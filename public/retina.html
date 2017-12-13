@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+
+<script src="https://pecan.stjude.org/sjcharts/bin/sjcharts.js" charset="utf-8"></script>
+<script src="https://pecan.stjude.org/pp/bin/proteinpaint.js" charset="utf-8"></script>
+<!--
+<script src="http://localhost:3000/bin/proteinpaint.js" charset="utf-8"></script>
+-->
+
+<div style='border-bottom:solid 1px #858585;font-size:1.5em;margin:50px 20px 20px 20px;color:#aaa;'>Human retina</div>
+<div id=human style="margin:20px"></div>
+<div style='border-bottom:solid 1px #858585;font-size:1.5em;margin:50px 20px 20px 20px;color:#aaa;'>Mouse retina</div>
+<div id=mouse style="margin:20px"></div>
+
+<script>
+
+
+runproteinpaint({
+	//host:'http://localhost:3000',
+	host:'https://pecan.stjude.org/pp',
+	holder:document.getElementById('human'),
+	noheader:true,
+	studyview:{
+		name:'Human retina',
+		genome:'hg19',
+		assays:['WGBS', 'chromHMM'],
+
+		  "WGBS": {
+			"config": {
+			  "type": "bigwig",
+			  "scale": {
+				"auto": 1
+			  }
+			},
+			"FW10": {
+			  "FW10": {
+				"file": "retina/hg19/wgbs/Methyl-FW10.bw"
+			  }
+			},
+			"FW14": {
+			  "FW14": {
+				"file": "retina/hg19/wgbs/Methyl-FW14.bw"
+			  }
+			},
+			"FW17": {
+			  "FW17": {
+				"file": "retina/hg19/wgbs/Methyl-FW17.bw"
+			  }
+			},
+			"FW18": {
+			  "FW18": {
+				"file": "retina/hg19/wgbs/Methyl-FW18.bw"
+			  }
+			},
+			"FW19": {
+			  "FW19": {
+				"file": "retina/hg19/wgbs/Methyl-FW19.bw"
+			  }
+			},
+			"FW20": {
+			  "FW20": {
+				"file": "retina/hg19/wgbs/Methyl-FW20.bw"
+			  }
+			},
+			"FW21": {
+			  "FW21": {
+				"file": "retina/hg19/wgbs/Methyl-FW21.bw"
+			  }
+			},
+			"FW23": {
+			  "FW23": {
+				"file": "retina/hg19/wgbs/Methyl-FW23.bw"
+			  }
+			},
+			"RB":{
+			  "D1":{
+				"file": "retina/hg19/wgbs/Methyl-RB-D1.bw"
+			  },
+			  "D2":{
+				"file": "retina/hg19/wgbs/Methyl-RB-D2.bw"
+			  },
+			  "X1":{
+				"file": "retina/hg19/wgbs/Methyl-RB-X1.bw"
+			  },
+			  "X2":{
+				"file": "retina/hg19/wgbs/Methyl-RB-X2.bw"
+			  }
+			}
+		  },
+
+		chromHMM:{
+			config:{type:'bedj'},
+			FW14:{
+				FW14: {"type":"bedj","file":"retina/hg19/FW13_14.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"FW13_14"}
+			},
+			FW15_16:{
+				FW15_16:{"type":"bedj","file":"retina/hg19/FW15_16.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"FW15_16"}
+			},
+			FW18:{
+				FW18:{"type":"bedj","file":"retina/hg19/FW18_20.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"FW18_20"}
+			},
+			FW23:{
+				FW23:{"type":"bedj","file":"retina/hg19/FW23_24.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"FW23_24"}
+			},
+			RB:{
+				D:{"type":"bedj","file":"retina/hg19/RB_D.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"RB_D"},
+				X:{"type":"bedj","file":"retina/hg19/RB_X.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"RB_X"}
+			}
+		},
+
+		show_browser:1,
+		hide_navigation:1,
+
+		browserview:{
+			position:'chr14:24549316-24584223',
+			nativetracks:'RefGene',
+			nobox:true,
+			"tracks":[
+				{
+				"type":"profilegenevalue",
+				"genevaluetrack":{
+					"file":"retina/hg19/fpkm.gz"
+				},
+				"genevaluetype":"FPKM",
+				"legendimg":{
+					"file":"retina/hg19/HMM.png",
+					"width":400,
+					"height":400
+				},
+				"name":"Human retina chromHMM",
+				"tracks":[
+					{"type":"bedj","file":"retina/hg19/FW13_14.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"FW13_14"},
+					{"type":"bedj","file":"retina/hg19/FW15_16.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"FW15_16"},
+					{"type":"bedj","file":"retina/hg19/FW18_20.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"FW18_20"},
+					{"type":"bedj","file":"retina/hg19/FW23_24.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"FW23_24"},
+					{"type":"bedj","file":"retina/hg19/RB_D.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"RB_D"},
+					{"type":"bedj","file":"retina/hg19/RB_X.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"RB_X"}
+				]
+				}
+			]
+		}
+	}
+});
+
+
+runproteinpaint({
+	host:'https://pecan.stjude.org/pp',
+	//host:'http://localhost:3000',
+	holder:document.getElementById('mouse'),
+	noheader:true,
+	studyview:{
+		name:'Mouse retina',
+		genome:'mm9',
+		assays:['WGBS', 'ATAC-seq',"chromHMM"],
+
+		WGBS:{
+			"config": {
+			  "type": "bigwig",
+			  "scale": {
+				"auto": 1
+			  }
+			},
+			"Adult-Rod_E_N-E14.5":{
+				"Adult-Rod_E_N-E14.5":{file:"retina/mm9/wgbs/Methyl-Adult-Rod_E_N-E14.5.bw"}
+			},
+			"Adult-Rod_I_N-P3":{
+				"Adult-Rod_I_N-P3":{file:"retina/mm9/wgbs/Methyl-Adult-Rod_I_N-P3.bw"}
+			},
+			"Adult-Rod_M_N-P21":{
+				"Adult-Rod_M_N-P21":{file:"retina/mm9/wgbs/Methyl-Adult-Rod_M_N-P21.bw"}
+			},
+			"IPS-Fibr_F_Y-fMG02":{
+				"IPS-Fibr_F_Y-fMG02":{file:"retina/mm9/wgbs/Methyl-IPS-Fibr_F_Y-fMG02.bw"}
+			},
+			"IPS-Rod_M_Y-3302":{
+				"IPS-Rod_M_Y-3302":{file:"retina/mm9/wgbs/Methyl-IPS-Rod_M_Y-3302.bw"}
+			},
+			"Adult-Rod_E_N-E17.5":{
+				"Adult-Rod_E_N-E17.5":{file:"retina/mm9/wgbs/Methyl-Adult-Rod_E_N-E17.5.bw"}
+			},
+			"Adult-Rod_M_N-P10":{
+				"Adult-Rod_M_N-P10":{file:"retina/mm9/wgbs/Methyl-Adult-Rod_M_N-P10.bw"}
+			},
+			"Adult-Rod_M_N-P7":{
+				"Adult-Rod_M_N-P7":{file:"retina/mm9/wgbs/Methyl-Adult-Rod_M_N-P7.bw"}
+			},
+			"IPS-Fibr_F_Y-fMG03":{
+				"IPS-Fibr_F_Y-fMG03":{file:"retina/mm9/wgbs/Methyl-IPS-Fibr_F_Y-fMG03.bw"}
+			},
+			"IPS-Rod_M_Y-7602":{
+				"IPS-Rod_M_Y-7602":{file:"retina/mm9/wgbs/Methyl-IPS-Rod_M_Y-7602.bw"}
+			},
+			"Adult-Rod_I_N-P0":{
+				"Adult-Rod_I_N-P0":{file:"retina/mm9/wgbs/Methyl-Adult-Rod_I_N-P0.bw"}
+			},
+			"Adult-Rod_M_N-P14":{
+				"Adult-Rod_M_N-P14":{file:"retina/mm9/wgbs/Methyl-Adult-Rod_M_N-P14.bw"}
+			},
+			"IPS-Fibr_F_N-MEF":{
+				"IPS-Fibr_F_N-MEF":{file:"retina/mm9/wgbs/Methyl-IPS-Fibr_F_N-MEF.bw"}
+			},
+			"IPS-Rod_I_Y-8601":{
+				"IPS-Rod_I_Y-8601":{file:"retina/mm9/wgbs/Methyl-IPS-Rod_I_Y-8601.bw"}
+			},
+			"mESC-Eb5_E_Y-Eb5":{
+				"mESC-Eb5_E_Y-Eb5":{file:"retina/mm9/wgbs/Methyl-mESC-Eb5_E_Y-Eb5.bw"}
+			}
+		},
+
+		"ATAC-seq":{
+			"config": {
+			  "type": "bigwig",
+			  "scale": {
+				"auto": 1
+			  }
+			},
+			"Adult-Rod_E_N-E14.5":{
+				"Adult-Rod_E_N-E14.5":{"file":"retina/mm9/atac/ATAC-Adult-Rod_E_N-E14.5.free.bw"}
+			},
+			"Adult-Rod_E_N-E17.5":{
+				"Adult-Rod_E_N-E17.5":{"file":"retina/mm9/atac/ATAC-Adult-Rod_E_N-E17.5.free.bw"}
+			},
+			"Adult-Rod_I_N-P0":{
+				"Adult-Rod_I_N-P0":{"file":"retina/mm9/atac/ATAC-Adult-Rod_I_N-P0.free.bw"}
+			},
+			"Adult-Rod_I_N-P3":{
+				"Adult-Rod_I_N-P3":{"file":"retina/mm9/atac/ATAC-Adult-Rod_I_N-P3.free.bw"}
+			},
+			"Adult-Rod_M_N-P14":{
+				"Adult-Rod_M_N-P14":{"file":"retina/mm9/atac/ATAC-Adult-Rod_M_N-P14.free.bw"}
+			},
+			"Adult-Rod_M_N-P21":{
+				"Adult-Rod_M_N-P21":{"file":"retina/mm9/atac/ATAC-Adult-Rod_M_N-P21.free.bw"}
+			},
+			"Adult-Rod_M_N-P7":{
+				"Adult-Rod_M_N-P7":{"file":"retina/mm9/atac/ATAC-Adult-Rod_M_N-P7.free.bw"}
+			}
+		},
+
+
+		"chromHMM":{
+			"config":{"type":"bedj"},
+			"Adult-Rod_E_N-E14.5":{
+				"Adult-Rod_E_N-E14.5":
+					{"type":"bedj","file":"retina/mm9/Adult-Rod_E_N-E14.5.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_E_N-E14.5"}
+			},
+			"Adult-Rod_E_N-E17.5":{
+				"Adult-Rod_E_N-E17.5":
+					{"type":"bedj","file":"retina/mm9/Adult-Rod_E_N-E17.5.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_E_N-E17.5"}
+			},
+			"Adult-Rod_I_N-P0":{
+				"Adult-Rod_I_N-P0":
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_I_N-P0.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_I_N-P0"},
+			},
+			"Adult-Rod_I_N-P3":{
+				"Adult-Rod_I_N-P3":
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_I_N-P3.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_I_N-P3"},
+			},
+			"Adult-Rod_M_N-P7":{
+				"Adult-Rod_M_N-P7":
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_M_N-P7.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_M_N-P7"},
+			},
+			"Adult-Rod_M_N-P10":{
+				"Adult-Rod_M_N-P10":
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_M_N-P10.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_M_N-P10"},
+			},
+			"Adult-Rod_M_N-P21":{
+				"Adult-Rod_M_N-P21":
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_M_N-P21.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_M_N-P21"},
+			},
+			"Adult-Rod_M_N-WTM11":{
+				"Adult-Rod_M_N-WTM11":
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_M_N-WTM11.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_M_N-WTM11"},
+			},
+			"Adult-Rod_T_N-MDMX":{
+				"Adult-Rod_T_N-MDMX":
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_T_N-MDMX.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_T_N-MDMX"},
+			},
+			"mESC-Eb5_E_Y-Eb5":{
+				"mESC-Eb5_E_Y-Eb5":
+				{"type":"bedj","file":"retina/mm9/mESC-Eb5_E_Y-Eb5.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"mESC-Eb5_E_Y-Eb5"},
+			},
+			"SCN-Rod_S_N-SCN194":{
+				"SCN-Rod_S_N-SCN194":
+				{"type":"bedj","file":"retina/mm9/SCN-Rod_S_N-SCN194.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"SCN-Rod_S_N-SCN194"},
+			},
+			"IPS-Amac_I_Y-120.08":{
+				"IPS-Amac_I_Y-120.08":
+				{"type":"bedj","file":"retina/mm9/IPS-Amac_I_Y-120.08.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Amac_I_Y-120.08"},
+			},
+			"IPS-Amac_I_Y-206.06":{
+				"IPS-Amac_I_Y-206.06":
+				{"type":"bedj","file":"retina/mm9/IPS-Amac_I_Y-206.06.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Amac_I_Y-206.06"},
+			},
+			"IPS-Amac_M_N-30.05":{
+				"IPS-Amac_M_N-30.05":
+				{"type":"bedj","file":"retina/mm9/IPS-Amac_M_N-30.05.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Amac_M_N-30.05"},
+			},
+			"IPS-Amac_M_Y-30.02":{
+				"IPS-Amac_M_Y-30.02":
+				{"type":"bedj","file":"retina/mm9/IPS-Amac_M_Y-30.02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Amac_M_Y-30.02"},
+			},
+			"IPS-Amac_M_Y-30.06":{
+				"IPS-Amac_M_Y-30.06":
+				{"type":"bedj","file":"retina/mm9/IPS-Amac_M_Y-30.06.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Amac_M_Y-30.06"},
+			},
+			"IPS-Bipo_I_N-rM0408":{
+				"IPS-Bipo_I_N-rM0408":
+				{"type":"bedj","file":"retina/mm9/IPS-Bipo_I_N-rM0408.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Bipo_I_N-rM0408"},
+			},
+			"IPS-Bipo_I_Y-208.03":{
+				"IPS-Bipo_I_Y-208.03":
+				{"type":"bedj","file":"retina/mm9/IPS-Bipo_I_Y-208.03.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Bipo_I_Y-208.03"},
+			},
+			"IPS-Bipo_I_Y-208.04":{
+				"IPS-Bipo_I_Y-208.04":
+				{"type":"bedj","file":"retina/mm9/IPS-Bipo_I_Y-208.04.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Bipo_I_Y-208.04"},
+			},
+			"IPS-Bipo_I_Y-rM0401":{
+				"IPS-Bipo_I_Y-rM0401":
+				{"type":"bedj","file":"retina/mm9/IPS-Bipo_I_Y-rM0401.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Bipo_I_Y-rM0401"},
+			},
+			"IPS-Bipo_I_Y-rM0405":{
+				"IPS-Bipo_I_Y-rM0405":
+				{"type":"bedj","file":"retina/mm9/IPS-Bipo_I_Y-rM0405.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Bipo_I_Y-rM0405"},
+			},
+			"IPS-Cone_I_N-rCh209.04":{
+				"IPS-Cone_I_N-rCh209.04":
+				{"type":"bedj","file":"retina/mm9/IPS-Cone_I_N-rCh209.04.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Cone_I_N-rCh209.04"},
+			},
+			"IPS-Cone_M_N-rCh257.4":{
+				"IPS-Cone_M_N-rCh257.4":
+				{"type":"bedj","file":"retina/mm9/IPS-Cone_M_N-rCh257.4.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Cone_M_N-rCh257.4"},
+			},
+			"IPS-Cone_M_Y-Ch143.02":{
+				"IPS-Cone_M_Y-Ch143.02":
+				{"type":"bedj","file":"retina/mm9/IPS-Cone_M_Y-Ch143.02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Cone_M_Y-Ch143.02"},
+			},
+			"IPS-Cone_M_Y-Ch143.08":{
+				"IPS-Cone_M_Y-Ch143.08":
+				{"type":"bedj","file":"retina/mm9/IPS-Cone_M_Y-Ch143.08.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Cone_M_Y-Ch143.08"},
+			},
+			"IPS-Cone_M_Y-Ch143.09":{
+				"IPS-Cone_M_Y-Ch143.09":
+				{"type":"bedj","file":"retina/mm9/IPS-Cone_M_Y-Ch143.09.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Cone_M_Y-Ch143.09"},
+			},
+			"IPS-Fibr_F_N-FCR01":{
+				"IPS-Fibr_F_N-FCR01":
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_N-FCR01.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_N-FCR01"},
+			},
+			"IPS-Fibr_F_N-FCR02":{
+				"IPS-Fibr_F_N-FCR02":
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_N-FCR02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_N-FCR02"},
+			},
+			"IPS-Fibr_F_N-fG140.02":{
+				"IPS-Fibr_F_N-fG140.02":
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_N-fG140.02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_N-fG140.02"},
+			},
+			"IPS-Fibr_F_Y-fG140.03":{
+				"IPS-Fibr_F_Y-fG140.03":
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_Y-fG140.03.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_Y-fG140.03"},
+			},
+			"IPS-Fibr_F_Y-fG140.04":{
+				"IPS-Fibr_F_Y-fG140.04":
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_Y-fG140.04.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_Y-fG140.04"},
+			},
+			"IPS-Fibr_F_Y-fMG02":{
+				"IPS-Fibr_F_Y-fMG02":
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_Y-fMG02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_Y-fMG02"},
+			},
+			"IPS-Fibr_F_Y-fMG03":{
+				"IPS-Fibr_F_Y-fMG03":
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_Y-fMG03.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_Y-fMG03"},
+			},
+			"IPS-Fibr_F_Y-FNR07":{
+				"IPS-Fibr_F_Y-FNR07":
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_Y-FNR07.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_Y-FNR07"},
+			},
+			"IPS-Mull_I_N-rCr216.3":{
+				"IPS-Mull_I_N-rCr216.3":
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_I_N-rCr216.3.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_I_N-rCr216.3"},
+			},
+			"IPS-Mull_M_N-rCr143.02":{
+				"IPS-Mull_M_N-rCr143.02":
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_N-rCr143.02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_N-rCr143.02"},
+			},
+			"IPS-Mull_M_N-rCr263.4":{
+				"IPS-Mull_M_N-rCr263.4":
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_N-rCr263.4.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_N-rCr263.4"},
+			},
+			"IPS-Mull_M_N-rCr33.05":{
+				"IPS-Mull_M_N-rCr33.05":
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_N-rCr33.05.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_N-rCr33.05"},
+			},
+			"IPS-Mull_M_Y-263.08":{
+				"IPS-Mull_M_Y-263.08":
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_Y-263.08.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_Y-263.08"},
+			},
+			"IPS-Mull_M_Y-Cr143.01":{
+				"IPS-Mull_M_Y-Cr143.01":
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_Y-Cr143.01.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_Y-Cr143.01"},
+			},
+			"IPS-Mull_M_Y-rCr33.01":{
+				"IPS-Mull_M_Y-rCr33.01":
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_Y-rCr33.01.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_Y-rCr33.01"},
+			},
+			"IPS-Mull_M_Y-rCr33.04":{
+				"IPS-Mull_M_Y-rCr33.04":
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_Y-rCr33.04.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_Y-rCr33.04"},
+			},
+			"IPS-Rod_I_Y-8601":{
+				"IPS-Rod_I_Y-8601":
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_I_Y-8601.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_I_Y-8601"},
+			},
+			"IPS-Rod_I_Y-8602":{
+				"IPS-Rod_I_Y-8602":
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_I_Y-8602.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_I_Y-8602"},
+			},
+			"IPS-Rod_I_Y-8603":{
+				"IPS-Rod_I_Y-8603":
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_I_Y-8603.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_I_Y-8603"},
+			},
+			"IPS-Rod_I_Y-8604":{
+				"IPS-Rod_I_Y-8604":
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_I_Y-8604.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_I_Y-8604"},
+			},
+			"IPS-Rod_M_Y-3301":{
+				"IPS-Rod_M_Y-3301":
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_M_Y-3301.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_M_Y-3301"},
+			},
+			"IPS-Rod_M_Y-3302":{
+				"IPS-Rod_M_Y-3302":
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_M_Y-3302.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_M_Y-3302"},
+			},
+			"IPS-Rod_M_Y-7601":{
+				"IPS-Rod_M_Y-7601":
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_M_Y-7601.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_M_Y-7601"},
+			},
+			"IPS-Rod_M_Y-7602":{
+				"IPS-Rod_M_Y-7602":
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_M_Y-7602.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_M_Y-7602"}
+			}
+		},
+
+
+		show_browser:1,
+		hide_navigation:1,
+
+		browserview:{
+			position:"chr14:56137815-56143802",
+			nativetracks:"RefGene",
+			nobox:true,
+			"tracks":[
+			{
+				"type":"bedj",
+				"name":"Super enhancer",
+				"file":"retina/mm9/SuperEnhancer.gz"
+			},
+			{
+				"type":"profilegenevalue",
+				"genevaluetrack":{
+					"file":"retina/mm9/fpkm.gz"
+				},
+				"genevaluetype":"FPKM",
+				"legendimg":{
+					"file":"retina/mm9/HMM.png",
+					"width":400,
+					"height":400
+				},
+				"name":"Mouse retina chromHMM",
+				"tracks":[
+				{"type":"bedj","file":"retina/mm9/TAD.Cortex.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"TAD.Cortex"},
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_E_N-E14.5.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_E_N-E14.5"},
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_E_N-E17.5.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_E_N-E17.5"},
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_I_N-P0.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_I_N-P0"},
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_I_N-P3.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_I_N-P3"},
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_M_N-P7.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_M_N-P7"},
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_M_N-P10.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_M_N-P10"},
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_M_N-P14.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_M_N-P14"},
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_M_N-P21.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_M_N-P21"},
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_M_N-WTM11.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_M_N-WTM11"},
+				{"type":"bedj","file":"retina/mm9/Adult-Rod_T_N-MDMX.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Adult-Rod_T_N-MDMX"},
+				{"type":"bedj","file":"retina/mm9/mESC-Eb5_E_Y-Eb5.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"mESC-Eb5_E_Y-Eb5"},
+				{"type":"bedj","file":"retina/mm9/SCN-Rod_S_N-SCN194.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"SCN-Rod_S_N-SCN194"},
+				{"type":"bedj","file":"retina/mm9/IPS-Amac_I_Y-120.08.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Amac_I_Y-120.08"},
+				{"type":"bedj","file":"retina/mm9/IPS-Amac_I_Y-206.06.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Amac_I_Y-206.06"},
+				{"type":"bedj","file":"retina/mm9/IPS-Amac_M_N-30.05.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Amac_M_N-30.05"},
+				{"type":"bedj","file":"retina/mm9/IPS-Amac_M_Y-30.02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Amac_M_Y-30.02"},
+				{"type":"bedj","file":"retina/mm9/IPS-Amac_M_Y-30.06.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Amac_M_Y-30.06"},
+				{"type":"bedj","file":"retina/mm9/IPS-Bipo_I_N-rM0408.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Bipo_I_N-rM0408"},
+				{"type":"bedj","file":"retina/mm9/IPS-Bipo_I_Y-208.03.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Bipo_I_Y-208.03"},
+				{"type":"bedj","file":"retina/mm9/IPS-Bipo_I_Y-208.04.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Bipo_I_Y-208.04"},
+				{"type":"bedj","file":"retina/mm9/IPS-Bipo_I_Y-rM0401.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Bipo_I_Y-rM0401"},
+				{"type":"bedj","file":"retina/mm9/IPS-Bipo_I_Y-rM0405.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Bipo_I_Y-rM0405"},
+				{"type":"bedj","file":"retina/mm9/IPS-Cone_I_N-rCh209.04.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Cone_I_N-rCh209.04"},
+				{"type":"bedj","file":"retina/mm9/IPS-Cone_M_N-rCh257.4.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Cone_M_N-rCh257.4"},
+				{"type":"bedj","file":"retina/mm9/IPS-Cone_M_Y-Ch143.02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Cone_M_Y-Ch143.02"},
+				{"type":"bedj","file":"retina/mm9/IPS-Cone_M_Y-Ch143.08.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Cone_M_Y-Ch143.08"},
+				{"type":"bedj","file":"retina/mm9/IPS-Cone_M_Y-Ch143.09.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Cone_M_Y-Ch143.09"},
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_N-FCR01.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_N-FCR01"},
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_N-FCR02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_N-FCR02"},
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_N-fG140.02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_N-fG140.02"},
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_Y-fG140.03.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_Y-fG140.03"},
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_Y-fG140.04.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_Y-fG140.04"},
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_Y-fMG02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_Y-fMG02"},
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_Y-fMG03.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_Y-fMG03"},
+				{"type":"bedj","file":"retina/mm9/IPS-Fibr_F_Y-FNR07.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Fibr_F_Y-FNR07"},
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_I_N-rCr216.3.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_I_N-rCr216.3"},
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_N-rCr143.02.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_N-rCr143.02"},
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_N-rCr263.4.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_N-rCr263.4"},
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_N-rCr33.05.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_N-rCr33.05"},
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_Y-263.08.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_Y-263.08"},
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_Y-Cr143.01.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_Y-Cr143.01"},
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_Y-rCr33.01.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_Y-rCr33.01"},
+				{"type":"bedj","file":"retina/mm9/IPS-Mull_M_Y-rCr33.04.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Mull_M_Y-rCr33.04"},
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_I_Y-8601.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_I_Y-8601"},
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_I_Y-8602.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_I_Y-8602"},
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_I_Y-8603.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_I_Y-8603"},
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_I_Y-8604.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_I_Y-8604"},
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_M_Y-3301.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_M_Y-3301"},
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_M_Y-3302.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_M_Y-3302"},
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_M_Y-7601.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_M_Y-7601"},
+				{"type":"bedj","file":"retina/mm9/IPS-Rod_M_Y-7602.gz","stackheight":10,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"IPS-Rod_M_Y-7602"}
+				]
+			}]
+		}
+	}
+});
+
+</script>
+
+</body>
+</html>

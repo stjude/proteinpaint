@@ -1,0 +1,30 @@
+chr1	242030356	242035336	+	EXO1 strange at exon12	2
+chr5	40980010	40981493	+	C7 normal junction at intron 17	15
+chr5	40980030	40981493	+	C7 novel junction at intron 17, extends exon 17	10
+chr9	34552324	34552671	+	CNTFR novel junction at exon 7-8, truncates exon 8	10
+chr9	34552326	34552671	+	CNTFR normal junction at exon 7-8	10
+chr11	108202283	108202605	+	ATM normal junction	10
+chr11	108202283	108202616	+	ATM novel junction, j.stop truncates exon 52	10
+chr17	16285345	16285574	+	UBB both ends inside coding coding exon	10
+chr17	37004309	37008856	+	RPL23 known junction over large intron, from minor isoform ENST00000394333	10
+chr17	37006727	37008856	+	RPL23 known junction over intron 3	10
+chr17	37006728	37008856	+	RPL23 novel junction, 1 bp off from its competing site	10
+chr17	37356601	37357465	+	RPL19 intron 1 known	8
+chr17	37357259	37357465	+	RPL19 left in intron 1	8
+chr17	79479385	79479626	+	j.stop in intron 1 of ACTG1	8
+chr17	79479385	79479640	+	ACTG1 normal junction at intron 1, minor isoform	9
+chr17	79479385	79479759	+	ACTG1 normal junction at intron 1, major isoform	9
+chrX	123159677	123159689	+	FintronNew5 start in STAG2 intron create 5' site	9
+chrX	123164975	123170001	+	FRS5mut stop in STAG2 intron break RS5	9
+chrX	123171472	123176411	+	FintronNew3 real, stop position in STAG2(+) intron creates 3' site	9
+chrX	123176400	123176435	+	FexonNew3 stop position in STAG2(+) exon creates 3' site	9
+chrX	123176468	123180000	+	FexonNew5 start pos in STAG2(+) exon, created 5' site	9
+chrX	123184158	123184970	+	STAG2 known junction at intron 10	9
+chrX	123184158	123185164	+	STAG2 exon 11 skip	9
+chrX	123184158	123185165	+	fake one	9
+chrX	123185068	123185164	+	STAG2 known junction at intron 11	9
+chrX	123515134	123516000	+	RexonNew3 start pos in TENM1(-) exon, created 3' site	9
+chrX	123515144	123515190	+	RintronNew5 stop in TENM1 intron create 5' site	9
+chrX	123515146	123516531	+	RexonNew5 stop pos in TENM1 exon create 5' site	9
+chrX	123515157	123516519	+	RintronNew3 start pos in TENM1- intron create 3' site	9
+chrX	123516284	123516519	+	RRS5mut start pos in TENM1 intron break RS5	9

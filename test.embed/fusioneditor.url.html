@@ -1,0 +1,28 @@
+<html>
+
+
+<body>
+
+
+<div id=aaa style='margin:20px'></div>
+
+<script src=http://localhost:3000/bin/proteinpaint.js></script>
+
+<script>
+
+runproteinpaint({
+	host:'http://localhost:3000',
+	holder:document.getElementById('aaa'),
+	genome:'hg19',
+	fusioneditor:{
+		urls:[
+			'https://dl.dropboxusercontent.com/u/6959481/ProteinPaint/cicero.3.txt',
+			'https://dl.dropboxusercontent.com/u/6959481/ProteinPaint/cicero.SJBALL270_D.txt',
+			'https://dl.dropboxusercontent.com/u/6959481/ProteinPaint/cicero.SJBALL020589_D1.txt'
+		],
+		dataname:'cicero test'
+	}
+})
+</script>
+</body>
+</html>

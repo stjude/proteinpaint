@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ProteinPaint</title>
+	<script src='https://platform.dnanexus.com/javascript/file-viewer-1.1.min.js'></script>
+    <script src='http://localhost:3000/bin/proteinpaint.js'></script>
+	<!--
+	<script src='https://pecan.stjude.org/pp/bin/proteinpaint.js'></script>
+	-->
+    <style type="text/css">
+  
+	body {
+		margin: 0;
+		padding: 0;
+	}
+	
+	.omnibar {
+		  width: 100%;
+		  background: #1381B3;
+		  min-height: 64px;
+		  font-family: 'Open Sans', "Helvetica Neue", Helvetica, Arial, sans-serif
+	}
+  
+
+	.logo {
+		display: block;
+		float: left;
+		margin: 0 auto;
+		width: 50px;
+		height: 50px;
+		color: #fff;
+		text-decoration: none;
+		padding: 8px 10px;
+	}
+	
+	.logo img {
+		border: none;
+		margin: 0;
+		padding: 0;
+		width: 100%;
+	}
+	
+	.site-title {
+		font-weight: 300;
+		font-size: 22px;
+		padding: 0;
+		margin: 0;
+		color: #A1CDE1;
+		padding: 14px;
+	}
+	
+	.site-title a {
+		color: #fff;
+		text-decoration: none;
+		font-weight: 600;
+	}
+	
+	
+	.nav {
+		float: right;
+		margin: 0;
+		padding: 20px 30px 20px 0;
+	}
+	
+	.nav li {
+		display: inline;
+		margin: 0;
+		padding: 0;
+		margin-left: 40px;
+		font-weight: 600;
+		font-size: 14px;
+	}
+	
+	.nav li a {
+		text-decoration: none;
+		color: #fff;
+		text-transform: uppercase;
+	}
+	
+  
+  </style>
+  </head>
+
+
+
+
+  <body>
+
+
+    <div class="omnibar">
+        <ul class="nav">
+            <li><a href="https://platform.stjude.cloud/requests/data_by_disease">Data</a></li>
+            <li><a href="https://platform.stjude.cloud/tools">Tools</a></li>
+            <li><a href="https://platform.stjude.cloud/visualizations/cohort">Visualizations</a></li>
+        </ul>
+        <a href="index.html" class="logo"><img src="https://pecan.stjude.org/static/stjude-logo-child.png" alt="St. Jude Cloud" title="St. Jude Cloud" /></a>
+        <h1 class="site-title"><a href="index.html">St. Jude Cloud</a> ProteinPaint</h1>   
+    </div>
+
+
+
+
+    <div class="container-fluid" id="proteinpaintdiv"></div>
+
+    <script type="text/javascript">
+      getOptions(function(options) {
+
+		var textfileurl=null
+		var tracks=[]
+
+        for (var i = 0; i < options.files.length; i++) {
+			var url=options.files[i].url
+			if(url.substr(url.length-3,3)=='.bw') {
+				var basename=url.split('/').pop().replace(/\.bw$/,'')
+				if(basename.substr(basename.length-10,10)=='.negStrand') {
+					var samplename=basename.replace('.negStrand','')
+					var notfound=true
+					for(var j=0; j<tracks.length; j++) {
+						var tk=tracks[j]
+						if(tk.type=='bigwigstranded' && tk.name==samplename) {
+							tk.strand2={
+								url:url,
+								scale:{auto:1}
+							}
+							notfound=false
+							break
+						}
+					}
+					if(notfound) {
+						tracks.push({
+							type:'bigwigstranded',
+							name:samplename,
+							iscustom:true,
+							strand2:{
+								url:url,
+								scale:{auto:1}
+							}
+						})
+					}
+				} else if(basename.substr(basename.length-10,10)=='.posStrand') {
+					var samplename=basename.replace('.posStrand','')
+					var notfound=true
+					for(var j=0; j<tracks.length; j++) {
+						var tk=tracks[j]
+						if(tk.type=='bigwigstranded' && tk.name==samplename) {
+							tk.strand1={
+								url:url,
+								scale:{auto:1}
+							}
+							notfound=false
+							break
+						}
+					}
+					if(notfound) {
+						tracks.push({
+							type:'bigwigstranded',
+							name:samplename,
+							iscustom:true,
+							strand1:{
+								url:url,
+								scale:{auto:1}
+							}
+						})
+					}
+				} else {
+					tracks.push({
+						url:url,
+						type:'bigwig',
+						name:basename,
+						scale:{auto:1},
+						iscustom:true
+					})
+				}
+			} else if(url.substr(url.length-4,4)=='.txt') {
+				textfileurl=url
+			}
+        }
+
+		if(!textfileurl) {
+			window.alert('.txt file not provided')
+			return
+		}
+
+		if(tracks.length>0) {
+			var lst=[]
+			tracks.forEach(function(tk){
+				if(tk.type=='bigwigstranded') {
+					if(tk.strand1 && tk.strand2) {
+						lst.push(tk)
+					} else if(tk.strand1) {
+						lst.push({
+							type:'bigwig',
+							url:tk.strand1.url,
+							scale:{auto:1},
+							name:tk.name
+						})
+					} else if(tk.strand2) {
+						lst.push({
+							type:'bigwig',
+							url:tk.strand2.url,
+							scale:{auto:1},
+							name:tk.name
+						})
+					}
+				} else {
+					lst.push(tk)
+				}
+			})
+			tracks=lst
+		}
+
+		var proteinpaintConfig={
+			//host:'https://pecan.stjude.org/pp',
+			host:'http://localhost:3000',
+			holder:document.getElementById('proteinpaintdiv'),
+			noheader:true,
+			genome:'hg19',
+			mavolcanoplot:{
+				url:textfileurl,
+				dataname:'Differential expression',
+				tracks: (tracks.length ? tracks : null)
+			}
+		};
+
+		runproteinpaint(proteinpaintConfig)
+	});
+    </script>
+  </body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="http://proteinpaint-dev.stjude.org:3001/bin/proteinpaint.js" charset="utf-8"></script>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	host:'http://proteinpaint-dev.stjude.org:3001',
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+
+	block:true,
+	genome:'hg19',
+	position:'chr1:111111-222222',
+	nativetracks:'refgene',
+
+	genome:'hg19',
+	gene:'alk',
+	dataset:'pediatric',
+	hlaachange:[{name:'G574R',codon:574,class:'snv'},{name:'ABC',codon:560,class:'N'}],
+	hlaachange:'G574R,sdfsaf',
+	noheader:true,
+	hidedatasetexpression:true,
+	hidegenecontrol:true,
+	hidegenelegend:true,
+	
+	/*
+	study:'mullighan_dux4_erg'
+	studyview:{
+		snvindel:snvindeldata,
+		name:'test study',
+		genome:'hg19',
+		show_genetable:1,
+		no_defaultgeneset:1,
+	},
+	*/
+})
+</script>
+
+</body>
+</html>

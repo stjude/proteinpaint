@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="http://localhost:3000/bin/proteinpaint.js" charset="utf-8"></script>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	host:'http://localhost:3000',
+	holder:document.getElementById('aaa'),
+	noheader:true,
+
+	block:true,
+	genome:'hg19',
+	tracks:[
+		{name:'bw',type:'bigwig',file:'hg19/hg19.100way.phyloP100way.bw'},
+		{name:'vcf',type:'vcf',file:'hg19/clinvar.hg19.201612.vcf.gz'},
+		{name:'Un-typed junctions',type:'junction',url:'https://dl.dropboxusercontent.com/u/6959481/junction4.hg19.notype.gz'},
+		{name:'aggregated junctions',type:'junction',categories:{known:{color:'#858585',label:'Known'},novel:{color:'red',label:'Novel'}},tracks:[
+			{name:'J-aaa',type:'junction',url:'https://dl.dropboxusercontent.com/u/6959481/junction1.hg19.gz'},
+			{name:'J-bbb',type:'junction',url:'https://dl.dropboxusercontent.com/u/6959481/junction2.hg19.gz'},
+			{name:'J-ccc',type:'junction',url:'https://dl.dropboxusercontent.com/u/6959481/junction3.hg19.gz'},
+		]}
+		],
+	nativetracks:['RefGene','RepeatMasker'],
+	noheader:true,
+	nobox:true
+})
+</script>
+
+</body>
+</html>

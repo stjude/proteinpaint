@@ -1,0 +1,110 @@
+##fileformat=VCFv4.1
+##fileDate=20130517
+##center=Complete Genomics
+##source=CGAPipeline_2.1.2.20
+##source_GENOME_REFERENCE=NCBI build 37
+##source_GENE_ANNOTATIONS=NCBI build 37.3
+##source_DBSNP_BUILD=dbSNP build 134
+##source_COSMIC=COSMIC v55
+##source_DGV_VERSION=9
+##source_MIRBASE_VERSION=miRBase version 16
+##source_PFAM_DATE=October 13, 2011
+##source_REPMASK_GENERATED_AT=2011-Feb-15 10:08
+##source_SEGDUP_GENERATED_AT=2010-Dec-01 13:40
+##reference=ftp://ftp.completegenomics.com/ReferenceFiles/build37.fa.bz2
+##contig=<ID=1,length=249250621,assembly=B37,md5=1b22b98cdeb4a9304cb5d48026a85128,species="Homo sapiens">
+##contig=<ID=2,length=243199373,assembly=B37,md5=a0d9851da00400dec1098a9255ac712e,species="Homo sapiens">
+##contig=<ID=3,length=198022430,assembly=B37,md5=641e4338fa8d52a5b781bd2a2c08d3c3,species="Homo sapiens">
+##contig=<ID=4,length=191154276,assembly=B37,md5=23dccd106897542ad87d2765d28a19a1,species="Homo sapiens">
+##contig=<ID=5,length=180915260,assembly=B37,md5=0740173db9ffd264d728f32784845cd7,species="Homo sapiens">
+##contig=<ID=6,length=171115067,assembly=B37,md5=1d3a93a248d92a729ee764823acbbc6b,species="Homo sapiens">
+##contig=<ID=7,length=159138663,assembly=B37,md5=618366e953d6aaad97dbe4777c29375e,species="Homo sapiens">
+##contig=<ID=8,length=146364022,assembly=B37,md5=96f514a9929e410c6651697bded59aec,species="Homo sapiens">
+##contig=<ID=9,length=141213431,assembly=B37,md5=3e273117f15e0a400f01055d9f393768,species="Homo sapiens">
+##contig=<ID=10,length=135534747,assembly=B37,md5=988c28e000e84c26d552359af1ea2e1d,species="Homo sapiens">
+##contig=<ID=11,length=135006516,assembly=B37,md5=98c59049a2df285c76ffb1c6db8f8b96,species="Homo sapiens">
+##contig=<ID=12,length=133851895,assembly=B37,md5=51851ac0e1a115847ad36449b0015864,species="Homo sapiens">
+##contig=<ID=13,length=115169878,assembly=B37,md5=283f8d7892baa81b510a015719ca7b0b,species="Homo sapiens">
+##contig=<ID=14,length=107349540,assembly=B37,md5=98f3cae32b2a2e9524bc19813927542e,species="Homo sapiens">
+##contig=<ID=15,length=102531392,assembly=B37,md5=e5645a794a8238215b2cd77acb95a078,species="Homo sapiens">
+##contig=<ID=16,length=90354753,assembly=B37,md5=fc9b1a7b42b97a864f56b348b06095e6,species="Homo sapiens">
+##contig=<ID=17,length=81195210,assembly=B37,md5=351f64d4f4f9ddd45b35336ad97aa6de,species="Homo sapiens">
+##contig=<ID=18,length=78077248,assembly=B37,md5=b15d4b2d29dde9d3e4f93d1d0f2cbc9c,species="Homo sapiens">
+##contig=<ID=19,length=59128983,assembly=B37,md5=1aacd71f30db8e561810913e0b72636d,species="Homo sapiens">
+##contig=<ID=20,length=63025520,assembly=B37,md5=0dec9660ec1efaaf33281c0d5ea2560f,species="Homo sapiens">
+##contig=<ID=21,length=48129895,assembly=B37,md5=2979a6085bfe28e3ad6f552f361ed74d,species="Homo sapiens">
+##contig=<ID=22,length=51304566,assembly=B37,md5=a718acaa6135fdca8357d5bfe94211dd,species="Homo sapiens">
+##contig=<ID=X,length=155270560,assembly=B37,md5=7e0e2e580297b7764e31dbc80c2540dd,species="Homo sapiens">
+##contig=<ID=Y,length=59373566,assembly=B37,md5=1e86411d73e6f00a10590f976be01623,species="Homo sapiens">
+##contig=<ID=M,length=16569,assembly=B37,md5=c68f52674c9fb33aef52dcf399755519,species="Homo sapiens">
+##phasing=partial
+##INFO=<ID=note,Number=1,Type=String,Description="test note">
+##INFO=<ID=CGA_BF,Number=1,Type=Float,Description="Frequency in baseline">
+##INFO=<ID=CGA_BNDG,Number=A,Type=String,Description="Transcript name and strand of genes containing breakend">
+##INFO=<ID=CGA_BNDGO,Number=A,Type=String,Description="Transcript name and strand of genes containing mate breakend">
+##INFO=<ID=CGA_FI,Number=A,Type=String,Description="Functional impact annotation">
+##INFO=<ID=CGA_MEDEL,Number=4,Type=String,Description="Consistent with deletion of mobile element; type,chromosome,start,end">
+##INFO=<ID=CGA_MIRB,Number=.,Type=String,Description="miRBaseId">
+##INFO=<ID=CGA_PFAM,Number=.,Type=String,Description="PFAM Domain">
+##INFO=<ID=CGA_RPT,Number=.,Type=String,Description="repeatMasker overlap information">
+##INFO=<ID=CGA_SDO,Number=1,Type=Integer,Description="Number of distinct segmental duplications that overlap this locus">
+##INFO=<ID=CGA_WINEND,Number=1,Type=Integer,Description="End of coverage window">
+##INFO=<ID=CGA_XR,Number=A,Type=String,Description="Per-ALT external database reference (dbSNP, COSMIC, etc)">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=MATEID,Number=1,Type=String,Description="ID of mate breakend">
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
+##INFO=<ID=SS,Number=1,Type=String,Description="Somatic Status: Germline, Somatic, LOH, or . (Unknown)">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##ALT=<ID=CGA_CNVWIN,Description="Copy number analysis window">
+##ALT=<ID=CGA_NOCALL,Description="No-called record">
+##FILTER=<ID=MPCBT,Description="Mate pair count below 10">
+##FILTER=<ID=SHORT,Description="Junction side length below 70">
+##FILTER=<ID=TSNR,Description="Transition sequence not resolved">
+##FILTER=<ID=URR,Description="Too close to an underrepresented repeat">
+##FORMAT=<ID=AD,Number=2,Type=Integer,Description="Allelic depths (number of reads in each observed allele)">
+##FORMAT=<ID=CGA_BNDDEF,Number=1,Type=String,Description="Breakend definition">
+##FORMAT=<ID=CGA_BNDMPC,Number=1,Type=Integer,Description="Mate pair count supporting breakend">
+##FORMAT=<ID=CGA_BNDP,Number=1,Type=String,Description="Precision of breakend">
+##FORMAT=<ID=CGA_BNDPOS,Number=1,Type=Integer,Description="Breakend position">
+##FORMAT=<ID=CGA_CL,Number=1,Type=Float,Description="Nondiploid-model called level">
+##FORMAT=<ID=CGA_CP,Number=1,Type=Integer,Description="Diploid-model called ploidy">
+##FORMAT=<ID=CGA_CT,Number=1,Type=String,Description="Diploid-model CNV type">
+##FORMAT=<ID=CGA_EHQ,Number=2,Type=Integer,Description="Haplotype Quality, Equal Allele Fraction Assumption">
+##FORMAT=<ID=CGA_GP,Number=1,Type=Float,Description="Depth of coverage for 2k window GC normalized to mean">
+##FORMAT=<ID=CGA_LAF,Number=1,Type=Float,Description="Lesser allele fraction estimate, 100k window">
+##FORMAT=<ID=CGA_LLAF,Number=1,Type=Float,Description="Lesser allele fraction lower bound, 100k window">
+##FORMAT=<ID=CGA_LS,Number=1,Type=Integer,Description="Nondiploid-model called level score">
+##FORMAT=<ID=CGA_OAD,Number=2,Type=Integer,Description="Other Allelic depths (number of reads in other sample in each observed allele of this sample)">
+##FORMAT=<ID=CGA_ODP,Number=1,Type=Integer,Description="Other Total Read Depth (read depth of other sample in somatic comparison)">
+##FORMAT=<ID=CGA_ORDP,Number=1,Type=Integer,Description="Other Reference Depth (number of reads in other sample observed supporting the reference allele)">
+##FORMAT=<ID=CGA_PS,Number=1,Type=Integer,Description="Diploid-model called ploidy score">
+##FORMAT=<ID=CGA_RDP,Number=1,Type=Integer,Description="Number of reads observed supporting the reference allele">
+##FORMAT=<ID=CGA_SCL,Number=1,Type=Float,Description="Nondiploid-model somatic called level">
+##FORMAT=<ID=CGA_SLS,Number=1,Type=Integer,Description="Nondiploid-model somatic called level score">
+##FORMAT=<ID=CGA_SOMC,Number=1,Type=String,Description="somaticCategory">
+##FORMAT=<ID=CGA_SOMR,Number=1,Type=String,Description="somaticRank">
+##FORMAT=<ID=CGA_SOMS,Number=1,Type=Float,Description="somaticScore">
+##FORMAT=<ID=CGA_TS,Number=1,Type=Integer,Description="Diploid-model CNV type score">
+##FORMAT=<ID=CGA_ULAF,Number=1,Type=Float,Description="Lesser allele fraction upper bound, 100k window">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Total Read Depth">
+##FORMAT=<ID=FT,Number=1,Type=String,Description="Genotype filters">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=HQ,Number=2,Type=Integer,Description="Haplotype Quality">
+##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Phase Set">
+##FORMAT=<ID=CGA_SOMFE,Number=1,Type=Integer,Description="Fisher's Exact test p-value converted to PHRED-like score">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	GS000020330-ASM-N1	GS000020330-ASM-T1
+5	40980013	.	T	C	.	.	NS=2;SS=Germline;CGA_FI=730|NM_000587.2|C7|DONOR|DISRUPT;note=break5'siteOfExon17geneC7causeexonExtension	GT:PS:FT:GQ:HQ:CGA_EHQ:DP:AD:CGA_RDP:CGA_ODP:CGA_OAD:CGA_ORDP	1/0:.:PASS:273:421,273:419,272:35:20,15:15:31:18,13:13	1/0:.:PASS:226:309,226:308,225:31:18,13:13:35:20,15:15
+11	108202604	.	A	C	.	.	note=break3'siteOfexon52geneATM	GT:AD	1/0:50,50	1/0:50,50
+X	123159679	.	T	G	.	.	note=create5'siteinSTAG2intron	GT:AD	1/0:50,50	1/0:50,50
+X	123170003	.	T	A	.	.	note=STAG2intronbreak5'RS	GT:AD	1/0:50,50	1/0:50,50
+X	123176411	.	A	G	.	.	note=STAG2introncreate3'site	GT:AD	1/0:50,50	1/0:50,50
+X	123176412	.	AGTB	X	.	.	note=STAG2introncreate3'siteDownstream	GT:AD	1/0:50,50	1/0:50,50
+X	123176435	.	A	G	.	.	NS=2	GT:AD	1/0:50,50	1/0:50,50
+X	123176471	.	A	T	.	.	note=STAG2exoncreate5'site	GT:AD	1/0:50,50	1/0:50,50
+X	123515137	.	A	T	.	.	note=TENM1exoncreate3'siteTruncateExon	GT:AD	1/0:50,50	1/0:50,50
+X	123515160	.	A	T	.	.	note=TENN1ntroncreate3'site	GT:AD	1/0:50,50	1/0:50,50
+X	123515189	.	T	A	.	.	note=TENM1introncreate5'site	GT:AD	1/0:50,50	1/0:50,50
+X	123516284	.	A	G	.	.	note=TENM1intronbreakRS5	GT:AD	1/0:50,50	1/0:50,50
+X	123516530	.	T	A	.	.	note=TENM1exoncreate5'site	GT:AD	1/0:50,50	1/0:50,50
+X	123517500	.	A	T	.	.	note=TENM1exoncreate3'site	GT:AD	1/0:50,50	1/0:50,50

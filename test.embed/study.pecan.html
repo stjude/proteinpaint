@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body style="background-color:#f1f1f1">
+
+<script src="https://pecan.stjude.org/sjcharts/bin/sjcharts.js" charset="utf-8"></script>
+<script src="https://proteinpaint.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
+
+<div style="margin:30px"><a href=https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing>Tutorial for embedding ProteinPaint</a></div>
+
+<div id=aaa style="margin:30px;border:solid 1px black;padding:30px;display:inline-block;background-color:white"></div>
+
+<script>
+const snvindeldata=`gene	refseq	chromosome	start	aachange	class	sample	disease	origin	patient
+AADACL3	NM_001103169	chr1	12785949	V277L	MISSENSE	SJERG005	ERG_var	diagnosis	SJERG005
+ABCA4	NM_000350	chr1	94490588	T1519M	MISSENSE	SJERG023	ERG_var	diagnosis	SJERG023
+ABCA7	NM_019112	chr19	1046970	S598G	MISSENSE	SJBALL020595	ERG_var	diagnosis	SJBALL020595
+ABCC8	NM_000352	chr11	17417152	R1436_E35splice_region	SPLICE_REGION	SJERG007	ERG_var	diagnosis	SJERG007
+ABCC8	NM_000352	chr11	17428190	R1103Q	MISSENSE	SJERG020309	ERG_wt	diagnosis	SJERG020309
+ABCC9	NM_005691	chr12	21981956	T1202M	MISSENSE	SJERG023	ERG_var	diagnosis	SJERG023
+ABCF2	NM_005692	chr7	150913085	H457Y	MISSENSE	SJBALL021405	ERG_wt	diagnosis	SJBALL021405
+ABCF3	NM_018358	chr3	183911319	G658_E21splice_region	SPLICE_REGION	SJBALL021514	ERG_wt	diagnosis	SJBALL021514
+ACAN	NM_013227	chr15	89383327	A180>GA	PROTEININS	SJBALL021372	ERG_wt	diagnosis	SJBALL021372
+ACE2	NM_021804	chrX	15588471	D615Y	MISSENSE	SJERG016	ERG_var	diagnosis	SJERG016
+ACPL2	NM_152282	chr3	141011680	R359Q	MISSENSE	SJERG020305	ERG_var	diagnosis	SJERG020305
+ACSL5	NM_016234	chr10	114181393	T509fs	FRAMESHIFT	SJBALL021130	ERG_var	diagnosis	SJBALL021130
+ACTN2	NM_001103	chr1	236883483	S147L	MISSENSE	SJBALL021324	ERG_wt	diagnosis	SJBALL021324
+ADAM21	NM_003813	chr14	70925439	R408H	MISSENSE	SJERG020050	ERG_var	diagnosis	SJERG020050
+ADAMTSL1	NM_052866	chr9	18657708	R302S	MISSENSE	SJERG023	ERG_var	diagnosis	SJERG023
+AFF2	NM_002025	chrX	148072831	C1302Y	MISSENSE	SJERG020303	ERG_var	diagnosis	SJERG020303
+AGAP3	NM_031946	chr7	150815312	A241V	MISSENSE	SJERG029	ERG_var	diagnosis	SJERG029
+AGTR2	NM_000686	chrX	115303835	A101E	MISSENSE	SJBALL021336	ERG_var	diagnosis	SJBALL021336
+AHNAK	NM_001620	chr11	62294701	K2396N	MISSENSE	SJBALL020595	ERG_var	diagnosis	SJBALL020595
+AKR1C2	NM_001354	chr10	5038010	C206*	NONSENSE	SJERG028	ERG_var	diagnosis	SJERG028
+ALPK2	NM_052947	chr18	56203529	A1297V	MISSENSE	SJBALL021299	ERG_var	diagnosis	SJBALL021299
+ANKRD30B	NM_001145029	chr18	14757944	V250F	MISSENSE	SJERG020	ERG_wt	diagnosis	SJERG020
+ANO2	NM_020373	chr12	5744378	V586M	MISSENSE	SJERG020	ERG_wt	diagnosis	SJERG020
+APBA2	NM_005503	chr15	29393948	K495N	MISSENSE	SJERG016	ERG_var	diagnosis	SJERG016
+APC	NM_000038	chr5	112174605	R1105Q	MISSENSE	SJERG031	ERG_var	diagnosis	SJERG031
+APOB48R	NM_018690	chr16	28506471	V37I	MISSENSE	SJERG020300	ERG_wt	diagnosis	SJERG020300
+AQP4	NM_001650	chr18	24436281	T289M	MISSENSE	SJERG028	ERG_var	diagnosis	SJERG028
+AQPEP	NM_173800	chr5	115341610	A680V	MISSENSE	SJERG020303	ERG_var	diagnosis	SJERG020303
+AR	NM_000044	chrX	66765674	T229I	MISSENSE	SJERG026	ERG_var	diagnosis	SJERG026
+ARAP3	NM_022481	chr5	141039502	R1040_E22splice_region	SPLICE_REGION	SJBALL021514	ERG_wt	diagnosis	SJBALL021514
+ARFGAP3	NM_014570	chr22	43222932	L208_E7splice_region	SPLICE_REGION	SJERG020305	ERG_var	diagnosis	SJERG020305
+ARHGAP20	NM_020809	chr11	110485284	Y210_E7splice	SPLICE	SJERG020050	ERG_var	diagnosis	SJERG020050
+ARHGEF3	NM_019555	chr3	56779398	Q235H	MISSENSE	SJBALL227	ERG_var	diagnosis	SJBALL227
+ARID1B	NM_020732	chr6	157100414	PinsS451	PROTEININS	SJERG020308	ERG_var	diagnosis	SJERG020308
+ASXL1	NM_015338	chr20	31021565	Q522*	NONSENSE	SJERG018	ERG_var	diagnosis	SJERG018
+ATF3	NM_001674	chr1	212788542	S60F	MISSENSE	SJBALL021324	ERG_wt	diagnosis	SJBALL021324
+ATG4A	NM_178270	chrX	107374526	C77Y	MISSENSE	SJERG031	ERG_var	diagnosis	SJERG031
+ATM	NM_000051	chr11	108150285	T1118fs	FRAMESHIFT	SJBALL021081	ERG_wt	diagnosis	SJBALL021081
+ATOH1	NM_005172	chr4	94750775	S233T	MISSENSE	SJERG030	ERG_var	diagnosis	SJERG030
+ATP10A	NM_024490	chr15	25924588	A1467V	MISSENSE	SJERG030	ERG_var	diagnosis	SJERG030
+ATP4A	NM_000704	chr19	36046428	E691K	MISSENSE	SJBALL021333	ERG_wt	diagnosis	SJBALL021333
+ATP6V0D2	NM_152565	chr8	87151792	E137*	NONSENSE	SJERG002	ERG_var	diagnosis	SJERG002
+ATRX	NM_000489	chrX	76907650	R1504L	MISSENSE	SJBALL227	ERG_var	diagnosis	SJBALL227
+AVPR1B	NM_000707	chr1	206231108	D414G	MISSENSE	SJBALL021324	ERG_wt	diagnosis	SJBALL021324
+AXIN2	NM_004655	chr17	63533584	V524I	MISSENSE	SJERG020300	ERG_wt	diagnosis	SJERG020300
+AZI1	NM_014984	chr17	79174136	K300R	MISSENSE	SJERG006	ERG_wt	diagnosis	SJERG006
+BCL2L2	NM_004050	chr14	23778079	R163W	MISSENSE	SJERG030	ERG_var	diagnosis	SJERG030
+BMP7	NM_001719	chr20	55777635	S219L	MISSENSE	SJERG002	ERG_var	diagnosis	SJERG002
+BMPR1A	NM_004329	chr10	88681452	G448R	MISSENSE	SJBALL227	ERG_var	diagnosis	SJBALL227
+BNC2	NM_017637	chr9	16437399	E265K	MISSENSE	SJERG019	ERG_var	diagnosis	SJERG019
+BRPF1	NM_001003694	chr3	9787339	G1051C	MISSENSE	SJERG002	ERG_var	diagnosis	SJERG002
+BRWD1	NM_018963	chr21	40622722	K783N	MISSENSE	SJBALL020469	ERG_wt	diagnosis	SJBALL020469
+BRWD1	NM_018963	chr21	40570903	F1813fs	FRAMESHIFT	SJBALL227	ERG_var	diagnosis	SJBALL227
+C11orf41	NM_012194	chr11	33566357	V643I	MISSENSE	SJERG013	ERG_var	diagnosis	SJERG013
+C11orf53	NM_198498	chr11	111154994	D67fs	FRAMESHIFT	SJERG020308	ERG_var	diagnosis	SJERG020308
+C11orf63	NM_024806	chr11	122817220	S550_S551>S	PROTEINDEL	SJERG006	ERG_wt	diagnosis	SJERG006
+C12orf64	NM_173591	chr12	80672819	R925Q	MISSENSE	SJERG020306	ERG_wt	diagnosis	SJERG020306
+C14orf145	NM_152446	chr14	81251399	T684I	MISSENSE	SJERG017	ERG_wt	diagnosis	SJERG017
+C17orf68	NM_025099	chr17	8139585	K290E	MISSENSE	SJERG020052	ERG_wt	diagnosis	SJERG020052
+C1orf94	NM_001134734	chr1	34643704	Q105R	MISSENSE	SJERG018	ERG_var	diagnosis	SJERG018
+C20orf11	NM_017896	chr20	61576236	S220N	MISSENSE	SJERG020300	ERG_wt	diagnosis	SJERG020300
+C2orf80	NM_001099334	chr2	209049701	R33W	MISSENSE	SJBALL087	ERG_wt	diagnosis	SJBALL087
+C3orf15	NM_033364	chr3	119459417	R519*	NONSENSE	SJERG018	ERG_var	diagnosis	SJERG018
+C3orf55	NM_001099777	chr3	157296093	L110F	MISSENSE	SJBALL215	ERG_var	diagnosis	SJBALL215
+C6orf132	NM_001164446	chr6	42074243	K469N	MISSENSE	SJERG013	ERG_var	diagnosis	SJERG013
+C6orf154	NM_001012974	chr6	43476492	S144_E2splice_region	SPLICE_REGION	SJERG020309	ERG_wt	diagnosis	SJERG020309
+C6orf168	NM_032511	chr6	99771413	R244C	MISSENSE	SJERG031	ERG_var	diagnosis	SJERG031
+C9orf25	NM_147202	chr9	34405950	A25T	MISSENSE	SJERG031	ERG_var	diagnosis	SJERG031
+C9orf9	NM_018956	chr9	135762900	L97M	MISSENSE	SJBALL020383	ERG_wt	diagnosis	SJBALL020383
+CADPS2	NM_017954	chr7	122131423	P532T	MISSENSE	SJBALL021512	ERG_var	diagnosis	SJBALL021512
+CAMSAP1L1	NM_203459	chr1	200821708	A1169P	MISSENSE	SJERG020300	ERG_wt	diagnosis	SJERG020300
+CASP4	NM_001225	chr11	104820458	K198M	MISSENSE	SJERG020	ERG_wt	diagnosis	SJERG020
+CATSPERG	NM_021185	chr19	38858200	S941T	MISSENSE	SJERG020051	ERG_var	diagnosis	SJERG020051
+CAV3	NM_033337	chr3	8775597	Q12L	MISSENSE	SJERG030	ERG_var	diagnosis	SJERG030
+CC2D1B	NM_032449	chr1	52825812	A233T	MISSENSE	SJERG020300	ERG_wt	diagnosis	SJERG020300
+CCBE1	NM_133459	chr18	57103282	R360L	MISSENSE	SJERG029	ERG_var	diagnosis	SJERG029
+CCDC110	NM_152775	chr4	186379867	T625M	MISSENSE	SJBALL199	ERG_wt	diagnosis	SJBALL199
+CCDC148	NM_138803	chr2	159201752	E76K	MISSENSE	SJERG020054	ERG_wt	diagnosis	SJERG020054
+CCDC158	NM_001042784	chr4	77300541	Q311K	MISSENSE	SJBALL215	ERG_var	diagnosis	SJBALL215
+CCDC42	NM_144681	chr17	8647039	R67C	MISSENSE	SJBALL020383	ERG_wt	diagnosis	SJBALL020383
+CCDC86	NM_024098	chr11	60609650	S18F	MISSENSE	SJERG008	ERG_wt	diagnosis	SJERG008
+CCNE2	NM_057749	chr8	95895044	H303fs	FRAMESHIFT	SJERG020304	ERG_var	diagnosis	SJERG020304
+CD19	NM_001770	chr16	28943909	W111R	MISSENSE	SJBALL215	ERG_var	diagnosis	SJBALL215
+CD3E	NM_000733	chr11	118182890	P35_E5splice_region	SPLICE_REGION	SJERG017	ERG_wt	diagnosis	SJERG017
+CD68	NM_001251	chr17	7484690	F312_E6splice_region	SPLICE_REGION	SJBALL021333	ERG_wt	diagnosis	SJBALL021333
+CD93	NM_012072	chr20	23065128	V568M	MISSENSE	SJERG022	ERG_var	diagnosis	SJERG022
+CDC6	NM_001254	chr17	38447501	V124I	MISSENSE	SJBALL021324	ERG_wt	diagnosis	SJBALL021324
+CDH8	NM_001796	chr16	61935256	D125V	MISSENSE	SJBALL021511	ERG_wt	diagnosis	SJBALL021511
+CDH9	NM_016279	chr5	26988283	R53H	MISSENSE	SJBALL021372	ERG_wt	diagnosis	SJBALL021372
+CDK5RAP2	NM_018249	chr9	123230157	A696V	MISSENSE	SJERG020306	ERG_wt	diagnosis	SJERG020306
+CDKN2A	NM_000077	chr9	21971000	E120*	NONSENSE	SJERG020052	ERG_wt	diagnosis	SJERG020052
+CDT1	NM_030928	chr16	88873756	L448_L451fs	FRAMESHIFT	SJBALL021427	ERG_var	diagnosis	SJBALL021427
+CECR2	NM_031413	chr22	18022449	V893fs	FRAMESHIFT	SJERG021	ERG_var	diagnosis	SJERG021
+CELSR1	NM_014246	chr22	46774603	T2423M	MISSENSE	SJBALL021372	ERG_wt	diagnosis	SJBALL021372
+CELSR2	NM_001408	chr1	109793756	R352H	MISSENSE	SJBALL021372	ERG_wt	diagnosis	SJBALL021372
+CEP290	NM_025114	chr12	88510907	D576G	MISSENSE	SJERG028	ERG_var	diagnosis	SJERG028
+CFP	NM_002621	chrX	47486264	T283M	MISSENSE	SJERG008	ERG_wt	diagnosis	SJERG008
+CHAT	NM_020984	chr10	50870832	V542_E14splice	SPLICE	SJERG020306	ERG_wt	diagnosis	SJERG020306
+CHD2	NM_001271	chr15	93567599	H1719_E39splice_region	SPLICE_REGION	SJERG017	ERG_wt	diagnosis	SJERG017
+CHD8	NM_020920	chr14	21878018	K507fs	FRAMESHIFT	SJERG004	ERG_var	diagnosis	SJERG004
+CHL1	NM_006614	chr3	367698	D50N	MISSENSE	SJERG020304	ERG_var	diagnosis	SJERG020304
+CHRNA4	NM_000744	chr20	61981676	V363M	MISSENSE	SJERG020051	ERG_var	diagnosis	SJERG020051
+CLEC4M	NM_014257	chr19	7833734	Y354H	MISSENSE	SJBALL021324	ERG_wt	diagnosis	SJBALL021324
+CLTCL1	NM_007098	chr22	19178933	E1402D	MISSENSE	SJERG006	ERG_wt	diagnosis	SJERG006
+CNGB1	NM_001297	chr16	57954425	T556K	MISSENSE	SJBALL227	ERG_var	diagnosis	SJBALL227
+CNGB1	NM_001297	chr16	57950023	K739_E22splice_region	SPLICE_REGION	SJERG022	ERG_var	diagnosis	SJERG022
+CNPY3	NM_006586	chr6	42905452	G125_E4splice_region	SPLICE_REGION	SJERG020306	ERG_wt	diagnosis	SJERG020306
+COL11A1	NM_001854	chr1	103478027	R524_E14splice	SPLICE	SJERG020053	ERG_wt	diagnosis	SJERG020053
+CPSF1	NM_013291	chr8	145620541	T1042fs	FRAMESHIFT	SJERG020302	ERG_var	diagnosis	SJERG020302
+CRHR1	NM_004382	chr17	43907899	D224E	MISSENSE	SJERG020304	ERG_var	diagnosis	SJERG020304
+CTCF	NM_006565	chr16	67650719	R342C	MISSENSE	SJBALL020595	ERG_var	diagnosis	SJBALL020595
+CTCF	NM_006565	chr16	67650737	E348K	MISSENSE	SJBALL020595	ERG_var	diagnosis	SJBALL020595
+CTCF	NM_006565	chr16	67654646	P378L	MISSENSE	SJERG001	ERG_var	diagnosis	SJERG001
+CTCF	NM_006565	chr16	67654642	R377C	MISSENSE	SJERG020051	ERG_var	diagnosis	SJERG020051
+CXorf23	NM_198279	chrX	19984619	P64T	MISSENSE	SJERG020	ERG_wt	diagnosis	SJERG020
+CYP51A1	NM_000786	chr7	91747856	M386_M387>M	PROTEINDEL	SJBALL021405	ERG_wt	diagnosis	SJBALL021405
+CYS1	NM_001037160	chr2	10199094	E124_E3splice_region	SPLICE_REGION	SJERG020304	ERG_var	diagnosis	SJERG020304
+DACH2	NM_053281	chrX	86069827	R558S	MISSENSE	SJERG020303	ERG_var	diagnosis	SJERG020303
+DACT2	NM_214462	chr6	168708497	R647H	MISSENSE	SJERG018	ERG_var	diagnosis	SJERG018
+DACT2	NM_214462	chr6	168708155	R761H	MISSENSE	SJERG020303	ERG_var	diagnosis	SJERG020303
+DAPK1	NM_004938	chr9	90220066	T87M	MISSENSE	SJERG008	ERG_wt	diagnosis	SJERG008
+DBN1	NM_004395	chr5	176893784	Q254*	NONSENSE	SJBALL227	ERG_var	diagnosis	SJBALL227
+DDX3X	NM_001356	chrX	41205779	I507L	MISSENSE	SJERG020306	ERG_wt	diagnosis	SJERG020306
+DGAT2	NM_032564	chr11	75508290	A241fs	FRAMESHIFT	SJERG007	ERG_var	diagnosis	SJERG007
+DGKZ	NM_201533	chr11	46388903	P80L	MISSENSE	SJBALL021512	ERG_var	diagnosis	SJBALL021512
+DNAH5	NM_001369	chr5	13891084	D860N	MISSENSE	SJERG020052	ERG_wt	diagnosis	SJERG020052
+DNAH9	NM_001372	chr17	11872618	A4412V	MISSENSE	SJBALL021372	ERG_wt	diagnosis	SJBALL021372
+DNAH9	NM_001372	chr17	11550513	Q699E	MISSENSE	SJERG023	ERG_var	diagnosis	SJERG023
+DNAJC21	NM_001012339	chr5	34938953	K248_E6splice_region	SPLICE_REGION	SJERG020299	ERG_var	diagnosis	SJERG020299
+DOT1L	NM_032482	chr19	2216652	L766fs	FRAMESHIFT	SJBALL021324	ERG_wt	diagnosis	SJBALL021324
+DPH1	NM_001383	chr17	1937109	A89G	MISSENSE	SJERG020304	ERG_var	diagnosis	SJERG020304
+DPT	NM_001937	chr1	168665810	D195N	MISSENSE	SJERG020050	ERG_var	diagnosis	SJERG020050
+DPYD	NM_000110	chr1	97915670	T617M	MISSENSE	SJBALL021405	ERG_wt	diagnosis	SJBALL021405
+DSP	NM_004415	chr6	7571821	V635_E14splice_region	SPLICE_REGION	SJBALL021333	ERG_wt	diagnosis	SJBALL021333
+DYSF	NM_001130977	chr2	71755493	V416del	PROTEINDEL	SJERG020051	ERG_var	diagnosis	SJERG020051
+EBI3	NM_005755	chr19	4234822	V180L	MISSENSE	SJBALL021336	ERG_var	diagnosis	SJBALL021336
+EEF1A2	NM_001958	chr20	62126354	T142M	MISSENSE	SJERG009	ERG_wt	diagnosis	SJERG009
+EGFR	NM_005228	chr7	55240749	G665S	MISSENSE	SJERG020309	ERG_wt	diagnosis	SJERG020309
+EHD4	NM_139265	chr15	42246128	E83*	NONSENSE	SJERG014	ERG_wt	diagnosis	SJERG014
+EHMT2	NM_006709	chr6	31850677	G1035D	MISSENSE	SJERG005	ERG_var	diagnosis	SJERG005
+EHMT2	NM_006709	chr6	31864705	E35fs	FRAMESHIFT	SJERG022	ERG_var	diagnosis	SJERG022
+ENOX2	NM_182314	chrX	129803970	H250Q	MISSENSE	SJBALL020340	ERG_wt	diagnosis	SJBALL020340
+ENTPD3	NM_001248	chr3	40456300	T189K	MISSENSE	SJERG025	ERG_var	diagnosis	SJERG025
+EPS8	NM_004447	chr12	15800127	G501E	MISSENSE	SJBALL020828	ERG_wt	diagnosis	SJBALL020828
+ERC2	NM_015576	chr3	56330132	R330Q	MISSENSE	SJERG020302	ERG_var	diagnosis	SJERG020302
+ERG	NM_182918	chr21	39763587	R287_Q289fs	FRAMESHIFT	SJBALL230	ERG_var	diagnosis	SJBALL230
+ERG	NM_182918	chr21	39795343	I126fs	FRAMESHIFT	SJERG001	ERG_var	diagnosis	SJERG001
+ERG	NM_001136154	chr21	39755682	N368K	MISSENSE	SJERG026	ERG_var	diagnosis	SJERG026
+ERO1LB	NM_019891	chr1	236389666	P319S	MISSENSE	SJBALL020595	ERG_var	diagnosis	SJBALL020595
+ERP44	NM_015051	chr9	102780581	P201L	MISSENSE	SJBALL020595	ERG_var	diagnosis	SJBALL020595
+ETFDH	NM_004453	chr4	159624737	T427_I428del	PROTEINDEL	SJERG020309	ERG_wt	diagnosis	SJERG020309
+ETV6	NM_001987	chr12	12022848	I318fs	FRAMESHIFT	SJBALL021333	ERG_wt	diagnosis	SJBALL021333
+ETV6	NM_001987	chr12	12006449	S139fs	FRAMESHIFT	SJERG026	ERG_var	diagnosis	SJERG026
+EVC	NM_153717	chr4	5800360	Q715H	MISSENSE	SJERG020309	ERG_wt	diagnosis	SJERG020309
+EXD3	NM_017820	chr9	140247093	R339H	MISSENSE	SJERG020306	ERG_wt	diagnosis	SJERG020306
+EXOC3L	NM_178516	chr16	67222964	R56C	MISSENSE	SJERG020054	ERG_wt	diagnosis	SJERG020054
+EZH2	NM_001203247	chr7	148544328	S21fs	FRAMESHIFT	SJBALL021427	ERG_var	diagnosis	SJBALL021427
+F8	NM_000132	chrX	154132226	R1985*	NONSENSE	SJERG020052	ERG_wt	diagnosis	SJERG020052
+FAM115C	NM_173678	chr7	143421677	A798P	MISSENSE	SJERG023	ERG_var	diagnosis	SJERG023
+FAM123C	NM_152698	chr2	131520687	A348T	MISSENSE	SJERG003	ERG_var	diagnosis	SJERG003
+FAM134C	NM_178126	chr17	40737196	R225Q	MISSENSE	SJERG026	ERG_var	diagnosis	SJERG026
+FAM190A	NM_001145065	chr4	92519978	V825F	MISSENSE	SJERG005	ERG_var	diagnosis	SJERG005
+FAM5C	NM_199051	chr1	190067540	G637S	MISSENSE	SJERG011	ERG_wt	diagnosis	SJERG011
+FAM65A	NM_024519	chr16	67577157	S823N	MISSENSE	SJBALL021336	ERG_var	diagnosis	SJBALL021336
+FAM71B	NM_130899	chr5	156592568	V202_E1splice_region	SPLICE_REGION	SJBALL021511	ERG_wt	diagnosis	SJBALL021511
+FAM76B	FAM76B	chr11	95516430	K121R	MISSENSE	SJBALL021324	ERG_wt	diagnosis	SJBALL021324
+FAT3	NM_001008781	chr11	92532103	A1975D	MISSENSE	SJBALL021511	ERG_wt	diagnosis	SJBALL021511
+FBLIM1	NM_017556	chr1	16091672	T65N	MISSENSE	SJBALL021492	ERG_var	diagnosis	SJBALL021492
+FBN3	NM_032447	chr19	8136969	R2684Q	MISSENSE	SJBALL215	ERG_var	diagnosis	SJBALL215
+FCRLA	NM_032738	chr1	161680559	F47S	MISSENSE	SJERG020	ERG_wt	diagnosis	SJERG020
+FGF13	NM_004114	chrX	137790971	T100_E2splice_region	SPLICE_REGION	SJERG014	ERG_wt	diagnosis	SJERG014
+FIBIN	NM_203371	chr11	27016371	G100S	MISSENSE	SJBALL230	ERG_var	diagnosis	SJBALL230
+FILIP1	NM_015687	chr6	76124649	G14R	MISSENSE	SJERG002	ERG_var	diagnosis	SJERG002
+FLII	NM_002018	chr17	18149771	V1019fs	FRAMESHIFT	SJERG020306	ERG_wt	diagnosis	SJERG020306
+FLT3	NM_004119	chr13	28608329	L576P	MISSENSE	SJERG020050	ERG_var	diagnosis	SJERG020050
+FLT3	NM_004119	chr13	28592642	D835Y	MISSENSE	SJERG020308	ERG_var	diagnosis	SJERG020308
+FLT3	NM_004119	chr13	28602381	K663Q	MISSENSE	SJERG020308	ERG_var	diagnosis	SJERG020308
+FMN2	NM_020066	chr1	240371620	G1170R	MISSENSE	SJERG025	ERG_var	diagnosis	SJERG025
+FMOD	NM_002023	chr1	203317049	I117T	MISSENSE	SJERG016	ERG_var	diagnosis	SJERG016
+FMR1	NM_002024	chrX	147018131	E330V	MISSENSE	SJERG021	ERG_var	diagnosis	SJERG021
+FNDC1	NM_032532	chr6	159653454	A637V	MISSENSE	SJBALL021492	ERG_var	diagnosis	SJBALL021492
+FNDC1	NM_032532	chr6	159654491	A983T	MISSENSE	SJERG031	ERG_var	diagnosis	SJERG031
+FREM2	NM_207361	chr13	39430310	V2325L	MISSENSE	SJERG004	ERG_var	diagnosis	SJERG004
+FSIP2	NM_173651	chr2	186661455	E3287Q	MISSENSE	SJERG020307	ERG_var	diagnosis	SJERG020307
+FSTL5	NM_020116	chr4	162380456	P542S	MISSENSE	SJERG020305	ERG_var	diagnosis	SJERG020305
+FUT6	NM_000150	chr19	5832214	R122H	MISSENSE	SJERG020308	ERG_var	diagnosis	SJERG020308
+FXR2	NM_004860	chr17	7517786	N22S	MISSENSE	SJERG024	ERG_var	diagnosis	SJERG024
+GABRG3	NM_033223	chr15	27573948	L165_E5splice_region	SPLICE_REGION	SJERG019	ERG_var	diagnosis	SJERG019
+GAS2L3	NM_174942	chr12	101017684	M367I	MISSENSE	SJERG010	ERG_wt	diagnosis	SJERG010
+GAS6	NM_000820	chr13	114523987	V629fs	FRAMESHIFT	SJERG020302	ERG_var	diagnosis	SJERG020302
+GATA3	NM_001002295	chr10	8106072	R299W	MISSENSE	SJERG028	ERG_var	diagnosis	SJERG028
+GATSL3	NM_001037666	chr22	30682031	R267H	MISSENSE	SJERG008	ERG_wt	diagnosis	SJERG008
+GFM2	NM_032380	chr5	74041988	F204S	MISSENSE	SJBALL241	ERG_var	diagnosis	SJBALL241`
+
+
+
+
+const svdata=`sample	genes	isoform	json
+SJBALL218	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":526.06,"a":{"name":"DUX4","chr":"chr4","position":191000230,"strand":"+","ratio":0.08,"feature":"coding","chimericreads":12,"contiglen":134,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":107048670,"strand":"+","ratio":1,"feature":"5utr","chimericreads":791,"contiglen":431,"repeatscore":0.5}}]
+SJERG020299	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":2097.53,"a":{"name":"DUX4","chr":"chr4","position":190999976,"strand":"+","ratio":0.17,"feature":"coding","chimericreads":33,"contiglen":270,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106328197,"strand":"-","ratio":0.07,"feature":"5utr","chimericreads":550,"contiglen":359,"repeatscore":0}}]
+SJBALL021516	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":2085.91,"a":{"name":"DUX4","chr":"chr4","position":190999908,"strand":"+","ratio":0.21,"feature":"coding","chimericreads":56,"contiglen":161,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106329418,"strand":"+","ratio":0.51,"feature":"5utr","chimericreads":1067,"contiglen":437,"repeatscore":0}}]
+SJERG014	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":679.56,"a":{"name":"DUX4","chr":"chr4","position":190999903,"strand":"+","ratio":0.2,"feature":"coding","chimericreads":12,"contiglen":245,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106342735,"strand":"+","ratio":0.77,"feature":"5utr","chimericreads":545,"contiglen":348,"repeatscore":0}}]
+SJBALL020609	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":556.24,"a":{"name":"DUX4","chr":"chr4","position":190999656,"strand":"+","ratio":0.14,"feature":"coding","chimericreads":7,"contiglen":107,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106384134,"strand":"-","ratio":0.37,"feature":"5utr","chimericreads":547,"contiglen":389,"repeatscore":0}}]
+SJERG020304	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":1222.74,"a":{"name":"DUX4","chr":"chr4","position":191000034,"strand":"+","ratio":0.16,"feature":"coding","chimericreads":18,"contiglen":190,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106733161,"strand":"+","ratio":0.01,"feature":"5utr","chimericreads":510,"contiglen":460,"repeatscore":0}}]
+SJERG002	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":243.5,"a":{"name":"DUX4","chr":"chr4","position":191000146,"strand":"+","ratio":0.13,"feature":"coding","chimericreads":11,"contiglen":148,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106791006,"strand":"+","ratio":0,"feature":"5utr","chimericreads":0,"contiglen":133,"repeatscore":0.5}}]
+SJBALL020595	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":2067.54,"a":{"name":"DUX4","chr":"chr4","position":191000222,"strand":"+","ratio":0.25,"feature":"coding","chimericreads":43,"contiglen":222,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106330467,"strand":"-","ratio":0.47,"feature":"5utr","chimericreads":555,"contiglen":436,"repeatscore":0}}]
+SJBALL021333	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":2159.54,"a":{"name":"DUX4","chr":"chr4","position":191000170,"strand":"+","ratio":0.41,"feature":"coding","chimericreads":90,"contiglen":347,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106330464,"strand":"-","ratio":0.29,"feature":"5utr","chimericreads":364,"contiglen":338,"repeatscore":0}}]
+SJBALL021405	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":3555.71,"a":{"name":"DUX4","chr":"chr4","position":191000122,"strand":"+","ratio":0.36,"feature":"coding","chimericreads":92,"contiglen":274,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106330468,"strand":"-","ratio":0.41,"feature":"5utr","chimericreads":992,"contiglen":426,"repeatscore":0}}]
+SJBALL021512	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":1116.33,"a":{"name":"DUX4","chr":"chr4","position":191000168,"strand":"+","ratio":0.38,"feature":"coding","chimericreads":19,"contiglen":174,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106733142,"strand":"+","ratio":0.7,"feature":"5utr","chimericreads":317,"contiglen":369,"repeatscore":0}}]
+SJBALL021492	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":283.97,"a":{"name":"DUX4","chr":"chr4","position":190999911,"strand":"+","ratio":0.36,"feature":"coding","chimericreads":5,"contiglen":214,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":107176507,"strand":"+","ratio":0.43,"feature":"5utr","chimericreads":121,"contiglen":367,"repeatscore":0}}]
+SJBALL227	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":1016.69,"a":{"name":"DUX4","chr":"chr4","position":191000212,"strand":"+","ratio":0.16,"feature":"coding","chimericreads":26,"contiglen":245,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":107131048,"strand":"+","ratio":0.5,"feature":"5utr","chimericreads":736,"contiglen":358,"repeatscore":0.5}}]
+SJBALL230	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":466.05,"a":{"name":"DUX4","chr":"chr4","position":191000218,"strand":"+","ratio":0.12,"feature":"coding","chimericreads":6,"contiglen":118,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":107048689,"strand":"+","ratio":0.98,"feature":"5utr","chimericreads":441,"contiglen":420,"repeatscore":0}}]
+SJBALL020828	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":1845.13,"a":{"name":"DUX4","chr":"chr4","position":191000222,"strand":"+","ratio":0.32,"feature":"coding","chimericreads":33,"contiglen":219,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106353612,"strand":"+","ratio":0.72,"feature":"5utr","chimericreads":409,"contiglen":141,"repeatscore":0}}]
+SJERG004	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":516,"a":{"name":"DUX4","chr":"chr4","position":191000228,"strand":"+","ratio":0.21,"feature":"coding","chimericreads":16,"contiglen":333,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106361497,"strand":"+","ratio":0,"feature":"5utr","chimericreads":0,"contiglen":111,"repeatscore":0}}]
+SJERG005	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":1038.4,"a":{"name":"DUX4","chr":"chr4","position":191000220,"strand":"+","ratio":0.43,"feature":"coding","chimericreads":21,"contiglen":207,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":107122101,"strand":"+","ratio":0.28,"feature":"5utr","chimericreads":256,"contiglen":407,"repeatscore":0}}]
+SJERG009	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":746.13,"a":{"name":"DUX4","chr":"chr4","position":191000074,"strand":"+","ratio":0.45,"feature":"coding","chimericreads":21,"contiglen":296,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106370386,"strand":"-","ratio":0.16,"feature":"5utr","chimericreads":61,"contiglen":342,"repeatscore":0}}]
+SJERG020051	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":1983.72,"a":{"name":"DUX4","chr":"chr4","position":191000122,"strand":"+","ratio":0.41,"feature":"coding","chimericreads":53,"contiglen":273,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106330471,"strand":"-","ratio":0.69,"feature":"5utr","chimericreads":451,"contiglen":393,"repeatscore":0}}]
+SJERG020309	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":1930.4,"a":{"name":"DUX4","chr":"chr4","position":191000082,"strand":"+","ratio":0.24,"feature":"coding","chimericreads":30,"contiglen":242,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106328213,"strand":"-","ratio":0.06,"feature":"5utr","chimericreads":283,"contiglen":347,"repeatscore":0}}]
+SJERG028	DUX4,IGH	NM_001293798	[{"type":"CTX","type2":"fusion","rating":"HQ","score":602.37,"a":{"name":"DUX4","chr":"chr4","position":191000179,"strand":"+","ratio":0.47,"feature":"coding","chimericreads":12,"contiglen":159,"repeatscore":0.97,"isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106328880,"strand":"-","ratio":0.07,"feature":"5utr","chimericreads":195,"contiglen":268,"repeatscore":0}}]
+SJERG026	CDH4,IGH	NM_001252338	[{"type":"CTX","type2":"other","rating":"HQ","score":8069,"a":{"name":"CDH4","chr":"chr20","position":60296857,"strand":"+","ratio":0.77,"feature":"intron","chimericreads":444,"contiglen":373,"repeatscore":0,"isoform":"NM_001252338"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","position":106363843,"strand":"-","ratio":0.38,"feature":"5utr","chimericreads":211,"contiglen":399,"repeatscore":0},"frame":""}]
+SJERG026	DUX4,CDH4	NM_001252338	[{"type":"CTX","type2":"other","rating":"HQ","score":821.07,"a":{"name":"DUX4","chr":"chr4","position":190996879,"strand":"+","ratio":0.31,"feature":"intron","chimericreads":12,"contiglen":160,"repeatscore":0.97},"b":{"name":"CDH4","chr":"chr20","position":60296120,"strand":"+","ratio":1,"feature":"intron","chimericreads":265,"contiglen":341,"repeatscore":0,"isoform":"NM_001252338"},"frame":""}]
+SJERG020308	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":302,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG020307	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":375,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG031	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":393,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG030	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":313,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL021299	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":369,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL021336	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":263,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG020052	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":330,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL021130	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":391,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG020303	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":372,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG020305	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":312,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG029	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":420,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL021427	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":416,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG020302	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":411,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG016	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":415,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL215	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":397,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG024	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":400,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL021324	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":349,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL021372	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":416,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL021511	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":413,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL021514	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":408,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL020340	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":369,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL020469	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":365,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJBALL020383	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":360,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG020300	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":400,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG020306	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":399,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG020	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":383,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG010	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":394,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG006	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":386,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG003	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":312,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG008	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":354,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG011	DUX4,IGH	NM_001293798	[{"a":{"name":"DUX4","codon":343,"strand":"+","isoform":"NM_001293798"},"b":{"name":"IGH","isoform":"IGH","chr":"chr14","strand":"-"}}]
+SJERG028	ERG	NM_182918	{"typecode":9,"position":39869748,"chr":"chr21","isoform":"NM_182918","gene":"ERG"}
+SJERG028	ERG	NM_182918	{"typecode":9,"position":39811439,"chr":"chr21","isoform":"NM_182918","gene":"ERG"}
+SJERG031	ERG	NM_182918	{"typecode":9,"position":39847327,"chr":"chr21","isoform":"NM_182918","gene":"ERG"}
+SJERG020051	ERG	NM_182918	{"typecode":9,"position":39867406,"chr":"chr21","isoform":"NM_182918","gene":"ERG"}
+SJERG005	ERG	NM_182918	{"typecode":9,"position":39811438,"chr":"chr21","isoform":"NM_182918","gene":"ERG"}
+SJBALL230	ERG	NM_182918	{"typecode":9,"position":39870287,"chr":"chr21","isoform":"NM_182918","gene":"ERG"}
+SJERG020308	ERG	NM_182918	{"typecode":7,"rnaposition":125,"rnadellength":18,"isoform":"NM_182918","gene":"ERG"}
+SJERG020307	ERG	NM_182918	{"typecode":7,"rnaposition":125,"rnadellength":870,"isoform":"NM_182918","gene":"ERG"}
+SJERG030	ERG	NM_182918	{"typecode":7,"rnaposition":143,"rnadellength":852,"isoform":"NM_182918","gene":"ERG"}
+SJBALL021299	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJBALL021336	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJBALL021492	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJBALL021512	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJERG020052	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJBALL021130	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJERG020299	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJERG020304	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJERG020305	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJERG020051	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJERG029	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJERG002	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+SJBALL021427	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":682,"isoform":"NM_182918","gene":"ERG"}
+SJERG020302	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":682,"isoform":"NM_182918","gene":"ERG"}
+SJERG016	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":682,"isoform":"NM_182918","gene":"ERG"}
+SJBALL215	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":682,"isoform":"NM_182918","gene":"ERG"}
+SJBALL227	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":682,"isoform":"NM_182918","gene":"ERG"}
+SJERG024	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":682,"isoform":"NM_182918","gene":"ERG"}
+SJERG026	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":682,"isoform":"NM_182918","gene":"ERG"}
+SJERG004	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":682,"isoform":"NM_182918","gene":"ERG"}
+SJBALL020595	ERG	NM_182918	{"typecode":7,"rnaposition":125,"rnadellength":18,"isoform":"NM_182918","gene":"ERG"}
+SJBALL021516	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"isoform":"NM_182918","gene":"ERG"}
+`
+
+
+
+
+runproteinpaint({
+	host:'https://proteinpaint.stjude.org',
+	holder:document.getElementById('aaa'),
+	genome:'hg19',
+	//gene:'alk',
+	dataset:'pediatric',
+	hlaachange:[{name:'G574R',codon:574,class:'M'},{name:'ABC',codon:560,class:'N'}],
+	noheader:true,
+	hidedatasetexpression:true,
+	hidegenecontrol:true,
+	hidegenelegend:true,
+	studyview:{
+		snvindel:snvindeldata,
+		svjson:svdata,
+		name:'ERG study',
+		genome:'hg19',
+		show_genetable:1
+	}
+})
+</script>
+
+</body>
+</html>

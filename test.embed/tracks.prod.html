@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="https://proteinpaint.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
+<!--
+<script src=https://pecan.stjude.org/pp/no-babel-polyfill/proteinpaint.js></script>
+<script src="https://ppc.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
+-->
+
+<h3><a href=https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing target=_blank>Refer to this document on how to embed ProteinPaint into your website</a></h3>
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	host:'https://proteinpaint.stjude.org',
+	//jwt:'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOlwvXC9jc2l0aC5zdGp1ZGUub3JnIiwiYXVkIjoiaHR0cDpcL1wvcHJvdGVpbnBhaW50LnN0anVkZS5vcmciLCJpYXQiOjE1MDU3NTg4MjgsImV4cCI6MTUwNTg0NTIyOCwidXNlcm5hbWUiOiJhcGF0ZWwxIiwiY2xpbmljYWxfcGVybWlzc2lvbiI6dHJ1ZX0.Ypaq6RFokeUZDHvnntblt3_zAaa9iqC9QKIvMisfez4',
+	//host:'https://ppc.stjude.org/',
+	holder:document.getElementById('aaa'),
+
+	block:true,
+	genome:'hg19',
+	position:'chr12:25352791-25408521',
+	tracks:[
+		{name:'phyloP100way',type:'bigwig',height:80,url:'http://hgdownload.soe.ucsc.edu/goldenPath/hg19/phyloP100way/hg19.100way.phyloP100way.bw'},
+		{name:'phastCons100way',type:'bigwig',height:80,url:'http://hgdownload.soe.ucsc.edu/goldenPath/hg19/phastCons100way/hg19.100way.phastCons.bw'}
+		],
+	nativetracks:['RefGene','RepeatMasker'],
+	noheader:true,
+	nobox:true
+})
+</script>
+
+</body>
+</html>
