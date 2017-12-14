@@ -7,6 +7,7 @@ public/stage/*
 public/prod/*
 public/ppdev/*
 public/.htaccess
+public/dev.html
 .htaccess
 public/builds/*
 public/no-babel-polyfill/*
