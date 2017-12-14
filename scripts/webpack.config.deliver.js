@@ -6,7 +6,7 @@ module.exports = function(env) {
 
 	//config.output.path= __dirname+'/../public/deliver'
 	config.output.publicPath='https://pecan.stjude.org/pp/bin/'
-	config.output.path='/home/xzhou/node/proteinpaint/public/bin/'
+	config.output.path=__dirname+'/deploys/deliver/proteinpaint/public/bin/'
 
 	config.plugins = [
 		new webpack.optimize.UglifyJsPlugin({
