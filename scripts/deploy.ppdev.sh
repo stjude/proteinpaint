@@ -1,13 +1,12 @@
 #npm run ppdev
 
-cp server.js ../proteinpaint/
-cp utils/* ../proteinpaint/utils/
-cp public/index.html ../proteinpaint/public/
-cp genome/* ../proteinpaint/genome/
-cp dataset/* ../proteinpaint/dataset/
-cp src/common.js src/vcf.js src/bulk* src/tree.js ../proteinpaint/src/
-cp public/bin/* ../proteinpaint/public/bin/
-cp public/dev.html ../proteinpaint/public/
+cp server.js deploys/ppdev/
+cp utils/* deploys/ppdev/utils/
+cp public/index.html deploys/ppdev/public/
+cp genome/* deploys/ppdev/genome/
+cp dataset/* deploys/ppdev/dataset/
+cp src/common.js src/vcf.js src/bulk* src/tree.js deploys/ppdev/src/
+cp public/bin/* deploys/ppdev/public/bin/
 
 sed 's%http://localhost:3000/bin/%http://proteinpaint-dev:3001/bin/%' < public/bin/proteinpaint.js > ../proteinpaint/public/bin/proteinpaint.js
 

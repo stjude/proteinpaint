@@ -6,7 +6,7 @@
   "scripts": {
     "els": "webpack --config=scripts/webpack.config.els.js --watch --progress --colors",
     "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js --watch --progress --colors",
-    "ppdev": "sh ./scripts/deploy.ppdev.sh",
+    "ppdev": "node scripts/deploy.ppdev.js",
     "ppc": "sh ./scripts/deploy.ppc.sh",
     "public-stage": "./scripts/deploy.sh public-stage",
     "public-prod": "./scripts/deploy.sh public-prod",
