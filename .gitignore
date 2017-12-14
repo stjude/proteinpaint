@@ -31,3 +31,5 @@ tmpbuild/*
 *.min.js
 
 scripts/*.newdev.sh
+
+deploys/
