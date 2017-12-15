@@ -167,12 +167,19 @@ module.exports={
 
 	queries:{
 		svcnv:{
-			name:'Pediatric tumor somatic CNV+SV',
+			name:'Pediatric tumor somatic CNV+SV+LOH',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
 			file:'hg19/Pediatric/pediatric.svcnv.hg19.gz',
+
+			// cnv
 			valueCutoff:0.2,
 			bplengthUpperLimit:2000000, // limit cnv length to focal events
+
+			// loh
+			segmeanValueCutoff:0.1,
+			lohLengthUpperLimit:2000000,
+
 			sortsamplebyhierarchy: {
 				hierarchyidx:0, // array index of cohort.hierarchies.lst[]
 				// TODO which level to look at
