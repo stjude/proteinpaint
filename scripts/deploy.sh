@@ -41,14 +41,12 @@ fi
 # convert $REV to standard numeric notation
 if [[ $REV=="HEAD" ]]; then
 	if [[ -d .git ]]; then
-		REV=$(git svn find-rev $(git rev-parse HEAD))
-	elif [[ -d .svn ]]; then
-		REV=$(svn info | awk '/^Revision:/ {print $2}')
+		REV=$(git rev-parse --short HEAD)
 	fi
 fi
 
 if [[ "$REV" == "HEAD" || "$REV" == "" ]]; then
-	echo "Unable to convert the HEAD revision into a SVN revision number."
+	echo "Unable to convert the HEAD revision into a Git commit hash."
 	exit 1
 fi
 
@@ -59,7 +57,7 @@ fi
 
 APP=es6_proteinpaint # might be overridden below
 RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
-SVNREMOTE=https://subversion.stjude.org/svn/compbio/apps/proteinpaint/branches/dev2
+GIT_REMOTE=http://cmpb-devops.stjude.org/gitlab/viz/proteinpaint.git
 
 if [[ "$ENV" == "public-stage" ]]; then
 	DEPLOYER=genomeuser
@@ -111,7 +109,9 @@ fi
 #################################
 
 rm -Rf tmpbuild
-svn export -qr $REV $SVNREMOTE tmpbuild
+# remote repo not used, use local repo for now
+mkdir tmpbuild
+git archive HEAD | tar -x -C tmpbuild/
 
 cd tmpbuild
 # save some time by reusing parent folder's node_modules
@@ -159,8 +159,6 @@ fi
 cd $APP
 tar -cvzf ../$APP-$REV.tgz .
 cd ..
-
-cd tmpbuild
 ##########
 # DEPLOY
 ##########
