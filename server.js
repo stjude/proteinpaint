@@ -271,6 +271,13 @@ function handle_genomes(req,res) {
 						if(q.bplengthUpperLimit) {
 							clientquery.bplengthUpperLimit=q.bplengthUpperLimit
 						}
+						// loh attributes
+						if(q.segmeanValueCutoff) {
+							clientquery.segmeanValueCutoff = q.segmeanValueCutoff
+						}
+						if(q.lohLengthUpperLimit) {
+							clientquery.lohLengthUpperLimit=q.lohLengthUpperLimit
+						}
 
 						if(q.type == common.tkt.mdssvcnv) {
 							if(q.expressionrank_querykey) {
