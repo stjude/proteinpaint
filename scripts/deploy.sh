@@ -59,12 +59,19 @@ APP=es6_proteinpaint # might be overridden below
 RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
 GIT_REMOTE=http://cmpb-devops.stjude.org/gitlab/viz/proteinpaint.git
 
-if [[ "$ENV" == "public-stage" ]]; then
+if [[ "$ENV" == "old-stage" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pecan-test.stjude.org
 	REMOTEDIR=/opt/genomeportal/current
 	URL="//pecan-test.stjude.org/pp"
 	SUBDOMAIN=pecan-test
+
+elif [[ "$ENV" == "public-stage" ]]; then
+	DEPLOYER=genomeuser
+	REMOTEHOST=pp-prt.stjude.org
+	REMOTEDIR=/opt/app/pp
+	URL="//pp-prt.stjude.org/pp"
+	SUBDOMAIN=pp-prt
 
 elif [[ "$ENV" == "old-prod" ]]; then
 	DEPLOYER=genomeuser
