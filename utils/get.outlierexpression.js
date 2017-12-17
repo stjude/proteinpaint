@@ -44,13 +44,10 @@ new Promise((resolve,reject)=>{
 
 .then(genename2coord=>{
 
-	const tasks = []
 
-	for(const [genename,obj] of genename2coord) {
-		//console.log(genename, obj.coord)
-		// for each gene, get all samples
-		tasks.push(
-		new Promise((resolve,reject)=>{
+	const run=()=>{
+		for(const [genename,obj] of genename2coord) {
+			// for each gene, get all samples
 			const fi = fs.createReadStream(infile,{encoding:'utf8'})
 			const r = readline.createInterface({input:fi})
 			const samples=[]
@@ -62,21 +59,25 @@ new Promise((resolve,reject)=>{
 			r.on('close',()=>{
 				fi.destroy()
 
+				genename2coord.delete( genename )
+
 				const result = filter_iqr(samples)
 				if(result.lst) {
 					for(const sample of result.lst) {
 						console.log(genename+'\t'+obj.coord+'\t'+sample.name+'\t'+sample.value+'\t'+sample.rank+'\t'+result.cutoff)
 					}
 				}
-				resolve()
+				run()
 			})
-		})
-		)
+			break
+		}
 	}
+
 
 	console.log('gene\tcoord\tsample\tFPKM\trank\tIQR*'+iqrfold)
 
-	Promise.all(tasks)
+	run()
+
 })
 
 
