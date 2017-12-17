@@ -1829,6 +1829,8 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 		discradius:8,
 		bplengthUpperLimit:tk.bplengthUpperLimit,
 		valueCutoff:tk.valueCutoff,
+		lohLengthUpperLimit:tk.lohLengthUpperLimit,
+		segmeanValueCutoff:tk.segmeanValueCutoff,
 		singlesample:{
 			name:sample.samplename
 		}
@@ -1892,6 +1894,7 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 	if(cnv) {
 		bb.addhlregion( cnv.chr, cnv.start, cnv.stop, cnvhighlightcolor )
 	}
+	// done launching single-sample view from multi-sample
 }
 
 

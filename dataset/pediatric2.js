@@ -178,7 +178,7 @@ module.exports={
 
 			// loh
 			segmeanValueCutoff:0.1,
-			lohLengthUpperLimit:2000000,
+			lohLengthUpperLimit:10000000,
 
 			sortsamplebyhierarchy: {
 				hierarchyidx:0, // array index of cohort.hierarchies.lst[]
