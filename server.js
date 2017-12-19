@@ -8026,6 +8026,21 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		}
 		if(set.size==0) return 'no samples from the header line'
 		query.samples = [...set]
+
+		if(ds.cohort && ds.cohort.annotation) {
+			// find & report unannotated samples
+			const unknown=new Set()
+			for(const sample of query.samples) {
+				if(!ds.cohort.annotation[sample]) {
+					unknown.add(sample)
+				}
+			}
+			if(unknown.size) {
+				console.log('unannotated samples: '+[...unknown].join(' '))
+			}
+		}
+
+
 		query.attributeSummary = mds_query_attrsum4samples(query.samples, ds)
 		query.hierarchySummary = mds_query_hierarchy4samples(query.samples,ds)
 		for(const hierarchyname in query.hierarchySummary) {
