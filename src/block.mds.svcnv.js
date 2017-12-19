@@ -3004,10 +3004,12 @@ function tooltip_cnvitem_singlesample(item, tk) {
 	const lst = []
 	
 	if(item.loh) {
-		lst.push({k:'Seg.mean',v:item.segmean})
+		// loh
+		lst.push({k:'LOH seg.mean',v:item.segmean})
 	} else {
+		// cnv
 		lst.push({
-			k:'Value',
+			k:'CNV log2(ratio)',
 			v:'<span style="padding:0px 4px;background:'+(item.value>0?tk.cnvcolor.gain.str:tk.cnvcolor.loss.str)+';color:white;">'+item.value.toFixed(2)+'</span>'
 		})
 	}
