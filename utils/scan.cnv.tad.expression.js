@@ -28,7 +28,12 @@ const maxlen_domainoverlap = 500
 const min_expressionrank = 60
 // min actual expression value to report
 const min_fpkm = 5
-
+// max percentage of a tad domain to overlap with a cnv segment; if above, won't check genes in this domain
+const max_domaincontainedincnv = 0.9 // not used
+// max percentage of a gene to overlap with a cnv loss segment; if above, will not look at this gene
+const max_geneoverlapwithcnvloss = 0.2
+// min percentage of a gene to overlap with a domain; if less, do not consider the gene; commonly the gene should be entirely included in the domain
+const min_geneoverlapwithdomain = 0.5 // using 100% instead
 
 
 
@@ -184,13 +189,40 @@ function test_boundary( cnv, boundary, hicfile ) {
 	hicfile
 		.name
 	*/
-	
-	/// genes in each domain
+
+	// genes from the left/right domains to be tested for expression
 	const leftgenes = findgenefromdomain( cnv.chr, boundary.leftdomain )
 	const rightgenes = findgenefromdomain( cnv.chr, boundary.rightdomain )
 
-	const genes = [...leftgenes, ...rightgenes]
+	const genes0 = [...leftgenes, ...rightgenes]
+	const genes = []
+
+	if(cnv.value<0) {
+		// copy number loss
+		for(const g of genes0) {
+			const p1 = Math.max(g.start, cnv.start)
+			const p2 = Math.min(g.stop, cnv.stop)
+			if(p1 < p2) {
+				// gene overlap with cnv
+				if( (p2-p1) / (g.stop-g.start) > max_geneoverlapwithcnvloss) {
+					// too much of gene in cnv
+					continue
+				}
+			}
+			genes.push(g)
+		}
+
+	} else {
+
+		// gain
+		// use all
+		for(const g of genes0) {
+			genes.push(g)
+		}
+	}
+
 	if(genes.length==0) return
+
 	for(const gene of genes) {
 		// gene/start/stop/chr
 
@@ -216,9 +248,13 @@ function test_boundary( cnv, boundary, hicfile ) {
 
 		const out = {
 			sample:cnv.sample,
-			genevalue:expressionvalue,
-			generank:rank,
-			hicsample:hicfile.name,
+			logratio:cnv.value,
+			gene:{
+				name:gene.gene,
+				fpkm:expressionvalue,
+				rank:rank,
+			},
+			hic:hicfile.name,
 			boundary:boundary
 		}
 		console.log(cnv.chr+'\t'+cnv.start+'\t'+cnv.stop+'\t'+JSON.stringify(out))
@@ -284,11 +320,9 @@ function get_rank_from_sortedarray(v, lst) {
 function get_annotation_level(sample) {
 	const anno = ds.cohort.annotation[sample]
 	if(!anno) {
-		// no annotation found
-		console.error('no annotation for sample: '+sample)
-		process.exit()
-		return null
+		abort('no annotation for sample: '+sample)
 	}
+
 	const keyvalues = []
 	for(const key of ds.cohort.samplegroupkeys) {
 		keyvalues.push( anno[key] )
