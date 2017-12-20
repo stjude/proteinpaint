@@ -721,15 +721,26 @@ function init2(x,y, plot, group) {
 		.text('Data')
 		.on('click',()=> {
 
-			const pane2=client.newpane({x:200,y:200})
+			const pane2=client.newpane({x:200, y:200})
 			pane2.header.text( pane.header.node().innerHTML )
 			const table=pane2.body.append('table')
 			const tr=table.append('tr')
 			tr.append('td').text('sample')
 			tr.append('td').text(plot.gecfg.datatype)
-			for(const d of pp.data.lst) {
+
+			for(const [i,d] of pp.data.lst.entries()) {
 				const tr=table.append('tr')
-				tr.append('td').text(d.sample)
+				if(!(i%2)) tr.style('background','#f1f1f1')
+
+				const td=tr.append('td').text(d.sample)
+
+				if(plot.clicksample) {
+					td.attr('class','sja_clbtext')
+					.on('click',()=>{
+						plot.clicksample( d, group, plot )
+					})
+				}
+
 				tr.append('td').text(d.value)
 			}
 		})
@@ -988,6 +999,12 @@ function init2(x,y, plot, group) {
 				.on('mouseout',()=>{
 					_p.tip.hide()
 				})
+
+			if(_p.clicksample) {
+				d.circle.on('click',()=>{
+					_p.clicksample( d, group, _p )
+				})
+			}
 
 			// make cells
 			const status2cell = new Map()
