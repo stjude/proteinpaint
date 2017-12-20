@@ -8,10 +8,11 @@ fi
 
 rm -rf tmpbuild
 mkdir tmpbuild
-mkdir tmpbuild/public 
+mkdir tmpbuild/public
+mkdir tmpbuild/public/bin
 mkdir tmpbuild/genome
 mkdir tmpbuild/dataset
-mkdir tmpbuild/public/bin
+mkdir tmpbuild/src
 
 cp server.js tmpbuild/
 cp public/index.html tmpbuild/public/
@@ -25,20 +26,23 @@ sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/bin/proteinpaint.js 
 
 tar zcvf sourcecode.tgz tmpbuild/
 
-scp sourcecode.tgz genomeuser@ppr.stjude.org:/opt/app/pp
+scp sourcecode.tgz genomeuser@pp-irp.stjude.org:/opt/app/pp
 
-ssh -t genomeuser@ppr.stjude.org "
-	cd /opt/app/pp/es6_proteinpaint
+ssh -tt genomeuser@pp-irp.stjude.org "
+	cd /opt/app/pp
 	tar zxvf sourcecode.tgz
-	mv tmpbuild/server.js .
-	mv tmpbuild/dataset/*js dataset/
-	mv tmpbuild/genome/*js genome/
-	mv tmpbuild/public/index.html public/
-	mv tmpbuild/public/bin/* public/bin/
-	mv tmpbuild/src/* src/
+	
+	mv tmpbuild/server.js es6_proteinpaint/
+	mv tmpbuild/dataset/*js es6_proteinpaint/dataset/
+	mv tmpbuild/genome/*js es6_proteinpaint/genome/
+	mv tmpbuild/public/index.html es6_proteinpaint/public/
+	mv tmpbuild/public/bin/* es6_proteinpaint/public/bin/
+	mv tmpbuild/src/* es6_proteinpaint/src/
+	
 	rm -rf tmpbuild/ sourcecode.tgz
+	
+	cd es6_proteinpaint
 	../proteinpaint_run_node.sh
 "
-
 rm -rf tmpbuild
 rm sourcecode.tgz

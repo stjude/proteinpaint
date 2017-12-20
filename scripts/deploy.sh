@@ -163,7 +163,10 @@ mkdir $APP/public
 mkdir $APP/public/bin
 mkdir $APP/src
 
-./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-js/bin/uglifyjs -q --compress --mangle > server.min.js
+if [[ "$ENV" != "ppdev" ||  "$ENV" != "internal-prod" ]]; then
+	./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-js/bin/uglifyjs -q --compress --mangle > server.min.js
+fi
+
 mv server.min.js $APP/server.js 
 mv package.json $APP/
 mv public/builds/$SUBDOMAIN $APP/public/bin
@@ -211,7 +214,6 @@ ssh -t $DEPLOYER@$REMOTEHOST "
 	chmod -R 755 $REMOTEDIR/$APP
 
 	cd $REMOTEDIR/$APP/
-
 	$REMOTEDIR/proteinpaint_run_node.sh
 
 	echo \"$ENV $REV $(date)\" >> $REMOTEDIR/$APP/public/rev.txt
