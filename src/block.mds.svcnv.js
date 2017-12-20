@@ -39,7 +39,9 @@ loadTk()
 makeTk()
 render_samplegroups
 	render_multi_svdensity
+		click_svdense
 	render_multi_cnvloh
+		click_samplegroup_showtable
 		tooltip_multi_cnvloh
 	render_multi_genebar
 		genebar_config
@@ -1143,7 +1145,7 @@ function render_multi_cnvloh(tk,block) {
 					tk.tktip.hide()
 				})
 				.on('click',()=>{
-					click_samplegroup_showtable( samplegroup, tk)
+					click_samplegroup_showtable( samplegroup, tk, block )
 				})
 
 			// v span
@@ -1743,13 +1745,19 @@ function click_svdense(g, tk, block) {
 		.text('SV')
 		.style('font-size','.8em')
 		.style('color','#858585')
-	for(const [sample, lst] of sample2lst) {
+	
+	let j=0
+	for(const [sample,lst] of sample2lst) {
 		const tr=table.append('tr')
+		if(!(j++%2)) {
+			tr.style('background','#f1f1f1')
+		}
+
 		tr.append('td').text(sample)
 		const td=tr.append('td')
 		for(const i of lst) {
 			td.append('div')
-				.attr('class','sja_menuoption')
+				.attr('class','sja_clbtext')
 				.html(
 					svchr2html(i.chrA, tk)
 					+':'+i.posA+':'+i.strandA
@@ -3061,11 +3069,11 @@ function get_max(lst) {
 
 
 
-function click_samplegroup_showtable( samplegroup, tk ) {
+function click_samplegroup_showtable( samplegroup, tk, block ) {
 	/*
 	click on the left label of a sample group, show cnv/sv items in table
 	multi-sample
-	only for native track
+	only for native track; requires sample annotation & hierarchy
 	*/
 	const pane = client.newpane({x:d3event.clientX+100, y:Math.max(100,d3event.clientY-100)})
 	pane.header.html(samplegroup.name+' <span style="font-size:.7em">'+tk.name+'</span>')
@@ -3081,6 +3089,9 @@ function click_samplegroup_showtable( samplegroup, tk ) {
 			lst.push({k:'PubMed', v: sample.pmid.split(',').map(i=>'<a href=https://www.ncbi.nlm.nih.gov/pubmed/'+i+' target=_blank>'+i+'</a>').join(' ')})
 		}
 		const [cnvlst, svlst, lohlst] = printitems_svcnv(sample.items, tk)
+
+		// TODO make button for cnv/sv/loh to launch single-sample
+
 		if(cnvlst.length) {
 			lst.push({k:'CNV', v:cnvlst.join('')})
 		}
@@ -3099,7 +3110,7 @@ function click_samplegroup_showtable( samplegroup, tk ) {
 		.style('border-spacing','2px')
 		.style('margin','20px')
 
-	const hasst = samplegroup.samples.find(i=>i.sampletype)
+	const hassampletype = samplegroup.samples.find(i=>i.sampletype)
 	const haspmid=samplegroup.samples.find(i=>i.pmid)
 
 	// header
@@ -3107,7 +3118,7 @@ function click_samplegroup_showtable( samplegroup, tk ) {
 	tr.append('td')
 		.text('Sample')
 		.style('color','#aaa')
-	if(hasst) {
+	if(hassampletype) {
 		tr.append('td')
 			.text('Sample type')
 			.style('color','#aaa')
@@ -3128,19 +3139,52 @@ function click_samplegroup_showtable( samplegroup, tk ) {
 	}
 
 	for(const [i,sample] of samplegroup.samples.entries()) {
+
 		const tr=table.append('tr')
-			.attr('class','sja_tr')
+		if(!(i%2)) {
+			tr.style('background','#f1f1f1')
+		}
 		tr.append('td').text(sample.samplename)
-		if(hasst) {
+
+		if(hassampletype) {
 			tr.append('td').text( sample.sampletype || '' )
 		}
-		const [cnvlst, svlst, lohlst]=printitems_svcnv(sample.items, tk)
-		tr.append('td')
-			.html( cnvlst.length ? cnvlst.join('') : '')
-		tr.append('td')
-			.html( svlst.length ? svlst.join('') : '')
-		tr.append('td')
-			.html( lohlst.length ? lohlst.join('') : '')
+
+		const [ cnvlst, svlst, lohlst, cnvlst0, svlst0, lohlst0 ] = printitems_svcnv(sample.items, tk)
+
+		{
+			const td=tr.append('td')
+			for(let j=0; j<cnvlst.length; j++) {
+				td.append('div')
+					.html(cnvlst[j])
+					.attr('class', 'sja_clbtext')
+					.on('click',()=>{
+						click_multi2single( cnvlst0[j], null, sample, samplegroup, tk, block )
+					})
+			}
+		}
+		{
+			const td= tr.append('td')
+			for(let j=0; j<svlst.length; j++) {
+				td.append('div')
+					.html(svlst[j])
+					.attr('class','sja_clbtext')
+					.on('click',()=>{
+						click_multi2single( null, svlst0[j], sample, samplegroup, tk, block )
+					})
+			}
+		}
+		{
+			const td=tr.append('td')
+			for(let j=0; j<lohlst.length; j++) {
+				td.append('div')
+					.html(lohlst[j])
+					.attr('class','sja_clbtext')
+					.on('click',()=>{
+						click_multi2single( lohlst0[j], null, sample, samplegroup, tk, block )
+					})
+			}
+		}
 		if(haspmid) {
 			tr.append('td').html( sample.pmid ? sample.pmid.split(',').map(i=>'<a href=https://www.ncbi.nlm.nih.gov/pubmed/'+i+' target=_blank>'+i+'</a>').join(' ') : '')
 		}
@@ -3154,9 +3198,12 @@ function printitems_svcnv(lst, tk) {
 	full mode
 	for a set of items from the same sample
 	*/
-	const cnvlst=[],
+	const cnvlst=[], // html
 		svlst=[],
-		lohlst=[]
+		lohlst=[],
+		cnvlst0=[], // actual obj
+		svlst0=[],
+		lohlst0=[]
 	for(const i of lst) {
 		if(i.loh) {
 			lohlst.push(
@@ -3164,12 +3211,15 @@ function printitems_svcnv(lst, tk) {
 				+' <span style="font-size:.8em">'+common.bplen(i.stop-i.start)
 				+' seg.mean: '+i.segmean+'</span>'
 			)
+			lohlst0.push(i)
 		} else if(i._chr) {
 			svlst.push('<div>'+svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
 				+' &raquo; '
 				+svchr2html(i.chrB,tk)+':'+i.posB+':'+i.strandB
+				+(i.isfusion ? ' <span style="font-size:.7em;opacity:.7">(RNA fusion)</span>':'')
 				+'</div>'
 			)
+			svlst0.push(i)
 		} else {
 			cnvlst.push(
 				'<div>'+i.chr+':'+(i.start-1)+'-'+(i.stop-1)
@@ -3177,9 +3227,10 @@ function printitems_svcnv(lst, tk) {
 				+' <span style="background:'+(i.value>0?tk.cnvcolor.gain.str:tk.cnvcolor.loss.str)+';font-size:.8em;color:white">&nbsp;'+i.value+'&nbsp;</span>'
 				+'</div>'
 			)
+			cnvlst0.push(i)
 		}
 	}
-	return [cnvlst, svlst, lohlst]
+	return [ cnvlst, svlst, lohlst, cnvlst0, svlst0, lohlst0 ]
 }
 
 
