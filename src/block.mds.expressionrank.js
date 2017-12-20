@@ -215,6 +215,12 @@ function renderTk( tk, block ) {
 
 					const table=client.make_table_2col(tk.tktip.d, lst)
 						.style('margin','0px')
+
+					{
+						const tr=table.append('tr')
+						const td=tr.append('td').attr('colspan',3)
+						td.text(i.chr+':'+i.start+'-'+i.stop)
+					}
 					
 					expressionstat.showsingleitem_table( i, tk.gecfg, table )
 				})
