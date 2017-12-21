@@ -160,12 +160,9 @@ fi
 rm -rf $APP
 mkdir $APP
 mkdir $APP/public
-mkdir $APP/public/bin
 mkdir $APP/src
 
-if [[ "$ENV" != "ppdev" ||  "$ENV" != "internal-prod" ]]; then
-	./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-js/bin/uglifyjs -q --compress --mangle > server.min.js
-fi
+./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-js/bin/uglifyjs -q --compress --mangle > server.min.js
 
 mv server.min.js $APP/server.js 
 mv package.json $APP/
@@ -190,7 +187,7 @@ fi
 # tar inside the dir in order to not create
 # a root directory in tarball
 cd $APP
-tar -cvzf ../$APP-$REV.tgz .
+tar -czf ../$APP-$REV.tgz .
 cd ..
 
 ##########
