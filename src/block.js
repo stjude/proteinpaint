@@ -15,6 +15,7 @@ import {pgvfromtemplate,     pgvmaketk,     pgvload} from      './block.tk.pgv.a
 import {junctionfromtemplate,junctionmaketk,junctionload} from './block.tk.junction'
 import {bampilefromtemplate, bampilemaketk, bampileload} from  './block.tk.bampile'
 import {bigwigfromtemplate,  bigwigmaketk,  bigwigload, bigwigloadsubpanel} from   './block.tk.bigwig'
+import {aicheckfromtemplate,  aicheckmaketk,  aicheckload,  aicheckloadsubpanel} from   './block.tk.aicheck.adaptor'
 import {bigwigstrandedfromtemplate,  bigwigstrandedmaketk,  bigwigstrandedload} from   './block.tk.bigwigstranded'
 import {bedjfromtemplate,    bedjmaketk,    bedjload, bedjloadsubpanel} from     './block.tk.bedj'
 import {gmtkfromtemplate,    gmtkmaketk,    gmtkrender} from   './block.tk.usegm'
@@ -2284,6 +2285,9 @@ block_addtk_template(template) {
 		break
 	case client.tkt.bedgraph:
 	*/
+	case client.tkt.aicheck:
+		aicheckfromtemplate(tk,template)
+		break
 	case client.tkt.bigwig:
 		bigwigfromtemplate(tk,template)
 		break
@@ -2433,6 +2437,9 @@ block_maketk(tk) {
 		break
 	case client.tkt.junction:
 		junctionmaketk(tk,this)
+		break
+	case client.tkt.aicheck:
+		aicheckmaketk(tk,this)
 		break
 	case client.tkt.bigwig:
 		bigwigmaketk(tk,this)
@@ -2786,6 +2793,9 @@ tk_load(tk) {
 		break
 	case client.tkt.bigwig:
 		bigwigload(tk,this)
+		break
+	case client.tkt.aicheck:
+		aicheckload(tk,this)
 		break
 	case client.tkt.bigwigstranded:
 		bigwigstrandedload(tk, this)
@@ -3708,6 +3718,8 @@ add_subpanel() {
 				mdssvcnvload(tk,this)
 			} else if(tk.type==client.tkt.mdsexpressionrank) {
 				mdsexpressionrankload(tk,this)
+			} else if(tk.type==client.tkt.aicheck) {
+				aicheckloadsubpanel(tk, this, thispanel)
 			}
 		}
 	}
@@ -3814,9 +3826,13 @@ new_tk_subpanel(tk, panelrecord) {
 
 	obj.glider = obj.gtksubpanel.append('g')
 
+	// important!
+
 	if(tk.type==client.tkt.bedj) {
 		obj.img = obj.glider.append('image')
 	} else if(tk.type==client.tkt.bigwig) {
+		obj.img = obj.glider.append('image')
+	} else if(tk.type==client.tkt.aicheck) {
 		obj.img = obj.glider.append('image')
 	}
 

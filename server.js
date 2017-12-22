@@ -143,7 +143,10 @@ app.post('/bedjdata',handle_bedjdata)
 app.post('/tkbampile',handle_tkbampile)
 app.post('/snpbyname',handle_snpbyname)
 app.post('/dsdata',handle_dsdata) // old official ds, replace by mds
+
 app.post('/tkbigwig',handle_tkbigwig)
+app.post('/tkaicheck',handle_tkaicheck)
+
 app.post('/snp',handle_snpbycoord)
 app.post('/isoformlst',handle_isoformlst)
 app.post('/dbdata',handle_dbdata)
@@ -613,13 +616,7 @@ function handle_pdomain(req,res) {
 
 
 function handle_tkbigwig(req,res) {
-	try {
-		req.query=JSON.parse(req.body)
-	} catch(e){
-		res.send({error:'invalid request body'})
-		return
-	}
-	log(req)
+	if(reqbodyisinvalidjson(req,res)) return
 	const [e,file,isurl]=fileurl(req)
 	if(e) return res.send({error:e})
 	let fixminv,
@@ -812,9 +809,139 @@ function handle_tkbigwig(req,res) {
 			console.log(err.stack)
 		}
 	})
-
 }
 
+
+
+
+
+function handle_tkaicheck(req,res) {
+	if(reqbodyisinvalidjson(req,res)) return
+	const [e,file,isurl]=fileurl(req)
+	if(e) return res.send({error:e})
+
+	const coveragemax = req.query.coveragemax || 100
+	if(!Number.isInteger(coveragemax)) return res.send({error:'invalid coveragemax'})
+
+	const vafheight = req.query.vafheight
+	if(!Number.isInteger(vafheight)) return res.send({error:'invalid vafheight'})
+	const coverageheight = req.query.coverageheight
+	if(!Number.isInteger(coverageheight)) return res.send({error:'invalid coverageheight'})
+	const rowspace = req.query.rowspace
+	if(!Number.isInteger(rowspace)) return res.send({error:'invalid rowspace'})
+
+	if(!req.query.rglst) return res.send({error:'region list missing'})
+
+	const canvas=new Canvas(req.query.width, vafheight*3 + rowspace*4 + coverageheight*2 )
+	const ctx=canvas.getContext('2d')
+
+	// vaf track background
+	ctx.fillStyle = '#f1f1f1'
+	ctx.fillRect(0,0,req.query.width, vafheight/2) // tumor
+	ctx.fillRect(0, rowspace*2+vafheight+coverageheight, req.query.width, vafheight/2) // normal
+	ctx.fillStyle = '#FAFAD9'
+	ctx.fillRect(0, vafheight/2, req.query.width, vafheight/2) // tumor
+	ctx.fillRect(0, rowspace*2+vafheight*1.5+coverageheight, req.query.width, vafheight/2) // normal
+
+	Promise.resolve()
+	.then(()=>{
+
+		/*********************************
+		    1 - cache url index
+		*********************************/
+
+		if(!isurl) return {file:file}
+		const indexurl = req.query.indexURL || file+'.tbi'
+
+		return cache_index_promise(indexurl)
+		.then(dir=>{
+			return {file:file, dir:dir}
+		})
+
+	})
+
+	.then( fileobj => {
+
+
+		let x=0
+		for(const r of req.query.rglst) {
+			r.x=x
+			x += req.query.regionspace+r.width
+		}
+
+		const samplecolor = '#786312'
+		const aicolor = '#122778'
+
+		const barcolor = '#858585'
+
+		const tasks = [] // each region draw
+
+		for(const r of req.query.rglst) {
+			tasks.push(new Promise((resolve,reject)=>{
+				const ps=spawn(tabix, [ fileobj.file, r.chr+':'+r.start+'-'+r.stop ])
+				const out=[]
+				const out2=[]
+				ps.stdout.on('data',i=>out.push(i))
+				ps.stderr.on('data',i=>out2.push(i))
+				ps.on('close',code=>{
+					const err=out2.join('')
+					if(err && !tabixnoterror(err)) {
+						reject({message:_e})
+					}
+
+					const xsf = r.width / (r.stop-r.start)
+
+					for(const line of out.join('').trim().split('\n')) {
+						const l = line.split('\t')
+						const pos = Number.parseInt(l[1])
+						const mintumor = Number.parseInt(l[2])
+						const tintumor = Number.parseInt(l[3])
+						const minnormal = Number.parseInt(l[4])
+						const tinnormal = Number.parseInt(l[5])
+						if(Number.isNaN(mintumor) || Number.isNaN(tintumor) || Number.isNaN(minnormal) || Number.isNaN(tinnormal)) {
+							reject('line with invalid allele count: '+line)
+						}
+
+						const x = Math.ceil( r.x+ xsf * (r.reverse ?  r.stop-pos : pos-r.start) )
+
+						ctx.fillStyle = samplecolor
+						const vaftumor = mintumor/tintumor
+						ctx.fillRect(x, vafheight*(1-vaftumor), 1, 2)
+						const vafnormal = minnormal/tinnormal
+						ctx.fillRect(x, vafheight+rowspace+coverageheight+rowspace+vafheight*(1-vafnormal), 1, 2)
+						ctx.fillStyle = aicolor
+						const ai = Math.abs(vaftumor-vafnormal)
+						ctx.fillRect(x, vafheight*2+rowspace*4+coverageheight*2+vafheight*(1-ai), 1, 2)
+
+						ctx.fillStyle = barcolor
+						let barh = (tintumor >= coveragemax ? coveragemax : tintumor) * coverageheight / coveragemax
+						let y = coverageheight-barh
+						ctx.fillRect(x, y + vafheight+rowspace, 1, barh)
+			
+						barh = (tinnormal >= coveragemax ? coveragemax : tinnormal) * coverageheight / coveragemax
+						y = coverageheight-barh
+						ctx.fillRect(x, y + 3*rowspace + 2*vafheight + coverageheight, 1, barh)
+					}
+					resolve()
+				})
+			}))
+		}
+		return Promise.all( tasks )
+
+	})
+	.then( ()=>{
+		res.send({
+			src:canvas.toDataURL(),
+			coveragemax:coveragemax
+		})
+	})
+	.catch( err =>{
+		res.send({error: err.message })
+		if(err.stack) {
+			console.log(err.stack)
+		}
+	})
+}
 
 
 
