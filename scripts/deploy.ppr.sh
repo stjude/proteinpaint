@@ -1,29 +1,48 @@
-#npm run ppdev
+# ./scripts/deploy.ppr.sh [$DEVHOST]
 
-cp server.js ../proteinpaint/
-cp public/index.html ../proteinpaint/public/
-cp genome/* ../proteinpaint/genome/
-cp dataset/* ../proteinpaint/dataset/
-cp src/common.js src/vcf.js src/bulk* src/tree.js ../proteinpaint/src/
-cp public/bin/* ../proteinpaint/public/bin/
-cp public/dev.html ../proteinpaint/public/
+if (($# == 0)); then
+	DEVHOST="http://localhost:3000"
+else
+	DEVHOST=$1
+fi	
 
-sed 's%http://localhost:3000/bin/%https://ppr.stjude.org/bin/%' < public/bin/proteinpaint.js > ../proteinpaint/public/bin/proteinpaint.js
+rm -rf tmpbuild
+mkdir tmpbuild
+mkdir tmpbuild/public
+mkdir tmpbuild/public/bin
+mkdir tmpbuild/genome
+mkdir tmpbuild/dataset
+mkdir tmpbuild/src
 
-cd ..
-tar zcvf sourcecode.tgz proteinpaint/
-scp sourcecode.tgz xzhou1@ppr.stjude.org:/opt/app/pp
+cp server.js tmpbuild/
+cp public/index.html tmpbuild/public/
+cp genome/* tmpbuild/genome/
+cp dataset/* tmpbuild/dataset/
+cp src/common.js src/vcf.js src/bulk* src/tree.js tmpbuild/src/
+cp public/bin/* tmpbuild/public/bin/
+cp public/dev.html tmpbuild/public/
 
+sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/bin/proteinpaint.js > tmpbuild/public/bin/proteinpaint.js
 
-ssh -t xzhou1@ppr.stjude.org "
+tar zcvf sourcecode.tgz tmpbuild/
+
+scp sourcecode.tgz genomeuser@pp-irp.stjude.org:/opt/app/pp
+
+ssh -tt genomeuser@pp-irp.stjude.org "
 	cd /opt/app/pp
 	tar zxvf sourcecode.tgz
-	mv proteinpaint/server.js .
-	mv proteinpaint/dataset/*js dataset/
-	mv proteinpaint/genome/*js genome/
-	mv proteinpaint/public/index.html public/
-	mv proteinpaint/public/bin/* public/bin/
-	mv proteinpaint/src/* src/
-	rm -rf proteinpaint/ sourcecode.tgz
-	./node_modules/forever/bin/forever stop server.js;./node_modules/forever/bin/forever -o forever.out -e forever.err start server.js --max-old-space-size=81920
+	
+	mv tmpbuild/server.js es6_proteinpaint/
+	mv tmpbuild/dataset/*js es6_proteinpaint/dataset/
+	mv tmpbuild/genome/*js es6_proteinpaint/genome/
+	mv tmpbuild/public/index.html es6_proteinpaint/public/
+	mv tmpbuild/public/bin/* es6_proteinpaint/public/bin/
+	mv tmpbuild/src/* es6_proteinpaint/src/
+	
+	rm -rf tmpbuild/ sourcecode.tgz
+	
+	cd es6_proteinpaint
+	../proteinpaint_run_node.sh
 "
+rm -rf tmpbuild
+rm sourcecode.tgz

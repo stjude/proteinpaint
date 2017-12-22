@@ -92,8 +92,18 @@ elif [[ "$ENV" == "internal-prod" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-irp.stjude.org
 	REMOTEDIR=/opt/app/pp
+	URL="//ppr.stjude.org/"
+	SUBDOMAIN=ppr
+
+# alternate internal-prod deploy procedure
+# which reuses live webpack bundle 
+elif [[ "$ENV" == "ppdev" ]]; then
+	DEPLOYER=genomeuser
+	REMOTEHOST=pp-irp.stjude.org
+	REMOTEDIR=/opt/app/pp
 	# TESTHOST=genomeuser@pecan-test.stjude.org
-	URL="//pp-irp.stjude.org/"
+	DEVHOST=http://localhost:3000
+	URL="//ppr.stjude.org/"
 	SUBDOMAIN=ppr
 
 elif [[ "$ENV" == "public-prod" ]]; then
@@ -121,13 +131,25 @@ mkdir tmpbuild
 git archive HEAD | tar -x -C tmpbuild/
 
 cd tmpbuild
+
 # save some time by reusing parent folder's node_modules
 # but making sure to update to committed package.json
 ln -s ../node_modules node_modules
 # npm update
 
 # create webpack bundle
-webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
+if [[ "$ENV" == "ppdev" ]]; then
+	# option to simply reuse and deploy live bundled code.
+	# This is slightly better than deploy.ppr.sh in that 
+	# committed code is used except for the live bundle.
+	# To force rebundle from committed code, 
+	# use "internal-prod" instead of "ppdev" environment
+	mkdir public/builds/$SUBDOMAIN
+	cp ../public/bin/* public/builds/$SUBDOMAIN
+	sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/builds/$SUBDOMAIN/proteinpaint.js > public/builds/SUBDOMAIN/proteinpaint.js
+else 
+	webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
+fi
 
 # no-babel-polyfill version for use in sjcloud, to avoid conflict
 if [[ "$ENV" == "public-prod" ]]; then
@@ -140,7 +162,8 @@ mkdir $APP
 mkdir $APP/public
 mkdir $APP/src
 
-./node_modules/babel-cli/bin/babel.js server.js | ./node_modules/uglify-js/bin/uglifyjs --compress --mangle > server.min.js
+./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-js/bin/uglifyjs -q --compress --mangle > server.min.js
+
 mv server.min.js $APP/server.js 
 mv package.json $APP/
 mv public/builds/$SUBDOMAIN $APP/public/bin
@@ -164,8 +187,9 @@ fi
 # tar inside the dir in order to not create
 # a root directory in tarball
 cd $APP
-tar -cvzf ../$APP-$REV.tgz .
+tar -czf ../$APP-$REV.tgz .
 cd ..
+
 ##########
 # DEPLOY
 ##########
@@ -187,7 +211,6 @@ ssh -t $DEPLOYER@$REMOTEHOST "
 	chmod -R 755 $REMOTEDIR/$APP
 
 	cd $REMOTEDIR/$APP/
-
 	$REMOTEDIR/proteinpaint_run_node.sh
 
 	echo \"$ENV $REV $(date)\" >> $REMOTEDIR/$APP/public/rev.txt
@@ -198,4 +221,4 @@ ssh -t $DEPLOYER@$REMOTEHOST "
 #############
 
 cd ..
-rm -rf tmpbuild
+# rm -rf tmpbuild
