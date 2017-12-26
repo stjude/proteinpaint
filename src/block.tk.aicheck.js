@@ -15,7 +15,6 @@ follows bedj track, main & subpanel rendered separately
 
 function makeTk(tk,block) {
 	tk.img=tk.glider.append('image')
-		.attr('transform','translate(0,'+tk.toppad+')')
 
 	if(!tk.vafheight) {
 		tk.vafheight = 50
@@ -150,7 +149,7 @@ export function loadTk(tk,block) {
 		if(!data.nodata) {
 			const scale=scaleLinear().domain([0,1]).range([tk.vafheight,0])
 
-			let y = tk.toppad
+			let y = 0
 			client.axisstyle({
 				axis:tk.Tvafaxis
 					.attr('transform','translate(0,'+y+')')
@@ -162,7 +161,7 @@ export function loadTk(tk,block) {
 			})
 			tk.label_tumor.attr('y', y+tk.vafheight*3/4)
 
-			y = tk.toppad+tk.vafheight+tk.rowspace+tk.coverageheight+tk.rowspace
+			y = tk.vafheight+tk.rowspace+tk.coverageheight+tk.rowspace
 			client.axisstyle({
 				axis:tk.Nvafaxis
 					.attr('transform','translate(0,'+y+')')
@@ -174,7 +173,7 @@ export function loadTk(tk,block) {
 			})
 			tk.label_germline.attr('y', y+tk.vafheight/2)
 
-			y=tk.toppad+ 2*(tk.vafheight+tk.rowspace+tk.coverageheight+tk.rowspace)
+			y = 2*(tk.vafheight+tk.rowspace+tk.coverageheight+tk.rowspace)
 			client.axisstyle({
 				axis:tk.aiaxis
 					.attr('transform','translate(0,'+y+')')
@@ -188,7 +187,7 @@ export function loadTk(tk,block) {
 
 			const scale2=scaleLinear().domain([0,tk.coveragemax]).range([tk.coverageheight,0])
 
-			y = tk.toppad+tk.vafheight+tk.rowspace
+			y = tk.vafheight+tk.rowspace
 			client.axisstyle({
 				axis:tk.Tcovaxis
 					.attr('transform','translate(0,'+y+')')
@@ -200,7 +199,7 @@ export function loadTk(tk,block) {
 			})
 			tk.label_tumorcoverage.attr('y', y+tk.coverageheight/2)
 
-			y = tk.toppad+ 2*(tk.vafheight+tk.rowspace)+tk.coverageheight+tk.rowspace
+			y = 2*(tk.vafheight+tk.rowspace)+tk.coverageheight+tk.rowspace
 			client.axisstyle({
 				axis:tk.Ncovaxis
 					.attr('transform','translate(0,'+y+')')

@@ -886,7 +886,7 @@ function handle_tkaicheck(req,res) {
 				ps.on('close',code=>{
 					const err=out2.join('')
 					if(err && !tabixnoterror(err)) {
-						reject({message:_e})
+						reject({message:err})
 					}
 
 					const xsf = r.width / (r.stop-r.start)

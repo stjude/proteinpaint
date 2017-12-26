@@ -42,6 +42,7 @@ render_samplegroups
 		click_svdense
 	render_multi_cnvloh
 		click_samplegroup_showtable
+		** click_multi2single
 		tooltip_multi_cnvloh
 	render_multi_genebar
 		genebar_config
