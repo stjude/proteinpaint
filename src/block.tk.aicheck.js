@@ -5,6 +5,9 @@ import {event as d3event} from 'd3-selection'
 
 
 
+/*
+follows bedj track, main & subpanel rendered separately
+*/
 
 
 
@@ -31,11 +34,53 @@ function makeTk(tk,block) {
 			tk.leftLabelMaxwidth = this.getBBox().width
 		})
 
+	// left side axes
 	tk.Tvafaxis = tk.gleft.append('g')
 	tk.Nvafaxis = tk.gleft.append('g')
 	tk.aiaxis   = tk.gleft.append('g')
+	// left labels
+	tk.label_tumor = tk.gleft.append('text')
+		.attr('font-family',client.font)
+		.attr('font-size', block.labelfontsize)
+		.attr('dominant-baseline','central')
+		.attr('text-anchor','end')
+		.attr('x', block.tkleftlabel_xshift)
+		.attr('fill-opacity',.6)
+		.text('Tumor')
+	tk.label_germline = tk.gleft.append('text')
+		.attr('font-family',client.font)
+		.attr('font-size', block.labelfontsize)
+		.attr('dominant-baseline','central')
+		.attr('text-anchor','end')
+		.attr('x', block.tkleftlabel_xshift)
+		.attr('fill-opacity',.6)
+		.text('Germline')
+	tk.label_ai = tk.gleft.append('text')
+		.attr('font-family',client.font)
+		.attr('font-size', block.labelfontsize)
+		.attr('dominant-baseline','central')
+		.attr('text-anchor','end')
+		.attr('x', block.tkleftlabel_xshift)
+		.attr('fill-opacity',.6)
+		.text('abs(T-G)')
+	// right side axes
 	tk.Tcovaxis = tk.gright.append('g')
 	tk.Ncovaxis = tk.gright.append('g')
+	// right labels
+	tk.label_tumorcoverage = tk.gright.append('text')
+		.attr('font-family',client.font)
+		.attr('font-size', block.labelfontsize)
+		.attr('dominant-baseline','central')
+		.attr('x',10)
+		.attr('fill-opacity',.6)
+		.text('T coverage')
+	tk.label_germlinecoverage = tk.gright.append('text')
+		.attr('font-family',client.font)
+		.attr('font-size', block.labelfontsize)
+		.attr('dominant-baseline','central')
+		.attr('x',10)
+		.attr('fill-opacity',.6)
+		.text('G coverage')
 
 	tk.config_handle = block.maketkconfighandle(tk)
 		.on('click',()=>{
@@ -44,6 +89,8 @@ function makeTk(tk,block) {
 			configPanel( tk, block )
 		})
 }
+
+
 
 
 
@@ -67,6 +114,8 @@ function tkarg(tk,block) {
 
 
 export function loadTk(tk,block) {
+	
+	// load main part of track
 
 	if(tk.uninitialized) {
 		makeTk(tk,block)
@@ -94,67 +143,74 @@ export function loadTk(tk,block) {
 			.attr('height', imgh)
 			.attr('xlink:href',data.src)
 
-		tk.Tvafaxis.selectAll('*').remove()
-		tk.Tcovaxis.selectAll('*').remove()
-		tk.Nvafaxis.selectAll('*').remove()
-		tk.Ncovaxis.selectAll('*').remove()
-		tk.aiaxis.selectAll('*').remove()
-
 		if(data.coveragemax) {
 			tk.coveragemax = data.coveragemax
 		}
 
-		if(data.nodata) {
-			// no axis
-		} else {
+		if(!data.nodata) {
 			const scale=scaleLinear().domain([0,1]).range([tk.vafheight,0])
+
+			let y = tk.toppad
 			client.axisstyle({
 				axis:tk.Tvafaxis
-					.attr('transform','translate(0,'+tk.toppad+')')
+					.attr('transform','translate(0,'+y+')')
 					.call(
 						axisLeft().scale(scale).tickValues([0,1])
 					),
 				color:'black',
 				showline:true
 			})
+			tk.label_tumor.attr('y', y+tk.vafheight*3/4)
+
+			y = tk.toppad+tk.vafheight+tk.rowspace+tk.coverageheight+tk.rowspace
 			client.axisstyle({
 				axis:tk.Nvafaxis
-					.attr('transform','translate(0,'+(tk.toppad+tk.vafheight+tk.rowspace+tk.coverageheight+tk.rowspace)+')')
+					.attr('transform','translate(0,'+y+')')
 					.call(
 						axisLeft().scale(scale).tickValues([0,1])
 					),
 				color:'black',
 				showline:true
 			})
+			tk.label_germline.attr('y', y+tk.vafheight/2)
+
+			y=tk.toppad+ 2*(tk.vafheight+tk.rowspace+tk.coverageheight+tk.rowspace)
 			client.axisstyle({
 				axis:tk.aiaxis
-					.attr('transform','translate(0,'+(tk.toppad+ 2*(tk.vafheight+tk.rowspace+tk.coverageheight+tk.rowspace))+')')
+					.attr('transform','translate(0,'+y+')')
 					.call(
 						axisLeft().scale(scale).tickValues([0,1])
 					),
 				color:'black',
 				showline:true
 			})
+			tk.label_ai.attr('y', y+tk.vafheight/2 )
 
 			const scale2=scaleLinear().domain([0,tk.coveragemax]).range([tk.coverageheight,0])
+
+			y = tk.toppad+tk.vafheight+tk.rowspace
 			client.axisstyle({
 				axis:tk.Tcovaxis
-					.attr('transform','translate(0,'+(tk.toppad+tk.vafheight+tk.rowspace)+')')
+					.attr('transform','translate(0,'+y+')')
 					.call(
 						axisRight().scale(scale2).tickValues([0,tk.coveragemax])
 					),
 				color:'black',
 				showline:true
 			})
+			tk.label_tumorcoverage.attr('y', y+tk.coverageheight/2)
+
+			y = tk.toppad+ 2*(tk.vafheight+tk.rowspace)+tk.coverageheight+tk.rowspace
 			client.axisstyle({
 				axis:tk.Ncovaxis
-					.attr('transform','translate(0,'+(tk.toppad+ 2*(tk.vafheight+tk.rowspace)+tk.coverageheight+tk.rowspace)+')')
+					.attr('transform','translate(0,'+y+')')
 					.call(
 						axisRight().scale(scale2).tickValues([0,tk.coveragemax])
 					),
 				color:'black',
 				showline:true
 			})
+			tk.label_germlinecoverage.attr('y', y+tk.coverageheight/2)
 		}
 		return null
 	})
