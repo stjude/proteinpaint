@@ -3725,6 +3725,26 @@ function handle_mdssvcnv(req,res) {
 		dsquery=dsquery1
 	}
 
+	if(req.query.gettrack4singlesample) {
+		/* detour,
+		getting track for single sample from server config
+		only for official dataset
+		*/
+		if(!req.query.sample) {
+			return res.send({error:'sample name missing'})
+		}
+		if(req.query.iscustom) {
+			// not supported
+			return res.send({error:'no server-side config available for custom track'})
+		}
+		if(!ds.sample2tracks) {
+			// not available
+			return res.send({})
+		}
+		return res.send({tracks: ds.sample2tracks[ req.query.sample ]})
+	}
+
+
 	if(!req.query.rglst) return res.send({error:'rglst missing'})
 
 	if(dsquery.viewrangeupperlimit) {
@@ -4198,19 +4218,6 @@ function handle_mdssvcnv(req,res) {
 
 			result.samplegroups = samplegroups
 
-			if(ds.sample2tracks) {
-				/* hic for nbl cell lines
-				should do another way:
-				each time clicking on a cnv for a sample, for official ds, run a query to fetch any tracks for the sample
-				*/
-				for(const g of samplegroups) {
-					for(const s of g.samples) {
-						if(ds.sample2tracks[s.samplename]) {
-							s.tracks = ds.sample2tracks[s.samplename]
-						}
-					}
-				}
-			}
 
 			///////// jinghui nbl cell line mixed into st/nbl, to identify that this sample is cell line on client
 			for(const g of samplegroups) {

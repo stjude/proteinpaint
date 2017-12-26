@@ -1786,6 +1786,8 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 	click cnv/loh or sv but not both, launch a new block instance, show sv-cnv track in single-sample mode,
 	and expression rank
 	view range determined by cnv or sv
+
+	no return value
 	*/
 
 	const pane = client.newpane({x:100, y:100})
@@ -1796,7 +1798,6 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 	}
 	client.first_genetrack_tolist( block.genome, arg.tklst )
 
-	if(sample.tracks) sample.tracks.forEach(t=>arg.tklst.push(t))
 
 	// expression rank
 	if(tk.iscustom) {
@@ -1894,15 +1895,55 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 		arg.stop=r.stop
 	}
 
-	const bb = block.newblock(arg)
 
-	if(block.debugmode) {
-		window.bbb=bb
-	}
-	if(cnv) {
-		bb.addhlregion( cnv.chr, cnv.start, cnv.stop, cnvhighlightcolor )
-	}
-	// done launching single-sample view from multi-sample
+	Promise.resolve()
+	.then(()=>{
+		if(tk.iscustom) {
+			// custom track, no serverside config
+			return
+		}
+
+		// get sample-level track from serverside dataset config
+		const par={
+			jwt:block.jwt,
+			genome:block.genome.name,
+			sample: sample.samplename,
+			dslabel:tk.mds.label,
+			querykey:tk.querykey,
+			gettrack4singlesample:1
+		}
+
+		return fetch( new Request(block.hostURL+'/mdssvcnv', {
+			method:'POST',
+			body:JSON.stringify(par)
+		}))
+		.then(data=>{return data.json()})
+		.then(data=>{
+
+			if(data.error) throw({message:data.error})
+			if(data.tracks) {
+				for(const t of data.tracks) {
+					arg.tklst.push( t )
+				}
+			}
+		})
+	})
+	.catch(err=>{
+		client.sayerror(pane.body, err.message)
+		if(err.stack) console.log(err.stack)
+	})
+	.then(()=>{
+
+		const bb = block.newblock(arg)
+
+		if(block.debugmode) {
+			window.bbb=bb
+		}
+		if(cnv) {
+			bb.addhlregion( cnv.chr, cnv.start, cnv.stop, cnvhighlightcolor )
+		}
+		// done launching single-sample view from multi-sample
+	})
 }
 
 
