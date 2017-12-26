@@ -2410,6 +2410,73 @@ function configPanel(tk, block) {
 			.html('&nbsp;Expanded <span style="font-size:.7em;color:#858585;">Showing SV together with CNV/LOH for each sample</span>')
 	}
 
+
+	// for official track, allow search for sample
+	if(!tk.iscustom) {
+		// show in both multi- or single-sample
+		const row=holder.append('div').style('margin-bottom','5px')
+		row.append('input')
+			.attr('size',20)
+			.attr('placeholder', 'Find sample')
+			.on('keyup',()=>{
+
+				row2.selectAll('*').remove()
+				
+				const str = d3event.target.value
+				if(!str) return
+
+				const par={
+					jwt:block.jwt,
+					genome:block.genome.name,
+					dslabel:tk.mds.label,
+					querykey:tk.querykey,
+					findsamplename: str
+				}
+				return fetch( new Request(block.hostURL+'/mdssvcnv', {
+					method:'POST',
+					body:JSON.stringify(par)
+				}))
+				.then(data=>{return data.json()})
+				.then(data=>{
+
+					if(data.error) throw({message:data.error})
+					console.log(data.result[0])
+					if(data.result) {
+						for(const sample of data.result) {
+							const cell= row2.append('div')
+							cell.append('span')
+								.text(sample.name)
+								.style('padding-right','10px')
+							if(sample.group) {
+								cell.append('span')
+									.text(sample.group.levelvalue)
+							}
+							cell
+								.attr('class','sja_menuoption')
+								.on('click',()=>{
+									click_multi2single(
+										null,
+										null,
+										{samplename:sample.name},
+										sample.group,
+										tk,
+										block
+									)
+								})
+						}
+					}
+				})
+				.catch(err=>{
+					client.sayerror(row2, err.message)
+					if(err.stack) console.log(err.stack)
+				})
+			})
+
+		const row2=holder.append('div').style('margin-bottom','15px')
+		holder.append('hr').style('margin','20px')
+	}
+
+
 	// filter cnv with sv
 	{
 		const row=holder.append('div').style('margin-bottom','15px')

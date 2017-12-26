@@ -3726,7 +3726,7 @@ function handle_mdssvcnv(req,res) {
 	}
 
 	if(req.query.gettrack4singlesample) {
-		/* detour,
+		/*** detour
 		getting track for single sample from server config
 		only for official dataset
 		*/
@@ -3744,6 +3744,49 @@ function handle_mdssvcnv(req,res) {
 		return res.send({tracks: ds.sample2tracks[ req.query.sample ]})
 	}
 
+
+	if(req.query.findsamplename) {
+		/*** detour
+		find sample names by matching with input string
+		only for official dataset
+		*/
+		if(req.query.iscustom) {
+			// not supported
+			return res.send({error:'no server-side config available for custom track'})
+		}
+		const str = req.query.findsamplename.toLowerCase()
+		const result = []
+		if(dsquery.samples) {
+			
+			// must return levelkey/levelvalue for launching expression rank
+			let hierarchylevel
+			if(dsquery.sortsamplebyhierarchy && ds.cohort && ds.cohort.hierarchies) {
+				hierarchylevel = ds.cohort.hierarchies.lst[ dsquery.sortsamplebyhierarchy.hierarchyidx ].levels[1]
+			}
+
+			for(const samplename of dsquery.samples) {
+				if(samplename.toLowerCase().indexOf( str ) == -1) continue
+
+				const sample={
+					name:samplename
+				}
+				if(ds.cohort && ds.cohort.annotation && hierarchylevel) {
+					const anno = ds.cohort.annotation[samplename]
+					if(anno) {
+						sample.group = {
+							levelkey : hierarchylevel.k,
+							levelvalue : anno[ hierarchylevel.k ]
+						}
+					}
+				}
+				result.push( sample )
+				if(result.length>10) {
+					break
+				}
+			}
+		}
+		return res.send({result:result})
+	}
 
 	if(!req.query.rglst) return res.send({error:'rglst missing'})
 
@@ -8170,7 +8213,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 				}
 			}
 			if(unknown.size) {
-				console.log('unannotated samples: '+[...unknown].join(' '))
+				console.log('mdssvcnv unannotated samples: '+[...unknown].join(' '))
 			}
 		}
 
