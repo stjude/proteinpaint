@@ -50,7 +50,7 @@ export function init(p) {
 
 	plot.tip = new client.Menu({ padding:'0px' })
 
-	if(plot.file) {
+	if(plot.file || plot.url) {
 		// is custom
 		plot.gecfg = {}
 	} else {
