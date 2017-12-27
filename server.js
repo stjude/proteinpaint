@@ -4708,13 +4708,25 @@ function handle_mdsgeneboxplot( req, res ) {
 
 				if(hierarchylevels) {
 
-					if(!j.sample) return nogroupvalues.push(j.value)
+					if(!j.sample) {
+						// missing sample
+						return
+					}
 					const anno=ds.cohort.annotation[j.sample]
-					if(!anno) return nogroupvalues.push(j.value)
+					if(!anno) {
+						nogroupvalues.push( {sample:j.sample, value:j.value} )
+						return
+					}
 					const L1=anno[hierarchylevels[0].k]
-					if(!L1) return nogroupvalues.push(j.value)
+					if(!L1) {
+						nogroupvalues.push({sample:j.sample, value:j.value})
+						return
+					}
 					const L2=anno[hierarchylevels[1].k]
-					if(!L2) return nogroupvalues.push(j.value)
+					if(!L2) {
+						nogroupvalues.push({ sample:j.sample, value:j.value })
+						return
+					}
 
 					const k=L1+', '+L2
 					if(!key2samplegroup.has(k)) {
