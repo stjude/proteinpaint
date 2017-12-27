@@ -1908,10 +1908,9 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 		const par={
 			jwt:block.jwt,
 			genome:block.genome.name,
-			sample: sample.samplename,
 			dslabel:tk.mds.label,
 			querykey:tk.querykey,
-			gettrack4singlesample:1
+			gettrack4singlesample: sample.samplename
 		}
 
 		return fetch( new Request(block.hostURL+'/mdssvcnv', {

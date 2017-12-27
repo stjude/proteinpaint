@@ -3730,9 +3730,7 @@ function handle_mdssvcnv(req,res) {
 		getting track for single sample from server config
 		only for official dataset
 		*/
-		if(!req.query.sample) {
-			return res.send({error:'sample name missing'})
-		}
+		const samplename = req.query.gettrack4singlesample
 		if(req.query.iscustom) {
 			// not supported
 			return res.send({error:'no server-side config available for custom track'})
@@ -3741,7 +3739,7 @@ function handle_mdssvcnv(req,res) {
 			// not available
 			return res.send({})
 		}
-		return res.send({tracks: ds.sample2tracks[ req.query.sample ]})
+		return res.send({tracks: ds.sample2tracks[ samplename ]})
 	}
 
 
