@@ -3063,7 +3063,12 @@ function tooltip_svitem( sv, tk ) {
 	// single sample mode
 	tk.tktip.clear()
 		.show(d3event.clientX, d3event.clientY)
-	tk.tktip.d.append('div').html( print_sv(sv) )
+	const row=tk.tktip.d.append('div')
+	row.append('span').html( print_sv(sv) )
+	
+	if(sv.isfusion) {
+		row.append('span').html('&nbsp;(RNA fusion)')
+	}
 }
 
 
