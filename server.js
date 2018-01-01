@@ -169,11 +169,11 @@ app.post('/translategm',handle_translategm)
 app.post('/hicstat',handle_hicstat)
 app.post('/hicdata',handle_hicdata)
 app.post('/checkrank',handle_checkrank)
+app.post('/samplematrix', handle_samplematrix)
 
 
 
-
-app.get('/tpaiimg',handle_tpaiimg)
+// obsolete
 app.get('/tpbam',handle_tpbam)
 app.get('/tpvafs1',handle_tpvafs1)
 
@@ -5710,6 +5710,12 @@ function handle_mdsjunction_actual(req, res, oo) {
 
 
 
+
+
+
+
+
+
 function mds_tkquery_parse_permanentHierarchy(query,ds) {
 	/*
 	only for subtrack of mds
@@ -6256,6 +6262,158 @@ function handle_mdsjunction_AreadcountbyB(reqquery,res,ds,dsquery) {
 
 
 
+function handle_samplematrix(req,res) {
+	/*
+	fetch values for a set of features, over a common set of samples
+	*/
+
+	if(reqbodyisinvalidjson(req,res)) return
+
+
+	const gn = genomes[ req.query.genome ]
+	if(!gn) return res.send({error:'invalid genome'})
+
+	let ds
+
+	if(req.query.iscustom) {
+
+		// TODO from custom tracks
+
+	} else {
+
+		// from native dataset
+		if(!gn.datasets) return res.send({error:'genome is not equipped with datasets'})
+		if(!req.query.dslabel) return res.send({error:'dslabel missing'})
+		ds = gn.datasets[req.query.dslabel]
+		if(!ds) return res.send({error:'invalid dslabel'})
+		if(!ds.queries) return res.send({error:'dataset is not equipped with queries'})
+	}
+
+	if(req.query.limitsamplebyeitherannotation) {
+		// must be official ds
+		if(!ds.cohort) return res.send({error:'limitsamplebyeitherannotation but no cohort in ds'})
+		if(!ds.cohort.annotation) return res.send({error:'limitsamplebyeitherannotation but no cohort.annotation in ds'})
+	}
+
+	const tasks = []
+
+	for(const feature of req.query.features) {
+
+		let dsquery
+		// may allow loading from custom track even if official ds is appointed
+
+		// allow other types of query, e.g. checking sample metadata
+
+
+		if(feature.querykey) {
+			if(!ds.queries) return res.send({error:'using querykey for a feature but no ds.queries'})
+			dsquery = ds.queries[ feature.querykey ]
+		} else {
+			return res.send({error:'unknown way to query a feature'})
+		}
+
+		if(!dsquery) return res.send({error:'unknown dsquery'})
+
+		// types of feature/query
+
+		if(feature.isgenevalue) {
+
+			/*********** feature: isgenevalue ********/
+
+			if(!feature.genename) return res.send({error:'genename missing for isgenevalue feature'})
+			const genename = feature.genename.toLowerCase()
+			if(!feature.chr) return res.send({error:'chr missing for isgenevalue feature'})
+			if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return res.send({error:'invalid start/stop for isgenevalue feature'})
+			if(feature.stop-feature.start > 10000000) return res.send({error:'gene feature bp length > 10Mb'})
+
+			const q = Promise.resolve()
+			.then(()=>{
+				if(dsquery.file) return
+				return cache_index_promise( req.query.indexURL || req.query.url+'.tbi' )
+			})
+			.then(dir=>{
+
+				return new Promise((resolve,reject)=>{
+
+					const data = []
+					const ps=spawn( tabix,
+						[
+							dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+							feature.chr+':'+feature.start+'-'+feature.stop
+						], {cwd: dir }
+						)
+					const rl = readline.createInterface({
+						input:ps.stdout
+					})
+
+					rl.on('line',line=>{
+
+						const l=line.split('\t')
+
+						const j=JSON.parse(l[3])
+
+						if(!j.gene) return
+						if(j.gene.toLowerCase() != genename) return
+
+						if(!j.sample) return
+						if(req.query.limitsamplebyeitherannotation) {
+							const anno = ds.cohort.annotation[ j.sample ]
+							if(!anno) return
+							let notfit = true
+							for(const filter of req.query.limitsamplebyeitherannotation) {
+								if(anno[ filter.key ] == filter.value) {
+									notfit=false
+									break
+								}
+							}
+							if(notfit) return
+						}
+						data.push( j )
+					})
+
+					const errout=[]
+					ps.stderr.on('data',i=> errout.push(i) )
+					ps.on('close',code=>{
+						const e=errout.join('')
+						if(e && !tabixnoterror(e)) {
+							reject(e)
+							return
+						}
+						resolve( {
+							isgenevalue:1,
+							id:feature.id,
+							items:data
+						})
+					})
+				})
+			})
+
+			tasks.push(q)
+
+		} else {
+
+			/*********** feature: xx  ********/
+
+			return res.send({error:'unknown type of feature'})
+		}
+	}
+
+	Promise.all(tasks)
+	.then( results =>{
+		res.send({results:results})
+	})
+	.catch(err=>{
+		res.send({error:err})
+		if(err.stack) console.error(err.stack)
+	})
+}
+
+
+
+
+
+
+
 
 
 
@@ -6591,161 +6749,6 @@ function handle_translategm(req,res) {
 /* __tp__ */
 
 
-function handle_tpaiimg(req,res)
-{
-if(!serverconfig.tpmasterdir) {
-	res.send({error:'Service not available on this server'})
-	return
-}
-var filetype,
-	file
-if(req.query.file) {
-	filetype=1
-	file=path.join(serverconfig.tpmasterdir,req.query.file)
-} else if(req.query.file2) {
-	filetype=2
-	file=path.join(serverconfig.tpmasterdir,req.query.file2)
-} else {
-	return res.send({error:'unknown file type'})
-}
-var start=parseInt(req.query.start),
-	stop=parseInt(req.query.stop)
-if(isNaN(start) || isNaN(stop)) {
-	return res.send({error:'invalid chromosomal position'})
-}
-var rowheight=parseInt(req.query.rowheight),
-	barheight=parseInt(req.query.barheight),
-	rowspace=parseInt(req.query.rowspace),
-	width=parseInt(req.query.width),
-	coveragemax=parseInt(req.query.covermax)
-if(isNaN(rowheight)) return res.send({error:'invalid rowheight'})
-if(isNaN(barheight)) return res.send({error:'invalid barheight'})
-if(isNaN(rowspace)) return res.send({error:'invalid rowspace'})
-if(isNaN(width)) return res.send({error:'invalid width'})
-if(isNaN(coveragemax)) return res.send({error:'invalid coveragemax'})
-log(req)
-var ps=spawn(tabix,[file,req.query.chr+':'+start+'-'+stop])
-var out=[],
-	out2=[]
-ps.stdout.on('data',function(data){
-	out.push(data)
-})
-ps.stderr.on('data',function(data){
-	out2.push(data)
-})
-ps.on('close',function(code){
-	if(out2.length>0) {
-		res.send({error:out2.join(',')})
-		return
-	}
-	function scale(p){
-		return Math.ceil(width*(p-start)/(stop-start))
-	}
-	var canvas=new Canvas(width, 3*rowheight+4*rowspace+2*barheight)
-	var ctx=canvas.getContext('2d')
-	if(req.query.hl) {
-		// highlight items
-		var fontsize=12
-		ctx.font=fontsize+'px Arial'
-		var y=rowheight*2+rowspace*3+barheight*2
-		for(var k in req.query.hl) {
-			var i=req.query.hl[k]
-			var istart=parseInt(i.start),
-				istop=parseInt(i.stop)
-			var x1=scale(istart),
-				x2=scale(istop)
-			ctx.fillStyle=i.color ? i.color : 'rgb(84,144,168)'
-			ctx.fillRect(x1,y,Math.max(1,x2-x1),rowspace)
-			ctx.fillText(i.name,(x1+x2)/2-ctx.measureText(i.name).width/2,y+rowspace+fontsize)
-		}
-	}
-	ctx.fillStyle='#f1f1f1'
-	ctx.fillRect(0,0,width,rowheight/2)
-	ctx.fillRect(0,rowheight+barheight+rowspace*2,width,rowheight/2)
-	ctx.fillStyle='#ffffdd'
-	ctx.fillRect(0,rowheight/2,width,rowheight/2)
-	ctx.fillRect(0,rowheight+barheight+rowspace*2+rowheight/2,width,rowheight/2)
-	var MinD=2,
-		TinD=3,
-		MinN=4,
-		TinN=5
-	var lines=out.join('').trim().split('\n')
-	// when range is small enough, draw big rect
-	var dotwidth,
-		dotshift
-	if(stop-start>1000000) {
-		dotwidth=1 // single pixel
-		dotshift=0
-	} else if(stop-start>500000) {
-		dotwidth=3
-		dotshift=1
-	} else {
-		dotwidth=5
-		dotshift=2
-	}
-	lines.forEach(function(line){
-		var l=line.split('\t')
-		var tmaf,
-			tt,
-			nmaf,
-			tn
-		if(filetype==1) {
-			var mt=parseInt(l[2]),
-				mn=parseInt(l[4])
-			tt=parseInt(l[3])
-			tn=parseInt(l[5])
-			if(isNaN(mt) || isNaN(tt) || isNaN(mn) || isNaN(tn)) return
-			tmaf=mt/tt
-			nmaf=mn/tn
-		} else {
-			tmaf=parseFloat(l[5])
-			tt=parseInt(l[4])
-			nmaf=parseFloat(l[7])
-			tn=parseInt(l[6])
-			if(isNaN(tmaf) || isNaN(tt) || isNaN(nmaf) || isNaN(tn)) return
-		}
-		var x=scale(parseInt(l[1]))
-		// dots
-		ctx.fillStyle='#5E3719'
-		if(tmaf>0) {
-			// tumor
-			var h=rowheight*tmaf
-			ctx.fillRect(x-dotshift,rowheight-h-dotshift,dotwidth,dotwidth)
-		}
-		if(nmaf>0) {
-			// normal
-			var h=rowheight*nmaf
-			ctx.fillRect(x-dotshift,rowheight*2+barheight+rowspace*2-h-dotshift,dotwidth,dotwidth)
-		}
-		if(tmaf>=0 && nmaf>=0) {
-			// diff
-			ctx.fillStyle='#191D5D'
-			var h=rowheight*Math.abs(tmaf-nmaf)
-			ctx.fillRect(x-dotshift,rowheight*3+barheight*2+rowspace*4-h-dotshift,dotwidth,dotwidth)
-		}
-		// bars
-		if(tt>0) {
-			ctx.fillStyle='#cccccc'
-			var h=tt>=coveragemax ? barheight: (barheight*tt/coveragemax)
-			ctx.fillRect(x,rowheight+barheight+rowspace-h,1,h)
-			if(tt>coveragemax) {
-				ctx.fillStyle='black'
-				ctx.fillRect(x,rowheight+rowspace,1,2)
-			}
-		}
-		if(tn>0) {
-			ctx.fillStyle='#cccccc'
-			var h=tn>=coveragemax ? barheight: (barheight*tn/coveragemax)
-			ctx.fillRect(x,rowheight*2+barheight*2+rowspace*3-h,1,h)
-			if(tn>coveragemax) {
-				ctx.fillStyle='black'
-				ctx.fillRect(x,rowheight*2+barheight+rowspace*3,1,2)
-			}
-		}
-	})
-	res.send({src:canvas.toDataURL()})
-})
-}
 
 
 

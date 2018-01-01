@@ -36,6 +36,7 @@ launchfusioneditor()
 launchmavb()
 launch2dmaf()
 launchhic()
+launchsamplematrix()
 
 
 
@@ -719,6 +720,12 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		}
 	}
 
+	if(arg.samplematrix) {
+		arg.samplematrix.jwt = arg.jwt
+		launchsamplematrix( arg.samplematrix, holder )
+		return
+	}
+
 	if(arg.hic) {
 		arg.hic.jwt = arg.jwt
 		launchhic( arg.hic, holder )
@@ -832,6 +839,25 @@ function launchhic(hic, holder) {
 	hic.holder = holder
 	import('./hic.straw').then(_=>{
 		_.hicparsefile(hic, debugmode)
+	})
+}
+
+
+
+function launchsamplematrix(cfg, holder) {
+	if(!cfg.genome) {
+		error0('missing genome for launching samplematrix')
+		return
+	}
+	cfg.genome = genomes[cfg.genome]
+	if(!cfg.genome) {
+		error0('invalid genome for samplematrix')
+		return
+	}
+	cfg.hostURL = hostURL
+	cfg.holder = holder
+	import('./samplematrix').then(_=>{
+		_.init(cfg, debugmode)
 	})
 }
 
