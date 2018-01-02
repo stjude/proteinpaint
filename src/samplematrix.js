@@ -36,60 +36,134 @@ export function init(cfg, debugmode) {
 	if(debugmode) window.cfg = cfg
 	cfg.tip  = new client.Menu()
 	cfg.menu = new client.Menu({padding:'0px'})
+	cfg.errdiv = cfg.holder.append('div')
 	cfg.legendtable = cfg.holder.append('table')
 	cfg.svg = cfg.holder.append('svg')
 
-	// TODO provide only gene name and query for coord
-	const err = validateconfig(cfg)
-	if(err) {
-		client.sayerror(cfg.holder, err)
-		return
-	}
-
-	getfeatures(cfg)
+	validateconfig(cfg)
+	.then(()=>{
+		getfeatures(cfg)
+	})
+	.catch(err=>{
+		client.sayerror(cfg.errdiv, err)
+	})
 }
 
 
 
+
 function validateconfig(cfg) {
-	if(cfg.dslabel) {
-		// accessing a native ds
-		cfg.mds = cfg.genome.datasets[cfg.dslabel]
-		if(!cfg.mds) return 'invalid dataset name: '+cfg.dslabel
-		if(!cfg.mds.isMds) return 'improper dataset: '+cfg.dslabel
-	} else {
 
-		return 'missing dslabel (custom track not yet supported)'
-	}
+	return Promise.resolve().then(()=>{
 
-	if(cfg.limitsamplebyeitherannotation) {
-		if(!Array.isArray(cfg.limitsamplebyeitherannotation)) return 'limitsamplebyeitherannotation must be an array'
-		const tr = cfg.legendtable.append('tr')
-		for(const anno of cfg.limitsamplebyeitherannotation) {
-			if(!anno.key) return '.key missing from an element of limitsamplebyeitherannotation'
-			if(!anno.value) return '.value missing from an element of limitsamplebyeitherannotation'
+		if(cfg.dslabel) {
+			// accessing a native ds
+			cfg.mds = cfg.genome.datasets[cfg.dslabel]
+			if(!cfg.mds) throw('invalid dataset name: '+cfg.dslabel)
+			if(!cfg.mds.isMds) throw('improper dataset: '+cfg.dslabel)
+		} else {
+
+			throw('missing dslabel (custom track not yet supported)')
 		}
-	}
 
-	if(!cfg.rowspace) cfg.rowspace=1
-	if(!cfg.colspace) cfg.colspace=1
-	if(!cfg.rowlabspace) cfg.rowlabspace=5
-	if(!cfg.collabspace) cfg.collabspace=5
-	if(!cfg.rowlabticksize) cfg.rowlabticksize=5
-	if(!cfg.collabticksize) cfg.collabticksize=5
+		if(cfg.limitsamplebyeitherannotation) {
+			if(!Array.isArray(cfg.limitsamplebyeitherannotation)) throw('limitsamplebyeitherannotation must be an array')
+			const tr = cfg.legendtable.append('tr')
+			for(const anno of cfg.limitsamplebyeitherannotation) {
+				if(!anno.key) throw('.key missing from an element of limitsamplebyeitherannotation')
+				if(!anno.value) throw('.value missing from an element of limitsamplebyeitherannotation')
+			}
+		}
+
+		if(!cfg.rowspace) cfg.rowspace=1
+		if(!cfg.colspace) cfg.colspace=1
+		if(!cfg.rowlabspace) cfg.rowlabspace=5
+		if(!cfg.collabspace) cfg.collabspace=5
+		if(!cfg.rowlabticksize) cfg.rowlabticksize=5
+		if(!cfg.collabticksize) cfg.collabticksize=5
 
 
-	// features
-	if(!cfg.features) return 'missing features[]'
-	if(!Array.isArray(cfg.features)) return 'features must be an array'
-	for(const feature of cfg.features) {
+		// features
+		if(!cfg.features) throw('missing features[]')
+		if(!Array.isArray(cfg.features)) throw('features must be an array')
 
-		const err = validatefeature( feature, cfg )
-		feature.id = Math.random().toString()
-		if(err) return err
-	}
+		// any feature with gene to get position
+		const querygenes=new Set()
+		for(const f of cfg.features) {
+			if(f.isgenevalue || f.iscnv) {
+				if(f.genename && !f.position && !f.chr) querygenes.add(f.genename)
+				continue
+			}
+		}
+		if(querygenes.size==0) return
+		const tasks=[]
+		for(const gene of querygenes) {
 
-	return null
+			const q = fetch(new Request(cfg.hostURL+'/genelookup',{
+				method:'POST',
+				body:JSON.stringify({
+					input:gene,
+					genome:cfg.genome.name,
+					jwt:cfg.jwt,
+					deep:1
+				})
+			}))
+			.then(data=>{return data.json()})
+			.then(data=>{
+				if(data.error) throw(data.error)
+				return [gene, data.gmlst]
+			})
+			tasks.push(q)
+		}
+
+		return Promise.all(tasks)
+		.then(lst=>{
+			const gene2coord = {}
+			for(const [gene, gmlst] of lst) {
+				if(!gene2coord[gene]) gene2coord[gene]=[]
+				for(const gm of gmlst) {
+					let nooverlap=true
+					for(const region of gene2coord[gene]) {
+						if(gm.chr==region.chr && Math.max(gm.start,region.start)<Math.min(gm.stop,region.stop)) {
+							nooverlap=false
+							region.start = Math.min(region.start, gm.start)
+							region.stop = Math.max(region.stop, gm.stop)
+							break
+						}
+					}
+					if(nooverlap) {
+						gene2coord[gene].push({
+							chr:gm.chr, 
+							start:gm.start,
+							stop:gm.stop
+						})
+					}
+				}
+			}
+			for(const f of cfg.features) {
+				if(f.isgenevalue || f.iscnv) {
+					if(f.genename && !f.position && !f.chr) {
+						if(!gene2coord[f.genename]) throw('unknown gene name: '+f.genename)
+						if(gene2coord[f.genename].length>1) {
+							client.sayerror(cfg.errdiv,'multiple regions found for gene '+f.genename+' you\'d better specify one in feature')
+						}
+						const r = gene2coord[f.genename][0]
+						f.chr = r.chr
+						f.start=r.start
+						f.stop = r.stop
+					}
+				}
+			}
+		})
+	})
+	.then(()=>{
+
+		for(const feature of cfg.features) {
+			const err = validatefeature( feature, cfg )
+			feature.id = Math.random().toString()
+			if(err) throw(err)
+		}
+	})
 }
 
 
@@ -241,7 +315,7 @@ function getfeatures(cfg) {
 				if(f.id == dat.id) {
 					// matches
 					f.items = dat.items
-					prepfeaturedata( f )
+					prepFeatureData( f )
 					break
 				}
 			}
@@ -261,7 +335,7 @@ function getfeatures(cfg) {
 
 
 
-function prepfeaturedata( f){
+function prepFeatureData( f){
 	/*
 	after getting data from query
 	prepare feature data for rendering
@@ -305,7 +379,13 @@ function prepfeaturedata( f){
 		const gmax = common.getMax_byiqr( gain, 0 )
 		const lmax = -common.getMax_byiqr( loss, 0 )
 		f.maxabslogratio = Math.max(gmax, lmax)
-		// show legend
+		{
+			const h=f.legendholder
+			h.selectAll('*').remove()
+			h.append('span').html('Gain <span style="background:'+f.colorgain+';color:white;padding:1px 5px">'+f.maxabslogratio+'</span> &nbsp; '
+				+'Loss <span style="background:'+f.colorloss+';color:white;padding:1px 5px">-'+f.maxabslogratio+'</span>'
+				)
+		}
 		return
 	}
 }
@@ -471,7 +551,7 @@ function drawCell(sample,feature,g) {
 	if(feature.isgenevalue) {
 		const item = feature.items.find( i=> i.sample == sample.name )
 		if(!item) {
-			showEmptycell(sample, feature, g)
+			drawEmptycell(sample, feature, g)
 			return
 		}
 
@@ -499,7 +579,7 @@ function drawCell(sample,feature,g) {
 	if(feature.iscnv) {
 		const items = feature.items.filter( i=> i.sample == sample.name )
 		if(items.length==0) {
-			showEmptycell(sample, feature, g)
+			drawEmptycell(sample, feature, g)
 			return
 		}
 		for(const item of items) {
@@ -535,7 +615,7 @@ function drawCell(sample,feature,g) {
 
 
 
-function showEmptycell(sample,feature,g) {
+function drawEmptycell(sample,feature,g) {
 	g.append('line')
 		.attr('x2',feature.width)
 		.attr('y2',sample.height)
@@ -574,6 +654,9 @@ function sortsamplesbyfeatures(samplelst, cfg) {
 
 
 function showMenu_feature(f, cfg) {
+	/*
+	hover over feature's name
+	*/
 	cfg.menu.showunder( d3event.target)
 		.clear()
 	cfg.menu.d.append('div')
@@ -581,6 +664,16 @@ function showMenu_feature(f, cfg) {
 		.style('opacity',.5)
 		.style('font-size','.7em')
 		.style('margin','10px')
+
+	if(f.isgenevalue || f.iscnv) {
+		// show region
+		cfg.menu.d.append('div')
+			.html(f.chr+':'+f.start+'-'+f.stop+' &nbsp; '+common.bplen(f.stop-f.start))
+			.style('font-size','.7em')
+			.style('opacity',.5)
+			.style('margin','0px 10px 10px 10px')
+	}
+
 	if(f.isgenevalue) {
 		cfg.menu.d.append('div')
 			.attr('class','sja_menuoption')

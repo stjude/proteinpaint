@@ -398,7 +398,6 @@ function handle_genelookup(req,res) {
 	if(!g) return res.send({error:'invalid genome name'})
 	if(!req.query.input) return res.send({error:'no input'})
 	if(req.query.deep) {
-		log(req)
 		///////////// deep
 
 		// isoform query must be converted to symbol first, so as to retrieve all gene models related to this gene
@@ -453,7 +452,6 @@ function handle_genelookup(req,res) {
 					rows.forEach(r=>{
 						const model=JSON.parse(r.genemodel) // must parse, otherwise still string
 						if(r.isdefault) {
-						console.log(r.isdefault)
 							model.isdefault=true
 						}
 						lst.push(model)
