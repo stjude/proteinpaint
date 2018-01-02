@@ -66,7 +66,7 @@ module.exports={
 				return 'select primary_site,primary_histology,histology_subtype1,histology_subtype2,histology_subtype3,site_subtype1,site_subtype2,site_subtype3,'
 					+'annovar_sj_gene,annovar_sj_class,annovar_sj_aachange,annovar_sj_filter_isoform,sample_name,'
 					+'chr,position,pmid,'
-					+'reference_allele,mutant_allele,mutation_cds from cosmic '
+					+'reference_allele,mutant_allele,mutation_cds,annovar_sj_cdna from cosmic '
 					+'where annovar_sj_filter_isoform=\''+k.toUpperCase()+'\''
 			},
 			tidy:r=>{
@@ -77,7 +77,7 @@ module.exports={
 					pos:r.position-1,
 					mname:r.annovar_sj_aachange,
 					isoform:r.annovar_sj_filter_isoform,
-					mutation_cds:r.mutation_cds,
+					mutation_cds:r.annovar_sj_cdna,
 					gene:r.annovar_sj_gene,
 					ref:r.reference_allele,
 					alt:r.mutant_allele,
