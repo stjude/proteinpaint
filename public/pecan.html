@@ -22,7 +22,7 @@ renamed to index.html as part of deploy.sh.
 runproteinpaint({
 	holder:document.getElementById('aaa'),
 	parseurl:true,
-	host: 'https://'+window.location.host+window.location.pathname
+	host: 'https://'+window.location.host+(window.location.pathname=='/' ? '' : window.location.pathname)
 })
 </script>
 
