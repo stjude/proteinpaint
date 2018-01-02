@@ -3975,10 +3975,16 @@ function handle_mdssvcnv(req,res) {
 			}
 		}
 		if(!expressionquery) return [ data_cnv ]
-		if(expressionquery.viewrangeupperlimit) {
+
+		let viewrangeupperlimit = expressionquery.viewrangeupperlimit
+		if(!viewrangeupperlimit && dsquery.iscustom) {
+			// no limit set for custom track, set a hard limit
+			viewrangeupperlimit = 5000000
+		}
+		if(viewrangeupperlimit) {
 			const len=req.query.rglst.reduce((i,j)=>i+j.stop-j.start,0)
-			if(len >= expressionquery.viewrangeupperlimit) {
-				return [data_cnv, expressionquery.viewrangeupperlimit ]
+			if(len >= viewrangeupperlimit) {
+				return [data_cnv, viewrangeupperlimit ]
 			}
 		}
 
