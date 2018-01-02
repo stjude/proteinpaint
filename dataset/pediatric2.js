@@ -110,6 +110,7 @@ module.exports={
 		files:[
 			// possible to have file-specific logic
 			{file:'anno/db/pediatric.samples'},
+			{file:'anno/db/pediatric.samples.2'},
 			{file:'anno/db/target.samples'},
 			{file:'anno/db/target.samples.tallsnp6array'},
 			{file:'anno/db/nbl.cellline.samples'}

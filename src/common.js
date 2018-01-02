@@ -664,3 +664,20 @@ exports.contigNameNoChr=function(genome,chrlst) {
 	}
 	return false
 }
+
+
+
+exports.getMax_byiqr=function(lst, novaluemax) {
+	/*
+	lst: array of numbers
+	novaluemax: when lst is empty, return this value
+	cutoff value based on IQR to exclude outlier values
+	*/
+	if(lst.length==0) return novaluemax
+	lst.sort((i,j)=>i-j)
+	const max=lst[lst.length-1]
+	if(lst.length<=5) return max
+	const q1=lst[Math.floor(lst.length/4)]
+	const q2=lst[Math.floor(lst.length*3/4)]
+	return Math.min( q2+(q2-q1)*1.5, max)
+}

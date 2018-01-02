@@ -108,7 +108,7 @@ elif [[ "$ENV" == "ppdev" ]]; then
 
 elif [[ "$ENV" == "public-prod" ]]; then
 	DEPLOYER=genomeuser
-	REMOTEHOST=pp-prp1.stjude.org
+	REMOTEHOST=pp-prp2.stjude.org
 	REMOTEDIR=/opt/app/pp
 	# TESTHOST=genomeuser@pecan-test.stjude.org
 	URL="//proteinpaint.stjude.org/"

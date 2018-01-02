@@ -1062,8 +1062,8 @@ function render_multi_cnvloh(tk,block) {
 				}
 			}
 		}
-		const gainmaxvalue = get_max(gain)
-		const lossmaxvalue = -get_max(loss)
+		const gainmaxvalue = common.getMax_byiqr(gain, novalue_max_cnvloh)
+		const lossmaxvalue = -common.getMax_byiqr(loss, novalue_max_cnvloh)
 		tk.cnvcolor.cnvmax = Math.max( gainmaxvalue, -lossmaxvalue )
 
 		if(segmean.length) {
@@ -3160,19 +3160,6 @@ function tooltip_cnvitem_singlesample(item, tk) {
 		})
 	}
 	client.make_table_2col( tk.tktip.d, lst )
-}
-
-
-
-function get_max(lst) {
-	// cutoff value based on IQR to exclude outlier values
-	if(lst.length==0) return novalue_max_cnvloh
-	lst.sort((i,j)=>i-j)
-	const max=lst[lst.length-1]
-	if(lst.length<=5) return max
-	const q1=lst[Math.floor(lst.length/4)]
-	const q2=lst[Math.floor(lst.length*3/4)]
-	return Math.min( q2+(q2-q1)*1.5, max)
 }
 
 

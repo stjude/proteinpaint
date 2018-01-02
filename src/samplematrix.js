@@ -1,6 +1,8 @@
 import * as client from './client'
 import {invalidcoord} from './coord'
 import {event as d3event} from 'd3-selection'
+import * as common from './common'
+import {scaleLinear} from 'd3-scale'
 
 
 /*
@@ -16,9 +18,13 @@ columsn
 	- features
 	- each has own width
 
+JUMP __draw
 */
 
 
+
+
+const saynovalue='na'
 
 
 
@@ -103,30 +109,26 @@ function validatefeature( f, cfg) {
 			if(err) return 'position error for isgenevalue feature: '+err
 		}
 
-		if(f.missingvalue==undefined) {
-			// samples that don't have such value
-			f.missingvalue=0
-		}
-		
-		tr.append('td')
-			.text(f.label)
-			.style('color','#858585')
-			.style('text-align','right')
-		f.legendholder = tr.append('td')
-
-		if(!f.width) {
-			f.width = 20
-		}
-		if(!f.color) {
-			f.color = '#095873'
-		}
-
 		if(cfg.dslabel) {
 			// official
 			if(!f.querykey) return '.querykey missing for isgenevalue feature while loading from official dataset'
 		} else {
 			// to allow loading from custom track
 		}
+
+		if(!f.scale) f.scale = {auto:1}
+
+		if(f.missingvalue==undefined) f.missingvalue=0 // samples that don't have value for that gene
+
+		tr.append('td')
+			.text(f.label)
+			.style('color','#858585')
+			.style('text-align','right')
+		f.legendholder = tr.append('td')
+
+		if(!f.width) f.width = 20
+		if(!f.color) f.color = '#095873'
+
 		return
 	}
 
@@ -148,15 +150,18 @@ function validatefeature( f, cfg) {
 			.style('color','#858585')
 			.style('text-align','right')
 		f.legendholder = tr.append('td')
-		if(!f.width) {
-			f.width=20
-		}
+
+		if(!f.width) f.width=40
+		f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width]) // scale must be reset when coord/width changes
 		if(!f.colorgain) f.colorgain = "#D6683C"
 		if(!f.colorloss) f.colorloss = "#67a9cf"
 		return
 	}
 
 	/*
+	if(f.issv) {
+		return
+	}
 	if(f.isbw) {
 		return
 	}
@@ -178,7 +183,9 @@ function validatefeature( f, cfg) {
 
 
 function feature2arg(f) {
-	// convert feature to argument obj for getting data
+	/*
+	convert feature to argument obj for getting data
+	*/
 	if(f.isgenevalue) {
 		return {
 			id:f.id,
@@ -256,17 +263,16 @@ function getfeatures(cfg) {
 
 function prepfeaturedata( f){
 	/*
+	after getting data from query
 	prepare feature data for rendering
-	updates legend
+	also updates legend
 	*/
 	if(f.isgenevalue) {
 
 		// gene-level expression value, get max value
-		f.scale = {
-			auto:1,
-			maxv:0,
-			minv:0
-		}
+		// TODO other types of scaling
+		f.scale.maxv=0
+		f.scale.minv=0
 		for(const i of f.items) {
 			f.scale.maxv = Math.max(f.scale.maxv, i.value)
 		}
@@ -283,7 +289,23 @@ function prepfeaturedata( f){
 				.style('background','linear-gradient( to right, white, '+f.color+')')
 			h.append('span').text(f.scale.maxv)
 		}
+		return
+	}
 
+	if(f.iscnv) {
+		const gain=[],
+			loss=[] // log2 ratio values for getting scale max
+		for(const i of f.items) {
+			if(i.value>0) {
+				gain.push(i.value)
+			} else {
+				loss.push(i.value)
+			}
+		}
+		const gmax = common.getMax_byiqr( gain, 0 )
+		const lmax = -common.getMax_byiqr( loss, 0 )
+		f.maxabslogratio = Math.max(gmax, lmax)
+		// show legend
 		return
 	}
 }
@@ -294,7 +316,7 @@ function prepfeaturedata( f){
 
 
 
-/******** draw *******/
+/******** __draw *******/
 
 
 function drawMatrix( cfg ) {
@@ -308,7 +330,7 @@ function drawMatrix( cfg ) {
 
 	for(const feature of cfg.features) {
 
-		if(feature.isgenevalue) {
+		if(feature.isgenevalue || feature.iscnv) {
 
 			for(const item of feature.items) {
 				if(!name2sample.has(item.sample)) {
@@ -387,7 +409,7 @@ function drawMatrix( cfg ) {
 
 			g.append('text')
 				.attr('font-family', client.font)
-				.attr('font-size', feature.width-2)
+				.attr('font-size',  Math.min(16, feature.width-2) ) // font size should not get crazy big
 				.attr('dominant-baseline','central')
 				.attr('transform','rotate(-90)')
 				.text(feature.label)
@@ -445,12 +467,14 @@ function drawCell(sample,feature,g) {
 	/*
 	draw a cell
 	*/
-	const item = feature.items.find( i=> i.sample == sample.name )
-	if(!item) {
-		return
-	}
 
 	if(feature.isgenevalue) {
+		const item = feature.items.find( i=> i.sample == sample.name )
+		if(!item) {
+			showEmptycell(sample, feature, g)
+			return
+		}
+
 		const rect = g.append('rect')
 			.attr('width', feature.width)
 			.attr('height', sample.height)
@@ -471,10 +495,57 @@ function drawCell(sample,feature,g) {
 		}
 		return
 	}
+
+	if(feature.iscnv) {
+		const items = feature.items.filter( i=> i.sample == sample.name )
+		if(items.length==0) {
+			showEmptycell(sample, feature, g)
+			return
+		}
+		for(const item of items) {
+			const x1 = feature.coordscale( Math.max(feature.start, item.start) )
+			const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
+			g.append('rect')
+				.attr('x', x1)
+				.attr('width', Math.max(1, x2-x1) )
+				.attr('height', sample.height)
+				.attr('fill',  item.value>0 ? feature.colorgain : feature.colorloss )
+				.attr('fill-opacity', Math.abs(item.value)/feature.maxabslogratio)
+				.attr('shape-rendering','crispEdges')
+		}
+		g.append('rect')
+			.attr('fill','white')
+			.attr('fill-opacity',0)
+			.attr('width', feature.width)
+			.attr('height', sample.height)
+			.attr('stroke','#ccc')
+			.attr('stroke-opacity',0)
+			.attr('shape-rendering','crispEdges')
+			.on('mouseover',()=>{
+				d3event.target.setAttribute('stroke-opacity',1)
+				showTip_cell( sample, feature, cfg )
+			})
+			.on('mouseout',()=>{
+				d3event.target.setAttribute('stroke-opacity',0)
+				cfg.tip.hide()
+			})
+		return
+	}
 }
 
 
-/******** draw ends *******/
+
+function showEmptycell(sample,feature,g) {
+	g.append('line')
+		.attr('x2',feature.width)
+		.attr('y2',sample.height)
+		.attr('stroke','#ccc')
+}
+
+
+
+
+/******** __draw ends *******/
 
 
 
@@ -529,6 +600,9 @@ function showMenu_feature(f, cfg) {
 			})
 		return
 	}
+	if(f.iscnv) {
+		return
+	}
 }
 
 
@@ -539,10 +613,28 @@ function showTip_sample(sample, cfg) {
 
 	const lst = []
 	for(const f of cfg.features) {
+
 		if(f.isgenevalue) {
 			const v = f.items.find( i=> i.sample == sample.name )
-			lst.push({k:f.label, v:(v ? v.value : 'na')})
+			lst.push({k:f.label, v:(v ? v.value : saynovalue)})
 			continue
+		}
+
+		if(f.iscnv) {
+			const items = f.items.filter( i=> i.sample==sample.name )
+			let text
+			if(items.length==0) {
+				text = saynovalue
+			} else {
+				const lst2 = items.map(i=>{
+					return '<div>'+i.chr+':'+i.start+'-'+i.stop+' '
+					+'<span style="font-size:.7em">'+common.bplen(i.stop-i.start)+'</span> '
+					+'<span style="background:'+(i.value>0?f.colorgain:f.colorloss)+';color:white;padding:1px 5px">'+i.value+'</span>'
+					+'</div>'
+				})
+				text = lst2.join('')
+			}
+			lst.push({k:f.label, v:text})
 		}
 	}
 	client.make_table_2col(cfg.tip.d, lst)
@@ -551,13 +643,34 @@ function showTip_sample(sample, cfg) {
 
 
 function showTip_cell(sample, f, cfg) {
+	/*
+	a cell
+	*/
 	cfg.tip.show(d3event.clientX,d3event.clientY)
 		.clear()
 
 	const lst=[{ k:'sample', v:sample.name }]
+
 	if(f.isgenevalue) {
+
 		const v = f.items.find( i=> i.sample == sample.name )
-		lst.push({k:f.label, v: (v ? v.value : 'na')})
+		lst.push({k:f.label, v: (v ? v.value : saynovalue)})
+
+	} else if(f.iscnv) {
+		const items = f.items.filter( i=> i.sample==sample.name )
+		let text
+		if(items.length==0) {
+			text = saynovalue
+		} else {
+			const lst2 = items.map(i=>{
+				return '<div>'+i.chr+':'+i.start+'-'+i.stop+' '
+					+'<span style="font-size:.7em">'+common.bplen(i.stop-i.start)+'</span> '
+					+'<span style="background:'+(i.value>0?f.colorgain:f.colorloss)+';color:white;padding:1px 5px">'+i.value+'</span>'
+					+'</div>'
+			})
+			text = lst2.join('')
+		}
+		lst.push({k:f.label, v:text})
 	}
 
 	client.make_table_2col(cfg.tip.d, lst)
