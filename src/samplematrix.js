@@ -18,7 +18,11 @@ columsn
 	- features
 	- each has own width
 
-JUMP __draw
+JUMP __draw __menu
+
+
+********************** INTERNAL
+getfeatures()
 */
 
 
@@ -218,6 +222,9 @@ function validatefeature( f, cfg) {
 		} else {
 			// to allow loading from custom track
 		}
+		if(!f.label && f.genename) {
+			f.label = f.genename+' CNV'
+		}
 		if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' CNV'
 		tr.append('td')
 			.text(f.label)
@@ -287,18 +294,18 @@ function feature2arg(f) {
 
 
 
-function getfeatures(cfg) {
-
-	// TODO allow updating data for select features
-
-	// TODO server-side clustering on select features to determine sample hierarchy
+function getfeatures(cfg, featureset) {
+	/*
+	may update subset of features instead of all
+	TODO server-side clustering on select features to determine sample hierarchy
+	*/
 
 	const arg={
 		jwt: cfg.jwt,
 		genome: cfg.genome.name,
 		dslabel: cfg.mds.label,
 		limitsamplebyeitherannotation: cfg.limitsamplebyeitherannotation,
-		features: cfg.features.map( feature2arg )
+		features: (featureset || cfg.features).map( feature2arg )
 	}
 
 	fetch(new Request(cfg.hostURL+'/samplematrix',{
@@ -311,19 +318,14 @@ function getfeatures(cfg) {
 		if(data.error) throw({message:data.error})
 
 		for(const dat of data.results) {
-			for(const f of cfg.features) {
-				if(f.id == dat.id) {
-					// matches
-					f.items = dat.items
-					prepFeatureData( f )
-					break
-				}
-			}
+			const f = cfg.features.find( f=> f.id==dat.id )
+			if(!f) throw({message: 'feature not found: '+f.id })
+
+			f.items = dat.items
+			prepFeatureData( f )
 		}
 
 		drawMatrix(cfg)
-
-		// TODO allow updating data
 	})
 	.catch(err=>{
 		client.sayerror( cfg.holder, err.message )
@@ -631,26 +633,7 @@ function drawEmptycell(sample,feature,g) {
 
 
 
-
-
-function sortsamplesbyfeatures(samplelst, cfg) {
-
-	// check if sorting is enabled on any one of isgenevalue
-	const sortbygenevalue = cfg.features.find( f => f.isgenevalue && f.sort )
-	if(sortbygenevalue && sortbygenevalue.items) {
-		const sample2value = new Map()
-		for(const i of sortbygenevalue.items) {
-			sample2value.set(i.sample, i.value)
-		}
-		samplelst.sort( (i,j)=>{
-			const vi = sample2value.has(i.name) ? sample2value.get(i.name) : sortbygenevalue.missingvalue
-			const vj = sample2value.has(j.name) ? sample2value.get(j.name) : sortbygenevalue.missingvalue
-			return vj-vi // descending
-		})
-	}
-
-}
-
+/********** __menu **********/
 
 
 function showMenu_feature(f, cfg) {
@@ -675,26 +658,133 @@ function showMenu_feature(f, cfg) {
 	}
 
 	if(f.isgenevalue) {
-		cfg.menu.d.append('div')
-			.attr('class','sja_menuoption')
-			.text('Sort')
-			.on('click',()=>{
-				cfg.menu.hide()
-				if(f.sort) {
-					// already sorting with this one
-					return
-				}
-				// sort with this one
-				for(const f2 of cfg.features) {
-					if(f2.isgenevalue) delete f2.sort
-				}
-				f.sort=1
-				drawMatrix(cfg)
-			})
+		showMenu_isgenevalue(f,cfg)
 		return
 	}
 	if(f.iscnv) {
+		showMenu_iscnv(f,cfg)
 		return
+	}
+}
+
+
+
+function showMenu_isgenevalue(f,cfg) {
+	cfg.menu.d.append('div')
+		.attr('class','sja_menuoption')
+		.text('Sort')
+		.on('click',()=>{
+			cfg.menu.hide()
+			if(f.sort) {
+				// already sorting with this one
+				return
+			}
+			// sort with this one
+			for(const f2 of cfg.features) {
+				if(f2.isgenevalue) delete f2.sort
+			}
+			f.sort=1
+			drawMatrix(cfg)
+		})
+}
+
+
+
+function showMenu_iscnv(f,cfg) {
+	// log2ratio cutoff
+	{
+		const row=cfg.menu.d.append('div')
+			.style('margin','10px')
+		row.append('span').html('CNV log2(ratio) cutoff&nbsp;')
+		row.append('input')
+			.property( 'value', f.valuecutoff || 0 )
+			.attr('type','number')
+			.style('width','50px')
+			.on('keyup',()=>{
+				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+				let v=Number.parseFloat(d3event.target.value)
+				if(!v || v<0) {
+					// invalid value, set to 0 to cancel
+					v=0
+				}
+				if(v==0) {
+					if(f.valuecutoff) {
+						// cutoff has been set, cancel and refetch data
+						f.valuecutoff=0
+						getfeatures(cfg,[f])
+					} else {
+						// cutoff has not been set, do nothing
+					}
+					return
+				}
+				// set cutoff
+				if(f.valuecutoff) {
+					// cutoff has been set
+					if(f.valuecutoff==v) {
+						// same as current cutoff, do nothing
+					} else {
+						// set new cutoff
+						f.valuecutoff=v
+						getfeatures(cfg,[f])
+					}
+				} else {
+					// cutoff has not been set
+					f.valuecutoff=v
+					getfeatures(cfg,[f])
+				}
+			})
+		row.append('div')
+			.style('font-size','.7em').style('color','#858585')
+			.html('Only show CNV with absolute log2(ratio) no less than cutoff.<br>Set to 0 to cancel.')
+	}
+
+	// focal cnv
+	{
+		const row=cfg.menu.d.append('div')
+			.style('margin','10px')
+		row.append('span')
+			.html('CNV segment size limit&nbsp;')
+		row.append('input')
+			.property('value', f.focalsizelimit || 0)
+			.attr('type','number')
+			.style('width','100px')
+			.on('keyup',()=>{
+				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+				let v = Number.parseInt(d3event.target.value)
+				if(!v || v<0) {
+					// invalid value, set to 0 to cancel
+					v=0
+				}
+				if(v==0) {
+					if(f.focalsizelimit) {
+						// cutoff has been set, cancel and refetch data
+						f.focalsizelimit=0
+						getfeatures(cfg,[f])
+					} else {
+						// cutoff has not been set, do nothing
+					}
+					return
+				}
+				// set cutoff
+				if(f.focalsizelimit) {
+					// cutoff has been set
+					if(f.focalsizelimit==v) {
+						// same as current cutoff, do nothing
+					} else {
+						// set new cutoff
+						f.focalsizelimit=v
+						getfeatures(cfg,[f])
+					}
+				} else {
+					// cutoff has not been set
+					f.focalsizelimit=v
+					getfeatures(cfg,[f])
+				}
+			})
+		row.append('span').text('bp')
+		row.append('div')
+			.style('font-size','.7em').style('color','#858585')
+			.html('Limit the CNV segment length to show only focal events.<br>Set to 0 to cancel.')
 	}
 }
 
@@ -735,6 +825,8 @@ function showTip_sample(sample, cfg) {
 
 
 
+
+
 function showTip_cell(sample, f, cfg) {
 	/*
 	a cell
@@ -767,4 +859,29 @@ function showTip_cell(sample, f, cfg) {
 	}
 
 	client.make_table_2col(cfg.tip.d, lst)
+}
+
+/********** __menu ends **********/
+
+
+
+
+
+
+function sortsamplesbyfeatures(samplelst, cfg) {
+
+	// check if sorting is enabled on any one of isgenevalue
+	const sortbygenevalue = cfg.features.find( f => f.isgenevalue && f.sort )
+	if(sortbygenevalue && sortbygenevalue.items) {
+		const sample2value = new Map()
+		for(const i of sortbygenevalue.items) {
+			sample2value.set(i.sample, i.value)
+		}
+		samplelst.sort( (i,j)=>{
+			const vi = sample2value.has(i.name) ? sample2value.get(i.name) : sortbygenevalue.missingvalue
+			const vj = sample2value.has(j.name) ? sample2value.get(j.name) : sortbygenevalue.missingvalue
+			return vj-vi // descending
+		})
+	}
+
 }

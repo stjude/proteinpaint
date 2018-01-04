@@ -6321,161 +6321,14 @@ function handle_samplematrix(req,res) {
 
 		if(feature.isgenevalue) {
 
-			/*********** feature: isgenevalue ********/
-
-			if(!feature.genename) return res.send({error:'genename missing for isgenevalue feature'})
-			const genename = feature.genename.toLowerCase()
-			if(!feature.chr) return res.send({error:'chr missing for isgenevalue feature'})
-			if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return res.send({error:'invalid start/stop for isgenevalue feature'})
-			if(feature.stop-feature.start > 10000000) return res.send({error:'gene feature bp length > 10Mb'})
-
-			const q = Promise.resolve()
-			.then(()=>{
-				if(dsquery.file) return
-				return cache_index_promise( req.query.indexURL || req.query.url+'.tbi' )
-			})
-			.then(dir=>{
-
-				return new Promise((resolve,reject)=>{
-
-					const data = []
-					const ps=spawn( tabix,
-						[
-							dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-							feature.chr+':'+feature.start+'-'+feature.stop
-						], {cwd: dir }
-						)
-					const rl = readline.createInterface({
-						input:ps.stdout
-					})
-
-					rl.on('line',line=>{
-
-						const l=line.split('\t')
-
-						const j=JSON.parse(l[3])
-
-						if(!j.gene) return
-						if(j.gene.toLowerCase() != genename) return
-
-						if(!j.sample) return
-						if(req.query.limitsamplebyeitherannotation) {
-							const anno = ds.cohort.annotation[ j.sample ]
-							if(!anno) return
-							let notfit = true
-							for(const filter of req.query.limitsamplebyeitherannotation) {
-								if(anno[ filter.key ] == filter.value) {
-									notfit=false
-									break
-								}
-							}
-							if(notfit) return
-						}
-						data.push( j )
-					})
-
-					const errout=[]
-					ps.stderr.on('data',i=> errout.push(i) )
-					ps.on('close',code=>{
-						const e=errout.join('')
-						if(e && !tabixnoterror(e)) {
-							reject(e)
-							return
-						}
-						resolve( {
-							id:feature.id,
-							items:data
-						})
-					})
-				})
-			})
-
+			const [err, q] = samplematrix_task_isgenevalue( feature, ds, dsquery, req )
+			if(err) return res.send({error:'error with isgenevalue: '+err})
 			tasks.push(q)
 
 		} else if(feature.iscnv) {
 
-			/*********** feature: isgenevalue ********/
-
-			if(!feature.chr) return res.send({error:'chr missing for iscnv feature'})
-			if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return res.send({error:'invalid start/stop for iscnv feature'})
-			if(feature.stop-feature.start > 10000000) return res.send({error:'cnv feature bp length > 10Mb'})
-			if(feature.valuecutoff!=undefined) {
-				if(!Number.isFinite(feature.valuecutoff)) return res.send({error:'invalid value for valuecutoff for iscnv feature'})
-			}
-			if(feature.focalsizelimit!=undefined) {
-				if(!Number.isInteger(feature.focalsizelimit)) return res.send({error:'invalid value for focalsizelimit for iscnv feature'})
-			}
-
-			const q = Promise.resolve()
-			.then(()=>{
-				if(dsquery.file) return
-				return cache_index_promise( req.query.indexURL || req.query.url+'.tbi' )
-			})
-			.then(dir=>{
-
-				return new Promise((resolve,reject)=>{
-
-					const data = []
-					const ps=spawn( tabix,
-						[
-							dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-							feature.chr+':'+feature.start+'-'+feature.stop
-						], {cwd: dir }
-						)
-					const rl = readline.createInterface({
-						input:ps.stdout
-					})
-					rl.on('line',line=>{
-
-						const l=line.split('\t')
-
-						const j=JSON.parse(l[3])
-
-						// loh and sv data could be present in same file
-						if(j.loh) return
-						if(j.chrA || j.chrB) return
-						if(j.value==undefined) return // exception
-
-						if(req.query.valuecutoff && Math.abs(j.value)<req.query.valuecutoff) return
-
-						j.chr = l[0]
-						j.start = Number.parseInt(l[1])
-						j.stop = Number.parseInt(l[2])
-						if(req.query.focalsizelimit && j.stop-j.start>=req.query.focalsizelimit) return
-
-						if(!j.sample) return
-						if(req.query.limitsamplebyeitherannotation) {
-							const anno = ds.cohort.annotation[ j.sample ]
-							if(!anno) return
-							let notfit = true
-							for(const filter of req.query.limitsamplebyeitherannotation) {
-								if(anno[ filter.key ] == filter.value) {
-									notfit=false
-									break
-								}
-							}
-							if(notfit) return
-						}
-
-						data.push( j )
-					})
-
-					const errout=[]
-					ps.stderr.on('data',i=> errout.push(i) )
-					ps.on('close',code=>{
-						const e=errout.join('')
-						if(e && !tabixnoterror(e)) {
-							reject(e)
-							return
-						}
-						resolve( {
-							id:feature.id,
-							items:data
-						})
-					})
-				})
-			})
-
+			const [err, q] = samplematrix_task_iscnv( feature, ds, dsquery, req )
+			if(err) return res.send({error:'error with iscnv: '+err})
 			tasks.push(q)
 
 		} else {
@@ -6498,9 +6351,161 @@ function handle_samplematrix(req,res) {
 
 
 
+function samplematrix_task_isgenevalue(feature, ds, dsquery, req) {
+	if(!feature.genename) return ['genename missing']
+	const genename = feature.genename.toLowerCase()
+	if(!feature.chr) return ['chr missing']
+	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
+	if(feature.stop-feature.start > 10000000) return ['gene feature too long (> 10Mb)']
+
+	const q = Promise.resolve()
+	.then(()=>{
+		if(dsquery.file) return
+		return cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
+	})
+	.then(dir=>{
+
+		return new Promise((resolve,reject)=>{
+
+			const data = []
+			const ps=spawn( tabix,
+				[
+					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+					feature.chr+':'+feature.start+'-'+feature.stop
+				], {cwd: dir }
+				)
+			const rl = readline.createInterface({
+				input:ps.stdout
+			})
+
+			rl.on('line',line=>{
+
+				const l=line.split('\t')
+
+				const j=JSON.parse(l[3])
+
+				if(!j.gene) return
+				if(j.gene.toLowerCase() != genename) return
+
+				if(!j.sample) return
+				if(req.query.limitsamplebyeitherannotation) {
+					const anno = ds.cohort.annotation[ j.sample ]
+					if(!anno) return
+					let notfit = true
+					for(const filter of req.query.limitsamplebyeitherannotation) {
+						if(anno[ filter.key ] == filter.value) {
+							notfit=false
+							break
+						}
+					}
+					if(notfit) return
+				}
+				data.push( j )
+			})
+
+			const errout=[]
+			ps.stderr.on('data',i=> errout.push(i) )
+			ps.on('close',code=>{
+				const e=errout.join('')
+				if(e && !tabixnoterror(e)) {
+					reject(e)
+					return
+				}
+				resolve( {
+					id:feature.id,
+					items:data
+				})
+			})
+		})
+	})
+	return [null,q]
+}
 
 
 
+function samplematrix_task_iscnv(feature, ds, dsquery, req) {
+	if(!feature.chr) return ['chr missing']
+	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
+	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
+	if(feature.valuecutoff!=undefined) {
+		if(!Number.isFinite(feature.valuecutoff)) return ['invalid value for valuecutoff']
+	}
+	if(feature.focalsizelimit!=undefined) {
+		if(!Number.isInteger(feature.focalsizelimit)) return ['invalid value for focalsizelimit']
+	}
+
+	const q = Promise.resolve()
+	.then(()=>{
+		if(dsquery.file) return
+		return cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
+	})
+	.then(dir=>{
+
+		return new Promise((resolve,reject)=>{
+
+			const data = []
+			const ps=spawn( tabix,
+				[
+					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+					feature.chr+':'+feature.start+'-'+feature.stop
+				], {cwd: dir }
+				)
+			const rl = readline.createInterface({
+				input:ps.stdout
+			})
+			rl.on('line',line=>{
+
+				const l=line.split('\t')
+
+				const j=JSON.parse(l[3])
+
+				// loh and sv data could be present in same file
+				if(j.loh) return
+				if(j.chrA || j.chrB) return
+				if(j.value==undefined) return // exception
+
+				if(feature.valuecutoff && Math.abs(j.value)<feature.valuecutoff) return
+
+				j.chr = l[0]
+				j.start = Number.parseInt(l[1])
+				j.stop = Number.parseInt(l[2])
+
+				if(feature.focalsizelimit && j.stop-j.start>=feature.focalsizelimit) return
+
+				if(!j.sample) return
+				if(req.query.limitsamplebyeitherannotation) {
+					const anno = ds.cohort.annotation[ j.sample ]
+					if(!anno) return
+					let notfit = true
+					for(const filter of req.query.limitsamplebyeitherannotation) {
+						if(anno[ filter.key ] == filter.value) {
+							notfit=false
+							break
+						}
+					}
+					if(notfit) return
+				}
+
+				data.push( j )
+			})
+
+			const errout=[]
+			ps.stderr.on('data',i=> errout.push(i) )
+			ps.on('close',code=>{
+				const e=errout.join('')
+				if(e && !tabixnoterror(e)) {
+					reject(e)
+					return
+				}
+				resolve( {
+					id:feature.id,
+					items:data
+				})
+			})
+		})
+	})
+	return [null,q]
+}
 
 
 
