@@ -1973,7 +1973,9 @@ function mayshowcovmafplot(m, tk, holder) {
 				.style('padding','1px 5px')
 				.style('margin-right','5px')
 				.style('background-color', c.color)
-				.text(count)
+				.html('&nbsp;&nbsp;')
+				// stop showing #sample as people may confuse with #patient
+				//.text(count)
 			row.append('span')
 				.style('color',c.color)
 				.text(c.label || k)
