@@ -840,6 +840,8 @@ function init2(x,y, plot, group) {
 
 		pp.g0.attr('transform', 'translate('+(samplenamewidth+statuscolpad)+','+topheight+')')
 
+		pp.axislabel.attr('x',statustotalwidth+axiswidth/2)
+
 		axisg.attr('transform', 'translate('+(samplenamewidth+statuscolpad+statustotalwidth)+','+topheight+')')
 
 		// fpkm value scale
@@ -931,6 +933,13 @@ function init2(x,y, plot, group) {
 	pp.makegraph=()=>{
 
 		const _p = pp._plot
+
+		pp.axislabel = pp.g0.append('text')
+			.attr('font-size',14)
+			.attr('font-family',client.font)
+			.attr('text-anchor','middle')
+			.attr('y', -25)
+			.text(_p.gene+' '+_p.gecfg.datatype)
 
 		for(const d of pp.data.lst) {
 			expressionstat.measure( d, _p.gecfg )
@@ -1099,7 +1108,7 @@ function loadplot2(pp) {
 		arg.indexURL = _p.indexURL
 	}
 
-	pp.g0.append('text')
+	const wait = pp.g0.append('text')
 		.text('Loading ...')
 		.attr('font-size',20)
 		.attr('text-anchor','center')
@@ -1118,8 +1127,7 @@ function loadplot2(pp) {
 
 		if(data.error) throw({message:data.error})
 
-
-		pp.g0.selectAll('*').remove()
+		wait.remove()
 		pp.data=data
 
 		pp.makegraph()
