@@ -346,7 +346,7 @@ export function init(p) {
 	plot.g0=plot.svg.append('g')
 
 
-	const axisheight=20
+	const axisheight=50
 	const lablspace=10
 	const axisw=500
 	const rowheight=16
@@ -357,6 +357,8 @@ export function init(p) {
 	const circleyshift=2
 
 	plot.place=()=>{
+
+		plot.axislabel.attr('x', axisw/2)
 
 		let labwidth=0
 		let rightwidth=0
@@ -509,7 +511,7 @@ function loadplot(plot) {
 		arg.indexURL=plot.indexURL
 	}
 
-	plot.g0.append('text')
+	const wait = plot.g0.append('text')
 		.text('Loading ...')
 		.attr('font-size',20)
 		.attr('text-anchor','center')
@@ -526,7 +528,15 @@ function loadplot(plot) {
 
 		if(data.error) throw({message:data.error})
 
-		plot.g0.selectAll('*').remove()
+		wait.remove()
+
+		plot.axislabel = plot.g0.append('text')
+			.attr('font-size',14)
+			.attr('font-family',client.font)
+			.attr('text-anchor','middle')
+			.attr('y', -25)
+			.text(plot.gene+' '+plot.gecfg.datatype)
+
 		plot.data=data
 
 		const color0='green'
