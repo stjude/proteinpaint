@@ -181,7 +181,7 @@ else
 fi
 
 if [[ "$ENV" == "public-prod" ]]; then
-	mv $APP/public/bin/no-babel-polyfill $APP/public/
+	mv public/builds/pecan/no-babel-polyfill $APP/public/
 fi
 
 # tar inside the dir in order to not create
