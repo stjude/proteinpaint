@@ -2439,7 +2439,6 @@ function configPanel(tk, block) {
 				.then(data=>{
 
 					if(data.error) throw({message:data.error})
-					console.log(data.result[0])
 					if(data.result) {
 						for(const sample of data.result) {
 							const cell= row2.append('div')
