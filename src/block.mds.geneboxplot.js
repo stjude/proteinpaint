@@ -92,6 +92,18 @@ export function init(p) {
 		})
 
 
+	if(plot.sample) {
+		plot.sample.shown=true
+		buttonrow.append('button')
+			.text(plot.sample.name+' toggle')
+			.on('click',()=>{
+				plot.sample.shown = !plot.sample.shown
+				plot.sample.line.attr('stroke-opacity', plot.sample.shown ? 1 : 0)
+				plot.sample.svgtext.attr('fill-opacity', plot.sample.shown ? 1 : 0)
+			})
+	}
+
+
 	if(plot.svcnv) {
 
 		/* boxplot options pertinent to cnv/loh
@@ -511,7 +523,7 @@ function loadplot(plot) {
 		arg.indexURL=plot.indexURL
 	}
 
-	const wait = plot.g0.append('text')
+	plot.g0.append('text')
 		.text('Loading ...')
 		.attr('font-size',20)
 		.attr('text-anchor','center')
@@ -528,7 +540,8 @@ function loadplot(plot) {
 
 		if(data.error) throw({message:data.error})
 
-		wait.remove()
+		// must clear g0 since may be adding/removing boxplots
+		plot.g0.selectAll('*').remove()
 
 		plot.axislabel = plot.g0.append('text')
 			.attr('font-size',14)
@@ -658,7 +671,7 @@ function loadplot(plot) {
 		}
 		if(plot.sample) {
 			plot.sample.g = plot.g0.append('g')
-			plot.sample.g.append('text')
+			plot.sample.svgtext = plot.sample.g.append('text')
 				.text(plot.sample.name)
 				.attr('font-family',client.font)
 				.attr('font-size',12)
@@ -1108,7 +1121,7 @@ function loadplot2(pp) {
 		arg.indexURL = _p.indexURL
 	}
 
-	const wait = pp.g0.append('text')
+	pp.g0.append('text')
 		.text('Loading ...')
 		.attr('font-size',20)
 		.attr('text-anchor','center')
@@ -1127,7 +1140,8 @@ function loadplot2(pp) {
 
 		if(data.error) throw({message:data.error})
 
-		wait.remove()
+		pp.g0.selectAll('*').remove()
+
 		pp.data=data
 
 		pp.makegraph()

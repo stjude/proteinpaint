@@ -38,7 +38,7 @@ export function init(cfg, debugmode) {
 	*/
 
 	if(debugmode) window.cfg = cfg
-	cfg.tip  = new client.Menu()
+	cfg.tip  = new client.Menu({padding:'0px'})
 	cfg.menu = new client.Menu({padding:'0px'})
 	cfg.errdiv = cfg.holder.append('div')
 	cfg.legendtable = cfg.holder.append('table')
@@ -489,7 +489,7 @@ function drawMatrix( cfg ) {
 				.attr('transform','translate('+ (x+feature.width/2) +',-'+(cfg.collabspace+cfg.collabticksize)+')') // feature.g shift to center
 			x+= feature.width + cfg.colspace
 
-			g.append('text')
+			const label = g.append('text')
 				.attr('font-family', client.font)
 				.attr('font-size',  Math.min(16, feature.width-2) ) // font size should not get crazy big
 				.attr('dominant-baseline','central')
@@ -498,10 +498,21 @@ function drawMatrix( cfg ) {
 				.each(function(){
 					featurenamemaxwidth = Math.max( featurenamemaxwidth, this.getBBox().width )
 				})
-				.attr('class','sja_clbtext')
+				//.attr('class','sja_clbtext')
+				.on('mouseover', ()=>{
+					showTip_feature(feature, cfg)
+				})
+				.on('mouseout',()=>{
+					cfg.tip.hide()
+				})
 				.on('click', ()=>{
 					showMenu_feature(feature, cfg)
 				})
+
+			if(feature.isgenevalue) {
+				label.attr('fill', feature.color)
+			}
+
 			g.append('line')
 				.attr('y1', cfg.collabspace)
 				.attr('y2', cfg.collabspace+cfg.collabticksize)
@@ -633,7 +644,14 @@ function drawEmptycell(sample,feature,g) {
 
 
 
-/********** __menu **********/
+/********** __menu and tooltip **********/
+
+
+function showTip_feature(f, cfg) {
+	cfg.tip.showunder( d3event.target)
+		.clear()
+	tipContent_feature(f, cfg.tip.d)
+}
 
 
 function showMenu_feature(f, cfg) {
@@ -642,20 +660,7 @@ function showMenu_feature(f, cfg) {
 	*/
 	cfg.menu.showunder( d3event.target)
 		.clear()
-	cfg.menu.d.append('div')
-		.text(f.label)
-		.style('opacity',.5)
-		.style('font-size','.7em')
-		.style('margin','10px')
-
-	if(f.isgenevalue || f.iscnv) {
-		// show region
-		cfg.menu.d.append('div')
-			.html(f.chr+':'+f.start+'-'+f.stop+' &nbsp; '+common.bplen(f.stop-f.start))
-			.style('font-size','.7em')
-			.style('opacity',.5)
-			.style('margin','0px 10px 10px 10px')
-	}
+	tipContent_feature(f, cfg.menu.d)
 
 	if(f.isgenevalue) {
 		showMenu_isgenevalue(f,cfg)
@@ -666,6 +671,33 @@ function showMenu_feature(f, cfg) {
 		return
 	}
 }
+
+
+function tipContent_feature(f, holder) {
+	holder.append('div')
+		.text(f.label)
+		.style('opacity',.5)
+		.style('font-size','.7em')
+		.style('margin','10px')
+
+	if(f.isgenevalue || f.iscnv) {
+		// show region
+		holder.append('div')
+			.html(f.chr+':'+f.start+'-'+f.stop+' &nbsp; '+common.bplen(f.stop-f.start))
+			.style('font-size','.7em')
+			.style('opacity',.5)
+			.style('margin','0px 10px 10px 10px')
+	}
+
+	if(f.isgenevalue) {
+		holder.append('div')
+			.text('Min: '+f.scale.minv+', max: '+f.scale.maxv)
+			.style('font-size','.7em')
+			.style('opacity',.5)
+			.style('margin','0px 10px 10px 10px')
+	}
+}
+
 
 
 
@@ -797,6 +829,11 @@ function showTip_sample(sample, cfg) {
 	const lst = []
 	for(const f of cfg.features) {
 
+		if(lst.length>10) {
+			lst.push({k:'more',v:'...'})
+			break
+		}
+
 		if(f.isgenevalue) {
 			const v = f.items.find( i=> i.sample == sample.name )
 			lst.push({k:f.label, v:(v ? v.value : saynovalue)})
@@ -819,6 +856,7 @@ function showTip_sample(sample, cfg) {
 			}
 			lst.push({k:f.label, v:text})
 		}
+
 	}
 	client.make_table_2col(cfg.tip.d, lst)
 }
