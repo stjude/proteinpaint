@@ -481,7 +481,9 @@ function newtk_bw(block,div) {
 		})
 		p2.append('button').text('Clear').on('click',()=> iurl.node().value=iname.node().value='')
 	}
-	div.append('p').html('<a href=https://genome.ucsc.edu/goldenpath/help/bigWig.html target=_blank>bigWig file format</a>')
+	div.append('div')
+		.style('margin','20px')
+		.html('<a href=https://genome.ucsc.edu/goldenpath/help/bigWig.html target=_blank>bigWig file format</a>')
 }
 
 
