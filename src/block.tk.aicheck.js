@@ -351,7 +351,7 @@ function configPanel(tk, block) {
 			.attr('id',id+'3')
 			.on('change',()=> update(3))
 		if(tk.dotsize==3) {
-			size2.property('checked',3)
+			size3.property('checked',3)
 		}
 		row.append('label')
 			.attr('for', id+'3')
