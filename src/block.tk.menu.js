@@ -628,8 +628,10 @@ function newtk_junction(block,div) {
 		const tk = {
 			type:client.tkt.junction,
 			name:(nta.property('value').trim() || 'junction'),
-			file:file,
-			url:url,
+			tracks:[{
+				file:file,
+				url:url,
+			}],
 			iscustom:true
 		}
 		may_add_customtk(tk, block, div)
