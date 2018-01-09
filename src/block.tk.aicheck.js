@@ -14,7 +14,9 @@ follows bigwig track, main & subpanel rendered separately
 
 
 function makeTk(tk,block) {
+
 	tk.img=tk.glider.append('image')
+	tk.dotsize = 1
 
 	if(!tk.coveragemax) {
 		tk.coveragemax=100
@@ -111,7 +113,8 @@ function tkarg(tk,block) {
 		indexURL:tk.indexURL,
 		vafheight:tk.vafheight,
 		coverageheight:tk.coverageheight,
-		rowspace:tk.rowspace
+		rowspace:tk.rowspace,
+		dotsize:tk.dotsize,
 	}
 	return a
 }
@@ -310,5 +313,53 @@ function configPanel(tk, block) {
 				tk.coveragemax=v
 				loadTk( tk, block)
 			})
+	}
+	// dot size
+	{
+		const row = tk.tkconfigtip.d.append('div')
+			.style('margin-bottom','15px')
+		row.append('span').html('Marker dot size:&nbsp;')
+		const id = Math.random().toString()
+
+		const size1 = row.append('input')
+			.attr('type','radio')
+			.attr('name',id)
+			.attr('id',id+'1')
+			.on('change',()=> update(1))
+		if(tk.dotsize==1) {
+			size1.property('checked',1)
+		}
+		row.append('label')
+			.attr('for', id+'1')
+			.html('&nbsp;1 pixel&nbsp;')
+
+		const size2 = row.append('input')
+			.attr('type','radio')
+			.attr('name',id)
+			.attr('id',id+'2')
+			.on('change',()=> update(2))
+		if(tk.dotsize==2) {
+			size2.property('checked',1)
+		}
+		row.append('label')
+			.attr('for', id+'2')
+			.html('&nbsp;2 pixels&nbsp;')
+
+		const size3 = row.append('input')
+			.attr('type','radio')
+			.attr('name',id)
+			.attr('id',id+'3')
+			.on('change',()=> update(3))
+		if(tk.dotsize==3) {
+			size2.property('checked',3)
+		}
+		row.append('label')
+			.attr('for', id+'3')
+			.html('&nbsp;3 pixels')
+
+		function update(v) {
+			tk.dotsize=v
+			loadTk(tk,block)
+		}
 	}
 }

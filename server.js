@@ -814,6 +814,11 @@ function handle_tkbigwig(req,res) {
 
 
 function handle_tkaicheck(req,res) {
+	/*
+	no caching markers, draw them as along as they are retrieved
+	do not try to estimate marker size, determined by client
+	*/
+
 	if(reqbodyisinvalidjson(req,res)) return
 	const [e,file,isurl]=fileurl(req)
 	if(e) return res.send({error:e})
@@ -827,6 +832,8 @@ function handle_tkaicheck(req,res) {
 	if(!Number.isInteger(coverageheight)) return res.send({error:'invalid coverageheight'})
 	const rowspace = req.query.rowspace
 	if(!Number.isInteger(rowspace)) return res.send({error:'invalid rowspace'})
+	const dotsize = req.query.dotsize || 1
+	if(!Number.isInteger(dotsize)) return res.send({error:'invalid dotsize'})
 
 	if(!req.query.rglst) return res.send({error:'region list missing'})
 
@@ -883,11 +890,9 @@ function handle_tkaicheck(req,res) {
 				ps.stderr.on('data',i=>out2.push(i))
 				ps.on('close',code=>{
 					const err=out2.join('')
-					if(err && !tabixnoterror(err)) {
-						reject({message:err})
-					}
+					if(err && !tabixnoterror(err)) reject({message:err})
 
-					const xsf = r.width / (r.stop-r.start)
+					const xsf = r.width / (r.stop-r.start) // pixel per bp
 
 					for(const line of out.join('').trim().split('\n')) {
 						const l = line.split('\t')
@@ -900,25 +905,25 @@ function handle_tkaicheck(req,res) {
 							reject('line with invalid allele count: '+line)
 						}
 
-						const x = Math.ceil( r.x+ xsf * (r.reverse ?  r.stop-pos : pos-r.start) )
+						const x = Math.ceil( r.x+ xsf * (r.reverse ?  r.stop-pos : pos-r.start) - dotsize/2 )
 
 						ctx.fillStyle = samplecolor
 						const vaftumor = mintumor/tintumor
-						ctx.fillRect(x, vafheight*(1-vaftumor), 1, 2)
+						ctx.fillRect(x, vafheight*(1-vaftumor), dotsize, 2)
 						const vafnormal = minnormal/tinnormal
-						ctx.fillRect(x, vafheight+rowspace+coverageheight+rowspace+vafheight*(1-vafnormal), 1, 2)
+						ctx.fillRect(x, vafheight+rowspace+coverageheight+rowspace+vafheight*(1-vafnormal), dotsize, 2)
 						ctx.fillStyle = aicolor
 						const ai = Math.abs(vaftumor-vafnormal)
-						ctx.fillRect(x, vafheight*2+rowspace*4+coverageheight*2+vafheight*(1-ai), 1, 2)
+						ctx.fillRect(x, vafheight*2+rowspace*4+coverageheight*2+vafheight*(1-ai), dotsize, 2)
 
 						ctx.fillStyle = barcolor
 						let barh = (tintumor >= coveragemax ? coveragemax : tintumor) * coverageheight / coveragemax
 						let y = coverageheight-barh
-						ctx.fillRect(x, y + vafheight+rowspace, 1, barh)
+						ctx.fillRect(x, y + vafheight+rowspace, dotsize, barh)
 			
 						barh = (tinnormal >= coveragemax ? coveragemax : tinnormal) * coverageheight / coveragemax
 						y = coverageheight-barh
-						ctx.fillRect(x, y + 3*rowspace + 2*vafheight + coverageheight, 1, barh)
+						ctx.fillRect(x, y + 3*rowspace + 2*vafheight + coverageheight, dotsize, barh)
 					}
 					resolve()
 				})
