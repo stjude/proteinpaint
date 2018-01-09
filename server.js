@@ -876,8 +876,8 @@ function handle_tkaicheck(req,res) {
 
 		const samplecolor = '#786312'
 		const aicolor = '#122778'
-
 		const barcolor = '#858585'
+		const coverageabovemaxcolor = 'red'
 
 		const tasks = [] // each region draw
 
@@ -907,20 +907,24 @@ function handle_tkaicheck(req,res) {
 
 						const x = Math.ceil( r.x+ xsf * (r.reverse ?  r.stop-pos : pos-r.start) - dotsize/2 )
 
+						// marker maf
 						ctx.fillStyle = samplecolor
 						const vaftumor = mintumor/tintumor
 						ctx.fillRect(x, vafheight*(1-vaftumor), dotsize, 2)
 						const vafnormal = minnormal/tinnormal
 						ctx.fillRect(x, vafheight+rowspace+coverageheight+rowspace+vafheight*(1-vafnormal), dotsize, 2)
 						ctx.fillStyle = aicolor
+						// ai
 						const ai = Math.abs(vaftumor-vafnormal)
 						ctx.fillRect(x, vafheight*2+rowspace*4+coverageheight*2+vafheight*(1-ai), dotsize, 2)
 
-						ctx.fillStyle = barcolor
+						// coverage bars
+						ctx.fillStyle = tintumor>=coveragemax ? coverageabovemaxcolor : barcolor
 						let barh = (tintumor >= coveragemax ? coveragemax : tintumor) * coverageheight / coveragemax
 						let y = coverageheight-barh
 						ctx.fillRect(x, y + vafheight+rowspace, dotsize, barh)
 			
+						ctx.fillStyle = tinnormal >=coveragemax ? coverageabovemaxcolor : barcolor
 						barh = (tinnormal >= coveragemax ? coveragemax : tinnormal) * coverageheight / coveragemax
 						y = coverageheight-barh
 						ctx.fillRect(x, y + 3*rowspace + 2*vafheight + coverageheight, dotsize, barh)
