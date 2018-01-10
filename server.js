@@ -3742,11 +3742,13 @@ function handle_mdssvcnv(req,res) {
 			// not supported
 			return res.send({error:'no server-side config available for custom track'})
 		}
-		if(!ds.sample2tracks) {
+		if(!ds.sampleAssayTrack) {
 			// not available
 			return res.send({})
 		}
-		return res.send({tracks: ds.sample2tracks[ samplename ]})
+		return res.send({
+			tracks: ds.sampleAssayTrack.samples.get( samplename )
+		})
 	}
 
 
@@ -7518,7 +7520,7 @@ for(const g of serverconfig.genomes) {
 	g2.genomefile = path.join( serverconfig.tpmasterdir, g2.genomefile )
 
 	genomes[g.name]=g2
-	
+
 	if(!g2.tracks) {
 		g2.tracks=[] // must always have .tracks even if empty
 	}
@@ -7718,7 +7720,10 @@ for(const genomename in genomes) {
 		ds.label=d.name
 		g.datasets[ds.label]=ds
 
+
+
 		if(ds.isMds) {
+
 			/********* MDS ************/
 			const err = mds_init(ds, g)
 			if(err) return 'Error with dataset '+ds.label+': '+err
@@ -7941,6 +7946,37 @@ function mds_init(ds,genome) {
 
 	// initialize one mds dataset
 
+	if(ds.sampleAssayTrack) {
+		if(!ds.sampleAssayTrack.file) return '.file missing from sampleAssayTrack'
+		ds.sampleAssayTrack.samples = new Map()
+		let count=0
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir, ds.sampleAssayTrack.file),{encoding:'utf8'}).trim().split('\n')) {
+
+			const [sample, assay, txt] = line.split('\t')
+			// assay name is not used
+
+			let tk
+			try {
+				tk = JSON.parse(txt)
+			} catch(err) {
+				return 'invalid JSON in sampleAssayTrack: '+txt
+			}
+
+			// validate track
+			if(!common.tkt[ tk.type ]) return 'invalid type from a sample track: '+txt
+			if(!tk.name) {
+				tk.name = sample+' '+assay
+			}
+
+			if(!ds.sampleAssayTrack.samples.has(sample)) {
+				ds.sampleAssayTrack.samples.set(sample, [])
+			}
+			ds.sampleAssayTrack.samples.get(sample).push(tk)
+			count++
+		}
+		console.log( ds.label+': '+count+' tracks loaded from '+ds.sampleAssayTrack.samples.size+' samples')
+	}
+
 	if(ds.cohort) {
 		if(!ds.cohort.files) return '.files[] missing from .cohort'
 		if(!Array.isArray(ds.cohort.files)) return '.cohort.files is not array'
@@ -8001,15 +8037,6 @@ function mds_init(ds,genome) {
 		}
 	}
 
-	if(ds.sample2tracks) {
-		if(!ds.cohort || !ds.cohort.annotation) return '.cohort is required for sample2tracks'
-		for(const sample in ds.sample2tracks) {
-			if(!ds.cohort.annotation[sample]) return 'unknown sample name from sample2track: '+sample
-			for(const tk of ds.sample2tracks[sample]) {
-				// validate?
-			}
-		}
-	}
 
 	if(ds.queries) {
 		for(const querykey in ds.queries) {
@@ -8055,8 +8082,6 @@ function mds_init(ds,genome) {
 				return 'unknown type of query from '+querykey
 			}
 		}
-	}
-	if(ds.trackstore) {
 	}
 	return null
 }
