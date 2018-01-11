@@ -7953,18 +7953,21 @@ function mds_init(ds,genome) {
 		let count=0
 		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir, ds.sampleAssayTrack.file),{encoding:'utf8'}).trim().split('\n')) {
 
-			const [sample, assay, txt] = line.split('\t')
-			// assay name is not used
+			if(!line) continue
+			if(line[0]=='#') continue
+
+			const [sample, assay, jsontext] = line.split('\t')
+			if(!assay || !jsontext) continue
 
 			let tk
 			try {
-				tk = JSON.parse(txt)
+				tk = JSON.parse(jsontext)
 			} catch(err) {
-				return 'invalid JSON in sampleAssayTrack: '+txt
+				return 'invalid JSON in sampleAssayTrack: '+jsontext
 			}
 
 			// validate track
-			if(!common.tkt[ tk.type ]) return 'invalid type from a sample track: '+txt
+			if(!common.tkt[ tk.type ]) return 'invalid type from a sample track: '+jsontext
 			if(!tk.name) {
 				tk.name = sample+' '+assay
 			}
