@@ -970,7 +970,7 @@ function init2(x,y, plot, group) {
 			if(d.loss) hasloss=true
 			if(d.sv) hassv=true
 			if(d.estat.ase_monoallelic || d.estat.ase_uncertain || d.estat.ase_biallelic) hasase=true
-			if(d.estat.outlier) hasoutlier=true
+			if(d.estat.outlier || d.estat.outlier_asehigh) hasoutlier=true
 		}
 
 		pp.statuscolumns = []
@@ -1075,7 +1075,11 @@ function init2(x,y, plot, group) {
 
 			if(d.estat.outlier) {
 				const cell = { g: d.rowg.append('g') }
-				cell.rect = cell.g.append('rect') .attr('fill', _p.gecfg.outlier.color)
+				cell.rect = cell.g.append('rect') .attr('fill', _p.gecfg.outlier.color_outlier)
+				status2cell.set( label_outlier, cell )
+			} else if(d.estat.outlier_asehigh) {
+				const cell = { g: d.rowg.append('g') }
+				cell.rect = cell.g.append('rect') .attr('fill', _p.gecfg.outlier.color_outlier_asehigh)
 				status2cell.set( label_outlier, cell )
 			}
 

@@ -1423,12 +1423,21 @@ function render_multi_genebar( tk, block) {
 						.attr('height',tk.rowheight)
 						.attr('shape-rendering','crispEdges')
 
-					if(v.estat.outlier) {
-						row.append('circle')
-							.attr('cx',barwidth)
-							.attr('cy',tk.rowheight/2)
-							.attr('r',tk.rowheight/2)
-							.attr('fill', tk.gecfg.outlier.color)
+					if(tk.isfull) {
+						// only show dots for outlier status in full, not dense
+						if(v.estat.outlier) {
+							row.append('circle')
+								.attr('cx',barwidth)
+								.attr('cy',tk.rowheight/2)
+								.attr('r',tk.rowheight/2)
+								.attr('fill', tk.gecfg.outlier.color_outlier)
+						} else if(v.estat.outlier_asehigh) {
+							row.append('circle')
+								.attr('cx',barwidth)
+								.attr('cy',tk.rowheight/2)
+								.attr('r',tk.rowheight/2)
+								.attr('fill', tk.gecfg.outlier.color_outlier_asehigh)
+						}
 					}
 
 					const barbg=row.append('rect')
@@ -3042,7 +3051,9 @@ function tooltip_svcnv_addexpressionrank( sample, tk ) {
 		}
 
 		if(v.estat.outlier) {
-			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color+';color:white">Outlier HIGH</span>')
+			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier+';color:white">Outlier HIGH</span>')
+		} else if(v.estat.outlier_asehigh) {
+			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier_asehigh+';color:white">ASE HIGH</span>')
 		}
 
 		lst.push('</td></tr>')

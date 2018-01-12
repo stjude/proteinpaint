@@ -28,14 +28,17 @@ export function init_config(cfg) {
 	if(cfg.ase.qvalue==undefined) cfg.ase.qvalue=0.05
 	if(cfg.ase.meandelta_monoallelic==undefined) cfg.ase.meandelta_monoallelic=0.3
 	if(cfg.ase.asemarkernumber_biallelic==undefined) cfg.ase.asemarkernumber_biallelic=0
-	if(cfg.ase.meandelta_biallelic==undefined) cfg.ase.meandelta_biallelic=0.1
+	//if(cfg.ase.meandelta_biallelic==undefined) cfg.ase.meandelta_biallelic=0.1
 	if(!cfg.ase.color_noinfo) cfg.ase.color_noinfo='#858585'
 	if(!cfg.ase.color_uncertain) cfg.ase.color_uncertain='#A8E0B5'
 	if(!cfg.ase.color_biallelic) cfg.ase.color_biallelic='#40859C'
 	if(!cfg.ase.color_monoallelic) cfg.ase.color_monoallelic='#d95f02'
+
 	if(!cfg.outlier) cfg.outlier={}
-	if(cfg.outlier.pvalue==undefined) cfg.outlier.pvalue=0.05
-	if(!cfg.outlier.color) cfg.outlier.color='#FF8875'
+	if(cfg.outlier.pvalue_cutoff==undefined) cfg.outlier.pvalue_cutoff=0.05
+	if(cfg.outlier.rank_asehigh_cutoff==undefined) cfg.outlier.rank_asehigh_cutoff=0.1 // rank within 10% of the cohort
+	if(!cfg.outlier.color_outlier) cfg.outlier.color_outlier='#FF8875'
+	if(!cfg.outlier.color_outlier_asehigh) cfg.outlier.color_outlier_asehigh='blue'
 }
 
 
@@ -62,7 +65,9 @@ export function measure(v, cfg) {
 				v.estat.ase_uncertain=true
 			}
 		} else {
-			if(v.ase.ase_markers == cfg.ase.asemarkernumber_biallelic && v.ase.mean_delta <= cfg.ase.meandelta_biallelic) {
+			if(v.ase.ase_markers == cfg.ase.asemarkernumber_biallelic) {
+				// no longer post a min cutoff for mean_delta
+				// v.ase.mean_delta <= cfg.ase.meandelta_biallelic
 				v.estat.ase_biallelic=true
 			} else {
 				v.estat.ase_uncertain=true
@@ -73,12 +78,65 @@ export function measure(v, cfg) {
 	}
 
 	if(v.outlier && cfg.outlier) {
+		/*
+		old logic, no ase_high category
 		if(v.outlier.test_whitelist && v.outlier.test_whitelist.pvalue<=cfg.outlier.pvalue) {
 			v.estat.outlier=true
 		} else if(v.outlier.test_biallelic && v.outlier.test_biallelic.pvalue<=cfg.outlier.pvalue) {
 			v.estat.outlier=true
 		} else if(v.outlier.test_entirecohort && v.outlier.test_entirecohort.pvalue<=cfg.outlier.pvalue) {
 			v.estat.outlier=true
+		}
+		*/
+
+		if(v.outlier.test_whitelist) {
+			if(v.outlier.test_whitelist.pvalue <= cfg.outlier.pvalue_cutoff) {
+				v.estat.outlier=true
+			} else {
+				// not significant pvalue
+				if(v.estat.ase_monoallelic) {
+					// is mono, then check rank in this group to decide ase_high
+					if(Number.isInteger(v.outlier.test_whitelist.rank) &&
+						Number.isInteger(v.outlier.test_whitelist.size) &&
+						(v.outlier.test_whitelist.rank / v.outlier.test_whitelist.size <= cfg.outlier.rank_asehigh_cutoff)) {
+
+						v.estat.outlier_asehigh=true
+						v.outlier.test_whitelist.asehigh = true
+					}
+				}
+			}
+		} else if(v.outlier.test_biallelic) {
+			if(v.outlier.test_biallelic.pvalue <= cfg.outlier.pvalue_cutoff) {
+				v.estat.outlier=true
+			} else {
+				// not significant pvalue
+				if(v.estat.ase_monoallelic) {
+					// is mono, then check rank in this group to decide ase_high
+					if(Number.isInteger(v.outlier.test_biallelic.rank) &&
+						Number.isInteger(v.outlier.test_biallelic.size) &&
+						(v.outlier.test_biallelic.rank / v.outlier.test_biallelic.size <= cfg.outlier.rank_asehigh_cutoff)) {
+
+						v.estat.outlier_asehigh=true
+						v.outlier.test_biallelic.asehigh=true
+					}
+				}
+			}
+		} else if(v.outlier.test_entirecohort) {
+			if(v.outlier.test_entirecohort.pvalue <= cfg.outlier.pvalue_cutoff) {
+				v.estat.outlier=true
+			} else {
+				// not significant pvalue
+				if(v.estat.ase_monoallelic) {
+					// is mono, then check rank in whilelist to decide ase_high
+					if(Number.isInteger(v.outlier.test_entirecohort.rank) &&
+						Number.isInteger(v.outlier.test_entirecohort.size) &&
+						(v.outlier.test_entirecohort.rank / v.outlier.test_entirecohort.size <= cfg.outlier.rank_asehigh_cutoff)) {
+
+						v.estat.outlier_asehigh=true
+						v.outlier.test_entirecohort.asehigh=true
+					}
+				}
+			}
 		}
 	}
 }
@@ -129,8 +187,17 @@ export function showsingleitem_table(v, cfg, table) {
 			for(const k in v.outlier.test_whitelist) {
 				lst.push({k:k, v:v.outlier.test_whitelist[k]})
 			}
+
 			const td=tr.append('td')
 			client.make_table_2col(td, lst)
+
+			if(v.outlier.test_whitelist.asehigh) {
+				td.append('div')
+					.style('background', cfg.outlier.color_outlier_asehigh)
+					.style('padding','2px 10px')
+					.style('color','white')
+					.text('ASE high')
+			}
 		}
 		if(v.outlier.test_biallelic) {
 			const tr=table.append('tr')
@@ -143,6 +210,14 @@ export function showsingleitem_table(v, cfg, table) {
 			}
 			const td=tr.append('td')
 			client.make_table_2col(td, lst)
+
+			if(v.outlier.test_biallelic.asehigh) {
+				td.append('div')
+					.style('background', cfg.outlier.color_outlier_asehigh)
+					.style('padding','2px 10px')
+					.style('color','white')
+					.text('ASE high')
+			}
 		}
 		if(v.outlier.test_entirecohort) {
 			const tr=table.append('tr')
@@ -155,6 +230,14 @@ export function showsingleitem_table(v, cfg, table) {
 			}
 			const td=tr.append('td')
 			client.make_table_2col(td, lst)
+
+			if(v.outlier.test_entirecohort.asehigh) {
+				td.append('div')
+					.style('background', cfg.outlier.color_outlier_asehigh)
+					.style('padding','2px 10px')
+					.style('color','white')
+					.text('ASE high')
+			}
 		}
 	}
 }
@@ -257,6 +340,7 @@ export function ui_config(holder, cfg, call) {
 				cfg.ase.asemarkernumber_biallelic=v
 				call()
 			})
+			/*
 		row.append('span').html('&nbsp;AND&nbsp;MEAN DELTA &le;&nbsp;')
 		row.append('input')
 			.attr('type','number')
@@ -276,6 +360,7 @@ export function ui_config(holder, cfg, call) {
 				cfg.ase.meandelta_biallelic=v
 				call()
 			})
+			*/
 		row.append('span').html('&nbsp;:&nbsp;')
 	}
 	holder.append('div')
@@ -295,7 +380,7 @@ export function ui_config(holder, cfg, call) {
 			cfg.ase.qvalue=0.05
 			cfg.ase.meandelta_monoallelic=0.3
 			cfg.ase.asemarkernumber_biallelic=0
-			cfg.ase.meandelta_biallelic=0.1
+			//cfg.ase.meandelta_biallelic=0.1
 			call()
 		})
 }
