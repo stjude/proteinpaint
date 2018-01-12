@@ -105,7 +105,7 @@ module.exports={
 				qvalue:0.05,
 				meandelta_monoallelic:0.3,
 				asemarkernumber_biallelic:0,
-				meandelta_biallelic:0.1,
+				//meandelta_biallelic:0.1,  no longer used
 				color_noinfo:'#858585',
 				color_notsure:'#A8E0B5',
 				color_biallelic:'#40859C',
