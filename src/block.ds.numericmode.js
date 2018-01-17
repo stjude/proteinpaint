@@ -395,8 +395,15 @@ set:
 
 
 const showstem = adjustview( tk, block )
+
 nm.showsamplebar = showstem && tk.ds && tk.ds.samplebynumericvalue
-tk.genotype2color.legend.style('display',nm.showsamplebar ? 'block':'none')
+
+if(!nm.showsamplebar) {
+	// do not show both at same time
+	nm.showgenotypebyvalue = showstem && tk.ds && tk.ds.genotypebynumericvalue
+}
+
+tk.genotype2color.legend.style('display', nm.showsamplebar || nm.showgenotypebyvalue ? 'block':'none')
 
 
 // v is for variant-level values
@@ -404,7 +411,11 @@ let mcset
 let vmin=null
 let vmax=null
 
-if(nm.showsamplebar) {
+// in case of plotting genotype circles, circle radius is set by relative # of samples
+let genotypebyvaluesamplemax=0
+let genotypebyvaluecircleradiusscale=null
+
+if(nm.showsamplebar ) {
 	mcset = { name:tk.ds.samplebynumericvalue.axislabel }
 	for(const d of tk.data) {
 		for(const m of d.mlst) {
@@ -426,6 +437,66 @@ if(nm.showsamplebar) {
 			}
 		}
 	}
+
+} else if(nm.showgenotypebyvalue) {
+
+	mcset = { name:tk.ds.genotypebynumericvalue.axislabel }
+	for(const d of tk.data) {
+		for(const m of d.mlst) {
+			let v = m.info[ tk.ds.genotypebynumericvalue.refref.infokey ]
+			if(v!=undefined) {
+				if(vmin==null) {
+					vmin=v
+					vmax=v
+				} else {
+					vmin = Math.min(vmin,v)
+					vmax = Math.max(vmax,v)
+				}
+			}
+			v = m.info[ tk.ds.genotypebynumericvalue.refalt.infokey ]
+			if(v!=undefined) {
+				if(vmin==null) {
+					vmin=v
+					vmax=v
+				} else {
+					vmin = Math.min(vmin,v)
+					vmax = Math.max(vmax,v)
+				}
+			}
+			v = m.info[ tk.ds.genotypebynumericvalue.altalt.infokey ]
+			if(v!=undefined) {
+				if(vmin==null) {
+					vmin=v
+					vmax=v
+				} else {
+					vmin = Math.min(vmin,v)
+					vmax = Math.max(vmax,v)
+				}
+			}
+
+			if(!m.sampledata) continue
+			let num_refref=0,
+				num_altalt=0,
+				num_refalt=0
+			for(const s of m.sampledata) {
+				if(!s.allele2readcount) continue
+				if(s.allele2readcount[m.alt]) {
+					if(s.allele2readcount[m.ref]) {
+						num_refalt++
+					} else {
+						num_altalt++
+					}
+				} else {
+					num_refref++
+				}
+			}
+			genotypebyvaluesamplemax = Math.max(genotypebyvaluesamplemax, num_refref, num_refalt, num_altalt)
+
+		}
+	}
+
+	genotypebyvaluecircleradiusscale = scaleLinear().domain([0, genotypebyvaluesamplemax]).range([4, 10])
+
 } else {
 	mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4numeric]
 
@@ -547,7 +618,7 @@ if(showstem) {
 nm.toplabelheight=0
 nm.bottomlabelheight=0
 
-if(nm.showsamplebar) {
+if(nm.showsamplebar || nm.showgenotypebyvalue) {
 	for(const d of tk.data) {
 		for(const m of d.mlst) {
 			nm.toplabelheight=Math.max(nm.toplabelheight,m.labwidth)
@@ -767,6 +838,108 @@ if(nm.showsamplebar) {
 		}
 	}
 
+} else if(nm.showgenotypebyvalue) {
+
+	discg.attr('transform',m=>'translate('+m.xoff+',0)')
+
+	for(const d of tk.data) {
+		for(const m of d.mlst) {
+			if(!m.sampledata) continue
+			const g = d3select(m.g)
+			let num_refref=0,
+				num_altalt=0,
+				num_refalt=0
+
+			for(const s of m.sampledata) {
+				if(!s.allele2readcount) continue
+				if(s.allele2readcount[m.alt]) {
+					if(s.allele2readcount[m.ref]) {
+						num_refalt++
+					} else {
+						num_altalt++
+					}
+				} else {
+					num_refref++
+				}
+			}
+
+			if(num_refref) {
+				const v = m.info[ tk.ds.genotypebynumericvalue.refref.infokey ]
+				if(v!=undefined) {
+					const y = -numscale(v)-nm.maxradius
+					g.append('circle')
+					.attr('cy',y)
+					.attr('r', genotypebyvaluecircleradiusscale( num_refref) )
+					.attr('stroke', tk.ds.genotypebynumericvalue.refref.color)
+					.attr('fill','none')
+					.on('mouseover',()=>{
+						tk.tktip.show(d3event.clientX,d3event.clientY)
+							.clear()
+						const lst = [
+							{k:'Variant',v:m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt},
+							{k:'Genotype',v:'Ref/Ref'},
+							{k:tk.ds.genotypebynumericvalue.axislabel,v:v}
+							]
+						client.make_table_2col(tk.tktip.d, lst)
+					})
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+					})
+				}
+			}
+			if(num_refalt) {
+				const v = m.info[ tk.ds.genotypebynumericvalue.refalt.infokey ]
+				if(v!=undefined) {
+					const y = -numscale(v)-nm.maxradius
+					g.append('circle')
+					.attr('cy',y)
+					.attr('r', genotypebyvaluecircleradiusscale( num_refalt) )
+					.attr('stroke', tk.ds.genotypebynumericvalue.refalt.color)
+					.attr('fill','none')
+					.on('mouseover',()=>{
+						tk.tktip.show(d3event.clientX,d3event.clientY)
+							.clear()
+						const lst = [
+							{k:'Variant',v:m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt},
+							{k:'Genotype',v:'Ref/Alt'},
+							{k:tk.ds.genotypebynumericvalue.axislabel,v:v}
+							]
+						client.make_table_2col(tk.tktip.d, lst)
+					})
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+					})
+				}
+			}
+			if(num_altalt) {
+				const v = m.info[ tk.ds.genotypebynumericvalue.altalt.infokey ]
+				if(v!=undefined) {
+					const y = -numscale(v)-nm.maxradius
+					g.append('circle')
+					.attr('cy',y)
+					.attr('r', genotypebyvaluecircleradiusscale( num_altalt) )
+					.attr('stroke', tk.ds.genotypebynumericvalue.altalt.color)
+					.attr('fill','none')
+					.on('mouseover',()=>{
+						tk.tktip.show(d3event.clientX,d3event.clientY)
+							.clear()
+						const lst = [
+							{k:'Variant',v:m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt},
+							{k:'Genotype',v:'Alt/Alt'},
+							{k:tk.ds.genotypebynumericvalue.axislabel,v:v}
+							]
+						client.make_table_2col(tk.tktip.d, lst)
+					})
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+					})
+				}
+			}
+		}
+	}
+
+
+
 } else {
 
 
@@ -860,7 +1033,7 @@ const textlabels=discg
 		return m._labfontsize
 		})
 	.attr('fill',m=> color4disc(m,tk))
-	.attr('x',m=> nm.showsamplebar ? nm.axisheight+nm.maxradius+4 : m.radius+m.rimwidth+disclabelspacing)
+	.attr('x',m=> (nm.showsamplebar || nm.showgenotypebyvalue) ? nm.axisheight+nm.maxradius+4 : m.radius+m.rimwidth+disclabelspacing)
 	.attr('y',m=> m._labfontsize*middlealignshift)
 	.attr('class','sja_aa_disclabel')
 	.attr('transform', m=> 'rotate('+(m.labattop?'-':'')+'90)')
@@ -926,6 +1099,7 @@ function m_mouseover(m,tk) {
 	}
 	const nm=tk.numericmode
 	if(nm.showsamplebar) return
+	if(nm.showgenotypebyvalue) return
 
 	// pica moves to center of m disc
 	tk.pica.g.attr('transform','translate('+(m.aa.x+m.xoff)+','+(nm.toplabelheight+nm.maxradius+nm.axisheight-m._y)+')')

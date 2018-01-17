@@ -182,6 +182,15 @@ export default function vcf2dstk(arg) {
 		tk.ds.samplebynumericvalue = arg.samplebynumericvalue
 	}
 
+	if(arg.genotypebynumericvalue) {
+		if(!arg.genotypebynumericvalue.refref) return ['refref missing from genotypebynumericvalue']
+		if(!arg.genotypebynumericvalue.refalt) return ['refalt missing from genotypebynumericvalue']
+		if(!arg.genotypebynumericvalue.altalt) return ['altalt missing from genotypebynumericvalue']
+		if(!arg.genotypebynumericvalue.refref.infokey) return ['refref.infokey missing from genotypebynumericvalue']
+		if(!arg.genotypebynumericvalue.refalt.infokey) return ['refalt.infokey missing from genotypebynumericvalue']
+		if(!arg.genotypebynumericvalue.altalt.infokey) return ['altalt.infokey missing from genotypebynumericvalue']
+		tk.ds.genotypebynumericvalue = arg.genotypebynumericvalue
+	}
 
 
 	if(arg.pointdown) {
