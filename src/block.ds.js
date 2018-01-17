@@ -2970,7 +2970,6 @@ function showlegend_sampleattribute(tk, block) {
 	shadow vcf, use slim matrix to map variant to sample list
 	*/
 	if(tk.mlst[0].sampledata) {
-	console.log('xx')
 		/*
 		multi-sample vcf
 		*/
