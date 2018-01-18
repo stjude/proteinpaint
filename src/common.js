@@ -681,3 +681,14 @@ exports.getMax_byiqr=function(lst, novaluemax) {
 	const q2=lst[Math.floor(lst.length*3/4)]
 	return Math.min( q2+(q2-q1)*1.5, max)
 }
+
+
+
+
+exports.alleleInGenotypeStr = function(genotype, allele) {
+	if(!genotype) return false
+	if(genotype.indexOf('/')!=-1) {
+		return genotype.split('/').indexOf(allele)!=-1
+	}
+	return genotype.split('|').indexOf(allele)!=-1
+}

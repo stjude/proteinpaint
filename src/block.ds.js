@@ -3320,7 +3320,7 @@ export function mlst_pretreat(tk, block, originhidden) {
 						/*
 						for this sample to be considered, it must have the alt allele
 						*/
-						if(!s0.allele2readcount || !s0.allele2readcount[ m.alt ]) {
+						if(!common.alleleInGenotypeStr( s0.genotype, m.alt )) {
 							// this sample does not have alt allele
 							continue
 						}
