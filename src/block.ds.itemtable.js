@@ -845,7 +845,7 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 			} else if( mayshowcovmafplot( m, tk, div) ) {
 			} else if( mayshowgenotype2boxplot( m, tk, div)) {
 			} else {
-				vcfsamplelistbutton( m, row1, tk.tktip )
+				vcfsamplelistbutton( m, row1, tk )
 			}
 		})
 		.catch(err=>{
@@ -1612,36 +1612,74 @@ function caller_pmid(m) {
 
 
 
-function vcfsamplelistbutton( m, holder, tip) {
+function vcfsamplelistbutton( m, holder, tk) {
 	/*
+	for sample objects about this variant loaded from cohort vcf
+	at header of itemtable
 	make a sample button
 	click to list samples
-	may be gone soon
+
+	the variant is present is because at least 1 of the sample passed sample annotation filter
+	so don't show samples that are filtered!
 	*/
+
+	let samplelst = m.sampledata
+	// check against annotation filter
+
+	if(tk.ds && tk.ds.cohort && tk.ds.cohort.annotation && tk.ds.cohort.key4annotation && tk.ds.cohort.sampleattribute && tk.ds.cohort.sampleattribute.runtimelst) {
+
+		samplelst = []
+		for(const s0 of m.sampledata) {
+
+			const s0name = s0.sampleobj[ tk.ds.cohort.key4annotation ]
+			if(!s0name) continue
+
+			const av = tk.ds.cohort.annotation[s0name]
+			if(av) {
+
+				let hidden=false
+				for(const attr of tk.ds.cohort.sampleattribute.runtimelst) {
+					if(attr.key && attr.key.k && attr.key.hiddenvalues && attr.key.hiddenvalues.size) {
+						const v = av[attr.key.k]
+						if(attr.key.hiddenvalues.has( v )) {
+							hidden=true
+							break
+						}
+					}
+				}
+				if(hidden) continue
+			}
+			samplelst.push(s0)
+		}
+	}
 
 	holder.append('div')
 	.attr('class','sja_menuoption')
 	.style('display','inline-block')
 	.style('margin-right','10px')
-	.text(m.sampledata.length+' sample'+(m.sampledata.length>1?'s':''))
+	.text(samplelst.length+' sample'+(samplelst.length>1?'s':''))
 	.on('click',()=>{
-		tip.clear()
-		tip.showunder(d3event.target)
-		const table= tip.d.append('table')
-		const tr=table.append('tr').style('font-size','.8em').style('color','#858585')
+
+		tk.tktip.showunder(d3event.target)
+			.clear()
+		const table= tk.tktip.d.append('table')
+		const tr=table.append('tr')
+			.style('font-size','.8em')
+			.style('color','#858585')
 		tr.append('td').text('Name')
 		tr.append('td').text('Genotype')
+
 		let hasgt=false
-		if(m.sampledata[0].DP!=undefined) {
+		if(samplelst[0].DP!=undefined) {
 			tr.append('td').text('Read depth')
 			hasgt=true
 		}
 		let hascount=false
-		if(m.sampledata[0].allele2readcount) {
+		if(samplelst[0].allele2readcount) {
 			tr.append('td').text('Allele read count')
 			hascount=true
 		}
-		for(const s of m.sampledata) {
+		for(const s of samplelst) {
 			const tr=table.append('tr')
 			tr.append('td').text(s.sampleobj.name)
 			tr.append('td').style('padding-left','10px').text(s.genotype)
