@@ -3176,6 +3176,8 @@ function legendmenu_sampleattribute(thisvalue, thisattr, tip, tk, block) {
 
 export function mlst_pretreat(tk, block, originhidden) {
 	/*
+	used both in skewer & numeric
+
 	no change to tk.mlst, but return a subset where they:
 
 	- inside view range
@@ -3295,17 +3297,67 @@ export function mlst_pretreat(tk, block, originhidden) {
 			sample attribute filtering can be applied
 			two ways of getting annotation for the current sample
 			*/
-			if(tk.ds.vcfcohorttrack) {
-				/*
-				slim matrix
-				*/
-			} else if(m.sampledata) {
-				/*
-				loaded from multi-sample vcf
-				*/
-				let usesamples=0
-				for(const s0 of m.sampledata) {
-					const k4a = s0.sampleobj[ tk.ds.cohort.key4annotation ]
+
+			let hiddenattrcount = 0
+			for(const i of tk.ds.cohort.sampleattribute.runtimelst) {
+				if(i.key && i.key.hiddenvalues) {
+					hiddenattrcount += i.key.hiddenvalues.size
+				}
+			}
+			if(hiddenattrcount > 0) {
+				// there are indeed hidden attributes, so commence filtering
+				if(tk.ds.vcfcohorttrack) {
+					/*
+					slim matrix
+					*/
+				} else if(m.sampledata) {
+					/*
+					loaded from multi-sample vcf
+					*/
+					let usesamples=0
+					for(const s0 of m.sampledata) {
+
+						/*
+						for this sample to be considered, it must have the alt allele
+						*/
+						if(!s0.allele2readcount || !s0.allele2readcount[ m.alt ]) {
+							// this sample does not have alt allele
+							continue
+						}
+
+						const k4a = s0.sampleobj[ tk.ds.cohort.key4annotation ]
+						if(k4a) {
+							const sanno = tk.ds.cohort.annotation[ k4a ]
+							if(sanno) {
+								// this sample has valid annotation
+								let hidden=false
+								for(const attr of tk.ds.cohort.sampleattribute.runtimelst) {
+									const thisvalue = sanno[ attr.key.k ]
+									if(thisvalue!=undefined) {
+										// this sample is annotated by this key
+										if(attr.key.hiddenvalues.has( thisvalue )) {
+											// annotation value of this sample is hidden
+											hidden=true
+											break
+										}
+									}
+								}
+								if(hidden) {
+									// this is a hidden sample
+									continue
+								}
+							}
+						}
+						usesamples++
+					}
+					if(usesamples==0) {
+						continue
+					}
+				} else {
+					/*
+					m loaded from db, per sample case
+					*/
+					const k4a = m[ tk.ds.cohort.key4annotation ]
 					if(k4a) {
 						const sanno = tk.ds.cohort.annotation[ k4a ]
 						if(sanno) {
@@ -3326,37 +3378,6 @@ export function mlst_pretreat(tk, block, originhidden) {
 								// this is a hidden sample
 								continue
 							}
-						}
-					}
-					usesamples++
-				}
-				if(usesamples==0) {
-					continue
-				}
-			} else {
-				/*
-				m loaded from db, per sample case
-				*/
-				const k4a = m[ tk.ds.cohort.key4annotation ]
-				if(k4a) {
-					const sanno = tk.ds.cohort.annotation[ k4a ]
-					if(sanno) {
-						// this sample has valid annotation
-						let hidden=false
-						for(const attr of tk.ds.cohort.sampleattribute.runtimelst) {
-							const thisvalue = sanno[ attr.key.k ]
-							if(thisvalue!=undefined) {
-								// this sample is annotated by this key
-								if(attr.key.hiddenvalues.has( thisvalue )) {
-									// annotation value of this sample is hidden
-									hidden=true
-									break
-								}
-							}
-						}
-						if(hidden) {
-							// this is a hidden sample
-							continue
 						}
 					}
 				}
