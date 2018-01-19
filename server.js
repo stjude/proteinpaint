@@ -4177,107 +4177,104 @@ function handle_mdssvcnv(req,res) {
 
 		const result = {}
 
-		if(ds.cohort && ds.cohort.annotation && ds.cohort.hierarchies && dsquery.sortsamplebyhierarchy) {
+		if(ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattrlst) {
 
-			/**** group samples by predefined levels of the hierarchy
+			/**** group samples by predefined annotation attributes
 			only for official ds
 			*/
-			const samplelst = [] // list of sample annotations retrieved from ds.cohort.annotation
-			for(const n of sample2item.keys()) {
-				const a=ds.cohort.annotation[n]
-				if(!a) {
-					// not annotated, should not happen, since samples should already been checked
+
+
+			const spacer = ', ' // join attribute values to form group name, e.g. "HM, BALL"
+
+			const key2group = new Map()
+			// k: group name string
+			// v: [] list of samples
+
+
+			// head-less samples
+			const headlesssamples = []
+
+
+			for(const [samplename, items] of sample2item) {
+				
+				const sanno = ds.cohort.annotation[ samplename ]
+				if(!sanno) {
+					// this sample has no annotation
+					headlesssamples.push({
+						samplename: samplename, // hardcoded attribute name
+						items: items
+					})
 					continue
 				}
-				samplelst.push(a)
-			}
 
-			const samplegroups = []
-			// for client, each group is one node of a chosen level
-			// each group will contain a list of samples
-
-			if( samplelst.length ) {
-				const hierarchy = ds.cohort.hierarchies.lst[ dsquery.sortsamplebyhierarchy.hierarchyidx ]
-				const tmp=stratinput(samplelst,hierarchy.levels.slice(0,2))
-				const root = d3stratify()(tmp)
-
-				/*
-				a "group" is one node in a selected hierarchy level
-				e.g. for cancer:
-					level: 2
-					level key: diagnosis_short
-					level name: diagnosis
-					level value: OS
-				all samples belonging to such node will be in a group
-
-				expression rank check: expression from one sample will be compared against its own group
-					to gather the group of samples, server will need level key and level value
-				
-				FIXME L1/L2
-				*/
-
-				for(const L1 of root.children) {
-					if( L1.children ) {
-						for(const L2 of L1.children) {
-
-							// L2 is a group
-							const group = {
-								name: L1.data.name+', '+L2.data.name,
-								levelnames: [ L1.data.full || L1.data.name, L2.data.full || L2.data.name ],
-								samples:[],
-								levelkey: hierarchy.levels[ 1 ].k,
-								levelvalue: L2.data.name
-							}
-							// total # of samples in L2
-							if( dsquery.hierarchySummary && dsquery.hierarchySummary[ hierarchy.name ]) {
-								group.sampletotalnum = dsquery.hierarchySummary[ hierarchy.name ][ L2.id ]
-							}
-
-							for(const leaf of L2.leaves()) {
-								for(const o of leaf.data.lst) {
-									const samplename = o[ ds.cohort.samplenamekey ]
-									group.samples.push( {
-										samplename:samplename,
-										items:sample2item.get( samplename )
-									} )
-								}
-							}
-							samplegroups.push( group )
-						}
-					} else {
-						
-						// L1 has no children
-						const group = {
-							name: L1.data.name,
-							levelnames: [ L1.data.full || L1.data.name ],
-							samples:[],
-							levelkey: hierarchy.levels[ 0 ].k,
-							levelvalue: L1.data.name
-						}
-						// total # of samples in L1
-						if( dsquery.hierarchySummary && dsquery.hierarchySummary[ hierarchy.name ]) {
-							group.sampletotalnum = dsquery.hierarchySummary[ hierarchy.name ][ L1.id ]
-						}
-
-						for(const leaf of L1.leaves()) {
-							for(const o of leaf.data.lst) {
-								const samplename = o[ ds.cohort.samplenamekey ]
-								group.samples.push( {
-									samplename:samplename,
-									items:sample2item.get( samplename )
-								} )
-							}
-						}
-						samplegroups.push( group )
-					}
+				const headname = sanno[ dsquery.groupsamplebyattrlst[0].k ]
+				if(headname == undefined) {
+					// head-less
+					headlesssamples.push({
+						samplename: samplename, // hardcoded
+						items: items
+					})
+					continue
 				}
+
+				const attrnames = []
+				for(let i=1; i<dsquery.groupsamplebyattrlst.length; i++) {
+
+					const v = sanno[ dsquery.groupsamplebyattrlst[i].k ]
+					if(v==undefined) {
+						break
+					}
+					attrnames.push(v)
+				}
+
+				attrnames.unshift( headname )
+
+				const groupname = attrnames.join( spacer )
+
+				if(!key2group.has(groupname)) {
+					// a new group name, need to get available full name for each attribute value for showing on client
+					// if attr.full is not available, just use key value
+					const levelnames = []
+					for(const attr of dsquery.groupsamplebyattrlst) {
+						const v = sanno[ attr.k ]
+						if(v==undefined) {
+							break
+						}
+						const lname = (attr.full ? sanno[ attr.full ] : null) || v
+						levelnames.push(lname)
+					}
+					key2group.set(groupname, {
+						name: groupname,
+						levelnames: levelnames,
+						samples:[],
+						// these are temp fix and should be dropped
+						levelkey: dsquery.groupsamplebyattrlst[ dsquery.groupsamplebyattrlst.length-1 ].k,
+						levelvalue: attrnames[ attrnames.length-1 ] 
+					})
+				}
+
+				key2group.get(groupname).samples.push({
+					samplename: samplename, // hardcoded
+					items: items
+				})
 			}
 
-			result.samplegroups = samplegroups
+			result.samplegroups = []
+
+			for(const o of key2group.values()) {
+				result.samplegroups.push( o )
+			}
+
+			if(headlesssamples.length) {
+				result.samplegroups.push({
+					name:'Unannotated',
+					samples: headlesssamples
+				})
+			}
 
 
-			///////// jinghui nbl cell line mixed into st/nbl, to identify that this sample is cell line on client
-			for(const g of samplegroups) {
+			///////// FIXME jinghui nbl cell line mixed into st/nbl, to identify that this sample is cell line on client
+			for(const g of result.samplegroups) {
 				for(const s of g.samples) {
 					if( ds.cohort.annotation[s.samplename]) {
 						s.sampletype = ds.cohort.annotation[s.samplename].sample_type
@@ -4291,7 +4288,7 @@ function handle_mdssvcnv(req,res) {
 			result.samplegroups = [ { samples: [] } ]
 			for(const [n,items] of sample2item) {
 				result.samplegroups[0].samples.push({
-					samplename:n,
+					samplename:n, // hardcoded
 					items:items
 				})
 			}
@@ -8384,10 +8381,21 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		if(!thatquery.isgenenumeric) return 'query '+query.expressionrank_querykey+' not tagged as isgenenumeric'
 	}
 
+	/* abandon
 	if(query.sortsamplebyhierarchy) {
 		if(!Number.isInteger(query.sortsamplebyhierarchy.hierarchyidx)) return 'sortsamplebyhierarchy.hierarchyidx should be array index'
 		if(!ds.cohort || !ds.cohort.hierarchies) return 'sortsamplebyhierarchy in use but cohort.hierarchies missing'
 		if(!ds.cohort.hierarchies.lst[query.sortsamplebyhierarchy.hierarchyidx]) return 'no hierarchy found by sortsamplebyhierarchy'
+	}
+	*/
+	if(query.groupsamplebyattrlst) {
+		if(!Array.isArray(query.groupsamplebyattrlst)) return 'groupsamplebyattrlst[] must be array'
+		if(query.groupsamplebyattrlst.length==0) return 'groupsamplebyattrlst[] empty array'
+		if(!ds.cohort) return 'groupsamplebyattrlst in use but ds.cohort missing'
+		if(!ds.cohort.annotation) return 'groupsamplebyattrlst in use but ds.cohort.annotation missing'
+		for(const attr of query.groupsamplebyattrlst) {
+			if(!attr.k) return 'k missing from one of groupsamplebyattrlst'
+		}
 	}
 
 	console.log('(svcnv) '+query.name+': '+(query.samples ? query.samples.length:'no')+' samples, '+(query.nochr ? 'no "chr"':'has "chr"'))

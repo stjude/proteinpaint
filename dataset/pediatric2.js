@@ -79,10 +79,22 @@ module.exports={
 			segmeanValueCutoff:0.1,
 			lohLengthUpperLimit:2000000,
 
+			// no longer requires hierarchy
 			sortsamplebyhierarchy: {
 				hierarchyidx:0, // array index of cohort.hierarchies.lst[]
-				// TODO which level to look at
 			},
+
+			/*
+			the list of attributes to group samples, name of groups such as "HM, BALL"
+			the attributes are hierarchical, when a sample is not annotated by 2nd attribute
+			the sample will come to the bin of 1st attribute
+			but if the sample is not annotated by 1st attribute, then it goes to a head-less bin, no matter if it's annotated by any subsequent attributes
+			*/
+			groupsamplebyattrlst:[
+				{k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
+				{k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
+			],
+
 			expressionrank_querykey:'genefpkm'
 		},
 		genefpkm:{
