@@ -14,10 +14,7 @@ single-sample mode for mds & custom data, all samples in the same file
 requires .sample as 
 
 
-Yu's ase/outlier is required feature
-TODO change into optional, e.g. no such thing for cosmic
-
-TODO seekcoord can seek into subpanels, should eliminate need for regions[]?
+Yu's ase & outlier analysis result is built-in but optional
 
 
 */
@@ -88,8 +85,7 @@ export function loadTk( tk, block ) {
 		} else {
 			arg.dslabel = tk.mds.label
 			arg.querykey = tk.querykey
-			arg.levelkey = tk.levelkey
-			arg.levelvalue = tk.levelvalue
+			arg.attributes = tk.attributes
 		}
 		tasks.push(
 			fetch( new Request(block.hostURL+'/mds_expressionrank',{
