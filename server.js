@@ -283,6 +283,8 @@ function handle_genomes(req,res) {
 						}
 
 						if(q.type == common.tkt.mdssvcnv) {
+
+							clientquery.attrnamespacer = q.attrnamespacer
 							if(q.expressionrank_querykey) {
 								// for checking expression rank
 								clientquery.checkexpressionrank = {
@@ -3732,69 +3734,12 @@ function handle_mdssvcnv(req,res) {
 		dsquery=dsquery1
 	}
 
-	if(req.query.gettrack4singlesample) {
-		/*** detour
-		getting track for single sample from server config
-		only for official dataset
-		*/
-		const samplename = req.query.gettrack4singlesample
-		if(req.query.iscustom) {
-			// not supported
-			return res.send({error:'no server-side config available for custom track'})
-		}
-		if(!ds.sampleAssayTrack) {
-			// not available
-			return res.send({})
-		}
-		return res.send({
-			tracks: ds.sampleAssayTrack.samples.get( samplename )
-		})
-	}
+
+	// exits
+	if(req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample( req, res, gn, ds, dsquery )
+	if(req.query.findsamplename) return mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery )
 
 
-	if(req.query.findsamplename) {
-		/*** detour
-		find sample names by matching with input string
-		only for official dataset
-		*/
-		if(req.query.iscustom) {
-			// not supported
-			return res.send({error:'no server-side config available for custom track'})
-		}
-		const str = req.query.findsamplename.toLowerCase()
-		const result = []
-		if(dsquery.samples) {
-			
-			// must return levelkey/levelvalue for launching expression rank
-			let hierarchylevel
-			if(dsquery.sortsamplebyhierarchy && ds.cohort && ds.cohort.hierarchies) {
-				hierarchylevel = ds.cohort.hierarchies.lst[ dsquery.sortsamplebyhierarchy.hierarchyidx ].levels[1]
-			}
-
-			for(const samplename of dsquery.samples) {
-				if(samplename.toLowerCase().indexOf( str ) == -1) continue
-
-				const sample={
-					name:samplename
-				}
-				if(ds.cohort && ds.cohort.annotation && hierarchylevel) {
-					const anno = ds.cohort.annotation[samplename]
-					if(anno) {
-						sample.group = {
-							levelkey : hierarchylevel.k,
-							levelvalue : anno[ hierarchylevel.k ]
-						}
-					}
-				}
-				result.push( sample )
-				if(result.length>10) {
-					break
-				}
-			}
-		}
-		// TODO find sample from ds.cohort even if it's not in this track (could be rna-only)
-		return res.send({result:result})
-	}
 
 	if(!req.query.rglst) return res.send({error:'rglst missing'})
 
@@ -3810,10 +3755,16 @@ function handle_mdssvcnv(req,res) {
 	
 	Promise.resolve()
 	.then(()=>{
+		
+		// cache cnv sv index
+
 		if(dsquery.file) return
 		return cache_index_promise( req.query.indexURL || req.query.url+'.tbi' )
+
 	})
 	.then(dir=>{
+
+		// query sv cnv
 
 		const tasks=[]
 
@@ -3967,6 +3918,7 @@ function handle_mdssvcnv(req,res) {
 	})
 	.then( data_cnv =>{
 
+		// expression query
 
 		if(req.query.singlesample) {
 			// no expression rank check
@@ -3986,7 +3938,10 @@ function handle_mdssvcnv(req,res) {
 				}
 			}
 		}
-		if(!expressionquery) return [ data_cnv ]
+		if(!expressionquery) {
+			// no expression query
+			return [ data_cnv ]
+		}
 
 		let viewrangeupperlimit = expressionquery.viewrangeupperlimit
 		if(!viewrangeupperlimit && dsquery.iscustom) {
@@ -4002,10 +3957,16 @@ function handle_mdssvcnv(req,res) {
 
 		return Promise.resolve()
 		.then(()=>{
+
+			// cache expression index
+
 			if(expressionquery.file) return ''
 			return cache_index_promise( expressionquery.indexURL || expressionquery.url+'.tbi' )
+
 		})
 		.then(dir=>{
+
+			// get expression data
 
 			const gene2sample2obj = new Map()
 			// k: gene
@@ -4057,9 +4018,11 @@ function handle_mdssvcnv(req,res) {
 				return [ data_cnv, false, gene2sample2obj ]
 			})
 		})
+
 	})
-	
 	.then( data=> {
+
+		// group samples by svcnv, calculate expression rank
 
 		const [ data_cnv, expressionrangelimit, gene2sample2obj ] = data
 
@@ -4126,7 +4089,7 @@ function handle_mdssvcnv(req,res) {
 			cnv must have at least 1 sv inside or within 1kb to it
 			*/
 			for(const [sample,lst] of sample2item) {
-				
+
 				const svchr2pos={}
 				// k: sv chr
 				// v: set of sv breakpoint positions
@@ -4174,6 +4137,7 @@ function handle_mdssvcnv(req,res) {
 		}
 
 		// not single-sample
+		// group sample by available attributes
 
 		const result = {}
 
@@ -4183,8 +4147,6 @@ function handle_mdssvcnv(req,res) {
 			only for official ds
 			*/
 
-
-			const spacer = ', ' // join attribute values to form group name, e.g. "HM, BALL"
 
 			const key2group = new Map()
 			// k: group name string
@@ -4196,7 +4158,7 @@ function handle_mdssvcnv(req,res) {
 
 
 			for(const [samplename, items] of sample2item) {
-				
+
 				const sanno = ds.cohort.annotation[ samplename ]
 				if(!sanno) {
 					// this sample has no annotation
@@ -4229,11 +4191,31 @@ function handle_mdssvcnv(req,res) {
 
 				attrnames.unshift( headname )
 
-				const groupname = attrnames.join( spacer )
+				const groupname = attrnames.join( dsquery.attrnamespacer )
 
 				if(!key2group.has(groupname)) {
-					// a new group name, need to get available full name for each attribute value for showing on client
-					// if attr.full is not available, just use key value
+
+					/*
+					a new group
+					need to get available full name for each attribute value for showing on client
+					if attr.full is not available, just use key value
+					*/
+					const attributes = []
+					for(const attr of dsquery.groupsamplebyattrlst) {
+						const v = sanno[ attr.k ]
+						if(v==undefined) {
+							// ordered list, look no further
+							break
+						}
+						const a = { k: attr.k, kvalue: v }
+						if(attr.full) {
+							a.full = attr.full
+							a.fullvalue = sanno[ attr.full ]
+						}
+						attributes.push( a)
+					}
+
+					// to be replaced
 					const levelnames = []
 					for(const attr of dsquery.groupsamplebyattrlst) {
 						const v = sanno[ attr.k ]
@@ -4243,11 +4225,15 @@ function handle_mdssvcnv(req,res) {
 						const lname = (attr.full ? sanno[ attr.full ] : null) || v
 						levelnames.push(lname)
 					}
+
+
+
 					key2group.set(groupname, {
 						name: groupname,
-						levelnames: levelnames,
 						samples:[],
-						// these are temp fix and should be dropped
+						attributes: attributes,
+						// following to be replaced by attributes
+						levelnames: levelnames,
 						levelkey: dsquery.groupsamplebyattrlst[ dsquery.groupsamplebyattrlst.length-1 ].k,
 						levelvalue: attrnames[ attrnames.length-1 ] 
 					})
@@ -4398,7 +4384,7 @@ function handle_mds_expressionrank( req, res ) {
 
 	sample: req.query.sample
 	range: req.query.coord
-	cohort: for official, defined by req.query.levelkey
+	cohort: for official, defined by req.query.attributes
 	        for custom, will use all available samples other than this one
 	*/
 	if(reqbodyisinvalidjson(req,res)) return
@@ -4518,17 +4504,24 @@ function handle_mds_expressionrank( req, res ) {
 						return
 					}
 
-					if(req.query.levelkey) {
-						const anno = ds.cohort.annotation[ j.sample ]
-						if(!anno) {
+					if(req.query.attributes) {
+						// official only,
+						// filter for samples of the same cohort
+						const sanno = ds.cohort.annotation[ j.sample ]
+						if(!sanno) {
 							// sample has no annotation
 							return
 						}
-						if( anno[ req.query.levelkey ] != req.query.levelvalue ) {
-							// not a sample for this cohort
-							return
+						for(const attr of req.query.attributes) {
+							if(attr.k && attr.kvalue) {
+								if(attr.kvalue != sanno[ attr.k ]) {
+									// not a sample for this cohort
+									return
+								}
+							}
 						}
 					}
+
 					// a sample for the group
 					if(!gene2value.has(j.gene)) {
 						gene2value.set(j.gene,{
@@ -4550,6 +4543,7 @@ function handle_mds_expressionrank( req, res ) {
 					if(e && !tabixnoterror(e)) throw({message:e})
 					resolve(gene2value)
 				})
+
 			}))
 		}
 
@@ -4576,6 +4570,94 @@ function handle_mds_expressionrank( req, res ) {
 		res.send({error:err.message})
 	})
 }
+
+
+
+
+
+function mdssvcnv_exit_gettrack4singlesample( req, res, gn, ds, dsquery ) {
+	/*
+	getting track for single sample from server config
+	only for official dataset
+	*/
+	const samplename = req.query.gettrack4singlesample
+	if(req.query.iscustom) {
+		// not supported
+		return res.send({error:'no server-side config available for custom track'})
+	}
+	if(!ds.sampleAssayTrack) {
+		// not available
+		return res.send({})
+	}
+	return res.send({
+		tracks: ds.sampleAssayTrack.samples.get( samplename )
+	})
+}
+
+
+
+
+function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
+	/*
+	find sample names by matching with input string
+	only for official dataset
+	*/
+	if(req.query.iscustom) {
+		// not supported
+		return res.send({error:'cannot search sample by name in custom track'})
+	}
+	const str = req.query.findsamplename.toLowerCase()
+	const result = []
+
+	// must return grouping attributes for launching expression rank
+
+	if(dsquery.samples) findadd( dsquery.samples )
+
+	if(result.length<10 && dsquery.expressionrank_querykey) {
+		// also find expression-only samples
+		const query = ds.queries[ dsquery.expressionrank_querykey ]
+		if(query && query.samples) {
+			findadd( query.samples )
+		}
+	}
+
+	return res.send({result:result})
+
+	function findadd(samples) {
+		for(const samplename of samples) {
+			if(samplename.toLowerCase().indexOf( str ) == -1) continue
+
+			const sample={
+				name:samplename
+			}
+
+			if(ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattrlst) {
+				const sanno = ds.cohort.annotation[samplename]
+				if(sanno) {
+					sample.attributes = []
+					for(const attr of dsquery.groupsamplebyattrlst) {
+						const v = sanno[ attr.k ]
+						if(v==undefined) {
+							break
+						}
+						const a = { k: attr.k, kvalue: v }
+						if(attr.full) {
+							a.full = attr.full
+							a.fullvalue = sanno[ attr.full ]
+						}
+						sample.attributes.push(a)
+					}
+				}
+			}
+			result.push( sample )
+			if(result.length>10) {
+				return
+			}
+		}
+	}
+}
+
+
 
 
 
@@ -4649,7 +4731,12 @@ function handle_mdsgeneboxplot( req, res ) {
 	if(req.query.getgroup) {
 		// getting sample data for a group, no making boxplot
 		if(!ds.cohort || !ds.cohort.annotation) return res.send({error:'no sample annotation for getting group'})
-		if(!req.query.getgroup.levelkey || !req.query.getgroup.levelvalue) return res.send({error:'missing levelkey or levelvalue for getting group'})
+		// getgroup value is same as attributes[]
+		if(!Array.isArray(req.query.getgroup)) return res.send({error:'getgroup should be array'})
+		for(const a of req.query.getgroup) {
+			if(!a.k) return res.send({error:'k missing from one of getgroup'})
+			if(!a.kvalue) return res.send({error:'kvalue missing from one of getgroup'})
+		}
 	}
 
 
@@ -4693,10 +4780,6 @@ function handle_mdsgeneboxplot( req, res ) {
 			*/
 			const nogroupvalues=[]
 
-			let hierarchylevels
-			if(ds.cohort && ds.cohort.annotation && ds.cohort.hierarchies && dsquery.boxplotbyhierarchy) {
-				hierarchylevels=ds.cohort.hierarchies.lst[dsquery.boxplotbyhierarchy.hierarchyidx].levels
-			}
 
 			/* use following when getting data for a group
 			*/
@@ -4712,44 +4795,70 @@ function handle_mdsgeneboxplot( req, res ) {
 
 				if(req.query.getgroup) {
 					if(!j.sample) return
-					const anno = ds.cohort.annotation[j.sample]
-					if(!anno) return
-					if(anno[req.query.getgroup.levelkey] != req.query.getgroup.levelvalue) return
+					const sanno = ds.cohort.annotation[j.sample]
+					if(!sanno) return
+					for(const a of req.query.getgroup) {
+						if(a.kvalue != sanno[ a.k ]) {
+							return
+						}
+					}
 					getgroupdata.push( j )
 					return
 				}
 
-				if(hierarchylevels) {
+				if(dsquery.boxplotbysamplegroup && ds.cohort && ds.cohort.annotation) {
 
 					if(!j.sample) {
 						// missing sample
 						return
 					}
-					const anno=ds.cohort.annotation[j.sample]
-					if(!anno) {
-						nogroupvalues.push( {sample:j.sample, value:j.value} )
-						return
-					}
-					const L1=anno[hierarchylevels[0].k]
-					if(!L1) {
-						nogroupvalues.push({sample:j.sample, value:j.value})
-						return
-					}
-					const L2=anno[hierarchylevels[1].k]
-					if(!L2) {
-						nogroupvalues.push({ sample:j.sample, value:j.value })
+
+					// same grouping procedure as svcnv
+
+					const sanno=ds.cohort.annotation[j.sample]
+					if(!sanno) {
+						nogroupvalues.push( {sample:j.sample, value:j.value} ) // hardcoded key
 						return
 					}
 
-					const k=L1+', '+L2
-					if(!key2samplegroup.has(k)) {
-						key2samplegroup.set(k, {
-							levelkey: hierarchylevels[1].k,
-							levelvalue: L2,
-							samples: []
-						})
+					const headname = sanno[ dsquery.boxplotbysamplegroup.attributes[0].k ]
+					if(headname==undefined) {
+						nogroupvalues.push( {sample:j.sample, value:j.value} ) // hardcoded key
+						return
 					}
-					key2samplegroup.get(k).samples.push({
+
+					const names = []
+					for(let i=1; i<dsquery.boxplotbysamplegroup.attributes.length; i++) {
+						const v = sanno[ dsquery.boxplotbysamplegroup.attributes[i].k ]
+						if(v==undefined) {
+							break
+						}
+						names.push(v)
+					}
+
+					names.unshift(headname)
+
+					const groupkey = names.join(', ')  // spacer is for display only
+
+					if(!key2samplegroup.has(groupkey)) {
+						const g = {
+							samples: [],
+							attributes: []
+						}
+						for(const a of dsquery.boxplotbysamplegroup.attributes) {
+							const v = sanno[ a.k ]
+							if(v==undefined) break
+							const a2 = { k: a.k, kvalue: v }
+							if(a.full) {
+								a2.full = a.full
+								a2.fullvalue = sanno[ a.full ]
+							}
+							g.attributes.push( a2 )
+						}
+
+						key2samplegroup.set(groupkey, g)
+					}
+					key2samplegroup.get(groupkey).samples.push({
 						sample:j.sample,
 						value:j.value
 					})
@@ -4770,13 +4879,13 @@ function handle_mdsgeneboxplot( req, res ) {
 					lst.push({
 						name: n,
 						values: o.samples,
-						levelkey: o.levelkey,
-						levelvalue: o.levelvalue
+						attributes: o.attributes
 					})
 				}
 
 				if(nogroupvalues.length) {
 					lst.push({
+						name:'Unannotated',
 						values:nogroupvalues
 					})
 				}
@@ -4955,8 +5064,7 @@ function handle_mdsgeneboxplot( req, res ) {
 			grouplst.push({
 				name:group.name+' ('+group.values.length+')',
 				boxplots:boxplots,
-				levelkey: group.levelkey,
-				levelvalue: group.levelvalue
+				attributes: group.attributes
 			})
 		}
 		grouplst.sort((i,j)=>{
@@ -8381,13 +8489,6 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		if(!thatquery.isgenenumeric) return 'query '+query.expressionrank_querykey+' not tagged as isgenenumeric'
 	}
 
-	/* abandon
-	if(query.sortsamplebyhierarchy) {
-		if(!Number.isInteger(query.sortsamplebyhierarchy.hierarchyidx)) return 'sortsamplebyhierarchy.hierarchyidx should be array index'
-		if(!ds.cohort || !ds.cohort.hierarchies) return 'sortsamplebyhierarchy in use but cohort.hierarchies missing'
-		if(!ds.cohort.hierarchies.lst[query.sortsamplebyhierarchy.hierarchyidx]) return 'no hierarchy found by sortsamplebyhierarchy'
-	}
-	*/
 	if(query.groupsamplebyattrlst) {
 		if(!Array.isArray(query.groupsamplebyattrlst)) return 'groupsamplebyattrlst[] must be array'
 		if(query.groupsamplebyattrlst.length==0) return 'groupsamplebyattrlst[] empty array'
@@ -8396,6 +8497,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		for(const attr of query.groupsamplebyattrlst) {
 			if(!attr.k) return 'k missing from one of groupsamplebyattrlst'
 		}
+		if(!query.attrnamespacer) query.attrnamespacer = ', '
 	}
 
 	console.log('(svcnv) '+query.name+': '+(query.samples ? query.samples.length:'no')+' samples, '+(query.nochr ? 'no "chr"':'has "chr"'))
@@ -8440,10 +8542,12 @@ function mds_init_genenumeric(query, ds, genome) {
 		query.samples = [ ...set ]
 		console.log( '(genenumeric) '+query.name+': '+ query.samples.length +' samples' )
 	}
-	if(query.boxplotbyhierarchy) {
-		if(!Number.isInteger(query.boxplotbyhierarchy.hierarchyidx)) return 'boxplotbyhierarchy.hierarchyidx should be array index'
-		if(!ds.cohort || !ds.cohort.hierarchies) return 'boxplotbyhierarchy in use but cohort.hierarchies missing'
-		if(!ds.cohort.hierarchies.lst[query.boxplotbyhierarchy.hierarchyidx]) return 'no hierarchy found by boxplotbyhierarchy'
+	if(query.boxplotbysamplegroup) {
+		if(!query.boxplotbysamplegroup.attributes) return 'boxplotbysamplegroup.attributes missing'
+		if(!Array.isArray(query.boxplotbysamplegroup.attributes)) return 'boxplotbysamplegroup.attributes should be array'
+		for(const a of query.boxplotbysamplegroup.attributes) {
+			if(!a.k) return 'k missing from one of boxplotbysamplegroup.attributes[]'
+		}
 	}
 }
 

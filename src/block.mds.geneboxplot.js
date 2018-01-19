@@ -596,6 +596,7 @@ function loadplot(plot) {
 					.attr('class','sja_clbtext')
 					.text(g.name)
 					.on('click', ()=>{
+						// click a group label to show rope plot for this group alone
 						init2(
 							Math.max(100, d3event.clientX-100),
 							Math.max(100, d3event.clientY-100),
@@ -712,10 +713,7 @@ function init2(x,y, plot, group) {
 		_plot:plot,
 		holder: pane.body,
 		uselog: plot.uselog,
-		getgroup:{
-			levelkey: group.levelkey,
-			levelvalue: group.levelvalue,
-		},
+		getgroup: group.attributes
 	}
 
 

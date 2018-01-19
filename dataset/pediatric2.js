@@ -79,21 +79,18 @@ module.exports={
 			segmeanValueCutoff:0.1,
 			lohLengthUpperLimit:2000000,
 
-			// no longer requires hierarchy
-			sortsamplebyhierarchy: {
-				hierarchyidx:0, // array index of cohort.hierarchies.lst[]
-			},
-
 			/*
 			the list of attributes to group samples, name of groups such as "HM, BALL"
 			the attributes are hierarchical, when a sample is not annotated by 2nd attribute
 			the sample will come to the bin of 1st attribute
 			but if the sample is not annotated by 1st attribute, then it goes to a head-less bin, no matter if it's annotated by any subsequent attributes
 			*/
-			groupsamplebyattrlst:[
+			groupsamplebyattrlst:[ 
 				{k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
 				{k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
 			],
+
+			attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
 
 			expressionrank_querykey:'genefpkm'
 		},
@@ -109,9 +106,23 @@ module.exports={
 			// for expression rank checking when coupled to svcnv
 			viewrangeupperlimit:5000000,
 
+			/*
 			boxplotbyhierarchy:{
 				hierarchyidx:0
 			},
+			*/
+			/*
+			one boxplot for each sample group
+			the grouping method must be same as svcnv
+			*/
+			boxplotbysamplegroup:{
+				attributes: [
+					{k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
+					{k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
+				]
+			},
+
+
 			// yu's data & method for ase/outlier
 			ase:{
 				qvalue:0.05,

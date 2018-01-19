@@ -827,6 +827,7 @@ function render_samplegroups( tk, block ) {
 		.attr('x', genebaraxisheight ? -(block.rpad) : 0)
 
 	if(tk.samplegroupcolor) {
+		// official only
 		const names=new Set()
 		for(const g of tk._data) {
 			if(g.name) names.add(g.name)
@@ -1120,7 +1121,8 @@ function render_multi_cnvloh(tk,block) {
 		if(samplegroup.name) {
 
 			// the group's got a name, show name and border lines
-			const color=tk.samplegroupcolor.color(samplegroup.name)
+			const color = tk.samplegroupcolor ? tk.samplegroupcolor.color(samplegroup.name) : '#0A7FA6'
+
 			tk.cnvleftg.append('text')
 				.attr('font-size', grouplabelfontsize)
 				.attr('font-family', client.font)
@@ -1531,8 +1533,11 @@ function render_multi_genebar( tk, block) {
 									samplename:thissample.sample
 								}
 								const samplegroup={
+									attributes: group.attributes
+									/*
 									levelkey:group.levelkey,
 									levelvalue:group.levelvalue
+									*/
 								}
 								const tk={} // svcnv track
 								if(plot.svcnv.iscustom) {
@@ -1831,8 +1836,11 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 			mds:tk.mds,
 			querykey: tk.mds.queries[tk.querykey].checkexpressionrank.querykey,
 			sample: sample.samplename,
+			attributes: samplegroup.attributes
+			/*
 			levelkey: samplegroup.levelkey,
 			levelvalue: samplegroup.levelvalue,
+			*/
 		}
 		arg.tklst.push(et)
 	}
@@ -1989,6 +1997,11 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 
 
 function makeTk(tk, block) {
+
+	if(!tk.attrnamespacer) {
+		// fill in for custom track
+		tk.attrnamespacer=', '
+	}
 
 	if(tk.singlesample) {
 
@@ -2450,14 +2463,21 @@ function configPanel(tk, block) {
 					if(data.error) throw({message:data.error})
 					if(data.result) {
 						for(const sample of data.result) {
+
 							const cell= row2.append('div')
 							cell.append('span')
 								.text(sample.name)
-								.style('padding-right','10px')
-							if(sample.group) {
-								cell.append('span')
-									.text(sample.group.levelvalue)
+
+							if(sample.attributes) {
+								const groupname = sample.attributes.map(i=>i.kvalue).join( tk.attrnamespacer )
+								cell.append('div')
+									.style('display','inline-block')
+									.style('margin-left','10px')
+									.style('font-size','.7em')
+									.style('color', tk.samplegroupcolor.color( groupname ) )
+									.html( groupname )
 							}
+
 							cell
 								.attr('class','sja_menuoption')
 								.on('click',()=>{
@@ -2925,15 +2945,22 @@ function print_sv(s) {
 
 
 function tooltip_samplegroup( g, tk ) {
-	if(!g.levelnames) return
 	tk.tktip.clear()
 		.show( d3event.clientX, d3event.clientY )
+
 	const d = tk.tktip.d.append('div')
-	for(let i=0; i<g.levelnames.length; i++) {
-		const row = d.append('div')
-			.style('margin-left', (i*20)+'px')
-			.html( (i==0?'':'&raquo;&nbsp;') + g.levelnames[i] )
+	
+	if(g.attributes) {
+		// official only
+		for(let i=0; i<g.attributes.length; i++) {
+			d.append('div')
+				.style('margin-left', (i*20)+'px')
+				.html( (i==0?'':'&raquo;&nbsp;') + (g.attributes[i].fullvalue || g.attributes[i].kvalue) )
+		}
+	} else if(g.name) {
+		d.append('div').text(g.name)
 	}
+
 	const p= tk.tktip.d.append('div').style('margin-top','10px').style('color','#858585')
 	p.html( g.samples.length+' sample'+(g.samples.length>1?'s':'')
 		+ (g.sampletotalnum ?  '<br>'+g.sampletotalnum+' samples total, '+Math.ceil(100*g.samples.length/g.sampletotalnum)+'%' : ''))
