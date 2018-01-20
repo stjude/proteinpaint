@@ -197,22 +197,8 @@ function addLoadParameter( par, tk ) {
 
 	} else {
 
-		const a={}
-		let hasfilter=false
-		for(const k in tk.cohortFilter.hiddenAttr) {
-			let count=0
-			const b={}
-			for(const k2 in tk.cohortFilter.hiddenAttr[k]) {
-				count++
-				b[k2]=1
-			}
-			if(count) {
-				hasfilter=true
-				a[k]=b
-			}
-		}
-		if(hasfilter) {
-			par.cohortHiddenAttr = a
+		if(tk.hiddensgnames && tk.hiddensgnames.size) {
+			par.hiddensgnames = [ ...tk.hiddensgnames ]
 		}
 	}
 }
@@ -826,36 +812,10 @@ function render_samplegroups( tk, block ) {
 		.attr('text-anchor', genebaraxisheight ? 'end' : 'start')
 		.attr('x', genebaraxisheight ? -(block.rpad) : 0)
 
-	if(tk.samplegroupcolor) {
-		// official only
-		const names=new Set()
-		for(const g of tk._data) {
-			if(g.name) names.add(g.name)
-		}
-		if(names.size) {
-			tk.samplegroupcolor.row.style('display','block')
-			tk.samplegroupcolor.holder.selectAll('*').remove()
-			for(const n of names) {
-				const d=tk.samplegroupcolor.holder.append('div')
-					.style('display','inline-block')
-					.style('margin-left','5px')
-				d.append('div')
-					.style('display','inline-block')
-					.style('background', tk.samplegroupcolor.color(n))
-					.style('border-radius','10px')
-					.style('margin-right','3px')
-					.html('&nbsp;&nbsp;')
-				d.append('div')
-					.style('display','inline-block')
-					.style('color', tk.samplegroupcolor.color(n))
-					.style('font-size','.8em')
-					.text(n)
-			}
-		} else {
-			tk.samplegroupcolor.row.style('display','none')
-		}
-	}
+	may_legend_samplegroup(tk, block)
 }
+
+
 
 
 
@@ -1130,7 +1090,6 @@ function render_multi_cnvloh(tk,block) {
 				.attr('text-anchor','end')
 				.attr('dominant-baseline','central')
 				.attr('fill',color)
-				//.attr('class','sja_clbtext')
 				.attr('x',block.tkleftlabel_xshift)
 				.text(
 					samplegroup.name
@@ -1148,7 +1107,9 @@ function render_multi_cnvloh(tk,block) {
 					tk.tktip.hide()
 				})
 				.on('click',()=>{
-					click_samplegroup_showtable( samplegroup, tk, block )
+					tk.tip2.showunder(d3event.target)
+						.clear()
+					click_samplegroup_showmenu( samplegroup, tk, block )
 				})
 
 			// v span
@@ -1332,6 +1293,161 @@ function multi_expressionstatus_ase_outlier(tk) {
 	}
 }
 
+
+
+
+
+
+function click_samplegroup_showmenu( samplegroup, tk, block ) {
+	/*
+	official only
+	dense or full
+	click sample group label in track display to show menu, not legend
+	this group must already been shown
+	*/
+	tk.tip2.d.append('div')
+		.style('margin','4px 10px')
+		.style('font-size','.7em')
+		.text(samplegroup.name)
+
+	tk.tip2.d.append('div')
+		.attr('class','sja_menuoption')
+		.text('Hide')
+		.on('click',()=>{
+			tk.tip2.hide()
+			tk.hiddensgnames.add( samplegroup.name )
+			loadTk(tk, block)
+		})
+
+	tk.tip2.d.append('div')
+		.attr('class','sja_menuoption')
+		.text('Show only')
+		.on('click',()=>{
+			tk.tip2.hide()
+			for(const g of tk._data) {
+				if(g.name && g.name!='Unannotated' && g.name!=samplegroup.name) tk.hiddensgnames.add(g.name)
+			}
+			loadTk(tk, block)
+		})
+	
+	if(tk.hiddensgnames.size) {
+		tk.tip2.d.append('div')
+			.attr('class','sja_menuoption')
+			.text('Show all')
+			.on('click',()=>{
+				tk.tip2.hide()
+				tk.hiddensgnames.clear()
+				loadTk(tk, block)
+			})
+	}
+
+	tk.tip2.d.append('div')
+		.attr('class','sja_menuoption')
+		.text('Table view')
+		.on('click',()=>{
+			tk.tip2.hide()
+			click_samplegroup_showtable( samplegroup, tk, block )
+		})
+}
+
+
+
+
+
+function may_legend_samplegroup(tk, block) {
+	if(!tk.samplegroupcolor) {
+		// official only
+		return
+	}
+
+	tk.samplegroupcolor.row.style('display','block')
+	tk.samplegroupcolor.holder.selectAll('*').remove()
+
+	const shownamegroups = []
+	for(const g of tk._data) {
+		if(g.name && g.name!='Unannotated') {
+			shownamegroups.push(g)
+		}
+	}
+	if(shownamegroups.length>0) {
+
+		for(const g of shownamegroups) {
+
+			const cell = tk.samplegroupcolor.holder.append('div')
+				.style('display','inline-block')
+				.attr('class','sja_clb')
+				.on('click',()=>{
+					tk.tip2.showunder(d3event.target)
+						.clear()
+					if(tk.hiddensgnames.has(g.name)) {
+						tk.tip2.d.append('div')
+							.attr('class','sja_menuoption')
+							.text('Show')
+							.on('click',()=>{
+								tk.tip2.hide()
+								tk.hiddensgnames.delete( g.name )
+								loadTk(tk,block)
+							})
+					} else {
+						tk.tip2.d.append('div')
+							.attr('class','sja_menuoption')
+							.text('Hide')
+							.on('click',()=>{
+								tk.tip2.hide()
+								tk.hiddensgnames.add( g.name )
+								loadTk(tk,block)
+							})
+					}
+					tk.tip2.d.append('div')
+						.attr('class','sja_menuoption')
+						.text('Show only')
+						.on('click',()=>{
+							tk.tip2.hide()
+							for(const g2 of tk._data) {
+								if(g2.name && g2.name!='Unannotated') tk.hiddensgnames.add(g2.name)
+							}
+							tk.hiddensgnames.delete( g.name )
+							loadTk(tk,block)
+						})
+					if(tk.hiddensgnames.size) {
+						tk.tip2.d.append('div')
+							.attr('class','sja_menuoption')
+							.text('Show all')
+							.on('click',()=>{
+								tk.tip2.hide()
+								tk.hiddensgnames.clear()
+								loadTk(tk,block)
+							})
+					}
+				})
+
+
+			cell.append('div')
+				.style('display','inline-block')
+				.attr('class','sja_mcdot')
+				.style('background', tk.samplegroupcolor.color(g.name) )
+				.text(g.samples.length)
+			cell.append('div')
+				.style('display','inline-block')
+				.style('color', tk.samplegroupcolor.color(g.name))
+				.text(g.name)
+		}
+	}
+
+	// hidden groups
+	for(const name of tk.hiddensgnames) {
+		const cell = tk.samplegroupcolor.holder.append('div')
+			.style('display','inline-block')
+			.attr('class','sja_clb')
+			.style('text-decoration','line-through')
+			.text(name)
+			.on('click',()=>{
+				// directly click to show
+				tk.hiddensgnames.delete( name )
+				loadTk(tk, block)
+			})
+	}
+}
 
 
 
@@ -1534,10 +1650,6 @@ function render_multi_genebar( tk, block) {
 								}
 								const samplegroup={
 									attributes: group.attributes
-									/*
-									levelkey:group.levelkey,
-									levelvalue:group.levelvalue
-									*/
 								}
 								const tk={} // svcnv track
 								if(plot.svcnv.iscustom) {
@@ -1837,10 +1949,6 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 			querykey: tk.mds.queries[tk.querykey].checkexpressionrank.querykey,
 			sample: sample.samplename,
 			attributes: samplegroup.attributes
-			/*
-			levelkey: samplegroup.levelkey,
-			levelvalue: samplegroup.levelvalue,
-			*/
 		}
 		arg.tklst.push(et)
 	}
@@ -1997,6 +2105,8 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 
 
 function makeTk(tk, block) {
+
+	tk.tip2 = new client.Menu({padding:'0px'})
 
 	if(!tk.attrnamespacer) {
 		// fill in for custom track
@@ -2229,23 +2339,25 @@ function makeTk(tk, block) {
 
 	}
 
-	if(!tk.singlesample) {
-		if(!tk.iscustom) {
-			// official, sample group color for sv density
-			const row=td.append('div')
-				.style('display','none')
-				.style('margin','10px')
-			row.append('div')
-				.style('color','#858585')
+	if(!tk.singlesample && !tk.iscustom) {
+		// official, not single sample
+
+		tk.hiddensgnames = new Set()
+
+		// sample group color for sv density
+		const row=td.append('div')
+			.style('display','none')
+			.style('margin','10px')
+		row.append('div')
+			.style('color','#858585')
+			.style('display','inline-block')
+			.text('Cancer')
+		tk.samplegroupcolor={
+			color:scaleOrdinal(schemeCategory20),
+			row:row,
+			holder:row.append('div')
 				.style('display','inline-block')
-				.text('Cancer')
-			tk.samplegroupcolor={
-				color:scaleOrdinal(schemeCategory20),
-				row:row,
-				holder:row.append('div')
-					.style('display','inline-block')
-					.style('margin-left','10px')
-			}
+				.style('margin-left','10px')
 		}
 	}
 
@@ -2295,20 +2407,6 @@ function makeTk(tk, block) {
 		expressionstat.init_config( tk.gecfg )
 	}
 
-	tk.cohortFilter = {
-		holderTable: tk.td_legend.append('table'),
-		hiddenAttr: {}
-	}
-
-	if(tk.mds && tk.mds.cohortHiddenAttr) {
-		// dataset has hidden attributes by default for sample annotation, copy to hiddenAttr
-		for(const k in tk.mds.cohortHiddenAttr) {
-			tk.cohortFilter.hiddenAttr[k]={}
-			for(const v in tk.mds.cohortHiddenAttr[k]) {
-				tk.cohortFilter.hiddenAttr[k][v]=1
-			}
-		}
-	}
 
 	// end of makeTk
 }

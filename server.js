@@ -3695,7 +3695,6 @@ function handle_mdssvcnv(req,res) {
 	.singlesample
 	.showonlycnvwithsv
 
-	******* routes
 	*/
 
 	if(reqbodyisinvalidjson(req,res)) return
@@ -3749,6 +3748,12 @@ function handle_mdssvcnv(req,res) {
 		if(len >= dsquery.viewrangeupperlimit) {
 			return res.send({error:'zoom in under '+common.bplen(dsquery.viewrangeupperlimit)+' to view details'})
 		}
+	}
+
+	let hiddensgnames
+	if(req.query.hiddensgnames) {
+		// only for official track
+		hiddensgnames = new Set( req.query.hiddensgnames )
 	}
 
 
@@ -3858,43 +3863,6 @@ function handle_mdssvcnv(req,res) {
 							// this sample has no annotation at all, since it's doing filtering, will drop it
 							return
 						}
-
-						/*
-						if(req.query.cohortHiddenAttr && ds.cohort.attributes) {
-							let hidden=false
-
-							for(const attrkey in req.query.cohortHiddenAttr) {
-
-								// this attribute in registry, so to be able to tell if it's numeric
-								const attr = ds.cohort.attributes.lst.find(i=>i.key==attrkey)
-
-								if(attr.isNumeric) {
-									//continue
-								}
-
-								// categorical
-								const value=anno[attrkey]
-								if(value) {
-									// this sample has annotation for this attrkey
-									if(req.query.cohortHiddenAttr[attrkey][value]) {
-										hidden=true
-										break
-									}
-								} else {
-									// this sample has no value for attrkey
-									if(req.query.cohortHiddenAttr[attrkey][infoFilter_unannotated]) {
-										// to drop unannotated ones
-										hidden=true
-										break
-									}
-								}
-							}
-							if(hidden) {
-								// this sample has a hidden value for an attribute, skip
-								return
-							}
-						}
-						*/
 					}
 					// this item is acceptable
 					data.push( j )
@@ -4192,6 +4160,10 @@ function handle_mdssvcnv(req,res) {
 				attrnames.unshift( headname )
 
 				const groupname = attrnames.join( dsquery.attrnamespacer )
+
+				if(hiddensgnames && hiddensgnames.has(groupname)) {
+					continue
+				}
 
 				if(!key2group.has(groupname)) {
 
