@@ -8,7 +8,7 @@ import * as bulkcnv from './bulk.cnv'
 import * as bulkitd from './bulk.itd'
 import * as bulkdel from './bulk.del'
 import * as bulktrunc from './bulk.trunc'
-import * as bulkproject from './bulk.project'
+import {ProjectHandler} from './bulk.project'
 import * as common from './common'
 import {tpinit} from './tp.init'
 
@@ -86,25 +86,19 @@ export function bulkui(x,y,genomes, hostURL) {
 	</ul>`)
 
 
-
-
-
-
-
-
-
 	const fileui=()=>{
 		filediv.selectAll('*').remove()
-		/*
-		bulkproject.set({
+		
+		// create a separate project handler for each bulk ui pane
+		new ProjectHandler({
 			bulkin,
-			flag,
+			genomes,
+			gselect,
 			content2flag,
 			flag2tp,
 			filediv,
 			init_bulk_flag: bulk.init_bulk_flag
-		})
-		*/
+		});
 		
 		filediv.append('span').html('Select data type&nbsp;')
 		const typeselect=client.filetypeselect(filediv).style('margin-right','20px')
@@ -112,7 +106,6 @@ export function bulkui(x,y,genomes, hostURL) {
 
 		// TODO vcf, new tabular formats
 		const butt=filediv.append('input').attr('type','file').on('change',()=>{
-
 			const flag=bulk.init_bulk_flag(genomes[gselect.options[gselect.selectedIndex].innerHTML])
 			saydiv.text('')
 			const file=d3event.target.files[0]

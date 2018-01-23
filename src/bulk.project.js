@@ -23,40 +23,12 @@ const typeIndex={
 	cnv: 6
 };
 
-/*
-	Reuse a project handler instance 
-	for handling file inputs.
-
-	bt = same as ProjectHandler.constructor argument
-*/
-let defaultLoader
-export function set(bt) {
-	if (!defaultLoader) {
-		defaultLoader=new ProjectHandler(bt);
-
-		// autoload a project if specified via URL parameter
-		// happens only once, right after the default project handler is created
-		const params=getParams();
-		if (params.project) {
-			defaultLoader.getData(params.project);
-		}
-	}
-	if (bt.filediv) {
-		defaultLoader.projectByInput(bt.filediv);
-	}
-	// calling function may ignore this returned handler
-	return defaultLoader
-}
-
+let urlProjectLoaded = false;
 
 /*
 	Easily upload multiple data files
-
-	- Not exporting this class the as use case right now is
-	only within bulk.ui. So only one instance, the defaultLoader
-	above, is created via the exposed 'set' function.
 */
-class ProjectHandler {
+export class ProjectHandler {
 	/*
 		Create a handler for multiple uploaded or fetched
 		files in a project
@@ -72,9 +44,20 @@ class ProjectHandler {
 	constructor(bt) {
 		this.bt=bt;
 		this.err=this.errHandler();
-		this.cohort={
-			genome:bt.flag.genome,
-			name:'project',
+
+		// autoload a project if specified via URL parameter
+		// happens only once, right after the first instance of
+		// projectHandler is created
+		if (!urlProjectLoaded) {
+			const params=getParams();
+			if (params.project) {
+				this.getData(params.project);
+				urlProjectLoaded = true;
+			}
+		}
+
+		if (bt.filediv) {
+			this.projectByInput(bt.filediv)
 		}
 	}
 
@@ -95,6 +78,7 @@ class ProjectHandler {
 			}
 		}
 	*/
+
 	processData(data) {
 		const file=data.files.pop();
 		const i=data.expectedFileNames.indexOf(file.name);
@@ -104,7 +88,11 @@ class ProjectHandler {
 			},1);
 			return; // ignore files that are not listed in the reference file
 		}
-		data.expectedFileNames.splice(i,1); 
+		data.expectedFileNames.splice(i,1);
+		this.cohort = {
+			name: 'project',
+			genome: this.bt.genomes[this.bt.gselect.options[this.bt.gselect.selectedIndex].innerHTML]
+		}
 		const flag=this.bt.init_bulk_flag(this.cohort.genome);
 
 		const error=this.bt.content2flag(
