@@ -84,8 +84,8 @@ export function bulkui(x,y,genomes, hostURL) {
 		</li>
 	  </ul>
 	</ul>`)
-	const fileui=()=>{
 		const flag=bulk.init_bulk_flag(genomes[gselect.options[gselect.selectedIndex].innerHTML])
+	const fileui=()=>{
 		filediv.selectAll('*').remove()
 		bulkproject.set({
 			bulkin,
