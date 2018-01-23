@@ -84,9 +84,18 @@ export function bulkui(x,y,genomes, hostURL) {
 		</li>
 	  </ul>
 	</ul>`)
-		const flag=bulk.init_bulk_flag(genomes[gselect.options[gselect.selectedIndex].innerHTML])
+
+
+
+
+
+
+
+
+
 	const fileui=()=>{
 		filediv.selectAll('*').remove()
+		/*
 		bulkproject.set({
 			bulkin,
 			flag,
@@ -95,11 +104,16 @@ export function bulkui(x,y,genomes, hostURL) {
 			filediv,
 			init_bulk_flag: bulk.init_bulk_flag
 		})
+		*/
 		
 		filediv.append('span').html('Select data type&nbsp;')
 		const typeselect=client.filetypeselect(filediv).style('margin-right','20px')
+
+
 		// TODO vcf, new tabular formats
 		const butt=filediv.append('input').attr('type','file').on('change',()=>{
+
+			const flag=bulk.init_bulk_flag(genomes[gselect.options[gselect.selectedIndex].innerHTML])
 			saydiv.text('')
 			const file=d3event.target.files[0]
 			if(!file) {
@@ -156,6 +170,7 @@ export function bulkui(x,y,genomes, hostURL) {
 			genome:flag.genome,
 			name:file.name,
 		});
+
 
 		const err=bulkin({
 			flag:flag,
