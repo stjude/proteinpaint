@@ -3761,6 +3761,7 @@ function handle_mdssvcnv(req,res) {
 	Promise.resolve()
 	.then(()=>{
 		
+		////////////////////////////////////////////////////////
 		// cache cnv sv index
 
 		if(dsquery.file) return
@@ -3769,6 +3770,9 @@ function handle_mdssvcnv(req,res) {
 	})
 	.then(dir=>{
 
+
+
+		////////////////////////////////////////////////////////
 		// query sv cnv
 
 		const tasks=[]
@@ -3886,6 +3890,11 @@ function handle_mdssvcnv(req,res) {
 	})
 	.then( data_cnv =>{
 
+
+
+
+
+		////////////////////////////////////////////////////////
 		// expression query
 
 		if(req.query.singlesample) {
@@ -3939,7 +3948,7 @@ function handle_mdssvcnv(req,res) {
 			const gene2sample2obj = new Map()
 			// k: gene
 			// v: { chr, start, stop, samples:Map }
-			//    sample : { value:V, outlier:{}, ase:{} } }
+			//    sample : { value:V, outlier:{}, ase:{} } 
 
 			const tasks=[]
 			for(const r of req.query.rglst) {
@@ -3990,9 +3999,120 @@ function handle_mdssvcnv(req,res) {
 	})
 	.then( data=> {
 
-		// group samples by svcnv, calculate expression rank
+
+		return data
+
+
+
+		////////////////////////////////////////////////////////
+		// vcf query
 
 		const [ data_cnv, expressionrangelimit, gene2sample2obj ] = data
+
+		let vcfquery
+		if(dsquery.iscustom) {
+			vcfquery=dsquery.checkvcf
+		} else {
+			// official
+			if(dsquery.vcf_querykey) {
+				if(ds.queries[ dsquery.vcf_querykey ]) {
+					vcfquery = ds.queries[ dsquery.vcf_querykey ]
+				}
+			}
+		}
+		if(!vcfquery) {
+			// no vcf query
+			return [ data_cnv, expressionrangelimit, gene2sample2obj, null, null ]
+		}
+
+		let viewrangeupperlimit = vcfquery.viewrangeupperlimit
+		if(!viewrangeupperlimit && dsquery.iscustom) {
+			// no limit set for custom track, set a hard limit
+			viewrangeupperlimit = 50000
+		}
+		if(viewrangeupperlimit) {
+			const len=req.query.rglst.reduce((i,j)=>i+j.stop-j.start,0)
+			if(len >= viewrangeupperlimit) {
+				return [ data_cnv, expressionrangelimit, gene2sample2obj, viewrangeupperlimit, null ]
+			}
+		}
+
+		const tracktasks = []
+
+		for(const tk of vcfquery.tracks) {
+
+			const thistracktask = Promise.resolve()
+			.then(()=>{
+
+				// cache index
+				if(tk.file) return ''
+				return cache_index_promise( tk.indexURL || tk.url+'.tbi' )
+
+			})
+			.then(dir=>{
+
+				// get vcf data
+				const variants = []
+
+				const tasks=[]
+				for(const r of req.query.rglst) {
+					const task=new Promise((resolve,reject)=>{
+						const data = []
+						const ps=spawn( tabix, [
+								expressionquery.file ? path.join(serverconfig.tpmasterdir, expressionquery.file) : expressionquery.url,
+								r.chr+':'+r.start+'-'+r.stop
+							], { cwd: dir } )
+						const rl = readline.createInterface({
+							input:ps.stdout
+						})
+						rl.on('line',line=>{
+							const l=line.split('\t')
+							const j=JSON.parse(l[3])
+							if(!j.gene) return
+							if(!j.sample) return
+							if(!Number.isFinite(j.value)) return
+							if(!gene2sample2obj.has(j.gene)) {
+								gene2sample2obj.set(j.gene, {chr:l[0], start:Number.parseInt(l[1]), stop:Number.parseInt(l[2]), samples:new Map()} )
+							}
+							gene2sample2obj.get(j.gene).samples.set(j.sample, {
+								value: j.value,
+								ase: j.ase,
+								outlier: j.outlier
+							})
+						})
+						const errout=[]
+						ps.stderr.on('data',i=> errout.push(i) )
+						ps.on('close',code=>{
+							const e=errout.join('')
+							if(e && !tabixnoterror(e)) {
+								reject(e)
+								return
+							}
+							resolve()
+						})
+					})
+					tasks.push(task)
+				}
+			})
+
+			tracktasks.push( thistracktask )
+		}
+
+		return Promise.all( tracktasks )
+			.then(result =>{
+				return [ data_cnv, expressionrangelimit, gene2sample2obj, null, snvindel2sample ]
+			})
+	})
+	.then( data=>{
+
+
+
+
+
+		////////////////////////////////////////////////////////
+		// group samples by svcnv, calculate expression rank
+
+		const [ data_cnv, expressionrangelimit, gene2sample2obj, vcfrangelimit, snvindel2sample ] = data
 
 		// to dedup, as the same cnv event may be retrieved multiple times by closeby regions, also gets set of samples for summary
 		const sample2item = new Map()
@@ -4590,6 +4710,18 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 		const query = ds.queries[ dsquery.expressionrank_querykey ]
 		if(query && query.samples) {
 			findadd( query.samples )
+		}
+	}
+
+	if(result.length<10 && dsquery.vcf_querykey) {
+		// also find vcf-only samples
+		const query = ds.queries[ dsquery.vcf_querykey ]
+		if(query && query.tracks) {
+			for(const tk of query.tracks) {
+				if(tk.samples) {
+					findadd( tk.samples.map(i=>i.name) )
+				}
+			}
 		}
 	}
 
@@ -8027,7 +8159,11 @@ function mds_init(ds,genome) {
 	if(ds.sampleAssayTrack) {
 		if(!ds.sampleAssayTrack.file) return '.file missing from sampleAssayTrack'
 		ds.sampleAssayTrack.samples = new Map()
+
 		let count=0
+
+		let unannotated=new Set()
+
 		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir, ds.sampleAssayTrack.file),{encoding:'utf8'}).trim().split('\n')) {
 
 			if(!line) continue
@@ -8036,6 +8172,21 @@ function mds_init(ds,genome) {
 			const [sample, assay, jsontext] = line.split('\t')
 			if(!assay || !jsontext) continue
 
+			if(!ds.sampleAssayTrack.samples.has(sample)) {
+
+				// new sample
+				if(ds.cohort && ds.cohort.annotation) {
+					if(!ds.cohort.annotation[ sample ]) {
+						// this sample is unannotated
+						unannotated.add( sample )
+						continue
+					}
+				}
+	
+				ds.sampleAssayTrack.samples.set(sample, [])
+			}
+
+
 			let tk
 			try {
 				tk = JSON.parse(jsontext)
@@ -8043,19 +8194,21 @@ function mds_init(ds,genome) {
 				return 'invalid JSON in sampleAssayTrack: '+jsontext
 			}
 
-			// validate track
+			// TODO validate track
 			if(!common.tkt[ tk.type ]) return 'invalid type from a sample track: '+jsontext
 			if(!tk.name) {
 				tk.name = sample+' '+assay
 			}
 
-			if(!ds.sampleAssayTrack.samples.has(sample)) {
-				ds.sampleAssayTrack.samples.set(sample, [])
-			}
+
 			ds.sampleAssayTrack.samples.get(sample).push(tk)
 			count++
 		}
+
 		console.log( ds.label+': '+count+' tracks loaded from '+ds.sampleAssayTrack.samples.size+' samples')
+		if(unannotated.size) {
+			console.log( 'Assay track table: '+unannotated.size+' samples are unannotated: '+[...unannotated].join(' ') )
+		}
 	}
 
 	if(ds.cohort) {
@@ -8145,9 +8298,9 @@ function mds_init(ds,genome) {
 					const err = mds_init_mdssvcnv(query, ds, genome)
 					if(err) return querykey+' (svcnv) error: '+err
 
-				} else if(query.type=='vcf') {
-					// TODO
-					const err = mds_init_vcf(query,genome)
+				} else if(query.type==common.tkt.mdsvcf) {
+
+					const err = mds_init_mdsvcf(query, ds, genome)
 					if(err) return querykey+' (vcf) error: '+err
 				} else {
 					return 'unknown track type for a query: '+query.type+' '+querykey
@@ -8391,7 +8544,7 @@ function mds_init_mdscnv(query, ds, genome) {
 
 
 function mds_init_mdssvcnv(query, ds, genome) {
-	// only allows single track
+	// only allows single track, since there is no challenge merging multiple into one
 
 	let cwd=null
 	let _file
@@ -8461,6 +8614,13 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		if(!thatquery.isgenenumeric) return 'query '+query.expressionrank_querykey+' not tagged as isgenenumeric'
 	}
 
+	if(query.vcf_querykey) {
+		// check expression rank, data from another query
+		const thatquery = ds.queries[ query.vcf_querykey ]
+		if(!thatquery) return 'invalid key by vcf_querykey'
+		if(thatquery.type!=common.tkt.mdsvcf) return 'query '+query.vcf_querykey+' not of mdsvcf type'
+	}
+
 	if(query.groupsamplebyattrlst) {
 		if(!Array.isArray(query.groupsamplebyattrlst)) return 'groupsamplebyattrlst[] must be array'
 		if(query.groupsamplebyattrlst.length==0) return 'groupsamplebyattrlst[] empty array'
@@ -8528,8 +8688,68 @@ function mds_init_genenumeric(query, ds, genome) {
 
 
 
-function mds_init_vcf(query, genome) {
-	console.log('mds_init_vcf TODO')
+function mds_init_mdsvcf(query, ds, genome) {
+
+	if(!query.tracks) return 'tracks[] missing'
+	if(!Array.isArray(query.tracks)) return 'tracks should be array'
+	
+	/*
+	info from all member tracks are merged, this requires the same info shared across multiple tracks must be identical
+	*/
+	query.info = {}
+
+	for(const tk of query.tracks) {
+
+		if(!tk.file) {
+			return 'file missing from a track (url not supported yet)'
+		}
+
+		// will set tk.cwd for url
+
+		const [ err, _file] = validate_tabixfile(tk.file)
+		if(err) return 'tabix file error: '+err
+
+		const arg = {cwd: tk.cwd, encoding:'utf8'}
+
+		{
+			const tmp=child_process.execSync(tabix+' -H '+_file,arg).trim()
+			if(!tmp) return 'no meta/header lines for '+_file
+			const [info, format, samples, errs] = vcf.vcfparsemeta(tmp.split('\n'))
+			if(errs) return 'error parsing vcf meta for '+_file+': '+errs.join('\n')
+
+			for(const k in info) {
+				query.info[ k ] = info[k]
+			}
+
+			tk.format = format
+			tk.samples = samples
+
+			if(ds.cohort && ds.cohort.annotation) {
+				/*
+				ds.cohort.annotation is sample-level, e.g. tumor
+				if vcf encodes germline stuff on person, or need some kind of sample name conversion,
+				need to identify such in this track
+				*/
+				const notannotated=[]
+				for(const sample of tk.samples) {
+					if(!ds.cohort.annotation[ sample.name ]) {
+						notannotated.push(sample.name)
+					}
+				}
+				if(notannotated.length) {
+					console.log(_file+' has unannotated samples: '+notannotated)
+				}
+			}
+		}
+
+		{
+			const tmp=child_process.execSync(tabix+' -l '+_file,{encoding:'utf8'}).trim()
+			if(tmp=='') return 'no chr from '+_file
+			tk.nochr = common.contigNameNoChr( genome, tmp.split('\n') )
+		}
+
+		console.log( '(mdsvcf) '+_file+': '+tk.samples.length+' samples, '+ (tk.nochr ? 'no chr':'has chr') )
+	}
 }
 
 
