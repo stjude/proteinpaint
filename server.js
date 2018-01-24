@@ -3898,7 +3898,7 @@ function handle_mdssvcnv(req,res) {
 		// expression query
 
 		if(req.query.singlesample) {
-			// no expression rank check
+			// no expression rank check in single-sample: will be handled in a separate track
 			return [data_cnv]
 		}
 
@@ -4000,12 +4000,12 @@ function handle_mdssvcnv(req,res) {
 	.then( data=> {
 
 
-		return data
 
 
 
 		////////////////////////////////////////////////////////
 		// vcf query
+		// for both single- and multi sample
 
 		const [ data_cnv, expressionrangelimit, gene2sample2obj ] = data
 
@@ -4039,14 +4039,14 @@ function handle_mdssvcnv(req,res) {
 
 		const tracktasks = []
 
-		for(const tk of vcfquery.tracks) {
+		for(const vcftk of vcfquery.tracks) {
 
 			const thistracktask = Promise.resolve()
 			.then(()=>{
 
 				// cache index
-				if(tk.file) return ''
-				return cache_index_promise( tk.indexURL || tk.url+'.tbi' )
+				if(vcftk.file) return ''
+				return cache_index_promise( vcftk.indexURL || vcftk.url+'.tbi' )
 
 			})
 			.then(dir=>{
@@ -4056,29 +4056,50 @@ function handle_mdssvcnv(req,res) {
 
 				const tasks=[]
 				for(const r of req.query.rglst) {
-					const task=new Promise((resolve,reject)=>{
-						const data = []
+
+					const task = new Promise((resolve,reject)=>{
 						const ps=spawn( tabix, [
-								expressionquery.file ? path.join(serverconfig.tpmasterdir, expressionquery.file) : expressionquery.url,
-								r.chr+':'+r.start+'-'+r.stop
+								vcftk.file ? path.join(serverconfig.tpmasterdir, vcftk.file) : vcftk.url,
+								(vcftk.nochr ? r.chr.replace('chr','') : r.chr) +':'+r.start+'-'+r.stop
 							], { cwd: dir } )
 						const rl = readline.createInterface({
 							input:ps.stdout
 						})
 						rl.on('line',line=>{
-							const l=line.split('\t')
-							const j=JSON.parse(l[3])
-							if(!j.gene) return
-							if(!j.sample) return
-							if(!Number.isFinite(j.value)) return
-							if(!gene2sample2obj.has(j.gene)) {
-								gene2sample2obj.set(j.gene, {chr:l[0], start:Number.parseInt(l[1]), stop:Number.parseInt(l[2]), samples:new Map()} )
+
+							const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:vcftk.nochr, samples:vcftk.samples, info:vcfquery.info, format:vcftk.format} )
+
+							for(const m of mlst) {
+								if(!m.sampledata) {
+									// do not allow
+									continue
+								}
+
+								if(req.query.singlesample) {
+									let thissampleobj=null
+									for(const s of m.sampledata) {
+										if(s.sampleobj.name == req.query.singlesample) {
+											thissampleobj=s
+											break
+										}
+									}
+									if(!thissampleobj) {
+										// this variant is not in this sample
+										continue
+									}
+									// alter
+									m.sampledata = [ thissampleobj ]
+								}
+
+								delete m._m
+								delete m.vcf_ID
+								delete m.type
+								delete m.name
+
+								m.dt = common.dtsnvindel
+								variants.push(m)
+								// mclass and rest will be determined at client, according to whether in gmmode and such
 							}
-							gene2sample2obj.get(j.gene).samples.set(j.sample, {
-								value: j.value,
-								ase: j.ase,
-								outlier: j.outlier
-							})
 						})
 						const errout=[]
 						ps.stderr.on('data',i=> errout.push(i) )
@@ -4091,16 +4112,46 @@ function handle_mdssvcnv(req,res) {
 							resolve()
 						})
 					})
+
 					tasks.push(task)
 				}
+				return Promise.all(tasks)
+					.then(()=>{
+						return variants
+					})
 			})
 
 			tracktasks.push( thistracktask )
 		}
 
 		return Promise.all( tracktasks )
-			.then(result =>{
-				return [ data_cnv, expressionrangelimit, gene2sample2obj, null, snvindel2sample ]
+			.then(vcffiles =>{
+
+				const mmerge = [] // variant/sample merged from multiple vcf
+
+				for(const eachvcf of vcffiles) {
+					for(const m of eachvcf) {
+						if(!m.sampledata) {
+							// no sample data, won't show
+							continue
+						}
+						let notfound=true
+						for(const m2 of mmerge) {
+							if(m.chr==m2.chr && m.pos==m2.pos && m.ref==m2.ref && m.alt==m2.alt) {
+								for(const s of m.sampledata) {
+									m2.sampledata.push( s )
+								}
+								notfound=false
+								break
+							}
+						}
+						if(notfound) {
+							mmerge.push( m )
+						}
+					}
+				}
+
+				return [ data_cnv, expressionrangelimit, gene2sample2obj, null, mmerge ]
 			})
 	})
 	.then( data=>{
@@ -4112,14 +4163,29 @@ function handle_mdssvcnv(req,res) {
 		////////////////////////////////////////////////////////
 		// group samples by svcnv, calculate expression rank
 
-		const [ data_cnv, expressionrangelimit, gene2sample2obj, vcfrangelimit, snvindel2sample ] = data
+		const [ data_cnv, expressionrangelimit, gene2sample2obj, vcfrangelimit, data_vcf ] = data
 
-		// to dedup, as the same cnv event may be retrieved multiple times by closeby regions, also gets set of samples for summary
 		const sample2item = new Map()
-		// k: sample
-		// v: list of sv, cnv, loh
+		/*
+		to dedup, as the same cnv event may be retrieved multiple times by closeby regions, also gets set of samples for summary
+		k: sample
+		v: list of sv, cnv, loh
+
+		do not include snvindel from vcf
+		the current data_vcf is variant-2-sample
+		if snvindel is spread across samples, the variant annotation must be duplicated too
+		just pass the lot to client, there each variant will sort out annotation, then spread to samples while keeping pointers in sample-m to original m
+
+		yet further complexity due to the need of grouping samples by server-side annotation
+		which will require vcf samples all to be included in samplegroups
+
+		expression rank will be assigned to samples in all groups
+		for vcf samples to get expression rank, it also require them to be grouped!
+		*/
 
 
+
+		
 		{
 			const sample2coordset_cnv = {}
 			const sample2coordset_loh = {}
@@ -4219,8 +4285,21 @@ function handle_mdssvcnv(req,res) {
 			}
 		}
 
+		// exit
 		if(req.query.singlesample) {
-			res.send({ lst: sample2item.get( req.query.singlesample ) })
+			/*
+			single sample does not include expression
+			but will include vcf
+			*/
+			const result = { lst: sample2item.get( req.query.singlesample ) }
+			if(vcfrangelimit) {
+				// out of range
+				result.vcfrangelimit = vcfrangelimit 
+			} else {
+				result.data_vcf = data_vcf
+			}
+
+			res.send( result )
 			return
 		}
 
@@ -4233,6 +4312,10 @@ function handle_mdssvcnv(req,res) {
 
 			/**** group samples by predefined annotation attributes
 			only for official ds
+
+			when vcf data is present, must include them samples in the grouping too, but not the variants
+
+			expression samples don't participate in grouping
 			*/
 
 
@@ -4244,8 +4327,11 @@ function handle_mdssvcnv(req,res) {
 			// head-less samples
 			const headlesssamples = []
 
-
-			for(const [samplename, items] of sample2item) {
+			const _grouper = ( samplename, items ) => {
+				/*
+				helper function, used by both cnv and vcf
+				to identify which group a sample is from, insert the group, then insert the sample
+				*/
 
 				const sanno = ds.cohort.annotation[ samplename ]
 				if(!sanno) {
@@ -4254,7 +4340,7 @@ function handle_mdssvcnv(req,res) {
 						samplename: samplename, // hardcoded attribute name
 						items: items
 					})
-					continue
+					return
 				}
 
 				const headname = sanno[ dsquery.groupsamplebyattrlst[0].k ]
@@ -4264,7 +4350,7 @@ function handle_mdssvcnv(req,res) {
 						samplename: samplename, // hardcoded
 						items: items
 					})
-					continue
+					return
 				}
 
 				const attrnames = []
@@ -4282,7 +4368,8 @@ function handle_mdssvcnv(req,res) {
 				const groupname = attrnames.join( dsquery.attrnamespacer )
 
 				if(hiddensgnames && hiddensgnames.has(groupname)) {
-					continue
+					// a group selected to be hidden by client
+					return
 				}
 
 				if(!key2group.has(groupname)) {
@@ -4331,10 +4418,47 @@ function handle_mdssvcnv(req,res) {
 					})
 				}
 
-				key2group.get(groupname).samples.push({
-					samplename: samplename, // hardcoded
-					items: items
-				})
+				let notfound=true
+				for(const s of key2group.get(groupname).samples) {
+
+					if(s.samplename == samplename) {
+						// same sample, can happen for vcf samples
+						// combine data, actually none for vcf
+						for(const m of items) {
+							s.items.push(m)
+						}
+						notfound=false
+						break
+					}
+				}
+
+				if(notfound) {
+					key2group.get(groupname).samples.push({
+						samplename: samplename, // hardcoded
+						items: items
+					})
+				}
+
+				///// end of grouper
+			}
+
+
+
+			//// group the sv-cnv samples
+			for(const [samplename, items] of sample2item) {
+
+				_grouper( samplename, items )
+
+			}
+
+
+			if(data_vcf) {
+				// group the vcf samples
+				for(const m of data_vcf) {
+					for(const s of m.sampledata) {
+						_grouper( s.sampleobj.name, [] )
+					}
+				}
 			}
 
 			result.samplegroups = []
@@ -4363,19 +4487,46 @@ function handle_mdssvcnv(req,res) {
 		} else {
 
 			// custom track or no annotation, lump all in one group
-			result.samplegroups = [ { samples: [] } ]
+
+			// cnv
+			const samples = []
 			for(const [n,items] of sample2item) {
-				result.samplegroups[0].samples.push({
+				samples.push({
 					samplename:n, // hardcoded
 					items:items
 				})
 			}
+
+			if(data_vcf) {
+				for(const m of data_vcf) {
+					for(const s of m.sampledata) {
+						let notfound=true
+						for(const s2 of samples) {
+							if(s2.samplename==s.sampleobj.name) {
+								notfound=false
+								break
+							}
+						}
+						if(notfound) {
+							samples.push({
+								samplename: s.sampleobj.name,
+								items:[]
+							})
+						}
+					}
+				}
+			}
+			result.samplegroups = [ { samples: samples } ]
 		}
 
+
+
+
+		///////// assign expression rank for all samples listed in samplegroup
 		if(expressionrangelimit) {
 
 			// view range too big above limit set by official track, no checking expression
-			result.expressionrangelimit=expressionrangelimit
+			result.expressionrangelimit = expressionrangelimit
 
 		} else if(gene2sample2obj) {
 
@@ -4437,6 +4588,13 @@ function handle_mdssvcnv(req,res) {
 					}
 				}
 			}
+		}
+
+		if(vcfrangelimit) {
+			result.vcfrangelimit = vcfrangelimit
+		}
+		if(data_vcf) {
+			result.data_vcf = data_vcf
 		}
 
 		res.send(result)
@@ -8716,6 +8874,8 @@ function mds_init_mdsvcf(query, ds, genome) {
 			if(!tmp) return 'no meta/header lines for '+_file
 			const [info, format, samples, errs] = vcf.vcfparsemeta(tmp.split('\n'))
 			if(errs) return 'error parsing vcf meta for '+_file+': '+errs.join('\n')
+
+			if(samples.length==0) return 'vcf file has no sample: '+_file
 
 			for(const k in info) {
 				query.info[ k ] = info[k]
