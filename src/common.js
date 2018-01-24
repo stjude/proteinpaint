@@ -32,7 +32,9 @@ const dtsnvindel=1,
 	dtitd=6,
 	dtdel=7,
 	dtnloss=8,
-	dtcloss=9
+	dtcloss=9,
+	dtloh=10 // to be used in svcnv track
+
 const h={}
 h[dtsnvindel]='SNV/indel'
 h[dtfusionrna]='Fusion RNA'
@@ -42,6 +44,7 @@ h[dtitd]='ITD'
 h[dtdel]='Deletion'
 h[dtnloss]='N-loss'
 h[dtcloss]='C-loss'
+h[dtloh] = 'LOH'
 exports.dt2label=h
 exports.dtsnvindel=dtsnvindel
 exports.dtfusionrna=dtfusionrna
@@ -52,6 +55,7 @@ exports.dtitd=dtitd
 exports.dtdel=dtdel
 exports.dtnloss=dtnloss
 exports.dtcloss=dtcloss
+exports.dtloh=dtloh
 
 
 const mclass={
@@ -357,6 +361,7 @@ const tkt={
 	mdscnv:'mdscnv',
 	mdssvcnv:'mdssvcnv',
 	mdsexpressionrank:'mdsexpressionrank',
+	mdsvcf:'mdsvcf',
 	bedj:'bedj',
 	pgv:'profilegenevalue',
 	bampile:'bampile',

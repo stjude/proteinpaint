@@ -66,7 +66,7 @@ module.exports={
 
 	queries:{
 		svcnv:{
-			name:'Pediatric tumor somatic CNV+SV+LOH',
+			name:'Pediatric tumor somatic mutation',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
 			file:'hg19/Pediatric/pediatric.svcnv.hg19.gz',
@@ -92,7 +92,16 @@ module.exports={
 
 			attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
 
-			expressionrank_querykey:'genefpkm'
+			expressionrank_querykey:'genefpkm',
+			vcf_querykey:'somaticsnvindel'
+		},
+		somaticsnvindel:{
+			name:'somatic SNV/indel',
+			istrack:true,
+			type:common.tkt.mdsvcf,
+			tracks:[
+				{file:'hg19/PCGP/vcf.somatic/652samples.vcf.gz'},
+			]
 		},
 		genefpkm:{
 			name:'Pediatric tumor RNA-seq gene FPKM',
@@ -106,11 +115,6 @@ module.exports={
 			// for expression rank checking when coupled to svcnv
 			viewrangeupperlimit:5000000,
 
-			/*
-			boxplotbyhierarchy:{
-				hierarchyidx:0
-			},
-			*/
 			/*
 			one boxplot for each sample group
 			the grouping method must be same as svcnv

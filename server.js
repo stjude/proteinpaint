@@ -3773,7 +3773,7 @@ function handle_mdssvcnv(req,res) {
 
 
 		////////////////////////////////////////////////////////
-		// query sv cnv
+		// query sv cnv loh
 
 		const tasks=[]
 
@@ -3801,9 +3801,20 @@ function handle_mdssvcnv(req,res) {
 
 					const j=JSON.parse(l[3])
 
+					if(j.dt==undefined) {
+						if(j.segmean) {
+							j.dt = common.dtloh
+						} else if(j.value!=undefined) {
+							j.dt = common.dtcnv
+						} else {
+							// no way to tell sv and fusion
+							j.dt = common.dtsv
+						}
+					}
+
 					///// data-type specific handling and filtering
 
-					if(j.loh) {
+					if(j.dt == common.dtloh ) {
 
 						// loh
 						if(j.segmean && req.query.segmeanValueCutoff && j.segmean<req.query.segmeanValueCutoff) {
@@ -3818,7 +3829,7 @@ function handle_mdssvcnv(req,res) {
 						j.start = start0
 						j.stop = stop0
 
-					} else if(j.chrA || j.chrB) {
+					} else if( j.dt==common.dtfusionrna || j.dt==common.dtsv ) {
 
 						// sv
 						j._chr=l[0]
@@ -3831,7 +3842,7 @@ function handle_mdssvcnv(req,res) {
 							j.posA=start0
 						}
 
-					} else {
+					} else if(j.dt==common.dtcnv) {
 
 						// cnv
 						if(req.query.valueCutoff) {
@@ -3848,6 +3859,9 @@ function handle_mdssvcnv(req,res) {
 						j.start = start0
 						j.stop = stop0
 
+					} else {
+						// TODO complain
+						return
 					}
 
 					if(req.query.singlesample) {

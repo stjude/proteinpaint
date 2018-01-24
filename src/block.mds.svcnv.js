@@ -122,6 +122,8 @@ export function loadTk( tk, block ) {
 	.then(data=>{return data.json()})
 	.then(data=>{
 
+		// throw errors
+
 		if(data.error) throw({message:data.error})
 
 		if(tk.singlesample) {
@@ -130,6 +132,10 @@ export function loadTk( tk, block ) {
 		}
 
 		if(!data.samplegroups || data.samplegroups.length==0) throw({message:'no data in view range'})
+
+		if(data.data_vcf) {
+			integrate_vcf( data )
+		}
 
 		return data
 
@@ -160,6 +166,8 @@ export function loadTk( tk, block ) {
 		block.setllabel()
 	})
 }
+
+
 
 
 
@@ -247,7 +255,7 @@ function render_singlesample( tk, block ) {
 
 	for(const item of tk.data) {
 
-		if(item._chr) {
+		if( item.dt==common.dtfusionrna || item.dt==common.dtsv ) {
 			// sv
 			const id=item.chrA+'.'+item.posA+'.'+item.chrB+'.'+item.posB
 			if(!id2sv[id]){
@@ -276,7 +284,7 @@ function render_singlesample( tk, block ) {
 			continue
 		}
 
-		if(item.loh) {
+		if(item.dt==common.dtloh) {
 			// loh
 			segmeanmax = Math.max(segmeanmax, item.segmean)
 			lohlst.push(item)
@@ -289,13 +297,14 @@ function render_singlesample( tk, block ) {
 			const v = 2*Math.pow(2, item.value)
 			copynumbermax = Math.max( copynumbermax, v )
 		} else {
-			// item.value is logratio by default
+			// item.value is log2 ratio by default
 			if(item.value>0) {
 				gainmaxvalue = Math.max(gainmaxvalue, item.value)
 			} else {
 				lossmaxvalue = Math.min(lossmaxvalue, item.value)
 			}
 		}
+
 		cnvlst.push(item)
 	}
 
@@ -402,206 +411,84 @@ function render_singlesample( tk, block ) {
 	}
 
 
-	if(0) {
-		// cnv wiggle plot
-		if(cnvlst.length) {
-			tk.axis_label_cnv
-				.text( usecopynumber ? 'Copy number' : 'CNV log2(ratio)')
-				.attr('y',svheight+tk.cnvheight/2+(svheight==0?8:0))
+	// stack bar plot for cnv loh
 
-			tk.axisg_cnvleft
-				.attr('transform','translate(0,'+ svheight +')')
+	const items = [...cnvlst, ...lohlst]
 
-			tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
+	if(items.length > 0) {
 
-			let axismin,
-				axismax,
-				showzero=false
+		tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
 
-			if(usecopynumber) {
-				axismin=0
-				axismax=copynumbermax
+		items.sort( (i,j)=> Math.min(i.x1,i.x2) - Math.min(j.x1,j.x2) )
+
+		const stacks=[ 0 ]
+		for(const item of items) {
+			let addnew=true
+			for(let i=0; i<stacks.length; i++) {
+				if(stacks[i]<= Math.min(item.x1,item.x2) ) {
+					stacks[i] = Math.max( stacks[i], Math.max(item.x1,item.x2) )
+					item.stack=i
+					addnew=false
+					break
+				}
+			}
+			if(addnew) {
+				stacks.push( Math.max(item.x1,item.x2) )
+				item.stack=stacks.length-1
+			}
+		}
+
+		const stackheight = 12
+		const stackspace  = 1
+
+		tk.cnvcolor.cnvmax = Math.max(gainmaxvalue, -lossmaxvalue)
+
+		for(const item of items) {
+			let color
+
+			if(item.dt==common.dtloh) {
+
+				color = 'rgba('+tk.cnvcolor.loh.r+','+tk.cnvcolor.loh.g+','+tk.cnvcolor.loh.b+','+(item.segmean/segmeanmax)+')'
+
 			} else {
-				// keeps using logratio
-				if(lossmaxvalue<0) {
-					if(gainmaxvalue>0) {
-						showzero=true
-					}
-					axismin=lossmaxvalue
-					axismax=gainmaxvalue
+
+				if(item.value>0) {
+					color = 'rgba('+tk.cnvcolor.gain.r+','+tk.cnvcolor.gain.g+','+tk.cnvcolor.gain.b+','+(item.value/tk.cnvcolor.cnvmax)+')'
 				} else {
-					axismin=0
-					axismax=gainmaxvalue
+					color = 'rgba('+tk.cnvcolor.loss.r+','+tk.cnvcolor.loss.g+','+tk.cnvcolor.loss.b+','+(-item.value/tk.cnvcolor.cnvmax)+')'
 				}
 			}
 
-			const scale = scaleLinear().domain([ axismax, axismin ]).range([ 0, tk.cnvheight ])
-			client.axisstyle({
-				axis: tk.axisg_cnvleft.call(
-					axisLeft().scale( scale ).tickValues([axismin, axismax])
-					),
-				showline:1
-			})
-			const y0 = scale(0)
-			for(const item of cnvlst) {
-				
-				const y = scale( usecopynumber ? 2*Math.pow(2, item.value) : item.value )
-
-				const rect = tk.cnv_g.append('rect')
-					.attr('x', Math.min(item.x1,item.x2) )
-					.attr('width', Math.max(1, Math.abs(item.x2-item.x1) ) )
-					.attr('fill', item.value>0 ? tk.cnvcolor.gain.str : tk.cnvcolor.loss.str )
-					.attr('shape-rendering','crispEdges')
-					.attr('stroke','none')
-					.attr('class','sja_aa_skkick')
-					.on('mouseover',()=>{
-						tooltip_cnvitem_singlesample(item, tk)
-					})
-					.on('mouseout',()=> tk.tktip.hide() )
-
-				if(usecopynumber) {
-					rect.attr('y', y)
-						.attr('height', tk.cnvheight-y)
-				} else {
-					if(item.value>0) {
-						rect.attr('y', y)
-						if(showzero) {
-							rect.attr('height', y0-y)
-						} else {
-							rect.attr('height', tk.cnvheight-y)
-						}
-					} else {
-						if(showzero) {
-							rect.attr('y', y0)
-								.attr('height',	y-y0)
-						} else {
-							rect.attr('height',y)
-						}
-					}
-				}
-			}
+			tk.cnv_g.append('rect')
+				.attr('x', Math.min(item.x1, item.x2) )
+				.attr('y', (stackheight+stackspace)*item.stack)
+				.attr('width', Math.max(1, Math.abs(item.x2-item.x1) ) )
+				.attr('height', stackheight)
+				.attr('fill',color)
+				.attr('shape-rendering','crispEdges')
+				.attr('stroke','none')
+				.attr('class','sja_aa_skkick')
+				.on('mouseover',()=>{
+					tooltip_cnvitem_singlesample(item, tk)
+				})
+				.on('mouseout',()=> {
+					tk.tktip.hide()
+				})
 		}
-
-		// loh 
+		if(cnvlst.length) {
+			tk.cnvcolor.cnvmax = Math.max(gainmaxvalue, -lossmaxvalue)
+			draw_colorscale_cnv(tk)
+		}
 		if(lohlst.length) {
-			tk.axis_label_loh
-				.text('LOH')
-				.attr('y',svheight+tk.cnvheight/2+(svheight==0?8:0))
-
-			tk.axisg_lohright
-				.attr('transform','translate(0,'+ svheight +')')
-
-			tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
-
-			let axismin=0,
-				axismax=segmeanmax,
-				showzero=false
-
-			const scale = scaleLinear().domain([ axismax, axismin ]).range([ 0, tk.cnvheight ])
-			client.axisstyle({
-				axis: tk.axisg_lohright.call(
-					axisRight().scale( scale ).tickValues([axismin, axismax])
-					),
-				showline:1
-			})
-			const y0 = scale(0)
-			for(const item of lohlst) {
-				const y = scale(item.segmean)
-				const rect = tk.cnv_g.append('rect')
-					.attr('x', Math.min(item.x1,item.x2) )
-					.attr('width', Math.max(1, Math.abs(item.x2-item.x1) ) )
-					.attr('fill', tk.cnvcolor.loh.str )
-					.attr('shape-rendering','crispEdges')
-					.attr('stroke','none')
-					.attr('class','sja_aa_skkick')
-					.attr('y', y)
-					.attr('height', tk.cnvheight-y)
-					.on('mouseover',()=>{
-						tooltip_cnvitem_singlesample(item, tk)
-					})
-					.on('mouseout',()=> tk.tktip.hide() )
-			}
+			tk.cnvcolor.segmeanmax=segmeanmax
+			draw_colorscale_loh(tk)
 		}
 
-		tk.height_main = tk.toppad+ svheight + ( cnvlst.length || lohlst.length ? tk.cnvheight : 0 ) + tk.bottompad
-
+		tk.height_main = tk.toppad+ svheight + stacks.length*(stackheight+stackspace)-stackspace + tk.bottompad
 
 	} else {
 
-		const items = [...cnvlst, ...lohlst]
-
-		if(items.length > 0) {
-
-			tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
-
-			items.sort( (i,j)=> Math.min(i.x1,i.x2) - Math.min(j.x1,j.x2) )
-
-			const stacks=[ 0 ]
-			for(const item of items) {
-				let addnew=true
-				for(let i=0; i<stacks.length; i++) {
-					if(stacks[i]<= Math.min(item.x1,item.x2) ) {
-						stacks[i] = Math.max( stacks[i], Math.max(item.x1,item.x2) )
-						item.stack=i
-						addnew=false
-						break
-					}
-				}
-				if(addnew) {
-					stacks.push( Math.max(item.x1,item.x2) )
-					item.stack=stacks.length-1
-				}
-			}
-
-			const stackheight = 12
-			const stackspace  = 1
-
-			tk.cnvcolor.cnvmax = Math.max(gainmaxvalue, -lossmaxvalue)
-
-			for(const item of items) {
-				let color
-
-				if(item.loh) {
-					color = 'rgba('+tk.cnvcolor.loh.r+','+tk.cnvcolor.loh.g+','+tk.cnvcolor.loh.b+','+(item.segmean/segmeanmax)+')'
-				} else {
-					if(item.value>0) {
-						color = 'rgba('+tk.cnvcolor.gain.r+','+tk.cnvcolor.gain.g+','+tk.cnvcolor.gain.b+','+(item.value/tk.cnvcolor.cnvmax)+')'
-					} else {
-						color = 'rgba('+tk.cnvcolor.loss.r+','+tk.cnvcolor.loss.g+','+tk.cnvcolor.loss.b+','+(-item.value/tk.cnvcolor.cnvmax)+')'
-					}
-				}
-
-				tk.cnv_g.append('rect')
-					.attr('x', Math.min(item.x1, item.x2) )
-					.attr('y', (stackheight+stackspace)*item.stack)
-					.attr('width', Math.max(1, Math.abs(item.x2-item.x1) ) )
-					.attr('height', stackheight)
-					.attr('fill',color)
-					.attr('shape-rendering','crispEdges')
-					.attr('stroke','none')
-					.attr('class','sja_aa_skkick')
-					.on('mouseover',()=>{
-						tooltip_cnvitem_singlesample(item, tk)
-					})
-					.on('mouseout',()=> {
-						tk.tktip.hide()
-					})
-			}
-			if(cnvlst.length) {
-				tk.cnvcolor.cnvmax = Math.max(gainmaxvalue, -lossmaxvalue)
-				draw_colorscale_cnv(tk)
-			}
-			if(lohlst.length) {
-				tk.cnvcolor.segmeanmax=segmeanmax
-				draw_colorscale_loh(tk)
-			}
-
-			tk.height_main = tk.toppad+ svheight + stacks.length*(stackheight+stackspace)-stackspace + tk.bottompad
-
-		} else {
-
-			tk.height_main = tk.toppad+ svheight + tk.bottompad
-		}
+		tk.height_main = tk.toppad+ svheight + tk.bottompad
 	}
 }
 
@@ -730,7 +617,7 @@ function render_samplegroups( tk, block ) {
 
 			for(const item of sample.items) {
 
-				if(item._chr) {
+				if(item.dt==common.dtsv || item.dt==common.dtfusionrna) {
 					// sv
 					map_sv_2(item,block)
 					if(item.x==undefined) {
@@ -1012,11 +899,11 @@ function render_multi_cnvloh(tk,block) {
 		for(const g of tk.samplegroups) {
 			for(const s of g.samples) {
 				for(const i of s.items) {
-					if(i.loh) {
+					if(i.dt==common.dtloh) {
 						segmean.push(i.segmean)
 						continue
 					}
-					if(!i._chr) {
+					if(i.dt==common.dtcnv) {
 						if(i.value>0) gain.push(i.value)
 						else loss.push(-i.value)
 					}
@@ -1168,7 +1055,7 @@ function render_multi_cnvloh(tk,block) {
 
 			for( const item of sample.items ) {
 
-				if(item._chr) {
+				if(item.dt==common.dtsv || item.dt==common.dtfusionrna) {
 
 					/////// sv
 					// sv appears here in full mode, not in dense mode
@@ -1202,7 +1089,7 @@ function render_multi_cnvloh(tk,block) {
 
 				// segment color set by numeric value against a cutoff
 				let color
-				if(item.loh) {
+				if(item.dt==common.dtloh) {
 					if(item.segmean >= tk.cnvcolor.segmeanmax) {
 						color=tk.cnvcolor.loh.str
 					} else {
@@ -1826,7 +1713,7 @@ function tooltip_svdense(g, tk, block) {
 				+' &raquo; '
 				+svchr2html(i.chrB, tk)
 				+':'+i.posB+':'+i.strandB
-				+( i.isfusion ? ' (RNA fusion)' : '')
+				+( i.dt==common.dtfusionrna? ' (RNA fusion)' : '')
 			)
 		return
 	}
@@ -1891,7 +1778,7 @@ function click_svdense(g, tk, block) {
 					+' &raquo; '
 					+svchr2html(i.chrB, tk)
 					+':'+i.posB+':'+i.strandB
-					+( i.isfusion ? ' (RNA fusion)' : '')
+					+( i.dt==common.dtfusionrna? ' (RNA fusion)' : '')
 					)
 				.on('click',()=>{
 					click_multi2single(null, i, i._sample, i._samplegroup, tk, block)
@@ -3087,7 +2974,7 @@ function tooltip_multi_cnvloh( item, sample, samplegroup, tk, block, xoff ) {
 		}
 	]
 
-	if(item.loh) {
+	if(item.dt==common.dtloh) {
 		lst.push({
 			k:'LOH seg.mean',
 			v: item.segmean.toFixed(2)
@@ -3113,13 +3000,13 @@ function tooltip_multi_cnvloh( item, sample, samplegroup, tk, block, xoff ) {
 		cnv & loh may overlap in a sample but can only mouse over one segment
 		in that case must also show any items hidding behind the cursor position
 		*/
-		const thiskey = (item.loh?'loh'+item.segmean:'cnv'+item.value)+item.chr+'.'+item.start+'.'+item.stop
+		const thiskey = (item.dt==common.dtloh ? 'loh'+item.segmean:'cnv'+item.value)+item.chr+'.'+item.start+'.'+item.stop
 
 		const [ridx, cursorcoord] = block.pxoff2region( xoff )
 		const thischr = block.rglst[ridx].chr
 
 		for(const i2 of sample.items) {
-			const thatkey = (i2.loh?'loh'+i2.segmean:'cnv'+i2.value)+i2.chr+'.'+i2.start+'.'+i2.stop
+			const thatkey = (i2.dt==common.dtloh ?'loh'+i2.segmean:'cnv'+i2.value)+i2.chr+'.'+i2.start+'.'+i2.stop
 			if(thiskey==thatkey) {
 				// same item
 				continue
@@ -3129,7 +3016,7 @@ function tooltip_multi_cnvloh( item, sample, samplegroup, tk, block, xoff ) {
 				// the other item overlaps with cursor, show
 				lst.push({
 					k:'Overlap with',
-					v: (i2.loh ? 'LOH <span style="font-size:.7em">seg.mean</span> '+i2.segmean :
+					v: (i2.dt==common.dtloh ? 'LOH <span style="font-size:.7em">seg.mean</span> '+i2.segmean :
 						'CNV <span style="font-size:.7em">log2(ratio)</span> <span style="padding:0px 4px;background:'
 							+(i2.value>0?tk.cnvcolor.gain.str:tk.cnvcolor.loss.str)+';color:white;">'
 							+i2.value.toFixed(2)
@@ -3200,7 +3087,7 @@ function tooltip_svitem( sv, tk ) {
 	const row=tk.tktip.d.append('div')
 	row.append('span').html( print_sv(sv) )
 	
-	if(sv.isfusion) {
+	if(sv.dt==common.dtfusionrna) {
 		row.append('span').html('&nbsp;(RNA fusion)')
 	}
 }
@@ -3213,21 +3100,31 @@ function tooltip_svitem_2( sv, sample, samplegroup, tk ) {
 	multi-sample
 	full mode
 	mouse over a sv circle
+	sv or fusion
 	*/
 	tk.tktip.clear()
 		.show(d3event.clientX, d3event.clientY)
+
 	const lst = [
-		{k:'Sample',   v: sample.samplename
+		{k:'Sample',
+		v: sample.samplename
 			+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
-			+ (samplegroup.name ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '') },
-		{k:'SV', v: svchr2html(sv.chrA, tk) +':'+sv.posA+':'+sv.strandA+' &raquo; '
+			+ (samplegroup.name ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '')
+		},
+		{k: (sv.dt==common.dtsv ? 'SV' : 'RNA fusion'),
+		v: svchr2html(sv.chrA, tk) +':'+sv.posA+':'+sv.strandA+' &raquo; '
 			+svchr2html(sv.chrB,tk)+':'+sv.posB+':'+sv.strandB
 		}
 	]
 
-	if(sv.isfusion) {
-		lst.push({k:'note', v:'RNA fusion'})
+	if(sv.clipreadA) {
+		lst.push({
+			k:'# of reads',
+			v:'A <span style="font-size:.7em">clip/total</span> '+sv.clipreadA+' / '+sv.totalreadA+'<br>'+
+				'B <span style="font-size:.7em">clip/total</span> '+sv.clipreadB+' / '+sv.totalreadB
+		})
 	}
+
 
 	const tmp=tooltip_svcnv_addexpressionrank(sample,tk)
 	if(tmp) {
@@ -3258,8 +3155,8 @@ function tooltip_cnvitem_singlesample(item, tk) {
 	tk.tktip.clear()
 		.show( d3event.clientX, d3event.clientY )
 	const lst = []
-	
-	if(item.loh) {
+
+	if(item.dt==common.dtloh) {
 		// loh
 		lst.push({k:'LOH seg.mean',v:item.segmean})
 	} else {
@@ -3276,24 +3173,6 @@ function tooltip_cnvitem_singlesample(item, tk) {
 			+' <span style="font-size:.7em">'+common.bplen(item.stop-item.start)+'</span>'
 	})
 
-	if(item.start_sv) {
-		lst.push({
-			k:'Start SV',
-			v: print_sv( item.start_sv )
-		})
-	}
-	if(item.stop_sv) {
-		lst.push({
-			k:'Stop SV',
-			v: print_sv( item.stop_sv )
-		})
-	}
-	if(item.match_sv) {
-		lst.push({
-			k:'Match SV',
-			v: print_sv( item.match_sv )
-		})
-	}
 	client.make_table_2col( tk.tktip.d, lst )
 }
 
@@ -3440,22 +3319,22 @@ function printitems_svcnv(lst, tk) {
 		svlst0=[],
 		lohlst0=[]
 	for(const i of lst) {
-		if(i.loh) {
+		if(i.dt==common.dtloh) {
 			lohlst.push(
 				'<div>'+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
 				+' <span style="font-size:.8em">'+common.bplen(i.stop-i.start)
 				+' seg.mean: '+i.segmean+'</span>'
 			)
 			lohlst0.push(i)
-		} else if(i._chr) {
+		} else if(i.dt==common.dtsv || i.dt==common.dtfusionrna) {
 			svlst.push('<div>'+svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
 				+' &raquo; '
 				+svchr2html(i.chrB,tk)+':'+i.posB+':'+i.strandB
-				+(i.isfusion ? ' <span style="font-size:.7em;opacity:.7">(RNA fusion)</span>':'')
+				+(i.dt==common.dtfusionrna ? ' <span style="font-size:.7em;opacity:.7">(RNA fusion)</span>':'')
 				+'</div>'
 			)
 			svlst0.push(i)
-		} else {
+		} else if(i.dt==common.dtcnv) {
 			cnvlst.push(
 				'<div>'+i.chr+':'+(i.start-1)+'-'+(i.stop-1)
 				+' <span style="font-size:.8em">'+common.bplen(i.stop-i.start)+'</span>'
@@ -3499,4 +3378,12 @@ function click_sv_single(sv, tk, block) {
 	block.init_coord_subpanel(p)
 	block.subpanels.push(p)
 	block.ifbusy()
+}
+
+
+
+
+
+function integrate_vcf(data) {
+	console.log(data)
 }
