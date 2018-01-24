@@ -151,9 +151,10 @@ else
 	webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
 fi
 
-# no-babel-polyfill version for use in sjcloud, to avoid conflict
+# no-babel-polyfill version for use in sjcloud, 
+# to avoid conflict with external code
 if [[ "$ENV" == "public-prod" ]]; then
-	webpack --config=scripts/webpack.config.build.js --env.subdomain=pecan --env.nopolyfill=1
+	webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN --env.nopolyfill=1
 fi
 
 # create dirs to put extracted files
@@ -181,7 +182,7 @@ else
 fi
 
 if [[ "$ENV" == "public-prod" ]]; then
-	mv public/builds/pecan/no-babel-polyfill $APP/public/
+	mv public/builds/$SUBDOMAIN/no-babel-polyfill $APP/public/
 fi
 
 # tar inside the dir in order to not create
