@@ -3750,7 +3750,7 @@ function handle_mdssvcnv(req,res) {
 		}
 	}
 
-	let hiddensgnames
+	let hiddensgnames // sample groups selected to be hidden from client
 	if(req.query.hiddensgnames) {
 		// only for official track
 		hiddensgnames = new Set( req.query.hiddensgnames )
@@ -4107,7 +4107,6 @@ function handle_mdssvcnv(req,res) {
 
 								delete m._m
 								delete m.vcf_ID
-								delete m.type
 								delete m.name
 
 								m.dt = common.dtsnvindel
