@@ -628,6 +628,18 @@ function render_samplegroups( tk, block ) {
 	}
 
 
+	if(tk.data_vcf) {
+		// map vcf variants to view range
+		for(const m of tk.data_vcf) {
+			m._chr = m.chr
+			m._pos = m.pos
+			map_sv_2( m, block )
+			delete m._chr
+			delete m._pos
+		}
+	}
+
+
 	// sv to be drawn in separate process from cnv/loh, both dense and full
 	const svlst=[] 
 
@@ -692,24 +704,41 @@ function render_samplegroups( tk, block ) {
 				}
 				s2.items.push(item)
 			}
-			if(s2.items.length==0) continue
+
+			if(s2.items.length==0) {
+				/*
+				no cnv/sv/loh for this sample, may drop it
+				however if vcf is in full mode, must check if this sample has vcf data
+				since vcf data is not bundled in items[]
+				*/
+				if(tk.isfull && tk.data_vcf) {
+					let samplehasvcf=false
+					for(const m of tk.data_vcf) {
+						if(samplehasvcf) break
+						if(m.x==undefined || !m.sampledata) continue
+						for(const s of m.sampledata) {
+							if(s.sampleobj.name == sample.samplename) {
+								samplehasvcf=true
+								break
+							}
+						}
+					}
+					if(!samplehasvcf) {
+						// this sample has no vcf either, drop
+						continue
+					}
+
+				} else {
+					continue
+				}
+			}
+
 			g2.samples.push(s2)
 		}
 		if(g2.samples.length==0) continue
 		tk.samplegroups.push(g2)
 	}
 
-
-	if(tk.data_vcf) {
-		// map vcf variants to view range
-		for(const m of tk.data_vcf) {
-			m._chr = m.chr
-			m._pos = m.pos
-			map_sv_2( m, block )
-			delete m._chr
-			delete m._pos
-		}
-	}
 
 
 	// cnv/sv/vcf mapped, if in dense mode, sv moved from samplegroups to svlst
@@ -1183,6 +1212,10 @@ function render_multi_cnvloh(tk,block) {
 	multi-sample
 	official or custom
 	full or dense
+
+	in full mode, will overlap sv & vcf data over cnv bars
+
+	TODO allow variable heights in each samples
 	*/
 
 	{
@@ -1316,7 +1349,8 @@ function render_multi_cnvloh(tk,block) {
 
 		for( const sample of samplegroup.samples ) {
 			
-			/* for each sample from this group
+			/*
+			for each sample from this group
 			*/
 
 			if(sample.samplename && tk.iscustom && tk.rowheight>=minlabfontsize) {
@@ -1353,8 +1387,10 @@ function render_multi_cnvloh(tk,block) {
 
 				if(item.dt==common.dtsv || item.dt==common.dtfusionrna) {
 
-					/////// sv
-					// sv appears here in full mode, not in dense mode
+					/*
+					sv, appears here in full mode, not in dense mode
+					fortunately sv comes later than cnv in the items[] array otherwise it will be covered!!
+					*/
 
 					const otherchr= item.chrA==item._chr ? item.chrB : item.chrA
 
@@ -1431,8 +1467,85 @@ function render_multi_cnvloh(tk,block) {
 					})
 
 			}
+
+			// done cnv & sv of this sample
+
+			if(tk.isfull && tk.data_vcf) {
+				/*
+				vcf ticks in full mode
+				*/
+				for(const m of tk.data_vcf) {
+					if(m.x==undefined || !m.sampledata) continue
+					for(const ms of m.sampledata) {
+						if(ms.sampleobj.name != sample.samplename) continue
+						// a variant from this sample
+						const rowheight = tk.rowheight
+						const m_g = g.append('g')
+							.attr('transform','translate('+m.x+','+(rowheight/2)+')')
+						const color = common.mclass[m.class].color
+
+						const bgbox = m_g.append('rect')
+							.attr('x', -rowheight/2-1)
+							.attr('y', -rowheight/2-1)
+							.attr('width', rowheight+2)
+							.attr('height', rowheight+2)
+							.attr('fill',color)
+							.attr('fill-opacity', 0)
+						const bgline1 = m_g.append('line')
+							.attr('stroke', 'white')
+							.attr('stroke-width',2)
+							.attr('x1', -rowheight/2)
+							.attr('x2', rowheight/2)
+							.attr('y1', -rowheight/2)
+							.attr('y2', rowheight/2)
+						const fgline1 = m_g.append('line')
+							.attr('stroke', color)
+							.attr('x1', -rowheight/2)
+							.attr('x2', rowheight/2)
+							.attr('y1', -rowheight/2)
+							.attr('y2', rowheight/2)
+						const bgline2 = m_g.append('line')
+							.attr('stroke', 'white')
+							.attr('stroke-width',2)
+							.attr('x1', -rowheight/2)
+							.attr('x2', rowheight/2)
+							.attr('y1', rowheight/2)
+							.attr('y2', -rowheight/2)
+						const fgline2 = m_g.append('line')
+							.attr('stroke', color)
+							.attr('x1', -rowheight/2)
+							.attr('x2', rowheight/2)
+							.attr('y1', rowheight/2)
+							.attr('y2', -rowheight/2)
+						m_g.append('rect')
+							.attr('x', -rowheight/2)
+							.attr('y', -rowheight/2)
+							.attr('width', rowheight)
+							.attr('height', rowheight)
+							.attr('fill','white')
+							.attr('fill-opacity', 0)
+							.on('mouseover',()=>{
+								bgbox.attr('fill-opacity',1)
+								bgline1.attr('stroke-opacity',0)
+								bgline2.attr('stroke-opacity',0)
+								fgline1.attr('stroke','white')
+								fgline2.attr('stroke','white')
+								tooltip_multi_vcf( m, ms, sample, samplegroup, tk, block )
+							})
+							.on('mouseout',()=>{
+								tk.tktip.hide()
+								bgbox.attr('fill-opacity',0)
+								bgline1.attr('stroke-opacity',1)
+								bgline2.attr('stroke-opacity',1)
+								fgline1.attr('stroke',color)
+								fgline2.attr('stroke',color)
+							})
+					}
+				}
+			}
+
 			yoff1 += tk.rowheight + tk.rowspace
-			// done a sample
+			// done cnv & sv & vcf of this sample
 		}
 		yoff += thisgroupheight + thisgroupypad*2 + groupspace
 		// done a group
@@ -3353,6 +3466,53 @@ function tooltip_multi_cnvloh( item, sample, samplegroup, tk, block, xoff ) {
 	}
 	client.make_table_2col( tk.tktip.d, lst )
 }
+
+
+
+
+
+
+function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
+	/*
+	multi-sample
+	native or custom
+	full mode only
+	mouse over a vcf variant tick
+
+	m_sample is of m.sampledata[]
+	*/
+
+	tk.tktip.clear()
+		.show( d3event.clientX, d3event.clientY )
+
+	const lst = [
+		{
+			k:'Sample',
+			v: sample.samplename
+				+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
+				+ (samplegroup.name  ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '')
+		}
+	]
+
+
+	lst.push( { k:'Position', v: m.chr+':'+(m.pos+1) } )
+
+	// TODO ITD
+
+	lst.push( { k:'Mutation', v: m.mname+'&nbsp;&nbsp;<span style="background:'+common.mclass[m.class].color+';font-size:.7em;color:white;padding:1px 3px;">'+common.mclass[m.class].label+'</span>'})
+
+	// TODO show info and format
+
+
+	// expression rank
+	const tmp=tooltip_svcnv_addexpressionrank(sample, tk)
+	if(tmp) {
+		lst.push(tmp)
+	}
+	client.make_table_2col( tk.tktip.d, lst )
+}
+
+
 
 
 
