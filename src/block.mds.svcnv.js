@@ -32,11 +32,6 @@ fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
 JUMP __cohortfilter __multi __maketk __boxplot
 
 
-********************** EXPORTED
-loadTk()
-
-
-********************** INTERNAL
 
 makeTk()
 render_samplegroups
@@ -47,6 +42,7 @@ render_samplegroups
 		click_samplegroup_showtable
 		** click_multi2single
 		tooltip_multi_cnvloh
+		tooltip_multi_vcf
 	render_multi_genebar
 		genebar_config
 render_singlesample
@@ -236,9 +232,8 @@ function render_singlesample( tk, block ) {
 	/*
 	single-sample mode
 	sv as leg-disc
-	cnv as wiggle track, also converts log ratio to copy number
-	loh share space with cnv, but axis on the other end
-	updated: cnv & loh as bar segments
+	cnv & loh as bar segments
+	TODO vcf
 	*/
 
 	tk.sv_g.selectAll('*').remove()
@@ -800,7 +795,7 @@ function render_samplegroups( tk, block ) {
 			tk.vcfdensitylabelg
 				.attr('transform','translate(0,'+(hpad-vcfdensityheight-vcfsvpad-svdensityheight)+')')
 				.append('text')
-				.text('SNV/indel density')
+				.text( tk.data_vcf.length+' SNV/indel'+(tk.data_vcf.length>1?'s':'') )
 				.attr('text-anchor','end')
 				.attr('x',block.tkleftlabel_xshift)
 				.attr('y',vcfdensityheight/2)
@@ -827,7 +822,7 @@ function render_samplegroups( tk, block ) {
 			tk.svdensitylabelg
 				.attr('transform','translate(0,'+(hpad-svdensityheight)+')')
 				.append('text')
-				.text('SV breakpoint density')
+				.text( svlst.length+' SV breakpoint'+(svlst.length>1?'s':'') )
 				.attr('text-anchor','end')
 				.attr('x',block.tkleftlabel_xshift)
 				.attr('y',svdensityheight/2)
@@ -2106,6 +2101,11 @@ function svdense_tolist(lst) {
 
 
 function tooltip_svdense(g, tk, block) {
+	/*
+	multi-sample
+	official or custom
+	dense mode
+	*/
 	tk.tktip.clear()
 		.show(d3event.clientX,d3event.clientY)
 	const hold=tk.tktip.d
@@ -2137,10 +2137,65 @@ function tooltip_svdense(g, tk, block) {
 
 
 function tooltip_vcfdense(g, tk, block) {
+	/*
+	multi-sample
+	official or custom
+	dense mode
+	*/
 	tk.tktip.clear()
 		.show(d3event.clientX,d3event.clientY)
-	const hold=tk.tktip.d
-	hold.append('div').text(g.items.length)
+
+	if(g.items.length == 1) {
+
+		// single variant
+		const m = g.items[0]
+		if(!m.sampledata) return
+		if(m.sampledata.length == 1) {
+			// in just one sample
+			tooltip_multi_vcf(
+				m, 
+				m.sampledata[0],
+				{samplename: m.sampledata[0].sampleobj.name},
+				null,
+				tk,
+				block
+				)
+			return
+		}
+
+		// multiple samples
+		const lst=[
+			{
+				k:'Mutation',
+				v: print_snvindel(m)
+			},
+			{
+				k:'Samples',
+				v: m.sampledata.map(i=>i.sampleobj.name).join('<br>')
+			}
+		]
+		client.make_table_2col( tk.tktip.d, lst)
+		return
+	}
+
+	// multiple variants, of same class
+	tk.tktip.d.append('div')
+		.style('font-size','.7em')
+		.style('margin-bottom','5px')
+		.text(g.items.length+' '+common.mclass[g.items[0].class].label+' mutations')
+	const table=tk.tktip.d.append('table')
+		.style('border-spacing','3px')
+	for(const m of g.items) {
+		const tr=table.append('tr')
+		tr.append('td')
+			.style('color',common.mclass[m.class].color)
+			.style('font-weight','bold')
+			.text(m.mname)
+		tr.append('td')
+			.style('font-size','.7em')
+			.text( m.sampledata.length==1 ? m.sampledata[0].sampleobj.name : m.sampledata.length+' samples')
+	}
+		
 }
 
 
@@ -3490,30 +3545,42 @@ function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
 			k:'Sample',
 			v: sample.samplename
 				+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
-				+ (samplegroup.name  ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '')
+				+ ( samplegroup ? (samplegroup.name  ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '') : '')
 		}
 	]
 
 
-	lst.push( { k:'Position', v: m.chr+':'+(m.pos+1) } )
-
 	// TODO ITD
 
-	lst.push( { k:'Mutation', v: m.mname+'&nbsp;&nbsp;<span style="background:'+common.mclass[m.class].color+';font-size:.7em;color:white;padding:1px 3px;">'+common.mclass[m.class].label+'</span>'})
+	// snv/indel
+	lst.push( {
+		k:'Mutation',
+		v: print_snvindel(m)
+		})
 
-	// TODO show info and format
 
 
 	// expression rank
-	const tmp=tooltip_svcnv_addexpressionrank(sample, tk)
+	const tmp = tooltip_svcnv_addexpressionrank(sample, tk)
 	if(tmp) {
 		lst.push(tmp)
 	}
-	client.make_table_2col( tk.tktip.d, lst )
+	client.make_table_2col( tk.tktip.d, lst ).style('margin','0px')
 }
 
 
 
+
+
+function print_snvindel(m) {
+	return '<span style="color:'+common.mclass[m.class].color+';font-weight:bold">'+m.mname+'</span> &nbsp;&nbsp;'
+		+'<span style="font-size:.7em">'+common.mclass[m.class].label+'</span>'
+		+'<div style="margin-top:10px">'
+			+m.chr+':'+(m.pos+1)+' '
+			+'<span style="font-size:.7em">REF</span> '+m.ref
+			+'<span style="padding-left:10px;font-size:.7em">ALT</span> '+m.alt
+		+'</div>'
+}
 
 
 
@@ -3597,8 +3664,8 @@ function tooltip_svitem_2( sv, sample, samplegroup, tk ) {
 	if(sv.clipreadA) {
 		lst.push({
 			k:'# of reads',
-			v:'A <span style="font-size:.7em">clip/total</span> '+sv.clipreadA+' / '+sv.totalreadA+'<br>'+
-				'B <span style="font-size:.7em">clip/total</span> '+sv.clipreadB+' / '+sv.totalreadB
+			v:'A <span style="font-size:.7em;opacity:.7">CLIP / TOTAL</span> '+sv.clipreadA+' / '+sv.totalreadA+'<br>'+
+				'B <span style="font-size:.7em;opacity:.7">CLIP / TOTAL</span> '+sv.clipreadB+' / '+sv.totalreadB
 		})
 	}
 
