@@ -3884,7 +3884,7 @@ function handle_mdssvcnv(req,res) {
 						j.stop = stop0
 
 					} else {
-						// TODO complain
+						// TODO unknown dt
 						return
 					}
 
@@ -4113,6 +4113,8 @@ function handle_mdssvcnv(req,res) {
 									continue
 								}
 
+								// filters on samples
+
 								if(req.query.singlesample) {
 									let thissampleobj=null
 									for(const s of m.sampledata) {
@@ -4128,6 +4130,37 @@ function handle_mdssvcnv(req,res) {
 									// alter
 									m.sampledata = [ thissampleobj ]
 								}
+
+								if(hiddensgnames) {
+									const samplesnothidden = []
+									for(const s of m.sampledata) {
+										// figure out group name for this sample
+
+										const sanno = ds.cohort.annotation[ s.sampleobj.name ]
+										if(!sanno) continue
+
+										const attrnames = []
+										for(const attr of dsquery.groupsamplebyattrlst) {
+											const v = sanno[ attr.k ]
+											if(v) {
+												attrnames.push(v)
+											} else {
+												break
+											}
+										}
+
+										const groupname = attrnames.join( dsquery.attrnamespacer )
+										if( !hiddensgnames.has( groupname ) ) {
+											samplesnothidden.push( s )
+										}
+									}
+									if(samplesnothidden.length==0) {
+										continue
+									}
+									m.sampledata = samplesnothidden
+								}
+
+
 
 								delete m._m
 								delete m.vcf_ID
@@ -4448,10 +4481,6 @@ function handle_mdssvcnv(req,res) {
 						name: groupname,
 						samples:[],
 						attributes: attributes,
-						// following to be replaced by attributes
-						levelnames: levelnames,
-						levelkey: dsquery.groupsamplebyattrlst[ dsquery.groupsamplebyattrlst.length-1 ].k,
-						levelvalue: attrnames[ attrnames.length-1 ] 
 					})
 				}
 
@@ -4588,7 +4617,14 @@ function handle_mdssvcnv(req,res) {
 						if(ds.cohort && ds.cohort.annotation) {
 							const anno = ds.cohort.annotation[sample]
 							if(!anno) continue
-							if(anno[g.levelkey] == g.levelvalue) {
+							let annomatch = true
+							for(const attr of g.attributes) {
+								if( anno[ attr.k ] != attr.kvalue ) {
+									annomatch=false
+									break
+								}
+							}
+							if(annomatch) {
 								gene2allvalues.get(gene).push( obj )
 							}
 						} else {
