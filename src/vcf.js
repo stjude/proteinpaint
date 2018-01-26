@@ -340,7 +340,7 @@ function parse_FORMAT( lst, m, vcf ) {
 		if(vcf.samples && vcf.samples[i-9]) {
 			spobj.sampleobj = vcf.samples[i-9]
 		} else {
-			spobj.sampleobj = {name:'error_vcf_header'}
+			spobj.sampleobj = {name:'missing_samplename_from_vcf_header'}
 		}
 
 
@@ -349,7 +349,10 @@ function parse_FORMAT( lst, m, vcf ) {
 
 			const slst=lst[i].split(':')
 			for(let j=0; j<formatfields.length; j++) {
-				spobj[ formatfields[j] ] = slst[j]
+				const ID = formatfields[j]
+				const vstr = slst[j]
+				spobj[ ID ] = vstr
+				// TODO should parse value according to format description
 			}
 
 			if(spobj.GT) {
@@ -588,9 +591,10 @@ function parse_INFO(tmp, m, vcf) {
 			m.info[key]=key
 			continue
 		}
+
 		if(__number=='A') {
 			/*
-			per allele
+			per alt allele
 			*/
 			const tt = value.split(',')
 			for(let j=0; j<tt.length; j++) {
@@ -600,6 +604,16 @@ function parse_INFO(tmp, m, vcf) {
 			}
 			continue
 		}
+
+		if(__number=='R') {
+			/*
+			FIXME "R" is not considered, m.alleles only contain alt, which .info{} for each
+			the current datastructure does not support info for ref allele!
+			*/
+		}
+
+
+
 		if(__number=='1') {
 			/*
 			single value
