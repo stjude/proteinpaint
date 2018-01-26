@@ -1028,6 +1028,7 @@ function render_multi_vcfdensity( tk, block) {
 
 
 
+
 function render_multi_svdensity( svlst, tk,block) {
 	/*
 	multi-sample
@@ -3558,6 +3559,20 @@ function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
 		v: print_snvindel(m)
 		})
 
+	// format fields of this sample
+	for(const k in m_sample) {
+		if(k=='AD' || k=='sampleobj') continue
+		if(k=='allele2readcount') {
+			const lst2=[]
+			for(const ale in m_sample.allele2readcount) {
+				lst2.push(ale+': '+m_sample.allele2readcount[ale])
+			}
+			lst.push({k:'Read count', v:lst2.join(', ')})
+			continue
+		}
+		// a format field
+		lst.push({k:k, v:m_sample[k]})
+	}
 
 
 	// expression rank
