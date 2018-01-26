@@ -292,6 +292,19 @@ function handle_genomes(req,res) {
 									datatype: ds.queries[ q.expressionrank_querykey ].datatype
 								}
 							}
+							if(q.vcf_querykey) {
+								clientquery.checkvcf = {
+									info: ds.queries[ q.vcf_querykey ].info,
+									format: {}
+								}
+								for(const tk of ds.queries[ q.vcf_querykey ].tracks ) {
+									if(tk.format) {
+										for(const k in tk.format) {
+											clientquery.checkvcf.format[ k ] = tk.format[ k ]
+										}
+									}
+								}
+							}
 						}
 
 					} else if(q.isgenenumeric) {
