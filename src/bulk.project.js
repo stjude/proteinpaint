@@ -93,12 +93,15 @@ export class ProjectHandler {
 			name: 'project',
 			genome: this.bt.genomes[this.bt.gselect.options[this.bt.gselect.selectedIndex].innerHTML]
 		}
-		const flag=this.bt.init_bulk_flag(this.cohort.genome);
+
+		if (!this.flag) {
+			this.flag=this.bt.init_bulk_flag(this.cohort.genome);
+		}
 
 		const error=this.bt.content2flag(
 			file.content,
 			file.type,
-			flag
+			this.flag
 		);
 
 		if (error) {
@@ -109,7 +112,7 @@ export class ProjectHandler {
 			if (data.expectedFileNames.length) {
 				this.err('These referenced files were not found: "'+ data.expectedFileNames.join('", "') +'".');
 			}
-			this.bt.flag2tp(flag,{name:'project'},Object.assign(this.cohort,data.schema),this.ds);
+			this.bt.flag2tp(this.flag,{name:'project'},Object.assign(this.cohort,data.schema),this.ds);
 			return;
 		}
 		else {
@@ -123,7 +126,7 @@ export class ProjectHandler {
 			
 			// flag2thisds tells the data in flag will be appended to the given ds
 			const error1=this.bt.bulkin({
-				flag: flag,
+				flag: this.flag,
 				cohort: this.cohort,
 				flag2thisds: this.ds,
 				filename: 'project'
@@ -134,7 +137,7 @@ export class ProjectHandler {
 				this.err('Error with '+file.name+': '+error1)
 				return
 			}
-			if(flag.good===0) {
+			if(this.flag.good===0) {
 				this.err(file.name+': no data loaded')
 				return
 			}
@@ -380,7 +383,7 @@ export class ProjectHandler {
 		const errdiv=d3select('body').append('div')//.style('display','none');
 		let mssg=''
 		return function (m) {
-			if (!m) return; console.log(m)
+			if (!m) return; //console.log(m)
 			//mssg+=m+'<br/>\n'
 			client.sayerror(errdiv,m);//mssg);
 		}
