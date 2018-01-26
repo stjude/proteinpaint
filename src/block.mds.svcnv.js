@@ -798,10 +798,11 @@ function render_samplegroups( tk, block ) {
 		// if showing density plots, put labels
 		const color='#858585'
 		if(vcfdensityheight && tk.data_vcf) {
+			const mtotal = tk.data_vcf.reduce( (i,j)=>j.sampledata.length + i, 0 )
 			tk.vcfdensitylabelg
 				.attr('transform','translate(0,'+(hpad-vcfdensityheight-vcfsvpad-svdensityheight)+')')
 				.append('text')
-				.text( tk.data_vcf.length+' SNV/indel'+(tk.data_vcf.length>1?'s':'') )
+				.text( mtotal+' SNV/indel'+(mtotal>1?'s':'') )
 				.attr('text-anchor','end')
 				.attr('x',block.tkleftlabel_xshift)
 				.attr('y',vcfdensityheight/2)
@@ -926,7 +927,7 @@ function render_multi_vcfdensity( tk, block) {
 		}
 	}
 
-	// group items in each bin
+	// group m in each bin by class
 	for(const b of bins) {
 		if(b.lst.length==0) continue
 		const name2group = new Map()
@@ -939,6 +940,7 @@ function render_multi_vcfdensity( tk, block) {
 			}
 			name2group.get(m.class).push(m)
 		}
+
 		const lst=[]
 		for(const [ classname, mlst ] of name2group) {
 			lst.push({
@@ -987,13 +989,23 @@ function render_multi_vcfdensity( tk, block) {
 				w+(mrd-w)*.9,
 				w+(mrd-w)*.95,
 				mrd])
+
+		// note: must count # of samples in each mutation for radius & offset
 		for(const b of bins) {
 			if(!b.groups) continue
+
 			for(const g of b.groups) {
-				g.radius=Math.sqrt( sf_discradius( g.items.length )/Math.PI )
+				// group dot radius determined by total number of samples in each mutation, not # of mutations
+				g.radius = Math.sqrt(
+					sf_discradius(
+						g.items.reduce((i,j)=>j.sampledata.length+i,0)
+					) / Math.PI
+					)
 			}
-			// offset of a bin determined by the total number of items
-			b.offset=Math.sqrt( sf_discradius( b.lst.length )/Math.PI )
+
+			// offset of a bin determined by the total number of samples
+			b.offset=Math.sqrt( sf_discradius( b.lst.reduce((i,j)=>j.sampledata.length+i,0) ) / Math.PI )
+
 			const sumheight=b.groups.reduce((i,j)=>i+j.radius*2,0)
 			maxheight = Math.max(maxheight, b.offset + sumheight)
 		}
