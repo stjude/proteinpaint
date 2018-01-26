@@ -159,7 +159,7 @@ app.post('/urltextfile',handle_urltextfile)
 app.post('/junction',handle_junction)       // legacy
 app.post('/mdsjunction',handle_mdsjunction)
 app.post('/mdscnv',handle_mdscnv)
-app.post('/mdssvcnv',handle_mdssvcnv) // integrated with expression rank
+app.post('/mdssvcnv',handle_mdssvcnv)
 app.post('/mds_expressionrank',handle_mds_expressionrank) // expression rank as a browser track
 app.post('/mdsgeneboxplot',handle_mdsgeneboxplot)
 //app.post('/mdsgeneboxplot_svcnv',handle_mdsgeneboxplot_svcnv) // no longer used
@@ -3692,7 +3692,7 @@ function handle_mdscnv(req,res) {
 
 function handle_mdssvcnv(req,res) {
 	/*
-	cnv & expression rank done in one query
+	cnv & vcf & expression rank done in one query
 		- get all cnv/loh in view range:
 			- filtering
 			- group events by sample
@@ -3727,12 +3727,23 @@ function handle_mdssvcnv(req,res) {
 			url:  req.query.url,
 			indexURL: req.query.indexURL,
 		}
+
 		if(req.query.checkexpressionrank) {
 			if(!req.query.checkexpressionrank.file && !req.query.checkexpressionrank.url) return res.send({error:'no file or url for checkexpressionrank'})
 			dsquery.checkexpressionrank={
 				file:req.query.checkexpressionrank.file,
 				url:req.query.checkexpressionrank.url,
 				indexURL:req.query.checkexpressionrank.indexURL,
+			}
+		}
+
+		if(req.query.checkvcf) {
+			// TODO
+			if(!req.query.checkvcf.file && !req.query.checkvcf.url) return res.send({error:'no file or url for checkvcf'})
+			dsquery.checkvcf = {
+				file:req.query.checkvcf.file,
+				url:req.query.checkvcf.url,
+				indexURL:req.query.checkvcf.indexURL,
 			}
 		}
 

@@ -36,6 +36,7 @@ JUMP __cohortfilter __multi __maketk __boxplot
 makeTk()
 render_samplegroups
 	render_multi_vcfdensity
+		tooltip_vcfdense
 	render_multi_svdensity
 		click_svdense
 	render_multi_cnvloh
@@ -752,7 +753,11 @@ function render_samplegroups( tk, block ) {
 	may_legend_vcfmclass(tk)
 
 
-	// if dense, draw vcf density and return height; otherwise variants are dispersed among samplegroup and won't affect tk height
+	/*
+	if dense, draw vcf density and return height; otherwise variants are dispersed among samplegroup and won't affect tk height
+	when view range is too big, won't draw but show a message
+	which will take vertical space, the height of which will also be returned
+	*/
 	const vcfdensityheight = render_multi_vcfdensity( tk, block )
 
 	// likewise for sv
@@ -774,6 +779,7 @@ function render_samplegroups( tk, block ) {
 		vcfdensityheight+svdensityheight + vcfsvpad,
 		genebaraxisheight
 		)
+
 	// may increase hpad: don't allow tk label to overlap with density plot label
 	if(vcfdensityheight) {
 		hpad += Math.max( 0, block.labelfontsize*1.5 - (hpad-svdensityheight-vcfsvpad-vcfdensityheight/2) )
@@ -791,7 +797,7 @@ function render_samplegroups( tk, block ) {
 	{
 		// if showing density plots, put labels
 		const color='#858585'
-		if(vcfdensityheight) {
+		if(vcfdensityheight && tk.data_vcf) {
 			tk.vcfdensitylabelg
 				.attr('transform','translate(0,'+(hpad-vcfdensityheight-vcfsvpad-svdensityheight)+')')
 				.append('text')
@@ -868,7 +874,16 @@ function render_multi_vcfdensity( tk, block) {
 	native/custom
 	dense
 	*/
-	if(!tk.isdense || !tk.data_vcf || tk.data_vcf.length==0) return 0
+	if(!tk.isdense) return 0
+	if(tk.vcfrangelimit) {
+		tk.vcfdensityg.append('text')
+			.text('View range too big: zoom in under '+common.bplen(tk.vcfrangelimit)+' to show SNV/indel density')
+			.attr('font-size',block.labelfontsize)
+			.attr('font-family',client.font)
+		return block.labelfontsize
+	}
+
+	if(!tk.data_vcf || tk.data_vcf.length==0) return 0
 
 	// list of bins
 	const binw=10 // pixel
@@ -2194,7 +2209,7 @@ function tooltip_vcfdense(g, tk, block) {
 			.text(m.mname)
 		tr.append('td')
 			.style('font-size','.7em')
-			.text( m.sampledata.length==1 ? m.sampledata[0].sampleobj.name : m.sampledata.length+' samples')
+			.text( m.sampledata.length==1 ? m.sampledata[0].sampleobj.name : '('+m.sampledata.length+' samples)')
 	}
 		
 }
@@ -3592,8 +3607,8 @@ function print_snvindel(m) {
 		+'<span style="font-size:.7em">'+common.mclass[m.class].label+'</span>'
 		+'<div style="margin-top:10px">'
 			+m.chr+':'+(m.pos+1)+' '
-			+'<span style="font-size:.7em">REF</span> '+m.ref
-			+'<span style="padding-left:10px;font-size:.7em">ALT</span> '+m.alt
+			+'<span style="padding-left:10px;font-size:.7em;opacity:.5">REF</span> '+m.ref
+			+'<span style="padding-left:10px;font-size:.7em;opacity:.5">ALT</span> '+m.alt
 		+'</div>'
 }
 

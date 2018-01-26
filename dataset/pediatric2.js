@@ -64,7 +64,11 @@ module.exports={
 		},
 	},
 
+
+
+
 	queries:{
+
 		svcnv:{
 			name:'Pediatric tumor somatic mutation',
 			istrack:true,
@@ -95,14 +99,18 @@ module.exports={
 			expressionrank_querykey:'genefpkm',
 			vcf_querykey:'somaticsnvindel'
 		},
+
 		somaticsnvindel:{
 			name:'somatic SNV/indel',
 			istrack:true,
 			type:common.tkt.mdsvcf,
+			viewrangeupperlimit:1000000,
 			tracks:[
 				{file:'hg19/PCGP/vcf.somatic/652samples.vcf.gz'},
 			]
 		},
+
+
 		genefpkm:{
 			name:'Pediatric tumor RNA-seq gene FPKM',
 			isgenenumeric:true,
