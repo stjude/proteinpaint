@@ -875,14 +875,14 @@ function render_multi_vcfdensity( tk, block) {
 	native/custom
 	dense
 	*/
-	if(!tk.isdense) return 0
 	if(tk.vcfrangelimit) {
 		tk.vcfdensityg.append('text')
-			.text('View range too big: zoom in under '+common.bplen(tk.vcfrangelimit)+' to show SNV/indel density')
+			.text('Zoom in under '+common.bplen(tk.vcfrangelimit)+' to show SNV/indel density')
 			.attr('font-size',block.labelfontsize)
 			.attr('font-family',client.font)
 		return block.labelfontsize
 	}
+	if(!tk.isdense) return 0
 
 	if(!tk.data_vcf || tk.data_vcf.length==0) return 0
 
@@ -3773,10 +3773,11 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 	/*
 	click on the left label of a sample group, show cnv/sv items in table
 	multi-sample
-	only for native track; requires sample annotation & hierarchy
+	only for native track: no group for custom track for lack of annotation
 	*/
 	const pane = client.newpane({x:d3event.clientX+100, y:Math.max(100,d3event.clientY-100)})
 	pane.header.html(samplegroup.name+' <span style="font-size:.7em">'+tk.name+'</span>')
+
 	if(samplegroup.samples.length==1) {
 		// one sample
 		const sample=samplegroup.samples[0]
@@ -3788,7 +3789,7 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 		if(sample.pmid) {
 			lst.push({k:'PubMed', v: sample.pmid.split(',').map(i=>'<a href=https://www.ncbi.nlm.nih.gov/pubmed/'+i+' target=_blank>'+i+'</a>').join(' ')})
 		}
-		const [cnvlst, svlst, lohlst] = printitems_svcnv(sample.items, tk)
+		const [ cnvlst, svlst, lohlst, vcflst ] = printitems_svcnv( sample.samplename, sample.items, tk )
 
 		// TODO make button for cnv/sv/loh to launch single-sample
 
@@ -3800,6 +3801,9 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 		}
 		if(lohlst.length) {
 			lst.push({k:'LOH', v:lohlst.join('')})
+		}
+		if(vcflst.length) {
+			lst.push({ k:'SNV/indel', v:vcflst.join('') })
 		}
 		client.make_table_2col( pane.body, lst)
 		return
@@ -3832,6 +3836,13 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 	tr.append('td')
 		.text('LOH')
 		.style('color','#aaa')
+	
+	if(tk.data_vcf) {
+		tr.append('td')
+			.text('SNV/indel')
+			.style('color','#aaa')
+	}
+
 	if(haspmid) {
 		tr.append('td')
 			.text('PubMed ID')
@@ -3850,7 +3861,7 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 			tr.append('td').text( sample.sampletype || '' )
 		}
 
-		const [ cnvlst, svlst, lohlst, cnvlst0, svlst0, lohlst0 ] = printitems_svcnv(sample.items, tk)
+		const [ cnvlst, svlst, lohlst, vcflst, cnvlst0, svlst0, lohlst0, vcflst0 ] = printitems_svcnv(sample.samplename, sample.items, tk)
 
 		{
 			const td=tr.append('td')
@@ -3885,6 +3896,15 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 					})
 			}
 		}
+
+		if(tk.data_vcf) {
+			const td=tr.append('td')
+			for(let j=0; j<vcflst.length; j++) {
+				td.append('div')
+					.html(vcflst[j])
+			}
+		}
+
 		if(haspmid) {
 			tr.append('td').html( sample.pmid ? sample.pmid.split(',').map(i=>'<a href=https://www.ncbi.nlm.nih.gov/pubmed/'+i+' target=_blank>'+i+'</a>').join(' ') : '')
 		}
@@ -3893,17 +3913,22 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 
 
 
-function printitems_svcnv(lst, tk) {
-	/* multi-sample
+function printitems_svcnv( samplename, lst, tk ) {
+	/*
+	multi-sample
 	full mode
-	for a set of items from the same sample
+	sort out a set of items from the same sample
+	also count vcf data
 	*/
 	const cnvlst=[], // html
 		svlst=[],
 		lohlst=[],
+		vcflst=[],
 		cnvlst0=[], // actual obj
 		svlst0=[],
-		lohlst0=[]
+		lohlst0=[],
+		vcflst0=[]
+
 	for(const i of lst) {
 		if(i.dt==common.dtloh) {
 			lohlst.push(
@@ -3930,8 +3955,21 @@ function printitems_svcnv(lst, tk) {
 			cnvlst0.push(i)
 		}
 	}
-	return [ cnvlst, svlst, lohlst, cnvlst0, svlst0, lohlst0 ]
+
+	if(tk.data_vcf) {
+		for(const m of tk.data_vcf) {
+			if(m.sampledata.find( s=> s.sampleobj.name == samplename )) {
+				const c = common.mclass[m.class]
+				vcflst.push('<div><span style="color:'+c.color+';font-weight:bold">'+m.mname+'</span> <span style="font-size:.7em">'+c.label+'</span></div>')
+			}
+		}
+	}
+
+	return [ cnvlst, svlst, lohlst, vcflst, cnvlst0, svlst0, lohlst0, vcflst0 ]
 }
+
+
+
 
 
 
