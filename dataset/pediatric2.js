@@ -100,6 +100,8 @@ module.exports={
 			vcf_querykey:'somaticsnvindel'
 		},
 
+
+
 		somaticsnvindel:{
 			name:'somatic SNV/indel',
 			istrack:true,
@@ -107,8 +109,10 @@ module.exports={
 			viewrangeupperlimit:1000000,
 			tracks:[
 				{file:'hg19/PCGP/vcf.somatic/652samples.vcf.gz'},
+				{file:'hg19/TARGET/vcf.somatic/target.vep.vcf.gz'},
 			]
 		},
+
 
 
 		genefpkm:{
