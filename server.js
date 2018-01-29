@@ -3748,7 +3748,7 @@ function handle_mdssvcnv(req,res) {
 		}
 
 	} else {
-		
+
 		// is native track
 		const [err, gn1, ds1, dsquery1] = mds_query_arg_check( req.query )
 		if(err) return res.send({error:err})
@@ -4044,6 +4044,8 @@ function handle_mdssvcnv(req,res) {
 		////////////////////////////////////////////////////////
 		// vcf query
 		// for both single- and multi sample
+		// each member track has its own data type
+		// querying procedure is the same for all types, data parsing will be different
 
 		const [ data_cnv, expressionrangelimit, gene2sample2obj ] = data
 
@@ -4105,75 +4107,90 @@ function handle_mdssvcnv(req,res) {
 						})
 						rl.on('line',line=>{
 
-							const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:vcftk.nochr, samples:vcftk.samples, info:vcfquery.info, format:vcftk.format} )
+							/*
+							each member track is for particular type of data
+							*/
 
-							for(const m of mlst) {
-								if(!m.sampledata) {
-									// do not allow
-									continue
-								}
+							if(vcftk.type==common.mdsvcfitdtype.vcf) {
 
-								// filters on samples
+								// snv/indel
 
-								if(req.query.singlesample) {
-									let thissampleobj=null
-									for(const s of m.sampledata) {
-										if(s.sampleobj.name == req.query.singlesample) {
-											thissampleobj=s
-											break
-										}
-									}
-									if(!thissampleobj) {
-										// this variant is not in this sample
+								const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:vcftk.nochr, samples:vcftk.samples, info:vcfquery.info, format:vcftk.format} )
+
+								for(const m of mlst) {
+									if(!m.sampledata) {
+										// do not allow
 										continue
 									}
-									// alter
-									m.sampledata = [ thissampleobj ]
-								}
 
-								if(hiddensgnames) {
-									const samplesnothidden = []
-									for(const s of m.sampledata) {
-										// figure out group name for this sample
+									// filters on samples
 
-										const sanno = ds.cohort.annotation[ s.sampleobj.name ]
-										if(!sanno) continue
-
-										const attrnames = []
-										for(const attr of dsquery.groupsamplebyattrlst) {
-											const v = sanno[ attr.k ]
-											if(v) {
-												attrnames.push(v)
-											} else {
+									if(req.query.singlesample) {
+										let thissampleobj=null
+										for(const s of m.sampledata) {
+											if(s.sampleobj.name == req.query.singlesample) {
+												thissampleobj=s
 												break
 											}
 										}
-
-										const groupname = attrnames.join( dsquery.attrnamespacer )
-										if( !hiddensgnames.has( groupname ) ) {
-											samplesnothidden.push( s )
+										if(!thissampleobj) {
+											// this variant is not in this sample
+											continue
 										}
+										// alter
+										m.sampledata = [ thissampleobj ]
 									}
-									if(samplesnothidden.length==0) {
-										continue
+
+									if(hiddensgnames) {
+										const samplesnothidden = []
+										for(const s of m.sampledata) {
+											// figure out group name for this sample
+
+											const sanno = ds.cohort.annotation[ s.sampleobj.name ]
+											if(!sanno) continue
+
+											const attrnames = []
+											for(const attr of dsquery.groupsamplebyattrlst) {
+												const v = sanno[ attr.k ]
+												if(v) {
+													attrnames.push(v)
+												} else {
+													break
+												}
+											}
+
+											const groupname = attrnames.join( dsquery.attrnamespacer )
+											if( !hiddensgnames.has( groupname ) ) {
+												samplesnothidden.push( s )
+											}
+										}
+										if(samplesnothidden.length==0) {
+											continue
+										}
+										m.sampledata = samplesnothidden
 									}
-									m.sampledata = samplesnothidden
+
+
+									// delete the obsolete attr
+									for(const sb of m.sampledata) {
+										delete sb.allele2readcount
+									}
+
+
+									delete m._m
+									delete m.vcf_ID
+									delete m.name
+
+									m.dt = common.dtsnvindel
+									variants.push(m)
+									// mclass and rest will be determined at client, according to whether in gmmode and such
 								}
 
+							} else if(vcftk.type==common.mdsvcfitdtype.itd) {
 
-								// delete the obsolete attr
-								for(const sb of m.sampledata) {
-									delete sb.allele2readcount
-								}
+								// TODO
+								// m.dt = common.dtitd
 
-
-								delete m._m
-								delete m.vcf_ID
-								delete m.name
-
-								m.dt = common.dtsnvindel
-								variants.push(m)
-								// mclass and rest will be determined at client, according to whether in gmmode and such
 							}
 						})
 						const errout=[]
@@ -4202,27 +4219,45 @@ function handle_mdssvcnv(req,res) {
 		return Promise.all( tracktasks )
 			.then(vcffiles =>{
 
-				const mmerge = [] // variant/sample merged from multiple vcf
+				// snv/indel/itd data aggregated from multiple tracks
+				const mmerge = []
 
 				for(const eachvcf of vcffiles) {
+
 					for(const m of eachvcf) {
-						if(!m.sampledata) {
-							// no sample data, won't show
+
+						if(m.dt==common.dtsnvindel) {
+
+							// snv/indel all follows vcf matrix, using sampledata[]
+
+							if(!m.sampledata) {
+								// no sample data, won't show
+								continue
+							}
+							let notfound=true
+							for(const m2 of mmerge) {
+								if(m.chr==m2.chr && m.pos==m2.pos && m.ref==m2.ref && m.alt==m2.alt) {
+									for(const s of m.sampledata) {
+										m2.sampledata.push( s )
+									}
+									notfound=false
+									break
+								}
+							}
+							if(notfound) {
+								mmerge.push( m )
+							}
 							continue
 						}
-						let notfound=true
-						for(const m2 of mmerge) {
-							if(m.chr==m2.chr && m.pos==m2.pos && m.ref==m2.ref && m.alt==m2.alt) {
-								for(const s of m.sampledata) {
-									m2.sampledata.push( s )
-								}
-								notfound=false
-								break
-							}
+
+						if(m.dt==common.dtitd) {
+
+							console.log('ITD todo')
+							continue
 						}
-						if(notfound) {
-							mmerge.push( m )
-						}
+
+						console.error('unknown dt: '+m.dt)
+
 					}
 				}
 
@@ -4526,9 +4561,19 @@ function handle_mdssvcnv(req,res) {
 			if(data_vcf) {
 				// group the vcf samples
 				for(const m of data_vcf) {
-					for(const s of m.sampledata) {
-						_grouper( s.sampleobj.name, [] )
+
+					if(m.dt==common.dtsnvindel) {
+						for(const s of m.sampledata) {
+							_grouper( s.sampleobj.name, [] )
+						}
+						continue
 					}
+
+					if(m.dt==common.dtitd) {
+						// 
+						continue
+					}
+
 				}
 			}
 
@@ -4570,20 +4615,29 @@ function handle_mdssvcnv(req,res) {
 
 			if(data_vcf) {
 				for(const m of data_vcf) {
-					for(const s of m.sampledata) {
-						let notfound=true
-						for(const s2 of samples) {
-							if(s2.samplename==s.sampleobj.name) {
-								notfound=false
-								break
+
+					if(m.dt==common.dtsnvindel) {
+						for(const s of m.sampledata) {
+							let notfound=true
+							for(const s2 of samples) {
+								if(s2.samplename==s.sampleobj.name) {
+									notfound=false
+									break
+								}
+							}
+							if(notfound) {
+								samples.push({
+									samplename: s.sampleobj.name,
+									items:[]
+								})
 							}
 						}
-						if(notfound) {
-							samples.push({
-								samplename: s.sampleobj.name,
-								items:[]
-							})
-						}
+						continue
+					}
+
+					if(m.dt==common.dtitd) {
+						//
+						continue
 					}
 				}
 			}
@@ -8534,10 +8588,11 @@ function mds_init(ds,genome) {
 					const err = mds_init_mdssvcnv(query, ds, genome)
 					if(err) return querykey+' (svcnv) error: '+err
 
-				} else if(query.type==common.tkt.mdsvcf) {
+				} else if(query.type==common.tkt.mdsvcfitd) {
 
-					const err = mds_init_mdsvcf(query, ds, genome)
+					const err = mds_init_mdsvcfitd(query, ds, genome)
 					if(err) return querykey+' (vcf) error: '+err
+
 				} else {
 					return 'unknown track type for a query: '+query.type+' '+querykey
 				}
@@ -8773,7 +8828,7 @@ function mds_init_mdscnv(query, ds, genome) {
 		query.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
 	}
 
-	console.log('(mdscnv) '+query.name+': '+(query.samples ? query.samples.length:'no')+' samples, '+(query.nochr ? 'no "chr"':'has "chr"'))
+	console.log('('+query.type+') '+query.name+': '+(query.samples ? query.samples.length:'no')+' samples, '+(query.nochr ? 'no "chr"':'has "chr"'))
 }
 
 
@@ -8854,7 +8909,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		// check expression rank, data from another query
 		const thatquery = ds.queries[ query.vcf_querykey ]
 		if(!thatquery) return 'invalid key by vcf_querykey'
-		if(thatquery.type!=common.tkt.mdsvcf) return 'query '+query.vcf_querykey+' not of mdsvcf type'
+		if(thatquery.type!=common.tkt.mdsvcfitd) return 'query '+query.vcf_querykey+' not of mdsvcfitd type'
 	}
 
 	if(query.groupsamplebyattrlst) {
@@ -8868,7 +8923,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		if(!query.attrnamespacer) query.attrnamespacer = ', '
 	}
 
-	console.log('(svcnv) '+query.name+': '+(query.samples ? query.samples.length:'no')+' samples, '+(query.nochr ? 'no "chr"':'has "chr"'))
+	console.log('('+query.type+') '+query.name+': '+(query.samples ? query.samples.length:'no')+' samples, '+(query.nochr ? 'no "chr"':'has "chr"'))
 }
 
 
@@ -8924,7 +8979,12 @@ function mds_init_genenumeric(query, ds, genome) {
 
 
 
-function mds_init_mdsvcf(query, ds, genome) {
+function mds_init_mdsvcfitd(query, ds, genome) {
+	/*
+	mixture of snv/indel (vcf), ITD, and others
+	that are not either cnv or sv
+	has member tracks, each track of one type of data
+	*/
 
 	if(!query.tracks) return 'tracks[] missing'
 	if(!Array.isArray(query.tracks)) return 'tracks should be array'
@@ -8942,12 +9002,13 @@ function mds_init_mdsvcf(query, ds, genome) {
 
 		// will set tk.cwd for url
 
-		const [ err, _file] = validate_tabixfile(tk.file)
+		const [ err, _file ] = validate_tabixfile(tk.file)
 		if(err) return 'tabix file error: '+err
 
 		const arg = {cwd: tk.cwd, encoding:'utf8'}
 
-		{
+		if(tk.type==common.mdsvcfitdtype.vcf) {
+
 			const tmp=child_process.execSync(tabix+' -H '+_file,arg).trim()
 			if(!tmp) return 'no meta/header lines for '+_file
 			const [info, format, samples, errs] = vcf.vcfparsemeta(tmp.split('\n'))
@@ -8962,21 +9023,32 @@ function mds_init_mdsvcf(query, ds, genome) {
 			tk.format = format
 			tk.samples = samples
 
-			if(ds.cohort && ds.cohort.annotation) {
-				/*
-				ds.cohort.annotation is sample-level, e.g. tumor
-				if vcf encodes germline stuff on person, or need some kind of sample name conversion,
-				need to identify such in this track
-				*/
-				const notannotated=[]
-				for(const sample of tk.samples) {
-					if(!ds.cohort.annotation[ sample.name ]) {
-						notannotated.push(sample.name)
-					}
+		} else if(tk.type==common.mdsvcfitdtype.itd) {
+
+			return 'itd not ready yet'
+
+		} else {
+
+			return 'invalid track type: '+tk.type
+		}
+
+
+		// common procedure for any track type
+
+		if(ds.cohort && ds.cohort.annotation) {
+			/*
+			ds.cohort.annotation is sample-level, e.g. tumor
+			if vcf encodes germline stuff on person, or need some kind of sample name conversion,
+			need to identify such in this track
+			*/
+			const notannotated=[]
+			for(const sample of tk.samples) {
+				if(!ds.cohort.annotation[ sample.name ]) {
+					notannotated.push(sample.name)
 				}
-				if(notannotated.length) {
-					console.log(_file+' has unannotated samples: '+notannotated)
-				}
+			}
+			if(notannotated.length) {
+				console.log(_file+' has unannotated samples: '+notannotated)
 			}
 		}
 
@@ -8986,7 +9058,7 @@ function mds_init_mdsvcf(query, ds, genome) {
 			tk.nochr = common.contigNameNoChr( genome, tmp.split('\n') )
 		}
 
-		console.log( '(mdsvcf) '+_file+': '+tk.samples.length+' samples, '+ (tk.nochr ? 'no chr':'has chr') )
+		console.log( '('+query.type+') '+_file+': '+tk.samples.length+' samples, '+ (tk.nochr ? 'no chr':'has chr') )
 	}
 }
 

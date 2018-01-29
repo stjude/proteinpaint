@@ -351,6 +351,9 @@ exports.morigin=morigin
 
 
 
+
+
+
 const tkt={
 	usegm:'usegm',
 	ds:'dataset',
@@ -361,7 +364,7 @@ const tkt={
 	mdscnv:'mdscnv',
 	mdssvcnv:'mdssvcnv',
 	mdsexpressionrank:'mdsexpressionrank',
-	mdsvcf:'mdsvcf',
+	mdsvcfitd:'mdsvcfitd',
 	bedj:'bedj',
 	pgv:'profilegenevalue',
 	bampile:'bampile',
@@ -381,6 +384,19 @@ exports.validtkt=function(what) {
 	return false
 }
 
+
+
+
+
+
+/*
+member track types from mdsvcfitd
+to get rid of hardcoded strings
+*/
+exports.mdsvcfitdtype = {
+	vcf:'vcf',
+	itd:'itd'
+}
 
 
 

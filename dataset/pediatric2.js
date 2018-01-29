@@ -97,19 +97,31 @@ module.exports={
 			attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
 
 			expressionrank_querykey:'genefpkm',
-			vcf_querykey:'somaticsnvindel'
+			vcf_querykey:'somaticsnvindelitd'
 		},
 
 
 
-		somaticsnvindel:{
-			name:'somatic SNV/indel',
+		somaticsnvindelitd:{
+			name:'somatic SNV/indel/ITD',
 			istrack:true,
-			type:common.tkt.mdsvcf,
+			type:common.tkt.mdsvcfitd,
 			viewrangeupperlimit:1000000,
 			tracks:[
-				{file:'hg19/PCGP/vcf.somatic/652samples.vcf.gz'},
-				{file:'hg19/TARGET/vcf.somatic/target.vep.vcf.gz'},
+				{
+					file:'hg19/PCGP/vcf.somatic/652samples.vcf.gz',
+					type:'vcf',
+				},
+				{
+					file:'hg19/TARGET/vcf.somatic/target.vep.vcf.gz',
+					type:'vcf',
+				},
+				/*
+				{
+					file:'',
+					type:'itd',
+				}
+				*/
 			]
 		},
 

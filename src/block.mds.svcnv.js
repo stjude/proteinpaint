@@ -138,7 +138,6 @@ export function loadTk( tk, block ) {
 
 		if(!data.samplegroups || data.samplegroups.length==0) throw({message:'no data in view range'})
 
-
 		return data
 
 	})
@@ -147,7 +146,7 @@ export function loadTk( tk, block ) {
 		return {error: tk.name+': '+obj.message}
 	})
 	.then(obj=>{
-		
+
 		// preps common to both single and multi sample
 		tk.legend_svchrcolor.interchrs.clear()
 		tk.legend_svchrcolor.row.style('display','none')
@@ -181,7 +180,14 @@ export function loadTk( tk, block ) {
 function vcfdata_prepmclass(tk, block) {
 	if(!tk.data_vcf || tk.data_vcf.length==0) return
 	for(const m of tk.data_vcf) {
-		vcfcopymclass.copymclass(m, block)
+		if(m.dt == common.dtsnvindel) {
+			vcfcopymclass.copymclass(m, block)
+			continue
+		}
+		if(m.dt==common.dtitd) {
+			console.log('itd')
+			continue
+		}
 	}
 }
 
@@ -632,6 +638,10 @@ function render_samplegroups( tk, block ) {
 			map_sv_2( m, block )
 			delete m._chr
 			delete m._pos
+
+			if(m.dt==common.dtitd) {
+				console.log('may additional processing on itd')
+			}
 		}
 	}
 
@@ -711,14 +721,26 @@ function render_samplegroups( tk, block ) {
 					let samplehasvcf=false
 					for(const m of tk.data_vcf) {
 						if(samplehasvcf) break
-						if(m.x==undefined || !m.sampledata) continue
-						for(const s of m.sampledata) {
-							if(s.sampleobj.name == sample.samplename) {
-								samplehasvcf=true
-								break
+						if(m.x==undefined) continue
+
+						if(m.dt==common.dtsnvindel) {
+							if(!m.sampledata) continue
+							for(const s of m.sampledata) {
+								if(s.sampleobj.name == sample.samplename) {
+									samplehasvcf=true
+									break
+								}
 							}
+							continue
 						}
+
+						if(m.dt==common.dtitd) {
+							//
+							continue
+						}
+
 					}
+
 					if(!samplehasvcf) {
 						// this sample has no vcf either, drop
 						continue
@@ -739,9 +761,13 @@ function render_samplegroups( tk, block ) {
 
 	// cnv/sv/vcf mapped, if in dense mode, sv moved from samplegroups to svlst
 	// if there is anything to render
-	if( tk.samplegroups.length+svlst.length == 0 && !tk.data_vcf) {
-		tk.height_main=100
-		return
+	if( tk.samplegroups.length+svlst.length == 0 ) {
+		// no cnv/sv data
+		if( !tk.data_vcf || tk.data_vcf.length==0 ) {
+			// no vcf data either, nothing to draw
+			tk.height_main=100
+			return
+		}
 	}
 
 
@@ -791,7 +817,21 @@ function render_samplegroups( tk, block ) {
 		// if showing density plots, put labels
 		const color='#858585'
 		if(vcfdensityheight && tk.data_vcf) {
-			const mtotal = tk.data_vcf.reduce( (i,j)=>j.sampledata.length + i, 0 )
+
+			let mtotal = 0
+
+			for(const m of tk.data_vcf) {
+				if(m.x==undefined) continue
+				if(m.dt==common.dtsnvindel) {
+					mtotal += m.sampledata.length
+					continue
+				}
+				if(m.dt==common.dtitd) {
+					mtotal++
+					continue
+				}
+			}
+
 			tk.vcfdensitylabelg
 				.attr('transform','translate(0,'+(hpad-vcfdensityheight-vcfsvpad-svdensityheight)+')')
 				.append('text')
@@ -806,6 +846,7 @@ function render_samplegroups( tk, block ) {
 				.each(function(){
 					tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth,this.getBBox().width)
 				})
+
 			tk.vcfdensitylabelg.append('line')
 				.attr('stroke',color)
 				.attr('y2',vcfdensityheight)
@@ -993,23 +1034,46 @@ function render_multi_vcfdensity( tk, block) {
 				mrd])
 
 		// note: must count # of samples in each mutation for radius & offset
-		for(const b of bins) {
-			if(!b.groups) continue
+		for(const bin of bins) {
+			if(!bin.groups) continue
 
-			for(const g of b.groups) {
+			for(const g of bin.groups) {
 				// group dot radius determined by total number of samples in each mutation, not # of mutations
-				g.radius = Math.sqrt(
-					sf_discradius(
-						g.items.reduce((i,j)=>j.sampledata.length+i,0)
-					) / Math.PI
-					)
+
+				let totalnum=0
+				for(const m of g.items) {
+					if(m.dt==common.dtsnvindel) {
+						totalnum += m.sampledata.length
+						continue
+					}
+					if(m.dt==common.dtitd) {
+						totalnum++
+						continue
+					}
+				}
+
+				g.radius = Math.sqrt( sf_discradius( totalnum ) / Math.PI )
 			}
 
 			// offset of a bin determined by the total number of samples
-			b.offset=Math.sqrt( sf_discradius( b.lst.reduce((i,j)=>j.sampledata.length+i,0) ) / Math.PI )
+			// count again for the bin
+			let totalnum=0
+			for(const m of bin.lst ) {
+				if(m.dt==common.dtsnvindel) {
+					totalnum += m.sampledata.length
+					continue
+				}
+				if(m.dt==common.dtitd) {
+					totalnum++
+					continue
+				}
+			}
 
-			const sumheight=b.groups.reduce((i,j)=>i+j.radius*2,0)
-			maxheight = Math.max(maxheight, b.offset + sumheight)
+			bin.offset=Math.sqrt( sf_discradius( totalnum ) / Math.PI )
+
+			const sumheight=bin.groups.reduce((i,j)=>i+j.radius*2,0)
+
+			maxheight = Math.max(maxheight, bin.offset + sumheight)
 		}
 	}
 
@@ -1501,72 +1565,84 @@ function render_multi_cnvloh(tk,block) {
 				vcf ticks in full mode
 				*/
 				for(const m of tk.data_vcf) {
-					if(m.x==undefined || !m.sampledata) continue
-					for(const ms of m.sampledata) {
-						if(ms.sampleobj.name != sample.samplename) continue
-						// a variant from this sample
-						const rowheight = tk.rowheight
-						const m_g = g.append('g')
-							.attr('transform','translate('+m.x+','+(rowheight/2)+')')
-						const color = common.mclass[m.class].color
+					if(m.x==undefined) continue
 
-						const bgbox = m_g.append('rect')
-							.attr('x', -rowheight/2-1)
-							.attr('y', -rowheight/2-1)
-							.attr('width', rowheight+2)
-							.attr('height', rowheight+2)
-							.attr('fill',color)
-							.attr('fill-opacity', 0)
-						const bgline1 = m_g.append('line')
-							.attr('stroke', 'white')
-							.attr('stroke-width',2)
-							.attr('x1', -rowheight/2)
-							.attr('x2', rowheight/2)
-							.attr('y1', -rowheight/2)
-							.attr('y2', rowheight/2)
-						const fgline1 = m_g.append('line')
-							.attr('stroke', color)
-							.attr('x1', -rowheight/2)
-							.attr('x2', rowheight/2)
-							.attr('y1', -rowheight/2)
-							.attr('y2', rowheight/2)
-						const bgline2 = m_g.append('line')
-							.attr('stroke', 'white')
-							.attr('stroke-width',2)
-							.attr('x1', -rowheight/2)
-							.attr('x2', rowheight/2)
-							.attr('y1', rowheight/2)
-							.attr('y2', -rowheight/2)
-						const fgline2 = m_g.append('line')
-							.attr('stroke', color)
-							.attr('x1', -rowheight/2)
-							.attr('x2', rowheight/2)
-							.attr('y1', rowheight/2)
-							.attr('y2', -rowheight/2)
-						m_g.append('rect')
-							.attr('x', -rowheight/2)
-							.attr('y', -rowheight/2)
-							.attr('width', rowheight)
-							.attr('height', rowheight)
-							.attr('fill','white')
-							.attr('fill-opacity', 0)
-							.on('mouseover',()=>{
-								bgbox.attr('fill-opacity',1)
-								bgline1.attr('stroke-opacity',0)
-								bgline2.attr('stroke-opacity',0)
-								fgline1.attr('stroke','white')
-								fgline2.attr('stroke','white')
-								tooltip_multi_vcf( m, ms, sample, samplegroup, tk, block )
-							})
-							.on('mouseout',()=>{
-								tk.tktip.hide()
-								bgbox.attr('fill-opacity',0)
-								bgline1.attr('stroke-opacity',1)
-								bgline2.attr('stroke-opacity',1)
-								fgline1.attr('stroke',color)
-								fgline2.attr('stroke',color)
-							})
-							// TODO no clicking yet
+					if(m.dt==common.dtsnvindel) {
+
+						if(!m.sampledata) continue
+						for(const ms of m.sampledata) {
+							if(ms.sampleobj.name != sample.samplename) continue
+							// a variant from this sample
+							const rowheight = tk.rowheight
+							const m_g = g.append('g')
+								.attr('transform','translate('+m.x+','+(rowheight/2)+')')
+							const color = common.mclass[m.class].color
+
+							const bgbox = m_g.append('rect')
+								.attr('x', -rowheight/2-1)
+								.attr('y', -rowheight/2-1)
+								.attr('width', rowheight+2)
+								.attr('height', rowheight+2)
+								.attr('fill',color)
+								.attr('fill-opacity', 0)
+							const bgline1 = m_g.append('line')
+								.attr('stroke', 'white')
+								.attr('stroke-width',2)
+								.attr('x1', -rowheight/2)
+								.attr('x2', rowheight/2)
+								.attr('y1', -rowheight/2)
+								.attr('y2', rowheight/2)
+							const fgline1 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('x1', -rowheight/2)
+								.attr('x2', rowheight/2)
+								.attr('y1', -rowheight/2)
+								.attr('y2', rowheight/2)
+							const bgline2 = m_g.append('line')
+								.attr('stroke', 'white')
+								.attr('stroke-width',2)
+								.attr('x1', -rowheight/2)
+								.attr('x2', rowheight/2)
+								.attr('y1', rowheight/2)
+								.attr('y2', -rowheight/2)
+							const fgline2 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('x1', -rowheight/2)
+								.attr('x2', rowheight/2)
+								.attr('y1', rowheight/2)
+								.attr('y2', -rowheight/2)
+							m_g.append('rect')
+								.attr('x', -rowheight/2)
+								.attr('y', -rowheight/2)
+								.attr('width', rowheight)
+								.attr('height', rowheight)
+								.attr('fill','white')
+								.attr('fill-opacity', 0)
+								.on('mouseover',()=>{
+									bgbox.attr('fill-opacity',1)
+									bgline1.attr('stroke-opacity',0)
+									bgline2.attr('stroke-opacity',0)
+									fgline1.attr('stroke','white')
+									fgline2.attr('stroke','white')
+									tooltip_multi_vcf( m, ms, sample, samplegroup, tk, block )
+								})
+								.on('mouseout',()=>{
+									tk.tktip.hide()
+									bgbox.attr('fill-opacity',0)
+									bgline1.attr('stroke-opacity',1)
+									bgline2.attr('stroke-opacity',1)
+									fgline1.attr('stroke',color)
+									fgline2.attr('stroke',color)
+								})
+								// TODO no clicking yet
+						}
+
+						continue
+					}
+
+					if(m.dt==common.dtitd) {
+						// draw itd
+						continue
 					}
 				}
 			}
@@ -2868,7 +2944,7 @@ function may_legend_vcfmclass(tk) {
 
 	for(const m of tk.data_vcf) {
 		if(!classes.has(m.class)) {
-			classes.set( m.class, {count:0} )
+			classes.set( m.class, { count:0 } )
 		}
 		classes.get(m.class).count++
 	}
@@ -4015,6 +4091,7 @@ function printitems_svcnv( samplename, lst, tk ) {
 
 	if(tk.data_vcf) {
 		for(const m of tk.data_vcf) {
+			// xxx
 			if(m.sampledata.find( s=> s.sampleobj.name == samplename )) {
 				const c = common.mclass[m.class]
 				vcflst.push('<div><span style="color:'+c.color+';font-weight:bold">'+m.mname+'</span> <span style="font-size:.7em">'+c.label+'</span></div>')
