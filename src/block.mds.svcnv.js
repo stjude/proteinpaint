@@ -127,6 +127,10 @@ export function loadTk( tk, block ) {
 
 		if(data.error) throw({message:data.error})
 
+		tk.data_vcf = data.data_vcf
+		tk.vcfrangelimit = data.vcfrangelimit
+		vcfdata_prepmclass(tk, block)
+
 		if(tk.singlesample) {
 			if(!data.lst || data.lst.length==0) throw({message:tk.singlesample.name+': no CNV or SV in view range'})
 			return data
@@ -134,9 +138,6 @@ export function loadTk( tk, block ) {
 
 		if(!data.samplegroups || data.samplegroups.length==0) throw({message:'no data in view range'})
 
-		tk.data_vcf = data.data_vcf
-		tk.vcfrangelimit = data.vcfrangelimit
-		vcfdata_prepmclass(tk, block)
 
 		return data
 
@@ -150,6 +151,8 @@ export function loadTk( tk, block ) {
 		// preps common to both single and multi sample
 		tk.legend_svchrcolor.interchrs.clear()
 		tk.legend_svchrcolor.row.style('display','none')
+
+		tk.legend_mclass.row.style('display','none')
 
 		if(tk.singlesample) {
 
@@ -218,8 +221,8 @@ function addLoadParameter( par, tk ) {
 
 	} else {
 
-		if(tk.hiddensgnames && tk.hiddensgnames.size) {
-			par.hiddensgnames = [ ...tk.hiddensgnames ]
+		if(tk.legend_samplegroup && tk.legend_samplegroup.hidden.size) {
+			par.hiddensgnames = [ ...tk.legend_samplegroup.hidden ]
 		}
 	}
 }
@@ -232,17 +235,15 @@ function addLoadParameter( par, tk ) {
 function render_singlesample( tk, block ) {
 	/*
 	single-sample mode
-	sv as leg-disc
+	sv/vcf drawn in same space, as classic pp;
+	sv/fusion with both feet in view range as legged
+	vcf and single-end sv as lollipops that dodges
 	cnv & loh as bar segments
 	TODO vcf
 	*/
 
-	tk.sv_g.selectAll('*').remove()
+	tk.svvcf_g.selectAll('*').remove()
 	tk.cnv_g.selectAll('*').remove()
-	tk.label_sv.text('')
-	tk.axis_label_cnv.text('')
-	tk.axisg_cnvleft.selectAll('*').remove()
-	tk.axisg_lohright.selectAll('*').remove()
 	tk.cnvcolor.cnvlegend.div.style('display','none')
 	tk.cnvcolor.lohlegend.div.style('display','none')
 	tk.tklabel.each(function(){
@@ -332,9 +333,8 @@ function render_singlesample( tk, block ) {
 				tk.stem1+tk.legheight :
 				tk.stem1+tk.stem2+tk.stem3
 				)
-		//tk.label_sv .text('SV') .attr('y',block.labelfontsize*2)
 
-		tk.sv_g.attr('transform','translate(0,'+ (svheight-tk.midpad) +')')
+		tk.svvcf_g.attr('transform','translate(0,'+ (svheight-tk.midpad) +')')
 
 		// clean sv
 		for(const i of svlst) {
@@ -359,7 +359,7 @@ function render_singlesample( tk, block ) {
 
 		for(const sv of svlst) {
 			const doubleleg = sv.x0 && sv.x1
-			const g = tk.sv_g.append('g')
+			const g = tk.svvcf_g.append('g')
 				.attr('transform','translate('+ sv.x +','+(doubleleg ? -tk.stem1-tk.legheight : -tk.stem1-tk.stem2-tk.stem3) +')')
 
 			const otherchr=sv.chrA==sv._chr ? sv.chrB : sv.chrA
@@ -744,13 +744,6 @@ function render_samplegroups( tk, block ) {
 		return
 	}
 
-	if(tk.isfull) {
-		// TODO change sv legend to type
-		may_legend_svchr2(tk)
-	}
-
-	// show legend for mclass of vcf data
-	may_legend_vcfmclass(tk)
 
 
 	/*
@@ -860,7 +853,16 @@ function render_samplegroups( tk, block ) {
 		.attr('text-anchor', genebaraxisheight ? 'end' : 'start')
 		.attr('x', genebaraxisheight ? -(block.rpad) : 0)
 
+
+	/// legend
+
+	if(tk.isfull) {
+		may_legend_svchr2(tk)
+	}
+
 	may_legend_samplegroup(tk, block)
+
+	may_legend_vcfmclass(tk)
 }
 
 
@@ -1062,6 +1064,7 @@ function render_multi_svdensity( svlst, tk,block) {
 	native/custom
 	dense
 	list of sv provided
+	TODO change disc color to sv type
 	*/
 	if(!tk.isdense || svlst.length==0) return 0
 
@@ -1128,7 +1131,7 @@ function render_multi_svdensity( svlst, tk,block) {
 			lst.push({
 				name:  name,
 				items: items,
-				color: ( tk.samplegroupcolor ? tk.samplegroupcolor.color(name) : '#aaa')
+				color: ( tk.legend_samplegroup ? tk.legend_samplegroup.color(name) : '#aaa')
 			})
 		}
 		lst.sort((i,j)=>j.items.length-i.items.length)
@@ -1320,7 +1323,7 @@ function render_multi_cnvloh(tk,block) {
 		if(samplegroup.name) {
 
 			// the group's got a name, show name and border lines
-			const color = tk.samplegroupcolor ? tk.samplegroupcolor.color(samplegroup.name) : '#0A7FA6'
+			const color = tk.legend_samplegroup ? tk.legend_samplegroup.color(samplegroup.name) : '#0A7FA6'
 
 			tk.cnvleftg.append('text')
 				.attr('font-size', grouplabelfontsize)
@@ -1634,7 +1637,7 @@ function click_samplegroup_showmenu( samplegroup, tk, block ) {
 		.text('Hide')
 		.on('click',()=>{
 			tk.tip2.hide()
-			tk.hiddensgnames.add( samplegroup.name )
+			tk.legend_samplegroup.hidden.add( samplegroup.name )
 			loadTk(tk, block)
 		})
 
@@ -1644,18 +1647,18 @@ function click_samplegroup_showmenu( samplegroup, tk, block ) {
 		.on('click',()=>{
 			tk.tip2.hide()
 			for(const g of tk._data) {
-				if(g.name && g.name!='Unannotated' && g.name!=samplegroup.name) tk.hiddensgnames.add(g.name)
+				if(g.name && g.name!='Unannotated' && g.name!=samplegroup.name) tk.legend_samplegroup.hidden.add(g.name)
 			}
 			loadTk(tk, block)
 		})
 	
-	if(tk.hiddensgnames.size) {
+	if(tk.legend_samplegroup.hidden.size) {
 		tk.tip2.d.append('div')
 			.attr('class','sja_menuoption')
 			.text('Show all')
 			.on('click',()=>{
 				tk.tip2.hide()
-				tk.hiddensgnames.clear()
+				tk.legend_samplegroup.hidden.clear()
 				loadTk(tk, block)
 			})
 	}
@@ -1674,13 +1677,13 @@ function click_samplegroup_showmenu( samplegroup, tk, block ) {
 
 
 function may_legend_samplegroup(tk, block) {
-	if(!tk.samplegroupcolor) {
+	if(!tk.legend_samplegroup) {
 		// official only
 		return
 	}
 
-	tk.samplegroupcolor.row.style('display','block')
-	tk.samplegroupcolor.holder.selectAll('*').remove()
+	tk.legend_samplegroup.row.style('display','block')
+	tk.legend_samplegroup.holder.selectAll('*').remove()
 
 	const shownamegroups = []
 	for(const g of tk._data) {
@@ -1692,19 +1695,19 @@ function may_legend_samplegroup(tk, block) {
 
 		for(const g of shownamegroups) {
 
-			const cell = tk.samplegroupcolor.holder.append('div')
+			const cell = tk.legend_samplegroup.holder.append('div')
 				.style('display','inline-block')
 				.attr('class','sja_clb')
 				.on('click',()=>{
-					tk.tip2.showunder(d3event.target)
+					tk.tip2.showunder(cell.node())
 						.clear()
-					if(tk.hiddensgnames.has(g.name)) {
+					if(tk.legend_samplegroup.hidden.has(g.name)) {
 						tk.tip2.d.append('div')
 							.attr('class','sja_menuoption')
 							.text('Show')
 							.on('click',()=>{
 								tk.tip2.hide()
-								tk.hiddensgnames.delete( g.name )
+								tk.legend_samplegroup.hidden.delete( g.name )
 								loadTk(tk,block)
 							})
 					} else {
@@ -1713,7 +1716,7 @@ function may_legend_samplegroup(tk, block) {
 							.text('Hide')
 							.on('click',()=>{
 								tk.tip2.hide()
-								tk.hiddensgnames.add( g.name )
+								tk.legend_samplegroup.hidden.add( g.name )
 								loadTk(tk,block)
 							})
 					}
@@ -1723,18 +1726,20 @@ function may_legend_samplegroup(tk, block) {
 						.on('click',()=>{
 							tk.tip2.hide()
 							for(const g2 of tk._data) {
-								if(g2.name && g2.name!='Unannotated') tk.hiddensgnames.add(g2.name)
+								if(g2.name && g2.name!='Unannotated') {
+									tk.legend_samplegroup.hidden.add(g2.name)
+								}
 							}
-							tk.hiddensgnames.delete( g.name )
+							tk.legend_samplegroup.hidden.delete( g.name )
 							loadTk(tk,block)
 						})
-					if(tk.hiddensgnames.size) {
+					if(tk.legend_samplegroup.hidden.size) {
 						tk.tip2.d.append('div')
 							.attr('class','sja_menuoption')
 							.text('Show all')
 							.on('click',()=>{
 								tk.tip2.hide()
-								tk.hiddensgnames.clear()
+								tk.legend_samplegroup.hidden.clear()
 								loadTk(tk,block)
 							})
 					}
@@ -1744,25 +1749,25 @@ function may_legend_samplegroup(tk, block) {
 			cell.append('div')
 				.style('display','inline-block')
 				.attr('class','sja_mcdot')
-				.style('background', tk.samplegroupcolor.color(g.name) )
+				.style('background', tk.legend_samplegroup.color(g.name) )
 				.text(g.samples.length)
 			cell.append('div')
 				.style('display','inline-block')
-				.style('color', tk.samplegroupcolor.color(g.name))
-				.text(g.name)
+				.style('color', tk.legend_samplegroup.color(g.name))
+				.html('&nbsp;'+g.name)
 		}
 	}
 
 	// hidden groups
-	for(const name of tk.hiddensgnames) {
-		const cell = tk.samplegroupcolor.holder.append('div')
+	for(const name of tk.legend_samplegroup.hidden) {
+		const cell = tk.legend_samplegroup.holder.append('div')
 			.style('display','inline-block')
 			.attr('class','sja_clb')
 			.style('text-decoration','line-through')
 			.text(name)
 			.on('click',()=>{
 				// directly click to show
-				tk.hiddensgnames.delete( name )
+				tk.legend_samplegroup.hidden.delete( name )
 				loadTk(tk, block)
 			})
 	}
@@ -2505,28 +2510,8 @@ function makeTk(tk, block) {
 	if(tk.singlesample) {
 
 		tk.tklabel.text( (tk.name? tk.name+', ' : '') + tk.singlesample.name )
-		tk.label_sv= tk.gleft.append('text')
-			.attr('text-anchor','end')
-			.attr('x',block.tkleftlabel_xshift)
-			.attr('dominant-baseline','central')
-			.attr('font-size',block.labelfontsize)
-			.attr('font-family',client.font)
 
-		tk.axis_label_cnv = tk.gleft.append('text')
-			.attr('text-anchor','end')
-			.attr('x',block.tkleftlabel_xshift)
-			.attr('dominant-baseline','central')
-			.attr('font-size',block.labelfontsize)
-			.attr('font-family',client.font)
-		tk.axis_label_loh = tk.gright.append('text')
-			.attr('x',1)
-			.attr('dominant-baseline','central')
-			.attr('font-size',block.labelfontsize)
-			.attr('font-family',client.font)
-
-		tk.axisg_cnvleft = tk.gleft.append('g') // for log ratio
-		tk.axisg_lohright = tk.gright.append('g') // for segmean
-		tk.sv_g=tk.glider.append('g') // show sv as lollipops
+		tk.svvcf_g=tk.glider.append('g') // show sv as lollipops
 		tk.cnv_g=tk.glider.append('g') // show cnv/loh as bed track
 
 	} else {
@@ -2591,6 +2576,22 @@ function makeTk(tk, block) {
 
 
 	{
+		const row = td.append('div').style('margin','10px')
+		tk.legend_mclass = {
+			row:row,
+			hidden: new Set(),
+		}
+		row.append('div')
+			.style('display','inline-block')
+			.style('opacity',.5)
+			.text('SNV/indel')
+		tk.legend_mclass.holder = row.append('div')
+			.style('display','inline-block')
+			.style('margin-left','10px')
+	}
+
+
+	{
 		// cnv/loh color scale showing in legend, only for multi-sample
 		const fontsize = 14
 		const xpad = 15
@@ -2609,7 +2610,7 @@ function makeTk(tk, block) {
 			.style('margin','10px')
 		tk.cnvcolor.cnvlegend.div.append('div')
 			.style('display','inline-block')
-			.style('color','#858585')
+			.style('opacity',.5)
 			.text('CNV log2(ratio)')
 
 		{
@@ -2694,7 +2695,7 @@ function makeTk(tk, block) {
 			.style('margin','10px')
 		tk.cnvcolor.lohlegend.div.append('div')
 			.style('display','inline-block')
-			.style('color','#858585')
+			.style('opacity',.5)
 			.text('LOH seg.mean')
 
 		{
@@ -2732,24 +2733,22 @@ function makeTk(tk, block) {
 	}
 
 	if(!tk.singlesample && !tk.iscustom) {
-		// official, not single sample
+		// official, multi-sample
 
-		tk.hiddensgnames = new Set()
-
-		// sample group color for sv density
 		const row=td.append('div')
 			.style('display','none')
 			.style('margin','10px')
 		row.append('div')
-			.style('color','#858585')
+			.style('opacity',.5)
 			.style('display','inline-block')
 			.text('Cancer')
-		tk.samplegroupcolor={
-			color:scaleOrdinal(schemeCategory20),
-			row:row,
-			holder:row.append('div')
+		tk.legend_samplegroup = {
+			color: scaleOrdinal(schemeCategory20),
+			row: row,
+			holder: row.append('div')
 				.style('display','inline-block')
-				.style('margin-left','10px')
+				.style('margin-left','10px'),
+			hidden: new Set(),
 		}
 	}
 
@@ -2764,11 +2763,11 @@ function makeTk(tk, block) {
 		}
 		row.append('div')
 			.style('display','inline-block')
+			.style('opacity',.5)
 			.text('SV chromosome')
-			.style('color','#858585')
 		tk.legend_svchrcolor.holder=row.append('div')
 			.style('display','inline-block')
-			.style('margin','5px')
+			.style('margin-left','10px')
 	}
 
 	// gene expression config
@@ -2855,6 +2854,47 @@ function may_legend_svchr2(tk) {
 
 
 function may_legend_vcfmclass(tk) {
+	/*
+	full or dense
+	native or custom
+	single or multi-sample
+	*/
+	if(!tk.data_vcf) return
+	tk.legend_mclass.row.style('display','block')
+	tk.legend_mclass.holder.selectAll('*').remove()
+
+	const classes = new Map()
+
+	for(const m of tk.data_vcf) {
+		if(!classes.has(m.class)) {
+			classes.set( m.class, {count:0} )
+		}
+		classes.get(m.class).count++
+	}
+
+	const classlst = [ ...classes ]
+	classlst.sort( (i,j)=>j.count-i.count )
+
+	for(const [cname, cobj] of classlst) {
+
+		const _c = common.mclass[cname]
+
+		const cell = tk.legend_mclass.holder.append('div')
+			.attr('class', 'sja_clb')
+			.style('display','inline-block')
+			.on('click',()=>{
+			})
+
+		cell.append('div')
+			.style('display','inline-block')
+			.attr('class','sja_mcdot')
+			.style('background', _c.color)
+			.text(cobj.count)
+		cell.append('div')
+			.style('display','inline-block')
+			.style('color',_c.color)
+			.html('&nbsp;'+_c.label)
+	}
 }
 
 
@@ -2972,7 +3012,7 @@ function configPanel(tk, block) {
 									.style('display','inline-block')
 									.style('margin-left','10px')
 									.style('font-size','.7em')
-									.style('color', tk.samplegroupcolor.color( groupname ) )
+									.style('color', tk.legend_samplegroup.color( groupname ) )
 									.html( groupname )
 							}
 
@@ -3568,25 +3608,30 @@ function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
 	tk.tktip.clear()
 		.show( d3event.clientX, d3event.clientY )
 
-	const lst = [
-		{
-			k:'Sample',
-			v: sample.samplename
-				+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
-				+ ( samplegroup ? (samplegroup.name  ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '') : '')
-		}
-	]
+
+	// mutation label
+
+	if(m.dt == common.dtsnvindel) {
+		tk.tktip.d.append('div')
+			.style('margin-bottom','5px')
+			.html( print_snvindel(m) )
+	} else {
+		tk.tktip.d.append('div').text('unknown m dt: '+m.dt)
+	}
 
 
-	// TODO ITD
+	const lst = []
 
-	// snv/indel
-	lst.push( {
-		k:'Mutation',
-		v: print_snvindel(m)
+	// sample
+	lst.push({
+		k:'Sample',
+		v: sample.samplename
+			+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
+			+ ( samplegroup ? (samplegroup.name  ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '') : '')
 		})
 
 	// format fields of this sample
+	// TODO stop using allele2readcount, support other format fields
 	for(const k in m_sample) {
 		if(k=='AD' || k=='sampleobj') continue
 		if(k=='allele2readcount') {
@@ -3615,13 +3660,11 @@ function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
 
 
 function print_snvindel(m) {
-	return '<span style="color:'+common.mclass[m.class].color+';font-weight:bold">'+m.mname+'</span> &nbsp;&nbsp;'
-		+'<span style="font-size:.7em">'+common.mclass[m.class].label+'</span>'
-		+'<div style="margin-top:10px">'
-			+m.chr+':'+(m.pos+1)+' '
-			+'<span style="padding-left:10px;font-size:.7em;opacity:.5">REF</span> '+m.ref
-			+'<span style="padding-left:10px;font-size:.7em;opacity:.5">ALT</span> '+m.alt
-		+'</div>'
+	return '<span style="color:'+common.mclass[m.class].color+';font-size:1.3em;font-weight:bold">'+m.mname+'</span> '
+		+'<span style="font-size:.7em">'+common.mclass[m.class].label+'</span> &nbsp;&nbsp;'
+		+'<span style="font-size:.8em">'+m.chr+':'+(m.pos+1)+'</span> '
+		+'<span style="font-size:.7em;opacity:.5">REF</span> '+m.ref
+		+'<span style="font-size:.7em;opacity:.5">ALT</span> '+m.alt
 }
 
 
