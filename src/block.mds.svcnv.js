@@ -1566,6 +1566,7 @@ function render_multi_cnvloh(tk,block) {
 								fgline1.attr('stroke',color)
 								fgline2.attr('stroke',color)
 							})
+							// TODO no clicking yet
 					}
 				}
 			}
@@ -3630,19 +3631,32 @@ function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
 			+ ( samplegroup ? (samplegroup.name  ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '') : '')
 		})
 
-	// format fields of this sample
-	// TODO stop using allele2readcount, support other format fields
+	/*
+	show format fields of this sample
+	*/
+	const formats = tk.checkvcf ? tk.checkvcf.format : null // format registry
+
 	for(const k in m_sample) {
-		if(k=='AD' || k=='sampleobj') continue
-		if(k=='allele2readcount') {
-			const lst2=[]
-			for(const ale in m_sample.allele2readcount) {
-				lst2.push(ale+': '+m_sample.allele2readcount[ale])
-			}
-			lst.push({k:'Read count', v:lst2.join(', ')})
+		if(k=='sampleobj') continue
+
+		const formatdesc = formats[ k ]
+
+		if(!formatdesc) {
+			// not described, jus show as string
+			lst.push({k:k, v:m_sample[k]})
 			continue
 		}
-		// a format field
+
+		if(formatdesc.Number=='R' || formatdesc.Number=='A') {
+			// per allele value
+			const lst2=[]
+			for(const ale in m_sample[k]) {
+				lst2.push(ale+': '+m_sample[k][ale])
+			}
+			lst.push({k:k, v:lst2.join(', ')})
+			continue
+		}
+
 		lst.push({k:k, v:m_sample[k]})
 	}
 
@@ -3662,8 +3676,8 @@ function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
 function print_snvindel(m) {
 	return '<span style="color:'+common.mclass[m.class].color+';font-size:1.3em;font-weight:bold">'+m.mname+'</span> '
 		+'<span style="font-size:.7em">'+common.mclass[m.class].label+'</span> &nbsp;&nbsp;'
-		+'<span style="font-size:.8em">'+m.chr+':'+(m.pos+1)+'</span> '
-		+'<span style="font-size:.7em;opacity:.5">REF</span> '+m.ref
+		+'<span style="font-size:.9em">'+m.chr+':'+(m.pos+1)+'</span> '
+		+'<span style="font-size:.7em;opacity:.5">REF</span> '+m.ref+' '
 		+'<span style="font-size:.7em;opacity:.5">ALT</span> '+m.alt
 }
 
@@ -3715,7 +3729,7 @@ function tooltip_svitem( sv, tk ) {
 		.show(d3event.clientX, d3event.clientY)
 	const row=tk.tktip.d.append('div')
 	row.append('span').html( print_sv(sv) )
-	
+
 	if(sv.dt==common.dtfusionrna) {
 		row.append('span').html('&nbsp;(RNA fusion)')
 	}

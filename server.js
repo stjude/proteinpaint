@@ -4161,6 +4161,11 @@ function handle_mdssvcnv(req,res) {
 								}
 
 
+								// delete the obsolete attr
+								for(const sb of m.sampledata) {
+									delete sb.allele2readcount
+								}
+
 
 								delete m._m
 								delete m.vcf_ID

@@ -331,6 +331,8 @@ function correctRefAlt(p, ref, alt) {
 
 function parse_FORMAT( lst, m, vcf ) {
 	// format fields
+	// m.alleles[] still contain ref as first element
+
 	const formatfields=lst[9-1].split(':')
 
 	for(let i=9; i<lst.length; i++) {
@@ -351,8 +353,54 @@ function parse_FORMAT( lst, m, vcf ) {
 			for(let j=0; j<formatfields.length; j++) {
 				const ID = formatfields[j]
 				const vstr = slst[j]
-				spobj[ ID ] = vstr
-				// TODO should parse value according to format description
+				if(vstr=='.') {
+					// no value for this field
+					continue
+				}
+
+				const formatdesc = vcf.format[ID]
+
+				if(!formatdesc) {
+					// undefined field
+					spobj[ ID ] = vstr
+					continue
+				}
+
+				const isinteger = formatdesc.Type=='Integer'
+				const isfloat = formatdesc.Type=='Float'
+
+				if(formatdesc.Number && formatdesc.Number=='R') {
+					// per-allele value, including ref
+					const fvlst = vstr.split(',')
+					spobj[ID] = {} // allele 2 value
+
+					for(let k=0; k<m.alleles.length; k++) {
+						const thisaltvalue = fvlst[k]
+						if(thisaltvalue) {
+							spobj[ID][ m.alleles[k].allele ] = isinteger ? Number.parseInt(thisaltvalue) : (isfloat ? Number.parseFloat(thisaltvalue) : thisaltvalue )
+						}
+					}
+
+					continue
+				}
+
+
+				if(formatdesc.Number && formatdesc.Number=='A') {
+					// per alt allele value
+					const fvlst = vstr.split(',')
+					spobj[ID] = {}
+
+					for(let k=1; k<m.alleles.length; k++) {
+						const thisaltvalue = fvlst[k-1]
+						if(thisaltvalue) {
+							spobj[ID][ m.alleles[k].allele ] = isinteger ? Number.parseInt(thisaltvalue) : (isfloat ? Number.parseFloat(thisaltvalue) : thisaltvalue )
+						}
+					}
+
+					continue
+				}
+
+				spobj[ID] = vstr
 			}
 
 			if(spobj.GT) {
@@ -411,26 +459,25 @@ function parse_FORMAT( lst, m, vcf ) {
 				}
 			}
 
-			if(spobj.DP) {
-				// total coverage
-				spobj.DP = Number.parseInt(spobj.DP)
-			}
-
 			if(spobj.AD) {
 				/*
-				per allele read count, including REF
-				not related to GT
-				in case of <*:DEL>, may contain extra alleles not represented in the ALT column, ignore them here
-				so must use array idx of m.alleles[]
+				for old application, reformat to allele2readcount
 				*/
 				spobj.allele2readcount={}
-				const lst=spobj.AD.split(',').map(j=>Number.parseInt(j))
-				for(let k=0; k<m.alleles.length; k++) {
-					const v= lst[k]
-					if(Number.isInteger(v) && v>=0) {
-						spobj.allele2readcount[ m.alleles[k].allele ] = v
+				if(typeof(spobj.AD)=='string') {
+					// wasn't able to parse AD into per allele read count (lack Number=R in description), parse it with old method
+					const lst=spobj.AD.split(',').map(j=>Number.parseInt(j))
+					for(let k=0; k<m.alleles.length; k++) {
+						const v= lst[k]
+						if(Number.isInteger(v) && v>=0) {
+							spobj.allele2readcount[ m.alleles[k].allele ] = v
+						}
 					}
-					// exceptional values not recorded
+				} else {
+					// already parsed
+					for(const k in spobj.AD) {
+						spobj.allele2readcount[k] = spobj.AD[k]
+					}
 				}
 			}
 		}
