@@ -385,7 +385,7 @@ function render_singlesample( tk, block ) {
 		itd: show label
 	*/
 
-	const items = [ ...cnvlst, ...lohlst ] // plottable items with valid x offset
+	const items = [ ...cnvlst, ...lohlst ] // stack bar items
 	if(tk.data_vcf) {
 		for(const m of tk.data_vcf) {
 			if(m.x!=undefined) {
@@ -396,225 +396,8 @@ function render_singlesample( tk, block ) {
 
 	if(items.length > 0) {
 
-		tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
 
-		const stackheight = 12
-		const stackspace  = 1
-
-		for(const m of items) {
-
-			if(m.dt==common.dtsnvindel || m.dt==common.dtitd) {
-				// snvindel, itd: create & measure label
-
-				m._p = {
-					g: tk.cnv_g.append('g')
-				}
-
-				const lab = m._p.g.append('text')
-					.attr('font-size', stackheight)
-					.attr('font-family', client.font)
-					.attr('fill', common.mclass[ m.class ].color )
-					.attr('dominant-baseline','central')
-
-				/*
-				stackw
-				stackx
-				g_x
-				*/
-
-				if(m.dt==common.dtsnvindel) {
-					lab.text( m.mname )
-				} else if(m.dt==common.dtitd) {
-					lab.text('ITD')
-				}
-				
-				let labelw
-				lab.each(function(){ labelw = this.getBBox().width })
-
-				if(m.dt==common.dtsnvindel) {
-
-					const space = 5
-					m._p.stackw = stackheight + 5 + labelw
-
-					if(block.width - m.x > labelw + space + stackheight/2) {
-						// label on right
-						//m._p.labelonright=1
-						m._p.stackx = m.x-stackheight/2
-						m._p.g_x = stackheight/2
-						lab.attr('x', stackheight/2+space)
-					} else {
-						// label on left
-						//m._p.labelonleft = 1
-						m._p.stackx = m.x-stackheight/2-space-labelw
-						m._p.g_x = stackheight/2+space+labelw
-						lab
-							.attr('x', -stackheight/2-space)
-							.attr('text-anchor','end')
-					}
-				} else if(m.dt==common.dtitd) {
-					// TODO itd bar width
-					// label may be inside bar
-				}
-			}
-		}
-
-
-		items.sort( (i,j)=> {
-			let xi, xj
-			switch(i.dt) {
-			case common.dtsnvindel:
-			case common.dtitd:
-				xi = i.x
-				break
-			default:
-				xi= Math.min(i.x1,i.x2)
-			}
-			switch(i.dt) {
-			case common.dtsnvindel:
-			case common.dtitd:
-				xj = j.x
-				break
-			default:
-				xj= Math.min(j.x1,j.x2)
-			}
-			return xi - xj
-		})
-
-
-		const stacks=[ 0 ]
-		for(const item of items) {
-
-			const itemstart = item._p ? item._p.stackx : Math.min(item.x1, item.x2)
-			const itemwidth = item._p ? item._p.stackw : Math.abs(item.x1-item.x2)
-
-			let addnew=true
-			for(let i=0; i<stacks.length; i++) {
-				if(stacks[i] <= itemstart ) {
-					stacks[i] = Math.max( stacks[i], itemstart + itemwidth )
-					item.stack=i
-					addnew=false
-					break
-				}
-			}
-			if(addnew) {
-				stacks.push( itemstart + itemwidth )
-				item.stack=stacks.length-1
-			}
-		}
-
-
-
-		for(const item of items) {
-
-			if(item.dt==common.dtloh || item.dt==common.dtcnv) {
-
-				let color
-
-				if(item.dt==common.dtloh) {
-
-					color = 'rgba('+tk.cnvcolor.loh.r+','+tk.cnvcolor.loh.g+','+tk.cnvcolor.loh.b+','+(item.segmean/segmeanmax)+')'
-
-				} else {
-
-					if(item.value>0) {
-						color = 'rgba('+tk.cnvcolor.gain.r+','+tk.cnvcolor.gain.g+','+tk.cnvcolor.gain.b+','+(item.value/tk.cnvcolor.cnvmax)+')'
-					} else {
-						color = 'rgba('+tk.cnvcolor.loss.r+','+tk.cnvcolor.loss.g+','+tk.cnvcolor.loss.b+','+(-item.value/tk.cnvcolor.cnvmax)+')'
-					}
-				}
-
-				tk.cnv_g.append('rect')
-					.attr('x', Math.min(item.x1, item.x2) )
-					.attr('y', (stackheight+stackspace)*item.stack)
-					.attr('width', Math.max(1, Math.abs(item.x2-item.x1) ) )
-					.attr('height', stackheight)
-					.attr('fill',color)
-					.attr('shape-rendering','crispEdges')
-					.attr('stroke','none')
-					.attr('class','sja_aa_skkick')
-					.on('mouseover',()=>{
-						tooltip_cnvitem_singlesample(item, tk)
-					})
-					.on('mouseout',()=> {
-						tk.tktip.hide()
-					})
-				continue
-			}
-
-			if(item.dt==common.dtsnvindel) {
-
-				const color = common.mclass[item.class].color
-
-				item._p.g.attr('transform','translate('+(item._p.stackx+item._p.g_x)+','+(stackheight/2 + (stackheight+stackspace)*item.stack)+')')
-
-				const rowheight = stackheight
-
-				const bgbox = item._p.g.append('rect')
-					.attr('x', -rowheight/2-1)
-					.attr('y', -rowheight/2-1)
-					.attr('width', rowheight+2)
-					.attr('height', rowheight+2)
-					.attr('fill', color)
-					.attr('fill-opacity', 0)
-				const bgline1 = item._p.g.append('line')
-					.attr('stroke', 'white')
-					.attr('stroke-width',2)
-					.attr('x1', -rowheight/2)
-					.attr('x2', rowheight/2)
-					.attr('y1', -rowheight/2)
-					.attr('y2', rowheight/2)
-				const fgline1 = item._p.g.append('line')
-					.attr('stroke', color)
-					.attr('x1', -rowheight/2)
-					.attr('x2', rowheight/2)
-					.attr('y1', -rowheight/2)
-					.attr('y2', rowheight/2)
-				const bgline2 = item._p.g.append('line')
-					.attr('stroke', 'white')
-					.attr('stroke-width',2)
-					.attr('x1', -rowheight/2)
-					.attr('x2', rowheight/2)
-					.attr('y1', rowheight/2)
-					.attr('y2', -rowheight/2)
-				const fgline2 = item._p.g.append('line')
-					.attr('stroke', color)
-					.attr('x1', -rowheight/2)
-					.attr('x2', rowheight/2)
-					.attr('y1', rowheight/2)
-					.attr('y2', -rowheight/2)
-				item._p.g.append('rect')
-					.attr('x', -rowheight/2)
-					.attr('y', -rowheight/2)
-					.attr('width', rowheight)
-					.attr('height', rowheight)
-					.attr('fill','white')
-					.attr('fill-opacity', 0)
-					.on('mouseover',()=>{
-						bgbox.attr('fill-opacity',1)
-						bgline1.attr('stroke-opacity',0)
-						bgline2.attr('stroke-opacity',0)
-						fgline1.attr('stroke','white')
-						fgline2.attr('stroke','white')
-					})
-					.on('mouseout',()=>{
-						tk.tktip.hide()
-						bgbox.attr('fill-opacity',0)
-						bgline1.attr('stroke-opacity',1)
-						bgline2.attr('stroke-opacity',1)
-						fgline1.attr('stroke',color)
-						fgline2.attr('stroke',color)
-					})
-
-				continue
-			}
-
-			if(item.dt==common.dtitd) {
-				console.log('show itd')
-				continue
-			}
-		}
-
-		tk.height_main = tk.toppad+ svheight + stacks.length*(stackheight+stackspace)-stackspace + tk.bottompad
+		render_singlesample_stack( items, tk, block, svheight )
 
 	} else {
 
@@ -628,6 +411,268 @@ function render_singlesample( tk, block ) {
 }
 
 
+
+
+
+function render_singlesample_stack( items, tk, block, svheight ) {
+
+	tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
+
+	const stackheight = 12
+	const stackspace  = 1
+	const labelspace = 5 // when label is shown outside of box, the space between them
+
+	for(const m of items) {
+
+		if(m.dt==common.dtsnvindel || m.dt==common.dtitd) {
+			// snvindel, itd: create & measure label
+
+
+			const g = tk.cnv_g.append('g')
+			m._p = {
+				g:g
+			}
+			/* for later use:
+			stackw
+			stackx
+			g_x
+			*/
+
+			const color = common.mclass[ m.class ].color
+
+			// label is the same for snvindel/itd
+			const lab = g.append('text')
+				.attr('font-size', stackheight)
+				.attr('font-family', client.font)
+				.attr('fill', color)
+				.attr('dominant-baseline','central')
+
+			if(m.dt==common.dtsnvindel) {
+				lab.text( m.mname )
+			} else if(m.dt==common.dtitd) {
+				lab.text('ITD')
+			}
+
+			let labelw
+			lab.each(function(){ labelw = this.getBBox().width })
+
+
+			if(m.dt==common.dtsnvindel) {
+				// render shapes for snvindel
+				const rowheight = stackheight
+
+				const bgbox = g.append('rect')
+					.attr('x', -rowheight/2)
+					.attr('y', -rowheight/2)
+					.attr('width', rowheight)
+					.attr('height', rowheight)
+					.attr('fill', color)
+					.attr('fill-opacity', 0)
+					/*
+				const bgline1 = g.append('line')
+					.attr('stroke', 'white')
+					.attr('stroke-width',2)
+					.attr('x1', -rowheight/2)
+					.attr('x2', rowheight/2)
+					.attr('y1', -rowheight/2)
+					.attr('y2', rowheight/2)
+					*/
+				const fgline1 = g.append('line')
+					.attr('stroke', color)
+					.attr('stroke-width',2)
+					.attr('x1', -rowheight/2)
+					.attr('x2', rowheight/2)
+					.attr('y1', -rowheight/2)
+					.attr('y2', rowheight/2)
+					/*
+				const bgline2 = g.append('line')
+					.attr('stroke', 'white')
+					.attr('stroke-width',2)
+					.attr('x1', -rowheight/2)
+					.attr('x2', rowheight/2)
+					.attr('y1', rowheight/2)
+					.attr('y2', -rowheight/2)
+					*/
+				const fgline2 = g.append('line')
+					.attr('stroke', color)
+					.attr('stroke-width',2)
+					.attr('x1', -rowheight/2)
+					.attr('x2', rowheight/2)
+					.attr('y1', rowheight/2)
+					.attr('y2', -rowheight/2)
+				// to cover both cross & label, will be placed after deciding whether label is on left/right
+				m._p.cover = g.append('rect')
+					.attr('y', -rowheight/2)
+					.attr('width', stackheight+labelspace+labelw)
+					.attr('height', rowheight)
+					.attr('fill','white')
+					.attr('fill-opacity', 0)
+					.on('mouseover',()=>{
+						bgbox.attr('fill-opacity',1)
+						//bgline1.attr('stroke-opacity',0)
+						//bgline2.attr('stroke-opacity',0)
+						fgline1.attr('stroke','white')
+							.attr('x1', 1-rowheight/2)
+							.attr('x2', rowheight/2-1)
+							.attr('y1', 1-rowheight/2)
+							.attr('y2', rowheight/2-1)
+						fgline2.attr('stroke','white')
+							.attr('x1', 1-rowheight/2)
+							.attr('x2', rowheight/2-1)
+							.attr('y1', rowheight/2-1)
+							.attr('y2', 1-rowheight/2)
+						// tooltip
+					})
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						bgbox.attr('fill-opacity',0)
+						//bgline1.attr('stroke-opacity',1)
+						//bgline2.attr('stroke-opacity',1)
+						fgline1.attr('stroke',color)
+							.attr('x1', -rowheight/2)
+							.attr('x2', rowheight/2)
+							.attr('y1', -rowheight/2)
+							.attr('y2', rowheight/2)
+						fgline2.attr('stroke',color)
+							.attr('x1', -rowheight/2)
+							.attr('x2', rowheight/2)
+							.attr('y1', rowheight/2)
+							.attr('y2', -rowheight/2)
+					})
+			}
+
+
+
+
+			if(m.dt==common.dtsnvindel) {
+
+				m._p.stackw = stackheight + 5 + labelw
+
+				if(block.width - m.x > labelw + labelspace + stackheight/2) {
+					// label on right
+					//m._p.labelonright=1
+					m._p.stackx = m.x-stackheight/2
+					m._p.g_x = stackheight/2
+					lab.attr('x', stackheight/2+labelspace)
+					m._p.cover.attr('x', -stackheight/2)
+
+				} else {
+					// label on left
+					//m._p.labelonleft = 1
+					m._p.stackx = m.x-stackheight/2-labelspace-labelw
+					m._p.g_x = stackheight/2+labelspace+labelw
+					lab
+						.attr('x', -stackheight/2-labelspace)
+						.attr('text-anchor','end')
+					m._p.cover.attr('x', -labelw-labelspace-stackheight/2 )
+				}
+			} else if(m.dt==common.dtitd) {
+				// TODO itd bar width
+				// label may be inside bar
+			}
+		}
+	}
+
+
+	items.sort( (i,j)=> {
+		let xi, xj
+		switch(i.dt) {
+		case common.dtsnvindel:
+		case common.dtitd:
+			xi = i.x
+			break
+		default:
+			xi= Math.min(i.x1,i.x2)
+		}
+		switch(i.dt) {
+		case common.dtsnvindel:
+		case common.dtitd:
+			xj = j.x
+			break
+		default:
+			xj= Math.min(j.x1,j.x2)
+		}
+		return xi - xj
+	})
+
+
+	const stacks=[ 0 ]
+	for(const item of items) {
+
+		const itemstart = item._p ? item._p.stackx : Math.min(item.x1, item.x2)
+		const itemwidth = item._p ? item._p.stackw : Math.abs(item.x1-item.x2)
+
+		let addnew=true
+		for(let i=0; i<stacks.length; i++) {
+			if(stacks[i] <= itemstart ) {
+				stacks[i] = Math.max( stacks[i], itemstart + itemwidth )
+				item.stack=i
+				addnew=false
+				break
+			}
+		}
+		if(addnew) {
+			stacks.push( itemstart + itemwidth )
+			item.stack=stacks.length-1
+		}
+	}
+
+
+
+	for(const item of items) {
+
+		if(item.dt==common.dtloh || item.dt==common.dtcnv) {
+
+			let color
+
+			if(item.dt==common.dtloh) {
+
+				color = 'rgba('+tk.cnvcolor.loh.r+','+tk.cnvcolor.loh.g+','+tk.cnvcolor.loh.b+','+(item.segmean/tk.cnvcolor.segmeanmax)+')'
+
+			} else {
+
+				if(item.value>0) {
+					color = 'rgba('+tk.cnvcolor.gain.r+','+tk.cnvcolor.gain.g+','+tk.cnvcolor.gain.b+','+(item.value/tk.cnvcolor.cnvmax)+')'
+				} else {
+					color = 'rgba('+tk.cnvcolor.loss.r+','+tk.cnvcolor.loss.g+','+tk.cnvcolor.loss.b+','+(-item.value/tk.cnvcolor.cnvmax)+')'
+				}
+			}
+
+			tk.cnv_g.append('rect')
+				.attr('x', Math.min(item.x1, item.x2) )
+				.attr('y', (stackheight+stackspace)*item.stack)
+				.attr('width', Math.max(1, Math.abs(item.x2-item.x1) ) )
+				.attr('height', stackheight)
+				.attr('fill',color)
+				.attr('shape-rendering','crispEdges')
+				.attr('stroke','none')
+				.attr('class','sja_aa_skkick')
+				.on('mouseover',()=>{
+					tooltip_cnvitem_singlesample(item, tk)
+				})
+				.on('mouseout',()=> {
+					tk.tktip.hide()
+				})
+			continue
+		}
+
+		if(item.dt==common.dtsnvindel) {
+
+
+			item._p.g.attr('transform','translate('+(item._p.stackx+item._p.g_x)+','+(stackheight/2 + (stackheight+stackspace)*item.stack)+')')
+
+
+			continue
+		}
+
+		if(item.dt==common.dtitd) {
+			console.log('show itd')
+			continue
+		}
+	}
+
+	tk.height_main = tk.toppad+ svheight + stacks.length*(stackheight+stackspace)-stackspace + tk.bottompad
+}
 
 
 
