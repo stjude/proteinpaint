@@ -29,7 +29,7 @@ sv-cnv-fpkm ranking, two modes
 sv/cnv/loh data mixed in same file, sv has _chr and _pos which are indexing fields, along with chrA/posA/chrB/posB
 fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
 
-JUMP __cohortfilter __multi __maketk __boxplot
+JUMP __multi __single __maketk __boxplot
 
 
 
@@ -133,7 +133,14 @@ export function loadTk( tk, block ) {
 
 
 		if(tk.singlesample) {
-			if(!data.lst || data.lst.length==0) throw({message:tk.singlesample.name+': no CNV or SV in view range'})
+			// logic for deciding whether no data in single sample mode
+			if(!data.lst || data.lst.length==0) {
+				// no cnv/sv
+				if(!tk.data_vcf || tk.data_vcf.length==0) {
+					// no vcf, nothing to show
+					throw({message:tk.singlesample.name+': no data in view range'})
+				}
+			}
 			return data
 		}
 
@@ -253,14 +260,17 @@ function addLoadParameter( par, tk ) {
 
 
 
+
+
+/////////////////////// __single
+
+
 function render_singlesample( tk, block ) {
 	/*
 	single-sample mode
-	sv/vcf drawn in same space, as classic pp;
+	must have data of any type
 	sv/fusion with both feet in view range as legged
-	vcf and single-end sv as lollipops that dodges
-	cnv & loh as bar segments
-	TODO vcf
+	cnv & loh & snvindel & itd as stack bars
 	*/
 
 	tk.svvcf_g.selectAll('*').remove()
@@ -270,9 +280,12 @@ function render_singlesample( tk, block ) {
 	tk.tklabel.each(function(){
 		tk.leftLabelMaxwidth = this.getBBox().width
 	})
-	if(!tk.data || tk.data.length==0) {
-		tk.height_main=50
-		return
+
+	if(tk.vcfrangelimit) {
+		// for single-sample, indicate it in legend instead
+		tk.legend_mclass.row.style('display','block')
+		tk.legend_mclass.holder.selectAll('*').remove()
+		tk.legend_mclass.holder.append('div').text('Zoom in under '+common.bplen(tk.vcfrangelimit)+' to view data')
 	}
 
 	const svlst = []
@@ -287,234 +300,318 @@ function render_singlesample( tk, block ) {
 		copynumbermax=0, // for copy number converted from logratio, instead of logratio
 		segmeanmax=0
 
-	for(const item of tk.data) {
+	if(tk.data) {
+		// divide cnv/sv data into holders
 
-		if( item.dt==common.dtfusionrna || item.dt==common.dtsv ) {
-			// sv
-			const id=item.chrA+'.'+item.posA+'.'+item.chrB+'.'+item.posB
-			if(!id2sv[id]){
-				map_sv(item,block)
-				if(item.x0 || item.x1) {
-					id2sv[id]=1
-					svlst.push(item)
-					if(item.chrA!=item._chr) {
-						tk.legend_svchrcolor.interchrs.add(item.chrA)
-						tk.legend_svchrcolor.colorfunc(item.chrA)
-					}
-					if(item.chrB!=item._chr) {
-						tk.legend_svchrcolor.interchrs.add(item.chrB)
-						tk.legend_svchrcolor.colorfunc(item.chrB)
+		for(const item of tk.data) {
+
+			if( item.dt==common.dtfusionrna || item.dt==common.dtsv ) {
+				// sv
+				const id=item.chrA+'.'+item.posA+'.'+item.chrB+'.'+item.posB
+				if(!id2sv[id]){
+					map_sv(item,block)
+					if(item.x0 || item.x1) {
+						id2sv[id]=1
+						svlst.push(item)
+						if(item.chrA!=item._chr) {
+							tk.legend_svchrcolor.interchrs.add(item.chrA)
+							tk.legend_svchrcolor.colorfunc(item.chrA)
+						}
+						if(item.chrB!=item._chr) {
+							tk.legend_svchrcolor.interchrs.add(item.chrB)
+							tk.legend_svchrcolor.colorfunc(item.chrB)
+						}
 					}
 				}
+				continue
 			}
-			continue
-		}
 
-		// cnv or loh
+			// cnv or loh
 
-		map_cnv(item, block)
-		if(item.x1==undefined || item.x2==undefined) {
-			console.log('unmappable: '+item.chr+' '+item.start+' '+item.stop)
-			continue
-		}
+			map_cnv(item, block)
+			if(item.x1==undefined || item.x2==undefined) {
+				console.log('unmappable: '+item.chr+' '+item.start+' '+item.stop)
+				continue
+			}
 
-		if(item.dt==common.dtloh) {
-			// loh
-			segmeanmax = Math.max(segmeanmax, item.segmean)
-			lohlst.push(item)
-			continue
-		}
+			if(item.dt==common.dtloh) {
+				// loh
+				segmeanmax = Math.max(segmeanmax, item.segmean)
+				lohlst.push(item)
+				continue
+			}
 
-		// cnv
+			// cnv
 
-		if(usecopynumber) {
-			const v = 2*Math.pow(2, item.value)
-			copynumbermax = Math.max( copynumbermax, v )
-		} else {
-			// item.value is log2 ratio by default
-			if(item.value>0) {
-				gainmaxvalue = Math.max(gainmaxvalue, item.value)
+			if(usecopynumber) {
+				const v = 2*Math.pow(2, item.value)
+				copynumbermax = Math.max( copynumbermax, v )
 			} else {
-				lossmaxvalue = Math.min(lossmaxvalue, item.value)
+				// item.value is log2 ratio by default
+				if(item.value>0) {
+					gainmaxvalue = Math.max(gainmaxvalue, item.value)
+				} else {
+					lossmaxvalue = Math.min(lossmaxvalue, item.value)
+				}
 			}
+
+			cnvlst.push(item)
 		}
 
-		cnvlst.push(item)
+		if(cnvlst.length) {
+			tk.cnvcolor.cnvmax = Math.max(gainmaxvalue, -lossmaxvalue)
+			draw_colorscale_cnv(tk)
+		}
+
+		if(lohlst.length) {
+			tk.cnvcolor.segmeanmax=segmeanmax
+			draw_colorscale_loh(tk)
+		}
 	}
 
-	may_legend_svchr2(tk)
+
+	may_map_vcf( tk, block )
+
 
 	// sv on top
-	let svheight=0
-	if(svlst.length) {
+	const svheight = render_singlesample_sv( svlst, tk, block )
 
-		// if sv has both x0/x1 will show both legs, will be higher, else lower
-		svheight = tk.discradius*2 + tk.midpad
-			+ (svlst.find(s=> s.x0 && s.x1) ?
-				tk.stem1+tk.legheight :
-				tk.stem1+tk.stem2+tk.stem3
-				)
 
-		tk.svvcf_g.attr('transform','translate(0,'+ (svheight-tk.midpad) +')')
+	/*
+	stack bar plot for:
+		cnv
+		loh
+		snvindel: show label
+		itd: show label
+	*/
 
-		// clean sv
-		for(const i of svlst) {
-			i.radius = tk.discradius
-			if(i.x0!=undefined && i.x1!=undefined) {
-				if(i.x0 > i.x1) {
-					// x0 maybe bigger than x1
-					const a=i.x1
-					i.x1=i.x0
-					i.x0=a
-				}
-				i._x = (i.x0+i.x1)/2
-			} else {
-				i._x = i.x0 || i.x1
-			}
-			i.x=i._x
-		}
-
-		const entirewidth = block.width+block.subpanels.reduce((i,j)=>i+j.leftpad+j.width,0)
-
-		//horiplace( svlst, entirewidth )
-
-		for(const sv of svlst) {
-			const doubleleg = sv.x0 && sv.x1
-			const g = tk.svvcf_g.append('g')
-				.attr('transform','translate('+ sv.x +','+(doubleleg ? -tk.stem1-tk.legheight : -tk.stem1-tk.stem2-tk.stem3) +')')
-
-			const otherchr=sv.chrA==sv._chr ? sv.chrB : sv.chrA
-			const color =  otherchr==sv._chr ? intrasvcolor : tk.legend_svchrcolor.colorfunc(otherchr)
-
-			g.append('circle')
-				.attr('r', tk.discradius)
-				.attr('cy',-tk.discradius)
-				.attr('fill',color)
-				.attr('stroke','white')
-			g.append('circle')
-				.attr('r', tk.discradius)
-				.attr('cy',-tk.discradius)
-				.attr('fill','white')
-				.attr('fill-opacity',0)
-				.attr('stroke',color)
-				.attr('stroke-opacity',0)
-				.attr('class','sja_aa_disckick')
-				.on('click',()=>{
-					click_sv_single(sv, tk, block)
-				})
-				.on('mouseover',()=>{
-					tooltip_svitem( sv, tk)
-				})
-				.on('mouseout',()=> tk.tktip.hide() )
-
-			if(doubleleg) {
-				g.append('line')
-					.attr('stroke',color)
-					.attr('y2',tk.stem1)
-					.attr('shape-rendering','crispEdges')
-				g.append('line') // right leg
-					.attr('stroke',color)
-					.attr('y1', tk.stem1)
-					.attr('x2', (sv.x1-sv.x0)/2-(sv.x-sv._x) )
-					.attr('y2', tk.stem1+tk.legheight)
-				g.append('line') // left leg
-					.attr('stroke',color)
-					.attr('y1', tk.stem1)
-					.attr('x2', -(sv.x1-sv.x0)/2-(sv.x-sv._x) )
-					.attr('y2', tk.stem1+tk.legheight)
-			} else {
-				g.append('line')
-					.attr('stroke',color)
-					.attr('y2', tk.stem1)
-					.attr('shape-rendering','crispEdges')
-				g.append('line')
-					.attr('stroke',color)
-					.attr('y1', tk.stem1)
-					.attr('y2', tk.stem1+tk.stem2)
-					.attr('x2', sv._x-sv.x)
-				g.append('line')
-					.attr('stroke',color)
-					.attr('y1', tk.stem1+tk.stem2)
-					.attr('y2', tk.stem1+tk.stem2+tk.stem3)
-					.attr('x1', sv._x-sv.x)
-					.attr('x2', sv._x-sv.x)
-					.attr('shape-rendering','crispEdges')
+	const items = [ ...cnvlst, ...lohlst ] // plottable items with valid x offset
+	if(tk.data_vcf) {
+		for(const m of tk.data_vcf) {
+			if(m.x!=undefined) {
+				items.push(m)
 			}
 		}
 	}
-
-
-	// stack bar plot for cnv loh
-
-	const items = [...cnvlst, ...lohlst]
 
 	if(items.length > 0) {
 
 		tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
 
-		items.sort( (i,j)=> Math.min(i.x1,i.x2) - Math.min(j.x1,j.x2) )
+		const stackheight = 12
+		const stackspace  = 1
+
+		for(const m of items) {
+
+			if(m.dt==common.dtsnvindel || m.dt==common.dtitd) {
+				// snvindel, itd: create & measure label
+
+				m._p = {
+					g: tk.cnv_g.append('g')
+				}
+
+				const lab = m._p.g.append('text')
+					.attr('font-size', stackheight)
+					.attr('font-family', client.font)
+					.attr('fill', common.mclass[ m.class ].color )
+					.attr('dominant-baseline','central')
+
+				/*
+				stackw
+				stackx
+				g_x
+				*/
+
+				if(m.dt==common.dtsnvindel) {
+					lab.text( m.mname )
+				} else if(m.dt==common.dtitd) {
+					lab.text('ITD')
+				}
+				
+				let labelw
+				lab.each(function(){ labelw = this.getBBox().width })
+
+				if(m.dt==common.dtsnvindel) {
+
+					const space = 5
+					m._p.stackw = stackheight + 5 + labelw
+
+					if(block.width - m.x > labelw + space + stackheight/2) {
+						// label on right
+						//m._p.labelonright=1
+						m._p.stackx = m.x-stackheight/2
+						m._p.g_x = stackheight/2
+						lab.attr('x', stackheight/2+space)
+					} else {
+						// label on left
+						//m._p.labelonleft = 1
+						m._p.stackx = m.x-stackheight/2-space-labelw
+						m._p.g_x = stackheight/2+space+labelw
+						lab
+							.attr('x', -stackheight/2-space)
+							.attr('text-anchor','end')
+					}
+				} else if(m.dt==common.dtitd) {
+					// TODO itd bar width
+					// label may be inside bar
+				}
+			}
+		}
+
+
+		items.sort( (i,j)=> {
+			let xi, xj
+			switch(i.dt) {
+			case common.dtsnvindel:
+			case common.dtitd:
+				xi = i.x
+				break
+			default:
+				xi= Math.min(i.x1,i.x2)
+			}
+			switch(i.dt) {
+			case common.dtsnvindel:
+			case common.dtitd:
+				xj = j.x
+				break
+			default:
+				xj= Math.min(j.x1,j.x2)
+			}
+			return xi - xj
+		})
+
 
 		const stacks=[ 0 ]
 		for(const item of items) {
+
+			const itemstart = item._p ? item._p.stackx : Math.min(item.x1, item.x2)
+			const itemwidth = item._p ? item._p.stackw : Math.abs(item.x1-item.x2)
+
 			let addnew=true
 			for(let i=0; i<stacks.length; i++) {
-				if(stacks[i]<= Math.min(item.x1,item.x2) ) {
-					stacks[i] = Math.max( stacks[i], Math.max(item.x1,item.x2) )
+				if(stacks[i] <= itemstart ) {
+					stacks[i] = Math.max( stacks[i], itemstart + itemwidth )
 					item.stack=i
 					addnew=false
 					break
 				}
 			}
 			if(addnew) {
-				stacks.push( Math.max(item.x1,item.x2) )
+				stacks.push( itemstart + itemwidth )
 				item.stack=stacks.length-1
 			}
 		}
 
-		const stackheight = 12
-		const stackspace  = 1
 
-		tk.cnvcolor.cnvmax = Math.max(gainmaxvalue, -lossmaxvalue)
 
 		for(const item of items) {
-			let color
 
-			if(item.dt==common.dtloh) {
+			if(item.dt==common.dtloh || item.dt==common.dtcnv) {
 
-				color = 'rgba('+tk.cnvcolor.loh.r+','+tk.cnvcolor.loh.g+','+tk.cnvcolor.loh.b+','+(item.segmean/segmeanmax)+')'
+				let color
 
-			} else {
+				if(item.dt==common.dtloh) {
 
-				if(item.value>0) {
-					color = 'rgba('+tk.cnvcolor.gain.r+','+tk.cnvcolor.gain.g+','+tk.cnvcolor.gain.b+','+(item.value/tk.cnvcolor.cnvmax)+')'
+					color = 'rgba('+tk.cnvcolor.loh.r+','+tk.cnvcolor.loh.g+','+tk.cnvcolor.loh.b+','+(item.segmean/segmeanmax)+')'
+
 				} else {
-					color = 'rgba('+tk.cnvcolor.loss.r+','+tk.cnvcolor.loss.g+','+tk.cnvcolor.loss.b+','+(-item.value/tk.cnvcolor.cnvmax)+')'
+
+					if(item.value>0) {
+						color = 'rgba('+tk.cnvcolor.gain.r+','+tk.cnvcolor.gain.g+','+tk.cnvcolor.gain.b+','+(item.value/tk.cnvcolor.cnvmax)+')'
+					} else {
+						color = 'rgba('+tk.cnvcolor.loss.r+','+tk.cnvcolor.loss.g+','+tk.cnvcolor.loss.b+','+(-item.value/tk.cnvcolor.cnvmax)+')'
+					}
 				}
+
+				tk.cnv_g.append('rect')
+					.attr('x', Math.min(item.x1, item.x2) )
+					.attr('y', (stackheight+stackspace)*item.stack)
+					.attr('width', Math.max(1, Math.abs(item.x2-item.x1) ) )
+					.attr('height', stackheight)
+					.attr('fill',color)
+					.attr('shape-rendering','crispEdges')
+					.attr('stroke','none')
+					.attr('class','sja_aa_skkick')
+					.on('mouseover',()=>{
+						tooltip_cnvitem_singlesample(item, tk)
+					})
+					.on('mouseout',()=> {
+						tk.tktip.hide()
+					})
+				continue
 			}
 
-			tk.cnv_g.append('rect')
-				.attr('x', Math.min(item.x1, item.x2) )
-				.attr('y', (stackheight+stackspace)*item.stack)
-				.attr('width', Math.max(1, Math.abs(item.x2-item.x1) ) )
-				.attr('height', stackheight)
-				.attr('fill',color)
-				.attr('shape-rendering','crispEdges')
-				.attr('stroke','none')
-				.attr('class','sja_aa_skkick')
-				.on('mouseover',()=>{
-					tooltip_cnvitem_singlesample(item, tk)
-				})
-				.on('mouseout',()=> {
-					tk.tktip.hide()
-				})
-		}
-		if(cnvlst.length) {
-			tk.cnvcolor.cnvmax = Math.max(gainmaxvalue, -lossmaxvalue)
-			draw_colorscale_cnv(tk)
-		}
-		if(lohlst.length) {
-			tk.cnvcolor.segmeanmax=segmeanmax
-			draw_colorscale_loh(tk)
+			if(item.dt==common.dtsnvindel) {
+
+				const color = common.mclass[item.class].color
+
+				item._p.g.attr('transform','translate('+(item._p.stackx+item._p.g_x)+','+(stackheight/2 + (stackheight+stackspace)*item.stack)+')')
+
+				const rowheight = stackheight
+
+				const bgbox = item._p.g.append('rect')
+					.attr('x', -rowheight/2-1)
+					.attr('y', -rowheight/2-1)
+					.attr('width', rowheight+2)
+					.attr('height', rowheight+2)
+					.attr('fill', color)
+					.attr('fill-opacity', 0)
+				const bgline1 = item._p.g.append('line')
+					.attr('stroke', 'white')
+					.attr('stroke-width',2)
+					.attr('x1', -rowheight/2)
+					.attr('x2', rowheight/2)
+					.attr('y1', -rowheight/2)
+					.attr('y2', rowheight/2)
+				const fgline1 = item._p.g.append('line')
+					.attr('stroke', color)
+					.attr('x1', -rowheight/2)
+					.attr('x2', rowheight/2)
+					.attr('y1', -rowheight/2)
+					.attr('y2', rowheight/2)
+				const bgline2 = item._p.g.append('line')
+					.attr('stroke', 'white')
+					.attr('stroke-width',2)
+					.attr('x1', -rowheight/2)
+					.attr('x2', rowheight/2)
+					.attr('y1', rowheight/2)
+					.attr('y2', -rowheight/2)
+				const fgline2 = item._p.g.append('line')
+					.attr('stroke', color)
+					.attr('x1', -rowheight/2)
+					.attr('x2', rowheight/2)
+					.attr('y1', rowheight/2)
+					.attr('y2', -rowheight/2)
+				item._p.g.append('rect')
+					.attr('x', -rowheight/2)
+					.attr('y', -rowheight/2)
+					.attr('width', rowheight)
+					.attr('height', rowheight)
+					.attr('fill','white')
+					.attr('fill-opacity', 0)
+					.on('mouseover',()=>{
+						bgbox.attr('fill-opacity',1)
+						bgline1.attr('stroke-opacity',0)
+						bgline2.attr('stroke-opacity',0)
+						fgline1.attr('stroke','white')
+						fgline2.attr('stroke','white')
+					})
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						bgbox.attr('fill-opacity',0)
+						bgline1.attr('stroke-opacity',1)
+						bgline2.attr('stroke-opacity',1)
+						fgline1.attr('stroke',color)
+						fgline2.attr('stroke',color)
+					})
+
+				continue
+			}
+
+			if(item.dt==common.dtitd) {
+				console.log('show itd')
+				continue
+			}
 		}
 
 		tk.height_main = tk.toppad+ svheight + stacks.length*(stackheight+stackspace)-stackspace + tk.bottompad
@@ -523,7 +620,16 @@ function render_singlesample( tk, block ) {
 
 		tk.height_main = tk.toppad+ svheight + tk.bottompad
 	}
+
+
+	may_legend_svchr2(tk)
+
+	may_legend_vcfmclass(tk, block)
 }
+
+
+
+
 
 
 
@@ -599,6 +705,112 @@ function horiplace(lst,width) {
 
 
 
+function render_singlesample_sv( svlst, tk, block ) {
+
+	if(svlst.length==0) return 0
+
+	// if sv has both x0/x1 will show both legs, will be higher, else lower
+	const svheight = tk.discradius*2 + tk.midpad
+		+ (svlst.find(s=> s.x0 && s.x1) ?
+			tk.stem1+tk.legheight :
+			tk.stem1+tk.stem2+tk.stem3
+			)
+
+	tk.svvcf_g.attr('transform','translate(0,'+ (svheight-tk.midpad) +')')
+
+	// clean sv
+	for(const i of svlst) {
+		i.radius = tk.discradius
+		if(i.x0!=undefined && i.x1!=undefined) {
+			if(i.x0 > i.x1) {
+				// x0 maybe bigger than x1
+				const a=i.x1
+				i.x1=i.x0
+				i.x0=a
+			}
+			i._x = (i.x0+i.x1)/2
+		} else {
+			i._x = i.x0 || i.x1
+		}
+		i.x=i._x
+	}
+
+	const entirewidth = block.width+block.subpanels.reduce((i,j)=>i+j.leftpad+j.width,0)
+
+	//horiplace( svlst, entirewidth )
+
+	for(const sv of svlst) {
+		const doubleleg = sv.x0 && sv.x1
+		const g = tk.svvcf_g.append('g')
+			.attr('transform','translate('+ sv.x +','+(doubleleg ? -tk.stem1-tk.legheight : -tk.stem1-tk.stem2-tk.stem3) +')')
+
+		const otherchr=sv.chrA==sv._chr ? sv.chrB : sv.chrA
+		const color =  otherchr==sv._chr ? intrasvcolor : tk.legend_svchrcolor.colorfunc(otherchr)
+
+		g.append('circle')
+			.attr('r', tk.discradius)
+			.attr('cy',-tk.discradius)
+			.attr('fill',color)
+			.attr('stroke','white')
+		g.append('circle')
+			.attr('r', tk.discradius)
+			.attr('cy',-tk.discradius)
+			.attr('fill','white')
+			.attr('fill-opacity',0)
+			.attr('stroke',color)
+			.attr('stroke-opacity',0)
+			.attr('class','sja_aa_disckick')
+			.on('click',()=>{
+				click_sv_single(sv, tk, block)
+			})
+			.on('mouseover',()=>{
+				tooltip_svitem( sv, tk)
+			})
+			.on('mouseout',()=> tk.tktip.hide() )
+
+		if(doubleleg) {
+			g.append('line')
+				.attr('stroke',color)
+				.attr('y2',tk.stem1)
+				.attr('shape-rendering','crispEdges')
+			g.append('line') // right leg
+				.attr('stroke',color)
+				.attr('y1', tk.stem1)
+				.attr('x2', (sv.x1-sv.x0)/2-(sv.x-sv._x) )
+				.attr('y2', tk.stem1+tk.legheight)
+			g.append('line') // left leg
+				.attr('stroke',color)
+				.attr('y1', tk.stem1)
+				.attr('x2', -(sv.x1-sv.x0)/2-(sv.x-sv._x) )
+				.attr('y2', tk.stem1+tk.legheight)
+		} else {
+			g.append('line')
+				.attr('stroke',color)
+				.attr('y2', tk.stem1)
+				.attr('shape-rendering','crispEdges')
+			g.append('line')
+				.attr('stroke',color)
+				.attr('y1', tk.stem1)
+				.attr('y2', tk.stem1+tk.stem2)
+				.attr('x2', sv._x-sv.x)
+			g.append('line')
+				.attr('stroke',color)
+				.attr('y1', tk.stem1+tk.stem2)
+				.attr('y2', tk.stem1+tk.stem2+tk.stem3)
+				.attr('x1', sv._x-sv.x)
+				.attr('x2', sv._x-sv.x)
+				.attr('shape-rendering','crispEdges')
+		}
+	}
+	return svheight
+}
+
+
+/////////////////////// __single ends
+
+
+
+
 
 
 /////////////////////// __multi
@@ -645,20 +857,7 @@ function render_samplegroups( tk, block ) {
 	}
 
 
-	if(tk.data_vcf) {
-		// map vcf variants to view range
-		for(const m of tk.data_vcf) {
-			m._chr = m.chr
-			m._pos = m.pos
-			map_sv_2( m, block )
-			delete m._chr
-			delete m._pos
-
-			if(m.dt==common.dtitd) {
-				console.log('may additional processing on itd')
-			}
-		}
-	}
+	may_map_vcf( tk, block )
 
 
 	// sv to be drawn in separate process from cnv/loh, both dense and full
@@ -4216,6 +4415,19 @@ function click_sv_single(sv, tk, block) {
 
 
 
-function integrate_vcf(data) {
-	
+
+function may_map_vcf(tk, block) {
+	// map to view range: snvindel, itd
+	if(!tk.data_vcf) return
+	for(const m of tk.data_vcf) {
+		m._chr = m.chr
+		m._pos = m.pos
+		map_sv_2( m, block )
+		delete m._chr
+		delete m._pos
+
+		if(m.dt==common.dtitd) {
+			console.log('may map span of itd to #pixel')
+		}
+	}
 }

@@ -338,6 +338,7 @@ function parse_FORMAT( lst, m, vcf ) {
 	for(let i=9; i<lst.length; i++) {
 
 		// for each sample
+
 		const spobj={}
 		if(vcf.samples && vcf.samples[i-9]) {
 			spobj.sampleobj = vcf.samples[i-9]
@@ -496,6 +497,27 @@ function parse_FORMAT( lst, m, vcf ) {
 			continue
 		}
 
+		/*
+		assign this sampleobj to allele.sampledata[]
+		stop using hardcoded AD
+		check format fields to see if AD-like fields have value in an alt allele
+		*/
+		for(let alti=1; alti<m.alleles.length; alti++) {
+			// for this alt allele, check if any format field has it
+			for(const formatid in spobj) {
+				const formatdesc = vcf.format[ formatid ]
+				if( formatdesc && (formatdesc.Number=='R' || formatdesc.Number=='A') ) {
+					// AD-like field
+					if(spobj[formatid][ m.alleles[alti].allele ] != undefined) {
+						// this format field has this alt allele
+						m.alleles[alti].sampledata.push( copysample(spobj) )
+						break
+					}
+				}
+			}
+		}
+
+		/*
 		if(spobj.allele2readcount) {
 			// has read count per allele, 
 			// for each alt allele, find sample with that allele
@@ -506,6 +528,7 @@ function parse_FORMAT( lst, m, vcf ) {
 				}
 			}
 		}
+		*/
 	}
 }
 

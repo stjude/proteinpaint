@@ -70,7 +70,7 @@ module.exports={
 	queries:{
 
 		svcnv:{
-			name:'Pediatric tumor somatic mutation',
+			name:'Pediatric tumor mutation',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
 			file:'hg19/Pediatric/pediatric.svcnv.hg19.gz',
@@ -103,7 +103,7 @@ module.exports={
 
 
 		somaticsnvindelitd:{
-			name:'somatic SNV/indel/ITD',
+			name:'Pediatric tumor SNV/indel/ITD',
 			istrack:true,
 			type:common.tkt.mdsvcfitd,
 			viewrangeupperlimit:1000000,
