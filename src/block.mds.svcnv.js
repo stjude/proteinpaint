@@ -127,9 +127,10 @@ export function loadTk( tk, block ) {
 
 		if(data.error) throw({message:data.error})
 
-		tk.data_vcf = data.data_vcf
+		tk._data_vcf = data.data_vcf
 		tk.vcfrangelimit = data.vcfrangelimit
-		vcfdata_prepmclass(tk, block)
+		vcfdata_prepmclass(tk, block) // copies showing data to tk.data_vcf
+
 
 		if(tk.singlesample) {
 			if(!data.lst || data.lst.length==0) throw({message:tk.singlesample.name+': no CNV or SV in view range'})
@@ -178,18 +179,32 @@ export function loadTk( tk, block ) {
 
 
 function vcfdata_prepmclass(tk, block) {
-	if(!tk.data_vcf || tk.data_vcf.length==0) return
-	for(const m of tk.data_vcf) {
+	/*
+	_data_vcf returned by server
+	will be filtered to data_vcf for display
+	changing filtering option will call this and won't reload data
+	*/
+	if(!tk._data_vcf || tk._data_vcf.length==0) {
+		tk.data_vcf=null
+		return
+	}
+	tk.data_vcf=[]
+	for(const m of tk._data_vcf) {
 		if(m.dt == common.dtsnvindel) {
 			vcfcopymclass.copymclass(m, block)
-			continue
+		} else if(m.dt==common.dtitd) {
+			console.log('todo itd')
 		}
-		if(m.dt==common.dtitd) {
-			console.log('itd')
-			continue
+
+		if(tk.legend_mclass.hidden.has( m.class )) {
+			// class is hidden
+		} else {
+			tk.data_vcf.push( m )
 		}
 	}
 }
+
+
 
 
 
@@ -903,7 +918,7 @@ function render_samplegroups( tk, block ) {
 
 	may_legend_samplegroup(tk, block)
 
-	may_legend_vcfmclass(tk)
+	may_legend_vcfmclass(tk, block)
 }
 
 
@@ -2930,13 +2945,13 @@ function may_legend_svchr2(tk) {
 
 
 
-function may_legend_vcfmclass(tk) {
+function may_legend_vcfmclass(tk, block) {
 	/*
 	full or dense
 	native or custom
 	single or multi-sample
 	*/
-	if(!tk.data_vcf) return
+	if(!tk.data_vcf || tk.data_vcf.length==0) return
 	tk.legend_mclass.row.style('display','block')
 	tk.legend_mclass.holder.selectAll('*').remove()
 
@@ -2944,33 +2959,92 @@ function may_legend_vcfmclass(tk) {
 
 	for(const m of tk.data_vcf) {
 		if(!classes.has(m.class)) {
-			classes.set( m.class, { count:0 } )
+			classes.set( m.class, { cname:m.class, count:0 } )
 		}
 		classes.get(m.class).count++
 	}
 
-	const classlst = [ ...classes ]
+	const classlst = [ ...classes.values() ]
 	classlst.sort( (i,j)=>j.count-i.count )
 
-	for(const [cname, cobj] of classlst) {
+	for(const { cname, count} of classlst) {
 
-		const _c = common.mclass[cname]
+		const _c = common.mclass[cname] || {label:cname, desc:cname, color:'black'}
 
 		const cell = tk.legend_mclass.holder.append('div')
 			.attr('class', 'sja_clb')
 			.style('display','inline-block')
 			.on('click',()=>{
+				tk.tip2.showunder(cell.node())
+					.clear()
+
+				tk.tip2.d.append('div')
+					.attr('class','sja_menuoption')
+					.text('Hide')
+					.on('click',()=>{
+						tk.legend_mclass.hidden.add(cname)
+						applychange()
+					})
+
+				tk.tip2.d.append('div')
+					.attr('class','sja_menuoption')
+					.text('Show only')
+					.on('click',()=>{
+						for(const c2 of classlst) {
+							tk.legend_mclass.hidden.add(c2.cname)
+						}
+						tk.legend_mclass.hidden.delete(cname)
+						applychange()
+					})
+
+				if(tk.legend_mclass.hidden.size) {
+					tk.tip2.d.append('div')
+						.attr('class','sja_menuoption')
+						.text('Show all')
+						.on('click',()=>{
+							tk.legend_mclass.hidden.clear()
+							applychange()
+						})
+				}
+
+				tk.tip2.d.append('div')
+					.style('padding','10px')
+					.style('font-size','.8em')
+					.html('<div style="color:'+_c.color+'">'+_c.label+'</div><div style="opacity:.5;width:150px">'+_c.desc+'</div>')
 			})
 
 		cell.append('div')
 			.style('display','inline-block')
 			.attr('class','sja_mcdot')
 			.style('background', _c.color)
-			.text(cobj.count)
+			.text(count)
 		cell.append('div')
 			.style('display','inline-block')
 			.style('color',_c.color)
 			.html('&nbsp;'+_c.label)
+	}
+
+	// hidden
+	for(const cname of tk.legend_mclass.hidden) {
+		tk.legend_mclass.holder.append('div')
+			.style('display','inline-block')
+			.attr('class','sja_clb')
+			.style('text-decoration','line-through')
+			.text( common.mclass[cname] ? common.mclass[cname].label : cname )
+			.on('click',()=>{
+				tk.legend_mclass.hidden.delete( cname )
+				applychange()
+			})
+	}
+
+	const applychange = ()=>{
+		tk.tip2.hide()
+		vcfdata_prepmclass(tk, block)
+		if(tk.singlesample) {
+			render_singlesample( tk, block )
+		} else {
+			render_samplegroups( tk, block )
+		}
 	}
 }
 
