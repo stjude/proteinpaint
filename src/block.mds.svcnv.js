@@ -37,8 +37,13 @@ makeTk()
 render_samplegroups
 	render_multi_vcfdensity
 		tooltip_vcfdense
+		click_vcf_dense
+		click_vcf_single
 	render_multi_svdensity
+		tooltip_svdense
 		click_svdense
+		tooltip_svitem
+		click_sv_single
 	render_multi_cnvloh
 		click_samplegroup_showtable
 		** click_multi2single
@@ -1218,13 +1223,21 @@ function render_multi_vcfdensity( tk, block) {
 
 		const lst=[]
 		for(const [ classname, mlst ] of name2group) {
+
+			let samplecount = 0 // total # of samples in this group
+			for(const m of mlst) {
+				if(m.dt==common.dtsnvindel) samplecount += m.sampledata.length
+				else if(m.dt==common.dtitd) samplecount++
+			}
+
 			lst.push({
 				name:  common.mclass[classname].label,
 				items: mlst,
-				color: common.mclass[classname].color
+				color: common.mclass[classname].color,
+				samplecount: samplecount
 			})
 		}
-		lst.sort((i,j)=>j.items.length-i.items.length)
+		lst.sort( (i,j) => j.samplecount - i.samplecount )
 		b.groups = lst
 	}
 
@@ -1272,34 +1285,12 @@ function render_multi_vcfdensity( tk, block) {
 			for(const g of bin.groups) {
 				// group dot radius determined by total number of samples in each mutation, not # of mutations
 
-				let totalnum=0
-				for(const m of g.items) {
-					if(m.dt==common.dtsnvindel) {
-						totalnum += m.sampledata.length
-						continue
-					}
-					if(m.dt==common.dtitd) {
-						totalnum++
-						continue
-					}
-				}
-
-				g.radius = Math.sqrt( sf_discradius( totalnum ) / Math.PI )
+				g.radius = Math.sqrt( sf_discradius( g.samplecount ) / Math.PI )
 			}
 
 			// offset of a bin determined by the total number of samples
 			// count again for the bin
-			let totalnum=0
-			for(const m of bin.lst ) {
-				if(m.dt==common.dtsnvindel) {
-					totalnum += m.sampledata.length
-					continue
-				}
-				if(m.dt==common.dtitd) {
-					totalnum++
-					continue
-				}
-			}
+			const totalnum = bin.groups.reduce((i,j) => j.samplecount+i, 0)
 
 			bin.offset=Math.sqrt( sf_discradius( totalnum ) / Math.PI )
 
@@ -1316,8 +1307,19 @@ function render_multi_vcfdensity( tk, block) {
 		const g=tk.vcfdensityg.append('g').attr('transform','translate('+((b.x1+b.x2)/2)+',0)')
 
 		let y=b.offset
+
 		for(const grp of b.groups) {
-			// one dot for each group
+
+			/*
+			one dot for each group
+
+			.name
+			.items[]
+			.radius
+			.color
+			.samplecount
+			*/
+
 			y+=grp.radius
 			g.append('circle')
 				.attr('cy',-y)
@@ -1328,8 +1330,8 @@ function render_multi_vcfdensity( tk, block) {
 			if(grp.radius>=8) {
 				// big enough dot, show # of items
 				const s = grp.radius*1.5
-				const text = grp.items.reduce((i,j)=>j.sampledata.length+i,0).toString()
-				const fontsize=Math.min(s/(text.length*client.textlensf),s)
+				const text = grp.samplecount.toString()
+				const fontsize = Math.min(s/(text.length*client.textlensf), s)
 
 				g.append('text')
 					.text(text)
@@ -1357,7 +1359,7 @@ function render_multi_vcfdensity( tk, block) {
 					tk.tktip.hide()
 				})
 				.on('click',()=>{
-					//click_svdense(grp, tk, block)
+					click_vcf_dense( grp, tk, block )
 				})
 			y+=grp.radius
 		}
@@ -1569,13 +1571,13 @@ function render_multi_svdensity( svlst, tk,block) {
 function render_multi_cnvloh(tk,block) {
 
 	/*
-	draws cnv & loh segments
+	draws sample rows, each contain cnv & loh segments
+	in full mode, include vcf data as well
 
 	multi-sample
 	official or custom
 	full or dense
 
-	in full mode, will overlap sv & vcf data over cnv bars
 
 	TODO allow variable heights in each samples
 	*/
@@ -1859,26 +1861,28 @@ function render_multi_cnvloh(tk,block) {
 								.attr('fill-opacity', 0)
 							const bgline1 = m_g.append('line')
 								.attr('stroke', 'white')
-								.attr('stroke-width',2)
-								.attr('x1', -rowheight/2)
-								.attr('x2', rowheight/2)
-								.attr('y1', -rowheight/2)
-								.attr('y2', rowheight/2)
-							const fgline1 = m_g.append('line')
-								.attr('stroke', color)
+								.attr('stroke-width',3)
 								.attr('x1', -rowheight/2)
 								.attr('x2', rowheight/2)
 								.attr('y1', -rowheight/2)
 								.attr('y2', rowheight/2)
 							const bgline2 = m_g.append('line')
 								.attr('stroke', 'white')
-								.attr('stroke-width',2)
+								.attr('stroke-width',3)
 								.attr('x1', -rowheight/2)
 								.attr('x2', rowheight/2)
 								.attr('y1', rowheight/2)
 								.attr('y2', -rowheight/2)
+							const fgline1 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('stroke-width',1.5)
+								.attr('x1', -rowheight/2)
+								.attr('x2', rowheight/2)
+								.attr('y1', -rowheight/2)
+								.attr('y2', rowheight/2)
 							const fgline2 = m_g.append('line')
 								.attr('stroke', color)
+								.attr('stroke-width',1.5)
 								.attr('x1', -rowheight/2)
 								.attr('x2', rowheight/2)
 								.attr('y1', rowheight/2)
@@ -2565,7 +2569,10 @@ function tooltip_vcfdense(g, tk, block) {
 	tk.tktip.d.append('div')
 		.style('font-size','.7em')
 		.style('margin-bottom','5px')
-		.text(g.items.length+' '+common.mclass[g.items[0].class].label+' mutations')
+		.text(
+			g.items.length+' '+common.mclass[g.items[0].class].label+' mutations, '
+			+g.samplecount+' samples'
+			)
 	const table=tk.tktip.d.append('table')
 		.style('border-spacing','3px')
 	for(const m of g.items) {
@@ -2574,12 +2581,69 @@ function tooltip_vcfdense(g, tk, block) {
 			.style('color',common.mclass[m.class].color)
 			.style('font-weight','bold')
 			.text(m.mname)
-		tr.append('td')
+		const td=tr.append('td')
 			.style('font-size','.7em')
-			.text( m.sampledata.length==1 ? m.sampledata[0].sampleobj.name : '('+m.sampledata.length+' samples)')
+
+		if(m.dt==common.dtsnvindel) {
+			td.text( m.sampledata.length==1 ? m.sampledata[0].sampleobj.name : '('+m.sampledata.length+' samples)')
+		} else if(m.dt==common.dtitd) {
+			// 
+		}
 	}
-		
 }
+
+
+
+
+function click_vcf_dense( g, tk, block ) {
+	/*
+	multi-sample
+	native/custom
+	dense
+	click on a dot representing some snvindel or itd, of same type
+	*/
+	if(g.items.length==1) {
+		click_vcf_single( g.items[0], tk, block )
+		return
+	}
+
+	const pane = client.newpane({ x:d3event.clientX, y:d3event.clientY })
+	const table = pane.body.append('table')
+		.style('border-spacing','4px')
+
+	for(const m of g.items) {
+		const tr = table.append('tr')
+
+		tr.append('td')
+			.text(m.mname)
+			.style('color', common.mclass[m.class].color)
+
+		{
+			const td = tr.append('td')
+			if(m.dt==common.dtsnvindel) {
+				td.text( m.sampledata.length>1 ? m.sampledata.length+' samples' : m.sampledata[0].sampleobj.name )
+			} else if(m.dt==common.dtitd) {
+			}
+		}
+
+		{
+			// buttons
+			const td = tr.append('td')
+		}
+	}
+}
+
+
+
+
+function click_vcf_single( m, tk, block ) {
+	/*
+	multi-sample
+	dense or full
+	*/
+	
+}
+
 
 
 
@@ -3379,76 +3443,7 @@ function configPanel(tk, block) {
 	}
 
 
-	// for official track, allow search for sample
-	if(!tk.iscustom) {
-		// show in both multi- or single-sample
-		const row=holder.append('div').style('margin-bottom','5px')
-		row.append('input')
-			.attr('size',20)
-			.attr('placeholder', 'Find sample')
-			.on('keyup',()=>{
-
-				row2.selectAll('*').remove()
-				
-				const str = d3event.target.value
-				if(!str) return
-
-				const par={
-					jwt:block.jwt,
-					genome:block.genome.name,
-					dslabel:tk.mds.label,
-					querykey:tk.querykey,
-					findsamplename: str
-				}
-				return fetch( new Request(block.hostURL+'/mdssvcnv', {
-					method:'POST',
-					body:JSON.stringify(par)
-				}))
-				.then(data=>{return data.json()})
-				.then(data=>{
-
-					if(data.error) throw({message:data.error})
-					if(data.result) {
-						for(const sample of data.result) {
-
-							const cell= row2.append('div')
-							cell.append('span')
-								.text(sample.name)
-
-							if(sample.attributes) {
-								const groupname = sample.attributes.map(i=>i.kvalue).join( tk.attrnamespacer )
-								cell.append('div')
-									.style('display','inline-block')
-									.style('margin-left','10px')
-									.style('font-size','.7em')
-									.style('color', tk.legend_samplegroup.color( groupname ) )
-									.html( groupname )
-							}
-
-							cell
-								.attr('class','sja_menuoption')
-								.on('click',()=>{
-									click_multi2single(
-										null,
-										null,
-										{samplename:sample.name},
-										sample.group,
-										tk,
-										block
-									)
-								})
-						}
-					}
-				})
-				.catch(err=>{
-					client.sayerror(row2, err.message)
-					if(err.stack) console.log(err.stack)
-				})
-			})
-
-		const row2=holder.append('div').style('margin-bottom','15px')
-		holder.append('hr').style('margin','20px')
-	}
+	may_allow_samplesearch( tk, block)
 
 
 	// filter cnv with sv
@@ -3729,6 +3724,83 @@ function configPanel(tk, block) {
 	// end of config
 }
 
+
+
+
+function may_allow_samplesearch(tk, block) {
+	/*
+	for official track, allow search for sample
+	single or multi
+	*/
+	if(tk.iscustom) return
+
+	const row=tk.tkconfigtip.d.append('div')
+		.style('margin-bottom','15px')
+	row.append('input')
+		.attr('size',20)
+		.attr('placeholder', 'Find sample')
+		.on('keyup',()=>{
+
+			tk.tip2.showunder(d3event.target)
+				.clear()
+			
+			const str = d3event.target.value
+			if(!str) return
+
+			const par={
+				jwt:block.jwt,
+				genome:block.genome.name,
+				dslabel:tk.mds.label,
+				querykey:tk.querykey,
+				findsamplename: str
+			}
+			return fetch( new Request(block.hostURL+'/mdssvcnv', {
+				method:'POST',
+				body:JSON.stringify(par)
+			}))
+			.then(data=>{return data.json()})
+			.then(data=>{
+
+				if(data.error) throw({message:data.error})
+				if(!data.result) return
+				for(const sample of data.result) {
+
+					const cell= tk.tip2.d.append('div')
+					cell.append('span')
+						.text(sample.name)
+
+					if(sample.attributes) {
+						const groupname = sample.attributes.map(i=>i.kvalue).join( tk.attrnamespacer )
+						cell.append('div')
+							.style('display','inline-block')
+							.style('margin-left','10px')
+							.style('font-size','.7em')
+							.style('color', tk.legend_samplegroup.color( groupname ) )
+							.html( groupname )
+					}
+
+					cell
+						.attr('class','sja_menuoption')
+						.on('click',()=>{
+
+							tk.tip2.hide()
+							click_multi2single(
+								null,
+								null,
+								{samplename: sample.name},
+								{attributes: sample.attributes},
+								tk,
+								block
+							)
+						})
+				}
+			})
+			.catch(err=>{
+				client.sayerror( tk.tip2.d, err.message)
+				if(err.stack) console.log(err.stack)
+			})
+		})
+}
 
 
 
