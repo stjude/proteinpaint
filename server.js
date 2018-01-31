@@ -4065,15 +4065,20 @@ function handle_mdssvcnv(req,res) {
 			return [ data_cnv, expressionrangelimit, gene2sample2obj, null, null ]
 		}
 
-		let viewrangeupperlimit = vcfquery.viewrangeupperlimit
-		if(!viewrangeupperlimit && dsquery.iscustom) {
-			// no limit set for custom track, set a hard limit
-			viewrangeupperlimit = 50000
-		}
-		if(viewrangeupperlimit) {
-			const len=req.query.rglst.reduce((i,j)=>i+j.stop-j.start,0)
-			if(len >= viewrangeupperlimit) {
-				return [ data_cnv, expressionrangelimit, gene2sample2obj, viewrangeupperlimit, null ]
+		if(req.query.singlesample) {
+			// do not limit view range for single sample -- dangerous?
+		} else {
+			// multi-sample
+			let viewrangeupperlimit = vcfquery.viewrangeupperlimit
+			if(!viewrangeupperlimit && dsquery.iscustom) {
+				// no limit set for custom track, set a hard limit
+				viewrangeupperlimit = 50000
+			}
+			if(viewrangeupperlimit) {
+				const len=req.query.rglst.reduce((i,j)=>i+j.stop-j.start,0)
+				if(len >= viewrangeupperlimit) {
+					return [ data_cnv, expressionrangelimit, gene2sample2obj, viewrangeupperlimit, null ]
+				}
 			}
 		}
 
