@@ -34,6 +34,8 @@ export function copymclass(m, block) {
 			}
 		}
 		if(useone) {
+			m.gene = useone._gene
+			m.isoform = useone._isoform
 			m.class=useone._class
 			m.dt=useone._dt
 			m.mname=useone._mname
@@ -73,6 +75,8 @@ export function copymclass(m, block) {
 			}
 		}
 		if(useone) {
+			m.gene=useone._gene
+			m.isoform=useone._isoform
 			m.class=useone._class
 			m.dt=useone._dt
 			m.mname=useone._mname

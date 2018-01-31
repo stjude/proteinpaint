@@ -760,12 +760,17 @@ function parse_CSQ(str,header,m) {
 			allele.csq=[]
 		}
 		allele.csq.push(o)
+
+		// gene
+		o._gene = o.SYMBOL || o.Gene
+
 		// isoform
 		if(o.Feature_type && o.Feature_type=='Transcript') {
-			o._isoform=o.Feature.split('.')[0]
+			o._isoform=o.Feature.split('.')[0] // remove version
 		} else {
-			o._isoform=o.Gene
+			o._isoform=o._gene
 		}
+
 		// class
 		if(o.Consequence) {
 			const [dt,cls,rank]=common.vepinfo(o.Consequence)
@@ -830,6 +835,7 @@ function parse_ANN(str,header,m) {
 			allele.ann=[]
 		}
 		allele.ann.push(o)
+		o._gene = o.Gene_Name
 		// isoform
 		if(o.Feature_Type && o.Feature_Type=='transcript' && o.Feature_ID) {
 			o._isoform=o.Feature_ID.split('.')[0]

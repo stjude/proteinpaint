@@ -129,7 +129,7 @@ export function loadTk( tk, block ) {
 
 		tk._data_vcf = data.data_vcf
 		tk.vcfrangelimit = data.vcfrangelimit
-		vcfdata_prepmclass(tk, block) // copies showing data to tk.data_vcf
+		vcfdata_prepmclass(tk, block) // data for display is now in tk.data_vcf[]
 
 
 		if(tk.singlesample) {
@@ -182,34 +182,6 @@ export function loadTk( tk, block ) {
 }
 
 
-
-
-
-function vcfdata_prepmclass(tk, block) {
-	/*
-	_data_vcf returned by server
-	will be filtered to data_vcf for display
-	changing filtering option will call this and won't reload data
-	*/
-	if(!tk._data_vcf || tk._data_vcf.length==0) {
-		tk.data_vcf=null
-		return
-	}
-	tk.data_vcf=[]
-	for(const m of tk._data_vcf) {
-		if(m.dt == common.dtsnvindel) {
-			vcfcopymclass.copymclass(m, block)
-		} else if(m.dt==common.dtitd) {
-			console.log('todo itd')
-		}
-
-		if(tk.legend_mclass.hidden.has( m.class )) {
-			// class is hidden
-		} else {
-			tk.data_vcf.push( m )
-		}
-	}
-}
 
 
 
@@ -268,7 +240,7 @@ function addLoadParameter( par, tk ) {
 function render_singlesample( tk, block ) {
 	/*
 	single-sample mode
-	must have data of any type
+	may not have any data!
 	sv/fusion with both feet in view range as legged
 	cnv & loh & snvindel & itd as stack bars
 	*/
@@ -287,6 +259,14 @@ function render_singlesample( tk, block ) {
 		tk.legend_mclass.holder.selectAll('*').remove()
 		tk.legend_mclass.holder.append('div').text('Zoom in under '+common.bplen(tk.vcfrangelimit)+' to view data')
 	}
+
+	if(!tk.data || tk.data.length==0) {
+		if(!tk.data_vcf || tk.data_vcf.length==0) {
+			tk.height_main = 20
+			return
+		}
+	}
+
 
 	const svlst = []
 	const cnvlst =[]
@@ -378,12 +358,13 @@ function render_singlesample( tk, block ) {
 
 
 	/*
-	stack bar plot for:
+	stack bar plot on bottom:
 		cnv
 		loh
 		snvindel: show label
 		itd: show label
 	*/
+	tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
 
 	const items = [ ...cnvlst, ...lohlst ] // stack bar items
 	if(tk.data_vcf) {
@@ -394,15 +375,11 @@ function render_singlesample( tk, block ) {
 		}
 	}
 
-	if(items.length > 0) {
+
+	const stackploth = render_singlesample_stack( items, tk, block )
 
 
-		render_singlesample_stack( items, tk, block, svheight )
-
-	} else {
-
-		tk.height_main = tk.toppad+ svheight + tk.bottompad
-	}
+	tk.height_main = tk.toppad+ svheight + stackploth + tk.bottompad
 
 
 	may_legend_svchr2(tk)
@@ -416,160 +393,151 @@ function render_singlesample( tk, block ) {
 
 function render_singlesample_stack( items, tk, block, svheight ) {
 
-	tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
+	if(items.length==0) return 0
+
+	/*
+	stack for cnv/loh/snvindel/itd
+	all in items[]
+	*/
+
 
 	const stackheight = 12
 	const stackspace  = 1
 	const labelspace = 5 // when label is shown outside of box, the space between them
 
+	// prep & pre-render snvindel/itd
 	for(const m of items) {
 
-		if(m.dt==common.dtsnvindel || m.dt==common.dtitd) {
-			// snvindel, itd: create & measure label
+		if(m.dt==common.dtloh || m.dt==common.dtcnv) continue
 
+		const g = tk.cnv_g.append('g')
+		m._p = {
+			g:g
+		}
+		/* for later use:
+		stackw
+		stackx
+		g_x
+		*/
 
-			const g = tk.cnv_g.append('g')
-			m._p = {
-				g:g
-			}
-			/* for later use:
-			stackw
-			stackx
-			g_x
-			*/
+		const color = common.mclass[ m.class ].color
 
-			const color = common.mclass[ m.class ].color
+		/////////////////////////////////// label is the same for snvindel/itd
+		// mouseover event not on label but on cover box
+		const lab = g.append('text')
+			.attr('font-size', stackheight)
+			.attr('font-family', client.font)
+			.attr('fill', color)
+			.attr('dominant-baseline','central')
 
-			// label is the same for snvindel/itd
-			const lab = g.append('text')
-				.attr('font-size', stackheight)
-				.attr('font-family', client.font)
+		if(m.dt==common.dtsnvindel) {
+			lab.text( m.mname )
+		} else if(m.dt==common.dtitd) {
+			lab.text('ITD')
+		}
+
+		let labelw
+		lab.each(function(){ labelw = this.getBBox().width })
+
+		////////////////////////////////// render shapes
+		if(m.dt==common.dtsnvindel) {
+			const rowheight = stackheight
+
+			const bgbox = g.append('rect')
+				.attr('x', -rowheight/2)
+				.attr('y', -rowheight/2)
+				.attr('width', rowheight)
+				.attr('height', rowheight)
 				.attr('fill', color)
-				.attr('dominant-baseline','central')
+				.attr('fill-opacity', 0)
+			const fgline1 = g.append('line')
+				.attr('stroke', color)
+				.attr('stroke-width',2)
+				.attr('x1', -rowheight/2)
+				.attr('x2', rowheight/2)
+				.attr('y1', -rowheight/2)
+				.attr('y2', rowheight/2)
+			const fgline2 = g.append('line')
+				.attr('stroke', color)
+				.attr('stroke-width',2)
+				.attr('x1', -rowheight/2)
+				.attr('x2', rowheight/2)
+				.attr('y1', rowheight/2)
+				.attr('y2', -rowheight/2)
+			// to cover both cross & label, will be placed after deciding whether label is on left/right
+			m._p.cover = g.append('rect')
+				.attr('y', -rowheight/2)
+				.attr('width', stackheight+labelspace+labelw)
+				.attr('height', rowheight)
+				.attr('fill','white')
+				.attr('fill-opacity', 0)
+				.on('mouseover',()=>{
+					bgbox.attr('fill-opacity',1)
+					fgline1.attr('stroke','white')
+						.attr('x1', 1-rowheight/2)
+						.attr('x2', rowheight/2-1)
+						.attr('y1', 1-rowheight/2)
+						.attr('y2', rowheight/2-1)
+					fgline2.attr('stroke','white')
+						.attr('x1', 1-rowheight/2)
+						.attr('x2', rowheight/2-1)
+						.attr('y1', rowheight/2-1)
+						.attr('y2', 1-rowheight/2)
+					tooltip_multi_vcf(
+						m, 
+						m.sampledata[0],
+						null,
+						null,
+						tk,
+						block
+						)
+				})
+				.on('mouseout',()=>{
+					tk.tktip.hide()
+					bgbox.attr('fill-opacity',0)
+					fgline1.attr('stroke',color)
+						.attr('x1', -rowheight/2)
+						.attr('x2', rowheight/2)
+						.attr('y1', -rowheight/2)
+						.attr('y2', rowheight/2)
+					fgline2.attr('stroke',color)
+						.attr('x1', -rowheight/2)
+						.attr('x2', rowheight/2)
+						.attr('y1', rowheight/2)
+						.attr('y2', -rowheight/2)
+				})
+		} else if(m.dt==common.dtitd) {
+			// itd shapes
+		}
 
-			if(m.dt==common.dtsnvindel) {
-				lab.text( m.mname )
-			} else if(m.dt==common.dtitd) {
-				lab.text('ITD')
+
+
+		//////////////////////////////// set position for text label & cover
+		if(m.dt==common.dtsnvindel) {
+
+			m._p.stackw = stackheight + 5 + labelw
+
+			if(block.width - m.x > labelw + labelspace + stackheight/2) {
+				// label on right
+				//m._p.labelonright=1
+				m._p.stackx = m.x-stackheight/2
+				m._p.g_x = stackheight/2
+				lab.attr('x', stackheight/2+labelspace)
+				m._p.cover.attr('x', -stackheight/2)
+
+			} else {
+				// label on left
+				//m._p.labelonleft = 1
+				m._p.stackx = m.x-stackheight/2-labelspace-labelw
+				m._p.g_x = stackheight/2+labelspace+labelw
+				lab
+					.attr('x', -stackheight/2-labelspace)
+					.attr('text-anchor','end')
+				m._p.cover.attr('x', -labelw-labelspace-stackheight/2 )
 			}
-
-			let labelw
-			lab.each(function(){ labelw = this.getBBox().width })
-
-
-			if(m.dt==common.dtsnvindel) {
-				// render shapes for snvindel
-				const rowheight = stackheight
-
-				const bgbox = g.append('rect')
-					.attr('x', -rowheight/2)
-					.attr('y', -rowheight/2)
-					.attr('width', rowheight)
-					.attr('height', rowheight)
-					.attr('fill', color)
-					.attr('fill-opacity', 0)
-					/*
-				const bgline1 = g.append('line')
-					.attr('stroke', 'white')
-					.attr('stroke-width',2)
-					.attr('x1', -rowheight/2)
-					.attr('x2', rowheight/2)
-					.attr('y1', -rowheight/2)
-					.attr('y2', rowheight/2)
-					*/
-				const fgline1 = g.append('line')
-					.attr('stroke', color)
-					.attr('stroke-width',2)
-					.attr('x1', -rowheight/2)
-					.attr('x2', rowheight/2)
-					.attr('y1', -rowheight/2)
-					.attr('y2', rowheight/2)
-					/*
-				const bgline2 = g.append('line')
-					.attr('stroke', 'white')
-					.attr('stroke-width',2)
-					.attr('x1', -rowheight/2)
-					.attr('x2', rowheight/2)
-					.attr('y1', rowheight/2)
-					.attr('y2', -rowheight/2)
-					*/
-				const fgline2 = g.append('line')
-					.attr('stroke', color)
-					.attr('stroke-width',2)
-					.attr('x1', -rowheight/2)
-					.attr('x2', rowheight/2)
-					.attr('y1', rowheight/2)
-					.attr('y2', -rowheight/2)
-				// to cover both cross & label, will be placed after deciding whether label is on left/right
-				m._p.cover = g.append('rect')
-					.attr('y', -rowheight/2)
-					.attr('width', stackheight+labelspace+labelw)
-					.attr('height', rowheight)
-					.attr('fill','white')
-					.attr('fill-opacity', 0)
-					.on('mouseover',()=>{
-						bgbox.attr('fill-opacity',1)
-						//bgline1.attr('stroke-opacity',0)
-						//bgline2.attr('stroke-opacity',0)
-						fgline1.attr('stroke','white')
-							.attr('x1', 1-rowheight/2)
-							.attr('x2', rowheight/2-1)
-							.attr('y1', 1-rowheight/2)
-							.attr('y2', rowheight/2-1)
-						fgline2.attr('stroke','white')
-							.attr('x1', 1-rowheight/2)
-							.attr('x2', rowheight/2-1)
-							.attr('y1', rowheight/2-1)
-							.attr('y2', 1-rowheight/2)
-						// tooltip
-					})
-					.on('mouseout',()=>{
-						tk.tktip.hide()
-						bgbox.attr('fill-opacity',0)
-						//bgline1.attr('stroke-opacity',1)
-						//bgline2.attr('stroke-opacity',1)
-						fgline1.attr('stroke',color)
-							.attr('x1', -rowheight/2)
-							.attr('x2', rowheight/2)
-							.attr('y1', -rowheight/2)
-							.attr('y2', rowheight/2)
-						fgline2.attr('stroke',color)
-							.attr('x1', -rowheight/2)
-							.attr('x2', rowheight/2)
-							.attr('y1', rowheight/2)
-							.attr('y2', -rowheight/2)
-					})
-			}
-
-
-
-
-			if(m.dt==common.dtsnvindel) {
-
-				m._p.stackw = stackheight + 5 + labelw
-
-				if(block.width - m.x > labelw + labelspace + stackheight/2) {
-					// label on right
-					//m._p.labelonright=1
-					m._p.stackx = m.x-stackheight/2
-					m._p.g_x = stackheight/2
-					lab.attr('x', stackheight/2+labelspace)
-					m._p.cover.attr('x', -stackheight/2)
-
-				} else {
-					// label on left
-					//m._p.labelonleft = 1
-					m._p.stackx = m.x-stackheight/2-labelspace-labelw
-					m._p.g_x = stackheight/2+labelspace+labelw
-					lab
-						.attr('x', -stackheight/2-labelspace)
-						.attr('text-anchor','end')
-					m._p.cover.attr('x', -labelw-labelspace-stackheight/2 )
-				}
-			} else if(m.dt==common.dtitd) {
-				// TODO itd bar width
-				// label may be inside bar
-			}
+		} else if(m.dt==common.dtitd) {
+			// TODO itd bar width
+			// label may be inside bar
 		}
 	}
 
@@ -671,7 +639,8 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 		}
 	}
 
-	tk.height_main = tk.toppad+ svheight + stacks.length*(stackheight+stackspace)-stackspace + tk.bottompad
+	return stacks.length*(stackheight+stackspace)-stackspace
+
 }
 
 
@@ -1344,12 +1313,31 @@ function render_multi_vcfdensity( tk, block) {
 
 		let y=b.offset
 		for(const grp of b.groups) {
+			// one dot for each group
 			y+=grp.radius
 			g.append('circle')
 				.attr('cy',-y)
 				.attr('r',grp.radius)
 				.attr('fill',grp.color)
 				.attr('stroke','white')
+
+			if(grp.radius>=8) {
+				// big enough dot, show # of items
+				const s = grp.radius*1.5
+				const text = grp.items.reduce((i,j)=>j.sampledata.length+i,0).toString()
+				const fontsize=Math.min(s/(text.length*client.textlensf),s)
+
+				g.append('text')
+					.text(text)
+					.attr('y', -y)
+					.attr('dominant-baseline','central')
+					.attr('text-anchor', 'middle')
+					.attr('font-size', fontsize)
+					.attr('font-family', client.font)
+					.attr('fill','white')
+			}
+
+
 			g.append('circle')
 				.attr('cy',-y)
 				.attr('r',grp.radius)
@@ -1516,13 +1504,34 @@ function render_multi_svdensity( svlst, tk,block) {
 		const g=tk.svdensityg.append('g').attr('transform','translate('+((b.x1+b.x2)/2)+',0)')
 
 		let y=b.offset
+
 		for(const grp of b.groups) {
+			// one dot for each group
+
 			y+=grp.radius
 			g.append('circle')
 				.attr('cy',-y)
 				.attr('r',grp.radius)
 				.attr('fill',grp.color)
 				.attr('stroke','white')
+
+			if(grp.radius>=8) {
+				// big enough dot, show # of items
+				const s = grp.radius*1.5
+				const text = grp.items.length.toString()
+				const fontsize=Math.min(s/(text.length*client.textlensf),s)
+
+				g.append('text')
+					.text(text)
+					.attr('y', -y)
+					.attr('dominant-baseline','central')
+					.attr('text-anchor', 'middle')
+					.attr('font-size', fontsize)
+					.attr('font-family', client.font)
+					.attr('fill','white')
+			}
+
+			// cover
 			g.append('circle')
 				.attr('cy',-y)
 				.attr('r',grp.radius)
@@ -2510,6 +2519,7 @@ function tooltip_vcfdense(g, tk, block) {
 	multi-sample
 	official or custom
 	dense mode
+	mouseover a dot
 	*/
 	tk.tktip.clear()
 		.show(d3event.clientX,d3event.clientY)
@@ -3992,10 +4002,10 @@ function tooltip_multi_cnvloh( item, sample, samplegroup, tk, block, xoff ) {
 
 function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
 	/*
-	multi-sample
-	native or custom
-	full mode only
 	mouse over a vcf variant tick
+	either single-sample
+	or multi-sample in full mode
+	native or custom
 
 	m_sample is of m.sampledata[]
 	*/
@@ -4018,12 +4028,14 @@ function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
 	const lst = []
 
 	// sample
-	lst.push({
-		k:'Sample',
-		v: sample.samplename
-			+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
-			+ ( samplegroup ? (samplegroup.name  ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '') : '')
-		})
+	if(sample) {
+		lst.push({
+			k:'Sample',
+			v: sample.samplename
+				+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
+				+ ( samplegroup ? (samplegroup.name  ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '') : '')
+			})
+	}
 
 	/*
 	show format fields of this sample
@@ -4055,11 +4067,14 @@ function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
 	}
 
 
-	// expression rank
-	const tmp = tooltip_svcnv_addexpressionrank(sample, tk)
-	if(tmp) {
-		lst.push(tmp)
+	if(sample) {
+		// expression rank, only for multi-sample mode
+		const tmp = tooltip_svcnv_addexpressionrank(sample, tk)
+		if(tmp) {
+			lst.push(tmp)
+		}
 	}
+
 	client.make_table_2col( tk.tktip.d, lst ).style('margin','0px')
 }
 
@@ -4068,9 +4083,13 @@ function tooltip_multi_vcf( m, m_sample, sample, samplegroup, tk, block ) {
 
 
 function print_snvindel(m) {
-	return '<span style="color:'+common.mclass[m.class].color+';font-size:1.3em;font-weight:bold">'+m.mname+'</span> '
-		+'<span style="font-size:.7em">'+common.mclass[m.class].label+'</span> &nbsp;&nbsp;'
-		+'<span style="font-size:.9em">'+m.chr+':'+(m.pos+1)+'</span> '
+	return '<div style="display:inline-block;color:'+common.mclass[m.class].color+';font-size:1.3em;font-weight:bold;padding-right:10px">'+m.mname+'</div>'
+		+'<div style="display:inline-block;font-size:.7em;margin-right:10px">'
+			+(m.gene ? m.gene+'<br>' : '')+common.mclass[m.class].label
+		+'</div>'
+		+'<div style="display:inline-block;font-size:.7em;margin-right:10px">'
+			+(m.isoform==m.gene ? '' : m.isoform+'<br>')+m.chr+':'+(m.pos+1)
+		+'</div>'
 		+'<span style="font-size:.7em;opacity:.5">REF</span> '+m.ref+' '
 		+'<span style="font-size:.7em;opacity:.5">ALT</span> '+m.alt
 }
@@ -4473,6 +4492,35 @@ function may_map_vcf(tk, block) {
 
 		if(m.dt==common.dtitd) {
 			console.log('may map span of itd to #pixel')
+		}
+	}
+}
+
+
+
+
+function vcfdata_prepmclass(tk, block) {
+	/*
+	_data_vcf returned by server
+	will be filtered to data_vcf for display
+	changing filtering option will call this and won't reload data
+	*/
+	if(!tk._data_vcf || tk._data_vcf.length==0) {
+		tk.data_vcf=null
+		return
+	}
+	tk.data_vcf=[]
+	for(const m of tk._data_vcf) {
+		if(m.dt == common.dtsnvindel) {
+			vcfcopymclass.copymclass(m, block)
+		} else if(m.dt==common.dtitd) {
+			console.log('todo itd')
+		}
+
+		if(tk.legend_mclass.hidden.has( m.class )) {
+			// class is hidden
+		} else {
+			tk.data_vcf.push( m )
 		}
 	}
 }

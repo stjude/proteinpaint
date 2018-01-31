@@ -106,7 +106,7 @@ module.exports={
 			name:'Pediatric tumor SNV/indel/ITD',
 			istrack:true,
 			type:common.tkt.mdsvcfitd,
-			viewrangeupperlimit:1000000,
+			viewrangeupperlimit:2000000,
 			tracks:[
 				{
 					file:'hg19/PCGP/vcf.somatic/652samples.vcf.gz',
