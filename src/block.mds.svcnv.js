@@ -1034,6 +1034,14 @@ function render_samplegroups( tk, block ) {
 		hpad += Math.max( 0, block.labelfontsize*1.5 - (hpad-svdensityheight/2) )
 	}
 
+	// adjust config handle position by top blank height
+	if( hpad > genebaraxisheight+3+block.labelfontsize ) {
+		// enough space for label to be in usual place
+		tk.config_handle.transition().attr('text-anchor', 'start').attr('x',0)
+	} else {
+		tk.config_handle.transition().attr('text-anchor', 'end').attr('x', -block.rpad)
+	}
+
 	tk.cnvleftg.transition().attr('transform','translate(0,'+hpad+')')
 	tk.cnvmidg.transition().attr('transform','translate(0,'+hpad+')')
 	tk.vcfdensityg.transition()
@@ -1117,10 +1125,6 @@ function render_samplegroups( tk, block ) {
 
 	tk.height_main = tk.toppad + hpad + cnvheight + tk.bottompad
 
-	tk.config_handle
-		.transition()
-		.attr('text-anchor', genebaraxisheight ? 'end' : 'start')
-		.attr('x', genebaraxisheight ? -(block.rpad) : 0)
 
 
 	/// legend
