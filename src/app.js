@@ -856,8 +856,9 @@ function launchsamplematrix(cfg, holder) {
 	}
 	cfg.hostURL = hostURL
 	cfg.holder = holder
+	cfg.debugmode = debugmode
 	import('./samplematrix').then(_=>{
-		_.init(cfg, debugmode)
+		new _.Samplematrix(cfg)
 	})
 }
 
