@@ -53,6 +53,8 @@ render_samplegroups
 		genebar_config
 render_singlesample
 configPanel()
+createbutton_addfeature
+createbutton_focusvcf
 
 
 
@@ -2615,8 +2617,14 @@ function tooltip_vcf_dense(g, tk, block) {
 
 
 
-function createbutton_addfeature( m, holder, tk, block ) {
-	
+function createbutton_addfeature( p ) {
+	p.holder.append('div')
+	.style('display','inline-block')
+	.attr('class', 'sja_menuoption')
+	.text('Add as feature')
+	.on('click',()=>{
+		
+	})
 }
 
 
@@ -2647,7 +2655,6 @@ function createbutton_focusvcf( p ) {
 	p.holder.append('div')
 		.style('display','inline-block')
 		.attr('class', 'sja_menuoption')
-		.attr('margin-right','10px')
 		.text('Focus')
 		.on('click',()=>{
 			click_multi2single( null, null, {samplename:samplename}, grp, p.tk, p.block )
@@ -2673,7 +2680,12 @@ function click_vcf_dense( g, tk, block ) {
 		const m = g.items[0]
 
 		const butrow = pane.body.append('div').style('margin','10px')
-		createbutton_addfeature( m, butrow, tk, block )
+		createbutton_addfeature( {
+			m:m,
+			holder:butrow,
+			tk:tk,
+			block:block
+			})
 
 		if(m.dt==common.dtsnvindel) {
 			
@@ -4355,7 +4367,12 @@ function click_snvindel_singlevariantsample( p ) {
 		block:p.block
 	})
 
-	createbutton_addfeature( p.m, butrow, p.tk, p.block )
+	createbutton_addfeature( {
+		m:p.m,
+		holder:butrow,
+		tk:p.tk,
+		block:p.block
+	})
 
 	p.holder = pane.body
 
