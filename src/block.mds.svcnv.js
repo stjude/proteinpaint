@@ -45,7 +45,9 @@ render_samplegroups
 		tooltip_svitem
 		click_sv_single
 	render_multi_cnvloh
+		click_samplegroup_showmenu
 		click_samplegroup_showtable
+		click_multi_cnvloh
 		** click_multi2single
 		tooltip_multi_cnvloh
 		tooltip_multi_snvindel
@@ -1247,7 +1249,7 @@ function render_multi_vcfdensity( tk, block) {
 	for(const b of bins) {
 		if(!b.groups) continue
 		for(const g of b.groups) {
-			maxcount=Math.max(maxcount, g.items.length)
+			maxcount=Math.max(maxcount, g.samplecount)
 		}
 	}
 
@@ -1736,8 +1738,9 @@ function render_multi_cnvloh(tk,block) {
 			const g = tk.cnvmidg.append('g')
 				.attr('transform','translate(0,'+yoff1+')')
 
-			////////////////////////
-			//    jinghui nbl cell line mixed into st/nbl
+			/*
+			jinghui nbl cell line mixed into st/nbl
+			*/
 			if(tk.isfull && sample.sampletype==hardcode_cellline) {
 				g.append('rect')
 					.attr('x',-5)
@@ -1748,41 +1751,13 @@ function render_multi_cnvloh(tk,block) {
 					.attr('shape-rendering','crispEdges')
 			}
 
+
+			/*
+			draw cnv/loh bars
+			*/
 			for( const item of sample.items ) {
 
-				if(item.dt==common.dtsv || item.dt==common.dtfusionrna) {
-
-					/*
-					sv, appears here in full mode, not in dense mode
-					fortunately sv comes later than cnv in the items[] array otherwise it will be covered!!
-					*/
-
-					const otherchr= item.chrA==item._chr ? item.chrB : item.chrA
-
-					const color = otherchr==item._chr ? intrasvcolor : tk.legend_svchrcolor.colorfunc(otherchr)
-
-					g.append('circle')
-						.attr('cx',item.x)
-						.attr('cy',tk.rowheight/2)
-						.attr('r', Math.max( minsvradius, 1+tk.rowheight/2) )
-						.attr('fill',color)
-						.attr('fill-opacity',0)
-						.attr('stroke', color)
-						.on('mouseover', ()=> {
-							d3event.target.setAttribute('fill-opacity',1)
-							tooltip_svitem_2( item, sample, samplegroup, tk )
-							})
-						.on('mouseout',()=>{
-							d3event.target.setAttribute('fill-opacity',0)
-							tk.tktip.hide()
-						})
-						.on('click',()=>{
-							click_multi2single( null, item, sample, samplegroup, tk, block )
-						})
-					continue
-				}
-
-				/////// cnv or loh
+				if(item.dt!=common.dtcnv && item.dt!=common.dtloh) continue
 
 				// segment color set by numeric value against a cutoff
 				let color
@@ -1809,7 +1784,6 @@ function render_multi_cnvloh(tk,block) {
 					}
 				}
 
-				// cnv/loh bar
 				g.append('rect')
 					.attr('x', Math.min(item.x1, item.x2) )
 					.attr('width', Math.max( 1, Math.abs( item.x1-item.x2 ) ) )
@@ -1821,24 +1795,68 @@ function render_multi_cnvloh(tk,block) {
 					.on('mousemove',()=>{
 						// get cursor x offset on block
 						const x = d3mouse( tk.glider.node() )[0]
-						tooltip_multi_cnvloh( item, sample, samplegroup, tk, block, x )
+						tooltip_multi_cnvloh( {
+							item:item,
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block,
+							xoff:x
+							})
 					})
 					.on('mouseout',()=>{
 						tk.tktip.hide()
 					})
 					.on('click',()=>{
-					// FIXME prevent click while dragging
-						click_multi2single( item, null, sample, samplegroup, tk, block )
+						// FIXME prevent click while dragging
+						click_multi_cnvloh( {
+							item:item,
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
 					})
 
 			}
 
-			// done cnv & sv of this sample
 
+			/*
+			draw sv/fusion circles, appears here in full mode, not in dense
+			*/
+			for(const item of sample.items) {
+				if(item.dt!=common.dtsv && item.dt!=common.dtfusionrna) continue
+
+				const otherchr= item.chrA==item._chr ? item.chrB : item.chrA
+
+				const color = otherchr==item._chr ? intrasvcolor : tk.legend_svchrcolor.colorfunc(otherchr)
+
+				g.append('circle')
+					.attr('cx',item.x)
+					.attr('cy',tk.rowheight/2)
+					.attr('r', Math.max( minsvradius, 1+tk.rowheight/2) )
+					.attr('fill',color)
+					.attr('fill-opacity',0)
+					.attr('stroke', color)
+					.on('mouseover', ()=> {
+						d3event.target.setAttribute('fill-opacity',1)
+						tooltip_svitem_2( item, sample, samplegroup, tk )
+						})
+					.on('mouseout',()=>{
+						d3event.target.setAttribute('fill-opacity',0)
+						tk.tktip.hide()
+					})
+					.on('click',()=>{
+						click_multi2single( null, item, sample, samplegroup, tk, block )
+					})
+				continue
+			}
+
+			/*
+			vcf ticks in full mode, not dense
+			*/
 			if(tk.isfull && tk.data_vcf) {
-				/*
-				vcf ticks in full mode
-				*/
+
 				for(const m of tk.data_vcf) {
 					if(m.x==undefined) continue
 
@@ -2618,12 +2636,47 @@ function tooltip_vcf_dense(g, tk, block) {
 
 
 function createbutton_addfeature( p ) {
+	/*
+	.m
+	.tk
+	.block
+	*/
+	if(p.tk.iscustom) {
+		// not custom yet
+		return
+	}
 	p.holder.append('div')
 	.style('display','inline-block')
 	.attr('class', 'sja_menuoption')
 	.text('Add as feature')
 	.on('click',()=>{
-		
+
+		if(!p.m) return alert('no m')
+
+		// generate a new feature
+		const nf = {}
+
+		switch(p.m.dt) {
+		case common.dtcnv:
+			nf.querykey = p.tk.querykey
+			nf.chr = p.m.chr
+			nf.start = p.m.start
+			nf.stop = p.m.stop
+			nf.valuecutoff = p.tk.valueCutoff
+			break
+		case common.dtloh:
+			break
+		case common.dtsv:
+		case common.dtfusionrna:
+			break
+		case common.dtsnvindel:
+			break
+		case common.dtitd:
+			break
+		default:
+			alert('unknown dt')
+			return
+		}
 	})
 }
 
@@ -2658,6 +2711,23 @@ function createbutton_focusvcf( p ) {
 		.text('Focus')
 		.on('click',()=>{
 			click_multi2single( null, null, {samplename:samplename}, grp, p.tk, p.block )
+		})
+}
+
+
+
+
+
+function createbutton_focuscnvlohsv( p ) {
+	/*
+	multi-sample
+	*/
+	p.holder.append('div')
+		.style('display','inline-block')
+		.attr('class', 'sja_menuoption')
+		.text('Focus')
+		.on('click',()=>{
+			click_multi2single( p.item, null, p.sample, p.samplegroup, p.tk, p.block )
 		})
 }
 
@@ -4234,7 +4304,35 @@ function tooltip_samplegroup( g, tk ) {
 
 
 
-function tooltip_multi_cnvloh( item, sample, samplegroup, tk, block, xoff ) {
+function click_multi_cnvloh( p ) {
+	const pane = client.newpane({x:d3event.clientX, y:d3event.clientY})
+
+	const butrow = pane.body.append('div').style('margin','10px')
+	createbutton_focuscnvlohsv( {
+		item: p.item,
+		sample:p.sample,
+		samplegroup:p.samplegroup,
+		holder:butrow,
+		tk: p.tk,
+		block: p.block
+	})
+
+	createbutton_addfeature( {
+		m: p.item,
+		holder:butrow,
+		tk: p.tk,
+		block: p.block
+	})
+
+	p.holder = pane.body
+	detailtable_cnvloh_singlesample( p )
+}
+
+
+
+
+
+function tooltip_multi_cnvloh( p ) {
 	/*
 	multi-sample
 	native or custom
@@ -4242,79 +4340,88 @@ function tooltip_multi_cnvloh( item, sample, samplegroup, tk, block, xoff ) {
 	mouse over a cnv or loh
 	*/
 
-	tk.tktip.clear()
+	p.tk.tktip.clear()
 		.show( d3event.clientX, d3event.clientY )
 
+	p.holder = p.tk.tktip.d
+	detailtable_cnvloh_singlesample( p )
+}
+
+
+
+function detailtable_cnvloh_singlesample(p) {
 	const lst = [
 		{
 			k:'Sample',
-			v: sample.samplename
-				+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
-				+ (samplegroup.name  ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '')
+			v: p.sample.samplename
+				+ (p.sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+p.sample.sampletype+'</span>' : '')
+				+ (p.samplegroup.name  ? ' <span style="font-size:.7em">'+ p.samplegroup.name+'</span>' : '')
 		}
 	]
 
-	if(item.dt==common.dtloh) {
+	const m = p.item
+
+	if(m.dt==common.dtloh) {
 		lst.push({
 			k:'LOH seg.mean',
-			v: item.segmean.toFixed(2)
+			v: m.segmean.toFixed(2)
 		})
-	} else {
+	} else if(m.dt==common.dtcnv) {
 		lst.push({
 			k:'CNV log2(ratio)',
 			v: '<span style="padding:0px 4px;background:'
-				+(item.value>0?tk.cnvcolor.gain.str:tk.cnvcolor.loss.str)+';color:white;">'
-				+item.value.toFixed(2)
+				+(m.value>0? p.tk.cnvcolor.gain.str : p.tk.cnvcolor.loss.str)+';color:white;">'
+				+m.value.toFixed(2)
 				+'</span>'
 		})
 	}
 	
 	lst.push( {
 		k:'Position',
-		v: item.chr+':'+(item.start+1)+'-'+(item.stop+1)
-			+' <span style="font-size:.7em">'+common.bplen(item.stop-item.start)+'</span>'
+		v: m.chr+':'+(m.start+1)+'-'+(m.stop+1)
+			+' <span style="font-size:.7em">'+common.bplen(m.stop-m.start)+'</span>'
 	})
 
-	{
+	if(p.xoff) {
 		/*
 		cnv & loh may overlap in a sample but can only mouse over one segment
 		in that case must also show any items hidding behind the cursor position
 		*/
-		const thiskey = (item.dt==common.dtloh ? 'loh'+item.segmean:'cnv'+item.value)+item.chr+'.'+item.start+'.'+item.stop
+		const thiskey = (m.dt==common.dtloh ? 'loh'+m.segmean:'cnv'+m.value)+m.chr+'.'+m.start+'.'+m.stop
 
-		const [ridx, cursorcoord] = block.pxoff2region( xoff )
-		const thischr = block.rglst[ridx].chr
+		const [ridx, cursorcoord] = p.block.pxoff2region( p.xoff )
+		const thischr = p.block.rglst[ridx].chr
 
-		for(const i2 of sample.items) {
+		for(const i2 of p.sample.items) {
 			const thatkey = (i2.dt==common.dtloh ?'loh'+i2.segmean:'cnv'+i2.value)+i2.chr+'.'+i2.start+'.'+i2.stop
 			if(thiskey==thatkey) {
 				// same item
 				continue
 			}
 			// not same item
-			if(item.chr==i2.chr && (i2.start<cursorcoord && i2.stop>cursorcoord)) {
+			if(m.chr==i2.chr && (i2.start<cursorcoord && i2.stop>cursorcoord)) {
 				// the other item overlaps with cursor, show
 				lst.push({
 					k:'Overlap with',
 					v: (i2.dt==common.dtloh ? 'LOH <span style="font-size:.7em">seg.mean</span> '+i2.segmean :
 						'CNV <span style="font-size:.7em">log2(ratio)</span> <span style="padding:0px 4px;background:'
-							+(i2.value>0?tk.cnvcolor.gain.str:tk.cnvcolor.loss.str)+';color:white;">'
+							+(i2.value>0? p.tk.cnvcolor.gain.str : p.tk.cnvcolor.loss.str)+';color:white;">'
 							+i2.value.toFixed(2)
 							+'</span>')
 						+' <span style="font-size:.8em;opacity:.7">'
 						+i2.chr+':'+(i2.start+1)+'-'+(i2.stop+1)
-						+' '+common.bplen(item.stop-item.start)
+						+' '+common.bplen(m.stop-m.start)
 				})
 			}
 		}
 	}
 
 	// expression rank
-	const tmp=tooltip_svcnv_addexpressionrank(sample, tk)
+	const tmp=tooltip_svcnv_addexpressionrank(p.sample, p.tk)
 	if(tmp) {
 		lst.push(tmp)
 	}
-	client.make_table_2col( tk.tktip.d, lst )
+	client.make_table_2col( p.holder, lst )
 }
 
 
