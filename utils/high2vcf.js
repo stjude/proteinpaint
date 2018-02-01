@@ -34,8 +34,8 @@ console.log(m+`
 
 
 
-const lazy=require('lazy')
 const fs=require('fs')
+const readline=require('readline')
 const exec=require('child_process').execSync
 
 
