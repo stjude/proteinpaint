@@ -4266,6 +4266,9 @@ function handle_mdssvcnv(req,res) {
 					}
 				}
 
+				// variants may come from multiple files, sort again to avoid curious batch effect
+				mmerge.sort( (i,j) => i.pos-j.pos )
+
 				return [ data_cnv, expressionrangelimit, gene2sample2obj, null, mmerge ]
 			})
 	})

@@ -2683,16 +2683,11 @@ function createbutton_addfeature( p ) {
 			color: tk.cnvcolor.loh.str,
 		}
 		break
-	case common.dtsv:
-		break
-	case common.dtfusionrna:
-		break
-	case common.dtsnvindel:
-		break
-	case common.dtitd:
-		break
 	default:
+		console.log('newfeature: unknown td')
+		return
 	}
+
 
 	const button = holder.append('div')
 	.style('display','inline-block')
