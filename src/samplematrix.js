@@ -72,6 +72,9 @@ export class Samplematrix {
 
 
 	validateconfig() {
+		/*
+		only run once, upon init
+		*/
 
 		return Promise.resolve().then(()=>{
 
@@ -181,7 +184,6 @@ export class Samplematrix {
 			for(const feature of this.features) {
 
 				const err = this.validatefeature( feature )
-				feature.id = Math.random().toString()
 				if(err) throw(err)
 			}
 		})
@@ -192,7 +194,10 @@ export class Samplematrix {
 
 	validatefeature( f ) {
 
+		f.id = Math.random().toString()
+
 		const tr = this.legendtable.append('tr')
+		f.legend_tr = tr
 
 		if(f.isgenevalue) {
 			// numerical value per sample
@@ -724,11 +729,20 @@ export class Samplematrix {
 
 	showMenu_feature( f ) {
 		/*
-		hover over feature's name
 		*/
 		this.menu.showunder( d3event.target)
 			.clear()
 		this.tipContent_feature(f, this.menu.d)
+
+		this.menu.d.append('div')
+			.attr('class','sja_menuoption')
+			.text('Remove')
+			.on('click',()=>{
+				this.menu.hide()
+				f.legend_tr.remove()
+				this.features.splice( this.features.findIndex(i=>i.id==f.id), 1 )
+				this.drawMatrix()
+			})
 
 		if(f.isgenevalue) {
 			this.showMenu_isgenevalue(f )
@@ -1027,7 +1041,24 @@ export class Samplematrix {
 					const lst2 = items.map(i=>{
 						return '<div>'+i.chr+':'+i.start+'-'+i.stop+' '
 						+'<span style="font-size:.7em">'+common.bplen(i.stop-i.start)+'</span> '
-						+'<span style="background:'+(i.value>0?f.colorgain:f.colorloss)+';color:white;padding:1px 5px">'+i.value+'</span>'
+						+'<span style="font-size:.8em;background:'+(i.value>0?f.colorgain:f.colorloss)+';color:white;padding:1px 5px">'+i.value+'</span>'
+						+'</div>'
+					})
+					text = lst2.join('')
+				}
+				lst.push({k:f.label, v:text})
+			}
+
+			if(f.isloh) {
+				const items = f.items.filter( i=> i.sample==sample.name )
+				let text
+				if(items.length==0) {
+					text = saynovalue
+				} else {
+					const lst2 = items.map(i=>{
+						return '<div>'+i.chr+':'+i.start+'-'+i.stop+' '
+						+'<span style="font-size:.7em">'+common.bplen(i.stop-i.start)+'</span> '
+						+'<span style="font-size:.8em;background:'+f.color+';color:white;padding:1px 5px">'+i.segmean+'</span>'
 						+'</div>'
 					})
 					text = lst2.join('')
@@ -1058,6 +1089,7 @@ export class Samplematrix {
 			lst.push({k:f.label, v: (v ? v.value : saynovalue)})
 
 		} else if(f.iscnv) {
+
 			const items = f.items.filter( i=> i.sample==sample.name )
 			let text
 			if(items.length==0) {
@@ -1066,7 +1098,24 @@ export class Samplematrix {
 				const lst2 = items.map(i=>{
 					return '<div>'+i.chr+':'+i.start+'-'+i.stop+' '
 						+'<span style="font-size:.7em">'+common.bplen(i.stop-i.start)+'</span> '
-						+'<span style="background:'+(i.value>0?f.colorgain:f.colorloss)+';color:white;padding:1px 5px">'+i.value+'</span>'
+						+'<span style="font-size:.8em;background:'+(i.value>0?f.colorgain:f.colorloss)+';color:white;padding:1px 5px">'+i.value+'</span>'
+						+'</div>'
+				})
+				text = lst2.join('')
+			}
+			lst.push({k:f.label, v:text})
+
+		} else if(f.isloh) {
+
+			const items = f.items.filter( i=> i.sample==sample.name )
+			let text
+			if(items.length==0) {
+				text = saynovalue
+			} else {
+				const lst2 = items.map(i=>{
+					return '<div>'+i.chr+':'+i.start+'-'+i.stop+' '
+						+'<span style="font-size:.7em">'+common.bplen(i.stop-i.start)+'</span> '
+						+'<span style="font-size:.8em;background:'+f.color+';color:white;padding:1px 5px">'+i.segmean+'</span>'
 						+'</div>'
 				})
 				text = lst2.join('')

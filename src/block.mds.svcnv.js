@@ -2708,6 +2708,7 @@ function createbutton_addfeature( p ) {
 		if(!tk.samplematrix) {
 			// create new instance
 			const pane = client.newpane({x:100, y:100, closekeep:1 })
+			pane.header.text(tk.name)
 			const arg = {
 				genome: block.genome,
 				dslabel: tk.mds.label,
@@ -4139,7 +4140,7 @@ function may_allow_modeswitch(tk, block) {
 	row1.append('label')
 		.attr('for',id1)
 		.attr('class','sja_clbtext')
-		.html('&nbsp;Compact <span style="font-size:.7em;color:#858585;">Showing SV breakpoint density, independently from CNV/LOH</span>')
+		.html('&nbsp;Dense <span style="font-size:.7em;color:#858585;">Showing densities of SV breakpoints and SNV/indels, over all samples</span>')
 
 	const row2=div.append('div')
 	tk.mode_radio_2=row2.append('input')
@@ -4153,7 +4154,7 @@ function may_allow_modeswitch(tk, block) {
 	row2.append('label')
 		.attr('for',id2)
 		.attr('class','sja_clbtext')
-		.html('&nbsp;Expanded <span style="font-size:.7em;color:#858585;">Showing SV together with CNV/LOH for each sample</span>')
+		.html('&nbsp;Expanded <span style="font-size:.7em;color:#858585;">Showing SV/SNV/indel for each sample</span>')
 }
 
 
