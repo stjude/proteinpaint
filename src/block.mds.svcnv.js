@@ -57,6 +57,7 @@ render_singlesample
 configPanel()
 createbutton_addfeature
 createbutton_focusvcf
+createbutton_focuscnvlohsv
 
 
 
@@ -2643,46 +2644,98 @@ function tooltip_vcf_dense(g, tk, block) {
 
 function createbutton_addfeature( p ) {
 	/*
-	.m
-	.tk
-	.block
 	*/
-	if(p.tk.iscustom) {
+	const {m, tk, block, holder} = p
+	if(tk.iscustom) {
 		// not custom yet
 		return
 	}
-	p.holder.append('div')
+	if(!m) return
+
+	// generate new feature beforehand
+	let nf
+
+	switch(m.dt) {
+	case common.dtcnv:
+		nf = {
+			iscnv: 1,
+			label: m.chr+' '+common.bplen(m.stop-m.start)+' CNV',
+			querykey: tk.querykey,
+			chr: m.chr,
+			start: m.start,
+			stop: m.stop,
+			valuecutoff: tk.valueCutoff,
+			focalsizelimit: tk.bplengthUpperLimit,
+			colorgain: tk.cnvcolor.gain.str,
+			colorloss: tk.cnvcolor.loss.str
+		}
+		break
+	case common.dtloh:
+		nf = {
+			isloh: 1,
+			label: m.chr+' '+common.bplen(m.stop-m.start)+' LOH',
+			querykey: tk.querykey,
+			chr: m.chr,
+			start: m.start,
+			stop: m.stop,
+			valuecutoff: tk.segmeanValueCutoff,
+			focalsizelimit: tk.lohLengthUpperLimit,
+			color: tk.cnvcolor.loh.str,
+		}
+		break
+	case common.dtsv:
+		break
+	case common.dtfusionrna:
+		break
+	case common.dtsnvindel:
+		break
+	case common.dtitd:
+		break
+	default:
+	}
+
+	const button = holder.append('div')
 	.style('display','inline-block')
 	.attr('class', 'sja_menuoption')
-	.text('Add as feature')
+	.text('Add feature: '+nf.label)
 	.on('click',()=>{
 
-		if(!p.m) return alert('no m')
+		if(p.pane) {
+			// close old pane
+			p.pane.pane.remove()
+		}
 
-		// generate a new feature
-		const nf = {}
-
-		switch(p.m.dt) {
-		case common.dtcnv:
-			nf.querykey = p.tk.querykey
-			nf.chr = p.m.chr
-			nf.start = p.m.start
-			nf.stop = p.m.stop
-			nf.valuecutoff = p.tk.valueCutoff
-			break
-		case common.dtloh:
-			break
-		case common.dtsv:
-		case common.dtfusionrna:
-			break
-		case common.dtsnvindel:
-			break
-		case common.dtitd:
-			break
-		default:
-			alert('unknown dt')
+		if(!tk.samplematrix) {
+			// create new instance
+			const pane = client.newpane({x:100, y:100, closekeep:1 })
+			const arg = {
+				genome: block.genome,
+				dslabel: tk.mds.label,
+				features: [ nf ],
+				hostURL: block.hostURL,
+				jwt:block.jwt,
+				holder: pane.body.append('div').style('margin','20px'),
+			}
+			import('./samplematrix').then(_=>{
+				tk.samplematrix = new _.Samplematrix( arg )
+				tk.samplematrix._pane = pane
+			})
 			return
 		}
+
+		// already exists
+		if(tk.samplematrix._pane.pane.style('display')=='none') {
+			// show first
+			tk.samplematrix._pane.pane.style('display','block').style('opacity',1)
+		}
+		// add new feature
+		tk.samplematrix.features.push( nf )
+		const err = tk.samplematrix.validatefeature( nf )
+		if(err) {
+			alert(err) // should not happen
+			return
+		}
+		tk.samplematrix.getfeatures( [nf] )
 	})
 }
 
@@ -2767,12 +2820,6 @@ function click_vcf_dense( g, tk, block ) {
 		const m = g.items[0]
 
 		const butrow = pane.body.append('div').style('margin','10px')
-		createbutton_addfeature( {
-			m:m,
-			holder:butrow,
-			tk:tk,
-			block:block
-			})
 
 		if(m.dt==common.dtsnvindel) {
 			
@@ -2788,6 +2835,14 @@ function click_vcf_dense( g, tk, block ) {
 					block:block
 				})
 
+				createbutton_addfeature( {
+					m:m,
+					holder:butrow,
+					tk:tk,
+					block:block,
+					pane: pane,
+				})
+
 				detailtable_vcf_singlevariantsample( {
 					holder: pane.body,
 					snvindel: {
@@ -2801,7 +2856,15 @@ function click_vcf_dense( g, tk, block ) {
 				return
 			}
 
-			// in multiple samples
+			// one snv, in multiple samples
+			createbutton_addfeature( {
+				m:m,
+				holder:butrow,
+				tk:tk,
+				block:block,
+				pane: pane
+			})
+
 			const lst=[
 				{
 					k:'Mutation',
@@ -3236,8 +3299,10 @@ function focus_singlesample( p ) {
 			window.bbb=bb
 		}
 
-		if( m.dt==common.dtcnv || m.dt==common.dtloh ) {
-			bb.addhlregion( m.chr, m.start, m.stop, cnvhighlightcolor )
+		if( m ) {
+			if( m.dt==common.dtcnv || m.dt==common.dtloh ) {
+				bb.addhlregion( m.chr, m.start, m.stop, cnvhighlightcolor )
+			}
 		}
 		// done launching single-sample view from multi-sample
 	})
@@ -3764,51 +3829,11 @@ function configPanel(tk, block) {
 
 	const holder=tk.tkconfigtip.d
 
-	if(!tk.singlesample) {
-
-		// multi-sample modes
-
-		const div=holder.append('div')
-			.style('background','#FAF9DE')
-			.style('margin-bottom','20px')
-			.style('padding','15px')
-
-		const id1=Math.random().toString()
-		const id2=Math.random().toString()
-		const name=Math.random().toString()
-		const row1=div.append('div')
-			.style('margin-bottom','5px')
-		tk.mode_radio_1=row1.append('input')
-			.attr('type','radio')
-			.attr('id',id1)
-			.attr('name',name)
-			.property('checked', tk.isdense)
-			.on('change',()=>{
-				multi_changemode( tk, block )
-			})
-		row1.append('label')
-			.attr('for',id1)
-			.attr('class','sja_clbtext')
-			.html('&nbsp;Compact <span style="font-size:.7em;color:#858585;">Showing SV breakpoint density, independently from CNV/LOH</span>')
-
-		const row2=div.append('div')
-		tk.mode_radio_2=row2.append('input')
-			.attr('type','radio')
-			.attr('id',id2)
-			.attr('name',name)
-			.property('checked', tk.isfull)
-			.on('change',()=>{
-				multi_changemode( tk, block )
-			})
-		row2.append('label')
-			.attr('for',id2)
-			.attr('class','sja_clbtext')
-			.html('&nbsp;Expanded <span style="font-size:.7em;color:#858585;">Showing SV together with CNV/LOH for each sample</span>')
-	}
-
+	may_allow_modeswitch( tk, block )
 
 	may_allow_samplesearch( tk, block)
 
+	may_show_matrix( tk, block)
 
 	// filter cnv with sv
 	{
@@ -4089,6 +4114,47 @@ function configPanel(tk, block) {
 }
 
 
+function may_allow_modeswitch(tk, block) {
+	// only for multi-sample
+	if(tk.singlesample) return
+
+	const div = tk.tkconfigtip.d.append('div')
+		.style('background','#FAF9DE')
+		.style('margin-bottom','20px')
+		.style('padding','15px')
+
+	const id1=Math.random().toString()
+	const id2=Math.random().toString()
+	const name=Math.random().toString()
+	const row1=div.append('div')
+		.style('margin-bottom','5px')
+	tk.mode_radio_1=row1.append('input')
+		.attr('type','radio')
+		.attr('id',id1)
+		.attr('name',name)
+		.property('checked', tk.isdense)
+		.on('change',()=>{
+			multi_changemode( tk, block )
+		})
+	row1.append('label')
+		.attr('for',id1)
+		.attr('class','sja_clbtext')
+		.html('&nbsp;Compact <span style="font-size:.7em;color:#858585;">Showing SV breakpoint density, independently from CNV/LOH</span>')
+
+	const row2=div.append('div')
+	tk.mode_radio_2=row2.append('input')
+		.attr('type','radio')
+		.attr('id',id2)
+		.attr('name',name)
+		.property('checked', tk.isfull)
+		.on('change',()=>{
+			multi_changemode( tk, block )
+		})
+	row2.append('label')
+		.attr('for',id2)
+		.attr('class','sja_clbtext')
+		.html('&nbsp;Expanded <span style="font-size:.7em;color:#858585;">Showing SV together with CNV/LOH for each sample</span>')
+}
 
 
 function may_allow_samplesearch(tk, block) {
@@ -4162,6 +4228,24 @@ function may_allow_samplesearch(tk, block) {
 				if(err.stack) console.log(err.stack)
 			})
 		})
+}
+
+
+function may_show_matrix(tk, block) {
+	if(!tk.samplematrix) return
+	if(tk.samplematrix._pane.pane.style('display')=='none') {
+		tk.tkconfigtip.d.append('div')
+			.style('margin-bottom','15px')
+			.attr('class','sja_menuoption')
+			.text('Show sample by attribute matrix')
+			.on('click',()=>{
+				tk.tkconfigtip.hide()
+				tk.samplematrix._pane.pane
+					.transition()
+					.style('display','block')
+					.style('opacity',1)
+			})
+	}
 }
 
 
@@ -4367,7 +4451,8 @@ function click_multi_cnvloh( p ) {
 		m: p.item,
 		holder:butrow,
 		tk: p.tk,
-		block: p.block
+		block: p.block,
+		pane: pane
 	})
 
 	p.holder = pane.body
@@ -4521,10 +4606,11 @@ function click_snvindel_singlevariantsample( p ) {
 	})
 
 	createbutton_addfeature( {
-		m:p.m,
-		holder:butrow,
-		tk:p.tk,
-		block:p.block
+		m: p.snvindel.m,
+		holder: butrow,
+		tk: p.tk,
+		block: p.block,
+		pane: pane,
 	})
 
 	p.holder = pane.body

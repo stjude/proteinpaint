@@ -256,6 +256,34 @@ export class Samplematrix {
 			return
 		}
 
+		if(f.isloh) {
+			// loh with segmean
+			{
+				const err = invalidcoord( this.genome, f.chr, f.start, f.stop)
+				if(err) return 'position error for isloh feature: '+err
+			}
+			if(this.dslabel) {
+				// official
+				if(!f.querykey) return '.querykey missing for isloh feature while loading from official dataset'
+			} else {
+				// to allow loading from custom track
+			}
+			if(!f.label && f.genename) {
+				f.label = f.genename+' LOH'
+			}
+			if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' LOH'
+			tr.append('td')
+				.text(f.label)
+				.style('color','#858585')
+				.style('text-align','right')
+			f.legendholder = tr.append('td')
+
+			if(!f.width) f.width=40
+			f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width]) // scale must be reset when coord/width changes
+			if(!f.color) f.color = "black"
+			return
+		}
+
 		/*
 		if(f.issv) {
 			return
@@ -378,6 +406,25 @@ export class Samplematrix {
 			}
 			return
 		}
+
+		if(f.isloh) {
+			const values = f.items.map(i=>i.segmean)
+			f.minvalue = 0
+			f.maxvalue = Math.max(...values)
+			{
+				const h=f.legendholder
+				h.selectAll('*').remove()
+				h.append('span').text(f.minvalue)
+				h.append('div')
+					.style('margin','2px 10px')
+					.style('display','inline-block')
+					.style('width','100px')
+					.style('height','15px')
+					.style('background','linear-gradient( to right, white, '+f.color+')')
+				h.append('span').text(f.maxvalue)
+			}
+			return
+		}
 	}
 
 
@@ -389,7 +436,7 @@ export class Samplematrix {
 
 
 
-	/*********** __draw ends *****/
+	/*********** __draw *****/
 
 
 
@@ -404,7 +451,7 @@ export class Samplematrix {
 
 		for(const feature of this.features) {
 
-			if(feature.isgenevalue || feature.iscnv) {
+			if( feature.isgenevalue || feature.iscnv || feature.isloh ) {
 
 				for(const item of feature.items) {
 					if(!name2sample.has(item.sample)) {
@@ -616,6 +663,42 @@ export class Samplematrix {
 				})
 			return
 		}
+
+		if(feature.isloh) {
+			const items = feature.items.filter( i=> i.sample == sample.name )
+			if(items.length==0) {
+				drawEmptycell(sample, feature, g)
+				return
+			}
+			for(const item of items) {
+				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
+				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
+				g.append('rect')
+					.attr('x', x1)
+					.attr('width', Math.max(1, x2-x1) )
+					.attr('height', sample.height)
+					.attr('fill',  feature.color )
+					.attr('fill-opacity', (item.segmean-feature.minvalue)/feature.maxvalue)
+					.attr('shape-rendering','crispEdges')
+			}
+			g.append('rect')
+				.attr('fill','white')
+				.attr('fill-opacity',0)
+				.attr('width', feature.width)
+				.attr('height', sample.height)
+				.attr('stroke','#ccc')
+				.attr('stroke-opacity',0)
+				.attr('shape-rendering','crispEdges')
+				.on('mouseover',()=>{
+					d3event.target.setAttribute('stroke-opacity',1)
+					this.showTip_cell( sample, feature )
+				})
+				.on('mouseout',()=>{
+					d3event.target.setAttribute('stroke-opacity',0)
+					this.tip.hide()
+				})
+			return
+		}
 	}
 
 	/*********** __draw ends *****/
@@ -655,6 +738,10 @@ export class Samplematrix {
 			this.showMenu_iscnv(f)
 			return
 		}
+		if(f.isloh) {
+			this.showMenu_isloh(f)
+			return
+		}
 	}
 
 
@@ -665,7 +752,7 @@ export class Samplematrix {
 			.style('font-size','.7em')
 			.style('margin','10px')
 
-		if(f.isgenevalue || f.iscnv) {
+		if(f.isgenevalue || f.iscnv || f.isloh) {
 			// show region
 			holder.append('div')
 				.html(f.chr+':'+f.start+'-'+f.stop+' &nbsp; '+common.bplen(f.stop-f.start))
@@ -752,7 +839,7 @@ export class Samplematrix {
 				})
 			row.append('div')
 				.style('font-size','.7em')
-				.style('color','#858585')
+				.style('opacity',.5)
 				.html('Only show CNV with absolute log2(ratio) no less than cutoff.<br>Set to 0 to cancel.')
 		}
 
@@ -801,8 +888,113 @@ export class Samplematrix {
 				})
 			row.append('span').text('bp')
 			row.append('div')
-				.style('font-size','.7em').style('color','#858585')
+				.style('font-size','.7em')
+				.style('opacity',.5)
 				.html('Limit the CNV segment length to show only focal events.<br>Set to 0 to cancel.')
+		}
+	}
+
+
+
+
+
+	showMenu_isloh(f) {
+		// segmean cutoff
+		{
+			const row=this.menu.d.append('div')
+				.style('margin','10px')
+			row.append('span').html('LOH segmean cutoff&nbsp;')
+			row.append('input')
+				.property( 'value', f.valuecutoff || 0 )
+				.attr('type','number')
+				.style('width','50px')
+				.on('keyup',()=>{
+					if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+					let v=Number.parseFloat(d3event.target.value)
+					if(!v || v<0) {
+						// invalid value, set to 0 to cancel
+						v=0
+					}
+					if(v==0) {
+						if(f.valuecutoff) {
+							// cutoff has been set, cancel and refetch data
+							f.valuecutoff=0
+							this.getfeatures([f])
+						} else {
+							// cutoff has not been set, do nothing
+						}
+						return
+					}
+					// set cutoff
+					if(f.valuecutoff) {
+						// cutoff has been set
+						if(f.valuecutoff==v) {
+							// same as current cutoff, do nothing
+						} else {
+							// set new cutoff
+							f.valuecutoff=v
+							this.getfeatures([f])
+						}
+					} else {
+						// cutoff has not been set
+						f.valuecutoff=v
+						this.getfeatures([f])
+					}
+				})
+			row.append('div')
+				.style('font-size','.7em')
+				.style('opacity',.5)
+				.html('Only show LOH with segmean no less than cutoff.<br>Set to 0 to cancel.')
+		}
+
+		// focal cnv
+		{
+			const row=this.menu.d.append('div')
+				.style('margin','10px')
+			row.append('span')
+				.html('LOH segment size limit&nbsp;')
+			row.append('input')
+				.property('value', f.focalsizelimit || 0)
+				.attr('type','number')
+				.style('width','100px')
+				.on('keyup',()=>{
+					if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+					let v = Number.parseInt(d3event.target.value)
+					if(!v || v<0) {
+						// invalid value, set to 0 to cancel
+						v=0
+					}
+					if(v==0) {
+						if(f.focalsizelimit) {
+							// cutoff has been set, cancel and refetch data
+							f.focalsizelimit=0
+							this.getfeatures([f])
+						} else {
+							// cutoff has not been set, do nothing
+						}
+						return
+					}
+					// set cutoff
+					if(f.focalsizelimit) {
+						// cutoff has been set
+						if(f.focalsizelimit==v) {
+							// same as current cutoff, do nothing
+						} else {
+							// set new cutoff
+							f.focalsizelimit=v
+							this.getfeatures([f])
+						}
+					} else {
+						// cutoff has not been set
+						f.focalsizelimit=v
+						this.getfeatures([f])
+					}
+				})
+			row.append('span').text('bp')
+			row.append('div')
+				.style('font-size','.7em')
+				.style('opacity',.5)
+				.html('Limit the LOH segment length to show only focal events.<br>Set to 0 to cancel.')
 		}
 	}
 
@@ -950,6 +1142,18 @@ function feature2arg(f) {
 		return {
 			id:f.id,
 			iscnv:1,
+			querykey:f.querykey,
+			chr:f.chr,
+			start:f.start,
+			stop:f.stop,
+			valuecutoff:f.valuecutoff,
+			focalsizelimit:f.focalsizelimit,
+		}
+	}
+	if(f.isloh) {
+		return {
+			id:f.id,
+			isloh:1,
 			querykey:f.querykey,
 			chr:f.chr,
 			start:f.start,

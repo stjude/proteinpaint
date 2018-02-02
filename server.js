@@ -6847,6 +6847,12 @@ function handle_samplematrix(req,res) {
 			if(err) return res.send({error:'error with iscnv: '+err})
 			tasks.push(q)
 
+		} else if(feature.isloh) {
+
+			const [err, q] = samplematrix_task_isloh( feature, ds, dsquery, req )
+			if(err) return res.send({error:'error with iscnv: '+err})
+			tasks.push(q)
+
 		} else {
 
 			/*********** feature: xx  ********/
@@ -6976,11 +6982,93 @@ function samplematrix_task_iscnv(feature, ds, dsquery, req) {
 				const j=JSON.parse(l[3])
 
 				// loh and sv data could be present in same file
-				if(j.loh) return
-				if(j.chrA || j.chrB) return
-				if(j.value==undefined) return // exception
+				if(j.dt!=common.dtcnv) return
 
 				if(feature.valuecutoff && Math.abs(j.value)<feature.valuecutoff) return
+
+				j.chr = l[0]
+				j.start = Number.parseInt(l[1])
+				j.stop = Number.parseInt(l[2])
+
+				if(feature.focalsizelimit && j.stop-j.start>=feature.focalsizelimit) return
+
+				if(!j.sample) return
+				if(req.query.limitsamplebyeitherannotation) {
+					const anno = ds.cohort.annotation[ j.sample ]
+					if(!anno) return
+					let notfit = true
+					for(const filter of req.query.limitsamplebyeitherannotation) {
+						if(anno[ filter.key ] == filter.value) {
+							notfit=false
+							break
+						}
+					}
+					if(notfit) return
+				}
+
+				data.push( j )
+			})
+
+			const errout=[]
+			ps.stderr.on('data',i=> errout.push(i) )
+			ps.on('close',code=>{
+				const e=errout.join('')
+				if(e && !tabixnoterror(e)) {
+					reject(e)
+					return
+				}
+				resolve( {
+					id:feature.id,
+					items:data
+				})
+			})
+		})
+	})
+	return [null,q]
+}
+
+
+
+
+function samplematrix_task_isloh(feature, ds, dsquery, req) {
+	if(!feature.chr) return ['chr missing']
+	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
+	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
+	if(feature.valuecutoff!=undefined) {
+		if(!Number.isFinite(feature.valuecutoff)) return ['invalid value for valuecutoff']
+	}
+	if(feature.focalsizelimit!=undefined) {
+		if(!Number.isInteger(feature.focalsizelimit)) return ['invalid value for focalsizelimit']
+	}
+
+	const q = Promise.resolve()
+	.then(()=>{
+		if(dsquery.file) return
+		return cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
+	})
+	.then(dir=>{
+
+		return new Promise((resolve,reject)=>{
+
+			const data = []
+			const ps=spawn( tabix,
+				[
+					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+					feature.chr+':'+feature.start+'-'+feature.stop
+				], {cwd: dir }
+				)
+			const rl = readline.createInterface({
+				input:ps.stdout
+			})
+			rl.on('line',line=>{
+
+				const l=line.split('\t')
+
+				const j=JSON.parse(l[3])
+
+				if(j.dt != common.dtloh) return
+
+				if(feature.valuecutoff && j.segmean < feature.valuecutoff) return
 
 				j.chr = l[0]
 				j.start = Number.parseInt(l[1])
