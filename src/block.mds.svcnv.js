@@ -48,7 +48,7 @@ render_samplegroups
 		click_samplegroup_showmenu
 		click_samplegroup_showtable
 		click_multi_cnvloh
-		** click_multi2single
+		** focus_singlesample
 		tooltip_multi_cnvloh
 		tooltip_multi_snvindel
 	render_multi_genebar
@@ -1847,7 +1847,7 @@ function render_multi_cnvloh(tk,block) {
 						tk.tktip.hide()
 					})
 					.on('click',()=>{
-						click_multi2single( null, item, sample, samplegroup, tk, block )
+						//click_multi2single( null, item, sample, samplegroup, tk, block )
 					})
 				continue
 			}
@@ -2347,11 +2347,6 @@ function render_multi_genebar( tk, block) {
 
 							p.clicksample = (thissample, group, plot) => {
 								// click outlier sample to launch browser and show sv/cnv+expression rank for single sample
-								const cnv={
-									chr:plot.chr,
-									start:plot.start,
-									stop:plot.stop
-								}
 								const sample={
 									samplename:thissample.sample
 								}
@@ -2366,7 +2361,18 @@ function render_multi_genebar( tk, block) {
 									}
 									tk.mds = plot.block.genome.datasets[ plot.svcnv.dslabel ]
 								}
-								click_multi2single( cnv, null, sample, samplegroup, tk, plot.block )
+								focus_singlesample({
+									m: {
+										dt: common.dtcnv,
+										chr:plot.chr,
+										start:plot.start,
+										stop:plot.stop
+									},
+									sample: sample,
+									samplegroup: samplegroup,
+									tk: tk,
+									block: plot.block
+								})
 							}
 							import('./block.mds.geneboxplot').then(_=>{
 								_.init(p)
@@ -2710,7 +2716,12 @@ function createbutton_focusvcf( p ) {
 		.attr('class', 'sja_menuoption')
 		.text('Focus')
 		.on('click',()=>{
-			click_multi2single( null, null, {samplename:samplename}, grp, p.tk, p.block )
+			focus_singlesample({
+				sample: {samplename: samplename},
+				samplegroup: grp,
+				tk: p.tk,
+				block: p.block
+			})
 		})
 }
 
@@ -2727,7 +2738,13 @@ function createbutton_focuscnvlohsv( p ) {
 		.attr('class', 'sja_menuoption')
 		.text('Focus')
 		.on('click',()=>{
-			click_multi2single( p.item, null, p.sample, p.samplegroup, p.tk, p.block )
+			focus_singlesample({
+				m: p.item,
+				sample: p.sample,
+				samplegroup: p.samplegroup,
+				tk: p.tk,
+				block: p.block
+			})
 		})
 }
 
@@ -2974,9 +2991,16 @@ function click_sv_dense(g, tk, block) {
 	const svlst=svdense_tolist(g.items)
 	if(svlst.length==1) {
 		const i=svlst[0]
-		click_multi2single( null, i, i._sample, i._samplegroup, tk, block )
+		focus_singlesample({
+			m:i,
+			sample:i._sample,
+			samplegroup: i._samplegroup,
+			tk: tk,
+			block: block
+		})
 		return
 	}
+
 	const pane = client.newpane({x:d3event.clientX,y:d3event.clientY})
 	pane.header.html(g.name+' <span style="font-size:.8em">'+tk.name+'</span>')
 	const sample2lst=new Map()
@@ -3018,7 +3042,13 @@ function click_sv_dense(g, tk, block) {
 					+( i.dt==common.dtfusionrna? ' (RNA fusion)' : '')
 					)
 				.on('click',()=>{
-					click_multi2single(null, i, i._sample, i._samplegroup, tk, block)
+					focus_singlesample({
+						m:i,
+						sample: i._sample,
+						samplegroup: i._samplegroup,
+						tk:tk,
+						block:block
+					})
 				})
 		}
 	}
@@ -3030,16 +3060,25 @@ function click_sv_dense(g, tk, block) {
 
 
 
-function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
+function focus_singlesample( p ) {
 	/*
 	multi-sample
 	native or custom
-	click cnv/loh or sv but not both, launch a new block instance, show sv-cnv track in single-sample mode,
-	and expression rank
+	launch a new block instance, show sv-cnv-vcf-expression track in single-sample mode,
 	view range determined by cnv or sv
+	if vcf, will use block view range
 
-	no return value
+	.m
+	.sample
+		.samplename
+		.sampletype
+	.samplegroup
+		.attributes[]
+	.tk
+	.block
 	*/
+
+	const {m, sample, samplegroup, tk, block} = p
 
 	const pane = client.newpane({x:100, y:100})
 	const arg={
@@ -3077,7 +3116,7 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 		arg.tklst.push(et)
 	}
 
-	// add sv-cnv track in single-sample mode
+	// add sv-cnv-vcf track in single-sample mode
 	const t2 = {
 		cnvheight:40,
 		midpad:3,
@@ -3113,32 +3152,40 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 	}
 	arg.tklst.push(t2)
 
-	if(cnv) {
-		const span = Math.ceil((cnv.stop-cnv.start)/2)
-		arg.chr = cnv.chr
-		arg.start = Math.max(0, cnv.start-span)
-		arg.stop = Math.min( block.genome.chrlookup[cnv.chr.toUpperCase()].len, cnv.stop+span )
-	} else if(sv) {
-		if(sv.chrA==sv.chrB) {
-			const span = Math.ceil(Math.abs(sv.posA-sv.posB)/4)
-			arg.chr = sv.chrA
-			arg.start = Math.max(0, Math.min(sv.posA, sv.posB)-span)
-			arg.stop = Math.min( block.genome.chrlookup[sv.chrA.toUpperCase()].len, Math.max(sv.posA,sv.posB)+span )
-		} else {
-			const span=10000
-			arg.chr=sv.chrA
-			arg.start=Math.max(0, sv.posA-span)
-			arg.stop = Math.min( block.genome.chrlookup[sv.chrA.toUpperCase()].len, sv.posA+span )
-			arg.subpanels.push({
-				chr:sv.chrB,
-				start: Math.max(0, sv.posB-span),
-				stop: Math.min( block.genome.chrlookup[sv.chrB.toUpperCase()].len, sv.posB+span),
-				width:600,
-				leftpad:10,
-				leftborder:'rgba(50,50,50,.1)'
-			})
+	if(m) {
+		if( m.dt==common.dtcnv || m.dt==common.dtloh ) {
+
+			const span = Math.ceil((m.stop-m.start)/2)
+			arg.chr = m.chr
+			arg.start = Math.max(0, m.start-span)
+			arg.stop = Math.min( block.genome.chrlookup[ m.chr.toUpperCase()].len, m.stop+span )
+
+		} else if( m.dt==common.dtsv || m.dt==common.dtfusionrna ) {
+
+			if(m.chrA==m.chrB) {
+				const span = Math.ceil(Math.abs(m.posA-m.posB)/4)
+				arg.chr = m.chrA
+				arg.start = Math.max(0, Math.min(m.posA, m.posB)-span)
+				arg.stop = Math.min( block.genome.chrlookup[ m.chrA.toUpperCase()].len, Math.max(m.posA, m.posB)+span )
+			} else {
+				const span=10000
+				arg.chr = m.chrA
+				arg.start = Math.max(0, m.posA-span)
+				arg.stop = Math.min( block.genome.chrlookup[ m.chrA.toUpperCase()].len, m.posA+span )
+				arg.subpanels.push({
+					chr: m.chrB,
+					start: Math.max(0, m.posB-span),
+					stop: Math.min( block.genome.chrlookup[ m.chrB.toUpperCase()].len, m.posB+span),
+					width:600,
+					leftpad:10,
+					leftborder:'rgba(50,50,50,.1)'
+				})
+			}
 		}
-	} else {
+	}
+
+	if(!arg.chr) {
+		// no view range set
 		const r = block.tkarg_maygm(tk)[0]
 		arg.chr=r.chr
 		arg.start=r.start
@@ -3188,8 +3235,9 @@ function click_multi2single( cnv, sv, sample, samplegroup, tk, block ) {
 		if(block.debugmode) {
 			window.bbb=bb
 		}
-		if(cnv) {
-			bb.addhlregion( cnv.chr, cnv.start, cnv.stop, cnvhighlightcolor )
+
+		if( m.dt==common.dtcnv || m.dt==common.dtloh ) {
+			bb.addhlregion( m.chr, m.start, m.stop, cnvhighlightcolor )
 		}
 		// done launching single-sample view from multi-sample
 	})
@@ -4100,14 +4148,12 @@ function may_allow_samplesearch(tk, block) {
 						.on('click',()=>{
 
 							tk.tip2.hide()
-							click_multi2single(
-								null,
-								null,
-								{samplename: sample.name},
-								{attributes: sample.attributes},
-								tk,
-								block
-							)
+							focus_singlesample({
+								sample: {samplename: sample.name},
+								samplegroup: {attributes: sample.attributes},
+								tk: tk,
+								block: block
+							})
 						})
 				}
 			})
@@ -4733,7 +4779,7 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 					.html(cnvlst[j])
 					.attr('class', 'sja_clbtext')
 					.on('click',()=>{
-						click_multi2single( cnvlst0[j], null, sample, samplegroup, tk, block )
+						//click_multi2single( cnvlst0[j], null, sample, samplegroup, tk, block )
 					})
 			}
 		}
@@ -4744,7 +4790,7 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 					.html(svlst[j])
 					.attr('class','sja_clbtext')
 					.on('click',()=>{
-						click_multi2single( null, svlst0[j], sample, samplegroup, tk, block )
+						//click_multi2single( null, svlst0[j], sample, samplegroup, tk, block )
 					})
 			}
 		}
@@ -4755,7 +4801,7 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 					.html(lohlst[j])
 					.attr('class','sja_clbtext')
 					.on('click',()=>{
-						click_multi2single( lohlst0[j], null, sample, samplegroup, tk, block )
+						//click_multi2single( lohlst0[j], null, sample, samplegroup, tk, block )
 					})
 			}
 		}
