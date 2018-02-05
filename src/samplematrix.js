@@ -21,7 +21,6 @@ columsn
 JUMP __draw __menu
 
 
-********************** INTERNAL
 getfeatures()
 */
 
@@ -47,6 +46,7 @@ export class Samplematrix {
 		this.menu = new client.Menu({padding:'0px'})
 		this.errdiv = this.holder.append('div')
 		this.legendtable = this.holder.append('table')
+			.style('margin-bottom','20px')
 		this.svg = this.holder.append('svg')
 
 		this.validateconfig()
@@ -74,6 +74,7 @@ export class Samplematrix {
 	validateconfig() {
 		/*
 		only run once, upon init
+		TODO gene coord query should go into validatefeature, in case adding genes later
 		*/
 
 		return Promise.resolve().then(()=>{

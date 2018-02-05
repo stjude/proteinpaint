@@ -2427,7 +2427,43 @@ function render_multi_genebar( tk, block) {
 
 
 function genebar_config( holder, genes, tk, block ) {
-	
+	/*
+	*/
+
+	let usegene
+	if(tk.selectedgene && genes.has(tk.selectedgene)) {
+		usegene = tk.selectedgene
+	} else {
+		usegene = [...genes][0]
+	}
+
+	holder.append('div')
+		.text('Add feature: '+usegene+' expression')
+		.attr('class','sja_menuoption')
+		.style('margin-bottom','10px')
+		.on('click',()=>{
+			const coord = tk.gene2coord[ usegene ]
+			if(!coord) {
+				alert('no coord for '+usegene)
+				return
+			}
+			const nf = {
+				isgenevalue:1,
+				genename: usegene,
+				chr: coord.chr,
+				start: coord.start,
+				stop: coord.stop,
+			}
+
+			if(tk.iscustom) {
+				console.error('custom!')
+				return
+			}
+			nf.querykey = tk.checkexpressionrank.querykey
+
+			sm_mayaddnewfeature( nf, tk, block )
+		})
+
 	if(genes.size>1) {
 		// more than one gene
 		const scrollholder=holder.append('div')
@@ -2438,12 +2474,6 @@ function genebar_config( holder, genes, tk, block ) {
 				.style('padding','15px')
 				.style('overflow-y','scroll')
 				.style('resize','vertical')
-		}
-		let usegene
-		if(tk.selectedgene && genes.has(tk.selectedgene)) {
-			usegene = tk.selectedgene
-		} else {
-			usegene = [...genes][0]
 		}
 		const id0=Math.random().toString()
 		for(const gene of genes) {
@@ -2700,40 +2730,51 @@ function createbutton_addfeature( p ) {
 			p.pane.pane.remove()
 		}
 
-		if(!tk.samplematrix) {
-			// create new instance
-			const pane = client.newpane({x:100, y:100, closekeep:1 })
-			pane.header.text(tk.name)
-			const arg = {
-				genome: block.genome,
-				dslabel: tk.mds.label,
-				features: [ nf ],
-				hostURL: block.hostURL,
-				jwt:block.jwt,
-				holder: pane.body.append('div').style('margin','20px'),
-			}
-			import('./samplematrix').then(_=>{
-				tk.samplematrix = new _.Samplematrix( arg )
-				tk.samplematrix._pane = pane
-			})
-			return
-		}
-
-		// already exists
-		if(tk.samplematrix._pane.pane.style('display')=='none') {
-			// show first
-			tk.samplematrix._pane.pane.style('display','block').style('opacity',1)
-		}
-		// add new feature
-		tk.samplematrix.features.push( nf )
-		const err = tk.samplematrix.validatefeature( nf )
-		if(err) {
-			alert(err) // should not happen
-			return
-		}
-		tk.samplematrix.getfeatures( [nf] )
+		sm_mayaddnewfeature( nf, tk, block )
 	})
 }
+
+
+
+function sm_mayaddnewfeature( nf, tk, block) {
+	/*
+	samplematrix may have not been created
+	*/
+	if(!tk.samplematrix) {
+		// create new instance
+		const pane = client.newpane({x:100, y:100, closekeep:1 })
+		pane.header.text(tk.name)
+		const arg = {
+			genome: block.genome,
+			dslabel: tk.mds.label,
+			features: [ nf ],
+			hostURL: block.hostURL,
+			jwt:block.jwt,
+			holder: pane.body.append('div').style('margin','20px'),
+		}
+		import('./samplematrix').then(_=>{
+			tk.samplematrix = new _.Samplematrix( arg )
+			tk.samplematrix._pane = pane
+		})
+		return
+	}
+
+	// already exists
+	if(tk.samplematrix._pane.pane.style('display')=='none') {
+		// show first
+		tk.samplematrix._pane.pane.style('display','block').style('opacity',1)
+	}
+	// add new feature
+	tk.samplematrix.features.push( nf )
+	const err = tk.samplematrix.validatefeature( nf )
+	if(err) {
+		alert(err) // should not happen
+		return
+	}
+	tk.samplematrix.getfeatures( [nf] )
+}
+
+
 
 
 
