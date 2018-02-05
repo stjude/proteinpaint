@@ -2442,6 +2442,9 @@ function genebar_config( holder, genes, tk, block ) {
 		.attr('class','sja_menuoption')
 		.style('margin-bottom','10px')
 		.on('click',()=>{
+
+			tk.tkconfigtip.hide()
+
 			const coord = tk.gene2coord[ usegene ]
 			if(!coord) {
 				alert('no coord for '+usegene)
@@ -2657,6 +2660,12 @@ function tooltip_vcf_dense(g, tk, block) {
 			.style('color',common.mclass[m.class].color)
 			.style('font-weight','bold')
 			.text(m.mname)
+
+		tr.append('td')
+			.style('font-size','.7em')
+			.style('opacity','.5')
+			.text(m.ref+' > '+m.alt)
+
 		const td=tr.append('td')
 			.style('font-size','.7em')
 
@@ -2714,7 +2723,7 @@ function createbutton_addfeature( p ) {
 		}
 		break
 	default:
-		console.log('newfeature: unknown td')
+		console.log('newfeature: unknown dt')
 		return
 	}
 
