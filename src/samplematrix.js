@@ -290,6 +290,31 @@ export class Samplematrix {
 			return
 		}
 
+		if(f.isvcfitd) {
+			{
+				const err = invalidcoord( this.genome, f.chr, f.start, f.stop)
+				if(err) return 'position error for isloh feature: '+err
+			}
+			if(this.dslabel) {
+				// official
+				if(!f.querykey) return '.querykey missing for isvcfitd feature while loading from official dataset'
+			} else {
+				// to allow loading from custom track
+			}
+			if(!f.label && f.genename) {
+				f.label = f.genename+' LOH'
+			}
+			if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' mutation'
+			tr.append('td')
+				.text(f.label)
+				.style('color','#858585')
+				.style('text-align','right')
+			f.legendholder = tr.append('td')
+
+			if(!f.width) f.width=20
+			return
+		}
+
 		/*
 		if(f.issv) {
 			return
@@ -431,6 +456,38 @@ export class Samplematrix {
 			}
 			return
 		}
+
+		if(f.isvcfitd) {
+			if(this.iscustom) {
+				// TODO parse vcf lines to variants
+			}
+
+			const classes = new Set()
+			for(const m of f.items) {
+				if(m.dt == common.dtsnvindel) {
+					common.vcfcopymclass( m, {} ) // simulate block
+				}
+				classes.add(m.class)
+			}
+
+			{
+				const h = f.legendholder
+				h.selectAll('*').remove()
+				for(const c of classes) {
+					const cell = h.append('div')
+						.style('display','inline-block')
+						.style('margin-right','10px')
+					cell.append('span')
+						.style('background', common.mclass[c].color)
+						.html('&nbsp;&nbsp;&nbsp;')
+					cell.append('span')
+						.text(common.mclass[c].label)
+						.style('color', common.mclass[c].color)
+				}
+			}
+
+			return
+		}
 	}
 
 
@@ -462,6 +519,24 @@ export class Samplematrix {
 				for(const item of feature.items) {
 					if(!name2sample.has(item.sample)) {
 						name2sample.set(item.sample, {})
+					}
+				}
+
+			} else if(feature.isvcfitd) {
+				for(const m of feature.items) {
+					if(m.dt==common.dtsnvindel) {
+						if(!m.sampledata) continue
+						for(const s of m.sampledata) {
+							if(!name2sample.has( s.sampleobj.name )) {
+								name2sample.set( s.sampleobj.name, {} )
+							}
+						}
+					} else if(m.dt==common.dtitd) {
+						if(!name2sample.has( m.sample )) {
+							name2sample.set( m.sample, {} )
+						}
+					} else {
+						console.error('unsupported dt from isvcfitd: '+m.dt)
 					}
 				}
 
@@ -686,6 +761,51 @@ export class Samplematrix {
 					.attr('fill',  feature.color )
 					.attr('fill-opacity', (item.segmean-feature.minvalue)/feature.maxvalue)
 					.attr('shape-rendering','crispEdges')
+			}
+			g.append('rect')
+				.attr('fill','white')
+				.attr('fill-opacity',0)
+				.attr('width', feature.width)
+				.attr('height', sample.height)
+				.attr('stroke','#ccc')
+				.attr('stroke-opacity',0)
+				.attr('shape-rendering','crispEdges')
+				.on('mouseover',()=>{
+					d3event.target.setAttribute('stroke-opacity',1)
+					this.showTip_cell( sample, feature )
+				})
+				.on('mouseout',()=>{
+					d3event.target.setAttribute('stroke-opacity',0)
+					this.tip.hide()
+				})
+			return
+		}
+
+		if(feature.isvcfitd) {
+			const mlst = getitemforsample_vcfitd( feature, sample )
+
+			if(mlst.length==0) {
+				drawEmptycell(sample, feature, g)
+				return
+			}
+
+			const class2count = new Map()
+			for(const m of mlst) {
+				if(!class2count.has(m.class)) {
+					class2count.set(m.class,0)
+				}
+				class2count.set(m.class, class2count.get(m.class)+1)
+			}
+			let x=0
+			for(const [cname, count] of class2count) {
+				const span = (count/mlst.length) * feature.width
+				g.append('rect')
+					.attr('x', x)
+					.attr('width', span)
+					.attr('height', sample.height)
+					.attr('fill', common.mclass[cname].color)
+					.attr('shape-rendering','crispEdges')
+				x += span
 			}
 			g.append('rect')
 				.attr('fill','white')
@@ -1048,6 +1168,7 @@ export class Samplematrix {
 					text = lst2.join('')
 				}
 				lst.push({k:f.label, v:text})
+				continue
 			}
 
 			if(f.isloh) {
@@ -1065,9 +1186,26 @@ export class Samplematrix {
 					text = lst2.join('')
 				}
 				lst.push({k:f.label, v:text})
+				continue
 			}
 
+			if(f.isvcfitd) {
+				const mlst = getitemforsample_vcfitd( f, sample )
+				let text
+				if(mlst.length==0) {
+					text = saynovalue
+				} else {
+					text = mlst.map( m=>{
+						return '<div><span style="color:'+common.mclass[m.class].color+'">'+m.mname+'</span> '
+							+'<span style="font-size:.7em;opacity:.5">'+common.mclass[m.class].label+'</span>'
+							+'</div>'
+					}).join('')
+				}
+				lst.push({k:f.label, v: text} )
+				continue
+			}
 		}
+
 		client.make_table_2col(this.tip.d, lst)
 	}
 
@@ -1122,7 +1260,23 @@ export class Samplematrix {
 				text = lst2.join('')
 			}
 			lst.push({k:f.label, v:text})
+
+		} else if(f.isvcfitd) {
+
+			const mlst = getitemforsample_vcfitd( f, sample )
+			let text
+			if(mlst.length==0) {
+				text = saynovalue
+			} else {
+				text = mlst.map( m=>{
+					return '<div><span style="color:'+common.mclass[m.class].color+'">'+m.mname+'</span> '
+						+'<span style="font-size:.7em;opacity:.5">'+common.mclass[m.class].label+'</span>'
+						+'</div>'
+				}).join('')
+			}
+			lst.push({k:f.label, v: text} )
 		}
+
 
 		client.make_table_2col(this.tip.d, lst)
 	}
@@ -1212,4 +1366,32 @@ function feature2arg(f) {
 			focalsizelimit:f.focalsizelimit,
 		}
 	}
+	if(f.isvcfitd) {
+		return {
+			id:f.id,
+			isvcfitd:1,
+			querykey:f.querykey,
+			chr:f.chr,
+			start: f.start,
+			stop: f.stop
+		}
+	}
+}
+
+
+
+function getitemforsample_vcfitd( feature, sample ) {
+	const mlst=[]
+	for(const m of feature.items) {
+		if(m.dt==common.dtsnvindel) {
+			if(m.sampledata.findIndex( i=> i.sampleobj.name==sample.name)!=-1) {
+				mlst.push(m)
+			}
+		} else if(m.dt==common.dtitd) {
+			if(m.sample == sample.name) {
+				mlst.push(m)
+			}
+		}
+	}
+	return mlst
 }

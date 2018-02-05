@@ -1,4 +1,4 @@
-// JUMP __MDS __util __rank
+// JUMP __MDS __util __rank __smat
 
 const serverconfigfile='./serverconfig.json'
 
@@ -294,6 +294,7 @@ function handle_genomes(req,res) {
 							}
 							if(q.vcf_querykey) {
 								clientquery.checkvcf = {
+									querykey: q.vcf_querykey,
 									info: ds.queries[ q.vcf_querykey ].info,
 									format: {}
 								}
@@ -6785,6 +6786,14 @@ function handle_mdsjunction_AreadcountbyB(reqquery,res,ds,dsquery) {
 
 
 
+
+
+
+
+/***********  __smat ends ************/
+
+
+
 function handle_samplematrix(req,res) {
 	/*
 	fetch values for a set of features, over a common set of samples
@@ -6856,9 +6865,13 @@ function handle_samplematrix(req,res) {
 			if(err) return res.send({error:'error with iscnv: '+err})
 			tasks.push(q)
 
-		} else {
+		} else if(feature.isvcfitd) {
 
-			/*********** feature: xx  ********/
+			const [err, q] = samplematrix_task_isvcfitd( feature, ds, dsquery, req )
+			if(err) return res.send({error:'error with iscnv: '+err})
+			tasks.push(q)
+
+		} else {
 
 			return res.send({error:'unknown type of feature'})
 		}
@@ -6873,6 +6886,7 @@ function handle_samplematrix(req,res) {
 		if(err.stack) console.error(err.stack)
 	})
 }
+
 
 
 
@@ -7115,6 +7129,148 @@ function samplematrix_task_isloh(feature, ds, dsquery, req) {
 }
 
 
+
+
+function samplematrix_task_isvcfitd(feature, ds, dsquery, req) {
+	/*
+	if is custom, will pass the lines to client for processing
+	*/
+	if(!dsquery.tracks) return 'tracks[] missing from dsquery'
+	if(!feature.chr) return ['chr missing']
+	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
+	if(feature.stop-feature.start > 100000) return ['look range too big (>100Kb)']
+
+	const tasks = []
+
+	for(const tk of dsquery.tracks) {
+
+		const q = Promise.resolve()
+		.then(()=>{
+			if(tk.file) return
+			return cache_index_promise( tk.indexURL || tk.url+'.tbi' )
+		})
+		.then(dir=>{
+
+			return new Promise((resolve,reject)=>{
+
+				const data = []
+				const ps=spawn( tabix,
+					[
+						tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
+						(tk.nochr ? feature.chr.replace('chr','') : feature.chr) +':'+feature.start+'-'+ (feature.stop+1)
+						// must add 1 to stop so to get snv data
+					], {cwd: dir }
+					)
+				const rl = readline.createInterface({
+					input:ps.stdout
+				})
+				rl.on('line',line=>{
+
+					if(dsquery.iscustom) {
+						// info/format are at client, pass them over
+						data.push( line )
+						return
+					}
+
+					if(tk.type==common.mdsvcfitdtype.vcf) {
+
+						// snv/indel
+
+						const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:tk.nochr, samples:tk.samples, info:dsquery.info, format:tk.format} )
+
+						for(const m of mlst) {
+							if(!m.sampledata) {
+								// do not allow
+								continue
+							}
+
+							// filters on samples
+
+							if(req.query.limitsamplebyeitherannotation) {
+								const samplesnothidden = []
+								for(const s of m.sampledata) {
+
+									const sanno = ds.cohort.annotation[ s.sampleobj.name ]
+									if(!sanno) continue
+
+									let notfit = true
+									for(const filter of req.query.limitsamplebyeitherannotation) {
+										if(sanno[ filter.key ] == filter.value) {
+											notfit=false
+											break
+										}
+									}
+									if(notfit) continue
+
+									samplesnothidden.push( s )
+								}
+								if(samplesnothidden.length==0) {
+									continue
+								}
+								m.sampledata = samplesnothidden
+							}
+
+
+							// delete the obsolete attr
+							for(const sb of m.sampledata) {
+								delete sb.allele2readcount
+							}
+
+
+							delete m._m
+							delete m.vcf_ID
+							delete m.name
+
+							m.dt = common.dtsnvindel
+							data.push(m)
+							// mclass and rest will be determined at client, according to whether in gmmode and such
+						}
+
+					} else if(vcftk.type==common.mdsvcfitdtype.itd) {
+
+						// TODO
+						// m.dt = common.dtitd
+						//data.push( m )
+
+					}
+
+				})
+
+				const errout=[]
+				ps.stderr.on('data',i=> errout.push(i) )
+				ps.on('close', code=>{
+					const e=errout.join('')
+					if(e && !tabixnoterror(e)) {
+						reject(e)
+						return
+					}
+					resolve( data )
+				})
+			})
+		})
+		tasks.push(q)
+	}
+
+	return [
+		null,
+		Promise.all(tasks)
+		.then(results=>{
+			const lst = []
+			for(const i of results) {
+				for(const m of i) {
+					lst.push(m)
+				}
+			}
+			return {
+				id: feature.id,
+				items: lst
+			}
+		})
+	]
+}
+
+
+/***********  __smat ends ************/
 
 
 

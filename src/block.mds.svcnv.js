@@ -7,7 +7,6 @@ import {axisTop, axisLeft, axisRight} from 'd3-axis'
 import {scaleLinear,scaleLog,scaleOrdinal,schemeCategory10,schemeCategory20} from 'd3-scale'
 import * as common from './common'
 import * as expressionstat from './block.mds.expressionstat'
-import * as vcfcopymclass from './vcf.copymclass'
 
 
 /*
@@ -2714,12 +2713,23 @@ function createbutton_addfeature( p ) {
 		}
 		nf = {
 			isgenevalue:1,
+			querykey: tk.checkexpressionrank.querykey,
 			genename: m.genename,
 			label: m.genename+' expression',
-			querykey: tk.checkexpressionrank.querykey,
 			chr: tmp.chr,
 			start: tmp.start,
 			stop: tmp.stop
+		}
+		break
+	case common.dtsnvindel:
+	case common.dtitd:
+		nf = {
+			isvcfitd:1,
+			querykey: tk.checkvcf.querykey,
+			label: (m.gene || m.chr) + ' mutation',
+			chr: m.chr,
+			start: m.pos,
+			stop: m.pos,
 		}
 		break
 	default:
@@ -2754,6 +2764,7 @@ function sm_mayaddnewfeature( nf, tk, block) {
 		const pane = client.newpane({x:100, y:100, closekeep:1 })
 		pane.header.text(tk.name)
 		const arg = {
+			debugmode: block.debugmode,
 			genome: block.genome,
 			dslabel: tk.mds.label,
 			features: [ nf ],
@@ -5137,7 +5148,7 @@ function vcfdata_prepmclass(tk, block) {
 	tk.data_vcf=[]
 	for(const m of tk._data_vcf) {
 		if(m.dt == common.dtsnvindel) {
-			vcfcopymclass.copymclass(m, block)
+			common.vcfcopymclass(m, block)
 		} else if(m.dt==common.dtitd) {
 			console.log('todo itd')
 		}

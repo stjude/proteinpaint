@@ -5,7 +5,6 @@ import * as vcf from './vcf'
 import * as coord from './coord'
 import * as common from './common'
 import {load2tk} from './block.ds'
-import * as vcfcopymclass from './vcf.copymclass'
 
 
 
@@ -188,7 +187,7 @@ export function data2tk(data,tk,block) {
 			}
 			*/
 
-			vcfcopymclass.copymclass( m, block )
+			common.vcfcopymclass( m, block )
 
 			tk.mlst.push(m)
 		}
