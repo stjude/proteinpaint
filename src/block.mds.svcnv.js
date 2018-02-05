@@ -2413,9 +2413,8 @@ function render_multi_genebar( tk, block) {
 	text.attr('class','sja_clbtext')
 	.on('click',()=>{
 
-		const d=text.node().getBoundingClientRect()
 		tk.tkconfigtip.clear()
-			.show(d.left-100, d.top+d.height)
+			.showunder(d3event.target)
 
 		genebar_config( tk.tkconfigtip.d, genes, tk, block )
 	})
@@ -2437,35 +2436,15 @@ function genebar_config( holder, genes, tk, block ) {
 		usegene = [...genes][0]
 	}
 
-	holder.append('div')
-		.text('Add feature: '+usegene+' expression')
-		.attr('class','sja_menuoption')
-		.style('margin-bottom','10px')
-		.on('click',()=>{
-
-			tk.tkconfigtip.hide()
-
-			const coord = tk.gene2coord[ usegene ]
-			if(!coord) {
-				alert('no coord for '+usegene)
-				return
-			}
-			const nf = {
-				isgenevalue:1,
-				genename: usegene,
-				chr: coord.chr,
-				start: coord.start,
-				stop: coord.stop,
-			}
-
-			if(tk.iscustom) {
-				console.error('custom!')
-				return
-			}
-			nf.querykey = tk.checkexpressionrank.querykey
-
-			sm_mayaddnewfeature( nf, tk, block )
-		})
+	createbutton_addfeature({
+		m: {
+			dt: common.dtgeneexpression,
+			genename: usegene,
+		},
+		holder: holder.append('div').style('margin-bottom','10px'),
+		tk: tk,
+		block: block
+	})
 
 	if(genes.size>1) {
 		// more than one gene
@@ -2687,6 +2666,7 @@ function createbutton_addfeature( p ) {
 	const {m, tk, block, holder} = p
 	if(tk.iscustom) {
 		// not custom yet
+		console.log('createbutton_addfeature: not custom yet')
 		return
 	}
 	if(!m) return
@@ -2720,6 +2700,26 @@ function createbutton_addfeature( p ) {
 			valuecutoff: tk.segmeanValueCutoff,
 			focalsizelimit: tk.lohLengthUpperLimit,
 			color: tk.cnvcolor.loh.str,
+		}
+		break
+	case common.dtgeneexpression:
+		if(!tk.gene2coord) {
+			holder.text('tk.gene2coord missing')
+			return
+		}
+		const tmp =  tk.gene2coord[ m.genename ]
+		if(!tmp) {
+			holder.text('No position for '+m.genename)
+			return
+		}
+		nf = {
+			isgenevalue:1,
+			genename: m.genename,
+			label: m.genename+' expression',
+			querykey: tk.checkexpressionrank.querykey,
+			chr: tmp.chr,
+			start: tmp.start,
+			stop: tmp.stop
 		}
 		break
 	default:
@@ -2787,6 +2787,32 @@ function sm_mayaddnewfeature( nf, tk, block) {
 
 
 
+function findsamplegroup_byvcf( p ) {
+	/*
+	p.snvindel
+		.m_sample
+	p.itd
+	p.tk
+	*/
+	
+	let samplename
+	if(p.snvindel) {
+		samplename = p.snvindel.m_sample.sampleobj.name
+	} else if(p.itd) {
+		samplename = p.itd.sample
+	}
+
+	for(const g of p.tk._data) {
+		for(const sample of g.samples) {
+			if(sample.samplename == samplename) {
+				return [sample, g]
+			}
+		}
+	}
+	return [-1,-1]
+}
+
+
 
 function createbutton_focusvcf( p ) {
 	/*
@@ -2796,18 +2822,11 @@ function createbutton_focusvcf( p ) {
 	for custom track, no group to get
 	*/
 
-	// sample name for this variant
-	const samplename = p.snvindel ? p.snvindel.m_sample.sampleobj.name : p.itd.sample
-
-	let grp
-	for(const g of p.tk._data) {
-		if(grp) break
-		for(const sample of g.samples) {
-			if(sample.samplename == samplename) {
-				grp = g
-				break
-			}
-		}
+	const [sample, samplegroup] = findsamplegroup_byvcf( p )
+	if(!sample) {
+		console.error('no sample found')
+		console.log(p)
+		return
 	}
 
 	p.holder.append('div')
@@ -2816,8 +2835,8 @@ function createbutton_focusvcf( p ) {
 		.text('Focus')
 		.on('click',()=>{
 			focus_singlesample({
-				sample: {samplename: samplename},
-				samplegroup: grp,
+				sample: sample,
+				samplegroup: samplegroup,
 				tk: p.tk,
 				block: p.block
 			})
@@ -2930,6 +2949,10 @@ function click_vcf_dense( g, tk, block ) {
 		return
 	}
 
+	/* multiple variants
+	list samples for each variant
+	*/
+
 	const table = pane.body.append('table')
 		.style('border-spacing','4px')
 
@@ -2939,11 +2962,38 @@ function click_vcf_dense( g, tk, block ) {
 		tr.append('td')
 			.text(m.mname)
 			.style('color', common.mclass[m.class].color)
+			.style('font-weight','bold')
+			.style('vertical-align','top')
+			// createbutton_addfeature
+
+		tr.append('td')
+			.style('opacity','.5')
+			.text(m.ref+' > '+m.alt)
+			.style('vertical-align','top')
 
 		{
 			const td = tr.append('td')
 			if(m.dt==common.dtsnvindel) {
-				td.text( m.sampledata.length>1 ? m.sampledata.length+' samples' : m.sampledata[0].sampleobj.name )
+				// show each sample
+				for(const m_sample of m.sampledata) {
+					const [s, sg] = findsamplegroup_byvcf({ snvindel:{m_sample:m_sample}, tk: tk })
+					if(!s) {
+						td.append('div').text('Sample not found: '+m_sample.sampleobj.name)
+						continue
+					}
+					td.append('div')
+						.text(m_sample.sampleobj.name)
+						.attr('class','sja_clbtext')
+						.on('click',()=>{
+							focus_singlesample({
+								sample: s,
+								samplegroup: sg,
+								tk: tk,
+								block: block
+							})
+						})
+				}
+
 			} else if(m.dt==common.dtitd) {
 			}
 		}
