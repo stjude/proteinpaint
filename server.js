@@ -4113,13 +4113,14 @@ function handle_mdssvcnv(req,res) {
 						})
 						rl.on('line',line=>{
 
-							/*
-							each member track is for particular type of data
-							*/
+							// each member track is for particular type of data
 
 							if(vcftk.type==common.mdsvcfitdtype.vcf) {
 
-								// snv/indel
+								/*
+								snv/indel
+								TODO for custom track, should return lines to client for parsing
+								*/
 
 								const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:vcftk.nochr, samples:vcftk.samples, info:vcfquery.info, format:vcftk.format} )
 
@@ -4194,8 +4195,43 @@ function handle_mdssvcnv(req,res) {
 
 							} else if(vcftk.type==common.mdsvcfitdtype.itd) {
 
-								// TODO
-								// m.dt = common.dtitd
+								/*
+								itd
+								*/
+								const l = line.split('\t')
+								const m = JSON.parse( l[3] )
+
+								if(req.query.singlesample) {
+									if(m.sample == req.query.singlesample) {
+										return
+									}
+								}
+
+								if(hiddensgnames) {
+									const sanno = ds.cohort.annotation[ m.sample ]
+									if(!sanno) return
+									const attrnames = []
+									for(const attr of dsquery.groupsamplebyattrlst) {
+										const v = sanno[ attr.k ]
+										if(v) {
+											attrnames.push(v)
+										} else {
+											break
+										}
+									}
+									const groupname = attrnames.join( dsquery.attrnamespacer )
+									if( hiddensgnames.has( groupname ) ) {
+										// this sample is from a hidden group
+										return
+									}
+								}
+
+								m.dt = common.dtitd
+								m.chr = l[0]
+								m.pos = Number.parseInt(l[1]) // not called "start"!!!!
+								m.stop = Number.parseInt(l[2])
+
+								variants.push( m )
 
 							}
 						})
@@ -4258,7 +4294,7 @@ function handle_mdssvcnv(req,res) {
 
 						if(m.dt==common.dtitd) {
 
-							console.log('ITD todo')
+							mmerge.push( m )
 							continue
 						}
 
@@ -4285,27 +4321,27 @@ function handle_mdssvcnv(req,res) {
 		const [ data_cnv, expressionrangelimit, gene2sample2obj, vcfrangelimit, data_vcf ] = data
 
 		const sample2item = new Map()
-		/*
-		to dedup, as the same cnv event may be retrieved multiple times by closeby regions, also gets set of samples for summary
-		k: sample
-		v: list of sv, cnv, loh
 
-		do not include snvindel from vcf
-		the current data_vcf is variant-2-sample
-		if snvindel is spread across samples, the variant annotation must be duplicated too
-		just pass the lot to client, there each variant will sort out annotation, then spread to samples while keeping pointers in sample-m to original m
-
-		yet further complexity due to the need of grouping samples by server-side annotation
-		which will require vcf samples all to be included in samplegroups
-
-		expression rank will be assigned to samples in all groups
-		for vcf samples to get expression rank, it also require them to be grouped!
-		*/
-
-
-
-		
 		{
+			/*
+			transform data_cnv[] to sample2item
+
+			to dedup, as the same cnv event may be retrieved multiple times by closeby regions, also gets set of samples for summary
+			k: sample
+			v: list of sv, cnv, loh
+
+			do not include snvindel from vcf
+			the current data_vcf is variant-2-sample
+			if snvindel is spread across samples, the variant annotation must be duplicated too
+			just pass the lot to client, there each variant will sort out annotation, then spread to samples while keeping pointers in sample-m to original m
+
+			yet further complexity due to the need of grouping samples by server-side annotation
+			which will require vcf samples all to be included in samplegroups
+
+			expression rank will be assigned to samples in all groups
+			for vcf samples to get expression rank, it also require them to be grouped!
+			*/
+		
 			const sample2coordset_cnv = {}
 			const sample2coordset_loh = {}
 			// k: sample
@@ -4410,7 +4446,10 @@ function handle_mdssvcnv(req,res) {
 			single sample does not include expression
 			but will include vcf
 			*/
-			const result = { lst: sample2item.get( req.query.singlesample ) }
+			const result = {
+				lst: sample2item.get( req.query.singlesample )
+			}
+
 			if(vcfrangelimit) {
 				// out of range
 				result.vcfrangelimit = vcfrangelimit 
@@ -4580,6 +4619,7 @@ function handle_mdssvcnv(req,res) {
 
 					if(m.dt==common.dtitd) {
 						// 
+						_grouper( m.sample, [] )
 						continue
 					}
 
@@ -4645,7 +4685,12 @@ function handle_mdssvcnv(req,res) {
 					}
 
 					if(m.dt==common.dtitd) {
-						//
+						if( samples.find( s=> s.samplename == m.sample ) == -1 ) {
+							samples.push( {
+								samplename: m.sample,
+								items: []
+							})
+						}
 						continue
 					}
 				}
@@ -9277,13 +9322,28 @@ function mds_init_mdsvcfitd(query, ds, genome) {
 
 		} else if(tk.type==common.mdsvcfitdtype.itd) {
 
-			return 'itd not ready yet'
+			const tmp=child_process.execSync(tabix+' -H '+_file,arg).trim()
+			if(!tmp) return 'no header lines for '+_file
+			tk.samples = []
+			const samples=new Set()
+			for(const line of tmp.split('\n')) {
+				const l = line.split(' ')
+				for(let i=1; i<l.length; i++) {
+					tk.samples.push( {
+						name: l[i]
+					})
+				}
+			}
 
 		} else {
 
 			return 'invalid track type: '+tk.type
 		}
 
+
+		if(!tk.samples) {
+			return 'track has no samples: '+_file
+		}
 
 		// common procedure for any track type
 

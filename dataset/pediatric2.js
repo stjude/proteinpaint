@@ -116,12 +116,10 @@ module.exports={
 					file:'hg19/TARGET/vcf.somatic/target.vep.vcf.gz',
 					type:'vcf',
 				},
-				/*
 				{
-					file:'',
+					file:'hg19/Pediatric/pediatric.itd.gz',
 					type:'itd',
 				}
-				*/
 			]
 		},
 
