@@ -10,27 +10,7 @@ import * as expressionstat from './block.mds.expressionstat'
 
 
 /*
-sv-cnv-fpkm ranking, two modes
-	multi-sample:
-		one row per sample
-		two forms:
-			dense
-				sv breakpoint density in separate track
-				cnv shown densily
-			full
-				cnv & sv shown together at sample-level
-	single-sample:
-		show cnv & sv data from a single sample
-		indicated by tk.singlesample {name:"samplename"}
-		spawn from sample group, mode won't mutate
-		fpkm ranking shown as independent track
-
-sv/cnv/loh data mixed in same file, sv has _chr and _pos which are indexing fields, along with chrA/posA/chrB/posB
-fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
-
 JUMP __multi __single __maketk __boxplot
-
-
 
 makeTk()
 render_samplegroups
@@ -58,6 +38,27 @@ createbutton_addfeature
 createbutton_focusvcf
 createbutton_focuscnvlohsv
 
+
+
+
+
+sv-cnv-vcf-fpkm ranking, two modes
+	multi-sample:
+		one row per sample
+		two forms:
+			dense
+				sv breakpoint density in separate track
+				cnv shown densily
+			full
+				cnv & sv shown together at sample-level
+	single-sample:
+		show cnv & sv data from a single sample
+		indicated by tk.singlesample {name:"samplename"}
+		spawn from sample group, mode won't mutate
+		fpkm ranking shown as independent track
+
+sv/cnv/loh data mixed in same file, sv has _chr and _pos which are indexing fields, along with chrA/posA/chrB/posB
+fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
 
 
 integrate other pieces of information from the same mds
@@ -2749,20 +2750,34 @@ function createbutton_addfeature( p ) {
 			p.pane.pane.remove()
 		}
 
-		sm_mayaddnewfeature( nf, tk, block )
+		samplematrix_mayaddnewfeature( nf, tk, block )
 	})
 }
 
 
 
-function sm_mayaddnewfeature( nf, tk, block) {
+function samplematrix_mayaddnewfeature( nf, tk, block) {
 	/*
 	samplematrix may have not been created
 	*/
 	if(!tk.samplematrix) {
+
 		// create new instance
-		const pane = client.newpane({x:100, y:100, closekeep:1 })
+
+		const pane = client.newpane({
+			x:100,
+			y:100, 
+			close: ()=>{
+				client.flyindi(
+					pane.pane,
+					tk.config_handle
+				)
+				pane.pane.style('display','none')
+			}
+		})
 		pane.header.text(tk.name)
+
+		// TODO custom track
 		const arg = {
 			debugmode: block.debugmode,
 			genome: block.genome,
@@ -2898,7 +2913,7 @@ function click_vcf_dense( g, tk, block ) {
 		const butrow = pane.body.append('div').style('margin','10px')
 
 		if(m.dt==common.dtsnvindel) {
-			
+
 			if(m.sampledata.length==1) {
 				// in a single sample
 				createbutton_focusvcf( {
@@ -4340,19 +4355,21 @@ function may_allow_samplesearch(tk, block) {
 
 function may_show_matrix(tk, block) {
 	if(!tk.samplematrix) return
-	if(tk.samplematrix._pane.pane.style('display')=='none') {
-		tk.tkconfigtip.d.append('div')
-			.style('margin-bottom','15px')
-			.attr('class','sja_menuoption')
-			.text('Show sample by attribute matrix')
-			.on('click',()=>{
-				tk.tkconfigtip.hide()
-				tk.samplematrix._pane.pane
-					.transition()
-					.style('display','block')
-					.style('opacity',1)
-			})
+	if(tk.samplematrix._pane.pane.style('display')!='none') {
+		// already shown
+		return
 	}
+
+	tk.tkconfigtip.d.append('div')
+		.style('margin-bottom','15px')
+		.attr('class','sja_menuoption')
+		.text('Show sample by attribute matrix')
+		.on('click',()=>{
+			tk.tkconfigtip.hide()
+			tk.samplematrix._pane.pane
+				.transition()
+				.style('display','block')
+		})
 }
 
 
