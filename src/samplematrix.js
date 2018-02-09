@@ -479,6 +479,7 @@ export class Samplematrix {
 						.style('margin-right','10px')
 					cell.append('span')
 						.style('background', common.mclass[c].color)
+						.style('margin-right','2px')
 						.html('&nbsp;&nbsp;&nbsp;')
 					cell.append('span')
 						.text(common.mclass[c].label)
