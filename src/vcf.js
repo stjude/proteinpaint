@@ -330,8 +330,12 @@ function correctRefAlt(p, ref, alt) {
 
 
 function parse_FORMAT( lst, m, vcf ) {
-	// format fields
-	// m.alleles[] still contain ref as first element
+
+	/*
+	format fields
+	m.alleles[] still contain ref as first element
+	very tricky logic of assigning sample to m.alleles[], see below
+	*/
 
 	const formatfields=lst[9-1].split(':')
 
@@ -462,11 +466,18 @@ function parse_FORMAT( lst, m, vcf ) {
 
 			if(spobj.AD) {
 				/*
-				for old application, reformat to allele2readcount
+				old ds tracks requires allele2readcount, as from the hardcoded AD
+				should delete this part when old ds track retires
+				XXX tricky that the allele2readcount will also be required later to salvage AD 4.1
 				*/
 				spobj.allele2readcount={}
 				if(typeof(spobj.AD)=='string') {
-					// wasn't able to parse AD into per allele read count (lack Number=R in description), parse it with old method
+
+					/*
+					4.1 AD, which includes REF
+					wasn't able to parse AD into per allele read count (lack Number=R in description), parse it with old method
+					*/
+
 					const lst=spobj.AD.split(',').map(j=>Number.parseInt(j))
 					for(let k=0; k<m.alleles.length; k++) {
 						const v= lst[k]
@@ -481,13 +492,24 @@ function parse_FORMAT( lst, m, vcf ) {
 					}
 				}
 			}
+
+			/*** done parsing FORMAT of this sample
+				 info about this sample is now in spobj
+				 but not in m.alleles[] yet
+			***/
 		}
 
+
 		/*
-		TODO vcfparseline new parameter:
-		for each alt allele, identify samples with that allele and only report those samples but not anything else (0/0, other alt...)
-		if so, may not use spobj but only use spobj.sampleobj
+		copies of spobj should be put to sampledata[] of relevant ALT alleles in m.alleles[]
+		rule:
+			if this sample has only REF (e.g. ref/ref/):
+				the sample should go to all ALT alleles (may change in future)
+			else:
+				the sample should only go to the ALT allele that it carries
 		*/
+
+
 
 		if(spobj.gtallref) {
 			// this sample has only ref allele, should go into all alt allele records
@@ -498,9 +520,9 @@ function parse_FORMAT( lst, m, vcf ) {
 		}
 
 		/*
-		assign this sampleobj to allele.sampledata[]
-		stop using hardcoded AD
-		check format fields to see if AD-like fields have value in an alt allele
+		assign spobj to its own alleles
+		check format fields to see if AD-like fields have value in an alt allele, as declared by Number=R or Number=A
+		no-longer uses hardcoded AD
 		*/
 		for(let alti=1; alti<m.alleles.length; alti++) {
 			// for this alt allele, check if any format field has it
@@ -517,18 +539,28 @@ function parse_FORMAT( lst, m, vcf ) {
 			}
 		}
 
+
 		/*
+		if this sample is not associated with any allele, supposedly this is caused by 4.1 AD which was not properly parsed
+		to support 4.1 AD:
+			AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed"
+
+		decouple from allele2readcount, since allele2readcount is only required for old ds track
+		*/
 		if(spobj.allele2readcount) {
-			// has read count per allele, 
-			// for each alt allele, find sample with that allele
-			for(const alt of m.alleles) {
-				if(spobj.allele2readcount[alt.allele]>=0) {
-					// this sample has this allele, even if the alt allele count is 0, it still would have ref allele count, so still include it
-					alt.sampledata.push( copysample(spobj) )
+			const ADdesc = vcf.format.AD
+			if(ADdesc && ADdesc.Number!='R' && ADdesc.Number!='A') {
+				// has read count per allele from 4.1 spec
+				// for each alt allele, find sample with that allele
+				for(let alti=1; alti<m.alleles.length; alti++) {
+					const alt = m.alleles[ alti ]
+					if(spobj.allele2readcount[alt.allele]>=0) {
+						// this sample has this allele, even if the alt allele count is 0, it still would have ref allele count, so still include it
+						alt.sampledata.push( copysample(spobj) )
+					}
 				}
 			}
 		}
-		*/
 	}
 }
 
