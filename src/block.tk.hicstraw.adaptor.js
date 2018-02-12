@@ -1,4 +1,3 @@
-
 export function hicstrawfromtemplate(tk,template) {
 	if(!template.file && !template.url) return 'no file or url'
 	if(template.domainoverlay) {
@@ -22,7 +21,6 @@ export function hicstrawfromtemplate(tk,template) {
 
 export function hicstrawmaketk(tk,block) {
 	tk.uninitialized=true
-	// everything to be made in hicstraw.js
 }
 
 

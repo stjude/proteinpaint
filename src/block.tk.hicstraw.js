@@ -1,5 +1,4 @@
 import {event as d3event} from 'd3-selection'
-//import {hicparsestat, hicparsefragdata} from './hic.straw'
 import {bplen} from './common'
 import * as client from './client'
 import {axisBottom} from 'd3-axis'
@@ -548,8 +547,11 @@ function drawCanvas(tk, block) {
 
 	const ctx = canvas.getContext('2d')
 
+	// the max value for saturated color, color scale
 	let maxv
 
+	/*
+	old method for using pecentage of absolute max value
 	if(!maxv) {
 		// somehow must not use .map, at large view range it runs out of max call stack
 		//maxv = Math.max( ...tk.data.map(i=>i[4]) )
@@ -558,6 +560,14 @@ function drawCanvas(tk, block) {
 	}
 	if(tk.maxpercentage) {
 		maxv = maxv * tk.maxpercentage / 100
+	}
+	*/
+
+	// new method of using percentile
+	{
+		const values = tk.data.map(i=>i[4])
+		values.sort( (i,j)=>i-j )
+		maxv = values[ Math.floor( values.length * tk.percentile_max / 100 ) ]
 	}
 
 	resize_label(tk, block)
@@ -684,9 +694,16 @@ function makeTk(tk, block) {
 		}
 	}
 
+	/*
 	if(!tk.maxpercentage) {
 		tk.maxpercentage = 90
 	}
+	*/
+
+	if(!tk.percentile_max) {
+		tk.percentile_max = 90
+	}
+
 	if(tk.mincutoff==undefined) {
 		tk.mincutoff=0
 	}
@@ -762,6 +779,7 @@ function configPanel(tk,block) {
 	tk.tkconfigtip.clear()
 		.showunder( tk.config_handle.node() )
 	
+	/*
 	// percentage of max value
 	{
 		const row = tk.tkconfigtip.d.append('div')
@@ -786,6 +804,29 @@ function configPanel(tk,block) {
 			.style('color','#858585')
 			.style('font-size','.8em')
 			.text('Percentage of actual max value in the view range')
+	}
+	*/
+
+
+	{
+		const row = tk.tkconfigtip.d.append('div')
+			.style('margin-bottom','10px')
+		row.append('span').html('Color scale max&nbsp;')
+		row.append('input')
+			.attr('type','number')
+			.style('width','40px')
+			.property('value',tk.percentile_max)
+			.on('keyup',()=>{
+				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+				const v = Number.parseFloat(d3event.target.value)
+				if(Number.isNaN(v) || v<=0 || v>=100) {
+					alert('Please enter a value between 0 and 100')
+					return
+				}
+				tk.percentile_max= v
+				drawCanvas(tk, block)
+			})
+		row.append('span').html('&nbsp;percentile')
 	}
 
 	// min cutoff
