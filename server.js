@@ -7271,7 +7271,7 @@ function samplematrix_task_isvcfitd(feature, ds, dsquery, req) {
 							// mclass and rest will be determined at client, according to whether in gmmode and such
 						}
 
-					} else if(vcftk.type==common.mdsvcfitdtype.itd) {
+					} else if(tk.type==common.mdsvcfitdtype.itd) {
 
 						// TODO
 						// m.dt = common.dtitd
