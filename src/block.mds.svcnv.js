@@ -2782,7 +2782,8 @@ function click_vcf_dense( g, tk, block ) {
 					},
 					holder:butrow,
 					tk:tk,
-					block:block
+					block:block,
+					pane: pane
 				})
 
 				createbutton_addfeature( {
