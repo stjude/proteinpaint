@@ -1063,24 +1063,25 @@ function render_samplegroups( tk, block ) {
 		const color='#858585'
 		if(vcfdensityheight && tk.data_vcf) {
 
-			let mtotal = 0
+			let c_snvindel = 0,
+				c_itd = 0
 
 			for(const m of tk.data_vcf) {
 				if(m.x==undefined) continue
 				if(m.dt==common.dtsnvindel) {
-					mtotal += m.sampledata.length
-					continue
-				}
-				if(m.dt==common.dtitd) {
-					mtotal++
-					continue
+					c_snvindel += m.sampledata.length
+				} else if(m.dt==common.dtitd) {
+					c_itd++
 				}
 			}
+			const phrases = []
+			if(c_snvindel) phrases.push( c_snvindel+' SNV/indel'+(c_snvindel>1?'s':'') )
+			if(c_itd) phrases.push( c_itd+' ITD'+(c_itd>1?'s':'') )
 
 			tk.vcfdensitylabelg
 				.attr('transform','translate(0,'+(hpad-vcfdensityheight-vcfsvpad-svdensityheight)+')')
 				.append('text')
-				.text( mtotal+' SNV/indel'+(mtotal>1?'s':'') )
+				.text( phrases.join(', ') )
 				.attr('text-anchor','end')
 				.attr('x',block.tkleftlabel_xshift)
 				.attr('y',vcfdensityheight/2)
@@ -1582,8 +1583,14 @@ function render_multi_cnvloh(tk,block) {
 	official or custom
 	full or dense
 
+	in full mode:
+		sample/group height determined on the fly
+		for each sample, gather all stackable items: cnv/loh/itd
+		then do stacking, generate item.stack_y and obtain height for this sample
+		then commense rendering
 
-	TODO allow variable heights in each samples
+	in dense mode:
+		all samples have equal height, 1 pixel hardcoded
 	*/
 
 	{
@@ -1624,24 +1631,21 @@ function render_multi_cnvloh(tk,block) {
 	if(tk.isdense) {
 
 		// densely plot sample rows
-		tk.rowheight=1
 		tk.rowspace=0
 		groupspace=4
 
 	} else if(tk.isfull) {
 
-		/*
-		not in use
-		// dynamically set heights by number of samples
-		const totalsample = tk.samplegroups.reduce( (i,j)=>i+j.samples.length, 0 )
-		tk.rowheight = Math.min( 12, Math.max( 1, Math.ceil(400/totalsample) ) )
-		tk.rowspace = totalsample > 300 ? 0 : 1
-		*/
-
 		// fixed fat row height in full mode
-		tk.rowheight=8
 		tk.rowspace=1
 		groupspace=10
+	}
+
+	render_multi_cnvloh_stackeachsample( tk, block ) // in each sample, process stackable items
+
+	// sample height are set, but it doesn't set group height, because group height needs rowspace which is set above
+	for(const g of tk.samplegroups) {
+		g.height = tk.rowspace * (g.samples.length-1) + g.samples.reduce( (i,j)=>j.height+i, 0 )
 	}
 
 	const grouplabelfontsize = block.labelfontsize - (tk.isfull ? 0 : 1)
@@ -1654,12 +1658,10 @@ function render_multi_cnvloh(tk,block) {
 		for each group (custom track has just 1)
 		*/
 
-		const thisgroupheight = samplegroup.samples.length * (tk.rowheight+tk.rowspace)
-
 		// a group may have just 1 sample so height is smaller than label font size, need to have a ypad
 		let thisgroupypad = 0
-		if(thisgroupheight < grouplabelfontsize) {
-			thisgroupypad = (grouplabelfontsize - thisgroupheight) / 2
+		if(samplegroup.height < grouplabelfontsize) {
+			thisgroupypad = ( grouplabelfontsize - samplegroup.height ) / 2
 		}
 
 		if(samplegroup.name) {
@@ -1670,7 +1672,7 @@ function render_multi_cnvloh(tk,block) {
 			tk.cnvleftg.append('text')
 				.attr('font-size', grouplabelfontsize)
 				.attr('font-family', client.font)
-				.attr('y', yoff + thisgroupypad + thisgroupheight/2)
+				.attr('y', yoff + thisgroupypad + samplegroup.height/2)
 				.attr('text-anchor','end')
 				.attr('dominant-baseline','central')
 				.attr('fill',color)
@@ -1699,13 +1701,13 @@ function render_multi_cnvloh(tk,block) {
 			// v span
 			tk.cnvleftg.append('line')
 				.attr('y1', yoff + thisgroupypad)
-				.attr('y2', yoff + thisgroupypad + thisgroupheight)
+				.attr('y2', yoff + thisgroupypad + samplegroup.height )
 				.attr('stroke',color)
 				.attr('shape-rendering','crispEdges')
 			// tick
 			tk.cnvleftg.append('line')
-				.attr('y1', yoff + thisgroupypad + thisgroupheight/2)
-				.attr('y2', yoff + thisgroupypad + thisgroupheight/2)
+				.attr('y1', yoff + thisgroupypad + samplegroup.height/2)
+				.attr('y2', yoff + thisgroupypad + samplegroup.height/2)
 				.attr('x2', -leftlabelticksize)
 				.attr('stroke',color)
 				.attr('shape-rendering','crispEdges')
@@ -1721,16 +1723,16 @@ function render_multi_cnvloh(tk,block) {
 			for each sample from this group
 			*/
 
-			if(sample.samplename && tk.iscustom && tk.rowheight>=minlabfontsize) {
+			if(sample.samplename && tk.iscustom && sample.height >= minlabfontsize) {
 				// for custom track, show sample name since all of them are in one nameless group
 				tk.cnvleftg.append('text')
 					.text(sample.samplename)
 					.attr('text-anchor','end')
 					.attr('dominant-baseline','central')
 					.attr('x',-5)
-					.attr('y',yoff1+tk.rowheight/2)
+					.attr('y', yoff1 + sample.height/2 )
 					.attr('font-family',client.font)
-					.attr('font-size',Math.min(15, Math.max(minlabfontsize,tk.rowheight)))
+					.attr('font-size',Math.min(15, Math.max(minlabfontsize, sample.height)))
 					.each(function(){
 						tk.leftLabelMaxwidth=Math.max(tk.leftLabelMaxwidth,this.getBBox().width)
 					})
@@ -1747,7 +1749,7 @@ function render_multi_cnvloh(tk,block) {
 					.attr('x',-5)
 					.attr('y',0)
 					.attr('width',5)
-					.attr('height', tk.rowheight)
+					.attr('height', sample.height )
 					.attr('fill','black')
 					.attr('shape-rendering','crispEdges')
 			}
@@ -1787,8 +1789,9 @@ function render_multi_cnvloh(tk,block) {
 
 				g.append('rect')
 					.attr('x', Math.min(item.x1, item.x2) )
+					.attr('y', item.stack_y )
 					.attr('width', Math.max( 1, Math.abs( item.x1-item.x2 ) ) )
-					.attr('height', tk.rowheight )
+					.attr('height', item.stack_h )
 					.attr('shape-rendering','crispEdges')
 					.attr('stroke','none')
 					.attr('class','sja_aa_skkick')
@@ -1822,35 +1825,39 @@ function render_multi_cnvloh(tk,block) {
 			}
 
 			/*
-			if in full mode (not dense), draw itd bars
+			if in full mode (not dense), draw itd bars (already stacked)
 			*/
 			if(tk.isfull && tk.data_vcf) {
+
 				const color = common.mclass[ common.mclassitd ].color
+
 				for(const m of tk.data_vcf) {
 					if(m.dt!=common.dtitd) continue
 					if(m.x==undefined) continue
 					if(m.sample != sample.samplename) continue
+
 					// an itd from this sample
+
 					const m_g = g.append('g')
-						.attr('transform','translate('+m.x+',0)')
+						.attr('transform','translate('+m.x+','+m.stack_y+')')
+
 					m_g.append('rect')
 						.attr('width', m.itdpxlen)
-						.attr('height', tk.rowheight)
+						.attr('height', m.stack_h)
 						.attr('fill', color)
-						.attr('fill-opacity',.7)
+						.attr('fill-opacity', .7)
+						.attr('stroke','none')
+						.attr('class','sja_aa_skkick')
 						.attr('shape-rendering','crispEdges')
-					.on('mouseover', ()=> {
-						d3event.target.setAttribute('fill-opacity',1)
-						tooltip_itditem( m, sample, samplegroup, tk )
+						.on('mouseover',()=>{
+							tooltip_itditem( m, sample, samplegroup, tk )
 						})
-					.on('mouseout',()=>{
-						d3event.target.setAttribute('fill-opacity',.7)
-						tk.tktip.hide()
-					})
-					.on('click',()=>{
-						console.error('click itd')
-						//click_multi2single( null, item, sample, samplegroup, tk, block )
-					})
+						.on('mouseout',()=>{
+							tk.tktip.hide()
+						})
+						.on('click',()=>{
+							console.error('click itd')
+						})
 				}
 			}
 
@@ -1861,14 +1868,14 @@ function render_multi_cnvloh(tk,block) {
 			for(const item of sample.items) {
 				if(item.dt!=common.dtsv && item.dt!=common.dtfusionrna) continue
 
-				const otherchr= item.chrA==item._chr ? item.chrB : item.chrA
+				const otherchr = item.chrA==item._chr ? item.chrB : item.chrA
 
 				const color = otherchr==item._chr ? intrasvcolor : tk.legend_svchrcolor.colorfunc(otherchr)
 
 				g.append('circle')
-					.attr('cx',item.x)
-					.attr('cy',tk.rowheight/2)
-					.attr('r', Math.max( minsvradius, 1+tk.rowheight/2) )
+					.attr('cx', item.x)
+					.attr('cy', sample.height/2 )
+					.attr('r', Math.max( minsvradius, 1 + sample.height / 2 ) )
 					.attr('fill',color)
 					.attr('fill-opacity',0)
 					.attr('stroke', color)
@@ -1884,11 +1891,10 @@ function render_multi_cnvloh(tk,block) {
 						console.error('click sv/fusion')
 						//click_multi2single( null, item, sample, samplegroup, tk, block )
 					})
-				continue
 			}
 
 			/*
-			if in full mode (not dense), draw ticks for snv/indel
+			if in full mode (not dense), draw crosses for snv/indel
 			*/
 			if(tk.isfull && tk.data_vcf) {
 
@@ -1897,55 +1903,57 @@ function render_multi_cnvloh(tk,block) {
 					if(m.x == undefined) continue
 					if(!m.sampledata) continue
 
-					const rowheight = tk.rowheight
+					const w = Math.min( 8, sample.height )
+					const color = common.mclass[m.class].color
+
 					for(const ms of m.sampledata) {
 						if(ms.sampleobj.name != sample.samplename) continue
 
 						// a variant from this sample
+
 						const m_g = g.append('g')
-							.attr('transform','translate('+m.x+','+(rowheight/2)+')')
-						const color = common.mclass[m.class].color
+							.attr('transform','translate('+m.x+','+(sample.height/2)+')')
 
 						const bgbox = m_g.append('rect')
-							.attr('x', -rowheight/2-1)
-							.attr('y', -rowheight/2-1)
-							.attr('width', rowheight+2)
-							.attr('height', rowheight+2)
+							.attr('x', -w/2-1)
+							.attr('y', -w/2-1)
+							.attr('width', w+2)
+							.attr('height', w+2)
 							.attr('fill',color)
 							.attr('fill-opacity', 0)
 						const bgline1 = m_g.append('line')
 							.attr('stroke', 'white')
 							.attr('stroke-width',3)
-							.attr('x1', -rowheight/2)
-							.attr('x2', rowheight/2)
-							.attr('y1', -rowheight/2)
-							.attr('y2', rowheight/2)
+							.attr('x1', -w/2)
+							.attr('x2', w/2)
+							.attr('y1', -w/2)
+							.attr('y2', w/2)
 						const bgline2 = m_g.append('line')
 							.attr('stroke', 'white')
 							.attr('stroke-width',3)
-							.attr('x1', -rowheight/2)
-							.attr('x2', rowheight/2)
-							.attr('y1', rowheight/2)
-							.attr('y2', -rowheight/2)
+							.attr('x1', -w/2)
+							.attr('x2', w/2)
+							.attr('y1', w/2)
+							.attr('y2', -w/2)
 						const fgline1 = m_g.append('line')
 							.attr('stroke', color)
 							.attr('stroke-width',1.5)
-							.attr('x1', -rowheight/2)
-							.attr('x2', rowheight/2)
-							.attr('y1', -rowheight/2)
-							.attr('y2', rowheight/2)
+							.attr('x1', -w/2)
+							.attr('x2', w/2)
+							.attr('y1', -w/2)
+							.attr('y2', w/2)
 						const fgline2 = m_g.append('line')
 							.attr('stroke', color)
 							.attr('stroke-width',1.5)
-							.attr('x1', -rowheight/2)
-							.attr('x2', rowheight/2)
-							.attr('y1', rowheight/2)
-							.attr('y2', -rowheight/2)
+							.attr('x1', -w/2)
+							.attr('x2', w/2)
+							.attr('y1', w/2)
+							.attr('y2', -w/2)
 						m_g.append('rect')
-							.attr('x', -rowheight/2)
-							.attr('y', -rowheight/2)
-							.attr('width', rowheight)
-							.attr('height', rowheight)
+							.attr('x', -w/2)
+							.attr('y', -w/2)
+							.attr('width', w)
+							.attr('height', w)
 							.attr('fill','white')
 							.attr('fill-opacity', 0)
 							.on('mouseover',()=>{
@@ -1980,11 +1988,12 @@ function render_multi_cnvloh(tk,block) {
 				}
 			}
 
-			yoff1 += tk.rowheight + tk.rowspace
-			// done cnv & sv & vcf of this sample
+			/*** done all items for this sample ***/
+			yoff1 += sample.height + tk.rowspace
 		}
-		yoff += thisgroupheight + thisgroupypad*2 + groupspace
-		// done a group
+
+		/*** done a group ***/
+		yoff += samplegroup.height + thisgroupypad*2 + groupspace
 	}
 
 	if(tk.cnvcolor.cnvmax==novalue_max_cnvloh) {
@@ -2001,6 +2010,111 @@ function render_multi_cnvloh(tk,block) {
 
 	return yoff
 }
+
+
+
+
+
+function render_multi_cnvloh_stackeachsample( tk, block ) {
+	/*
+	called by render_multi_cnvloh()
+	for each sample, set .height
+	for each stackable item (cnv/loh/itd), set .stack_y, .stack_h
+	stackable items are still in original places
+	*/
+	if(!tk.samplegroups || tk.samplegroups.length==0) return
+
+	if(tk.isdense) {
+		// no stacking in dense mode, itd won't go into .items[]
+		for(const g of tk.samplegroups) {
+			for(const s of g.samples) {
+				s.height = 1 // hardcoded
+				for(const i of s.items) {
+					if(i.dt==common.dtcnv || i.dt==common.dtloh) {
+						i.stack_y = 0
+						i.stack_h = 1
+					}
+				}
+			}
+		}
+		return
+	}
+
+	const stackheightscale = scaleLinear()
+		.domain([ 1, 3, 5, 10 ])
+		.range([  8, 4, 2, 1 ])
+
+	// full mode
+	for(const g of tk.samplegroups) {
+		for(const s of g.samples) {
+			// for this sample, gather stackable items
+			const items = []
+			for(const i of s.items) {
+				if(i.dt==common.dtcnv || i.dt==common.dtloh) {
+					if(i.x1!=undefined && i.x2!=undefined) {
+						i._boxstart = Math.min(i.x1, i.x2)
+						i._boxwidth = Math.abs(i.x2-i.x1)
+						items.push( i )
+					}
+				}
+			}
+			if(tk.data_vcf) {
+				for(const i of tk.data_vcf) {
+					if(i.dt == common.dtitd && i.x!=undefined && i.sample==s.samplename) {
+						i._boxstart = i.x
+						i._boxwidth = i.itdpxlen
+						items.push( i )
+					}
+				}
+			}
+
+			if(items.length == 0) {
+				// this sample has no stackable item, but it must have other pointy items
+				// still set height
+				s.height = 8
+				continue
+			}
+
+			// stack
+
+			items.sort( (i,j)=> i._boxstart - j._boxstart )
+
+			const stacks = []
+			for(const m of items) {
+				for(let i=0; i<stacks.length; i++) {
+					if(stacks[i] < m._boxstart) {
+						m._stacki = i
+						stacks[i] = m._boxstart + m._boxwidth
+						break
+					}
+				}
+				if(m._stacki==undefined) {
+					m._stacki = stacks.length
+					stacks.push( m._boxstart + m._boxwidth )
+				}
+			}
+
+			let stackheight = stackheightscale( stacks.length )
+			if(stackheight < 1 ) {
+				// simpleminded scaling can make it negative
+				stackheight = 1
+			}
+
+			// no spacing between stacks!!
+
+			for(const i of items) {
+				i.stack_y = i._stacki * stackheight
+				i.stack_h = stackheight
+				delete i._stacki
+				delete i._boxstart
+				delete i._boxwidth
+			}
+
+			s.height = stackheight * stacks.length
+		}
+	}
+}
+
 
 
 
@@ -2259,7 +2373,9 @@ function render_multi_genebar( tk, block) {
 
 
 	for(const g of tk.samplegroups) {
+
 		let y = g.y
+
 		for(const s of g.samples) {
 
 			if(s.expressionrank) {
@@ -2272,7 +2388,7 @@ function render_multi_genebar( tk, block) {
 					const bar=row.append('rect')
 						.attr('fill',  expressionstat.ase_color( v, tk.gecfg ) ) // bar color set by ase status
 						.attr('width', barwidth * v.rank / maxvalue )
-						.attr('height',tk.rowheight)
+						.attr('height', s.height)
 						.attr('shape-rendering','crispEdges')
 
 					if(tk.isfull) {
@@ -2280,14 +2396,14 @@ function render_multi_genebar( tk, block) {
 						if(v.estat.outlier) {
 							row.append('circle')
 								.attr('cx',barwidth)
-								.attr('cy',tk.rowheight/2)
-								.attr('r',tk.rowheight/2)
+								.attr('cy', s.height/2)
+								.attr('r', s.height/2)
 								.attr('fill', tk.gecfg.outlier.color_outlier)
 						} else if(v.estat.outlier_asehigh) {
 							row.append('circle')
 								.attr('cx',barwidth)
-								.attr('cy',tk.rowheight/2)
-								.attr('r',tk.rowheight/2)
+								.attr('cy', s.height/2)
+								.attr('r',  s.height/2)
 								.attr('fill', tk.gecfg.outlier.color_outlier_asehigh)
 						}
 					}
@@ -2296,7 +2412,7 @@ function render_multi_genebar( tk, block) {
 						.attr('fill',  fpkmbarcolor_bg)
 						.attr('fill-opacity',.1)
 						.attr('width',barwidth)
-						.attr('height',tk.rowheight)
+						.attr('height', s.height)
 						.attr('shape-rendering','crispEdges')
 						.on('mouseover',()=>{
 							tk.tktip
@@ -2407,8 +2523,12 @@ function render_multi_genebar( tk, block) {
 						})
 				}
 			}
-			y += tk.rowheight + tk.rowspace
+
+			// done this sample
+			y += s.height + tk.rowspace
 		}
+
+		// done this group
 	}
 	// axis label
 	const axispad = 0
@@ -4678,6 +4798,11 @@ function tooltip_itditem( m, sample, samplegroup, tk ) {
 	}
 	if(m.aaduplength) {
 		lst.push({k:'AA duplicated', v: m.aaduplength+' aa'})
+	}
+
+	const tmp=tooltip_svcnv_addexpressionrank(sample,tk)
+	if(tmp) {
+		lst.push(tmp)
 	}
 
 	client.make_table_2col( tk.tktip.d, lst )
