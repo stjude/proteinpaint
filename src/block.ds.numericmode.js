@@ -871,13 +871,15 @@ if(nm.showsamplebar) {
 					.attr('cy',y)
 					.attr('r', genotypebyvaluecircleradiusscale( num_refref) )
 					.attr('stroke', tk.ds.genotypebynumericvalue.refref.color)
-					.attr('fill','none')
+					.attr('fill','white')
+					.attr('fill-opacity',0)
 					.on('mouseover',()=>{
 						tk.tktip.show(d3event.clientX,d3event.clientY)
 							.clear()
 						const lst = [
 							{k:'Variant',v:m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt},
 							{k:'Genotype',v:'Ref/Ref'},
+							{k:'#sample',  v:num_refref},
 							{k:tk.ds.genotypebynumericvalue.axislabel,v:v}
 							]
 						client.make_table_2col(tk.tktip.d, lst)
@@ -895,13 +897,15 @@ if(nm.showsamplebar) {
 					.attr('cy',y)
 					.attr('r', genotypebyvaluecircleradiusscale( num_refalt) )
 					.attr('stroke', tk.ds.genotypebynumericvalue.refalt.color)
-					.attr('fill','none')
+					.attr('fill','white')
+					.attr('fill-opacity',0)
 					.on('mouseover',()=>{
 						tk.tktip.show(d3event.clientX,d3event.clientY)
 							.clear()
 						const lst = [
 							{k:'Variant',v:m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt},
 							{k:'Genotype',v:'Ref/Alt'},
+							{k:'#sample',  v:num_refalt},
 							{k:tk.ds.genotypebynumericvalue.axislabel,v:v}
 							]
 						client.make_table_2col(tk.tktip.d, lst)
@@ -919,13 +923,15 @@ if(nm.showsamplebar) {
 					.attr('cy',y)
 					.attr('r', genotypebyvaluecircleradiusscale( num_altalt) )
 					.attr('stroke', tk.ds.genotypebynumericvalue.altalt.color)
-					.attr('fill','none')
+					.attr('fill','white')
+					.attr('fill-opacity',0)
 					.on('mouseover',()=>{
 						tk.tktip.show(d3event.clientX,d3event.clientY)
 							.clear()
 						const lst = [
 							{k:'Variant',v:m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt},
-							{k:'Genotype',v:'Alt/Alt'},
+							{k:'Genotype', v:'Alt/Alt'},
+							{k:'#sample',  v:num_altalt},
 							{k:tk.ds.genotypebynumericvalue.axislabel,v:v}
 							]
 						client.make_table_2col(tk.tktip.d, lst)
