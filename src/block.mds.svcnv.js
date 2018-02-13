@@ -1,5 +1,5 @@
 import * as client from './client'
-import {select as d3select,event as d3event, mouse as d3mouse} from 'd3-selection'
+import {select as d3select,event as d3event} from 'd3-selection'
 import {legend_newrow} from './block.legend'
 import * as blockmds from './block.mds'
 import {rgb as d3rgb} from 'd3-color'
@@ -17,7 +17,7 @@ render_samplegroups
 	render_multi_vcfdensity
 		tooltip_vcf_dense
 		click_vcf_dense
-		click_snvindel_singlevariantsample
+			click_snvindel_singlevariantsample
 	render_multi_svdensity
 		tooltip_sv_dense
 		click_sv_dense
@@ -26,9 +26,8 @@ render_samplegroups
 	render_multi_cnvloh
 		click_samplegroup_showmenu
 		click_samplegroup_showtable
-		click_multi_cnvloh
+		click_multi_singleitem
 		** focus_singlesample
-		tooltip_multi_cnvloh
 		tooltip_multi_snvindel
 	render_multi_genebar
 		genebar_config
@@ -1074,6 +1073,7 @@ function render_samplegroups( tk, block ) {
 					c_itd++
 				}
 			}
+
 			const phrases = []
 			if(c_snvindel) phrases.push( c_snvindel+' SNV/indel'+(c_snvindel>1?'s':'') )
 			if(c_itd) phrases.push( c_itd+' ITD'+(c_itd>1?'s':'') )
@@ -1796,16 +1796,12 @@ function render_multi_cnvloh(tk,block) {
 					.attr('stroke','none')
 					.attr('class','sja_aa_skkick')
 					.attr('fill', color)
-					.on('mousemove',()=>{
-						// get cursor x offset on block
-						const x = d3mouse( tk.glider.node() )[0]
-						tooltip_multi_cnvloh( {
+					.on('mouseover',()=>{
+						tooltip_multi_singleitem( {
 							item:item,
 							sample:sample,
 							samplegroup:samplegroup,
 							tk:tk,
-							block:block,
-							xoff:x
 							})
 					})
 					.on('mouseout',()=>{
@@ -1813,7 +1809,7 @@ function render_multi_cnvloh(tk,block) {
 					})
 					.on('click',()=>{
 						// FIXME prevent click while dragging
-						click_multi_cnvloh( {
+						click_multi_singleitem( {
 							item:item,
 							sample:sample,
 							samplegroup:samplegroup,
@@ -1825,7 +1821,7 @@ function render_multi_cnvloh(tk,block) {
 			}
 
 			/*
-			if in full mode (not dense), draw itd bars (already stacked)
+			in full mode, draw ITD bars (already stacked)
 			*/
 			if(tk.isfull && tk.data_vcf) {
 
@@ -1850,13 +1846,24 @@ function render_multi_cnvloh(tk,block) {
 						.attr('class','sja_aa_skkick')
 						.attr('shape-rendering','crispEdges')
 						.on('mouseover',()=>{
-							tooltip_itditem( m, sample, samplegroup, tk )
+							tooltip_multi_singleitem({
+								item:m,
+								sample: sample,
+								samplegroup: samplegroup,
+								tk:tk,
+							})
 						})
 						.on('mouseout',()=>{
 							tk.tktip.hide()
 						})
 						.on('click',()=>{
-							console.error('click itd')
+							click_multi_singleitem( {
+								item:m,
+								sample:sample,
+								samplegroup:samplegroup,
+								tk:tk,
+								block:block
+							})
 						})
 				}
 			}
@@ -1888,8 +1895,13 @@ function render_multi_cnvloh(tk,block) {
 						tk.tktip.hide()
 					})
 					.on('click',()=>{
-						console.error('click sv/fusion')
-						//click_multi2single( null, item, sample, samplegroup, tk, block )
+						click_multi_singleitem( {
+							item:item,
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
 					})
 			}
 
@@ -1973,6 +1985,7 @@ function render_multi_cnvloh(tk,block) {
 								fgline2.attr('stroke',color)
 							})
 							.on('click',()=>{
+								// click_multi_singleitem()
 								click_snvindel_singlevariantsample( {
 									snvindel: {
 										m:m,
@@ -4481,7 +4494,20 @@ function tooltip_samplegroup( g, tk ) {
 
 
 
-function click_multi_cnvloh( p ) {
+function click_multi_singleitem( p ) {
+	/*
+	click on a single item in multi-sample view
+
+	.item
+	.sample
+	.samplegroup
+	.tk
+	.block
+
+	if item is snvindel, will have:
+		.m_sample
+	*/
+
 	const pane = client.newpane({x:d3event.clientX, y:d3event.clientY})
 
 	const butrow = pane.body.append('div').style('margin','10px')
@@ -4492,7 +4518,6 @@ function click_multi_cnvloh( p ) {
 		holder:butrow,
 		tk: p.tk,
 		block: p.block,
-		pane: pane
 	})
 
 	createbutton_addfeature( {
@@ -4504,102 +4529,87 @@ function click_multi_cnvloh( p ) {
 	})
 
 	p.holder = pane.body
-	detailtable_cnvloh_singlesample( p )
+	detailtable_singlesample( p )
 }
 
 
 
 
 
-function tooltip_multi_cnvloh( p ) {
+
+
+function detailtable_singlesample(p) {
 	/*
-	multi-sample
-	native or custom
-	dense or full
-	mouse over a cnv or loh
+	a table to indicate basic info about an item from a sample
+
+	.item
+	.sample
+	.samplegroup
+	.tk
 	*/
-
-	p.tk.tktip.clear()
-		.show( d3event.clientX, d3event.clientY )
-
-	p.holder = p.tk.tktip.d
-	detailtable_cnvloh_singlesample( p )
-}
-
-
-
-function detailtable_cnvloh_singlesample(p) {
 	const lst = [
 		{
-			k:'Sample',
-			v: p.sample.samplename
-				+ (p.sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+p.sample.sampletype+'</span>' : '')
-				+ (p.samplegroup.name  ? ' <span style="font-size:.7em">'+ p.samplegroup.name+'</span>' : '')
-		}
+		k:'Sample',
+		v: p.sample.samplename
+			+ (p.sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+p.sample.sampletype+'</span>' : '')
+			+ (p.samplegroup && p.samplegroup.name ? ' <span style="font-size:.7em">'+p.samplegroup.name+'</span>' : '')
+		},
 	]
 
 	const m = p.item
 
-	if(m.dt==common.dtloh) {
-		lst.push({
-			k:'LOH seg.mean',
-			v: m.segmean.toFixed(2)
-		})
-	} else if(m.dt==common.dtcnv) {
-		lst.push({
-			k:'CNV log2(ratio)',
-			v: '<span style="padding:0px 4px;background:'
-				+(m.value>0? p.tk.cnvcolor.gain.str : p.tk.cnvcolor.loss.str)+';color:white;">'
-				+m.value.toFixed(2)
-				+'</span>'
-		})
-	}
-	
-	lst.push( {
-		k:'Position',
-		v: m.chr+':'+(m.start+1)+'-'+(m.stop+1)
-			+' <span style="font-size:.7em">'+common.bplen(m.stop-m.start)+'</span>'
-	})
+	if( m.dt == common.dtitd) {
 
-	if(p.xoff) {
-		/*
-		cnv & loh may overlap in a sample but can only mouse over one segment
-		in that case must also show any items hidding behind the cursor position
-		*/
-		const thiskey = (m.dt==common.dtloh ? 'loh'+m.segmean:'cnv'+m.value)+m.chr+'.'+m.start+'.'+m.stop
+		lst.push( {k:'ITD', v:m.chr+':'+m.pos+'-'+m.stop } )
 
-		const [ridx, cursorcoord] = p.block.pxoff2region( p.xoff )
-		const thischr = p.block.rglst[ridx].chr
-
-		for(const i2 of p.sample.items) {
-			const thatkey = (i2.dt==common.dtloh ?'loh'+i2.segmean:'cnv'+i2.value)+i2.chr+'.'+i2.start+'.'+i2.stop
-			if(thiskey==thatkey) {
-				// same item
-				continue
-			}
-			// not same item
-			if(m.chr==i2.chr && (i2.start<cursorcoord && i2.stop>cursorcoord)) {
-				// the other item overlaps with cursor, show
-				lst.push({
-					k:'Overlap with',
-					v: (i2.dt==common.dtloh ? 'LOH <span style="font-size:.7em">seg.mean</span> '+i2.segmean :
-						'CNV <span style="font-size:.7em">log2(ratio)</span> <span style="padding:0px 4px;background:'
-							+(i2.value>0? p.tk.cnvcolor.gain.str : p.tk.cnvcolor.loss.str)+';color:white;">'
-							+i2.value.toFixed(2)
-							+'</span>')
-						+' <span style="font-size:.8em;opacity:.7">'
-						+i2.chr+':'+(i2.start+1)+'-'+(i2.stop+1)
-						+' '+common.bplen(m.stop-m.start)
-				})
-			}
+		if(m.gene || m.isoform) {
+			const t = []
+			if(m.gene) t.push(m.gene)
+			if(m.isoform) t.push(m.isoform)
+			lst.push({k:'Gene', v: t.join(', ')})
 		}
+
+		if(m.rnaduplength) {
+			lst.push({k: 'RNA duplicated', v: m.rnaduplength+' bp'})
+		}
+		if(m.aaduplength) {
+			lst.push({k:'AA duplicated', v: m.aaduplength+' aa'})
+		}
+
+	} else if( m.dt == common.dtcnv  || m.dt == common.dtloh ) {
+
+		if(m.dt==common.dtloh) {
+			lst.push({
+				k:'LOH seg.mean',
+				v: m.segmean.toFixed(2)
+			})
+		} else {
+			lst.push({
+				k:'CNV log2(ratio)',
+				v: '<span style="padding:0px 4px;background:'
+					+(m.value>0? p.tk.cnvcolor.gain.str : p.tk.cnvcolor.loss.str)+';color:white;">'
+					+m.value.toFixed(2)
+					+'</span>'
+			})
+		}
+	
+		lst.push( {
+			k:'Position',
+			v: m.chr+':'+(m.start+1)+'-'+(m.stop+1)
+				+' <span style="font-size:.7em">'+common.bplen(m.stop-m.start)+'</span>'
+		})
+
+	} else if( m.dt == common.dtsv || m.dt==common.dtfusionrna ) {
+	} else if( m.dt == common.dtsnvindel ) {
+	} else {
+		lst.push({k:'Unknown dt', v: m.dt })
 	}
 
-	// expression rank
-	const tmp=tooltip_svcnv_addexpressionrank(p.sample, p.tk)
+	const tmp=tooltip_svcnv_addexpressionrank(p.sample,p.tk)
 	if(tmp) {
 		lst.push(tmp)
 	}
+
 	client.make_table_2col( p.holder, lst )
 }
 
@@ -4767,45 +4777,21 @@ function tooltip_svitem_2( sv, sample, samplegroup, tk ) {
 
 
 
-function tooltip_itditem( m, sample, samplegroup, tk ) {
+
+
+
+
+function tooltip_multi_singleitem( p ) {
 	/*
 	multi-sample
-	full mode
-	mouse over a itd bar
+	mouse over an item
 	*/
-	tk.tktip.clear()
+	p.tk.tktip.clear()
 		.show(d3event.clientX, d3event.clientY)
 
-	const lst = [
-		{
-		k:'Sample',
-		v: sample.samplename
-			+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
-			+ (samplegroup.name ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '')
-		},
-		{k:'ITD', v:m.chr+':'+m.pos+'-'+m.stop}
-	]
+	p.holder = p.tk.tktip.d
 
-	if(m.gene || m.isoform) {
-		const t = []
-		if(m.gene) t.push(m.gene)
-		if(m.isoform) t.push(m.isoform)
-		lst.push({k:'Gene', v: t.join(', ')})
-	}
-
-	if(m.rnaduplength) {
-		lst.push({k: 'RNA duplicated', v: m.rnaduplength+' bp'})
-	}
-	if(m.aaduplength) {
-		lst.push({k:'AA duplicated', v: m.aaduplength+' aa'})
-	}
-
-	const tmp=tooltip_svcnv_addexpressionrank(sample,tk)
-	if(tmp) {
-		lst.push(tmp)
-	}
-
-	client.make_table_2col( tk.tktip.d, lst )
+	detailtable_singlesample( p )
 }
 
 
