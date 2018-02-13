@@ -9179,7 +9179,8 @@ function mds_init_mdssvcnv(query, ds, genome) {
 			}
 		}
 
-
+		/*
+		// not used at the moment
 		query.attributeSummary = mds_query_attrsum4samples(query.samples, ds)
 		query.hierarchySummary = mds_query_hierarchy4samples(query.samples,ds)
 		for(const hierarchyname in query.hierarchySummary) {
@@ -9187,6 +9188,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 			for(const k in query.hierarchySummary[ hierarchyname ]) levelcount++
 			console.log(levelcount+' '+hierarchyname+' hierarchy levels for '+query.name)
 		}
+		*/
 	}
 
 	{

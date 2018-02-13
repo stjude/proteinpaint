@@ -70,7 +70,7 @@ integrate other pieces of information from the same mds
 
 
 
-const labyspace=5
+const labyspace = 5
 const intrasvcolor = '#858585' // inter-chr sv color is defined on the fly
 const cnvhighlightcolor = '#E8FFFF'
 const minlabfontsize=7
@@ -318,7 +318,7 @@ function render_singlesample( tk, block ) {
 
 			// cnv or loh
 
-			map_cnv(item, block)
+			map_cnv(item, tk, block)
 			if(item.x1==undefined || item.x2==undefined) {
 				console.log('unmappable: '+item.chr+' '+item.start+' '+item.stop)
 				continue
@@ -940,7 +940,7 @@ function render_samplegroups( tk, block ) {
 				}
 
 				// cnv
-				map_cnv( item, block )
+				map_cnv( item, tk, block )
 				if(item.x1==undefined || item.x2==undefined) {
 					console.log('unmappable cnv: ',item)
 					continue
@@ -1620,7 +1620,7 @@ function render_multi_cnvloh(tk,block) {
 
 
 
-	let groupspace
+	let groupspace // vertical spacing between groups
 	if(tk.isdense) {
 
 		// densely plot sample rows
@@ -1716,7 +1716,7 @@ function render_multi_cnvloh(tk,block) {
 		samplegroup.y = yoff1
 
 		for( const sample of samplegroup.samples ) {
-			
+
 			/*
 			for each sample from this group
 			*/
@@ -1754,7 +1754,7 @@ function render_multi_cnvloh(tk,block) {
 
 
 			/*
-			draw cnv/loh bars
+			draw cnv/loh bars before all others
 			*/
 			for( const item of sample.items ) {
 
@@ -1821,6 +1821,39 @@ function render_multi_cnvloh(tk,block) {
 
 			}
 
+			/*
+			if in full mode (not dense), draw itd bars
+			*/
+			if(tk.isfull && tk.data_vcf) {
+				const color = common.mclass[ common.mclassitd ].color
+				for(const m of tk.data_vcf) {
+					if(m.dt!=common.dtitd) continue
+					if(m.x==undefined) continue
+					if(m.sample != sample.samplename) continue
+					// an itd from this sample
+					const m_g = g.append('g')
+						.attr('transform','translate('+m.x+',0)')
+					m_g.append('rect')
+						.attr('width', m.itdpxlen)
+						.attr('height', tk.rowheight)
+						.attr('fill', color)
+						.attr('fill-opacity',.7)
+						.attr('shape-rendering','crispEdges')
+					.on('mouseover', ()=> {
+						d3event.target.setAttribute('fill-opacity',1)
+						tooltip_itditem( m, sample, samplegroup, tk )
+						})
+					.on('mouseout',()=>{
+						d3event.target.setAttribute('fill-opacity',.7)
+						tk.tktip.hide()
+					})
+					.on('click',()=>{
+						console.error('click itd')
+						//click_multi2single( null, item, sample, samplegroup, tk, block )
+					})
+				}
+			}
+
 
 			/*
 			draw sv/fusion circles, appears here in full mode, not in dense
@@ -1848,108 +1881,101 @@ function render_multi_cnvloh(tk,block) {
 						tk.tktip.hide()
 					})
 					.on('click',()=>{
+						console.error('click sv/fusion')
 						//click_multi2single( null, item, sample, samplegroup, tk, block )
 					})
 				continue
 			}
 
 			/*
-			vcf ticks in full mode, not dense
+			if in full mode (not dense), draw ticks for snv/indel
 			*/
 			if(tk.isfull && tk.data_vcf) {
 
 				for(const m of tk.data_vcf) {
-					if(m.x==undefined) continue
+					if(m.dt != common.dtsnvindel) continue
+					if(m.x == undefined) continue
+					if(!m.sampledata) continue
 
-					if(m.dt==common.dtsnvindel) {
+					const rowheight = tk.rowheight
+					for(const ms of m.sampledata) {
+						if(ms.sampleobj.name != sample.samplename) continue
 
-						if(!m.sampledata) continue
-						for(const ms of m.sampledata) {
-							if(ms.sampleobj.name != sample.samplename) continue
-							// a variant from this sample
-							const rowheight = tk.rowheight
-							const m_g = g.append('g')
-								.attr('transform','translate('+m.x+','+(rowheight/2)+')')
-							const color = common.mclass[m.class].color
+						// a variant from this sample
+						const m_g = g.append('g')
+							.attr('transform','translate('+m.x+','+(rowheight/2)+')')
+						const color = common.mclass[m.class].color
 
-							const bgbox = m_g.append('rect')
-								.attr('x', -rowheight/2-1)
-								.attr('y', -rowheight/2-1)
-								.attr('width', rowheight+2)
-								.attr('height', rowheight+2)
-								.attr('fill',color)
-								.attr('fill-opacity', 0)
-							const bgline1 = m_g.append('line')
-								.attr('stroke', 'white')
-								.attr('stroke-width',3)
-								.attr('x1', -rowheight/2)
-								.attr('x2', rowheight/2)
-								.attr('y1', -rowheight/2)
-								.attr('y2', rowheight/2)
-							const bgline2 = m_g.append('line')
-								.attr('stroke', 'white')
-								.attr('stroke-width',3)
-								.attr('x1', -rowheight/2)
-								.attr('x2', rowheight/2)
-								.attr('y1', rowheight/2)
-								.attr('y2', -rowheight/2)
-							const fgline1 = m_g.append('line')
-								.attr('stroke', color)
-								.attr('stroke-width',1.5)
-								.attr('x1', -rowheight/2)
-								.attr('x2', rowheight/2)
-								.attr('y1', -rowheight/2)
-								.attr('y2', rowheight/2)
-							const fgline2 = m_g.append('line')
-								.attr('stroke', color)
-								.attr('stroke-width',1.5)
-								.attr('x1', -rowheight/2)
-								.attr('x2', rowheight/2)
-								.attr('y1', rowheight/2)
-								.attr('y2', -rowheight/2)
-							m_g.append('rect')
-								.attr('x', -rowheight/2)
-								.attr('y', -rowheight/2)
-								.attr('width', rowheight)
-								.attr('height', rowheight)
-								.attr('fill','white')
-								.attr('fill-opacity', 0)
-								.on('mouseover',()=>{
-									bgbox.attr('fill-opacity',1)
-									bgline1.attr('stroke-opacity',0)
-									bgline2.attr('stroke-opacity',0)
-									fgline1.attr('stroke','white')
-									fgline2.attr('stroke','white')
-									tooltip_multi_snvindel( m, ms, sample, samplegroup, tk, block )
+						const bgbox = m_g.append('rect')
+							.attr('x', -rowheight/2-1)
+							.attr('y', -rowheight/2-1)
+							.attr('width', rowheight+2)
+							.attr('height', rowheight+2)
+							.attr('fill',color)
+							.attr('fill-opacity', 0)
+						const bgline1 = m_g.append('line')
+							.attr('stroke', 'white')
+							.attr('stroke-width',3)
+							.attr('x1', -rowheight/2)
+							.attr('x2', rowheight/2)
+							.attr('y1', -rowheight/2)
+							.attr('y2', rowheight/2)
+						const bgline2 = m_g.append('line')
+							.attr('stroke', 'white')
+							.attr('stroke-width',3)
+							.attr('x1', -rowheight/2)
+							.attr('x2', rowheight/2)
+							.attr('y1', rowheight/2)
+							.attr('y2', -rowheight/2)
+						const fgline1 = m_g.append('line')
+							.attr('stroke', color)
+							.attr('stroke-width',1.5)
+							.attr('x1', -rowheight/2)
+							.attr('x2', rowheight/2)
+							.attr('y1', -rowheight/2)
+							.attr('y2', rowheight/2)
+						const fgline2 = m_g.append('line')
+							.attr('stroke', color)
+							.attr('stroke-width',1.5)
+							.attr('x1', -rowheight/2)
+							.attr('x2', rowheight/2)
+							.attr('y1', rowheight/2)
+							.attr('y2', -rowheight/2)
+						m_g.append('rect')
+							.attr('x', -rowheight/2)
+							.attr('y', -rowheight/2)
+							.attr('width', rowheight)
+							.attr('height', rowheight)
+							.attr('fill','white')
+							.attr('fill-opacity', 0)
+							.on('mouseover',()=>{
+								bgbox.attr('fill-opacity',1)
+								bgline1.attr('stroke-opacity',0)
+								bgline2.attr('stroke-opacity',0)
+								fgline1.attr('stroke','white')
+								fgline2.attr('stroke','white')
+								tooltip_multi_snvindel( m, ms, sample, samplegroup, tk, block )
+							})
+							.on('mouseout',()=>{
+								tk.tktip.hide()
+								bgbox.attr('fill-opacity',0)
+								bgline1.attr('stroke-opacity',1)
+								bgline2.attr('stroke-opacity',1)
+								fgline1.attr('stroke',color)
+								fgline2.attr('stroke',color)
+							})
+							.on('click',()=>{
+								click_snvindel_singlevariantsample( {
+									snvindel: {
+										m:m,
+										m_sample: ms
+									},
+									sample: sample,
+									samplegroup: samplegroup,
+									tk:tk,
+									block:block
 								})
-								.on('mouseout',()=>{
-									tk.tktip.hide()
-									bgbox.attr('fill-opacity',0)
-									bgline1.attr('stroke-opacity',1)
-									bgline2.attr('stroke-opacity',1)
-									fgline1.attr('stroke',color)
-									fgline2.attr('stroke',color)
-								})
-								.on('click',()=>{
-									click_snvindel_singlevariantsample( {
-										snvindel: {
-											m:m,
-											m_sample: ms
-										},
-										sample: sample,
-										samplegroup: samplegroup,
-										tk:tk,
-										block:block
-									})
-								})
-						}
-
-						continue
-					}
-
-					if(m.dt==common.dtitd) {
-						// draw itd
-						continue
+							})
 					}
 				}
 			}
@@ -4231,9 +4257,8 @@ function may_allow_samplesearch(tk, block) {
 
 
 
-function map_cnv(item,block) {
-	const lst=[]
-	const main=block.tkarg_maygm(block.tklst[0])[0]
+function map_cnv(item, tk, block) {
+	const main = block.tkarg_maygm( tk )[0]
 	if(item.chr==main.chr && Math.max(item.start,main.start)<Math.min(item.stop,main.stop)) {
 		item.x1=block.seekcoord(item.chr, Math.max(item.start,main.start))[0].x
 		item.x2=block.seekcoord(item.chr, Math.min(item.stop,main.stop))[0].x
@@ -4252,69 +4277,6 @@ function map_cnv(item,block) {
 			}
 		}
 		x+=p.width
-	}
-	return
-	const r1 = block.seekcoord(item.chr, item.start)[0]
-	if(r1) {
-		if(r1.ridx!=undefined) {
-			if(r1.x<0 || r1.x>block.width) {
-				let x=block.width
-				for(const p of block.subpanels) {
-					x+=p.leftpad
-					if(item.chr==p.chr && item.start<p.stop) {
-						item.x1=x+(Math.max(item.start,p.start)-p.start)*p.exonsf
-						break
-					}
-					x+=p.width
-				}
-				if(item.x1==undefined) {
-					if(r1.x<0) item.x1=0
-					else item.x1=block.width
-				}
-			}
-		}
-		if(item.x1==undefined) item.x1=r1.x
-	} else {
-		let x=block.width
-		for(const [i,panel] of block.subpanels.entries()) {
-			x+=panel.leftpad
-			if(item.chr == panel.chr && item.start < panel.stop) {
-				item.x1=x + ( Math.max(item.start,panel.start)-panel.start ) * panel.exonsf
-				break
-			}
-			x+=panel.width
-		}
-	}
-	const r2 = block.seekcoord(item.chr, item.stop)[0]
-	if(r2) {
-		if(r2.ridx!=undefined) {
-			if(r2.x<0 || r2.x>block.width) {
-				let x=block.width
-				for(const p of block.subpanels) {
-					x+=p.leftpad
-					if(item.chr==p.chr && item.stop<p.start) {
-						item.x2=x+(Math.min(item.stop,p.stop)-p.start)*p.exonsf
-						break
-					}
-					x+=p.width
-				}
-				if(item.x2==undefined) {
-					if(r2.x<0) item.x2=0
-					else item.x2=block.width
-				}
-			}
-		}
-		if(item.x2==undefined) item.x2=r2.x
-	} else {
-		let x=block.width
-		for(const panel of block.subpanels) {
-			x+=panel.leftpad
-			if(item.chr == panel.chr && item.stop > panel.start) {
-				item.x2= x + ( Math.min(item.stop,panel.stop)-panel.start ) * panel.exonsf
-				break
-			}
-			x+=panel.width
-		}
 	}
 }
 
@@ -4685,6 +4647,45 @@ function tooltip_svitem_2( sv, sample, samplegroup, tk ) {
 
 
 
+function tooltip_itditem( m, sample, samplegroup, tk ) {
+	/*
+	multi-sample
+	full mode
+	mouse over a itd bar
+	*/
+	tk.tktip.clear()
+		.show(d3event.clientX, d3event.clientY)
+
+	const lst = [
+		{
+		k:'Sample',
+		v: sample.samplename
+			+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
+			+ (samplegroup.name ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '')
+		},
+		{k:'ITD', v:m.chr+':'+m.pos+'-'+m.stop}
+	]
+
+	if(m.gene || m.isoform) {
+		const t = []
+		if(m.gene) t.push(m.gene)
+		if(m.isoform) t.push(m.isoform)
+		lst.push({k:'Gene', v: t.join(', ')})
+	}
+
+	if(m.rnaduplength) {
+		lst.push({k: 'RNA duplicated', v: m.rnaduplength+' bp'})
+	}
+	if(m.aaduplength) {
+		lst.push({k:'AA duplicated', v: m.aaduplength+' aa'})
+	}
+
+	client.make_table_2col( tk.tktip.d, lst )
+}
+
+
+
+
 function svchr2html(chr, tk) {
 	// only for multi-sample, full mode
 	if( tk.legend_svchrcolor.interchrs.has(chr) ) {
@@ -4980,16 +4981,32 @@ function may_map_vcf(tk, block) {
 	// map to view range: snvindel, itd
 	if(!tk.data_vcf) return
 	for(const m of tk.data_vcf) {
-		m._chr = m.chr
-		m._pos = m.pos
-		map_sv_2( m, block )
-		delete m._chr
-		delete m._pos
 
 		if(m.dt==common.dtitd) {
-			const m2 = { _chr: m.chr, _pos: m.stop }
-			map_sv_2( m2, block )
-			m.itdpxlen = m2.x - m.x
+			// map like cnv
+			m.start = m.pos
+			map_cnv( m, tk, block )
+			delete m.start
+			if(m.x1==undefined || m.x2==undefined) {
+				console.log('itd unmapped: '+m.chr+':'+m.pos+'-'+m.stop)
+			} else {
+				m.x = Math.min( m.x1, m.x2 )
+				m.itdpxlen = Math.abs( m.x2 - m.x1 )
+				delete m.x1
+				delete m.x2
+			}
+		} else if(m.dt==common.dtsnvindel) {
+			m._chr = m.chr
+			m._pos = m.pos
+			map_sv_2( m, block )
+			if(m.x==undefined) {
+				console.log('snvindel unmapped: '+m.chr+':'+m.pos)
+			} else {
+				delete m._chr
+				delete m._pos
+			}
+		} else {
+			console.error('may_map_vcf: unknown dt')
 		}
 	}
 }
