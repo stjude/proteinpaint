@@ -17,13 +17,11 @@ render_samplegroups
 	render_multi_vcfdensity
 		tooltip_vcf_dense
 		click_vcf_dense
-			click_snvindel_singlevariantsample
 	render_multi_svdensity
 		tooltip_sv_dense
 		click_sv_dense
-		tooltip_svitem
-		click_sv_single
 	render_multi_cnvloh
+		tooltip_singleitem     (both multi- and single-sample)
 		click_samplegroup_showmenu
 		click_samplegroup_showtable
 		click_multi_singleitem
@@ -31,10 +29,12 @@ render_samplegroups
 	render_multi_genebar
 		genebar_config
 render_singlesample
+	render_singlesample_sv
+		click_sv_single
+	render_singlesample_stack
 configPanel()
 createbutton_addfeature
 createbutton_focusvcf
-createbutton_focuscnvlohsv
 
 
 
@@ -280,10 +280,11 @@ function render_singlesample( tk, block ) {
 	}
 
 
-	const svlst = []
-	const cnvlst =[]
-	const lohlst =[]
-	const id2sv = {} // must dedup sv, tell by breakpoint position
+	const svlst  = []
+	const cnvlst = []
+	const lohlst = []
+	const itdlst = []
+	const id2sv  = {} // must dedup sv, tell by breakpoint position
 
 	const usecopynumber=false // but not logratio
 
@@ -293,7 +294,7 @@ function render_singlesample( tk, block ) {
 		segmeanmax=0
 
 	if(tk.data) {
-		// divide cnv/sv data into holders
+		// divide cnv/loh/sv/itd data into holders
 
 		for(const item of tk.data) {
 
@@ -318,7 +319,7 @@ function render_singlesample( tk, block ) {
 				continue
 			}
 
-			// cnv or loh
+			// cnv, loh, itd
 
 			map_cnv(item, tk, block)
 			if(item.x1==undefined || item.x2==undefined) {
@@ -330,24 +331,27 @@ function render_singlesample( tk, block ) {
 				// loh
 				segmeanmax = Math.max(segmeanmax, item.segmean)
 				lohlst.push(item)
-				continue
-			}
 
-			// cnv
+			} else if(item.dt == common.dtcnv) {
 
-			if(usecopynumber) {
-				const v = 2*Math.pow(2, item.value)
-				copynumbermax = Math.max( copynumbermax, v )
-			} else {
-				// item.value is log2 ratio by default
-				if(item.value>0) {
-					gainmaxvalue = Math.max(gainmaxvalue, item.value)
+				// cnv
+				if(usecopynumber) {
+					const v = 2*Math.pow(2, item.value)
+					copynumbermax = Math.max( copynumbermax, v )
 				} else {
-					lossmaxvalue = Math.min(lossmaxvalue, item.value)
+					// item.value is log2 ratio by default
+					if(item.value>0) {
+						gainmaxvalue = Math.max(gainmaxvalue, item.value)
+					} else {
+						lossmaxvalue = Math.min(lossmaxvalue, item.value)
+					}
 				}
-			}
 
-			cnvlst.push(item)
+				cnvlst.push(item)
+
+			} else if(item.dt == common.dtitd) {
+				itdlst.push( item )
+			}
 		}
 
 		if(cnvlst.length) {
@@ -371,14 +375,12 @@ function render_singlesample( tk, block ) {
 
 	/*
 	stack bar plot on bottom:
-		cnv
-		loh
+		cnv, itd, loh as bars
 		snvindel: show label
-		itd: show label
 	*/
 	tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
 
-	const items = [ ...cnvlst, ...lohlst ] // stack bar items
+	const items = [ ...cnvlst, ...lohlst, ...itdlst ] // stack bar items
 	if(tk.data_vcf) {
 		for(const m of tk.data_vcf) {
 			if(m.x!=undefined) {
@@ -409,14 +411,14 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 	all in items[]
 	*/
 
-	const stackheight = 12
+	const stackheight = 12 // hardcoded
 	const stackspace  = 1
 	const labelspace = 5 // when label is shown outside of box, the space between them
 
-	// prep & pre-render snvindel/itd
+	// prep & pre-render snvindel
 	for(const m of items) {
 
-		if(m.dt==common.dtloh || m.dt==common.dtcnv) continue
+		if(m.dt != common.dtsnvindel) continue
 
 		const g = tk.cnv_g.append('g')
 		m._p = {
@@ -437,17 +439,12 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 			.attr('font-family', client.font)
 			.attr('fill', color)
 			.attr('dominant-baseline','central')
+			.text( m.mname )
 
-		if(m.dt==common.dtsnvindel) {
-			lab.text( m.mname )
-		} else if(m.dt==common.dtitd) {
-			lab.text('ITD')
-		}
 
 		let labelw
 		lab.each(function(){ labelw = this.getBBox().width })
 
-		////////////////////////////////// render shapes
 		if(m.dt==common.dtsnvindel) {
 			const rowheight = stackheight
 
@@ -491,10 +488,9 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 						.attr('x2', rowheight/2-1)
 						.attr('y1', rowheight/2-1)
 						.attr('y2', 1-rowheight/2)
-					tooltip_multi_singleitem({
+					tooltip_singleitem({
 						item: m,
 						m_sample: m.sampledata[0],
-						sample: {samplename: m.sampledata[0].sampleobj.name },
 						tk: tk,
 					})
 				})
@@ -512,10 +508,9 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 						.attr('y1', rowheight/2)
 						.attr('y2', -rowheight/2)
 				})
-		} else if(m.dt==common.dtitd) {
-			// itd shapes
+		} else {
+			console.error('unknown dt: '+m.dt)
 		}
-
 
 
 		//////////////////////////////// set position for text label & cover
@@ -525,7 +520,6 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 
 			if(block.width - m.x > labelw + labelspace + stackheight/2) {
 				// label on right
-				//m._p.labelonright=1
 				m._p.stackx = m.x-stackheight/2
 				m._p.g_x = stackheight/2
 				lab.attr('x', stackheight/2+labelspace)
@@ -533,7 +527,6 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 
 			} else {
 				// label on left
-				//m._p.labelonleft = 1
 				m._p.stackx = m.x-stackheight/2-labelspace-labelw
 				m._p.g_x = stackheight/2+labelspace+labelw
 				lab
@@ -541,9 +534,8 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 					.attr('text-anchor','end')
 				m._p.cover.attr('x', -labelw-labelspace-stackheight/2 )
 			}
-		} else if(m.dt==common.dtitd) {
-			// TODO itd bar width
-			// label may be inside bar
+		} else {
+			console.error('unknown dt: '+m.dt)
 		}
 	}
 
@@ -576,26 +568,23 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 		const itemstart = item._p ? item._p.stackx : Math.min(item.x1, item.x2)
 		const itemwidth = item._p ? item._p.stackw : Math.abs(item.x1-item.x2)
 
-		let addnew=true
 		for(let i=0; i<stacks.length; i++) {
 			if(stacks[i] <= itemstart ) {
 				stacks[i] = Math.max( stacks[i], itemstart + itemwidth )
 				item.stack=i
-				addnew=false
 				break
 			}
 		}
-		if(addnew) {
+		if(item.stack==undefined) {
+			item.stack=stacks.length
 			stacks.push( itemstart + itemwidth )
-			item.stack=stacks.length-1
 		}
 	}
 
 
-
 	for(const item of items) {
 
-		if(item.dt==common.dtloh || item.dt==common.dtcnv) {
+		if(item.dt==common.dtloh || item.dt==common.dtcnv || item.dt==common.dtitd) {
 
 			let color
 
@@ -603,13 +592,16 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 
 				color = 'rgba('+tk.cnvcolor.loh.r+','+tk.cnvcolor.loh.g+','+tk.cnvcolor.loh.b+','+(item.segmean/tk.cnvcolor.segmeanmax)+')'
 
-			} else {
+			} else if(item.dt==common.dtcnv){
 
 				if(item.value>0) {
 					color = 'rgba('+tk.cnvcolor.gain.r+','+tk.cnvcolor.gain.g+','+tk.cnvcolor.gain.b+','+(item.value/tk.cnvcolor.cnvmax)+')'
 				} else {
 					color = 'rgba('+tk.cnvcolor.loss.r+','+tk.cnvcolor.loss.g+','+tk.cnvcolor.loss.b+','+(-item.value/tk.cnvcolor.cnvmax)+')'
 				}
+			} else if(item.dt==common.dtitd) {
+
+				color = common.mclass[common.mclassitd].color
 			}
 
 			tk.cnv_g.append('rect')
@@ -622,7 +614,10 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 				.attr('stroke','none')
 				.attr('class','sja_aa_skkick')
 				.on('mouseover',()=>{
-					tooltip_cnvitem_singlesample(item, tk)
+					tooltip_singleitem({
+						item:item,
+						tk: tk
+					})
 				})
 				.on('mouseout',()=> {
 					tk.tktip.hide()
@@ -632,21 +627,13 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 
 		if(item.dt==common.dtsnvindel) {
 
-
-			item._p.g.attr('transform','translate('+(item._p.stackx+item._p.g_x)+','+(stackheight/2 + (stackheight+stackspace)*item.stack)+')')
-
-
-			continue
-		}
-
-		if(item.dt==common.dtitd) {
-			console.log('show itd')
+			item._p.g
+				.attr('transform','translate('+(item._p.stackx+item._p.g_x)+','+(stackheight/2 + (stackheight+stackspace)*item.stack)+')')
 			continue
 		}
 	}
 
 	return stacks.length*(stackheight+stackspace)-stackspace
-
 }
 
 
@@ -734,7 +721,7 @@ function render_singlesample_sv( svlst, tk, block ) {
 		+ (svlst.find(s=> s.x0 && s.x1) ?
 			tk.stem1+tk.legheight :
 			tk.stem1+tk.stem2+tk.stem3
-			)
+		)
 
 	tk.svvcf_g.attr('transform','translate(0,'+ (svheight-tk.midpad) +')')
 
@@ -780,13 +767,17 @@ function render_singlesample_sv( svlst, tk, block ) {
 			.attr('stroke',color)
 			.attr('stroke-opacity',0)
 			.attr('class','sja_aa_disckick')
-			.on('click',()=>{
-				click_sv_single(sv, tk, block)
-			})
 			.on('mouseover',()=>{
-				tooltip_svitem( sv, tk)
+				tooltip_singleitem({
+					item:sv,
+					tk: tk
+				})
 			})
 			.on('mouseout',()=> tk.tktip.hide() )
+			.on('click',()=>{
+				// click sv may add subpanel
+				click_sv_single(sv, tk, block)
+			})
 
 		if(doubleleg) {
 			g.append('line')
@@ -1794,7 +1785,7 @@ function render_multi_cnvloh(tk,block) {
 					.attr('class','sja_aa_skkick')
 					.attr('fill', color)
 					.on('mouseover',()=>{
-						tooltip_multi_singleitem( {
+						tooltip_singleitem( {
 							item:item,
 							sample:sample,
 							samplegroup:samplegroup,
@@ -1831,13 +1822,13 @@ function render_multi_cnvloh(tk,block) {
 				g.append('circle')
 					.attr('cx', item.x)
 					.attr('cy', sample.height/2 )
-					.attr('r', Math.max( minsvradius, 1 + sample.height / 2 ) )
+					.attr('r',  Math.min( 5, Math.max( minsvradius, 1 + sample.height / 2 ) ) )
 					.attr('fill',color)
 					.attr('fill-opacity',0)
 					.attr('stroke', color)
 					.on('mouseover', ()=> {
 						d3event.target.setAttribute('fill-opacity',1)
-						tooltip_multi_singleitem({
+						tooltip_singleitem({
 							item: item,
 							sample: sample,
 							samplegroup: samplegroup,
@@ -1928,7 +1919,8 @@ function render_multi_cnvloh(tk,block) {
 								bgline2.attr('stroke-opacity',0)
 								fgline1.attr('stroke','white')
 								fgline2.attr('stroke','white')
-								tooltip_multi_singleitem({
+
+								tooltip_singleitem({
 									item:m,
 									m_sample: ms,
 									sample: sample,
@@ -1945,12 +1937,9 @@ function render_multi_cnvloh(tk,block) {
 								fgline2.attr('stroke',color)
 							})
 							.on('click',()=>{
-								// click_multi_singleitem()
-								click_snvindel_singlevariantsample( {
-									snvindel: {
-										m:m,
-										m_sample: ms
-									},
+								click_multi_singleitem({
+									item: m,
+									m_sample: ms,
 									sample: sample,
 									samplegroup: samplegroup,
 									tk:tk,
@@ -2700,7 +2689,7 @@ function tooltip_vcf_dense(g, tk, block) {
 
 			if(m.sampledata.length == 1) {
 				// in just one sample
-				tooltip_multi_singleitem( {
+				tooltip_singleitem( {
 					item: m,
 					m_sample: m.sampledata[0],
 					sample: {samplename: m.sampledata[0].sampleobj.name},
@@ -2833,29 +2822,6 @@ function createbutton_focusvcf( p ) {
 
 
 
-
-
-function createbutton_focuscnvlohsv( p ) {
-	/*
-	multi-sample
-	*/
-	p.holder.append('div')
-		.style('display','inline-block')
-		.attr('class', 'sja_menuoption')
-		.text('Focus')
-		.on('click',()=>{
-
-			if(p.pane) p.pane.pane.remove()
-
-			focus_singlesample({
-				m: p.item,
-				sample: p.sample,
-				samplegroup: p.samplegroup,
-				tk: p.tk,
-				block: p.block
-			})
-		})
-}
 
 
 
@@ -3234,12 +3200,23 @@ function focus_singlesample( p ) {
 	.block
 	*/
 
-	const {m, sample, samplegroup, tk, block} = p
+	const { m, sample, samplegroup, tk, block } = p
 
-	const pane = client.newpane({x:100, y:100})
+	let holder
+
+	if(p.holder) {
+		
+		holder = p.holder
+
+	} else {
+
+		const pane = client.newpane({x:100, y:100})
+		holder = pane.body
+	}
+
 	const arg={
 		tklst:[],
-		holder:pane.body,
+		holder: holder,
 		subpanels:[]
 	}
 	client.first_genetrack_tolist( block.genome, arg.tklst )
@@ -3381,8 +3358,10 @@ function focus_singlesample( p ) {
 		})
 	})
 	.catch(err=>{
-		client.sayerror(pane.body, err.message)
+
+		client.sayerror( holder, err.message )
 		if(err.stack) console.log(err.stack)
+
 	})
 	.then(()=>{
 
@@ -4465,19 +4444,80 @@ function click_multi_singleitem( p ) {
 
 	const pane = client.newpane({x:d3event.clientX, y:d3event.clientY})
 
-	const butrow = pane.body.append('div').style('margin','10px')
-	createbutton_focuscnvlohsv( {
-		item: p.item,
-		sample:p.sample,
-		samplegroup:p.samplegroup,
-		holder:butrow,
-		tk: p.tk,
-		block: p.block,
-	})
+	const buttonrow = pane.body.append('div')
+		.style('margin','10px')
+
+	// click focus button to show block in holder
+	{
+		let blocknotshown = true
+		const holder = pane.body.append('div')
+			.style('margin','10px')
+			.style('display','none')
+
+		// focus button
+		buttonrow.append('div')
+			.style('display','inline-block')
+			.attr('class', 'sja_menuoption')
+			.text('Focus')
+			.on('click',()=>{
+
+				if(holder.style('display')=='none') {
+					client.appear(holder)
+				} else {
+					client.disappear(holder)
+				}
+
+				if(blocknotshown) {
+					blocknotshown=false
+					focus_singlesample({
+						holder: holder,
+						m: p.item,
+						sample: p.sample,
+						samplegroup: p.samplegroup,
+						tk: p.tk,
+						block: p.block
+					})
+				}
+			})
+	}
+
+
+	if( !p.tk.iscustom && 0 ) {
+		/*
+		is official dataset
+		click button to show whole-genome view
+		may check if dataset is equipped with disco files
+		*/
+		let plotnotshown = true
+		const holder = pane.body.append('div')
+			.style('margin','10px')
+			.style('display','none')
+
+		// focus button
+		buttonrow.append('div')
+			.style('display','inline-block')
+			.attr('class', 'sja_menuoption')
+			.text('Disco')
+			.on('click',()=>{
+
+				if(holder.style('display')=='none') {
+					client.appear(holder)
+				} else {
+					client.disappear(holder)
+				}
+
+				if(plotnotshown) {
+					plotnotshown=false
+					// retrieve data for this sample
+					// then call api to show plot
+				}
+			})
+	}
+
 
 	createbutton_addfeature( {
 		m: p.item,
-		holder:butrow,
+		holder:buttonrow,
 		tk: p.tk,
 		block: p.block,
 		pane: pane
@@ -4502,14 +4542,18 @@ function detailtable_singlesample(p) {
 	.samplegroup
 	.tk
 	*/
-	const lst = [
-		{
+	const lst = []
+
+	if(p.sample) {
+		lst.push({
 		k:'Sample',
 		v: p.sample.samplename
 			+ (p.sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+p.sample.sampletype+'</span>' : '')
 			+ (p.samplegroup && p.samplegroup.name ? ' <span style="font-size:.7em">'+p.samplegroup.name+'</span>' : '')
-		},
-	]
+		})
+	} else {
+		// if in single-sample mode, won't have p.sample
+	}
 
 	const m = p.item
 
@@ -4651,9 +4695,12 @@ function detailtable_singlesample(p) {
 		lst.push({k:'Unknown dt!!', v: m.dt })
 	}
 
-	const tmp=tooltip_svcnv_addexpressionrank(p.sample,p.tk)
-	if(tmp) {
-		lst.push(tmp)
+	if(p.sample) {
+		// p.sample and expression rank data only available in multi-sample mode
+		const tmp=tooltip_svcnv_addexpressionrank(p.sample,p.tk)
+		if(tmp) {
+			lst.push(tmp)
+		}
 	}
 
 	client.make_table_2col( p.holder, lst )
@@ -4667,35 +4714,6 @@ function detailtable_singlesample(p) {
 
 
 
-function click_snvindel_singlevariantsample( p ) {
-	/*
-	multi-sample
-	full mode
-	clicking on a snvindel
-	*/
-	const pane = client.newpane({x:d3event.clientX, y:d3event.clientY})
-
-	const butrow = pane.body.append('div').style('margin','10px')
-	createbutton_focusvcf( {
-		snvindel: p.snvindel,
-		holder:butrow,
-		tk:p.tk,
-		block:p.block,
-		pane: pane
-	})
-
-	createbutton_addfeature( {
-		m: p.snvindel.m,
-		holder: butrow,
-		tk: p.tk,
-		block: p.block,
-		pane: pane,
-	})
-
-	p.holder = pane.body
-
-	detailtable_vcf_singlevariantsample( p )
-}
 
 
 
@@ -4740,17 +4758,6 @@ function tooltip_svcnv_addexpressionrank( sample, tk ) {
 
 
 
-function tooltip_svitem( sv, tk ) {
-	// single sample mode
-	tk.tktip.clear()
-		.show(d3event.clientX, d3event.clientY)
-	const row=tk.tktip.d.append('div')
-	row.append('span').html( print_sv(sv) )
-
-	if(sv.dt==common.dtfusionrna) {
-		row.append('span').html('&nbsp;(RNA fusion)')
-	}
-}
 
 
 
@@ -4758,10 +4765,7 @@ function tooltip_svitem( sv, tk ) {
 
 
 
-
-
-
-function tooltip_multi_singleitem( p ) {
+function tooltip_singleitem( p ) {
 	/*
 	multi-sample
 	mouse over an item
@@ -4786,35 +4790,6 @@ function svchr2html(chr, tk) {
 }
 
 
-
-function tooltip_cnvitem_singlesample(item, tk) {
-	/*
-	single sample
-	mouse over cnv/loh
-	*/
-	tk.tktip.clear()
-		.show( d3event.clientX, d3event.clientY )
-	const lst = []
-
-	if(item.dt==common.dtloh) {
-		// loh
-		lst.push({k:'LOH seg.mean',v:item.segmean})
-	} else {
-		// cnv
-		lst.push({
-			k:'CNV log2(ratio)',
-			v:'<span style="padding:0px 4px;background:'+(item.value>0?tk.cnvcolor.gain.str:tk.cnvcolor.loss.str)+';color:white;">'+item.value.toFixed(2)+'</span>'
-		})
-	}
-
-	lst.push( {
-		k:'Position',
-		v: item.chr+':'+(item.start+1)+'-'+(item.stop+1)
-			+' <span style="font-size:.7em">'+common.bplen(item.stop-item.start)+'</span>'
-	})
-
-	client.make_table_2col( tk.tktip.d, lst )
-}
 
 
 
@@ -5215,7 +5190,6 @@ function createbutton_addfeature( p ) {
 		}
 		break
 	case common.dtsnvindel:
-	case common.dtitd:
 		nf = {
 			isvcfitd:1,
 			querykey: tk.checkvcf.querykey,
@@ -5223,6 +5197,16 @@ function createbutton_addfeature( p ) {
 			chr: m.chr,
 			start: m.pos,
 			stop: m.pos,
+		}
+		break
+	case common.dtitd:
+		nf = {
+			isitd:1,
+			querykey: tk.querykey,
+			label: 'ITD at '+m.chr+':'+(m.start+1)+'-'+(m.stop+1),
+			chr:m.chr,
+			start:m.start,
+			stop:m.stop
 		}
 		break
 	default:
