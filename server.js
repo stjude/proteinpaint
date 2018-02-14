@@ -3742,10 +3742,16 @@ function handle_mdssvcnv(req,res) {
 		if(req.query.checkvcf) {
 			// TODO
 			if(!req.query.checkvcf.file && !req.query.checkvcf.url) return res.send({error:'no file or url for checkvcf'})
+			// just one vcf or multiple?
 			dsquery.checkvcf = {
-				file:req.query.checkvcf.file,
-				url:req.query.checkvcf.url,
-				indexURL:req.query.checkvcf.indexURL,
+				tracks: [
+					{
+					file:req.query.checkvcf.file,
+					url:req.query.checkvcf.url,
+					indexURL:req.query.checkvcf.indexURL,
+					type: common.mdsvcfitdtype.vcf
+					}
+				]
 			}
 		}
 
@@ -3799,7 +3805,7 @@ function handle_mdssvcnv(req,res) {
 
 
 		////////////////////////////////////////////////////////
-		// query sv cnv loh
+		// query cnv loh sv fusion itd
 
 		const tasks=[]
 
@@ -3828,14 +3834,8 @@ function handle_mdssvcnv(req,res) {
 					const j=JSON.parse(l[3])
 
 					if(j.dt==undefined) {
-						if(j.segmean) {
-							j.dt = common.dtloh
-						} else if(j.value!=undefined) {
-							j.dt = common.dtcnv
-						} else {
-							// no way to tell sv and fusion
-							j.dt = common.dtsv
-						}
+						// TODO report bad lines
+						return
 					}
 
 					///// data-type specific handling and filtering
@@ -3881,6 +3881,12 @@ function handle_mdssvcnv(req,res) {
 								return
 							}
 						}
+						j.chr = l[0]
+						j.start = start0
+						j.stop = stop0
+
+					} else if(j.dt == common.dtitd) {
+
 						j.chr = l[0]
 						j.start = start0
 						j.stop = stop0
@@ -4193,47 +4199,6 @@ function handle_mdssvcnv(req,res) {
 									variants.push(m)
 									// mclass and rest will be determined at client, according to whether in gmmode and such
 								}
-
-							} else if(vcftk.type==common.mdsvcfitdtype.itd) {
-
-								/*
-								itd
-								*/
-								const l = line.split('\t')
-								const m = JSON.parse( l[3] )
-
-								if(req.query.singlesample) {
-									if(m.sample == req.query.singlesample) {
-										return
-									}
-								}
-
-								if(hiddensgnames) {
-									const sanno = ds.cohort.annotation[ m.sample ]
-									if(!sanno) return
-									const attrnames = []
-									for(const attr of dsquery.groupsamplebyattrlst) {
-										const v = sanno[ attr.k ]
-										if(v) {
-											attrnames.push(v)
-										} else {
-											break
-										}
-									}
-									const groupname = attrnames.join( dsquery.attrnamespacer )
-									if( hiddensgnames.has( groupname ) ) {
-										// this sample is from a hidden group
-										return
-									}
-								}
-
-								m.dt = common.dtitd
-								m.chr = l[0]
-								m.pos = Number.parseInt(l[1]) // not called "start"!!!!
-								m.stop = Number.parseInt(l[2])
-
-								variants.push( m )
-
 							}
 						})
 						const errout=[]
@@ -4293,14 +4258,7 @@ function handle_mdssvcnv(req,res) {
 							continue
 						}
 
-						if(m.dt==common.dtitd) {
-
-							mmerge.push( m )
-							continue
-						}
-
 						console.error('unknown dt: '+m.dt)
-
 					}
 				}
 
@@ -4618,12 +4576,7 @@ function handle_mdssvcnv(req,res) {
 						continue
 					}
 
-					if(m.dt==common.dtitd) {
-						// 
-						_grouper( m.sample, [] )
-						continue
-					}
-
+					console.log('unknown dt when grouping samples from vcf data: '+m.dt)
 				}
 			}
 
@@ -4685,15 +4638,7 @@ function handle_mdssvcnv(req,res) {
 						continue
 					}
 
-					if(m.dt==common.dtitd) {
-						if( samples.find( s=> s.samplename == m.sample ) == -1 ) {
-							samples.push( {
-								samplename: m.sample,
-								items: []
-							})
-						}
-						continue
-					}
+					console.log('unknown dt when grouping samples from vcf: '+m.dt)
 				}
 			}
 			result.samplegroups = [ { samples: samples } ]

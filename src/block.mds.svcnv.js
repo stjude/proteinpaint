@@ -28,7 +28,6 @@ render_samplegroups
 		click_samplegroup_showtable
 		click_multi_singleitem
 		** focus_singlesample
-		tooltip_multi_snvindel
 	render_multi_genebar
 		genebar_config
 render_singlesample
@@ -136,7 +135,12 @@ export function loadTk( tk, block ) {
 
 		if(data.error) throw({message:data.error})
 
+		/*
+		must keep the loaded "raw" data in _data_vcf, so it can later apply class filter without having to reload from server
+		on serverside, the "class" won't be parsed out from csq, without gmmode/isoform info of the client
+		*/
 		tk._data_vcf = data.data_vcf
+
 		tk.vcfrangelimit = data.vcfrangelimit
 		vcfdata_prepmclass(tk, block) // data for display is now in tk.data_vcf[]
 
@@ -167,7 +171,6 @@ export function loadTk( tk, block ) {
 		// preps common to both single and multi sample
 		tk.legend_svchrcolor.interchrs.clear()
 		tk.legend_svchrcolor.row.style('display','none')
-
 		tk.legend_mclass.row.style('display','none')
 
 		if(tk.singlesample) {
@@ -384,12 +387,9 @@ function render_singlesample( tk, block ) {
 		}
 	}
 
-
 	const stackploth = render_singlesample_stack( items, tk, block )
 
-
 	tk.height_main = tk.toppad+ svheight + stackploth + tk.bottompad
-
 
 	may_legend_svchr2(tk)
 
@@ -408,7 +408,6 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 	stack for cnv/loh/snvindel/itd
 	all in items[]
 	*/
-
 
 	const stackheight = 12
 	const stackspace  = 1
@@ -492,14 +491,12 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 						.attr('x2', rowheight/2-1)
 						.attr('y1', rowheight/2-1)
 						.attr('y2', 1-rowheight/2)
-					tooltip_multi_snvindel(
-						m, 
-						m.sampledata[0],
-						null,
-						null,
-						tk,
-						block
-						)
+					tooltip_multi_singleitem({
+						item: m,
+						m_sample: m.sampledata[0],
+						sample: {samplename: m.sampledata[0].sampleobj.name },
+						tk: tk,
+					})
 				})
 				.on('mouseout',()=>{
 					tk.tktip.hide()
@@ -845,15 +842,15 @@ function render_singlesample_sv( svlst, tk, block ) {
 function render_samplegroups( tk, block ) {
 
 	/*
-	sample groups
+	multi-sample
 	dense or full
 
-	a sample should have 1 or more of cnv/sv/loh/snvindel, cannot be empty
+	a sample should have 1 or more of cnv/sv/loh/itd/snvindel, cannot be empty
 	sv that are fully in view range will be shown as 2 circles
 	one sample per row, equal row height
 	for dense/full
 
-	draw cnv/loh first; then sv; then vcf
+	draw stack items first (cnv/loh/itd); then sv; then vcf
 	*/
 
 	tk.cnvleftg.selectAll('*').remove()
@@ -886,7 +883,7 @@ function render_samplegroups( tk, block ) {
 	const svlst=[] 
 
 
-	// map sv/cnv to view range, exclude unmappable stuff
+	// map sv/cnv/loh/itd to view range, exclude unmappable stuff
 	tk.samplegroups=[]
 	for( const samplegroup of tk._data) {
 
@@ -938,10 +935,10 @@ function render_samplegroups( tk, block ) {
 					continue
 				}
 
-				// cnv
+				// cnv, loh, itd
 				map_cnv( item, tk, block )
 				if(item.x1==undefined || item.x2==undefined) {
-					console.log('unmappable cnv: ',item)
+					console.log('unmappable stack item: ',item)
 					continue
 				}
 				s2.items.push(item)
@@ -968,11 +965,6 @@ function render_samplegroups( tk, block ) {
 									break
 								}
 							}
-							continue
-						}
-
-						if(m.dt==common.dtitd) {
-							samplehasvcf = m.sample == sample.samplename
 							continue
 						}
 					}
@@ -1159,6 +1151,8 @@ function render_multi_vcfdensity( tk, block) {
 	multi-sample
 	native/custom
 	dense
+
+	TODO no itd
 	*/
 	if(tk.vcfrangelimit) {
 		tk.vcfdensityg.append('text')
@@ -1738,6 +1732,7 @@ function render_multi_cnvloh(tk,block) {
 					})
 			}
 
+			// container for all the browser track elements
 			const g = tk.cnvmidg.append('g')
 				.attr('transform','translate(0,'+yoff1+')')
 
@@ -1756,11 +1751,11 @@ function render_multi_cnvloh(tk,block) {
 
 
 			/*
-			draw cnv/loh bars before all others
+			draw cnv/loh/itd bars, before all others
 			*/
 			for( const item of sample.items ) {
 
-				if(item.dt!=common.dtcnv && item.dt!=common.dtloh) continue
+				if( item.dt!=common.dtcnv && item.dt!=common.dtloh && item.dt!=common.dtitd ) continue
 
 				// segment color set by numeric value against a cutoff
 				let color
@@ -1770,7 +1765,7 @@ function render_multi_cnvloh(tk,block) {
 					} else {
 						color = 'rgba('+tk.cnvcolor.loh.r+','+tk.cnvcolor.loh.g+','+tk.cnvcolor.loh.b+','+(item.segmean/tk.cnvcolor.segmeanmax).toFixed(2)+')'
 					}
-				} else {
+				} else if(item.dt == common.dtcnv) {
 					// cnv
 					if(item.value>0) {
 						if(item.value >= tk.cnvcolor.cnvmax) {
@@ -1785,6 +1780,8 @@ function render_multi_cnvloh(tk,block) {
 							color = 'rgba('+tk.cnvcolor.loss.r+','+tk.cnvcolor.loss.g+','+tk.cnvcolor.loss.b+','+(-item.value/tk.cnvcolor.cnvmax).toFixed(2)+')'
 						}
 					}
+				} else if(item.dt == common.dtitd) {
+					color = common.mclass[common.mclassitd].color
 				}
 
 				g.append('rect')
@@ -1820,54 +1817,6 @@ function render_multi_cnvloh(tk,block) {
 
 			}
 
-			/*
-			in full mode, draw ITD bars (already stacked)
-			*/
-			if(tk.isfull && tk.data_vcf) {
-
-				const color = common.mclass[ common.mclassitd ].color
-
-				for(const m of tk.data_vcf) {
-					if(m.dt!=common.dtitd) continue
-					if(m.x==undefined) continue
-					if(m.sample != sample.samplename) continue
-
-					// an itd from this sample
-
-					const m_g = g.append('g')
-						.attr('transform','translate('+m.x+','+m.stack_y+')')
-
-					m_g.append('rect')
-						.attr('width', m.itdpxlen)
-						.attr('height', m.stack_h)
-						.attr('fill', color)
-						.attr('fill-opacity', .7)
-						.attr('stroke','none')
-						.attr('class','sja_aa_skkick')
-						.attr('shape-rendering','crispEdges')
-						.on('mouseover',()=>{
-							tooltip_multi_singleitem({
-								item:m,
-								sample: sample,
-								samplegroup: samplegroup,
-								tk:tk,
-							})
-						})
-						.on('mouseout',()=>{
-							tk.tktip.hide()
-						})
-						.on('click',()=>{
-							click_multi_singleitem( {
-								item:m,
-								sample:sample,
-								samplegroup:samplegroup,
-								tk:tk,
-								block:block
-							})
-						})
-				}
-			}
-
 
 			/*
 			draw sv/fusion circles, appears here in full mode, not in dense
@@ -1888,8 +1837,13 @@ function render_multi_cnvloh(tk,block) {
 					.attr('stroke', color)
 					.on('mouseover', ()=> {
 						d3event.target.setAttribute('fill-opacity',1)
-						tooltip_svitem_2( item, sample, samplegroup, tk )
+						tooltip_multi_singleitem({
+							item: item,
+							sample: sample,
+							samplegroup: samplegroup,
+							tk:tk,
 						})
+					})
 					.on('mouseout',()=>{
 						d3event.target.setAttribute('fill-opacity',0)
 						tk.tktip.hide()
@@ -1974,7 +1928,13 @@ function render_multi_cnvloh(tk,block) {
 								bgline2.attr('stroke-opacity',0)
 								fgline1.attr('stroke','white')
 								fgline2.attr('stroke','white')
-								tooltip_multi_snvindel( m, ms, sample, samplegroup, tk, block )
+								tooltip_multi_singleitem({
+									item:m,
+									m_sample: ms,
+									sample: sample,
+									samplegroup: samplegroup,
+									tk:tk,
+								})
 							})
 							.on('mouseout',()=>{
 								tk.tktip.hide()
@@ -2033,7 +1993,6 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 	called by render_multi_cnvloh()
 	for each sample, set .height
 	for each stackable item (cnv/loh/itd), set .stack_y, .stack_h
-	stackable items are still in original places
 	*/
 	if(!tk.samplegroups || tk.samplegroups.length==0) return
 
@@ -2043,7 +2002,7 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 			for(const s of g.samples) {
 				s.height = 1 // hardcoded
 				for(const i of s.items) {
-					if(i.dt==common.dtcnv || i.dt==common.dtloh) {
+					if(i.dt==common.dtcnv || i.dt==common.dtloh || i.dt==common.dtitd) {
 						i.stack_y = 0
 						i.stack_h = 1
 					}
@@ -2063,19 +2022,10 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 			// for this sample, gather stackable items
 			const items = []
 			for(const i of s.items) {
-				if(i.dt==common.dtcnv || i.dt==common.dtloh) {
+				if(i.dt==common.dtcnv || i.dt==common.dtloh || i.dt==common.dtitd) {
 					if(i.x1!=undefined && i.x2!=undefined) {
 						i._boxstart = Math.min(i.x1, i.x2)
 						i._boxwidth = Math.abs(i.x2-i.x1)
-						items.push( i )
-					}
-				}
-			}
-			if(tk.data_vcf) {
-				for(const i of tk.data_vcf) {
-					if(i.dt == common.dtitd && i.x!=undefined && i.sample==s.samplename) {
-						i._boxstart = i.x
-						i._boxwidth = i.itdpxlen
 						items.push( i )
 					}
 				}
@@ -2750,14 +2700,12 @@ function tooltip_vcf_dense(g, tk, block) {
 
 			if(m.sampledata.length == 1) {
 				// in just one sample
-				tooltip_multi_snvindel(
-					m, 
-					m.sampledata[0],
-					{samplename: m.sampledata[0].sampleobj.name},
-					null,
-					tk,
-					block
-					)
+				tooltip_multi_singleitem( {
+					item: m,
+					m_sample: m.sampledata[0],
+					sample: {samplename: m.sampledata[0].sampleobj.name},
+					tk: tk,
+				})
 				return
 			}
 
@@ -3055,6 +3003,10 @@ function click_vcf_dense( g, tk, block ) {
 
 function detailtable_vcf_singlevariantsample( p ) {
 	/*
+	delete
+
+
+
 	multi-sample
 	dense or full
 	the variant has just one sample
@@ -4391,6 +4343,9 @@ function may_allow_samplesearch(tk, block) {
 
 
 function map_cnv(item, tk, block) {
+	/*
+	cnv, loh, itd
+	*/
 	const main = block.tkarg_maygm( tk )[0]
 	if(item.chr==main.chr && Math.max(item.start,main.start)<Math.min(item.stop,main.stop)) {
 		item.x1=block.seekcoord(item.chr, Math.max(item.start,main.start))[0].x
@@ -4560,7 +4515,7 @@ function detailtable_singlesample(p) {
 
 	if( m.dt == common.dtitd) {
 
-		lst.push( {k:'ITD', v:m.chr+':'+m.pos+'-'+m.stop } )
+		lst.push( {k:'ITD', v:m.chr+':'+(m.start+1)+'-'+(m.stop+1) } )
 
 		if(m.gene || m.isoform) {
 			const t = []
@@ -4600,9 +4555,100 @@ function detailtable_singlesample(p) {
 		})
 
 	} else if( m.dt == common.dtsv || m.dt==common.dtfusionrna ) {
+
+		lst.push({
+			k: (m.dt==common.dtsv ? 'SV' : 'RNA fusion'),
+			v: svchr2html(m.chrA, p.tk) +':'+(m.posA+1)+':'+m.strandA+' &raquo; '
+				+svchr2html(m.chrB, p.tk)+':'+(m.posB+1)+':'+m.strandB
+		})
+
+		if(m.clipreadA!=undefined) {
+			lst.push({
+				k:'# clip reads',
+				v:'A <span style="font-size:.7em;opacity:.7">CLIP / TOTAL</span> '+m.clipreadA+' / '+m.totalreadA
+					+'<br>'+
+					'B <span style="font-size:.7em;opacity:.7">CLIP / TOTAL</span> '+m.clipreadB+' / '+m.totalreadB
+			})
+		}
+
+
 	} else if( m.dt == common.dtsnvindel ) {
+
+		const _c = common.mclass[m.class]
+
+		lst.push({
+			k:'Mutation',
+			v:'<span style="color:'+_c.color+'">'+m.mname+'</span> <span style="font-size:.7em">'+_c.label+'</span>'
+		})
+
+		{
+			const phrases=[]
+			if(m.gene) phrases.push(m.gene)
+			if(m.isoform) phrases.push(m.isoform)
+			if(phrases.length) {
+				lst.push({
+					k:'Gene',
+					v:phrases.join(' ')
+				})
+			}
+		}
+		lst.push({
+			k:'Position',
+			v:m.chr+':'+(m.pos+1)
+		})
+		lst.push({
+			k:'Alleles',
+			v:'<span style="font-size:.8em;opacity:.5">REF/ALT</span> '+m.ref+' / '+m.alt
+		})
+
+		if(p.m_sample) {
+			// m_sample as from m.sampledata[]
+			const formats = p.tk.checkvcf ? p.tk.checkvcf.format : null // format registry
+
+			for(const formatfield in p.m_sample) {
+
+				if(formatfield=='sampleobj') continue
+
+				const formatdesc = formats ? formats[ formatfield ] : null
+
+				if(!formatdesc) {
+					// not described, jus show as string
+					lst.push({k:formatfield, v: p.m_sample[k]})
+					continue
+				}
+
+				if(formatdesc.Number=='R' || formatdesc.Number=='A') {
+					// per allele value
+					const alleles= []
+					const values = []
+
+					// add alt first
+					for(const ale in p.m_sample[ formatfield ]) {
+						if(ale == m.ref) continue
+						alleles.push(ale)
+						values.push(p.m_sample[ formatfield ][ ale ])
+					}
+
+					// add ref after alt
+					const refvalue = p.m_sample[ formatfield ][ m.ref ]
+					if(refvalue!=undefined) {
+						alleles.push( m.ref )
+						values.push( refvalue )
+					}
+
+					lst.push({
+						k: formatfield,
+						v: '<span style="font-size:.8em;opacity:.5">'+alleles.join(' / ')+'</span> '+values.join(' / ')
+					})
+					continue
+				}
+
+				lst.push({k:k, v: p.m_sample[k]})
+			}
+		}
+
 	} else {
-		lst.push({k:'Unknown dt', v: m.dt })
+		lst.push({k:'Unknown dt!!', v: m.dt })
 	}
 
 	const tmp=tooltip_svcnv_addexpressionrank(p.sample,p.tk)
@@ -4618,32 +4664,6 @@ function detailtable_singlesample(p) {
 
 
 
-function tooltip_multi_snvindel( m, m_sample, sample, samplegroup, tk, block ) {
-	/*
-	mouse over a vcf variant tick
-	either single-sample
-	or multi-sample in full mode
-	native or custom
-	snvindel only, not itd
-
-	m_sample is of m.sampledata[]
-	*/
-
-	tk.tktip.clear()
-		.show( d3event.clientX, d3event.clientY )
-
-	detailtable_vcf_singlevariantsample( {
-		holder:tk.tktip.d, 
-		snvindel: {
-			m:m,
-			m_sample: m_sample
-		},
-		sample: sample,
-		samplegroup: samplegroup,
-		tk:tk,
-		block:block
-	})
-}
 
 
 
@@ -4733,46 +4753,6 @@ function tooltip_svitem( sv, tk ) {
 }
 
 
-
-
-function tooltip_svitem_2( sv, sample, samplegroup, tk ) {
-	/*
-	multi-sample
-	full mode
-	mouse over a sv circle
-	sv or fusion
-	*/
-	tk.tktip.clear()
-		.show(d3event.clientX, d3event.clientY)
-
-	const lst = [
-		{k:'Sample',
-		v: sample.samplename
-			+ (sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+sample.sampletype+'</span>' : '')
-			+ (samplegroup.name ? ' <span style="font-size:.7em">'+samplegroup.name+'</span>' : '')
-		},
-		{k: (sv.dt==common.dtsv ? 'SV' : 'RNA fusion'),
-		v: svchr2html(sv.chrA, tk) +':'+sv.posA+':'+sv.strandA+' &raquo; '
-			+svchr2html(sv.chrB,tk)+':'+sv.posB+':'+sv.strandB
-		}
-	]
-
-	if(sv.clipreadA) {
-		lst.push({
-			k:'# of reads',
-			v:'A <span style="font-size:.7em;opacity:.7">CLIP / TOTAL</span> '+sv.clipreadA+' / '+sv.totalreadA+'<br>'+
-				'B <span style="font-size:.7em;opacity:.7">CLIP / TOTAL</span> '+sv.clipreadB+' / '+sv.totalreadB
-		})
-	}
-
-
-	const tmp=tooltip_svcnv_addexpressionrank(sample,tk)
-	if(tmp) {
-		lst.push(tmp)
-	}
-
-	client.make_table_2col( tk.tktip.d, lst )
-}
 
 
 
@@ -5093,6 +5073,7 @@ function may_map_vcf(tk, block) {
 	if(!tk.data_vcf) return
 	for(const m of tk.data_vcf) {
 
+		/*
 		if(m.dt==common.dtitd) {
 			// map like cnv
 			m.start = m.pos
@@ -5106,7 +5087,10 @@ function may_map_vcf(tk, block) {
 				delete m.x1
 				delete m.x2
 			}
-		} else if(m.dt==common.dtsnvindel) {
+		}
+		*/
+
+		if(m.dt==common.dtsnvindel) {
 			m._chr = m.chr
 			m._pos = m.pos
 			map_sv_2( m, block )
@@ -5142,9 +5126,11 @@ function vcfdata_prepmclass(tk, block) {
 		case common.dtsnvindel:
 			common.vcfcopymclass(m, block)
 			break
+			/*
 		case common.dtitd:
 			m.class = common.mclassitd
 			break
+			*/
 		default:
 			console.error('unknown dt '+m.dt)
 		}
