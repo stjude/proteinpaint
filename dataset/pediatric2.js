@@ -97,13 +97,13 @@ module.exports={
 			attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
 
 			expressionrank_querykey:'genefpkm',
-			vcf_querykey:'somaticsnvindelitd'
+			vcf_querykey:'somaticsnvindel'
 		},
 
 
 
-		somaticsnvindelitd:{
-			name:'Pediatric tumor SNV/indel/ITD',
+		somaticsnvindel:{
+			name:'Pediatric tumor SNV/indel',
 			istrack:true,
 			type:common.tkt.mdsvcfitd,
 			viewrangeupperlimit:2000000,
@@ -116,10 +116,6 @@ module.exports={
 					file:'hg19/TARGET/vcf.somatic/target.vep.vcf.gz',
 					type:'vcf',
 				},
-				{
-					file:'hg19/Pediatric/pediatric.itd.gz',
-					type:'itd',
-				}
 			]
 		},
 
