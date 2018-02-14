@@ -171,7 +171,8 @@ app.post('/hicdata',handle_hicdata)
 app.post('/checkrank',handle_checkrank)
 app.post('/samplematrix', handle_samplematrix)
 
-
+app.get('/sample/:sample',handle_sample)
+app.get('/sampleNames',handle_sampleNames)
 
 // obsolete
 app.get('/tpbam',handle_tpbam)
@@ -7317,14 +7318,31 @@ function samplematrix_task_isvcfitd(feature, ds, dsquery, req) {
 
 /***********  __smat ends ************/
 
+function handle_sample(req,res) {
+	const file = serverconfig.tpmasterdir + '/hg19/pcgp-target/cnv-sv/tmp/' + req.params.sample
+	fs.readFile(file, (err, data)=>{
+		if(err) {
+			res.send({error:'error reading file'})
+			return
+		}
+		res.setHeader('Content-Type','application/json')
+		res.send(data)
+	})
+}
 
+function handle_sampleNames(req,res) {
+	const dir = serverconfig.tpmasterdir + '/hg19/pcgp-target/cnv-sv/tmp'
+	fs.readdir(dir, (err, files)=>{
+		if(err) {
+			res.send({error:'error reading file'})
+			return
+		}
+		res.setHeader('Content-Type','application/json')
+		res.send(JSON.stringify(files))
+	})
+}
 
-
-
-
-
-
-
+/***********  __sample ends ************/
 
 
 function handle_vcf(req,res) {
