@@ -13,15 +13,16 @@ import * as expressionstat from './block.mds.expressionstat'
 JUMP __multi __single __maketk __boxplot __sm
 
 makeTk()
+tooltip_singleitem     (both multi- and single-sample)
 render_samplegroups
 	render_multi_vcfdensity
-		tooltip_vcf_dense
-		click_vcf_dense
+		tooltip_multi_vcf_dense
+		click_multi_vcf_dense
+			findsamplegroup_byvcf
 	render_multi_svdensity
-		tooltip_sv_dense
-		click_sv_dense
+		tooltip_multi_sv_dense
+		click_multi_sv_dense
 	render_multi_cnvloh
-		tooltip_singleitem     (both multi- and single-sample)
 		click_samplegroup_showmenu
 		click_samplegroup_showtable
 		click_multi_singleitem
@@ -1142,8 +1143,6 @@ function render_multi_vcfdensity( tk, block) {
 	multi-sample
 	native/custom
 	dense
-
-	TODO no itd
 	*/
 	if(tk.vcfrangelimit) {
 		tk.vcfdensityg.append('text')
@@ -1216,8 +1215,11 @@ function render_multi_vcfdensity( tk, block) {
 
 			let samplecount = 0 // total # of samples in this group
 			for(const m of mlst) {
-				if(m.dt==common.dtsnvindel) samplecount += m.sampledata.length
-				else if(m.dt==common.dtitd) samplecount++
+				if(m.dt==common.dtsnvindel) {
+					samplecount += m.sampledata.length
+				} else {
+					console.error('unknown dt')
+				}
 			}
 
 			lst.push({
@@ -1343,13 +1345,13 @@ function render_multi_vcfdensity( tk, block) {
 				.attr('stroke-opacity',0)
 				.attr('class','sja_aa_disckick')
 				.on('mouseover',()=>{
-					tooltip_vcf_dense(grp, tk, block)
+					tooltip_multi_vcf_dense(grp, tk, block)
 				})
 				.on('mouseout',()=>{
 					tk.tktip.hide()
 				})
 				.on('click',()=>{
-					click_vcf_dense( grp, tk, block )
+					click_multi_vcf_dense( grp, tk, block )
 				})
 			y+=grp.radius
 		}
@@ -1377,22 +1379,23 @@ function render_multi_svdensity( svlst, tk,block) {
 
 	// list of bins
 	const binw=10 // pixel
-	const bins=[]
+	const tmpbins=[]
 	let x=0
 	while(x<block.width) {
-		bins.push({
+		tmpbins.push({
 			x1:x,
 			x2:x+binw,
 			lst:[]
 		})
 		x+=binw
 	}
+
 	x=block.width
 	for(const p of block.subpanels) {
 		x+=p.leftpad
 		let b=0
 		while(b<p.width) {
-			bins.push({
+			tmpbins.push({
 				x1:x+b,
 				x2:x+b+binw,
 				lst:[]
@@ -1404,7 +1407,7 @@ function render_multi_svdensity( svlst, tk,block) {
 
 	// sv to bins
 	for(const sv of svlst) {
-		for(const b of bins) {
+		for(const b of tmpbins) {
 			if(b.x1<=sv.x && b.x2>=sv.x) {
 				b.lst.push(sv)
 				break
@@ -1412,9 +1415,29 @@ function render_multi_svdensity( svlst, tk,block) {
 		}
 	}
 
+	// since sv are breakends, one sv with both ends may be in the same bin, so much dedup
+	const bins = []
+	for(const b of tmpbins) {
+		if(b.lst.length==0) continue
+		const b2 = {}
+		for(const k in b) {
+			b2[k] = b[k]
+		}
+
+		const key2sv = new Map()
+		for(const i of b.lst) {
+			key2sv.set(
+				i.sample+'.'+i.chrA+'.'+i.posA+'.'+i.strandA+'.'+i.chrB+'.'+i.posB+'.'+i.strandB,
+				i
+			)
+		}
+
+		b2.lst = [ ...key2sv.values() ]
+		bins.push(b2)
+	}
+
 	// group items in each bin
 	for(const b of bins) {
-		if(b.lst.length==0) continue
 		const name2group = new Map()
 		const nonamelst=[]
 		for(const i of b.lst) {
@@ -1448,7 +1471,6 @@ function render_multi_svdensity( svlst, tk,block) {
 
 	let maxcount=0 // per group
 	for(const b of bins) {
-		if(!b.groups) continue
 		for(const g of b.groups) {
 			maxcount=Math.max(maxcount, g.items.length)
 		}
@@ -1495,7 +1517,6 @@ function render_multi_svdensity( svlst, tk,block) {
 
 
 	for(const b of bins) {
-		if(!b.groups) continue
 
 		const g=tk.svdensityg.append('g').attr('transform','translate('+((b.x1+b.x2)/2)+',0)')
 
@@ -1537,13 +1558,13 @@ function render_multi_svdensity( svlst, tk,block) {
 				.attr('stroke-opacity',0)
 				.attr('class','sja_aa_disckick')
 				.on('mouseover',()=>{
-					tooltip_sv_dense(grp, tk, block)
+					tooltip_multi_sv_dense(grp, tk, block)
 				})
 				.on('mouseout',()=>{
 					tk.tktip.hide()
 				})
 				.on('click',()=>{
-					click_sv_dense(grp, tk, block)
+					click_multi_sv_dense(grp, tk, block)
 				})
 			y+=grp.radius
 		}
@@ -2077,9 +2098,12 @@ function multi_expressionstatus_ase_outlier(tk) {
 	for all genes
 	calculate expression status including ase and outlier, using Yu's data & method
 	only do this when getting new data, or changing cutoffs
+
+	should process _data, since in dense mode, .samplegroups[] will not contain sv-only samples
 	*/
-	if(!tk.samplegroups) return
-	for(const g of tk.samplegroups) {
+	//if(!tk.samplegroups) return
+	if(!tk._data) return
+	for(const g of tk._data) {
 		if(!g.samples) continue
 		for(const s of g.samples) {
 			if(!s.expressionrank) continue
@@ -2621,48 +2645,36 @@ function draw_colorscale_loh( tk ) {
 
 
 
-function svdense_tolist(lst) {
-	const k2item=new Map()
-	for(const i of lst) {
-		const k=i.sample+'.'+i.chrA+'.'+i.posA+'.'+i.strandA+'.'+i.chrB+'.'+i.posB+'.'+i.strandB
-		k2item.set(k, i)
-	}
-	return [...k2item.values()]
-}
 
 
 
 
-function tooltip_sv_dense(g, tk, block) {
+function tooltip_multi_sv_dense(g, tk, block) {
 	/*
 	multi-sample
 	official or custom
 	dense mode
 	mouse over a dot
 	*/
+
+	if(g.items.length==1) {
+		const sv = g.items[0]
+		tooltip_singleitem({
+			item: sv,
+			sample: sv._sample,
+			samplegroup: sv._samplegroup,
+			tk: tk,
+			block: block
+		})
+		return
+	}
+
 	tk.tktip.clear()
 		.show(d3event.clientX,d3event.clientY)
 	const hold=tk.tktip.d
-	const svlst=svdense_tolist(g.items)
-	if(svlst.length==1) {
-		const i=svlst[0]
-		hold.append('div')
-			.html(i.sample+ (i._samplegroup.name ? ' <span style="font-size:.8em">'+i._samplegroup.name+'</span>' : ''))
-			.style('margin-bottom','10px')
-		hold.append('div')
-			.html(
-				svchr2html(i.chrA, tk)
-				+':'+i.posA+':'+i.strandA
-				+' &raquo; '
-				+svchr2html(i.chrB, tk)
-				+':'+i.posB+':'+i.strandB
-				+( i.dt==common.dtfusionrna? ' (RNA fusion)' : '')
-			)
-		return
-	}
 	const lst=[
 		{k:'cancer',v:g.name},
-		{k:'# of SV',v:svlst.length}
+		{k:'# of SV',v: g.items.length}
 	]
 	client.make_table_2col( hold, lst )
 }
@@ -2670,7 +2682,7 @@ function tooltip_sv_dense(g, tk, block) {
 
 
 
-function tooltip_vcf_dense(g, tk, block) {
+function tooltip_multi_vcf_dense(g, tk, block) {
 	/*
 	multi-sample
 	official or custom
@@ -2689,10 +2701,16 @@ function tooltip_vcf_dense(g, tk, block) {
 
 			if(m.sampledata.length == 1) {
 				// in just one sample
+				const [sample, samplegroup] = findsamplegroup_byvcf({
+					m: m,
+					m_sample: m.sampledata[0],
+					tk: tk
+				})
 				tooltip_singleitem( {
 					item: m,
 					m_sample: m.sampledata[0],
-					sample: {samplename: m.sampledata[0].sampleobj.name},
+					sample: sample,
+					samplegroup: samplegroup,
 					tk: tk,
 				})
 				return
@@ -2711,10 +2729,9 @@ function tooltip_vcf_dense(g, tk, block) {
 			]
 			client.make_table_2col( tk.tktip.d, lst)
 
-		} else if(m.dt==common.dtitd) {
+		} else {
 
-			console.log('show itd in table')
-
+			throw('unknown dt: '+m.dt)
 		}
 		return
 	}
@@ -2726,7 +2743,7 @@ function tooltip_vcf_dense(g, tk, block) {
 		.text(
 			g.items.length+' '+common.mclass[g.items[0].class].label+' mutations, '
 			+g.samplecount+' samples'
-			)
+		)
 	const table=tk.tktip.d.append('table')
 		.style('border-spacing','3px')
 	for(const m of g.items) {
@@ -2746,8 +2763,8 @@ function tooltip_vcf_dense(g, tk, block) {
 
 		if(m.dt==common.dtsnvindel) {
 			td.text( m.sampledata.length==1 ? m.sampledata[0].sampleobj.name : '('+m.sampledata.length+' samples)')
-		} else if(m.dt==common.dtitd) {
-			// 
+		} else {
+			td.text('unknown dt: '+m.dt)
 		}
 	}
 }
@@ -2763,17 +2780,17 @@ function tooltip_vcf_dense(g, tk, block) {
 
 function findsamplegroup_byvcf( p ) {
 	/*
-	p.snvindel
-		.m_sample
-	p.itd
+	.m
+	.m_sample
 	p.tk
 	*/
 	
 	let samplename
-	if(p.snvindel) {
-		samplename = p.snvindel.m_sample.sampleobj.name
-	} else if(p.itd) {
-		samplename = p.itd.sample
+	if(p.m.dt==common.dtsnvindel) {
+		if(!p.m_sample) throw('m_sample missing')
+		samplename = p.m_sample.sampleobj.name
+	} else {
+		throw('unknown dt')
 	}
 
 	for(const g of p.tk._data) {
@@ -2827,7 +2844,7 @@ function createbutton_focusvcf( p ) {
 
 
 
-function click_vcf_dense( g, tk, block ) {
+function click_multi_vcf_dense( g, tk, block ) {
 	/*
 	multi-sample
 	native/custom
@@ -2837,6 +2854,7 @@ function click_vcf_dense( g, tk, block ) {
 	*/
 
 	const pane = client.newpane({ x:d3event.clientX, y:d3event.clientY })
+	pane.header.text(tk.name)
 
 	if(g.items.length==1) {
 		// only one variant
@@ -2847,35 +2865,23 @@ function click_vcf_dense( g, tk, block ) {
 		if(m.dt==common.dtsnvindel) {
 
 			if(m.sampledata.length==1) {
+
 				// in a single sample
-				createbutton_focusvcf( {
-					snvindel:{
-						m:m,
-						m_sample:m.sampledata[0]
-					},
-					holder:butrow,
-					tk:tk,
-					block:block,
-					pane: pane
+				pane.pane.remove()
+				// sample/group should always be found
+				const [sample, samplegroup] = findsamplegroup_byvcf({
+					m: m,
+					m_sample: m.sampledata[0],
+					tk: tk
 				})
-
-				createbutton_addfeature( {
-					m:m,
-					holder:butrow,
-					tk:tk,
-					block:block,
-					pane: pane,
-				})
-
-				detailtable_vcf_singlevariantsample( {
-					holder: pane.body,
-					snvindel: {
-						m: m,
-						m_sample: m.sampledata[0]
-					},
-					sample: {samplename: m.sampledata[0].sampleobj.name},
-					tk:tk,
-					block:block
+				const ms = m.sampledata[0]
+				click_multi_singleitem({
+					item: m,
+					m_sample: m.sampledata[0],
+					sample: sample,
+					samplegroup: samplegroup,
+					tk: tk,
+					block: block
 				})
 				return
 			}
@@ -2901,10 +2907,9 @@ function click_vcf_dense( g, tk, block ) {
 			]
 			client.make_table_2col( pane.body, lst)
 
-		} else if(m.dt==common.dtitd) {
-			console.log('show itd in table')
+		} else {
+			throw('Unknown dt: '+m.dt)
 		}
-
 		return
 	}
 
@@ -2918,6 +2923,7 @@ function click_vcf_dense( g, tk, block ) {
 	for(const m of g.items) {
 		const tr = table.append('tr')
 
+		// col 1: mutation name
 		tr.append('td')
 			.text(m.mname)
 			.style('color', common.mclass[m.class].color)
@@ -2925,17 +2931,27 @@ function click_vcf_dense( g, tk, block ) {
 			.style('vertical-align','top')
 			// createbutton_addfeature
 
-		tr.append('td')
-			.style('opacity','.5')
-			.text(m.ref+' > '+m.alt)
-			.style('vertical-align','top')
+		// col 2
+		{
+			const td = tr.append('td')
+			if(m.dt==common.dtsnvindel) {
+				td.style('opacity','.5')
+					.text(m.ref+' > '+m.alt)
+					.style('vertical-align','top')
+			}
+		}
 
+		// col 3
 		{
 			const td = tr.append('td')
 			if(m.dt==common.dtsnvindel) {
 				// show each sample
 				for(const m_sample of m.sampledata) {
-					const [s, sg] = findsamplegroup_byvcf({ snvindel:{m_sample:m_sample}, tk: tk })
+					const [s, sg] = findsamplegroup_byvcf({
+						m: m,
+						m_sample:m_sample,
+						tk: tk
+					})
 					if(!s) {
 						td.append('div').text('Sample not found: '+m_sample.sampleobj.name)
 						continue
@@ -2952,134 +2968,13 @@ function click_vcf_dense( g, tk, block ) {
 							})
 						})
 				}
-
-			} else if(m.dt==common.dtitd) {
 			}
-		}
-
-		{
-			// buttons
-			const td = tr.append('td')
 		}
 	}
 }
 
 
 
-
-function detailtable_vcf_singlevariantsample( p ) {
-	/*
-	delete
-
-
-
-	multi-sample
-	dense or full
-	the variant has just one sample
-	show details about a vcf item of only one sample, multi-sample variant won't go here
-
-	.snvindel
-		.m
-		.m_sample // from m.sampledata[], for the actual sample
-	.itd
-	.sample
-	.samplegroup
-	.tk
-	.block
-	.holder
-
-	*/
-
-	// mutation label
-
-	{
-		const row = p.holder.append('div').style('margin','10px 10px 15px 10px')
-		if(p.snvindel) {
-
-			row.html( print_snvindel( p.snvindel.m ) )
-			// TODO may show csq[] if asked
-
-		} else if(p.itd) {
-			console.log('show itd')
-		}
-	}
-
-
-	const lst = []
-
-	// sample
-	if(p.sample) {
-		lst.push({
-			k:'Sample',
-			v: p.sample.samplename
-				+ (p.sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+p.sample.sampletype+'</span>' : '')
-				+ ( p.samplegroup ? (p.samplegroup.name  ? ' <span style="font-size:.7em">'+p.samplegroup.name+'</span>' : '') : '')
-		})
-	}
-
-	if(p.snvindel) {
-		/*
-		from vcf
-		show format fields of this sample
-		*/
-		const m = p.snvindel.m
-
-		const formats = p.tk.checkvcf ? p.tk.checkvcf.format : null // format registry
-
-		for(const formatfield in p.snvindel.m_sample) {
-
-			if(formatfield=='sampleobj') continue
-
-			const formatdesc = formats[ formatfield ]
-
-			if(!formatdesc) {
-				// not described, jus show as string
-				lst.push({k:formatfield, v: p.snvindel.m_sample[k]})
-				continue
-			}
-
-			if(formatdesc.Number=='R' || formatdesc.Number=='A') {
-				// per allele value
-				const alleles= []
-				const values = []
-
-				// add alt first
-				for(const ale in p.snvindel.m_sample[ formatfield ]) {
-					if(ale == m.ref) continue
-					alleles.push(ale)
-					values.push(p.snvindel.m_sample[ formatfield ][ ale ])
-				}
-
-				// add ref after alt
-				const refvalue = p.snvindel.m_sample[ formatfield ][ m.ref ]
-				if(refvalue!=undefined) {
-					alleles.push( m.ref )
-					values.push( refvalue )
-				}
-
-				lst.push({
-					k: formatfield,
-					v: '<span style="font-size:.8em;opacity:.5">'+alleles.join(' / ')+'</span> '+values.join(' / ')
-				})
-				continue
-			}
-
-			lst.push({k:k, v: p.snvindel.m_sample[k]})
-		}
-	}
-
-
-	if(p.sample) {
-		// expression rank, only for multi-sample mode
-		const tmp = tooltip_svcnv_addexpressionrank(p.sample, p.tk)
-		if(tmp) {
-			lst.push(tmp)
-		}
-	}
-
-	client.make_table_2col( p.holder, lst )
-		.style('margin','0px')
-}
 
 
 
@@ -3103,20 +2998,19 @@ function print_snvindel(m) {
 
 
 
-function click_sv_dense(g, tk, block) {
+function click_multi_sv_dense(g, tk, block) {
 	/*
 	multi-sample
 	native/custom
 	dense
 	clicking on a ball representing density of sv breakend
 	*/
-	const svlst=svdense_tolist(g.items)
-	if(svlst.length==1) {
-		const i=svlst[0]
-		focus_singlesample({
-			m:i,
-			sample:i._sample,
-			samplegroup: i._samplegroup,
+	if(g.items.length==1) {
+		const sv = g.items[0]
+		click_multi_singleitem({
+			item: sv,
+			sample: sv._sample,
+			samplegroup: sv._samplegroup,
 			tk: tk,
 			block: block
 		})
@@ -3125,8 +3019,9 @@ function click_sv_dense(g, tk, block) {
 
 	const pane = client.newpane({x:d3event.clientX,y:d3event.clientY})
 	pane.header.html(g.name+' <span style="font-size:.8em">'+tk.name+'</span>')
+
 	const sample2lst=new Map()
-	for(const i of svlst) {
+	for(const i of g.items) {
 		if(!sample2lst.has(i.sample)) sample2lst.set(i.sample, [])
 		sample2lst.get(i.sample).push(i)
 	}
@@ -3214,11 +3109,17 @@ function focus_singlesample( p ) {
 		holder = pane.body
 	}
 
+	// for launching block
 	const arg={
+		style:{
+			margin:'0px'
+		},
+		hide_mdsHandleHolder:1,
 		tklst:[],
 		holder: holder,
 		subpanels:[]
 	}
+
 	client.first_genetrack_tolist( block.genome, arg.tklst )
 
 
@@ -3237,16 +3138,22 @@ function focus_singlesample( p ) {
 			arg.tklst.push(et)
 		}
 	} else if(tk.mds && tk.mds.queries[tk.querykey].checkexpressionrank) {
-		// add expression rank via official mds
-		const et = {
-			type: client.tkt.mdsexpressionrank,
-			name: sample.samplename+' expression rank',
-			mds:tk.mds,
-			querykey: tk.mds.queries[tk.querykey].checkexpressionrank.querykey,
-			sample: sample.samplename,
-			attributes: samplegroup.attributes
+
+		// official mds
+
+		if(samplegroup) {
+			const et = {
+				type: client.tkt.mdsexpressionrank,
+				name: sample.samplename+' expression rank',
+				mds:tk.mds,
+				querykey: tk.mds.queries[tk.querykey].checkexpressionrank.querykey,
+				sample: sample.samplename,
+				attributes: samplegroup.attributes
+			}
+			arg.tklst.push(et)
+		} else {
+			// in dense mode, vcf samples may not have group
 		}
-		arg.tklst.push(et)
 	}
 
 	// add sv-cnv-vcf track in single-sample mode
@@ -4430,7 +4337,8 @@ function tooltip_samplegroup( g, tk ) {
 
 function click_multi_singleitem( p ) {
 	/*
-	click on a single item in multi-sample view
+	multi-sample
+	click on a single item, of any type
 
 	.item
 	.sample
@@ -4443,6 +4351,7 @@ function click_multi_singleitem( p ) {
 	*/
 
 	const pane = client.newpane({x:d3event.clientX, y:d3event.clientY})
+	pane.header.text(p.tk.name)
 
 	const buttonrow = pane.body.append('div')
 		.style('margin','10px')
@@ -4486,7 +4395,7 @@ function click_multi_singleitem( p ) {
 		/*
 		is official dataset
 		click button to show whole-genome view
-		may check if dataset is equipped with disco files
+		may check if dataset is disco-ready
 		*/
 		let plotnotshown = true
 		const holder = pane.body.append('div')

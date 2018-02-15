@@ -420,7 +420,7 @@ constructor(arg) {
 		}
 		if(lst.length) {
 			this.ctrl.mdsHandleHolder = butrow.append('div')
-				.style('display','inline-block')
+				.style('display', arg.hide_mdsHandleHolder ? 'none' : 'inline-block')
 				.style('margin-right','10px')
 			lst.forEach(i=>this.mds_handle_make(i))
 		}
