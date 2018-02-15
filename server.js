@@ -2625,32 +2625,51 @@ function handle_svmr(req,res) {
 
 
 function handle_hicstat(req,res) {
-	try {
-		req.query=JSON.parse(req.body)
-	} catch(e){
-		res.send({error:'invalid request body'})
-		return
-	}
+	if(reqbodyisinvalidjson(req,res)) return
 	if(!req.query.file) {
 		res.send({error:'missing file'})
 		return
 	}
-	log(req)
 	const [e,file,isurl]=fileurl(req)
 	if(e) {
 		res.send({error:'illegal file name'})
 		return
 	}
-	exec(hicstat+' '+file,(err,stdout,stderr)=>{
-		if(err) {
-			res.send({error:err})
-			return
+
+	new Promise((resolve, reject)=>{
+		
+		if(isurl) {
+			// do not stat
+			resolve()
 		}
-		if(stderr) {
-			res.send({error:stderr})
-			return
-		}
-		res.send({out:stdout})
+
+		// is file, find
+		fs.stat(file,(err,stat)=>{
+			if(err) {
+				if(err.code=='ENOENT') reject({message:'file not found'})
+				if(err.code=='EACCES') reject({message:'no access to the file'})
+			}
+			resolve()
+		})
+
+	})
+	.then( ()=>{
+
+		exec(hicstat+' '+file,(err,stdout,stderr)=>{
+			if(err) {
+				res.send({error:err})
+				return
+			}
+			if(stderr) {
+				res.send({error:stderr})
+				return
+			}
+			res.send({out:stdout})
+		})
+
+	})
+	.catch(err=>{
+		res.send({error:err.message})
 	})
 }
 
