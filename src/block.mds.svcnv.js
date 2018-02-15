@@ -14,15 +14,16 @@ JUMP __multi __single __maketk __boxplot __sm
 
 makeTk()
 tooltip_singleitem     (both multi- and single-sample)
+	detailtable_singlesample
+		printer_snvindel
 render_samplegroups
-	render_multi_vcfdensity
-		tooltip_multi_vcf_dense
-		click_multi_vcf_dense
+	render_multi_vcfdense
+		tooltip_multi_vcfdense
+		click_multi_vcfdense
 			findsamplegroup_byvcf
-	render_multi_svdensity
-		tooltip_multi_sv_dense
-			dedup_sv
-		click_multi_sv_dense
+	render_multi_svdense
+		tooltip_multi_svdense
+		click_multi_svdense
 	render_multi_cnvloh
 		click_samplegroup_showmenu
 		click_samplegroup_showtable
@@ -999,10 +1000,10 @@ function render_samplegroups( tk, block ) {
 	when view range is too big, won't draw but show a message
 	which will take vertical space, the height of which will also be returned
 	*/
-	const vcfdensityheight = render_multi_vcfdensity( tk, block )
+	const vcfdensityheight = render_multi_vcfdense( tk, block )
 
 	// likewise for sv
-	const svdensityheight = render_multi_svdensity( svlst, tk, block )
+	const svdensityheight = render_multi_svdense( svlst, tk, block )
 
 	// draw cnv bars, will draw sv and vcf if in full mode
 	const cnvheight = render_multi_cnvloh( tk, block )
@@ -1140,7 +1141,7 @@ function render_samplegroups( tk, block ) {
 
 
 
-function render_multi_vcfdensity( tk, block) {
+function render_multi_vcfdense( tk, block) {
 	/*
 	multi-sample
 	native/custom
@@ -1347,13 +1348,13 @@ function render_multi_vcfdensity( tk, block) {
 				.attr('stroke-opacity',0)
 				.attr('class','sja_aa_disckick')
 				.on('mouseover',()=>{
-					tooltip_multi_vcf_dense(grp, tk, block)
+					tooltip_multi_vcfdense(grp, tk, block)
 				})
 				.on('mouseout',()=>{
 					tk.tktip.hide()
 				})
 				.on('click',()=>{
-					click_multi_vcf_dense( grp, tk, block )
+					click_multi_vcfdense( grp, tk, block )
 				})
 			y+=grp.radius
 		}
@@ -1369,7 +1370,7 @@ function render_multi_vcfdensity( tk, block) {
 
 
 
-function render_multi_svdensity( svlst, tk,block) {
+function render_multi_svdense( svlst, tk,block) {
 	/*
 	multi-sample
 	native/custom
@@ -1553,13 +1554,13 @@ function render_multi_svdensity( svlst, tk,block) {
 				.attr('stroke-opacity',0)
 				.attr('class','sja_aa_disckick')
 				.on('mouseover',()=>{
-					tooltip_multi_sv_dense(grp, tk, block)
+					tooltip_multi_svdense(grp, tk, block)
 				})
 				.on('mouseout',()=>{
 					tk.tktip.hide()
 				})
 				.on('click',()=>{
-					click_multi_sv_dense(grp, tk, block)
+					click_multi_svdense(grp, tk, block)
 				})
 			y+=grp.radius
 		}
@@ -2644,7 +2645,7 @@ function draw_colorscale_loh( tk ) {
 
 
 
-function tooltip_multi_sv_dense(g, tk, block) {
+function tooltip_multi_svdense(g, tk, block) {
 	/*
 	multi-sample
 	official or custom
@@ -2677,7 +2678,7 @@ function tooltip_multi_sv_dense(g, tk, block) {
 
 
 
-function tooltip_multi_vcf_dense(g, tk, block) {
+function tooltip_multi_vcfdense(g, tk, block) {
 	/*
 	multi-sample
 	official or custom
@@ -2712,16 +2713,11 @@ function tooltip_multi_vcf_dense(g, tk, block) {
 			}
 
 			// multiple samples
-			const lst=[
-				{
-					k:'Mutation',
-					v: print_snvindel(m)
-				},
-				{
-					k:'Samples',
-					v: m.sampledata.map(i=>i.sampleobj.name).join('<br>')
-				}
-			]
+			const lst = printer_snvindel( m )
+			lst.push({
+				k:'Samples',
+				v: m.sampledata.map(i=>i.sampleobj.name).join('<br>')
+			})
 			client.make_table_2col( tk.tktip.d, lst)
 
 		} else {
@@ -2839,7 +2835,7 @@ function createbutton_focusvcf( p ) {
 
 
 
-function click_multi_vcf_dense( g, tk, block ) {
+function click_multi_vcfdense( g, tk, block ) {
 	/*
 	multi-sample
 	native/custom
@@ -2890,18 +2886,34 @@ function click_multi_vcf_dense( g, tk, block ) {
 				pane: pane
 			})
 
-			const lst=[
-				{
-					k:'Mutation',
-					v: print_snvindel(m)
-				},
-				{
-					k:'Samples',
-					v: m.sampledata.map(i=>i.sampleobj.name).join('<br>')
-				}
-			]
-			client.make_table_2col( pane.body, lst)
-
+			const lst = printer_snvindel( m )
+			const table = client.make_table_2col( pane.body, lst)
+			const tr = table.append('tr')
+			tr.append('td')
+				.text('Samples')
+				.style('opacity',.5)
+				.attr('colspan',2)
+			const td = tr.append('td')
+			for(const sm of m.sampledata) {
+				td.append('div')
+					.text(sm.sampleobj.name)
+					.attr('class','sja_clbtext')
+					.on('click',()=>{
+						const [ sample, samplegroup ] = findsamplegroup_byvcf({
+							m: m,
+							m_sample: sm,
+							tk: tk
+						})
+						click_multi_singleitem({
+							item: m,
+							m_sample: sm,
+							sample: sample,
+							samplegroup: samplegroup,
+							tk: tk,
+							block: block
+						})
+					})
+			}
 		} else {
 			throw('Unknown dt: '+m.dt)
 		}
@@ -2942,20 +2954,18 @@ function click_multi_vcf_dense( g, tk, block ) {
 			if(m.dt==common.dtsnvindel) {
 				// show each sample
 				for(const m_sample of m.sampledata) {
-					const [s, sg] = findsamplegroup_byvcf({
-						m: m,
-						m_sample:m_sample,
-						tk: tk
-					})
-					if(!s) {
-						td.append('div').text('Sample not found: '+m_sample.sampleobj.name)
-						continue
-					}
 					td.append('div')
 						.text(m_sample.sampleobj.name)
 						.attr('class','sja_clbtext')
 						.on('click',()=>{
-							focus_singlesample({
+							const [s, sg] = findsamplegroup_byvcf({
+								m: m,
+								m_sample:m_sample,
+								tk: tk
+							})
+							click_multi_singleitem({
+								item: m,
+								m_sample: m_sample,
 								sample: s,
 								samplegroup: sg,
 								tk: tk,
@@ -2993,7 +3003,7 @@ function print_snvindel(m) {
 
 
 
-function click_multi_sv_dense(g, tk, block) {
+function click_multi_svdense(g, tk, block) {
 	/*
 	multi-sample
 	native/custom
@@ -3054,8 +3064,8 @@ function click_multi_sv_dense(g, tk, block) {
 					+( i.dt==common.dtfusionrna? ' (RNA fusion)' : '')
 					)
 				.on('click',()=>{
-					focus_singlesample({
-						m:i,
+					click_multi_singleitem({
+						item:i,
 						sample: i._sample,
 						samplegroup: i._samplegroup,
 						tk:tk,
@@ -4522,32 +4532,8 @@ function detailtable_singlesample(p) {
 
 	} else if( m.dt == common.dtsnvindel ) {
 
-		const _c = common.mclass[m.class]
-
-		lst.push({
-			k:'Mutation',
-			v:'<span style="color:'+_c.color+'">'+m.mname+'</span> <span style="font-size:.7em">'+_c.label+'</span>'
-		})
-
-		{
-			const phrases=[]
-			if(m.gene) phrases.push(m.gene)
-			if(m.isoform) phrases.push(m.isoform)
-			if(phrases.length) {
-				lst.push({
-					k:'Gene',
-					v:phrases.join(' ')
-				})
-			}
-		}
-		lst.push({
-			k:'Position',
-			v:m.chr+':'+(m.pos+1)
-		})
-		lst.push({
-			k:'Alleles',
-			v:'<span style="font-size:.8em;opacity:.5">REF/ALT</span> '+m.ref+' / '+m.alt
-		})
+		const tmp = printer_snvindel( m )
+		for(const l of tmp) lst.push(l)
 
 		if(p.m_sample) {
 			// m_sample as from m.sampledata[]
@@ -4613,6 +4599,34 @@ function detailtable_singlesample(p) {
 
 
 
+
+function printer_snvindel( m ) {
+	const _c = common.mclass[m.class]
+	const lst=[]
+	lst.push({
+		k:'Mutation',
+		v:'<span style="color:'+_c.color+'">'+m.mname+'</span> <span style="font-size:.7em">'+_c.label+'</span>'
+	})
+
+	const phrases=[]
+	if(m.gene) phrases.push(m.gene)
+	if(m.isoform) phrases.push(m.isoform)
+	if(phrases.length) {
+		lst.push({
+			k:'Gene',
+			v:phrases.join(' ')
+		})
+	}
+	lst.push({
+		k:'Position',
+		v:m.chr+':'+(m.pos+1)
+	})
+	lst.push({
+		k:'Alleles',
+		v:'<span style="font-size:.8em;opacity:.5">REF/ALT</span> '+m.ref+' / '+m.alt
+	})
+	return lst
+}
 
 
 
@@ -4801,7 +4815,13 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 					.html(cnvlst[j])
 					.attr('class', 'sja_clbtext')
 					.on('click',()=>{
-						//click_multi2single( cnvlst0[j], null, sample, samplegroup, tk, block )
+						click_multi_singleitem({
+							item: cnvlst0[j],
+							sample: sample,
+							samplegroup: samplegroup,
+							tk:tk,
+							block:block
+						})
 					})
 			}
 		}
@@ -4812,7 +4832,13 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 					.html(svlst[j])
 					.attr('class','sja_clbtext')
 					.on('click',()=>{
-						//click_multi2single( null, svlst0[j], sample, samplegroup, tk, block )
+						click_multi_singleitem({
+							item:svlst0[j],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
 					})
 			}
 		}
@@ -4823,7 +4849,13 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 					.html(lohlst[j])
 					.attr('class','sja_clbtext')
 					.on('click',()=>{
-						//click_multi2single( lohlst0[j], null, sample, samplegroup, tk, block )
+						click_multi_singleitem({
+							item:lohlst0[j],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
 					})
 			}
 		}
@@ -4834,14 +4866,34 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 				td.append('div')
 					.html(itdlst[j])
 					.attr('class','sja_clbtext')
+					.on('click',()=>{
+						click_multi_singleitem({
+							item:itdlst0[j],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
+					})
 			}
 		}
 
-		if(tk.data_vcf) {
+		if(vcflst.length) {
 			const td=tr.append('td')
 			for(let j=0; j<vcflst.length; j++) {
 				td.append('div')
 					.html(vcflst[j])
+					.attr('class','sja_clbtext')
+					.on('click',()=>{
+						click_multi_singleitem({
+							item: vcflst0[j],
+							m_sample: vcflst0[j].sampledata.find( i=> i.sampleobj.name == sample.samplename ),
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
+					})
 			}
 		}
 	}
@@ -4872,7 +4924,8 @@ function sortitemsbytype_onesample( samplename, lst, tk ) {
 		const breakends = lst.filter( i=> i.dt==common.dtsv || i.dt==common.dtfusionrna )
 		const deduped = dedup_sv( breakends )
 		for(const i of deduped) {
-			svlst.push('<div>'+svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
+			svlst.push(
+				'<div style="white-space:nowrap">'+svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
 				+' &raquo; '
 				+svchr2html(i.chrB,tk)+':'+i.posB+':'+i.strandB
 				+(i.dt==common.dtfusionrna ? ' <span style="font-size:.7em">(RNA fusion)</span>':'')
@@ -4889,14 +4942,14 @@ function sortitemsbytype_onesample( samplename, lst, tk ) {
 
 		if(i.dt==common.dtloh) {
 			lohlst.push(
-				'<div>'+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
+				'<div style="white-space:nowrap">'+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
 				+' <span style="font-size:.8em">'+common.bplen(i.stop-i.start)
 				+' seg.mean: '+i.segmean+'</span>'
 			)
 			lohlst0.push(i)
 		} else if(i.dt==common.dtcnv) {
 			cnvlst.push(
-				'<div>'+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
+				'<div style="white-space:nowrap">'+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
 				+' <span style="font-size:.8em">'+common.bplen(i.stop-i.start)+'</span>'
 				+' <span style="background:'+(i.value>0?tk.cnvcolor.gain.str:tk.cnvcolor.loss.str)+';font-size:.8em;color:white">&nbsp;'+i.value+'&nbsp;</span>'
 				+'</div>'
@@ -4904,7 +4957,7 @@ function sortitemsbytype_onesample( samplename, lst, tk ) {
 			cnvlst0.push(i)
 		} else if(i.dt==common.dtitd) {
 			itdlst.push(
-				'<div>'+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
+				'<div style="white-space:nowrap">'+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
 				+(i.rnaduplength ? ', '+i.rnaduplength+' bp duplicated in RNA' : '')
 				+(i.aaduplength ? ', '+i.aaduplength+' AA duplicated' : '')
 				+'</div>'
@@ -4921,7 +4974,12 @@ function sortitemsbytype_onesample( samplename, lst, tk ) {
 			if(m.dt == common.dtsnvindel) {
 				if(m.sampledata.find( s=> s.sampleobj.name == samplename )) {
 					const c = common.mclass[m.class]
-					vcflst.push('<div><span style="color:'+c.color+';font-weight:bold">'+m.mname+'</span> <span style="font-size:.7em">'+c.label+'</span></div>')
+					vcflst.push(
+						'<div style="white-space:nowrap">'
+						+'<span style="color:'+c.color+';font-weight:bold">'+m.mname+'</span> '
+						+'<span style="font-size:.7em">'+c.label+'</span></div>'
+					)
+					vcflst0.push(m)
 				}
 			} else {
 				throw('unknown dt: '+m.dt)
