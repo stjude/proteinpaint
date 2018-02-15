@@ -21,10 +21,12 @@ render_samplegroups
 			findsamplegroup_byvcf
 	render_multi_svdensity
 		tooltip_multi_sv_dense
+			dedup_sv
 		click_multi_sv_dense
 	render_multi_cnvloh
 		click_samplegroup_showmenu
 		click_samplegroup_showtable
+			sortitemsbytype_onesample
 		click_multi_singleitem
 		** focus_singlesample
 	render_multi_genebar
@@ -1424,15 +1426,8 @@ function render_multi_svdensity( svlst, tk,block) {
 			b2[k] = b[k]
 		}
 
-		const key2sv = new Map()
-		for(const i of b.lst) {
-			key2sv.set(
-				i.sample+'.'+i.chrA+'.'+i.posA+'.'+i.strandA+'.'+i.chrB+'.'+i.posB+'.'+i.strandB,
-				i
-			)
-		}
+		b2.lst = dedup_sv( b.lst )
 
-		b2.lst = [ ...key2sv.values() ]
 		bins.push(b2)
 	}
 
@@ -2122,9 +2117,9 @@ function multi_expressionstatus_ase_outlier(tk) {
 
 function click_samplegroup_showmenu( samplegroup, tk, block ) {
 	/*
-	official only
+	official only, multi-sample
 	dense or full
-	click sample group label in track display to show menu, not legend
+	click sample group label in track display to show menu
 	this group must already been shown
 	*/
 	tk.tip2.d.append('div')
@@ -4709,7 +4704,7 @@ function svchr2html(chr, tk) {
 
 function click_samplegroup_showtable( samplegroup, tk, block ) {
 	/*
-	click on the left label of a sample group, show cnv/sv items in table
+	show a table
 	multi-sample
 	only for native track: no group for custom track for lack of annotation
 	*/
@@ -4724,12 +4719,8 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 		if(sample.sampletype) {
 			lst.push({k:'Sample type', v:sample.sampletype})
 		}
-		if(sample.pmid) {
-			lst.push({k:'PubMed', v: sample.pmid.split(',').map(i=>'<a href=https://www.ncbi.nlm.nih.gov/pubmed/'+i+' target=_blank>'+i+'</a>').join(' ')})
-		}
-		const [ cnvlst, svlst, lohlst, vcflst ] = printitems_svcnv( sample.samplename, sample.items, tk )
 
-		// TODO make button for cnv/sv/loh to launch single-sample
+		const [ cnvlst, svlst, lohlst, itdlst, vcflst ] = sortitemsbytype_onesample( sample.samplename, sample.items, tk )
 
 		if(cnvlst.length) {
 			lst.push({k:'CNV', v:cnvlst.join('')})
@@ -4739,6 +4730,9 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 		}
 		if(lohlst.length) {
 			lst.push({k:'LOH', v:lohlst.join('')})
+		}
+		if(itdlst.length) {
+			lst.push({k:'ITD', v:itdlst.join('')})
 		}
 		if(vcflst.length) {
 			lst.push({ k:'SNV/indel', v:vcflst.join('') })
@@ -4753,53 +4747,52 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 		.style('margin','20px')
 
 	const hassampletype = samplegroup.samples.find(i=>i.sampletype)
-	const haspmid=samplegroup.samples.find(i=>i.pmid)
 
 	// header
 	const tr=table.append('tr')
 	tr.append('td')
 		.text('Sample')
-		.style('color','#aaa')
+		.style('opacity',.5)
 	if(hassampletype) {
 		tr.append('td')
 			.text('Sample type')
-			.style('color','#aaa')
+			.style('opacity',.5)
 	}
 	tr.append('td')
 		.text('CNV')
-		.style('color','#aaa')
+		.style('opacity',.5)
 	tr.append('td')
 		.text('SV')
-		.style('color','#aaa')
+		.style('opacity',.5)
 	tr.append('td')
 		.text('LOH')
-		.style('color','#aaa')
+		.style('opacity',.5)
+	tr.append('td')
+		.text('ITD')
+		.style('opacity',.5)
 	
 	if(tk.data_vcf) {
 		tr.append('td')
 			.text('SNV/indel')
-			.style('color','#aaa')
+			.style('opacity',.5)
 	}
 
-	if(haspmid) {
-		tr.append('td')
-			.text('PubMed ID')
-			.style('color','#aaa')
-	}
 
 	for(const [i,sample] of samplegroup.samples.entries()) {
 
 		const tr=table.append('tr')
+
 		if(!(i%2)) {
 			tr.style('background','#f1f1f1')
 		}
+
 		tr.append('td').text(sample.samplename)
 
 		if(hassampletype) {
 			tr.append('td').text( sample.sampletype || '' )
 		}
 
-		const [ cnvlst, svlst, lohlst, vcflst, cnvlst0, svlst0, lohlst0, vcflst0 ] = printitems_svcnv(sample.samplename, sample.items, tk)
+		const [ cnvlst, svlst, lohlst, itdlst, vcflst, cnvlst0, svlst0, lohlst0, itdlst0, vcflst0 ] = sortitemsbytype_onesample(sample.samplename, sample.items, tk)
 
 		{
 			const td=tr.append('td')
@@ -4835,6 +4828,15 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 			}
 		}
 
+		{
+			const td=tr.append('td')
+			for(let j=0; j<itdlst.length; j++) {
+				td.append('div')
+					.html(itdlst[j])
+					.attr('class','sja_clbtext')
+			}
+		}
+
 		if(tk.data_vcf) {
 			const td=tr.append('td')
 			for(let j=0; j<vcflst.length; j++) {
@@ -4842,32 +4844,49 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 					.html(vcflst[j])
 			}
 		}
-
-		if(haspmid) {
-			tr.append('td').html( sample.pmid ? sample.pmid.split(',').map(i=>'<a href=https://www.ncbi.nlm.nih.gov/pubmed/'+i+' target=_blank>'+i+'</a>').join(' ') : '')
-		}
 	}
 }
 
 
 
-function printitems_svcnv( samplename, lst, tk ) {
+function sortitemsbytype_onesample( samplename, lst, tk ) {
 	/*
 	multi-sample
-	full mode
-	sort out a set of items from the same sample
-	also count vcf data
+	dense or full
+	for one sample, to show its mutation data in table, grouped by type
 	*/
+
 	const cnvlst=[], // html
 		svlst=[],
 		lohlst=[],
+		itdlst=[],
 		vcflst=[],
-		cnvlst0=[], // actual obj
+		cnvlst0=[], // actual objects
 		svlst0=[],
 		lohlst0=[],
+		itdlst0=[],
 		vcflst0=[]
 
+	{
+		// treat sv/fusion first: dedup breakends
+		const breakends = lst.filter( i=> i.dt==common.dtsv || i.dt==common.dtfusionrna )
+		const deduped = dedup_sv( breakends )
+		for(const i of deduped) {
+			svlst.push('<div>'+svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
+				+' &raquo; '
+				+svchr2html(i.chrB,tk)+':'+i.posB+':'+i.strandB
+				+(i.dt==common.dtfusionrna ? ' <span style="font-size:.7em">(RNA fusion)</span>':'')
+				+'</div>'
+			)
+			svlst0.push(i)
+		}
+	}
+
+
 	for(const i of lst) {
+
+		if(i.dt==common.dtsv || i.dt==common.dtfusionrna) continue
+
 		if(i.dt==common.dtloh) {
 			lohlst.push(
 				'<div>'+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
@@ -4875,22 +4894,24 @@ function printitems_svcnv( samplename, lst, tk ) {
 				+' seg.mean: '+i.segmean+'</span>'
 			)
 			lohlst0.push(i)
-		} else if(i.dt==common.dtsv || i.dt==common.dtfusionrna) {
-			svlst.push('<div>'+svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
-				+' &raquo; '
-				+svchr2html(i.chrB,tk)+':'+i.posB+':'+i.strandB
-				+(i.dt==common.dtfusionrna ? ' <span style="font-size:.7em;opacity:.7">(RNA fusion)</span>':'')
-				+'</div>'
-			)
-			svlst0.push(i)
 		} else if(i.dt==common.dtcnv) {
 			cnvlst.push(
-				'<div>'+i.chr+':'+(i.start-1)+'-'+(i.stop-1)
+				'<div>'+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
 				+' <span style="font-size:.8em">'+common.bplen(i.stop-i.start)+'</span>'
 				+' <span style="background:'+(i.value>0?tk.cnvcolor.gain.str:tk.cnvcolor.loss.str)+';font-size:.8em;color:white">&nbsp;'+i.value+'&nbsp;</span>'
 				+'</div>'
 			)
 			cnvlst0.push(i)
+		} else if(i.dt==common.dtitd) {
+			itdlst.push(
+				'<div>'+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
+				+(i.rnaduplength ? ', '+i.rnaduplength+' bp duplicated in RNA' : '')
+				+(i.aaduplength ? ', '+i.aaduplength+' AA duplicated' : '')
+				+'</div>'
+			)
+			itdlst0.push(i)
+		} else {
+			throw('unknown dt: '+i.dt)
 		}
 	}
 
@@ -4902,13 +4923,13 @@ function printitems_svcnv( samplename, lst, tk ) {
 					const c = common.mclass[m.class]
 					vcflst.push('<div><span style="color:'+c.color+';font-weight:bold">'+m.mname+'</span> <span style="font-size:.7em">'+c.label+'</span></div>')
 				}
-			} else if(m.dt == common.dtitd) {
-				//
+			} else {
+				throw('unknown dt: '+m.dt)
 			}
 		}
 	}
 
-	return [ cnvlst, svlst, lohlst, vcflst, cnvlst0, svlst0, lohlst0, vcflst0 ]
+	return [ cnvlst, svlst, lohlst, itdlst, vcflst, cnvlst0, svlst0, lohlst0, itdlst0, vcflst0 ]
 }
 
 
@@ -5026,6 +5047,26 @@ function vcfdata_prepmclass(tk, block) {
 		}
 	}
 }
+
+
+
+
+
+function dedup_sv( lst ) {
+	/* sv are breakends
+	dedup
+	*/
+	const key2sv = new Map()
+	for(const i of lst) {
+		key2sv.set(
+			i.sample+'.'+i.chrA+'.'+i.posA+'.'+i.strandA+'.'+i.chrB+'.'+i.posB+'.'+i.strandB,
+			i
+		)
+	}
+	return [ ...key2sv.values() ]
+}
+
+
 
 
 
