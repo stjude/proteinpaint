@@ -28,17 +28,10 @@ export const textlensf=.6 // to replace n.getBBox().width for detecting filling 
 let base_zindex=null
 
 
-export const gmmode={
-	genomic:'genomic',
-	splicingrna:'splicing RNA', // if just 1 exon, use "RNA" as label
-	exononly:'exon only',
-	protein:'protein',
-	gmsum:'aggregated exons'
-}
 
-
+// things that used to be in client.js but now have been moved to common
 export const tkt = common.tkt
-
+export const gmmode = common.gmmode
 
 
 export const domaincolorlst=[ '#8dd3c7', '#bebada', '#fb8072', '#80b1d3', '#E8E89E', "#a6d854", '#fdb462', "#ffd92f","#e5c494","#b3b3b3" ]

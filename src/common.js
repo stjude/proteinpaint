@@ -717,6 +717,17 @@ exports.alleleInGenotypeStr = function(genotype, allele) {
 
 
 
+const gmmode={
+	genomic:'genomic',
+	splicingrna:'splicing RNA', // if just 1 exon, use "RNA" as label
+	exononly:'exon only',
+	protein:'protein',
+	gmsum:'aggregated exons'
+}
+exports.gmmode=gmmode
+
+
+
 exports.vcfcopymclass = function (m, block) {
 
 	if(m.csq) {
@@ -735,7 +746,7 @@ exports.vcfcopymclass = function (m, block) {
 					useone=q
 				}
 			}
-			if(!useone && block.gmmode==client.gmmode.genomic) {
+			if(!useone && block.gmmode==gmmode.genomic) {
 				// no match to this gene, but in genomic mode, maybe from other genes?
 				useone=m.csq[0]
 			}
@@ -776,7 +787,7 @@ exports.vcfcopymclass = function (m, block) {
 					useone=q
 				}
 			}
-			if(!useone && block.gmmode==client.gmmode.genomic) {
+			if(!useone && block.gmmode==gmmode.genomic) {
 				// no match to this gene, but in genomic mode, maybe from other genes?
 				useone=m.ann[0]
 			}
