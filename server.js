@@ -286,6 +286,8 @@ function handle_genomes(req,res) {
 						if(q.type == common.tkt.mdssvcnv) {
 
 							clientquery.attrnamespacer = q.attrnamespacer
+							clientquery.mutation_attribute = q.mutation_attribute
+
 							if(q.expressionrank_querykey) {
 								// for checking expression rank
 								clientquery.checkexpressionrank = {
@@ -8857,12 +8859,12 @@ function mds_init(ds,genome) {
 					const err = mds_init_mdsjunction(query, ds, genome)
 					if(err) return querykey+' (mdsjunction) error: '+err
 
-				} else if(query.type==common.tkt.mdscnv) {
+				} else if(query.type==common.tkt.mdscnv) { // obsolete
 
 					const err = mds_init_mdscnv(query, ds, genome)
 					if(err) return querykey+' (mdscnv) error: '+err
 
-				} else if(query.type==common.tkt.mdssvcnv) {
+				} else if(query.type==common.tkt.mdssvcnv) { // new
 
 					const err = mds_init_mdssvcnv(query, ds, genome)
 					if(err) return querykey+' (svcnv) error: '+err
@@ -9113,8 +9115,11 @@ function mds_init_mdscnv(query, ds, genome) {
 
 
 
+
 function mds_init_mdssvcnv(query, ds, genome) {
-	// only allows single track, since there is no challenge merging multiple into one
+	/*
+	only allows single track, since there is no challenge merging multiple into one
+	*/
 
 	let cwd=null
 	let _file
@@ -9202,6 +9207,23 @@ function mds_init_mdssvcnv(query, ds, genome) {
 			if(!attr.k) return 'k missing from one of groupsamplebyattrlst'
 		}
 		if(!query.attrnamespacer) query.attrnamespacer = ', '
+	}
+
+	if(query.mutation_attribute) {
+		if(!query.mutation_attribute.attributes) return 'attributes{} missing from mutation_attribute'
+		for(const key in query.mutation_attribute.attributes) {
+			const a = query.mutation_attribute.attributes[key]
+			if(!a.label) return '.label missing for key '+key+' from mutation_attribute.attributes'
+			if(a.appendto_link) {
+				// this is pmid, no .values{}
+				continue
+			}
+			if(!a.values) return '.values{} missing for key '+key+' from mutation_attribute.attributes'
+			for(const v in a.values) {
+				const b = a.values[v]
+				if(!b.label) return '.label missing for value '+v+' of key '+key+' from mutation_attribute.attributes'
+			}
+		}
 	}
 
 	console.log('('+query.type+') '+query.name+': '+(query.samples ? query.samples.length:'no')+' samples, '+(query.nochr ? 'no "chr"':'has "chr"'))

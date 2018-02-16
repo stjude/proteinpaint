@@ -1,7 +1,6 @@
 import * as client from './client'
 import {select as d3select,event as d3event} from 'd3-selection'
 import {legend_newrow} from './block.legend'
-import * as blockmds from './block.mds'
 import {rgb as d3rgb} from 'd3-color'
 import {axisTop, axisLeft, axisRight} from 'd3-axis'
 import {scaleLinear,scaleLog,scaleOrdinal,schemeCategory10,schemeCategory20} from 'd3-scale'
@@ -3396,205 +3395,7 @@ function makeTk(tk, block) {
 			configPanel(tk, block)
 		})
 
-
-	////////////// legend
-	{
-		const [tr,td] = legend_newrow(block,tk.name)
-		tk.tr_legend = tr
-		tk.td_legend = td
-		const table = td.append('table')
-			.style('border-spacing','5px')
-
-		{
-			const row = table.append('tr')
-			tk.legend_mclass = {
-				row:row,
-				hidden: new Set(),
-			}
-			row.append('td')
-				.style('text-align','right')
-				.style('opacity',.5)
-				.text('SNV/indel')
-			tk.legend_mclass.holder = row.append('td')
-				.style('display','inline-block')
-		}
-
-
-		// cnv/loh color scale showing in legend, only for multi-sample
-		{
-			const fontsize = 14
-			const xpad = 15
-			const barh = 20
-			let leftpad = 50
-
-			//// cnv color scale
-
-			tk.cnvcolor.cnvlegend = {
-				axistickh:4,
-				barw:55
-			}
-
-			tk.cnvcolor.cnvlegend.row = table.append('tr')
-			tk.cnvcolor.cnvlegend.row.append('td')
-				.style('text-align','right')
-				.style('opacity',.5)
-				.text('CNV log2(ratio)')
-
-			{
-				const svg = tk.cnvcolor.cnvlegend.row
-					.append('td')
-					.append('svg')
-					.attr('width', (leftpad+tk.cnvcolor.cnvlegend.barw)*2)
-					.attr('height',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh)
-
-				tk.cnvcolor.cnvlegend.axisg = svg.append('g')
-					.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.cnvlegend.axistickh)+')')
-
-				const gain_id = Math.random().toString()
-				const loss_id = Math.random().toString()
-
-				const defs = svg.append('defs')
-				{
-					// loss
-					const grad = defs.append('linearGradient')
-						.attr('id', loss_id)
-					tk.cnvcolor.cnvlegend.loss_stop = grad.append('stop')
-						.attr('offset','0%')
-						.attr('stop-color', tk.cnvcolor.loss.str)
-					grad.append('stop')
-						.attr('offset','100%')
-						.attr('stop-color', 'white')
-				}
-				{
-					// gain
-					const grad = defs.append('linearGradient')
-						.attr('id', gain_id)
-					grad.append('stop')
-						.attr('offset','0%')
-						.attr('stop-color', 'white')
-					tk.cnvcolor.cnvlegend.gain_stop = grad.append('stop')
-						.attr('offset','100%')
-						.attr('stop-color', tk.cnvcolor.gain.str)
-				}
-
-				svg.append('rect')
-					.attr('x',leftpad)
-					.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
-					.attr('width', tk.cnvcolor.cnvlegend.barw)
-					.attr('height',barh)
-					.attr('fill', 'url(#'+loss_id+')')
-
-				svg.append('rect')
-					.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw)
-					.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
-					.attr('width', tk.cnvcolor.cnvlegend.barw)
-					.attr('height',barh)
-					.attr('fill', 'url(#'+gain_id+')')
-
-				svg.append('text')
-					.attr('x',leftpad-5)
-					.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
-					.attr('font-family',client.font)
-					.attr('font-size',fontsize)
-					.attr('text-anchor','end')
-					.attr('dominant-baseline','central')
-					.attr('fill','black')
-					.text('Loss')
-				svg.append('text')
-					.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw*2+5)
-					.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
-					.attr('font-family',client.font)
-					.attr('font-size',fontsize)
-					.attr('dominant-baseline','central')
-					.attr('fill','black')
-					.text('Gain')
-			}
-
-
-			//// loh color legend
-
-			leftpad=20
-
-			tk.cnvcolor.lohlegend = {
-				axistickh:4,
-				barw:55
-			}
-
-			tk.cnvcolor.lohlegend.row = table.append('tr')
-			tk.cnvcolor.lohlegend.row.append('td')
-				.style('text-align','right')
-				.style('opacity',.5)
-				.text('LOH seg.mean')
-
-			{
-				const svg = tk.cnvcolor.lohlegend.row
-					.append('td')
-					.append('svg')
-					.attr('width', (leftpad+tk.cnvcolor.lohlegend.barw)*2)
-					.attr('height',fontsize+tk.cnvcolor.lohlegend.axistickh+barh)
-
-				tk.cnvcolor.lohlegend.axisg = svg.append('g')
-					.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.lohlegend.axistickh)+')')
-
-				const loh_id = Math.random().toString()
-
-				const defs = svg.append('defs')
-				{
-					const grad = defs.append('linearGradient')
-						.attr('id', loh_id)
-					grad.append('stop')
-						.attr('offset','0%')
-						.attr('stop-color', 'white')
-					tk.cnvcolor.lohlegend.loh_stop = grad.append('stop')
-						.attr('offset','100%')
-						.attr('stop-color', tk.cnvcolor.loh.str)
-				}
-
-				svg.append('rect')
-					.attr('x', leftpad)
-					.attr('y',fontsize+tk.cnvcolor.lohlegend.axistickh)
-					.attr('width', tk.cnvcolor.lohlegend.barw)
-					.attr('height',barh)
-					.attr('fill', 'url(#'+loh_id+')')
-			}
-		}
-
-
-		if(!tk.singlesample && !tk.iscustom) {
-			// official, multi-sample
-
-			const row = table.append('tr')
-				.style('display','none')
-				.style('margin','10px')
-			row.append('td')
-				.style('text-align','right')
-				.style('opacity',.5)
-				.text('Cancer')
-			tk.legend_samplegroup = {
-				row: row,
-				color: scaleOrdinal(schemeCategory20),
-				holder: row.append('td'),
-				hidden: new Set(),
-			}
-		}
-
-		// sv chr color
-		{
-			const row = table.append('tr')
-			tk.legend_svchrcolor={
-				row:row,
-				interchrs:new Set(),
-				colorfunc: scaleOrdinal(schemeCategory20)
-			}
-			row.append('td')
-				.style('text-align','right')
-				.style('opacity',.5)
-				.text('SV chromosome')
-			tk.legend_svchrcolor.holder = row.append('td')
-		}
-
-	}
-	// end of legend
+	makeTk_legend(block, tk)
 
 	// gene expression config
 
@@ -3624,9 +3425,222 @@ function makeTk(tk, block) {
 		expressionstat.init_config( tk.gecfg )
 	}
 
-
 	// end of makeTk
 }
+
+
+
+
+function makeTk_legend(block, tk) {
+	const [tr,td] = legend_newrow(block,tk.name)
+	tk.tr_legend = tr
+	tk.td_legend = td
+
+	const table = td.append('table')
+		.style('border-spacing','5px')
+
+	if(tk.mutation_attribute) {
+		// official only
+		for(const key in tk.mutation_attribute.attributes) {
+			const attr = tk.mutation_attribute.attributes[ key ]
+			if(attr.filter) {
+				attr.legendrow = table.append('tr')
+				attr.legendrow.append('td')
+					.style('text-align','right')
+					.style('opacity',.5)
+					.text(attr.label)
+				attr.legendholder = attr.legendrow.append('td')
+			}
+		}
+	}
+
+	{
+		const row = table.append('tr')
+		tk.legend_mclass = {
+			row:row,
+			hidden: new Set(),
+		}
+		row.append('td')
+			.style('text-align','right')
+			.style('opacity',.5)
+			.text('SNV/indel')
+		tk.legend_mclass.holder = row.append('td')
+	}
+
+	// cnv/loh color scale showing in legend, only for multi-sample
+	{
+		const fontsize = 14
+		const xpad = 15
+		const barh = 20
+		let leftpad = 50
+
+		//// cnv color scale
+
+		tk.cnvcolor.cnvlegend = {
+			axistickh:4,
+			barw:55
+		}
+
+		tk.cnvcolor.cnvlegend.row = table.append('tr')
+		tk.cnvcolor.cnvlegend.row.append('td')
+			.style('text-align','right')
+			.style('opacity',.5)
+			.text('CNV log2(ratio)')
+
+		{
+			const svg = tk.cnvcolor.cnvlegend.row
+				.append('td')
+				.append('svg')
+				.attr('width', (leftpad+tk.cnvcolor.cnvlegend.barw)*2)
+				.attr('height',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh)
+
+			tk.cnvcolor.cnvlegend.axisg = svg.append('g')
+				.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.cnvlegend.axistickh)+')')
+
+			const gain_id = Math.random().toString()
+			const loss_id = Math.random().toString()
+
+			const defs = svg.append('defs')
+			{
+				// loss
+				const grad = defs.append('linearGradient')
+					.attr('id', loss_id)
+				tk.cnvcolor.cnvlegend.loss_stop = grad.append('stop')
+					.attr('offset','0%')
+					.attr('stop-color', tk.cnvcolor.loss.str)
+				grad.append('stop')
+					.attr('offset','100%')
+					.attr('stop-color', 'white')
+			}
+			{
+				// gain
+				const grad = defs.append('linearGradient')
+					.attr('id', gain_id)
+				grad.append('stop')
+					.attr('offset','0%')
+					.attr('stop-color', 'white')
+				tk.cnvcolor.cnvlegend.gain_stop = grad.append('stop')
+					.attr('offset','100%')
+					.attr('stop-color', tk.cnvcolor.gain.str)
+			}
+
+			svg.append('rect')
+				.attr('x',leftpad)
+				.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
+				.attr('width', tk.cnvcolor.cnvlegend.barw)
+				.attr('height',barh)
+				.attr('fill', 'url(#'+loss_id+')')
+
+			svg.append('rect')
+				.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw)
+				.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
+				.attr('width', tk.cnvcolor.cnvlegend.barw)
+				.attr('height',barh)
+				.attr('fill', 'url(#'+gain_id+')')
+
+			svg.append('text')
+				.attr('x',leftpad-5)
+				.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
+				.attr('font-family',client.font)
+				.attr('font-size',fontsize)
+				.attr('text-anchor','end')
+				.attr('dominant-baseline','central')
+				.attr('fill','black')
+				.text('Loss')
+			svg.append('text')
+				.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw*2+5)
+				.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
+				.attr('font-family',client.font)
+				.attr('font-size',fontsize)
+				.attr('dominant-baseline','central')
+				.attr('fill','black')
+				.text('Gain')
+		}
+
+
+		//// loh color legend
+
+		leftpad=20
+
+		tk.cnvcolor.lohlegend = {
+			axistickh:4,
+			barw:55
+		}
+
+		tk.cnvcolor.lohlegend.row = table.append('tr')
+		tk.cnvcolor.lohlegend.row.append('td')
+			.style('text-align','right')
+			.style('opacity',.5)
+			.text('LOH seg.mean')
+
+		{
+			const svg = tk.cnvcolor.lohlegend.row
+				.append('td')
+				.append('svg')
+				.attr('width', (leftpad+tk.cnvcolor.lohlegend.barw)*2)
+				.attr('height',fontsize+tk.cnvcolor.lohlegend.axistickh+barh)
+
+			tk.cnvcolor.lohlegend.axisg = svg.append('g')
+				.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.lohlegend.axistickh)+')')
+
+			const loh_id = Math.random().toString()
+
+			const defs = svg.append('defs')
+			{
+				const grad = defs.append('linearGradient')
+					.attr('id', loh_id)
+				grad.append('stop')
+					.attr('offset','0%')
+					.attr('stop-color', 'white')
+				tk.cnvcolor.lohlegend.loh_stop = grad.append('stop')
+					.attr('offset','100%')
+					.attr('stop-color', tk.cnvcolor.loh.str)
+			}
+
+			svg.append('rect')
+				.attr('x', leftpad)
+				.attr('y',fontsize+tk.cnvcolor.lohlegend.axistickh)
+				.attr('width', tk.cnvcolor.lohlegend.barw)
+				.attr('height',barh)
+				.attr('fill', 'url(#'+loh_id+')')
+		}
+	}
+
+
+	if(!tk.singlesample && !tk.iscustom) {
+		// official, multi-sample
+
+		const row = table.append('tr')
+			.style('display','none')
+			.style('margin','10px')
+		row.append('td')
+			.style('text-align','right')
+			.style('opacity',.5)
+			.text('Cancer')
+		tk.legend_samplegroup = {
+			row: row,
+			color: scaleOrdinal(schemeCategory20),
+			holder: row.append('td'),
+			hidden: new Set(),
+		}
+	}
+
+	// sv chr color
+	{
+		const row = table.append('tr')
+		tk.legend_svchrcolor={
+			row:row,
+			interchrs:new Set(),
+			colorfunc: scaleOrdinal(schemeCategory20)
+		}
+		row.append('td')
+			.style('text-align','right')
+			.style('opacity',.5)
+			.text('SV chromosome')
+		tk.legend_svchrcolor.holder = row.append('td')
+	}
+}
+
 
 
 
