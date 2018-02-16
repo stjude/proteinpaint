@@ -147,6 +147,7 @@ export function loadTk( tk, block ) {
 
 		tk.vcfrangelimit = data.vcfrangelimit
 		vcfdata_prepmclass(tk, block) // data for display is now in tk.data_vcf[]
+		vcfdata_mclassfilter(tk)
 
 
 		if(tk.singlesample) {
@@ -878,7 +879,7 @@ function render_samplegroups( tk, block ) {
 	const svlst=[] 
 
 
-	// map sv/cnv/loh/itd to view range, exclude unmappable stuff
+	// map sv/cnv/loh/itd to view range, exclude unmappable items
 	tk.samplegroups=[]
 	for( const samplegroup of tk._data) {
 
@@ -1045,7 +1046,7 @@ function render_samplegroups( tk, block ) {
 	tk.cnvrightg.transition().attr('transform','translate(0,'+hpad+')')
 
 	{
-		// if showing density plots, put labels
+		// if showing density plots, put labels on left of density track
 		const color='#858585'
 		if(vcfdensityheight && tk.data_vcf) {
 
@@ -1121,7 +1122,6 @@ function render_samplegroups( tk, block ) {
 	}
 
 	tk.height_main = tk.toppad + hpad + cnvheight + tk.bottompad
-
 
 
 	/// legend
@@ -3773,12 +3773,13 @@ function may_legend_vcfmclass(tk, block) {
 
 	const applychange = ()=>{
 		tk.tip2.hide()
-		vcfdata_prepmclass(tk, block)
+		vcfdata_mclassfilter(tk)
 		if(tk.singlesample) {
 			render_singlesample( tk, block )
 		} else {
 			render_samplegroups( tk, block )
 		}
+		block.block_setheight()
 	}
 }
 
@@ -5076,32 +5077,34 @@ function vcfdata_prepmclass(tk, block) {
 	/*
 	_data_vcf returned by server
 	will be filtered to data_vcf for display
-	changing filtering option will call this and won't reload data
+	changing mclass filtering option will call this and won't reload data
+	because server-side code cannot yet parse out m class from csq
 	*/
 	if(!tk._data_vcf || tk._data_vcf.length==0) {
 		tk.data_vcf=null
 		return
 	}
-	tk.data_vcf=[]
 	for(const m of tk._data_vcf) {
 
-		switch(m.dt) {
-		case common.dtsnvindel:
+		if( m.dt == common.dtsnvindel ) {
 			common.vcfcopymclass(m, block)
-			break
-			/*
-		case common.dtitd:
-			m.class = common.mclassitd
-			break
-			*/
-		default:
-			console.error('unknown dt '+m.dt)
-		}
-
-		if(tk.legend_mclass.hidden.has( m.class )) {
-			// class is hidden
 		} else {
-			tk.data_vcf.push( m )
+			throw('unknown dt '+m.dt)
+		}
+	}
+}
+
+
+
+function vcfdata_mclassfilter(tk) {
+	/*
+	must work on the original set, otherwise class filtering won't work
+	*/
+	if(!tk._data_vcf) return
+	tk.data_vcf = []
+	for(const m of tk._data_vcf) {
+		if( m.class && !tk.legend_mclass.hidden.has( m.class ) ) {
+			tk.data_vcf.push(m)
 		}
 	}
 }
