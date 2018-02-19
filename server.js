@@ -286,7 +286,7 @@ function handle_genomes(req,res) {
 						if(q.type == common.tkt.mdssvcnv) {
 
 							clientquery.attrnamespacer = q.attrnamespacer
-							clientquery.mutation_attribute = q.mutation_attribute
+							clientquery.mutationAttribute = q.mutationAttribute
 
 							if(q.expressionrank_querykey) {
 								// for checking expression rank
@@ -9209,19 +9209,19 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		if(!query.attrnamespacer) query.attrnamespacer = ', '
 	}
 
-	if(query.mutation_attribute) {
-		if(!query.mutation_attribute.attributes) return 'attributes{} missing from mutation_attribute'
-		for(const key in query.mutation_attribute.attributes) {
-			const a = query.mutation_attribute.attributes[key]
-			if(!a.label) return '.label missing for key '+key+' from mutation_attribute.attributes'
+	if(query.mutationAttribute) {
+		if(!query.mutationAttribute.attributes) return 'attributes{} missing from mutationAttribute'
+		for(const key in query.mutationAttribute.attributes) {
+			const a = query.mutationAttribute.attributes[key]
+			if(!a.label) return '.label missing for key '+key+' from mutationAttribute.attributes'
 			if(a.appendto_link) {
 				// this is pmid, no .values{}
 				continue
 			}
-			if(!a.values) return '.values{} missing for key '+key+' from mutation_attribute.attributes'
+			if(!a.values) return '.values{} missing for key '+key+' from mutationAttribute.attributes'
 			for(const v in a.values) {
 				const b = a.values[v]
-				if(!b.label) return '.label missing for value '+v+' of key '+key+' from mutation_attribute.attributes'
+				if(!b.label) return '.label missing for value '+v+' of key '+key+' from mutationAttribute.attributes'
 			}
 		}
 	}

@@ -831,3 +831,11 @@ exports.vcfcopymclass = function (m, block) {
 
 	delete m.type
 }
+
+
+
+/*
+used in:
+	mdssvcnv track, mutation attributes, items that are not annotated by an attribute for showing in legend, and server-side filtering
+*/
+exports.not_annotated = 'Unannotated'

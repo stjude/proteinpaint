@@ -96,7 +96,7 @@ module.exports={
 
 			attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
 
-			mutation_attribute:{
+			mutationAttribute:{
 				attributes:{
 					dna_assay:{
 						label:'DNA assay',
