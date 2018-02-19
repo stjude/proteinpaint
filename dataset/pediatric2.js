@@ -65,6 +65,41 @@ module.exports={
 	},
 
 
+	mutationAttribute:{
+		// mutation-level attributes, applied to multiple data types
+		attributes:{
+			dna_assay:{
+				label:'DNA assay',
+				values:{
+					cgi:{ label:'Complete Genomics', },
+					wgs:{ label:'Whole genome' },
+					wes:{ label:'Whole exome'},
+					snp6:{ label:'SNP Array 6.0'}
+				},
+				filter:1
+			},
+			rna_assay:{
+				label:'RNA assay',
+				values:{
+					total:{ label:'Total RNA'},
+					polya:{ label:'Poly(A)-selected'},
+				},
+				filter:1
+			},
+			project:{
+				label:'Project',
+				values:{
+					pantarget:{ label:'Pan-TARGET'},
+					pcgp:{ label:'PCGP'}
+				},
+				filter:1
+			},
+			pmid:{
+				label:'PubMed ID',
+				appendto_link:'http://www.ncbi.nlm.nih.gov/pubmed/'
+			}
+		}
+	},
 
 
 	queries:{
@@ -96,40 +131,6 @@ module.exports={
 
 			attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
 
-			mutationAttribute:{
-				attributes:{
-					dna_assay:{
-						label:'DNA assay',
-						values:{
-							cgi:{ label:'Complete Genomics', },
-							wgs:{ label:'Whole genome' },
-							wes:{ label:'Whole exome'},
-							snp6:{ label:'SNP Array 6.0'}
-						},
-						filter:1
-					},
-					rna_assay:{
-						label:'RNA assay',
-						values:{
-							total:{ label:'Total RNA'},
-							polya:{ label:'Poly(A)-selected'},
-						},
-						filter:1
-					},
-					project:{
-						label:'Project',
-						values:{
-							pantarget:{ label:'Pan-TARGET'},
-							pcgp:{ label:'PCGP'}
-						},
-						filter:1
-					},
-					pmid:{
-						label:'PubMed ID',
-						appendto_link:'http://www.ncbi.nlm.nih.gov/pubmed/'
-					}
-				}
-			},
 
 			expressionrank_querykey:'genefpkm',
 			vcf_querykey:'somaticsnvindel'

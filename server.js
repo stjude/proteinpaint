@@ -286,7 +286,7 @@ function handle_genomes(req,res) {
 						if(q.type == common.tkt.mdssvcnv) {
 
 							clientquery.attrnamespacer = q.attrnamespacer
-							clientquery.mutationAttribute = q.mutationAttribute
+							clientquery.mutationAttribute = ds.mutationAttribute
 
 							if(q.expressionrank_querykey) {
 								// for checking expression rank
@@ -8901,6 +8901,23 @@ function mds_init(ds,genome) {
 		}
 	}
 
+	if(ds.mutationAttribute) {
+		if(!ds.mutationAttribute.attributes) return 'attributes{} missing from mutationAttribute'
+		for(const key in ds.mutationAttribute.attributes) {
+			const a = ds.mutationAttribute.attributes[key]
+			if(!a.label) return '.label missing for key '+key+' from mutationAttribute.attributes'
+			if(a.appendto_link) {
+				// this is pmid, no .values{}
+				continue
+			}
+			if(!a.values) return '.values{} missing for key '+key+' from mutationAttribute.attributes'
+			for(const v in a.values) {
+				const b = a.values[v]
+				if(!b.label) return '.label missing for value '+v+' of key '+key+' from mutationAttribute.attributes'
+			}
+		}
+	}
+
 
 	if(ds.queries) {
 		for(const querykey in ds.queries) {
@@ -9266,23 +9283,6 @@ function mds_init_mdssvcnv(query, ds, genome) {
 			if(!attr.k) return 'k missing from one of groupsamplebyattrlst'
 		}
 		if(!query.attrnamespacer) query.attrnamespacer = ', '
-	}
-
-	if(query.mutationAttribute) {
-		if(!query.mutationAttribute.attributes) return 'attributes{} missing from mutationAttribute'
-		for(const key in query.mutationAttribute.attributes) {
-			const a = query.mutationAttribute.attributes[key]
-			if(!a.label) return '.label missing for key '+key+' from mutationAttribute.attributes'
-			if(a.appendto_link) {
-				// this is pmid, no .values{}
-				continue
-			}
-			if(!a.values) return '.values{} missing for key '+key+' from mutationAttribute.attributes'
-			for(const v in a.values) {
-				const b = a.values[v]
-				if(!b.label) return '.label missing for value '+v+' of key '+key+' from mutationAttribute.attributes'
-			}
-		}
 	}
 
 	console.log('('+query.type+') '+query.name+': '+(query.samples ? query.samples.length:'no')+' samples, '+(query.nochr ? 'no "chr"':'has "chr"'))
