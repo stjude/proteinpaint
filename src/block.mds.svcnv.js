@@ -479,119 +479,93 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 		let labelw
 		lab.each(function(){ labelw = this.getBBox().width })
 
-		if(m.dt==common.dtsnvindel) {
-			const rowheight = stackheight
-
-			const bgbox = g.append('rect')
-				.attr('x', -rowheight/2)
-				.attr('y', -rowheight/2)
-				.attr('width', rowheight)
-				.attr('height', rowheight)
-				.attr('fill', color)
-				.attr('fill-opacity', 0)
-			const fgline1 = g.append('line')
-				.attr('stroke', color)
-				.attr('stroke-width',2)
-				.attr('x1', -rowheight/2)
-				.attr('x2', rowheight/2)
-				.attr('y1', -rowheight/2)
-				.attr('y2', rowheight/2)
-			const fgline2 = g.append('line')
-				.attr('stroke', color)
-				.attr('stroke-width',2)
-				.attr('x1', -rowheight/2)
-				.attr('x2', rowheight/2)
-				.attr('y1', rowheight/2)
-				.attr('y2', -rowheight/2)
-			// to cover both cross & label, will be placed after deciding whether label is on left/right
-			m._p.cover = g.append('rect')
-				.attr('y', -rowheight/2)
-				.attr('width', stackheight+labelspace+labelw)
-				.attr('height', rowheight)
-				.attr('fill','white')
-				.attr('fill-opacity', 0)
-				.on('mouseover',()=>{
-					bgbox.attr('fill-opacity',1)
-					fgline1.attr('stroke','white')
-						.attr('x1', 1-rowheight/2)
-						.attr('x2', rowheight/2-1)
-						.attr('y1', 1-rowheight/2)
-						.attr('y2', rowheight/2-1)
-					fgline2.attr('stroke','white')
-						.attr('x1', 1-rowheight/2)
-						.attr('x2', rowheight/2-1)
-						.attr('y1', rowheight/2-1)
-						.attr('y2', 1-rowheight/2)
-					tooltip_singleitem({
-						item: m,
-						m_sample: m.sampledata[0],
-						tk: tk,
-					})
+		const bgbox = g.append('rect')
+			.attr('x', -stackheight/2)
+			.attr('y', -stackheight/2)
+			.attr('width', stackheight)
+			.attr('height', stackheight)
+			.attr('fill', color)
+			.attr('fill-opacity', 0)
+		const fgline1 = g.append('line')
+			.attr('stroke', color)
+			.attr('stroke-width',2)
+			.attr('x1', -stackheight/2)
+			.attr('x2', stackheight/2)
+			.attr('y1', -stackheight/2)
+			.attr('y2', stackheight/2)
+		const fgline2 = g.append('line')
+			.attr('stroke', color)
+			.attr('stroke-width',2)
+			.attr('x1', -stackheight/2)
+			.attr('x2', stackheight/2)
+			.attr('y1', stackheight/2)
+			.attr('y2', -stackheight/2)
+		// to cover both cross & label, will be placed after deciding whether label is on left/right
+		m._p.cover = g.append('rect')
+			.attr('y', -stackheight/2)
+			.attr('width', stackheight+labelspace+labelw)
+			.attr('height', stackheight)
+			.attr('fill','white')
+			.attr('fill-opacity', 0)
+			.on('mouseover',()=>{
+				bgbox.attr('fill-opacity',1)
+				fgline1.attr('stroke','white')
+					.attr('x1', 1-stackheight/2)
+					.attr('x2', stackheight/2-1)
+					.attr('y1', 1-stackheight/2)
+					.attr('y2', stackheight/2-1)
+				fgline2.attr('stroke','white')
+					.attr('x1', 1-stackheight/2)
+					.attr('x2', stackheight/2-1)
+					.attr('y1', stackheight/2-1)
+					.attr('y2', 1-stackheight/2)
+				tooltip_singleitem({
+					item: m,
+					m_sample: m.sampledata[0],
+					tk: tk,
 				})
-				.on('mouseout',()=>{
-					tk.tktip.hide()
-					bgbox.attr('fill-opacity',0)
-					fgline1.attr('stroke',color)
-						.attr('x1', -rowheight/2)
-						.attr('x2', rowheight/2)
-						.attr('y1', -rowheight/2)
-						.attr('y2', rowheight/2)
-					fgline2.attr('stroke',color)
-						.attr('x1', -rowheight/2)
-						.attr('x2', rowheight/2)
-						.attr('y1', rowheight/2)
-						.attr('y2', -rowheight/2)
-				})
-		} else {
-			console.error('unknown dt: '+m.dt)
-		}
-
+			})
+			.on('mouseout',()=>{
+				tk.tktip.hide()
+				bgbox.attr('fill-opacity',0)
+				fgline1.attr('stroke',color)
+					.attr('x1', -stackheight/2)
+					.attr('x2', stackheight/2)
+					.attr('y1', -stackheight/2)
+					.attr('y2', stackheight/2)
+				fgline2.attr('stroke',color)
+					.attr('x1', -stackheight/2)
+					.attr('x2', stackheight/2)
+					.attr('y1', stackheight/2)
+					.attr('y2', -stackheight/2)
+			})
 
 		//////////////////////////////// set position for text label & cover
-		if(m.dt==common.dtsnvindel) {
 
-			m._p.stackw = stackheight + 5 + labelw
+		m._p.stackw = stackheight + 5 + labelw
 
-			if(block.width - m.x > labelw + labelspace + stackheight/2) {
-				// label on right
-				m._p.stackx = m.x-stackheight/2
-				m._p.g_x = stackheight/2
-				lab.attr('x', stackheight/2+labelspace)
-				m._p.cover.attr('x', -stackheight/2)
+		if(block.width - m.x > labelw + labelspace + stackheight/2) {
+			// label on right
+			m._p.stackx = m.x-stackheight/2
+			m._p.g_x = stackheight/2
+			lab.attr('x', stackheight/2+labelspace)
+			m._p.cover.attr('x', -stackheight/2)
 
-			} else {
-				// label on left
-				m._p.stackx = m.x-stackheight/2-labelspace-labelw
-				m._p.g_x = stackheight/2+labelspace+labelw
-				lab
-					.attr('x', -stackheight/2-labelspace)
-					.attr('text-anchor','end')
-				m._p.cover.attr('x', -labelw-labelspace-stackheight/2 )
-			}
 		} else {
-			console.error('unknown dt: '+m.dt)
+			// label on left
+			m._p.stackx = m.x-stackheight/2-labelspace-labelw
+			m._p.g_x = stackheight/2+labelspace+labelw
+			lab
+				.attr('x', -stackheight/2-labelspace)
+				.attr('text-anchor','end')
+			m._p.cover.attr('x', -labelw-labelspace-stackheight/2 )
 		}
 	}
 
 
 	items.sort( (i,j)=> {
-		let xi, xj
-		switch(i.dt) {
-		case common.dtsnvindel:
-		case common.dtitd:
-			xi = i.x
-			break
-		default:
-			xi= Math.min(i.x1,i.x2)
-		}
-		switch(i.dt) {
-		case common.dtsnvindel:
-		case common.dtitd:
-			xj = j.x
-			break
-		default:
-			xj= Math.min(j.x1,j.x2)
-		}
+		const xi = i._p ? i._p.stackx : Math.min(i.x1,i.x2)
+		const xj = j._p ? j._p.stackx : Math.min(j.x1,j.x2)
 		return xi - xj
 	})
 
@@ -604,7 +578,7 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 
 		for(let i=0; i<stacks.length; i++) {
 			if(stacks[i] <= itemstart ) {
-				stacks[i] = Math.max( stacks[i], itemstart + itemwidth )
+				stacks[i] = itemstart + itemwidth
 				item.stack=i
 				break
 			}
@@ -614,7 +588,6 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 			stacks.push( itemstart + itemwidth )
 		}
 	}
-
 
 	for(const item of items) {
 
