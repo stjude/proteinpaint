@@ -176,6 +176,7 @@ export function loadTk( tk, block ) {
 	})
 	.catch(obj=>{
 		if(obj.stack) console.log(obj)
+		tk.height_main = 100
 		return {error: tk.name+': '+obj.message}
 	})
 	.then( data=>{
@@ -199,7 +200,6 @@ export function loadTk( tk, block ) {
 			// mutationAttribute filtering has been applied on server, not on client
 
 			//applyfilter_svcnv_multi( tk )
-
 
 			tk.gene2coord = data.gene2coord
 			tk.expressionrangelimit = data.expressionrangelimit
@@ -255,6 +255,22 @@ function addLoadParameter( par, tk ) {
 
 		if(tk.legend_samplegroup && tk.legend_samplegroup.hidden.size) {
 			par.hiddensgnames = [ ...tk.legend_samplegroup.hidden ]
+		}
+	}
+
+	if(tk.mutationAttribute) {
+		// mutation attribute applicable to all data types
+		const key2value={}
+		let hashidden=false
+		for(const key in tk.mutationAttribute.attributes) {
+			const attr = tk.mutationAttribute.attributes[key]
+			if(attr.hidden && attr.hidden.size) {
+				key2value[key] = [...attr.hidden]
+				hashidden=true
+			}
+		}
+		if(hashidden) {
+			par.mutationAttributeHidden = key2value
 		}
 	}
 }
@@ -3838,13 +3854,22 @@ function may_legend_mutationAttribute(tk, block) {
 	for(const g of tk.samplegroups) {
 		for(const s of g.samples) {
 			for(const i of s.items) {
-				count_mutationAttribute( i, tk )
+				// even if mattr is abscent for it, still record it
+				count_mutationAttribute( i.mattr, tk )
 			}
 		}
 	}
 	if(tk.data_vcf) {
 		for(const m of tk.data_vcf) {
-			count_mutationAttribute( m, tk )
+			if(m.dt==common.dtsnvindel) {
+				if(!m.sampledata) continue
+				for(const s of m.sampledata) {
+					// annotation attributes directly attached to sample objects
+					count_mutationAttribute( s, tk )
+				}
+			} else {
+				console.error('unknown dt: '+m.dt)
+			}
 		}
 	}
 
@@ -3914,7 +3939,22 @@ function may_legend_mutationAttribute(tk, block) {
 				.text(count)
 			cell.append('span')
 				.html('&nbsp;' + printstr )
-				.style('text-decoration', attr.hidden.has( valuestr ) ? 'line-through' : 'none' )
+		}
+
+		if(attr.hidden.size) {
+			for(const valuestr of attr.hidden) {
+				const printstr = attr.values[ valuestr ] ? attr.values[valuestr].label : valuestr
+
+				attr.legendholder.append('div')
+					.style('display','inline-block')
+					.attr('class','sja_clb')
+					.style('text-decoration','line-through')
+					.text(printstr)
+					.on('click',()=>{
+						attr.hidden.delete( valuestr )
+						loadTk( tk, block )
+					})
+			}
 		}
 	}
 }
@@ -3922,15 +3962,15 @@ function may_legend_mutationAttribute(tk, block) {
 
 
 
-function count_mutationAttribute( i, tk ) {
+function count_mutationAttribute( mattr, tk ) {
 	for(const key in tk.mutationAttribute.attributes) {
 		const attr = tk.mutationAttribute.attributes[key]
 		if(!attr.filter) continue
 
 		/*
-		even if item misses i.mattr, still count it in as unannotated
+		even if mattr may be abscent, still count it in as unannotated
 		*/
-		let value = i.mattr ? i.mattr[ key ] : undefined
+		let value = mattr ? mattr[ key ] : undefined
 
 		if( value==undefined ) {
 			// this item is not annotated, change its label to hardcoded

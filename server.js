@@ -3803,17 +3803,27 @@ function handle_mdssvcnv(req,res) {
 		}
 	}
 
-	let hiddensgnames // sample groups selected to be hidden from client
+	// multi: sample groups selected to be hidden from client
+	let hiddensgnames
 	if(req.query.hiddensgnames) {
 		// only for official track
 		hiddensgnames = new Set( req.query.hiddensgnames )
+	}
+
+	// multi: mutation attributes selected to be hidden from client
+	let hiddenmattr 
+	if(req.query.mutationAttributeHidden) {
+		hiddenmattr = {}
+		for(const key in req.query.mutationAttributeHidden) {
+			hiddenmattr[ key ] = new Set( req.query.mutationAttributeHidden[key] )
+		}
 	}
 
 
 	
 	Promise.resolve()
 	.then(()=>{
-		
+
 		////////////////////////////////////////////////////////
 		// cache cnv sv index
 
@@ -3935,6 +3945,23 @@ function handle_mdssvcnv(req,res) {
 							return
 						}
 					}
+
+					if(hiddenmattr) {
+						// check mutation-level annotation
+						for(const key in hiddenmattr) {
+
+							let itemvalue = j.mattr ? j.mattr[ key ] : undefined
+							if(itemvalue == undefined) {
+								itemvalue = common.not_annotated
+							}
+
+							if(hiddenmattr[ key ].has( itemvalue )) {
+								// this item has hidden annotation
+								return
+							}
+						}
+					}
+
 					// this item is acceptable
 					data.push( j )
 				})
@@ -4034,6 +4061,9 @@ function handle_mdssvcnv(req,res) {
 						if(!j.gene) return
 						if(!j.sample) return
 						if(!Number.isFinite(j.value)) return
+
+						// TODO may apply hiddenmattr
+
 						if(!gene2sample2obj.has(j.gene)) {
 							gene2sample2obj.set(j.gene, {chr:l[0], start:Number.parseInt(l[1]), stop:Number.parseInt(l[2]), samples:new Map()} )
 						}
@@ -4094,20 +4124,21 @@ function handle_mdssvcnv(req,res) {
 			return [ data_cnv, expressionrangelimit, gene2sample2obj, null, null ]
 		}
 
+		let viewrangeupperlimit = vcfquery.viewrangeupperlimit
+		if(!viewrangeupperlimit && dsquery.iscustom) {
+			// no limit set for custom track, set a hard limit
+			viewrangeupperlimit = 50000
+		}
+
 		if(req.query.singlesample) {
-			// do not limit view range for single sample -- dangerous?
-		} else {
-			// multi-sample
-			let viewrangeupperlimit = vcfquery.viewrangeupperlimit
-			if(!viewrangeupperlimit && dsquery.iscustom) {
-				// no limit set for custom track, set a hard limit
-				viewrangeupperlimit = 50000
-			}
-			if(viewrangeupperlimit) {
-				const len=req.query.rglst.reduce((i,j)=>i+j.stop-j.start,0)
-				if(len >= viewrangeupperlimit) {
-					return [ data_cnv, expressionrangelimit, gene2sample2obj, viewrangeupperlimit, null ]
-				}
+			// still limit in singlesample
+			viewrangeupperlimit *= 5
+		}
+
+		if(viewrangeupperlimit) {
+			const len=req.query.rglst.reduce((i,j)=>i+j.stop-j.start,0)
+			if(len >= viewrangeupperlimit) {
+				return [ data_cnv, expressionrangelimit, gene2sample2obj, viewrangeupperlimit, null ]
 			}
 		}
 
@@ -4200,6 +4231,34 @@ function handle_mdssvcnv(req,res) {
 											}
 										}
 										if(samplesnothidden.length==0) {
+											// skip this variant
+											continue
+										}
+										m.sampledata = samplesnothidden
+									}
+
+									if(hiddenmattr) {
+										const samplesnothidden = []
+										for(const s of m.sampledata) {
+											
+											let nothidden=true
+											for(const key in hiddenmattr) {
+												// attribute keys are FORMAT fields
+												let value = s[ key ]
+												if(value==undefined) {
+													value = common.not_annotated
+												}
+												if(hiddenmattr[key].has( value )) {
+													nothidden=false
+													break
+												}
+											}
+											if(nothidden) {
+												samplesnothidden.append( s )
+											}
+										}
+										if(samplesnothidden.length==0) {
+											// skip this variant
 											continue
 										}
 										m.sampledata = samplesnothidden
