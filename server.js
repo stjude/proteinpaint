@@ -4254,7 +4254,7 @@ function handle_mdssvcnv(req,res) {
 												}
 											}
 											if(nothidden) {
-												samplesnothidden.append( s )
+												samplesnothidden.push( s )
 											}
 										}
 										if(samplesnothidden.length==0) {

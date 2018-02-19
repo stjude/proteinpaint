@@ -12,6 +12,7 @@ import * as expressionstat from './block.mds.expressionstat'
 JUMP __multi __single __maketk __boxplot __sm
 
 makeTk()
+	makeTk_legend
 tooltip_singleitem     (both multi- and single-sample)
 	detailtable_singlesample
 		printer_snvindel
@@ -3370,7 +3371,7 @@ function makeTk_legend(block, tk) {
 	const table = td.append('table')
 		.style('border-spacing','5px')
 
-	if(tk.mutationAttribute) {
+	if(tk.mutationAttribute && !tk.singlesample) {
 		// official only
 		for(const key in tk.mutationAttribute.attributes) {
 			const attr = tk.mutationAttribute.attributes[ key ]
@@ -4653,6 +4654,7 @@ function click_multi_singleitem( p ) {
 
 function detailtable_singlesample(p) {
 	/*
+	multi or single
 	a table to indicate basic info about an item from a sample
 
 	.item
@@ -4664,16 +4666,19 @@ function detailtable_singlesample(p) {
 
 	if(p.sample) {
 		lst.push({
-		k:'Sample',
-		v: p.sample.samplename
-			+ (p.sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+p.sample.sampletype+'</span>' : '')
-			+ (p.samplegroup && p.samplegroup.name ? ' <span style="font-size:.7em">'+p.samplegroup.name+'</span>' : '')
+			k:'Sample',
+			v: p.sample.samplename
+				+ (p.sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+p.sample.sampletype+'</span>' : '')
+				+ (p.samplegroup && p.samplegroup.name ? ' <span style="font-size:.7em">'+p.samplegroup.name+'</span>' : '')
 		})
 	} else {
 		// if in single-sample mode, won't have p.sample
 	}
 
 	const m = p.item
+
+	// mutation-level attributes
+	let mattr
 
 	if( m.dt == common.dtitd) {
 
@@ -4692,6 +4697,8 @@ function detailtable_singlesample(p) {
 		if(m.aaduplength) {
 			lst.push({k:'AA duplicated', v: m.aaduplength+' aa'})
 		}
+
+		mattr = m.mattr
 
 	} else if( m.dt == common.dtcnv  || m.dt == common.dtloh ) {
 
@@ -4716,6 +4723,8 @@ function detailtable_singlesample(p) {
 				+' <span style="font-size:.7em">'+common.bplen(m.stop-m.start)+'</span>'
 		})
 
+		mattr = m.mattr
+
 	} else if( m.dt == common.dtsv || m.dt==common.dtfusionrna ) {
 
 		lst.push({
@@ -4733,6 +4742,7 @@ function detailtable_singlesample(p) {
 			})
 		}
 
+		mattr = m.mattr
 
 	} else if( m.dt == common.dtsnvindel ) {
 
@@ -4783,11 +4793,41 @@ function detailtable_singlesample(p) {
 
 				lst.push({k:k, v: p.m_sample[k]})
 			}
+			// mutation attributes are FORMAT in vcf, already shown above
 		}
 
 	} else {
 		lst.push({k:'Unknown dt!!', v: m.dt })
 	}
+
+	if(mattr) {
+		// show mutation-level attributes, won't do here for vcf stuff
+		for(const key in mattr) {
+			const attr = p.tk.mutationAttribute ? p.tk.mutationAttribute.attributes[ key ] : null
+			const vstr = mattr[ key ]
+
+			if(attr) {
+				if(attr.appendto_link) {
+					// only for pmid
+					lst.push({
+						k: attr.label,
+						v: '<a target=_blank src='+attr.appendto_link + vstr+'>'+vstr+'</a>'
+					})
+				} else {
+					lst.push({
+						k: attr.label,
+						v: attr.values[vstr] ? attr.values[vstr].label : vstr
+					})
+				}
+			} else {
+				lst.push({
+					k: key,
+					v: vstr
+				})
+			}
+		}
+	}
+
 
 	if(p.sample) {
 		// p.sample and expression rank data only available in multi-sample mode
