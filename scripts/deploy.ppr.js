@@ -9,4 +9,4 @@ const path = require('path')
 const config = require('../serverconfig.json')
 const host = config.host || 'http://localhost:3000'
 
-exec("./scripts/deploy.ppr.sh "+host)
+exec("sh ./scripts/deploy.ppr.sh "+host)
