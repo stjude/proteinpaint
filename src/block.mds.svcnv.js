@@ -197,9 +197,6 @@ export function loadTk( tk, block ) {
 
 			tk._data = data.samplegroups
 
-			// mutationAttribute filtering has been applied on server, not on client
-
-
 			tk.gene2coord = data.gene2coord
 			tk.expressionrangelimit = data.expressionrangelimit
 			render_samplegroups( tk, block )
@@ -878,13 +875,15 @@ function render_samplegroups( tk, block ) {
 	})
 
 	const [groups, svlst4dense] = prep_samplegroups( tk, block )
-	if(groups.length==0) {
-		tk.height_main = 100
-		/*
-		still need to draw mclass legend: could be all datatypes are hidden
-		*/
-		may_legend_mclass(tk, block)
-		return
+	if(groups.length + svlst4dense.length == 0) {
+		// no cnv & sv
+		if(!tk.data_vcf || tk.data_vcf.length==0) {
+			// no vcf either, nothing to plot
+			tk.height_main = 100
+			// still need to draw mclass legend: could be all datatypes are hidden
+			may_legend_mclass(tk, block)
+			return
+		}
 	}
 
 	tk.samplegroups = groups
