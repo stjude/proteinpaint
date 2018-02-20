@@ -3903,6 +3903,16 @@ function may_legend_mutationAttribute(tk, block) {
 							attr.hidden.delete( valuestr )
 							loadTk(tk,block)
 						})
+					if(attr.hidden.size) {
+						tk.tip2.d.append('div')
+							.attr('class','sja_menuoption')
+							.text('Show all')
+							.on('click',()=>{
+								tk.tip2.hide()
+								attr.hidden.clear()
+								loadTk(tk,block)
+							})
+					}
 				})
 
 
