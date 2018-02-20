@@ -3947,19 +3947,28 @@ function may_legend_mutationAttribute(tk, block) {
 
 
 function count_mutationAttribute( mattr, tk ) {
+	if(!mattr) {
+		// the item does not have mattr, do not count
+		return
+	}
+
 	for(const key in tk.mutationAttribute.attributes) {
 		const attr = tk.mutationAttribute.attributes[key]
 		if(!attr.filter) continue
 
-		/*
-		even if mattr may be abscent, still count it in as unannotated
-		*/
-		let value = mattr ? mattr[ key ] : undefined
+		const value = mattr[ key ]
 
+		if(value==undefined) {
+			// not annotated, do not count
+			continue
+		}
+
+		/*
 		if( value==undefined ) {
 			// this item is not annotated, change its label to hardcoded
 			value = common.not_annotated
 		}
+		*/
 
 		// even if this value is not cataloged in attr.values{}, still record it for displaying
 		if(!attr.value2count.has( value )) {
