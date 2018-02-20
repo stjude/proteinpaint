@@ -4885,7 +4885,7 @@ function detailtable_singlesample(p) {
 					// only for pmid
 					lst.push({
 						k: attr.label,
-						v: '<a target=_blank src='+attr.appendto_link + vstr+'>'+vstr+'</a>'
+						v: '<a target=_blank href='+attr.appendto_link + vstr+'>'+vstr+'</a>'
 					})
 				} else {
 					lst.push({

@@ -95,7 +95,7 @@ module.exports={
 				filter:1
 			},
 			pmid:{
-				label:'PubMed ID',
+				label:'PubMed',
 				appendto_link:'http://www.ncbi.nlm.nih.gov/pubmed/'
 			}
 		}
