@@ -4675,7 +4675,7 @@ function click_multi_singleitem( p ) {
 	}
 
 
-	if( !p.tk.iscustom && 0 ) {
+	if(!p.tk.iscustom) { // && 0 ) {
 		/*
 		is official dataset
 		click button to show whole-genome view
@@ -4703,6 +4703,15 @@ function click_multi_singleitem( p ) {
 					plotnotshown=false
 					// retrieve data for this sample
 					// then call api to show plot
+
+					sjcharts.dtDisco({
+						appname: 'dtdisco',
+						holderSelector: holder,
+						settings: {
+							showControls: false,
+							selectedSamples: ['SJOS001101_M1']
+						}
+					})
 				}
 			})
 	}
