@@ -35,7 +35,7 @@ render_samplegroups
 		genebar_config
 	may_legend_svchr
 	may_legend_samplegroup
-	may_legend_vcfmclass
+	may_legend_mclass
 	may_legend_mutationAttribute
 render_singlesample
 	render_singlesample_sv
@@ -185,7 +185,6 @@ export function loadTk( tk, block ) {
 		// preps common to both single and multi sample
 		tk.legend_svchrcolor.interchrs.clear()
 		tk.legend_svchrcolor.row.style('display','none')
-		tk.legend_mclass.row.style('display','none')
 
 		may_map_vcf(tk, block)
 
@@ -200,7 +199,6 @@ export function loadTk( tk, block ) {
 
 			// mutationAttribute filtering has been applied on server, not on client
 
-			//applyfilter_svcnv_multi( tk )
 
 			tk.gene2coord = data.gene2coord
 			tk.expressionrangelimit = data.expressionrangelimit
@@ -223,6 +221,7 @@ export function loadTk( tk, block ) {
 
 
 function addLoadParameter( par, tk ) {
+
 	if(tk.iscustom) {
 		par.iscustom=1
 		par.file=tk.file
@@ -272,6 +271,17 @@ function addLoadParameter( par, tk ) {
 		}
 		if(hashidden) {
 			par.mutationAttributeHidden = key2value
+		}
+	}
+
+	{
+		// from mclass.hidden, only dt are used for filtering, vcf class currently filter on client
+		const hiddendt = []
+		for(const k of tk.legend_mclass.hidden) {
+			if(Number.isInteger(k)) hiddendt.push(k)
+		}
+		if(hiddendt.length) {
+			par.hiddendt = hiddendt
 		}
 	}
 }
@@ -429,7 +439,7 @@ function render_singlesample( tk, block ) {
 
 	may_legend_svchr2(tk)
 
-	may_legend_vcfmclass(tk, block)
+	may_legend_mclass(tk, block)
 }
 
 
@@ -870,6 +880,10 @@ function render_samplegroups( tk, block ) {
 	const [groups, svlst4dense] = prep_samplegroups( tk, block )
 	if(groups.length==0) {
 		tk.height_main = 100
+		/*
+		still need to draw mclass legend: could be all datatypes are hidden
+		*/
+		may_legend_mclass(tk, block)
 		return
 	}
 
@@ -1012,7 +1026,7 @@ function render_samplegroups( tk, block ) {
 
 	may_legend_samplegroup(tk, block)
 
-	may_legend_vcfmclass(tk, block)
+	may_legend_mclass(tk, block)
 
 	may_legend_mutationAttribute(tk, block)
 }
@@ -3089,7 +3103,7 @@ function prep_samplegroups( tk, block ) {
 	*/
 
 	if(!tk._data) {
-		console.error('_data[] missing')
+		// could be that all dt are hidden
 		return [ [], [] ]
 	}
 
@@ -3344,23 +3358,6 @@ function makeTk_legend(block, tk) {
 	const table = td.append('table')
 		.style('border-spacing','5px')
 
-	if(tk.mutationAttribute && !tk.singlesample) {
-		// official only
-		for(const key in tk.mutationAttribute.attributes) {
-			const attr = tk.mutationAttribute.attributes[ key ]
-			if(attr.filter) {
-				attr.hidden = new Set()
-				attr.value2count = new Map()
-				attr.legendrow = table.append('tr')
-				attr.legendrow.append('td')
-					.style('text-align','right')
-					.style('opacity',.5)
-					.text(attr.label)
-				attr.legendholder = attr.legendrow.append('td')
-			}
-		}
-	}
-
 	{
 		const row = table.append('tr')
 		tk.legend_mclass = {
@@ -3370,7 +3367,7 @@ function makeTk_legend(block, tk) {
 		row.append('td')
 			.style('text-align','right')
 			.style('opacity',.5)
-			.text('SNV/indel')
+			.text('Mutation')
 		tk.legend_mclass.holder = row.append('td')
 	}
 
@@ -3513,6 +3510,24 @@ function makeTk_legend(block, tk) {
 		}
 	}
 
+	if(tk.mutationAttribute && !tk.singlesample) {
+		// official only
+		for(const key in tk.mutationAttribute.attributes) {
+			const attr = tk.mutationAttribute.attributes[ key ]
+			if(attr.filter) {
+				attr.hidden = new Set()
+				attr.value2count = new Map()
+				attr.legendrow = table.append('tr')
+				attr.legendrow.append('td')
+					.style('text-align','right')
+					.style('opacity',.5)
+					.text(attr.label)
+				attr.legendholder = attr.legendrow.append('td')
+			}
+		}
+	}
+
+
 
 	if(!tk.singlesample && !tk.iscustom) {
 		// official, multi-sample
@@ -3599,31 +3614,90 @@ function may_legend_svchr2(tk) {
 
 
 
-function may_legend_vcfmclass(tk, block) {
+function may_legend_mclass(tk, block) {
 	/*
 	full or dense
 	native or custom
 	single or multi-sample
+	both snvindel class & other data types are shown
 	*/
-	if(!tk.data_vcf || tk.data_vcf.length==0) return
-	tk.legend_mclass.row.style('display','table-row')
+
 	tk.legend_mclass.holder.selectAll('*').remove()
 
-	const classes = new Map()
 
-	for(const m of tk.data_vcf) {
-		if(!classes.has(m.class)) {
-			classes.set( m.class, { cname:m.class, count:0 } )
+	const classes = new Map()
+	/*
+	k: class, v: {cname, count}
+	if is snvindel class, key is class code e.g. "M"
+	if not, key is dt
+	*/
+
+	// vcf classes
+	if(tk.data_vcf) {
+		for(const m of tk.data_vcf) {
+			if(!classes.has( m.class )) {
+				classes.set( m.class, {
+					isvcf:1,
+					cname:m.class,
+					count:0
+				} )
+			}
+			classes.get(m.class).count++
 		}
-		classes.get(m.class).count++
+	}
+	// non-vcf classes
+	if(tk.singlesample) {
+		for(const i of tk.data) {
+			if(!classes.has(i.dt)) {
+				classes.set( i.dt, {
+					dt: i.dt,
+					count:0
+				})
+			}
+			classes.get(i.dt).count++
+		}
+	} else if(tk._data) {
+		for(const g of tk._data) {
+			for(const s of g.samples) {
+				for(const i of s.items) {
+					if(!classes.has(i.dt)) {
+						classes.set( i.dt, {
+							dt: i.dt,
+							count:0
+						})
+					}
+					classes.get(i.dt).count++
+				}
+			}
+		}
 	}
 
 	const classlst = [ ...classes.values() ]
 	classlst.sort( (i,j)=>j.count-i.count )
 
-	for(const { cname, count} of classlst) {
+	for(const c of classlst) {
 
-		const _c = common.mclass[cname] || {label:cname, desc:cname, color:'black'}
+		let key,
+			label,
+			desc,
+			color = '#858585'
+
+		if(c.dt) {
+			key = c.dt
+			label = common.dt2label[ c.dt ]
+			if(c.dt==common.dtcnv) desc = 'Copy number variation.'
+			else if(c.dt==common.dtloh) desc = 'Loss of heterozygosity.'
+			else if(c.dt==common.dtitd) {
+				color = common.mclass[ common.mclassitd ].color
+				desc = 'Internal tandem duplication.'
+			} else if(c.dt==common.dtsv) desc = 'Structural variation of DNA.'
+			else if(c.dt==common.dtfusionrna) desc = 'Fusion gene from RNA-seq.'
+		} else {
+			key = c.cname
+			label = common.mclass[ c.cname ].label
+			color = common.mclass[ c.cname ].color
+			desc = common.mclass[c.cname].desc
+		}
 
 		const cell = tk.legend_mclass.holder.append('div')
 			.attr('class', 'sja_clb')
@@ -3636,7 +3710,7 @@ function may_legend_vcfmclass(tk, block) {
 					.attr('class','sja_menuoption')
 					.text('Hide')
 					.on('click',()=>{
-						tk.legend_mclass.hidden.add(cname)
+						tk.legend_mclass.hidden.add(key)
 						applychange()
 					})
 
@@ -3645,9 +3719,9 @@ function may_legend_vcfmclass(tk, block) {
 					.text('Show only')
 					.on('click',()=>{
 						for(const c2 of classlst) {
-							tk.legend_mclass.hidden.add(c2.cname)
+							tk.legend_mclass.hidden.add(key)
 						}
-						tk.legend_mclass.hidden.delete(cname)
+						tk.legend_mclass.hidden.delete(key)
 						applychange()
 					})
 
@@ -3664,35 +3738,39 @@ function may_legend_vcfmclass(tk, block) {
 				tk.tip2.d.append('div')
 					.style('padding','10px')
 					.style('font-size','.8em')
-					.html('<div style="color:'+_c.color+'">'+_c.label+'</div><div style="opacity:.5;width:150px">'+_c.desc+'</div>')
+					.style('width','150px')
+					.text(desc)
 			})
 
 		cell.append('div')
 			.style('display','inline-block')
 			.attr('class','sja_mcdot')
-			.style('background', _c.color)
-			.text(count)
+			.style('background', color)
+			.html( c.count>1 ? c.count : '&nbsp;')
 		cell.append('div')
 			.style('display','inline-block')
-			.style('color',_c.color)
-			.html('&nbsp;'+_c.label)
+			.style('color',color)
+			.html('&nbsp;'+label)
 	}
 
 	// hidden
-	for(const cname of tk.legend_mclass.hidden) {
+	for(const key of tk.legend_mclass.hidden) {
 		tk.legend_mclass.holder.append('div')
 			.style('display','inline-block')
 			.attr('class','sja_clb')
 			.style('text-decoration','line-through')
-			.text( common.mclass[cname] ? common.mclass[cname].label : cname )
+			.text( Number.isInteger(key) ? common.dt2label[key] : common.mclass[key].label )
 			.on('click',()=>{
-				tk.legend_mclass.hidden.delete( cname )
+				tk.legend_mclass.hidden.delete( key )
 				applychange()
 			})
 	}
 
 	const applychange = ()=>{
 		tk.tip2.hide()
+		loadTk(tk, block)
+		// must reload tk, even for vcf class, since old data (tk._data_vcf) is scoped and cannot reflect new data
+		/*
 		applyfilter_vcfdata(tk)
 		if(tk.singlesample) {
 			render_singlesample( tk, block )
@@ -3700,6 +3778,7 @@ function may_legend_vcfmclass(tk, block) {
 			render_samplegroups( tk, block )
 		}
 		block.block_setheight()
+		*/
 	}
 }
 
@@ -3851,12 +3930,16 @@ function may_legend_mutationAttribute(tk, block) {
 	for(const key in tk.mutationAttribute.attributes) {
 		const attr = tk.mutationAttribute.attributes[ key ]
 		if(!attr.filter) continue
+
+		/*
 		if(attr.value2count.size==0) {
 			// no value
 			attr.legendrow.style('display', 'none')
 			continue
 		}
 		attr.legendrow.style('display', 'table-row')
+		*/
+
 		attr.legendholder.selectAll('*').remove()
 
 		const lst = [ ...attr.value2count ]
@@ -5333,6 +5416,7 @@ function vcfdata_prepmclass(tk, block) {
 
 function applyfilter_vcfdata(tk) {
 	/*
+	drop hidden snvindel from client-side
 	must work on the original set, otherwise class filtering won't work
 	*/
 	if(!tk._data_vcf) return
@@ -5344,15 +5428,6 @@ function applyfilter_vcfdata(tk) {
 	}
 }
 
-
-
-/*
-function applyfilter_svcnv_multi(tk) {
-	// changed mind: do filtering on server-side
-	// tk._data is ready
-	if(!tk._data) return
-}
-*/
 
 
 

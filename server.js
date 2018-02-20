@@ -3803,6 +3803,12 @@ function handle_mdssvcnv(req,res) {
 		}
 	}
 
+	// single or multi: hidden dt, for cnv/loh/sv/fusion/itd, all from one file
+	let hiddendt
+	if(req.query.hiddendt) {
+		hiddendt = new Set( req.query.hiddendt )
+	}
+
 	// multi: sample groups selected to be hidden from client
 	let hiddensgnames
 	if(req.query.hiddensgnames) {
@@ -3866,6 +3872,10 @@ function handle_mdssvcnv(req,res) {
 
 					if(j.dt==undefined) {
 						// TODO report bad lines
+						return
+					}
+
+					if(hiddendt && hiddendt.has(j.dt)) {
 						return
 					}
 
