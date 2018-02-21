@@ -4833,12 +4833,31 @@ function detailtable_singlesample(p) {
 		for(const l of tmp) lst.push(l)
 
 		if(p.m_sample) {
+
+			/*
+			in vcf item, mutation-level attributes are in Formats
+			collect them for showing later
+			*/
+			mattr = {}
+
 			// m_sample as from m.sampledata[]
 			const formats = p.tk.checkvcf ? p.tk.checkvcf.format : null // format registry
 
 			for(const formatfield in p.m_sample) {
 
-				if(formatfield=='sampleobj') continue
+				if(formatfield=='sampleobj') {
+					// skip hardcoded attribute
+					continue
+				}
+
+				if(p.tk.mutationAttribute && p.tk.mutationAttribute.attributes) {
+					// has it; test whether this format is actually attribute
+					if(p.tk.mutationAttribute.attributes[ formatfield ]) {
+						mattr[ formatfield ] = p.m_sample[ formatfield ]
+						continue
+					}
+				}
+
 
 				const formatdesc = formats ? formats[ formatfield ] : null
 
@@ -4874,7 +4893,10 @@ function detailtable_singlesample(p) {
 					continue
 				}
 
-				lst.push({k:k, v: p.m_sample[k]})
+				lst.push({
+					k: formatfield,
+					v: p.m_sample[formatfield]
+					})
 			}
 			// mutation attributes are FORMAT in vcf, already shown above
 		}
