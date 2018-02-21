@@ -286,6 +286,7 @@ function handle_genomes(req,res) {
 						if(q.type == common.tkt.mdssvcnv) {
 
 							clientquery.attrnamespacer = q.attrnamespacer
+
 							clientquery.mutationAttribute = ds.mutationAttribute
 
 							if(q.expressionrank_querykey) {
@@ -8947,12 +8948,12 @@ function mds_init(ds,genome) {
 					const err = mds_init_mdsjunction(query, ds, genome)
 					if(err) return querykey+' (mdsjunction) error: '+err
 
-				} else if(query.type==common.tkt.mdscnv) { // obsolete
+				} else if(query.type==common.tkt.mdscnv) {
 
 					const err = mds_init_mdscnv(query, ds, genome)
 					if(err) return querykey+' (mdscnv) error: '+err
 
-				} else if(query.type==common.tkt.mdssvcnv) { // new
+				} else if(query.type==common.tkt.mdssvcnv) {
 
 					const err = mds_init_mdssvcnv(query, ds, genome)
 					if(err) return querykey+' (svcnv) error: '+err
@@ -9203,11 +9204,8 @@ function mds_init_mdscnv(query, ds, genome) {
 
 
 
-
 function mds_init_mdssvcnv(query, ds, genome) {
-	/*
-	only allows single track, since there is no challenge merging multiple into one
-	*/
+	// only allows single track, since there is no challenge merging multiple into one
 
 	let cwd=null
 	let _file
