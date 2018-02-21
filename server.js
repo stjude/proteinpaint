@@ -4693,6 +4693,8 @@ function handle_mdssvcnv(req,res) {
 				}
 			}
 
+			// sort groups by name
+
 		} else {
 
 			// custom track or no annotation, lump all in one group
