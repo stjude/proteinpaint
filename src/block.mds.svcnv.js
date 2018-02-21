@@ -92,6 +92,15 @@ const hardcode_cellline='CELLLINE'
 const novalue_max_cnvloh=0 // for max scale of log2ratio and segmean, if there is no cnv or loh data in view range
 
 
+// x space between label and box/circle
+const labelspace = 5 // when label is shown outside of box, the space between them
+
+const stackheightscale = scaleLinear()
+	.domain([ 1, 3, 5, 10 ])
+	.range([  8, 4, 2, 1 ])
+
+
+
 
 export function loadTk( tk, block ) {
 
@@ -455,7 +464,6 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 
 	const stackheight = 12 // hardcoded
 	const stackspace  = 1
-	const labelspace = 5 // when label is shown outside of box, the space between them
 
 	// prep & pre-render snvindel
 	for(const m of items) {
@@ -1528,16 +1536,15 @@ function render_multi_cnvloh(tk,block) {
 	let groupspace // vertical spacing between groups
 	if(tk.isdense) {
 
-		// densely plot sample rows
 		tk.rowspace=0
 		groupspace=4
 
 	} else if(tk.isfull) {
 
-		// fixed fat row height in full mode
 		tk.rowspace=1
 		groupspace=10
 	}
+
 
 	render_multi_cnvloh_stackeachsample( tk, block ) // in each sample, process stackable items
 
@@ -1732,6 +1739,8 @@ function render_multi_cnvloh(tk,block) {
 
 				const color = otherchr==item._chr ? intrasvcolor : tk.legend_svchrcolor.colorfunc(otherchr)
 
+				// may show label
+
 				g.append('circle')
 					.attr('cx', item.x)
 					.attr('cy', sample.height/2 )
@@ -1773,7 +1782,8 @@ function render_multi_cnvloh(tk,block) {
 					if(m.x == undefined) continue
 					if(!m.sampledata) continue
 
-					const w = Math.min( 8, sample.height )
+					const w = sample.crossboxw
+
 					const color = common.mclass[m.class].color
 
 					for(const ms of m.sampledata) {
@@ -1819,10 +1829,40 @@ function render_multi_cnvloh(tk,block) {
 							.attr('x2', w/2)
 							.attr('y1', w/2)
 							.attr('y2', -w/2)
+
+						let coverstart = -w/2,
+							coverwidth = w
+
+						if(ms.sampleobj.labonleft) {
+
+							m_g.append('text')
+								.text( m.mname )
+								.attr('text-anchor','end')
+								.attr('dominant-baseline','central')
+								.attr('font-family',client.font)
+								.attr('font-size', sample.crossboxw+2)
+								.attr('fill', color)
+								.attr('x', -w/2-labelspace)
+							coverstart = -w/2 - labelspace - ms.sampleobj.labelwidth
+							coverwidth = w + labelspace + ms.sampleobj.labelwidth
+
+						} else if(ms.sampleobj.labonright) {
+
+							m_g.append('text')
+								.text( m.mname )
+								.attr('dominant-baseline','central')
+								.attr('font-family',client.font)
+								.attr('font-size', sample.crossboxw+2)
+								.attr('fill', color)
+								.attr('x', w/2+labelspace)
+							coverwidth = w + labelspace + ms.sampleobj.labelwidth
+						}
+
+						// mouseover cover
 						m_g.append('rect')
-							.attr('x', -w/2)
+							.attr('x', coverstart)
 							.attr('y', -w/2)
-							.attr('width', w)
+							.attr('width', coverwidth)
 							.attr('height', w)
 							.attr('fill','white')
 							.attr('fill-opacity', 0)
@@ -1888,6 +1928,12 @@ function render_multi_cnvloh(tk,block) {
 
 
 
+function multi_snvindel_mayshowlabel( m, m_g, cnvsvlst ) {
+	return 0
+}
+
+
+
 
 
 function render_multi_cnvloh_stackeachsample( tk, block ) {
@@ -1895,6 +1941,8 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 	called by render_multi_cnvloh()
 	for each sample, set .height
 	for each stackable item (cnv/loh/itd), set .stack_y, .stack_h
+
+	check to see if vcf/sv can show label
 	*/
 	if(!tk.samplegroups || tk.samplegroups.length==0) return
 
@@ -1914,13 +1962,13 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 		return
 	}
 
-	const stackheightscale = scaleLinear()
-		.domain([ 1, 3, 5, 10 ])
-		.range([  8, 4, 2, 1 ])
+	// full width
+	const blockwidth = block.width + block.subpanels.reduce( (i,j)=>i+j.leftpad+j.width, 0 )
 
 	// full mode
 	for(const g of tk.samplegroups) {
 		for(const s of g.samples) {
+
 			// for this sample, gather stackable items
 			const items = []
 			for(const i of s.items) {
@@ -1933,51 +1981,194 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 				}
 			}
 
-			if(items.length == 0) {
-				// this sample has no stackable item, but it must have other pointy items
-				// still set height
-				s.height = 8
-				continue
-			}
+			dostack( s, items )
 
-			// stack
+			s.crossboxw = Math.min( 8, s.height ) // determines label font size
 
-			items.sort( (i,j)=> i._boxstart - j._boxstart )
+			// decide if to draw label for sv/fusion
 
-			const stacks = []
-			for(const m of items) {
-				for(let i=0; i<stacks.length; i++) {
-					if(stacks[i] < m._boxstart) {
-						m._stacki = i
-						stacks[i] = m._boxstart + m._boxwidth
-						break
+
+			if(tk.data_vcf) {
+
+				// collect vcf items for this sample
+				const mlst = []
+				for(const m of tk.data_vcf) {
+					if(m.dt!=common.dtsnvindel || m.x==undefined || !m.sampledata) continue
+					const m_sample = m.sampledata.find( i=> i.sampleobj.name==s.samplename)
+					if(m_sample) {
+						mlst.push( [ m, m_sample ] )
 					}
 				}
-				if(m._stacki==undefined) {
-					m._stacki = stacks.length
-					stacks.push( m._boxstart + m._boxwidth )
+
+				// for each variant, decide if/where to show label
+				for( const [ m, m_sample ]  of mlst ) {
+
+					let labw
+					tk.g.append('text')
+						.text( m.mname )
+						.attr('font-size', s.crossboxw+2)
+						.attr('font-family', client.font)
+						.each(function(){
+							labw = this.getBBox().width
+						})
+						.remove()
+
+					labw += s.crossboxw/2 + labelspace
+
+					let nleft=false,
+						nright=false
+
+					if( labw > m.x ) {
+						// no space on left
+						nleft=true
+					} else if(labw > blockwidth-m.x) {
+						// no space on right
+						nright=true
+					}
+
+					// test cases where label cannot go
+					for(const i of s.items) {
+
+						if(nleft && nright) break
+
+						if( (i.dt==common.dtcnv || i.dt==common.dtloh || i.dt==common.dtitd) && i.x1 && i.x2 ) {
+							// segment
+							if(i.x1==undefined || i.x2==undefined) continue
+							const x1 = Math.min(i.x1, i.x2)
+							const x2 = Math.max(i.x1, i.x2)
+
+							if( x1 < m.x ) {
+								if(x2 < m.x) {
+									if( labw > m.x - x2 ) {
+										nleft=true
+									}
+								} else {
+									nleft=true
+									nright=true
+								}
+							} else {
+								if( labw > x1 - m.x ) {
+									nright=true
+								}
+							}
+
+						} else if(i.dt==common.dtsv || i.dt==common.dtfusionrna) {
+							if(i.x==undefined) continue
+							if( i.x < m.x ) {
+								if( labw > m.x-i.x ) {
+									nleft=true
+								}
+							} else {
+								if( labw > i.x-m.x ) {
+									nright=true
+								}
+							}
+						}
+					}
+
+					if(nleft && nright) {
+						// this is blocked
+						continue
+					}
+
+					// then, test snvindels in case there are multiple for this sample
+					for( const [m2, m2s] of mlst) {
+						if(nleft && nright) break
+						if(m2.dt!=common.dtsnvindel) continue
+						if(m2.x==undefined) continue
+						if(m2.pos==m.pos && m2.alt==m.alt) {
+							// same variant
+							continue
+						}
+						if( m2.x < m.x ) {
+							if( labw > m.x-m2.x ) {
+								nleft=true
+							}
+						} else if(m2.x == m.x) {
+							// possible, avoid label overlap
+							if(m2s.sampleobj.labonleft) {
+								nleft=true
+							} else if(m2s.sampleobj.labonright) {
+								nright=true
+							}
+						} else {
+							if( labw > m2.x-m.x ) {
+								nright=true
+							}
+						}
+					}
+
+
+
+					if(nleft) {
+						if(!nright) {
+							m_sample.sampleobj.labonright=true
+						}
+					} else {
+						if(nright) {
+							m_sample.sampleobj.labonleft=true
+						} else {
+							m_sample.sampleobj.labonright=true // on right first
+						}
+					}
+
+					if(m_sample.sampleobj.labonleft || m_sample.sampleobj.labonright) {
+						m_sample.sampleobj.labelwidth = labw
+					}
 				}
 			}
-
-			let stackheight = stackheightscale( stacks.length )
-			if(stackheight < 1 ) {
-				// simpleminded scaling can make it negative
-				stackheight = 1
-			}
-
-			// no spacing between stacks!!
-
-			for(const i of items) {
-				i.stack_y = i._stacki * stackheight
-				i.stack_h = stackheight
-				delete i._stacki
-				delete i._boxstart
-				delete i._boxwidth
-			}
-
-			s.height = stackheight * stacks.length
 		}
 	}
+}
+
+
+
+function dostack( sample, items ) {
+	// set sample.height
+
+	if(items.length == 0) {
+		// this sample has no stackable item, but it must have other pointy items
+		// still set height
+		sample.height = 8
+		return
+	}
+
+	// stack
+
+	items.sort( (i,j)=> i._boxstart - j._boxstart )
+
+	const stacks = []
+	for(const m of items) {
+		for(let i=0; i<stacks.length; i++) {
+			if(stacks[i] < m._boxstart) {
+				m._stacki = i
+				stacks[i] = m._boxstart + m._boxwidth
+				break
+			}
+		}
+		if(m._stacki==undefined) {
+			m._stacki = stacks.length
+			stacks.push( m._boxstart + m._boxwidth )
+		}
+	}
+
+	let stackheight = stackheightscale( stacks.length )
+	if(stackheight < 1 ) {
+		// simpleminded scaling can make it negative
+		stackheight = 1
+	}
+
+	// no spacing between stacks!!
+
+	for(const i of items) {
+		i.stack_y = i._stacki * stackheight
+		i.stack_h = stackheight
+		delete i._stacki
+		delete i._boxstart
+		delete i._boxwidth
+	}
+
+	sample.height = stackheight * stacks.length
 }
 
 
@@ -4780,7 +4971,10 @@ export function detailtable_singlesample(p) {
 
 				if(!formatdesc) {
 					// not described, jus show as string
-					lst.push({k:formatfield, v: p.m_sample[k]})
+					lst.push({
+						k:formatfield,
+						v: p.m_sample[formatfield]
+					})
 					continue
 				}
 
