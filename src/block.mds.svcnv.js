@@ -6,6 +6,7 @@ import {axisTop, axisLeft, axisRight} from 'd3-axis'
 import {scaleLinear,scaleLog,scaleOrdinal,schemeCategory10,schemeCategory20} from 'd3-scale'
 import * as common from './common'
 import * as expressionstat from './block.mds.expressionstat'
+import {click_multi_singleitem} from './block.mds.svcnv.clickitem.js'
 
 
 /*
@@ -2880,7 +2881,7 @@ function click_multi_svdense(g, tk, block) {
 
 
 
-function focus_singlesample( p ) {
+export function focus_singlesample( p ) {
 	/*
 	multi-sample
 	native or custom
@@ -3646,14 +3647,16 @@ function may_legend_mclass(tk, block) {
 	}
 	// non-vcf classes
 	if(tk.singlesample) {
-		for(const i of tk.data) {
-			if(!classes.has(i.dt)) {
-				classes.set( i.dt, {
-					dt: i.dt,
-					count:0
-				})
+		if(tk.data) {
+			for(const i of tk.data) {
+				if(!classes.has(i.dt)) {
+					classes.set( i.dt, {
+						dt: i.dt,
+						count:0
+					})
+				}
+				classes.get(i.dt).count++
 			}
-			classes.get(i.dt).count++
 		}
 	} else if(tk._data) {
 		for(const g of tk._data) {
@@ -4619,115 +4622,6 @@ function tooltip_samplegroup( g, tk ) {
 
 
 
-function click_multi_singleitem( p ) {
-	/*
-	multi-sample
-	click on a single item, of any type
-
-	.item
-	.sample
-	.samplegroup
-	.tk
-	.block
-
-	if item is snvindel, will have:
-		.m_sample
-	*/
-
-	const pane = client.newpane({x:d3event.clientX, y:d3event.clientY})
-	pane.header.text(p.tk.name)
-
-	const buttonrow = pane.body.append('div')
-		.style('margin','10px')
-
-	// click focus button to show block in holder
-	{
-		let blocknotshown = true
-		const holder = pane.body.append('div')
-			.style('margin','10px')
-			.style('display','none')
-
-		// focus button
-		buttonrow.append('div')
-			.style('display','inline-block')
-			.attr('class', 'sja_menuoption')
-			.text('Focus')
-			.on('click',()=>{
-
-				if(holder.style('display')=='none') {
-					client.appear(holder)
-				} else {
-					client.disappear(holder)
-				}
-
-				if(blocknotshown) {
-					blocknotshown=false
-					focus_singlesample({
-						holder: holder,
-						m: p.item,
-						sample: p.sample,
-						samplegroup: p.samplegroup,
-						tk: p.tk,
-						block: p.block
-					})
-				}
-			})
-	}
-
-
-	if(!p.tk.iscustom) { // && 0 ) {
-		/*
-		is official dataset
-		click button to show whole-genome view
-		may check if dataset is disco-ready
-		*/
-		let plotnotshown = true
-		const holder = pane.body.append('div')
-			.style('margin','10px')
-			.style('display','none')
-
-		// focus button
-		buttonrow.append('div')
-			.style('display','inline-block')
-			.attr('class', 'sja_menuoption')
-			.text('Disco')
-			.on('click',()=>{
-
-				if(holder.style('display')=='none') {
-					client.appear(holder)
-				} else {
-					client.disappear(holder)
-				}
-
-				if(plotnotshown) {
-					plotnotshown=false
-					// retrieve data for this sample
-					// then call api to show plot
-
-					sjcharts.dtDisco({
-						appname: 'dtdisco',
-						holderSelector: holder,
-						settings: {
-							showControls: false,
-							selectedSamples: ['SJOS001101_M1']
-						}
-					})
-				}
-			})
-	}
-
-
-	createbutton_addfeature( {
-		m: p.item,
-		holder:buttonrow,
-		tk: p.tk,
-		block: p.block,
-		pane: pane
-	})
-
-	p.holder = pane.body
-	detailtable_singlesample( p )
-}
 
 
 
@@ -4735,7 +4629,7 @@ function click_multi_singleitem( p ) {
 
 
 
-function detailtable_singlesample(p) {
+export function detailtable_singlesample(p) {
 	/*
 	multi or single
 	a table to indicate basic info about an item from a sample
@@ -5485,7 +5379,7 @@ function dedup_sv( lst ) {
 
 
 
-function createbutton_addfeature( p ) {
+export function createbutton_addfeature( p ) {
 	/*
 	create a button for adding feature to samplematrix
 	the feature is underlied by m (m.dt for datatype)
