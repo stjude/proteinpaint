@@ -3109,7 +3109,7 @@ function prep_samplegroups( tk, block ) {
 
 	const svlst4dense = []
 
-	const plotgroups = []
+	let plotgroups = []
 
 	for( const samplegroup of tk._data) {
 
@@ -3210,6 +3210,29 @@ function prep_samplegroups( tk, block ) {
 
 		plotgroups.push(g2)
 	}
+
+	if(tk.sortgroupby && tk.sortgroupby.key && tk.sortgroupby.order) {
+		// sort groups, may be available for official track
+		const lst = []
+		for(const value of tk.sortgroupby.order) {
+			for(const g of plotgroups) {
+				for(const at of g.attributes) {
+					if(at.k == tk.sortgroupby.key && at.kvalue==value) {
+						// is one
+						g._sorted=1
+						lst.push(g)
+						break
+					}
+				}
+			}
+		}
+		for(const g of plotgroups) {
+			if(!g._sorted) lst.push(g)
+		}
+		for(const g of lst) delete g._sorted
+		plotgroups = lst
+	}
+
 	return [ plotgroups, svlst4dense ]
 }
 

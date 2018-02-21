@@ -65,8 +65,18 @@ module.exports={
 	},
 
 
+	/*
+	mutation-level attributes, applied to multiple data types
+	design issue:
+	1. attributes are sample-level, applied to per-sample cases as lines in svcnv file, and FORMAT in vcf,
+	   so as one vcf variant can be in multiple samples, each case discovered by different assay types (wgs/wes) by different lab
+	2. when representing annotation by these attributes on client, do not indicate items that are Unannotated
+	3. when filtering to hide items by attributes, do not hide Unannotated items
+	   case for conscern: sv & fusion are both present, sv is annotated by dna_assay; fusion by rna_assay
+	   if showing only "polyA" for rna_assay, all sv won't have such annotation, but they should not be dropped
+	   problem is no way to "scope" rna_assay filtering only within RNA-based variants
+	*/
 	mutationAttribute:{
-		// mutation-level attributes, applied to multiple data types
 		attributes:{
 			dna_assay:{
 				label:'DNA assay',
@@ -128,6 +138,14 @@ module.exports={
 				{k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
 				{k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
 			],
+
+			/*
+			to sort sample groups consistently, on client, not on server
+			*/
+			sortgroupby:{
+				key:'diagnosis_group_short',
+				order:['ST','BT','HM']
+			},
 
 			attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
 

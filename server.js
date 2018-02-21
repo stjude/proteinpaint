@@ -289,6 +289,8 @@ function handle_genomes(req,res) {
 
 							clientquery.mutationAttribute = ds.mutationAttribute
 
+							clientquery.sortgroupby = q.sortgroupby
+
 							if(q.expressionrank_querykey) {
 								// for checking expression rank
 								clientquery.checkexpressionrank = {
@@ -4531,130 +4533,13 @@ function handle_mdssvcnv(req,res) {
 			// k: group name string
 			// v: [] list of samples
 
-
 			// head-less samples
 			const headlesssamples = []
 
-			const _grouper = ( samplename, items ) => {
-				/*
-				helper function, used by both cnv and vcf
-				to identify which group a sample is from, insert the group, then insert the sample
-				*/
-
-				const sanno = ds.cohort.annotation[ samplename ]
-				if(!sanno) {
-					// this sample has no annotation
-					headlesssamples.push({
-						samplename: samplename, // hardcoded attribute name
-						items: items
-					})
-					return
-				}
-
-				const headname = sanno[ dsquery.groupsamplebyattrlst[0].k ]
-				if(headname == undefined) {
-					// head-less
-					headlesssamples.push({
-						samplename: samplename, // hardcoded
-						items: items
-					})
-					return
-				}
-
-				const attrnames = []
-				for(let i=1; i<dsquery.groupsamplebyattrlst.length; i++) {
-
-					const v = sanno[ dsquery.groupsamplebyattrlst[i].k ]
-					if(v==undefined) {
-						break
-					}
-					attrnames.push(v)
-				}
-
-				attrnames.unshift( headname )
-
-				const groupname = attrnames.join( dsquery.attrnamespacer )
-
-				if(hiddensgnames && hiddensgnames.has(groupname)) {
-					// a group selected to be hidden by client
-					return
-				}
-
-				if(!key2group.has(groupname)) {
-
-					/*
-					a new group
-					need to get available full name for each attribute value for showing on client
-					if attr.full is not available, just use key value
-					*/
-					const attributes = []
-					for(const attr of dsquery.groupsamplebyattrlst) {
-						const v = sanno[ attr.k ]
-						if(v==undefined) {
-							// ordered list, look no further
-							break
-						}
-						const a = { k: attr.k, kvalue: v }
-						if(attr.full) {
-							a.full = attr.full
-							a.fullvalue = sanno[ attr.full ]
-						}
-						attributes.push( a)
-					}
-
-					// to be replaced
-					const levelnames = []
-					for(const attr of dsquery.groupsamplebyattrlst) {
-						const v = sanno[ attr.k ]
-						if(v==undefined) {
-							break
-						}
-						const lname = (attr.full ? sanno[ attr.full ] : null) || v
-						levelnames.push(lname)
-					}
-
-
-
-					key2group.set(groupname, {
-						name: groupname,
-						samples:[],
-						attributes: attributes,
-					})
-				}
-
-				let notfound=true
-				for(const s of key2group.get(groupname).samples) {
-
-					if(s.samplename == samplename) {
-						// same sample, can happen for vcf samples
-						// combine data, actually none for vcf
-						for(const m of items) {
-							s.items.push(m)
-						}
-						notfound=false
-						break
-					}
-				}
-
-				if(notfound) {
-					key2group.get(groupname).samples.push({
-						samplename: samplename, // hardcoded
-						items: items
-					})
-				}
-
-				///// end of grouper
-			}
-
-
-
 			//// group the sv-cnv samples
 			for(const [samplename, items] of sample2item) {
-
-				_grouper( samplename, items )
-
+				mdssvcnv_grouper( samplename, items, key2group, headlesssamples, ds, dsquery, hiddensgnames )
 			}
-
 
 			if(data_vcf) {
 				// group the vcf samples
@@ -4662,7 +4547,7 @@ function handle_mdssvcnv(req,res) {
 
 					if(m.dt==common.dtsnvindel) {
 						for(const s of m.sampledata) {
-							_grouper( s.sampleobj.name, [] )
+							mdssvcnv_grouper( s.sampleobj.name, [], key2group, headlesssamples, ds, dsquery, hiddensgnames )
 						}
 						continue
 					}
@@ -4673,8 +4558,8 @@ function handle_mdssvcnv(req,res) {
 
 			result.samplegroups = []
 
-			for(const o of key2group.values()) {
-				result.samplegroups.push( o )
+			for(const g of key2group.values()) {
+				result.samplegroups.push( g )
 			}
 
 			if(headlesssamples.length) {
@@ -4694,7 +4579,6 @@ function handle_mdssvcnv(req,res) {
 				}
 			}
 
-			// sort groups by name
 
 		} else {
 
@@ -4831,6 +4715,120 @@ function handle_mdssvcnv(req,res) {
 			console.error(err.stack)
 		}
 	})
+}
+
+
+
+
+function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, dsquery, hiddensgnames ) {
+	/*
+	helper function, used by both cnv and vcf
+	to identify which group a sample is from, insert the group, then insert the sample
+	*/
+
+	const sanno = ds.cohort.annotation[ samplename ]
+	if(!sanno) {
+		// this sample has no annotation
+		headlesssamples.push({
+			samplename: samplename, // hardcoded attribute name
+			items: items
+		})
+		return
+	}
+
+	const headname = sanno[ dsquery.groupsamplebyattrlst[0].k ]
+	if(headname == undefined) {
+		// head-less
+		headlesssamples.push({
+			samplename: samplename, // hardcoded
+			items: items
+		})
+		return
+	}
+
+	const attrnames = []
+	for(let i=1; i<dsquery.groupsamplebyattrlst.length; i++) {
+
+		const v = sanno[ dsquery.groupsamplebyattrlst[i].k ]
+		if(v==undefined) {
+			break
+		}
+		attrnames.push(v)
+	}
+
+	attrnames.unshift( headname )
+
+	const groupname = attrnames.join( dsquery.attrnamespacer )
+
+	if(hiddensgnames && hiddensgnames.has(groupname)) {
+		// a group selected to be hidden by client
+		return
+	}
+
+	if(!key2group.has(groupname)) {
+
+		/*
+		a new group
+		need to get available full name for each attribute value for showing on client
+		if attr.full is not available, just use key value
+		*/
+		const attributes = []
+		for(const attr of dsquery.groupsamplebyattrlst) {
+			const v = sanno[ attr.k ]
+			if(v==undefined) {
+				// ordered list, look no further
+				break
+			}
+			const a = { k: attr.k, kvalue: v }
+			if(attr.full) {
+				a.full = attr.full
+				a.fullvalue = sanno[ attr.full ]
+			}
+			attributes.push( a)
+		}
+
+		// to be replaced
+		const levelnames = []
+		for(const attr of dsquery.groupsamplebyattrlst) {
+			const v = sanno[ attr.k ]
+			if(v==undefined) {
+				break
+			}
+			const lname = (attr.full ? sanno[ attr.full ] : null) || v
+			levelnames.push(lname)
+		}
+
+
+
+		key2group.set(groupname, {
+			name: groupname,
+			samples:[],
+			attributes: attributes,
+		})
+	}
+
+	let notfound=true
+	for(const s of key2group.get(groupname).samples) {
+
+		if(s.samplename == samplename) {
+			// same sample, can happen for vcf samples
+			// combine data, actually none for vcf
+			for(const m of items) {
+				s.items.push(m)
+			}
+			notfound=false
+			break
+		}
+	}
+
+	if(notfound) {
+		key2group.get(groupname).samples.push({
+			samplename: samplename, // hardcoded
+			items: items
+		})
+	}
+
+	///// end of grouper
 }
 
 
@@ -8948,19 +8946,19 @@ function mds_init(ds,genome) {
 					const err = mds_init_mdsjunction(query, ds, genome)
 					if(err) return querykey+' (mdsjunction) error: '+err
 
-				} else if(query.type==common.tkt.mdscnv) {
+				} else if(query.type==common.tkt.mdscnv) { // obsolete
 
 					const err = mds_init_mdscnv(query, ds, genome)
 					if(err) return querykey+' (mdscnv) error: '+err
 
-				} else if(query.type==common.tkt.mdssvcnv) {
+				} else if(query.type==common.tkt.mdssvcnv) { // replaces mdscnv
 
 					const err = mds_init_mdssvcnv(query, ds, genome)
 					if(err) return querykey+' (svcnv) error: '+err
 
-				} else if(query.type==common.tkt.mdsvcfitd) {
+				} else if(query.type==common.tkt.mdsvcfitd) { // vcf-only, no itd
 
-					const err = mds_init_mdsvcfitd(query, ds, genome)
+					const err = mds_init_mdsvcf(query, ds, genome)
 					if(err) return querykey+' (vcf) error: '+err
 
 				} else {
@@ -9295,6 +9293,14 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		if(!query.attrnamespacer) query.attrnamespacer = ', '
 	}
 
+	if(query.sortgroupby) {
+		if(!query.groupsamplebyattrlst) return '.groupsamplebyattrlst is required for .sortgroupby'
+		if(!query.sortgroupby.key) return '.key missing from .sortgroupby'
+		// the actual key is not validated
+		if(!query.sortgroupby.order) return '.order[] missing from .sortgroupby'
+		if(!Array.isArray(query.sortgroupby.order)) return '.order must be an array'
+	}
+
 	console.log('('+query.type+') '+query.name+': '+(query.samples ? query.samples.length:'no')+' samples, '+(query.nochr ? 'no "chr"':'has "chr"'))
 }
 
@@ -9351,7 +9357,7 @@ function mds_init_genenumeric(query, ds, genome) {
 
 
 
-function mds_init_mdsvcfitd(query, ds, genome) {
+function mds_init_mdsvcf(query, ds, genome) {
 	/*
 	mixture of snv/indel (vcf), ITD, and others
 	that are not either cnv or sv
