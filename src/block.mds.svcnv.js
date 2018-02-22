@@ -2658,51 +2658,19 @@ function tooltip_multi_svdense(g, tk, block) {
 	tk.tktip.clear()
 		.show(d3event.clientX,d3event.clientY)
 
-	tk.tktip.d.append('div')
-		.style('margin','10px')
-		.text('Cancer: '+g.name)
+	const lst = [{k:'Cancer',v:g.name}]
 
-	// summarize
-	const chr2sample = {
-		sv: new Map(),
-		fusion: new Map()
-	}
-
+	let svnum=0,
+		fusionnum=0
 	for(const i of g.items) {
-		const chr = i.chrA+' - '+i.chrB
-		if(i.dt==common.dtsv) {
-			if(!chr2sample.sv.has(chr)) chr2sample.sv.set( chr, [] )
-			chr2sample.sv.get(chr).push( i.sample )
-		} else if(i.dt==common.dtfusionrna) {
-			if(!chr2sample.fusion.has(chr)) chr2sample.fusion.set( chr, [] )
-			chr2sample.fusion.get(chr).push( i.sample )
-		}
+		if(i.dt==common.dtsv) svnum++
+		else if(i.dt==common.dtfusionrna) fusionnum++
 	}
 
-	const table = tk.tktip.d.append('table')
+	if(svnum) lst.push({k:'# of SV', v:svnum})
+	if(fusionnum) lst.push({k:'# of fusion', v:fusionnum})
 
-	if(chr2sample.sv.size) {
-		for(const [chr, samples] of chr2sample.sv) {
-			const tr=table.append('tr')
-			tr.append('td')
-				.text('SV')
-			tr.append('td')
-				.text(chr)
-			tr.append('td')
-				.html( samples.join('<br>') )
-		}
-	}
-	if(chr2sample.fusion.size) {
-		for(const [chr, samples] of chr2sample.fusion) {
-			const tr=table.append('tr')
-			tr.append('td')
-				.text('RNA fusion')
-			tr.append('td')
-				.text(chr)
-			tr.append('td')
-				.html( samples.join('<br>') )
-		}
-	}
+	client.make_table_2col( tk.tktip.d, lst )
 }
 
 
@@ -2923,17 +2891,30 @@ function click_multi_vcfdense( g, tk, block ) {
 				.text('Samples')
 				.style('opacity',.5)
 				.attr('colspan',2)
+
 			const td = tr.append('td')
 			for(const sm of m.sampledata) {
+
+				const [ sample, samplegroup ] = findsamplegroup_byvcf({
+					m: m,
+					m_sample: sm,
+					tk: tk
+				})
+
 				td.append('div')
 					.text(sm.sampleobj.name)
 					.attr('class','sja_clbtext')
-					.on('click',()=>{
-						const [ sample, samplegroup ] = findsamplegroup_byvcf({
-							m: m,
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item: m,
 							m_sample: sm,
-							tk: tk
+							sample: sample,
+							samplegroup: samplegroup,
+							tk: tk,
 						})
+					})
+					.on('mouseout',()=>tk.tktip.hide())
+					.on('click',()=>{
 						click_multi_singleitem({
 							item: m,
 							m_sample: sm,
@@ -2955,6 +2936,7 @@ function click_multi_vcfdense( g, tk, block ) {
 	*/
 
 	const table = pane.body.append('table')
+		.style('margin-top','10px')
 		.style('border-spacing','4px')
 
 	for(const m of g.items) {
@@ -2982,17 +2964,30 @@ function click_multi_vcfdense( g, tk, block ) {
 		{
 			const td = tr.append('td')
 			if(m.dt==common.dtsnvindel) {
+
 				// show each sample
+
 				for(const m_sample of m.sampledata) {
+
+					const [s, sg] = findsamplegroup_byvcf({
+						m: m,
+						m_sample:m_sample,
+						tk: tk
+					})
 					td.append('div')
 						.text(m_sample.sampleobj.name)
 						.attr('class','sja_clbtext')
-						.on('click',()=>{
-							const [s, sg] = findsamplegroup_byvcf({
-								m: m,
-								m_sample:m_sample,
-								tk: tk
+						.on('mouseover',()=>{
+							tooltip_singleitem({
+								item: m,
+								m_sample: m_sample,
+								sample: s,
+								samplegroup: sg,
+								tk: tk,
 							})
+						})
+						.on('mouseout',()=>tk.tktip.hide())
+						.on('click',()=>{
 							click_multi_singleitem({
 								item: m,
 								m_sample: m_sample,
@@ -3003,29 +2998,13 @@ function click_multi_vcfdense( g, tk, block ) {
 							})
 						})
 				}
+			} else {
+				console.error('unknown dt: '+m.dt)
 			}
 		}
 	}
 }
 
-
-
-
-
-
-
-
-function print_snvindel(m) {
-	return '<div style="display:inline-block;color:'+common.mclass[m.class].color+';font-size:1.3em;font-weight:bold;padding-right:10px">'+m.mname+'</div>'
-		+'<div style="display:inline-block;font-size:.7em;margin-right:10px">'
-			+(m.gene ? m.gene+'<br>' : '')+common.mclass[m.class].label
-		+'</div>'
-		+'<div style="display:inline-block;font-size:.7em;margin-right:10px">'
-			+(m.isoform==m.gene ? '' : m.isoform+'<br>')+m.chr+':'+(m.pos+1)
-		+'</div>'
-		+'<span style="font-size:.7em;opacity:.5">REF</span> '+m.ref+' '
-		+'<span style="font-size:.7em;opacity:.5">ALT</span> '+m.alt
-}
 
 
 
@@ -3057,33 +3036,49 @@ function click_multi_svdense(g, tk, block) {
 
 	const sample2lst=new Map()
 	for(const i of g.items) {
-		if(!sample2lst.has(i.sample)) sample2lst.set(i.sample, [])
-		sample2lst.get(i.sample).push(i)
+		if(!sample2lst.has(i.sample)) {
+			sample2lst.set(i.sample, {
+				sv:[],
+				fusion:[]
+			})
+		}
+		if(i.dt==common.dtsv) {
+			sample2lst.get(i.sample).sv.push(i)
+		} else if(i.dt==common.dtfusionrna) {
+			sample2lst.get(i.sample).fusion.push(i)
+		}
 	}
+
 	const table=pane.body.append('table')
 		.style('border-spacing','2px')
 		.style('margin','10px')
+
 	const tr=table.append('tr')
 	tr.append('td')
 		.text('Sample')
 		.style('font-size','.8em')
-		.style('color','#858585')
+		.style('opacity',.5)
 	tr.append('td')
 		.text('SV')
 		.style('font-size','.8em')
-		.style('color','#858585')
+		.style('opacity',.5)
+	tr.append('td')
+		.text('RNA fusion')
+		.style('font-size','.8em')
+		.style('opacity',.5)
 	
 	let j=0
-	for(const [sample,lst] of sample2lst) {
+	for(const [ sample, so] of sample2lst) {
 		const tr=table.append('tr')
 		if(!(j++%2)) {
 			tr.style('background','#f1f1f1')
 		}
 
 		tr.append('td').text(sample)
-		const td=tr.append('td')
-		for(const i of lst) {
-			td.append('div')
+
+		const td1=tr.append('td')
+		for(const i of so.sv) {
+			td1.append('div')
 				.attr('class','sja_clbtext')
 				.html(
 					svchr2html(i.chrA, tk)
@@ -3091,8 +3086,47 @@ function click_multi_svdense(g, tk, block) {
 					+' &raquo; '
 					+svchr2html(i.chrB, tk)
 					+':'+i.posB+':'+i.strandB
-					+( i.dt==common.dtfusionrna? ' (RNA fusion)' : '')
 					)
+				.on('mouseover',()=>{
+					tooltip_singleitem({
+						item:i,
+						sample: i._sample,
+						samplegroup: i._samplegroup,
+						tk:tk,
+					})
+				})
+				.on('mouseout', ()=>tk.tktip.hide())
+				.on('click',()=>{
+					click_multi_singleitem({
+						item:i,
+						sample: i._sample,
+						samplegroup: i._samplegroup,
+						tk:tk,
+						block:block
+					})
+				})
+		}
+
+		const td2=tr.append('td')
+		for(const i of so.fusion) {
+			td2.append('div')
+				.attr('class','sja_clbtext')
+				.html(
+					svchr2html(i.chrA, tk)
+					+':'+i.posA+':'+i.strandA
+					+' &raquo; '
+					+svchr2html(i.chrB, tk)
+					+':'+i.posB+':'+i.strandB
+					)
+				.on('mouseover',()=>{
+					tooltip_singleitem({
+						item:i,
+						sample: i._sample,
+						samplegroup: i._samplegroup,
+						tk:tk,
+					})
+				})
+				.on('mouseout', ()=>tk.tktip.hide())
 				.on('click',()=>{
 					click_multi_singleitem({
 						item:i,
@@ -4873,6 +4907,21 @@ function tooltip_samplegroup( g, tk ) {
 
 
 
+function tooltip_singleitem( p ) {
+	/*
+	multi-sample
+	mouse over an item
+	*/
+	p.tk.tktip.clear()
+		.show(d3event.clientX, d3event.clientY)
+
+	p.holder = p.tk.tktip.d
+
+	detailtable_singlesample( p )
+}
+
+
+
 
 
 export function detailtable_singlesample(p) {
@@ -4905,7 +4954,10 @@ export function detailtable_singlesample(p) {
 
 	if( m.dt == common.dtitd) {
 
-		lst.push( {k:'ITD', v:m.chr+':'+(m.start+1)+'-'+(m.stop+1) } )
+		lst.push( {
+			k:'ITD',
+			v:m.chr+':'+(m.start+1)+'-'+(m.stop+1)
+		})
 
 		if(m.gene || m.isoform) {
 			const t = []
@@ -4937,6 +4989,10 @@ export function detailtable_singlesample(p) {
 					+(m.value>0? p.tk.cnvcolor.gain.str : p.tk.cnvcolor.loss.str)+';color:white;">'
 					+m.value.toFixed(2)
 					+'</span>'
+			})
+			lst.push({
+				k:'Copy number',
+				v: (2*Math.pow(2, m.value)).toFixed(2)
 			})
 		}
 	
@@ -5175,21 +5231,6 @@ function tooltip_svcnv_addexpressionrank( sample, tk ) {
 
 
 
-function tooltip_singleitem( p ) {
-	/*
-	multi-sample
-	mouse over an item
-	*/
-	p.tk.tktip.clear()
-		.show(d3event.clientX, d3event.clientY)
-
-	p.holder = p.tk.tktip.d
-
-	detailtable_singlesample( p )
-}
-
-
-
 
 function svchr2html(chr, tk) {
 	// only for multi-sample, full mode
@@ -5218,32 +5259,189 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 	pane.header.html(samplegroup.name+' <span style="font-size:.7em">'+tk.name+'</span>')
 
 	if(samplegroup.samples.length==1) {
+
 		// one sample
+
 		const sample=samplegroup.samples[0]
 
-		const lst=[ {k:'Sample',v:sample.samplename} ]
+		const table = pane.body.append('table')
+			.style('margin','10px')
+			.style('border-spacing','4px')
+
+		{
+			const tr = table.append('tr')
+			tr.append('td')
+				.text('Sample')
+				.style('opacity',.5)
+			tr.append('td').text(sample.samplename)
+		}
 		if(sample.sampletype) {
-			lst.push({k:'Sample type', v:sample.sampletype})
+			const tr = table.append('tr')
+			tr.append('td')
+				.text('Sample type')
+				.style('opacity',.5)
+			tr.append('td').text(sample.sampletype)
 		}
 
-		const [ cnvlst, svlst, lohlst, itdlst, vcflst ] = sortitemsbytype_onesample( sample.samplename, sample.items, tk )
+
+		const [ cnvlst, svlst, lohlst, itdlst, vcflst, cnvlst0, svlst0, lohlst0, itdlst0, vcflst0 ] = sortitemsbytype_onesample( sample.samplename, sample.items, tk )
 
 		if(cnvlst.length) {
-			lst.push({k:'CNV', v:cnvlst.join('')})
+			const tr=table.append('tr')
+			tr.append('td')
+				.text('CNV')
+				.style('opacity',.5)
+			const td = tr.append('td')
+			for(let i=0; i<cnvlst.length; i++) {
+				td.append('div')
+					.html(cnvlst[i])
+					.attr('class','sja_clbtext')
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item:cnvlst0[i],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk
+						})
+					})
+					.on('mouseout',()=>tk.tktip.hide())
+					.on('click',()=>{
+						click_multi_singleitem({
+							item:cnvlst0[i],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
+					})
+			}
 		}
 		if(svlst.length) {
-			lst.push({k:'SV', v:svlst.join('')})
+			const tr=table.append('tr')
+			tr.append('td')
+				.text('SV')
+				.style('opacity',.5)
+			const td = tr.append('td')
+			for(let i=0; i<svlst.length; i++) {
+				td.append('div')
+					.html(svlst[i])
+					.attr('class','sja_clbtext')
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item:svlst0[i],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk
+						})
+					})
+					.on('mouseout',()=>tk.tktip.hide())
+					.on('click',()=>{
+						click_multi_singleitem({
+							item:svlst0[i],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
+					})
+			}
 		}
 		if(lohlst.length) {
-			lst.push({k:'LOH', v:lohlst.join('')})
+			const tr=table.append('tr')
+			tr.append('td')
+				.text('LOH')
+				.style('opacity',.5)
+			const td = tr.append('td')
+			for(let i=0; i<lohlst.length; i++) {
+				td.append('div')
+					.html(lohlst[i])
+					.attr('class','sja_clbtext')
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item:lohlst0[i],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk
+						})
+					})
+					.on('mouseout',()=>tk.tktip.hide())
+					.on('click',()=>{
+						click_multi_singleitem({
+							item:lohlst0[i],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
+					})
+			}
 		}
 		if(itdlst.length) {
-			lst.push({k:'ITD', v:itdlst.join('')})
+			const tr=table.append('tr')
+			tr.append('td')
+				.text('ITD')
+				.style('opacity',.5)
+			const td = tr.append('td')
+			for(let i=0; i<itdlst.length; i++) {
+				td.append('div')
+					.html(itdlst[i])
+					.attr('class','sja_clbtext')
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item:itdlst0[i],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk
+						})
+					})
+					.on('mouseout',()=>tk.tktip.hide())
+					.on('click',()=>{
+						click_multi_singleitem({
+							item:itdlst0[i],
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
+					})
+			}
 		}
 		if(vcflst.length) {
-			lst.push({ k:'SNV/indel', v:vcflst.join('') })
+			const tr=table.append('tr')
+			tr.append('td')
+				.text('SNV/indel')
+				.style('opacity',.5)
+			const td = tr.append('td')
+
+			for(let i=0; i<vcflst.length; i++) {
+
+				const ms = vcflst0[i].sampledata.find(j=>j.sampleobj.name==sample.samplename)
+
+				td.append('div')
+					.html(vcflst[i])
+					.attr('class','sja_clbtext')
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item:vcflst0[i],
+							m_sample: ms,
+							sample:sample,
+							samplegroup:samplegroup,
+							tk:tk
+						})
+					})
+					.on('mouseout',()=>tk.tktip.hide())
+					.on('click',()=>{
+						click_multi_singleitem({
+							item:vcflst0[i],
+							sample:sample,
+							m_sample:ms,
+							samplegroup:samplegroup,
+							tk:tk,
+							block:block
+						})
+					})
+			}
 		}
-		client.make_table_2col( pane.body, lst)
 		return
 	}
 
@@ -5306,6 +5504,15 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 				td.append('div')
 					.html(cnvlst[j])
 					.attr('class', 'sja_clbtext')
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item: cnvlst0[j],
+							sample: sample,
+							samplegroup: samplegroup,
+							tk:tk,
+						})
+					})
+					.on('mouseout',()=> tk.tktip.hide())
 					.on('click',()=>{
 						click_multi_singleitem({
 							item: cnvlst0[j],
@@ -5323,6 +5530,15 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 				td.append('div')
 					.html(svlst[j])
 					.attr('class','sja_clbtext')
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item: svlst0[j],
+							sample: sample,
+							samplegroup: samplegroup,
+							tk:tk,
+						})
+					})
+					.on('mouseout',()=> tk.tktip.hide())
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:svlst0[j],
@@ -5340,6 +5556,15 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 				td.append('div')
 					.html(lohlst[j])
 					.attr('class','sja_clbtext')
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item: lohlst0[j],
+							sample: sample,
+							samplegroup: samplegroup,
+							tk:tk,
+						})
+					})
+					.on('mouseout',()=> tk.tktip.hide())
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:lohlst0[j],
@@ -5358,6 +5583,15 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 				td.append('div')
 					.html(itdlst[j])
 					.attr('class','sja_clbtext')
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item: itdlst0[j],
+							sample: sample,
+							samplegroup: samplegroup,
+							tk:tk,
+						})
+					})
+					.on('mouseout',()=> tk.tktip.hide())
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:itdlst0[j],
@@ -5370,16 +5604,29 @@ function click_samplegroup_showtable( samplegroup, tk, block ) {
 			}
 		}
 
-		if(vcflst.length) {
+		if(tk.data_vcf) {
 			const td=tr.append('td')
 			for(let j=0; j<vcflst.length; j++) {
+
+				const ms = vcflst0[j].sampledata.find( k=> k.sampleobj.name == sample.samplename )
+
 				td.append('div')
 					.html(vcflst[j])
 					.attr('class','sja_clbtext')
+					.on('mouseover',()=>{
+						tooltip_singleitem({
+							item: vcflst0[j],
+							m_sample: ms,
+							sample: sample,
+							samplegroup: samplegroup,
+							tk:tk,
+						})
+					})
+					.on('mouseout',()=> tk.tktip.hide())
 					.on('click',()=>{
 						click_multi_singleitem({
 							item: vcflst0[j],
-							m_sample: vcflst0[j].sampledata.find( i=> i.sampleobj.name == sample.samplename ),
+							m_sample: ms,
 							sample:sample,
 							samplegroup:samplegroup,
 							tk:tk,
