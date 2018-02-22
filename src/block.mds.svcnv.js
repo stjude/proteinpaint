@@ -2657,12 +2657,52 @@ function tooltip_multi_svdense(g, tk, block) {
 
 	tk.tktip.clear()
 		.show(d3event.clientX,d3event.clientY)
-	const hold=tk.tktip.d
-	const lst=[
-		{k:'cancer',v:g.name},
-		{k:'# of SV',v: g.items.length}
-	]
-	client.make_table_2col( hold, lst )
+
+	tk.tktip.d.append('div')
+		.style('margin','10px')
+		.text('Cancer: '+g.name)
+
+	// summarize
+	const chr2sample = {
+		sv: new Map(),
+		fusion: new Map()
+	}
+
+	for(const i of g.items) {
+		const chr = i.chrA+' - '+i.chrB
+		if(i.dt==common.dtsv) {
+			if(!chr2sample.sv.has(chr)) chr2sample.sv.set( chr, [] )
+			chr2sample.sv.get(chr).push( i.sample )
+		} else if(i.dt==common.dtfusionrna) {
+			if(!chr2sample.fusion.has(chr)) chr2sample.fusion.set( chr, [] )
+			chr2sample.fusion.get(chr).push( i.sample )
+		}
+	}
+
+	const table = tk.tktip.d.append('table')
+
+	if(chr2sample.sv.size) {
+		for(const [chr, samples] of chr2sample.sv) {
+			const tr=table.append('tr')
+			tr.append('td')
+				.text('SV')
+			tr.append('td')
+				.text(chr)
+			tr.append('td')
+				.html( samples.join('<br>') )
+		}
+	}
+	if(chr2sample.fusion.size) {
+		for(const [chr, samples] of chr2sample.fusion) {
+			const tr=table.append('tr')
+			tr.append('td')
+				.text('RNA fusion')
+			tr.append('td')
+				.text(chr)
+			tr.append('td')
+				.html( samples.join('<br>') )
+		}
+	}
 }
 
 
@@ -3833,15 +3873,15 @@ function may_legend_mclass(tk, block) {
 	full or dense
 	native or custom
 	single or multi-sample
-	both snvindel class & other data types are shown
+	always shown! both snvindel class & dt included (cnv/loh/sv/fusion/itd)
 	*/
 
 	tk.legend_mclass.holder.selectAll('*').remove()
 
-
 	const classes = new Map()
 	/*
-	k: class, v: {cname, count}
+	k: class
+	v: {cname, count}
 	if is snvindel class, key is class code e.g. "M"
 	if not, key is dt
 	*/
@@ -3934,8 +3974,8 @@ function may_legend_mclass(tk, block) {
 					.attr('class','sja_menuoption')
 					.text('Show only')
 					.on('click',()=>{
-						for(const c2 of classlst) {
-							tk.legend_mclass.hidden.add(key)
+						for(const c2 of classes.keys()) {
+							tk.legend_mclass.hidden.add(c2)
 						}
 						tk.legend_mclass.hidden.delete(key)
 						applychange()
@@ -3985,16 +4025,6 @@ function may_legend_mclass(tk, block) {
 	const applychange = ()=>{
 		tk.tip2.hide()
 		loadTk(tk, block)
-		// must reload tk, even for vcf class, since old data (tk._data_vcf) is scoped and cannot reflect new data
-		/*
-		applyfilter_vcfdata(tk)
-		if(tk.singlesample) {
-			render_singlesample( tk, block )
-		} else {
-			render_samplegroups( tk, block )
-		}
-		block.block_setheight()
-		*/
 	}
 }
 
