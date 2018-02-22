@@ -2031,7 +2031,7 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 
 						if(nleft && nright) break
 
-						if( (i.dt==common.dtcnv || i.dt==common.dtloh || i.dt==common.dtitd) && i.x1 && i.x2 ) {
+						if( i.dt==common.dtcnv || i.dt==common.dtloh || i.dt==common.dtitd ) {
 							// segment
 							if(i.x1==undefined || i.x2==undefined) continue
 							const x1 = Math.min(i.x1, i.x2)
@@ -4120,11 +4120,13 @@ function may_legend_mutationAttribute(tk, block) {
 	}
 
 	// count
-	for(const g of tk.samplegroups) {
-		for(const s of g.samples) {
-			for(const i of s.items) {
-				// even if mattr is abscent for it, still record it
-				count_mutationAttribute( i.mattr, tk )
+	if(tk._data) {
+		for(const g of tk._data) {
+			for(const s of g.samples) {
+				for(const i of s.items) {
+					// even if mattr is abscent for it, still record it
+					count_mutationAttribute( i.mattr, tk )
+				}
 			}
 		}
 	}
