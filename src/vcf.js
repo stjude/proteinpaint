@@ -183,6 +183,7 @@ exports.vcfparseline=function(line,vcf) {
 		chr:(vcf.nochr ? 'chr':'')+lst[1-1],
 		pos:rawpos-1,
 		ref:refallele,
+		//refstr:refallele, // e.g. GA>GCC, ref:A, refstr:GA, "refstr" is required for matching in FORMAT
 		altstr:lst[5-1],
 		alleles:[
 			{
@@ -201,13 +202,14 @@ exports.vcfparseline=function(line,vcf) {
 	const altinvalid=[]
 	for(const alt of lst[5-1].split(',')) {
 		const a={
+			ref: m.ref, // may be corrected just below!
 			allele:alt,
 			sampledata:[],
 			_m:m,
 			info:{} // allele info, do not contain locus info
 		}
 		m.alleles.push(a)
-		if(alt.startsWith('<')) {
+		if(alt[0]=='<') {
 			/*
 			symbolic allele, show text within <> as name
 			FIXME match INFO
@@ -221,11 +223,18 @@ exports.vcfparseline=function(line,vcf) {
 
 			a.allele = tmp[1]
 			a.issymbolicallele=true
+		} else {
+
+			// normal nucleotide
+			const [p,ref,alt] = correctRefAlt( m.pos, m.ref, a.allele )
+			a.pos=p
+			a.ref=ref
+			a.allele=alt
 		}
 	}
 
 	if(lst[9-1] && lst[10-1]) {
-		parse_FORMAT( lst, m, vcf )
+		parse_FORMAT2( lst, m, vcf )
 	}
 
 
@@ -264,27 +273,30 @@ exports.vcfparseline=function(line,vcf) {
 			}
 		}
 		if(!m2.issymbolicallele && m2.alt!='NON_REF') {
+			/*
 			// valid alt allele, apply Dr. J's cool method
 			const [p,ref,alt]=correctRefAlt(m2.pos, m2.ref, m2.alt)
 			m2.pos=p
 			m2.ref=ref
 			m2.alt=alt
+			*/
+
 			// assign type
-			if( ref.length==1 && alt.length==1 ) {
+			if( m2.ref.length==1 && m2.alt.length==1 ) {
 				// both alleles length of 1
-				if(alt=='.') {
+				if(m2.alt=='.') {
 					// alt is missing
 					m2.type=common.mclassdeletion
 				} else {
 					// snv
 					m2.type=common.mclasssnv
 				}
-			} else if( ref.length==alt.length) {
+			} else if( m2.ref.length==m2.alt.length) {
 				m2.type=common.mclassmnv
-			} else if( ref.length<alt.length) {
+			} else if( m2.ref.length<m2.alt.length) {
 				// FIXME only when empty length of one allele
 				m2.type=common.mclassinsertion
-			} else if(ref.length>alt.length) {
+			} else if(m2.ref.length>m2.alt.length) {
 				m2.type=common.mclassdeletion
 			} else {
 				m2.type=common.mclassnonstandard
@@ -324,6 +336,168 @@ function correctRefAlt(p, ref, alt) {
 
 
 
+function parse_FORMAT2( lst, m, vcf ) {
+	/*
+	m.alleles[0] is ref allele
+	*/
+	const formatfields = lst[9-1].split(':')
+
+	for(let _sampleidx=9; _sampleidx<lst.length; _sampleidx++) {
+
+		// for each sample
+		const valuelst = lst[_sampleidx].split(':')
+		{
+			// tell if this sample have any data in this line (variant), if .:., then skip
+			let none=true
+			for(const v of valuelst) {
+				if(v!='.') {
+					none=false
+					break
+				}
+			}
+			if(none) {
+				// this sample has no format value
+				continue
+			}
+		}
+
+
+		const sampleidx = _sampleidx-9
+		for(let i=1; i<m.alleles.length; i++) {
+			const sobj = {}
+			if(vcf.samples && vcf.samples[sampleidx]) {
+				for(const k in vcf.samples[sampleidx]) {
+					sobj[k] = vcf.samples[sampleidx][k]
+				}
+			} else {
+				sobj.name = 'missing_samplename_from_vcf_header'
+			}
+			m.alleles[i].sampledata.push({
+				sampleobj: sobj
+			})
+		}
+
+		for(let fi=0; fi<formatfields.length; fi++) {
+
+			// for each field of this sample
+
+			const field = formatfields[fi]
+			const value = valuelst[fi]
+			if(value=='.') {
+				// no value for this field
+				continue
+			}
+
+			if(field == 'GT') {
+				const splitter = value.indexOf('/')!=-1 ? '/' : '|'
+				let gtsum = 0 // for calculating gtallref=true, old
+				let unknowngt=false // if any is '.', then won't calculate gtallref
+				const gtalleles = []
+				for(const i of value.split(splitter)) {
+					if( i == '.' ) {
+						unknowngt=true
+						continue
+					}
+					const j = Number.parseInt(i)
+					if(Number.isNaN(j)) {
+						unknowngt=true
+						continue
+					}
+					gtsum += j
+					const ale = m.alleles[ j ]
+					if(ale) {
+						gtalleles.push( ale.allele )
+					}
+				}
+				let gtallref = false
+				if(!unknowngt) {
+					gtallref = gtsum == 0
+				}
+				const genotype = gtalleles.join( splitter )
+				for(let i=1; i<m.alleles.length; i++) {
+					const ms = m.alleles[i].sampledata[ m.alleles[i].sampledata.length-1 ]
+					ms.GT = value
+					ms.genotype = genotype
+					if(gtallref) {
+						ms.gtallref = true
+					}
+				}
+				continue
+			}
+
+			// other data fields
+			const formatdesc = vcf.format ? vcf.format[ field ] : null
+			if(!formatdesc) {
+				// unspecified field, put to all alt alleles
+				for(let i=1; i<m.alleles.length; i++) {
+					m.alleles[i].sampledata[ m.alleles[i].sampledata.length-1 ][ field ] = value
+				}
+				continue
+			}
+
+			const isinteger = formatdesc.Type=='Integer'
+			const isfloat = formatdesc.Type=='Float'
+
+			if( (formatdesc.Number && formatdesc.Number=='R') || field=='AD' ) {
+				/*
+				per-allele value, including ref
+				v4.1 has AD not with "R", must process as R
+				*/
+				const fvlst = value.split(',').map( i=> {
+					if(isinteger) return Number.parseInt(i)
+					if(isfloat) return Number.parseFloat(i)
+					return i
+				})
+				for(let i=1; i<m.alleles.length; i++) {
+					if( fvlst[ i ] !=undefined) {
+						// this allele has value
+						const m2 = m.alleles[ i ]
+						const m2s = m2.sampledata[ m2.sampledata.length-1 ]
+						// use this allele's ref/alt (after nt trimming)
+						m2s[ field ] = {}
+						m2s[ field ][ m2.ref ] = fvlst[0]
+						m2s[ field ][ m2.allele ] = fvlst[i]
+					}
+				}
+				continue
+			}
+			if(formatdesc.Number && formatdesc.Number=='A') {
+				// per alt-allele value
+				const fvlst = value.split(',').map( i=> {
+					if(isinteger) return Number.parseInt(i)
+					if(isfloat) return Number.parseFloat(i)
+					return i
+				})
+				for(let i=1; i<m.alleles.length; i++) {
+					if( fvlst[ i-1 ] !=undefined) {
+						// this allele has value
+						const m2 = m.alleles[ i ]
+						const m2s = m2.sampledata[ m2.sampledata.length-1 ]
+						// use this allele's ref/alt (after nt trimming)
+						m2s[ field ] = {}
+						m2s[ field ][ m2.allele ] = fvlst[i-1]
+					}
+				}
+				continue
+			}
+			// otherwise, append this field to all alt
+			for(let i=1; i<m.alleles.length; i++) {
+				m.alleles[i].sampledata[ m.alleles[i].sampledata.length-1 ][ field ] = value
+			}
+		}
+	}
+	// compatible with old ds: make allele2readcount from AD
+	for(const a of m.alleles) {
+		for(const s of a.sampledata) {
+			if(s.AD) {
+				s.allele2readcount={}
+				for(const k in s.AD) {
+					s.allele2readcount[k] = s.AD[k]
+				}
+			}
+		}
+	}
+}
 
 
 
@@ -378,6 +552,7 @@ function parse_FORMAT( lst, m, vcf ) {
 					// per-allele value, including ref
 					const fvlst = vstr.split(',')
 					spobj[ID] = {} // allele 2 value
+
 
 					for(let k=0; k<m.alleles.length; k++) {
 						const thisaltvalue = fvlst[k]
