@@ -104,6 +104,14 @@ module.exports={
 				},
 				filter:1
 			},
+			vorigin:{
+				label:'Variant origin',
+				values:{
+					somatic:{label:'Somatic'},
+					germline:{label:'Germline'}
+				},
+				filter:1
+			},
 			pmid:{
 				label:'PubMed',
 				appendto_link:'http://www.ncbi.nlm.nih.gov/pubmed/'
