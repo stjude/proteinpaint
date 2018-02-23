@@ -13,6 +13,7 @@ export function click_multi_singleitem( p ) {
 	for official or custom tracks
 
 
+	p {}
 	.item
 	.sample
 	.samplegroup
@@ -79,7 +80,7 @@ export function click_multi_singleitem( p ) {
 		buttonrow.append('div')
 			.style('display','inline-block')
 			.attr('class', 'sja_menuoption')
-			.text('Disco')
+			.text(p.sample.samplename+' genome')
 			.on('click',()=>{
 
 				if(holder.style('display')=='none') {
