@@ -4,9 +4,10 @@ import * as common from './common'
 import {
 	loadTk,
 	focus_singlesample,
-	createbutton_addfeature,
 	dedup_sv
 	} from './block.mds.svcnv'
+import {createbutton_addfeature} from './block.mds.svcnv.samplematrix'
+
 
 /*
 
