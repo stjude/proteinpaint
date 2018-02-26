@@ -25,12 +25,15 @@ import {
 	} from './block.mds.svcnv.legend'
 import {render_singlesample} from './block.mds.svcnv.single'
 import {createbutton_addfeature, may_show_samplematrix_button} from './block.mds.svcnv.samplematrix'
-import {vcfparsemeta} from './vcf'
+import {vcfparsemeta, vcfparseline} from './vcf'
 
 /*
 JUMP __multi __maketk __sm
 
-makeTk()
+makeTk
+loadTk
+	loadTk_do
+		addLoadParameter
 render_samplegroups
 	prep_samplegroups
 	render_multi_vcfdense
@@ -39,9 +42,6 @@ render_samplegroups
 		** focus_singlesample
 	render_multi_genebar
 		genebar_config
-render_singlesample
-	render_singlesample_sv
-	render_singlesample_stack
 configPanel()
 createbutton_focusvcf
 
@@ -202,6 +202,10 @@ function loadTk_do( tk, block ) {
 
 		if(data.error) throw({message:data.error})
 
+		tk.tklabel.each(function(){
+			tk.leftLabelMaxwidth = this.getBBox().width
+		})
+
 		/*
 		must keep the loaded "raw" data in _data_vcf, so it can later apply class filter without having to reload from server
 		on serverside, the "class" won't be parsed out from csq, without gmmode/isoform info of the client
@@ -209,16 +213,9 @@ function loadTk_do( tk, block ) {
 		tk._data_vcf = data.data_vcf
 
 		tk.vcfrangelimit = data.vcfrangelimit // range too big
-		vcfdata_prepmclass(tk, block) // data for display is now in tk.data_vcf[]
-		applyfilter_vcfdata(tk)
-
-		tk.tklabel.each(function(){
-			tk.leftLabelMaxwidth = this.getBBox().width
-		})
-
+		vcfdata_prep(tk, block) // data for display is now in tk.data_vcf[]
 
 		if(tk.singlesample) {
-
 
 			if(!data.lst || data.lst.length==0) {
 				// no cnv/sv
@@ -231,6 +228,12 @@ function loadTk_do( tk, block ) {
 
 		} else {
 
+			// multi-sample
+
+			/*
+			tricky thing is to be isolated
+			*/
+			mdssvcnv_customtk_altersg_client( data, tk )
 
 			if(!data.samplegroups || data.samplegroups.length==0) {
 				// server has merged vcf samples into samplegroups
@@ -289,12 +292,14 @@ function addLoadParameter( par, tk ) {
 		par.file=tk.file
 		par.url=tk.url
 		par.indexURL=tk.indexURL
+
 		if(tk.checkexpressionrank) {
 			par.checkexpressionrank={}
 			for(const k in tk.checkexpressionrank) {
 				par.checkexpressionrank[k]=tk.checkexpressionrank[k]
 			}
 		}
+
 		if(tk.checkvcf) {
 			par.checkvcf = {
 				file: tk.checkvcf.file,
@@ -3116,39 +3121,54 @@ function may_map_vcf(tk, block) {
 
 
 
-function vcfdata_prepmclass(tk, block) {
+function vcfdata_prep(tk, block) {
 	/*
 	_data_vcf returned by server
 	will be filtered to data_vcf for display
-	changing mclass filtering option will call this and won't reload data
-	because server-side code cannot yet parse out m class from csq
+	changing mclass filtering option won't call this, will reload all datatypes from server, sorry about the trouble
 	*/
 	if(!tk._data_vcf || tk._data_vcf.length==0) {
 		tk.data_vcf=null
 		return
 	}
-	for(const m of tk._data_vcf) {
+
+	const mlst = []
+
+	if(tk.iscustom) {
+		/*
+		_data_vcf contains lines from vcf
+		*/
+		for(const line of tk._data_vcf) {
+			const [err,lst, err2] = vcfparseline( line, tk.checkvcf )
+			if(err) {
+				console.error(err)
+			}
+			if(err2) {
+				console.error(err2)
+			}
+			if(lst) {
+				for(const m of lst) {
+					m.dt = common.dtsnvindel
+					mlst.push(m)
+				}
+			}
+		}
+
+	} else {
+		for(const m of tk._data_vcf) mlst.push(m)
+	}
+
+	tk.data_vcf = []
+
+	for(const m of mlst) {
+
 		if( m.dt == common.dtsnvindel ) {
 			common.vcfcopymclass(m, block)
 		} else {
 			throw('unknown dt '+m.dt)
 		}
-	}
-}
-
-
-
-
-function applyfilter_vcfdata(tk) {
-	/*
-	drop hidden snvindel from client-side
-	must work on the original set, otherwise class filtering won't work
-	*/
-	if(!tk._data_vcf) return
-	tk.data_vcf = []
-	for(const m of tk._data_vcf) {
-		if( m.class && !tk.legend_mclass.hidden.has( m.class ) ) {
-			tk.data_vcf.push(m)
+		if( !tk.legend_mclass.hidden.has( m.class ) ) {
+			tk.data_vcf.push( m )
 		}
 	}
 }
@@ -3169,4 +3189,71 @@ export function dedup_sv( lst ) {
 		)
 	}
 	return [ ...key2sv.values() ]
+}
+
+
+
+
+function mdssvcnv_customtk_altersg_client( data, tk ) {
+	/*
+	strange thing: samplegroups contain ALL samples with expression data in view range
+	coupled with: mdssvcnv_customtk_altersg_server()
+	because server couldn't ....
+	*/
+
+	if( !tk.iscustom || !tk.checkvcf) {
+		// do not alter sg: not custom or has no vcf
+		return
+	}
+
+	if(tk.checkexpressionrank) {
+		// sg now has all expression sample, delete those samples without items or no vcf
+		if(!data.samplegroups[0])  {
+			// nothing to alter
+			return
+		}
+		const newlst = []
+		for(const s of data.samplegroups[0].samples) {
+			if(s.items && s.items.length) {
+				newlst.push( s )
+				continue
+			}
+			if(tk.data_vcf) {
+				// check if this sample has vcf
+				for(const m of tk.data_vcf) {
+					if( m.sampledata.find( ms => ms.sampleobj.name == s.samplename )) {
+						// this sample has vcf
+						newlst.push( s )
+						break
+					}
+				}
+			}
+		}
+		data.samplegroups[0].samples = newlst
+		return
+	}
+
+	// no expression: merge vcf samples into sg
+	// still there could be no vcf item in view range
+	const mlst = tk.data_vcf || []
+
+	if(!data.samplegroups[0]) {
+		// could happen: resulted from server
+		data.samplegroups[0] = { samples: [] }
+	}
+
+	for(const m of mlst) {
+		if(m.dt==common.dtsnvindel) {
+			for(const sm of m.sampledata) {
+				if(data.samplegroups[0].samples.find( s=> s.samplename == sm.sampleobj.name ) == undefined) {
+					// this vcf sample not in sg
+					data.samplegroups[0].samples.push( {
+						samplename: sm.sampleobj.name
+					})
+				}
+			}
+		} else {
+			console.error('unknown dt: '+m.dt)
+		}
+	}
 }

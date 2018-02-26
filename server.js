@@ -3773,10 +3773,11 @@ function handle_mdssvcnv(req,res) {
 			dsquery.checkvcf = {
 				tracks: [
 					{
-					file:req.query.checkvcf.file,
-					url:req.query.checkvcf.url,
-					indexURL:req.query.checkvcf.indexURL,
-					type: common.mdsvcfitdtype.vcf
+					type: common.mdsvcfitdtype.vcf,
+					file: req.query.checkvcf.file,
+					url: req.query.checkvcf.url,
+					indexURL: req.query.checkvcf.indexURL,
+					nochr: req.query.checkvcf.nochr,
 					}
 				]
 			}
@@ -4165,7 +4166,8 @@ function handle_mdssvcnv(req,res) {
 			const thistracktask = Promise.resolve()
 			.then(()=>{
 
-				// cache index
+				// for custom url the index has already been cached at initial load
+				// still need to get cache dir for loading index
 				if(vcftk.file) return ''
 				return cache_index_promise( vcftk.indexURL || vcftk.url+'.tbi' )
 
@@ -4188,14 +4190,15 @@ function handle_mdssvcnv(req,res) {
 						})
 						rl.on('line',line=>{
 
-							// each member track is for particular type of data
+							// all tracks are supposed to be vcf; still leaves the possibility of having different types of files here
 
 							if(vcftk.type==common.mdsvcfitdtype.vcf) {
 
-								/*
-								snv/indel
-								TODO for custom track, should return lines to client for parsing
-								*/
+								if(dsquery.iscustom) {
+									// do not parse, server does not have info; send line to client
+									variants.push( line )
+									return
+								}
 
 								const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:vcftk.nochr, samples:vcftk.samples, info:vcfquery.info, format:vcftk.format} )
 
@@ -4295,6 +4298,11 @@ function handle_mdssvcnv(req,res) {
 									variants.push(m)
 									// mclass and rest will be determined at client, according to whether in gmmode and such
 								}
+
+							} else {
+
+								console.error('unknown "type" from a vcf file')
+
 							}
 						})
 						const errout=[]
@@ -4322,6 +4330,11 @@ function handle_mdssvcnv(req,res) {
 
 		return Promise.all( tracktasks )
 			.then(vcffiles =>{
+
+				if(dsquery.iscustom) {
+					// only 1 vcf file, data are lines
+					return [ data_cnv, expressionrangelimit, gene2sample2obj, null, vcffiles[0] ]
+				}
 
 				// snv/indel/itd data aggregated from multiple tracks
 				const mmerge = []
@@ -4596,7 +4609,8 @@ function handle_mdssvcnv(req,res) {
 				})
 			}
 
-			if(data_vcf) {
+			if( data_vcf && !dsquery.iscustom ) {
+				// has vcf data and not custom track
 				for(const m of data_vcf) {
 
 					if(m.dt==common.dtsnvindel) {
@@ -4640,6 +4654,13 @@ function handle_mdssvcnv(req,res) {
 			result.expressionrangelimit = expressionrangelimit
 
 		} else if(gene2sample2obj) {
+
+			if(dsquery.iscustom && dsquery.checkvcf) {
+
+				// tricky!!! alters result.samplegroups by adding all expression samples
+				mdssvcnv_customtk_altersg_server( result, gene2sample2obj )
+
+			}
 
 			// report coordinates for each gene back to client
 			result.gene2coord={}
@@ -4724,6 +4745,43 @@ function handle_mdssvcnv(req,res) {
 			console.error(err.stack)
 		}
 	})
+}
+
+
+
+function mdssvcnv_customtk_altersg_server( result, gene2sample2obj ) {
+	/*
+	call this when there is vcf file for custom track
+	will add all expression samples to sg
+	*/
+	const allsamplenames = new Set()
+	for(const [gene, tmp] of gene2sample2obj) {
+		for(const [sample,o] of tmp.samples) {
+			allsamplenames.add(sample)
+		}
+	}
+
+	if( !result.samplegroups[0] ) {
+		// not a group, add all
+		result.samplegroups[0] = { samples: [] }
+		for(const s of allsamplenames) {
+			result.samplesgroups[0].samples.push( {
+				samplename: s,
+				items:[]
+			})
+		}
+		return
+	}
+
+	// add missing
+	for(const s of allsamplenames) {
+		if(!result.samplegroups[0].samples.find( s2=> s2.samplename == s)) {
+			result.samplegroups[0].samples.push({
+				samplename: s,
+				items:[]
+			})
+		}
+	}
 }
 
 
