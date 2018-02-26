@@ -204,32 +204,35 @@ if(urlp.has('block')) {
 	}
 	if(urlp.has('svcnvfpkmurl')) {
 		const lst=urlp.get('svcnvfpkmurl').split(',')
-		for(let i=0; i<lst.length; i+=3) {
-			if(lst[i] && lst[i+1] && lst[i+2]) {
-				tklst.push({
-					type:client.tkt.mdssvcnv,
-					name:lst[i],
-					url:lst[i+1],
-					checkexpressionrank:{
-						datatype:'FPKM',
-						url:lst[i+2]
-					}
-				})
+		// defines a single track
+		const name = lst[0]
+		const type2url = {}
+		for(let i=1; i<lst.length; i+=2) {
+			type2url[ lst[i] ] = lst[i+1]
+		}
+		if(type2url.svcnv) {
+			const tk = {
+				type:client.tkt.mdssvcnv,
+				name: name, 
+				url: type2url.svcnv,
 			}
+			if(type2url.fpkm) {
+				tk.checkexpressionrank = {
+					datatype:'FPKM',
+					url: type2url.fpkm,
+					indexURL: type2url.fpkmindex,
+				}
+			}
+			if(type2url.vcf) {
+				tk.checkvcf = {
+					url: type2url.vcf,
+					indexURL: type2url.vcfindex
+				}
+			}
+			tklst.push( tk )
 		}
 	}
-	if(urlp.has('svcnvurl')) {
-		const lst=urlp.get('svcnvurl').split(',')
-		for(let i=0; i<lst.length; i+=2) {
-			if(lst[i] && lst[i+1]) {
-				tklst.push({
-					type:client.tkt.mdssvcnv,
-					name:lst[i],
-					url:lst[i+1],
-				})
-			}
-		}
-	}
+
 	for(const t of tklst) {
 		t.iscustom = true
 	}
