@@ -4618,7 +4618,13 @@ function handle_mdssvcnv(req,res) {
 					console.log('unknown dt when grouping samples from vcf: '+m.dt)
 				}
 			}
-			result.samplegroups = [ { samples: samples } ]
+
+			if(samples.length) {
+				result.samplegroups = [ { samples: samples } ]
+			} else {
+				// no sample
+				result.samplegroups = []
+			}
 		}
 
 
