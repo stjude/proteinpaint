@@ -164,7 +164,10 @@ app.post('/mds_expressionrank',handle_mds_expressionrank) // expression rank as 
 app.post('/mdsgeneboxplot',handle_mdsgeneboxplot)
 //app.post('/mdsgeneboxplot_svcnv',handle_mdsgeneboxplot_svcnv) // no longer used
 
-app.post('/vcf',handle_vcf)
+app.post('/vcf',handle_vcf) // for old ds/vcf and old junction
+
+app.post('/vcfheader',handle_vcfheader)
+
 app.post('/translategm',handle_translategm)
 app.post('/hicstat',handle_hicstat)
 app.post('/hicdata',handle_hicdata)
@@ -7361,6 +7364,7 @@ function samplematrix_task_isvcfitd(feature, ds, dsquery, req) {
 /***********  __smat ends ************/
 
 function handle_sample(req,res) {
+	// invalid
 	const file = serverconfig.tpmasterdir + '/hg19/pcgp-target/cnv-sv/tmp/' + req.params.sample
 	fs.readFile(file, (err, data)=>{
 		if(err) {
@@ -7373,6 +7377,7 @@ function handle_sample(req,res) {
 }
 
 function handle_sampleNames(req,res) {
+	// invalid
 	const dir = serverconfig.tpmasterdir + '/hg19/pcgp-target/cnv-sv/tmp'
 	fs.readdir(dir, (err, files)=>{
 		if(err) {
@@ -7385,6 +7390,73 @@ function handle_sampleNames(req,res) {
 }
 
 /***********  __sample ends ************/
+
+
+
+
+
+
+function handle_vcfheader( req, res ) {
+	/*
+	get header for a single custom vcf track
+	*/
+	if(reqbodyisinvalidjson(req,res)) return
+	const [e,file,isurl] = fileurl( req )
+	if(e) return res.send({error:e})
+
+	Promise.resolve()
+	.then( ()=>{
+
+		if(!isurl) return
+		return cache_index_promise( req.query.indexURL || file+'.tbi' )
+	})
+	.then( dir=>{
+		return new Promise( (resolve, reject)=> {
+			const ps = spawn( tabix, ['-H', file], {cwd:dir} )
+			const data=[]
+			const err = []
+			ps.stdout.on('data', i=> data.push(i) )
+			ps.stderr.on('data', i=> err.push(i) )
+			ps.on('close',code=>{
+				const errstr = err.join('')
+				if(errstr && !tabixnoterror(errstr)) reject({message: errstr})
+				resolve( {
+					dir: dir,
+					metastr: data.join('')
+				})
+			})
+		})
+	})
+	.then( out=> {
+		return new Promise( (resolve, reject)=> {
+			const ps = spawn( tabix, ['-l', file], {cwd: out.dir} )
+			const data=[]
+			const err = []
+			ps.stdout.on('data', i=> data.push(i) )
+			ps.stderr.on('data', i=> err.push(i) )
+			ps.on('close',code=>{
+				const errstr = err.join('')
+				if(errstr && !tabixnoterror(errstr)) reject({message: errstr})
+				out.chrstr = data.join('')
+				resolve( out)
+			})
+		})
+	})
+	.then( out=>{
+		res.send({
+			metastr: out.metastr,
+			chrstr: out.chrstr
+		})
+	})
+	.catch( err=>{
+		res.send({error: err.message})
+		if(err.stack) console.error(err.stack)
+	})
+}
+
+
+
+
 
 
 function handle_vcf(req,res) {
