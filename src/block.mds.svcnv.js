@@ -2481,6 +2481,13 @@ function makeTk(tk, block) {
 		delete tk.lohcolor
 	}
 
+	if(tk.iscustom) {
+		// default value for naive custom track
+		if(tk.valueCutoff==undefined) tk.valueCutoff=0.2
+		if(tk.bplengthUpperLimit==undefined) tk.bplengthUpperLimit=2000000
+		if(tk.segmeanValueCutoff==undefined) tk.segmeanValueCutoff=0.1
+		if(tk.lohLengthUpperLimit==undefined) tk.lohLengthUpperLimit=2000000
+	}
 
 	// config
 	tk.config_handle = block.maketkconfighandle(tk)
