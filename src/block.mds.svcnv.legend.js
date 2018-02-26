@@ -193,12 +193,13 @@ export function makeTk_legend(block, tk) {
 				// k: key in mutationAttribute.attributes{}
 
 				attr.value2count = new Map()
-				// k: key
-				// v: count
-
-				attr.value2dt2count = new Map()
-				// k: key
-				// v: Map { dt : count }
+				/*
+				k: key
+				v: {
+					totalitems: INT
+					dt2count: Map( dt => count )
+				}
+				*/
 
 				attr.legendrow = table.append('tr')
 				attr.legendrow.append('td')
@@ -561,9 +562,8 @@ export function may_legend_mutationAttribute(tk, block) {
 		for(const g of tk._data) {
 			for(const s of g.samples) {
 				for(const i of s.items) {
-					if(i.mattr) {
-						count_mutationAttribute( i.mattr, tk )
-					}
+					// won't count if i.mattr is undefined
+					count_mutationAttribute( i.mattr, tk, i.dt )
 				}
 			}
 		}
@@ -573,7 +573,7 @@ export function may_legend_mutationAttribute(tk, block) {
 			if(m.dt==common.dtsnvindel) {
 				if(!m.sampledata) continue
 				for(const s of m.sampledata) {
-					count_mutationAttribute( s, tk )
+					count_mutationAttribute( s, tk, m.dt )
 				}
 			} else {
 				console.error('unknown dt: '+m.dt)
@@ -599,7 +599,7 @@ export function may_legend_mutationAttribute(tk, block) {
 		const lst = [ ...attr.value2count ]
 		lst.sort( (i,j)=> j[1]-i[1] )
 
-		for(const [valuestr, count] of lst) {
+		for(const [valuestr, _o] of lst) {
 
 			const printstr = attr.values[ valuestr ] ? attr.values[valuestr].label : valuestr
 
@@ -650,6 +650,25 @@ export function may_legend_mutationAttribute(tk, block) {
 								loadTk(tk,block)
 							})
 					}
+
+					// show by-dt count
+					{
+						const lst2 = [ ..._o.dt2count ]
+						lst2.sort( (i,j) => j[1]-i[1] )
+
+						const table = tk.tip2.d.append('div')
+							.style('margin', '5px')
+							.style('font-size', '.7em')
+							.style('opacity',.8)
+							.style('border-spacing','4px')
+						for(const [dt, count] of lst2) {
+							const tr = table.append('tr')
+							tr.append('td')
+								.text( common.dt2label[ dt ])
+							tr.append('td')
+								.text( count )
+						}
+					}
 				})
 
 
@@ -657,7 +676,7 @@ export function may_legend_mutationAttribute(tk, block) {
 				.style('display','inline-block')
 				.attr('class','sja_mcdot')
 				.style('background', '#858585')
-				.text(count)
+				.text( _o.totalitems )
 			cell.append('span')
 				.html('&nbsp;' + printstr )
 		}
@@ -685,7 +704,7 @@ export function may_legend_mutationAttribute(tk, block) {
 
 
 
-function count_mutationAttribute( mattr, tk ) {
+function count_mutationAttribute( mattr, tk, itemdt ) {
 	if(!mattr) {
 		// the item does not have mattr, do not count
 		return
@@ -703,6 +722,7 @@ function count_mutationAttribute( mattr, tk ) {
 		}
 
 		/*
+		no longer acknowledge unannotated values
 		if( value==undefined ) {
 			// this item is not annotated, change its label to hardcoded
 			value = common.not_annotated
@@ -711,8 +731,17 @@ function count_mutationAttribute( mattr, tk ) {
 
 		// even if this value is not cataloged in attr.values{}, still record it for displaying
 		if(!attr.value2count.has( value )) {
-			attr.value2count.set( value, 0 )
+			attr.value2count.set( value, {
+				totalitems: 0,
+				dt2count: new Map()
+			})
 		}
-		attr.value2count.set( value, attr.value2count.get( value )+1 )
+		attr.value2count.get( value ).totalitems++
+
+		if( !attr.value2count.get( value ).dt2count.has( itemdt ) ) {
+			attr.value2count.get( value ).dt2count.set( itemdt, 0 )
+		}
+
+		attr.value2count.get( value ).dt2count.set( itemdt, attr.value2count.get( value ).dt2count.get( itemdt ) +1 )
 	}
 }
