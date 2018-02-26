@@ -25,6 +25,7 @@ import {
 	} from './block.mds.svcnv.legend'
 import {render_singlesample} from './block.mds.svcnv.single'
 import {createbutton_addfeature, may_show_samplematrix_button} from './block.mds.svcnv.samplematrix'
+import {vcfparsemeta} from './vcf'
 
 /*
 JUMP __multi __maketk __sm
@@ -101,7 +102,69 @@ export function loadTk( tk, block ) {
 
 	if(tk.uninitialized) {
 		makeTk(tk,block)
+		delete tk.uninitialized
 	}
+
+	Promise.resolve()
+	.then( ()=>{
+
+		if(tk.iscustom && tk.checkvcf && !tk.checkvcf.info) {
+			// load vcf meta keep on client for parsing vcf data
+			const arg = {
+				file: tk.checkvcf.file,
+				url: tk.checkvcf.url,
+				indexURL: tk.checkvcf.indexURL
+			}
+			return fetch( new Request( block.hostURL+'/vcfheader', {
+				method:'POST',
+				body:JSON.stringify(arg)
+			}))
+			.then(data=>{return data.json()})
+			.then( data => {
+
+				const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
+				if(errs) throw({message:'Error parsing VCF meta lines: '+errs.join('; ')})
+				tk.checkvcf.info = info
+				tk.checkvcf.format = format
+				tk.checkvcf.samples = samples
+				tk.checkvcf.nochr = common.contigNameNoChr(block.genome,data.chrstr.split('\n'))
+
+			})
+		}
+	})
+	.then(()=>{
+
+		/*
+		if error, throw error
+		if no data, throw {message:"no data"}
+		else, set tk height and quiet
+		*/
+		return loadTk_do( tk, block )
+	})
+	.catch( err=>{
+		tk.height_main = 50
+
+		if(err.nodata) {
+			// no data to render
+			trackclear( tk )
+			return {error:tk.name+': no data in view range'}
+		}
+		if(err.stack) console.error( err.stack )
+		return {error: err.message}
+	})
+	.then( _final=>{
+		block.tkcloakoff( tk, {error: _final.error})
+		block.block_setheight()
+		block.setllabel()
+	})
+}
+
+
+
+
+
+
+function loadTk_do( tk, block ) {
 
 	const par={
 		jwt:block.jwt,
@@ -128,14 +191,7 @@ export function loadTk( tk, block ) {
 
 	addLoadParameter( par, tk )
 
-	if(tk.uninitialized) {
-		/* only delete the flag here after adding load parameter
-		   for custom track, it tells this is first time querying it, thus will modify parameter to retrieve list of samples from track header
-		*/
-		delete tk.uninitialized
-	}
-
-	fetch( new Request(block.hostURL+'/mdssvcnv', {
+	return fetch( new Request(block.hostURL+'/mdssvcnv', {
 		method:'POST',
 		body:JSON.stringify(par)
 	}))
@@ -152,37 +208,38 @@ export function loadTk( tk, block ) {
 		*/
 		tk._data_vcf = data.data_vcf
 
-		tk.vcfrangelimit = data.vcfrangelimit
+		tk.vcfrangelimit = data.vcfrangelimit // range too big
 		vcfdata_prepmclass(tk, block) // data for display is now in tk.data_vcf[]
 		applyfilter_vcfdata(tk)
 
-		/*
-		following empty data checking (both single & multi) are duplicated later
-		*/
+		tk.tklabel.each(function(){
+			tk.leftLabelMaxwidth = this.getBBox().width
+		})
+
 
 		if(tk.singlesample) {
-			// logic for deciding whether no data in single sample mode
+
+
 			if(!data.lst || data.lst.length==0) {
 				// no cnv/sv
 				if(!tk.data_vcf || tk.data_vcf.length==0) {
 					// no vcf, nothing to show
-					throw({message:tk.singlesample.name+': no data in view range'})
+					throw({nodata:1})
 				}
 			}
-			return data
+			tk.data = data.lst
+
+		} else {
+
+
+			if(!data.samplegroups || data.samplegroups.length==0) {
+				// server has merged vcf samples into samplegroups
+				throw({nodata:1})
+			}
+			tk._data = data.samplegroups
+			tk.gene2coord = data.gene2coord
+			tk.expressionrangelimit = data.expressionrangelimit
 		}
-
-		if(!data.samplegroups || data.samplegroups.length==0) throw({message:'no data in view range'})
-
-		return data
-
-	})
-	.catch(obj=>{
-		if(obj.stack) console.log(obj)
-		tk.height_main = 100
-		return {error: tk.name+': '+obj.message}
-	})
-	.then( data=>{
 
 		// preps common to both single and multi sample
 		tk.legend_svchrcolor.interchrs.clear()
@@ -191,28 +248,34 @@ export function loadTk( tk, block ) {
 		may_map_vcf(tk, block)
 
 		if(tk.singlesample) {
-
-			tk.data = data.lst
 			render_singlesample( tk, block )
-
 		} else {
-
-			tk._data = data.samplegroups
-
-			tk.gene2coord = data.gene2coord
-			tk.expressionrangelimit = data.expressionrangelimit
 			render_samplegroups( tk, block )
-
 		}
-
-		block.tkcloakoff(tk, {error: data.error})
-		block.block_setheight()
-		block.setllabel()
+		return {}
 	})
 }
 
 
 
+
+
+export function trackclear(tk) {
+	if(tk.singlesample) {
+		tk.svvcf_g.selectAll('*').remove()
+		tk.cnv_g.selectAll('*').remove()
+		tk.cnvcolor.cnvlegend.row.style('display','none')
+		tk.cnvcolor.lohlegend.row.style('display','none')
+		return
+	}
+	tk.cnvleftg.selectAll('*').remove()
+	tk.vcfdensitylabelg.selectAll('*').remove()
+	tk.vcfdensityg.selectAll('*').remove()
+	tk.svdensitylabelg.selectAll('*').remove()
+	tk.svdensityg.selectAll('*').remove()
+	tk.cnvmidg.selectAll('*').remove()
+	tk.cnvrightg.selectAll('*').remove()
+}
 
 
 
@@ -230,6 +293,14 @@ function addLoadParameter( par, tk ) {
 			par.checkexpressionrank={}
 			for(const k in tk.checkexpressionrank) {
 				par.checkexpressionrank[k]=tk.checkexpressionrank[k]
+			}
+		}
+		if(tk.checkvcf) {
+			par.checkvcf = {
+				file: tk.checkvcf.file,
+				url: tk.checkvcf.url,
+				indexURL: tk.checkvcf.indexURL,
+				nochr: tk.checkvcf.nochr
 			}
 		}
 	} else {
@@ -320,30 +391,9 @@ function render_samplegroups( tk, block ) {
 	need sv in separate list for dense plot
 	*/
 
-	tk.cnvleftg.selectAll('*').remove()
-	tk.vcfdensitylabelg.selectAll('*').remove()
-	tk.vcfdensityg.selectAll('*').remove()
-	tk.svdensitylabelg.selectAll('*').remove()
-	tk.svdensityg.selectAll('*').remove()
-	tk.cnvmidg.selectAll('*').remove()
-	tk.cnvrightg.selectAll('*').remove()
-
-	// initiate
-	tk.tklabel.each(function(){
-		tk.leftLabelMaxwidth = this.getBBox().width
-	})
+	trackclear( tk )
 
 	const [groups, svlst4dense] = prep_samplegroups( tk, block )
-	if(groups.length + svlst4dense.length == 0) {
-		// no cnv & sv
-		if(!tk.data_vcf || tk.data_vcf.length==0) {
-			// no vcf either, nothing to plot
-			tk.height_main = 100
-			// still need to draw mclass legend: could be all datatypes are hidden
-			may_legend_mclass(tk, block)
-			return
-		}
-	}
 
 	tk.samplegroups = groups
 

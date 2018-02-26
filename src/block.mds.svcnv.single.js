@@ -1,7 +1,7 @@
 import * as client from './client'
 import * as common from './common'
 import { tooltip_singleitem } from './block.mds.svcnv.clickitem'
-import { map_cnv, labelspace, draw_colorscale_cnv, draw_colorscale_loh, intrasvcolor } from './block.mds.svcnv'
+import { map_cnv, labelspace, draw_colorscale_cnv, draw_colorscale_loh, intrasvcolor, trackclear } from './block.mds.svcnv'
 import { may_legend_mclass, may_legend_svchr } from './block.mds.svcnv.legend'
 
 
@@ -14,28 +14,8 @@ export function render_singlesample( tk, block ) {
 	cnv & loh & snvindel & itd as stack bars
 	*/
 
-	tk.svvcf_g.selectAll('*').remove()
-	tk.cnv_g.selectAll('*').remove()
-	tk.cnvcolor.cnvlegend.row.style('display','none')
-	tk.cnvcolor.lohlegend.row.style('display','none')
-	tk.tklabel.each(function(){
-		tk.leftLabelMaxwidth = this.getBBox().width
-	})
 
-	if(tk.vcfrangelimit) {
-		// for single-sample, indicate it in legend instead
-		tk.legend_mclass.row.style('display','table-row')
-		tk.legend_mclass.holder.selectAll('*').remove()
-		tk.legend_mclass.holder.append('div').text('Zoom in under '+common.bplen(tk.vcfrangelimit)+' to view data')
-	}
-
-	if(!tk.data || tk.data.length==0) {
-		if(!tk.data_vcf || tk.data_vcf.length==0) {
-			tk.height_main = 20
-			return
-		}
-	}
-
+	trackclear( tk )
 
 	const svlst  = []
 	const cnvlst = []

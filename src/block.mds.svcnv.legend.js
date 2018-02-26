@@ -430,6 +430,15 @@ export function may_legend_mclass(tk, block) {
 			})
 	}
 
+	if(tk.vcfrangelimit) {
+		// range too big for vcf, no vcf data
+		tk.legend_mclass.holder.append('div')
+			.style('display','inline-block')
+			.text('Zoom in under '+common.bplen(tk.vcfrangelimit)+' to view SNV/indel data')
+			.style('white-space','nowrap')
+			.style('margin','10px')
+	}
+
 	const applychange = ()=>{
 		tk.tip2.hide()
 		loadTk(tk, block)
