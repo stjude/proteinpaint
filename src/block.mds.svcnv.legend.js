@@ -7,11 +7,19 @@ import {loadTk} from './block.mds.svcnv'
 
 /*
 exported:
+
 makeTk_legend
+may_legend_svchr
+may_legend_mclass
+may_legend_samplegroup
+may_legend_mutationAttribute
 */
 
 
 export function makeTk_legend(block, tk) {
+	/*
+	initiate legend
+	*/
 	const [tr,td] = legend_newrow(block,tk.name)
 	tk.tr_legend = tr
 	tk.td_legend = td
@@ -172,12 +180,26 @@ export function makeTk_legend(block, tk) {
 	}
 
 	if(tk.mutationAttribute && !tk.singlesample) {
-		// official only
+		/*
+		official only
+		mutationAttribute is copied over from mds.queries
+		initiate attributes used for filtering & legend display
+		*/
 		for(const key in tk.mutationAttribute.attributes) {
 			const attr = tk.mutationAttribute.attributes[ key ]
 			if(attr.filter) {
+
 				attr.hidden = new Set()
+				// k: key in mutationAttribute.attributes{}
+
 				attr.value2count = new Map()
+				// k: key
+				// v: count
+
+				attr.value2dt2count = new Map()
+				// k: key
+				// v: Map { dt : count }
+
 				attr.legendrow = table.append('tr')
 				attr.legendrow.append('td')
 					.style('text-align','right')
@@ -539,8 +561,9 @@ export function may_legend_mutationAttribute(tk, block) {
 		for(const g of tk._data) {
 			for(const s of g.samples) {
 				for(const i of s.items) {
-					// even if mattr is abscent for it, still record it
-					count_mutationAttribute( i.mattr, tk )
+					if(i.mattr) {
+						count_mutationAttribute( i.mattr, tk )
+					}
 				}
 			}
 		}
@@ -550,7 +573,6 @@ export function may_legend_mutationAttribute(tk, block) {
 			if(m.dt==common.dtsnvindel) {
 				if(!m.sampledata) continue
 				for(const s of m.sampledata) {
-					// annotation attributes directly attached to sample objects
 					count_mutationAttribute( s, tk )
 				}
 			} else {
@@ -564,14 +586,13 @@ export function may_legend_mutationAttribute(tk, block) {
 		const attr = tk.mutationAttribute.attributes[ key ]
 		if(!attr.filter) continue
 
-		/*
-		if(attr.value2count.size==0) {
-			// no value
-			attr.legendrow.style('display', 'none')
-			continue
+		if( attr.value2count.size + attr.hidden.size == 0 ) {
+			// no value after counting, no hidden value either
+			attr.legendrow.style('display','none')
+		} else {
+			attr.legendrow.style('display','table-row')
 		}
-		attr.legendrow.style('display', 'table-row')
-		*/
+
 
 		attr.legendholder.selectAll('*').remove()
 
