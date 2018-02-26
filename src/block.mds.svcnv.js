@@ -3206,54 +3206,42 @@ function mdssvcnv_customtk_altersg_client( data, tk ) {
 		return
 	}
 
-	if(tk.checkexpressionrank) {
-		// sg now has all expression sample, delete those samples without items or no vcf
-		if(!data.samplegroups[0])  {
-			// nothing to alter
-			return
-		}
-		const newlst = []
-		for(const s of data.samplegroups[0].samples) {
-			if(s.items && s.items.length) {
-				newlst.push( s )
-				continue
-			}
-			if(tk.data_vcf) {
-				// check if this sample has vcf
-				for(const m of tk.data_vcf) {
-					if( m.sampledata.find( ms => ms.sampleobj.name == s.samplename )) {
-						// this sample has vcf
-						newlst.push( s )
-						break
-					}
-				}
+	const vcfsamples = new Set()
+	if(tk.data_vcf) {
+		for(const m of tk.data_vcf) {
+			for(const s of m.sampledata) {
+				vcfsamples.add( s.sampleobj.name )
 			}
 		}
-		data.samplegroups[0].samples = newlst
+	}
+
+	if(!data.samplegroups[0])  {
+		data.samplegroups[0] = { samples: [] }
+		// add any vcf samples
+		for(const s of vcfsamples) {
+			data.samplegroups[0].samples.push({
+				samplename: s,
+				items:[]
+			})
+		}
 		return
 	}
 
-	// no expression: merge vcf samples into sg
-	// still there could be no vcf item in view range
-	const mlst = tk.data_vcf || []
-
-	if(!data.samplegroups[0]) {
-		// could happen: resulted from server
-		data.samplegroups[0] = { samples: [] }
-	}
-
-	for(const m of mlst) {
-		if(m.dt==common.dtsnvindel) {
-			for(const sm of m.sampledata) {
-				if(data.samplegroups[0].samples.find( s=> s.samplename == sm.sampleobj.name ) == undefined) {
-					// this vcf sample not in sg
-					data.samplegroups[0].samples.push( {
-						samplename: sm.sampleobj.name
-					})
-				}
-			}
-		} else {
-			console.error('unknown dt: '+m.dt)
+	// sg[0] may have all expression sample, delete those samples without items or no vcf
+	const newlst = []
+	for(const s of data.samplegroups[0].samples) {
+		if( (s.items && s.items.length) || vcfsamples.has( s.samplename ) ) {
+			newlst.push( s )
 		}
 	}
+	// add vcf samples to newlst
+	for(const s of vcfsamples) {
+		if( newlst.find( s2=> s2.samplename == s ) == undefined ) {
+			newlst.push({
+				samplename: s,
+				items:[]
+			})
+		}
+	}
+	data.samplegroups[0].samples = newlst
 }

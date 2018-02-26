@@ -4144,7 +4144,7 @@ function handle_mdssvcnv(req,res) {
 		let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 		if(!viewrangeupperlimit && dsquery.iscustom) {
 			// no limit set for custom track, set a hard limit
-			viewrangeupperlimit = 50000
+			viewrangeupperlimit = 1000000
 		}
 
 		if(req.query.singlesample) {
