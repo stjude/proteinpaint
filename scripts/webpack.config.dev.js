@@ -3,7 +3,7 @@ const config=require('../webpack.config')
 
 const _c=require('../serverconfig')
 
-config.output.publicPath = _c.host || 'http://localhost:3000/bin/'
+config.output.publicPath = (_c.host || 'http://localhost:3000') + '/bin/'
 
 var WebpackNotifierPlugin = require('webpack-notifier')
 //var BrowserSyncPlugin = require('browser-sync-webpack-plugin')
