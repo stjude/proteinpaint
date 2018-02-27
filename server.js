@@ -3767,7 +3767,7 @@ function handle_mdssvcnv(req,res) {
 		}
 
 		if(req.query.checkvcf) {
-			// TODO
+		/* XXX
 			if(!req.query.checkvcf.file && !req.query.checkvcf.url) return res.send({error:'no file or url for checkvcf'})
 			// just one vcf or multiple?
 			dsquery.checkvcf = {
@@ -3780,6 +3780,19 @@ function handle_mdssvcnv(req,res) {
 					nochr: req.query.checkvcf.nochr,
 					}
 				]
+			}
+			*/
+			let vcf
+			try {
+				vcf = JSON.parse( req.query.checkvcf )
+			} catch(e) {
+				return res.send({error:'invalid JSON for VCF object'})
+			}
+			if(!vcf.file && !vcf.url) return res.send({error:'no file or url for custom VCF track'})
+			vcf.type = common.mdsvcfitdtype.vcf
+			dsquery.checkvcf = {
+				info: vcf.info,
+				tracks: [ vcf ]
 			}
 		}
 
@@ -3940,7 +3953,8 @@ function handle_mdssvcnv(req,res) {
 						j.stop = stop0
 
 					} else {
-						// TODO unknown dt
+
+						console.error('unknown dt from svcnv file: '+j.dt)
 						return
 					}
 
@@ -4079,7 +4093,7 @@ function handle_mdssvcnv(req,res) {
 						if(!j.sample) return
 						if(!Number.isFinite(j.value)) return
 
-						// TODO may apply hiddenmattr
+						// may apply hiddenmattr
 
 						if(!gene2sample2obj.has(j.gene)) {
 							gene2sample2obj.set(j.gene, {chr:l[0], start:Number.parseInt(l[1]), stop:Number.parseInt(l[2]), samples:new Map()} )
@@ -4194,11 +4208,13 @@ function handle_mdssvcnv(req,res) {
 
 							if(vcftk.type==common.mdsvcfitdtype.vcf) {
 
+								/* XXX
 								if(dsquery.iscustom) {
 									// do not parse, server does not have info; send line to client
 									variants.push( line )
 									return
 								}
+								*/
 
 								const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:vcftk.nochr, samples:vcftk.samples, info:vcfquery.info, format:vcftk.format} )
 
@@ -4331,10 +4347,12 @@ function handle_mdssvcnv(req,res) {
 		return Promise.all( tracktasks )
 			.then(vcffiles =>{
 
+/* XXX
 				if(dsquery.iscustom) {
 					// only 1 vcf file, data are lines
 					return [ data_cnv, expressionrangelimit, gene2sample2obj, null, vcffiles[0] ]
 				}
+				*/
 
 				// snv/indel/itd data aggregated from multiple tracks
 				const mmerge = []
@@ -4609,7 +4627,7 @@ function handle_mdssvcnv(req,res) {
 				})
 			}
 
-			if( data_vcf && !dsquery.iscustom ) {
+			if( data_vcf ) {
 				// has vcf data and not custom track
 				for(const m of data_vcf) {
 
@@ -4655,12 +4673,13 @@ function handle_mdssvcnv(req,res) {
 
 		} else if(gene2sample2obj) {
 
+			/* XXX
 			if(dsquery.iscustom && dsquery.checkvcf) {
 
 				// tricky!!! alters result.samplegroups by adding all expression samples
 				mdssvcnv_customtk_altersg_server( result, gene2sample2obj )
-
 			}
+			*/
 
 			// report coordinates for each gene back to client
 			result.gene2coord={}

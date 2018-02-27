@@ -27,6 +27,8 @@ import {render_singlesample} from './block.mds.svcnv.single'
 import {createbutton_addfeature, may_show_samplematrix_button} from './block.mds.svcnv.samplematrix'
 import {vcfparsemeta, vcfparseline} from './vcf'
 
+
+
 /*
 JUMP __multi __maketk __sm
 
@@ -34,6 +36,7 @@ makeTk
 loadTk
 	loadTk_do
 		addLoadParameter
+		mdssvcnv_customtk_altersg_client
 render_samplegroups
 	prep_samplegroups
 	render_multi_vcfdense
@@ -43,10 +46,6 @@ render_samplegroups
 	render_multi_genebar
 		genebar_config
 configPanel()
-createbutton_focusvcf
-
-
-
 
 
 sv-cnv-vcf-fpkm ranking, two modes
@@ -66,6 +65,13 @@ sv-cnv-vcf-fpkm ranking, two modes
 
 sv/cnv/loh data mixed in same file, sv has _chr and _pos which are indexing fields, along with chrA/posA/chrB/posB
 fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
+
+custom vcf handling:
+	multi-sample
+	single-sample
+
+dense germline variants?
+
 */
 
 
@@ -108,29 +114,7 @@ export function loadTk( tk, block ) {
 	Promise.resolve()
 	.then( ()=>{
 
-		if(tk.iscustom && tk.checkvcf && !tk.checkvcf.info) {
-			// load vcf meta keep on client for parsing vcf data
-			const arg = {
-				file: tk.checkvcf.file,
-				url: tk.checkvcf.url,
-				indexURL: tk.checkvcf.indexURL
-			}
-			return fetch( new Request( block.hostURL+'/vcfheader', {
-				method:'POST',
-				body:JSON.stringify(arg)
-			}))
-			.then(data=>{return data.json()})
-			.then( data => {
-
-				const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
-				if(errs) throw({message:'Error parsing VCF meta lines: '+errs.join('; ')})
-				tk.checkvcf.info = info
-				tk.checkvcf.format = format
-				tk.checkvcf.samples = samples
-				tk.checkvcf.nochr = common.contigNameNoChr(block.genome,data.chrstr.split('\n'))
-
-			})
-		}
+		return loadTk_mayinitiatecustomvcf( tk, block )
 	})
 	.then(()=>{
 
@@ -142,6 +126,7 @@ export function loadTk( tk, block ) {
 		return loadTk_do( tk, block )
 	})
 	.catch( err=>{
+
 		tk.height_main = 50
 
 		if(err.nodata) {
@@ -160,6 +145,36 @@ export function loadTk( tk, block ) {
 }
 
 
+
+
+function loadTk_mayinitiatecustomvcf( tk, block ) {
+
+	if(!tk.iscustom || !tk.checkvcf || tk.checkvcf.info) return
+
+	// load vcf meta keep on client for parsing vcf data
+	const arg = {
+		file: tk.checkvcf.file,
+		url: tk.checkvcf.url,
+		indexURL: tk.checkvcf.indexURL
+	}
+	return fetch( new Request( block.hostURL+'/vcfheader', {
+		method:'POST',
+		body:JSON.stringify(arg)
+	}))
+	.then(data=>{return data.json()})
+	.then( data => {
+
+		const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
+		if(errs) throw({message:'Error parsing VCF meta lines: '+errs.join('; ')})
+		tk.checkvcf.info = info
+		tk.checkvcf.format = format
+		tk.checkvcf.samples = samples
+		tk.checkvcf.nochr = common.contigNameNoChr(block.genome,data.chrstr.split('\n'))
+
+		tk.checkvcf.stringifiedObj = JSON.stringify( tk.checkvcf )
+
+	})
+}
 
 
 
@@ -215,6 +230,8 @@ function loadTk_do( tk, block ) {
 		tk.vcfrangelimit = data.vcfrangelimit // range too big
 		vcfdata_prep(tk, block) // data for display is now in tk.data_vcf[]
 
+		may_map_vcf(tk, block)
+
 		if(tk.singlesample) {
 
 			if(!data.lst || data.lst.length==0) {
@@ -230,13 +247,10 @@ function loadTk_do( tk, block ) {
 
 			// multi-sample
 
-			/*
-			tricky thing is to be isolated
-			*/
-			mdssvcnv_customtk_altersg_client( data, tk )
+			//mdssvcnv_customtk_altersg_client( data, tk )
 
+			// now samplegroups contains samples with any data type (cnv, sv, vcf), no matter dense or full
 			if(!data.samplegroups || data.samplegroups.length==0) {
-				// server has merged vcf samples into samplegroups
 				throw({nodata:1})
 			}
 			tk._data = data.samplegroups
@@ -248,7 +262,6 @@ function loadTk_do( tk, block ) {
 		tk.legend_svchrcolor.interchrs.clear()
 		tk.legend_svchrcolor.row.style('display','none')
 
-		may_map_vcf(tk, block)
 
 		if(tk.singlesample) {
 			render_singlesample( tk, block )
@@ -301,12 +314,15 @@ function addLoadParameter( par, tk ) {
 		}
 
 		if(tk.checkvcf) {
+		/* XXX
 			par.checkvcf = {
 				file: tk.checkvcf.file,
 				url: tk.checkvcf.url,
 				indexURL: tk.checkvcf.indexURL,
 				nochr: tk.checkvcf.nochr
 			}
+			*/
+			par.checkvcf = tk.checkvcf.stringifiedObj
 		}
 	} else {
 		par.dslabel=tk.mds.label
@@ -2166,6 +2182,7 @@ export function focus_singlesample( p ) {
 		}
 	}
 
+
 	// add sv-cnv-vcf track in single-sample mode
 	const t2 = {
 		cnvheight:40,
@@ -2200,6 +2217,12 @@ export function focus_singlesample( p ) {
 			t2[k] = tk.mds.queries[tk.querykey][k]
 		}
 	}
+
+	// custom vcf track to be declared in t2
+	if(tk.iscustom && tk.checkvcf) {
+		t2.checkvcf = tk.checkvcf
+	}
+
 	arg.tklst.push(t2)
 
 	if(m) {
@@ -3132,12 +3155,12 @@ function vcfdata_prep(tk, block) {
 		return
 	}
 
+	const mlst = tk._data_vcf
+/* XXX
 	const mlst = []
 
 	if(tk.iscustom) {
-		/*
 		_data_vcf contains lines from vcf
-		*/
 		for(const line of tk._data_vcf) {
 			const [err,lst, err2] = vcfparseline( line, tk.checkvcf )
 			if(err) {
@@ -3157,6 +3180,7 @@ function vcfdata_prep(tk, block) {
 	} else {
 		for(const m of tk._data_vcf) mlst.push(m)
 	}
+	*/
 
 	tk.data_vcf = []
 
