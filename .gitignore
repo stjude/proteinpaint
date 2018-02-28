@@ -12,6 +12,8 @@ public/dev.html
 public/builds/*
 public/no-babel-polyfill/*
 
+/utils/vcf2genesamplematrix/bin.js
+
 
 sjcharts.html
 
