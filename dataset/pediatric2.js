@@ -81,7 +81,7 @@ module.exports={
 			dna_assay:{
 				label:'DNA assay',
 				values:{
-					cgi:{ name:'CGI',label:'Complete Genomics', },
+					cgi:{ name:'CGI',label:'Complete Genomics whole-genome sequencing', },
 					wgs:{ name:'WGS',label:'Whole-genome sequencing' },
 					wes:{ name:'WES',label:'Whole-exome sequencing'},
 					snp6:{ name:'SNP6',label:'SNP Array 6.0'}
@@ -101,7 +101,7 @@ module.exports={
 			project:{
 				label:'Project',
 				values:{
-					pantarget:{ name:'Pan-TARGET', label:'Pan-cancer analysis of the NCI Therapeutically Applicable Research To Generate Effective Treatments'},
+					pantarget:{ name:'Pan-TARGET', label:'Pan-cancer analysis of the NCI TARGET dataset'},
 					pcgp:{ name:'PCGP',label:'Pediatric Cancer Genome Project'},
 					pedccl:{name:'PedCCL',label:'Pediatric Cancer Cell Lines'}
 				},

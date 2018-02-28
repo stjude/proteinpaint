@@ -1271,12 +1271,22 @@ function detailtable_singlesample(p) {
 						k: attr.label,
 						v: '<a target=_blank href='+attr.appendto_link + vstr+'>'+vstr+'</a>'
 					})
-				} else {
+					continue
+				}
+				const vv = attr.values[vstr]
+				if(vv) {
 					lst.push({
 						k: attr.label,
-						v: attr.values[vstr] ? attr.values[vstr].label : vstr
+						v: vv.name + (vv.label ? ' <span style="font-size:.7em;opacity:.5">'+vv.label+'</span>' : '')
 					})
+					continue
 				}
+				// unregistered value
+				lst.push({
+					k: attr.label,
+					v: vstr
+				})
+
 			} else {
 				lst.push({
 					k: key,
