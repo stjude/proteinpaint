@@ -71,7 +71,7 @@ module.exports={
 	1. attributes are sample-level, applied to per-sample cases as lines in svcnv file, and FORMAT in vcf,
 	   so as one vcf variant can be in multiple samples, each case discovered by different assay types (wgs/wes) by different lab
 	2. when representing annotation by these attributes on client, do not indicate items that are Unannotated
-	3. when filtering to hide items by attributes, do not hide Unannotated items
+	3. when filtering to hide items by attributes, do not hide *unannotated* items
 	   case for conscern: sv & fusion are both present, sv is annotated by dna_assay; fusion by rna_assay
 	   if showing only "polyA" for rna_assay, all sv won't have such annotation, but they should not be dropped
 	   problem is no way to "scope" rna_assay filtering only within RNA-based variants
@@ -81,34 +81,37 @@ module.exports={
 			dna_assay:{
 				label:'DNA assay',
 				values:{
-					cgi:{ label:'Complete Genomics', },
-					wgs:{ label:'Whole genome' },
-					wes:{ label:'Whole exome'},
-					snp6:{ label:'SNP Array 6.0'}
+					cgi:{ name:'CGI',label:'Complete Genomics', },
+					wgs:{ name:'WGS',label:'Whole-genome sequencing' },
+					wes:{ name:'WES',label:'Whole-exome sequencing'},
+					snp6:{ name:'SNP6',label:'SNP Array 6.0'}
 				},
+				hidden:1,
 				filter:1
 			},
 			rna_assay:{
 				label:'RNA assay',
 				values:{
-					total:{ label:'Total RNA'},
-					polya:{ label:'Poly(A)-selected'},
+					total:{ name:'Total RNA'},
+					polya:{ name:'Poly(A)-selected'},
 				},
+				hidden:1,
 				filter:1
 			},
 			project:{
 				label:'Project',
 				values:{
-					pantarget:{ label:'Pan-TARGET'},
-					pcgp:{ label:'PCGP'}
+					pantarget:{ name:'Pan-TARGET', label:'Pan-cancer analysis of the NCI Therapeutically Applicable Research To Generate Effective Treatments'},
+					pcgp:{ name:'PCGP',label:'Pediatric Cancer Genome Project'},
+					pedccl:{name:'PedCCL',label:'Pediatric Cancer Cell Lines'}
 				},
 				filter:1
 			},
 			vorigin:{
 				label:'Variant origin',
 				values:{
-					somatic:{label:'Somatic'},
-					germline:{label:'Germline'}
+					somatic:{name:'Somatic'},
+					germline:{name:'Germline'}
 				},
 				filter:1
 			},

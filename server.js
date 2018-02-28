@@ -9079,7 +9079,7 @@ function mds_init(ds,genome) {
 			if(!a.values) return '.values{} missing for key '+key+' from mutationAttribute.attributes'
 			for(const v in a.values) {
 				const b = a.values[v]
-				if(!b.label) return '.label missing for value '+v+' of key '+key+' from mutationAttribute.attributes'
+				if(!b.name) return '.name missing for value '+v+' of key '+key+' from mutationAttribute.attributes'
 			}
 		}
 	}

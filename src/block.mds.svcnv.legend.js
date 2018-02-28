@@ -179,40 +179,6 @@ export function makeTk_legend(block, tk) {
 		}
 	}
 
-	if(tk.mutationAttribute && !tk.singlesample) {
-		/*
-		official only
-		mutationAttribute is copied over from mds.queries
-		initiate attributes used for filtering & legend display
-		*/
-		for(const key in tk.mutationAttribute.attributes) {
-			const attr = tk.mutationAttribute.attributes[ key ]
-			if(attr.filter) {
-
-				attr.hidden = new Set()
-				// k: key in mutationAttribute.attributes{}
-
-				attr.value2count = new Map()
-				/*
-				k: key
-				v: {
-					totalitems: INT
-					dt2count: Map( dt => count )
-				}
-				*/
-
-				attr.legendrow = table.append('tr')
-				attr.legendrow.append('td')
-					.style('text-align','right')
-					.style('opacity',.5)
-					.text(attr.label)
-				attr.legendholder = attr.legendrow.append('td')
-			}
-		}
-	}
-
-
-
 	if(!tk.singlesample && !tk.iscustom) {
 		// official, multi-sample
 
@@ -244,6 +210,40 @@ export function makeTk_legend(block, tk) {
 			.style('opacity',.5)
 			.text('SV chromosome')
 		tk.legend_svchrcolor.holder = row.append('td')
+	}
+
+	if(tk.mutationAttribute && !tk.singlesample) {
+		/*
+		official only
+		mutationAttribute is copied over from mds.queries
+		initiate attributes used for filtering & legend display
+		*/
+		for(const key in tk.mutationAttribute.attributes) {
+			const attr = tk.mutationAttribute.attributes[ key ]
+			if(!attr.filter) {
+				// not a filter
+				continue
+			}
+
+			attr.hiddenvalues = new Set()
+			// k: key in mutationAttribute.attributes{}
+
+			attr.value2count = new Map()
+			/*
+			k: key
+			v: {
+				totalitems: INT
+				dt2count: Map( dt => count )
+			}
+			*/
+
+			attr.legendrow = table.append('tr')
+			attr.legendrow.append('td')
+				.style('text-align','right')
+				.style('opacity',.5)
+				.text(attr.label)
+			attr.legendholder = attr.legendrow.append('td')
+		}
 	}
 }
 
@@ -595,7 +595,7 @@ export function may_legend_mutationAttribute(tk, block) {
 		const attr = tk.mutationAttribute.attributes[ key ]
 		if(!attr.filter) continue
 
-		if( attr.value2count.size + attr.hidden.size == 0 ) {
+		if( attr.value2count.size + attr.hiddenvalues.size == 0 ) {
 			// no value after counting, no hidden value either
 			attr.legendrow.style('display','none')
 		} else {
@@ -610,7 +610,7 @@ export function may_legend_mutationAttribute(tk, block) {
 
 		for(const [valuestr, _o] of lst) {
 
-			const printstr = attr.values[ valuestr ] ? attr.values[valuestr].label : valuestr
+			const printstr = attr.values[ valuestr ] ? attr.values[valuestr].name : valuestr
 
 			const cell = attr.legendholder.append('div')
 				.style('display','inline-block')
@@ -619,13 +619,13 @@ export function may_legend_mutationAttribute(tk, block) {
 					tk.tip2.showunder(cell.node())
 						.clear()
 
-					if(attr.hidden.has(valuestr)) {
+					if(attr.hiddenvalues.has(valuestr)) {
 						tk.tip2.d.append('div')
 							.attr('class','sja_menuoption')
 							.text('Show')
 							.on('click',()=>{
 								tk.tip2.hide()
-								attr.hidden.delete( valuestr )
+								attr.hiddenvalues.delete( valuestr )
 								loadTk(tk,block)
 							})
 					} else {
@@ -634,7 +634,7 @@ export function may_legend_mutationAttribute(tk, block) {
 							.text('Hide')
 							.on('click',()=>{
 								tk.tip2.hide()
-								attr.hidden.add( valuestr )
+								attr.hiddenvalues.add( valuestr )
 								loadTk(tk,block)
 							})
 					}
@@ -644,20 +644,29 @@ export function may_legend_mutationAttribute(tk, block) {
 						.on('click',()=>{
 							tk.tip2.hide()
 							for(const [vstr,c] of lst) {
-								attr.hidden.add( vstr )
+								attr.hiddenvalues.add( vstr )
 							}
-							attr.hidden.delete( valuestr )
+							attr.hiddenvalues.delete( valuestr )
 							loadTk(tk,block)
 						})
-					if(attr.hidden.size) {
+					if(attr.hiddenvalues.size) {
 						tk.tip2.d.append('div')
 							.attr('class','sja_menuoption')
 							.text('Show all')
 							.on('click',()=>{
 								tk.tip2.hide()
-								attr.hidden.clear()
+								attr.hiddenvalues.clear()
 								loadTk(tk,block)
 							})
+					}
+
+					// label for this value?
+					if(attr.values[ valuestr ] && attr.values[valuestr].label) {
+						tk.tip2.d.append('div')
+							.text(attr.values[valuestr].label)
+							.style('opacity',.5)
+							.style('font-size','.7em')
+							.style('margin','10px')
 					}
 
 					// show by-dt count
@@ -690,8 +699,8 @@ export function may_legend_mutationAttribute(tk, block) {
 				.html('&nbsp;' + printstr )
 		}
 
-		if(attr.hidden.size) {
-			for(const valuestr of attr.hidden) {
+		if(attr.hiddenvalues.size) {
+			for(const valuestr of attr.hiddenvalues) {
 				const printstr = attr.values[ valuestr ] ? attr.values[valuestr].label : valuestr
 
 				attr.legendholder.append('div')
@@ -700,7 +709,7 @@ export function may_legend_mutationAttribute(tk, block) {
 					.style('text-decoration','line-through')
 					.text(printstr)
 					.on('click',()=>{
-						attr.hidden.delete( valuestr )
+						attr.hiddenvalues.delete( valuestr )
 						loadTk( tk, block )
 					})
 			}

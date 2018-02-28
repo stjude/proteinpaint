@@ -355,8 +355,8 @@ function addLoadParameter( par, tk ) {
 		let hashidden=false
 		for(const key in tk.mutationAttribute.attributes) {
 			const attr = tk.mutationAttribute.attributes[key]
-			if(attr.hidden && attr.hidden.size) {
-				key2value[key] = [...attr.hidden]
+			if(attr.hiddenvalues && attr.hiddenvalues.size) {
+				key2value[key] = [...attr.hiddenvalues]
 				hashidden=true
 			}
 		}
