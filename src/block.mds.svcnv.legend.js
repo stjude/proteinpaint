@@ -266,7 +266,7 @@ export function makeTk_legend(block, tk) {
 			const cell = hiddenLegendRow.append('td')
 							.style('text-align','right')
 			
-			cell.append('span')
+			const btn = cell.append('span')
 				.attr('class','sja_legend_more_btn')
 				.text('more')
 				.on('click',()=>{
@@ -274,7 +274,7 @@ export function makeTk_legend(block, tk) {
 
 					for(const attr of hiddenMutationAttributes) {
 						attr.moreLegendRow = hiddenLegendRow
-						attr.moreLegendBtn = cell
+						attr.moreLegendBtn = btn
 						if (!attr.hidden) continue
 						const total = [...attr.value2count.values()].reduce((a,b)=>a+b.totalitems,0)
 						const div = tk.tip2.d.append('div')
