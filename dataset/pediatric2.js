@@ -174,7 +174,7 @@ module.exports={
 			viewrangeupperlimit:2000000,
 			tracks:[
 				{
-					file:'hg19/PCGP/vcf.somatic/652samples.vcf.gz',
+					file:'hg19/PCGP/vcf.somatic/812samples.vcf.gz',
 					type:'vcf',
 				},
 				{
