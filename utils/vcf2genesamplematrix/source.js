@@ -65,6 +65,8 @@ for(const thisvcf of arg.vcf) {
 	const task = new Promise((resolve, reject)=>{
 
 		let reader
+
+
 		if( thisvcf.istext ) {
 			reader = readline.createInterface({
 				input:fs.createReadStream( thisvcf.file, {encoding:'utf8'} )
@@ -99,7 +101,7 @@ for(const thisvcf of arg.vcf) {
 
 			const [badinfo, mlst, altinvald] = vcf.vcfparseline( line, vcfobj )
 
-			if(mlst.length==0) return
+			if(!mlst || mlst.length==0) return
 
 			for(const m of mlst) {
 
@@ -365,89 +367,77 @@ function heatmap_outputHtml() {
 
 function checkArg() {
 
-	const arg={
-		files:[],
-		excludeclass: new Set()
-	}
+	if(process.argv.length < 5) abort('insufficient number of output')
 
-	for(let i=2; i<process.argv.length; i++) {
+	const arg={}
+
+	// parse -- parameters
+	let i=2
+
+	for(; i<process.argv.length; i++) {
+
+		const str = process.argv[i]
+		if(!str.startsWith('--')) {
+			// a file
+			break
+		}
+
 		const [a,b]=process.argv[i].split('=')
+
+		if(!b) continue
 
 		const key=a.substr(2)
 
-		if(b==undefined) {
-			// flag
-			arg[key] = 1
-			continue
-		}
+		if(key=='excludeclass') {
 
-		if(key=='vcf') {
-
-			// allow multiple vcf files
-			arg.files.push(b)
-
-		} else if(key=='excludeclass') {
-
-			arg.excludeclass.add( b.trim() )
+			arg.excludeclass = new Set( [...(b.trim().split(','))] )
 
 		} else {
+
 			arg[key]=b.trim()
 		}
 	}
 
-	if(arg.files.length==0) abort('no VCF files provided')
+	// output file
+	arg.html = process.argv[i++]
 
-	// parse tracks into vcftracks, pair .gz with .tbi
+	// input files
 	arg.vcf = []
-	{
-		const trackfilename2path=new Map()
+	const trackfilename2path = new Map()
+	const indexfilename2path = new Map()
+	for(; i<process.argv.length; i++) {
 
-		// go through to find text files, as well as gz tracks
-		for(const file of arg.files) {
-			// skip index
-			if(file.endsWith('.gz.tbi') || file.endsWith('.gz.csi')) {
-				// do not handle index this round
-				continue
-			}
-			if(file.endsWith('.gz')) {
-				trackfilename2path.set( path.basename(file), { gzpath: file } )
-			} else {
-				// text file
-				arg.vcf.push({
-					istext:1,
-					file: file
-				})
-			}
-		}
+		const file = process.argv[i]
 
-		// go through again to match index
-		for(const file of arg.files) {
-			let trackfilename // if this file is .tbi or .csi
-			if(file.endsWith('.gz.tbi')) {
-				trackfilename = path.basename( file ).replace( /\.tbi$/, '' )
-			} else if(file.endsWith('.gz.csi')) {
-				trackfilename = path.basename( file ).replace( /\.csi$/, '' )
-			}
+		if(file.endsWith('.gz')) {
 
-			if(trackfilename) {
-				if(trackfilename2path.has(trackfilename)) {
-					trackfilename2path.get( trackfilename ).indexpath = file
-				} else {
-					abort('no matching .gz file for index '+path.basename(file))
-				}
-			}
-		}
+			trackfilename2path.set( path.basename(file), { gzpath: file } )
 
-		for(const [track, o] of trackfilename2path) {
+		} else if(file.endsWith('.tbi')) {
 
-			// accept only .gz file for now
-			// will require index when moving to samplematrix
-			//if(!o.indexpath) abort('no matching index file (.tbi or .csi) for '+track)
-			o.istrack = 1
-			arg.vcf.push( o )
+			indexfilename2path.set( path.basename(file).replace(/\.tbi$/,''), file )
+
+		} else if(file.endsWith('.csi')) {
+
+			indexfilename2path.set( path.basename(file).replace(/\.csi$/,''), file )
+
+		} else {
+
+			arg.vcf.push({
+				istext:1,
+				file: file
+			})
 		}
 	}
-	delete arg.files
+
+	for(const [track, o] of trackfilename2path) {
+
+		// accept only .gz file for now
+		// will require index when moving to samplematrix
+
+		o.istrack = 1
+		arg.vcf.push( o )
+	}
 
 	if(arg.vcf.length==0) abort('no VCF file')
 
@@ -460,29 +450,25 @@ function checkArg() {
 	arg.genefile = genefiles[ arg.genome ]
 	if(!arg.genefile) abort('unknown genome: '+arg.genome)
 
-
-	if(!arg.html) {
-		arg.html = 'output.html'
-	}
-
 	// hardcoded for heatmap, may add matrix later
 
 	arg.toheatmap = 1
 
 
-
 	function abort( msg ) {
 		console.log('Error: '+msg+`
 	
+$ node vcf2matrix.js --genome=<genome> --excludeclass=<class> <output.html> <input.vcf> <input2.vcf> ...
+
+One or multiple VCF files can be selected for input.
+A VCF file can be either .vcf.gz (bgzip-compressed) or .vcf (uncompressed).
+If compresed, should provide .tbi or .csi index file.
+Output is a html file.
+
 --genome=       reference genome name (hg19/hg38)
---vcf=          VCF file, either text file (.vcf or .txt), or bgzip-compressed.
-                If bgzip-compressed, must provide .tbi or .csi index, using
-                redundant --vcf=[] parameters.
-                Multiple --vcf entries can be made to provide a set of files
---html=         output HTML file name
---excludeclass= Provide a code for excluding a mutation class, see below for
-                class code and name.
-                Use multiple entries to exclude multiple classes.
+--excludeclass= Comma separated list of codes,
+                each code is a mutation class to be excluded.
+                See below for list of class codes and names.
 		M            MISSENSE
 		E            Exon of noncoding gene
 		F            FRAMESHIFT
