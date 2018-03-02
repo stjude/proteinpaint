@@ -1,7 +1,7 @@
 {
   "name": "vcf2matrix",
-  "title": "vcf2matrix",
-  "summary": "vcf2matrix",
+  "title": "VCF to mutation matrix",
+  "summary": "Show gene-by-sample mutation matrix based on the data from one or more VCF files",
   "dxapi": "1.0.0",
   "version": "0.0.1",
   "inputSpec": [
@@ -11,7 +11,7 @@
       "class": "array:file",
       "optional": false,
       "patterns": [
-        "*"
+        "*.vcf","*.vcf.gz"
       ],
       "help": ""
     },
@@ -20,7 +20,7 @@
       "label": "Other options",
       "class": "string",
       "optional": false,
-      "help": ""
+      "help": "--genome=hg19"
     }
   ],
   "outputSpec": [
@@ -43,7 +43,7 @@
     "interpreter": "bash",
     "release": "14.04",
     "distribution": "Ubuntu",
-    "file": "src/vcf2matrix.sh"
+    "file": "src/script.sh"
   },
   "regionalOptions": {
     "aws:us-east-1": {

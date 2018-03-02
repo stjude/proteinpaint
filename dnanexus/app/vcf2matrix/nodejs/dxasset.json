@@ -1,0 +1,9 @@
+{
+	"name":"nodejs",
+	"title":"nodejs",
+	"description":"node.js runtime",
+	"version": "0.0.1", 
+	"distribution": "Ubuntu",
+	"instanceType": "mem2_ssd1_x4",
+	"release": "14.04"
+}
