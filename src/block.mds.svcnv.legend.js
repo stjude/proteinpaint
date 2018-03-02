@@ -218,13 +218,13 @@ export function makeTk_legend(block, tk) {
 		mutationAttribute is copied over from mds.queries
 		initiate attributes used for filtering & legend display
 		*/
+		const hiddenMutationAttributes=[]
 		for(const key in tk.mutationAttribute.attributes) {
 			const attr = tk.mutationAttribute.attributes[ key ]
 			if(!attr.filter) {
 				// not a filter
 				continue
 			}
-
 			attr.hiddenvalues = new Set()
 			// k: key in mutationAttribute.attributes{}
 
@@ -238,11 +238,63 @@ export function makeTk_legend(block, tk) {
 			*/
 
 			attr.legendrow = table.append('tr')
-			attr.legendrow.append('td')
+			attr.legendcell = attr.legendrow.append('td')
 				.style('text-align','right')
 				.style('opacity',.5)
 				.text(attr.label)
+
+			if ('hidden' in attr) {
+				hiddenMutationAttributes.push(attr)
+				
+				attr.legendcell
+					.attr('class','sja_hideable_legend')
+					.on('click',()=>{
+						tk.tip2.hide()
+						attr.hidden=1
+						attr.moreLegendRow.style('display','table-row')
+						client.flyindi(attr.legendcell,attr.moreLegendBtn)
+						attr.legendrow.transition().delay(500)
+							.style('display','none')
+						loadTk(tk,block)
+					})
+			}
 			attr.legendholder = attr.legendrow.append('td')
+		}
+
+		if (hiddenMutationAttributes.length) {
+			const hiddenLegendRow = table.append('tr')
+			const cell = hiddenLegendRow.append('td')
+							.style('text-align','right')
+			
+			cell.append('span')
+				.attr('class','sja_legend_more_btn')
+				.text('more')
+				.on('click',()=>{
+					tk.tip2.showunder(cell.node()).clear()
+
+					for(const attr of hiddenMutationAttributes) {
+						attr.moreLegendRow = hiddenLegendRow
+						attr.moreLegendBtn = cell
+						if (!attr.hidden) continue
+						const total = [...attr.value2count.values()].reduce((a,b)=>a+b.totalitems,0)
+						const div = tk.tip2.d.append('div')
+							.attr('class','sja_menuoption')
+							.on('click',()=>{
+								tk.tip2.hide()
+								attr.hidden=0
+								loadTk(tk,block)
+							})
+
+						div.append('div')
+							.style('display','inline-block')
+							.attr('class','sja_mcdot')
+							.style('background', '#858585')
+							.text( total )
+						
+						div.append('span')
+							.html('&nbsp;' + attr.label )
+					}
+				})
 		}
 	}
 }
@@ -553,7 +605,7 @@ export function may_legend_mutationAttribute(tk, block) {
 	filtering by mutation attribute is done on server
 	*/
 
-	if(!tk.mutationAttribute) return
+	if(!tk.mutationAttribute) return;
 	if(tk.singlesample) {
 		// multi-sample only
 		return
@@ -562,7 +614,7 @@ export function may_legend_mutationAttribute(tk, block) {
 	// clear
 	for(const key in tk.mutationAttribute.attributes) {
 		const attr = tk.mutationAttribute.attributes[key]
-		if(!attr.filter) continue
+		if(!attr.filter) continue;
 		attr.value2count.clear()
 	}
 
@@ -591,17 +643,22 @@ export function may_legend_mutationAttribute(tk, block) {
 	}
 
 	// show legend
+	const hiddenMutationAttributes=[]
 	for(const key in tk.mutationAttribute.attributes) {
-		const attr = tk.mutationAttribute.attributes[ key ]
+		const attr = tk.mutationAttribute.attributes[ key ];
 		if(!attr.filter) continue
-
-		if( attr.value2count.size + attr.hiddenvalues.size == 0 ) {
+		
+		if (attr.hidden) {
+			attr.legendrow.style('display','none')
+			hiddenMutationAttributes.push(attr)
+			continue
+		} else if(attr.value2count.size + attr.hiddenvalues.size == 0 ) {
 			// no value after counting, no hidden value either
 			attr.legendrow.style('display','none')
+			continue
 		} else {
 			attr.legendrow.style('display','table-row')
 		}
-
 
 		attr.legendholder.selectAll('*').remove()
 
@@ -713,6 +770,18 @@ export function may_legend_mutationAttribute(tk, block) {
 						loadTk( tk, block )
 					})
 			}
+		}
+
+		if (attr.moreLegendRow) {
+			// the display will be overriden if there 
+			// are hidden legend after the loop 
+			attr.moreLegendRow.style('display','none')
+		}
+	}
+
+	for(const attr of hiddenMutationAttributes) {
+		if (attr.moreLegendRow) {
+			attr.moreLegendRow.style('display','table-row')
 		}
 	}
 }

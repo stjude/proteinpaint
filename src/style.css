@@ -66,6 +66,25 @@ table {
 .sja_clb_gray:hover { background-color:#f1f1f1; }
 .sja_clb_gray:active {background-color:#ffffcc; }
 
+.sja_hideable_legend {
+	cursor: default;
+}
+
+.sja_hideable_legend:hover {
+	background:#ffff99;
+}
+
+.sja_legend_more_btn {
+	padding: 3px;
+	text-align: center;
+	font-size: 0.7em;
+	opacity: 0.5;
+	cursor: default;
+} 
+
+.sja_legend_more_btn:hover {
+	text-decoration: underline;
+}
 
 
 
