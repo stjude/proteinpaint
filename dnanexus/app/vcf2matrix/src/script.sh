@@ -25,6 +25,7 @@ main() {
     # recover the original filenames, you can use the output of "dx describe
     # "$variable" --name".
 
+	
     for i in ${!vcf_file[@]}
     do
         dx download "${vcf_file[$i]}" -o vcf_file-$i
