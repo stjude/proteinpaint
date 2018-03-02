@@ -40,6 +40,7 @@
         "hours": 48
       }
     },
+	"assetDepends":[ {"id":"record-FBGqxvj0FJjvPXGP7gVGGQp9"} ],
     "interpreter": "bash",
     "release": "14.04",
     "distribution": "Ubuntu",

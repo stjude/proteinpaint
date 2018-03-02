@@ -1035,7 +1035,7 @@ for(const thisvcf of arg.vcf) {
 					continue
 				}
 
-				if(arg.excludeclass.has( m.class )) {
+				if(arg.excludeclass && arg.excludeclass.has( m.class )) {
 					continue
 				}
 

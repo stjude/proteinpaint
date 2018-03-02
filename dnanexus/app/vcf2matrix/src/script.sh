@@ -25,13 +25,19 @@ main() {
     # recover the original filenames, you can use the output of "dx describe
     # "$variable" --name".
 
-	
-    for i in ${!vcf_file[@]}
-    do
-        dx download "${vcf_file[$i]}" -o vcf_file-$i
-    done
+	dx-download-all-inputs
+
+	mkdir -p out/html/
+
+	# output to .heatmap.html, to indicate the old heatmap view, when samplematrix is ready, may change name
+	output_name="${vcf_file_prefix[0]}.heatmap.html"
 
     # Fill in your application code here.
+	nodejs /usr/bin/bin.js $other_options $output_name ${vcf_file_path[@]}
+
+	mv "$output_name" out/html/
+	dx-upload-all-outputs
+
     #
     # To report any recognized errors in the correct format in
     # $HOME/job_error.json and exit this script, you can use the
@@ -51,12 +57,12 @@ main() {
     # but you can change that behavior to suit your needs.  Run "dx upload -h"
     # to see more options to set metadata.
 
-    html=$(dx upload html --brief)
+    #html=$(dx upload html --brief)
 
     # The following line(s) use the utility dx-jobutil-add-output to format and
     # add output variables to your job's output as appropriate for the output
     # class.  Run "dx-jobutil-add-output -h" for more information on what it
     # does.
 
-    dx-jobutil-add-output html "$html" --class=file
+    #dx-jobutil-add-output html "$html" --class=file
 }
