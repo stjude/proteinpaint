@@ -39,7 +39,7 @@ export default function (arg) {
 	paint.samplecart=arg.samplecart
 	paint.debugmode=arg.debugmode
 	paint.tklst = arg.tklst || []
-	paint.error=m => client.sayerror(arg.holder,m)
+	paint.error=m => client.sayerror(paint.holder,m)
 
 	if(!arg.genome) {
 		paint.error('no genome')
