@@ -981,6 +981,10 @@ function handle_tkaicheck(req,res) {
 
 
 function handle_tkbedj(req,res) {
+/*
+should guard against file content error e.g. two tabs separating columns
+
+*/
 	if(reqbodyisinvalidjson(req,res)) return
 	const [e,tkfile,isurl]=fileurl(req)
 	if(e) return res.send({error:e})
@@ -1370,6 +1374,7 @@ function handle_tkbedj(req,res) {
 			// px position in the whole view range
 			let itemstartpx=null,
 				itemstoppx=null
+
 			for(const _r of item.rglst) {
 				let cumx=0
 				for(let i=0; i<_r.idx; i++) {
