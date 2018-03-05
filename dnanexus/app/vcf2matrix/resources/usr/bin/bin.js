@@ -1035,7 +1035,7 @@ for(const thisvcf of arg.vcf) {
 					continue
 				}
 
-				if(arg.excludeclass && arg.excludeclass.has( m.class )) {
+				if(arg.excludeclass && arg.excludeclass.has( m.class.toLowerCase() )) {
 					continue
 				}
 
@@ -1306,7 +1306,7 @@ function checkArg() {
 
 		if(key=='excludeclass') {
 
-			arg.excludeclass = new Set( [...(b.trim().split(','))] )
+			arg.excludeclass = new Set( [...(b.toLowerCase().trim().split(','))] )
 
 		} else {
 
@@ -1382,8 +1382,8 @@ If compresed, should provide .tbi or .csi index file.
 Output is a html file.
 
 --genome=       reference genome name (hg19/hg38)
---excludeclass= Comma separated list of codes,
-                each code is a mutation class to be excluded.
+--excludeclass= Comma separated list of codes, case-insensitive,
+                for excluding mutations by class.
                 See below for list of class codes and names.
 		M            MISSENSE
 		E            Exon of noncoding gene

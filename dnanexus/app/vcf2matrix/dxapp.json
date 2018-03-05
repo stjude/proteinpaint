@@ -20,7 +20,7 @@
       "label": "Other options",
       "class": "string",
       "optional": false,
-      "help": "--genome=hg19"
+      "help": "--genome=hg19 --excludeclass=intron"
     }
   ],
   "outputSpec": [
