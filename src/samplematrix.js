@@ -1,5 +1,5 @@
 import * as client from './client'
-import {invalidcoord} from './coord'
+import {string2pos, invalidcoord} from './coord'
 import {event as d3event} from 'd3-selection'
 import * as common from './common'
 import {scaleLinear} from 'd3-scale'
@@ -51,10 +51,15 @@ export class Samplematrix {
 
 		this.validateconfig()
 		.then(()=>{
-			this.getfeatures()
+			return this.getfeatures()
 		})
 		.catch(err=>{
-			this.error(err)
+			if(typeof(err)=='string') {
+				this.error(err)
+			} else {
+				this.error(err.message)
+				if(err.stack) console.log(err.stack)
+			}
 		})
 
 		///////////// end of constructor
@@ -74,10 +79,10 @@ export class Samplematrix {
 	validateconfig() {
 		/*
 		only run once, upon init
-		TODO gene coord query should go into validatefeature, in case adding genes later
 		*/
 
-		return Promise.resolve().then(()=>{
+		return Promise.resolve()
+		.then(()=>{
 
 			if(this.dslabel) {
 				// accessing a native ds
@@ -110,230 +115,227 @@ export class Samplematrix {
 			if(!this.features) throw('missing features[]')
 			if(!Array.isArray(this.features)) throw('features must be an array')
 
-			// last
-			// any feature with gene to get position
-			const genewithoutpos=new Set()
+			const featuretasks = []
 			for(const f of this.features) {
-				if(f.isgenevalue || f.iscnv) {
-					if(f.genename && !f.position && !f.chr) genewithoutpos.add(f.genename)
-				}
+				featuretasks.push( this.validatefeature( f ) )
 			}
-			if(genewithoutpos.size==0) return
-
-			const tasks=[]
-			for(const gene of genewithoutpos) {
-
-				const q = fetch(new Request(this.hostURL+'/genelookup',{
-					method:'POST',
-					body:JSON.stringify({
-						input:gene,
-						genome:this.genome.name,
-						jwt:this.jwt,
-						deep:1
-					})
-				}))
-				.then(data=>{return data.json()})
-				.then(data=>{
-					if(data.error) throw(data.error)
-					return [gene, data.gmlst]
-				})
-				tasks.push(q)
-			}
-
-			return Promise.all(tasks)
-			.then(lst=>{
-				const gene2coord = {}
-				for(const [gene, gmlst] of lst) {
-					if(!gene2coord[gene]) gene2coord[gene]=[]
-					for(const gm of gmlst) {
-						let nooverlap=true
-						for(const region of gene2coord[gene]) {
-							if(gm.chr==region.chr && Math.max(gm.start,region.start)<Math.min(gm.stop,region.stop)) {
-								nooverlap=false
-								region.start = Math.min(region.start, gm.start)
-								region.stop = Math.max(region.stop, gm.stop)
-								break
-							}
-						}
-						if(nooverlap) {
-							gene2coord[gene].push({
-								chr:gm.chr, 
-								start:gm.start,
-								stop:gm.stop
-							})
-						}
-					}
-				}
-				for(const f of this.features) {
-					if(f.isgenevalue || f.iscnv) {
-						if(f.genename && !f.position && !f.chr) {
-							if(!gene2coord[f.genename]) throw('unknown gene name: '+f.genename)
-							if(gene2coord[f.genename].length>1) {
-								client.sayerror(this.errdiv,'multiple regions found for gene '+f.genename+' you\'d better specify one in feature')
-							}
-							const r = gene2coord[f.genename][0]
-							f.chr = r.chr
-							f.start=r.start
-							f.stop = r.stop
-						}
-					}
-				}
-			})
-		})
-		.then(()=>{
-
-			for(const feature of this.features) {
-
-				const err = this.validatefeature( feature )
-				if(err) throw(err)
-			}
+			return Promise.all( featuretasks )
 		})
 	}
 
 
 
 
+	feature_parseposition_maygene( f ) {
+		/*
+		only for position-based features
+		not for e.g. annotation
+		*/
+		return Promise.resolve()
+		.then(()=>{
+
+			if( f.position ) {
+				// raw string
+				const o = string2pos( f.position, this.genome )
+				if(o) {
+					f.chr = o.chr
+					f.start = o.start
+					f.stop = o.stop
+				}
+			}
+
+			if( f.chr ) {
+				// has predefined position
+				const err = invalidcoord(this.genome, f.chr, f.start, f.stop)
+				if(err) {
+					throw('position error for feature: '+err)
+				} else {
+					// has valid position
+					return
+				}
+			}
+
+			if( !f.genename ) {
+				throw('position required for a feature: no position or genename given')
+			}
+
+			// fetch position by gene name
+			return fetch(new Request(this.hostURL+'/genelookup',{
+				method:'POST',
+				body:JSON.stringify({
+					input:f.genename,
+					genome:this.genome.name,
+					jwt:this.jwt,
+					deep:1
+				})
+			}))
+			.then(data=>{return data.json()})
+			.then(data=>{
+				if(data.error) throw(data.error)
+				if(!data.gmlst || data.gmlst.length==0) throw('no coordinate position can be found by gene '+f.genename)
+				// data.gmlst isoforms could be from different positions
+				const regions = []
+				for(const gm of data.gmlst) {
+					let nooverlap=true
+					for(const region of regions) {
+						if(gm.chr==region.chr && Math.max(gm.start,region.start)<Math.min(gm.stop,region.stop)) {
+							nooverlap=false
+							region.start = Math.min(region.start, gm.start)
+							region.stop = Math.max(region.stop, gm.stop)
+							break
+						}
+					}
+					if(nooverlap) {
+						regions.push({
+							chr:gm.chr, 
+							start:gm.start,
+							stop:gm.stop
+						})
+					}
+				}
+				if(regions.length>1) {
+					client.sayerror(this.errdiv,'multiple regions found for gene '+f.genename+' you\'d better specify one in feature')
+				}
+				f.chr = regions[0].chr
+				f.start = regions[0].start
+				f.stop = regions[0].stop
+
+			})
+		})
+		.then(()=>{
+			/*
+			f.width should have already been set
+			scale must be reset when coord/width changes
+			*/
+			f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
+		})
+	}
+
+
 	validatefeature( f ) {
 
-		f.id = Math.random().toString()
+		return Promise.resolve()
+		.then(()=>{
 
-		const tr = this.legendtable.append('tr')
-		f.legend_tr = tr
+			f.id = Math.random().toString()
 
-		if(f.isgenevalue) {
-			// numerical value per sample
-			if(!f.genename) return '.genename missing for isgenevalue feature'
-			f.label = f.genename+' expression'
+			const tr = this.legendtable.append('tr')
+			f.legend_tr = tr
 
-			{
-				const err = invalidcoord(this.genome, f.chr, f.start, f.stop)
-				if(err) return 'position error for isgenevalue feature: '+err
+			if(f.isgenevalue) {
+				// numerical value per sample
+				if(!f.genename) throw('.genename missing for isgenevalue feature')
+				f.label = f.genename+' expression'
+
+				if(this.dslabel) {
+					// official
+					if(!f.querykey) throw('.querykey missing for isgenevalue feature while loading from official dataset')
+				} else {
+					// to allow loading from custom track
+				}
+
+				if(!f.scale) f.scale = {auto:1}
+
+				if(f.missingvalue==undefined) f.missingvalue=0 // samples that don't have value for that gene
+
+				tr.append('td')
+					.text(f.label)
+					.style('color','#858585')
+					.style('text-align','right')
+				f.legendholder = tr.append('td')
+
+				if(!f.width) f.width = 20
+				if(!f.color) f.color = '#095873'
+
+				return this.feature_parseposition_maygene( f )
 			}
 
-			if(this.dslabel) {
-				// official
-				if(!f.querykey) return '.querykey missing for isgenevalue feature while loading from official dataset'
-			} else {
-				// to allow loading from custom track
+			if(f.iscnv) {
+				// cnv with log2ratio
+				if(this.dslabel) {
+					// official
+					if(!f.querykey) throw('.querykey missing for iscnv feature while loading from official dataset')
+				} else {
+					// to allow loading from custom track
+				}
+				if(!f.label && f.genename) {
+					f.label = f.genename+' CNV'
+				}
+				if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' CNV'
+				tr.append('td')
+					.text(f.label)
+					.style('color','#858585')
+					.style('text-align','right')
+				f.legendholder = tr.append('td')
+
+				if(!f.width) f.width=40
+				if(!f.colorgain) f.colorgain = "#D6683C"
+				if(!f.colorloss) f.colorloss = "#67a9cf"
+
+				return this.feature_parseposition_maygene( f )
 			}
 
-			if(!f.scale) f.scale = {auto:1}
+			if(f.isloh) {
+				// loh with segmean
+				if(this.dslabel) {
+					// official
+					if(!f.querykey) throw('.querykey missing for isloh feature while loading from official dataset')
+				} else {
+					// to allow loading from custom track
+				}
+				if(!f.label && f.genename) {
+					f.label = f.genename+' LOH'
+				}
+				if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' LOH'
+				tr.append('td')
+					.text(f.label)
+					.style('color','#858585')
+					.style('text-align','right')
+				f.legendholder = tr.append('td')
 
-			if(f.missingvalue==undefined) f.missingvalue=0 // samples that don't have value for that gene
+				if(!f.width) f.width=40
+				if(!f.color) f.color = "black"
 
-			tr.append('td')
-				.text(f.label)
-				.style('color','#858585')
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
-
-			if(!f.width) f.width = 20
-			if(!f.color) f.color = '#095873'
-
-			return
-		}
-
-		if(f.iscnv) {
-			// cnv with log2ratio
-			{
-				const err = invalidcoord( this.genome, f.chr, f.start, f.stop)
-				if(err) return 'position error for iscnv feature: '+err
+				return this.feature_parseposition_maygene( f )
 			}
-			if(this.dslabel) {
-				// official
-				if(!f.querykey) return '.querykey missing for iscnv feature while loading from official dataset'
-			} else {
-				// to allow loading from custom track
-			}
-			if(!f.label && f.genename) {
-				f.label = f.genename+' CNV'
-			}
-			if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' CNV'
-			tr.append('td')
-				.text(f.label)
-				.style('color','#858585')
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
 
-			if(!f.width) f.width=40
-			f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width]) // scale must be reset when coord/width changes
-			if(!f.colorgain) f.colorgain = "#D6683C"
-			if(!f.colorloss) f.colorloss = "#67a9cf"
-			return
-		}
+			if(f.isvcf) {
+				if(this.dslabel) {
+					// official
+					if(!f.querykey) throw('.querykey missing for isvcf feature while loading from official dataset')
+				} else {
+					// to allow loading from custom track
+				}
+				if(!f.label && f.genename) {
+					f.label = f.genename+' LOH'
+				}
+				if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' mutation'
+				tr.append('td')
+					.text(f.label)
+					.style('color','#858585')
+					.style('text-align','right')
+				f.legendholder = tr.append('td')
 
-		if(f.isloh) {
-			// loh with segmean
-			{
-				const err = invalidcoord( this.genome, f.chr, f.start, f.stop)
-				if(err) return 'position error for isloh feature: '+err
+				if(!f.width) f.width=20
+				return this.feature_parseposition_maygene( f )
 			}
-			if(this.dslabel) {
-				// official
-				if(!f.querykey) return '.querykey missing for isloh feature while loading from official dataset'
-			} else {
-				// to allow loading from custom track
-			}
-			if(!f.label && f.genename) {
-				f.label = f.genename+' LOH'
-			}
-			if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' LOH'
-			tr.append('td')
-				.text(f.label)
-				.style('color','#858585')
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
 
-			if(!f.width) f.width=40
-			f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width]) // scale must be reset when coord/width changes
-			if(!f.color) f.color = "black"
-			return
-		}
 
-		if(f.isvcf) {
-			{
-				const err = invalidcoord( this.genome, f.chr, f.start, f.stop)
-				if(err) return 'position error for isloh feature: '+err
+			/*
+			if(f.issv) {
+				return
 			}
-			if(this.dslabel) {
-				// official
-				if(!f.querykey) return '.querykey missing for isvcf feature while loading from official dataset'
-			} else {
-				// to allow loading from custom track
+			if(f.isbw) {
+				return
 			}
-			if(!f.label && f.genename) {
-				f.label = f.genename+' LOH'
+			if(f.isannotation) {
+				return
 			}
-			if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' mutation'
-			tr.append('td')
-				.text(f.label)
-				.style('color','#858585')
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
-
-			if(!f.width) f.width=20
-			return
-		}
-
-		/*
-		if(f.issv) {
-			return
-		}
-		if(f.isbw) {
-			return
-		}
-		if(f.isannotation) {
-			return
-		}
-		if(f.issnvindel) {
-			return
-		}
-		if(f.isgenevcf) {
-			return
-		}
-		*/
-
-		return 'type unknown for one feature'
+			if(f.isgenevcf) {
+				return
+			}
+			*/
+		})
 	}
 
 
@@ -355,7 +357,7 @@ export class Samplematrix {
 			features: (featureset || this.features).map( feature2arg )
 		}
 
-		fetch(new Request(this.hostURL+'/samplematrix',{
+		return fetch(new Request(this.hostURL+'/samplematrix',{
 			method:'POST',
 			body:JSON.stringify(arg)
 		}))
@@ -373,10 +375,6 @@ export class Samplematrix {
 			}
 
 			this.drawMatrix()
-		})
-		.catch(err=>{
-			this.error(err.message)
-			if(err.stack) console.log(err.stack)
 		})
 	}
 
@@ -524,6 +522,7 @@ export class Samplematrix {
 				}
 
 			} else if(feature.isvcf) {
+
 				for(const m of feature.items) {
 					if(m.dt==common.dtsnvindel) {
 						if(!m.sampledata) continue
