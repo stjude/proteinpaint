@@ -170,7 +170,7 @@ module.exports={
 		somaticsnvindel:{
 			name:'Pediatric tumor SNV/indel',
 			istrack:true,
-			type:common.tkt.mdsvcfitd,
+			type:common.tkt.mdsvcf,
 			viewrangeupperlimit:2000000,
 			tracks:[
 				{

@@ -290,14 +290,14 @@ export class Samplematrix {
 			return
 		}
 
-		if(f.isvcfitd) {
+		if(f.isvcf) {
 			{
 				const err = invalidcoord( this.genome, f.chr, f.start, f.stop)
 				if(err) return 'position error for isloh feature: '+err
 			}
 			if(this.dslabel) {
 				// official
-				if(!f.querykey) return '.querykey missing for isvcfitd feature while loading from official dataset'
+				if(!f.querykey) return '.querykey missing for isvcf feature while loading from official dataset'
 			} else {
 				// to allow loading from custom track
 			}
@@ -457,7 +457,7 @@ export class Samplematrix {
 			return
 		}
 
-		if(f.isvcfitd) {
+		if(f.isvcf) {
 			if(this.iscustom) {
 				// TODO parse vcf lines to variants
 			}
@@ -523,7 +523,7 @@ export class Samplematrix {
 					}
 				}
 
-			} else if(feature.isvcfitd) {
+			} else if(feature.isvcf) {
 				for(const m of feature.items) {
 					if(m.dt==common.dtsnvindel) {
 						if(!m.sampledata) continue
@@ -537,7 +537,7 @@ export class Samplematrix {
 							name2sample.set( m.sample, {} )
 						}
 					} else {
-						console.error('unsupported dt from isvcfitd: '+m.dt)
+						console.error('unsupported dt from isvcf: '+m.dt)
 					}
 				}
 
@@ -782,8 +782,8 @@ export class Samplematrix {
 			return
 		}
 
-		if(feature.isvcfitd) {
-			const mlst = getitemforsample_vcfitd( feature, sample )
+		if(feature.isvcf) {
+			const mlst = getitemforsample_vcf( feature, sample )
 
 			if(mlst.length==0) {
 				drawEmptycell(sample, feature, g)
@@ -1190,8 +1190,8 @@ export class Samplematrix {
 				continue
 			}
 
-			if(f.isvcfitd) {
-				const mlst = getitemforsample_vcfitd( f, sample )
+			if(f.isvcf) {
+				const mlst = getitemforsample_vcf( f, sample )
 				let text
 				if(mlst.length==0) {
 					text = saynovalue
@@ -1262,9 +1262,9 @@ export class Samplematrix {
 			}
 			lst.push({k:f.label, v:text})
 
-		} else if(f.isvcfitd) {
+		} else if(f.isvcf) {
 
-			const mlst = getitemforsample_vcfitd( f, sample )
+			const mlst = getitemforsample_vcf( f, sample )
 			let text
 			if(mlst.length==0) {
 				text = saynovalue
@@ -1367,10 +1367,10 @@ function feature2arg(f) {
 			focalsizelimit:f.focalsizelimit,
 		}
 	}
-	if(f.isvcfitd) {
+	if(f.isvcf) {
 		return {
 			id:f.id,
-			isvcfitd:1,
+			isvcf:1,
 			querykey:f.querykey,
 			chr:f.chr,
 			start: f.start,
@@ -1381,7 +1381,7 @@ function feature2arg(f) {
 
 
 
-function getitemforsample_vcfitd( feature, sample ) {
+function getitemforsample_vcf( feature, sample ) {
 	const mlst=[]
 	for(const m of feature.items) {
 		if(m.dt==common.dtsnvindel) {

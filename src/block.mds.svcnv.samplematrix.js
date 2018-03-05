@@ -68,7 +68,7 @@ export function createbutton_addfeature( p ) {
 		break
 	case common.dtsnvindel:
 		nf = {
-			isvcfitd:1,
+			isvcf:1,
 			querykey: tk.checkvcf.querykey,
 			label: 'Mutation at '+m.chr+':'+m.pos,
 			chr: m.chr,

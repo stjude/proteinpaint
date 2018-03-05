@@ -364,7 +364,7 @@ const tkt={
 	mdscnv:'mdscnv',
 	mdssvcnv:'mdssvcnv',
 	mdsexpressionrank:'mdsexpressionrank',
-	mdsvcfitd:'mdsvcfitd',
+	mdsvcf:'mdsvcf', // for snv/indels, currently vcf, may include MAF
 	bedj:'bedj',
 	pgv:'profilegenevalue',
 	bampile:'bampile',
@@ -390,12 +390,12 @@ exports.validtkt=function(what) {
 
 
 /*
-member track types from mdsvcfitd
+member track types from mdsvcf
 to get rid of hardcoded strings
+in future may include MAF format files
 */
-exports.mdsvcfitdtype = {
+exports.mdsvcftype = {
 	vcf:'vcf',
-	itd:'itd'
 }
 
 

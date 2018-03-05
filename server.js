@@ -3767,21 +3767,6 @@ function handle_mdssvcnv(req,res) {
 		}
 
 		if(req.query.checkvcf) {
-		/* XXX
-			if(!req.query.checkvcf.file && !req.query.checkvcf.url) return res.send({error:'no file or url for checkvcf'})
-			// just one vcf or multiple?
-			dsquery.checkvcf = {
-				tracks: [
-					{
-					type: common.mdsvcfitdtype.vcf,
-					file: req.query.checkvcf.file,
-					url: req.query.checkvcf.url,
-					indexURL: req.query.checkvcf.indexURL,
-					nochr: req.query.checkvcf.nochr,
-					}
-				]
-			}
-			*/
 			let vcf
 			try {
 				vcf = JSON.parse( req.query.checkvcf )
@@ -3789,7 +3774,7 @@ function handle_mdssvcnv(req,res) {
 				return res.send({error:'invalid JSON for VCF object'})
 			}
 			if(!vcf.file && !vcf.url) return res.send({error:'no file or url for custom VCF track'})
-			vcf.type = common.mdsvcfitdtype.vcf
+			vcf.type = common.mdsvcftype.vcf
 			dsquery.checkvcf = {
 				info: vcf.info,
 				tracks: [ vcf ]
@@ -4206,7 +4191,7 @@ function handle_mdssvcnv(req,res) {
 
 							// all tracks are supposed to be vcf; still leaves the possibility of having different types of files here
 
-							if(vcftk.type==common.mdsvcfitdtype.vcf) {
+							if(vcftk.type==common.mdsvcftype.vcf) {
 
 								/* XXX
 								if(dsquery.iscustom) {
@@ -7033,9 +7018,9 @@ function handle_samplematrix(req,res) {
 			if(err) return res.send({error:'error with iscnv: '+err})
 			tasks.push(q)
 
-		} else if(feature.isvcfitd) {
+		} else if(feature.isvcf) {
 
-			const [err, q] = samplematrix_task_isvcfitd( feature, ds, dsquery, req )
+			const [err, q] = samplematrix_task_isvcf( feature, ds, dsquery, req )
 			if(err) return res.send({error:'error with iscnv: '+err})
 			tasks.push(q)
 
@@ -7299,7 +7284,7 @@ function samplematrix_task_isloh(feature, ds, dsquery, req) {
 
 
 
-function samplematrix_task_isvcfitd(feature, ds, dsquery, req) {
+function samplematrix_task_isvcf(feature, ds, dsquery, req) {
 	/*
 	if is custom, will pass the lines to client for processing
 	*/
@@ -7340,7 +7325,7 @@ function samplematrix_task_isvcfitd(feature, ds, dsquery, req) {
 						return
 					}
 
-					if(tk.type==common.mdsvcfitdtype.vcf) {
+					if(tk.type==common.mdsvcftype.vcf) {
 
 						// snv/indel
 
@@ -7394,11 +7379,9 @@ function samplematrix_task_isvcfitd(feature, ds, dsquery, req) {
 							// mclass and rest will be determined at client, according to whether in gmmode and such
 						}
 
-					} else if(tk.type==common.mdsvcfitdtype.itd) {
+					} else {
 
-						// TODO
-						// m.dt = common.dtitd
-						//data.push( m )
+						console.error('type not one of mdsvcftype: '+tk.type)
 
 					}
 
@@ -9111,7 +9094,7 @@ function mds_init(ds,genome) {
 					const err = mds_init_mdssvcnv(query, ds, genome)
 					if(err) return querykey+' (svcnv) error: '+err
 
-				} else if(query.type==common.tkt.mdsvcfitd) { // vcf-only, no itd
+				} else if(query.type==common.tkt.mdsvcf) { // snvindel
 
 					const err = mds_init_mdsvcf(query, ds, genome)
 					if(err) return querykey+' (vcf) error: '+err
@@ -9434,7 +9417,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		// check expression rank, data from another query
 		const thatquery = ds.queries[ query.vcf_querykey ]
 		if(!thatquery) return 'invalid key by vcf_querykey'
-		if(thatquery.type!=common.tkt.mdsvcfitd) return 'query '+query.vcf_querykey+' not of mdsvcfitd type'
+		if(thatquery.type!=common.tkt.mdsvcf) return 'query '+query.vcf_querykey+' not of mdsvcf type'
 	}
 
 	if(query.groupsamplebyattrlst) {
@@ -9540,7 +9523,7 @@ function mds_init_mdsvcf(query, ds, genome) {
 
 		const arg = {cwd: tk.cwd, encoding:'utf8'}
 
-		if(tk.type==common.mdsvcfitdtype.vcf) {
+		if(tk.type==common.mdsvcftype.vcf) {
 
 			const tmp=child_process.execSync(tabix+' -H '+_file,arg).trim()
 			if(!tmp) return 'no meta/header lines for '+_file
@@ -9556,7 +9539,7 @@ function mds_init_mdsvcf(query, ds, genome) {
 			tk.format = format
 			tk.samples = samples
 
-		} else if(tk.type==common.mdsvcfitdtype.itd) {
+		} else if(tk.type==common.mdsvcftype.itd) {
 
 			const tmp=child_process.execSync(tabix+' -H '+_file,arg).trim()
 			if(!tmp) return 'no header lines for '+_file
