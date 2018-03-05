@@ -9,6 +9,7 @@ export function createbutton_addfeature( p ) {
 	*/
 
 	const {m, tk, block, holder} = p
+
 	if(tk.iscustom) {
 		console.log('createbutton_addfeature: not custom yet')
 		return
@@ -155,12 +156,15 @@ function addnewfeature( nf, tk, block) {
 	}
 	// add new feature
 	tk.samplematrix.features.push( nf )
-	const err = tk.samplematrix.validatefeature( nf )
-	if(err) {
-		alert(err) // should not happen
-		return
-	}
-	tk.samplematrix.getfeatures( [nf] )
+
+	tk.samplematrix.validatefeature( nf )
+	.then(()=>{
+		return tk.samplematrix.getfeatures( [nf] )
+	})
+	.catch(err=>{
+		tk.samplematrix.error( typeof(err)=='string' ? err : err.message )
+		if(err.stack) console.log(err.stack)
+	})
 }
 
 
