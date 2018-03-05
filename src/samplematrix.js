@@ -202,13 +202,6 @@ export class Samplematrix {
 
 			})
 		})
-		.then(()=>{
-			/*
-			f.width should have already been set
-			scale must be reset when coord/width changes
-			*/
-			f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
-		})
 	}
 
 
@@ -273,6 +266,12 @@ export class Samplematrix {
 				if(!f.colorloss) f.colorloss = "#67a9cf"
 
 				return this.feature_parseposition_maygene( f )
+					.then(()=>{
+						/*
+						scale must be reset when coord/width changes
+						*/
+						f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
+					})
 			}
 
 			if(f.isloh) {
@@ -297,6 +296,12 @@ export class Samplematrix {
 				if(!f.color) f.color = "black"
 
 				return this.feature_parseposition_maygene( f )
+					.then(()=>{
+						/*
+						scale must be reset when coord/width changes
+						*/
+						f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
+					})
 			}
 
 			if(f.isvcf) {
