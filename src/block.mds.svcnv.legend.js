@@ -27,6 +27,8 @@ export function makeTk_legend(block, tk) {
 	const table = td.append('table')
 		.style('border-spacing','5px')
 
+	tk.legend_table = table
+
 	{
 		const row = table.append('tr')
 		tk.legend_mclass = {
@@ -218,9 +220,8 @@ export function makeTk_legend(block, tk) {
 		mutationAttribute is copied over from mds.queries
 		initiate attributes used for filtering & legend display
 		*/
-		const hiddenMutationAttributes=[]
 		for(const key in tk.mutationAttribute.attributes) {
-			const attr = tk.mutationAttribute.attributes[ key ]
+			const attr = tk.mutationAttribute.attributes[ key ];
 			if(!attr.filter) {
 				// not a filter
 				continue
@@ -243,59 +244,16 @@ export function makeTk_legend(block, tk) {
 				.style('opacity',.5)
 				.text(attr.label)
 
-			if ('hidden' in attr) {
-				hiddenMutationAttributes.push(attr)
-				
-				attr.legendcell
-					.attr('class','sja_hideable_legend')
-					.on('click',()=>{
-						tk.tip2.hide()
-						attr.hidden=1
-						attr.moreLegendRow.style('display','table-row')
-						client.flyindi(attr.legendcell,attr.moreLegendBtn)
-						attr.legendrow.transition().delay(500)
-							.style('display','none')
-						loadTk(tk,block)
-					})
-			}
 			attr.legendholder = attr.legendrow.append('td')
 		}
 
-		if (hiddenMutationAttributes.length) {
-			const hiddenLegendRow = table.append('tr')
-			const cell = hiddenLegendRow.append('td')
-							.style('text-align','right')
-			
-			const btn = cell.append('span')
-				.attr('class','sja_legend_more_btn')
-				.text('more')
-				.on('click',()=>{
-					tk.tip2.showunder(cell.node()).clear()
-
-					for(const attr of hiddenMutationAttributes) {
-						attr.moreLegendRow = hiddenLegendRow
-						attr.moreLegendBtn = btn
-						if (!attr.hidden) continue
-						const total = [...attr.value2count.values()].reduce((a,b)=>a+b.totalitems,0)
-						const div = tk.tip2.d.append('div')
-							.attr('class','sja_menuoption')
-							.on('click',()=>{
-								tk.tip2.hide()
-								attr.hidden=0
-								loadTk(tk,block)
-							})
-
-						div.append('div')
-							.style('display','inline-block')
-							.attr('class','sja_mcdot')
-							.style('background', '#858585')
-							.text( total )
-						
-						div.append('span')
-							.html('&nbsp;' + attr.label )
-					}
-				})
-		}
+		tk.legend_more_row = table.append('tr')
+		tk.legend_more_label = tk.legend_more_row.append('td')
+								.style('text-align','right')
+								.append('span')
+		// blank cell for now since hidden legend items
+		// are displayed in pop-down menu, not in this row
+		tk.legend_more_row.append('td') 
 	}
 }
 
@@ -647,8 +605,24 @@ export function may_legend_mutationAttribute(tk, block) {
 	for(const key in tk.mutationAttribute.attributes) {
 		const attr = tk.mutationAttribute.attributes[ key ];
 		if(!attr.filter) continue
-		
-		if (attr.hidden) {
+
+		attr.legendcell
+			.attr('class','sja_hideable_legend')
+			.on('click',()=>{
+				tk.tip2.hide()
+				attr.hidden=1
+				tk.legend_more_row.style('display','table-row');
+				client.flyindi(attr.legendcell,tk.legend_more_label)
+				attr.legendrow.transition().delay(500)
+					.style('display','none')
+				setTimeout(()=>{
+					may_legend_mutationAttribute(tk,block)
+				},500)
+			})
+
+		tk.legend_more_label
+
+		if(attr.hidden) {
 			attr.legendrow.style('display','none')
 			hiddenMutationAttributes.push(attr)
 			continue
@@ -771,18 +745,41 @@ export function may_legend_mutationAttribute(tk, block) {
 					})
 			}
 		}
-
-		if (attr.moreLegendRow) {
-			// the display will be overriden if there 
-			// are hidden legend after the loop 
-			attr.moreLegendRow.style('display','none')
-		}
 	}
 
-	for(const attr of hiddenMutationAttributes) {
-		if (attr.moreLegendRow) {
-			attr.moreLegendRow.style('display','table-row')
-		}
+	if (!hiddenMutationAttributes.length) {
+		tk.legend_more_row.style('display','none')
+	}
+	else {
+		tk.legend_more_row.style('display','table-row')
+		tk.legend_more_label.selectAll('*').remove()
+		
+		const btn = tk.legend_more_label
+			.attr('class','sja_legend_more_btn')
+			.html('more')
+			.on('click',()=>{
+				tk.tip2.showunder(btn.node()).clear()
+				for(const attr of hiddenMutationAttributes) {
+					if (!attr.hidden) continue
+					const total = [...attr.value2count.values()].reduce((a,b)=>a+b.totalitems,0)
+					const div = tk.tip2.d.append('div')
+						.attr('class','sja_menuoption')
+						.on('click',()=>{
+							tk.tip2.hide()
+							attr.hidden=0
+							may_legend_mutationAttribute(tk,block)
+						})
+
+					div.append('div')
+						.style('display','inline-block')
+						.attr('class','sja_mcdot')
+						.style('background', '#858585')
+						.text( total )
+					
+					div.append('span')
+						.html('&nbsp;' + attr.label )
+				}
+			})
 	}
 }
 
