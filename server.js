@@ -6967,7 +6967,12 @@ function handle_samplematrix(req,res) {
 
 	if(req.query.iscustom) {
 
-		// TODO from custom tracks
+		/*
+		form ds from custom tracks
+		ds.queries = {
+			key: { tracks }
+		}
+		*/
 
 	} else {
 
@@ -7020,13 +7025,19 @@ function handle_samplematrix(req,res) {
 		} else if(feature.isloh) {
 
 			const [err, q] = samplematrix_task_isloh( feature, ds, dsquery, req )
-			if(err) return res.send({error:'error with iscnv: '+err})
+			if(err) return res.send({error:'error with isloh: '+err})
 			tasks.push(q)
 
 		} else if(feature.isvcf) {
 
 			const [err, q] = samplematrix_task_isvcf( feature, ds, dsquery, req )
 			if(err) return res.send({error:'error with iscnv: '+err})
+			tasks.push(q)
+
+		} else if(feature.isitd) {
+
+			const [err, q] = samplematrix_task_isitd( feature, ds, dsquery, req )
+			if(err) return res.send({error:'error with isitd: '+err})
 			tasks.push(q)
 
 		} else {
@@ -7250,6 +7261,80 @@ function samplematrix_task_isloh(feature, ds, dsquery, req) {
 				j.stop = Number.parseInt(l[2])
 
 				if(feature.focalsizelimit && j.stop-j.start>=feature.focalsizelimit) return
+
+				if(!j.sample) return
+				if(req.query.limitsamplebyeitherannotation) {
+					const anno = ds.cohort.annotation[ j.sample ]
+					if(!anno) return
+					let notfit = true
+					for(const filter of req.query.limitsamplebyeitherannotation) {
+						if(anno[ filter.key ] == filter.value) {
+							notfit=false
+							break
+						}
+					}
+					if(notfit) return
+				}
+
+				data.push( j )
+			})
+
+			const errout=[]
+			ps.stderr.on('data',i=> errout.push(i) )
+			ps.on('close',code=>{
+				const e=errout.join('')
+				if(e && !tabixnoterror(e)) {
+					reject(e)
+					return
+				}
+				resolve( {
+					id:feature.id,
+					items:data
+				})
+			})
+		})
+	})
+	return [null,q]
+}
+
+
+
+
+function samplematrix_task_isitd(feature, ds, dsquery, req) {
+	if(!feature.chr) return ['chr missing']
+	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
+	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
+
+	const q = Promise.resolve()
+	.then(()=>{
+		if(dsquery.file) return
+		return cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
+	})
+	.then(dir=>{
+
+		return new Promise((resolve,reject)=>{
+
+			const data = []
+			const ps=spawn( tabix,
+				[
+					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+					feature.chr+':'+feature.start+'-'+feature.stop
+				], {cwd: dir }
+				)
+			const rl = readline.createInterface({
+				input:ps.stdout
+			})
+			rl.on('line',line=>{
+
+				const l=line.split('\t')
+
+				const j=JSON.parse(l[3])
+
+				if(j.dt != common.dtitd) return
+
+				j.chr = l[0]
+				j.start = Number.parseInt(l[1])
+				j.stop = Number.parseInt(l[2])
 
 				if(!j.sample) return
 				if(req.query.limitsamplebyeitherannotation) {
