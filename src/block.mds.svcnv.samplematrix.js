@@ -157,9 +157,9 @@ function addnewfeature( nf, tk, block) {
 	// add new feature
 	tk.samplematrix.features.push( nf )
 
-	tk.samplematrix.validatefeature( nf )
+	tk.samplematrix.validate_feature( nf )
 	.then(()=>{
-		return tk.samplematrix.getfeatures( [nf] )
+		return tk.samplematrix.get_features( [nf] )
 	})
 	.catch(err=>{
 		tk.samplematrix.error( typeof(err)=='string' ? err : err.message )
