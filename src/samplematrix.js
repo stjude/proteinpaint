@@ -10,6 +10,8 @@ build a sample by feature matrix
 
 primarily, retrieve feature values from mds
 
+hardcoded: rows for samples, cols for features
+
 exposed methods (as in block.mds.svcnv.samplematrix.js)
 .validate_feature()
 .get_features()
@@ -27,6 +29,7 @@ columsn
 	- each has own width
 
 JUMP __draw __menu
+__newattr places for adding new feature
 
 
 */
@@ -393,6 +396,10 @@ export class Samplematrix {
 			return
 		}
 		*/
+
+		// __newattr
+		throw('unknown feature type')
+
 		})
 	}
 
@@ -546,6 +553,7 @@ export class Samplematrix {
 			return
 		}
 
+		// __newattr
 		throw('unknown feature type in prepFeatureData')
 	}
 
@@ -604,7 +612,7 @@ export class Samplematrix {
 		const samplelst = []
 
 		for(const [n,sample] of name2sample) {
-			sample.height = 14
+			sample.height = 14  // XXX hardcoded height
 			sample.name = n
 			samplelst.push( sample )
 		}
@@ -718,6 +726,7 @@ export class Samplematrix {
 				} else if(feature.isitd) {
 					this.drawCell_isitd(sample,feature,cell)
 				} else {
+					// __newattr
 					console.error('unknown feature type when drawing cell')
 				}
 			}
@@ -932,6 +941,7 @@ export class Samplematrix {
 
 	showMenu_feature( f ) {
 		/*
+		click feature label for menu options
 		*/
 		this.menu.showunder( d3event.target)
 			.clear()
@@ -959,6 +969,11 @@ export class Samplematrix {
 			this.showMenu_isloh(f)
 			return
 		}
+		if(f.isitd) {
+			// nothing
+			return
+		}
+		// __newattr
 	}
 
 
@@ -969,8 +984,9 @@ export class Samplematrix {
 			.style('font-size','.7em')
 			.style('margin','10px')
 
-		if(f.isgenevalue || f.iscnv || f.isloh) {
+		if(f.isgenevalue || f.iscnv || f.isloh || f.isitd) {
 			// show region
+			// __newattr
 			holder.append('div')
 				.html(f.chr+':'+f.start+'-'+f.stop+' &nbsp; '+common.bplen(f.stop-f.start))
 				.style('font-size','.7em')
@@ -1217,6 +1233,8 @@ export class Samplematrix {
 
 
 
+
+
 	showTip_sample(sample) {
 		this.tip.show(d3event.clientX,d3event.clientY)
 			.clear()
@@ -1304,6 +1322,7 @@ export class Samplematrix {
 				continue
 			}
 
+			// __newattr
 			console.error('Unknown feature type')
 		}
 
@@ -1393,6 +1412,7 @@ export class Samplematrix {
 			lst.push({k:f.label, v:text})
 			
 		} else {
+			// __newattr
 			console.error('unknown feature type')
 		}
 
@@ -1505,6 +1525,7 @@ function feature2arg(f) {
 			stop: f.stop
 		}
 	}
+	// __newattr
 	throw('unknown feature type in feature2arg')
 }
 
@@ -1517,10 +1538,8 @@ function getitemforsample_vcf( feature, sample ) {
 			if(m.sampledata.findIndex( i=> i.sampleobj.name==sample.name)!=-1) {
 				mlst.push(m)
 			}
-		} else if(m.dt==common.dtitd) {
-			if(m.sample == sample.name) {
-				mlst.push(m)
-			}
+		} else {
+			console.error('getitemforsample_vcf: unknown dt')
 		}
 	}
 	return mlst
