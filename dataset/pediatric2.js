@@ -48,7 +48,7 @@ module.exports={
 			{file:'anno/db/pediatric.samples.2'},
 			{file:'anno/db/target.samples'},
 			{file:'anno/db/target.samples.tallsnp6array'},
-			{file:'anno/db/nbl.cellline.samples'}
+			{file:'anno/db/pedccl.celllines'}
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
