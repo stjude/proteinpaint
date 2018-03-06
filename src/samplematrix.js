@@ -10,7 +10,15 @@ build a sample by feature matrix
 
 primarily, retrieve feature values from mds
 
-to allow retrieving features from custom tracks, e.g. chip-seq peaks
+exposed methods (as in block.mds.svcnv.samplematrix.js)
+.validate_feature()
+.get_features()
+.error()
+
+
+TODO
+- custom dataset
+- retrieve features from assay tracks, using an assay type
 
 rows
 	- samples, of same height
@@ -21,7 +29,6 @@ columsn
 JUMP __draw __menu
 
 
-getfeatures()
 */
 
 
@@ -49,9 +56,9 @@ export class Samplematrix {
 			.style('margin-bottom','20px')
 		this.svg = this.holder.append('svg')
 
-		this.validateconfig()
+		this.validate_config()
 		.then(()=>{
-			return this.getfeatures()
+			return this.get_features()
 		})
 		.catch(err=>{
 			if(typeof(err)=='string') {
@@ -76,7 +83,7 @@ export class Samplematrix {
 
 
 
-	validateconfig() {
+	validate_config() {
 		/*
 		only run once, upon init
 		*/
@@ -117,7 +124,7 @@ export class Samplematrix {
 
 			const featuretasks = []
 			for(const f of this.features) {
-				featuretasks.push( this.validatefeature( f ) )
+				featuretasks.push( this.validate_feature( f ) )
 			}
 			return Promise.all( featuretasks )
 		})
@@ -128,8 +135,8 @@ export class Samplematrix {
 
 	feature_parseposition_maygene( f ) {
 		/*
-		only for position-based features
-		not for e.g. annotation
+		for position-based features
+		only called by when validating features
 		*/
 		return Promise.resolve()
 		.then(()=>{
@@ -199,147 +206,193 @@ export class Samplematrix {
 				f.chr = regions[0].chr
 				f.start = regions[0].start
 				f.stop = regions[0].stop
-
 			})
 		})
 	}
 
 
-	validatefeature( f ) {
+
+
+	validate_feature( f ) {
+		/*
+		call when adding new feature
+		also generates legend row for this feature
+		returns promise
+		*/
 
 		return Promise.resolve()
 		.then(()=>{
 
-			f.id = Math.random().toString()
+		f.id = Math.random().toString()
 
-			const tr = this.legendtable.append('tr')
-			f.legend_tr = tr
+		const tr = this.legendtable.append('tr')
+		f.legend_tr = tr
 
-			if(f.isgenevalue) {
-				// numerical value per sample
-				if(!f.genename) throw('.genename missing for isgenevalue feature')
-				f.label = f.genename+' expression'
-
-				if(this.dslabel) {
-					// official
-					if(!f.querykey) throw('.querykey missing for isgenevalue feature while loading from official dataset')
-				} else {
-					// to allow loading from custom track
-				}
-
-				if(!f.scale) f.scale = {auto:1}
-
-				if(f.missingvalue==undefined) f.missingvalue=0 // samples that don't have value for that gene
-
-				tr.append('td')
-					.text(f.label)
-					.style('color','#858585')
-					.style('text-align','right')
-				f.legendholder = tr.append('td')
-
-				if(!f.width) f.width = 20
-				if(!f.color) f.color = '#095873'
-
-				return this.feature_parseposition_maygene( f )
-			}
-
-			if(f.iscnv) {
-				// cnv with log2ratio
-				if(this.dslabel) {
-					// official
-					if(!f.querykey) throw('.querykey missing for iscnv feature while loading from official dataset')
-				} else {
-					// to allow loading from custom track
-				}
-				if(!f.label && f.genename) {
-					f.label = f.genename+' CNV'
-				}
-				if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' CNV'
-				tr.append('td')
-					.text(f.label)
-					.style('color','#858585')
-					.style('text-align','right')
-				f.legendholder = tr.append('td')
-
-				if(!f.width) f.width=40
-				if(!f.colorgain) f.colorgain = "#D6683C"
-				if(!f.colorloss) f.colorloss = "#67a9cf"
-
-				return this.feature_parseposition_maygene( f )
-					.then(()=>{
-						/*
-						scale must be reset when coord/width changes
-						*/
-						f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
-					})
-			}
-
-			if(f.isloh) {
-				// loh with segmean
-				if(this.dslabel) {
-					// official
-					if(!f.querykey) throw('.querykey missing for isloh feature while loading from official dataset')
-				} else {
-					// to allow loading from custom track
-				}
-				if(!f.label && f.genename) {
-					f.label = f.genename+' LOH'
-				}
-				if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' LOH'
-				tr.append('td')
-					.text(f.label)
-					.style('color','#858585')
-					.style('text-align','right')
-				f.legendholder = tr.append('td')
-
-				if(!f.width) f.width=40
-				if(!f.color) f.color = "black"
-
-				return this.feature_parseposition_maygene( f )
-					.then(()=>{
-						/*
-						scale must be reset when coord/width changes
-						*/
-						f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
-					})
-			}
-
-			if(f.isvcf) {
-				if(this.dslabel) {
-					// official
-					if(!f.querykey) throw('.querykey missing for isvcf feature while loading from official dataset')
-				} else {
-					// to allow loading from custom track
-				}
-				if(!f.label && f.genename) {
-					f.label = f.genename+' LOH'
-				}
-				if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' mutation'
-				tr.append('td')
-					.text(f.label)
-					.style('color','#858585')
-					.style('text-align','right')
-				f.legendholder = tr.append('td')
-
-				if(!f.width) f.width=20
-				return this.feature_parseposition_maygene( f )
-			}
-
-
+		if(f.isgenevalue) {
 			/*
-			if(f.issv) {
-				return
-			}
-			if(f.isbw) {
-				return
-			}
-			if(f.isannotation) {
-				return
-			}
-			if(f.isgenevcf) {
-				return
-			}
+			numerical value per sample
+			single mark
 			*/
+			if(!f.genename) throw('.genename missing for isgenevalue feature')
+			f.label = f.genename+' expression'
+
+			if(this.dslabel) {
+				// official
+				if(!f.querykey) throw('.querykey missing for isgenevalue feature while loading from official dataset')
+			} else {
+				// to allow loading from custom track
+			}
+
+			if(!f.scale) f.scale = {auto:1}
+
+			if(f.missingvalue==undefined) f.missingvalue=0 // samples that don't have value for that gene
+
+			tr.append('td')
+				.text(f.label)
+				.style('color','#858585')
+				.style('text-align','right')
+			f.legendholder = tr.append('td')
+
+			if(!f.width) f.width = 20
+			if(!f.color) f.color = '#095873'
+
+			return this.feature_parseposition_maygene( f )
+		}
+
+		if(f.iscnv) {
+			/*
+			cnv with log2ratio
+			"browser track"
+			*/
+			if(this.dslabel) {
+				// official
+				if(!f.querykey) throw('.querykey missing for iscnv feature while loading from official dataset')
+			} else {
+				// to allow loading from custom track
+			}
+			if(!f.label && f.genename) {
+				f.label = f.genename+' CNV'
+			}
+			tr.append('td')
+				.text(f.label)
+				.style('color','#858585')
+				.style('text-align','right')
+			f.legendholder = tr.append('td')
+
+			if(!f.width) f.width=40
+			if(!f.colorgain) f.colorgain = "#D6683C"
+			if(!f.colorloss) f.colorloss = "#67a9cf"
+
+			return this.feature_parseposition_maygene( f )
+				.then(()=>{
+					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' CNV'
+					/*
+					scale must be reset when coord/width changes
+					*/
+					f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
+				})
+		}
+
+		if(f.isloh) {
+			// loh with segmean
+			if(this.dslabel) {
+				// official
+				if(!f.querykey) throw('.querykey missing for isloh feature while loading from official dataset')
+			} else {
+				// to allow loading from custom track
+			}
+			if(!f.label && f.genename) {
+				f.label = f.genename+' LOH'
+			}
+			tr.append('td')
+				.text(f.label)
+				.style('color','#858585')
+				.style('text-align','right')
+			f.legendholder = tr.append('td')
+
+			if(!f.width) f.width=40
+			if(!f.color) f.color = "black"
+
+			return this.feature_parseposition_maygene( f )
+				.then(()=>{
+					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' LOH'
+					/*
+					scale must be reset when coord/width changes
+					*/
+					f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
+				})
+		}
+
+		if(f.isvcf) {
+			if(this.dslabel) {
+				// official
+				if(!f.querykey) throw('.querykey missing for isvcf feature while loading from official dataset')
+			} else {
+				// to allow loading from custom track
+			}
+			if(!f.label && f.genename) {
+				f.label = f.genename+' LOH'
+			}
+			tr.append('td')
+				.text(f.label)
+				.style('color','#858585')
+				.style('text-align','right')
+			f.legendholder = tr.append('td')
+
+			if(!f.width) f.width=20
+			return this.feature_parseposition_maygene( f )
+				.then(()=>{
+					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' mutation'
+				})
+		}
+
+		if(f.isitd) {
+			if(this.dslabel) {
+				// official
+				if(!f.querykey) throw('.querykey missing for isitd feature while loading from official dataset')
+			} else {
+				// to allow loading from custom track
+			}
+			if(!f.label && f.genename) {
+				f.label = f.genename+' ITD'
+			}
+
+			if(!f.width) f.width=20
+			if(!f.color) f.color = common.mclass[ common.mclassitd ].color
+
+			tr.append('td')
+				.text(f.label)
+				.style('color','#858585')
+				.style('text-align','right')
+			f.legendholder = tr.append('td')
+
+			// itd legend is fixed, do not refresh with data loading
+			f.legendholder.append('div')
+				.style('width','20px')
+				.html('&nbsp;')
+				.style('background',f.color)
+
+			return this.feature_parseposition_maygene( f )
+				.then(()=>{
+					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' ITD'
+				})
+		}
+
+
+		/*
+		if(f.issv) {
+			return
+		}
+		if(f.isbw) {
+			return
+		}
+		if(f.isannotation) {
+			return
+		}
+		if(f.isgenevcf) {
+			return
+		}
+		*/
 		})
 	}
 
@@ -348,7 +401,7 @@ export class Samplematrix {
 
 
 
-	getfeatures(featureset) {
+	get_features(featureset) {
 		/*
 		may update subset of features instead of all
 		TODO server-side clustering on select features to determine sample hierarchy
@@ -461,10 +514,6 @@ export class Samplematrix {
 		}
 
 		if(f.isvcf) {
-			if(this.iscustom) {
-				// TODO parse vcf lines to variants
-			}
-
 			const classes = new Set()
 			for(const m of f.items) {
 				if(m.dt == common.dtsnvindel) {
@@ -489,9 +538,15 @@ export class Samplematrix {
 						.style('color', common.mclass[c].color)
 				}
 			}
-
 			return
 		}
+
+		if(f.isitd) {
+			// do nothing
+			return
+		}
+
+		throw('unknown feature type in prepFeatureData')
 	}
 
 
@@ -518,7 +573,7 @@ export class Samplematrix {
 
 		for(const feature of this.features) {
 
-			if( feature.isgenevalue || feature.iscnv || feature.isloh ) {
+			if( feature.isgenevalue || feature.iscnv || feature.isloh || feature.isitd ) {
 
 				for(const item of feature.items) {
 					if(!name2sample.has(item.sample)) {
@@ -535,10 +590,6 @@ export class Samplematrix {
 							if(!name2sample.has( s.sampleobj.name )) {
 								name2sample.set( s.sampleobj.name, {} )
 							}
-						}
-					} else if(m.dt==common.dtitd) {
-						if(!name2sample.has( m.sample )) {
-							name2sample.set( m.sample, {} )
 						}
 					} else {
 						console.error('unsupported dt from isvcf: '+m.dt)
@@ -656,7 +707,19 @@ export class Samplematrix {
 
 				x += feature.width + this.colspace
 
-				this.drawCell( sample, feature, cell)
+				if(feature.isgenevalue) {
+					this.drawCell_isgenevalue(sample,feature,cell)
+				} else if(feature.iscnv) {
+					this.drawCell_iscnv(sample,feature,cell)
+				} else if(feature.isloh) {
+					this.drawCell_isloh(sample,feature,cell)
+				} else if(feature.isvcf) {
+					this.drawCell_isvcf(sample,feature,cell)
+				} else if(feature.isitd) {
+					this.drawCell_isitd(sample,feature,cell)
+				} else {
+					console.error('unknown feature type when drawing cell')
+				}
 			}
 		}
 
@@ -681,155 +744,169 @@ export class Samplematrix {
 
 
 
-	drawCell(sample,feature,g) {
-		/*
-		draw a cell
-		*/
-
-		if(feature.isgenevalue) {
-			const item = feature.items.find( i=> i.sample == sample.name )
-			if(!item) {
-				drawEmptycell(sample, feature, g)
-				return
-			}
-
-			const rect = g.append('rect')
-				.attr('width', feature.width)
-				.attr('height', sample.height)
-				.attr('fill', feature.color)
-				.attr('stroke','#ccc')
-				.attr('stroke-opacity',0)
-				.attr('shape-rendering','crispEdges')
-				.on('mouseover',()=>{
-					d3event.target.setAttribute('stroke-opacity',1)
-					this.showTip_cell( sample, feature )
-				})
-				.on('mouseout',()=>{
-					d3event.target.setAttribute('stroke-opacity',0)
-					this.tip.hide()
-				})
-			if(item.value < feature.scale.maxv) {
-				rect.attr('fill-opacity', item.value/feature.scale.maxv)
-			}
+	drawCell_isgenevalue(sample,feature,g) {
+		const item = feature.items.find( i=> i.sample == sample.name )
+		if(!item) {
+			drawEmptycell(sample, feature, g)
 			return
 		}
 
-		if(feature.iscnv) {
-			const items = feature.items.filter( i=> i.sample == sample.name )
-			if(items.length==0) {
-				drawEmptycell(sample, feature, g)
-				return
-			}
-			for(const item of items) {
-				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
-				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
-				g.append('rect')
-					.attr('x', x1)
-					.attr('width', Math.max(1, x2-x1) )
-					.attr('height', sample.height)
-					.attr('fill',  item.value>0 ? feature.colorgain : feature.colorloss )
-					.attr('fill-opacity', Math.abs(item.value)/feature.maxabslogratio)
-					.attr('shape-rendering','crispEdges')
-			}
+		const rect = g.append('rect')
+			.attr('width', feature.width)
+			.attr('height', sample.height)
+			.attr('fill', feature.color)
+			.attr('stroke','#ccc')
+			.attr('stroke-opacity',0)
+			.attr('shape-rendering','crispEdges')
+			.on('mouseover',()=>{
+				d3event.target.setAttribute('stroke-opacity',1)
+				this.showTip_cell( sample, feature )
+			})
+			.on('mouseout',()=>{
+				d3event.target.setAttribute('stroke-opacity',0)
+				this.tip.hide()
+			})
+		if(item.value < feature.scale.maxv) {
+			rect.attr('fill-opacity', item.value/feature.scale.maxv)
+		}
+	}
+
+
+	drawCell_iscnv(sample,feature,g) {
+		const items = feature.items.filter( i=> i.sample == sample.name )
+		if(items.length==0) {
+			drawEmptycell(sample, feature, g)
+			return
+		}
+		for(const item of items) {
+			const x1 = feature.coordscale( Math.max(feature.start, item.start) )
+			const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
 			g.append('rect')
-				.attr('fill','white')
-				.attr('fill-opacity',0)
-				.attr('width', feature.width)
+				.attr('x', x1)
+				.attr('width', Math.max(1, x2-x1) )
 				.attr('height', sample.height)
-				.attr('stroke','#ccc')
-				.attr('stroke-opacity',0)
+				.attr('fill',  item.value>0 ? feature.colorgain : feature.colorloss )
+				.attr('fill-opacity', Math.abs(item.value)/feature.maxabslogratio)
 				.attr('shape-rendering','crispEdges')
-				.on('mouseover',()=>{
-					d3event.target.setAttribute('stroke-opacity',1)
-					this.showTip_cell( sample, feature )
-				})
-				.on('mouseout',()=>{
-					d3event.target.setAttribute('stroke-opacity',0)
-					this.tip.hide()
-				})
+		}
+		g.append('rect')
+			.attr('fill','white')
+			.attr('fill-opacity',0)
+			.attr('width', feature.width)
+			.attr('height', sample.height)
+			.attr('stroke','#ccc')
+			.attr('stroke-opacity',0)
+			.attr('shape-rendering','crispEdges')
+			.on('mouseover',()=>{
+				d3event.target.setAttribute('stroke-opacity',1)
+				this.showTip_cell( sample, feature )
+			})
+			.on('mouseout',()=>{
+				d3event.target.setAttribute('stroke-opacity',0)
+				this.tip.hide()
+			})
+	}
+
+	drawCell_isloh(sample,feature,g) {
+		const items = feature.items.filter( i=> i.sample == sample.name )
+		if(items.length==0) {
+			drawEmptycell(sample, feature, g)
 			return
 		}
-
-		if(feature.isloh) {
-			const items = feature.items.filter( i=> i.sample == sample.name )
-			if(items.length==0) {
-				drawEmptycell(sample, feature, g)
-				return
-			}
-			for(const item of items) {
-				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
-				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
-				g.append('rect')
-					.attr('x', x1)
-					.attr('width', Math.max(1, x2-x1) )
-					.attr('height', sample.height)
-					.attr('fill',  feature.color )
-					.attr('fill-opacity', (item.segmean-feature.minvalue)/feature.maxvalue)
-					.attr('shape-rendering','crispEdges')
-			}
+		for(const item of items) {
+			const x1 = feature.coordscale( Math.max(feature.start, item.start) )
+			const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
 			g.append('rect')
-				.attr('fill','white')
-				.attr('fill-opacity',0)
-				.attr('width', feature.width)
+				.attr('x', x1)
+				.attr('width', Math.max(1, x2-x1) )
 				.attr('height', sample.height)
-				.attr('stroke','#ccc')
-				.attr('stroke-opacity',0)
+				.attr('fill',  feature.color )
+				.attr('fill-opacity', (item.segmean-feature.minvalue)/feature.maxvalue)
 				.attr('shape-rendering','crispEdges')
-				.on('mouseover',()=>{
-					d3event.target.setAttribute('stroke-opacity',1)
-					this.showTip_cell( sample, feature )
-				})
-				.on('mouseout',()=>{
-					d3event.target.setAttribute('stroke-opacity',0)
-					this.tip.hide()
-				})
+		}
+		g.append('rect')
+			.attr('fill','white')
+			.attr('fill-opacity',0)
+			.attr('width', feature.width)
+			.attr('height', sample.height)
+			.attr('stroke','#ccc')
+			.attr('stroke-opacity',0)
+			.attr('shape-rendering','crispEdges')
+			.on('mouseover',()=>{
+				d3event.target.setAttribute('stroke-opacity',1)
+				this.showTip_cell( sample, feature )
+			})
+			.on('mouseout',()=>{
+				d3event.target.setAttribute('stroke-opacity',0)
+				this.tip.hide()
+			})
+	}
+
+	drawCell_isvcf(sample,feature,g) {
+		const mlst = getitemforsample_vcf( feature, sample )
+
+		if(mlst.length==0) {
+			drawEmptycell(sample, feature, g)
 			return
 		}
 
-		if(feature.isvcf) {
-			const mlst = getitemforsample_vcf( feature, sample )
-
-			if(mlst.length==0) {
-				drawEmptycell(sample, feature, g)
-				return
+		const class2count = new Map()
+		for(const m of mlst) {
+			if(!class2count.has(m.class)) {
+				class2count.set(m.class,0)
 			}
-
-			const class2count = new Map()
-			for(const m of mlst) {
-				if(!class2count.has(m.class)) {
-					class2count.set(m.class,0)
-				}
-				class2count.set(m.class, class2count.get(m.class)+1)
-			}
-			let x=0
-			for(const [cname, count] of class2count) {
-				const span = (count/mlst.length) * feature.width
-				g.append('rect')
-					.attr('x', x)
-					.attr('width', span)
-					.attr('height', sample.height)
-					.attr('fill', common.mclass[cname].color)
-					.attr('shape-rendering','crispEdges')
-				x += span
-			}
+			class2count.set(m.class, class2count.get(m.class)+1)
+		}
+		let x=0
+		for(const [cname, count] of class2count) {
+			const span = (count/mlst.length) * feature.width
 			g.append('rect')
-				.attr('fill','white')
-				.attr('fill-opacity',0)
-				.attr('width', feature.width)
+				.attr('x', x)
+				.attr('width', span)
 				.attr('height', sample.height)
-				.attr('stroke','#ccc')
-				.attr('stroke-opacity',0)
+				.attr('fill', common.mclass[cname].color)
 				.attr('shape-rendering','crispEdges')
-				.on('mouseover',()=>{
-					d3event.target.setAttribute('stroke-opacity',1)
-					this.showTip_cell( sample, feature )
-				})
-				.on('mouseout',()=>{
-					d3event.target.setAttribute('stroke-opacity',0)
-					this.tip.hide()
-				})
+			x += span
+		}
+		g.append('rect')
+			.attr('fill','white')
+			.attr('fill-opacity',0)
+			.attr('width', feature.width)
+			.attr('height', sample.height)
+			.attr('stroke','#ccc')
+			.attr('stroke-opacity',0)
+			.attr('shape-rendering','crispEdges')
+			.on('mouseover',()=>{
+				d3event.target.setAttribute('stroke-opacity',1)
+				this.showTip_cell( sample, feature )
+			})
+			.on('mouseout',()=>{
+				d3event.target.setAttribute('stroke-opacity',0)
+				this.tip.hide()
+			})
+	}
+
+	drawCell_isitd(sample,feature,g) {
+		const item = feature.items.find( i=> i.sample == sample.name )
+		if(!item) {
+			drawEmptycell(sample, feature, g)
 			return
 		}
+		g.append('rect')
+			.attr('width', feature.width)
+			.attr('height', sample.height)
+			.attr('fill', feature.color)
+			.attr('stroke','#ccc')
+			.attr('stroke-opacity',0)
+			.attr('shape-rendering','crispEdges')
+			.on('mouseover',()=>{
+				d3event.target.setAttribute('stroke-opacity',1)
+				this.showTip_cell( sample, feature )
+			})
+			.on('mouseout',()=>{
+				d3event.target.setAttribute('stroke-opacity',0)
+				this.tip.hide()
+			})
 	}
 
 	/*********** __draw ends *****/
@@ -955,7 +1032,7 @@ export class Samplematrix {
 						if(f.valuecutoff) {
 							// cutoff has been set, cancel and refetch data
 							f.valuecutoff=0
-							this.getfeatures([f])
+							this.get_features([f])
 						} else {
 							// cutoff has not been set, do nothing
 						}
@@ -969,12 +1046,12 @@ export class Samplematrix {
 						} else {
 							// set new cutoff
 							f.valuecutoff=v
-							this.getfeatures([f])
+							this.get_features([f])
 						}
 					} else {
 						// cutoff has not been set
 						f.valuecutoff=v
-						this.getfeatures([f])
+						this.get_features([f])
 					}
 				})
 			row.append('div')
@@ -1004,7 +1081,7 @@ export class Samplematrix {
 						if(f.focalsizelimit) {
 							// cutoff has been set, cancel and refetch data
 							f.focalsizelimit=0
-							this.getfeatures([f])
+							this.get_features([f])
 						} else {
 							// cutoff has not been set, do nothing
 						}
@@ -1018,12 +1095,12 @@ export class Samplematrix {
 						} else {
 							// set new cutoff
 							f.focalsizelimit=v
-							this.getfeatures([f])
+							this.get_features([f])
 						}
 					} else {
 						// cutoff has not been set
 						f.focalsizelimit=v
-						this.getfeatures([f])
+						this.get_features([f])
 					}
 				})
 			row.append('span').text('bp')
@@ -1059,7 +1136,7 @@ export class Samplematrix {
 						if(f.valuecutoff) {
 							// cutoff has been set, cancel and refetch data
 							f.valuecutoff=0
-							this.getfeatures([f])
+							this.get_features([f])
 						} else {
 							// cutoff has not been set, do nothing
 						}
@@ -1073,12 +1150,12 @@ export class Samplematrix {
 						} else {
 							// set new cutoff
 							f.valuecutoff=v
-							this.getfeatures([f])
+							this.get_features([f])
 						}
 					} else {
 						// cutoff has not been set
 						f.valuecutoff=v
-						this.getfeatures([f])
+						this.get_features([f])
 					}
 				})
 			row.append('div')
@@ -1108,7 +1185,7 @@ export class Samplematrix {
 						if(f.focalsizelimit) {
 							// cutoff has been set, cancel and refetch data
 							f.focalsizelimit=0
-							this.getfeatures([f])
+							this.get_features([f])
 						} else {
 							// cutoff has not been set, do nothing
 						}
@@ -1122,12 +1199,12 @@ export class Samplematrix {
 						} else {
 							// set new cutoff
 							f.focalsizelimit=v
-							this.getfeatures([f])
+							this.get_features([f])
 						}
 					} else {
 						// cutoff has not been set
 						f.focalsizelimit=v
-						this.getfeatures([f])
+						this.get_features([f])
 					}
 				})
 			row.append('span').text('bp')
@@ -1143,6 +1220,11 @@ export class Samplematrix {
 	showTip_sample(sample) {
 		this.tip.show(d3event.clientX,d3event.clientY)
 			.clear()
+
+		this.tip.d.append('div')
+			.text(sample.name)
+			.style('padding','10px')
+			.style('font-size','.7em')
 
 		const lst = []
 		for(const f of this.features) {
@@ -1209,6 +1291,20 @@ export class Samplematrix {
 				lst.push({k:f.label, v: text} )
 				continue
 			}
+
+			if(f.isitd) {
+				const items = f.items.filter( i => i.sample==sample.name )
+				let text
+				if(items.length==0) {
+					text = saynovalue
+				} else {
+					text = '<div style="background:'+f.color+';width:20px">&nbsp;</div>'
+				}
+				lst.push({k:f.label, v: text} )
+				continue
+			}
+
+			console.error('Unknown feature type')
 		}
 
 		client.make_table_2col(this.tip.d, lst)
@@ -1280,6 +1376,24 @@ export class Samplematrix {
 				}).join('')
 			}
 			lst.push({k:f.label, v: text} )
+
+		} else if(f.isitd) {
+
+			const items = f.items.filter( i=> i.sample==sample.name )
+			let text
+			if(items.length==0) {
+				text = saynovalue
+			} else {
+				const lst2 = items.map(i=>{
+					return '<div>'+i.chr+':'+i.start+'-'+i.stop+' '
+						+'</div>'
+				})
+				text = lst2.join('')
+			}
+			lst.push({k:f.label, v:text})
+			
+		} else {
+			console.error('unknown feature type')
 		}
 
 
@@ -1381,6 +1495,17 @@ function feature2arg(f) {
 			stop: f.stop
 		}
 	}
+	if(f.isitd) {
+		return {
+			id:f.id,
+			isitd:1,
+			querykey:f.querykey,
+			chr:f.chr,
+			start: f.start,
+			stop: f.stop
+		}
+	}
+	throw('unknown feature type in feature2arg')
 }
 
 
