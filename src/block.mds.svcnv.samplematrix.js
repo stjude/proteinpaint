@@ -87,8 +87,20 @@ export function createbutton_addfeature( p ) {
 			stop:m.stop
 		}
 		break
+	case common.dtsv:
+	case common.dtfusionrna:
+		// TODO hardcoded range +/- 1k
+		nf = {
+			issvfusion:1,
+			querykey: tk.querykey,
+			label: 'SV/fusion around '+m._chr+':'+(m._pos+1),
+			chr: m._chr,
+			start: Math.max(0, m._pos-1000),
+			stop: m._pos+1000
+		}
+		break
 	default:
-		console.log('newfeature: unknown dt')
+		console.log('createbutton_addfeature: unknown dt')
 		return
 	}
 
