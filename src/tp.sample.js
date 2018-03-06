@@ -36,7 +36,7 @@ if(patientnum==0) {
 }
 
 const patientlabel = cohort.individual_label_name ? cohort.individual_label_name.toUpperCase() : 'INDIVIDUAL'
-const labelnum = cohort.individual_label_num ? cohort.individual_label_num : patientnum; console.log(labelnum)
+const labelnum = cohort.individual_label_num ? cohort.individual_label_num : patientnum
 butt.html(labelnum+' <span style="font-size:70%">'+patientlabel+(labelnum>1?'S':'')+'</span>')
 
 const butrow=folder.append('div').style('padding','10px 0px')
