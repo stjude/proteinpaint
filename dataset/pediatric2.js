@@ -138,7 +138,7 @@ module.exports={
 	queries:{
 
 		svcnv:{
-			name:'Pediatric cancer CNV/LOH/SV/fusion/ITD',
+			name:'Pediatric tumor mutation',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
 			file:'hg19/Pediatric/pediatric.svcnv.hg19.gz',

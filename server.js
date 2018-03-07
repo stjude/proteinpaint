@@ -6960,12 +6960,25 @@ function handle_samplematrix(req,res) {
 
 	if(req.query.iscustom) {
 
-		/*
-		form ds from custom tracks
-		ds.queries = {
-			key: { tracks }
+		if(!req.query.querykey2tracks) return res.send({error:'querykey2tracks{} missing'})
+
+		ds = { queries: {} }
+		for(const key in req.query.querykey2tracks) {
+			if(key == common.custommdstktype.vcf) {
+
+				// special treatment for vcf
+				const tk = req.query.querykey2tracks[ key ]
+				tk.type = common.mdsvcftype.vcf
+
+				ds.queries[ key ] = {
+					info: tk.info, // comply with multi-vcf track mds
+					tracks:[ tk ]
+				}
+
+			} else {
+				ds.queries[ key ] = req.query.querykey2tracks[ key ]
+			}
 		}
-		*/
 
 	} else {
 
@@ -7024,7 +7037,7 @@ function handle_samplematrix(req,res) {
 		} else if(feature.isvcf) {
 
 			const [err, q] = samplematrix_task_isvcf( feature, ds, dsquery, req )
-			if(err) return res.send({error:'error with iscnv: '+err})
+			if(err) return res.send({error:'error with isvcf: '+err})
 			tasks.push(q)
 
 		} else if(feature.isitd) {

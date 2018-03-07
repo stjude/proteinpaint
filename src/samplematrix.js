@@ -23,6 +23,7 @@ exposed methods (as in block.mds.svcnv.samplematrix.js)
 internal use
 	.validate_config()
 	.draw_matrix()
+	feature2arg()
 
 TODO
 - custom dataset
@@ -93,14 +94,31 @@ export class Samplematrix {
 		return Promise.resolve()
 		.then(()=>{
 
-			if(this.dslabel) {
+			if(this.iscustom) {
+				// custom
+				if(!this.querykey2tracks) throw('querykey2tracks missing for custom dataset')
+
+				const validkeys = new Set()
+				for(const k in common.custommdstktype) validkeys.add( common.custommdstktype[k] )
+
+				let validtrackcount=0
+				for(const key in this.querykey2tracks) {
+					
+					if(!validkeys.has( key )) throw('unknown querykey "'+key+'" not found in custommdstktype')
+
+					const tk = this.querykey2tracks[key]
+					if(!tk.file && !tk.url) throw('no file or url for a custom track by key '+key)
+					validtrackcount++
+				}
+				if(validtrackcount==0) throw('no custom tracks from querykey2tracks')
+
+			} else {
+				// official
+				if(!this.dslabel) throw('not custom data but dslabel is missing')
 				// accessing a native ds
 				this.mds = this.genome.datasets[this.dslabel]
 				if(!this.mds) throw('invalid dataset name: '+this.dslabel)
 				if(!this.mds.isMds) throw('improper dataset: '+this.dslabel)
-			} else {
-
-				throw('missing dslabel (custom track not yet supported)')
 			}
 
 			if(this.limitsamplebyeitherannotation) {
@@ -428,9 +446,21 @@ export class Samplematrix {
 		const arg={
 			jwt: this.jwt,
 			genome: this.genome.name,
-			dslabel: this.mds.label,
 			limitsamplebyeitherannotation: this.limitsamplebyeitherannotation,
 			features: (featureset || this.features).map( feature2arg )
+		}
+
+		if(this.iscustom) {
+
+			arg.iscustom=1
+			arg.querykey2tracks = {}
+			// only provide tracks from current feature set, so the bulky vcf object won't be sent when only the cnv feature is updated
+			for( const f of arg.features ) {
+				arg.querykey2tracks[ f.querykey ] = this.querykey2tracks[ f.querykey ]
+			}
+
+		} else {
+			arg.dslabel = this.mds.label
 		}
 
 		return fetch(new Request(this.hostURL+'/samplematrix',{
