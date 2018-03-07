@@ -59,54 +59,28 @@ APP=es6_proteinpaint # might be overridden below
 RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
 GIT_REMOTE=http://cmpb-devops.stjude.org/gitlab/viz/proteinpaint.git
 
-if [[ "$ENV" == "old-stage" ]]; then
-	DEPLOYER=genomeuser
-	REMOTEHOST=pecan-test.stjude.org
-	REMOTEDIR=/opt/genomeportal/current
-	URL="//pecan-test.stjude.org/pp"
-	SUBDOMAIN=pecan-test
-
-elif [[ "$ENV" == "public-stage" ]]; then
-	DEPLOYER=genomeuser
-	REMOTEHOST=pp-prt.stjude.org
-	REMOTEDIR=/opt/app/pp
-	URL="//pp-prt.stjude.org/pp"
-	SUBDOMAIN=pp-prt
-
-elif [[ "$ENV" == "old-prod" ]]; then
-	DEPLOYER=genomeuser
-	REMOTEHOST=pecan-web01-g.stjude.org
-	REMOTEDIR=/opt/genomeportal/current
-	TESTHOST=genomeuser@pecan-test.stjude.org
-	URL="//pecan.stjude.org/pp"
-	SUBDOMAIN=pecan
-
-elif [[ "$ENV" == "internal-stage" ]]; then
+if [[ "$ENV" == "internal-stage" || "$ENV" == "pp-int-test" || "$ENV" == "pp-irt" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-int-test.stjude.org
 	REMOTEDIR=/opt/app/pp
-	URL="//pp-int-test.stjude.org/pp"
+	URL="//pp-int-test.stjude.org"
 	SUBDOMAIN=pp-int-test
 
-elif [[ "$ENV" == "internal-prod" ]]; then
+elif [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" || "$ENV" == "ppdev" || "$ENV" == "ppr" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-irp.stjude.org
 	REMOTEDIR=/opt/app/pp
 	URL="//ppr.stjude.org/"
 	SUBDOMAIN=ppr
 
-# alternate internal-prod deploy procedure
-# which reuses live webpack bundle 
-elif [[ "$ENV" == "ppdev" ]]; then
+elif [[ "$ENV" == "public-stage" || "$ENV" == "pecan-test" || "$ENV" == "pp-prt" ]]; then
 	DEPLOYER=genomeuser
-	REMOTEHOST=pp-irp.stjude.org
+	REMOTEHOST=pp-prt.stjude.org
 	REMOTEDIR=/opt/app/pp
-	# TESTHOST=genomeuser@pecan-test.stjude.org
-	DEVHOST=http://localhost:3000
-	URL="//ppr.stjude.org/"
-	SUBDOMAIN=ppr
+	URL="//pecan-test.stjude.org/pp"
+	SUBDOMAIN=pecan-test
 
-elif [[ "$ENV" == "public-prod" ]]; then
+elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prp1.stjude.org
 	REMOTEDIR=/opt/app/pp
