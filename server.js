@@ -4980,21 +4980,15 @@ function handle_mds_expressionrank( req, res ) {
 		if(!ds.cohort || !ds.cohort.annotation) return res.send({error:'.cohort.annotation missing from dataset'})
 	}
 
-	Promise.resolve(()=>{
-
-		if(dsquery.file) return null
-		if(!dsquery.url) throw({message:'file or url missing'})
-		// cache the index
-		const indexURL = dsquery.indexURL || dsquery.url+'.tbi'
-
-		return cache_index_promise(indexURL)
-		.then(dir => {
-			dsquery.usedir = dir
-		})
-	
-	})
+	Promise.resolve()
 	.then(()=>{
 
+		if(dsquery.file) return ''
+		if(!dsquery.url) throw({message:'file or url missing'})
+		return cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
+	
+	})
+	.then( dir =>{
 
 		const tasks = []
 
@@ -5006,7 +5000,7 @@ function handle_mds_expressionrank( req, res ) {
 						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
 						r.chr+':'+r.start+'-'+r.stop
 					],
-					{cwd: dsquery.usedir }
+					{cwd: dir }
 				)
 
 				const rl = readline.createInterface({
