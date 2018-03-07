@@ -151,6 +151,7 @@ function addnewfeature( nf, tk, block) {
 
 		if(tk.iscustom) {
 
+			arg.iscustom = 1
 			arg.querykey2tracks = {}
 			arg.querykey2tracks[ common.custommdstktype.svcnvitd ] = {
 				file: tk.file,
