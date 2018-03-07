@@ -21,16 +21,13 @@ exposed methods (as in block.mds.svcnv.samplematrix.js)
 	.error()
 
 internal use
+	.validate_config()
+	.draw_matrix()
 
 TODO
 - custom dataset
 - retrieve features from assay tracks, using an assay type
 
-rows
-	- samples, of same height
-columsn
-	- features
-	- each has own width
 
 
 
@@ -141,7 +138,7 @@ export class Samplematrix {
 	feature_parseposition_maygene( f ) {
 		/*
 		for position-based features
-		only called by when validating features
+		only called by validate_feature()
 		*/
 		return Promise.resolve()
 		.then(()=>{
@@ -160,7 +157,7 @@ export class Samplematrix {
 				// has predefined position
 				const err = invalidcoord(this.genome, f.chr, f.start, f.stop)
 				if(err) {
-					throw('position error for feature: '+err)
+					throw('feature "'+f.label+'" position error: '+err)
 				} else {
 					// has valid position
 					return
@@ -184,7 +181,7 @@ export class Samplematrix {
 			.then(data=>{return data.json()})
 			.then(data=>{
 				if(data.error) throw(data.error)
-				if(!data.gmlst || data.gmlst.length==0) throw('no coordinate position can be found by gene '+f.genename)
+				if(!data.gmlst || data.gmlst.length==0) throw('no gene can be found for '+f.genename)
 				// data.gmlst isoforms could be from different positions
 				const regions = []
 				for(const gm of data.gmlst) {
@@ -453,7 +450,7 @@ export class Samplematrix {
 				this.prepFeatureData( f )
 			}
 
-			this.drawMatrix()
+			this.draw_matrix()
 		})
 	}
 
@@ -588,7 +585,7 @@ export class Samplematrix {
 
 
 
-	drawMatrix() {
+	draw_matrix() {
 
 		this.svg.selectAll('*').remove()
 		const svgg = this.svg.append('g')
@@ -998,7 +995,7 @@ export class Samplematrix {
 				this.menu.hide()
 				f.legend_tr.remove()
 				this.features.splice( this.features.findIndex(i=>i.id==f.id), 1 )
-				this.drawMatrix()
+				this.draw_matrix()
 			})
 
 		if(f.isgenevalue) {
@@ -1068,7 +1065,7 @@ export class Samplematrix {
 					if(f2.isgenevalue) delete f2.sort
 				}
 				f.sort=1
-				this.drawMatrix()
+				this.draw_matrix()
 			})
 	}
 
