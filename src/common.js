@@ -362,9 +362,10 @@ const tkt={
 	junction:'junction',
 	mdsjunction:'mdsjunction',
 	mdscnv:'mdscnv',
-	mdssvcnv:'mdssvcnv',
+	mdssvcnv:'mdssvcnv', // no longer use as driver
 	mdsexpressionrank:'mdsexpressionrank',
 	mdsvcf:'mdsvcf', // for snv/indels, currently vcf, may include MAF
+	//mdsgeneral:'mdsgeneral', // replaces mdssvcnv   ****** not ready yet
 	bedj:'bedj',
 	pgv:'profilegenevalue',
 	bampile:'bampile',

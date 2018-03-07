@@ -122,11 +122,23 @@ module.exports={
 		}
 	},
 
+/************* not ready to migrate to general track yet
+	key2generalTracks:{
+		pedmut: {
+			label:'Pediatric cancer mutation',
+			querykeys: [
+				{key:'svcnv'},
+				{key:'somaticsnvindel'},
+				{key:'genefpkm'}
+			]
+		}
+	},
+	*/
 
 	queries:{
 
 		svcnv:{
-			name:'Pediatric tumor mutation',
+			name:'Pediatric cancer CNV/LOH/SV/fusion/ITD',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
 			file:'hg19/Pediatric/pediatric.svcnv.hg19.gz',

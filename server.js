@@ -9283,6 +9283,22 @@ function mds_init(ds,genome) {
 			}
 		}
 	}
+
+/*
+************* not ready to migrate to general track yet
+
+	if(ds.key2generalTracks) {
+		if(!ds.queries) return '.queries{} missing when key2generalTracks is in use'
+		for(const key in ds.key2generalTracks) {
+			const tk = ds.key2generalTracks[key]
+			tk.key = key
+			if(!tk.label) tk.label = ds.label + ' general track'
+			if(!tk.querykeys) return '.querykeys[] missing for general track by key '+key
+			if(!Array.isArray(tk.querykeys)) return 'querykeys[] should be array'
+		}
+	}
+	*/
+
 	return null
 }
 
