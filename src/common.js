@@ -401,6 +401,18 @@ exports.mdsvcftype = {
 
 
 
+/*
+for custom mdssvcnv track
+or general track
+to avoid using hard-coded string
+*/
+exports.custommdstktype = {
+	vcf:'vcf',
+	svcnvitd:'svcnvitd',
+	geneexpression:'geneexpression'
+}
+
+
 
 
 // codons that are not here are stop codon!!
