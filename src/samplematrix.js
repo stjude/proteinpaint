@@ -94,32 +94,53 @@ export class Samplematrix {
 		return Promise.resolve()
 		.then(()=>{
 
-			if(this.iscustom) {
-				// custom
-				if(!this.querykey2tracks) throw('querykey2tracks missing for custom dataset')
-
-				const validkeys = new Set()
-				for(const k in common.custommdstktype) validkeys.add( common.custommdstktype[k] )
-
-				let validtrackcount=0
-				for(const key in this.querykey2tracks) {
-					
-					if(!validkeys.has( key )) throw('unknown querykey "'+key+'" not found in custommdstktype')
-
-					const tk = this.querykey2tracks[key]
-					if(!tk.file && !tk.url) throw('no file or url for a custom track by key '+key)
-					validtrackcount++
-				}
-				if(validtrackcount==0) throw('no custom tracks from querykey2tracks')
-
-			} else {
+			if(!this.iscustom) {
 				// official
 				if(!this.dslabel) throw('not custom data but dslabel is missing')
 				// accessing a native ds
 				this.mds = this.genome.datasets[this.dslabel]
 				if(!this.mds) throw('invalid dataset name: '+this.dslabel)
 				if(!this.mds.isMds) throw('improper dataset: '+this.dslabel)
+				return
 			}
+			if(!this.querykey2tracks) throw('querykey2tracks missing for custom dataset')
+
+			const validkeys = new Set()
+			for(const k in common.custommdstktype) validkeys.add( common.custommdstktype[k] )
+
+			let validtrackcount=0
+			for(const key in this.querykey2tracks) {
+				
+				if(!validkeys.has( key )) throw('unknown querykey "'+key+'" not found in custommdstktype')
+
+				const tk = this.querykey2tracks[key]
+				if(!tk.file && !tk.url) throw('no file or url for a custom track by key '+key)
+				validtrackcount++
+			}
+			if(validtrackcount==0) throw('no custom tracks from querykey2tracks')
+
+			/*
+			for custom dataset, allows one vcf file
+			FIXME may allow more than one
+			if it comes from mdssvcnv/mdsgeneral, the vcf header has already been parsed
+			otherwise, fetch header
+			*/
+			let vcftk
+			for(const key in this.querykey2tracks) {
+				if(key == common.custommdstktype.vcf) {
+					vcftk = this.querykey2tracks[key]
+				}
+			}
+
+			if(!vcftk) {
+				// no vcf track
+				return
+			}
+
+			return this.may_init_customvcf(vcftk)
+
+		})
+		.then(()=>{
 
 			if(this.limitsamplebyeitherannotation) {
 				if(!Array.isArray(this.limitsamplebyeitherannotation)) throw('limitsamplebyeitherannotation must be an array')
@@ -1542,6 +1563,39 @@ export class Samplematrix {
 			})
 		}
 	}
+
+
+	may_init_customvcf(tk) {
+		/*
+		if not loaded, will load header for a custom vcf track
+		*/
+		if(tk.info) return
+
+		const arg = {
+			jwt: this.jwt,
+			file: tk.file,
+			url: tk.url,
+			indexURL: tk.indexURL
+		}
+		return fetch( new Request( this.hostURL+'/vcfheader', {
+			method:'POST',
+			body:JSON.stringify(arg)
+		}))
+		.then(data=>{return data.json()})
+		.then( data => {
+
+			const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
+			if(errs) throw('Error parsing VCF meta lines: '+errs.join('; '))
+			tk.info = info
+			tk.format = format
+			tk.samples = samples
+			tk.nochr = common.contigNameNoChr( this.genome, data.chrstr.split('\n'))
+
+		})
+	}
+
+
+
 
 	// end of class
 }

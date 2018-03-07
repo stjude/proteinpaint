@@ -162,7 +162,12 @@ function addnewfeature( nf, tk, block) {
 				arg.querykey2tracks[ common.custommdstktype.geneexpression ] = tk.checkexpressionrank
 			}
 			if(tk.checkvcf) {
-				arg.querykey2tracks[ common.custommdstktype.vcf ] = tk.checkvcf
+				// hardcoded one single vcf file
+				arg.querykey2tracks[ common.custommdstktype.vcf ] = {}
+				for(const k in tk.checkvcf) {
+					if(k=='stringifiedObj') continue
+					arg.querykey2tracks[ common.custommdstktype.vcf ][ k ] = tk.checkvcf[ k ]
+				}
 			}
 
 		} else {
