@@ -10,10 +10,6 @@ export function createbutton_addfeature( p ) {
 
 	const {m, tk, block, holder} = p
 
-	if(tk.iscustom) {
-		console.log('createbutton_addfeature: not custom yet')
-		return
-	}
 	if(!m) return
 
 	// generate new feature beforehand
@@ -24,7 +20,7 @@ export function createbutton_addfeature( p ) {
 		nf = {
 			iscnv: 1,
 			label: m.chr+' '+common.bplen(m.stop-m.start)+' CNV',
-			querykey: tk.querykey,
+			querykey: ( tk.iscustom ? common.custommdstktype.svcnvitd : tk.querykey),
 			chr: m.chr,
 			start: m.start,
 			stop: m.stop,
@@ -38,7 +34,7 @@ export function createbutton_addfeature( p ) {
 		nf = {
 			isloh: 1,
 			label: m.chr+' '+common.bplen(m.stop-m.start)+' LOH',
-			querykey: tk.querykey,
+			querykey: ( tk.iscustom ? common.custommdstktype.svcnvitd : tk.querykey),
 			chr: m.chr,
 			start: m.start,
 			stop: m.stop,
@@ -59,7 +55,7 @@ export function createbutton_addfeature( p ) {
 		}
 		nf = {
 			isgenevalue:1,
-			querykey: tk.checkexpressionrank.querykey,
+			querykey: ( tk.iscustom ? common.custommdstktype.geneexpression : tk.checkexpressionrank.querykey ),
 			genename: m.genename,
 			label: m.genename+' expression',
 			chr: tmp.chr,
@@ -70,7 +66,7 @@ export function createbutton_addfeature( p ) {
 	case common.dtsnvindel:
 		nf = {
 			isvcf:1,
-			querykey: tk.checkvcf.querykey,
+			querykey: ( tk.iscustom ? common.custommdstktype.vcf : tk.checkvcf.querykey ),
 			label: 'Mutation at '+m.chr+':'+m.pos,
 			chr: m.chr,
 			start: m.pos,
@@ -80,7 +76,7 @@ export function createbutton_addfeature( p ) {
 	case common.dtitd:
 		nf = {
 			isitd:1,
-			querykey: tk.querykey,
+			querykey: ( tk.iscustom ? common.custommdstktype.svcnvitd : tk.querykey),
 			label: 'ITD at '+m.chr+':'+(m.start+1)+'-'+(m.stop+1),
 			chr:m.chr,
 			start:m.start,
@@ -92,7 +88,7 @@ export function createbutton_addfeature( p ) {
 		// TODO hardcoded range +/- 1k
 		nf = {
 			issvfusion:1,
-			querykey: tk.querykey,
+			querykey: ( tk.iscustom ? common.custommdstktype.svcnvitd : tk.querykey),
 			label: 'SV/fusion around '+m._chr+':'+(m._pos+1),
 			chr: m._chr,
 			start: Math.max(0, m._pos-1000),
@@ -144,16 +140,35 @@ function addnewfeature( nf, tk, block) {
 		})
 		pane.header.text(tk.name)
 
-		// TODO custom track
 		const arg = {
 			debugmode: block.debugmode,
 			genome: block.genome,
-			dslabel: tk.mds.label,
 			features: [ nf ],
 			hostURL: block.hostURL,
 			jwt:block.jwt,
 			holder: pane.body.append('div').style('margin','20px'),
 		}
+
+		if(tk.iscustom) {
+
+			arg.querykey2tracks = {}
+			arg.querykey2tracks[ common.custommdstktype.svcnvitd ] = {
+				file: tk.file,
+				url: tk.url,
+				indexURL: tk.indexURL
+			}
+			if(tk.checkexpressionrank) {
+				arg.querykey2tracks[ common.custommdstktype.geneexpression ] = tk.checkexpressionrank
+			}
+			if(tk.checkvcf) {
+				arg.querykey2tracks[ common.custommdstktype.vcf ] = tk.checkvcf
+			}
+
+		} else {
+			// official
+			arg.dslabel = tk.mds.label
+		}
+
 		import('./samplematrix').then(_=>{
 			tk.samplematrix = new _.Samplematrix( arg )
 			tk.samplematrix._pane = pane
@@ -215,6 +230,3 @@ export function may_show_samplematrix_button(tk, block) {
 			delete tk.samplematrix
 		})
 }
-
-
-/************* __sm ends ********/
