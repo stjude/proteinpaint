@@ -756,7 +756,7 @@ export function may_legend_mutationAttribute(tk, block) {
 		
 		const btn = tk.legend_more_label
 			.attr('class','sja_legend_more_btn')
-			.html('more')
+			.html('MORE...')
 			.on('click',()=>{
 				tk.tip2.showunder(btn.node()).clear()
 				for(const attr of hiddenMutationAttributes) {
