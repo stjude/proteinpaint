@@ -473,21 +473,19 @@ function render_samplegroups( tk, block ) {
 		const color='#858585'
 		if(vcfdensityheight && tk.data_vcf) {
 
-			let c_snvindel = 0,
-				c_itd = 0
+			let c_snvindel = 0
 
 			for(const m of tk.data_vcf) {
 				if(m.x==undefined) continue
 				if(m.dt==common.dtsnvindel) {
 					c_snvindel += m.sampledata.length
-				} else if(m.dt==common.dtitd) {
-					c_itd++
+				} else {
+					console.error('unknown dt from data_vcf')
 				}
 			}
 
 			const phrases = []
 			if(c_snvindel) phrases.push( c_snvindel+' SNV/indel'+(c_snvindel>1?'s':'') )
-			if(c_itd) phrases.push( c_itd+' ITD'+(c_itd>1?'s':'') )
 
 			tk.vcfdensitylabelg
 				.attr('transform','translate(0,'+(hpad-vcfdensityheight-vcfsvpad-svdensityheight)+')')
@@ -1483,6 +1481,23 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 		return
 	}
 
+	/*
+	before commensing, may delete prior label-drawing flags from vcf sampleobj
+	this can happen when toggling label show/hide without reloading data
+	*/
+	if(tk.data_vcf) {
+		for(const m of tk.data_vcf) {
+			if(m.sampledata) {
+				for(const s of m.sampledata) {
+					if(s.sampleobj) {
+						delete s.sampleobj.labonleft
+						delete s.sampleobj.labonright
+					}
+				}
+			}
+		}
+	}
+
 	// full width
 	const blockwidth = block.width + block.subpanels.reduce( (i,j)=>i+j.leftpad+j.width, 0 )
 
@@ -1509,7 +1524,12 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 			// decide if to draw label for sv/fusion
 
 
-			if(tk.data_vcf) {
+			if( tk.data_vcf ) {
+
+				if( tk.hidelabel_vcf ) {
+					// no drawing labels
+					continue
+				}
 
 				// collect vcf items for this sample
 				const mlst = []
@@ -2497,6 +2517,11 @@ function prep_samplegroups( tk, block ) {
 
 function makeTk(tk, block) {
 
+	if(!tk.singlesample) {
+		// in multi-sample, hide vcf label by default
+		tk.hidelabel_vcf = true
+	}
+
 	tk.tip2 = new client.Menu({padding:'0px'})
 
 	if(!tk.attrnamespacer) {
@@ -2646,6 +2671,8 @@ function configPanel(tk, block) {
 	may_allow_modeswitch( tk, block )
 
 	may_allow_samplesearch( tk, block)
+
+	may_allow_showhidelabel_vcf( tk, block )
 
 
 	// filter cnv with sv
@@ -2968,6 +2995,29 @@ function may_allow_modeswitch(tk, block) {
 		.attr('class','sja_clbtext')
 		.html('&nbsp;Expanded <span style="font-size:.7em;color:#858585;">Showing SV/SNV/indel for each sample</span>')
 }
+
+
+
+function may_allow_showhidelabel_vcf(tk, block) {
+	// only for multi-sample
+	if(tk.singlesample) return
+	const row = tk.tkconfigtip.d.append('div')
+		.style('margin-bottom','15px')
+	const id = Math.random().toString()
+	row.append('input')
+		.attr('type','checkbox')
+		.attr('id',id)
+		.property('checked', tk.hidelabel_vcf)
+		.on('change',()=>{
+			tk.hidelabel_vcf = !tk.hidelabel_vcf
+			render_samplegroups(tk, block)
+		})
+	row.append('label')
+		.attr('for',id)
+		.attr('class','sja_clbtext')
+		.html('&nbsp;Hide labels for SNV/indel in "Expanded" mode')
+}
+
 
 
 function may_allow_samplesearch(tk, block) {
