@@ -1012,7 +1012,7 @@ function render_multi_cnvloh(tk,block) {
 		sample/group height determined on the fly
 		for each sample, gather all stackable items: cnv/loh/itd
 		then do stacking, generate item.stack_y and obtain height for this sample
-		then commense rendering
+		then commence rendering
 
 	in dense mode:
 		all samples have equal height, 1 pixel hardcoded
@@ -1482,7 +1482,7 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 	}
 
 	/*
-	before commensing, may delete prior label-drawing flags from vcf sampleobj
+	before commencing, delete prior label-drawing flags from vcf sampleobj
 	this can happen when toggling label show/hide without reloading data
 	*/
 	if(tk.data_vcf) {
