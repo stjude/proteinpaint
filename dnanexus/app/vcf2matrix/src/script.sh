@@ -27,15 +27,19 @@ main() {
 
 	dx-download-all-inputs
 
-	mkdir -p out/html/
+	mkdir -p out/matrix_viewer/
 
-	# output to .heatmap.html, to indicate the old heatmap view, when samplematrix is ready, may change name
-	output_name="${vcf_file_prefix[0]}.heatmap.html"
+	output_name="${vcf_file_prefix[0]}.matrix"
+	bookmark_name="${vcf_file_prefix[0]}.bookmark"
 
     # Fill in your application code here.
-	nodejs /usr/bin/bin.js $other_options $output_name ${vcf_file_path[@]}
+	nodejs /usr/bin/bin.smat.js $other_options ${vcf_file_path[@]} > $output_name
 
-	mv "$output_name" out/html/
+	dx upload $output_name --type FileViewer --details '{"patterns": ["*.gz", "*.gz.tbi", "*.gz.csi"]}' # | nodejs /usr/bin/bookmark.js > $bookmark_name
+
+
+	mv $output_name out/matrix_viewer/
+	#mv $bookmark_name out/matrix_viewer/
 	dx-upload-all-outputs
 
     #

@@ -24,15 +24,13 @@
     }
   ],
   "outputSpec": [
-    {
-      "name": "html",
-      "label": "Output HTML file",
-      "class": "file",
-      "patterns": [
-        "*"
-      ],
-      "help": ""
-    }
+  	{
+	"name":"matrix_viewer",
+	"label":"matrix Viewer",
+	"help":"matrix Viewer",
+	"class":"file",
+	"patterns":["*"]
+	}
   ],
   "runSpec": {
     "timeoutPolicy": {

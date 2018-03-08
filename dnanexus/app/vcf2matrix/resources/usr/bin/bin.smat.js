@@ -431,9 +431,10 @@ const tkt={
 	junction:'junction',
 	mdsjunction:'mdsjunction',
 	mdscnv:'mdscnv',
-	mdssvcnv:'mdssvcnv',
+	mdssvcnv:'mdssvcnv', // no longer use as driver
 	mdsexpressionrank:'mdsexpressionrank',
-	mdsvcfitd:'mdsvcfitd',
+	mdsvcf:'mdsvcf', // for snv/indels, currently vcf, may include MAF
+	//mdsgeneral:'mdsgeneral', // replaces mdssvcnv   ****** not ready yet
 	bedj:'bedj',
 	pgv:'profilegenevalue',
 	bampile:'bampile',
@@ -459,14 +460,26 @@ exports.validtkt=function(what) {
 
 
 /*
-member track types from mdsvcfitd
+member track types from mdsvcf
 to get rid of hardcoded strings
+in future may include MAF format files
 */
-exports.mdsvcfitdtype = {
+exports.mdsvcftype = {
 	vcf:'vcf',
-	itd:'itd'
 }
 
+
+
+/*
+for custom mdssvcnv track
+or general track
+to avoid using hard-coded string
+*/
+exports.custommdstktype = {
+	vcf:'vcf',
+	svcnvitd:'svcnvitd',
+	geneexpression:'geneexpression'
+}
 
 
 
@@ -932,16 +945,10 @@ const arg = checkArg( )
 arg:
 	.genome
 	.genefile
-	.toheatmap
-	.tomatrix
 	.excludeclass
 	.vcf[ {} ]
-		.istext
-		.file (text)
-
-		.istrack
 		.gzpath
-		.indexpath
+		.indexpath   actually it's not using the index path
 */
 
 
@@ -952,7 +959,7 @@ arg:
 
 const gene2mutationcount = new Map()
 /*
-k: gene
+k: gene name
 v: {
 	chrs: map
 		chr : {
@@ -968,11 +975,6 @@ const sample2geneset = new Map()
 // v: Set of gene
 
 
-//// data structures for heatmap
-
-const heatmap_snvindel_lines = []
-const heatmap_snvindel_fileheader = 'gene\trefseq\tchromosome\tstart\taachange\tclass\tsample'
-
 
 const vcftasks = []
 
@@ -980,18 +982,10 @@ for(const thisvcf of arg.vcf) {
 
 	const task = new Promise((resolve, reject)=>{
 
-		let reader
 
-
-		if( thisvcf.istext ) {
-			reader = readline.createInterface({
-				input:fs.createReadStream( thisvcf.file, {encoding:'utf8'} )
-			})
-		} else {
-			reader = readline.createInterface({
-				input: fs.createReadStream( thisvcf.gzpath ).pipe( zlib.createGunzip() )
-			})
-		}
+		const reader = readline.createInterface({
+			input: fs.createReadStream( thisvcf.gzpath ).pipe( zlib.createGunzip() )
+		})
 
 		const metalines = []
 		const vcfobj = {}
@@ -1004,7 +998,7 @@ for(const thisvcf of arg.vcf) {
 					metalines.push(line)
 					const [info, format, samples, err] = vcf.vcfparsemeta( metalines )
 					if(err) {
-						abort('header error: '+err.join('; '))
+						throw('header error: '+err.join('; '))
 					}
 					vcfobj.info = info
 					vcfobj.format = format
@@ -1039,15 +1033,8 @@ for(const thisvcf of arg.vcf) {
 					continue
 				}
 
-				if(arg.tomatrix) {
-
-					count4gene(m)
-					count4sample(m)
-
-				} else if(arg.toheatmap) {
-
-					variant2heatmap( m )
-				}
+				count4gene(m)
+				count4sample(m)
 			}
 		})
 
@@ -1063,24 +1050,18 @@ for(const thisvcf of arg.vcf) {
 Promise.all( vcftasks )
 .then( ()=>{
 
-	if(arg.toheatmap) {
-		heatmap_outputHtml()
-		return
-	}
-
 	return adjustGenePosition()
 
 })
 .then( ()=>{
 
-	if(arg.toheatmap) return
-
 	const features = topGenes2features()
 	const samples = rankSamplesByFeatures( features )
-	matrix_outputHtml( features, samples )
+	//matrix_outputHtml( features, samples )
+	make_output( features, samples )
 })
 .catch(err=>{
-	console.log(err)
+	console.log( typeof(err)=='string' ? 'Error: '+err : err.message )
 })
 
 
@@ -1091,23 +1072,176 @@ Promise.all( vcftasks )
 
 
 
+function make_output( features, samples ) {
 
-function variant2heatmap(m) {
-	for(const sm of m.sampledata) {
-		// gene\trefseq\tchromosome\tstart\taachange\tclass\tsample
-		heatmap_snvindel_lines.push(
-			m.gene+'\t'+
-			m.isoform+'\t'+
-			m.chr+'\t'+
-			m.pos+'\t'+
-			m.mname+'\t'+
-			common.mclass[m.class].label+'\t'+
-			sm.sampleobj.name
-		)
+	const featurejson = JSON.stringify(features)
+
+	console.log(`<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sample-by-attribute matrix using ProteinPaint</title>
+	<script src='https://platform.dnanexus.com/javascript/file-viewer-1.1.min.js'></script>
+	<script src='https://proteinpaint.stjude.org/bin/proteinpaint.js'></script>
+    <style type="text/css">
+  
+	body {
+		margin: 0;
+		padding: 0;
 	}
+	
+	.omnibar {
+		  width: 100%;
+		  background: #1381B3;
+		  min-height: 64px;
+		  font-family: 'Open Sans', "Helvetica Neue", Helvetica, Arial, sans-serif
+	}
+  
+
+	.logo {
+		display: block;
+		float: left;
+		margin: 0 auto;
+		width: 50px;
+		height: 50px;
+		color: #fff;
+		text-decoration: none;
+		padding: 8px 10px;
+	}
+	
+	.logo img {
+		border: none;
+		margin: 0;
+		padding: 0;
+		width: 100%;
+	}
+	
+	.site-title {
+		font-weight: 300;
+		font-size: 22px;
+		padding: 0;
+		margin: 0;
+		color: #A1CDE1;
+		padding: 14px;
+	}
+	
+	.site-title a {
+		color: #fff;
+		text-decoration: none;
+		font-weight: 600;
+	}
+	
+	
+	.nav {
+		float: right;
+		margin: 0;
+		padding: 20px 30px 20px 0;
+	}
+	
+	.nav li {
+		display: inline;
+		margin: 0;
+		padding: 0;
+		margin-left: 40px;
+		font-weight: 600;
+		font-size: 14px;
+	}
+	
+	.nav li a {
+		text-decoration: none;
+		color: #fff;
+		text-transform: uppercase;
+	}
+	
+  
+  </style>
+
+
+  </head>
+
+
+
+
+
+  <body>
+
+
+    <div class="omnibar">
+        <ul class="nav">
+			<li><a href="https://platform.stjude.cloud/requests/data_by_disease">Data</a></li>
+			<li><a href="https://platform.stjude.cloud/tools">Tools</a></li>
+			<li><a href="https://platform.stjude.cloud/visualizations/cohort">Visualizations</a></li>
+        </ul>
+        <a href="index.html" class="logo"><img src="https://pecan.stjude.org/static/stjude-logo-child.png" alt="St. Jude Cloud" title="St. Jude Cloud" /></a>
+        <h1 class="site-title"><a href="index.html">St. Jude Cloud</a> ProteinPaint</h1>   
+    </div>
+
+
+
+    <div class="container-fluid" id="proteinpaintdiv"></div>
+
+    <script type="text/javascript">
+      getOptions(function(options) {
+
+        function getPath(file) {
+          return file.folder + "/" + file.name;
+        }
+
+        var pathToURL = {};
+        for (var i = 0; i < options.files.length; ++i) {
+          pathToURL[getPath(options.files[i])] = options.files[i].url;
+        }
+
+		let vcftrack
+
+		for(var path in pathToURL) {
+			var filename = path.split('/').pop();
+			if(path.endsWith('.vcf.gz')) {
+				var indexfile = pathToURL[path+'.csi'] || pathToURL[path+'.tbi']
+				if(indexfile) {
+					vcftrack = {
+						url: pathToURL[path],
+						indexURL: indexfile,
+					}
+				} else {
+					window.alert("You chose a VCF.GZ file (" + filename + ") but no associated index file (.tbi or .csi)");
+				}
+			}
+		}
+
+		if(!vcftrack) window.alert('No VCF track provided')
+
+		var proteinpaintConfig={
+			//host:'https://proteinpaint.stjude.org',
+			host:'http://localhost:3000',
+			holder:document.getElementById('proteinpaintdiv'),
+			noheader:true,
+			samplematrix:{
+				genome: "${arg.genome}",
+				querykey2tracks: {
+					vcf: vcftrack
+				},
+				features: ${featurejson}
+			}
+		}
+
+		runproteinpaint(proteinpaintConfig)
+	});
+    </script>
+  </body>
+</html>
+`)
 }
 
+
+
+
 function rankSamplesByFeatures( features ) {
+
 	const featuregenes = new Set()
 	for(const f of features) {
 		featuregenes.add( f.genename )
@@ -1147,7 +1281,7 @@ function adjustGenePosition() {
 	*/
 	return new Promise((resolve,reject)=>{
 
-		const rl = readline.createInterface({input: fs.createReadStream( genome2genefile[ genomename ], {encoding:'utf8'} )})
+		const rl = readline.createInterface({input: fs.createReadStream( arg.genefile, {encoding:'utf8'} )})
 		rl.on('line',line=>{
 			const l = line.split('\t')
 			const j = JSON.parse(l[3])
@@ -1173,7 +1307,8 @@ function topGenes2features() {
 	for(const [genename, o] of gene2mutationcount) {
 		for(const [chr, o2] of o.chrs) {
 			lst.push({
-				isvcfitd:1,
+				isvcf:1,
+				querykey:'vcf',
 				label: genename + (o.chrs.size>1 ? ' ('+chr+')' : ''),
 				genename: genename,
 				chr: chr,
@@ -1236,46 +1371,6 @@ function count4sample( m ) {
 
 
 
-function matrix_outputHtml( features, samples ) {
-	const matrix = {
-		genome: genomename,
-		features: features,
-		samples: samples,
-		vcftracks: vcffiles
-	}
-}
-
-
-function heatmap_outputHtml() {
-
-	const text = heatmap_snvindel_fileheader+'\n'+heatmap_snvindel_lines.join('\n')
-
-	fs.writeFileSync( arg.html,
-	`<!DOCTYPE html>
-<html>
-<head>
- <meta charset="utf-8">
-</head>
-  <body style="margin:30px">
-	<script src="https://pecan.stjude.cloud/sjcharts/bin/sjcharts.js" charset="utf-8"></script>	
-	<script src="https://proteinpaint.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
-	<div id=aaa></div>
-	<script>
-	const vcfdata = \`${text}\`
-	runproteinpaint({
-		host:'https://proteinpaint.stjude.org',
-		holder:document.getElementById('aaa'),
-		studyview:{
-			genome:"${arg.genome}",
-			snvindel:vcfdata,
-			show_heatmap:1,
-		}
-	})
-	</script>
-</body></html>
-`)
-}
-
 
 
 
@@ -1314,9 +1409,6 @@ function checkArg() {
 		}
 	}
 
-	// output file
-	arg.html = process.argv[i++]
-
 	// input files
 	arg.vcf = []
 	const trackfilename2path = new Map()
@@ -1327,7 +1419,7 @@ function checkArg() {
 
 		if(file.endsWith('.gz')) {
 
-			trackfilename2path.set( path.basename(file), { gzpath: file } )
+			trackfilename2path.set( path.basename(file), file  )
 
 		} else if(file.endsWith('.tbi')) {
 
@@ -1339,20 +1431,21 @@ function checkArg() {
 
 		} else {
 
-			arg.vcf.push({
-				istext:1,
-				file: file
-			})
+			// do not process text file
 		}
 	}
 
-	for(const [track, o] of trackfilename2path) {
+	for(const [name, gzpath] of trackfilename2path) {
 
-		// accept only .gz file for now
-		// will require index when moving to samplematrix
+		const indexpath = indexfilename2path.get( name )
 
-		o.istrack = 1
-		arg.vcf.push( o )
+		if(!indexpath) abort('index file missing for .gz file '+name)
+
+		arg.vcf.push( {
+			name: name,
+			gzpath: gzpath,
+			indexpath: indexpath
+		})
 	}
 
 	if(arg.vcf.length==0) abort('no VCF file')
@@ -1360,9 +1453,9 @@ function checkArg() {
 	if(!arg.genome) abort('missing genome')
 
 	const genefiles = {
-		hg19: '/home/xzhou/data/tp/anno/refGene.hg19',
-		hg38: '/home/xzhou/data/tp/anno/refGene.hg38',
+		hg19: '/usr/bin/refGene.hg19',
 	}
+
 	arg.genefile = genefiles[ arg.genome ]
 	if(!arg.genefile) abort('unknown genome: '+arg.genome)
 
@@ -1374,7 +1467,12 @@ function checkArg() {
 	function abort( msg ) {
 		console.log('Error: '+msg+`
 	
-$ node vcf2matrix.js --genome=<genome> --excludeclass=<class> <output.html> <input.vcf> <input2.vcf> ...
+$ node getgene.js --genome=<genome> --excludeclass=<class> <input.vcf.gz> <input.vcf.gz.tbi>
+
+Output a JSON obj to stdout, with:
+	.filename
+	.genes
+	.samples
 
 One or multiple VCF files can be selected for input.
 A VCF file can be either .vcf.gz (bgzip-compressed) or .vcf (uncompressed).
