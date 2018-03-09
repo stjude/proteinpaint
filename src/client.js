@@ -929,6 +929,9 @@ export function flyindi(from,to) {
 		.style('top',(p1.top+window.pageYOffset)+'px')
 		.style('width',p1.width+'px')
 		.style('height',p1.height+'px')
+	if(base_zindex) {
+		d.style('z-index',base_zindex)
+	}
 	d.transition().duration(500)
 		.style('left',(p2.left+window.pageXOffset)+'px')
 		.style('top',(p2.top+window.pageYOffset)+'px')
