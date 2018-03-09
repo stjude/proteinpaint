@@ -29,13 +29,8 @@ for(var i=1; i<lines.length; i++) {
 		err++
 		continue
 	}
-	/*
 	data.push(
-		chr+'\t'+(start-1)+'\t'+(stop-1)+'\t'+strand+'\t'+readcount+'\t'+type
-	)
-	*/
-	data.push(
-		chr+'\t'+(start-1)+'\t'+(stop-1)+'\t'+readcount+'\t'+type
+		chr+'\t'+(start-1)+'\t'+(stop-1)+'\t'+strand+'\t'+type+'\t'+readcount
 	)
 }
 
