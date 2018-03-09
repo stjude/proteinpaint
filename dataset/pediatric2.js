@@ -32,10 +32,15 @@ module.exports={
 	genome:'hg19',
 	isMds:true,
 	about:[
-		{k:'RNA splice junction',v:'RNA splice junctions'},
-		{k:'CNV-SV',v:'Copy number variation events with supporting structural variation and gene expression ranking'}
+		{k:'Cohort',v:'PCGP and TARGET'},
+		{k:'CNV',v:'Somatic copy number changes'},
+		{k:'LOH',v:'Somatic copy-neutral LOH'},
+		{k:'SV',v:'Somatic DNA structural variation'},
+		{k:'Fusion',v:'Tumor RNA-seq fusion'},
+		{k:'ITD',v:'ITD from either RNA or DNA'},
+		{k:'SNV/indel',v:'Somatic mutations of tumor, and germline pathogenic mutations'},
+		{k:'RNA splice junction',v:'Tumor RNA splice junctions'},
 	],
-	dbFile:'anno/db/pediatric.hg19.db',
 
 	sampleAssayTrack:{
 		file:'hg19/Pediatric/tracktable/__table'
@@ -180,6 +185,7 @@ module.exports={
 
 
 		somaticsnvindel:{
+			hideforthemoment:1,
 			name:'Pediatric tumor SNV/indel',
 			istrack:true,
 			type:common.tkt.mdsvcf,
@@ -199,6 +205,7 @@ module.exports={
 
 
 		genefpkm:{
+			hideforthemoment:1,
 			name:'Pediatric tumor RNA-seq gene FPKM',
 			isgenenumeric:true,
 			file:'hg19/Pediatric/pediatric.fpkm.hg19.gz',

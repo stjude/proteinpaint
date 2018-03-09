@@ -4282,6 +4282,8 @@ mds_handle_make(key) {
 
 				for(const querykey in ds.queries) {
 
+					if(ds.queries[ querykey ].hideforthemoment) continue
+
 					const findtkindex=this.tklst.findIndex( t=> t.mds && t.mds.label==key && t.querykey==querykey )
 
 					const tr=table.append('tr')

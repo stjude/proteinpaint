@@ -245,7 +245,8 @@ function handle_genomes(req,res) {
 					const q=ds.queries[k]
 
 					const clientquery = { // revealed to client
-						name:q.name
+						name:q.name,
+						hideforthemoment: q.hideforthemoment, // hide track not ready to show on client
 					}
 
 					if(q.istrack) {
