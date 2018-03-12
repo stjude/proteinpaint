@@ -182,8 +182,8 @@ module.exports={
 			vcf_querykey:'somaticsnvindel',
 
 			multihidelabel_vcf:true,
-			multihidelabel_fusion:true,
-			fusion_label_mattrkey:'fusiongene',
+			multihidelabel_fusion:false,
+			multihidelabel_sv:true,
 		},
 
 
