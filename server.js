@@ -294,6 +294,9 @@ function handle_genomes(req,res) {
 							clientquery.mutationAttribute = ds.mutationAttribute
 
 							clientquery.sortgroupby = q.sortgroupby
+							clientquery.multihidelabel_fusion=q.multihidelabel_fusion
+							clientquery.multihidelabel_sv=q.multihidelabel_sv
+							clientquery.multihidelabel_vcf=q.multihidelabel_vcf
 
 							if(q.expressionrank_querykey) {
 								// for checking expression rank
