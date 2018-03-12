@@ -179,7 +179,11 @@ module.exports={
 
 
 			expressionrank_querykey:'genefpkm',
-			vcf_querykey:'somaticsnvindel'
+			vcf_querykey:'somaticsnvindel',
+
+			multihidelabel_vcf:true,
+			multihidelabel_fusion:true,
+			fusion_label_mattrkey:'fusiongene',
 		},
 
 

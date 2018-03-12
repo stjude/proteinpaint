@@ -15,6 +15,7 @@ public/no-babel-polyfill/*
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html
 /utils/vcf2genesamplematrix/bin.smat.js
+/utils/findspliceevent/bin2.js
 
 
 sjcharts.html
