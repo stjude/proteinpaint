@@ -42,6 +42,7 @@ render_samplegroups
 	render_multi_vcfdense
 	render_multi_svdense
 	render_multi_cnvloh
+		render_multi_cnvloh_stackeachsample
 		** focus_singlesample
 	render_multi_genebar
 		genebar_config
@@ -1258,17 +1259,54 @@ function render_multi_cnvloh(tk,block) {
 
 				const color = otherchr==item._chr ? intrasvcolor : tk.legend_svchrcolor.colorfunc(otherchr)
 
-				// may show label
+				const m_g = g.append('g').attr('transform','translate('+item.x+','+(sample.height/2)+')')
 
-				g.append('circle')
-					.attr('cx', item.x)
-					.attr('cy', sample.height/2 )
+				const w = sample.crossboxw
+				let coverstart = -w/2,
+					coverwidth = w
+
+				const circle = m_g.append('circle')
 					.attr('r',  Math.min( 5, Math.max( minsvradius, 1 + sample.height / 2 ) ) )
 					.attr('fill',color)
 					.attr('fill-opacity',0)
 					.attr('stroke', color)
+
+				// whether to draw label is solely dependent on the flags
+				if(item.labonleft) {
+
+					m_g.append('text')
+						.text( item.fusiongene || item.cytogeneticname || otherchr )
+						.attr('text-anchor','end')
+						.attr('dominant-baseline','central')
+						.attr('font-family',client.font)
+						.attr('font-size', w+2)
+						.attr('fill', color)
+						.attr('x', -w/2-labelspace)
+					coverstart = -w/2 - labelspace - item.labelwidth
+					coverwidth = w + labelspace + item.labelwidth
+
+				} else if(item.labonright) {
+
+					m_g.append('text')
+						.text( item.fusiongene || item.cytogeneticname || otherchr )
+						.attr('dominant-baseline','central')
+						.attr('font-family',client.font)
+						.attr('font-size', w+2)
+						.attr('fill', color)
+						.attr('x', w/2+labelspace)
+					coverwidth = w + labelspace + item.labelwidth
+				}
+
+				// mouseover cover
+				m_g.append('rect')
+					.attr('x', coverstart)
+					.attr('y', -w/2)
+					.attr('width', coverwidth)
+					.attr('height', w)
+					.attr('fill','white')
+					.attr('fill-opacity', 0)
 					.on('mouseover', ()=> {
-						d3event.target.setAttribute('fill-opacity',1)
+						circle.attr('fill-opacity',1)
 						tooltip_singleitem({
 							item: item,
 							sample: sample,
@@ -1277,7 +1315,7 @@ function render_multi_cnvloh(tk,block) {
 						})
 					})
 					.on('mouseout',()=>{
-						d3event.target.setAttribute('fill-opacity',0)
+						circle.attr('fill-opacity',0)
 						tk.tktip.hide()
 					})
 					.on('click',()=>{
@@ -1461,7 +1499,7 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 	for each sample, set .height
 	for each stackable item (cnv/loh/itd), set .stack_y, .stack_h
 
-	check to see if vcf/sv can show label
+	for vcf/fusion/sv, check if can show label for each
 	*/
 	if(!tk.samplegroups || tk.samplegroups.length==0) return
 
@@ -1485,6 +1523,16 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 	before commencing, delete prior label-drawing flags from vcf sampleobj
 	this can happen when toggling label show/hide without reloading data
 	*/
+	for(const g of tk.samplegroups) {
+		for(const s of g.samples) {
+			for(const i of s.items) {
+				if(i.dt==common.dtsv || i.dt==common.dtfusionrna) {
+					delete i.labonleft
+					delete i.labonright
+				}
+			}
+		}
+	}
 	if(tk.data_vcf) {
 		for(const m of tk.data_vcf) {
 			if(m.sampledata) {
@@ -1521,32 +1569,87 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 
 			s.crossboxw = Math.min( 8, s.height ) // determines label font size
 
-			// decide if to draw label for sv/fusion
 
+			// after stacking, decide if to draw label for pointy items
+
+			/*
+			collect pointy items of this sample, sv/fusion/snv
+			must collect all, even if its name is hidden or doesn't have a name, in order for collision detection to work
+			*/
+			const pointitems = []
+
+			for(const i of s.items) {
+				if(i.dt==common.dtfusionrna) {
+					if(i.x==undefined) continue
+					const item = {
+						dt: i.dt,
+						x: i.x,
+						obj: i
+					}
+					if(tk.multihidelabel_fusion) {
+						// no show
+					} else {
+						item.name =  i.fusiongene || (i._chr==i.chrA ? i.chrB : i.chrA)
+					}
+					pointitems.push(item)
+				} else if(i.dt==common.dtsv) {
+					if(i.x==undefined) continue
+					const item = {
+						dt: i.dt,
+						x: i.x,
+						obj: i
+					}
+					if(tk.multihidelabel_sv) {
+						// no show 
+					} else {
+						item.name =  i.cytogeneticname || (i._chr==i.chrA ? i.chrB : i.chrA)
+					}
+					pointitems.push(item)
+				}
+			}
 
 			if( tk.data_vcf ) {
 
-				if( tk.multihidelabel_vcf ) {
-					// no drawing labels
-					continue
-				}
-
 				// collect vcf items for this sample
-				const mlst = []
 				for(const m of tk.data_vcf) {
 					if(m.dt!=common.dtsnvindel || m.x==undefined || !m.sampledata) continue
 					const m_sample = m.sampledata.find( i=> i.sampleobj.name==s.samplename)
 					if(m_sample) {
-						mlst.push( [ m, m_sample ] )
+						const item = {
+							dt: m.dt,
+							x: m.x,
+							obj: m_sample.sampleobj,
+						}
+						if(tk.multihidelabel_vcf) {
+							// no show
+						} else {
+							item.name = m.mname
+						}
+						pointitems.push(item)
 					}
 				}
+			}
 
-				// for each variant, decide if/where to show label
-				for( const [ m, m_sample ]  of mlst ) {
+			if(pointitems.length > 0) {
+
+				pointitems.sort( (i,j) => i.x - j.x )
+
+				for(let pidx=0; pidx<pointitems.length; pidx++) {
+					/*
+					dt, x, name, obj
+					for each item, decide if/where to show label
+					*/
+
+					const pi = pointitems[ pidx ]
+
+					if(!pi.name) {
+						// no name
+						continue
+					}
 
 					let labw
 					tk.g.append('text')
-						.text( m.mname )
+						.text( pi.name )
 						.attr('font-size', s.crossboxw+2)
 						.attr('font-family', client.font)
 						.each(function(){
@@ -1559,28 +1662,27 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 					let nleft=false,
 						nright=false
 
-					if( labw > m.x ) {
+					if( labw > pi.x ) {
 						// no space on left
 						nleft=true
-					} else if(labw > blockwidth-m.x) {
+					} else if(labw > blockwidth-pi.x) {
 						// no space on right
 						nright=true
 					}
 
-					// test cases where label cannot go
+					// test segment items
 					for(const i of s.items) {
 
 						if(nleft && nright) break
 
 						if( i.dt==common.dtcnv || i.dt==common.dtloh || i.dt==common.dtitd ) {
-							// segment
 							if(i.x1==undefined || i.x2==undefined) continue
 							const x1 = Math.min(i.x1, i.x2)
 							const x2 = Math.max(i.x1, i.x2)
 
-							if( x1 < m.x ) {
-								if(x2 < m.x) {
-									if( labw > m.x - x2 ) {
+							if( x1 < pi.x ) {
+								if(x2 < pi.x) {
+									if( labw > pi.x - x2 ) {
 										nleft=true
 									}
 								} else {
@@ -1588,19 +1690,7 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 									nright=true
 								}
 							} else {
-								if( labw > x1 - m.x ) {
-									nright=true
-								}
-							}
-
-						} else if(i.dt==common.dtsv || i.dt==common.dtfusionrna) {
-							if(i.x==undefined) continue
-							if( i.x < m.x ) {
-								if( labw > m.x-i.x ) {
-									nleft=true
-								}
-							} else {
-								if( labw > i.x-m.x ) {
+								if( labw > x1 - pi.x ) {
 									nright=true
 								}
 							}
@@ -1608,53 +1698,74 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 					}
 
 					if(nleft && nright) {
-						// this is blocked
+						// cannot show label
 						continue
 					}
 
-					// then, test snvindels in case there are multiple for this sample
-					for( const [m2, m2s] of mlst) {
-						if(nleft && nright) break
-						if(m2.dt!=common.dtsnvindel) continue
-						if(m2.x==undefined) continue
-						if(m2.pos==m.pos && m2.alt==m.alt) {
-							// same variant
-							continue
-						}
-						if( m2.x < m.x ) {
-							if( labw > m.x-m2.x ) {
-								nleft=true
-							}
-						} else if(m2.x == m.x) {
-							// possible, avoid label overlap
-							if(m2s.sampleobj.labonleft) {
-								nleft=true
-							} else if(m2s.sampleobj.labonright) {
-								nright=true
-							}
-						} else {
-							if( labw > m2.x-m.x ) {
-								nright=true
+					if(!nleft) {
+						// check previous item for putting label on left
+						for(let pidx2=pidx-1; pidx2>=0; pidx2--) {
+							const pi0 = pointitems[ pidx2 ]
+							if(pi0.x == pi.x) {
+								// possible, avoid label overlap
+								if(pi0.obj.labonleft) {
+									nleft=true
+								} else if(pi0.obj.labonright) {
+									nright=true
+								} else {
+									// do not prohibit
+								}
+							} else {
+								if(labw > pi.x-pi0.x) {
+									nleft=true
+									break
+								} else {
+									// good space
+									break
+								}
 							}
 						}
 					}
 
+					if(nleft && nright) continue
+
+					if(!nright) {
+						// check rest of items for putting label on right
+						for( let pidx2=pidx+1; pidx2<pointitems.length; pidx2++) {
+
+							const pi2 = pointitems[ pidx2 ]
+
+							if(pi2.x == pi.x) {
+								// do not prohibit
+							} else {
+								if( labw > pi2.x-pi.x ) {
+									nright=true
+									break
+								} else {
+									// allow label on right
+									break
+								}
+							}
+						}
+					}
+
+					if(nleft && nright) continue
 
 
 					if(nleft) {
 						if(!nright) {
-							m_sample.sampleobj.labonright=true
+							pi.obj.labonright=true
 						}
 					} else {
 						if(nright) {
-							m_sample.sampleobj.labonleft=true
+							pi.obj.labonleft=true
 						} else {
-							m_sample.sampleobj.labonright=true // on right first
+							pi.obj.labonright=true // on right first
 						}
 					}
 
-					if(m_sample.sampleobj.labonleft || m_sample.sampleobj.labonright) {
-						m_sample.sampleobj.labelwidth = labw
+					if(pi.obj.labonleft || pi.obj.labonright) {
+						pi.obj.labelwidth = labw
 					}
 				}
 			}
@@ -2519,9 +2630,15 @@ function makeTk(tk, block) {
 
 	if(!tk.singlesample) {
 		// in multi-sample, allow hidding some labels
-		if(tk.multihidelabel_vcf==undefined) {
-			// do not override config from native dataset
+		// do not override config from native dataset
+		if( tk.multihidelabel_vcf==undefined ) {
 			tk.multihidelabel_vcf = true
+		}
+		if( tk.multihidelabel_fusion==undefined ) {
+			tk.multihidelabel_fusion = true
+		}
+		if( tk.multihidelabel_sv==undefined ) {
+			tk.multihidelabel_sv = true
 		}
 	}
 
@@ -2675,7 +2792,7 @@ function configPanel(tk, block) {
 
 	may_allow_samplesearch( tk, block)
 
-	may_allow_showhidelabel_vcf( tk, block )
+	may_allow_showhidelabel_multi( tk, block )
 
 
 	// filter cnv with sv
@@ -3001,24 +3118,64 @@ function may_allow_modeswitch(tk, block) {
 
 
 
-function may_allow_showhidelabel_vcf(tk, block) {
+function may_allow_showhidelabel_multi(tk, block) {
 	// only for multi-sample
 	if(tk.singlesample) return
-	const row = tk.tkconfigtip.d.append('div')
-		.style('margin-bottom','15px')
-	const id = Math.random().toString()
-	row.append('input')
-		.attr('type','checkbox')
-		.attr('id',id)
-		.property('checked', tk.multihidelabel_vcf)
-		.on('change',()=>{
-			tk.multihidelabel_vcf = !tk.multihidelabel_vcf
-			render_samplegroups(tk, block)
-		})
-	row.append('label')
-		.attr('for',id)
-		.attr('class','sja_clbtext')
-		.html('&nbsp;Hide labels for SNV/indel in "Expanded" mode')
+	tk.tkconfigtip.d.append('div')
+		.style('margin-bottom','5px')
+		.text('Show text labels in expanded mode')
+		.style('opacity',.5)
+
+	const row=tk.tkconfigtip.d.append('div')
+		.style('margin-bottom','20px')
+	{
+		const id = Math.random().toString()
+		row.append('input')
+			.attr('type','checkbox')
+			.attr('id',id)
+			.property('checked', !tk.multihidelabel_vcf)
+			.on('change',()=>{
+				tk.multihidelabel_vcf = !tk.multihidelabel_vcf
+				render_samplegroups(tk, block)
+			})
+		row.append('label')
+			.attr('for',id)
+			.attr('class','sja_clbtext')
+			.html('&nbsp;SNV/indel')
+	}
+	{
+		const id = Math.random().toString()
+		row.append('input')
+			.attr('type','checkbox')
+			.style('margin-left','20px')
+			.attr('id',id)
+			.property('checked', !tk.multihidelabel_sv)
+			.on('change',()=>{
+				tk.multihidelabel_sv = !tk.multihidelabel_sv
+				render_samplegroups(tk, block)
+			})
+		row.append('label')
+			.attr('for',id)
+			.attr('class','sja_clbtext')
+			.html('&nbsp;DNA SV')
+	}
+	{
+		const id = Math.random().toString()
+		row.append('input')
+			.attr('type','checkbox')
+			.style('margin-left','20px')
+			.attr('id',id)
+			.property('checked', !tk.multihidelabel_fusion)
+			.on('change',()=>{
+				tk.multihidelabel_fusion = !tk.multihidelabel_fusion
+				render_samplegroups(tk, block)
+			})
+		row.append('label')
+			.attr('for',id)
+			.attr('class','sja_clbtext')
+			.html('&nbsp;RNA fusion')
+	}
+	// cnv
 }
 
 
