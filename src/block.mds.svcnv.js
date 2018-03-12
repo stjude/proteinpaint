@@ -1526,7 +1526,7 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 
 			if( tk.data_vcf ) {
 
-				if( tk.hidelabel_vcf ) {
+				if( tk.multihidelabel_vcf ) {
 					// no drawing labels
 					continue
 				}
@@ -2518,8 +2518,11 @@ function prep_samplegroups( tk, block ) {
 function makeTk(tk, block) {
 
 	if(!tk.singlesample) {
-		// in multi-sample, hide vcf label by default
-		tk.hidelabel_vcf = true
+		// in multi-sample, allow hidding some labels
+		if(tk.multihidelabel_vcf==undefined) {
+			// do not override config from native dataset
+			tk.multihidelabel_vcf = true
+		}
 	}
 
 	tk.tip2 = new client.Menu({padding:'0px'})
@@ -3007,9 +3010,9 @@ function may_allow_showhidelabel_vcf(tk, block) {
 	row.append('input')
 		.attr('type','checkbox')
 		.attr('id',id)
-		.property('checked', tk.hidelabel_vcf)
+		.property('checked', tk.multihidelabel_vcf)
 		.on('change',()=>{
-			tk.hidelabel_vcf = !tk.hidelabel_vcf
+			tk.multihidelabel_vcf = !tk.multihidelabel_vcf
 			render_samplegroups(tk, block)
 		})
 	row.append('label')
