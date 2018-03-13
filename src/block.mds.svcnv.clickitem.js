@@ -95,10 +95,9 @@ export function tooltip_samplegroup( g, tk ) {
 	
 	if(g.attributes) {
 		// official only
-		for(let i=0; i<g.attributes.length; i++) {
+		for(const a of g.attributes) {
 			d.append('div')
-				.style('margin-left', (i*20)+'px')
-				.html( (i==0?'':'&raquo;&nbsp;') + (g.attributes[i].fullvalue || g.attributes[i].kvalue) )
+				.html( a.kvalue + (a.fullvalue ? ' <span style="opacity:.5;font-size:.8em;">'+a.fullvalue+'</span>' : '') )
 		}
 	} else if(g.name) {
 		d.append('div').text(g.name)
