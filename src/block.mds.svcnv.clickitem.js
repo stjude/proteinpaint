@@ -60,7 +60,7 @@ export function click_samplegroup_showmenu( samplegroup, tk, block ) {
 			}
 			loadTk(tk, block)
 		})
-	
+
 	if(tk.legend_samplegroup.hidden.size) {
 		tk.tip2.d.append('div')
 			.attr('class','sja_menuoption')
@@ -618,15 +618,16 @@ export function click_multi_svdense(g, tk, block) {
 
 		const td1=tr.append('td')
 		for(const i of so.sv) {
-			td1.append('div')
-				.attr('class','sja_clbtext')
-				.html(
-					svchr2html(i.chrA, tk)
+
+			const breakpoint = svchr2html(i.chrA, tk)
 					+':'+i.posA+':'+i.strandA
 					+' &raquo; '
 					+svchr2html(i.chrB, tk)
 					+':'+i.posB+':'+i.strandB
-					)
+
+			td1.append('div')
+				.attr('class','sja_clbtext')
+				.html( i.cytogeneticname ? i.cytogeneticname+' <span style="font-size:.7em">'+breakpoint+'</span>' : breakpoint )
 				.on('mouseover',()=>{
 					tooltip_singleitem({
 						item:i,
@@ -649,15 +650,16 @@ export function click_multi_svdense(g, tk, block) {
 
 		const td2=tr.append('td')
 		for(const i of so.fusion) {
-			td2.append('div')
-				.attr('class','sja_clbtext')
-				.html(
-					svchr2html(i.chrA, tk)
+
+			const breakpoint = svchr2html(i.chrA, tk)
 					+':'+i.posA+':'+i.strandA
 					+' &raquo; '
 					+svchr2html(i.chrB, tk)
 					+':'+i.posB+':'+i.strandB
-					)
+
+			td2.append('div')
+				.attr('class','sja_clbtext')
+				.html( i.fusiongene ? i.fusiongene+' <span style="font-size:.7em">'+breakpoint+'</span>' : breakpoint )
 				.on('mouseover',()=>{
 					tooltip_singleitem({
 						item:i,
@@ -1160,11 +1162,14 @@ function detailtable_singlesample(p) {
 
 	} else if( m.dt == common.dtsv || m.dt==common.dtfusionrna ) {
 
-		lst.push({
-			k: (m.dt==common.dtsv ? 'SV' : 'RNA fusion'),
-			v: svchr2html(m.chrA, p.tk) +':'+(m.posA+1)+':'+m.strandA+' &raquo; '
+		{
+			const breakpoint = svchr2html(m.chrA, p.tk) +':'+(m.posA+1)+':'+m.strandA+' &raquo; '
 				+svchr2html(m.chrB, p.tk)+':'+(m.posB+1)+':'+m.strandB
-		})
+			lst.push({
+				k: (m.dt==common.dtsv ? 'SV' : 'RNA fusion'),
+				v: ((m.fusiongene || m.cytogeneticname) ? (m.fusiongene || m.cytogeneticname)+' <span style="font-size:.7em">'+breakpoint+'</span>' : breakpoint)
+			})
+		}
 
 		if(m.clipreadA!=undefined) {
 			lst.push({
@@ -1445,10 +1450,14 @@ function sortitemsbytype_onesample( samplename, lst, tk ) {
 		const breakends = lst.filter( i=> i.dt==common.dtsv || i.dt==common.dtfusionrna )
 		const deduped = dedup_sv( breakends )
 		for(const i of deduped) {
-			svlst.push(
-				'<div style="white-space:nowrap">'+svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
+
+			const breakpoint = svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
 				+' &raquo; '
 				+svchr2html(i.chrB,tk)+':'+i.posB+':'+i.strandB
+
+			svlst.push(
+				'<div style="white-space:nowrap">'
+				+( (i.fusiongene || i.cytogeneticname) ? (i.fusiongene||i.cytogeneticname)+' <span style="font-size:.7em">'+breakpoint+'</span>' : breakpoint)
 				+(i.dt==common.dtfusionrna ? ' <span style="font-size:.7em">(RNA fusion)</span>':'')
 				+'</div>'
 			)
