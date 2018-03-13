@@ -7005,13 +7005,20 @@ function handle_samplematrix(req,res) {
 	for(const feature of req.query.features) {
 
 		let dsquery
-		// may allow loading from custom track even if official ds is appointed
+		let dsquerylst=[]
 
 		// allow other types of query, e.g. checking sample metadata
 
 		if(feature.querykey) {
 			if(!ds.queries) return res.send({error:'using querykey for a feature but no ds.queries'})
 			dsquery = ds.queries[ feature.querykey ]
+		} else if(feature.querykeylst) {
+			if(!ds.queries) return res.send({error:'using querykeylst for a feature but no ds.queries'})
+			for(const k of feature.querykeylst) {
+				const q = ds.queries[k]
+				if(!q) return res.send({error:'unknown key "'+k+'" from querykeylst'})
+				dsquerylst.push(q)
+			}
 		} else {
 			return res.send({error:'unknown way to query a feature'})
 		}
@@ -7054,6 +7061,18 @@ function handle_samplematrix(req,res) {
 
 			const [err, q] = samplematrix_task_issvfusion( feature, ds, dsquery, req )
 			if(err) return res.send({error:'error with issvfusion: '+err})
+			tasks.push(q)
+
+		} else if(feature.issvcnv) {
+
+			const [err, q] = samplematrix_task_issvcnv( feature, ds, dsquery, req )
+			if(err) return res.send({error:'error with issvcnv: '+err})
+			tasks.push(q)
+
+		} else if(feature.ismutation) {
+
+			const [err, q] = samplematrix_task_ismutation( feature, ds, dsquerylst, req )
+			if(err) return res.send({error:'error with ismutation: '+err})
 			tasks.push(q)
 
 		} else {
@@ -7389,7 +7408,7 @@ function samplematrix_task_isitd(feature, ds, dsquery, req) {
 
 
 
-function samplematrix_task_issvfusion(feature, ds, dsquery, req) {
+function samplematrix_task_issvcnv(feature, ds, dsquery, req) {
 	if(!feature.chr) return ['chr missing']
 	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
 	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
@@ -7419,19 +7438,6 @@ function samplematrix_task_issvfusion(feature, ds, dsquery, req) {
 
 				const j=JSON.parse(l[3])
 
-				if(j.dt != common.dtsv && j.dt != common.dtfusionrna ) return
-
-				j._chr = l[0]
-				j._pos = Number.parseInt(l[1])
-				if(j.chrA) {
-					j.chrB = j._chr
-					j.posB = j._pos
-				} else {
-					j.chrA = j._chr
-					j.posA = j._pos
-				}
-
-
 				if(!j.sample) return
 				if(req.query.limitsamplebyeitherannotation) {
 					const anno = ds.cohort.annotation[ j.sample ]
@@ -7444,6 +7450,47 @@ function samplematrix_task_issvfusion(feature, ds, dsquery, req) {
 						}
 					}
 					if(notfit) return
+				}
+
+				// keep all data and return
+
+				if(j.dt == common.dtsv && j.dt == common.dtfusionrna ) {
+
+					j._chr = l[0]
+					j._pos = Number.parseInt(l[1])
+					if(j.chrA) {
+						j.chrB = j._chr
+						j.posB = j._pos
+					} else {
+						j.chrA = j._chr
+						j.posA = j._pos
+					}
+
+				} else if(j.dt==common.dtcnv) {
+
+					if(feature.cnv && feature.cnv.valuecutoff && j.value < feature.cnv.valuecutoff) return
+					j.chr = l[0]
+					j.start = Number.parseInt(l[1])
+					j.stop = Number.parseInt(l[2])
+					if(feature.cnv && feature.cnv.focalsizelimit && j.stop-j.start>=feature.cnv.focalsizelimit) return
+
+				} else if(j.dt==common.dtloh) {
+
+					if(feature.loh && feature.loh.valuecutoff && j.segmean < feature.loh.valuecutoff) return
+					j.chr = l[0]
+					j.start = Number.parseInt(l[1])
+					j.stop = Number.parseInt(l[2])
+					if(feature.loh && feature.loh.focalsizelimit && j.stop-j.start>=feature.loh.focalsizelimit) return
+
+				} else if(j.dt==common.dtitd) {
+
+					j.chr = l[0]
+					j.start = Number.parseInt(l[1])
+					j.stop = Number.parseInt(l[2])
+
+				} else {
+					console.error('unknown datatype')
+					return
 				}
 
 				data.push( j )
@@ -7466,6 +7513,9 @@ function samplematrix_task_issvfusion(feature, ds, dsquery, req) {
 	})
 	return [null,q]
 }
+
+
+
 
 
 
