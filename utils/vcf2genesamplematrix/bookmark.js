@@ -1,23 +1,32 @@
+/*
+stdin: log for uploading the new fileviewer
+
+arguments:
+
+*/
+
+
 const readline=require('readline')
 
 
-const rl = readline.createInterface( {input:process.stdin})
+const rl = readline.createInterface( {input:process.stdin} )
 
-let ID
-let Project
+let viewerid
+let projectid
 
 
 rl.on('line',line=> {
 	const l = line.split(/\s+/)
 	if(l[0]=='ID') {
-		ID = l[1]
+		viewerid = l[1]
 		return
 	}
-	if(l[0]=='Project')
-		Project = l[1]
+	if(l[0]=='Project') {
+		projectid = l[1]
 		return
 	}
 })
 
 rl.on('close',()=>{
+	console.log('viewer',viewerid, 'project', projectid)
 })
