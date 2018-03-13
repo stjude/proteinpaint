@@ -95,7 +95,9 @@ export class Samplematrix {
 		.then(()=>{
 
 			if(!this.iscustom) {
-				// official
+
+				// official dataset
+
 				if(!this.dslabel) throw('not custom data but dslabel is missing')
 				// accessing a native ds
 				this.mds = this.genome.datasets[this.dslabel]
@@ -103,6 +105,9 @@ export class Samplematrix {
 				if(!this.mds.isMds) throw('improper dataset: '+this.dslabel)
 				return
 			}
+
+			// load from custom dataset: may cache vcf header
+
 			if(!this.querykey2tracks) throw('querykey2tracks missing for custom dataset')
 
 			const validkeys = new Set()
@@ -110,7 +115,7 @@ export class Samplematrix {
 
 			let validtrackcount=0
 			for(const key in this.querykey2tracks) {
-				
+
 				if(!validkeys.has( key )) throw('unknown querykey "'+key+'" not found in custommdstktype')
 
 				const tk = this.querykey2tracks[key]
@@ -372,7 +377,7 @@ export class Samplematrix {
 				// to allow loading from custom track
 			}
 			if(!f.label && f.genename) {
-				f.label = f.genename+' LOH'
+				f.label = f.genename+' SNV/indel'
 			}
 			tr.append('td')
 				.text(f.label)
@@ -383,7 +388,7 @@ export class Samplematrix {
 			if(!f.width) f.width=20
 			return this.feature_parseposition_maygene( f )
 				.then(()=>{
-					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' mutation'
+					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' SNV/indel'
 				})
 		}
 
@@ -445,6 +450,71 @@ export class Samplematrix {
 				})
 		}
 
+		if(f.issvcnv) {
+			if(this.dslabel) {
+				// official
+				if(!f.querykey) throw('.querykey missing for issvcnv feature while loading from official dataset')
+			} else {
+				// to allow loading from custom track
+			}
+			if(!f.label && f.genename) {
+				f.label = f.genename+' CNV/SV'
+			}
+
+			if(!f.width) f.width=40
+			if(!f.color) f.color = 'black'
+
+			tr.append('td')
+				.text(f.label)
+				.style('color','#858585')
+				.style('text-align','right')
+			f.legendholder = tr.append('td')
+
+			if(!f.cnv) f.cnv = {}
+			if(!f.cnv.valuecutoff) f.cnv.valuecutoff = 0.2
+			if(!f.cnv.focalsizelimit) f.cnv.focalsizelimit=2000000
+			if(!f.cnv.colorgain) f.cnv.colorgain = "#D6683C"
+			if(!f.cnv.colorloss) f.cnv.colorloss = "#67a9cf"
+			if(!f.loh) f.loh = {}
+			if(!f.loh.valuecutoff) f.loh.valuecutoff = 0.1
+			if(!f.loh.focalsizelimit) f.loh.focalsizelimit=2000000
+			if(!f.loh.color) f.loh.color = 'black'
+			if(!f.itd) f.itd = {}
+			if(!f.itd.color) f.itd.color = 'red'
+			if(!f.sv) f.sv = {}
+			if(!f.sv.color) f.sv.color = 'black'
+
+			return this.feature_parseposition_maygene( f )
+				.then(()=>{
+					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' CNV/SV'
+				})
+		}
+
+
+		if(f.ismutation) {
+			if(this.dslabel) {
+				// official
+				if(!f.querykeylst) throw('.querykeylst missing for ismutation feature')
+				if(!Array.isArray(f.querykeylst)) throw('.querykeylst[] should be array for ismutation feature')
+				if(f.querykeylst.length==0) throw('querykeylst[] empty array for ismutation feature')
+			} else {
+				// to allow loading from custom track
+			}
+			if(!f.label && f.genename) {
+				f.label = f.genename+' mutation'
+			}
+			tr.append('td')
+				.text(f.label)
+				.style('color','#858585')
+				.style('text-align','right')
+			f.legendholder = tr.append('td')
+
+			if(!f.width) f.width=20
+			return this.feature_parseposition_maygene( f )
+				.then(()=>{
+					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' mutation'
+				})
+		}
 
 
 		// __newattr
@@ -619,8 +689,106 @@ export class Samplematrix {
 			return
 		}
 
+		if(f.issvcnv) {
+
+			// compound
+			const cnvgain=[], cnvloss=[] // cnv log2 ratio
+			let lohmax=0
+			let itdcount=0
+			let svcount=0
+			let fusioncount=0
+
+			for(const i of f.items) {
+
+				if(i.dt == common.dtcnv) {
+					if(i.value>0) {
+						cnvgain.push(i.value)
+					} else {
+						cnvloss.push(i.value)
+					}
+				} else if(i.dt == common.dtloh) {
+					lohmax = Math.max( i.segmean, lohmax )
+				} else if(i.dt == common.itd) {
+					itdcount++
+				} else if(i.dt==common.dtsv) {
+					svcount++
+				} else if(i.dt==common.dtfusionrna) {
+					fusioncount++
+				} else {
+					console.error('unknown dt')
+				}
+			}
+
+			const h=f.legendholder
+			h.selectAll('*').remove()
+
+			if(cnvgain.length + cnvloss.length > 0) {
+				const gmax = common.getMax_byiqr( cnvgain, 0 )
+				const lmax = -common.getMax_byiqr( cnvloss, 0 )
+				f.cnv.maxabslogratio = Math.max(gmax, lmax)
+				h.append('div')
+					.style('margin-bottom','5px')
+					.html(
+						'CNV gain <span style="background:'+f.cnv.colorgain+';color:white;padding:1px 5px">'+f.cnv.maxabslogratio+'</span> &nbsp; '
+						+'CNV loss <span style="background:'+f.cnv.colorloss+';color:white;padding:1px 5px">-'+f.cnv.maxabslogratio+'</span>'
+					)
+			}
+
+			if(lohmax) {
+				f.loh.minvalue=0
+				f.loh.maxvalue=lohmax
+				const row = h.append('div')
+					.style('margin-bottom','5px')
+				row.append('span')
+					.text('LOH seg.mean: '+f.loh.minvalue)
+				row.append('div')
+					.style('margin','2px 10px')
+					.style('display','inline-block')
+					.style('width','100px')
+					.style('height','15px')
+					.style('background','linear-gradient( to right, white, '+f.loh.color+')')
+				row.append('span').text(f.loh.maxvalue)
+			}
+
+			if(itdcount) {
+				const row=h.append('div')
+					.style('margin-bottom','5px')
+				row.append('div')
+					.attr('class','sja_mcdot')
+					.style('background', f.itd.color)
+					.text(itdcount)
+				row.append('span')
+					.text('ITD')
+			}
+			if(svcount) {
+				const row=h.append('div')
+					.style('margin-bottom','5px')
+				row.append('div')
+					.attr('class','sja_mcdot')
+					.style('background', f.sv.color)
+					.text(svcount)
+				row.append('span')
+					.text('SV')
+			}
+			if(fusioncount) {
+				const row=h.append('div')
+					.style('margin-bottom','5px')
+				row.append('div')
+					.attr('class','sja_mcdot')
+					.style('background', f.fusion.color)
+					.text(fusioncount)
+				row.append('span')
+					.text('Fusion')
+			}
+			return
+		}
+
+		if(f.ismutation) {
+			return
+		}
+
 		// __newattr
-		throw('unknown feature type in prepFeatureData')
+		throw('unknown feature type in preparing feature data')
 	}
 
 
@@ -647,7 +815,7 @@ export class Samplematrix {
 
 		for(const feature of this.features) {
 
-			if( feature.isgenevalue || feature.iscnv || feature.isloh || feature.isitd || feature.issvfusion ) {
+			if( feature.isgenevalue || feature.iscnv || feature.isloh || feature.isitd || feature.issvfusion || feature.issvcnv ) {
 
 				for(const item of feature.items) {
 					if(!name2sample.has(item.sample)) {
@@ -667,6 +835,23 @@ export class Samplematrix {
 						}
 					} else {
 						console.error('unsupported dt from isvcf: '+m.dt)
+					}
+				}
+
+			} else if(feature.ismutation) {
+				for(const m of feature.items) {
+					if(m.dt==common.dtsnvindel) {
+						if(!m.sampledata) continue
+						for(const s of m.sampledata) {
+							if(!name2sample.has( s.sampleobj.name )) {
+								name2sample.set( s.sampleobj.name, {} )
+							}
+						}
+					} else {
+						if(!m.sample) continue
+						if(!name2sample.has(m.sample)) {
+							name2sample.set(m.sample, {})
+						}
 					}
 				}
 
@@ -794,6 +979,10 @@ export class Samplematrix {
 					this.drawCell_isitd(sample,feature,cell)
 				} else if(feature.issvfusion) {
 					this.drawCell_issvfusion(sample,feature,cell)
+				} else if(feature.issvcnv) {
+					this.drawCell_issvcnv(sample,feature,cell)
+				} else if(feature.ismutation) {
+					this.drawCell_ismutation(sample,feature,cell)
 				} else {
 					// __newattr
 					console.error('unknown feature type when drawing cell')
@@ -1010,6 +1199,83 @@ export class Samplematrix {
 			})
 	}
 
+	drawCell_issvcnv(sample,feature,g) {
+
+		const [ nodata, cnvvalue, lohvalue, hasitd, hassv, hasfusion ] = getitemforsample_compound( feature, sample )
+
+		if(nodata) {
+			drawEmptycell(sample, feature, g)
+			return
+		}
+
+		if(cnvvalue!=0) {
+			g.append('rect')
+				.attr('width', feature.width)
+				.attr('height', sample.height)
+				.attr('fill', cnvvalue > 0 ? feature.cnv.colorgain : feature.cnv.colorloss )
+				.attr('fill-opacity', Math.abs(cnvvalue) / feature.cnv.maxabslogratio )
+				.attr('stroke','#ccc')
+				.attr('stroke-opacity',0)
+				.attr('shape-rendering','crispEdges')
+		}
+		if(lohvalue!=0) {
+			g.append('rect')
+				.attr('width', feature.width)
+				.attr('height', sample.height)
+				.attr('fill', feature.loh.color )
+				.attr('fill-opacity', (lohvalue-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue) )
+				.attr('stroke','#ccc')
+				.attr('stroke-opacity',0)
+				.attr('shape-rendering','crispEdges')
+		}
+		if(hasitd) {
+		}
+
+
+		g.append('rect')
+			.attr('width', feature.width)
+			.attr('height', sample.height)
+			.attr('fill', 'white')
+			.attr('fill-opacity', 0)
+			.attr('stroke','#ccc')
+			.attr('stroke-opacity',0)
+			.attr('shape-rendering','crispEdges')
+			.on('mouseover',()=>{
+				d3event.target.setAttribute('stroke-opacity',1)
+				this.showTip_cell( sample, feature )
+			})
+			.on('mouseout',()=>{
+				d3event.target.setAttribute('stroke-opacity',0)
+				this.tip.hide()
+			})
+	}
+
+
+
+
+	drawCell_ismutation(sample,feature,g) {
+		const item = feature.items.find( i=> i.sample == sample.name )
+		if(!item) {
+			drawEmptycell(sample, feature, g)
+			return
+		}
+		g.append('rect')
+			.attr('width', feature.width)
+			.attr('height', sample.height)
+			.attr('fill', 'red')
+			.attr('stroke','#ccc')
+			.attr('stroke-opacity',0)
+			.attr('shape-rendering','crispEdges')
+			.on('mouseover',()=>{
+				d3event.target.setAttribute('stroke-opacity',1)
+				this.showTip_cell( sample, feature )
+			})
+			.on('mouseout',()=>{
+				d3event.target.setAttribute('stroke-opacity',0)
+				this.tip.hide()
+			})
+	}
+
 	/*********** __draw ends *****/
 
 
@@ -1068,7 +1334,13 @@ export class Samplematrix {
 		if(f.issvfusion) {
 			return
 		}
-		// __newattr
+		if(f.issvcnv) {
+			return
+		}
+		if(f.ismutation) {
+			return
+		}
+		// __newattr show menu for feature
 	}
 
 
@@ -1079,14 +1351,24 @@ export class Samplematrix {
 			.style('font-size','.7em')
 			.style('margin','10px')
 
+		// __newattr
 		if(f.isgenevalue || f.iscnv || f.isloh || f.isitd || f.issvfusion) {
-			// show region
-			// __newattr
+			// single data type: show region
 			holder.append('div')
 				.html(f.chr+':'+f.start+'-'+f.stop+' &nbsp; '+common.bplen(f.stop-f.start))
 				.style('font-size','.7em')
 				.style('opacity',.5)
 				.style('margin','0px 10px 10px 10px')
+		} else if( f.issvcnv || f.ismutation ) {
+			// compound data types: show region if no gene name
+			if(!f.genename) {
+				// no gene, show region
+				holder.append('div')
+					.html(f.chr+':'+f.start+'-'+f.stop+' &nbsp; '+common.bplen(f.stop-f.start))
+					.style('font-size','.7em')
+					.style('opacity',.5)
+					.style('margin','0px 10px 10px 10px')
+			}
 		}
 
 		if(f.isgenevalue) {
@@ -1429,6 +1711,14 @@ export class Samplematrix {
 				continue
 			}
 
+			if(f.issvcnv) {
+				continue
+			}
+
+			if(f.ismutation) {
+				continue
+			}
+
 			// __newattr
 			console.error('sample tooltip: Unknown feature type')
 		}
@@ -1532,6 +1822,33 @@ export class Samplematrix {
 				text = lst2.join('')
 			}
 			lst.push({k:f.label, v:text})
+
+		} else if(f.issvcnv) {
+
+			const [ nodata, cnvvalue, lohvalue, hasitd, hassv, hasfusion ] = getitemforsample_compound( f, sample )
+			if(!nodata) {
+				const says=[]
+				if(cnvvalue!=0) {
+					says.push('<div>CNV <span class=sja_mcdot style="background:'+(cnvvalue>0?f.cnv.colorgain:f.cnv.colorloss)+'">'+cnvvalue+'</div>')
+				}
+				if(lohvalue) {
+					says.push('<div>LOH <span class=sja_mcdot style="background:'+f.loh.color+'">'+lohvalue+'</div>')
+				}
+				if(hasitd) {
+					says.push('<div>ITD</div>')
+				}
+				if(hassv) {
+					says.push('<div>SV</div>')
+				}
+				if(hasfusion) {
+					says.push('<div>Fusion</div>')
+				}
+				lst.push({k:f.label, v: says.join('')})
+			}
+
+		} else if(f.ismutation) {
+
+			console.log('todo')
 
 		} else {
 			// __newattr
@@ -1690,8 +2007,26 @@ function feature2arg(f) {
 			stop: f.stop
 		}
 	}
+	if(f.issvcnv) {
+		return {
+			id:f.id,
+			issvcnv:1,
+			querykey:f.querykey,
+			chr:f.chr,
+			start: f.start,
+			stop: f.stop
+		}
+	}
+	if(f.ismutation) return {
+		id:f.id,
+		ismutation:1,
+		querykeylst:f.querykeylst,
+		chr:f.chr,
+		start:f.start,
+		stop:f.stop
+	}
 	// __newattr
-	throw('unknown feature type in feature2arg')
+	throw('unknown feature type in making request parameter')
 }
 
 
@@ -1708,4 +2043,32 @@ function getitemforsample_vcf( feature, sample ) {
 		}
 	}
 	return mlst
+}
+
+
+function getitemforsample_compound( feature, sample ) {
+	let cnvvalue=0,
+		lohvalue=0,
+		hasitd=0,
+		hassv=0,
+		hasfusion=0,
+		nodata=true
+	for(const item of feature.items) {
+		if(item.sample != sample.name) continue
+		nodata=false
+		if(item.dt==common.dtcnv) {
+			cnvvalue = item.value
+		} else if(item.dt==common.dtloh) {
+			lohvalue = item.segmean
+		} else if(item.dt==common.dtitd) {
+			hasitd=1
+		} else if(item.dt==common.dtsv) {
+			hassv=1
+		} else if(item.dt==common.dtfusionrna) {
+			hasfusion=1
+		} else {
+			console.error('unknown dt: '+item.dt)
+		}
+	}
+	return [ nodata, cnvvalue, lohvalue, hasitd, hassv, hasfusion ]
 }

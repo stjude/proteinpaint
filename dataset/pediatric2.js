@@ -127,6 +127,16 @@ module.exports={
 		}
 	},
 
+	annotationsampleset2matrix: {
+		annotationkey:'diagnosis_short',
+		group2matrix:{
+			BALL:{
+				attributes:[
+				],
+			}
+		}
+	},
+
 /************* not ready to migrate to general track yet
 	key2generalTracks:{
 		pedmut: {

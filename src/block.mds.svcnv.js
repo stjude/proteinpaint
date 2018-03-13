@@ -430,7 +430,7 @@ function render_samplegroups( tk, block ) {
 	// likewise for sv
 	const svdensityheight = render_multi_svdense( svlst4dense, tk, block )
 
-	// draw cnv bars, will draw sv and vcf if in full mode
+	// for each sample group, draw cnv bars, will draw sv and vcf if in full mode
 	const cnvheight = render_multi_cnvloh( tk, block )
 
 	multi_expressionstatus_ase_outlier(tk)

@@ -30,7 +30,7 @@ main() {
 
 	mkdir -p out/matrix_viewer/
 
-	output_name="${vcf_file_prefix[0]}.matrix"
+	output_name="${vcf_file_prefix[0]}.FileViewer"
 	bookmark_name="${vcf_file_prefix[0]}.bookmark"
 
     # Fill in your application code here.
