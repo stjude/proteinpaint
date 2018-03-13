@@ -28,5 +28,5 @@ rl.on('line',line=> {
 })
 
 rl.on('close',()=>{
-	console.log('viewer',viewerid, 'project', projectid)
+	//console.log('viewer',viewerid, 'project', projectid)
 })
