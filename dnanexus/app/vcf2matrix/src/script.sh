@@ -20,6 +20,7 @@ main() {
     echo "Value of vcf_file: '${vcf_file[@]}'"
     echo "Value of other_options: '$other_options'"
 
+
     # The following line(s) use the dx command-line tool to download your file
     # inputs to the local file system using variable names for the filenames. To
     # recover the original filenames, you can use the output of "dx describe
@@ -33,9 +34,13 @@ main() {
 	bookmark_name="${vcf_file_prefix[0]}.bookmark"
 
     # Fill in your application code here.
+
+
 	nodejs /usr/bin/bin.smat.js $other_options ${vcf_file_path[@]} > $output_name
 
-	dx upload $output_name --type FileViewer --details '{"patterns": ["*.gz", "*.gz.tbi", "*.gz.csi"]}' # | nodejs /usr/bin/bookmark.js > $bookmark_name
+	dx upload $output_name --type FileViewer --details '{"patterns": ["*.gz", "*.gz.tbi", "*.gz.csi"]}'
+
+	make_dnanexus_shortcut -p xx --no-select -v $output_name -f ${vcf_file_name[@]} -o $bookmark_name
 
 
 	mv $output_name out/matrix_viewer/
