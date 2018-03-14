@@ -548,9 +548,8 @@ function render_samplegroups( tk, block ) {
 
 	/// legend
 
-	if(tk.isfull) {
-		may_legend_svchr(tk)
-	}
+	
+	may_legend_svchr(tk)
 
 	may_legend_samplegroup(tk, block)
 

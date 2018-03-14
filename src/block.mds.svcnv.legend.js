@@ -206,7 +206,9 @@ export function makeTk_legend(block, tk) {
 
 	// sv chr color
 	{
-		const row = table.append('tr')
+		const row = table.append('tr').style('display','none')
+		row.hidden=1
+		tk.legend_hideable_rows.push(row)
 		tk.legend_svchrcolor={
 			row:row,
 			interchrs:new Set(),
@@ -215,7 +217,6 @@ export function makeTk_legend(block, tk) {
 		row.append('td')
 			.style('text-align','right')
 			.style('opacity',.5)
-			.style('display','none')
 			.text('SV chromosome')
 		tk.legend_svchrcolor.holder = row.append('td')
 	}
@@ -270,8 +271,7 @@ export function makeTk_legend(block, tk) {
 
 
 export function may_legend_svchr(tk) {
-	if(tk.legend_svchrcolor.interchrs.size==0) return
-	tk.legend_hideable_rows.push(tk.legend_svchrcolor.row)
+	if(tk.legend_svchrcolor.interchrs.size==0) return;
 	tk.legend_svchrcolor.row.style('display','table-row')
 	tk.legend_svchrcolor.holder.selectAll('*').remove()
 	for(const chr of tk.legend_svchrcolor.interchrs) {
@@ -471,8 +471,9 @@ export function may_legend_samplegroup(tk, block) {
 		// official only
 		return
 	}
-
-	tk.legend_hideable_rows.push(tk.legend_samplegroup.row)
+	if (!tk.legend_hideable_rows.includes(tk.legend_samplegroup.row)) {
+		tk.legend_hideable_rows.push(tk.legend_samplegroup.row)
+	}
 	tk.legend_samplegroup.row.style('display','table-row')
 	tk.legend_samplegroup.holder.selectAll('*').remove()
 
