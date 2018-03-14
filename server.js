@@ -6996,6 +6996,11 @@ function handle_samplematrix(req,res) {
 
 					ds.queries[ key ] = tk
 
+				} else if(tk.type == common.tkt.mdsexpressionrank) {
+
+					// gene expression is currently not used in custom track...
+					ds.queries[ key ] = tk
+
 				} else {
 					throw('unknown type of data track: '+tk.type)
 				}
@@ -7617,109 +7622,54 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, req) {
 
 
 function samplematrix_task_ismutation(feature, ds, dsquerylst, req) {
+	/*
+	load mutation of any type:
+		snvindel from vcf file
+		cnv/loh/sv/fusion/itd from svcnv file
+
+	no expression data here
+
+	*/
 	if(!feature.chr) return ['chr missing']
 	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
 	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
 
-	const q = Promise.resolve()
-	.then(()=>{
-		if(dsquery.file) return
-		return cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
-	})
-	.then(dir=>{
+	const tasks = []
 
-		return new Promise((resolve,reject)=>{
+	for(const query of dsquerylst) {
 
-			const data = []
-			const ps=spawn( tabix,
-				[
-					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-					feature.chr+':'+feature.start+'-'+feature.stop
-				], {cwd: dir }
-				)
-			const rl = readline.createInterface({
-				input:ps.stdout
-			})
-			rl.on('line',line=>{
+		if(query.type == common.tkt.mdsvcf) {
 
-				const l=line.split('\t')
+			const [err, q] = samplematrix_task_isvcf( feature, ds, query, req )
+			if(err) return [err]
+			tasks.push(q)
 
-				const j=JSON.parse(l[3])
+		} else if(query.type == common.tkt.mdssvcnv) {
+			
+			const [err, q] = samplematrix_task_issvcnv( feature, ds, query, req )
+			if(err) return [err]
+			tasks.push(q)
 
-				if(!j.sample) return
-				if(req.query.limitsamplebyeitherannotation) {
-					const anno = ds.cohort.annotation[ j.sample ]
-					if(!anno) return
-					let notfit = true
-					for(const filter of req.query.limitsamplebyeitherannotation) {
-						if(anno[ filter.key ] == filter.value) {
-							notfit=false
-							break
-						}
-					}
-					if(notfit) return
+		} else {
+			return ['unsupported track type: '+query.type]
+		}
+	}
+
+	return [ null, 
+		Promise.all(tasks)
+		.then(results=>{
+			const items = []
+			for(const r of results) {
+				for(const i of r.items) {
+					items.push(i)
 				}
-
-				// keep all data and return
-
-				if(j.dt == common.dtsv || j.dt == common.dtfusionrna ) {
-
-					j._chr = l[0]
-					j._pos = Number.parseInt(l[1])
-					if(j.chrA) {
-						j.chrB = j._chr
-						j.posB = j._pos
-					} else {
-						j.chrA = j._chr
-						j.posA = j._pos
-					}
-
-				} else if(j.dt==common.dtcnv) {
-
-					if(feature.cnv && feature.cnv.valuecutoff && j.value < feature.cnv.valuecutoff) return
-					j.chr = l[0]
-					j.start = Number.parseInt(l[1])
-					j.stop = Number.parseInt(l[2])
-					if(feature.cnv && feature.cnv.focalsizelimit && j.stop-j.start>=feature.cnv.focalsizelimit) return
-
-				} else if(j.dt==common.dtloh) {
-
-					if(feature.loh && feature.loh.valuecutoff && j.segmean < feature.loh.valuecutoff) return
-					j.chr = l[0]
-					j.start = Number.parseInt(l[1])
-					j.stop = Number.parseInt(l[2])
-					if(feature.loh && feature.loh.focalsizelimit && j.stop-j.start>=feature.loh.focalsizelimit) return
-
-				} else if(j.dt==common.dtitd) {
-
-					j.chr = l[0]
-					j.start = Number.parseInt(l[1])
-					j.stop = Number.parseInt(l[2])
-
-				} else {
-					console.error('unknown datatype', j.dt)
-					return
-				}
-
-				data.push( j )
-			})
-
-			const errout=[]
-			ps.stderr.on('data',i=> errout.push(i) )
-			ps.on('close',code=>{
-				const e=errout.join('')
-				if(e && !tabixnoterror(e)) {
-					reject(e)
-					return
-				}
-				resolve( {
-					id:feature.id,
-					items:data
-				})
-			})
+			}
+			return {
+				id: results[0].id,
+				items: items
+			}
 		})
-	})
-	return [null,q]
+	]
 }
 
 
