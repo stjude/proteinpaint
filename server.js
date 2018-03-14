@@ -7454,7 +7454,7 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, req) {
 
 				// keep all data and return
 
-				if(j.dt == common.dtsv && j.dt == common.dtfusionrna ) {
+				if(j.dt == common.dtsv || j.dt == common.dtfusionrna ) {
 
 					j._chr = l[0]
 					j._pos = Number.parseInt(l[1])
@@ -7489,7 +7489,7 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, req) {
 					j.stop = Number.parseInt(l[2])
 
 				} else {
-					console.error('unknown datatype')
+					console.error('unknown datatype', j.dt)
 					return
 				}
 
