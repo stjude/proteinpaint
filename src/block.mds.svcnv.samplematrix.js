@@ -2,6 +2,22 @@ import * as common from './common'
 import * as client from './client'
 
 
+/*
+hardcoded keys to identify tracks in querykey2tracks of a custom dataset
+only used to correlate feature.querykey to its track in smat.querykey2tracks
+their literal value won't be used in server
+
+this requires that, in custom dataset,
+	*** there can be only 1 track of each type ***
+	e.g. there cannot be two svcnv tracks...
+
+*/
+
+const customkey_svcnv = 'svcnv'
+const customkey_vcf = 'vcf'
+const customkey_expression = 'expression'
+
+
 export function createbutton_addfeature( p ) {
 	/*
 	create a button for adding feature to samplematrix
@@ -20,7 +36,7 @@ export function createbutton_addfeature( p ) {
 		nf = {
 			iscnv: 1,
 			label: m.chr+' '+common.bplen(m.stop-m.start)+' CNV',
-			querykey: ( tk.iscustom ? common.custommdstktype.svcnvitd : tk.querykey),
+			querykey: ( tk.iscustom ? customkey_svcnv : tk.querykey),
 			chr: m.chr,
 			start: m.start,
 			stop: m.stop,
@@ -34,7 +50,7 @@ export function createbutton_addfeature( p ) {
 		nf = {
 			isloh: 1,
 			label: m.chr+' '+common.bplen(m.stop-m.start)+' LOH',
-			querykey: ( tk.iscustom ? common.custommdstktype.svcnvitd : tk.querykey),
+			querykey: ( tk.iscustom ? customkey_svcnv : tk.querykey),
 			chr: m.chr,
 			start: m.start,
 			stop: m.stop,
@@ -55,7 +71,7 @@ export function createbutton_addfeature( p ) {
 		}
 		nf = {
 			isgenevalue:1,
-			querykey: ( tk.iscustom ? common.custommdstktype.geneexpression : tk.checkexpressionrank.querykey ),
+			querykey: ( tk.iscustom ? customkey_expression : tk.checkexpressionrank.querykey ),
 			genename: m.genename,
 			label: m.genename+' expression',
 			chr: tmp.chr,
@@ -66,7 +82,7 @@ export function createbutton_addfeature( p ) {
 	case common.dtsnvindel:
 		nf = {
 			isvcf:1,
-			querykey: ( tk.iscustom ? common.custommdstktype.vcf : tk.checkvcf.querykey ),
+			querykey: ( tk.iscustom ? customkey_vcf : tk.checkvcf.querykey ),
 			label: 'Mutation at '+m.chr+':'+m.pos,
 			chr: m.chr,
 			start: m.pos,
@@ -76,7 +92,7 @@ export function createbutton_addfeature( p ) {
 	case common.dtitd:
 		nf = {
 			isitd:1,
-			querykey: ( tk.iscustom ? common.custommdstktype.svcnvitd : tk.querykey),
+			querykey: ( tk.iscustom ? customkey_svcnv : tk.querykey),
 			label: 'ITD at '+m.chr+':'+(m.start+1)+'-'+(m.stop+1),
 			chr:m.chr,
 			start:m.start,
@@ -88,7 +104,7 @@ export function createbutton_addfeature( p ) {
 		// TODO hardcoded range +/- 1k
 		nf = {
 			issvfusion:1,
-			querykey: ( tk.iscustom ? common.custommdstktype.svcnvitd : tk.querykey),
+			querykey: ( tk.iscustom ? customkey_svcnv : tk.querykey),
 			label: 'SV/fusion around '+m._chr+':'+(m._pos+1),
 			chr: m._chr,
 			start: Math.max(0, m._pos-1000),
@@ -153,20 +169,33 @@ function addnewfeature( nf, tk, block) {
 
 			arg.iscustom = 1
 			arg.querykey2tracks = {}
-			arg.querykey2tracks[ common.custommdstktype.svcnvitd ] = {
+			arg.querykey2tracks[ customkey_svcnv ] = {
+				type: common.tkt.mdssvcnv,
 				file: tk.file,
 				url: tk.url,
 				indexURL: tk.indexURL
 			}
 			if(tk.checkexpressionrank) {
-				arg.querykey2tracks[ common.custommdstktype.geneexpression ] = tk.checkexpressionrank
+				/*
+				gene expression track file "type" is only temporary,
+				since in mds.queries, this data is not regarded as a track, thus has no type
+				add type here so server code won't break
+				*/
+				arg.querykey2tracks[ customkey_expression ] = {
+					type: common.tkt.mdsexpressionrank
+				}
+				for(const k in tk.checkexpressionrank) {
+					arg.querykey2tracks[ customkey_expression ][ k ] = tk.checkexpressionrank[ k ]
+				}
 			}
 			if(tk.checkvcf) {
 				// hardcoded one single vcf file
-				arg.querykey2tracks[ common.custommdstktype.vcf ] = {}
+				arg.querykey2tracks[ customkey_vcf ] = {
+					type: common.tkt.mdsvcf
+				}
 				for(const k in tk.checkvcf) {
 					if(k=='stringifiedObj') continue
-					arg.querykey2tracks[ common.custommdstktype.vcf ][ k ] = tk.checkvcf[ k ]
+					arg.querykey2tracks[ customkey_vcf ][ k ] = tk.checkvcf[ k ]
 				}
 			}
 

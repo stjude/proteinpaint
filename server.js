@@ -6953,140 +6953,161 @@ function handle_mdsjunction_AreadcountbyB(reqquery,res,ds,dsquery) {
 function handle_samplematrix(req,res) {
 	/*
 	fetch values for a set of features, over a common set of samples
+	for singular feature, the datatype & file format is implied
+	for feature spanning multiple data types, will need to query multiple data tracks, each track must be identified with "type" e.g. common.tkt.mdsvcf
 	*/
 
 	if(reqbodyisinvalidjson(req,res)) return
 
-	const gn = genomes[ req.query.genome ]
-	if(!gn) return res.send({error:'invalid genome'})
+	Promise.resolve()
+	.then(()=>{
 
-	let ds
+		const gn = genomes[ req.query.genome ]
+		if(!gn) throw('invalid genome')
 
-	if(req.query.iscustom) {
+		let ds
 
-		if(!req.query.querykey2tracks) return res.send({error:'querykey2tracks{} missing'})
+		if(req.query.iscustom) {
 
-		ds = { queries: {} }
-		for(const key in req.query.querykey2tracks) {
-			if(key == common.custommdstktype.vcf) {
+			if(!req.query.querykey2tracks) throw('querykey2tracks{} missing for custom dataset')
+			ds = { queries: {} }
 
-				// special treatment for vcf
+			for(const key in req.query.querykey2tracks) {
+
+				// the key is arbitrary
+
 				const tk = req.query.querykey2tracks[ key ]
-				tk.type = common.mdsvcftype.vcf
 
-				ds.queries[ key ] = {
-					info: tk.info, // comply with multi-vcf track mds
-					tracks:[ tk ]
+				if(!tk.type) throw('missing "type" for a data track')
+
+				if(tk.type == common.tkt.mdsvcf) {
+
+					// special treatment for vcf
+					const tk = req.query.querykey2tracks[ key ]
+					tk.type = common.mdsvcftype.vcf
+
+					ds.queries[ key ] = {
+						type: common.tkt.mdsvcf,
+						info: tk.info, // comply with multi-vcf track mds
+						tracks:[ tk ]
+					}
+
+				} else if(tk.type == common.tkt.mdssvcnv) {
+
+					ds.queries[ key ] = tk
+
+				} else {
+					throw('unknown type of data track: '+tk.type)
 				}
 
+			}
+
+		} else {
+
+			// from native dataset
+			if(!gn.datasets) throw('genome is not equipped with datasets')
+			if(!req.query.dslabel) throw('dslabel missing')
+			ds = gn.datasets[req.query.dslabel]
+			if(!ds) throw('invalid dslabel')
+			if(!ds.queries) throw('dataset is not equipped with queries')
+		}
+
+		if(req.query.limitsamplebyeitherannotation) {
+			// must be official ds
+			if(!ds.cohort) throw('limitsamplebyeitherannotation but no cohort in ds')
+			if(!ds.cohort.annotation) throw('limitsamplebyeitherannotation but no cohort.annotation in ds')
+		}
+
+		const tasks = []
+
+		for(const feature of req.query.features) {
+
+			let dsquery
+			let dsquerylst=[]
+
+			// allow other types of query, e.g. checking sample metadata
+
+			if(feature.querykey) {
+				if(!ds.queries) throw('using querykey for a feature but no ds.queries')
+				dsquery = ds.queries[ feature.querykey ]
+				if(!dsquery) throw('unknown dsquery by key '+feature.querykey)
+			} else if(feature.querykeylst) {
+				if(!ds.queries) throw('using querykeylst for a feature but no ds.queries')
+				for(const k of feature.querykeylst) {
+					const q = ds.queries[k]
+					if(!q) throw('unknown key "'+k+'" from querykeylst')
+					dsquerylst.push(q)
+				}
+				if(dsquerylst.length==0) throw('no valid keys in querykeylst')
 			} else {
-				ds.queries[ key ] = req.query.querykey2tracks[ key ]
+				throw('unknown way to query a feature')
+			}
+
+
+			// types of feature/query
+
+			if(feature.isgenevalue) {
+
+				const [err, q] = samplematrix_task_isgenevalue( feature, ds, dsquery, req )
+				if(err) throw('error with isgenevalue: '+err)
+				tasks.push(q)
+
+			} else if(feature.iscnv) {
+
+				const [err, q] = samplematrix_task_iscnv( feature, ds, dsquery, req )
+				if(err) throw('error with iscnv: '+err)
+				tasks.push(q)
+
+			} else if(feature.isloh) {
+
+				const [err, q] = samplematrix_task_isloh( feature, ds, dsquery, req )
+				if(err) throw('error with isloh: '+err)
+				tasks.push(q)
+
+			} else if(feature.isvcf) {
+
+				const [err, q] = samplematrix_task_isvcf( feature, ds, dsquery, req )
+				if(err) throw('error with isvcf: '+err)
+				tasks.push(q)
+
+			} else if(feature.isitd) {
+
+				const [err, q] = samplematrix_task_isitd( feature, ds, dsquery, req )
+				if(err) throw('error with isitd: '+err)
+				tasks.push(q)
+
+			} else if(feature.issvfusion) {
+
+				const [err, q] = samplematrix_task_issvfusion( feature, ds, dsquery, req )
+				if(err) throw('error with issvfusion: '+err)
+				tasks.push(q)
+
+			} else if(feature.issvcnv) {
+
+				const [err, q] = samplematrix_task_issvcnv( feature, ds, dsquery, req )
+				if(err) throw('error with issvcnv: '+err)
+				tasks.push(q)
+
+			} else if(feature.ismutation) {
+
+				const [err, q] = samplematrix_task_ismutation( feature, ds, dsquerylst, req )
+				if(err) throw('error with ismutation: '+err)
+				tasks.push(q)
+
+			} else {
+
+				throw('unknown type of feature')
 			}
 		}
 
-	} else {
+		return Promise.all(tasks)
 
-		// from native dataset
-		if(!gn.datasets) return res.send({error:'genome is not equipped with datasets'})
-		if(!req.query.dslabel) return res.send({error:'dslabel missing'})
-		ds = gn.datasets[req.query.dslabel]
-		if(!ds) return res.send({error:'invalid dslabel'})
-		if(!ds.queries) return res.send({error:'dataset is not equipped with queries'})
-	}
-
-	if(req.query.limitsamplebyeitherannotation) {
-		// must be official ds
-		if(!ds.cohort) return res.send({error:'limitsamplebyeitherannotation but no cohort in ds'})
-		if(!ds.cohort.annotation) return res.send({error:'limitsamplebyeitherannotation but no cohort.annotation in ds'})
-	}
-
-	const tasks = []
-
-	for(const feature of req.query.features) {
-
-		let dsquery
-		let dsquerylst=[]
-
-		// allow other types of query, e.g. checking sample metadata
-
-		if(feature.querykey) {
-			if(!ds.queries) return res.send({error:'using querykey for a feature but no ds.queries'})
-			dsquery = ds.queries[ feature.querykey ]
-		} else if(feature.querykeylst) {
-			if(!ds.queries) return res.send({error:'using querykeylst for a feature but no ds.queries'})
-			for(const k of feature.querykeylst) {
-				const q = ds.queries[k]
-				if(!q) return res.send({error:'unknown key "'+k+'" from querykeylst'})
-				dsquerylst.push(q)
-			}
-		} else {
-			return res.send({error:'unknown way to query a feature'})
-		}
-
-		if(!dsquery) return res.send({error:'unknown dsquery'})
-
-		// types of feature/query
-
-		if(feature.isgenevalue) {
-
-			const [err, q] = samplematrix_task_isgenevalue( feature, ds, dsquery, req )
-			if(err) return res.send({error:'error with isgenevalue: '+err})
-			tasks.push(q)
-
-		} else if(feature.iscnv) {
-
-			const [err, q] = samplematrix_task_iscnv( feature, ds, dsquery, req )
-			if(err) return res.send({error:'error with iscnv: '+err})
-			tasks.push(q)
-
-		} else if(feature.isloh) {
-
-			const [err, q] = samplematrix_task_isloh( feature, ds, dsquery, req )
-			if(err) return res.send({error:'error with isloh: '+err})
-			tasks.push(q)
-
-		} else if(feature.isvcf) {
-
-			const [err, q] = samplematrix_task_isvcf( feature, ds, dsquery, req )
-			if(err) return res.send({error:'error with isvcf: '+err})
-			tasks.push(q)
-
-		} else if(feature.isitd) {
-
-			const [err, q] = samplematrix_task_isitd( feature, ds, dsquery, req )
-			if(err) return res.send({error:'error with isitd: '+err})
-			tasks.push(q)
-
-		} else if(feature.issvfusion) {
-
-			const [err, q] = samplematrix_task_issvfusion( feature, ds, dsquery, req )
-			if(err) return res.send({error:'error with issvfusion: '+err})
-			tasks.push(q)
-
-		} else if(feature.issvcnv) {
-
-			const [err, q] = samplematrix_task_issvcnv( feature, ds, dsquery, req )
-			if(err) return res.send({error:'error with issvcnv: '+err})
-			tasks.push(q)
-
-		} else if(feature.ismutation) {
-
-			const [err, q] = samplematrix_task_ismutation( feature, ds, dsquerylst, req )
-			if(err) return res.send({error:'error with ismutation: '+err})
-			tasks.push(q)
-
-		} else {
-
-			return res.send({error:'unknown type of feature'})
-		}
-	}
-
-	Promise.all(tasks)
+	})
 	.then( results =>{
 		res.send({results:results})
 	})
 	.catch(err=>{
-		res.send({error:err})
+		res.send({error: (typeof(err)=='string' ? err : err.message) })
 		if(err.stack) console.error(err.stack)
 	})
 }
@@ -7408,7 +7429,194 @@ function samplematrix_task_isitd(feature, ds, dsquery, req) {
 
 
 
+
+function samplematrix_task_issvfusion(feature, ds, dsquery, req) {
+	if(!feature.chr) return ['chr missing']
+	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
+	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
+
+	const q = Promise.resolve()
+	.then(()=>{
+		if(dsquery.file) return
+		return cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
+	})
+	.then(dir=>{
+
+		return new Promise((resolve,reject)=>{
+
+			const data = []
+			const ps=spawn( tabix,
+				[
+					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+					feature.chr+':'+feature.start+'-'+feature.stop
+				], {cwd: dir }
+				)
+			const rl = readline.createInterface({
+				input:ps.stdout
+			})
+			rl.on('line',line=>{
+
+				const l=line.split('\t')
+
+				const j=JSON.parse(l[3])
+
+				if(j.dt != common.dtsv && j.dt != common.dtfusionrna ) return
+
+				if(!j.sample) return
+				if(req.query.limitsamplebyeitherannotation) {
+					const anno = ds.cohort.annotation[ j.sample ]
+					if(!anno) return
+					let notfit = true
+					for(const filter of req.query.limitsamplebyeitherannotation) {
+						if(anno[ filter.key ] == filter.value) {
+							notfit=false
+							break
+						}
+					}
+					if(notfit) return
+				}
+
+				j._chr = l[0]
+				j._pos = Number.parseInt(l[1])
+				if(j.chrA) {
+					j.chrB = j._chr
+					j.posB = j._pos
+				} else {
+					j.chrA = j._chr
+					j.posA = j._pos
+				}
+
+				data.push( j )
+			})
+
+			const errout=[]
+			ps.stderr.on('data',i=> errout.push(i) )
+			ps.on('close',code=>{
+				const e=errout.join('')
+				if(e && !tabixnoterror(e)) {
+					reject(e)
+					return
+				}
+				resolve( {
+					id:feature.id,
+					items:data
+				})
+			})
+		})
+	})
+	return [null,q]
+}
+
 function samplematrix_task_issvcnv(feature, ds, dsquery, req) {
+	if(!feature.chr) return ['chr missing']
+	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
+	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
+
+	const q = Promise.resolve()
+	.then(()=>{
+		if(dsquery.file) return
+		return cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
+	})
+	.then(dir=>{
+
+		return new Promise((resolve,reject)=>{
+
+			const data = []
+			const ps=spawn( tabix,
+				[
+					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+					feature.chr+':'+feature.start+'-'+feature.stop
+				], {cwd: dir }
+				)
+			const rl = readline.createInterface({
+				input:ps.stdout
+			})
+			rl.on('line',line=>{
+
+				const l=line.split('\t')
+
+				const j=JSON.parse(l[3])
+
+				if(!j.sample) return
+				if(req.query.limitsamplebyeitherannotation) {
+					const anno = ds.cohort.annotation[ j.sample ]
+					if(!anno) return
+					let notfit = true
+					for(const filter of req.query.limitsamplebyeitherannotation) {
+						if(anno[ filter.key ] == filter.value) {
+							notfit=false
+							break
+						}
+					}
+					if(notfit) return
+				}
+
+				// keep all data and return
+
+				if(j.dt == common.dtsv || j.dt == common.dtfusionrna ) {
+
+					j._chr = l[0]
+					j._pos = Number.parseInt(l[1])
+					if(j.chrA) {
+						j.chrB = j._chr
+						j.posB = j._pos
+					} else {
+						j.chrA = j._chr
+						j.posA = j._pos
+					}
+
+				} else if(j.dt==common.dtcnv) {
+
+					if(feature.cnv && feature.cnv.valuecutoff && j.value < feature.cnv.valuecutoff) return
+					j.chr = l[0]
+					j.start = Number.parseInt(l[1])
+					j.stop = Number.parseInt(l[2])
+					if(feature.cnv && feature.cnv.focalsizelimit && j.stop-j.start>=feature.cnv.focalsizelimit) return
+
+				} else if(j.dt==common.dtloh) {
+
+					if(feature.loh && feature.loh.valuecutoff && j.segmean < feature.loh.valuecutoff) return
+					j.chr = l[0]
+					j.start = Number.parseInt(l[1])
+					j.stop = Number.parseInt(l[2])
+					if(feature.loh && feature.loh.focalsizelimit && j.stop-j.start>=feature.loh.focalsizelimit) return
+
+				} else if(j.dt==common.dtitd) {
+
+					j.chr = l[0]
+					j.start = Number.parseInt(l[1])
+					j.stop = Number.parseInt(l[2])
+
+				} else {
+					console.error('unknown datatype', j.dt)
+					return
+				}
+
+				data.push( j )
+			})
+
+			const errout=[]
+			ps.stderr.on('data',i=> errout.push(i) )
+			ps.on('close',code=>{
+				const e=errout.join('')
+				if(e && !tabixnoterror(e)) {
+					reject(e)
+					return
+				}
+				resolve( {
+					id:feature.id,
+					items:data
+				})
+			})
+		})
+	})
+	return [null,q]
+}
+
+
+
+
+function samplematrix_task_ismutation(feature, ds, dsquerylst, req) {
 	if(!feature.chr) return ['chr missing']
 	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
 	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']

@@ -106,19 +106,16 @@ export class Samplematrix {
 
 			if(!this.querykey2tracks) throw('querykey2tracks missing for custom dataset')
 
-			const validkeys = new Set()
-			for(const k in common.custommdstktype) validkeys.add( common.custommdstktype[k] )
-
-			let validtrackcount=0
+			let novalidtk=true
 			for(const key in this.querykey2tracks) {
-
-				if(!validkeys.has( key )) throw('unknown querykey "'+key+'" not found in custommdstktype')
-
-				const tk = this.querykey2tracks[key]
+				// key is arbitrary
+				const tk = this.querykey2tracks[ key ]
 				if(!tk.file && !tk.url) throw('no file or url for a custom track by key '+key)
-				validtrackcount++
+				if(!tk.type) throw('missing type for member track by key '+key)
+				if(!common.validtkt( tk.type )) throw('invalid type for a member track: '+tk.type)
+				novalidtk=false
 			}
-			if(validtrackcount==0) throw('no custom tracks from querykey2tracks')
+			if(novalidtk) throw('no custom tracks from querykey2tracks')
 
 			/*
 			for custom dataset, allows one vcf file
@@ -128,8 +125,9 @@ export class Samplematrix {
 			*/
 			let vcftk
 			for(const key in this.querykey2tracks) {
-				if(key == common.custommdstktype.vcf) {
-					vcftk = this.querykey2tracks[key]
+				const tk = this.querykey2tracks[key]
+				if(tk.type == common.tkt.mdsvcf) {
+					vcftk = tk
 				}
 			}
 
