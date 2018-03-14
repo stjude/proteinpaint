@@ -802,14 +802,12 @@ export class Samplematrix {
 
 
 
-	/*********** __draw *****/
-
-
-
-	draw_matrix() {
-
-		this.svg.selectAll('*').remove()
-		const svgg = this.svg.append('g')
+	gatherSamplesFromFeatureData() {
+		/*
+		gather samples from feature data
+		call after updating any feature, in draw_matrix()
+		will set height for samples
+		*/
 
 		const name2sample = new Map()
 		// k: sample name
@@ -863,13 +861,33 @@ export class Samplematrix {
 			}
 		}
 
+		/*
+		TODO better height assignment
+		may highlight certain feature by showing fat rows for samples with data in that feature; rest of samples get thin rows
+		*/
 		const samplelst = []
-
 		for(const [n,sample] of name2sample) {
-			sample.height = 14  // XXX hardcoded height
+			sample.height = 14
 			sample.name = n
 			samplelst.push( sample )
 		}
+		return samplelst
+	}
+
+
+
+
+	/*********** __draw *****/
+
+
+
+	draw_matrix() {
+
+		this.svg.selectAll('*').remove()
+		const svgg = this.svg.append('g')
+
+
+		const samplelst = this.gatherSamplesFromFeatureData()
 
 		this.sortsamplesbyfeatures( samplelst )
 
