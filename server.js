@@ -4667,13 +4667,6 @@ function handle_mdssvcnv(req,res) {
 
 		} else if(gene2sample2obj) {
 
-			/* XXX
-			if(dsquery.iscustom && dsquery.checkvcf) {
-
-				// tricky!!! alters result.samplegroups by adding all expression samples
-				mdssvcnv_customtk_altersg_server( result, gene2sample2obj )
-			}
-			*/
 
 			// report coordinates for each gene back to client
 			result.gene2coord={}
@@ -4693,7 +4686,12 @@ function handle_mdssvcnv(req,res) {
 					gene2allvalues.set( gene, [] )
 
 					for(const [sample, obj] of tmp.samples) {
-						if(ds.cohort && ds.cohort.annotation) {
+
+						if(g.attributes && ds.cohort && ds.cohort.annotation) {
+
+							/*
+							a group from official track could still be unannotated, skip them
+							*/
 							const anno = ds.cohort.annotation[sample]
 							if(!anno) continue
 							let annomatch = true
@@ -4706,6 +4704,7 @@ function handle_mdssvcnv(req,res) {
 							if(annomatch) {
 								gene2allvalues.get(gene).push( obj )
 							}
+
 						} else {
 							// custom track, just one group for all samples
 							gene2allvalues.get(gene).push( obj )
