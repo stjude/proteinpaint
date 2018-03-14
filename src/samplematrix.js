@@ -25,20 +25,16 @@ internal use
 	.draw_matrix()
 	feature2arg()
 
-TODO
-- custom dataset
-- retrieve features from assay tracks, using an assay type
-
-
-
-
+TODO - retrieve features from assay tracks, using an assay type
 */
 
 
-
-
 const saynovalue='na'
-
+const default_cnvgaincolor = "#D6683C"
+const default_cnvlosscolor = "#67a9cf"
+const default_genevaluecolor = '#095873'
+const default_lohcolor = 'black'
+const default_svcolor = 'black'
 
 
 export class Samplematrix {
@@ -295,12 +291,12 @@ export class Samplematrix {
 
 			tr.append('td')
 				.text(f.label)
-				.style('color','#858585')
+				.style('opacity',.5)
 				.style('text-align','right')
 			f.legendholder = tr.append('td')
 
 			if(!f.width) f.width = 20
-			if(!f.color) f.color = '#095873'
+			if(!f.color) f.color = default_genevaluecolor
 
 			return this.feature_parseposition_maygene( f )
 		}
@@ -321,13 +317,13 @@ export class Samplematrix {
 			}
 			tr.append('td')
 				.text(f.label)
-				.style('color','#858585')
+				.style('opacity',.5)
 				.style('text-align','right')
 			f.legendholder = tr.append('td')
 
 			if(!f.width) f.width=40
-			if(!f.colorgain) f.colorgain = "#D6683C"
-			if(!f.colorloss) f.colorloss = "#67a9cf"
+			if(!f.colorgain) f.colorgain = default_cnvgaincolor
+			if(!f.colorloss) f.colorloss = default_cnvlosscolor
 
 			return this.feature_parseposition_maygene( f )
 				.then(()=>{
@@ -352,12 +348,12 @@ export class Samplematrix {
 			}
 			tr.append('td')
 				.text(f.label)
-				.style('color','#858585')
+				.style('opacity',.5)
 				.style('text-align','right')
 			f.legendholder = tr.append('td')
 
 			if(!f.width) f.width=40
-			if(!f.color) f.color = "black"
+			if(!f.color) f.color = default_lohcolor
 
 			return this.feature_parseposition_maygene( f )
 				.then(()=>{
@@ -381,7 +377,7 @@ export class Samplematrix {
 			}
 			tr.append('td')
 				.text(f.label)
-				.style('color','#858585')
+				.style('opacity',.5)
 				.style('text-align','right')
 			f.legendholder = tr.append('td')
 
@@ -408,7 +404,7 @@ export class Samplematrix {
 
 			tr.append('td')
 				.text(f.label)
-				.style('color','#858585')
+				.style('opacity',.5)
 				.style('text-align','right')
 			f.legendholder = tr.append('td')
 
@@ -436,11 +432,11 @@ export class Samplematrix {
 			}
 
 			if(!f.width) f.width=20
-			if(!f.color) f.color = 'black'
+			if(!f.color) f.color = default_svcolor
 
 			tr.append('td')
 				.text(f.label)
-				.style('color','#858585')
+				.style('opacity',.5)
 				.style('text-align','right')
 			f.legendholder = tr.append('td')
 
@@ -451,6 +447,9 @@ export class Samplematrix {
 		}
 
 		if(f.issvcnv) {
+
+			// compound mark
+
 			if(this.dslabel) {
 				// official
 				if(!f.querykey) throw('.querykey missing for issvcnv feature while loading from official dataset')
@@ -462,7 +461,6 @@ export class Samplematrix {
 			}
 
 			if(!f.width) f.width=40
-			if(!f.color) f.color = 'black'
 
 			tr.append('td')
 				.text(f.label)
@@ -473,16 +471,18 @@ export class Samplematrix {
 			if(!f.cnv) f.cnv = {}
 			if(!f.cnv.valuecutoff) f.cnv.valuecutoff = 0.2
 			if(!f.cnv.focalsizelimit) f.cnv.focalsizelimit=2000000
-			if(!f.cnv.colorgain) f.cnv.colorgain = "#D6683C"
-			if(!f.cnv.colorloss) f.cnv.colorloss = "#67a9cf"
+			if(!f.cnv.colorgain) f.cnv.colorgain = default_cnvgaincolor
+			if(!f.cnv.colorloss) f.cnv.colorloss = default_cnvlosscolor
 			if(!f.loh) f.loh = {}
 			if(!f.loh.valuecutoff) f.loh.valuecutoff = 0.1
 			if(!f.loh.focalsizelimit) f.loh.focalsizelimit=2000000
-			if(!f.loh.color) f.loh.color = 'black'
+			if(!f.loh.color) f.loh.color = default_lohcolor
 			if(!f.itd) f.itd = {}
-			if(!f.itd.color) f.itd.color = 'red'
+			if(!f.itd.color) f.itd.color = common.mclass[ common.mclassitd ].color
 			if(!f.sv) f.sv = {}
-			if(!f.sv.color) f.sv.color = 'black'
+			if(!f.sv.color) f.sv.color = default_svcolor
+			if(!f.fusion) f.fusion = {}
+			if(!f.fusion.color) f.fusion.color = default_svcolor
 
 			return this.feature_parseposition_maygene( f )
 				.then(()=>{
@@ -505,9 +505,10 @@ export class Samplematrix {
 			}
 			tr.append('td')
 				.text(f.label)
-				.style('color','#858585')
+				.style('opacity',.5)
 				.style('text-align','right')
 			f.legendholder = tr.append('td')
+			// TODO
 
 			if(!f.width) f.width=20
 			return this.feature_parseposition_maygene( f )
@@ -708,14 +709,14 @@ export class Samplematrix {
 					}
 				} else if(i.dt == common.dtloh) {
 					lohmax = Math.max( i.segmean, lohmax )
-				} else if(i.dt == common.itd) {
+				} else if(i.dt == common.dtitd) {
 					itdcount++
 				} else if(i.dt==common.dtsv) {
 					svcount++
 				} else if(i.dt==common.dtfusionrna) {
 					fusioncount++
 				} else {
-					console.error('unknown dt')
+					console.error('unknown dt', i.dt)
 				}
 			}
 
@@ -754,6 +755,7 @@ export class Samplematrix {
 				const row=h.append('div')
 					.style('margin-bottom','5px')
 				row.append('div')
+					.style('display','inline-block')
 					.attr('class','sja_mcdot')
 					.style('background', f.itd.color)
 					.text(itdcount)
@@ -764,6 +766,7 @@ export class Samplematrix {
 				const row=h.append('div')
 					.style('margin-bottom','5px')
 				row.append('div')
+					.style('display','inline-block')
 					.attr('class','sja_mcdot')
 					.style('background', f.sv.color)
 					.text(svcount)
@@ -774,6 +777,7 @@ export class Samplematrix {
 				const row=h.append('div')
 					.style('margin-bottom','5px')
 				row.append('div')
+					.style('display','inline-block')
 					.attr('class','sja_mcdot')
 					.style('background', f.fusion.color)
 					.text(fusioncount)
@@ -1199,6 +1203,8 @@ export class Samplematrix {
 			})
 	}
 
+
+
 	drawCell_issvcnv(sample,feature,g) {
 
 		const [ nodata, cnvvalue, lohvalue, hasitd, hassv, hasfusion ] = getitemforsample_compound( feature, sample )
@@ -1214,8 +1220,6 @@ export class Samplematrix {
 				.attr('height', sample.height)
 				.attr('fill', cnvvalue > 0 ? feature.cnv.colorgain : feature.cnv.colorloss )
 				.attr('fill-opacity', Math.abs(cnvvalue) / feature.cnv.maxabslogratio )
-				.attr('stroke','#ccc')
-				.attr('stroke-opacity',0)
 				.attr('shape-rendering','crispEdges')
 		}
 		if(lohvalue!=0) {
@@ -1224,11 +1228,30 @@ export class Samplematrix {
 				.attr('height', sample.height)
 				.attr('fill', feature.loh.color )
 				.attr('fill-opacity', (lohvalue-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue) )
-				.attr('stroke','#ccc')
-				.attr('stroke-opacity',0)
 				.attr('shape-rendering','crispEdges')
 		}
 		if(hasitd) {
+			g.append('rect')
+				.attr('width', feature.width)
+				.attr('height', sample.height)
+				.attr('fill', feature.itd.color )
+				.attr('shape-rendering','crispEdges')
+		}
+		if(hassv) {
+			g.append('circle')
+				.attr('cx', feature.width/2 )
+				.attr('cy', sample.height/2 )
+				.attr('r', Math.min(feature.width, sample.height) /2 )
+				.attr('stroke', feature.sv.color)
+				.attr('fill', 'none')
+		}
+		if(hasfusion) {
+			g.append('circle')
+				.attr('cx', feature.width/2 )
+				.attr('cy', sample.height/2 )
+				.attr('r', Math.min(feature.width, sample.height) /2 )
+				.attr('stroke', feature.fusion.color)
+				.attr('fill', 'none')
 		}
 
 
