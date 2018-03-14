@@ -28,6 +28,8 @@ export function makeTk_legend(block, tk) {
 		.style('border-spacing','5px')
 
 	tk.legend_table = table
+	// track hideable rows that are non-mutation attr 
+	tk.legend_hideable_rows = []
 
 	{
 		const row = table.append('tr')
@@ -40,6 +42,7 @@ export function makeTk_legend(block, tk) {
 			.style('opacity',.5)
 			.text('Mutation')
 		tk.legend_mclass.holder = row.append('td')
+		tk.legend_hideable_rows.push(row)
 	}
 
 	// cnv/loh color scale showing in legend, only for multi-sample
@@ -61,6 +64,7 @@ export function makeTk_legend(block, tk) {
 			.style('text-align','right')
 			.style('opacity',.5)
 			.text('CNV log2(ratio)')
+		tk.legend_hideable_rows.push(tk.cnvcolor.cnvlegend.row)
 
 		{
 			const svg = tk.cnvcolor.cnvlegend.row
@@ -147,6 +151,7 @@ export function makeTk_legend(block, tk) {
 			.style('text-align','right')
 			.style('opacity',.5)
 			.text('LOH seg.mean')
+		tk.legend_hideable_rows.push(tk.cnvcolor.lohlegend.row)
 
 		{
 			const svg = tk.cnvcolor.lohlegend.row
@@ -210,6 +215,7 @@ export function makeTk_legend(block, tk) {
 		row.append('td')
 			.style('text-align','right')
 			.style('opacity',.5)
+			.style('display','none')
 			.text('SV chromosome')
 		tk.legend_svchrcolor.holder = row.append('td')
 	}
@@ -265,6 +271,7 @@ export function makeTk_legend(block, tk) {
 
 export function may_legend_svchr(tk) {
 	if(tk.legend_svchrcolor.interchrs.size==0) return
+	tk.legend_hideable_rows.push(tk.legend_svchrcolor.row)
 	tk.legend_svchrcolor.row.style('display','table-row')
 	tk.legend_svchrcolor.holder.selectAll('*').remove()
 	for(const chr of tk.legend_svchrcolor.interchrs) {
@@ -348,6 +355,7 @@ export function may_legend_mclass(tk, block) {
 
 	const classlst = [ ...classes.values() ]
 	classlst.sort( (i,j)=>j.count-i.count )
+	tk.legend_mclass.total_count = classlst.reduce((a,b)=>a+b.count,0);
 
 	for(const c of classlst) {
 
@@ -464,15 +472,19 @@ export function may_legend_samplegroup(tk, block) {
 		return
 	}
 
+	tk.legend_hideable_rows.push(tk.legend_samplegroup.row)
 	tk.legend_samplegroup.row.style('display','table-row')
 	tk.legend_samplegroup.holder.selectAll('*').remove()
 
 	const shownamegroups = []
+	let numSamples=0
 	for(const g of tk._data) {
 		if(g.name && g.name!='Unannotated') {
 			shownamegroups.push(g)
+			numSamples += g.samples.length
 		}
 	}
+	tk.legend_samplegroup.total_count = numSamples
 	if(shownamegroups.length>0) {
 
 		for(const g of shownamegroups) {
@@ -555,8 +567,6 @@ export function may_legend_samplegroup(tk, block) {
 	}
 }
 
-
-
 export function may_legend_mutationAttribute(tk, block) {
 	/*
 	official-only, multi-sample
@@ -607,7 +617,7 @@ export function may_legend_mutationAttribute(tk, block) {
 		if(!attr.filter) continue
 
 		attr.legendcell
-			.attr('class','sja_hideable_legend')
+			.classed('sja_hideable_legend',true)
 			.on('click',()=>{
 				tk.tip2.hide()
 				attr.hidden=1
@@ -619,8 +629,6 @@ export function may_legend_mutationAttribute(tk, block) {
 					may_legend_mutationAttribute(tk,block)
 				},500)
 			})
-
-		tk.legend_more_label
 
 		if(attr.hidden) {
 			attr.legendrow.style('display','none')
@@ -747,7 +755,34 @@ export function may_legend_mutationAttribute(tk, block) {
 		}
 	}
 
-	if (!hiddenMutationAttributes.length) {
+	may_process_hideable_rows(tk,block,hiddenMutationAttributes)
+}
+
+export function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
+	// handle non-mutation attribute
+	let numHiddenRows=0
+	for(const row of tk.legend_hideable_rows) {
+		row.select('td')
+			.classed('sja_hideable_legend',true)
+			.on('click',()=>{
+				tk.tip2.hide()
+				row.hidden=1
+				tk.legend_more_row.style('display','table-row');
+				client.flyindi(row.select('td'),tk.legend_more_label)
+				row.transition().delay(500)
+					.style('display','none')
+				setTimeout(()=>{
+					may_legend_mutationAttribute(tk,block)
+				},500)
+			})
+
+		row.style('display',row.hidden ? 'none' : 'table-row')
+		if (row.hidden) {
+			numHiddenRows++
+		}
+	}
+
+	if (!hiddenMutationAttributes.length && !numHiddenRows) {
 		tk.legend_more_row.style('display','none')
 	}
 	else {
@@ -759,6 +794,36 @@ export function may_legend_mutationAttribute(tk, block) {
 			.html('MORE...')
 			.on('click',()=>{
 				tk.tip2.showunder(btn.node()).clear()
+				
+				for(const row of tk.legend_hideable_rows) {
+					if (!row.hidden) continue
+					const div = tk.tip2.d.append('div')
+						.attr('class','sja_menuoption')
+						.on('click',()=>{
+							tk.tip2.hide()
+							row.hidden=0
+							may_legend_mutationAttribute(tk,block)
+						})
+
+					if(row == tk.legend_mclass.row) {					
+						div.append('div')
+							.style('display','inline-block')
+							.attr('class','sja_mcdot')
+							.style('background', '#858585')
+							.text( tk.legend_mclass.total_count )
+					} 
+					if(row == tk.legend_samplegroup.row) {					
+						div.append('div')
+							.style('display','inline-block')
+							.attr('class','sja_mcdot')
+							.style('background', '#858585')
+							.text( tk.legend_samplegroup.total_count )
+					} 
+
+					div.append('span')
+						.html('&nbsp;' + row.node().firstChild.innerHTML )
+				}
+
 				for(const attr of hiddenMutationAttributes) {
 					if (!attr.hidden) continue
 					const total = [...attr.value2count.values()].reduce((a,b)=>a+b.totalitems,0)
@@ -782,7 +847,6 @@ export function may_legend_mutationAttribute(tk, block) {
 			})
 	}
 }
-
 
 
 
