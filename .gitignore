@@ -18,6 +18,8 @@ public/no-babel-polyfill/*
 /utils/vcf2genesamplematrix/bin.smat.js
 /utils/findspliceevent/bin2.js
 
+/dnanexus/app/vcf2matrix/resources/usr/bin/*
+
 
 sjcharts.html
 
