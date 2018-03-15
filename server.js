@@ -224,114 +224,10 @@ function handle_genomes(req,res) {
 			const ds=g.datasets[dsname]
 
 			if(ds.isMds) {
-				if(!ds.queries) {
-					/*
-					this ds has no queries, will not reveal to client
-					*/
-					continue
+				const _ds = mds_clientcopy( ds )
+				if(_ds) {
+					g2.datasets[ds.label] = _ds
 				}
-				const ds2={
-					isMds:true,
-					label:ds.label,
-					about:ds.about,
-					queries:{}
-				}
-				if(ds.cohort && ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
-					// default hidden attributes from sample annotation, tell client
-					ds2.cohortHiddenAttr=ds.cohort.attributes.defaulthidden
-				}
-
-				for(const k in ds.queries) {
-					const q=ds.queries[k]
-
-					const clientquery = { // revealed to client
-						name:q.name,
-						hideforthemoment: q.hideforthemoment, // hide track not ready to show on client
-					}
-
-					if(q.istrack) {
-						clientquery.istrack=true
-						clientquery.type = q.type
-						// track attributes, some are common, many are track type-specific
-						if(q.tracks) {
-							clientquery.sampleTotalNumber = q.tracks.reduce((num,tk)=>num+(tk.samples ? tk.samples.length : 0),0)
-						}
-						if(q.samples) {
-							clientquery.sampleTotalNumber = q.samples.length
-						}
-						if(q.nochr!=undefined) {
-							clientquery.nochr=q.nochr
-						}
-						if(q.infoFilter) {
-							clientquery.infoFilter=q.infoFilter
-						}
-						// junction attributes
-						if(q.readcountCutoff) {
-							clientquery.readcountCutoff=q.readcountCutoff
-						}
-						// cnv attributes
-						if(q.valueLabel) {
-							clientquery.valueLabel=q.valueLabel
-						}
-						if(q.valueCutoff) {
-							clientquery.valueCutoff=q.valueCutoff
-						}
-						if(q.bplengthUpperLimit) {
-							clientquery.bplengthUpperLimit=q.bplengthUpperLimit
-						}
-						// loh attributes
-						if(q.segmeanValueCutoff) {
-							clientquery.segmeanValueCutoff = q.segmeanValueCutoff
-						}
-						if(q.lohLengthUpperLimit) {
-							clientquery.lohLengthUpperLimit=q.lohLengthUpperLimit
-						}
-
-						if(q.type == common.tkt.mdssvcnv) {
-
-							clientquery.attrnamespacer = q.attrnamespacer
-
-							clientquery.mutationAttribute = ds.mutationAttribute
-
-							clientquery.sortgroupby = q.sortgroupby
-							clientquery.multihidelabel_fusion=q.multihidelabel_fusion
-							clientquery.multihidelabel_sv=q.multihidelabel_sv
-							clientquery.multihidelabel_vcf=q.multihidelabel_vcf
-
-							if(q.expressionrank_querykey) {
-								// for checking expression rank
-								clientquery.checkexpressionrank = {
-									querykey:q.expressionrank_querykey,
-									datatype: ds.queries[ q.expressionrank_querykey ].datatype
-								}
-							}
-							if(q.vcf_querykey) {
-								clientquery.checkvcf = {
-									querykey: q.vcf_querykey,
-									info: ds.queries[ q.vcf_querykey ].info,
-									format: {}
-								}
-								for(const tk of ds.queries[ q.vcf_querykey ].tracks ) {
-									if(tk.format) {
-										for(const k in tk.format) {
-											clientquery.checkvcf.format[ k ] = tk.format[ k ]
-										}
-									}
-								}
-							}
-						}
-
-					} else if(q.isgenenumeric) {
-						clientquery.isgenenumeric=true
-						clientquery.datatype = q.datatype
-					} else {
-						// this query is not to be revealed to client
-						continue
-					}
-
-					ds2.queries[k]=clientquery
-				}
-				g2.datasets[ds.label]=ds2
 				continue
 			}
 
@@ -415,6 +311,119 @@ function handle_genomes(req,res) {
 		base_zindex: serverconfig.base_zindex,
 		lastdate:lastdate.toDateString()
 	})
+}
+
+
+
+function mds_clientcopy(ds) {
+	// make client-side copy of a mds
+	if(!ds.queries) {
+		// this ds has no queries, will not reveal to client
+		return
+	}
+	const ds2={
+		isMds:true,
+		label:ds.label,
+		about:ds.about,
+		annotationsampleset2matrix: ds.annotationsampleset2matrix,
+		queries:{}
+	}
+	if(ds.cohort && ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
+		// default hidden attributes from sample annotation, tell client
+		ds2.cohortHiddenAttr=ds.cohort.attributes.defaulthidden
+	}
+
+	for(const k in ds.queries) {
+		const q=ds.queries[k]
+
+		const clientquery = { // revealed to client
+			name:q.name,
+			hideforthemoment: q.hideforthemoment, // hide track not ready to show on client
+		}
+
+		if(q.istrack) {
+			clientquery.istrack=true
+			clientquery.type = q.type
+			// track attributes, some are common, many are track type-specific
+			if(q.tracks) {
+				clientquery.sampleTotalNumber = q.tracks.reduce((num,tk)=>num+(tk.samples ? tk.samples.length : 0),0)
+			}
+			if(q.samples) {
+				clientquery.sampleTotalNumber = q.samples.length
+			}
+			if(q.nochr!=undefined) {
+				clientquery.nochr=q.nochr
+			}
+			if(q.infoFilter) {
+				clientquery.infoFilter=q.infoFilter
+			}
+			// junction attributes
+			if(q.readcountCutoff) {
+				clientquery.readcountCutoff=q.readcountCutoff
+			}
+			// cnv attributes
+			if(q.valueLabel) {
+				clientquery.valueLabel=q.valueLabel
+			}
+			if(q.valueCutoff) {
+				clientquery.valueCutoff=q.valueCutoff
+			}
+			if(q.bplengthUpperLimit) {
+				clientquery.bplengthUpperLimit=q.bplengthUpperLimit
+			}
+			// loh attributes
+			if(q.segmeanValueCutoff) {
+				clientquery.segmeanValueCutoff = q.segmeanValueCutoff
+			}
+			if(q.lohLengthUpperLimit) {
+				clientquery.lohLengthUpperLimit=q.lohLengthUpperLimit
+			}
+
+			if(q.type == common.tkt.mdssvcnv) {
+
+				clientquery.attrnamespacer = q.attrnamespacer
+
+				clientquery.mutationAttribute = ds.mutationAttribute
+
+				clientquery.sortgroupby = q.sortgroupby
+				clientquery.multihidelabel_fusion=q.multihidelabel_fusion
+				clientquery.multihidelabel_sv=q.multihidelabel_sv
+				clientquery.multihidelabel_vcf=q.multihidelabel_vcf
+
+				if(q.expressionrank_querykey) {
+					// for checking expression rank
+					clientquery.checkexpressionrank = {
+						querykey:q.expressionrank_querykey,
+						datatype: ds.queries[ q.expressionrank_querykey ].datatype
+					}
+				}
+				if(q.vcf_querykey) {
+					clientquery.checkvcf = {
+						querykey: q.vcf_querykey,
+						info: ds.queries[ q.vcf_querykey ].info,
+						format: {}
+					}
+					for(const tk of ds.queries[ q.vcf_querykey ].tracks ) {
+						if(tk.format) {
+							for(const k in tk.format) {
+								clientquery.checkvcf.format[ k ] = tk.format[ k ]
+							}
+						}
+					}
+				}
+			}
+
+		} else if(q.isgenenumeric) {
+			clientquery.isgenenumeric=true
+			clientquery.datatype = q.datatype
+		} else {
+			// this query is not to be revealed to client
+			continue
+		}
+
+		ds2.queries[k]=clientquery
+	}
+	return ds2
 }
 
 
@@ -9444,6 +9453,13 @@ function mds_init(ds,genome) {
 	}
 
 	if(ds.mutationAttribute) {
+		/*
+		mutation-level attributes
+		for items in svcnv track:
+			.mattr{}
+		for vcf:
+			FORMAT
+		*/
 		if(!ds.mutationAttribute.attributes) return 'attributes{} missing from mutationAttribute'
 		for(const key in ds.mutationAttribute.attributes) {
 			const a = ds.mutationAttribute.attributes[key]
@@ -9456,6 +9472,36 @@ function mds_init(ds,genome) {
 			for(const v in a.values) {
 				const b = a.values[v]
 				if(!b.name) return '.name missing for value '+v+' of key '+key+' from mutationAttribute.attributes'
+			}
+		}
+	}
+
+	if(ds.annotationsampleset2matrix) {
+		if(!ds.cohort) return 'ds.cohort misssing when annotationsampleset2matrix is in use'
+		if(!ds.cohort.annotation) return 'ds.cohort.annotation misssing when annotationsampleset2matrix is in use'
+		// limit to one attribute
+		if(!ds.annotationsampleset2matrix.key) return '.key STR missing in annotationsampleset2matrix'
+		if(!ds.annotationsampleset2matrix.groups) return '.groups{} missing in annotationsampleset2matrix'
+		if(typeof(ds.annotationsampleset2matrix.groups)!='object') return 'ds.annotationsampleset2matrix.groups{} not an object'
+		for(const groupvalue in ds.annotationsampleset2matrix.groups) {
+			// for each value that defines a group, it's associated with a matrix
+			const smat = ds.annotationsampleset2matrix.groups[groupvalue]
+			if(!smat.attributes) return '.attributes[] missing from group '+groupvalue
+			if(!Array.isArray(smat.attributes)) return '.attributes[] should be array from group '+groupvalue
+			if(smat.attributes.length==0) return '.attributes[] zero length from group '+groupvalue
+			for(const attr of smat.attributes) {
+				if(attr.ismutation) {
+					if(!attr.position) return 'position missing from attribute '+JSON.stringify(attr)+' from group '+groupvalue
+				} else {
+					return 'unknown attribute type from group '+groupvalue
+				}
+			}
+			if(!smat.limitsamplebyeitherannotation) return '.limitsamplebyeitherannotation[] missing from group '+groupvalue
+			if(!Array.isArray(smat.limitsamplebyeitherannotation)) return '.limitsamplebyeitherannotation[] should be array from group '+groupvalue
+			if(smat.limitsamplebyeitherannotation.length==0) return '.limitsamplebyeitherannotation[] zero length from group '+groupvalue
+			for(const lim of smat.limitsamplebyeitherannotation) {
+				if(!lim.key) return 'key missing from one of limitsamplebyeitherannotation from group '+groupvalue
+				if(!lim.value) return 'value missing from one of limitsamplebyeitherannotation from group '+groupvalue
 			}
 		}
 	}
