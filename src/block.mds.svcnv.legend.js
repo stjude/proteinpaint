@@ -574,7 +574,7 @@ export function may_legend_mutationAttribute(tk, block) {
 	filtering by mutation attribute is done on server
 	*/
 
-	if(!tk.mutationAttribute) return;
+	if(!tk.mutationAttribute) return
 	if(tk.singlesample) {
 		// multi-sample only
 		return
@@ -583,7 +583,7 @@ export function may_legend_mutationAttribute(tk, block) {
 	// clear
 	for(const key in tk.mutationAttribute.attributes) {
 		const attr = tk.mutationAttribute.attributes[key]
-		if(!attr.filter) continue;
+		if(!attr.filter) continue
 		attr.value2count.clear()
 	}
 
@@ -612,7 +612,8 @@ export function may_legend_mutationAttribute(tk, block) {
 	}
 
 	// show legend
-	const hiddenMutationAttributes=[]
+	const hiddenMutationAttributes=[] // collects attributes that are selected to be hidden
+
 	for(const key in tk.mutationAttribute.attributes) {
 		const attr = tk.mutationAttribute.attributes[ key ];
 		if(!attr.filter) continue
@@ -632,16 +633,22 @@ export function may_legend_mutationAttribute(tk, block) {
 			})
 
 		if(attr.hidden) {
+			// this attribute is hidden
 			attr.legendrow.style('display','none')
 			hiddenMutationAttributes.push(attr)
 			continue
-		} else if(attr.value2count.size + attr.hiddenvalues.size == 0 ) {
-			// no value after counting, no hidden value either
+		}
+
+		// this attribute is not hidden
+
+		if(attr.value2count.size + attr.hiddenvalues.size == 0 ) {
+			// no value after counting, no hidden value either: no data for this attribute
 			attr.legendrow.style('display','none')
 			continue
-		} else {
-			attr.legendrow.style('display','table-row')
 		}
+
+		// this attribute is shown
+		attr.legendrow.style('display','table-row')
 
 		attr.legendholder.selectAll('*').remove()
 
@@ -740,8 +747,10 @@ export function may_legend_mutationAttribute(tk, block) {
 		}
 
 		if(attr.hiddenvalues.size) {
+			// this attribute has hidden values, show with strike-through
 			for(const valuestr of attr.hiddenvalues) {
-				const printstr = attr.values[ valuestr ] ? attr.values[valuestr].label : valuestr
+
+				const printstr = (attr.values[ valuestr ] && attr.values[valuestr].name) ? attr.values[valuestr].name : valuestr
 
 				attr.legendholder.append('div')
 					.style('display','inline-block')
