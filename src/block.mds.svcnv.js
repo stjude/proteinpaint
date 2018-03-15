@@ -3295,6 +3295,44 @@ export function map_cnv(item, tk, block) {
 		}
 		x+=p.width
 	}
+
+	if(item.x1!=undefined && block.gmmode && block.gmmode!=common.gmmode.genomic) {
+		
+		// mapped item, in gmmode, may adjust
+
+		const pxw = block.width + block.subpanels.reduce( (i,j)=> j.width+j.leftpad, 0)
+
+		if(item.x1 < item.x2) {
+
+			if(item.x2<0 || item.x1>pxw) {
+				// out of range
+				item.x1=undefined
+				item.x2=undefined
+				return
+			} 
+			if(item.x1<0) {
+				item.x1=0
+			}
+			if(item.x2 > pxw) {
+				item.x2 = pxw
+			}
+
+		} else if(item.x1 > item.x2) {
+			// reversed
+			if(item.x1<0 || item.x2>pxw) {
+				// out of range
+				item.x1=undefined
+				item.x2=undefined
+				return
+			} 
+			if(item.x2<0) {
+				item.x2=0
+			}
+			if(item.x1 > pxw) {
+				item.x1 = pxw
+			}
+		}
+	}
 }
 
 
