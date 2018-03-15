@@ -6,9 +6,15 @@ import {loadTk} from './block.mds.svcnv'
 
 
 /*
-exported:
+*********** exported:
 
 makeTk_legend
+update_legend
+updateLegend_singleSample
+updateLegend_multiSample
+
+
+*********** internal:
 may_legend_svchr
 may_legend_mclass
 may_legend_samplegroup
@@ -19,6 +25,10 @@ may_legend_mutationAttribute
 export function makeTk_legend(block, tk) {
 	/*
 	initiate legend
+	for all cases:
+		single- and multi-sample
+		official and custom track
+
 	*/
 	const [tr,td] = legend_newrow(block,tk.name)
 	tk.tr_legend = tr
@@ -266,14 +276,37 @@ export function makeTk_legend(block, tk) {
 
 
 
+export function update_legend(tk, block) {
+	/*
+	for all cases
+	*/
+	may_legend_svchr(tk)
+	may_legend_mclass(tk, block)
+	if(tk.singlesample) {
+		// only do above for single sample case
+		return
+	}
+	// is multi-sample: also do following
+	may_legend_samplegroup(tk, block)
+	may_legend_mutationAttribute(tk, block)
+}
 
 
 
 
-export function may_legend_svchr(tk) {
-	if(tk.legend_svchrcolor.interchrs.size==0) return;
-	tk.legend_svchrcolor.row.style('display','table-row')
+
+
+
+
+// helpers
+
+
+
+function may_legend_svchr(tk) {
+
 	tk.legend_svchrcolor.holder.selectAll('*').remove()
+	if(tk.legend_svchrcolor.interchrs.size==0) return
+	tk.legend_svchrcolor.row.style('display','table-row')
 	for(const chr of tk.legend_svchrcolor.interchrs) {
 		const color=tk.legend_svchrcolor.colorfunc(chr)
 		const d=tk.legend_svchrcolor.holder.append('div')
@@ -293,7 +326,7 @@ export function may_legend_svchr(tk) {
 
 
 
-export function may_legend_mclass(tk, block) {
+function may_legend_mclass(tk, block) {
 	/*
 	full or dense
 	native or custom
@@ -466,11 +499,12 @@ export function may_legend_mclass(tk, block) {
 
 
 
-export function may_legend_samplegroup(tk, block) {
+function may_legend_samplegroup(tk, block) {
 	if(!tk.legend_samplegroup) {
-		// official only
+		// only for official track: not available for custom track
 		return
 	}
+
 	if (!tk.legend_hideable_rows.includes(tk.legend_samplegroup.row)) {
 		tk.legend_hideable_rows.push(tk.legend_samplegroup.row)
 	}
@@ -479,12 +513,16 @@ export function may_legend_samplegroup(tk, block) {
 
 	const shownamegroups = []
 	let numSamples=0
-	for(const g of tk._data) {
-		if(g.name && g.name!='Unannotated') {
-			shownamegroups.push(g)
-			numSamples += g.samples.length
+
+	if(tk._data) {
+		for(const g of tk._data) {
+			if(g.name && g.name!='Unannotated') {
+				shownamegroups.push(g)
+				numSamples += g.samples.length
+			}
 		}
 	}
+
 	tk.legend_samplegroup.total_count = numSamples
 	if(shownamegroups.length>0) {
 
@@ -568,7 +606,7 @@ export function may_legend_samplegroup(tk, block) {
 	}
 }
 
-export function may_legend_mutationAttribute(tk, block) {
+function may_legend_mutationAttribute(tk, block) {
 	/*
 	official-only, multi-sample
 	filtering by mutation attribute is done on server
@@ -768,7 +806,7 @@ export function may_legend_mutationAttribute(tk, block) {
 	may_process_hideable_rows(tk,block,hiddenMutationAttributes)
 }
 
-export function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
+function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 	// handle non-mutation attribute
 	let numHiddenRows=0
 	for(const row of tk.legend_hideable_rows) {

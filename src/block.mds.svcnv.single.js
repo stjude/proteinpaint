@@ -2,7 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import { tooltip_singleitem } from './block.mds.svcnv.clickitem'
 import { map_cnv, labelspace, draw_colorscale_cnv, draw_colorscale_loh, intrasvcolor, trackclear } from './block.mds.svcnv'
-import { may_legend_mclass, may_legend_svchr } from './block.mds.svcnv.legend'
+import { update_legend } from './block.mds.svcnv.legend'
 
 
 
@@ -127,9 +127,7 @@ export function render_singlesample( tk, block ) {
 
 	tk.height_main = tk.toppad+ svheight + stackploth + tk.bottompad
 
-	may_legend_svchr(tk)
-
-	may_legend_mclass(tk, block)
+	update_legend(tk, block)
 }
 
 

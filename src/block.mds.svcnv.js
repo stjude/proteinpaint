@@ -16,13 +16,7 @@ import {
 	click_samplegroup_showtable,
 	click_samplegroup_showmenu
 	} from './block.mds.svcnv.clickitem'
-import {
-	makeTk_legend,
-	may_legend_mclass,
-	may_legend_mutationAttribute,
-	may_legend_svchr,
-	may_legend_samplegroup
-	} from './block.mds.svcnv.legend'
+import { makeTk_legend, update_legend } from './block.mds.svcnv.legend'
 import {render_singlesample} from './block.mds.svcnv.single'
 import {createbutton_addfeature, may_show_samplematrix_button} from './block.mds.svcnv.samplematrix'
 import {vcfparsemeta, vcfparseline} from './vcf'
@@ -104,6 +98,10 @@ const stackheightscale = scaleLinear()
 
 export function loadTk( tk, block ) {
 
+	/*
+	works for both multi- and single-sample modes
+	*/
+
 	block.tkcloakon(tk)
 	block.block_setheight()
 
@@ -121,7 +119,7 @@ export function loadTk( tk, block ) {
 
 		/*
 		if error, throw error
-		if no data, throw {message:"no data"}
+		if no data, throw {nodata:1}
 		else, set tk height and quiet
 		*/
 		return loadTk_do( tk, block )
@@ -131,10 +129,22 @@ export function loadTk( tk, block ) {
 		tk.height_main = 50
 
 		if(err.nodata) {
-			// no data to render
+			/*
+			central place to handle "no data", for all cases
+			*/
 			trackclear( tk )
+			// remove old data so the legend can update properly
+			delete tk.data_vcf
+			if(tk.singlesample) {
+				delete tk.data
+			} else {
+				delete tk._data
+				delete tk.samplegroups
+			}
+			update_legend(tk, block)
 			return {error:tk.name+': no data in view range'}
 		}
+
 		if(err.stack) console.error( err.stack )
 		return {error: err.message}
 	})
@@ -545,17 +555,7 @@ function render_samplegroups( tk, block ) {
 
 	tk.height_main = tk.toppad + hpad + cnvheight + tk.bottompad
 
-
-	/// legend
-
-	
-	may_legend_svchr(tk)
-
-	may_legend_samplegroup(tk, block)
-
-	may_legend_mclass(tk, block)
-
-	may_legend_mutationAttribute(tk, block)
+	update_legend(tk, block)
 }
 
 
