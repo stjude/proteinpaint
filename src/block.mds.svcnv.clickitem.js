@@ -19,8 +19,8 @@ tooltip_multi_vcfdense
 click_multi_svdense
 tooltip_multi_svdense
 tooltip_samplegroup
-click_samplegroup_showtable
 click_samplegroup_showmenu
+click_samplegroup_showtable
 
 
 ********************** INTERNAL
@@ -36,6 +36,9 @@ export function click_samplegroup_showmenu( samplegroup, tk, block ) {
 	click sample group label in track display to show menu
 	this group must already been shown
 	*/
+
+	if(tk.iscustom) return
+
 	tk.tip2.d.append('div')
 		.style('margin','4px 10px')
 		.style('font-size','.7em')
@@ -79,6 +82,8 @@ export function click_samplegroup_showmenu( samplegroup, tk, block ) {
 			tk.tip2.hide()
 			click_samplegroup_showtable( samplegroup, tk, block )
 		})
+	
+	may_show_matrixbutton(samplegroup, tk, block)
 }
 
 
@@ -1517,4 +1522,50 @@ function sortitemsbytype_onesample( samplename, lst, tk ) {
 	}
 
 	return [ cnvlst, svlst, lohlst, itdlst, vcflst, cnvlst0, svlst0, lohlst0, itdlst0, vcflst0 ]
+}
+
+
+
+
+function may_show_matrixbutton(samplegroup, tk, block) {
+	/*
+	in sample group name menu, may add a button for showing pre-configured samplematrix for this group
+	annotationsampleset2matrix has one key
+	from g.attributes[], find the attribute that uses that key
+	*/
+	if(!tk.mds.annotationsampleset2matrix) return
+	if(!samplegroup.attributes) return
+	const attr = samplegroup.attributes.find( i=> i.k == tk.mds.annotationsampleset2matrix.key )
+	if(!attr) return
+
+	const matrixconfig = tk.mds.annotationsampleset2matrix.groups[ attr.kvalue ]
+	if(!matrixconfig) return
+
+	tk.tip2.d.append('div')
+		.text(attr.kvalue+' summary')
+		.attr('class', 'sja_menuoption')
+		.on('click',()=>{
+
+			tk.tip2.hide()
+
+			const pane = client.newpane({ x:100, y:100 })
+			pane.header.text(attr.kvalue+' summary')
+
+			const arg = {
+				dslabel: tk.mds.label,
+				debugmode: block.debugmode,
+				genome: block.genome,
+				hostURL: block.hostURL,
+				jwt:block.jwt,
+				holder: pane.body.append('div').style('margin','20px'),
+			}
+
+			for(const k in matrixconfig) {
+				arg[k] = matrixconfig[k]
+			}
+
+			import('./samplematrix').then(_=>{
+				new _.Samplematrix( arg )
+			})
+		})
 }
