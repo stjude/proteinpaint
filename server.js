@@ -9486,14 +9486,15 @@ function mds_init(ds,genome) {
 		for(const groupvalue in ds.annotationsampleset2matrix.groups) {
 			// for each value that defines a group, it's associated with a matrix
 			const smat = ds.annotationsampleset2matrix.groups[groupvalue]
-			if(!smat.attributes) return '.attributes[] missing from group '+groupvalue
-			if(!Array.isArray(smat.attributes)) return '.attributes[] should be array from group '+groupvalue
-			if(smat.attributes.length==0) return '.attributes[] zero length from group '+groupvalue
-			for(const attr of smat.attributes) {
+			if(!smat.features) return '.features[] missing from group '+groupvalue
+			if(!Array.isArray(smat.features)) return '.features[] should be array from group '+groupvalue
+			if(smat.features.length==0) return '.features[] zero length from group '+groupvalue
+			for(const attr of smat.features) {
 				if(attr.ismutation) {
-					if(!attr.position) return 'position missing from attribute '+JSON.stringify(attr)+' from group '+groupvalue
+					if(!attr.position) return 'position missing from feature '+JSON.stringify(attr)+' from group '+groupvalue
+					// verify querykeylst
 				} else {
-					return 'unknown attribute type from group '+groupvalue
+					return 'unknown feature type from group '+groupvalue
 				}
 			}
 			if(!smat.limitsamplebyeitherannotation) return '.limitsamplebyeitherannotation[] missing from group '+groupvalue
