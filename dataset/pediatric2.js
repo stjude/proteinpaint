@@ -139,12 +139,12 @@ module.exports={
 		groups:{
 			// key is value for annotationkey
 			BALL:{
-				attributes:[
-					{ismutation:1,genename:'ETV6',position:'chr12:11802788-12048325'},
-					{ismutation:1,genename:'RUNX1',position:'chr21:36160098-36421595'},
-					{ismutation:1,genename:'KRAS',position:'chr12:25357723-25403865'},
-					{ismutation:1,genename:'NRAS',position:'chr1:115247085-115259515'},
-					{ismutation:1,genename:'JAK2',position:'chr9:4985245-5128183'},
+				features:[
+					{ismutation:1,genename:'ETV6',position:'chr12:11802788-12048325',querykeylst:['svcnv','snvindel']},
+					{ismutation:1,genename:'RUNX1',position:'chr21:36160098-36421595',querykeylst:['svcnv','snvindel']},
+					{ismutation:1,genename:'KRAS',position:'chr12:25357723-25403865',querykeylst:['svcnv','snvindel']},
+					{ismutation:1,genename:'NRAS',position:'chr1:115247085-115259515',querykeylst:['svcnv','snvindel']},
+					{ismutation:1,genename:'JAK2',position:'chr9:4985245-5128183',querykeylst:['svcnv','snvindel']},
 				],
 				limitsamplebyeitherannotation:[ {key:'diagnosis_short',value:'BALL'} ],
 			}
@@ -157,7 +157,7 @@ module.exports={
 			label:'Pediatric cancer mutation',
 			querykeys: [
 				{key:'svcnv'},
-				{key:'somaticsnvindel'},
+				{key:'snvindel'},
 				{key:'genefpkm'}
 			]
 		}
@@ -203,7 +203,7 @@ module.exports={
 
 
 			expressionrank_querykey:'genefpkm',
-			vcf_querykey:'somaticsnvindel',
+			vcf_querykey:'snvindel',
 
 			multihidelabel_vcf:true,
 			multihidelabel_fusion:false,
@@ -212,7 +212,7 @@ module.exports={
 
 
 
-		somaticsnvindel:{
+		snvindel:{
 			hideforthemoment:1,
 			name:'Pediatric tumor SNV/indel',
 			istrack:true,
