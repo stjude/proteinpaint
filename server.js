@@ -329,8 +329,14 @@ function mds_clientcopy(ds) {
 		annotationsampleset2matrix: ds.annotationsampleset2matrix,
 		queries:{}
 	}
+
+
 	if(ds.cohort && ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
-		// default hidden attributes from sample annotation, tell client
+		/*
+		.attributes.lst[] are not released to client
+
+		default hidden attributes from sample annotation, tell client
+		*/
 		ds2.cohortHiddenAttr=ds.cohort.attributes.defaulthidden
 	}
 
@@ -384,7 +390,12 @@ function mds_clientcopy(ds) {
 
 				clientquery.attrnamespacer = q.attrnamespacer
 
-				clientquery.mutationAttribute = ds.mutationAttribute
+				if(ds.mutationAttribute) {
+					clientquery.mutationAttribute = ds.mutationAttribute
+				}
+				if(ds.cohort && ds.cohort.sampleAttribute) {
+					clientquery.sampleAttribute = ds.cohort.sampleAttribute
+				}
 
 				clientquery.sortgroupby = q.sortgroupby
 				clientquery.multihidelabel_fusion=q.multihidelabel_fusion
@@ -3840,7 +3851,10 @@ function handle_mdssvcnv(req,res) {
 		hiddensgnames = new Set( req.query.hiddensgnames )
 	}
 
-	// multi: mutation attributes selected to be hidden from client
+	/*
+	multi: mutation attributes selected to be hidden from client
+	terms defined in ds.mutationAttribute
+	*/
 	let hiddenmattr 
 	if(req.query.mutationAttributeHidden) {
 		hiddenmattr = {}
@@ -9414,8 +9428,16 @@ function mds_init(ds,genome) {
 		}
 
 		if(ds.cohort.attributes) {
-			// list of attributes, no hierarchy, as opposed to those read from files
-			// mainly to provide label/description/color for attribute values, where file data has only value key
+			/*
+			.attributes.lst[] are not released to client
+			instead, summarize samples on server and return stats to client to show
+			used in mdsjunction & mdscnv
+
+			in comparison, sampleAttribute is released to client
+
+			list of attributes, no hierarchy, as opposed to those read from files
+			mainly to provide label/description/color for attribute values, where file data has only value key
+			*/
 			if(!ds.cohort.attributes.lst) return '.lst[] missing for cohort.attributes'
 			if(!Array.isArray(ds.cohort.attributes.lst)) return '.cohort.attributes.lst is not array'
 			for(const attr of ds.cohort.attributes.lst) {
@@ -9450,6 +9472,27 @@ function mds_init(ds,genome) {
 				if(!Array.isArray(h.levels)) return '.levels is not array from one hierarchy'
 				for(const l of h.levels) {
 					if(!l.k) return '.k missing from one level in hierarchy '+h.name
+				}
+			}
+		}
+
+		if(ds.cohort.sampleAttribute) {
+			/*
+			sample attributes
+			attached to svcnv track object for making legend and filtering
+
+			compare to cohort.attributes which is not returned to client
+			*/
+			if(!ds.cohort.sampleAttribute.attributes) return 'attributes{} missing from cohort.sampleAttribute'
+			for(const key in ds.cohort.sampleAttribute.attributes) {
+				const a = ds.cohort.sampleAttribute.attributes[key]
+				if(!a.label) return '.label missing for key '+key+' from cohort.sampleAttribute.attributes'
+				if(a.values) {
+					// optional
+					for(const v in a.values) {
+						const b = a.values[v]
+						if(!b.name) return '.name missing for value '+v+' of key '+key+' from cohort.sampleAttribute.attributes'
+					}
 				}
 			}
 		}
