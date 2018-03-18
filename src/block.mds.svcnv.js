@@ -30,7 +30,6 @@ makeTk
 loadTk
 	loadTk_do
 		addLoadParameter
-		mdssvcnv_customtk_altersg_client
 render_samplegroups
 	prep_samplegroups
 	render_multi_vcfdense
@@ -258,8 +257,6 @@ function loadTk_do( tk, block ) {
 
 			// multi-sample
 
-			//mdssvcnv_customtk_altersg_client( data, tk )
-
 			// now samplegroups contains samples with any data type (cnv, sv, vcf), no matter dense or full
 			if(!data.samplegroups || data.samplegroups.length==0) {
 				throw({nodata:1})
@@ -267,6 +264,14 @@ function loadTk_do( tk, block ) {
 			tk._data = data.samplegroups
 			tk.gene2coord = data.gene2coord
 			tk.expressionrangelimit = data.expressionrangelimit
+
+			if(tk.sampleAttribute) {
+				if(data.sampleannotation) {
+					tk.sampleAttribute.samples = data.sampleannotation
+				} else {
+					tk.sampleAttribute.samples = {}
+				}
+			}
 		}
 
 		// preps common to both single and multi sample
@@ -2627,6 +2632,16 @@ function prep_samplegroups( tk, block ) {
 
 function makeTk(tk, block) {
 
+	if(tk.sampleAttribute) {
+		/*
+		official-only, as defined in ds.cohort, optional
+		during data loading, server lumps all requested samples together with their annotations as defined in sampleAttribute.attributes
+		and returns in a separate hash alongside mutation data
+		the sample annotations are cached in .samples{}
+		*/
+		tk.sampleAttribute.samples = {}
+	}
+
 	if(!tk.singlesample) {
 		// in multi-sample, allow hidding some labels
 		// do not override config from native dataset
@@ -3460,59 +3475,4 @@ export function dedup_sv( lst ) {
 		)
 	}
 	return [ ...key2sv.values() ]
-}
-
-
-
-
-function mdssvcnv_customtk_altersg_client( data, tk ) {
-	/*
-	strange thing: samplegroups contain ALL samples with expression data in view range
-	coupled with: mdssvcnv_customtk_altersg_server()
-	because server couldn't ....
-	*/
-
-	if( !tk.iscustom || !tk.checkvcf) {
-		// do not alter sg: not custom or has no vcf
-		return
-	}
-
-	const vcfsamples = new Set()
-	if(tk.data_vcf) {
-		for(const m of tk.data_vcf) {
-			for(const s of m.sampledata) {
-				vcfsamples.add( s.sampleobj.name )
-			}
-		}
-	}
-
-	if(!data.samplegroups[0])  {
-		data.samplegroups[0] = { samples: [] }
-		// add any vcf samples
-		for(const s of vcfsamples) {
-			data.samplegroups[0].samples.push({
-				samplename: s,
-				items:[]
-			})
-		}
-		return
-	}
-
-	// sg[0] may have all expression sample, delete those samples without items or no vcf
-	const newlst = []
-	for(const s of data.samplegroups[0].samples) {
-		if( (s.items && s.items.length) || vcfsamples.has( s.samplename ) ) {
-			newlst.push( s )
-		}
-	}
-	// add vcf samples to newlst
-	for(const s of vcfsamples) {
-		if( newlst.find( s2=> s2.samplename == s ) == undefined ) {
-			newlst.push({
-				samplename: s,
-				items:[]
-			})
-		}
-	}
-	data.samplegroups[0].samples = newlst
 }
