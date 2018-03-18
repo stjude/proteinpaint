@@ -49,8 +49,11 @@ module.exports={
 				}
 			]
 		},
-		
+
 		/*
+		attributes.lst[] are not released to client
+		used in mdsjunction & mdscnv
+
 		attributes:{
 			lst:[
 				{key:'diagnosis_group_short',label:'Cancer group',
@@ -86,7 +89,6 @@ module.exports={
 			defaulthidden:{diagnosis_short:{BALL:1}}
 		}
 		*/
-
 	},
 
 	queries:{
