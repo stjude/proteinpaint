@@ -4,6 +4,8 @@ import {event as d3event} from 'd3-selection'
 
 /*
 shared code for all mds tracks
+only for mdsjunction and mdscnv
+may be obsolete
 */
 
 
