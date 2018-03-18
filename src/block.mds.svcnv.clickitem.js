@@ -21,9 +21,10 @@ tooltip_multi_svdense
 tooltip_samplegroup
 click_samplegroup_showmenu
 click_samplegroup_showtable
-
+may_add_sampleannotation
 
 ********************** INTERNAL
+detailtable_singlesample
 
 
 */
@@ -1106,35 +1107,8 @@ function detailtable_singlesample(p) {
 				+ (p.samplegroup && p.samplegroup.name ? ' <span style="font-size:.7em">'+p.samplegroup.name+'</span>' : '')
 		})
 
-		if(p.tk.sampleAttribute && p.tk.sampleAttribute.attributes && p.tk.sampleAttribute.samples) {
-			// should only be available in multi-sample, official tk
-			const anno = p.tk.sampleAttribute.samples[ p.sample.samplename ]
-			if(anno) {
-				// show annotation for this sample
-				for(const key in anno) {
+		may_add_sampleannotation( p.sample.samplename, p.tk, lst )
 
-					// config about this key
-					const keycfg = p.tk.sampleAttribute.attributes[ key ] || {}
-
-					const value = anno[ key ]
-
-					if(value==undefined) continue
-
-					let printvalue = value
-					if(keycfg.values) {
-						const o = keycfg.values[ value ]
-						if(o && o.label) {
-							printvalue = o.label
-						}
-					}
-
-					lst.push({
-						k: ( keycfg.label || key),
-						v: printvalue
-					})
-				}
-			}
-		}
 	} else {
 		// if in single-sample mode, won't have p.sample
 	}
@@ -1600,4 +1574,41 @@ function may_show_matrixbutton(samplegroup, tk, block) {
 				new _.Samplematrix( arg )
 			})
 		})
+}
+
+
+
+
+export function may_add_sampleannotation(samplename, tk, lst) {
+	if(!tk.sampleAttribute) return
+	if(!tk.sampleAttribute.attributes || !tk.sampleAttribute.samples) return
+
+	// should only be available in multi-sample, official tk
+
+	const anno = tk.sampleAttribute.samples[ samplename ]
+	if(!anno) return
+
+	// show annotation for this sample
+	for(const key in anno) {
+
+		// config about this key
+		const keycfg = tk.sampleAttribute.attributes[ key ] || {}
+
+		const value = anno[ key ]
+
+		if(value==undefined) continue
+
+		let printvalue = value
+		if(keycfg.values) {
+			const o = keycfg.values[ value ]
+			if(o && o.label) {
+				printvalue = o.label
+			}
+		}
+
+		lst.push({
+			k: ( keycfg.label || key),
+			v: printvalue
+		})
+	}
 }

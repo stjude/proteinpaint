@@ -14,7 +14,8 @@ import {
 	click_multi_svdense,
 	tooltip_samplegroup,
 	click_samplegroup_showtable,
-	click_samplegroup_showmenu
+	click_samplegroup_showmenu,
+	may_add_sampleannotation
 	} from './block.mds.svcnv.clickitem'
 import { makeTk_legend, update_legend } from './block.mds.svcnv.legend'
 import {render_singlesample} from './block.mds.svcnv.single'
@@ -1980,11 +1981,16 @@ function render_multi_genebar( tk, block) {
 							tk.tktip
 								.clear()
 								.show(d3event.clientX, d3event.clientY)
-							const lst=[{k:'sample',v:s.samplename}]
+
+							const lst=[{k:'Sample',v:s.samplename}]
+							may_add_sampleannotation( s.samplename, tk, lst )
+
+							// hardcoded sample group
 							if(g.name) {
-								lst.push({k:'group',v:g.name})
+								lst.push({k:'Group',v:g.name})
 							}
-							lst.push({k:'rank',  v:client.ranksays(v.rank)})
+
+							lst.push({k:'Rank',  v:client.ranksays(v.rank)})
 							lst.push({k:tk.gecfg.datatype,  v:v.value})
 
 							const table = client.make_table_2col(tk.tktip.d,lst)
