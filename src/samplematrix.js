@@ -15,15 +15,18 @@ hardcoded: rows for samples, cols for features
 JUMP __draw __menu
 	__newattr places for adding new feature
 
-exposed methods (as in block.mds.svcnv.samplematrix.js)
+****************** exposed methods (as in block.mds.svcnv.samplematrix.js)
 	.validate_feature()
 	.get_features()
 	.error()
 
-internal use
+****************** internal use
 	.validate_config()
 	.draw_matrix()
+	.prepFeatureData()
 	feature2arg()
+
+
 
 TODO - retrieve features from assay tracks, using an assay type
 */
@@ -671,10 +674,11 @@ export class Samplematrix {
 		if(f.isvcf) {
 			const classes = new Set()
 			for(const m of f.items) {
-				if(m.dt == common.dtsnvindel) {
-					common.vcfcopymclass( m, {} ) // simulate block
+				if(m.class) {
+					classes.add(m.class)
+				} else {
+					//  no class?
 				}
-				classes.add(m.class)
 			}
 
 			{
@@ -710,7 +714,7 @@ export class Samplematrix {
 			// compound
 
 			const cnvgain=[], cnvloss=[] // cnv log2 ratio
-			const vcfclasses = new Set()
+			const vcfclass2count = new Map() // k: class, v: sample count
 			let lohmax=0
 			let itdcount=0
 			let svcount=0
@@ -720,8 +724,14 @@ export class Samplematrix {
 
 				if(i.dt == common.dtsnvindel) {
 
-					common.vcfcopymclass( i, {} ) // simulate block
-					vcfclasses.add( i.class )
+					if(i.class && i.sampledata) {
+						if(!vcfclass2count.has(i.class)) {
+							vcfclass2count.set( i.class, 0 )
+						}
+						vcfclass2count.set( i.class, vcfclass2count.get(i.class) + i.sampledata.length )
+					} else {
+						// ?
+					}
 
 				} else if(i.dt == common.dtcnv) {
 					if(i.value>0) {
@@ -745,51 +755,27 @@ export class Samplematrix {
 			const h=f.legendholder
 			h.selectAll('*').remove()
 
-			if(cnvgain.length + cnvloss.length > 0) {
-				const gmax = common.getMax_byiqr( cnvgain, 0 )
-				const lmax = -common.getMax_byiqr( cnvloss, 0 )
-				f.cnv.maxabslogratio = Math.max(gmax, lmax)
-				h.append('div')
-					.style('margin-bottom','5px')
-					.html(
-						'CNV gain <span style="background:'+f.cnv.colorgain+';color:white;padding:1px 5px">'+f.cnv.maxabslogratio+'</span> &nbsp; '
-						+'CNV loss <span style="background:'+f.cnv.colorloss+';color:white;padding:1px 5px">-'+f.cnv.maxabslogratio+'</span>'
-					)
-			}
+			// make legend for each category
 
-			if(lohmax) {
-				f.loh.minvalue=0
-				f.loh.maxvalue=lohmax
-				const row = h.append('div')
-					.style('margin-bottom','5px')
-				row.append('span')
-					.text('LOH seg.mean: '+f.loh.minvalue)
-				row.append('div')
-					.style('margin','2px 10px')
-					.style('display','inline-block')
-					.style('width','100px')
-					.style('height','15px')
-					.style('background','linear-gradient( to right, white, '+f.loh.color+')')
-				row.append('span').text(f.loh.maxvalue)
-			}
-
-			if( vcfclasses.size + itdcount + svcount + fusioncount > 0 ) {
+			if( vcfclass2count.size + itdcount + svcount + fusioncount > 0 ) {
 
 				// put them in same row
 				const row=h.append('div')
 					.style('margin-bottom','5px')
+					.style('white-space','nowrap')
 
-				for(const c of vcfclasses) {
+				for(const [classname, count] of vcfclass2count) {
+					const c = common.mclass[classname]
 					const cell = row.append('div')
 						.style('display','inline-block')
 						.style('margin-right','20px')
 					cell.append('span')
-						.style('background', common.mclass[c].color)
-						.style('margin-right','2px')
-						.html('&nbsp;&nbsp;&nbsp;')
+						.attr('class','sja_mcdot')
+						.style('background', c.color)
+						.text(count)
 					cell.append('span')
-						.text(common.mclass[c].label)
-						.style('color', common.mclass[c].color)
+						.text(c.label)
+						.style('color', c.color)
 				}
 				if(itdcount) {
 					const cell = row.append('div')
@@ -825,6 +811,34 @@ export class Samplematrix {
 						.text('Fusion')
 				}
 			}
+			if(cnvgain.length + cnvloss.length > 0) {
+				const gmax = common.getMax_byiqr( cnvgain, 0 )
+				const lmax = -common.getMax_byiqr( cnvloss, 0 )
+				f.cnv.maxabslogratio = Math.max(gmax, lmax)
+				h.append('div')
+					.style('margin-bottom','5px')
+					.html(
+						'CNV gain <span style="background:'+f.cnv.colorgain+';color:white;padding:1px 5px">'+f.cnv.maxabslogratio+'</span> &nbsp; '
+						+'CNV loss <span style="background:'+f.cnv.colorloss+';color:white;padding:1px 5px">-'+f.cnv.maxabslogratio+'</span>'
+					)
+			}
+
+			if(lohmax) {
+				f.loh.minvalue=0
+				f.loh.maxvalue=lohmax
+				const row = h.append('div')
+					.style('margin-bottom','5px')
+				row.append('span')
+					.text('LOH seg.mean: '+f.loh.minvalue)
+				row.append('div')
+					.style('margin','2px 10px')
+					.style('display','inline-block')
+					.style('width','100px')
+					.style('height','15px')
+					.style('background','linear-gradient( to right, white, '+f.loh.color+')')
+				row.append('span').text(f.loh.maxvalue)
+			}
+
 			return
 		}
 
