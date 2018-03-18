@@ -4226,13 +4226,6 @@ function handle_mdssvcnv(req,res) {
 
 							if(vcftk.type==common.mdsvcftype.vcf) {
 
-								/* XXX
-								if(dsquery.iscustom) {
-									// do not parse, server does not have info; send line to client
-									variants.push( line )
-									return
-								}
-								*/
 
 								const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:vcftk.nochr, samples:vcftk.samples, info:vcfquery.info, format:vcftk.format} )
 
@@ -4350,9 +4343,9 @@ function handle_mdssvcnv(req,res) {
 							resolve()
 						})
 					})
-
 					tasks.push(task)
 				}
+
 				return Promise.all(tasks)
 					.then(()=>{
 						return variants
@@ -4365,12 +4358,6 @@ function handle_mdssvcnv(req,res) {
 		return Promise.all( tracktasks )
 			.then(vcffiles =>{
 
-/* XXX
-				if(dsquery.iscustom) {
-					// only 1 vcf file, data are lines
-					return [ data_cnv, expressionrangelimit, gene2sample2obj, null, vcffiles[0] ]
-				}
-				*/
 
 				// snv/indel/itd data aggregated from multiple tracks
 				const mmerge = []
@@ -4764,6 +4751,32 @@ function handle_mdssvcnv(req,res) {
 				}
 			}
 		}
+
+
+		if(ds.cohort && ds.cohort.sampleAttribute && ds.cohort.sampleAttribute.attributes && ds.cohort.annotation) {
+			result.sampleannotation = {}
+			for(const g of result.samplegroups) {
+				for(const sample of g.samples) {
+					const anno = ds.cohort.annotation[ sample.samplename ]
+					if(anno) {
+						const toclient = {} // annotations to client
+						let hasannotation = false
+						for(const key in ds.cohort.sampleAttribute.attributes) {
+							const value = anno[ key ]
+							if(value!=undefined) {
+								hasannotation=true
+								toclient[ key ] = value
+							}
+						}
+						if(hasannotation) {
+							// ony pass on if this sample has valid annotation
+							result.sampleannotation[ sample.samplename ] = toclient
+						}
+					}
+				}
+			}
+		}
+
 
 		if(vcfrangelimit) {
 			result.vcfrangelimit = vcfrangelimit
