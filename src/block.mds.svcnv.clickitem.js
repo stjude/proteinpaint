@@ -1090,8 +1090,10 @@ function detailtable_singlesample(p) {
 	a table to indicate basic info about an item from a sample
 
 	.item
-	.sample
-	.samplegroup
+	.sample {}
+		.samplename
+	.samplegroup {}
+		.name
 	.tk
 	*/
 	const lst = []
@@ -1103,6 +1105,36 @@ function detailtable_singlesample(p) {
 				+ (p.sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+p.sample.sampletype+'</span>' : '')
 				+ (p.samplegroup && p.samplegroup.name ? ' <span style="font-size:.7em">'+p.samplegroup.name+'</span>' : '')
 		})
+
+		if(p.tk.sampleAttribute && p.tk.sampleAttribute.attributes && p.tk.sampleAttribute.samples) {
+			// should only be available in multi-sample, official tk
+			const anno = p.tk.sampleAttribute.samples[ p.sample.samplename ]
+			if(anno) {
+				// show annotation for this sample
+				for(const key in anno) {
+
+					// config about this key
+					const keycfg = p.tk.sampleAttribute.attributes[ key ] || {}
+
+					const value = anno[ key ]
+
+					if(value==undefined) continue
+
+					let printvalue = value
+					if(keycfg.values) {
+						const o = keycfg.values[ value ]
+						if(o && o.label) {
+							printvalue = o.label
+						}
+					}
+
+					lst.push({
+						k: ( keycfg.label || key),
+						v: printvalue
+					})
+				}
+			}
+		}
 	} else {
 		// if in single-sample mode, won't have p.sample
 	}
