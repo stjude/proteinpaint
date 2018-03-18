@@ -4555,7 +4555,7 @@ function handle_mdssvcnv(req,res) {
 		// not single-sample
 		// group sample by available attributes
 
-		const result = {}
+		const result = {} // for res.send( )
 
 		if(ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattrlst) {
 
@@ -9445,9 +9445,9 @@ function mds_init(ds,genome) {
 			count++
 		}
 
-		console.log( ds.label+': '+count+' tracks loaded from '+ds.sampleAssayTrack.samples.size+' samples')
+		console.log( count+' assay-tracks from '+ds.sampleAssayTrack.samples.size+' samples ('+ds.label+')')
 		if(unannotated.size) {
-			console.log( 'Assay track table: '+unannotated.size+' samples are unannotated: '+[...unannotated].join(' ') )
+			console.log( 'Error: '+unannotated.size+' samples with assay tracks are unannotated: '+[...unannotated].join(' ') )
 		}
 	}
 
