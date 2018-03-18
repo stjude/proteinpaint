@@ -8903,6 +8903,35 @@ function downloadFile(url, tofile, cb) {
 
 
 
+function parse_textfilewithheader( text ) {
+	/*
+	for sample annotation file, first line is header, skip lines start with #
+	parse each line as an item
+	*/
+	const lines = text.split(/\r?\n/)
+	if(lines.length<=1) return ['no content']
+
+	if(lines[0] == '') return ['empty header line']
+
+	const header = lines[0].split('\t')
+	const items = []
+	for(let i=1; i<lines.length; i++) {
+		//if(lines[i][0]=='#') continue
+		const l = lines[i].split('\t')
+		const item = {}
+		for(let j=0; j<header.length; j++) {
+			const value = l[j]
+			if(value) {
+				item[ header[j] ] = value
+			}
+		}
+		items.push(item)
+	}
+	return [null, items]
+}
+
+
+
 /***************************   end of __util   **/
 
 
@@ -9434,10 +9463,11 @@ function mds_init(ds,genome) {
 
 		for(const file of ds.cohort.files) {
 			if(!file.file) return '.file missing from one of .cohort.files'
-			const text=fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim()
-			const items=d3dsv.tsvParse(text)
+			const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
+			if(err) return 'cohort annotation file "'+file.file+'": '+err
+			if(items.length==0) return 'no content from sample annotation file '+file.file
+			console.log(items.length+' samples loaded from annotation file '+file.file)
 			items.forEach( i=> ds.cohort.tohash(i, ds))
-			// TODO properly parse numerical attributes
 		}
 
 		if(ds.cohort.attributes) {
