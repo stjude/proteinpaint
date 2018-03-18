@@ -48,6 +48,10 @@ module.exports={
 		file:'hg19/Pediatric/tracktable/__table'
 	},
 
+
+	/*
+	cohort and sample annotation
+	*/
 	cohort:{
 		files:[
 			// possible to have file-specific logic
@@ -69,11 +73,30 @@ module.exports={
 				}
 			]
 		},
+		/*
+		in svcnv track, sample attributes to pass to client for display
+		on client, attach to track object
+		similar to mutationAttribute, semi-controlled vocabulary, where one attribute will have multiple values
+		may also for metadata rendering 
+		*/
+		sampleAttribute:{
+			attributes:{
+				diagnosis_subtype_short:{
+					label:'Subtype',
+					filter:1
+				},
+			},
+		}
 	},
+
+
+
 
 
 	/*
 	mutation-level attributes, applied to multiple data types
+	on client, attach to track object
+
 	design issue:
 	1. attributes are sample-level, applied to per-sample cases as lines in svcnv file, and FORMAT in vcf,
 	   so as one vcf variant can be in multiple samples, each case discovered by different assay types (wgs/wes) by different lab
