@@ -7777,8 +7777,10 @@ function samplematrix_task_isvcf(feature, ds, dsquery, req) {
 							delete m.name
 
 							m.dt = common.dtsnvindel
+
+							common.vcfcopymclass( m, {} ) // extract class/mname from vep csq etc.
+
 							data.push(m)
-							// mclass and rest will be determined at client, according to whether in gmmode and such
 						}
 
 					} else {
