@@ -49,6 +49,7 @@ module.exports={
 				}
 			]
 		},
+		
 		/*
 		attributes:{
 			lst:[
@@ -85,6 +86,7 @@ module.exports={
 			defaulthidden:{diagnosis_short:{BALL:1}}
 		}
 		*/
+
 	},
 
 	queries:{
