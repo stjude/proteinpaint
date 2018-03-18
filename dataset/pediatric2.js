@@ -31,6 +31,8 @@ module.exports={
 
 	genome:'hg19',
 	isMds:true,
+	noHandleOnClient:true,
+
 	about:[
 		{k:'Cohort',v:'PCGP and TARGET'},
 		{k:'CNV',v:'Somatic copy number changes'},

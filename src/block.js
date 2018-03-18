@@ -414,7 +414,7 @@ constructor(arg) {
 	if(this.genome.datasets) {
 		const lst=[]
 		for(const n in this.genome.datasets) {
-			if(this.genome.datasets[n].isMds) {
+			if(this.genome.datasets[n].isMds && !this.genome.datasets[n].noHandleOnClient) {
 				lst.push(n)
 			}
 		}

@@ -323,6 +323,7 @@ function mds_clientcopy(ds) {
 	}
 	const ds2={
 		isMds:true,
+		noHandleOnClient:ds.noHandleOnClient,
 		label:ds.label,
 		about:ds.about,
 		annotationsampleset2matrix: ds.annotationsampleset2matrix,
