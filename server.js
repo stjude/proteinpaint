@@ -388,8 +388,6 @@ function mds_clientcopy(ds) {
 
 			if(q.type == common.tkt.mdssvcnv) {
 
-				clientquery.attrnamespacer = q.attrnamespacer
-
 				if(ds.mutationAttribute) {
 					clientquery.mutationAttribute = ds.mutationAttribute
 				}
@@ -397,7 +395,9 @@ function mds_clientcopy(ds) {
 					clientquery.sampleAttribute = ds.cohort.sampleAttribute
 				}
 
-				clientquery.sortgroupby = q.sortgroupby
+				if(q.groupsamplebyattr) {
+					clientquery.groupsamplebyattr = q.groupsamplebyattr
+				}
 				clientquery.multihidelabel_fusion=q.multihidelabel_fusion
 				clientquery.multihidelabel_sv=q.multihidelabel_sv
 				clientquery.multihidelabel_vcf=q.multihidelabel_vcf
@@ -3845,6 +3845,7 @@ function handle_mdssvcnv(req,res) {
 	}
 
 	// multi: sample groups selected to be hidden from client
+	// XXX not used
 	let hiddensgnames
 	if(req.query.hiddensgnames) {
 		// only for official track
@@ -3862,6 +3863,11 @@ function handle_mdssvcnv(req,res) {
 			hiddenmattr[ key ] = new Set( req.query.mutationAttributeHidden[key] )
 		}
 	}
+
+	/*
+	multi: sample attributes selected to be hidden from client
+	TODO
+	*/
 
 
 	
@@ -3909,7 +3915,7 @@ function handle_mdssvcnv(req,res) {
 					const j=JSON.parse(l[3])
 
 					if(j.dt==undefined) {
-						// TODO report bad lines
+						// todo: report bad lines
 						return
 					}
 
@@ -4253,6 +4259,7 @@ function handle_mdssvcnv(req,res) {
 										m.sampledata = [ thissampleobj ]
 									}
 
+/*
 									if(hiddensgnames) {
 										const samplesnothidden = []
 										for(const s of m.sampledata) {
@@ -4282,6 +4289,7 @@ function handle_mdssvcnv(req,res) {
 										}
 										m.sampledata = samplesnothidden
 									}
+									*/
 
 									if(hiddenmattr) {
 										const samplesnothidden = []
@@ -4557,7 +4565,7 @@ function handle_mdssvcnv(req,res) {
 
 		const result = {} // for res.send( )
 
-		if(ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattrlst) {
+		if(ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr) {
 
 			/**** group samples by predefined annotation attributes
 			only for official ds
@@ -4852,7 +4860,7 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 		return
 	}
 
-	const headname = sanno[ dsquery.groupsamplebyattrlst[0].k ]
+	const headname = sanno[ dsquery.groupsamplebyattr.attrlst[0].k ]
 	if(headname == undefined) {
 		// head-less
 		headlesssamples.push({
@@ -4863,9 +4871,9 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 	}
 
 	const attrnames = []
-	for(let i=1; i<dsquery.groupsamplebyattrlst.length; i++) {
+	for(let i=1; i<dsquery.groupsamplebyattr.attrlst.length; i++) {
 
-		const v = sanno[ dsquery.groupsamplebyattrlst[i].k ]
+		const v = sanno[ dsquery.groupsamplebyattr.attrlst[i].k ]
 		if(v==undefined) {
 			break
 		}
@@ -4874,12 +4882,14 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 
 	attrnames.unshift( headname )
 
-	const groupname = attrnames.join( dsquery.attrnamespacer )
+	const groupname = attrnames.join( dsquery.groupsamplebyattr.attrnamespacer )
 
+/*
 	if(hiddensgnames && hiddensgnames.has(groupname)) {
 		// a group selected to be hidden by client
 		return
 	}
+	*/
 
 	if(!key2group.has(groupname)) {
 
@@ -4889,7 +4899,7 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 		if attr.full is not available, just use key value
 		*/
 		const attributes = []
-		for(const attr of dsquery.groupsamplebyattrlst) {
+		for(const attr of dsquery.groupsamplebyattr.attrlst) {
 			const v = sanno[ attr.k ]
 			if(v==undefined) {
 				// ordered list, look no further
@@ -4905,7 +4915,7 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 
 		// to be replaced
 		const levelnames = []
-		for(const attr of dsquery.groupsamplebyattrlst) {
+		for(const attr of dsquery.groupsamplebyattr.attrlst) {
 			const v = sanno[ attr.k ]
 			if(v==undefined) {
 				break
@@ -4943,8 +4953,6 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 			items: items
 		})
 	}
-
-	///// end of grouper
 }
 
 
@@ -9471,16 +9479,6 @@ function mds_init(ds,genome) {
 		}
 
 		if(ds.cohort.attributes) {
-			/*
-			.attributes.lst[] are not released to client
-			instead, summarize samples on server and return stats to client to show
-			used in mdsjunction & mdscnv
-
-			in comparison, sampleAttribute is released to client
-
-			list of attributes, no hierarchy, as opposed to those read from files
-			mainly to provide label/description/color for attribute values, where file data has only value key
-			*/
 			if(!ds.cohort.attributes.lst) return '.lst[] missing for cohort.attributes'
 			if(!Array.isArray(ds.cohort.attributes.lst)) return '.cohort.attributes.lst is not array'
 			for(const attr of ds.cohort.attributes.lst) {
@@ -9520,12 +9518,6 @@ function mds_init(ds,genome) {
 		}
 
 		if(ds.cohort.sampleAttribute) {
-			/*
-			sample attributes
-			attached to svcnv track object for making legend and filtering
-
-			compare to cohort.attributes which is not returned to client
-			*/
 			if(!ds.cohort.sampleAttribute.attributes) return 'attributes{} missing from cohort.sampleAttribute'
 			for(const key in ds.cohort.sampleAttribute.attributes) {
 				const a = ds.cohort.sampleAttribute.attributes[key]
@@ -9965,24 +9957,35 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		if(thatquery.type!=common.tkt.mdsvcf) return 'query '+query.vcf_querykey+' not of mdsvcf type'
 	}
 
-	if(query.groupsamplebyattrlst) {
-		if(!Array.isArray(query.groupsamplebyattrlst)) return 'groupsamplebyattrlst[] must be array'
-		if(query.groupsamplebyattrlst.length==0) return 'groupsamplebyattrlst[] empty array'
-		if(!ds.cohort) return 'groupsamplebyattrlst in use but ds.cohort missing'
-		if(!ds.cohort.annotation) return 'groupsamplebyattrlst in use but ds.cohort.annotation missing'
-		for(const attr of query.groupsamplebyattrlst) {
-			if(!attr.k) return 'k missing from one of groupsamplebyattrlst'
+	if(query.groupsamplebyattr) {
+		if(!query.groupsamplebyattr.attrlst) return '.attrlst[] missing from groupsamplebyattr'
+		if(query.groupsamplebyattr.attrlst.length==0) return 'groupsamplebyattr.attrlst[] empty array'
+		if(!ds.cohort) return 'groupsamplebyattr in use but ds.cohort missing'
+		if(!ds.cohort.annotation) return 'groupsamplebyattr in use but ds.cohort.annotation missing'
+		if(!ds.cohort.sampleAttribute) {
+			ds.cohort.sampleAttribute = {}
 		}
-		if(!query.attrnamespacer) query.attrnamespacer = ', '
+		if(!ds.cohort.sampleAttribute.attributes) {
+			ds.cohort.sampleAttribute.attributes = {}
+			console.log('cohort.sampleAttribute added when groupsamplebyattr is in use')
+		}
+		for(const attr of query.groupsamplebyattr.attrlst) {
+			if(!attr.k) return 'k missing from one of groupsamplebyattr.attrlst[]'
+			if(!ds.cohort.sampleAttribute.attributes[ attr.k ]) {
+				ds.cohort.sampleAttribute.attributes[ attr.k ] = {
+					label: (attr.label || attr.k)
+				}
+			}
+		}
+		if(query.groupsamplebyattr.sortgroupby) {
+			if(!query.groupsamplebyattr.sortgroupby.key) return '.key missing from .sortgroupby'
+			if(!query.groupsamplebyattr.sortgroupby.order) return '.order[] missing from .sortgroupby'
+			if(!Array.isArray(query.groupsamplebyattr.sortgroupby.order)) return '.order must be an array'
+			// values of order[] is not validated
+		}
+		if(!query.groupsamplebyattr.attrnamespacer) query.groupsamplebyattr.attrnamespacer = ', '
 	}
 
-	if(query.sortgroupby) {
-		if(!query.groupsamplebyattrlst) return '.groupsamplebyattrlst is required for .sortgroupby'
-		if(!query.sortgroupby.key) return '.key missing from .sortgroupby'
-		// the actual key is not validated
-		if(!query.sortgroupby.order) return '.order[] missing from .sortgroupby'
-		if(!Array.isArray(query.sortgroupby.order)) return '.order must be an array'
-	}
 
 	console.log('('+query.type+') '+query.name+': '+(query.samples ? query.samples.length:'no')+' samples, '+(query.nochr ? 'no "chr"':'has "chr"'))
 }

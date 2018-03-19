@@ -73,17 +73,16 @@ module.exports={
 				}
 			]
 		},
-		/*
-		in svcnv track, sample attributes to pass to client for display
-		on client, attach to track object
-		similar to mutationAttribute, semi-controlled vocabulary, where one attribute will have multiple values
-		may also for metadata rendering 
-		*/
 		sampleAttribute:{
 			attributes:{
-				diagnosis_subtype_short:{
-					label:'Subtype',
-					filter:1
+				diagnosis_group_short:{
+					label:'Cancer group',
+					filter:1,
+					hidden:1,
+				},
+				diagnosis_short:{
+					label:'Cancer',
+					filter:1,
 				},
 			},
 		}
@@ -91,21 +90,6 @@ module.exports={
 
 
 
-
-
-	/*
-	mutation-level attributes, applied to multiple data types
-	on client, attach to track object
-
-	design issue:
-	1. attributes are sample-level, applied to per-sample cases as lines in svcnv file, and FORMAT in vcf,
-	   so as one vcf variant can be in multiple samples, each case discovered by different assay types (wgs/wes) by different lab
-	2. when representing annotation by these attributes on client, do not indicate items that are Unannotated
-	3. when filtering to hide items by attributes, do not hide *unannotated* items
-	   case for conscern: sv & fusion are both present, sv is annotated by dna_assay; fusion by rna_assay
-	   if showing only "polyA" for rna_assay, all sv won't have such annotation, but they should not be dropped
-	   problem is no way to "scope" rna_assay filtering only within RNA-based variants
-	*/
 	mutationAttribute:{
 		attributes:{
 			dna_assay:{
@@ -205,26 +189,19 @@ module.exports={
 			segmeanValueCutoff:0.1,
 			lohLengthUpperLimit:2000000,
 
-			/*
-			the list of attributes to group samples, name of groups such as "HM, BALL"
-			the attributes are hierarchical, when a sample is not annotated by 2nd attribute
-			the sample will come to the bin of 1st attribute
-			but if the sample is not annotated by 1st attribute, then it goes to a head-less bin, no matter if it's annotated by any subsequent attributes
-			*/
-			groupsamplebyattrlst:[ 
-				{k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
-				{k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
-			],
-
-			/*
-			to sort sample groups consistently, on client, not on server
-			*/
-			sortgroupby:{
-				key:'diagnosis_group_short',
-				order:['ST','BT','HM']
+			groupsamplebyattr:{ 
+				attrlst:[
+					{k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
+					{k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
+				],
+				sortgroupby:{
+					key:'diagnosis_group_short',
+					order:['ST','BT','HM']
+				},
+				attrnamespacer:', ',
 			},
 
-			attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
+
 
 
 			expressionrank_querykey:'genefpkm',

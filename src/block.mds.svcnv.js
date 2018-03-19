@@ -2581,26 +2581,29 @@ function prep_samplegroups( tk, block ) {
 		plotgroups.push(g2)
 	}
 
-	if(tk.sortgroupby && tk.sortgroupby.key && tk.sortgroupby.order) {
-		// sort groups, may be available for official track
-		const lst = []
-		for(const value of tk.sortgroupby.order) {
-			for(const g of plotgroups) {
-				for(const at of g.attributes) {
-					if(at.k == tk.sortgroupby.key && at.kvalue==value) {
-						// is one
-						g._sorted=1
-						lst.push(g)
-						break
+	if(tk.groupsamplebyattr) {
+		const sortgroupby = tk.groupsamplebyattr.sortgroupby
+		if(sortgroupby && sortgroupby.key && sortgroupby.order) {
+			// sort groups, may be available for official track
+			const lst = []
+			for(const value of sortgroupby.order) {
+				for(const g of plotgroups) {
+					for(const at of g.attributes) {
+						if(at.k == sortgroupby.key && at.kvalue==value) {
+							// is one
+							g._sorted=1
+							lst.push(g)
+							break
+						}
 					}
 				}
 			}
+			for(const g of plotgroups) {
+				if(!g._sorted) lst.push(g)
+			}
+			for(const g of lst) delete g._sorted
+			plotgroups = lst
 		}
-		for(const g of plotgroups) {
-			if(!g._sorted) lst.push(g)
-		}
-		for(const g of lst) delete g._sorted
-		plotgroups = lst
 	}
 
 	return [ plotgroups, svlst4dense ]
@@ -2664,10 +2667,12 @@ function makeTk(tk, block) {
 
 	tk.tip2 = new client.Menu({padding:'0px'})
 
+/*
 	if(!tk.attrnamespacer) {
 		// fill in for custom track
 		tk.attrnamespacer=', '
 	}
+	*/
 
 	if(tk.singlesample) {
 
@@ -3243,7 +3248,7 @@ function may_allow_samplesearch(tk, block) {
 						.text(sample.name)
 
 					if(sample.attributes) {
-						const groupname = sample.attributes.map(i=>i.kvalue).join( tk.attrnamespacer )
+						const groupname = sample.attributes.map(i=>i.kvalue).join(', ') // tk.attrnamespacer
 						cell.append('div')
 							.style('display','inline-block')
 							.style('margin-left','10px')
