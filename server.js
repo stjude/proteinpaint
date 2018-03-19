@@ -3844,33 +3844,33 @@ function handle_mdssvcnv(req,res) {
 		hiddendt = new Set( req.query.hiddendt )
 	}
 
-	// multi: sample groups selected to be hidden from client
-	// XXX not used
-	let hiddensgnames
-	if(req.query.hiddensgnames) {
-		// only for official track
-		hiddensgnames = new Set( req.query.hiddensgnames )
-	}
 
 	/*
 	multi: mutation attributes selected to be hidden from client
 	terms defined in ds.mutationAttribute
 	*/
 	let hiddenmattr 
-	if(req.query.mutationAttributeHidden) {
+	if(req.query.hiddenmattr) {
 		hiddenmattr = {}
-		for(const key in req.query.mutationAttributeHidden) {
-			hiddenmattr[ key ] = new Set( req.query.mutationAttributeHidden[key] )
+		for(const key in req.query.hiddenmattr) {
+			hiddenmattr[ key ] = new Set( req.query.hiddenmattr[key] )
 		}
 	}
 
 	/*
 	multi: sample attributes selected to be hidden from client
-	TODO
+	as defined in ds.cohort.sampleAttribute
 	*/
+	let hiddensampleattr
+	if(req.query.hiddensampleattr) {
+		hiddensampleattr = {}
+		for(const key in req.query.hiddensampleattr) {
+			hiddensampleattr[ key ] = new Set( req.query.hiddensampleattr[key] )
+		}
+	}
 
 
-	
+
 	Promise.resolve()
 	.then(()=>{
 
@@ -3999,6 +3999,17 @@ function handle_mdssvcnv(req,res) {
 							// this sample has no annotation at all, since it's doing filtering, will drop it
 							return
 						}
+
+						// only check this here, because it requires sample annotation
+						if(hiddensampleattr) {
+							for(const key in hiddensampleattr) {
+								const samplevalue = anno[ key ]
+								if(hiddensampleattr[ key ].has( samplevalue )) {
+									// this sample has hidden annotation
+									return
+								}
+							}
+						}
 					}
 
 					if(hiddenmattr) {
@@ -4016,6 +4027,7 @@ function handle_mdssvcnv(req,res) {
 							}
 						}
 					}
+
 
 					// this item is acceptable
 					data.push( j )
@@ -4117,7 +4129,10 @@ function handle_mdssvcnv(req,res) {
 						if(!j.sample) return
 						if(!Number.isFinite(j.value)) return
 
-						// may apply hiddenmattr
+						/* hiddenmattr hiddensampleattr are not applied here
+						cnv/vcf data from those samples will be dropped, so their expression won't show
+						but their expression will still be used in calculating rank of visible samples
+						*/
 
 						if(!gene2sample2obj.has(j.gene)) {
 							gene2sample2obj.set(j.gene, {chr:l[0], start:Number.parseInt(l[1]), stop:Number.parseInt(l[2]), samples:new Map()} )
@@ -4259,37 +4274,6 @@ function handle_mdssvcnv(req,res) {
 										m.sampledata = [ thissampleobj ]
 									}
 
-/*
-									if(hiddensgnames) {
-										const samplesnothidden = []
-										for(const s of m.sampledata) {
-											// figure out group name for this sample
-
-											const sanno = ds.cohort.annotation[ s.sampleobj.name ]
-											if(!sanno) continue
-
-											const attrnames = []
-											for(const attr of dsquery.groupsamplebyattrlst) {
-												const v = sanno[ attr.k ]
-												if(v) {
-													attrnames.push(v)
-												} else {
-													break
-												}
-											}
-
-											const groupname = attrnames.join( dsquery.attrnamespacer )
-											if( !hiddensgnames.has( groupname ) ) {
-												samplesnothidden.push( s )
-											}
-										}
-										if(samplesnothidden.length==0) {
-											// skip this variant
-											continue
-										}
-										m.sampledata = samplesnothidden
-									}
-									*/
 
 									if(hiddenmattr) {
 										const samplesnothidden = []
@@ -4303,6 +4287,40 @@ function handle_mdssvcnv(req,res) {
 													value = common.not_annotated
 												}
 												if(hiddenmattr[key].has( value )) {
+													nothidden=false
+													break
+												}
+											}
+											if(nothidden) {
+												samplesnothidden.push( s )
+											}
+										}
+										if(samplesnothidden.length==0) {
+											// skip this variant
+											continue
+										}
+										m.sampledata = samplesnothidden
+									}
+
+
+									if(hiddensampleattr && ds.cohort && ds.cohort.annotation) {
+										/*
+										drop sample by annotation
+										FIXME this is not efficient
+										ideally should identify samples from this vcf file to be dropped, the column # of them
+										after querying the vcf file, cut these columns away
+										*/
+										const samplesnothidden = []
+										for(const s of m.sampledata) {
+											const sanno = ds.cohort.annotation[ s.sampleobj.name ]
+											if(!sanno) {
+												// sample has no annotation?
+												continue
+											}
+											let nothidden=true
+											for(const key in hiddensampleattr) {
+												const value = sanno[ key ]
+												if(hiddensampleattr[ key ].has( value )) {
 													nothidden=false
 													break
 												}
@@ -4585,7 +4603,7 @@ function handle_mdssvcnv(req,res) {
 
 			//// group the sv-cnv samples
 			for(const [samplename, items] of sample2item) {
-				mdssvcnv_grouper( samplename, items, key2group, headlesssamples, ds, dsquery, hiddensgnames )
+				mdssvcnv_grouper( samplename, items, key2group, headlesssamples, ds, dsquery )
 			}
 
 			if(data_vcf) {
@@ -4594,7 +4612,7 @@ function handle_mdssvcnv(req,res) {
 
 					if(m.dt==common.dtsnvindel) {
 						for(const s of m.sampledata) {
-							mdssvcnv_grouper( s.sampleobj.name, [], key2group, headlesssamples, ds, dsquery, hiddensgnames )
+							mdssvcnv_grouper( s.sampleobj.name, [], key2group, headlesssamples, ds, dsquery )
 						}
 						continue
 					}
@@ -4844,7 +4862,7 @@ function mdssvcnv_customtk_altersg_server( result, gene2sample2obj ) {
 
 
 
-function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, dsquery, hiddensgnames ) {
+function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, dsquery ) {
 	/*
 	helper function, used by both cnv and vcf
 	to identify which group a sample is from, insert the group, then insert the sample
@@ -4884,13 +4902,6 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 
 	const groupname = attrnames.join( dsquery.groupsamplebyattr.attrnamespacer )
 
-/*
-	if(hiddensgnames && hiddensgnames.has(groupname)) {
-		// a group selected to be hidden by client
-		return
-	}
-	*/
-
 	if(!key2group.has(groupname)) {
 
 		/*
@@ -4923,8 +4934,6 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 			const lname = (attr.full ? sanno[ attr.full ] : null) || v
 			levelnames.push(lname)
 		}
-
-
 
 		key2group.set(groupname, {
 			name: groupname,
