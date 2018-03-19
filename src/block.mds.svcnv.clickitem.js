@@ -25,6 +25,7 @@ may_add_sampleannotation
 
 ********************** INTERNAL
 detailtable_singlesample
+may_show_matrixbutton
 
 
 */
@@ -40,6 +41,11 @@ export function click_samplegroup_showmenu( samplegroup, tk, block ) {
 
 	if(tk.iscustom) return
 
+	const printerror = msg=> client.sayerror( tk.tip2.d, msg )
+
+	if(!tk.sampleAttribute) return printerror('tk.sampleAttribute missing')
+	if(!tk.sampleAttribute.attributes) return printerror('tk.sampleAttribute.attributes{} missing')
+
 	tk.tip2.d.append('div')
 		.style('margin','4px 10px')
 		.style('font-size','.7em')
@@ -49,8 +55,11 @@ export function click_samplegroup_showmenu( samplegroup, tk, block ) {
 		.attr('class','sja_menuoption')
 		.text('Hide')
 		.on('click',()=>{
+
+			tk.tip2.clear()
+			const err = samplegroup_setShowhide( samplegroup, tk, true )
+			if(err) return printerror(err)
 			tk.tip2.hide()
-			tk.legend_samplegroup.hidden.add( samplegroup.name )
 			loadTk(tk, block)
 		})
 
@@ -58,22 +67,34 @@ export function click_samplegroup_showmenu( samplegroup, tk, block ) {
 		.attr('class','sja_menuoption')
 		.text('Show only')
 		.on('click',()=>{
-			tk.tip2.hide()
+			tk.tip2.clear()
 			for(const g of tk._data) {
-				if(g.name && g.name!='Unannotated' && g.name!=samplegroup.name) tk.legend_samplegroup.hidden.add(g.name)
+				const err = samplegroup_setShowhide( g, tk, true)
+				if(err) return printerror(err)
 			}
+			samplegroup_setShowhide( samplegroup, tk, false)
+			tk.tip2.hide()
 			loadTk(tk, block)
 		})
 
-	if(tk.legend_samplegroup.hidden.size) {
-		tk.tip2.d.append('div')
-			.attr('class','sja_menuoption')
-			.text('Show all')
-			.on('click',()=>{
-				tk.tip2.hide()
-				tk.legend_samplegroup.hidden.clear()
-				loadTk(tk, block)
-			})
+	{
+		/*
+		under the same driver attribute, any other groups are hidden?
+		if so, allow to show all
+		*/
+		const [err, attr, attrR] = samplegroup_getdriverattribute( samplegroup, tk )
+		if(err) return error(err)
+		if(attrR.hiddenvalues.size>0) {
+			// has other hidden groups
+			tk.tip2.d.append('div')
+				.attr('class','sja_menuoption')
+				.text('Show all')
+				.on('click',()=>{
+					tk.tip2.hide()
+					attrR.hiddenvalues.clear()
+					loadTk(tk, block)
+				})
+		}
 	}
 
 	tk.tip2.d.append('div')
@@ -87,6 +108,37 @@ export function click_samplegroup_showmenu( samplegroup, tk, block ) {
 	may_show_matrixbutton(samplegroup, tk, block)
 }
 
+
+
+
+
+function samplegroup_getdriverattribute( g, tk ) {
+	if(!g.attributes) return ['.attributes[] missing for group '+g.name]
+	if(g.attributes.length==0) return ['.attributes[] zero length for group '+g.name]
+	const attribute = g.attributes[ g.attributes.length-1 ]
+	/*
+	.k
+	.kvalue
+	.full
+	.fullvalue
+
+	use this attribute to set this group to hidden in tk.sampleAttribute 
+	*/
+	const attrRegister = tk.sampleAttribute.attributes[ attribute.k ]
+	if(!attrRegister) return ['"'+attribute.k+'" not registered in sampleAttribute for group '+g.name]
+	return [null, attribute, attrRegister]
+}
+
+function samplegroup_setShowhide( g, tk, tohide ) {
+	const [err, attr, attrR] = samplegroup_getdriverattribute( g, tk )
+	if(err) return err
+	if(tohide) {
+		attrR.hiddenvalues.add( attr.kvalue )
+	} else {
+		attrR.hiddenvalues.delete( attr.kvalue )
+	}
+	return null
+}
 
 
 
