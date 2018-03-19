@@ -2641,16 +2641,6 @@ function prep_samplegroups( tk, block ) {
 
 function makeTk(tk, block) {
 
-	if(tk.sampleAttribute) {
-		/*
-		official-only, as defined in ds.cohort, optional
-		during data loading, server lumps all requested samples together with their annotations as defined in sampleAttribute.attributes
-		and returns in a separate hash alongside mutation data
-		the sample annotations are cached in .samples{}
-		*/
-		tk.sampleAttribute.samples = {}
-	}
-
 	if(!tk.singlesample) {
 		// in multi-sample, allow hidding some labels
 		// do not override config from native dataset
