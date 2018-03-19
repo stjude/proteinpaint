@@ -363,7 +363,7 @@ function addLoadParameter( par, tk ) {
 			}
 		}
 		if(hashidden) {
-			par.mutationAttributeHidden = key2value
+			par.hiddenmattr = key2value
 		}
 	}
 
@@ -379,7 +379,7 @@ function addLoadParameter( par, tk ) {
 			}
 		}
 		if(hashidden) {
-			par.sampleAttributeHidden = key2value
+			par.hiddensampleattr = key2value
 		}
 	}
 
