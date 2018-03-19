@@ -348,14 +348,7 @@ function addLoadParameter( par, tk ) {
 	if(tk.lohLengthUpperLimit) par.lohLengthUpperLimit=tk.lohLengthUpperLimit
 
 	if(tk.singlesample) {
-
 		par.singlesample = tk.singlesample.name
-
-	} else {
-
-		if(tk.legend_samplegroup && tk.legend_samplegroup.hidden.size) {
-			par.hiddensgnames = [ ...tk.legend_samplegroup.hidden ]
-		}
 	}
 
 	if(tk.mutationAttribute) {
