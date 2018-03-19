@@ -24,12 +24,12 @@ may_legend_mutationAttribute
 
 export function makeTk_legend(block, tk) {
 	/*
-	initiate legend
+	only run once, to initialize legend
 	for all cases:
 		single- and multi-sample
 		official and custom track
-
 	*/
+
 	const [tr,td] = legend_newrow(block,tk.name)
 	tk.tr_legend = tr
 	tk.td_legend = td
@@ -196,6 +196,7 @@ export function makeTk_legend(block, tk) {
 		}
 	}
 
+/*
 	if(!tk.singlesample && !tk.iscustom) {
 		// official, multi-sample
 
@@ -213,6 +214,7 @@ export function makeTk_legend(block, tk) {
 			hidden: new Set(),
 		}
 	}
+	*/
 
 	// sv chr color
 	{
@@ -230,6 +232,52 @@ export function makeTk_legend(block, tk) {
 			.text('SV chromosome')
 		tk.legend_svchrcolor.holder = row.append('td')
 	}
+
+
+	if(tk.sampleAttribute && !tk.singlesample) {
+		/*
+		official only
+		sampleAttribute is copied over from mds.queries
+		initiate attributes used for filtering & legend display
+		*/
+		for(const key in tk.sampleAttribute.attributes) {
+			const attr = tk.sampleAttribute.attributes[ key ];
+			if(!attr.filter) {
+				// not a filter
+				continue
+			}
+			attr.hiddenvalues = new Set()
+			// k: key in mutationAttribute.attributes{}
+
+			attr.value2count = new Map()
+			/*
+			k: key
+			v: {
+				totalitems: INT
+				dt2count: Map( dt => count )
+			}
+			*/
+
+			attr.legendrow = table.append('tr')
+			attr.legendcell = attr.legendrow.append('td')
+				.style('text-align','right')
+				.style('opacity',.5)
+				.text(attr.label)
+
+			attr.legendholder = attr.legendrow.append('td')
+		}
+
+/*
+		tk.legend_more_row = table.append('tr')
+		tk.legend_more_label = tk.legend_more_row.append('td')
+								.style('text-align','right')
+								.append('span')
+		// blank cell for now since hidden legend items
+		// are displayed in pop-down menu, not in this row
+		tk.legend_more_row.append('td') 
+		*/
+	}
+
 
 	if(tk.mutationAttribute && !tk.singlesample) {
 		/*
@@ -264,6 +312,11 @@ export function makeTk_legend(block, tk) {
 			attr.legendholder = attr.legendrow.append('td')
 		}
 
+		/*
+		FIXME the MORE button should not be dependent on mutationAttribute
+		mutationAttribute is optional, the dataset is allowed not to have it, in that case, the MORE button won't be made
+		but other legend categories are hiddable now, and they need the MORE button
+		*/
 		tk.legend_more_row = table.append('tr')
 		tk.legend_more_label = tk.legend_more_row.append('td')
 								.style('text-align','right')
@@ -287,7 +340,7 @@ export function update_legend(tk, block) {
 		return
 	}
 	// is multi-sample: also do following
-	may_legend_samplegroup(tk, block)
+	//may_legend_samplegroup(tk, block)
 	may_legend_mutationAttribute(tk, block)
 }
 
@@ -802,9 +855,9 @@ function may_legend_mutationAttribute(tk, block) {
 			}
 		}
 	}
-
 	may_process_hideable_rows(tk,block,hiddenMutationAttributes)
 }
+
 
 function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 	// handle non-mutation attribute
