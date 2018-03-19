@@ -331,14 +331,6 @@ function addLoadParameter( par, tk ) {
 		}
 
 		if(tk.checkvcf) {
-		/* XXX
-			par.checkvcf = {
-				file: tk.checkvcf.file,
-				url: tk.checkvcf.url,
-				indexURL: tk.checkvcf.indexURL,
-				nochr: tk.checkvcf.nochr
-			}
-			*/
 			par.checkvcf = tk.checkvcf.stringifiedObj
 		}
 	} else {
@@ -379,6 +371,22 @@ function addLoadParameter( par, tk ) {
 		}
 		if(hashidden) {
 			par.mutationAttributeHidden = key2value
+		}
+	}
+
+	if(tk.sampleAttribute) {
+		// mutation attribute applicable to all data types
+		const key2value={}
+		let hashidden=false
+		for(const key in tk.sampleAttribute.attributes) {
+			const attr = tk.sampleAttribute.attributes[key]
+			if(attr.hiddenvalues && attr.hiddenvalues.size) {
+				key2value[key] = [...attr.hiddenvalues]
+				hashidden=true
+			}
+		}
+		if(hashidden) {
+			par.sampleAttributeHidden = key2value
 		}
 	}
 
@@ -3419,31 +3427,6 @@ function vcfdata_prep(tk, block) {
 	}
 
 	const mlst = tk._data_vcf
-/* XXX
-	const mlst = []
-
-	if(tk.iscustom) {
-		_data_vcf contains lines from vcf
-		for(const line of tk._data_vcf) {
-			const [err,lst, err2] = vcfparseline( line, tk.checkvcf )
-			if(err) {
-				console.error(err)
-			}
-			if(err2) {
-				console.error(err2)
-			}
-			if(lst) {
-				for(const m of lst) {
-					m.dt = common.dtsnvindel
-					mlst.push(m)
-				}
-			}
-		}
-
-	} else {
-		for(const m of tk._data_vcf) mlst.push(m)
-	}
-	*/
 
 	tk.data_vcf = []
 
