@@ -37,7 +37,7 @@ const default_cnvgaincolor = "#D6683C"
 const default_cnvlosscolor = "#67a9cf"
 const default_genevaluecolor = '#095873'
 const default_lohcolor = 'black'
-const default_svcolor = 'black'
+const default_svcolor = '#858585'
 
 
 export class Samplematrix {
@@ -383,6 +383,8 @@ export class Samplematrix {
 			f.legendholder = tr.append('td')
 
 			if(!f.width) f.width=20
+			if(!f.snvindel) f.snvindel = {}
+
 			return this.feature_parseposition_maygene( f )
 				.then(()=>{
 					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' SNV/indel'
@@ -461,29 +463,13 @@ export class Samplematrix {
 				f.label = f.genename+' CNV/SV'
 			}
 
-			if(!f.width) f.width=40
-
 			tr.append('td')
 				.text(f.label)
 				.style('color','#858585')
 				.style('text-align','right')
 			f.legendholder = tr.append('td')
 
-			if(!f.cnv) f.cnv = {}
-			if(!f.cnv.valuecutoff) f.cnv.valuecutoff = 0.2
-			if(!f.cnv.focalsizelimit) f.cnv.focalsizelimit=2000000
-			if(!f.cnv.colorgain) f.cnv.colorgain = default_cnvgaincolor
-			if(!f.cnv.colorloss) f.cnv.colorloss = default_cnvlosscolor
-			if(!f.loh) f.loh = {}
-			if(!f.loh.valuecutoff) f.loh.valuecutoff = 0.1
-			if(!f.loh.focalsizelimit) f.loh.focalsizelimit=2000000
-			if(!f.loh.color) f.loh.color = default_lohcolor
-			if(!f.itd) f.itd = {}
-			if(!f.itd.color) f.itd.color = common.mclass[ common.mclassitd ].color
-			if(!f.sv) f.sv = {}
-			if(!f.sv.color) f.sv.color = default_svcolor
-			if(!f.fusion) f.fusion = {}
-			if(!f.fusion.color) f.fusion.color = default_svcolor
+			initfeature_polymutation( f )
 
 			return this.feature_parseposition_maygene( f )
 				.then(()=>{
@@ -505,29 +491,13 @@ export class Samplematrix {
 				f.label = f.genename+' mutation'
 			}
 
-			if(!f.width) f.width=40
-
 			tr.append('td')
 				.text(f.label)
 				.style('opacity',.5)
 				.style('text-align','right')
 			f.legendholder = tr.append('td')
 
-			if(!f.cnv) f.cnv = {}
-			if(!f.cnv.valuecutoff) f.cnv.valuecutoff = 0.2
-			if(!f.cnv.focalsizelimit) f.cnv.focalsizelimit=2000000
-			if(!f.cnv.colorgain) f.cnv.colorgain = default_cnvgaincolor
-			if(!f.cnv.colorloss) f.cnv.colorloss = default_cnvlosscolor
-			if(!f.loh) f.loh = {}
-			if(!f.loh.valuecutoff) f.loh.valuecutoff = 0.1
-			if(!f.loh.focalsizelimit) f.loh.focalsizelimit=2000000
-			if(!f.loh.color) f.loh.color = default_lohcolor
-			if(!f.itd) f.itd = {}
-			if(!f.itd.color) f.itd.color = common.mclass[ common.mclassitd ].color
-			if(!f.sv) f.sv = {}
-			if(!f.sv.color) f.sv.color = default_svcolor
-			if(!f.fusion) f.fusion = {}
-			if(!f.fusion.color) f.fusion.color = default_svcolor
+			initfeature_polymutation( f )
 
 			return this.feature_parseposition_maygene( f )
 				.then(()=>{
@@ -792,7 +762,7 @@ export class Samplematrix {
 					const cell = row.append('div')
 						.style('display','inline-block')
 						.style('margin-right','20px')
-					cell.append('div')
+					cell.append('span')
 						.attr('class','sja_mcdot')
 						.style('background', f.sv.color)
 						.text(svcount)
@@ -800,10 +770,10 @@ export class Samplematrix {
 						.text('SV')
 				}
 				if(fusioncount) {
-					const cell=h.append('div')
+					const cell=row.append('div')
 						.style('display','inline-block')
 						.style('margin-right','20px')
-					cell.append('div')
+					cell.append('span')
 						.attr('class','sja_mcdot')
 						.style('background', f.fusion.color)
 						.text(fusioncount)
@@ -2039,7 +2009,7 @@ function drawEmptycell(sample,feature,g) {
 	g.append('line')
 		.attr('x2',feature.width)
 		.attr('y2',sample.height)
-		.attr('stroke','#ccc')
+		.attr('stroke','#ededed')
 }
 
 
@@ -2093,7 +2063,10 @@ function feature2arg(f) {
 			querykey:f.querykey,
 			chr:f.chr,
 			start: f.start,
-			stop: f.stop
+			stop: f.stop,
+			snvindel:{
+				excludeclasses: f.snvindel.excludeclasses
+			},
 		}
 	}
 	if(f.isitd) {
@@ -2116,24 +2089,34 @@ function feature2arg(f) {
 			stop: f.stop
 		}
 	}
-	if(f.issvcnv) {
-		return {
+	if(f.issvcnv || f.ismutation) {
+		const arg = {
 			id:f.id,
-			issvcnv:1,
-			querykey:f.querykey,
 			chr:f.chr,
 			start: f.start,
-			stop: f.stop
+			stop: f.stop,
+			cnv: {
+				valuecutoff: f.cnv.valuecutoff,
+				focalsizelimit: f.cnv.focalsizelimit
+			},
+			loh: {
+				valuecutoff: f.loh.valuecutoff,
+				focalsizelimit: f.loh.focalsizelimit
+			},
+			snvindel:{
+				excludeclasses: f.snvindel.excludeclasses
+			}
 		}
+		if(f.issvcnv) {
+			arg.issvcnv = 1
+			arg.querykey = f.querykey
+		} else {
+			arg.ismutation = 1
+			arg.querykeylst = f.querykeylst
+		}
+		return arg
 	}
-	if(f.ismutation) return {
-		id:f.id,
-		ismutation:1,
-		querykeylst:f.querykeylst,
-		chr:f.chr,
-		start:f.start,
-		stop:f.stop
-	}
+
 	// __newattr
 	throw('unknown feature type in making request parameter')
 }
@@ -2205,4 +2188,36 @@ function getitemforsample_compound( feature, sample ) {
 		}
 	}
 	return [ nodata, cnvvalue, lohvalue, hasitd, hassv, hasfusion, snvindel ]
+}
+
+
+function initfeature_polymutation(f) {
+	/*
+	for issvcnv and ismutation
+	set defaults if not provided
+	*/
+
+	if(!f.width) f.width = 20
+
+	if(!f.cnv) f.cnv = {}
+	if(!f.cnv.valuecutoff) f.cnv.valuecutoff = 0.2
+	if(!f.cnv.focalsizelimit) f.cnv.focalsizelimit=2000000
+	if(!f.cnv.colorgain) f.cnv.colorgain = default_cnvgaincolor
+	if(!f.cnv.colorloss) f.cnv.colorloss = default_cnvlosscolor
+
+	if(!f.loh) f.loh = {}
+	if(!f.loh.valuecutoff) f.loh.valuecutoff = 0.1
+	if(!f.loh.focalsizelimit) f.loh.focalsizelimit=2000000
+	if(!f.loh.color) f.loh.color = default_lohcolor
+
+	if(!f.itd) f.itd = {}
+	if(!f.itd.color) f.itd.color = common.mclass[ common.mclassitd ].color
+
+	if(!f.sv) f.sv = {}
+	if(!f.sv.color) f.sv.color = default_svcolor
+	if(!f.fusion) f.fusion = {}
+	if(!f.fusion.color) f.fusion.color = default_svcolor
+
+	if(!f.snvindel) f.snvindel = {}
+	// snvindel class color come from common.mclass
 }
