@@ -16,7 +16,7 @@ updateLegend_multiSample
 *********** internal:
 may_legend_svchr
 may_legend_mclass
-may_legend_mutationAttribute
+may_legend_attribute
 */
 
 
@@ -307,7 +307,7 @@ export function update_legend(tk, block) {
 		return
 	}
 	// is multi-sample: also do following
-	may_legend_mutationAttribute(tk, block)
+	may_legend_attribute(tk, block)
 }
 
 
@@ -517,20 +517,21 @@ function may_legend_mclass(tk, block) {
 
 
 
-function may_legend_mutationAttribute(tk, block) {
+function may_legend_attribute(tk, block) {
+	if(tk.singlesample) {
+		// multi-sample only
+		return
+	}
+
 	// collects attributes that are selected to be hidden
-	const hiddenMutationAttributes=[]
+	const hiddenAttributes=[]
 
 	/*
 	official-only, multi-sample
 	filtering by mutation attribute is done on server
 	*/
 	for(const attrGrp of ['sampleAttribute','mutationAttribute']) {
-		if(!tk[attrGrp]) return
-		if(tk.singlesample) {
-			// multi-sample only
-			return
-		}
+		if(!tk[attrGrp]) continue
 
 		// clear
 		for(const key in tk[attrGrp].attributes) {
@@ -586,14 +587,14 @@ function may_legend_mutationAttribute(tk, block) {
 					attr.legendrow.transition().delay(500)
 						.style('display','none')
 					setTimeout(()=>{
-						may_legend_mutationAttribute(tk,block)
+						may_legend_attribute(tk,block)
 					},500)
 				})
 
 			if(attr.hidden) {
 				// this attribute is hidden
 				attr.legendrow.style('display','none')
-				hiddenMutationAttributes.push(attr)
+				hiddenAttributes.push(attr)
 				continue
 			}
 
@@ -725,11 +726,11 @@ function may_legend_mutationAttribute(tk, block) {
 			}
 		}
 	}
-	may_process_hideable_rows(tk,block,hiddenMutationAttributes)
+	may_process_hideable_rows(tk,block,hiddenAttributes)
 }
 
 
-function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
+function may_process_hideable_rows(tk,block,hiddenAttributes) {
 	// handle non-mutation attribute
 	let numHiddenRows=0
 	for(const hideable of tk.legend_hideable) {
@@ -743,7 +744,7 @@ function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 				hideable.row.transition().delay(500)
 					.style('display','none')
 				setTimeout(()=>{
-					may_legend_mutationAttribute(tk,block)
+					may_legend_attribute(tk,block)
 				},500)
 			})
 
@@ -753,7 +754,7 @@ function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 		}
 	}
 
-	if (!hiddenMutationAttributes.length && !numHiddenRows) {
+	if (!hiddenAttributes.length && !numHiddenRows) {
 		tk.legend_more_row.style('display','none')
 	}
 	else {
@@ -773,10 +774,9 @@ function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 						.on('click',()=>{
 							tk.tip2.hide()
 							hideable.hidden=0
-							may_legend_mutationAttribute(tk,block)
+							may_legend_attribute(tk,block)
 						})
 
-					// PLEASE CHECK how does this equivalency testing work?
 					if(hideable.hidden && hideable.total_count) {					
 						div.append('div')
 							.style('display','inline-block')
@@ -789,7 +789,7 @@ function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 						.html('&nbsp;' + hideable.row.node().firstChild.innerHTML )
 				}
 
-				for(const attr of hiddenMutationAttributes) {
+				for(const attr of hiddenAttributes) {
 					if (!attr.hidden) continue
 					const total = [...attr.value2count.values()].reduce((a,b)=>a+b.totalitems,0)
 					const div = tk.tip2.d.append('div')
@@ -797,7 +797,7 @@ function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 						.on('click',()=>{
 							tk.tip2.hide()
 							attr.hidden=0
-							may_legend_mutationAttribute(tk,block)
+							may_legend_attribute(tk,block)
 						})
 
 					div.append('div')
@@ -815,6 +815,8 @@ function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 
 
 function count_sampleAttribute(key, attr, sample) {
+	if (!(key in sample)) return
+
 	const value = sample[key]
 	if(!attr.value2count.has( value )) {
 		attr.value2count.set( value, {
