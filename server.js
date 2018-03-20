@@ -9569,7 +9569,6 @@ function mds_init(ds,genome) {
 	if(ds.annotationsampleset2matrix) {
 		if(!ds.cohort) return 'ds.cohort misssing when annotationsampleset2matrix is in use'
 		if(!ds.cohort.annotation) return 'ds.cohort.annotation misssing when annotationsampleset2matrix is in use'
-		// limit to one attribute
 		if(!ds.annotationsampleset2matrix.key) return '.key STR missing in annotationsampleset2matrix'
 		if(!ds.annotationsampleset2matrix.groups) return '.groups{} missing in annotationsampleset2matrix'
 		if(typeof(ds.annotationsampleset2matrix.groups)!='object') return 'ds.annotationsampleset2matrix.groups{} not an object'
@@ -9579,13 +9578,22 @@ function mds_init(ds,genome) {
 			if(!smat.features) return '.features[] missing from group '+groupvalue
 			if(!Array.isArray(smat.features)) return '.features[] should be array from group '+groupvalue
 			if(smat.features.length==0) return '.features[] zero length from group '+groupvalue
-			for(const attr of smat.features) {
-				if(attr.ismutation) {
-					if(!attr.position) return 'position missing from feature '+JSON.stringify(attr)+' from group '+groupvalue
-					// verify querykeylst
-				} else {
-					return 'unknown feature type from group '+groupvalue
+			for(const feature of smat.features) {
+
+				if(ds.annotationsampleset2matrix.commonfeatureattributes) {
+					// apply common attributes to each feature
+					for(const k in ds.annotationsampleset2matrix.commonfeatureattributes) {
+						feature[ k ] = ds.annotationsampleset2matrix.commonfeatureattributes[ k ]
+					}
 				}
+
+				if(feature.ismutation) {
+					if(!feature.position) return 'position missing from feature '+JSON.stringify(feature)+' from group '+groupvalue
+					// verify querykeylst
+					continue
+				}
+
+				return 'unknown feature type from group '+groupvalue
 			}
 			if(!smat.limitsamplebyeitherannotation) return '.limitsamplebyeitherannotation[] missing from group '+groupvalue
 			if(!Array.isArray(smat.limitsamplebyeitherannotation)) return '.limitsamplebyeitherannotation[] should be array from group '+groupvalue
