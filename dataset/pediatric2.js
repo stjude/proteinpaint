@@ -140,7 +140,23 @@ module.exports={
 	annotationsampleset2matrix: {
 		key:'diagnosis_short',
 		commonfeatureattributes:{
-			querykeylst:['svcnv','snvindel']
+			querykeylst:['svcnv','snvindel'],
+			cnv:{
+				valuecutoff:0.2,
+				focalsizelimit:2000000,
+			},
+			loh:{
+				valuecutoff:0.1,
+				focalsizelimit:2000000,
+			},
+			snvindel:{
+				excludeclasses:{
+					E:1,
+					Intron:1,
+					X:1,
+					noncoding:1
+				}
+			}
 		},
 		groups:{
 			BALL:{
