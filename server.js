@@ -8933,7 +8933,7 @@ function parse_textfilewithheader( text ) {
 	const header = lines[0].split('\t')
 	const items = []
 	for(let i=1; i<lines.length; i++) {
-		//if(lines[i][0]=='#') continue
+		if(lines[i][0]=='#') continue
 		const l = lines[i].split('\t')
 		const item = {}
 		for(let j=0; j<header.length; j++) {
