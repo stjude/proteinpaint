@@ -196,29 +196,11 @@ export function makeTk_legend(block, tk) {
 		}
 	}
 
-/*
-	if(!tk.singlesample && !tk.iscustom) {
-		// official, multi-sample
-
-		const row = table.append('tr')
-			.style('display','none')
-			.style('margin','10px')
-		row.append('td')
-			.style('text-align','right')
-			.style('opacity',.5)
-			.text('Cancer')
-		tk.legend_samplegroup = {
-			row: row,
-			color: scaleOrdinal(schemeCategory20),
-			holder: row.append('td'),
-			hidden: new Set(),
-		}
-	}
-	*/
 
 	// sv chr color
 	{
 		const row = table.append('tr').style('display','none')
+		// PLEASE CHECK may not to set row.hidden
 		row.hidden=1
 		tk.legend_hideable_rows.push(row)
 		tk.legend_svchrcolor={
@@ -234,6 +216,7 @@ export function makeTk_legend(block, tk) {
 	}
 
 
+
 	if(tk.sampleAttribute && !tk.singlesample) {
 		/*
 		official only
@@ -241,7 +224,7 @@ export function makeTk_legend(block, tk) {
 		initiate attributes used for filtering & legend display
 		*/
 		for(const key in tk.sampleAttribute.attributes) {
-			const attr = tk.sampleAttribute.attributes[ key ];
+			const attr = tk.sampleAttribute.attributes[ key ]
 			if(!attr.filter) {
 				// not a filter
 				continue
