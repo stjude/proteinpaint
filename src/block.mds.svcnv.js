@@ -386,7 +386,7 @@ function addLoadParameter( par, tk ) {
 	{
 		// from mclass.hidden, only dt are used for filtering, vcf class currently filter on client
 		const hiddendt = []
-		for(const k of tk.legend_mclass.hidden) {
+		for(const k of tk.legend_mclass.hiddenvalues) {
 			if(Number.isInteger(k)) hiddendt.push(k)
 		}
 		if(hiddendt.length) {
@@ -3430,7 +3430,7 @@ function vcfdata_prep(tk, block) {
 		} else {
 			throw('unknown dt '+m.dt)
 		}
-		if( !tk.legend_mclass.hidden.has( m.class ) ) {
+		if( !tk.legend_mclass.hiddenvalues.has( m.class ) ) {
 			tk.data_vcf.push( m )
 		}
 	}

@@ -4,7 +4,6 @@ import {legend_newrow} from './block.legend'
 import * as common from './common'
 import {loadTk} from './block.mds.svcnv'
 
-
 /*
 *********** exported:
 
@@ -17,7 +16,6 @@ updateLegend_multiSample
 *********** internal:
 may_legend_svchr
 may_legend_mclass
-may_legend_samplegroup
 may_legend_mutationAttribute
 */
 
@@ -39,20 +37,21 @@ export function makeTk_legend(block, tk) {
 
 	tk.legend_table = table
 	// track hideable rows that are non-mutation attr 
-	tk.legend_hideable_rows = []
+	tk.legend_hideable = []
 
 	{
 		const row = table.append('tr')
 		tk.legend_mclass = {
 			row:row,
-			hidden: new Set(),
+			hiddenvalues: new Set(),
+			hidden: false,
 		}
 		row.append('td')
 			.style('text-align','right')
 			.style('opacity',.5)
 			.text('Mutation')
 		tk.legend_mclass.holder = row.append('td')
-		tk.legend_hideable_rows.push(row)
+		tk.legend_hideable.push(tk.legend_mclass)
 	}
 
 	// cnv/loh color scale showing in legend, only for multi-sample
@@ -74,7 +73,7 @@ export function makeTk_legend(block, tk) {
 			.style('text-align','right')
 			.style('opacity',.5)
 			.text('CNV log2(ratio)')
-		tk.legend_hideable_rows.push(tk.cnvcolor.cnvlegend.row)
+		tk.legend_hideable.push(tk.cnvcolor.cnvlegend)
 
 		{
 			const svg = tk.cnvcolor.cnvlegend.row
@@ -161,7 +160,7 @@ export function makeTk_legend(block, tk) {
 			.style('text-align','right')
 			.style('opacity',.5)
 			.text('LOH seg.mean')
-		tk.legend_hideable_rows.push(tk.cnvcolor.lohlegend.row)
+		tk.legend_hideable.push(tk.cnvcolor.lohlegend)
 
 		{
 			const svg = tk.cnvcolor.lohlegend.row
@@ -200,19 +199,19 @@ export function makeTk_legend(block, tk) {
 	// sv chr color
 	{
 		const row = table.append('tr').style('display','none')
-		// PLEASE CHECK may not to set row.hidden
-		row.hidden=1
-		tk.legend_hideable_rows.push(row)
 		tk.legend_svchrcolor={
 			row:row,
 			interchrs:new Set(),
-			colorfunc: scaleOrdinal(schemeCategory20)
+			colorfunc: scaleOrdinal(schemeCategory20),
+			hidden: true
 		}
 		row.append('td')
 			.style('text-align','right')
 			.style('opacity',.5)
 			.text('SV chromosome')
 		tk.legend_svchrcolor.holder = row.append('td')
+		// PLEASE CHECK may not to set row.hidden
+		tk.legend_hideable.push(tk.legend_svchrcolor)
 	}
 
 
@@ -249,16 +248,6 @@ export function makeTk_legend(block, tk) {
 
 			attr.legendholder = attr.legendrow.append('td')
 		}
-
-/*
-		tk.legend_more_row = table.append('tr')
-		tk.legend_more_label = tk.legend_more_row.append('td')
-								.style('text-align','right')
-								.append('span')
-		// blank cell for now since hidden legend items
-		// are displayed in pop-down menu, not in this row
-		tk.legend_more_row.append('td') 
-		*/
 	}
 
 
@@ -294,20 +283,15 @@ export function makeTk_legend(block, tk) {
 
 			attr.legendholder = attr.legendrow.append('td')
 		}
-
-		/*
-		FIXME the MORE button should not be dependent on mutationAttribute
-		mutationAttribute is optional, the dataset is allowed not to have it, in that case, the MORE button won't be made
-		but other legend categories are hiddable now, and they need the MORE button
-		*/
-		tk.legend_more_row = table.append('tr')
-		tk.legend_more_label = tk.legend_more_row.append('td')
-								.style('text-align','right')
-								.append('span')
-		// blank cell for now since hidden legend items
-		// are displayed in pop-down menu, not in this row
-		tk.legend_more_row.append('td') 
 	}
+
+	tk.legend_more_row = table.append('tr')
+	tk.legend_more_label = tk.legend_more_row.append('td')
+							.style('text-align','right')
+							.append('span')
+	// blank cell for now since hidden legend items
+	// are displayed in pop-down menu, not in this row
+	tk.legend_more_row.append('td')
 }
 
 
@@ -323,7 +307,6 @@ export function update_legend(tk, block) {
 		return
 	}
 	// is multi-sample: also do following
-	//may_legend_samplegroup(tk, block)
 	may_legend_mutationAttribute(tk, block)
 }
 
@@ -461,7 +444,7 @@ function may_legend_mclass(tk, block) {
 					.attr('class','sja_menuoption')
 					.text('Hide')
 					.on('click',()=>{
-						tk.legend_mclass.hidden.add(key)
+						tk.legend_mclass.hiddenvalues.add(key)
 						applychange()
 					})
 
@@ -470,18 +453,18 @@ function may_legend_mclass(tk, block) {
 					.text('Show only')
 					.on('click',()=>{
 						for(const c2 of classes.keys()) {
-							tk.legend_mclass.hidden.add(c2)
+							tk.legend_mclass.hiddenvalues.add(c2)
 						}
-						tk.legend_mclass.hidden.delete(key)
+						tk.legend_mclass.hiddenvalues.delete(key)
 						applychange()
 					})
 
-				if(tk.legend_mclass.hidden.size) {
+				if(tk.legend_mclass.hiddenvalues.size) {
 					tk.tip2.d.append('div')
 						.attr('class','sja_menuoption')
 						.text('Show all')
 						.on('click',()=>{
-							tk.legend_mclass.hidden.clear()
+							tk.legend_mclass.hiddenvalues.clear()
 							applychange()
 						})
 				}
@@ -505,14 +488,14 @@ function may_legend_mclass(tk, block) {
 	}
 
 	// hidden
-	for(const key of tk.legend_mclass.hidden) {
+	for(const key of tk.legend_mclass.hiddenvalues) {
 		tk.legend_mclass.holder.append('div')
 			.style('display','inline-block')
 			.attr('class','sja_clb')
 			.style('text-decoration','line-through')
 			.text( Number.isInteger(key) ? common.dt2label[key] : common.mclass[key].label )
 			.on('click',()=>{
-				tk.legend_mclass.hidden.delete( key )
+				tk.legend_mclass.hiddenvalues.delete( key )
 				applychange()
 			})
 	}
@@ -534,307 +517,211 @@ function may_legend_mclass(tk, block) {
 
 
 
-
-function may_legend_samplegroup(tk, block) {
-	if(!tk.legend_samplegroup) {
-		// only for official track: not available for custom track
-		return
-	}
-
-	if (!tk.legend_hideable_rows.includes(tk.legend_samplegroup.row)) {
-		tk.legend_hideable_rows.push(tk.legend_samplegroup.row)
-	}
-	tk.legend_samplegroup.row.style('display','table-row')
-	tk.legend_samplegroup.holder.selectAll('*').remove()
-
-	const shownamegroups = []
-	let numSamples=0
-
-	if(tk._data) {
-		for(const g of tk._data) {
-			if(g.name && g.name!='Unannotated') {
-				shownamegroups.push(g)
-				numSamples += g.samples.length
-			}
-		}
-	}
-
-	tk.legend_samplegroup.total_count = numSamples
-	if(shownamegroups.length>0) {
-
-		for(const g of shownamegroups) {
-
-			const cell = tk.legend_samplegroup.holder.append('div')
-				.style('display','inline-block')
-				.attr('class','sja_clb')
-				.on('click',()=>{
-					tk.tip2.showunder(cell.node())
-						.clear()
-					if(tk.legend_samplegroup.hidden.has(g.name)) {
-						tk.tip2.d.append('div')
-							.attr('class','sja_menuoption')
-							.text('Show')
-							.on('click',()=>{
-								tk.tip2.hide()
-								tk.legend_samplegroup.hidden.delete( g.name )
-								loadTk(tk,block)
-							})
-					} else {
-						tk.tip2.d.append('div')
-							.attr('class','sja_menuoption')
-							.text('Hide')
-							.on('click',()=>{
-								tk.tip2.hide()
-								tk.legend_samplegroup.hidden.add( g.name )
-								loadTk(tk,block)
-							})
-					}
-					tk.tip2.d.append('div')
-						.attr('class','sja_menuoption')
-						.text('Show only')
-						.on('click',()=>{
-							tk.tip2.hide()
-							for(const g2 of tk._data) {
-								if(g2.name && g2.name!='Unannotated') {
-									tk.legend_samplegroup.hidden.add(g2.name)
-								}
-							}
-							tk.legend_samplegroup.hidden.delete( g.name )
-							loadTk(tk,block)
-						})
-					if(tk.legend_samplegroup.hidden.size) {
-						tk.tip2.d.append('div')
-							.attr('class','sja_menuoption')
-							.text('Show all')
-							.on('click',()=>{
-								tk.tip2.hide()
-								tk.legend_samplegroup.hidden.clear()
-								loadTk(tk,block)
-							})
-					}
-				})
-
-
-			cell.append('div')
-				.style('display','inline-block')
-				.attr('class','sja_mcdot')
-				.style('background', tk.legend_samplegroup.color(g.name) )
-				.text(g.samples.length)
-			cell.append('div')
-				.style('display','inline-block')
-				.style('color', tk.legend_samplegroup.color(g.name))
-				.html('&nbsp;'+g.name)
-		}
-	}
-
-	// hidden groups
-	for(const name of tk.legend_samplegroup.hidden) {
-		const cell = tk.legend_samplegroup.holder.append('div')
-			.style('display','inline-block')
-			.attr('class','sja_clb')
-			.style('text-decoration','line-through')
-			.text(name)
-			.on('click',()=>{
-				// directly click to show
-				tk.legend_samplegroup.hidden.delete( name )
-				loadTk(tk, block)
-			})
-	}
-}
-
 function may_legend_mutationAttribute(tk, block) {
+	// collects attributes that are selected to be hidden
+	const hiddenMutationAttributes=[]
+
 	/*
 	official-only, multi-sample
 	filtering by mutation attribute is done on server
 	*/
+	for(const attrGrp of ['sampleAttribute','mutationAttribute']) {
+		if(!tk[attrGrp]) return
+		if(tk.singlesample) {
+			// multi-sample only
+			return
+		}
 
-	if(!tk.mutationAttribute) return
-	if(tk.singlesample) {
-		// multi-sample only
-		return
-	}
+		// clear
+		for(const key in tk[attrGrp].attributes) {
+			const attr = tk[attrGrp].attributes[key]
+			if(!attr.filter) continue;
+			attr.value2count.clear()
+		}
 
-	// clear
-	for(const key in tk.mutationAttribute.attributes) {
-		const attr = tk.mutationAttribute.attributes[key]
-		if(!attr.filter) continue
-		attr.value2count.clear()
-	}
-
-	// count
-	if(tk._data) {
-		for(const g of tk._data) {
-			for(const s of g.samples) {
-				for(const i of s.items) {
-					// won't count if i.mattr is undefined
-					count_mutationAttribute( i.mattr, tk, i.dt )
+		// count
+		if (attrGrp=='sampleAttribute') {
+			for(const key in tk.sampleAttribute.attributes) {
+				for(const sample in tk.sampleAttribute.samples) {
+					count_sampleAttribute(key, tk.sampleAttribute.attributes[key], tk.sampleAttribute.samples[sample])
+				}
+			}
+		} else {
+			if(tk._data) {
+				for(const g of tk._data) {
+					for(const s of g.samples) {
+						for(const i of s.items) {
+							// won't count if i.mattr is undefined
+							count_mutationAttribute(i.mattr, tk, i.dt )
+						}
+					}
+				}
+			}
+			if(tk.data_vcf) {
+				for(const m of tk.data_vcf) {
+					if(m.dt==common.dtsnvindel) {
+						if(!m.sampledata) continue
+						for(const s of m.sampledata) {
+							count_mutationAttribute(s, tk, m.dt )
+						}
+					} else {
+						console.error('unknown dt: '+m.dt)
+					}
 				}
 			}
 		}
-	}
-	if(tk.data_vcf) {
-		for(const m of tk.data_vcf) {
-			if(m.dt==common.dtsnvindel) {
-				if(!m.sampledata) continue
-				for(const s of m.sampledata) {
-					count_mutationAttribute( s, tk, m.dt )
-				}
-			} else {
-				console.error('unknown dt: '+m.dt)
-			}
-		}
-	}
 
-	// show legend
-	const hiddenMutationAttributes=[] // collects attributes that are selected to be hidden
+		// show legend
+		for(const key in tk[attrGrp].attributes) {
+			const attr = tk[attrGrp].attributes[ key ];
+			if(!attr.filter) continue
 
-	for(const key in tk.mutationAttribute.attributes) {
-		const attr = tk.mutationAttribute.attributes[ key ];
-		if(!attr.filter) continue
-
-		attr.legendcell
-			.classed('sja_hideable_legend',true)
-			.on('click',()=>{
-				tk.tip2.hide()
-				attr.hidden=1
-				tk.legend_more_row.style('display','table-row');
-				client.flyindi(attr.legendcell,tk.legend_more_label)
-				attr.legendrow.transition().delay(500)
-					.style('display','none')
-				setTimeout(()=>{
-					may_legend_mutationAttribute(tk,block)
-				},500)
-			})
-
-		if(attr.hidden) {
-			// this attribute is hidden
-			attr.legendrow.style('display','none')
-			hiddenMutationAttributes.push(attr)
-			continue
-		}
-
-		// this attribute is not hidden
-
-		if(attr.value2count.size + attr.hiddenvalues.size == 0 ) {
-			// no value after counting, no hidden value either: no data for this attribute
-			attr.legendrow.style('display','none')
-			continue
-		}
-
-		// this attribute is shown
-		attr.legendrow.style('display','table-row')
-
-		attr.legendholder.selectAll('*').remove()
-
-		const lst = [ ...attr.value2count ]
-		lst.sort( (i,j)=> j[1]-i[1] )
-
-		for(const [valuestr, _o] of lst) {
-
-			const printstr = attr.values[ valuestr ] ? attr.values[valuestr].name : valuestr
-
-			const cell = attr.legendholder.append('div')
-				.style('display','inline-block')
-				.attr('class','sja_clb')
+			attr.legendcell
+				.classed('sja_hideable_legend',true)
 				.on('click',()=>{
-					tk.tip2.showunder(cell.node())
-						.clear()
+					tk.tip2.hide()
+					attr.hidden=1
+					tk.legend_more_row.style('display','table-row');
+					client.flyindi(attr.legendcell,tk.legend_more_label)
+					attr.legendrow.transition().delay(500)
+						.style('display','none')
+					setTimeout(()=>{
+						may_legend_mutationAttribute(tk,block)
+					},500)
+				})
 
-					if(attr.hiddenvalues.has(valuestr)) {
+			if(attr.hidden) {
+				// this attribute is hidden
+				attr.legendrow.style('display','none')
+				hiddenMutationAttributes.push(attr)
+				continue
+			}
+
+			// this attribute is not hidden
+
+			if(attr.value2count.size + attr.hiddenvalues.size == 0 ) {
+				// no value after counting, no hidden value either: no data for this attribute
+				attr.legendrow.style('display','none')
+				continue
+			}
+
+			// this attribute is shown
+			attr.legendrow.style('display','table-row')
+
+			attr.legendholder.selectAll('*').remove()
+
+			const lst = [ ...attr.value2count ]
+			lst.sort( (i,j)=> j[1]-i[1] )
+
+			for(const [valuestr, _o] of lst) {
+
+				const printstr = attr.values[ valuestr ] ? attr.values[valuestr].name : valuestr
+
+				const cell = attr.legendholder.append('div')
+					.style('display','inline-block')
+					.attr('class','sja_clb')
+					.on('click',()=>{
+						tk.tip2.showunder(cell.node())
+							.clear()
+
+						if(attr.hiddenvalues.has(valuestr)) {
+							tk.tip2.d.append('div')
+								.attr('class','sja_menuoption')
+								.text('Show')
+								.on('click',()=>{
+									tk.tip2.hide()
+									attr.hiddenvalues.delete( valuestr )
+									loadTk(tk,block)
+								})
+						} else {
+							tk.tip2.d.append('div')
+								.attr('class','sja_menuoption')
+								.text('Hide')
+								.on('click',()=>{
+									tk.tip2.hide()
+									attr.hiddenvalues.add( valuestr )
+									loadTk(tk,block)
+								})
+						}
 						tk.tip2.d.append('div')
 							.attr('class','sja_menuoption')
-							.text('Show')
+							.text('Show only')
 							.on('click',()=>{
 								tk.tip2.hide()
+								for(const [vstr,c] of lst) {
+									attr.hiddenvalues.add( vstr )
+								}
 								attr.hiddenvalues.delete( valuestr )
 								loadTk(tk,block)
 							})
-					} else {
-						tk.tip2.d.append('div')
-							.attr('class','sja_menuoption')
-							.text('Hide')
-							.on('click',()=>{
-								tk.tip2.hide()
-								attr.hiddenvalues.add( valuestr )
-								loadTk(tk,block)
-							})
-					}
-					tk.tip2.d.append('div')
-						.attr('class','sja_menuoption')
-						.text('Show only')
-						.on('click',()=>{
-							tk.tip2.hide()
-							for(const [vstr,c] of lst) {
-								attr.hiddenvalues.add( vstr )
-							}
-							attr.hiddenvalues.delete( valuestr )
-							loadTk(tk,block)
-						})
-					if(attr.hiddenvalues.size) {
-						tk.tip2.d.append('div')
-							.attr('class','sja_menuoption')
-							.text('Show all')
-							.on('click',()=>{
-								tk.tip2.hide()
-								attr.hiddenvalues.clear()
-								loadTk(tk,block)
-							})
-					}
-
-					// label for this value?
-					if(attr.values[ valuestr ] && attr.values[valuestr].label) {
-						tk.tip2.d.append('div')
-							.text(attr.values[valuestr].label)
-							.style('opacity',.5)
-							.style('font-size','.7em')
-							.style('margin','10px')
-					}
-
-					// show by-dt count
-					{
-						const lst2 = [ ..._o.dt2count ]
-						lst2.sort( (i,j) => j[1]-i[1] )
-
-						const table = tk.tip2.d.append('div')
-							.style('margin', '5px')
-							.style('font-size', '.7em')
-							.style('opacity',.8)
-							.style('border-spacing','4px')
-						for(const [dt, count] of lst2) {
-							const tr = table.append('tr')
-							tr.append('td')
-								.text( common.dt2label[ dt ])
-							tr.append('td')
-								.text( count )
+						if(attr.hiddenvalues.size) {
+							tk.tip2.d.append('div')
+								.attr('class','sja_menuoption')
+								.text('Show all')
+								.on('click',()=>{
+									tk.tip2.hide()
+									attr.hiddenvalues.clear()
+									loadTk(tk,block)
+								})
 						}
-					}
-				})
 
+						// label for this value?
+						if(attr.values[ valuestr ] && attr.values[valuestr].label) {
+							tk.tip2.d.append('div')
+								.text(attr.values[valuestr].label)
+								.style('opacity',.5)
+								.style('font-size','.7em')
+								.style('margin','10px')
+						}
 
-			cell.append('div')
-				.style('display','inline-block')
-				.attr('class','sja_mcdot')
-				.style('background', '#858585')
-				.text( _o.totalitems )
-			cell.append('span')
-				.html('&nbsp;' + printstr )
-		}
+						// show by-dt count
+						if (_o.dt2count) {
+							const lst2 = [ ..._o.dt2count ]
+							lst2.sort( (i,j) => j[1]-i[1] )
 
-		if(attr.hiddenvalues.size) {
-			// this attribute has hidden values, show with strike-through
-			for(const valuestr of attr.hiddenvalues) {
-
-				const printstr = (attr.values[ valuestr ] && attr.values[valuestr].name) ? attr.values[valuestr].name : valuestr
-
-				attr.legendholder.append('div')
-					.style('display','inline-block')
-					.attr('class','sja_clb')
-					.style('text-decoration','line-through')
-					.text(printstr)
-					.on('click',()=>{
-						attr.hiddenvalues.delete( valuestr )
-						loadTk( tk, block )
+							const table = tk.tip2.d.append('div')
+								.style('margin', '5px')
+								.style('font-size', '.7em')
+								.style('opacity',.8)
+								.style('border-spacing','4px')
+							for(const [dt, count] of lst2) {
+								const tr = table.append('tr')
+								tr.append('td')
+									.text( common.dt2label[ dt ])
+								tr.append('td')
+									.text( count )
+							}
+						}
 					})
+
+				const color = attrGrp=='sampleAttribute' && tk.legend_samplegroups && tk.legend_samplegroups.color(valuestr)
+							? tk.legend_samplegroups.color(valuestr) : '#858585'
+
+				cell.append('div')
+					.style('display','inline-block')
+					.attr('class','sja_mcdot')
+					.style('background', color)
+					.text( _o.totalitems )
+				cell.append('span')
+					.html('&nbsp;' + printstr )
+			}
+
+			if(attr.hiddenvalues.size) {
+				// this attribute has hidden values, show with strike-through
+				for(const valuestr of attr.hiddenvalues) {
+
+					const printstr = (attr.values[ valuestr ] && attr.values[valuestr].name) ? attr.values[valuestr].name : valuestr
+
+					attr.legendholder.append('div')
+						.style('display','inline-block')
+						.attr('class','sja_clb')
+						.style('text-decoration','line-through')
+						.text(printstr)
+						.on('click',()=>{
+							attr.hiddenvalues.delete( valuestr )
+							loadTk( tk, block )
+						})
+				}
 			}
 		}
 	}
@@ -845,24 +732,23 @@ function may_legend_mutationAttribute(tk, block) {
 function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 	// handle non-mutation attribute
 	let numHiddenRows=0
-	for(const row of tk.legend_hideable_rows) {
-		row.select('td')
+	for(const hideable of tk.legend_hideable) {
+		hideable.row.select('td')
 			.classed('sja_hideable_legend',true)
 			.on('click',()=>{
 				tk.tip2.hide()
-				// PLEASE CORRECT row is generated by external code we don't have control over, by mutating object may affect how it works
-				row.hidden=1
+				hideable.hidden=1
 				tk.legend_more_row.style('display','table-row');
-				client.flyindi(row.select('td'),tk.legend_more_label)
-				row.transition().delay(500)
+				client.flyindi(hideable.row.select('td'),tk.legend_more_label)
+				hideable.row.transition().delay(500)
 					.style('display','none')
 				setTimeout(()=>{
 					may_legend_mutationAttribute(tk,block)
 				},500)
 			})
 
-		row.style('display',row.hidden ? 'none' : 'table-row')
-		if (row.hidden) {
+		hideable.row.style('display',hideable.hidden ? 'none' : 'table-row')
+		if (hideable.hidden) {
 			numHiddenRows++
 		}
 	}
@@ -880,34 +766,27 @@ function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 			.on('click',()=>{
 				tk.tip2.showunder(btn.node()).clear()
 				
-				for(const row of tk.legend_hideable_rows) {
-					if (!row.hidden) continue
+				for(const hideable of tk.legend_hideable) {
+					if (!hideable.hidden) continue
 					const div = tk.tip2.d.append('div')
 						.attr('class','sja_menuoption')
 						.on('click',()=>{
 							tk.tip2.hide()
-							row.hidden=0
+							hideable.hidden=0
 							may_legend_mutationAttribute(tk,block)
 						})
 
 					// PLEASE CHECK how does this equivalency testing work?
-					if(row == tk.legend_mclass.row) {					
+					if(hideable.hidden && hideable.total_count) {					
 						div.append('div')
 							.style('display','inline-block')
 							.attr('class','sja_mcdot')
 							.style('background', '#858585')
-							.text( tk.legend_mclass.total_count )
-					} 
-					if(row == tk.legend_samplegroup.row) {					
-						div.append('div')
-							.style('display','inline-block')
-							.attr('class','sja_mcdot')
-							.style('background', '#858585')
-							.text( tk.legend_samplegroup.total_count )
-					} 
+							.text( hideable.total_count )
+					}
 
 					div.append('span')
-						.html('&nbsp;' + row.node().firstChild.innerHTML )
+						.html('&nbsp;' + hideable.row.node().firstChild.innerHTML )
 				}
 
 				for(const attr of hiddenMutationAttributes) {
@@ -935,26 +814,43 @@ function may_process_hideable_rows(tk,block,hiddenMutationAttributes) {
 }
 
 
+function count_sampleAttribute(key, attr, sample) {
+	const value = sample[key]
+	if(!attr.value2count.has( value )) {
+		attr.value2count.set( value, {
+			totalitems: 0
+		})
+	}
+	attr.value2count.get( value ).totalitems++
+	if (!attr.values) {
+		attr.values = {}
+	}
+	if (!attr.values[value]) {
+		attr.values[value]={
+			name: value,
+			label: value
+		}
+	}
+}
 
 
-
-function count_mutationAttribute( mattr, tk, itemdt ) {
+function count_mutationAttribute(mattr, tk, itemdt ) {
 	if(!mattr) {
 		// the item does not have mattr, do not count
 		return
 	}
-
+ 
 	for(const key in tk.mutationAttribute.attributes) {
 		const attr = tk.mutationAttribute.attributes[key]
 		if(!attr.filter) continue
-
+ 
 		const value = mattr[ key ]
 
 		if(value==undefined) {
 			// not annotated, do not count
 			continue
 		}
-
+ 
 		/*
 		no longer acknowledge unannotated values
 		if( value==undefined ) {
