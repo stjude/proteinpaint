@@ -9566,44 +9566,6 @@ function mds_init(ds,genome) {
 		}
 	}
 
-	if(ds.annotationsampleset2matrix) {
-		if(!ds.cohort) return 'ds.cohort misssing when annotationsampleset2matrix is in use'
-		if(!ds.cohort.annotation) return 'ds.cohort.annotation misssing when annotationsampleset2matrix is in use'
-		if(!ds.annotationsampleset2matrix.key) return '.key STR missing in annotationsampleset2matrix'
-		if(!ds.annotationsampleset2matrix.groups) return '.groups{} missing in annotationsampleset2matrix'
-		if(typeof(ds.annotationsampleset2matrix.groups)!='object') return 'ds.annotationsampleset2matrix.groups{} not an object'
-		for(const groupvalue in ds.annotationsampleset2matrix.groups) {
-			// for each value that defines a group, it's associated with a matrix
-			const smat = ds.annotationsampleset2matrix.groups[groupvalue]
-			if(!smat.features) return '.features[] missing from group '+groupvalue
-			if(!Array.isArray(smat.features)) return '.features[] should be array from group '+groupvalue
-			if(smat.features.length==0) return '.features[] zero length from group '+groupvalue
-			for(const feature of smat.features) {
-
-				if(ds.annotationsampleset2matrix.commonfeatureattributes) {
-					// apply common attributes to each feature
-					for(const k in ds.annotationsampleset2matrix.commonfeatureattributes) {
-						feature[ k ] = ds.annotationsampleset2matrix.commonfeatureattributes[ k ]
-					}
-				}
-
-				if(feature.ismutation) {
-					if(!feature.position) return 'position missing from feature '+JSON.stringify(feature)+' from group '+groupvalue
-					// verify querykeylst
-					continue
-				}
-
-				return 'unknown feature type from group '+groupvalue
-			}
-			if(!smat.limitsamplebyeitherannotation) return '.limitsamplebyeitherannotation[] missing from group '+groupvalue
-			if(!Array.isArray(smat.limitsamplebyeitherannotation)) return '.limitsamplebyeitherannotation[] should be array from group '+groupvalue
-			if(smat.limitsamplebyeitherannotation.length==0) return '.limitsamplebyeitherannotation[] zero length from group '+groupvalue
-			for(const lim of smat.limitsamplebyeitherannotation) {
-				if(!lim.key) return 'key missing from one of limitsamplebyeitherannotation from group '+groupvalue
-				if(!lim.value) return 'value missing from one of limitsamplebyeitherannotation from group '+groupvalue
-			}
-		}
-	}
 
 
 	if(ds.queries) {
@@ -9651,6 +9613,57 @@ function mds_init(ds,genome) {
 				return 'unknown type of query from '+querykey
 			}
 		}
+	}
+
+
+
+	if(ds.annotationsampleset2matrix) {
+		if(!ds.cohort) return 'ds.cohort misssing when annotationsampleset2matrix is in use'
+		if(!ds.cohort.annotation) return 'ds.cohort.annotation misssing when annotationsampleset2matrix is in use'
+		if(!ds.queries) return 'ds.queries misssing when annotationsampleset2matrix is in use'
+		if(!ds.annotationsampleset2matrix.key) return '.key STR missing in annotationsampleset2matrix'
+		if(!ds.annotationsampleset2matrix.groups) return '.groups{} missing in annotationsampleset2matrix'
+		if(typeof(ds.annotationsampleset2matrix.groups)!='object') return 'ds.annotationsampleset2matrix.groups{} not an object'
+		for(const groupvalue in ds.annotationsampleset2matrix.groups) {
+			// for each value that defines a group, it's associated with a matrix
+			const smat = ds.annotationsampleset2matrix.groups[groupvalue]
+			if(!smat.features) return '.features[] missing from group '+groupvalue
+			if(!Array.isArray(smat.features)) return '.features[] should be array from group '+groupvalue
+			if(smat.features.length==0) return '.features[] zero length from group '+groupvalue
+			for(const feature of smat.features) {
+
+				if(ds.annotationsampleset2matrix.commonfeatureattributes) {
+					// apply common attributes to each feature
+					for(const k in ds.annotationsampleset2matrix.commonfeatureattributes) {
+						// not to overwrite predefined value
+						if(feature[ k ] == undefined) {
+							feature[ k ] = ds.annotationsampleset2matrix.commonfeatureattributes[ k ]
+						}
+					}
+				}
+
+				if(feature.ismutation) {
+					if(!feature.position) return 'position missing from feature '+JSON.stringify(feature)+' from group '+groupvalue
+					if(!feature.querykeylst) return '.querykeylst[] missing from ismutation feature from group '+groupvalue
+					if(!Array.isArray(feature.querykeylst)) return '.querykeylst[] not an array from ismutation feature from group '+groupvalue
+					if(feature.querykeylst.length==0) return '.querykeylst[] zero length from ismutation feature from group '+groupvalue
+					for(const querykey of feature.querykeylst) {
+						if(!ds.queries[ querykey ]) return 'unknown query key "'+querykey+'" from ismutation feature of group '+groupvalue
+					}
+					continue
+				}
+
+				return 'unknown feature type from group '+groupvalue
+			}
+			if(!smat.limitsamplebyeitherannotation) return '.limitsamplebyeitherannotation[] missing from group '+groupvalue
+			if(!Array.isArray(smat.limitsamplebyeitherannotation)) return '.limitsamplebyeitherannotation[] should be array from group '+groupvalue
+			if(smat.limitsamplebyeitherannotation.length==0) return '.limitsamplebyeitherannotation[] zero length from group '+groupvalue
+			for(const lim of smat.limitsamplebyeitherannotation) {
+				if(!lim.key) return 'key missing from one of limitsamplebyeitherannotation from group '+groupvalue
+				if(!lim.value) return 'value missing from one of limitsamplebyeitherannotation from group '+groupvalue
+			}
+		}
+		delete ds.annotationsampleset2matrix.commonfeatureattributes
 	}
 
 /*
