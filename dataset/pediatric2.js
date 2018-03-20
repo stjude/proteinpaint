@@ -137,28 +137,27 @@ module.exports={
 	},
 
 
-	/*
-	in svcnv track, sample groups (HM, BALL) are defined by annotation attributes (groupsamplebyattrlst)
-	such a group can get a preconfigured samplematrix
-	key the matrix to the sample group by just one attribute
-	*/
 	annotationsampleset2matrix: {
 		key:'diagnosis_short',
-		// key for sample attribute
+		commonfeatureattributes:{
+			querykeylst:['svcnv','snvindel']
+		},
 		groups:{
-			// key is value for annotationkey
 			BALL:{
 				features:[
-					{ismutation:1,genename:'ETV6',position:'chr12:11802788-12048325',querykeylst:['svcnv','snvindel']},
-					{ismutation:1,genename:'RUNX1',position:'chr21:36160098-36421595',querykeylst:['svcnv','snvindel']},
-					{ismutation:1,genename:'KRAS',position:'chr12:25357723-25403865',querykeylst:['svcnv','snvindel']},
-					{ismutation:1,genename:'NRAS',position:'chr1:115247085-115259515',querykeylst:['svcnv','snvindel']},
-					{ismutation:1,genename:'JAK2',position:'chr9:4985245-5128183',querykeylst:['svcnv','snvindel']},
+					{ismutation:1,label:'ETV6',position:'chr12:11802788-12048325'},
+					{ismutation:1,label:'RUNX1',position:'chr21:36160098-36421595'},
+					{ismutation:1,label:'KRAS',position:'chr12:25357723-25403865'},
+					{ismutation:1,label:'NRAS',position:'chr1:115247085-115259515'},
+					{ismutation:1,label:'JAK2',position:'chr9:4985245-5128183'},
 				],
 				limitsamplebyeitherannotation:[ {key:'diagnosis_short',value:'BALL'} ],
 			}
 		}
 	},
+
+
+
 
 /************* not ready to migrate to general track yet
 	key2generalTracks:{
