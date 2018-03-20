@@ -7784,6 +7784,16 @@ function samplematrix_task_isvcf(feature, ds, dsquery, req) {
 								continue
 							}
 
+							// extract class/mname from vep csq etc, must be done here but not on client
+							common.vcfcopymclass( m, {} )
+
+							if(feature.snvindel) {
+								if(feature.snvindel.excludeclasses && feature.snvindel.excludeclasses[ m.class ]) {
+									// m class is one of excluded
+									continue
+								}
+							}
+
 							// filters on samples
 
 							if(req.query.limitsamplebyeitherannotation) {
@@ -7811,6 +7821,7 @@ function samplematrix_task_isvcf(feature, ds, dsquery, req) {
 							}
 
 
+
 							// delete the obsolete attr
 							for(const sb of m.sampledata) {
 								delete sb.allele2readcount
@@ -7823,7 +7834,6 @@ function samplematrix_task_isvcf(feature, ds, dsquery, req) {
 
 							m.dt = common.dtsnvindel
 
-							common.vcfcopymclass( m, {} ) // extract class/mname from vep csq etc.
 
 							data.push(m)
 						}
