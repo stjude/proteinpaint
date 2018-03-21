@@ -24,6 +24,7 @@ JUMP __draw __menu
 	.validate_config()
 	.draw_matrix()
 	.prepFeatureData()
+	.click_cell
 	feature2arg()
 
 
@@ -1074,6 +1075,10 @@ export class Samplematrix {
 				d3event.target.setAttribute('stroke-opacity',0)
 				this.tip.hide()
 			})
+			.on('click',()=> {
+				this.click_cell(sample, feature) 
+			})
+
 		if(item.value < feature.scale.maxv) {
 			rect.attr('fill-opacity', item.value/feature.scale.maxv)
 		}
@@ -1112,6 +1117,9 @@ export class Samplematrix {
 			.on('mouseout',()=>{
 				d3event.target.setAttribute('stroke-opacity',0)
 				this.tip.hide()
+			})
+			.on('click',()=> {
+				this.click_cell(sample, feature) 
 			})
 	}
 
@@ -1357,6 +1365,98 @@ export class Samplematrix {
 
 
 
+	click_cell( sample, feature ) {
+		/*
+		browser view of single sample, to show whatever data's available from the dataset, irrespective of feature type
+		feature provides view range
+
+		some duplication from focus_singlesample(), on fetching assay track for requested sample
+		since there is no block here, so cannot call the existing function
+
+		*/
+
+		Promise.resolve().then(()=>{
+
+			// not general track yet -- still need the svcnv track as trunk
+			let svcnvtk
+			if(this.iscustom) {
+			} else {
+				if(!this.mds) throw('not custom but .mds{} missing')
+				for(const querykey in this.mds.queries) {
+					const tk = this.mds.queries[ querykey ]
+					if(tk.type == common.tkt.mdssvcnv) {
+						// found svcnv from official, must keep the querykey, so build new object
+						svcnvtk = {
+							mds: this.mds,
+							querykey: querykey,
+							singlesample:{
+								name: sample.name
+							}
+						}
+						for(const k in tk) svcnvtk[k] = tk[k]
+						break
+					}
+				}
+			}
+			if(!svcnvtk) throw('cannot find a svcnv tk')
+
+			if(this.iscustom) {
+				// no checking for custom data
+				return { svcnvtk: svcnvtk }
+			}
+
+			if(!this.dslabel) throw('not custom but dslabel missing')
+
+			// for official dataset, check for availability of assay track of this sample
+			const par = {
+				jwt:this.jwt,
+				genome:this.genome.name,
+				dslabel:this.dslabel,
+				querykey: svcnvtk.querykey,
+				gettrack4singlesample: sample.name
+			}
+			return fetch( new Request(this.hostURL+'/mdssvcnv',{
+				method:'POST',
+				body:JSON.stringify(par)
+			}))
+			.then(data=>{return data.json()})
+			.then(data=>{
+				if(data.error) throw('Error checking for assay track: '+data.error)
+				return {
+					svcnvtk: svcnvtk,
+					tracks: data.tracks
+				}
+			})
+
+		})
+		.then( arg=>{
+
+			const pane = client.newpane({x:100,y:100})
+			const blockarg = {
+				jwt: this.jwt,
+				hostURL:this.hostURL,
+				genome:this.genome,
+				holder:pane.body,
+				chr:feature.chr,
+				start:feature.start,
+				stop:feature.stop,
+				tklst:[],
+			}
+			client.first_genetrack_tolist( this.genome, blockarg.tklst )
+			blockarg.tklst.push( arg.svcnvtk )
+			if(arg.tracks) {
+				for(const t of arg.tracks) blockarg.tklst.push( t )
+			}
+			import('./block.js').then(_=>{
+				new _.Block( blockarg )
+			})
+
+		})
+		.catch(err=>{
+			window.alert( typeof(err)=='string' ? err : err.message )
+			if(err.stack) console.log(err.stack)
+		})
+	}
 
 
 
