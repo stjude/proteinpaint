@@ -514,7 +514,7 @@ module.exports={
 							}
 							return ''
 						case common.dtitd:
-							if(m.a && m.b) {
+							if(m.a && m.b && m.a.ratio && m.b.ratio) {
 								return m.a.ratio+' ('+m.a.chimericreads+'/'+Math.ceil(m.a.chimericreads/m.a.ratio)+'), '
 									+m.b.ratio+' ('+m.b.chimericreads+'/'+Math.ceil(m.b.chimericreads/m.b.ratio)+')'
 							}
