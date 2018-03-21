@@ -2327,13 +2327,6 @@ export function focus_singlesample( p ) {
 
 	// add sv-cnv-vcf track in single-sample mode
 	const t2 = {
-		cnvheight:40,
-		midpad:3,
-		stem1:10,
-		stem2:0,
-		stem3:5,
-		legheight:40,
-		discradius:8,
 		bplengthUpperLimit:tk.bplengthUpperLimit,
 		valueCutoff:tk.valueCutoff,
 		lohLengthUpperLimit:tk.lohLengthUpperLimit,
@@ -2658,14 +2651,22 @@ function makeTk(tk, block) {
 
 	tk.tip2 = new client.Menu({padding:'0px'})
 
-/*
-	if(!tk.attrnamespacer) {
-		// fill in for custom track
-		tk.attrnamespacer=', '
-	}
-	*/
 
 	if(tk.singlesample) {
+
+		// set default values
+		if(!tk.midpad) tk.midpad = 3
+		if(!tk.stem1) {
+			tk.stem1 = 10
+			tk.stem2 = 0
+			tk.stem3 = 5
+		}
+		if(!tk.legheight) tk.legheight = 40
+		if(!tk.discradius) tk.discradius = 8
+		if(!tk.bplengthUpperLimit) tk.bplengthUpperLimit = 2000000
+		if(!tk.valueCutoff) tk.valueCutoff = 0.2
+		if(!tk.lohLengthUpperLimit) tk.lohLengthUpperLimit = 2000000
+		if(!tk.segmeanValueCutoff) tk.segmeanValueCutoff = 0.1
 
 		tk.tklabel.text( (tk.name? tk.name+', ' : '') + tk.singlesample.name )
 
