@@ -1076,7 +1076,7 @@ export class Samplematrix {
 				this.tip.hide()
 			})
 			.on('click',()=> {
-				this.click_cell(sample, feature) 
+				this.click_cell(sample, feature)
 			})
 
 		if(item.value < feature.scale.maxv) {
@@ -1119,7 +1119,7 @@ export class Samplematrix {
 				this.tip.hide()
 			})
 			.on('click',()=> {
-				this.click_cell(sample, feature) 
+				this.click_cell(sample, feature)
 			})
 	}
 
@@ -1155,6 +1155,9 @@ export class Samplematrix {
 			.on('mouseout',()=>{
 				d3event.target.setAttribute('stroke-opacity',0)
 				this.tip.hide()
+			})
+			.on('click',()=> {
+				this.click_cell(sample, feature)
 			})
 	}
 
@@ -1200,6 +1203,9 @@ export class Samplematrix {
 				d3event.target.setAttribute('stroke-opacity',0)
 				this.tip.hide()
 			})
+			.on('click',()=> {
+				this.click_cell(sample, feature)
+			})
 	}
 
 	drawCell_isitd(sample,feature,g) {
@@ -1222,6 +1228,9 @@ export class Samplematrix {
 			.on('mouseout',()=>{
 				d3event.target.setAttribute('stroke-opacity',0)
 				this.tip.hide()
+			})
+			.on('click',()=> {
+				this.click_cell(sample, feature)
 			})
 	}
 
@@ -1246,46 +1255,63 @@ export class Samplematrix {
 				d3event.target.setAttribute('stroke-opacity',0)
 				this.tip.hide()
 			})
+			.on('click',()=> {
+				this.click_cell(sample, feature)
+			})
 	}
 
 
 
 	drawCell_ismutation(sample,feature,g) {
 		/*
-		also for issvcnv
+		for features ismutation & issvcnv
+
+		drawing order:
+		cnv/loh/itd > sv/fusion > snvindel
+
 		*/
 
-		const [ nodata, cnvvalue, lohvalue, hasitd, hassv, hasfusion, snvindel ] = getitemforsample_compound( feature, sample )
+		const [ cnv, loh, itd, sv, fusion, snvindel ] = getitemforsample_compound( feature, sample )
+		/*
+		returns array for each data type
+		if multiple items in an array, only use information from first item to draw!!
+		*/
 
-		if(nodata) {
+		if(cnv.length+loh.length+itd.length+sv.length+fusion.length+snvindel.length == 0) {
 			drawEmptycell(sample, feature, g)
 			return
 		}
 
-		if(cnvvalue!=0) {
+		if(cnv.length) {
+			// draw cnv as singular filled-box at bottom
+			const value = cnv[0].value
 			g.append('rect')
 				.attr('width', feature.width)
 				.attr('height', sample.height)
-				.attr('fill', cnvvalue > 0 ? feature.cnv.colorgain : feature.cnv.colorloss )
-				.attr('fill-opacity', Math.abs(cnvvalue) / feature.cnv.maxabslogratio )
+				.attr('fill', value > 0 ? feature.cnv.colorgain : feature.cnv.colorloss )
+				.attr('fill-opacity', Math.abs(value) / feature.cnv.maxabslogratio )
 				.attr('shape-rendering','crispEdges')
 		}
-		if(lohvalue!=0) {
+		if(loh.length) {
+			// draw loh as singlular filled-box at bottom
+			const value = loh[0].value
 			g.append('rect')
 				.attr('width', feature.width)
 				.attr('height', sample.height)
 				.attr('fill', feature.loh.color )
-				.attr('fill-opacity', (lohvalue-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue) )
+				.attr('fill-opacity', (value-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue) )
 				.attr('shape-rendering','crispEdges')
 		}
-		if(hasitd) {
+		if(itd.length) {
+			// draw itd as singular filled-box
 			g.append('rect')
 				.attr('width', feature.width)
 				.attr('height', sample.height)
 				.attr('fill', feature.itd.color )
 				.attr('shape-rendering','crispEdges')
 		}
-		if(hassv) {
+		if(sv.length) {
+			// sv as feature-less circle
 			g.append('circle')
 				.attr('cx', feature.width/2 )
 				.attr('cy', sample.height/2 )
@@ -1293,7 +1319,8 @@ export class Samplematrix {
 				.attr('stroke', feature.sv.color)
 				.attr('fill', 'none')
 		}
-		if(hasfusion) {
+		if(fusion.length) {
+			// fusion as feature-less circle
 			g.append('circle')
 				.attr('cx', feature.width/2 )
 				.attr('cy', sample.height/2 )
@@ -1302,10 +1329,16 @@ export class Samplematrix {
 				.attr('fill', 'none')
 		}
 
-		if(snvindel) {
+		if(snvindel.length) {
+			/*
+			snvindel as cross
+			color by m class
+			if multiple variants, may use class of highest rank
+			*/
+			const m = snvindel[0]
 			const g2 = g.append('g')
 				.attr('transform','translate('+(feature.width/2)+','+(sample.height/2)+')')
-			const color = common.mclass[ snvindel.m.class ].color
+			const color = common.mclass[ m.m.class ].color
 			const w = Math.min(feature.width, sample.height)/2
 			g2.append('line')
 				.attr('x1', -w)
@@ -1335,7 +1368,7 @@ export class Samplematrix {
 				.attr('stroke', color)
 		}
 
-
+		// cover
 		g.append('rect')
 			.attr('width', feature.width)
 			.attr('height', sample.height)
@@ -1351,6 +1384,9 @@ export class Samplematrix {
 			.on('mouseout',()=>{
 				d3event.target.setAttribute('stroke-opacity',0)
 				this.tip.hide()
+			})
+			.on('click',()=> {
+				this.click_cell(sample, feature)
 			})
 	}
 
@@ -1435,6 +1471,7 @@ export class Samplematrix {
 			const blockarg = {
 				jwt: this.jwt,
 				hostURL:this.hostURL,
+				nobox:1,
 				genome:this.genome,
 				holder:pane.body,
 				chr:feature.chr,
@@ -2000,34 +2037,65 @@ export class Samplematrix {
 
 		} else if(f.issvcnv || f.ismutation) {
 
-			const [ nodata, cnvvalue, lohvalue, hasitd, hassv, hasfusion, snvindel ] = getitemforsample_compound( f, sample )
-			if(!nodata) {
-				const says=[]
-				if(cnvvalue!=0) {
-					says.push('<div>CNV <span class=sja_mcdot style="background:'+(cnvvalue>0?f.cnv.colorgain:f.cnv.colorloss)+'">'+cnvvalue+'</div>')
-				}
-				if(lohvalue) {
-					says.push('<div>LOH <span class=sja_mcdot style="background:'+f.loh.color+'">'+lohvalue+'</div>')
-				}
-				if(hasitd) {
-					says.push('<div>ITD</div>')
-				}
-				if(hassv) {
-					says.push('<div>SV</div>')
-				}
-				if(hasfusion) {
-					says.push('<div>Fusion</div>')
-				}
-				if(snvindel) {
-					const c = common.mclass[snvindel.m.class]
-					says.push('<div class=sja_mcdot style="display:inline-block;background:'+c.color+'">'+c.label+'</div>')
-				}
-				lst.push({k:f.label, v: says.join('')})
+			const [ cnv, loh, itd, sv, fusion, snvindel ] = getitemforsample_compound( f, sample )
+			if(cnv.length) {
+				lst.push({
+					k: (f.genename||f.label)+' CNV',
+					v: cnv.map( i=> {
+						return '<div>'
+							+'<span style="background:'+(i.value>0?f.cnv.colorgain:f.cnv.colorloss)+';color:white;padding:0px 3px">'+i.value+'</span> '
+							+'<span style="font-size:.8em">'+i.chr+':'+i.start+'-'+i.stop+' &nbsp;&nbsp;'+common.bplen(i.stop-i.start)+'</span>'
+							+'</div>'
+					}).join('')
+				})
 			}
-
-		} else if(f.ismutation) {
-
-			console.log('todo')
+			if(loh.length) {
+				lst.push({
+					k: (f.genename||f.label)+' LOH',
+					v: loh.map( i=>{
+						return '<div>'
+							+'<span style="background:'+f.loh.color+';color:white;padding:0px 3px">'+i.segmean+'</span> '
+							+'<span style="font-size:.8em">'+i.chr+':'+i.start+'-'+i.stop+' &nbsp;&nbsp;'+common.bplen(i.stop-i.start)+'</span>'
+							+'</div>'
+					}).join('')
+				})
+			}
+			if(itd.length) {
+				lst.push({
+					k: (f.genename||f.label)+' ITD',
+					v: itd.map(i=>{
+						return '<div style="font-size:.8em">'+i.chr+':'+i.start+'-'+i.stop+'</div>'
+					}).join('')
+				})
+			}
+			if(sv.length) {
+				lst.push({
+					k: (f.genename||f.label)+' SV',
+					v: sv.map(i=>{
+						return '<div>'+i.chrA+':'+i.posA+','+i.strandA+' &gt; '+i.chrB+':'+i.posB+','+i.strandB+'</div>'
+					}).join('')
+				})
+			}
+			if(fusion.length) {
+				lst.push({
+					k: (f.genename||f.label)+' fusion',
+					v: fusion.map(i=>{
+						return '<div>'+i.chrA+':'+i.posA+','+i.strandA+' &gt; '+i.chrB+':'+i.posB+','+i.strandB+'</div>'
+					}).join('')
+				})
+			}
+			if(snvindel.length) {
+				lst.push({
+					k: (f.genename||f.label)+' SNV/indel',
+					v: snvindel.map(m=>{
+						const c = common.mclass[m.m.class]
+						return '<div>'
+							+'<span style="color:'+c.color+'">'+m.m.mname+'</span> '
+							+'<span style="font-size:.7em;opacity:.5">'+c.label+'</span>'
+							+'</div>'
+					}).join('')
+				})
+			}
 
 		} else {
 			// __newattr
@@ -2243,16 +2311,16 @@ function getitemforsample_vcf( feature, sample ) {
 
 function getitemforsample_compound( feature, sample ) {
 	/*
+	for feature "issvcnv" and "ismutation"
 	works for all mutation data types, not including expression
 	*/
 
-	let cnvvalue=0,
-		lohvalue=0,
-		hasitd=0,
-		hassv=0,
-		hasfusion=0,
-		snvindel=null,
-		nodata=true
+	const cnv=[],
+		loh=[],
+		itd=[],
+		sv=[],
+		fusion=[],
+		snvindel=[]
 
 	for(const item of feature.items) {
 
@@ -2261,34 +2329,35 @@ function getitemforsample_compound( feature, sample ) {
 			const m_sample = item.sampledata.find( s => s.sampleobj.name == sample.name )
 			if(!m_sample) continue
 
-			snvindel = {
+			snvindel.push( {
 				m: item,
 				m_sample: m_sample
-			}
-			nodata=false
+			})
 			continue
 		}
 
 		// not snv/indel type
 
 		if(item.sample != sample.name) continue
-		nodata=false
+
 		if(item.dt==common.dtcnv) {
-			cnvvalue = item.value
+			cnv.push(item)
 		} else if(item.dt==common.dtloh) {
-			lohvalue = item.segmean
+			loh.push(item)
 		} else if(item.dt==common.dtitd) {
-			hasitd=1
+			itd.push(item)
 		} else if(item.dt==common.dtsv) {
-			hassv=1
+			sv.push(item)
 		} else if(item.dt==common.dtfusionrna) {
-			hasfusion=1
+			fusion.push(item)
 		} else {
 			console.error('unknown dt: '+item.dt)
 		}
 	}
-	return [ nodata, cnvvalue, lohvalue, hasitd, hassv, hasfusion, snvindel ]
+	return [ cnv, loh, itd, sv, fusion, snvindel ]
 }
+
+
 
 
 function initfeature_polymutation(f) {
