@@ -1,5 +1,10 @@
 export function hicstrawfromtemplate(tk,template) {
-	if(!template.file && !template.url) return 'no file or url'
+	if(tk.textdata) {
+		if(!tk.textdata.raw) return '.textdata.raw missing'
+		if(typeof(tk.textdata.raw)!='string') return '.textdata.raw should be string'
+	} else {
+		if(!template.file && !template.url) return 'no file or url'
+	}
 	if(template.domainoverlay) {
 		if(!template.domainoverlay.file && !template.domainoverlay.url) return 'file or url missing for domainoverlay'
 		tk.domainoverlay = {}
