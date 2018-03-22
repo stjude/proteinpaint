@@ -53,13 +53,17 @@ export function loadTk( tk, block ) {
 
 	.then(()=>{
 
-		// hic file is always custom, so need to stat the file the first time
-		if(!tk.uninitialized) {
-			// not the first time querying it, proceed to data retrieval
-			return
-		}
+		if(!tk.uninitialized) return
+		// initialize the track
+		delete tk.uninitialized
 
-		makeTk(tk, block)
+		makeTk(tk, block) // also parse raw text data if any
+		if(tk.textdata) return
+
+		/*
+		first time querying a hic file
+		hic file is always custom, need to stat the file
+		*/
 
 		return fetch( new Request(block.hostURL+'/hicstat',{
 			method:'POST',
@@ -82,13 +86,13 @@ export function loadTk( tk, block ) {
 	})
 
 	.then( ()=>{
-		return loadData( tk, block)
+		
+		if(tk.textdata) return loadTextdata(tk,block)
+
+		return loadStrawdata( tk, block)
 	})
-	.then( data=>{
-		const err = parseStrawData(data, tk, block)
-		if(err) throw(err)
+	.then(()=>{
 		drawCanvas(tk, block)
-		return
 	})
 	.catch(err=>{
 		if(err.stack) {
@@ -106,7 +110,10 @@ export function loadTk( tk, block ) {
 
 
 function setResolution(tk, block) {
-	// determine what resolution, if using fragment, will load fragment index
+	/*
+	when using text data, no need to set resolution but still need .regions[]
+	determine what resolution, if using fragment, will load fragment index
+	*/
 
 	// list of regions to load data from, including bb.rglst[], and bb.subpanels[]
 	const regions = []
@@ -135,6 +142,13 @@ function setResolution(tk, block) {
 		})
 		x += r.leftpad+r.width
 	}
+
+	tk.regions = regions
+
+	if(tk.textdata) {
+		return
+	}
+
 
 	/*
 	which resolution? bp or frag
@@ -215,7 +229,6 @@ function setResolution(tk, block) {
 				resolution_frag = tk.hic.fragresolution[ tk.hic.fragresolution.length-1 ]
 			}
 		}
-		tk.regions = regions
 		tk.resolution_bp = resolution_bp
 		tk.resolution_frag = resolution_frag
 		if(resolution_bp) {
@@ -233,10 +246,10 @@ function setResolution(tk, block) {
 function mayLoadDomainoverlay(tk, block) {
 	// must already have tk.regions[]
 
+	if(!tk.domainoverlay || !tk.domainoverlay.inuse) return
+
 	return Promise.resolve()
 	.then(()=>{
-		
-		if(!tk.domainoverlay || !tk.domainoverlay.inuse) return
 
 		// fetch domains for each region
 		const tasks=[]
@@ -269,8 +282,56 @@ function mayLoadDomainoverlay(tk, block) {
 
 
 
+function loadTextdata(tk, block) {
+	/*
+	at the end, set tk.data[]
+	*/
+	tk.data=[]
+	for(const i of tk.textdata.lst) {
+		let left1 = map_point(i.chr1, i.start1, block)
+		let left2 = map_point(i.chr1, i.stop1, block)
+		if(left1==-1 && left2==-1) {
+			continue
+		}
 
-function loadData( tk, block) {
+		if(left1==-1) left1=left2
+		else if(left2==-1) left2=left1
+
+		let right1 = map_point(i.chr2, i.start2, block)
+		let right2 = map_point(i.chr2, i.stop2, block)
+		if(right1==-1 && right2==-1) {
+			continue
+		}
+
+		if(right1==-1) right1=right2
+		else if(right2==-1) right2=right1
+
+		tk.data.push([ left1, left2, right1, right2, i.value ])
+	}
+}
+
+
+
+function map_point(chr,pos,block) {
+	const lst = block.seekcoord( chr, pos )
+	for(const r of lst) {
+		if(r.ridx!=undefined) {
+			if(r.x>0 && r.x<block.width) return r.x
+		} else if(r.subpanelidx!=undefined){
+			return r.x
+		}
+	}
+	return -1
+}
+
+
+
+
+function loadStrawdata( tk, block) {
+	/*
+	at the end, set tk.data[]
+	*/
+
 	const resolution_bp = tk.resolution_bp
 	const resolution_frag = tk.resolution_frag
 
@@ -362,7 +423,7 @@ function loadData( tk, block) {
 
 	return Promise.all(tasks)
 		.then(data=>{
-			return [ data, resolution_bp, resolution_frag]
+			return parseStrawData( data, resolution_bp, resolution_frag, tk, block )
 		})
 }
 
@@ -371,9 +432,7 @@ function loadData( tk, block) {
 
 
 
-function parseStrawData( tmp, tk, block ) {
-
-	const [ datalst, resolution_bp, resolution_frag ] = tmp
+function parseStrawData( datalst, resolution_bp, resolution_frag, tk, block ) {
 
 	tk.data = []
 
@@ -546,6 +605,13 @@ function drawCanvas(tk, block) {
 		changing max value, min cutoff, color
 	*/
 
+	if(tk.data.length==0) {
+		tk.height_main=100
+		tk.colorscale.g.attr('transform','scale(0)')
+		tk.img.attr('width',0)
+		throw(tk.name+': no data in view range')
+	}
+
 	const canvas = tk.hiddencanvas.node()
 
 	const canvaswidth = block.width + block.subpanels.reduce( (i,j)=> i + j.leftpad + j.width, 0 )
@@ -672,6 +738,7 @@ function drawCanvas(tk, block) {
 		.attr('xlink:href', canvas.toDataURL())
 
 	// update colorscale
+	tk.colorscale.g.attr('transform','scale(1) '+tk.colorscale.positionstr)
 	tk.colorscale.scale.domain([0, maxv])
 	if(tk.mincutoff!=undefined && tk.mincutoff!=0) {
 		const x = tk.colorscale.scale( tk.mincutoff )
@@ -720,15 +787,75 @@ function resize_label(tk, block) {
 
 
 
+function parse_rawtext(tk,block) {
+	/*
+	chr1
+	start1
+	stop1
+	chr2
+	start2
+	stop2
+	xx
+	value
+	*/
+	tk.textdata.lst=[]
+	const lines = tk.textdata.raw.trim().split(/\r?\n/)
+	for(let i=0; i<lines.length; i++) {
+		const l = lines[i].split('\t')
+		const chr1=l[0]
+		if(!block.genome.chrlookup[chr1.toUpperCase()]) return 'wrong chrA name at line '+(i+1)
+		const start1 = Number.parseInt(l[1])
+		if(Number.isNaN(start1)) return 'invalid startA at line '+(i+1)
+		const stop1 = Number.parseInt(l[2])
+		if(Number.isNaN(stop1)) return 'invalid stopA name at line '+(i+1)
+		const chr2=l[3]
+		if(!block.genome.chrlookup[chr2.toUpperCase()]) return 'wrong chrB name at line '+(i+1)
+		const start2 = Number.parseInt(l[4])
+		if(Number.isNaN(start2)) return 'invalid startB at line '+(i+1)
+		const stop2 = Number.parseInt(l[5])
+		if(Number.isNaN(stop2)) return 'invalid stopB at line '+(i+1)
+		const value = Number.parseFloat(l[7])
+		if(Number.isNaN(value)) return 'invalid value (8th column) at line '+(i+1)
+		tk.textdata.lst.push({
+			chr1:chr1,
+			start1:start1,
+			stop1:stop1,
+			chr2:chr2,
+			start2:start2,
+			stop2:stop2,
+			value:value
+		})
+	}
+	if(tk.textdata.lst.length==0) return 'No data points from text input'
+}
+
+
+
 
 function makeTk(tk, block) {
+	/*
+	call only once to initialize
+	also parse text data
+	*/
 
-	delete tk.uninitialized
+	if(tk.textdata) {
+		if(!tk.textdata.raw) throw('.raw missing from textdata')
+		const err = parse_rawtext( tk, block )
+		if(err) throw('Error with text data: '+err)
+	}
 
-	tk.mode_arc = true
-	tk.mode_hm = false
+
+	if(tk.mode_hm==undefined) tk.mode_hm = true
+	if(tk.mode_arc==undefined) tk.mode_arc = false
+	if(tk.mode_hm && tk.mode_arc) {
+		tk.mode_arc=false
+	} else if(!tk.mode_hm && !tk.mode_arc) {
+		tk.mode_hm=true
+	}
 
 	tk.arcangle = Math.PI/2
+
+	if(tk.pyramidup==undefined) tk.pyramidup=true
 
 	tk.hic.genome = block.genome
 	if(tk.hic.enzyme) {
@@ -761,9 +888,12 @@ function makeTk(tk, block) {
 	tk.tklabel.text(tk.name)
 
 	let laby = labyspace + block.labelfontsize
-	tk.label_resolution = block.maketklefthandle(tk, laby)
-		.attr('class',null)
-	laby += labyspace + block.labelfontsize
+
+	if(!tk.textdata) {
+		tk.label_resolution = block.maketklefthandle(tk, laby)
+			.attr('class',null)
+		laby += labyspace + block.labelfontsize
+	}
 
 	tk.colorscale = {}
 	{
@@ -771,8 +901,11 @@ function makeTk(tk, block) {
 		laby+=labyspace
 		const barheight = 14
 
-		const g = tk.gleft.append('g')
-			.attr('transform','translate('+(block.tkleftlabel_xshift - tk.colorscale.barwidth)+', '+laby+')')
+		tk.colorscale.positionstr = 'translate('+(block.tkleftlabel_xshift - tk.colorscale.barwidth)+', '+laby+')'
+
+		const g = tk.gleft.append('g').attr('transform', tk.colorscale.positionstr)
+
+		tk.colorscale.g = g
 
 		const defs = g.append('defs')
 		const id = Math.random().toString()
