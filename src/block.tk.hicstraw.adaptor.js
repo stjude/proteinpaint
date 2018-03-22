@@ -1,7 +1,10 @@
 export function hicstrawfromtemplate(tk,template) {
 	if(tk.textdata) {
+
 		if(!tk.textdata.raw) return '.textdata.raw missing'
 		if(typeof(tk.textdata.raw)!='string') return '.textdata.raw should be string'
+		delete template.enzyme
+
 	} else {
 		if(!template.file && !template.url) return 'no file or url'
 	}
