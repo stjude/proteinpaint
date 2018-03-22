@@ -63,10 +63,9 @@ export function loadTk( tk, block ) {
 		}))
 		.then(data=>{return data.json()})
 		.then(data=>{
-			if(data.error) throw({message:data.error})
+			if(data.error) throw(data.error)
 			const err = hicstraw.hicparsestat( tk.hic, data.out )
-			if(err) throw({message:err})
-			return
+			if(err) throw(err)
 		})
 	})
 
@@ -83,14 +82,14 @@ export function loadTk( tk, block ) {
 	})
 	.then( data=>{
 		const err = renderTk(data, tk, block)
-		if(err) throw({message:err})
+		if(err) throw(err)
 		return
 	})
 	.catch(err=>{
 		if(err.stack) {
 			console.log(err.stack)
 		}
-		return err.message
+		return typeof(err)=='string' ? err : err.message
 	})
 	.then( errmsg =>{
 		block.tkcloakoff(tk, {error:errmsg})
@@ -180,11 +179,11 @@ function setResolution(tk, block) {
 			}))
 			.then(data=>{return data.json()})
 			.then(data=>{
-				if(data.error) throw({message:data.error})
-				if(!data.items) throw({message:'.items[] missing at mapping coord to fragment index'})
+				if(data.error) throw(data.error)
+				if(!data.items) throw('.items[] missing at mapping coord to fragment index')
 
 				const [err, map, start, stop] = hicstraw.hicparsefragdata( data.items )
-				if(err) throw({message:err})
+				if(err) throw(err)
 				r.frag = {
 					id2coord: map,
 					startidx: start,
@@ -237,23 +236,24 @@ function mayLoadDomainoverlay(tk, block) {
 		// fetch domains for each region
 		const tasks=[]
 		for(const r of tk.regions) {
-			tasks.push( fetch( new Request( block.hostURL+'/bedjdata', {
-				method:'POST',
-				body: JSON.stringify({
-					jwt:block.jwt,
-					file: tk.domainoverlay.file,
-					url: tk.domainoverlay.url,
-					isbed: true,
-					rglst:[ {chr:r.chr, start:r.start, stop:r.stop } ]
+			tasks.push(
+				fetch( new Request( block.hostURL+'/bedjdata', {
+					method:'POST',
+					body: JSON.stringify({
+						jwt:block.jwt,
+						file: tk.domainoverlay.file,
+						url: tk.domainoverlay.url,
+						isbed: true,
+						rglst:[ {chr:r.chr, start:r.start, stop:r.stop } ]
+					})
+				}))
+				.then(data=>{return data.json()})
+				.then(data=>{
+					if(data.error) throw(data.error)
+					if(!data.items || data.items.length==0) return
+					r.domainlst = data.items
+					// each item is a domain, may support inter-chr domains by parsing json
 				})
-			}))
-			.then(data=>{return data.json()})
-			.then(data=>{
-				if(data.error) throw({message:data.error})
-				if(!data.items || data.items.length==0) return
-				r.domainlst = data.items
-				// each item is a domain, may support inter-chr domains by parsing json
-			})
 			)
 		}
 		return Promise.all(tasks)
@@ -301,7 +301,7 @@ function loadData( tk, block) {
 			}))
 			.then(data=>{return data.json()})
 			.then(data=>{
-				if(data.error) throw({message:data.error})
+				if(data.error) throw(data.error)
 				if(!data.items || data.items.length==0) {
 					// a region have no data
 					return null
@@ -550,18 +550,6 @@ function drawCanvas(tk, block) {
 	// the max value for saturated color, color scale
 	let maxv
 
-	/*
-	old method for using pecentage of absolute max value
-	if(!maxv) {
-		// somehow must not use .map, at large view range it runs out of max call stack
-		//maxv = Math.max( ...tk.data.map(i=>i[4]) )
-		maxv = tk.data[0][0]
-		for(const i of tk.data) maxv = Math.max( maxv, i[4])
-	}
-	if(tk.maxpercentage) {
-		maxv = maxv * tk.maxpercentage / 100
-	}
-	*/
 
 	// new method of using percentile
 	{
@@ -694,11 +682,6 @@ function makeTk(tk, block) {
 		}
 	}
 
-	/*
-	if(!tk.maxpercentage) {
-		tk.maxpercentage = 90
-	}
-	*/
 
 	if(!tk.percentile_max) {
 		tk.percentile_max = 90
@@ -779,35 +762,6 @@ function configPanel(tk,block) {
 	tk.tkconfigtip.clear()
 		.showunder( tk.config_handle.node() )
 	
-	/*
-	// percentage of max value
-	{
-		const row = tk.tkconfigtip.d.append('div')
-			.style('margin-bottom','10px')
-		row.append('span').html('Color scale max&nbsp;')
-		row.append('input')
-			.attr('type','number')
-			.style('width','50px')
-			.property('value',tk.maxpercentage)
-			.on('keyup',()=>{
-				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
-				const v = Number.parseInt(d3event.target.value)
-				if(Number.isNaN(v) || v<=0 || v>100) {
-					alert('Please enter integer between 1 and 100')
-					return
-				}
-				tk.maxpercentage = v
-				drawCanvas(tk, block)
-			})
-		row.append('span').text('%')
-		row.append('div')
-			.style('color','#858585')
-			.style('font-size','.8em')
-			.text('Percentage of actual max value in the view range')
-	}
-	*/
-
-
 	{
 		const row = tk.tkconfigtip.d.append('div')
 			.style('margin-bottom','10px')
