@@ -4,12 +4,16 @@ import * as client from './client'
 import {axisBottom} from 'd3-axis'
 import {scaleLinear} from 'd3-scale'
 
-
-
 /*
 single-sample hic
+always draw on canvas
 
-JUMP 
+two modes:
+	if tk.textdata:
+		parse data from raw text input, no server query
+	else:
+		load data from .hic straw file
+
 
 
 
@@ -81,8 +85,9 @@ export function loadTk( tk, block ) {
 		return loadData( tk, block)
 	})
 	.then( data=>{
-		const err = renderTk(data, tk, block)
+		const err = parseStrawData(data, tk, block)
 		if(err) throw(err)
+		drawCanvas(tk, block)
 		return
 	})
 	.catch(err=>{
@@ -295,9 +300,10 @@ function loadData( tk, block) {
 			par.resolution = resolution_frag
 			par.isfrag = true
 		}
-		tasks.push( fetch( new Request(block.hostURL+'/hicdata',{
-			method:'POST',
-			body:JSON.stringify(par)
+		tasks.push(
+			fetch( new Request(block.hostURL+'/hicdata',{
+				method:'POST',
+				body:JSON.stringify(par)
 			}))
 			.then(data=>{return data.json()})
 			.then(data=>{
@@ -365,7 +371,7 @@ function loadData( tk, block) {
 
 
 
-function renderTk( tmp, tk, block ) {
+function parseStrawData( tmp, tk, block ) {
 
 	const [ datalst, resolution_bp, resolution_frag ] = tmp
 
@@ -402,9 +408,14 @@ function renderTk( tmp, tk, block ) {
 		}
 
 
+
 		for(const [n1,n2,v] of data.items) {
 
-			// a contact
+			/*
+			n1: coord of one point
+			n2: coord of the other point
+			v:  value
+			*/
 
 			let coord1, // bp position
 				coord2,
@@ -540,7 +551,16 @@ function drawCanvas(tk, block) {
 	const canvaswidth = block.width + block.subpanels.reduce( (i,j)=> i + j.leftpad + j.width, 0 )
 
 	// dynamic height
-	const canvasheight = tk.data.reduce( (i,j)=>Math.max(i, (j[3]-j[0])/2 ), 0)
+	let canvasheight=0
+	if(tk.mode_hm) {
+		canvasheight = tk.data.reduce( (i,j)=>Math.max(i, (j[3]-j[0])/2 ), 0)
+	} else if(tk.mode_arc) {
+		for(const i of tk.data) {
+			const arcxspan = (i[2]+i[3])/2 - (i[0]+i[1])/2
+			const h = (arcxspan/2) / Math.tan( (Math.PI - tk.arcangle/2) / 2 )
+			canvasheight = Math.max( canvasheight, h )
+		}
+	}
 
 	canvas.width = canvaswidth
 	canvas.height = canvasheight
@@ -565,47 +585,85 @@ function drawCanvas(tk, block) {
 		// diamond
 		// color of the diamond
 
+		let color
 		if(insidedomain) {
+		/*
 			const r = 200+Math.floor( 50* (maxv-value) / maxv)
-			ctx.fillStyle = 'rgb('+r+','+r+','+r+')'
+			color = 'rgb('+r+','+r+','+r+')'
+			*/
+			color = 'rgba(102,102,102,'+(value/maxv).toFixed(2)+')'
 		} else {
+		/*
 			const r = Math.floor( 255* (maxv-value) / maxv)
-			ctx.fillStyle = 'rgb(255,'+r+','+r+')'
+			color = 'rgb(255,'+r+','+r+')'
+			*/
+			color = 'rgba(255,0,0,'+(value/maxv).toFixed(2)+')'
 		}
 
-		ctx.beginPath()
 
-		let x1,y1, // top
-			x2,y2, // left
-			x3,y3, // bottom
-			x4,y4  // top
-		if(tk.pyramidup) {
-			x1 = (left1+right2)/2
-			y1 = canvas.height - (right2-left1)/2
-			x2 = (left1+right1)/2
-			y2 = canvas.height - (right1-left1)/2
-			x3 = (left2+right1)/2
-			y3 = canvas.height - (right1-left2)/2
-			x4 = (left2+right2)/2
-			y4 = canvas.height - (right2-left2)/2
-		} else {
-			x1 = (left2+right1)/2
-			y1 = (right1-left2)/2
-			x2 = (left1+right1)/2
-			y2 = (right1-left1)/2
-			x3 = (left1+right2)/2
-			y3 = (right2-left1)/2
-			x4 = (left2+right2)/2
-			y4 = (right2-left2)/2
+		if(tk.mode_hm) {
+			ctx.fillStyle = color
+			ctx.beginPath()
+
+			let x1,y1, // top
+				x2,y2, // left
+				x3,y3, // bottom
+				x4,y4  // top
+			if(tk.pyramidup) {
+				x1 = (left1+right2)/2
+				y1 = canvas.height - (right2-left1)/2
+				x2 = (left1+right1)/2
+				y2 = canvas.height - (right1-left1)/2
+				x3 = (left2+right1)/2
+				y3 = canvas.height - (right1-left2)/2
+				x4 = (left2+right2)/2
+				y4 = canvas.height - (right2-left2)/2
+			} else {
+				x1 = (left2+right1)/2
+				y1 = (right1-left2)/2
+				x2 = (left1+right1)/2
+				y2 = (right1-left1)/2
+				x3 = (left1+right2)/2
+				y3 = (right2-left1)/2
+				x4 = (left2+right2)/2
+				y4 = (right2-left2)/2
+			}
+
+			ctx.moveTo(x1,y1)
+			ctx.lineTo(x2,y2)
+			ctx.lineTo(x3,y3)
+			ctx.lineTo(x4,y4)
+
+			ctx.closePath()
+			ctx.fill()
+
+		} else if(tk.mode_arc) {
+			const arcxspan = (right1+right2)/2 - (left1+left2)/2
+			const centerx = (left1+left2)/2 + arcxspan/2
+			const radius = (arcxspan/2) / Math.sin( tk.arcangle/2 )
+			let centery,
+				startangle,
+				endangle
+			if(tk.pyramidup) {
+				centery = canvasheight + radius * Math.cos( tk.arcangle/2 )
+				startangle = Math.PI + (Math.PI-tk.arcangle)/2
+				endangle = startangle + tk.arcangle
+			} else {
+				centery = -radius * Math.cos(tk.arcangle/2)
+				startangle = (Math.PI-tk.arcangle)/2
+				endangle = startangle+tk.arcangle
+			}
+			ctx.strokeStyle = color
+			ctx.beginPath()
+			ctx.arc(
+				centerx,
+				centery,
+				radius,
+				startangle,
+				endangle
+			)
+			ctx.stroke()
 		}
-
-		ctx.moveTo(x1,y1)
-		ctx.lineTo(x2,y2)
-		ctx.lineTo(x3,y3)
-		ctx.lineTo(x4,y4)
-
-		ctx.closePath()
-		ctx.fill()
 	}
 
 	tk.img
@@ -666,6 +724,12 @@ function resize_label(tk, block) {
 function makeTk(tk, block) {
 
 	delete tk.uninitialized
+
+	tk.mode_arc = true
+	tk.mode_hm = false
+
+	tk.arcangle = Math.PI/2
+
 	tk.hic.genome = block.genome
 	if(tk.hic.enzyme) {
 		if(block.genome.hicenzymefragment) {
@@ -831,20 +895,6 @@ function configPanel(tk,block) {
 		}
 	}
 
-	// point up down
-	{
-		const row = tk.tkconfigtip.d
-			.append('div')
-			.style('margin-bottom','10px')
-			.append('button')
-			.text('Triangles point '+(tk.pyramidup ? 'down' : 'up'))
-			.on('click',()=>{
-				tk.pyramidup = !tk.pyramidup
-				drawCanvas(tk, block)
-				tk.tkconfigtip.hide()
-			})
-	}
-
 	// domain overlay
 	if(tk.domainoverlay) {
 		// equipped with domain overlay data
@@ -855,8 +905,80 @@ function configPanel(tk,block) {
 		row.append('button')
 			.text( tk.domainoverlay.inuse ? 'No' : 'Yes' )
 			.on('click',()=>{
+				tk.tkconfigtip.hide()
 				tk.domainoverlay.inuse = !tk.domainoverlay.inuse
 				loadTk(tk, block)
 			})
 	}
+
+	// point up down
+	{
+		const row = tk.tkconfigtip.d
+			.append('div')
+			.style('margin','20px 0px 10px 0px')
+			.append('button')
+			.text('Point '+(tk.pyramidup ? 'down' : 'up'))
+			.on('click',()=>{
+				tk.pyramidup = !tk.pyramidup
+				drawCanvas(tk, block)
+				tk.tkconfigtip.hide()
+			})
+	}
+
+	// arc/hm
+	{
+		const d=tk.tkconfigtip.d
+			.append('div')
+			.append('div')
+			.style('display','inline-block')
+			.style('background','#FAF9DE')
+			.style('padding','10px')
+			.style('margin-bottom','10px')
+		const id=Math.random().toString()
+		const row1=d.append('div')
+		row1.append('input')
+			.attr('name',id)
+			.attr('id', id+'1')
+			.attr('type','radio')
+			.property('checked', tk.mode_hm)
+			.on('change',()=>{
+				if(d3event.target.checked) {
+					tk.mode_hm=true
+					tk.mode_arc=false
+				} else {
+					tk.mode_hm=false
+					tk.mode_arc=true
+				}
+				drawCanvas(tk,block)
+				block.block_setheight()
+				tk.tkconfigtip.hide()
+			})
+		row1.append('label')
+			.attr('for',id+'1')
+			.attr('class','sja_clbtext')
+			.html('&nbsp;Heatmap')
+		const row2=d.append('div')
+		row2.append('input')
+			.attr('name',id)
+			.attr('id', id+'2')
+			.attr('type','radio')
+			.property('checked', tk.mode_arc)
+			.on('change',()=>{
+				if(d3event.target.checked) {
+					tk.mode_hm=false
+					tk.mode_arc=true
+				} else {
+					tk.mode_hm=true
+					tk.mode_arc=false
+				}
+				drawCanvas(tk,block)
+				block.block_setheight()
+				tk.tkconfigtip.hide()
+			})
+		row2.append('label')
+			.attr('for',id+'2')
+			.attr('class','sja_clbtext')
+			.html('&nbsp;Arc')
+	}
+
 }
