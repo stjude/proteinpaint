@@ -783,7 +783,12 @@ function newtk_hicstraw(block,div) {
 		tk.iscustom = true
 		may_add_customtk(tk, block, div)
 	})
-	p.append('button').text('Clear').on('click',()=> ta.node().value=nta.node().value='')
+	p.append('button').text('Clear').on('click',()=> {
+		nta.property('value','')
+		urla.property('value','')
+		texta.property('value','')
+		if(enzymeselect) enzymeselect.property('selectedIndex',0)
+	})
 }
 
 
