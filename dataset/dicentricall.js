@@ -1,0 +1,267 @@
+const common=require('../src/common')
+
+
+const samplenamekey = 'sample_name'
+
+
+module.exports={
+
+	genome:'hg19',
+	isMds:true,
+
+noHandleOnClient:1,
+
+	about:[
+		{k:'RNA splice junction',v:'RNA splice junctions'},
+		{k:'CNV-SV',v:'Copy number variation events with supporting structural variation and gene expression ranking'}
+	],
+	//dbFile:'anno/db/pediatric.hg19.db',
+
+	sampleAssayTrack:{
+		file:'hg19/pan-all/tracktable/__table'
+	},
+
+	cohort:{
+		files:[
+			// possible to have file-specific logic
+			{file:'hg19/pan-all/sampletable/Dicentrics_sample'}
+		],
+		samplenamekey:samplenamekey,
+		tohash:(item, ds)=>{
+			ds.cohort.annotation[ item[samplenamekey] ] = item
+		},
+		sampleAttribute:{
+                       attributes:{
+                               diagnosis_subtype_short:{
+                                              label:'Cancer subtype',
+                                              filter:1,
+                              },
+				Gender:{ label:'Gender',filter:1},
+				'Dicentric chr.':{label:'Dicentric chromosome',filter:1}
+                       },
+                 },
+	},
+
+
+	/*
+	mutation-level attributes, applied to multiple data types
+	design issue:
+	1. attributes are sample-level, applied to per-sample cases as lines in svcnv file, and FORMAT in vcf,
+	   so as one vcf variant can be in multiple samples, each case discovered by different assay types (wgs/wes) by different lab
+	2. when representing annotation by these attributes on client, do not indicate items that are Unannotated
+	3. when filtering to hide items by attributes, do not hide *unannotated* items
+	   case for conscern: sv & fusion are both present, sv is annotated by dna_assay; fusion by rna_assay
+	   if showing only "polyA" for rna_assay, all sv won't have such annotation, but they should not be dropped
+	   problem is no way to "scope" rna_assay filtering only within RNA-based variants
+	*/
+	/*
+	mutationAttribute:{
+		attributes:{
+			dna_assay:{
+				label:'DNA assay',
+				values:{
+					cgi:{ name:'CGI',label:'Complete Genomics whole-genome sequencing', },
+					wgs:{ name:'WGS',label:'Whole-genome sequencing' },
+					wes:{ name:'WES',label:'Whole-exome sequencing'},
+					snp6:{ name:'SNP6',label:'SNP Array 6.0'}
+				},
+				hidden:1,
+				filter:1
+			},
+			rna_assay:{
+				label:'RNA assay',
+				values:{
+					total:{ name:'Total RNA'},
+					polya:{ name:'Poly(A)-selected'},
+				},
+				hidden:1,
+				filter:1
+			},
+			project:{
+				label:'Project',
+				values:{
+					pantarget:{ name:'Pan-TARGET', label:'Pan-cancer analysis of the NCI TARGET dataset'},
+					pcgp:{ name:'PCGP',label:'Pediatric Cancer Genome Project'},
+					pedccl:{name:'PedCCL',label:'Pediatric Cancer Cell Lines'}
+				},
+				filter:1
+			},
+			vorigin:{
+				label:'Variant origin',
+				values:{
+					somatic:{name:'Somatic'},
+					germline:{name:'Germline'}
+				},
+				filter:1
+			},
+			pmid:{
+				label:'PubMed',
+				appendto_link:'http://www.ncbi.nlm.nih.gov/pubmed/'
+			}
+		}
+	},
+*/
+
+	queries:{
+
+		svcnv:{
+			name:'Dicentric ALL mutation',
+			istrack:true,
+			type:common.tkt.mdssvcnv,
+			file:'hg19/pan-all/cnv-sv/dicentric.cnv.hg19.gz',
+
+			// cnv
+			valueCutoff:0.2,
+			bplengthUpperLimit:2000000, // limit cnv length to focal events
+
+			// loh
+			segmeanValueCutoff:0.1,
+			lohLengthUpperLimit:2000000,
+
+			/*
+			the list of attributes to group samples, name of groups such as "HM, BALL"
+			the attributes are hierarchical, when a sample is not annotated by 2nd attribute
+			the sample will come to the bin of 1st attribute
+			but if the sample is not annotated by 1st attribute, then it goes to a head-less bin, no matter if it's annotated by any subsequent attributes
+			*/
+			groupsamplebyattr:{
+				attrlst:[
+                                	{k:'diagnosis_subtype_short',label:'Subtype'},
+				]
+			},
+
+			/*
+			to sort sample groups consistently, on client, not on server
+			*/
+
+			attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
+
+
+		        expressionrank_querykey:'genefpkm',
+			//vcf_querykey:'somaticsnvindel'
+		},
+
+
+/*
+		somaticsnvindel:{
+			name:'Pediatric tumor SNV/indel',
+			istrack:true,
+			type:common.tkt.mdsvcfitd,
+			viewrangeupperlimit:2000000,
+			tracks:[
+				{
+					file:'hg19/PCGP/vcf.somatic/812samples.vcf.gz',
+					type:'vcf',
+				},
+				{
+					file:'hg19/TARGET/vcf.somatic/target.vep.vcf.gz',
+					type:'vcf',
+				},
+			]
+		},
+
+*/
+
+		genefpkm:{
+			name:'Dicentric ALL tumor RNA-seq gene FPKM',
+			isgenenumeric:true,
+			file:'hg19/pan-all/fpkm/dicentric.fpkm.hg19.gz',
+			datatype:'FPKM',
+			
+			// for boxplots & circles, and the standalone expression track
+			itemcolor:'green',
+
+			// for expression rank checking when coupled to svcnv
+			viewrangeupperlimit:5000000,
+			/*
+			one boxplot for each sample group
+			the grouping method must be same as svcnv
+			*/
+			
+			boxplotbysamplegroup:{
+				attributes: [
+					//{k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
+					//{k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
+				        {k:'diagnosis_subtype_short',label:'Subtype'},
+                           ]
+			},
+/*
+
+			// yu's data & method for ase/outlier
+			ase:{
+				qvalue:0.05,
+				meandelta_monoallelic:0.3,
+				asemarkernumber_biallelic:0,
+				//meandelta_biallelic:0.1,  no longer used
+				color_noinfo:'#858585',
+				color_notsure:'#A8E0B5',
+				color_biallelic:'#40859C',
+				color_monoallelic:'#d95f02'
+			},
+			*/
+			outlier:{
+				pvalue:0.05,
+				color:'#FF8875'
+			}
+		},
+
+		/*
+		junction: {
+			name:'PCGP tumor RNA splice junction',
+			istrack:true,
+			type:common.tkt.mdsjunction,
+			viewrangeupperlimit:500000,
+			readcountCutoff:5,
+			file:'hg19/PCGP/junction/junction.gz',
+			infoFilter:{ // client handles junction-level attributes
+				lst:[
+					{
+						key:'type',
+						label:'Type',
+						categories:{
+							canonical:{
+								label:'Canonical',
+								color:'#0C72A8'
+							},
+							exonskip:{
+								label:'Exon skipping',
+								color:'#D14747',
+								valuePerSample:valuePerSample
+							},
+							exonaltuse:{
+								label:'Exon alternative usage',
+								color:'#E69525',
+								valuePerSample:valuePerSample
+							},
+							a5ss:{
+								label:'Alternative 5\' splice site',
+								color:'#476CD1',
+								valuePerSample:valuePerSample
+							},
+							a3ss:{
+								label:'Alternative 3\' splice site',
+								color:'#47B582',
+								valuePerSample:valuePerSample
+							},
+							Unannotated:{
+								label:'Not annotated',
+								color:'#787854'
+							}
+						},
+						hiddenCategories:{Unannotated:1}
+					}
+				]
+			},
+			singlejunctionsummary:{
+				readcountboxplotpercohort:{
+					// categorical attributes only
+					groups:[
+						{label:'Cancer group',key:'diagnosis_group_short'},
+						{label:'Cancer', key:'diagnosis_short'}
+					]
+				}
+			}
+		}
+		*/
+	}
+}
