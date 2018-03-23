@@ -722,7 +722,7 @@ function newtk_hicstraw(block,div) {
 		.style('margin','20px')
 	const nta=box.append('p').append('input').attr('type','text').attr('placeholder','Hi-C track name').attr('size',20)
 
-	box.append('p').text('For juicebox-format files (*.hic):')
+	box.append('p').html('For juicebox files <a href=https://github.com/theaidenlab/Juicebox target=_blank>(about juicebox)</a>:')
 	const p1 = box.append('p')
 	const urla = p1.append('input').attr('type','text').attr('placeholder','URL or server-side file path').attr('size',25)
 
@@ -740,10 +740,10 @@ function newtk_hicstraw(block,div) {
 		}
 	}
 
-	box.append('p').text('Or, enter interaction as tab-delimited text:')
+	box.append('p').html('Or, enter interaction data as tab-delimited text <a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit?usp=sharing target=_blank>(see data format)</a>:')
 	const texta = box.append('textarea')
 		.attr('placeholder','One line per interaction')
-		.attr('cols',50)
+		.attr('cols',45)
 		.attr('rows',5)
 
 	const p=box.append('p')
