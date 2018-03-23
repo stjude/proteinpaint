@@ -20,6 +20,8 @@ stringisurl()
 newtk_bw
 newtk_bedj
 newtk_junction
+newtk_vcf
+newtk_hicstraw
 
 
 */
@@ -326,12 +328,26 @@ function customtracktypeui(block, div) {
 
 	const d1=div.append('div')
 		.style('margin','20px')
-	//d1.append('p').style('color','#858585').text('Choose type to add one track:')
-	d1.append('div').attr('class','sja_menuoption').text('bigWig: numerical data').on('click',()=> newtk_bw(block,div))
-	//d1.append('div').attr('class','sja_menuoption').text('Stranded bigWigs').on('click',()=> newtk_bws(block,div))
-	d1.append('div').attr('class','sja_menuoption').text('JSON-BED: positional annotations').on('click',()=> newtk_bedj(block,div) )
-	d1.append('div').attr('class','sja_menuoption').text('Splice junction with read count').on('click',()=> newtk_junction(block,div) )
-	d1.append('div').attr('class','sja_menuoption').text('VCF: variants and mutations').on('click',()=> newtk_vcf(block,div) )
+	d1.append('div')
+		.attr('class','sja_menuoption')
+		.html('bigWig <span style="opacity:.5;font-size:.8em">numerical data</span>')
+		.on('click',()=> newtk_bw(block,div))
+	d1.append('div')
+		.attr('class','sja_menuoption')
+		.html('JSON-BED <span style="opacity:.5;font-size:.8em">positional annotations</span>')
+		.on('click',()=> newtk_bedj(block,div) )
+	d1.append('div')
+		.attr('class','sja_menuoption')
+		.text('Splice junction')
+		.on('click',()=> newtk_junction(block,div) )
+	d1.append('div')
+		.attr('class','sja_menuoption')
+		.html('VCF <span style="opacity:.5;font-size:.8em">SNV/indel</span>')
+		.on('click',()=> newtk_vcf(block,div) )
+	d1.append('div')
+		.attr('class','sja_menuoption')
+		.html('Hi-C <span style="opacity:.5;font-size:.8em">juicebox or text format</span>')
+		.on('click',()=> newtk_hicstraw(block,div) )
 
 	const d2=div.append('div')
 		.style('margin','20px')
@@ -688,6 +704,84 @@ function newtk_vcf(block,div) {
 	p.append('button').text('Clear').on('click',()=> ta.node().value=nta.node().value='')
 	box.append('p').html('<a href=https://drive.google.com/open?id=1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw target=_blank>VCF format</a>')
 	box.append('p').style('color','#858585').style('font-size','.8em').text('SNV/indel data only')
+}
+
+
+
+
+function newtk_hicstraw(block,div) {
+	div.selectAll('*').remove()
+	div.append('div')
+		.style('margin','20px')
+		.style('display','inline-block')
+		.html('&lt; go back')
+		.attr('class','sja_menuoption')
+		.on('click',()=> customtracktypeui(block,div))
+
+	const box=div.append('div')
+		.style('margin','20px')
+	const nta=box.append('p').append('input').attr('type','text').attr('placeholder','Hi-C track name').attr('size',20)
+
+	box.append('p').text('For juicebox-format files (*.hic):')
+	const p1 = box.append('p')
+	const urla = p1.append('input').attr('type','text').attr('placeholder','URL or server-side file path').attr('size',30)
+
+	let enzymeselect
+	if(block.genome.hicenzymefragment) {
+		enzymeselect = p1.append('select')
+			.style('margin-left','5px')
+		enzymeselect.append('option')
+			.text('Select enzyme')
+		for(const e of block.genome.hicenzymefragment) {
+			enzymeselect.append('option')
+				.text(e.enzyme)
+				.property('value',e.enzyme)
+		}
+	}
+
+	box.append('p').text('Or, enter interaction as tab-delimited text:')
+	const texta = box.append('textarea')
+		.attr('placeholder','One line per interaction')
+		.attr('cols',50)
+		.attr('rows',5)
+
+	const p=box.append('p')
+	p.append('button').text('Add Hi-C track').on('click',()=>{
+		let tk
+		const urlinput = urla.property('value').trim()
+		if(urlinput) {
+			tk = {
+				mode_hm:true,
+				mode_arc:false
+			}
+			if(stringisurl(urlinput)) {
+				tk.url = urlinput
+			} else {
+				tk.file = urlinput
+			}
+			if(enzymeselect) {
+				const s = enzymeselect.node()
+				tk.enzyme = s.options[s.selectedIndex].value
+			}
+		} else {
+			const raw = texta.property('value').trim()
+			if(raw) {
+				tk = {
+					mode_hm:false,
+					mode_arc:true,
+					textdata:{
+						raw: raw
+					}
+				}
+			}
+		}
+		if(!tk) return
+		tk.name = nta.property('value') || 'Custom track'
+		tk.type = client.tkt.hicstraw
+		tk.iscustom = true
+		may_add_customtk(tk, block, div)
+	})
+	p.append('button').text('Clear').on('click',()=> ta.node().value=nta.node().value='')
 }
 
 
