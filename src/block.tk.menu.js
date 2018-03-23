@@ -724,14 +724,15 @@ function newtk_hicstraw(block,div) {
 
 	box.append('p').text('For juicebox-format files (*.hic):')
 	const p1 = box.append('p')
-	const urla = p1.append('input').attr('type','text').attr('placeholder','URL or server-side file path').attr('size',30)
+	const urla = p1.append('input').attr('type','text').attr('placeholder','URL or server-side file path').attr('size',25)
 
 	let enzymeselect
 	if(block.genome.hicenzymefragment) {
+		p1.append('span')
+			.html('&nbsp;&nbsp;Restriction enzyme:&nbsp;')
 		enzymeselect = p1.append('select')
-			.style('margin-left','5px')
 		enzymeselect.append('option')
-			.text('Select enzyme')
+			.text('none')
 		for(const e of block.genome.hicenzymefragment) {
 			enzymeselect.append('option')
 				.text(e.enzyme)
@@ -762,6 +763,7 @@ function newtk_hicstraw(block,div) {
 			if(enzymeselect) {
 				const s = enzymeselect.node()
 				tk.enzyme = s.options[s.selectedIndex].value
+				if(tk.enzyme == 'none') delete tk.enzyme
 			}
 		} else {
 			const raw = texta.property('value').trim()
