@@ -777,10 +777,12 @@ function resize_label(tk, block) {
 		.each(function(){
 			tk.leftLabelMaxwidth = Math.max( tk.leftLabelMaxwidth, this.getBBox().width)
 		})
-	tk.label_resolution
-		.each(function(){
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
-		})
+	if(tk.label_resolution) {
+		tk.label_resolution
+			.each(function(){
+				tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
+			})
+	}
 	block.setllabel()
 }
 
