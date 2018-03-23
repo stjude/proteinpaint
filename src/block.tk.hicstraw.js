@@ -23,7 +23,8 @@ loadTk()
 
 
 ********************** INTERNAL
-
+makeTk
+configPanel
 
 
 */
@@ -92,6 +93,12 @@ export function loadTk( tk, block ) {
 		return loadStrawdata( tk, block)
 	})
 	.then(()=>{
+		if(tk.data.length==0) {
+			tk.height_main=100
+			tk.colorscale.g.attr('transform','scale(0)')
+			tk.img.attr('width',0)
+			throw(tk.name+': no data in view range')
+		}
 		drawCanvas(tk, block)
 	})
 	.catch(err=>{
@@ -605,12 +612,7 @@ function drawCanvas(tk, block) {
 		changing max value, min cutoff, color
 	*/
 
-	if(tk.data.length==0) {
-		tk.height_main=100
-		tk.colorscale.g.attr('transform','scale(0)')
-		tk.img.attr('width',0)
-		throw(tk.name+': no data in view range')
-	}
+	if(tk.data.length==0) return
 
 	const canvas = tk.hiddencanvas.node()
 
@@ -789,47 +791,6 @@ function resize_label(tk, block) {
 
 
 
-function parse_rawtext(tk,block) {
-	/*
-	chr1
-	start1
-	stop1
-	chr2
-	start2
-	stop2
-	xx
-	value
-	*/
-	tk.textdata.lst=[]
-	const lines = tk.textdata.raw.trim().split(/\r?\n/)
-	for(let i=0; i<lines.length; i++) {
-		const l = lines[i].split('\t')
-		const chr1=l[0]
-		if(!block.genome.chrlookup[chr1.toUpperCase()]) return 'wrong chrA name at line '+(i+1)
-		const start1 = Number.parseInt(l[1])
-		if(Number.isNaN(start1)) return 'invalid startA at line '+(i+1)
-		const stop1 = Number.parseInt(l[2])
-		if(Number.isNaN(stop1)) return 'invalid stopA name at line '+(i+1)
-		const chr2=l[3]
-		if(!block.genome.chrlookup[chr2.toUpperCase()]) return 'wrong chrB name at line '+(i+1)
-		const start2 = Number.parseInt(l[4])
-		if(Number.isNaN(start2)) return 'invalid startB at line '+(i+1)
-		const stop2 = Number.parseInt(l[5])
-		if(Number.isNaN(stop2)) return 'invalid stopB at line '+(i+1)
-		const value = Number.parseFloat(l[7])
-		if(Number.isNaN(value)) return 'invalid value (8th column) at line '+(i+1)
-		tk.textdata.lst.push({
-			chr1:chr1,
-			start1:start1,
-			stop1:stop1,
-			chr2:chr2,
-			start2:start2,
-			stop2:stop2,
-			value:value
-		})
-	}
-	if(tk.textdata.lst.length==0) return 'No data points from text input'
-}
 
 
 
@@ -842,7 +803,7 @@ function makeTk(tk, block) {
 
 	if(tk.textdata) {
 		if(!tk.textdata.raw) throw('.raw missing from textdata')
-		const err = parse_rawtext( tk, block )
+		const err = textdata_parseraw( tk, block )
 		if(err) throw('Error with text data: '+err)
 	}
 
@@ -960,11 +921,20 @@ function makeTk(tk, block) {
 function configPanel(tk,block) {
 	tk.tkconfigtip.clear()
 		.showunder( tk.config_handle.node() )
-	
+
+	if(tk.textdata) {
+		tk.tkconfigtip.d.append('div')
+			.attr('class','sja_menuoption')
+			.style('margin-bottom','10px')
+			.text('Edit interaction data')
+			.on('click',()=>{
+				textdata_editUI(tk,block)
+			})
+	}
+
 	{
 		const row = tk.tkconfigtip.d.append('div')
 			.style('margin-bottom','10px')
-		row.append('span').html('Color scale max&nbsp;')
 		row.append('input')
 			.attr('type','number')
 			.style('width','40px')
@@ -979,14 +949,13 @@ function configPanel(tk,block) {
 				tk.percentile_max= v
 				drawCanvas(tk, block)
 			})
-		row.append('span').html('&nbsp;percentile')
+		row.append('span').html('&nbsp;percentile for color scale max')
 	}
 
 	// min cutoff
 	{
 		const row = tk.tkconfigtip.d.append('div')
 			.style('margin-bottom','10px')
-		row.append('span').html('Minimum cutoff value&nbsp;')
 		row.append('input')
 			.attr('type','number')
 			.style('width','50px')
@@ -1001,14 +970,15 @@ function configPanel(tk,block) {
 				tk.mincutoff = v
 				loadTk(tk, block)
 			})
+		row.append('span').html('&nbsp;for minimum cutoff value')
 		row.append('div')
-			.style('color','#858585')
 			.style('font-size','.8em')
-			.html('Contacting regions with scores &le; cutoff will not be shown')
+			.style('opacity',.5)
+			.html('Interactions with scores &le; cutoff will not be shown.')
 	}
 
 	// normalization method
-	{
+	if(!tk.textdata) {
 		const row = tk.tkconfigtip.d.append('div')
 			.style('margin-bottom','10px')
 		row.append('span').html('Normalization&nbsp;')
@@ -1046,32 +1016,14 @@ function configPanel(tk,block) {
 			})
 	}
 
-	// point up down
-	{
-		const row = tk.tkconfigtip.d
-			.append('div')
-			.style('margin','20px 0px 10px 0px')
-			.append('button')
-			.text('Point '+(tk.pyramidup ? 'down' : 'up'))
-			.on('click',()=>{
-				tk.pyramidup = !tk.pyramidup
-				drawCanvas(tk, block)
-				tk.tkconfigtip.hide()
-			})
-	}
 
 	// arc/hm
 	{
-		const d=tk.tkconfigtip.d
+		const row=tk.tkconfigtip.d
 			.append('div')
-			.append('div')
-			.style('display','inline-block')
-			.style('background','#FAF9DE')
-			.style('padding','10px')
 			.style('margin-bottom','10px')
 		const id=Math.random().toString()
-		const row1=d.append('div')
-		row1.append('input')
+		row.append('input')
 			.attr('name',id)
 			.attr('id', id+'1')
 			.attr('type','radio')
@@ -1086,14 +1038,14 @@ function configPanel(tk,block) {
 				}
 				drawCanvas(tk,block)
 				block.block_setheight()
-				tk.tkconfigtip.hide()
+				//tk.tkconfigtip.hide()
 			})
-		row1.append('label')
+		row.append('label')
 			.attr('for',id+'1')
 			.attr('class','sja_clbtext')
 			.html('&nbsp;Heatmap')
-		const row2=d.append('div')
-		row2.append('input')
+		row.append('input')
+			.style('margin-left','10px')
 			.attr('name',id)
 			.attr('id', id+'2')
 			.attr('type','radio')
@@ -1108,12 +1060,119 @@ function configPanel(tk,block) {
 				}
 				drawCanvas(tk,block)
 				block.block_setheight()
-				tk.tkconfigtip.hide()
+				//tk.tkconfigtip.hide()
 			})
-		row2.append('label')
+		row.append('label')
 			.attr('for',id+'2')
 			.attr('class','sja_clbtext')
 			.html('&nbsp;Arc')
+		row.append('span')
+			.style('margin-left','10px')
+			.style('opacity',.5)
+			.text('for showing interactions.')
 	}
 
+	// point up down
+	{
+		const row = tk.tkconfigtip.d
+			.append('div')
+			.style('margin','20px 0px 10px 0px')
+			.append('button')
+			.text('Point '+(tk.pyramidup ? 'down' : 'up'))
+			.on('click',()=>{
+				tk.pyramidup = !tk.pyramidup
+				drawCanvas(tk, block)
+				tk.tkconfigtip.hide()
+			})
+	}
+}
+
+
+
+
+function textdata_editUI(tk,block) {
+	tk.tkconfigtip.d.transition().style('left', (Number.parseInt(tk.tkconfigtip.d.style('left'))-500)+'px' )
+	tk.tkconfigtip.clear()
+	const d = tk.tkconfigtip.d.append('div')
+
+	const ta = d.append('textarea')
+		.attr('cols',50)
+		.attr('rows',10)
+	ta.property('value', tk.textdata.raw)
+
+	const row2 = d.append('div')
+		.style('margin-top','10px')
+
+	row2.append('button')
+		.text('Update')
+		.on('click',()=>{
+			const text = ta.property('value')
+			if(!text) {
+				window.alert('Enter text interaction data')
+				return
+			}
+			tk.textdata.raw = text
+			const err = textdata_parseraw( tk, block )
+			if(err) {
+				window.alert(err)
+				return
+			}
+			loadTk(tk,block)
+			tk.tkconfigtip.hide()
+		})
+	
+	row2.append('span')
+		.style('margin-left','5px')
+		.html('<a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit?usp=sharing target=_blank>Data format</a>')
+
+	row2.append('button')
+		.style('margin-left','30px')
+		.text('Cancel')
+		.on('click',()=>tk.tkconfigtip.hide())
+}
+
+
+
+function textdata_parseraw(tk,block) {
+	/*
+	chr1
+	start1
+	stop1
+	chr2
+	start2
+	stop2
+	xx
+	value
+	*/
+	tk.textdata.lst=[]
+	const lines = tk.textdata.raw.trim().split(/\r?\n/)
+	for(let i=0; i<lines.length; i++) {
+		const line = lines[i].trim()
+		if(!line) continue
+		const l = line.split('\t')
+		const chr1=l[0]
+		if(!block.genome.chrlookup[chr1.toUpperCase()]) return 'wrong chrA name at line '+(i+1)
+		const start1 = Number.parseInt(l[1])
+		if(Number.isNaN(start1)) return 'invalid startA at line '+(i+1)
+		const stop1 = Number.parseInt(l[2])
+		if(Number.isNaN(stop1)) return 'invalid stopA name at line '+(i+1)
+		const chr2=l[3]
+		if(!block.genome.chrlookup[chr2.toUpperCase()]) return 'wrong chrB name at line '+(i+1)
+		const start2 = Number.parseInt(l[4])
+		if(Number.isNaN(start2)) return 'invalid startB at line '+(i+1)
+		const stop2 = Number.parseInt(l[5])
+		if(Number.isNaN(stop2)) return 'invalid stopB at line '+(i+1)
+		const value = Number.parseFloat(l[7])
+		if(Number.isNaN(value)) return 'invalid value (8th column) at line '+(i+1)
+		tk.textdata.lst.push({
+			chr1:chr1,
+			start1:start1,
+			stop1:stop1,
+			chr2:chr2,
+			start2:start2,
+			stop2:stop2,
+			value:value
+		})
+	}
+	if(tk.textdata.lst.length==0) return 'No data points from text input'
 }
