@@ -827,7 +827,7 @@ function newtk_interaction(block,div) {
 	{
 		// bed file
 		div2.append('p')
-			.html('BED file format')
+			.html('<a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit?usp=sharing target=_blank>BED file format</a>')
 		const urlinput = div2.append('p')
 			.append('input')
 			.attr('type','text')
