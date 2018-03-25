@@ -8,10 +8,12 @@ import {scaleLinear} from 'd3-scale'
 single-sample hic
 always draw on canvas
 
-two modes:
-	if tk.textdata:
+3 sources of data
+	tk.textdata:
 		parse data from raw text input, no server query
-	else:
+	tk.bedfile/bedurl:
+		request data from bed file track
+	tk.file/url
 		load data from .hic straw file
 
 
@@ -59,7 +61,7 @@ export function loadTk( tk, block ) {
 		delete tk.uninitialized
 
 		makeTk(tk, block) // also parse raw text data if any
-		if(tk.textdata) return
+		if(tk.textdata || tk.bedfile || tk.bedurl) return
 
 		/*
 		first time querying a hic file
@@ -88,7 +90,9 @@ export function loadTk( tk, block ) {
 
 	.then( ()=>{
 		
-		if(tk.textdata) return loadTextdata(tk,block)
+		if(tk.textdata) return textdata_load(tk,block)
+
+		if(tk.bedfile || tk.bedurl) return bedfile_load(tk, block)
 
 		return loadStrawdata( tk, block)
 	})
@@ -152,12 +156,13 @@ function setResolution(tk, block) {
 
 	tk.regions = regions
 
-	if(tk.textdata) {
+	if(tk.textdata || tk.bedfile || tk.bedurl) {
 		return
 	}
 
 
 	/*
+	following is only for hic straw file
 	which resolution? bp or frag
 	the same resolution will be shared across all regions
 	find biggest region by bp span, use it's pixel width to determine resolution
@@ -289,34 +294,41 @@ function mayLoadDomainoverlay(tk, block) {
 
 
 
-function loadTextdata(tk, block) {
+function textdata_load(tk, block) {
 	/*
 	at the end, set tk.data[]
 	*/
 	tk.data=[]
 	for(const i of tk.textdata.lst) {
-		let left1 = map_point(i.chr1, i.start1, block)
-		let left2 = map_point(i.chr1, i.stop1, block)
-		if(left1==-1 && left2==-1) {
-			continue
+
+		const point = coordpair2plotpoint( i.chr1, i.start1, i.stop1, i.chr2, i.start2, i.stop2, block)
+		if(point) {
+			point.push( i.value )
+			tk.data.push(point)
 		}
-
-		if(left1==-1) left1=left2
-		else if(left2==-1) left2=left1
-
-		let right1 = map_point(i.chr2, i.start2, block)
-		let right2 = map_point(i.chr2, i.stop2, block)
-		if(right1==-1 && right2==-1) {
-			continue
-		}
-
-		if(right1==-1) right1=right2
-		else if(right2==-1) right2=right1
-
-		tk.data.push([ left1, left2, right1, right2, i.value ])
 	}
 }
 
+
+
+
+function coordpair2plotpoint(chr1,start1,stop1, chr2,start2,stop2, block) {
+	let left1 = map_point(chr1, start1, block)
+	let left2 = map_point(chr1, stop1, block)
+	if(left1==-1 && left2==-1) return
+
+	if(left1==-1) left1=left2
+	else if(left2==-1) left2=left1
+
+	let right1 = map_point(chr2, start2, block)
+	let right2 = map_point(chr2, stop2, block)
+	if(right1==-1 && right2==-1) return
+
+	if(right1==-1) right1=right2
+	else if(right2==-1) right2=right1
+
+	return [ left1, left2, right1, right2  ]
+}
 
 
 function map_point(chr,pos,block) {
@@ -332,6 +344,64 @@ function map_point(chr,pos,block) {
 }
 
 
+
+
+
+function bedfile_load(tk,block) {
+	/*
+	at end, set tk.data[]
+	*/
+	const arg = {
+		isbed:1,
+		file: tk.bedfile,
+		url: tk.bedurl,
+		indexURL: tk.bedindexURL,
+		rglst: tk.regions.map( i=> {return {chr:i.chr, start:i.start, stop:i.stop}} )
+	}
+	return fetch( new Request(block.hostURL+'/bedjdata',{
+		method:'POST',
+		body:JSON.stringify(arg)
+	}))
+	.then(data=>{return data.json()})
+	.then(data=>{
+		if(data.error) throw(data.error)
+		tk.data=[]
+		if(!data.items) {
+			return
+		}
+		// remove duplicating lines
+		const usedlines = new Set()
+		/*
+		used lines from the bed file
+		for each uniq interaction, it would have a duplicating line
+		e.g. {chr1, start1, stop1, rest:{chr2,start2,stop2} }
+		will have duplicating line of "chr2 start2 stop2 chr1 start1 stop1", and this line should be skipped
+		*/
+
+		for(const i of data.items) {
+
+			const skipline = i.chr+' '+i.start+' '+i.stop+' '+i.rest[0]+' '+i.rest[1]+' '+i.rest[2]
+			if(usedlines.has(skipline)) continue
+
+			const thisline = i.rest[0]+' '+i.rest[1]+' '+i.rest[2]+' '+i.chr+' '+i.start+' '+i.stop
+			usedlines.add(thisline)
+
+			const chr2 = i.rest[0]
+			const start2 = Number.parseInt(i.rest[1])
+			const stop2 = Number.parseInt(i.rest[2])
+			if(Number.isNaN(start2)) throw('invalid start2 position: '+i.rest[1])
+			if(Number.isNaN(stop2)) throw('invalid stop2 position: '+i.rest[2])
+
+			const value = Number.parseFloat(i.rest[3])
+			if(Number.isNaN(value)) throw('invalid value: '+i.rest[3])
+			const point = coordpair2plotpoint( i.chr, i.start, i.stop, chr2, start2, stop2, block)
+			if(point) {
+				point.push( value )
+				tk.data.push( point )
+			}
+		}
+	})
+}
 
 
 function loadStrawdata( tk, block) {
@@ -852,7 +922,8 @@ function makeTk(tk, block) {
 
 	let laby = labyspace + block.labelfontsize
 
-	if(!tk.textdata) {
+	if(tk.file || tk.url) {
+		// straw file
 		tk.label_resolution = block.maketklefthandle(tk, laby)
 			.attr('class',null)
 		laby += labyspace + block.labelfontsize
@@ -977,8 +1048,8 @@ function configPanel(tk,block) {
 			.html('Interactions with scores &le; cutoff will not be shown.')
 	}
 
-	// normalization method
-	if(!tk.textdata) {
+	if(tk.file || tk.url) {
+		// hic straw normalization method
 		const row = tk.tkconfigtip.d.append('div')
 			.style('margin-bottom','10px')
 		row.append('span').html('Normalization&nbsp;')
