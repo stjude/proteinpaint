@@ -21,7 +21,7 @@ newtk_bw
 newtk_bedj
 newtk_junction
 newtk_vcf
-newtk_hicstraw
+newtk_interaction
 
 
 */
@@ -346,8 +346,8 @@ function customtracktypeui(block, div) {
 		.on('click',()=> newtk_vcf(block,div) )
 	d1.append('div')
 		.attr('class','sja_menuoption')
-		.html('Hi-C <span style="opacity:.5;font-size:.8em">juicebox or text format</span>')
-		.on('click',()=> newtk_hicstraw(block,div) )
+		.html('Interaction <span style="opacity:.5;font-size:.8em">pairs of genomic regions</span>')
+		.on('click',()=> newtk_interaction(block,div) )
 
 	const d2=div.append('div')
 		.style('margin','20px')
@@ -709,7 +709,7 @@ function newtk_vcf(block,div) {
 
 
 
-function newtk_hicstraw(block,div) {
+function newtk_interaction(block,div) {
 	div.selectAll('*').remove()
 	div.append('div')
 		.style('margin','20px')
@@ -720,75 +720,172 @@ function newtk_hicstraw(block,div) {
 
 	const box=div.append('div')
 		.style('margin','20px')
-	const nta=box.append('p').append('input').attr('type','text').attr('placeholder','Hi-C track name').attr('size',20)
 
-	box.append('p').html('For juicebox files <a href=https://github.com/theaidenlab/Juicebox target=_blank>(about juicebox)</a>:')
-	const p1 = box.append('p')
-	const urla = p1.append('input').attr('type','text').attr('placeholder','URL or server-side file path').attr('size',25)
+	const tknameinput=box.append('p').append('input').attr('type','text').attr('placeholder','Interaction track name').attr('size',20)
 
-	let enzymeselect
-	if(block.genome.hicenzymefragment) {
-		p1.append('span')
-			.html('&nbsp;&nbsp;Restriction enzyme:&nbsp;')
-		enzymeselect = p1.append('select')
-		enzymeselect.append('option')
-			.text('none')
-		for(const e of block.genome.hicenzymefragment) {
-			enzymeselect.append('option')
-				.text(e.enzyme)
-				.property('value',e.enzyme)
-		}
+	const tr = box.append('table')
+		.append('tr')
+	tr.append('td')
+		.text('Data source')
+		.style('opacity',.5)
+		.style('vertical-align','top')
+		.style('padding-right','10px')
+	const td = tr.append('td')
+	const id = Math.random().toString()
+	{
+		const row=td.append('div')
+		row.append('input')
+			.attr('type','radio')
+			.attr('name',id)
+			.attr('id',id+1)
+			.property('checked',1)
+			.on('change',()=> change(1))
+		row.append('label')
+			.attr('class','sja_clbtext')
+			.html('&nbsp;Hi-C, juicebox format')
+			.attr('for', id+1)
+	}
+	{
+		const row=td.append('div')
+		row.append('input')
+			.attr('type','radio')
+			.attr('name',id)
+			.attr('id',id+2)
+			.on('change',()=> change(2))
+		row.append('label')
+			.attr('class','sja_clbtext')
+			.html('&nbsp;BED file, compressed and indexed')
+			.attr('for', id+2)
+	}
+	{
+		const row=td.append('div')
+		row.append('input')
+			.attr('type','radio')
+			.attr('name',id)
+			.attr('id',id+3)
+			.on('change',()=> change(3))
+		row.append('label')
+			.attr('class','sja_clbtext')
+			.html('&nbsp;Text input')
+			.attr('for', id+3)
 	}
 
-	box.append('p').html('Or, enter interaction data as tab-delimited text <a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit?usp=sharing target=_blank>(see data format)</a>:')
-	const texta = box.append('textarea')
-		.attr('placeholder','One line per interaction')
-		.attr('cols',45)
-		.attr('rows',5)
 
-	const p=box.append('p')
-	p.append('button').text('Add Hi-C track').on('click',()=>{
-		let tk
-		const urlinput = urla.property('value').trim()
-		if(urlinput) {
-			tk = {
-				mode_hm:true,
-				mode_arc:false
-			}
-			if(stringisurl(urlinput)) {
-				tk.url = urlinput
-			} else {
-				tk.file = urlinput
-			}
-			if(enzymeselect) {
-				const s = enzymeselect.node()
-				tk.enzyme = s.options[s.selectedIndex].value
-				if(tk.enzyme == 'none') delete tk.enzyme
-			}
-		} else {
-			const raw = texta.property('value').trim()
-			if(raw) {
-				tk = {
-					mode_hm:false,
-					mode_arc:true,
-					textdata:{
-						raw: raw
-					}
-				}
+
+
+	const div1 = box.append('div')
+	{
+		// hic straw
+		div1.append('p')
+			.html('Juicebox: <a href=https://github.com/theaidenlab/Juicebox target=_blank>github.com/theaidenlab/Juicebox</a>')
+		const urlinput = div1.append('p')
+			.append('input')
+			.attr('type','text')
+			.attr('placeholder','*.hic file URL or server-side path')
+			.attr('size',40)
+		let enzymeselect
+		if(block.genome.hicenzymefragment) {
+			const p = div1.append('p')
+			p.append('span')
+				.html('Restriction enzyme:&nbsp;')
+			enzymeselect = p.append('select')
+			enzymeselect.append('option')
+				.text('none')
+			for(const e of block.genome.hicenzymefragment) {
+				enzymeselect.append('option')
+					.text(e.enzyme)
+					.property('value',e.enzyme)
 			}
 		}
-		if(!tk) return
-		tk.name = nta.property('value') || 'Custom track'
-		tk.type = client.tkt.hicstraw
-		tk.iscustom = true
-		may_add_customtk(tk, block, div)
-	})
-	p.append('button').text('Clear').on('click',()=> {
-		nta.property('value','')
-		urla.property('value','')
-		texta.property('value','')
-		if(enzymeselect) enzymeselect.property('selectedIndex',0)
-	})
+		div1.append('p')
+			.append('button')
+			.text('Add track')
+			.on('click',()=>{
+				const str = urlinput.property('value')
+				if(!str) return
+				const tk = {
+					type:client.tkt.hicstraw,
+					name: (tknameinput.property('value') || 'Custom interaction'),
+					mode_hm:true,
+					mode_arc: false,
+					iscustom:1,
+				}
+				if(stringisurl(str)) tk.url = str
+				else tk.file = str
+				if(enzymeselect) {
+					const s = enzymeselect.node()
+					tk.enzyme = s.options[s.selectedIndex].value
+					if(tk.enzyme == 'none') delete tk.enzyme
+				}
+				may_add_customtk(tk, block, div)
+			})
+	}
+
+
+	const div2 = box.append('div')
+		.style('display','none')
+	{
+		// bed file
+		div2.append('p')
+			.html('BED file format')
+		const urlinput = div2.append('p')
+			.append('input')
+			.attr('type','text')
+			.attr('placeholder','*.gz file URL or server-side path')
+			.attr('size',40)
+		div2.append('p')
+			.append('button')
+			.text('Add track')
+			.on('click',()=>{
+				const str = urlinput.property('value')
+				if(!str) return
+				const tk = {
+					type:client.tkt.hicstraw,
+					name: (tknameinput.property('value') || 'Custom interaction'),
+					mode_hm:false,
+					mode_arc: true,
+					iscustom:1,
+				}
+				if(stringisurl(str)) tk.bedurl = str
+				else tk.bedfile = str
+				may_add_customtk(tk, block, div)
+			})
+	}
+
+
+	const div3 = box.append('div')
+		.style('display','none')
+	{
+		// text data
+		div3.append('p')
+			.html('Enter interaction data as <a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit?usp=sharing target=_blank>tab-delimited text</a>.')
+		const textinput = div3.append('textarea')
+			.attr('placeholder','One line per interaction')
+			.attr('cols',45)
+			.attr('rows',5)
+		div3.append('p')
+			.append('button')
+			.text('Add track')
+			.on('click',()=>{
+				const str = textinput.property('value')
+				if(!str) return
+				const tk = {
+					type:client.tkt.hicstraw,
+					name: (tknameinput.property('value') || 'Custom interaction'),
+					mode_hm:false,
+					mode_arc: true,
+					iscustom:1,
+					textdata:{ raw: str }
+				}
+				may_add_customtk(tk, block, div)
+			})
+	}
+
+	const change= i=>{
+		div1.style('display', i==1?'block':'none')
+		div2.style('display', i==2?'block':'none')
+		div3.style('display', i==3?'block':'none')
+	}
 }
 
 
