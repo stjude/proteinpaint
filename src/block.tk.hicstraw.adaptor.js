@@ -7,7 +7,7 @@ export function hicstrawfromtemplate(tk,template) {
 
 	} else if(tk.bedfile || tk.bedurl) {
 
-		// by file
+		// bed file
 
 	} else {
 
@@ -20,9 +20,6 @@ export function hicstrawfromtemplate(tk,template) {
 		for(const k in template.domainoverlay) {
 			tk.domainoverlay[k] = template.domainoverlay[k]
 		}
-	}
-	if(!tk.color) {
-		tk.color = 'red'
 	}
 	// the "hic" object to work with hic.straw.js
 	tk.hic = {

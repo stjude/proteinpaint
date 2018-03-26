@@ -1,6 +1,7 @@
 import {event as d3event} from 'd3-selection'
 import {bplen} from './common'
 import * as client from './client'
+import {rgb as d3rgb} from 'd3-color'
 import {axisBottom} from 'd3-axis'
 import {scaleLinear} from 'd3-scale'
 
@@ -39,6 +40,7 @@ const minimumbinnum_bp = 200 // minimum bin number at bp resolution
 const minimumbinnum_frag = 200 // minimum bin number at frag resolution
 
 const labyspace = 5
+const insidedomaincolor = '102,102,102'
 
 
 let hicstraw // loaded on the fly, will result in bundle duplication
@@ -684,6 +686,12 @@ function drawCanvas(tk, block) {
 
 	if(tk.data.length==0) return
 
+	let rgbstring
+	{
+		const t = d3rgb(tk.color)
+		rgbstring = t.r+','+t.g+','+t.b
+	}
+
 	const canvas = tk.hiddencanvas.node()
 
 	const canvaswidth = block.width + block.subpanels.reduce( (i,j)=> i + j.leftpad + j.width, 0 )
@@ -729,13 +737,13 @@ function drawCanvas(tk, block) {
 			const r = 200+Math.floor( 50* (maxv-value) / maxv)
 			color = 'rgb('+r+','+r+','+r+')'
 			*/
-			color = 'rgba(102,102,102,'+(value/maxv).toFixed(2)+')'
+			color = 'rgba(' + insidedomaincolor +','+(value/maxv).toFixed(2)+')'
 		} else {
 		/*
 			const r = Math.floor( 255* (maxv-value) / maxv)
 			color = 'rgb(255,'+r+','+r+')'
 			*/
-			color = 'rgba(255,0,0,'+(value/maxv).toFixed(2)+')'
+			color = 'rgba(' + rgbstring + ',' + (value/maxv).toFixed(2) + ')'
 		}
 
 
@@ -886,6 +894,9 @@ function makeTk(tk, block) {
 		tk.mode_hm=true
 	}
 
+
+	if(!tk.color) tk.color = '#ff0000'
+
 	tk.arcangle = Math.PI/2
 
 	if(tk.pyramidup==undefined) tk.pyramidup=true
@@ -1000,6 +1011,21 @@ function configPanel(tk,block) {
 			.text('Edit interaction data')
 			.on('click',()=>{
 				textdata_editUI(tk,block)
+			})
+	}
+
+	{
+		// color
+		const row = tk.tkconfigtip.d.append('div')
+			.style('margin-bottom','10px')
+		row.append('span')
+			.html('Change color&nbsp;')
+		row.append('input')
+			.attr('type','color')
+			.property('value',tk.color)
+			.on('change',()=>{
+				tk.color = d3event.target.value
+				drawCanvas(tk,block)
 			})
 	}
 
