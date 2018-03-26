@@ -1,4 +1,3 @@
-import {json as d3json} from 'd3-request'
 import {scaleLinear} from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import * as client from './client'
@@ -140,11 +139,15 @@ export function bigwigstrandedload(tk,block) {
 	}
 	block.tkcloakon(tk)
 
-	new Promise((resolve,reject)=>{
-		const par=block.tkarg_q(tk.strand1)
+	Promise.resolve()
+	.then(()=>{
+
+		const par = block.tkarg_q(tk.strand1)
 		par.name=tk.name+' forward strand'
-		d3json(block.hostURL+'/tkbigwig').post(JSON.stringify(par),data=>{
-			if(data.error) return reject('forward strand error: '+data.error)
+
+		return requestdata( par, tk, block)
+		.then(data=>{
+			if(data.error) throw('forward strand error: '+data.error)
 			tk.strand1.img
 				.attr('width',block.width)
 				.attr('height',tk.strand1.barheight)
@@ -160,17 +163,17 @@ export function bigwigstrandedload(tk,block) {
 				tk.strand1.scale.max=data.maxv
 			}
 			tk.strand1.nodata=data.nodata
-			resolve()
 		})
+
 	})
 	.then(()=>{
+
 		const par=block.tkarg_q(tk.strand2)
 		par.name=tk.name+' reverse strand'
-		d3json(block.hostURL+'/tkbigwig').post(JSON.stringify(par),data=>{
-			if(data.error) {
-				throw('reverse strand error: '+data.error)
-				return
-			}
+
+		return requestdata( par, tk, block )
+		.then(data=>{
+			if(data.error) throw('reverse strand error: '+data.error)
 			tk.strand2.img
 				.attr('width',block.width)
 				.attr('height',tk.strand2.barheight)
@@ -209,9 +212,22 @@ export function bigwigstrandedload(tk,block) {
 	.catch(err=>{
 		tk.strand1.img.attr('x',0) // shift back
 		tk.height_main = 50
-		block.tkcloakoff(tk, {error:err})
+		block.tkcloakoff(tk, {error: ( typeof(err)=='string' ? err : err.message )})
+		if(err.stack) console.log(err.stack)
 		block.block_setheight()
 	})
+}
+
+
+
+
+function requestdata(par, tk, block) {
+	par.jwt = block.jwt
+	return fetch( new Request(block.hostURL+'/tkbigwig',{
+		method:'POST',
+		body:JSON.stringify(par)
+	}))
+	.then(data=>{return data.json()})
 }
 
 
