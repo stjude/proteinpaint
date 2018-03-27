@@ -4,6 +4,10 @@ import * as client from './client'
 import {event as d3event} from 'd3-selection'
 
 
+/*
+FIXME
+bigwigloadsubpanel should return promise and be tracked
+*/
 
 
 
