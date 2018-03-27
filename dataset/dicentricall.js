@@ -13,7 +13,9 @@ noHandleOnClient:1,
 
 	about:[
 		{k:'RNA splice junction',v:'RNA splice junctions'},
-		{k:'CNV-SV',v:'Copy number variation events with supporting structural variation and gene expression ranking'}
+		{k:'CNV',v:'Somatic copy number changes'},
+		{k:'SV',v:'Somatic DNA structural variation'},
+		{k:'SNV/indel',v:'Somatic mutations of tumor, and germline pathogenic mutations'}
 	],
 	//dbFile:'anno/db/pediatric.hg19.db',
 
@@ -31,15 +33,15 @@ noHandleOnClient:1,
 			ds.cohort.annotation[ item[samplenamekey] ] = item
 		},
 		sampleAttribute:{
-                       attributes:{
-                               diagnosis_subtype_short:{
-                                              label:'Cancer subtype',
-                                              filter:1,
-                              },
+            attributes:{
+                 diagnosis_subtype_short:{
+                     label:'Cancer subtype',
+                     filter:1,
+				},
 				Gender:{ label:'Gender',filter:1},
 				'Dicentric chr.':{label:'Dicentric chromosome',filter:1}
-                       },
-                 },
+            },
+        },
 	},
 
 
@@ -108,7 +110,7 @@ noHandleOnClient:1,
 			name:'Dicentric ALL mutation',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
-			file:'hg19/pan-all/cnv-sv/dicentric.cnv.hg19.gz',
+			file:'hg19/pan-all/cnv-sv/dicentric.svcnv.hg19.gz',
 
 			// cnv
 			valueCutoff:0.2,
@@ -127,40 +129,39 @@ noHandleOnClient:1,
 			groupsamplebyattr:{
 				attrlst:[
                                 	{k:'diagnosis_subtype_short',label:'Subtype'},
-				]
+				],
+				attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
 			},
 
 			/*
 			to sort sample groups consistently, on client, not on server
 			*/
 
-			attrnamespacer:', ', // for making name e.g. "HM, BALL", will be propagated to the client-side track object
 
 
-		        expressionrank_querykey:'genefpkm',
-			//vcf_querykey:'somaticsnvindel'
+		    expressionrank_querykey:'genefpkm',
+			vcf_querykey:'snvindel',
+
+			multihidelabel_vcf:false,
+			multihidelabel_sv:true,
 		},
 
 
-/*
-		somaticsnvindel:{
-			name:'Pediatric tumor SNV/indel',
+
+		snvindel:{
+			hideforthemoment:1,
+			name:'Dicentric ALL SNV/indel',
 			istrack:true,
-			type:common.tkt.mdsvcfitd,
+			type:common.tkt.mdsvcf,
 			viewrangeupperlimit:2000000,
 			tracks:[
 				{
-					file:'hg19/PCGP/vcf.somatic/812samples.vcf.gz',
-					type:'vcf',
-				},
-				{
-					file:'hg19/TARGET/vcf.somatic/target.vep.vcf.gz',
+					file:'hg19/pan-all/vcf.somatic/Dicentric_SNV_sorted.vep.out.vcf.gz',
 					type:'vcf',
 				},
 			]
 		},
 
-*/
 
 		genefpkm:{
 			name:'Dicentric ALL tumor RNA-seq gene FPKM',
