@@ -139,45 +139,45 @@ export function bigwigstrandedload(tk,block) {
 	}
 	block.tkcloakon(tk)
 
-	Promise.resolve()
-	.then(()=>{
+	tk.strand1.img
+		.attr('width',block.width)
+		.attr('height',tk.strand1.barheight)
+	tk.strand2.img
+		.attr('width',block.width)
+		.attr('height',tk.strand2.barheight)
+		.attr('y',tk.strand1.barheight)
 
-		const par = block.tkarg_q(tk.strand1)
-		par.name=tk.name+' forward strand'
+	// load strand1
 
-		return requestdata( par, tk, block)
-		.then(data=>{
-			if(data.error) throw('forward strand error: '+data.error)
-			tk.strand1.img
-				.attr('width',block.width)
-				.attr('height',tk.strand1.barheight)
-				.attr('xlink:href',data.src)
-			if(block.pannedpx!=undefined) {
-				// offset panned distance
-				tk.strand1.img.attr('x',-block.pannedpx)
-			}
-			if(data.minv!=undefined) {
-				tk.strand1.scale.min=data.minv
-			}
-			if(data.maxv!=undefined) {
-				tk.strand1.scale.max=data.maxv
-			}
-			tk.strand1.nodata=data.nodata
-		})
+	const par1 = block.tkarg_q(tk.strand1)
+	par1.name=tk.name+' forward strand'
 
-	})
-	.then(()=>{
+	requestdata( par1, block)
+	.then(data=>{
+		if(data.error) throw('forward strand error: '+data.error)
+		tk.strand1.img
+			.attr('xlink:href',data.src)
+		if(block.pannedpx!=undefined) {
+			// offset panned distance
+			tk.strand1.img.attr('x',-block.pannedpx)
+		}
+		if(data.minv!=undefined) {
+			tk.strand1.scale.min=data.minv
+		}
+		if(data.maxv!=undefined) {
+			tk.strand1.scale.max=data.maxv
+		}
+		tk.strand1.nodata=data.nodata
 
-		const par=block.tkarg_q(tk.strand2)
-		par.name=tk.name+' reverse strand'
+		// load strand2
 
-		return requestdata( par, tk, block )
+		const par2 = block.tkarg_q(tk.strand2)
+		par2.name=tk.name+' reverse strand'
+
+		return requestdata( par2,  block )
 		.then(data=>{
 			if(data.error) throw('reverse strand error: '+data.error)
 			tk.strand2.img
-				.attr('width',block.width)
-				.attr('height',tk.strand2.barheight)
-				.attr('y',tk.strand1.barheight)
 				.attr('xlink:href',data.src)
 			if(data.minv!=undefined) {
 				tk.strand2.scale.min=data.minv
@@ -208,6 +208,10 @@ export function bigwigstrandedload(tk,block) {
 		tk.labforward.transition().attr('y',tk.strand1.barheight/2)
 		tk.labreverse.transition().attr('y',tk.strand1.barheight+tk.strand2.barheight/2)
 		block.block_setheight()
+
+		for(const panel of tk.subpanels) {
+			bigwigstrandedloadsubpanel( tk, block, panel )
+		}
 	})
 	.catch(err=>{
 		tk.strand1.img.attr('x',0) // shift back
@@ -221,7 +225,7 @@ export function bigwigstrandedload(tk,block) {
 
 
 
-function requestdata(par, tk, block) {
+function requestdata(par, block) {
 	par.jwt = block.jwt
 	return fetch( new Request(block.hostURL+'/tkbigwig',{
 		method:'POST',
@@ -229,6 +233,74 @@ function requestdata(par, tk, block) {
 	}))
 	.then(data=>{return data.json()})
 }
+
+
+
+
+
+export function bigwigstrandedloadsubpanel(tk, block, panel) {
+
+	block.tkcloakon_subpanel(panel)
+
+	panel.strand1.img
+		.attr('width',panel.width)
+		.attr('height',tk.strand1.barheight)
+	panel.strand2.img
+		.attr('width',panel.width)
+		.attr('height',tk.strand2.barheight)
+		.attr('y',tk.strand1.barheight)
+
+	const par1 = block.tkarg_q( tk.strand1 )
+	par1.width = panel.width
+	par1.rglst = [{
+		chr:panel.chr,
+		start:panel.start,
+		stop:panel.stop,
+		width:panel.width
+	}]
+	par1.maxv = tk.strand1.scale.max
+	par1.minv = tk.strand1.scale.min
+	delete par1.autoscale
+	delete par1.percentile
+
+
+	requestdata( par1, block )
+	.then(data=>{
+		if(data.error) throw({message:data.error})
+		panel.strand1.img.attr('xlink:href',data.src)
+
+
+		const par2 = block.tkarg_q( tk.strand2 )
+		par2.width = panel.width
+		par2.rglst = [{
+			chr:panel.chr,
+			start:panel.start,
+			stop:panel.stop,
+			width:panel.width
+		}]
+		par2.maxv = tk.strand2.scale.max
+		par2.minv = tk.strand2.scale.min
+		delete par2.autoscale
+		delete par2.percentile
+
+		return requestdata( par2, block)
+		.then(data=>{
+			if(data.error) throw({message:data.error})
+			panel.strand2.img.attr('xlink:href', data.src)
+		})
+	})
+	.catch(obj=>{
+		if(obj.stack) {
+			// error
+			console.log(obj.stack)
+		}
+		return obj.message
+	})
+	.then(errtext=>{
+		block.tkcloakoff_subpanel(panel, {error:errtext} )
+	})
+}
+
 
 
 
