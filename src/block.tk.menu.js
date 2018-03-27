@@ -827,7 +827,7 @@ function newtk_interaction(block,div) {
 	{
 		// bed file
 		div2.append('p')
-			.html('<a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit?usp=sharing target=_blank>BED file format</a>')
+			.html('<a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.kr6p4w2zhhwq target=_blank>BED file format</a>')
 		const urlinput = div2.append('p')
 			.append('input')
 			.attr('type','text')
@@ -858,7 +858,7 @@ function newtk_interaction(block,div) {
 	{
 		// text data
 		div3.append('p')
-			.html('Enter interaction data as <a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit?usp=sharing target=_blank>tab-delimited text</a>.')
+			.html('Enter interaction data as <a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.kr6p4w2zhhwq target=_blank>tab-delimited text</a>.')
 		const textinput = div3.append('textarea')
 			.attr('placeholder','One line per interaction')
 			.attr('cols',45)
