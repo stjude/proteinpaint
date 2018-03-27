@@ -897,7 +897,7 @@ function makeTk(tk, block) {
 
 	if(!tk.color) tk.color = '#ff0000'
 
-	tk.arcangle = Math.PI/2
+	tk.arcangle = Math.PI/2 // make configurable
 
 	if(tk.pyramidup==undefined) tk.pyramidup=true
 
@@ -956,7 +956,9 @@ function makeTk(tk, block) {
 		const id = Math.random().toString()
 		const gradient = defs.append('linearGradient').attr('id',id)
 		gradient.append('stop').attr('offset',0).attr('stop-color','white')
-		gradient.append('stop').attr('offset',1).attr('stop-color','rgb(255,0,0)')
+		tk.colorscale.gradientstop = gradient.append('stop').attr('offset',1)
+
+		updatetkcolor_client(tk)
 
 		const space = 1 // y space between bar and axis
 
@@ -999,6 +1001,13 @@ function makeTk(tk, block) {
 
 
 
+function updatetkcolor_client(tk) {
+	// call after updating color, only on client
+	tk.colorscale.gradientstop.attr('stop-color', tk.color)
+}
+
+
+
 
 function configPanel(tk,block) {
 	tk.tkconfigtip.clear()
@@ -1019,12 +1028,14 @@ function configPanel(tk,block) {
 		const row = tk.tkconfigtip.d.append('div')
 			.style('margin-bottom','10px')
 		row.append('span')
-			.html('Change color&nbsp;')
+			.text('Change color')
 		row.append('input')
+			.style('margin-left','5px')
 			.attr('type','color')
 			.property('value',tk.color)
 			.on('change',()=>{
 				tk.color = d3event.target.value
+				updatetkcolor_client(tk)
 				drawCanvas(tk,block)
 			})
 	}
