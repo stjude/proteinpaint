@@ -28,6 +28,9 @@ loadTk()
 ********************** INTERNAL
 makeTk
 configPanel
+textdata_load
+textdata_parseraw
+textdata_editUI
 
 
 */
@@ -41,6 +44,7 @@ const minimumbinnum_frag = 200 // minimum bin number at frag resolution
 
 const labyspace = 5
 const insidedomaincolor = '102,102,102'
+const docurl_text = 'https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.kr6p4w2zhhwq'
 
 
 let hicstraw // loaded on the fly, will result in bundle duplication
@@ -1231,7 +1235,7 @@ function textdata_editUI(tk,block) {
 	
 	row2.append('span')
 		.style('margin-left','5px')
-		.html('<a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit?usp=sharing target=_blank>Data format</a>')
+		.html('<a href='+docurl_text+' target=_blank>Text data format</a>')
 
 	row2.append('button')
 		.style('margin-left','30px')
@@ -1257,7 +1261,7 @@ function textdata_parseraw(tk,block) {
 	for(let i=0; i<lines.length; i++) {
 		const line = lines[i].trim()
 		if(!line) continue
-		const l = line.split('\t')
+		const l = line.split(/[\t\s]+/)
 		const chr1=l[0]
 		if(!block.genome.chrlookup[chr1.toUpperCase()]) return 'wrong chrA name at line '+(i+1)
 		const start1 = Number.parseInt(l[1])
