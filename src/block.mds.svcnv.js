@@ -2636,7 +2636,9 @@ function prep_samplegroups( tk, block ) {
 function makeTk(tk, block) {
 
 	if(!tk.singlesample) {
-		// in multi-sample, allow hidding some labels
+		// in multi-sample
+		
+		// allow hidding some labels
 		// do not override config from native dataset
 		if( tk.multihidelabel_vcf==undefined ) {
 			tk.multihidelabel_vcf = true
@@ -2647,7 +2649,16 @@ function makeTk(tk, block) {
 		if( tk.multihidelabel_sv==undefined ) {
 			tk.multihidelabel_sv = true
 		}
+
+		// set mode
+		tk.isdense=true
+		tk.isfull=false
+		if(tk.showfullmode) {
+			tk.isdense=false
+			tk.isfull=true
+		}
 	}
+
 
 	tk.tip2 = new client.Menu({padding:'0px'})
 
@@ -2677,8 +2688,6 @@ function makeTk(tk, block) {
 
 		// multi-sample
 		tk.tklabel.text( tk.name )
-		tk.isdense=true
-		tk.isfull=false
 		tk.cnvleftg= tk.gleft.append('g')
 		tk.vcfdensityg = tk.glider.append('g')
 		tk.vcfdensitylabelg = tk.gleft.append('g')

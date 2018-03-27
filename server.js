@@ -398,9 +398,12 @@ function mds_clientcopy(ds) {
 				if(q.groupsamplebyattr) {
 					clientquery.groupsamplebyattr = q.groupsamplebyattr
 				}
-				clientquery.multihidelabel_fusion=q.multihidelabel_fusion
-				clientquery.multihidelabel_sv=q.multihidelabel_sv
-				clientquery.multihidelabel_vcf=q.multihidelabel_vcf
+
+				// flags
+				clientquery.multihidelabel_fusion = q.multihidelabel_fusion
+				clientquery.multihidelabel_sv     = q.multihidelabel_sv
+				clientquery.multihidelabel_vcf    = q.multihidelabel_vcf
+				clientquery.showfullmode          = q.showfullmode
 
 				if(q.expressionrank_querykey) {
 					// for checking expression rank
