@@ -156,7 +156,7 @@ noHandleOnClient:1,
 			name:'Dicentric ALL SNV/indel',
 			istrack:true,
 			type:common.tkt.mdsvcf,
-			viewrangeupperlimit:2000000,
+			viewrangeupperlimit:3000000,
 			tracks:[
 				{
 					file:'hg19/pan-all/vcf.somatic/Dicentric_SNV_sorted.vep.out.vcf.gz',
