@@ -503,10 +503,14 @@ module.exports={
 						case common.dtsnvindel:
 							return m.maf_rna
 						case common.dtfusionrna:
-							const lst=m.pairlst.map(function(i){return i.a.name+': '+(typeof(i.a.ratio)=='number' ? i.a.ratio : '?')+', '
-								+i.b.name+': '+(typeof(i.b.ratio)=='number'?i.b.ratio:'?')
-							})
-							return lst.join(' ')
+							if(m.pairlst[0] && m.pairlst[0].a && typeof(m.pairlst[0].a.ratio)=='number') {
+								const lst=m.pairlst.map(function(i){
+									return (i.a.name || '') +': '+(typeof(i.a.ratio)=='number' ? i.a.ratio : '?')+', '
+										+(i.b.name || '') +': '+(typeof(i.b.ratio)=='number'?i.b.ratio:'?')
+								})
+								return lst.join(' ')
+							}
+							return ''
 						case common.dtcloss:
 						case common.dtnloss:
 							if(m.ratio!=undefined) {
