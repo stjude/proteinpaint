@@ -327,14 +327,18 @@ function mds_clientcopy(ds) {
 		label:ds.label,
 		about:ds.about,
 		annotationsampleset2matrix: ds.annotationsampleset2matrix,
-		queries:{}
+		queries:{},
+		mutationAttribute: ds.mutationAttribute
+	}
+
+	if(ds.cohort && ds.cohort.sampleAttribute) {
+		ds2.sampleAttribute = ds.cohort.sampleAttribute
 	}
 
 
 	if(ds.cohort && ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
 		/*
 		.attributes.lst[] are not released to client
-
 		default hidden attributes from sample annotation, tell client
 		*/
 		ds2.cohortHiddenAttr=ds.cohort.attributes.defaulthidden
@@ -388,12 +392,6 @@ function mds_clientcopy(ds) {
 
 			if(q.type == common.tkt.mdssvcnv) {
 
-				if(ds.mutationAttribute) {
-					clientquery.mutationAttribute = ds.mutationAttribute
-				}
-				if(ds.cohort && ds.cohort.sampleAttribute) {
-					clientquery.sampleAttribute = ds.cohort.sampleAttribute
-				}
 
 				if(q.groupsamplebyattr) {
 					clientquery.groupsamplebyattr = q.groupsamplebyattr
