@@ -54,16 +54,26 @@ module.exports={
 	*/
 	cohort:{
 		files:[
-			// possible to have file-specific logic
 			{file:'anno/db/pediatric.samples'},
 			{file:'anno/db/pediatric.samples.2'},
 			{file:'anno/db/target.samples'},
 			{file:'anno/db/target.samples.tallsnp6array'},
-			{file:'anno/db/pedccl.celllines'}
+			{file:'anno/db/pedccl.celllines'},
+			{file:'anno/db/pcgp.telomerecall'}
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
-			ds.cohort.annotation[ item[samplenamekey] ] = item
+			const samplename = item[samplenamekey]
+			if(!samplename) return console.error(samplenamekey+' missing from a line: '+JSON.stringify(item))
+			if(ds.cohort.annotation[ samplename ]) {
+				// append info
+				for(const k in item) {
+					ds.cohort.annotation[samplename][ k ] = item[k]
+				}
+			} else {
+				// new sample
+				ds.cohort.annotation[ samplename ] = item
+			}
 		},
 		hierarchies:{
 			lst:[
@@ -84,6 +94,9 @@ module.exports={
 					label:'Cancer',
 					filter:1,
 				},
+				'WGS telomere call':{
+					label:'WGS telomere call',
+				}
 			},
 		}
 	},
