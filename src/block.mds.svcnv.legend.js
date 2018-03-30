@@ -817,6 +817,8 @@ function may_process_hideable_rows(tk,block,hiddenAttributes) {
 function count_sampleAttribute(key, attr, sample) {
 	if (!(key in sample)) return
 
+	if(!attr.filter) return // not a filter
+
 	const value = sample[key]
 	if(!attr.value2count.has( value )) {
 		attr.value2count.set( value, {
