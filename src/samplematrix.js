@@ -55,8 +55,20 @@ export class Samplematrix {
 		this.tip  = new client.Menu({padding:'0px'})
 		this.menu = new client.Menu({padding:'0px'})
 		this.errdiv = this.holder.append('div')
+
+		// one legend item for each feature -- may not be desirable though
 		this.legendtable = this.holder.append('table')
 			.style('margin-bottom','20px')
+		if(this.hidelegend_features) {
+			this.legendtable.style('display','none')
+		}
+
+		if(this.header) {
+			this.holder.append('div')
+				.style('margin-bottom','20px')
+				.html(this.header)
+		}
+
 		this.svg = this.holder.append('svg')
 
 		this.validate_config()
