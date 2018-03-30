@@ -31,7 +31,7 @@ may_show_matrixbutton
 */
 
 
-export function click_samplegroup_showmenu( samplegroup, tk, block ) {
+export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 	/*
 	official only, multi-sample
 	dense or full
@@ -1589,43 +1589,53 @@ function may_show_matrixbutton(samplegroup, tk, block) {
 	/*
 	in sample group name menu, may add a button for showing pre-configured samplematrix for this group
 	annotationsampleset2matrix has one key
-	from g.attributes[], find the attribute that uses that key
 	*/
-	if(!tk.mds.annotationsampleset2matrix) return
+	if(!tk.mds || !tk.mds.annotationsampleset2matrix) return
 	if(!samplegroup.attributes) return
+
+	// from attributes of this group, find one using that key
 	const attr = samplegroup.attributes.find( i=> i.k == tk.mds.annotationsampleset2matrix.key )
 	if(!attr) return
 
-	const matrixconfig = tk.mds.annotationsampleset2matrix.groups[ attr.kvalue ]
-	if(!matrixconfig) return
+	// and the value of the attribute for this group should have corresponding item
+	const valueitem = tk.mds.annotationsampleset2matrix.groups[ attr.kvalue ]
+	if(!valueitem) return
 
-	tk.tip2.d.append('div')
-		.text(attr.kvalue+' summary')
-		.attr('class', 'sja_menuoption')
-		.on('click',()=>{
+	if(!valueitem.groups) return // should not happen
 
-			tk.tip2.hide()
+	// this group will have 1 or more subgroups, each is one study group or subtype
+	for(const group of valueitem.groups) {
 
-			const pane = client.newpane({ x:100, y:100 })
-			pane.header.text(attr.kvalue+' summary')
+		if(!group.name || !group.matrixconfig) continue
 
-			const arg = {
-				dslabel: tk.mds.label,
-				debugmode: block.debugmode,
-				genome: block.genome,
-				hostURL: block.hostURL,
-				jwt:block.jwt,
-				holder: pane.body.append('div').style('margin','20px'),
-			}
+		tk.tip2.d.append('div')
+			.html(group.name+' <span style="font-size:.8em;opacity:.5">SUMMARY</span>')
+			.attr('class', 'sja_menuoption')
+			.on('click',()=>{
 
-			for(const k in matrixconfig) {
-				arg[k] = matrixconfig[k]
-			}
+				tk.tip2.hide()
 
-			import('./samplematrix').then(_=>{
-				new _.Samplematrix( arg )
+				const pane = client.newpane({ x:100, y:100 })
+				pane.header.text(group.name+' summary')
+
+				const arg = {
+					dslabel: tk.mds.label,
+					debugmode: block.debugmode,
+					genome: block.genome,
+					hostURL: block.hostURL,
+					jwt:block.jwt,
+					holder: pane.body.append('div').style('margin','20px'),
+				}
+
+				for(const k in group.matrixconfig) {
+					arg[k] = group.matrixconfig[k]
+				}
+
+				import('./samplematrix').then(_=>{
+					new _.Samplematrix( arg )
+				})
 			})
-		})
+	}
 }
 
 
