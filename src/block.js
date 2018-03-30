@@ -16,7 +16,7 @@ import {junctionfromtemplate,junctionmaketk,junctionload} from './block.tk.junct
 import {bampilefromtemplate, bampilemaketk, bampileload} from  './block.tk.bampile'
 import {bigwigfromtemplate,  bigwigmaketk,  bigwigload, bigwigloadsubpanel} from   './block.tk.bigwig'
 import {aicheckfromtemplate,  aicheckmaketk,  aicheckload,  aicheckloadsubpanel} from   './block.tk.aicheck.adaptor'
-import {bigwigstrandedfromtemplate,  bigwigstrandedmaketk,  bigwigstrandedload} from   './block.tk.bigwigstranded'
+import {bigwigstrandedfromtemplate,  bigwigstrandedmaketk,  bigwigstrandedload, bigwigstrandedloadsubpanel } from   './block.tk.bigwigstranded'
 import {bedjfromtemplate,    bedjmaketk,    bedjload, bedjloadsubpanel} from     './block.tk.bedj'
 import {gmtkfromtemplate,    gmtkmaketk,    gmtkrender} from   './block.tk.usegm'
 import {hicstrawfromtemplate,hicstrawmaketk,hicstrawload} from './block.tk.hicstraw.adaptor'
@@ -3704,22 +3704,34 @@ add_subpanel() {
 
 			this.updateruler_subpanel( panelrecord )
 
-			if(tk.type==client.tkt.bedj) {
+			switch(tk.type) {
+			case client.tkt.bedj:
 				bedjloadsubpanel(tk, this, thispanel)
-			} else if(tk.type==client.tkt.bigwig) {
+				break
+			case client.tkt.bigwig:
 				bigwigloadsubpanel(tk, this, thispanel)
-			} else if(tk.type==client.tkt.hicstraw) {
+				break
+			case client.tkt.bigwigstranded:
+				bigwigstrandedloadsubpanel(tk, this, thispanel)
+				break
+			case client.tkt.hicstraw:
 				hicstrawload(tk,this)
-			} else if(tk.type==client.tkt.expressionrank) {
+				break
+			case client.tkt.expressionrank:
 				expressionrankload(tk,this)
-			} else if(tk.type==client.tkt.mdsjunction) {
+				break
+			case client.tkt.mdsjunction:
 				mdsjunctionload(tk,this)
-			} else if(tk.type==client.tkt.mdssvcnv) {
+				break
+			case client.tkt.mdssvcnv:
 				mdssvcnvload(tk,this)
-			} else if(tk.type==client.tkt.mdsexpressionrank) {
+				break
+			case client.tkt.mdsexpressionrank:
 				mdsexpressionrankload(tk,this)
-			} else if(tk.type==client.tkt.aicheck) {
+				break
+			case client.tkt.aicheck:
 				aicheckloadsubpanel(tk, this, thispanel)
+				break
 			}
 		}
 	}
@@ -3832,6 +3844,13 @@ new_tk_subpanel(tk, panelrecord) {
 		obj.img = obj.glider.append('image')
 	} else if(tk.type==client.tkt.bigwig) {
 		obj.img = obj.glider.append('image')
+	} else if(tk.type==client.tkt.bigwigstranded) {
+		obj.strand1 = {
+			img: obj.glider.append('image')
+		}
+		obj.strand2 = {
+			img: obj.glider.append('image')
+		}
 	} else if(tk.type==client.tkt.aicheck) {
 		obj.img = obj.glider.append('image')
 	}

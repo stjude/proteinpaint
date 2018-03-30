@@ -2635,6 +2635,18 @@ function prep_samplegroups( tk, block ) {
 
 function makeTk(tk, block) {
 
+	if(tk.mds) {
+		/*
+		in ds.js, these two attributes belong to mds, but not the svcnv query track,
+		meant to be applied to all tracks of this mds
+		previously, on client, these two attributes were recorded on the svcnv track object
+		now they reside in the mds registry object of genome
+		however, they are still copied to tk object so that all the code will work!!
+		*/
+		tk.mutationAttribute = tk.mds.mutationAttribute
+		tk.sampleAttribute = tk.mds.sampleAttribute
+	}
+
 	if(!tk.singlesample) {
 		// in multi-sample
 		

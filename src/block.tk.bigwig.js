@@ -4,8 +4,11 @@ import * as client from './client'
 import {event as d3event} from 'd3-selection'
 
 
+/*
+FIXME
+bigwigloadsubpanel should return promise and be tracked
+*/
 
-// for both bigwig and bedgraph
 
 
 
@@ -72,6 +75,11 @@ export function bigwigload(tk,block) {
 		par.dotplotfactor=tk.dotplotfactor
 	}
 
+	tk.height_main = tk.toppad+tk.barheight+tk.bottompad
+	tk.img
+		.attr('width',block.width)
+		.attr('height',tk.barheight)
+
 	const req = new Request(block.hostURL+'/tkbigwig', {
 		method:'POST',
 		body:JSON.stringify(par)
@@ -81,11 +89,8 @@ export function bigwigload(tk,block) {
 	.then(data=>{
 		if(data.error) throw({message:data.error})
 
-		tk.height_main = tk.toppad+tk.barheight+tk.bottompad
-		tk.img
-			.attr('width',block.width)
-			.attr('height',tk.barheight)
-			.attr('xlink:href',data.src)
+		tk.img.attr('xlink:href',data.src)
+
 		if(data.minv!=undefined) {
 			tk.scale.min=data.minv
 		}
@@ -147,6 +152,10 @@ export function bigwigloadsubpanel(tk, block, panel) {
 	delete par.percentile
 	delete par.autoscale
 
+	panel.img
+		.attr('width',panel.width)
+		.attr('height',tk.barheight)
+
 	const req = new Request(block.hostURL+'/tkbigwig', {
 		method:'POST',
 		body:JSON.stringify(par)
@@ -157,8 +166,6 @@ export function bigwigloadsubpanel(tk, block, panel) {
 		if(data.error) throw({message:data.error})
 
 		panel.img
-			.attr('width',panel.width)
-			.attr('height',tk.barheight)
 			.attr('xlink:href',data.src)
 		return null
 	})

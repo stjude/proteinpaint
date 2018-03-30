@@ -159,15 +159,25 @@ module.exports={
 			}
 		},
 		groups:{
-			BALL:{
-				features:[
-					{ismutation:1,label:'ETV6',position:'chr12:11802788-12048325'},
-					{ismutation:1,label:'RUNX1',position:'chr21:36160098-36421595'},
-					{ismutation:1,label:'KRAS',position:'chr12:25357723-25403865'},
-					{ismutation:1,label:'NRAS',position:'chr1:115247085-115259515'},
-					{ismutation:1,label:'JAK2',position:'chr9:4985245-5128183'},
-				],
-				limitsamplebyeitherannotation:[ {key:'diagnosis_short',value:'BALL'} ],
+			"BALL":{
+				groups:[
+					{
+						name:'Ph-like',
+						matrixconfig:{
+							header:'<h3>Targetable kinase-activating lesions in Ph-like acute lymphoblastic leukemia</h3>',
+							hidelegend_features:1,
+							features:[
+								{ismutation:1,label:'ABL1',position:'chr9:133710642-133763062'},
+								{ismutation:1,label:'ABL2',position:'chr1:179068461-179198819'},
+								{ismutation:1,label:'CSF1R',position:'chr5:149432853-149492935'},
+								{ismutation:1,label:'PDGFRB',position:'chr5:149493399-149535435'},
+								{ismutation:1,label:'JAK2',position:'chr9:4985032-5128183'},
+								//{ismutation:1,label:'',position:''},
+							],
+							limitsamplebyeitherannotation:[ {key:'diagnosis_subtype_short',value:'PH-LIKE'} ],
+						}
+					},
+				]
 			}
 		}
 	},
