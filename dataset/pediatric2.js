@@ -96,6 +96,11 @@ module.exports={
 				},
 				'WGS telomere call':{
 					label:'WGS telomere call',
+					values:{
+						GAIN:{ name:'Gain',color:'red'},
+						LOSS:{ name:'Loss',color:'blue'},
+						NO_CHANGE:{name:'No change',color:'gray'}
+					}
 				}
 			},
 		}
