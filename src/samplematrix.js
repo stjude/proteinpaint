@@ -2,7 +2,7 @@ import * as client from './client'
 import {string2pos, invalidcoord} from './coord'
 import {event as d3event} from 'd3-selection'
 import * as common from './common'
-import {scaleLinear} from 'd3-scale'
+import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 
 
 /*
@@ -518,9 +518,28 @@ export class Samplematrix {
 				})
 		}
 
+		if(f.issampleattribute) {
+			if(!this.dslabel) throw('.dslabel missing: sampleattribute only works for official dataset')
+			if(!f.key) throw('.key missing for issampleattribute feature')
+			if(!f.label) f.label = f.key
+			// allow this feature to be not available on client
+			if(this.mds && this.mds.sampleAttribute && this.mds.sampleAttribute.attributes) {
+				const registry = this.mds.sampleAttribute.attributes[ f.key ]
+				if(registry) {
+					f.values = registry.values
+				}
+			}
+			if(!f.values) {
+				f.values = {}
+			}
+			f.assignmissingcolor = scaleOrdinal(schemeCategory10)
+			if(!f.width) f.width=20
+			return Promise.resolve()
+		}
+
 
 		// __newattr
-		throw('unknown feature type')
+		throw('unknown feature type in validating feature')
 
 		})
 	}
@@ -821,7 +840,19 @@ export class Samplematrix {
 					.style('background','linear-gradient( to right, white, '+f.loh.color+')')
 				row.append('span').text(f.loh.maxvalue)
 			}
+			return
+		}
 
+		if(f.issampleattribute) {
+			for(const i of f.items) {
+				if(!f.values[i.value]) {
+					// a unknown value, still support it
+					f.values[i.value] = {
+						name: i.value,
+						color: f.assignmissingcolor( i.value )
+					}
+				}
+			}
 			return
 		}
 
@@ -891,6 +922,12 @@ export class Samplematrix {
 					}
 				}
 
+			} else if(feature.issampleattribute) {
+				for(const i of feature.items) {
+					if(!name2sample.has(i.sample)) {
+						name2sample.set(i.sample, {})
+					}
+				}
 			} else {
 				// __newattr
 				console.error('unknown feature type from this.data')
@@ -1037,6 +1074,8 @@ export class Samplematrix {
 					this.drawCell_issvfusion(sample,feature,cell)
 				} else if(feature.issvcnv || feature.ismutation) {
 					this.drawCell_ismutation(sample,feature,cell)
+				} else if(feature.issampleattribute) {
+					this.drawCell_issampleattribute(sample,feature,cell)
 				} else {
 					// __newattr
 					console.error('unknown feature type when drawing cell')
@@ -1230,6 +1269,32 @@ export class Samplematrix {
 			.attr('width', feature.width)
 			.attr('height', sample.height)
 			.attr('fill', feature.color)
+			.attr('stroke','#ccc')
+			.attr('stroke-opacity',0)
+			.attr('shape-rendering','crispEdges')
+			.on('mouseover',()=>{
+				d3event.target.setAttribute('stroke-opacity',1)
+				this.showTip_cell( sample, feature )
+			})
+			.on('mouseout',()=>{
+				d3event.target.setAttribute('stroke-opacity',0)
+				this.tip.hide()
+			})
+			.on('click',()=> {
+				this.click_cell(sample, feature)
+			})
+	}
+
+	drawCell_issampleattribute(sample,feature,g) {
+		const item = feature.items.find( i=> i.sample == sample.name )
+		if(!item) {
+			drawEmptycell(sample, feature, g)
+			return
+		}
+		g.append('rect')
+			.attr('width', feature.width)
+			.attr('height', sample.height)
+			.attr('fill', feature.values[item.value].color)
 			.attr('stroke','#ccc')
 			.attr('stroke-opacity',0)
 			.attr('shape-rendering','crispEdges')
@@ -1552,16 +1617,23 @@ export class Samplematrix {
 			return
 		}
 		if(f.isitd) {
-			// nothing
+			// TODO
 			return
 		}
 		if(f.issvfusion) {
+			// TODO
 			return
 		}
 		if(f.issvcnv) {
+			// TODO
 			return
 		}
 		if(f.ismutation) {
+			// TODO
+			return
+		}
+		if(f.issampleattribute) {
+			// TODO
 			return
 		}
 		// __newattr show menu for feature
@@ -1569,6 +1641,8 @@ export class Samplematrix {
 
 
 	tipContent_feature(f, holder) {
+		// say something about a feature
+
 		holder.append('div')
 			.text(f.label)
 			.style('opacity',.5)
@@ -1593,6 +1667,9 @@ export class Samplematrix {
 					.style('opacity',.5)
 					.style('margin','0px 10px 10px 10px')
 			}
+		} else if(f.issampleattribute) {
+			holder.append('div')
+				.text(f.label)
 		}
 
 		if(f.isgenevalue) {
@@ -1943,6 +2020,14 @@ export class Samplematrix {
 				continue
 			}
 
+			if(f.issampleattribute) {
+				const item = f.items.find(i => i.sample == sample.name)
+				if(item) {
+					lst.push({k:f.label, v: item.value})
+				}
+				continue
+			}
+
 			// __newattr
 			console.error('sample tooltip: Unknown feature type')
 		}
@@ -2106,6 +2191,16 @@ export class Samplematrix {
 							+'<span style="font-size:.7em;opacity:.5">'+c.label+'</span>'
 							+'</div>'
 					}).join('')
+				})
+			}
+
+		} else if(f.issampleattribute) {
+
+			const item = f.items.find(i=>i.sample == sample.name)
+			if(item) {
+				lst.push({
+					k: f.label,
+					v: item.value
 				})
 			}
 
@@ -2295,6 +2390,13 @@ function feature2arg(f) {
 			arg.querykeylst = f.querykeylst
 		}
 		return arg
+	}
+	if(f.issampleattribute) {
+		return {
+			id:f.id,
+			issampleattribute:1,
+			key: f.key
+		}
 	}
 
 	// __newattr
