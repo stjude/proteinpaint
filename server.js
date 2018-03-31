@@ -7075,6 +7075,7 @@ function handle_samplematrix(req,res) {
 			// must be official ds
 			if(!ds.cohort) throw('limitsamplebyeitherannotation but no cohort in ds')
 			if(!ds.cohort.annotation) throw('limitsamplebyeitherannotation but no cohort.annotation in ds')
+			// should produce a set of names for allowed samples
 		}
 
 		const tasks = []
@@ -7098,6 +7099,8 @@ function handle_samplematrix(req,res) {
 					dsquerylst.push(q)
 				}
 				if(dsquerylst.length==0) throw('no valid keys in querykeylst')
+			} else if(feature.issampleattribute) {
+				// no need for dsquery
 			} else {
 				throw('unknown way to query a feature')
 			}
@@ -7153,6 +7156,12 @@ function handle_samplematrix(req,res) {
 				if(err) throw('error with ismutation: '+err)
 				tasks.push(q)
 
+			} else if(feature.issampleattribute) {
+
+				const [err, q] = samplematrix_task_issampleattribute( feature, ds, req )
+				if(err) throw('error with issampleattribute: '+err)
+				tasks.push(q)
+
 			} else {
 
 				throw('unknown type of feature')
@@ -7171,6 +7180,41 @@ function handle_samplematrix(req,res) {
 	})
 }
 
+
+
+function samplematrix_task_issampleattribute(feature, ds, req) {
+	if(!feature.key) return ['.key missing']
+	if(!ds.cohort) return ['ds.cohort missing']
+	if(!ds.cohort.annotation) return ['ds.cohort.annotation missing']
+	const q = Promise.resolve()
+	.then(()=>{
+		const items=[]
+		for(const samplename in ds.cohort.annotation) {
+			const anno = ds.cohort.annotation[ samplename ]
+			if(req.query.limitsamplebyeitherannotation) {
+				let notfit = true
+				for(const filter of req.query.limitsamplebyeitherannotation) {
+					if(anno[ filter.key ] == filter.value) {
+						notfit=false
+						break
+					}
+				}
+				if(notfit) continue
+			}
+			const value = anno[ feature.key ]
+			if(value==undefined) continue
+			items.push({
+				sample: samplename, 
+				value: value
+			})
+		}
+		return {
+			id: feature.id,
+			items: items
+		}
+	})
+	return [null,q]
+}
 
 
 
