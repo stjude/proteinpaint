@@ -106,22 +106,20 @@ if(serverconfig.jwt) {
 		}
 		if(!j.jwt) return res.send({error:'json web token missing'})
 		jsonwebtoken.verify( j.jwt, serverconfig.jwt.secret, (err, decode)=>{
-			if(err) return res.send({error:'Not authorized'})
+			if(err) return res.send({error:'Invalid token'})
+
+			// FIXME do not hardcode required attribute, replace with a list
 			if(!decode[ serverconfig.jwt.permissioncheck ]) return res.send({error:'Not authorized'})
+
 			next()
 		})
 
-		/*
-		if(!req.headers || !req.headers.authorization) {
+/*
+		if(!req.headers || !req.headers.jwt) {
 			res.send({error:'No authorization'})
 			return
 		}
-		const lst = req.headers.authorization.split(' ')
-		if(lst[0]!='JWT') {
-			res.send({error:'Not JWT'})
-			return
-		}
-		jsonwebtoken.verify( lst[1], serverconfig.jwt, (err, decode)=>{
+		jsonwebtoken.verify( req.headers.jwt, serverconfig.jwt, (err, decode)=>{
 			if(err) {
 				res.send({error:'Not authorized'})
 				return
@@ -392,10 +390,13 @@ function mds_clientcopy(ds) {
 
 			if(q.type == common.tkt.mdssvcnv) {
 
-
 				if(q.groupsamplebyattr) {
 					clientquery.groupsamplebyattr = q.groupsamplebyattr
 				}
+				if(q.singlesampledirectory) {
+					clientquery.singlesampledirectory = 1
+				}
+
 
 				// flags
 				clientquery.multihidelabel_fusion = q.multihidelabel_fusion
@@ -3826,6 +3827,7 @@ function handle_mdssvcnv(req,res) {
 	// exits
 	if(req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample( req, res, gn, ds, dsquery )
 	if(req.query.findsamplename) return mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery )
+	if(req.query.getsample4disco) return mdssvcnv_exit_getsample4disco( req, res, gn, ds, dsquery )
 
 
 
@@ -5192,6 +5194,23 @@ function mdssvcnv_exit_gettrack4singlesample( req, res, gn, ds, dsquery ) {
 	}
 	return res.send({
 		tracks: ds.sampleAssayTrack.samples.get( samplename )
+	})
+}
+
+
+
+function mdssvcnv_exit_getsample4disco( req, res, gn, ds, dsquery ) {
+	/*
+	a text file for a single sample
+	only for official dataset
+	*/
+	if(req.query.iscustom) return res.send({error:'not for custom track'})
+	if(!dsquery.singlesampledirectory) return res.send({error:'singlesampledirectory not defined in dataset config'})
+	const samplename = req.query.getsample4disco
+	const file = path.join(serverconfig.tpmasterdir, dsquery.singlesampledirectory, samplename)
+	fs.readFile(file, {encoding:'utf8'}, (err,data)=>{
+		if(err) return res.send({error:'error getting data for this sample'})
+		res.send({text:data})
 	})
 }
 
