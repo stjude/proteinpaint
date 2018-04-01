@@ -1071,7 +1071,7 @@ export function click_multi_singleitem( p ) {
 			.style('margin','10px')
 			.style('display','none')
 		const discoPromise = sjcharts.dtDisco({
-			appname: 'dtdisco',
+			appname: 'dtdisco-'+p.sample.samplename,
 			holderSelector: holder,
 			settings: {
 				showControls: false,
