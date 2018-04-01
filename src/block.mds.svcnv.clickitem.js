@@ -1061,18 +1061,16 @@ export function click_multi_singleitem( p ) {
 	}
 
 
-	if(!p.tk.iscustom) {
+	if(!p.tk.iscustom && p.tk.singlesampledirectory) {
 		/*
-		is official dataset
-		click button to show whole-genome view
-		may check if dataset is disco-ready
+		is official dataset, and equipped with single-sample files
+		click button to retrieve all mutations and show in disco plot
 		*/
 		let plotnotshown = true
 		const holder = pane.body.append('div')
 			.style('margin','10px')
 			.style('display','none')
 
-		// focus button
 		buttonrow.append('div')
 			.style('display','inline-block')
 			.attr('class', 'sja_menuoption')
@@ -1087,16 +1085,31 @@ export function click_multi_singleitem( p ) {
 
 				if(plotnotshown) {
 					plotnotshown=false
-					// retrieve data for this sample
-					// then call api to show plot
 
-					sjcharts.dtDisco({
-						appname: 'dtdisco',
-						holderSelector: holder,
-						settings: {
-							showControls: false,
-							selectedSamples: ['SJOS001101_M1']
-						}
+					const arg = {
+						genome: p.block.genome.name,
+						dslabel: p.tk.mds.label,
+						querykey: p.tk.querykey,
+						getsample4disco: p.sample.samplename
+					}
+					client.dofetch('/mdssvcnv', arg)
+					.then(data=>{
+						if(data.error) throw(data.error)
+						holder.text(data.text)
+						/*
+						sjcharts.dtDisco({
+							appname: 'dtdisco',
+							holderSelector: holder,
+							settings: {
+								showControls: false,
+								selectedSamples: ['SJOS001101_M1']
+							}
+						})
+						*/
+					})
+					.catch(err=>{
+						client.sayerror(holder, typeof(err)=='string'?err:err.message)
+						if(err.stack) console.log(err.stack)
 					})
 				}
 			})
