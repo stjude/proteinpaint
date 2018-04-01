@@ -37,6 +37,24 @@ export const gmmode = common.gmmode
 export const domaincolorlst=[ '#8dd3c7', '#bebada', '#fb8072', '#80b1d3', '#E8E89E', "#a6d854", '#fdb462', "#ffd92f","#e5c494","#b3b3b3" ]
 
 
+
+export function dofetch(path,arg) {
+	const jwt = localStorage.getItem('jwt')
+	if(jwt) {
+		arg.jwt = jwt
+	}
+	return fetch(new Request(
+		(localStorage.getItem('hostURL')||'') + path,
+		{
+			method: 'POST',
+			body:JSON.stringify(arg)
+		})
+	)
+	.then(data=>{return data.json()})
+}
+
+
+
 export function appear(d,display) {
 	d.style('opacity',0)
 	.style('display',display || 'block')
