@@ -83,9 +83,18 @@ window.runproteinpaint=(arg)=>{
 	const holder= arg.holder ? d3select(arg.holder) : d3select(document.body)
 	holder.style('font','1em Arial, sans-serif')
 		.style('color','black')
+
 	if(arg.host) {
 		hostURL=arg.host
 	}
+
+	// store fetch parameters
+	localStorage.setItem('hostURL', hostURL)
+	if(arg.jwt) {
+		localStorage.setItem('jwt',arg.jwt)
+	}
+
+
 	if(arg.variantPageCall_snv) {
 		variantPageCall_snv=arg.variantPageCall_snv
 	}
