@@ -193,7 +193,7 @@ function loadTk_mayinitiatecustomvcf( tk, block ) {
 function loadTk_do( tk, block ) {
 
 	const par={
-		jwt:block.jwt,
+		//jwt:block.jwt,
 		genome:block.genome.name,
 		rglst: block.tkarg_maygm(tk),
 	}
@@ -217,11 +217,7 @@ function loadTk_do( tk, block ) {
 
 	addLoadParameter( par, tk )
 
-	return fetch( new Request(block.hostURL+'/mdssvcnv', {
-		method:'POST',
-		body:JSON.stringify(par)
-	}))
-	.then(data=>{return data.json()})
+	return client.dofetch('/mdssvcnv', par)
 	.then(data=>{
 
 		// throw errors
