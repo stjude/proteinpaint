@@ -245,14 +245,14 @@ module.exports={
 			},
 
 
-
-
 			expressionrank_querykey:'genefpkm',
 			vcf_querykey:'snvindel',
 
 			multihidelabel_vcf:true,
 			multihidelabel_fusion:false,
 			multihidelabel_sv:true,
+
+			singlesampledirectory:'hg19/Pediatric/mutationpersample/',
 		},
 
 
