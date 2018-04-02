@@ -172,8 +172,6 @@ app.post('/hicdata',handle_hicdata)
 app.post('/checkrank',handle_checkrank)
 app.post('/samplematrix', handle_samplematrix)
 
-app.get('/sample/:sample',handle_sample)
-app.get('/sampleNames',handle_sampleNames)
 
 // obsolete
 app.get('/tpbam',handle_tpbam)
@@ -7090,12 +7088,30 @@ function handle_samplematrix(req,res) {
 			if(!ds.queries) throw('dataset is not equipped with queries')
 		}
 
+		/*
+		impose certain limits to restrict to a set of samples
+		merge different logic of limits into one set
+		share in different feature processor
+		*/
+		let usesampleset
+
 		if(req.query.limitsamplebyeitherannotation) {
 			// must be official ds
 			if(!ds.cohort) throw('limitsamplebyeitherannotation but no cohort in ds')
 			if(!ds.cohort.annotation) throw('limitsamplebyeitherannotation but no cohort.annotation in ds')
-			// should produce a set of names for allowed samples
+			usesampleset = new Set()
+			for(const n in ds.cohort.annotation) {
+				const a = ds.cohort.annotation[n]
+				for(const filter of req.query.limitsamplebyeitherannotation) {
+					if(a[ filter.key ] == filter.value) {
+						// use this sample
+						usesampleset.add( n )
+						break
+					}
+				}
+			}
 		}
+
 
 		const tasks = []
 
@@ -7129,55 +7145,55 @@ function handle_samplematrix(req,res) {
 
 			if(feature.isgenevalue) {
 
-				const [err, q] = samplematrix_task_isgenevalue( feature, ds, dsquery, req )
+				const [err, q] = samplematrix_task_isgenevalue( feature, ds, dsquery, usesampleset )
 				if(err) throw('error with isgenevalue: '+err)
 				tasks.push(q)
 
 			} else if(feature.iscnv) {
 
-				const [err, q] = samplematrix_task_iscnv( feature, ds, dsquery, req )
+				const [err, q] = samplematrix_task_iscnv( feature, ds, dsquery, usesampleset )
 				if(err) throw('error with iscnv: '+err)
 				tasks.push(q)
 
 			} else if(feature.isloh) {
 
-				const [err, q] = samplematrix_task_isloh( feature, ds, dsquery, req )
+				const [err, q] = samplematrix_task_isloh( feature, ds, dsquery, usesampleset )
 				if(err) throw('error with isloh: '+err)
 				tasks.push(q)
 
 			} else if(feature.isvcf) {
 
-				const [err, q] = samplematrix_task_isvcf( feature, ds, dsquery, req )
+				const [err, q] = samplematrix_task_isvcf( feature, ds, dsquery, usesampleset )
 				if(err) throw('error with isvcf: '+err)
 				tasks.push(q)
 
 			} else if(feature.isitd) {
 
-				const [err, q] = samplematrix_task_isitd( feature, ds, dsquery, req )
+				const [err, q] = samplematrix_task_isitd( feature, ds, dsquery, usesampleset )
 				if(err) throw('error with isitd: '+err)
 				tasks.push(q)
 
 			} else if(feature.issvfusion) {
 
-				const [err, q] = samplematrix_task_issvfusion( feature, ds, dsquery, req )
+				const [err, q] = samplematrix_task_issvfusion( feature, ds, dsquery, usesampleset )
 				if(err) throw('error with issvfusion: '+err)
 				tasks.push(q)
 
 			} else if(feature.issvcnv) {
 
-				const [err, q] = samplematrix_task_issvcnv( feature, ds, dsquery, req )
+				const [err, q] = samplematrix_task_issvcnv( feature, ds, dsquery, usesampleset )
 				if(err) throw('error with issvcnv: '+err)
 				tasks.push(q)
 
 			} else if(feature.ismutation) {
 
-				const [err, q] = samplematrix_task_ismutation( feature, ds, dsquerylst, req )
+				const [err, q] = samplematrix_task_ismutation( feature, ds, dsquerylst, usesampleset )
 				if(err) throw('error with ismutation: '+err)
 				tasks.push(q)
 
 			} else if(feature.issampleattribute) {
 
-				const [err, q] = samplematrix_task_issampleattribute( feature, ds, req )
+				const [err, q] = samplematrix_task_issampleattribute( feature, ds, usesampleset )
 				if(err) throw('error with issampleattribute: '+err)
 				tasks.push(q)
 
@@ -7201,7 +7217,7 @@ function handle_samplematrix(req,res) {
 
 
 
-function samplematrix_task_issampleattribute(feature, ds, req) {
+function samplematrix_task_issampleattribute(feature, ds, usesampleset) {
 	if(!feature.key) return ['.key missing']
 	if(!ds.cohort) return ['ds.cohort missing']
 	if(!ds.cohort.annotation) return ['ds.cohort.annotation missing']
@@ -7209,17 +7225,11 @@ function samplematrix_task_issampleattribute(feature, ds, req) {
 	.then(()=>{
 		const items=[]
 		for(const samplename in ds.cohort.annotation) {
-			const anno = ds.cohort.annotation[ samplename ]
-			if(req.query.limitsamplebyeitherannotation) {
-				let notfit = true
-				for(const filter of req.query.limitsamplebyeitherannotation) {
-					if(anno[ filter.key ] == filter.value) {
-						notfit=false
-						break
-					}
-				}
-				if(notfit) continue
-			}
+
+			if(usesampleset && !usesampleset.has(samplename)) continue
+
+			const anno = ds.cohort.annotation[samplename]
+
 			const value = anno[ feature.key ]
 			if(value==undefined) continue
 			items.push({
@@ -7237,7 +7247,7 @@ function samplematrix_task_issampleattribute(feature, ds, req) {
 
 
 
-function samplematrix_task_isgenevalue(feature, ds, dsquery, req) {
+function samplematrix_task_isgenevalue(feature, ds, dsquery, usesampleset) {
 	if(!feature.genename) return ['genename missing']
 	const genename = feature.genename.toLowerCase()
 	if(!feature.chr) return ['chr missing']
@@ -7274,18 +7284,8 @@ function samplematrix_task_isgenevalue(feature, ds, dsquery, req) {
 				if(j.gene.toLowerCase() != genename) return
 
 				if(!j.sample) return
-				if(req.query.limitsamplebyeitherannotation) {
-					const anno = ds.cohort.annotation[ j.sample ]
-					if(!anno) return
-					let notfit = true
-					for(const filter of req.query.limitsamplebyeitherannotation) {
-						if(anno[ filter.key ] == filter.value) {
-							notfit=false
-							break
-						}
-					}
-					if(notfit) return
-				}
+				if(usesampleset && !usesampleset.has(j.sample)) return
+
 				data.push( j )
 			})
 
@@ -7309,7 +7309,7 @@ function samplematrix_task_isgenevalue(feature, ds, dsquery, req) {
 
 
 
-function samplematrix_task_iscnv(feature, ds, dsquery, req) {
+function samplematrix_task_iscnv(feature, ds, dsquery, usesampleset) {
 	if(!feature.chr) return ['chr missing']
 	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
 	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
@@ -7357,18 +7357,7 @@ function samplematrix_task_iscnv(feature, ds, dsquery, req) {
 				if(feature.focalsizelimit && j.stop-j.start>=feature.focalsizelimit) return
 
 				if(!j.sample) return
-				if(req.query.limitsamplebyeitherannotation) {
-					const anno = ds.cohort.annotation[ j.sample ]
-					if(!anno) return
-					let notfit = true
-					for(const filter of req.query.limitsamplebyeitherannotation) {
-						if(anno[ filter.key ] == filter.value) {
-							notfit=false
-							break
-						}
-					}
-					if(notfit) return
-				}
+				if(usesampleset && !usesampleset.has(j.sample)) return
 
 				data.push( j )
 			})
@@ -7394,7 +7383,7 @@ function samplematrix_task_iscnv(feature, ds, dsquery, req) {
 
 
 
-function samplematrix_task_isloh(feature, ds, dsquery, req) {
+function samplematrix_task_isloh(feature, ds, dsquery, usesampleset) {
 	if(!feature.chr) return ['chr missing']
 	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
 	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
@@ -7441,18 +7430,7 @@ function samplematrix_task_isloh(feature, ds, dsquery, req) {
 				if(feature.focalsizelimit && j.stop-j.start>=feature.focalsizelimit) return
 
 				if(!j.sample) return
-				if(req.query.limitsamplebyeitherannotation) {
-					const anno = ds.cohort.annotation[ j.sample ]
-					if(!anno) return
-					let notfit = true
-					for(const filter of req.query.limitsamplebyeitherannotation) {
-						if(anno[ filter.key ] == filter.value) {
-							notfit=false
-							break
-						}
-					}
-					if(notfit) return
-				}
+				if(usesampleset && !usesampleset.has(j.sample)) return
 
 				data.push( j )
 			})
@@ -7478,7 +7456,7 @@ function samplematrix_task_isloh(feature, ds, dsquery, req) {
 
 
 
-function samplematrix_task_isitd(feature, ds, dsquery, req) {
+function samplematrix_task_isitd(feature, ds, dsquery, usesampleset) {
 	if(!feature.chr) return ['chr missing']
 	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
 	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
@@ -7515,18 +7493,7 @@ function samplematrix_task_isitd(feature, ds, dsquery, req) {
 				j.stop = Number.parseInt(l[2])
 
 				if(!j.sample) return
-				if(req.query.limitsamplebyeitherannotation) {
-					const anno = ds.cohort.annotation[ j.sample ]
-					if(!anno) return
-					let notfit = true
-					for(const filter of req.query.limitsamplebyeitherannotation) {
-						if(anno[ filter.key ] == filter.value) {
-							notfit=false
-							break
-						}
-					}
-					if(notfit) return
-				}
+				if(usesampleset && !usesampleset.has(j.sample)) return
 
 				data.push( j )
 			})
@@ -7552,7 +7519,7 @@ function samplematrix_task_isitd(feature, ds, dsquery, req) {
 
 
 
-function samplematrix_task_issvfusion(feature, ds, dsquery, req) {
+function samplematrix_task_issvfusion(feature, ds, dsquery, usesampleset) {
 	if(!feature.chr) return ['chr missing']
 	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
 	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
@@ -7585,18 +7552,7 @@ function samplematrix_task_issvfusion(feature, ds, dsquery, req) {
 				if(j.dt != common.dtsv && j.dt != common.dtfusionrna ) return
 
 				if(!j.sample) return
-				if(req.query.limitsamplebyeitherannotation) {
-					const anno = ds.cohort.annotation[ j.sample ]
-					if(!anno) return
-					let notfit = true
-					for(const filter of req.query.limitsamplebyeitherannotation) {
-						if(anno[ filter.key ] == filter.value) {
-							notfit=false
-							break
-						}
-					}
-					if(notfit) return
-				}
+				if(usesampleset && !usesampleset.has(j.sample)) return
 
 				j._chr = l[0]
 				j._pos = Number.parseInt(l[1])
@@ -7629,7 +7585,8 @@ function samplematrix_task_issvfusion(feature, ds, dsquery, req) {
 	return [null,q]
 }
 
-function samplematrix_task_issvcnv(feature, ds, dsquery, req) {
+
+function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 	if(!feature.chr) return ['chr missing']
 	if(!Number.isInteger(feature.start) || !Number.isInteger(feature.stop)) return ['invalid start/stop coordinate']
 	if(feature.stop-feature.start > 10000000) return ['look range too big (>10Mb)']
@@ -7660,18 +7617,7 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, req) {
 				const j=JSON.parse(l[3])
 
 				if(!j.sample) return
-				if(req.query.limitsamplebyeitherannotation) {
-					const anno = ds.cohort.annotation[ j.sample ]
-					if(!anno) return
-					let notfit = true
-					for(const filter of req.query.limitsamplebyeitherannotation) {
-						if(anno[ filter.key ] == filter.value) {
-							notfit=false
-							break
-						}
-					}
-					if(notfit) return
-				}
+				if(usesampleset && !usesampleset.has(j.sample)) return
 
 				// keep all data and return
 
@@ -7738,7 +7684,7 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, req) {
 
 
 
-function samplematrix_task_ismutation(feature, ds, dsquerylst, req) {
+function samplematrix_task_ismutation(feature, ds, dsquerylst, usesampleset) {
 	/*
 	load mutation of any type:
 		snvindel from vcf file
@@ -7757,13 +7703,13 @@ function samplematrix_task_ismutation(feature, ds, dsquerylst, req) {
 
 		if(query.type == common.tkt.mdsvcf) {
 
-			const [err, q] = samplematrix_task_isvcf( feature, ds, query, req )
+			const [err, q] = samplematrix_task_isvcf( feature, ds, query, usesampleset )
 			if(err) return [err]
 			tasks.push(q)
 
 		} else if(query.type == common.tkt.mdssvcnv) {
 			
-			const [err, q] = samplematrix_task_issvcnv( feature, ds, query, req )
+			const [err, q] = samplematrix_task_issvcnv( feature, ds, query, usesampleset )
 			if(err) return [err]
 			tasks.push(q)
 
@@ -7795,7 +7741,7 @@ function samplematrix_task_ismutation(feature, ds, dsquerylst, req) {
 
 
 
-function samplematrix_task_isvcf(feature, ds, dsquery, req) {
+function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 	/*
 	if is custom, will pass the lines to client for processing
 	*/
@@ -7860,31 +7806,18 @@ function samplematrix_task_isvcf(feature, ds, dsquery, req) {
 
 							// filters on samples
 
-							if(req.query.limitsamplebyeitherannotation) {
+							if(usesampleset) {
 								const samplesnothidden = []
 								for(const s of m.sampledata) {
-
-									const sanno = ds.cohort.annotation[ s.sampleobj.name ]
-									if(!sanno) continue
-
-									let notfit = true
-									for(const filter of req.query.limitsamplebyeitherannotation) {
-										if(sanno[ filter.key ] == filter.value) {
-											notfit=false
-											break
-										}
+									if(usesampleset.has( s.sampleobj.name )) {
+										samplesnothidden.push( s )
 									}
-									if(notfit) continue
-
-									samplesnothidden.push( s )
 								}
 								if(samplesnothidden.length==0) {
 									continue
 								}
 								m.sampledata = samplesnothidden
 							}
-
-
 
 							// delete the obsolete attr
 							for(const sb of m.sampledata) {
@@ -7946,33 +7879,11 @@ function samplematrix_task_isvcf(feature, ds, dsquery, req) {
 
 /***********  __smat ends ************/
 
-function handle_sample(req,res) {
-	// invalid
-	const file = serverconfig.tpmasterdir + '/hg19/pcgp-target/cnv-sv/tmp/' + req.params.sample
-	fs.readFile(file, (err, data)=>{
-		if(err) {
-			res.send({error:'error reading file'})
-			return
-		}
-		res.setHeader('Content-Type','application/json')
-		res.send(data)
-	})
-}
 
-function handle_sampleNames(req,res) {
-	// invalid
-	const dir = serverconfig.tpmasterdir + '/hg19/pcgp-target/cnv-sv/tmp'
-	fs.readdir(dir, (err, files)=>{
-		if(err) {
-			res.send({error:'error reading file'})
-			return
-		}
-		res.setHeader('Content-Type','application/json')
-		res.send(JSON.stringify(files))
-	})
-}
 
-/***********  __sample ends ************/
+
+
+
 
 
 
