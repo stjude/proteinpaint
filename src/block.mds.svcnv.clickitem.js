@@ -1102,6 +1102,21 @@ export function click_multi_singleitem( p ) {
 					client.dofetch('/mdssvcnv', arg)
 					.then(data=>{
 						if(data.error) throw(data.error)
+						if(!data.text) throw('.text missing')
+						/*
+						parsing text to json should be handled here in pp
+						then pass the json to sjchart
+						edgar: please modify if there can be better way to parse json and capture error
+						*/
+						let json
+						try{
+							json = JSON.parse(data.text)
+						} catch(e){
+							throw(e.message)
+						}
+
+						// TODO provide json to sjcharts
+
 						discoPromise.then(renderer=>{
 							renderer.main({
 								sampleName: p.sample.samplename,
