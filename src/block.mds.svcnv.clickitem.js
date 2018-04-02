@@ -1070,6 +1070,13 @@ export function click_multi_singleitem( p ) {
 		const holder = pane.body.append('div')
 			.style('margin','10px')
 			.style('display','none')
+		const discoPromise = sjcharts.dtDisco({
+			holderSelector: holder,
+			settings: {
+				showControls: false,
+				selectedSamples: []
+			}
+		})
 
 		buttonrow.append('div')
 			.style('display','inline-block')
@@ -1095,17 +1102,12 @@ export function click_multi_singleitem( p ) {
 					client.dofetch('/mdssvcnv', arg)
 					.then(data=>{
 						if(data.error) throw(data.error)
-						holder.text(data.text)
-						/*
-						sjcharts.dtDisco({
-							appname: 'dtdisco',
-							holderSelector: holder,
-							settings: {
-								showControls: false,
-								selectedSamples: ['SJOS001101_M1']
-							}
+						discoPromise.then(renderer=>{
+							renderer.main({
+								sampleName: p.sample.samplename,
+								data: JSON.parse(data.text),
+							})
 						})
-						*/
 					})
 					.catch(err=>{
 						client.sayerror(holder, typeof(err)=='string'?err:err.message)
