@@ -94,6 +94,10 @@ module.exports={
 					label:'Cancer',
 					filter:1,
 				},
+				sample_type:{
+					label:'Sample type',
+					filter:1,
+				},
 				'WGS telomere call':{
 					label:'WGS telomere call',
 					values:{
