@@ -3822,7 +3822,7 @@ function handle_mdssvcnv(req,res) {
 	}
 
 
-	// exits
+	///////////////// exits
 	if(req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample( req, res, gn, ds, dsquery )
 	if(req.query.findsamplename) return mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery )
 	if(req.query.getsample4disco) return mdssvcnv_exit_getsample4disco( req, res, gn, ds, dsquery )
@@ -4438,76 +4438,7 @@ function handle_mdssvcnv(req,res) {
 
 		const [ data_cnv, expressionrangelimit, gene2sample2obj, vcfrangelimit, data_vcf ] = data
 
-		const sample2item = new Map()
-
-		{
-			/*
-			transform data_cnv[] to sample2item
-
-			to dedup, as the same cnv event may be retrieved multiple times by closeby regions, also gets set of samples for summary
-			k: sample
-			v: list of sv, cnv, loh
-
-			do not include snvindel from vcf
-			the current data_vcf is variant-2-sample
-			if snvindel is spread across samples, the variant annotation must be duplicated too
-			just pass the lot to client, there each variant will sort out annotation, then spread to samples while keeping pointers in sample-m to original m
-
-			yet further complexity due to the need of grouping samples by server-side annotation
-			which will require vcf samples all to be included in samplegroups
-
-			expression rank will be assigned to samples in all groups
-			for vcf samples to get expression rank, it also require them to be grouped!
-			*/
-		
-			const sample2coordset_cnv = {}
-			const sample2coordset_loh = {}
-			// k: sample
-			// v: {}, key is cnv/loh coordinate set chr.start.stop
-			for(const tmp of data_cnv) {
-				for(const item of tmp) {
-					if(!item.sample) {
-						// must have sample
-						continue
-					}
-					const sn = item.sample
-					if(!sample2coordset_cnv[sn]) {
-						sample2coordset_cnv[sn] = {}
-						sample2coordset_loh[sn] = {}
-						sample2item.set( sn,  [] )
-					}
-
-					if(item._chr) {
-						// sv, no checking against coordset
-						sample2item.get(sn).push(item)
-						continue
-					}
-
-					const k = item.chr+'.'+item.start+'.'+item.stop
-
-					if(item.loh) {
-						// loh
-						if( sample2coordset_loh[ sn ][ k ] ) {
-							// the event is already in this sample
-							continue
-						}
-						sample2coordset_loh[ sn ][ k ] = 1
-					} else {
-						// cnv
-						if( sample2coordset_cnv[ sn ][ k ] ) {
-							// the event is already in this sample
-							continue
-						}
-						sample2coordset_cnv[ sn ][ k ] = 1
-					}
-
-					// new event
-					delete item.sample
-					delete item.sampletype
-					sample2item.get( sn ).push( item )
-				}
-			}
-		}
+		const sample2item = mdssvcnv_do_sample2item( data_cnv )
 
 		if(req.query.showonlycnvwithsv) {
 			/*
@@ -4515,47 +4446,7 @@ function handle_mdssvcnv(req,res) {
 			for each cnv of each sample,
 			cnv must have at least 1 sv inside or within 1kb to it
 			*/
-			for(const [sample,lst] of sample2item) {
-
-				const svchr2pos={}
-				// k: sv chr
-				// v: set of sv breakpoint positions
-				for(const j of lst) {
-					if(j._chr) {
-						if(!svchr2pos[j.chrA]) {
-							svchr2pos[j.chrA]=new Set()
-						}
-						svchr2pos[j.chrA].add(j.posA)
-						if(!svchr2pos[j.chrB]) {
-							svchr2pos[j.chrB]=new Set()
-						}
-						svchr2pos[j.chrB].add(j.posB)
-					}
-				}
-				const keepitems = []
-				for(const j of lst) {
-					if(j._chr || j.loh) {
-						keepitems.push(j)
-						continue
-					}
-					if(!svchr2pos[j.chr]) continue
-					let match=false
-					for(const pos of svchr2pos[j.chr]) {
-						if( pos>=j.start-1000 && pos<=j.stop+1000) {
-							match=true
-							break
-						}
-					}
-					if(match) {
-						keepitems.push(j)
-					}
-				}
-				if(keepitems.length) {
-					sample2item.set(sample, keepitems)
-				} else {
-					sample2item.delete(sample)
-				}
-			}
+			mdssvcnv_do_showonlycnvwithsv(sample2item)
 		}
 
 		// exit
@@ -4579,7 +4470,12 @@ function handle_mdssvcnv(req,res) {
 			return
 		}
 
-		// not single-sample
+		///// not single-sample; in multi-sample mode
+
+
+		mdssvcnv_do_copyneutralloh(sample2item)
+
+
 		// group sample by available attributes
 
 		const result = {} // for res.send( )
@@ -4821,6 +4717,172 @@ function handle_mdssvcnv(req,res) {
 			console.error(err.stack)
 		}
 	})
+}
+
+
+
+function mdssvcnv_do_sample2item(data_cnv) {
+	/*
+	transform data_cnv[] to sample2item
+
+	to dedup, as the same cnv event may be retrieved multiple times by closeby regions, also gets set of samples for summary
+	k: sample
+	v: list of sv, cnv, loh
+
+	do not include snvindel from vcf
+	the current data_vcf is variant-2-sample
+	if snvindel is spread across samples, the variant annotation must be duplicated too
+	just pass the lot to client, there each variant will sort out annotation, then spread to samples while keeping pointers in sample-m to original m
+
+	yet further complexity due to the need of grouping samples by server-side annotation
+	which will require vcf samples all to be included in samplegroups
+
+	expression rank will be assigned to samples in all groups
+	for vcf samples to get expression rank, it also require them to be grouped!
+	*/
+	const sample2item = new Map()
+
+	const sample2coordset_cnv = {}
+	const sample2coordset_loh = {}
+	// k: sample
+	// v: {}, key is cnv/loh coordinate set chr.start.stop
+	for(const tmp of data_cnv) {
+		for(const item of tmp) {
+			if(!item.sample) {
+				// must have sample
+				continue
+			}
+			const sn = item.sample
+			if(!sample2coordset_cnv[sn]) {
+				sample2coordset_cnv[sn] = {}
+				sample2coordset_loh[sn] = {}
+				sample2item.set( sn,  [] )
+			}
+
+			if(item._chr) {
+				// sv, no checking against coordset
+				sample2item.get(sn).push(item)
+				continue
+			}
+
+			const k = item.chr+'.'+item.start+'.'+item.stop
+
+			if(item.loh) {
+				// loh
+				if( sample2coordset_loh[ sn ][ k ] ) {
+					// the event is already in this sample
+					continue
+				}
+				sample2coordset_loh[ sn ][ k ] = 1
+			} else {
+				// cnv
+				if( sample2coordset_cnv[ sn ][ k ] ) {
+					// the event is already in this sample
+					continue
+				}
+				sample2coordset_cnv[ sn ][ k ] = 1
+			}
+
+			// new event
+			delete item.sample
+			delete item.sampletype
+			sample2item.get( sn ).push( item )
+		}
+	}
+	return sample2item
+}
+
+
+
+function mdssvcnv_do_showonlycnvwithsv(sample2item) {
+	for(const [sample,lst] of sample2item) {
+
+		const svchr2pos={}
+		// k: sv chr
+		// v: set of sv breakpoint positions
+		for(const j of lst) {
+			if(j._chr) {
+				if(!svchr2pos[j.chrA]) {
+					svchr2pos[j.chrA]=new Set()
+				}
+				svchr2pos[j.chrA].add(j.posA)
+				if(!svchr2pos[j.chrB]) {
+					svchr2pos[j.chrB]=new Set()
+				}
+				svchr2pos[j.chrB].add(j.posB)
+			}
+		}
+		const keepitems = []
+		for(const j of lst) {
+			if(j._chr || j.loh) {
+				keepitems.push(j)
+				continue
+			}
+			if(!svchr2pos[j.chr]) continue
+			let match=false
+			for(const pos of svchr2pos[j.chr]) {
+				if( pos>=j.start-1000 && pos<=j.stop+1000) {
+					match=true
+					break
+				}
+			}
+			if(match) {
+				keepitems.push(j)
+			}
+		}
+		if(keepitems.length) {
+			sample2item.set(sample, keepitems)
+		} else {
+			sample2item.delete(sample)
+		}
+	}
+}
+
+
+
+
+function mdssvcnv_do_copyneutralloh (sample2item) {
+	for(const [sample,lst] of sample2item) {
+
+		// only keep loh with no overlap with cnv
+		const chr2loh = new Map()
+		const chr2cnv = new Map()
+		const thissampleitems = []
+		for(const i of lst) {
+			if(i.dt==common.dtloh) {
+				if(!chr2loh.has(i.chr)) chr2loh.set(i.chr, [])
+				chr2loh.get(i.chr).push(i)
+				continue
+			}
+			if(i.dt==common.dtcnv) {
+				if(!chr2cnv.has(i.chr)) chr2cnv.set(i.chr, [])
+				chr2cnv.get(i.chr).push(i)
+			}
+			thissampleitems.push(i)
+		}
+
+		if(chr2loh.size==0) continue
+
+		for(const [chr, lohlst] of chr2loh) {
+			const cnvlst = chr2cnv.get(chr)
+			if(!cnvlst) {
+				for(const i of lohlst) thissampleitems.push(i)
+				continue
+			}
+			for(const loh of lohlst) {
+				let nocnvmatch=true
+				for(const cnv of cnvlst) {
+					if(Math.max(loh.start,cnv.start) < Math.min(loh.stop, cnv.stop)) {
+						nocnvmatch=false
+						break
+					}
+				}
+				if(nocnvmatch) thissampleitems.push( loh )
+			}
+		}
+
+		sample2item.set(sample, thissampleitems)
+	}
 }
 
 
