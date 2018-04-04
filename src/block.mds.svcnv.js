@@ -1277,7 +1277,7 @@ function render_multi_cnvloh(tk,block) {
 				if(item.labonleft) {
 
 					m_g.append('text')
-						.text(  itemname_svfusion(item) ) // item.fusiongene || item.cytogeneticname || otherchr
+						.text(  itemname_svfusion(item) )
 						.attr('text-anchor','end')
 						.attr('dominant-baseline','central')
 						.attr('font-family',client.font)
@@ -1290,7 +1290,7 @@ function render_multi_cnvloh(tk,block) {
 				} else if(item.labonright) {
 
 					m_g.append('text')
-						.text( itemname_svfusion(item) ) // item.fusiongene || item.cytogeneticname || otherchr
+						.text( itemname_svfusion(item) )
 						.attr('dominant-baseline','central')
 						.attr('font-family',client.font)
 						.attr('font-size', w+2)

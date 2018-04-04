@@ -4,7 +4,8 @@ import * as common from './common'
 import {
 	loadTk,
 	focus_singlesample,
-	dedup_sv
+	dedup_sv,
+	itemname_svfusion
 	} from './block.mds.svcnv'
 import {createbutton_addfeature} from './block.mds.svcnv.samplematrix'
 
@@ -716,7 +717,7 @@ export function click_multi_svdense(g, tk, block) {
 
 			td2.append('div')
 				.attr('class','sja_clbtext')
-				.html( i.fusiongene ? i.fusiongene+' <span style="font-size:.7em">'+breakpoint+'</span>' : breakpoint )
+				.html( itemname_svfusion(i) + ' <span style="font-size:.7em">'+breakpoint+'</span>' )
 				.on('mouseover',()=>{
 					tooltip_singleitem({
 						item:i,
@@ -1259,7 +1260,7 @@ function detailtable_singlesample(p) {
 				+svchr2html(m.chrB, p.tk)+':'+(m.posB+1)+':'+m.strandB
 			lst.push({
 				k: (m.dt==common.dtsv ? 'SV' : 'RNA fusion'),
-				v: ((m.fusiongene || m.cytogeneticname) ? (m.fusiongene || m.cytogeneticname)+' <span style="font-size:.7em">'+breakpoint+'</span>' : breakpoint)
+				v: itemname_svfusion(m)+' <span style="font-size:.7em">'+breakpoint+'</span>'
 			})
 		}
 
@@ -1549,7 +1550,7 @@ function sortitemsbytype_onesample( samplename, lst, tk ) {
 
 			svlst.push(
 				'<div style="white-space:nowrap">'
-				+( (i.fusiongene || i.cytogeneticname) ? (i.fusiongene||i.cytogeneticname)+' <span style="font-size:.7em">'+breakpoint+'</span>' : breakpoint)
+				+ itemname_svfusion(i) + ' <span style="font-size:.7em">'+breakpoint+'</span>'
 				+(i.dt==common.dtfusionrna ? ' <span style="font-size:.7em">(RNA fusion)</span>':'')
 				+'</div>'
 			)
@@ -1704,3 +1705,7 @@ export function may_add_sampleannotation(samplename, tk, lst) {
 		})
 	}
 }
+
+
+
+
