@@ -1277,7 +1277,7 @@ function render_multi_cnvloh(tk,block) {
 				if(item.labonleft) {
 
 					m_g.append('text')
-						.text( item.fusiongene || item.cytogeneticname || otherchr )
+						.text(  itemname_svfusion(item) ) // item.fusiongene || item.cytogeneticname || otherchr
 						.attr('text-anchor','end')
 						.attr('dominant-baseline','central')
 						.attr('font-family',client.font)
@@ -1290,7 +1290,7 @@ function render_multi_cnvloh(tk,block) {
 				} else if(item.labonright) {
 
 					m_g.append('text')
-						.text( item.fusiongene || item.cytogeneticname || otherchr )
+						.text( itemname_svfusion(item) ) // item.fusiongene || item.cytogeneticname || otherchr
 						.attr('dominant-baseline','central')
 						.attr('font-family',client.font)
 						.attr('font-size', w+2)
@@ -1591,7 +1591,7 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 					if(tk.multihidelabel_fusion) {
 						// no show
 					} else {
-						item.name =  i.fusiongene || (i._chr==i.chrA ? i.chrB : i.chrA)
+						item.name = itemname_svfusion( i )
 					}
 					pointitems.push(item)
 				} else if(i.dt==common.dtsv) {
@@ -1604,7 +1604,7 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 					if(tk.multihidelabel_sv) {
 						// no show 
 					} else {
-						item.name =  i.cytogeneticname || (i._chr==i.chrA ? i.chrB : i.chrA)
+						item.name = itemname_svfusion(i)
 					}
 					pointitems.push(item)
 				}
@@ -1774,6 +1774,20 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 		}
 	}
 }
+
+
+
+
+function itemname_svfusion (i) {
+	if(i.dt==common.dtfusionrna) {
+		if(i.geneA || i.geneB) return (i.geneA || i.chrA) + ' > '+(i.geneB || i.chrB)
+		return i._chr==i.chrA ? i.chrB : i.chrA
+	}
+	if(i.cytogeneticname) return i.cytogeneticname
+	if(i.geneA || i.geneB) return (i.geneA || i.chrA) + ' > '+(i.geneB || i.chrB)
+	return i._chr==i.chrA ? i.chrB : i.chrA
+}
+
 
 
 
