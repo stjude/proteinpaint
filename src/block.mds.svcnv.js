@@ -1778,14 +1778,9 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 
 
 
-function itemname_svfusion (i) {
-	if(i.dt==common.dtfusionrna) {
-		if(i.geneA || i.geneB) return (i.geneA || i.chrA) + ' > '+(i.geneB || i.chrB)
-		return i._chr==i.chrA ? i.chrB : i.chrA
-	}
+export function itemname_svfusion (i) {
 	if(i.cytogeneticname) return i.cytogeneticname
-	if(i.geneA || i.geneB) return (i.geneA || i.chrA) + ' > '+(i.geneB || i.chrB)
-	return i._chr==i.chrA ? i.chrB : i.chrA
+	return (i.geneA || i.chrA) + ' > '+(i.geneB || i.chrB)
 }
 
 
