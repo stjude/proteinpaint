@@ -4,25 +4,42 @@ function abort(m) {
 }
 
 
-if(process.argv.length!=4) abort('<SV file from cohort> <bin bp length> output compressed SV to stdout')
+if(process.argv.length!=5) abort('<SV file from cohort> <bin bp length> <#sample cutoff> output compressed SV to stdout')
+
+
+
+/*
+sv file contains SV or fusion; columns must be following:
+
+1	sample	PAISNS_diagnosis
+2	chra	1
+3	posa	120543859
+4	chrb	2
+5	posb	65103235
+
+bin bp length is e.g. 1000000
+
+will group SVs into genomic bins of this size;
+each grouped SV points to two genomic bins (chrA, binned posA, chrB, binned posB), and each has a number of samples
+
+output grouped SV with #sample no less than cutoff value
+*/
+
+
+
 
 
 const svfile = process.argv[2]
 const binsize = Number.parseInt(process.argv[3])
 if(Number.isNaN(binsize)) abort('invalid value for bin bp length')
+const samplenumcutoff = Number.parseInt(process.argv[4])
+if(Number.isNaN(samplenumcutoff)) abort('invalid value for samplenumcutoff')
 
 
 const fs=require('fs')
 
 const lines = fs.readFileSync(svfile,{encoding:'utf8'}).trim().split('\n')
 
-/*
-1	sample	PAISNS_diagnosis
-2	chra	1
-3	posa	120543859
-4	chrb	2
-5	posb	65103235
-*/
 
 const data = new Map()
 /*
@@ -49,22 +66,16 @@ for(let i=1; i<lines.length; i++) {
 	let chrA, posA, chrB, posB
 	/* for sv cases of chr1-chr2 & chr2-chr1, they should be registered using the same chr in data
 	*/
-	if(data.has(chr1)) {
+	if(chr1 > chr2) {
 		chrA = chr1
 		posA = pos1
 		chrB = chr2
 		posB = pos2
-	} else if(data.has(chr2)) {
+	} else {
 		chrA = chr2
 		posA = pos2
 		chrB = chr1
 		posB = pos1
-	} else {
-		// neither chr indexed
-		chrA = chr1
-		posA = pos1
-		chrB = chr2
-		posB = pos2
 	}
 
 	const binposA = binsize * Math.floor( posA/binsize )
@@ -81,11 +92,16 @@ for(let i=1; i<lines.length; i++) {
 	data.get(chrA).get(binposA).get(chrB).get(binposB).add( sample )
 }
 
+
+
 for(const [chrA,d1] of data) {
 	for(const [posA, d2] of d1) {
 		for(const [chrB, d3] of d2) {
 			for(const [posB, samples] of d3) {
-				console.log(chrA+'\t'+posA+'\t'+chrB+'\t'+posB+'\t'+samples.size)
+				if(samples.size >= samplenumcutoff) {
+					//console.log(chrA+'\t'+posA+'\t'+chrB+'\t'+posB+'\t'+samples.size)
+					console.log( JSON.stringify({dt:2, chrA:chrA, posA:posA, chrB:chrB,posB:posB, samplecount:samples.size})+',')
+				}
 			}
 		}
 	}
