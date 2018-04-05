@@ -42,6 +42,11 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 
 	if(tk.iscustom) return
 
+	if(!samplegroup.attributes) {
+		// no attributes[], maybe unannotated samples, do not show menu for the moment
+		return
+	}
+
 	const printerror = msg=> client.sayerror( tk.tip2.d, msg )
 
 	if(!tk.sampleAttribute) return printerror('tk.sampleAttribute missing')
@@ -84,7 +89,7 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 		if so, allow to show all
 		*/
 		const [err, attr, attrR] = samplegroup_getdriverattribute( samplegroup, tk )
-		if(err) return error(err)
+		if(err) return printerror(err)
 		if(attrR.hiddenvalues.size>0) {
 			// has other hidden groups
 			tk.tip2.d.append('div')

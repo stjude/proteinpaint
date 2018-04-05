@@ -2587,6 +2587,7 @@ function prep_samplegroups( tk, block ) {
 			const lst = []
 			for(const value of sortgroupby.order) {
 				for(const g of plotgroups) {
+					if(!g.attributes) continue
 					for(const at of g.attributes) {
 						if(at.k == sortgroupby.key && at.kvalue==value) {
 							// is one
