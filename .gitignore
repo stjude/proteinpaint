@@ -42,3 +42,6 @@ tmpbuild/*
 scripts/*.newdev.sh
 
 deploys/
+
+p4/node_modules/
+p4/public/bin/*
