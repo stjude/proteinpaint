@@ -76,11 +76,16 @@ export function init(p) {
 
 	const buttonrow=plot.holder.append('div')
 		.style('margin','10px')
+
+	// below button row, show/hide boxes
 	const configdiv=plot.holder.append('div')
 		.style('margin','10px')
 		.style('border','solid 1px #ededed')
 		.style('padding','10px')
 		.style('display','none')
+
+	const showdatatable = plot.holder.append('table')
+		.style('margin','10px')
 
 	// TODO no log conversion if there is negative value (z-score)
 	buttonrow.append('button')
@@ -351,6 +356,46 @@ export function init(p) {
 			}
 		}
 	}
+
+
+	buttonrow.append('button')
+		.text('Data')
+		.on('click',()=>{
+			if(showdatatable.style('display')=='block') {
+				client.disappear(showdatatable)
+				return
+			}
+
+			showdatatable.selectAll('*').remove()
+			const tr=showdatatable.append('tr')
+			tr.append('td').text('Group')
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			tr.append('td').text('1st quartile')
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			tr.append('td').text('Median')
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			tr.append('td').text('3rd quartile')
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			if(plot.data && plot.data.groups) {
+				for(const [i,g] of plot.data.groups.entries()) {
+					const tr = showdatatable.append('tr')
+						.style('background', i%2 ? '' : '#f1f1f1' )
+					tr.append('td').text(g.name)
+
+					const boxplot = g.boxplots ? g.boxplots[0] : null
+
+					tr.append('td').text( boxplot ? boxplot.p25 : '')
+					tr.append('td').text( boxplot ? boxplot.p50 : '')
+					tr.append('td').text( boxplot ? boxplot.p75 : '')
+				}
+			}
+
+			client.appear(showdatatable)
+		})
 
 
 	plot.svg=plot.holder.append('svg')
