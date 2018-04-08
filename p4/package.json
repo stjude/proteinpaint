@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "ProteinPaint 4",
   "scripts": {
-    "dev": "rm -rf public/bin;webpack-cli --config=webpack.config.js --progress --colors"
+    "dev": "rm -rf public/bin;webpack-cli --config=webpack.config.js --watch --progress --colors"
   },
   "main": "app.js",
   "author": "",
@@ -15,6 +15,7 @@
     "webpack-notifier": "1.6.0"
   },
   "dependencies": {
+    "better-sqlite3": "^4.1.0",
     "body-parser": "^1.18.2",
     "canvas": "1.6.10",
     "compression": "1.7.2",

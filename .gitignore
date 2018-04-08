@@ -45,3 +45,4 @@ deploys/
 
 p4/node_modules/
 p4/public/bin/*
+p4/config.json
