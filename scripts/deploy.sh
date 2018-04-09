@@ -156,7 +156,7 @@ else
 fi
 
 if [[ "$ENV" == "public-prod" ]]; then
-	mv public/builds/$SUBDOMAIN/no-babel-polyfill $APP/public/
+	mv $APP/public/bin/no-babel-polyfill $APP/public/
 fi
 
 # tar inside the dir in order to not create
@@ -174,7 +174,7 @@ scp $APP-$REV.tgz $DEPLOYER@$REMOTEHOST:~
 ssh -t $DEPLOYER@$REMOTEHOST "
 	rm -Rf $REMOTEDIR/$APP-new
 	mkdir $REMOTEDIR/$APP-new
-	tar -xvzf ~/$APP-$REV.tgz -C $REMOTEDIR/$APP-new/
+	tar --warning=no-unknown-keyword -xzf ~/$APP-$REV.tgz -C $REMOTEDIR/$APP-new/
 
 	cp -r $REMOTEDIR/$APP/node_modules $REMOTEDIR/$APP-new/
 	cp $REMOTEDIR/$APP/serverconfig.json $REMOTEDIR/$APP-new/
