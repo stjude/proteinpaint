@@ -128,6 +128,20 @@ export function newboxplot(ep,data,label,id,handle) {
 			t.setAttribute('fill','#FFeeee')
 			t.setAttribute('stroke','#D10000')
 			})
+		.on('mouseover',()=>{
+			ep.dottip.show({x:d3event.clientX,y:d3event.clientY})
+				.clear()
+			const lst = [
+				{k:'Name', v: (box.labeltext || 'All samples')},
+				{k:'1st quartile',v: box.percentile[25]},
+				{k:'Median', v: box.percentile[50]},
+				{k:'3rd quartile', v: box.percentile[75]}
+			]
+			client.make_table_2col(ep.dottip.d.append('div'), lst)
+		})
+		.on('mouseout',()=>{
+			ep.dottip.hide()
+		})
 			/*
 		.on('mouseover',function(){
 			holder.append('text').text('X').attr({
