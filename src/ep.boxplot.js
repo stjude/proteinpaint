@@ -129,10 +129,10 @@ export function newboxplot(ep,data,label,id,handle) {
 			t.setAttribute('stroke','#D10000')
 			})
 		.on('mouseover',()=>{
-			ep.dottip.show({x:d3event.clientX,y:d3event.clientY})
+			ep.dottip.show(d3event.clientX,d3event.clientY)
 				.clear()
 			const lst = [
-				{k:'Name', v: (box.labeltext || 'All samples')},
+				{k:'Group', v: (box.labeltext || 'All samples')},
 				{k:'1st quartile',v: box.percentile[25]},
 				{k:'Median', v: box.percentile[50]},
 				{k:'3rd quartile', v: box.percentile[75]}
@@ -142,22 +142,6 @@ export function newboxplot(ep,data,label,id,handle) {
 		.on('mouseout',()=>{
 			ep.dottip.hide()
 		})
-			/*
-		.on('mouseover',function(){
-			holder.append('text').text('X').attr({
-				class:'sja_epbox_x',
-				'font-family':sja.font,
-				x:ep.x_scale(box.percentile[75])+2,
-				y:box.height/2,
-				'dominant-baseline':'middle',
-				fill:'#EB3144',
-				'font-size':20,
-				})
-			})
-		.on('mouseout',function(){
-			holder.select('.sja_epbox_x').remove()
-			})
-			*/
 	box.box.transition().duration(ep.dur)
 		.attr('x',Math.max(0,ep.x_scale(box.percentile[25])))
 		.attr('width',Math.max(0,ep.x_scale(box.percentile[75]))-Math.max(0,ep.x_scale(box.percentile[25])))
