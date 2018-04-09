@@ -658,6 +658,13 @@ tk.leftaxis
 	const thisaxis  = axisLeft().scale(thisscale).ticks(4)
 	if(mcset.numberIsInteger) {
 		thisaxis.tickFormat(d3format('d'))
+		if(vmax-vmin < 3) {
+			/*
+			must do this to avoid axis showing redundant labels that doesn't make sense
+			e.g. -1 -2 -2
+			*/
+			thisaxis.ticks( vmax-vmin)
+		}
 	}
 	client.axisstyle({
 		axis:tk.leftaxis.call( thisaxis),
