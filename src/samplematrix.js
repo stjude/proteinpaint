@@ -37,8 +37,10 @@ const saynovalue='na'
 const default_cnvgaincolor = "#D6683C"
 const default_cnvlosscolor = "#67a9cf"
 const default_genevaluecolor = '#095873'
-const default_lohcolor = 'black'
+const default_lohcolor = '#858585'
 const default_svcolor = '#858585'
+
+const minheight2showname = 8
 
 
 export class Samplematrix {
@@ -515,6 +517,10 @@ export class Samplematrix {
 			return this.feature_parseposition_maygene( f )
 				.then(()=>{
 					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' mutation'
+					/*
+					scale must be reset when coord/width changes
+					*/
+					f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
 				})
 		}
 
@@ -882,6 +888,11 @@ export class Samplematrix {
 
 		for(const feature of this.features) {
 
+			if(feature.donotaddsample) {
+				// not adding sample from this feature
+				continue
+			}
+
 			if( feature.isgenevalue || feature.iscnv || feature.isloh || feature.isitd || feature.issvfusion || feature.issvcnv ) {
 
 				for(const item of feature.items) {
@@ -938,9 +949,11 @@ export class Samplematrix {
 		TODO better height assignment
 		may highlight certain feature by showing fat rows for samples with data in that feature; rest of samples get thin rows
 		*/
+
+		const uniformheight = Math.max( 1, Math.ceil(800/name2sample.size) )
 		const samplelst = []
 		for(const [n,sample] of name2sample) {
-			sample.height = 14
+			sample.height = uniformheight
 			sample.name = n
 			samplelst.push( sample )
 		}
@@ -976,30 +989,32 @@ export class Samplematrix {
 					.attr('transform','translate(0,'+y+')')
 				y += sample.height + this.rowspace
 
-				sample.g.append('text')
-					.attr('font-family',client.font)
-					.attr('font-size', sample.height-2)
-					.attr('text-anchor','end')
-					.attr('dominant-baseline','central')
-					.attr('x', -this.rowlabspace - this.rowlabticksize)
-					.attr('y', sample.height/2 )
-					.text( sample.name )
-					.each(function(){
-						samplenamemaxwidth = Math.max( samplenamemaxwidth, this.getBBox().width )
-					})
-					.attr('class','sja_clbtext')
-					.on('mouseover',()=>{
-						this.showTip_sample(sample)
-					})
-					.on('mouseout',()=>{
-						this.tip.hide()
-					})
-				sample.g.append('line')
-					.attr('x1', -this.rowlabticksize)
-					.attr('y1', sample.height/2)
-					.attr('y2', sample.height/2)
-					.attr('stroke','black')
-					.attr('shape-rendering','crispEdges')
+				if(sample.height >= minheight2showname) {
+					sample.g.append('text')
+						.attr('font-family',client.font)
+						.attr('font-size', sample.height-2)
+						.attr('text-anchor','end')
+						.attr('dominant-baseline','central')
+						.attr('x', -this.rowlabspace - this.rowlabticksize)
+						.attr('y', sample.height/2 )
+						.text( sample.name )
+						.each(function(){
+							samplenamemaxwidth = Math.max( samplenamemaxwidth, this.getBBox().width )
+						})
+						.attr('class','sja_clbtext')
+						.on('mouseover',()=>{
+							this.showTip_sample(sample)
+						})
+						.on('mouseout',()=>{
+							this.tip.hide()
+						})
+					sample.g.append('line')
+						.attr('x1', -this.rowlabticksize)
+						.attr('y1', sample.height/2)
+						.attr('y2', sample.height/2)
+						.attr('stroke','black')
+						.attr('shape-rendering','crispEdges')
+				}
 
 				// may plot additional things in sample.g for decoration
 			}
@@ -1359,8 +1374,21 @@ export class Samplematrix {
 			return
 		}
 
+		if(loh.length && 0) {
+			/* XXX hide loh for the moment, only temporary!!!!!
+			*/
+			// draw loh as singlular filled-box at bottom
+			const value = loh[0].segmean
+			g.append('rect')
+				.attr('width', feature.width)
+				.attr('height', sample.height)
+				.attr('fill', feature.loh.color )
+				.attr('fill-opacity', (value-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue) )
+				.attr('shape-rendering','crispEdges')
+		}
 		if(cnv.length) {
 			// draw cnv as singular filled-box at bottom
+			/*
 			const value = cnv[0].value
 			g.append('rect')
 				.attr('width', feature.width)
@@ -1368,16 +1396,18 @@ export class Samplematrix {
 				.attr('fill', value > 0 ? feature.cnv.colorgain : feature.cnv.colorloss )
 				.attr('fill-opacity', Math.abs(value) / feature.cnv.maxabslogratio )
 				.attr('shape-rendering','crispEdges')
-		}
-		if(loh.length) {
-			// draw loh as singlular filled-box at bottom
-			const value = loh[0].value
-			g.append('rect')
-				.attr('width', feature.width)
-				.attr('height', sample.height)
-				.attr('fill', feature.loh.color )
-				.attr('fill-opacity', (value-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue) )
-				.attr('shape-rendering','crispEdges')
+				*/
+			for(const item of cnv) {
+				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
+				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
+				g.append('rect')
+					.attr('x', x1)
+					.attr('width', Math.max(1, x2-x1) )
+					.attr('height', sample.height)
+					.attr('fill',  item.value>0 ? feature.cnv.colorgain : feature.cnv.colorloss )
+					.attr('fill-opacity', Math.abs(item.value)/feature.cnv.maxabslogratio)
+					.attr('shape-rendering','crispEdges')
+			}
 		}
 		if(itd.length) {
 			// draw itd as singular filled-box
@@ -2281,6 +2311,7 @@ export class Samplematrix {
 
 
 function drawEmptycell(sample,feature,g) {
+	return
 	g.append('line')
 		.attr('x2',feature.width)
 		.attr('y2',sample.height)
