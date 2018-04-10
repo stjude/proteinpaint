@@ -1,5 +1,6 @@
 
 const fs = require('fs'),
+	url = require('url')
 	path = require('path'),
 	readline = require('readline'),
 	express = require('express'),
@@ -50,6 +51,7 @@ server_validate_config()
 
 
 function server_validate_config() {
+
 return Promise.resolve()
 .then(()=>{
 
@@ -160,12 +162,16 @@ return Promise.resolve()
 
 		if(!g.genedb) throw '.genedb missing for '+genomename
 		if(!g.genedb.dbfile) throw '.genedb.dbfile missing for '+genomename
+		if(!g.genedb.statement_getnamebyname) throw '.genedb.statement_getnamebyname missing for '+genomename
 		if(!g.genedb.statement_getnamebyalias) throw '.genedb.statement_getnamebyalias missing for '+genomename
-		if(!g.genedb.statement_getbynameorisoform) throw '.genedb.statement_getbynameorisoform missing for '+genomename
+		if(!g.genedb.statement_getjsonbyname) throw '.genedb.statement_getjsonbyname missing for '+genomename
+		if(!g.genedb.statement_getnameslike) throw '.genedb.statement_getnameslike missing for '+genomename
 		{
 			const db = bettersqlite( path.join(serverconfig.filedir, g.genedb.dbfile), {readonly:true, fileMustExist:true} )
+			g.genedb.getnamebyname = db.prepare(g.genedb.statement_getnamebyname)
 			g.genedb.getnamebyalias = db.prepare( g.genedb.statement_getnamebyalias )
-			g.genedb.getbynameorisoform = db.prepare( g.genedb.statement_getbynameorisoform )
+			g.genedb.getjsonbyname = db.prepare( g.genedb.statement_getjsonbyname)
+			g.genedb.getnameslike = db.prepare( g.genedb.statement_getnameslike )
 		}
 
 
@@ -279,6 +285,7 @@ function server_launch() {
 
 	// routes
 	app.get('/genomes',handle_genomes)
+	app.post('/genelookup',handle_genelookup)
 
 	const port = serverconfig.port || 3000
 	app.listen(port)
@@ -357,6 +364,34 @@ function handle_genomes(req,res) {
 
 
 
+function handle_genelookup(req,res) {
+Promise.resolve().then(()=>{
+	const q = JSON.parse(req.body)
+	log(req,q)
+	if(!q.input) throw 'no input'
+	const genome = genomes[q.genome]
+
+	if(q.deep) {
+	}
+
+	return Promise.resolve().then(()=>{
+		let names = genome.genedb.getnameslike.all( q.input+'%' )
+		if(names.length) return { names: (names.length>20 ? names.slice(0,20) : names) }
+		names = genome.genedb.getnamebyalias.all( q.input )
+		return {names:names}
+	})
+	.then(result=>{
+		res.send(result)
+	})
+})
+.catch(e=>{
+	res.send({error: (typeof(e)=='string' ? e : e.message ) })
+	if(e.stack) console.error(e.stack)
+})
+}
+
+
+
 ////////////////////////////////////////////////// END of sec
 
 
@@ -366,6 +401,15 @@ function handle_genomes(req,res) {
 
 
 ////////////////////////////////////////////////// helpers
+
+function log(req,q) {
+	console.log('%s\t%s\t%s\t%s',
+		url.parse(req.url).pathname,
+		new Date(),
+		req.header('x-forwarded-for') || req.connection.remoteAddress,
+		JSON.stringify(q)
+	)
+}
 
 function isBadArray (i) {
 	if(!Array.isArray(i)) return true

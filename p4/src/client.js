@@ -37,7 +37,7 @@ export const domaincolorlst=[ '#8dd3c7', '#bebada', '#fb8072', '#80b1d3', '#E8E8
 
 
 
-export function dofetch(path,arg) {
+export function dofetch (path,arg,isget) {
 	const jwt = localStorage.getItem('jwt')
 	if(jwt) {
 		arg.jwt = jwt
@@ -45,8 +45,8 @@ export function dofetch(path,arg) {
 	return fetch(new Request(
 		(localStorage.getItem('hostURL')||'') + path,
 		{
-			method: 'GET',
-			body:JSON.stringify(arg)
+			method: (isget ? 'GET' : 'POST'),
+			body: (arg ? JSON.stringify(arg) : undefined)
 		})
 	)
 	.then(data=>{return data.json()})
