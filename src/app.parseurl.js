@@ -42,6 +42,17 @@ if(urlp.has('block')) {
 	if(!genomeobj) {
 		return 'invalid genome: '+genomename
 	}
+
+	const par={
+		hostURL:arg.hostURL,
+		jwt: arg.jwt,
+		holder:arg.holder,
+		genome:arg.genomes[genomename],
+		dogtag:genomename,
+		allowpopup:true,
+		debugmode:arg.debugmode,
+	}
+
 	let position=null
 	let rglst=null
 	if(urlp.has('position')) {
@@ -232,21 +243,20 @@ if(urlp.has('block')) {
 			tklst.push( tk )
 		}
 	}
+	if(urlp.has('mds')) {
+		const tmp = urlp.get('mds').split(',')
+		if(tmp[0] && tmp[1]) {
+			par.datasetqueries = [ { dataset: tmp[0], querykey: tmp[1] } ]
+		}
+	}
 
 	for(const t of tklst) {
 		t.iscustom = true
 	}
 
-	const par={
-		hostURL:arg.hostURL,
-		jwt: arg.jwt,
-		holder:arg.holder,
-		genome:arg.genomes[genomename],
-		dogtag:genomename,
-		allowpopup:true,
-		debugmode:arg.debugmode,
-		tklst: tklst
-	}
+
+	par.tklst = tklst
+
 	client.first_genetrack_tolist( arg.genomes[genomename], tklst )
 	if(position) {
 		par.chr=position.chr
