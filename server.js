@@ -7697,7 +7697,7 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 
 				} else if(j.dt==common.dtcnv) {
 
-					if(feature.cnv && feature.cnv.valuecutoff && j.value < feature.cnv.valuecutoff) return
+					if(feature.cnv && feature.cnv.valuecutoff && Math.abs(j.value) < feature.cnv.valuecutoff) return
 					j.chr = l[0]
 					j.start = Number.parseInt(l[1])
 					j.stop = Number.parseInt(l[2])
