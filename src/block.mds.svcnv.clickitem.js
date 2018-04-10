@@ -37,7 +37,7 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 	official only, multi-sample
 	dense or full
 	click sample group label in track display to show menu
-	this group must already been shown
+	this group must already has been shown
 	*/
 
 	if(tk.iscustom) return
@@ -64,7 +64,9 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 
 			tk.tip2.clear()
 			const err = samplegroup_setShowhide( samplegroup, tk, true )
-			if(err) return printerror(err)
+			if(err) {
+				//return printerror(err)
+			}
 			tk.tip2.hide()
 			loadTk(tk, block)
 		})
@@ -76,7 +78,9 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 			tk.tip2.clear()
 			for(const g of tk._data) {
 				const err = samplegroup_setShowhide( g, tk, true)
-				if(err) return printerror(err)
+				if(err) {
+					//return printerror(err)
+				}
 			}
 			samplegroup_setShowhide( samplegroup, tk, false)
 			tk.tip2.hide()
@@ -89,8 +93,10 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 		if so, allow to show all
 		*/
 		const [err, attr, attrR] = samplegroup_getdriverattribute( samplegroup, tk )
-		if(err) return printerror(err)
-		if(attrR.hiddenvalues.size>0) {
+		if(err) {
+			// do not abort -- unannotated group of sample won't have .attributes[]
+			// return printerror(err)
+		} else if(attrR.hiddenvalues.size>0) {
 			// has other hidden groups
 			tk.tip2.d.append('div')
 				.attr('class','sja_menuoption')
