@@ -44,6 +44,7 @@ if(urlp.has('block')) {
 	}
 
 	const par={
+		nobox:1,
 		hostURL:arg.hostURL,
 		jwt: arg.jwt,
 		holder:arg.holder,
