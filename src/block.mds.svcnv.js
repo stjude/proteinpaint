@@ -1898,7 +1898,7 @@ function render_multi_genebar( tk, block) {
 	}
 
 	const genes = new Set()
-	for(const g of tk.samplegroups) {
+	for(const g of tk._data) {
 		for(const s of g.samples) {
 			if(s.expressionrank) {
 				for(const gene in s.expressionrank) {
