@@ -23,7 +23,9 @@ JUMP __draw __menu
 ****************** internal use
 	.validate_config()
 	.draw_matrix()
-	.prepFeatureData()
+	.prep_featuredata()
+	.make_legend()
+	.gatherSamplesFromFeatureData
 	.click_cell
 	feature2arg()
 
@@ -61,6 +63,7 @@ export class Samplematrix {
 		// one legend item for each feature -- may not be desirable though
 		this.legendtable = this.holder.append('table')
 			.style('margin-bottom','20px')
+			.style('border-spacing','10px')
 		if(this.hidelegend_features) {
 			this.legendtable.style('display','none')
 		}
@@ -540,6 +543,13 @@ export class Samplematrix {
 			}
 			f.assignmissingcolor = scaleOrdinal(schemeCategory10)
 			if(!f.width) f.width=20
+
+			tr.append('td')
+				.text(f.label)
+				.style('opacity',.5)
+				.style('text-align','right')
+			f.legendholder = tr.append('td')
+
 			return Promise.resolve()
 		}
 
@@ -595,10 +605,11 @@ export class Samplematrix {
 				if(!f) throw({message: 'feature not found: '+f.id })
 
 				f.items = dat.items
-				this.prepFeatureData( f )
+				this.prep_featuredata( f )
 			}
 
 			this.draw_matrix()
+			this.make_legend()
 		})
 	}
 
@@ -606,11 +617,10 @@ export class Samplematrix {
 
 
 
-	prepFeatureData( f ){
+	prep_featuredata( f ){
 		/*
 		after getting data from query
 		prepare feature data for rendering
-		also updates legend
 		*/
 		if(f.isgenevalue) {
 
@@ -620,19 +630,6 @@ export class Samplematrix {
 			f.scale.minv=0
 			for(const i of f.items) {
 				f.scale.maxv = Math.max(f.scale.maxv, i.value)
-			}
-
-			{
-				const h = f.legendholder
-				h.selectAll('*').remove()
-				h.append('span').text(f.scale.minv)
-				h.append('div')
-					.style('margin','2px 10px')
-					.style('display','inline-block')
-					.style('width','100px')
-					.style('height','15px')
-					.style('background','linear-gradient( to right, white, '+f.color+')')
-				h.append('span').text(f.scale.maxv)
 			}
 			return
 		}
@@ -650,13 +647,6 @@ export class Samplematrix {
 			const gmax = common.getMax_byiqr( gain, 0 )
 			const lmax = -common.getMax_byiqr( loss, 0 )
 			f.maxabslogratio = Math.max(gmax, lmax)
-			{
-				const h=f.legendholder
-				h.selectAll('*').remove()
-				h.append('span').html('Gain <span style="background:'+f.colorgain+';color:white;padding:1px 5px">'+f.maxabslogratio+'</span> &nbsp; '
-					+'Loss <span style="background:'+f.colorloss+';color:white;padding:1px 5px">-'+f.maxabslogratio+'</span>'
-					)
-			}
 			return
 		}
 
@@ -664,52 +654,14 @@ export class Samplematrix {
 			const values = f.items.map(i=>i.segmean)
 			f.minvalue = 0
 			f.maxvalue = Math.max(...values)
-			{
-				const h=f.legendholder
-				h.selectAll('*').remove()
-				h.append('span').text(f.minvalue)
-				h.append('div')
-					.style('margin','2px 10px')
-					.style('display','inline-block')
-					.style('width','100px')
-					.style('height','15px')
-					.style('background','linear-gradient( to right, white, '+f.color+')')
-				h.append('span').text(f.maxvalue)
-			}
 			return
 		}
 
 		if(f.isvcf) {
-			const classes = new Set()
-			for(const m of f.items) {
-				if(m.class) {
-					classes.add(m.class)
-				} else {
-					//  no class?
-				}
-			}
-
-			{
-				const h = f.legendholder
-				h.selectAll('*').remove()
-				for(const c of classes) {
-					const cell = h.append('div')
-						.style('display','inline-block')
-						.style('margin-right','10px')
-					cell.append('span')
-						.style('background', common.mclass[c].color)
-						.style('margin-right','2px')
-						.html('&nbsp;&nbsp;&nbsp;')
-					cell.append('span')
-						.text(common.mclass[c].label)
-						.style('color', common.mclass[c].color)
-				}
-			}
 			return
 		}
 
 		if(f.isitd) {
-			// do nothing
 			return
 		}
 
@@ -722,26 +674,11 @@ export class Samplematrix {
 			// compound
 
 			const cnvgain=[], cnvloss=[] // cnv log2 ratio
-			const vcfclass2count = new Map() // k: class, v: sample count
 			let lohmax=0
-			let itdcount=0
-			let svcount=0
-			let fusioncount=0
 
 			for(const i of f.items) {
 
-				if(i.dt == common.dtsnvindel) {
-
-					if(i.class && i.sampledata) {
-						if(!vcfclass2count.has(i.class)) {
-							vcfclass2count.set( i.class, 0 )
-						}
-						vcfclass2count.set( i.class, vcfclass2count.get(i.class) + i.sampledata.length )
-					} else {
-						// ?
-					}
-
-				} else if(i.dt == common.dtcnv) {
+				if(i.dt == common.dtcnv) {
 					if(i.value>0) {
 						cnvgain.push(i.value)
 					} else {
@@ -749,107 +686,24 @@ export class Samplematrix {
 					}
 				} else if(i.dt == common.dtloh) {
 					lohmax = Math.max( i.segmean, lohmax )
-				} else if(i.dt == common.dtitd) {
-					itdcount++
-				} else if(i.dt==common.dtsv) {
-					svcount++
-				} else if(i.dt==common.dtfusionrna) {
-					fusioncount++
-				} else {
-					console.error('unknown dt', i.dt)
 				}
 			}
 
-			const h=f.legendholder
-			h.selectAll('*').remove()
-
-			// make legend for each category
-
-			if( vcfclass2count.size + itdcount + svcount + fusioncount > 0 ) {
-
-				// put them in same row
-				const row=h.append('div')
-					.style('margin-bottom','5px')
-					.style('white-space','nowrap')
-
-				for(const [classname, count] of vcfclass2count) {
-					const c = common.mclass[classname]
-					const cell = row.append('div')
-						.style('display','inline-block')
-						.style('margin-right','20px')
-					cell.append('span')
-						.attr('class','sja_mcdot')
-						.style('background', c.color)
-						.text(count)
-					cell.append('span')
-						.text(c.label)
-						.style('color', c.color)
-				}
-				if(itdcount) {
-					const cell = row.append('div')
-						.style('display','inline-block')
-						.style('margin-right','20px')
-					cell.append('div')
-						.attr('class','sja_mcdot')
-						.style('background', f.itd.color)
-						.text(itdcount)
-					cell.append('span')
-						.text('ITD')
-				}
-				if(svcount) {
-					const cell = row.append('div')
-						.style('display','inline-block')
-						.style('margin-right','20px')
-					cell.append('span')
-						.attr('class','sja_mcdot')
-						.style('background', f.sv.color)
-						.text(svcount)
-					cell.append('span')
-						.text('SV')
-				}
-				if(fusioncount) {
-					const cell=row.append('div')
-						.style('display','inline-block')
-						.style('margin-right','20px')
-					cell.append('span')
-						.attr('class','sja_mcdot')
-						.style('background', f.fusion.color)
-						.text(fusioncount)
-					cell.append('span')
-						.text('Fusion')
-				}
-			}
 			if(cnvgain.length + cnvloss.length > 0) {
 				const gmax = common.getMax_byiqr( cnvgain, 0 )
 				const lmax = -common.getMax_byiqr( cnvloss, 0 )
 				f.cnv.maxabslogratio = Math.max(gmax, lmax)
-				h.append('div')
-					.style('margin-bottom','5px')
-					.html(
-						'CNV gain <span style="background:'+f.cnv.colorgain+';color:white;padding:1px 5px">'+f.cnv.maxabslogratio+'</span> &nbsp; '
-						+'CNV loss <span style="background:'+f.cnv.colorloss+';color:white;padding:1px 5px">-'+f.cnv.maxabslogratio+'</span>'
-					)
 			}
 
 			if(lohmax) {
 				f.loh.minvalue=0
 				f.loh.maxvalue=lohmax
-				const row = h.append('div')
-					.style('margin-bottom','5px')
-				row.append('span')
-					.text('LOH seg.mean: '+f.loh.minvalue)
-				row.append('div')
-					.style('margin','2px 10px')
-					.style('display','inline-block')
-					.style('width','100px')
-					.style('height','15px')
-					.style('background','linear-gradient( to right, white, '+f.loh.color+')')
-				row.append('span').text(f.loh.maxvalue)
 			}
 			return
 		}
 
 		if(f.issampleattribute) {
+			// set color for unknown value
 			for(const i of f.items) {
 				if(!f.values[i.value]) {
 					// a unknown value, still support it
@@ -863,7 +717,221 @@ export class Samplematrix {
 		}
 
 		// __newattr
-		throw('unknown feature type in preparing feature data')
+		throw 'unknown feature type in preparing feature data'
+	}
+
+
+
+	make_legend() {
+		/*
+		after parsing data for each feature, and getting the total list of samples
+		make legend for each feature
+		*/
+		for(const f of this.features) {
+
+			const h = f.legendholder
+			h.selectAll('*').remove()
+
+			if(f.isgenevalue) {
+				h.append('span').text(f.scale.minv)
+				h.append('div')
+					.style('margin','2px 10px')
+					.style('display','inline-block')
+					.style('width','100px')
+					.style('height','15px')
+					.style('background','linear-gradient( to right, white, '+f.color+')')
+				h.append('span').text(f.scale.maxv)
+				continue
+			}
+
+			if(f.iscnv) {
+				h.append('span').html('Gain <span style="background:'+f.colorgain+';color:white;padding:1px 5px">'+f.maxabslogratio+'</span> &nbsp; '
+					+'Loss <span style="background:'+f.colorloss+';color:white;padding:1px 5px">-'+f.maxabslogratio+'</span>'
+					)
+				continue
+			}
+
+			if(f.isloh) {
+				h.append('span').text(f.minvalue)
+				h.append('div')
+					.style('margin','2px 10px')
+					.style('display','inline-block')
+					.style('width','100px')
+					.style('height','15px')
+					.style('background','linear-gradient( to right, white, '+f.color+')')
+				h.append('span').text(f.maxvalue)
+				continue
+			}
+
+			if(f.isvcf) {
+				const classes = new Set()
+				for(const m of f.items) {
+					if(m.class) {
+						classes.add(m.class)
+					} else {
+						//  no class?
+					}
+				}
+				for(const c of classes) {
+					const cell = h.append('div')
+						.style('display','inline-block')
+						.style('margin-right','10px')
+					cell.append('span')
+						.style('background', common.mclass[c].color)
+						.style('margin-right','2px')
+						.html('&nbsp;&nbsp;&nbsp;')
+					cell.append('span')
+						.text(common.mclass[c].label)
+						.style('color', common.mclass[c].color)
+				}
+				continue
+			}
+
+			if(f.isitd) {
+				continue
+			}
+
+			if(f.issvfusion) {
+				continue
+			}
+
+			if(f.issvcnv || f.ismutation) {
+
+				const vcfclass2count = new Map() // k: class, v: sample count
+				let itdcount=0
+				let svcount=0
+				let fusioncount=0
+
+				for(const i of f.items) {
+
+					if(i.dt == common.dtsnvindel) {
+
+						if(i.class && i.sampledata) {
+							if(!vcfclass2count.has(i.class)) {
+								vcfclass2count.set( i.class, 0 )
+							}
+							vcfclass2count.set( i.class, vcfclass2count.get(i.class) + i.sampledata.length )
+						} else {
+							// ?
+						}
+
+					} else if(i.dt == common.dtitd) {
+						itdcount++
+					} else if(i.dt==common.dtsv) {
+						svcount++
+					} else if(i.dt==common.dtfusionrna) {
+						fusioncount++
+					}
+				}
+
+				if( vcfclass2count.size + itdcount + svcount + fusioncount > 0 ) {
+
+					// put them in same row
+					const row=h.append('div')
+						.style('margin-bottom','5px')
+						.style('white-space','nowrap')
+
+					for(const [classname, count] of vcfclass2count) {
+						const c = common.mclass[classname]
+						const cell = row.append('div')
+							.style('display','inline-block')
+							.style('margin-right','20px')
+						cell.append('span')
+							.attr('class','sja_mcdot')
+							.style('background', c.color)
+							.text(count)
+						cell.append('span')
+							.text(c.label)
+							.style('color', c.color)
+					}
+					if(itdcount) {
+						const cell = row.append('div')
+							.style('display','inline-block')
+							.style('margin-right','20px')
+						cell.append('div')
+							.attr('class','sja_mcdot')
+							.style('background', f.itd.color)
+							.text(itdcount)
+						cell.append('span')
+							.text('ITD')
+					}
+					if(svcount) {
+						const cell = row.append('div')
+							.style('display','inline-block')
+							.style('margin-right','20px')
+						cell.append('span')
+							.attr('class','sja_mcdot')
+							.style('background', f.sv.color)
+							.text(svcount)
+						cell.append('span')
+							.text('SV')
+					}
+					if(fusioncount) {
+						const cell=row.append('div')
+							.style('display','inline-block')
+							.style('margin-right','20px')
+						cell.append('span')
+							.attr('class','sja_mcdot')
+							.style('background', f.fusion.color)
+							.text(fusioncount)
+						cell.append('span')
+							.text('Fusion')
+					}
+				}
+				if(f.cnv.maxabslogratio!=undefined) {
+					h.append('div')
+						.style('margin-bottom','5px')
+						.html(
+							'CNV gain <span style="background:'+f.cnv.colorgain+';color:white;padding:1px 5px">'+f.cnv.maxabslogratio+'</span> &nbsp; '
+							+'CNV loss <span style="background:'+f.cnv.colorloss+';color:white;padding:1px 5px">-'+f.cnv.maxabslogratio+'</span>'
+						)
+				}
+
+				if(f.loh.maxvalue!=undefined) {
+					const row = h.append('div')
+						.style('margin-bottom','5px')
+					row.append('span')
+						.text('LOH seg.mean: '+f.loh.minvalue)
+					row.append('div')
+						.style('margin','2px 10px')
+						.style('display','inline-block')
+						.style('width','100px')
+						.style('height','15px')
+						.style('background','linear-gradient( to right, white, '+f.loh.color+')')
+					row.append('span').text(f.loh.maxvalue)
+				}
+				continue
+			}
+
+/*
+show legend for sampleattribute
+sort samples by f.issampleattribute
+*/
+			if(f.issampleattribute) {
+				const value2count = new Map()
+				for(const sample of this.samples) {
+					const anno = f.items.find( i=> i.sample == sample.name)
+					if(anno) {
+						value2count.set( anno.value, (value2count.get(anno.value) || 0)+1 )
+					}
+				}
+				for(const [value, count] of value2count) {
+					const cell = h.append('div')
+						.style('display','inline-block')
+						.style('margin-right','20px')
+					cell.append('span')
+						.attr('class','sja_mcdot')
+						.style('background', f.values[value].color )
+						.text(count)
+					cell.append('span')
+						.text( f.values[value].name )
+				}
+				continue
+			}
+
+			// __newattr
+			throw 'unknown feature type in making legend'
+		}
 	}
 
 
@@ -945,19 +1013,16 @@ export class Samplematrix {
 			}
 		}
 
-		/*
-		TODO better height assignment
-		may highlight certain feature by showing fat rows for samples with data in that feature; rest of samples get thin rows
-		*/
 
 		const uniformheight = Math.max( 1, Math.ceil(800/name2sample.size) )
-		const samplelst = []
+
+		this.samples = []
+
 		for(const [n,sample] of name2sample) {
 			sample.height = uniformheight
 			sample.name = n
-			samplelst.push( sample )
+			this.samples.push( sample )
 		}
-		return samplelst
 	}
 
 
@@ -972,10 +1037,10 @@ export class Samplematrix {
 		this.svg.selectAll('*').remove()
 		const svgg = this.svg.append('g')
 
-		const samplelst = this.gatherSamplesFromFeatureData()
+		this.gatherSamplesFromFeatureData()
 		// [ {name, height} ]
 
-		this.sortsamplesbyfeatures( samplelst )
+		this.sortsamplesbyfeatures()
 
 		////// rows, g and label
 
@@ -983,7 +1048,7 @@ export class Samplematrix {
 
 		{
 			let y=0
-			for(const sample of samplelst) {
+			for(const sample of this.samples) {
 
 				sample.g = svgg.append('g')
 					.attr('transform','translate(0,'+y+')')
@@ -1067,7 +1132,7 @@ export class Samplematrix {
 
 
 		// cells
-		for(const sample of samplelst) {
+		for(const sample of this.samples) {
 			let x=0
 			for(const feature of this.features) {
 				const cell = sample.g.append('g')
@@ -1112,8 +1177,8 @@ export class Samplematrix {
 			.attr('height',
 				featurenamemaxwidth+
 				this.collabspace + this.collabticksize +
-				samplelst.reduce((i,j)=>i+j.height,0) +
-				samplelst.length * this.rowspace )
+				this.samples.reduce((i,j)=>i+j.height,0) +
+				this.samples.length * this.rowspace )
 	}
 
 
@@ -2248,22 +2313,23 @@ export class Samplematrix {
 
 
 
-	sortsamplesbyfeatures(samplelst) {
-
+	sortsamplesbyfeatures() {
 		// check if sorting is enabled on any one of isgenevalue
+
 		const sortbygenevalue = this.features.find( f => f.isgenevalue && f.sort )
 		if(sortbygenevalue && sortbygenevalue.items) {
 			const sample2value = new Map()
 			for(const i of sortbygenevalue.items) {
 				sample2value.set(i.sample, i.value)
 			}
-			samplelst.sort( (i,j)=>{
+			this.samples.sort( (i,j)=>{
 				const vi = sample2value.has(i.name) ? sample2value.get(i.name) : sortbygenevalue.missingvalue
 				const vj = sample2value.has(j.name) ? sample2value.get(j.name) : sortbygenevalue.missingvalue
 				return vj-vi // descending
 			})
 		}
 	}
+
 
 
 	may_init_customvcf(tk) {
