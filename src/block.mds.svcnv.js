@@ -468,7 +468,7 @@ function render_samplegroups( tk, block ) {
 	}
 
 	// adjust config handle position by top blank height
-	if( hpad > genebaraxisheight+3+block.labelfontsize ) {
+	if( genebaraxisheight==0 || hpad > genebaraxisheight+3+block.labelfontsize ) {
 		// enough space for label to be in usual place
 		tk.config_handle.transition().attr('text-anchor', 'start').attr('x',0)
 	} else {
@@ -1131,6 +1131,7 @@ function render_multi_cnvloh(tk,block) {
 				.attr('y2', yoff + thisgroupypad + samplegroup.height )
 				.attr('stroke',color)
 				.attr('shape-rendering','crispEdges')
+
 			// tick
 			tk.cnvleftg.append('line')
 				.attr('y1', yoff + thisgroupypad + samplegroup.height/2)
@@ -1150,7 +1151,9 @@ function render_multi_cnvloh(tk,block) {
 			for each sample from this group
 			*/
 
-			if(sample.samplename && tk.iscustom && sample.height >= minlabfontsize) {
+			// if to draw sample name
+
+			if( (tk.iscustom || !samplegroup.name) && sample.samplename && sample.height >= minlabfontsize) {
 				// for custom track, show sample name since all of them are in one nameless group
 				tk.cnvleftg.append('text')
 					.text(sample.samplename)

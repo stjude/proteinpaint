@@ -17,7 +17,7 @@ module.exports={
 	cohort:{
 		files:[
 			// possible to have file-specific logic
-			{file:'hg38/scd/cnv/sample.table'}
+			{file:'hg38/scd/mds/sample.table'}
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
@@ -35,7 +35,7 @@ module.exports={
 			showfullmode:true,
 			istrack:true,
 			type:common.tkt.mdssvcnv,
-			file:'hg38/scd/cnv/cnv.gz',
+			file:'hg38/scd/mds/cnv.gz',
 
 			// cnv
 			valueCutoff:0.2,
