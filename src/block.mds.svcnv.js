@@ -1718,7 +1718,7 @@ function render_multi_cnvloh_stackeachsample( tk, block ) {
 									// do not prohibit
 								}
 							} else {
-								if(labw > pi.x-pi0.x) {
+								if(labw > pi.x - pi0.x - (pi0.obj.labonright ? pi0.obj.labelwidth : 0) ) {
 									nleft=true
 									break
 								} else {
