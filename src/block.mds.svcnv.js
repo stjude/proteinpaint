@@ -1881,8 +1881,41 @@ function render_multi_genebar( tk, block) {
 	native or custom
 	dense or full
 	*/
+
+	const attrlst = [] // list of sample attributes to show alongside expression
+	if(tk.sampleAttribute && tk.sampleAttribute.attributes && tk.sampleAttribute.samples) {
+		for(const attrkey in tk.sampleAttribute.attributes) {
+			const attr = tk.sampleAttribute.attributes[ attrkey ]
+			if(!attr.showintrack) continue
+
+			const attrobj = {
+				key: attrkey,
+				label: attr.label,
+				min: null,
+				max: null
+			}
+			// determine min/max
+			for(const g of tk.samplegroups) {
+				for(const s of g.samples) {
+					const v0 = tk.sampleAttribute.samples[s.samplename]
+					if(!v0) continue
+					const v = v0[ attrkey ]
+					if(Number.isNaN(v)) continue
+					if(attrobj.min==null) {
+						attrobj.min=attrobj.max=v
+					} else {
+						attrobj.min = Math.min(attrobj.min, v)
+						attrobj.max = Math.max(attrobj.max, v)
+					}
+				}
+			}
+			attrlst.push(attrobj)
+		}
+	}
+
 	if(tk.expressionrangelimit) {
 		// too big to do it
+		// FIXME if attrlst should keep render, but also need to show this message
 		const g=tk.cnvrightg
 		const h=15
 		let y=12
@@ -1900,6 +1933,7 @@ function render_multi_genebar( tk, block) {
 		return 0
 	}
 
+
 	const genes = new Set()
 	for(const g of tk._data) {
 		for(const s of g.samples) {
@@ -1910,7 +1944,7 @@ function render_multi_genebar( tk, block) {
 			}
 		}
 	}
-	if(genes.size==0) {
+	if(genes.size + attrlst.length == 0) {
 		return 0
 	}
 
@@ -1926,7 +1960,11 @@ function render_multi_genebar( tk, block) {
 	let minvalue=0
 	let maxvalue=100
 
-	const barwidth=80
+	// hardcoded bar width for expression rank
+	const expbarwidth=80
+	// hardcoded bar width for numeric attribute
+	const numattrbarwidth=80
+	const xspace = 10
 
 	// any gene has ase info? if so, tooltip will show 'no info' for those missing
 	// otherwise won't indicate ase status
@@ -1950,16 +1988,24 @@ function render_multi_genebar( tk, block) {
 
 		for(const s of g.samples) {
 
-			if(s.expressionrank) {
+			const row = tk.cnvrightg.append('g').attr('transform','translate(0,'+y+')')
+
+			/*
+			may be multiple columns, show gene expression rank first, then attrlst
+			x is xoffset in each sample
+			*/
+			let x = 0
+
+			if(s.expressionrank && usegene ) {
 
 				const v = s.expressionrank[usegene]
 				if(v!=undefined) {
 
-					const row = tk.cnvrightg.append('g').attr('transform','translate(0,'+y+')')
 
 					const bar=row.append('rect')
+						.attr('x',x)
 						.attr('fill',  expressionstat.ase_color( v, tk.gecfg ) ) // bar color set by ase status
-						.attr('width', barwidth * v.rank / maxvalue )
+						.attr('width', expbarwidth * v.rank / maxvalue )
 						.attr('height', s.height)
 						.attr('shape-rendering','crispEdges')
 
@@ -1967,25 +2013,24 @@ function render_multi_genebar( tk, block) {
 						// only show dots for outlier status in full, not dense
 						if(v.estat.outlier) {
 							row.append('circle')
-								.attr('cx',barwidth)
+								.attr('cx',expbarwidth)
 								.attr('cy', s.height/2)
 								.attr('r', s.height/2)
 								.attr('fill', tk.gecfg.outlier.color_outlier)
 						} else if(v.estat.outlier_asehigh) {
 							row.append('circle')
-								.attr('cx',barwidth)
+								.attr('cx',expbarwidth)
 								.attr('cy', s.height/2)
 								.attr('r',  s.height/2)
 								.attr('fill', tk.gecfg.outlier.color_outlier_asehigh)
 						}
 					}
 
-					const barbg=row.append('rect')
+					const cover = row.append('rect')
 						.attr('fill',  fpkmbarcolor_bg)
 						.attr('fill-opacity',.1)
-						.attr('width',barwidth)
+						.attr('width',expbarwidth)
 						.attr('height', s.height)
-						.attr('shape-rendering','crispEdges')
 						.on('mouseover',()=>{
 							tk.tktip
 								.clear()
@@ -1994,11 +2039,6 @@ function render_multi_genebar( tk, block) {
 							const lst=[{k:'Sample',v:s.samplename}]
 							may_add_sampleannotation( s.samplename, tk, lst )
 
-							// hardcoded sample group
-							if(g.name) {
-								lst.push({k:'Group',v:g.name})
-							}
-
 							lst.push({k:'Rank',  v:client.ranksays(v.rank)})
 							lst.push({k:tk.gecfg.datatype,  v:v.value})
 
@@ -2006,11 +2046,11 @@ function render_multi_genebar( tk, block) {
 
 							expressionstat.showsingleitem_table( v, tk.gecfg, table )
 
-							barbg.attr('fill','orange')
+							cover.attr('fill','orange')
 						})
 						.on('mouseout',()=>{
 							tk.tktip.hide()
-							barbg.attr('fill',fpkmbarcolor_bg)
+							cover.attr('fill',fpkmbarcolor_bg)
 						})
 						.on('click',()=>{
 							const pane=client.newpane({x:window.innerWidth/2,y:100})
@@ -2099,6 +2139,51 @@ function render_multi_genebar( tk, block) {
 							})
 						})
 				}
+				x += expbarwidth + xspace
+			}
+
+			// numeric attributes follow expression rank
+
+			for(const attr of attrlst) {
+				const v0 = tk.sampleAttribute.samples[ s.samplename ]
+				if(v0) {
+					const v = v0[ attr.key ]
+					if(!Number.isNaN(v)) {
+						row.append('rect')
+							.attr('x',x)
+							.attr('width', Math.max(1, numattrbarwidth * (v-attr.min)/(attr.max-attr.min)) )
+							.attr('height', s.height)
+							.attr('fill','#858585')
+							.attr('shape-rendering','crispEdges')
+						row.append('rect')
+							.attr('x',x)
+							.attr('width', numattrbarwidth )
+							.attr('height', s.height)
+							.attr('fill','#858585')
+							.attr('fill-opacity',.1)
+						const cover = row.append('rect')
+							.attr('fill',  fpkmbarcolor_bg)
+							.attr('fill-opacity',.1)
+							.attr('width',numattrbarwidth)
+							.attr('height', s.height)
+							.on('mouseover',()=>{
+								cover.attr('fill','orange')
+								tk.tktip
+									.clear()
+									.show(d3event.clientX, d3event.clientY)
+
+								const lst=[{k:'Sample',v:s.samplename}]
+								may_add_sampleannotation( s.samplename, tk, lst )
+
+								const table = client.make_table_2col(tk.tktip.d,lst)
+							})
+							.on('mouseout',()=>{
+								tk.tktip.hide()
+								cover.attr('fill',fpkmbarcolor_bg)
+							})
+					}
+				}
+				x += numattrbarwidth + xspace
 			}
 
 			// done this sample
@@ -2107,40 +2192,73 @@ function render_multi_genebar( tk, block) {
 
 		// done this group
 	}
+
 	// axis label
 	const axispad = 0
 	const labelpad=3
 	const ticksize = 5
 	const fontsize=12
+
 	const headg = tk.cnvrightg.append('g')
 		.attr('transform','translate(0,-'+axispad+')')
-	client.axisstyle({
-		axis: headg.append('g').call( axisTop().scale(
-			scaleLinear().domain([minvalue,maxvalue]).range([0,barwidth])
-			)
-			.tickValues([0,50,100])
-			.tickSize(ticksize)
-			),
-		fontsize:fontsize,
-		showline:1
-	})
 
-	const text = headg.append('text')
-		.attr('text-anchor','middle')
-		.attr('x',barwidth/2)
-		.attr('y',-(fontsize+labelpad+ticksize+axispad))
-		.attr('font-family',client.font)
-		.attr('font-size',fontsize)
-		.text(usegene+' rank')
+	let x=0
 
-	text.attr('class','sja_clbtext')
-	.on('click',()=>{
+	if( usegene ) {
+		client.axisstyle({
+			axis: headg.append('g').call( axisTop().scale(
+				scaleLinear().domain([minvalue,maxvalue]).range([0,expbarwidth])
+				)
+				.tickValues([0,50,100])
+				.tickSize(ticksize)
+				),
+			fontsize:fontsize,
+			showline:1
+		})
 
-		tk.tkconfigtip.clear()
-			.showunder(d3event.target)
+		const text = headg.append('text')
+			.attr('text-anchor','middle')
+			.attr('x',expbarwidth/2)
+			.attr('y',-(fontsize+labelpad+ticksize+axispad))
+			.attr('font-family',client.font)
+			.attr('font-size',fontsize)
+			.text(usegene+' rank')
 
-		genebar_config( tk.tkconfigtip.d, genes, tk, block )
-	})
+		text.attr('class','sja_clbtext')
+		.on('click',()=>{
+
+			tk.tkconfigtip.clear()
+				.showunder(d3event.target)
+
+			genebar_config( tk.tkconfigtip.d, genes, tk, block )
+		})
+		x += expbarwidth + xspace
+	}
+
+	for(const attr of attrlst) {
+		client.axisstyle({
+			axis: headg.append('g')
+				.attr('transform','translate('+x+',0)')
+				.call( axisTop().scale(
+					scaleLinear().domain([attr.min,attr.max]).range([0,numattrbarwidth])
+				)
+				.ticks(3)
+				),
+			fontsize:fontsize,
+			showline:1
+		})
+
+		const text = headg.append('text')
+			.attr('x', x + numattrbarwidth/2)
+			.attr('text-anchor','middle')
+			.attr('y',-(fontsize+labelpad+ticksize+axispad))
+			.attr('font-family',client.font)
+			.attr('font-size',fontsize)
+			.text(attr.label)
+		x += numattrbarwidth + xspace
+	}
+
+	// TODO when multiple columns, must adjust block.rightheadw
 
 	return fontsize+fontsize+labelpad+ticksize+axispad
 }
