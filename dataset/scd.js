@@ -23,6 +23,15 @@ module.exports={
 		tohash:(item, ds)=>{
 			ds.cohort.annotation[ item[samplenamekey] ] = item
 		},
+		sampleAttribute:{
+			attributes:{
+				CorrectedHbF: {
+					label:'HbF level',
+					isfloat:true,
+					showintrack:true
+				}
+			}
+		}
 	},
 
 
