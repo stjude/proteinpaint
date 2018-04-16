@@ -9525,14 +9525,6 @@ function mds_init(ds,genome) {
 		ds.cohort.annotation = {}
 		// should allow both sample/individual level as key
 
-		for(const file of ds.cohort.files) {
-			if(!file.file) return '.file missing from one of .cohort.files'
-			const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
-			if(err) return 'cohort annotation file "'+file.file+'": '+err
-			if(items.length==0) return 'no content from sample annotation file '+file.file
-			console.log(items.length+' samples loaded from annotation file '+file.file)
-			items.forEach( i=> ds.cohort.tohash(i, ds))
-		}
 
 		if(ds.cohort.attributes) {
 			if(!ds.cohort.attributes.lst) return '.lst[] missing for cohort.attributes'
@@ -9540,9 +9532,6 @@ function mds_init(ds,genome) {
 			for(const attr of ds.cohort.attributes.lst) {
 				if(!attr.key) return '.key missing from one of the .cohort.attributes.lst[]'
 				if(!attr.label) return '.label missing from one of the .cohort.attributes.lst[]'
-				if(attr.isNumeric) {
-					// TODO numeric attribute??
-				}
 				if(!attr.values) return '.values{} missing from '+attr.label+' of .cohort.attributes.lst'
 				for(const value in attr.values) {
 					if(!attr.values[value].label) return '.label missing from one value of '+attr.label+' in .cohort.attributes.lst'
@@ -9585,8 +9574,38 @@ function mds_init(ds,genome) {
 						if(!b.name) return '.name missing for value '+v+' of key '+key+' from cohort.sampleAttribute.attributes'
 					}
 				}
+				if(a.showintrack) {
+					if(!a.isinteger && !a.isfloat) return a.label+': .showintrack requires .isinteger or .isfloat'
+				}
 			}
 		}
+
+		for(const file of ds.cohort.files) {
+			if(!file.file) return '.file missing from one of .cohort.files'
+			const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
+			if(err) return 'cohort annotation file "'+file.file+'": '+err
+			if(items.length==0) return 'no content from sample annotation file '+file.file
+			console.log(items.length+' samples loaded from annotation file '+file.file)
+			items.forEach( i=> {
+
+				// may need to parse certain values into particular format
+				if(ds.cohort.sampleAttribute) {
+					for(const k in i) {
+						const attr = ds.cohort.sampleAttribute.attributes[ k ]
+						if(attr) {
+							if(attr.isfloat) {
+								i[k] = Number.parseFloat(i[k])
+							} else if(attr.isinteger) {
+								i[k] = Number.parseInt(i[k])
+							}
+						}
+					}
+				}
+
+				ds.cohort.tohash(i, ds)
+			})
+		}
+
 	}
 
 	if(ds.mutationAttribute) {
