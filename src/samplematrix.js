@@ -1014,7 +1014,7 @@ sort samples by f.issampleattribute
 		}
 
 
-		const uniformheight = Math.max( 1, Math.ceil(800/name2sample.size) )
+		const uniformheight = Math.min(18, Math.max( 1, Math.ceil(800/name2sample.size) ) )
 
 		this.samples = []
 
@@ -1038,7 +1038,6 @@ sort samples by f.issampleattribute
 		const svgg = this.svg.append('g')
 
 		this.gatherSamplesFromFeatureData()
-		// [ {name, height} ]
 
 		this.sortsamplesbyfeatures()
 
