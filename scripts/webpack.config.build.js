@@ -3,7 +3,7 @@ const config=require('../webpack.config');
 const path = require('path'); 
 
 module.exports = function(env) {
-	const protocol=env.subdomain=='pecan-test' ? '' : 'https:'
+	const protocol=env.subdomain=='pp-test' ? '' : 'https:'
 	if (env.nopolyfill) {
 		config.output.path= __dirname+'/../public/builds/'+(env.subdomain?env.subdomain:'proteinpaint')+'/no-babel-polyfill'
 		

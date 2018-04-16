@@ -73,18 +73,18 @@ elif [[ "$ENV" == "internal-prod" || "$ENV" == "pp-int" || "$ENV" == "pp-irp" ||
 	URL="//ppr.stjude.org/"
 	SUBDOMAIN=ppr
 
-elif [[ "$ENV" == "public-stage" || "$ENV" == "pecan-test" || "$ENV" == "pp-prt" ]]; then
+elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prt.stjude.org
 	REMOTEDIR=/opt/app/pp
-	URL="//pecan-test.stjude.org/pp"
-	SUBDOMAIN=pecan-test
+	URL="//pp-test.stjude.org/pp"
+	SUBDOMAIN=pp-test
 
 elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prp1.stjude.org
 	REMOTEDIR=/opt/app/pp
-	# TESTHOST=genomeuser@pecan-test.stjude.org
+	# TESTHOST=genomeuser@pp-test.stjude.org
 	URL="//proteinpaint.stjude.org/"
 	SUBDOMAIN=proteinpaint
 
