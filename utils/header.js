@@ -5,32 +5,33 @@ if(process.argv.length<=2) {
 
 
 const fs=require('fs'),
-	lazy=require('lazy')
+	readline = require('readline')
+
 
 const infile=process.argv[2]
 let linenum=process.argv[3]
 
 if(linenum) {
 	linenum=Number.parseInt(linenum)
-	if(Number.isNaN(linenum)) 
-		linenum=2
+	if(Number.isNaN(linenum)) linenum=2
 } else {
 	linenum=2
 }
 
 
 let i=1
-var hlst=[]
+let hlst=[]
 
-const fin=fs.createReadStream(infile)
+const fin = fs.createReadStream(infile, {encoding:'utf8'})
+const rl = readline.createInterface({input: fin})
 
-new lazy(fin)
-.lines
-.map(String)
-.forEach(line=>{
+rl.on('line',line=>{
+
 	if(line[0]=='#') return
 	if(i==1) {
 		hlst=line.split('\t')
+		i++
+		return
 	}
 	if(i==linenum) {
 		const look=line.split('\t')
