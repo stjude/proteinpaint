@@ -226,6 +226,10 @@ exports.vcfparseline=function(line,vcf) {
 		} else {
 
 			// normal nucleotide
+
+			// 5078356.TATCAGAGAA.GGGAGGA keep original allele for matching with csq which hardcodes original allele
+			a.allele_original = a.allele
+
 			const [p,ref,alt] = correctRefAlt( m.pos, m.ref, a.allele )
 			a.pos=p
 			a.ref=ref
@@ -688,7 +692,7 @@ function parse_CSQ(str,header,m) {
 		}
 		let allele=null
 		for(const a of m.alleles) {
-			if(a.allele==o.Allele) {
+			if(a.allele_original==o.Allele) {
 				allele=a
 				break
 			}
@@ -701,7 +705,7 @@ function parse_CSQ(str,header,m) {
 				}
 			} else {
 				for(const a of m.alleles) {
-					if(a.allele.substr(1)==o.Allele) {
+					if(a.allele_original.substr(1)==o.Allele) {
 						// insertion, without first padding base
 						allele=a
 						break
