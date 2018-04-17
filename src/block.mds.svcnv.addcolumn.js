@@ -8,7 +8,6 @@ import { may_add_sampleannotation } from './block.mds.svcnv.clickitem'
 import {createbutton_addfeature} from './block.mds.svcnv.samplematrix'
 import {focus_singlesample,
 	coverbarcolor_silent,
-	coverbarcolor_active,
 	multi_sample_addhighlight,
 	multi_sample_removehighlight
 	} from './block.mds.svcnv'
@@ -332,7 +331,6 @@ export function render_multi_genebar( tk, block) {
 						s.columnbars.push(cover)
 
 						cover.on('mouseover',()=>{
-							cover.attr('fill', coverbarcolor_active)
 							tk.tktip
 								.clear()
 								.show(d3event.clientX, d3event.clientY)
@@ -340,11 +338,12 @@ export function render_multi_genebar( tk, block) {
 							const lst=[{k:'Sample',v:s.samplename}]
 							may_add_sampleannotation( s.samplename, tk, lst )
 
-							const table = client.make_table_2col(tk.tktip.d,lst)
+							client.make_table_2col(tk.tktip.d,lst)
+							multi_sample_addhighlight(s)
 						})
 						.on('mouseout',()=>{
 							tk.tktip.hide()
-							cover.attr('fill', coverbarcolor_silent)
+							multi_sample_removehighlight(s)
 						})
 					}
 				}
