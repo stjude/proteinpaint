@@ -112,6 +112,9 @@ function step1_findgm(paint,querystr){
 		}
 		says.remove()
 		paint.allmodels=data.gmlst
+
+		const defaultisoforms = []
+
 		for(const m of paint.allmodels) {
 			if(!m.isoform) {
 				paint.error('isoform missing from one gene model: '+JSON.stringify(m))
@@ -134,18 +137,34 @@ function step1_findgm(paint,querystr){
 				paint.genome.isoformcache.set(n,[m])
 			}
 			if(m.isoform.toUpperCase()==querystr.toUpperCase()) {
-				paint.model=m
+				defaultisoforms.push(m)
 				break
 			}
 			if(m.isdefault) {
-				if(paint.model) {
-					if(m.chr!='chrY') {
-						// FIXME hard-coded
-						paint.model=m
-					}
-				} else {
-					paint.model=m
+				defaultisoforms.push(m)
+			}
+		}
+
+		if(defaultisoforms.length==1) {
+			paint.model = defaultisoforms[0]
+		} else if(defaultisoforms.length>1) {
+			for(const m of defaultisoforms) {
+				if(m.chr=='chrY') {
+					// hardcoded to avoid for CRLF2
+					continue
 				}
+				const chr = paint.genome.chrlookup[ m.chr.toUpperCase()]
+				if(!chr) {
+					// unknown chr
+					continue
+				}
+				if(!chr.major) {
+					continue
+				}
+				paint.model = m
+			}
+			if(!paint.model) {
+				paint.model = defaultisoforms[0]
 			}
 		}
 		if(!paint.model) {
@@ -205,13 +224,15 @@ function step2_getpdomain(paint) {
 	block.init special treatment:
 	will get pdomain for all isoforms, not just the isoform that's used
 	*/
-	const isoform2gm = new Map() // those isoform missing pdomain
+	const isoform2gm = new Map()
+	// k: isoform name, v: [{}]
 
 	for(const m of paint.allmodels) {
 		if(!m.pdomains) {
 			m.pdomains = [] // empty for no domain
 			m.domain_hidden = {}
-			isoform2gm.set(m.isoform, m)
+			if(!isoform2gm.has(m.isoform)) isoform2gm.set(m.isoform,[])
+			isoform2gm.get(m.isoform).push(m)
 		}
 	}
 	if(isoform2gm.size==0) {
@@ -232,7 +253,9 @@ function step2_getpdomain(paint) {
 			const colorscale=scaleOrdinal().range(client.domaincolorlst)
 
 			for(const a of data.lst) {
-				isoform2gm.get( a.name ).pdomains = a.pdomains
+				for(const m of isoform2gm.get(a.name)) {
+					m.pdomains = a.pdomains
+				}
 				for(const d of a.pdomains) {
 					if(!d.color) {
 						d.color=colorscale(d.name+d.description)
