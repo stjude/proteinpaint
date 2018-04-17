@@ -5,9 +5,11 @@ import {
 	loadTk,
 	focus_singlesample,
 	dedup_sv,
-	itemname_svfusion
+	itemname_svfusion,
+	multi_sample_addhighlight,
+	multi_sample_removehighlight
 	} from './block.mds.svcnv'
-import {createbutton_addfeature} from './block.mds.svcnv.samplematrix'
+import { createbutton_addfeature } from './block.mds.svcnv.samplematrix'
 
 
 /*
@@ -1164,6 +1166,9 @@ export function tooltip_singleitem( p ) {
 	multi-sample
 	mouse over an item
 	*/
+
+	multi_sample_addhighlight(p.sample)
+
 	p.tk.tktip.clear()
 		.show(d3event.clientX, d3event.clientY)
 

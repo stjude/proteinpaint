@@ -74,6 +74,9 @@ dense germline variants?
 const labyspace = 5
 export const intrasvcolor = '#858585' // inter-chr sv color is defined on the fly
 const cnvhighlightcolor = '#E8FFFF'
+export const coverbarcolor_silent='#222'
+export const coverbarcolor_active='orange'
+
 const minlabfontsize=7
 const minsvradius=5
 const svdensitynogroupcolor='#40859C'
@@ -1064,6 +1067,9 @@ function render_multi_cnvloh(tk,block) {
 		groupspace=10
 	}
 
+	// for width of background bar of each sample
+	const entirewidth = block.width + block.subpanels.reduce((i,j)=>i+j.width+j.leftpad,0)
+
 
 	render_multi_cnvloh_stackeachsample( tk, block ) // in each sample, process stackable items
 
@@ -1169,6 +1175,20 @@ function render_multi_cnvloh(tk,block) {
 			const g = tk.cnvmidg.append('g')
 				.attr('transform','translate(0,'+yoff1+')')
 
+			if(tk.isfull) {
+				sample.blockbg = g.append('rect')
+					.attr('width', entirewidth)
+					.attr('height', sample.height)
+					.attr('fill', coverbarcolor_active)
+					.attr('fill-opacity', 0)
+					.on('mouseover',()=>{
+						multi_sample_addhighlight(sample)
+					})
+					.on('mouseout',()=>{
+						multi_sample_removehighlight(sample)
+					})
+			}
+
 			/*
 			jinghui nbl cell line mixed into st/nbl
 			*/
@@ -1236,6 +1256,7 @@ function render_multi_cnvloh(tk,block) {
 					})
 					.on('mouseout',()=>{
 						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
 					})
 					.on('click',()=>{
 						// FIXME prevent click while dragging
@@ -1319,6 +1340,7 @@ function render_multi_cnvloh(tk,block) {
 					.on('mouseout',()=>{
 						circle.attr('fill-opacity',0)
 						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
 					})
 					.on('click',()=>{
 						click_multi_singleitem( {
@@ -1447,6 +1469,7 @@ function render_multi_cnvloh(tk,block) {
 								bgline2.attr('stroke-opacity',1)
 								fgline1.attr('stroke',color)
 								fgline2.attr('stroke',color)
+								multi_sample_removehighlight( sample )
 							})
 							.on('click',()=>{
 								click_multi_singleitem({
@@ -1487,10 +1510,30 @@ function render_multi_cnvloh(tk,block) {
 
 
 
-function multi_snvindel_mayshowlabel( m, m_g, cnvsvlst ) {
-	return 0
+
+export function multi_sample_addhighlight(sample) {
+	if(!sample) return
+	// one of tk.samplegroup[].sample[]
+	if(sample.blockbg) sample.blockbg.attr('fill-opacity',.1)
+	if(sample.columnbars) {
+		for(const b of sample.columnbars) {
+			b.attr('fill', coverbarcolor_active)
+		}
+	}
 }
 
+
+
+export function multi_sample_removehighlight(sample) {
+	if(!sample) return
+	// one of tk.samplegroup[].sample[]
+	if(sample.blockbg) sample.blockbg.attr('fill-opacity',0)
+	if(sample.columnbars) {
+		for(const b of sample.columnbars) {
+			b.attr('fill', coverbarcolor_silent)
+		}
+	}
+}
 
 
 

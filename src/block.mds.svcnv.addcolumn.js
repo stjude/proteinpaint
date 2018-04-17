@@ -6,7 +6,12 @@ import * as common from './common'
 import * as expressionstat from './block.mds.expressionstat'
 import { may_add_sampleannotation } from './block.mds.svcnv.clickitem'
 import {createbutton_addfeature} from './block.mds.svcnv.samplematrix'
-import {focus_singlesample} from './block.mds.svcnv'
+import {focus_singlesample,
+	coverbarcolor_silent,
+	coverbarcolor_active,
+	multi_sample_addhighlight,
+	multi_sample_removehighlight
+	} from './block.mds.svcnv'
 
 
 /*
@@ -21,7 +26,6 @@ column could be gene expression rank and sample attribute
 
 
 //const fpkmbarcolor='#40859C'
-const fpkmbarcolor_bg='#222'
 
 
 
@@ -139,6 +143,8 @@ export function render_multi_genebar( tk, block) {
 
 		for(const s of g.samples) {
 
+			s.columnbars = []
+
 			const row = tk.cnvrightg.append('g').attr('transform','translate(0,'+y+')')
 
 			/*
@@ -178,117 +184,122 @@ export function render_multi_genebar( tk, block) {
 					}
 
 					const cover = row.append('rect')
-						.attr('fill',  fpkmbarcolor_bg)
+						.attr('fill',  coverbarcolor_silent)
 						.attr('fill-opacity',.1)
 						.attr('width',expbarwidth)
 						.attr('height', s.height)
-						.on('mouseover',()=>{
-							tk.tktip
-								.clear()
-								.show(d3event.clientX, d3event.clientY)
 
-							const lst=[{k:'Sample',v:s.samplename}]
-							may_add_sampleannotation( s.samplename, tk, lst )
+					if(tk.isfull) {
+						s.columnbars.push(cover)
+					}
 
-							lst.push({k:'Rank',  v:client.ranksays(v.rank)})
-							lst.push({k:tk.gecfg.datatype,  v:v.value})
+					cover.on('mouseover',()=>{
+						tk.tktip
+							.clear()
+							.show(d3event.clientX, d3event.clientY)
 
-							const table = client.make_table_2col(tk.tktip.d,lst)
+						const lst=[{k:'Sample',v:s.samplename}]
+						may_add_sampleannotation( s.samplename, tk, lst )
 
-							expressionstat.showsingleitem_table( v, tk.gecfg, table )
+						lst.push({k:'Rank',  v:client.ranksays(v.rank)})
+						lst.push({k:tk.gecfg.datatype,  v:v.value})
 
-							cover.attr('fill','orange')
-						})
-						.on('mouseout',()=>{
-							tk.tktip.hide()
-							cover.attr('fill',fpkmbarcolor_bg)
-						})
-						.on('click',()=>{
-							const pane=client.newpane({x:window.innerWidth/2,y:100})
-							pane.header.text( usegene+' '+tk.gecfg.datatype+' from '+tk.name )
-							const c=tk.gene2coord[usegene]
-							if(!c) {
-								pane.body.text('No coordinate for '+usegene)
-								return
+						const table = client.make_table_2col(tk.tktip.d,lst)
+
+						expressionstat.showsingleitem_table( v, tk.gecfg, table )
+
+						multi_sample_addhighlight(s)
+					})
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						multi_sample_removehighlight(s)
+					})
+					.on('click',()=>{
+						const pane=client.newpane({x:window.innerWidth/2,y:100})
+						pane.header.text( usegene+' '+tk.gecfg.datatype+' from '+tk.name )
+						const c=tk.gene2coord[usegene]
+						if(!c) {
+							pane.body.text('No coordinate for '+usegene)
+							return
+						}
+
+						const p={
+							gene:usegene,
+							chr:c.chr,
+							start:c.start,
+							stop:c.stop,
+							holder:pane.body,
+							block:block,
+							genome:block.genome,
+							jwt:block.jwt,
+							hostURL:block.hostURL,
+							sample:{name:s.samplename,value:v.value}
+						}
+
+						// expression
+						if(tk.iscustom) {
+							for(const k in tk.checkexpressionrank) {
+								p[k]=tk.checkexpressionrank[k]
 							}
-
-							const p={
-								gene:usegene,
-								chr:c.chr,
-								start:c.start,
-								stop:c.stop,
-								holder:pane.body,
-								block:block,
-								genome:block.genome,
-								jwt:block.jwt,
-								hostURL:block.hostURL,
-								sample:{name:s.samplename,value:v.value}
+						} else {
+							p.dslabel=tk.mds.label
+							p.querykey=tk.mds.queries[tk.querykey].checkexpressionrank.querykey
+						}
+						// svcnv
+						p.color={
+							cnvgain:tk.cnvcolor.gain.str,
+							cnvloss:tk.cnvcolor.loss.str,
+							sv:'black'
+						}
+						if(tk.iscustom) {
+							p.svcnv={
+								iscustom:1,
+								file: tk.file,
+								url: tk.url,
+								indexURL: tk.indexURL
 							}
+						} else {
+							p.svcnv={
+								dslabel:tk.mds.label,
+								querykey:tk.querykey
+							}
+						}
+						p.svcnv.valueCutoff=tk.valueCutoff
+						p.svcnv.bplengthUpperLimit=tk.bplengthUpperLimit
 
-							// expression
-							if(tk.iscustom) {
-								for(const k in tk.checkexpressionrank) {
-									p[k]=tk.checkexpressionrank[k]
-								}
+						p.clicksample = (thissample, group, plot) => {
+							// click outlier sample to launch browser and show sv/cnv+expression rank for single sample
+							const sample={
+								samplename:thissample.sample
+							}
+							const samplegroup={
+								attributes: group.attributes
+							}
+							const tk={} // svcnv track
+							if(plot.svcnv.iscustom) {
 							} else {
-								p.dslabel=tk.mds.label
-								p.querykey=tk.mds.queries[tk.querykey].checkexpressionrank.querykey
+								for(const k in plot.svcnv) {
+									tk[k] = plot.svcnv[k]
+								}
+								tk.mds = plot.block.genome.datasets[ plot.svcnv.dslabel ]
 							}
-							// svcnv
-							p.color={
-								cnvgain:tk.cnvcolor.gain.str,
-								cnvloss:tk.cnvcolor.loss.str,
-								sv:'black'
-							}
-							if(tk.iscustom) {
-								p.svcnv={
-									iscustom:1,
-									file: tk.file,
-									url: tk.url,
-									indexURL: tk.indexURL
-								}
-							} else {
-								p.svcnv={
-									dslabel:tk.mds.label,
-									querykey:tk.querykey
-								}
-							}
-							p.svcnv.valueCutoff=tk.valueCutoff
-							p.svcnv.bplengthUpperLimit=tk.bplengthUpperLimit
-
-							p.clicksample = (thissample, group, plot) => {
-								// click outlier sample to launch browser and show sv/cnv+expression rank for single sample
-								const sample={
-									samplename:thissample.sample
-								}
-								const samplegroup={
-									attributes: group.attributes
-								}
-								const tk={} // svcnv track
-								if(plot.svcnv.iscustom) {
-								} else {
-									for(const k in plot.svcnv) {
-										tk[k] = plot.svcnv[k]
-									}
-									tk.mds = plot.block.genome.datasets[ plot.svcnv.dslabel ]
-								}
-								focus_singlesample({
-									m: {
-										dt: common.dtcnv,
-										chr:plot.chr,
-										start:plot.start,
-										stop:plot.stop
-									},
-									sample: sample,
-									samplegroup: samplegroup,
-									tk: tk,
-									block: plot.block
-								})
-							}
-							import('./block.mds.geneboxplot').then(_=>{
-								_.init(p)
+							focus_singlesample({
+								m: {
+									dt: common.dtcnv,
+									chr:plot.chr,
+									start:plot.start,
+									stop:plot.stop
+								},
+								sample: sample,
+								samplegroup: samplegroup,
+								tk: tk,
+								block: plot.block
 							})
+						}
+						import('./block.mds.geneboxplot').then(_=>{
+							_.init(p)
 						})
+					})
 				}
 				x += expbarwidth + xspace
 			}
@@ -313,25 +324,28 @@ export function render_multi_genebar( tk, block) {
 							.attr('fill','#858585')
 							.attr('fill-opacity',.1)
 						const cover = row.append('rect')
-							.attr('fill',  fpkmbarcolor_bg)
+							.attr('fill',  coverbarcolor_silent)
 							.attr('fill-opacity',.1)
 							.attr('width',numattrbarwidth)
 							.attr('height', s.height)
-							.on('mouseover',()=>{
-								cover.attr('fill','orange')
-								tk.tktip
-									.clear()
-									.show(d3event.clientX, d3event.clientY)
 
-								const lst=[{k:'Sample',v:s.samplename}]
-								may_add_sampleannotation( s.samplename, tk, lst )
+						s.columnbars.push(cover)
 
-								const table = client.make_table_2col(tk.tktip.d,lst)
-							})
-							.on('mouseout',()=>{
-								tk.tktip.hide()
-								cover.attr('fill',fpkmbarcolor_bg)
-							})
+						cover.on('mouseover',()=>{
+							cover.attr('fill', coverbarcolor_active)
+							tk.tktip
+								.clear()
+								.show(d3event.clientX, d3event.clientY)
+
+							const lst=[{k:'Sample',v:s.samplename}]
+							may_add_sampleannotation( s.samplename, tk, lst )
+
+							const table = client.make_table_2col(tk.tktip.d,lst)
+						})
+						.on('mouseout',()=>{
+							tk.tktip.hide()
+							cover.attr('fill', coverbarcolor_silent)
+						})
 					}
 				}
 				x += numattrbarwidth + xspace
