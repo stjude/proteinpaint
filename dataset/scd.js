@@ -14,6 +14,11 @@ module.exports={
 	about:[
 	],
 
+	sampleAssayTrack:{
+		file:'hg38/scd/mds/assaytracks/__table'
+	},
+
+
 	cohort:{
 		files:[
 			// possible to have file-specific logic
