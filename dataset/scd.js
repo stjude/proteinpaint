@@ -6,7 +6,6 @@ const samplenamekey = 'sample_name'
 
 module.exports={
 
-	genome:'hg19',
 	isMds:true,
 
 	noHandleOnClient:1,
