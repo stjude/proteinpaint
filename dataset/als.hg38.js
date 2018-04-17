@@ -29,7 +29,7 @@ module.exports={
 		sampleAttribute:{
 			attributes:{
 				ALSRD_Dx: {
-					label:'Diagnosis',
+					label:'ALSRD_Dx',
 					filter:1,
 				}
 			}
@@ -55,7 +55,7 @@ module.exports={
 
 			groupsamplebyattr:{ 
 				attrlst:[
-					{k:'ALSRD_Dx',label:'Diagnosis'},
+					{k:'ALSRD_Dx',label:'ALSRD_Dx'},
 				],
 				sortgroupby:{
 					key:'ALSRD_Dx',
