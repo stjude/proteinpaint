@@ -216,7 +216,7 @@ if(urlp.has('block')) {
 	}
 	if(urlp.has('svcnvfpkmurl')) {
 		const lst=urlp.get('svcnvfpkmurl').split(',')
-		// defines a single track
+		// defines a single track, all members using url
 		const name = lst[0]
 		const type2url = {}
 		for(let i=1; i<lst.length; i+=2) {
@@ -244,6 +244,37 @@ if(urlp.has('block')) {
 			tklst.push( tk )
 		}
 	}
+
+	if(urlp.has('svcnvfpkmfile')) {
+		const lst=urlp.get('svcnvfpkmfile').split(',')
+		// defines a single track, all members using file
+		const name = lst[0]
+		const type2file = {}
+		for(let i=1; i<lst.length; i+=2) {
+			type2file[ lst[i] ] = lst[i+1]
+		}
+		if(type2file.svcnv) {
+			const tk = {
+				type:client.tkt.mdssvcnv,
+				name: name, 
+				file: type2file.svcnv,
+			}
+			if(type2file.fpkm) {
+				tk.checkexpressionrank = {
+					datatype:'FPKM',
+					file: type2file.fpkm
+				}
+			}
+			if(type2file.vcf) {
+				tk.checkvcf = {
+					file: type2file.vcf
+				}
+			}
+			tklst.push( tk )
+		}
+	}
+
+
 	if(urlp.has('mds')) {
 		const tmp = urlp.get('mds').split(',')
 		if(tmp[0] && tmp[1]) {
