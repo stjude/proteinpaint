@@ -204,6 +204,8 @@ exports.vcfparseline=function(line,vcf) {
 		const a={
 			ref: m.ref, // may be corrected just below!
 			allele:alt,
+			// 5078356.TATCAGAGAA.GGGAGGA keep original allele for matching with csq which hardcodes original allele
+			allele_original: alt,
 			sampledata:[],
 			_m:m,
 			info:{} // allele info, do not contain locus info
@@ -227,8 +229,6 @@ exports.vcfparseline=function(line,vcf) {
 
 			// normal nucleotide
 
-			// 5078356.TATCAGAGAA.GGGAGGA keep original allele for matching with csq which hardcodes original allele
-			a.allele_original = a.allele
 
 			const [p,ref,alt] = correctRefAlt( m.pos, m.ref, a.allele )
 			a.pos=p
