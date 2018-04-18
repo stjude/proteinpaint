@@ -1165,7 +1165,7 @@ function render_multi_cnvloh(tk,block) {
 					.attr('x',-5)
 					.attr('y', yoff1 + sample.height/2 )
 					.attr('font-family',client.font)
-					.attr('font-size',Math.min(15, Math.max(minlabfontsize, sample.height)))
+					.attr('font-size',Math.min(15, Math.max(minlabfontsize, sample.height+1)))
 					.each(function(){
 						tk.leftLabelMaxwidth=Math.max(tk.leftLabelMaxwidth,this.getBBox().width)
 					})
