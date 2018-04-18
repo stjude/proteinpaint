@@ -40,7 +40,8 @@ render_samplegroups
 		render_multi_cnvloh_stackeachsample
 		** focus_singlesample
 configPanel()
-
+multi_sample_addhighlight
+multi_sample_removehighlight
 
 sv-cnv-vcf-fpkm ranking, two modes
 	multi-sample:
@@ -75,7 +76,7 @@ const labyspace = 5
 export const intrasvcolor = '#858585' // inter-chr sv color is defined on the fly
 const cnvhighlightcolor = '#E8FFFF'
 export const coverbarcolor_silent='#222'
-export const coverbarcolor_active='orange'
+export const coverbarcolor_active='red'
 
 const minlabfontsize=7
 const minsvradius=5
@@ -1157,17 +1158,24 @@ function render_multi_cnvloh(tk,block) {
 			// if to draw sample name
 
 			if( (tk.iscustom || !samplegroup.name) && sample.samplename && sample.height >= minlabfontsize) {
-				// for custom track, show sample name since all of them are in one nameless group
-				tk.cnvleftg.append('text')
+				// show sample name when is custom track, or no group name in native track, and tall enough
+				sample.svglabel = tk.cnvleftg.append('text')
 					.text(sample.samplename)
 					.attr('text-anchor','end')
 					.attr('dominant-baseline','central')
+					.attr('fill','black')
 					.attr('x',-5)
 					.attr('y', yoff1 + sample.height/2 )
 					.attr('font-family',client.font)
 					.attr('font-size',Math.min(15, Math.max(minlabfontsize, sample.height+1)))
 					.each(function(){
 						tk.leftLabelMaxwidth=Math.max(tk.leftLabelMaxwidth,this.getBBox().width)
+					})
+					.on('mouseover',()=>{
+						multi_sample_addhighlight(sample)
+					})
+					.on('mouseout',()=>{
+						multi_sample_removehighlight(sample)
 					})
 			}
 
@@ -1514,6 +1522,7 @@ function render_multi_cnvloh(tk,block) {
 export function multi_sample_addhighlight(sample) {
 	if(!sample) return
 	// one of tk.samplegroup[].sample[]
+	if(sample.svglabel) sample.svglabel.attr('fill',coverbarcolor_active)
 	if(sample.blockbg) sample.blockbg.attr('fill-opacity',.1)
 	if(sample.columnbars) {
 		for(const b of sample.columnbars) {
@@ -1527,6 +1536,7 @@ export function multi_sample_addhighlight(sample) {
 export function multi_sample_removehighlight(sample) {
 	if(!sample) return
 	// one of tk.samplegroup[].sample[]
+	if(sample.svglabel) sample.svglabel.attr('fill',coverbarcolor_silent)
 	if(sample.blockbg) sample.blockbg.attr('fill-opacity',0)
 	if(sample.columnbars) {
 		for(const b of sample.columnbars) {
@@ -2378,11 +2388,17 @@ function makeTk(tk, block) {
 		}
 
 		// set mode
-		tk.isdense=true
-		tk.isfull=false
-		if(tk.showfullmode) {
+
+		if(tk.iscustom) {
 			tk.isdense=false
 			tk.isfull=true
+		} else {
+			tk.isdense=true
+			tk.isfull=false
+			if(tk.showfullmode) {
+				tk.isdense=false
+				tk.isfull=true
+			}
 		}
 	}
 
