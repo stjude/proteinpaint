@@ -169,12 +169,10 @@ function loadTk_mayinitiatecustomvcf( tk, block ) {
 		url: tk.checkvcf.url,
 		indexURL: tk.checkvcf.indexURL
 	}
-	return fetch( new Request( block.hostURL+'/vcfheader', {
-		method:'POST',
-		body:JSON.stringify(arg)
-	}))
-	.then(data=>{return data.json()})
+	return client.dofetch('/vcfheader', arg)
 	.then( data => {
+		if(!data) throw {message:'server error!'}
+		if(data.error) throw {message:data.error}
 
 		const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
 		if(errs) throw({message:'Error parsing VCF meta lines: '+errs.join('; ')})
