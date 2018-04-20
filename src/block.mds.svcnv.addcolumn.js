@@ -451,6 +451,8 @@ function genebar_config( holder, genes, tk, block ) {
 		block: block
 	})
 
+	// scatter plot button
+
 	if(genes.size>1) {
 		// more than one gene
 		const scrollholder=holder.append('div')
