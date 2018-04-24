@@ -1085,9 +1085,10 @@ function configPanel_bwcommon(tk, block) {
 	}
 
 	bigwigconfigpanel(mock, block, tk.tkconfigtip.d, (code)=>{
-		if(!tk.bigwigsetting) {
-			tk.bigwigsetting={}
-		}
+
+		if(!tk.bigwigsetting) tk.bigwigsetting={}
+		if(!tk.bigwigsetting.scale) tk.bigwigsetting.scale={}
+
 		switch(code){
 		case client.bwSetting.height:
 			tk.bigwigsetting.barheight = mock.barheight
