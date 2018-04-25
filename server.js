@@ -171,6 +171,7 @@ app.post('/hicstat',handle_hicstat)
 app.post('/hicdata',handle_hicdata)
 app.post('/checkrank',handle_checkrank)
 app.post('/samplematrix', handle_samplematrix)
+app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
 
 
 // obsolete
@@ -7077,9 +7078,47 @@ function handle_mdsjunction_AreadcountbyB(reqquery,res,ds,dsquery) {
 
 
 
+function handle_mdssamplescatterplot (req,res) {
+	if(reqbodyisinvalidjson(req,res)) return
+	Promise.resolve()
+	.then(()=>{
+		const gn = genomes[req.query.genome]
+		if(!gn) throw 'invalid genome'
+		const ds = gn.datasets[ req.query.dslabel ]
+		if(!ds) throw 'invalid dataset'
+		if(!ds.cohort) throw 'no cohort for dataset'
+		if(!ds.cohort.annotation) throw 'cohort.annotation missing for dataset'
+		if(!ds.cohort.scatterplot) throw 'scatterplot not supported for this cohort'
+		const dots = []
+		for(const sample in ds.cohort.annotation) {
+			const anno = ds.cohort.annotation[sample]
+			const x = anno[ds.cohort.scatterplot.x.attribute]
+			if(!Number.isFinite(x)) continue
+			const y = anno[ds.cohort.scatterplot.y.attribute]
+			if(!Number.isFinite(y)) continue
+			dots.push({
+				sample:sample,
+				x:x,
+				y:y,
+				s:anno
+			})
+		}
+		res.send({
+			colorbyattributes: ds.cohort.scatterplot.colorbyattributes,
+			dots:dots,
+		})
+	})
+	.catch(err=>{
+		if(err.stack) console.error(err.stack)
+		res.send({error: (typeof(err)=='string' ? err : err.message) })
+	})
+}
 
 
-/***********  __smat ends ************/
+
+
+
+/***********  __smat ************/
 
 
 
@@ -9580,6 +9619,20 @@ function mds_init(ds,genome) {
 			}
 		}
 
+		if(ds.cohort.scatterplot) {
+			if(!ds.cohort.sampleAttribute) return '.sampleAttribute missing but required for .cohort.scatterplot'
+			if(!ds.cohort.scatterplot.x) return '.x missing from .cohort.scatterplot'
+			if(!ds.cohort.scatterplot.x.attribute) return '.attribute missing from .cohort.scatterplot.x'
+			const x = ds.cohort.sampleAttribute.attributes[ds.cohort.scatterplot.x.attribute]
+			if(!x) return 'scatterplot.x.attribute is not defined in sampleAttribute'
+			if(!x.isfloat) return 'scatterplot.x is not "isfloat"'
+			if(!ds.cohort.scatterplot.y) return '.y missing from .cohort.scatterplot'
+			if(!ds.cohort.scatterplot.y.attribute) return '.attribute missing from .cohort.scatterplot.y'
+			const y = ds.cohort.sampleAttribute.attributes[ds.cohort.scatterplot.y.attribute]
+			if(!y) return 'scatterplot.y.attribute is not defined in sampleAttribute'
+			if(!y.isfloat) return 'scatterplot.y is not "isfloat"'
+		}
+
 		for(const file of ds.cohort.files) {
 			if(!file.file) return '.file missing from one of .cohort.files'
 			const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
@@ -9607,6 +9660,8 @@ function mds_init(ds,genome) {
 		}
 
 	}
+
+
 
 	if(ds.mutationAttribute) {
 		/*
