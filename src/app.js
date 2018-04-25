@@ -37,7 +37,7 @@ launchmavb()
 launch2dmaf()
 launchhic()
 launchsamplematrix()
-
+launchmdssamplescatterplot
 
 
 */
@@ -729,6 +729,12 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		}
 	}
 
+	if(arg.mdssamplescatterplot) {
+		if(arg.genome) arg.mdssamplescatterplot.genome = arg.genome
+		launchmdssamplescatterplot(arg.mdssamplescatterplot, holder)
+		return
+	}
+
 	if(arg.samplematrix) {
 		arg.samplematrix.jwt = arg.jwt
 		launchsamplematrix( arg.samplematrix, holder )
@@ -829,6 +835,38 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		bulkui(0,0,genomes, hostURL);
 	}
 }
+
+
+
+
+function launchmdssamplescatterplot(arg, holder) {
+	if(!arg.genome) {
+		error0('missing genome for mdssamplescatterplot')
+		return
+	}
+	const genome = genomes[arg.genome]
+	if(!genome) {
+		error0('invalid genome for mdssamplescatterplot')
+		return
+	}
+	arg.genome = genome
+	if(!arg.dataset) {
+		error0('missing dataset for mdssamplescatterplot')
+		return
+	}
+	arg.mds = genome.datasets[arg.dataset]
+	if(!arg.mds) {
+		error0('invalid dataset for mdssamplescatterplot')
+		return
+	}
+	arg.dslabel = arg.dataset
+	delete arg.dataset
+	import('./mds.samplescatterplot').then(_=>{
+		_.init(arg, holder, debugmode)
+	})
+}
+
+
 
 function launchhic(hic, holder) {
 	if(!hic.genome) {
