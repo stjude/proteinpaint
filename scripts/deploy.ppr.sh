@@ -26,9 +26,9 @@ sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/bin/proteinpaint.js 
 
 tar zcvf sourcecode.tgz tmpbuild/
 
-scp sourcecode.tgz genomeuser@pp-irp.stjude.org:/opt/app/pp
+scp sourcecode.tgz genomeuser@ppr.stjude.org:/opt/app/pp
 
-ssh -tt genomeuser@pp-irp.stjude.org "
+ssh -tt genomeuser@ppr.stjude.org "
 	cd /opt/app/pp
 	tar zxvf sourcecode.tgz
 	
