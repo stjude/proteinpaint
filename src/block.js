@@ -4254,7 +4254,6 @@ moremenu(tip) {
 						for(const line of str.split('\n')) {
 							const l = line.split(' ')
 							if(!l[0]) continue
-							console.log(l[0])
 							const r = coord.string2pos(l[0],this.genome)
 							if(!r) continue
 							this.addhlregion(r.chr, r.start, r.stop, l[1] || hlregioncolor)
@@ -4267,7 +4266,7 @@ moremenu(tip) {
 						ta.property('value','')
 					})
 				tip.d.append('div')
-					.html('<ul><li>One row per region</li><li>Example row: "chr1:123-456 #96FAF8"</li><li>Color is optional, must be hex format</li><li>If provided, separate coordinate and color by space</ul>')
+					.html('<ul><li>Limited to adding regions to the current chromosome</li><li>One row per region</li><li>Example row: "chr1:123-456 #96FAF8"</li><li>Color is optional, must be hex format</li><li>If provided, separate coordinate and color by space</ul>')
 			})
 
 		// list for editing
