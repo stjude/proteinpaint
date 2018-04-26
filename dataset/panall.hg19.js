@@ -107,7 +107,7 @@ noHandleOnClient:1,
 
 		svcnv:{
 
-			showfullmode:true,
+			//showfullmode:true,
 
 			name:'Pan-ALL mutation',
 			istrack:true,
