@@ -4218,55 +4218,102 @@ moremenu(tip) {
 		}
 	}
 
-	// add new highlight region
-	tip.d.append('div')
-		.text('Select a region to highlight')
-		.attr('class','sja_menuoption')
-		.on('click',()=>{
-			tip.clear()
-			tip.d.append('div').html('&#9660; drag on the ruler')
-			tip.d.transition().style('top', (Number.parseInt(tip.d.style('top'))-60)+'px')
-			this.toselecthlregion=true
-		})
-
-	for(const h of this.hlregion.lst) {
-		const row=tip.d.append('div')
-		row.append('div')
-			.html('&#10005;')
-			.style('display','inline-block')
-			.attr('class','sja_menuoption')
-			.on('click',()=>{
-				for(let i=0; i<this.hlregion.lst.length; i++) {
-					const h2=this.hlregion.lst[i]
-					if(h2.chr==h.chr && h2.start==h.start && h2.stop==h.stop) {
-						this.hlregion.lst.splice(i,1)
-						h2.rect.remove()
-						break
-					}
-				}
-				row.remove()
-			})
+	// highlight region
+	{
+		const div = tip.d.append('div')
+			.style('border','solid 1px #eee')
+			.style('padding','10px')
+			.style('margin','20px 0px 20px 0px')
+		const row = div.append('div')
 		row.append('span')
-			.style('color','#858585')
-			.html('&nbsp;&nbsp;'+h.chr+':'+h.start+'-'+h.stop+'&nbsp;&nbsp;')
-		row.append('input')
-			.attr('type','color')
-			.property('value', h.color)
-			.on('change',()=>{
-				h.color = d3event.target.value
-				h.rect.transition().attr('fill',h.color)
+			.text('Highlight')
+			.style('opacity',.5)
+			.style('padding-right','10px')
+		row.append('button')
+			.text('Select a region')
+			.on('click',()=>{
+				tip.clear()
+				tip.d.append('div').html('&#9660; drag on the ruler')
+				tip.d.transition().style('top', (Number.parseInt(tip.d.style('top'))-60)+'px')
+				this.toselecthlregion=true
 			})
+		row.append('button')
+			.text('Enter regions')
+			.on('click',()=>{
+				tip.clear()
+				const ta = tip.d.append('textarea')
+					.attr('rows',5)
+					.attr('cols',30)
+				const row = tip.d.append('div')
+					.style('margin-top','3px')
+				row.append('button')
+					.text('Submit')
+					.on('click',()=>{
+						const str = ta.property('value').trim()
+						if(!str) return
+						for(const line of str.split('\n')) {
+							const l = line.split(' ')
+							if(!l[0]) continue
+							console.log(l[0])
+							const r = coord.string2pos(l[0],this.genome)
+							if(!r) continue
+							this.addhlregion(r.chr, r.start, r.stop, l[1] || hlregioncolor)
+						}
+						this.moremenu(tip.clear())
+					})
+				row.append('button')
+					.text('Clear')
+					.on('click',()=>{
+						ta.property('value','')
+					})
+				tip.d.append('div')
+					.style('margin-top','10px')
+					.html('<ul><li>One row per region</li><li>Example row: "chr1:123-456 #96FAF8"</li><li>Color is optional, must be hex format</li><li>If provided, separate coordinate and color by space</ul>')
+			})
+
+		// list for editing
+		if(this.hlregion.lst.length) {
+			const div2 = div.append('div')
+				.style('margin-top','10px')
+			for(const h of this.hlregion.lst) {
+				const row=div2.append('div')
+				row.append('div')
+					.html('&#10005;')
+					.style('display','inline-block')
+					.attr('class','sja_menuoption')
+					.on('click',()=>{
+						for(let i=0; i<this.hlregion.lst.length; i++) {
+							const h2=this.hlregion.lst[i]
+							if(h2.chr==h.chr && h2.start==h.start && h2.stop==h.stop) {
+								this.hlregion.lst.splice(i,1)
+								h2.rect.remove()
+								break
+							}
+						}
+						row.remove()
+					})
+				row.append('span')
+					.style('color','#858585')
+					.html('&nbsp;&nbsp;'+h.chr+':'+h.start+'-'+h.stop+'&nbsp;&nbsp;')
+				row.append('input')
+					.attr('type','color')
+					.property('value', h.color)
+					.on('change',()=>{
+						h.color = d3event.target.value
+						h.rect.transition().attr('fill',h.color)
+					})
+			}
+		}
 	}
 
 	// experimental
 	tip.d.append('div')
 		.text('EXPERIMENTAL')
 		.style('font-size','.7em')
-		.style('margin','10px 0px 2px 10px')
-		.style('color','#858585')
-	tip.d.append('div')
+		.style('margin','10px 0px 2px 0px')
+		.style('opacity',.5)
+	tip.d.append('button')
 		.text('Customize mutation class color')
-		.attr('class','sja_menuoption')
 		.on('click',()=>{
 			tip.clear()
 			client.mclasscolorchangeui(tip)
