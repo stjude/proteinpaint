@@ -7105,6 +7105,7 @@ function handle_mdssamplescatterplot (req,res) {
 		}
 		res.send({
 			colorbyattributes: ds.cohort.scatterplot.colorbyattributes,
+			querykey: ds.cohort.scatterplot.querykey,
 			dots:dots,
 		})
 	})

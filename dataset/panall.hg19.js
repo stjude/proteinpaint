@@ -48,7 +48,8 @@ noHandleOnClient:1,
 			},
 			colorbyattributes:[
 				{key:'subtype1',label:'Subtype 1'}
-			]
+			],
+			querykey:'svcnv'
 		}
 	},
 

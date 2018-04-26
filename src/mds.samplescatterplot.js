@@ -2,8 +2,9 @@ import * as client from './client'
 import * as common from './common'
 import {axisLeft,axisBottom} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
-//import {interpolateRgb} from 'd3-interpolate'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
+import blocklazyload from './block.lazyload'
+
 
 
 /*
@@ -77,6 +78,9 @@ export function init (obj,holder, debugmode) {
 			obj.sample2dot.set( dot.sample, dot )
 		}
 		obj.dots = data.dots
+
+		// TODO general track
+		obj.querykey = data.querykey
 
 		// TODO generic attributes for legend, specify some categorical ones for coloring
 		if(data.colorbyattributes) {
@@ -168,6 +172,9 @@ function init_plot (obj) {
 		.on('mouseout',d=>{
 			d3event.target.setAttribute('stroke','none')
 			obj.tip.hide()
+		})
+		.on('click',d=>{
+			click_dot(d, obj)
 		})
 	
 	obj.dotselection = circles
@@ -275,4 +282,63 @@ function init_legend(arg,holder) {
 				.text(value)
 		}
 	}
+}
+
+
+
+function click_dot(dot, obj) {
+	const pane = client.newpane({x:d3event.clientX,y:d3event.clientY})
+	pane.header.text(dot.sample)
+
+	const wait = pane.body.append('div')
+		.style('margin','20px')
+		.text('Loading ...')
+
+	let sampletracks
+
+	client.dofetch('/mdssvcnv',{
+		genome:obj.genome.name,
+		dslabel:obj.dslabel,
+		querykey:obj.querykey, // TODO general track
+		gettrack4singlesample:dot.sample
+	})
+	.then(data=>{
+		wait.text('Loading ... ...')
+		sampletracks = data.tracks
+		//return import('./block')
+	})
+	.then(_=>{
+		wait.remove()
+		const arg = {
+			genome:obj.genome,
+			hostURL:(localStorage.getItem('hostURL')||''),
+			jwt:(localStorage.getItem('jwt')||''),
+			holder:pane.body,
+			chr: obj.genome.defaultcoord.chr,
+			start: obj.genome.defaultcoord.start,
+			stop: obj.genome.defaultcoord.stop,
+			nobox:1,
+			tklst:[]
+		}
+
+		// TODO general track in single-sample mode
+		const tk = {
+			singlesample:{name:dot.sample},
+			mds: obj.mds,
+			querykey: obj.querykey,
+		}
+		for(const k in tk.mds.queries[tk.querykey]) {
+			tk[k] = tk.mds.queries[tk.querykey][k]
+		}
+		arg.tklst.push(tk)
+
+
+		if(sampletracks) {
+			for(const t of sampletracks) arg.tklst.push(t)
+		}
+
+		client.first_genetrack_tolist(obj.genome,arg.tklst)
+		//new _.Block(arg)
+		blocklazyload(arg)
+	})
 }
