@@ -50,11 +50,17 @@ export function init (obj,holder, debugmode) {
 		if(e.stack) console.log(e.stack)
 	}
 
-	const scatterdiv0 = holder.append('div')
-		.style('margin','10px')
-		.style('display','inline-block')
+	const _table = holder.append('table')
+		.style('border-spacing','10px')
+	
+	const tr1 = _table.append('tr') // row has two <td>
 
-	const scatterdiv = scatterdiv0.append('div')
+	const tr1td1 = tr1.append('td')
+	const tr1td2 = tr1.append('td')
+		.style('vertical-align','top')
+
+
+	const scatterdiv = tr1td1.append('div')
 		.style('position','relative')
 
 	obj.scattersvg = scatterdiv.append('svg')
@@ -85,7 +91,7 @@ export function init (obj,holder, debugmode) {
 		// TODO generic attributes for legend, specify some categorical ones for coloring
 		if(data.colorbyattributes) {
 			obj.colorbyattributes = data.colorbyattributes
-			init_legend(obj,holder)
+			init_legend(obj,tr1td2)
 		}
 
 		init_plot(obj)
@@ -176,7 +182,7 @@ function init_plot (obj) {
 		.on('click',d=>{
 			click_dot(d, obj)
 		})
-	
+
 	obj.dotselection = circles
 
 
@@ -238,11 +244,19 @@ function init_plot (obj) {
 
 
 function init_legend(arg,holder) {
-	const legendholder = holder.append('table')
-		.style('margin','10px')
+
+	const table = holder.append('table')
 		.style('border-spacing','5px')
 
 	for(const attr of obj.colorbyattributes) {
+
+		const tr = table.append('tr')
+
+		// legend item name
+		tr.append('td')
+			.style('opacity',.5)
+			.style('white-space','nowrap')
+			.text(attr.label)
 
 		// in case value2color is not provided
 		const colorfunc = scaleOrdinal(schemeCategory10)
@@ -257,17 +271,11 @@ function init_legend(arg,holder) {
 			attr.values.get( value ).count++
 		}
 
-
-		const row = legendholder.append('div')
-		row.append('div')
-			.style('display','inline-block')
-			.style('opacity',.5)
-			.text(attr.label)
-		const celldiv = row.append('div')
-			.style('display','inline-block')
+		// legend values
+		const cellholder = tr.append('td')
 
 		for(const [value,o] of attr.values) {
-			const cell = celldiv.append('div')
+			const cell = cellholder.append('div')
 				.style('display','inline-block')
 				.attr('class','sja_clb')
 			cell.append('div')
