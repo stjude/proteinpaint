@@ -4267,7 +4267,6 @@ moremenu(tip) {
 						ta.property('value','')
 					})
 				tip.d.append('div')
-					.style('margin-top','10px')
 					.html('<ul><li>One row per region</li><li>Example row: "chr1:123-456 #96FAF8"</li><li>Color is optional, must be hex format</li><li>If provided, separate coordinate and color by space</ul>')
 			})
 
