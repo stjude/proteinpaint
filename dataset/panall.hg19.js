@@ -14,11 +14,9 @@ noHandleOnClient:1,
 	about:[
 	],
 
-/*
 	sampleAssayTrack:{
-		file:'hg19/pan-all/tracktable/__table'
+		file:'hg19/pan-all/tracktable/panall.rnabw'
 	},
-	*/
 
 	cohort:{
 		files:[
