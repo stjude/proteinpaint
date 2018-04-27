@@ -9611,6 +9611,7 @@ function mds_init(ds,genome) {
 					// optional
 					for(const v in a.values) {
 						const b = a.values[v]
+						if(typeof(b)!='object') return 'value "'+v+'" not pointing to {} from sampleAttribute'
 						if(!b.name) b.name = v
 					}
 				}
