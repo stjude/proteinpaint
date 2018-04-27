@@ -9611,7 +9611,7 @@ function mds_init(ds,genome) {
 					// optional
 					for(const v in a.values) {
 						const b = a.values[v]
-						if(!b.name) return '.name missing for value '+v+' of key '+key+' from cohort.sampleAttribute.attributes'
+						if(!b.name) b.name = v
 					}
 				}
 				if(a.showintrack) {
