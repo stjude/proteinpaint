@@ -91,7 +91,7 @@ export function init (obj,holder, debugmode) {
 		// TODO generic attributes for legend, specify some categorical ones for coloring
 		if(data.colorbyattributes) {
 			obj.colorbyattributes = data.colorbyattributes
-			init_legend(obj,tr1td2)
+			init_legend_beforeplot(obj,tr1td2)
 		}
 
 		init_plot(obj)
@@ -243,7 +243,9 @@ function init_plot (obj) {
 
 
 
-function init_legend(arg,holder) {
+function init_legend_beforeplot(arg,holder) {
+	/*
+	*/
 
 	const table = holder.append('table')
 		.style('border-spacing','5px')
@@ -258,9 +260,23 @@ function init_legend(arg,holder) {
 			.style('white-space','nowrap')
 			.text(attr.label)
 
-		// in case value2color is not provided
 		const colorfunc = scaleOrdinal(schemeCategory10)
-		attr.values = new Map()
+		if(attr.values) {
+			/*
+			provided by dataset config
+			{ value: {color} }
+			convert to map
+			*/
+			const values = new Map()
+			for(const value in attr.values) {
+				const v = attr.values[value]
+				v.count = 0
+				values.set( value, v)
+			}
+			attr.values = values
+		} else {
+			attr.values = new Map()
+		}
 
 		for(const d of obj.dots) {
 			const value = d.s[attr.key]
