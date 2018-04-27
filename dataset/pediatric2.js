@@ -54,12 +54,30 @@ module.exports={
 	*/
 	cohort:{
 		files:[
-			{file:'anno/db/pediatric.samples'},
-			{file:'anno/db/pediatric.samples.2'},
-			{file:'anno/db/target.samples'},
-			{file:'anno/db/target.samples.tallsnp6array'},
-			{file:'anno/db/pedccl.celllines'},
-			{file:'anno/db/pcgp.telomerecall'}
+			{file:'hg19/Pediatric/sampletable/2011_ETP_TALL'},
+			{file:'hg19/Pediatric/sampletable/2012_AMLM7'},
+			{file:'hg19/Pediatric/sampletable/2012_hypodiploid_ALL'},
+			{file:'hg19/Pediatric/sampletable/2012_MB'},
+			{file:'hg19/Pediatric/sampletable/2012_NBL'},
+			{file:'hg19/Pediatric/sampletable/2012_RB'},
+			{file:'hg19/Pediatric/sampletable/2013_E_RHB'},
+			{file:'hg19/Pediatric/sampletable/2013_LGG'},
+			{file:'hg19/Pediatric/sampletable/2014_ACT'},
+			{file:'hg19/Pediatric/sampletable/2014_EPD'},
+			{file:'hg19/Pediatric/sampletable/2014_EWS'},
+			{file:'hg19/Pediatric/sampletable/2014_HGG'},
+			{file:'hg19/Pediatric/sampletable/2014_INF'},
+			{file:'hg19/Pediatric/sampletable/2014_OS'},
+			{file:'hg19/Pediatric/sampletable/2014_Pediatric_BALL'},
+			{file:'hg19/Pediatric/sampletable/2014_Ph-like_ALL'},
+			{file:'hg19/Pediatric/sampletable/2014_RB'},
+			{file:'hg19/Pediatric/sampletable/2016_ALL'},
+			{file:'hg19/Pediatric/sampletable/2016_AML'},
+			{file:'hg19/Pediatric/sampletable/target.samples'},
+			{file:'hg19/Pediatric/sampletable/target.samples.tallsnp6array'},
+			{file:'hg19/Pediatric/sampletable/pedccl.celllines'},
+			{file:'hg19/Pediatric/sampletable/pcgp.telomerecall'},
+			{file:'hg19/Pediatric/sampletable/pediatric.sampletable'}, // to catch any missing samples
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
@@ -97,6 +115,21 @@ module.exports={
 				sample_type:{
 					label:'Sample type',
 					filter:1,
+				},
+				gender:{
+					label:'Gender',
+					filter:1,
+					values:{
+						male:{name:'Male'},
+						female:{name:'Female'}
+					}
+				},
+				race:{
+					label:'Race',
+					filter:1,
+				},
+				age_dx_years:{
+					label:'Age at diagnosis'
 				},
 				'WGS telomere call':{
 					label:'WGS telomere call',
