@@ -9622,6 +9622,7 @@ function mds_init(ds,genome) {
 
 		if(ds.cohort.scatterplot) {
 			if(!ds.cohort.sampleAttribute) return '.sampleAttribute missing but required for .cohort.scatterplot'
+			// TODO support multiple plots
 			if(!ds.cohort.scatterplot.x) return '.x missing from .cohort.scatterplot'
 			if(!ds.cohort.scatterplot.x.attribute) return '.attribute missing from .cohort.scatterplot.x'
 			const x = ds.cohort.sampleAttribute.attributes[ds.cohort.scatterplot.x.attribute]
@@ -9632,6 +9633,15 @@ function mds_init(ds,genome) {
 			const y = ds.cohort.sampleAttribute.attributes[ds.cohort.scatterplot.y.attribute]
 			if(!y) return 'scatterplot.y.attribute is not defined in sampleAttribute'
 			if(!y.isfloat) return 'scatterplot.y is not "isfloat"'
+			if(ds.cohort.scatterplot.colorbyattributes) {
+				for(const attr of ds.cohort.scatterplot.colorbyattributes) {
+					if(!attr.key) return '.key missing from one of scatterplot.colorbyattributes'
+					const attrreg = ds.cohort.sampleAttribute.attributes[attr.key]
+					if(!attrreg) return 'unknown attribute by key '+(attr.key)+' from scatterplot.colorbyattributes'
+					attr.label = attrreg.label
+					attr.values = attrreg.values
+				}
+			}
 		}
 
 		for(const file of ds.cohort.files) {
