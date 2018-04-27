@@ -1202,8 +1202,6 @@ function detailtable_singlesample(p) {
 		lst.push({
 			k:'Sample',
 			v: p.sample.samplename
-				+ (p.sample.sampletype ? ' <span style="font-size:.7em;color:#858585;">'+p.sample.sampletype+'</span>' : '')
-				+ (p.samplegroup && p.samplegroup.name ? ' <span style="font-size:.7em">'+p.samplegroup.name+'</span>' : '')
 		})
 
 		may_add_sampleannotation( p.sample.samplename, p.tk, lst )
@@ -1710,8 +1708,8 @@ export function may_add_sampleannotation(samplename, tk, lst) {
 		let printvalue = value
 		if(keycfg.values) {
 			const o = keycfg.values[ value ]
-			if(o && o.label) {
-				printvalue = o.label
+			if(o && o.name) {
+				printvalue = o.name
 			}
 		}
 
