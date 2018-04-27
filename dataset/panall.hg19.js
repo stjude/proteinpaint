@@ -30,7 +30,32 @@ noHandleOnClient:1,
             attributes:{
 				fusion:{label:'Fusion'},
 				karyotype:{label:'Karyotype'},
-				subtype1:{label:'Subtype1',filter:1},
+				subtype1:{
+					label:'Subtype1',
+					filter:1,
+					values:{
+						'BCL2/MYC':{color:'#4EEE94'},
+						'DUX4':{color:'#666666'},
+						'ETV6-RUNX1':{color:'#EEC900'},
+						'HLF':{color:'#87CEEB'},
+						'Hyperdiploid':{color:'#3E9F32'},
+						'KMT2A':{color:'#1F78B5'},
+						'LowHypo':{color:'#1E90FF'},
+						'MEF2D':{color:'#66C2A6'},
+						'NearHaploid':{color:'#0000CD'},
+						'NUTM1':{color:'#000000'},
+						'PAX5(P80R)':{color:'#FF4500'},
+						'PAX5r':{color:'#FFA620'},
+						'Ph':{color:'#CD00CD'},
+						'Ph-like(ABL1-class)':{color:'#FF6A6A'},
+						'Ph-like(JAK/STAT)':{color:'#8B0000'},
+						'Ph-like(Other)':{color:'#FFC0CB'},
+						'TCF3-PBX1':{color:'#8B6508'},
+						'ZNF384':{color:'#A8DD00'},
+						'Other':{color:'#BFBFBF'},
+						'iAMP21':{color:'#8470FF'}
+					}
+				},
 				subtype2:{label:'Subtype2',filter:1},
 				X:{label:'X',isfloat:1},
 				Y:{label:'Y',isfloat:1},
@@ -45,7 +70,7 @@ noHandleOnClient:1,
 				attribute:'Y'
 			},
 			colorbyattributes:[
-				{key:'subtype1',label:'Subtype 1'}
+				{key:'subtype1'}
 			],
 			querykey:'svcnv'
 		}
