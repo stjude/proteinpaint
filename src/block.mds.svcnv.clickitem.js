@@ -242,7 +242,10 @@ export function click_samplegroup_showtable( samplegroup, tk, block ) {
 							tk:tk
 						})
 					})
-					.on('mouseout',()=>tk.tktip.hide())
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:cnvlst0[i],
@@ -272,7 +275,10 @@ export function click_samplegroup_showtable( samplegroup, tk, block ) {
 							tk:tk
 						})
 					})
-					.on('mouseout',()=>tk.tktip.hide())
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:svlst0[i],
@@ -302,7 +308,10 @@ export function click_samplegroup_showtable( samplegroup, tk, block ) {
 							tk:tk
 						})
 					})
-					.on('mouseout',()=>tk.tktip.hide())
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:lohlst0[i],
@@ -332,7 +341,10 @@ export function click_samplegroup_showtable( samplegroup, tk, block ) {
 							tk:tk
 						})
 					})
-					.on('mouseout',()=>tk.tktip.hide())
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:itdlst0[i],
@@ -367,7 +379,10 @@ export function click_samplegroup_showtable( samplegroup, tk, block ) {
 							tk:tk
 						})
 					})
-					.on('mouseout',()=>tk.tktip.hide())
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:vcflst0[i],
@@ -450,7 +465,10 @@ export function click_samplegroup_showtable( samplegroup, tk, block ) {
 							tk:tk,
 						})
 					})
-					.on('mouseout',()=> tk.tktip.hide())
+					.on('mouseout',()=> {
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item: cnvlst0[j],
@@ -476,7 +494,10 @@ export function click_samplegroup_showtable( samplegroup, tk, block ) {
 							tk:tk,
 						})
 					})
-					.on('mouseout',()=> tk.tktip.hide())
+					.on('mouseout',()=> {
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:svlst0[j],
@@ -502,7 +523,10 @@ export function click_samplegroup_showtable( samplegroup, tk, block ) {
 							tk:tk,
 						})
 					})
-					.on('mouseout',()=> tk.tktip.hide())
+					.on('mouseout',()=> {
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:lohlst0[j],
@@ -529,7 +553,10 @@ export function click_samplegroup_showtable( samplegroup, tk, block ) {
 							tk:tk,
 						})
 					})
-					.on('mouseout',()=> tk.tktip.hide())
+					.on('mouseout',()=> {
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item:itdlst0[j],
@@ -560,7 +587,10 @@ export function click_samplegroup_showtable( samplegroup, tk, block ) {
 							tk:tk,
 						})
 					})
-					.on('mouseout',()=> tk.tktip.hide())
+					.on('mouseout',()=> {
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item: vcflst0[j],
@@ -707,7 +737,10 @@ export function click_multi_svdense(g, tk, block) {
 						tk:tk,
 					})
 				})
-				.on('mouseout', ()=>tk.tktip.hide())
+				.on('mouseout', ()=>{
+					tk.tktip.hide()
+					multi_sample_removehighlight(i._sample)
+				})
 				.on('click',()=>{
 					click_multi_singleitem({
 						item:i,
@@ -739,7 +772,10 @@ export function click_multi_svdense(g, tk, block) {
 						tk:tk,
 					})
 				})
-				.on('mouseout', ()=>tk.tktip.hide())
+				.on('mouseout', ()=>{
+					tk.tktip.hide()
+					multi_sample_removehighlight(i._sample)
+				})
 				.on('click',()=>{
 					click_multi_singleitem({
 						item:i,
@@ -836,7 +872,10 @@ export function click_multi_vcfdense( g, tk, block ) {
 							tk: tk,
 						})
 					})
-					.on('mouseout',()=>tk.tktip.hide())
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						multi_sample_removehighlight(sample)
+					})
 					.on('click',()=>{
 						click_multi_singleitem({
 							item: m,
@@ -909,7 +948,10 @@ export function click_multi_vcfdense( g, tk, block ) {
 								tk: tk,
 							})
 						})
-						.on('mouseout',()=>tk.tktip.hide())
+						.on('mouseout',()=>{
+							tk.tktip.hide()
+							multi_sample_removehighlight(s)
+						})
 						.on('click',()=>{
 							click_multi_singleitem({
 								item: m,
