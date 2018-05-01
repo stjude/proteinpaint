@@ -76,7 +76,7 @@ const labyspace = 5
 export const intrasvcolor = '#858585' // inter-chr sv color is defined on the fly
 const cnvhighlightcolor = '#E8FFFF'
 export const coverbarcolor_silent='#222'
-export const coverbarcolor_active='red'
+export const coverbarcolor_active='#ED8600'
 
 const minlabfontsize=7
 const minsvradius=5
