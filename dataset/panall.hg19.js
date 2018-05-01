@@ -15,12 +15,12 @@ noHandleOnClient:1,
 	],
 
 	sampleAssayTrack:{
-		file:'hg19/pan-all/tracktable/panall.rnabw'
+		file:'hg19/pan-all/tracktable/rnabw.ball'
 	},
 
 	cohort:{
 		files:[
-			{file:'hg19/pan-all/sampletable/panall.samples'}
+			{file:'hg19/pan-all/sampletable/samples.ball'}
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
@@ -134,10 +134,10 @@ noHandleOnClient:1,
 
 			//showfullmode:true,
 
-			name:'Pan-ALL mutation',
+			name:'BALL mutation',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
-			file:'hg19/pan-all/snp6cnv/cnv.gz',
+			file:'hg19/pan-all/snp6cnv.ball/cnv.gz',
 
 			// cnv
 			valueCutoff:0.2,
@@ -154,7 +154,7 @@ noHandleOnClient:1,
 				attrnamespacer:', ',
 			},
 
-		    //expressionrank_querykey:'genefpkm',
+		    expressionrank_querykey:'generlog',
 			//vcf_querykey:'snvindel',
 
 			multihidelabel_vcf:false,
@@ -176,14 +176,15 @@ noHandleOnClient:1,
 				},
 			]
 		},
+		*/
 
 
-		genefpkm:{
-			name:'Dicentric ALL tumor RNA-seq gene FPKM',
+		generlog:{
+			name:'BALL RNA-seq gene rlog values',
 			isgenenumeric:true,
-			file:'hg19/pan-all/fpkm/dicentric.fpkm.hg19.gz',
-			datatype:'FPKM',
-			
+			file:'hg19/pan-all/rlog.ball/rlog.gz',
+			datatype:'rlog',
+
 			// for boxplots & circles, and the standalone expression track
 			itemcolor:'green',
 
@@ -192,17 +193,9 @@ noHandleOnClient:1,
 			
 			boxplotbysamplegroup:{
 				attributes: [
-					//{k:'diagnosis_group_short',label:'Group',full:'diagnosis_group_full'},
-					//{k:'diagnosis_short',label:'Cancer',full:'diagnosis_full'},
-				        {k:'diagnosis_subtype_short',label:'Subtype'},
-                           ]
+                   {k:'subtype1',label:'Subtype'},
+               	]
 			},
-			outlier:{
-				pvalue:0.05,
-				color:'#FF8875'
-			}
 		},
-		*/
-
 	}
 }
