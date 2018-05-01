@@ -1420,10 +1420,17 @@ function detailtable_singlesample(p) {
 
 			if(attr) {
 				if(attr.appendto_link) {
-					// only for pmid
+					// quick fix for pmid
+
+					if(!vstr) {
+						// no value
+						continue
+					}
+					console.log(vstr)
+
 					lst.push({
 						k: attr.label,
-						v: '<a target=_blank href='+attr.appendto_link + vstr+'>'+vstr+'</a>'
+						v: vstr.split(',').map(id=> '<a target=_blank href='+attr.appendto_link + id+'>'+id+'</a>').join(' ')
 					})
 					continue
 				}
