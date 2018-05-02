@@ -29,7 +29,9 @@ module.exports = {
 					'not_provided': {color:'#ccc',label:'Not provided'},
 					'_not_provided':{color:'#ccc',label:'Not provided'},
 					'Benign':{color:'#43ac6a',label:'Benign',textcolor:'white'},
+
 					'Benign/Likely_benign':{color:'#43ac6a',label:'Benign/Likely benign',textcolor:'white'},
+
 					'Likely_benign':{color:'#5bc0de',label:'Likely benign',textcolor:'white'},
 					'Likely_pathogenic':{color:'#e99002',label:'Likely pathogenic',textcolor:'white'},
 					'Pathogenic':{color:'#f04124',label:'Pathogenic',textcolor:'white'},
