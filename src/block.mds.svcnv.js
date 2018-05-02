@@ -20,7 +20,7 @@ import {
 import { makeTk_legend, update_legend } from './block.mds.svcnv.legend'
 import {render_singlesample} from './block.mds.svcnv.single'
 import {createbutton_addfeature, may_show_samplematrix_button} from './block.mds.svcnv.samplematrix'
-import {render_multi_genebar} from './block.mds.svcnv.addcolumn'
+import {render_multi_genebar, multi_show_geneboxplot} from './block.mds.svcnv.addcolumn'
 import {vcfparsemeta, vcfparseline} from './vcf'
 
 
@@ -32,6 +32,7 @@ makeTk
 loadTk
 	loadTk_do
 		addLoadParameter
+may_showgeneexp_nomutationdata
 render_samplegroups
 	prep_samplegroups
 	render_multi_vcfdense
@@ -131,7 +132,8 @@ export function loadTk( tk, block ) {
 
 		if(err.nodata) {
 			/*
-			central place to handle "no data", for all cases
+			central place to handle "no data", no mutation data in any sample
+			for both single/multi-sample
 			*/
 			trackclear( tk )
 			// remove old data so the legend can update properly
@@ -139,8 +141,10 @@ export function loadTk( tk, block ) {
 			if(tk.singlesample) {
 				delete tk.data
 			} else {
+				// multi
 				delete tk._data
 				delete tk.samplegroups
+				may_showgeneexp_nomutationdata(tk,block)
 			}
 			update_legend(tk, block)
 			return {error:tk.name+': no data in view range'}
@@ -153,6 +157,65 @@ export function loadTk( tk, block ) {
 		block.tkcloakoff( tk, {error: _final.error})
 		block.block_setheight()
 		block.setllabel()
+	})
+}
+
+
+
+
+
+function may_showgeneexp_nomutationdata(tk,block) {
+	/*
+	multi-sample
+	no mutation data in view range, thus no .samplegroup
+	but still may be genes with expression, as in .gene2coord
+	need to indicate them
+	*/
+	const genenames=[]
+	if(tk.gene2coord) {
+		for(const gene in tk.gene2coord) genenames.push(gene)
+	}
+	if(genenames.length==0) return
+
+	if(!tk.gecfg) {
+		console.error('but .gecfg is missing')
+		return
+	}
+
+	const text = tk.cnvrightg.append('text')
+		.attr('font-size',12)
+		.attr('class','sja_clbtext')
+		//.attr('y',12)
+
+	if(genenames.length==1) {
+		text.text(genenames[0]+' '+tk.gecfg.datatype)
+		.on('click',()=>{
+			multi_show_geneboxplot({
+				gene:genenames[0],
+				tk:tk,
+				block:block
+			})
+		})
+		return
+	}
+
+	text.text('Genes '+tk.gecfg.datatype)
+	.on('click',()=>{
+		tk.tktip.clear()
+			.showunder(text.node())
+		for(const gene of genenames) {
+			tk.tktip.d.append('div')
+				.text(gene)
+				.attr('class','sja_menuoption')
+				.on('click',()=>{
+					tk.tktip.hide()
+					multi_show_geneboxplot({
+						gene:gene,
+						tk:tk,
+						block:block
+					})
+				})
+		}
 	})
 }
 
@@ -253,13 +316,18 @@ function loadTk_do( tk, block ) {
 
 			// multi-sample
 
+			/*
+			keep gene expression info,
+			so even if no sample with mutation in view range, still be able to indicate available of gene expression
+			*/
+			tk.gene2coord = data.gene2coord
+			tk.expressionrangelimit = data.expressionrangelimit
+
 			// now samplegroups contains samples with any data type (cnv, sv, vcf), no matter dense or full
 			if(!data.samplegroups || data.samplegroups.length==0) {
 				throw({nodata:1})
 			}
 			tk._data = data.samplegroups
-			tk.gene2coord = data.gene2coord
-			tk.expressionrangelimit = data.expressionrangelimit
 
 			if(tk.sampleAttribute) {
 				if(data.sampleannotation) {
@@ -303,6 +371,7 @@ export function trackclear(tk) {
 	tk.svdensityg.selectAll('*').remove()
 	tk.cnvmidg.selectAll('*').remove()
 	tk.cnvrightg.selectAll('*').remove()
+	tk.config_handle.transition().attr('text-anchor', 'start').attr('x',0)
 }
 
 
@@ -2538,6 +2607,12 @@ function multi_changemode(tk, block) {
 		tk.isdense=false
 		tk.isfull=true
 	}
+
+	if(!tk._data) {
+		// no data
+		return
+	}
+
 	render_samplegroups(tk,block)
 	block.block_setheight()
 	block.setllabel()

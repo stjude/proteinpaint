@@ -1426,7 +1426,6 @@ function detailtable_singlesample(p) {
 						// no value
 						continue
 					}
-					console.log(vstr)
 
 					lst.push({
 						k: attr.label,

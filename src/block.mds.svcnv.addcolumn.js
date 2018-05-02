@@ -14,6 +14,13 @@ import {focus_singlesample,
 
 
 /*
+
+********************** EXPORTED
+render_multi_genebar
+multi_show_geneboxplot
+
+
+
 add columns
 column could be gene expression rank and sample attribute
 
@@ -89,11 +96,13 @@ export function render_multi_genebar( tk, block) {
 
 
 	const genes = new Set()
-	for(const g of tk._data) {
-		for(const s of g.samples) {
-			if(s.expressionrank) {
-				for(const gene in s.expressionrank) {
-					genes.add(gene)
+	if(tk._data) {
+		for(const g of tk._data) {
+			for(const s of g.samples) {
+				if(s.expressionrank) {
+					for(const gene in s.expressionrank) {
+						genes.add(gene)
+					}
 				}
 			}
 		}
@@ -214,89 +223,12 @@ export function render_multi_genebar( tk, block) {
 						multi_sample_removehighlight(s)
 					})
 					.on('click',()=>{
-						const pane=client.newpane({x:window.innerWidth/2,y:100})
-						pane.header.text( usegene+' '+tk.gecfg.datatype+' from '+tk.name )
-						const c=tk.gene2coord[usegene]
-						if(!c) {
-							pane.body.text('No coordinate for '+usegene)
-							return
-						}
-
-						const p={
+						multi_show_geneboxplot({
 							gene:usegene,
-							chr:c.chr,
-							start:c.start,
-							stop:c.stop,
-							holder:pane.body,
-							block:block,
-							genome:block.genome,
-							jwt:block.jwt,
-							hostURL:block.hostURL,
-							sample:{name:s.samplename,value:v.value}
-						}
-
-						// expression
-						if(tk.iscustom) {
-							for(const k in tk.checkexpressionrank) {
-								p[k]=tk.checkexpressionrank[k]
-							}
-						} else {
-							p.dslabel=tk.mds.label
-							p.querykey=tk.mds.queries[tk.querykey].checkexpressionrank.querykey
-						}
-						// svcnv
-						p.color={
-							cnvgain:tk.cnvcolor.gain.str,
-							cnvloss:tk.cnvcolor.loss.str,
-							sv:'black'
-						}
-						if(tk.iscustom) {
-							p.svcnv={
-								iscustom:1,
-								file: tk.file,
-								url: tk.url,
-								indexURL: tk.indexURL
-							}
-						} else {
-							p.svcnv={
-								dslabel:tk.mds.label,
-								querykey:tk.querykey
-							}
-						}
-						p.svcnv.valueCutoff=tk.valueCutoff
-						p.svcnv.bplengthUpperLimit=tk.bplengthUpperLimit
-
-						p.clicksample = (thissample, group, plot) => {
-							// click outlier sample to launch browser and show sv/cnv+expression rank for single sample
-							const sample={
-								samplename:thissample.sample
-							}
-							const samplegroup={
-								attributes: group.attributes
-							}
-							const tk={} // svcnv track
-							if(plot.svcnv.iscustom) {
-							} else {
-								for(const k in plot.svcnv) {
-									tk[k] = plot.svcnv[k]
-								}
-								tk.mds = plot.block.genome.datasets[ plot.svcnv.dslabel ]
-							}
-							focus_singlesample({
-								m: {
-									dt: common.dtcnv,
-									chr:plot.chr,
-									start:plot.start,
-									stop:plot.stop
-								},
-								sample: sample,
-								samplegroup: samplegroup,
-								tk: tk,
-								block: plot.block
-							})
-						}
-						import('./block.mds.geneboxplot').then(_=>{
-							_.init(p)
+							samplename: s.samplename,
+							value: v.value,
+							tk:tk,
+							block:block
 						})
 					})
 				}
@@ -426,6 +358,107 @@ export function render_multi_genebar( tk, block) {
 
 	return fontsize+fontsize+labelpad+ticksize+axispad
 }
+
+
+
+
+export function multi_show_geneboxplot(arg) {
+	/*
+	multi-sample
+	for a given gene, show expression across all samples
+	if the gecfg are configured to group samples by attribute, will show boxplot for each group
+	*/
+
+	const {gene, samplename, value, tk, block} = arg
+
+	const pane=client.newpane({x:window.innerWidth/2,y:100})
+	pane.header.text( gene+' '+tk.gecfg.datatype+' from '+tk.name )
+	const c=tk.gene2coord[gene]
+	if(!c) {
+		pane.body.text('No coordinate for '+gene)
+		return
+	}
+
+	const p={
+		gene:gene,
+		chr:c.chr,
+		start:c.start,
+		stop:c.stop,
+		holder:pane.body,
+		block:block,
+		genome:block.genome,
+		jwt:block.jwt,
+		hostURL:block.hostURL,
+		sample: (samplename ? {name:samplename,value:value} : null)
+	}
+
+	// expression
+	if(tk.iscustom) {
+		for(const k in tk.checkexpressionrank) {
+			p[k]=tk.checkexpressionrank[k]
+		}
+	} else {
+		p.dslabel=tk.mds.label
+		p.querykey=tk.mds.queries[tk.querykey].checkexpressionrank.querykey
+	}
+	// svcnv
+	p.color={
+		cnvgain:tk.cnvcolor.gain.str,
+		cnvloss:tk.cnvcolor.loss.str,
+		sv:'black'
+	}
+	if(tk.iscustom) {
+		p.svcnv={
+			iscustom:1,
+			file: tk.file,
+			url: tk.url,
+			indexURL: tk.indexURL
+		}
+	} else {
+		p.svcnv={
+			dslabel:tk.mds.label,
+			querykey:tk.querykey
+		}
+	}
+	p.svcnv.valueCutoff=tk.valueCutoff
+	p.svcnv.bplengthUpperLimit=tk.bplengthUpperLimit
+
+	p.clicksample = (thissample, group, plot) => {
+		// click outlier sample to launch browser and show sv/cnv+expression rank for single sample
+		const sample={
+			samplename:thissample.sample
+		}
+		const samplegroup={
+			attributes: group.attributes
+		}
+		const tk={} // svcnv track
+		if(plot.svcnv.iscustom) {
+		} else {
+			for(const k in plot.svcnv) {
+				tk[k] = plot.svcnv[k]
+			}
+			tk.mds = plot.block.genome.datasets[ plot.svcnv.dslabel ]
+		}
+		focus_singlesample({
+			m: {
+				dt: common.dtcnv,
+				chr:plot.chr,
+				start:plot.start,
+				stop:plot.stop
+			},
+			sample: sample,
+			samplegroup: samplegroup,
+			tk: tk,
+			block: plot.block
+		})
+	}
+	import('./block.mds.geneboxplot').then(_=>{
+		_.init(p)
+	})
+}
+
+
+
 
 
 
