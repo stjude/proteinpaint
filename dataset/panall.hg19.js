@@ -32,7 +32,7 @@ noHandleOnClient:1,
 				subtype2:{label:'Subtype2',filter:1},
 				PAX5_mut:{label:'PAX5_mut'},
 				'PAX5cna(amp)':{label:'PAX5cna(amp)'},
-				outcomeGroup:{label:'Outcome group'},
+				outcomeGroup:{label:'Outcome group'}, // use in gene expression sample grouping
 				'RNA-seqCNA':{label:'RNA-seqCNA'},
 				Gender:{label:'Gender'},
 				karyotype:{label:'Karyotype'},
@@ -205,7 +205,7 @@ noHandleOnClient:1,
 			
 			boxplotbysamplegroup:{
 				attributes: [
-                   {k:'subtype1',label:'Subtype'},
+                   {k:'outcomeGroup',label:'Outcome group'},
                	]
 			},
 		},
