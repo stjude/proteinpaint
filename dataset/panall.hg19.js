@@ -29,8 +29,22 @@ noHandleOnClient:1,
 		sampleAttribute:{
             attributes:{
 				fusion:{label:'Fusion'},
+				subtype2:{label:'Subtype2',filter:1},
+				PAX5_mut:{label:'PAX5_mut'},
+				'PAX5cna(amp)':{label:'PAX5cna(amp)'},
+				outcomeGroup:{label:'Outcome group'},
+				'RNA-seqCNA':{label:'RNA-seqCNA'},
+				Gender:{label:'Gender'},
 				karyotype:{label:'Karyotype'},
-				subtype1:{
+				WES:{label:'WES'},
+				WGS:{label:'WGS'},
+				SNP:{label:'SNP'},
+				age:{label:'Age',isfloat:1},
+				ageGroup:{label:'Age group'},
+
+				X:{label:'X',isfloat:1},
+				Y:{label:'Y',isfloat:1},
+				subtype1:{ // used in tsne
 					label:'Subtype1',
 					filter:1,
 					values:{
@@ -53,12 +67,10 @@ noHandleOnClient:1,
 						'TCF3-PBX1':{color:'#8B6508'},
 						'ZNF384':{color:'#A8DD00'},
 						'Other':{color:'#BFBFBF'},
-						'iAMP21':{color:'#8470FF'}
+						'iAMP21':{color:'#8470FF'},
+						'IKZF1(N159Y)':{color:'#CDCE34'},
 					}
 				},
-				subtype2:{label:'Subtype2',filter:1},
-				X:{label:'X',isfloat:1},
-				Y:{label:'Y',isfloat:1},
             },
         },
 
