@@ -4245,17 +4245,33 @@ function handle_mdssvcnv(req,res) {
 						})
 						rl.on('line',line=>{
 
-							// all tracks are supposed to be vcf; still leaves the possibility of having different types of files here
 
 							if(vcftk.type==common.mdsvcftype.vcf) {
+								// bgzip vcf file
 
 
 								const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:vcftk.nochr, samples:vcftk.samples, info:vcfquery.info, format:vcftk.format} )
+
 
 								for(const m of mlst) {
 									if(!m.sampledata) {
 										// do not allow
 										continue
+									}
+
+									{
+										/*
+										for germline track, drop ref/ref samples
+										*/
+										const lst = []
+										for(const s of m.sampledata) {
+											if(s.gtallref) continue
+											lst.push(s)
+										}
+										if(lst.length==0) {
+											continue
+										}
+										m.sampledata = lst
 									}
 
 									// filters on samples
