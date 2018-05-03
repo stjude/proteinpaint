@@ -9559,7 +9559,7 @@ function mds_init(ds,genome) {
 		if(!ds.cohort.files) return '.files[] missing from .cohort'
 		if(!Array.isArray(ds.cohort.files)) return '.cohort.files is not array'
 		if(!ds.cohort.tohash) return '.tohash() missing from cohort'
-		if(typeof(ds.cohort.tohash)!='function') return '.cohort.tohash is not function'
+		if(typeof ds.cohort.tohash !='function') return '.cohort.tohash is not function'
 		if(!ds.cohort.samplenamekey) return '.samplenamekey missing'
 
 		ds.cohort.annotation = {}
@@ -9670,7 +9670,6 @@ function mds_init(ds,genome) {
 				ds.cohort.tohash(i, ds)
 			})
 		}
-
 	}
 
 
@@ -10226,18 +10225,19 @@ function mds_init_mdsvcf(query, ds, genome) {
 
 	for(const tk of query.tracks) {
 
-		if(!tk.file) {
-			return 'file missing from a track (url not supported yet)'
-		}
+
+		if(!tk.file) return 'file missing from a track (url not supported yet)'
 
 		// will set tk.cwd for url
 
 		const [ err, _file ] = validate_tabixfile(tk.file)
 		if(err) return 'tabix file error: '+err
 
-		const arg = {cwd: tk.cwd, encoding:'utf8'}
 
 		if(tk.type==common.mdsvcftype.vcf) {
+
+
+			const arg = {cwd: tk.cwd, encoding:'utf8'}
 
 			const tmp=child_process.execSync(tabix+' -H '+_file,arg).trim()
 			if(!tmp) return 'no meta/header lines for '+_file
@@ -10251,22 +10251,16 @@ function mds_init_mdsvcf(query, ds, genome) {
 			}
 
 			tk.format = format
-			tk.samples = samples
 
-		} else if(tk.type==common.mdsvcftype.itd) {
-
-			const tmp=child_process.execSync(tabix+' -H '+_file,arg).trim()
-			if(!tmp) return 'no header lines for '+_file
-			tk.samples = []
-			const samples=new Set()
-			for(const line of tmp.split('\n')) {
-				const l = line.split(' ')
-				for(let i=1; i<l.length; i++) {
-					tk.samples.push( {
-						name: l[i]
-					})
+			if(tk.samplenameconvert) {
+				if(typeof tk.samplenameconvert != 'function') return '.samplenameconvert must be function'
+				for(const s of samples) {
+					s.name = tk.samplenameconvert( s.name )
 				}
 			}
+
+			tk.samples = samples
+
 
 		} else {
 
@@ -10274,11 +10268,6 @@ function mds_init_mdsvcf(query, ds, genome) {
 		}
 
 
-		if(!tk.samples) {
-			return 'track has no samples: '+_file
-		}
-
-		// common procedure for any track type
 
 		if(ds.cohort && ds.cohort.annotation) {
 			/*
@@ -10287,13 +10276,13 @@ function mds_init_mdsvcf(query, ds, genome) {
 			need to identify such in this track
 			*/
 			const notannotated=[]
-			for(const sample of tk.samples) {
-				if(!ds.cohort.annotation[ sample.name ]) {
-					notannotated.push(sample.name)
+			for(const s of tk.samples) {
+				if(!ds.cohort.annotation[ s.name ]) {
+					notannotated.push(s.name)
 				}
 			}
 			if(notannotated.length) {
-				console.log(_file+' has unannotated samples: '+notannotated)
+				console.log(ds.label+': VCF '+tk.file+' has unannotated samples: '+notannotated.join(','))
 			}
 		}
 

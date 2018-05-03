@@ -322,11 +322,11 @@ module.exports={
 			viewrangeupperlimit:2000000,
 			tracks:[
 				{
-					file:'hg19/PCGP/vcf.somatic/pcgp.somatic.vcf.gz',
+					file:'hg19/PCGP/vcf.germline/NEJMGermline_sorted.vep.out.vcf.gz',
 					type:'vcf',
 				},
 				{
-					file:'hg19/PCGP/vcf.germline/NEJMGermline_sorted.vep.out.vcf.gz',
+					file:'hg19/PCGP/vcf.somatic/pcgp.somatic.vcf.gz',
 					type:'vcf',
 				},
 				{

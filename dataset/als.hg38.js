@@ -46,7 +46,7 @@ module.exports={
 			showfullmode:true,
 			istrack:true,
 			type:common.tkt.mdssvcnv,
-			file:'hg38/als/mds/cnv.gz',
+			file:'hg38/als/mds/svcnv.gz',
 
 			// cnv
 			valueCutoff:0.2,
@@ -64,8 +64,27 @@ module.exports={
 				attrnamespacer:', ',
 			},
 
+			vcf_querykey:'snvindel',
+
 			multihidelabel_vcf:false,
 			multihidelabel_sv:true,
+		},
+
+
+		snvindel:{
+			name:'ALS germline SNV/indel',
+			istrack:true,
+			type:common.tkt.mdsvcf,
+			viewrangeupperlimit:2000000,
+			tracks:[
+				{
+					file:'hg38/als/mds/vcf/ALS329.vep.ann.hg38_multianno.clinvar.ExAC.NFE.vcf.gz',
+					type:'vcf',
+					samplenameconvert: str=>{
+						return str.split('-')[0]
+					}
+				},
+			]
 		},
 
 
