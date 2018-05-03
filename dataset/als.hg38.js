@@ -36,6 +36,18 @@ module.exports={
 		}
 	},
 
+	alleleAttribute:{
+		attributes:{
+			AF:{
+				label:'AF',
+				isnumeric:1,
+				filter:1,
+				cutoffvalue:0.1,
+				keeplowerthan:true
+			}
+		}
+	},
+
 
 	queries:{
 
