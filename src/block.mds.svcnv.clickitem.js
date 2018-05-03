@@ -1203,6 +1203,9 @@ export function click_multi_singleitem( p ) {
 
 
 
+
+
+
 export function tooltip_singleitem( p ) {
 	/*
 	multi-sample
@@ -1365,45 +1368,48 @@ function detailtable_singlesample(p) {
 
 				const formatdesc = formats ? formats[ formatfield ] : null
 
-				if(!formatdesc) {
-					// not described, jus show as string
-					lst.push({
-						k:formatfield,
-						v: p.m_sample[formatfield]
-					})
-					continue
-				}
+				if(formatdesc) {
 
-				if(formatdesc.Number=='R' || formatdesc.Number=='A') {
-					// per allele value
-					const alleles= []
-					const values = []
-
-					// add alt first
-					for(const ale in p.m_sample[ formatfield ]) {
-						if(ale == m.ref) continue
-						alleles.push(ale)
-						values.push(p.m_sample[ formatfield ][ ale ])
+					// if the FORMAT has per-allele value, like AD in vcf 4.2+
+					let isperallelevalue = formatdesc.Number=='R' || formatdesc.Number=='A'
+					if(!isperallelevalue) {
+						if(formatfield=='AD') {
+							// vcf 4.1 has AD as '.'
+							isperallelevalue=true
+						}
 					}
 
-					// add ref after alt
-					const refvalue = p.m_sample[ formatfield ][ m.ref ]
-					if(refvalue!=undefined) {
-						alleles.push( m.ref )
-						values.push( refvalue )
-					}
+					if(isperallelevalue) {
+						// per allele value
+						const alleles= []
+						const values = []
 
-					lst.push({
-						k: formatfield,
-						v: '<span style="font-size:.8em;opacity:.5">'+alleles.join(' / ')+'</span> '+values.join(' / ')
-					})
-					continue
+						// add alt first
+						for(const ale in p.m_sample[ formatfield ]) {
+							if(ale == m.ref) continue
+							alleles.push(ale)
+							values.push(p.m_sample[ formatfield ][ ale ])
+						}
+
+						// add ref after alt
+						const refvalue = p.m_sample[ formatfield ][ m.ref ]
+						if(refvalue!=undefined) {
+							alleles.push( m.ref )
+							values.push( refvalue )
+						}
+
+						lst.push({
+							k: formatfield,
+							v: '<span style="font-size:.8em;opacity:.5">'+alleles.join(' / ')+'</span> '+values.join(' / ')
+						})
+						continue
+					}
 				}
 
 				lst.push({
 					k: formatfield,
 					v: p.m_sample[formatfield]
-					})
+				})
 			}
 			// mutation attributes are FORMAT in vcf, already shown above
 		}
@@ -1514,9 +1520,11 @@ function addexpressionrank( sample, tk ) {
 function printer_snvindel( m ) {
 	const _c = common.mclass[m.class]
 	const lst=[]
+
 	lst.push({
 		k:'Mutation',
-		v:'<span style="color:'+_c.color+'">'+m.mname+'</span> <span style="font-size:.7em">'+_c.label+'</span>'
+		v: (m.mname ? '<span style="color:'+_c.color+'">'+m.mname+'</span>' : '')
+			+' <span style="font-size:.7em">'+_c.label+'</span>'
 	})
 
 	const phrases=[]
