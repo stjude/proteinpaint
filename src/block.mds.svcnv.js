@@ -447,6 +447,29 @@ function addLoadParameter( par, tk ) {
 		}
 	}
 
+	if(tk.alleleAttribute) {
+		// mutation attribute applicable to all data types
+		const key2value={}
+		let hashidden=false
+		for(const key in tk.alleleAttribute.attributes) {
+			const attr = tk.alleleAttribute.attributes[key]
+			if(attr.isnumeric) {
+				if(Number.isFinite(attr.cutoffvalue)) {
+					key2value[ key ] = {
+						cutoffvalue: attr.cutoffvalue,
+						keeplowerthan: attr.keeplowerthan
+					}
+					hashidden=true
+				}
+			} else {
+				// categorical
+			}
+		}
+		if(hashidden) {
+			par.hiddenalleleattr = key2value
+		}
+	}
+
 	{
 		// from mclass.hidden, only dt are used for filtering, vcf class currently filter on client
 		const hiddendt = []
@@ -2437,6 +2460,8 @@ function makeTk(tk, block) {
 		*/
 		tk.mutationAttribute = tk.mds.mutationAttribute
 		tk.sampleAttribute = tk.mds.sampleAttribute
+		tk.locusAttribute = tk.mds.locusAttribute
+		tk.alleleAttribute = tk.mds.alleleAttribute
 	}
 
 	if(!tk.singlesample) {
