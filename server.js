@@ -325,7 +325,9 @@ function mds_clientcopy(ds) {
 		about:ds.about,
 		annotationsampleset2matrix: ds.annotationsampleset2matrix,
 		queries:{},
-		mutationAttribute: ds.mutationAttribute
+		mutationAttribute: ds.mutationAttribute,
+		locusAttribute: ds.locusAttribute,
+		alleleAttribute: ds.alleleAttribute,
 	}
 
 	if(ds.cohort && ds.cohort.sampleAttribute) {
@@ -3859,6 +3861,28 @@ function handle_mdssvcnv(req,res) {
 		}
 	}
 
+
+	/*
+	multi: vcf info field allele-level
+	*/
+	let hiddenalleleattr 
+	if(req.query.hiddenalleleattr) {
+		hiddenalleleattr = {}
+		for(const key in req.query.hiddenalleleattr) {
+			const v = req.query.hiddenalleleattr[key]
+			if(v.cutoffvalue != undefined) {
+				// numeric
+				hiddenalleleattr[ key ] = v
+			} else {
+				// categorical
+			}
+		}
+	}
+
+
+
+	// TODO terms from locusAttribute
+
 	/*
 	multi: sample attributes selected to be hidden from client
 	as defined in ds.cohort.sampleAttribute
@@ -4254,9 +4278,45 @@ function handle_mdssvcnv(req,res) {
 
 
 								for(const m of mlst) {
+
 									if(!m.sampledata) {
 										// do not allow
 										continue
+									}
+
+									if(hiddenalleleattr) {
+										
+										let todrop=false
+
+										for(const key in hiddenalleleattr) {
+
+											const value = m.altinfo[ key ]
+											if(value==undefined) {
+												// no value
+												todrop=true
+												break
+											}
+
+											const attr = hiddenalleleattr[key]
+											if(attr.cutoffvalue != undefined) {
+												// numeric
+												if(attr.keeplowerthan) {
+													if(value > attr.cutoffvalue) {
+														todrop=true
+														break
+													}
+												} else {
+													if(value < attr.cutoffvalue) {
+														todrop=true
+														break
+													}
+												}
+											}
+										}
+										if(todrop) {
+											// drop this variant
+											continue
+										}
 									}
 
 									{
@@ -9713,6 +9773,50 @@ function mds_init(ds,genome) {
 			}
 		}
 	}
+
+
+	if(ds.alleleAttribute) {
+		/*
+		vcf info field, allele-level
+		*/
+		if(!ds.alleleAttribute.attributes) return 'attributes{} missing from alleleAttribute'
+		for(const key in ds.alleleAttribute.attributes) {
+			const a = ds.alleleAttribute.attributes[key]
+			if(!a.label) return '.label missing for key '+key+' from alleleAttribute.attributes'
+			if(a.isnumeric) {
+				continue
+			}
+			// not numeric value
+			if(!a.values) return '.values{} missing for non-numeric key '+key+' from alleleAttribute.attributes'
+			for(const v in a.values) {
+				const b = a.values[v]
+				if(!b.name) return '.name missing for value '+v+' of key '+key+' from alleleAttribute.attributes'
+			}
+		}
+	}
+
+
+
+	if(ds.locusAttribute) {
+		/*
+		vcf info field, locus-level
+		*/
+		if(!ds.locusAttribute.attributes) return 'attributes{} missing from locusAttribute'
+		for(const key in ds.locusAttribute.attributes) {
+			const a = ds.locusAttribute.attributes[key]
+			if(!a.label) return '.label missing for key '+key+' from locusAttribute.attributes'
+			if(a.isnumeric) {
+				continue
+			}
+			// not numeric value
+			if(!a.values) return '.values{} missing for non-numeric key '+key+' from locusAttribute.attributes'
+			for(const v in a.values) {
+				const b = a.values[v]
+				if(!b.name) return '.name missing for value '+v+' of key '+key+' from locusAttribute.attributes'
+			}
+		}
+	}
+
 
 
 
