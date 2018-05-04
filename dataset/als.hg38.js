@@ -55,7 +55,9 @@ module.exports={
 
 
 			name:'ALS germline CNV',
-			showfullmode:true,
+
+			//showfullmode:true,
+
 			istrack:true,
 			type:common.tkt.mdssvcnv,
 			file:'hg38/als/mds/svcnv.gz',
