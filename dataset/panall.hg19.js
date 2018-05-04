@@ -9,7 +9,7 @@ module.exports={
 	genome:'hg19',
 	isMds:true,
 
-noHandleOnClient:1,
+	noHandleOnClient:1,
 
 	about:[
 	],
@@ -20,7 +20,8 @@ noHandleOnClient:1,
 
 	cohort:{
 		files:[
-			{file:'hg19/pan-all/sampletable/samples.ball'}
+			{file:'hg19/pan-all/sampletable/samples.ball'},
+			{file:'hg19/pan-all/sampletable/samples.ball.normal'}
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
