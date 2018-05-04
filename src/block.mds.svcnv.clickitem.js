@@ -28,6 +28,7 @@ may_add_sampleannotation
 
 ********************** INTERNAL
 detailtable_singlesample
+	printer_snvindel
 may_show_matrixbutton
 
 
@@ -843,7 +844,7 @@ export function click_multi_vcfdense( g, tk, block ) {
 				pane: pane
 			})
 
-			const lst = printer_snvindel( m )
+			const lst = printer_snvindel( m, tk )
 			const table = client.make_table_2col( pane.body, lst)
 			const tr = table.append('tr')
 			tr.append('td')
@@ -1007,8 +1008,8 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 				return
 			}
 
-			// multiple samples
-			const lst = printer_snvindel( m )
+			// multiple samples have this variant
+			const lst = printer_snvindel( m, tk )
 			lst.push({
 				k:'Samples',
 				v: m.sampledata.map(i=>i.sampleobj.name).join('<br>')
@@ -1336,7 +1337,7 @@ function detailtable_singlesample(p) {
 
 	} else if( m.dt == common.dtsnvindel ) {
 
-		const tmp = printer_snvindel( m )
+		const tmp = printer_snvindel( m, p.tk )
 		for(const l of tmp) lst.push(l)
 
 		if(p.m_sample) {
@@ -1517,25 +1518,38 @@ function addexpressionrank( sample, tk ) {
 
 
 
-function printer_snvindel( m ) {
-	const _c = common.mclass[m.class]
+function printer_snvindel( m, tk ) {
+
+	/*
+	show attributes for a single variant
+	may show INFO if they are used for filtering
+	*/
+
 	const lst=[]
 
-	lst.push({
-		k:'Mutation',
-		v: (m.mname ? '<span style="color:'+_c.color+'">'+m.mname+'</span>' : '')
-			+' <span style="font-size:.7em">'+_c.label+'</span>'
-	})
 
-	const phrases=[]
-	if(m.gene) phrases.push(m.gene)
-	if(m.isoform) phrases.push(m.isoform)
-	if(phrases.length) {
+	{
+		// somehow mname may be abscent from vep annotation
+		const _c = common.mclass[m.class]
 		lst.push({
-			k:'Gene',
-			v:phrases.join(' ')
+			k:'Mutation',
+			v: (m.mname ? '<span style="color:'+_c.color+'">'+m.mname+'</span>' : '')
+				+' <span style="font-size:.7em">'+_c.label+'</span>'
 		})
 	}
+
+	{
+		const phrases=[]
+		if(m.gene) phrases.push(m.gene)
+		if(m.isoform) phrases.push(m.isoform)
+		if(phrases.length) {
+			lst.push({
+				k:'Gene',
+				v:phrases.join(' ')
+			})
+		}
+	}
+
 	lst.push({
 		k:'Position',
 		v:m.chr+':'+(m.pos+1)
@@ -1544,6 +1558,27 @@ function printer_snvindel( m ) {
 		k:'Alleles',
 		v:'<span style="font-size:.8em;opacity:.5">REF/ALT</span> '+m.ref+' / '+m.alt
 	})
+
+	if(tk && tk.alleleAttribute && tk.alleleAttribute.attributes) {
+		for(const key in tk.alleleAttribute.attributes) {
+			const attr = tk.alleleAttribute.attributes[key]
+			lst.push({
+				k: attr.label,
+				v: ( m.altinfo ? m.altinfo[key] : '')
+			})
+		}
+	}
+
+	if(tk && tk.locusAttribute && tk.locusAttribute.attributes) {
+		for(const key in tk.locusAttribute.attributes) {
+			const attr = tk.locusAttribute.attributes[key]
+			lst.push({
+				k: attr.label,
+				v: ( m.info ? m.info[key] : '')
+			})
+		}
+	}
+
 	return lst
 }
 

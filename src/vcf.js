@@ -191,7 +191,7 @@ exports.vcfparseline=function(line,vcf) {
 				allele:refallele,
 				sampledata:[]
 			}
-			],
+		],
 
 		info:{}, // locus info, do not contain allele info
 
@@ -343,12 +343,19 @@ function correctRefAlt(p, ref, alt) {
 function parse_FORMAT2( lst, m, vcf ) {
 	/*
 	m.alleles[0] is ref allele
+
+	each allele:
+		.ref
+		.allele
+		.allele_original
+		.sampledata[]     blank array
 	*/
 	const formatfields = lst[9-1].split(':')
 
 	for(let _sampleidx=9; _sampleidx<lst.length; _sampleidx++) {
 
 		// for each sample
+
 		const valuelst = lst[_sampleidx].split(':')
 		{
 			// tell if this sample have any data in this line (variant), if .:., then skip
@@ -366,7 +373,19 @@ function parse_FORMAT2( lst, m, vcf ) {
 		}
 
 
+		/* should create an object of {format:value} of this sample
+		with this object, for each alt allele this sample has,
+		put a copy in m.allele[x].sampledata[]
+		*/
+
+
 		const sampleidx = _sampleidx-9
+
+		/*
+		for each alt allele, initialize obj of this sample and store in this allele
+		later, to iterate over format fields and put in appropriate values
+		note that this sample may not actually have this allele
+		*/
 		for(let i=1; i<m.alleles.length; i++) {
 			const sobj = {}
 			if(vcf.samples && vcf.samples[sampleidx]) {
@@ -417,6 +436,7 @@ function parse_FORMAT2( lst, m, vcf ) {
 				if(!unknowngt) {
 					gtallref = gtsum == 0
 				}
+
 				const genotype = gtalleles.join( splitter )
 				for(let i=1; i<m.alleles.length; i++) {
 					const ms = m.alleles[i].sampledata[ m.alleles[i].sampledata.length-1 ]
@@ -425,6 +445,9 @@ function parse_FORMAT2( lst, m, vcf ) {
 					if(gtallref) {
 						ms.gtallref = true
 					}
+
+					// for mds vcf to drop out samples that do not have this alt allele
+					ms.__gtalleles = gtalleles
 				}
 				continue
 			}
@@ -490,6 +513,8 @@ function parse_FORMAT2( lst, m, vcf ) {
 			}
 		}
 	}
+
+
 	// compatible with old ds: make allele2readcount from AD
 	for(const a of m.alleles) {
 		for(const s of a.sampledata) {

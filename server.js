@@ -4284,8 +4284,10 @@ function handle_mdssvcnv(req,res) {
 										continue
 									}
 
+
 									if(hiddenalleleattr) {
-										
+										// filter using allele INFO
+
 										let todrop=false
 
 										for(const key in hiddenalleleattr) {
@@ -4319,13 +4321,28 @@ function handle_mdssvcnv(req,res) {
 										}
 									}
 
+
+									// TODO filter with locus INFO
+
 									{
-										/*
-										for germline track, drop ref/ref samples
-										*/
+										// for germline track:
 										const lst = []
 										for(const s of m.sampledata) {
-											if(s.gtallref) continue
+
+											if(s.gtallref) {
+												// drop ref/ref sample, should only happen for germline vcf
+												continue
+											}
+
+											if(s.__gtalleles) {
+												// germline - m.sampledata[] always have all the samples due to the old vcf processing
+												// even if the sample does not carry m's alt allele
+												if(s.__gtalleles.indexOf(m.alt)==-1) {
+													continue
+												}
+												delete s.__gtalleles
+											}
+
 											lst.push(s)
 										}
 										if(lst.length==0) {
