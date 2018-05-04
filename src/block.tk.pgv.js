@@ -147,10 +147,15 @@ function makeTk(tk,block) {
 				listgenes(tk.changegenelabel, tk, block)
 			})
 
+
 	} else {
-		// no genevalue tracks, show config in usual spot
+
+		// no genevalue tracks
+
+		tk.toppad=20
 		tk.config_handle = block.maketkconfighandle(tk)
-			.attr('y',-10)
+			.attr('y',-5)
+
 	}
 
 	tk.config_handle.on('click',()=>{
