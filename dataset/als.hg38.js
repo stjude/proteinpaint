@@ -54,7 +54,7 @@ module.exports={
 		svcnv:{
 
 
-			name:'ALS germline CNV',
+			name:'ALS germline mutation',
 
 			//showfullmode:true,
 
@@ -82,6 +82,8 @@ module.exports={
 
 			multihidelabel_vcf:false,
 			multihidelabel_sv:true,
+
+			no_loh:true,
 		},
 
 

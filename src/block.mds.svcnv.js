@@ -361,7 +361,7 @@ export function trackclear(tk) {
 		tk.svvcf_g.selectAll('*').remove()
 		tk.cnv_g.selectAll('*').remove()
 		tk.cnvcolor.cnvlegend.row.style('display','none')
-		tk.cnvcolor.lohlegend.row.style('display','none')
+		if(tk.cnvcolor.lohlegend) tk.cnvcolor.lohlegend.row.style('display','none')
 		return
 	}
 	tk.cnvleftg.selectAll('*').remove()
@@ -1598,7 +1598,9 @@ function render_multi_cnvloh(tk,block) {
 	}
 
 	if(tk.cnvcolor.segmeanmax==novalue_max_cnvloh) {
-		tk.cnvcolor.lohlegend.row.style('display','none')
+		if(tk.cnvcolor.lohlegend) {
+			tk.cnvcolor.lohlegend.row.style('display','none')
+		}
 	} else {
 		draw_colorscale_loh(tk)
 	}
@@ -2036,6 +2038,9 @@ export function draw_colorscale_cnv( tk ) {
 
 
 export function draw_colorscale_loh( tk ) {
+
+	if(!tk.cnvcolor.lohlegend) return
+
 	tk.cnvcolor.lohlegend.row.style('display','table-row')
 	client.axisstyle({
 		axis: tk.cnvcolor.lohlegend.axisg.call(
@@ -2816,125 +2821,129 @@ function configPanel(tk, block) {
 			})
 	}
 
-	holder.append('hr').style('margin','20px')
 
 
-	// loh segmean cutoff
-	{
-		const row=holder.append('div')
-			.style('margin-bottom','15px')
-		row.append('span').html('LOH seg.mean cutoff&nbsp;')
-		row.append('input')
-			.property( 'value', tk.segmeanValueCutoff || 0 )
-			.attr('type','number')
-			.style('width','50px')
-			.on('keyup',()=>{
-				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
-				let v=Number.parseFloat(d3event.target.value)
-				if(!v || v<0) {
-					// invalid value, set to 0 to cancel
-					v=0
-				}
-				if(v==0) {
-					if(tk.segmeanValueCutoff) {
-						// cutoff has been set, cancel and refetch data
-						tk.segmeanValueCutoff=0
-						loadTk(tk,block)
-					} else {
-						// cutoff has not been set, do nothing
+	if(tk.cnvcolor.lohlegend) {
+
+		holder.append('hr').style('margin','20px')
+
+		// loh segmean cutoff
+		{
+			const row=holder.append('div')
+				.style('margin-bottom','15px')
+			row.append('span').html('LOH seg.mean cutoff&nbsp;')
+			row.append('input')
+				.property( 'value', tk.segmeanValueCutoff || 0 )
+				.attr('type','number')
+				.style('width','50px')
+				.on('keyup',()=>{
+					if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+					let v=Number.parseFloat(d3event.target.value)
+					if(!v || v<0) {
+						// invalid value, set to 0 to cancel
+						v=0
 					}
-					return
-				}
-				// set cutoff
-				if(tk.segmeanValueCutoff) {
-					// cutoff has been set
-					if(tk.segmeanValueCutoff==v) {
-						// same as current cutoff, do nothing
+					if(v==0) {
+						if(tk.segmeanValueCutoff) {
+							// cutoff has been set, cancel and refetch data
+							tk.segmeanValueCutoff=0
+							loadTk(tk,block)
+						} else {
+							// cutoff has not been set, do nothing
+						}
+						return
+					}
+					// set cutoff
+					if(tk.segmeanValueCutoff) {
+						// cutoff has been set
+						if(tk.segmeanValueCutoff==v) {
+							// same as current cutoff, do nothing
+						} else {
+							// set new cutoff
+							tk.segmeanValueCutoff=v
+							loadTk(tk, block)
+						}
 					} else {
-						// set new cutoff
+						// cutoff has not been set
 						tk.segmeanValueCutoff=v
 						loadTk(tk, block)
 					}
-				} else {
-					// cutoff has not been set
-					tk.segmeanValueCutoff=v
-					loadTk(tk, block)
-				}
-			})
-		row.append('div')
-			.style('font-size','.7em').style('color','#858585')
-			.html('Only show LOH with seg.mean no less than cutoff.<br>Set to 0 to cancel.')
-	}
+				})
+			row.append('div')
+				.style('font-size','.7em').style('color','#858585')
+				.html('Only show LOH with seg.mean no less than cutoff.<br>Set to 0 to cancel.')
+		}
 
-	// focal loh
-	{
-		const row=holder.append('div').style('margin-bottom','15px')
-		row.append('span')
-			.html('LOH segment size limit&nbsp;')
-		row.append('input')
-			.property('value',tk.lohLengthUpperLimit || 0)
-			.attr('type','number')
-			.style('width','80px')
-			.on('keyup',()=>{
-				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
-				let v = Number.parseInt(d3event.target.value)
-				if(!v || v<0) {
-					// invalid value, set to 0 to cancel
-					v=0
-				}
-				if(v==0) {
-					if(tk.lohLengthUpperLimit) {
-						// cutoff has been set, cancel and refetch data
-						tk.lohLengthUpperLimit=0
-						loadTk(tk,block)
-					} else {
-						// cutoff has not been set, do nothing
+		// focal loh
+		{
+			const row=holder.append('div').style('margin-bottom','15px')
+			row.append('span')
+				.html('LOH segment size limit&nbsp;')
+			row.append('input')
+				.property('value',tk.lohLengthUpperLimit || 0)
+				.attr('type','number')
+				.style('width','80px')
+				.on('keyup',()=>{
+					if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+					let v = Number.parseInt(d3event.target.value)
+					if(!v || v<0) {
+						// invalid value, set to 0 to cancel
+						v=0
 					}
-					return
-				}
-				// set cutoff
-				if(tk.lohLengthUpperLimit) {
-					// cutoff has been set
-					if(tk.lohLengthUpperLimit==v) {
-						// same as current cutoff, do nothing
+					if(v==0) {
+						if(tk.lohLengthUpperLimit) {
+							// cutoff has been set, cancel and refetch data
+							tk.lohLengthUpperLimit=0
+							loadTk(tk,block)
+						} else {
+							// cutoff has not been set, do nothing
+						}
+						return
+					}
+					// set cutoff
+					if(tk.lohLengthUpperLimit) {
+						// cutoff has been set
+						if(tk.lohLengthUpperLimit==v) {
+							// same as current cutoff, do nothing
+						} else {
+							// set new cutoff
+							tk.lohLengthUpperLimit=v
+							loadTk(tk, block)
+						}
 					} else {
-						// set new cutoff
+						// cutoff has not been set
 						tk.lohLengthUpperLimit=v
 						loadTk(tk, block)
 					}
-				} else {
-					// cutoff has not been set
-					tk.lohLengthUpperLimit=v
-					loadTk(tk, block)
-				}
-			})
-		row.append('span').text('bp')
-		row.append('div')
-			.style('font-size','.7em').style('color','#858585')
-			.html('Limit the LOH segment length to show only focal events.<br>Set to 0 to cancel.')
-	}
+				})
+			row.append('span').text('bp')
+			row.append('div')
+				.style('font-size','.7em').style('color','#858585')
+				.html('Limit the LOH segment length to show only focal events.<br>Set to 0 to cancel.')
+		}
 
-	// loh color
-	{
-		const row=holder.append('div').style('margin-bottom','1px')
-		row.append('span')
-			.html('LOH color&nbsp;')
-		row.append('input')
-			.attr('type','color')
-			.property('value',tk.cnvcolor.loh.str)
-			.on('change',()=>{
-				tk.cnvcolor.loh.str=d3event.target.value
-				const c = d3rgb(tk.cnvcolor.loh.str)
-				tk.cnvcolor.loh.r = c.r
-				tk.cnvcolor.loh.g = c.g
-				tk.cnvcolor.loh.b = c.b
-				tk.cnvcolor.lohlegend.loh_stop.attr('stop-color', tk.cnvcolor.loh.str)
-				if(tk.singlesample) {
-					render_singlesample(tk,block)
-				} else {
-					render_samplegroups(tk, block)
-				}
-			})
+		// loh color
+		{
+			const row=holder.append('div').style('margin-bottom','1px')
+			row.append('span')
+				.html('LOH color&nbsp;')
+			row.append('input')
+				.attr('type','color')
+				.property('value',tk.cnvcolor.loh.str)
+				.on('change',()=>{
+					tk.cnvcolor.loh.str=d3event.target.value
+					const c = d3rgb(tk.cnvcolor.loh.str)
+					tk.cnvcolor.loh.r = c.r
+					tk.cnvcolor.loh.g = c.g
+					tk.cnvcolor.loh.b = c.b
+					tk.cnvcolor.lohlegend.loh_stop.attr('stop-color', tk.cnvcolor.loh.str)
+					if(tk.singlesample) {
+						render_singlesample(tk,block)
+					} else {
+						render_samplegroups(tk, block)
+					}
+				})
+		}
 	}
 
 	// end of config

@@ -3,6 +3,7 @@ import * as client from './client'
 import {legend_newrow} from './block.legend'
 import * as common from './common'
 import {loadTk} from './block.mds.svcnv'
+import {event as d3event} from 'd3-selection'
 
 /*
 *********** exported:
@@ -18,6 +19,13 @@ may_legend_svchr
 may_legend_mclass
 may_legend_attribute
 */
+
+
+const fontsize = 14
+const xpad = 15
+const barh = 20
+
+
 
 
 export function makeTk_legend(block, tk) {
@@ -39,251 +47,21 @@ export function makeTk_legend(block, tk) {
 	// track hideable rows that are non-mutation attr 
 	tk.legend_hideable = []
 
-	{
-		const row = table.append('tr')
-		tk.legend_mclass = {
-			row:row,
-			hiddenvalues: new Set(),
-			hidden: false,
-		}
-		row.append('td')
-			.style('text-align','right')
-			.style('opacity',.5)
-			.text('Mutation')
-		tk.legend_mclass.holder = row.append('td')
-		tk.legend_hideable.push(tk.legend_mclass)
-	}
 
-	// cnv/loh color scale showing in legend, only for multi-sample
-	{
-		const fontsize = 14
-		const xpad = 15
-		const barh = 20
-		let leftpad = 50
+	create_mclass( tk )
 
-		//// cnv color scale
+	create_cnv( tk )
 
-		tk.cnvcolor.cnvlegend = {
-			axistickh:4,
-			barw:55
-		}
+	create_loh( tk )
 
-		tk.cnvcolor.cnvlegend.row = table.append('tr')
-		tk.cnvcolor.cnvlegend.row.append('td')
-			.style('text-align','right')
-			.style('opacity',.5)
-			.text('CNV log2(ratio)')
-		tk.legend_hideable.push(tk.cnvcolor.cnvlegend)
+	create_svchrcolor( tk )
 
-		{
-			const svg = tk.cnvcolor.cnvlegend.row
-				.append('td')
-				.append('svg')
-				.attr('width', (leftpad+tk.cnvcolor.cnvlegend.barw)*2)
-				.attr('height',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh)
+	create_sampleAttribute( tk )
 
-			tk.cnvcolor.cnvlegend.axisg = svg.append('g')
-				.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.cnvlegend.axistickh)+')')
+	create_mutationAttribute(tk)
 
-			const gain_id = Math.random().toString()
-			const loss_id = Math.random().toString()
+	create_alleleAttribute(tk, block)
 
-			const defs = svg.append('defs')
-			{
-				// loss
-				const grad = defs.append('linearGradient')
-					.attr('id', loss_id)
-				tk.cnvcolor.cnvlegend.loss_stop = grad.append('stop')
-					.attr('offset','0%')
-					.attr('stop-color', tk.cnvcolor.loss.str)
-				grad.append('stop')
-					.attr('offset','100%')
-					.attr('stop-color', 'white')
-			}
-			{
-				// gain
-				const grad = defs.append('linearGradient')
-					.attr('id', gain_id)
-				grad.append('stop')
-					.attr('offset','0%')
-					.attr('stop-color', 'white')
-				tk.cnvcolor.cnvlegend.gain_stop = grad.append('stop')
-					.attr('offset','100%')
-					.attr('stop-color', tk.cnvcolor.gain.str)
-			}
-
-			svg.append('rect')
-				.attr('x',leftpad)
-				.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
-				.attr('width', tk.cnvcolor.cnvlegend.barw)
-				.attr('height',barh)
-				.attr('fill', 'url(#'+loss_id+')')
-
-			svg.append('rect')
-				.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw)
-				.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
-				.attr('width', tk.cnvcolor.cnvlegend.barw)
-				.attr('height',barh)
-				.attr('fill', 'url(#'+gain_id+')')
-
-			svg.append('text')
-				.attr('x',leftpad-5)
-				.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
-				.attr('font-family',client.font)
-				.attr('font-size',fontsize)
-				.attr('text-anchor','end')
-				.attr('dominant-baseline','central')
-				.attr('fill','black')
-				.text('Loss')
-			svg.append('text')
-				.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw*2+5)
-				.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
-				.attr('font-family',client.font)
-				.attr('font-size',fontsize)
-				.attr('dominant-baseline','central')
-				.attr('fill','black')
-				.text('Gain')
-		}
-
-
-		//// loh color legend
-
-		leftpad=20
-
-		tk.cnvcolor.lohlegend = {
-			axistickh:4,
-			barw:55
-		}
-
-		tk.cnvcolor.lohlegend.row = table.append('tr')
-		tk.cnvcolor.lohlegend.row.append('td')
-			.style('text-align','right')
-			.style('opacity',.5)
-			.text('LOH seg.mean')
-		tk.legend_hideable.push(tk.cnvcolor.lohlegend)
-
-		{
-			const svg = tk.cnvcolor.lohlegend.row
-				.append('td')
-				.append('svg')
-				.attr('width', (leftpad+tk.cnvcolor.lohlegend.barw)*2)
-				.attr('height',fontsize+tk.cnvcolor.lohlegend.axistickh+barh)
-
-			tk.cnvcolor.lohlegend.axisg = svg.append('g')
-				.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.lohlegend.axistickh)+')')
-
-			const loh_id = Math.random().toString()
-
-			const defs = svg.append('defs')
-			{
-				const grad = defs.append('linearGradient')
-					.attr('id', loh_id)
-				grad.append('stop')
-					.attr('offset','0%')
-					.attr('stop-color', 'white')
-				tk.cnvcolor.lohlegend.loh_stop = grad.append('stop')
-					.attr('offset','100%')
-					.attr('stop-color', tk.cnvcolor.loh.str)
-			}
-
-			svg.append('rect')
-				.attr('x', leftpad)
-				.attr('y',fontsize+tk.cnvcolor.lohlegend.axistickh)
-				.attr('width', tk.cnvcolor.lohlegend.barw)
-				.attr('height',barh)
-				.attr('fill', 'url(#'+loh_id+')')
-		}
-	}
-
-
-	// sv chr color
-	{
-		const row = table.append('tr').style('display','none')
-		tk.legend_svchrcolor={
-			row:row,
-			interchrs:new Set(),
-			colorfunc: scaleOrdinal(schemeCategory20),
-			hidden: true
-		}
-		row.append('td')
-			.style('text-align','right')
-			.style('opacity',.5)
-			.text('SV chromosome')
-		tk.legend_svchrcolor.holder = row.append('td')
-		// PLEASE CHECK may not to set row.hidden
-		tk.legend_hideable.push(tk.legend_svchrcolor)
-	}
-
-
-
-	if(tk.sampleAttribute && !tk.singlesample) {
-		/*
-		official only
-		sampleAttribute is copied over from mds.queries
-		initiate attributes used for filtering & legend display
-		*/
-		for(const key in tk.sampleAttribute.attributes) {
-			const attr = tk.sampleAttribute.attributes[ key ]
-			if(!attr.filter) {
-				// not a filter
-				continue
-			}
-			attr.hiddenvalues = new Set()
-			// k: key in mutationAttribute.attributes{}
-
-			attr.value2count = new Map()
-			/*
-			k: key
-			v: {
-				totalitems: INT
-				dt2count: Map( dt => count )
-			}
-			*/
-
-			attr.legendrow = table.append('tr')
-			attr.legendcell = attr.legendrow.append('td')
-				.style('text-align','right')
-				.style('opacity',.5)
-				.text(attr.label)
-
-			attr.legendholder = attr.legendrow.append('td')
-		}
-	}
-
-
-	if(tk.mutationAttribute && !tk.singlesample) {
-		/*
-		official only
-		mutationAttribute is copied over from mds.queries
-		initiate attributes used for filtering & legend display
-		*/
-		for(const key in tk.mutationAttribute.attributes) {
-			const attr = tk.mutationAttribute.attributes[ key ];
-			if(!attr.filter) {
-				// not a filter
-				continue
-			}
-			attr.hiddenvalues = new Set()
-			// k: key in mutationAttribute.attributes{}
-
-			attr.value2count = new Map()
-			/*
-			k: key
-			v: {
-				totalitems: INT
-				dt2count: Map( dt => count )
-			}
-			*/
-
-			attr.legendrow = table.append('tr')
-			attr.legendcell = attr.legendrow.append('td')
-				.style('text-align','right')
-				.style('opacity',.5)
-				.text(attr.label)
-
-			attr.legendholder = attr.legendrow.append('td')
-		}
-	}
 
 	tk.legend_more_row = table.append('tr')
 	tk.legend_more_label = tk.legend_more_row.append('td')
@@ -293,6 +71,9 @@ export function makeTk_legend(block, tk) {
 	// are displayed in pop-down menu, not in this row
 	tk.legend_more_row.append('td')
 }
+
+
+
 
 
 
@@ -318,6 +99,353 @@ export function update_legend(tk, block) {
 
 
 // helpers
+
+
+
+
+
+function create_mclass(tk) {
+	/*
+	list all mutation classes
+	*/
+	const row = tk.legend_table.append('tr')
+	tk.legend_mclass = {
+		row:row,
+		hiddenvalues: new Set(),
+		hidden: false,
+	}
+	row.append('td')
+		.style('text-align','right')
+		.style('opacity',.5)
+		.text('Mutation')
+	tk.legend_mclass.holder = row.append('td')
+	tk.legend_hideable.push(tk.legend_mclass)
+}
+
+
+
+
+
+function create_cnv(tk) {
+	/*
+	cnv log ratio color scale
+	*/
+	const leftpad = 50
+
+	//// cnv color scale
+
+	tk.cnvcolor.cnvlegend = {
+		axistickh:4,
+		barw:55
+	}
+
+	tk.cnvcolor.cnvlegend.row = tk.legend_table.append('tr')
+	tk.cnvcolor.cnvlegend.row.append('td')
+		.style('text-align','right')
+		.style('opacity',.5)
+		.text('CNV log2(ratio)')
+	tk.legend_hideable.push(tk.cnvcolor.cnvlegend)
+
+	const svg = tk.cnvcolor.cnvlegend.row
+			.append('td')
+			.append('svg')
+			.attr('width', (leftpad+tk.cnvcolor.cnvlegend.barw)*2)
+			.attr('height',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh)
+
+		tk.cnvcolor.cnvlegend.axisg = svg.append('g')
+			.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.cnvlegend.axistickh)+')')
+
+		const gain_id = Math.random().toString()
+		const loss_id = Math.random().toString()
+
+		const defs = svg.append('defs')
+		{
+			// loss
+			const grad = defs.append('linearGradient')
+				.attr('id', loss_id)
+			tk.cnvcolor.cnvlegend.loss_stop = grad.append('stop')
+				.attr('offset','0%')
+				.attr('stop-color', tk.cnvcolor.loss.str)
+			grad.append('stop')
+				.attr('offset','100%')
+				.attr('stop-color', 'white')
+		}
+		{
+			// gain
+			const grad = defs.append('linearGradient')
+				.attr('id', gain_id)
+			grad.append('stop')
+				.attr('offset','0%')
+				.attr('stop-color', 'white')
+			tk.cnvcolor.cnvlegend.gain_stop = grad.append('stop')
+				.attr('offset','100%')
+				.attr('stop-color', tk.cnvcolor.gain.str)
+		}
+
+		svg.append('rect')
+			.attr('x',leftpad)
+			.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
+			.attr('width', tk.cnvcolor.cnvlegend.barw)
+			.attr('height',barh)
+			.attr('fill', 'url(#'+loss_id+')')
+
+		svg.append('rect')
+			.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw)
+			.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
+			.attr('width', tk.cnvcolor.cnvlegend.barw)
+			.attr('height',barh)
+			.attr('fill', 'url(#'+gain_id+')')
+
+		svg.append('text')
+			.attr('x',leftpad-5)
+			.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
+			.attr('font-family',client.font)
+			.attr('font-size',fontsize)
+			.attr('text-anchor','end')
+			.attr('dominant-baseline','central')
+			.attr('fill','black')
+			.text('Loss')
+		svg.append('text')
+			.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw*2+5)
+			.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
+			.attr('font-family',client.font)
+			.attr('font-size',fontsize)
+			.attr('dominant-baseline','central')
+			.attr('fill','black')
+			.text('Gain')
+}
+
+
+
+
+function create_loh(tk) {
+
+	if(tk.mds
+		&& tk.mds.queries
+		&& tk.mds.queries[tk.querykey]
+		&& tk.mds.queries[tk.querykey].no_loh) {
+		// quick dirty
+		return
+	}
+
+	//// loh color legend
+
+	const leftpad=20
+
+	tk.cnvcolor.lohlegend = {
+		axistickh:4,
+		barw:55
+	}
+
+	tk.cnvcolor.lohlegend.row = tk.legend_table.append('tr')
+	tk.cnvcolor.lohlegend.row.append('td')
+		.style('text-align','right')
+		.style('opacity',.5)
+		.text('LOH seg.mean')
+	tk.legend_hideable.push(tk.cnvcolor.lohlegend)
+
+	const svg = tk.cnvcolor.lohlegend.row
+		.append('td')
+		.append('svg')
+		.attr('width', (leftpad+tk.cnvcolor.lohlegend.barw)*2)
+		.attr('height',fontsize+tk.cnvcolor.lohlegend.axistickh+barh)
+
+	tk.cnvcolor.lohlegend.axisg = svg.append('g')
+		.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.lohlegend.axistickh)+')')
+
+	const loh_id = Math.random().toString()
+
+	const defs = svg.append('defs')
+	{
+		const grad = defs.append('linearGradient')
+			.attr('id', loh_id)
+		grad.append('stop')
+			.attr('offset','0%')
+			.attr('stop-color', 'white')
+		tk.cnvcolor.lohlegend.loh_stop = grad.append('stop')
+			.attr('offset','100%')
+			.attr('stop-color', tk.cnvcolor.loh.str)
+	}
+
+	svg.append('rect')
+		.attr('x', leftpad)
+		.attr('y',fontsize+tk.cnvcolor.lohlegend.axistickh)
+		.attr('width', tk.cnvcolor.lohlegend.barw)
+		.attr('height',barh)
+		.attr('fill', 'url(#'+loh_id+')')
+}
+
+
+
+function create_svchrcolor(tk) {
+
+	const row = tk.legend_table.append('tr')
+		.style('display','none') // default hide
+
+	tk.legend_svchrcolor={
+		row:row,
+		interchrs:new Set(),
+		colorfunc: scaleOrdinal(schemeCategory20),
+		hidden: true
+	}
+	row.append('td')
+		.style('text-align','right')
+		.style('opacity',.5)
+		.text('SV chromosome')
+	tk.legend_svchrcolor.holder = row.append('td')
+	tk.legend_hideable.push(tk.legend_svchrcolor)
+}
+
+
+function create_sampleAttribute(tk) {
+	if(tk.singlesample) return
+	if(!tk.sampleAttribute) return
+	/*
+	official only
+	sampleAttribute is copied over from mds.queries
+	initiate attributes used for filtering & legend display
+	*/
+	for(const key in tk.sampleAttribute.attributes) {
+		const attr = tk.sampleAttribute.attributes[ key ]
+		if(!attr.filter) {
+			// not a filter
+			continue
+		}
+		attr.hiddenvalues = new Set()
+		// k: key in mutationAttribute.attributes{}
+
+		attr.value2count = new Map()
+		/*
+		k: key
+		v: {
+			totalitems: INT
+			dt2count: Map( dt => count )
+		}
+		*/
+
+		attr.legendrow = tk.legend_table.append('tr')
+		attr.legendcell = attr.legendrow.append('td')
+			.style('text-align','right')
+			.style('opacity',.5)
+			.text(attr.label)
+
+		attr.legendholder = attr.legendrow.append('td')
+	}
+}
+
+
+
+function create_mutationAttribute(tk) {
+	if(tk.singlesample) return
+	if(!tk.mutationAttribute) return
+	/*
+	official only
+	mutationAttribute is copied over from mds.queries
+	initiate attributes used for filtering & legend display
+	*/
+	for(const key in tk.mutationAttribute.attributes) {
+		const attr = tk.mutationAttribute.attributes[ key ];
+		if(!attr.filter) {
+			// not a filter
+			continue
+		}
+		attr.hiddenvalues = new Set()
+		// k: key in mutationAttribute.attributes{}
+
+		attr.value2count = new Map()
+		/*
+		k: key
+		v: {
+			totalitems: INT
+			dt2count: Map( dt => count )
+		}
+		*/
+
+		attr.legendrow = tk.legend_table.append('tr')
+		attr.legendcell = attr.legendrow.append('td')
+			.style('text-align','right')
+			.style('opacity',.5)
+			.text(attr.label)
+
+		attr.legendholder = attr.legendrow.append('td')
+	}
+}
+
+
+
+function create_alleleAttribute(tk, block) {
+	if(!tk.alleleAttribute) return
+	/*
+	official only
+	alleleAttribute is copied over from mds.queries
+	initiate attributes used for filtering & legend display
+	*/
+	for(const key in tk.alleleAttribute.attributes) {
+		const attr = tk.alleleAttribute.attributes[ key ];
+		if(!attr.filter) {
+			// not a filter
+			continue
+		}
+
+		attr.legendrow = tk.legend_table.append('tr')
+		attr.legendcell = attr.legendrow.append('td')
+			.style('text-align','right')
+			.style('opacity',.5)
+			.text(attr.label)
+
+		attr.legendholder = attr.legendrow.append('td')
+
+		if(attr.isnumeric) {
+
+			// numeric cutoff with direction of inclusion
+
+			const select = attr.legendholder.append('select')
+				.style('margin','0px 10px 0px 10px')
+				.on('change',()=>{
+					const value = select.property('value')
+
+					attr.keeplowerthan = value=='<'
+
+					loadTk(tk,block)
+				})
+
+			const lowerthan = select.append('option')
+				.attr('value','<')
+				.property('text','≤')
+
+			const higherthan = select.append('option')
+				.attr('value','>')
+				.property('text','≥')
+
+			if(attr.keeplowerthan) {
+				lowerthan.property('selected',1)
+			} else {
+				higherthan.property('selected',1)
+			}
+
+			attr.legendholder.append('input')
+				.attr('type','number')
+				.style('width','50px')
+				.property('value',attr.cutoffvalue)
+				.on('keyup',()=>{
+					if(d3event.key!='Enter') return
+					attr.cutoffvalue = d3event.target.valueAsNumber
+					loadTk(tk, block)
+				})
+
+
+		} else {
+			// categorical
+			attr.hiddenvalues = new Set()
+			// k: key in mutationAttribute.attributes{}
+
+			attr.value2count = new Map()
+		}
+
+	}
+}
+
+
 
 
 

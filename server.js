@@ -404,6 +404,7 @@ function mds_clientcopy(ds) {
 				clientquery.multihidelabel_sv     = q.multihidelabel_sv
 				clientquery.multihidelabel_vcf    = q.multihidelabel_vcf
 				clientquery.showfullmode          = q.showfullmode
+				clientquery.no_loh                = q.no_loh // quick dirty fix
 
 				if(q.expressionrank_querykey) {
 					// for checking expression rank
