@@ -88,13 +88,9 @@ export function loadTk( tk, block ) {
 			arg.attributes = tk.attributes
 		}
 		tasks.push(
-			fetch( new Request(block.hostURL+'/mds_expressionrank',{
-				method:'POST',
-				body:JSON.stringify(arg)
-			}))
-			.then(data=>{return data.json()})
+			client.dofetch('/mds_expressionrank',arg)
 			.then(data=>{
-				if(data.error) throw({message:data.error})
+				if(data.error) throw {message:data.error}
 				if(data.result && data.result.length>0) {
 					r.items = data.result
 				}
@@ -144,6 +140,7 @@ function renderTk( tk, block ) {
 	let max_rank = 100 
 
 	const scale_rank = bar_plot_y(min_rank, max_rank, tk.barheight)
+
 
 	// render
 	for(const r of tk.regions) {
