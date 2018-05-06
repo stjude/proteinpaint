@@ -24,6 +24,13 @@ obj:
 	.label
 	.values
 
+
+********************** EXPORTED
+init()
+********************** INTERNAL
+init_plot()
+init_legend_beforeplot
+click_dot
 */
 
 
@@ -322,7 +329,6 @@ function click_dot(dot, obj) {
 		.style('margin','20px')
 		.text('Loading ...')
 
-	let sampletracks
 
 	client.dofetch('/mdssvcnv',{
 		genome:obj.genome.name,
@@ -331,42 +337,71 @@ function click_dot(dot, obj) {
 		gettrack4singlesample:dot.sample
 	})
 	.then(data=>{
-		wait.text('Loading ... ...')
-		sampletracks = data.tracks
-		//return import('./block')
-	})
-	.then(_=>{
+		// done getting assay tracks for this sample
 		wait.remove()
-		const arg = {
-			genome:obj.genome,
-			hostURL:(localStorage.getItem('hostURL')||''),
-			jwt:(localStorage.getItem('jwt')||''),
-			holder:pane.body,
-			chr: obj.genome.defaultcoord.chr,
-			start: obj.genome.defaultcoord.start,
-			stop: obj.genome.defaultcoord.stop,
-			nobox:1,
-			tklst:[]
-		}
+		launch_singlesample({
+			obj: obj,
+			samplename: dot.sample,
+			sampletracks: data.tracks,
+			holder: pane.body
+		})
+	})
+}
 
-		// TODO general track in single-sample mode
+
+
+function launch_singlesample (p) {
+
+	const {obj, samplename, sampletracks, holder} = p
+
+	const arg = {
+		genome:obj.genome,
+		hostURL:(localStorage.getItem('hostURL')||''),
+		jwt:(localStorage.getItem('jwt')||''),
+		holder: holder,
+		chr: obj.genome.defaultcoord.chr,
+		start: obj.genome.defaultcoord.start,
+		stop: obj.genome.defaultcoord.stop,
+		nobox:1,
+		tklst:[]
+	}
+
+	// TODO general track in single-sample mode
+
+	const mdstk = obj.mds.queries[ obj.querykey ] // TODO general track
+	if(mdstk) {
 		const tk = {
-			singlesample:{name:dot.sample},
+			singlesample:{name:samplename},
 			mds: obj.mds,
 			querykey: obj.querykey,
 		}
-		for(const k in tk.mds.queries[tk.querykey]) {
-			tk[k] = tk.mds.queries[tk.querykey][k]
+		for(const k in mdstk) {
+			tk[k] = mdstk[k]
 		}
 		arg.tklst.push(tk)
 
+		if(mdstk.checkexpressionrank) {
 
-		if(sampletracks) {
-			for(const t of sampletracks) arg.tklst.push(t)
+			/*
+			not adding expression rank yet
+			sample grouping attr for gene expression boxplot is not exposed here
+			*/
+			const et = {
+				type: client.tkt.mdsexpressionrank,
+				name: samplename+' gene '+mdstk.checkexpressionrank.datatype,
+				mds: tk.mds,
+				querykey: mdstk.checkexpressionrank.querykey,
+				sample: samplename,
+			}
+			arg.tklst.push(et)
 		}
+	}
 
-		client.first_genetrack_tolist(obj.genome,arg.tklst)
-		//new _.Block(arg)
-		blocklazyload(arg)
-	})
+
+	if(sampletracks) {
+		for(const t of sampletracks) arg.tklst.push(t)
+	}
+
+	client.first_genetrack_tolist(obj.genome,arg.tklst)
+	blocklazyload(arg)
 }
