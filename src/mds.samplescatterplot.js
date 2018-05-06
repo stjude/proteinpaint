@@ -85,8 +85,7 @@ export function init (obj,holder, debugmode) {
 		}
 		obj.dots = data.dots
 
-		// TODO general track
-		obj.querykey = data.querykey
+		obj.querykey = data.querykey // for the moment it should always be set
 
 		// TODO generic attributes for legend, specify some categorical ones for coloring
 		if(data.colorbyattributes) {
@@ -311,6 +310,11 @@ function init_legend_beforeplot(arg,holder) {
 
 
 function click_dot(dot, obj) {
+	/*
+	clicking a dot to launch browser view of tracks from this sample
+
+	*/
+
 	const pane = client.newpane({x:d3event.clientX,y:d3event.clientY})
 	pane.header.text(dot.sample)
 
