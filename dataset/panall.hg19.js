@@ -41,7 +41,6 @@ module.exports={
 				WGS:{label:'WGS'},
 				SNP:{label:'SNP'},
 				age:{label:'Age',isfloat:1},
-				ageGroup:{label:'Age group'},
 
 				X:{label:'X',isfloat:1},
 				Y:{label:'Y',isfloat:1},
@@ -72,6 +71,14 @@ module.exports={
 						'IKZF1(N159Y)':{color:'#CDCE34'},
 					}
 				},
+				ageGroup: {
+					label:'Age group',
+					values:{
+						Adult:{color:'#1b9e77'},
+						Childhood:{color:'#d95f02'},
+						'Young Adult':{color:'#7570b3'}
+					}
+				}
             },
         },
 
@@ -83,7 +90,8 @@ module.exports={
 				attribute:'Y'
 			},
 			colorbyattributes:[
-				{key:'subtype1'}
+				{key:'subtype1'},
+				{key:'ageGroup'}
 			],
 			querykey:'svcnv'
 		}
