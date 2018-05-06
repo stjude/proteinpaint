@@ -10,6 +10,7 @@ import blocklazyload from './block.lazyload'
 /*
 obj:
 .holder
+.legendtable
 .genome {}
 .dslabel
 .dots [ {} ]
@@ -17,19 +18,23 @@ obj:
 	.y
 	.sample
 	.s {}
+.dotselection
 .sample2dot MAP
 .scattersvg SVG
 .colorbyattributes [ {} ]
 	.key
 	.label
 	.values
+	.__inuse
+	.labelhandle
+
 
 
 ********************** EXPORTED
 init()
 ********************** INTERNAL
 init_plot()
-init_legend_beforeplot
+init_dotcolor_legend
 click_dot
 launch_singlesample
 
@@ -65,13 +70,16 @@ export function init (obj,holder, debugmode) {
 	}
 
 	const _table = holder.append('table')
-		.style('border-spacing','10px')
+		.style('border-spacing','20px')
 	
 	const tr1 = _table.append('tr') // row has two <td>
 
 	const tr1td1 = tr1.append('td')
 	const tr1td2 = tr1.append('td')
 		.style('vertical-align','top')
+	
+	obj.legendtable = tr1td2.append('table')
+		.style('border-spacing','5px')
 
 
 	const scatterdiv = tr1td1.append('div')
@@ -104,7 +112,7 @@ export function init (obj,holder, debugmode) {
 		// TODO generic attributes for legend, specify some categorical ones for coloring
 		if(data.colorbyattributes) {
 			obj.colorbyattributes = data.colorbyattributes
-			init_legend_beforeplot(obj,tr1td2)
+			init_dotcolor_legend(obj)
 		}
 
 		init_plot(obj)
@@ -163,16 +171,8 @@ function init_plot (obj) {
 		.data( obj.dots )
 		.enter().append('g')
 
-	const defaultcolorbyattr = obj.colorbyattributes ? obj.colorbyattributes[0] : null
 
 	const circles=dots.append('circle')
-		.attr('fill', d=>{
-			if(defaultcolorbyattr) {
-				const value = d.s[ defaultcolorbyattr.key ]
-				return defaultcolorbyattr.values.get( value ).color
-			}
-			return '#ccc'
-		})
 		.attr('stroke','none')
 		.on('mouseover',d=>{
 			d3event.target.setAttribute('stroke','white')
@@ -198,6 +198,7 @@ function init_plot (obj) {
 
 	obj.dotselection = circles
 
+	assign_color4dots( obj )
 
 
 	function resize() {
@@ -255,23 +256,57 @@ function init_plot (obj) {
 
 
 
+function assign_color4dots(obj) {
+	let colordotsby
+	if(obj.colorbyattributes) {
+		colordotsby = obj.colorbyattributes.find( i=> i.__inuse ) || obj.colorbyattributes[0]
+	}
+	obj.dotselection
+		.transition()
+		.attr('fill', d=>{
+			if(colordotsby) {
+				const value = d.s[ colordotsby.key ]
+				return colordotsby.values.get( value ).color
+			}
+			return '#ccc'
+		})
+}
 
-function init_legend_beforeplot(arg,holder) {
+
+
+
+function init_dotcolor_legend(obj) {
 	/*
+	show legend for coloring dots/samples
+	by pre-defined sample attributes, categorical
+	by gene expression
 	*/
 
-	const table = holder.append('table')
-		.style('border-spacing','5px')
+	if(!obj.colorbyattributes.find(i=>i.__inuse)) obj.colorbyattributes[0].__inuse=true
 
 	for(const attr of obj.colorbyattributes) {
 
-		const tr = table.append('tr')
+		const tr = obj.legendtable.append('tr')
 
 		// legend item name
-		tr.append('td')
-			.style('opacity',.5)
+		attr.labelhandle = tr.append('td')
+			.append('div')
 			.style('white-space','nowrap')
 			.text(attr.label)
+			.attr('class','sja_clb')
+			.on('click',()=>{
+				for(const attr2 of obj.colorbyattributes) {
+					attr2.__inuse=false
+					attr2.labelhandle.style('background','').style('border-bottom','')
+				}
+				attr.__inuse=true
+				attr.labelhandle.style('background','#ededed').style('border-bottom','solid 2px #858585')
+				assign_color4dots(obj)
+			})
+
+		if(attr.__inuse) {
+			attr.labelhandle.style('background','#ededed').style('border-bottom','solid 2px #858585')
+		}
 
 		const colorfunc = scaleOrdinal(schemeCategory10)
 		if(attr.values) {
