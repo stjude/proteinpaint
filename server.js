@@ -9717,19 +9717,29 @@ function mds_init(ds,genome) {
 
 		if(ds.cohort.scatterplot) {
 			if(!ds.cohort.sampleAttribute) return '.sampleAttribute missing but required for .cohort.scatterplot'
+
+			const sp = ds.cohort.scatterplot
+
+			// for the moment require querykey
+			if(!sp.querykey) return '.querykey missing from .cohort.scatterplot'
+			{
+				if(!ds.queries) return '.cohort.scatterplot.querykey in use but ds.queries missing'
+				if(!ds.queries[ sp.querykey ]) return 'unknown query by .cohort.scatterplot.querykey: '+sp.querykey
+			}
+
 			// TODO support multiple plots
-			if(!ds.cohort.scatterplot.x) return '.x missing from .cohort.scatterplot'
-			if(!ds.cohort.scatterplot.x.attribute) return '.attribute missing from .cohort.scatterplot.x'
-			const x = ds.cohort.sampleAttribute.attributes[ds.cohort.scatterplot.x.attribute]
+			if(!sp.x) return '.x missing from .cohort.scatterplot'
+			if(!sp.x.attribute) return '.attribute missing from .cohort.scatterplot.x'
+			const x = ds.cohort.sampleAttribute.attributes[sp.x.attribute]
 			if(!x) return 'scatterplot.x.attribute is not defined in sampleAttribute'
 			if(!x.isfloat) return 'scatterplot.x is not "isfloat"'
-			if(!ds.cohort.scatterplot.y) return '.y missing from .cohort.scatterplot'
-			if(!ds.cohort.scatterplot.y.attribute) return '.attribute missing from .cohort.scatterplot.y'
-			const y = ds.cohort.sampleAttribute.attributes[ds.cohort.scatterplot.y.attribute]
+			if(!sp.y) return '.y missing from .cohort.scatterplot'
+			if(!sp.y.attribute) return '.attribute missing from .cohort.scatterplot.y'
+			const y = ds.cohort.sampleAttribute.attributes[sp.y.attribute]
 			if(!y) return 'scatterplot.y.attribute is not defined in sampleAttribute'
 			if(!y.isfloat) return 'scatterplot.y is not "isfloat"'
-			if(ds.cohort.scatterplot.colorbyattributes) {
-				for(const attr of ds.cohort.scatterplot.colorbyattributes) {
+			if(sp.colorbyattributes) {
+				for(const attr of sp.colorbyattributes) {
 					if(!attr.key) return '.key missing from one of scatterplot.colorbyattributes'
 					const attrreg = ds.cohort.sampleAttribute.attributes[attr.key]
 					if(!attrreg) return 'unknown attribute by key '+(attr.key)+' from scatterplot.colorbyattributes'
