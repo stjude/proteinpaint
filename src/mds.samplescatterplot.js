@@ -31,7 +31,14 @@ init()
 init_plot()
 init_legend_beforeplot
 click_dot
+launch_singlesample
+
+
 */
+
+
+
+
 
 
 export function init (obj,holder, debugmode) {
@@ -341,7 +348,7 @@ function click_dot(dot, obj) {
 		wait.remove()
 		launch_singlesample({
 			obj: obj,
-			samplename: dot.sample,
+			dot: dot,
 			sampletracks: data.tracks,
 			holder: pane.body
 		})
@@ -350,9 +357,12 @@ function click_dot(dot, obj) {
 
 
 
+
+
+
 function launch_singlesample (p) {
 
-	const {obj, samplename, sampletracks, holder} = p
+	const {obj, dot, sampletracks, holder} = p
 
 	const arg = {
 		genome:obj.genome,
@@ -371,7 +381,7 @@ function launch_singlesample (p) {
 	const mdstk = obj.mds.queries[ obj.querykey ] // TODO general track
 	if(mdstk) {
 		const tk = {
-			singlesample:{name:samplename},
+			singlesample:{name: dot.sample},
 			mds: obj.mds,
 			querykey: obj.querykey,
 		}
@@ -382,17 +392,33 @@ function launch_singlesample (p) {
 
 		if(mdstk.checkexpressionrank) {
 
-			/*
-			not adding expression rank yet
-			sample grouping attr for gene expression boxplot is not exposed here
-			*/
 			const et = {
 				type: client.tkt.mdsexpressionrank,
-				name: samplename+' gene '+mdstk.checkexpressionrank.datatype,
+				name: dot.sample+' gene expression rank',
 				mds: tk.mds,
 				querykey: mdstk.checkexpressionrank.querykey,
-				sample: samplename,
+				sample: dot.sample,
 			}
+
+			/*
+			in what group to compare expression rank?
+			use the last attr from svcnv track
+			*/
+			if(mdstk.groupsamplebyattr) {
+				const lst = mdstk.groupsamplebyattr.attrlst
+				if(lst && lst.length) {
+					const attr0 = lst[ lst.length-1 ]
+
+					const attr = {
+						k: attr0.k,
+						v: dot.s[attr0.k]
+					}
+					console.log(attr)
+
+					et.attributes = [ attr ]
+				}
+			}
+
 			arg.tklst.push(et)
 		}
 	}
