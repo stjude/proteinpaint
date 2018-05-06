@@ -352,5 +352,14 @@ function makeTk(tk, block) {
 function configPanel(tk,block) {
 	tk.tkconfigtip.clear()
 		.showunder( tk.config_handle.node() )
-
+	{
+		tk.tkconfigtip.d.append('div')
+			.style('opacity',.5)
+			.text('Expression rank within group:')
+		const lst = []
+		for(const a of tk.attributes) {
+			lst.push({k: (a.label || a.k), v:(a.fullvalue || a.kvalue)})
+		}
+		client.make_table_2col(tk.tkconfigtip.d, lst)
+	}
 }

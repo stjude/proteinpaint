@@ -407,15 +407,16 @@ function launch_singlesample (p) {
 			if(mdstk.groupsamplebyattr) {
 				const lst = mdstk.groupsamplebyattr.attrlst
 				if(lst && lst.length) {
-					const attr0 = lst[ lst.length-1 ]
 
-					const attr = {
-						k: attr0.k,
-						v: dot.s[attr0.k]
+					et.attributes = []
+
+					for(const attr of lst) {
+						et.attributes.push( {
+							k: attr.k,
+							label: attr.label,
+							kvalue: dot.s[attr.k]
+						})
 					}
-					console.log(attr)
-
-					et.attributes = [ attr ]
 				}
 			}
 
