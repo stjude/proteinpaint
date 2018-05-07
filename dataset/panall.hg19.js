@@ -93,7 +93,8 @@ module.exports={
 				{key:'subtype1'},
 				{key:'ageGroup'}
 			],
-			querykey:'svcnv'
+			colorbygeneexpression:{ querykey:'generlog' }, // not about mds
+			querykey:'svcnv', // combine with mds
 		}
 	},
 

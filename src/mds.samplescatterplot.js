@@ -27,7 +27,10 @@ obj:
 	.values
 	.__inuse
 	.labelhandle
-
+.colorbygeneexpression{}
+	.querykey
+	.labelhandle
+	.__inuse
 
 
 ********************** EXPORTED
@@ -110,10 +113,9 @@ export function init (obj,holder, debugmode) {
 		obj.querykey = data.querykey // for the moment it should always be set
 
 		// TODO generic attributes for legend, specify some categorical ones for coloring
-		if(data.colorbyattributes) {
-			obj.colorbyattributes = data.colorbyattributes
-			init_dotcolor_legend(obj)
-		}
+		obj.colorbyattributes = data.colorbyattributes
+		obj.colorbygeneexpression = data.colorbygeneexpression
+		init_dotcolor_legend(obj)
 
 		init_plot(obj)
 	})
@@ -181,7 +183,11 @@ function init_plot (obj) {
 			]
 			for(const attrkey in obj.mds.sampleAttribute.attributes) {
 				const attr = obj.mds.sampleAttribute.attributes[attrkey]
-				lst.push( { k:attr.label, v: d.s[attrkey] } )
+				const v = d.s[attrkey]
+				lst.push( {
+					k:attr.label,
+					v: d.s[attrkey]
+				} )
 			}
 
 			obj.tip.clear()
@@ -257,16 +263,23 @@ function init_plot (obj) {
 
 
 function assign_color4dots(obj) {
-	let colordotsby
-	if(obj.colorbyattributes) {
-		colordotsby = obj.colorbyattributes.find( i=> i.__inuse ) || obj.colorbyattributes[0]
+
+	let byattr
+
+	if(obj.colorbygeneexpression && obj.colorbygeneexpression.__inuse) {
+
+	} else if(obj.colorbyattributes) {
+
+		byattr = obj.colorbyattributes.find( i=> i.__inuse ) || obj.colorbyattributes[0]
+
 	}
+
 	obj.dotselection
 		.transition()
 		.attr('fill', d=>{
-			if(colordotsby) {
-				const value = d.s[ colordotsby.key ]
-				return colordotsby.values.get( value ).color
+			if(byattr) {
+				const value = d.s[ byattr.key ]
+				return byattr.values.get( value ).color
 			}
 			return '#ccc'
 		})
@@ -282,77 +295,89 @@ function init_dotcolor_legend(obj) {
 	by gene expression
 	*/
 
-	if(!obj.colorbyattributes.find(i=>i.__inuse)) obj.colorbyattributes[0].__inuse=true
+	if(obj.colorbyattributes) {
+		if(!obj.colorbyattributes.find(i=>i.__inuse)) obj.colorbyattributes[0].__inuse=true
 
-	for(const attr of obj.colorbyattributes) {
+		for(const attr of obj.colorbyattributes) {
 
-		const tr = obj.legendtable.append('tr')
+			const tr = obj.legendtable.append('tr')
 
-		// legend item name
-		attr.labelhandle = tr.append('td')
-			.append('div')
-			.style('white-space','nowrap')
-			.text(attr.label)
-			.attr('class','sja_clb')
-			.on('click',()=>{
-				for(const attr2 of obj.colorbyattributes) {
-					attr2.__inuse=false
-					attr2.labelhandle.style('background','').style('border-bottom','')
-				}
-				attr.__inuse=true
-				attr.labelhandle.style('background','#ededed').style('border-bottom','solid 2px #858585')
-				assign_color4dots(obj)
-			})
-
-		if(attr.__inuse) {
-			attr.labelhandle.style('background','#ededed').style('border-bottom','solid 2px #858585')
-		}
-
-		const colorfunc = scaleOrdinal(schemeCategory10)
-		if(attr.values) {
-			/*
-			provided by dataset config
-			{ value: {color} }
-			convert to map
-			*/
-			const values = new Map()
-			for(const value in attr.values) {
-				const v = attr.values[value]
-				v.count = 0
-				values.set( value, v)
-			}
-			attr.values = values
-		} else {
-			attr.values = new Map()
-		}
-
-		for(const d of obj.dots) {
-			const value = d.s[attr.key]
-			const color = colorfunc( value )
-			if(!attr.values.has(value)) {
-				attr.values.set(value,{ count:1, color:color })
-			}
-			attr.values.get( value ).count++
-		}
-
-		// legend values
-		const cellholder = tr.append('td')
-
-		for(const [value,o] of attr.values) {
-			const cell = cellholder.append('div')
-				.style('display','inline-block')
+			// legend item name
+			attr.labelhandle = tr.append('td')
+				.append('div')
+				.style('white-space','nowrap')
+				.text(attr.label)
 				.attr('class','sja_clb')
-			cell.append('div')
-				.style('display','inline-block')
-				.attr('class','sja_mcdot')
-				.style('background',o.color)
-				.style('margin-right','3px')
-				.text(o.count)
-			cell.append('div')
-				.style('display','inline-block')
-				.style('color',o.color)
-				.text(value)
+				.on('click',()=>{
+					for(const attr2 of obj.colorbyattributes) {
+						attr2.__inuse=false
+						attr2.labelhandle.style('background','').style('border-bottom','')
+					}
+					attr.__inuse=true
+					attr.labelhandle.style('background','#ededed').style('border-bottom','solid 2px #858585')
+					assign_color4dots(obj)
+				})
+
+			if(attr.__inuse) {
+				attr.labelhandle.style('background','#ededed').style('border-bottom','solid 2px #858585')
+			}
+
+			const colorfunc = scaleOrdinal(schemeCategory10)
+			if(attr.values) {
+				/*
+				provided by dataset config
+				{ value: {color} }
+				convert to map
+				*/
+				const values = new Map()
+				for(const value in attr.values) {
+					const v = attr.values[value]
+					v.count = 0
+					values.set( value, v)
+				}
+				attr.values = values
+			} else {
+				attr.values = new Map()
+			}
+
+			for(const d of obj.dots) {
+				const value = d.s[attr.key]
+				const color = colorfunc( value )
+				if(!attr.values.has(value)) {
+					attr.values.set(value,{ count:1, color:color })
+				}
+				attr.values.get( value ).count++
+			}
+
+			// legend values
+			const cellholder = tr.append('td')
+
+			for(const [value,o] of attr.values) {
+				const cell = cellholder.append('div')
+					.style('display','inline-block')
+					.attr('class','sja_clb')
+				cell.append('div')
+					.style('display','inline-block')
+					.attr('class','sja_mcdot')
+					.style('background',o.color)
+					.style('margin-right','3px')
+					.text(o.count)
+				cell.append('div')
+					.style('display','inline-block')
+					.style('color',o.color)
+					.text(value)
+			}
 		}
+	}
+
+	if(obj.colorbygeneexpression) {
+		/*
+		const tr = obj.legendtable.append('tr')
+		obj.colorbygeneexpression.labelhandle = tr.append('td')
+			.append('div')
+			.text('Gene expression')
+		const td = tr.append('td')
+		*/
 	}
 }
 
@@ -361,7 +386,6 @@ function init_dotcolor_legend(obj) {
 function click_dot(dot, obj) {
 	/*
 	clicking a dot to launch browser view of tracks from this sample
-
 	*/
 
 	const pane = client.newpane({x:d3event.clientX,y:d3event.clientY})

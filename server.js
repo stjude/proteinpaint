@@ -7199,6 +7199,7 @@ function handle_mdssamplescatterplot (req,res) {
 		}
 		res.send({
 			colorbyattributes: ds.cohort.scatterplot.colorbyattributes,
+			colorbygeneexpression: ds.cohort.scatterplot.colorbygeneexpression,
 			querykey: ds.cohort.scatterplot.querykey,
 			dots:dots,
 		})
@@ -9720,11 +9721,21 @@ function mds_init(ds,genome) {
 
 			const sp = ds.cohort.scatterplot
 
-			// for the moment require querykey
+			// querykey is required
 			if(!sp.querykey) return '.querykey missing from .cohort.scatterplot'
 			{
-				if(!ds.queries) return '.cohort.scatterplot.querykey in use but ds.queries missing'
-				if(!ds.queries[ sp.querykey ]) return 'unknown query by .cohort.scatterplot.querykey: '+sp.querykey
+				if(!ds.queries) return '.cohort.scatterplot.querykey in use but ds.queries{} missing'
+				const tk = ds.queries[ sp.querykey ]
+				if(!tk) return 'unknown query by .cohort.scatterplot.querykey: '+sp.querykey
+				if(tk.type!=common.tkt.mdssvcnv) return 'type is not '+common.tkt.mdssvcnv+' of the track pointed to by .cohort.scatterplot.querykey'
+			}
+
+			if(sp.colorbygeneexpression) {
+				if(!sp.colorbygeneexpression.querykey) return 'querykey missing from .cohort.scatterplot.colorbygeneexpression'
+				if(!ds.queries) return '.cohort.scatterplot.colorbygeneexpression in use by ds.queries{} missing'
+				const tk = ds.queries[ sp.colorbygeneexpression.querykey ]
+				if(!tk) return 'unknown query by .cohort.scatterplot.colorbygeneexpression.querykey: '+sp.colorbygeneexpression.querykey
+				if(!tk.isgenenumeric) return 'isgenenumeric missing from the track pointed to by .cohort.scatterplot.colorbygeneexpression.querykey'
 			}
 
 			// TODO support multiple plots
