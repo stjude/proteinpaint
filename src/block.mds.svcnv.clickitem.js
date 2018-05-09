@@ -154,6 +154,7 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 			}
 
 			if(tk.iscustom) {
+				console.error('solve it here')
 			} else {
 				feature.querykeylst=[
 					tk.querykey
