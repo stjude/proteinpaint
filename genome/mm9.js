@@ -11,7 +11,7 @@ module.exports={
 	},
 	tracks:[
 		{
-			__isgene:true, // only for initialization 
+			__isgene:true,
 			translatecoding:true,
 			file:'anno/refGene.mm9.gz',
 			type:'bedj',
@@ -20,6 +20,17 @@ module.exports={
 			stackspace:1,
 			vpad:4,
 			color:'#1D591D',
+		},
+		{
+			__isgene:true,
+			translatecoding:true,
+			file:'anno/gencode.vM9.mm9.gz',
+			type:'bedj',
+			name:'GENCODE M9',
+			stackheight:16,
+			stackspace:1,
+			vpad:4,
+			color:'#375E80'
 		},
 		{
 			"type":"bedj",
