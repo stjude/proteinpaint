@@ -9,7 +9,7 @@ import {
 	multi_sample_addhighlight,
 	multi_sample_removehighlight
 	} from './block.mds.svcnv'
-import { createbutton_addfeature } from './block.mds.svcnv.samplematrix'
+import { createbutton_addfeature, createnewmatrix_withafeature } from './block.mds.svcnv.samplematrix'
 
 
 /*
@@ -119,8 +119,78 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 			tk.tip2.hide()
 			click_samplegroup_showtable( samplegroup, tk, block )
 		})
-	
-	may_show_matrixbutton(samplegroup, tk, block)
+
+
+	tk.tip2.d.append('div')
+		.attr('class','sja_menuoption')
+		.text('Matrix view')
+		.on('click',()=>{
+			tk.tip2.hide()
+
+			const r = block.rglst[ block.startidx ]
+			const feature = {
+				ismutation:1,
+				width:40,
+				chr: r.chr,
+				start: r.start,
+				stop: r.stop
+			}
+
+			// label, try to use expression gene name
+			if(tk.gene2coord) {
+				// from expression
+				if(tk.selectedgene && tk.gene2coord[tk.selectedgene]) {
+					feature.label = tk.selectedgene
+				} else {
+					// use first gene
+					for(const n in tk.gene2coord) {
+						feature.label = n
+						break
+					}
+				}
+			}
+			if(!feature.label) {
+				feature.label = r.chr+':'+r.start+'-'+r.stop
+			}
+
+			if(tk.iscustom) {
+			} else {
+				feature.querykeylst=[
+					tk.querykey
+				]
+				if(tk.checkvcf) {
+					feature.querykeylst.push( tk.checkvcf.querykey )
+				}
+			}
+
+			// attribute that defines this group of samples
+			const attr = samplegroup.attributes[ samplegroup.attributes.length-1 ]
+
+			for(const m of tk.samplematrices) {
+				if(m.limitsamplebyeitherannotation) {
+					// hardcoded to use first attr
+					const a = m.limitsamplebyeitherannotation[0]
+					if(a && a.key==attr.k && a.value==attr.kvalue) {
+						// belong to this sample group
+						m.addnewfeature_update( feature )
+						return
+					}
+				}
+			}
+
+			// create new smat
+			createnewmatrix_withafeature({
+				tk:tk,
+				block: block,
+				feature: feature,
+				limitsamplebyeitherannotation:[{
+					key: attr.k,
+					value: attr.kvalue
+				}]
+			})
+		})
+	// not in use
+	//may_show_matrixbutton(samplegroup, tk, block)
 }
 
 

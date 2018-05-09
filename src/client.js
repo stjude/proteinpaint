@@ -948,7 +948,7 @@ export function flyindi(from,to) {
 		.style('width',p1.width+'px')
 		.style('height',p1.height+'px')
 	if(base_zindex) {
-		d.style('z-index',base_zindex)
+		d.style('z-index',base_zindex+3)
 	}
 	d.transition().duration(500)
 		.style('left',(p2.left+window.pageXOffset)+'px')

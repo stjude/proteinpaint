@@ -2471,6 +2471,8 @@ function makeTk(tk, block) {
 
 	if(!tk.singlesample) {
 		// in multi-sample
+
+		tk.samplematrices = []
 		
 		// allow hidding some labels
 		// do not override config from native dataset

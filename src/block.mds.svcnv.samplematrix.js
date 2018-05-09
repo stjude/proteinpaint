@@ -3,6 +3,37 @@ import * as client from './client'
 
 
 /*
+
+********************** EXPORTED
+may_show_samplematrix_button
+createbutton_addfeature
+createnewmatrix_withafeature
+********************** INTERNAL
+addnewfeature_nosamplefilter
+
+
+created smat is stored in tk.samplematrices[]
+
+createbutton_addfeature():
+	launches smat by a mutation, creates a feature
+	subsequent selection of new mutations will add features to this same smat
+	each feature is limited to that type of mutation
+	does not restrict samples
+	there should only be one such matrix
+
+clicking Matrix view on sample group label
+	launches a smat including all types of mutation
+	restrict samples to the group
+	one matrix can be created for each sample group
+	official only
+
+each time creating either matrix, must find out if it has already existed in samplematrices[]
+currently a hardcoded method of telling that is through limitsamplebyeitherannotation
+	if this attr exists, it belongs to one of sample group
+	otherwise, it is first type
+
+
+
 hardcoded keys to identify tracks in querykey2tracks of a custom dataset
 only used to correlate feature.querykey to its track in smat.querykey2tracks
 their literal value won't be used in server
@@ -22,6 +53,8 @@ export function createbutton_addfeature( p ) {
 	/*
 	create a button for adding feature to samplematrix
 	the feature is underlied by m (m.dt for datatype)
+
+	no sample filter: this feature does not restrict samples to a group
 	*/
 
 	const {m, tk, block, holder} = p
@@ -128,104 +161,114 @@ export function createbutton_addfeature( p ) {
 			p.pane.pane.remove()
 		}
 
-		addnewfeature( nf, tk, block )
+		addnewfeature_nosamplefilter( nf, tk, block )
 	})
 }
 
 
 
-function addnewfeature( nf, tk, block) {
+function addnewfeature_nosamplefilter( nf, tk, block) {
 	/*
-	if samplematrix instance has already been created, add feature;
-	otherwise, create instance with the new feature
+	will generate a matrix without sample filtering
+	if the matrix does not exist, create it;
+	otherwise, add the new feature to it
+
 	*/
-	if(!tk.samplematrix) {
 
-		// create new instance
+	const smat = tk.samplematrices.find( i=> !i.limitsamplebyeitherannotation ) // hardcoded to use this attribute to tell
 
-		const pane = client.newpane({
-			x:100,
-			y:100, 
-			close: ()=>{
-				client.flyindi(
-					pane.pane,
-					tk.config_handle
-				)
-				pane.pane.style('display','none')
-			}
-		})
-		pane.header.text(tk.name)
-
-		const arg = {
-			debugmode: block.debugmode,
-			genome: block.genome,
-			features: [ nf ],
-			hostURL: block.hostURL,
-			jwt:block.jwt,
-			holder: pane.body.append('div').style('margin','20px'),
-		}
-
-		if(tk.iscustom) {
-
-			arg.iscustom = 1
-			arg.querykey2tracks = {}
-			arg.querykey2tracks[ customkey_svcnv ] = {
-				type: common.tkt.mdssvcnv,
-				file: tk.file,
-				url: tk.url,
-				indexURL: tk.indexURL
-			}
-			if(tk.checkexpressionrank) {
-				/*
-				gene expression track file "type" is only temporary,
-				since in mds.queries, this data is not regarded as a track, thus has no type
-				add type here so server code won't break
-				*/
-				arg.querykey2tracks[ customkey_expression ] = {
-					type: common.tkt.mdsexpressionrank
-				}
-				for(const k in tk.checkexpressionrank) {
-					arg.querykey2tracks[ customkey_expression ][ k ] = tk.checkexpressionrank[ k ]
-				}
-			}
-			if(tk.checkvcf) {
-				// hardcoded one single vcf file
-				arg.querykey2tracks[ customkey_vcf ] = {
-					type: common.tkt.mdsvcf
-				}
-				for(const k in tk.checkvcf) {
-					if(k=='stringifiedObj') continue
-					arg.querykey2tracks[ customkey_vcf ][ k ] = tk.checkvcf[ k ]
-				}
-			}
-
-		} else {
-			// official
-			arg.dslabel = tk.mds.label
-		}
-
-		import('./samplematrix').then(_=>{
-			tk.samplematrix = new _.Samplematrix( arg )
-			tk.samplematrix._pane = pane
+	if(!smat) {
+		createnewmatrix_withafeature( {
+			feature:nf,
+			tk:tk,
+			block:block
 		})
 		return
 	}
 
 	// already exists
-	if(tk.samplematrix._pane.pane.style('display')=='none') {
+	if(smat._pane.pane.style('display')=='none') {
 		// show first
-		tk.samplematrix._pane.pane.style('display','block').style('opacity',1)
+		client.appear(smat._pane.pane)
 	}
-	// add new feature
-	tk.samplematrix.features.push( nf )
 
-	tk.samplematrix.validate_feature( nf )
-	.then(()=>{
-		return tk.samplematrix.get_features( [nf] )
+	smat.addnewfeature_update( nf )
+}
+
+
+
+
+
+export function createnewmatrix_withafeature(_p) {
+	// create new instance
+	const {feature, tk, block, limitsamplebyeitherannotation} = _p
+
+	const pane = client.newpane({
+		x:100,
+		y:100, 
+		close: ()=>{
+			client.flyindi(
+				pane.pane,
+				tk.config_handle
+			)
+			pane.pane.style('display','none')
+		}
 	})
-	.catch(err=>{
-		tk.samplematrix.error( typeof(err)=='string' ? err : err.message )
-		if(err.stack) console.log(err.stack)
+	pane.header.text(tk.name)
+
+	const arg = {
+		debugmode: block.debugmode,
+		genome: block.genome,
+		features: [ feature ],
+		hostURL: block.hostURL,
+		limitsamplebyeitherannotation: limitsamplebyeitherannotation,
+		jwt:block.jwt,
+		holder: pane.body.append('div').style('margin','20px'),
+	}
+
+	if(tk.iscustom) {
+
+		arg.iscustom = 1
+		arg.querykey2tracks = {}
+		arg.querykey2tracks[ customkey_svcnv ] = {
+			type: common.tkt.mdssvcnv,
+			file: tk.file,
+			url: tk.url,
+			indexURL: tk.indexURL
+		}
+		if(tk.checkexpressionrank) {
+			/*
+			gene expression track file "type" is only temporary,
+			since in mds.queries, this data is not regarded as a track, thus has no type
+			add type here so server code won't break
+			*/
+			arg.querykey2tracks[ customkey_expression ] = {
+				type: common.tkt.mdsexpressionrank
+			}
+			for(const k in tk.checkexpressionrank) {
+				arg.querykey2tracks[ customkey_expression ][ k ] = tk.checkexpressionrank[ k ]
+			}
+		}
+		if(tk.checkvcf) {
+			// hardcoded one single vcf file
+			arg.querykey2tracks[ customkey_vcf ] = {
+				type: common.tkt.mdsvcf
+			}
+			for(const k in tk.checkvcf) {
+				if(k=='stringifiedObj') continue
+				arg.querykey2tracks[ customkey_vcf ][ k ] = tk.checkvcf[ k ]
+			}
+		}
+
+	} else {
+		// official
+		arg.dslabel = tk.mds.label
+	}
+
+	import('./samplematrix').then(_=>{
+		const m = new _.Samplematrix( arg )
+		m._pane = pane
+		tk.samplematrices.push( m )
 	})
 }
 
@@ -236,32 +279,77 @@ export function may_show_samplematrix_button(tk, block) {
 	/*
 	if samplematrix is hidden, show button in config menu
 	*/
-	if(!tk.samplematrix) return
-	if(tk.samplematrix._pane.pane.style('display')!='none') {
-		// already shown
-		return
+	if(!tk.samplematrices || tk.samplematrices.length==0) return
+
+	const table = tk.tkconfigtip.d.append('table')
+		.style('margin-bottom','5px')
+
+
+	for(const m of tk.samplematrices) {
+		const tr=table.append('tr')
+		
+		{
+			// name
+
+			const words=[]
+			if(m.limitsamplebyeitherannotation) {
+				// by sample group
+				const a = m.limitsamplebyeitherannotation[0]
+				words.push(a.key+': '+a.value)
+			} else {
+				// general
+				words.push('Any sample')
+			}
+			const c=m.features.length
+			words.push(c+' feature'+(c>1?'s':''))
+
+			const div = tr.append('td')
+				.append('div')
+				.attr('class','sja_menuoption')
+				.style('border','solid 1px #ededed')
+				.text(words.join(', '))
+			if(m._pane.pane.style('display')=='none') {
+				div.style('border-color','black')
+			}
+			div.on('click',()=>{
+				if(m._pane.pane.style('display')=='none') {
+					client.appear(m._pane.pane)
+					client.flyindi(div, m._pane.pane)
+					div.style('border-color','#ededed')
+				} else {
+					client.flyindi(m._pane.pane, div)
+					client.disappear(m._pane.pane)
+					div.style('border-color','black')
+				}
+			})
+		}
+
+		{
+			// remove
+			tr.append('td')
+			.attr('class','sja_menuoption')
+			.html('&times;')
+			.on('click',()=>{
+				tr.remove()
+				m._pane.pane.remove()
+				for(const [i, m2] of tk.samplematrices.entries()) {
+					if(m.limitsamplebyeitherannotation) {
+						if(m2.limitsamplebyeitherannotation) {
+							const a = m.limitsamplebyeitherannotation[0]
+							const b = m2.limitsamplebyeitherannotation[0]
+							if(a.key==b.key && a.value==b.value) {
+								tk.samplematrices.splice(i,1)
+								return
+							}
+						}
+					} else {
+						if(!m2.limitsamplebyeitherannotation) {
+							tk.samplematrices.splice(i,1)
+							return
+						}
+					}
+				}
+			})
+		}
 	}
-
-	const row = tk.tkconfigtip.d.append('div')
-		.style('margin-bottom','15px')
-
-	row.append('div')
-		.style('display','inline-block')
-		.attr('class','sja_menuoption')
-		.text('Show sample-by-attribute matrix')
-		.on('click',()=>{
-			tk.tkconfigtip.hide()
-			tk.samplematrix._pane.pane
-				.transition()
-				.style('display','block')
-		})
-	row.append('div')
-		.style('display','inline-block')
-		.attr('class','sja_menuoption')
-		.html('&times; delete')
-		.on('click',()=>{
-			row.remove()
-			tk.samplematrix._pane.pane.remove()
-			delete tk.samplematrix
-		})
 }

@@ -18,6 +18,7 @@ JUMP __draw __menu
 ****************** exposed methods (as in block.mds.svcnv.samplematrix.js)
 	.validate_feature()
 	.get_features()
+	.addnewfeature_update()
 	.error()
 
 ****************** internal use
@@ -610,6 +611,22 @@ export class Samplematrix {
 
 			this.draw_matrix()
 			this.make_legend()
+		})
+	}
+
+
+
+	addnewfeature_update( f ) {
+		// add a new feature, get data, update and done
+		this.features.push( f )
+
+		this.validate_feature( f )
+		.then(()=>{
+			return this.get_features( [f] )
+		})
+		.catch(err=>{
+			this.error( typeof(err)=='string' ? err : err.message )
+			if(err.stack) console.log(err.stack)
 		})
 	}
 
@@ -2376,7 +2393,7 @@ sort samples by f.issampleattribute
 
 
 function drawEmptycell(sample,feature,g) {
-	return
+	if(sample.height<5) return
 	g.append('line')
 		.attr('x2',feature.width)
 		.attr('y2',sample.height)
