@@ -39,6 +39,7 @@ export default function (arg) {
 	paint.samplecart=arg.samplecart
 	paint.debugmode=arg.debugmode
 	paint.tklst = arg.tklst || []
+	paint.datasetqueries = arg.datasetqueries
 	paint.error=m => client.sayerror(paint.holder,m)
 
 	if(!arg.genome) {
@@ -298,6 +299,7 @@ function step3(paint) {
 		hidegenecontrol:paint.hidegenecontrol,
 		hidegenelegend:paint.hidegenelegend,
 		variantPageCall_snv:paint.variantPageCall_snv,
+		datasetqueries: paint.datasetqueries,
 		samplecart:paint.samplecart,
 		debugmode:paint.debugmode,
 		tklst: paint.tklst,

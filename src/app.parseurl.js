@@ -28,8 +28,11 @@ for(const s of decodeURIComponent( location.search.substr(1) ).split('&')) {
 			key='gene'
 		}
 		urlp.set(key,l[1])
+
+		sessionStorage.setItem( 'urlp_'+key, l[1] )
 	}
 }
+
 
 
 

@@ -27,6 +27,7 @@ returns a promise that resolve to something e.g. block
 
 initgenome()
 validate_oldds()
+findgene2paint
 
 ********** loaders from parseembedthenurl()
 
@@ -448,7 +449,10 @@ function findgene2paint( str, genomename, jwt ) {
 			})
 		return
 	}
-	blockinit({
+
+	// input string is not coordinate, find gene match
+
+	const par = {
 		hostURL:hostURL,
 		jwt:jwt,
 		query:str,
@@ -457,7 +461,19 @@ function findgene2paint( str, genomename, jwt ) {
 		variantPageCall_snv:variantPageCall_snv,
 		samplecart:samplecart,
 		debugmode:debugmode
-	})
+	}
+
+
+	// add svcnv tk from url param
+	const tmp = sessionStorage.getItem( 'urlp_mds' )
+	if(tmp) {
+		const l = tmp.split(',')
+		if(l.length==2) {
+			par.datasetqueries = [ { dataset: l[0], querykey: l[1] } ]
+		}
+	}
+
+	blockinit( par )
 }
 
 
