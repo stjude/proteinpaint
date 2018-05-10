@@ -34,6 +34,17 @@ for(const s of decodeURIComponent( location.search.substr(1) ).split('&')) {
 }
 
 
+if(urlp.has('genome') && arg.selectgenome) {
+	const n = urlp.get('genome')
+	for(let i=0; i<arg.selectgenome.node().childNodes.length; i++) {
+		if(arg.selectgenome.node().childNodes[i].value == n) {
+			arg.selectgenome.property('selectedIndex',i)
+			break
+		}
+	}
+}
+
+
 
 
 if(urlp.has('block')) {

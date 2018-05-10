@@ -839,6 +839,7 @@ function parseembedthenurl(arg, holder, selectgenome) {
 				variantPageCall_snv:variantPageCall_snv,
 				samplecart:samplecart,
 				holder:holder,
+				selectgenome:selectgenome,
 				debugmode:debugmode
 			})
 			if(err) {
