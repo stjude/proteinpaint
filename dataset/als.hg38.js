@@ -42,7 +42,7 @@ module.exports={
 				label:'AF',
 				isnumeric:1,
 				filter:1,
-				cutoffvalue:0.1,
+				cutoffvalue:0.01,
 				keeplowerthan:true
 			}
 		}
