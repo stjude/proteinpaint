@@ -295,7 +295,7 @@ export function may_show_samplematrix_button(tk, block) {
 			if(m.limitsamplebyeitherannotation) {
 				// by sample group
 				const a = m.limitsamplebyeitherannotation[0]
-				words.push(a.key+': '+a.value)
+				words.push(a.value)
 			} else {
 				// general
 				words.push('Any sample')

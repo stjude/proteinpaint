@@ -3583,7 +3583,11 @@ export function done_tknodata(tk, block) {
 		// went beyond range
 		block.tkerror(tk,tk.name+': zoom in under '+common.bplen(tk.viewrangeupperlimit)+' to view data')
 	} else {
-		block.tkerror(tk,tk.name+': no data in view range')
+		let context = 'view range'
+		if(block.usegm && block.gmmode!=client.gmmode.genomic) {
+			context = block.usegm.name || block.usegm.isoform
+		}
+		block.tkerror(tk,tk.name+': no mutation in '+context)
 	}
 
 	if(tk.hlaachange) {

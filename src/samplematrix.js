@@ -61,13 +61,7 @@ export class Samplematrix {
 		this.menu = new client.Menu({padding:'0px'})
 		this.errdiv = this.holder.append('div')
 
-		// one legend item for each feature -- may not be desirable though
-		this.legendtable = this.holder.append('table')
-			.style('margin-bottom','20px')
-			.style('border-spacing','10px')
-		if(this.hidelegend_features) {
-			this.legendtable.style('display','none')
-		}
+		init_legendholder(this)
 
 		if(this.header) {
 			this.holder.append('div')
@@ -2616,4 +2610,31 @@ function initfeature_polymutation(f) {
 
 	if(!f.snvindel) f.snvindel = {}
 	// snvindel class color come from common.mclass
+}
+
+
+
+
+function init_legendholder(o) {
+
+	const div = o.holder.append('div')
+		.style('margin-bottom','20px')
+	div.append('div')
+		.style('display','inline-block')
+		.attr('class','sja_menuoption')
+		.style('font-size','.8em')
+		.text('LEGEND')
+		.on('click',()=>{
+			if(o.legendtable.style('display')=='none') {
+				client.appear(o.legendtable)
+			} else {
+				client.disappear(o.legendtable)
+			}
+		})
+
+	// one legend item for each feature
+	o.legendtable = div.append('table')
+		.style('border-left','solid 1px #ededed')
+		.style('border-spacing','10px')
+		.style('display','none')
 }
