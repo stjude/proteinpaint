@@ -1722,7 +1722,7 @@ sort samples by f.issampleattribute
 
 		this.menu.d.append('div')
 			.attr('class','sja_menuoption')
-			.text('Remove')
+			.text('Remove this feature')
 			.on('click',()=>{
 				this.menu.hide()
 				f.legend_tr.remove()
@@ -1730,18 +1730,10 @@ sort samples by f.issampleattribute
 				this.draw_matrix()
 			})
 
-		if(f.isgenevalue) {
-			this.showMenu_isgenevalue(f )
-			return
-		}
-		if(f.iscnv) {
-			this.showMenu_iscnv(f)
-			return
-		}
-		if(f.isloh) {
-			this.showMenu_isloh(f)
-			return
-		}
+		if(f.isgenevalue) return this.showMenu_isgenevalue(f )
+		if(f.iscnv) return this.showMenu_iscnv( f, f )
+		if(f.isloh) return this.showMenu_isloh(f, f)
+		if(f.ismutation) return this.showMenu_ismutation(f)
 		if(f.isitd) {
 			// TODO
 			return
@@ -1751,10 +1743,6 @@ sort samples by f.issampleattribute
 			return
 		}
 		if(f.issvcnv) {
-			// TODO
-			return
-		}
-		if(f.ismutation) {
 			// TODO
 			return
 		}
@@ -1831,14 +1819,20 @@ sort samples by f.issampleattribute
 
 
 
-	showMenu_iscnv(f) {
+	showMenu_iscnv( f, obj ) {
+		/*
+		if reuse it for ismutation, obj should be f.cnv
+		if iscnv can also use f.cnv, then no need to bother with it
+		*/
+
+
 		// log2ratio cutoff
 		{
 			const row=this.menu.d.append('div')
 				.style('margin','10px')
 			row.append('span').html('CNV log2(ratio) cutoff&nbsp;')
 			row.append('input')
-				.property( 'value', f.valuecutoff || 0 )
+				.property( 'value', obj.valuecutoff || 0 )
 				.attr('type','number')
 				.style('width','50px')
 				.on('keyup',()=>{
@@ -1849,9 +1843,9 @@ sort samples by f.issampleattribute
 						v=0
 					}
 					if(v==0) {
-						if(f.valuecutoff) {
+						if(obj.valuecutoff) {
 							// cutoff has been set, cancel and refetch data
-							f.valuecutoff=0
+							obj.valuecutoff=0
 							this.update_singlefeature(f)
 						} else {
 							// cutoff has not been set, do nothing
@@ -1859,18 +1853,18 @@ sort samples by f.issampleattribute
 						return
 					}
 					// set cutoff
-					if(f.valuecutoff) {
+					if(obj.valuecutoff) {
 						// cutoff has been set
-						if(f.valuecutoff==v) {
+						if(obj.valuecutoff==v) {
 							// same as current cutoff, do nothing
 						} else {
 							// set new cutoff
-							f.valuecutoff=v
+							obj.valuecutoff=v
 							this.update_singlefeature(f)
 						}
 					} else {
 						// cutoff has not been set
-						f.valuecutoff=v
+						obj.valuecutoff=v
 						this.update_singlefeature(f)
 					}
 				})
@@ -1887,7 +1881,7 @@ sort samples by f.issampleattribute
 			row.append('span')
 				.html('CNV segment size limit&nbsp;')
 			row.append('input')
-				.property('value', f.focalsizelimit || 0)
+				.property('value', obj.focalsizelimit || 0)
 				.attr('type','number')
 				.style('width','100px')
 				.on('keyup',()=>{
@@ -1898,9 +1892,9 @@ sort samples by f.issampleattribute
 						v=0
 					}
 					if(v==0) {
-						if(f.focalsizelimit) {
+						if(obj.focalsizelimit) {
 							// cutoff has been set, cancel and refetch data
-							f.focalsizelimit=0
+							obj.focalsizelimit=0
 							this.update_singlefeature(f)
 						} else {
 							// cutoff has not been set, do nothing
@@ -1908,18 +1902,18 @@ sort samples by f.issampleattribute
 						return
 					}
 					// set cutoff
-					if(f.focalsizelimit) {
+					if(obj.focalsizelimit) {
 						// cutoff has been set
-						if(f.focalsizelimit==v) {
+						if(obj.focalsizelimit==v) {
 							// same as current cutoff, do nothing
 						} else {
 							// set new cutoff
-							f.focalsizelimit=v
+							obj.focalsizelimit=v
 							this.update_singlefeature(f)
 						}
 					} else {
 						// cutoff has not been set
-						f.focalsizelimit=v
+						obj.focalsizelimit=v
 						this.update_singlefeature(f)
 					}
 				})
@@ -1935,14 +1929,14 @@ sort samples by f.issampleattribute
 
 
 
-	showMenu_isloh(f) {
+	showMenu_isloh(f, obj) {
 		// segmean cutoff
 		{
 			const row=this.menu.d.append('div')
 				.style('margin','10px')
 			row.append('span').html('LOH segmean cutoff&nbsp;')
 			row.append('input')
-				.property( 'value', f.valuecutoff || 0 )
+				.property( 'value', obj.valuecutoff || 0 )
 				.attr('type','number')
 				.style('width','50px')
 				.on('keyup',()=>{
@@ -1953,9 +1947,9 @@ sort samples by f.issampleattribute
 						v=0
 					}
 					if(v==0) {
-						if(f.valuecutoff) {
+						if(obj.valuecutoff) {
 							// cutoff has been set, cancel and refetch data
-							f.valuecutoff=0
+							obj.valuecutoff=0
 							this.update_singlefeature(f)
 						} else {
 							// cutoff has not been set, do nothing
@@ -1963,18 +1957,18 @@ sort samples by f.issampleattribute
 						return
 					}
 					// set cutoff
-					if(f.valuecutoff) {
+					if(obj.valuecutoff) {
 						// cutoff has been set
-						if(f.valuecutoff==v) {
+						if(obj.valuecutoff==v) {
 							// same as current cutoff, do nothing
 						} else {
 							// set new cutoff
-							f.valuecutoff=v
+							obj.valuecutoff=v
 							this.update_singlefeature(f)
 						}
 					} else {
 						// cutoff has not been set
-						f.valuecutoff=v
+						obj.valuecutoff=v
 						this.update_singlefeature(f)
 					}
 				})
@@ -1991,7 +1985,7 @@ sort samples by f.issampleattribute
 			row.append('span')
 				.html('LOH segment size limit&nbsp;')
 			row.append('input')
-				.property('value', f.focalsizelimit || 0)
+				.property('value', obj.focalsizelimit || 0)
 				.attr('type','number')
 				.style('width','100px')
 				.on('keyup',()=>{
@@ -2002,9 +1996,9 @@ sort samples by f.issampleattribute
 						v=0
 					}
 					if(v==0) {
-						if(f.focalsizelimit) {
+						if(obj.focalsizelimit) {
 							// cutoff has been set, cancel and refetch data
-							f.focalsizelimit=0
+							obj.focalsizelimit=0
 							this.update_singlefeature(f)
 						} else {
 							// cutoff has not been set, do nothing
@@ -2012,18 +2006,18 @@ sort samples by f.issampleattribute
 						return
 					}
 					// set cutoff
-					if(f.focalsizelimit) {
+					if(obj.focalsizelimit) {
 						// cutoff has been set
-						if(f.focalsizelimit==v) {
+						if(obj.focalsizelimit==v) {
 							// same as current cutoff, do nothing
 						} else {
 							// set new cutoff
-							f.focalsizelimit=v
+							obj.focalsizelimit=v
 							this.update_singlefeature(f)
 						}
 					} else {
 						// cutoff has not been set
-						f.focalsizelimit=v
+						obj.focalsizelimit=v
 						this.update_singlefeature(f)
 					}
 				})
@@ -2032,6 +2026,176 @@ sort samples by f.issampleattribute
 				.style('font-size','.7em')
 				.style('opacity',.5)
 				.html('Limit the LOH segment length to show only focal events.<br>Set to 0 to cancel.')
+		}
+	}
+
+
+
+	showMenu_ismutation(f) {
+
+		const table = this.menu.d.append('table')
+			.style('margin','10px')
+			.style('border-spacing','1px')
+
+		{
+			// cnv
+			const tr = table.append('tr')
+			tr.append('td')
+				.style('opacity',.5)
+				.text('CNV')
+			tr.append('td')
+				.attr('class','sja_menuoption')
+				.text( f.cnv.hidden ? 'Show' : 'Hide' )
+				.on('click',()=>{
+					f.cnv.hidden = !f.cnv.hidden
+					this.update_singlefeature(f)
+					this.menu.hide()
+				})
+			tr.append('td')
+				.attr('class','sja_menuoption')
+				.text('Show only')
+				.on('click',()=>{
+					ismutation_hideallclass(f)
+					delete f.cnv.hidden
+					this.update_singlefeature(f)
+					this.menu.hide()
+				})
+			const td=tr.append('td')
+			if(!f.cnv.hidden) {
+				td
+				.attr('class','sja_menuoption')
+				.style('font-size','.8em')
+				.text('CONFIG')
+				.on('click',()=>{
+					this.menu.clear()
+					this.showMenu_iscnv( f, f.cnv )
+				})
+			}
+		}
+		{
+			// loh
+			const tr = table.append('tr')
+			tr.append('td')
+				.style('opacity',.5)
+				.text('LOH')
+			tr.append('td')
+				.attr('class','sja_menuoption')
+				.text( f.loh.hidden ? 'Show' : 'Hide' )
+				.on('click',()=>{
+					f.loh.hidden = !f.loh.hidden
+					this.update_singlefeature(f)
+					this.menu.hide()
+				})
+			tr.append('td')
+				.attr('class','sja_menuoption')
+				.text('Show only')
+				.on('click',()=>{
+					ismutation_hideallclass(f)
+					delete f.loh.hidden
+					this.update_singlefeature(f)
+					this.menu.hide()
+				})
+			const td=tr.append('td')
+			if(!f.loh.hidden) {
+				td
+				.attr('class','sja_menuoption')
+				.style('font-size','.8em')
+				.text('CONFIG')
+				.on('click',()=>{
+					this.menu.clear()
+					this.showMenu_isloh( f, f.loh )
+				})
+			}
+		}
+		{
+			// itd
+			const tr = table.append('tr')
+			tr.append('td')
+				.style('opacity',.5)
+				.text('ITD')
+			tr.append('td')
+				.attr('class','sja_menuoption')
+				.text( f.itd.hidden ? 'Show' : 'Hide' )
+				.on('click',()=>{
+					f.itd.hidden = !f.itd.hidden
+					this.update_singlefeature(f)
+					this.menu.hide()
+				})
+			tr.append('td')
+				.attr('class','sja_menuoption')
+				.text('Show only')
+				.on('click',()=>{
+					ismutation_hideallclass(f)
+					delete f.itd.hidden
+					this.update_singlefeature(f)
+					this.menu.hide()
+				})
+			const td=tr.append('td')
+			if(!f.itd.hidden) {
+				// no config yet for itd
+			}
+		}
+		{
+			// sv
+			const tr = table.append('tr')
+			tr.append('td')
+				.style('opacity',.5)
+				.text('SV')
+			tr.append('td')
+				.attr('class','sja_menuoption')
+				.text( f.sv.hidden ? 'Show' : 'Hide' )
+				.on('click',()=>{
+					f.sv.hidden = !f.sv.hidden
+					this.update_singlefeature(f)
+					this.menu.hide()
+				})
+			tr.append('td')
+				.attr('class','sja_menuoption')
+				.text('Show only')
+				.on('click',()=>{
+					ismutation_hideallclass(f)
+					delete f.sv.hidden
+					this.update_singlefeature(f)
+					this.menu.hide()
+				})
+			const td=tr.append('td')
+			if(!f.sv.hidden) {
+				// no config yet for sv
+			}
+		}
+		{
+			// fusion
+			const tr = table.append('tr')
+			tr.append('td')
+				.style('opacity',.5)
+				.text('Fusion')
+			tr.append('td')
+				.attr('class','sja_menuoption')
+				.text( f.fusion.hidden ? 'Show' : 'Hide' )
+				.on('click',()=>{
+					f.fusion.hidden = !f.fusion.hidden
+					this.update_singlefeature(f)
+					this.menu.hide()
+				})
+			tr.append('td')
+				.attr('class','sja_menuoption')
+				.text('Show only')
+				.on('click',()=>{
+					ismutation_hideallclass(f)
+					delete f.fusion.hidden
+					this.update_singlefeature(f)
+					this.menu.hide()
+				})
+			const td=tr.append('td')
+			if(!f.fusion.hidden) {
+				// no config yet for fusion
+			}
+		}
+
+		// each mclass
+		for(const k in common.mclass) {
+			const c = common.mclass[k]
+			// TODO
 		}
 	}
 
@@ -2665,4 +2829,18 @@ function init_legendholder(o) {
 		.style('border-top','solid 1px #ededed')
 		.style('border-spacing','10px')
 		.style('display','none')
+}
+
+
+
+function ismutation_hideallclass(f) {
+	f.cnv.hidden=true
+	f.loh.hidden=true
+	f.itd.hidden=true
+	f.sv.hidden=true
+	f.fusion.hidden=true
+	f.snvindel.excludeclasses={}
+	for(const k in common.mclass) {
+		if(common.mclass[k].dt==common.dtsnvindel) f.snvindel.excludeclasses[k]=1
+	}
 }
