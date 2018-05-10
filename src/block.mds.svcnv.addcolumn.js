@@ -120,6 +120,8 @@ export function render_multi_genebar( tk, block) {
 		usegene = [...genes][0]
 	}
 
+	tk.showinggene = usegene // quick fix to expose this gene name to smat task in Matrix view
+
 	let minvalue=0
 	let maxvalue=100
 
