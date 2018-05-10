@@ -151,7 +151,44 @@ function matrix_view(tk, block, samplegroup) {
 		width:40,
 		chr: r.chr,
 		start: r.start,
-		stop: r.stop
+		stop: r.stop,
+		cnv: {
+			valuecutoff: tk.valueCutoff,
+			focalsizelimit: tk.bplengthUpperLimit,
+		},
+		loh: {
+			valuecutoff: tk.segmeanValueCutoff,
+			focalsizelimit: tk.lohLengthUpperLimit
+		},
+		itd:{},
+		sv:{},
+		fusion:{},
+		snvindel:{
+			excludeclasses:{}
+		}
+	}
+
+	if(tk.legend_mclass && tk.legend_mclass.hiddenvalues) {
+		// hidden class and dt
+		for(const v of tk.legend_mclass.hiddenvalues) {
+			if(typeof v=='string') {
+				feature.snvindel.excludeclasses[v]=1
+			} else {
+				if(v==common.dtcnv) {
+					feature.cnv.hidden=1
+				} else if(v==common.dtloh) {
+					feature.loh.hidden=1
+				} else if(v==common.dtitd) {
+					feature.itd.hidden=1
+				} else if(v==common.dtsv) {
+					feature.sv.hidden=1
+				} else if(v==common.dtfusionrna) {
+					feature.fusion.hidden=1
+				} else {
+					console.error('unknown hidden dt?? '+v)
+				}
+			}
+		}
 	}
 
 	// label, try to use expression gene name

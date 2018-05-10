@@ -111,7 +111,7 @@ function create_mclass(tk) {
 	const row = tk.legend_table.append('tr')
 	tk.legend_mclass = {
 		row:row,
-		hiddenvalues: new Set(),
+		hiddenvalues: new Set(), // !!!!
 		hidden: false,
 	}
 	row.append('td')

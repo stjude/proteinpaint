@@ -16,24 +16,25 @@ JUMP __draw __menu
 	__newattr places for adding new feature
 
 ****************** exposed methods (as in block.mds.svcnv.samplematrix.js)
-	.validate_feature()
-	.addnewfeature_update()
-	.error()
+.validate_feature()
+.addnewfeature_update()
+.error()
 
 ****************** internal use
-	.validate_config()
-	.get_features()
-	.update_singlefeature()
-	.draw_matrix()
-	.prep_featuredata()
-	.make_legend()
-	.showTip_sample
-	.showTip_feature
-	.showTip_cell
-	.showMenu_feature
-	.gatherSamplesFromFeatureData
-	.click_cell
-	feature2arg()
+.validate_config()
+.get_features()
+.update_singlefeature()
+.draw_matrix()
+.prep_featuredata()
+.make_legend()
+.showTip_sample
+.showTip_feature
+.showTip_cell
+.showMenu_feature
+.gatherSamplesFromFeatureData
+.click_cell
+feature2arg()
+initfeature_polymutation
 
 
 
@@ -470,7 +471,7 @@ export class Samplematrix {
 
 		if(f.issvcnv) {
 
-			// compound mark
+			// loading from a single svcnv file, with multiple types of data
 
 			if(this.dslabel) {
 				// official
@@ -498,6 +499,8 @@ export class Samplematrix {
 
 
 		if(f.ismutation) {
+			// loading from one or more files, svcnv or vcf, for multiple types of marks
+
 			if(this.dslabel) {
 				// official
 				if(!f.querykeylst) throw('.querykeylst missing for ismutation feature')
@@ -2482,6 +2485,7 @@ function feature2arg(f) {
 			stop: f.stop
 		}
 	}
+
 	if(f.issvcnv || f.ismutation) {
 		const arg = {
 			id:f.id,
@@ -2489,17 +2493,29 @@ function feature2arg(f) {
 			start: f.start,
 			stop: f.stop,
 			cnv: {
+				hidden: f.cnv.hidden,
 				valuecutoff: f.cnv.valuecutoff,
 				focalsizelimit: f.cnv.focalsizelimit
 			},
 			loh: {
+				hidden: f.cnv.hidden,
 				valuecutoff: f.loh.valuecutoff,
 				focalsizelimit: f.loh.focalsizelimit
+			},
+			itd:{
+				hidden: f.itd.hidden
+			},
+			sv:{
+				hidden: f.sv.hidden
+			},
+			fusion:{
+				hidden: f.fusion.hidden
 			},
 			snvindel:{
 				excludeclasses: f.snvindel.excludeclasses
 			}
 		}
+
 		if(f.issvcnv) {
 			arg.issvcnv = 1
 			arg.querykey = f.querykey
@@ -2594,7 +2610,7 @@ function getitemforsample_compound( feature, sample ) {
 
 function initfeature_polymutation(f) {
 	/*
-	for issvcnv and ismutation
+	initialize feature for issvcnv and ismutation
 	set defaults if not provided
 	*/
 
@@ -2602,13 +2618,13 @@ function initfeature_polymutation(f) {
 
 	if(!f.cnv) f.cnv = {}
 	if(!f.cnv.valuecutoff) f.cnv.valuecutoff = 0.2
-	if(!f.cnv.focalsizelimit) f.cnv.focalsizelimit=2000000
+	if(!Number.isInteger(f.cnv.focalsizelimit)) f.cnv.focalsizelimit=2000000
 	if(!f.cnv.colorgain) f.cnv.colorgain = default_cnvgaincolor
 	if(!f.cnv.colorloss) f.cnv.colorloss = default_cnvlosscolor
 
 	if(!f.loh) f.loh = {}
 	if(!f.loh.valuecutoff) f.loh.valuecutoff = 0.1
-	if(!f.loh.focalsizelimit) f.loh.focalsizelimit=2000000
+	if(!Number.isInteger(f.loh.focalsizelimit)) f.loh.focalsizelimit=2000000
 	if(!f.loh.color) f.loh.color = default_lohcolor
 
 	if(!f.itd) f.itd = {}
