@@ -17,15 +17,20 @@ JUMP __draw __menu
 
 ****************** exposed methods (as in block.mds.svcnv.samplematrix.js)
 	.validate_feature()
-	.get_features()
 	.addnewfeature_update()
 	.error()
 
 ****************** internal use
 	.validate_config()
+	.get_features()
+	.update_singlefeature()
 	.draw_matrix()
 	.prep_featuredata()
 	.make_legend()
+	.showTip_sample
+	.showTip_feature
+	.showTip_cell
+	.showMenu_feature
 	.gatherSamplesFromFeatureData
 	.click_cell
 	feature2arg()
@@ -164,6 +169,7 @@ export class Samplematrix {
 					if(!anno.key) throw('.key missing from an element of limitsamplebyeitherannotation')
 					if(!anno.value) throw('.value missing from an element of limitsamplebyeitherannotation')
 				}
+				this.showlegend_limitsample()
 			}
 
 			if(!this.rowspace) this.rowspace=1
@@ -184,6 +190,13 @@ export class Samplematrix {
 			}
 			return Promise.all( featuretasks )
 		})
+	}
+
+
+
+	showlegend_limitsample() {
+		if(!this.limitsamplebyeitherannotation) return
+		// to show these in legend
 	}
 
 
@@ -218,24 +231,17 @@ export class Samplematrix {
 				}
 			}
 
-			if( !f.genename ) {
-				throw('position required for a feature: no position or genename given')
-			}
+			if( !f.genename ) throw 'position required for a feature: no position or genename given'
 
 			// fetch position by gene name
-			return fetch(new Request(this.hostURL+'/genelookup',{
-				method:'POST',
-				body:JSON.stringify({
-					input:f.genename,
-					genome:this.genome.name,
-					jwt:this.jwt,
-					deep:1
-				})
-			}))
-			.then(data=>{return data.json()})
+			return client.dofetch('/genelookup', {
+				input:f.genename,
+				genome:this.genome.name,
+				deep:1
+			})
 			.then(data=>{
-				if(data.error) throw(data.error)
-				if(!data.gmlst || data.gmlst.length==0) throw('no gene can be found for '+f.genename)
+				if(data.error) throw data.error
+				if(!data.gmlst || data.gmlst.length==0) throw 'no gene can be found for '+f.genename
 				// data.gmlst isoforms could be from different positions
 				const regions = []
 				for(const gm of data.gmlst) {
@@ -522,6 +528,7 @@ export class Samplematrix {
 				})
 		}
 
+
 		if(f.issampleattribute) {
 			if(!this.dslabel) throw('.dslabel missing: sampleattribute only works for official dataset')
 			if(!f.key) throw('.key missing for issampleattribute feature')
@@ -562,12 +569,10 @@ export class Samplematrix {
 
 	get_features(featureset) {
 		/*
-		may update subset of features instead of all
 		TODO server-side clustering on select features to determine sample hierarchy
 		*/
 
 		const arg={
-			jwt: this.jwt,
 			genome: this.genome.name,
 			limitsamplebyeitherannotation: this.limitsamplebyeitherannotation,
 			features: (featureset || this.features).map( feature2arg )
@@ -586,18 +591,14 @@ export class Samplematrix {
 			arg.dslabel = this.mds.label
 		}
 
-		return fetch(new Request(this.hostURL+'/samplematrix',{
-			method:'POST',
-			body:JSON.stringify(arg)
-		}))
-		.then(data=>{return data.json()})
+		return client.dofetch('/samplematrix',arg)
 		.then(data=>{
 
-			if(data.error) throw({message:data.error})
+			if(data.error) throw data.error
 
 			for(const dat of data.results) {
 				const f = this.features.find( f=> f.id==dat.id )
-				if(!f) throw({message: 'feature not found: '+f.id })
+				if(!f) throw 'feature not found: '+f.id
 
 				f.items = dat.items
 				this.prep_featuredata( f )
@@ -609,9 +610,31 @@ export class Samplematrix {
 	}
 
 
+	update_singlefeature(f) {
+		/*
+		update a single feature
+		do not return promise
+		*/
+
+		this.get_features([f])
+		.catch(err=>{
+			if(typeof(err)=='string') {
+				this.error(err)
+			} else {
+				this.error(err.message)
+				if(err.stack) console.log(err.stack)
+			}
+		})
+	}
+
+
 
 	addnewfeature_update( f ) {
-		// add a new feature, get data, update and done
+		/*
+		add a new feature, get data, update and done
+		no return promise
+		*/
+
 		this.features.push( f )
 
 		this.validate_feature( f )
@@ -859,7 +882,7 @@ export class Samplematrix {
 						const cell = row.append('div')
 							.style('display','inline-block')
 							.style('margin-right','20px')
-						cell.append('div')
+						cell.append('span')
 							.attr('class','sja_mcdot')
 							.style('background', f.itd.color)
 							.text(itdcount)
@@ -1627,19 +1650,14 @@ sort samples by f.issampleattribute
 
 			// for official dataset, check for availability of assay track of this sample
 			const par = {
-				jwt:this.jwt,
 				genome:this.genome.name,
 				dslabel:this.dslabel,
 				querykey: svcnvtk.querykey,
 				gettrack4singlesample: sample.name
 			}
-			return fetch( new Request(this.hostURL+'/mdssvcnv',{
-				method:'POST',
-				body:JSON.stringify(par)
-			}))
-			.then(data=>{return data.json()})
+			return client.dofetch( '/mdssvcnv', par)
 			.then(data=>{
-				if(data.error) throw('Error checking for assay track: '+data.error)
+				if(data.error) throw 'Error checking for assay track: '+data.error
 				return {
 					svcnvtk: svcnvtk,
 					tracks: data.tracks
@@ -1831,7 +1849,7 @@ sort samples by f.issampleattribute
 						if(f.valuecutoff) {
 							// cutoff has been set, cancel and refetch data
 							f.valuecutoff=0
-							this.get_features([f])
+							this.update_singlefeature(f)
 						} else {
 							// cutoff has not been set, do nothing
 						}
@@ -1845,12 +1863,12 @@ sort samples by f.issampleattribute
 						} else {
 							// set new cutoff
 							f.valuecutoff=v
-							this.get_features([f])
+							this.update_singlefeature(f)
 						}
 					} else {
 						// cutoff has not been set
 						f.valuecutoff=v
-						this.get_features([f])
+						this.update_singlefeature(f)
 					}
 				})
 			row.append('div')
@@ -1880,7 +1898,7 @@ sort samples by f.issampleattribute
 						if(f.focalsizelimit) {
 							// cutoff has been set, cancel and refetch data
 							f.focalsizelimit=0
-							this.get_features([f])
+							this.update_singlefeature(f)
 						} else {
 							// cutoff has not been set, do nothing
 						}
@@ -1894,12 +1912,12 @@ sort samples by f.issampleattribute
 						} else {
 							// set new cutoff
 							f.focalsizelimit=v
-							this.get_features([f])
+							this.update_singlefeature(f)
 						}
 					} else {
 						// cutoff has not been set
 						f.focalsizelimit=v
-						this.get_features([f])
+						this.update_singlefeature(f)
 					}
 				})
 			row.append('span').text('bp')
@@ -1935,7 +1953,7 @@ sort samples by f.issampleattribute
 						if(f.valuecutoff) {
 							// cutoff has been set, cancel and refetch data
 							f.valuecutoff=0
-							this.get_features([f])
+							this.update_singlefeature(f)
 						} else {
 							// cutoff has not been set, do nothing
 						}
@@ -1949,12 +1967,12 @@ sort samples by f.issampleattribute
 						} else {
 							// set new cutoff
 							f.valuecutoff=v
-							this.get_features([f])
+							this.update_singlefeature(f)
 						}
 					} else {
 						// cutoff has not been set
 						f.valuecutoff=v
-						this.get_features([f])
+						this.update_singlefeature(f)
 					}
 				})
 			row.append('div')
@@ -1984,7 +2002,7 @@ sort samples by f.issampleattribute
 						if(f.focalsizelimit) {
 							// cutoff has been set, cancel and refetch data
 							f.focalsizelimit=0
-							this.get_features([f])
+							this.update_singlefeature(f)
 						} else {
 							// cutoff has not been set, do nothing
 						}
@@ -1998,12 +2016,12 @@ sort samples by f.issampleattribute
 						} else {
 							// set new cutoff
 							f.focalsizelimit=v
-							this.get_features([f])
+							this.update_singlefeature(f)
 						}
 					} else {
 						// cutoff has not been set
 						f.focalsizelimit=v
-						this.get_features([f])
+						this.update_singlefeature(f)
 					}
 				})
 			row.append('span').text('bp')
@@ -2349,25 +2367,18 @@ sort samples by f.issampleattribute
 		if(tk.info) return
 
 		const arg = {
-			jwt: this.jwt,
 			file: tk.file,
 			url: tk.url,
 			indexURL: tk.indexURL
 		}
-		return fetch( new Request( this.hostURL+'/vcfheader', {
-			method:'POST',
-			body:JSON.stringify(arg)
-		}))
-		.then(data=>{return data.json()})
+		return client.dofetch('/vcfheader', arg)
 		.then( data => {
-
 			const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
 			if(errs) throw('Error parsing VCF meta lines: '+errs.join('; '))
 			tk.info = info
 			tk.format = format
 			tk.samples = samples
 			tk.nochr = common.contigNameNoChr( this.genome, data.chrstr.split('\n'))
-
 		})
 	}
 
@@ -2619,6 +2630,8 @@ function init_legendholder(o) {
 
 	const div = o.holder.append('div')
 		.style('margin-bottom','20px')
+
+	// button
 	div.append('div')
 		.style('display','inline-block')
 		.attr('class','sja_menuoption')
@@ -2632,9 +2645,8 @@ function init_legendholder(o) {
 			}
 		})
 
-	// one legend item for each feature
 	o.legendtable = div.append('table')
-		.style('border-left','solid 1px #ededed')
+		.style('border-top','solid 1px #ededed')
 		.style('border-spacing','10px')
 		.style('display','none')
 }

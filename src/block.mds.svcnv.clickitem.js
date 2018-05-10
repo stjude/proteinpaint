@@ -30,6 +30,7 @@ may_add_sampleannotation
 detailtable_singlesample
 	printer_snvindel
 may_show_matrixbutton
+matrix_view
 
 
 */
@@ -125,11 +126,11 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 		.attr('class','sja_menuoption')
 		.text('Matrix view')
 		.on('click',()=>{
-
 			tk.tip2.hide()
 			matrix_view(tk, block, samplegroup)
-
 		})
+
+
 	// not in use
 	//may_show_matrixbutton(samplegroup, tk, block)
 }
@@ -143,6 +144,7 @@ function matrix_view(tk, block, samplegroup) {
 	in group-less track (custom or official lacking config)
 	samplegroup will not be given, use all samples
 	*/
+
 	const r = block.rglst[ block.startidx ]
 	const feature = {
 		ismutation:1,

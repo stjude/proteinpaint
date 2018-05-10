@@ -214,7 +214,16 @@ export function createnewmatrix_withafeature(_p) {
 			pane.pane.style('display','none')
 		}
 	})
-	pane.header.text(tk.name)
+
+	if(limitsamplebyeitherannotation) {
+		// from matrix view of a sample group
+		const a = limitsamplebyeitherannotation[0]
+		if(a) {
+			pane.header.html('<span style="font-size:.8em;opacity:.5">'+tk.name+'</span> '+a.value)
+		}
+	} else {
+		pane.header.text(tk.name)
+	}
 
 	const arg = {
 		debugmode: block.debugmode,
