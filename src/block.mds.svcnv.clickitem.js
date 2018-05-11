@@ -148,7 +148,7 @@ function matrix_view(tk, block, samplegroup) {
 	const r = block.rglst[ block.startidx ]
 	const feature = {
 		ismutation:1,
-		width:40,
+		width:60,
 		chr: r.chr,
 		start: r.start,
 		stop: r.stop,

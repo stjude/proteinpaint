@@ -2264,7 +2264,7 @@ function feature2arg(f) {
 				focalsizelimit: f.cnv.focalsizelimit
 			},
 			loh: {
-				hidden: f.cnv.hidden,
+				hidden: f.loh.hidden,
 				valuecutoff: f.loh.valuecutoff,
 				focalsizelimit: f.loh.focalsizelimit
 			},
