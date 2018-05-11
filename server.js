@@ -4837,10 +4837,6 @@ function mdssvcnv_do_sample2item(data_cnv) {
 	*/
 	const sample2item = new Map()
 
-	const sample2coordset_cnv = {}
-	const sample2coordset_loh = {}
-	// k: sample
-	// v: {}, key is cnv/loh coordinate set chr.start.stop
 	for(const tmp of data_cnv) {
 		for(const item of tmp) {
 			if(!item.sample) {
@@ -4848,9 +4844,7 @@ function mdssvcnv_do_sample2item(data_cnv) {
 				continue
 			}
 			const sn = item.sample
-			if(!sample2coordset_cnv[sn]) {
-				sample2coordset_cnv[sn] = {}
-				sample2coordset_loh[sn] = {}
+			if(!sample2item.has(sn)) {
 				sample2item.set( sn,  [] )
 			}
 
@@ -4858,24 +4852,6 @@ function mdssvcnv_do_sample2item(data_cnv) {
 				// sv, no checking against coordset
 				sample2item.get(sn).push(item)
 				continue
-			}
-
-			const k = item.chr+'.'+item.start+'.'+item.stop
-
-			if(item.loh) {
-				// loh
-				if( sample2coordset_loh[ sn ][ k ] ) {
-					// the event is already in this sample
-					continue
-				}
-				sample2coordset_loh[ sn ][ k ] = 1
-			} else {
-				// cnv
-				if( sample2coordset_cnv[ sn ][ k ] ) {
-					// the event is already in this sample
-					continue
-				}
-				sample2coordset_cnv[ sn ][ k ] = 1
 			}
 
 			// new event
@@ -7878,9 +7854,24 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 					reject(e)
 					return
 				}
+
+				const sample2item = new Map()
+				for(const i of data) {
+					if(!sample2item.has(i.sample)) sample2item.set(i.sample, [])
+					sample2item.get(i.sample).push(i)
+				}
+				mdssvcnv_do_copyneutralloh(sample2item)
+
+				const newlst=[]
+				for(const [n,lst] of sample2item) {
+					for(const i of lst) {
+						newlst.push(i)
+					}
+				}
+
 				resolve( {
 					id:feature.id,
-					items:data
+					items:newlst
 				})
 			})
 		})
