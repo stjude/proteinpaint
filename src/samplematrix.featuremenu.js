@@ -1,3 +1,4 @@
+import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
 

@@ -1478,7 +1478,7 @@ sort samples by f.issampleattribute
 			return
 		}
 
-		if(loh.length && 0) {
+		if(loh.length) {
 			/* XXX hide loh for the moment, only temporary!!!!!
 			*/
 			// draw loh as singlular filled-box at bottom
@@ -2079,7 +2079,7 @@ sort samples by f.issampleattribute
 					v: snvindel.map(m=>{
 						const c = common.mclass[m.m.class]
 						return '<div>'
-							+'<span style="color:'+c.color+'">'+m.m.mname+'</span> '
+							+'<span style="color:'+c.color+'">'+(m.m.mname||'')+'</span> '
 							+'<span style="font-size:.7em;opacity:.5">'+c.label+'</span>'
 							+'</div>'
 					}).join('')
