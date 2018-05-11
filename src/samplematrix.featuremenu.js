@@ -242,12 +242,22 @@ export function showMenu_ismutation(smat, f) {
 	/*
 	*/
 
+	{
+	// show/hide mutation classes
+
+	const div = smat.menu.d
+		.append('div')
+		.style('margin','10px')
+		.style('border', 'solid 1px #ededed')
+	
+
 	const update = ()=>{
 		smat.update_singlefeature(f)
 		smat.menu.hide()
 	}
 
-	const table = smat.menu.d.append('table')
+
+	const table = div.append('table')
 		.style('margin','10px')
 		.style('border-spacing','1px')
 
@@ -282,7 +292,7 @@ export function showMenu_ismutation(smat, f) {
 			.text('CONFIG')
 			.on('click',()=>{
 				smat.menu.clear()
-				smat.showMenu_iscnv( f, f.cnv )
+				showMenu_iscnv( smat, f, f.cnv )
 			})
 		}
 	}
@@ -315,7 +325,7 @@ export function showMenu_ismutation(smat, f) {
 			.text('CONFIG')
 			.on('click',()=>{
 				smat.menu.clear()
-				smat.showMenu_isloh( f, f.loh )
+				showMenu_isloh( smat, f, f.loh )
 			})
 		}
 	}
@@ -404,6 +414,7 @@ export function showMenu_ismutation(smat, f) {
 		.attr('colspan',4)
 		.style('padding-top','10px')
 		.append('span')
+		.style('font-size','.8em')
 		.text('List SNV/indel')
 		.attr('class','sja_clbtext')
 		.on('click',()=>{
@@ -449,6 +460,25 @@ export function showMenu_ismutation(smat, f) {
 				update()
 			})
 		const td=tr.append('td')
+	}
+
+	div.append('div')
+		.style('margin','10px')
+		.append('span')
+		.style('font-size','.8em')
+		.text('Show all classes')
+		.attr('class', 'sja_clbtext')
+		.on('click',()=>{
+			f.cnv.hidden=false
+			f.loh.hidden=false
+			f.itd.hidden=false
+			f.sv.hidden=false
+			f.fusion.hidden=false
+			f.snvindel.excludeclasses={}
+			update()
+		})
+
+	// end of show/hide class
 	}
 }
 
