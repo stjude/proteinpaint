@@ -30,7 +30,7 @@ may_add_sampleannotation
 detailtable_singlesample
 	printer_snvindel
 may_show_matrixbutton
-matrix_view
+matrix_view()
 
 
 */
@@ -217,7 +217,8 @@ function matrix_view(tk, block, samplegroup) {
 			// hardcoded to use first attr
 			const a = m.limitsamplebyeitherannotation[0]
 			if(a && a.key==attr.k && a.value==attr.kvalue) {
-				// belong to this sample group
+				// found the smat of this sample group
+				client.appear(m._pane.pane)
 				m.addnewfeature_update( feature )
 				return
 			}
