@@ -1053,7 +1053,7 @@ sort samples by f.issampleattribute
 			}
 		}
 
-
+		// set equal height for all samples
 		const uniformheight = Math.min(18, Math.max( 1, Math.ceil(800/name2sample.size) ) )
 
 		this.samples = []
@@ -1478,29 +1478,28 @@ sort samples by f.issampleattribute
 			return
 		}
 
-		if(loh.length) {
-			/* XXX hide loh for the moment, only temporary!!!!!
-			*/
-			// draw loh as singlular filled-box at bottom
-			const value = loh[0].segmean
-			g.append('rect')
-				.attr('width', feature.width)
-				.attr('height', sample.height)
-				.attr('fill', feature.loh.color )
-				.attr('fill-opacity', (value-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue) )
-				.attr('shape-rendering','crispEdges')
+/*
+		if(sample.height<=4) {
+			this.drawCell_ismutation_symbolic(sample,feature,g)
+			return
 		}
+		*/
+
+		if(loh.length) {
+			// draw loh as singlular filled-box at bottom
+			for(const item of loh) {
+				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
+				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
+				g.append('rect')
+					.attr('width', Math.max(1, x2-x1))
+					.attr('height', sample.height)
+					.attr('fill', feature.loh.color )
+					.attr('fill-opacity', (item.segmean-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue) )
+					.attr('shape-rendering','crispEdges')
+			}
+		}
+
 		if(cnv.length) {
-			// draw cnv as singular filled-box at bottom
-			/*
-			const value = cnv[0].value
-			g.append('rect')
-				.attr('width', feature.width)
-				.attr('height', sample.height)
-				.attr('fill', value > 0 ? feature.cnv.colorgain : feature.cnv.colorloss )
-				.attr('fill-opacity', Math.abs(value) / feature.cnv.maxabslogratio )
-				.attr('shape-rendering','crispEdges')
-				*/
 			for(const item of cnv) {
 				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
 				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
@@ -1514,12 +1513,16 @@ sort samples by f.issampleattribute
 			}
 		}
 		if(itd.length) {
-			// draw itd as singular filled-box
-			g.append('rect')
-				.attr('width', feature.width)
-				.attr('height', sample.height)
-				.attr('fill', feature.itd.color )
-				.attr('shape-rendering','crispEdges')
+			for(const item of itd) {
+				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
+				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
+				g.append('rect')
+					.attr('x', x1)
+					.attr('width', Math.max(1, x2-x1) )
+					.attr('height', sample.height)
+					.attr('fill', feature.itd.color )
+					.attr('shape-rendering','crispEdges')
+			}
 		}
 		if(sv.length) {
 			// sv as feature-less circle
@@ -1599,6 +1602,11 @@ sort samples by f.issampleattribute
 			.on('click',()=> {
 				this.click_cell(sample, feature)
 			})
+	}
+
+
+
+	drawCell_ismutation_symbolic(sample,feature,g) {
 	}
 
 
