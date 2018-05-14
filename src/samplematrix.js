@@ -1480,106 +1480,109 @@ sort samples by f.issampleattribute
 		}
 
 		if(sample.height<=4) {
+
+			// thin lines
 			this.drawCell_ismutation_symbolic(sample,feature,g, cnv, loh, itd, sv, fusion, snvindel )
-			return
-		}
 
-		if(loh.length) {
-			// draw loh as singlular filled-box at bottom
-			for(const item of loh) {
-				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
-				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
-				g.append('rect')
-					.attr('x', x1)
-					.attr('width', Math.max(1, x2-x1))
-					.attr('height', sample.height)
-					.attr('fill', feature.loh.color )
-					.attr('fill-opacity', (item.segmean-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue) )
-					.attr('shape-rendering','crispEdges')
-			}
-		}
+		} else {
 
-		if(cnv.length) {
-			for(const item of cnv) {
-				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
-				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
-				g.append('rect')
-					.attr('x', x1)
-					.attr('width', Math.max(1, x2-x1) )
-					.attr('height', sample.height)
-					.attr('fill',  item.value>0 ? feature.cnv.colorgain : feature.cnv.colorloss )
-					.attr('fill-opacity', Math.abs(item.value)/feature.cnv.maxabslogratio)
-					.attr('shape-rendering','crispEdges')
+			if(loh.length) {
+				// draw loh as singlular filled-box at bottom
+				for(const item of loh) {
+					const x1 = feature.coordscale( Math.max(feature.start, item.start) )
+					const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
+					g.append('rect')
+						.attr('x', x1)
+						.attr('width', Math.max(1, x2-x1))
+						.attr('height', sample.height)
+						.attr('fill', feature.loh.color )
+						.attr('fill-opacity', (item.segmean-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue) )
+						.attr('shape-rendering','crispEdges')
+				}
 			}
-		}
-		if(itd.length) {
-			for(const item of itd) {
-				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
-				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
-				g.append('rect')
-					.attr('x', x1)
-					.attr('width', Math.max(1, x2-x1) )
-					.attr('height', sample.height)
-					.attr('fill', feature.itd.color )
-					.attr('shape-rendering','crispEdges')
-			}
-		}
-		if(sv.length) {
-			// sv as feature-less circle
-			g.append('circle')
-				.attr('cx', feature.width/2 )
-				.attr('cy', sample.height/2 )
-				.attr('r', Math.min(feature.width, sample.height) /2 )
-				.attr('stroke', feature.sv.color)
-				.attr('fill', 'none')
-		}
-		if(fusion.length) {
-			// fusion as feature-less circle
-			g.append('circle')
-				.attr('cx', feature.width/2 )
-				.attr('cy', sample.height/2 )
-				.attr('r', Math.min(feature.width, sample.height) /2 )
-				.attr('stroke', feature.fusion.color)
-				.attr('fill', 'none')
-		}
 
-		if(snvindel.length) {
-			/*
-			snvindel as cross
-			color by m class
-			if multiple variants, may use class of highest rank
-			*/
-			const m = snvindel[0]
-			const g2 = g.append('g')
-				.attr('transform','translate('+(feature.width/2)+','+(sample.height/2)+')')
-			const color = common.mclass[ m.m.class ].color
-			const w = Math.min(feature.width, sample.height)/2
-			g2.append('line')
-				.attr('x1', -w)
-				.attr('x2', w)
-				.attr('y1', -w)
-				.attr('y2', w)
-				.attr('stroke', 'white')
-				.attr('stroke-width',3)
-			g2.append('line')
-				.attr('x1', -w)
-				.attr('x2', w)
-				.attr('y1', w)
-				.attr('y2', -w)
-				.attr('stroke', 'white')
-				.attr('stroke-width',3)
-			g2.append('line')
-				.attr('x1', -w)
-				.attr('x2', w)
-				.attr('y1', -w)
-				.attr('y2', w)
-				.attr('stroke', color)
-			g2.append('line')
-				.attr('x1', -w)
-				.attr('x2', w)
-				.attr('y1', w)
-				.attr('y2', -w)
-				.attr('stroke', color)
+			if(cnv.length) {
+				for(const item of cnv) {
+					const x1 = feature.coordscale( Math.max(feature.start, item.start) )
+					const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
+					g.append('rect')
+						.attr('x', x1)
+						.attr('width', Math.max(1, x2-x1) )
+						.attr('height', sample.height)
+						.attr('fill',  item.value>0 ? feature.cnv.colorgain : feature.cnv.colorloss )
+						.attr('fill-opacity', Math.abs(item.value)/feature.cnv.maxabslogratio)
+						.attr('shape-rendering','crispEdges')
+				}
+			}
+			if(itd.length) {
+				for(const item of itd) {
+					const x1 = feature.coordscale( Math.max(feature.start, item.start) )
+					const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
+					g.append('rect')
+						.attr('x', x1)
+						.attr('width', Math.max(1, x2-x1) )
+						.attr('height', sample.height)
+						.attr('fill', feature.itd.color )
+						.attr('shape-rendering','crispEdges')
+				}
+			}
+			if(sv.length) {
+				// sv as feature-less circle
+				g.append('circle')
+					.attr('cx', feature.width/2 )
+					.attr('cy', sample.height/2 )
+					.attr('r', Math.min(feature.width, sample.height) /2 )
+					.attr('stroke', feature.sv.color)
+					.attr('fill', 'none')
+			}
+			if(fusion.length) {
+				// fusion as feature-less circle
+				g.append('circle')
+					.attr('cx', feature.width/2 )
+					.attr('cy', sample.height/2 )
+					.attr('r', Math.min(feature.width, sample.height) /2 )
+					.attr('stroke', feature.fusion.color)
+					.attr('fill', 'none')
+			}
+
+			if(snvindel.length) {
+				/*
+				snvindel as cross
+				color by m class
+				if multiple variants, may use class of highest rank
+				*/
+				const m = snvindel[0]
+				const g2 = g.append('g')
+					.attr('transform','translate('+(feature.width/2)+','+(sample.height/2)+')')
+				const color = common.mclass[ m.m.class ].color
+				const w = Math.min(feature.width, sample.height)/2
+				g2.append('line')
+					.attr('x1', -w)
+					.attr('x2', w)
+					.attr('y1', -w)
+					.attr('y2', w)
+					.attr('stroke', 'white')
+					.attr('stroke-width',3)
+				g2.append('line')
+					.attr('x1', -w)
+					.attr('x2', w)
+					.attr('y1', w)
+					.attr('y2', -w)
+					.attr('stroke', 'white')
+					.attr('stroke-width',3)
+				g2.append('line')
+					.attr('x1', -w)
+					.attr('x2', w)
+					.attr('y1', -w)
+					.attr('y2', w)
+					.attr('stroke', color)
+				g2.append('line')
+					.attr('x1', -w)
+					.attr('x2', w)
+					.attr('y1', w)
+					.attr('y2', -w)
+					.attr('stroke', color)
+			}
 		}
 
 		// cover
