@@ -326,13 +326,9 @@ module.exports={
 					type:'vcf',
 				},
 				{
-					file:'hg19/PCGP/vcf.somatic/pcgp.somatic.vcf.gz',
+					file:'hg19/Pediatric/pediatric.somatic.hg19.vcf.gz',
 					type:'vcf',
-				},
-				{
-					file:'hg19/TARGET/vcf.somatic/target.vep.vcf.gz',
-					type:'vcf',
-				},
+				}
 			]
 		},
 

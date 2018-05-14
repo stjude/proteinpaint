@@ -28,6 +28,7 @@ JUMP __draw __menu
 .get_features()
 .update_singlefeature()
 .draw_matrix()
+.drawCell_ismutation
 .prep_featuredata()
 .make_legend()
 .showTip_sample
@@ -681,11 +682,11 @@ export class Samplematrix {
 				if(i.value>0) {
 					gain.push(i.value)
 				} else {
-					loss.push(i.value)
+					loss.push(-i.value)
 				}
 			}
 			const gmax = common.getMax_byiqr( gain, 0 )
-			const lmax = -common.getMax_byiqr( loss, 0 )
+			const lmax = common.getMax_byiqr( loss, 0 )
 			f.maxabslogratio = Math.max(gmax, lmax)
 			return
 		}
@@ -722,7 +723,7 @@ export class Samplematrix {
 					if(i.value>0) {
 						cnvgain.push(i.value)
 					} else {
-						cnvloss.push(i.value)
+						cnvloss.push(-i.value)
 					}
 				} else if(i.dt == common.dtloh) {
 					lohmax = Math.max( i.segmean, lohmax )
@@ -731,7 +732,7 @@ export class Samplematrix {
 
 			if(cnvgain.length + cnvloss.length > 0) {
 				const gmax = common.getMax_byiqr( cnvgain, 0 )
-				const lmax = -common.getMax_byiqr( cnvloss, 0 )
+				const lmax = common.getMax_byiqr( cnvloss, 0 )
 				f.cnv.maxabslogratio = Math.max(gmax, lmax)
 			}
 
@@ -1478,12 +1479,10 @@ sort samples by f.issampleattribute
 			return
 		}
 
-/*
 		if(sample.height<=4) {
-			this.drawCell_ismutation_symbolic(sample,feature,g)
+			this.drawCell_ismutation_symbolic(sample,feature,g, cnv, loh, itd, sv, fusion, snvindel )
 			return
 		}
-		*/
 
 		if(loh.length) {
 			// draw loh as singlular filled-box at bottom
@@ -1491,6 +1490,7 @@ sort samples by f.issampleattribute
 				const x1 = feature.coordscale( Math.max(feature.start, item.start) )
 				const x2 = feature.coordscale( Math.min(feature.stop, item.stop) )
 				g.append('rect')
+					.attr('x', x1)
 					.attr('width', Math.max(1, x2-x1))
 					.attr('height', sample.height)
 					.attr('fill', feature.loh.color )
@@ -1606,7 +1606,57 @@ sort samples by f.issampleattribute
 
 
 
-	drawCell_ismutation_symbolic(sample,feature,g) {
+	drawCell_ismutation_symbolic(sample,feature,g, cnv, loh, itd, sv, fusion, snvindel) {
+		/*
+		symbolic rep
+		must have data
+		*/
+		const lst = []
+		if(cnv.length) {
+			for(const i of cnv) {
+				if(i.value>0) {
+					lst.push({color:feature.cnv.colorgain})
+				} else {
+					lst.push({color:feature.cnv.colorloss})
+				}
+			}
+		}
+		if(loh.length) {
+			for(const i of loh) {
+				lst.push({color:feature.loh.color})
+			}
+		}
+		if(itd.length) {
+			for(const i of itd) {
+				lst.push({color:feature.itd.color})
+			}
+		}
+		if(sv.length) {
+			for(const i of sv) {
+				lst.push({color: feature.sv.color})
+			}
+		}
+		if(fusion.length) {
+			for(const i of fusion) {
+				lst.push({color: feature.fusion.color})
+			}
+		}
+		if(snvindel.length) {
+			for(const i of snvindel) {
+				lst.push({color: common.mclass[ i.m.class].color })
+			}
+		}
+		const w = feature.width / lst.length
+		let x=0
+		for(const i of lst) {
+			g.append('rect')
+				.attr('x', x)
+				.attr('width', w)
+				.attr('height', sample.height)
+				.attr('fill', i.color )
+				.attr('shape-rendering','crispEdges')
+			x+=w
+		}
 	}
 
 
