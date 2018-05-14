@@ -602,9 +602,21 @@ function parseheader(line) {
 	if(i==-1) return ['sv_refseqA missing']
 	header[i].key='lstisoforma'
 	delete header[i].custom
+
 	i=htry('sv_refseqa_codon')
-	if(i==-1) return ['sv_refseqA_codon missing']
-	header[i].key='lstisoformacodon'
+	//if(i==-1) return ['sv_refseqA_codon missing']
+	//header[i].key='lstisoformacodon'
+	if(i!=-1) {
+		header[i].key='lstisoformacodon'
+	}
+
+	i=htry('sv_refseqb_codon')
+	//if(i==-1) return ['sv_refseqB_codon missing']
+	//header[i].key='lstisoformbcodon'
+	if(i!=-1) {
+		header[i].key='lstisoformbcodon'
+	}
+
 	i=htry('score')
 	if(i==-1) return ['score missing']
 	header[i].key='score'
@@ -613,9 +625,6 @@ function parseheader(line) {
 	if(i==-1) return ['sv_refseqB missing']
 	header[i].key='lstisoformb'
 	delete header[i].custom
-	i=htry('sv_refseqb_codon')
-	if(i==-1) return ['sv_refseqB_codon missing']
-	header[i].key='lstisoformbcodon'
 	i=htry('rating')
 	if(i==-1) return ['rating missing']
 	header[i].key='rating'
