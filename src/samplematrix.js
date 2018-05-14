@@ -1617,16 +1617,22 @@ sort samples by f.issampleattribute
 		const lst = []
 		if(cnv.length) {
 			for(const i of cnv) {
+				let k
 				if(i.value>0) {
-					lst.push({color:feature.cnv.colorgain})
+					k = { color: feature.cnv.colorgain }
 				} else {
-					lst.push({color:feature.cnv.colorloss})
+					k = {color:feature.cnv.colorloss}
 				}
+				k.opacity = Math.abs(i.value)/feature.cnv.maxabslogratio
+				lst.push(k)
 			}
 		}
 		if(loh.length) {
 			for(const i of loh) {
-				lst.push({color:feature.loh.color})
+				lst.push({
+					color:feature.loh.color,
+					opacity: (i.segmean-feature.loh.minvalue) / (feature.loh.maxvalue-feature.loh.minvalue)
+					})
 			}
 		}
 		if(itd.length) {
@@ -1652,12 +1658,13 @@ sort samples by f.issampleattribute
 		const w = feature.width / lst.length
 		let x=0
 		for(const i of lst) {
-			g.append('rect')
+			const r = g.append('rect')
 				.attr('x', x)
 				.attr('width', w)
 				.attr('height', sample.height)
 				.attr('fill', i.color )
 				.attr('shape-rendering','crispEdges')
+			if(i.opacity) r.attr('opacity', i.opacity)
 			x+=w
 		}
 	}
