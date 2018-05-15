@@ -29,6 +29,7 @@ JUMP __draw __menu
 .update_singlefeature()
 .draw_matrix()
 .drawCell_ismutation
+.drawCell_ismutation_symbolic
 .prep_featuredata()
 .make_legend()
 .showTip_sample
@@ -71,7 +72,7 @@ export class Samplematrix {
 		this.menu = new client.Menu({padding:'0px'})
 		this.errdiv = this.holder.append('div')
 
-		init_legendholder(this)
+		init_controlui(this)
 
 		if(this.header) {
 			this.holder.append('div')
@@ -1479,7 +1480,22 @@ sort samples by f.issampleattribute
 			return
 		}
 
-		if(sample.height<=4) {
+		// decide if to draw as symbolic
+		let is_symbolic=false
+
+		if(this.ismutation_allsymbolic) {
+			is_symbolic=true
+		} else if(this.ismutation_allnotsymbolic) {
+			// not
+		} else {
+			// if height is too thin
+			if(sample.height<=4) {
+				is_symbolic=true
+			}
+		}
+
+
+		if(is_symbolic) {
 
 			// thin lines
 			this.drawCell_ismutation_symbolic(sample,feature,g, cnv, loh, itd, sv, fusion, snvindel )
@@ -2477,17 +2493,24 @@ function initfeature_polymutation(f) {
 
 
 
-function init_legendholder(o) {
+function init_controlui(o) {
+	/*
+	init control ui, including legend, config
+	*/
 
-	const div = o.holder.append('div')
+	const buttonrow = o.holder.append('div')
+		.style('margin-bottom','5px')
+
+	const folderdiv = o.holder.append('div')
 		.style('margin-bottom','20px')
 
-	// button
-	div.append('div')
-		.style('display','inline-block')
-		.attr('class','sja_menuoption')
+
+	// legend
+	buttonrow.append('span')
+		.style('margin-right','20px')
 		.style('font-size','.8em')
 		.text('LEGEND')
+		.attr('class','sja_clbtext')
 		.on('click',()=>{
 			if(o.legendtable.style('display')=='none') {
 				client.appear(o.legendtable)
@@ -2496,8 +2519,49 @@ function init_legendholder(o) {
 			}
 		})
 
-	o.legendtable = div.append('table')
+	o.legendtable = folderdiv.append('table')
 		.style('border-top','solid 1px #ededed')
+		.style('border-bottom','solid 1px #ededed')
 		.style('border-spacing','10px')
 		.style('display','none')
+
+	// config
+	buttonrow.append('span')
+		.style('margin-right','20px')
+		.style('font-size','.8em')
+		.text('CONFIG')
+		.attr('class','sja_clbtext')
+		.on('click',()=>{
+			if(generalconfig.style('display')=='none') {
+				client.appear(generalconfig)
+			} else {
+				client.disappear(generalconfig)
+			}
+		})
+
+	const generalconfig = folderdiv.append('div')
+		.style('border-top','solid 1px #ededed')
+		.style('border-bottom','solid 1px #ededed')
+		.style('display','none')
+
+	{
+		// symbolic mutation
+		const row = generalconfig.append('div')
+			.style('margin','5px')
+		row.append('span').html('Show all mutation features as symbolic&nbsp;&nbsp;')
+		row.append('button')
+			.text('Yes')
+			.on('click',()=>{
+				o.ismutation_allsymbolic=true
+				delete o.ismutation_allnotsymbolic
+				o.draw_matrix()
+			})
+		row.append('button')
+			.text('No')
+			.on('click',()=>{
+				delete o.ismutation_allsymbolic
+				o.ismutation_allnotsymbolic=true
+				o.draw_matrix()
+			})
+	}
 }
