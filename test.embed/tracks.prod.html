@@ -21,8 +21,11 @@ runproteinpaint({
 	//host:'https://ppc.stjude.org/',
 	holder:document.getElementById('aaa'),
 
-	block:true,
 	genome:'hg19',
+	mdssamplescatterplot:{ dataset:'panall' },
+
+
+	block:true,
 	position:'chr12:25352791-25408521',
 	tracks:[
 		{name:'phyloP100way',type:'bigwig',height:80,url:'http://hgdownload.soe.ucsc.edu/goldenPath/hg19/phyloP100way/hg19.100way.phyloP100way.bw'},
