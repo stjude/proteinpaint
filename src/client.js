@@ -39,16 +39,31 @@ export const domaincolorlst=[ '#8dd3c7', '#bebada', '#fb8072', '#80b1d3', '#E8E8
 
 
 export function dofetch(path,arg) {
+	// path should be "path" but not "/path"
+	if(path[0]=='/') {
+		path = path.slice(1)
+	}
+
 	const jwt = localStorage.getItem('jwt')
 	if(jwt) {
 		arg.jwt = jwt
 	}
-	return fetch(new Request(
-		(localStorage.getItem('hostURL')||'') + path,
-		{
-			method: 'POST',
-			body:JSON.stringify(arg)
-		})
+
+	let url
+	const host = localStorage.getItem('hostURL')
+	if(host) {
+		// hostURL can end with / or not, must use 'host/path'
+		if(host.endsWith('/')) {
+			url = host+path
+		} else {
+			url = host +'/'+ path
+		}
+	} else {
+		url = path
+	}
+
+	return fetch(
+		new Request( url, { method: 'POST', body:JSON.stringify(arg) })
 	)
 	.then(data=>{return data.json()})
 }
