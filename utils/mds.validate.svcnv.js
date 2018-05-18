@@ -16,6 +16,7 @@ const zlib=require('zlib')
 
 
 const chr2dt = new Map()
+const pmid2dt = new Map()
 
 const dt2name = new Map([[4,'CNV'],[10,'LOH'],[5,'SV'],[2,'fusion'],[6,'ITD']])
 
@@ -57,6 +58,24 @@ rl.on('line',line=>{
 		if(!chr2dt.get(chr).has(j.dt)) chr2dt.get(chr).set( j.dt, 0 )
 		chr2dt.get(chr).set( j.dt, chr2dt.get(chr).get(j.dt)+1 )
 	}
+
+	//pmid
+	{
+		if(!j.mattr) abort('mattr missing: '+line)
+		const PMID = j.mattr.pmid
+		if (PMID){
+			for(const pid of PMID.split(',')) {
+				if(!pmid2dt.has(pid)) pmid2dt.set(pid, new Map())
+				if(!pmid2dt.get(pid).has(j.dt)) pmid2dt.get(pid).set(j.dt, 0)
+				pmid2dt.get(pid).set(j.dt, pmid2dt.get(pid).get(j.dt)+1)
+			}
+		}
+		else{
+			if(!pmid2dt.has('pmidMissed')) pmid2dt.pmidMissed = []
+			pmid2dt.pmidMissed.push(j.sample)
+		}
+		
+	}
 })
 
 rl.on('close',()=>{
@@ -72,4 +91,16 @@ rl.on('close',()=>{
 		}
 		console.log(lst.join('\t'))
 	}
+	//pmid
+	console.log('pmid\t'+lst.join('\t'))
+	for(const [pmid, o] of pmid2dt) {
+		if(pmid === 'pmidMissed') continue
+		const pst = [pmid]
+		for(const dt of dt2name.keys()){
+			pst.push(o.get(dt)||0)
+		}	
+		console.log(pst.join('\t'))
+	}
+	console.log('\nSmples missing pmid:')
+	console.log(pmid2dt.pmidMissed.join('\t'))
 })
