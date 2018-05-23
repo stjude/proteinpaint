@@ -43,12 +43,6 @@ module.exports={
 				filter:1,
 				values:{
 				}
-			},
-			CADD_phred:{
-				label:'CADD_phred',
-				filter:1,
-				values:{
-				},
 			}
 		}
 	},
@@ -68,6 +62,12 @@ module.exports={
 				filter:1,
 				cutoffvalue:0.01,
 				keeplowerthan:true
+			},
+			CADD_phred:{
+				label:'CADD_phred',
+				filter:1,
+				isnumeric:1,
+				cutoffvalue:10,
 			}
 		}
 	},
