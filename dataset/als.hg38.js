@@ -36,8 +36,32 @@ module.exports={
 		}
 	},
 
+	locusAttribute:{
+		attributes:{
+			CLNSIG:{
+				label:'Clinical significance',
+				filter:1,
+				values:{
+				}
+			},
+			CADD_phred:{
+				label:'CADD_phred',
+				filter:1,
+				values:{
+				},
+			}
+		}
+	},
+
 	alleleAttribute:{
 		attributes:{
+			ExAC_AF:{
+				label:'ExAC',
+				isnumeric:1,
+				filter:1,
+				cutoffvalue:0.01,
+				keeplowerthan:true
+			},
 			AF:{
 				label:'AF',
 				isnumeric:1,
