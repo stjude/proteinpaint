@@ -397,14 +397,24 @@ function create_alleleAttribute(tk, block) {
 
 		if(attr.isnumeric) {
 
-			// numeric cutoff with direction of inclusion
+			/*
+			numeric cutoff with options:
+			<= no greater than
+			>= no smaller than
+			x  do not use
+			*/
 
 			const select = attr.legendholder.append('select')
 				.style('margin','0px 10px 0px 10px')
 				.on('change',()=>{
 					const value = select.property('value')
 
-					attr.keeplowerthan = value=='<'
+					if(value=='x') {
+						attr.disable=true
+					} else {
+						delete attr.disable
+						attr.keeplowerthan = value=='<'
+					}
 
 					loadTk(tk,block)
 				})
@@ -417,7 +427,13 @@ function create_alleleAttribute(tk, block) {
 				.attr('value','>')
 				.property('text','≥')
 
-			if(attr.keeplowerthan) {
+			const disable = select.append('option')
+				.attr('value','x')
+				.property('text','X')
+
+			if(attr.disable) {
+				disable.property('selected',1)
+			} else if(attr.keeplowerthan) {
 				lowerthan.property('selected',1)
 			} else {
 				higherthan.property('selected',1)

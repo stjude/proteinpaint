@@ -454,6 +454,9 @@ function addLoadParameter( par, tk ) {
 		for(const key in tk.alleleAttribute.attributes) {
 			const attr = tk.alleleAttribute.attributes[key]
 			if(attr.isnumeric) {
+
+				if(attr.disable) continue
+
 				if(Number.isFinite(attr.cutoffvalue)) {
 					key2value[ key ] = {
 						cutoffvalue: attr.cutoffvalue,
