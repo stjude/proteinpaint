@@ -469,7 +469,7 @@ function addLoadParameter( par, tk ) {
 			}
 		}
 		if(hashidden) {
-			par.hiddenalleleattr = key2value
+			par.filteralleleattr = key2value
 		}
 	}
 

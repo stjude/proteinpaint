@@ -3866,14 +3866,14 @@ function handle_mdssvcnv(req,res) {
 	/*
 	multi: vcf info field allele-level
 	*/
-	let hiddenalleleattr 
-	if(req.query.hiddenalleleattr) {
-		hiddenalleleattr = {}
-		for(const key in req.query.hiddenalleleattr) {
-			const v = req.query.hiddenalleleattr[key]
+	let filteralleleattr 
+	if(req.query.filteralleleattr) {
+		filteralleleattr = {}
+		for(const key in req.query.filteralleleattr) {
+			const v = req.query.filteralleleattr[key]
 			if(v.cutoffvalue != undefined) {
 				// numeric
-				hiddenalleleattr[ key ] = v
+				filteralleleattr[ key ] = v
 			} else {
 				// categorical
 			}
@@ -4286,12 +4286,12 @@ function handle_mdssvcnv(req,res) {
 									}
 
 
-									if(hiddenalleleattr) {
+									if(filteralleleattr) {
 										// filter using allele INFO
 
 										let todrop=false
 
-										for(const key in hiddenalleleattr) {
+										for(const key in filteralleleattr) {
 
 											const value = m.altinfo[ key ]
 											if(value==undefined) {
@@ -4300,9 +4300,17 @@ function handle_mdssvcnv(req,res) {
 												break
 											}
 
-											const attr = hiddenalleleattr[key]
+											const attr = filteralleleattr[key]
 											if(attr.cutoffvalue != undefined) {
-												// numeric
+
+												// is a numeric cutoff
+
+												if(!Number.isFinite(value)) {
+													// value of this mutation is not a number
+													todrop=true
+													break
+												}
+
 												if(attr.keeplowerthan) {
 													if(value > attr.cutoffvalue) {
 														todrop=true
