@@ -36,7 +36,7 @@ module.exports={
 		}
 	},
 
-	locusAttribute:{
+	locusAttribute:{ // FIXME
 		attributes:{
 			CLNSIG:{
 				label:'Clinical significance',
@@ -68,6 +68,14 @@ module.exports={
 				filter:1,
 				isnumeric:1,
 				cutoffvalue:10,
+			}
+		}
+	},
+
+	mutationAttribute:{
+		attributes:{
+			discordantreads:{
+				label:'Discordant reads'
 			}
 		}
 	},
