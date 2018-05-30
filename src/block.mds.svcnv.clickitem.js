@@ -1554,15 +1554,20 @@ function detailtable_singlesample(p) {
 					})
 					continue
 				}
-				const vv = attr.values[vstr]
-				if(vv) {
-					lst.push({
-						k: attr.label,
-						v: vv.name + (vv.label ? ' <span style="font-size:.7em;opacity:.5">'+vv.label+'</span>' : '')
-					})
-					continue
+
+				if(attr.values) {
+					// values is optional
+					const vv = attr.values[vstr]
+					if(vv) {
+						lst.push({
+							k: attr.label,
+							v: vv.name + (vv.label ? ' <span style="font-size:.7em;opacity:.5">'+vv.label+'</span>' : '')
+						})
+						continue
+					}
 				}
-				// unregistered value
+
+				// no attr.values{} or unregistered value
 				lst.push({
 					k: attr.label,
 					v: vstr
