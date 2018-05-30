@@ -9814,10 +9814,13 @@ function mds_init(ds,genome) {
 				// this is pmid, no .values{}
 				continue
 			}
-			if(!a.values) return '.values{} missing for key '+key+' from mutationAttribute.attributes'
-			for(const v in a.values) {
-				const b = a.values[v]
-				if(!b.name) return '.name missing for value '+v+' of key '+key+' from mutationAttribute.attributes'
+			if(a.values) {
+				for(const v in a.values) {
+					const b = a.values[v]
+					if(!b.name) return '.name missing for value '+v+' of key '+key+' from mutationAttribute.attributes'
+				}
+			} else {
+				// allow values{} missing
 			}
 		}
 	}
