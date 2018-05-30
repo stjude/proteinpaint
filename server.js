@@ -6984,8 +6984,16 @@ function handle_mdsjunction_singlejunction(req,res,ds,dsquery) {
 		})
 	})
 	.then( jd=>{
+
+		// test test
+		for(const s of jd.samples) {
+			console.log(dsquery.samples[s.i],s.readcount)
+		}
+
+
 		const samples = filtersamples4onejunction(jd, req.query, ds, dsquery) // TODO iscustom
 		if(samples.length==0) throw({message:'no sample passing filters'})
+
 
 		const report={
 		}
