@@ -75,7 +75,7 @@ module.exports={
 	mutationAttribute:{
 		attributes:{
 			discordantreads:{
-				label:'Discordant reads'
+				label:'Discordant read pairs'
 			}
 		}
 	},
