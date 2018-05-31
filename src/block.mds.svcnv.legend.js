@@ -311,8 +311,12 @@ function create_sampleAttribute(tk) {
 			// not a filter
 			continue
 		}
-		attr.hiddenvalues = new Set()
-		// k: key in mutationAttribute.attributes{}
+
+		// do not override customization from embedding
+		if( !attr.hiddenvalues || !(attr.hiddenvalues instanceof Set)) {
+			attr.hiddenvalues = new Set()
+			// k: key in mutationAttribute.attributes{}
+		}
 
 		attr.value2count = new Map()
 		/*

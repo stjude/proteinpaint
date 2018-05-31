@@ -2472,6 +2472,31 @@ function makeTk(tk, block) {
 		tk.alleleAttribute = tk.mds.alleleAttribute
 	}
 
+	if(tk.customization) {
+		/*
+		customization attr from embedding
+		copy them to attributes
+		*/
+		if(tk.customization.sampleAttribute) {
+			if(!tk.sampleAttribute) tk.sampleAttribute={}
+			if(!tk.sampleAttribute.attributes) tk.sampleAttribute.attributes={}
+			for(const k in tk.customization.sampleAttribute) {
+				const cust = tk.customization.sampleAttribute[k]
+				if(!tk.sampleAttribute.attributes[k]) {
+					// a customized attribute is not found in registry, allow it 
+					tk.sampleAttribute.attributes[k]={
+						label: k,
+					}
+				}
+				const attr = tk.sampleAttribute.attributes[k]
+				if(!attr.hiddenvalues) attr.hiddenvalues = new Set()
+				if(cust.hiddenvalues) {
+					for(const v of cust.hiddenvalues) attr.hiddenvalues.add(v)
+				}
+			}
+		}
+	}
+
 	if(!tk.singlesample) {
 		// in multi-sample
 
