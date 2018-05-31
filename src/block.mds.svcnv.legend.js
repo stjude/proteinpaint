@@ -107,18 +107,20 @@ export function update_legend(tk, block) {
 function create_mclass(tk) {
 	/*
 	list all mutation classes
+	attribute may have already been created with customization
 	*/
-	const row = tk.legend_table.append('tr')
-	tk.legend_mclass = {
-		row:row,
-		hiddenvalues: new Set(), // !!!!
-		hidden: false,
-	}
-	row.append('td')
+	if(!tk.legend_mclass) tk.legend_mclass={}
+	if(!tk.legend_mclass.hiddenvalues) tk.legend_mclass.hiddenvalues = new Set()
+
+	tk.legend_mclass.hidden=false
+
+	tk.legend_mclass.row = tk.legend_table.append('tr')
+
+	tk.legend_mclass.row.append('td')
 		.style('text-align','right')
 		.style('opacity',.5)
 		.text('Mutation')
-	tk.legend_mclass.holder = row.append('td')
+	tk.legend_mclass.holder = tk.legend_mclass.row.append('td')
 	tk.legend_hideable.push(tk.legend_mclass)
 }
 
