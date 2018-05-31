@@ -921,9 +921,17 @@ function launchsamplematrix(cfg, holder) {
 	cfg.hostURL = hostURL
 	cfg.holder = holder
 	cfg.debugmode = debugmode
-	import('./samplematrix').then(_=>{
-		new _.Samplematrix(cfg)
-	})
+	// dynamic import works with static values, not expressions
+	if (window.location.search.includes('smx=3')) {
+		import('./samplematrix3').then(_=>{
+			new _.Samplematrix(cfg)
+		})
+	}
+	else {
+		import('./samplematrix').then(_=>{
+			new _.Samplematrix(cfg)
+		})
+	}
 }
 
 

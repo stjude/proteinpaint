@@ -268,17 +268,34 @@ export function createnewmatrix_withafeature(_p) {
 				arg.querykey2tracks[ customkey_vcf ][ k ] = tk.checkvcf[ k ]
 			}
 		}
-
 	} else {
 		// official
 		arg.dslabel = tk.mds.label
 	}
 
-	import('./samplematrix').then(_=>{
-		const m = new _.Samplematrix( arg )
-		m._pane = pane
-		tk.samplematrices.push( m )
-	})
+	// dynamic import works with static values, not expressions
+	if (window.location.search.includes('smx=3')) {
+		import('./samplematrix3').then(_=>{
+			const m = new _.Samplematrix( arg )
+			m._pane = pane
+			tk.samplematrices.push( m )
+		})
+	}
+	else {
+		import('./samplematrix').then(_=>{
+			const m = new _.Samplematrix(arg)
+			m._pane = pane
+			tk.samplematrices.push( m )
+		})
+	}
+	
+	// already exists
+	/*
+	if(tk.samplematrix._pane.pane.style('display')=='none') {
+		// show first
+		tk.samplematrix._pane.pane.style('display','block').style('opacity',1)
+	}
+	*/
 }
 
 
