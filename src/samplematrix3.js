@@ -1670,7 +1670,7 @@ sort samples by f.issampleattribute
 
 
 
-	click_cell( sample, feature ) {
+	click_cell( samplename, feature ) {
 		/*
 		browser view of single sample, to show whatever data's available from the dataset, irrespective of feature type
 		feature provides view range
@@ -1695,7 +1695,7 @@ sort samples by f.issampleattribute
 							mds: this.mds,
 							querykey: querykey,
 							singlesample:{
-								name: sample.name
+								name: samplename
 							}
 						}
 						for(const k in tk) svcnvtk[k] = tk[k]
@@ -1717,7 +1717,7 @@ sort samples by f.issampleattribute
 				genome:this.genome.name,
 				dslabel:this.dslabel,
 				querykey: svcnvtk.querykey,
-				gettrack4singlesample: sample.name
+				gettrack4singlesample: samplename
 			}
 			return client.dofetch( '/mdssvcnv', par)
 			.then(data=>{
