@@ -948,6 +948,7 @@ function launchgeneview(arg, holder) {
 		variantPageCall_snv:variantPageCall_snv,
 		samplecart:samplecart,
 		debugmode:debugmode,
+		datasetqueries: arg.datasetqueries,
 		tklst: arg.tracks
 	}
 	let ds=null
