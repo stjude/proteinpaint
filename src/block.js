@@ -749,7 +749,7 @@ constructor(arg) {
 				if(!ds.isMds) return this.error('query not supported in dataset: '+q.dataset)
 				if(!ds.queries) return this.error('.queries missing from dataset: '+q.dataset)
 				if(!ds.queries[q.querykey]) return this.error('invalid querykey: '+q.querykey)
-				this.mds_load_query_bykey(ds, q.querykey)
+				this.mds_load_query_bykey( ds, q )
 			})
 		}
 	}
@@ -4370,7 +4370,7 @@ mds_handle_make(key) {
 								this.tk_remove(findtkindex)
 								return
 							}
-							this.mds_load_query_bykey(ds, querykey)
+							this.mds_load_query_bykey( ds, {querykey:querykey} )
 						})
 				}
 			}
@@ -4392,11 +4392,14 @@ mds_handle_make(key) {
 
 
 
-mds_load_query_bykey(ds, querykey) {
-	// official ds
+mds_load_query_bykey(ds, q) {
+	/*
+	official ds
+	q comes from datasetqueries of embedding, with customizations
+	*/
 	if(!ds.queries) return console.log('ds.queries{} missing')
-	const tk0=ds.queries[querykey]
-	if(!tk0) return console.log('querykey not found in ds.queries: '+querykey)
+	const tk0=ds.queries[q.querykey]
+	if(!tk0) return console.log('querykey not found in ds.queries: '+q.querykey)
 
 	if(tk0.isgenenumeric) {
 		// gene numeric values, show gene search box
@@ -4404,14 +4407,16 @@ mds_load_query_bykey(ds, querykey) {
 		return
 	}
 
-	if(this.tklst.find( t=> t.mds && t.mds.label==ds.label && t.querykey==querykey )) {
+	if(this.tklst.find( t=> t.mds && t.mds.label==ds.label && t.querykey==q.querykey )) {
 		// already shown
 		return
 	}
 
 	const tk=this.block_addtk_template(tk0)
 	tk.mds = ds
-	tk.querykey = querykey
+	tk.querykey = q.querykey
+	tk.customization = q
+
 	this.tk_load(tk)
 }
 
