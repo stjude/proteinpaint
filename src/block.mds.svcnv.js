@@ -43,6 +43,8 @@ render_samplegroups
 configPanel()
 multi_sample_addhighlight
 multi_sample_removehighlight
+apply_customization_oninit
+
 
 sv-cnv-vcf-fpkm ranking, two modes
 	multi-sample:
@@ -2507,7 +2509,7 @@ function makeTk(tk, block) {
 	}
 
 
-	apply_customization_oninit(tk)
+	apply_customization_oninit( tk, block )
 
 
 	tk.tip2 = new client.Menu({padding:'0px'})
@@ -2629,7 +2631,7 @@ function makeTk(tk, block) {
 
 
 
-function apply_customization_oninit(tk) {
+function apply_customization_oninit(tk, block) {
 	/*
 	customization attr from embedding
 	copy them to attributes
@@ -2639,6 +2641,21 @@ function apply_customization_oninit(tk) {
 	*/
 	const c = tk.customization
 	if(!c) return
+
+	if(c.singlesample) {
+		/*
+		FIXME no way to show single sample standalone
+		*/
+		const s = c.singlesample
+		focus_singlesample({
+			sample: { samplename: s.name },
+			samplegroup: { attributes: s.attributes },
+			tk: tk,
+			block: block,
+		})
+	}
+
+	// rest are multi-sample
 
 	if(c.isfull) {
 		tk.isdense=false
