@@ -78,6 +78,7 @@ module.exports={
 			{file:'hg19/Pediatric/sampletable/pedccl.celllines'},
 			{file:'hg19/Pediatric/sampletable/pcgp.telomerecall'},
 			{file:'hg19/Pediatric/sampletable/pediatric.sampletable'}, // to catch any missing samples
+			{file:'hg19/Pediatric/sampletable/fpkmOnly.samples'}, // rna only
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
