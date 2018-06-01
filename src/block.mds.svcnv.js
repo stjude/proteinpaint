@@ -2137,7 +2137,7 @@ export function focus_singlesample( p ) {
 			const et = {
 				type: client.tkt.mdsexpressionrank,
 				name: sample.samplename+' expression rank',
-				mds:tk.mds,
+				dslabel: tk.mds.label,
 				querykey: tk.mds.queries[tk.querykey].checkexpressionrank.querykey,
 				sample: sample.samplename,
 				attributes: samplegroup.attributes
@@ -2644,8 +2644,8 @@ function apply_customization_oninit(tk, block) {
 
 	if(c.singlesample) {
 		/*
-		FIXME no way to show single sample standalone
-		*/
+		this method will pop up panel and show all associated tracks
+
 		const s = c.singlesample
 		focus_singlesample({
 			sample: { samplename: s.name },
@@ -2653,6 +2653,9 @@ function apply_customization_oninit(tk, block) {
 			tk: tk,
 			block: block,
 		})
+		*/
+
+		tk.singlesample = c.singlesample
 	}
 
 	// rest are multi-sample
