@@ -6,7 +6,7 @@ export function mdsexpressionrankfromtemplate(tk,template) {
 			tk.datatype='unnamed_datatype'
 		}
 	} else {
-		if(!tk.mds) return 'mds missing for native track'
+		if(!tk.dslabel) return 'dslabel missing for native track'
 		if(!tk.querykey) return 'querykey missing for native track'
 	}
 	if(!tk.barheight) tk.barheight = 60

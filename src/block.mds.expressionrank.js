@@ -317,10 +317,16 @@ function makeTk(tk, block) {
 
 	delete tk.uninitialized
 
+
 	if(tk.iscustom) {
 		tk.gecfg = {}
 	} else {
 		// native track bar color comes from mds config with complicated setting
+
+		tk.mds = block.genome.datasets[ tk.dslabel ]
+		// XXX must catch error for invalid dslabel
+		delete tk.dslabel
+
 		tk.gecfg = tk.mds.queries[ tk.querykey ]
 	}
 
