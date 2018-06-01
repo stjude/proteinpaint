@@ -5282,7 +5282,7 @@ function handle_mds_expressionrank( req, res ) {
 				ps.stderr.on('data',i=> errout.push(i) )
 				ps.on('close',code=>{
 					const e=errout.join('')
-					if(e && !tabixnoterror(e)) throw({message:e})
+					if(e && !tabixnoterror(e)) reject({message:e})
 					resolve(gene2value)
 				})
 
