@@ -1,5 +1,15 @@
 export function mdsexpressionrankfromtemplate(tk,template) {
 	if(!tk.sample) return 'sample name missing'
+
+	if(tk.dslabel) {
+		/*
+		this one is official tk,
+		unfortunately if it is added from embedding, it will be flagged as custom
+		*/
+		delete tk.iscustom
+	}
+
+
 	if(tk.iscustom) {
 		if(!template.file && !template.url) return 'no file or url'
 		if(!tk.datatype) {
