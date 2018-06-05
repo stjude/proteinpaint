@@ -1323,3 +1323,14 @@ export function ranksays(v) {
 	if(v>0) return 'LOW '+v+'%'
 	return 'LOWEST'
 }
+
+
+export function rgb2hex(rgb){
+	// should be replaced by d3-color.rgb(xx).hex()
+	if(rgb[0]=='#') return rgb
+	const r = rgb.match(/^rgba?[\s+]?\([\s+]?(\d+)[\s+]?,[\s+]?(\d+)[\s+]?,[\s+]?(\d+)[\s+]?/i)
+	return (r && r.length === 4) ? "#" +
+	("0" + parseInt(r[1],10).toString(16)).slice(-2) +
+	("0" + parseInt(r[2],10).toString(16)).slice(-2) +
+	("0" + parseInt(r[3],10).toString(16)).slice(-2) : ''
+}

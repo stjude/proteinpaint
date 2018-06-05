@@ -226,8 +226,9 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 	// pcolor
 	config.pcolor.row=holder.append('div').style('margin-bottom','15px')
 	config.pcolor.lab=config.pcolor.row.append('span').text('Positive value color').style('padding-right','10px')
-	config.pcolor.row.append('input').attr('type','color')
-		.property('value',tk.pcolor)
+	config.pcolor.row.append('input')
+		.attr('type','color')
+		.property('value', client.rgb2hex(tk.pcolor) )
 		.on('change',()=>{
 			tk.pcolor=d3event.target.value
 			loader( client.bwSetting.pcolor )
@@ -236,8 +237,9 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 	// ncolor
 	config.ncolor.row=holder.append('div').style('margin-bottom','15px')
 	config.ncolor.lab=config.ncolor.row.append('span').text('Negative value color').style('padding-right','10px')
-	config.ncolor.row.append('input').attr('type','color')
-		.property('value',tk.ncolor)
+	config.ncolor.row.append('input')
+		.attr('type','color')
+		.property('value', client.rgb2hex(tk.ncolor) )
 		.on('change',()=>{
 			tk.ncolor=d3event.target.value
 			loader( client.bwSetting.ncolor )
@@ -247,8 +249,9 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 		// pcolor2
 		config.pcolor2.row=holder.append('div').style('margin-bottom','15px')
 		config.pcolor2.lab=config.pcolor2.row.append('span').html('&ge;Max color').style('padding-right','10px')
-		config.pcolor2.row.append('input').attr('type','color')
-			.property('value',tk.pcolor2)
+		config.pcolor2.row.append('input')
+			.attr('type','color')
+			.property('value', client.rgb2hex(tk.pcolor2) )
 			.on('change',()=>{
 				tk.pcolor2=d3event.target.value
 				loader( client.bwSetting.pcolor2 )
@@ -256,8 +259,9 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 		// ncolor2
 		config.ncolor2.row=holder.append('div').style('margin-bottom','15px')
 		config.ncolor2.lab=config.ncolor2.row.append('span').html('&le;Min color').style('padding-right','10px')
-		config.ncolor2.row.append('input').attr('type','color')
-			.property('value',tk.ncolor2)
+		config.ncolor2.row.append('input')
+			.attr('type','color')
+			.property('value', client.rgb2hex(tk.ncolor2) )
 			.on('change',()=>{
 				tk.ncolor2=d3event.target.value
 				loader( client.bwSetting.ncolor2 )
