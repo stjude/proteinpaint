@@ -2756,8 +2756,10 @@ function configPanel(tk, block) {
 	may_allow_showhidelabel_multi( tk, block )
 
 
+/*
 	// filter cnv with sv
 	{
+		// do not use!!! see notes on server
 		const row=holder.append('div').style('margin-bottom','15px')
 		const id = Math.random().toString()
 		row.append('input')
@@ -2775,6 +2777,7 @@ function configPanel(tk, block) {
 			.style('font-size','.7em').style('color','#858585')
 			.html('SV breakpoint must be inside a CNV or within its 1 Kb flanking.')
 	}
+	*/
 
 	// cnv log2 ratio
 	{

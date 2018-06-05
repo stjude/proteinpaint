@@ -4543,14 +4543,11 @@ function handle_mdssvcnv(req,res) {
 
 		const sample2item = mdssvcnv_do_sample2item( data_cnv )
 
+/*
 		if(req.query.showonlycnvwithsv) {
-			/*
-			show only cnv with sv support
-			for each cnv of each sample,
-			cnv must have at least 1 sv inside or within 1kb to it
-			*/
 			mdssvcnv_do_showonlycnvwithsv(sample2item)
 		}
+		*/
 
 		// exit
 		if(req.query.singlesample) {
@@ -4874,13 +4871,23 @@ function mdssvcnv_do_sample2item(data_cnv) {
 
 
 function mdssvcnv_do_showonlycnvwithsv(sample2item) {
+/*
+!!!do not use!!!!
+for a cnv with both ends out of view range, there is no way to query the sv at its boundary regions so no way to know if "sv-supported"
+
+arg is a map of sample to list of items
+in each sample, for a cnv to be displayed, its ends must 
+*/
+	// if a sv breakpoint falls within this distance to a cnv boundary, will say this boundary is "sv-supported"
+	//const maxsupportdist = 1000
+
 	for(const [sample,lst] of sample2item) {
 
 		const svchr2pos={}
 		// k: sv chr
 		// v: set of sv breakpoint positions
 		for(const j of lst) {
-			if(j._chr) {
+			if(j.dt==common.dtsv) {
 				if(!svchr2pos[j.chrA]) {
 					svchr2pos[j.chrA]=new Set()
 				}
@@ -4891,6 +4898,7 @@ function mdssvcnv_do_showonlycnvwithsv(sample2item) {
 				svchr2pos[j.chrB].add(j.posB)
 			}
 		}
+
 		const keepitems = []
 		for(const j of lst) {
 			if(j._chr || j.loh) {
@@ -4898,6 +4906,7 @@ function mdssvcnv_do_showonlycnvwithsv(sample2item) {
 				continue
 			}
 			if(!svchr2pos[j.chr]) continue
+
 			let match=false
 			for(const pos of svchr2pos[j.chr]) {
 				if( pos>=j.start-1000 && pos<=j.stop+1000) {
