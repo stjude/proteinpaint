@@ -4930,9 +4930,13 @@ in each sample, for a cnv to be displayed, its ends must
 
 
 function mdssvcnv_do_copyneutralloh (sample2item) {
+/*
+decide what's copy neutral loh
+only keep loh with no overlap with cnv
+*/
 	for(const [sample,lst] of sample2item) {
 
-		// only keep loh with no overlap with cnv
+		// put cnv and loh into respective maps, keyed by chr
 		const chr2loh = new Map()
 		const chr2cnv = new Map()
 		const thissampleitems = []
@@ -4954,13 +4958,17 @@ function mdssvcnv_do_copyneutralloh (sample2item) {
 		for(const [chr, lohlst] of chr2loh) {
 			const cnvlst = chr2cnv.get(chr)
 			if(!cnvlst) {
+				// this sample has no cnv in view range, use all loh as copy neutral
 				for(const i of lohlst) thissampleitems.push(i)
 				continue
 			}
+
 			for(const loh of lohlst) {
+				// for each loh
 				let nocnvmatch=true
 				for(const cnv of cnvlst) {
 					if(Math.max(loh.start,cnv.start) < Math.min(loh.stop, cnv.stop)) {
+						// this loh overlaps with a cnv, then it isn't copy neutral
 						nocnvmatch=false
 						break
 					}
@@ -4972,6 +4980,7 @@ function mdssvcnv_do_copyneutralloh (sample2item) {
 		sample2item.set(sample, thissampleitems)
 	}
 }
+
 
 
 
