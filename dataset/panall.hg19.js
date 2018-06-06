@@ -54,11 +54,11 @@ module.exports={
 						'HLF':{color:'#87CEEB'},
 						'Hyperdiploid':{color:'#3E9F32'},
 						'KMT2A':{color:'#1F78B5'},
-						'LowHypo':{color:'#1E90FF'},
+						'Low hypodiploid':{ color:'#1E90FF' },
 						'MEF2D':{color:'#66C2A6'},
-						'NearHaploid':{color:'#0000CD'},
+						'Near haploid':{ color:'#0000CD', },
 						'NUTM1':{color:'#000000'},
-						'PAX5(P80R)':{color:'#FF4500'},
+						'PAX5 P80R':{ color:'#FF4500', },
 						'PAX5alt':{color:'#FFA620'},
 						'Ph':{color:'#CD00CD'},
 						'Ph-like(ABL1-class)':{color:'#FF6A6A'},
@@ -68,7 +68,12 @@ module.exports={
 						'ZNF384':{color:'#A8DD00'},
 						'Other':{color:'#BFBFBF'},
 						'iAMP21':{color:'#8470FF'},
-						'IKZF1(N159Y)':{color:'#CDCE34'},
+						'IKZF1 N159Y':{ color:'#CDCE34', },
+						'CRLF2(non-Ph-like)':{color:'#858585'},
+						'ETV6-RUNX1-like':{color:'#858585'},
+						'KMT2A-like':{color:'#858585'},
+						'Low hyperdiploid':{color:'#858585'},
+						'ZNF384-like':{color:'#858585'},
 					}
 				},
 				ageGroup: {
@@ -83,7 +88,7 @@ module.exports={
 							color:'#d95f02'
 							},
 						AYA:{
-							name:'Adolescent and young adult, age 16~19 years',
+							name:'Adolescent and young adult (AYA), age 16~40 years',
 							color:'#7570b3'
 							}
 					}
@@ -169,6 +174,8 @@ module.exports={
 			istrack:true,
 			type:common.tkt.mdssvcnv,
 			file:'hg19/pan-all/snp6cnv.ball/cnv.gz',
+
+			no_loh:1,
 
 			// cnv
 			valueCutoff:0.2,
