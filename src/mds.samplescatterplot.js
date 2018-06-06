@@ -365,7 +365,7 @@ function init_dotcolor_legend(obj) {
 				cell.append('div')
 					.style('display','inline-block')
 					.style('color',o.color)
-					.text(value)
+					.text( o.name || value )
 			}
 		}
 	}
