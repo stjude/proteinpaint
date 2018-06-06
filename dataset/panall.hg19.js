@@ -69,11 +69,11 @@ module.exports={
 						'Other':{color:'#BFBFBF'},
 						'iAMP21':{color:'#8470FF'},
 						'IKZF1 N159Y':{ color:'#CDCE34', },
-						'CRLF2(non-Ph-like)':{color:'#858585'},
-						'ETV6-RUNX1-like':{color:'#858585'},
-						'KMT2A-like':{color:'#858585'},
-						'Low hyperdiploid':{color:'#858585'},
-						'ZNF384-like':{color:'#858585'},
+						'CRLF2(non-Ph-like)':{color:'#BFBFBF'},
+						'ETV6-RUNX1-like':{color:'#BFBFBF'},
+						'KMT2A-like':{color:'#BFBFBF'},
+						'Low hyperdiploid':{color:'#BFBFBF'},
+						'ZNF384-like':{color:'#BFBFBF'},
 					}
 				},
 				ageGroup: {
