@@ -5775,7 +5775,7 @@ function handle_mdsgeneboxplot( req, res ) {
 
 		const {groups, sample2event} = data
 
-		if(req.query.iscustom) {
+		if(req.query.iscustom || groups.length==1) {
 			// a custom track
 			if(groups[0]) {
 				const l=groups[0].values
