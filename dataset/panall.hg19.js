@@ -30,7 +30,7 @@ module.exports={
 		sampleAttribute:{
             attributes:{
 				fusion:{label:'Fusion'},
-				subtype2:{label:'Subtype2',filter:1},
+				'2nd subtype':{label:'2nd subtype',filter:1},
 				PAX5_mut:{label:'PAX5_mut'},
 				'PAX5cna(amp)':{label:'PAX5cna(amp)'},
 				outcomeGroup:{label:'Outcome group'}, // use in gene expression sample grouping
@@ -44,8 +44,8 @@ module.exports={
 
 				X:{label:'X',isfloat:1},
 				Y:{label:'Y',isfloat:1},
-				subtype1:{ // used in tsne
-					label:'Subtype1',
+				'primary subtype':{ // used in tsne
+					label:'Primary subtype',
 					filter:1,
 					values:{
 						'BCL2/MYC':{color:'#4EEE94'},
@@ -74,9 +74,18 @@ module.exports={
 				ageGroup: {
 					label:'Age group',
 					values:{
-						Adult:{color:'#1b9e77'},
-						Childhood:{color:'#d95f02'},
-						'Young Adult':{color:'#7570b3'}
+						Adult:{
+							name:'Adult, age >= 40 years',
+							color:'#1b9e77'
+							},
+						Childhood:{
+							name:'Childhood, age < 16 years',
+							color:'#d95f02'
+							},
+						AYA:{
+							name:'Adolescent and young adult, age 16~19 years',
+							color:'#7570b3'
+							}
 					}
 				}
             },
@@ -90,7 +99,7 @@ module.exports={
 				attribute:'Y'
 			},
 			colorbyattributes:[
-				{key:'subtype1'},
+				{key:'primary subtype'},
 				{key:'ageGroup'}
 			],
 			colorbygeneexpression:{ querykey:'generlog' }, // not about mds
@@ -171,7 +180,7 @@ module.exports={
 
 			groupsamplebyattr:{
 				attrlst:[
-                                	{k:'subtype1',label:'Subtype'},
+                                	{k:'primary subtype',label:'Subtype'},
 				],
 				attrnamespacer:', ',
 			},
