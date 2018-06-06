@@ -454,7 +454,8 @@ function launch_singlesample (p) {
 			const et = {
 				type: client.tkt.mdsexpressionrank,
 				name: dot.sample+' gene expression rank',
-				mds: tk.mds,
+				//mds: tk.mds,
+				dslabel: obj.mds.label,
 				querykey: mdstk.checkexpressionrank.querykey,
 				sample: dot.sample,
 			}
