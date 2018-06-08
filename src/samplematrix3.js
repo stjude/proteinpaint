@@ -75,11 +75,16 @@ export class Samplematrix {
 				.html(this.header)
 		}
 
-		//this.svg = this.holder.append('svg')
-		// one legend item for each feature -- may not be desirable though
+		this.buttonrow = this.holder.append('div')
+			.style('text-align', 'left')
+			.style('font-family', 'sans-serif')
+
+		this.controlsDiv = this.holder.append('div')
+			.style('text-align', 'left')
+			.style('font-family', 'sans-serif')
+
 		this.legendholder = this.holder.append('div')
 			.style('text-align', 'center')
-			.style('padding', '0px 10%')
 			.style('font-family', 'sans-serif')
 
 		this.svgholder = this.holder.append('div') 
@@ -581,7 +586,6 @@ export class Samplematrix {
 			return Promise.resolve()
 		}
 
-
 		// __newattr
 		throw('unknown feature type in validating feature')
 
@@ -622,6 +626,8 @@ export class Samplematrix {
 			this.dtApp = await sjcharts.dtHm({
 				appCaller: this, 
 				holder: this.svgholder,
+				buttonRow: this.buttonrow,
+				controlsDiv: this.controlsDiv,
 				legendHolder: this.legendholder,
 				settings: {
 					colw: 50,
@@ -638,14 +644,14 @@ export class Samplematrix {
 			if(data.error) throw({message:data.error})
 			for(const dat of data.results) {
 				const f = this.features.find( f=> f.id==dat.id )
-				if(!f) throw({message: 'feature not found: '+f.id })
+				if(!f) throw({message: 'feature not found: '+f.id });
 				f.items = dat.items
 				//this.prep_featuredata( f )
 			}
 
 			this.gatherSamplesFromFeatureData()
 			this.sortsamplesbyfeatures()
-			this.dtApp.main(arg.features,data)
+			this.dtApp.main(this.features,data)
 		})
 
 		/*return client.dofetch('/samplematrix',arg)
