@@ -1108,6 +1108,13 @@ function launchblock(arg,holder) {
 	}
 
 	if(arg.datasetqueries) {
+		/*
+		each dataset comes with customization
+		it will be appended as .customization{} to the tk object
+		and parsed in makeTk() of svcnv track
+
+		also for launching gene view
+		*/
 		blockinitarg.datasetqueries=arg.datasetqueries
 	}
 
