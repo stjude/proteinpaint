@@ -2676,9 +2676,7 @@ function apply_customization_oninit(tk, block) {
 
 	if(c.singlesample) {
 		/*
-		this method will pop up panel and show all associated tracks
-		do not use it for now
-		actually, do not use singlesample, as there is no good solution
+		this method will pop up panel and show all associated tracks, not in use now
 
 		const s = c.singlesample
 		focus_singlesample({
@@ -2689,6 +2687,7 @@ function apply_customization_oninit(tk, block) {
 		})
 		*/
 
+		// for now, simply turn the mds track into single-sample mode
 		tk.singlesample = c.singlesample
 	}
 
