@@ -31,6 +31,8 @@ obj:
 	.querykey
 	.labelhandle
 	.__inuse
+.tracks[]
+	tracks to be shown in single sample by clicking dots
 
 
 ********************** EXPORTED
@@ -116,6 +118,9 @@ export function init (obj,holder, debugmode) {
 		obj.colorbyattributes = data.colorbyattributes
 		obj.colorbygeneexpression = data.colorbygeneexpression
 		init_dotcolor_legend(obj)
+
+		// optional stuff
+		obj.tracks = data.tracks
 
 		init_plot(obj)
 	})
@@ -434,6 +439,12 @@ function launch_singlesample (p) {
 		nobox:1,
 		tklst:[]
 	}
+
+	if(obj.tracks) {
+		// quick fix for adding tracks to single-sample view
+		for(const t of obj.tracks) arg.tklst.push(t)
+	}
+
 
 	// TODO general track in single-sample mode
 
