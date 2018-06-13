@@ -175,6 +175,7 @@ ssh -t $DEPLOYER@$REMOTEHOST "
 	rm -Rf $REMOTEDIR/$APP-new
 	mkdir $REMOTEDIR/$APP-new
 	tar --warning=no-unknown-keyword -xzf ~/$APP-$REV.tgz -C $REMOTEDIR/$APP-new/
+	rm ~/$APP-$REV.tgz
 
 	cp -r $REMOTEDIR/$APP/node_modules $REMOTEDIR/$APP-new/
 	cp $REMOTEDIR/$APP/serverconfig.json $REMOTEDIR/$APP-new/
