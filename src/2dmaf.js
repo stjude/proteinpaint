@@ -4,6 +4,7 @@ import {scaleLinear} from 'd3-scale'
 import {axisLeft, axisTop, axisBottom} from 'd3-axis'
 import {format as d3format} from 'd3-format'
 import * as common from './common'
+import Anchors from './2dmaf.Anchors'
 
 
 /*
@@ -863,6 +864,9 @@ headerdiv.append('button').text('Hide').on('click',()=>{
 	outtable.remove()
 })
 
+const anchors = new Anchors(axiswidth,sp,sample2height,shareheight,sharewidth)
+anchors.addControls(headerdiv)
+
 headerdiv.append('button').text('Screenshot').on('click',()=>{
 	client.to_svg(svg.node(), '2dmaf_'+pdata.name)
 })
@@ -959,6 +963,8 @@ const svg=tdgraph.append('svg')
 const g=svg.append('g')
 	.attr('transform','translate('+sp+','+sp+')')
 
+anchors.render(g.append('g'))
+
 // axis 1 (horizontal)
 const scale1=scaleLinear().domain([0,1]).range([0,sharewidth])
 const scalediv1=g.append('g')
@@ -968,7 +974,6 @@ const scalediv1=g.append('g')
 		.tickSize(5)
 	)
 client.axisstyle({axis:scalediv1,showline:true,fontsize:labelfontsize*.8})
-
 
 // axis 1 label
 const c=set_1.length+set_share.length
@@ -1016,7 +1021,6 @@ g.append('path').attr('d',
 	.attr('stroke','black')
 	.attr('shape-rendering','crispEdges')
 	.attr('stroke-dasharray','5,5')
-
 
 // set share
 const select_share=g.append('g')
@@ -1124,6 +1128,7 @@ g_set1.append('g')
 	.attr('dominant-baseline','middle')
 	.attr('transform','rotate(-90)')
 
+anchors.setD(shareheight+sp2, shareheight+sample1height)
 
 // set 1
 const select_set1=g_set1.selectAll()
@@ -1225,6 +1230,7 @@ g_set2.append('text')
 	.attr('y',shareheight+labelfontsize)
 	.attr('text-anchor','middle')
 
+anchors.setR(axiswidth+sp, sample2height+sp)
 
 // set 2
 const select_set2=g_set2.selectAll()
