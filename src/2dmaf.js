@@ -864,8 +864,7 @@ headerdiv.append('button').text('Hide').on('click',()=>{
 	outtable.remove()
 })
 
-const anchors = new Anchors(axiswidth,sp,sample2height,shareheight,sharewidth)
-anchors.addControls(headerdiv)
+const anchors = new Anchors({axiswidth,sp,sp2,sample1height,sample2height,shareheight,sharewidth,headerdiv})
 
 headerdiv.append('button').text('Screenshot').on('click',()=>{
 	client.to_svg(svg.node(), '2dmaf_'+pdata.name)
@@ -962,8 +961,8 @@ const svg=tdgraph.append('svg')
 	.attr('height',axiswidth+sp+sample1height+shareheight+sp*2)
 const g=svg.append('g')
 	.attr('transform','translate('+sp+','+sp+')')
-
-anchors.render(g.append('g'))
+	
+anchors.setWrapper(g.append('g'))
 
 // axis 1 (horizontal)
 const scale1=scaleLinear().domain([0,1]).range([0,sharewidth])
@@ -1128,8 +1127,6 @@ g_set1.append('g')
 	.attr('dominant-baseline','middle')
 	.attr('transform','rotate(-90)')
 
-anchors.setD(shareheight+sp2, shareheight+sample1height)
-
 // set 1
 const select_set1=g_set1.selectAll()
 	.data(set_1)
@@ -1152,7 +1149,6 @@ select_set1.filter(d=> d.Rcnvloh)
 	.attr('cx',d=>  d.issnv ? -radiusscale(d['TinD.D']) : -indelboxw/2 )
 	.attr('fill','#858585')
 	.attr('r',r_cnvloh)
-
 
 // set 1 - snv
 snv=select_set1
@@ -1229,8 +1225,6 @@ g_set2.append('text')
 	.attr('x',(sample2height-sp2)/2)
 	.attr('y',shareheight+labelfontsize)
 	.attr('text-anchor','middle')
-
-anchors.setR(axiswidth+sp, sample2height+sp)
 
 // set 2
 const select_set2=g_set2.selectAll()
