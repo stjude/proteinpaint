@@ -3,6 +3,7 @@ import * as client from './client'
 import {scaleLinear} from 'd3-scale'
 import {axisLeft, axisTop, axisBottom} from 'd3-axis'
 import {format as d3format} from 'd3-format'
+import {symbol} from 'd3-shape'
 import * as common from './common'
 import Anchors from './2dmaf.Anchors'
 
@@ -961,7 +962,7 @@ const svg=tdgraph.append('svg')
 	.attr('height',axiswidth+sp+sample1height+shareheight+sp*2)
 const g=svg.append('g')
 	.attr('transform','translate('+sp+','+sp+')')
-	
+
 anchors.setWrapper(g.append('g'))
 
 // axis 1 (horizontal)
@@ -1504,37 +1505,49 @@ for(const name of genelst) {
 	let td=tr.append('td')
 	if(s1.length) {
 		for(const m of s1) {
-			td.append('div')
+			const div = td.append('div')
 			.attr('class','sja_clbtext')
 			.style('color',m.style.fillhl)
 			.text(m.mname || '')
 			.on('click',()=>{
 				click(d3event.target, m, select_set1)
 			})
+
+			if (m.labelIsVisible) {
+				click(div.node(), m, select_set1)
+			}
 		}
 	}
 	td=tr.append('td')
 	if(s2.length) {
 		for(const m of s2) {
-			td.append('div')
+			const div = td.append('div')
 			.attr('class','sja_clbtext')
 			.style('color',m.style.fillhl)
 			.text(m.mname || '')
 			.on('click',()=>{
 				click(d3event.target,m,select_set2)
 			})
+
+			if (m.labelIsVisible) {
+				click(div.node(), m, select_set1)
+			}
 		}
 	}
 	td=tr.append('td')
 	if(ss.length) {
 		for(const m of ss) {
-			td.append('div')
+			const div = td.append('div')
 			.attr('class','sja_clbtext')
 			.style('color',m.style.fillhl)
 			.text(m.mname || '')
 			.on('click',()=>{
 				click(d3event.target,m,select_share)
 			})
+
+			if (m.labelIsVisible) {
+				click(div.node(), m, select_set1)
+			}
 		}
 	}
 }
@@ -1569,7 +1582,7 @@ function click(butt,m,select) {
 			.attr('transform','translate('+x+','+y+')')
 		let w
 		g.append('text')
-			.text(m.gene+' '+m.mname)
+			.text(m.labelAs ? m.labelAs : m.gene+' '+m.mname)
 			.attr('fill',m.style.fillhl)
 			.attr('dominant-baseline','middle')
 			.attr('font-size',m.radius)
