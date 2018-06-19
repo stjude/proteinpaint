@@ -3,7 +3,7 @@ import * as client from './client'
 import {scaleLinear} from 'd3-scale'
 import {axisLeft, axisTop, axisBottom} from 'd3-axis'
 import {format as d3format} from 'd3-format'
-import {symbol} from 'd3-shape'
+import {symbol, symbolCircle, symbolCross, symbolDiamond, symbolSquare, symbolStar, symbolTriangle, symbolWye} from 'd3-shape'
 import * as common from './common'
 import Anchors from './2dmaf.Anchors'
 
@@ -16,13 +16,24 @@ make a 2dmaf plot for each pair
 */
 
 
-
-
 const color1='#f9766c'
 const color2='#609cff'
 const colorshare='#01b937'
-
-
+const symbols={
+	circle: symbolCircle,
+	cross: symbolCross,
+	diamond: symbolDiamond,
+	square: symbolSquare,
+	star: symbolStar,
+	triangle: symbolTriangle,
+	wye: symbolWye,
+}
+// for selecting what tagName to use when appending
+// needed for now until the issue with selection.append([function]) is figured out
+const symbolFilters = {
+	path: (d)=>d.symbol, 
+	circle: (d)=>!d.symbol,
+}
 
 export function d2mafui(genomes) {
 	const [pane,inputdiv,gselect,filediv,saydiv,visualdiv]=client.newpane3(100, 100, genomes)
@@ -318,6 +329,13 @@ function parseraw(lines, genome, filename, holder) {
 				delete m[key]
 			} else {
 				m[key]=a
+			}
+		}
+
+		if (m.symbol) {
+			if (!symbols[m.symbol]) {
+				badlines.push([i, "Invalid symbol value='"+m.symbol+"'", lst])
+				continue
 			}
 		}
 
@@ -800,10 +818,11 @@ const set_2=[]
 const set_share=[]
 const mlst=pdata.mlst
 const person=mlst[0].sample
+const symbolgen = symbol()
 
 let maxtotal=0
+let bysymbol={}
 const mclasses={}
-
 for(const m of mlst) {
 	if(m['TinD.D']>0) {
 		maxtotal=Math.max(maxtotal,m['TinD.D'])
@@ -820,6 +839,12 @@ for(const m of mlst) {
 	}
 	if(!(m.class in mclasses)) {
 		mclasses[m.class]=0
+	}
+	if (m.symbol) {
+		if (!bysymbol[m.symbol]) {
+			bysymbol[m.symbol]={numlines:0, label:m.symbollabel, hidden: false}
+		}
+		bysymbol[m.symbol].numlines++
 	}
 	mclasses[m.class]++
 }
@@ -839,6 +864,7 @@ const axiswidth=50,
 	r_cnvloh=3
 
 const radiusscale=scaleLinear().domain([0,maxtotal]).range([radius/2,radius])
+const radiustoarea=d=>Math.PI*Math.pow(radiusscale(d),2)
 
 for(const m of mlst) {
 	// for creating dot label upon pushing button
@@ -1054,17 +1080,25 @@ select_share.filter((d)=> d.Rcnvloh)
 // set share - snv
 let snv=select_share
 	//.filter(function(d){return d.issnv})
-snv.append('ellipse')
-	.attr('rx',d=> radiusscale(d['TinD.D']) )
-	.attr('ry',d=> radiusscale(d['TinD.R']) )
-	.attr('fill',d=> d.style.fill)
-	.attr('fill-opacity',d=> d.style.fillopacity)
-	.attr('stroke',d=> d.style.stroke)
-	.attr('stroke-opacity',d=> d.style.strokeopacity)
-	.attr('stroke-dasharray',d=> d.chr=='chrX' ? '5,5' : 'none')
-	.on('mouseover',d=> d2maf_dotmover(d,d3event.target, tooltip) )
-	.on('mouseout',d=> d2maf_dotmout(d,d3event.target, tooltip) )
-	.on('click',d=> d2maf_minfo(pdata.header,d) )
+
+// not sure why this documented option to supply a function to append is not working
+// snv.append(function(d){return document.createElement(1 || d.symbol ? 'path' : 'circle')})
+// ... do this instead for now
+for(const tagName in symbolFilters) {
+	snv.filter(symbolFilters[tagName])
+	    .append(tagName)
+		.attr('rx',d=>d.symbol ? null : radiusscale(d['TinD.D']) )
+		.attr('ry',d=>d.symbol ? null : radiusscale(d['TinD.R']) )
+		.attr('d',d=>!d.symbol ? null : symbolgen.type(symbols[d.symbol]).size(radiustoarea(d['TinD.D'])+radiustoarea(d['TinD.R'])/2)())
+		.attr('fill',d=> d.style.fill)
+		.attr('fill-opacity',d=> d.style.fillopacity)
+		.attr('stroke',d=> d.style.stroke)
+		.attr('stroke-opacity',d=> d.style.strokeopacity)
+		.attr('stroke-dasharray',d=> d.chr=='chrX' ? '5,5' : 'none')
+		.on('mouseover',d=> d2maf_dotmover(d,d3event.target, tooltip) )
+		.on('mouseout',d=> d2maf_dotmout(d,d3event.target, tooltip) )
+		.on('click',d=> d2maf_minfo(pdata.header,d) )
+}
 snv.append('line')
 	.attr('stroke',d=> d.style.stroke)
 	.attr('stroke-opacity',d=> d.style.strokeopacity)
@@ -1153,16 +1187,24 @@ select_set1.filter(d=> d.Rcnvloh)
 
 // set 1 - snv
 snv=select_set1
-snv.append('circle')
-	.attr('r',d=> radiusscale(d['TinD.R']) )
-	.attr('fill',d=>  d.style.fill)
-	.attr('fill-opacity',d=> d.style.fillopacity)
-	.attr('stroke',d=> d.style.stroke)
-	.attr('stroke-opacity',d=> d.style.strokeopacity)
-	.attr('stroke-dasharray',d=> d.chr=='chrX' ? '5,5' : 'none')
-	.on('mouseover',d=> d2maf_dotmover(d,d3event.target, tooltip) )
-	.on('mouseout',d=> d2maf_dotmout(d,d3event.target, tooltip) )
-	.on('click',d=> d2maf_minfo(pdata.header,d) )
+// not sure why this documented option to supply a function to append is not working
+// snv.append(function(d){return document.createElement(1 || d.symbol ? 'path' : 'circle')})
+// ... do this instead for now
+for(const tagName in symbolFilters) {
+	snv.filter(symbolFilters[tagName])
+	    .append(tagName)
+	    .attr('class',d=>d.symbol ? 'twodmaf-'+d.symbol : null)
+		.attr('r',d=>d.symbol ? null : radiusscale(d['TinD.R']) )
+		.attr('d',d=>!d.symbol ? null : symbolgen.type(symbols[d.symbol]).size(radiustoarea(d['TinD.R']))())
+		.attr('fill',d=>  d.style.fill)
+		.attr('fill-opacity',d=> d.style.fillopacity)
+		.attr('stroke',d=> d.style.stroke)
+		.attr('stroke-opacity',d=> d.style.strokeopacity)
+		.attr('stroke-dasharray',d=> d.chr=='chrX' ? '5,5' : 'none')
+		.on('mouseover',d=> d2maf_dotmover(d,d3event.target, tooltip) )
+		.on('mouseout',d=> d2maf_dotmout(d,d3event.target, tooltip) )
+		.on('click',d=> d2maf_minfo(pdata.header,d) )
+}
 snv.append('line')
 	.attr('stroke',d=> d.style.stroke)
 	.attr('stroke-opacity',d=> d.style.strokeopacity)
@@ -1226,7 +1268,6 @@ g_set2.append('text')
 	.attr('x',(sample2height-sp2)/2)
 	.attr('y',shareheight+labelfontsize)
 	.attr('text-anchor','middle')
-
 // set 2
 const select_set2=g_set2.selectAll()
 	.data(set_2)
@@ -1251,9 +1292,17 @@ select_set2.filter(d=> d.Rcnvloh)
 
 // set 2 - snv
 snv=select_set2
-	//.filter(function(d){return d.issnv});
-snv.append('circle')
-	.attr('r',d=> radiusscale(d['TinD.D']) )
+	//.filter(function(d){return d.issnv}); 
+
+// not sure why this documented option to supply a function to append is not working
+// snv.append(function(d){return document.createElement(1 || d.symbol ? 'path' : 'circle')})
+// ... do this instead for now
+for(const tagName in symbolFilters) {
+	snv.filter(symbolFilters[tagName])
+	.append(tagName)
+	.attr('class',d=>d.symbol ? 'twodmaf-'+d.symbol : null)
+	.attr('r',d=>d.symbol ? null : radiusscale(d['TinD.D']) )
+	.attr('d',d=>!d.symbol ? null : symbolgen.type(symbols[d.symbol]).size(radiustoarea(d['TinD.R']))())
 	.attr('fill',d=> d.style.fill)
 	.attr('fill-opacity',d=> d.style.fillopacity)
 	.attr('stroke',d=> d.style.stroke)
@@ -1262,6 +1311,7 @@ snv.append('circle')
 	.on('mouseover',d=> d2maf_dotmover(d,d3event.target, tooltip) )
 	.on('mouseout',d=> d2maf_dotmout(d,d3event.target, tooltip) )
 	.on('click',d=> d2maf_minfo(pdata.header,d) )
+}
 snv.append('line')
 	.attr('stroke',d=> d.style.stroke)
 	.attr('stroke-opacity',d=> d.style.strokeopacity)
@@ -1429,6 +1479,44 @@ if(pdata.purity1!=undefined || pdata.purity2!=undefined) {
 		.attr('y',y)
 		.attr('width',40)
 		.attr('height',3)
+	y+=30
+}
+
+// 
+const renderedsymbols = Object.keys(bysymbol)
+if (renderedsymbols.length) {
+	leng.append('text')
+	.text('Symbols')
+	.attr('y',y)
+	.attr('dominant-baseline','middle')
+	.each(function(){x=this.getBBox().width})
+
+	let x1
+	for(const symbolname in bysymbol) {
+		const s = bysymbol[symbolname]
+		const g = leng.append('g').on('click',()=>{
+			s.hidden = !s.hidden
+			svg.selectAll('.twodmaf-'+symbolname).style('display',s.hidden ? 'none' : '')
+			label.style('text-decoration', s.hidden ? 'line-through' : '')
+		})
+
+		x1 = x+20
+		g.append('path')
+		.attr('transform','translate('+x1+','+y+')')
+		.attr('d',symbolgen.type(symbols[symbolname]).size(100)())
+		.attr('stroke','black')
+		.attr('fill','none')
+		.each(function(){x1+=this.getBBox().width})
+
+		//x+=10
+		const label = g.append('text')
+		.text(s.label ? s.label + ' ('+s.numlines+')' : '')
+		.attr('y',y+2)
+		.attr('x',x1)
+		.attr('dominant-baseline','middle')
+		.style('text-decoration', s.hidden ? 'line-through' : '')
+		y+=30
+	}
 	y+=30
 }
 
