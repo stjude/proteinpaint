@@ -41,7 +41,7 @@ export function d2mafui(genomes) {
 	pane.body.style('margin','10px')
 	inputdiv.append('div').style('margin-top','20px').html(
 		'<ul>'
-		+'<li><a href=https://plus.google.com/+XinZhou_s/posts/TLYfqRU1c45 target=_blank>File format</a></li>'
+		+'<li><a href="https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13" target=_blank>File format</a></li>'
 		+'<li>To define samples differently than "Diagnosis/Relapse", <a href=https://plus.google.com/+XinZhou_s/posts/WqBVvmd3wYR target=_blank>see how</a>.</li>'
 		+'</ul>'
 	)
