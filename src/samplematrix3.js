@@ -15,28 +15,18 @@ hardcoded: rows for samples, cols for features
 JUMP __draw __menu
 	__newattr places for adding new feature
 
-****************** exposed methods (as in block.mds.svcnv.samplematrix.js)
-.validate_feature()
-.addnewfeature_update()
-.error()
+****************** exposed methods (as called in sjcharts/src/dt.hm*.js)
+.get_features()
+.click_cell()
 
 ****************** internal use
 .validate_config()
-.get_features()
-.update_singlefeature()
-.draw_matrix()
-.prep_featuredata()
-.make_legend()
-.showTip_sample
-.showTip_feature
-.showTip_cell
-.showMenu_feature
+.validate_feature()
+.error()
 .gatherSamplesFromFeatureData
 .click_cell
 feature2arg()
 initfeature_polymutation
-
-
 
 TODO - retrieve features from assay tracks, using an assay type
 */
@@ -48,17 +38,14 @@ const default_cnvlosscolor = "#67a9cf"
 const default_genevaluecolor = '#095873'
 const default_lohcolor = '#858585'
 const default_svcolor = '#858585'
-
 const minheight2showname = 8
-
 
 export class Samplematrix {
 	/*
 	init ui
 	*/
 
-	constructor( p ) { console.log(p)
-
+	constructor( p ) {
 		for(const k in p) {
 			this[k] = p[k]
 		}
@@ -66,8 +53,6 @@ export class Samplematrix {
 		this.tip  = new client.Menu({padding:'0px'})
 		this.menu = new client.Menu({padding:'0px'})
 		this.errdiv = this.holder.append('div')
-
-		//init_legendholder(this)
 
 		if(this.header) {
 			this.holder.append('div')
@@ -95,18 +80,12 @@ export class Samplematrix {
 		])
 		.then(()=>this.validate_config())
 		.then(()=>this.get_features())
-		.catch(err=>{
-			if(typeof(err)=='string') {
-				this.error(err)
-			} else {
-				this.error(err.message)
-				if(err.stack) console.log(err.stack)
-			}
-		})
+		.catch(err=>this.error(err))
 	}
 
-	error( m ) {
-		client.sayerror( this.errdiv, m )
+	error( err ) {
+		client.sayerror(this.errdiv, typeof err=='string' ? err : err.message)
+		if(err.stack) console.log(err.stack)
 	}
 
 	setDtApp() {
@@ -124,17 +103,75 @@ export class Samplematrix {
 	}
 
 	set_dataset() {
-		// official dataset
-		if (!this.iscustom) {
-			if(!this.dslabel) throw('not custom data but dslabel is missing')
-			// accessing a native ds
-			this.mds = this.genome.datasets[this.dslabel]
-			if(!this.mds) throw('invalid dataset name: '+this.dslabel)
-			if(!this.mds.isMds) throw('improper dataset: '+this.dslabel)
+		// Using a top level Promise.resolve simplifies exception handling
+		// from throw(err), instead of having to return Promise.reject(err)
+		// from every called functions within
+		return Promise.resolve()
+		.then(()=>{
+			// official dataset
+			if (!this.iscustom) {
+				if(!this.dslabel) throw('not custom data but dslabel is missing')
+				// accessing a native ds
+				this.mds = this.genome.datasets[this.dslabel]
+				if(!this.mds) throw('invalid dataset name: '+this.dslabel)
+				if(!this.mds.isMds) throw('improper dataset: '+this.dslabel)
+			}
+			else {
+				return this.init_customvcf()
+			}
+		})
+	}
+
+	init_customvcf() {
+		/*
+		if not loaded, will load header for a custom vcf track
+		*/
+		if (!this.iscustom) return Promise.resolve()
+		if(!this.querykey2tracks) throw('---querykey2tracks missing for custom dataset')
+		let novalidtk=true
+		for(const key in this.querykey2tracks) {
+			// key is arbitrary
+			const tk = this.querykey2tracks[ key ]
+			if(!tk.file && !tk.url) throw('no file or url for a custom track by key '+key)
+			if(!tk.type) throw('missing type for member track by key '+key)
+			if(!common.validtkt( tk.type )) throw('invalid type for a member track: '+tk.type)
+			novalidtk=false
 		}
-		else {
-			return this.init_customvcf(vcftk)
+		if(novalidtk) throw('no custom tracks from querykey2tracks')
+
+		/*
+		for custom dataset, allows one vcf file
+		FIXME may allow more than one
+		if it comes from mdssvcnv/mdsgeneral, the vcf header has already been parsed
+		otherwise, fetch header
+		-- *** does the multiple promises below provide the fix? ***
+		*/
+		const promises=[]
+		for(const key in this.querykey2tracks) {
+			const tk = this.querykey2tracks[key]
+			if(tk.type == common.tkt.mdsvcf) {
+				if (!tk.info) {
+					const arg = {
+						file: tk.file,
+						url: tk.url,
+						indexURL: tk.indexURL
+					}
+					promises.push(
+						client
+						.dofetch('/vcfheader', arg)
+						.then( data => {
+							const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
+							if(errs) throw('Error parsing VCF meta lines: '+errs.join('; '))
+							tk.info = info
+							tk.format = format
+							tk.samples = samples
+							tk.nochr = common.contigNameNoChr( this.genome, data.chrstr.split('\n'))
+						})
+					)
+				}
+			}
 		}
+		return promises	
 	}
 
 	validate_config() {
@@ -169,74 +206,41 @@ export class Samplematrix {
 		return Promise.all( featuretasks )
 	}
 
-	feature_parseposition_maygene( f ) { console.log('test')
+	get_features(featureset=null) {
 		/*
-		for position-based features
-		only called by validate_feature()
+		TODO server-side clustering on select features to determine sample hierarchy
 		*/
-		//return Promise.resolve()
-		//.then(()=>{
 
-			if( f.position ) {
-				// raw string
-				const o = string2pos( f.position, this.genome )
-				if(o) {
-					f.chr = o.chr
-					f.start = o.start
-					f.stop = o.stop
-				}
+		const arg={
+			genome: this.genome.name,
+			limitsamplebyeitherannotation: this.limitsamplebyeitherannotation,
+			features: (featureset || this.features).map( feature2arg )
+		}
+
+		if(this.iscustom) {
+
+			arg.iscustom=1
+			arg.querykey2tracks = {}
+			// only provide tracks from current feature set, so the bulky vcf object won't be sent when only the cnv feature is updated
+			for( const f of arg.features ) {
+				arg.querykey2tracks[ f.querykey ] = this.querykey2tracks[ f.querykey ]
 			}
 
-			if( f.chr ) {
-				// has predefined position
-				const err = invalidcoord(this.genome, f.chr, f.start, f.stop)
-				if(err) {
-					throw('feature "'+f.label+'" position error: '+err)
-				} else {
-					// has valid position
-					return
-				}
+		} else {
+			arg.dslabel = this.mds.label
+		}
+
+		return client.dofetch('/samplematrix',arg).then(data=>{
+			if(data.error) throw({message:data.error})
+			for(const dat of data.results) {
+				const f = this.features.find( f=> f.id==dat.id )
+				if(!f) throw({message: 'feature not found: '+f.id });
+				f.items = dat.items
 			}
-
-			if( !f.genename ) throw 'position required for a feature: no position or genename given'
-
-			// fetch position by gene name
-			return client.dofetch('/genelookup', {
-				input:f.genename,
-				genome:this.genome.name,
-				deep:1
-			})
-			.then(data=>{
-				if(data.error) throw data.error
-				if(!data.gmlst || data.gmlst.length==0) throw 'no gene can be found for '+f.genename
-				// data.gmlst isoforms could be from different positions
-				const regions = []
-				for(const gm of data.gmlst) {
-					let nooverlap=true
-					for(const region of regions) {
-						if(gm.chr==region.chr && Math.max(gm.start,region.start)<Math.min(gm.stop,region.stop)) {
-							nooverlap=false
-							region.start = Math.min(region.start, gm.start)
-							region.stop = Math.max(region.stop, gm.stop)
-							break
-						}
-					}
-					if(nooverlap) {
-						regions.push({
-							chr:gm.chr, 
-							start:gm.start,
-							stop:gm.stop
-						})
-					}
-				}
-				if(regions.length>1) {
-					client.sayerror(this.errdiv,'multiple regions found for gene '+f.genename+' you\'d better specify one in feature')
-				}
-				f.chr = regions[0].chr
-				f.start = regions[0].start
-				f.stop = regions[0].stop
-			})
-		//})
+			this.gatherSamplesFromFeatureData()
+			this.sortsamplesbyfeatures()
+			this.dtApp.main(this.features,data)
+		})
 	}
 
 	validate_feature( f ) {
@@ -245,9 +249,6 @@ export class Samplematrix {
 		also generates legend row for this feature
 		returns promise
 		*/
-
-		return Promise.resolve()
-		.then(()=>{
 
 		f.id = Math.random().toString()
 
@@ -270,20 +271,9 @@ export class Samplematrix {
 			}
 
 			if(!f.scale) f.scale = {auto:1}
-
 			if(f.missingvalue==undefined) f.missingvalue=0 // samples that don't have value for that gene
-
-			/*
-			tr.append('td')
-				.text(f.label)
-				.style('opacity',.5)
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
-			*/
-
 			if(!f.width) f.width = 20
 			if(!f.color) f.color = default_genevaluecolor
-
 			return this.feature_parseposition_maygene( f )
 		}
 
@@ -301,26 +291,12 @@ export class Samplematrix {
 			if(!f.label && f.genename) {
 				f.label = f.genename+' CNV'
 			}
-			/*
-			tr.append('td')
-				.text(f.label)
-				.style('opacity',.5)
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
-			*/
 
 			if(!f.width) f.width=40
 			if(!f.colorgain) f.colorgain = default_cnvgaincolor
 			if(!f.colorloss) f.colorloss = default_cnvlosscolor
 
-			return this.feature_parseposition_maygene( f )
-				.then(()=>{
-					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' CNV'
-					/*
-					scale must be reset when coord/width changes
-					*/
-					f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
-				})
+			return this.feature_parseposition_maygene(f,'CNV')
 		}
 
 		if(f.isloh) {
@@ -345,14 +321,7 @@ export class Samplematrix {
 			if(!f.width) f.width=40
 			if(!f.color) f.color = default_lohcolor
 
-			return this.feature_parseposition_maygene( f )
-				.then(()=>{
-					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' LOH'
-					/*
-					scale must be reset when coord/width changes
-					*/
-					f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
-				})
+			return this.feature_parseposition_maygene(f,'LOH')
 		}
 
 		if(f.isvcf) {
@@ -375,11 +344,7 @@ export class Samplematrix {
 
 			if(!f.width) f.width=20
 			if(!f.snvindel) f.snvindel = {}
-
-			return this.feature_parseposition_maygene( f )
-				.then(()=>{
-					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' SNV/indel'
-				})
+			return this.feature_parseposition_maygene(f,'SNV/indel')
 		}
 
 		if(f.isitd) {
@@ -395,26 +360,7 @@ export class Samplematrix {
 
 			if(!f.width) f.width=20
 			if(!f.color) f.color = common.mclass[ common.mclassitd ].color
-			/*
-			tr.append('td')
-				.text(f.label)
-				.style('opacity',.5)
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
-			*/
-
-			// itd legend is fixed, do not refresh with data loading
-			/*
-			f.legendholder.append('div')
-				.style('width','20px')
-				.html('&nbsp;')
-				.style('background',f.color)
-			*/
-
-			return this.feature_parseposition_maygene( f )
-				.then(()=>{
-					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' ITD'
-				})
+			return this.feature_parseposition_maygene(f,'ITD')
 		}
 
 		if(f.issvfusion) {
@@ -430,18 +376,7 @@ export class Samplematrix {
 
 			if(!f.width) f.width=20
 			if(!f.color) f.color = default_svcolor
-			/*
-			tr.append('td')
-				.text(f.label)
-				.style('opacity',.5)
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
-			*/
-
-			return this.feature_parseposition_maygene( f )
-				.then(()=>{
-					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' SV/fusion'
-				})
+			return this.feature_parseposition_maygene(f,'SV/fusion')
 		}
 
 		if(f.issvcnv) {
@@ -457,20 +392,9 @@ export class Samplematrix {
 			if(!f.label && f.genename) {
 				f.label = f.genename+' CNV/SV'
 			}
-			/*
-			tr.append('td')
-				.text(f.label)
-				.style('color','#858585')
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
-			*/
 
 			initfeature_polymutation( f )
-
-			return this.feature_parseposition_maygene( f )
-				.then(()=>{
-					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' CNV/SV'
-				})
+			return this.feature_parseposition_maygene(f,'CNV/SV')
 		}
 
 
@@ -488,24 +412,9 @@ export class Samplematrix {
 			if(!f.label && f.genename) {
 				f.label = f.genename+' mutation'
 			}
-			/*
-			tr.append('td')
-				.text(f.label)
-				.style('opacity',.5)
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
-			*/
 
 			initfeature_polymutation( f )
-
-			return this.feature_parseposition_maygene( f )
-				.then(()=>{
-					if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+' mutation'
-					/*
-					scale must be reset when coord/width changes
-					*/
-					f.coordscale = scaleLinear().domain([f.start,f.stop]).range([0, f.width])
-				})
+			return this.feature_parseposition_maygene(f,' mutation')
 		}
 
 
@@ -525,111 +434,78 @@ export class Samplematrix {
 			}
 			f.assignmissingcolor = scaleOrdinal(schemeCategory10)
 			if(!f.width) f.width=20
-			/*
-			tr.append('td')
-				.text(f.label)
-				.style('opacity',.5)
-				.style('text-align','right')
-			f.legendholder = tr.append('td')
-			*/
-
 			return Promise.resolve()
 		}
 
 		// __newattr
 		throw('unknown feature type in validating feature')
-
-		})
 	}
 
-	get_features(featureset=null) { console.log(featureset)
+	feature_parseposition_maygene(f,label='') {
 		/*
-		TODO server-side clustering on select features to determine sample hierarchy
+		for position-based features
+		only called by validate_feature()
 		*/
-
-		const arg={
-			genome: this.genome.name,
-			limitsamplebyeitherannotation: this.limitsamplebyeitherannotation,
-			features: (featureset || this.features).map( feature2arg )
+		if( f.position ) {
+			// raw string
+			const o = string2pos( f.position, this.genome )
+			if(o) {
+				f.chr = o.chr
+				f.start = o.start
+				f.stop = o.stop
+			}
 		}
 
-		if(this.iscustom) {
-
-			arg.iscustom=1
-			arg.querykey2tracks = {}
-			// only provide tracks from current feature set, so the bulky vcf object won't be sent when only the cnv feature is updated
-			for( const f of arg.features ) {
-				arg.querykey2tracks[ f.querykey ] = this.querykey2tracks[ f.querykey ]
-			}
-
-		} else {
-			arg.dslabel = this.mds.label
-		}
-
-		return client.dofetch('/samplematrix',arg)
-				.then(data=>{
-					if(data.error) throw({message:data.error})
-					for(const dat of data.results) {
-						const f = this.features.find( f=> f.id==dat.id )
-						if(!f) throw({message: 'feature not found: '+f.id });
-						f.items = dat.items
-					}
-					this.gatherSamplesFromFeatureData()
-					this.sortsamplesbyfeatures()
-					this.dtApp.main(this.features,data)
-				})
-
-		/*return client.dofetch('/samplematrix',arg)
-		.then(data=>{
-
-			if(data.error) throw data.error
-
-			for(const dat of data.results) {
-				const f = this.features.find( f=> f.id==dat.id )
-				if(!f) throw 'feature not found: '+f.id
-
-				f.items = dat.items
-				this.prep_featuredata( f )
-			}
-
-			this.draw_matrix()
-			this.make_legend()
-		})*/
-	}
-
-
-	update_singlefeature(f) {
-		/*
-		update a single feature
-		do not return promise
-		*/
-
-		this.get_features([f])
-		.catch(err=>{
-			if(typeof(err)=='string') {
-				this.error(err)
+		if( f.chr ) {
+			// has predefined position
+			const err = invalidcoord(this.genome, f.chr, f.start, f.stop)
+			if(err) {
+				throw('feature "'+f.label+'" position error: '+err)
 			} else {
-				this.error(err.message)
-				if(err.stack) console.log(err.stack)
+				// has valid position
+				if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+(label ? ' '+label : '')
+				return
 			}
+		}
+
+		if( !f.genename ) throw 'position required for a feature: no position or genename given'
+
+		// fetch position by gene name
+		return client.dofetch('/genelookup', {
+			input:f.genename,
+			genome:this.genome.name,
+			deep:1
 		})
-	}
-
-	addnewfeature_update( f ) {
-		/*
-		add a new feature, get data, update and done
-		no return promise
-		*/
-
-		this.features.push( f )
-
-		this.validate_feature( f )
-		.then(()=>{
-			return this.get_features( [f] )
-		})
-		.catch(err=>{
-			this.error( typeof(err)=='string' ? err : err.message )
-			if(err.stack) console.log(err.stack)
+		.then(data=>{
+			if(data.error) throw data.error
+			if(!data.gmlst || data.gmlst.length==0) throw 'no gene can be found for '+f.genename
+			// data.gmlst isoforms could be from different positions
+			const regions = []
+			for(const gm of data.gmlst) {
+				let nooverlap=true
+				for(const region of regions) {
+					if(gm.chr==region.chr && Math.max(gm.start,region.start)<Math.min(gm.stop,region.stop)) {
+						nooverlap=false
+						region.start = Math.min(region.start, gm.start)
+						region.stop = Math.max(region.stop, gm.stop)
+						break
+					}
+				}
+				if(nooverlap) {
+					regions.push({
+						chr:gm.chr, 
+						start:gm.start,
+						stop:gm.stop
+					})
+				}
+			}
+			if(regions.length>1) {
+				client.sayerror(this.errdiv,'Multiple regions found for gene '+f.genename+'. Please specify a region in the feature.')
+			}
+			f.chr = regions[0].chr
+			f.start = regions[0].start
+			f.stop = regions[0].stop
+			if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+(label ? ' '+label : '')
 		})
 	}
 
@@ -820,58 +696,6 @@ export class Samplematrix {
 				return vj-vi // descending
 			})
 		}
-	}
-
-	init_customvcf() {
-		/*
-		if not loaded, will load header for a custom vcf track
-		*/
-		if (!this.iscustom) return []
-		if(!this.querykey2tracks) throw('querykey2tracks missing for custom dataset')
-		let novalidtk=true
-		for(const key in this.querykey2tracks) {
-			// key is arbitrary
-			const tk = this.querykey2tracks[ key ]
-			if(!tk.file && !tk.url) throw('no file or url for a custom track by key '+key)
-			if(!tk.type) throw('missing type for member track by key '+key)
-			if(!common.validtkt( tk.type )) throw('invalid type for a member track: '+tk.type)
-			novalidtk=false
-		}
-		if(novalidtk) throw('no custom tracks from querykey2tracks')
-
-		/*
-		for custom dataset, allows one vcf file
-		FIXME may allow more than one
-		if it comes from mdssvcnv/mdsgeneral, the vcf header has already been parsed
-		otherwise, fetch header
-		-- *** does the multiple promises below provide the fix? ***
-		*/
-		const promises=[]
-		for(const key in this.querykey2tracks) {
-			const tk = this.querykey2tracks[key]
-			if(tk.type == common.tkt.mdsvcf) {
-				if (!tk.info) {
-					const arg = {
-						file: tk.file,
-						url: tk.url,
-						indexURL: tk.indexURL
-					}
-					promises.push(
-						client
-						.dofetch('/vcfheader', arg)
-						.then( data => {
-							const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
-							if(errs) throw('Error parsing VCF meta lines: '+errs.join('; '))
-							tk.info = info
-							tk.format = format
-							tk.samples = samples
-							tk.nochr = common.contigNameNoChr( this.genome, data.chrstr.split('\n'))
-						})
-					)
-				}
-			}
-		}
-		return promises	
 	}
 }
 
@@ -1090,31 +914,6 @@ function initfeature_polymutation(f) {
 
 	if(!f.snvindel) f.snvindel = {}
 	// snvindel class color come from common.mclass
-}
-
-function init_legendholder(o) {
-
-	const div = o.holder.append('div')
-		.style('margin-bottom','20px')
-
-	// button
-	div.append('div')
-		.style('display','inline-block')
-		.attr('class','sja_menuoption')
-		.style('font-size','.8em')
-		.text('LEGEND')
-		.on('click',()=>{
-			if(o.legendtable.style('display')=='none') {
-				client.appear(o.legendtable)
-			} else {
-				client.disappear(o.legendtable)
-			}
-		})
-
-	o.legendtable = div.append('table')
-		.style('border-top','solid 1px #ededed')
-		.style('border-spacing','10px')
-		.style('display','none')
 }
 
 function ismutation_hideallclass(f) {
