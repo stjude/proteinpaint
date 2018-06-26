@@ -16,9 +16,20 @@ const zlib=require('zlib')
 
 
 const chr2dt = new Map()
+// k: chromosome
+// v: map
+//    k: dt, v: # of variants
+
 const pmid2dt = new Map()
+// k: pmid
+// v: map
+//    k: dt, v: #variants
 
 const dt2name = new Map([[4,'CNV'],[10,'LOH'],[5,'SV'],[2,'fusion'],[6,'ITD']])
+
+const dt2totalcount = new Map()
+// k: dt
+// v: count
 
 
 const rl = readline.createInterface({input: fs.createReadStream( infile ).pipe(zlib.createGunzip()) })
@@ -37,6 +48,7 @@ rl.on('line',line=>{
 	if(!Number.isInteger(j.dt)) abort('dt missing: '+line)
 
 
+
 	if(j.dt==2) {
 		// fusion
 	} else if(j.dt==5) {
@@ -50,6 +62,12 @@ rl.on('line',line=>{
 	} else {
 		abort('invalid dt: '+line)
 	}
+
+
+
+	if(!dt2totalcount.has(j.dt)) dt2totalcount.set( j.dt, 0 )
+	dt2totalcount.set( j.dt, dt2totalcount.get(j.dt)+1 )
+
 
 
 	{
@@ -80,6 +98,13 @@ rl.on('line',line=>{
 
 rl.on('close',()=>{
 
+	console.log('TOTAL per dt')
+	for(const [dt,c] of dt2totalcount) {
+		console.log(dt2name.get(dt)+': '+c)
+	}
+
+
+	console.log('\nPer chromosome')
 	const lst = []
 	for(const name of dt2name.values()) lst.push(name)
 	console.log('chr\t'+ lst.join('\t') )
@@ -91,7 +116,8 @@ rl.on('close',()=>{
 		}
 		console.log(lst.join('\t'))
 	}
-	//pmid
+
+	console.log('\nPer PMID')
 	console.log('pmid\t'+lst.join('\t'))
 	for(const [pmid, o] of pmid2dt) {
 		if(pmid === 'pmidMissed') continue
@@ -101,6 +127,6 @@ rl.on('close',()=>{
 		}	
 		console.log(pst.join('\t'))
 	}
-	console.log('\nSmples missing pmid:')
+	console.log('\nSamples missing pmid:')
 	console.log(pmid2dt.pmidMissed.join('\t'))
 })
