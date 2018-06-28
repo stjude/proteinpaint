@@ -2870,6 +2870,12 @@ tkcloakoff(tk,data) {
 	tk.cloaktext.attr('fill-opacity',0)
 	tk.cloakline.attr('x2',0)
 	tk.glider.attr('transform','translate(0,0)')
+
+	if(tk.gerror) {
+		// must do this before tkerror
+		tk.gerror.remove()
+	}
+
 	if(!data) {
 		this.tkerror(tk,'Server error ...')
 	} else if(data.error) {
@@ -2920,6 +2926,7 @@ tkprogress(tk,percent) {
 
 tkerror(tk,msg,y) {
 	// only works for main track, not subpanel
+	// FIXME when printing new error old error register is overwritten!!
 	tk.gerror=tk.glider.append('text').text(msg)
 		.attr('x',this.width/2)
 		.attr('text-anchor','middle')
