@@ -39,6 +39,15 @@ module.exports={
 	},
 
 
+	mutationAttribute:{
+		attributes:{
+			discordantreads:{
+				label:'Discordant read pairs'
+			}
+		}
+	},
+
+
 	queries:{
 
 		svcnv:{

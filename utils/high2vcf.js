@@ -1,3 +1,5 @@
+// support tumor-normal pair or single sample, in that case always use "tumor"
+
 const arg={}
 for(let i=2; i<process.argv.length; i++) {
 	const [a,b]=process.argv[i].split('=')
@@ -10,24 +12,18 @@ if(!arg.out) abort('no vcf file name')
 
 function abort(m) {
 console.log(m+`
-  --genome = .gz file, samtools-indexed
-  --out    = output vcf file basename
-  --high20 = high_20 text file, first 15 columns:
-	1	Name	chr1.546697
-	2	Chr	chr1
-	3	Pos	546697
-	4	Type	SNP
-	5	Size	1
-	6	Coverage	23
-	7	Percent_alternative_allele	1.000
-	8	Chr_Allele	A
-	9	Alternative_Allele	G
-	10	Score	0.990
-	11	Text	TGTGGGGGTGTGGGTGTGAC[A/G]GGGTGTGTTCTGTGTGAGAA
-	12	reference_normal_count	0
-	13	reference_tumor_count	0
-	14	alternative_normal_count	4
-	15	alternative_tumor_count	19
+  --genome = <.gz fasta file> samtools-indexed
+  --out    = <output vcf file basename>
+  --single = <single sample name> use tumor
+  --high20 = <high_20 text file> with following columns:
+  	Chr: chr1
+	Pos: 546697
+	Chr_Allele: A
+	Alternative_Allele: G
+	reference_normal_count
+	reference_tumor_count
+	alternative_normal_count
+	alternative_tumor_count
 `)
 	process.exit()
 }
@@ -43,11 +39,8 @@ const tempfile=Math.random().toString()
 const vcfout=fs.createWriteStream(tempfile)
 
 
-vcfout.write(`##fileformat=VCFv4.1
-##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	normal	tumor
-`)
+
+
 
 
 vcfout.on('finish',()=>{
@@ -59,28 +52,33 @@ vcfout.on('finish',()=>{
 })
 
 
-let firstline=true
 
-new lazy(fs.createReadStream(arg.high20))
-.on('end',()=>{
+let iChr, iPos, iChr_Allele, iAlternative_Allele, ireference_normal_count, ireference_tumor_count, ialternative_normal_count, ialternative_tumor_count
+
+
+const rl = readline.createInterface({input: fs.createReadStream(arg.high20,{encoding:'utf8'})})
+rl.on('close',()=>{
 	vcfout.end()
 })
-.lines
-.map(String)
-.forEach(line=>{
-	if(firstline) {
-		firstline=false
+rl.on('line',line=>{
+
+	if(!iChr) {
+		// header
+		parseheader(line)
 		return
 	}
+
 	const l=line.split('\t')
-	const chr=l[2-1]
-	let pos=Number.parseInt(l[3-1])
+
+	const chr=l[iChr]
+	let pos=Number.parseInt(l[iPos])
 	if(Number.isNaN(pos)) {
-		console.error('invalid position: '+pos)
+		console.error('invalid position: '+l[iPos])
 		return
 	}
-	let ref=l[8-1]
-	let mut=l[9-1]
+
+	let ref=l[iChr_Allele]
+	let mut=l[iAlternative_Allele]
 
 	if(ref=='') {
 		const base=getbase(chr, pos)
@@ -100,45 +98,38 @@ new lazy(fs.createReadStream(arg.high20))
 	}
 
 	const normal=[]
-	{
-		const refcount= l[12-1] || '0'
-		const mutcount= l[14-1] || '0'
-		// genotype
-		const genotype=[]
-		const readcount=[]
-		if(refcount!='0') {
-			genotype.push(0)
-			readcount.push(refcount)
-		}
-		if(mutcount!='0') {
-			genotype.push(1)
-			readcount.push(mutcount)
-		}
-		// unphased genotype
-		normal.push(genotype.join('/'))
-		normal.push(readcount.join(','))
-	}
-	const tumor=[]
-	{
-		const refcount = l[13-1] || '0'
-		const mutcount = l[15-1] || '0'
-		// genotype
-		const genotype=[]
-		const readcount=[]
-		if(refcount!='0') {
-			genotype.push(0)
-			readcount.push(refcount)
-		}
-		if(mutcount!='0') {
-			genotype.push(1)
-			readcount.push(mutcount)
-		}
-		// unphased genotype
-		tumor.push(genotype.join('/'))
-		tumor.push(readcount.join(','))
+	if(!arg.single) {
+		// only have normal if it's not single
+		const refcount= l[ireference_normal_count] || '0'
+		const mutcount= l[ialternative_normal_count] || '0'
+		normal.push(refcount+','+mutcount)
 	}
 
-	vcfout.write(chr.replace('chr','')+'\t'+pos+'\t.\t'+ref+'\t'+mut+'\t100\t.\t.\tGT:AD\t'+normal.join(':')+'\t'+tumor.join(':')+'\n')
+	const tumor=[]
+	let tumorbaf
+	{
+		// always have tumor sample
+		const refcount = l[ireference_tumor_count] || '0'
+		const mutcount = l[ialternative_tumor_count] || '0'
+		tumor.push(refcount+','+mutcount)
+
+		if(arg.single) {
+			const ref = Number.parseInt(refcount)
+			const alt = Number.parseInt(mutcount)
+			if(ref+alt==0) {
+				tumorbaf=0
+			} else {
+				tumorbaf = alt / (ref+alt)
+			}
+		}
+	}
+
+	// output VCF line
+	if(arg.single) {
+		vcfout.write(chr+'\t'+pos+'\t.\t'+ref+'\t'+mut+'\t100\t.\tBAF='+tumorbaf.toFixed(2)+'\tAD\t'+tumor.join(':')+'\n')
+	} else {
+		vcfout.write(chr+'\t'+pos+'\t.\t'+ref+'\t'+mut+'\t100\t.\t.\tAD\t'+normal.join(':')+'\t'+tumor.join(':')+'\n')
+	}
 })
 
 
@@ -150,4 +141,47 @@ function getbase(chr, pos) {
 	}
 	console.log('getbase error: '+chr+':'+pos)
 	return null
+}
+
+
+
+function parseheader(line) {
+	const l = line.split('\t')
+	for([i, v] of l.entries()) {
+		if(v=='Chr') iChr=i
+		else if(v=='Pos') iPos=i
+		else if(v=='Chr_Allele') iChr_Allele=i
+		else if(v=='Alternative_Allele') iAlternative_Allele=i
+		else if(v=='reference_normal_count') ireference_normal_count=i
+		else if(v=='reference_tumor_count') ireference_tumor_count=i
+		else if(v=='alternative_normal_count') ialternative_normal_count=i
+		else if(v=='alternative_tumor_count') ialternative_tumor_count=i
+	}
+	if(iChr==undefined) abort('Chr missing')
+	if(iPos==undefined) abort('Pos missing')
+	if(iChr_Allele==undefined) abort('Chr_Allele missing')
+	if(iAlternative_Allele==undefined) abort('Alternative_Allele missing')
+
+	if(ireference_tumor_count==undefined) abort('reference_tumor_count missing')
+	if(ialternative_tumor_count==undefined) abort('alternative_tumor_count missing')
+
+	if(arg.single) {
+		// single sample, always as "tumor", no normal
+	} else {
+		// is paired samples, must have normal
+		if(ireference_normal_count==undefined) abort('reference_normal_count missing')
+		if(ialternative_normal_count==undefined) abort('alternative_normal_count missing')
+	}
+
+	// vcf meta lines depend on 
+	vcfout.write(`##fileformat=VCFv4.1
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
+`)
+
+	if(arg.single) {
+		vcfout.write('##INFO=<ID=BAF,Number=1,Type=Float,Description="B allele fraction">\n')
+		vcfout.write('#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t'+arg.single+'\n')
+	} else {
+		vcfout.write('#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tnormal\ttumor\n')
+	}
 }

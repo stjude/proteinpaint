@@ -5775,7 +5775,7 @@ function handle_mdsgeneboxplot( req, res ) {
 
 		const {groups, sample2event} = data
 
-		if(req.query.iscustom) {
+		if(req.query.iscustom || groups.length==1) {
 			// a custom track
 			if(groups[0]) {
 				const l=groups[0].values
@@ -7192,13 +7192,16 @@ function handle_mdssamplescatterplot (req,res) {
 		if(!ds) throw 'invalid dataset'
 		if(!ds.cohort) throw 'no cohort for dataset'
 		if(!ds.cohort.annotation) throw 'cohort.annotation missing for dataset'
-		if(!ds.cohort.scatterplot) throw 'scatterplot not supported for this cohort'
+
+		const sp = ds.cohort.scatterplot
+		if(!sp) throw 'scatterplot not supported for this cohort'
+
 		const dots = []
 		for(const sample in ds.cohort.annotation) {
 			const anno = ds.cohort.annotation[sample]
-			const x = anno[ds.cohort.scatterplot.x.attribute]
+			const x = anno[sp.x.attribute]
 			if(!Number.isFinite(x)) continue
-			const y = anno[ds.cohort.scatterplot.y.attribute]
+			const y = anno[sp.y.attribute]
 			if(!Number.isFinite(y)) continue
 			dots.push({
 				sample:sample,
@@ -7208,10 +7211,12 @@ function handle_mdssamplescatterplot (req,res) {
 			})
 		}
 		res.send({
-			colorbyattributes: ds.cohort.scatterplot.colorbyattributes,
-			colorbygeneexpression: ds.cohort.scatterplot.colorbygeneexpression,
-			querykey: ds.cohort.scatterplot.querykey,
+			colorbyattributes: sp.colorbyattributes, // optional
+			colorbygeneexpression: sp.colorbygeneexpression, // optional
+			querykey: sp.querykey,
 			dots:dots,
+			// optional, quick fix for showing additional tracks when launching single sample view by clicking a dot
+			tracks: sp.tracks,
 		})
 	})
 	.catch(err=>{
@@ -9771,6 +9776,17 @@ function mds_init(ds,genome) {
 				const tk = ds.queries[ sp.colorbygeneexpression.querykey ]
 				if(!tk) return 'unknown query by .cohort.scatterplot.colorbygeneexpression.querykey: '+sp.colorbygeneexpression.querykey
 				if(!tk.isgenenumeric) return 'isgenenumeric missing from the track pointed to by .cohort.scatterplot.colorbygeneexpression.querykey'
+			}
+
+			if(sp.tracks) {
+				// a common set of tracks to be shown in single sample browser upon clicking a dot
+				// must label them as custom otherwise they won't be listed
+				// TODO validate the tracks
+				/*
+				for(const t of sp.tracks) {
+					t.iscustom=1
+				}
+				*/
 			}
 
 			// TODO support multiple plots

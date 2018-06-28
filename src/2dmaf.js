@@ -3,7 +3,9 @@ import * as client from './client'
 import {scaleLinear} from 'd3-scale'
 import {axisLeft, axisTop, axisBottom} from 'd3-axis'
 import {format as d3format} from 'd3-format'
+import {symbol, symbolCircle, symbolCross, symbolDiamond, symbolSquare, symbolStar, symbolTriangle, symbolWye} from 'd3-shape'
 import * as common from './common'
+import Anchors from './2dmaf.anchors'
 
 
 /*
@@ -14,13 +16,24 @@ make a 2dmaf plot for each pair
 */
 
 
-
-
 const color1='#f9766c'
 const color2='#609cff'
 const colorshare='#01b937'
-
-
+const symbols={
+	circle: symbolCircle,
+	cross: symbolCross,
+	diamond: symbolDiamond,
+	square: symbolSquare,
+	star: symbolStar,
+	triangle: symbolTriangle,
+	wye: symbolWye,
+}
+// for selecting what tagName to use when appending
+// needed for now until the issue with selection.append([function]) is figured out
+const symbolFilters = {
+	path: (d)=>d.symbol, 
+	circle: (d)=>!d.symbol,
+}
 
 export function d2mafui(genomes) {
 	const [pane,inputdiv,gselect,filediv,saydiv,visualdiv]=client.newpane3(100, 100, genomes)
@@ -28,7 +41,7 @@ export function d2mafui(genomes) {
 	pane.body.style('margin','10px')
 	inputdiv.append('div').style('margin-top','20px').html(
 		'<ul>'
-		+'<li><a href=https://plus.google.com/+XinZhou_s/posts/TLYfqRU1c45 target=_blank>File format</a></li>'
+		+'<li><a href="https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13" target=_blank>File format</a></li>'
 		+'<li>To define samples differently than "Diagnosis/Relapse", <a href=https://plus.google.com/+XinZhou_s/posts/WqBVvmd3wYR target=_blank>see how</a>.</li>'
 		+'</ul>'
 	)
@@ -316,6 +329,13 @@ function parseraw(lines, genome, filename, holder) {
 				delete m[key]
 			} else {
 				m[key]=a
+			}
+		}
+
+		if (m.symbol) {
+			if (!symbols[m.symbol]) {
+				badlines.push([i, "Invalid symbol value='"+m.symbol+"'", lst])
+				continue
 			}
 		}
 
@@ -798,10 +818,11 @@ const set_2=[]
 const set_share=[]
 const mlst=pdata.mlst
 const person=mlst[0].sample
+const symbolgen = symbol()
 
 let maxtotal=0
+let bysymbol={}
 const mclasses={}
-
 for(const m of mlst) {
 	if(m['TinD.D']>0) {
 		maxtotal=Math.max(maxtotal,m['TinD.D'])
@@ -818,6 +839,12 @@ for(const m of mlst) {
 	}
 	if(!(m.class in mclasses)) {
 		mclasses[m.class]=0
+	}
+	if (m.symbol) {
+		if (!bysymbol[m.symbol]) {
+			bysymbol[m.symbol]={numlines:0, label:m.symbollabel, hidden: false}
+		}
+		bysymbol[m.symbol].numlines++
 	}
 	mclasses[m.class]++
 }
@@ -837,6 +864,7 @@ const axiswidth=50,
 	r_cnvloh=3
 
 const radiusscale=scaleLinear().domain([0,maxtotal]).range([radius/2,radius])
+const radiustoarea=d=>Math.PI*Math.pow(radiusscale(d),2)
 
 for(const m of mlst) {
 	// for creating dot label upon pushing button
@@ -862,6 +890,8 @@ headerdiv.append('button').text('Hide').on('click',()=>{
 	}
 	outtable.remove()
 })
+
+const anchors = new Anchors({axiswidth,sp,sp2,sample1height,sample2height,shareheight,sharewidth,headerdiv})
 
 headerdiv.append('button').text('Screenshot').on('click',()=>{
 	client.to_svg(svg.node(), '2dmaf_'+pdata.name)
@@ -959,6 +989,8 @@ const svg=tdgraph.append('svg')
 const g=svg.append('g')
 	.attr('transform','translate('+sp+','+sp+')')
 
+anchors.setWrapper(g.append('g'))
+
 // axis 1 (horizontal)
 const scale1=scaleLinear().domain([0,1]).range([0,sharewidth])
 const scalediv1=g.append('g')
@@ -968,7 +1000,6 @@ const scalediv1=g.append('g')
 		.tickSize(5)
 	)
 client.axisstyle({axis:scalediv1,showline:true,fontsize:labelfontsize*.8})
-
 
 // axis 1 label
 const c=set_1.length+set_share.length
@@ -1017,7 +1048,6 @@ g.append('path').attr('d',
 	.attr('shape-rendering','crispEdges')
 	.attr('stroke-dasharray','5,5')
 
-
 // set share
 const select_share=g.append('g')
 	.attr('transform','translate('+(axiswidth+sp+sample2height)+',0)')
@@ -1050,17 +1080,25 @@ select_share.filter((d)=> d.Rcnvloh)
 // set share - snv
 let snv=select_share
 	//.filter(function(d){return d.issnv})
-snv.append('ellipse')
-	.attr('rx',d=> radiusscale(d['TinD.D']) )
-	.attr('ry',d=> radiusscale(d['TinD.R']) )
-	.attr('fill',d=> d.style.fill)
-	.attr('fill-opacity',d=> d.style.fillopacity)
-	.attr('stroke',d=> d.style.stroke)
-	.attr('stroke-opacity',d=> d.style.strokeopacity)
-	.attr('stroke-dasharray',d=> d.chr=='chrX' ? '5,5' : 'none')
-	.on('mouseover',d=> d2maf_dotmover(d,d3event.target, tooltip) )
-	.on('mouseout',d=> d2maf_dotmout(d,d3event.target, tooltip) )
-	.on('click',d=> d2maf_minfo(pdata.header,d) )
+
+// not sure why this documented option to supply a function to append is not working
+// snv.append(function(d){return document.createElement(1 || d.symbol ? 'path' : 'circle')})
+// ... do this instead for now
+for(const tagName in symbolFilters) {
+	snv.filter(symbolFilters[tagName])
+	    .append(tagName)
+		.attr('rx',d=>d.symbol ? null : radiusscale(d['TinD.D']) )
+		.attr('ry',d=>d.symbol ? null : radiusscale(d['TinD.R']) )
+		.attr('d',d=>!d.symbol ? null : symbolgen.type(symbols[d.symbol]).size(radiustoarea(d['TinD.D'])+radiustoarea(d['TinD.R'])/2)())
+		.attr('fill',d=> d.style.fill)
+		.attr('fill-opacity',d=> d.style.fillopacity)
+		.attr('stroke',d=> d.style.stroke)
+		.attr('stroke-opacity',d=> d.style.strokeopacity)
+		.attr('stroke-dasharray',d=> d.chr=='chrX' ? '5,5' : 'none')
+		.on('mouseover',d=> d2maf_dotmover(d,d3event.target, tooltip) )
+		.on('mouseout',d=> d2maf_dotmout(d,d3event.target, tooltip) )
+		.on('click',d=> d2maf_minfo(pdata.header,d) )
+}
 snv.append('line')
 	.attr('stroke',d=> d.style.stroke)
 	.attr('stroke-opacity',d=> d.style.strokeopacity)
@@ -1124,7 +1162,6 @@ g_set1.append('g')
 	.attr('dominant-baseline','middle')
 	.attr('transform','rotate(-90)')
 
-
 // set 1
 const select_set1=g_set1.selectAll()
 	.data(set_1)
@@ -1148,19 +1185,26 @@ select_set1.filter(d=> d.Rcnvloh)
 	.attr('fill','#858585')
 	.attr('r',r_cnvloh)
 
-
 // set 1 - snv
 snv=select_set1
-snv.append('circle')
-	.attr('r',d=> radiusscale(d['TinD.R']) )
-	.attr('fill',d=>  d.style.fill)
-	.attr('fill-opacity',d=> d.style.fillopacity)
-	.attr('stroke',d=> d.style.stroke)
-	.attr('stroke-opacity',d=> d.style.strokeopacity)
-	.attr('stroke-dasharray',d=> d.chr=='chrX' ? '5,5' : 'none')
-	.on('mouseover',d=> d2maf_dotmover(d,d3event.target, tooltip) )
-	.on('mouseout',d=> d2maf_dotmout(d,d3event.target, tooltip) )
-	.on('click',d=> d2maf_minfo(pdata.header,d) )
+// not sure why this documented option to supply a function to append is not working
+// snv.append(function(d){return document.createElement(1 || d.symbol ? 'path' : 'circle')})
+// ... do this instead for now
+for(const tagName in symbolFilters) {
+	snv.filter(symbolFilters[tagName])
+	    .append(tagName)
+	    .attr('class',d=>d.symbol ? 'twodmaf-'+d.symbol : null)
+		.attr('r',d=>d.symbol ? null : radiusscale(d['TinD.R']) )
+		.attr('d',d=>!d.symbol ? null : symbolgen.type(symbols[d.symbol]).size(radiustoarea(d['TinD.R']))())
+		.attr('fill',d=>  d.style.fill)
+		.attr('fill-opacity',d=> d.style.fillopacity)
+		.attr('stroke',d=> d.style.stroke)
+		.attr('stroke-opacity',d=> d.style.strokeopacity)
+		.attr('stroke-dasharray',d=> d.chr=='chrX' ? '5,5' : 'none')
+		.on('mouseover',d=> d2maf_dotmover(d,d3event.target, tooltip) )
+		.on('mouseout',d=> d2maf_dotmout(d,d3event.target, tooltip) )
+		.on('click',d=> d2maf_minfo(pdata.header,d) )
+}
 snv.append('line')
 	.attr('stroke',d=> d.style.stroke)
 	.attr('stroke-opacity',d=> d.style.strokeopacity)
@@ -1224,8 +1268,6 @@ g_set2.append('text')
 	.attr('x',(sample2height-sp2)/2)
 	.attr('y',shareheight+labelfontsize)
 	.attr('text-anchor','middle')
-
-
 // set 2
 const select_set2=g_set2.selectAll()
 	.data(set_2)
@@ -1250,9 +1292,17 @@ select_set2.filter(d=> d.Rcnvloh)
 
 // set 2 - snv
 snv=select_set2
-	//.filter(function(d){return d.issnv});
-snv.append('circle')
-	.attr('r',d=> radiusscale(d['TinD.D']) )
+	//.filter(function(d){return d.issnv}); 
+
+// not sure why this documented option to supply a function to append is not working
+// snv.append(function(d){return document.createElement(1 || d.symbol ? 'path' : 'circle')})
+// ... do this instead for now
+for(const tagName in symbolFilters) {
+	snv.filter(symbolFilters[tagName])
+	.append(tagName)
+	.attr('class',d=>d.symbol ? 'twodmaf-'+d.symbol : null)
+	.attr('r',d=>d.symbol ? null : radiusscale(d['TinD.D']) )
+	.attr('d',d=>!d.symbol ? null : symbolgen.type(symbols[d.symbol]).size(radiustoarea(d['TinD.R']))())
 	.attr('fill',d=> d.style.fill)
 	.attr('fill-opacity',d=> d.style.fillopacity)
 	.attr('stroke',d=> d.style.stroke)
@@ -1261,6 +1311,7 @@ snv.append('circle')
 	.on('mouseover',d=> d2maf_dotmover(d,d3event.target, tooltip) )
 	.on('mouseout',d=> d2maf_dotmout(d,d3event.target, tooltip) )
 	.on('click',d=> d2maf_minfo(pdata.header,d) )
+}
 snv.append('line')
 	.attr('stroke',d=> d.style.stroke)
 	.attr('stroke-opacity',d=> d.style.strokeopacity)
@@ -1431,6 +1482,44 @@ if(pdata.purity1!=undefined || pdata.purity2!=undefined) {
 	y+=30
 }
 
+// 
+const renderedsymbols = Object.keys(bysymbol)
+if (renderedsymbols.length) {
+	leng.append('text')
+	.text('Symbols')
+	.attr('y',y)
+	.attr('dominant-baseline','middle')
+	.each(function(){x=this.getBBox().width})
+
+	let x1
+	for(const symbolname in bysymbol) {
+		const s = bysymbol[symbolname]
+		const g = leng.append('g').on('click',()=>{
+			s.hidden = !s.hidden
+			svg.selectAll('.twodmaf-'+symbolname).style('display',s.hidden ? 'none' : '')
+			label.style('text-decoration', s.hidden ? 'line-through' : '')
+		})
+
+		x1 = x+20
+		g.append('path')
+		.attr('transform','translate('+x1+','+y+')')
+		.attr('d',symbolgen.type(symbols[symbolname]).size(100)())
+		.attr('stroke','black')
+		.attr('fill','none')
+		.each(function(){x1+=this.getBBox().width})
+
+		//x+=10
+		const label = g.append('text')
+		.text(s.label ? s.label + ' ('+s.numlines+')' : '')
+		.attr('y',y+2)
+		.attr('x',x1)
+		.attr('dominant-baseline','middle')
+		.style('text-decoration', s.hidden ? 'line-through' : '')
+		y+=30
+	}
+	y+=30
+}
+
 
 
 // gene table - sort genes
@@ -1504,37 +1593,49 @@ for(const name of genelst) {
 	let td=tr.append('td')
 	if(s1.length) {
 		for(const m of s1) {
-			td.append('div')
+			const div = td.append('div')
 			.attr('class','sja_clbtext')
 			.style('color',m.style.fillhl)
 			.text(m.mname || '')
 			.on('click',()=>{
 				click(d3event.target, m, select_set1)
 			})
+
+			if (m.labelIsVisible) {
+				click(div.node(), m, select_set1)
+			}
 		}
 	}
 	td=tr.append('td')
 	if(s2.length) {
 		for(const m of s2) {
-			td.append('div')
+			const div = td.append('div')
 			.attr('class','sja_clbtext')
 			.style('color',m.style.fillhl)
 			.text(m.mname || '')
 			.on('click',()=>{
 				click(d3event.target,m,select_set2)
 			})
+
+			if (m.labelIsVisible) {
+				click(div.node(), m, select_set1)
+			}
 		}
 	}
 	td=tr.append('td')
 	if(ss.length) {
 		for(const m of ss) {
-			td.append('div')
+			const div = td.append('div')
 			.attr('class','sja_clbtext')
 			.style('color',m.style.fillhl)
 			.text(m.mname || '')
 			.on('click',()=>{
 				click(d3event.target,m,select_share)
 			})
+
+			if (m.labelIsVisible) {
+				click(div.node(), m, select_set1)
+			}
 		}
 	}
 }
@@ -1569,7 +1670,7 @@ function click(butt,m,select) {
 			.attr('transform','translate('+x+','+y+')')
 		let w
 		g.append('text')
-			.text(m.gene+' '+m.mname)
+			.text(m.labelAs ? m.labelAs : m.gene+' '+m.mname)
 			.attr('fill',m.style.fillhl)
 			.attr('dominant-baseline','middle')
 			.attr('font-size',m.radius)

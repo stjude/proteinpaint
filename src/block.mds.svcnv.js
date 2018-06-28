@@ -29,6 +29,7 @@ import {vcfparsemeta, vcfparseline} from './vcf'
 JUMP __multi __maketk __sm
 
 makeTk
+	apply_customization_oninit
 loadTk
 	loadTk_do
 		addLoadParameter
@@ -43,7 +44,6 @@ render_samplegroups
 configPanel()
 multi_sample_addhighlight
 multi_sample_removehighlight
-apply_customization_oninit
 
 
 sv-cnv-vcf-fpkm ranking, two modes
@@ -2396,6 +2396,9 @@ function prep_samplegroups( tk, block ) {
 		}
 		if(g2.samples.length==0) continue
 
+		// only for tal1 figure
+		//maysortsamplesingroupbydt(g2)
+
 		plotgroups.push(g2)
 	}
 
@@ -2426,6 +2429,35 @@ function prep_samplegroups( tk, block ) {
 	}
 
 	return [ plotgroups, svlst4dense ]
+}
+
+
+
+
+function maysortsamplesingroupbydt(g) {
+	/*
+	temporary, only for making tal1 figure
+	by default samples are ordered by the first genomic position of their mutations
+
+	arg: a group with .samples[ {} ]
+	*/
+	const cnv=[]
+	const fusioninter=[]
+	const rest=[]
+	for(const s of g.samples) {
+		if( s.items.find( m=> m.dt==common.dtcnv ) ) {
+			cnv.push(s)
+			continue
+		}
+		if( s.items.find( m=>{ return m.dt==common.dtfusionrna && m.chrA!=m.chrB } ) ) {
+			fusioninter.push(s)
+			continue
+		}
+
+		rest.push(s)
+	}
+
+	g.samples = [ ...cnv, ...fusioninter, ...rest ]
 }
 
 
@@ -2644,7 +2676,7 @@ function apply_customization_oninit(tk, block) {
 
 	if(c.singlesample) {
 		/*
-		this method will pop up panel and show all associated tracks
+		this method will pop up panel and show all associated tracks, not in use now
 
 		const s = c.singlesample
 		focus_singlesample({
@@ -2655,6 +2687,7 @@ function apply_customization_oninit(tk, block) {
 		})
 		*/
 
+		// for now, simply turn the mds track into single-sample mode
 		tk.singlesample = c.singlesample
 	}
 
@@ -2694,9 +2727,11 @@ function apply_customization_oninit(tk, block) {
 	}
 	if(c.cnv) {
 		if(c.cnv.hidden) tk.legend_mclass.hiddenvalues.add(common.dtcnv)
+		if(Number.isInteger(c.cnv.upperlengthlimit)) tk.bplengthUpperLimit = c.cnv.upperlengthlimit
 	}
 	if(c.loh) {
 		if(c.loh.hidden) tk.legend_mclass.hiddenvalues.add(common.dtloh)
+		if(Number.isInteger(c.loh.upperlengthlimit)) tk.lohLengthUpperLimit=c.loh.upperlengthlimit
 	}
 	if(c.fusion) {
 		if(c.fusion.hidden) tk.legend_mclass.hiddenvalues.add(common.dtfusionrna)
