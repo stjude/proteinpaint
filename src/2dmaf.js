@@ -5,7 +5,7 @@ import {axisLeft, axisTop, axisBottom} from 'd3-axis'
 import {format as d3format} from 'd3-format'
 import {symbol, symbolCircle, symbolCross, symbolDiamond, symbolSquare, symbolStar, symbolTriangle, symbolWye} from 'd3-shape'
 import * as common from './common'
-import Anchors from './2dmaf.Anchors'
+import Anchors from './2dmaf.anchors'
 
 
 /*
