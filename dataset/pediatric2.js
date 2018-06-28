@@ -193,7 +193,7 @@ module.exports={
 	},
 
 
-	annotationsampleset2matrix: {
+	aaaannotationsampleset2matrix: {
 		key:'diagnosis_short',
 		commonfeatureattributes:{
 			querykeylst:['svcnv','snvindel'],
@@ -250,7 +250,8 @@ module.exports={
 								{ismutation:1,label:'PAX5',position:'chr9:36833271-37034476'},
 								{ismutation:1,label:'EBF1',position:'chr5:158122922-158526770'},
 							],
-							limitsamplebyeitherannotation:[ {key:'diagnosis_subtype_short',value:'PH-LIKE'} ],
+							//limitsamplebyeitherannotation:[ {key:'diagnosis_subtype_short',value:'PH-LIKE'} ],
+							limitsamplebyeitherannotation:[ {key:'diagnosis_short',value:'BALL'} ],
 						}
 					},
 				]
