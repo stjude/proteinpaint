@@ -498,7 +498,7 @@ function newtk_bw(block,div) {
 			}
 
 		})
-		p2.append('button').text('Clear').on('click',()=> iurl.node().value=iname.node().value='')
+		p2.append('button').text('Clear').on('click',()=> input.node().value='')
 	}
 	div.append('div')
 		.style('margin','20px')
