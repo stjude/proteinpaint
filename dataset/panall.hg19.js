@@ -193,28 +193,28 @@ module.exports={
 			},
 
 		    expressionrank_querykey:'generlog',
-			//vcf_querykey:'snvindel',
+		    vcf_querykey:'snvindel',
 
 			multihidelabel_vcf:false,
 			multihidelabel_sv:true,
 		},
 
 
-/*
+
 		snvindel:{
 			hideforthemoment:1,
-			name:'Dicentric ALL SNV/indel',
+			name:'BALL SNV/indel',
 			istrack:true,
 			type:common.tkt.mdsvcf,
 			viewrangeupperlimit:3000000,
 			tracks:[
 				{
-					file:'hg19/pan-all/vcf.somatic/Dicentric_SNV_sorted.vep.out.vcf.gz',
+					file:'hg19/pan-all/vcf/somatic.vcf.gz',
 					type:'vcf',
 				},
 			]
 		},
-		*/
+		
 
 
 		generlog:{
