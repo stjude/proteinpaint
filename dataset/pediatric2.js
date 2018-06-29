@@ -311,6 +311,12 @@ module.exports={
 			multihidelabel_fusion:false,
 			multihidelabel_sv:true,
 
+			legend_vorigin:{
+				key:'vorigin',
+				somatic:'somatic',
+				germline:'germline'
+			},
+
 			singlesampledirectory:'hg19/Pediatric/mutationpersample/',
 		},
 
