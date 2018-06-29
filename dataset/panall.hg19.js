@@ -241,7 +241,7 @@ module.exports={
 			
 			boxplotbysamplegroup:{
 				attributes: [
-                   {k:'outcomeGroup',label:'Outcome group'},
+                   {k:'primary subtype',label:'Subtype'},
                	]
 			},
 		},
