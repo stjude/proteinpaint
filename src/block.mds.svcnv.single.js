@@ -1,7 +1,7 @@
 import * as client from './client'
 import * as common from './common'
 import { tooltip_singleitem } from './block.mds.svcnv.clickitem'
-import { map_cnv, labelspace, draw_colorscale_cnv, draw_colorscale_loh, intrasvcolor, trackclear } from './block.mds.svcnv'
+import { map_cnv, labelspace, draw_colorscale_cnv, draw_colorscale_loh, intrasvcolor, trackclear, vcfvariantisgermline } from './block.mds.svcnv'
 import { update_legend } from './block.mds.svcnv.legend'
 
 
@@ -183,20 +183,38 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 			.attr('height', stackheight)
 			.attr('fill', color)
 			.attr('fill-opacity', 0)
-		const fgline1 = g.append('line')
-			.attr('stroke', color)
-			.attr('stroke-width',2)
-			.attr('x1', -stackheight/2)
-			.attr('x2', stackheight/2)
-			.attr('y1', -stackheight/2)
-			.attr('y2', stackheight/2)
-		const fgline2 = g.append('line')
-			.attr('stroke', color)
-			.attr('stroke-width',2)
-			.attr('x1', -stackheight/2)
-			.attr('x2', stackheight/2)
-			.attr('y1', stackheight/2)
-			.attr('y2', -stackheight/2)
+
+		let fgline1,
+			fgline2
+
+		if( m.sampledata && vcfvariantisgermline(m.sampledata[0], tk) ) {
+			fgline1 = g.append('line')
+				.attr('stroke', color)
+				.attr('stroke-width',2)
+				.attr('y1', 1-stackheight/2)
+				.attr('y2', stackheight/2-1)
+			fgline2 = g.append('line')
+				.attr('stroke', color)
+				.attr('stroke-width',2)
+				.attr('x1', 1-stackheight/2)
+				.attr('x2', stackheight/2-1)
+		} else {
+			fgline1 = g.append('line')
+				.attr('stroke', color)
+				.attr('stroke-width',2)
+				.attr('x1', 1-stackheight/2)
+				.attr('x2', stackheight/2-1)
+				.attr('y1', 1-stackheight/2)
+				.attr('y2', stackheight/2-1)
+			fgline2 = g.append('line')
+				.attr('stroke', color)
+				.attr('stroke-width',2)
+				.attr('x1', 1-stackheight/2)
+				.attr('x2', stackheight/2-1)
+				.attr('y1', stackheight/2-1)
+				.attr('y2', 1-stackheight/2)
+		}
+
 		// to cover both cross & label, will be placed after deciding whether label is on left/right
 		m._p.cover = g.append('rect')
 			.attr('y', -stackheight/2)
@@ -207,15 +225,7 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 			.on('mouseover',()=>{
 				bgbox.attr('fill-opacity',1)
 				fgline1.attr('stroke','white')
-					.attr('x1', 1-stackheight/2)
-					.attr('x2', stackheight/2-1)
-					.attr('y1', 1-stackheight/2)
-					.attr('y2', stackheight/2-1)
 				fgline2.attr('stroke','white')
-					.attr('x1', 1-stackheight/2)
-					.attr('x2', stackheight/2-1)
-					.attr('y1', stackheight/2-1)
-					.attr('y2', 1-stackheight/2)
 				tooltip_singleitem({
 					item: m,
 					m_sample: m.sampledata[0],
@@ -226,15 +236,7 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 				tk.tktip.hide()
 				bgbox.attr('fill-opacity',0)
 				fgline1.attr('stroke',color)
-					.attr('x1', -stackheight/2)
-					.attr('x2', stackheight/2)
-					.attr('y1', -stackheight/2)
-					.attr('y2', stackheight/2)
 				fgline2.attr('stroke',color)
-					.attr('x1', -stackheight/2)
-					.attr('x2', stackheight/2)
-					.attr('y1', stackheight/2)
-					.attr('y2', -stackheight/2)
 			})
 
 		//////////////////////////////// set position for text label & cover

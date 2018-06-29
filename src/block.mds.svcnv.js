@@ -1485,34 +1485,68 @@ function render_multi_cnvloh(tk,block) {
 							.attr('height', w+2)
 							.attr('fill',color)
 							.attr('fill-opacity', 0)
-						const bgline1 = m_g.append('line')
-							.attr('stroke', 'white')
-							.attr('stroke-width',3)
-							.attr('x1', -w/2)
-							.attr('x2', w/2)
-							.attr('y1', -w/2)
-							.attr('y2', w/2)
-						const bgline2 = m_g.append('line')
-							.attr('stroke', 'white')
-							.attr('stroke-width',3)
-							.attr('x1', -w/2)
-							.attr('x2', w/2)
-							.attr('y1', w/2)
-							.attr('y2', -w/2)
-						const fgline1 = m_g.append('line')
-							.attr('stroke', color)
-							.attr('stroke-width',1.5)
-							.attr('x1', -w/2)
-							.attr('x2', w/2)
-							.attr('y1', -w/2)
-							.attr('y2', w/2)
-						const fgline2 = m_g.append('line')
-							.attr('stroke', color)
-							.attr('stroke-width',1.5)
-							.attr('x1', -w/2)
-							.attr('x2', w/2)
-							.attr('y1', w/2)
-							.attr('y2', -w/2)
+
+						let bgline1,
+							bgline2,
+							fgline1,
+							fgline2
+
+
+						if( vcfvariantisgermline( ms, tk ) ) {
+							// germline: 1 |  2 --
+							bgline1 = m_g.append('line')
+								.attr('stroke', 'white')
+								.attr('stroke-width',3)
+								.attr('y1', -w/2-1)
+								.attr('y2', w/2+1)
+							bgline2 = m_g.append('line')
+								.attr('stroke', 'white')
+								.attr('stroke-width',3)
+								.attr('x1', -w/2-1)
+								.attr('x2', w/2+1)
+							fgline1 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('stroke-width',1.5)
+								.attr('y1', -w/2-1)
+								.attr('y2', w/2+1)
+							fgline2 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('stroke-width',1.5)
+								.attr('x1', -w/2-1)
+								.attr('x2', w/2+1)
+
+						} else {
+
+							// somatic or not specified: 1 \  2 /
+							bgline1 = m_g.append('line')
+								.attr('stroke', 'white')
+								.attr('stroke-width',3)
+								.attr('x1', -w/2)
+								.attr('x2', w/2)
+								.attr('y1', -w/2)
+								.attr('y2', w/2)
+							bgline2 = m_g.append('line')
+								.attr('stroke', 'white')
+								.attr('stroke-width',3)
+								.attr('x1', -w/2)
+								.attr('x2', w/2)
+								.attr('y1', w/2)
+								.attr('y2', -w/2)
+							fgline1 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('stroke-width',1.5)
+								.attr('x1', -w/2)
+								.attr('x2', w/2)
+								.attr('y1', -w/2)
+								.attr('y2', w/2)
+							fgline2 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('stroke-width',1.5)
+								.attr('x1', -w/2)
+								.attr('x2', w/2)
+								.attr('y1', w/2)
+								.attr('y2', -w/2)
+						}
 
 						let coverstart = -w/2,
 							coverwidth = w
@@ -3439,4 +3473,23 @@ export function dedup_sv( lst ) {
 		)
 	}
 	return [ ...key2sv.values() ]
+}
+
+
+export function vcfvariantisgermline( ms, tk ) {
+	/*
+	harcode: either somatic or germline
+	ms as an item from tk.data_vcf[].sampledata[]
+	tk
+	*/
+
+	if(!ms) return false
+
+	if(tk.legend_vorigin && tk.legend_vorigin.key) {
+		const v = ms[tk.legend_vorigin.key]
+		if(v) {
+			if(v.toLowerCase()==tk.legend_vorigin.germline) return true
+		}
+	}
+	return false
 }
