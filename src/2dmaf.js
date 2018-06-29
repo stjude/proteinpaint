@@ -1676,6 +1676,7 @@ function click(butt,m,select) {
 			.text(m.labelAs ? m.labelAs : m.gene+' '+m.mname)
 			.attr('fill',m.style.fillhl)
 			.attr('dominant-baseline','middle')
+			.attr('text-anchor','start')
 			.attr('font-size',m.radius)
 			.each(function(){w=this.getBBox().width})
 		g.append('rect')
