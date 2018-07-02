@@ -226,7 +226,7 @@ function may_showgeneexp_nomutationdata(tk,block) {
 
 function loadTk_mayinitiatecustomvcf( tk, block ) {
 
-	if(!tk.iscustom || !tk.checkvcf || tk.checkvcf.info) return
+	if(!tk.iscustom || !tk.checkvcf || tk.checkvcf.stringifiedObj) return
 
 	// load vcf meta keep on client for parsing vcf data
 	const arg = {
