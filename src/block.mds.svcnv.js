@@ -2559,17 +2559,21 @@ function makeTk(tk, block) {
 			tk.multihidelabel_sv = true
 		}
 
-		// set mode
-
-		if(tk.iscustom) {
-			tk.isdense=false
-			tk.isfull=true
+		if(tk.isdense || tk.isfull) {
+			// mode has been set, do not change
 		} else {
-			tk.isdense=true
-			tk.isfull=false
-			if(tk.showfullmode) {
+			// set to default
+
+			if(tk.iscustom) {
 				tk.isdense=false
 				tk.isfull=true
+			} else {
+				tk.isdense=true
+				tk.isfull=false
+				if(tk.showfullmode) {
+					tk.isdense=false
+					tk.isfull=true
+				}
 			}
 		}
 	}
