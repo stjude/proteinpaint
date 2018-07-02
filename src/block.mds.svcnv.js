@@ -2558,28 +2558,26 @@ function makeTk(tk, block) {
 		if( tk.multihidelabel_sv==undefined ) {
 			tk.multihidelabel_sv = true
 		}
-
-		if(tk.isdense || tk.isfull) {
-			// mode has been set, do not change
-		} else {
-			// set to default
-
-			if(tk.iscustom) {
-				tk.isdense=false
-				tk.isfull=true
-			} else {
-				tk.isdense=true
-				tk.isfull=false
-				if(tk.showfullmode) {
-					tk.isdense=false
-					tk.isfull=true
-				}
-			}
-		}
 	}
 
 
 	apply_customization_oninit( tk, block )
+
+	// if not set, will set default mode here
+	if(!tk.singlesample && !tk.isdense && !tk.isfull) {
+		if(tk.iscustom) {
+			tk.isdense=false
+			tk.isfull=true
+		} else {
+			tk.isdense=true
+			tk.isfull=false
+			if(tk.showfullmode) {
+				tk.isdense=false
+				tk.isfull=true
+			}
+		}
+	}
+
 
 
 	tk.tip2 = new client.Menu({padding:'0px'})
@@ -2704,12 +2702,18 @@ function makeTk(tk, block) {
 function apply_customization_oninit(tk, block) {
 	/*
 	customization attr from embedding
+	either native or custom track
 	copy them to attributes
+	will override some previous settings
 
 	for filtering attributes, must do it before initiating legend
 	because novel keys will be added anew
 	*/
-	const c = tk.customization
+
+	// if is custom, the "customization" will be tk itself
+
+	const c = tk.iscustom ? tk : tk.customization
+
 	if(!c) return
 
 	if(c.singlesample) {
@@ -2734,6 +2738,9 @@ function apply_customization_oninit(tk, block) {
 	if(c.isfull) {
 		tk.isdense=false
 		tk.isfull=true
+	} else if(c.isdense) {
+		tk.isdense=true
+		tk.isfull=false
 	}
 
 	if(c.sampleAttribute) {
