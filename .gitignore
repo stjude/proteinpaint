@@ -10,6 +10,7 @@ public/ppdev/*
 public/.htaccess
 public/dev.html
 public/svcnv.html
+public/ALCL.html
 .htaccess
 public/builds/*
 public/no-babel-polyfill/*

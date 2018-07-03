@@ -256,7 +256,7 @@ module.exports={
 			name:'Pediatric tumor mutation',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
-			file:'hg19/alcl-mds/ALCL.svcnv.gz',
+			file:'hg19/alcl-mds/ALCL.hg19.svcnv.gz',
 
 			// cnv
 			valueCutoff:0.2,
@@ -299,7 +299,7 @@ module.exports={
 			viewrangeupperlimit:2000000,
 			tracks:[
 				{
-					file:'hg19/alcl-mds/ALCL.vcf.gz',
+					file:'hg19/alcl-mds/ALCL.hg19.vcf.gz',
 					type:'vcf',
 				}
 			]
@@ -311,7 +311,7 @@ module.exports={
 			hideforthemoment:1,
 			name:'Pediatric tumor RNA-seq gene FPKM',
 			isgenenumeric:true,
-			file:'hg19/alcl-mds/ALCL.fpkm.gz',
+			file:'hg19/alcl-mds/ALCL.hg19.fpkm.gz',
 			datatype:'FPKM',
 			
 			// for boxplots & circles, and the standalone expression track
