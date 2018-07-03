@@ -49,10 +49,19 @@ rl.on('line',line=>{
 
 
 
-	if(j.dt==2) {
-		// fusion
-	} else if(j.dt==5) {
-		// sv
+	if(j.dt==2 || j.dt==5) {
+		// fusion 2, or sv 5
+		if(j.chrA) {
+			if(typeof j.chrA != 'string') abort('chrA value not string: '+line)
+			if(!j.posA) abort('posA missing: '+line)
+			if(!Number.isInteger(j.posA)) abort('posA value not integer: '+line)
+		} else {
+			if(!j.chrB) abort('chrA and chrB missing: '+line)
+			if(typeof j.chrB != 'string') abort('chrB value not string: '+line)
+			if(!j.posB) abort('posB missing: '+line)
+			if(!Number.isInteger(j.posB)) abort('posB value not integer: '+line)
+		}
+
 	} else if(j.dt==4) {
 		// cnv
 	} else if(j.dt==6) {
