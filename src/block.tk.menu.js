@@ -483,12 +483,14 @@ function newtk_bw(block,div) {
 				if(l[0] && l[1]) {
 					const t={
 						type:client.tkt.bigwig,
-						name:l[0],
+						name:l[0].trim(),
 						scale:{auto:1},iscustom:true
 					}
 
-					if(stringisurl(l[1])) t.url=l[1]
-					else t.file=l[1]
+					const tmp = l[1].trim()
+
+					if(stringisurl(tmp)) t.url=tmp
+					else t.file=tmp
 
 					const t2=block.block_addtk_template(t)
 					block.tk_load(t2)
@@ -496,7 +498,7 @@ function newtk_bw(block,div) {
 			}
 
 		})
-		p2.append('button').text('Clear').on('click',()=> iurl.node().value=iname.node().value='')
+		p2.append('button').text('Clear').on('click',()=> input.node().value='')
 	}
 	div.append('div')
 		.style('margin','20px')

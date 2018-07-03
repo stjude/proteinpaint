@@ -34,6 +34,10 @@ const symbolFilters = {
 	path: (d)=>d.symbol, 
 	circle: (d)=>!d.symbol,
 }
+const sharedFilters = {
+	path: (d)=>d.symbol, 
+	ellipse: (d)=>!d.symbol,
+}
 
 export function d2mafui(genomes) {
 	const [pane,inputdiv,gselect,filediv,saydiv,visualdiv]=client.newpane3(100, 100, genomes)
@@ -1059,7 +1063,6 @@ const select_share=g.append('g')
 		return d.posstring
 	})
 
-
 // set share - cnv loh
 select_share.filter(d=>d.Dcnvloh)
 	.append('circle')
@@ -1084,8 +1087,8 @@ let snv=select_share
 // not sure why this documented option to supply a function to append is not working
 // snv.append(function(d){return document.createElement(1 || d.symbol ? 'path' : 'circle')})
 // ... do this instead for now
-for(const tagName in symbolFilters) {
-	snv.filter(symbolFilters[tagName])
+for(const tagName in sharedFilters) {
+	snv.filter(sharedFilters[tagName])
 	    .append(tagName)
 		.attr('rx',d=>d.symbol ? null : radiusscale(d['TinD.D']) )
 		.attr('ry',d=>d.symbol ? null : radiusscale(d['TinD.R']) )
@@ -1673,6 +1676,7 @@ function click(butt,m,select) {
 			.text(m.labelAs ? m.labelAs : m.gene+' '+m.mname)
 			.attr('fill',m.style.fillhl)
 			.attr('dominant-baseline','middle')
+			.attr('text-anchor','start')
 			.attr('font-size',m.radius)
 			.each(function(){w=this.getBBox().width})
 		g.append('rect')

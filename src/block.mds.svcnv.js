@@ -226,7 +226,7 @@ function may_showgeneexp_nomutationdata(tk,block) {
 
 function loadTk_mayinitiatecustomvcf( tk, block ) {
 
-	if(!tk.iscustom || !tk.checkvcf || tk.checkvcf.info) return
+	if(!tk.iscustom || !tk.checkvcf || tk.checkvcf.stringifiedObj) return
 
 	// load vcf meta keep on client for parsing vcf data
 	const arg = {
@@ -1485,34 +1485,68 @@ function render_multi_cnvloh(tk,block) {
 							.attr('height', w+2)
 							.attr('fill',color)
 							.attr('fill-opacity', 0)
-						const bgline1 = m_g.append('line')
-							.attr('stroke', 'white')
-							.attr('stroke-width',3)
-							.attr('x1', -w/2)
-							.attr('x2', w/2)
-							.attr('y1', -w/2)
-							.attr('y2', w/2)
-						const bgline2 = m_g.append('line')
-							.attr('stroke', 'white')
-							.attr('stroke-width',3)
-							.attr('x1', -w/2)
-							.attr('x2', w/2)
-							.attr('y1', w/2)
-							.attr('y2', -w/2)
-						const fgline1 = m_g.append('line')
-							.attr('stroke', color)
-							.attr('stroke-width',1.5)
-							.attr('x1', -w/2)
-							.attr('x2', w/2)
-							.attr('y1', -w/2)
-							.attr('y2', w/2)
-						const fgline2 = m_g.append('line')
-							.attr('stroke', color)
-							.attr('stroke-width',1.5)
-							.attr('x1', -w/2)
-							.attr('x2', w/2)
-							.attr('y1', w/2)
-							.attr('y2', -w/2)
+
+						let bgline1,
+							bgline2,
+							fgline1,
+							fgline2
+
+
+						if( vcfvariantisgermline( ms, tk ) ) {
+							// germline: 1 |  2 --
+							bgline1 = m_g.append('line')
+								.attr('stroke', 'white')
+								.attr('stroke-width',3)
+								.attr('y1', -w/2-1)
+								.attr('y2', w/2+1)
+							bgline2 = m_g.append('line')
+								.attr('stroke', 'white')
+								.attr('stroke-width',3)
+								.attr('x1', -w/2-1)
+								.attr('x2', w/2+1)
+							fgline1 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('stroke-width',1.5)
+								.attr('y1', -w/2-1)
+								.attr('y2', w/2+1)
+							fgline2 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('stroke-width',1.5)
+								.attr('x1', -w/2-1)
+								.attr('x2', w/2+1)
+
+						} else {
+
+							// somatic or not specified: 1 \  2 /
+							bgline1 = m_g.append('line')
+								.attr('stroke', 'white')
+								.attr('stroke-width',3)
+								.attr('x1', -w/2)
+								.attr('x2', w/2)
+								.attr('y1', -w/2)
+								.attr('y2', w/2)
+							bgline2 = m_g.append('line')
+								.attr('stroke', 'white')
+								.attr('stroke-width',3)
+								.attr('x1', -w/2)
+								.attr('x2', w/2)
+								.attr('y1', w/2)
+								.attr('y2', -w/2)
+							fgline1 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('stroke-width',1.5)
+								.attr('x1', -w/2)
+								.attr('x2', w/2)
+								.attr('y1', -w/2)
+								.attr('y2', w/2)
+							fgline2 = m_g.append('line')
+								.attr('stroke', color)
+								.attr('stroke-width',1.5)
+								.attr('x1', -w/2)
+								.attr('x2', w/2)
+								.attr('y1', w/2)
+								.attr('y2', -w/2)
+						}
 
 						let coverstart = -w/2,
 							coverwidth = w
@@ -2524,9 +2558,13 @@ function makeTk(tk, block) {
 		if( tk.multihidelabel_sv==undefined ) {
 			tk.multihidelabel_sv = true
 		}
+	}
 
-		// set mode
 
+	apply_customization_oninit( tk, block )
+
+	// if not set, will set default mode here
+	if(!tk.singlesample && !tk.isdense && !tk.isfull) {
 		if(tk.iscustom) {
 			tk.isdense=false
 			tk.isfull=true
@@ -2540,8 +2578,6 @@ function makeTk(tk, block) {
 		}
 	}
 
-
-	apply_customization_oninit( tk, block )
 
 
 	tk.tip2 = new client.Menu({padding:'0px'})
@@ -2666,12 +2702,18 @@ function makeTk(tk, block) {
 function apply_customization_oninit(tk, block) {
 	/*
 	customization attr from embedding
+	either native or custom track
 	copy them to attributes
+	will override some previous settings
 
 	for filtering attributes, must do it before initiating legend
 	because novel keys will be added anew
 	*/
-	const c = tk.customization
+
+	// if is custom, the "customization" will be tk itself
+
+	const c = tk.iscustom ? tk : tk.customization
+
 	if(!c) return
 
 	if(c.singlesample) {
@@ -2696,6 +2738,9 @@ function apply_customization_oninit(tk, block) {
 	if(c.isfull) {
 		tk.isdense=false
 		tk.isfull=true
+	} else if(c.isdense) {
+		tk.isdense=true
+		tk.isfull=false
 	}
 
 	if(c.sampleAttribute) {
@@ -3439,4 +3484,23 @@ export function dedup_sv( lst ) {
 		)
 	}
 	return [ ...key2sv.values() ]
+}
+
+
+export function vcfvariantisgermline( ms, tk ) {
+	/*
+	harcode: either somatic or germline
+	ms as an item from tk.data_vcf[].sampledata[]
+	tk
+	*/
+
+	if(!ms) return false
+
+	if(tk.legend_vorigin && tk.legend_vorigin.key) {
+		const v = ms[tk.legend_vorigin.key]
+		if(v) {
+			if(v.toLowerCase()==tk.legend_vorigin.germline) return true
+		}
+	}
+	return false
 }

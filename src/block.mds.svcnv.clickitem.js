@@ -131,8 +131,7 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 		})
 
 
-	// not in use
-	//may_show_matrixbutton(samplegroup, tk, block)
+	may_show_matrixbutton(samplegroup, tk, block)
 }
 
 
