@@ -135,12 +135,29 @@ function renderTk( tk, block ) {
 			.selectAll('*').remove()
 	}
 
+	let minv=null,
+		maxv
 
-	// range of rank value, currently fixed!
-	let min_rank = 0
-	let max_rank = 100 
+	if(tk.showrank) {
+		minv=0
+		maxv=100
+	} else {
+		for(const r of tk.regions) {
+			if(!r.items) continue
+			for(const i of r.items) {
+				if(minv==null) {
+					minv=maxv=i.thisvalue
+				} else {
+					minv = Math.min(minv, i.thisvalue)
+					maxv = Math.max(maxv, i.thisvalue)
+				}
+			}
+		}
+		if(minv>0) minv=0
+		else if(maxv<0) maxv=0
+	}
 
-	const scale_rank = bar_plot_y(min_rank, max_rank, tk.barheight)
+	const scale = bar_plot_y(minv, maxv, tk.barheight)
 
 
 	// render
@@ -170,15 +187,13 @@ function renderTk( tk, block ) {
 				x2 = Math.max(a.x,b.x)
 			}
 
-			const [y,h] = scale_rank( i.rank )
+			const [y,h] = scale( tk.showrank ? i.rank : i.thisvalue )
 
 			expressionstat.measure( i, tk.gecfg )
 			const barcolor = expressionstat.ase_color(i, tk.gecfg)
 
-
 			const tt = d3rgb(barcolor)
 			const fillcolor='rgba('+tt.r+','+tt.g+','+tt.b+',.2)'
-
 
 			// plot bar for this item
 			const ig = g.append('g')
@@ -254,9 +269,17 @@ function renderTk( tk, block ) {
 		}
 	}
 
-	tk.rankaxis.label.text('Rank')
+	tk.rankaxis.label.text( tk.showrank ? 'Rank' : (tk.datatype || 'actual value') )
+
 	client.axisstyle({
-		axis:tk.rankaxis.g.call( axisLeft().scale( scaleLinear().domain([min_rank,max_rank]).range([tk.barheight,0]) ).tickValues([min_rank,max_rank]) ),
+		axis:tk.rankaxis.g.call(
+			axisLeft().scale(
+				scaleLinear()
+					.domain([minv,maxv])
+					.range([tk.barheight,0])
+			)
+			.tickValues([minv,maxv])
+		),
 		showline:true
 	})
 
@@ -317,6 +340,7 @@ function set_height(tk, block) {
 
 function makeTk(tk, block) {
 
+	tk.showrank=true
 
 	if(!tk.gecfg.itemcolor) {
 		tk.gecfg.itemcolor='green'
@@ -338,6 +362,8 @@ function makeTk(tk, block) {
 			configPanel(tk,block)
 		})
 }
+
+
 
 
 
@@ -369,20 +395,73 @@ function configPanel(tk,block) {
 	}
 
 	{
-		const lst = []
-		if(tk.attributes) {
-			for(const a of tk.attributes) {
-				lst.push({k: (a.label || a.k), v:(a.fullvalue || a.kvalue)})
+		// rank/value toggle and ranking group printout are shown together
+		const table = tk.tkconfigtip.d.append('table')
+			.style('margin-bottom','15px')
+			.style('border-spacing','5px')
+
+		const radioname = Math.random()
+		let rrank,
+			rvalue
+
+		{
+			const tr = table.append('tr')
+			tr.append('td').text('Show')
+			const td = tr.append('td')
+
+			rvalue = td.append('input')
+				.attr('type','radio')
+				.attr('name',radioname)
+				.attr('id',radioname+2)
+				.on('change',()=>{
+					tk.showrank=false
+					renderTk(tk,block)
+				})
+			td.append('label')
+				.html('&nbsp;'+(tk.datatype || 'actual value'))
+				.attr('for',radioname+2)
+				.attr('class','sja_clbtext')
+		}
+		{
+			const tr = table.append('tr')
+			tr.append('td')
+			const td = tr.append('td')
+			rrank = td.append('input')
+				.attr('type','radio')
+				.attr('name',radioname)
+				.attr('id',radioname+1)
+				.on('change',()=>{
+					tk.showrank=true
+					renderTk(tk,block)
+				})
+			td.append('label')
+				.html('&nbsp;Rank of a group of samples')
+				.attr('for',radioname+1)
+				.attr('class','sja_clbtext')
+				.style('margin-right','10px')
+			// details about ranking group
+			const lst = []
+			if(tk.attributes) {
+				for(const a of tk.attributes) {
+					lst.push({k: (a.label || a.k), v:(a.fullvalue || a.kvalue)})
+				}
+			}
+			if(tk.totalsamples) {
+				lst.push({k:'Total number of samples',v:(tk.totalsamples+1)})
+			}
+			if(lst.length) {
+				client.make_table_2col( td, lst)
 			}
 		}
-		if(tk.totalsamples) {
-			lst.push({k:'Total number of samples',v:(tk.totalsamples+1)})
+
+
+		if(tk.showrank) {
+			rrank.property('checked',1)
+		} else {
+			rvalue.property('checked',1)
 		}
-		if(lst.length) {
-			tk.tkconfigtip.d.append('div')
-				.style('opacity',.5)
-				.text('Expression rank within group:')
-			client.make_table_2col(tk.tkconfigtip.d, lst)
-		}
+	}
+
+	{
 	}
 }
