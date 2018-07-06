@@ -5155,54 +5155,56 @@ function handle_mds_expressionrank( req, res ) {
 	        for custom, will use all available samples other than this one
 	*/
 	if(reqbodyisinvalidjson(req,res)) return
-	if(!req.query.rglst) return res.send({error:'rglst missing'})
-	if(!req.query.sample) return res.send({error:'sample missing'})
 
 	let gn,
 		ds,
 		dsquery
 
-	if(req.query.iscustom) {
-		gn = genomes[ req.query.genome ]
-		if(!gn) return res.send({error:'invalid genome'})
-		if(!req.query.file && !req.query.url) return res.send({error:'no file or url for expression data'})
-		ds = {}
-		dsquery = {
-			file: req.query.file,
-			url:  req.query.url,
-			indexURL: req.query.indexURL
-		}
-
-	} else {
-
-		// official
-		const [err, gn1, ds1, dsquery1] = mds_query_arg_check( req.query )
-		if(err) return res.send({error:err})
-		gn = gn1
-		ds = ds1
-		dsquery = dsquery1
-
-		if(!dsquery.samples) return res.send({error:'total samples missing from server config'})
-		// check if the said sample exists
-		if(dsquery.samples.indexOf(req.query.sample)==-1) return res.send({nodata:1})
-	}
-
-
-	if(dsquery.viewrangeupperlimit) {
-		if( req.query.rglst.reduce((i,j)=>i+j.stop-j.start, 0) > dsquery.viewrangeupperlimit ) return res.send({error:'zoom in under '+common.bplen(dsquery.viewrangeupperlimit)+' to view data'})
-	}
-
-	if(req.query.levelkey) {
-		// only for official ds
-		if(!req.query.levelvalue) return res.send({error:'levelvalue is required when levelkey is used'})
-		if(!ds.cohort || !ds.cohort.annotation) return res.send({error:'.cohort.annotation missing from dataset'})
-	}
-
 	Promise.resolve()
 	.then(()=>{
 
-		if(dsquery.file) return ''
-		if(!dsquery.url) throw({message:'file or url missing'})
+		if(!req.query.rglst) throw 'rglst missing'
+		if(!req.query.sample) throw 'sample missing'
+
+		if(req.query.iscustom) {
+			gn = genomes[ req.query.genome ]
+			if(!gn) throw 'invalid genome'
+			if(!req.query.file && !req.query.url) throw 'no file or url for expression data'
+			ds = {}
+			dsquery = {
+				file: req.query.file,
+				url:  req.query.url,
+				indexURL: req.query.indexURL
+			}
+
+		} else {
+
+			// official
+			const [err, gn1, ds1, dsquery1] = mds_query_arg_check( req.query )
+			if(err) throw err
+			gn = gn1
+			ds = ds1
+			dsquery = dsquery1
+
+			if(!dsquery.samples) throw 'total samples missing from server config'
+			// check if the said sample exists
+			if(dsquery.samples.indexOf(req.query.sample)==-1) throw {nodata:1}
+		}
+
+
+		if(dsquery.viewrangeupperlimit) {
+			if( req.query.rglst.reduce((i,j)=>i+j.stop-j.start, 0) > dsquery.viewrangeupperlimit ) throw 'zoom in under '+common.bplen(dsquery.viewrangeupperlimit)+' to view data'
+		}
+
+		if(req.query.levelkey) {
+			// only for official ds
+			if(!req.query.levelvalue) throw 'levelvalue is required when levelkey is used'
+			if(!ds.cohort || !ds.cohort.annotation) throw '.cohort.annotation missing from dataset'
+		}
+
+		if(dsquery.file) return
+		if(!dsquery.url) throw 'file or url missing'
+
 		return cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
 	
 	})
@@ -5233,12 +5235,10 @@ function handle_mds_expressionrank( req, res ) {
 					const l=line.split('\t')
 					const j = JSON.parse( l[3] )
 
-					if(!j.gene) {
-						return
-					}
-					if(!Number.isFinite(j.value)) {
-						return
-					}
+					if(!j.gene) return
+
+					if(!Number.isFinite(j.value)) return
+
 					const chr = l[0]
 					const start = Number.parseInt(l[1])
 					const stop  = Number.parseInt(l[2])
@@ -5328,7 +5328,11 @@ function handle_mds_expressionrank( req, res ) {
 	})
 	.catch(err=>{
 		if(err.stack) console.log(err)
-		res.send({error:err.message})
+		if(err.nodata) {
+			res.send({nodata:1})
+		} else {
+			res.send({error:err.message})
+		}
 	})
 }
 
