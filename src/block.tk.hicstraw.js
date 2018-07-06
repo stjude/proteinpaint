@@ -333,7 +333,8 @@ function coordpair2plotpoint(chr1,start1,stop1, chr2,start2,stop2, block) {
 	if(right1==-1) right1=right2
 	else if(right2==-1) right2=right1
 
-	return [ left1, left2, right1, right2  ]
+	if(left1 < right1) return [ left1, left2, right1, right2  ]
+	return [right1, right2, left1, left2]
 }
 
 
