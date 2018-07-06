@@ -31,6 +31,7 @@ export function loadTk( tk, block ) {
 
 	if(tk.uninitialized) {
 		makeTk(tk, block)
+		delete tk.uninitialized
 	}
 
 	// list of regions to load data from, including bb.rglst[], and bb.subpanels[]
@@ -88,12 +89,13 @@ export function loadTk( tk, block ) {
 			arg.attributes = tk.attributes
 		}
 		tasks.push(
-			client.dofetch('/mds_expressionrank',arg)
+			client.dofetch('/mdsexpressionrank',arg)
 			.then(data=>{
 				if(data.error) throw {message:data.error}
 				if(data.result && data.result.length>0) {
 					r.items = data.result
 				}
+				tk.totalsamples = data.samplecount
 				return
 			})
 		)
@@ -103,7 +105,7 @@ export function loadTk( tk, block ) {
 
 	.then(()=>{
 		// any data?
-		if( !tk.regions.find( r=>r.items ) ) throw({message:'no data in view range'})
+		if( !tk.regions.find( r=>r.items ) ) throw {message:'no data in view range'}
 	})
 
 	.catch(err=>{
@@ -315,20 +317,6 @@ function set_height(tk, block) {
 
 function makeTk(tk, block) {
 
-	delete tk.uninitialized
-
-
-	if(tk.iscustom) {
-		tk.gecfg = {}
-	} else {
-		// native track bar color comes from mds config with complicated setting
-
-		tk.mds = block.genome.datasets[ tk.dslabel ]
-		// XXX must catch error for invalid dslabel
-		delete tk.dslabel
-
-		tk.gecfg = tk.mds.queries[ tk.querykey ]
-	}
 
 	if(!tk.gecfg.itemcolor) {
 		tk.gecfg.itemcolor='green'
@@ -358,14 +346,22 @@ function makeTk(tk, block) {
 function configPanel(tk,block) {
 	tk.tkconfigtip.clear()
 		.showunder( tk.config_handle.node() )
+
 	{
-		tk.tkconfigtip.d.append('div')
-			.style('opacity',.5)
-			.text('Expression rank within group:')
 		const lst = []
-		for(const a of tk.attributes) {
-			lst.push({k: (a.label || a.k), v:(a.fullvalue || a.kvalue)})
+		if(tk.attributes) {
+			for(const a of tk.attributes) {
+				lst.push({k: (a.label || a.k), v:(a.fullvalue || a.kvalue)})
+			}
 		}
-		client.make_table_2col(tk.tkconfigtip.d, lst)
+		if(tk.totalsamples) {
+			lst.push({k:'Total number of samples',v:(tk.totalsamples+1)})
+		}
+		if(lst.length) {
+			tk.tkconfigtip.d.append('div')
+				.style('opacity',.5)
+				.text('Expression rank within group:')
+			client.make_table_2col(tk.tkconfigtip.d, lst)
+		}
 	}
 }

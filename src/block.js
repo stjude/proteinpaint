@@ -2319,7 +2319,7 @@ block_addtk_template(template) {
 		}
 		break
 	case client.tkt.mdsexpressionrank:
-		const e8 = mdsexpressionrankfromtemplate(tk, template)
+		const e8 = mdsexpressionrankfromtemplate(tk, template, this)
 		if(e8) {
 			this.error(e8)
 			return

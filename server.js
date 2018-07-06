@@ -158,7 +158,7 @@ app.post('/junction',handle_junction)       // legacy
 app.post('/mdsjunction',handle_mdsjunction)
 app.post('/mdscnv',handle_mdscnv)
 app.post('/mdssvcnv',handle_mdssvcnv)
-app.post('/mds_expressionrank',handle_mds_expressionrank) // expression rank as a browser track
+app.post('/mdsexpressionrank',handle_mdsexpressionrank) // expression rank as a browser track
 app.post('/mdsgeneboxplot',handle_mdsgeneboxplot)
 //app.post('/mdsgeneboxplot_svcnv',handle_mdsgeneboxplot_svcnv) // no longer used
 
@@ -5140,7 +5140,7 @@ function get_rank_from_sortedarray(v, lst) {
 
 
 
-function handle_mds_expressionrank( req, res ) {
+function handle_mdsexpressionrank( req, res ) {
 	/*
 	for a given sample, check expression rank of its gene expression as compared with its cohort
 	similar task done in svcnv
@@ -5158,7 +5158,8 @@ function handle_mds_expressionrank( req, res ) {
 
 	let gn,
 		ds,
-		dsquery
+		dsquery,
+		samples = new Set() // to record all samples seen and report the total number
 
 	Promise.resolve()
 	.then(()=>{
@@ -5237,6 +5238,8 @@ function handle_mds_expressionrank( req, res ) {
 
 					if(!j.gene) return
 
+					if(!j.sample) return
+
 					if(!Number.isFinite(j.value)) return
 
 					const chr = l[0]
@@ -5283,7 +5286,10 @@ function handle_mds_expressionrank( req, res ) {
 						}
 					}
 
-					// a sample for the group
+					// now it is a sample for the group
+
+					samples.add(j.sample)
+
 					if(!gene2value.has(j.gene)) {
 						gene2value.set(j.gene,{
 							chr:chr,
@@ -5324,7 +5330,10 @@ function handle_mds_expressionrank( req, res ) {
 				lst.push(o)
 			}
 		}
-		res.send({result:lst})
+		res.send({
+			result:lst,
+			samplecount: samples.size
+			})
 	})
 	.catch(err=>{
 		if(err.stack) console.log(err)
