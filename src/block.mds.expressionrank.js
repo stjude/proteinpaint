@@ -117,7 +117,6 @@ export function loadTk( tk, block ) {
 	.then( errmsg =>{
 		renderTk(tk, block)
 		block.tkcloakoff(tk, {error:errmsg})
-		set_height(tk, block)
 	})
 }
 
@@ -262,6 +261,7 @@ function renderTk( tk, block ) {
 	})
 
 	resize_label(tk, block)
+	set_height(tk, block)
 }
 
 
@@ -346,6 +346,27 @@ function makeTk(tk, block) {
 function configPanel(tk,block) {
 	tk.tkconfigtip.clear()
 		.showunder( tk.config_handle.node() )
+
+	{
+		const row=tk.tkconfigtip.d.append('div')
+			.style('margin-bottom','15px')
+		row.append('span').html('Height&nbsp;&nbsp;')
+		row.append('input')
+			.attr('size',5)
+			.property('value',tk.barheight)
+			.on('keyup',()=>{
+				if(d3event.key!='Enter') return
+				const s=d3event.target.value
+				if(s=='') return
+				const v=Number.parseInt(s)
+				if(Number.isNaN(v) || v<=1) {
+					alert('track height must be positive integer')
+					return
+				}
+				tk.barheight=v
+				renderTk(tk, block)
+			})
+	}
 
 	{
 		const lst = []
