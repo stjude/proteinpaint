@@ -5340,7 +5340,7 @@ function handle_mdsexpressionrank( req, res ) {
 		if(err.nodata) {
 			res.send({nodata:1})
 		} else {
-			res.send({error:err.message})
+			res.send({error: (err.message ? err.message : err) })
 		}
 	})
 }
