@@ -68,7 +68,7 @@ export class Samplematrix {
 			this[k] = p[k]
 		}
 		if(this.debugmode) window.smat = this
-		this.tip  = new client.Menu({padding:'0px'})
+		this.tip  = new client.Menu({padding:'0px', hideXmute: 1, hideYmute: 1})
 		this.menu = new client.Menu({padding:'0px'})
 		this.errdiv = this.holder.append('div')
 
@@ -1890,9 +1890,6 @@ sort samples by f.issampleattribute
 
 
 	showTip_sample(sample) {
-		this.tip.show(d3event.clientX,d3event.clientY)
-			.clear()
-
 		this.tip.d.append('div')
 			.text(sample.name)
 			.style('padding','10px')
@@ -2008,7 +2005,11 @@ sort samples by f.issampleattribute
 			console.error('sample tooltip: Unknown feature type')
 		}
 
+		this.tip.clear()
 		client.make_table_2col(this.tip.d, lst)
+		// show tip after filling it with html so that 
+		// computed bounding width, height are accurate
+		this.tip.show(d3event.clientX,d3event.clientY)
 	}
 
 
@@ -2019,9 +2020,6 @@ sort samples by f.issampleattribute
 		/*
 		a cell
 		*/
-		this.tip.show(d3event.clientX,d3event.clientY)
-			.clear()
-
 		const lst=[{ k:'sample', v:sample.name }]
 
 		if(f.isgenevalue) {
@@ -2185,8 +2183,11 @@ sort samples by f.issampleattribute
 			console.error('cell tooltip: unknown feature type')
 		}
 
-
+		this.tip.clear()
 		client.make_table_2col(this.tip.d, lst)
+		// show tip after filling it with html so that 
+		// computed bounding width, height are accurate
+		this.tip.show(d3event.clientX,d3event.clientY)
 	}
 
 	/********** __menu ends **********/

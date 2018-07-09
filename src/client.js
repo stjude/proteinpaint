@@ -120,7 +120,10 @@ export class Menu{
 		}
 		this.offsetX = Number.isInteger(arg.offsetX) ? arg.offsetX : 20
 		this.offsetY = Number.isInteger(arg.offsetY) ? arg.offsetY : 20
-
+		this.hideXmute = Number.isInteger(arg.hideXmute) ? arg.hideXmute : 0
+		this.hideYmute = Number.isInteger(arg.hideYmute) ? arg.hideYmute : 0
+		this.prevX = -1
+		this.prevY = -1
 	}
 
 	clear() {
@@ -128,7 +131,10 @@ export class Menu{
 		return this
 	}
 
-	show(x,y) {
+	show(x,y) { 
+		this.prevX = x
+		this.prevY = y
+
 		// show around a given point
 		document.body.appendChild(this.d.node())
 
@@ -183,6 +189,8 @@ export class Menu{
 	}
 
 	hide() {
+		// prevent flickering
+		if (Math.abs(this.prevX - d3event.clientX) < this.hideXmute && Math.abs(this.prevY-d3event.clientY) < this.hideYmute) return
 		this.d.style('display','none').style('opacity',0)
 		return this
 	}
