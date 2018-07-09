@@ -120,6 +120,11 @@ export class Menu{
 		}
 		this.offsetX = Number.isInteger(arg.offsetX) ? arg.offsetX : 20
 		this.offsetY = Number.isInteger(arg.offsetY) ? arg.offsetY : 20
+		// The hideXmute and hideYmute options would cancel tip hiding if the 
+		// cursor's X,Y movement is less than the corresponding hide*mute value.
+		// This helps avoid flickering when the tooltip div blocks a stationary cursor,
+		// which trigers an unwanted mouseout of the element that triggered a mouseover. 
+		// Also useful for decreasing the sensitivity of the mouseout behavior in general.
 		this.hideXmute = Number.isInteger(arg.hideXmute) ? arg.hideXmute : 0
 		this.hideYmute = Number.isInteger(arg.hideYmute) ? arg.hideYmute : 0
 		this.prevX = -1
@@ -189,7 +194,7 @@ export class Menu{
 	}
 
 	hide() {
-		// prevent flickering
+		// prevent flickering, decrease sensitivity of tooltip to movement on mouseout
 		if (Math.abs(this.prevX - d3event.clientX) < this.hideXmute && Math.abs(this.prevY-d3event.clientY) < this.hideYmute) return
 		this.d.style('display','none').style('opacity',0)
 		return this
