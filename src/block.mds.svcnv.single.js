@@ -1,7 +1,16 @@
 import * as client from './client'
 import * as common from './common'
-import { tooltip_singleitem } from './block.mds.svcnv.clickitem'
-import { map_cnv, labelspace, draw_colorscale_cnv, draw_colorscale_loh, intrasvcolor, trackclear, vcfvariantisgermline } from './block.mds.svcnv'
+import {scaleLinear} from 'd3-scale'
+import {event as d3event} from 'd3-selection'
+import { tooltip_singleitem, svchr2html } from './block.mds.svcnv.clickitem'
+import { map_cnv,
+	labelspace,
+	draw_colorscale_cnv,
+	draw_colorscale_loh,
+	intrasvcolor,
+	trackclear,
+	itemname_svfusion,
+	vcfvariantisgermline } from './block.mds.svcnv'
 import { update_legend } from './block.mds.svcnv.legend'
 
 
@@ -36,8 +45,11 @@ export function render_singlesample( tk, block ) {
 		for(const item of tk.data) {
 
 			if( item.dt==common.dtfusionrna || item.dt==common.dtsv ) {
+
 				// sv
-				const id=item.chrA+'.'+item.posA+'.'+item.chrB+'.'+item.posB
+
+				const id=item.chrA+'.'+item.posA+'.'+item.chrB+'.'+item.posB+'.'+item.dt
+
 				if(!id2sv[id]){
 					map_sv(item,block)
 					if(item.x0 || item.x1) {
@@ -104,7 +116,11 @@ export function render_singlesample( tk, block ) {
 
 
 	// sv on top
-	const svheight = render_singlesample_sv( svlst, tk, block )
+	const svheight = render_singlesample_sv(
+		group_sv( svlst ),
+		tk,
+		block
+		)
 
 
 	/*
@@ -128,6 +144,83 @@ export function render_singlesample( tk, block ) {
 	tk.height_main = tk.toppad+ svheight + stackploth + tk.bottompad
 
 	update_legend(tk, block)
+}
+
+
+
+
+function group_sv(lst) {
+	/*
+	sv/fusion will be merged
+
+	for group of sv with both ends mapped, their ends are close enough within a bin
+
+	for group of sv with only one mapped end, no matter which, that end for each is within a bin
+
+
+	input:
+	.x0 .x1 could be undefined
+	.chrA .chrB
+	.posA .posB
+
+	output will add .lst[ {original} ]
+	*/
+	const newlst = []
+
+	const pxbinsize = 8 // bin pixel size
+
+	for(let i=0; i<lst.length; i++) {
+
+		const si = lst[i]
+		if(si.__claimed) continue
+
+		const thisgroup = {
+			x0: si.x0,
+			x1: si.x1,
+			_chr: si._chr,
+			chrA: si.chrA,
+			chrB: si.chrB,
+			posA: si.posA,
+			posB: si.posB,
+			lst: [ si ]
+		}
+
+
+		for(let j=i+1; j<lst.length; j++) {
+
+			const sj = lst[j]
+			if(sj.__claimed) continue
+
+			const isoneend = sj.x0==undefined || sj.x1==undefined
+
+			if(si.x0!=undefined && si.x1!=undefined) {
+				// two ends
+
+				if(isoneend) continue
+
+				if( Math.abs(sj.x0-si.x0)<=pxbinsize && Math.abs(sj.x1-si.x1)<=pxbinsize ) {
+					thisgroup.lst.push( sj )
+					sj.__claimed=true
+				}
+
+			} else {
+				// one end
+				if(!isoneend) continue
+				const end_i = si.x0==undefined ? si.x1 : si.x0
+				const end_j = sj.x0==undefined ? sj.x1 : sj.x0
+				if(Math.abs(end_i-end_j)<=pxbinsize) {
+					thisgroup.lst.push( sj )
+					sj.__claimed=true
+				}
+			}
+		}
+
+		newlst.push( thisgroup )
+	}
+
+	for(const s of lst) delete s.__claimed
+
+	return newlst
 }
 
 
@@ -422,18 +515,83 @@ function render_singlesample_sv( svlst, tk, block ) {
 
 	if(svlst.length==0) return 0
 
-	// if sv has both x0/x1 will show both legs, will be higher, else lower
-	const svheight = tk.discradius*2 + tk.midpad
-		+ (svlst.find(s=> s.x0 && s.x1) ?
-			tk.stem1+tk.legheight :
-			tk.stem1+tk.stem2+tk.stem3
-		)
 
-	tk.svvcf_g.attr('transform','translate(0,'+ (svheight-tk.midpad) +')')
+
+
+	let sf_discradius
+	{
+		let maxcount=1
+		for(const j of svlst) maxcount = Math.max( maxcount, j.lst.length )
+
+
+		let mrd=0 // max radius
+		const w = Math.pow( tk.discradius,2 )*Math.PI // unit area
+
+		/*
+		if(maxcount==1) {
+			mrd=w
+		} else if(maxcount<=2) {
+			mrd=w * 1.4
+		} else if(maxcount<=3) {
+			mrd=w * 1.7
+		} else if(maxcount<=5) {
+			mrd=w * 2
+		} else if(maxcount<=8) {
+			mrd=w * 3
+		} else {
+			mrd=w * 4
+		}
+
+		sf_discradius=scaleLinear()
+			.domain([1,
+				maxcount*.5+.1,
+				maxcount*.6+.1,
+				maxcount*.7+.1,
+				maxcount*.8+.1,
+				maxcount])
+			.range([w,
+				w+(mrd-w)*.8,
+				w+(mrd-w)*.85,
+				w+(mrd-w)*.9,
+				w+(mrd-w)*.95,
+				mrd])
+				*/
+
+		const s = scaleLinear()
+		if(maxcount==1) {
+			s.domain([1,1]).range([w,w])
+		} else if(maxcount==2) {
+			s.domain([1,2])
+				.range([w, w*1.3])
+		} else if(maxcount==3) {
+			s.domain([1,3])
+				.range([w, w*1.6])
+		} else if(maxcount==4) {
+			s.domain([1,4])
+				.range([w, w*1.8])
+		} else if(maxcount==6) {
+			s.domain([1,6])
+				.range([w, w*2])
+		} else if(maxcount==10) {
+			s.domain([1,10])
+				.range([w, w*3])
+		} else {
+			s.domain([1, maxcount])
+				.range([w, w*4])
+		}
+		sf_discradius=s
+	}
+
 
 	// clean sv
+
+	let maxradius=0
+
 	for(const i of svlst) {
-		i.radius = tk.discradius
+
+		i.radius = Math.sqrt( sf_discradius( i.lst.length ) / Math.PI ) 
+		maxradius = Math.max(i.radius, maxradius)
+
 		if(i.x0!=undefined && i.x1!=undefined) {
 			if(i.x0 > i.x1) {
 				// x0 maybe bigger than x1
@@ -448,74 +606,104 @@ function render_singlesample_sv( svlst, tk, block ) {
 		i.x=i._x
 	}
 
+
+	/*
+	radius for all items have been set
+	sum up height for subtrack
+	if sv has both x0/x1 will show both legs, will be higher, else lower
+	*/
+	const svheight = maxradius*2 // ball diameter
+		+maxradius*2 // raise height
+		+ (svlst.find(s=> s.x0 && s.x1) ? tk.legheight : 0)
+
+	tk.svvcf_g.attr('transform','translate(0,'+ (svheight-0) +')')
+
+
 	const entirewidth = block.width+block.subpanels.reduce((i,j)=>i+j.leftpad+j.width,0)
 
 	//horiplace( svlst, entirewidth )
 
 	for(const sv of svlst) {
-		const doubleleg = sv.x0 && sv.x1
-		const g = tk.svvcf_g.append('g')
-			.attr('transform','translate('+ sv.x +','+(doubleleg ? -tk.stem1-tk.legheight : -tk.stem1-tk.stem2-tk.stem3) +')')
 
-		const otherchr=sv.chrA==sv._chr ? sv.chrB : sv.chrA
+		const doubleleg = sv.x0 && sv.x1
+
+		const thislegheight = tk.legheight*(doubleleg ? 1 : 0)
+		const raiseheight = sv.lst.length==1 ? sv.radius : sv.radius*2
+
+		const g = tk.svvcf_g.append('g')
+			.attr('transform','translate('+ sv.x +',-'+(thislegheight+raiseheight) +')')
+
+		const otherchr =sv.chrA==sv._chr ? sv.chrB : sv.chrA
 		const color =  otherchr==sv._chr ? intrasvcolor : tk.legend_svchrcolor.colorfunc(otherchr)
 
 		g.append('circle')
-			.attr('r', tk.discradius)
-			.attr('cy',-tk.discradius)
+			.attr('r', sv.radius)
+			.attr('cy', -sv.radius)
 			.attr('fill',color)
 			.attr('stroke','white')
+
+		if(sv.lst.length>1) {
+			const s = sv.radius*1.5
+			const text = sv.lst.length.toString()
+			const fontsize = Math.min(s/(text.length*client.textlensf), s)
+			g.append('text')
+				.text(text)
+				.attr('text-anchor','middle')
+				.attr('dominant-baseline','central')
+				.attr('fill','white')
+				.attr('y', -sv.radius)
+				.attr('font-size', fontsize)
+				.attr('font-family', client.font)
+		}
+
+		// cover
 		g.append('circle')
-			.attr('r', tk.discradius)
-			.attr('cy',-tk.discradius)
+			.attr('r', sv.radius)
+			.attr('cy', -sv.radius)
 			.attr('fill','white')
 			.attr('fill-opacity',0)
 			.attr('stroke',color)
 			.attr('stroke-opacity',0)
 			.attr('class','sja_aa_disckick')
 			.on('mouseover',()=>{
-				tooltip_singleitem({
-					item:sv,
-					tk: tk
-				})
+				if(sv.lst.length==1) {
+					tooltip_singleitem({
+						item:sv.lst[0],
+						tk: tk
+					})
+					return
+				}
+				tooltip_multi_sv(sv.lst, tk)
 			})
 			.on('mouseout',()=> tk.tktip.hide() )
 			.on('click',()=>{
-				// click sv may add subpanel
-				click_sv_single(sv, tk, block)
+				if(sv.lst.length==1) {
+					// click sv may add subpanel
+					click_sv_single(sv.lst[0], tk, block)
+					return
+				}
+				panel_multi_sv(sv.lst, tk, block)
 			})
 
 		if(doubleleg) {
 			g.append('line')
 				.attr('stroke',color)
-				.attr('y2',tk.stem1)
+				.attr('y2', raiseheight)
 				.attr('shape-rendering','crispEdges')
 			g.append('line') // right leg
 				.attr('stroke',color)
-				.attr('y1', tk.stem1)
 				.attr('x2', (sv.x1-sv.x0)/2-(sv.x-sv._x) )
-				.attr('y2', tk.stem1+tk.legheight)
+				.attr('y1', raiseheight)
+				.attr('y2', raiseheight+thislegheight)
 			g.append('line') // left leg
 				.attr('stroke',color)
-				.attr('y1', tk.stem1)
 				.attr('x2', -(sv.x1-sv.x0)/2-(sv.x-sv._x) )
-				.attr('y2', tk.stem1+tk.legheight)
+				.attr('y1', raiseheight)
+				.attr('y2', raiseheight+thislegheight)
 		} else {
 			g.append('line')
 				.attr('stroke',color)
-				.attr('y2', tk.stem1)
-				.attr('shape-rendering','crispEdges')
-			g.append('line')
-				.attr('stroke',color)
-				.attr('y1', tk.stem1)
-				.attr('y2', tk.stem1+tk.stem2)
-				.attr('x2', sv._x-sv.x)
-			g.append('line')
-				.attr('stroke',color)
-				.attr('y1', tk.stem1+tk.stem2)
-				.attr('y2', tk.stem1+tk.stem2+tk.stem3)
-				.attr('x1', sv._x-sv.x)
-				.attr('x2', sv._x-sv.x)
+				.attr('y2', raiseheight+thislegheight)
 				.attr('shape-rendering','crispEdges')
 		}
 	}
@@ -584,5 +772,44 @@ function map_sv(sv, block) {
 		} else if(r.subpanelidx!=undefined) {
 			sv.x1 = r.x
 		}
+	}
+}
+
+
+
+
+function tooltip_multi_sv( lst, tk ) {
+	tk.tktip.clear()
+	showtable_multi_sv(lst, tk.tktip.d, tk)
+	tk.tktip.show(d3event.clientX, d3event.clientY)
+}
+
+
+function panel_multi_sv( lst, tk, block ) {
+	const pane = client.newpane({x: d3event.clientX, y: d3event.clientY})
+	showtable_multi_sv(lst, pane.body, tk)
+}
+
+
+
+function showtable_multi_sv(lst, holder, tk) {
+	const table = holder.append('table')
+	for(const i of lst) {
+
+		const tr = table.append('tr')
+
+		tr.append('td')
+			.style('font-size','.7em')
+			.text( i.dt==common.dtsv ? 'SV' : 'Fusion' )
+
+		tr.append('td')
+			.text( itemname_svfusion( i ) )
+		tr.append('td')
+			.style('font-size','.8em')
+			.html(
+				svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
+				+' &raquo; '
+				+svchr2html(i.chrB,tk)+':'+i.posB+':'+i.strandB
+			)
 	}
 }
