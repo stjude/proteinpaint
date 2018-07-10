@@ -1,5 +1,6 @@
 import * as common from './common'
 import * as client from './client'
+import {string2pos, invalidcoord} from './coord'
 
 
 /*
@@ -275,8 +276,13 @@ export function createnewmatrix_withafeature(_p) {
 
 	// dynamic import works with static values, not expressions
 	if (window.location.search.includes('smx=3')) {
-		import('./samplematrix3').then(_=>{
-			const m = new _.Samplematrix( arg )
+		arg.client = client
+		arg.common = common
+		arg.string2pos = string2pos
+		arg.invalidcoord = invalidcoord
+		arg.block = import('./block.js')
+
+		window.sjcharts.dthm(arg).then(m=>{
 			m._pane = pane
 			tk.samplematrices.push( m )
 		})

@@ -8,7 +8,7 @@ import './style.css'
 import * as common from './common'
 import {bulkui,bulkembed} from './bulk.ui'
 import {stratinput} from './tree'
-import {string2pos} from './coord'
+import {string2pos, invalidcoord} from './coord'
 import {loadstudycohort} from './tp.init'
 import {rgb as d3rgb} from 'd3-color'
 import blockinit from './block.init'
@@ -923,9 +923,12 @@ function launchsamplematrix(cfg, holder) {
 	cfg.debugmode = debugmode
 	// dynamic import works with static values, not expressions
 	if (window.location.search.includes('smx=3')) {
-		import('./samplematrix3').then(_=>{
-			new _.Samplematrix(cfg)
-		})
+		cfg.client = client
+		cfg.common = common
+		cfg.string2pos = string2pos
+		cfg.invalidcoord = invalidcoord
+		cfg.block = import('./block.js')
+		window.sjcharts.dthm( cfg )
 	}
 	else {
 		import('./samplematrix').then(_=>{
