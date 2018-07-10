@@ -26,6 +26,7 @@ click_samplegroup_showmenu
 click_samplegroup_showtable
 may_add_sampleannotation
 svchr2html
+svcoord2html
 
 ********************** INTERNAL
 detailtable_singlesample
@@ -835,11 +836,7 @@ export function click_multi_svdense(g, tk, block) {
 		const td1=tr.append('td')
 		for(const i of so.sv) {
 
-			const breakpoint = svchr2html(i.chrA, tk)
-					+':'+i.posA+':'+i.strandA
-					+' &raquo; '
-					+svchr2html(i.chrB, tk)
-					+':'+i.posB+':'+i.strandB
+			const breakpoint = svcoord2html(i,tk)
 
 			td1.append('div')
 				.attr('class','sja_clbtext')
@@ -870,15 +867,9 @@ export function click_multi_svdense(g, tk, block) {
 		const td2=tr.append('td')
 		for(const i of so.fusion) {
 
-			const breakpoint = svchr2html(i.chrA, tk)
-					+':'+i.posA+':'+i.strandA
-					+' &raquo; '
-					+svchr2html(i.chrB, tk)
-					+':'+i.posB+':'+i.strandB
-
 			td2.append('div')
 				.attr('class','sja_clbtext')
-				.html( itemname_svfusion(i) + ' <span style="font-size:.7em">'+breakpoint+'</span>' )
+				.html( itemname_svfusion(i) + ' <span style="font-size:.7em">'+ svcoord2html(i,tk) +'</span>' )
 				.on('mouseover',()=>{
 					tooltip_singleitem({
 						item:i,
@@ -1430,11 +1421,9 @@ function detailtable_singlesample(p) {
 	} else if( m.dt == common.dtsv || m.dt==common.dtfusionrna ) {
 
 		{
-			const breakpoint = svchr2html(m.chrA, p.tk) +':'+(m.posA+1)+':'+m.strandA+' &raquo; '
-				+svchr2html(m.chrB, p.tk)+':'+(m.posB+1)+':'+m.strandB
 			lst.push({
 				k: (m.dt==common.dtsv ? 'SV' : 'RNA fusion'),
-				v: itemname_svfusion(m)+' <span style="font-size:.7em">'+breakpoint+'</span>'
+				v: itemname_svfusion(m)+' <span style="font-size:.7em">'+svcoord2html(m,p.tk)+'</span>'
 			})
 		}
 
@@ -1743,6 +1732,13 @@ export function svchr2html(chr, tk) {
 
 
 
+export function svcoord2html(i, tk) {
+	return svchr2html(i.chrA,tk)+':'+i.posA + (i.strandA ? ':'+i.strandA : '')
+		+' &raquo; '
+		+svchr2html(i.chrB,tk)+':'+i.posB+ (i.strandB ? ':'+i.strandB : '')
+}
+
+
 
 function sortitemsbytype_onesample( samplename, lst, tk ) {
 	/*
@@ -1768,13 +1764,10 @@ function sortitemsbytype_onesample( samplename, lst, tk ) {
 		const deduped = dedup_sv( breakends )
 		for(const i of deduped) {
 
-			const breakpoint = svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
-				+' &raquo; '
-				+svchr2html(i.chrB,tk)+':'+i.posB+':'+i.strandB
-
 			svlst.push(
 				'<div style="white-space:nowrap">'
-				+ itemname_svfusion(i) + ' <span style="font-size:.7em">'+breakpoint+'</span>'
+				+ itemname_svfusion(i) + ' <span style="font-size:.7em">'
+				+ svcoord2html(i,tk)+'</span>'
 				+(i.dt==common.dtfusionrna ? ' <span style="font-size:.7em">(RNA fusion)</span>':'')
 				+'</div>'
 			)

@@ -2,7 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {scaleLinear} from 'd3-scale'
 import {event as d3event} from 'd3-selection'
-import { tooltip_singleitem, svchr2html } from './block.mds.svcnv.clickitem'
+import { tooltip_singleitem, svcoord2html} from './block.mds.svcnv.clickitem'
 import { map_cnv,
 	labelspace,
 	draw_colorscale_cnv,
@@ -806,10 +806,6 @@ function showtable_multi_sv(lst, holder, tk) {
 			.text( itemname_svfusion( i ) )
 		tr.append('td')
 			.style('font-size','.8em')
-			.html(
-				svchr2html(i.chrA,tk)+':'+i.posA+':'+i.strandA
-				+' &raquo; '
-				+svchr2html(i.chrB,tk)+':'+i.posB+':'+i.strandB
-			)
+			.html( svcoord2html(i,tk) )
 	}
 }
