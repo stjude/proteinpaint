@@ -13,10 +13,6 @@ export function mdsexpressionrankfromtemplate(tk,template, block) {
 
 	if(tk.iscustom) {
 		if(!template.file && !template.url) return 'no file or url'
-		if(!tk.datatype) {
-			tk.datatype='unnamed_datatype'
-		}
-
 		tk.gecfg = {}
 
 	} else {
@@ -28,6 +24,11 @@ export function mdsexpressionrankfromtemplate(tk,template, block) {
 		delete tk.dslabel
 		tk.gecfg = tk.mds.queries[ tk.querykey ]
 		if(!tk.gecfg) return 'expression query not found: invalid value for querykey'
+	}
+
+	if(tk.datatype) {
+		tk.gecfg.datatype = tk.datatype
+		delete tk.datatype
 	}
 
 	if(!tk.barheight) tk.barheight = 60

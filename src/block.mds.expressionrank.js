@@ -269,7 +269,7 @@ function renderTk( tk, block ) {
 		}
 	}
 
-	tk.rankaxis.label.text( tk.showrank ? 'Rank' : (tk.datatype || 'actual value') )
+	tk.rankaxis.label.text( tk.showrank ? 'Rank' : (tk.gecfg.datatype || 'actual value') )
 
 	client.axisstyle({
 		axis:tk.rankaxis.g.call(
@@ -418,7 +418,7 @@ function configPanel(tk,block) {
 					renderTk(tk,block)
 				})
 			td.append('label')
-				.html('&nbsp;'+(tk.datatype || 'actual value'))
+				.html('&nbsp;'+(tk.gecfg.datatype || 'actual value'))
 				.attr('for',radioname+2)
 				.attr('class','sja_clbtext')
 		}
