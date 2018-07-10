@@ -59,6 +59,10 @@ rl.on('line',line=>{
 	if(flag & 0x8) {
 		return
 	}
+	if(flag & 0x80) {
+		// second in pair
+		return
+	}
 
 	if(rnext=='=') {
 		if( Math.abs(tlen) > intradist_min ) {
@@ -67,12 +71,16 @@ rl.on('line',line=>{
 				dt:5,
 				chrB: chr,
 				posB: pnext,
+				qname:qname,
+				sample:'1'
 			}
 			console.log(chr+'\t'+pos+'\t'+pos+'\t'+JSON.stringify(i))
 			const j = {
 				dt:5,
 				chrA: chr,
-				posA: pos
+				posA: pos,
+				qname:qname,
+				sample:'1'
 			}
 			console.log(chr+'\t'+pnext+'\t'+pnext+'\t'+JSON.stringify(j))
 		}
@@ -85,13 +93,15 @@ rl.on('line',line=>{
 	const i = {
 		dt: 5,
 		chrB: chr2,
-		posB: pnext
+		posB: pnext,
+		sample:'1'
 	}
 	console.log(chr1+'\t'+pos+'\t'+pos+'\t'+JSON.stringify(i))
 	const j = {
 		dt: 5,
 		chrA: chr1,
-		posA: pos
+		posA: pos,
+		sample:'1'
 	}
 	console.log(chr2+'\t'+pnext+'\t'+pnext+'\t'+JSON.stringify(j))
 })
