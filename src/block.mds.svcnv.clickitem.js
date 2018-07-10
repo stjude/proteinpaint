@@ -25,6 +25,7 @@ tooltip_samplegroup
 click_samplegroup_showmenu
 click_samplegroup_showtable
 may_add_sampleannotation
+svchr2html
 
 ********************** INTERNAL
 detailtable_singlesample
@@ -1732,7 +1733,7 @@ function findsamplegroup_byvcf( p ) {
 
 
 
-function svchr2html(chr, tk) {
+export function svchr2html(chr, tk) {
 	// only for multi-sample, full mode
 	if( tk.legend_svchrcolor.interchrs.has(chr) ) {
 		return '<span style="background:'+tk.legend_svchrcolor.colorfunc(chr)+';font-weight:bold;padding:0px 5px;color:white">'+chr+'</span>'
