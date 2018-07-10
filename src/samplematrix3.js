@@ -88,6 +88,29 @@ export class Samplematrix {
 		if(err.stack) console.log(err.stack)
 	}
 
+	update_singlefeature(f) {
+		/*
+		update a single feature
+		do not return promise
+		*/
+		this.get_features([f])
+	}
+
+
+
+	addnewfeature_update( f ) {
+		/*
+		add a new feature, get data, update and done
+		no return promise
+		*/
+
+		this.features.push( f )
+		this.validate_feature( f )
+		.then(()=>{
+			return this.get_features( [f] )
+		})
+	}
+
 	setDtApp() {
 		return window.sjcharts.dtHm({
 			appCaller: this, 
@@ -464,7 +487,7 @@ export class Samplematrix {
 			} else {
 				// has valid position
 				if(!f.label) f.label = f.chr+':'+f.start+'-'+f.stop+(label ? ' '+label : '')
-				return
+				return Promise.resolve()
 			}
 		}
 
