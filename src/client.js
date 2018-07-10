@@ -194,8 +194,11 @@ export class Menu{
 	}
 
 	hide() {
-		// prevent flickering, decrease sensitivity of tooltip to movement on mouseout
-		if (Math.abs(this.prevX - d3event.clientX) < this.hideXmute && Math.abs(this.prevY-d3event.clientY) < this.hideYmute) return
+		if(d3event) {
+			// d3event can be undefined
+			// prevent flickering, decrease sensitivity of tooltip to movement on mouseout
+			if (Math.abs(this.prevX - d3event.clientX) < this.hideXmute && Math.abs(this.prevY-d3event.clientY) < this.hideYmute) return
+		}
 		this.d.style('display','none').style('opacity',0)
 		return this
 	}
