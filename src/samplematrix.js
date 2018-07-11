@@ -602,7 +602,18 @@ export class Samplematrix {
 		return client.dofetch('/samplematrix',arg)
 		.then(data=>{
 
-			if(data.error) throw data.error
+			if(data.error) {
+				/* something's wrong about this feature e.g. look range too big
+				server refused to provide data
+				still must assign empty array of items
+				in order for other methods to work!
+				*/
+				for(const f0 of arg.features) {
+					const f = this.features.find(f=> f.id==f0.id)
+					if(f) f.items=[]
+				}
+				throw data.error
+			}
 
 			for(const dat of data.results) {
 				const f = this.features.find( f=> f.id==dat.id )
@@ -1002,6 +1013,8 @@ sort samples by f.issampleattribute
 				// not adding sample from this feature
 				continue
 			}
+
+
 
 			if( feature.isgenevalue || feature.iscnv || feature.isloh || feature.isitd || feature.issvfusion || feature.issvcnv ) {
 
