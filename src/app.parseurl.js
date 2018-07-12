@@ -209,6 +209,22 @@ if(urlp.has('block')) {
 			}
 		}
 	}
+
+	if(urlp.has('aicheckfile')) {
+		const lst=urlp.get('aicheckfile').split(',')
+		for(let i=0; i<lst.length; i+=2) {
+			if(lst[i] && lst[i+1]) {
+				tklst.push({
+					type:'aicheck',
+					name:lst[i],
+					file:lst[i+1]
+				})
+			}
+		}
+	}
+
+
+
 	if(urlp.has('bampilefile')) {
 		const lst=urlp.get('bampilefile').split(',')
 		let links=null
