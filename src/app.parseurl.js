@@ -196,6 +196,7 @@ if(urlp.has('block')) {
 			}
 		}
 	}
+
 	if(urlp.has('vcfurl')) {
 		const lst=urlp.get('vcfurl').split(',')
 		for(let i=0; i<lst.length; i+=2) {
@@ -295,6 +296,22 @@ if(urlp.has('block')) {
 			par.datasetqueries = [ { dataset: tmp[0], querykey: tmp[1] } ]
 		}
 	}
+
+
+	if(urlp.has('mdsjunctionfile')) {
+		const lst=urlp.get('mdsjunctionfile').split(',')
+		for(let i=0; i<lst.length; i+=2) {
+			if(lst[i] && lst[i+1]) {
+				tklst.push({
+					type:'mdsjunction',
+					name:lst[i],
+					file:lst[i+1]
+				})
+			}
+		}
+	}
+
+
 
 	for(const t of tklst) {
 		t.iscustom = true
