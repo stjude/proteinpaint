@@ -1446,12 +1446,13 @@ function detailtable_singlesample(p) {
 		if(p.m_sample) {
 
 			/*
+			m_sample as from m.sampledata[]
+
 			in vcf item, mutation-level attributes are in Formats
 			collect them for showing later
 			*/
 			mattr = {}
 
-			// m_sample as from m.sampledata[]
 			const formats = p.tk.checkvcf ? p.tk.checkvcf.format : null // format registry
 
 			for(const formatfield in p.m_sample) {
@@ -1468,6 +1469,12 @@ function detailtable_singlesample(p) {
 						continue
 					}
 				}
+
+				/*
+				this formatfield is not declared in mds.mutationAttribute
+				confusing here
+				e.g. allele count
+				*/
 
 
 				const formatdesc = formats ? formats[ formatfield ] : null
@@ -1505,6 +1512,7 @@ function detailtable_singlesample(p) {
 						lst.push({
 							k: formatfield,
 							v: '<span style="font-size:.8em;opacity:.5">'+alleles.join(' / ')+'</span> '+values.join(' / ')
+								+(formatdesc.Description ? ' <span style="font-size:.7em;opacity:.5">'+formatdesc.Description+'</span>' : '')
 						})
 						continue
 					}
