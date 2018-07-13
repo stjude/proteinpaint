@@ -9693,6 +9693,8 @@ function mds_init(ds,genome) {
 				tk.name = sample+' '+assay
 			}
 
+			tk.assayName = assay
+
 
 			ds.sampleAssayTrack.samples.get(sample).push(tk)
 			count++
