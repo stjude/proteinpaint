@@ -2140,7 +2140,10 @@ export function focus_singlesample( p ) {
 		style:{
 			margin:'0px'
 		},
-		hide_mdsHandleHolder:1,
+
+		// this is to hide green button in sub block
+		//hide_mdsHandleHolder:1,
+
 		tklst:[],
 		holder: holder,
 		subpanels:[]
