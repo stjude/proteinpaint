@@ -671,16 +671,17 @@ function handle_pdomain(req,res) {
 function handle_tkbigwig(req,res) {
 	if(reqbodyisinvalidjson(req,res)) return
 
+	let fixminv,
+		fixmaxv,
+		percentile,
+		autoscale=false
+
 	Promise.resolve()
 	.then(()=>{
 
 		const [e,file,isurl]=fileurl(req)
 		if(e) throw e
 
-		let fixminv,
-			fixmaxv,
-			percentile
-		let autoscale=false
 		if(req.query.autoscale) {
 			autoscale=true
 		} else if(req.query.percentile) {
