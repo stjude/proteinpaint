@@ -87,11 +87,14 @@ export function bigwigstrandedfromtemplate(tk,template) {
 export function bigwigstrandedmaketk(tk,block) {
 
 	const collectlabelw = []
+
 	tk.tklabel
 		.text(tk.name)
+		.attr('y', 1) // tk label y position is fixed
 		.each(function(){
 			collectlabelw.push(this.getBBox().width)
 		})
+
 	tk.labforward=block.maketklefthandle(tk)
 		.text('Forward')
 		.each(function(){
@@ -152,9 +155,10 @@ export function bigwigstrandedload(tk,block) {
 	const par1 = block.tkarg_q(tk.strand1)
 	par1.name=tk.name+' forward strand'
 
-	requestdata( par1, block)
+	client.dofetch('tkbigwig',par1)
 	.then(data=>{
-		if(data.error) throw('forward strand error: '+data.error)
+		if(data.error) throw 'forward strand error: '+data.error
+
 		tk.strand1.img
 			.attr('xlink:href',data.src)
 		if(block.pannedpx!=undefined) {
@@ -174,9 +178,9 @@ export function bigwigstrandedload(tk,block) {
 		const par2 = block.tkarg_q(tk.strand2)
 		par2.name=tk.name+' reverse strand'
 
-		return requestdata( par2,  block )
+		return client.dofetch('tkbigwig',par2)
 		.then(data=>{
-			if(data.error) throw('reverse strand error: '+data.error)
+			if(data.error) throw 'reverse strand error: '+data.error
 			tk.strand2.img
 				.attr('xlink:href',data.src)
 			if(data.minv!=undefined) {
@@ -225,14 +229,6 @@ export function bigwigstrandedload(tk,block) {
 
 
 
-function requestdata(par, block) {
-	par.jwt = block.jwt
-	return fetch( new Request(block.hostURL+'/tkbigwig',{
-		method:'POST',
-		body:JSON.stringify(par)
-	}))
-	.then(data=>{return data.json()})
-}
 
 
 
@@ -264,11 +260,10 @@ export function bigwigstrandedloadsubpanel(tk, block, panel) {
 	delete par1.percentile
 
 
-	requestdata( par1, block )
+	client.dofetch('tkbigwig',par1)
 	.then(data=>{
-		if(data.error) throw({message:data.error})
+		if(data.error) throw data.error
 		panel.strand1.img.attr('xlink:href',data.src)
-
 
 		const par2 = block.tkarg_q( tk.strand2 )
 		par2.width = panel.width
@@ -283,9 +278,9 @@ export function bigwigstrandedloadsubpanel(tk, block, panel) {
 		delete par2.autoscale
 		delete par2.percentile
 
-		return requestdata( par2, block)
+		return client.dofetch('tkbigwig',par2)
 		.then(data=>{
-			if(data.error) throw({message:data.error})
+			if(data.error) throw data.error
 			panel.strand2.img.attr('xlink:href', data.src)
 		})
 	})
@@ -294,7 +289,7 @@ export function bigwigstrandedloadsubpanel(tk, block, panel) {
 			// error
 			console.log(obj.stack)
 		}
-		return obj.message
+		return typeof obj == 'string' ? obj : obj.message
 	})
 	.then(errtext=>{
 		block.tkcloakoff_subpanel(panel, {error:errtext} )
