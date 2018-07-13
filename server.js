@@ -670,66 +670,75 @@ function handle_pdomain(req,res) {
 
 function handle_tkbigwig(req,res) {
 	if(reqbodyisinvalidjson(req,res)) return
-	const [e,file,isurl]=fileurl(req)
-	if(e) return res.send({error:e})
-	let fixminv,
-		fixmaxv,
-		percentile
-	let autoscale=false
-	if(req.query.autoscale) {
-		autoscale=true
-	} else if(req.query.percentile) {
-		percentile=req.query.percentile
-		if(!Number.isFinite(percentile)) return res.send({error:'invalid percentile'})
-	} else {
-		fixminv=req.query.minv
-		fixmaxv=req.query.maxv
-		if(!Number.isFinite(fixminv)) return res.send({error:'invalid minv'})
-		if(!Number.isFinite(fixmaxv)) return res.send({error:'invalid maxv'})
-	}
-	if(!Number.isFinite(req.query.barheight)) return res.send({error:'invalid barheight'})
-	if(!Number.isFinite(req.query.regionspace)) return res.send({error:'invalid regionspace'})
-	if(!Number.isFinite(req.query.width)) return res.send({error:'invalid width'})
-	if(!req.query.rglst) return res.send({error:'region list missing'})
-	if(req.query.dotplotfactor) {
-		if(!Number.isInteger(req.query.dotplotfactor)) return res.send({error:'dotplotfactor value should be positive integer'})
-	}
 
-	const tasks = [] // one task per region
+	Promise.resolve()
+	.then(()=>{
 
-	for(const r of req.query.rglst) {
-		tasks.push(new Promise((resolve,reject)=>{
-			const ps=spawn(bigwigsummary,[
-				'-udcDir='+serverconfig.cachedir,
-				file,
-				r.chr,
-				r.start,
-				r.stop,
-				Math.ceil(r.width * (req.query.dotplotfactor || 1) )])
-			const out=[]
-			const out2=[]
-			ps.stdout.on('data',i=>out.push(i))
-			ps.stderr.on('data',i=>out2.push(i))
-			ps.on('close',code=>{
-				const err=out2.join('')
-				if(err.length) {
-					if(err.startsWith('no data')) {
-						r.nodata=true
+		const [e,file,isurl]=fileurl(req)
+		if(e) throw e
+
+		let fixminv,
+			fixmaxv,
+			percentile
+		let autoscale=false
+		if(req.query.autoscale) {
+			autoscale=true
+		} else if(req.query.percentile) {
+			percentile=req.query.percentile
+			if(!Number.isFinite(percentile)) throw 'invalid percentile'
+		} else {
+			fixminv=req.query.minv
+			fixmaxv=req.query.maxv
+			if(!Number.isFinite(fixminv)) throw 'invalid minv'
+			if(!Number.isFinite(fixmaxv)) throw 'invalid maxv'
+		}
+		if(!Number.isFinite(req.query.barheight)) throw 'invalid barheight'
+		if(!Number.isFinite(req.query.regionspace)) throw 'invalid regionspace'
+		if(!Number.isFinite(req.query.width)) throw 'invalid width'
+		if(!req.query.rglst) throw 'region list missing'
+		if(req.query.dotplotfactor) {
+			if(!Number.isInteger(req.query.dotplotfactor)) throw 'dotplotfactor value should be positive integer'
+		}
+
+		const tasks = [] // one task per region
+
+		for(const r of req.query.rglst) {
+			tasks.push(new Promise((resolve,reject)=>{
+				const ps=spawn(bigwigsummary,[
+					'-udcDir='+serverconfig.cachedir,
+					file,
+					r.chr,
+					r.start,
+					r.stop,
+					Math.ceil(r.width * (req.query.dotplotfactor || 1) )])
+				const out=[]
+				const out2=[]
+				ps.stdout.on('data',i=>out.push(i))
+				ps.stderr.on('data',i=>out2.push(i))
+				ps.on('close',code=>{
+					const err=out2.join('')
+					if(err.length) {
+						if(err.startsWith('no data')) {
+							r.nodata=true
+						} else {
+							// in case of invalid file the message is "Couldn't open /path/to/tp/..."
+							// must not give away the tp path!!
+							reject( 'Cannot read bigWig file' )
+						}
 					} else {
-						r.err=err
+						r.values=out.join('').trim().split('\t').map(Number.parseFloat)
+						if(req.query.dividefactor) {
+							r.values = r.values.map(i=>i/req.query.dividefactor)
+						}
 					}
-				} else {
-					r.values=out.join('').trim().split('\t').map(Number.parseFloat)
-					if(req.query.dividefactor) {
-						r.values = r.values.map(i=>i/req.query.dividefactor)
-					}
-				}
-				resolve()
-			})
-			})
-		)
-	}
-	Promise.all( tasks )
+					resolve()
+				})
+				})
+			)
+		}
+
+		return Promise.all( tasks )
+	})
 	.then( ()=>{
 		let nodata=true
 		for(const r of req.query.rglst) {
@@ -857,10 +866,10 @@ function handle_tkbigwig(req,res) {
 		res.send(result)
 	})
 	.catch( err =>{
-		res.send({error: err.message })
 		if(err.stack) {
 			console.log(err.stack)
 		}
+		res.send({error: typeof err == 'string' ? err : err.message })
 	})
 }
 
