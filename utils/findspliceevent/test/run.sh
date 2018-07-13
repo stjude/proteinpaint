@@ -16,4 +16,5 @@ bgzip -f /home/xzhou/data/tp/hg19/PCGP/junction/test/new
 tabix -p bed -c '#' -f /home/xzhou/data/tp/hg19/PCGP/junction/test/new.gz
 
 
-scp bin.js bin2.js xzhou1@hpc:/home/xzhou1/gb_customTracks/tp/hg19/PCGP/junction/spliceevent
+scp bin.js xzhou1@hpc:/home/xzhou1/gb_customTracks/tp/junction/annotate/annotate_spliceevent.js
+scp bin2.js xzhou1@hpc:/home/xzhou1/gb_customTracks/tp/junction/annotate/annotate_junction.js
