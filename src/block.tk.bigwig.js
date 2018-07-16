@@ -108,11 +108,17 @@ export function bigwigload(tk,block) {
 
 
 		// update axis
-		const scale=scaleLinear().domain([tk.scale.min,tk.scale.max]).range([tk.barheight,0])
+		const scale = scaleLinear()
+			.domain([tk.scale.min,tk.scale.max])
+			.range([tk.barheight,0])
+		const axis = d3axis
+			.axisLeft()
+			.scale(scale)
+			.tickValues([tk.scale.min,tk.scale.max])
+
+
 		client.axisstyle({
-			axis:tk.leftaxis.call(
-				d3axis.axisLeft().scale(scale).tickValues([tk.scale.min,tk.scale.max])
-			),
+			axis:tk.leftaxis.call( axis ),
 			color:'black',
 			showline:true
 		})
