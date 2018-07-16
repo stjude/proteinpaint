@@ -18,7 +18,7 @@ exports.invalidcoord=invalidcoord
 
 
 
-exports.string2pos=function(s,genome) {
+exports.string2pos=function( s, genome, donotextend ) {
 	s=s.replace(/,/g,'')
 	const chr=genome.chrlookup[s.toUpperCase()]
 	if(chr) {
@@ -78,15 +78,19 @@ exports.string2pos=function(s,genome) {
 		}
 		const actualposition = {position:start, len:stop-start}
 		const chr=genome.chrlookup[tmp[0].toUpperCase()]
-		const minspan=400
-		if(stop-start<minspan) {
-			let center=Math.ceil((start+stop)/2)
-			if(center+minspan/2 >=chr.len) {
-				center=chr.len-Math.ceil(minspan/2)
+
+		if(!donotextend) {
+			const minspan=400
+			if(stop-start<minspan) {
+				let center=Math.ceil((start+stop)/2)
+				if(center+minspan/2 >=chr.len) {
+					center=chr.len-Math.ceil(minspan/2)
+				}
+				start=Math.max(0,center-Math.ceil(minspan/2))
+				stop=start+minspan
 			}
-			start=Math.max(0,center-Math.ceil(minspan/2))
-			stop=start+minspan
 		}
+
 		return {
 			chr:chr.name,
 			chrlen:chr.len,
