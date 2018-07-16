@@ -196,15 +196,28 @@ export function bigwigstrandedload(tk,block) {
 		tk.strand1.img.attr('x',0) // shift back
 		block.tkcloakoff(tk,{})
 		tk.leftaxis.selectAll('*').remove()
+
 		const minvalue=tk.strand2.nodata ? 0 : tk.strand2.scale.min
 		const maxvalue=tk.strand1.nodata ? 0 : tk.strand1.scale.max
+
 		const scale=scaleLinear()
 			.domain([minvalue, 0, maxvalue ])
 			.range([tk.strand1.barheight+tk.strand2.barheight, tk.strand1.barheight, 0])
+
+		let formatstr = 'r'
+		if(tk.integer4axis) {
+			// show integer
+			formatstr = 'd'
+		}
+
+		const axis = d3axis
+			.axisRight()
+			.scale(scale)
+			.tickFormat(d3format( formatstr ))
+			.tickValues([minvalue, 0, maxvalue])
+
 		client.axisstyle({
-			axis:tk.leftaxis.call(
-				d3axis.axisRight().scale(scale).tickFormat(d3format('r')).tickValues([minvalue, 0, maxvalue])
-			),
+			axis:tk.leftaxis.call( axis),
 			color:'black',
 			showline:true
 		})
