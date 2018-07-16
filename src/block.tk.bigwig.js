@@ -1,7 +1,9 @@
 import {scaleLinear} from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import * as client from './client'
+import {format as d3format} from 'd3-format'
 import {event as d3event} from 'd3-selection'
+
 
 
 /*
@@ -111,11 +113,15 @@ export function bigwigload(tk,block) {
 		const scale = scaleLinear()
 			.domain([tk.scale.min,tk.scale.max])
 			.range([tk.barheight,0])
+
 		const axis = d3axis
 			.axisLeft()
 			.scale(scale)
 			.tickValues([tk.scale.min,tk.scale.max])
 
+		if(tk.integer4axis) {
+			axis.tickFormat( d3format('d') )
+		}
 
 		client.axisstyle({
 			axis:tk.leftaxis.call( axis ),
