@@ -260,7 +260,7 @@ module.exports={
 
 			// cnv
 			valueCutoff:0.2,
-			bplengthUpperLimit:2000000, // limit cnv length to focal events
+			//bplengthUpperLimit:2000000, // limit cnv length to focal events
 
 			// loh
 			segmeanValueCutoff:0.1,
