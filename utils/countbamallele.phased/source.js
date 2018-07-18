@@ -68,16 +68,16 @@ rl.on('line',line=>{
 
 
 rl.on('close',()=>{
-	if(count_notsnp) console.log('count_notsnp',count_notsnp)
-	if(count_nosampledata) console.log('count_nosampledata',count_nosampledata)
-	if(count_nosample0) console.log('count_nosample0',count_nosample0)
-	if(count_nogenotype) console.log('count_nogenotype',count_nogenotype)
-	if(count_snpnotphased) console.log('count_snpnotphased',count_snpnotphased)
-	if(count_not2alleles) console.log('count_not2alleles',count_not2alleles)
-	if(count_homozygous) console.log('count_homozygous',count_homozygous)
-	if(count_used) console.log('count_used',count_used)
+	if(count_notsnp) console.error('count_notsnp',count_notsnp)
+	if(count_nosampledata) console.error('count_nosampledata',count_nosampledata)
+	if(count_nosample0) console.error('count_nosample0',count_nosample0)
+	if(count_nogenotype) console.error('count_nogenotype',count_nogenotype)
+	if(count_snpnotphased) console.error('count_snpnotphased',count_snpnotphased)
+	if(count_not2alleles) console.error('count_not2alleles',count_not2alleles)
+	if(count_homozygous) console.error('count_homozygous',count_homozygous)
+	if(count_used) console.error('count_used',count_used)
 	if(pileuperrors.size) {
-		for(const [s,c] of pileuperrors) console.log('mpileup error: '+s+', '+c)
+		for(const [s,c] of pileuperrors) console.error('mpileup error: '+s+', '+c)
 	}
 })
 
