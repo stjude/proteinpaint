@@ -17,7 +17,7 @@ if(!vcffile || !bamforward || !bamreverse ) abort('<vcf text file of phased vari
 const fs=require('fs')
 const readline=require('readline')
 const exec=require('child_process').execSync
-const vcf = require('../src/vcf')
+const vcf = require('../../src/vcf')
 
 
 const nt = new Set(['A','T','C','G'])
