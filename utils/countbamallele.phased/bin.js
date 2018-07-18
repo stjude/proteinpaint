@@ -77,10 +77,11 @@ const abort = m=>{
 const vcffile = process.argv[2]
 const bamforward = process.argv[3]
 const bamreverse = process.argv[4]
-//const fafile = process.argv[4]
+const chrsizefile = process.argv[5]
+const outfile = process.argv[6]
 
 
-if(!vcffile || !bamforward || !bamreverse ) abort('<vcf text file of phased variants> <forward strand.bam> <reverse strand.bam> output to stdout')
+if(!vcffile || !bamforward || !bamreverse || !outfile || !chrsizefile ) abort('<vcf text file of phased variants> <forward strand.bam> <reverse strand.bam> <chr size file> <output file basename>')
 
 
 const fs=__webpack_require__(1)
@@ -92,8 +93,18 @@ const vcf = __webpack_require__(4)
 const nt = new Set(['A','T','C','G'])
 
 
+const chr1forwardfile = outfile+'.chr1forward'
+const chr1reversefile = outfile+'.chr1reverse'
+const chr2forwardfile = outfile+'.chr2forward'
+const chr2reversefile = outfile+'.chr2reverse'
+const psfile = outfile+'.phaseset'
 
 
+const chr1forward = fs.createWriteStream( chr1forwardfile )
+const chr1reverse = fs.createWriteStream( chr1reversefile )
+const chr2forward = fs.createWriteStream( chr2forwardfile )
+const chr2reverse = fs.createWriteStream( chr2reversefile )
+const pswrite = fs.createWriteStream( psfile )
 
 
 
@@ -111,6 +122,7 @@ let count_notsnp=0,
 	count_snpnotphased=0,
 	count_not2alleles=0,
 	count_homozygous=0,
+	count_nops=0,
 	count_used=0,
 	pileuperrors = new Map()
 
@@ -137,9 +149,38 @@ rl.on('line',line=>{
 
 
 rl.on('close',()=>{
+	chr1forward.end()
+	chr1reverse.end()
+	chr2forward.end()
+	chr2reverse.end()
+	pswrite.end()
+
+	const tmp = Math.random()
+	exec('sort -k1,1 -k2,2n '+chr1forwardfile+' > '+tmp)
+	exec('mv '+tmp+' '+chr1forwardfile)
+	exec('bedGraphToBigWig '+chr1forwardfile+' '+chrsizefile+' '+chr1forwardfile+'.bw')
+
+	exec('sort -k1,1 -k2,2n '+chr1reversefile+' > '+tmp)
+	exec('mv '+tmp+' '+chr1reversefile)
+	exec('bedGraphToBigWig '+chr1reversefile+' '+chrsizefile+' '+chr1reversefile+'.bw')
+
+	exec('sort -k1,1 -k2,2n '+chr2forwardfile+' > '+tmp)
+	exec('mv '+tmp+' '+chr2forwardfile)
+	exec('bedGraphToBigWig '+chr2forwardfile+' '+chrsizefile+' '+chr2forwardfile+'.bw')
+
+	exec('sort -k1,1 -k2,2n '+chr2reversefile+' > '+tmp)
+	exec('mv '+tmp+' '+chr2reversefile)
+	exec('bedGraphToBigWig '+chr2reversefile+' '+chrsizefile+' '+chr2reversefile+'.bw')
+
+	exec('sort -k1,1 -k2,2n '+psfile+' > '+tmp)
+	exec('mv '+tmp+' '+psfile)
+	exec('bgzip '+psfile)
+	exec('tabix -p bed '+psfile)
+
 	if(count_notsnp) console.error('count_notsnp',count_notsnp)
 	if(count_nosampledata) console.error('count_nosampledata',count_nosampledata)
 	if(count_nosample0) console.error('count_nosample0',count_nosample0)
+	if(count_nops) console.error('count_nops',count_nops)
 	if(count_nogenotype) console.error('count_nogenotype',count_nogenotype)
 	if(count_snpnotphased) console.error('count_snpnotphased',count_snpnotphased)
 	if(count_not2alleles) console.error('count_not2alleles',count_not2alleles)
@@ -157,8 +198,14 @@ rl.on('close',()=>{
 /////////////////////////// helpers
 
 
+let psid=null,
+	pschr,
+	psstart,
+	psstop,
+	psalt=true
 
-const analyze = async (line)=> {
+
+const analyze = (line)=> {
 
 	const [badkeys, mlst, invalidalt] = vcf.vcfparseline( line, vcfobj )
 	if(badkeys) abort('badkeys: '+badkeys.join(' '))
@@ -166,12 +213,7 @@ const analyze = async (line)=> {
 
 	for(const m of mlst) {
 
-		/*
-		if(!nt.has(m.alt) || nt.has(m.ref)) {
-			count_notsnp++
-			continue
-		}
-		*/
+		const chr = 'chr'+m.chr
 
 		if(!m.sampledata) {
 			count_nosampledata++
@@ -182,6 +224,39 @@ const analyze = async (line)=> {
 		if(!sample) {
 			count_nosample0++
 			continue
+		}
+
+		if(!sample.PS) {
+			count_nops++
+			continue
+		}
+
+		// PS
+		if(sample.PS!=psid) {
+			if(!psid) {
+				// first
+				psid = sample.PS
+				pschr = chr
+				psstart = psstop = m.pos
+			} else {
+				// has seen ps
+				psalt = !psalt
+				pswrite.write(pschr+'\t'+psstart+'\t'+psstop+'\t{"color":"'+(psalt ? '#7EA0BD' : '#BD9B7E')+'"}\n')
+
+				if(chr != pschr) {
+					// new chr, log previous ps
+					psid = sample.PS
+					pschr = chr
+					psstart = psstop = m.pos
+				} else {
+					// same chr
+					psid = sample.PS
+					psstart = psstop = m.pos
+				}
+			}
+		} else {
+			// same ps
+			psstop = m.pos
 		}
 
 		if(!sample.genotype) {
@@ -223,6 +298,7 @@ const analyze = async (line)=> {
 			continue
 		}
 
+/*
 		const j = {
 			allele1: allele1,
 			allele2: allele2,
@@ -230,7 +306,13 @@ const analyze = async (line)=> {
 			count: data
 		}
 
-		console.log( 'chr'+m.chr+'\t'+m.pos+'\t'+JSON.stringify(j) )
+		console.log( chr+'\t'+m.pos+'\t'+JSON.stringify(j) )
+		*/
+
+		chr1forward.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr1.forward+'\n')
+		chr1reverse.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr1.reverse+'\n')
+		chr2forward.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr2.forward+'\n')
+		chr2reverse.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr2.reverse+'\n')
 	}
 }
 
@@ -1681,8 +1763,7 @@ const tkt={
 	bampile:'bampile',
 	hicstraw:'hicstraw',
 	expressionrank:'expressionrank',
-	aicheck:'aicheck',
-	phasedallelecount:'phasedallelecount'
+	aicheck:'aicheck'
 }
 exports.tkt = tkt
 
