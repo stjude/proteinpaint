@@ -161,7 +161,7 @@ const analyze = async (line)=> {
 			count: data
 		}
 
-		console.log( m.chr+'\t'+m.pos+'\t'+JSON.stringify(j) )
+		console.log( 'chr'+m.chr+'\t'+m.pos+'\t'+JSON.stringify(j) )
 	}
 }
 
