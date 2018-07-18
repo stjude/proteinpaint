@@ -187,7 +187,11 @@ exports.vcfparseline=function(line,vcf) {
 		altstr:lst[5-1],
 		alleles:[
 			{
-				// ref allele only a placeholder, to be removed, this array only contains alt alleles
+				/*
+				ref allele only a placeholder, to be removed, this array only contains alt alleles
+				this is a must
+				also allows GT allele index to work
+				*/
 				allele:refallele,
 				sampledata:[]
 			}
