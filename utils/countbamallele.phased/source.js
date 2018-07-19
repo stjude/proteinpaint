@@ -1,46 +1,107 @@
-const abort = m=>{
-	console.error('Error:',m)
-	process.exit()
-}
-
-
-
-const vcffile = process.argv[2]
-const bamforward = process.argv[3]
-const bamreverse = process.argv[4]
-const chrsizefile = process.argv[5]
-const outfile = process.argv[6]
-
-
-if(!vcffile || !bamforward || !bamreverse || !outfile || !chrsizefile ) abort('<vcf text file of phased variants> <forward strand.bam> <reverse strand.bam> <chr size file> <output file basename>')
-
-
 const fs=require('fs')
 const readline=require('readline')
 const exec=require('child_process').execSync
 const vcf = require('../../src/vcf')
 
 
+
+const abort = m=>{
+	console.error('Error:',m)
+	process.exit()
+}
+
+
+const argerror = m=> {
+console.log(m+`
+  --vcf     = VCF text file
+              file must have one sample, and FORMAT fields including GT, PS
+              for phased heterzygous SNPs from this file, will count their alleles from the BAM files
+              chromosome naming must be consistent with what's in the BAM file (cannot be "chr1" versus "1")
+  --forbam  = a BAM file for reads from forward strand, e.g. stranded RNA-seq
+  --revbam  = a BAM file for reads from reverse strand, required when "forbam" is used
+  --bam     = a BAM file;
+              if this parameter is used, will count alleles irrespective of strands
+              and stranded BAMs are ignored
+              all BAM files should have the .bai index at the same location
+  --chrsize = chr size file, two columns: chr1 -tab- size
+  --out     = output file basename
+`)
+	process.exit()
+}
+
+
+
+  // --addchr  = 0/1; 1 if the chromosome names of VCF and BAM files are not prefixed by "chr"
+
+
+
+const arg={}
+for(let i=2; i<process.argv.length; i++) {
+	const [a,b]=process.argv[i].split('=')
+	arg[a.substr(2)]=b
+}
+
+if(!arg.vcf) argerror('no vcf file')
+if(arg.vcf.endsWith('.gz')) argerror('vcf file should not be compressed')
+if(!fs.existsSync(arg.vcf)) argerror('cannot read vcf file')
+
+if(arg.bam) {
+	if(!fs.existsSync(arg.bam)) argerror('cannot read BAM file')
+	if(!fs.existsSync(arg.bam+'.bai')) argerror('cannot read BAM index file')
+} else if(arg.forbam) {
+	if(!fs.existsSync(arg.forbam)) argerror('cannot read forward strand BAM file')
+	if(!fs.existsSync(arg.forbam+'.bai')) argerror('cannot read forward strand BAM index file')
+	if(!arg.revbam) argerror('revbam missing when forbam is used')
+	if(!fs.existsSync(arg.revbam)) argerror('cannot read reverse strand BAM file')
+	if(!fs.existsSync(arg.revbam+'.bai')) argerror('cannot read reverse strand BAM index file')
+} else {
+	argerror('no bam file given')
+}
+if(!arg.chrsize) argerror('chrsize file missing')
+if(!fs.existsSync(arg.chrsize)) argerror('cannot read chr size file')
+if(!arg.out) argerror('output file basename missing')
+
+
+
+
+
+
+
+
+
+
+
+if(arg.bam) {
+	arg.chr1file = arg.out+'.chr1'
+	arg.chr2file = arg.out+'.chr2'
+	arg.chr1write = fs.createWriteStream( arg.chr1file )
+	arg.chr2write = fs.createWriteStream( arg.chr2file )
+} else {
+
+	arg.chr1forwardfile = arg.out+'.chr1forward'
+	arg.chr1reversefile = arg.out+'.chr1reverse'
+	arg.chr2forwardfile = arg.out+'.chr2forward'
+	arg.chr2reversefile = arg.out+'.chr2reverse'
+
+	arg.chr1forwardwrite = fs.createWriteStream( arg.chr1forwardfile )
+	arg.chr1reversewrite = fs.createWriteStream( arg.chr1reversefile )
+	arg.chr2forwardwrite = fs.createWriteStream( arg.chr2forwardfile )
+	arg.chr2reversewrite = fs.createWriteStream( arg.chr2reversefile )
+}
+
+arg.psfile = arg.out+'.phaseset'
+arg.pswrite = fs.createWriteStream( arg.psfile )
+
+
+
+
+
+
+
+
 const nt = new Set(['A','T','C','G'])
 
-
-const chr1forwardfile = outfile+'.chr1forward'
-const chr1reversefile = outfile+'.chr1reverse'
-const chr2forwardfile = outfile+'.chr2forward'
-const chr2reversefile = outfile+'.chr2reverse'
-const psfile = outfile+'.phaseset'
-
-
-const chr1forward = fs.createWriteStream( chr1forwardfile )
-const chr1reverse = fs.createWriteStream( chr1reversefile )
-const chr2forward = fs.createWriteStream( chr2forwardfile )
-const chr2reverse = fs.createWriteStream( chr2reversefile )
-const pswrite     = fs.createWriteStream( psfile )
-
-
-
-
-const rl = readline.createInterface({input: fs.createReadStream(vcffile)})
+const rl = readline.createInterface({input: fs.createReadStream(arg.vcf)})
 
 const metalines = []
 let first=true
@@ -80,36 +141,53 @@ rl.on('line',line=>{
 
 
 rl.on('close',()=>{
-	chr1forward.end()
-	chr1reverse.end()
-	chr2forward.end()
-	chr2reverse.end()
+
+	// done reading vcf file
+
+	const tmp = Math.random() // tmp file name
 
 	// last ps
-	pswrite.write(pschr+'\t'+psstart+'\t'+psstop+'\t{"name":"phaseset_'+psid+'","color":"'+(psalt ? '#7EA0BD' : '#BD9B7E')+'"}\n')
-	pswrite.end()
+	arg.pswrite.write(pschr+'\t'+psstart+'\t'+psstop+'\t{"name":"phaseset_'+psid+'","color":"'+(psalt ? '#7EA0BD' : '#BD9B7E')+'"}\n')
+	arg.pswrite.end()
+	exec('sort -k1,1 -k2,2n '+arg.psfile+' > '+tmp)
+	exec('mv '+tmp+' '+arg.psfile)
+	exec('bgzip -f '+arg.psfile)
+	exec('tabix -p bed -f '+arg.psfile+'.gz')
 
-	const tmp = Math.random()
-	exec('sort -k1,1 -k2,2n '+chr1forwardfile+' > '+tmp)
-	exec('mv '+tmp+' '+chr1forwardfile)
-	exec('bedGraphToBigWig '+chr1forwardfile+' '+chrsizefile+' '+chr1forwardfile+'.bw')
+	if(arg.bam) {
+		arg.chr1write.end()
+		arg.chr2write.end()
+		exec('sort -k1,1 -k2,2n '+arg.chr1file+' > '+tmp)
+		exec('mv '+tmp+' '+arg.chr1file)
+		exec('bedGraphToBigWig '+arg.chr1file+' '+arg.chrsize+' '+arg.chr1file+'.bw')
+		exec('sort -k1,1 -k2,2n '+arg.chr2file+' > '+tmp)
+		exec('mv '+tmp+' '+arg.chr2file)
+		exec('bedGraphToBigWig '+arg.chr2file+' '+arg.chrsize+' '+arg.chr2file+'.bw')
+	} else {
+		arg.chr1forwardwrite.end()
+		arg.chr1reversewrite.end()
+		arg.chr2forwardwrite.end()
+		arg.chr2reversewrite.end()
+		exec('sort -k1,1 -k2,2n '+arg.chr1forwardfile+' > '+tmp)
+		exec('mv '+tmp+' '+arg.chr1forwardfile)
+		exec('bedGraphToBigWig '+arg.chr1forwardfile+' '+arg.chrsize+' '+arg.chr1forwardfile+'.bw')
 
-	exec('sort -k1,1 -k2,2n '+chr1reversefile+' > '+tmp)
-	exec('mv '+tmp+' '+chr1reversefile)
-	exec('bedGraphToBigWig '+chr1reversefile+' '+chrsizefile+' '+chr1reversefile+'.bw')
+		exec('sort -k1,1 -k2,2n '+arg.chr1reversefile+' > '+tmp)
+		exec('mv '+tmp+' '+arg.chr1reversefile)
+		exec('bedGraphToBigWig '+arg.chr1reversefile+' '+arg.chrsize+' '+arg.chr1reversefile+'.bw')
 
-	exec('sort -k1,1 -k2,2n '+chr2forwardfile+' > '+tmp)
-	exec('mv '+tmp+' '+chr2forwardfile)
-	exec('bedGraphToBigWig '+chr2forwardfile+' '+chrsizefile+' '+chr2forwardfile+'.bw')
+		exec('sort -k1,1 -k2,2n '+arg.chr2forwardfile+' > '+tmp)
+		exec('mv '+tmp+' '+arg.chr2forwardfile)
+		exec('bedGraphToBigWig '+arg.chr2forwardfile+' '+arg.chrsize+' '+arg.chr2forwardfile+'.bw')
 
-	exec('sort -k1,1 -k2,2n '+chr2reversefile+' > '+tmp)
-	exec('mv '+tmp+' '+chr2reversefile)
-	exec('bedGraphToBigWig '+chr2reversefile+' '+chrsizefile+' '+chr2reversefile+'.bw')
+		exec('sort -k1,1 -k2,2n '+arg.chr2reversefile+' > '+tmp)
+		exec('mv '+tmp+' '+arg.chr2reversefile)
+		exec('bedGraphToBigWig '+arg.chr2reversefile+' '+arg.chrsize+' '+arg.chr2reversefile+'.bw')
+	}
 
-	exec('sort -k1,1 -k2,2n '+psfile+' > '+tmp)
-	exec('mv '+tmp+' '+psfile)
-	exec('bgzip '+psfile)
-	exec('tabix -p bed -f '+psfile+'.gz')
+
+
+
 
 	if(count_notsnp) console.error('count_notsnp',count_notsnp)
 	if(count_nosampledata) console.error('count_nosampledata',count_nosampledata)
@@ -175,7 +253,7 @@ const analyze = (line)=> {
 			} else {
 				// has seen ps
 				psalt = !psalt
-				pswrite.write(pschr+'\t'+psstart+'\t'+psstop+'\t{"color":"'+(psalt ? '#7EA0BD' : '#BD9B7E')+'"}\n')
+				arg.pswrite.write(pschr+'\t'+psstart+'\t'+psstop+'\t{"color":"'+(psalt ? '#7EA0BD' : '#BD9B7E')+'"}\n')
 
 				if(chr != pschr) {
 					// new chr, log previous ps
@@ -223,30 +301,43 @@ const analyze = (line)=> {
 
 		count_used++
 
-		//const [err, data] = await checkbam( m, allele1, allele2 )
-		const [err,data] = checkbamstranded(m, allele1, allele2)
 
-		if(err) {
-			if(!pileuperrors.has(err)) pileuperrors.set(err,0)
-			pileuperrors.set( err, pileuperrors.get(err)+1 )
-			continue
+		if(arg.bam) {
+
+			const [err,data] = checkbam(m, allele1, allele2)
+			if(err) {
+				if(!pileuperrors.has(err)) pileuperrors.set(err,0)
+				pileuperrors.set( err, pileuperrors.get(err)+1 )
+				continue
+			}
+			arg.chr1write.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr1+'\n')
+			arg.chr2write.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr2+'\n')
+
+		} else {
+
+			const [err,data] = checkbamstranded(m, allele1, allele2)
+			if(err) {
+				if(!pileuperrors.has(err)) pileuperrors.set(err,0)
+				pileuperrors.set( err, pileuperrors.get(err)+1 )
+				continue
+			}
+			arg.chr1forwardwrite.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr1.forward+'\n')
+			arg.chr1reversewrite.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr1.reverse+'\n')
+			arg.chr2forwardwrite.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr2.forward+'\n')
+			arg.chr2reversewrite.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr2.reverse+'\n')
 		}
 
-/*
+
+		/*
 		const j = {
 			allele1: allele1,
 			allele2: allele2,
 			ps: sample.PS,
 			count: data
 		}
-
 		console.log( chr+'\t'+m.pos+'\t'+JSON.stringify(j) )
 		*/
 
-		chr1forward.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr1.forward+'\n')
-		chr1reverse.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr1.reverse+'\n')
-		chr2forward.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr2.forward+'\n')
-		chr2reverse.write(chr+'\t'+m.pos+'\t'+(m.pos+1)+'\t'+data.chr2.reverse+'\n')
 	}
 }
 
@@ -254,59 +345,18 @@ const analyze = (line)=> {
 
 
 
+
+
 const checkbam = ( m, allele1, allele2 ) => {
-	return new Promise((resolve,reject)=>{
 
-	const ps = spawn('samtools', [ 'mpileup', '-d','999999', '-r', m.chr+':'+(m.pos+1)+'-'+(m.pos+1), bamfile ] )
-	const out = []
-	ps.stdout.on('data',d=> out.push(d) )
-	ps.on('close', code=>{
-		const lines = out.join('').trim().split('\n')
+	const upcase1 = allele1.toUpperCase()
+	const upcase2 = allele2.toUpperCase()
+	const coord = m.chr+':'+(m.pos+1)+'-'+(m.pos+1)
 
-		// only look at one line
-		if(!lines[0]) reject(['no data line'])
-		// 8	128744796	N	33	>>>>>>>>>>>>>>>>>>>>>>><<>><><>>T	HH9GJIHIJHJJB<JDJ>IFJHACFJJFJDDGq
-		const l = lines[0].split('\t')
-		if(l[0]!=m.chr) reject(['chr doesnot match'])
-
-		const data={
-			chr1:{
-				forward:0,
-				reverse:0
-			},
-			chr2:{
-				forward:0,
-				reverse:0
-			}
-		}
-
-		const upcase1 = allele1.toUpperCase()
-		const upcase2 = allele2.toUpperCase()
-		const locase1 = allele1.toLowerCase()
-		const locase2 = allele2.toLowerCase()
-
-		for(const x of l[4]) {
-			const xup = x.toUpperCase()
-
-			if(!nt.has(xup)) {
-				// not a nt
-				continue
-			}
-
-			if(x==upcase1) {
-				data.chr1.forward++
-			} else if(x==locase1) {
-				data.chr1.reverse++
-			} else if(x==upcase2) {
-				data.chr2.forward++
-			} else if(x==locase2) {
-				data.chr2.reverse++
-			}
-		}
-		resolve([null, data])
-	})
-	})
+	const [c1,c2] = dopileup( coord, arg.bam, upcase1, upcase2 )
+	return [null, { chr1:c1, chr2:c2 } ]
 }
+
 
 
 
@@ -329,57 +379,50 @@ const checkbamstranded = ( m, allele1, allele2 ) => {
 	const coord = m.chr+':'+(m.pos+1)+'-'+(m.pos+1)
 
 	{
-		const line = exec('samtools mpileup -d 999999 -Q 0 -r '+coord+' '+bamforward+' 2>x',{encoding:'utf8'}).trim().split('\n')[0]
-		if(line) {
-
-			// 8	128744796	N	33	>>>>>>>>>>>>>>>>>>>>>>><<>><><>>T	HH9GJIHIJHJJB<JDJ>IFJHACFJJFJDDGq
-			const l = line.split('\t')
-			if(l[0]!=m.chr) reject(['chr does not match in forward bam'])
-
-			for(const x of l[4]) {
-
-				// do not consider case here
-				const xup = x.toUpperCase()
-
-				if(!nt.has(xup)) {
-					// not a nt
-					continue
-				}
-
-				if(xup==upcase1) {
-					data.chr1.forward++
-				} else if(xup==upcase2) {
-					data.chr2.forward++
-				}
-			}
-		}
+		const [c1,c2] = dopileup( coord, arg.forbam, upcase1, upcase2 )
+		data.chr1.forward += c1
+		data.chr2.forward += c2
 	}
 
 	{
-		const line = exec('samtools mpileup -d 999999 -Q 0 -r '+coord+' '+bamreverse+' 2>x',{encoding:'utf8'}).trim().split('\n')[0]
-		if(line) {
+		const [c1,c2] = dopileup( coord, arg.revbam, upcase1, upcase2 )
+		data.chr1.reverse += c1
+		data.chr2.reverse += c2
+	}
+	return [null,data]
+}
 
-			const l = line.split('\t')
-			if(l[0]!=m.chr) reject(['chr does not match in reverse bam'])
 
+
+
+
+
+
+
+function dopileup(coord, bam, upcase1, upcase2) {
+	const line = exec('samtools mpileup -d 999999 -Q 0 -r '+coord+' '+bam+' 2>x',{encoding:'utf8'}).trim().split('\n')[0]
+
+	let c1=0,
+		c2=0
+
+	if(line) {
+		// 8	128744796	N	33	>>>>>>>>>>>>>>>>>>>>>>><<>><><>>T	HH9GJIHIJHJJB<JDJ>IFJHACFJJFJDDGq
+		const l = line.split('\t')
+		if(l[4]) {
 			for(const x of l[4]) {
-
 				// do not consider case here
 				const xup = x.toUpperCase()
-
 				if(!nt.has(xup)) {
 					// not a nt
 					continue
 				}
-
 				if(xup==upcase1) {
-					data.chr1.reverse++
+					c1++
 				} else if(xup==upcase2) {
-					data.chr2.reverse++
+					c2++
 				}
 			}
 		}
 	}
-
-	return [null,data]
+	return [c1,c2]
 }
