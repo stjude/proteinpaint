@@ -35,7 +35,7 @@ const chr1forward = fs.createWriteStream( chr1forwardfile )
 const chr1reverse = fs.createWriteStream( chr1reversefile )
 const chr2forward = fs.createWriteStream( chr2forwardfile )
 const chr2reverse = fs.createWriteStream( chr2reversefile )
-const pswrite = fs.createWriteStream( psfile )
+const pswrite     = fs.createWriteStream( psfile )
 
 
 
@@ -84,6 +84,9 @@ rl.on('close',()=>{
 	chr1reverse.end()
 	chr2forward.end()
 	chr2reverse.end()
+
+	// last ps
+	pswrite.write(pschr+'\t'+psstart+'\t'+psstop+'\t{"name":"phaseset_'+psid+'","color":"'+(psalt ? '#7EA0BD' : '#BD9B7E')+'"}\n')
 	pswrite.end()
 
 	const tmp = Math.random()
@@ -106,7 +109,7 @@ rl.on('close',()=>{
 	exec('sort -k1,1 -k2,2n '+psfile+' > '+tmp)
 	exec('mv '+tmp+' '+psfile)
 	exec('bgzip '+psfile)
-	exec('tabix -p bed '+psfile)
+	exec('tabix -p bed -f '+psfile+'.gz')
 
 	if(count_notsnp) console.error('count_notsnp',count_notsnp)
 	if(count_nosampledata) console.error('count_nosampledata',count_nosampledata)
