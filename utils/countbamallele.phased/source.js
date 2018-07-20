@@ -116,7 +116,12 @@ let count_notsnp=0,
 	count_homozygous=0,
 	count_nops=0,
 	count_used=0,
-	pileuperrors = new Map()
+	count_dup=0
+const pileuperrors = new Map()
+const allsnv4 = new Set()
+
+
+
 
 rl.on('line',line=>{
 
@@ -197,6 +202,7 @@ rl.on('close',()=>{
 	if(count_snpnotphased) console.error('count_snpnotphased',count_snpnotphased)
 	if(count_not2alleles) console.error('count_not2alleles',count_not2alleles)
 	if(count_homozygous) console.error('count_homozygous',count_homozygous)
+	if(count_dup) console.error('count_dup',count_dup)
 	if(count_used) console.error('count_used',count_used)
 	if(pileuperrors.size) {
 		for(const [s,c] of pileuperrors) console.error('mpileup error: '+s+', '+c)
@@ -297,6 +303,15 @@ const analyze = (line)=> {
 		if(!nt.has(allele1) || !nt.has(allele2)) {
 			count_notsnp++
 			continue
+		}
+
+		{
+			const snv4 = chr+'.'+m.pos+'.'+allele1+'.'+allele2
+			if(allsnv4.has(snv4)) {
+				count_dup++
+				continue
+			}
+			allsnv4.add(snv4)
 		}
 
 		count_used++
