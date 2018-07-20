@@ -105,7 +105,7 @@ export function bigwigstrandedmaketk(tk,block) {
 			collectlabelw.push(this.getBBox().width)
 		})
 	tk.labreverse=block.maketklefthandle(tk)
-		.text( tk.strand1.name )
+		.text( tk.strand2.name )
 		.each(function(){
 			collectlabelw.push(this.getBBox().width)
 		})
