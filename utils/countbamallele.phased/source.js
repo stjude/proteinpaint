@@ -12,26 +12,42 @@ const abort = m=>{
 
 
 const argerror = m=> {
-console.log(m+`
-  --vcf     = VCF text file
-              file must have one sample, and FORMAT fields including GT, PS
-              for phased heterzygous SNPs from this file, will count their alleles from the BAM files
-              chromosome naming must be consistent with what's in the BAM file (cannot be "chr1" versus "1")
-  --forbam  = a BAM file for reads from forward strand, e.g. stranded RNA-seq
-  --revbam  = a BAM file for reads from reverse strand, required when "forbam" is used
-  --bam     = a BAM file;
-              if this parameter is used, will count alleles irrespective of strands
-              and stranded BAMs are ignored
-              all BAM files should have the .bai index at the same location
-  --chrsize = chr size file, two columns: chr1 -tab- size
-  --out     = output file basename
+console.log('Error: '+m+`
+  --vcf       = VCF text file
+                file must have one sample, and FORMAT fields including GT, PS
+                for phased heterzygous SNPs from this file, will count their alleles from the BAM files
+  --vcfhaschr = 1; set this if VCF has chr names like "chr1"
+  --forbam    = a BAM file for reads from forward strand, e.g. stranded RNA-seq
+  --revbam    = a BAM file for reads from reverse strand, required when "forbam" is used
+  --bam       = a BAM file;
+                if this parameter is used, will count alleles irrespective of strands
+                and stranded BAMs are ignored
+                all BAM files should have the .bai index at the same location
+  --bamhaschr = 1; set this if all BAM files have chr names like "chr1"
+  --chrsize   = chr size file, two columns: chr1 -tab- size
+  --out       = output file basename
+
+For stranded BAM, output these files:
+out.chr1forward.bw
+out.chr1reverse.bw
+out.chr2forward.bw
+out.chr2reverse.bw
+
+For single BAM, output these files:
+out.chr1.bw
+out.chr2.bw
+
+In both cases, the bedj track "out.phaseset.gz" will be produced
+
+All tracks (bw and bedj) uses "chr1" as chromosome name.
+
+Requires samtools and bedGraphToBigWig.
 `)
 	process.exit()
 }
 
 
 
-  // --addchr  = 0/1; 1 if the chromosome names of VCF and BAM files are not prefixed by "chr"
 
 
 
@@ -43,22 +59,22 @@ for(let i=2; i<process.argv.length; i++) {
 
 if(!arg.vcf) argerror('no vcf file')
 if(arg.vcf.endsWith('.gz')) argerror('vcf file should not be compressed')
-if(!fs.existsSync(arg.vcf)) argerror('cannot read vcf file')
+if(!fs.existsSync(arg.vcf)) argerror('vcf file not found')
 
 if(arg.bam) {
-	if(!fs.existsSync(arg.bam)) argerror('cannot read BAM file')
-	if(!fs.existsSync(arg.bam+'.bai')) argerror('cannot read BAM index file')
+	if(!fs.existsSync(arg.bam)) argerror('BAM file not found')
+	if(!fs.existsSync(arg.bam+'.bai')) argerror('BAM index file not found')
 } else if(arg.forbam) {
-	if(!fs.existsSync(arg.forbam)) argerror('cannot read forward strand BAM file')
-	if(!fs.existsSync(arg.forbam+'.bai')) argerror('cannot read forward strand BAM index file')
+	if(!fs.existsSync(arg.forbam)) argerror('forward strand BAM file not found')
+	if(!fs.existsSync(arg.forbam+'.bai')) argerror('forward strand BAM index file not found')
 	if(!arg.revbam) argerror('revbam missing when forbam is used')
-	if(!fs.existsSync(arg.revbam)) argerror('cannot read reverse strand BAM file')
-	if(!fs.existsSync(arg.revbam+'.bai')) argerror('cannot read reverse strand BAM index file')
+	if(!fs.existsSync(arg.revbam)) argerror('reverse strand BAM file not found')
+	if(!fs.existsSync(arg.revbam+'.bai')) argerror('reverse strand BAM index file not found')
 } else {
 	argerror('no bam file given')
 }
 if(!arg.chrsize) argerror('chrsize file missing')
-if(!fs.existsSync(arg.chrsize)) argerror('cannot read chr size file')
+if(!fs.existsSync(arg.chrsize)) argerror('chr size file not found')
 if(!arg.out) argerror('output file basename missing')
 
 
@@ -231,7 +247,7 @@ const analyze = (line)=> {
 
 	for(const m of mlst) {
 
-		const chr = 'chr'+m.chr
+		const chr = (arg.vcfhaschr ? '' : 'chr') + m.chr
 
 		if(!m.sampledata) {
 			count_nosampledata++
@@ -259,7 +275,7 @@ const analyze = (line)=> {
 			} else {
 				// has seen ps
 				psalt = !psalt
-				arg.pswrite.write(pschr+'\t'+psstart+'\t'+psstop+'\t{"color":"'+(psalt ? '#7EA0BD' : '#BD9B7E')+'"}\n')
+				arg.pswrite.write(pschr+'\t'+psstart+'\t'+psstop+'\t{"name":"phaseset_'+psid+'","color":"'+(psalt ? '#7EA0BD' : '#BD9B7E')+'"}\n')
 
 				if(chr != pschr) {
 					// new chr, log previous ps
@@ -359,6 +375,24 @@ const analyze = (line)=> {
 
 
 
+const checkbamcoord = m=>{
+	let chr
+	if(arg.bamhaschr) {
+		if(arg.vcfhaschr) {
+			chr = m.chr
+		} else {
+			chr = 'chr'+m.chr
+		}
+	} else {
+		if(arg.vcfhaschr) {
+			chr = m.chr.substr(3)
+		} else {
+			chr = m.chr
+		}
+	}
+	return chr+':'+(m.pos+1)+'-'+(m.pos+1)
+}
+
 
 
 
@@ -366,9 +400,8 @@ const checkbam = ( m, allele1, allele2 ) => {
 
 	const upcase1 = allele1.toUpperCase()
 	const upcase2 = allele2.toUpperCase()
-	const coord = m.chr+':'+(m.pos+1)+'-'+(m.pos+1)
 
-	const [c1,c2] = dopileup( coord, arg.bam, upcase1, upcase2 )
+	const [c1,c2] = dopileup( m, arg.bam, upcase1, upcase2 )
 	return [null, { chr1:c1, chr2:c2 } ]
 }
 
@@ -391,16 +424,15 @@ const checkbamstranded = ( m, allele1, allele2 ) => {
 
 	const upcase1 = allele1.toUpperCase()
 	const upcase2 = allele2.toUpperCase()
-	const coord = m.chr+':'+(m.pos+1)+'-'+(m.pos+1)
 
 	{
-		const [c1,c2] = dopileup( coord, arg.forbam, upcase1, upcase2 )
+		const [c1,c2] = dopileup( m, arg.forbam, upcase1, upcase2 )
 		data.chr1.forward += c1
 		data.chr2.forward += c2
 	}
 
 	{
-		const [c1,c2] = dopileup( coord, arg.revbam, upcase1, upcase2 )
+		const [c1,c2] = dopileup( m, arg.revbam, upcase1, upcase2 )
 		data.chr1.reverse += c1
 		data.chr2.reverse += c2
 	}
@@ -414,7 +446,9 @@ const checkbamstranded = ( m, allele1, allele2 ) => {
 
 
 
-function dopileup(coord, bam, upcase1, upcase2) {
+function dopileup(m, bam, upcase1, upcase2) {
+
+	const coord = checkbamcoord(m)
 	const line = exec('samtools mpileup -d 999999 -Q 0 -r '+coord+' '+bam+' 2>x',{encoding:'utf8'}).trim().split('\n')[0]
 
 	let c1=0,
