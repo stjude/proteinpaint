@@ -1223,7 +1223,7 @@ export function click_multi_singleitem( p ) {
 	}
 
 
-	if(!p.tk.iscustom && p.tk.singlesampledirectory) {
+	if(!p.tk.iscustom && p.tk.singlesampledirectory && window.sjcharts) {
 		/*
 		is official dataset, and equipped with single-sample files
 		click button to retrieve all mutations and show in disco plot
