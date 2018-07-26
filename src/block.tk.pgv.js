@@ -148,6 +148,17 @@ function makeTk(tk,block) {
 			})
 
 
+		if(tk.genevaluematchname) {
+			/* possible
+			tk may mix the old and new notion together
+			will simply apply it to all member tracks
+			*/
+			for(const gvtk of tk.genevaluetklst) {
+				if(!gvtk.matchname) gvtk.matchname = tk.genevaluematchname
+			}
+			delete tk.genevaluematchname
+		}
+
 	} else {
 
 		// no genevalue tracks
