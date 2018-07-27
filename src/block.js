@@ -2224,6 +2224,7 @@ block_addtk_template(template) {
 		axisfontsize:12,
 		busy:false,
 		leftLabelMaxwidth:0,
+		rightheadw_tk: this.rightheadw,
 		subpanels:[] // to keep in sync with block.subpanels
 		}
 	for(const k in template) {
