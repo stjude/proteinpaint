@@ -2694,6 +2694,8 @@ function makeTk(tk, block) {
 		*/
 		if(!tk.gecfg) tk.gecfg={}
 
+		tk.gecfg.fixed = []
+
 		expressionstat.init_config( tk.gecfg )
 	}
 
