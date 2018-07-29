@@ -2022,7 +2022,7 @@ function dostack( sample, items ) {
 
 
 
-function multi_expressionstatus_ase_outlier(tk) {
+export function multi_expressionstatus_ase_outlier(tk) {
 	/*
 	multi-sample
 	for all genes
