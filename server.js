@@ -3841,6 +3841,7 @@ function handle_mdssvcnv(req,res) {
 	if(req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample( req, res, gn, ds, dsquery )
 	if(req.query.findsamplename) return mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery )
 	if(req.query.getsample4disco) return mdssvcnv_exit_getsample4disco( req, res, gn, ds, dsquery )
+	if(req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene( req, res, gn, ds, dsquery )
 
 
 
@@ -5140,7 +5141,8 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 
 
 function get_rank_from_sortedarray(v, lst) {
-	// lst must be sorted ascending [ { value: v } ]
+	// [ { value: v } ]
+	// lst must be sorted ascending
 	const i = lst.findIndex(j=> j.value >= v)
 	if(i==-1 || i==lst.length-1) return 100
 	if(i==0) return 0
@@ -5392,6 +5394,143 @@ function mdssvcnv_exit_getsample4disco( req, res, gn, ds, dsquery ) {
 	fs.readFile(file, {encoding:'utf8'}, (err,data)=>{
 		if(err) return res.send({error:'error getting data for this sample'})
 		res.send({text:data})
+	})
+}
+
+
+
+async function mdssvcnv_exit_getexpression4gene( req, res, gn, ds, dsquery ) {
+	/*
+	get expression data for a gene
+	*/
+
+	try {
+
+		let _c 
+		if(dsquery.iscustom) {
+			_c=dsquery.checkexpressionrank
+		} else {
+			if(dsquery.expressionrank_querykey) {
+				_c = ds.queries[ dsquery.expressionrank_querykey ]
+			}
+		}
+		if( !_c ) throw 'missing expression data source'
+
+		const q = req.query.getexpression4gene
+		if(!q.chr) throw 'chr missing'
+		if(!Number.isFinite(q.start)) throw 'invalid start pos'
+		if(!Number.isFinite(q.stop)) throw 'invalid stop pos'
+		if(!q.name) throw 'unknown gene name'
+		q.name = q.name.toLowerCase()
+
+		const dir = await cache_index_promise( _c.file ? null : (_c.indexURL || _c.url+'.tbi' ) )
+
+		const values = await mdssvcnv_exit_getexpression4gene_getdata(dir, _c, q)
+
+		// convert to rank
+		const sample2rank = mdssvcnv_exit_getexpression4gene_rank(ds,dsquery, values )
+
+		res.send({ sample2rank: sample2rank })
+
+	} catch (err) {
+		if(err.stack) console.error(err.stack)
+		res.send({error: (err.message || err) })
+	}
+}
+
+
+
+function mdssvcnv_exit_getexpression4gene_rank( ds, dsquery, values ) {
+	/*
+	values: [ {sample, value, ase, outlier } ]
+	for each value, convert to rank
+
+	if native, may group samples by attr
+	otherwise, use all samples as a group
+	*/
+
+	const sample2rank = {}
+
+	if(ds && ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr && dsquery.groupsamplebyattr.attrlst) {
+		// native, and with required attr
+
+		const groups = new Map()
+
+		for(const vo of values ) {
+			// vo: {value, ase, outlier, sample}
+
+			const anno = ds.cohort.annotation[ vo.sample ]
+			if(!anno) continue
+
+			const tmp= []
+			for(const a of dsquery.groupsamplebyattr.attrlst) {
+				tmp.push( anno[a.k] )
+			}
+			const grouplabel = tmp.join(',') // won't be shown on client
+
+			if(!groups.has(grouplabel)) groups.set( grouplabel, [] )
+
+			groups.get(grouplabel).push( vo )
+		}
+
+		for(const lst of groups.values()) {
+			// each group
+			lst.sort((a,b)=> a.value-b.value )
+			for(const vo of lst) {
+				vo.rank = get_rank_from_sortedarray( vo.value, lst )
+				sample2rank[ vo.sample ] = vo
+			}
+		}
+
+	} else {
+		// anything else, include all samples into one group
+		values.sort( (a,b) => a.value-b.value )
+		for(const vo of values ) {
+			vo.rank = get_rank_from_sortedarray( vo.value, values )
+			sample2rank[ vo.sample ] = vo
+		}
+	}
+
+	return sample2rank
+}
+
+
+
+function mdssvcnv_exit_getexpression4gene_getdata(dir, expquery, q) {
+	return new Promise((resolve,reject)=>{
+
+		const values = []
+		const errout = []
+
+		const ps = spawn( tabix, [expquery.file ? path.join(serverconfig.tpmasterdir,expquery.file) : expquery.url, q.chr+':'+q.start+'-'+q.stop], {cwd:dir} )
+		ps.stderr.on('data',d=> errout.push(d))
+
+		const rl = readline.createInterface({ input: ps.stdout })
+
+		rl.on('line',line=>{
+			const l = line.split('\t')
+
+			let j
+			try {
+				j = JSON.parse(l[3])
+			} catch(e) {
+				reject('invalid json from expression data')
+			}
+
+			if(!j.sample) return
+			if(!j.gene) return
+			if(!Number.isFinite(j.value)) return
+
+			if(j.gene.toLowerCase() == q.name) {
+				values.push( j )
+			}
+		})
+
+		rl.on('close',()=>{
+			const err = errout.join('')
+			if(err && !tabixnoterror(err)) reject(err)
+			resolve(values)
+		})
 	})
 }
 
@@ -8411,6 +8550,8 @@ function cache_index(indexURL,tkloader,res) {
 
 function cache_index_promise(indexURL) {
 return new Promise((resolve,reject)=>{
+
+	if(!indexURL) resolve()
 
 	const tmp=indexURL.split('//')
 	if(tmp.length!=2) reject({message:'irregular index URL: '+indexURL})
