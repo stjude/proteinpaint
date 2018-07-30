@@ -36,7 +36,7 @@
     "karma-jasmine": "^1.0.2",
     "karma-webpack": "^1.8.0",
     "style-loader": "^0.13.1",
-    "uglify-js": "^2.8.29",
+    "uglify-js": "3.4.6",
     "webpack": "^3.6.0",
     "webpack-notifier": "^1.4.1"
   },
