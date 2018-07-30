@@ -80,7 +80,7 @@ elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]
 	URL="//pp-test.stjude.org/pp"
 	SUBDOMAIN=pp-test
 
-elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" ]]; then
+elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$ENV" == "vpn-prod" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prp1.stjude.org
 	REMOTEDIR=/opt/app/pp
@@ -170,8 +170,14 @@ cd ..
 # DEPLOY
 ##########
 
-scp $APP-$REV.tgz $DEPLOYER@pp-irt:~ # $REMOTEHOST:~
-exit 1
+if [[ "$ENV" == "vpn-prod" ]]; then
+	TEMPHOST=pp-irp
+	scp $APP-$REV.tgz $DEPLOYER@$TEMPHOST:~
+	echo "Deployed to $TEMPHOST. Whitelisted IP address required to access $REMOTEHOST."
+	exit 1
+fi
+
+scp $APP-$REV.tgz $DEPLOYER@$REMOTEHOST:~
 
 ssh -t $DEPLOYER@$REMOTEHOST "
 	rm -Rf $REMOTEDIR/$APP-new
