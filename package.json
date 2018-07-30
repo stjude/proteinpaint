@@ -16,7 +16,7 @@
     "irt": "./scripts/deploy.sh internal-stage",
     "test": "karma start karma.conf.js",
     "deliver": "sh utils/deliver.sh",
-    "servermin": "./node_modules/babel-cli/bin/babel.js server.js | ./node_modules/uglify-js/bin/uglifyjs --compress --mangle > server.min.js"
+    "servermin": "./node_modules/babel-cli/bin/babel.js server.js | ./node_modules/uglify-es/bin/uglifyjs --compress --mangle --output server.min.js"
   },
   "author": "",
   "license": "ISC",
@@ -36,7 +36,9 @@
     "karma-jasmine": "^1.0.2",
     "karma-webpack": "^1.8.0",
     "style-loader": "^0.13.1",
-    "uglify-js": "3.4.6",
+    "uglify-es": "^3.3.9",
+    "uglify-js": "^3.4.6",
+    "uglifyjs-webpack-plugin": "^1.2.7",
     "webpack": "^3.6.0",
     "webpack-notifier": "^1.4.1"
   },

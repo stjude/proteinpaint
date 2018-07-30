@@ -1,6 +1,7 @@
 const webpack = require('webpack');
 const config=require('../webpack.config');
-const path = require('path'); 
+const path = require('path');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 
 module.exports = function(env) {
 	const protocol=env.subdomain=='pp-test' ? '' : 'https:'
@@ -19,11 +20,13 @@ module.exports = function(env) {
 	}
 
 	config.plugins = [
-		new webpack.optimize.UglifyJsPlugin({
-	      mangle: true,
-	      compress: {
-	        warnings: false
-	      }
+		new UglifyJsPlugin({
+		  cache: true,
+		  parallel: true,
+		  uglifyOptions: {
+		  	mangle: true,
+		  	compress: true
+		  }
 	    }),
 	    new webpack.optimize.OccurrenceOrderPlugin(),
 	]
