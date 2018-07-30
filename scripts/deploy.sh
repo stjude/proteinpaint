@@ -137,7 +137,9 @@ mkdir $APP
 mkdir $APP/public
 mkdir $APP/src
 
-./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-js/bin/uglifyjs -q --compress --mangle > server.min.js
+# server.js has async syntax, which breaks babel/uglify
+#./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-js/bin/uglifyjs -q --compress --mangle > server.min.js
+cp server.js server.min.js
 
 mv server.min.js $APP/server.js 
 mv package.json $APP/
