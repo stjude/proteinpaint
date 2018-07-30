@@ -733,6 +733,10 @@ function drawCanvas(tk, block) {
 
 	for(const [left1,left2, right1,right2, value, insidedomain] of tk.data) {
 
+		if(value < tk.mincutoff) {
+			continue
+		}
+
 		// diamond
 		// color of the diamond
 
@@ -826,7 +830,7 @@ function drawCanvas(tk, block) {
 	tk.colorscale.g.attr('transform','scale(1) '+tk.colorscale.positionstr)
 	tk.colorscale.scale.domain([0, maxv])
 	if(tk.mincutoff!=undefined && tk.mincutoff!=0) {
-		const x = tk.colorscale.scale( tk.mincutoff )
+		const x = Math.min( tk.colorscale.barwidth, tk.colorscale.scale( tk.mincutoff ) )
 		tk.colorscale.tick_mincutoff
 			.attr('x1', x)
 			.attr('x2', x)
