@@ -2694,7 +2694,15 @@ function makeTk(tk, block) {
 		*/
 		if(!tk.gecfg) tk.gecfg={}
 
-		tk.gecfg.fixed = []
+		if(!tk.gecfg.fixed) {
+			/*
+			upon initing multi-sample view, fixed[] is added
+			when launching a single-sample from multi, makeTk will be called again
+			since gecfg is referencing the original object but not a duplicate, must not overwrite fixed[]
+			should really be a duplicate object instead
+			*/
+			tk.gecfg.fixed=[]
+		}
 
 		expressionstat.init_config( tk.gecfg )
 	}
