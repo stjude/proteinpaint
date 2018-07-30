@@ -1597,7 +1597,9 @@ function detailtable_singlesample(p) {
 
 function addexpressionrank( sample, tk ) {
 	if(!sample.expressionrank) return null
+
 	const rows=[]  // one gene per row
+
 	for(const genename in sample.expressionrank) {
 		const v = sample.expressionrank[genename]
 		const lst=[
@@ -1622,6 +1624,36 @@ function addexpressionrank( sample, tk ) {
 		lst.push('</td></tr>')
 		rows.push(lst.join(''))
 	}
+
+	if(tk.gecfg && tk.gecfg.fixed) {
+		for(const fgene of tk.gecfg.fixed) {
+			if(fgene.sample2rank && fgene.sample2rank[ sample.samplename ]) {
+				const v = fgene.sample2rank[ sample.samplename ]
+				const lst=[
+					'<tr>'
+					+'<td><b>'+ fgene.gene +'</b></td>'
+					+'<td>&nbsp;<span style="font-size:.7em">RANK</span> '+client.ranksays(v.rank)+'</td>'
+					+'<td>&nbsp;<span style="font-size:.7em">'+tk.gecfg.datatype+'</span> '+v.value+'</td>'
+					+'<td>'
+				]
+				if(v.estat.ase_uncertain) {
+					lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_uncertain+';color:white">ASE uncertain</span>')
+				} else if(v.estat.ase_biallelic) {
+					lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_biallelic+';color:white">Bi-allelic</span>')
+				} else if(v.estat.ase_monoallelic) {
+					lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_monoallelic+';color:white">Mono-allelic</span>')
+				}
+				if(v.estat.outlier) {
+					lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier+';color:white">Outlier HIGH</span>')
+				} else if(v.estat.outlier_asehigh) {
+					lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier_asehigh+';color:white">ASE HIGH</span>')
+				}
+				lst.push('</td></tr>')
+				rows.push(lst.join(''))
+			}
+		}
+	}
+
 	if(rows.length) return {k:'Expression', v:'<table style="font-size:.9em">'+rows.join('')+'</table>'}
 	return null
 }
