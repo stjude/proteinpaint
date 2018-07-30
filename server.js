@@ -9579,7 +9579,7 @@ for(const genomename in genomes) {
 		if(ds.isMds) {
 
 			/********* MDS ************/
-			const err = mds_init(ds, g)
+			const err = mds_init(ds, g, d)
 			if(err) return 'Error with dataset '+ds.label+': '+err
 			continue
 		}
@@ -9796,9 +9796,13 @@ for(const genomename in genomes) {
 
 
 
-function mds_init(ds,genome) {
+function mds_init(ds,genome, _servconfig) {
+	/*
+	ds: loaded from datasets/what.js
+	genome: obj {}
+	_servconfig: the entry in "datasets" array from serverconfig.json
 
-	// initialize one mds dataset
+	*/
 
 	if(ds.sampleAssayTrack) {
 		if(!ds.sampleAssayTrack.file) return '.file missing from sampleAssayTrack'
@@ -10084,6 +10088,13 @@ function mds_init(ds,genome) {
 		for(const querykey in ds.queries) {
 
 			const query = ds.queries[querykey]
+
+			// server may choose to hide some queries
+			if(_servconfig.hide_queries && _servconfig.hide_queries.indexOf(querykey)!=-1) {
+				// this query will be hidden on client
+				query.hideforthemoment = 1
+			}
+
 			if(query.istrack) {
 				if(!query.type) return '.type missing for track query '+querykey
 
