@@ -178,208 +178,15 @@ export function render_multi_genebar( tk, block) {
 	}
 
 
-
-	// hardcoded bar width for expression rank
-	const expbarwidth = 80
-	// hardcoded bar width for numeric attribute
-	const numattrbarwidth = 80
-	const xspace = 15
-
 	let column_xoff = 0
 
-	// axis label
-	const axispad = 0
-	const labelpad=3
-	const ticksize = 5
-	const fontsize=12
+	column_xoff += addcolumn_autogene(
+		autogenename, 
+		genes_auto,
+		tk,
+		block
+	)
 
-
-	////// column 1 is for auto gene
-	if( autogenename ) {
-
-		let minvalue=0
-		let maxvalue=100
-
-		for(const g of tk.samplegroups) {
-
-			let y = g.y
-
-			for(const s of g.samples) {
-
-				const row = tk.cnvrightg
-					.append('g')
-					.attr('transform','translate('+column_xoff+','+y+')')
-
-				if( s.expressionrank ) {
-
-					const v = s.expressionrank[autogenename]
-					if(v!=undefined) {
-
-						const bar=row.append('rect')
-							.attr('fill',  expressionstat.ase_color( v, tk.gecfg ) ) // bar color set by ase status
-							.attr('width', expbarwidth * v.rank / maxvalue )
-							.attr('height', s.height)
-							.attr('shape-rendering','crispEdges')
-
-						if(tk.isfull) {
-							// only show dots for outlier status in full, not dense
-							if(v.estat.outlier) {
-								row.append('circle')
-									.attr('cx',expbarwidth)
-									.attr('cy', s.height/2)
-									.attr('r', s.height/2)
-									.attr('fill', tk.gecfg.outlier.color_outlier)
-							} else if(v.estat.outlier_asehigh) {
-								row.append('circle')
-									.attr('cx',expbarwidth)
-									.attr('cy', s.height/2)
-									.attr('r',  s.height/2)
-									.attr('fill', tk.gecfg.outlier.color_outlier_asehigh)
-							}
-						}
-
-						const cover = row.append('rect')
-							.attr('fill',  coverbarcolor_silent)
-							.attr('fill-opacity',.1)
-							.attr('width',expbarwidth)
-							.attr('height', s.height)
-
-						if(tk.isfull) {
-							s.columnbars.push(cover)
-						}
-
-						cover.on('mouseover',()=>{
-							tk.tktip
-								.clear()
-								.show(d3event.clientX, d3event.clientY)
-
-							const lst=[{k:'Sample',v:s.samplename}]
-							may_add_sampleannotation( s.samplename, tk, lst )
-
-							lst.push({
-								k: autogenename+' rank',
-								v:client.ranksays(v.rank)
-							})
-							lst.push({
-								k: autogenename+' '+tk.gecfg.datatype,
-								v:v.value
-							})
-
-							const table = client.make_table_2col(tk.tktip.d,lst)
-
-							expressionstat.showsingleitem_table( v, tk.gecfg, table )
-
-							multi_sample_addhighlight(s)
-						})
-						.on('mouseout',()=>{
-							tk.tktip.hide()
-							multi_sample_removehighlight(s)
-						})
-						.on('click',()=>{
-							multi_show_geneboxplot({
-								gene: autogenename,
-								samplename: s.samplename,
-								value: v.value,
-								tk:tk,
-								block:block
-							})
-						})
-					}
-				}
-
-				// done this sample
-				y += s.height + tk.rowspace
-			}
-
-			// done this group
-		}
-
-
-		const headg = tk.cnvrightg.append('g')
-			.attr('transform','translate('+column_xoff+',-'+axispad+')')
-
-		client.axisstyle({
-			axis: headg.append('g').call( axisTop().scale(
-				scaleLinear().domain([minvalue,maxvalue]).range([0,expbarwidth])
-				)
-				.tickValues([0,50,100])
-				.tickSize(ticksize)
-				),
-			fontsize:fontsize,
-			showline:1
-		})
-
-		headg.append('text')
-			.attr('text-anchor','middle')
-			.attr('x',expbarwidth/2)
-			.attr('y',-(fontsize+labelpad+ticksize+axispad))
-			.attr('font-family',client.font)
-			.attr('font-size',fontsize)
-			.text(autogenename + ' rank')
-			.attr('class','sja_clbtext')
-			.on('click',()=>{
-
-				tk.tkconfigtip.clear()
-					.showunder(d3event.target)
-
-				genebar_config(
-					tk.tkconfigtip.d,
-					autogenename,
-					genes_auto,
-					tk,
-					block,
-					true
-				)
-			})
-
-		// done column for auto gene
-		column_xoff += expbarwidth + xspace
-
-	} else {
-
-		/* no auto gene name
-		1. no expression track
-		2. no gene in view range
-		3. view range beyond limit
-		*/
-
-		if(tk.gecfg) {
-			// indeed has expression track
-			// here should show button for querying gene
-
-			const g=tk.cnvrightg
-
-			g.append('text')
-			.attr('class','sja_clbtext2')
-			.attr('font-family',client.font)
-			.attr('font-size',14)
-			.text('ADD GENE')
-			.on('click',()=>{
-				tk.tkconfigtip.clear()
-					.showunder(d3event.target)
-				findgene4fix_searchui( tk.tkconfigtip.d, tk, block )
-			})
-
-			if( tk.expressionrangelimit ) {
-				// too big to do it
-				const h=15
-				let y=20
-				g.append('text').text('Zoom in').attr('y',y).attr('font-size',12)
-				y+=h
-				g.append('text').text('under').attr('y',y).attr('font-size',12)
-				y+=h
-				g.append('text').text(common.bplen(tk.expressionrangelimit)).attr('y',y).attr('font-size',12)
-				y+=h
-				g.append('text').text('to show').attr('y',y).attr('font-size',12)
-				y+=h
-				g.append('text').text('exp rank').attr('y',y).attr('font-size',12)
-				y+=h
-				g.append('text').text('automatically').attr('y',y).attr('font-size',12)
-			}
-
-			column_xoff += expbarwidth + xspace
-		}
-	}
 
 
 
@@ -390,145 +197,12 @@ export function render_multi_genebar( tk, block) {
 		.sample2rank{}
 		*/
 
-		let minvalue=0,maxvalue=100 // still rank
-
-
-		for(const g of tk.samplegroups) {
-
-			let y = g.y
-
-			for(const s of g.samples) {
-
-				const row = tk.cnvrightg
-					.append('g')
-					.attr('transform','translate('+column_xoff+','+y+')')
-
-				const v = fixedgene.sample2rank[ s.samplename ]
-				if( v ) {
-
-					const bar=row.append('rect')
-						.attr('fill',  expressionstat.ase_color( v, tk.gecfg ) ) // bar color set by ase status
-						.attr('width', expbarwidth * v.rank / maxvalue )
-						.attr('height', s.height)
-						.attr('shape-rendering','crispEdges')
-
-					if(tk.isfull) {
-						// only show dots for outlier status in full, not dense
-						if(v.estat.outlier) {
-							row.append('circle')
-								.attr('cx',expbarwidth)
-								.attr('cy', s.height/2)
-								.attr('r', s.height/2)
-								.attr('fill', tk.gecfg.outlier.color_outlier)
-						} else if(v.estat.outlier_asehigh) {
-							row.append('circle')
-								.attr('cx',expbarwidth)
-								.attr('cy', s.height/2)
-								.attr('r',  s.height/2)
-								.attr('fill', tk.gecfg.outlier.color_outlier_asehigh)
-						}
-					}
-
-					const cover = row.append('rect')
-						.attr('fill',  coverbarcolor_silent)
-						.attr('fill-opacity',.1)
-						.attr('width',expbarwidth)
-						.attr('height', s.height)
-
-					if(tk.isfull) {
-						s.columnbars.push(cover)
-					}
-
-					cover.on('mouseover',()=>{
-						tk.tktip
-							.clear()
-							.show(d3event.clientX, d3event.clientY)
-
-						const lst=[{k:'Sample',v:s.samplename}]
-						may_add_sampleannotation( s.samplename, tk, lst )
-
-						lst.push({
-							k: fixedgene.gene+' rank',
-							v:client.ranksays(v.rank)
-							})
-						lst.push({
-							k: fixedgene.gene+' '+tk.gecfg.datatype,
-							v: v.value
-							})
-
-						const table = client.make_table_2col(tk.tktip.d,lst)
-
-						expressionstat.showsingleitem_table( v, tk.gecfg, table )
-
-						multi_sample_addhighlight(s)
-					})
-					.on('mouseout',()=>{
-						tk.tktip.hide()
-						multi_sample_removehighlight(s)
-					})
-					.on('click',()=>{
-
-						// surely the coord of this fixed gene is not in cache
-						if(!tk.gene2coord) tk.gene2coord = {}
-						tk.gene2coord[ fixedgene.gene ] = {
-							chr: fixedgene.chr,
-							start: fixedgene.start,
-							stop: fixedgene.stop
-						}
-
-						multi_show_geneboxplot({
-							gene: fixedgene.gene,
-							samplename: s.samplename,
-							value: v.value,
-							tk:tk,
-							block:block
-						})
-					})
-				}
-
-				// done this sample
-				y += s.height + tk.rowspace
-			}
-			// done this group
-		}
-
-
-		const headg = tk.cnvrightg.append('g')
-			.attr('transform','translate('+column_xoff+',-'+axispad+')')
-
-		client.axisstyle({
-			axis: headg.append('g').call( axisTop().scale(
-				scaleLinear().domain([minvalue,maxvalue]).range([0,expbarwidth])
-				)
-				.tickValues([0,50,100])
-				.tickSize(ticksize)
-				),
-			fontsize:fontsize,
-			showline:1
-		})
-
-		headg.append('text')
-			.attr('text-anchor','middle')
-			.attr('x',expbarwidth/2)
-			.attr('y',-(fontsize+labelpad+ticksize+axispad))
-			.attr('font-family',client.font)
-			.attr('font-size',fontsize)
-			.text(fixedgene.gene + ' rank')
-			.attr('class','sja_clbtext')
-			.attr('fill','red')
-			.attr('title','Click to remove gene')
-			.on('click',()=>{
-
-				for(let i=0; i<tk.gecfg.fixed.length; i++) {
-					if(tk.gecfg.fixed[i].gene == fixedgene.gene) {
-						tk.gecfg.fixed.splice(i,1)
-					}
-				}
-				render_multi_genebar(tk,block)
-			})
-
-		// done column for this fixed gene
-		column_xoff += expbarwidth + xspace
+		column_xoff += addcolumn_fixedgene(
+			fixedgene,
+			tk,
+			block,
+			column_xoff
+		)
 	}
 
 
@@ -536,97 +210,13 @@ export function render_multi_genebar( tk, block) {
 	// one column for each sample attribute
 	for(const attr of attrlst) {
 
-		let minvalue=0
-		let maxvalue=100
+		column_xoff += addcolumn_attr(
+			attr,
+			tk,
+			block,
+			column_xoff
+		)
 
-		for(const g of tk.samplegroups) {
-
-			let y = g.y
-
-			for(const s of g.samples) {
-
-				const row = tk.cnvrightg
-					.append('g')
-					.attr('transform','translate('+column_xoff+','+y+')')
-
-				// TODO support categorical attr and detect type
-
-				const v0 = tk.sampleAttribute.samples[ s.samplename ]
-				if(v0) {
-					const v = v0[ attr.key ]
-					if(!Number.isNaN(v)) {
-						row.append('rect')
-							.attr('x',0)
-							.attr('width', Math.max(1, numattrbarwidth * (v-attr.min)/(attr.max-attr.min)) )
-							.attr('height', s.height)
-							.attr('fill','#858585')
-							.attr('shape-rendering','crispEdges')
-						row.append('rect')
-							.attr('x',0)
-							.attr('width', numattrbarwidth )
-							.attr('height', s.height)
-							.attr('fill','#858585')
-							.attr('fill-opacity',.1)
-						const cover = row.append('rect')
-							.attr('fill',  coverbarcolor_silent)
-							.attr('fill-opacity',.1)
-							.attr('width',numattrbarwidth)
-							.attr('height', s.height)
-
-						s.columnbars.push(cover)
-
-						cover.on('mouseover',()=>{
-							tk.tktip
-								.clear()
-								.show(d3event.clientX, d3event.clientY)
-
-							const lst=[{k:'Sample',v:s.samplename}]
-							may_add_sampleannotation( s.samplename, tk, lst )
-
-							client.make_table_2col(tk.tktip.d,lst)
-							multi_sample_addhighlight(s)
-						})
-						.on('mouseout',()=>{
-							tk.tktip.hide()
-							multi_sample_removehighlight(s)
-						})
-					}
-				}
-
-				// done this sample
-				y += s.height + tk.rowspace
-			}
-
-			// done this group
-		}
-
-
-		const headg = tk.cnvrightg.append('g')
-			.attr('transform','translate('+column_xoff+',-'+axispad+')')
-
-		// if is numeric type
-		client.axisstyle({
-			axis: headg.append('g')
-				.attr('transform','translate(0,0)')
-				.call( axisTop().scale(
-					scaleLinear().domain([attr.min,attr.max]).range([0,numattrbarwidth])
-				)
-				.ticks(3)
-				),
-			fontsize:fontsize,
-			showline:1
-		})
-
-		const text = headg.append('text')
-			.attr('x', numattrbarwidth/2)
-			.attr('text-anchor','middle')
-			.attr('y',-(fontsize+labelpad+ticksize+axispad))
-			.attr('font-family',client.font)
-			.attr('font-size',fontsize)
-			.text(attr.label)
-
-		// done column for auto gene
-		column_xoff += expbarwidth + xspace
 	}
 
 
@@ -638,9 +228,15 @@ export function render_multi_genebar( tk, block) {
 	}
 	block.blocksetw()
 
+	const axispad = 0
+	const labelpad=3
+	const ticksize = 5
+	const fontsize=12
 
 	return fontsize+fontsize+labelpad+ticksize+axispad
 }
+
+
 
 
 
@@ -741,6 +337,516 @@ export function multi_show_geneboxplot(arg) {
 }
 
 
+
+
+
+function addcolumn_autogene(autogenename, genes_auto, tk, block) {
+	/*
+	return width of column to indicate whether a column is drawn or not
+	*/
+
+	// TODO enable column-specific width config
+
+	// hardcoded bar width for expression rank
+	const expbarwidth = 80
+	// hardcoded bar width for numeric attribute
+	const numattrbarwidth = 80
+	const xspace = 15
+
+
+	// axis label
+	const axispad = 0
+	const labelpad=3
+	const ticksize = 5
+	const fontsize=12
+
+
+	////// column 1 is for auto gene
+	if( autogenename ) {
+
+		let minvalue=0
+		let maxvalue=100
+
+		for(const g of tk.samplegroups) {
+
+			let y = g.y
+
+			for(const s of g.samples) {
+
+				const row = tk.cnvrightg
+					.append('g')
+					.attr('transform','translate(0,'+y+')')
+
+				if( s.expressionrank ) {
+
+					const v = s.expressionrank[autogenename]
+					if(v!=undefined) {
+
+						const bar=row.append('rect')
+							.attr('fill',  expressionstat.ase_color( v, tk.gecfg ) ) // bar color set by ase status
+							.attr('width', expbarwidth * v.rank / maxvalue )
+							.attr('height', s.height)
+							.attr('shape-rendering','crispEdges')
+
+						if(tk.isfull) {
+							// only show dots for outlier status in full, not dense
+							if(v.estat.outlier) {
+								row.append('circle')
+									.attr('cx',expbarwidth)
+									.attr('cy', s.height/2)
+									.attr('r', s.height/2)
+									.attr('fill', tk.gecfg.outlier.color_outlier)
+							} else if(v.estat.outlier_asehigh) {
+								row.append('circle')
+									.attr('cx',expbarwidth)
+									.attr('cy', s.height/2)
+									.attr('r',  s.height/2)
+									.attr('fill', tk.gecfg.outlier.color_outlier_asehigh)
+							}
+						}
+
+						const cover = row.append('rect')
+							.attr('fill',  coverbarcolor_silent)
+							.attr('fill-opacity',.1)
+							.attr('width',expbarwidth)
+							.attr('height', s.height)
+
+						if(tk.isfull) {
+							s.columnbars.push(cover)
+						}
+
+						cover.on('mouseover',()=>{
+							tk.tktip
+								.clear()
+								.show(d3event.clientX, d3event.clientY)
+
+							const lst=[{k:'Sample',v:s.samplename}]
+							may_add_sampleannotation( s.samplename, tk, lst )
+
+							lst.push({
+								k: autogenename+' rank',
+								v:client.ranksays(v.rank)
+							})
+							lst.push({
+								k: autogenename+' '+tk.gecfg.datatype,
+								v:v.value
+							})
+
+							const table = client.make_table_2col(tk.tktip.d,lst)
+
+							expressionstat.showsingleitem_table( v, tk.gecfg, table )
+
+							multi_sample_addhighlight(s)
+						})
+						.on('mouseout',()=>{
+							tk.tktip.hide()
+							multi_sample_removehighlight(s)
+						})
+						.on('click',()=>{
+							multi_show_geneboxplot({
+								gene: autogenename,
+								samplename: s.samplename,
+								value: v.value,
+								tk:tk,
+								block:block
+							})
+						})
+					}
+				}
+
+				// done this sample
+				y += s.height + tk.rowspace
+			}
+
+			// done this group
+		}
+
+
+		const headg = tk.cnvrightg.append('g')
+			.attr('transform','translate(0,-'+axispad+')')
+
+		client.axisstyle({
+			axis: headg.append('g').call( axisTop().scale(
+				scaleLinear().domain([minvalue,maxvalue]).range([0,expbarwidth])
+				)
+				.tickValues([0,50,100])
+				.tickSize(ticksize)
+				),
+			fontsize:fontsize,
+			showline:1
+		})
+
+		headg.append('text')
+			.attr('text-anchor','middle')
+			.attr('x',expbarwidth/2)
+			.attr('y',-(fontsize+labelpad+ticksize+axispad))
+			.attr('font-family',client.font)
+			.attr('font-size',fontsize)
+			.text(autogenename + ' rank')
+			.attr('class','sja_clbtext')
+			.on('click',()=>{
+
+				tk.tkconfigtip.clear()
+					.showunder(d3event.target)
+
+				genebar_config(
+					tk.tkconfigtip.d,
+					autogenename,
+					genes_auto,
+					tk,
+					block,
+					true
+				)
+			})
+
+		// done column for auto gene
+		return expbarwidth + xspace
+	}
+
+
+	/* no auto gene name
+	1. no expression track
+	2. no gene in view range
+	3. view range beyond limit
+	*/
+
+	if(tk.gecfg) {
+		// indeed has expression track
+		// here should show button for querying gene
+
+		const g=tk.cnvrightg
+
+		g.append('text')
+		.attr('class','sja_clbtext2')
+		.attr('font-family',client.font)
+		.attr('font-size',14)
+		.text('ADD GENE')
+		.on('click',()=>{
+			tk.tkconfigtip.clear()
+				.showunder(d3event.target)
+			findgene4fix_searchui( tk.tkconfigtip.d, tk, block )
+		})
+
+		if( tk.expressionrangelimit ) {
+			// too big to do it
+			const h=15
+			let y=20
+			g.append('text').text('Zoom in').attr('y',y).attr('font-size',12)
+			y+=h
+			g.append('text').text('under').attr('y',y).attr('font-size',12)
+			y+=h
+			g.append('text').text(common.bplen(tk.expressionrangelimit)).attr('y',y).attr('font-size',12)
+			y+=h
+			g.append('text').text('to show').attr('y',y).attr('font-size',12)
+			y+=h
+			g.append('text').text('exp rank').attr('y',y).attr('font-size',12)
+			y+=h
+			g.append('text').text('automatically').attr('y',y).attr('font-size',12)
+		}
+
+		return expbarwidth + xspace
+	}
+
+	// no expression track, won't draw column
+	return 0
+}
+
+
+
+
+function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
+	/*
+	*/
+
+	// TODO enable column-specific width config
+
+	// hardcoded bar width for expression rank
+	const expbarwidth = 80
+	// hardcoded bar width for numeric attribute
+	const numattrbarwidth = 80
+	const xspace = 15
+
+
+	// axis label
+	const axispad = 0
+	const labelpad=3
+	const ticksize = 5
+	const fontsize=12
+
+	let minvalue=0,maxvalue=100 // still rank
+
+
+	for(const g of tk.samplegroups) {
+
+		let y = g.y
+
+		for(const s of g.samples) {
+
+			const row = tk.cnvrightg
+				.append('g')
+				.attr('transform','translate('+column_xoff+','+y+')')
+
+			const v = fixedgene.sample2rank[ s.samplename ]
+			if( v ) {
+
+				const bar=row.append('rect')
+					.attr('fill',  expressionstat.ase_color( v, tk.gecfg ) ) // bar color set by ase status
+					.attr('width', expbarwidth * v.rank / maxvalue )
+					.attr('height', s.height)
+					.attr('shape-rendering','crispEdges')
+
+				if(tk.isfull) {
+					// only show dots for outlier status in full, not dense
+					if(v.estat.outlier) {
+						row.append('circle')
+							.attr('cx',expbarwidth)
+							.attr('cy', s.height/2)
+							.attr('r', s.height/2)
+							.attr('fill', tk.gecfg.outlier.color_outlier)
+					} else if(v.estat.outlier_asehigh) {
+						row.append('circle')
+							.attr('cx',expbarwidth)
+							.attr('cy', s.height/2)
+							.attr('r',  s.height/2)
+							.attr('fill', tk.gecfg.outlier.color_outlier_asehigh)
+					}
+				}
+
+				const cover = row.append('rect')
+					.attr('fill',  coverbarcolor_silent)
+					.attr('fill-opacity',.1)
+					.attr('width',expbarwidth)
+					.attr('height', s.height)
+
+				if(tk.isfull) {
+					s.columnbars.push(cover)
+				}
+
+				cover.on('mouseover',()=>{
+					tk.tktip
+						.clear()
+						.show(d3event.clientX, d3event.clientY)
+
+					const lst=[{k:'Sample',v:s.samplename}]
+					may_add_sampleannotation( s.samplename, tk, lst )
+
+					lst.push({
+						k: fixedgene.gene+' rank',
+						v:client.ranksays(v.rank)
+						})
+					lst.push({
+						k: fixedgene.gene+' '+tk.gecfg.datatype,
+						v: v.value
+						})
+
+					const table = client.make_table_2col(tk.tktip.d,lst)
+
+					expressionstat.showsingleitem_table( v, tk.gecfg, table )
+
+					multi_sample_addhighlight(s)
+				})
+				.on('mouseout',()=>{
+					tk.tktip.hide()
+					multi_sample_removehighlight(s)
+				})
+				.on('click',()=>{
+
+					// surely the coord of this fixed gene is not in cache
+					if(!tk.gene2coord) tk.gene2coord = {}
+					tk.gene2coord[ fixedgene.gene ] = {
+						chr: fixedgene.chr,
+						start: fixedgene.start,
+						stop: fixedgene.stop
+					}
+
+					multi_show_geneboxplot({
+						gene: fixedgene.gene,
+						samplename: s.samplename,
+						value: v.value,
+						tk:tk,
+						block:block
+					})
+				})
+			}
+
+			// done this sample
+			y += s.height + tk.rowspace
+		}
+		// done this group
+	}
+
+
+	const headg = tk.cnvrightg.append('g')
+		.attr('transform','translate('+column_xoff+',-'+axispad+')')
+
+	client.axisstyle({
+		axis: headg.append('g').call( axisTop().scale(
+			scaleLinear().domain([minvalue,maxvalue]).range([0,expbarwidth])
+			)
+			.tickValues([0,50,100])
+			.tickSize(ticksize)
+			),
+		fontsize:fontsize,
+		showline:1
+	})
+
+	// special looking header compared to auto genes
+
+	const bg = headg.append('rect')
+		.attr('y',-(fontsize+fontsize+labelpad+ticksize+axispad))
+		.attr('width',expbarwidth)
+		.attr('height', fontsize)
+		.attr('shape-rendering','crispEdges')
+		.attr('fill','#ededed')
+
+	const text = headg.append('text')
+		.attr('text-anchor','middle')
+		.attr('x',expbarwidth/2)
+		.attr('y',-(fontsize+labelpad+ticksize+axispad))
+		.attr('font-family',client.font)
+		.attr('font-size',fontsize)
+		.attr('fill','black')
+		.text(fixedgene.gene + ' rank')
+
+	headg.append('rect')
+		.attr('y',-(fontsize+fontsize+labelpad+ticksize+axispad))
+		.attr('width',expbarwidth)
+		.attr('height', fontsize)
+		.attr('shape-rendering','crispEdges')
+		.attr('fill','white')
+		.attr('fill-opacity',0)
+		.on('mouseover',()=>{
+			bg.attr('fill','#545454')
+			text.attr('fill','white')
+		})
+		.on('mouseout',()=>{
+			bg.attr('fill','#ededed')
+			text.attr('fill','black')
+		})
+		.on('click',()=>{
+
+			for(let i=0; i<tk.gecfg.fixed.length; i++) {
+				if(tk.gecfg.fixed[i].gene == fixedgene.gene) {
+					tk.gecfg.fixed.splice(i,1)
+				}
+			}
+			render_multi_genebar(tk,block)
+		})
+	
+
+	return expbarwidth + xspace
+}
+
+
+
+
+function addcolumn_attr(attr, tk, block, column_xoff) {
+
+	// TODO enable column-specific width config
+
+	// hardcoded bar width for expression rank
+	const expbarwidth = 80
+	// hardcoded bar width for numeric attribute
+	const numattrbarwidth = 80
+	const xspace = 15
+
+
+	// axis label
+	const axispad = 0
+	const labelpad=3
+	const ticksize = 5
+	const fontsize=12
+
+	for(const g of tk.samplegroups) {
+
+		let y = g.y
+
+		for(const s of g.samples) {
+
+			const row = tk.cnvrightg
+				.append('g')
+				.attr('transform','translate('+column_xoff+','+y+')')
+
+			// TODO support categorical attr and detect type
+
+			const v0 = tk.sampleAttribute.samples[ s.samplename ]
+			if(v0) {
+				const v = v0[ attr.key ]
+				if(!Number.isNaN(v)) {
+					row.append('rect')
+						.attr('x',0)
+						.attr('width', Math.max(1, numattrbarwidth * (v-attr.min)/(attr.max-attr.min)) )
+						.attr('height', s.height)
+						.attr('fill','#858585')
+						.attr('shape-rendering','crispEdges')
+					row.append('rect')
+						.attr('x',0)
+						.attr('width', numattrbarwidth )
+						.attr('height', s.height)
+						.attr('fill','#858585')
+						.attr('fill-opacity',.1)
+					const cover = row.append('rect')
+						.attr('fill',  coverbarcolor_silent)
+						.attr('fill-opacity',.1)
+						.attr('width',numattrbarwidth)
+						.attr('height', s.height)
+
+					s.columnbars.push(cover)
+
+					cover.on('mouseover',()=>{
+						tk.tktip
+							.clear()
+							.show(d3event.clientX, d3event.clientY)
+
+						const lst=[{k:'Sample',v:s.samplename}]
+						may_add_sampleannotation( s.samplename, tk, lst )
+
+						client.make_table_2col(tk.tktip.d,lst)
+						multi_sample_addhighlight(s)
+					})
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						multi_sample_removehighlight(s)
+					})
+				}
+			}
+
+			// done this sample
+			y += s.height + tk.rowspace
+		}
+
+		// done this group
+	}
+
+
+	const headg = tk.cnvrightg.append('g')
+		.attr('transform','translate('+column_xoff+',-'+axispad+')')
+
+	// if is numeric type
+	client.axisstyle({
+		axis: headg.append('g')
+			.attr('transform','translate(0,0)')
+			.call( axisTop().scale(
+				scaleLinear().domain([attr.min,attr.max]).range([0,numattrbarwidth])
+			)
+			.ticks(3)
+			),
+		fontsize:fontsize,
+		showline:1
+	})
+
+	const text = headg.append('text')
+		.attr('x', numattrbarwidth/2)
+		.attr('text-anchor','middle')
+		.attr('y',-(fontsize+labelpad+ticksize+axispad))
+		.attr('font-family',client.font)
+		.attr('font-size',fontsize)
+		.text(attr.label)
+
+	// TODO click for menu
+
+	return expbarwidth + xspace
+}
 
 
 
