@@ -1427,12 +1427,18 @@ function detailtable_singlesample(p) {
 			})
 		}
 
-		if(m.clipreadA!=undefined) {
+		if(m.clipreadA || m.clipreadB) {
 			lst.push({
 				k:'# clip reads',
-				v:'A <span style="font-size:.7em;opacity:.7">CLIP / TOTAL</span> '+m.clipreadA+' / '+m.totalreadA
-					+'<br>'+
-					'B <span style="font-size:.7em;opacity:.7">CLIP / TOTAL</span> '+m.clipreadB+' / '+m.totalreadB
+				v:'<span style="font-size:.7em;opacity:.7">A CLIP / TOTAL</span> '
+					+( Number.isInteger(m.clipreadA) ? m.clipreadA : '?' )
+					+' / '
+					+( Number.isInteger(m.totalreadA) ? m.totalreadA : '?')
+					+'<br>'
+					+'<span style="font-size:.7em;opacity:.7">B CLIP / TOTAL</span> '
+					+( Number.isInteger(m.clipreadB) ? m.clipreadB : '?' )
+					+' / '
+					+( Number.isInteger(m.totalreadB) ? m.totalreadB : '?' )
 			})
 		}
 
