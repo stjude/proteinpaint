@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 ######## 
 # NOTES
 # - called from project root, e.g., `./scripts/deploy.sh $ENV`
@@ -80,14 +82,16 @@ elif [[ "$ENV" == "public-stage" || "$ENV" == "pp-test" || "$ENV" == "pp-prt" ]]
 	URL="//pp-test.stjude.org/pp"
 	SUBDOMAIN=pp-test
 
-elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$ENV" == "vpn-prod" ]]; then
+elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$ENV" == "vpn-prod" || "$ENV" == "scp-prod" ]]; then
 	DEPLOYER=genomeuser
 	REMOTEHOST=pp-prp1.stjude.org
 	REMOTEDIR=/opt/app/pp
 	# TESTHOST=genomeuser@pp-test.stjude.org
 	URL="//proteinpaint.stjude.org/"
 	SUBDOMAIN=proteinpaint
-
+	if [[ "$ENV" == "vpn-prod" || "$ENV" == "scp-prod" ]]; then
+		TEMPHOST=pp-irp
+	fi
 else
 	echo "Environment='$ENV' is not supported"
 	exit 1
@@ -99,72 +103,74 @@ fi
 # EXTRACT AND BUILD FROM COMMIT
 #################################
 
-rm -Rf tmpbuild
-# remote repo not used, use local repo for now
-mkdir tmpbuild
-git archive HEAD | tar -x -C tmpbuild/
+if [[ "$ENV" != "scp-prod" ]]; then 
+	rm -Rf tmpbuild
+	# remote repo not used, use local repo for now
+	mkdir tmpbuild
+	git archive HEAD | tar -x -C tmpbuild/
 
-cd tmpbuild
+	cd tmpbuild
 
-# save some time by reusing parent folder's node_modules
-# but making sure to update to committed package.json
-ln -s ../node_modules node_modules
-# npm update
+	# save some time by reusing parent folder's node_modules
+	# but making sure to update to committed package.json
+	ln -s ../node_modules node_modules
+	# npm update
 
-# create webpack bundle
-if [[ "$ENV" == "ppdev" ]]; then
-	# option to simply reuse and deploy live bundled code.
-	# This is slightly better than deploy.ppr.sh in that 
-	# committed code is used except for the live bundle.
-	# To force rebundle from committed code, 
-	# use "internal-prod" instead of "ppdev" environment
-	mkdir public/builds/$SUBDOMAIN
-	cp ../public/bin/* public/builds/$SUBDOMAIN
-	sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/builds/$SUBDOMAIN/proteinpaint.js > public/builds/SUBDOMAIN/proteinpaint.js
-else 
-	webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
+	# create webpack bundle
+	if [[ "$ENV" == "ppdev" ]]; then
+		# option to simply reuse and deploy live bundled code.
+		# This is slightly better than deploy.ppr.sh in that 
+		# committed code is used except for the live bundle.
+		# To force rebundle from committed code, 
+		# use "internal-prod" instead of "ppdev" environment
+		mkdir public/builds/$SUBDOMAIN
+		cp ../public/bin/* public/builds/$SUBDOMAIN
+		sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/builds/$SUBDOMAIN/proteinpaint.js > public/builds/SUBDOMAIN/proteinpaint.js
+	else 
+		webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN
+	fi
+
+	# no-babel-polyfill version for use in sjcloud, 
+	# to avoid conflict with external code
+	if [[ "$ENV" == "public-prod" ]]; then
+		webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN --env.nopolyfill=1
+	fi
+
+	# create dirs to put extracted files
+	rm -rf $APP
+	mkdir $APP
+	mkdir $APP/public
+	mkdir $APP/src
+
+	# server.js has async syntax, which breaks babel/uglify
+	./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-es/bin/uglifyjs --compress --mangle --output server.min.js
+
+	mv server.min.js $APP/server.js 
+	mv package.json $APP/
+	mv public/builds/$SUBDOMAIN $APP/public/bin
+	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
+	mv utils test.embed $APP/
+	mv genome $APP/
+	mv dataset $APP/
+
+	if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ]]; then
+		cp public/pecan.html $APP/public/index.html
+	elif [[ "$ENV" == "internal-stage" ]]; then
+		cp public/pp-int-test.html $APP/public/index.html
+	else
+		cp public/index.html $APP/public/index.html
+	fi
+
+	if [[ "$ENV" == "public-prod" ]]; then
+		mv $APP/public/bin/no-babel-polyfill $APP/public/
+	fi
+
+	# tar inside the dir in order to not create
+	# a root directory in tarball
+	cd $APP
+	tar -czf ../$APP-$REV.tgz .
+	cd ..
 fi
-
-# no-babel-polyfill version for use in sjcloud, 
-# to avoid conflict with external code
-if [[ "$ENV" == "public-prod" ]]; then
-	webpack --config=scripts/webpack.config.build.js --env.subdomain=$SUBDOMAIN --env.nopolyfill=1
-fi
-
-# create dirs to put extracted files
-rm -rf $APP
-mkdir $APP
-mkdir $APP/public
-mkdir $APP/src
-
-# server.js has async syntax, which breaks babel/uglify
-./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-es/bin/uglifyjs --compress --mangle --output server.min.js
-
-mv server.min.js $APP/server.js 
-mv package.json $APP/
-mv public/builds/$SUBDOMAIN $APP/public/bin
-mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
-mv utils test.embed $APP/
-mv genome $APP/
-mv dataset $APP/
-
-if [[ "$ENV" == "public-stage" || "$ENV" == "public-prod" ]]; then
-	cp public/pecan.html $APP/public/index.html
-elif [[ "$ENV" == "internal-stage" ]]; then
-	cp public/pp-int-test.html $APP/public/index.html
-else
-	cp public/index.html $APP/public/index.html
-fi
-
-if [[ "$ENV" == "public-prod" ]]; then
-	mv $APP/public/bin/no-babel-polyfill $APP/public/
-fi
-
-# tar inside the dir in order to not create
-# a root directory in tarball
-cd $APP
-tar -czf ../$APP-$REV.tgz .
-cd ..
 
 ##########
 # DEPLOY
@@ -175,6 +181,11 @@ if [[ "$ENV" == "vpn-prod" ]]; then
 	scp $APP-$REV.tgz $DEPLOYER@$TEMPHOST:~
 	echo "Deployed to $TEMPHOST. Whitelisted IP address required to access $REMOTEHOST."
 	exit 1
+elif [[ "$ENV" == "scp-prod" ]]; then
+	scp $DEPLOYER@$TEMPHOST:~/$APP-$REV.tgz .
+	ssh -t $DEPLOYER@$TEMPHOST "
+		rm ~/$APP-$REV.tgz
+	"
 fi
 
 scp $APP-$REV.tgz $DEPLOYER@$REMOTEHOST:~
@@ -206,3 +217,6 @@ ssh -t $DEPLOYER@$REMOTEHOST "
 
 cd ..
 # rm -rf tmpbuild
+if [[ "$ENV" == "scp-prod" ]]; then
+	rm ./$APP-$REV.tgz
+fi
