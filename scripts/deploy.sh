@@ -89,6 +89,24 @@ elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pecan" || "$
 	# TESTHOST=genomeuser@pp-test.stjude.org
 	URL="//proteinpaint.stjude.org/"
 	SUBDOMAIN=proteinpaint
+	#
+	# *** TO-DO ***: 
+	# Replace the following with a build server, preferably via git hooks + CI.
+	#
+	# The following approach removes the need to maintain another git repo
+	# on a prod-whitelisted machine. So builds are created locally in the
+	# dev machine, no need to worry about incompatible builds in another 
+	# remote machine.
+	# 
+	# vpn-prod (step 1): 
+	#	- put the built tar into a non-whitelisted temporary host
+	# 
+	# scp-prod (step 2): 
+	# 	- log on to prod-whitelisted machine/remote desktop
+	#	- scp built tar from the non-whitelisted temporary host
+	#	- scp built tar to prod host
+	#	- then complete the deployment via from there
+	#
 	if [[ "$ENV" == "vpn-prod" || "$ENV" == "scp-prod" ]]; then
 		TEMPHOST=pp-irp
 	fi
@@ -215,8 +233,9 @@ ssh -t $DEPLOYER@$REMOTEHOST "
 # CLEANUP
 #############
 
-cd ..
-# rm -rf tmpbuild
 if [[ "$ENV" == "scp-prod" ]]; then
 	rm ./$APP-$REV.tgz
+else 
+	cd ..
+	rm -rf tmpbuild
 fi
