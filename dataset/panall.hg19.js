@@ -61,19 +61,19 @@ module.exports={
 						'PAX5 P80R':{ color:'#FF4500', },
 						'PAX5alt':{color:'#FFA620'},
 						'Ph':{color:'#CD00CD'},
-						'Ph-like(ABL1-class)':{color:'#FF6A6A'},
-						'Ph-like(JAK/STAT)':{color:'#8B0000'},
-						'Ph-like(Other)':{color:'#FFC0CB'},
+						'Ph-like':{color:'#8B0000'},
 						'TCF3-PBX1':{color:'#8B6508'},
 						'ZNF384':{color:'#A8DD00'},
-						'Other':{color:'#BFBFBF'},
 						'iAMP21':{color:'#8470FF'},
 						'IKZF1 N159Y':{ color:'#CDCE34', },
+						/*
 						'CRLF2(non-Ph-like)':{color:'#BFBFBF'},
 						'ETV6-RUNX1-like':{color:'#BFBFBF'},
 						'KMT2A-like':{color:'#BFBFBF'},
 						'Low hyperdiploid':{color:'#BFBFBF'},
 						'ZNF384-like':{color:'#BFBFBF'},
+						*/
+						'Other':{color:'#BFBFBF'},
 					}
 				},
 				ageGroup: {
@@ -83,8 +83,12 @@ module.exports={
 							name:'Adult, age >= 40 years',
 							color:'#1b9e77'
 							},
-						Childhood:{
-							name:'Childhood, age < 16 years',
+						'Childhood SR':{
+							name:'Childhood SR, age < 16 years',
+							color:'#d95f02'
+							},
+						'Childhood HR':{
+							name:'Childhood HR, age < 16 years',
 							color:'#d95f02'
 							},
 						AYA:{
