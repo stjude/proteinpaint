@@ -80,7 +80,7 @@ export class ProjectHandler {
 	*/
 
 	processData(data) {
-		const file=data.files.pop();
+		const file=data.files.pop()
 		const i=data.expectedFileNames.indexOf(file.name);
 		if (i==-1) {
 			if (data.files.length) setTimeout(()=>{
@@ -157,7 +157,7 @@ export class ProjectHandler {
 			let numFiles=0
 
 			text.trim().split('\n').forEach(line=>{
-				const [type,filename]=line.split('\t');
+				const [type,filename]=line.trim().split('\t')
 				if (schemaNames.includes(type)) {
 					nameToSchemaType[filename]=type;
 					numFiles+=1;
@@ -285,7 +285,7 @@ export class ProjectHandler {
 		reader.onload=(event)=>{
 			// process reference file
 			event.target.result.trim().split('\n').forEach(line=>{
-				const [type,filename]=line.split('\t');
+				const [type,filename]=line.trim().split('\t');
 				if (schemaNames.includes(type)) {
 					nameToSchemaType[filename]=type;
 				}

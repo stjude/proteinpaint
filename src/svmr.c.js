@@ -337,6 +337,9 @@ step_isoform(items) {
 	const wait=this.holder.append('div')
 		.style('margin','20px')
 		.text('Loading '+newset.size+' isoforms ...')
+	
+	// FIXME query small amount of isoforms at a time
+
 	fetch( new Request(this.hostURL+'/isoformlst',{
 		method:'POST',
 		body:JSON.stringify({ genome:this.genome.name, lst:newisoform, jwt:this.jwt })

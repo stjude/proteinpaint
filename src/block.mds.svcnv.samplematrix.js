@@ -275,7 +275,7 @@ export function createnewmatrix_withafeature(_p) {
 	}
 
 	// dynamic import works with static values, not expressions
-	if (window.location.search.includes('smx=3')) {
+	if (window.sjcharts && window.location.search.includes('smx=3')) {
 		arg.client = client
 		arg.common = common
 		arg.string2pos = string2pos

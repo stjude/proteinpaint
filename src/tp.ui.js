@@ -364,6 +364,7 @@ if(cohort.browserview) {
 			jwt:cohort.jwt,
 			cohort:cohort,
 			nobox:cohort.browserview.nobox,
+			datasetqueries: cohort.browserview.datasetqueries,
 			tklst:[]
 		}
 		if(cohort.browserview.position) {

@@ -2022,7 +2022,7 @@ function dostack( sample, items ) {
 
 
 
-function multi_expressionstatus_ase_outlier(tk) {
+export function multi_expressionstatus_ase_outlier(tk) {
 	/*
 	multi-sample
 	for all genes
@@ -2693,6 +2693,16 @@ function makeTk(tk, block) {
 		allowing it to be shared for boxplots etc.
 		*/
 		if(!tk.gecfg) tk.gecfg={}
+
+		if(!tk.gecfg.fixed) {
+			/*
+			upon initing multi-sample view, fixed[] is added
+			when launching a single-sample from multi, makeTk will be called again
+			since gecfg is referencing the original object but not a duplicate, must not overwrite fixed[]
+			should really be a duplicate object instead
+			*/
+			tk.gecfg.fixed=[]
+		}
 
 		expressionstat.init_config( tk.gecfg )
 	}

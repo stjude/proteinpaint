@@ -2224,6 +2224,7 @@ block_addtk_template(template) {
 		axisfontsize:12,
 		busy:false,
 		leftLabelMaxwidth:0,
+		rightheadw_tk: this.rightheadw,
 		subpanels:[] // to keep in sync with block.subpanels
 		}
 	for(const k in template) {
@@ -4261,7 +4262,11 @@ moremenu(tip) {
 						for(const line of str.split('\n')) {
 							const l = line.split(' ')
 							if(!l[0]) continue
-							const r = coord.string2pos(l[0],this.genome)
+							const r = coord.string2pos(
+								l[0],
+								this.genome,
+								true // do not extend
+								)
 							if(!r) continue
 							this.addhlregion(r.chr, r.start, r.stop, l[1] || hlregioncolor)
 						}

@@ -148,6 +148,17 @@ function makeTk(tk,block) {
 			})
 
 
+		if(tk.genevaluematchname) {
+			/* possible
+			tk may mix the old and new notion together
+			will simply apply it to all member tracks
+			*/
+			for(const gvtk of tk.genevaluetklst) {
+				if(!gvtk.matchname) gvtk.matchname = tk.genevaluematchname
+			}
+			delete tk.genevaluematchname
+		}
+
 	} else {
 
 		// no genevalue tracks
@@ -1046,14 +1057,21 @@ function configPanel(tk, block ) {
 
 
 function setrightwidth(tk, block) {
-	let width = 30
+
+	tk.rightheadw_tk = 30
+
 	if(tk.genevaluetklst) {
 		for(const t of tk.genevaluetklst) {
-			width += t.barwidth
+			tk.rightheadw_tk += t.barwidth
 		}
-		width += genevaluexspace * (tk.genevaluetklst.length-1)
+		tk.rightheadw_tk += genevaluexspace * (tk.genevaluetklst.length-1)
 	}
-	block.rightheadw = Math.max( block.rightheadw, width )
+
+	block.rightheadw = 0
+	for(const t of block.tklst) {
+		block.rightheadw = Math.max( block.rightheadw, t.rightheadw_tk )
+	}
+
 	block.blocksetw()
 }
 

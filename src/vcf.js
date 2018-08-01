@@ -187,7 +187,11 @@ exports.vcfparseline=function(line,vcf) {
 		altstr:lst[5-1],
 		alleles:[
 			{
-				// ref allele only a placeholder, to be removed, this array only contains alt alleles
+				/*
+				ref allele only a placeholder, to be removed, this array only contains alt alleles
+				this is a must
+				also allows GT allele index to work
+				*/
 				allele:refallele,
 				sampledata:[]
 			}
@@ -636,13 +640,14 @@ function parse_INFO(tmp, m, vcf) {
 
 		////////////////// end of hardcoded fields
 
+
 		const __number = vcf.info[key].Number
 		const isinteger = vcf.info[key].Type=='Integer'
 		const isfloat   = vcf.info[key].Type=='Float'
 
 		if(__number=='0') {
 			/*
-			no value, should be a flag
+			no value, should be a Flag
 			*/
 			m.info[key]=key
 			continue
@@ -678,7 +683,13 @@ function parse_INFO(tmp, m, vcf) {
 			continue
 		}
 
+		if(!value.split) {
+			// unknown error
+			continue
+		}
+
 		// number of values unknown, "commas are permitted only as delimiters for lists of values"
+
 
 		const lst = value.split(',') // value is always array!!
 		if(isinteger) {

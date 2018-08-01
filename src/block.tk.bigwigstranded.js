@@ -41,6 +41,8 @@ export function bigwigstrandedfromtemplate(tk,template) {
 			}
 		}
 		tk.strand1=s
+
+		if(!tk.strand1.name) tk.strand1.name = 'Forward'
 	}
 	if(template.strand2) {
 		const s={}
@@ -70,6 +72,8 @@ export function bigwigstrandedfromtemplate(tk,template) {
 			}
 		}
 		tk.strand2=s
+
+		if(!tk.strand2.name) tk.strand2.name = 'Reverse'
 	}
 
 	tk.height_main = tk.toppad
@@ -96,12 +100,12 @@ export function bigwigstrandedmaketk(tk,block) {
 		})
 
 	tk.labforward=block.maketklefthandle(tk)
-		.text('Forward')
+		.text( tk.strand1.name )
 		.each(function(){
 			collectlabelw.push(this.getBBox().width)
 		})
 	tk.labreverse=block.maketklefthandle(tk)
-		.text('Reverse')
+		.text( tk.strand2.name )
 		.each(function(){
 			collectlabelw.push(this.getBBox().width)
 		})
@@ -319,7 +323,7 @@ function configpanel(tk, block ) {
 		const div=client.labelbox({
 			holder:holder,
 			margin:'0px 0px 15px 0px',
-			label:'Forward'
+			label: tk.strand1.name,
 		})
 		const obj=bigwigconfigpanel(tk.strand1, block, div, ()=>bigwigstrandedload(tk,block))
 		obj.ncolor.row.remove()
@@ -335,7 +339,7 @@ function configpanel(tk, block ) {
 	{
 		const div=client.labelbox({
 			holder:holder,
-			label:'Reverse'
+			label: tk.strand2.name
 		})
 		const obj=bigwigconfigpanel(tk.strand2, block, div, ()=>bigwigstrandedload(tk,block))
 		obj.pcolor.row.remove()

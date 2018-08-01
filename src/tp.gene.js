@@ -862,8 +862,11 @@ function paintgene(gene) {
 	for(const k in cohort.dsset) {
 		dslst.push(k)
 	}
-	const pane=client.newpane({x:100,y:100})
-	for(const isoform in union[gene].isoform) {
+	let pane
+	for(const isoform in union[gene].isoform) { 
+		if (!pane) {
+			pane=client.newpane({x:100,y:100})
+		}
 		blockinit({
 			hostURL:hostURL,
 			jwt:cohort.jwt,
