@@ -878,7 +878,7 @@ function paintgene(gene) {
 		})
 	}
 
-	if(cohort.loadgeneexpressionfromofficialds) { console.log('---tests---')
+	if(cohort.loadgeneexpressionfromofficialds) {
 		tp_getgeneexpression({
 			gene:gene,
 			genome:cohort.genome.name,
