@@ -51,12 +51,12 @@ if not os.path.isfile(TableFile):
 fh = open(TableFile)
 start = 0
 for line in fh:
-	start += 1
-	print(str(start)+' finished')
 	line = line.strip()
 	if not line:
 		continue
+	start += 1
 	L = line.split('\t')
+	print(str(start)+' finished\t'+L[0])
 	SampleNam = L[0]
 	AssayNam = L[1]
 	JS = json.loads(L[2])
