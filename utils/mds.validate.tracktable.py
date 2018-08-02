@@ -19,7 +19,7 @@ def CKBIGWIG(bwfh):
 	if not os.path.isfile(bwfh):
 		return False,bwfh+": BigWig file does not exist!"
 	try:
-		sp.run("./bigWigInfo "+bwfh,shell=True,check=True)
+		INFO = sp.run("./bigWigInfo "+bwfh,shell=True,check=True,stdout=sp.PIPE,stderr=sp.PIPE)
 	except:
 		return False,bwfh+": This is not a valid bigwig file!"
 	return True,'bigwig file validation passed'
