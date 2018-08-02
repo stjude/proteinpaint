@@ -10,8 +10,8 @@ const fs = require('fs'),
 	bettersqlite = require('better-sqlite3'), // synchronous
 	Canvas = require('canvas'),
 	bodyParser = require('body-parser'),
-	jsonwebtoken = require('jsonwebtoken'),
-	coord = require('./src/coord')
+	jsonwebtoken = require('jsonwebtoken')
+	//coord = require('./src/coord')
 
 
 
@@ -244,6 +244,7 @@ function validate_genedb ( g ) {
 	if(!g.statement_getnamebyisoform) throw '.genedb.statement_getnamebyisoform missing'
 	if(!g.statement_getnamebynameorisoform) throw '.genedb.statement_getnamebynameorisoform missing'
 	if(!g.statement_getjsonbyname) throw '.genedb.statement_getjsonbyname missing'
+	if(!g.statement_getjsonbyisoform) throw '.genedb.statement_getjsonbyisoform missing'
 	if(!g.statement_getnameslike) throw '.genedb.statement_getnameslike missing'
 	let db
 	try {
@@ -255,6 +256,7 @@ function validate_genedb ( g ) {
 	g.getnamebyisoform       = db.prepare( g.statement_getnamebyisoform )
 	g.getnamebynameorisoform = db.prepare( g.statement_getnamebynameorisoform )
 	g.getjsonbyname          = db.prepare( g.statement_getjsonbyname )
+	g.getjsonbyisoform       = db.prepare( g.statement_getjsonbyisoform )
 	g.getnameslike           = db.prepare( g.statement_getnameslike )
 	if( g.statement_getnamebyalias ) {
 		g.getnamebyalias = db.prepare( g.statement_getnamebyalias )
@@ -390,13 +392,32 @@ function handle_genelookup(req,res) {
 		if(!genome) throw 'invalid genome name'
 
 		if(q.deep) {
-			return
+			if( q.isisoform ) {
+				const out = genome.genedb.getjsonbyisoform.all( q.input )
+				const lst = []
+				for(const i of out) {
+					lst.push( JSON.parse( i.genemodel ) )
+				}
+				return res.send( { lst: lst })
+			}
+			/*
+			gene name should have been cleaned,
+			no alias
+			*/
+			const out = genome.genedb.getjsonbyname.all( q.input )
+			const lst = []
+			for(const i of out) {
+				const j = JSON.parse( i.genemodel )
+				if(i.isdefault) j.isdefault = true
+				lst.push(j)
+			}
+			return res.send( { lst: lst })
 		}
 
 		let names = genome.genedb.getnameslike.all( q.input+'%' )
 		if(names.length) {
 			// found by symbol
-			return res.send( { names: (names.length>20 ? names.slice(0,20) : names) } )
+			return res.send( { lst: (names.length>20 ? names.slice(0,20) : names) } )
 		}
 
 		if( genome.genedb.getnamebyalias ) {
@@ -406,7 +427,7 @@ function handle_genelookup(req,res) {
 				for(const n of names) {
 					n.alias = q.input
 				}
-				return res.send({names:names})
+				return res.send({lst:names})
 			}
 		}
 
@@ -416,11 +437,11 @@ function handle_genelookup(req,res) {
 			for(const n of names) {
 				n.isoform = q.input
 			}
-			return res.send({names:names})
+			return res.send({lst:names})
 		}
 
 		// no hit
-		res.send({names:[]})
+		res.send({lst:[]})
 
 	} catch(e){
 		if(e.stack) console.error(e.stack)

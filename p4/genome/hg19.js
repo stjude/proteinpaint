@@ -8,6 +8,7 @@ module.exports={
 		statement_getnamebyisoform: 'select distinct name from genes where isoform=?',
 		statement_getnamebyalias: 'select name from genealias where alias=?',
 		statement_getjsonbyname: 'select isdefault,genemodel from genes where name=?',
+		statement_getjsonbyisoform: 'select isdefault,genemodel from genes where isoform=?',
 		statement_getnameslike: 'select distinct name from genes where name like ? limit 20',
 	},
 

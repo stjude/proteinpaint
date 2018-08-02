@@ -9,22 +9,11 @@ import {scaleLinear} from 'd3-scale'
 import {select as d3select, selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {rgb as d3rgb} from 'd3-color'
 import {transition} from 'd3-transition'
-//import * as common from './common'
 
 
 
 
 export const font='Arial'
-/*
-export const unspecified='Unspecified'
-export const colorinframe='green'
-export const coloroutframe='#858585'
-export const colorbgleft='#FCE3B8'
-export const colorbgright='#D2E2FC'
-export const colorantisense='red'
-export const colorctx='#DE3336'
-export const textlensf=.6 // to replace n.getBBox().width for detecting filling font size which breaks in chrome
-*/
 
 
 let base_zindex=null
@@ -175,112 +164,6 @@ export class Menu{
 		this.d.transition().style('opacity',0).on('end',()=>this.d.style('display','none'))
 		return this
 	}
-
-	toggle() {
-		if (!this.hidden) {
-			this.hide()
-			this.hidden=true
-		}
-		else {
-			this.d.style('opacity',1).style('display','block')
-			this.hidden=false
-		}
-		return this
-	}
-}
-
-
-
-
-export function menushow(x,y,opts={}) {
-	/********************* deprecated **********************/
-	console.log('client.menushow is deprecated')
-
-	d3selectAll('.sja_menu').remove()
-	d3selectAll('.sja_menu_persist').style('display','none')
-	let left=x+document.body.scrollLeft,
-		right='',
-		top0=y+document.body.scrollTop,
-		bottom=''
-	x=document.body.clientWidth+document.body.scrollLeft-left
-	if(x<200) {
-		left=''
-	} else {
-		left=left+'px'
-	}
-	y=document.body.clientHeight+document.body.scrollTop-top0
-	if(y<200) {
-		top0=''
-		bottom=y-document.body.scrollTop+40+'px'
-	} else {
-		top0=top0+'px'
-	}
-	const body=d3select(document.body)
-	const menu=body.append('div').attr('class',opts.persist?'sja_menu_persist':'sja_menu')
-		.on('mouseover',()=>body.on('mousedown',null))
-		.on('mouseout',()=>body.on('mousedown',menuhide))
-	menu.style('left',left)
-		.style('top',top0)
-		.style('right',right)
-		.style('bottom',bottom)
-		.style('display','block')
-	body.on('mousedown',menuhide)
-	function menuhide() { 
-		if (opts.persist) {
-			menu.style('display','none')
-		}
-		else {
-			menu.remove()
-			body.on('mousedown',null)
-		}
-	}
-	menu.show=function(){
-		d3selectAll('.sja_menu').remove()
-		d3selectAll('.sja_menu_persist').style('display','none')
-		if (menu) menu.style("display","block")
-	}
-	return menu
-}
-
-
-
-
-export function menuunderdom(d,opts={}) {
-	const p=d.getBoundingClientRect()
-	return menushow(p.left,p.top+p.height+3,opts)
-}
-
-
-
-export function sayerror(holder,msg) {
-	const div=holder.append('div')
-		.attr('class','sja_errorbar')
-	div.append('div').html(msg)
-	div.append('div').html('&#10005;').on('click',()=>{
-		disappear(div,true)
-	})
-}
-
-
-
-export function axisstyle(p) {
-	if(!p || !p.axis) return
-	if(!p.color) {
-		p.color='#545454'
-	}
-	p.axis.selectAll('line')
-		.attr('stroke',p.color)
-		.attr('shape-rendering','crispEdges')
-	p.axis.selectAll('path')
-		.attr('fill','none')
-		.attr('stroke',p.showline?p.color:'none')
-		.attr('stroke-width',p.showline?1:0)
-		.attr('shape-rendering','crispEdges')
-	p.axis.selectAll('text')
-		.style('cursor','default')
-		.attr('font-family',font)
-		.attr('font-size',p.fontsize?p.fontsize+'px':'12px')
-		.attr('fill',p.color)
 }
 
 
@@ -306,9 +189,7 @@ export function newpane(pm) {
 	*/
 
 	if(pm.setzindex) {
-		/*
-		dirty fix
-		*/
+		// dirty fix
 		base_zindex=pm.setzindex
 		return
 	}
@@ -326,7 +207,6 @@ export function newpane(pm) {
 		pp.pane.style('z-index',base_zindex)
 	}
 
-	pp.pane.transition().duration(dur).style('opacity',1)
 
 	const toprow=pp.pane.append('div')
 		.on('mousedown',()=>{
@@ -387,14 +267,70 @@ export function newpane(pm) {
 			})
 		}
 	}
+
 	// where you can write
 	pp.header=toprow.append('div')
 		.style('display','inline-block')
 		.style('font-family',font)
 		.style('padding', pm.headpad || '5px 10px')
 	pp.body=pp.pane.append('div').style('font-family',font)
+
+	pp.pane.transition().duration(dur).style('opacity',1)
+
 	return pp
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////// below are old code
+
+
+
+
+export function sayerror(holder,msg) {
+	const div=holder.append('div')
+		.attr('class','sja_errorbar')
+	div.append('div').html(msg)
+	div.append('div').html('&#10005;').on('click',()=>{
+		disappear(div,true)
+	})
+}
+
+
+
+export function axisstyle(p) {
+	if(!p || !p.axis) return
+	if(!p.color) {
+		p.color='#545454'
+	}
+	p.axis.selectAll('line')
+		.attr('stroke',p.color)
+		.attr('shape-rendering','crispEdges')
+	p.axis.selectAll('path')
+		.attr('fill','none')
+		.attr('stroke',p.showline?p.color:'none')
+		.attr('stroke-width',p.showline?1:0)
+		.attr('shape-rendering','crispEdges')
+	p.axis.selectAll('text')
+		.style('cursor','default')
+		.attr('font-family',font)
+		.attr('font-size',p.fontsize?p.fontsize+'px':'12px')
+		.attr('fill',p.color)
+}
+
+
 
 
 
