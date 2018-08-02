@@ -4,7 +4,8 @@ module.exports={
 
 	genedb:{
 		dbfile:'anno/genes.hg19.db',
-		statement_getnamebyname: 'select name from genes where name=? or isoform=?',
+		statement_getnamebynameorisoform: 'select name from genes where name=? or isoform=?',
+		statement_getnamebyisoform: 'select distinct name from genes where isoform=?',
 		statement_getnamebyalias: 'select name from genealias where alias=?',
 		statement_getjsonbyname: 'select isdefault,genemodel from genes where name=?',
 		statement_getnameslike: 'select distinct name from genes where name like ? limit 20',
