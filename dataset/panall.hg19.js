@@ -80,12 +80,8 @@ module.exports={
 							name:'Adult, age >= 40 years',
 							color:'#1b9e77'
 							},
-						'Childhood SR':{
-							name:'Childhood SR, age < 16 years',
-							color:'#d95f02'
-							},
-						'Childhood HR':{
-							name:'Childhood HR, age < 16 years',
+						Childhood:{
+							name:'Childhood, age < 16 years',
 							color:'#d95f02'
 							},
 						AYA:{

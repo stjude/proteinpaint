@@ -25,18 +25,23 @@ sed "s%$DEVHOST/bin/%http://124.74.133.38:8088/bin/%" < public/bin/proteinpaint.
 
 tar zcvf sourcecode.tgz tmpbuild/
 
-scp sourcecode.tgz -p 3322 user@124.74.133.38:
+scp sourcecode.tgz genomeuser@pp-prp1:~/static_files/
 
 
 
 # cd /opt/data/pp/tp/
 # tar cvf test/anno.tar anno/
 # ln -s /opt/data/pp/tp/test/anno.tar /opt/app/pp/es6_proteinpaint/public/
-# tar cvf  test/hg19.tar genomes/hg19.gz*
-# ln -s /opt/data/pp/tp/test/hg19.tar /opt/app/pp/es6_proteinpaint/public/
+# cd /opt/data/pp/tp/genomes/
+# tar cvf ../test/genomes.tar *
+# ln -s /opt/data/pp/tp/test/genomes.tar /opt/app/pp/es6_proteinpaint/public/
+
 
 
 
 # $ wget https://proteinpaint.stjude.org/sourcecode.tgz
 # $ wget https://proteinpaint.stjude.org/anno.tar
-# $ wget https://proteinpaint.stjude.org/hg19.tar
+# $ wget https://proteinpaint.stjude.org/genomes.tar
+
+# wget https://pecan.stjude.cloud/static/tmp/read_hic_header.py
+# wget https://pecan.stjude.cloud/static/tmp/straw

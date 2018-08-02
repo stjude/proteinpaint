@@ -7,7 +7,6 @@ const fs = require('fs'),
 	http = require('http'),
 	https = require('https'),
 	compression = require('compression'),
-	//sqlite = require('sqlite'),
 	bettersqlite = require('better-sqlite3'),
 	Canvas = require('canvas'),
 	bodyParser = require('body-parser'),
@@ -111,7 +110,7 @@ return Promise.resolve()
 	}
 
 	// validate each genome
-	const tasks = []
+
 	for(const genomename in genomes) {
 
 		const g = genomes[genomename]
@@ -185,25 +184,32 @@ return Promise.resolve()
 
 
 		if(g.snp) {
+			/*
+			snp must have both sqlite db and bedj track
+			*/
 			if(!g.snp.db) throw '.snp.db{} missing for '+genomename
 			if(!g.snp.db.dbfile) throw '.snp.db.dbfile missing for '+genomename
 			if(!g.snp.db.statement) throw '.snp.db.statement missing for '+genomename
 			const db = bettersqlite( path.join(serverconfig.filedir, g.snp.db.dbfile), {readonly:true, fileMustExist:true} )
 			g.snp.db.get = db.prepare( g.snp.db.statement )
+
 			if(!g.snp.tk) throw '.snp.tk{} is required for range-based query for '+genomename
-			// TODO validate snp bed track
+			if(!g.snp.tk.file) throw '.snp.tk.file missing for '+genomename
+			const err = validate_tabixfile( g.snp.tk.file )
+			if(err) throw genomename+'.snp.tk.file error: '+err
 		}
 
 
-		for(const tk of g.tracks) {
-		/*
-			if(!tk.__isgene) continue
-			if(!tk.file) return 'Tabix file missing for gene track: '+JSON.stringify(tk)
-			const [err, file] =validate_tabixfile(tk.file)
-			if(err) return tk.file+': gene tabix file error: '+err
-			*/
+		if(g.tracks) {
+			for(const tk of g.tracks) {
+			/*
+				if(!tk.__isgene) continue
+				if(!tk.file) return 'Tabix file missing for gene track: '+JSON.stringify(tk)
+				const [err, file] =validate_tabixfile(tk.file)
+				if(err) return tk.file+': gene tabix file error: '+err
+				*/
+			}
 		}
-
 
 
 
@@ -402,7 +408,7 @@ Promise.resolve().then(()=>{
 
 ////////////////////////////////////////////////// helpers
 
-function log(req,q) {
+function log ( req, q ) {
 	console.log('%s\t%s\t%s\t%s',
 		url.parse(req.url).pathname,
 		new Date(),
@@ -414,6 +420,35 @@ function log(req,q) {
 function isBadArray (i) {
 	if(!Array.isArray(i)) return true
 	if(i.length==0) return
+}
+
+
+function illegalpath ( s ) {
+	if(s[0]=='/') return true
+	if(s.indexOf('..')!=-1) return true
+	return false
+}
+
+async function validate_tabixfile ( halfpath ) {
+	if( illegalpath( halfpath )) return 'illegal file path'
+	if( !halfpath.endsWith( '.gz' )) return 'tabix file not ending with .gz'
+
+	const e1 = await access_file( halfpath )
+	if(e1) return e1
+
+	const e2 = await access_file( halfpath+'.tbi' )
+	if(e2) return e2
+}
+
+function access_file ( halfpath ) {
+	const file = path.join( serverconfig.tpmasterdir, halfpath )
+	// full path to file
+	return new Promise((resolve,reject)=>{
+		fs.access( file, fs.constants.R_OK, err=>{
+			if(err) resolve('cannot read file: ' + halfpath )
+			resolve()
+		})
+	})
 }
 
 ///////////////////////////////////////////////// END of helpers
