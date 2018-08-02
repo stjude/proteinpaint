@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "ProteinPaint 4",
   "scripts": {
-    "dev": "rm -rf public/bin;webpack-cli --config=webpack.config.js --watch --progress --colors"
+    "dev": "rm -rf public/bin; ./node_modules/.bin/webpack-cli --config=webpack.config.js --watch --progress --colors"
   },
   "main": "app.js",
   "author": "",
@@ -11,7 +11,7 @@
   "devDependencies": {
     "css-loader": "^0.28.11",
     "webpack": "4.5.0",
-    "webpack-cli": "2.0.14",
+    "webpack-cli": "3.1.0",
     "webpack-notifier": "1.6.0"
   },
   "dependencies": {
@@ -19,7 +19,7 @@
     "body-parser": "^1.18.2",
     "canvas": "1.6.10",
     "compression": "1.7.2",
-    "d3": "5.0.0",
+    "d3": "5.5.0",
     "empty-module": "0.0.2",
     "express": "4.16.3",
     "jsonwebtoken": "8.2.1",

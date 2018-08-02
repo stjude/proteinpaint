@@ -7,11 +7,11 @@ import * as coord from './coord'
 //import * as common from './common'
 
 
-// do not use genomes as global
+// do not use genomes as global, no globals here
 
 
 
-window.runproteinpaint = (arg) => {
+window.runproteinpaint4 = async (arg) => {
 	/*
 	all parameters and triggers are contained in arg
 	including genomes retrieved from server
@@ -30,23 +30,29 @@ window.runproteinpaint = (arg) => {
 		localStorage.setItem('jwt', arg.jwt)
 	}
 
-	return client.dofetch('/genomes',null,true)
-	.then(data=>{
-		if(data.error) throw 'Cannot get genomes: '+data.error
 
+	try {
+		const data = await fetch_genomes()
 		init_genomes( data, arg )
 
 		may_makeheader( arg, data.headermessage, data.lastupdate)
 
 		arg.showholder = arg.holder.append('div').style('margin','20px')
 
-	})
-	.catch(e=>{
+	} catch(e){
 		arg.holder.text('Error: '+e)
-	})
+	}
 }
 
 
+
+function fetch_genomes () {
+	return client.dofetch('genomes',null,true)
+	.then(data=>{
+		if(data.error) throw 'Cannot get genomes: '+data.error
+		return data
+	})
+}
 
 
 function init_genomes ( data, arg ) {
@@ -111,7 +117,8 @@ function may_makeheader (arg, headermessage, lastupdate) {
 		.on('keyup',()=>{
 			header_inputkeyup( arg, selectgenome, tip )
 		})
-		.node().focus()
+		.node()
+		.focus()
 
 	const selectgenome = buttonrow.append('div')
 		.style('display','inline-block')
@@ -161,7 +168,7 @@ function may_makeheader (arg, headermessage, lastupdate) {
 
 
 
-function header_inputkeyup (arg, selectgenome, tip) {
+async function header_inputkeyup (arg, selectgenome, tip) {
 	/*
 	arg {} as passed from runpp()
 	*/
@@ -169,87 +176,128 @@ function header_inputkeyup (arg, selectgenome, tip) {
 	const stmp = selectgenome.node()
 	const usegenomeobj = arg.genomes[ stmp.options[stmp.selectedIndex].getAttribute('n') ]
 	const inputdom = d3event.target
-	const typeenter = d3event.key == 'Enter'
 
-	Promise.resolve().then(()=>{
+	const str = inputdom.value.trim()
+	if(!str) {
+		tip.hide()
+		return
+	}
 
-		if(typeenter) {
+	if( d3event.key == 'Enter' ) {
 
-			return Promise.resolve().then(()=>{
+		/*
+		must get coord for launching block
 
-				// now launch block, make argument
-				const blockarg = {
+		searching gene by:
+		symbol/alias, convert to neat symbol
+		isoform, use isoform
+		any hit will be displayed as buttons in tip, otherwise it's not a gene
+		*/
+
+		if(tip.d.style('display')=='block') {
+			const hitgene = tip.d.select('.sja_menuoption')
+			if(hitgene.size()>0) {
+				// input indeed matches with gene name
+
+				return header_deepgene({
+					arg: arg,
 					genome: usegenomeobj,
-					holder: arg.showholder.append('div'),
-				}
-
-				// detect input
-				
-				// 1 - gene name
-				if(tip.d.style('display')=='block') {
-					const hitgene = tip.d.select('.sja_menuoption')
-					if(hitgene.size()>0) {
-						blockarg.showgenename = hitgene.text()
-						return blockarg
-					}
-				}
-
-				// input string
-				const str = inputdom.value.trim()
-
-				// 2 - single region
-				const position = coord.string2pos(str, usegenomeobj)
-				if(position) {
-					blockarg.singleregion = position
-					return blockarg
-				}
-
-				// 3 - multiple regions
-				console.log('parse multi region')
-
-				// 4 - snp
-				console.log('parse snp')
-			})
-			.then( blockarg => {
-				console.log(blockarg)
-				// return import('./block').then(_=> ... )
-			})
+					tip: tip,
+					isoform: hitgene.attr('isoform'),
+					genename: hitgene.attr('genename')
+				})
+				//return launchblock_bygenename( arg, usegenomeobj, hitgene.attr('genename') )
+			}
 		}
 
-		// show list of matching gene names
-		const str = inputdom.value.trim()
-		if(!str) {
+		// parse input and launch block accordingly
+
+
+		// 2 - single region
+		const position = coord.string2pos(str, usegenomeobj)
+		if(position) {
+			blockarg.singleregion = position
+			return blockarg
+		}
+
+		// 3 - multiple regions
+		console.log('parse multi region')
+
+		// 4 - snp
+		console.log('parse snp')
+
+		return
+	}
+
+	// show list of matching gene names
+
+	try {
+		const names = await fetch_genelookup( str, usegenomeobj.name )
+		if(names.length==0) {
 			tip.hide()
 			return
 		}
-		client.dofetch('/genelookup',{
-			input:str,
-			genome: usegenomeobj.name
-		})
-		.then(data=>{
-			if(data.error) throw data.error
-			if(!data.names || data.names.length==0) {
-				tip.hide()
-				return
-			}
-			tip.showunder(inputdom)
-				.clear()
-			for(const n of data.names) {
-				tip.d.append('div')
-					.attr('class','sja_menuoption')
-					.text(n.name)
-			}
-		})
-	})
-	.catch(e=>{
-		if(e.stack) console.error(e.stack)
-		tip.showunder(inputdom)
+		tip
 			.clear()
+			.showunder(inputdom)
+		for(const n of names) {
+			const row = tip.d.append('div')
+				.attr('class','sja_menuoption')
+				.attr('genename', n.name)
+				.on('click',()=>{
+
+					header_deepgene({
+						arg: arg,
+						genome: usegenomeobj,
+						tip: tip,
+						isoform: n.isoform,
+						genename: n.name
+					})
+				})
+			if(n.alias) {
+				row.html(n.name + ' <span style="opacity:.7;font-size:.7em">'+n.alias+'</span>' )
+			} else if(n.isoform) {
+				row.html(n.name + ' <span style="opacity:.7;font-size:.7em">'+n.isoform+'</span>' )
+				row.attr('isoform', n.isoform) // pass this to hitting Enter
+			} else {
+				row.text(n.name)
+			}
+		}
+	} catch(e){
+		if(e.stack) console.error(e.stack)
+		tip
+			.clear()
+			.showunder(inputdom)
 			.d
 			.append('div')
 			.style('margin','5px')
 			.style('color','red')
 			.text('Error: '+e)
+	}
+}
+
+
+
+async function header_deepgene ( arg, genome, genename, tip ) {
+	/*
+	given a gene name, find isoforms and summarize regions
+	if single region, launch block (protein mode)
+	else, list regions and ask to choose one in order to launch block
+	*/
+}
+
+
+
+
+function fetch_genelookup( input, genomename ) {
+	return client.dofetch('genelookup',{
+		input:input,
+		genome: genomename
+	})
+	.then(data=>{
+		if(data.error) throw data.error
+		if(!data.names) throw '.names[] missing'
+		return data.names
 	})
 }
 

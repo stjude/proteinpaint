@@ -7,7 +7,7 @@ const fs = require('fs'),
 	http = require('http'),
 	https = require('https'),
 	compression = require('compression'),
-	bettersqlite = require('better-sqlite3'),
+	bettersqlite = require('better-sqlite3'), // synchronous
 	Canvas = require('canvas'),
 	bodyParser = require('body-parser'),
 	jsonwebtoken = require('jsonwebtoken'),
@@ -37,7 +37,7 @@ const hicstraw = serverconfig.hicstraw || 'straw'
 // launch
 server_validate_config()
 .then(()=>{
-	return server_launch()
+	server_launch()
 })
 .catch(err=>{
 	console.error(err)
@@ -49,10 +49,8 @@ server_validate_config()
 ///////////////////////////////// validate server config
 
 
-function server_validate_config() {
+async function server_validate_config() {
 
-return Promise.resolve()
-.then(()=>{
 
 	const cfg = serverconfig
 
@@ -122,7 +120,9 @@ return Promise.resolve()
 			const chrorder=[]
 			for(let i=0; i<lst.length; i+=2) {
 				const chr=lst[i]
-				hash[chr]= Number.parseInt(lst[i+1])
+				const v = Number.parseInt(lst[i+1])
+				if(!Number.isFinite(v) || v<=0) throw 'invalid chr len for '+chr+' from '+genomename
+				hash[chr] = v
 				chrorder.push(chr)
 			}
 			g.majorchr = hash
@@ -133,16 +133,12 @@ return Promise.resolve()
 				const lst=g.minorchr.trim().split(/[\s\t\n]+/)
 				const hash={}
 				for(let i=0; i<lst.length; i+=2) {
-					hash[lst[i]] = Number.parseInt(lst[i+1])
+					const v = Number.parseInt(lst[i+1])
+					if(!Number.isFinite(v) || v<=0) throw 'invald chr len for '+lst[i]+' from '+genomename
+					hash[lst[i]] = v
 				}
 				g.minorchr=hash
 			}
-		}
-		for(const k in g.majorchr) {
-			if(!Number.isInteger(g.majorchr[k])) throw 'invalid chr size for majorchr '+k+' of '+genomename
-		}
-		for(const k in g.minorchr) {
-			if(!Number.isInteger(g.minorchr[k])) throw 'invalid chr size for minorchr '+k+' of '+genomename
 		}
 
 		if(!g.defaultcoord) throw '.defaultcoord missing for '+genomename
@@ -152,33 +148,28 @@ return Promise.resolve()
 
 
 		if(!g.genomefile) throw 'genomefile missing for '+genomename
+		if(!g.genomefile.endsWith('.gz')) throw 'genomefile '+g.genomefile+' not ending with .gz'
 		g.genomefile = path.join( serverconfig.filedir, g.genomefile )
+		if( await access_file_readable( g.genomefile        ) ) throw 'cannot read file '+g.genomefile
+		if( await access_file_readable( g.genomefile+'.fai' ) ) throw '.fai index missing for '+g.genomefile
+		if( await access_file_readable( g.genomefile+'.gzi' ) ) throw '.gzi index missing for '+g.genomefile
+
+
 		try {
-			fs.statSync( g.genomefile )
+			validate_genedb( g.genedb )
 		} catch(e) {
-			throw e.message
+			throw genomename+': '+e
 		}
-
-		if(!g.genedb) throw '.genedb missing for '+genomename
-		if(!g.genedb.dbfile) throw '.genedb.dbfile missing for '+genomename
-		if(!g.genedb.statement_getnamebyname) throw '.genedb.statement_getnamebyname missing for '+genomename
-		if(!g.genedb.statement_getnamebyalias) throw '.genedb.statement_getnamebyalias missing for '+genomename
-		if(!g.genedb.statement_getjsonbyname) throw '.genedb.statement_getjsonbyname missing for '+genomename
-		if(!g.genedb.statement_getnameslike) throw '.genedb.statement_getnameslike missing for '+genomename
-		{
-			const db = bettersqlite( path.join(serverconfig.filedir, g.genedb.dbfile), {readonly:true, fileMustExist:true} )
-			g.genedb.getnamebyname = db.prepare(g.genedb.statement_getnamebyname)
-			g.genedb.getnamebyalias = db.prepare( g.genedb.statement_getnamebyalias )
-			g.genedb.getjsonbyname = db.prepare( g.genedb.statement_getjsonbyname)
-			g.genedb.getnameslike = db.prepare( g.genedb.statement_getnameslike )
-		}
-
-
 
 		if(g.proteindomain) {
 			if(!g.proteindomain.dbfile) throw '.proteindomain.dbfile missing for '+genomename
 			if(!g.proteindomain.statement) throw '.proteindomain.statement missing for '+genomename
-			const db = bettersqlite( path.join(serverconfig.filedir, g.proteindomain.dbfile), {readonly:true, fileMustExist:true} )
+			let db
+			try {
+				db = bettersqlite( path.join(serverconfig.filedir, g.proteindomain.dbfile), {readonly:true, fileMustExist:true} )
+			} catch(e) {
+				throw 'cannot read proteindomain.dbfile: '+g.proteindomain.dbfile
+			}
 			g.proteindomain.get = db.prepare( g.proteindomain.statement )
 		}
 
@@ -190,12 +181,17 @@ return Promise.resolve()
 			if(!g.snp.db) throw '.snp.db{} missing for '+genomename
 			if(!g.snp.db.dbfile) throw '.snp.db.dbfile missing for '+genomename
 			if(!g.snp.db.statement) throw '.snp.db.statement missing for '+genomename
-			const db = bettersqlite( path.join(serverconfig.filedir, g.snp.db.dbfile), {readonly:true, fileMustExist:true} )
+			let db
+			try {
+				db = bettersqlite( path.join(serverconfig.filedir, g.snp.db.dbfile), {readonly:true, fileMustExist:true} )
+			} catch(e) {
+				throw 'cannot read snp.db.dbfile: '+g.snp.db.dbfile
+			}
 			g.snp.db.get = db.prepare( g.snp.db.statement )
 
 			if(!g.snp.tk) throw '.snp.tk{} is required for range-based query for '+genomename
 			if(!g.snp.tk.file) throw '.snp.tk.file missing for '+genomename
-			const err = validate_tabixfile( g.snp.tk.file )
+			const err = await validate_tabixfile( g.snp.tk.file )
 			if(err) throw genomename+'.snp.tk.file error: '+err
 		}
 
@@ -233,14 +229,36 @@ return Promise.resolve()
 			}
 			ds.label=d.name
 			g.datasets[ds.label]=ds
-
 		}
 
 		delete g.rawdslst
 	}
+}
 
-	return Promise.all(tasks)
-})
+
+function validate_genedb ( g ) {
+	// genome.genedb
+	if(!g) throw '.genedb missing'
+	if(!g.dbfile) throw '.genedb.dbfile missing'
+	//if(!g.statement_getnamebyname) throw '.genedb.statement_getnamebyname missing'
+	if(!g.statement_getnamebyisoform) throw '.genedb.statement_getnamebyisoform missing'
+	if(!g.statement_getnamebynameorisoform) throw '.genedb.statement_getnamebynameorisoform missing'
+	if(!g.statement_getjsonbyname) throw '.genedb.statement_getjsonbyname missing'
+	if(!g.statement_getnameslike) throw '.genedb.statement_getnameslike missing'
+	let db
+	try {
+		db = bettersqlite( path.join(serverconfig.filedir, g.dbfile), {readonly:true, fileMustExist:true} )
+	} catch(e) {
+		throw 'cannot read genedb.dbfile: '+g.dbfile
+	}
+	//g.getnamebyname          = db.prepare( g.statement_getnamebyname )
+	g.getnamebyisoform       = db.prepare( g.statement_getnamebyisoform )
+	g.getnamebynameorisoform = db.prepare( g.statement_getnamebynameorisoform )
+	g.getjsonbyname          = db.prepare( g.statement_getjsonbyname )
+	g.getnameslike           = db.prepare( g.statement_getnameslike )
+	if( g.statement_getnamebyalias ) {
+		g.getnamebyalias = db.prepare( g.statement_getnamebyalias )
+	}
 }
 
 
@@ -304,7 +322,7 @@ function server_launch() {
 ////////////////////////////////////////////////// sec
 
 
-function handle_genomes(req,res) {
+async function handle_genomes(req,res) {
 	const hash={}
 	for(const genomename in genomes) {
 		const g=genomes[genomename]
@@ -320,21 +338,16 @@ function handle_genomes(req,res) {
 			//hicenzymefragment:g.hicenzymefragment,
 			datasets:{}
 		}
-		/*
+
 		for(const dsname in g.datasets) {
 			const ds=g.datasets[dsname]
 
-			if(ds.isMds) {
-				const _ds = mds_clientcopy( ds )
-				if(_ds) {
-					g2.datasets[ds.label] = _ds
-				}
-				continue
+			const _ds = mds_clientcopy( ds )
+			if(_ds) {
+				g2.datasets[ds.label] = _ds
 			}
 		}
-		*/
 
-		/*
 		if(g.hicdomain) {
 			g2.hicdomain = { groups: {} }
 			for(const s1 in g.hicdomain.groups) {
@@ -352,48 +365,67 @@ function handle_genomes(req,res) {
 				}
 			}
 		}
-		*/
+
 		hash[genomename]=g2
 	}
 
-	const date1=fs.statSync('server.js').mtime
-	const date2=fs.statSync('public/bin/proteinpaint.js').mtime
-	const lastupdate=date1<date2 ? date1 : date2
 	res.send({
 		genomes:hash,
 		debugmode: serverconfig.debugmode,
 		headermessage: serverconfig.headermessage,
 		base_zindex: serverconfig.base_zindex,
-		lastupdate:lastupdate.toDateString()
+		lastupdate: await whenisserverupdated()
 	})
 }
 
 
 
 function handle_genelookup(req,res) {
-Promise.resolve().then(()=>{
-	const q = JSON.parse(req.body)
-	log(req,q)
-	if(!q.input) throw 'no input'
-	const genome = genomes[q.genome]
+	// better sqlite3 is synchronous
+	try {
+		const q = JSON.parse(req.body)
+		log(req,q)
+		if(!q.input) throw 'no input'
+		const genome = genomes[q.genome]
+		if(!genome) throw 'invalid genome name'
 
-	if(q.deep) {
-	}
+		if(q.deep) {
+			return
+		}
 
-	return Promise.resolve().then(()=>{
 		let names = genome.genedb.getnameslike.all( q.input+'%' )
-		if(names.length) return { names: (names.length>20 ? names.slice(0,20) : names) }
-		names = genome.genedb.getnamebyalias.all( q.input )
-		return {names:names}
-	})
-	.then(result=>{
-		res.send(result)
-	})
-})
-.catch(e=>{
-	res.send({error: (typeof(e)=='string' ? e : e.message ) })
-	if(e.stack) console.error(e.stack)
-})
+		if(names.length) {
+			// found by symbol
+			return res.send( { names: (names.length>20 ? names.slice(0,20) : names) } )
+		}
+
+		if( genome.genedb.getnamebyalias ) {
+			names = genome.genedb.getnamebyalias.all( q.input )
+			if(names.length) {
+				// found symbol by alias
+				for(const n of names) {
+					n.alias = q.input
+				}
+				return res.send({names:names})
+			}
+		}
+
+		names = genome.genedb.getnamebyisoform.all( q.input )
+		if(names.length) {
+			// found name by isoform
+			for(const n of names) {
+				n.isoform = q.input
+			}
+			return res.send({names:names})
+		}
+
+		// no hit
+		res.send({names:[]})
+
+	} catch(e){
+		if(e.stack) console.error(e.stack)
+		res.send({error: (e.message || e)})
+	}
 }
 
 
@@ -419,7 +451,8 @@ function log ( req, q ) {
 
 function isBadArray (i) {
 	if(!Array.isArray(i)) return true
-	if(i.length==0) return
+	if(i.length==0) return true
+	return false
 }
 
 
@@ -433,22 +466,40 @@ async function validate_tabixfile ( halfpath ) {
 	if( illegalpath( halfpath )) return 'illegal file path'
 	if( !halfpath.endsWith( '.gz' )) return 'tabix file not ending with .gz'
 
-	const e1 = await access_file( halfpath )
+	const e1 = await access_file_readable( halfpath, true )
 	if(e1) return e1
 
-	const e2 = await access_file( halfpath+'.tbi' )
+	const e2 = await access_file_readable( halfpath+'.tbi', true )
 	if(e2) return e2
 }
 
-function access_file ( halfpath ) {
-	const file = path.join( serverconfig.tpmasterdir, halfpath )
-	// full path to file
+function access_file_readable ( str, ishalf ) {
+	// if file is readable
+	const file = ishalf ? path.join( serverconfig.filedir, str ) : str
 	return new Promise((resolve,reject)=>{
 		fs.access( file, fs.constants.R_OK, err=>{
-			if(err) resolve('cannot read file: ' + halfpath )
+			if(err) resolve('cannot read file: ' + str )
 			resolve()
 		})
 	})
+}
+
+function stat_file ( file ) {
+	// return stat, do not join path
+	return new Promise((resolve,reject)=>{
+		fs.stat( file, (e,s)=> resolve([e,s]) )
+	})
+}
+
+
+async function whenisserverupdated() {
+	const [e1, stat1] = await stat_file('server.js')
+	if(e1) return 'error stating server.js'
+	const date1 = stat1.mtime
+	const [e2, stat2] = await stat_file('public/bin/proteinpaint.js')
+	if(e2) return 'error stating proteinpaint.js'
+	const date2 = stat2.mtime
+	return ( date1<date2 ? date1 : date2 ).toDateString()
 }
 
 ///////////////////////////////////////////////// END of helpers
