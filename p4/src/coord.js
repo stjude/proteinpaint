@@ -1,4 +1,4 @@
-
+//import dofetch from './client'
 
 function invalidcoord ( thisgenome, chrom, start, stop ) {
 	if(!thisgenome) return 'no genome'
@@ -102,37 +102,12 @@ exports.string2pos = function ( s, genome, is0based ) {
 
 
 
-
-
-
-
-
-
-
-/////////////////////////// below are old code
-
-
-
-
-
-exports.string2snp=function( genome, str, hostURL, jwt) {
-	return fetch( new Request(hostURL+'/snpbyname', {
-		method:'POST',
-		body:JSON.stringify({ genome:genome, lst:[str], jwt:jwt })
-	}))
-	.then(data=>{return data.json()})
+/*
+exports.string2snp = function( str, genome ) {
+	return dofetch( 'snpbyname', {genome:genome, str:str} )
 	.then(data=>{
-		if(data.error) throw({message:data.error})
-		if(!data.lst || data.lst.length==0) throw({message:str+': not a SNP'})
-		/*
-		start/stop are ucsc bed format, include start, not stop
-		*/
-		const r=data.lst[0]
-		return {
-			chr:r.chrom,
-			start:r.chromStart,
-			stop:r.chromEnd
-		}
+		if(data.error) throw data.error
+		return data.hit
 	})
 }
-
+*/

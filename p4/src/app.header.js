@@ -127,7 +127,7 @@ function launch_block_shortcut ( arg, selectgenome ) {
 	const pane = client.newpane({x:100,y:100})
 	pane.header.text(usegenomeobj.name)
 
-	launch_block( {
+	client.launch_block( {
 		genome: usegenomeobj,
 		holder: pane.body,
 		// show default position
@@ -155,51 +155,69 @@ async function input_keyup (arg, selectgenome, tip) {
 		return
 	}
 
-	if( d3event.key == 'Enter' ) {
+	try {
 
-		/* 1 - gene
-		symbol/alias, convert to neat symbol
-		isoform, use isoform
-		any hit will be displayed as buttons in tip, otherwise it's not a gene
-		*/
-		if(tip.d.style('display')=='block') {
-			const hitgene = tip.d.select('.sja_menuoption')
-			if(hitgene.size()>0) {
-				// input indeed matches with gene name
-				return header_deepgene({
-					arg: arg,
+		if( d3event.key == 'Enter' ) {
+
+			/* 1 - gene
+			symbol/alias, convert to neat symbol
+			isoform, use isoform
+			any hit will be displayed as buttons in tip, otherwise it's not a gene
+			*/
+			if(tip.d.style('display')=='block') {
+				const hitgene = tip.d.select('.sja_menuoption')
+				if(hitgene.size()>0) {
+					// input indeed matches with gene name
+					return header_deepgene({
+						arg: arg,
+						genome: usegenomeobj,
+						tip: tip,
+						isoform: hitgene.attr('isoform'),
+						genename: hitgene.attr('genename')
+					})
+				}
+			}
+
+			// 2 - single region
+			// assume the region is 1-based
+			const position = coord.string2pos(str, usegenomeobj)
+			if(position) {
+				arg.showholder.selectAll('*').remove()
+				return client.launch_block( {
 					genome: usegenomeobj,
-					tip: tip,
-					isoform: hitgene.attr('isoform'),
-					genename: hitgene.attr('genename')
+					holder: arg.showholder,
+					range_0based: position,
 				})
 			}
+
+			// 3 - multiple regions TODO
+
+
+			// 4 - snp
+			const snp = await string2snp( str, usegenomeobj.name )
+			if(snp) {
+				// hit a snp
+				tip.hide()
+				arg.showholder.selectAll('*').remove()
+				return client.launch_block( {
+					genome: usegenomeobj,
+					holder: arg.showholder,
+					range_0based: {
+						chr: snp.chrom,
+						start: snp.chromStart,
+						stop: snp.chromEnd
+					},
+					// TODO highlight snp
+				})
+			} else {
+				throw 'Not a gene or snp'
+			}
+
+			return
 		}
 
-		// 2 - single region
-		// assume the region is 1-based
-		const position = coord.string2pos(str, usegenomeobj)
-		if(position) {
-			arg.showholder.selectAll('*').remove()
-			return launch_block( {
-				genome: usegenomeobj,
-				holder: arg.showholder,
-				range_0based: position,
-			})
-		}
+		// show list of matching gene names
 
-		// 3 - multiple regions TODO
-		console.log('parse multi region')
-
-		// 4 - snp
-		console.log('parse snp')
-
-		return
-	}
-
-	// show list of matching gene names
-
-	try {
 		const names = await fetch_genelookup( {input:str, genome:usegenomeobj.name } )
 		if(names.length==0) {
 			tip.hide()
@@ -242,6 +260,18 @@ async function input_keyup (arg, selectgenome, tip) {
 			.text('Error: '+e)
 	}
 }
+
+
+
+
+function string2snp ( str, genome ) {
+	return client.dofetch( 'snpbyname', {genome:genome, str:str} )
+	.then(data=>{
+		if(data.error) throw data.error
+		return data.hit
+	})
+}
+
 
 
 
@@ -325,7 +355,7 @@ function launch_block_protein( p ) {
 
 	arg.showholder.selectAll('*').remove()
 
-	launch_block( {
+	client.launch_block( {
 		holder: arg.showholder,
 		genome: genome,
 		gm: gm,
@@ -371,14 +401,3 @@ function header_clickbutton_help (arg, tip) {
 	d.append('p').html('<a href=https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing target=_blank>All tutorials</a>')
 	d.append('p').html('<a href=https://plus.google.com/u/0/communities/102575530275461548028 target=_blank>User community</a>')
 }
-
-
-
-
-
-function launch_block ( p ) {
-	import('./block').then( _ => {
-		new _.Block( p )
-	})
-}
-

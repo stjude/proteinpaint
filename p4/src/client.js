@@ -1,10 +1,3 @@
-///////////////////
-//
-// all client-side stuff, including DOM
-//
-///////////////////
-
-
 import {scaleLinear} from 'd3-scale'
 import {select as d3select, selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {rgb as d3rgb} from 'd3-color'
@@ -17,7 +10,6 @@ export const font='Arial'
 
 
 let base_zindex=null
-
 
 
 
@@ -280,6 +272,15 @@ export function newpane(pm) {
 	return pp
 }
 
+
+
+
+
+export function launch_block ( p ) {
+	import('./block').then( _ => {
+		new _.Block( p )
+	})
+}
 
 
 

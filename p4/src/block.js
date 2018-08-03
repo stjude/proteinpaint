@@ -4,20 +4,26 @@ import {transition} from 'd3-transition'
 import {format as d3format} from 'd3-format'
 import {axisTop, axisLeft} from 'd3-axis'
 import * as coord from './coord'
+import * as common from './common'
 
 
+const ntpxwidth = 20  // max allowed pixel width for a nt
 
 
 export class Block {
 
 constructor ( arg ) {
 
+	if(arg.debugmode) {
+		window.bb = this
+	}
+
 	try {
 		validate_parameter( arg, this )
 	} catch(e) {
 		if(e.stack) console.log(e.stack)
-		if(arg.holder) {
-			arg.holder.append('div')
+		if(this.holder) {
+			this.holder.append('div')
 				.style('margin','20px')
 				.text('Error: '+e)
 		} else {
@@ -32,11 +38,18 @@ constructor ( arg ) {
 	*/
 
 
+	init_view_pxwidth( this )
+
+	this.set_block_width()
 
 
 // END of constructor
 }
 
+
+
+set_block_width() {
+}
 
 // END of block
 }
@@ -137,6 +150,68 @@ function validate_parameter ( arg, block ) {
 	} else {
 		// no position given; use genome default position
 		const r = block.genome.defaultcoord
-		block.holder.text('show '+r.chr+':'+r.start+'-'+r.stop)
+		const chr = block.genome.chrlookup[ r.chr.toUpperCase() ]
+		if(!chr) throw 'invalid chr from defaultcoord'
+		const region = { 
+			chr: r.chr,
+			bstart: 0,
+			bstop: chr.len,
+			start: r.start,
+			stop: r.stop,
+		}
+		if( arg.width ) {
+			if( !common.isPositiveInteger( arg.width)) throw 'invalid width'
+			region.width = arg.width
+		}
+		block.views.push({
+			regions: [ region ],
+			xspace: 10,
+			rightpad: 10,
+		})
+	}
+}
+
+
+
+function init_view_pxwidth ( block ) {
+	/*
+	initialize px width for regions
+	*/
+	const uncovered_regions = []
+	let covered_bpsum   = 0,
+		covered_pxsum   = 0,
+		uncovered_bpsum = 0
+	for(const view of block.views) {
+		if(!view.regions) continue
+		for(const r of view.regions) {
+			if(r.width) {
+				// width set
+				covered_pxsum += r.width
+				covered_bpsum += r.stop-r.start
+			} else {
+				// width not set
+				uncovered_regions.push( r )
+				uncovered_bpsum += r.stop-r.start
+			}
+		}
+	}
+	if(uncovered_bpsum==0) return
+	// there are regions without width
+
+	let pxperbp
+
+	if(covered_bpsum) {
+		// there are regions already have width set
+		// not working
+	} else {
+		// ideal width
+		const minwidth = 800
+		const w = block.holder.node().getBoundingClientRect().width
+		const idealwidth = Math.ceil( Math.max(w*.63,minwidth) )
+		pxperbp = idealwidth / uncovered_bpsum
+	}
+
+	for(const r of uncovered_regions) {
+		r.width = Math.ceil( pxperbp * (r.stop-r.start) )
 	}
 }

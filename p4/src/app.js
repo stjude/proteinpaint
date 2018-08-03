@@ -32,10 +32,9 @@ window.runproteinpaint4 = async (arg) => {
 
 
 	try {
-		const data = await fetch_genomes()
-		init_genomes( data, arg )
+		const data = await fetch_genomes( arg )
 
-		window.hg19 = arg.genomes['hg19']
+		window.hg19 = arg.genomes['hg19'] // to be removed
 
 		if(!arg.noheader) {
 			arg._headerdiv = arg.holder.append('div') // make sure header will be on top of showholder
@@ -52,38 +51,79 @@ window.runproteinpaint4 = async (arg) => {
 			.append('div')
 			.style('margin','20px')
 
+		process_embed_url( arg )
+
 	} catch(e){
+		if(e.stack) console.log(e.stack)
 		arg.holder.text('Error: '+(e.message||e))
 	}
 }
 
 
 
-function fetch_genomes () {
+function fetch_genomes ( arg ) {
+	/*
+	arg is from runpp call
+	append returned results to arg
+	*/
 	return client.dofetch('genomes',null,true)
 	.then(data=>{
 		if(data.error) throw 'Cannot get genomes: '+data.error
+		if(!data.genomes) throw '.genomes missing from response'
+		arg.genomes = data.genomes
+		for(const n in arg.genomes) {
+			const g = arg.genomes[n]
+			g.chrlookup = {}
+			for(const c in g.majorchr) {
+				g.chrlookup[ c.toUpperCase() ] = { name: c, len: g.majorchr[c] }
+			}
+			if(g.minorchr) {
+				for(const c in g.minorchr) {
+					g.chrlookup[ c.toUpperCase() ] = { name: c, len: g.minorchr[c] }
+				}
+			}
+		}
+		arg.debugmode = data.debugmode
 		return data
 	})
 }
 
 
-function init_genomes ( data, arg ) {
-	if(!data.genomes) throw '.genomes missing from response'
-	arg.genomes = data.genomes
-	for(const n in arg.genomes) {
-		const g = arg.genomes[n]
-		g.chrlookup = {}
-		for(const c in g.majorchr) {
-			g.chrlookup[ c.toUpperCase() ] = { name: c, len: g.majorchr[c] }
+
+
+
+function process_embed_url ( arg ) {
+	try {
+
+		if( arg.block ) {
+			embed_block( arg )
+			return
 		}
-		if(g.minorchr) {
-			for(const c in g.minorchr) {
-				g.chrlookup[ c.toUpperCase() ] = { name: c, len: g.minorchr[c] }
-			}
-		}
+
+	} catch(e) {
+		if(e.stack) console.log(e.stack)
+		arg.showholder.append('div').text('Error: '+(e.message||e))
 	}
 }
 
 
+function embed_block( arg ) {
+	/*
+	arg is primary
+	*/
+	if(!arg.genome) throw '.genome is undefined'
+	const genome = arg.genomes[ arg.genome ]
+	if(!genome) throw 'invalid value for .genome: '+arg.genome
 
+	const p = {
+		debugmode: arg.debugmode,
+		genome: genome,
+		holder: arg.showholder,
+		range_0based: arg.range_0based,
+		range_1based: arg.range_1based,
+		position_0based: arg.position_0based,
+		position_1based: arg.position_1based,
+		tklst: arg.tklst,
+	}
+	client.launch_block( p )
+}

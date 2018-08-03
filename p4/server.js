@@ -330,8 +330,9 @@ function server_launch() {
 	}
 
 	// routes
-	app.get('/genomes',handle_genomes)
-	app.post('/genelookup',handle_genelookup)
+	app.get('/genomes', handle_genomes)
+	app.post('/genelookup', handle_genelookup)
+	app.post('/snpbyname', handle_snpbyname)
 
 	const port = serverconfig.port || 3000
 	app.listen(port)
@@ -344,7 +345,7 @@ function server_launch() {
 ////////////////////////////////////////////////// sec
 
 
-async function handle_genomes(req,res) {
+async function handle_genomes( req, res) {
 	const hash={}
 	for(const genomename in genomes) {
 		const g=genomes[genomename]
@@ -402,7 +403,7 @@ async function handle_genomes(req,res) {
 
 
 
-function handle_genelookup(req,res) {
+function handle_genelookup( req, res ) {
 	// better sqlite3 is synchronous
 	try {
 		const q = JSON.parse(req.body)
@@ -462,6 +463,29 @@ function handle_genelookup(req,res) {
 
 		// no hit
 		res.send({lst:[]})
+
+	} catch(e){
+		if(e.stack) console.error(e.stack)
+		res.send({error: (e.message || e)})
+	}
+}
+
+
+
+
+function handle_snpbyname( req, res ) {
+	try {
+		const q = JSON.parse(req.body)
+		log(req,q)
+		if(!q.str) throw 'no input string'
+		const genome = genomes[q.genome]
+		if(!genome) throw 'invalid genome name'
+		if(!genome.snp) throw 'snp not available for '+q.genome
+
+		// only query the first snp set, may fix later
+		const snp = genome.snp[0]
+		const hit = snp.db.get.get( q.str )
+		return res.send({ hit: hit })
 
 	} catch(e){
 		if(e.stack) console.error(e.stack)
