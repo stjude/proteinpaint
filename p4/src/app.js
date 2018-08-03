@@ -35,6 +35,8 @@ window.runproteinpaint4 = async (arg) => {
 		const data = await fetch_genomes()
 		init_genomes( data, arg )
 
+		window.hg19 = arg.genomes['hg19']
+
 		if(!arg.noheader) {
 			arg._headerdiv = arg.holder.append('div') // make sure header will be on top of showholder
 			import('./app.header').then( _ => {

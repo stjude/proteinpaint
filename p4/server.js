@@ -154,11 +154,11 @@ async function server_validate_config() {
 		if( await access_file_readable( g.genomefile+'.fai' ) ) throw '.fai index missing for '+g.genomefile
 		if( await access_file_readable( g.genomefile+'.gzi' ) ) throw '.gzi index missing for '+g.genomefile
 
-
+		// genedb is required
 		try {
 			validate_genedb( g.genedb )
 		} catch(e) {
-			throw genomename+': '+e
+			throw genomename+'.genedb: '+e
 		}
 
 		if(g.proteindomain) {
@@ -174,25 +174,11 @@ async function server_validate_config() {
 		}
 
 
-		if(g.snp) {
-			/*
-			snp must have both sqlite db and bedj track
-			*/
-			if(!g.snp.db) throw '.snp.db{} missing for '+genomename
-			if(!g.snp.db.dbfile) throw '.snp.db.dbfile missing for '+genomename
-			if(!g.snp.db.statement) throw '.snp.db.statement missing for '+genomename
-			let db
-			try {
-				db = bettersqlite( path.join(serverconfig.filedir, g.snp.db.dbfile), {readonly:true, fileMustExist:true} )
-			} catch(e) {
-				throw 'cannot read snp.db.dbfile: '+g.snp.db.dbfile
-			}
-			g.snp.db.get = db.prepare( g.snp.db.statement )
-
-			if(!g.snp.tk) throw '.snp.tk{} is required for range-based query for '+genomename
-			if(!g.snp.tk.file) throw '.snp.tk.file missing for '+genomename
-			const err = await validate_tabixfile( g.snp.tk.file )
-			if(err) throw genomename+'.snp.tk.file error: '+err
+		// snp is optional
+		try {
+			validate_snpdb( g.snp )
+		} catch(e) {
+			throw genomename+'.snp: '+e
 		}
 
 
@@ -239,18 +225,18 @@ async function server_validate_config() {
 function validate_genedb ( g ) {
 	// genome.genedb
 	if(!g) throw '.genedb missing'
-	if(!g.dbfile) throw '.genedb.dbfile missing'
-	//if(!g.statement_getnamebyname) throw '.genedb.statement_getnamebyname missing'
-	if(!g.statement_getnamebyisoform) throw '.genedb.statement_getnamebyisoform missing'
-	if(!g.statement_getnamebynameorisoform) throw '.genedb.statement_getnamebynameorisoform missing'
-	if(!g.statement_getjsonbyname) throw '.genedb.statement_getjsonbyname missing'
-	if(!g.statement_getjsonbyisoform) throw '.genedb.statement_getjsonbyisoform missing'
-	if(!g.statement_getnameslike) throw '.genedb.statement_getnameslike missing'
+	if(!g.dbfile) throw '.dbfile missing'
+	//if(!g.statement_getnamebyname) throw '.statement_getnamebyname missing'
+	if(!g.statement_getnamebyisoform) throw '.statement_getnamebyisoform missing'
+	if(!g.statement_getnamebynameorisoform) throw '.statement_getnamebynameorisoform missing'
+	if(!g.statement_getjsonbyname) throw '.statement_getjsonbyname missing'
+	if(!g.statement_getjsonbyisoform) throw '.statement_getjsonbyisoform missing'
+	if(!g.statement_getnameslike) throw '.statement_getnameslike missing'
 	let db
 	try {
 		db = bettersqlite( path.join(serverconfig.filedir, g.dbfile), {readonly:true, fileMustExist:true} )
 	} catch(e) {
-		throw 'cannot read genedb.dbfile: '+g.dbfile
+		throw 'cannot read dbfile: '+g.dbfile
 	}
 	//g.getnamebyname          = db.prepare( g.statement_getnamebyname )
 	g.getnamebyisoform       = db.prepare( g.statement_getnamebyisoform )
@@ -260,6 +246,40 @@ function validate_genedb ( g ) {
 	g.getnameslike           = db.prepare( g.statement_getnameslike )
 	if( g.statement_getnamebyalias ) {
 		g.getnamebyalias = db.prepare( g.statement_getnamebyalias )
+	}
+}
+
+
+async function validate_snpdb ( lst ) {
+	/*
+	genome.snp[] is array
+	each snp db has both sqlite and bedj track
+	*/
+	if(!lst) return
+	if(isBadArray(lst)) throw '.snp must be array'
+
+	for(const snp of lst) {
+		/*
+		snp must have both sqlite db and bedj track
+		*/
+		if(!snp.name) throw '.key missing from a snpdb'
+
+		if(!snp.db) throw '.db{} missing for '+snp.name
+		if(!snp.db.dbfile) throw '.db.dbfile missing for '+snp.name
+		if(!snp.db.statement) throw '.db.statement missing for '+snp.name
+
+		let db
+		try {
+			db = bettersqlite( path.join(serverconfig.filedir, snp.db.dbfile), {readonly:true, fileMustExist:true} )
+		} catch(e) {
+			throw 'cannot read dbfile: '+snp.db.dbfile
+		}
+		snp.db.get = db.prepare( snp.db.statement )
+
+		if(!snp.tk) throw '.snp.tk{} missing for '+snp.name
+		if(!snp.tk.file) throw '.snp.tk.file missing for '+snp.name
+		const err = await validate_tabixfile( snp.tk.file )
+		if(err) throw 'tk.file error for '+snp.name+': '+err
 	}
 }
 

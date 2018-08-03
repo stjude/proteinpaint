@@ -12,34 +12,38 @@ module.exports={
 		statement_getnameslike: 'select distinct name from genes where name like ? limit 20',
 	},
 
-	snp:{
-		db:{
-			dbfile:'anno/db/snp146.hg19.db',
-			statement: 'select * from snp146 where name=?'
-		},
-		tk:{
-			type: 'densebed',
-			file: 'anno/db/snp146.hg19.gz',
-			name: 'dbSNP 146',
-			categories:{
-				deletion:{color:'crimson',label:'Deletion'},
-				insertion:{color:'orange',label:'Insertion'},
-				single:{color:'royalblue',label:'SNP'},
-				mnp:{color:'teal',label:'MNP'},
-				'in-del':{color:'indigo',label:'In-del'},
-				microsatellite:{color:'olive',label:'Microsatellite'},
-				named:{color:'#858585',label:'Named'}
+	snp:[
+		// allow multiple snp source
+		{
+			name: 'snp',
+			db:{
+				dbfile:'anno/db/snp146.hg19.db',
+				statement: 'select * from snp146 where name=?'
 			},
-			showdensitybeyondrange:20000,
-			densitytrack:{
-				type:'bigwig',
-				file:'hg19/hg19.100way.phastCons.bw', // fake
-				height: 70,
-				scale:{ auto:1 }
+			tk:{
+				type: 'densebed',
+				file: 'anno/db/snp146.hg19.gz',
+				name: 'dbSNP 146',
+				categories:{
+					deletion:{color:'crimson',label:'Deletion'},
+					insertion:{color:'orange',label:'Insertion'},
+					single:{color:'royalblue',label:'SNP'},
+					mnp:{color:'teal',label:'MNP'},
+					'in-del':{color:'indigo',label:'In-del'},
+					microsatellite:{color:'olive',label:'Microsatellite'},
+					named:{color:'#858585',label:'Named'}
+				},
+				showdensitybeyondrange:20000,
+				densitytrack:{
+					type:'bigwig',
+					file:'hg19/hg19.100way.phastCons.bw', // fake
+					height: 70,
+					scale:{ auto:1 }
+				}
 			}
-		}
+		},
+	],
 
-	},
 
 	proteindomain:{
 		dbfile:'anno/db/proteindomain.db',
@@ -108,7 +112,6 @@ module.exports={
 		chr:'chr17',
 		start:7568451,
 		stop:7591984,
-		gene:'TP53'
 	},
 
 	hicenzymefragment:[

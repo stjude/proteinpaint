@@ -1,10 +1,25 @@
 import * as client from './client'
+import * as coord from './coord'
 import {event as d3event} from 'd3-selection'
+
+
+
+/******** EXTERNAL
+makeheader()
+
+********* INTERNAL
+
+*/
+
+
 
 
 
 
 export function makeheader (arg, headermessage, lastupdate) {
+	/*
+	*/
+
 	const bordercolor = '#ededed'
 	const padw='13px'
 
@@ -64,7 +79,7 @@ export function makeheader (arg, headermessage, lastupdate) {
 		.style('padding',padw)
 		.text('Genome browser')
 		.on('click',()=>{
-			header_launchblock( arg, selectgenome )
+			launch_block_shortcut( arg, selectgenome )
 		})
 
 	buttonrow.append('span')
@@ -102,8 +117,26 @@ export function makeheader (arg, headermessage, lastupdate) {
 
 
 
-function header_launchblock ( arg, selectgenome ) {
+function launch_block_shortcut ( arg, selectgenome ) {
+	/*
+	click button from header
+	*/
+
+	const stmp = selectgenome.node()
+	const usegenomeobj = arg.genomes[ stmp.options[stmp.selectedIndex].getAttribute('n') ]
+	const pane = client.newpane({x:100,y:100})
+	pane.header.text(usegenomeobj.name)
+
+	launch_block( {
+		genome: usegenomeobj,
+		holder: pane.body,
+		// show default position
+	})
 }
+
+
+
+
 
 
 
@@ -124,15 +157,11 @@ async function input_keyup (arg, selectgenome, tip) {
 
 	if( d3event.key == 'Enter' ) {
 
-		/*
-		must get coord for launching block
-
-		searching gene by:
+		/* 1 - gene
 		symbol/alias, convert to neat symbol
 		isoform, use isoform
 		any hit will be displayed as buttons in tip, otherwise it's not a gene
 		*/
-
 		if(tip.d.style('display')=='block') {
 			const hitgene = tip.d.select('.sja_menuoption')
 			if(hitgene.size()>0) {
@@ -147,17 +176,19 @@ async function input_keyup (arg, selectgenome, tip) {
 			}
 		}
 
-		// parse input and launch block accordingly
-
-
 		// 2 - single region
+		// assume the region is 1-based
 		const position = coord.string2pos(str, usegenomeobj)
 		if(position) {
-			blockarg.singleregion = position
-			return blockarg
+			arg.showholder.selectAll('*').remove()
+			return launch_block( {
+				genome: usegenomeobj,
+				holder: arg.showholder,
+				range_0based: position,
+			})
 		}
 
-		// 3 - multiple regions
+		// 3 - multiple regions TODO
 		console.log('parse multi region')
 
 		// 4 - snp
@@ -191,10 +222,10 @@ async function input_keyup (arg, selectgenome, tip) {
 					})
 				})
 			if(n.alias) {
-				row.html('<span style="opacity:.7;font-size:.7em">'+n.alias+'</span> '+n.name )
+				row.html( '<span style="opacity:.7;font-size:.7em">'+n.alias+'</span> '+n.name )
 			} else if(n.isoform) {
-				row.html(' <span style="opacity:.7;font-size:.7em">'+n.isoform+'</span> '+n.name )
-				row.attr('isoform', n.isoform) // pass this to hitting Enter
+				row.html( n.name+' <span style="opacity:.7;font-size:.7em">'+n.isoform+'</span>' )
+				row.attr('isoform', n.isoform) // upon hitting Enter this will be captured
 			} else {
 				row.text(n.name)
 			}
@@ -278,6 +309,10 @@ async function header_deepgene ( p ) {
 
 
 
+
+
+
+
 function launch_block_protein( p ) {
 	/*
 	TODO
@@ -290,11 +325,12 @@ function launch_block_protein( p ) {
 
 	arg.showholder.selectAll('*').remove()
 
-	if(gm) {
-		arg.showholder.text('to show protein for '+gm.isoform)
-		return
-	}
-	arg.showholder.text('to show protein for '+gmlst[0].name+', '+gmlst.length+' isoforms')
+	launch_block( {
+		holder: arg.showholder,
+		genome: genome,
+		gm: gm,
+		gmlst: gmlst
+	})
 }
 
 
@@ -321,6 +357,9 @@ function header_clickbutton_apps (arg, tip) {
 		.clear()
 	tip.d.append('p').text('to show list of apps')
 }
+
+
+
 function header_clickbutton_help (arg, tip) {
 	tip.showunder(d3event.target)
 		.clear()
@@ -334,4 +373,12 @@ function header_clickbutton_help (arg, tip) {
 }
 
 
-//////////////////// __header ends
+
+
+
+function launch_block ( p ) {
+	import('./block').then( _ => {
+		new _.Block( p )
+	})
+}
+

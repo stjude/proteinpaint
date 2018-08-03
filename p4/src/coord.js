@@ -1,9 +1,6 @@
 
 
-
-
-
-function invalidcoord(thisgenome,chrom,start,stop) {
+function invalidcoord ( thisgenome, chrom, start, stop ) {
 	if(!thisgenome) return 'no genome'
 	if(!chrom) return 'no chr name'
 	const chr=thisgenome.chrlookup[chrom.toUpperCase()]
@@ -19,85 +16,101 @@ exports.invalidcoord=invalidcoord
 
 
 
-exports.string2pos=function(s,genome) {
-	s=s.replace(/,/g,'')
-	const chr=genome.chrlookup[s.toUpperCase()]
-	if(chr) {
-		// chr name only, to middle
-		return {
-			chr:chr.name,
-			chrlen:chr.len,
-			start:Math.max(0, Math.ceil(chr.len/2)-10000),
-			stop:Math.min(chr.len, Math.ceil(chr.len/2)+10000)
+
+
+
+exports.string2pos = function ( s, genome, is0based ) {
+	/*
+	by default all input positions are treated as 1-based
+	and will subtract by 1 during parsing
+	otherwise specify it is 0-based
+	*/
+
+	if(!genome) throw 'string2pos: genome missing'
+	if(!genome.chrlookup) throw 'string2pos: genome.chrlookup missing'
+
+	s = s.replace(/,/g,'') // remove comma
+
+	// see if input is a chr name
+	{
+		const chr = genome.chrlookup[ s.toUpperCase() ]
+		if(chr) {
+			// chr name only, to middle
+			return {
+				chr:chr.name,
+				//chrlen:chr.len,
+				start:Math.max(0, Math.ceil(chr.len/2)-10000),
+				stop:Math.min(chr.len, Math.ceil(chr.len/2)+10000)
+			}
 		}
 	}
+
 	{
 		// special handling for snv4
-		const tmp=s.split('.')
-		if(tmp.length>=2) {
+		const tmp = s.split('.')
+		if(tmp.length ==  4) {
 			const chr=genome.chrlookup[tmp[0].toUpperCase()]
-			const pos=Number.parseInt(tmp[1])
+			const pos=Number.parseInt(tmp[1]) - (is0based ? 0 : 1)
 			const e=invalidcoord(genome,tmp[0],pos,pos+1)
 			if(!e) {
 				// valid snv4
-				const bpspan=400
 				return {
 					chr:chr.name,
-					chrlen:chr.len,
-					start:Math.max(0, pos-Math.ceil(bpspan/2)),
-					stop:Math.min(chr.len,pos+Math.ceil(bpspan/2)),
-					actualposition:{position:pos,len:1}
+					//chrlen:chr.len,
+					start: pos,
+					stop: pos
 				}
 			}
 		}
 	}
-	const tmp=s.split(/[-:\s]+/)
+
+	const tmp = s.split(/[-:\s]+/)
 	if(tmp.length==2) {
-		// must be chr - pos
-		const pos=Number.parseInt(tmp[1])
+		// see if is chr : pos
+		const pos = Number.parseInt(tmp[1]) - (is0based ? 0 : 1)
 		const e=invalidcoord(genome,tmp[0],pos,pos+1)
 		if(e) {
+			// either chr or pos is wrong
 			return null
 		}
-		const chr=genome.chrlookup[tmp[0].toUpperCase()]
-		const bpspan=400
+		const chr = genome.chrlookup[ tmp[0].toUpperCase() ]
 		return {
-			chr:chr.name,
-			chrlen:chr.len,
-			start:Math.max(0, pos-Math.ceil(bpspan/2)),
-			stop:Math.min(chr.len,pos+Math.ceil(bpspan/2)),
-			actualposition:{position:pos,len:1}
+			chr: chr.name,
+			start: pos,
+			stop: pos
 		}
 	}
+
 	if(tmp.length==3) {
-		// must be chr - start - stop
-		let start=Number.parseInt(tmp[1]),
-			stop=Number.parseInt(tmp[2])
-		const e=invalidcoord(genome,tmp[0],start,stop)
+		// see if is chr - start - stop
+		const start = Number.parseInt(tmp[1]) - (is0based ? 0 : 1),
+			stop  = Number.parseInt(tmp[2]) - (is0based ? 0 : 1)
+		const e = invalidcoord( genome, tmp[0], start, stop )
 		if(e){
 			return null
 		}
-		const actualposition = {position:start, len:stop-start}
-		const chr=genome.chrlookup[tmp[0].toUpperCase()]
-		const minspan=400
-		if(stop-start<minspan) {
-			let center=Math.ceil((start+stop)/2)
-			if(center+minspan/2 >=chr.len) {
-				center=chr.len-Math.ceil(minspan/2)
-			}
-			start=Math.max(0,center-Math.ceil(minspan/2))
-			stop=start+minspan
-		}
+		const chr = genome.chrlookup[ tmp[0].toUpperCase() ]
 		return {
 			chr:chr.name,
-			chrlen:chr.len,
-			start:start,
-			stop:stop,
-			actualposition:actualposition
+			start: start,
+			stop: stop,
 		}
 	}
+
 	return null
 }
+
+
+
+
+
+
+
+
+
+
+/////////////////////////// below are old code
+
 
 
 
