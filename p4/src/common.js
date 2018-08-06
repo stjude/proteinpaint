@@ -7,3 +7,9 @@ function isPositiveInteger(a) {
 }
 
 exports.isPositiveInteger = isPositiveInteger
+
+
+const tkt = {
+	ruler: 'ruler',
+}
+exports.tkt = tkt
