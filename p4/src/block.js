@@ -34,8 +34,7 @@ constructor ( arg ) {
 	.tklst[]
 	*/
 
-	set_pxwidth_to_regions( this )
-	init_view_boundary( this )
+	init_regionpxwidth_viewresolution( this )
 
 	init_dom_for_block( arg, this )
 
@@ -66,11 +65,17 @@ settle_width () {
 
 	let x = 0
 	for(const v of this.views) {
+
 		v.x = x
 		v.g.attr('transform','translate('+x+',0)')
+
 		if(v.regions) {
-			// update view width
-			v.width = v.regions.reduce((i,j)=>i+j.width,0) + (v.regions.length-1)*v.regionspace
+			// set view width by portions of regions in view range
+			v.width = ( v.stopidx - v.startidx ) * v.regionspace
+			for(let i=v.startidx; i<=v.stopidx; i++) {
+				const r = v.regions[ i ]
+				v.width += ( r.stop - r.start ) / v.bpperpx
+			}
 			v.cliprect.attr('width', v.width+1 )
 		} else {
 			// something else
@@ -151,47 +156,203 @@ init_dom_tk ( tk ) {
 		})
 
 	tk.views = {}
-	for( const v of this.views ) {
+	for( const view of this.views ) {
 		const tv = {
-			g: v.gscroll.append('g'), // y shift
+			g: view.gscroll.append('g'), // y shift
 		}
-		tk.views[ v.id ] = tv
+		tk.views[ view.id ] = tv
 	}
 }
 
 
-pxoff2viewregion ( v, px ) {
-	/*
-	relative to the start of a view
-	from px offset to the region & coord in this view
+
+
+
+view_updaterulerscale ( view ) {
+	/* update ruler scale 
+	call after updating range
 	*/
-	px -= v.x
-	if( px > 0 ) {
-		// px after v start
-		for(let i=v.startidx; i<v.regions.length; i++) {
-			const r = v.regions[ i ]
-			if( r.width >= px ) {
-				// in this region
-				const sf = (r.stop - r.start) / r.width
-				if( v.reverse ) {
-					return [ i, r.stop - Math.floor( sf * px ) ]
-				}
-				return [ i, r.start + Math.ceil( sf * px ) ]
-			}
-			// not in this region
-			px -= v.regionspace + r.width
-		}
-		// hit pos has not been found
-		const i = v.regions.length-1
-		return [ i, v.reverse ? v.regions[i].bstart : v.regions[i].bstop ]
+	if(!view.regions) return
+
+	const domains = []
+	const ranges = []
+
+	let x = 0
+
+	for(let i=view.startidx; i<=view.stopidx; i++) {
+		const r = view.regions[ i ]
+		domains.push( view.reverse ? r.stop : r.start )
+		domains.push( view.reverse ? r.start : r.stop )
+
+		ranges.push( x )
+		x += (r.stop - r.start)/ view.bpperpx
+		ranges.push( x )
+		x += view.regionspace
 	}
 
-	// px before v start
-	px *= -1
-	for(let i=v.startidx; i>=0; i--) {
-		const r = v.regions[ i ]
-	}
+	view.rulerscale.domain( domains ).range( ranges )
 }
+
+
+
+
+pannedby ( view, xoff ) {
+	if( xoff == 0 ) return
+
+	let nope = false
+	if(xoff < 0) {
+		// test right
+		if( view.stopidx == view.regions.length-1 ) {
+			const r = view.regions[ view.stopidx ]
+			if( view.reverse ) {
+				if( r.start <= r.bstart ) nope =true
+			} else {
+				if( r.stop >= r.bstop ) nope=true
+			}
+		}
+	} else {
+		// test left
+		if( view.startidx == 0 ) {
+			const r = view.regions[ 0 ]
+			if( view.reverse ) {
+				if( r.stop >= r.bstop ) nope=true
+			} else {
+				if( r.start <= r.bstart ) nope=true
+			}
+		}
+	}
+	if(nope) {
+		view.gscroll.transition().attr('transform','translate(0,0)')
+		return
+	}
+
+	this.busy = true
+
+	// before track actually udpates, keep shifted
+	for(const tk of this.tklst) {
+		const tv = tk.views[ view.id ]
+		if(!tv) continue
+		tv.g.attr( 'transform', 'translate('+xoff+',0)' )
+	}
+
+	this.zoom2px( view, -xoff, view.width-xoff )
+}
+
+
+
+async zoom2px ( view, px1, px2 ) {
+	/*
+	for pan and zoom
+	*/
+	if(!view.regions) return
+	const pxstart = Math.min( px1, px2 )
+	const pxstop  = Math.max( px1, px2 )
+	// update viewport
+	const [ ridx1, pos1 ] = this.pxoff2region( view, pxstart )
+	const [ ridx2, pos2 ] = this.pxoff2region( view, pxstop  )
+
+	view.startidx = ridx1
+	view.stopidx  = ridx2
+
+	let totalbpinviewport = 0
+
+	if( ridx1 == ridx2 ) {
+
+		const r = view.regions[ ridx1 ]
+		r.start = pos1
+		r.stop  = pos2
+		totalbpinviewport = pos2 - pos1
+
+	} else {
+
+		const r1 = view.regions[ ridx1 ]
+		const r2 = view.regions[ ridx2 ]
+		/*
+		     -----------
+		>>>>>|>>>  >>>>|>>>>>
+		<<<<<|<<<  <<<<|<<<<<
+		     -----------
+		*/
+		if( view.reverse ) {
+			r1.start = r1.bstart
+			r1.stop = pos1
+			r2.start = pos2
+			r2.stop = r2.bstop
+		} else {
+			r1.start = pos1
+			r1.stop = r1.bstop
+			r2.start = r2.bstart
+			r2.stop = pos2
+		}
+
+		totalbpinviewport = r1.stop-r1.start + r2.stop-r2.start
+		for(let i=ridx1+1; i<ridx2; i++) {
+			const r = view.regions[ i ]
+			totalbpinviewport += r.bstop - r.bstart
+		}
+	}
+
+	// view px width stays same despite coord change
+	view.bpperpx = totalbpinviewport / ( view.width - (ridx2-ridx1) * view.regionspace )
+
+	this.view_updaterulerscale( view )
+
+	for(const tk of this.tklst) {
+		await tk.update()
+	}
+	this.busy = false
+}
+
+
+pxoff2region ( view, px ) {
+	if(!view.regions) return
+	const coord = view.rulerscale.invert( px )
+	let regionidx
+	if(px > 0) {
+		// to right
+		for(regionidx = view.startidx; regionidx<view.regions.length; regionidx++) {
+			const r = view.regions[ regionidx ]
+			let remainbp // remaining bp from this region
+			if( regionidx == view.startidx ) {
+				if( view.reverse ) {
+					remainbp = r.stop - r.bstart
+				} else {
+					remainbp = r.bstop - r.start
+				}
+			} else {
+				remainbp = r.bstop - r.bstart
+			}
+			const remainpx = remainbp / view.bpperpx
+			if( remainpx >= px ) {
+				break
+			}
+			px -= remainpx + view.regionspace
+		}
+	} else {
+		// to left
+		px *= -1
+		for(regionidx = view.startidx; regionidx >=0; regionidx--) {
+			const r = view.regions[ regionidx ]
+			let remainbp
+			if( regionidx == view.startidx ) {
+				if( view.reverse ) {
+					remainbp = r.bstop - r.stop
+				} else {
+					remainbp = r.start - r.bstart
+				}
+			} else {
+				remainbp = r.bstop - r.bstart
+			}
+			const remainpx = remainbp / view.bpperpx
+			if( remainpx >= px ) {
+				break
+			}
+			px -= remainpx + view.regionspace
+		}
+	}
+	return [ regionidx, coord ]
+}
+
 
 
 
@@ -331,13 +492,34 @@ function validate_parameter ( arg, block ) {
 			rightpad: 10,
 		})
 	}
+
+	for(const v of block.views) {
+		if( v.regions ) {
+			for(const r of v.regions) {
+				if(!Number.isFinite(r.bstart)) throw 'region.bstart missing'
+				if(!Number.isFinite(r.bstop)) throw 'region.bstop missing'
+				if(!Number.isFinite(r.start)) throw 'region.start missing'
+				if(!Number.isFinite(r.stop)) throw 'region.stop missing'
+			}
+		}
+	}
 }
 
 
 
-function set_pxwidth_to_regions ( b ) {
+function init_regionpxwidth_viewresolution( b ) {
 	/*
 	initialize px width for regions
+	only to calculate resolution of view
+
+	should not use region.width; use view bpperpx
+	
+	calculate region width:
+	if region overlaps with viewport: (stop-start)/v.bpperpx
+	if region is outside viewport: (bstop-bstart)/v.bpperpx
+
+	initialize viewport of each view,
+	to show all regions by default, unless to be customized
 	*/
 	const uncovered_regions = []
 	let covered_bpsum   = 0,
@@ -346,6 +528,7 @@ function set_pxwidth_to_regions ( b ) {
 	for(const view of b.views) {
 		if(!view.regions) continue
 		for(const r of view.regions) {
+
 			if(r.width) {
 				// width set
 				covered_pxsum += r.width
@@ -357,37 +540,57 @@ function set_pxwidth_to_regions ( b ) {
 			}
 		}
 	}
-	if(uncovered_bpsum==0) return
-	// there are regions without width
+	if( uncovered_bpsum > 0 ) {
+		// there are regions without width
 
-	let pxperbp
+		let pxperbp
 
-	if(covered_bpsum) {
-		// there are regions already have width set
-		// not working
-	} else {
-		// ideal width
-		const minwidth = 800
-		const w = b.holder.node().getBoundingClientRect().width
-		const idealwidth = Math.ceil( Math.max(w*.63,minwidth) )
-		pxperbp = idealwidth / uncovered_bpsum
+		if(covered_bpsum) {
+			// there are regions already have width set
+			// not working
+		} else {
+			// ideal width
+			const minwidth = 800
+			const w = b.holder.node().getBoundingClientRect().width
+			const idealwidth = Math.ceil( Math.max(w*.63,minwidth) )
+			pxperbp = idealwidth / uncovered_bpsum
+		}
+
+		for(const r of uncovered_regions) {
+			r.width = Math.ceil( pxperbp * (r.stop-r.start) )
+		}
 	}
 
-	for(const r of uncovered_regions) {
-		r.width = Math.ceil( pxperbp * (r.stop-r.start) )
-	}
-}
 
+	/*
+	upon init, show all regions in each view
+	*/
 
+	for(const view of b.views) {
+		if(view.regions) {
+			view.startidx = 0
+			view.stopidx = view.regions.length-1
 
-function init_view_boundary ( b ) {
-	for(const v of b.views) {
-		if(v.regions) {
-			v.startidx = 0
-			v.stopidx = v.regions.length-1
+			// set resolution for this region
+			let sumw = 0,
+				sumbp = 0
+			for(const r of view.regions) {
+				sumw += r.width
+				sumbp += r.stop-r.start
+				delete r.width
+			}
+			view.bpperpx = sumbp / sumw
+
+			view.rulerscale = scaleLinear() // init blank scale
+
+			b.view_updaterulerscale( view ) // update scale
 		}
 	}
 }
+
+
+
+
 
 
 
@@ -417,87 +620,63 @@ function init_dom_for_block ( arg, b ) {
 	// render in layer #0
 
 	b.svg.gleft = b.svg.layer_0.append('g')
-	//	.attr('transform','translate('+b.leftcolumnwidth+',0)')
 
 	b.svg.gmiddle = b.svg.layer_0.append('g')
-	//	.attr('transform','translate('+(b.leftcolumnwidth+b.leftpad)+',0)')
 
 	for(const v of b.views) {
 		init_dom_view( v, b )
 	}
 
 	b.svg.gright = b.svg.layer_0.append('g')
-	//	.attr('transform','translate('+(b.width-b.rightpad)+',0)')
 }
 
 
 
-function init_dom_view ( v, b ) {
+function init_dom_view ( view, block ) {
 	/* call when adding a new view
 	not include creating components for each track
 	*/
 
+	view.id = Math.random().toString()
+	view.g = block.svg.gmiddle.append('g')
 
-	v.id = Math.random().toString()
-	v.g = b.svg.gmiddle.append('g')
-
-	const clipid = v.id+'clip'
-	const clippath = v.g.append('clipPath')
+	const clipid = view.id+'clip'
+	const clippath = view.g.append('clipPath')
 		.attr('id',clipid)
-	v.cliprect = clippath.append('rect')
 
-	v.clipframe = v.g.append('g')
+	view.cliprect = clippath.append('rect')
+
+	view.clipframe = view.g.append('g')
 		.attr('clip-path','url(#'+clipid+')')
 
 	// panning
-	v.gscroll = v.clipframe.append('g')
+	view.gscroll = view.clipframe.append('g')
 	.on('mousedown', ()=>{
 
-		if( b.busy )  return
+		if( block.busy )  return
 
-		b.busy = true
+		//if(d3event.which==3) return // right
 
 		d3event.preventDefault()
-		const body = d3select(document.body)
-		const x0 = b.rotated ? d3event.clientY : d3event.clientX
+		const body = d3select( document.body )
+		const x0 = block.rotated ? d3event.clientY : d3event.clientX
 
 		body.on('mousemove', ()=>{
-			const xoff = ( b.rotated ? d3event.clientY : d3event.clientX ) - x0
-			v.gscroll.attr( 'transform', 'translate('+xoff+',0)' )
+			const xoff = ( block.rotated ? d3event.clientY : d3event.clientX ) - x0
+			view.gscroll.attr( 'transform', 'translate('+xoff+',0)' )
 		})
 
 		body.on('mouseup', ()=>{
 			body.on('mousemove', null)
 				.on('mouseup', null)
-			v.gscroll.attr( 'transform', 'translate(0,0)' )
+			view.gscroll.attr( 'transform', 'translate(0,0)' )
 
 			// panned dist
-			const xoff = ( b.rotated ? d3event.clientY : d3event.clientX ) - x0
+			const xoff = ( block.rotated ? d3event.clientY : d3event.clientX ) - x0
 
-			for(const tk of b.tklst) {
-				const tv = tk.views[ v.id ]
-				if(!tv) continue
-				//  keep shifted until track updates
-				tv.g.attr( 'transform', 'translate('+xoff+',0)' )
-				tk.update()
-			}
+			block.pannedby( view, xoff )
 		})
 	})
-
-	// set scale, dependent on view type
-
-	v.rulerscale = scaleLinear() // assist ruler
-	{
-		// single-region genomic view
-		const r = v.regions[ 0 ]
-		if( v.reverse ) {
-			v.rulerscale.domain([ r.stop, r.start ])
-		} else {
-			v.rulerscale.domain([ r.start, r.stop ])
-		}
-		v.rulerscale.range([ 0, r.width ])
-	}
-	// TODO gm view
 }
 
 
@@ -517,7 +696,7 @@ class TKruler {
 	constructor ( b ) {
 
 		this.ticksize = 4
-		this.fontsize = 14
+		this.fontsize = 15
 		this.tickpad = 3
 		this.height = this.fontsize + this.tickpad + this.ticksize
 
@@ -529,11 +708,11 @@ class TKruler {
 			.attr('font-weight','normal')
 
 		// initialize rulers
-		for( const v of b.views ) {
-			const tv = this.views[ v.id ]
+		for( const view of b.views ) {
+			const tv = this.views[ view.id ]
 			if(!tv) continue
 			// always a single axis across all regions of this view
-			tv.axisfunc = axisTop( v.rulerscale )
+			tv.axisfunc = axisTop( view.rulerscale )
 				.tickSize( this.ticksize )
 				.tickPadding( this.tickpad )
 
@@ -549,10 +728,13 @@ class TKruler {
 	}
 
 	update ( ) {
-		for(const v of this.block.views) {
-			const tv = this.views[ v.id ]
+		for(const view of this.block.views) {
+			const tv = this.views[ view.id ]
 			if( tv ) {
 				tv.gaxis.call( tv.axisfunc )
+				tv.gaxis.selectAll('text')
+					.attr('font-family',client.font)
+					.attr('font-size', this.fontsize)
 				tv.g.attr('transform','translate(0,0)')
 			}
 		}
