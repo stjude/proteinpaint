@@ -515,9 +515,6 @@ function render_singlesample_sv( svlst, tk, block ) {
 
 	if(svlst.length==0) return 0
 
-
-
-
 	let sf_discradius
 	{
 		let maxcount=1
@@ -730,6 +727,14 @@ function click_sv_single(sv, tk, block) {
 		block.error('Invalid chr name: '+otherchr)
 		return
 	}
+
+	// see if this chr already exists...
+	for(const p of block.subpanels) {
+		if(p.chr == otherchr) {
+			return
+		}
+	}
+
 	const span=10000
 	const p={
 		chr:chr.name,
