@@ -6,7 +6,6 @@ import {axisTop, axisLeft} from 'd3-axis'
 import * as coord from './coord'
 import * as common from './common'
 import * as client from './client'
-import {TKruler} from './block.tk.ruler'
 import {validate_parameter_init} from './block.init'
 
 
@@ -17,8 +16,8 @@ import {validate_parameter_init} from './block.init'
 
 export class Block {
 
-constructor ( arg ) {
 
+async init ( arg ) {
 	try {
 		validate_parameter_init( arg, this )
 	} catch(e) {
@@ -31,40 +30,42 @@ constructor ( arg ) {
 		return
 	}
 
-	/* now has:
-	.genome
-	.views[]
-	.tklst[]
-	*/
-
-
-	this.settle_width()
-
-	{
-		// init ruler
-		const tk = new TKruler( this )
-		this.tklst.push( tk )
-	}
+	await addtk_ruler( this )
 
 	// init other tracks
 
-	this.settle_height()
+	this.setwidth_views()
 
-// END of constructor
+	this.update_tracks()
+}
+
+static async create ( arg ) {
+	const block = new Block()
+	await block.init( arg )
+	return block
 }
 
 
 
-//////////// methods
 
-
-settle_width () {
+update_tracks ( lst ) {
 	/*
-	call after changing width of any column
-	update:
-		view width and clip box
-		block width
-		x position for each column accordingly
+	given list or all
+	*/
+
+	const dolst = lst || this.tklst
+	for(const tk of dolst) {
+		tk.update()
+	}
+	this.settle_height()
+	this.setwidth_svg()
+}
+
+
+setwidth_views () {
+	/*
+	call after changing width of anything in the middle
+	do not shift any dom
 	*/
 
 	let x = 0
@@ -87,9 +88,21 @@ settle_width () {
 		}
 		x += v.width + v.rightpad
 	}
+}
+
+
+
+
+setwidth_svg () {
+	// only call after updating tracks
+
+	this.leftcolumnwidth = 100
+	for(const tk of this.tklst) {
+		this.leftcolumnwidth = Math.max( this.leftcolumnwidth, tk.left_width )
+	}
 
 	this.width = this.leftcolumnwidth + this.leftpad
-		+ x
+		+ this.views.reduce( (i,j) => i+j.width+j.rightpad, 0 )
 		- this.views[this.views.length-1].rightpad
 		+ this.rightpad + this.rightcolumnwidth
 
@@ -389,4 +402,15 @@ pxoff2region ( view, px ) {
 
 
 // END of block
+}
+
+
+
+
+function addtk_ruler ( block ) {
+	return import('./block.tk.ruler')
+	.then(_=>{
+		const tk = new _.TKruler( block)
+		block.tklst.push(tk)
+	})
 }

@@ -26,8 +26,6 @@ export class TKruler {
 		for( const view of block.views ) {
 			this.fill_view_init( view )
 		}
-
-		this.update()
 	}
 
 
@@ -85,7 +83,7 @@ export class TKruler {
 	}
 
 
-	async update ( ) {
+	update ( ) {
 
 		const row1height = this.fontsize + this.tickpad + this.ticksize
 
