@@ -1188,6 +1188,10 @@ export function click_multi_singleitem( p ) {
 	const buttonrow = pane.body.append('div')
 		.style('margin','10px')
 
+
+	may_show_svgraph( p, buttonrow, pane.body )
+
+
 	// click focus button to show block in holder
 	{
 		let blocknotshown = true
@@ -1971,4 +1975,91 @@ export function may_add_sampleannotation(samplename, tk, lst) {
 
 
 
+function may_show_svgraph ( p, buttonrow, holder0 ) {
+	if(!p.item) return
+	if(p.item.dt != common.dtsv && p.item.dt != common.dtfusionrna) return
 
+	const holder = holder0.append('div')
+		.style('margin','10px')
+	make_svgraph( p, holder )
+
+	buttonrow.append('div')
+		.style('display','inline-block')
+		.attr('class', 'sja_menuoption')
+		.text('SVGraph')
+		.on('click',()=>{
+			if(holder.style('display')=='none') {
+				client.appear(holder)
+			} else {
+				client.disappear(holder)
+			}
+		})
+}
+
+
+async function make_svgraph( p, holder ) {
+	const svpair = {
+		a: {
+			chr: p.item.chrA,
+			position: p.item.posA,
+			strand: p.item.strandA
+		},
+		b: {
+			chr: p.item.chrB,
+			position: p.item.posB,
+			strand: p.item.strandB
+		}
+	}
+
+	const wait = holder.append('div')
+
+	try {
+
+		// may use isoform supplied along with the data!!
+
+		{
+			wait.text('Loading gene at '+svpair.a.chr+':'+svpair.a.position+' ...')
+			const lst = await getisoform( p, svpair.a.chr, svpair.a.position )
+			const useone = lst.find( i=> i.isdefault ) || lst[0]
+			if(useone) {
+				svpair.a.name = useone.name
+				svpair.a.gm = { isoform: useone.isoform }
+			}
+		}
+		{
+			wait.text('Loading gene at '+svpair.b.chr+':'+svpair.b.position+' ...')
+			const lst = await getisoform( p, svpair.b.chr, svpair.b.position )
+			const useone = lst.find( i=> i.isdefault ) || lst[0]
+			if(useone) {
+				svpair.b.name = useone.name
+				svpair.b.gm = { isoform: useone.isoform }
+			}
+		}
+
+		wait.remove()
+
+		const svarg={
+			jwt: p.block.jwt,
+			hostURL: p.block.hostURL,
+			pairlst: [ svpair ],
+			genome: p.block.genome,
+			holder:holder
+		}
+		import('./svgraph').then(_=>{
+			_.default(svarg)
+		})
+
+
+	} catch(e) {
+		if(e.stack) console.log(e.stack)
+		wait.text('Error: '+(e.message||e))
+	}
+}
+
+function getisoform ( p, chr, pos ) {
+	return client.dofetch('isoformbycoord',{ genome: p.block.genome.name, chr: chr, pos: pos })
+	.then(data=>{
+		if(data.error) throw data.error
+		return data.lst
+	})
+}

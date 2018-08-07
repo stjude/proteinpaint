@@ -172,6 +172,7 @@ app.post('/hicdata',handle_hicdata)
 app.post('/checkrank',handle_checkrank)
 app.post('/samplematrix', handle_samplematrix)
 app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
+app.post('/isoformbycoord', handle_isoformbycoord)
 
 
 // obsolete
@@ -7388,6 +7389,60 @@ function handle_mdssamplescatterplot (req,res) {
 	})
 }
 
+
+
+
+
+async function handle_isoformbycoord (req, res) {
+	if(reqbodyisinvalidjson(req,res)) return
+	try {
+
+		const genome = genomes[ req.query.genome ]
+		if(!genome) throw 'invalid genome'
+		if(!req.query.chr) throw 'chr missing'
+		if(!Number.isInteger(req.query.pos)) throw 'pos must be positive integer'
+
+		const isoforms = await isoformbycoord_tabix( genome, req.query.chr, req.query.pos )
+		for(const i of isoforms) {
+			const tmp = await isoformbycoord_db( genome, i.isoform )
+			i.name = tmp.name
+			i.isdefault = tmp.isdefault
+		}
+		res.send({lst: isoforms})
+
+	} catch(e) {
+		if(e.stack) console.log(e.stack)
+		res.send({error: (e.message || e)})
+	}
+}
+
+function isoformbycoord_tabix ( genome, chr, pos ) {
+	return new Promise((resolve,reject)=>{
+		const genetk = genome.tracks.find( i=> i.__isgene )
+		if(!genetk) reject('no gene track')
+		const ps = spawn('tabix',[path.join(serverconfig.tpmasterdir,genetk.file), chr+':'+pos+'-'+pos])
+		const out=[], out2=[]
+		ps.stdout.on('data',d=> out.push(d))
+		ps.stderr.on('data',d=> out2.push(d))
+		ps.on('close',()=>{
+			const err = out2.join('')
+			if( err && !tabixnoterror(err) ) reject(err)
+			const lst = []
+			for(const line of out.join('').trim().split('\n')) {
+				const j = JSON.parse(line.split('\t')[3])
+				if(j.isoform) lst.push({isoform: j.isoform})
+			}
+			resolve(lst)
+		})
+	})
+}
+
+function isoformbycoord_db ( genome, isoform ) {
+	return genome.genedb.db.all('select name, isdefault from '+genome.genedb.genetable+' where isoform="'+isoform+'"')
+	.then(rows=>{
+		return rows[0]
+	})
+}
 
 
 
