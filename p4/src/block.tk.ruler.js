@@ -1,7 +1,4 @@
-//import {scaleLinear} from 'd3-scale'
-//import {select as d3select,selectAll as d3selectAll,event as d3event,mouse as d3mouse} from 'd3-selection'
-//import {transition} from 'd3-transition'
-//import {format as d3format} from 'd3-format'
+import {event as d3event, mouse as d3mouse} from 'd3-selection'
 import {axisTop} from 'd3-axis'
 import {basecolor, basecompliment} from './common'
 import * as client from './client'
@@ -51,6 +48,40 @@ export class TKruler {
 		tv.cover = tv.g.append('rect')
 			.attr('fill','white')
 			.attr('fill-opacity',0)
+			.on('mousemove',()=>{
+				this.tip.clear()
+				const p = d3mouse( view.g.node() )
+				const [ ridx, floatcoord ] = this.block.pxoff2region( view, p[0] )
+
+				const coord = Math.ceil(floatcoord)
+
+				let printstr = view.regions[0].chr+':'
+
+				if(view.bpperpx <= 1) {
+					// in bp mode
+					const r = view.regions[ridx]
+					if( view.reverse ) {
+					// TODO
+						
+					} else {
+						const nt = r.seq[ Math.floor(floatcoord) - r.start ]
+						printstr += Math.ceil( floatcoord )
+							+ ', ' + nt
+							+ ' <span style="background:'+(basecolor[nt.toUpperCase()] || basecolorunknown)+'">&nbsp;&nbsp;</span>'
+					}
+				} else {
+					printstr += Math.ceil(floatcoord)
+				}
+
+				this.tip.d
+					.append('div')
+					.html( printstr )
+
+				this.tip.show( d3event.clientX, d3event.clientY )
+			})
+			.on('mouseout',()=>{
+				this.tip.hide()
+			})
 	}
 
 
@@ -58,7 +89,7 @@ export class TKruler {
 
 		const row1height = this.fontsize + this.tickpad + this.ticksize
 
-		this.height = row1height + ( this.block.views.find( i => i.bpperpx <= 1 )  ? this.ntheight : 0 )
+		this.height = row1height + ( this.block.views.find( i => i.bpperpx <= 1 )  ? this.ntheight + 2 : 0 ) // 2 for pad necessary
 
 		for(const view of this.block.views) {
 			const tv = this.views[ view.id ]
@@ -76,18 +107,16 @@ export class TKruler {
 				.attr('transform', 'translate(' + xshift + ',' + row1height +')')
 				.call( tv.axisfunc )
 
-
 			tv.gaxis.selectAll('text')
 				.attr('font-family',client.font)
 				.attr('font-size', this.fontsize)
-
 
 			tv.cover
 				.attr('width', view.width)
 				.attr('height', this.height)
 
 			tv.gnt
-				.attr('transform', 'translate(0,' + row1height +')')
+				.attr('transform', 'translate(0,' + (row1height + 2) +')')  // 2 for pad necessary
 				.selectAll('*').remove()
 
 			if( atbplevel ) {
@@ -131,6 +160,8 @@ export class TKruler {
 			try {
 				const seq = await this.loadnt( r.chr, r.start, r.stop )
 
+				r.seq = seq
+
 				if(_fs>0) {
 					// show nt
 					for(let i=0; i<seq.length; i++) {
@@ -141,7 +172,7 @@ export class TKruler {
 							.attr('font-size', _fs )
 							.attr('dominant-baseline','hanging')
 							.attr('x', basewidth * i + basewidth/2 )
-							.attr('y', 2) // shift down??
+							.attr('y', 1) // shift necessary
 							.attr('text-anchor','middle')
 					}
 				}
