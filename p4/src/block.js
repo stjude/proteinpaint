@@ -6,10 +6,20 @@ import {axisTop, axisLeft} from 'd3-axis'
 import * as coord from './coord'
 import * as common from './common'
 import * as client from './client'
+import {TKruler} from './block.tk.ruler'
 
 
 const ntpxwidth = 20  // max allowed pixel width for a nt
-const tklabelfontsize = 14
+
+
+
+
+
+
+
+
+
+
 
 
 export class Block {
@@ -40,7 +50,11 @@ constructor ( arg ) {
 
 	this.settle_width()
 
-	init_ruler( this )
+	{
+		// init ruler
+		const tk = new TKruler( this )
+		this.tklst.push( tk )
+	}
 
 	// init other tracks
 
@@ -83,6 +97,7 @@ settle_width () {
 		}
 		x += v.width + v.rightpad
 	}
+
 	this.width = this.leftcolumnwidth + this.leftpad
 		+ x
 		- this.views[this.views.length-1].rightpad
@@ -126,6 +141,7 @@ init_dom_tk ( tk ) {
 	*/
 
 	tk.block = this
+	tk.left_width = tk.right_width = 100
 	tk.y = 0 // shift by
 	tk.toppad = 3
 	tk.bottompad = 3
@@ -135,10 +151,10 @@ init_dom_tk ( tk ) {
 		.append('text')
 		.attr('fill','black')
 		.attr('font-family',client.font)
-		.attr('font-size', tklabelfontsize)
+		.attr('font-size', this.tklabelfontsize)
 		.attr('font-weight','bold')
 		.attr('text-anchor','end')
-		.attr('y', tklabelfontsize)
+		.attr('y', this.tklabelfontsize)
 		.on('mousedown',()=>{
 			// TODO
 		})
@@ -149,19 +165,28 @@ init_dom_tk ( tk ) {
 		.text('CONFIG')
 		.attr('fill','#ccc')
 		.attr('font-family',client.font)
-		.attr('font-size', tklabelfontsize)
-		.attr('y', tklabelfontsize)
+		.attr('font-size', this.tklabelfontsize)
+		.attr('y', this.tklabelfontsize)
 		.on('click',()=>{
 			// TODO
 		})
 
 	tk.views = {}
 	for( const view of this.views ) {
-		const tv = {
-			g: view.gscroll.append('g'), // y shift
-		}
-		tk.views[ view.id ] = tv
+		this.add_view_2tk( tk, view )
 	}
+}
+
+
+
+add_view_2tk ( tk, view ) {
+	/* addings things about a view to a tk
+	do not update
+	*/
+	const tv = {
+		g: view.gscroll.append('g'), // y shift
+	}
+	tk.views[ view.id ] = tv
 }
 
 
@@ -197,6 +222,9 @@ view_updaterulerscale ( view ) {
 
 
 pannedby ( view, xoff ) {
+	/*
+	call after panning by a distance
+	*/
 	if( xoff == 0 ) return
 
 	let nope = false
@@ -232,7 +260,7 @@ pannedby ( view, xoff ) {
 	for(const tk of this.tklst) {
 		const tv = tk.views[ view.id ]
 		if(!tv) continue
-		tv.g.attr( 'transform', 'translate('+xoff+',0)' )
+		tv.g.attr( 'transform', 'translate(' + xoff + ',' + tk.y + ')' )
 	}
 
 	this.zoom2px( view, -xoff, view.width-xoff )
@@ -248,8 +276,17 @@ async zoom2px ( view, px1, px2 ) {
 	const pxstart = Math.min( px1, px2 )
 	const pxstop  = Math.max( px1, px2 )
 	// update viewport
-	const [ ridx1, pos1 ] = this.pxoff2region( view, pxstart )
-	const [ ridx2, pos2 ] = this.pxoff2region( view, pxstop  )
+	const [ ridx1, float1 ] = this.pxoff2region( view, pxstart )
+	const [ ridx2, float2 ] = this.pxoff2region( view, pxstop  )
+
+	let pos1, pos2 // integer
+	if( view.reverse ) {
+		pos1 = Math.ceil(float1)
+		pos2 = Math.floor(float2)
+	} else {
+		pos1 = Math.floor(float1)
+		pos2 = Math.ceil(float2)
+	}
 
 	view.startidx = ridx1
 	view.stopidx  = ridx2
@@ -298,10 +335,12 @@ async zoom2px ( view, px1, px2 ) {
 	this.view_updaterulerscale( view )
 
 	for(const tk of this.tklst) {
-		await tk.update()
+		tk.update()
 	}
 	this.busy = false
 }
+
+
 
 
 pxoff2region ( view, px ) {
@@ -372,7 +411,7 @@ pxoff2region ( view, px ) {
 
 
 
-////////////////////////// INIT helpers
+////////////////////////// INIT 
 
 
 function validate_parameter ( arg, block ) {
@@ -388,6 +427,7 @@ function validate_parameter ( arg, block ) {
 	block.rightpad = 10
 	block.leftcolumnwidth = 100
 	block.rightcolumnwidth = 100
+	block.tklabelfontsize = 14
 
 	////////////////////// tracks
 
@@ -425,6 +465,7 @@ function validate_parameter ( arg, block ) {
 		block.holder.text('show protein view for '+arg.gmlst[0].name)
 
 	} else if( arg.range_0based ) {
+
 		// single region { chr, start, stop }
 		const r = arg.range_0based
 		const e =  coord.invalidcoord(
@@ -434,9 +475,10 @@ function validate_parameter ( arg, block ) {
 			r.stop
 		)
 		if(e) throw '.range_0based: '+e
-		block.holder.text('show '+r.chr+':'+r.start+'-'+r.stop)
+		init_view_bysingleregion( r, block, arg )
 
 	} else if( arg.range_1based ) {
+
 		// single region { chr, start, stop } 1-based
 		const r = arg.range_1based
 		r.start -= 1
@@ -448,49 +490,33 @@ function validate_parameter ( arg, block ) {
 			r.stop
 		)
 		if(e) throw '.range_1based: '+e
-		block.holder.text('show '+r.chr+':'+r.start+'-'+r.stop)
+		init_view_bysingleregion( r, block, arg )
 
 	} else if( arg.position_0based ) {
+
 		// single region, "chr:start-stop"
 		const r = coord.string2pos( arg.position_0based, block.genome, true )
 		if(r) {
-			// 
+			init_view_bysingleregion( r, block, arg )
 		} else {
 			throw 'invalid region: '+arg.position_0based
 		}
-		block.holder.text('show '+r.chr+':'+r.start+'-'+r.stop)
 
 	} else if( arg.position_1based ) {
+
 		// single region, "chr:start-stop"
 		const r= coord.string2pos( arg.position_1based, block.genome )
 		if(r) {
-			// 
+			init_view_bysingleregion( r, block, arg )
 		} else {
 			throw 'invalid region: '+arg.position_1based
 		}
 		block.holder.text('show '+r.chr+':'+r.start+'-'+r.stop)
 
 	} else {
+
 		// no position given; use genome default position
-		const r = block.genome.defaultcoord
-		const chr = block.genome.chrlookup[ r.chr.toUpperCase() ]
-		if(!chr) throw 'invalid chr from defaultcoord'
-		const region = { 
-			chr: r.chr,
-			bstart: 0,
-			bstop: chr.len,
-			start: r.start,
-			stop: r.stop,
-		}
-		if( arg.width ) {
-			if( !common.isPositiveInteger( arg.width)) throw 'invalid width'
-			region.width = arg.width
-		}
-		block.views.push({
-			regions: [ region ],
-			regionspace: 10,
-			rightpad: 10,
-		})
+		init_view_bysingleregion( block.genome.defaultcoord, block, arg )
 	}
 
 	for(const v of block.views) {
@@ -503,6 +529,29 @@ function validate_parameter ( arg, block ) {
 			}
 		}
 	}
+}
+
+
+
+function init_view_bysingleregion ( r, block, arg ) {
+	const chr = block.genome.chrlookup[ r.chr.toUpperCase() ]
+	if(!chr) throw 'invalid chr: '+r.chr
+	const region = {
+		chr: r.chr,
+		bstart: 0,
+		bstop: chr.len,
+		start: r.start,
+		stop: r.stop,
+	}
+	if( arg.width ) {
+		if( !common.isPositiveInteger( arg.width)) throw 'width is not positive integer'
+		region.width = arg.width
+	}
+	block.views.push({
+		regions: [ region ],
+		regionspace: 10,
+		rightpad: 10,
+	})
 }
 
 
@@ -528,7 +577,6 @@ function init_regionpxwidth_viewresolution( b ) {
 	for(const view of b.views) {
 		if(!view.regions) continue
 		for(const r of view.regions) {
-
 			if(r.width) {
 				// width set
 				covered_pxsum += r.width
@@ -655,8 +703,6 @@ function init_dom_view ( view, block ) {
 
 		if( block.busy )  return
 
-		//if(d3event.which==3) return // right
-
 		d3event.preventDefault()
 		const body = d3select( document.body )
 		const x0 = block.rotated ? d3event.clientY : d3event.clientX
@@ -679,64 +725,4 @@ function init_dom_view ( view, block ) {
 	})
 }
 
-
-
-
-function init_ruler ( b ) {
-	// call at init; ruler is initiated only once
-	const tk = new TKruler( b )
-	b.tklst.push( tk )
-}
-
-
-
-
-
-class TKruler {
-	constructor ( b ) {
-
-		this.ticksize = 4
-		this.fontsize = 15
-		this.tickpad = 3
-		this.height = this.fontsize + this.tickpad + this.ticksize
-
-		b.init_dom_tk( this )
-
-		this.tklabel
-			.text(b.genome.name)
-			.attr('y', this.height)
-			.attr('font-weight','normal')
-
-		// initialize rulers
-		for( const view of b.views ) {
-			const tv = this.views[ view.id ]
-			if(!tv) continue
-			// always a single axis across all regions of this view
-			tv.axisfunc = axisTop( view.rulerscale )
-				.tickSize( this.ticksize )
-				.tickPadding( this.tickpad )
-
-			tv.gaxis = tv.g.append('g')
-				.attr('transform', 'translate(0,'+(this.height)+')')
-				.call( tv.axisfunc )
-
-			tv.gaxis.selectAll('text')
-				.attr('font-family',client.font)
-				.attr('font-size', this.fontsize)
-		}
-		this.update()
-	}
-
-	update ( ) {
-		for(const view of this.block.views) {
-			const tv = this.views[ view.id ]
-			if( tv ) {
-				tv.gaxis.call( tv.axisfunc )
-				tv.gaxis.selectAll('text')
-					.attr('font-family',client.font)
-					.attr('font-size', this.fontsize)
-				tv.g.attr('transform','translate(0,0)')
-			}
-		}
-	}
-}
+////////////////////////// end of INIT 

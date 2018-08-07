@@ -115,15 +115,10 @@ function embed_block( arg ) {
 	const genome = arg.genomes[ arg.genome ]
 	if(!genome) throw 'invalid value for .genome: '+arg.genome
 
-	const p = {
-		debugmode: arg.debugmode,
-		genome: genome,
-		holder: arg.showholder,
-		range_0based: arg.range_0based,
-		range_1based: arg.range_1based,
-		position_0based: arg.position_0based,
-		position_1based: arg.position_1based,
-		tklst: arg.tklst,
-	}
+	const p = {}
+	for(const k in arg) p[k] = arg[k]
+	p.genome = genome
+	p.holder = arg.showholder
+
 	client.launch_block( p )
 }

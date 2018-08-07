@@ -1,7 +1,7 @@
-
 const fs = require('fs'),
 	url = require('url')
 	path = require('path'),
+	spawn = require('child_process').spawn,
 	readline = require('readline'),
 	express = require('express'),
 	http = require('http'),
@@ -10,8 +10,9 @@ const fs = require('fs'),
 	bettersqlite = require('better-sqlite3'), // synchronous
 	Canvas = require('canvas'),
 	bodyParser = require('body-parser'),
-	jsonwebtoken = require('jsonwebtoken')
-	//coord = require('./src/coord')
+	jsonwebtoken = require('jsonwebtoken'),
+	coord = require('./src/coord'),
+	common = require('./src/common')
 
 
 
@@ -333,6 +334,7 @@ function server_launch() {
 	app.get('/genomes', handle_genomes)
 	app.post('/genelookup', handle_genelookup)
 	app.post('/snpbyname', handle_snpbyname)
+	app.post('/ntseq', handle_ntseq)
 
 	const port = serverconfig.port || 3000
 	app.listen(port)
@@ -495,6 +497,30 @@ function handle_snpbyname( req, res ) {
 
 
 
+
+async function handle_ntseq( req, res ) {
+	try {
+		const q = JSON.parse(req.body)
+		log(req,q)
+		if(!q.chr) throw 'no chr'
+		if(!common.isPositiveInteger( q.start )) throw 'start is not positive integer'
+		if(!common.isPositiveInteger( q.stop )) throw 'stop is not positive integer'
+		const genome = genomes[q.genome]
+		if(!genome) throw 'invalid genome name'
+		const seq = await get_ntseq( genome, q.chr, q.start, q.stop )
+		res.send({seq: seq})
+
+	} catch(e){
+		if(e.stack) console.error(e.stack)
+		res.send({error: (e.message || e)})
+	}
+}
+
+
+
+
+
+
 ////////////////////////////////////////////////// END of sec
 
 
@@ -504,6 +530,10 @@ function handle_snpbyname( req, res ) {
 
 
 ////////////////////////////////////////////////// helpers
+
+
+
+
 
 function log ( req, q ) {
 	console.log('%s\t%s\t%s\t%s',
@@ -565,6 +595,24 @@ async function whenisserverupdated() {
 	if(e2) return 'error stating proteinpaint.js'
 	const date2 = stat2.mtime
 	return ( date1<date2 ? date1 : date2 ).toDateString()
+}
+
+
+
+function get_ntseq ( genome, chr, start, stop ) {
+	return new Promise( (resolve, reject) => {
+		const out = [],
+			out2 = []
+		const ps = spawn( samtools, [ 'faidx', genome.genomefile, chr+':'+(start+1)+'-'+stop ] )
+		ps.stdout.on('data', d=> out.push(d) )
+		ps.stderr.on('data', d=> out2.push(d) )
+		ps.on('close', ()=>{
+			const err = out2.join('')
+			if(err) reject('error getting sequence: '+err)
+			const lines = out.join('').trim().split('\n')
+			resolve( lines.slice(1).join('') )
+		})
+	})
 }
 
 ///////////////////////////////////////////////// END of helpers
