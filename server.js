@@ -7427,10 +7427,15 @@ function isoformbycoord_tabix ( genome, chr, pos ) {
 		ps.on('close',()=>{
 			const err = out2.join('')
 			if( err && !tabixnoterror(err) ) reject(err)
+			const str = out.join('').trim()
+			if(!str) resolve([])
 			const lst = []
-			for(const line of out.join('').trim().split('\n')) {
-				const j = JSON.parse(line.split('\t')[3])
-				if(j.isoform) lst.push({isoform: j.isoform})
+			for(const line of str.split('\n')) {
+				const js = line.split('\t')[3]
+				if(js) {
+					const j = JSON.parse(js)
+					if(j.isoform) lst.push({isoform: j.isoform})
+				}
 			}
 			resolve(lst)
 		})
