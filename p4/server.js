@@ -335,6 +335,7 @@ function server_launch() {
 	app.post('/genelookup', handle_genelookup)
 	app.post('/snpbyname', handle_snpbyname)
 	app.post('/ntseq', handle_ntseq)
+	app.post('/bigwig', handle_bigwig)
 
 	const port = serverconfig.port || 3000
 	app.listen(port)
@@ -498,7 +499,7 @@ function handle_snpbyname( req, res ) {
 
 
 
-async function handle_ntseq( req, res ) {
+async function handle_ntseq ( req, res ) {
 	try {
 		const q = JSON.parse(req.body)
 		log(req,q)
@@ -515,6 +516,38 @@ async function handle_ntseq( req, res ) {
 		res.send({error: (e.message || e)})
 	}
 }
+
+
+
+
+
+async function handle_bigwig ( req, res ) {
+	try {
+		const q = JSON.parse(req.body)
+		log(req,q)
+		//res.send({seq: seq})
+
+	} catch(e){
+		if(e.stack) console.error(e.stack)
+		res.send({error: (e.message || e)})
+	}
+}
+
+
+
+async function handle_template ( req, res ) {
+	try {
+		const q = JSON.parse(req.body)
+		log(req,q)
+		//res.send({seq: seq})
+
+	} catch(e){
+		if(e.stack) console.error(e.stack)
+		res.send({error: (e.message || e)})
+	}
+}
+
+
 
 
 

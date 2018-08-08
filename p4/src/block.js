@@ -33,12 +33,16 @@ async init ( arg ) {
 		return
 	}
 
-	await addtk_ruler( this )
 
-	// init other tracks
-	if( arg.tklst ) {
-		for(const t of arg.tklst) {
-			addtk_bytype( t, this )
+	arg.tklst.unshift({type:common.tkt.ruler})
+
+	for(const t of arg.tklst) {
+		try {
+			await this.addtk_bytype( t )
+		} catch(e) {
+			if(e.stack) console.log(e.stack)
+			client.sayerror( this.holder, 'Error creating '+t.type+' track "'+t.name+'": ' + (e.message||e) )
+			return
 		}
 	}
 
@@ -138,10 +142,24 @@ setwidth_svg () {
 
 
 settle_height () {
-	this.height = 0
-	for(const t of this.tklst) {
-		this.height += t.toppad + t.tkheight + t.bottompad
+	/*
+	call after updating any track
+	*/
+	let yoff = 0
+	for(const tk of this.tklst) {
+		yoff += tk.toppad
+		tk.y = yoff
+		tk.gleft.transition().attr('transform','translate(0,'+yoff+')')
+		tk.gright.transition().attr('transform','translate(0,'+yoff+')')
+		for(const id in tk.views) {
+			const tv = tk.views[id]
+			tv.g.transition().attr('transform','translate(0,'+yoff+')')
+			tv.g_noclip.transition().attr('transform','translate(0,'+yoff+')')
+		}
+		yoff += tk.tkheight + tk.bottompad
 	}
+	this.height = yoff
+
 	// update cliprect height
 	for(const v of this.views) {
 		v.cliprect.attr('height', this.height)
@@ -152,12 +170,22 @@ settle_height () {
 }
 
 
+
+
+
+
+
+
+////////////////////////////////// __tk
+
+
 init_dom_tk ( tk ) {
 	/*
 	call for a newly created tk
 	initialize common things
 	*/
 
+	tk.tkid = Math.random().toString()
 	tk.block = this
 	tk.left_width = tk.right_width = 100
 	tk.y = 0 // shift by
@@ -196,8 +224,60 @@ init_dom_tk ( tk ) {
 	for( const view of this.views ) {
 		this.add_view_2tk( tk, view )
 	}
+
+	// not attached to views
+	tk.gcloak = tk.gleft.append('g')
+	tk.cloakbox = tk.gcloak.append('rect')
+		.attr('fill','white')
+	tk.cloaktext = tk.gcloak.append('text')
+		.text('Loading ...')
+		.attr('fill','black')
+		.attr('fill-opacity',.5)
+		.attr('font-size','1.5em')
+		.attr('font-weight','bold')
+		.attr('font-family',client.font)
+		.attr('text-align','center')
+		.attr('dominant-baseline','central')
+	tk.gerror = tk.gleft.append('g')
+	tk.errortext = tk.gerror.append('text')
+		.attr('fill','black')
+		.attr('font-weight','bold')
+		.attr('font-family',client.font)
+		.attr('font-size', this.tklabelfontsize)
+		.attr('text-align','center')
+		.attr('dominant-baseline','central')
 }
 
+
+tkcloakon ( tk ) {
+	tk.gerror.attr('transform','scale(0)') // clear error
+	tk.gcloak
+		.attr('transform','scale(1)')
+		.attr('fill-opacity',0)
+		.transition()
+		.attr('fill-opacity',.5)
+	const w = this.width - this.leftcolumnwidth - this.leftpad - this.rightpad - this.rightcolumnwidth
+	tk.cloakbox
+		.attr('width', w)
+		.attr('height', tk.tkheight )
+	tk.cloaktext
+		.attr('x', w/2)
+		.attr('y', tk.tkheight/2)
+}
+
+tkcloakoff ( tk ) {
+	tk.gcloak.attr('transform','scale(0)')
+}
+
+tkerror ( tk, m ) {
+	tk.gcloak.attr('transform','scale(0)') // hide cloak
+	tk.gerror.attr('transform','scale(1)')
+	const w = this.width - this.leftcolumnwidth - this.leftpad - this.rightpad - this.rightcolumnwidth
+	tk.errortext
+		.attr('x', w/2)
+		.attr('y', tk.tkheight/2)
+		.text( 'Error: '+m )
+}
 
 
 add_view_2tk ( tk, view ) {
@@ -209,18 +289,69 @@ add_view_2tk ( tk, view ) {
 		g_noclip: view.gscroll_noclip.append('g'), // y shift
 		viewheight: 30
 	}
+
 	tk.views[ view.id ] = tv
 }
 
 
+////////////////////////////////// __tk ends
+
+
+
+
+
+////////////////////////////////// __coord and view range
 
 
 
 view_updaterulerscale ( view ) {
-	/* update ruler scale 
-	call after updating range
+	/*
+	call after updating view port and resolution
+	do:
+		print coord
+		update ruler scale 
+		toggle zoom buttons
 	*/
 	if(!view.regions) return
+
+	if( this.views.find(i=>i.regions).id == view.id ) {
+		// this view is the first in the list
+		if( this.dom.coord && this.dom.coord.input ) {
+			const r1 = view.regions[view.startidx]
+			const r2 = view.regions[view.stopidx]
+			const start = Math.min(r1.start,r1.stop, r2.start,r2.stop)
+			const stop = Math.max(r1.start,r1.stop, r2.start,r2.stop)
+			this.dom.coord.input.property( 'value', r1.chr+':'+start+'-'+stop )
+			this.dom.coord.says.text( common.bplen(stop-start))
+		}
+
+		if(this.dom.zoom) {
+			this.dom.zoom.in2.attr('disabled',null)
+			this.dom.zoom.out2.attr('disabled',null)
+			this.dom.zoom.out10.attr('disabled',null)
+			this.dom.zoom.out50.attr('disabled',null)
+
+			if( 1/view.bpperpx >= this.ntpxwidth ) {
+				this.dom.zoom.in2.attr('disabled',1)
+			} else {
+				if(view.startidx==0 && view.stopidx==view.regions.length-1) {
+					let atmax=false
+					const r1 = view.regions[view.startidx]
+					const r2 = view.regions[view.stopidx]
+					if(view.reverse) {
+						atmax = r1.stop >= r1.bstop && r2.start <= r2.bstart
+					} else {
+						atmax = r1.start <= r1.bstart && r2.stop >= r2.bstop
+					}
+					if(atmax) {
+						this.dom.zoom.out2.attr('disabled',1)
+						this.dom.zoom.out10.attr('disabled',1)
+						this.dom.zoom.out50.attr('disabled',1)
+					}
+				}
+			}
+		}
+	}
 
 	const domains = []
 	const ranges = []
@@ -280,7 +411,8 @@ pannedby ( view, xoff ) {
 		return
 	}
 
-	this.busy = true
+	view.gscroll.attr('transform','translate(0,0)')
+	view.gscroll_noclip.attr('transform','translate(0,0)')
 
 	// before track actually udpates, keep shifted
 	for(const tk of this.tklst) {
@@ -299,6 +431,9 @@ async zoom2px ( view, px1, px2 ) {
 	for pan and zoom
 	*/
 	if(!view.regions) return
+
+	this.busy = true
+
 	const pxstart = Math.min( px1, px2 )
 	const pxstop  = Math.max( px1, px2 )
 	// update viewport
@@ -368,7 +503,7 @@ async zoom2px ( view, px1, px2 ) {
 
 pxoff2region ( view, px ) {
 	if(!view.regions) return
-	const coord = view.rulerscale.invert( px )
+	let coord = view.rulerscale.invert( px )
 	let regionidx
 	if(px > 0) {
 		// to right
@@ -390,6 +525,14 @@ pxoff2region ( view, px ) {
 			}
 			px -= remainpx + view.regionspace
 		}
+
+		if( regionidx >= view.regions.length ) {
+			// out of bound, use rightmost point
+			regionidx = view.regions.length-1
+			const r = view.regions[regionidx]
+			return [ regionidx, view.reverse ? r.bstart : r.bstop ]
+		}
+
 	} else {
 		// to left
 		px *= -1
@@ -411,11 +554,78 @@ pxoff2region ( view, px ) {
 			}
 			px -= remainpx + view.regionspace
 		}
+
+		if(regionidx < 0) {
+			// out of bound, use leftmost
+			const r = view.regions[0]
+			return [0, view.reverse ? r.bstop : r.bstart ]
+		}
 	}
 	return [ regionidx, coord ]
 }
 
 
+
+async zoomin_default ( fold ) {
+	/*
+	default only act on the first view
+	*/
+	await this.zoomin( fold, this.views.find( i=> i.regions) )
+}
+
+
+async zoomout_default ( fold ) {
+	await this.zoomout( fold, this.views.find( i=> i.regions) )
+}
+
+async zoomin ( fold, view ) {
+	if(fold<2) return alert('invalid zoomin fold '+fold)
+	const dist = Math.floor(view.width / (fold*2) )
+	await this.zoom2px( view, dist, view.width-dist )
+}
+
+async zoomout ( fold, view ) {
+	if(fold<2) return alert('invalid zoom out fold '+fold)
+	const dist = Math.floor( (view.width * (fold-1))/2 )
+	await this.zoom2px( view, -dist, view.width+dist )
+}
+
+
+param_viewrange () {
+	const lst = []
+	for(const view of this.views) {
+		if(!view.regions) continue
+		const v2 = {
+			reverse: view.reverse,
+			regions:[],
+			regionspace: view.regionspace,
+		}
+		for(let i=view.startidx; i<=view.stopidx; i++) {
+			const r = view.regions[i]
+			v2.regions.push[ {
+				chr: r.chr,
+				start: r.start,
+				stop: r.stop,
+				width: Math.ceil( (r.stop-r.start) / view.bpperpx )
+			}]
+		}
+		lst.push(v2)
+	}
+	return lst
+}
+
+
+/////////////////////////////////// end of __coord and view range
+
+
+addtk_bytype( t ) {
+	if(t.type == common.tkt.bigwig) {
+		return import('./block.tk.bigwig').then(_=>this.tklst.push( new _.TKbigwig( t, this) ) )
+	}
+	if(t.type == common.tkt.ruler) {
+		return import('./block.tk.ruler').then(_=> this.tklst.push( new _.TKruler( this ) ) )
+	}
+}
 
 
 
@@ -425,10 +635,3 @@ pxoff2region ( view, px ) {
 
 
 
-function addtk_ruler ( block ) {
-	return import('./block.tk.ruler')
-	.then(_=>{
-		const tk = new _.TKruler( block)
-		block.tklst.push(tk)
-	})
-}

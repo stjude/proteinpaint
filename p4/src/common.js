@@ -11,8 +11,10 @@ exports.isPositiveInteger = isPositiveInteger
 
 const tkt = {
 	ruler: 'ruler',
+	bigwig: 'bigwig',
 }
 exports.tkt = tkt
+
 
 
 // codons that are not here are stop codon

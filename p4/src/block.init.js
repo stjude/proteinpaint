@@ -2,6 +2,7 @@ import {scaleLinear} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event,mouse as d3mouse} from 'd3-selection'
 import * as coord from './coord'
 import * as common from './common'
+import * as client from './client'
 
 
 
@@ -22,6 +23,7 @@ export function validate_parameter_init ( arg, block ) {
 	block.leftcolumnwidth = 100
 	block.rightcolumnwidth = 100
 	block.tklabelfontsize = 14
+	block.dom = {}
 
 	////////////////////// tracks
 
@@ -38,7 +40,9 @@ export function validate_parameter_init ( arg, block ) {
 	block.tklst = []
 
 	for(const t of arg.tklst) {
-		if(!t.type) throw '.type missing from a provided track'
+		if(!t.name) throw '.name missing for a track'
+		if(!t.type) throw '.type missing for track '+t.name
+		if(!common.tkt[ t.type ]) throw 'invalid type for track '+t.name+': '+t.type
 		// TODO if track type is valid
 		// validate track by type
 		// tracks stay in arg.tklst
@@ -139,9 +143,9 @@ export function validate_parameter_init ( arg, block ) {
 		}
 	}
 
-	init_regionpxwidth_viewresolution( block )
-
 	init_dom_for_block( arg, block )
+
+	init_regionpxwidth_viewresolution( block )
 }
 
 
@@ -270,15 +274,34 @@ function init_dom_for_block ( arg, b ) {
 	/*
 	init dom for block
 	*/
-	b.dom = {}
 
 	b.dom.row1 = b.holder.append('div')
-	b.dom.coordinput = b.dom.row1.append('input')
+		.style('margin-bottom','5px')
+	b.dom.coord = {}
+	b.dom.coord.input = b.dom.row1.append('input')
 		.attr('type','text')
 		.style('width','200px')
+	b.dom.coord.says = b.dom.row1.append('span')
+		.style('margin','0px 10px')
+		.style('font-size','.8em')
+		.style('font-family',client.font)
+
+	b.dom.zoom = {}
+	b.dom.zoom.in2 = b.dom.row1.append('button')
+		.text('In')
+		.on('click',()=> b.zoomin_default(2) )
+	b.dom.zoom.out2 = b.dom.row1.append('button')
+		.html('Out &times;2')
+		.on('click',()=> b.zoomout_default(2) )
+	b.dom.zoom.out10 = b.dom.row1.append('button')
+		.html('&times;10')
+		.on('click',()=> b.zoomout_default(10) )
+	b.dom.zoom.out50 = b.dom.row1.append('button')
+		.html('&times;50')
+		.on('click',()=> b.zoomout_default(50) )
 
 	b.dom.svgdiv = b.holder.append('div')
-		.style('border','solid 1px #ccc') // remove
+
 	b.svg = {}
 	b.svg.svg = b.dom.svgdiv.append('svg')
 
@@ -345,8 +368,6 @@ function init_dom_view ( view, block ) {
 		body.on('mouseup', ()=>{
 			body.on('mousemove', null)
 				.on('mouseup', null)
-			view.gscroll.attr( 'transform', 'translate(0,0)' )
-			view.gscroll_noclip.attr( 'transform', 'translate(0,0)' )
 
 			// panned dist
 			const xoff = ( block.rotated ? d3event.clientY : d3event.clientX ) - x0

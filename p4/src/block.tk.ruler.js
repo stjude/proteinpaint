@@ -1,5 +1,6 @@
 import {event as d3event, mouse as d3mouse} from 'd3-selection'
 import {axisTop} from 'd3-axis'
+import {format as d3format} from 'd3-format'
 import {basecolor, basecompliment} from './common'
 import * as client from './client'
 
@@ -74,14 +75,14 @@ export class TKruler {
 			}
 
 
-			tv.gaxis
-				.attr('transform', 'translate(' + xshift + ',' + row1height +')')
-				.call( 
-					tv.axisfunc.ticks( this.maxticknumber( view, tv ) )
-					)
-				.selectAll('text')
-				.attr('font-family',client.font)
-				.attr('font-size', this.fontsize)
+			client.neataxis(
+				tv.gaxis
+					.attr('transform', 'translate(' + xshift + ',' + row1height +')')
+					.call( 
+						tv.axisfunc.ticks( this.maxticknumber( view, tv ) )
+					),
+				this.fontsize
+			)
 
 			tv.cover
 				.attr('width', view.width)
@@ -118,16 +119,17 @@ export class TKruler {
 			r2.start,
 			r2.stop
 		)
+		const posstr = d3format(',.2r')(pos)
 		let labelw
 		tv.g.append('text')
-			.text( pos )
+			.text( posstr )
 			.attr('font-size', this.fontsize)
 			.attr('font-family', client.font)
 			.each(function(){
 				labelw = this.getBBox().width
 			})
 			.remove()
-		return Math.floor( view.width / (labelw+50) )
+		return Math.floor( view.width / (labelw+60) )
 	}
 
 

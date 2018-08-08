@@ -1,6 +1,5 @@
 import {scaleLinear} from 'd3-scale'
 import {select as d3select, selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import {rgb as d3rgb} from 'd3-color'
 import {transition} from 'd3-transition'
 
 
@@ -300,4 +299,12 @@ export function sayerror(holder,msg) {
 	div.append('div').html('&#10005;').on('click',()=>{
 		disappear(div,true)
 	})
+}
+
+
+
+export function neataxis ( g, fontsize ) {
+	g.selectAll('text')
+		.attr('font-family', font)
+		.attr('font-size', fontsize)
 }
