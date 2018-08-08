@@ -47,35 +47,7 @@ export class TKruler {
 			.attr('fill','white')
 			.attr('fill-opacity',0)
 			.on('mousemove',()=>{
-				this.tip.clear()
-				const p = d3mouse( view.g.node() )
-				const [ ridx, floatcoord ] = this.block.pxoff2region( view, p[0] )
-
-				const coord = Math.ceil(floatcoord)
-
-				let printstr = view.regions[0].chr+':'
-
-				if(view.bpperpx <= 1) {
-					// in bp mode
-					const r = view.regions[ridx]
-					if( view.reverse ) {
-					// TODO
-						
-					} else {
-						const nt = r.seq[ Math.floor(floatcoord) - r.start ]
-						printstr += Math.ceil( floatcoord )
-							+ ', ' + nt
-							+ ' <span style="background:'+(basecolor[nt.toUpperCase()] || basecolorunknown)+'">&nbsp;&nbsp;</span>'
-					}
-				} else {
-					printstr += Math.ceil(floatcoord)
-				}
-
-				this.tip.d
-					.append('div')
-					.html( printstr )
-
-				this.tip.show( d3event.clientX, d3event.clientY )
+				this.hovertip( tv, view )
 			})
 			.on('mouseout',()=>{
 				this.tip.hide()
@@ -83,11 +55,11 @@ export class TKruler {
 	}
 
 
-	update ( ) {
+	async update ( ) {
 
 		const row1height = this.fontsize + this.tickpad + this.ticksize
 
-		this.height = row1height + ( this.block.views.find( i => i.bpperpx <= 1 )  ? this.ntheight + 2 : 0 ) // 2 for pad necessary
+		this.tkheight = row1height + ( this.block.views.find( i => i.bpperpx <= 1 )  ? this.ntheight + 2 : 0 ) // 2 for pad necessary
 
 		for(const view of this.block.views) {
 			const tv = this.views[ view.id ]
@@ -101,24 +73,26 @@ export class TKruler {
 				xshift = ( view.reverse ? 1 : -1 ) / (2*view.bpperpx)
 			}
 
+
 			tv.gaxis
 				.attr('transform', 'translate(' + xshift + ',' + row1height +')')
-				.call( tv.axisfunc )
-
-			tv.gaxis.selectAll('text')
+				.call( 
+					tv.axisfunc.ticks( this.maxticknumber( view, tv ) )
+					)
+				.selectAll('text')
 				.attr('font-family',client.font)
 				.attr('font-size', this.fontsize)
 
 			tv.cover
 				.attr('width', view.width)
-				.attr('height', this.height)
+				.attr('height', this.tkheight)
 
 			tv.gnt
 				.attr('transform', 'translate(0,' + (row1height + 2) +')')  // 2 for pad necessary
 				.selectAll('*').remove()
 
 			if( atbplevel ) {
-				this.loadnt_view( tv, view )
+				await this.loadnt_view( tv, view )
 			}
 
 			// shift back to x=0 after panning
@@ -134,8 +108,34 @@ export class TKruler {
 	}
 
 
+
+	maxticknumber ( view, tv ) {
+		const r1 = view.regions[ view.startidx ]
+		const r2 = view.regions[ view.stopidx ]
+		const pos = Math.max(
+			r1.start,
+			r1.stop,
+			r2.start,
+			r2.stop
+		)
+		let labelw
+		tv.g.append('text')
+			.text( pos )
+			.attr('font-size', this.fontsize)
+			.attr('font-family', client.font)
+			.each(function(){
+				labelw = this.getBBox().width
+			})
+			.remove()
+		return Math.floor( view.width / (labelw+50) )
+	}
+
+
+
 	async loadnt_view ( tv, view ) {
-		// load nt for portions of regions in viewport
+		/*
+		load nt for portions of regions in viewport
+		*/
 		const basewidth = 1 / view.bpperpx
 
 		// tentative base font size
@@ -221,6 +221,44 @@ export class TKruler {
 	removeview ( view ) {
 	}
 
+
+	hovertip ( tv, view ) {
+		this.tip.clear()
+		const p = d3mouse( view.g.node() )
+		const [ ridx, floatcoord ] = this.block.pxoff2region( view, p[0] )
+
+		const coord = Math.ceil(floatcoord)
+		this.tip.d
+			.append('div')
+			.text( view.regions[0].chr + ' : '+ coord )
+
+		if(view.bpperpx <= 1) {
+			// in bp mode
+			const r = view.regions[ridx]
+			const nt = r.seq[ Math.floor(floatcoord)-r.start ]
+			if( nt ) {
+				if( view.reverse ) {
+					const nt2 = basecompliment( nt )
+					this.tip.d
+						.append('div')
+						.html( nt2
+							+ ' <span style="background:'+(basecolor[nt2.toUpperCase()] || basecolorunknown)+'">&nbsp;&nbsp;</span>'
+							+ ' <span style="font-size:.7em;opacity:.7">REVERSE</span>'
+							)
+				} else {
+					this.tip.d
+						.append('div')
+						.html( nt
+							+ ' <span style="background:'+(basecolor[nt.toUpperCase()] || basecolorunknown)+'">&nbsp;&nbsp;</span>'
+							+ ' <span style="font-size:.7em;opacity:.7">FORWARD</span>'
+							)
+				}
+			} else {
+				// somehow it can be out of range
+			}
+		}
+		this.tip.show( d3event.clientX, d3event.clientY )
+	}
 
 	// END of  class
 }

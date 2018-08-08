@@ -18,14 +18,17 @@ export class Block {
 
 
 async init ( arg ) {
+	/* initiate new block with async steps
+	*/
 	try {
 		validate_parameter_init( arg, this )
 	} catch(e) {
 		if(e.stack) console.log(e.stack)
+		const m = 'Error: '+(e.message || e)
 		if(this.holder) {
-			this.holder.append('div').style('margin','20px').text('Error: '+e)
+			client.sayerror( this.holder, m )
 		} else {
-			alert('Error: '+e)
+			alert( m )
 		}
 		return
 	}
@@ -33,11 +36,19 @@ async init ( arg ) {
 	await addtk_ruler( this )
 
 	// init other tracks
+	if( arg.tklst ) {
+		for(const t of arg.tklst) {
+			addtk_bytype( t, this )
+		}
+	}
 
+	// upon init, must provide valid view width for track updating
 	this.setwidth_views()
 
-	this.update_tracks()
+	await this.update_tracks()
 }
+
+
 
 static async create ( arg ) {
 	const block = new Block()
@@ -48,18 +59,22 @@ static async create ( arg ) {
 
 
 
-update_tracks ( lst ) {
+async update_tracks ( lst ) {
 	/*
 	given list or all
+
+	for each track, update all views, even if it is triggered by just one view
 	*/
 
 	const dolst = lst || this.tklst
 	for(const tk of dolst) {
-		tk.update()
+		await tk.update()
 	}
 	this.settle_height()
 	this.setwidth_svg()
+	this.busy = false
 }
+
 
 
 setwidth_views () {
@@ -125,7 +140,7 @@ setwidth_svg () {
 settle_height () {
 	this.height = 0
 	for(const t of this.tklst) {
-		this.height += t.toppad + t.height + t.bottompad
+		this.height += t.toppad + t.tkheight + t.bottompad
 	}
 	// update cliprect height
 	for(const v of this.views) {
@@ -148,6 +163,7 @@ init_dom_tk ( tk ) {
 	tk.y = 0 // shift by
 	tk.toppad = 3
 	tk.bottompad = 3
+	tk.tkheight = 30
 
 	tk.tip = new client.Menu({padding:'5px'})
 
@@ -190,6 +206,8 @@ add_view_2tk ( tk, view ) {
 	*/
 	const tv = {
 		g: view.gscroll.append('g'), // y shift
+		g_noclip: view.gscroll_noclip.append('g'), // y shift
+		viewheight: 30
 	}
 	tk.views[ view.id ] = tv
 }
@@ -228,6 +246,8 @@ view_updaterulerscale ( view ) {
 
 pannedby ( view, xoff ) {
 	/*
+	is async!!!!
+
 	call after panning by a distance
 	*/
 	if( xoff == 0 ) return
@@ -256,6 +276,7 @@ pannedby ( view, xoff ) {
 	}
 	if(nope) {
 		view.gscroll.transition().attr('transform','translate(0,0)')
+		view.gscroll_noclip.transition().attr('transform','translate(0,0)')
 		return
 	}
 
@@ -286,8 +307,8 @@ async zoom2px ( view, px1, px2 ) {
 
 	let pos1, pos2 // integer
 	if( view.reverse ) {
-		pos1 = Math.ceil(float1)
-		pos2 = Math.floor(float2)
+		pos1 = Math.floor(float2)
+		pos2 = Math.ceil(float1)
 	} else {
 		pos1 = Math.floor(float1)
 		pos2 = Math.ceil(float2)
@@ -339,10 +360,7 @@ async zoom2px ( view, px1, px2 ) {
 
 	this.view_updaterulerscale( view )
 
-	for(const tk of this.tklst) {
-		tk.update()
-	}
-	this.busy = false
+	await this.update_tracks()
 }
 
 

@@ -64,7 +64,7 @@ async function server_validate_config() {
 	}
 
 	if(!cfg.genomes) throw '.genomes[] missing'
-	if(isBadArray(cfg.genomes)) throw '.genomes[] should be non-empty array'
+	if(common.isBadArray(cfg.genomes)) throw '.genomes[] should be non-empty array'
 
 	for(const g of cfg.genomes) {
 		if(!g.name) throw '.name missing for a genome'
@@ -257,7 +257,7 @@ async function validate_snpdb ( lst ) {
 	each snp db has both sqlite and bedj track
 	*/
 	if(!lst) return
-	if(isBadArray(lst)) throw '.snp must be array'
+	if(common.isBadArray(lst)) throw '.snp must be array'
 
 	for(const snp of lst) {
 		/*
@@ -544,11 +544,6 @@ function log ( req, q ) {
 	)
 }
 
-function isBadArray (i) {
-	if(!Array.isArray(i)) return true
-	if(i.length==0) return true
-	return false
-}
 
 
 function illegalpath ( s ) {

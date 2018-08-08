@@ -41,6 +41,7 @@ export function validate_parameter_init ( arg, block ) {
 		if(!t.type) throw '.type missing from a provided track'
 		// TODO if track type is valid
 		// validate track by type
+		// tracks stay in arg.tklst
 	}
 
 
@@ -57,6 +58,20 @@ export function validate_parameter_init ( arg, block ) {
 	} else if( arg.gmlst ) {
 		// list of gm from the same gene
 		block.holder.text('show protein view for '+arg.gmlst[0].name)
+	
+	} else if( arg.multi_range_0based ) {
+		// list of regions
+		if( common.isBadArray( arg.multi_range_0based ) ) throw '.multi_range_0based[] is not non-empty array'
+		for(const r of arg.multi_range_0based) {
+			const e =  coord.invalidcoord(
+				arg.genome,
+				r.chr,
+				r.start,
+				r.stop
+			)
+			if(e) throw '.multi_range_0based[]: '+e
+			init_view_bysingleregion( r, block, arg )
+		}
 
 	} else if( arg.range_0based ) {
 
@@ -143,15 +158,23 @@ function init_view_bysingleregion ( r, block, arg ) {
 		start: r.start,
 		stop: r.stop,
 	}
-	if( arg.width ) {
+
+	if( r.width ) {
+		if( !common.isPositiveInteger( r.width)) throw 'width is not positive integer'
+		region.width = r.width
+	} else if( arg.width ) {
 		if( !common.isPositiveInteger( arg.width)) throw 'width is not positive integer'
-		region.width = Math.min( arg.width, block.ntpxwidth * (region.stop-region.start) )
+		region.width = arg.width
+	}
+
+	if( region.width ) {
+		region.width = Math.min( region.width, block.ntpxwidth * (region.stop-region.start) )
 	}
 	block.views.push({
 		regions: [ region ],
 		regionspace: 10,
 		rightpad: 10,
-		reverse: arg.reverse
+		reverse: ( r.reverse || arg.reverse )
 	})
 }
 
@@ -248,9 +271,14 @@ function init_dom_for_block ( arg, b ) {
 	init dom for block
 	*/
 	b.dom = {}
+
 	b.dom.row1 = b.holder.append('div')
+	b.dom.coordinput = b.dom.row1.append('input')
+		.attr('type','text')
+		.style('width','200px')
+
 	b.dom.svgdiv = b.holder.append('div')
-		.style('border','solid 1px black') // remove
+		.style('border','solid 1px #ccc') // remove
 	b.svg = {}
 	b.svg.svg = b.dom.svgdiv.append('svg')
 
@@ -311,12 +339,14 @@ function init_dom_view ( view, block ) {
 		body.on('mousemove', ()=>{
 			const xoff = ( block.rotated ? d3event.clientY : d3event.clientX ) - x0
 			view.gscroll.attr( 'transform', 'translate('+xoff+',0)' )
+			view.gscroll_noclip.attr( 'transform', 'translate('+xoff+',0)' )
 		})
 
 		body.on('mouseup', ()=>{
 			body.on('mousemove', null)
 				.on('mouseup', null)
 			view.gscroll.attr( 'transform', 'translate(0,0)' )
+			view.gscroll_noclip.attr( 'transform', 'translate(0,0)' )
 
 			// panned dist
 			const xoff = ( block.rotated ? d3event.clientY : d3event.clientX ) - x0
@@ -324,4 +354,6 @@ function init_dom_view ( view, block ) {
 			block.pannedby( view, xoff )
 		})
 	})
+
+	view.gscroll_noclip = view.g.append('g')
 }
