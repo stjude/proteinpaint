@@ -1,5 +1,5 @@
 import {scaleLinear} from 'd3-scale'
-import {event as d3event, mouse as d3mouse} from 'd3-selection'
+import {event as d3event} from 'd3-selection'
 import {axisLeft} from 'd3-axis'
 import {format as d3format} from 'd3-format'
 import * as client from './client'
@@ -8,6 +8,7 @@ import * as client from './client'
 
 
 
+const tklabelxshift = -3 // shift label to left away from axis
 
 
 
@@ -24,16 +25,16 @@ export class TKbigwig {
 		{
 			const tk=this
 			this.tklabel
-				.attr('x', -3)
+				.attr('x', tklabelxshift)
 				.text(this.name)
 				.each(function(){
-					tk.left_width = this.getBBox().width
+					tk.left_width = this.getBBox().width - tklabelxshift
 				})
 		}
 
 		this.leftaxis = this.gleft.append('g')
 		this.axisfontsize = 12
-		this.toppad = this.bottompad = this.axisfontsize/2 + 3
+		this.toppad = this.bottompad = this.axisfontsize/2
 
 		this.scale = {}
 		if(temp.scale) {
@@ -76,7 +77,6 @@ export class TKbigwig {
 
 
 	async update ( ) {
-		this.block.busy = true
 		this.busy = true
 		const p = {
 			genome: this.block.genome.name,

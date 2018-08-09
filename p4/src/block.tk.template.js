@@ -33,8 +33,6 @@ export class TKwhat {
 
 
 	async update ( ) {
-		this.block.busy = true
-
 		for(const view of this.block.views) {
 			const tv = this.views[ view.id ]
 			if(!tv) continue

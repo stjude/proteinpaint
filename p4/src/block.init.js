@@ -1,5 +1,5 @@
 import {scaleLinear} from 'd3-scale'
-import {select as d3select,selectAll as d3selectAll,event as d3event,mouse as d3mouse} from 'd3-selection'
+import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import * as coord from './coord'
 import * as common from './common'
 import * as client from './client'
@@ -304,8 +304,6 @@ function init_dom_for_block ( arg, b ) {
 
 	b.svg = {}
 	b.svg.svg = b.dom.svgdiv.append('svg')
-		.style('border','solid 1px #ccc')
-
 
 
 	// insert negative layers here
@@ -316,7 +314,19 @@ function init_dom_for_block ( arg, b ) {
 	b.svg.layer_0 = b.svg.svg.append('g')
 
 	// insert plus layers here
-	//b.svg.layer_pos1
+	b.svg.layer_pos1 = b.svg.svg.append('g')
+	// drag to zoom in
+	b.svg.drag = {}
+	b.svg.drag.g = b.svg.layer_pos1.append('g')
+	b.svg.drag.bar = b.svg.drag.g.append('rect')
+		.attr('fill-opacity',.3)
+	b.svg.drag.text = b.svg.drag.g.append('text')
+		.attr('text-anchor','middle')
+		.attr('dominant-baseline','central')
+		.attr('font-family',client.font)
+		.attr('font-size','1.5em')
+		.attr('fill','black')
+
 
 	// render in layer #0
 

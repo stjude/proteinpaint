@@ -7,6 +7,7 @@ import * as coord from './coord'
 import * as common from './common'
 import * as client from './client'
 import {validate_parameter_init} from './block.init'
+import {TKruler} from './block.tk.ruler'
 
 
 
@@ -163,17 +164,11 @@ settle_height () {
 	for(const tk of this.tklst) {
 		yoff += tk.toppad
 		tk.y = yoff
-		tk.gleft.transition().attr('transform','translate(0,'+yoff+')')
-		tk.gright.transition().attr('transform','translate(0,'+yoff+')')
 		if(!tk.busy) {
 			/* in the case of panning
 			tv.g should keep shifted before it finish updating
 			*/
-			for(const id in tk.views) {
-				const tv = tk.views[id]
-				tv.g.transition().attr('transform','translate(0,'+yoff+')')
-				tv.g_noclip.transition().attr('transform','translate(0,'+yoff+')')
-			}
+			tk_to_y(tk)
 		}
 		yoff += tk.tkheight - tk.toppad
 	}
@@ -230,7 +225,78 @@ init_dom_tk ( tk ) {
 		.attr('text-anchor','end')
 		.attr('y', this.tklabelfontsize)
 		.on('mousedown',()=>{
-			// TODO
+
+			if(this.ifbusy()) return
+
+			d3event.preventDefault()
+			const body = d3select( document.body )
+			let y0=d3event.clientY
+			body.on('mousemove',()=>{
+				const dy=d3event.clientY-y0
+
+				tk.gleft.attr('transform','translate(0,'+(tk.y+dy)+')')
+				tk.gright.attr('transform','translate(0,'+(tk.y+dy)+')')
+				for(const id in tk.views) {
+					tk.views[id].g.attr('transform','translate(0,'+(tk.y+dy)+')')
+					tk.views[id].g_noclip.attr('transform','translate(0,'+(tk.y+dy)+')')
+				}
+
+				const tkidx = this.tklst.findIndex( i=> i.tkid == tk.tkid )
+				if(dy<0 && tkidx>0) {
+					let t2idx=tkidx-1,
+						t2=this.tklst[t2idx]
+					while(t2.hidden) {
+						t2idx--
+						if(t2idx<0) {
+							return
+						}
+						t2=this.tklst[t2idx]
+					}
+					if(!t2) {
+						return
+					}
+					if(-dy>=t2.tkheight) {
+						// swap
+						this.tklst[t2idx]=tk
+						this.tklst[tkidx]=t2
+						tk.y = t2.y - t2.toppad + tk.toppad // important since tk/t2 may have different toppad, and yoff does not include toppad
+						t2.y += tk.tkheight
+						tk_to_y( t2 )
+
+						y0 = d3event.clientY
+
+						this.tkorder_changed()
+					}
+				} else if(dy>0 && tkidx<this.tklst.length-1) {
+					let t2idx=tkidx+1,
+						t2=this.tklst[t2idx]
+					while(t2.hidden) {
+						t2idx++
+						if(t2idx>=this.tklst.length) {
+							return
+						}
+						t2=this.tklst[t2idx]
+					}
+					if(!t2) {
+						return
+					}
+					if(dy>=t2.tkheight) {
+						// swap
+						this.tklst[t2idx]=tk
+						this.tklst[tkidx]=t2
+						t2.y = tk.y-tk.toppad+t2.toppad
+						tk.y += t2.tkheight
+						tk_to_y(t2)
+
+						y0 = d3event.clientY
+						this.tkorder_changed()
+					}
+				}
+			})
+			body.on('mouseup',()=>{
+				tk_to_y(tk)
+				body.on('mousemove',null).on('mouseup',null)
+			})
 		})
 
 	tk.gright = this.svg.gright.append('g') // y shift
@@ -259,7 +325,7 @@ init_dom_tk ( tk ) {
 	tk.cloaktext = tk.gcloak.append('text')
 		.text('Loading ...')
 		.attr('fill','black')
-		.attr('fill-opacity',.5)
+		//.attr('stroke','white') .attr('stroke-width',1)
 		.attr('font-size','1.5em')
 		.attr('font-weight','bold')
 		.attr('font-family',client.font)
@@ -314,10 +380,24 @@ add_view_2tk ( tk, view ) {
 	const tv = {
 		g: view.gscroll.append('g'), // y shift
 		g_noclip: view.gscroll_noclip.append('g'), // y shift
-		viewheight: 30
 	}
 
 	tk.views[ view.id ] = tv
+}
+
+
+
+addtk_bytype( t ) {
+	if(t.type == common.tkt.bigwig) {
+		return import('./block.tk.bigwig').then(_=>this.tklst.push( new _.TKbigwig( t, this) ) )
+	}
+	if(t.type == common.tkt.ruler) {
+		this.tklst.push( new TKruler( this ) )
+	}
+}
+
+
+tkorder_changed () {
 }
 
 
@@ -601,11 +681,13 @@ async zoomin_default ( fold ) {
 	/*
 	default only act on the first view
 	*/
+	if(this.ifbusy()) return
 	await this.zoomin( fold, this.views.find( i=> i.regions) )
 }
 
 
 async zoomout_default ( fold ) {
+	if(this.ifbusy()) return
 	await this.zoomout( fold, this.views.find( i=> i.regions) )
 }
 
@@ -651,15 +733,6 @@ param_viewrange () {
 /////////////////////////////////// end of __coord and view range
 
 
-addtk_bytype( t ) {
-	if(t.type == common.tkt.bigwig) {
-		return import('./block.tk.bigwig').then(_=>this.tklst.push( new _.TKbigwig( t, this) ) )
-	}
-	if(t.type == common.tkt.ruler) {
-		return import('./block.tk.ruler').then(_=> this.tklst.push( new _.TKruler( this ) ) )
-	}
-}
-
 
 
 // END of block
@@ -668,3 +741,11 @@ addtk_bytype( t ) {
 
 
 
+function tk_to_y ( t ) {
+	t.gleft.transition().attr('transform','translate(0,'+t.y+')')
+	t.gright.transition().attr('transform','translate(0,'+t.y+')')
+	for(const id in t.views) {
+		t.views[id].g.transition().attr('transform','translate(0,'+t.y+')')
+		t.views[id].g_noclip.transition().attr('transform','translate(0,'+t.y+')')
+	}
+}
