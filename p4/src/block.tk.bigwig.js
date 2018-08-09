@@ -1,3 +1,4 @@
+import {scaleLinear} from 'd3-scale'
 import {event as d3event, mouse as d3mouse} from 'd3-selection'
 import {axisLeft} from 'd3-axis'
 import {format as d3format} from 'd3-format'
@@ -23,6 +24,7 @@ export class TKbigwig {
 		{
 			const tk=this
 			this.tklabel
+				.attr('x', -3)
 				.text(this.name)
 				.each(function(){
 					tk.left_width = this.getBBox().width
@@ -31,6 +33,7 @@ export class TKbigwig {
 
 		this.leftaxis = this.gleft.append('g')
 		this.axisfontsize = 12
+		this.toppad = this.bottompad = this.axisfontsize/2 + 3
 
 		this.scale = {}
 		if(temp.scale) {
@@ -73,6 +76,8 @@ export class TKbigwig {
 
 
 	async update ( ) {
+		this.block.busy = true
+		this.busy = true
 		const p = {
 			genome: this.block.genome.name,
 			views: this.block.param_viewrange(),
@@ -93,19 +98,20 @@ export class TKbigwig {
 
 		try {
 			const data = await this.getdata( p )
-			if(data.nodata) throw 'no data in view range'
 
 			this.block.tkcloakoff(this)
 			this.tkheight = this.toppad+this.barheight+this.bottompad
-			this.tklabel.transition().attr('y', this.tkheight/2 )
+			this.tklabel.transition().attr('y', this.barheight/2 + this.block.tklabelfontsize/3 )
 
-			for(const id in data.views) {
-				const imgv = data.views[id]
-				const tv = this.views[id]
+			for(const id in data.view2img) {
+				const imgv = data.view2img[ id ]
+				const tv = this.views[ id ]
 				tv.img
 					.attr('width', imgv.width)
-					.attr('height', tk.barheight)
+					.attr('height', this.barheight)
 					.attr('xlink:href', imgv.src)
+				tv.g.attr('transform','translate(0,'+this.y+')')
+				tv.g_noclip.attr('transform','translate(0,'+this.y+')')
 			}
 
 			if(this.scale.auto) {
@@ -129,6 +135,8 @@ export class TKbigwig {
 				this.views[id].img.attr('width',1).attr('height',1)
 			}
 		}
+		this.busy=false
+		this.block.settle_height()
 	}
 
 
@@ -148,6 +156,37 @@ export class TKbigwig {
 	removeview ( view ) {
 	}
 
+
+
+	show_configmenu () {
+		this.configmenu.clear()
+		{
+			const row = this.configmenu.d.append('div')
+				.style('margin-bottom','5px')
+			row.append('span')
+				.html('Height&nbsp;&nbsp;')
+			row.append('input')
+				.attr('type','number')
+				.style('width', '70px')
+				.property('value', this.barheight)
+				.on('keyup',()=>{
+					if(d3event.key != 'Enter') return
+					const h = Number.parseInt(d3event.target.value)
+					if(Number.isNaN(h)) return
+					if(h <= 1) return
+					if(h == this.barheight) return
+					this.barheight = h
+					this.update_height()
+				})
+		}
+		this.configmenu.showunder( this.configlabel.node() )
+			.d.style('left', (Number.parseInt(this.configmenu.d.style('left'))-50)+'px')
+	}
+
+	async update_height () {
+		await this.update()
+		this.block.settle_height()
+	}
 
 
 	// END of  class

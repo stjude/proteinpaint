@@ -10,6 +10,19 @@ import {validate_parameter_init} from './block.init'
 
 
 
+/*
+block.busy:
+	set to true in every tk.update()
+	set to false only in settling width/height
+	if updating a single tk without changing dimension (height, or left/right_width), must set busy=false at the end of update
+
+upon finishing updating a track, will settle width/height
+no setting block.busy
+
+
+
+
+*/
 
 
 
@@ -33,7 +46,6 @@ async init ( arg ) {
 		return
 	}
 
-
 	arg.tklst.unshift({type:common.tkt.ruler})
 
 	for(const t of arg.tklst) {
@@ -46,8 +58,9 @@ async init ( arg ) {
 		}
 	}
 
-	// upon init, must provide valid view width for track updating
+	// upon init, must provide valid width for both view and svg for track updating
 	this.setwidth_views()
+	this.settle_width()
 
 	await this.update_tracks()
 }
@@ -71,12 +84,13 @@ async update_tracks ( lst ) {
 	*/
 
 	const dolst = lst || this.tklst
+
+	const tasks = []
 	for(const tk of dolst) {
-		await tk.update()
+		tasks.push( tk.update() )
 	}
-	this.settle_height()
-	this.setwidth_svg()
-	this.busy = false
+	await Promise.all( tasks )
+	this.settle_width()
 }
 
 
@@ -112,8 +126,9 @@ setwidth_views () {
 
 
 
-setwidth_svg () {
-	// only call after updating tracks
+settle_width () {
+	/* call after updating a track
+	*/
 
 	this.leftcolumnwidth = 100
 	for(const tk of this.tklst) {
@@ -142,8 +157,7 @@ setwidth_svg () {
 
 
 settle_height () {
-	/*
-	call after updating any track
+	/* call after updating any track
 	*/
 	let yoff = 0
 	for(const tk of this.tklst) {
@@ -151,12 +165,17 @@ settle_height () {
 		tk.y = yoff
 		tk.gleft.transition().attr('transform','translate(0,'+yoff+')')
 		tk.gright.transition().attr('transform','translate(0,'+yoff+')')
-		for(const id in tk.views) {
-			const tv = tk.views[id]
-			tv.g.transition().attr('transform','translate(0,'+yoff+')')
-			tv.g_noclip.transition().attr('transform','translate(0,'+yoff+')')
+		if(!tk.busy) {
+			/* in the case of panning
+			tv.g should keep shifted before it finish updating
+			*/
+			for(const id in tk.views) {
+				const tv = tk.views[id]
+				tv.g.transition().attr('transform','translate(0,'+yoff+')')
+				tv.g_noclip.transition().attr('transform','translate(0,'+yoff+')')
+			}
 		}
-		yoff += tk.tkheight + tk.bottompad
+		yoff += tk.tkheight - tk.toppad
 	}
 	this.height = yoff
 
@@ -170,6 +189,12 @@ settle_height () {
 }
 
 
+ifbusy () {
+	for(const t of this.tklst) {
+		if(t.busy) return true
+	}
+	return false
+}
 
 
 
@@ -209,6 +234,7 @@ init_dom_tk ( tk ) {
 		})
 
 	tk.gright = this.svg.gright.append('g') // y shift
+	tk.configmenu = new client.Menu()
 	tk.configlabel = tk.gright
 		.append('text')
 		.text('CONFIG')
@@ -216,8 +242,9 @@ init_dom_tk ( tk ) {
 		.attr('font-family',client.font)
 		.attr('font-size', this.tklabelfontsize)
 		.attr('y', this.tklabelfontsize)
+		.attr('class', 'sja_clbtext')
 		.on('click',()=>{
-			// TODO
+			tk.show_configmenu()
 		})
 
 	tk.views = {}
@@ -321,7 +348,7 @@ view_updaterulerscale ( view ) {
 			const r2 = view.regions[view.stopidx]
 			const start = Math.min(r1.start,r1.stop, r2.start,r2.stop)
 			const stop = Math.max(r1.start,r1.stop, r2.start,r2.stop)
-			this.dom.coord.input.property( 'value', r1.chr+':'+start+'-'+stop )
+			this.dom.coord.input.property( 'value', r1.chr+':'+(start+1)+'-'+(stop+1) )
 			this.dom.coord.says.text( common.bplen(stop-start))
 		}
 
@@ -416,6 +443,12 @@ pannedby ( view, xoff ) {
 
 	// before track actually udpates, keep shifted
 	for(const tk of this.tklst) {
+
+		/* critical to set all tracks busy
+		so their tv.g won't be moved when someother tk finish updating first
+		*/
+		tk.busy = true
+
 		const tv = tk.views[ view.id ]
 		if(!tv) continue
 		tv.g.attr( 'transform', 'translate(' + xoff + ',' + tk.y + ')' )
@@ -431,8 +464,6 @@ async zoom2px ( view, px1, px2 ) {
 	for pan and zoom
 	*/
 	if(!view.regions) return
-
-	this.busy = true
 
 	const pxstart = Math.min( px1, px2 )
 	const pxstop  = Math.max( px1, px2 )
@@ -595,21 +626,23 @@ param_viewrange () {
 	const lst = []
 	for(const view of this.views) {
 		if(!view.regions) continue
-		const v2 = {
+
+		const va = {
+			id: view.id,
 			reverse: view.reverse,
 			regions:[],
 			regionspace: view.regionspace,
 		}
 		for(let i=view.startidx; i<=view.stopidx; i++) {
 			const r = view.regions[i]
-			v2.regions.push[ {
+			va.regions.push( {
 				chr: r.chr,
 				start: r.start,
 				stop: r.stop,
 				width: Math.ceil( (r.stop-r.start) / view.bpperpx )
-			}]
+			})
 		}
-		lst.push(v2)
+		lst.push(va)
 	}
 	return lst
 }

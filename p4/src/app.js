@@ -2,10 +2,17 @@ import {select as d3select, event as d3event} from 'd3-selection'
 import 'normalize.css'
 import './style.css'
 import * as client from './client'
-//import * as coord from './coord'
-//import {rgb as d3rgb} from 'd3-color'
-//import * as common from './common'
 
+/*
+gm view
+ruler config
+ruler zoom in
+bw config
+gene tk
+
+reorder tracks
+
+*/
 
 // do not use genomes as global, no globals here
 

@@ -20,6 +20,7 @@ export class TKruler {
 		this.ntheight = 15
 
 		block.init_dom_tk( this )
+		this.gcloak.remove()
 
 		this.tklabel
 			.attr('font-weight','normal')
@@ -57,6 +58,8 @@ export class TKruler {
 
 
 	async update ( ) {
+		this.block.busy = true
+		this.busy=true
 
 		const row1height = this.fontsize + this.tickpad + this.ticksize
 
@@ -98,6 +101,7 @@ export class TKruler {
 
 			// shift back to x=0 after panning
 			tv.g.attr('transform','translate(0,' + this.y +')')
+			tv.g_noclip.attr('transform','translate(0,' + this.y +')')
 		}
 		const tk = this
 		this.tklabel
@@ -106,6 +110,8 @@ export class TKruler {
 			.each( function(){
 				tk.left_width = this.getBBox().width
 			})
+		this.busy=false
+		this.block.settle_height()
 	}
 
 
@@ -260,6 +266,12 @@ export class TKruler {
 			}
 		}
 		this.tip.show( d3event.clientX, d3event.clientY )
+	}
+
+
+	show_configmenu () {
+		this.configmenu.showunder( this.configlabel.node() )
+			.d.style('left', (Number.parseInt(this.configmenu.d.style('left'))-50)+'px')
 	}
 
 	// END of  class

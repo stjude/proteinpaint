@@ -304,6 +304,7 @@ function init_dom_for_block ( arg, b ) {
 
 	b.svg = {}
 	b.svg.svg = b.dom.svgdiv.append('svg')
+		.style('border','solid 1px #ccc')
 
 
 
@@ -353,7 +354,7 @@ function init_dom_view ( view, block ) {
 	view.gscroll = view.clipframe.append('g')
 	.on('mousedown', ()=>{
 
-		if( block.busy )  return
+		if( block.ifbusy() )  return
 
 		d3event.preventDefault()
 		const body = d3select( document.body )

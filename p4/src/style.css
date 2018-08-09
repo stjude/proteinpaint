@@ -49,3 +49,17 @@
 .sja_pane button:disabled {
 	color:#858585;
 }
+
+
+
+.sja_clbtext {
+	cursor:default;
+	text-decoration:none;
+}
+.sja_clbtext:hover {
+	text-decoration:underline;
+}
+.sja_clbtext:active {
+	fill:#CC0000;
+	color:#CC0000;
+}

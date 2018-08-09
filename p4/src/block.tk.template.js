@@ -33,7 +33,18 @@ export class TKwhat {
 
 
 	async update ( ) {
+		this.block.busy = true
 
+		for(const view of this.block.views) {
+			const tv = this.views[ view.id ]
+			if(!tv) continue
+
+
+			// shift back to x=0 after panning
+			tv.g.attr('transform','translate(0,' + this.y +')')
+			tv.g_noclip.attr('transform','translate(0,' + this.y +')')
+		}
+		this.block.settle_height()
 	}
 
 
@@ -44,6 +55,11 @@ export class TKwhat {
 	removeview ( view ) {
 	}
 
+
+	show_configmenu () {
+		this.configmenu.showunder( this.configlabel.node() )
+			.d.style('left', (Number.parseInt(this.configmenu.d.style('left'))-50)+'px')
+	}
 
 
 	// END of  class
