@@ -323,7 +323,9 @@ init_dom_tk ( tk ) {
 }
 
 
+
 tkcloakon ( tk ) {
+	tk.busy = true
 	tk.gerror.attr('transform','scale(0)') // clear error
 	tk.gcloak
 		.attr('transform','scale(1)')
@@ -340,11 +342,12 @@ tkcloakon ( tk ) {
 }
 
 tkcloakoff ( tk ) {
+	tk.busy = false
 	tk.gcloak.attr('transform','scale(0)')
 }
 
 tkerror ( tk, m ) {
-	tk.gcloak.attr('transform','scale(0)') // hide cloak
+	this.tkcloakoff( tk )
 	tk.gerror.attr('transform','scale(1)')
 	const w = this.width - this.leftcolumnwidth - this.leftpad - this.rightpad - this.rightcolumnwidth
 	tk.errortext
@@ -375,8 +378,8 @@ addtk_bytype ( t ) {
 	if(t.type == common.tkt.bigwig) {
 		return import('./block.tk.bigwig').then(_=>this.tklst.push( new _.TKbigwig( t, this) ) )
 	}
-	if(t.type == common.tkt.snp) {
-		return import('./block.tk.snp').then(_=>this.tklst.push( new _.TKsnp( t, this) ) )
+	if(t.type==common.tkt.bedj) {
+		return import('./block.tk.bedj').then(_=>this.tklst.push( new _.TKbedj( t, this) ) )
 	}
 	throw 'unknown type: '+t.type
 }
@@ -403,7 +406,9 @@ async update_tracks ( lst ) {
 
 async addtk_native ( t ) {
 	if( !t.name ) throw '.name missing'
-	if( t.type == common.tkt.snp ) {
+	if( t.issnp ) {
+		// may change here
+		t.type = common.tkt.bedj
 		// native snp, no client template
 		await this.addtk_bytype( t )
 		return

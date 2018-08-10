@@ -115,7 +115,10 @@ export class TKruler {
 
 
 	async update ( ) {
-		this.busy=true
+		/* not cloaking so must toggle busy here
+		*/
+
+		this.busy = true
 
 		const row1height = this.fontsize + this.tickpad + this.ticksize
 
@@ -168,7 +171,7 @@ export class TKruler {
 			.each( function(){
 				tk.left_width = this.getBBox().width
 			})
-		this.busy=false
+		this.busy=false // must call this since ...
 		this.block.settle_width()
 		this.block.settle_height()
 	}

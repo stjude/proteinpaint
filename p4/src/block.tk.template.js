@@ -33,14 +33,33 @@ export class TKwhat {
 
 
 	async update ( ) {
-		for(const view of this.block.views) {
-			const tv = this.views[ view.id ]
-			if(!tv) continue
+		const p = {
+			genome: this.block.genome.name,
+			views: this.block.param_viewrange(),
+			file: this.file,
+			url: this.url,
+		}
+
+		this.block.tkcloakon( this )
+
+		try {
+			const data = await this.getdata( p )
+
+			this.block.tkcloakoff( this )
+			//this.tkheight = this.toppad + data.height + this.bottompad
+
+			for(const view of this.block.views) {
+				const tv = this.views[ view.id ]
+				if(!tv) continue
 
 
-			// after updating, shift back to x=0 to conclude panning
-			tv.g.attr('transform','translate(0,' + this.y +')')
-			tv.g_noclip.attr('transform','translate(0,' + this.y +')')
+				// after updating, shift back to x=0 to conclude panning
+				tv.g.attr('transform','translate(0,' + this.y +')')
+				tv.g_noclip.attr('transform','translate(0,' + this.y +')')
+			}
+		} catch(e) {
+			if(e.stack) console.log(e.stack)
+			this.block.tkerror( this, e.message || e)
 		}
 
 		//this.block.settle_width()

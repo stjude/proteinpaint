@@ -5,13 +5,14 @@ import {basecolor, basecompliment} from './common'
 import * as client from './client'
 
 
+// JUST A TEMPLATE
 
 
 
 
 
 
-export class TKsnp {
+export class TKwhat {
 	constructor ( block ) {
 
 		block.init_dom_tk( this )
@@ -32,19 +33,20 @@ export class TKsnp {
 
 
 	async update ( ) {
-		this.busy = true
 		const p = {
 			genome: this.block.genome.name,
 			views: this.block.param_viewrange(),
-			name: this.name,
+			file: this.file,
+			url: this.url,
 		}
+
 		this.block.tkcloakon( this )
 
 		try {
-			const data = this.getdata( p )
-			this.block.tkcloakoff( this )
-			this.tkheight = this.toppad + data.height + this.bottompad
+			const data = await this.getdata( p )
 
+			this.block.tkcloakoff( this )
+			//this.tkheight = this.toppad + data.height + this.bottompad
 
 			for(const view of this.block.views) {
 				const tv = this.views[ view.id ]
@@ -64,14 +66,6 @@ export class TKsnp {
 		this.block.settle_height()
 	}
 
-
-	getdata ( p ) {
-		return client.dofetch('snptk', p)
-		.then(data=>{
-			if(data.error) throw data.error
-			return data
-		})
-	}
 
 
 	addview ( view ) {

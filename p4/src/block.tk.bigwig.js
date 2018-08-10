@@ -77,7 +77,6 @@ export class TKbigwig {
 
 
 	async update ( ) {
-		this.busy = true
 		const p = {
 			genome: this.block.genome.name,
 			views: this.block.param_viewrange(),
@@ -135,7 +134,6 @@ export class TKbigwig {
 				this.views[id].img.attr('width',1).attr('height',1)
 			}
 		}
-		this.busy=false
 		this.block.settle_height()
 	}
 

@@ -830,7 +830,6 @@ async function validate_bigwig ( file, url, genome ) {
 		if( await file_not_exist( file ) ) throw 'file not found'
 		if( await file_not_readable( file ) ) throw 'file not readable'
 	}
-	//if( await file_not_bigwig( file || url ) ) throw 'not a bigWig file'
 	const output = await getfileinfo_bigwig( file || url )
 	if(!output) throw 'not a bigWig file'
 	const nochr = ifnochr_bigwig( output, genome )
@@ -967,22 +966,6 @@ function file_not_writable ( file ) {
 	})
 }
 
-/*
-function file_not_bigwig ( fileurl ) {
-	// no use?
-	return new Promise((resolve, reject)=>{
-		const ps = spawn( bigWigInfo, [ fileurl ] )
-		const out = [], out2 = []
-		ps.stdout.on('data',i=> out.push(i) )
-		ps.stderr.on('data',i=> out2.push(i) )
-		ps.on('close',()=>{
-			const err = out2.join('')
-			if(err) resolve(true)
-			resolve(false)
-		})
-	})
-}
-*/
 function getfileinfo_bigwig ( fileurl ) {
 	return new Promise((resolve, reject)=>{
 		const ps = spawn( bigWigInfo, [ '-chroms', fileurl ] )
