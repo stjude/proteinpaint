@@ -48,6 +48,21 @@ export function validate_parameter_init ( arg, block ) {
 		// tracks stay in arg.tklst
 	}
 
+	if( !arg.nativetracks ) arg.nativetracks = []
+	if(!Array.isArray(arg.nativetracks)) throw '.nativetracks[] should be array'
+	{
+		const lst = []
+		for(const t of arg.nativetracks) {
+			if(typeof t == 'string') {
+				lst.push({name: t})
+			} else {
+				if(!t.name) throw 'name missing from a native track'
+				lst.push(t)
+			}
+		}
+		arg.nativetracks = lst
+	}
+
 
 	////////////////////// views and regions
 

@@ -59,6 +59,7 @@ async init ( arg ) {
 		}
 	}
 
+
 	// upon init, must provide valid width for both view and svg for track updating
 	this.setwidth_views()
 	this.settle_width()
