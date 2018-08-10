@@ -21,7 +21,7 @@ cp src/common.js src/vcf.js src/bulk* src/tree.js tmpbuild/src/
 cp public/bin/* tmpbuild/public/bin/
 cp public/dev.html tmpbuild/public/
 
-sed "s%$DEVHOST/bin/%http://124.74.133.38:8088/bin/%" < public/bin/proteinpaint.js > tmpbuild/public/bin/proteinpaint.js
+sed "s%http://localhost:3000/bin/%http://124.74.133.38:3000/bin/%" < public/bin/proteinpaint.js > tmpbuild/public/bin/proteinpaint.js
 
 tar zcvf sourcecode.tgz tmpbuild/
 
