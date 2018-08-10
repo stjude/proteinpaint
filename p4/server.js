@@ -369,6 +369,7 @@ function server_launch() {
 	app.post('/snpbyname', handle_snpbyname)
 	app.post('/ntseq', handle_ntseq)
 	app.post('/bigwig', handle_bigwig)
+	app.post('/snptk', handle_snptk)
 
 	const port = serverconfig.port || 3000
 	app.listen(port)
@@ -553,12 +554,38 @@ async function handle_ntseq ( req, res ) {
 
 
 
+async function handle_snptk ( req, res ) {
+	try {
+		const q = JSON.parse(req.body)
+		log(req,q)
+		const genome = genomes[q.genome]
+		if(!genome) throw 'invalid genome name'
+		if(!genome.snp) throw 'no snp for this genome'
+		
+		if(!q.name) throw 'track name missing'
+		const tk = genome.snp.find( i=> i.name == q.name )
+		if(!tk) throw 'no snp track found by name '+q.name
+
+		const seq = await get_ntseq( genome, q.chr, q.start, q.stop )
+		res.send({seq: seq})
+
+	} catch(e){
+		if(e.stack) console.error(e.stack)
+		res.send({error: (e.message || e)})
+	}
+}
+
+
+
+
 
 async function handle_bigwig ( req, res ) {
 	try {
 		const q = JSON.parse(req.body)
 		log(req,q)
 
+		const genome = genomes[ q.genome ]
+		if(!genome) throw 'invalid genome name'
 		const [ file, url ] = fileurl( q )
 		if( common.isBadArray( q.views )) throw '.views[] should be array'
 		if( !q.scale ) throw '.scale{} missing'
@@ -572,7 +599,7 @@ async function handle_bigwig ( req, res ) {
 		}
 		if(!common.isPositiveInteger(q.barheight)) throw 'invalid barheight'
 
-		await validate_bigwig( file, url )
+		const fileobj = await validate_bigwig( file, url, genome )
 
 		const result = {
 			view2img: {}
@@ -584,8 +611,7 @@ async function handle_bigwig ( req, res ) {
 			// .src, .width
 			for(const region of view.regions) {
 				region.values = await handle_bigwig_queryfile(
-					file,
-					url,
+					fileobj,
 					region,
 					q.dotplotfactor,
 					q.dividefactor
@@ -768,12 +794,17 @@ function makeyscale() {
 }
 
 
-function handle_bigwig_queryfile ( file, url, region, dotplotfactor, dividefactor ) {
+function handle_bigwig_queryfile ( fileobj, region, dotplotfactor, dividefactor ) {
+	/*
+	fileobj: {file, url, nochr}
+	*/
 	return new Promise((resolve,reject)=>{
 		const ps = spawn( bigWigSummary, [
 			'-udcDir='+serverconfig.cachedir,
-			file || url,
-			region.chr, region.start, region.stop,
+			fileobj.file || fileobj.url,
+			fileobj.nochr ? region.chr.replace('chr','') : region.chr,
+			region.start,
+			region.stop,
 			Math.ceil( region.width * (dotplotfactor || 1) )
 		])
 		const out=[], out2=[]
@@ -794,12 +825,20 @@ function handle_bigwig_queryfile ( file, url, region, dotplotfactor, dividefacto
 
 
 
-async function validate_bigwig ( file, url ) {
+async function validate_bigwig ( file, url, genome ) {
 	if( file ) {
 		if( await file_not_exist( file ) ) throw 'file not found'
 		if( await file_not_readable( file ) ) throw 'file not readable'
 	}
-	if( await file_not_bigwig( file || url ) ) throw 'not a bigWig file'
+	//if( await file_not_bigwig( file || url ) ) throw 'not a bigWig file'
+	const output = await getfileinfo_bigwig( file || url )
+	if(!output) throw 'not a bigWig file'
+	const nochr = ifnochr_bigwig( output, genome )
+	return {
+		file: file,
+		url: url,
+		nochr: nochr
+	}
 }
 
 
@@ -928,7 +967,9 @@ function file_not_writable ( file ) {
 	})
 }
 
+/*
 function file_not_bigwig ( fileurl ) {
+	// no use?
 	return new Promise((resolve, reject)=>{
 		const ps = spawn( bigWigInfo, [ fileurl ] )
 		const out = [], out2 = []
@@ -941,6 +982,46 @@ function file_not_bigwig ( fileurl ) {
 		})
 	})
 }
+*/
+function getfileinfo_bigwig ( fileurl ) {
+	return new Promise((resolve, reject)=>{
+		const ps = spawn( bigWigInfo, [ '-chroms', fileurl ] )
+		const out = [], out2 = []
+		ps.stdout.on('data',i=> out.push(i) )
+		ps.stderr.on('data',i=> out2.push(i) )
+		ps.on('close',()=>{
+			const err = out2.join('')
+			if(err) resolve(false)
+			resolve(out.join(''))
+		})
+	})
+}
+
+function ifnochr_bigwig ( text, genome ) {
+	/*
+	chromCount: 25
+		1 0 249250621
+		10 1 135534747
+	*/
+	const chrlst = []
+	for(const line of text.split('\n')) {
+		if(line[0] == '\t') chrlst.push( line.trim().split(' ')[0] )
+	}
+	if(chrlst.length==0) throw 'no chr names found'
+	return contigNameNoChr( chrlst, genome )
+}
+
+
+function contigNameNoChr( chrlst, genome ) {
+	// hardcoded for human genome
+	for(const n in genome.majorchr) {
+		if(chrlst.indexOf( n.replace('chr','')) != -1) return true
+	}
+	return false
+}
+
+
+
 
 async function validate_tabixfile ( halfpath ) {
 	if( illegalpath( halfpath )) return 'illegal file path'

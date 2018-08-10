@@ -5,14 +5,13 @@ import {basecolor, basecompliment} from './common'
 import * as client from './client'
 
 
-// JUST A TEMPLATE
 
 
 
 
 
 
-export class TKwhat {
+export class TKsnp {
 	constructor ( block ) {
 
 		block.init_dom_tk( this )
@@ -33,20 +32,46 @@ export class TKwhat {
 
 
 	async update ( ) {
-		for(const view of this.block.views) {
-			const tv = this.views[ view.id ]
-			if(!tv) continue
+		this.busy = true
+		const p = {
+			genome: this.block.genome.name,
+			views: this.block.param_viewrange(),
+			name: this.name,
+		}
+		this.block.tkcloakon( this )
+
+		try {
+			const data = this.getdata( p )
+			this.block.tkcloakoff( this )
+			this.tkheight = this.toppad + data.height + this.bottompad
 
 
-			// after updating, shift back to x=0 to conclude panning
-			tv.g.attr('transform','translate(0,' + this.y +')')
-			tv.g_noclip.attr('transform','translate(0,' + this.y +')')
+			for(const view of this.block.views) {
+				const tv = this.views[ view.id ]
+				if(!tv) continue
+
+
+				// after updating, shift back to x=0 to conclude panning
+				tv.g.attr('transform','translate(0,' + this.y +')')
+				tv.g_noclip.attr('transform','translate(0,' + this.y +')')
+			}
+		} catch(e) {
+			if(e.stack) console.log(e.stack)
+			this.block.tkerror( this, e.message || e)
 		}
 
 		//this.block.settle_width()
 		this.block.settle_height()
 	}
 
+
+	getdata ( p ) {
+		return client.dofetch('snptk', p)
+		.then(data=>{
+			if(data.error) throw data.error
+			return data
+		})
+	}
 
 
 	addview ( view ) {

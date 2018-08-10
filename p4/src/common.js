@@ -12,6 +12,7 @@ exports.isPositiveInteger = isPositiveInteger
 const tkt = {
 	ruler: 'ruler',
 	bigwig: 'bigwig',
+	snp: 'snp'
 }
 exports.tkt = tkt
 

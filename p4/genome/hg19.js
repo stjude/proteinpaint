@@ -15,7 +15,7 @@ module.exports={
 	snp:[
 		// allow multiple snp source
 		{
-			name: 'snp',
+			name: 'snp146',
 			db:{
 				dbfile:'anno/db/snp146.hg19.db',
 				statement: 'select * from snp146 where name=?'

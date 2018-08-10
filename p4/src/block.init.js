@@ -290,6 +290,8 @@ function init_dom_for_block ( arg, b ) {
 	init dom for block
 	*/
 
+	b.errdiv = b.holder.append('div')
+
 	b.dom.row1 = b.holder.append('div')
 		.style('margin-bottom','5px')
 	b.dom.coord = {}

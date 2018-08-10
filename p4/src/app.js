@@ -4,13 +4,16 @@ import './style.css'
 import * as client from './client'
 
 /*
+# ruler zoom in
+# reorder tracks
+
 gm view
 ruler config
-ruler zoom in
 bw config
 gene tk
+block <input> search gene
+block <input> jump
 
-reorder tracks
 
 */
 

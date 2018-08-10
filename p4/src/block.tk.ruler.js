@@ -169,6 +169,7 @@ export class TKruler {
 				tk.left_width = this.getBBox().width
 			})
 		this.busy=false
+		this.block.settle_width()
 		this.block.settle_height()
 	}
 

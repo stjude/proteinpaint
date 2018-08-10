@@ -37,14 +37,7 @@ async init ( arg ) {
 	try {
 		validate_parameter_init( arg, this )
 	} catch(e) {
-		if(e.stack) console.log(e.stack)
-		const m = 'Error: '+(e.message || e)
-		if(this.holder) {
-			client.sayerror( this.holder, m )
-		} else {
-			alert( m )
-		}
-		return
+		return this.error( 'Error: '+(e.message || e), e )
 	}
 
 	arg.tklst.unshift({type:common.tkt.ruler})
@@ -53,12 +46,17 @@ async init ( arg ) {
 		try {
 			await this.addtk_bytype( t )
 		} catch(e) {
-			if(e.stack) console.log(e.stack)
-			client.sayerror( this.holder, 'Error creating '+t.type+' track "'+t.name+'": ' + (e.message||e) )
-			return
+			return this.error('Error creating '+t.type+' track "'+t.name+'": ' + (e.message||e), e )
 		}
 	}
 
+	for(const t of arg.nativetracks) {
+		try {
+			await this.addtk_native( t )
+		} catch(e) {
+			return this.error('Native track error: '+(t.name||'noname')+': '+(e.message||e), e)
+		}
+	}
 
 	// upon init, must provide valid width for both view and svg for track updating
 	this.setwidth_views()
@@ -76,24 +74,6 @@ static async create ( arg ) {
 }
 
 
-
-
-async update_tracks ( lst ) {
-	/*
-	given list or all
-
-	for each track, update all views, even if it is triggered by just one view
-	*/
-
-	const dolst = lst || this.tklst
-
-	const tasks = []
-	for(const tk of dolst) {
-		tasks.push( tk.update() )
-	}
-	await Promise.all( tasks )
-	this.settle_width()
-}
 
 
 
@@ -388,13 +368,64 @@ add_view_2tk ( tk, view ) {
 
 
 
-addtk_bytype( t ) {
+addtk_bytype ( t ) {
+	if(t.type == common.tkt.ruler) {
+		return this.tklst.push( new TKruler( this ) )
+	}
 	if(t.type == common.tkt.bigwig) {
 		return import('./block.tk.bigwig').then(_=>this.tklst.push( new _.TKbigwig( t, this) ) )
 	}
-	if(t.type == common.tkt.ruler) {
-		this.tklst.push( new TKruler( this ) )
+	if(t.type == common.tkt.snp) {
+		return import('./block.tk.snp').then(_=>this.tklst.push( new _.TKsnp( t, this) ) )
 	}
+	throw 'unknown type: '+t.type
+}
+
+
+
+async update_tracks ( lst ) {
+	/*
+	given list or all
+
+	for each track, update all views, even if it is triggered by just one view
+	*/
+
+	const dolst = lst || this.tklst
+
+	const tasks = []
+	for(const tk of dolst) {
+		tasks.push( tk.update() )
+	}
+	await Promise.all( tasks )
+	this.settle_width()
+}
+
+
+async addtk_native ( t ) {
+	if( !t.name ) throw '.name missing'
+	if( t.type == common.tkt.snp ) {
+		// native snp, no client template
+		await this.addtk_bytype( t )
+		return
+	}
+	// look at genome.tracks[]
+	if(!this.genome.tracks) throw 'genome.tracks[] missing'
+	const t0 = this.genome.tracks.find( i=> i.name.toLowerCase() == t.name.toLowerCase() )
+	if(t0) {
+		// found client template; make a copy
+		const tkcopy = {}
+		for(const k in t0) {
+			tkcopy[k] = t0[k]
+		}
+		// override custom attr
+		for(const k in t) {
+			if(k=='name') continue
+			tkcopy[k] = t[k]
+		}
+		await this.addtk_bytype( tkcopy )
+		return
+	}
+	throw 'track not found'
 }
 
 
@@ -734,6 +765,16 @@ param_viewrange () {
 /////////////////////////////////// end of __coord and view range
 
 
+
+
+error ( m, e ) {
+	if(e.stack) console.log(e.stack)
+	if(this.errdiv) {
+		client.sayerror( this.errdiv, m )
+	} else {
+		alert( m )
+	}
+}
 
 
 // END of block
