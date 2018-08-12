@@ -938,6 +938,7 @@ async function handle_tkbedj ( req, res ) {
 
 		const genome = genomes[ q.genome ]
 		if(!genome) throw 'invalid genome name'
+		q.genome = genome
 
 		let fileobj
 
@@ -1091,7 +1092,7 @@ function handle_bedj_getdata_mayflipmode ( view ) {
 	}
 	for(const region of view.regions) {
 		region.depth = []
-		for(const i=0; i<region.width; i++) region.depth.push(0)
+		for(let i=0; i<region.width; i++) region.depth.push(0)
 		
 		region.binbpsize = (region.stop - region.start) / region.width
 	}
@@ -1132,6 +1133,7 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 		stackspace
 		categories {}
 		color
+		genome
 	*/
 
 	const items = []
@@ -1326,18 +1328,18 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 			continue
 		}
 
-		const fillcolor =
+		item.fillcolor =
 			(q.categories && item.category && q.categories[item.category]) ?
 				q.categories[item.category].color :
 				(item.color || q.color)
-		ctx.fillStyle = fillcolor
+		ctx.fillStyle = item.fillcolor
 
 		const y = (q.stackheight + q.stackspace) * (c.stack-1)
 
 
 		if( item.exon || item.rglst.length>1 ) {
 			// through line
-			ctx.strokeStyle = fillcolor
+			ctx.strokeStyle = item.fillcolor
 			ctx.beginPath()	
 			ctx.moveTo(c.start, Math.floor(y + q.stackheight/2)+.5)
 			ctx.lineTo(c.stop,  Math.floor(y + q.stackheight/2)+.5)
@@ -1390,13 +1392,13 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 					ctx.fillRect( pxa, y, Math.max(1,pxb-pxa), q.stackheight )
 					if(c.stranded && !item.willtranslate) {
 						ctx.strokeStyle='white'
-						strokearrow(ctx, _strand, pxa, y+q.thinpad, pxb-pxa, q.stackheight-thinpad*2)
+						strokearrow(ctx, _strand, pxa, y+thinpad, pxb-pxa, q.stackheight-thinpad*2)
 					}
 				}
 			}
 			if(c.stranded && item.intron) {
 				// intron arrows
-				ctx.strokeStyle = fillcolor
+				ctx.strokeStyle = item.fillcolor
 				for(const e of item.intron) {
 					const a = Math.max( e[0], r.start)
 					const b = Math.min( e[1], r.stop)
@@ -1448,15 +1450,15 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 		// name
 		if(c.namestart!=undefined) {
 			ctx.textAlign = c.textalign
-			ctx.fillStyle = fillcolor
+			ctx.fillStyle = item.fillcolor
 			ctx.fillText(c.namestr, c.namestart, y + q.stackheight/2 )
 		} else if(c.namehover) {
 			const x=Math.max(10,c.start+10)
 			ctx.fillStyle='white'
 			ctx.fillRect(x, y, c.namewidth+10, q.stackheight )
-			ctx.strokeStyle = fillcolor
+			ctx.strokeStyle = item.fillcolor
 			ctx.strokeRect( x+1.5, y+.5, c.namewidth+10-3, q.stackheight-2)
-			ctx.fillStyle = fillcolor
+			ctx.fillStyle = item.fillcolor
 			ctx.textAlign = 'center'
 			ctx.fillText( c.namestr, x+c.namewidth/2+5, y+q.stackheight/2)
 		} else if(c.namein) {
@@ -1468,9 +1470,8 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 		}
 	}
 
-	if( 0 && translateitem.length ) {
-		// items to be translated
-		await handle_bedj_render_stack_translate( canvas, ctx, translateitem )
+	for(const item of translateitem) {
+		await handle_bedj_render_stack_translate( canvas, ctx, item, view, q )
 	}
 
 	view.src = canvas.toDataURL()
@@ -1517,182 +1518,142 @@ function printcoord(chr, start, stop) {
 
 
 
-async function handle_bedj_render_stack_translate ( result ) {
+async function handle_bedj_render_stack_translate ( canvas, ctx, item, view, q ) {
+	/*
+	a single item
+	*/
 
-			const translateitem = result.translateitem
-			const canvas = result.canvas
-			const ctx = result.ctx
-			delete result.translateitem
-			delete result.canvas
-			delete result.ctx
+	if(!view.mapaa) view.mapaa = []
 
-			const mapaa=[]
+	const altcolor='rgba(122,103,44,.7)',
+		errcolor='red',
+		startcolor='rgba(0,255,0,.4)',
+		stopcolor='rgba(255,0,0,.5)'
 
-			const arg=['faidx', genomefile]
-			for(const i of translateitem) {
-				arg.push(i.chr+':'+(i.start+1)+'-'+i.stop)
+	ctx.textAlign='center'
+	ctx.textBaseline='middle'
+
+	const c=item.canvas
+	const y = (q.stackheight + q.stackspace)*(c.stack-1)
+
+	item.genomicseq = ( await get_ntseq( q.genome, item.chr, item.start, item.stop ) ).toUpperCase()
+
+	const aaseq=common.nt2aa(item)
+
+	for(const region of item.rglst) {
+		const bppx = region.width / (region.stop-region.start)
+		const _fs = Math.min( q.stackheight, bppx*3)
+		const aafontsize=_fs<8 ? null : _fs
+		let minustrand=false
+		if(c.stranded && item.strand=='-') {
+			minustrand=true
+		}
+		let cds=0
+		if(aafontsize) {
+			ctx.font=aafontsize+'px Arial'
+		}
+		for(const e of item.coding) {
+			// each exon, they are ordered 5' to 3'
+			if(minustrand) {
+				if(e[0]>=item.stop) {
+					cds+=e[1]-e[0]
+					continue
+				}
+				if(e[1]<=item.start) {
+					break
+				}
+			} else {
+				if(e[1]<=item.start) {
+					cds+=e[1]-e[0]
+					continue
+				}
+				if(e[0]>=item.stop) {
+					break
+				}
 			}
-			const _out=[],
-				_out2=[]
-			const sp2=spawn(samtools,arg)
-			sp2.stdout.on('data',i=> _out.push(i) )
-			sp2.stderr.on('data',i=> _out2.push(i) )
-			sp2.on('close',code=>{
-				const dnalst=[]
-				let thisseq=null
-				for(const line of _out.join('').trim().split('\n')) {
-					if(line[0]=='>') {
-						if(thisseq) {
-							dnalst.push(thisseq)
-						}
-						thisseq=''
+
+			const lookstart=Math.max(item.start, e[0]),
+				lookstop=Math.min(item.stop, e[1])
+			if(minustrand) {
+				cds+=e[1]-lookstop
+			} else {
+				cds+=lookstart-e[0]
+			}
+
+			let codonspan=0
+			for(let k=0; k<lookstop-lookstart;k++) {
+				// each coding base
+				cds++
+				codonspan++
+				let aanumber
+				if(cds%3==0) {
+					aanumber=(cds/3)-1
+				} else {
+					if(k<lookstop-lookstart-1) {
 						continue
+					} else {
+						// at the 3' end of this exon
+						aanumber=Math.floor(cds/3)
 					}
-					thisseq+=line
 				}
-				dnalst.push(thisseq)
-
-				if(dnalst.length!=translateitem.length) {
-					console.error('ERROR: number mismatch between gene and retrieved sequence: '+translateitem.length+' '+dnalst.length)
-					result.src = canvas.toDataURL()
-					resolve(result)
+				let aa=aaseq[aanumber],
+					_fillcolor= Math.ceil(cds/3)%2==0 ? altcolor : null
+				if(!aa) {
+					aa=4 // show text "4" to indicate error
+					_fillcolor=errcolor
+				} else if(aa=='M') {
+					_fillcolor=startcolor
+				} else if(aa=='*') {
+					_fillcolor=stopcolor
 				}
 
-				const altcolor='rgba(122,103,44,.7)',
-					errcolor='red',
-					startcolor='rgba(0,255,0,.4)',
-					stopcolor='rgba(255,0,0,.5)'
-				ctx.textAlign='center'
-				ctx.textBaseline='middle'
-				for(let i=0; i<translateitem.length; i++) {
-					// need i
-					const item=translateitem[i]
-					const fillcolor= (categories && item.category && categories[item.category]) ? categories[item.category].color : (item.color || color)
-					const c=item.canvas
-					const y=(stackheight+stackspace)*(c.stack-1)
-					item.genomicseq=dnalst[i].toUpperCase()
-					const aaseq=common.nt2aa(item)
-					for(const _r of item.rglst) {
-						const region=rglst[_r.idx]
-						let cumx=0
-						for(let j=0; j<_r.idx; j++) {
-							cumx+=rglst[j].width+regionspace
-						}
-						const bppx=region.width/(region.stop-region.start)
-						const _fs=Math.min(stackheight,bppx*3)
-						const aafontsize=_fs<8 ? null : _fs
-						let minustrand=false
-						if(c.stranded && item.strand=='-') {
-							minustrand=true
-						}
-						let cds=0
-						if(aafontsize) {
-							ctx.font=aafontsize+'px Arial'
-						}
-						for(const e of item.coding) {
-							// each exon, they are ordered 5' to 3'
-							if(minustrand) {
-								if(e[0]>=item.stop) {
-									cds+=e[1]-e[0]
-									continue
-								}
-								if(e[1]<=item.start) {
-									break
-								}
-							} else {
-								if(e[1]<=item.start) {
-									cds+=e[1]-e[0]
-									continue
-								}
-								if(e[0]>=item.stop) {
-									break
-								}
-							}
-							const lookstart=Math.max(item.start, e[0]),
-								lookstop=Math.min(item.stop, e[1])
-							if(minustrand) {
-								cds+=e[1]-lookstop
-							} else {
-								cds+=lookstart-e[0]
-							}
-							let codonspan=0
-							for(let k=0; k<lookstop-lookstart;k++) {
-								// each coding base
-								cds++
-								codonspan++
-								let aanumber
-								if(cds%3==0) {
-									aanumber=(cds/3)-1
-								} else {
-									if(k<lookstop-lookstart-1) {
-										continue
-									} else {
-										// at the 3' end of this exon
-										aanumber=Math.floor(cds/3)
-									}
-								}
-								let aa=aaseq[aanumber],
-									_fillcolor= Math.ceil(cds/3)%2==0 ? altcolor : null
-								if(!aa) {
-									aa=4 // show text "4" to indicate error
-									_fillcolor=errcolor
-								} else if(aa=='M') {
-									_fillcolor=startcolor
-								} else if(aa=='*') {
-									_fillcolor=stopcolor
-								}
-								// draw aa
-								let thispx,
-									thiswidth=bppx*codonspan
-								if(minustrand) {
-									const thispos=lookstop-1-k
-									thispx=cumx+region.scale(thispos)
-								} else {
-									const thispos=lookstart+k+1-codonspan
-									thispx=cumx+region.scale(thispos)
-								}
-								if(region.reverse) {
-									// correction!
-									thispx-=thiswidth
-								}
-								codonspan=0
-								if(thispx>=cumx && thispx<=cumx+region.width) {
-									// in view range
-									// rect
-									if(_fillcolor) {
-										ctx.fillStyle= _fillcolor
-										ctx.fillRect(thispx,y,thiswidth,stackheight)
-									}
-									if(aafontsize) {
-										ctx.fillStyle='white'
-										ctx.fillText(aa,thispx+thiswidth/2,y+stackheight/2)
-									}
-									mapaa.push({
-										x1:thispx,
-										x2:thispx+thiswidth,
-										y:item.canvas.stack,
-										name:aa+(aanumber+1)+' <span style="font-size:.7em;color:#858585">AA residue</span>'
-										})
-								}
-							}
-						}
+				// draw aa
+				let thispx,
+					thiswidth=bppx*codonspan
+				if(minustrand) {
+					const thispos=lookstop-1-k
+					thispx = region.scale(thispos)
+				} else {
+					const thispos=lookstart+k+1-codonspan
+					thispx = region.scale(thispos)
+				}
+				if(view.reverse) {
+					// correction!
+					thispx-=thiswidth
+				}
+
+				codonspan=0
+				if(thispx>=cumx && thispx<=cumx+region.width) {
+					// in view range
+					// rect
+					if(_fillcolor) {
+						ctx.fillStyle= _fillcolor
+						ctx.fillRect(thispx,y,thiswidth, q.stackheight)
 					}
-					if(c.namehover) {
-						ctx.font='bold '+fontsize+'px Arial'
-						const x=Math.max(10,c.start+10)
+					if(aafontsize) {
 						ctx.fillStyle='white'
-						ctx.fillRect(x,y,c.namewidth+10,stackheight)
-						ctx.strokeStyle=fillcolor
-						ctx.strokeRect(x+1.5,y+.5,c.namewidth+10-3,stackheight-2)
-						ctx.fillStyle=fillcolor
-						ctx.fillText(c.namestr,x+c.namewidth/2+5,y+stackheight/2)
+						ctx.fillText(aa,thispx+thiswidth/2, y+ q.stackheight/2 )
 					}
+					mapaa.push({
+						x1:thispx,
+						x2:thispx+thiswidth,
+						y:item.canvas.stack,
+						name:aa+(aanumber+1)+' <span style="font-size:.7em;color:#858585">AA residue</span>'
+					})
 				}
-				// done translating
-				result.src = canvas.toDataURL()
-				result.mapaa = mapaa
-				resolve(result)
-		})
+			}
+		}
+	}
+	if(c.namehover) {
+		ctx.font='bold '+fontsize+'px Arial'
+		const x=Math.max(10,c.start+10)
+		ctx.fillStyle='white'
+		ctx.fillRect(x,y,c.namewidth+10, q.stackheight)
+		ctx.strokeStyle = item.fillcolor
+		ctx.strokeRect(x+1.5,y+.5,c.namewidth+10-3, q.stackheight-2)
+		ctx.fillStyle = item.fillcolor
+		ctx.fillText(c.namestr,x+c.namewidth/2+5, y + q.stackheight/2)
+	}
 }
 
 
