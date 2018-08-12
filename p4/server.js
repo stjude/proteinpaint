@@ -2,6 +2,7 @@ const fs = require('fs'),
 	url = require('url')
 	path = require('path'),
 	spawn = require('child_process').spawn,
+	exec = require('child_process').exec,
 	readline = require('readline'),
 	express = require('express'),
 	http = require('http'),
@@ -12,6 +13,7 @@ const fs = require('fs'),
 	bodyParser = require('body-parser'),
 	jsonwebtoken = require('jsonwebtoken'),
 	d3color = require('d3-color'),
+	d3scale = require('d3-scale'),
 	coord = require('./src/coord'),
 	common = require('./src/common')
 
@@ -45,6 +47,59 @@ server_validate_config()
 .catch(err=>{
 	console.error(err)
 })
+
+
+
+
+
+
+function server_launch() {
+
+	const app = express()
+
+	app.use( bodyParser.json({}) )
+	app.use( bodyParser.text({limit:'1mb'}) )
+	app.use(bodyParser.urlencoded({ extended: true })) 
+
+	app.use((req, res, next)=>{
+		res.header("Access-Control-Allow-Origin", "*")
+		res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+		next()
+	})
+
+
+	app.use(express.static(__dirname+'/public'))
+	app.use(compression())
+
+
+	if(serverconfig.jwt) {
+		console.log('JWT is activated')
+		app.use( (req,res,next)=>{
+			if(!req.headers || !req.headers.jwt) {
+				res.send({error:'No authorization'})
+				return
+			}
+			jsonwebtoken.verify( req.headers.jwt, serverconfig.jwt, (err, decode)=>{
+				if(err) {
+					res.send({error:'Not authorized'})
+					return
+				}
+				next()
+			})
+		})
+	}
+
+	app.get('/genomes', handle_genomes)
+	app.post('/genelookup', handle_genelookup)
+	app.post('/snpbyname', handle_snpbyname)
+	app.post('/ntseq', handle_ntseq)
+	app.post('/bigwig', handle_bigwig)
+	app.post('/tkbedj', handle_tkbedj)
+
+	const port = serverconfig.port || 3000
+	app.listen(port)
+	console.log('STANDBY at port',port)
+}
 
 
 
@@ -193,12 +248,9 @@ async function server_validate_config() {
 
 		if(g.tracks) {
 			for(const tk of g.tracks) {
-			/*
-				if(!tk.__isgene) continue
-				if(!tk.file) return 'Tabix file missing for gene track: '+JSON.stringify(tk)
-				const [err, file] =validate_tabixfile(tk.file)
-				if(err) return tk.file+': gene tabix file error: '+err
-				*/
+				if( tk.__isgene ) {
+				} else {
+				}
 			}
 		}
 
@@ -312,7 +364,7 @@ async function validate_snpdb ( lst ) {
 
 		if(!snp.tk) throw '.snp.tk{} missing for '+snp.name
 		if(!snp.tk.file) throw '.snp.tk.file missing for '+snp.name
-		const err = await validate_tabixfile( snp.tk.file )
+		const err = await validate_tabixfile( path.join( serverconfig.filedir, snp.tk.file ) )
 		if(err) throw 'tk.file error for '+snp.name+': '+err
 	}
 }
@@ -326,55 +378,6 @@ async function validate_snpdb ( lst ) {
 
 
 
-
-function server_launch() {
-
-	const app = express()
-
-	app.use( bodyParser.json({}) )
-	app.use( bodyParser.text({limit:'1mb'}) )
-	app.use(bodyParser.urlencoded({ extended: true })) 
-
-	app.use((req, res, next)=>{
-		res.header("Access-Control-Allow-Origin", "*")
-		res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
-		next()
-	})
-
-
-	app.use(express.static(__dirname+'/public'))
-	app.use(compression())
-
-
-	if(serverconfig.jwt) {
-		console.log('JWT is activated')
-		app.use( (req,res,next)=>{
-			if(!req.headers || !req.headers.jwt) {
-				res.send({error:'No authorization'})
-				return
-			}
-			jsonwebtoken.verify( req.headers.jwt, serverconfig.jwt, (err, decode)=>{
-				if(err) {
-					res.send({error:'Not authorized'})
-					return
-				}
-				next()
-			})
-		})
-	}
-
-	// routes
-	app.get('/genomes', handle_genomes)
-	app.post('/genelookup', handle_genelookup)
-	app.post('/snpbyname', handle_snpbyname)
-	app.post('/ntseq', handle_ntseq)
-	app.post('/bigwig', handle_bigwig)
-	app.post('/snptk', handle_snptk)
-
-	const port = serverconfig.port || 3000
-	app.listen(port)
-	console.log('STANDBY at port',port)
-}
 
 
 
@@ -554,27 +557,6 @@ async function handle_ntseq ( req, res ) {
 
 
 
-async function handle_snptk ( req, res ) {
-	try {
-		const q = JSON.parse(req.body)
-		log(req,q)
-		const genome = genomes[q.genome]
-		if(!genome) throw 'invalid genome name'
-		if(!genome.snp) throw 'no snp for this genome'
-		
-		if(!q.name) throw 'track name missing'
-		const tk = genome.snp.find( i=> i.name == q.name )
-		if(!tk) throw 'no snp track found by name '+q.name
-
-		const seq = await get_ntseq( genome, q.chr, q.start, q.stop )
-		res.send({seq: seq})
-
-	} catch(e){
-		if(e.stack) console.error(e.stack)
-		res.send({error: (e.message || e)})
-	}
-}
-
 
 
 
@@ -628,6 +610,17 @@ async function handle_bigwig ( req, res ) {
 
 
 function handle_bigwig_render ( q, result ) {
+	/*
+	q:
+		.pcolor
+		.barheight
+		.views[ { id, regions:[], regionspace } ]
+			.width
+			.values[]
+		.scale.auto
+	result:
+		view2img{}
+	*/
 	if(q.scale.auto || q.scale.percentile) {
 		// get min/max across all views
 		const positive=[]
@@ -841,6 +834,883 @@ async function validate_bigwig ( file, url, genome ) {
 }
 
 
+async function validate_tabixtrack ( filefullpath, url, indexURL, genome ) {
+	if(filefullpath) {
+		const err = await validate_tabixfile( filefullpath )
+		if(err) throw err
+		const chrlst = await getchrlst_tabix( filefullpath )
+		if(!chrlst) throw 'not a tabix file'
+		return {
+			file: filefullpath,
+			nochr: contigNameNoChr( chrlst, genome )
+		}
+	}
+	if(!url) throw 'neither file or url given'
+
+
+	const indexurl = indexURL || url+'.tbi' // no .csi
+
+	const tmp = indexurl.split('//')
+	if(tmp.length!=2) throw 'invalid index URL: '+indexurl
+
+	// path of the index file, not including file name
+	const dir = path.join( serverconfig.cachedir, tmp[0], tmp[1] )
+
+	/*
+	index file full path
+	for .tbi index file coming from dnanexus, convert the downloaded cache file to .csi
+	XXX FIXME why .tbi index doesn't work natively on dnanexus??
+	*/
+	let indexfile = path.basename(tmp[1])
+	if(indexurl.startsWith('https://dl.dnanex.us') ||
+		indexurl.startsWith('https://westus.dl.azure.dnanex.us') ||
+		indexurl.startsWith('https://westus.dl.stagingazure.dnanex.us')
+		) {
+		indexfile = indexfile.replace(/tbi$/,'csi')
+	}
+
+	const indexFilepath = path.join( dir,  indexfile )
+
+	if( await file_not_exist( dir )) {
+		if(! (await create_directory( dir ) )) throw 'cannot create directory for index file'
+	}
+	if( await file_not_writable( dir )) throw 'cannot write to index file directory'
+	if( await file_not_exist( indexFilepath ) ) {
+		await downloadFileSaveTo( indexurl, indexFilepath )
+	}
+	const chrlst = await getchrlst_tabix( url, dir )
+	if(!chrlst) throw 'URL does not point to tabix file'
+	return {
+		url: url,
+		dir: dir,
+		nochr: contigNameNoChr( chrlst, genome )
+	}
+}
+
+
+function downloadFileSaveTo( url, tofile ) {
+	return new Promise((resolve,reject)=>{
+		const f = fs.createWriteStream(tofile)
+
+		f.on('finish',()=>{
+			f.close()
+			resolve()
+		})
+
+		( url.startsWith('https') ? https : http )
+		.get( url, (response)=>{
+			response.pipe(f)
+		})
+		.on('error', err=>{
+			reject('cannot download index file')
+		})
+	})
+}
+
+
+
+
+async function getchrlst_tabix ( file, dir ) {
+	/* file is either full-path file or url
+	in case of url, dir must be given
+	*/
+	return new Promise((resolve,reject)=>{
+		const ps = spawn(tabix, [ '-l', file], {cwd: dir} )
+		const out=[], out2=[]
+		ps.stdout.on('data',i=>out.push(i))
+		ps.stderr.on('data',i=>out2.push(i))
+		ps.on('close',()=>{
+			const err = out2.join('')
+			if(err) resolve(null)
+			resolve( out.join('').trim().split('\n') )
+		})
+	})
+}
+
+
+
+
+
+async function handle_tkbedj ( req, res ) {
+	try {
+		const q = JSON.parse(req.body)
+		log(req,q)
+
+		const genome = genomes[ q.genome ]
+		if(!genome) throw 'invalid genome name'
+
+		let fileobj
+
+		if( q.issnp ) {
+			// TODO snp tk
+			if( !genome.snp) throw 'genome has no snp'
+			const snptk = genome.snp.find( i=> i.name == q.issnp )
+			if( !snptk ) throw 'no snp track found for '+q.issnp
+			fileobj = { issnp: 1, }
+			for(const k in snptk) {
+				fileobj[k] = snptk[k]
+			}
+		} else {
+			const [ file, url ] = fileurl( q )
+			fileobj = await validate_tabixtrack( file, url, q.indexURL, genome )
+			if( common.isBadArray( q.views )) throw '.views[] should be array'
+		}
+
+
+		for(const view of q.views) {
+			if( common.isBadArray( view.regions )) throw 'view.regions[] should be array'
+
+			if( handle_bedj_rangetoobig( fileobj, view ) ) {
+				// view range beyond limit, drawn an alert message
+				continue
+			}
+
+			await handle_bedj_getdata_view( fileobj, view )
+
+			if( view.lineset ) {
+				await handle_bedj_render_stack( view, fileobj, q )
+			} else {
+				handle_bedj_render_density( view, q )
+			}
+		}
+
+		const result = {
+			views: [],
+			maxdepth: 0
+		}
+		for(const view of q.views) {
+			result.views.push( {
+				id: view.id,
+				src: view.src,
+				width: view.width,
+				height: view.height,
+			} )
+			if( !view.lineset ) {
+				// depth
+				for(const r of view.regions) {
+					for(const v of r.depth) {
+						result.maxdepth = Math.max( v, result.maxdepth )
+					}
+				}
+			}
+		}
+		if( result.maxdepth == 0 ) delete result.maxdepth
+
+		res.send(result)
+
+	} catch(e){
+		if(e.stack) console.error(e.stack)
+		res.send({error: (e.message || e)})
+	}
+}
+
+
+function handle_bedj_rangetoobig ( fileobj, view ) {
+	if(fileobj.noshowbeyondrange) {
+		if( view.regions.reduce((i,j)=>i+j.stop-j.start,0) > fileobj.noshowbeyondrange ) {
+			// above limit
+			const h = 50
+			const canvas=new Canvas( view.width, h )
+			const ctx=canvas.getContext('2d')
+			ctx.font = '16px Arial'
+			ctx.fillStyle='#aaa'
+			ctx.textAlign='center'
+			ctx.textBaseline='middle'
+			ctx.fillText('No data in view range', view.width/2, h/2 )
+			view.src = canvas.toDataURL()
+			view.height = h
+			return true
+		}
+	}
+	return false
+}
+
+
+async function handle_bedj_getdata_view ( fileobj, view ) {
+	/*
+	view {}
+		regions [ {} ]
+	
+	for each region, fetch lines and add to view.lineset
+	when # of lines grow too big
+	convert lines to region.depth[], length by region.width, and add subsequent lines to coverage
+	delete view.lineset
+
+	otherwise, keep view.lineset for stack
+	*/
+	view.lineset = new Set()
+
+	for(const region of view.regions) {
+		await handle_bedj_getdata_region( fileobj, view, region )
+	}
+}
+
+
+async function handle_bedj_getdata_region ( fileobj, view, region ) {
+	return new Promise((resolve,reject)=>{
+		const ps = spawn( tabix, [
+			fileobj.file || fileobj.url,
+			(fileobj.nochr ? region.chr.replace('chr','') : region.chr)+':'+region.start+'-'+region.stop,
+			{cwd: fileobj.dir}
+		])
+		const out2 = []
+		ps.stderr.on('data',i=>out2.push(i))
+		const rl = readline.createInterface({input: ps.stdout})
+		rl.on('line',line=>{
+
+			if( view.lineset ) {
+				// recording lines
+				view.lineset.add( line )
+				handle_bedj_getdata_mayflipmode( view )
+				return
+			}
+			// recording depth
+			const l = line.split('\t')
+			const start = Number.parseInt(l[1])
+			const stop = Number.parseInt(l[2])
+			for( let binidx=Math.floor((Math.max(start,region.start)-region.start)/region.binbpsize); ; binidx++ ) {
+				region.depth[ binidx ]++
+				if( stop <= region.start + binidx * region.binbpsize ) {
+					break
+				}
+			}
+		})
+		rl.on('close',()=>{
+			const err = out2.join('')
+			if(err) throw err
+			resolve()
+		})
+	})
+}
+
+
+function handle_bedj_getdata_mayflipmode ( view ) {
+	if( view.lineset.size < 500 ) {
+		// no flip
+		return
+	}
+	for(const region of view.regions) {
+		region.depth = []
+		for(const i=0; i<region.width; i++) region.depth.push(0)
+		
+		region.binbpsize = (region.stop - region.start) / region.width
+	}
+	// collapse all lines to depth
+	for(const line of view.lineset) {
+		const l = line.split('\t')
+		const start = Number.parseInt(l[1])
+		const stop = Number.parseInt(l[2])
+		for(const r of view.regions) {
+			const start0 = Math.max( r.start, start )
+			const stop0 = Math.min( r.stop, stop )
+			if( start0 > stop0 ) {
+				for(let i=Math.floor((start0-r.start)/r.binbpsize); ; i++) {
+					r.depth[ i ]++
+					if( stop <= r.start + r.binsize*(i+1) ) break
+				}
+			}
+		}
+	}
+	delete view.lineset
+}
+
+
+
+async function handle_bedj_render_stack ( view, fileobj, q ) {
+	/*
+	view {}
+		reverse
+		lineset
+		regions [ {} ]
+			start/stop/width
+		regionspace
+		width
+	fileobj {}
+		isgene -- only from server-side config
+	q {}
+		stackheight
+		stackspace
+		categories {}
+		color
+	*/
+
+	const items = []
+	for(const line of view.lineset) {
+		const l = line.split('\t')
+		const j = JSON.parse(l[3])
+		j.start = Number.parseInt(l[1])
+		j.stop  = Number.parseInt(l[2])
+		items.push( j )
+	}
+
+	let maytranslate = false
+	if( fileobj.isgene ) {
+		let bp=0, w=0
+		for(const r of view.regions) {
+			bp += r.stop - r.start
+			w += r.width
+		}
+		if( bp > w*3 ) maytranslate = true
+	}
+
+	const fontsize = q.stackheight - 2
+
+	const translateitem=[]
+	const namespace=1
+	const namepad=10 // box no struct: [pad---name---pad]
+	const canvas=new Canvas(10,10) // for measuring text only
+	let ctx=canvas.getContext('2d')
+	ctx.font='bold '+fontsize+'px Arial'
+	const packfull = items.length<200
+	const mapisoform = items.length<200 ? [] : null
+
+	// sort items
+	items.sort((a,b)=>{
+		if( view.reverse ) {
+			if(a.stop==b.stop) {
+				return a.start-b.start
+			}
+			return b.stop-a.stop
+		}
+		if(a.start==b.start) {
+			return b.stop-a.stop
+		}
+		return a.start-b.start
+	})
+
+	const hasstruct = items.find( i=> i.exon )
+
+	// for each region, make coord 2 px scale 
+	{
+		let x = 0
+		for(const r of view.regions) {
+			r.scale = d3scale.scaleLinear()
+				.range([ x, x + r.width ])
+			if( view.reverse ) {
+				r.scale.domain([ r.stop, r.start ])
+			} else {
+				r.scale.domain([ r.start, r.stop ])
+			}
+			x += r.width + view.regionspace
+		}
+	}
+
+	// stack
+	const stack = [ 0 ]
+	let maxstack = 1,
+		mapexon = null
+
+	for(const item of items) {
+
+		item.rglst = [] // list of regions which this item is in
+		// px position in view.regions
+		let itemstartpx = null,
+			itemstoppx = null
+
+		for(const r of view.regions ) {
+			const a=Math.max(item.start,r.start)
+			const b=Math.min(item.stop,r.stop)
+			if(a<b) {
+				// item in this region
+				const x1 = r.scale( a )
+				const x2 = r.scale( b )
+				itemstartpx = Math.min( x1, x2 )
+				itemstoppx  = Math.max( x1, x2 )
+				item.rglst.push( r )
+			}
+		}
+
+		if(itemstartpx==null) {
+			continue
+		}
+
+		item.canvas = {
+			start:itemstartpx,
+			stop:itemstoppx,
+			stranded:(item.strand!=undefined),
+		}
+
+		if(item.coding && maytranslate) {
+			item.willtranslate=true // so later the strand will not show
+			translateitem.push(item)
+		}
+
+		let boxstart = itemstartpx
+		let boxstop  = itemstoppx
+		if(packfull) {
+			// check item name
+			const namestr = item.name ? item.name : null
+			if(namestr) {
+				item.canvas.namestr=namestr
+				const namewidth=ctx.measureText( namestr ).width
+				if(hasstruct) {
+					if(item.canvas.start>=namewidth+namespace) {
+						item.canvas.namestart=item.canvas.start-namespace
+						boxstart=item.canvas.namestart-namewidth
+						item.canvas.textalign='right'
+					} else if(item.canvas.stop+namewidth+namespace <= view.width) {
+						item.canvas.namestart=item.canvas.stop+namespace
+						boxstop=item.canvas.namestart+namewidth
+						item.canvas.textalign='left'
+					} else {
+						item.canvas.namehover=true
+						item.canvas.namewidth=namewidth
+						item.canvas.textalign='left'
+					}
+				} else {
+					if(Math.min(view.width,item.canvas.stop)-Math.max(0,item.canvas.start)>=namewidth+namepad*2) {
+						item.canvas.namein=true
+					} else if(item.canvas.start>=namewidth+namespace) {
+						item.canvas.namestart=item.canvas.start-namespace
+						boxstart=item.canvas.namestart-namewidth
+						item.canvas.textalign='right'
+					} else if(item.canvas.stop+namewidth+namespace <= view.width) {
+						item.canvas.namestart=item.canvas.stop+namespace
+						boxstop=item.canvas.namestart+namewidth
+						item.canvas.textalign='left'
+					} else {
+						// why??
+						item.canvas.namein=true
+					}
+				}
+			}
+		}
+		if(item.canvas.stop-item.canvas.start > view.width * .3) {
+			// enable
+			mapexon = []
+		}
+		for(let i=1; i<=maxstack; i++) {
+			if(stack[i]==undefined || stack[i]<boxstart) {
+				item.canvas.stack=i
+				stack[i]=boxstop
+				break
+			}
+		}
+		if(item.canvas.stack==undefined) {
+			maxstack++
+			stack[maxstack]=boxstop
+			item.canvas.stack=maxstack
+		}
+		if(mapisoform && (item.name || item.isoform)) {
+			const show=[]
+			if(item.name) show.push(item.name)
+			if(item.isoform) show.push(item.isoform)
+			mapisoform.push({
+				x1:item.canvas.start,
+				x2:item.canvas.stop,
+				y:item.canvas.stack,
+				name:show.join(' ')+printcoord(item.chr, item.start, item.stop)
+			})
+		}
+	}
+
+	// render
+
+	canvas.width = view.width
+	const finalheight = (q.stackheight + q.stackspace) * maxstack - q.stackspace
+	canvas.height = finalheight
+	ctx = canvas.getContext('2d')
+	ctx.font = 'bold '+fontsize+'px Arial'
+	ctx.textBaseline='middle'
+	ctx.lineWidth=1
+
+	const thinpad = Math.ceil( q.stackheight/4 )-1
+
+	for(const item of items) {
+
+		// render an item 
+
+		const c=item.canvas
+		if(!c) {
+			// invisible item
+			continue
+		}
+
+		const fillcolor =
+			(q.categories && item.category && q.categories[item.category]) ?
+				q.categories[item.category].color :
+				(item.color || q.color)
+		ctx.fillStyle = fillcolor
+
+		const y = (q.stackheight + q.stackspace) * (c.stack-1)
+
+
+		if( item.exon || item.rglst.length>1 ) {
+			// through line
+			ctx.strokeStyle = fillcolor
+			ctx.beginPath()	
+			ctx.moveTo(c.start, Math.floor(y + q.stackheight/2)+.5)
+			ctx.lineTo(c.stop,  Math.floor(y + q.stackheight/2)+.5)
+			ctx.stroke()
+		}
+
+
+		// parts of item
+		const thinbox = []
+		if(item.utr3) {
+			thinbox.push(...item.utr3)
+		}
+		if(item.utr5) {
+			thinbox.push(...item.utr5)
+		}
+		if(item.exon && (!item.coding || item.coding.length==0)) {
+			thinbox.push(...item.exon)
+		}
+
+		const thick=[]
+		if(item.exon) {
+			if(item.coding && item.coding.length>0) {
+				thick.push(...item.coding)
+			}
+		} else {
+			thick.push([item.start,item.stop])
+		}
+
+		let _strand=item.strand
+		if(c.stranded && view.reverse) {
+			_strand = item.strand=='+' ? '-' : '+'
+		}
+
+		for(const r of item.rglst) {
+			for(const e of thinbox) {
+				const a=Math.max(e[0],r.start)
+				const b=Math.min(e[1],r.stop)
+				if(a<b) {
+					const pxa=r.scale( view.reverse ? b : a)
+					const pxb=r.scale( view.reverse ? a : b )
+					ctx.fillRect(pxa, y+thinpad, Math.max(1,pxb-pxa), q.stackheight-thinpad*2)
+				}
+			}
+			for(const e of thick) {
+				const a=Math.max(e[0],r.start)
+				const b=Math.min(e[1],r.stop)
+				if(a<b) {
+					const pxa = r.scale( view.reverse ? b : a)
+					const pxb = r.scale( view.reverse ? a : b )
+					ctx.fillRect( pxa, y, Math.max(1,pxb-pxa), q.stackheight )
+					if(c.stranded && !item.willtranslate) {
+						ctx.strokeStyle='white'
+						strokearrow(ctx, _strand, pxa, y+q.thinpad, pxb-pxa, q.stackheight-thinpad*2)
+					}
+				}
+			}
+			if(c.stranded && item.intron) {
+				// intron arrows
+				ctx.strokeStyle = fillcolor
+				for(const e of item.intron) {
+					const a = Math.max( e[0], r.start)
+					const b = Math.min( e[1], r.stop)
+					if(a<b) {
+						const pxa = r.scale( view.reverse ? b : a)
+						const pxb = r.scale( view.reverse ? a : b )
+						strokearrow( ctx, _strand, pxa, y+thinpad, pxb-pxa, q.stackheight-thinpad*2 )
+					}
+				}
+			}
+
+			if(mapexon && item.exon) {
+				// client tooltip
+				for(const [ i, e ] of item.exon.entries() ) {
+					const a = Math.max( e[0], r.start )
+					const b = Math.min( e[1], r.stop )
+					if(a<b) {
+						const x1 = r.scale( view.reverse ? b : a)
+						const x2 = r.scale( view.reverse ? a : b)
+						mapexon.push({
+							x1:x1,
+							x2:x2,
+							y:c.stack,
+							name:'Exon '+(i+1)+'/'+item.exon.length + printcoord(item.chr, e[0], e[1])
+						})
+					}
+				}
+				for(let i=1; i<item.exon.length; i++) {
+					const istart=item.exon[ item.strand=='+' ? i-1 : i][1],
+						  istop=item.exon[ item.strand=='+' ? i : i-1][0]
+					if(istop<=r.start || istart>=r.stop) continue
+					const a=Math.max(istart,r.start)
+					const b=Math.min(istop, r.stop)
+					if(a<b) {
+						const x1 = r.scale( view.reverse ? b : a)
+						const x2 = r.scale( view.reverse ? a : b)
+						if(x2<0) continue
+						mapexon.push({
+							x1:x1,
+							x2:x2,
+							y:c.stack,
+							name:'Intron '+i+'/'+(item.exon.length-1) + printcoord(item.chr, istart, istop)
+						})
+					}
+				}
+			}
+		}
+
+		// name
+		if(c.namestart!=undefined) {
+			ctx.textAlign = c.textalign
+			ctx.fillStyle = fillcolor
+			ctx.fillText(c.namestr, c.namestart, y + q.stackheight/2 )
+		} else if(c.namehover) {
+			const x=Math.max(10,c.start+10)
+			ctx.fillStyle='white'
+			ctx.fillRect(x, y, c.namewidth+10, q.stackheight )
+			ctx.strokeStyle = fillcolor
+			ctx.strokeRect( x+1.5, y+.5, c.namewidth+10-3, q.stackheight-2)
+			ctx.fillStyle = fillcolor
+			ctx.textAlign = 'center'
+			ctx.fillText( c.namestr, x+c.namewidth/2+5, y+q.stackheight/2)
+		} else if(c.namein) {
+			ctx.textAlign='center'
+			ctx.fillStyle='white'
+			ctx.fillText(c.namestr,
+				(Math.max(0,c.start)+Math.min( view.width,c.stop))/2,
+				y + q.stackheight/2)
+		}
+	}
+
+	if( 0 && translateitem.length ) {
+		// items to be translated
+		await handle_bedj_render_stack_translate( canvas, ctx, translateitem )
+	}
+
+	view.src = canvas.toDataURL()
+	view.height = finalheight
+	view.mapisoform = mapisoform
+	view.mapexon = mapexon
+}
+
+
+
+
+function strokearrow(ctx,strand,x,y,w,h) {
+	const pad=h/2,
+		arrowwidth=h/2,
+		arrowpad=Math.max(h/2,6)
+	if(w-pad*2<arrowwidth) return
+	var arrownum=Math.ceil((w-pad*2)/(arrowwidth+arrowpad))
+	if(arrownum<=0) return
+	var forward=strand=='+'
+	var x0=Math.ceil(x+(w-arrowwidth*arrownum-arrowpad*(arrownum-1))/2)
+	for(var i=0; i<arrownum; i++) {
+		ctx.beginPath()
+		if(forward) {
+			ctx.moveTo(x0,y)
+			ctx.lineTo(x0+arrowwidth, y+h/2)
+			ctx.moveTo(x0+arrowwidth, y+h/2+1)
+			ctx.lineTo(x0,y+h)
+		} else {
+			ctx.moveTo(x0+arrowwidth,y)
+			ctx.lineTo(x0, y+h/2)
+			ctx.moveTo(x0, y+h/2+1)
+			ctx.lineTo(x0+arrowwidth,y+h)
+		}
+		ctx.stroke()
+		x0+=arrowwidth+arrowpad
+	}
+}
+
+
+
+function printcoord(chr, start, stop) {
+	return ' <span style="font-size:.7em;color:#858585">'+chr+':'+(start+1)+'-'+stop+' '+common.bplen(stop-start)+'</span>'
+}
+
+
+
+async function handle_bedj_render_stack_translate ( result ) {
+
+			const translateitem = result.translateitem
+			const canvas = result.canvas
+			const ctx = result.ctx
+			delete result.translateitem
+			delete result.canvas
+			delete result.ctx
+
+			const mapaa=[]
+
+			const arg=['faidx', genomefile]
+			for(const i of translateitem) {
+				arg.push(i.chr+':'+(i.start+1)+'-'+i.stop)
+			}
+			const _out=[],
+				_out2=[]
+			const sp2=spawn(samtools,arg)
+			sp2.stdout.on('data',i=> _out.push(i) )
+			sp2.stderr.on('data',i=> _out2.push(i) )
+			sp2.on('close',code=>{
+				const dnalst=[]
+				let thisseq=null
+				for(const line of _out.join('').trim().split('\n')) {
+					if(line[0]=='>') {
+						if(thisseq) {
+							dnalst.push(thisseq)
+						}
+						thisseq=''
+						continue
+					}
+					thisseq+=line
+				}
+				dnalst.push(thisseq)
+
+				if(dnalst.length!=translateitem.length) {
+					console.error('ERROR: number mismatch between gene and retrieved sequence: '+translateitem.length+' '+dnalst.length)
+					result.src = canvas.toDataURL()
+					resolve(result)
+				}
+
+				const altcolor='rgba(122,103,44,.7)',
+					errcolor='red',
+					startcolor='rgba(0,255,0,.4)',
+					stopcolor='rgba(255,0,0,.5)'
+				ctx.textAlign='center'
+				ctx.textBaseline='middle'
+				for(let i=0; i<translateitem.length; i++) {
+					// need i
+					const item=translateitem[i]
+					const fillcolor= (categories && item.category && categories[item.category]) ? categories[item.category].color : (item.color || color)
+					const c=item.canvas
+					const y=(stackheight+stackspace)*(c.stack-1)
+					item.genomicseq=dnalst[i].toUpperCase()
+					const aaseq=common.nt2aa(item)
+					for(const _r of item.rglst) {
+						const region=rglst[_r.idx]
+						let cumx=0
+						for(let j=0; j<_r.idx; j++) {
+							cumx+=rglst[j].width+regionspace
+						}
+						const bppx=region.width/(region.stop-region.start)
+						const _fs=Math.min(stackheight,bppx*3)
+						const aafontsize=_fs<8 ? null : _fs
+						let minustrand=false
+						if(c.stranded && item.strand=='-') {
+							minustrand=true
+						}
+						let cds=0
+						if(aafontsize) {
+							ctx.font=aafontsize+'px Arial'
+						}
+						for(const e of item.coding) {
+							// each exon, they are ordered 5' to 3'
+							if(minustrand) {
+								if(e[0]>=item.stop) {
+									cds+=e[1]-e[0]
+									continue
+								}
+								if(e[1]<=item.start) {
+									break
+								}
+							} else {
+								if(e[1]<=item.start) {
+									cds+=e[1]-e[0]
+									continue
+								}
+								if(e[0]>=item.stop) {
+									break
+								}
+							}
+							const lookstart=Math.max(item.start, e[0]),
+								lookstop=Math.min(item.stop, e[1])
+							if(minustrand) {
+								cds+=e[1]-lookstop
+							} else {
+								cds+=lookstart-e[0]
+							}
+							let codonspan=0
+							for(let k=0; k<lookstop-lookstart;k++) {
+								// each coding base
+								cds++
+								codonspan++
+								let aanumber
+								if(cds%3==0) {
+									aanumber=(cds/3)-1
+								} else {
+									if(k<lookstop-lookstart-1) {
+										continue
+									} else {
+										// at the 3' end of this exon
+										aanumber=Math.floor(cds/3)
+									}
+								}
+								let aa=aaseq[aanumber],
+									_fillcolor= Math.ceil(cds/3)%2==0 ? altcolor : null
+								if(!aa) {
+									aa=4 // show text "4" to indicate error
+									_fillcolor=errcolor
+								} else if(aa=='M') {
+									_fillcolor=startcolor
+								} else if(aa=='*') {
+									_fillcolor=stopcolor
+								}
+								// draw aa
+								let thispx,
+									thiswidth=bppx*codonspan
+								if(minustrand) {
+									const thispos=lookstop-1-k
+									thispx=cumx+region.scale(thispos)
+								} else {
+									const thispos=lookstart+k+1-codonspan
+									thispx=cumx+region.scale(thispos)
+								}
+								if(region.reverse) {
+									// correction!
+									thispx-=thiswidth
+								}
+								codonspan=0
+								if(thispx>=cumx && thispx<=cumx+region.width) {
+									// in view range
+									// rect
+									if(_fillcolor) {
+										ctx.fillStyle= _fillcolor
+										ctx.fillRect(thispx,y,thiswidth,stackheight)
+									}
+									if(aafontsize) {
+										ctx.fillStyle='white'
+										ctx.fillText(aa,thispx+thiswidth/2,y+stackheight/2)
+									}
+									mapaa.push({
+										x1:thispx,
+										x2:thispx+thiswidth,
+										y:item.canvas.stack,
+										name:aa+(aanumber+1)+' <span style="font-size:.7em;color:#858585">AA residue</span>'
+										})
+								}
+							}
+						}
+					}
+					if(c.namehover) {
+						ctx.font='bold '+fontsize+'px Arial'
+						const x=Math.max(10,c.start+10)
+						ctx.fillStyle='white'
+						ctx.fillRect(x,y,c.namewidth+10,stackheight)
+						ctx.strokeStyle=fillcolor
+						ctx.strokeRect(x+1.5,y+.5,c.namewidth+10-3,stackheight-2)
+						ctx.fillStyle=fillcolor
+						ctx.fillText(c.namestr,x+c.namewidth/2+5,y+stackheight/2)
+					}
+				}
+				// done translating
+				result.src = canvas.toDataURL()
+				result.mapaa = mapaa
+				resolve(result)
+		})
+}
+
+
+
+function handle_bedj_render_density ( view ) {
+	/*
+	view {}
+		regions : [ {} ]
+			depth: []
+			width
+	*/
+}
+
+
+
+
+
+
 
 async function handle_TEMPLATE ( req, res ) {
 	try {
@@ -965,6 +1835,14 @@ function file_not_writable ( file ) {
 		})
 	})
 }
+function create_directory ( dir ) {
+	return new Promise((resolve,reject)=>{
+		exec('mkdir -p '+dir, e=>{
+			if(e) resolve(false)
+			resolve(true)
+		})
+	})
+}
 
 function getfileinfo_bigwig ( fileurl ) {
 	return new Promise((resolve, reject)=>{
@@ -1006,10 +1884,11 @@ function contigNameNoChr( chrlst, genome ) {
 
 
 
-async function validate_tabixfile ( halfpath ) {
-	if( illegalpath( halfpath )) return 'illegal file path'
-	if( !halfpath.endsWith( '.gz' )) return 'tabix file not ending with .gz'
-	const file = path.join( serverconfig.filedir, halfpath )
+async function validate_tabixfile ( file ) {
+	/*
+	file is full path, legal
+	*/
+	if( !file.endsWith( '.gz' )) return 'tabix file not ending with .gz'
 	if( await file_not_exist(file)) return '.gz file not exist'
 	if( await file_not_readable(file)) return '.gz file not readable'
 

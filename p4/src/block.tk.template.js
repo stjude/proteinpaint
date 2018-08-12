@@ -13,9 +13,14 @@ import * as client from './client'
 
 
 export class TKwhat {
-	constructor ( block ) {
+	constructor ( temp, block ) {
 
 		block.init_dom_tk( this )
+		this.name = temp.name
+		this.file = temp.file
+		this.url = temp.url
+		this.indexURL = temp.indexURL
+		this.tklabel.text( this.name )
 
 		for( const view of block.views ) {
 			this.fill_view_init( view )
@@ -66,6 +71,15 @@ export class TKwhat {
 		this.block.settle_height()
 	}
 
+
+
+	getdata ( p ) {
+		return client.dofetch('bedj',p)
+		.then(data=>{
+			if(data.error) throw data.error
+			return data
+		})
+	}
 
 
 	addview ( view ) {

@@ -157,12 +157,18 @@ settle_height () {
 
 	// update cliprect height
 	for(const v of this.views) {
-		v.cliprect.attr('height', this.height)
+		if(v.cliprect) {
+			v.cliprect.transition().attr('height', this.height)
+		}
 	}
+	// why transition on the svg won't account for bedj track height change
 	this.svg.svg
-		.transition()
+		//.transition()
 		.attr('height', this.height)
 }
+
+
+
 
 
 ifbusy () {
@@ -371,17 +377,20 @@ add_view_2tk ( tk, view ) {
 
 
 
-addtk_bytype ( t ) {
-	if(t.type == common.tkt.ruler) {
+addtk_bytype ( temp ) {
+	/*
+	temp with custom attributes
+	*/
+	if(temp.type == common.tkt.ruler) {
 		return this.tklst.push( new TKruler( this ) )
 	}
-	if(t.type == common.tkt.bigwig) {
-		return import('./block.tk.bigwig').then(_=>this.tklst.push( new _.TKbigwig( t, this) ) )
+	if(temp.type == common.tkt.bigwig) {
+		return import('./block.tk.bigwig').then(_=>this.tklst.push( new _.TKbigwig( temp, this) ) )
 	}
-	if(t.type==common.tkt.bedj) {
-		return import('./block.tk.bedj').then(_=>this.tklst.push( new _.TKbedj( t, this) ) )
+	if(temp.type == common.tkt.bedj) {
+		return import('./block.tk.bedj').then(_=>this.tklst.push( new _.TKbedj( temp, this) ) )
 	}
-	throw 'unknown type: '+t.type
+	throw 'unknown type: '+temp.type
 }
 
 
@@ -416,21 +425,18 @@ async addtk_native ( t ) {
 	// look at genome.tracks[]
 	if(!this.genome.tracks) throw 'genome.tracks[] missing'
 	const t0 = this.genome.tracks.find( i=> i.name.toLowerCase() == t.name.toLowerCase() )
-	if(t0) {
-		// found client template; make a copy
-		const tkcopy = {}
-		for(const k in t0) {
-			tkcopy[k] = t0[k]
-		}
-		// override custom attr
-		for(const k in t) {
-			if(k=='name') continue
-			tkcopy[k] = t[k]
-		}
-		await this.addtk_bytype( tkcopy )
-		return
+	if( !t0 ) throw 'track not found for '+t.name
+	// found client template; make a copy
+	const tkcopy = {}
+	for(const k in t0) {
+		tkcopy[k] = t0[k]
 	}
-	throw 'track not found'
+	// override custom attr
+	for(const k in t) {
+		if(k=='name') continue
+		tkcopy[k] = t[k]
+	}
+	await this.addtk_bytype( tkcopy )
 }
 
 
@@ -751,6 +757,7 @@ param_viewrange () {
 			reverse: view.reverse,
 			regions:[],
 			regionspace: view.regionspace,
+			width: view.width,
 		}
 		for(let i=view.startidx; i<=view.stopidx; i++) {
 			const r = view.regions[i]

@@ -321,6 +321,7 @@ function init_dom_for_block ( arg, b ) {
 
 	b.svg = {}
 	b.svg.svg = b.dom.svgdiv.append('svg')
+		.style('border','solid 1px #ccc')
 
 
 	// insert negative layers here

@@ -174,17 +174,13 @@ export class TKbigwig {
 					if(h <= 1) return
 					if(h == this.barheight) return
 					this.barheight = h
-					this.update_height()
+					this.update()
 				})
 		}
 		this.configmenu.showunder( this.configlabel.node() )
 			.d.style('left', (Number.parseInt(this.configmenu.d.style('left'))-50)+'px')
 	}
 
-	async update_height () {
-		await this.update()
-		this.block.settle_height()
-	}
 
 
 	// END of  class

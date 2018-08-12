@@ -33,7 +33,7 @@ module.exports={
 					microsatellite:{color:'olive',label:'Microsatellite'},
 					named:{color:'#858585',label:'Named'}
 				},
-				showdensitybeyondrange:20000,
+				noshowbeyondrange:50000,
 				densitytrack:{
 					type:'bigwig',
 					file:'hg19/hg19.100way.phastCons.bw', // fake
