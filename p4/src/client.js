@@ -307,4 +307,6 @@ export function neataxis ( g, fontsize ) {
 	g.selectAll('text')
 		.attr('font-family', font)
 		.attr('font-size', fontsize)
+	g.select('path')
+		.attr('shape-rendering','crispEdges')
 }

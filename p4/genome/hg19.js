@@ -21,7 +21,6 @@ module.exports={
 				statement: 'select * from snp146 where name=?'
 			},
 			tk:{
-				type: 'densebed',
 				file: 'anno/db/snp146.hg19.gz',
 				name: 'dbSNP 146',
 				categories:{
@@ -33,13 +32,7 @@ module.exports={
 					microsatellite:{color:'olive',label:'Microsatellite'},
 					named:{color:'#858585',label:'Named'}
 				},
-				noshowbeyondrange:50000,
-				densitytrack:{
-					type:'bigwig',
-					file:'hg19/hg19.100way.phastCons.bw', // fake
-					height: 70,
-					scale:{ auto:1 }
-				}
+				noshowbeyondrange:20000,
 			}
 		},
 	],

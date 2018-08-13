@@ -21,7 +21,12 @@ export class TKbedj {
 		this.file = temp.file
 		this.url = temp.url
 		this.indexURL = temp.indexURL
-		if(!this.file && !this.url) throw 'no file or url given'
+		this.issnp = temp.issnp
+		if( this.issnp ) {
+			// snp track to be validated on server side
+		} else {
+			if(!this.file && !this.url) throw 'no file or url given'
+		}
 
 		this.tklabel.text(this.name)
 
@@ -69,8 +74,7 @@ export class TKbedj {
 		try {
 			const data = await this.getdata( p )
 
-
-			if( Number.isInteger( data.maxdepth ) ) {
+			if( data.maxdepth ) {
 
 				// using density for at least one view
 				this.toppad = this.bottompad = this.axisfontsize/2
@@ -79,15 +83,25 @@ export class TKbedj {
 					scaleLinear()
 						.domain([ data.maxdepth, 0 ])
 						.range([ 0, this.barheight ])
-					).tickValues([ 0, data.maxdepth ])
+					)
+					.tickValues([ 0, data.maxdepth ])
+					.tickFormat( d3format('d'))
 				client.neataxis(
 					this.leftaxis.call( this.axisfunc ),
 					this.axisfontsize
 				)
+				this.tklabel
+					.transition()
+					.attr('x', -3)
+					.attr('y', this.barheight/2 + this.block.tklabelfontsize/3 )
 			} else {
 				// no axis
 				this.leftaxis.selectAll('*').remove()
 				this.toppad = this.bottompad = 3
+				this.tklabel
+					.transition()
+					.attr('x', 0)
+					.attr('y', this.block.tklabelfontsize )
 			}
 
 			// variable view height: one view may be stack, another may be density

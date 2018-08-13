@@ -236,15 +236,12 @@ async function server_validate_config() {
 			throw genomename+'.proteindomain: '+e
 		}
 
-
-
 		// snp is optional
 		try {
 			validate_snpdb( g.snp )
 		} catch(e) {
 			throw genomename+'.snp: '+e
 		}
-
 
 		if(g.tracks) {
 			for(const tk of g.tracks) {
@@ -254,7 +251,18 @@ async function server_validate_config() {
 			}
 		}
 
-
+		if( g.snp ) {
+			// expose snp as tracks, but not file and other attributes
+			if(!g.tracks) g.tracks = []
+			for(const snp of g.snp) {
+				g.tracks.push( {
+					type: common.tkt.bedj,
+					name: snp.tk.name,
+					issnp: snp.name,
+					categories: snp.tk.categories
+				})
+			}
+		}
 
 		/*
 		done everything except dataset
@@ -364,7 +372,9 @@ async function validate_snpdb ( lst ) {
 
 		if(!snp.tk) throw '.snp.tk{} missing for '+snp.name
 		if(!snp.tk.file) throw '.snp.tk.file missing for '+snp.name
-		const err = await validate_tabixfile( path.join( serverconfig.filedir, snp.tk.file ) )
+		illegalpath(snp.tk.file)
+		snp.tk.file = path.join( serverconfig.filedir, snp.tk.file )
+		const err = await validate_tabixfile( snp.tk.file )
 		if(err) throw 'tk.file error for '+snp.name+': '+err
 	}
 }
@@ -583,10 +593,10 @@ async function handle_bigwig ( req, res ) {
 
 		const fileobj = await validate_bigwig( file, url, genome )
 
+
 		const result = {
 			view2img: {}
 		}
-
 		for(const view of q.views) {
 			if( common.isBadArray( view.regions )) throw 'view.regions[] should be array'
 			result.view2img[ view.id ] = { }
@@ -670,9 +680,8 @@ function handle_bigwig_render ( q, result ) {
 	}
 
 	for(const view of q.views ) {
-		const width = view.regions.reduce((i,j)=>i+j.width, 0 ) + (view.regions.length-1) * view.regionspace
-		result.view2img[ view.id ].width = width
-		const canvas = new Canvas( width, q.barheight )
+		result.view2img[ view.id ].width = view.width
+		const canvas = new Canvas( view.width, q.barheight )
 		const ctx = canvas.getContext('2d')
 
 		const pointwidth = 1 // line/dot plot width
@@ -940,31 +949,9 @@ async function handle_tkbedj ( req, res ) {
 		if(!genome) throw 'invalid genome name'
 		q.genome = genome
 
-		let fileobj
+		const fileobj = await handle_bedj_fileobj( q, genome )
 
-		if( q.issnp ) {
-			// TODO snp tk
-			if( !genome.snp) throw 'genome has no snp'
-			const snptk = genome.snp.find( i=> i.name == q.issnp )
-			if( !snptk ) throw 'no snp track found for '+q.issnp
-			fileobj = { issnp: 1, }
-			for(const k in snptk) {
-				fileobj[k] = snptk[k]
-			}
-		} else {
-			const [ file, url ] = fileurl( q )
-			fileobj = await validate_tabixtrack( file, url, q.indexURL, genome )
-			if( common.isBadArray( q.views )) throw '.views[] should be array'
-
-			if( fileobj.file ) {
-				// check if it is a native gene track
-				if( genome.tracks.find( i=> i.__isgene && path.join(serverconfig.filedir,i.file) == fileobj.file ) ) {
-					fileobj.isgene = true
-				}
-			}
-		}
-
-
+		if( common.isBadArray( q.views )) throw '.views[] should be array'
 		for(const view of q.views) {
 			if( common.isBadArray( view.regions )) throw 'view.regions[] should be array'
 
@@ -978,14 +965,14 @@ async function handle_tkbedj ( req, res ) {
 			if( view.lineset ) {
 				await handle_bedj_render_stack( view, fileobj, q )
 			} else {
-				handle_bedj_render_density( view, q )
+				handle_bedj_render_depth( view, q )
 			}
 		}
 
 		const result = {
 			views: [],
-			maxdepth: 0
 		}
+		let maxdepth = 0
 		for(const view of q.views) {
 			result.views.push( {
 				id: view.id,
@@ -993,16 +980,16 @@ async function handle_tkbedj ( req, res ) {
 				width: view.width,
 				height: view.height,
 			} )
-			if( !view.lineset ) {
+			if( view.regions[0].depth ) {
 				// depth
 				for(const r of view.regions) {
 					for(const v of r.depth) {
-						result.maxdepth = Math.max( v, result.maxdepth )
+						maxdepth = Math.max( v, maxdepth )
 					}
 				}
 			}
 		}
-		if( result.maxdepth == 0 ) delete result.maxdepth
+		if( maxdepth ) result.maxdepth = maxdepth
 
 		res.send(result)
 
@@ -1011,6 +998,34 @@ async function handle_tkbedj ( req, res ) {
 		res.send({error: (e.message || e)})
 	}
 }
+
+
+
+async function handle_bedj_fileobj( q, genome ) {
+	if( q.issnp ) {
+		// TODO snp tk
+		if( !genome.snp) throw 'genome has no snp'
+		const snptk = genome.snp.find( i=> i.name == q.issnp )
+		if( !snptk ) throw 'no snp track found for '+q.issnp
+		const fileobj = { issnp: 1, }
+		for(const k in snptk.tk) {
+			fileobj[k] = snptk.tk[k]
+		}
+		return fileobj
+	}
+
+	const [ file, url ] = fileurl( q )
+	const fileobj = await validate_tabixtrack( file, url, q.indexURL, genome )
+
+	if( fileobj.file ) {
+		// check if it is a native gene track
+		if( genome.tracks.find( i=> i.__isgene && path.join(serverconfig.filedir,i.file) == fileobj.file ) ) {
+			fileobj.isgene = true
+		}
+	}
+	return fileobj
+}
+
 
 
 function handle_bedj_rangetoobig ( fileobj, view ) {
@@ -1024,7 +1039,7 @@ function handle_bedj_rangetoobig ( fileobj, view ) {
 			ctx.fillStyle='#aaa'
 			ctx.textAlign='center'
 			ctx.textBaseline='middle'
-			ctx.fillText('No data in view range', view.width/2, h/2 )
+			ctx.fillText('Zoom in under '+common.bplen(fileobj.noshowbeyondrange)+' to view data', view.width/2, h/2 )
 			view.src = canvas.toDataURL()
 			view.height = h
 			return true
@@ -1073,15 +1088,7 @@ async function handle_bedj_getdata_region ( fileobj, view, region ) {
 				return
 			}
 			// recording depth
-			const l = line.split('\t')
-			const start = Number.parseInt(l[1])
-			const stop = Number.parseInt(l[2])
-			for( let binidx=Math.floor((Math.max(start,region.start)-region.start)/region.binbpsize); ; binidx++ ) {
-				region.depth[ binidx ]++
-				if( stop <= region.start + binidx * region.binbpsize ) {
-					break
-				}
-			}
+			handle_bedj_line2regiondepth( line, view, region )
 		})
 		rl.on('close',()=>{
 			const err = out2.join('')
@@ -1105,21 +1112,34 @@ function handle_bedj_getdata_mayflipmode ( view ) {
 	}
 	// collapse all lines to depth
 	for(const line of view.lineset) {
-		const l = line.split('\t')
-		const start = Number.parseInt(l[1])
-		const stop = Number.parseInt(l[2])
-		for(const r of view.regions) {
-			const start0 = Math.max( r.start, start )
-			const stop0 = Math.min( r.stop, stop )
-			if( start0 > stop0 ) {
-				for(let i=Math.floor((start0-r.start)/r.binbpsize); ; i++) {
-					r.depth[ i ]++
-					if( stop <= r.start + r.binsize*(i+1) ) break
-				}
-			}
-		}
+		handle_bedj_line2regiondepth( line, view )
 	}
+	console.log('flipped', Math.max(...view.regions[0].depth))
 	delete view.lineset
+}
+
+
+
+function handle_bedj_line2regiondepth ( line, view, region ) {
+	const l = line.split('\t')
+	const start = Number.parseInt(l[1])
+	const stop = Number.parseInt(l[2])
+	if( ! region ) {
+		region = view.regions.find( r => Math.max( r.start, start) <= Math.min( r.stop, stop ) )
+		if(!region) throw start+'-'+stop+' not falling into any region'
+	}
+	const start0 = Math.max( region.start, start )
+	const stop0  = Math.min( region.stop, stop )
+	/*
+	for(let i=Math.floor((start0-region.start)/region.binbpsize); start0+region.binbpsize*(i+1)< stop0; i++) {
+		region.depth[ i ]++
+	}
+	*/
+	let i=Math.floor((start0-region.start)/region.binbpsize)
+	while(1) {
+		region.depth[ i++ ]++
+		if(start0+region.binbpsize*(i+1) >= stop0) break
+	}
 }
 
 
@@ -1677,13 +1697,30 @@ async function handle_bedj_render_stack_translate ( canvas, ctx, item, view, q )
 
 
 
-function handle_bedj_render_density ( view ) {
+function handle_bedj_render_depth ( view, q ) {
 	/*
 	view {}
 		regions : [ {} ]
 			depth: []
 			width
 	*/
+
+	for(const r of view.regions) {
+		r.values = r.depth
+	}
+
+	const q2 = {
+		pcolor: q.color,
+		barheight: q.barheight,
+		views: [ view ],
+		scale: {auto:1}
+	}
+
+	const result = { view2img:{} }
+	result.view2img[ view.id ] ={}
+	handle_bigwig_render( q2, result )
+	view.height = q.barheight
+	view.src = result.view2img[ view.id ].src
 }
 
 
@@ -1712,6 +1749,11 @@ async function handle_TEMPLATE ( req, res ) {
 
 
 ////////////////////////////////////////////////// END of sec
+
+
+
+
+
 
 
 
