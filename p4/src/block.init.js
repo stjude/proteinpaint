@@ -321,17 +321,16 @@ function init_dom_for_block ( arg, b ) {
 
 	b.svg = {}
 	b.svg.svg = b.dom.svgdiv.append('svg')
-		.style('border','solid 1px #ccc')
 
 
-	// insert negative layers here
+	///////////////// insert negative layers here
 	//b.svg.layer_neg1
 
 
-	// layer #0
+	//////////////// layer #0
 	b.svg.layer_0 = b.svg.svg.append('g')
 
-	// insert plus layers here
+	//////////////// insert plus layers here
 	b.svg.layer_pos1 = b.svg.svg.append('g')
 	// drag to zoom in
 	b.svg.drag = {}
@@ -357,6 +356,24 @@ function init_dom_for_block ( arg, b ) {
 	}
 
 	b.svg.gright = b.svg.layer_0.append('g')
+
+	//////////// done layers
+	
+	// legend
+	{
+		b.legend = {
+			linecolor: '#EDD8A6'
+		}
+		const d = b.holder.append('div')
+		d.append('div')
+			.text('LEGEND')
+			.style('font-size', '.7em')
+			.style('color',b.legend.linecolor)
+		b.legend.table = d.append('table')
+			.style('border-top','solid 1px '+b.legend.linecolor)
+			.style('border-spacing','5px')
+		// two column
+	}
 }
 
 

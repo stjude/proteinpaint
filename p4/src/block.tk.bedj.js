@@ -8,6 +8,7 @@ import * as client from './client'
 
 
 
+const tklabelxshift = -3 // just like bw
 
 
 
@@ -23,12 +24,19 @@ export class TKbedj {
 		this.indexURL = temp.indexURL
 		this.issnp = temp.issnp
 		if( this.issnp ) {
-			// snp track to be validated on server side
+			// snp track file is kept on server
 		} else {
 			if(!this.file && !this.url) throw 'no file or url given'
 		}
+		this.categories = temp.categories
 
-		this.tklabel.text(this.name)
+		if(this.categories) {
+			// legend
+			this.legend.td1.text( this.name )
+			this.legend.category_holder = this.legend.showdiv.append('div')
+		} else {
+			this.legend.tr.remove()
+		}
 
 		for( const view of block.views ) {
 			this.fill_view_init( view )
@@ -67,11 +75,22 @@ export class TKbedj {
 			stackheight: this.stackheight,
 			stackspace: this.stackspace,
 			color: this.color,
+			categories: this.categories,
 		}
 
 		this.block.tkcloakon( this )
+		{
+			const tk = this
+			this.tklabel
+				.text(this.name)
+				.each(function(){
+					tk.left_width = this.getBBox().width
+				})
+		}
 
 		try {
+
+
 			const data = await this.getdata( p )
 
 			if( data.maxdepth ) {
@@ -94,6 +113,8 @@ export class TKbedj {
 					.transition()
 					.attr('x', -3)
 					.attr('y', this.barheight/2 + this.block.tklabelfontsize/3 )
+				this.left_width += 3
+
 			} else {
 				// no axis
 				this.leftaxis.selectAll('*').remove()
@@ -102,6 +123,7 @@ export class TKbedj {
 					.transition()
 					.attr('x', 0)
 					.attr('y', this.block.tklabelfontsize )
+
 			}
 
 			// variable view height: one view may be stack, another may be density
@@ -126,6 +148,7 @@ export class TKbedj {
 			this.block.tkcloakoff( this )
 			this.tkheight = this.toppad + max_viewheight + this.bottompad
 
+			this.mayupdatelegend( data )
 
 		} catch(e) {
 			if(e.stack) console.log(e.stack)
@@ -150,6 +173,42 @@ export class TKbedj {
 	}
 
 	removeview ( view ) {
+	}
+
+
+	mayupdatelegend ( data ) {
+		if(!this.legend.tr) return
+
+		// categories, may support other items
+		if( this.categories ) {
+			this.legend.category_holder.selectAll('*').remove()
+			const lst = []
+			for(const k in data.categories || {} ) {
+				const o = data.categories[k]
+				o.k = k
+				lst.push( o )
+			}
+			lst.sort((i,j)=>j.count-i.count)
+
+			for(const o of lst) {
+				const cat = this.categories[ o.k ]
+				const cell = this.legend.category_holder.append('div')
+					.style('display','inline-block')
+					.style('margin','3px')
+					.attr('class','sja_clbbox')
+					.style('padding','3px 8px')
+				cell.append('span')
+					.text( o.count )
+					.style('padding','0px 3px')
+					.style('margin-right','4px')
+					.style('background', cat.color)
+					.style('color','white')
+					.style('font-size','.8em')
+				cell.append('span')
+					.text( cat.label )
+					.style('color', cat.color)
+			}
+		}
 	}
 
 

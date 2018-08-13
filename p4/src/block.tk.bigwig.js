@@ -17,6 +17,9 @@ export class TKbigwig {
 
 		block.init_dom_tk( this )
 
+		// no legend
+		this.legend.tr.remove()
+
 		this.name = temp.name
 		this.file = temp.file
 		this.url = temp.url
@@ -25,8 +28,8 @@ export class TKbigwig {
 		{
 			const tk=this
 			this.tklabel
-				.attr('x', tklabelxshift)
 				.text(this.name)
+				.attr('x', tklabelxshift)
 				.each(function(){
 					tk.left_width = this.getBBox().width - tklabelxshift
 				})
@@ -100,7 +103,9 @@ export class TKbigwig {
 
 			this.block.tkcloakoff(this)
 			this.tkheight = this.toppad+this.barheight+this.bottompad
-			this.tklabel.transition().attr('y', this.barheight/2 + this.block.tklabelfontsize/3 )
+			this.tklabel
+				.transition()
+				.attr('y', this.barheight/2 + this.block.tklabelfontsize/3 )
 
 			for(const id in data.view2img) {
 				const imgv = data.view2img[ id ]

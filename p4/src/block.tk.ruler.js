@@ -16,13 +16,15 @@ const color_dragbar_active = '#FCA051'
 export class TKruler {
 	constructor ( block ) {
 
+		block.init_dom_tk( this )
+		this.gcloak.remove()
+		this.legend.tr.remove()
+
 		this.ticksize = 4
 		this.fontsize = 15
 		this.tickpad = 3
 		this.ntheight = 15
 
-		block.init_dom_tk( this )
-		this.gcloak.remove()
 
 		this.tklabel
 			.attr('font-weight','normal')

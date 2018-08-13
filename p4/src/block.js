@@ -326,6 +326,26 @@ init_dom_tk ( tk ) {
 		.attr('font-size', this.tklabelfontsize)
 		.attr('text-align','center')
 		.attr('dominant-baseline','central')
+	{
+		const tr = this.legend.table.append('tr')
+		tk.legend = {
+			tr: tr,
+		}
+		tk.legend.td1 = tr.append('td')
+			.style('text-align','right')
+			.style('border-right','solid 1px '+this.legend.linecolor)
+			.style('padding','10px')
+			.attr('class','sja_clbtext')
+			.on('click',()=>{
+				if(tk.legend.showdiv.style('display')=='none') {
+					client.appear( tk.legend.showdiv )
+				} else {
+					client.disappear( tk.legend.showdiv )
+				}
+			})
+		const td2 = tr.append('td')
+		tk.legend.showdiv = td2.append('div')
+	}
 }
 
 
@@ -415,15 +435,17 @@ async update_tracks ( lst ) {
 
 async addtk_native ( t ) {
 	if( !t.name ) throw '.name missing'
+
+	// look at genome.tracks[]
+	if(!this.genome.tracks) throw 'genome.tracks[] missing'
+
 	if( t.issnp ) {
-		// may change here
-		t.type = common.tkt.bedj
-		// native snp, no client template
+		const originaltk = this.genome.tracks.find( i=> i.issnp == t.issnp )
+		if( !originaltk ) throw 'SNP track not found for '+t.issnp
+		for(const k in originaltk) t[k] = originaltk[k]
 		await this.addtk_bytype( t )
 		return
 	}
-	// look at genome.tracks[]
-	if(!this.genome.tracks) throw 'genome.tracks[] missing'
 	const t0 = this.genome.tracks.find( i=> i.name.toLowerCase() == t.name.toLowerCase() )
 	if( !t0 ) throw 'track not found for '+t.name
 	// found client template; make a copy

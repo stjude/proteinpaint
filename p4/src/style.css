@@ -10,6 +10,13 @@
 .sja_menuoption:active { color:#cc0000; background-color:#FCE2E1;}
 
 
+.sja_clbbox {
+	cursor:default;
+}
+.sja_clbbox:hover { background-color:#e6e6e6}
+.sja_clbbox:active { color:#cc0000; background-color:#FCE2E1;}
+
+
 .sja_errorbar {
 	position:relative;
 	padding:5px 50px 5px 10px;

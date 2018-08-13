@@ -950,6 +950,9 @@ async function handle_tkbedj ( req, res ) {
 		q.genome = genome
 
 		const fileobj = await handle_bedj_fileobj( q, genome )
+		if( q.categories ) {
+			fileobj.categories = new Map() // category 2 count
+		}
 
 		if( common.isBadArray( q.views )) throw '.views[] should be array'
 		for(const view of q.views) {
@@ -990,6 +993,11 @@ async function handle_tkbedj ( req, res ) {
 			}
 		}
 		if( maxdepth ) result.maxdepth = maxdepth
+
+		if( fileobj.categories && fileobj.categories.size ) {
+			result.categories = {}
+			for(const [k,o] of fileobj.categories) result.categories[k] = o
+		}
 
 		res.send(result)
 
@@ -1355,10 +1363,23 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 			continue
 		}
 
-		item.fillcolor =
-			(q.categories && item.category && q.categories[item.category]) ?
-				q.categories[item.category].color :
-				(item.color || q.color)
+		if( q.categories && item.category ) {
+			const cat = q.categories[ item.category ]
+			if( cat ) {
+				item.fillcolor = cat.color
+				// count
+				if( !fileobj.categories.has( item.category )) {
+					fileobj.categories.set( item.category, { count: 0 } )
+				}
+				fileobj.categories.get( item.category ).count++
+			} else {
+				// unknown
+				item.fillcolor = 'black'
+			}
+		} else {
+			item.fillcolor = item.color || q.color
+		}
+
 		ctx.fillStyle = item.fillcolor
 
 		const y = (q.stackheight + q.stackspace) * (c.stack-1)
