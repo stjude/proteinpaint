@@ -904,7 +904,7 @@ function downloadFileSaveTo( url, tofile ) {
 		f.on('finish',()=>{
 			f.close()
 			resolve()
-		})
+		});
 
 		( url.startsWith('https') ? https : http )
 		.get( url, (response)=>{
@@ -919,7 +919,7 @@ function downloadFileSaveTo( url, tofile ) {
 
 
 
-async function getchrlst_tabix ( file, dir ) {
+function getchrlst_tabix ( file, dir ) {
 	/* file is either full-path file or url
 	in case of url, dir must be given
 	*/
@@ -930,7 +930,7 @@ async function getchrlst_tabix ( file, dir ) {
 		ps.stderr.on('data',i=>out2.push(i))
 		ps.on('close',()=>{
 			const err = out2.join('')
-			if(err) resolve(null)
+			if(err) reject(err)
 			resolve( out.join('').trim().split('\n') )
 		})
 	})
@@ -1081,9 +1081,10 @@ async function handle_bedj_getdata_region ( fileobj, view, region ) {
 	return new Promise((resolve,reject)=>{
 		const ps = spawn( tabix, [
 			fileobj.file || fileobj.url,
-			(fileobj.nochr ? region.chr.replace('chr','') : region.chr)+':'+region.start+'-'+region.stop,
+			(fileobj.nochr ? region.chr.replace('chr','') : region.chr)+':'+region.start+'-'+region.stop
+			],
 			{cwd: fileobj.dir}
-		])
+		)
 		const out2 = []
 		ps.stderr.on('data',i=>out2.push(i))
 		const rl = readline.createInterface({input: ps.stdout})
@@ -1100,7 +1101,7 @@ async function handle_bedj_getdata_region ( fileobj, view, region ) {
 		})
 		rl.on('close',()=>{
 			const err = out2.join('')
-			if(err) throw err
+			if(err) reject(err)
 			resolve()
 		})
 	})
@@ -1122,7 +1123,6 @@ function handle_bedj_getdata_mayflipmode ( view ) {
 	for(const line of view.lineset) {
 		handle_bedj_line2regiondepth( line, view )
 	}
-	console.log('flipped', Math.max(...view.regions[0].depth))
 	delete view.lineset
 }
 
@@ -1261,11 +1261,13 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 			continue
 		}
 
-		item.canvas = {
+		const c = {
 			start:itemstartpx,
 			stop:itemstoppx,
 			stranded:(item.strand!=undefined),
 		}
+		item.canvas = c
+
 
 		if(item.coding && maytranslate) {
 			item.willtranslate=true // so later the strand will not show
@@ -1278,64 +1280,65 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 			// check item name
 			const namestr = item.name ? item.name : null
 			if(namestr) {
-				item.canvas.namestr=namestr
-				const namewidth=ctx.measureText( namestr ).width
+
+				c.namestr=namestr
+				c.namewidth = ctx.measureText( namestr ).width
+
 				if(hasstruct) {
-					if(item.canvas.start>=namewidth+namespace) {
-						item.canvas.namestart=item.canvas.start-namespace
-						boxstart=item.canvas.namestart-namewidth
-						item.canvas.textalign='right'
-					} else if(item.canvas.stop+namewidth+namespace <= view.width) {
-						item.canvas.namestart=item.canvas.stop+namespace
-						boxstop=item.canvas.namestart+namewidth
-						item.canvas.textalign='left'
+					if(c.start >= c.namewidth + namespace) {
+						c.namestart = c.start - namespace
+						boxstart = c.namestart - c.namewidth
+						c.textalign='right'
+					} else if(c.stop + c.namewidth + namespace <= view.width) {
+						c.namestart = c.stop + namespace
+						boxstop = c.namestart + c.namewidth
+						c.textalign='left'
 					} else {
-						item.canvas.namehover=true
-						item.canvas.namewidth=namewidth
-						item.canvas.textalign='left'
+						c.namehover=true
+						c.textalign='left'
 					}
 				} else {
-					if(Math.min(view.width,item.canvas.stop)-Math.max(0,item.canvas.start)>=namewidth+namepad*2) {
-						item.canvas.namein=true
-					} else if(item.canvas.start>=namewidth+namespace) {
-						item.canvas.namestart=item.canvas.start-namespace
-						boxstart=item.canvas.namestart-namewidth
-						item.canvas.textalign='right'
-					} else if(item.canvas.stop+namewidth+namespace <= view.width) {
-						item.canvas.namestart=item.canvas.stop+namespace
-						boxstop=item.canvas.namestart+namewidth
-						item.canvas.textalign='left'
+					if(Math.min( view.width, c.stop) - Math.max(0,c.start) >= c.namewidth+namepad*2) {
+						c.namein=true
+					} else if(c.start >= c.namewidth + namespace) {
+						c.namestart = c.start - namespace
+						boxstart = c.namestart - c.namewidth
+						c.textalign = 'right'
+					} else if(c.stop + c.namewidth+namespace <= view.width) {
+						c.namestart = c.stop + namespace
+						boxstop = c.namestart+ c.namewidth
+						c.textalign = 'left'
 					} else {
 						// why??
-						item.canvas.namein=true
+						c.namein = true
 					}
 				}
 			}
 		}
-		if(item.canvas.stop-item.canvas.start > view.width * .3) {
+		if( c.stop - c.start > view.width * .3 ) {
 			// enable
 			mapexon = []
 		}
 		for(let i=1; i<=maxstack; i++) {
 			if(stack[i]==undefined || stack[i]<boxstart) {
-				item.canvas.stack=i
+				c.stack = i
 				stack[i]=boxstop
 				break
 			}
 		}
-		if(item.canvas.stack==undefined) {
+		if( c.stack == undefined ) {
 			maxstack++
-			stack[maxstack]=boxstop
-			item.canvas.stack=maxstack
+			stack[maxstack] = boxstop
+			c.stack = maxstack
 		}
 		if(mapisoform && (item.name || item.isoform)) {
 			const show=[]
 			if(item.name) show.push(item.name)
 			if(item.isoform) show.push(item.isoform)
 			mapisoform.push({
-				x1:item.canvas.start,
-				x2:item.canvas.stop,
-				y:item.canvas.stack,
+				x1: c.start,
+				x2: c.stop,
+				y:  c.stack,
 				name:show.join(' ')+printcoord(item.chr, item.start, item.stop)
 			})
 		}
@@ -1422,6 +1425,7 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 		}
 
 		for(const r of item.rglst) {
+
 			for(const e of thinbox) {
 				const a=Math.max(e[0],r.start)
 				const b=Math.min(e[1],r.stop)
@@ -1431,6 +1435,7 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 					ctx.fillRect(pxa, y+thinpad, Math.max(1,pxb-pxa), q.stackheight-thinpad*2)
 				}
 			}
+
 			for(const e of thick) {
 				const a=Math.max(e[0],r.start)
 				const b=Math.min(e[1],r.stop)
@@ -1438,12 +1443,24 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 					const pxa = r.scale( view.reverse ? b : a)
 					const pxb = r.scale( view.reverse ? a : b )
 					ctx.fillRect( pxa, y, Math.max(1,pxb-pxa), q.stackheight )
+
 					if(c.stranded && !item.willtranslate) {
+
 						ctx.strokeStyle='white'
-						strokearrow(ctx, _strand, pxa, y+thinpad, pxb-pxa, q.stackheight-thinpad*2)
+						/* for non gene single-segment items
+						the segment will appear here
+						*/
+						if( c.namein ) {
+							const freew = (pxb-pxa-c.namewidth-10)/2
+							strokearrow(ctx, _strand, pxa, y+thinpad, freew, q.stackheight-thinpad*2)
+							strokearrow(ctx, _strand, pxb-freew, y+thinpad, freew, q.stackheight-thinpad*2)
+						} else {
+							strokearrow(ctx, _strand, pxa, y+thinpad, pxb-pxa, q.stackheight-thinpad*2)
+						}
 					}
 				}
 			}
+
 			if(c.stranded && item.intron) {
 				// intron arrows
 				ctx.strokeStyle = item.fillcolor

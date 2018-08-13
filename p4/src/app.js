@@ -3,21 +3,6 @@ import 'normalize.css'
 import './style.css'
 import * as client from './client'
 
-/*
-# ruler zoom in
-# reorder tracks
-# gene tk
-# bedj depth view
-
-gm view
-ruler config
-bw config
-bedj config
-block <input> search gene
-block <input> jump
-bedj category legend and filtering
-
-*/
 
 // do not use genomes as global, no globals here
 
@@ -134,3 +119,20 @@ function embed_block( arg ) {
 
 	client.launch_block( p )
 }
+
+/*
+# ruler zoom in
+# reorder tracks
+# gene tk
+# bedj depth view
+# bedj category legend
+
+gm view
+ruler config
+bw config
+bedj config
+block <input> search gene
+block <input> jump
+url param
+bam track
+*/

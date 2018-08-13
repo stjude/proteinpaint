@@ -312,7 +312,6 @@ init_dom_tk ( tk ) {
 	tk.cloaktext = tk.gcloak.append('text')
 		.text('Loading ...')
 		.attr('fill','black')
-		//.attr('stroke','white') .attr('stroke-width',1)
 		.attr('font-size','1.5em')
 		.attr('font-weight','bold')
 		.attr('font-family',client.font)
@@ -321,10 +320,9 @@ init_dom_tk ( tk ) {
 	tk.gerror = tk.gleft.append('g')
 	tk.errortext = tk.gerror.append('text')
 		.attr('fill','black')
-		.attr('font-weight','bold')
 		.attr('font-family',client.font)
 		.attr('font-size', this.tklabelfontsize)
-		.attr('text-align','center')
+		.attr('text-anchor','middle')
 		.attr('dominant-baseline','central')
 	{
 		const tr = this.legend.table.append('tr')
@@ -335,6 +333,8 @@ init_dom_tk ( tk ) {
 			.style('text-align','right')
 			.style('border-right','solid 1px '+this.legend.linecolor)
 			.style('padding','10px')
+			.style('font-size', this.tklabelfontsize+'px')
+			.style('font-weight','bold')
 			.attr('class','sja_clbtext')
 			.on('click',()=>{
 				if(tk.legend.showdiv.style('display')=='none') {
