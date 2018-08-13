@@ -6,11 +6,13 @@ import * as client from './client'
 /*
 # ruler zoom in
 # reorder tracks
+# gene tk
 
+bedj depth view
 gm view
 ruler config
 bw config
-gene tk
+bedj config
 block <input> search gene
 block <input> jump
 

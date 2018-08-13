@@ -955,6 +955,13 @@ async function handle_tkbedj ( req, res ) {
 			const [ file, url ] = fileurl( q )
 			fileobj = await validate_tabixtrack( file, url, q.indexURL, genome )
 			if( common.isBadArray( q.views )) throw '.views[] should be array'
+
+			if( fileobj.file ) {
+				// check if it is a native gene track
+				if( genome.tracks.find( i=> i.__isgene && path.join(serverconfig.filedir,i.file) == fileobj.file ) ) {
+					fileobj.isgene = true
+				}
+			}
 		}
 
 
@@ -1152,7 +1159,7 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 			bp += r.stop - r.start
 			w += r.width
 		}
-		if( bp > w*3 ) maytranslate = true
+		if( bp < w*3 ) maytranslate = true
 	}
 
 	const fontsize = q.stackheight - 2
@@ -1530,17 +1537,24 @@ async function handle_bedj_render_stack_translate ( canvas, ctx, item, view, q )
 		startcolor='rgba(0,255,0,.4)',
 		stopcolor='rgba(255,0,0,.5)'
 
+
 	ctx.textAlign='center'
 	ctx.textBaseline='middle'
 
 	const c=item.canvas
 	const y = (q.stackheight + q.stackspace)*(c.stack-1)
 
-	item.genomicseq = ( await get_ntseq( q.genome, item.chr, item.start, item.stop ) ).toUpperCase()
+	item.genomicseq = ( await get_ntseq( q.genome, view.regions[0].chr, item.start, item.stop ) ).toUpperCase()
 
-	const aaseq=common.nt2aa(item)
+	const aaseq = common.nt2aa(item)
 
-	for(const region of item.rglst) {
+	let cumx = 0
+
+	for(const region of view.regions) {
+		if( Math.max(item.start, region.start) > Math.min(item.stop, region.stop) ) {
+			continue
+		}
+
 		const bppx = region.width / (region.stop-region.start)
 		const _fs = Math.min( q.stackheight, bppx*3)
 		const aafontsize=_fs<8 ? null : _fs
@@ -1585,6 +1599,7 @@ async function handle_bedj_render_stack_translate ( canvas, ctx, item, view, q )
 				// each coding base
 				cds++
 				codonspan++
+
 				let aanumber
 				if(cds%3==0) {
 					aanumber=(cds/3)-1
@@ -1596,8 +1611,10 @@ async function handle_bedj_render_stack_translate ( canvas, ctx, item, view, q )
 						aanumber=Math.floor(cds/3)
 					}
 				}
-				let aa=aaseq[aanumber],
-					_fillcolor= Math.ceil(cds/3)%2==0 ? altcolor : null
+
+				let aa = aaseq[aanumber]
+				let _fillcolor= Math.ceil(cds/3)%2==0 ? altcolor : null
+
 				if(!aa) {
 					aa=4 // show text "4" to indicate error
 					_fillcolor=errcolor
@@ -1608,8 +1625,8 @@ async function handle_bedj_render_stack_translate ( canvas, ctx, item, view, q )
 				}
 
 				// draw aa
-				let thispx,
-					thiswidth=bppx*codonspan
+				let thispx
+				let thiswidth=bppx*codonspan
 				if(minustrand) {
 					const thispos=lookstop-1-k
 					thispx = region.scale(thispos)
@@ -1621,6 +1638,7 @@ async function handle_bedj_render_stack_translate ( canvas, ctx, item, view, q )
 					// correction!
 					thispx-=thiswidth
 				}
+
 
 				codonspan=0
 				if(thispx>=cumx && thispx<=cumx+region.width) {
@@ -1634,18 +1652,19 @@ async function handle_bedj_render_stack_translate ( canvas, ctx, item, view, q )
 						ctx.fillStyle='white'
 						ctx.fillText(aa,thispx+thiswidth/2, y+ q.stackheight/2 )
 					}
-					mapaa.push({
+					view.mapaa.push({
 						x1:thispx,
 						x2:thispx+thiswidth,
-						y:item.canvas.stack,
-						name:aa+(aanumber+1)+' <span style="font-size:.7em;color:#858585">AA residue</span>'
+						y: c.stack,
+						name: aa+(aanumber+1)+' <span style="font-size:.7em;color:#858585">AA residue</span>'
 					})
 				}
 			}
 		}
+		cumx += region.width + view.regionspace
 	}
 	if(c.namehover) {
-		ctx.font='bold '+fontsize+'px Arial'
+		ctx.font='bold '+(q.stackheight-2)+'px Arial'
 		const x=Math.max(10,c.start+10)
 		ctx.fillStyle='white'
 		ctx.fillRect(x,y,c.namewidth+10, q.stackheight)
@@ -1746,6 +1765,7 @@ async function whenisserverupdated() {
 
 
 function get_ntseq ( genome, chr, start, stop ) {
+	if(!chr) throw 'unknown chr'
 	return new Promise( (resolve, reject) => {
 		const out = [],
 			out2 = []
