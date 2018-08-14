@@ -46,7 +46,7 @@ export function makeheader (arg, headermessage, lastupdate) {
 		.text('ProteinPaint')
 
 	// 2 <input>
-	buttonrow.append('div')
+	const inputdom = buttonrow.append('div')
 		.style('display','inline-block')
 		.style('padding',padw)
 		.style('padding-right','5px')
@@ -73,6 +73,8 @@ export function makeheader (arg, headermessage, lastupdate) {
 			.text( (arg.genomes[n].species ? arg.genomes[n].species+' ' : '') + n)
 			.property('value',n)
 	}
+
+
 
 	buttonrow.append('span')
 		.attr('class','sja_menuoption')
@@ -127,13 +129,30 @@ function launch_block_shortcut ( arg, selectgenome ) {
 	const pane = client.newpane({x:100,y:100})
 	pane.header.text(usegenomeobj.name)
 
-	client.launch_block( {
+	const p = {
 		genome: usegenomeobj,
 		holder: pane.body,
 		// show default position
-	})
+	}
+	if( usegenomeobj.tracks ) {
+		const genetk = usegenomeobj.tracks.find( i=> i.__isgene )
+		if(genetk) p.tklst = [ genetk ]
+	}
+	client.launch_block( p )
 }
 
+
+
+
+
+
+async function input_keyup2 ( arg, selectgenome ) {
+	const stmp = selectgenome.node()
+	const usegenomeobj = arg.genomes[ stmp.options[stmp.selectedIndex].getAttribute('n') ]
+	const inputdom = d3event.target
+	const str = inputdom.value.trim()
+	
+}
 
 
 

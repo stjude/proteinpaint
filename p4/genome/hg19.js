@@ -48,24 +48,20 @@ module.exports={
 
 		{
 			__isgene:true, // only for initialization 
-			translatecoding:true, // instructs to translate coding:[]
 			file:'anno/refGene.hg19.gz',
 			type:'bedj',
 			name:'RefGene',
 			stackheight:16,
 			stackspace:1,
-			vpad:4,
 			color:'#1D591D',
 		},
 		{
 			__isgene:true,
-			translatecoding:true,
 			file:'anno/gencode.v24.hg19.gz',
 			type:'bedj',
 			name:'GENCODE',
 			stackheight:16,
 			stackspace:1,
-			vpad:4,
 			categories:{"coding":{"color":"#004D99","label":"Coding gene"},"nonCoding":{"color":"#009933","label":"Noncoding gene"},"problem":{"color":"#FF3300","label":"Problem"},"pseudo":{"color":"#FF00CC","label":"Pseudogene"}}
 		},
 		{
