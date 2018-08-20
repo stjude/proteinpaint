@@ -174,7 +174,7 @@ function parseheader(line) {
 	}
 
 	// vcf meta lines depend on 
-	vcfout.write(`##fileformat=VCFv4.1
+	vcfout.write(`##fileformat=VCFv4.3
 ##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
 `)
 
