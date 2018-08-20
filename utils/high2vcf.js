@@ -9,13 +9,15 @@ for(let i=2; i<process.argv.length; i++) {
 if(!arg.high20) abort('no high20 file')
 if(!arg.genome) abort('no genome sequence file')
 if(!arg.out) abort('no vcf file name')
+if(!arg.chromsize) abort('no chromsize file')
 
 function abort(m) {
 console.log(m+`
-  --genome = <.gz fasta file> samtools-indexed
-  --out    = <output vcf file basename>
-  --single = <single sample name> use tumor
-  --high20 = <high_20 text file> with following columns:
+  --genome    = <.gz fasta file> samtools-indexed
+  --chromsize = <chrom size file> each row: chrname -tab- size
+  --out       = <output vcf file basename>
+  --single    = <single sample name> use tumor
+  --high20    = <high_20 text file> with following columns:
   	Chr: chr1
 	Pos: 546697
 	Chr_Allele: A
@@ -34,6 +36,14 @@ const fs=require('fs')
 const readline=require('readline')
 const exec=require('child_process').execSync
 
+const chr2size = {} // chr : size
+for(const line of fs.readFileSync(arg.chromsize,{encoding:'utf8'}).trim().split('\n')) {
+	const l = line.split('\t')
+	const s = Number.parseInt(l[1])
+	if(Number.isNaN(s)) abort('invalid chromosome size: '+line)
+	chr2size[ l[0] ] = s
+}
+
 
 const tempfile=Math.random().toString()
 const vcfout=fs.createWriteStream(tempfile)
@@ -49,11 +59,21 @@ vcfout.on('finish',()=>{
 	fs.unlinkSync(tempfile)
 	exec('bgzip '+arg.out)
 	exec('tabix -p vcf '+arg.out+'.gz')
+
+	if(invalidchr) console.log(invalidchr+' lines skipped for invalid chr name')
 })
 
 
 
-let iChr, iPos, iChr_Allele, iAlternative_Allele, ireference_normal_count, ireference_tumor_count, ialternative_normal_count, ialternative_tumor_count
+let iChr,
+	iPos,
+	iChr_Allele,
+	iAlternative_Allele,
+	ireference_normal_count,
+	ireference_tumor_count,
+	ialternative_normal_count,
+	ialternative_tumor_count,
+	invalidchr = 0
 
 
 const rl = readline.createInterface({input: fs.createReadStream(arg.high20,{encoding:'utf8'})})
@@ -64,14 +84,21 @@ rl.on('line',line=>{
 
 	if(!iChr) {
 		// header
-		parseheader(line)
+		const err = parseheader(line)
+		if(err) abort('high20 file header error: '+err)
 		return
 	}
 
 	const l=line.split('\t')
 
 	const chr=l[iChr]
-	let pos=Number.parseInt(l[iPos])
+	if( !chr2size[ chr ] ) {
+		invalidchr++
+		return
+	}
+
+
+	let pos = Number.parseInt(l[iPos])
 	if(Number.isNaN(pos)) {
 		console.error('invalid position: '+l[iPos])
 		return
@@ -157,26 +184,31 @@ function parseheader(line) {
 		else if(v=='alternative_normal_count') ialternative_normal_count=i
 		else if(v=='alternative_tumor_count') ialternative_tumor_count=i
 	}
-	if(iChr==undefined) abort('Chr missing')
-	if(iPos==undefined) abort('Pos missing')
-	if(iChr_Allele==undefined) abort('Chr_Allele missing')
-	if(iAlternative_Allele==undefined) abort('Alternative_Allele missing')
+	if(iChr==undefined) return 'Chr missing'
+	if(iPos==undefined) return 'Pos missing'
+	if(iChr_Allele==undefined) return 'Chr_Allele missing'
+	if(iAlternative_Allele==undefined) return 'Alternative_Allele missing'
 
-	if(ireference_tumor_count==undefined) abort('reference_tumor_count missing')
-	if(ialternative_tumor_count==undefined) abort('alternative_tumor_count missing')
+	if(ireference_tumor_count==undefined) return 'reference_tumor_count missing'
+	if(ialternative_tumor_count==undefined) return 'alternative_tumor_count missing'
 
 	if(arg.single) {
 		// single sample, always as "tumor", no normal
 	} else {
 		// is paired samples, must have normal
-		if(ireference_normal_count==undefined) abort('reference_normal_count missing')
-		if(ialternative_normal_count==undefined) abort('alternative_normal_count missing')
+		if(ireference_normal_count==undefined) return 'reference_normal_count missing'
+		if(ialternative_normal_count==undefined) return 'alternative_normal_count missing'
 	}
 
 	// vcf meta lines depend on 
+
 	vcfout.write(`##fileformat=VCFv4.3
 ##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
 `)
+
+	for(const chr in chr2size) {
+		vcfout.write('##contig=<ID='+chr+',length='+chr2size[chr]+'>')
+	}
 
 	if(arg.single) {
 		vcfout.write('##INFO=<ID=BAF,Number=1,Type=Float,Description="B allele fraction">\n')
@@ -184,4 +216,6 @@ function parseheader(line) {
 	} else {
 		vcfout.write('#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tnormal\ttumor\n')
 	}
+
+	return null
 }
