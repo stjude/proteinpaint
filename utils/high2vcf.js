@@ -207,7 +207,7 @@ function parseheader(line) {
 `)
 
 	for(const chr in chr2size) {
-		vcfout.write('##contig=<ID='+chr+',length='+chr2size[chr]+'>')
+		vcfout.write('##contig=<ID='+chr+',length='+chr2size[chr]+'>\n')
 	}
 
 	if(arg.single) {
