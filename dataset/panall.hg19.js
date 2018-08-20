@@ -4,6 +4,21 @@ const common=require('../src/common')
 const samplenamekey = 'sample_name'
 
 
+
+const valuePerSample={
+	key:'percentage',
+	label:'Percentage',
+	cutoffValueLst:[
+		{side:'>',value:5,label:'>5%'},
+		{side:'>',value:10,label:'>10%'},
+		{side:'>',value:20,label:'>20%'},
+		{side:'>',value:30,label:'>30%'},
+		{side:'>',value:40,label:'>40%'}
+	]
+}
+
+
+
 module.exports={
 
 	genome:'hg19',
@@ -242,5 +257,65 @@ module.exports={
                	]
 			},
 		},
+
+
+
+		junction: {
+			name:'PCGP tumor RNA splice junction',
+			istrack:true,
+			type:common.tkt.mdsjunction,
+			viewrangeupperlimit:500000,
+			readcountCutoff:5,
+			file:'hg19/pan-all/junction/pan-BALL.junction.gz',
+			infoFilter:{ // client handles junction-level attributes
+				lst:[
+					{
+						key:'type',
+						label:'Type',
+						categories:{
+							canonical:{
+								label:'Canonical',
+								color:'#0C72A8'
+							},
+							exonskip:{
+								label:'Exon skipping',
+								color:'#D14747',
+								valuePerSample:valuePerSample
+							},
+							exonaltuse:{
+								label:'Exon alternative usage',
+								color:'#E69525',
+								valuePerSample:valuePerSample
+							},
+							a5ss:{
+								label:'Alternative 5\' splice site',
+								color:'#476CD1',
+								valuePerSample:valuePerSample
+							},
+							a3ss:{
+								label:'Alternative 3\' splice site',
+								color:'#47B582',
+								valuePerSample:valuePerSample
+							},
+							Unannotated:{
+								label:'Not annotated',
+								color:'#787854'
+							}
+						},
+						hiddenCategories:{Unannotated:1}
+					}
+				]
+			},
+			singlejunctionsummary:{
+				readcountboxplotpercohort:{
+					// categorical attributes only
+					groups:[
+						{label:'Cancer group',key:'diagnosis_group_short'},
+						{label:'Cancer', key:'diagnosis_short'}
+					]
+				}
+			}
+		}
+
 	}
 }
