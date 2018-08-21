@@ -21,6 +21,7 @@ import {bedjfromtemplate,    bedjmaketk,    bedjload, bedjloadsubpanel} from    
 import {gmtkfromtemplate,    gmtkmaketk,    gmtkrender} from   './block.tk.usegm'
 import {hicstrawfromtemplate,hicstrawmaketk,hicstrawload} from './block.tk.hicstraw.adaptor'
 import {expressionrankfromtemplate,expressionrankmaketk,expressionrankload} from './block.tk.expressionrank.adaptor'
+import {asefromtemplate,asemaketk,aseload} from './block.tk.ase.adaptor'
 
 import {mdsjunctionfromtemplate,mdsjunctionmaketk,mdsjunctionload} from './block.mds.junction.adaptor'
 import {mdscnvfromtemplate,mdscnvmaketk,mdscnvload} from './block.mds.cnv.adaptor'
@@ -2333,6 +2334,13 @@ block_addtk_template(template) {
 			return
 		}
 		break
+	case client.tkt.ase:
+		const e9 = asefromtemplate(tk,template)
+		if(e9) {
+			this.error(e9)
+			return
+		}
+		break
 	case client.tkt.expressionrank:
 		const e5 = expressionrankfromtemplate(tk,template)
 		if(e5) {
@@ -2465,6 +2473,9 @@ block_maketk(tk) {
 		break
 	case client.tkt.expressionrank:
 		expressionrankmaketk(tk,this)
+		break
+	case client.tkt.ase:
+		asemaketk(tk,this)
 		break
 	default:
 		this.error('maketk: unknown template tk type '+tk.type)
@@ -2830,6 +2841,9 @@ tk_load(tk) {
 		break
 	case client.tkt.expressionrank:
 		expressionrankload(tk,this)
+		break
+	case client.tkt.ase:
+		aseload(tk,this)
 		break
 	default:
 		this.error('tk_load: unknown tk type')
@@ -3727,6 +3741,9 @@ add_subpanel() {
 				break
 			case client.tkt.expressionrank:
 				expressionrankload(tk,this)
+				break
+			case client.tkt.ase:
+				aseload(tk,this)
 				break
 			case client.tkt.mdsjunction:
 				mdsjunctionload(tk,this)

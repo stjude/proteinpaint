@@ -173,6 +173,7 @@ app.post('/checkrank',handle_checkrank)
 app.post('/samplematrix', handle_samplematrix)
 app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
 app.post('/isoformbycoord', handle_isoformbycoord)
+app.post('/ase', handle_ase)
 
 
 // obsolete
@@ -5137,6 +5138,97 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 	}
 }
 
+
+
+async function handle_ase ( req, res ) {
+	if( reqbodyisinvalidjson( req, res )) return
+	const q = req.query
+
+	try {
+
+		const genome = genomes[ q.genome ]
+		if(!genome) throw 'invalid genome'
+
+		if(!genome.tracks) throw 'genome.tracks[] missing'
+
+
+		// may designate specific gene track
+
+		const genetk = genome.tracks.find( i=> i.__isgene )
+		if(!genetk) throw 'no gene track from this genome'
+
+		if( q.rnabamfile ) {
+		} else {
+			if( !q.rnabamurl ) throw 'no file or url for rna bam'
+			// cache
+			q.dir_rnabam = ''
+		}
+
+		if( q.vcffile ) {
+		} else {
+			if( !q.vcfurl ) throw 'no file or url for vcf'
+			q.dir_vcf = ''
+		}
+
+		if(!q.chr) throw 'no chr'
+		if(!q.start || !q.stop) throw 'no start/stop'
+
+		const genes = await handle_ase_getgenes( genetk, q.chr, q.start, q.stop )
+
+		if(!genes) throw 'no genes in view range'
+
+
+		const items = []
+		
+		res.send({ items: items })
+
+	} catch (e) {
+		res.send({error: (e.message||e)})
+	}
+}
+
+
+
+async function handle_ase_getgenes ( genetk, chr, start, stop ) {
+	const lines = await tabix_getlines( path.join(serverconfig.tpmasterdir, genetk.file), chr+':'+start+'-'+stop )
+	if(!lines) return null
+
+	const symbol2lst = new Map()
+	// k: symbol, v: list of isoforms
+
+	for(const line of lines) {
+		const l = line.split('\t')
+		const j = JSON.parse( l[3])
+		const start = Number.parseInt( l[1] )
+		const stop  = Number.parseInt( l[2] )
+		if( symbol2lst.has( j.name )) {
+			const s = symbol2lst.get(j.name)
+			s.start = Math.min( s.start, start )
+			s.stop = Math.max( s.stop, stop )
+		} else {
+			symbol2lst.set( j.name, { start, stop } )
+		}
+	}
+	return symbol2lst
+}
+
+
+
+function tabix_getlines ( file, coord ) {
+	return new Promise((resolve,reject)=>{
+		const sp = spawn( tabix, [ file, coord ] )
+		const out=[], out2 = []
+		sp.stdout.on('data', i=> out.push(i))
+		sp.stderr.on('data', i=> out2.push(i))
+		sp.on('close',()=>{
+			const err = out2.join('')
+			if(err) reject(err)
+			const str = out.join('').trim()
+			if( !str ) resolve()
+			resolve( str.split('\n'))
+		})
+	})
+}
 
 
 

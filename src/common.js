@@ -371,7 +371,8 @@ const tkt={
 	bampile:'bampile',
 	hicstraw:'hicstraw',
 	expressionrank:'expressionrank',
-	aicheck:'aicheck'
+	aicheck:'aicheck',
+	ase:'ase',
 }
 exports.tkt = tkt
 
