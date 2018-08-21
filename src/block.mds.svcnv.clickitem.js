@@ -27,9 +27,10 @@ click_samplegroup_showtable
 may_add_sampleannotation
 svchr2html
 svcoord2html
+detailtable_singlesample
+make_svgraph
 
 ********************** INTERNAL
-detailtable_singlesample
 	printer_snvindel
 may_show_matrixbutton
 matrix_view()
@@ -1339,7 +1340,7 @@ export function tooltip_singleitem( p ) {
 
 
 
-function detailtable_singlesample(p) {
+export function detailtable_singlesample(p) {
 	/*
 	multi or single
 	a table to indicate basic info about an item from a sample
@@ -1997,7 +1998,8 @@ function may_show_svgraph ( p, buttonrow, holder0 ) {
 }
 
 
-async function make_svgraph( p, holder ) {
+
+export async function make_svgraph( p, holder ) {
 	const svpair = {
 		a: {
 			chr: p.item.chrA,

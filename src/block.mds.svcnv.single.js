@@ -2,7 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {scaleLinear} from 'd3-scale'
 import {event as d3event} from 'd3-selection'
-import { tooltip_singleitem, svcoord2html} from './block.mds.svcnv.clickitem'
+import { tooltip_singleitem, svcoord2html, make_svgraph, detailtable_singlesample } from './block.mds.svcnv.clickitem'
 import { map_cnv,
 	labelspace,
 	draw_colorscale_cnv,
@@ -12,6 +12,11 @@ import { map_cnv,
 	itemname_svfusion,
 	vcfvariantisgermline } from './block.mds.svcnv'
 import { update_legend } from './block.mds.svcnv.legend'
+
+
+
+
+
 
 
 
@@ -664,6 +669,7 @@ function render_singlesample_sv( svlst, tk, block ) {
 			.attr('class','sja_aa_disckick')
 			.on('mouseover',()=>{
 				if(sv.lst.length==1) {
+
 					tooltip_singleitem({
 						item:sv.lst[0],
 						tk: tk
@@ -675,8 +681,44 @@ function render_singlesample_sv( svlst, tk, block ) {
 			.on('mouseout',()=> tk.tktip.hide() )
 			.on('click',()=>{
 				if(sv.lst.length==1) {
-					// click sv may add subpanel
-					click_sv_single(sv.lst[0], tk, block)
+
+					const m = sv.lst[0]
+					const pane = client.newpane({x:d3event.clientX,y:d3event.clientY})
+					pane.header.text( m.sample )
+					pane.body.style('margin-top','10px')
+
+					// 1 - may split button
+					const [ chr, otherpos ] = get_split_coord( m, block )
+					if( chr ) {
+						// will split
+						const row = pane.body.append('div')
+							.style('margin-bottom','5px')
+						row.append('div')
+							.style('display','inline-block')
+							.text('Add new panel at '+chr.name+':'+otherpos)
+							.attr('class','sja_menuoption')
+							.on('click',()=>{
+								row.remove()
+								split_panel( chr, otherpos, block )
+							})
+					}
+
+					// 2 - svgraph
+					make_svgraph( {
+						item: m,
+						block: block,
+						//tk: tk,
+						},
+						pane.body.append('div')
+					)
+
+					// 3 - detail table
+					detailtable_singlesample({
+						item: m,
+						tk: tk,
+						holder: pane.body.append('div'),
+					})
+
 					return
 				}
 				panel_multi_sv(sv.lst, tk, block)
@@ -711,7 +753,7 @@ function render_singlesample_sv( svlst, tk, block ) {
 
 
 
-function click_sv_single(sv, tk, block) {
+function get_split_coord ( sv, block ) {
 	let otherchr
 	let otherpos
 	if(sv._chr!=sv.chrA) {
@@ -721,20 +763,24 @@ function click_sv_single(sv, tk, block) {
 		otherchr=sv.chrB
 		otherpos=sv.posB
 	}
-	if(!otherchr) return
-	const chr=block.genome.chrlookup[otherchr.toUpperCase()]
+	if(!otherchr) return [ null ]
+	const chr = block.genome.chrlookup[ otherchr.toUpperCase() ]
 	if(!chr) {
 		block.error('Invalid chr name: '+otherchr)
-		return
+		return [ null ]
 	}
 
 	// see if this chr already exists...
 	for(const p of block.subpanels) {
 		if(p.chr == otherchr) {
-			return
+			return [null]
 		}
 	}
+	return [ chr, otherpos ]
+}
 
+
+function split_panel ( chr, otherpos, block ) {
 	const span=10000
 	const p={
 		chr:chr.name,
