@@ -8,7 +8,7 @@
     "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js --watch --progress --colors",
     "ppdev": "node scripts/deploy.ppdev.js",
     "ppr": "node ./scripts/deploy.ppr.js",
-    "ppr2": "sh ./scripts/deploy.ppr.sh http://localhost:3000",
+    "ppr2": "sh ./scripts/deploy.ppr.sh http://localhost:3001",
     "ppc": "sh ./scripts/deploy.ppc.sh",
     "public-stage": "./scripts/deploy.sh public-stage",
     "public-prod": "./scripts/deploy.sh public-prod",
