@@ -334,8 +334,7 @@ if (hasdiseaselst.length || cohort.piebarJSON) {
 		dom: {
 			butt: piebtn.node(),
 			holder: piediv.node()
-		},
-		show: cohort.show_piebar
+		}
 	})
 }
 
