@@ -1,4 +1,5 @@
 export function asefromtemplate ( tk, template ) {
+	if( !template.samplename ) return 'samplename missing'
 	if( !template.rnabamfile ) {
 		if( !template.ranbamurl ) return 'neither file or url given for rnabam'
 	}

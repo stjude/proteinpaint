@@ -5140,73 +5140,439 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 
 
 
+
+
+
+
+
+
+
+
+
 async function handle_ase ( req, res ) {
 	if( reqbodyisinvalidjson( req, res )) return
 	const q = req.query
 
 	try {
 
+		if(!q.samplename) throw 'samplename missing'
+		if(!q.chr) throw 'no chr'
+		if(!q.start || !q.stop) throw 'no start/stop'
+		if(!q.rnabarheight) throw 'no rnabarheight'
+		if(!q.dnabarheight) throw 'no dnabarheight'
+		if(!Number.isInteger(q.barypad)) throw 'invalid barypad'
+		if(!q.rnacoveragemax) throw 'no rnacoveragemax'
+
 		const genome = genomes[ q.genome ]
 		if(!genome) throw 'invalid genome'
 
 		if(!genome.tracks) throw 'genome.tracks[] missing'
-
 
 		// may designate specific gene track
 
 		const genetk = genome.tracks.find( i=> i.__isgene )
 		if(!genetk) throw 'no gene track from this genome'
 
-		if( q.rnabamfile ) {
-		} else {
-			if( !q.rnabamurl ) throw 'no file or url for rna bam'
-			// cache
-			q.dir_rnabam = ''
+		await handle_ase_prepfiles( q, genome )
+
+
+		const genes = await handle_ase_getgenes( genome, genetk, q.chr, q.start, q.stop )
+		// k: symbol, v: {start,stop}
+
+
+		// may alter search start/stop by gene range
+		const searchstart = q.start
+		const searchstop = q.stop
+		const renderstart = q.start
+		const renderstop = q.stop
+
+		// heterozygous ones
+		const snps = await handle_ase_getsnps( q, genome, genes, searchstart, searchstop )
+
+		// check rna bam
+		const imgsrc = await handle_ase_pileup(
+			q,
+			snps,
+			searchstart,
+			searchstop,
+			renderstart,
+			renderstop
+			)
+
+
+		const generesult = handle_ase_generesult( snps, genes )
+
+		// return
+		let dnamax = 0
+		for(const m of snps) {
+			if(m.dnacount) {
+				dnamax = Math.max( m.dnacount.ref + m.dnacount.alt )
+			}
 		}
 
-		if( q.vcffile ) {
-		} else {
-			if( !q.vcfurl ) throw 'no file or url for vcf'
-			q.dir_vcf = ''
-		}
-
-		if(!q.chr) throw 'no chr'
-		if(!q.start || !q.stop) throw 'no start/stop'
-
-		const genes = await handle_ase_getgenes( genetk, q.chr, q.start, q.stop )
-
-		if(!genes) throw 'no genes in view range'
-
-
-		const items = []
-		
-		res.send({ items: items })
+		res.send({
+			genes: generesult,
+			coveragesrc: imgsrc,
+			dnamax: dnamax,
+		})
 
 	} catch (e) {
+		if(e.stack) console.log(e.stack)
 		res.send({error: (e.message||e)})
 	}
 }
 
 
 
-async function handle_ase_getgenes ( genetk, chr, start, stop ) {
-	const lines = await tabix_getlines( path.join(serverconfig.tpmasterdir, genetk.file), chr+':'+start+'-'+stop )
-	if(!lines) return null
+function handle_ase_generesult ( snps, genes ) {
+	/*
+	snps
+	genes
+	k: symbol, v: {start,stop}
+	*/
+	const out = []
+	for( const [symbol, gene] of genes ) {
+
+		out.push( gene )
+
+		const thissnps = snps.filter( m=> m.pos >= gene.start && m.pos <= gene.stop )
+		if(thissnps.length==0) {
+			gene.nosnp = 1
+			continue
+		}
+		
+		gene.snps = thissnps
+
+		const rnasnp = thissnps.filter( i=> !i.rnacount.nocoverage )
+		if( rnasnp.length==0 ) {
+			gene.nornasnp = 1
+			continue
+		}
+		const deltasum = rnasnp.reduce((i,j) => i + Math.abs( j.dnacount.f - j.rnacount.f ), 0)
+		gene.mean_delta = deltasum / rnasnp.length
+	}
+
+	return out
+}
+
+
+
+function handle_ase_pileup(
+	q,
+	snps,
+	searchstart,
+	searchstop,
+	renderstart,
+	renderstop
+	) {
+
+	for(const m of snps) {
+		m.rnacount = {
+			nocoverage: 1
+		}
+	}
+
+	const canvas = new Canvas( q.width, q.rnabarheight + q.barypad + q.dnabarheight )
+	const ctx = canvas.getContext('2d')
+
+	const bpw = Math.max( 1, q.width/(q.stop-q.start) )
+	if( bpw > 1 ) {
+		ctx.lineWidth = bpw
+	}
+
+	return new Promise((resolve,reject)=>{
+
+		const sp = spawn(
+			samtools,
+			[ 'mpileup', '-d', 999999, '-Q', 10, '-r',
+				(q.rnabam_nochr?q.chr.replace('chr',''):q.chr)+':'+(searchstart+1)+'-'+(searchstop+1),
+				q.rnabamurl || q.rnabamfile
+			],
+			{cwd: q.rnabamurl_dir}
+			)
+
+		const rl = readline.createInterface({input:sp.stdout})
+		rl.on('line',line=>{
+
+			// 1       47685158        N       50      ttTTTTTTTtTTTTT      JIEmI@IGEC3Fi?jB
+			const l = line.split('\t')
+			if(l.length!=6) return
+
+			const pos = Number.parseInt( l[1] ) - 1
+
+			let renderx // for this nt; if set, means this nt is plotted
+			let h
+
+			if( pos >= q.start && pos <= q.stop ) {
+				// in render range, plot coverage
+				// do not use coverage number that includes split reads -- count bases
+				let coverage = 0
+				for(const x of l[4]) {
+					if( common.basecolor[x.toUpperCase()] ) coverage++
+				}
+
+				renderx = q.width * (pos-q.start) / (q.stop-q.start)
+				h = q.rnabarheight *
+					( 1 - (q.rnacoveragemax - Math.min(coverage,q.rnacoveragemax))/q.rnacoveragemax )
+
+				ctx.strokeStyle = '#ccc'
+				ctx.beginPath()
+				ctx.moveTo( renderx+bpw/2, q.rnabarheight )
+				ctx.lineTo( renderx+bpw/2, q.rnabarheight-h )
+				ctx.stroke()
+				ctx.closePath()
+			}
+
+
+			const m = snps.find( m=> m.pos == pos )
+			if( m ) {
+				// a snp from query range, but may not in render range
+				m.__x = renderx // could be undefined
+
+				const allele1 = m.ref.toUpperCase()
+				const allele2 = m.alt.toUpperCase()
+				let c1=0, c2=0
+				for(const x of l[4]) {
+					const xup = x.toUpperCase()
+					if( !common.basecolor[ xup ] ) continue
+					if( xup == allele1 ) c1++
+					else if( xup == allele2 ) c2++
+				}
+
+				if( c1+c2 > 0 ) {
+					// has coverage at this snp
+					m.rnacount = {
+						ref: c1,
+						alt: c2,
+						f: ( c2 /(c1+c2) ),
+						h: h,
+					}
+				}
+			}
+		})
+		sp.on('close',()=>{
+
+			// only plot snp bars after finishing, so the rna bars are on foreground
+			let dnamax = 0
+			for(const m of snps) {
+				if( m.__x == undefined) continue
+				dnamax = Math.max( dnamax, m.dnacount.ref+m.dnacount.alt )
+			}
+
+			for(const m of snps) {
+				if( m.__x == undefined) continue
+				if( !m.rnacount.nocoverage ) {
+					// rna
+					ctx.beginPath()
+					ctx.moveTo( m.__x+bpw/2, q.rnabarheight )
+					ctx.lineTo( m.__x+bpw/2, q.rnabarheight - (m.rnacount.f * m.rnacount.h) )
+					ctx.strokeStyle = 'blue'
+					ctx.stroke()
+					ctx.closePath()
+					ctx.beginPath()
+					ctx.strokeStyle = '#FF4040'
+					ctx.moveTo( m.__x+bpw/2, q.rnabarheight - (m.rnacount.f * m.rnacount.h) )
+					ctx.lineTo( m.__x+bpw/2, q.rnabarheight - m.rnacount.h )
+					ctx.stroke()
+					ctx.closePath()
+				}
+				// dna
+				const h = q.dnabarheight * (m.dnacount.ref+m.dnacount.alt) / dnamax
+				ctx.beginPath()
+				ctx.moveTo( m.__x+bpw/2, q.rnabarheight + q.barypad )
+				ctx.lineTo( m.__x+bpw/2, q.rnabarheight + q.barypad + (m.dnacount.f * h) )
+				ctx.strokeStyle = 'blue'
+				ctx.stroke()
+				ctx.closePath()
+				ctx.beginPath()
+				ctx.strokeStyle = '#FF4040'
+				ctx.moveTo( m.__x+bpw/2, q.rnabarheight + q.barypad + (m.dnacount.f * h) )
+				ctx.lineTo( m.__x+bpw/2, q.rnabarheight + q.barypad + h )
+				ctx.stroke()
+				ctx.closePath()
+				delete m.__x
+			}
+
+			resolve( canvas.toDataURL() )
+		})
+	})
+}
+
+
+
+
+function pileup_singlent ( file, dir, coord, allele1, allele2 ) {
+	return new Promise((resolve, reject)=>{
+		const sp = spawn( samtools,[ 'mpileup', '-d', 999999, '-Q', 10, '-r', coord, file],{cwd:dir})
+		const out=[]
+		sp.stdout.on('data',i=>out.push(i))
+		// do not capture stderr
+		sp.on('close',()=>{
+			let c1=0, c2=0
+			const line = out.join('').trim()
+			if( line ) {
+				const l = line.split('\t')
+				if( l[4] ) {
+					for(const x of l[4]) {
+						const xup = x.toUpperCase()
+						if( !common.basecolor[xup] ) continue
+						if( xup == allele1 ) c1++
+						else if( xup == allele2 ) c2++
+					}
+				}
+			}
+			resolve( [c1,c2] )
+		})
+	})
+}
+
+
+
+async function handle_ase_prepfiles( q, genome ) {
+	if( q.rnabamfile ) {
+		q.rnabamfile = path.join( serverconfig.tpmasterdir, q.rnabamfile )
+	} else {
+		if( !q.rnabamurl ) throw 'no file or url for rna bam'
+		q.rnabamurl_dir = await cache_index_promise( q.rnabamindexURL || q.rnabamurl+'.bai' )
+	}
+
+	q.rnabam_nochr = await bam_ifnochr(
+		q.rnabamfile || q.rnabamurl,
+		genome,
+		q.rnabamurl_dir
+		)
+
+	if( q.vcffile ) {
+		q.vcffile = path.join( serverconfig.tpmasterdir, q.vcffile )
+	} else {
+		if( !q.vcfurl ) throw 'no file or url for vcf'
+		q.vcfurl_dir = await cache_index_promise( q.vcfindexURL || q.vcfurl+'.tbi' )
+	}
+	q.vcf_nochr = await tabix_ifnochr(
+		q.vcffile || q.vcfurl,
+		genome,
+		q.vcfurl_dir
+		)
+}
+
+
+async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) {
+	/*
+	q:
+	.samplename
+	.vcffile
+	.vcfurl
+	.vcfindexURL
+	.chr
+	*/
+	const mlines = await tabix_getvcfmeta( 
+		q.vcffile || q.vcfurl,
+		q.vcfurl_dir
+		)
+
+	const [info, format, samples, err] = vcf.vcfparsemeta( mlines )
+	if(err) throw err
+
+
+	const vcfobj = {
+		info: info,
+		format: format,
+		samples: samples
+	}
+
+
+	const lines = await tabix_getlines(
+		q.vcffile || q.vcfurl,
+		( q.vcf_nochr ? q.chr.replace('chr','') : q.chr)+':'+searchstart+'-'+searchstop,
+		q.vcfurl_dir
+		)
+
+	const allsnps = []
+
+	for(const line of (lines || [])) {
+
+		const [badinfo, mlst, altinvalid] = vcf.vcfparseline( line, vcfobj )
+
+		for(const m of mlst) {
+			// if is snp
+			if( !common.basecolor[m.ref] || !common.basecolor[m.alt] ) {
+				continue
+			}
+			// find sample
+			if( !m.sampledata ) continue
+
+			const sobj = m.sampledata.find( i=> i.sampleobj.name == q.samplename )
+			if( !sobj ) continue
+
+			let hm // if is heterozygous
+
+			if( sobj.AD ) {
+				const refcount = sobj.AD[ m.ref ]
+				const altcount = sobj.AD[ m.alt ]
+				if( refcount >= 2 && altcount >=2 ) {
+					const f = altcount / (altcount+refcount)
+					if( f >= 0.3 && f <= 0.7 ) {
+						hm = {
+							pos: m.pos,
+							ref: m.ref,
+							alt: m.alt,
+							dnacount: {
+								f: f,
+								ref: refcount,
+								alt: altcount
+							}
+						}
+					}
+				}
+			} else {
+				// GT?
+			}
+
+			if( hm ) allsnps.push( hm )
+		}
+	}
+
+	const genesnps = []
+	for(const m of allsnps) {
+		for(const [g, p] of genes) {
+			if( m.pos >= p.start && m.pos <= p.stop ) {
+				genesnps.push( m )
+				break
+			}
+		}
+	}
+
+	return genesnps
+}
+
+
+
+
+
+
+async function handle_ase_getgenes ( genome, genetk, chr, start, stop ) {
+	// if not native track, must test chr
+	const lines = await tabix_getlines(
+		path.join( serverconfig.tpmasterdir, genetk.file ),
+		chr+':'+start+'-'+stop,
+		)
 
 	const symbol2lst = new Map()
 	// k: symbol, v: list of isoforms
 
-	for(const line of lines) {
-		const l = line.split('\t')
-		const j = JSON.parse( l[3])
-		const start = Number.parseInt( l[1] )
-		const stop  = Number.parseInt( l[2] )
-		if( symbol2lst.has( j.name )) {
-			const s = symbol2lst.get(j.name)
-			s.start = Math.min( s.start, start )
-			s.stop = Math.max( s.stop, stop )
-		} else {
-			symbol2lst.set( j.name, { start, stop } )
+	if( lines ) {
+		for(const line of lines) {
+			const l = line.split('\t')
+			const j = JSON.parse( l[3])
+			const start = Number.parseInt( l[1] )
+			const stop  = Number.parseInt( l[2] )
+			if( symbol2lst.has( j.name )) {
+				const s = symbol2lst.get(j.name)
+				s.start = Math.min( s.start, start )
+				s.stop = Math.max( s.stop, stop )
+			} else {
+				symbol2lst.set( j.name, { start, stop } )
+			}
 		}
 	}
 	return symbol2lst
@@ -5214,9 +5580,9 @@ async function handle_ase_getgenes ( genetk, chr, start, stop ) {
 
 
 
-function tabix_getlines ( file, coord ) {
+async function tabix_getlines ( file, coord, dir ) {
 	return new Promise((resolve,reject)=>{
-		const sp = spawn( tabix, [ file, coord ] )
+		const sp = spawn( tabix, [ file, coord ], { cwd:dir })
 		const out=[], out2 = []
 		sp.stdout.on('data', i=> out.push(i))
 		sp.stderr.on('data', i=> out2.push(i))
@@ -5226,6 +5592,71 @@ function tabix_getlines ( file, coord ) {
 			const str = out.join('').trim()
 			if( !str ) resolve()
 			resolve( str.split('\n'))
+		})
+	})
+}
+
+
+
+function tabix_getvcfmeta ( file,  dir ) {
+	return new Promise((resolve,reject)=>{
+		const sp = spawn( tabix, [ '-H', file ], {cwd:dir} )
+		const out = [], out2 = []
+		sp.stdout.on('data', i=> out.push(i))
+		sp.stderr.on('data', i=> out2.push(i))
+		sp.on('close',()=>{
+			const err = out2.join('')
+			if(err) reject(err)
+			const str = out.join('').trim()
+			if( !str ) reject('cannot list vcf meta lines')
+			resolve( str.split('\n') )
+		})
+	})
+}
+
+
+function tabix_ifnochr ( file, genome, dir ) {
+	return new Promise((resolve,reject)=>{
+		const sp = spawn( tabix, [ '-l', file ], {cwd:dir} )
+		const out=[], out2 = []
+		sp.stdout.on('data', i=> out.push(i))
+		sp.stderr.on('data', i=> out2.push(i))
+		sp.on('close',()=>{
+			const err = out2.join('')
+			if(err) reject(err)
+			const str = out.join('').trim()
+			if( !str ) reject('cannot list chr names')
+			resolve( common.contigNameNoChr( genome, str.split('\n')) )
+		})
+	})
+}
+
+
+
+
+function bam_ifnochr ( file, genome, dir ) {
+	return new Promise((resolve,reject)=>{
+		const sp = spawn( samtools, [ 'view', '-H', file ], {cwd:dir} )
+		const out=[], out2 = []
+		sp.stdout.on('data', i=> out.push(i))
+		sp.stderr.on('data', i=> out2.push(i))
+		sp.on('close',()=>{
+			const err = out2.join('')
+			if(err) reject(err)
+			const str = out.join('').trim()
+			if( !str ) reject('cannot list bam header lines')
+			const chrlst = []
+			for(const line of str.split('\n')) {
+				if( !line.startsWith('@SQ') ) continue
+				const tmp = line.split('\t')[1]
+				if( !tmp ) reject('2nd field missing from @SQ line')
+				const l = tmp.split(':')
+				if( l[0]!='SN' ) reject('@SQ line 2nd field is not "SN" but '+l[0])
+				if( !l[1] ) reject('@SQ line no value for SN')
+				chrlst.push( l[1] )
+			}
+
+			resolve( common.contigNameNoChr( genome, chrlst ) )
 		})
 	})
 }
