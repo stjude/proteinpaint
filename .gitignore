@@ -37,6 +37,7 @@ serverconfig.json
 setup/*gz*
 setup/*
 tmpbuild/*
+pp-server/*
 
 *-stash.js
 
