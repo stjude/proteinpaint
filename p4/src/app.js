@@ -104,6 +104,9 @@ function process_embed_url ( arg ) {
 }
 
 
+
+
+
 function embed_block( arg ) {
 	/*
 	arg is primary
@@ -113,7 +116,10 @@ function embed_block( arg ) {
 	if(!genome) throw 'invalid value for .genome: '+arg.genome
 
 	const p = {}
-	for(const k in arg) p[k] = arg[k]
+	for(const k in arg) {
+		p[k] = arg[k]
+	}
+
 	p.genome = genome
 	p.holder = arg.showholder
 

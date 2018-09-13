@@ -14,7 +14,7 @@ let base_zindex=null
 
 
 
-export const domaincolorlst=[ '#8dd3c7', '#bebada', '#fb8072', '#80b1d3', '#E8E89E', "#a6d854", '#fdb462', "#ffd92f","#e5c494","#b3b3b3" ]
+export const domaincolorlst = [ '#8dd3c7', '#bebada', '#fb8072', '#80b1d3', '#E8E89E', "#a6d854", '#fdb462', "#ffd92f","#e5c494","#b3b3b3" ]
 
 
 
@@ -63,7 +63,7 @@ export class Menu{
 		body.on('mousedown.menu'+this.typename,()=>{
 				this.hide()
 			})
-		
+
 		this.d=body.append('div')
 			.style('display','none')
 			.style('position','absolute')

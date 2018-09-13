@@ -39,18 +39,6 @@ const hicstraw = serverconfig.hicstraw || 'straw'
 
 
 
-// launch
-server_validate_config()
-.then(()=>{
-	server_launch()
-})
-.catch(err=>{
-	console.error(err)
-})
-
-
-
-
 
 
 function server_launch() {
@@ -104,6 +92,56 @@ function server_launch() {
 
 
 
+function abort (e) {
+	console.error( e )
+	process.exit()
+}
+
+
+async function server_init() {
+
+	// server config
+	try {
+		await server_validate_config()
+	} catch( e ) {
+		abort( 'ERROR with "config.json": '+ e )
+	}
+
+	for(const genomename in genomes) {
+		// genome
+
+		const g = genomes[ genomename ]
+
+		try {
+			await server_validate_genome( g, genomename )
+		} catch( e ) {
+			abort( 'ERROR with genome configuration for "'+genomename+'": '+ e )
+		}
+
+		g.datasets={}
+		// dataset
+		for( const d of g.rawdslst ) {
+			try {
+				await server_validate_dataset( d, g )
+			} catch( e ) {
+				abort( 'ERROR with '+genomename+' dataset "'+d.name+'": ' + e )
+			}
+		}
+		delete g.rawdslst
+	}
+
+	server_launch()
+}
+
+server_init()
+
+
+
+
+
+
+
+
 ///////////////////////////////// validate server config
 
 
@@ -127,7 +165,6 @@ async function server_validate_config() {
 		if(!cfg.jwt.permissioncheck) throw 'jwt.permissioncheck missing'
 	}
 
-	if(!cfg.genomes) throw '.genomes[] missing'
 	if(common.isBadArray(cfg.genomes)) throw '.genomes[] should be non-empty array'
 
 	for(const g of cfg.genomes) {
@@ -171,124 +208,124 @@ async function server_validate_config() {
 		// register as global
 		genomes[ g.name ] = g2
 	}
+}
 
-	// validate each genome
 
-	for(const genomename in genomes) {
 
-		const g = genomes[genomename]
+async function server_validate_genome ( g, genomename ) {
+	// validate a genome
 
-		if(!g.majorchr) throw '.majorchr missing for '+genomename
-		if(typeof(g.majorchr)=='string') {
-			const lst=g.majorchr.trim().split(/[\s\t\n]+/)
+	if(!g.majorchr) throw '.majorchr missing'
+
+	if(typeof(g.majorchr)=='string') {
+		const lst=g.majorchr.trim().split(/[\s\t\n]+/)
+		const hash={}
+		const chrorder=[]
+		for(let i=0; i<lst.length; i+=2) {
+			const chr=lst[i]
+			const v = Number.parseInt(lst[i+1])
+			if(!Number.isFinite(v) || v<=0) throw 'invalid chr len for '+chr
+			hash[chr] = v
+			chrorder.push(chr)
+		}
+		g.majorchr = hash
+		g.majorchrorder = chrorder
+	}
+
+	if(g.minorchr) {
+		if(typeof(g.minorchr)=='string') {
+			const lst=g.minorchr.trim().split(/[\s\t\n]+/)
 			const hash={}
-			const chrorder=[]
 			for(let i=0; i<lst.length; i+=2) {
-				const chr=lst[i]
 				const v = Number.parseInt(lst[i+1])
-				if(!Number.isFinite(v) || v<=0) throw 'invalid chr len for '+chr+' from '+genomename
-				hash[chr] = v
-				chrorder.push(chr)
+				if(!Number.isFinite(v) || v<=0) throw 'invald chr len for '+lst[i]
+				hash[lst[i]] = v
 			}
-			g.majorchr = hash
-			g.majorchrorder = chrorder
+			g.minorchr=hash
 		}
-		if(g.minorchr) {
-			if(typeof(g.minorchr)=='string') {
-				const lst=g.minorchr.trim().split(/[\s\t\n]+/)
-				const hash={}
-				for(let i=0; i<lst.length; i+=2) {
-					const v = Number.parseInt(lst[i+1])
-					if(!Number.isFinite(v) || v<=0) throw 'invald chr len for '+lst[i]+' from '+genomename
-					hash[lst[i]] = v
-				}
-				g.minorchr=hash
-			}
-		}
+	}
 
-		if(!g.defaultcoord) throw '.defaultcoord missing for '+genomename
-		if(!g.majorchr[ g.defaultcoord.chr ]) throw 'no length for defaultcoord.chr '+g.defaultcoord.chr
-		if(!Number.isInteger(g.defaultcoord.start)) throw 'invalid value for defaultcoord.start'
-		if(!Number.isInteger(g.defaultcoord.stop)) throw 'invalid value for defaultcoord.stop'
+	if(!g.defaultcoord) throw '.defaultcoord missing'
+	if(!g.majorchr[ g.defaultcoord.chr ]) throw 'no length for defaultcoord.chr'
+	if(!Number.isInteger(g.defaultcoord.start)) throw 'invalid value for defaultcoord.start'
+	if(!Number.isInteger(g.defaultcoord.stop)) throw 'invalid value for defaultcoord.stop'
 
 
-		if(!g.genomefile) throw 'genomefile missing for '+genomename
-		if(!g.genomefile.endsWith('.gz')) throw 'genomefile '+g.genomefile+' not ending with .gz'
-		g.genomefile = path.join( serverconfig.filedir, g.genomefile )
-		if( await file_not_exist(    g.genomefile )) throw 'file not exist: '+g.genomefile
-		if( await file_not_readable( g.genomefile )) throw 'file not readable: '+g.genomefile
-		if( await file_not_exist(    g.genomefile+'.fai' )) throw '.fai index not exist: '+g.genomefile
-		if( await file_not_readable( g.genomefile+'.fai' )) throw '.fai index not readable: '+g.genomefile
-		if( await file_not_exist(    g.genomefile+'.gzi' )) throw '.gzi index not exist: '+g.genomefile
-		if( await file_not_readable( g.genomefile+'.gzi' )) throw '.gzi index not readable: '+g.genomefile
+	if(!g.genomefile) throw '.genomefile missing'
+	if(!g.genomefile.endsWith('.gz')) throw 'genomefile '+g.genomefile+' not ending with .gz'
+	g.genomefile = path.join( serverconfig.filedir, g.genomefile )
+	if( await file_not_exist(    g.genomefile )) throw 'file not exist: '+g.genomefile
+	if( await file_not_readable( g.genomefile )) throw 'file not readable: '+g.genomefile
+	if( await file_not_exist(    g.genomefile+'.fai' )) throw '.fai index not exist: '+g.genomefile
+	if( await file_not_readable( g.genomefile+'.fai' )) throw '.fai index not readable: '+g.genomefile
+	if( await file_not_exist(    g.genomefile+'.gzi' )) throw '.gzi index not exist: '+g.genomefile
+	if( await file_not_readable( g.genomefile+'.gzi' )) throw '.gzi index not readable: '+g.genomefile
 
-		// genedb is required
-		try {
-			validate_genedb( g.genedb )
-		} catch(e) {
-			throw genomename+'.genedb: '+e
-		}
+	// genedb is required
+	try {
+		validate_genedb( g.genedb )
+	} catch(e) {
+		throw '.genedb error: '+e
+	}
 
-		// proteindomain db is optional
-		try {
-			validate_proteindomain( g.proteindomain )
-		} catch(e) {
-			throw genomename+'.proteindomain: '+e
-		}
+	// proteindomain db is optional
+	try {
+		validate_proteindomain( g.proteindomain )
+	} catch(e) {
+		throw '.proteindomain error: '+e
+	}
 
-		// snp is optional
-		try {
-			validate_snpdb( g.snp )
-		} catch(e) {
-			throw genomename+'.snp: '+e
-		}
+	// snp is optional
+	try {
+		validate_snpdb( g.snp )
+	} catch(e) {
+		throw '.snp error: '+e
+	}
 
-		if(g.tracks) {
-			for(const tk of g.tracks) {
-				if( tk.__isgene ) {
-				} else {
-				}
-			}
-		}
-
-		if( g.snp ) {
-			// expose snp as tracks, but not file and other attributes
-			if(!g.tracks) g.tracks = []
-			for(const snp of g.snp) {
-				g.tracks.push( {
-					type: common.tkt.bedj,
-					name: snp.tk.name,
-					issnp: snp.name,
-					categories: snp.tk.categories
-				})
-			}
-		}
-
-		/*
-		done everything except dataset
-		*/
-
-		g.datasets={}
-		for(const d of g.rawdslst) {
-			/*
-			for each raw dataset
-			*/
-
-			if(!d.name) throw 'a nameless dataset from '+genomename
-			if(g.datasets[d.name]) throw genomename+' has duplicating dataset name: '+d.name
-			let ds
-			if(d.jsfile) {
-				ds=require(d.jsfile)
+	if(g.tracks) {
+		// TODO
+		for(const tk of g.tracks) {
+			if( tk.__isgene ) {
 			} else {
-				throw 'jsfile not available for dataset '+d.name+' of '+genomename
 			}
-			ds.label=d.name
-			g.datasets[ds.label]=ds
 		}
+	}
 
-		delete g.rawdslst
+	if( g.snp ) {
+		// expose snp as tracks, but not file and other attributes
+		if(!g.tracks) g.tracks = []
+		for(const snp of g.snp) {
+			g.tracks.push( {
+				type: common.tkt.bedj,
+				name: snp.tk.name,
+				issnp: snp.name,
+				categories: snp.tk.categories
+			})
+		}
 	}
 }
+
+
+
+
+async function server_validate_dataset ( d, g ) {
+
+	if(!d.name) throw '.name missing'
+	if(g.datasets[d.name]) throw 'duplicating dataset name'
+	let ds
+	if(d.jsfile) {
+		ds=require(d.jsfile)
+	} else {
+		throw 'jsfile not available'
+	}
+	ds.label=d.name
+
+	// TODO
+
+	g.datasets[ds.label]=ds
+}
+
+
 
 
 async function validate_genedb ( g ) {

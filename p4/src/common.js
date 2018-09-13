@@ -116,6 +116,7 @@ exports.basecolor={
 
 
 exports.isBadArray = function (i) {
+	if(!i) return true
 	if(!Array.isArray(i)) return true
 	if(i.length==0) return true
 	return false
