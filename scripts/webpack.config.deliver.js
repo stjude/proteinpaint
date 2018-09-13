@@ -8,6 +8,7 @@ module.exports = function(env) {
 	config.output.publicPath='https://pecan.stjude.org/pp/bin/'
 	config.output.path=__dirname+'/../deploys/deliver/proteinpaint/public/bin/'
 
+/*
 	config.plugins = [
 		new webpack.optimize.UglifyJsPlugin({
 	      mangle: true,
@@ -17,6 +18,7 @@ module.exports = function(env) {
 	    }),
 	    new webpack.optimize.OccurrenceOrderPlugin(),
 	]
+	*/
 
 	delete config.devtool
 
