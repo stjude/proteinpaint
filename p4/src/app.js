@@ -52,7 +52,7 @@ window.runproteinpaint4 = async (arg) => {
 
 	} catch(e){
 		if(e.stack) console.log(e.stack)
-		arg.holder.text('Error: '+(e.message||e))
+		client.sayerror( arg.holder, 'Error: '+(e.message||e) )
 	}
 }
 
@@ -90,16 +90,9 @@ function fetch_genomes ( arg ) {
 
 
 function process_embed_url ( arg ) {
-	try {
-
-		if( arg.block ) {
-			embed_block( arg )
-			return
-		}
-
-	} catch(e) {
-		if(e.stack) console.log(e.stack)
-		arg.showholder.append('div').text('Error: '+(e.message||e))
+	if( arg.block ) {
+		embed_block( arg )
+		return
 	}
 }
 
@@ -126,18 +119,23 @@ function embed_block( arg ) {
 	client.launch_block( p )
 }
 
+
+
+
+
 /*
 # ruler zoom in
 # reorder tracks
 # gene tk
 # bedj depth view
 # bedj category legend
+# findgene util
+# block <input> search gene
 
 gm view
 ruler config
 bw config
 bedj config
-block <input> search gene
 block <input> jump
 url param
 bam track

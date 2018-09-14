@@ -987,9 +987,6 @@ async function handle_tkbedj ( req, res ) {
 		q.genome = genome
 
 		const fileobj = await handle_bedj_fileobj( q, genome )
-		if( q.categories ) {
-			fileobj.categories = new Map() // category 2 count
-		}
 
 		if( common.isBadArray( q.views )) throw '.views[] should be array'
 		for(const view of q.views) {
@@ -1047,6 +1044,25 @@ async function handle_tkbedj ( req, res ) {
 
 
 async function handle_bedj_fileobj( q, genome ) {
+	// create and furbish object
+
+	const fileobj = await handle_bedj_fileobj_create( q, genome )
+
+	// furbish
+	if( q.categories ) {
+		fileobj.categories = new Map() // category 2 count
+	}
+
+	return fileobj
+}
+
+
+
+
+
+async function handle_bedj_fileobj_create( q, genome ) {
+	// create file object
+
 	if( q.issnp ) {
 		// TODO snp tk
 		if( !genome.snp) throw 'genome has no snp'
@@ -1070,6 +1086,13 @@ async function handle_bedj_fileobj( q, genome ) {
 	}
 	return fileobj
 }
+
+
+
+
+
+
+
 
 
 

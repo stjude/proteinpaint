@@ -796,13 +796,59 @@ param_viewrange () {
 }
 
 
+
+async jump_pos_0based ( pos ) {
+	/*
+	{ chr/start/stop }
+	default to first view
+	*/
+	const view = this.views[ 0 ]
+
+	// view px width stays same despite coord change
+	view.reverse = false
+	view.startidx = view.stopidx = 0
+
+	const chr = this.genome.chrlookup[ pos.chr.toUpperCase() ]
+	if(!chr) throw 'invalid chr at coord jump'
+
+	let start = pos.start,
+		stop  = pos.stop
+	
+	const minbprange = view.width / this.ntpxwidth
+	if( stop - start < minbprange ) {
+		const c = (stop + start)/2
+		start = Math.floor( c - minbprange/2 )
+		stop = Math.ceil( c + minbprange/2 )
+	}
+
+	view.regions = [ {
+		chr: chr.name,
+		bstart: 0,
+		bstop: chr.len,
+		start: start,
+		stop: stop
+	} ]
+
+	view.bpperpx = ( stop - start ) / view.width
+
+	this.view_updaterulerscale( view )
+
+	await this.update_tracks()
+}
+
 /////////////////////////////////// end of __coord and view range
 
 
 
 
+
+
+
+
 error ( m, e ) {
-	if(e.stack) console.log(e.stack)
+	if( e ) {
+		if(e.stack) console.log(e.stack)
+	}
 	if(this.errdiv) {
 		client.sayerror( this.errdiv, m )
 	} else {

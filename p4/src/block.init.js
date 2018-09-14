@@ -3,6 +3,7 @@ import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-s
 import * as coord from './coord'
 import * as common from './common'
 import * as client from './client'
+import {findgene} from './findgene'
 
 
 
@@ -295,9 +296,26 @@ function init_dom_for_block ( arg, b ) {
 	b.dom.row1 = b.holder.append('div')
 		.style('margin-bottom','5px')
 	b.dom.coord = {}
+
+	const tip = new client.Menu({padding:'0px'})
+
 	b.dom.coord.input = b.dom.row1.append('input')
 		.attr('type','text')
 		.style('width','200px')
+		.on('keyup',()=>{
+			findgene(
+				b.genome,
+				tip,
+				d3event.target,
+				d3event.key,
+				( gm, gmlst, pos )=>{
+					if( gm ) return b.jump_gm( gm )
+					if( gmlst ) return b.jump_gmlst( gmlst )
+					if( pos ) return b.jump_pos_0based( pos )
+				}
+			)
+		})
+
 	b.dom.coord.says = b.dom.row1.append('span')
 		.style('margin','0px 10px')
 		.style('font-size','.8em')
@@ -424,3 +442,6 @@ function init_dom_view ( view, block ) {
 
 	view.gscroll_noclip = view.g.append('g')
 }
+
+
+

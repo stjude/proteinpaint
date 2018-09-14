@@ -281,7 +281,6 @@ export function newpane(pm) {
 
 export function launch_block ( p ) {
 	import('./block').then( _ => {
-		//new _.Block( p )
 		_.Block.create( p )
 	})
 }
