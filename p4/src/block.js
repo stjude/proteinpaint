@@ -797,12 +797,10 @@ param_viewrange () {
 
 
 
-async jump_pos_0based ( pos ) {
+async jump_pos_0based ( view, pos ) {
 	/*
 	{ chr/start/stop }
-	default to first view
 	*/
-	const view = this.views[ 0 ]
 
 	// view px width stays same despite coord change
 	view.reverse = false
@@ -813,7 +811,7 @@ async jump_pos_0based ( pos ) {
 
 	let start = pos.start,
 		stop  = pos.stop
-	
+
 	const minbprange = view.width / this.ntpxwidth
 	if( stop - start < minbprange ) {
 		const c = (stop + start)/2
@@ -835,6 +833,58 @@ async jump_pos_0based ( pos ) {
 
 	await this.update_tracks()
 }
+
+
+jump_gmlst ( view, gmlst ) {
+	/*
+	gmlst has more than 1 isoform
+	if cluster at different locus, show menu
+	*/
+	const regions = []
+	// { chr/start/stop, gmlst[] }
+	for(const m of gmlst) {
+		const r = regions.find( r=> r.chr==m.chr && (Math.max(r.start,m.start) <= Math.min(r.stop, m.stop)) )
+		if( r ) {
+			r.gmlst.push( m )
+		} else {
+			regions.push({
+				chr: m.chr,
+				start: m.start,
+				stop: m.stop,
+				gmlst: [ m ]
+			})
+		}
+	}
+	if( regions.length == 0 ) {
+		console.error('no region')
+		return
+	}
+	if( regions.length == 1 ) {
+		const r = regions[ 0 ]
+		this.jump_pos_0based( view, { chr:r.chr, start:r.start, stop:r.stop } )
+		return
+	}
+	// multiple regions, show menu
+	bb.dom.coord.tip
+		.clear()
+		.showunder( bb.dom.coord.input.node() )
+	for(const r of regions) {
+		bb.dom.coord.tip.d
+		.append('div')
+		.attr('class','sja_menuoption')
+		.html(
+			'<span style="opacity:.5">'+r.gmlst[0].name+'</span> '
+			+ r.gmlst[0].isoform
+			+ ' <span style="font-size:.7em">'+r.chr+':'+r.start+'-'+r.stop+'</span>'
+			)
+		.on('click',()=>{
+			bb.dom.coord.tip.hide()
+			this.jump_pos_0based( view, { chr:r.chr, start:r.start, stop:r.stop } )
+		})
+	}
+}
+
+
 
 /////////////////////////////////// end of __coord and view range
 

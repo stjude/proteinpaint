@@ -131,12 +131,13 @@ function embed_block( arg ) {
 # bedj category legend
 # findgene util
 # block <input> search gene
+# block <input> jump
 
+no native track -- block arg has only tracks
 gm view
 ruler config
 bw config
 bedj config
-block <input> jump
 url param
 bam track
 */

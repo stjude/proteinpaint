@@ -297,7 +297,7 @@ function init_dom_for_block ( arg, b ) {
 		.style('margin-bottom','5px')
 	b.dom.coord = {}
 
-	const tip = new client.Menu({padding:'0px'})
+	b.dom.coord.tip = new client.Menu({padding:'0px'})
 
 	b.dom.coord.input = b.dom.row1.append('input')
 		.attr('type','text')
@@ -305,13 +305,25 @@ function init_dom_for_block ( arg, b ) {
 		.on('keyup',()=>{
 			findgene(
 				b.genome,
-				tip,
+				b.dom.coord.tip,
 				d3event.target,
 				d3event.key,
 				( gm, gmlst, pos )=>{
-					if( gm ) return b.jump_gm( gm )
-					if( gmlst ) return b.jump_gmlst( gmlst )
-					if( pos ) return b.jump_pos_0based( pos )
+					/*
+					defaults to change position of first view
+					not available for other views
+					*/
+					const view = b.views[0]
+					if( gm ) {
+						b.jump_pos_0based(
+							view,
+							{ chr: gm.chr, start: gm.start, stop: gm.stop }
+						)
+						return
+					}
+					if( gmlst ) return b.jump_gmlst( view, gmlst )
+					// TODO if snp, highlight
+					if( pos ) return b.jump_pos_0based( view, pos )
 				}
 			)
 		})

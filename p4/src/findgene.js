@@ -2,13 +2,36 @@ import * as client from './client'
 import * as coord from './coord'
 
 
+/******** EXTERNAL
+findgene()
+
+********* INTERNAL
+string2snp
+findgene_byname
+fetch_genelookup
+
+
+handle keyup event in a gene search box
+when typing letters, find matching gene names and show as menu:
+	 - clicking one gene in menu to find all isoforms by that name
+	 - hitting enter to search for the first gene in menu, if any
+	 - searching by isoform accession to find a single isoform
+	 - searching by snp or genomic position
+
+callback should be able to process:
+	single gene model, as from isoform search
+	multiple gene models of the same name
+	one genomic position
+
+error handling contained
+*/
 
 
 export async function findgene ( genome, tip, inputdom, eventkey, callback ) {
 /*
 genome: {}
 tip: Menu
-inputdom: <input type=text>
+inputdom: <input>
 eventkey: event.key
 callback: with arg (gm, gmlst, pos)
 */
