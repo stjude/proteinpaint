@@ -50,6 +50,7 @@ let usenoncoding=true,
 	importsilent=false
 
 butt.html(genelst.length+' <span style="font-size:.8em">GENES</span>')
+	.attr('title','A summary table of gene by variant type, order by number of hits in descending order.')
 const errdiv=folder.append('div')
 const sayerror=m=>{
 	client.sayerror(errdiv,m)
