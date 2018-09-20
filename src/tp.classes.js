@@ -76,6 +76,7 @@ export default function(cohort,button,folder) {
 	}
 
 	button.html(totalcount+' <span style="font-size:.8em">VARIANTS</span>')
+		  .attr('title', 'A summary of variant hits from all genes, in descending order.')
 	const table=folder.append('table')
 		.style('margin-right','20px')
 	const trup=table.append('tr')

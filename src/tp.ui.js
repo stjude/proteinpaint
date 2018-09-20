@@ -299,6 +299,7 @@ if(ds2clst && !cohort.disable_genenetwork) {
 	// has mlst
 	const [butt,folder]=makefolder(cohort)
 	butt.style('font-size','.8em').text('GENE NETWORK')
+		.attr('title','A force-directed graph of gene groups, shown with proportion of hits by diagnosis.')
 	let loaded=false
 	butt.on('click',()=>{
 		if(folder.style('display')=='none') {
@@ -316,7 +317,9 @@ if(ds2clst && !cohort.disable_genenetwork) {
 
 if(hasdiseaselst.length) {
 	const [skbtn,skdiv]=makefolder(cohort)
-	skbtn.style('font-size','.8em').text('RIBBON GRAPH')
+	skbtn.style('font-size','.8em')
+		 .text('RIBBON GRAPH')
+		 .attr('title','A flow or Sankey diagram showing associated quantities by proportional ribbon widths.')
 	window.sjcharts.sankey({
 		cohort,
 		dom: {
@@ -329,6 +332,7 @@ if(hasdiseaselst.length) {
 if (hasdiseaselst.length || cohort.piebarJSON) {
 	const [piebtn,piediv]=makefolder(cohort)
 	piebtn.style('font-size','.8em').text('PIE CHARTS')
+		  .attr('title', 'A sample group by gene group matrix of piecharts, with each pie wedge representing the number of hits by variant class.')
 	window.sjcharts.piebar({
 		cohort,
 		dom: {

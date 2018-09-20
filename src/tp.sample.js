@@ -38,6 +38,7 @@ if(patientnum==0) {
 const patientlabel = cohort.individual_label_name ? cohort.individual_label_name.toUpperCase() : 'INDIVIDUAL'
 const labelnum = cohort.individual_label_num ? cohort.individual_label_num : patientnum
 butt.html(labelnum+' <span style="font-size:70%">'+patientlabel+(labelnum>1?'S':'')+'</span>')
+    .attr('title', 'A table of an '+ patientlabel.toLowerCase() +" by variant categories.")
 
 const butrow=folder.append('div').style('padding','10px 0px')
 butrow.append('input').attr('size',12).attr('placeholder','Find '+patientlabel.toLowerCase()).on('keyup',()=>{
