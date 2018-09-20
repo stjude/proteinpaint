@@ -50,14 +50,6 @@ async init ( arg ) {
 		}
 	}
 
-	for(const t of arg.nativetracks) {
-		try {
-			await this.addtk_native( t )
-		} catch(e) {
-			return this.error('Native track error: '+(t.name||'noname')+': '+(e.message||e), e)
-		}
-	}
-
 	// upon init, must provide valid width for both view and svg for track updating
 	this.setwidth_views()
 	this.settle_width()
@@ -397,20 +389,22 @@ add_view_2tk ( tk, view ) {
 
 
 
-addtk_bytype ( temp ) {
+addtk_bytype ( t ) {
 	/*
-	temp with custom attributes
+	temp tk with custom attributes
 	*/
-	if(temp.type == common.tkt.ruler) {
+	if( t.type == common.tkt.ruler ) {
 		return this.tklst.push( new TKruler( this ) )
 	}
-	if(temp.type == common.tkt.bigwig) {
-		return import('./block.tk.bigwig').then(_=>this.tklst.push( new _.TKbigwig( temp, this) ) )
+	if( t.type == common.tkt.bigwig ) {
+		if(!t.file && !t.url) this.copynativetk( t )
+		return import('./block.tk.bigwig').then(_=>this.tklst.push( new _.TKbigwig( t, this) ) )
 	}
-	if(temp.type == common.tkt.bedj) {
-		return import('./block.tk.bedj').then(_=>this.tklst.push( new _.TKbedj( temp, this) ) )
+	if( t.type == common.tkt.bedj ) {
+		if(!t.file && !t.url) this.copynativetk( t )
+		return import('./block.tk.bedj').then(_=>this.tklst.push( new _.TKbedj( t, this) ) )
 	}
-	throw 'unknown type: '+temp.type
+	throw 'unknown type: '+t.type
 }
 
 
@@ -433,32 +427,20 @@ async update_tracks ( lst ) {
 }
 
 
-async addtk_native ( t ) {
+copynativetk ( t ) {
+	// 
 	if( !t.name ) throw '.name missing'
 
 	// look at genome.tracks[]
 	if(!this.genome.tracks) throw 'genome.tracks[] missing'
 
-	if( t.issnp ) {
-		const originaltk = this.genome.tracks.find( i=> i.issnp == t.issnp )
-		if( !originaltk ) throw 'SNP track not found for '+t.issnp
-		for(const k in originaltk) t[k] = originaltk[k]
-		await this.addtk_bytype( t )
-		return
-	}
 	const t0 = this.genome.tracks.find( i=> i.name.toLowerCase() == t.name.toLowerCase() )
 	if( !t0 ) throw 'track not found for '+t.name
-	// found client template; make a copy
-	const tkcopy = {}
+	// found client template; copy attr, do not override custom attr
 	for(const k in t0) {
-		tkcopy[k] = t0[k]
+		if( k in t ) continue
+		t[ k ] = t0[ k ]
 	}
-	// override custom attr
-	for(const k in t) {
-		if(k=='name') continue
-		tkcopy[k] = t[k]
-	}
-	await this.addtk_bytype( tkcopy )
 }
 
 

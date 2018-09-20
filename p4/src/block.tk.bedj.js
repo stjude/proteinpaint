@@ -22,13 +22,8 @@ export class TKbedj {
 		this.file = temp.file
 		this.url = temp.url
 		this.indexURL = temp.indexURL
-		this.issnp = temp.issnp
-		if( this.issnp ) {
-			// snp track file is kept on server
-		} else {
-			if(!this.file && !this.url) throw 'no file or url given'
-		}
 		this.categories = temp.categories
+		// allow file/url to be missing and treat as native track
 
 		if(this.categories) {
 			// legend
@@ -67,7 +62,7 @@ export class TKbedj {
 		const p = {
 			genome: this.block.genome.name,
 			views: this.block.param_viewrange(),
-			issnp: this.issnp,
+			name: this.name,
 			file: this.file,
 			url: this.url,
 			indexURL: this.indexURL,

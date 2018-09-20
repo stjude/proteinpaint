@@ -168,6 +168,7 @@ async function server_validate_config() {
 	if(common.isBadArray(cfg.genomes)) throw '.genomes[] should be non-empty array'
 
 	for(const g of cfg.genomes) {
+		// from g to g2
 		if(!g.name) throw '.name missing for a genome'
 		if(!g.file) throw '.file missing for genome '+g.name
 		const g2 = require( g.file )
@@ -213,7 +214,10 @@ async function server_validate_config() {
 
 
 async function server_validate_genome ( g, genomename ) {
-	// validate a genome
+	/* validate a genome
+	already has:
+	g.tracks[]
+	*/
 
 	if(!g.majorchr) throw '.majorchr missing'
 
@@ -277,30 +281,25 @@ async function server_validate_genome ( g, genomename ) {
 
 	// snp is optional
 	try {
-		validate_snpdb( g.snp )
+		validate_snpdb( g )
 	} catch(e) {
 		throw '.snp error: '+e
 	}
 
-	if(g.tracks) {
-		// TODO
-		for(const tk of g.tracks) {
-			if( tk.__isgene ) {
-			} else {
-			}
-		}
-	}
+	// validate tk - come from both genome.js and config.json
+	for(const tk of g.tracks) {
+		if( !tk.name ) throw 'a nameless track'
+		if( !tk.file ) throw '.file missing from track '+tk.name
+		if( illegalpath( tk.file )) throw 'invalid file path for track '+tk.name
+		tk.file = path.join( serverconfig.filedir, tk.file )
 
-	if( g.snp ) {
-		// expose snp as tracks, but not file and other attributes
-		if(!g.tracks) g.tracks = []
-		for(const snp of g.snp) {
-			g.tracks.push( {
-				type: common.tkt.bedj,
-				name: snp.tk.name,
-				issnp: snp.name,
-				categories: snp.tk.categories
-			})
+		if( !tk.type ) throw '.type missing from track '+tk.name
+		if( tk.type == common.tkt.bigwig ) {
+			// TODO
+		} else if( tk.type == common.tkt.bedj ) {
+			// TODO
+		} else {
+			throw 'unknown type "'+tk.type+'" from track '+tk.name
 		}
 	}
 }
@@ -377,19 +376,22 @@ async function validate_proteindomain ( g ) {
 }
 
 
-async function validate_snpdb ( lst ) {
+
+
+
+async function validate_snpdb ( g ) {
 	/*
 	genome.snp[] is array
 	each snp db has both sqlite and bedj track
 	*/
-	if(!lst) return
-	if(common.isBadArray(lst)) throw '.snp must be array'
+	if(!g.snp) return // optional
+	if( common.isBadArray( g.snp ) ) throw '.snp[] must be array'
 
-	for(const snp of lst) {
+	for( const snp of g.snp ) {
 		/*
 		snp must have both sqlite db and bedj track
 		*/
-		if(!snp.name) throw '.key missing from a snpdb'
+		if(!snp.name) throw '.name missing from a snp db'
 
 		if(!snp.db) throw '.db{} missing for '+snp.name
 		if(!snp.db.dbfile) throw '.db.dbfile missing for '+snp.name
@@ -407,12 +409,19 @@ async function validate_snpdb ( lst ) {
 		}
 		snp.db.get = db.prepare( snp.db.statement )
 
-		if(!snp.tk) throw '.snp.tk{} missing for '+snp.name
+		if(!snp.tk) throw 'snp .tk{} missing for '+snp.name
 		if(!snp.tk.file) throw '.snp.tk.file missing for '+snp.name
 		illegalpath(snp.tk.file)
+
 		snp.tk.file = path.join( serverconfig.filedir, snp.tk.file )
 		const err = await validate_tabixfile( snp.tk.file )
-		if(err) throw 'tk.file error for '+snp.name+': '+err
+		if(err) throw 'snp .tk.file error for '+snp.name+': '+err
+
+		// copy tk
+		const t = {}
+		for(const k in snp.tk) t[ k ] = snp.tk[ k ]
+		t.name = snp.name
+		g.tracks.push( t )
 	}
 }
 
@@ -435,7 +444,7 @@ async function validate_snpdb ( lst ) {
 async function handle_genomes( req, res) {
 	const hash={}
 	for(const genomename in genomes) {
-		const g=genomes[genomename]
+		const g = genomes[ genomename ]
 		const g2={
 			species: g.species,
 			name:genomename,
@@ -444,10 +453,19 @@ async function handle_genomes( req, res) {
 			majorchr:g.majorchr,
 			majorchrorder:g.majorchrorder,
 			minorchr:g.minorchr,
-			tracks:g.tracks,
 			//hicenzymefragment:g.hicenzymefragment,
 			datasets:{}
 		}
+
+		// send tracks, but no file
+		g2.tracks = []
+		for(const t of g.tracks) {
+			const t2 = {}
+			for(const k in t) t2[ k ] = t[ k ]
+			delete t2.file
+			g2.tracks.push( t2 )
+		}
+
 
 		for(const dsname in g.datasets) {
 			const ds=g.datasets[dsname]
@@ -1063,27 +1081,24 @@ async function handle_bedj_fileobj( q, genome ) {
 async function handle_bedj_fileobj_create( q, genome ) {
 	// create file object
 
-	if( q.issnp ) {
-		// TODO snp tk
-		if( !genome.snp) throw 'genome has no snp'
-		const snptk = genome.snp.find( i=> i.name == q.issnp )
-		if( !snptk ) throw 'no snp track found for '+q.issnp
-		const fileobj = { issnp: 1, }
-		for(const k in snptk.tk) {
-			fileobj[k] = snptk.tk[k]
+	if( !q.file && !q.url ) {
+		// no file or url, see if it can match a native track by name
+		for(const tk of genome.tracks) {
+			if( tk.name.toUpperCase() == q.name.toUpperCase() ) {
+				// found a native track, return a copy of this tk
+				const t2 = {}
+				for(const k in tk) {
+					t2[ k ] = tk[ k ]
+				}
+				return t2
+			}
 		}
-		return fileobj
+		throw 'no file or url given, nor does the name match a native track'
 	}
 
+	// provided file/url, use as custom track
 	const [ file, url ] = fileurl( q )
 	const fileobj = await validate_tabixtrack( file, url, q.indexURL, genome )
-
-	if( fileobj.file ) {
-		// check if it is a native gene track
-		if( genome.tracks.find( i=> i.__isgene && path.join(serverconfig.filedir,i.file) == fileobj.file ) ) {
-			fileobj.isgene = true
-		}
-	}
 	return fileobj
 }
 
@@ -1241,7 +1256,7 @@ async function handle_bedj_render_stack ( view, fileobj, q ) {
 	}
 
 	let maytranslate = false
-	if( fileobj.isgene ) {
+	if( fileobj.__isgene ) {
 		let bp=0, w=0
 		for(const r of view.regions) {
 			bp += r.stop - r.start

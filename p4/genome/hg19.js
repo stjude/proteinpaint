@@ -15,14 +15,13 @@ module.exports={
 	snp:[
 		// allow multiple snp source
 		{
-			name: 'snp146',
+			name: 'dbSNP 146',
 			db:{
 				dbfile:'anno/db/snp146.hg19.db',
 				statement: 'select * from snp146 where name=?'
 			},
 			tk:{
 				file: 'anno/db/snp146.hg19.gz',
-				name: 'dbSNP 146',
 				categories:{
 					deletion:{color:'crimson',label:'Deletion'},
 					insertion:{color:'orange',label:'Insertion'},

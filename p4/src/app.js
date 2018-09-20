@@ -124,6 +124,15 @@ function embed_block( arg ) {
 
 
 /*
+gm view
+ruler config
+bw config
+bedj config
+url param
+bam track
+bedj item click and link url
+
+
 # ruler zoom in
 # reorder tracks
 # gene tk
@@ -132,12 +141,5 @@ function embed_block( arg ) {
 # findgene util
 # block <input> search gene
 # block <input> jump
-
-no native track -- block arg has only tracks
-gm view
-ruler config
-bw config
-bedj config
-url param
-bam track
+# no native/custom track -- block arg has only tracks
 */
