@@ -10154,6 +10154,8 @@ for(const genomename in genomes) {
 		} else {
 			return 'jsfile not available for dataset '+d.name+' of '+genomename
 		}
+
+		ds.noHandleOnClient = d.noHandleOnClient
 		ds.label=d.name
 		g.datasets[ds.label]=ds
 
