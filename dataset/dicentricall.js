@@ -9,7 +9,6 @@ module.exports={
 	genome:'hg19',
 	isMds:true,
 
-noHandleOnClient:1,
 
 	about:[
 		{k:'RNA splice junction',v:'RNA splice junctions'},

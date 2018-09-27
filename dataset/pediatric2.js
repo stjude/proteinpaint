@@ -31,7 +31,6 @@ module.exports={
 
 	genome:'hg19',
 	isMds:true,
-	//noHandleOnClient:true,  // to hide handle on client
 
 	about:[
 		{k:'Cohort',v:'PCGP and TARGET'},

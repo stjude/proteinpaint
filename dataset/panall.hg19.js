@@ -24,7 +24,6 @@ module.exports={
 	genome:'hg19',
 	isMds:true,
 
-	noHandleOnClient:1,
 
 	about:[
 	],

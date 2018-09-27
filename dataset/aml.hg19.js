@@ -8,7 +8,6 @@ module.exports={
 
 	isMds:true,
 
-	noHandleOnClient:1,
 
 	about:[
 	],
