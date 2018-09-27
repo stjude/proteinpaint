@@ -1034,6 +1034,8 @@ async function handle_tkbedj ( req, res ) {
 				src: view.src,
 				width: view.width,
 				height: view.height,
+				mapisoform: view.mapisoform,
+				mapexon: view.mapexon,
 			} )
 			if( view.regions[0].depth ) {
 				// depth
