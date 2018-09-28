@@ -5179,17 +5179,15 @@ async function handle_ase ( req, res ) {
 		const genes = await handle_ase_getgenes( genome, genetk, q.chr, q.start, q.stop )
 		// k: symbol, v: {start,stop}
 
-
-		// may alter search start/stop by gene range
-		const searchstart = q.start
-		const searchstop = q.stop
-		const renderstart = q.start
-		const renderstop = q.stop
+		const [ searchstart,
+			searchstop,
+			renderstart,
+			renderstop ] = handle_ase_definerange( q, genes )
 
 		// heterozygous ones
 		const snps = await handle_ase_getsnps( q, genome, genes, searchstart, searchstop )
 
-		// check rna bam
+		// check rna bam and plot track
 		const imgsrc = await handle_ase_pileup(
 			q,
 			snps,
@@ -5199,6 +5197,8 @@ async function handle_ase ( req, res ) {
 			renderstop
 			)
 
+		// fisher test
+		await handle_ase_fisher( snps )
 
 		const generesult = handle_ase_generesult( snps, genes )
 
@@ -5220,6 +5220,35 @@ async function handle_ase ( req, res ) {
 		if(e.stack) console.log(e.stack)
 		res.send({error: (e.message||e)})
 	}
+}
+
+
+
+function handle_ase_fisher ( snps ) {
+	return new Promise((resolve,reject)=>{
+		// TODO
+		resolve()
+	})
+}
+
+
+
+function handle_ase_definerange ( q, genes ) {
+
+	// may alter search start/stop by gene range
+
+	let searchstart = q.start,
+		searchstop = q.stop
+	for(const [name, g] of genes) {
+		searchstart = Math.min( searchstart, g.start )
+		searchstop = Math.max( searchstop, g.stop )
+	}
+
+	const renderstart = q.start,
+		renderstop = q.stop
+
+	
+	return [ searchstart, searchstop, renderstart, renderstop ]
 }
 
 
@@ -5250,6 +5279,8 @@ function handle_ase_generesult ( snps, genes ) {
 		}
 		const deltasum = rnasnp.reduce((i,j) => i + Math.abs( j.dnacount.f - j.rnacount.f ), 0)
 		gene.mean_delta = deltasum / rnasnp.length
+
+		// geometric mean
 	}
 
 	return out
@@ -5303,7 +5334,7 @@ function handle_ase_pileup(
 			let renderx // for this nt; if set, means this nt is plotted
 			let h
 
-			if( pos >= q.start && pos <= q.stop ) {
+			if( pos >= renderstart && pos <= renderstop ) {
 				// in render range, plot coverage
 				// do not use coverage number that includes split reads -- count bases
 				let coverage = 0
@@ -5311,7 +5342,7 @@ function handle_ase_pileup(
 					if( common.basecolor[x.toUpperCase()] ) coverage++
 				}
 
-				renderx = q.width * (pos-q.start) / (q.stop-q.start)
+				renderx = q.width * (pos-renderstart) / (q.stop-renderstart)
 				h = q.rnabarheight *
 					( 1 - (q.rnacoveragemax - Math.min(coverage,q.rnacoveragemax))/q.rnacoveragemax )
 
