@@ -1,3 +1,5 @@
+cp package.json deploys/deliver/proteinpaint/
+
 node utils/uglify.js src/bulk.cnv.js    deploys/deliver/proteinpaint/src/
 node utils/uglify.js src/bulk.del.js    deploys/deliver/proteinpaint/src/
 node utils/uglify.js src/bulk.itd.js    deploys/deliver/proteinpaint/src/
