@@ -5236,18 +5236,55 @@ async function handle_ase ( req, res ) {
 
 async function handle_ase_binom ( snps ) {
 	const snpfile = await handle_ase_binom_write( snps )
+	const pfile = await handle_ase_binom_test( snpfile, snps )
+	await handle_ase_binom_result( snps, pfile )
+}
+
+
+
+function handle_ase_binom_result( snps, pfile ) {
+	return new Promise((resolve,reject)=>{
+		fs.readFile( pfile, {encoding:'utf8'}, (err, data)=>{
+			if(err) reject('cannot read binom pvalue')
+			for(const line of data.trim().split('\n')) {
+				const l = line.split('\t')
+				const m = snps.find( i=> l[0] == i.pos+'.'+i.ref+'.'+i.alt )
+				if( m ) {
+					m.rnacount.pvalue = Number.parseFloat( l[10] )
+				}
+			}
+			resolve()
+		})
+	})
+}
+
+
+
+
+function handle_ase_binom_test ( snpfile, snps ) {
+	const pfile = snpfile+'.pvalue'
+	return new Promise((resolve, reject)=>{
+		const sp = spawn( 'Rscript', ['utils/binom.R', snpfile, pfile] )
+		sp.on('close', ()=>{
+			resolve( pfile )
+		})
+		sp.on('error', (e)=>{
+			reject( 'cannot do binom test' )
+		})
+	})
 }
 
 
 
 function handle_ase_binom_write( snps ) {
-	const snpfile = Math.random().toString()
+	const snpfile = path.join(serverconfig.cachedir, Math.random().toString() )
 	const data = []
 	for(const s of snps) {
-		data.push ( s.pos+'\t'+s.ref+'\t'+s.alt+'\t\t\t\t\t\t' )
+		if( s.rnacount.nocoverage ) continue
+		data.push ( s.pos+'.'+s.ref+'.'+s.alt+'\t\t\t\t\t\t\t\t'+s.rnacount.ref+'\t'+s.rnacount.alt )
 	}
 	return new Promise((resolve, reject)=>{
-		fs.writeFile( path.join(serverconfig.cachedir, snpfile) , snps.join('\n'), (err)=>{
+		fs.writeFile( snpfile, data.join('\n')+'\n', (err)=>{
 			if(err) {
 				reject('cannot write')
 			}
@@ -5294,7 +5331,7 @@ function handle_ase_generesult ( snps, genes ) {
 			gene.nosnp = 1
 			continue
 		}
-		
+
 		gene.snps = thissnps
 
 		const rnasnp = thissnps.filter( i=> !i.rnacount.nocoverage )
@@ -5302,10 +5339,18 @@ function handle_ase_generesult ( snps, genes ) {
 			gene.nornasnp = 1
 			continue
 		}
-		const deltasum = rnasnp.reduce((i,j) => i + Math.abs( j.dnacount.f - j.rnacount.f ), 0)
+		const deltasum = rnasnp.reduce((i,j) => i + Math.abs( j.rnacount.f - 0.5 ), 0)
 		gene.mean_delta = deltasum / rnasnp.length
 
 		// geometric mean
+		let mean = null
+		for(const s of rnasnp) {
+			if( s.rnacount.pvalue!=undefined ) {
+				if(mean==null) mean = s.rnacount.pvalue
+				else mean *= s.rnacount.pvalue
+			}
+		}
+		gene.geometricmean = Math.pow( mean, 1/rnasnp.length )
 	}
 
 	return out
