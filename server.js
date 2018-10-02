@@ -46,7 +46,12 @@ const express=require('express'),
 	bulksvjson=require('./src/bulk.svjson'),
 	bulktrunc=require('./src/bulk.trunc'),
 	d3scale=require('d3-scale'),
-	d3dsv=require('d3-dsv')
+	d3dsv=require('d3-dsv'),
+	basicAuth = require('express-basic-auth')
+
+
+
+
 
 
 
@@ -78,6 +83,11 @@ const hicstraw = serverconfig.hicstraw || 'straw'
 
 
 const app=express()
+
+if( serverconfig.users ) {
+	// { user1 : pass1, user2: pass2, ... }
+	app.use( basicAuth({ users: serverconfig.users, challenge:true }) )
+}
 
 app.use( bodyParser.json({}) )
 app.use( bodyParser.text({limit:'1mb'}) )
@@ -5197,8 +5207,8 @@ async function handle_ase ( req, res ) {
 			renderstop
 			)
 
-		// fisher test
-		await handle_ase_fisher( snps )
+		// binom test
+		await handle_ase_binom( snps )
 
 		const generesult = handle_ase_generesult( snps, genes )
 
@@ -5224,10 +5234,25 @@ async function handle_ase ( req, res ) {
 
 
 
-function handle_ase_fisher ( snps ) {
-	return new Promise((resolve,reject)=>{
-		// TODO
-		resolve()
+async function handle_ase_binom ( snps ) {
+	const snpfile = await handle_ase_binom_write( snps )
+}
+
+
+
+function handle_ase_binom_write( snps ) {
+	const snpfile = Math.random().toString()
+	const data = []
+	for(const s of snps) {
+		data.push ( s.pos+'\t'+s.ref+'\t'+s.alt+'\t\t\t\t\t\t' )
+	}
+	return new Promise((resolve, reject)=>{
+		fs.writeFile( path.join(serverconfig.cachedir, snpfile) , snps.join('\n'), (err)=>{
+			if(err) {
+				reject('cannot write')
+			}
+			resolve( snpfile )
+		})
 	})
 }
 
