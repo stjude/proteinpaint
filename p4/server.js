@@ -41,6 +41,9 @@ const hicstraw = serverconfig.hicstraw || 'straw'
 
 
 
+
+
+
 function server_launch() {
 
 	const app = express()
@@ -2039,6 +2042,12 @@ async function validate_tabixfile ( file ) {
 		// tbi exists
 		if(await file_not_readable(tbi)) return '.tbi index file not readable'
 	}
+}
+
+
+function standard_chr ( str, genome ) {
+	// '1' to 'chr1' by genome.chrconvert
+	// replace the 'nochr' flag
 }
 
 ///////////////////////////////////////////////// END of helpers
