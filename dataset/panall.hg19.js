@@ -29,7 +29,7 @@ module.exports={
 	],
 
 	sampleAssayTrack:{
-		file:'hg19/pan-all/tracktable/rnabw.ball'
+		file:'hg19/pan-all/tracktable/panall.table'
 	},
 
 	cohort:{
