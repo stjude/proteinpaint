@@ -46,20 +46,25 @@ multi_sample_addhighlight
 multi_sample_removehighlight
 
 
-sv-cnv-vcf-fpkm ranking, two modes
-	multi-sample:
-		one row per sample
-		two forms:
-			dense
-				sv breakpoint density in separate track
-				cnv shown densily
-			full
-				cnv & sv shown together at sample-level
-	single-sample:
-		show cnv & sv data from a single sample
-		indicated by tk.singlesample {name:"samplename"}
-		spawn from sample group, mode won't mutate
-		fpkm ranking shown as independent track
+three modes:
+	1 & 2: driven by svcnv file, sv-cnv-vcf-fpkm ranking
+		multi-sample:
+			one row per sample
+			two forms:
+				dense
+					sv breakpoint density in separate track
+					cnv shown densily
+				full
+					cnv & sv shown together at sample-level
+		single-sample:
+			show cnv & sv data from a single sample
+			indicated by tk.singlesample {name:"samplename"}
+			spawn from sample group, mode won't mutate
+			fpkm ranking shown as independent track
+	3: ase mode, driven by vcf file and supplemented by rna bam files
+	   always multi-sample
+	   always cohort
+
 
 sv/cnv/loh data mixed in same file, sv has _chr and _pos which are indexing fields, along with chrA/posA/chrB/posB
 fpkm data in one file, fpkm may contain Yu's results on ASE/outlier
@@ -68,8 +73,7 @@ custom vcf handling:
 	multi-sample
 	single-sample
 
-dense germline variants?
-
+TODO dense germline variants?
 */
 
 
@@ -226,29 +230,54 @@ function may_showgeneexp_nomutationdata(tk,block) {
 
 function loadTk_mayinitiatecustomvcf( tk, block ) {
 
-	if(!tk.iscustom || !tk.checkvcf || tk.checkvcf.stringifiedObj) return
+	if( !tk.iscustom ) return
 
-	// load vcf meta keep on client for parsing vcf data
-	const arg = {
-		file: tk.checkvcf.file,
-		url: tk.checkvcf.url,
-		indexURL: tk.checkvcf.indexURL
+	if( tk.checkvcf && !tk.checkvcf.stringifiedObj ) {
+		// driven by svcnv file
+		// load vcf meta keep on client for parsing vcf data
+		const arg = {
+			file: tk.checkvcf.file,
+			url: tk.checkvcf.url,
+			indexURL: tk.checkvcf.indexURL
+		}
+		return client.dofetch('/vcfheader', arg)
+		.then( data => {
+			if(!data) throw {message:'server error!'}
+			if(data.error) throw {message:data.error}
+
+			const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
+			if(errs) throw({message:'Error parsing VCF meta lines: '+errs.join('; ')})
+			tk.checkvcf.info = info
+			tk.checkvcf.format = format
+			tk.checkvcf.samples = samples
+			tk.checkvcf.nochr = common.contigNameNoChr(block.genome,data.chrstr.split('\n'))
+
+			tk.checkvcf.stringifiedObj = JSON.stringify( tk.checkvcf )
+		})
 	}
-	return client.dofetch('/vcfheader', arg)
-	.then( data => {
-		if(!data) throw {message:'server error!'}
-		if(data.error) throw {message:data.error}
 
-		const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
-		if(errs) throw({message:'Error parsing VCF meta lines: '+errs.join('; ')})
-		tk.checkvcf.info = info
-		tk.checkvcf.format = format
-		tk.checkvcf.samples = samples
-		tk.checkvcf.nochr = common.contigNameNoChr(block.genome,data.chrstr.split('\n'))
+	if( tk.vcfmatrix && tk.vcfmatrix.url ) {
+		// driven by vcf file
+		const arg = {
+			file: tk.vcfmatrix.file,
+			url: tk.vcfmatrix.url,
+			indexURL: tk.checkvcf.indexURL
+		}
+		return client.dofetch('/vcfheader', arg)
+		.then( data => {
+			if(!data) throw {message:'server error!'}
+			if(data.error) throw {message:data.error}
 
-		tk.checkvcf.stringifiedObj = JSON.stringify( tk.checkvcf )
+			const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
+			if(errs) throw({message:'Error parsing VCF meta lines: '+errs.join('; ')})
+			tk.checkvcf.info = info
+			tk.checkvcf.format = format
+			tk.checkvcf.samples = samples
+			tk.checkvcf.nochr = common.contigNameNoChr(block.genome,data.chrstr.split('\n'))
 
-	})
+			tk.checkvcf.stringifiedObj = JSON.stringify( tk.checkvcf )
+		})
+	}
 }
 
 
@@ -2705,6 +2734,13 @@ function makeTk(tk, block) {
 		}
 
 		expressionstat.init_config( tk.gecfg )
+	}
+
+	if( tk.vcfmatrix ) {
+		// independently init
+		if( tk.sample2rnabam ) {
+			// anything
+		}
 	}
 
 	// end of makeTk

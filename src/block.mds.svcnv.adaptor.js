@@ -20,6 +20,13 @@ export function mdssvcnvfromtemplate(tk,template) {
 	tk.gaincolor= template.gaincolor || '#D6683C'
 	tk.losscolor= template.losscolor || '#67a9cf'
 	tk.lohcolor= template.lohcolor || '#545454'
+	
+	// vcffile dictates cohort ase mode, independent of above
+	if( tk.vcffile || tk.vcfurl ) {
+		tk.iscustom = true
+		// make rnabam optional?
+		if( !tk.sample2rnabam ) return 'sample2rnabam missing'
+	}
 	return null
 }
 
