@@ -3989,12 +3989,38 @@ async function handle_mdssvcnv(req,res) {
 		data_vcf: data_vcf,
 	}
 
-	handle_mdssvcnv_addexprank( result, ds, expressionrangelimit, gene2sample2obj  )
+	if( dsquery.checkrnabam ) {
+		// should be only one querying region
+		await handle_mdssvcnv_rnabam( req.query.rglst[0], gn, dsquery, result )
+	} else {
+		handle_mdssvcnv_addexprank( result, ds, expressionrangelimit, gene2sample2obj  )
+	}
 
 	handle_mdssvcnv_end( ds, result )
+
 	res.send(result)
 }
 
+
+
+async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
+
+	if(dsquery.checkvcf) {
+		const genetk = genome.tracks.find( i=> i.__isgene )
+
+		const genes = await handle_ase_getgenes( genome, genetk, region.chr, region.start, region.stop )
+		let start=null, stop
+		for(const o of genes.values()) {
+			if(start==null) {
+				start = o.start
+				stop = o.stop
+			} else {
+				start = Math.min( start, o.start )
+				stop = Math.max( stop, o.stop )
+			}
+		}
+	}
+}
 
 
 
@@ -4229,8 +4255,6 @@ function handle_mdssvcnv_end ( ds, result ) {
 			}
 		}
 	}
-
-
 }
 
 
