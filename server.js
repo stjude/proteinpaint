@@ -184,6 +184,7 @@ app.post('/samplematrix', handle_samplematrix)
 app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
+app.post('/bamnochr', handle_bamnochr)
 
 
 // obsolete
@@ -3776,7 +3777,7 @@ function handle_mdscnv(req,res) {
 
 
 
-function handle_mdssvcnv(req,res) {
+async function handle_mdssvcnv(req,res) {
 	/*
 	cnv & vcf & expression rank done in one query
 		- get all cnv/loh in view range:
@@ -3788,6 +3789,7 @@ function handle_mdssvcnv(req,res) {
 			- expression file for official or custom
 			- calculate expression rank for genes in each sample
 
+	vcf matrix and ase computation
 
 	****** filter attributes (added by addFilterToLoadParam)
 
@@ -3805,7 +3807,10 @@ function handle_mdssvcnv(req,res) {
 		// is custom track
 		gn = genomes[ req.query.genome ]
 		if(!gn) return res.send({error:'invalid genome'})
-		if(!req.query.file && !req.query.url) return res.send({error:'no file or url for expression data'})
+
+		// in ase by vcf and rnabam mode, svcnv file is optional
+		//if(!req.query.file && !req.query.url) return res.send({error:'no file or url for svcnv track'})
+
 		ds = {}
 		dsquery = {
 			iscustom:1,
@@ -3836,6 +3841,11 @@ function handle_mdssvcnv(req,res) {
 				info: vcf.info,
 				tracks: [ vcf ]
 			}
+		}
+
+		if( req.query.checkrnabam ) {
+			if(!req.query.checkrnabam.samples) return res.send({error:'samples{} missing from checkrnabam'})
+			dsquery.checkrnabam = req.query.checkrnabam
 		}
 
 	} else {
@@ -3921,278 +3931,568 @@ function handle_mdssvcnv(req,res) {
 	}
 
 
-
-	Promise.resolve()
-	.then(()=>{
-
-		////////////////////////////////////////////////////////
-		// cache cnv sv index
-
-		if(dsquery.file) return
-		return cache_index_promise( req.query.indexURL || req.query.url+'.tbi' )
-
-	})
-	.then(dir=>{
+	// cache svcnv tk url index
+	if(dsquery.url) {
+		dsquery.dir = await cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
+	}
 
 
+	// query svcnv
+	const data_cnv = await handle_mdssvcnv_cnv( ds, dsquery, req, hiddendt, hiddensampleattr, hiddenmattr )
 
-		////////////////////////////////////////////////////////
-		// query cnv loh sv fusion itd
+	// expression query
+	const [ expressionrangelimit, gene2sample2obj ] = await handle_mdssvcnv_expression( ds, dsquery, req, data_cnv )
 
-		const tasks=[]
+	// vcf query
+	// for both single- and multi sample
+	// each member track has its own data type
+	// querying procedure is the same for all types, data parsing will be different
+	const [ vcfrangelimit, data_vcf ] = await handle_mdssvcnv_vcf( ds, dsquery, req, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr )
 
-		for(const r of req.query.rglst) {
+	handle_mdssvcnv_end( ds, dsquery, req, res, data_cnv, expressionrangelimit, gene2sample2obj, vcfrangelimit, data_vcf )
 
-			const task=new Promise((resolve,reject)=>{
-
-				const data = []
-				const ps=spawn( tabix,
-					[
-						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-						r.chr+':'+r.start+'-'+r.stop
-					], {cwd: dir }
-					)
-				const rl = readline.createInterface({
-					input:ps.stdout
-				})
-
-				rl.on('line',line=>{
-
-					const l=line.split('\t')
-					const start0=Number.parseInt(l[1])
-					const stop0=Number.parseInt(l[2])
-
-
-					const j=JSON.parse(l[3])
-
-					if(j.dt==undefined) {
-						// todo: report bad lines
-						return
-					}
-
-					if(hiddendt && hiddendt.has(j.dt)) {
-						return
-					}
-
-					///// data-type specific handling and filtering
-
-					if(j.dt == common.dtloh ) {
-
-						// loh
-						if(j.segmean && req.query.segmeanValueCutoff && j.segmean<req.query.segmeanValueCutoff) {
-							return
-						}
-						if(req.query.lohLengthUpperLimit) {
-							if(stop0-start0 > req.query.lohLengthUpperLimit) {
-								return
-							}
-						}
-						j.chr = l[0]
-						j.start = start0
-						j.stop = stop0
-
-					} else if( j.dt==common.dtfusionrna || j.dt==common.dtsv ) {
-
-						// sv
-						j._chr=l[0]
-						j._pos=start0
-						if(j.chrA) {
-							j.chrB=l[0]
-							j.posB=start0
-						} else {
-							j.chrA=l[0]
-							j.posA=start0
-						}
-
-					} else if(j.dt==common.dtcnv) {
-
-						// cnv
-						if(req.query.valueCutoff) {
-							if(Math.abs(j.value)<req.query.valueCutoff) {
-								return
-							}
-						}
-						if(req.query.bplengthUpperLimit) {
-							if(stop0-start0 > req.query.bplengthUpperLimit) {
-								return
-							}
-						}
-						j.chr = l[0]
-						j.start = start0
-						j.stop = stop0
-
-					} else if(j.dt == common.dtitd) {
-
-						j.chr = l[0]
-						j.start = start0
-						j.stop = stop0
-
-					} else {
-
-						console.error('unknown dt from svcnv file: '+j.dt)
-						return
-					}
-
-					if(req.query.singlesample) {
-
-						// in single-sample mode
-						if(j.sample != req.query.singlesample) {
-							return
-						}
-
-					} else if(j.sample && ds.cohort && ds.cohort.annotation) {
-						// not single-sample
-						// only for official ds
-
-						// may apply sample annotation filtering
-						const anno=ds.cohort.annotation[j.sample]
-						if(!anno) {
-							// this sample has no annotation at all, since it's doing filtering, will drop it
-							return
-						}
-
-						// only check this here, because it requires sample annotation
-						if(hiddensampleattr) {
-							for(const key in hiddensampleattr) {
-								const samplevalue = anno[ key ]
-								if(hiddensampleattr[ key ].has( samplevalue )) {
-									// this sample has hidden annotation
-									return
-								}
-							}
-						}
-					}
-
-					if(hiddenmattr) {
-						// check mutation-level annotation
-						for(const key in hiddenmattr) {
-
-							let itemvalue = j.mattr ? j.mattr[ key ] : undefined
-							if(itemvalue == undefined) {
-								itemvalue = common.not_annotated
-							}
-
-							if(hiddenmattr[ key ].has( itemvalue )) {
-								// this item has hidden annotation
-								return
-							}
-						}
-					}
-
-
-					// this item is acceptable
-					data.push( j )
-				})
-
-				const errout=[]
-				ps.stderr.on('data',i=> errout.push(i) )
-				ps.on('close',code=>{
-					const e=errout.join('')
-					if(e && !tabixnoterror(e)) {
-						reject(e)
-						return
-					}
-					resolve(data)
-				})
-			})
-			tasks.push(task)
-		}
-		return Promise.all(tasks)
-
-	})
-	.then( data_cnv =>{
+}
 
 
 
 
 
-		////////////////////////////////////////////////////////
-		// expression query
 
-		if(req.query.singlesample) {
-			// no expression rank check in single-sample: will be handled in a separate track
-			return [data_cnv]
+
+function handle_mdssvcnv_end ( ds, dsquery, req, res, data_cnv, expressionrangelimit, gene2sample2obj, vcfrangelimit, data_vcf ) {
+
+	// group samples by svcnv, calculate expression rank
+	const sample2item = mdssvcnv_do_sample2item( data_cnv )
+
+	/*
+	if(req.query.showonlycnvwithsv) {
+		mdssvcnv_do_showonlycnvwithsv(sample2item)
+	}
+	*/
+
+	// exit
+	if(req.query.singlesample) {
+		/*
+		single sample does not include expression
+		but will include vcf
+		*/
+		const result = {
+			lst: sample2item.get( req.query.singlesample )
 		}
 
-		// multi-sample
-		// expression data?
-		let expressionquery
-		if(dsquery.iscustom) {
-			expressionquery=dsquery.checkexpressionrank
+		if(vcfrangelimit) {
+			// out of range
+			result.vcfrangelimit = vcfrangelimit 
 		} else {
-			// official
-			if(dsquery.expressionrank_querykey) {
-				if(ds.queries[ dsquery.expressionrank_querykey ]) {
-					expressionquery = ds.queries[ dsquery.expressionrank_querykey ]
+			result.data_vcf = data_vcf
+		}
+
+		res.send( result )
+		return
+	}
+
+	///// not single-sample; in multi-sample mode
+
+
+	mdssvcnv_do_copyneutralloh(sample2item)
+
+
+	// group sample by available attributes
+
+	const result = {} // for res.send( )
+
+	if(ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr) {
+
+		/**** group samples by predefined annotation attributes
+		only for official ds
+
+		when vcf data is present, must include them samples in the grouping too, but not the variants
+
+		expression samples don't participate in grouping
+		*/
+
+
+		const key2group = new Map()
+		// k: group name string
+		// v: [] list of samples
+
+		// head-less samples
+		const headlesssamples = []
+
+		//// group the sv-cnv samples
+		for(const [samplename, items] of sample2item) {
+			mdssvcnv_grouper( samplename, items, key2group, headlesssamples, ds, dsquery )
+		}
+
+		if(data_vcf) {
+			// group the vcf samples
+			for(const m of data_vcf) {
+
+				if(m.dt==common.dtsnvindel) {
+					for(const s of m.sampledata) {
+						mdssvcnv_grouper( s.sampleobj.name, [], key2group, headlesssamples, ds, dsquery )
+					}
+					continue
+				}
+
+				console.log('unknown dt when grouping samples from vcf data: '+m.dt)
+			}
+		}
+
+		result.samplegroups = []
+
+		for(const g of key2group.values()) {
+			result.samplegroups.push( g )
+		}
+
+		if(headlesssamples.length) {
+			result.samplegroups.push({
+				name:'Unannotated',
+				samples: headlesssamples
+			})
+		}
+
+
+		///////// FIXME jinghui nbl cell line mixed into st/nbl, to identify that this sample is cell line on client
+		for(const g of result.samplegroups) {
+			for(const s of g.samples) {
+				if( ds.cohort.annotation[s.samplename]) {
+					s.sampletype = ds.cohort.annotation[s.samplename].sample_type
 				}
 			}
 		}
-		if(!expressionquery) {
-			// no expression query
-			return [ data_cnv ]
+
+
+	} else {
+
+		// custom track or no annotation, lump all in one group
+
+		// cnv
+		const samples = []
+		for(const [n,items] of sample2item) {
+			samples.push({
+				samplename:n, // hardcoded
+				items:items
+			})
 		}
 
-		let viewrangeupperlimit = expressionquery.viewrangeupperlimit
-		if(!viewrangeupperlimit && dsquery.iscustom) {
-			// no limit set for custom track, set a hard limit
-			viewrangeupperlimit = 5000000
-		}
-		if(viewrangeupperlimit) {
-			const len=req.query.rglst.reduce((i,j)=>i+j.stop-j.start,0)
-			if(len >= viewrangeupperlimit) {
-				return [data_cnv, viewrangeupperlimit ]
+		if( data_vcf ) {
+			// has vcf data and not custom track
+			for(const m of data_vcf) {
+
+				if(m.dt==common.dtsnvindel) {
+					for(const s of m.sampledata) {
+						let notfound=true
+						for(const s2 of samples) {
+							if(s2.samplename==s.sampleobj.name) {
+								notfound=false
+								break
+							}
+						}
+						if(notfound) {
+							samples.push({
+								samplename: s.sampleobj.name,
+								items:[]
+							})
+						}
+					}
+					continue
+				}
+
+				console.log('unknown dt when grouping samples from vcf: '+m.dt)
 			}
 		}
 
-		return Promise.resolve()
+		if(samples.length) {
+			result.samplegroups = [ { samples: samples } ]
+		} else {
+			// no sample
+			result.samplegroups = []
+		}
+	}
+
+
+
+
+	///////// assign expression rank for all samples listed in samplegroup
+	if(expressionrangelimit) {
+
+		// view range too big above limit set by official track, no checking expression
+		result.expressionrangelimit = expressionrangelimit
+
+	} else if(gene2sample2obj) {
+
+
+		// report coordinates for each gene back to client
+		result.gene2coord={}
+		for(const [n,g] of gene2sample2obj) {
+			result.gene2coord[n]={chr:g.chr,start:g.start,stop:g.stop}
+		}
+
+		for(const g of result.samplegroups) {
+
+			// expression ranking is within each sample group
+			// collect expression data for each gene for all samples of this group
+			const gene2allvalues = new Map()
+			// k: gene, v: [ obj ]
+
+			for(const [gene, tmp] of gene2sample2obj) {
+
+				gene2allvalues.set( gene, [] )
+
+				for(const [sample, obj] of tmp.samples) {
+
+					if(g.attributes && ds.cohort && ds.cohort.annotation) {
+
+						/*
+						a group from official track could still be unannotated, skip them
+						*/
+						const anno = ds.cohort.annotation[sample]
+						if(!anno) continue
+						let annomatch = true
+						for(const attr of g.attributes) {
+							if( anno[ attr.k ] != attr.kvalue ) {
+								annomatch=false
+								break
+							}
+						}
+						if(annomatch) {
+							gene2allvalues.get(gene).push( obj )
+						}
+
+					} else {
+						// custom track, just one group for all samples
+						gene2allvalues.get(gene).push( obj )
+					}
+				}
+			}
+
+			// for each gene, sort samples
+			for(const [gene,lst] of gene2allvalues) {
+				lst.sort((i,j)=> i.value - j.value )
+			}
+
+			// for each sample, compute rank within its group
+			for(const sample of g.samples) {
+				sample.expressionrank = {}
+				for(const [gene, allvalue] of gene2allvalues) {
+					// allvalue is expression of this gene in all samples of this group
+					// for this gene
+					// expression value of this gene in this sample
+					const thisobj = gene2sample2obj.get(gene).samples.get(sample.samplename)
+					if(thisobj==undefined) {
+						// not expressed
+						continue
+					}
+
+					const rank = get_rank_from_sortedarray( thisobj.value, allvalue )
+					sample.expressionrank[gene] = { rank: rank }
+
+					for(const k in thisobj) {
+						sample.expressionrank[gene][ k ] = thisobj[k]
+					}
+				}
+			}
+		}
+	}
+
+
+	if(ds.cohort && ds.cohort.sampleAttribute && ds.cohort.sampleAttribute.attributes && ds.cohort.annotation) {
+		result.sampleannotation = {}
+		for(const g of result.samplegroups) {
+			for(const sample of g.samples) {
+				const anno = ds.cohort.annotation[ sample.samplename ]
+				if(anno) {
+					const toclient = {} // annotations to client
+					let hasannotation = false
+					for(const key in ds.cohort.sampleAttribute.attributes) {
+						const value = anno[ key ]
+						if(value!=undefined) {
+							hasannotation=true
+							toclient[ key ] = value
+						}
+					}
+					if(hasannotation) {
+						// ony pass on if this sample has valid annotation
+						result.sampleannotation[ sample.samplename ] = toclient
+					}
+				}
+			}
+		}
+	}
+
+
+	if(vcfrangelimit) {
+		result.vcfrangelimit = vcfrangelimit
+	}
+	if(data_vcf) {
+		result.data_vcf = data_vcf
+	}
+
+	res.send(result)
+}
+
+
+
+
+function handle_mdssvcnv_vcf ( ds, dsquery, req, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr ) {
+
+	let vcfquery
+	if(dsquery.iscustom) {
+		vcfquery=dsquery.checkvcf
+	} else {
+		// official
+		if(dsquery.vcf_querykey) {
+			if(ds.queries[ dsquery.vcf_querykey ]) {
+				vcfquery = ds.queries[ dsquery.vcf_querykey ]
+			}
+		}
+	}
+	if(!vcfquery) {
+		// no vcf query
+		return [ null, null ]
+	}
+
+	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
+	if(!viewrangeupperlimit && dsquery.iscustom) {
+		// no limit set for custom track, set a hard limit
+		viewrangeupperlimit = 1000000
+	}
+
+	if(req.query.singlesample) {
+		// still limit in singlesample
+		viewrangeupperlimit *= 5
+	}
+
+	if(viewrangeupperlimit) {
+		const len=req.query.rglst.reduce((i,j)=>i+j.stop-j.start,0)
+		if(len >= viewrangeupperlimit) {
+			return [ viewrangeupperlimit, null ]
+		}
+	}
+
+	const tracktasks = []
+
+	for(const vcftk of vcfquery.tracks) {
+
+		const thistracktask = Promise.resolve()
 		.then(()=>{
 
-			// cache expression index
-
-			if(expressionquery.file) return ''
-			return cache_index_promise( expressionquery.indexURL || expressionquery.url+'.tbi' )
+			// for custom url the index has already been cached at initial load
+			// still need to get cache dir for loading index
+			if(vcftk.file) return ''
+			return cache_index_promise( vcftk.indexURL || vcftk.url+'.tbi' )
 
 		})
 		.then(dir=>{
 
-			// get expression data
-
-			const gene2sample2obj = new Map()
-			// k: gene
-			// v: { chr, start, stop, samples:Map }
-			//    sample : { value:V, outlier:{}, ase:{} } 
+			// get vcf data
+			const variants = []
 
 			const tasks=[]
 			for(const r of req.query.rglst) {
-				const task=new Promise((resolve,reject)=>{
-					const data = []
+
+				const task = new Promise((resolve,reject)=>{
 					const ps=spawn( tabix, [
-							expressionquery.file ? path.join(serverconfig.tpmasterdir, expressionquery.file) : expressionquery.url,
-							r.chr+':'+r.start+'-'+r.stop
+							vcftk.file ? path.join(serverconfig.tpmasterdir, vcftk.file) : vcftk.url,
+							(vcftk.nochr ? r.chr.replace('chr','') : r.chr) +':'+r.start+'-'+r.stop
 						], { cwd: dir } )
 					const rl = readline.createInterface({
 						input:ps.stdout
 					})
 					rl.on('line',line=>{
-						const l=line.split('\t')
-						const j=JSON.parse(l[3])
-						if(!j.gene) return
-						if(!j.sample) return
-						if(!Number.isFinite(j.value)) return
 
-						/* hiddenmattr hiddensampleattr are not applied here
-						cnv/vcf data from those samples will be dropped, so their expression won't show
-						but their expression will still be used in calculating rank of visible samples
-						*/
 
-						if(!gene2sample2obj.has(j.gene)) {
-							gene2sample2obj.set(j.gene, {chr:l[0], start:Number.parseInt(l[1]), stop:Number.parseInt(l[2]), samples:new Map()} )
+						if(vcftk.type==common.mdsvcftype.vcf) {
+							// bgzip vcf file
+
+
+							const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:vcftk.nochr, samples:vcftk.samples, info:vcfquery.info, format:vcftk.format} )
+
+
+							for(const m of mlst) {
+
+								if(!m.sampledata) {
+									// do not allow
+									continue
+								}
+
+
+								if(filteralleleattr) {
+									// filter using allele INFO
+
+									let todrop=false
+
+									for(const key in filteralleleattr) {
+
+										const value = m.altinfo[ key ]
+										if(value==undefined) {
+											// no value
+											todrop=true
+											break
+										}
+
+										const attr = filteralleleattr[key]
+										if(attr.cutoffvalue != undefined) {
+
+											// is a numeric cutoff
+
+											if(!Number.isFinite(value)) {
+												// value of this mutation is not a number
+												todrop=true
+												break
+											}
+
+											if(attr.keeplowerthan) {
+												if(value > attr.cutoffvalue) {
+													todrop=true
+													break
+												}
+											} else {
+												if(value < attr.cutoffvalue) {
+													todrop=true
+													break
+												}
+											}
+										}
+									}
+									if(todrop) {
+										// drop this variant
+										continue
+									}
+								}
+
+
+								// TODO filter with locus INFO
+
+								{
+									// for germline track:
+									const lst = []
+									for(const s of m.sampledata) {
+
+										if(s.gtallref) {
+											// drop ref/ref sample, should only happen for germline vcf
+											continue
+										}
+
+										if(s.__gtalleles) {
+											// germline - m.sampledata[] always have all the samples due to the old vcf processing
+											// even if the sample does not carry m's alt allele
+											if(s.__gtalleles.indexOf(m.alt)==-1) {
+												continue
+											}
+											delete s.__gtalleles
+										}
+
+										lst.push(s)
+									}
+									if(lst.length==0) {
+										continue
+									}
+									m.sampledata = lst
+								}
+
+								// filters on samples
+
+								if(req.query.singlesample) {
+									let thissampleobj=null
+									for(const s of m.sampledata) {
+										if(s.sampleobj.name == req.query.singlesample) {
+											thissampleobj=s
+											break
+										}
+									}
+									if(!thissampleobj) {
+										// this variant is not in this sample
+										continue
+									}
+									// alter
+									m.sampledata = [ thissampleobj ]
+								}
+
+
+								if(hiddenmattr) {
+									const samplesnothidden = []
+									for(const s of m.sampledata) {
+										
+										let nothidden=true
+										for(const key in hiddenmattr) {
+											// attribute keys are FORMAT fields
+											let value = s[ key ]
+											if(value==undefined) {
+												value = common.not_annotated
+											}
+											if(hiddenmattr[key].has( value )) {
+												nothidden=false
+												break
+											}
+										}
+										if(nothidden) {
+											samplesnothidden.push( s )
+										}
+									}
+									if(samplesnothidden.length==0) {
+										// skip this variant
+										continue
+									}
+									m.sampledata = samplesnothidden
+								}
+
+
+								if(hiddensampleattr && ds.cohort && ds.cohort.annotation) {
+									/*
+									drop sample by annotation
+									FIXME this is not efficient
+									ideally should identify samples from this vcf file to be dropped, the column # of them
+									after querying the vcf file, cut these columns away
+									*/
+									const samplesnothidden = []
+									for(const s of m.sampledata) {
+										const sanno = ds.cohort.annotation[ s.sampleobj.name ]
+										if(!sanno) {
+											// sample has no annotation?
+											continue
+										}
+										let nothidden=true
+										for(const key in hiddensampleattr) {
+											const value = sanno[ key ]
+											if(hiddensampleattr[ key ].has( value )) {
+												nothidden=false
+												break
+											}
+										}
+										if(nothidden) {
+											samplesnothidden.push( s )
+										}
+									}
+									if(samplesnothidden.length==0) {
+										// skip this variant
+										continue
+									}
+									m.sampledata = samplesnothidden
+								}
+
+
+								// delete the obsolete attr
+								for(const sb of m.sampledata) {
+									delete sb.allele2readcount
+								}
+
+
+								delete m._m
+								delete m.vcf_ID
+								delete m.name
+
+								m.dt = common.dtsnvindel
+								variants.push(m)
+								// mclass and rest will be determined at client, according to whether in gmmode and such
+							}
+
+						} else {
+
+							console.error('unknown "type" from a vcf file')
+
 						}
-						gene2sample2obj.get(j.gene).samples.set(j.sample, {
-							value: j.value,
-							ase: j.ase,
-							outlier: j.outlier
-						})
 					})
 					const errout=[]
 					ps.stderr.on('data',i=> errout.push(i) )
@@ -4208,639 +4508,339 @@ function handle_mdssvcnv(req,res) {
 				tasks.push(task)
 			}
 
-			return Promise.all( tasks )
-			.then(()=>{
-				return [ data_cnv, false, gene2sample2obj ]
-			})
+			return Promise.all(tasks)
+				.then(()=>{
+					return variants
+				})
 		})
 
-	})
-	.then( data=> {
+		tracktasks.push( thistracktask )
+	}
+
+	return Promise.all( tracktasks )
+	.then(vcffiles =>{
 
 
+		// snv/indel/itd data aggregated from multiple tracks
+		const mmerge = []
 
+		for(const eachvcf of vcffiles) {
 
+			for(const m of eachvcf) {
 
-		////////////////////////////////////////////////////////
-		// vcf query
-		// for both single- and multi sample
-		// each member track has its own data type
-		// querying procedure is the same for all types, data parsing will be different
+				if(m.dt==common.dtsnvindel) {
 
-		const [ data_cnv, expressionrangelimit, gene2sample2obj ] = data
+					// snv/indel all follows vcf matrix, using sampledata[]
 
-		let vcfquery
-		if(dsquery.iscustom) {
-			vcfquery=dsquery.checkvcf
-		} else {
-			// official
-			if(dsquery.vcf_querykey) {
-				if(ds.queries[ dsquery.vcf_querykey ]) {
-					vcfquery = ds.queries[ dsquery.vcf_querykey ]
-				}
-			}
-		}
-		if(!vcfquery) {
-			// no vcf query
-			return [ data_cnv, expressionrangelimit, gene2sample2obj, null, null ]
-		}
-
-		let viewrangeupperlimit = vcfquery.viewrangeupperlimit
-		if(!viewrangeupperlimit && dsquery.iscustom) {
-			// no limit set for custom track, set a hard limit
-			viewrangeupperlimit = 1000000
-		}
-
-		if(req.query.singlesample) {
-			// still limit in singlesample
-			viewrangeupperlimit *= 5
-		}
-
-		if(viewrangeupperlimit) {
-			const len=req.query.rglst.reduce((i,j)=>i+j.stop-j.start,0)
-			if(len >= viewrangeupperlimit) {
-				return [ data_cnv, expressionrangelimit, gene2sample2obj, viewrangeupperlimit, null ]
-			}
-		}
-
-		const tracktasks = []
-
-		for(const vcftk of vcfquery.tracks) {
-
-			const thistracktask = Promise.resolve()
-			.then(()=>{
-
-				// for custom url the index has already been cached at initial load
-				// still need to get cache dir for loading index
-				if(vcftk.file) return ''
-				return cache_index_promise( vcftk.indexURL || vcftk.url+'.tbi' )
-
-			})
-			.then(dir=>{
-
-				// get vcf data
-				const variants = []
-
-				const tasks=[]
-				for(const r of req.query.rglst) {
-
-					const task = new Promise((resolve,reject)=>{
-						const ps=spawn( tabix, [
-								vcftk.file ? path.join(serverconfig.tpmasterdir, vcftk.file) : vcftk.url,
-								(vcftk.nochr ? r.chr.replace('chr','') : r.chr) +':'+r.start+'-'+r.stop
-							], { cwd: dir } )
-						const rl = readline.createInterface({
-							input:ps.stdout
-						})
-						rl.on('line',line=>{
-
-
-							if(vcftk.type==common.mdsvcftype.vcf) {
-								// bgzip vcf file
-
-
-								const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:vcftk.nochr, samples:vcftk.samples, info:vcfquery.info, format:vcftk.format} )
-
-
-								for(const m of mlst) {
-
-									if(!m.sampledata) {
-										// do not allow
-										continue
-									}
-
-
-									if(filteralleleattr) {
-										// filter using allele INFO
-
-										let todrop=false
-
-										for(const key in filteralleleattr) {
-
-											const value = m.altinfo[ key ]
-											if(value==undefined) {
-												// no value
-												todrop=true
-												break
-											}
-
-											const attr = filteralleleattr[key]
-											if(attr.cutoffvalue != undefined) {
-
-												// is a numeric cutoff
-
-												if(!Number.isFinite(value)) {
-													// value of this mutation is not a number
-													todrop=true
-													break
-												}
-
-												if(attr.keeplowerthan) {
-													if(value > attr.cutoffvalue) {
-														todrop=true
-														break
-													}
-												} else {
-													if(value < attr.cutoffvalue) {
-														todrop=true
-														break
-													}
-												}
-											}
-										}
-										if(todrop) {
-											// drop this variant
-											continue
-										}
-									}
-
-
-									// TODO filter with locus INFO
-
-									{
-										// for germline track:
-										const lst = []
-										for(const s of m.sampledata) {
-
-											if(s.gtallref) {
-												// drop ref/ref sample, should only happen for germline vcf
-												continue
-											}
-
-											if(s.__gtalleles) {
-												// germline - m.sampledata[] always have all the samples due to the old vcf processing
-												// even if the sample does not carry m's alt allele
-												if(s.__gtalleles.indexOf(m.alt)==-1) {
-													continue
-												}
-												delete s.__gtalleles
-											}
-
-											lst.push(s)
-										}
-										if(lst.length==0) {
-											continue
-										}
-										m.sampledata = lst
-									}
-
-									// filters on samples
-
-									if(req.query.singlesample) {
-										let thissampleobj=null
-										for(const s of m.sampledata) {
-											if(s.sampleobj.name == req.query.singlesample) {
-												thissampleobj=s
-												break
-											}
-										}
-										if(!thissampleobj) {
-											// this variant is not in this sample
-											continue
-										}
-										// alter
-										m.sampledata = [ thissampleobj ]
-									}
-
-
-									if(hiddenmattr) {
-										const samplesnothidden = []
-										for(const s of m.sampledata) {
-											
-											let nothidden=true
-											for(const key in hiddenmattr) {
-												// attribute keys are FORMAT fields
-												let value = s[ key ]
-												if(value==undefined) {
-													value = common.not_annotated
-												}
-												if(hiddenmattr[key].has( value )) {
-													nothidden=false
-													break
-												}
-											}
-											if(nothidden) {
-												samplesnothidden.push( s )
-											}
-										}
-										if(samplesnothidden.length==0) {
-											// skip this variant
-											continue
-										}
-										m.sampledata = samplesnothidden
-									}
-
-
-									if(hiddensampleattr && ds.cohort && ds.cohort.annotation) {
-										/*
-										drop sample by annotation
-										FIXME this is not efficient
-										ideally should identify samples from this vcf file to be dropped, the column # of them
-										after querying the vcf file, cut these columns away
-										*/
-										const samplesnothidden = []
-										for(const s of m.sampledata) {
-											const sanno = ds.cohort.annotation[ s.sampleobj.name ]
-											if(!sanno) {
-												// sample has no annotation?
-												continue
-											}
-											let nothidden=true
-											for(const key in hiddensampleattr) {
-												const value = sanno[ key ]
-												if(hiddensampleattr[ key ].has( value )) {
-													nothidden=false
-													break
-												}
-											}
-											if(nothidden) {
-												samplesnothidden.push( s )
-											}
-										}
-										if(samplesnothidden.length==0) {
-											// skip this variant
-											continue
-										}
-										m.sampledata = samplesnothidden
-									}
-
-
-									// delete the obsolete attr
-									for(const sb of m.sampledata) {
-										delete sb.allele2readcount
-									}
-
-
-									delete m._m
-									delete m.vcf_ID
-									delete m.name
-
-									m.dt = common.dtsnvindel
-									variants.push(m)
-									// mclass and rest will be determined at client, according to whether in gmmode and such
-								}
-
-							} else {
-
-								console.error('unknown "type" from a vcf file')
-
+					if(!m.sampledata) {
+						// no sample data, won't show
+						continue
+					}
+					let notfound=true
+					for(const m2 of mmerge) {
+						if(m.chr==m2.chr && m.pos==m2.pos && m.ref==m2.ref && m.alt==m2.alt) {
+							for(const s of m.sampledata) {
+								m2.sampledata.push( s )
 							}
-						})
-						const errout=[]
-						ps.stderr.on('data',i=> errout.push(i) )
-						ps.on('close',code=>{
-							const e=errout.join('')
-							if(e && !tabixnoterror(e)) {
-								reject(e)
+							notfound=false
+							break
+						}
+					}
+					if(notfound) {
+						mmerge.push( m )
+					}
+					continue
+				}
+
+				console.error('unknown dt: '+m.dt)
+			}
+		}
+
+		// variants may come from multiple files, sort again to avoid curious batch effect
+		mmerge.sort( (i,j) => i.pos-j.pos )
+
+		return [ null, mmerge ]
+	})
+}
+
+
+
+
+function handle_mdssvcnv_expression ( ds, dsquery, req, data_cnv ) {
+	if(req.query.singlesample) {
+		// no expression rank check in single-sample: will be handled in a separate track
+		return []
+	}
+
+	// multi-sample
+	// expression data?
+	let expressionquery
+	if(dsquery.iscustom) {
+		expressionquery=dsquery.checkexpressionrank
+	} else {
+		// official
+		if(dsquery.expressionrank_querykey) {
+			if(ds.queries[ dsquery.expressionrank_querykey ]) {
+				expressionquery = ds.queries[ dsquery.expressionrank_querykey ]
+			}
+		}
+	}
+	if(!expressionquery) {
+		// no expression query
+		return []
+	}
+
+	let viewrangeupperlimit = expressionquery.viewrangeupperlimit
+	if(!viewrangeupperlimit && dsquery.iscustom) {
+		// no limit set for custom track, set a hard limit
+		viewrangeupperlimit = 5000000
+	}
+	if(viewrangeupperlimit) {
+		const len=req.query.rglst.reduce((i,j)=>i+j.stop-j.start,0)
+		if(len >= viewrangeupperlimit) {
+			return [ viewrangeupperlimit ]
+		}
+	}
+
+	return Promise.resolve()
+	.then(()=>{
+
+		// cache expression index
+
+		if(expressionquery.file) return ''
+		return cache_index_promise( expressionquery.indexURL || expressionquery.url+'.tbi' )
+
+	})
+	.then(dir=>{
+
+		// get expression data
+
+		const gene2sample2obj = new Map()
+		// k: gene
+		// v: { chr, start, stop, samples:Map }
+		//    sample : { value:V, outlier:{}, ase:{} } 
+
+		const tasks=[]
+		for(const r of req.query.rglst) {
+			const task=new Promise((resolve,reject)=>{
+				const data = []
+				const ps=spawn( tabix, [
+						expressionquery.file ? path.join(serverconfig.tpmasterdir, expressionquery.file) : expressionquery.url,
+						r.chr+':'+r.start+'-'+r.stop
+					], { cwd: dir } )
+				const rl = readline.createInterface({
+					input:ps.stdout
+				})
+				rl.on('line',line=>{
+					const l=line.split('\t')
+					const j=JSON.parse(l[3])
+					if(!j.gene) return
+					if(!j.sample) return
+					if(!Number.isFinite(j.value)) return
+
+					/* hiddenmattr hiddensampleattr are not applied here
+					cnv/vcf data from those samples will be dropped, so their expression won't show
+					but their expression will still be used in calculating rank of visible samples
+					*/
+
+					if(!gene2sample2obj.has(j.gene)) {
+						gene2sample2obj.set(j.gene, {chr:l[0], start:Number.parseInt(l[1]), stop:Number.parseInt(l[2]), samples:new Map()} )
+					}
+					gene2sample2obj.get(j.gene).samples.set(j.sample, {
+						value: j.value,
+						ase: j.ase,
+						outlier: j.outlier
+					})
+				})
+				const errout=[]
+				ps.stderr.on('data',i=> errout.push(i) )
+				ps.on('close',code=>{
+					const e=errout.join('')
+					if(e && !tabixnoterror(e)) {
+						reject(e)
+						return
+					}
+					resolve()
+				})
+			})
+			tasks.push(task)
+		}
+
+		return Promise.all( tasks )
+		.then(()=>{
+			return [ false, gene2sample2obj ]
+		})
+	})
+}
+
+
+
+function handle_mdssvcnv_cnv ( ds, dsquery, req, hiddendt, hiddensampleattr, hiddenmattr ) {
+
+	if( !dsquery.file && !dsquery.url ) {
+		// svcnv file is optional now
+		return []
+	}
+
+	const tasks=[]
+
+	for(const r of req.query.rglst) {
+
+		const task=new Promise((resolve,reject)=>{
+
+			const data = []
+			const ps=spawn( tabix,
+				[
+					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+					r.chr+':'+r.start+'-'+r.stop
+				], {cwd: dsquery.dir }
+				)
+			const rl = readline.createInterface({
+				input:ps.stdout
+			})
+
+			rl.on('line',line=>{
+
+				const l=line.split('\t')
+				const start0=Number.parseInt(l[1])
+				const stop0=Number.parseInt(l[2])
+
+
+				const j=JSON.parse(l[3])
+
+				if(j.dt==undefined) {
+					// todo: report bad lines
+					return
+				}
+
+				if(hiddendt && hiddendt.has(j.dt)) {
+					return
+				}
+
+				///// data-type specific handling and filtering
+
+				if(j.dt == common.dtloh ) {
+
+					// loh
+					if(j.segmean && req.query.segmeanValueCutoff && j.segmean<req.query.segmeanValueCutoff) {
+						return
+					}
+					if(req.query.lohLengthUpperLimit) {
+						if(stop0-start0 > req.query.lohLengthUpperLimit) {
+							return
+						}
+					}
+					j.chr = l[0]
+					j.start = start0
+					j.stop = stop0
+
+				} else if( j.dt==common.dtfusionrna || j.dt==common.dtsv ) {
+
+					// sv
+					j._chr=l[0]
+					j._pos=start0
+					if(j.chrA) {
+						j.chrB=l[0]
+						j.posB=start0
+					} else {
+						j.chrA=l[0]
+						j.posA=start0
+					}
+
+				} else if(j.dt==common.dtcnv) {
+
+					// cnv
+					if(req.query.valueCutoff) {
+						if(Math.abs(j.value)<req.query.valueCutoff) {
+							return
+						}
+					}
+					if(req.query.bplengthUpperLimit) {
+						if(stop0-start0 > req.query.bplengthUpperLimit) {
+							return
+						}
+					}
+					j.chr = l[0]
+					j.start = start0
+					j.stop = stop0
+
+				} else if(j.dt == common.dtitd) {
+
+					j.chr = l[0]
+					j.start = start0
+					j.stop = stop0
+
+				} else {
+
+					console.error('unknown dt from svcnv file: '+j.dt)
+					return
+				}
+
+				if(req.query.singlesample) {
+
+					// in single-sample mode
+					if(j.sample != req.query.singlesample) {
+						return
+					}
+
+				} else if(j.sample && ds.cohort && ds.cohort.annotation) {
+					// not single-sample
+					// only for official ds
+
+					// may apply sample annotation filtering
+					const anno=ds.cohort.annotation[j.sample]
+					if(!anno) {
+						// this sample has no annotation at all, since it's doing filtering, will drop it
+						return
+					}
+
+					// only check this here, because it requires sample annotation
+					if(hiddensampleattr) {
+						for(const key in hiddensampleattr) {
+							const samplevalue = anno[ key ]
+							if(hiddensampleattr[ key ].has( samplevalue )) {
+								// this sample has hidden annotation
 								return
 							}
-							resolve()
-						})
-					})
-					tasks.push(task)
+						}
+					}
 				}
 
-				return Promise.all(tasks)
-					.then(()=>{
-						return variants
-					})
+				if(hiddenmattr) {
+					// check mutation-level annotation
+					for(const key in hiddenmattr) {
+
+						let itemvalue = j.mattr ? j.mattr[ key ] : undefined
+						if(itemvalue == undefined) {
+							itemvalue = common.not_annotated
+						}
+
+						if(hiddenmattr[ key ].has( itemvalue )) {
+							// this item has hidden annotation
+							return
+						}
+					}
+				}
+
+
+				// this item is acceptable
+				data.push( j )
 			})
 
-			tracktasks.push( thistracktask )
-		}
-
-		return Promise.all( tracktasks )
-			.then(vcffiles =>{
-
-
-				// snv/indel/itd data aggregated from multiple tracks
-				const mmerge = []
-
-				for(const eachvcf of vcffiles) {
-
-					for(const m of eachvcf) {
-
-						if(m.dt==common.dtsnvindel) {
-
-							// snv/indel all follows vcf matrix, using sampledata[]
-
-							if(!m.sampledata) {
-								// no sample data, won't show
-								continue
-							}
-							let notfound=true
-							for(const m2 of mmerge) {
-								if(m.chr==m2.chr && m.pos==m2.pos && m.ref==m2.ref && m.alt==m2.alt) {
-									for(const s of m.sampledata) {
-										m2.sampledata.push( s )
-									}
-									notfound=false
-									break
-								}
-							}
-							if(notfound) {
-								mmerge.push( m )
-							}
-							continue
-						}
-
-						console.error('unknown dt: '+m.dt)
-					}
+			const errout=[]
+			ps.stderr.on('data',i=> errout.push(i) )
+			ps.on('close',code=>{
+				const e=errout.join('')
+				if(e && !tabixnoterror(e)) {
+					reject(e)
+					return
 				}
-
-				// variants may come from multiple files, sort again to avoid curious batch effect
-				mmerge.sort( (i,j) => i.pos-j.pos )
-
-				return [ data_cnv, expressionrangelimit, gene2sample2obj, null, mmerge ]
+				resolve(data)
 			})
-	})
-	.then( data=>{
-
-
-
-
-
-		////////////////////////////////////////////////////////
-		// group samples by svcnv, calculate expression rank
-
-		const [ data_cnv, expressionrangelimit, gene2sample2obj, vcfrangelimit, data_vcf ] = data
-
-		const sample2item = mdssvcnv_do_sample2item( data_cnv )
-
-/*
-		if(req.query.showonlycnvwithsv) {
-			mdssvcnv_do_showonlycnvwithsv(sample2item)
-		}
-		*/
-
-		// exit
-		if(req.query.singlesample) {
-			/*
-			single sample does not include expression
-			but will include vcf
-			*/
-			const result = {
-				lst: sample2item.get( req.query.singlesample )
-			}
-
-			if(vcfrangelimit) {
-				// out of range
-				result.vcfrangelimit = vcfrangelimit 
-			} else {
-				result.data_vcf = data_vcf
-			}
-
-			res.send( result )
-			return
-		}
-
-		///// not single-sample; in multi-sample mode
-
-
-		mdssvcnv_do_copyneutralloh(sample2item)
-
-
-		// group sample by available attributes
-
-		const result = {} // for res.send( )
-
-		if(ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr) {
-
-			/**** group samples by predefined annotation attributes
-			only for official ds
-
-			when vcf data is present, must include them samples in the grouping too, but not the variants
-
-			expression samples don't participate in grouping
-			*/
-
-
-			const key2group = new Map()
-			// k: group name string
-			// v: [] list of samples
-
-			// head-less samples
-			const headlesssamples = []
-
-			//// group the sv-cnv samples
-			for(const [samplename, items] of sample2item) {
-				mdssvcnv_grouper( samplename, items, key2group, headlesssamples, ds, dsquery )
-			}
-
-			if(data_vcf) {
-				// group the vcf samples
-				for(const m of data_vcf) {
-
-					if(m.dt==common.dtsnvindel) {
-						for(const s of m.sampledata) {
-							mdssvcnv_grouper( s.sampleobj.name, [], key2group, headlesssamples, ds, dsquery )
-						}
-						continue
-					}
-
-					console.log('unknown dt when grouping samples from vcf data: '+m.dt)
-				}
-			}
-
-			result.samplegroups = []
-
-			for(const g of key2group.values()) {
-				result.samplegroups.push( g )
-			}
-
-			if(headlesssamples.length) {
-				result.samplegroups.push({
-					name:'Unannotated',
-					samples: headlesssamples
-				})
-			}
-
-
-			///////// FIXME jinghui nbl cell line mixed into st/nbl, to identify that this sample is cell line on client
-			for(const g of result.samplegroups) {
-				for(const s of g.samples) {
-					if( ds.cohort.annotation[s.samplename]) {
-						s.sampletype = ds.cohort.annotation[s.samplename].sample_type
-					}
-				}
-			}
-
-
-		} else {
-
-			// custom track or no annotation, lump all in one group
-
-			// cnv
-			const samples = []
-			for(const [n,items] of sample2item) {
-				samples.push({
-					samplename:n, // hardcoded
-					items:items
-				})
-			}
-
-			if( data_vcf ) {
-				// has vcf data and not custom track
-				for(const m of data_vcf) {
-
-					if(m.dt==common.dtsnvindel) {
-						for(const s of m.sampledata) {
-							let notfound=true
-							for(const s2 of samples) {
-								if(s2.samplename==s.sampleobj.name) {
-									notfound=false
-									break
-								}
-							}
-							if(notfound) {
-								samples.push({
-									samplename: s.sampleobj.name,
-									items:[]
-								})
-							}
-						}
-						continue
-					}
-
-					console.log('unknown dt when grouping samples from vcf: '+m.dt)
-				}
-			}
-
-			if(samples.length) {
-				result.samplegroups = [ { samples: samples } ]
-			} else {
-				// no sample
-				result.samplegroups = []
-			}
-		}
-
-
-
-
-		///////// assign expression rank for all samples listed in samplegroup
-		if(expressionrangelimit) {
-
-			// view range too big above limit set by official track, no checking expression
-			result.expressionrangelimit = expressionrangelimit
-
-		} else if(gene2sample2obj) {
-
-
-			// report coordinates for each gene back to client
-			result.gene2coord={}
-			for(const [n,g] of gene2sample2obj) {
-				result.gene2coord[n]={chr:g.chr,start:g.start,stop:g.stop}
-			}
-
-			for(const g of result.samplegroups) {
-
-				// expression ranking is within each sample group
-				// collect expression data for each gene for all samples of this group
-				const gene2allvalues = new Map()
-				// k: gene, v: [ obj ]
-
-				for(const [gene, tmp] of gene2sample2obj) {
-
-					gene2allvalues.set( gene, [] )
-
-					for(const [sample, obj] of tmp.samples) {
-
-						if(g.attributes && ds.cohort && ds.cohort.annotation) {
-
-							/*
-							a group from official track could still be unannotated, skip them
-							*/
-							const anno = ds.cohort.annotation[sample]
-							if(!anno) continue
-							let annomatch = true
-							for(const attr of g.attributes) {
-								if( anno[ attr.k ] != attr.kvalue ) {
-									annomatch=false
-									break
-								}
-							}
-							if(annomatch) {
-								gene2allvalues.get(gene).push( obj )
-							}
-
-						} else {
-							// custom track, just one group for all samples
-							gene2allvalues.get(gene).push( obj )
-						}
-					}
-				}
-
-				// for each gene, sort samples
-				for(const [gene,lst] of gene2allvalues) {
-					lst.sort((i,j)=> i.value - j.value )
-				}
-
-				// for each sample, compute rank within its group
-				for(const sample of g.samples) {
-					sample.expressionrank = {}
-					for(const [gene, allvalue] of gene2allvalues) {
-						// allvalue is expression of this gene in all samples of this group
-						// for this gene
-						// expression value of this gene in this sample
-						const thisobj = gene2sample2obj.get(gene).samples.get(sample.samplename)
-						if(thisobj==undefined) {
-							// not expressed
-							continue
-						}
-
-						const rank = get_rank_from_sortedarray( thisobj.value, allvalue )
-						sample.expressionrank[gene] = { rank: rank }
-
-						for(const k in thisobj) {
-							sample.expressionrank[gene][ k ] = thisobj[k]
-						}
-					}
-				}
-			}
-		}
-
-
-		if(ds.cohort && ds.cohort.sampleAttribute && ds.cohort.sampleAttribute.attributes && ds.cohort.annotation) {
-			result.sampleannotation = {}
-			for(const g of result.samplegroups) {
-				for(const sample of g.samples) {
-					const anno = ds.cohort.annotation[ sample.samplename ]
-					if(anno) {
-						const toclient = {} // annotations to client
-						let hasannotation = false
-						for(const key in ds.cohort.sampleAttribute.attributes) {
-							const value = anno[ key ]
-							if(value!=undefined) {
-								hasannotation=true
-								toclient[ key ] = value
-							}
-						}
-						if(hasannotation) {
-							// ony pass on if this sample has valid annotation
-							result.sampleannotation[ sample.samplename ] = toclient
-						}
-					}
-				}
-			}
-		}
-
-
-		if(vcfrangelimit) {
-			result.vcfrangelimit = vcfrangelimit
-		}
-		if(data_vcf) {
-			result.data_vcf = data_vcf
-		}
-
-		res.send(result)
-	})
-	.catch(err=>{
-		res.send({error:err})
-		if(err.stack) {
-			// debug
-			console.error(err.stack)
-		}
-	})
+		})
+		tasks.push(task)
+	}
+	return Promise.all(tasks)
 }
 
 
@@ -5526,6 +5526,36 @@ function pileup_singlent ( file, dir, coord, allele1, allele2 ) {
 		})
 	})
 }
+
+
+
+async function handle_bamnochr ( req, res ) {
+	if( reqbodyisinvalidjson( req, res )) return
+	const q = req.query
+	try {
+		const genome = genomes[ q.genome ]
+		if(!genome) throw 'invalid genome'
+		if( q.file ) {
+			q.file = path.join( serverconfig.tpmasterdir, q.file )
+		} else {
+			if( !q.url ) throw 'no bam file or url'
+			q.url_dir = await cache_index_promise( q.indexURL || q.url+'.bai' )
+		}
+
+		const nochr = await bam_ifnochr(
+			q.file || q.url,
+			genome,
+			q.url_dir
+			)
+		res.send({ nochr: nochr })
+
+	} catch( e ) {
+		if(e.stack) console.log(e.stack)
+		res.send({error: (e.message||e)})
+	}
+}
+
+
 
 
 
