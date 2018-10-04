@@ -2045,9 +2045,39 @@ async function validate_tabixfile ( file ) {
 }
 
 
-function standard_chr ( str, genome ) {
-	// '1' to 'chr1' by genome.chrconvert
-	// replace the 'nochr' flag
+/*
+haschr flag is not generic
+
+pp genome chrmap:
+k: alias, lower
+v: standard chr, original
+{
+	'1' : 'chr1'
+	'm' : 'chrM',
+	'mt': 'chrM',
+	...
+}
+
+tk chrconvert( standard_chr ):
+return its own alias
+
+tk query obj for bw/tabix/vcf/bam
+{
+	file
+	url
+	indexURL
+	url_dir
+	chrconvert()
+}
+*/
+async function tkqueryobj_bigwig ( genome, file, url ) {
+}
+async function tkqueryobj_tabix ( genome, file, url, indexURL ) {
+}
+async function tkqueryobj_vcf ( genome, file, url, indexURL ) {
+	// also parse meta lines
+}
+async function tkqueryobj_bam ( genome, file, url, indexURL ) {
 }
 
 ///////////////////////////////////////////////// END of helpers
