@@ -124,10 +124,10 @@ module.exports={
 			tracks:[
 				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM012512_G2.bw","name":"SJNORM012512_G2 RNA"},
 				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM012512_G4.bw","name":"SJNORM012512_G4 RNA"},
-				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G1.bw","name":"SJNORM016096_G1 RNA"},
-				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G2.bw","name":"SJNORM016096_G2 RNA"},
-				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G3.bw","name":"SJNORM016096_G3 RNA"},
-				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G4.bw","name":"SJNORM016096_G4 RNA"},
+				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G1.bw","name":"SJNORM016096_G1 CD34+/19+ RNA"},
+				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G2.bw","name":"SJNORM016096_G2 CD19+/10+ RNA"},
+				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G3.bw","name":"SJNORM016096_G3 CD19+/CD10-/KL+ RNA"},
+				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G4.bw","name":"SJNORM016096_G4 CD19+/CD10-/KL- RNA"},
 			],
 
 		}
