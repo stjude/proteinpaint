@@ -3936,7 +3936,6 @@ async function handle_mdssvcnv(req,res) {
 		dsquery.dir = await cache_index_promise( dsquery.indexURL || dsquery.url+'.tbi' )
 	}
 
-
 	// query svcnv
 	const data_cnv = await handle_mdssvcnv_cnv( ds, dsquery, req, hiddendt, hiddensampleattr, hiddenmattr )
 
@@ -3949,17 +3948,7 @@ async function handle_mdssvcnv(req,res) {
 	// querying procedure is the same for all types, data parsing will be different
 	const [ vcfrangelimit, data_vcf ] = await handle_mdssvcnv_vcf( ds, dsquery, req, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr )
 
-	handle_mdssvcnv_end( ds, dsquery, req, res, data_cnv, expressionrangelimit, gene2sample2obj, vcfrangelimit, data_vcf )
 
-}
-
-
-
-
-
-
-
-function handle_mdssvcnv_end ( ds, dsquery, req, res, data_cnv, expressionrangelimit, gene2sample2obj, vcfrangelimit, data_vcf ) {
 
 	// group samples by svcnv, calculate expression rank
 	const sample2item = mdssvcnv_do_sample2item( data_cnv )
@@ -3970,9 +3959,9 @@ function handle_mdssvcnv_end ( ds, dsquery, req, res, data_cnv, expressionrangel
 	}
 	*/
 
-	// exit
 	if(req.query.singlesample) {
 		/*
+		exit
 		single sample does not include expression
 		but will include vcf
 		*/
@@ -3991,17 +3980,34 @@ function handle_mdssvcnv_end ( ds, dsquery, req, res, data_cnv, expressionrangel
 		return
 	}
 
-	///// not single-sample; in multi-sample mode
 
+	const samplegroups = handle_mdssvcnv_groupsample( ds, dsquery, data_cnv, data_vcf, sample2item )
+
+	const result = {
+		samplegroups: samplegroups,
+		vcfrangelimit: vcfrangelimit,
+		data_vcf: data_vcf,
+	}
+
+	handle_mdssvcnv_addexprank( result, ds, expressionrangelimit, gene2sample2obj  )
+
+	handle_mdssvcnv_end( ds, result )
+	res.send(result)
+}
+
+
+
+
+
+function handle_mdssvcnv_groupsample ( ds, dsquery, data_cnv, data_vcf, sample2item ) {
+	// multi sample
 
 	mdssvcnv_do_copyneutralloh(sample2item)
 
-
 	// group sample by available attributes
+	const samplegroups = []
 
-	const result = {} // for res.send( )
-
-	if(ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr) {
+	if( ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattr ) {
 
 		/**** group samples by predefined annotation attributes
 		only for official ds
@@ -4039,14 +4045,12 @@ function handle_mdssvcnv_end ( ds, dsquery, req, res, data_cnv, expressionrangel
 			}
 		}
 
-		result.samplegroups = []
-
 		for(const g of key2group.values()) {
-			result.samplegroups.push( g )
+			samplegroups.push( g )
 		}
 
 		if(headlesssamples.length) {
-			result.samplegroups.push({
+			samplegroups.push({
 				name:'Unannotated',
 				samples: headlesssamples
 			})
@@ -4054,7 +4058,7 @@ function handle_mdssvcnv_end ( ds, dsquery, req, res, data_cnv, expressionrangel
 
 
 		///////// FIXME jinghui nbl cell line mixed into st/nbl, to identify that this sample is cell line on client
-		for(const g of result.samplegroups) {
+		for(const g of samplegroups) {
 			for(const s of g.samples) {
 				if( ds.cohort.annotation[s.samplename]) {
 					s.sampletype = ds.cohort.annotation[s.samplename].sample_type
@@ -4104,15 +4108,18 @@ function handle_mdssvcnv_end ( ds, dsquery, req, res, data_cnv, expressionrangel
 		}
 
 		if(samples.length) {
-			result.samplegroups = [ { samples: samples } ]
-		} else {
-			// no sample
-			result.samplegroups = []
+			samplegroups.push( { samples: samples } )
 		}
 	}
+	return samplegroups
+}
 
 
 
+
+
+
+function handle_mdssvcnv_addexprank ( result, ds, expressionrangelimit, gene2sample2obj  ) {
 
 	///////// assign expression rank for all samples listed in samplegroup
 	if(expressionrangelimit) {
@@ -4195,8 +4202,10 @@ function handle_mdssvcnv_end ( ds, dsquery, req, res, data_cnv, expressionrangel
 			}
 		}
 	}
+}
 
 
+function handle_mdssvcnv_end ( ds, result ) {
 	if(ds.cohort && ds.cohort.sampleAttribute && ds.cohort.sampleAttribute.attributes && ds.cohort.annotation) {
 		result.sampleannotation = {}
 		for(const g of result.samplegroups) {
@@ -4222,15 +4231,11 @@ function handle_mdssvcnv_end ( ds, dsquery, req, res, data_cnv, expressionrangel
 	}
 
 
-	if(vcfrangelimit) {
-		result.vcfrangelimit = vcfrangelimit
-	}
-	if(data_vcf) {
-		result.data_vcf = data_vcf
-	}
-
-	res.send(result)
 }
+
+
+
+
 
 
 
