@@ -123,7 +123,10 @@ export function loadTk( tk, block ) {
 
 		return loadTk_mayinitiatecustomvcf( tk, block )
 	})
-	.then(()=>{
+	.then( ()=>{
+		return loadTk_mayinitiaternabam( tk, block )
+	})
+	.then( ()=>{
 
 		/*
 		if error, throw error
@@ -227,40 +230,35 @@ function may_showgeneexp_nomutationdata(tk,block) {
 
 
 
+function loadTk_mayinitiaternabam ( tk, block ) {
+	if( !tk.checkrnabam ) return
+	const tasks = []
+	for(const s in tk.checkrnabam.samples ) {
+		const b = tk.checkrnabam.samples[ s ]
+		tasks.push(
+			client.dofetch('bamnochr',{genome:block.genome.name, file:b.file, url:b.url, indexURL:b.indexURL})
+			.then(data=>{
+				if(data.error) throw {message:data.error}
+				b.nochr = data.nochr
+			})
+		)
+	}
+	return Promise.all( tasks )
+}
+
+
+
 
 function loadTk_mayinitiatecustomvcf( tk, block ) {
 
 	if( !tk.iscustom ) return
-
+	
 	if( tk.checkvcf && !tk.checkvcf.stringifiedObj ) {
 		// driven by svcnv file
 		// load vcf meta keep on client for parsing vcf data
 		const arg = {
 			file: tk.checkvcf.file,
 			url: tk.checkvcf.url,
-			indexURL: tk.checkvcf.indexURL
-		}
-		return client.dofetch('/vcfheader', arg)
-		.then( data => {
-			if(!data) throw {message:'server error!'}
-			if(data.error) throw {message:data.error}
-
-			const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
-			if(errs) throw({message:'Error parsing VCF meta lines: '+errs.join('; ')})
-			tk.checkvcf.info = info
-			tk.checkvcf.format = format
-			tk.checkvcf.samples = samples
-			tk.checkvcf.nochr = common.contigNameNoChr(block.genome,data.chrstr.split('\n'))
-
-			tk.checkvcf.stringifiedObj = JSON.stringify( tk.checkvcf )
-		})
-	}
-
-	if( tk.vcfmatrix && tk.vcfmatrix.url ) {
-		// driven by vcf file
-		const arg = {
-			file: tk.vcfmatrix.file,
-			url: tk.vcfmatrix.url,
 			indexURL: tk.checkvcf.indexURL
 		}
 		return client.dofetch('/vcfheader', arg)
@@ -425,9 +423,14 @@ function addLoadParameter( par, tk ) {
 			}
 		}
 
-		if(tk.checkvcf) {
+		if( tk.checkvcf ) {
 			par.checkvcf = tk.checkvcf.stringifiedObj
 		}
+
+		if( tk.checkrnabam ) {
+			par.checkrnabam = tk.checkrnabam
+		}
+
 	} else {
 		par.dslabel=tk.mds.label
 		par.querykey=tk.querykey
@@ -2708,7 +2711,13 @@ function makeTk(tk, block) {
 			tk.gecfg = {
 				datatype: tk.checkexpressionrank.datatype
 			}
+		} else if( tk.checkrnabam ) {
+			hasexpression = true
+			tk.gecfg = {
+				datatype: 'FPKM'
+			}
 		}
+
 	} else {
 		// official
 		if(tk.mds.queries[tk.querykey].checkexpressionrank) {
@@ -2734,13 +2743,6 @@ function makeTk(tk, block) {
 		}
 
 		expressionstat.init_config( tk.gecfg )
-	}
-
-	if( tk.vcfmatrix ) {
-		// independently init
-		if( tk.sample2rnabam ) {
-			// anything
-		}
 	}
 
 	// end of makeTk

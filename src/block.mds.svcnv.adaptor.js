@@ -1,5 +1,6 @@
 export function mdssvcnvfromtemplate(tk,template) {
 	if(tk.file || tk.url) {
+		// svcnv file is now optional
 		tk.iscustom=true
 	}
 	if(template.singlesample) {
@@ -17,16 +18,15 @@ export function mdssvcnvfromtemplate(tk,template) {
 			tk.checkexpressionrank[k] = template.checkexpressionrank[k]
 		}
 	}
+	if( template.checkrnabam ) {
+		if( !template.checkrnabam.samples) return 'samples{} missing from checkrnabam'
+		// will check against a custom vcf
+		tk.iscustom = true
+	}
+
 	tk.gaincolor= template.gaincolor || '#D6683C'
 	tk.losscolor= template.losscolor || '#67a9cf'
 	tk.lohcolor= template.lohcolor || '#545454'
-	
-	// vcffile dictates cohort ase mode, independent of above
-	if( tk.vcffile || tk.vcfurl ) {
-		tk.iscustom = true
-		// make rnabam optional?
-		if( !tk.sample2rnabam ) return 'sample2rnabam missing'
-	}
 	return null
 }
 
