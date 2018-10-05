@@ -62,7 +62,8 @@ valuable globals
 */
 const genomes={}
 const tabix= serverconfig.tabix || 'tabix'
-const samtools= serverconfig.samtools || 'samtools'
+const samtools = serverconfig.samtools || 'samtools'
+const bcftools = serverconfig.bcftools || 'bcftools'
 const bigwigsummary= serverconfig.bigwigsummary || 'bigWigSummary'
 const hicstat = serverconfig.hicstat || 'python read_hic_header.py'
 const hicstraw = serverconfig.hicstraw || 'straw'
@@ -4004,22 +4005,98 @@ async function handle_mdssvcnv(req,res) {
 
 
 async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
+	/*
+	hardcoded to query first region
+	*/
 
-	if(dsquery.checkvcf) {
-		const genetk = genome.tracks.find( i=> i.__isgene )
+	if(!dsquery.checkvcf) return
 
-		const genes = await handle_ase_getgenes( genome, genetk, region.chr, region.start, region.stop )
-		let start=null, stop
-		for(const o of genes.values()) {
-			if(start==null) {
-				start = o.start
-				stop = o.stop
-			} else {
-				start = Math.min( start, o.start )
-				stop = Math.max( stop, o.stop )
-			}
+
+	const genetk = genome.tracks.find( i=> i.__isgene )
+
+	const genes = await handle_ase_getgenes( genome, genetk, region.chr, region.start, region.stop )
+
+	let start=null, stop
+	for(const o of genes.values()) {
+		if(start==null) {
+			start = o.start
+			stop = o.stop
+		} else {
+			start = Math.min( start, o.start )
+			stop = Math.max( stop, o.stop )
 		}
 	}
+
+
+	const snps = await handle_mdssvcnv_rnabam_getsnp( dsquery, region.chr, start, stop )
+
+	for( const samplename in dsquery.checkrnabam.samples ) {
+
+		// for each gene, record het snp from this sample of this gene
+		const s = dsquery.checkrnabam.samples[ samplename ]
+		s.genes = {}
+
+		for( const [genename, genepos] of genes ) {
+		
+			// find snps within this gene
+			const thissnp = snps.filter( i=> i.pos>=genepos.start && i.pos<=genepos.stop )
+			if(thissnp.length==0) continue
+
+			s.genes[ genename ] = { snps:[] }
+
+			for(const m of thissnp) {
+				const het = handle_ase_hetsnp4sample( m, samplename )
+				if( het ) s.genes[genename].snps.push( het )
+			}
+		}
+
+		// do one pileup for each rna bam
+		//xxx
+	}
+}
+
+
+
+
+async function handle_mdssvcnv_rnabam_getsnp ( dsquery, chr, start, stop ) {
+	/*
+	hardcoded to query first vcf track
+	*/
+
+	const x = dsquery.checkvcf.tracks[ 0 ]
+	const vobj = {
+		file: x.file,
+		url: x.url,
+		indexURL: x.indexURL,
+		dir: x.dir,
+		nochr: x.nochr,
+		samples: x.samples,
+		info: dsquery.checkvcf.info,
+		format: x.format,
+	}
+
+	const lines = await tabix_getlines(
+		vobj.file ? path.join(serverconfig.tpmasterdir,vobj.file) : vobj.url,
+		( vobj.nochr ? chr.replace('chr','') : chr) + ':' + start+'-' + stop,
+		vobj.dir
+		)
+
+	const allsnps = []
+
+	for(const line of (lines || [])) {
+
+		const [badinfo, mlst, altinvalid] = vcf.vcfparseline( line, vobj )
+
+		for(const m of mlst) {
+			if( !common.basecolor[m.ref] || !common.basecolor[m.alt] ) {
+				// is not snp
+				continue
+			}
+			if( !m.sampledata ) continue
+			allsnps.push( m )
+		}
+	}
+	return allsnps
 }
 
 
@@ -4314,6 +4391,8 @@ function handle_mdssvcnv_vcf ( ds, dsquery, req, filteralleleattr, hiddendt, hid
 
 		})
 		.then(dir=>{
+
+			vcftk.dir = dir // reuse in rnabam
 
 			// get vcf data
 			const variants = []
@@ -5264,6 +5343,7 @@ async function handle_ase ( req, res ) {
 
 
 async function handle_ase_binom ( snps ) {
+	if( snps.length==0 ) return
 	const snpfile = await handle_ase_binom_write( snps )
 	const pfile = await handle_ase_binom_test( snpfile, snps )
 	await handle_ase_binom_result( snps, pfile )
@@ -5273,8 +5353,9 @@ async function handle_ase_binom ( snps ) {
 
 function handle_ase_binom_result( snps, pfile ) {
 	return new Promise((resolve,reject)=>{
-		fs.readFile( pfile, {encoding:'utf8'}, (err, data)=>{
+		fs.readFile( pfile, 'utf8', (err, data)=>{
 			if(err) reject('cannot read binom pvalue')
+			if(!data) resolve()
 			for(const line of data.trim().split('\n')) {
 				const l = line.split('\t')
 				const m = snps.find( i=> l[0] == i.pos+'.'+i.ref+'.'+i.alt )
@@ -5411,10 +5492,10 @@ function handle_ase_pileup(
 	}
 
 	return new Promise((resolve,reject)=>{
-
+ 
 		const sp = spawn(
-			samtools,
-			[ 'mpileup', '-d', 999999, '-Q', 10, '-r',
+			bcftools,
+			[ 'mpileup', '--no-reference', '-a', 'INFO/AD', '-d', 999999, '-r',
 				(q.rnabam_nochr?q.chr.replace('chr',''):q.chr)+':'+(searchstart+1)+'-'+(searchstop+1),
 				q.rnabamurl || q.rnabamfile
 			],
@@ -5424,26 +5505,20 @@ function handle_ase_pileup(
 		const rl = readline.createInterface({input:sp.stdout})
 		rl.on('line',line=>{
 
-			// 1       47685158        N       50      ttTTTTTTTtTTTTT      JIEmI@IGEC3Fi?jB
-			const l = line.split('\t')
-			if(l.length!=6) return
+			if(line[0]=='#') return
 
-			const pos = Number.parseInt( l[1] ) - 1
+			const m0 = mpileup_parsevcf_dp_ad( line )
+			if( !m0 ) return
 
 			let renderx // for this nt; if set, means this nt is plotted
 			let h
 
-			if( pos >= renderstart && pos <= renderstop ) {
+			if( m0.pos >= renderstart && m0.pos <= renderstop && m0.DP ) {
 				// in render range, plot coverage
-				// do not use coverage number that includes split reads -- count bases
-				let coverage = 0
-				for(const x of l[4]) {
-					if( common.basecolor[x.toUpperCase()] ) coverage++
-				}
 
-				renderx = q.width * (pos-renderstart) / (q.stop-renderstart)
+				renderx = q.width * ( m0.pos-renderstart) / (q.stop-renderstart)
 				h = q.rnabarheight *
-					( 1 - (q.rnacoveragemax - Math.min(coverage,q.rnacoveragemax))/q.rnacoveragemax )
+					( 1 - (q.rnacoveragemax - Math.min( m0.DP, q.rnacoveragemax ))/q.rnacoveragemax )
 
 				ctx.strokeStyle = '#ccc'
 				ctx.beginPath()
@@ -5454,20 +5529,13 @@ function handle_ase_pileup(
 			}
 
 
-			const m = snps.find( m=> m.pos == pos )
+			const m = snps.find( m=> m.pos == m0.pos )
 			if( m ) {
-				// a snp from query range, but may not in render range
+				// a het snp from query range, but may not in render range
 				m.__x = renderx // could be undefined
 
-				const allele1 = m.ref.toUpperCase()
-				const allele2 = m.alt.toUpperCase()
-				let c1=0, c2=0
-				for(const x of l[4]) {
-					const xup = x.toUpperCase()
-					if( !common.basecolor[ xup ] ) continue
-					if( xup == allele1 ) c1++
-					else if( xup == allele2 ) c2++
-				}
+				const c1 = m0.allele2count[ m.ref ]
+				const c2 = m0.allele2count[ m.alt ]
 
 				if( c1+c2 > 0 ) {
 					// has coverage at this snp
@@ -5480,6 +5548,8 @@ function handle_ase_pileup(
 				}
 			}
 		})
+
+
 		sp.on('close',()=>{
 
 			// only plot snp bars after finishing, so the rna bars are on foreground
@@ -5526,6 +5596,38 @@ function handle_ase_pileup(
 			resolve( canvas.toDataURL() )
 		})
 	})
+}
+
+
+
+function mpileup_parsevcf_dp_ad ( line ) {
+	// quick dirty, no header
+	// hardcoded for AD DP
+	// <ID=DP,Number=1,Type=Integer,Description="Raw read depth">
+	// <ID=AD,Number=R,Type=Integer,Description="Total allelic depths">
+	// 1	47838652	.	N	G,A,<*>	0	.	DP=200;AD=0,97,97,0;I16=0,0,125,69,
+
+	const l = line.split('\t')
+	if( l.length < 8 ) return
+
+	const m = {
+		pos: Number.parseInt(l[1])-1,
+	}
+	const alleles = [ l[3], ...(l[4].split(',')) ]
+	const info = {}
+	for(const s of l[7].split(';')) {
+		const k = s.split('=')
+		info[ k[0] ] = k[1]
+	}
+	if( info.DP ) m.DP = Number.parseInt(info.DP)
+	if( info.AD ) {
+		m.allele2count = {}
+		const lst = info.AD.split(',')
+		for(const [i,allele] of alleles.entries()) {
+			m.allele2count[ allele ] = Number.parseInt( lst[ i ] )
+		}
+	}
+	return m
 }
 
 
@@ -5633,7 +5735,6 @@ async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) 
 	const [info, format, samples, err] = vcf.vcfparsemeta( mlines )
 	if(err) throw err
 
-
 	const vcfobj = {
 		info: info,
 		format: format,
@@ -5661,32 +5762,8 @@ async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) 
 			// find sample
 			if( !m.sampledata ) continue
 
-			const sobj = m.sampledata.find( i=> i.sampleobj.name == q.samplename )
-			if( !sobj ) continue
+			const hm = handle_ase_hetsnp4sample( m, q.samplename )
 
-			let hm // if is heterozygous
-
-			if( sobj.AD ) {
-				const refcount = sobj.AD[ m.ref ]
-				const altcount = sobj.AD[ m.alt ]
-				if( refcount >= 2 && altcount >=2 ) {
-					const f = altcount / (altcount+refcount)
-					if( f >= 0.3 && f <= 0.7 ) {
-						hm = {
-							pos: m.pos,
-							ref: m.ref,
-							alt: m.alt,
-							dnacount: {
-								f: f,
-								ref: refcount,
-								alt: altcount
-							}
-						}
-					}
-				}
-			} else {
-				// GT?
-			}
 
 			if( hm ) allsnps.push( hm )
 		}
@@ -5706,6 +5783,35 @@ async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) 
 }
 
 
+function handle_ase_hetsnp4sample ( m, samplename ) {
+	const sobj = m.sampledata.find( i=> i.sampleobj.name == samplename )
+	if( !sobj ) return
+
+	let hm // if is heterozygous
+
+	if( sobj.AD ) {
+		const refcount = sobj.AD[ m.ref ]
+		const altcount = sobj.AD[ m.alt ]
+		if( refcount >= 2 && altcount >=2 ) {
+			const f = altcount / (altcount+refcount)
+			if( f >= 0.3 && f <= 0.7 ) {
+				hm = {
+					pos: m.pos,
+					ref: m.ref,
+					alt: m.alt,
+					dnacount: {
+						f: f,
+						ref: refcount,
+						alt: altcount
+					}
+				}
+			}
+		}
+	} else {
+		// GT?
+	}
+	return hm
+}
 
 
 
