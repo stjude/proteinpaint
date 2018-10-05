@@ -36,7 +36,11 @@ Optional:
 const fs = require('fs')
 const exec =require('child_process').execSync
 
-const c = {}
+// user config
+const uc = {}
+// server config, to be exported as "serverconfig.json"
+const sc = {}
+
 if( process.argv[2] ) {
 	// load installation instructions from external file, optional
 	for(const line of fs.readFileSync(process.argv[2],{encoding:'utf8'}).trim().split('\n')) {
@@ -44,7 +48,7 @@ if( process.argv[2] ) {
 		if(line[0]=='#') continue
 		const l = line.split('\t')
 		if(l.length != 2) continue
-		c[ l[0] ] = l[1]
+		uc[ l[0] ] = l[1]
 	}
 }
 
@@ -63,3 +67,6 @@ if( process.argv[2] ) {
 
 // for each genome:
 // 
+
+
+// export to serverconfig.json
