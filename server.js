@@ -4027,32 +4027,185 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 		}
 	}
 
-
 	const snps = await handle_mdssvcnv_rnabam_getsnp( dsquery, region.chr, start, stop )
+	const testlines = []
 
 	for( const samplename in dsquery.checkrnabam.samples ) {
 
 		// for each gene, record het snp from this sample of this gene
-		const s = dsquery.checkrnabam.samples[ samplename ]
-		s.genes = {}
+		const sbam = dsquery.checkrnabam.samples[ samplename ]
+		sbam.hetsnps = [] // all het for this sample
 
-		for( const [genename, genepos] of genes ) {
-		
-			// find snps within this gene
-			const thissnp = snps.filter( i=> i.pos>=genepos.start && i.pos<=genepos.stop )
-			if(thissnp.length==0) continue
-
-			s.genes[ genename ] = { snps:[] }
-
-			for(const m of thissnp) {
-				const het = handle_ase_hetsnp4sample( m, samplename )
-				if( het ) s.genes[genename].snps.push( het )
-			}
+		for(const m of snps) {
+			const het = handle_ase_hetsnp4sample( m, samplename )
+			if( het ) sbam.hetsnps.push( het )
 		}
+		if( sbam.hetsnps.length==0 ) continue
 
-		// do one pileup for each rna bam
-		//xxx
+		// do one pileup for these snp over this bam
+		if( sbam.url ) {
+			sbam.dir = await cache_index_promise( sbam.indexURL || sbam.url+'.bai' )
+		}
+		await handle_mdssvcnv_rnabam_pileup( sbam, sbam.hetsnps, region.chr )
+
+		for( const m of sbam.hetsnps ) {
+			if( m.rnacount.nocoverage ) continue
+			testlines.push( samplename+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t\t\t\t\t\t\t\t'+m.rnacount.ref+'\t'+m.rnacount.alt )
+		}
 	}
+
+	await handle_mdssvcnv_rnabam_binom( testlines, dsquery.checkrnabam.samples )
+
+	result.checkrnabam = []
+
+	for( const samplename in dsquery.checkrnabam.samples ) {
+		const sbam = dsquery.checkrnabam.samples[ samplename ]
+		if( sbam.hetsnps.length==0 ) continue
+
+		const thisgenes = []
+		for( const [genename, genepos] of genes ) {
+			// find snps within this gene
+			const rnasnp = sbam.hetsnps.filter( m=> m.pos>=genepos.start && m.pos<=genepos.stop && !m.rnacount.nocoverage )
+			if( rnasnp.length == 0 ) continue
+
+			const deltasum = rnasnp.reduce((i,j) => i + Math.abs( j.rnacount.f - 0.5 ), 0)
+
+			// geometric mean
+			let mean = null
+			for(const s of rnasnp) {
+				if( s.rnacount.pvalue!=undefined ) {
+					if(mean==null) mean = s.rnacount.pvalue
+					else mean *= s.rnacount.pvalue
+				}
+			}
+
+			thisgenes.push({
+				gene: genename,
+				chr: region.chr,
+				start: genepos.start,
+				stop: genepos.stop,
+				snps: rnasnp,
+				mean_delta: deltasum / rnasnp.length,
+				geometricmean: Math.pow( mean, 1/rnasnp.length )
+			})
+		}
+		if(thisgenes.length) {
+			result.checkrnabam.push( {
+				sample: samplename,
+				genes: thisgenes
+			} )
+		}
+	}
+}
+
+
+async function handle_mdssvcnv_rnabam_binom ( lines, samples ) {
+	const infile = await handle_mdssvcnv_rnabam_binom_write( lines )
+	const pfile  = await handle_ase_binom_test( infile )
+	await handle_mdssvcnv_rnabam_binom_result( pfile, samples )
+}
+
+function handle_mdssvcnv_rnabam_binom_write ( lines ) {
+	const snpfile = path.join(serverconfig.cachedir, Math.random().toString() )
+	return new Promise((resolve, reject)=>{
+		fs.writeFile( snpfile, lines.join('\n')+'\n', (err)=>{
+			if(err) reject('cannot write')
+			resolve( snpfile )
+		})
+	})
+}
+
+function handle_mdssvcnv_rnabam_binom_result ( pfile, samples ) {
+	return new Promise((resolve,reject)=>{
+		fs.readFile( pfile, 'utf8', (err, data)=>{
+			if(err) reject('cannot read binom pvalue')
+			if(!data) resolve()
+			for(const line of data.trim().split('\n')) {
+				const l = line.split('\t')
+				const tmp = l[0].split('.')
+				const sbam = samples[ tmp[0] ]
+				if( !sbam ) {
+					// should not happen
+					continue
+				}
+				const m = sbam.hetsnps.find( i=> i.pos+'.'+i.ref+'.'+i.alt == tmp[1]+'.'+tmp[2]+'.'+tmp[3] )
+				if( m ) {
+					m.rnacount.pvalue = Number.parseFloat( l[10] )
+				}
+			}
+			resolve()
+		})
+	})
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function handle_mdssvcnv_rnabam_pileup ( bam, snps, chr ) {
+	// only query said snps
+	const lst = []
+	for(const m of snps) {
+		m.rnacount = {
+			nocoverage: 1
+		}
+		lst.push( (bam.nochr ? chr.replace('chr',''):chr) +':'+(m.pos+1)+'-'+(m.pos+1) )
+	}
+
+	return new Promise((resolve,reject)=>{
+ 
+		const sp = spawn(
+			bcftools,
+			[ 'mpileup', '--no-reference', '-a', 'INFO/AD', '-d', 999999, '-r', lst.join(','),
+				bam.url || path.join(serverconfig.tpmasterdir,bam.file)
+			],
+			{cwd: bam.dir}
+			)
+
+		const rl = readline.createInterface({input:sp.stdout})
+		rl.on('line',line=>{
+
+			if(line[0]=='#') return
+
+			const m0 = mpileup_parsevcf_dp_ad( line )
+			if( !m0 ) return
+
+
+			const m = snps.find( m=> m.pos == m0.pos )
+			if( m ) {
+				// a het snp
+				const c1 = m0.allele2count[ m.ref ]
+				const c2 = m0.allele2count[ m.alt ]
+
+				if( c1+c2 > 0 ) {
+					// has coverage at this snp
+					m.rnacount = {
+						ref: c1,
+						alt: c2,
+						f: ( c2 /(c1+c2) ),
+					}
+				}
+			}
+		})
+
+		sp.on('close',()=>{
+			resolve()
+		})
+	})
 }
 
 
@@ -5345,7 +5498,7 @@ async function handle_ase ( req, res ) {
 async function handle_ase_binom ( snps ) {
 	if( snps.length==0 ) return
 	const snpfile = await handle_ase_binom_write( snps )
-	const pfile = await handle_ase_binom_test( snpfile, snps )
+	const pfile = await handle_ase_binom_test( snpfile )
 	await handle_ase_binom_result( snps, pfile )
 }
 
@@ -5371,7 +5524,7 @@ function handle_ase_binom_result( snps, pfile ) {
 
 
 
-function handle_ase_binom_test ( snpfile, snps ) {
+function handle_ase_binom_test ( snpfile ) {
 	const pfile = snpfile+'.pvalue'
 	return new Promise((resolve, reject)=>{
 		const sp = spawn( 'Rscript', ['utils/binom.R', snpfile, pfile] )
@@ -5633,31 +5786,6 @@ function mpileup_parsevcf_dp_ad ( line ) {
 
 
 
-function pileup_singlent ( file, dir, coord, allele1, allele2 ) {
-	return new Promise((resolve, reject)=>{
-		const sp = spawn( samtools,[ 'mpileup', '-d', 999999, '-Q', 10, '-r', coord, file],{cwd:dir})
-		const out=[]
-		sp.stdout.on('data',i=>out.push(i))
-		// do not capture stderr
-		sp.on('close',()=>{
-			let c1=0, c2=0
-			const line = out.join('').trim()
-			if( line ) {
-				const l = line.split('\t')
-				if( l[4] ) {
-					for(const x of l[4]) {
-						const xup = x.toUpperCase()
-						if( !common.basecolor[xup] ) continue
-						if( xup == allele1 ) c1++
-						else if( xup == allele2 ) c2++
-					}
-				}
-			}
-			resolve( [c1,c2] )
-		})
-	})
-}
-
 
 
 async function handle_bamnochr ( req, res ) {
@@ -5787,15 +5915,13 @@ function handle_ase_hetsnp4sample ( m, samplename ) {
 	const sobj = m.sampledata.find( i=> i.sampleobj.name == samplename )
 	if( !sobj ) return
 
-	let hm // if is heterozygous
-
 	if( sobj.AD ) {
 		const refcount = sobj.AD[ m.ref ]
 		const altcount = sobj.AD[ m.alt ]
 		if( refcount >= 2 && altcount >=2 ) {
 			const f = altcount / (altcount+refcount)
 			if( f >= 0.3 && f <= 0.7 ) {
-				hm = {
+				return {
 					pos: m.pos,
 					ref: m.ref,
 					alt: m.alt,
@@ -5807,10 +5933,9 @@ function handle_ase_hetsnp4sample ( m, samplename ) {
 				}
 			}
 		}
-	} else {
-		// GT?
 	}
-	return hm
+
+	// GT?
 }
 
 

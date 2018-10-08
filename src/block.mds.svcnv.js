@@ -315,6 +315,8 @@ function loadTk_do( tk, block ) {
 
 		if(data.error) throw({message:data.error})
 
+		console.log(data.checkrnabam)
+
 		tk.tklabel.each(function(){
 			tk.leftLabelMaxwidth = this.getBBox().width
 		})
