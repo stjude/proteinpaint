@@ -83,6 +83,8 @@ export async function loadTk( tk, block ) {
 
 	try {
 
+		tk.dna.coveragemax = 0 // reset
+
 		for(const r of regions) {
 			await getdata_region( r, tk, block )
 		}
