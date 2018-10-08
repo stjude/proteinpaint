@@ -2186,6 +2186,14 @@ export function focus_singlesample( p ) {
 	client.first_genetrack_tolist( block.genome, arg.tklst )
 
 
+	// detour
+	if( tk.checkrnabam ) {
+		const sbam = tk.checkrnabam[ sample.samplename ]
+		// TODO
+	}
+	// should also root out error when showing that
+
+
 	// expression rank
 	if(tk.iscustom) {
 		if(tk.checkexpressionrank) {
