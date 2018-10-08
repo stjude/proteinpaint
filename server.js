@@ -5324,7 +5324,7 @@ async function handle_ase ( req, res ) {
 		let dnamax = 0
 		for(const m of snps) {
 			if(m.dnacount) {
-				dnamax = Math.max( m.dnacount.ref + m.dnacount.alt )
+				dnamax = Math.max( dnamax, m.dnacount.ref + m.dnacount.alt )
 			}
 		}
 
