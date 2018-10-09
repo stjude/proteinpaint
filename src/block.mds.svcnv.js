@@ -315,8 +315,6 @@ function loadTk_do( tk, block ) {
 
 		if(data.error) throw({message:data.error})
 
-		console.log(data.checkrnabam)
-
 		tk.tklabel.each(function(){
 			tk.leftLabelMaxwidth = this.getBBox().width
 		})
@@ -2189,8 +2187,8 @@ export function focus_singlesample( p ) {
 	// detour
 	if( tk.checkrnabam ) {
 		const sbam = tk.checkrnabam[ sample.samplename ]
-		// TODO
 	}
+
 	// should also root out error when showing that
 
 
@@ -2243,6 +2241,7 @@ export function focus_singlesample( p ) {
 		t2.file=tk.file
 		t2.url=tk.url
 		t2.indexURL=tk.indexURL
+		t2.iscustom=true
 	} else {
 		// official
 		t2.mds = tk.mds
