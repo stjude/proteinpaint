@@ -4188,8 +4188,8 @@ function handle_mdssvcnv_rnabam_pileup ( bam, snps, chr ) {
 			const m = snps.find( m=> m.pos == m0.pos )
 			if( m ) {
 				// a het snp
-				const c1 = m0.allele2count[ m.ref ]
-				const c2 = m0.allele2count[ m.alt ]
+				const c1 = m0.allele2count[ m.ref ] || 0
+				const c2 = m0.allele2count[ m.alt ] || 0
 
 				if( c1+c2 > 0 ) {
 					// has coverage at this snp
@@ -5497,7 +5497,9 @@ async function handle_ase ( req, res ) {
 
 async function handle_ase_binom ( snps ) {
 	if( snps.length==0 ) return
-	const snpfile = await handle_ase_binom_write( snps )
+	const rnasnp = snps.filter( i=> !i.rnacount.nocoverage )
+	if( rnasnp.length==0 ) return
+	const snpfile = await handle_ase_binom_write( rnasnp )
 	const pfile = await handle_ase_binom_test( snpfile )
 	await handle_ase_binom_result( snps, pfile )
 }
@@ -5687,8 +5689,8 @@ function handle_ase_pileup(
 				// a het snp from query range, but may not in render range
 				m.__x = renderx // could be undefined
 
-				const c1 = m0.allele2count[ m.ref ]
-				const c2 = m0.allele2count[ m.alt ]
+				const c1 = m0.allele2count[ m.ref ] || 0
+				const c2 = m0.allele2count[ m.alt ] || 0
 
 				if( c1+c2 > 0 ) {
 					// has coverage at this snp

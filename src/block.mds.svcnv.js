@@ -2185,8 +2185,28 @@ export function focus_singlesample( p ) {
 
 
 	// detour
-	if( tk.checkrnabam ) {
-		const sbam = tk.checkrnabam[ sample.samplename ]
+	if( tk.checkrnabam && tk.checkvcf ) {
+		const sbam = tk.checkrnabam.samples[ sample.samplename ]
+		if( sbam ) {
+			arg.chr = block.rglst[0].chr
+			arg.start = block.rglst[0].start
+			arg.stop = block.rglst[0].stop
+
+			arg.tklst.push({
+				type: common.tkt.ase,
+				name: sample.samplename+' ASE',
+				samplename: sample.samplename,
+				rnabamfile: sbam.file,
+				rnabamurl: sbam.url,
+				rnabamindexURL: sbam.rnabamindexURL,
+				vcffile: tk.checkvcf.file,
+				vcfurl: tk.checkvcf.url,
+				vcfindexURL: tk.checkvcf.indexURL,
+			})
+			console.log(arg.tklst[1])
+			block.newblock( arg )
+			return
+		}
 	}
 
 	// should also root out error when showing that
