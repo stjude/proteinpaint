@@ -365,6 +365,16 @@ function loadTk_do( tk, block ) {
 					tk.sampleAttribute.samples = {}
 				}
 			}
+
+			if( tk.checkrnabam ) {
+				for(const samplename in tk.checkrnabam.samples ) {
+					delete tk.checkrnabam.samples[ samplename ].genes
+					if( data.checkrnabam ) {
+						const g = data.checkrnabam.find( i=> i.sample == samplename )
+						if(g) tk.checkrnabam.samples[ samplename ].genes = g.genes
+					}
+				}
+			}
 		}
 
 		// preps common to both single and multi sample
@@ -2203,7 +2213,6 @@ export function focus_singlesample( p ) {
 				vcfurl: tk.checkvcf.url,
 				vcfindexURL: tk.checkvcf.indexURL,
 			})
-			console.log(arg.tklst[1])
 			block.newblock( arg )
 			return
 		}
