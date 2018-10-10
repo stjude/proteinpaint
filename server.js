@@ -4064,8 +4064,11 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 
 		const thisgenes = []
 		for( const [genename, genepos] of genes ) {
-			// find snps within this gene
-			const rnasnp = sbam.hetsnps.filter( m=> m.pos>=genepos.start && m.pos<=genepos.stop && !m.rnacount.nocoverage )
+
+			// het snps within this gene
+			const thishetsnp = sbam.hetsnps.filter( m=> m.pos>=genepos.start && m.pos<=genepos.stop )
+			// het snps covered in rna
+			const rnasnp = thishetsnp.filter( m=> !m.rnacount.nocoverage )
 			if( rnasnp.length == 0 ) continue
 
 			const deltasum = rnasnp.reduce((i,j) => i + Math.abs( j.rnacount.f - 0.5 ), 0)
@@ -4084,7 +4087,8 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 				chr: region.chr,
 				start: genepos.start,
 				stop: genepos.stop,
-				snps: rnasnp,
+				snps: thishetsnp,
+				rnasnpcount: rnasnp.length,
 				mean_delta: deltasum / rnasnp.length,
 				geometricmean: Math.pow( mean, 1/rnasnp.length )
 			})
