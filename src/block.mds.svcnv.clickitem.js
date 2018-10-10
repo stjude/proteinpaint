@@ -31,7 +31,7 @@ detailtable_singlesample
 make_svgraph
 
 ********************** INTERNAL
-	printer_snvindel
+printer_snvindel
 may_show_matrixbutton
 matrix_view()
 
@@ -1535,6 +1535,8 @@ export function detailtable_singlesample(p) {
 				})
 			}
 			// mutation attributes are FORMAT in vcf, already shown above
+
+			mayaddRnabamstatusForsnp( p.tk, m, p.m_sample.sampleobj.name, lst )
 		}
 
 	} else {
@@ -1590,14 +1592,9 @@ export function detailtable_singlesample(p) {
 		}
 	}
 
+	mayaddexpressionrank( p, lst )
 
-	if(p.sample) {
-		// p.sample and expression rank data only available in multi-sample mode
-		const tmp = addexpressionrank(p.sample,p.tk)
-		if(tmp) {
-			lst.push(tmp)
-		}
-	}
+	mayaddrnabamase( p, lst )
 
 	client.make_table_2col( p.holder, lst )
 }
@@ -1605,11 +1602,104 @@ export function detailtable_singlesample(p) {
 
 
 
+function mayaddRnabamstatusForsnp ( tk, m, samplename, lst ) {
+	if(!tk.checkrnabam) return
+	const sbam = tk.checkrnabam.samples[ samplename ]
+	if(!sbam) return // no rna bam for this sample
 
-function addexpressionrank( sample, tk ) {
-	if(!sample.expressionrank) return null
+	if(!common.basecolor[m.ref] || !common.basecolor[m.alt]) {
+		// not snp
+		lst.push({
+			k:'RNA-seq',
+			v:'RNA-seq coverage not assessed, not SNV'
+		})
+		return
+	}
 
-	const rows=[]  // one gene per row
+	if(!sbam.genes) return
+
+	// this snp could be included multiple times in overlapping genes
+	let rnasnp
+
+	for(const g of sbam.genes) {
+		if(g.snps) {
+			const s = g.snps.find( i=> i.pos==m.pos && i.ref==m.ref && i.alt==m.alt )
+			if(s) {
+				rnasnp = s
+				break
+			}
+		}
+	}
+
+	if(!rnasnp) {
+		lst.push({
+			k:'RNA-seq',
+			v: 'RNA-seq coverage not assessed, not heterozygous in DNA'
+		})
+		return
+	}
+
+	if( rnasnp.rnacount.nocoverage ) {
+		lst.push({
+			k: 'RNA-seq',
+			v: 'Not covered in RNA-seq'
+		})
+		return
+	}
+	lst.push({
+		k: 'RNA-seq read count',
+		v: '<span style="font-size:.8em;opacity:.5">'+m.alt+' / '+m.ref+'</span> '+rnasnp.rnacount.alt+' / '+rnasnp.rnacount.ref
+			+(rnasnp.rnacount.pvalue ? ' <span style="font-size:.8em;opacity:.5">Binomial p</span> '+rnasnp.rnacount.pvalue : '')
+	})
+}
+
+
+
+function mayaddrnabamase ( p, lst ) {
+	// may add ase status from rna bam
+	const tk = p.tk
+	if(!tk) return
+	if(!tk.checkrnabam) return
+	if(!p.sample) return
+	const sbam = tk.checkrnabam.samples[ p.sample.samplename ]
+	if( !sbam ) return
+	if(!sbam.genes) return
+	const rows = []
+	for(const g of sbam.genes) {
+		const lst = [
+			'<td><b>'+g.gene+'</b></td>'
+			+'<td>'
+		]
+		if(g.estat.ase_uncertain) {
+			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_uncertain+';color:white">ASE uncertain</span>')
+		} else if(g.estat.ase_biallelic) {
+			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_biallelic+';color:white">Bi-allelic</span>')
+		} else if(g.estat.ase_monoallelic) {
+			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_monoallelic+';color:white">Mono-allelic</span>')
+		}
+		lst.push('</td>')
+
+		rows.push( '<tr>'+lst.join('')+'</tr>' )
+	}
+	if(rows.length) {
+		lst.push({
+			k:'Gene ASE',
+			v:'<table>'+rows.join('')+'</table>'
+		})
+	}
+}
+
+
+
+function mayaddexpressionrank( p, lines ) {
+	const tk = p.tk
+	if(!tk) return
+	const sample = p.sample
+	if(!sample) return
+	if(!sample.expressionrank) return
+
+	// one gene per row
+	const rows = []
 
 	for(const genename in sample.expressionrank) {
 		const v = sample.expressionrank[genename]
@@ -1665,8 +1755,12 @@ function addexpressionrank( sample, tk ) {
 		}
 	}
 
-	if(rows.length) return {k:'Expression', v:'<table style="font-size:.9em">'+rows.join('')+'</table>'}
-	return null
+	if(rows.length) {
+		lines.push({
+			k:'Expression',
+			v:'<table style="font-size:.9em">'+rows.join('')+'</table>'
+		})
+	}
 }
 
 
