@@ -43,6 +43,42 @@ export function init_config(cfg) {
 
 
 
+
+export function measure_rnabam(v, cfg) {
+	/*
+	for on the fly partial ase status of rna bam
+	no outlier high exp
+
+	v{} is from tk.checkrnabam.samples{}.genes[]
+		geometricmean
+		mean_delta
+		ase_markers
+	*/
+	if(!cfg) return
+	v.estat={}
+
+	if(cfg.ase) {
+		if(v.geometricmean <= cfg.ase.qvalue) {
+			if(v.mean_delta >= cfg.ase.meandelta_monoallelic) {
+				v.estat.ase_monoallelic=true
+			} else {
+				v.estat.ase_uncertain=true
+			}
+		} else {
+			if(v.ase_markers == cfg.ase.asemarkernumber_biallelic) {
+				// no longer post a min cutoff for mean_delta
+				// v.ase.mean_delta <= cfg.ase.meandelta_biallelic
+				v.estat.ase_biallelic=true
+			} else {
+				v.estat.ase_uncertain=true
+			}
+		}
+	} else {
+		v.estat.ase_noinfo=true
+	}
+}
+
+
 export function measure(v, cfg) {
 	/*
 	liuyu's data & strategy for ase and outlier expression
