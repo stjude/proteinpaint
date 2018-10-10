@@ -586,6 +586,8 @@ function render_samplegroups( tk, block ) {
 
 	multi_expressionstatus_ase_outlier(tk)
 
+	multi_rnabam_asestatus(tk)
+
 	const genebaraxisheight = render_multi_genebar(tk, block)
 
 	// padding between sv/vcf, if both drawn
@@ -2062,6 +2064,22 @@ function dostack( sample, items ) {
 
 
 
+
+
+export function multi_rnabam_asestatus ( tk ) {
+	/*
+	multi-sample, only ase for rna bam mode
+	*/
+	if(!tk.checkrnabam) return
+	for(const s in tk.checkrnabam.samples) {
+		const sbam = tk.checkrnabam.samples[s]
+		if( sbam.genes ) {
+			for(const gene of sbam.genes ) {
+				expressionstat.measure_rnabam( gene, tk.gecfg )
+			}
+		}
+	}
+}
 
 
 export function multi_expressionstatus_ase_outlier(tk) {
