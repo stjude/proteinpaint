@@ -4089,8 +4089,11 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 				}
 			}
 
+			const genereadcount = await handle_mdssvcnv_rnabam_genereadcount( sbam, region.chr, genepos.start, genepos.stop )
+
 			thisgenes.push({
 				gene: genename,
+				rpkm: ( genereadcount / ((sbam.totalreads/1000000)*(genepos.stop-genepos.start)/1000) ),
 				chr: region.chr,
 				start: genepos.start,
 				stop: genepos.stop,
@@ -4110,10 +4113,32 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 }
 
 
+function handle_mdssvcnv_rnabam_genereadcount ( bam, chr, start, stop ) {
+	return new Promise((resolve,reject)=>{
+		const sp = spawn(
+			samtools,
+			[ 'view', '-c',
+				bam.url || path.join(serverconfig.tpmasterdir,bam.file),
+				(bam.nochr ? chr.replace('chr','') : chr)+':'+start+'-'+stop
+			],
+			{cwd: bam.dir}
+			)
+		const out=[], out2=[]
+		sp.stdout.on('data',i=>out.push(i))
+		sp.stderr.on('data',i=>out2.push(i))
+		sp.on('close',()=>{
+			resolve( Number.parseInt( out.join('')))
+		})
+	})
+}
+
+
 async function handle_mdssvcnv_rnabam_binom ( lines, samples ) {
 	const infile = await handle_mdssvcnv_rnabam_binom_write( lines )
 	const pfile  = await handle_ase_binom_test( infile )
 	await handle_mdssvcnv_rnabam_binom_result( pfile, samples )
+	fs.unlink( infile, ()=>{})
+	fs.unlink( pfile, ()=>{})
 }
 
 function handle_mdssvcnv_rnabam_binom_write ( lines ) {
@@ -5513,6 +5538,8 @@ async function handle_ase_binom ( snps ) {
 	const snpfile = await handle_ase_binom_write( rnasnp )
 	const pfile = await handle_ase_binom_test( snpfile )
 	await handle_ase_binom_result( snps, pfile )
+	fs.unlink( snpfile, ()=>{} )
+	fs.unlink( pfile, ()=>{} )
 }
 
 
