@@ -4075,10 +4075,17 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 
 			// geometric mean
 			let mean = null
+			// number of ase markers by pvalue cutoff 0.05, hardcoded!!
+			let ase_markers = 0
 			for(const s of rnasnp) {
 				if( s.rnacount.pvalue!=undefined ) {
+
 					if(mean==null) mean = s.rnacount.pvalue
 					else mean *= s.rnacount.pvalue
+
+					if( s.rnacount.pvalue <= 0.05 ) {
+						ase_markers++
+					}
 				}
 			}
 
@@ -4088,7 +4095,7 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 				start: genepos.start,
 				stop: genepos.stop,
 				snps: thishetsnp,
-				rnasnpcount: rnasnp.length,
+				ase_markers: ase_markers,
 				mean_delta: deltasum / rnasnp.length,
 				geometricmean: Math.pow( mean, 1/rnasnp.length )
 			})
