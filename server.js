@@ -4084,7 +4084,6 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 			if( rnasnp.length>0 ) {
 
 				const deltasum = rnasnp.reduce((i,j) => i + Math.abs( j.rnacount.f - 0.5 ), 0)
-				outputgene.mean_delta = deltasum / rnasnp.length
 
 				// geometric mean
 				let mean = null
@@ -4102,8 +4101,12 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 					}
 				}
 
-				outputgene.ase_markers = ase_markers
-				outputgene.geometricmean = Math.pow( mean, 1/rnasnp.length )
+				outputgene.ase = {
+					markers: thishetsnp.length,
+					ase_markers: ase_markers,
+					mean_delta: deltasum / rnasnp.length,
+					geometricmean: Math.pow( mean, 1/rnasnp.length )
+				}
 			}
 
 			const genereadcount = await handle_mdssvcnv_rnabam_genereadcount( sbam, region.chr, genepos.start, genepos.stop )
@@ -5972,6 +5975,7 @@ function handle_ase_hetsnp4sample ( m, samplename ) {
 			const f = altcount / (altcount+refcount)
 			if( f >= 0.3 && f <= 0.7 ) {
 				return {
+					chr: m.chr,
 					pos: m.pos,
 					ref: m.ref,
 					alt: m.alt,
