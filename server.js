@@ -3867,7 +3867,6 @@ async function handle_mdssvcnv(req,res) {
 	if(req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene( req, res, gn, ds, dsquery )
 
 
-
 	if(!req.query.rglst) return res.send({error:'rglst missing'})
 
 	if(dsquery.viewrangeupperlimit) {
@@ -4011,7 +4010,10 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 	*/
 
 	if(!dsquery.checkvcf) return
-
+	if( region.stop - region.start >= 500000 ) {
+		result.expressionrangelimit = 500000
+		return
+	}
 
 	const genetk = genome.tracks.find( i=> i.__isgene )
 
