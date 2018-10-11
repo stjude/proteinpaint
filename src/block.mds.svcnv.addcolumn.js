@@ -22,6 +22,7 @@ multi_show_geneboxplot
 
 ********************** INTERNAL
 genebar_config
+genebar_printtooltip
 
 
 add columns
@@ -601,9 +602,11 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 			y+=h
 			g.append('text').text('to show').attr('y',y).attr('font-size',12)
 			y+=h
-			g.append('text').text('exp rank').attr('y',y).attr('font-size',12)
+			g.append('text').text('gene exp').attr('y',y).attr('font-size',12)
+			/*
 			y+=h
 			g.append('text').text('automatically').attr('y',y).attr('font-size',12)
+			*/
 		}
 
 		return expbarwidth + xspace
