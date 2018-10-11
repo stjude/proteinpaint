@@ -1594,7 +1594,7 @@ export function detailtable_singlesample(p) {
 
 	mayaddexpressionrank( p, lst )
 
-	mayaddrnabamase( p, lst )
+	mayAddRnabamGenease( p, lst )
 
 	client.make_table_2col( p.holder, lst )
 }
@@ -1655,7 +1655,7 @@ function mayaddRnabamstatusForsnp ( tk, m, samplename, lst ) {
 
 
 
-function mayaddrnabamase ( p, lst ) {
+function mayAddRnabamGenease ( p, lst ) {
 	// may add ase status from rna bam
 	const tk = p.tk
 	if(!tk) return
@@ -1668,6 +1668,7 @@ function mayaddrnabamase ( p, lst ) {
 	for(const g of sbam.genes) {
 		const lst = [
 			'<td><b>'+g.gene+'</b></td>'
+			+'<td><span style="font-size:.8em;opacity:.5">RPKM</span> '+g.rpkm+'</td>'
 			+'<td>'
 		]
 		if(g.estat.ase_uncertain) {
@@ -1683,7 +1684,7 @@ function mayaddrnabamase ( p, lst ) {
 	}
 	if(rows.length) {
 		lst.push({
-			k:'Gene ASE',
+			k:'Gene expression',
 			v:'<table>'+rows.join('')+'</table>'
 		})
 	}

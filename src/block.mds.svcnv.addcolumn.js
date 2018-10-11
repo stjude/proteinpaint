@@ -109,6 +109,17 @@ export function render_multi_genebar( tk, block) {
 			}
 		}
 	}
+	if( tk.checkrnabam ) {
+		for(const s in tk.checkrnabam.samples) {
+			const sbam = tk.checkrnabam.samples[s]
+			if(sbam.genes) {
+				for(const g of sbam.genes) {
+					genes_auto.add( g.gene )
+				}
+			}
+		}
+	}
+
 
 	const genes_fixed = tk.gecfg ? tk.gecfg.fixed : []
 
@@ -165,6 +176,14 @@ export function render_multi_genebar( tk, block) {
 						anygenehasase=true
 					}
 				}
+			}
+		}
+	}
+	if( tk.checkrnabam ) {
+		for(const s in tk.checkrnabam.samples) {
+			const sbam = tk.checkrnabam.samples[s]
+			if( sbam.genes && sbam.genes.find( i=> i.gene == autogenename ) ) {
+				anygenehasase = true
 			}
 		}
 	}
@@ -365,7 +384,21 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 	if( autogenename ) {
 
 		let minvalue=0
-		let maxvalue=100
+		let maxvalue=100 // hardcoded rank
+		
+		if( tk.checkrnabam ) {
+			// use rpkm instead
+			maxvalue = 0
+			for(const s in tk.checkrnabam.samples) {
+				const sbam = tk.checkrnabam.samples[s]
+				if(sbam.genes) {
+					const g = sbam.genes.find( i=> i.gene==autogenename )
+					if( g ) {
+						maxvalue = Math.max( maxvalue, g.rpkm )
+					}
+				}
+			}
+		}
 
 		for(const g of tk.samplegroups) {
 
@@ -420,21 +453,7 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 								.clear()
 								.show(d3event.clientX, d3event.clientY)
 
-							const lst=[{k:'Sample',v:s.samplename}]
-							may_add_sampleannotation( s.samplename, tk, lst )
-
-							lst.push({
-								k: autogenename+' rank',
-								v:client.ranksays(v.rank)
-							})
-							lst.push({
-								k: autogenename+' '+tk.gecfg.datatype,
-								v:v.value
-							})
-
-							const table = client.make_table_2col(tk.tktip.d,lst)
-
-							expressionstat.showsingleitem_table( v, tk.gecfg, table )
+							genebar_printtooltip( autogenename, v, s, tk.tktip.d, tk )
 
 							multi_sample_addhighlight(s)
 						})
@@ -453,6 +472,49 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 						})
 					}
 				}
+				else if( tk.checkrnabam ) {
+
+					const sbam = tk.checkrnabam.samples[ s.samplename ]
+					if( sbam && sbam.genes ) {
+						const gene = sbam.genes.find( i=> i.gene == autogenename )
+						if( gene ) {
+
+							// draw bar for gene rpkm & ase from rna bam
+							const bar=row.append('rect')
+								.attr('fill',  expressionstat.ase_color( gene, tk.gecfg ) ) // bar color set by ase status
+								.attr('width', expbarwidth * gene.rpkm / maxvalue  )
+								.attr('height', s.height)
+								.attr('shape-rendering','crispEdges')
+							const cover = row.append('rect')
+								.attr('fill',  coverbarcolor_silent)
+								.attr('fill-opacity',.1)
+								.attr('width',expbarwidth)
+								.attr('height', s.height)
+
+							if(tk.isfull) {
+								s.columnbars.push(cover)
+							}
+
+							cover.on('mouseover',()=>{
+								tk.tktip
+									.clear()
+									.show(d3event.clientX, d3event.clientY)
+
+								genebar_printtooltip( autogenename, gene, s, tk.tktip.d, tk )
+
+								multi_sample_addhighlight(s)
+							})
+							.on('mouseout',()=>{
+								tk.tktip.hide()
+								multi_sample_removehighlight(s)
+							})
+							.on('click',()=>{
+								rnabam_click_genebar( gene, s, tk, block )
+							})
+						}
+					}
+
+				}
 
 				// done this sample
 				y += s.height + tk.rowspace
@@ -469,7 +531,7 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 			axis: headg.append('g').call( axisTop().scale(
 				scaleLinear().domain([minvalue,maxvalue]).range([0,expbarwidth])
 				)
-				.tickValues([0,50,100])
+				.tickValues([0,maxvalue])
 				.tickSize(ticksize)
 				),
 			fontsize:fontsize,
@@ -482,7 +544,7 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 			.attr('y',-(fontsize+labelpad+ticksize+axispad))
 			.attr('font-family',client.font)
 			.attr('font-size',fontsize)
-			.text(autogenename + ' rank')
+			.text(autogenename + ' ' + (tk.checkrnabam ? 'RPKM' : 'rank') )
 			.attr('class','sja_clbtext')
 			.on('click',()=>{
 
@@ -1053,4 +1115,90 @@ function findgene4fix_getsamplevalue( gm, tk, block) {
 
 	return client.dofetch('mdssvcnv', arg)
 	.then(data=>{ return data })
+}
+
+
+
+function genebar_printtooltip ( genename, v, s, holder, tk ) {
+	const lst=[{k:'Sample',v:s.samplename}]
+	may_add_sampleannotation( s.samplename, tk, lst )
+
+	if( tk.checkrnabam ) {
+		lst.push({
+			k: genename+' '+tk.gecfg.datatype,
+			v: v.rpkm
+		})
+	} else {
+		lst.push({
+			k: genename+' rank',
+			v: client.ranksays(v.rank)
+		})
+		lst.push({
+			k: genename+' '+tk.gecfg.datatype,
+			v: v.value
+		})
+	}
+	const table = client.make_table_2col( holder, lst )
+	expressionstat.showsingleitem_table( v, tk.gecfg, table )
+}
+
+
+
+
+function rnabam_click_genebar ( gene, sample, tk, block ) {
+	/*
+	in rna bam mode,
+	clicking on a gene bar to launch new panel
+	showing the ase track of this sample at this gene,
+	and gene ase snp details
+
+	gene: obj of checkrnabam.samples[].genes[]
+	sample: obj of .samplegroups[].samples[]
+
+	*/
+	const pane = client.newpane({x:window.innerWidth/2,y:100})
+	pane.header.text( gene.gene+' in '+sample.samplename )
+
+	const div = pane.body.append('div').style('margin','10px 0px 20px 0px')
+
+	if( tk.checkrnabam && tk.checkvcf ) {
+
+		const sbam = tk.checkrnabam.samples[ sample.samplename ]
+
+		if( sbam ) {
+
+			const arg={
+				style:{
+					margin:'0px'
+				},
+				tklst:[
+					{
+					type: common.tkt.ase,
+					name: sample.samplename+' ASE',
+					samplename: sample.samplename,
+					rnabamfile: sbam.file,
+					rnabamurl: sbam.url,
+					rnabamindexURL: sbam.rnabamindexURL,
+					vcffile: tk.checkvcf.file,
+					vcfurl: tk.checkvcf.url,
+					vcfindexURL: tk.checkvcf.indexURL,
+					}
+				],
+				holder: div,
+				chr: gene.chr,
+				start: gene.start,
+				stop: gene.stop,
+			}
+
+			client.first_genetrack_tolist( block.genome, arg.tklst )
+
+			block.newblock( arg )
+		} else {
+			div.text('sbam missing')
+		}
+	} else {
+		div.text('checkrnabam or checkvcf missing')
+	}
+
+	genebar_printtooltip( gene.gene, gene, sample, pane.body, tk )
 }
