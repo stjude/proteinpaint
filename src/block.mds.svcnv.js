@@ -2075,7 +2075,8 @@ export function multi_rnabam_asestatus ( tk ) {
 		const sbam = tk.checkrnabam.samples[s]
 		if( sbam.genes ) {
 			for(const gene of sbam.genes ) {
-				expressionstat.measure_rnabam( gene, tk.gecfg )
+				//expressionstat.measure_rnabam( gene, tk.gecfg )
+				expressionstat.measure( gene, tk.gecfg )
 			}
 		}
 	}
@@ -2770,7 +2771,7 @@ function makeTk(tk, block) {
 		} else if( tk.checkrnabam ) {
 			hasexpression = true
 			tk.gecfg = {
-				datatype: 'FPKM'
+				datatype: 'RPKM'
 			}
 		}
 
