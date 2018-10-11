@@ -2952,8 +2952,6 @@ function configPanel(tk, block) {
 	tk.tkconfigtip.clear()
 		.showunder(tk.config_handle.node())
 
-	const holder=tk.tkconfigtip.d
-
 	may_show_samplematrix_button( tk, block)
 
 	may_allow_modeswitch( tk, block )
@@ -2972,6 +2970,8 @@ function configPanel(tk, block) {
 function configPanel_cnvloh ( tk, block ) {
 
 	if( tk.nocnvlohsv ) return
+
+	const holder=tk.tkconfigtip.d
 /*
 	// filter cnv with sv
 	{
