@@ -530,7 +530,7 @@ export function bulkembed(arg) {
 			dsset: {}
 		}
 		for(const k in arg) {
-			if(k=='snvindel' || k=='svjson' || k=='cnv' || k=='mutationset') {
+			if(k=='snvindel' || k=='svjson' || k=='cnv' || k=='sv' || k=='mutationset') {
 				// don't copy these to cohort
 				continue
 			}
@@ -541,7 +541,7 @@ export function bulkembed(arg) {
 
 	.then( cohort => {
 
-		if(!arg.snvindel && !arg.svjson && !arg.cnv) return cohort
+		if(!arg.snvindel && !arg.svjson && !arg.cnv && !arg.sv) return cohort
 
 		/************ parse data by lumped text string, tabular format
 		*/
@@ -557,6 +557,11 @@ export function bulkembed(arg) {
 			const e = parse_svjson(arg.svjson, flag)
 			if(e) throw({message: 'error in svjson data: '+e})
 			delete arg.svjson
+		}
+		if(arg.sv) {
+			const e = parse_sv(arg.sv, flag)
+			if(e) throw({message: 'error in svjson data: '+e})
+			delete arg.sv
 		}
 		if(arg.cnv) {
 			const e = parse_cnv(arg.cnv, flag)
