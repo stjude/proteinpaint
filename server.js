@@ -4007,6 +4007,7 @@ async function handle_mdssvcnv(req,res) {
 async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 	/*
 	hardcoded to query first region
+	irrelevant to samplegroup from svcnv query
 	*/
 
 	if(!dsquery.checkvcf) return
@@ -4030,7 +4031,17 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 		}
 	}
 
-	const snps = await handle_mdssvcnv_rnabam_getsnp( dsquery, region.chr, start, stop )
+	await handle_mdssvcnv_rnabam_do( genes, region.chr, start, stop, dsquery, result )
+}
+
+
+
+async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, result ) {
+	/* actually do
+	works for normal query and adding fixed gene in expression column
+	*/
+
+	const snps = await handle_mdssvcnv_rnabam_getsnp( dsquery, chr, start, stop )
 	const testlines = []
 
 	for( const samplename in dsquery.checkrnabam.samples ) {
@@ -4050,7 +4061,7 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 		}
 		if( sbam.hetsnps.length>0 ) {
 			// do one pileup for these snp over this bam
-			await handle_mdssvcnv_rnabam_pileup( sbam, sbam.hetsnps, region.chr )
+			await handle_mdssvcnv_rnabam_pileup( sbam, sbam.hetsnps, chr )
 			for( const m of sbam.hetsnps ) {
 				if( m.rnacount.nocoverage ) continue
 				testlines.push( samplename+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t\t\t\t\t\t\t\t'+m.rnacount.ref+'\t'+m.rnacount.alt )
@@ -4073,7 +4084,7 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 			// one obj for each gene
 			const outputgene = {
 				gene: genename,
-				chr: region.chr,
+				chr: chr,
 				start: genepos.start,
 				stop: genepos.stop,
 			}
@@ -4111,7 +4122,7 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 				}
 			}
 
-			const genereadcount = await handle_mdssvcnv_rnabam_genereadcount( sbam, region.chr, genepos.start, genepos.stop )
+			const genereadcount = await handle_mdssvcnv_rnabam_genereadcount( sbam, chr, genepos.start, genepos.stop )
 
 			outputgene.rpkm = ( genereadcount / ((sbam.totalreads/1000000)*(genepos.stop-genepos.start)/1000) )
 			outputgene.snps = thishetsnp
@@ -6377,6 +6388,28 @@ async function mdssvcnv_exit_getexpression4gene( req, res, gn, ds, dsquery ) {
 
 	try {
 
+		const q = req.query.getexpression4gene
+		if(!q.chr) throw 'chr missing'
+		if(!Number.isFinite(q.start)) throw 'invalid start pos'
+		if(!Number.isFinite(q.stop)) throw 'invalid stop pos'
+		if(!q.name) throw 'unknown gene name'
+		q.name = q.name.toLowerCase()
+
+		if( dsquery.checkrnabam ) {
+
+			const result = {}
+			await handle_mdssvcnv_rnabam_do( 
+				new Map([ [ q.name, {start:q.start, stop:q.stop} ] ]),
+				q.chr,
+				q.start,
+				q.stop,
+				dsquery,
+				result
+			)
+			res.send( result )
+			return
+		}
+
 		let _c 
 		if(dsquery.iscustom) {
 			_c=dsquery.checkexpressionrank
@@ -6387,12 +6420,6 @@ async function mdssvcnv_exit_getexpression4gene( req, res, gn, ds, dsquery ) {
 		}
 		if( !_c ) throw 'missing expression data source'
 
-		const q = req.query.getexpression4gene
-		if(!q.chr) throw 'chr missing'
-		if(!Number.isFinite(q.start)) throw 'invalid start pos'
-		if(!Number.isFinite(q.stop)) throw 'invalid stop pos'
-		if(!q.name) throw 'unknown gene name'
-		q.name = q.name.toLowerCase()
 
 		const dir = await cache_index_promise( _c.file ? null : (_c.indexURL || _c.url+'.tbi' ) )
 
