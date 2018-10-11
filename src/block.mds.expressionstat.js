@@ -44,39 +44,8 @@ export function init_config(cfg) {
 
 
 
-export function measure_rnabam(v, cfg) {
-	/*
-	for on the fly partial ase status of rna bam
-	no outlier high exp
 
-	v{} is from tk.checkrnabam.samples{}.genes[]
-		geometricmean
-		mean_delta
-		ase_markers
-	*/
-	if(!cfg) return
-	v.estat={}
 
-	if(cfg.ase) {
-		if(v.geometricmean <= cfg.ase.qvalue) {
-			if(v.mean_delta >= cfg.ase.meandelta_monoallelic) {
-				v.estat.ase_monoallelic=true
-			} else {
-				v.estat.ase_uncertain=true
-			}
-		} else {
-			if(v.ase_markers == cfg.ase.asemarkernumber_biallelic) {
-				// no longer post a min cutoff for mean_delta
-				// v.ase.mean_delta <= cfg.ase.meandelta_biallelic
-				v.estat.ase_biallelic=true
-			} else {
-				v.estat.ase_uncertain=true
-			}
-		}
-	} else {
-		v.estat.ase_noinfo=true
-	}
-}
 
 
 export function measure(v, cfg) {
@@ -94,7 +63,11 @@ export function measure(v, cfg) {
 	v.estat={}
 
 	if(v.ase && cfg.ase) {
-		if(v.ase.qvalue <= cfg.ase.qvalue) {
+
+		const qvalue = v.ase.qvalue || v.ase.geometricmean
+		// rna bam mode uses geometricmean instead of qvalue
+
+		if( qvalue <= cfg.ase.qvalue ) {
 			if(v.ase.mean_delta >= cfg.ase.meandelta_monoallelic) {
 				v.estat.ase_monoallelic=true
 			} else {
@@ -196,12 +169,57 @@ export function showsingleitem_table(v, cfg, table) {
 				+'<br>(allele-specific expression)'
 			)
 
-		const lst=[]
-		for(const k in v.ase) {
-			lst.push({k:k, v:v.ase[k]})
+		const lst=[
+			{
+				k: '#SNPs heterozygous in DNA',
+				v: v.ase.markers
+			},
+			{
+				k: '#SNPs showing ASE in RNA',
+				v: v.ase.ase_markers
+			},
+			{
+				k: 'Mean delta of ASE SNPs',
+				v: v.ase.mean_delta
+			}
+		]
+
+		if( v.ase.qvalue ) {
+			lst.push({
+				k: 'Q-value',
+				v: v.ase.qvalue
+			})
+		} else if( v.ase.geometricmean ) {
+			// in rna bam mode
+			lst.push({
+				k: 'Geometric mean of binomial P-values of ASE SNPs',
+				v: v.ase.geometricmean
+			})
 		}
 		const td=tr.append('td')
 		client.make_table_2col(td, lst)
+
+		if( v.ase.geometricmean && v.snps ) {
+			// in rna bam mode; v is one gene obj, print snps
+			const lst = []
+			for(const m of v.snps ) {
+				lst.push(
+					'<tr>'
+					+'<td>'+m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt+'</td>'
+					+'<td>'+m.dnacount.ref+'/'+m.dnacount.alt+'</td>'
+					+'<td>'+( m.rnacount.nocoverage ? 'No coverage' : m.rnacount.ref+'/'+m.rnacount.alt+' <span style="font-size:.8em;opacity:.5">Binomial P-value</span> '+m.rnacount.pvalue)
+					+'</td>'
+					+'</tr>'
+				)
+			}
+			table.append('tr')
+				.append('td')
+				.attr('colspan',3)
+				.html( '<table><tr style="opacity:.5"><td>SNP</td><td>DNA</td><td>RNA</td></tr>'
+					+lst.join('')
+					+'</table>'
+					)
+		}
 
 	} else {
 
