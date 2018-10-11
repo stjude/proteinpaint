@@ -207,15 +207,17 @@ export function showsingleitem_table(v, cfg, table) {
 					'<tr>'
 					+'<td>'+m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt+'</td>'
 					+'<td>'+m.dnacount.ref+'/'+m.dnacount.alt+'</td>'
-					+'<td>'+( m.rnacount.nocoverage ? 'No coverage' : m.rnacount.ref+'/'+m.rnacount.alt+' <span style="font-size:.8em;opacity:.5">Binomial P-value</span> '+m.rnacount.pvalue)
+					+'<td>'+( m.rnacount.nocoverage ? '<span style="font-size:.8em;opacity:.5">No coverage</span>' : m.rnacount.ref+'/'+m.rnacount.alt)
 					+'</td>'
+					+'<td>'+(m.rnacount.nocoverage ? '-' : m.rnacount.pvalue)+'</td>'
 					+'</tr>'
 				)
 			}
 			table.append('tr')
 				.append('td')
 				.attr('colspan',3)
-				.html( '<table><tr style="opacity:.5"><td>SNP</td><td>DNA</td><td>RNA</td></tr>'
+				.html( '<table style="margin-top:10px;border:solid 1px #ededed;border-spacing:5px;">'
+					+'<tr style="opacity:.5"><td>SNP</td><td>DNA</td><td>RNA</td><td>Binomial test P-value</td></tr>'
 					+lst.join('')
 					+'</table>'
 					)
