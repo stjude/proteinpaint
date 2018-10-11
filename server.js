@@ -3993,6 +3993,7 @@ async function handle_mdssvcnv(req,res) {
 	if( dsquery.checkrnabam ) {
 		// should be only one querying region
 		await handle_mdssvcnv_rnabam( req.query.rglst[0], gn, dsquery, result )
+		// added result.checkrnabam[{}]
 	} else {
 		handle_mdssvcnv_addexprank( result, ds, expressionrangelimit, gene2sample2obj  )
 	}
@@ -4040,68 +4041,77 @@ async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 			const het = handle_ase_hetsnp4sample( m, samplename )
 			if( het ) sbam.hetsnps.push( het )
 		}
-		if( sbam.hetsnps.length==0 ) continue
 
-		// do one pileup for these snp over this bam
 		if( sbam.url ) {
+			// even if no het snp still init dir, will calculate rpkm later for all bams
 			sbam.dir = await cache_index_promise( sbam.indexURL || sbam.url+'.bai' )
 		}
-		await handle_mdssvcnv_rnabam_pileup( sbam, sbam.hetsnps, region.chr )
-
-		for( const m of sbam.hetsnps ) {
-			if( m.rnacount.nocoverage ) continue
-			testlines.push( samplename+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t\t\t\t\t\t\t\t'+m.rnacount.ref+'\t'+m.rnacount.alt )
+		if( sbam.hetsnps.length>0 ) {
+			// do one pileup for these snp over this bam
+			await handle_mdssvcnv_rnabam_pileup( sbam, sbam.hetsnps, region.chr )
+			for( const m of sbam.hetsnps ) {
+				if( m.rnacount.nocoverage ) continue
+				testlines.push( samplename+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t\t\t\t\t\t\t\t'+m.rnacount.ref+'\t'+m.rnacount.alt )
+			}
 		}
 	}
 
-	await handle_mdssvcnv_rnabam_binom( testlines, dsquery.checkrnabam.samples )
+	if( testlines.length>0 ) {
+		await handle_mdssvcnv_rnabam_binom( testlines, dsquery.checkrnabam.samples )
+	}
 
 	result.checkrnabam = []
 
 	for( const samplename in dsquery.checkrnabam.samples ) {
 		const sbam = dsquery.checkrnabam.samples[ samplename ]
-		if( sbam.hetsnps.length==0 ) continue
 
 		const thisgenes = []
 		for( const [genename, genepos] of genes ) {
+
+			// one obj for each gene
+			const outputgene = {
+				gene: genename,
+				chr: region.chr,
+				start: genepos.start,
+				stop: genepos.stop,
+			}
 
 			// het snps within this gene
 			const thishetsnp = sbam.hetsnps.filter( m=> m.pos>=genepos.start && m.pos<=genepos.stop )
 			// het snps covered in rna
 			const rnasnp = thishetsnp.filter( m=> !m.rnacount.nocoverage )
-			if( rnasnp.length == 0 ) continue
 
-			const deltasum = rnasnp.reduce((i,j) => i + Math.abs( j.rnacount.f - 0.5 ), 0)
+			if( rnasnp.length>0 ) {
 
-			// geometric mean
-			let mean = null
-			// number of ase markers by pvalue cutoff 0.05, hardcoded!!
-			let ase_markers = 0
-			for(const s of rnasnp) {
-				if( s.rnacount.pvalue!=undefined ) {
+				const deltasum = rnasnp.reduce((i,j) => i + Math.abs( j.rnacount.f - 0.5 ), 0)
+				outputgene.mean_delta = deltasum / rnasnp.length
 
-					if(mean==null) mean = s.rnacount.pvalue
-					else mean *= s.rnacount.pvalue
+				// geometric mean
+				let mean = null
+				// number of ase markers by pvalue cutoff 0.05, hardcoded!!
+				let ase_markers = 0
+				for(const s of rnasnp) {
+					if( s.rnacount.pvalue!=undefined ) {
 
-					if( s.rnacount.pvalue <= 0.05 ) {
-						ase_markers++
+						if(mean==null) mean = s.rnacount.pvalue
+						else mean *= s.rnacount.pvalue
+
+						if( s.rnacount.pvalue <= 0.05 ) {
+							ase_markers++
+						}
 					}
 				}
+
+				outputgene.ase_markers = ase_markers
+				outputgene.geometricmean = Math.pow( mean, 1/rnasnp.length )
 			}
 
 			const genereadcount = await handle_mdssvcnv_rnabam_genereadcount( sbam, region.chr, genepos.start, genepos.stop )
 
-			thisgenes.push({
-				gene: genename,
-				rpkm: ( genereadcount / ((sbam.totalreads/1000000)*(genepos.stop-genepos.start)/1000) ),
-				chr: region.chr,
-				start: genepos.start,
-				stop: genepos.stop,
-				snps: thishetsnp,
-				ase_markers: ase_markers,
-				mean_delta: deltasum / rnasnp.length,
-				geometricmean: Math.pow( mean, 1/rnasnp.length )
-			})
+			outputgene.rpkm = ( genereadcount / ((sbam.totalreads/1000000)*(genepos.stop-genepos.start)/1000) )
+			outputgene.snps = thishetsnp
+
+			thisgenes.push( outputgene )
 		}
 		if(thisgenes.length) {
 			result.checkrnabam.push( {
