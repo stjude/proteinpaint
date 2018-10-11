@@ -50,11 +50,12 @@ export function makeTk_legend(block, tk) {
 
 	create_mclass( tk )
 
-	create_cnv( tk )
-
-	create_loh( tk )
-
-	create_svchrcolor( tk )
+	if( !tk.nocnvlohsv ) {
+		// has svcnv file
+		create_cnv( tk )
+		create_loh( tk )
+		create_svchrcolor( tk )
+	}
 
 	create_sampleAttribute( tk )
 
@@ -131,7 +132,9 @@ function create_mclass(tk) {
 function create_cnv(tk) {
 	/*
 	cnv log ratio color scale
+
 	*/
+
 	const leftpad = 50
 
 	//// cnv color scale
@@ -472,6 +475,11 @@ function create_alleleAttribute(tk, block) {
 
 
 function may_legend_svchr(tk) {
+
+	if( !tk.legend_svchrcolor ) {
+		// not there when there is no svcnv file
+		return
+	}
 
 	tk.legend_svchrcolor.holder.selectAll('*').remove()
 	if(tk.legend_svchrcolor.interchrs.size==0) return

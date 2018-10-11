@@ -378,8 +378,10 @@ function loadTk_do( tk, block ) {
 		}
 
 		// preps common to both single and multi sample
-		tk.legend_svchrcolor.interchrs.clear()
-		tk.legend_svchrcolor.row.style('display','none')
+		if( tk.legend_svchrcolor ) {
+			tk.legend_svchrcolor.interchrs.clear()
+			tk.legend_svchrcolor.row.style('display','none')
+		}
 
 
 		if(tk.singlesample) {
@@ -1674,18 +1676,20 @@ function render_multi_cnvloh(tk,block) {
 		yoff += samplegroup.height + thisgroupypad*2 + groupspace
 	}
 
-	if(tk.cnvcolor.cnvmax==novalue_max_cnvloh) {
-		tk.cnvcolor.cnvlegend.row.style('display','none')
-	} else {
-		draw_colorscale_cnv(tk)
-	}
-
-	if(tk.cnvcolor.segmeanmax==novalue_max_cnvloh) {
-		if(tk.cnvcolor.lohlegend) {
-			tk.cnvcolor.lohlegend.row.style('display','none')
+	if( !tk.nocnvlohsv ) {
+		if(tk.cnvcolor.cnvmax==novalue_max_cnvloh) {
+			tk.cnvcolor.cnvlegend.row.style('display','none')
+		} else {
+			draw_colorscale_cnv(tk)
 		}
-	} else {
-		draw_colorscale_loh(tk)
+
+		if(tk.cnvcolor.segmeanmax==novalue_max_cnvloh) {
+			if(tk.cnvcolor.lohlegend) {
+				tk.cnvcolor.lohlegend.row.style('display','none')
+			}
+		} else {
+			draw_colorscale_loh(tk)
+		}
 	}
 
 	return yoff
@@ -2630,15 +2634,31 @@ function makeTk(tk, block) {
 		tk.sampleAttribute = tk.mds.sampleAttribute
 		tk.locusAttribute = tk.mds.locusAttribute
 		tk.alleleAttribute = tk.mds.alleleAttribute
-	}
 
+		tk.nocnvlohsv = true
+		if( tk.mds.queries ) {
+			for(const k in tk.mds.queries) {
+				if(tk.mds.queries[k].type == common.tkt.mdssvcnv ) {
+					// mds has a svcnv track
+					delete tk.nocnvlohsv
+				}
+			}
+		}
+
+	} else if( tk.iscustom ) {
+		if( !tk.file && !tk.url ) {
+			// custom track without svcnv file, should be in rnabam mode
+			// do not show legend and config for cnv loh sv fusion
+			tk.nocnvlohsv = true
+		}
+	}
 
 
 	if(!tk.singlesample) {
 		// in multi-sample
 
 		tk.samplematrices = []
-		
+
 		// allow hidding some labels
 		// do not override config from native dataset
 		if( tk.multihidelabel_vcf==undefined ) {
@@ -2669,7 +2689,6 @@ function makeTk(tk, block) {
 			}
 		}
 	}
-
 
 
 	tk.tip2 = new client.Menu({padding:'0px'})
@@ -2709,8 +2728,8 @@ function makeTk(tk, block) {
 		tk.cnvrightg = tk.gright.append('g')
 	}
 
-	tk.cnvcolor={}
 
+	tk.cnvcolor={}
 	{
 		const t = d3rgb(tk.gaincolor)
 		tk.cnvcolor.gain = {
@@ -2771,7 +2790,7 @@ function makeTk(tk, block) {
 		} else if( tk.checkrnabam ) {
 			hasexpression = true
 			tk.gecfg = {
-				datatype: 'RPKM'
+				datatype: 'RPKM' // hardcoded
 			}
 		}
 
@@ -2943,7 +2962,16 @@ function configPanel(tk, block) {
 
 	may_allow_showhidelabel_multi( tk, block )
 
+	configPanel_cnvloh( tk, block )
 
+	// TODO rna bam
+}
+
+
+
+function configPanel_cnvloh ( tk, block ) {
+
+	if( tk.nocnvlohsv ) return
 /*
 	// filter cnv with sv
 	{
@@ -3285,6 +3313,7 @@ function may_allow_showhidelabel_multi(tk, block) {
 	const row=tk.tkconfigtip.d.append('div')
 		.style('margin-bottom','20px')
 	{
+		// TODO if no vcf tk, do not show it
 		const id = Math.random().toString()
 		row.append('input')
 			.attr('type','checkbox')
@@ -3299,39 +3328,41 @@ function may_allow_showhidelabel_multi(tk, block) {
 			.attr('class','sja_clbtext')
 			.html('&nbsp;SNV/indel')
 	}
-	{
-		const id = Math.random().toString()
-		row.append('input')
-			.attr('type','checkbox')
-			.style('margin-left','20px')
-			.attr('id',id)
-			.property('checked', !tk.multihidelabel_sv)
-			.on('change',()=>{
-				tk.multihidelabel_sv = !tk.multihidelabel_sv
-				render_samplegroups(tk, block)
-			})
-		row.append('label')
-			.attr('for',id)
-			.attr('class','sja_clbtext')
-			.html('&nbsp;DNA SV')
+
+	if( !tk.nocnvlohsv ) {
+		{
+			const id = Math.random().toString()
+			row.append('input')
+				.attr('type','checkbox')
+				.style('margin-left','20px')
+				.attr('id',id)
+				.property('checked', !tk.multihidelabel_sv)
+				.on('change',()=>{
+					tk.multihidelabel_sv = !tk.multihidelabel_sv
+					render_samplegroups(tk, block)
+				})
+			row.append('label')
+				.attr('for',id)
+				.attr('class','sja_clbtext')
+				.html('&nbsp;DNA SV')
+		}
+		{
+			const id = Math.random().toString()
+			row.append('input')
+				.attr('type','checkbox')
+				.style('margin-left','20px')
+				.attr('id',id)
+				.property('checked', !tk.multihidelabel_fusion)
+				.on('change',()=>{
+					tk.multihidelabel_fusion = !tk.multihidelabel_fusion
+					render_samplegroups(tk, block)
+				})
+			row.append('label')
+				.attr('for',id)
+				.attr('class','sja_clbtext')
+				.html('&nbsp;RNA fusion')
+		}
 	}
-	{
-		const id = Math.random().toString()
-		row.append('input')
-			.attr('type','checkbox')
-			.style('margin-left','20px')
-			.attr('id',id)
-			.property('checked', !tk.multihidelabel_fusion)
-			.on('change',()=>{
-				tk.multihidelabel_fusion = !tk.multihidelabel_fusion
-				render_samplegroups(tk, block)
-			})
-		row.append('label')
-			.attr('for',id)
-			.attr('class','sja_clbtext')
-			.html('&nbsp;RNA fusion')
-	}
-	// cnv
 }
 
 
