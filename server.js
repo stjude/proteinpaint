@@ -4006,6 +4006,7 @@ async function handle_mdssvcnv(req,res) {
 
 async function handle_mdssvcnv_rnabam ( region, genome, dsquery, result ) {
 	/*
+	runs on a vcf matrix, and one rna bam file for each sample
 	hardcoded to query first region
 	irrelevant to samplegroup from svcnv query
 	*/
@@ -5982,6 +5983,9 @@ function handle_ase_hetsnp4sample ( m, samplename ) {
 	if( !sobj ) return
 
 	if( sobj.AD ) {
+
+		// TODO parameters
+
 		const refcount = sobj.AD[ m.ref ]
 		const altcount = sobj.AD[ m.alt ]
 		if( refcount >= 2 && altcount >=2 ) {

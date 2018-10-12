@@ -2821,6 +2821,10 @@ function makeTk(tk, block) {
 		expressionstat.init_config( tk.gecfg )
 	}
 
+	if( tk.checkrnabam ) {
+		// TODO defaults for parameters
+	}
+
 	// end of makeTk
 }
 
@@ -2962,7 +2966,18 @@ function configPanel(tk, block) {
 
 	configPanel_cnvloh( tk, block )
 
+	configPanel_rnabam( tk, block )
+
 	// TODO rna bam
+}
+
+
+
+function configPanel_rnabam ( tk, block ) {
+	/* parameters
+	min read count for het dna
+	...
+	*/
 }
 
 
