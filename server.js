@@ -6397,16 +6397,25 @@ async function mdssvcnv_exit_getexpression4gene( req, res, gn, ds, dsquery ) {
 
 		if( dsquery.checkrnabam ) {
 
-			const result = {}
+			const tmp = {}
 			await handle_mdssvcnv_rnabam_do( 
 				new Map([ [ q.name, {start:q.start, stop:q.stop} ] ]),
 				q.chr,
 				q.start,
 				q.stop,
 				dsquery,
-				result
+				tmp
 			)
-			res.send( result )
+			const sample2rnabam = {}
+			for(const s of tmp.checkrnabam) {
+				if( s.genes ) {
+					const g = s.genes.find( i=> i.gene == q.name )
+					if( g ) {
+						sample2rnabam[ s.sample ] = g
+					}
+				}
+			}
+			res.send( { sample2rnabam : sample2rnabam } )
 			return
 		}
 
