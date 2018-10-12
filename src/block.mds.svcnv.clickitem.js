@@ -1665,23 +1665,54 @@ function mayAddRnabamGenease ( p, lst ) {
 	if( !sbam ) return
 	if(!sbam.genes) return
 	const rows = []
+
 	for(const g of sbam.genes) {
 		const lst = [
 			'<td><b>'+g.gene+'</b></td>'
 			+'<td><span style="font-size:.8em;opacity:.5">RPKM</span> '+g.rpkm+'</td>'
 			+'<td>'
 		]
-		if(g.estat.ase_uncertain) {
-			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_uncertain+';color:white">ASE uncertain</span>')
-		} else if(g.estat.ase_biallelic) {
-			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_biallelic+';color:white">Bi-allelic</span>')
-		} else if(g.estat.ase_monoallelic) {
-			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_monoallelic+';color:white">Mono-allelic</span>')
+		if(g.estat) {
+			if(g.estat.ase_uncertain) {
+				lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_uncertain+';color:white">ASE uncertain</span>')
+			} else if(g.estat.ase_biallelic) {
+				lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_biallelic+';color:white">Bi-allelic</span>')
+			} else if(g.estat.ase_monoallelic) {
+				lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_monoallelic+';color:white">Mono-allelic</span>')
+			}
 		}
 		lst.push('</td>')
 
 		rows.push( '<tr>'+lst.join('')+'</tr>' )
 	}
+	
+	if( tk.gecfg.fixed ) {
+		for(const gene of tk.gecfg.fixed ) {
+			if( gene.sample2rnabam ) {
+				const g4s = gene.sample2rnabam[ p.sample.samplename ]
+				if( g4s ) {
+					const lst = [
+						'<td><b>'+gene.gene+'</b></td>'
+						+'<td><span style="font-size:.8em;opacity:.5">RPKM</span> '+g4s.rpkm+'</td>'
+						+'<td>'
+					]
+					if(g4s.estat) {
+						if(g4s.estat.ase_uncertain) {
+							lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_uncertain+';color:white">ASE uncertain</span>')
+						} else if(g4s.estat.ase_biallelic) {
+							lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_biallelic+';color:white">Bi-allelic</span>')
+						} else if(g4s.estat.ase_monoallelic) {
+							lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_monoallelic+';color:white">Mono-allelic</span>')
+						}
+					}
+					lst.push('</td>')
+
+					rows.push( '<tr>'+lst.join('')+'</tr>' )
+				}
+			}
+		}
+	}
+
 	if(rows.length) {
 		lst.push({
 			k:'Gene expression',
