@@ -401,7 +401,7 @@ export function trackclear(tk) {
 	if(tk.singlesample) {
 		tk.svvcf_g.selectAll('*').remove()
 		tk.cnv_g.selectAll('*').remove()
-		tk.cnvcolor.cnvlegend.row.style('display','none')
+		if(tk.cnvcolor.cnvlegend) tk.cnvcolor.cnvlegend.row.style('display','none')
 		if(tk.cnvcolor.lohlegend) tk.cnvcolor.lohlegend.row.style('display','none')
 		return
 	}
