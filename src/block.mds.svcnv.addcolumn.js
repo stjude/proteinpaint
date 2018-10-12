@@ -23,6 +23,9 @@ multi_show_geneboxplot
 ********************** INTERNAL
 genebar_config
 genebar_printtooltip
+addcolumn_autogene
+addcolumn_fixedgene
+addcolumn_attr
 
 
 add columns
@@ -481,37 +484,7 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 						if( gene ) {
 
 							// draw bar for gene rpkm & ase from rna bam
-							const bar=row.append('rect')
-								.attr('fill',  expressionstat.ase_color( gene, tk.gecfg ) ) // bar color set by ase status
-								.attr('width', expbarwidth * gene.rpkm / maxvalue  )
-								.attr('height', s.height)
-								.attr('shape-rendering','crispEdges')
-							const cover = row.append('rect')
-								.attr('fill',  coverbarcolor_silent)
-								.attr('fill-opacity',.1)
-								.attr('width',expbarwidth)
-								.attr('height', s.height)
-
-							if(tk.isfull) {
-								s.columnbars.push(cover)
-							}
-
-							cover.on('mouseover',()=>{
-								tk.tktip
-									.clear()
-									.show(d3event.clientX, d3event.clientY)
-
-								genebar_printtooltip( autogenename, gene, s, tk.tktip.d, tk )
-
-								multi_sample_addhighlight(s)
-							})
-							.on('mouseout',()=>{
-								tk.tktip.hide()
-								multi_sample_removehighlight(s)
-							})
-							.on('click',()=>{
-								rnabam_click_genebar( gene, s, tk, block )
-							})
+							drawgenebar_rnabam( expbarwidth, maxvalue, row, gene, s, tk, block )
 						}
 					}
 
@@ -639,6 +612,13 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 	const fontsize=12
 
 	let minvalue=0,maxvalue=100 // still rank
+	if( fixedgene.sample2rnabam ) {
+		// use rpkm instead
+		maxvalue = 0
+		for(const s in fixedgene.sample2rnabam) {
+			maxvalue = Math.max( maxvalue, fixedgene.sample2rnabam[ s ].rpkm )
+		}
+	}
 
 
 	for(const g of tk.samplegroups) {
@@ -651,87 +631,97 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 				.append('g')
 				.attr('transform','translate('+column_xoff+','+y+')')
 
-			const v = fixedgene.sample2rank[ s.samplename ]
-			if( v ) {
+			if( fixedgene.sample2rnabam ) {
 
-				const bar=row.append('rect')
-					.attr('fill',  expressionstat.ase_color( v, tk.gecfg ) ) // bar color set by ase status
-					.attr('width', expbarwidth * v.rank / maxvalue )
-					.attr('height', s.height)
-					.attr('shape-rendering','crispEdges')
-
-				if(tk.isfull) {
-					// only show dots for outlier status in full, not dense
-					if(v.estat.outlier) {
-						row.append('circle')
-							.attr('cx',expbarwidth)
-							.attr('cy', s.height/2)
-							.attr('r', s.height/2)
-							.attr('fill', tk.gecfg.outlier.color_outlier)
-					} else if(v.estat.outlier_asehigh) {
-						row.append('circle')
-							.attr('cx',expbarwidth)
-							.attr('cy', s.height/2)
-							.attr('r',  s.height/2)
-							.attr('fill', tk.gecfg.outlier.color_outlier_asehigh)
-					}
+				const gene = fixedgene.sample2rnabam[ s.samplename ]
+				if( gene ) {
+					drawgenebar_rnabam( expbarwidth, maxvalue, row, gene, s, tk, block )
 				}
 
-				const cover = row.append('rect')
-					.attr('fill',  coverbarcolor_silent)
-					.attr('fill-opacity',.1)
-					.attr('width',expbarwidth)
-					.attr('height', s.height)
+			} else {
 
-				if(tk.isfull) {
-					s.columnbars.push(cover)
-				}
+				const v = fixedgene.sample2rank[ s.samplename ]
+				if( v ) {
 
-				cover.on('mouseover',()=>{
-					tk.tktip
-						.clear()
-						.show(d3event.clientX, d3event.clientY)
+					const bar=row.append('rect')
+						.attr('fill',  expressionstat.ase_color( v, tk.gecfg ) ) // bar color set by ase status
+						.attr('width', expbarwidth * v.rank / maxvalue )
+						.attr('height', s.height)
+						.attr('shape-rendering','crispEdges')
 
-					const lst=[{k:'Sample',v:s.samplename}]
-					may_add_sampleannotation( s.samplename, tk, lst )
-
-					lst.push({
-						k: fixedgene.gene+' rank',
-						v:client.ranksays(v.rank)
-						})
-					lst.push({
-						k: fixedgene.gene+' '+tk.gecfg.datatype,
-						v: v.value
-						})
-
-					const table = client.make_table_2col(tk.tktip.d,lst)
-
-					expressionstat.showsingleitem_table( v, tk.gecfg, table )
-
-					multi_sample_addhighlight(s)
-				})
-				.on('mouseout',()=>{
-					tk.tktip.hide()
-					multi_sample_removehighlight(s)
-				})
-				.on('click',()=>{
-
-					// surely the coord of this fixed gene is not in cache
-					if(!tk.gene2coord) tk.gene2coord = {}
-					tk.gene2coord[ fixedgene.gene ] = {
-						chr: fixedgene.chr,
-						start: fixedgene.start,
-						stop: fixedgene.stop
+					if(tk.isfull) {
+						// only show dots for outlier status in full, not dense
+						if(v.estat.outlier) {
+							row.append('circle')
+								.attr('cx',expbarwidth)
+								.attr('cy', s.height/2)
+								.attr('r', s.height/2)
+								.attr('fill', tk.gecfg.outlier.color_outlier)
+						} else if(v.estat.outlier_asehigh) {
+							row.append('circle')
+								.attr('cx',expbarwidth)
+								.attr('cy', s.height/2)
+								.attr('r',  s.height/2)
+								.attr('fill', tk.gecfg.outlier.color_outlier_asehigh)
+						}
 					}
 
-					multi_show_geneboxplot({
-						gene: fixedgene.gene,
-						samplename: s.samplename,
-						value: v.value,
-						tk:tk,
-						block:block
+					const cover = row.append('rect')
+						.attr('fill',  coverbarcolor_silent)
+						.attr('fill-opacity',.1)
+						.attr('width',expbarwidth)
+						.attr('height', s.height)
+
+					if(tk.isfull) {
+						s.columnbars.push(cover)
+					}
+
+					cover.on('mouseover',()=>{
+						tk.tktip
+							.clear()
+							.show(d3event.clientX, d3event.clientY)
+
+						const lst=[{k:'Sample',v:s.samplename}]
+						may_add_sampleannotation( s.samplename, tk, lst )
+
+						lst.push({
+							k: fixedgene.gene+' rank',
+							v:client.ranksays(v.rank)
+							})
+						lst.push({
+							k: fixedgene.gene+' '+tk.gecfg.datatype,
+							v: v.value
+							})
+
+						const table = client.make_table_2col(tk.tktip.d,lst)
+
+						expressionstat.showsingleitem_table( v, tk.gecfg, table )
+
+						multi_sample_addhighlight(s)
 					})
-				})
+					.on('mouseout',()=>{
+						tk.tktip.hide()
+						multi_sample_removehighlight(s)
+					})
+					.on('click',()=>{
+
+						// surely the coord of this fixed gene is not in cache
+						if(!tk.gene2coord) tk.gene2coord = {}
+						tk.gene2coord[ fixedgene.gene ] = {
+							chr: fixedgene.chr,
+							start: fixedgene.start,
+							stop: fixedgene.stop
+						}
+
+						multi_show_geneboxplot({
+							gene: fixedgene.gene,
+							samplename: s.samplename,
+							value: v.value,
+							tk:tk,
+							block:block
+						})
+					})
+				}
 			}
 
 			// done this sample
@@ -748,7 +738,7 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 		axis: headg.append('g').call( axisTop().scale(
 			scaleLinear().domain([minvalue,maxvalue]).range([0,expbarwidth])
 			)
-			.tickValues([0,50,100])
+			.tickValues([minvalue, maxvalue])
 			.tickSize(ticksize)
 			),
 		fontsize:fontsize,
@@ -1058,22 +1048,34 @@ async function findgene4fix( name, tk, block ) {
 
 		wait.text('Loading '+tk.gecfg.datatype+' for '+gm.name+' ...')
 
-		const data2 = await findgene4fix_getsamplevalue( gm, tk, block)
+		const data2 = await findgene4fix_getsamplevalue( gm, tk, block )
 
 		if(data2.error) throw data2.error
-		if(!data2.sample2rank) throw '.sample2rank{} missing'
 
-		for(const sample in data2.sample2rank) {
-			expressionstat.measure( data2.sample2rank[sample], tk.gecfg )
-		}
-
-		tk.gecfg.fixed.push({
+		const fixedgene = {
 			gene: name,
-			sample2rank: data2.sample2rank,
 			chr: gm.chr,
 			start: gm.start,
 			stop: gm.stop
-		})
+		}
+
+		if( data2.sample2rnabam ) {
+			// rna bam mode
+			for(const samplename in data2.sample2rnabam) {
+				expressionstat.measure( data2.sample2rnabam[ samplename ], tk.gecfg )
+			}
+			fixedgene.sample2rnabam = data2.sample2rnabam
+
+		} else {
+
+			if(!data2.sample2rank) throw '.sample2rank{} missing'
+			for(const sample in data2.sample2rank) {
+				expressionstat.measure( data2.sample2rank[sample], tk.gecfg )
+			}
+			fixedgene.sample2rank = data2.sample2rank
+		}
+
+		tk.gecfg.fixed.push( fixedgene )
 
 		tk.tkconfigtip.hide()
 
@@ -1102,7 +1104,7 @@ function findgene4fix_getsamplevalue( gm, tk, block) {
 
 	if(tk.iscustom) {
 		arg.iscustom=1
-		arg.file = 'dummy' // svcnv file won't be used
+		//arg.file = 'dummy' // svcnv file won't be used
 		const c = tk.checkexpressionrank
 		if(c) {
 			arg.checkexpressionrank = {
@@ -1111,13 +1113,21 @@ function findgene4fix_getsamplevalue( gm, tk, block) {
 				indexURL: c.indexURL
 			}
 		}
+
+		if( tk.checkvcf ) {
+			arg.checkvcf = tk.checkvcf.stringifiedObj
+		}
+
+		if( tk.checkrnabam ) {
+			arg.checkrnabam = tk.checkrnabam
+		}
+
 	} else {
 		arg.dslabel = tk.mds.label
 		arg.querykey = tk.querykey
 	}
 
 	return client.dofetch('mdssvcnv', arg)
-	.then(data=>{ return data })
 }
 
 
@@ -1204,4 +1214,53 @@ function rnabam_click_genebar ( gene, sample, tk, block ) {
 	}
 
 	genebar_printtooltip( gene.gene, gene, sample, pane.body, tk )
+}
+
+
+
+
+function drawgenebar_rnabam ( expbarwidth, maxvalue, row, gene, s, tk, block ) {
+	/*
+	row: <g>
+	genename: str
+	gene: {}
+		.gene
+		.chr start stop
+		.rpkm
+		.estat{}
+		.snps[]
+	s: sample obj from .samplegroups[]
+
+	*/
+	const bar=row.append('rect')
+		.attr('fill',  expressionstat.ase_color( gene, tk.gecfg ) ) // bar color set by ase status
+		.attr('width', expbarwidth * gene.rpkm / maxvalue  )
+		.attr('height', s.height)
+		.attr('shape-rendering','crispEdges')
+	const cover = row.append('rect')
+		.attr('fill',  coverbarcolor_silent)
+		.attr('fill-opacity',.1)
+		.attr('width', expbarwidth)
+		.attr('height', s.height)
+
+	if(tk.isfull) {
+		s.columnbars.push(cover)
+	}
+
+	cover.on('mouseover',()=>{
+		tk.tktip
+			.clear()
+			.show(d3event.clientX, d3event.clientY)
+
+		genebar_printtooltip( gene.gene, gene, s, tk.tktip.d, tk )
+
+		multi_sample_addhighlight(s)
+	})
+	.on('mouseout',()=>{
+		tk.tktip.hide()
+		multi_sample_removehighlight(s)
+	})
+	.on('click',()=>{
+		rnabam_click_genebar( gene, s, tk, block )
+	})
 }
