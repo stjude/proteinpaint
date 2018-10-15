@@ -851,24 +851,39 @@ if(nm.showsamplebar) {
 
 	for(const d of tk.data) {
 		for(const m of d.mlst) {
-			if(!m.sampledata) continue
-			const g = d3select(m.g)
+
 			let num_refref=0,
 				num_altalt=0,
 				num_refalt=0
 
-			for(const s of m.sampledata) {
-				if(!s.allele2readcount) continue
-				if(s.allele2readcount[m.alt]) {
-					if(s.allele2readcount[m.ref]) {
-						num_refalt++
+			// genotype count can either be encoded in INFO or figured from sampledata[]
+			if( tk.ds.genotypebynumericvalue.refref.genotypeCountInfokey ) {
+
+				// from INFO
+				num_refref = m.info[ tk.ds.genotypebynumericvalue.refref.genotypeCountInfokey ]
+				num_altalt = m.info[ tk.ds.genotypebynumericvalue.altalt.genotypeCountInfokey ]
+				num_refalt = m.info[ tk.ds.genotypebynumericvalue.refalt.genotypeCountInfokey ]
+
+			} else {
+				// from samples, require matrix
+				if(!m.sampledata) continue
+				for(const s of m.sampledata) {
+					if(!s.allele2readcount) continue
+					if(s.allele2readcount[m.alt]) {
+						if(s.allele2readcount[m.ref]) {
+							num_refalt++
+						} else {
+							num_altalt++
+						}
 					} else {
-						num_altalt++
+						num_refref++
 					}
-				} else {
-					num_refref++
 				}
 			}
+
+
+
+			const g = d3select(m.g)
 
 			if(num_refref) {
 				const v = m.info[ tk.ds.genotypebynumericvalue.refref.infokey ]
