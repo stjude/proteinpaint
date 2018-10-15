@@ -4052,7 +4052,11 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 		sbam.hetsnps = [] // all het for this sample
 
 		for(const m of snps) {
-			const het = handle_ase_hetsnp4sample( m, samplename )
+			const het = handle_ase_hetsnp4sample(
+				m,
+				samplename,
+				dsquery.checkrnabam
+				)
 			if( het ) sbam.hetsnps.push( het )
 		}
 
@@ -4062,7 +4066,7 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 		}
 		if( sbam.hetsnps.length>0 ) {
 			// do one pileup for these snp over this bam
-			await handle_mdssvcnv_rnabam_pileup( sbam, sbam.hetsnps, chr )
+			await handle_mdssvcnv_rnabam_pileup( sbam, sbam.hetsnps, chr, dsquery.checkrnabam )
 			for( const m of sbam.hetsnps ) {
 				if( m.rnacount.nocoverage ) continue
 				testlines.push( samplename+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t\t\t\t\t\t\t\t'+m.rnacount.ref+'\t'+m.rnacount.alt )
@@ -4219,7 +4223,7 @@ function handle_mdssvcnv_rnabam_binom_result ( pfile, samples ) {
 
 
 
-function handle_mdssvcnv_rnabam_pileup ( bam, snps, chr ) {
+function handle_mdssvcnv_rnabam_pileup ( bam, snps, chr, arg ) {
 	// only query said snps
 	const lst = []
 	for(const m of snps) {
@@ -4234,6 +4238,7 @@ function handle_mdssvcnv_rnabam_pileup ( bam, snps, chr ) {
 		const sp = spawn(
 			bcftools,
 			[ 'mpileup', '--no-reference', '-a', 'INFO/AD', '-d', 999999, '-r', lst.join(','),
+				'-q', arg.rnapileup_q, '-Q', arg.rnapileup_Q,
 				bam.url || path.join(serverconfig.tpmasterdir,bam.file)
 			],
 			{cwd: bam.dir}
@@ -5713,6 +5718,8 @@ function handle_ase_pileup(
 
 	return new Promise((resolve,reject)=>{
  
+ // TODO -Q -q
+
 		const sp = spawn(
 			bcftools,
 			[ 'mpileup', '--no-reference', '-a', 'INFO/AD', '-d', 999999, '-r',
@@ -5958,6 +5965,7 @@ async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) 
 			if( !m.sampledata ) continue
 
 			const hm = handle_ase_hetsnp4sample( m, q.samplename )
+			// FIXME
 
 
 			if( hm ) allsnps.push( hm )
@@ -5978,19 +5986,19 @@ async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) 
 }
 
 
-function handle_ase_hetsnp4sample ( m, samplename ) {
+function handle_ase_hetsnp4sample ( m, samplename, arg ) {
+	// cutoff values in arg{} must have all been validated
+
 	const sobj = m.sampledata.find( i=> i.sampleobj.name == samplename )
 	if( !sobj ) return
 
 	if( sobj.AD ) {
 
-		// TODO parameters
-
 		const refcount = sobj.AD[ m.ref ]
 		const altcount = sobj.AD[ m.alt ]
-		if( refcount >= 2 && altcount >=2 ) {
+		if( refcount >= arg.hetsnp_minallelecount && altcount >= arg.hetsnp_minallelecount ) {
 			const f = altcount / (altcount+refcount)
-			if( f >= 0.3 && f <= 0.7 ) {
+			if( f >= arg.hetsnp_minbaf && f <= arg.hetsnp_maxbaf ) {
 				return {
 					chr: m.chr,
 					pos: m.pos,
