@@ -53,9 +53,13 @@ $ node utils/install.pp.js [options]
 -v       Validate all the file URLs
 -t       Test mode; do not use
 
-Will install some dependencies and download support files from pecan.stjude.cloud
+The script automates some installation procedures, including:
+- dependencies, without compilation
+- reference files for supported genomes
+- building the server configuration file
+
 Requires Node.js (8 or higher), wget, and sed.
-Certain files are large and may take a while to download.
+Certain reference files are large and may take a while to download.
 Use "-v" to see the size of each file (in #bytes) from each genome.
 My apologies that I do not know how to print download progress, as wget does.
 If the downloading process is interrupted, you can always rerun the script to resume the downloading.
