@@ -1,4 +1,7 @@
 cp package.json deploys/deliver/proteinpaint/
+cp utils/install.pp.js deploys/deliver/proteinpaint/utils/
+cp genome/* deploys/deliver/proteinpaint/genome/
+cp dataset/clinvar* deploys/deliver/proteinpaint/dataset/
 
 node utils/uglify.js src/bulk.cnv.js    deploys/deliver/proteinpaint/src/
 node utils/uglify.js src/bulk.del.js    deploys/deliver/proteinpaint/src/
@@ -28,3 +31,6 @@ cd deploys/deliver/proteinpaint
 
 sed 's%https://pecan.stjude.org/pp/bin/%__PP_URL__%' public/bin/proteinpaint.js >public/bin/template.js
 sed 's%__PP_URL__%http://localhost:3000/bin/%' public/bin/template.js >public/bin/proteinpaint.js
+
+cd ..
+tar zcvf ~/sourcecode.tgz proteinpaint/
