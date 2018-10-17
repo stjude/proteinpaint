@@ -1,8 +1,8 @@
 import {event as d3event} from 'd3-selection'
-import * as client from './client'
 import {axisLeft,axisRight} from 'd3-axis'
 import {scaleLinear} from 'd3-scale'
-
+import * as client from './client'
+import {rnabamtk_initparam} from './block.mds.svcnv.share'
 
 
 /*
@@ -124,6 +124,7 @@ function getdata_region ( r, tk, block ) {
 		start: r.start,
 		stop: r.stop,
 		width: r.width,
+		asearg: tk.asearg
 	}
 	return client.dofetch('ase', arg )
 	.then(data=>{
@@ -263,6 +264,9 @@ function makeTk(tk, block) {
 		.on('click',()=>{
 			configPanel(tk,block)
 		})
+	
+	if( !tk.asearg ) tk.asearg = {}
+	rnabamtk_initparam( tk.asearg )
 }
 
 

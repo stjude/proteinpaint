@@ -22,6 +22,7 @@ import {render_singlesample} from './block.mds.svcnv.single'
 import {createbutton_addfeature, may_show_samplematrix_button} from './block.mds.svcnv.samplematrix'
 import {render_multi_genebar, multi_show_geneboxplot} from './block.mds.svcnv.addcolumn'
 import {vcfparsemeta, vcfparseline} from './vcf'
+import {rnabamtk_initparam} from './block.mds.svcnv.share'
 
 
 
@@ -2225,7 +2226,7 @@ export function focus_singlesample( p ) {
 			arg.start = block.rglst[0].start
 			arg.stop = block.rglst[0].stop
 
-			arg.tklst.push({
+			const asetk = {
 				type: common.tkt.ase,
 				name: sample.samplename+' ASE',
 				samplename: sample.samplename,
@@ -2235,8 +2236,16 @@ export function focus_singlesample( p ) {
 				vcffile: tk.checkvcf.file,
 				vcfurl: tk.checkvcf.url,
 				vcfindexURL: tk.checkvcf.indexURL,
-			})
-			block.newblock( arg )
+			}
+
+			rnabamtk_copyparam( tk, asetk )
+
+			arg.tklst.push( asetk )
+			const b = block.newblock( arg )
+			if(block.debugmode) {
+				window.bbb = b
+			}
+
 			return
 		}
 	}
@@ -2408,6 +2417,22 @@ export function focus_singlesample( p ) {
 		// done launching single-sample view from multi-sample
 	})
 }
+
+
+
+
+export function rnabamtk_copyparam ( from, to ) {
+	// both tk obj
+	if( !from.checkrnabam ) return
+	to.aseaarg = {
+		hetsnp_minallelecount: from.hetsnp_minallelecount,
+		hetsnp_minbaf: from.hetsnp_minbaf,
+		hetsnp_maxbaf: from.hetsnp_maxbaf,
+		rnapileup_q: from.rnapileup_q,
+		rnapileup_Q: from.rnapileup_Q
+	}
+}
+
 
 
 
@@ -2823,16 +2848,15 @@ function makeTk(tk, block) {
 
 	if( tk.checkrnabam ) {
 		// defaults for parameters
-		const c = tk.checkrnabam
-		if( !c.hetsnp_minallelecount ) c.hetsnp_minallelecount = 2
-		if( !c.hetsnp_minbaf ) c.hetsnp_minbaf = 0.3
-		if( !c.hetsnp_maxbaf ) c.hetsnp_maxbaf = 0.7
-		if( c.rnapileup_q==undefined ) c.rnapileup_q = 1
-		if( !c.rnapileup_Q ) c.rnapileup_Q = 13
+		rnabamtk_initparam( tk.checkrnabam )
 	}
 
 	// end of makeTk
 }
+
+
+
+
 
 
 

@@ -5501,6 +5501,12 @@ async function handle_ase ( req, res ) {
 		if(!q.dnabarheight) throw 'no dnabarheight'
 		if(!Number.isInteger(q.barypad)) throw 'invalid barypad'
 		if(!q.rnacoveragemax) throw 'no rnacoveragemax'
+		if(!q.asearg) throw '.asearg{} missing'
+		if(!Number.isFinite(q.asearg.hetsnp_minallelecount)) throw 'invalid value for hetsnp_minallelecount'
+		if(!Number.isFinite(q.asearg.hetsnp_minbaf)) throw 'invalid value for hetsnp_minbaf'
+		if(!Number.isFinite(q.asearg.hetsnp_maxbaf)) throw 'invalid value for hetsnp_maxbaf'
+		if(!Number.isFinite(q.asearg.rnapileup_q)) throw 'invalid value for rnapileup_q'
+		if(!Number.isFinite(q.asearg.rnapileup_Q)) throw 'invalid value for rnapileup_Q'
 
 		const genome = genomes[ q.genome ]
 		if(!genome) throw 'invalid genome'
@@ -5718,11 +5724,11 @@ function handle_ase_pileup(
 
 	return new Promise((resolve,reject)=>{
  
- // TODO -Q -q
-
 		const sp = spawn(
 			bcftools,
-			[ 'mpileup', '--no-reference', '-a', 'INFO/AD', '-d', 999999, '-r',
+			[ 'mpileup',
+				'-q', q.asearg.rnapileup_q, '-Q', q.asearg.rnapileup_Q,
+				'--no-reference', '-a', 'INFO/AD', '-d', 999999, '-r',
 				(q.rnabam_nochr?q.chr.replace('chr',''):q.chr)+':'+(searchstart+1)+'-'+(searchstop+1),
 				q.rnabamurl || q.rnabamfile
 			],
@@ -5923,6 +5929,7 @@ async function handle_ase_prepfiles( q, genome ) {
 async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) {
 	/*
 	q:
+	.asearg{}
 	.samplename
 	.vcffile
 	.vcfurl
@@ -5964,9 +5971,7 @@ async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) 
 			// find sample
 			if( !m.sampledata ) continue
 
-			const hm = handle_ase_hetsnp4sample( m, q.samplename )
-			// FIXME
-
+			const hm = handle_ase_hetsnp4sample( m, q.samplename, q.asearg )
 
 			if( hm ) allsnps.push( hm )
 		}
@@ -5987,7 +5992,9 @@ async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) 
 
 
 function handle_ase_hetsnp4sample ( m, samplename, arg ) {
-	// cutoff values in arg{} must have all been validated
+	/*
+	cutoff values in arg{} must have all been validated
+	*/
 
 	const sobj = m.sampledata.find( i=> i.sampleobj.name == samplename )
 	if( !sobj ) return

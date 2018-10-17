@@ -10,7 +10,8 @@ import {focus_singlesample,
 	coverbarcolor_silent,
 	multi_sample_addhighlight,
 	multi_sample_removehighlight,
-	multi_expressionstatus_ase_outlier
+	multi_expressionstatus_ase_outlier,
+	rnabamtk_copyparam
 	} from './block.mds.svcnv'
 
 
@@ -1180,23 +1181,23 @@ function rnabam_click_genebar ( gene, sample, tk, block ) {
 
 		if( sbam ) {
 
+
+			const asetk = {
+				type: common.tkt.ase,
+				name: sample.samplename+' ASE',
+				samplename: sample.samplename,
+				rnabamfile: sbam.file,
+				rnabamurl: sbam.url,
+				rnabamindexURL: sbam.rnabamindexURL,
+				vcffile: tk.checkvcf.file,
+				vcfurl: tk.checkvcf.url,
+				vcfindexURL: tk.checkvcf.indexURL,
+			}
+			rnabamtk_copyparam( tk, asetk )
+
 			const arg={
-				style:{
-					margin:'0px'
-				},
-				tklst:[
-					{
-					type: common.tkt.ase,
-					name: sample.samplename+' ASE',
-					samplename: sample.samplename,
-					rnabamfile: sbam.file,
-					rnabamurl: sbam.url,
-					rnabamindexURL: sbam.rnabamindexURL,
-					vcffile: tk.checkvcf.file,
-					vcfurl: tk.checkvcf.url,
-					vcfindexURL: tk.checkvcf.indexURL,
-					}
-				],
+				style:{ margin:'0px' },
+				tklst:[ asetk ],
 				holder: div,
 				chr: gene.chr,
 				start: gene.start,
@@ -1205,7 +1206,11 @@ function rnabam_click_genebar ( gene, sample, tk, block ) {
 
 			client.first_genetrack_tolist( block.genome, arg.tklst )
 
-			block.newblock( arg )
+			const b = block.newblock( arg )
+			if(block.debugmode) {
+				window.bbb = b
+			}
+
 		} else {
 			div.text('sbam missing')
 		}
