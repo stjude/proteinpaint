@@ -6,15 +6,8 @@ import {rnabamtk_initparam} from './block.mds.svcnv.share'
 
 
 /*
-TODO seekcoord can seek into subpanels, should eliminate need for regions[]?
-
 on the fly ase track
 runs off RNA bam and VCF
-
-
-JUMP
-
-
 
 
 ********************** EXPORTED
@@ -23,8 +16,6 @@ loadTk()
 
 ********************** INTERNAL
 getdata_region
-
-
 
 */
 
@@ -83,7 +74,9 @@ export async function loadTk( tk, block ) {
 
 	try {
 
-		tk.dna.coveragemax = 0 // reset
+		// reset max
+		tk.dna.coveragemax = 0
+		tk.rna.coveragemax = 0
 
 		for(const r of regions) {
 			await getdata_region( r, tk, block )
@@ -118,7 +111,6 @@ function getdata_region ( r, tk, block ) {
 		vcfindexURL: tk.vcfindexURL,
 		rnabarheight: tk.rna.coveragebarh,
 		dnabarheight: tk.dna.coveragebarh,
-		rnacoveragemax: tk.rna.coveragemax,
 		barypad: tk.barypad,
 		chr: r.chr,
 		start: r.start,
@@ -132,6 +124,7 @@ function getdata_region ( r, tk, block ) {
 		r.genes = data.genes
 		r.coveragesrc = data.coveragesrc
 		tk.dna.coveragemax = Math.max( tk.dna.coveragemax, data.dnamax )
+		tk.rna.coveragemax = Math.max( tk.rna.coveragemax, data.rnamax )
 	})
 }
 
@@ -241,7 +234,7 @@ function makeTk(tk, block) {
 	tk.rna.coverageaxisg = tk.gleft.append('g')
 	tk.rna.coveragelabel = block.maketklefthandle(tk)
 		.text('RNA coverage')
-	if(!tk.rna.coveragemax) tk.rna.coveragemax = 50
+	//if(!tk.rna.coveragemax) tk.rna.coveragemax = 50
 	if(!tk.rna.coveragebarh) tk.rna.coveragebarh = 50
 
 	if(!tk.dna) tk.dna = {}
