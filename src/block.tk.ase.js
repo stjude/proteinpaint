@@ -76,7 +76,7 @@ export async function loadTk( tk, block ) {
 
 		// reset max
 		tk.dna.coveragemax = 0
-		tk.rna.coveragemax = 0
+		if(tk.rna.coverageauto) tk.rna.coveragemax = 0
 
 		for(const r of regions) {
 			await getdata_region( r, tk, block )
@@ -118,13 +118,20 @@ function getdata_region ( r, tk, block ) {
 		width: r.width,
 		asearg: tk.asearg
 	}
+	if( !tk.rna.coverageauto ) {
+		// fixed
+		arg.rnamax = tk.rna.coveragemax
+	}
+
 	return client.dofetch('ase', arg )
 	.then(data=>{
 		if(data.error) throw data.error
 		r.genes = data.genes
 		r.coveragesrc = data.coveragesrc
 		tk.dna.coveragemax = Math.max( tk.dna.coveragemax, data.dnamax )
-		tk.rna.coveragemax = Math.max( tk.rna.coveragemax, data.rnamax )
+		if( tk.rna.coverageauto ) {
+			tk.rna.coveragemax = Math.max( tk.rna.coveragemax, data.rnamax )
+		}
 	})
 }
 
@@ -154,8 +161,10 @@ function renderTk( tk, block ) {
 			),
 		showline:true
 	})
+	tk.tklabel
+		.attr('y', tk.rna.coveragebarh/2-2)
 	tk.rna.coveragelabel
-		.attr('y', tk.rna.coveragebarh/2)
+		.attr('y', tk.rna.coveragebarh/2+2)
 
 	client.axisstyle({
 		axis: tk.dna.coverageaxisg
@@ -197,7 +206,7 @@ function resize_label(tk, block) {
 	tk.leftLabelMaxwidth = 0
 	tk.tklabel
 		.each(function(){
-			tk.leftLabelMaxwidth = Math.max( tk.leftLabelMaxwidth, this.getBBox().width)
+			tk.leftLabelMaxwidth = this.getBBox().width
 		})
 	tk.dna.coveragelabel
 		.each(function(){
@@ -227,19 +236,23 @@ function makeTk(tk, block) {
 	delete tk.uninitialized
 
 	tk.tklabel.text(tk.name)
+		.attr('dominant-baseline','auto')
 
 	if(!tk.barypad) tk.barypad = 0
 
 	if(!tk.rna) tk.rna = {}
 	tk.rna.coverageaxisg = tk.gleft.append('g')
 	tk.rna.coveragelabel = block.maketklefthandle(tk)
+		.attr('class',null)
+		.attr('dominant-baseline','hanging')
 		.text('RNA coverage')
-	//if(!tk.rna.coveragemax) tk.rna.coveragemax = 50
+	tk.rna.coverageauto = true
 	if(!tk.rna.coveragebarh) tk.rna.coveragebarh = 50
 
 	if(!tk.dna) tk.dna = {}
 	tk.dna.coverageaxisg = tk.gleft.append('g')
 	tk.dna.coveragelabel = block.maketklefthandle(tk)
+		.attr('class',null)
 		.text('DNA coverage')
 	tk.dna.coveragemax = 0
 	if(!tk.dna.coveragebarh) tk.dna.coveragebarh = 50
@@ -269,5 +282,65 @@ function makeTk(tk, block) {
 function configPanel(tk,block) {
 	tk.tkconfigtip.clear()
 		.showunder( tk.config_handle.node() )
+	const d = tk.tkconfigtip.d.append('div')
 
+	d.append('div')
+		.text('RNA-seq coverage is shown at all covered bases.')
+		.style('font-size','.8em')
+		.style('opacity',.5)
+	{
+		const row = d.append('div')
+			.style('margin','5px 0px')
+		row.append('span')
+			.html('Bar height&nbsp;')
+		row.append('input')
+			.attr('type','numeric')
+			.property('value', tk.rna.coveragebarh)
+			.style('width','80px')
+			.on('keyup',()=>{
+				if(!client.keyupEnter()) return
+				const v = Number.parseInt(d3event.target.value)
+				if(v <= 20) return
+				if(v == tk.rna.coveragebarh) return
+				tk.rna.coveragebarh = v
+				loadTk(tk,block)
+			})
+	}
+	{
+		const row = d.append('div')
+			.style('margin','5px 0px')
+		const id = Math.random()
+		row.append('input')
+			.attr('type','checkbox')
+			.attr('id',id)
+			.property('checked',tk.rna.coverageauto)
+			.on('change',()=>{
+				tk.rna.coverageauto = d3event.target.checked
+				fixed.style('display', tk.rna.coverageauto ? 'none' : 'inline')
+				loadTk(tk,block)
+			})
+		row.append('label')
+			.html('&nbsp;automatic scale')
+			.attr('for',id)
+		const fixed = row.append('div')
+			.style('display', tk.rna.coverageauto ? 'none' : 'inline')
+			.style('margin-left','20px')
+		fixed.append('span')
+			.html('Fixed max&nbsp')
+		fixed.append('input')
+			.attr('value','numeric')
+			.property('value', tk.rna.coveragemax)
+			.style('width','50px')
+			.on('keyup',()=>{
+				if(!client.keyupEnter()) return
+				const v = Number.parseInt(d3event.target.value)
+				if(v<=0) return
+				if(v==tk.rna.coveragemax) return
+				tk.rna.coveragemax = v
+				loadTk(tk,block)
+			})
+	}
+	// dna bar h
+	// gecfg analysis
+	// list genes, ase status, and snps
 }

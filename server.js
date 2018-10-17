@@ -5506,6 +5506,7 @@ async function handle_ase ( req, res ) {
 		if(!Number.isFinite(q.asearg.hetsnp_maxbaf)) throw 'invalid value for hetsnp_maxbaf'
 		if(!Number.isFinite(q.asearg.rnapileup_q)) throw 'invalid value for rnapileup_q'
 		if(!Number.isFinite(q.asearg.rnapileup_Q)) throw 'invalid value for rnapileup_Q'
+		if(q.rnamax && !Number.isFinite(q.rnamax)) throw 'invalid value for rnamax'
 
 		const genome = genomes[ q.genome ]
 		if(!genome) throw 'invalid genome'
@@ -5531,7 +5532,7 @@ async function handle_ase ( req, res ) {
 		// heterozygous ones
 		const snps = await handle_ase_getsnps( q, genome, genes, searchstart, searchstop )
 
-		const rnamax  = await handle_ase_bamcoverage1stpass( q, renderstart, renderstop )
+		const rnamax  = q.rnamax || await handle_ase_bamcoverage1stpass( q, renderstart, renderstop )
 		const plotter = await handle_ase_bamcoverage2ndpass( q, renderstart, renderstop, snps, rnamax )
 
 		// check rna bam and plot track
