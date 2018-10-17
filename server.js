@@ -5532,6 +5532,9 @@ async function handle_ase ( req, res ) {
 		// heterozygous ones
 		const snps = await handle_ase_getsnps( q, genome, genes, searchstart, searchstop )
 
+		const rnamax = await handle_ase_bamcoverage1stpass( q, renderstart, renderstop )
+		const plotter = await handle_ase_bamcoverage2ndpass( q, renderstart, renderstop, snps, rnamax )
+
 		// check rna bam and plot track
 		const imgsrc = await handle_ase_pileup(
 			q,
@@ -5539,7 +5542,8 @@ async function handle_ase ( req, res ) {
 			searchstart,
 			searchstop,
 			renderstart,
-			renderstop
+			renderstop,
+			plotter
 			)
 
 		// binom test
@@ -5559,6 +5563,7 @@ async function handle_ase ( req, res ) {
 			genes: generesult,
 			coveragesrc: imgsrc,
 			dnamax: dnamax,
+			rnamax: rnamax,
 		})
 
 	} catch (e) {
@@ -5699,27 +5704,139 @@ function handle_ase_generesult ( snps, genes ) {
 
 
 
-function handle_ase_pileup(
-	q,
-	snps,
-	searchstart,
-	searchstop,
-	renderstart,
-	renderstop
-	) {
+function handle_ase_bamcoverage1stpass ( q, start, stop ) {
+	/*
+	first pass: just get the max
+	*/
+	let m = 0
+	return new Promise((resolve,reject)=>{
+ 
+		const sp = spawn( samtools, [ 'depth','-r', (q.rnabam_nochr?q.chr.replace('chr',''):q.chr)+':'+(start+1)+'-'+(stop+1),
+				q.rnabamurl || q.rnabamfile
+			],
+			{cwd: q.rnabamurl_dir}
+			)
 
+		const rl = readline.createInterface({input:sp.stdout})
+		rl.on('line',line=>{
+
+			const l = line.split('\t')
+			if(l.length!=3) return
+			const v = Number.parseInt(l[2])
+			if(!Number.isInteger(v)) return
+			m = Math.max(m, v)
+		})
+
+		sp.on('close',()=>{
+			resolve(m)
+		})
+	})
+}
+
+
+function handle_ase_bamcoverage2ndpass ( q, start, stop, snps, rnamax ) {
+	/*
+	second pass: plot coverage bar at each covered bp
+	*/
+
+	// snps default to be no coverage in rna
+	// for those in viewrange and covered in rna, record bar h
+	const pos2snp = new Map()
 	for(const m of snps) {
 		m.rnacount = {
 			nocoverage: 1
+		}
+		if(m.pos>=start && m.pos<=stop) {
+			// in render range
+			pos2snp.set( m.pos, m )
 		}
 	}
 
 	const canvas = new Canvas( q.width, q.rnabarheight + q.barypad + q.dnabarheight )
 	const ctx = canvas.getContext('2d')
 
-	const bpw = Math.max( 1, q.width/(q.stop-q.start) )
-	if( bpw > 1 ) {
-		ctx.lineWidth = bpw
+	let isbp=false,
+		binbpsize,
+		binpxw
+	if( (stop-start) <= q.width ) {
+		// each bin is one bp
+		isbp = true
+		binbpsize = 1
+		binpxw = q.width / (stop-start)
+		ctx.lineWidth = binpxw
+	} else {
+		// each bin is one px
+		binpxw = 1
+		binbpsize = (stop-start)/q.width
+		// line width is 1 by default
+	}
+
+	return new Promise((resolve,reject)=>{
+ 
+		const sp = spawn( samtools, [ 'depth','-r', (q.rnabam_nochr?q.chr.replace('chr',''):q.chr)+':'+(start+1)+'-'+(stop+1),
+				q.rnabamurl || q.rnabamfile
+			],
+			{cwd: q.rnabamurl_dir}
+			)
+
+		const rl = readline.createInterface({input:sp.stdout})
+		rl.on('line',line=>{
+
+			const l = line.split('\t')
+			if(l.length!=3) return
+			
+			const pos = Number.parseInt(l[1]) -1
+			if(!Number.isInteger(pos)) return
+			const v = Number.parseInt(l[2])
+			if(!Number.isInteger(v)) return
+
+			const h = q.rnabarheight * v / rnamax
+			const x = isbp ? (pos-start)*binpxw : (pos-start)/binbpsize
+			ctx.strokeStyle = '#ccc'
+			ctx.beginPath()
+			ctx.moveTo( x+binpxw/2, q.rnabarheight )
+			ctx.lineTo( x+binpxw/2, q.rnabarheight-h )
+			ctx.stroke()
+			ctx.closePath()
+			const m = pos2snp.get( pos )
+			if(m) {
+				// matching a snp, record rna coverage
+				delete m.rnacount.nocoverage
+				m.rnacount.h = h
+			}
+		})
+
+		sp.on('close',()=>{
+
+			resolve( {
+				canvas: canvas,
+				ctx: ctx,
+				isbp: isbp,
+				binpxw: binpxw,
+				binbpsize: binbpsize,
+			})
+		})
+	})
+}
+
+
+
+function handle_ase_pileup(
+	q,
+	snps,
+	searchstart,
+	searchstop,
+	renderstart,
+	renderstop,
+	plotter
+	) {
+
+
+	const { canvas, ctx, isbp, binpxw, binbpsize } = plotter
+
+	const snpstr = []
+	for(const m of snps) {
+		snpstr.push( (q.rnabam_nochr ? q.chr.replace('chr','') : q.chr)+':'+(m.pos+1)+'-'+(m.pos+1) )
 	}
 
 	return new Promise((resolve,reject)=>{
@@ -5728,8 +5845,7 @@ function handle_ase_pileup(
 			bcftools,
 			[ 'mpileup',
 				'-q', q.asearg.rnapileup_q, '-Q', q.asearg.rnapileup_Q,
-				'--no-reference', '-a', 'INFO/AD', '-d', 999999, '-r',
-				(q.rnabam_nochr?q.chr.replace('chr',''):q.chr)+':'+(searchstart+1)+'-'+(searchstop+1),
+				'--no-reference', '-a', 'INFO/AD', '-d', 999999, '-r', snpstr.join(','),
 				q.rnabamurl || q.rnabamfile
 			],
 			{cwd: q.rnabamurl_dir}
@@ -5744,23 +5860,11 @@ function handle_ase_pileup(
 			if( !m0 ) return
 
 			let renderx // for this nt; if set, means this nt is plotted
-			let h
 
 			if( m0.pos >= renderstart && m0.pos <= renderstop && m0.DP ) {
-				// in render range, plot coverage
-
+				// in render range
 				renderx = q.width * ( m0.pos-renderstart) / (q.stop-renderstart)
-				h = q.rnabarheight *
-					( 1 - (q.rnacoveragemax - Math.min( m0.DP, q.rnacoveragemax ))/q.rnacoveragemax )
-
-				ctx.strokeStyle = '#ccc'
-				ctx.beginPath()
-				ctx.moveTo( renderx+bpw/2, q.rnabarheight )
-				ctx.lineTo( renderx+bpw/2, q.rnabarheight-h )
-				ctx.stroke()
-				ctx.closePath()
 			}
-
 
 			const m = snps.find( m=> m.pos == m0.pos )
 			if( m ) {
@@ -5771,21 +5875,18 @@ function handle_ase_pileup(
 				const c2 = m0.allele2count[ m.alt ] || 0
 
 				if( c1+c2 > 0 ) {
-					// has coverage at this snp
-					m.rnacount = {
-						ref: c1,
-						alt: c2,
-						f: ( c2 /(c1+c2) ),
-						h: h,
-					}
+					// has rna coverage at this snp
+					delete m.rnacount.nocoverage
+					m.rnacount.ref = c1
+					m.rnacount.alt = c2
+					m.rnacount.f   = c2/(c1+c2)
 				}
 			}
 		})
 
-
 		sp.on('close',()=>{
 
-			// only plot snp bars after finishing, so the rna bars are on foreground
+			// done piling up, plot all snps in view range
 			let dnamax = 0
 			for(const m of snps) {
 				if( m.__x == undefined) continue
@@ -5794,33 +5895,34 @@ function handle_ase_pileup(
 
 			for(const m of snps) {
 				if( m.__x == undefined) continue
+
 				if( !m.rnacount.nocoverage ) {
 					// rna
 					ctx.beginPath()
-					ctx.moveTo( m.__x+bpw/2, q.rnabarheight )
-					ctx.lineTo( m.__x+bpw/2, q.rnabarheight - (m.rnacount.f * m.rnacount.h) )
+					ctx.moveTo( m.__x+binpxw/2, q.rnabarheight )
+					ctx.lineTo( m.__x+binpxw/2, q.rnabarheight - (m.rnacount.f * m.rnacount.h) )
 					ctx.strokeStyle = 'blue'
 					ctx.stroke()
 					ctx.closePath()
 					ctx.beginPath()
 					ctx.strokeStyle = '#FF4040'
-					ctx.moveTo( m.__x+bpw/2, q.rnabarheight - (m.rnacount.f * m.rnacount.h) )
-					ctx.lineTo( m.__x+bpw/2, q.rnabarheight - m.rnacount.h )
+					ctx.moveTo( m.__x+binpxw/2, q.rnabarheight - (m.rnacount.f * m.rnacount.h) )
+					ctx.lineTo( m.__x+binpxw/2, q.rnabarheight - m.rnacount.h )
 					ctx.stroke()
 					ctx.closePath()
 				}
 				// dna
 				const h = q.dnabarheight * (m.dnacount.ref+m.dnacount.alt) / dnamax
 				ctx.beginPath()
-				ctx.moveTo( m.__x+bpw/2, q.rnabarheight + q.barypad )
-				ctx.lineTo( m.__x+bpw/2, q.rnabarheight + q.barypad + (m.dnacount.f * h) )
+				ctx.moveTo( m.__x+binpxw/2, q.rnabarheight + q.barypad )
+				ctx.lineTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + (m.dnacount.f * h) )
 				ctx.strokeStyle = 'blue'
 				ctx.stroke()
 				ctx.closePath()
 				ctx.beginPath()
 				ctx.strokeStyle = '#FF4040'
-				ctx.moveTo( m.__x+bpw/2, q.rnabarheight + q.barypad + (m.dnacount.f * h) )
-				ctx.lineTo( m.__x+bpw/2, q.rnabarheight + q.barypad + h )
+				ctx.moveTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + (m.dnacount.f * h) )
+				ctx.lineTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + h )
 				ctx.stroke()
 				ctx.closePath()
 				delete m.__x
