@@ -5500,7 +5500,6 @@ async function handle_ase ( req, res ) {
 		if(!q.rnabarheight) throw 'no rnabarheight'
 		if(!q.dnabarheight) throw 'no dnabarheight'
 		if(!Number.isInteger(q.barypad)) throw 'invalid barypad'
-		if(!q.rnacoveragemax) throw 'no rnacoveragemax'
 		if(!q.asearg) throw '.asearg{} missing'
 		if(!Number.isFinite(q.asearg.hetsnp_minallelecount)) throw 'invalid value for hetsnp_minallelecount'
 		if(!Number.isFinite(q.asearg.hetsnp_minbaf)) throw 'invalid value for hetsnp_minbaf'
@@ -5532,7 +5531,7 @@ async function handle_ase ( req, res ) {
 		// heterozygous ones
 		const snps = await handle_ase_getsnps( q, genome, genes, searchstart, searchstop )
 
-		const rnamax = await handle_ase_bamcoverage1stpass( q, renderstart, renderstop )
+		const rnamax  = await handle_ase_bamcoverage1stpass( q, renderstart, renderstop )
 		const plotter = await handle_ase_bamcoverage2ndpass( q, renderstart, renderstop, snps, rnamax )
 
 		// check rna bam and plot track
@@ -5543,7 +5542,8 @@ async function handle_ase ( req, res ) {
 			searchstop,
 			renderstart,
 			renderstop,
-			plotter
+			plotter,
+			rnamax
 			)
 
 		// binom test
@@ -5623,10 +5623,11 @@ function handle_ase_binom_test ( snpfile ) {
 
 
 function handle_ase_binom_write( snps ) {
-	const snpfile = path.join(serverconfig.cachedir, Math.random().toString() )
+	const snpfile = path.join(serverconfig.cachedir, Math.random().toString() )+'.snp'
 	const data = []
 	for(const s of snps) {
 		if( s.rnacount.nocoverage ) continue
+		if( s.rnacount.ref==undefined || s.rnacount.alt==undefined ) continue // xxx
 		data.push ( s.pos+'.'+s.ref+'.'+s.alt+'\t\t\t\t\t\t\t\t'+s.rnacount.ref+'\t'+s.rnacount.alt )
 	}
 	return new Promise((resolve, reject)=>{
@@ -5706,7 +5707,7 @@ function handle_ase_generesult ( snps, genes ) {
 
 function handle_ase_bamcoverage1stpass ( q, start, stop ) {
 	/*
-	first pass: just get the max
+	1st pass: get max
 	*/
 	let m = 0
 	return new Promise((resolve,reject)=>{
@@ -5736,7 +5737,7 @@ function handle_ase_bamcoverage1stpass ( q, start, stop ) {
 
 function handle_ase_bamcoverage2ndpass ( q, start, stop, snps, rnamax ) {
 	/*
-	second pass: plot coverage bar at each covered bp
+	2nd pass: plot coverage bar at each covered bp
 	*/
 
 	// snps default to be no coverage in rna
@@ -5800,8 +5801,7 @@ function handle_ase_bamcoverage2ndpass ( q, start, stop, snps, rnamax ) {
 			ctx.closePath()
 			const m = pos2snp.get( pos )
 			if(m) {
-				// matching a snp, record rna coverage
-				delete m.rnacount.nocoverage
+				// matching a snp, record bar h
 				m.rnacount.h = h
 			}
 		})
@@ -5828,7 +5828,8 @@ function handle_ase_pileup(
 	searchstop,
 	renderstart,
 	renderstop,
-	plotter
+	plotter,
+	rnamax
 	) {
 
 
@@ -5898,6 +5899,10 @@ function handle_ase_pileup(
 
 				if( !m.rnacount.nocoverage ) {
 					// rna
+					// h is computed in 1st pass so could be missing...
+					if(m.rnacount.h==undefined) {
+						m.rnacount.h = q.rnabarheight * (m.rnacount.ref+m.rnacount.alt) / rnamax
+					}
 					ctx.beginPath()
 					ctx.moveTo( m.__x+binpxw/2, q.rnabarheight )
 					ctx.lineTo( m.__x+binpxw/2, q.rnabarheight - (m.rnacount.f * m.rnacount.h) )
