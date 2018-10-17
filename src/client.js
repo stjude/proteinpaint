@@ -1350,3 +1350,8 @@ export function rgb2hex(rgb){
 	("0" + parseInt(r[2],10).toString(16)).slice(-2) +
 	("0" + parseInt(r[3],10).toString(16)).slice(-2) : ''
 }
+
+
+export function keyupEnter() {
+	return d3event.code=='Enter' || d3event.code=='NumpadEnter'
+}
