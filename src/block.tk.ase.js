@@ -3,6 +3,8 @@ import {axisLeft,axisRight} from 'd3-axis'
 import {scaleLinear} from 'd3-scale'
 import * as client from './client'
 import {rnabamtk_initparam} from './block.mds.svcnv.share'
+import * as common from './common'
+import * as expressionstat from './block.mds.expressionstat'
 
 
 /*
@@ -87,13 +89,12 @@ export async function loadTk( tk, block ) {
 		block.tkcloakoff( tk, {} )
 
 	} catch(e) {
+		if(e.stack) console.log(e.stack)
 		tk.height_main = tk.height = 100
 		block.tkcloakoff( tk, {error: (e.message||e)})
-		if(e.stack) console.log(e.stack)
 	}
 
-
-	set_height(tk, block)
+	block.block_setheight()
 }
 
 
@@ -128,10 +129,17 @@ function getdata_region ( r, tk, block ) {
 	.then(data=>{
 		if(data.error) throw data.error
 		r.genes = data.genes
-		r.coveragesrc = data.coveragesrc
-		tk.dna.coveragemax = Math.max( tk.dna.coveragemax, data.dnamax )
-		if( tk.rna.coverageauto ) {
-			tk.rna.coveragemax = Math.max( tk.rna.coveragemax, data.rnamax )
+		r.rpkmrangelimit = data.rpkmrangelimit
+		if( data.covplotrangelimit ) {
+			// no cov plot
+			r.covplotrangelimit = data.covplotrangelimit
+		} else {
+			// has cov plot
+			r.coveragesrc = data.coveragesrc
+			tk.dna.coveragemax = Math.max( tk.dna.coveragemax, data.dnamax )
+			if( tk.rna.coverageauto ) {
+				tk.rna.coveragemax = Math.max( tk.rna.coveragemax, data.rnamax )
+			}
 		}
 	})
 }
@@ -150,83 +158,215 @@ function renderTk( tk, block ) {
 			.selectAll('*').remove()
 	}
 
-	client.axisstyle({
-		axis: tk.rna.coverageaxisg
-			.attr('transform','translate(0,0)')
-			.call(
-			axisLeft()
-				.scale(
-					scaleLinear().domain([0,tk.rna.coveragemax]).range([tk.rna.coveragebarh,0])
-					)
-				.tickValues([0,tk.rna.coveragemax])
-			),
-		showline:true
-	})
 	tk.tklabel
-		.attr('y', tk.rna.coveragebarh/2-2)
-	tk.rna.coveragelabel
-		.attr('y', tk.rna.coveragebarh/2+2)
+		.each(function(){
+			tk.leftLabelMaxwidth = this.getBBox().width
+		})
 
-	client.axisstyle({
-		axis: tk.dna.coverageaxisg
-			.attr('transform','translate(0,'+(tk.rna.coveragebarh+tk.barypad)+')')
-			.call(
-			axisLeft()
-				.scale(
-					scaleLinear().domain([0,tk.dna.coveragemax]).range([0,tk.dna.coveragebarh])
-					)
-				.tickValues([0,tk.dna.coveragemax])
-			),
-		showline:true
-	})
-	tk.dna.coveragelabel
-		.attr('y', tk.rna.coveragebarh + tk.barypad + tk.dna.coveragebarh/2 )
+	renderTk_covplot( tk, block )
+	renderTk_rpkm( tk, block )
 
+	// gene rpkm
+
+	block.setllabel()
+	tk.height_main += tk.toppad + tk.bottompad
+}
+
+
+
+function renderTk_covplot ( tk, block ) {
+	const noploth = 30 // row height for not showing plot
+	const anyregionwithcovplot = tk.regions.find( r=> r.coveragesrc )
+
+	if( anyregionwithcovplot ) {
+		// at least 1 region has rna/dna cov plot
+		// position labels accordingly
+		client.axisstyle({
+			axis: tk.rna.coverageaxisg
+				.attr('transform','scale(1) translate(0,0)')
+				.call(
+				axisLeft()
+					.scale(
+						scaleLinear().domain([0,tk.rna.coveragemax]).range([tk.rna.coveragebarh,0])
+						)
+					.tickValues([0,tk.rna.coveragemax])
+				),
+			showline:true
+		})
+		tk.tklabel
+			.attr('y', tk.rna.coveragebarh/2-2)
+		tk.rna.coveragelabel
+			.attr('y', tk.rna.coveragebarh/2+2)
+			.attr('transform','scale(1)')
+
+		client.axisstyle({
+			axis: tk.dna.coverageaxisg
+				.attr('transform','scale(1) translate(0,'+(tk.rna.coveragebarh+tk.barypad)+')')
+				.call(
+				axisLeft()
+					.scale(
+						scaleLinear().domain([0,tk.dna.coveragemax]).range([0,tk.dna.coveragebarh])
+						)
+					.tickValues([0,tk.dna.coveragemax])
+				),
+			showline:true
+		})
+		tk.dna.coveragelabel
+			.attr('transform','scale(1)')
+			.attr('y', tk.rna.coveragebarh + tk.barypad + tk.dna.coveragebarh/2 )
+			.each(function(){
+				tk.leftLabelMaxwidth = Math.max( tk.leftLabelMaxwidth, this.getBBox().width)
+			})
+
+		tk.height_main = tk.rna.coveragebarh + tk.barypad + tk.dna.coveragebarh
+
+	} else {
+		// no region has cov plot
+		tk.dna.coverageaxisg.attr('transform','scale(0)')
+		tk.rna.coverageaxisg.attr('transform','scale(0)')
+		tk.dna.coveragelabel.attr('transform','scale(0)')
+		tk.rna.coveragelabel.attr('transform','scale(0)')
+
+		tk.height_main = noploth
+	}
 
 	for(const r of tk.regions) {
+		if( r.covplotrangelimit ) {
+			// no plot
+			tk.glider.append('text')
+				.text('Zoom in under '+common.bplen(r.covplotrangelimit)+' to show coverage plot')
+				.attr('font-size', block.laelfontsize)
+				.attr('text-anchor','middle')
+				.attr('x', r.x + r.width/2)
+				.attr('y', noploth/2)
+			continue
+		}
 		tk.glider.append('image')
 			.attr('x', r.x)
 			.attr('width', r.width)
 			.attr('height', tk.rna.coveragebarh + tk.barypad + tk.dna.coveragebarh )
 			.attr('xlink:href', r.coveragesrc)
+	}
+}
 
-		// show genes
+
+function renderTk_rpkm( tk, block ) {
+	const noploth = 30 // row height for not showing plot
+	const anyregionwithrpkm = tk.regions.find( r=> !r.rpkmrangelimit )
+
+	let maxrpkm = 0
+	for(const r of tk.regions) {
+		if(r.rpkmrangelimit) continue
+		if(r.genes) {
+			for(const g of r.genes) {
+				if(Number.isFinite(g.rpkm)) maxrpkm = Math.max(maxrpkm, g.rpkm)
+				expressionstat.measure( g, tk.gecfg )
+			}
+		}
 	}
 
-	resize_label(tk, block)
-}
+	const y = tk.height_main+tk.yspace1
 
+	if(anyregionwithrpkm && maxrpkm>0) {
 
-
-
-
-
-
-
-function resize_label(tk, block) {
-	tk.leftLabelMaxwidth = 0
-	tk.tklabel
-		.each(function(){
-			tk.leftLabelMaxwidth = this.getBBox().width
+		client.axisstyle({
+			axis: tk.rpkm.axisg
+				.attr('transform','scale(1) translate(0,'+y+')')
+				.call(
+				axisLeft()
+					.scale(
+						scaleLinear().domain([0,maxrpkm]).range([tk.rpkm.barh,0])
+						)
+					.tickValues([0, maxrpkm])
+				),
+			showline:true
 		})
-	tk.dna.coveragelabel
-		.each(function(){
-			tk.leftLabelMaxwidth = Math.max( tk.leftLabelMaxwidth, this.getBBox().width)
-		})
-	block.setllabel()
+		tk.rpkm.label
+			.attr('y', y+tk.rpkm.barh/2)
+			.attr('transform','scale(1)')
+
+		tk.height_main += tk.yspace1 + tk.rpkm.barh
+	} else {
+		// no region has rpkm
+		tk.rpkm.axisg.attr('transform','scale(0)')
+		tk.rpkm.label.attr('transform','scale(0)')
+		tk.height_main += noploth
+	}
+
+	for(const r of tk.regions) {
+		if( r.rpkmrangelimit) {
+			// no plot
+			tk.glider.append('text')
+				.text('Zoom in under '+common.bplen(r.rpkmrangelimit)+' to show gene RPKM values')
+				.attr('font-size', block.laelfontsize)
+				.attr('text-anchor','middle')
+				.attr('x', r.x + r.width/2)
+				.attr('y', y+noploth/2)
+			continue
+		}
+		if(!r.genes) continue
+
+		const rsf = r.width / (r.stop-r.start)
+
+		for(const gene of r.genes) {
+			if(!Number.isFinite(gene.rpkm)) continue
+
+			const color = expressionstat.ase_color( gene, tk.gecfg )
+			const boxh = tk.rpkm.barh * gene.rpkm / maxrpkm
+
+			let x1, x2
+			if( r.reverse ) {
+				x1 = r.x + rsf * (r.stop - Math.min(r.stop, gene.stop))
+				x2 = r.x + rsf * (r.stop - Math.max(r.start,gene.start))
+			} else {
+				x1 = r.x + rsf * (Math.max(r.start,gene.start) - r.start )
+				x2 = r.x + rsf * (Math.min(r.stop,gene.stop) - r.start )
+			}
+
+			const line = tk.glider.append('line')
+				.attr('x1',x1)
+				.attr('x2',x2)
+				.attr('y1',y+tk.rpkm.barh-boxh)
+				.attr('y2',y+tk.rpkm.barh-boxh)
+				.attr('stroke',color)
+				.attr('stroke-width',2)
+				.attr('stroke-opacity',.4)
+			const box = tk.glider.append('rect')
+				.attr('x', x1)
+				.attr('y', y + tk.rpkm.barh - boxh )
+				.attr('width', x2-x1 )
+				.attr('height', boxh)
+				.attr('fill', color)
+				.attr('fill-opacity',.2)
+				.on('mouseover',()=>{
+					line.attr('stroke-opacity',.5)
+					box.attr('fill-opacity',.3)
+					tooltip_generpkm( gene, tk )
+				})
+				.on('mouseout',()=>{
+					line.attr('stroke-opacity',.4)
+					box.attr('fill-opacity',.2)
+					tk.tktip.hide()
+				})
+		}
+	}
 }
 
 
 
 
-function set_height(tk, block) {
-	// call when track height updates
-
-
-	tk.height_main = tk.toppad + tk.rna.coveragebarh + tk.barypad + tk.dna.coveragebarh + tk.bottompad
-
-	block.block_setheight()
+function tooltip_generpkm (gene, tk) {
+	tk.tktip.clear().show(d3event.clientX,d3event.clientY)
+	const lst = [{
+		k: gene.gene+' RPKM',
+		v: gene.rpkm
+	}]
+	const table = client.make_table_2col( tk.tktip.d, lst )
+	expressionstat.showsingleitem_table( gene, tk.gecfg, table )
 }
+
+
+
 
 
 
@@ -258,13 +398,14 @@ function makeTk(tk, block) {
 	tk.dna.coveragemax = 0
 	if(!tk.dna.coveragebarh) tk.dna.coveragebarh = 50
 
+	if(!tk.yspace1) tk.yspace1=15 // y space between two rows: cov and rpkm
 
-/*
-	let laby = labyspace + block.labelfontsize
-	tk.label_resolution = block.maketklefthandle(tk, laby)
+	if(!tk.rpkm) tk.rpkm = {}
+	tk.rpkm.axisg = tk.gleft.append('g')
+	tk.rpkm.label = block.maketklefthandle(tk)
 		.attr('class',null)
-	laby += labyspace + block.labelfontsize
-	*/
+		.text('Gene RPKM')
+	if(!tk.rpkm.barh) tk.rpkm.barh = 50
 
 	tk.config_handle = block.maketkconfighandle(tk)
 		.attr('y',10+block.labelfontsize)
@@ -274,6 +415,9 @@ function makeTk(tk, block) {
 	
 	if( !tk.asearg ) tk.asearg = {}
 	rnabamtk_initparam( tk.asearg )
+
+	tk.gecfg = {datatype:'RPKM'}
+	expressionstat.init_config( tk.gecfg )
 }
 
 
