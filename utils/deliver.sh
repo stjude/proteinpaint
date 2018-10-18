@@ -1,5 +1,6 @@
 cp package.json deploys/deliver/proteinpaint/
 cp utils/install.pp.js deploys/deliver/proteinpaint/utils/
+cp utils/binom.R deploys/deliver/proteinpaint/utils/
 cp genome/* deploys/deliver/proteinpaint/genome/
 cp dataset/clinvar* deploys/deliver/proteinpaint/dataset/
 
