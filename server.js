@@ -5510,6 +5510,9 @@ async function handle_ase ( req, res ) {
 	if( reqbodyisinvalidjson( req, res )) return
 	const q = req.query
 
+	const rpkmrangelimit = 3000000
+	const covplotrangelimit = 500000
+
 	try {
 
 		if(!q.samplename) throw 'samplename missing'
@@ -5540,7 +5543,6 @@ async function handle_ase ( req, res ) {
 
 		const result = {}
 
-		const rpkmrangelimit = 3000000
 		if( q.stop - q.start < rpkmrangelimit ) {
 			for(const [n,g] of genes) {
 				const b = {
@@ -5553,7 +5555,7 @@ async function handle_ase ( req, res ) {
 				g.rpkm = reads * 1000000000 / ( q.rnabamtotalreads * (g.stop-g.start) )
 			}
 		} else {
-			// range too big
+			// range too big for rpkm
 			result.rpkmrangelimit = rpkmrangelimit
 		}
 
@@ -5566,15 +5568,21 @@ async function handle_ase ( req, res ) {
 		const snps = await handle_ase_getsnps( q, genome, genes, searchstart, searchstop )
 
 		let rnamax
-		if( q.rnamax ) {
-			// fixed max
-			rnamax = q.rnamax
-		} else {
-			rnamax  = await handle_ase_bamcoverage1stpass( q, renderstart, renderstop )
-			result.rnamax = rnamax
-		}
+		let plotter
 
-		const plotter = await handle_ase_bamcoverage2ndpass( q, renderstart, renderstop, snps, rnamax )
+		if( renderstop - renderstart >= covplotrangelimit ) {
+			// range too big for cov plot
+			result.covplotrangelimit = covplotrangelimit
+		} else {
+			if( q.rnamax ) {
+				// fixed max
+				rnamax = q.rnamax
+			} else {
+				rnamax  = await handle_ase_bamcoverage1stpass( q, renderstart, renderstop )
+				result.rnamax = rnamax
+			}
+			plotter = await handle_ase_bamcoverage2ndpass( q, renderstart, renderstop, snps, rnamax )
+		}
 
 		// check rna bam and plot track
 		result.coveragesrc = await handle_ase_pileup_plotcoverage(
@@ -5874,9 +5882,6 @@ function handle_ase_pileup_plotcoverage (
 	rnamax
 	) {
 
-
-	const { canvas, ctx, isbp, binpxw, binbpsize } = plotter
-
 	const snpstr = []
 	for(const m of snps) {
 		snpstr.push( (q.rnabam_nochr ? q.chr.replace('chr','') : q.chr)+':'+(m.pos+1)+'-'+(m.pos+1) )
@@ -5928,6 +5933,13 @@ function handle_ase_pileup_plotcoverage (
 		})
 
 		sp.on('close',()=>{
+
+			if( !plotter ) {
+				// won't do plotting, beyond range
+				resolve()
+			}
+
+			const { canvas, ctx, binpxw } = plotter
 
 			// done piling up, plot all snps in view range
 			let dnamax = 0
