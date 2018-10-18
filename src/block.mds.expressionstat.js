@@ -67,12 +67,18 @@ export function measure(v, cfg) {
 		const qvalue = v.ase.qvalue || v.ase.geometricmean
 		// rna bam mode uses geometricmean instead of qvalue
 
-		if( qvalue <= cfg.ase.qvalue ) {
+		if( qvalue == undefined ) {
+
+			v.estat.ase_noinfo=true
+
+		} else if( qvalue <= cfg.ase.qvalue ) {
+
 			if(v.ase.mean_delta >= cfg.ase.meandelta_monoallelic) {
 				v.estat.ase_monoallelic=true
 			} else {
 				v.estat.ase_uncertain=true
 			}
+
 		} else {
 			if(v.ase.ase_markers == cfg.ase.asemarkernumber_biallelic) {
 				// no longer post a min cutoff for mean_delta
