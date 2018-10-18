@@ -106,6 +106,7 @@ function getdata_region ( r, tk, block ) {
 		rnabamfile: tk.rnabamfile,
 		rnabamurl: tk.rnabamurl,
 		rnabamindexURL: tk.rnabamindexURL,
+		rnabamtotalreads: tk.rnabamtotalreads,
 		vcffile: tk.vcffile,
 		vcfurl: tk.vcfurl,
 		vcfindexURL: tk.vcfindexURL,

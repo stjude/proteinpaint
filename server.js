@@ -3846,6 +3846,8 @@ async function handle_mdssvcnv(req,res) {
 
 		if( req.query.checkrnabam ) {
 			if(!req.query.checkrnabam.samples) return res.send({error:'samples{} missing from checkrnabam'})
+			const e = ase_testarg( req.query.checkrnabam )
+			if(e) return res.send({error:e})
 			dsquery.checkrnabam = req.query.checkrnabam
 		}
 
@@ -4063,12 +4065,16 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 		if( sbam.url ) {
 			// even if no het snp still init dir, will calculate rpkm later for all bams
 			sbam.dir = await cache_index_promise( sbam.indexURL || sbam.url+'.bai' )
+		} else if( sbam.file ) {
+			sbam.file = path.join( serverconfig.tpmasterdir, sbam.file )
 		}
+
 		if( sbam.hetsnps.length>0 ) {
 			// do one pileup for these snp over this bam
 			await handle_mdssvcnv_rnabam_pileup( sbam, sbam.hetsnps, chr, dsquery.checkrnabam )
 			for( const m of sbam.hetsnps ) {
 				if( m.rnacount.nocoverage ) continue
+				if( m.rnacount.ref < dsquery.checkrnabam.rna_minallelecount && m.rnacount.alt < dsquery.checkrnabam.rna_minallelecount ) continue
 				testlines.push( samplename+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t\t\t\t\t\t\t\t'+m.rnacount.ref+'\t'+m.rnacount.alt )
 			}
 		}
@@ -4108,6 +4114,7 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 				// number of ase markers by pvalue cutoff 0.05, hardcoded!!
 				let ase_markers = 0
 				for(const s of rnasnp) {
+					// if rna read count below cutoff, then pvalue is undefined
 					if( s.rnacount.pvalue!=undefined ) {
 
 						if(mean==null) mean = s.rnacount.pvalue
@@ -4119,17 +4126,20 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 					}
 				}
 
-				outputgene.ase = {
-					markers: thishetsnp.length,
-					ase_markers: ase_markers,
-					mean_delta: deltasum / rnasnp.length,
-					geometricmean: Math.pow( mean, 1/rnasnp.length )
+				if( mean != null ) {
+					// has snp with valid pvalue
+					outputgene.ase = {
+						markers: thishetsnp.length,
+						ase_markers: ase_markers,
+						mean_delta: deltasum / rnasnp.length,
+						geometricmean: Math.pow( mean, 1/rnasnp.length )
+					}
 				}
 			}
 
 			const genereadcount = await handle_mdssvcnv_rnabam_genereadcount( sbam, chr, genepos.start, genepos.stop )
 
-			outputgene.rpkm = ( genereadcount / ((sbam.totalreads/1000000)*(genepos.stop-genepos.start)/1000) )
+			outputgene.rpkm = genereadcount * 1000000000 / ( sbam.totalreads * (genepos.stop-genepos.start) )
 			outputgene.snps = thishetsnp
 
 			thisgenes.push( outputgene )
@@ -4148,8 +4158,7 @@ function handle_mdssvcnv_rnabam_genereadcount ( bam, chr, start, stop ) {
 	return new Promise((resolve,reject)=>{
 		const sp = spawn(
 			samtools,
-			[ 'view', '-c',
-				bam.url || path.join(serverconfig.tpmasterdir,bam.file),
+			[ 'view', '-c', bam.url || bam.file,
 				(bam.nochr ? chr.replace('chr','') : chr)+':'+start+'-'+stop
 			],
 			{cwd: bam.dir}
@@ -4239,7 +4248,7 @@ function handle_mdssvcnv_rnabam_pileup ( bam, snps, chr, arg ) {
 			bcftools,
 			[ 'mpileup', '--no-reference', '-a', 'INFO/AD', '-d', 999999, '-r', lst.join(','),
 				'-q', arg.rnapileup_q, '-Q', arg.rnapileup_Q,
-				bam.url || path.join(serverconfig.tpmasterdir,bam.file)
+				bam.url || bam.file
 			],
 			{cwd: bam.dir}
 			)
@@ -5484,6 +5493,15 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 
 
 
+function ase_testarg ( q ) {
+	if(!Number.isFinite(q.hetsnp_minallelecount)) return 'invalid value for hetsnp_minallelecount'
+	if(!Number.isFinite(q.rna_minallelecount)) return 'invalid value for rna_minallelecount'
+	if(!Number.isFinite(q.hetsnp_minbaf)) return 'invalid value for hetsnp_minbaf'
+	if(!Number.isFinite(q.hetsnp_maxbaf)) return 'invalid value for hetsnp_maxbaf'
+	if(!Number.isFinite(q.rnapileup_q)) return 'invalid value for rnapileup_q'
+	if(!Number.isFinite(q.rnapileup_Q)) return 'invalid value for rnapileup_Q'
+}
+
 
 
 
@@ -5500,13 +5518,10 @@ async function handle_ase ( req, res ) {
 		if(!q.rnabarheight) throw 'no rnabarheight'
 		if(!q.dnabarheight) throw 'no dnabarheight'
 		if(!Number.isInteger(q.barypad)) throw 'invalid barypad'
-		if(!q.asearg) throw '.asearg{} missing'
-		if(!Number.isFinite(q.asearg.hetsnp_minallelecount)) throw 'invalid value for hetsnp_minallelecount'
-		if(!Number.isFinite(q.asearg.hetsnp_minbaf)) throw 'invalid value for hetsnp_minbaf'
-		if(!Number.isFinite(q.asearg.hetsnp_maxbaf)) throw 'invalid value for hetsnp_maxbaf'
-		if(!Number.isFinite(q.asearg.rnapileup_q)) throw 'invalid value for rnapileup_q'
-		if(!Number.isFinite(q.asearg.rnapileup_Q)) throw 'invalid value for rnapileup_Q'
 		if(q.rnamax && !Number.isFinite(q.rnamax)) throw 'invalid value for rnamax'
+		if(!q.asearg) throw '.asearg{} missing'
+		const e = ase_testarg( q.asearg )
+		if(e) throw e
 
 		const genome = genomes[ q.genome ]
 		if(!genome) throw 'invalid genome'
@@ -5520,9 +5535,27 @@ async function handle_ase ( req, res ) {
 
 		await handle_ase_prepfiles( q, genome )
 
-
 		const genes = await handle_ase_getgenes( genome, genetk, q.chr, q.start, q.stop )
 		// k: symbol, v: {start,stop}
+
+		const result = {}
+
+		const rpkmrangelimit = 3000000
+		if( q.stop - q.start < rpkmrangelimit ) {
+			for(const [n,g] of genes) {
+				const b = {
+					file: q.rnabamfile,
+					url: q.rnabamurl,
+					dir: q.rnabamurl_dir,
+					nochr: q.rnabam_nochr
+				}
+				const reads = await handle_mdssvcnv_rnabam_genereadcount( b, q.chr, g.start, g.stop )
+				g.rpkm = reads * 1000000000 / ( q.rnabamtotalreads * (g.stop-g.start) )
+			}
+		} else {
+			// range too big
+			result.rpkmrangelimit = rpkmrangelimit
+		}
 
 		const [ searchstart,
 			searchstop,
@@ -5532,11 +5565,19 @@ async function handle_ase ( req, res ) {
 		// heterozygous ones
 		const snps = await handle_ase_getsnps( q, genome, genes, searchstart, searchstop )
 
-		const rnamax  = q.rnamax || await handle_ase_bamcoverage1stpass( q, renderstart, renderstop )
+		let rnamax
+		if( q.rnamax ) {
+			// fixed max
+			rnamax = q.rnamax
+		} else {
+			rnamax  = await handle_ase_bamcoverage1stpass( q, renderstart, renderstop )
+			result.rnamax = rnamax
+		}
+
 		const plotter = await handle_ase_bamcoverage2ndpass( q, renderstart, renderstop, snps, rnamax )
 
 		// check rna bam and plot track
-		const imgsrc = await handle_ase_pileup(
+		result.coveragesrc = await handle_ase_pileup_plotcoverage(
 			q,
 			snps,
 			searchstart,
@@ -5548,24 +5589,19 @@ async function handle_ase ( req, res ) {
 			)
 
 		// binom test
-		await handle_ase_binom( snps )
+		await handle_ase_binom( snps, q )
 
-		const generesult = handle_ase_generesult( snps, genes )
+		result.genes = handle_ase_generesult( snps, genes )
 
-		// return
 		let dnamax = 0
 		for(const m of snps) {
 			if(m.dnacount) {
 				dnamax = Math.max( dnamax, m.dnacount.ref + m.dnacount.alt )
 			}
 		}
+		result.dnamax = dnamax
 
-		res.send({
-			genes: generesult,
-			coveragesrc: imgsrc,
-			dnamax: dnamax,
-			rnamax: rnamax,
-		})
+		res.send( result )
 
 	} catch (e) {
 		if(e.stack) console.log(e.stack)
@@ -5575,9 +5611,14 @@ async function handle_ase ( req, res ) {
 
 
 
-async function handle_ase_binom ( snps ) {
+async function handle_ase_binom ( snps, q ) {
 	if( snps.length==0 ) return
-	const rnasnp = snps.filter( i=> !i.rnacount.nocoverage )
+	const rnasnp = [] // should have suffcient coverage
+	for(const m of snps) {
+		if(m.rnacount.nocoverage) continue
+		if(m.rnacount.ref < q.asearg.rna_minallelecount && m.rnacount.alt < q.asearg.rna_minallelecount ) continue
+		rnasnp.push( m )
+	}
 	if( rnasnp.length==0 ) return
 	const snpfile = await handle_ase_binom_write( rnasnp )
 	const pfile = await handle_ase_binom_test( snpfile )
@@ -5663,7 +5704,7 @@ function handle_ase_definerange ( q, genes ) {
 
 
 
-function handle_ase_generesult ( snps, genes ) {
+function handle_ase_generesult ( snps, genes, q ) {
 	/*
 	snps
 	genes
@@ -5682,7 +5723,7 @@ function handle_ase_generesult ( snps, genes ) {
 
 		gene.snps = thissnps
 
-		const rnasnp = thissnps.filter( i=> !i.rnacount.nocoverage )
+		const rnasnp = thissnps.filter( i=> i.rnacount.pvalue!=undefined )
 		if( rnasnp.length==0 ) {
 			gene.nornasnp = 1
 			continue
@@ -5822,7 +5863,7 @@ function handle_ase_bamcoverage2ndpass ( q, start, stop, snps, rnamax ) {
 
 
 
-function handle_ase_pileup(
+function handle_ase_pileup_plotcoverage (
 	q,
 	snps,
 	searchstart,
