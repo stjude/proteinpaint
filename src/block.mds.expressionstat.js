@@ -5,8 +5,17 @@ import {event as d3event} from 'd3-selection'
 /*
 Yu's ase & outlier method and data
 works for both native and custom track
-
 common code shared by business modules
+
+********************** EXPORTED
+init_config
+measure()
+showsingleitem_table
+
+
+********************** INTERNAL
+
+
 
 */
 
@@ -205,29 +214,6 @@ export function showsingleitem_table(v, cfg, table) {
 		const td=tr.append('td')
 		client.make_table_2col(td, lst)
 
-		if( v.ase.geometricmean && v.snps ) {
-			// in rna bam mode; v is one gene obj, print snps
-			const lst = []
-			for(const m of v.snps ) {
-				lst.push(
-					'<tr>'
-					+'<td>'+m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt+'</td>'
-					+'<td>'+m.dnacount.ref+'/'+m.dnacount.alt+'</td>'
-					+'<td>'+( m.rnacount.nocoverage ? '<span style="font-size:.8em;opacity:.5">No coverage</span>' : m.rnacount.ref+'/'+m.rnacount.alt)
-					+'</td>'
-					+'<td>'+(m.rnacount.nocoverage ? '-' : m.rnacount.pvalue)+'</td>'
-					+'</tr>'
-				)
-			}
-			table.append('tr')
-				.append('td')
-				.attr('colspan',3)
-				.html( '<table style="margin-top:10px;border:solid 1px #ededed;border-spacing:5px;">'
-					+'<tr style="opacity:.5"><td>SNP</td><td>DNA</td><td>RNA</td><td>Binomial test P-value</td></tr>'
-					+lst.join('')
-					+'</table>'
-					)
-		}
 
 	} else {
 
@@ -238,6 +224,36 @@ export function showsingleitem_table(v, cfg, table) {
 			.style('color','white')
 			.text('No info on allele-specific expression')
 	}
+
+
+	/*
+	in rnabam mode, snps[] may be available
+	despite there may not be a ase call
+	*/
+	if( v.snps && v.snps.length>0 ) {
+		// in rna bam mode; v is one gene obj, print snps
+		const lst = []
+		for(const m of v.snps ) {
+			lst.push(
+				'<tr>'
+				+'<td>'+m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt+'</td>'
+				+'<td>'+m.dnacount.ref+'/'+m.dnacount.alt+'</td>'
+				+'<td>'+( m.rnacount.nocoverage ? '<span style="font-size:.8em;opacity:.5">No coverage</span>' : m.rnacount.ref+'/'+m.rnacount.alt)
+				+'</td>'
+				+'<td>'+(m.rnacount.pvalue || '-')+'</td>'
+				+'</tr>'
+			)
+		}
+		table.append('tr')
+			.append('td')
+			.attr('colspan',3)
+			.html( '<table style="margin-top:10px;border:solid 1px #ededed;border-spacing:5px;">'
+				+'<tr style="opacity:.5"><td>SNP</td><td>DNA</td><td>RNA</td><td>Binomial test P-value</td></tr>'
+				+lst.join('')
+				+'</table>'
+				)
+	}
+
 
 	if(v.outlier) {
 		if(v.outlier.test_whitelist) {
