@@ -2080,7 +2080,6 @@ export function multi_rnabam_asestatus ( tk ) {
 		const sbam = tk.checkrnabam.samples[s]
 		if( sbam.genes ) {
 			for(const gene of sbam.genes ) {
-				//expressionstat.measure_rnabam( gene, tk.gecfg )
 				expressionstat.measure( gene, tk.gecfg )
 			}
 		}
@@ -2425,12 +2424,10 @@ export function focus_singlesample( p ) {
 export function rnabamtk_copyparam ( from, to ) {
 	// both tk obj
 	if( !from.checkrnabam ) return
-	to.aseaarg = {
-		hetsnp_minallelecount: from.hetsnp_minallelecount,
-		hetsnp_minbaf: from.hetsnp_minbaf,
-		hetsnp_maxbaf: from.hetsnp_maxbaf,
-		rnapileup_q: from.rnapileup_q,
-		rnapileup_Q: from.rnapileup_Q
+	to.asearg = {}
+	for(const k in from.checkrnabam) {
+		if(k=='samples') continue
+		to.asearg[k] = from.checkrnabam[k]
 	}
 }
 
