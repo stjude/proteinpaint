@@ -4111,7 +4111,7 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 
 				// geometric mean
 				let mean = null
-				// number of ase markers by pvalue cutoff 0.05, hardcoded!!
+				// number of ase markers by pvalue cutoff
 				let ase_markers = 0
 				for(const s of rnasnp) {
 					// if rna read count below cutoff, then pvalue is undefined
@@ -4120,7 +4120,7 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 						if(mean==null) mean = s.rnacount.pvalue
 						else mean *= s.rnacount.pvalue
 
-						if( s.rnacount.pvalue <= 0.05 ) {
+						if( s.rnacount.pvalue <= dsquery.checkrnabam.binompvaluecutoff ) {
 							ase_markers++
 						}
 					}
@@ -5567,6 +5567,12 @@ async function handle_ase ( req, res ) {
 		// heterozygous ones
 		const snps = await handle_ase_getsnps( q, genome, genes, searchstart, searchstop )
 
+		for(const m of snps) {
+			m.rnacount = {
+				nocoverage: 1
+			}
+		}
+
 		let rnamax
 		let plotter
 
@@ -5599,7 +5605,7 @@ async function handle_ase ( req, res ) {
 		// binom test
 		await handle_ase_binom( snps, q )
 
-		result.genes = handle_ase_generesult( snps, genes )
+		result.genes = handle_ase_generesult( snps, genes, q )
 
 		let dnamax = 0
 		for(const m of snps) {
@@ -5677,7 +5683,7 @@ function handle_ase_binom_write( snps ) {
 	const data = []
 	for(const s of snps) {
 		if( s.rnacount.nocoverage ) continue
-		if( s.rnacount.ref==undefined || s.rnacount.alt==undefined ) continue // xxx
+		if( s.rnacount.ref==undefined || s.rnacount.alt==undefined ) continue
 		data.push ( s.pos+'.'+s.ref+'.'+s.alt+'\t\t\t\t\t\t\t\t'+s.rnacount.ref+'\t'+s.rnacount.alt )
 	}
 	return new Promise((resolve, reject)=>{
@@ -5737,17 +5743,23 @@ function handle_ase_generesult ( snps, genes, q ) {
 			continue
 		}
 		const deltasum = rnasnp.reduce((i,j) => i + Math.abs( j.rnacount.f - 0.5 ), 0)
-		gene.mean_delta = deltasum / rnasnp.length
 
 		// geometric mean
 		let mean = null
+		let ase_markers = 0
 		for(const s of rnasnp) {
-			if( s.rnacount.pvalue!=undefined ) {
-				if(mean==null) mean = s.rnacount.pvalue
-				else mean *= s.rnacount.pvalue
+			if(mean==null) mean = s.rnacount.pvalue
+			else mean *= s.rnacount.pvalue
+			if(s.rnacount.pvalue <= q.asearg.binompvaluecutoff) {
+				ase_markers++
 			}
 		}
-		gene.geometricmean = Math.pow( mean, 1/rnasnp.length )
+		gene.ase = {
+			markers: thissnps.length,
+			ase_markers: ase_markers,
+			mean_delta: deltasum / rnasnp.length,
+			geometricmean: Math.pow( mean, 1/rnasnp.length )
+		}
 	}
 
 	return out
@@ -5794,9 +5806,6 @@ function handle_ase_bamcoverage2ndpass ( q, start, stop, snps, rnamax ) {
 	// for those in viewrange and covered in rna, record bar h
 	const pos2snp = new Map()
 	for(const m of snps) {
-		m.rnacount = {
-			nocoverage: 1
-		}
 		if(m.pos>=start && m.pos<=stop) {
 			// in render range
 			pos2snp.set( m.pos, m )
@@ -5937,6 +5946,7 @@ function handle_ase_pileup_plotcoverage (
 			if( !plotter ) {
 				// won't do plotting, beyond range
 				resolve()
+				return
 			}
 
 			const { canvas, ctx, binpxw } = plotter
@@ -6209,7 +6219,11 @@ async function handle_ase_getgenes ( genome, genetk, chr, start, stop ) {
 				s.start = Math.min( s.start, start )
 				s.stop = Math.max( s.stop, stop )
 			} else {
-				symbol2lst.set( j.name, { start, stop } )
+				symbol2lst.set( j.name, {
+					gene: j.name,
+					start: start,
+					stop: stop
+					} )
 			}
 		}
 	}
