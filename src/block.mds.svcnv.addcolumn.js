@@ -1181,7 +1181,6 @@ function rnabam_click_genebar ( gene, sample, tk, block ) {
 
 		if( sbam ) {
 
-
 			const asetk = {
 				type: common.tkt.ase,
 				name: sample.samplename+' ASE',
@@ -1189,6 +1188,7 @@ function rnabam_click_genebar ( gene, sample, tk, block ) {
 				rnabamfile: sbam.file,
 				rnabamurl: sbam.url,
 				rnabamindexURL: sbam.rnabamindexURL,
+				rnabamtotalreads: sbam.totalreads,
 				vcffile: tk.checkvcf.file,
 				vcfurl: tk.checkvcf.url,
 				vcfindexURL: tk.checkvcf.indexURL,

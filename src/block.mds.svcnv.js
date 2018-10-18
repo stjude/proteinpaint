@@ -2233,6 +2233,7 @@ export function focus_singlesample( p ) {
 				rnabamfile: sbam.file,
 				rnabamurl: sbam.url,
 				rnabamindexURL: sbam.rnabamindexURL,
+				rnabamtotalreads: sbam.totalreads,
 				vcffile: tk.checkvcf.file,
 				vcfurl: tk.checkvcf.url,
 				vcfindexURL: tk.checkvcf.indexURL,
