@@ -48,6 +48,7 @@ launch_singlesample
 
 
 
+const radius=3
 
 
 
@@ -82,7 +83,31 @@ export function init (obj,holder, debugmode) {
 	const tr1td1 = tr1.append('td')
 	const tr1td2 = tr1.append('td')
 		.style('vertical-align','top')
-	
+
+	{
+		// sample search may be configurable
+		const row = tr1td2.append('div')
+			.style('margin-bottom','5px')
+		row.append('input')
+			.attr('type','text')
+			.attr('placeholder','Search sample')
+			.style('width','200px')
+			.on('keyup',()=>{
+				const str0 = d3event.target.value
+				if(!str0) {
+					// reset
+					obj.dotselection.transition().attr('r', radius)
+					return
+				}
+				const str = str0.toLowerCase()
+				obj.dotselection
+					.filter( d=> d.sample.toLowerCase().indexOf( str )!=-1 )
+					.transition().attr('r', radius*2)
+				obj.dotselection
+					.filter( d=> d.sample.toLowerCase().indexOf( str )==-1 )
+					.transition().attr('r', 1)
+			})
+	}
 	obj.legendtable = tr1td2.append('table')
 		.style('border-spacing','5px')
 
@@ -213,7 +238,6 @@ function init_plot (obj) {
 
 
 	function resize() {
-		const radius=3
 		bottompad=width/20+20
 		svg.attr('width',leftpad+vpad+width+rightpad)
 			.attr('height',toppad+height+vpad+bottompad)
