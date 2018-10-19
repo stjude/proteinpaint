@@ -2,7 +2,7 @@ import {event as d3event} from 'd3-selection'
 import {axisLeft,axisRight} from 'd3-axis'
 import {scaleLinear} from 'd3-scale'
 import * as client from './client'
-import {rnabamtk_initparam} from './block.mds.svcnv.share'
+import {rnabamtk_initparam, configPanel_rnabam} from './block.mds.svcnv.share'
 import * as common from './common'
 import * as expressionstat from './block.mds.expressionstat'
 
@@ -21,6 +21,7 @@ getdata_region
 renderTk
 renderTk_covplot
 renderTk_rpkm
+configPanel
 
 */
 
@@ -122,6 +123,8 @@ function getdata_region ( r, tk, block ) {
 		stop: r.stop,
 		width: r.width,
 		checkrnabam: tk.checkrnabam,
+		refcolor: tk.dna.refcolor,
+		altcolor: tk.dna.altcolor,
 	}
 	if( !tk.rna.coverageauto ) {
 		// fixed
@@ -418,6 +421,8 @@ function makeTk(tk, block) {
 		.text('DNA coverage')
 	tk.dna.coveragemax = 0
 	if(!tk.dna.coveragebarh) tk.dna.coveragebarh = 50
+	if(!tk.dna.refcolor) tk.dna.refcolor = 'blue'
+	if(!tk.dna.altcolor) tk.dna.altcolor = '#ff4040'
 
 	if(!tk.yspace1) tk.yspace1=15 // y space between two rows: cov and rpkm
 
@@ -506,7 +511,30 @@ function configPanel(tk,block) {
 				loadTk(tk,block)
 			})
 	}
+
 	// dna bar h
+	d.append('div')
+		.text('DNA markers are only shown for heterozygous SNPs.')
+		.style('font-size','.8em')
+		.style('opacity',.5)
+		.style('margin-top','25px')
+	{
+		const row = d.append('div')
+			.style('margin','5px 0px')
+		row.append('span')
+			.html('Bar height&nbsp;')
+		row.append('input')
+			.attr('type','numeric')
+			.property('value', tk.dna.coveragebarh)
+			.style('width','80px')
+			.on('keyup',()=>{
+				if(!client.keyupEnter()) return
+				const v = Number.parseInt(d3event.target.value)
+				if(v <= 20) return
+				if(v == tk.dna.coveragebarh) return
+				tk.dna.coveragebarh = v
+				loadTk(tk,block)
+			})
+	}
 	// gecfg analysis
-	// list genes, ase status, and snps
 }
