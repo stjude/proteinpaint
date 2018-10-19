@@ -501,7 +501,7 @@ if(nm.showsamplebar ) {
 		return 2+ 8* (1 - Math.pow( (1- x/genotypebyvaluesamplemax), 4))
 	}
 	*/
-	const w=Math.pow(2/2,2)*Math.PI // unit area
+	const w=Math.pow(12/2,2)*Math.PI // unit area
 	/*
 	let mrd=0 // max disc radius
 	if(genotypebyvaluesamplemax<=10) mrd=w*genotypebyvaluesamplemax*.9
@@ -509,7 +509,7 @@ if(nm.showsamplebar ) {
 	else if(genotypebyvaluesamplemax<=1000) mrd=w*14
 	else mrd=w*20
 	*/
-	const mrd = w*4
+	const mrd = w*10
 	// scale for disc radius
 	genotypebyvaluecircleradiusscale = scaleLinear()
 		.domain([1,
@@ -920,7 +920,8 @@ if(nm.showsamplebar) {
 					const y = -numscale(v)-nm.maxradius
 					g.append('circle')
 					.attr('cy',y)
-					.attr('r', genotypebyvaluecircleradiusscale( num_refref) )
+					//.attr('r', genotypebyvaluecircleradiusscale( num_refref) )
+					.attr('r', Math.sqrt( genotypebyvaluecircleradiusscale( num_refref) ) / Math.PI )
 					.attr('stroke', tk.ds.genotypebynumericvalue.refref.color)
 					.attr('fill','white')
 					.attr('fill-opacity',0)
@@ -946,7 +947,8 @@ if(nm.showsamplebar) {
 					const y = -numscale(v)-nm.maxradius
 					g.append('circle')
 					.attr('cy',y)
-					.attr('r', genotypebyvaluecircleradiusscale( num_refalt) )
+					//.attr('r', genotypebyvaluecircleradiusscale( num_refalt) )
+					.attr('r', Math.sqrt( genotypebyvaluecircleradiusscale( num_refalt) ) / Math.PI )
 					.attr('stroke', tk.ds.genotypebynumericvalue.refalt.color)
 					.attr('fill','white')
 					.attr('fill-opacity',0)
