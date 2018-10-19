@@ -5522,8 +5522,8 @@ async function handle_ase ( req, res ) {
 		if(!q.dnabarheight) throw 'no dnabarheight'
 		if(!Number.isInteger(q.barypad)) throw 'invalid barypad'
 		if(q.rnamax && !Number.isFinite(q.rnamax)) throw 'invalid value for rnamax'
-		if(!q.asearg) throw '.asearg{} missing'
-		const e = ase_testarg( q.asearg )
+		if(!q.checkrnabam) throw '.checkrnabam{} missing'
+		const e = ase_testarg( q.checkrnabam )
 		if(e) throw e
 
 		const genome = genomes[ q.genome ]
@@ -5631,7 +5631,7 @@ async function handle_ase_binom ( snps, q ) {
 	const rnasnp = [] // should have suffcient coverage
 	for(const m of snps) {
 		if(m.rnacount.nocoverage) continue
-		if(m.rnacount.ref < q.asearg.rna_minallelecount && m.rnacount.alt < q.asearg.rna_minallelecount ) continue
+		if(m.rnacount.ref < q.checkrnabam.rna_minallelecount && m.rnacount.alt < q.checkrnabam.rna_minallelecount ) continue
 		rnasnp.push( m )
 	}
 	if( rnasnp.length==0 ) return
@@ -5751,7 +5751,7 @@ function handle_ase_generesult ( snps, genes, q ) {
 		for(const s of rnasnp) {
 			if(mean==null) mean = s.rnacount.pvalue
 			else mean *= s.rnacount.pvalue
-			if(s.rnacount.pvalue <= q.asearg.binompvaluecutoff) {
+			if(s.rnacount.pvalue <= q.checkrnabam.binompvaluecutoff) {
 				ase_markers++
 			}
 		}
@@ -5902,7 +5902,7 @@ function handle_ase_pileup_plotcoverage (
 		const sp = spawn(
 			bcftools,
 			[ 'mpileup',
-				'-q', q.asearg.rnapileup_q, '-Q', q.asearg.rnapileup_Q,
+				'-q', q.checkrnabam.rnapileup_q, '-Q', q.checkrnabam.rnapileup_Q,
 				'--no-reference', '-a', 'INFO/AD', '-d', 999999, '-r', snpstr.join(','),
 				q.rnabamurl || q.rnabamfile
 			],
@@ -5921,7 +5921,6 @@ function handle_ase_pileup_plotcoverage (
 
 			if( m0.pos >= renderstart && m0.pos <= renderstop && m0.DP ) {
 				// in render range
-				renderx = q.width * ( m0.pos-renderstart) / (q.stop-renderstart)
 			}
 
 			const m = snps.find( m=> m.pos == m0.pos )
@@ -5955,7 +5954,9 @@ function handle_ase_pileup_plotcoverage (
 			// done piling up, plot all snps in view range
 			let dnamax = 0
 			for(const m of snps) {
-				if( m.__x == undefined) continue
+				if( !m.dnacount) continue
+				if( m.pos<renderstart || m.pos>renderstop ) continue
+				m.__x = q.width * ( m.pos-renderstart) / (renderstop-renderstart)
 				dnamax = Math.max( dnamax, m.dnacount.ref+m.dnacount.alt )
 			}
 
@@ -6101,7 +6102,7 @@ async function handle_ase_prepfiles( q, genome ) {
 async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) {
 	/*
 	q:
-	.asearg{}
+	.checkrnabam{}
 	.samplename
 	.vcffile
 	.vcfurl
@@ -6143,7 +6144,7 @@ async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) 
 			// find sample
 			if( !m.sampledata ) continue
 
-			const hm = handle_ase_hetsnp4sample( m, q.samplename, q.asearg )
+			const hm = handle_ase_hetsnp4sample( m, q.samplename, q.checkrnabam )
 
 			if( hm ) allsnps.push( hm )
 		}
