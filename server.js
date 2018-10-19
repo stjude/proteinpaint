@@ -6797,11 +6797,17 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 
 	function findadd(samples) {
 		for(const samplename of samples) {
+
+			if(result.length>10) return
+
 			if(samplename.toLowerCase().indexOf( str ) == -1) continue
 
 			const sample={
 				name:samplename
 			}
+
+
+
 
 			if(ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattrlst) {
 				const sanno = ds.cohort.annotation[samplename]
@@ -6821,9 +6827,9 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 					}
 				}
 			}
-			result.push( sample )
-			if(result.length>10) {
-				return
+
+			if( !result.find(i=>i.name==samplename)) {
+				result.push( sample )
 			}
 		}
 	}
