@@ -5515,6 +5515,8 @@ async function handle_ase ( req, res ) {
 
 	try {
 
+		const genome = genomes[ q.genome ]
+		if(!genome) throw 'invalid genome'
 		if(!q.samplename) throw 'samplename missing'
 		if(!q.chr) throw 'no chr'
 		if(!q.start || !q.stop) throw 'no start/stop'
@@ -5526,8 +5528,8 @@ async function handle_ase ( req, res ) {
 		const e = ase_testarg( q.checkrnabam )
 		if(e) throw e
 
-		const genome = genomes[ q.genome ]
-		if(!genome) throw 'invalid genome'
+		if(!q.refcolor) q.refcolor = 'blue'
+		if(!q.altcolor) q.altcolor = 'red'
 
 		if(!genome.tracks) throw 'genome.tracks[] missing'
 
@@ -5587,11 +5589,12 @@ async function handle_ase ( req, res ) {
 				rnamax  = await handle_ase_bamcoverage1stpass( q, renderstart, renderstop )
 				result.rnamax = rnamax
 			}
+			// plot coverage
 			plotter = await handle_ase_bamcoverage2ndpass( q, renderstart, renderstop, snps, rnamax )
 		}
 
-		// check rna bam and plot track
-		result.coveragesrc = await handle_ase_pileup_plotcoverage(
+		// check rna bam and plot markers
+		result.coveragesrc = await handle_ase_pileup_plotsnp(
 			q,
 			snps,
 			searchstart,
@@ -5889,7 +5892,7 @@ function handle_ase_bamcoverage2ndpass ( q, start, stop, snps, rnamax ) {
 
 
 
-function handle_ase_pileup_plotcoverage (
+function handle_ase_pileup_plotsnp (
 	q,
 	snps,
 	searchstart,
@@ -5899,6 +5902,12 @@ function handle_ase_pileup_plotcoverage (
 	plotter,
 	rnamax
 	) {
+/*
+q {}
+.refcolor  .altcolor
+.rnabam_nochr
+.checkrnabam{}
+*/
 
 	const snpstr = []
 	for(const m of snps) {
@@ -5977,30 +5986,30 @@ function handle_ase_pileup_plotcoverage (
 					if(m.rnacount.h==undefined) {
 						m.rnacount.h = q.rnabarheight * (m.rnacount.ref+m.rnacount.alt) / rnamax
 					}
+					ctx.strokeStyle = q.refcolor
 					ctx.beginPath()
 					ctx.moveTo( m.__x+binpxw/2, q.rnabarheight )
-					ctx.lineTo( m.__x+binpxw/2, q.rnabarheight - (m.rnacount.f * m.rnacount.h) )
-					ctx.strokeStyle = 'blue'
+					ctx.lineTo( m.__x+binpxw/2, q.rnabarheight - ((1-m.rnacount.f) * m.rnacount.h) )
 					ctx.stroke()
 					ctx.closePath()
+					ctx.strokeStyle = q.altcolor
 					ctx.beginPath()
-					ctx.strokeStyle = '#FF4040'
-					ctx.moveTo( m.__x+binpxw/2, q.rnabarheight - (m.rnacount.f * m.rnacount.h) )
+					ctx.moveTo( m.__x+binpxw/2, q.rnabarheight - ((1-m.rnacount.f) * m.rnacount.h) )
 					ctx.lineTo( m.__x+binpxw/2, q.rnabarheight - m.rnacount.h )
 					ctx.stroke()
 					ctx.closePath()
 				}
 				// dna
 				const h = q.dnabarheight * (m.dnacount.ref+m.dnacount.alt) / dnamax
+				ctx.strokeStyle = q.refcolor
 				ctx.beginPath()
 				ctx.moveTo( m.__x+binpxw/2, q.rnabarheight + q.barypad )
-				ctx.lineTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + (m.dnacount.f * h) )
-				ctx.strokeStyle = 'blue'
+				ctx.lineTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + ((1-m.dnacount.f) * h) )
 				ctx.stroke()
 				ctx.closePath()
+				ctx.strokeStyle = q.altcolor
 				ctx.beginPath()
-				ctx.strokeStyle = '#FF4040'
-				ctx.moveTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + (m.dnacount.f * h) )
+				ctx.moveTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + ((1-m.dnacount.f) * h) )
 				ctx.lineTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + h )
 				ctx.stroke()
 				ctx.closePath()
