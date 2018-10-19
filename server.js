@@ -5607,9 +5607,10 @@ async function handle_ase ( req, res ) {
 
 		result.genes = handle_ase_generesult( snps, genes, q )
 
+		// find dna max coverage for snps in plot range
 		let dnamax = 0
 		for(const m of snps) {
-			if(m.dnacount) {
+			if( m.dnacount && m.pos>=renderstart && m.pos<=renderstop ) {
 				dnamax = Math.max( dnamax, m.dnacount.ref + m.dnacount.alt )
 			}
 		}
