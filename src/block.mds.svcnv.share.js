@@ -1,4 +1,5 @@
 import {event as d3event} from 'd3-selection'
+import {keyupEnter} from './client'
 /*
 for rnabam ase stuff shared with ase tk
 */
@@ -34,19 +35,18 @@ export function configPanel_rnabam ( tk, block, loadTk ) {
 	d.append('div')
 		.style('opacity',.5)
 		.style('font-size','.9em')
-		.style('font-weight','bold')
 		.text('Finding heterozygous SNPs in DNA')
 	{
 		const row = d.append('div')
 			.style('margin-top','5px')
 		row.append('span')
-			.html('Minimum allele read count&nbsp;')
+			.html('DNA minimum read count&nbsp;')
 		row.append('input')
 			.attr('type','number')
 			.style('width','50px')
 			.property('value', c.hetsnp_minallelecount)
 			.on('keyup',()=>{
-				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+				if(!keyupEnter()) return
 				let v=Number.parseInt(d3event.target.value)
 				if(!v || v<=0) return // invalid value
 				if( c.hetsnp_minallelecount == v ) {
@@ -59,7 +59,7 @@ export function configPanel_rnabam ( tk, block, loadTk ) {
 		row.append('div')
 			.style('opacity','.5')
 			.style('font-size','.8em')
-			.text('If both alleles have read count below cutoff, then this SNP will be skipped.')
+			.text('If both alleles of a SNP have read count below cutoff, then this SNP will be skipped.')
 	}
 	{
 		const row = d.append('div')
@@ -71,7 +71,7 @@ export function configPanel_rnabam ( tk, block, loadTk ) {
 			.style('width','50px')
 			.property('value', c.hetsnp_minbaf)
 			.on('keyup',()=>{
-				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+				if(!keyupEnter()) return
 				let v=Number.parseFloat(d3event.target.value)
 				if(!v || v<=0) return // invalid value
 				if( c.hetsnp_minbaf == v ) {
@@ -90,7 +90,7 @@ export function configPanel_rnabam ( tk, block, loadTk ) {
 			.style('width','50px')
 			.property('value', c.hetsnp_maxbaf)
 			.on('keyup',()=>{
-				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+				if(!keyupEnter()) return
 				let v=Number.parseFloat(d3event.target.value)
 				if(!v || v<=0) return // invalid value
 				if( c.hetsnp_maxbaf == v ) {
@@ -103,14 +103,13 @@ export function configPanel_rnabam ( tk, block, loadTk ) {
 		row.append('div')
 			.style('opacity','.5')
 			.style('font-size','.8em')
-			.text('If BAF (B-allele fraction) is within this range, the SNP can be considered heterzygous.')
+			.text('If a SNP\'s BAF (B-allele fraction) is within this range, it is heterozygous.')
 	}
 
 	d.append('div')
-		.style('margin','20px 0px 10px 0px')
+		.style('margin-top','20px')
 		.style('opacity',.5)
 		.style('font-size','.9em')
-		.style('font-weight','bold')
 		.text('Counting alleles in RNA-seq BAM file')
 
 	{
@@ -123,7 +122,7 @@ export function configPanel_rnabam ( tk, block, loadTk ) {
 			.style('width','50px')
 			.property('value', c.rnapileup_q)
 			.on('keyup',()=>{
-				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+				if(!keyupEnter()) return
 				let v=Number.parseInt(d3event.target.value)
 				if(!v || v<0) return // invalid value
 				if( c.rnapileup_q == v ) {
@@ -144,7 +143,7 @@ export function configPanel_rnabam ( tk, block, loadTk ) {
 			.style('width','50px')
 			.property('value', c.rnapileup_Q)
 			.on('keyup',()=>{
-				if(d3event.code!='Enter' && d3event.code!='NumpadEnter') return
+				if(!keyupEnter()) return
 				let v=Number.parseInt(d3event.target.value)
 				if(!v || v<=0) return // invalid value
 				if( c.rnapileup_Q == v ) {
@@ -154,5 +153,57 @@ export function configPanel_rnabam ( tk, block, loadTk ) {
 				c.rnapileup_Q = v
 				loadTk(tk, block)
 			})
+	}
+
+	d.append('div')
+		.style('margin-top','20px')
+		.style('opacity',.5)
+		.style('font-size','.9em')
+		.text('Binomial test on wheter a heterozygous SNP shows allelic bias in RNA')
+	{
+		const row = d.append('div')
+			.style('margin-top','5px')
+		row.append('span')
+			.html('P-value cutoff&nbsp;')
+		row.append('input')
+			.attr('type','number')
+			.style('width','50px')
+			.property('value', c.binompvaluecutoff )
+			.on('keyup',()=>{
+				if(!keyupEnter()) return
+				let v=Number.parseFloat(d3event.target.value)
+				if(!v || v<=0 || v>=1) return // invalid value
+				if( c.binompvaluecutoff == v ) {
+					// same as current cutoff, do nothing
+					return
+				}
+				c.binompvaluecutoff = v
+				loadTk(tk, block)
+			})
+	}
+	{
+		const row = d.append('div')
+			.style('margin-top','5px')
+		row.append('span')
+			.html('RNA minimum read count&nbsp;')
+		row.append('input')
+			.attr('type','number')
+			.style('width','50px')
+			.property('value', c.rna_minallelecount)
+			.on('keyup',()=>{
+				if(!keyupEnter()) return
+				let v=Number.parseInt(d3event.target.value)
+				if(!v || v<=0) return // invalid value
+				if( c.rna_minallelecount == v ) {
+					// same as current cutoff, do nothing
+					return
+				}
+				c.rna_minallelecount = v
+				loadTk(tk, block)
+			})
+		row.append('div')
+			.style('opacity','.5')
+			.style('font-size','.8em')
+			.text('If both alleles of a SNP have RNA read count below cutoff, then it won\'t do binomial test.')
 	}
 }
