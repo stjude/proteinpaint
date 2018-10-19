@@ -3457,14 +3457,26 @@ function may_allow_samplesearch(tk, block) {
 					cell
 						.attr('class','sja_menuoption')
 						.on('click',()=>{
-
 							tk.tip2.hide()
+
+							const pane = client.newpane({x:100, y:100})
+							pane.header.text( sample.name )
 							focus_singlesample({
 								sample: {samplename: sample.name},
 								samplegroup: {attributes: sample.attributes},
 								tk: tk,
-								block: block
+								block: block,
+								holder: pane.body.append('div'),
 							})
+							if(sample.attr) {
+								if(tk.sampleAttribute && tk.sampleAttribute.attributes) {
+									for(const attr of sample.attr) {
+										const a = tk.sampleAttribute.attributes[attr.k]
+										if(a) attr.k = a.label
+									}
+								}
+								client.make_table_2col( pane.body, sample.attr)
+							}
 						})
 				}
 			})

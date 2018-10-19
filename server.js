@@ -6806,30 +6806,26 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 				name:samplename
 			}
 
+			if( result.find(i=>i.name==samplename)) {
+				// already found it
+				continue
+			}
+			result.push( sample )
 
-
-
-			if(ds.cohort && ds.cohort.annotation && dsquery.groupsamplebyattrlst) {
-				const sanno = ds.cohort.annotation[samplename]
-				if(sanno) {
-					sample.attributes = []
-					for(const attr of dsquery.groupsamplebyattrlst) {
-						const v = sanno[ attr.k ]
-						if(v==undefined) {
-							break
+			if(ds.cohort && ds.cohort.sampleAttribute && ds.cohort.sampleAttribute.attributes && ds.cohort.annotation) {
+				const anno = ds.cohort.annotation[ samplename ]
+				if(anno) {
+					const toclient = [] // annotations to client
+					for(const key in ds.cohort.sampleAttribute.attributes) {
+						const value = anno[ key ]
+						if(value!=undefined) {
+							toclient.push({k: key, v: value})
 						}
-						const a = { k: attr.k, kvalue: v }
-						if(attr.full) {
-							a.full = attr.full
-							a.fullvalue = sanno[ attr.full ]
-						}
-						sample.attributes.push(a)
+					}
+					if(toclient.length) {
+						sample.attr = toclient
 					}
 				}
-			}
-
-			if( !result.find(i=>i.name==samplename)) {
-				result.push( sample )
 			}
 		}
 	}
