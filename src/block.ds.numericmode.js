@@ -495,7 +495,36 @@ if(nm.showsamplebar ) {
 		}
 	}
 
-	genotypebyvaluecircleradiusscale = scaleLinear().domain([0, genotypebyvaluesamplemax]).range([4, 10])
+	//genotypebyvaluecircleradiusscale = scaleLinear().domain([0, genotypebyvaluesamplemax]).range([4, 10])
+	/*
+	genotypebyvaluecircleradiusscale = (x)=>{
+		return 2+ 8* (1 - Math.pow( (1- x/genotypebyvaluesamplemax), 4))
+	}
+	*/
+	const w=Math.pow(2/2,2)*Math.PI // unit area
+	/*
+	let mrd=0 // max disc radius
+	if(genotypebyvaluesamplemax<=10) mrd=w*genotypebyvaluesamplemax*.9
+	else if(genotypebyvaluesamplemax<=100) mrd=w*10
+	else if(genotypebyvaluesamplemax<=1000) mrd=w*14
+	else mrd=w*20
+	*/
+	const mrd = w*4
+	// scale for disc radius
+	genotypebyvaluecircleradiusscale = scaleLinear()
+		.domain([1,
+			genotypebyvaluesamplemax*.1,
+			genotypebyvaluesamplemax*.3,
+			genotypebyvaluesamplemax*.6,
+			genotypebyvaluesamplemax*.8,
+			genotypebyvaluesamplemax])
+		.range([w,
+			w+(mrd-w)*.8,
+			w+(mrd-w)*.85,
+			w+(mrd-w)*.9,
+			w+(mrd-w)*.95,
+			mrd])
+
 
 } else {
 	mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4numeric]
@@ -943,7 +972,8 @@ if(nm.showsamplebar) {
 					const y = -numscale(v)-nm.maxradius
 					g.append('circle')
 					.attr('cy',y)
-					.attr('r', genotypebyvaluecircleradiusscale( num_altalt) )
+					//.attr('r', genotypebyvaluecircleradiusscale( num_altalt) )
+					.attr('r', Math.sqrt( genotypebyvaluecircleradiusscale( num_altalt) ) / Math.PI )
 					.attr('stroke', tk.ds.genotypebynumericvalue.altalt.color)
 					.attr('fill','white')
 					.attr('fill-opacity',0)
