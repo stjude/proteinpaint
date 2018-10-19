@@ -421,8 +421,8 @@ function makeTk(tk, block) {
 		.text('DNA coverage')
 	tk.dna.coveragemax = 0
 	if(!tk.dna.coveragebarh) tk.dna.coveragebarh = 50
-	if(!tk.dna.refcolor) tk.dna.refcolor = 'blue'
-	if(!tk.dna.altcolor) tk.dna.altcolor = '#ff4040'
+	if(!tk.dna.refcolor) tk.dna.refcolor = '#188FF5'
+	if(!tk.dna.altcolor) tk.dna.altcolor = '#F51818'
 
 	if(!tk.yspace1) tk.yspace1=15 // y space between two rows: cov and rpkm
 
@@ -536,5 +536,27 @@ function configPanel(tk,block) {
 				loadTk(tk,block)
 			})
 	}
-	// gecfg analysis
+	{
+		const row = d.append('div')
+			.style('margin','5px 0px 25px 0px')
+		row.append('span')
+			.html('Allele color&nbsp;&nbsp;Ref:&nbsp;')
+		row.append('input')
+			.attr('type','color')
+			.property('value', tk.dna.refcolor)
+			.on('change',()=>{
+				tk.dna.refcolor = d3event.target.value
+				loadTk(tk,block)
+			})
+		row.append('span')
+			.html('&nbsp;Alt:&nbsp;')
+		row.append('input')
+			.attr('type','color')
+			.property('value', tk.dna.altcolor)
+			.on('change',()=>{
+				tk.dna.altcolor = d3event.target.value
+				loadTk(tk,block)
+			})
+	}
+	configPanel_rnabam( tk, block, loadTk)
 }
