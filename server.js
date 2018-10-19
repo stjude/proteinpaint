@@ -5851,7 +5851,7 @@ function handle_ase_bamcoverage2ndpass ( q, start, stop, snps, rnamax ) {
 			const v = Number.parseInt(l[2])
 			if(!Number.isInteger(v)) return
 
-			const h = q.rnabarheight * v / rnamax
+			const h = q.rnabarheight * Math.min(v, rnamax) / rnamax
 			const x = isbp ? (pos-start)*binpxw : (pos-start)/binbpsize
 			ctx.strokeStyle = '#ccc'
 			ctx.beginPath()
@@ -5859,6 +5859,14 @@ function handle_ase_bamcoverage2ndpass ( q, start, stop, snps, rnamax ) {
 			ctx.lineTo( x+binpxw/2, q.rnabarheight-h )
 			ctx.stroke()
 			ctx.closePath()
+			if( v > rnamax ) {
+				ctx.strokeStyle = 'blue'
+				ctx.beginPath()
+				ctx.moveTo( x+binpxw/2, 0 )
+				ctx.lineTo( x+binpxw/2, 2 )
+				ctx.stroke()
+				ctx.closePath()
+			}
 			const m = pos2snp.get( pos )
 			if(m) {
 				// matching a snp, record bar h
