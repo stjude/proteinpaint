@@ -514,7 +514,7 @@ function configPanel(tk,block) {
 
 	// dna bar h
 	d.append('div')
-		.text('DNA markers are only shown for heterozygous SNPs.')
+		.text('SNPs are only shown for those heterozygous in DNA.')
 		.style('font-size','.8em')
 		.style('opacity',.5)
 		.style('margin-top','25px')
