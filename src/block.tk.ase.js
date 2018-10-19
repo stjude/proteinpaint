@@ -18,6 +18,9 @@ loadTk()
 
 ********************** INTERNAL
 getdata_region
+renderTk
+renderTk_covplot
+renderTk_rpkm
 
 */
 
@@ -251,6 +254,10 @@ function renderTk_covplot ( tk, block ) {
 
 
 function renderTk_rpkm( tk, block ) {
+/*
+1. if anything to render across all regions, make axis, else, hide axis & label
+2. for each region, if has gene rpkm, plot; else, show out of bound
+*/
 	const noploth = 30 // row height for not showing plot
 	const anyregionwithrpkm = tk.regions.find( r=> !r.rpkmrangelimit )
 
@@ -306,10 +313,17 @@ function renderTk_rpkm( tk, block ) {
 		}
 		if(!r.genes) continue
 
+		if( maxrpkm == 0 ) {
+			// within range but still no data
+			continue
+		}
+
 		const rsf = r.width / (r.stop-r.start)
 
 		for(const gene of r.genes) {
 			if(!Number.isFinite(gene.rpkm)) continue
+
+			// plot this gene
 
 			const color = expressionstat.ase_color( gene, tk.gecfg )
 			const boxh = tk.rpkm.barh * gene.rpkm / maxrpkm
@@ -338,6 +352,13 @@ function renderTk_rpkm( tk, block ) {
 				.attr('height', boxh)
 				.attr('fill', color)
 				.attr('fill-opacity',.2)
+			tk.glider.append('rect')
+				.attr('x', x1)
+				.attr('y', y + tk.rpkm.barh - boxh-2 )
+				.attr('width', x2-x1 )
+				.attr('height', boxh+2)
+				.attr('fill', 'white')
+				.attr('fill-opacity',0)
 				.on('mouseover',()=>{
 					line.attr('stroke-opacity',.5)
 					box.attr('fill-opacity',.3)
