@@ -121,7 +121,7 @@ function getdata_region ( r, tk, block ) {
 		start: r.start,
 		stop: r.stop,
 		width: r.width,
-		asearg: tk.asearg
+		checkrnabam: tk.checkrnabam,
 	}
 	if( !tk.rna.coverageauto ) {
 		// fixed
@@ -434,8 +434,8 @@ function makeTk(tk, block) {
 			configPanel(tk,block)
 		})
 	
-	if( !tk.asearg ) tk.asearg = {}
-	rnabamtk_initparam( tk.asearg )
+	if( !tk.checkrnabam ) tk.checkrnabam = {}
+	rnabamtk_initparam( tk.checkrnabam )
 
 	tk.gecfg = {datatype:'RPKM'}
 	expressionstat.init_config( tk.gecfg )
