@@ -11,6 +11,7 @@ common code shared by business modules
 init_config
 measure()
 showsingleitem_table
+ui_config
 
 
 ********************** INTERNAL
@@ -333,13 +334,17 @@ export function ase_color(v, cfg) {
 
 
 
-export function ui_config(holder, cfg, call) {
+export function ui_config(holder, cfg, tk, call) {
 	// ase
 	const indent=30
 	{
 		const row=holder.append('div')
 			.style('margin-bottom','5px')
-		row.append('span').html('If Q-VALUE &le;&nbsp;')
+		row.append('span')
+			.html('If '
+				+(tk.checkrnabam ? 'p-value geometric mean' : 'Q-VALUE')
+				+' &le;&nbsp;'
+				)
 		row.append('input')
 			.attr('type','number')
 			.style('width','50px')
