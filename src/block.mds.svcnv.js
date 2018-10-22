@@ -441,7 +441,10 @@ function addLoadParameter( par, tk ) {
 		}
 
 		if( tk.checkrnabam ) {
-			par.checkrnabam = tk.checkrnabam
+			par.checkrnabam = {}
+			for(const k in tk.checkrnabam) {
+				if(k!='legend') par.checkrnabam[k] = tk.checkrnabam[k]
+			}
 		}
 
 	} else {
@@ -2458,6 +2461,7 @@ export function rnabamtk_copyparam ( from, to ) {
 	to.checkrnabam = {}
 	for(const k in from.checkrnabam) {
 		if(k=='samples') continue
+		if(k=='legend') continue
 		to.checkrnabam[k] = from.checkrnabam[k]
 	}
 }
