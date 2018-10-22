@@ -192,7 +192,7 @@ export function data2tk(data,tk,block) {
 			tk.mlst.push(m)
 		}
 	}
-	if(errors.length) {
+	if(!tk.dstk_novcferror && errors.length) {
 		block.error(errors[0]+ (errors.length==1 ? '' : ' and '+(errors.length-1)+' more errors with the VCF track'))
 	}
 }

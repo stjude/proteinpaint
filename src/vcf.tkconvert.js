@@ -205,6 +205,10 @@ export default function vcf2dstk(arg) {
 		tk.aboveprotein = false
 	}
 
+	if(arg.dstk_novcferror) {
+		tk.dstk_novcferror=true
+	}
+
 	return [null,tk]
 }
 
