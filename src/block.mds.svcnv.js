@@ -2829,6 +2829,14 @@ function makeTk(tk, block) {
 			configPanel(tk, block)
 		})
 
+	if( tk.checkrnabam ) {
+		/* defaults for parameters
+		make this before legend
+		*/
+		rnabamtk_initparam( tk.checkrnabam )
+	}
+
+
 	makeTk_legend(block, tk)
 
 	// gene expression config
@@ -2875,10 +2883,6 @@ function makeTk(tk, block) {
 		expressionstat.init_config( tk.gecfg )
 	}
 
-	if( tk.checkrnabam ) {
-		// defaults for parameters
-		rnabamtk_initparam( tk.checkrnabam )
-	}
 
 	// end of makeTk
 }
