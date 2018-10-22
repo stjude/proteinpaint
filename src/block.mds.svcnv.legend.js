@@ -106,7 +106,14 @@ export function update_legend(tk, block) {
 
 
 function create_mclass(tk) {
-	if(tk.checkrnabam) return
+	/* quick fix
+	if in rnabam mode, suppress mclass legend, 
+	*/
+	if(tk.checkrnabam) {
+		create_checkrnabam_snpusage( tk )
+		return
+	}
+
 	/*
 	list all mutation classes
 	attribute may have already been created with customization
@@ -125,11 +132,48 @@ function create_mclass(tk) {
 	tk.legend_mclass.holder = tk.legend_mclass.row.append('td')
 	tk.legend_hideable.push(tk.legend_mclass)
 
-	/* quick fix
-	if in rnabam mode, hide mclass legend, 
-	*/
 }
 
+
+
+function create_checkrnabam_snpusage( tk ) {
+/*
+create static legend
+to illusrate colors about snp usage (if has valid pvalue or not)
+*/
+	const tr = tk.legend_table.append('tr')
+	tr.append('td')
+		.style('text-align','right')
+		.style('opacity',.5)
+		.text('DNA marker usage')
+	const td = tr.append('td')
+	{
+		const row = td.append('div')
+		row.append('span')
+			.html('&times;&nbsp;')
+			.style('color', tk.checkrnabam.clientcolor_snpinuse)
+			.style('font-size','1.5em')
+		row.append('span')
+			.text('Heterozygous SNP with a p-value from binomial test')
+			.style('opacity',.5)
+	}
+	{
+		const row = td.append('div')
+		row.append('span')
+			.html('&times;&nbsp;')
+			.style('color', tk.checkrnabam.clientcolor_markernotinuse)
+			.style('font-size','1.5em')
+		row.append('span')
+			.text('Marker not in use and without binomial test')
+			.style('opacity',.5)
+	}
+
+	tk.checkrnabam.legend = {
+		snpusage: {
+			row: tr
+		}
+	}
+}
 
 
 
