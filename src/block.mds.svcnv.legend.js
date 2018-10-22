@@ -106,6 +106,7 @@ export function update_legend(tk, block) {
 
 
 function create_mclass(tk) {
+	if(tk.checkrnabam) return
 	/*
 	list all mutation classes
 	attribute may have already been created with customization
@@ -123,6 +124,10 @@ function create_mclass(tk) {
 		.text('Mutation')
 	tk.legend_mclass.holder = tk.legend_mclass.row.append('td')
 	tk.legend_hideable.push(tk.legend_mclass)
+
+	/* quick fix
+	if in rnabam mode, hide mclass legend, 
+	*/
 }
 
 
@@ -510,6 +515,8 @@ function may_legend_mclass(tk, block) {
 	single or multi-sample
 	always shown! both snvindel class & dt included (cnv/loh/sv/fusion/itd)
 	*/
+
+	if( !tk.legend_mclass || !tk.legend_mclass.holder ) return
 
 	tk.legend_mclass.holder.selectAll('*').remove()
 
