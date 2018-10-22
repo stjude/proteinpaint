@@ -9,8 +9,9 @@ for rnabam ase stuff shared with ase tk
 
 export function rnabamtk_initparam ( c ) {
 	/*
-	for svcnv, c is tk.checkrnabam
-	for ase, c is tk
+	svcnv is multi-sample
+	ase tk is single-sample
+	both uses tk.checkrnabam{}
 	*/
 	if(!c.hetsnp_minallelecount ) c.hetsnp_minallelecount = 2
 	if(!c.rna_minallelecount ) c.rna_minallelecount = 3
@@ -19,6 +20,8 @@ export function rnabamtk_initparam ( c ) {
 	if(c.rnapileup_q==undefined ) c.rnapileup_q = 0
 	if(!c.rnapileup_Q ) c.rnapileup_Q = 13
 	if(!c.binompvaluecutoff) c.binompvaluecutoff=0.05
+	if(!c.clientcolor_snpinuse) c.clientcolor_snpinuse = 'blue'
+	if(!c.clientcolor_markernotinuse) c.clientcolor_markernotinuse = '#bbb'
 }
 
 

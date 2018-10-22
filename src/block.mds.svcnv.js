@@ -1515,7 +1515,8 @@ function render_multi_cnvloh(tk,block) {
 
 					const w = sample.crossboxw
 
-					const color = common.mclass[m.class].color
+					//const color = common.mclass[m.class].color
+					const color = multi_snvindelcolor( tk, m, sample )
 
 					for(const ms of m.sampledata) {
 						if(ms.sampleobj.name != sample.samplename) continue
@@ -1537,7 +1538,6 @@ function render_multi_cnvloh(tk,block) {
 							bgline2,
 							fgline1,
 							fgline2
-
 
 						if( vcfvariantisgermline( ms, tk ) ) {
 							// germline: 1 |  2 --
@@ -1694,6 +1694,37 @@ function render_multi_cnvloh(tk,block) {
 	}
 
 	return yoff
+}
+
+
+
+
+function multi_snvindelcolor( tk, m, sample ) {
+/*
+in multi-sample mode, snvindel drawn as x or +
+decide the color
+m{}
+sample{}
+	.samplename
+*/
+	if( tk.checkrnabam ) {
+		/* in rnabam mode
+		if the variant has valid pvalue, show bright color, else gray
+		*/
+		const sbam = tk.checkrnabam.samples[ sample.samplename ]
+		if( sbam && sbam.genes ) {
+			for(const g of sbam.genes) {
+				if(g.snps) {
+					const m2 = g.snps.find( i=> i.pos==m.pos && i.ref==m.ref && i.alt==m.alt )
+					if( m2 && m2.rnacount && m2.rnacount.pvalue!=undefined ) {
+						return tk.checkrnabam.clientcolor_snpinuse
+					}
+				}
+			}
+		}
+		return tk.checkrnabam.clientcolor_markernotinuse
+	}
+	return common.mclass[m.class].color
 }
 
 
