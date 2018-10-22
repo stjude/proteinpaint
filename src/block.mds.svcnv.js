@@ -21,7 +21,7 @@ import { makeTk_legend, update_legend } from './block.mds.svcnv.legend'
 import {render_singlesample} from './block.mds.svcnv.single'
 import {createbutton_addfeature, may_show_samplematrix_button} from './block.mds.svcnv.samplematrix'
 import {render_multi_genebar, multi_show_geneboxplot} from './block.mds.svcnv.addcolumn'
-import {vcfparsemeta, vcfparseline} from './vcf'
+import {vcfparsemeta} from './vcf'
 import {rnabamtk_initparam,configPanel_rnabam} from './block.mds.svcnv.share'
 
 
