@@ -162,7 +162,7 @@ export function configPanel_rnabam ( tk, block, loadTk ) {
 		.style('margin-top','20px')
 		.style('opacity',.5)
 		.style('font-size','.9em')
-		.text('Binomial test on wheter a heterozygous SNP shows allelic bias in RNA')
+		.text('Binomial test on whether a heterozygous SNP shows allelic bias in RNA')
 	{
 		const row = d.append('div')
 			.style('margin-top','5px')
