@@ -3846,6 +3846,9 @@ async function handle_mdssvcnv(req,res) {
 
 		if( req.query.checkrnabam ) {
 			if(!req.query.checkrnabam.samples) return res.send({error:'samples{} missing from checkrnabam'})
+			let n=0
+			for(const k in req.query.checkrnabam.samples) n++
+			if( n>10) return res.send({error:'no more than 10 BAM files allowed'})
 			const e = ase_testarg( req.query.checkrnabam )
 			if(e) return res.send({error:e})
 			dsquery.checkrnabam = req.query.checkrnabam
