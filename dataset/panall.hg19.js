@@ -309,8 +309,7 @@ module.exports={
 				readcountboxplotpercohort:{
 					// categorical attributes only
 					groups:[
-						{label:'Cancer group',key:'diagnosis_group_short'},
-						{label:'Cancer', key:'diagnosis_short'}
+						{label:'Primary subtype',key:'primary subtype'},
 					]
 				}
 			}
