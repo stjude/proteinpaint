@@ -441,10 +441,7 @@ function addLoadParameter( par, tk ) {
 		}
 
 		if( tk.checkrnabam ) {
-			par.checkrnabam = {}
-			for(const k in tk.checkrnabam) {
-				if(k!='legend') par.checkrnabam[k] = tk.checkrnabam[k]
-			}
+			rnabamtk_copyparam( tk, par, true )
 		}
 
 	} else {
@@ -2272,7 +2269,7 @@ export function focus_singlesample( p ) {
 				vcfindexURL: tk.checkvcf.indexURL,
 			}
 
-			rnabamtk_copyparam( tk, asetk )
+			rnabamtk_copyparam( tk, asetk, false )
 
 			arg.tklst.push( asetk )
 			const b = block.newblock( arg )
@@ -2455,7 +2452,7 @@ export function focus_singlesample( p ) {
 
 
 
-export function rnabamtk_copyparam ( from, to ) {
+export function rnabamtk_copyparam ( from, to, copysample ) {
 	// both tk obj
 	if( !from.checkrnabam ) return
 	to.checkrnabam = {}
@@ -2463,6 +2460,20 @@ export function rnabamtk_copyparam ( from, to ) {
 		if(k=='samples') continue
 		if(k=='legend') continue
 		to.checkrnabam[k] = from.checkrnabam[k]
+	}
+	// the sample part is only for xhr
+	if( copysample ) {
+		to.checkrnabam.samples = {}
+		for(const samplename in from.checkrnabam.samples) {
+			const s = from.checkrnabam.samples[samplename]
+			to.checkrnabam.samples[samplename] = {
+				file: s.file,
+				url: s.url,
+				indexURL: s.indexURL,
+				nochr: s.nochr,
+				totalreads: s.totalreads,
+			}
+		}
 	}
 }
 

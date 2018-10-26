@@ -23,6 +23,7 @@ multi_show_geneboxplot
 
 ********************** INTERNAL
 genebar_config
+	findgene4fix
 genebar_printtooltip
 addcolumn_autogene
 addcolumn_fixedgene
@@ -1091,6 +1092,7 @@ async function findgene4fix( name, tk, block ) {
 }
 
 
+
 function findgene4fix_getsamplevalue( gm, tk, block) {
 
 	const arg = {
@@ -1105,7 +1107,6 @@ function findgene4fix_getsamplevalue( gm, tk, block) {
 
 	if(tk.iscustom) {
 		arg.iscustom=1
-		//arg.file = 'dummy' // svcnv file won't be used
 		const c = tk.checkexpressionrank
 		if(c) {
 			arg.checkexpressionrank = {
@@ -1193,7 +1194,7 @@ function rnabam_click_genebar ( gene, sample, tk, block ) {
 				vcfurl: tk.checkvcf.url,
 				vcfindexURL: tk.checkvcf.indexURL,
 			}
-			rnabamtk_copyparam( tk, asetk )
+			rnabamtk_copyparam( tk, asetk, false )
 
 			const arg={
 				style:{ margin:'0px' },
