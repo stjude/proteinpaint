@@ -3848,7 +3848,7 @@ async function handle_mdssvcnv(req,res) {
 			if(!req.query.checkrnabam.samples) return res.send({error:'samples{} missing from checkrnabam'})
 			let n=0
 			for(const k in req.query.checkrnabam.samples) n++
-			if( n>10) return res.send({error:'no more than 10 BAM files allowed'})
+			if( n>13) return res.send({error:'no more than 13 BAM files allowed'})
 			const e = ase_testarg( req.query.checkrnabam )
 			if(e) return res.send({error:e})
 			dsquery.checkrnabam = req.query.checkrnabam
@@ -4142,7 +4142,7 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 
 			const genereadcount = await handle_mdssvcnv_rnabam_genereadcount( sbam, chr, genepos.start, genepos.stop )
 
-			outputgene.rpkm = genereadcount * 1000000000 / ( sbam.totalreads * (genepos.stop-genepos.start) )
+			outputgene.rpkm = genereadcount * 1000000000 / ( sbam.totalreads * genepos.exonlength )
 			outputgene.snps = thishetsnp
 
 			thisgenes.push( outputgene )
@@ -5557,7 +5557,7 @@ async function handle_ase ( req, res ) {
 					nochr: q.rnabam_nochr
 				}
 				const reads = await handle_mdssvcnv_rnabam_genereadcount( b, q.chr, g.start, g.stop )
-				g.rpkm = reads * 1000000000 / ( q.rnabamtotalreads * (g.stop-g.start) )
+				g.rpkm = reads * 1000000000 / ( q.rnabamtotalreads * g.exonlength )
 			}
 		} else {
 			// range too big for rpkm
@@ -6244,11 +6244,33 @@ async function handle_ase_getgenes ( genome, genetk, chr, start, stop ) {
 				symbol2lst.set( j.name, {
 					gene: j.name,
 					start: start,
-					stop: stop
+					stop: stop,
+					exonunion: []
 					} )
+			}
+
+			const g = symbol2lst.get(j.name)
+
+			if(j.exon) {
+				// exon union
+				for(const e of j.exon) {
+					const e2 = g.exonunion.find( i=> Math.max(i[0],e[0]) < Math.min(i[1],e[1]) )
+					if(e2) {
+						e2[0] = Math.min(e[0], e2[0])
+						e2[1] = Math.max(e[1], e2[1])
+					} else {
+						g.exonunion.push([ e[0], e[1] ])
+					}
+				}
 			}
 		}
 	}
+
+	// sum exon total length
+	for(const [n, g] of symbol2lst) {
+		g.exonlength = g.exonunion.reduce( (i,j)=>i+j[1]-j[0], 0 )
+	}
+
 	return symbol2lst
 }
 
