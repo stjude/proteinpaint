@@ -1121,7 +1121,7 @@ function findgene4fix_getsamplevalue( gm, tk, block) {
 		}
 
 		if( tk.checkrnabam ) {
-			arg.checkrnabam = tk.checkrnabam
+			rnabamtk_copyparam( tk, arg, true )
 		}
 
 	} else {

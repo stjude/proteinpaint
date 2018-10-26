@@ -5544,7 +5544,7 @@ async function handle_ase ( req, res ) {
 		await handle_ase_prepfiles( q, genome )
 
 		const genes = await handle_ase_getgenes( genome, genetk, q.chr, q.start, q.stop )
-		// k: symbol, v: {start,stop}
+		// k: symbol, v: {start,stop,exonlength}
 
 		const result = {}
 
@@ -6631,13 +6631,20 @@ async function mdssvcnv_exit_getexpression4gene( req, res, gn, ds, dsquery ) {
 		if(!Number.isFinite(q.start)) throw 'invalid start pos'
 		if(!Number.isFinite(q.stop)) throw 'invalid stop pos'
 		if(!q.name) throw 'unknown gene name'
-		q.name = q.name.toLowerCase()
+		//q.name = q.name.toLowerCase()
 
 		if( dsquery.checkrnabam ) {
 
+			// need to construct the gene obj
+			const genome = genomes[req.query.genome]
+			const genetk = genome.tracks.find( i=> i.__isgene )
+			const genes = await handle_ase_getgenes( genome, genetk, q.chr, q.start, q.stop )
+			const gene = genes.get( q.name )
+			if(!gene) throw 'no gene matching with '+q.name
+
 			const tmp = {}
 			await handle_mdssvcnv_rnabam_do( 
-				new Map([ [ q.name, {start:q.start, stop:q.stop} ] ]),
+				new Map([ [ q.name, gene ] ]),
 				q.chr,
 				q.start,
 				q.stop,
