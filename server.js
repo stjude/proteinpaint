@@ -11402,6 +11402,12 @@ function mds_init(ds,genome, _servconfig) {
 	if(ds.queries) {
 		for(const querykey in ds.queries) {
 
+			// server may choose to remove it
+			if(_servconfig.remove_queries && _servconfig.remove_queries.indexOf(querykey)!=-1) {
+				delete ds.queries[ querykey ]
+				continue
+			}
+
 			const query = ds.queries[querykey]
 
 			// server may choose to hide some queries
