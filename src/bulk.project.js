@@ -255,7 +255,7 @@ export class ProjectHandler {
 		advancedDiv.append('div')
 			.style('margin','10px 10px 10px 0')
 			.html(`<a href="https://docs.google.com/document/d/1wlfGzyhxFYtWu9Fyf3FK7pgvS3rVb9_vrfYUBUOUrw4/edit?usp=sharing" target="new">Project user guide</a> | 
-			<a href='https://pecan.stjude.org/static/target-tall-project/ref.txt'>Example project reference file</a>`)
+			<a href='https://pecan.stjude.org/static/target-tall-project/ref.txt' target=_blank>Example project reference file</a>`)
 
 		advancedDiv.append('div')
 			.style('margin','20px')
