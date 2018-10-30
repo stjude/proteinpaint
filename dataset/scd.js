@@ -24,7 +24,14 @@ module.exports={
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
-			ds.cohort.annotation[ item[samplenamekey] ] = item
+			const n = item[samplenamekey]
+			if(ds.cohort.annotation[n]) {
+				for(const k in item) {
+					ds.cohort.annotation[n][k] = item[k]
+				}
+			} else {
+				ds.cohort.annotation[ n ] = item
+			}
 		},
 		sampleAttribute:{
 			attributes:{
