@@ -4073,7 +4073,7 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 		}
 
 		if( sbam.url ) {
-			// even if no het snp still init dir, will calculate rpkm later for all bams
+			// even if no het snp still init dir, will calculate fpkm later for all bams
 			sbam.dir = await cache_index_promise( sbam.indexURL || sbam.url+'.bai' )
 		} else if( sbam.file ) {
 			sbam.file = path.join( serverconfig.tpmasterdir, sbam.file )
@@ -4147,10 +4147,14 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 				}
 			}
 
-			// XXX
-			const genereadcount = await handle_mdssvcnv_rnabam_genereadcount( sbam, chr, genepos.start, genepos.stop )
+			let count
+			if(sbam.pairedend) {
+				count = await handle_mdssvcnv_rnabam_genefragcount( sbam, chr, genepos )
+			} else {
+				count = await handle_mdssvcnv_rnabam_genereadcount( sbam, chr, genepos )
+			}
 
-			outputgene.rpkm = genereadcount * 1000000000 / ( sbam.totalreads * genepos.exonlength )
+			outputgene.fpkm = count * 1000000000 / ( sbam.totalreads * genepos.exonlength )
 			outputgene.snps = thishetsnp
 
 			thisgenes.push( outputgene )

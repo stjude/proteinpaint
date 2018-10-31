@@ -393,14 +393,14 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 		let maxvalue=100 // hardcoded rank
 		
 		if( tk.checkrnabam ) {
-			// use rpkm instead
+			// fpkm from a different source
 			maxvalue = 0
 			for(const s in tk.checkrnabam.samples) {
 				const sbam = tk.checkrnabam.samples[s]
 				if(sbam.genes) {
 					const g = sbam.genes.find( i=> i.gene==autogenename )
 					if( g ) {
-						maxvalue = Math.max( maxvalue, g.rpkm )
+						maxvalue = Math.max( maxvalue, g.fpkm )
 					}
 				}
 			}
@@ -485,7 +485,7 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 						const gene = sbam.genes.find( i=> i.gene == autogenename )
 						if( gene ) {
 
-							// draw bar for gene rpkm & ase from rna bam
+							// draw bar for gene fpkm & ase from rna bam
 							drawgenebar_rnabam( expbarwidth, maxvalue, row, gene, s, tk, block )
 						}
 					}
@@ -520,7 +520,7 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 			.attr('y',-(fontsize+labelpad+ticksize+axispad))
 			.attr('font-family',client.font)
 			.attr('font-size',fontsize)
-			.text(autogenename + ' ' + (tk.checkrnabam ? 'RPKM' : 'rank') )
+			.text(autogenename + ' ' + (tk.checkrnabam ? tk.gecfg.datatype : 'rank') )
 			.attr('class','sja_clbtext')
 			.on('click',()=>{
 
@@ -615,10 +615,10 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 
 	let minvalue=0,maxvalue=100 // still rank
 	if( fixedgene.sample2rnabam ) {
-		// use rpkm instead
+		// use fpkm instead
 		maxvalue = 0
 		for(const s in fixedgene.sample2rnabam) {
-			maxvalue = Math.max( maxvalue, fixedgene.sample2rnabam[ s ].rpkm )
+			maxvalue = Math.max( maxvalue, fixedgene.sample2rnabam[ s ].fpkm )
 		}
 	}
 
@@ -1141,7 +1141,7 @@ function genebar_printtooltip ( genename, v, s, holder, tk ) {
 	if( tk.checkrnabam ) {
 		lst.push({
 			k: genename+' '+tk.gecfg.datatype,
-			v: v.rpkm
+			v: v.fpkm
 		})
 	} else {
 		lst.push({
@@ -1190,6 +1190,7 @@ function rnabam_click_genebar ( gene, sample, tk, block ) {
 				rnabamurl: sbam.url,
 				rnabamindexURL: sbam.rnabamindexURL,
 				rnabamtotalreads: sbam.totalreads,
+				rnabamispairedend: sbam.pairedend,
 				vcffile: tk.checkvcf.file,
 				vcfurl: tk.checkvcf.url,
 				vcfindexURL: tk.checkvcf.indexURL,
@@ -1232,7 +1233,7 @@ function drawgenebar_rnabam ( expbarwidth, maxvalue, row, gene, s, tk, block ) {
 	gene: {}
 		.gene
 		.chr start stop
-		.rpkm
+		.fpkm
 		.estat{}
 		.snps[]
 	s: sample obj from .samplegroups[]
@@ -1240,7 +1241,7 @@ function drawgenebar_rnabam ( expbarwidth, maxvalue, row, gene, s, tk, block ) {
 	*/
 	const bar=row.append('rect')
 		.attr('fill',  expressionstat.ase_color( gene, tk.gecfg ) ) // bar color set by ase status
-		.attr('width', expbarwidth * gene.rpkm / maxvalue  )
+		.attr('width', expbarwidth * gene.fpkm / maxvalue  )
 		.attr('height', s.height)
 		.attr('shape-rendering','crispEdges')
 	const cover = row.append('rect')

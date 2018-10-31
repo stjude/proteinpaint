@@ -1669,7 +1669,7 @@ function mayAddRnabamGenease ( p, lst ) {
 	for(const g of sbam.genes) {
 		const lst = [
 			'<td><b>'+g.gene+'</b></td>'
-			+'<td><span style="font-size:.8em;opacity:.5">RPKM</span> '+g.rpkm+'</td>'
+			+'<td><span style="font-size:.8em;opacity:.5">'+tk.gecfg.datatype+'</span> '+g.fpkm+'</td>'
 			+'<td>'
 		]
 		if(g.estat) {
@@ -1693,7 +1693,7 @@ function mayAddRnabamGenease ( p, lst ) {
 				if( g4s ) {
 					const lst = [
 						'<td><b>'+gene.gene+'</b></td>'
-						+'<td><span style="font-size:.8em;opacity:.5">RPKM</span> '+g4s.rpkm+'</td>'
+						+'<td><span style="font-size:.8em;opacity:.5">'+tk.gecfg.datatype+'</span> '+g4s.fpkm+'</td>'
 						+'<td>'
 					]
 					if(g4s.estat) {

@@ -2472,6 +2472,7 @@ export function rnabamtk_copyparam ( from, to, copysample ) {
 				indexURL: s.indexURL,
 				nochr: s.nochr,
 				totalreads: s.totalreads,
+				pairedend: s.pairedend,
 			}
 		}
 	}
@@ -2867,7 +2868,7 @@ function makeTk(tk, block) {
 		} else if( tk.checkrnabam ) {
 			hasexpression = true
 			tk.gecfg = {
-				datatype: 'RPKM' // hardcoded
+				datatype: 'FPKM'
 			}
 		}
 
