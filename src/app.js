@@ -39,6 +39,7 @@ launch2dmaf()
 launchhic()
 launchsamplematrix()
 launchmdssamplescatterplot
+launchmdssurvivalplot
 
 
 */
@@ -745,6 +746,12 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		}
 	}
 
+	if(arg.mdssurvivalplot) {
+		if(arg.genome) arg.mdssurvivalplot.genome = arg.genome
+		launchmdssurvivalplot(arg.mdssurvivalplot, holder)
+		return
+	}
+
 	if(arg.mdssamplescatterplot) {
 		if(arg.genome) arg.mdssamplescatterplot.genome = arg.genome
 		launchmdssamplescatterplot(arg.mdssamplescatterplot, holder)
@@ -879,6 +886,35 @@ function launchmdssamplescatterplot(arg, holder) {
 	arg.dslabel = arg.dataset
 	delete arg.dataset
 	import('./mds.samplescatterplot').then(_=>{
+		_.init(arg, holder, debugmode)
+	})
+}
+
+
+
+function launchmdssurvivalplot(arg, holder) {
+	if(!arg.genome) {
+		error0('missing genome for mdssurvivalplot')
+		return
+	}
+	const genome = genomes[arg.genome]
+	if(!genome) {
+		error0('invalid genome for mdssurvivalplot')
+		return
+	}
+	arg.genome = genome
+	if(!arg.dataset) {
+		error0('missing dataset for mdssurvivalplot')
+		return
+	}
+	arg.mds = genome.datasets[arg.dataset]
+	if(!arg.mds) {
+		error0('invalid dataset for mdssurvivalplot')
+		return
+	}
+	arg.dslabel = arg.dataset
+	delete arg.dataset
+	import('./mds.survivalplot').then(_=>{
 		_.init(arg, holder, debugmode)
 	})
 }

@@ -183,6 +183,7 @@ app.post('/hicdata',handle_hicdata)
 app.post('/checkrank',handle_checkrank)
 app.post('/samplematrix', handle_samplematrix)
 app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
+app.post('/mdssurvivalplot',handle_mdssurvivalplot)
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
@@ -345,7 +346,13 @@ function mds_clientcopy(ds) {
 	}
 
 	if(ds.cohort && ds.cohort.sampleAttribute) {
-		ds2.sampleAttribute = ds.cohort.sampleAttribute
+		// attr may be hidden from client
+		const toclient = {}
+		for(const k in ds.cohort.sampleAttribute.attributes) {
+			const a = ds.cohort.sampleAttribute.attributes[k]
+			if(!a.clientnoshow) toclient[ k ] = a
+		}
+		ds2.sampleAttribute = { attributes: toclient }
 	}
 
 
@@ -4544,13 +4551,20 @@ function handle_mdssvcnv_addexprank ( result, ds, expressionrangelimit, gene2sam
 function handle_mdssvcnv_end ( ds, result ) {
 	if(ds.cohort && ds.cohort.sampleAttribute && ds.cohort.sampleAttribute.attributes && ds.cohort.annotation) {
 		result.sampleannotation = {}
+
+		const useattrkeys = [] // some attr keys are hidden from client
+		for(const key in ds.cohort.sampleAttribute.attributes) {
+			const a = ds.cohort.sampleAttribute.attributes[key]
+			if(!a.clientnoshow ) useattrkeys.push( key )
+		}
+
 		for(const g of result.samplegroups) {
 			for(const sample of g.samples) {
 				const anno = ds.cohort.annotation[ sample.samplename ]
 				if(anno) {
 					const toclient = {} // annotations to client
 					let hasannotation = false
-					for(const key in ds.cohort.sampleAttribute.attributes) {
+					for(const key of useattrkeys) {
 						const value = anno[ key ]
 						if(value!=undefined) {
 							hasannotation=true
@@ -8643,6 +8657,137 @@ function handle_mdssamplescatterplot (req,res) {
 }
 
 
+async function handle_mdssurvivalplot (req,res) {
+	if(reqbodyisinvalidjson(req,res)) return
+	try {
+		const q = req.query
+		const gn = genomes[q.genome]
+		if(!gn) throw 'invalid genome'
+		const ds = gn.datasets[ q.dslabel ]
+		if(!ds) throw 'invalid dataset'
+		if(!ds.cohort) throw 'no cohort for dataset'
+		if(!ds.cohort.annotation) throw 'cohort.annotation missing for dataset'
+
+		const sp = ds.cohort.survivalplot
+		if(!sp) throw 'survivalplot not supported for this dataset'
+
+		if(req.query.init) {
+			res.send({plottypes: sp.plots.map( i=>{
+				return {
+					name: i.name
+				}
+			})
+			})
+			return
+		}
+
+		// make plot
+
+		if(!q.type) throw '.type missing'
+		const plottype = sp.plots.find( i=> q.type==i.name)
+		if(!plottype) throw 'unknown plot type: '+q.type
+
+		const samples = handle_mdssurvivalplot_getsamples(q, ds, plottype )
+
+		//const samplesets = await handle_mdssurvivalplot_dividesamples( q, ds, samples )
+		// just test
+		const samplesets = [ {name:'All', lst: samples} ]
+
+		for(const s of samplesets) {
+			handle_mdssurvivalplot_plot( s )
+		}
+
+		for(const s of samplesets) {
+			delete s.lst
+		}
+		res.send({ samplesets: samplesets })
+
+	} catch(err) {
+		if(err.stack) console.error(err.stack)
+		res.send({error: (err.message || err)})
+	}
+}
+
+
+
+function handle_mdssurvivalplot_plot ( s ) {
+	/*
+	.name
+	.lst[]
+		{name, serialtime, censored}
+
+	hardcoded integer 0/1 value for censored
+	*/
+	s.lst.sort((a,b)=> a.serialtime-b.serialtime)
+
+	let thistotal = s.lst.length
+	let thiscensored = []
+	let y=0
+	s.steps = []
+	for(const a of s.lst) {
+		if( a.censored == 0 ) {
+			thiscensored.push( a.serialtime )
+			continue
+		}
+		// otherwise a.censored==1 has event
+		y += (1-y) * (1 / (thistotal - thiscensored.length))
+		s.steps.push({
+			x: a.serialtime,
+			y: y,
+			censored: thiscensored
+		})
+		thistotal -= thiscensored.length + 1
+		thiscensored = []
+	}
+	if(thiscensored.length>0) {
+		// censored at the end
+		s.steps.push({
+			x: s.lst[ s.lst.length-1 ].serialtime, // last time
+			y: y,
+			censored: thiscensored
+		})
+	}
+}
+
+
+
+function handle_mdssurvivalplot_getsamples (q, ds, plottype) {
+	if(!q.samplerule) throw '.samplerule missing'
+	if(!q.samplerule.full) throw '.samplerule.full missing'
+
+	const lst1 = []
+
+	if(q.samplerule.full.byattr) {
+		const key = q.samplerule.full.key
+		if(!key) throw 'key missing from samplerule.full{}'
+		const value = q.samplerule.full.value
+		if(value==undefined) throw 'value missing from samplerule.full{}'
+		for(const sn in ds.cohort.annotation) {
+			const o = ds.cohort.annotation[sn]
+			if(o[key] == value) {
+				lst1.push({
+					name: sn,
+					o: o
+				})
+			}
+		}
+	} else {
+		throw 'unknown sample rule'
+	}
+
+	const lst2 = [] // with valid serialtimekey
+	for(const s of lst1) {
+		if(Number.isFinite( s.o[ plottype.serialtimekey ] )) {
+			s.serialtime = s.o[plottype.serialtimekey]
+			s.censored   = s.o[plottype.iscensoredkey]
+			lst2.push(s)
+		}
+	}
+	if(lst2.length==0) throw 'no samples found'
+	return lst2
+}
+
+
 
 
 
@@ -11179,12 +11324,24 @@ function mds_init(ds,genome, _servconfig) {
 	if(ds.cohort) {
 		if(!ds.cohort.files) return '.files[] missing from .cohort'
 		if(!Array.isArray(ds.cohort.files)) return '.cohort.files is not array'
+
+		// FIXME tohash{} to be replaced by using sample_name field
 		if(!ds.cohort.tohash) return '.tohash() missing from cohort'
 		if(typeof ds.cohort.tohash !='function') return '.cohort.tohash is not function'
 		if(!ds.cohort.samplenamekey) return '.samplenamekey missing'
 
 		ds.cohort.annotation = {}
 		// should allow both sample/individual level as key
+
+		if( ds.cohort.survivalplot ) {
+			if(!ds.cohort.survivalplot.plots) return '.plots[] missing from survivalplot'
+			if(!Array.isArray(ds.cohort.survivalplot.plots)) return 'survivalplot.plots is not array'
+			for(const p of ds.cohort.survivalplot.plots) {
+				if(!p.name) return '.name missing from a survivalplot'
+				if(!p.serialtimekey) return '.serialtimekey missing from a survivalplot'
+				if(!p.iscensoredkey) return '.iscensoredkey missing from a survivalplot'
+			}
+		}
 
 
 		if(ds.cohort.attributes) {
