@@ -35,11 +35,19 @@ module.exports={
 	cohort:{
 		files:[
 			{file:'hg19/pan-all/sampletable/samples.ball'},
-			{file:'hg19/pan-all/sampletable/samples.ball.normal'}
+			{file:'hg19/pan-all/sampletable/samples.ball.normal'},
+			{file:'hg19/pan-all/sampletable/outcome.ball'},
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
-			ds.cohort.annotation[ item[samplenamekey] ] = item
+			const n = item[samplenamekey]
+			if(ds.cohort.annotation[n]) {
+				for(const k in item) {
+					ds.cohort.annotation[n][k] = item[k]
+				}
+			} else {
+				ds.cohort.annotation[ n ] = item
+			}
 		},
 		sampleAttribute:{
             attributes:{
@@ -103,6 +111,26 @@ module.exports={
 							color:'#7570b3'
 							}
 					}
+				},
+				'F_efstime (yrs)':{
+					label:'Event free survival, years',
+					isfloat:1,
+					clientnoshow:1
+				},
+				'F_efscensor':{
+					label:'Event free survival, censored',
+					isinteger:1,
+					clientnoshow:1
+				},
+				'F_ostime (yrs)':{
+					label:'Overall survival, years',
+					isfloat:1,
+					clientnoshow:1
+				},
+				'F_oscensor':{
+					label:'Overall survival, censored',
+					isinteger:1,
+					clientnoshow:1
 				}
             },
         },
@@ -129,7 +157,21 @@ module.exports={
 				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G3.bw","name":"SJNORM016096_G3 CD19+/CD10-/KL+ RNA"},
 				{"type":"bigwig","file":"hg19/pan-all/RNAbw.normal/SJNORM016096_G4.bw","name":"SJNORM016096_G4 CD19+/CD10-/KL- RNA"},
 			],
+		},
 
+		survivalplot: {
+			plots:[
+				{
+					name:'Event-free survival',
+					serialtimekey:'F_efstime (yrs)',
+					iscensoredkey:'F_efscensor',
+				},
+				{
+					name:'Overall survival',
+					serialtimekey:'F_ostime (yrs)',
+					iscensoredkey:'F_oscensor',
+				},
+			],
 		}
 	},
 
