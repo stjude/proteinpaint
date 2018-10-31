@@ -4069,7 +4069,7 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 				samplename,
 				dsquery.checkrnabam
 				)
-			if( het ) sbam.hetsnps.push( het )
+			if( het && het.dnacount.ishet ) sbam.hetsnps.push( het )
 		}
 
 		if( sbam.url ) {
@@ -5624,7 +5624,7 @@ async function handle_ase ( req, res ) {
 			renderstart,
 			renderstop ] = handle_ase_definerange( q, genes )
 
-		// heterozygous ones
+		// all
 		const snps = await handle_ase_getsnps( q, genome, genes, searchstart, searchstop )
 
 		for(const m of snps) {
@@ -5868,6 +5868,10 @@ function handle_ase_bamcoverage2ndpass ( q, start, stop, snps, rnamax ) {
 	// for those in viewrange and covered in rna, record bar h
 	const pos2snp = new Map()
 	for(const m of snps) {
+		if(!m.dnacount.ishet) {
+			// not het
+			continue
+		}
 		if(m.pos>=start && m.pos<=stop) {
 			// in render range
 			pos2snp.set( m.pos, m )
@@ -5967,8 +5971,12 @@ q {}
 .checkrnabam{}
 */
 
-	const snpstr = []
+	const snpstr = [] // het only
 	for(const m of snps) {
+		if(!m.dnacount.ishet) {
+			// not het
+			continue
+		}
 		snpstr.push( (q.rnabam_nochr ? q.chr.replace('chr','') : q.chr)+':'+(m.pos+1)+'-'+(m.pos+1) )
 	}
 
@@ -6057,20 +6065,31 @@ q {}
 					ctx.stroke()
 					ctx.closePath()
 				}
+
 				// dna
 				const h = q.dnabarheight * (m.dnacount.ref+m.dnacount.alt) / dnamax
-				ctx.strokeStyle = q.refcolor
-				ctx.beginPath()
-				ctx.moveTo( m.__x+binpxw/2, q.rnabarheight + q.barypad )
-				ctx.lineTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + ((1-m.dnacount.f) * h) )
-				ctx.stroke()
-				ctx.closePath()
-				ctx.strokeStyle = q.altcolor
-				ctx.beginPath()
-				ctx.moveTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + ((1-m.dnacount.f) * h) )
-				ctx.lineTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + h )
-				ctx.stroke()
-				ctx.closePath()
+				if( m.dnacount.ishet ) {
+					ctx.strokeStyle = q.refcolor
+					ctx.beginPath()
+					ctx.moveTo( m.__x+binpxw/2, q.rnabarheight + q.barypad )
+					ctx.lineTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + ((1-m.dnacount.f) * h) )
+					ctx.stroke()
+					ctx.closePath()
+					ctx.strokeStyle = q.altcolor
+					ctx.beginPath()
+					ctx.moveTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + ((1-m.dnacount.f) * h) )
+					ctx.lineTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + h )
+					ctx.stroke()
+					ctx.closePath()
+				} else {
+					// not het
+					ctx.strokeStyle = '#ccc'
+					ctx.beginPath()
+					ctx.moveTo( m.__x+binpxw/2, q.rnabarheight + q.barypad )
+					ctx.lineTo( m.__x+binpxw/2, q.rnabarheight + q.barypad + h )
+					ctx.stroke()
+					ctx.closePath()
+				}
 				delete m.__x
 			}
 
@@ -6176,6 +6195,7 @@ async function handle_ase_prepfiles( q, genome ) {
 
 async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) {
 	/*
+	get all for showing in cov plot
 	q:
 	.checkrnabam{}
 	.samplename
@@ -6219,9 +6239,10 @@ async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) 
 			// find sample
 			if( !m.sampledata ) continue
 
-			const hm = handle_ase_hetsnp4sample( m, q.samplename, q.checkrnabam )
-
-			if( hm ) allsnps.push( hm )
+			const m2 = handle_ase_hetsnp4sample( m, q.samplename, q.checkrnabam )
+			if(m2) {
+				allsnps.push( m2 )
+			}
 		}
 	}
 
@@ -6242,6 +6263,7 @@ async function handle_ase_getsnps ( q, genome, genes, searchstart, searchstop ) 
 function handle_ase_hetsnp4sample ( m, samplename, arg ) {
 	/*
 	cutoff values in arg{} must have all been validated
+	always return a snp
 	*/
 
 	const sobj = m.sampledata.find( i=> i.sampleobj.name == samplename )
@@ -6249,27 +6271,35 @@ function handle_ase_hetsnp4sample ( m, samplename, arg ) {
 
 	if( sobj.AD ) {
 
-		const refcount = sobj.AD[ m.ref ]
-		const altcount = sobj.AD[ m.alt ]
-		if( refcount >= arg.hetsnp_minallelecount && altcount >= arg.hetsnp_minallelecount ) {
-			const f = altcount / (altcount+refcount)
-			if( f >= arg.hetsnp_minbaf && f <= arg.hetsnp_maxbaf ) {
-				return {
-					chr: m.chr,
-					pos: m.pos,
-					ref: m.ref,
-					alt: m.alt,
-					dnacount: {
-						f: f,
-						ref: refcount,
-						alt: altcount
-					}
-				}
+		const refcount = sobj.AD[ m.ref ] || 0
+		const altcount = sobj.AD[ m.alt ] || 0
+		const m2 = {
+			chr: m.chr,
+			pos: m.pos,
+			ref: m.ref,
+			alt: m.alt,
+			dnacount: {
+				ref: refcount,
+				alt: altcount
 			}
 		}
+		if(altcount+refcount == 0) {
+			m2.dnacount.f = 0
+		} else {
+			m2.dnacount.f = altcount / (altcount+refcount)
+		}
+
+		if( refcount >= arg.hetsnp_minallelecount && altcount >= arg.hetsnp_minallelecount ) {
+			if( m2.dnacount.f >= arg.hetsnp_minbaf && m2.dnacount.f <= arg.hetsnp_maxbaf ) {
+				m2.dnacount.ishet = true
+			}
+		}
+		return m2
 	}
 
 	// GT?
+
+	return null
 }
 
 
