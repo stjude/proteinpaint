@@ -20,7 +20,7 @@ loadTk()
 getdata_region
 renderTk
 renderTk_covplot
-renderTk_rpkm
+renderTk_fpkm
 configPanel
 
 */
@@ -112,6 +112,7 @@ function getdata_region ( r, tk, block ) {
 		rnabamurl: tk.rnabamurl,
 		rnabamindexURL: tk.rnabamindexURL,
 		rnabamtotalreads: tk.rnabamtotalreads,
+		rnabamispairedend: tk.rnabamispairedend,
 		vcffile: tk.vcffile,
 		vcfurl: tk.vcfurl,
 		vcfindexURL: tk.vcfindexURL,
@@ -135,7 +136,7 @@ function getdata_region ( r, tk, block ) {
 	.then(data=>{
 		if(data.error) throw data.error
 		r.genes = data.genes
-		r.rpkmrangelimit = data.rpkmrangelimit
+		r.fpkmrangelimit = data.fpkmrangelimit
 		if( data.covplotrangelimit ) {
 			// no cov plot
 			r.covplotrangelimit = data.covplotrangelimit
@@ -170,9 +171,9 @@ function renderTk( tk, block ) {
 		})
 
 	renderTk_covplot( tk, block )
-	renderTk_rpkm( tk, block )
+	renderTk_fpkm( tk, block )
 
-	// gene rpkm
+	// gene fpkm
 
 	block.setllabel()
 	tk.height_main += tk.toppad + tk.bottompad
@@ -256,20 +257,20 @@ function renderTk_covplot ( tk, block ) {
 }
 
 
-function renderTk_rpkm( tk, block ) {
+function renderTk_fpkm( tk, block ) {
 /*
 1. if anything to render across all regions, make axis, else, hide axis & label
-2. for each region, if has gene rpkm, plot; else, show out of bound
+2. for each region, if has gene fpkm, plot; else, show out of bound
 */
 	const noploth = 30 // row height for not showing plot
-	const anyregionwithrpkm = tk.regions.find( r=> !r.rpkmrangelimit )
+	const anyregionwithfpkm = tk.regions.find( r=> !r.fpkmrangelimit )
 
-	let maxrpkm = 0
+	let maxfpkm = 0
 	for(const r of tk.regions) {
-		if(r.rpkmrangelimit) continue
+		if(r.fpkmrangelimit) continue
 		if(r.genes) {
 			for(const g of r.genes) {
-				if(Number.isFinite(g.rpkm)) maxrpkm = Math.max(maxrpkm, g.rpkm)
+				if(Number.isFinite(g.fpkm)) maxfpkm = Math.max(maxfpkm, g.fpkm)
 				expressionstat.measure( g, tk.gecfg )
 			}
 		}
@@ -277,37 +278,37 @@ function renderTk_rpkm( tk, block ) {
 
 	const y = tk.height_main+tk.yspace1
 
-	if(anyregionwithrpkm && maxrpkm>0) {
+	if(anyregionwithfpkm && maxfpkm>0) {
 
 		client.axisstyle({
-			axis: tk.rpkm.axisg
+			axis: tk.fpkm.axisg
 				.attr('transform','scale(1) translate(0,'+y+')')
 				.call(
 				axisLeft()
 					.scale(
-						scaleLinear().domain([0,maxrpkm]).range([tk.rpkm.barh,0])
+						scaleLinear().domain([0,maxfpkm]).range([tk.fpkm.barh,0])
 						)
-					.tickValues([0, maxrpkm])
+					.tickValues([0, maxfpkm])
 				),
 			showline:true
 		})
-		tk.rpkm.label
-			.attr('y', y+tk.rpkm.barh/2)
+		tk.fpkm.label
+			.attr('y', y+tk.fpkm.barh/2)
 			.attr('transform','scale(1)')
 
-		tk.height_main += tk.yspace1 + tk.rpkm.barh
+		tk.height_main += tk.yspace1 + tk.fpkm.barh
 	} else {
-		// no region has rpkm
-		tk.rpkm.axisg.attr('transform','scale(0)')
-		tk.rpkm.label.attr('transform','scale(0)')
+		// no region has fpkm
+		tk.fpkm.axisg.attr('transform','scale(0)')
+		tk.fpkm.label.attr('transform','scale(0)')
 		tk.height_main += noploth
 	}
 
 	for(const r of tk.regions) {
-		if( r.rpkmrangelimit) {
+		if( r.fpkmrangelimit) {
 			// no plot
 			tk.glider.append('text')
-				.text('Zoom in under '+common.bplen(r.rpkmrangelimit)+' to show gene RPKM values')
+				.text('Zoom in under '+common.bplen(r.fpkmrangelimit)+' to show gene '+tk.gecfg.datatype+' values')
 				.attr('font-size', block.laelfontsize)
 				.attr('text-anchor','middle')
 				.attr('x', r.x + r.width/2)
@@ -316,7 +317,7 @@ function renderTk_rpkm( tk, block ) {
 		}
 		if(!r.genes) continue
 
-		if( maxrpkm == 0 ) {
+		if( maxfpkm == 0 ) {
 			// within range but still no data
 			continue
 		}
@@ -324,12 +325,12 @@ function renderTk_rpkm( tk, block ) {
 		const rsf = r.width / (r.stop-r.start)
 
 		for(const gene of r.genes) {
-			if(!Number.isFinite(gene.rpkm)) continue
+			if(!Number.isFinite(gene.fpkm)) continue
 
 			// plot this gene
 
 			const color = expressionstat.ase_color( gene, tk.gecfg )
-			const boxh = tk.rpkm.barh * gene.rpkm / maxrpkm
+			const boxh = tk.fpkm.barh * gene.fpkm / maxfpkm
 
 			let x1, x2
 			if( r.reverse ) {
@@ -343,21 +344,21 @@ function renderTk_rpkm( tk, block ) {
 			const line = tk.glider.append('line')
 				.attr('x1',x1)
 				.attr('x2',x2)
-				.attr('y1',y+tk.rpkm.barh-boxh)
-				.attr('y2',y+tk.rpkm.barh-boxh)
+				.attr('y1',y+tk.fpkm.barh-boxh)
+				.attr('y2',y+tk.fpkm.barh-boxh)
 				.attr('stroke',color)
 				.attr('stroke-width',2)
 				.attr('stroke-opacity',.4)
 			const box = tk.glider.append('rect')
 				.attr('x', x1)
-				.attr('y', y + tk.rpkm.barh - boxh )
+				.attr('y', y + tk.fpkm.barh - boxh )
 				.attr('width', x2-x1 )
 				.attr('height', boxh)
 				.attr('fill', color)
 				.attr('fill-opacity',.2)
 			tk.glider.append('rect')
 				.attr('x', x1)
-				.attr('y', y + tk.rpkm.barh - boxh-2 )
+				.attr('y', y + tk.fpkm.barh - boxh-2 )
 				.attr('width', x2-x1 )
 				.attr('height', boxh+2)
 				.attr('fill', 'white')
@@ -365,7 +366,7 @@ function renderTk_rpkm( tk, block ) {
 				.on('mouseover',()=>{
 					line.attr('stroke-opacity',.5)
 					box.attr('fill-opacity',.3)
-					tooltip_generpkm( gene, tk )
+					tooltip_genefpkm( gene, tk )
 				})
 				.on('mouseout',()=>{
 					line.attr('stroke-opacity',.4)
@@ -379,11 +380,11 @@ function renderTk_rpkm( tk, block ) {
 
 
 
-function tooltip_generpkm (gene, tk) {
+function tooltip_genefpkm (gene, tk) {
 	tk.tktip.clear().show(d3event.clientX,d3event.clientY)
 	const lst = [{
-		k: gene.gene+' RPKM',
-		v: gene.rpkm
+		k: gene.gene+' '+tk.gecfg.datatype,
+		v: gene.fpkm
 	}]
 	const table = client.make_table_2col( tk.tktip.d, lst )
 	expressionstat.showsingleitem_table( gene, tk.gecfg, table )
@@ -424,14 +425,18 @@ function makeTk(tk, block) {
 	if(!tk.dna.refcolor) tk.dna.refcolor = '#188FF5'
 	if(!tk.dna.altcolor) tk.dna.altcolor = '#F51818'
 
-	if(!tk.yspace1) tk.yspace1=15 // y space between two rows: cov and rpkm
+	if(!tk.yspace1) tk.yspace1=15 // y space between two rows: cov and fpkm
 
-	if(!tk.rpkm) tk.rpkm = {}
-	tk.rpkm.axisg = tk.gleft.append('g')
-	tk.rpkm.label = block.maketklefthandle(tk)
+
+	tk.gecfg = {datatype:'FPKM'}
+	expressionstat.init_config( tk.gecfg )
+
+	if(!tk.fpkm) tk.fpkm = {}
+	tk.fpkm.axisg = tk.gleft.append('g')
+	tk.fpkm.label = block.maketklefthandle(tk)
 		.attr('class',null)
-		.text('Gene RPKM')
-	if(!tk.rpkm.barh) tk.rpkm.barh = 50
+		.text('Gene '+tk.gecfg.datatype)
+	if(!tk.fpkm.barh) tk.fpkm.barh = 50
 
 	tk.config_handle = block.maketkconfighandle(tk)
 		.attr('y',10+block.labelfontsize)
@@ -442,8 +447,6 @@ function makeTk(tk, block) {
 	if( !tk.checkrnabam ) tk.checkrnabam = {}
 	rnabamtk_initparam( tk.checkrnabam )
 
-	tk.gecfg = {datatype:'RPKM'}
-	expressionstat.init_config( tk.gecfg )
 }
 
 

@@ -4147,6 +4147,7 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 				}
 			}
 
+			// XXX
 			const genereadcount = await handle_mdssvcnv_rnabam_genereadcount( sbam, chr, genepos.start, genepos.stop )
 
 			outputgene.rpkm = genereadcount * 1000000000 / ( sbam.totalreads * genepos.exonlength )
@@ -4164,15 +4165,18 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 }
 
 
-function handle_mdssvcnv_rnabam_genereadcount ( bam, chr, start, stop ) {
+function handle_mdssvcnv_rnabam_genereadcount ( bam, chr, gene ) {
+	/* get # of reads for single-end sequencing over exons
+	.exonunion[
+		[ start, stop ], e2, ...
+	]
+	*/
 	return new Promise((resolve,reject)=>{
-		const sp = spawn(
-			samtools,
-			[ 'view', '-c', bam.url || bam.file,
-				(bam.nochr ? chr.replace('chr','') : chr)+':'+start+'-'+stop
-			],
-			{cwd: bam.dir}
-			)
+		const args = ['view', '-c', '-M', bam.url || bam.file ]
+		for(const e of gene.exonunion) {
+			args.push( (bam.nochr ? chr.replace('chr','') : chr)+':'+(e[0]+1)+'-'+(e[1]+1) )
+		}
+		const sp = spawn( samtools, args, {cwd: bam.dir} )
 		const out=[], out2=[]
 		sp.stdout.on('data',i=>out.push(i))
 		sp.stderr.on('data',i=>out2.push(i))
@@ -4181,6 +4185,34 @@ function handle_mdssvcnv_rnabam_genereadcount ( bam, chr, start, stop ) {
 		})
 	})
 }
+
+
+
+function handle_mdssvcnv_rnabam_genefragcount ( bam, chr, gene ) {
+	// for paired-end, over exons
+	return new Promise((resolve,reject)=>{
+
+		const args = ['view', '-M', bam.url || bam.file ]
+		for(const e of gene.exonunion) {
+			args.push( (bam.nochr ? chr.replace('chr','') : chr)+':'+(e[0]+1)+'-'+(e[1]+1) )
+		}
+
+		const p1 = spawn( samtools, args, {cmd: bam.dir})
+		const p2 = spawn( 'cut', ['-f1'], {cmd: bam.dir})
+		const p3 = spawn( 'sort', ['-u'], {cmd: bam.dir})
+		const p4 = spawn( 'wc', ['-l'], {cmd: bam.dir})
+		p1.stdout.pipe(p2.stdin)
+		p2.stdout.pipe(p3.stdin)
+		p3.stdout.pipe(p4.stdin)
+		const out=[], out2=[]
+		p4.stdout.on('data',i=>out.push(i))
+		p4.stderr.on('data',i=>out2.push(i))
+		p4.on('close',()=>{
+			resolve( Number.parseInt( out.join('')))
+		})
+	})
+}
+
 
 
 async function handle_mdssvcnv_rnabam_binom ( lines, samples ) {
@@ -5527,7 +5559,7 @@ async function handle_ase ( req, res ) {
 	if( reqbodyisinvalidjson( req, res )) return
 	const q = req.query
 
-	const rpkmrangelimit = 3000000
+	const fpkmrangelimit = 3000000
 	const covplotrangelimit = 500000
 
 	try {
@@ -5562,7 +5594,7 @@ async function handle_ase ( req, res ) {
 
 		const result = {}
 
-		if( q.stop - q.start < rpkmrangelimit ) {
+		if( q.stop - q.start < fpkmrangelimit ) {
 			for(const [n,g] of genes) {
 				const b = {
 					file: q.rnabamfile,
@@ -5570,12 +5602,17 @@ async function handle_ase ( req, res ) {
 					dir: q.rnabamurl_dir,
 					nochr: q.rnabam_nochr
 				}
-				const reads = await handle_mdssvcnv_rnabam_genereadcount( b, q.chr, g.start, g.stop )
-				g.rpkm = reads * 1000000000 / ( q.rnabamtotalreads * g.exonlength )
+				let count
+				if( q.rnabamispairedend ) {
+					count = await handle_mdssvcnv_rnabam_genefragcount( b, q.chr, g )
+				} else {
+					count = await handle_mdssvcnv_rnabam_genereadcount( b, q.chr, g )
+				}
+				g.fpkm = count * 1000000000 / ( q.rnabamtotalreads * g.exonlength )
 			}
 		} else {
-			// range too big for rpkm
-			result.rpkmrangelimit = rpkmrangelimit
+			// range too big for fpkm
+			result.fpkmrangelimit = fpkmrangelimit
 		}
 
 		const [ searchstart,
