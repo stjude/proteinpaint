@@ -4084,7 +4084,7 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 			await handle_mdssvcnv_rnabam_pileup( sbam, sbam.hetsnps, chr, dsquery.checkrnabam )
 			for( const m of sbam.hetsnps ) {
 				if( m.rnacount.nocoverage ) continue
-				if( m.rnacount.ref < dsquery.checkrnabam.rna_minallelecount && m.rnacount.alt < dsquery.checkrnabam.rna_minallelecount ) continue
+				if( m.rnacount.ref+m.rnacount.alt < dsquery.checkrnabam.rna_mintotalreads ) continue
 				testlines.push( samplename+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t\t\t\t\t\t\t\t'+m.rnacount.ref+'\t'+m.rnacount.alt )
 			}
 		}
@@ -5547,8 +5547,8 @@ function mdssvcnv_grouper ( samplename, items, key2group, headlesssamples, ds, d
 
 
 function ase_testarg ( q ) {
-	if(!Number.isFinite(q.hetsnp_minallelecount)) return 'invalid value for hetsnp_minallelecount'
-	if(!Number.isFinite(q.rna_minallelecount)) return 'invalid value for rna_minallelecount'
+	if(!Number.isFinite(q.dna_mintotalreads)) return 'invalid value for dna_mintotalreads'
+	if(!Number.isFinite(q.rna_mintotalreads)) return 'invalid value for rna_mintotalreads'
 	if(!Number.isFinite(q.hetsnp_minbaf)) return 'invalid value for hetsnp_minbaf'
 	if(!Number.isFinite(q.hetsnp_maxbaf)) return 'invalid value for hetsnp_maxbaf'
 	if(!Number.isFinite(q.rnapileup_q)) return 'invalid value for rnapileup_q'
@@ -5692,7 +5692,7 @@ async function handle_ase_binom ( snps, q ) {
 	const rnasnp = [] // should have suffcient coverage
 	for(const m of snps) {
 		if(m.rnacount.nocoverage) continue
-		if(m.rnacount.ref < q.checkrnabam.rna_minallelecount && m.rnacount.alt < q.checkrnabam.rna_minallelecount ) continue
+		if(m.rnacount.ref+m.rnacount.alt < q.checkrnabam.rna_mintotalreads ) continue
 		rnasnp.push( m )
 	}
 	if( rnasnp.length==0 ) return
@@ -6289,7 +6289,7 @@ function handle_ase_hetsnp4sample ( m, samplename, arg ) {
 			m2.dnacount.f = altcount / (altcount+refcount)
 		}
 
-		if( refcount >= arg.hetsnp_minallelecount && altcount >= arg.hetsnp_minallelecount ) {
+		if( refcount+altcount >= arg.dna_mintotalreads ) {
 			if( m2.dnacount.f >= arg.hetsnp_minbaf && m2.dnacount.f <= arg.hetsnp_maxbaf ) {
 				m2.dnacount.ishet = true
 			}
