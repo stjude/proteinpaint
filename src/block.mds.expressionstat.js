@@ -232,27 +232,30 @@ export function showsingleitem_table(v, cfg, table) {
 	despite there may not be a ase call
 	*/
 	if( v.snps && v.snps.length>0 ) {
-		// in rna bam mode; v is one gene obj, print snps
-		const lst = []
-		for(const m of v.snps ) {
-			lst.push(
-				'<tr>'
-				+'<td>'+m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt+'</td>'
-				+'<td>'+m.dnacount.ref+'/'+m.dnacount.alt+'</td>'
-				+'<td>'+( m.rnacount.nocoverage ? '<span style="font-size:.8em;opacity:.5">No coverage</span>' : m.rnacount.ref+'/'+m.rnacount.alt)
-				+'</td>'
-				+'<td>'+(m.rnacount.pvalue || '-')+'</td>'
-				+'</tr>'
-			)
-		}
-		table.append('tr')
-			.append('td')
-			.attr('colspan',3)
-			.html( '<table style="margin-top:10px;border:solid 1px #ededed;border-spacing:5px;">'
-				+'<tr style="opacity:.5"><td>SNP</td><td>DNA</td><td>RNA</td><td>Binomial test P-value</td></tr>'
-				+lst.join('')
-				+'</table>'
+		const hetsnp = v.snps.filter( i=> i.dnacount && i.dnacount.ishet )
+		if(hetsnp.length>0) {
+			// in rna bam mode; v is one gene obj, print snps
+			const lst = []
+			for(const m of hetsnp ) {
+				lst.push(
+					'<tr>'
+					+'<td>'+m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt+'</td>'
+					+'<td>'+m.dnacount.ref+'/'+m.dnacount.alt+'</td>'
+					+'<td>'+( m.rnacount.nocoverage ? '<span style="font-size:.8em;opacity:.5">No coverage</span>' : m.rnacount.ref+'/'+m.rnacount.alt)
+					+'</td>'
+					+'<td>'+(m.rnacount.pvalue || '-')+'</td>'
+					+'</tr>'
 				)
+			}
+			table.append('tr')
+				.append('td')
+				.attr('colspan',3)
+				.html( '<table style="margin-top:10px;border:solid 1px #ededed;border-spacing:5px;">'
+					+'<tr style="opacity:.5"><td>SNP</td><td>DNA</td><td>RNA</td><td>Binomial test P-value</td></tr>'
+					+lst.join('')
+					+'</table>'
+					)
+		}
 	}
 
 
