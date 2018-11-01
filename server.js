@@ -4139,7 +4139,7 @@ async function handle_mdssvcnv_rnabam_do ( genes, chr, start, stop, dsquery, res
 				if( mean != null ) {
 					// has snp with valid pvalue
 					outputgene.ase = {
-						markers: thishetsnp.length,
+						markers: thishetsnp.filter(i=>i.dnacount.ishet).length,
 						ase_markers: ase_markers,
 						mean_delta: deltasum / rnasnp.length,
 						geometricmean: Math.pow( mean, 1/rnasnp.length )
@@ -5817,7 +5817,7 @@ function handle_ase_generesult ( snps, genes, q ) {
 			}
 		}
 		gene.ase = {
-			markers: thissnps.length,
+			markers: thissnps.filter(i=>i.dnacount.ishet).length,
 			ase_markers: ase_markers,
 			mean_delta: deltasum / rnasnp.length,
 			geometricmean: Math.pow( mean, 1/rnasnp.length )
