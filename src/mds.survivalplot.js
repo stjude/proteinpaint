@@ -117,9 +117,10 @@ function doplot( plot, obj ) {
 			const pathd = ['M 0 0']
 			for(const s of curve.steps) {
 				pathd.push('H '+(plot.width*s.x/maxx))
-				const y = plot.height * s.y
-				pathd.push('V '+y)
+				const y = plot.height * (s.y+s.drop)
+				pathd.push('V '+ y)
 				if(s.censored) {
+					const y = plot.height * s.y
 					for(const c of s.censored) {
 						const x = plot.width*c/maxx
 						ticks.push('M '+(x-plot.censorticksize/2)+' '+(y-plot.censorticksize/2)
@@ -134,10 +135,12 @@ function doplot( plot, obj ) {
 				.attr('d', pathd.join(' '))
 				.attr('stroke','black')
 				.attr('fill','none')
-			g.append('path')
-				.attr('d', ticks.join(' '))
-				.attr('stroke','black')
-				.attr('fill','none')
+			if(ticks.length) {
+				g.append('path')
+					.attr('d', ticks.join(' '))
+					.attr('stroke','black')
+					.attr('fill','none')
+			}
 		}
 	}
 	// y axis

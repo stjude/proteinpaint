@@ -8801,12 +8801,14 @@ function handle_mdssurvivalplot_plot ( s ) {
 			continue
 		}
 		// otherwise a.censored==1 has event
-		y += (1-y) * (1 / (thistotal - thiscensored.length))
+		const drop = (1-y) * 1 / (thistotal - thiscensored.length)
 		s.steps.push({
 			x: a.serialtime,
 			y: y,
+			drop: drop,
 			censored: thiscensored
 		})
+		y += drop
 		thistotal -= thiscensored.length + 1
 		thiscensored = []
 	}
@@ -8815,6 +8817,7 @@ function handle_mdssurvivalplot_plot ( s ) {
 		s.steps.push({
 			x: s.lst[ s.lst.length-1 ].serialtime, // last time
 			y: y,
+			drop: 0,
 			censored: thiscensored
 		})
 	}
