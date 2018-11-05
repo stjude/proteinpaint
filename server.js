@@ -6710,6 +6710,11 @@ function mdssvcnv_exit_getsample4disco( req, res, gn, ds, dsquery ) {
 async function mdssvcnv_exit_getexpression4gene( req, res, gn, ds, dsquery ) {
 	/*
 	get expression data for a gene
+
+	gene name up/lower case confusion here
+	- query name
+	- gene name in fpkm file
+	- in rnabam mode, gene name in gene track
 	*/
 
 	try {
@@ -6719,7 +6724,6 @@ async function mdssvcnv_exit_getexpression4gene( req, res, gn, ds, dsquery ) {
 		if(!Number.isFinite(q.start)) throw 'invalid start pos'
 		if(!Number.isFinite(q.stop)) throw 'invalid stop pos'
 		if(!q.name) throw 'unknown gene name'
-		//q.name = q.name.toLowerCase()
 
 		if( dsquery.checkrnabam ) {
 
@@ -6861,7 +6865,7 @@ function mdssvcnv_exit_getexpression4gene_getdata(dir, expquery, q) {
 			if(!j.gene) return
 			if(!Number.isFinite(j.value)) return
 
-			if(j.gene.toLowerCase() == q.name) {
+			if(j.gene.toLowerCase() == q.name.toLowerCase()) {
 				values.push( j )
 			}
 		})

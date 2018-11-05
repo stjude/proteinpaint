@@ -180,6 +180,8 @@ export function showsingleitem_table(v, cfg, table) {
 
 	if(!v.estat) return
 
+	if(cfg.no_ase) return
+
 	if(v.ase) {
 		const tr=table.append('tr')
 		tr.append('td')
