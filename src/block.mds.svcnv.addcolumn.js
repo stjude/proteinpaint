@@ -963,11 +963,13 @@ function genebar_config( holder, usegene, genes, tk, block, isauto ) {
 		}
 	}
 
-	expressionstat.ui_config( holder, tk.gecfg, tk, ()=>{
-		tk.tkconfigtip.hide()
-		multi_expressionstatus_ase_outlier(tk)
-		render_multi_genebar(tk,block)
-	})
+	if(!tk.gecfg.no_ase) {
+		expressionstat.ui_config( holder, tk.gecfg, tk, ()=>{
+			tk.tkconfigtip.hide()
+			multi_expressionstatus_ase_outlier(tk)
+			render_multi_genebar(tk,block)
+		})
+	}
 }
 
 

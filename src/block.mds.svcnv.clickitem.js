@@ -1742,18 +1742,22 @@ function mayaddexpressionrank( p, lines ) {
 			+'<td>&nbsp;<span style="font-size:.7em">'+tk.gecfg.datatype+'</span> '+v.value+'</td>'
 			+'<td>'
 		]
-		if(v.estat.ase_uncertain) {
-			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_uncertain+';color:white">ASE uncertain</span>')
-		} else if(v.estat.ase_biallelic) {
-			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_biallelic+';color:white">Bi-allelic</span>')
-		} else if(v.estat.ase_monoallelic) {
-			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_monoallelic+';color:white">Mono-allelic</span>')
+
+		if( v.estat ) {
+			if(v.estat.ase_uncertain) {
+				lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_uncertain+';color:white">ASE uncertain</span>')
+			} else if(v.estat.ase_biallelic) {
+				lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_biallelic+';color:white">Bi-allelic</span>')
+			} else if(v.estat.ase_monoallelic) {
+				lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_monoallelic+';color:white">Mono-allelic</span>')
+			}
+			if(v.estat.outlier) {
+				lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier+';color:white">Outlier HIGH</span>')
+			} else if(v.estat.outlier_asehigh) {
+				lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier_asehigh+';color:white">ASE HIGH</span>')
+			}
 		}
-		if(v.estat.outlier) {
-			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier+';color:white">Outlier HIGH</span>')
-		} else if(v.estat.outlier_asehigh) {
-			lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier_asehigh+';color:white">ASE HIGH</span>')
-		}
+
 		lst.push('</td></tr>')
 		rows.push(lst.join(''))
 	}
@@ -1769,18 +1773,22 @@ function mayaddexpressionrank( p, lines ) {
 					+'<td>&nbsp;<span style="font-size:.7em">'+tk.gecfg.datatype+'</span> '+v.value+'</td>'
 					+'<td>'
 				]
-				if(v.estat.ase_uncertain) {
-					lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_uncertain+';color:white">ASE uncertain</span>')
-				} else if(v.estat.ase_biallelic) {
-					lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_biallelic+';color:white">Bi-allelic</span>')
-				} else if(v.estat.ase_monoallelic) {
-					lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_monoallelic+';color:white">Mono-allelic</span>')
+
+				if(v.estat) {
+					if(v.estat.ase_uncertain) {
+						lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_uncertain+';color:white">ASE uncertain</span>')
+					} else if(v.estat.ase_biallelic) {
+						lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_biallelic+';color:white">Bi-allelic</span>')
+					} else if(v.estat.ase_monoallelic) {
+						lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.ase.color_monoallelic+';color:white">Mono-allelic</span>')
+					}
+					if(v.estat.outlier) {
+						lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier+';color:white">Outlier HIGH</span>')
+					} else if(v.estat.outlier_asehigh) {
+						lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier_asehigh+';color:white">ASE HIGH</span>')
+					}
 				}
-				if(v.estat.outlier) {
-					lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier+';color:white">Outlier HIGH</span>')
-				} else if(v.estat.outlier_asehigh) {
-					lst.push('<span style="padding:0px 5px;background:'+tk.gecfg.outlier.color_outlier_asehigh+';color:white">ASE HIGH</span>')
-				}
+
 				lst.push('</td></tr>')
 				rows.push(lst.join(''))
 			}

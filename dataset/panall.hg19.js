@@ -285,6 +285,7 @@ module.exports={
 			isgenenumeric:true,
 			file:'hg19/pan-all/rlog.ball/rlog.gz',
 			datatype:'rlog',
+			no_ase: true,
 
 			// for boxplots & circles, and the standalone expression track
 			itemcolor:'green',

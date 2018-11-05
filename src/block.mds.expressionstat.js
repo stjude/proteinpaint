@@ -12,6 +12,7 @@ init_config
 measure()
 showsingleitem_table
 ui_config
+ase_color()
 
 
 ********************** INTERNAL
@@ -19,6 +20,10 @@ ui_config
 
 
 */
+
+
+
+const color_noinfo = '#858585'
 
 
 export function init_config(cfg) {
@@ -39,7 +44,7 @@ export function init_config(cfg) {
 	if(cfg.ase.meandelta_monoallelic==undefined) cfg.ase.meandelta_monoallelic=0.3
 	if(cfg.ase.asemarkernumber_biallelic==undefined) cfg.ase.asemarkernumber_biallelic=0
 	//if(cfg.ase.meandelta_biallelic==undefined) cfg.ase.meandelta_biallelic=0.1
-	if(!cfg.ase.color_noinfo) cfg.ase.color_noinfo='#858585'
+	if(!cfg.ase.color_noinfo) cfg.ase.color_noinfo = color_noinfo
 	if(!cfg.ase.color_uncertain) cfg.ase.color_uncertain='#A8E0B5'
 	if(!cfg.ase.color_biallelic) cfg.ase.color_biallelic='#40859C'
 	if(!cfg.ase.color_monoallelic) cfg.ase.color_monoallelic='#d95f02'
@@ -327,6 +332,9 @@ export function showsingleitem_table(v, cfg, table) {
 
 
 export function ase_color(v, cfg) {
+	if(cfg.no_ase) return color_noinfo
+	if(!cfg.ase) return color_noinfo
+
 	if(!v.estat) return cfg.ase.color_noinfo
 	if(v.estat.ase_monoallelic) return cfg.ase.color_monoallelic
 	if(v.estat.ase_biallelic) return cfg.ase.color_biallelic

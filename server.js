@@ -452,8 +452,11 @@ function mds_clientcopy(ds) {
 			}
 
 		} else if(q.isgenenumeric) {
+
 			clientquery.isgenenumeric=true
 			clientquery.datatype = q.datatype
+			clientquery.no_ase = q.no_ase
+
 		} else {
 			// this query is not to be revealed to client
 			continue

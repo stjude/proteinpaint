@@ -2129,6 +2129,8 @@ export function multi_expressionstatus_ase_outlier(tk) {
 	*/
 	//if(!tk.samplegroups) return
 	if(!tk._data) return
+	if(!tk.gecfg) return
+	if(tk.gecfg.no_ase) return
 	for(const g of tk._data) {
 		if(!g.samples) continue
 		for(const s of g.samples) {
@@ -2896,7 +2898,9 @@ function makeTk(tk, block) {
 			tk.gecfg.fixed=[]
 		}
 
-		expressionstat.init_config( tk.gecfg )
+		if(!tk.gecfg.no_ase) {
+			expressionstat.init_config( tk.gecfg )
+		}
 	}
 
 
