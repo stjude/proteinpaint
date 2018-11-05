@@ -153,8 +153,14 @@ function doplot( plot, obj ) {
 				)
 			),
 			showline:1,
-			fontsize:15
+			fontsize:plot.tickfontsize,
 		})
+		plot.svg.append('g')
+			.attr('transform','translate('+(plot.labfontsize)+','+(plot.toppad+plot.height/2)+')')
+			.append('text')
+			.text('Survival')
+			.attr('font-size',plot.labfontsize)
+			.attr('transform','rotate(-90)')
 	}
 	// x axis
 	{
@@ -166,8 +172,12 @@ function doplot( plot, obj ) {
 				)
 			),
 			showline:1,
-			fontsize:15
+			fontsize:plot.tickfontsize
 		})
+		plot.svg.append('text')
+			.text('Years')
+			.attr('x', plot.yaxisw+plot.yaxispad+plot.width/2)
+			.attr('y', plot.toppad+plot.height+plot.xaxispad+plot.xaxish)
 	}
 	plot.svg
 		.attr('width', plot.yaxisw+plot.yaxispad+plot.width+plot.rightpad)
@@ -220,9 +230,11 @@ function initplot_dom (obj) {
 		rightpad:10,
 		xaxispad:10,
 		yaxispad:10,
-		xaxish: 30,
-		yaxisw: 30,
+		xaxish: 40,
+		yaxisw: 65,
 		censorticksize:6,
+		tickfontsize:14,
+		labfontsize:15,
 		d: obj.plotdiv.append('div').style('margin','20px'),
 	}
 	plot.svg = plot.d.append('svg')
