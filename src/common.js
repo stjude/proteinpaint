@@ -630,7 +630,7 @@ exports.validate_vcfinfofilter=function(obj) {
 			// categorical info
 			for(const k in set.categories) {
 				const v=set.categories[k]
-				if(!v.color) return '.color missing for class '+k+' from .categories of set '+set.name
+				if( !set.autocolor && !v.color) return '.color missing for class '+k+' from .categories of set '+set.name
 				if(!v.label) {
 					v.label=k
 				}

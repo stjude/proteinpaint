@@ -13,7 +13,8 @@ node utils/uglify.js src/bulk.snv.js    deploys/deliver/proteinpaint/src/
 node utils/uglify.js src/bulk.sv.js     deploys/deliver/proteinpaint/src/
 node utils/uglify.js src/bulk.svjson.js deploys/deliver/proteinpaint/src/
 node utils/uglify.js src/bulk.trunc.js  deploys/deliver/proteinpaint/src/
-node utils/uglify.js src/bulk.ui.js     deploys/deliver/proteinpaint/src/
+#node utils/uglify.js src/bulk.ui.js     deploys/deliver/proteinpaint/src/
+cp src/bulk.ui.js     deploys/deliver/proteinpaint/src/
 node utils/uglify.js src/tree.js        deploys/deliver/proteinpaint/src/
 node utils/uglify.js src/common.js      deploys/deliver/proteinpaint/src/
 node utils/uglify.js src/vcf.js         deploys/deliver/proteinpaint/src/

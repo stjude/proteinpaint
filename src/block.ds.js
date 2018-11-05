@@ -1,4 +1,4 @@
-import {scaleLinear} from 'd3-scale'
+import {scaleLinear, scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {arc as d3arc} from 'd3-shape'
 import {select as d3select,event as d3event} from 'd3-selection'
 import {itemtable} from './block.ds.itemtable'
@@ -459,7 +459,7 @@ export function load2tk(datalst,block,tk) {
 
 export function dstkrender(tk,block) {
 	block.tkcloakoff(tk,{})
-	
+
 	/* not in use
 	if(tk.isvcfbarplot) {
 		vcftk.renderbarplot(tk,block)
@@ -487,6 +487,8 @@ export function dstkrender(tk,block) {
 			originhidden.add(k)
 		}
 	}
+
+	vcfinfofilter_mayupdateautocategory( tk, block )
 
 	if(tk.numericmode) {
 		rendernumerictk( tk, block, originhidden )
@@ -2705,6 +2707,65 @@ function showlegend_vcfinfofilter(tk, block) {
 			if(mcset.categoryhidden[ k ]) {
 				lab.style('text-decoration','line-through')
 			}
+		}
+	}
+}
+
+
+
+function vcfinfofilter_mayupdateautocategory(tk, block) {
+	/*
+	categorical info filter may use auto color
+	call this after updating mlst[] -- will update the color for all categories
+	*/
+	if(!tk.vcfinfofilter) return
+
+	for(const mcset of tk.vcfinfofilter.lst) {
+
+		if(mcset.numericfilter) {
+			continue
+		}
+
+		if(!mcset.autocolor) {
+			continue
+		}
+
+		/* categorical attribute
+		only need to record categories used in mlst[]
+		then assign dynamic color
+		*/
+
+		const key2count=new Map()
+
+		for(const m of tk.mlst) {
+			
+			const [err, vlst] = getter_mcset_key( mcset, m )
+
+			if(err) {
+				continue
+			}
+
+			if(vlst!=undefined) {
+				for(const v of vlst) {
+					if(!key2count.has(v)) {
+						key2count.set(v, 0)
+					}
+					key2count.set( v, key2count.get(v)+1)
+				}
+			}
+		}
+
+		const lst=[...key2count]
+		lst.sort((i,j)=>j[1]-i[1])
+
+		const colorfunc = scaleOrdinal( schemeCategory20 )
+
+		for(const [k, count] of lst) {
+
+			const v = mcset.categories[k]
+
+			if(!v) continue
+			v.color = colorfunc( k )
 		}
 	}
 }
