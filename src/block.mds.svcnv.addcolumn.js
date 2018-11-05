@@ -249,7 +249,7 @@ export function render_multi_genebar( tk, block) {
 	tk.rightheadw_tk = column_xoff
 	block.rightheadw = 0
 	for(const t of block.tklst) {
-		block.rightheadw = Math.max( block.rightheadw, tk.rightheadw_tk )
+		block.rightheadw = Math.max( block.rightheadw, t.rightheadw_tk )
 	}
 	block.blocksetw()
 
