@@ -427,7 +427,7 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 							.attr('height', s.height)
 							.attr('shape-rendering','crispEdges')
 
-						if(tk.isfull) {
+						if(tk.isfull && v.estat) {
 							// only show dots for outlier status in full, not dense
 							if(v.estat.outlier) {
 								row.append('circle')
@@ -521,7 +521,7 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 			.attr('font-family',client.font)
 			.attr('font-size',fontsize)
 			.text(autogenename + ' ' + (tk.checkrnabam ? tk.gecfg.datatype : 'rank') )
-			.attr('class','sja_clbtext')
+			.attr('class','sja_clbtext2')
 			.on('click',()=>{
 
 				tk.tkconfigtip.clear()
@@ -651,7 +651,7 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 						.attr('height', s.height)
 						.attr('shape-rendering','crispEdges')
 
-					if(tk.isfull) {
+					if(tk.isfull && v.estat) {
 						// only show dots for outlier status in full, not dense
 						if(v.estat.outlier) {
 							row.append('circle')
@@ -749,45 +749,33 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 
 	// special looking header compared to auto genes
 
-	const bg = headg.append('rect')
-		.attr('y',-(fontsize+fontsize+labelpad+ticksize+axispad))
-		.attr('width',expbarwidth)
-		.attr('height', fontsize)
-		.attr('shape-rendering','crispEdges')
-		.attr('fill','#ededed')
-
-	const text = headg.append('text')
+	headg.append('text')
 		.attr('text-anchor','middle')
 		.attr('x',expbarwidth/2)
 		.attr('y',-(fontsize+labelpad+ticksize+axispad))
 		.attr('font-family',client.font)
 		.attr('font-size',fontsize)
 		.attr('fill','black')
+		.attr('class','sja_clbtext2')
 		.text(fixedgene.gene + ' rank')
-
-	headg.append('rect')
-		.attr('y',-(fontsize+fontsize+labelpad+ticksize+axispad))
-		.attr('width',expbarwidth)
-		.attr('height', fontsize)
-		.attr('shape-rendering','crispEdges')
-		.attr('fill','white')
-		.attr('fill-opacity',0)
-		.on('mouseover',()=>{
-			bg.attr('fill','#545454')
-			text.attr('fill','white')
-		})
-		.on('mouseout',()=>{
-			bg.attr('fill','#ededed')
-			text.attr('fill','black')
-		})
 		.on('click',()=>{
 
-			for(let i=0; i<tk.gecfg.fixed.length; i++) {
-				if(tk.gecfg.fixed[i].gene == fixedgene.gene) {
-					tk.gecfg.fixed.splice(i,1)
-				}
-			}
-			render_multi_genebar(tk,block)
+			tk.tkconfigtip.clear()
+				.showunder(d3event.target)
+
+			tk.tkconfigtip.d
+				.append('div')
+				.attr('class','sja_menuoption')
+				.text('Remove')
+				.on('click',()=>{
+					tk.tkconfigtip.hide()
+					for(let i=0; i<tk.gecfg.fixed.length; i++) {
+						if(tk.gecfg.fixed[i].gene == fixedgene.gene) {
+							tk.gecfg.fixed.splice(i,1)
+						}
+					}
+					render_multi_genebar(tk,block)
+				})
 		})
 	
 
