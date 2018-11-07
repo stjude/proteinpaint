@@ -8835,19 +8835,19 @@ async function handle_mdssurvivalplot_dividesamples_genevaluequartile ( samples,
 	const i3 = Math.ceil(samplewithvalue.length * .75 )
 	return [
 		{
-			name: st.gene+' '+genenumquery.datatype+' from 1st quartile',
+			name: st.gene+' '+genenumquery.datatype+' from 1st quartile (n='+i1+')',
 			lst: samplewithvalue.slice(0, i1)
 		},
 		{
-			name: st.gene+' '+genenumquery.datatype+' from 2nd quartile',
+			name: st.gene+' '+genenumquery.datatype+' from 2nd quartile (n='+(i2-i1)+')',
 			lst: samplewithvalue.slice( i1, i2 )
 		},
 		{
-			name: st.gene+' '+genenumquery.datatype+' from 3rd quartile',
+			name: st.gene+' '+genenumquery.datatype+' from 3rd quartile (n='+(i3-i2)+')',
 			lst: samplewithvalue.slice( i2, i3 )
 		},
 		{
-			name: st.gene+' '+genenumquery.datatype+' from 4th quartile',
+			name: st.gene+' '+genenumquery.datatype+' from 4th quartile (n='+(samplewithvalue.length-i3)+')',
 			lst: samplewithvalue.slice( i3, samplewithvalue.length )
 		},
 	]
@@ -8858,15 +8858,15 @@ async function handle_mdssurvivalplot_dividesamples_genevaluequartile ( samples,
 async function handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff ( samples, q, ds, plottype ) {
 	const st = q.samplerule.set
 	const [ genenumquery, samplewithvalue ] = await handle_mdssurvivalplot_dividesamples_genevalue_get( samples, q, ds )
-	const idx = Math.ceil(samplewithvalue.length * st.cutoff / 100)
+	const i = Math.ceil(samplewithvalue.length * st.cutoff / 100)
 	return [
 		{
-			name: st.gene+' '+genenumquery.datatype+' below '+st.cutoff+' percentile',
-			lst: samplewithvalue.slice(0, idx)
+			name: st.gene+' '+genenumquery.datatype+' below '+st.cutoff+' percentile (n='+i+')',
+			lst: samplewithvalue.slice(0, i)
 		},
 		{
-			name: st.gene+' '+genenumquery.datatype+' above '+st.cutoff+' percentile',
-			lst: samplewithvalue.slice( idx, samplewithvalue.length )
+			name: st.gene+' '+genenumquery.datatype+' above '+st.cutoff+' percentile (n='+(samplewithvalue.length-i)+')',
+			lst: samplewithvalue.slice( i, samplewithvalue.length )
 		},
 	]
 }
