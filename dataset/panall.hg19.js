@@ -160,18 +160,18 @@ module.exports={
 		},
 
 		survivalplot: {
-			plots:[
-				{
+			plots:{
+				efs: {
 					name:'Event-free survival',
 					serialtimekey:'F_efstime (yrs)',
 					iscensoredkey:'F_efscensor',
 				},
-				{
+				os: {
 					name:'Overall survival',
 					serialtimekey:'F_ostime (yrs)',
 					iscensoredkey:'F_oscensor',
 				},
-			],
+			},
 		}
 	},
 
