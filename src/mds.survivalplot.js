@@ -18,8 +18,10 @@ obj:
 init()
 ********************** INTERNAL
 initdataset
-initplot_dom
+validateplotandinitdom
+loadoneplot
 doplot
+
 */
 
 
@@ -60,16 +62,25 @@ export async function init (obj,holder, debugmode) {
 	obj.legendtable = holder.append('table')
 		.style('border-spacing','5px')
 
-
 	try {
+
 		await initdataset( obj )
+
+		if( obj.plotlist) {
+			if(!Array.isArray(obj.plotlist)) throw '.plotlist should be array'
+			for(const p of obj.plotlist) {
+				const plot = validateplotandinitdom( p, obj )
+				loadoneplot( plot, obj )
+			}
+		}
+
 	} catch(e) {
-		obj.sayerror('Cannot initiate: '+(e.message||e))
+		obj.sayerror('Cannot make plot: '+(e.message||e))
 		return
 	}
-
-	initplot_justtest( obj )
 }
+
+
 
 
 
@@ -85,7 +96,7 @@ function initdataset (obj) {
 		if(!data.plottypes) throw 'plottypes[] missing'
 		obj.plottypes = {}
 		for(const a of data.plottypes) {
-			obj.plottypes[ a.name ] = a
+			obj.plottypes[ a.key ] = a
 		}
 	})
 }
@@ -101,19 +112,23 @@ function doplot( plot, obj ) {
 			.x/y
 			.censored[]
 	*/
+	const colorfunc = scaleOrdinal(schemeCategory10)
+
 	let maxx = 0
 	for(const curve of plot.samplesets) {
+		curve.color = colorfunc( curve.name )
 		for(const s of curve.steps) {
 			maxx = Math.max(maxx, s.x)
 		}
 	}
+
 	plot.svg.selectAll('*').remove()
 	// curves
 	{
 		const g = plot.svg.append('g')
 			.attr('transform','translate('+(plot.yaxisw+plot.yaxispad)+','+(plot.toppad)+')')
-		const ticks = []
 		for(const curve of plot.samplesets) {
+			const ticks = []
 			const pathd = ['M 0 0']
 			for(const s of curve.steps) {
 				pathd.push('H '+(plot.width*s.x/maxx))
@@ -133,12 +148,12 @@ function doplot( plot, obj ) {
 			}
 			g.append('path')
 				.attr('d', pathd.join(' '))
-				.attr('stroke','black')
+				.attr('stroke',curve.color)
 				.attr('fill','none')
 			if(ticks.length) {
 				g.append('path')
 					.attr('d', ticks.join(' '))
-					.attr('stroke','black')
+					.attr('stroke', curve.color)
 					.attr('fill','none')
 			}
 		}
@@ -187,27 +202,13 @@ function doplot( plot, obj ) {
 
 
 
-function initplot_justtest (obj) {
-
-	const plot = initplot_dom( obj )
-
-	// just test
-	plot.type = 'Event-free survival'
-	plot.samplerule = {
-		full: {
-			byattr:1,
-			key: 'primary subtype',
-			value: 'PAX5 P80R',
-		},
-	}
-
+function loadoneplot (plot, obj) {
 	const par = {
 		genome: obj.genome.name,
 		dslabel: obj.dslabel,
 		type: plot.type,
 		samplerule: plot.samplerule,
 	}
-
 	client.dofetch('mdssurvivalplot', par)
 	.then(data=>{
 		if(data.error) throw data.error
@@ -222,8 +223,20 @@ function initplot_justtest (obj) {
 
 
 
-function initplot_dom (obj) {
+function validateplotandinitdom ( p, obj ) {
+	if(!p.type) throw '.type missing from a plot'
+	if(!p.samplerule) throw '.samplerule{} missing from a plot'
+	if(!p.samplerule.full) throw '.samplerule.full{} missing from a plot'
+	if(p.samplerule.full.byattr) {
+		if(!p.samplerule.full.key) throw '.samplerule.full.key missing from a plot'
+		if(!p.samplerule.full.value) throw '.samplerule.full.value missing from a plot'
+	} else {
+		throw 'unknown rule for samplerule.full for a plot'
+	}
+
 	const plot = {
+		type: p.type,
+		samplerule: p.samplerule,
 		width: 500,
 		height: 500,
 		toppad:10,
@@ -237,6 +250,7 @@ function initplot_dom (obj) {
 		labfontsize:15,
 		d: obj.plotdiv.append('div').style('margin','20px'),
 	}
+
 	plot.svg = plot.d.append('svg')
 	obj.plots.push( plot )
 	return plot
