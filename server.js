@@ -8735,6 +8735,11 @@ function handle_mdssamplescatterplot (req,res) {
 }
 
 
+
+
+
+
+
 async function handle_mdssurvivalplot (req,res) {
 	if(reqbodyisinvalidjson(req,res)) return
 	try {
@@ -8748,28 +8753,26 @@ async function handle_mdssurvivalplot (req,res) {
 
 		const sp = ds.cohort.survivalplot
 		if(!sp) throw 'survivalplot not supported for this dataset'
+		if(!sp.plots) throw '.plots{} missing'
 
 		if(req.query.init) {
-			res.send({plottypes: sp.plots.map( i=>{
-				return {
-					name: i.name
-				}
-			})
-			})
+			const lst = []
+			for(const k in sp.plots) {
+				lst.push({ key: k, name: sp.plots[k].name })
+			}
+			res.send({plottypes: lst})
 			return
 		}
 
 		// make plot
 
 		if(!q.type) throw '.type missing'
-		const plottype = sp.plots.find( i=> q.type==i.name)
+		const plottype = sp.plots[ q.type ]
 		if(!plottype) throw 'unknown plot type: '+q.type
 
-		const samples = handle_mdssurvivalplot_getsamples(q, ds, plottype )
+		const samples = handle_mdssurvivalplot_getfullsamples(q, ds, plottype )
 
-		//const samplesets = await handle_mdssurvivalplot_dividesamples( q, ds, samples )
-		// just test
-		const samplesets = [ {name:'All', lst: samples} ]
+		const samplesets = await handle_mdssurvivalplot_dividesamples( samples, q, ds, samples )
 
 		for(const s of samplesets) {
 			handle_mdssurvivalplot_plot( s )
@@ -8784,6 +8787,101 @@ async function handle_mdssurvivalplot (req,res) {
 		if(err.stack) console.error(err.stack)
 		res.send({error: (err.message || err)})
 	}
+}
+
+
+
+async function handle_mdssurvivalplot_dividesamples ( samples, q, ds, plottype ) {
+/*
+samples[]
+	.name
+	.o{}
+q{}
+ds{}
+plottype{}
+*/
+	const st = q.samplerule.set
+	if(!st) {
+		// no rule for sets -- make one
+		return [ {name:'All', lst: samples} ]
+	}
+	if(st.genevaluepercentilecutoff) {
+		if(!st.gene) throw '.gene missing from samplerule.set'
+		if(!st.chr) throw '.chr missing from samplerule.set'
+		if(!Number.isInteger(st.start)) throw '.start not integer from samplerule.set'
+		if(!Number.isInteger(st.stop)) throw '.start not integer from samplerule.set'
+		if(!Number.isInteger(st.cutoff)) throw '.cutoff not integer from samplerule.set'
+		if(st.cutoff<=0 || st.cutoff>=100) throw '.cutoff not a valid percentile 0-100'
+		return await handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff( samples, q, ds, plottype )
+	} else {
+		throw 'unknown rule for samplerule.set{}'
+	}
+}
+
+
+
+async function handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff ( samples, q, ds, plottype ) {
+	if(!ds.queries) throw '.queries{} missing from ds'
+	let genenumquery // gene numeric value query
+	for(const k in ds.queries) {
+		if(ds.queries[k].isgenenumeric) {
+			genenumquery = ds.queries[k]
+		}
+	}
+	if(!genenumquery) throw 'no gene numeric query from ds'
+
+	let dir
+	if(genenumquery.url) {
+		dir = await cache_index_promise( genenumquery.indexURL || genenumquery.url+'.tbi' )
+	}
+
+	const st = q.samplerule.set
+
+	const sample2genevalue = await mds_genenumeric_querygene( genenumquery, dir, st.chr, st.start, st.stop, st.gene )
+
+	const samplewithvalue = []
+	for(const s of samples) {
+		if(sample2genevalue.has(s.name)) {
+			s.genevalue = sample2genevalue.get(s.name)
+			samplewithvalue.push(s)
+		}
+	}
+	samplewithvalue.sort((a,b) => a.genevalue-b.genevalue )
+	const idx = Math.ceil(samplewithvalue.length * st.cutoff / 100)
+	return [
+		{
+			name: 'Below '+st.cutoff+' percentile',
+			lst: samplewithvalue.slice(0, idx)
+		},
+		{
+			name: 'Above '+st.cutoff+' percentile',
+			lst: samplewithvalue.slice( idx, samplewithvalue.length )
+		},
+	]
+}
+
+
+
+async function mds_genenumeric_querygene ( query, dir, chr, start, stop, gene ) {
+	return new Promise((resolve, reject)=>{
+	
+	const ps = spawn(tabix, [
+		query.file ? path.join(serverconfig.tpmasterdir,query.file) : query.url,
+		chr+':'+start+'-'+stop
+		], {cwd: dir}
+		)
+
+	const sample2genevalue = new Map()
+	const rl = readline.createInterface({input:ps.stdout})
+	rl.on('line',line=>{
+		const j = JSON.parse(line.split('\t')[3])
+		if(!j.sample || !Number.isFinite(j.value) || j.gene!=gene) return
+		sample2genevalue.set( j.sample, j.value )
+	})
+	ps.on('close',code=>{
+		resolve( sample2genevalue )
+	})
+	})
 }
 
 
@@ -8832,7 +8930,7 @@ function handle_mdssurvivalplot_plot ( s ) {
 
 
 
-function handle_mdssurvivalplot_getsamples (q, ds, plottype) {
+function handle_mdssurvivalplot_getfullsamples (q, ds, plottype) {
 	if(!q.samplerule) throw '.samplerule missing'
 	if(!q.samplerule.full) throw '.samplerule.full missing'
 
@@ -8853,7 +8951,7 @@ function handle_mdssurvivalplot_getsamples (q, ds, plottype) {
 			}
 		}
 	} else {
-		throw 'unknown sample rule'
+		throw 'unknown rule for samplerule.full'
 	}
 
 	const lst2 = [] // with valid serialtimekey
@@ -8864,7 +8962,7 @@ function handle_mdssurvivalplot_getsamples (q, ds, plottype) {
 			lst2.push(s)
 		}
 	}
-	if(lst2.length==0) throw 'no samples found'
+	if(lst2.length==0) throw 'no samples found for full set'
 	return lst2
 }
 
@@ -11415,12 +11513,13 @@ function mds_init(ds,genome, _servconfig) {
 		// should allow both sample/individual level as key
 
 		if( ds.cohort.survivalplot ) {
-			if(!ds.cohort.survivalplot.plots) return '.plots[] missing from survivalplot'
-			if(!Array.isArray(ds.cohort.survivalplot.plots)) return 'survivalplot.plots is not array'
-			for(const p of ds.cohort.survivalplot.plots) {
-				if(!p.name) return '.name missing from a survivalplot'
-				if(!p.serialtimekey) return '.serialtimekey missing from a survivalplot'
-				if(!p.iscensoredkey) return '.iscensoredkey missing from a survivalplot'
+			if(!ds.cohort.survivalplot.plots) return '.plots{} missing from survivalplot'
+			for(const k in ds.cohort.survivalplot.plots) {
+				const p = ds.cohort.survivalplot.plots[k]
+				if(!p.name) return '.name missing from survivalplot '+k
+				if(!p.serialtimekey) return '.serialtimekey missing from survivalplot '+k
+				if(!p.iscensoredkey) return '.iscensoredkey missing from survivalplot '+k
+				p.key = k
 			}
 		}
 
