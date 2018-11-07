@@ -18,9 +18,9 @@ obj:
 init()
 ********************** INTERNAL
 initdataset
-validateplotandinitdom
-loadoneplot
-doplot
+validatePlot_initDom
+loadPlot
+doPlot
 
 */
 
@@ -64,13 +64,13 @@ export async function init (obj,holder, debugmode) {
 
 	try {
 
-		await initdataset( obj )
+		//await initdataset( obj )
 
 		if( obj.plotlist) {
 			if(!Array.isArray(obj.plotlist)) throw '.plotlist should be array'
 			for(const p of obj.plotlist) {
-				const plot = validateplotandinitdom( p, obj )
-				loadoneplot( plot, obj )
+				const plot = validatePlot_initDom( p, obj )
+				loadPlot( plot, obj )
 			}
 		}
 
@@ -103,7 +103,7 @@ function initdataset (obj) {
 
 
 
-function doplot( plot, obj ) {
+function doPlot( plot, obj ) {
 	/*
 	make one plot
 	.samplesets[]
@@ -197,12 +197,22 @@ function doplot( plot, obj ) {
 	plot.svg
 		.attr('width', plot.yaxisw+plot.yaxispad+plot.width+plot.rightpad)
 		.attr('height', plot.toppad+plot.height+plot.xaxispad+plot.xaxish)
+
+	// legend
+	if(plot.samplesets.length>1) {
+		plot.legend.d_curves.selectAll('*').remove()
+		for(const c of plot.samplesets) {
+			plot.legend.d_curves.append('div')
+				.style('margin','3px')
+				.html('<span style="background:'+c.color+'">&nbsp;&nbsp;</span> '+c.name)
+		}
+	}
 }
 
 
 
 
-function loadoneplot (plot, obj) {
+function loadPlot (plot, obj) {
 	const par = {
 		genome: obj.genome.name,
 		dslabel: obj.dslabel,
@@ -214,7 +224,7 @@ function loadoneplot (plot, obj) {
 		if(data.error) throw data.error
 		if(!data.samplesets) throw 'samplesets[] missing'
 		plot.samplesets = data.samplesets
-		doplot( plot, obj )
+		doPlot( plot, obj )
 	})
 	.catch(e=>{
 		obj.sayerror(e)
@@ -223,7 +233,7 @@ function loadoneplot (plot, obj) {
 
 
 
-function validateplotandinitdom ( p, obj ) {
+function validatePlot_initDom( p, obj ) {
 	if(!p.type) throw '.type missing from a plot'
 	if(!p.samplerule) throw '.samplerule{} missing from a plot'
 	if(!p.samplerule.full) throw '.samplerule.full{} missing from a plot'
@@ -249,9 +259,33 @@ function validateplotandinitdom ( p, obj ) {
 		tickfontsize:14,
 		labfontsize:15,
 		d: obj.plotdiv.append('div').style('margin','20px'),
+		legend:{}
+	}
+
+	if(plot.name) {
+		plot.d.append('div')
+			.text(plot.name)
+			.style('margin','10px')
+	}
+
+
+	// legend
+	if(p.samplerule.full.byattr) {
+		plot.d.append('div')
+			.style('margin','10px')
+			.text( p.samplerule.full.key+': '+p.samplerule.full.value )
+	} else {
+		// new samplerule for full set
+	}
+
+	if(p.samplerule.set) {
+		// to fill in curve legend after doing plot
+		plot.legend.d_curves = plot.d.append('div')
+			.style('margin','10px')
 	}
 
 	plot.svg = plot.d.append('svg')
+
 	obj.plots.push( plot )
 	return plot
 }
