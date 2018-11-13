@@ -2264,7 +2264,7 @@ export function focus_singlesample( p ) {
 				samplename: sample.samplename,
 				rnabamfile: sbam.file,
 				rnabamurl: sbam.url,
-				rnabamindexURL: sbam.rnabamindexURL,
+				rnabamindexURL: sbam.indexURL,
 				rnabamtotalreads: sbam.totalreads,
 				vcffile: tk.checkvcf.file,
 				vcfurl: tk.checkvcf.url,

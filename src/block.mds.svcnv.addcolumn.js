@@ -1178,7 +1178,7 @@ function rnabam_click_genebar ( gene, sample, tk, block ) {
 				samplename: sample.samplename,
 				rnabamfile: sbam.file,
 				rnabamurl: sbam.url,
-				rnabamindexURL: sbam.rnabamindexURL,
+				rnabamindexURL: sbam.indexURL,
 				rnabamtotalreads: sbam.totalreads,
 				rnabamispairedend: sbam.pairedend,
 				vcffile: tk.checkvcf.file,
