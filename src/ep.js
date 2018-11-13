@@ -1117,21 +1117,18 @@ function makeButtons( ep ) {
 				.attr('stroke-opacity', normal_strokeopacity)
 		})
 
-	/*
-	don't show gene search
-		butrow.append('input')
-		.attr('placeholder','Gene')
-		.style('width','60px')
-		.style('margin-left','5px')
-		.on('keyup',()=>{
-			const str=d3event.target.value
-			if(d3event.code=='Enter') {
-				showgene(ep,str)
-				d3event.target.value=''
-				return
-			}
-		})
-		*/
+	butrow.append('input')
+	.attr('placeholder','Gene')
+	.style('width','60px')
+	.style('margin-left','5px')
+	.on('keyup',()=>{
+		const str=d3event.target.value
+		if(d3event.code=='Enter') {
+			showgene(ep,str)
+			d3event.target.value=''
+			return
+		}
+	})
 
 	if(ep.p.gtexlink) {
 		butrow.append('span')
