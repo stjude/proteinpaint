@@ -4204,10 +4204,10 @@ function handle_mdssvcnv_rnabam_genefragcount ( bam, chr, gene ) {
 			args.push( (bam.nochr ? chr.replace('chr','') : chr)+':'+(e[0]+1)+'-'+(e[1]+1) )
 		}
 
-		const p1 = spawn( samtools, args, {cmd: bam.dir})
-		const p2 = spawn( 'cut', ['-f1'], {cmd: bam.dir})
-		const p3 = spawn( 'sort', ['-u'], {cmd: bam.dir})
-		const p4 = spawn( 'wc', ['-l'], {cmd: bam.dir})
+		const p1 = spawn( samtools, args, {cwd: bam.dir})
+		const p2 = spawn( 'cut', ['-f1'], {cwd: bam.dir})
+		const p3 = spawn( 'sort', ['-u'], {cwd: bam.dir})
+		const p4 = spawn( 'wc', ['-l'], {cwd: bam.dir})
 		p1.stdout.pipe(p2.stdin)
 		p2.stdout.pipe(p3.stdin)
 		p3.stdout.pipe(p4.stdin)
@@ -10249,7 +10249,12 @@ return new Promise((resolve,reject)=>{
 		indexURL.startsWith('https://westus.dl.azure.dnanex.us') ||
 		indexURL.startsWith('https://westus.dl.stagingazure.dnanex.us')
 		) {
-		indexfile = indexfile.replace(/tbi$/,'csi')
+
+		if( indexURL.endsWith('bai')) {
+			indexfile = indexfile.replace(/bai$/,'csi')
+		} else {
+			indexfile = indexfile.replace(/tbi$/,'csi')
+		}
 	}
 
 	const indexFilepath=path.join( dir,  indexfile )
