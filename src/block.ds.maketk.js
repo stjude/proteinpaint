@@ -755,6 +755,7 @@ function ctrlui_vcfinfofilter(tk,block) {
 
 	categorical:
 		has the .categories{} attribute
+		if autocategory is set, .categories{} will be dynamically filled with color roster each time data is loaded
 
 	numerical:
 		does not have .categories{}
@@ -774,7 +775,9 @@ function ctrlui_vcfinfofilter(tk,block) {
 		if(!Number.isInteger(obj.setidx4mclass)) return '.setidx4mclass value should be array index (non-negative integer)'
 		const set = obj.lst[obj.setidx4mclass]
 		if(!set) return '.setidx4mclass value out of bound'
-		if(!set.categories) return '.setidx4mclass does not point to a categorical set'
+		if(!set.autocategory) {
+			if(!set.categories) return '.setidx4mclass does not point to a categorical set'
+		}
 	}
 
 	if(obj.setidx4numeric!=undefined) {
@@ -786,12 +789,17 @@ function ctrlui_vcfinfofilter(tk,block) {
 	}
 
 	// validated
+
+
 	obj.holder=tk.td_legend.append('table')
 		.style('border-spacing','5px')
 
 	// display holder for each set
 	for(let i=0; i<obj.lst.length; i++) {
+
 		const set=obj.lst[i]
+
+
 		const row = obj.holder.append('tr')
 
 		set.namebutton=row.append('td')

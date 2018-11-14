@@ -2573,7 +2573,7 @@ function showlegend_vcfinfofilter(tk, block) {
 	for(const mcset of tk.vcfinfofilter.lst) {
 
 		mcset.holder.selectAll('*').remove()
-		
+
 		if(mcset.numericfilter) {
 			// numeric
 			// duplicative
@@ -2726,7 +2726,7 @@ function vcfinfofilter_mayupdateautocategory(tk, block) {
 			continue
 		}
 
-		if(!mcset.autocolor) {
+		if(!mcset.autocategory) {
 			continue
 		}
 
@@ -2760,12 +2760,13 @@ function vcfinfofilter_mayupdateautocategory(tk, block) {
 
 		const colorfunc = scaleOrdinal( schemeCategory20 )
 
+		mcset.categories = {}
+
 		for(const [k, count] of lst) {
-
-			const v = mcset.categories[k]
-
-			if(!v) continue
-			v.color = colorfunc( k )
+			mcset.categories[k] = {
+				label: k,
+				color: colorfunc( k )
+			}
 		}
 	}
 }

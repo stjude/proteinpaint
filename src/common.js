@@ -625,16 +625,20 @@ exports.validate_vcfinfofilter=function(obj) {
 
 		if(!set.name) return 'name missing from a set of .vcfinfofilter.lst'
 
-		if(set.categories) {
+		if(set.autocategory || set.categories) {
 
-			// categorical info
-			for(const k in set.categories) {
-				const v=set.categories[k]
-				if( !set.autocolor && !v.color) return '.color missing for class '+k+' from .categories of set '+set.name
-				if(!v.label) {
-					v.label=k
+			// categorical info, auto or defined
+
+			if(!set.autocategory) {
+				for(const k in set.categories) {
+					const v=set.categories[k]
+					if( !set.autocolor && !v.color) return '.color missing for class '+k+' from .categories of set '+set.name
+					if(!v.label) {
+						v.label=k
+					}
 				}
 			}
+
 			if(set.categoryhidden) {
 				for(const k in set.categoryhidden) {
 					if(!set.categories[k]) return 'unknown hidden-by-default category '+k+' from set '+set.name
