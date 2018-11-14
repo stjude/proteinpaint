@@ -172,6 +172,11 @@ module.exports={
 					iscensoredkey:'F_oscensor',
 				},
 			},
+			samplegroupattrlst:[
+				{
+					key:'primary subtype'
+				},
+			]
 		}
 	},
 
