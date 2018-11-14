@@ -356,12 +356,23 @@ function mds_clientcopy(ds) {
 	}
 
 
-	if(ds.cohort && ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
-		/*
-		.attributes.lst[] are not released to client
-		default hidden attributes from sample annotation, tell client
-		*/
-		ds2.cohortHiddenAttr=ds.cohort.attributes.defaulthidden
+	if(ds.cohort) {
+		if( ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
+			/*
+			.attributes.lst[] are not released to client
+			default hidden attributes from sample annotation, tell client
+			*/
+			ds2.cohortHiddenAttr=ds.cohort.attributes.defaulthidden
+		}
+		if(ds.cohort.survivalplot) {
+			ds2.survivalplot = { plots:[] }
+			for(const k in ds.cohort.survivalplot.plots) {
+				ds2.survivalplot.plots.push({
+					key: k,
+					name: ds.cohort.survivalplot.plots[k].name
+				})
+			}
+		}
 	}
 
 	for(const k in ds.queries) {
@@ -8756,11 +8767,56 @@ async function handle_mdssurvivalplot (req,res) {
 		if(!sp.plots) throw '.plots{} missing'
 
 		if(req.query.init) {
-			const lst = []
-			for(const k in sp.plots) {
-				lst.push({ key: k, name: sp.plots[k].name })
+
+			const result = {
+				plottypes: []
 			}
-			res.send({plottypes: lst})
+
+			for(const k in sp.plots) {
+				result.plottypes.push({ key: k, name: sp.plots[k].name })
+			}
+
+			if(sp.samplegroupattrlst) {
+				result.samplegroupings = []
+
+				for(const a of sp.samplegroupattrlst) {
+					const attr = ds.cohort.sampleAttribute.attributes[ a.key ]
+					const value2count = new Map()
+					for(const n in ds.cohort.annotation) {
+						const sobj = ds.cohort.annotation[n]
+						const v = sobj[a.key]
+						if(v!=undefined) {
+
+							let hasoutcome = false
+							// if the sample has info in any plot, will count it
+							for(const k in sp.plots) {
+								if( sobj[ sp.plots[k].serialtimekey ]!=undefined ) {
+									hasoutcome=true
+									break
+								}
+							}
+
+							if(hasoutcome) {
+								if(value2count.has(v)) {
+									value2count.set(v, value2count.get(v)+1)
+								} else {
+									value2count.set(v, 1)
+								}
+							}
+						}
+					}
+					const lst = []
+					for(const [v,c] of value2count) {
+						lst.push({value:v, count: c})
+					}
+					result.samplegroupings.push({
+						key: a.key,
+						label: attr.label,
+						values: lst
+					})
+				}
+			}
+			res.send( result )
 			return
 		}
 
@@ -8993,6 +9049,8 @@ function handle_mdssurvivalplot_getfullsamples (q, ds, plottype) {
 				})
 			}
 		}
+	} else if(q.samplerule.full.useall) {
+		// TODO
 	} else {
 		throw 'unknown rule for samplerule.full'
 	}
