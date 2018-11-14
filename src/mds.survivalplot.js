@@ -11,7 +11,6 @@ obj:
 .holder
 .legendtable
 .genome {}
-.dslabel
 
 
 ********************** EXPORTED
@@ -31,12 +30,15 @@ const radius=3
 
 
 export async function init (obj,holder, debugmode) {
-	/*
-	holder
-	genome
-	dslabel
-
-	*/
+/*
+obj{}
+.genome
+.mds
+.plotlist[]
+.geneexpression{}
+	.gene{}
+		name/chr/start/stop
+*/
 
 	if(debugmode) {
 		window.obj = obj
@@ -57,6 +59,8 @@ export async function init (obj,holder, debugmode) {
 
 	///////////// following are tests
 
+	obj.uidiv = holder.append('div')
+		.style('margin','20px')
 	obj.plotdiv = holder.append('div')
 		.style('margin','20px')
 	obj.legendtable = holder.append('table')
@@ -64,22 +68,38 @@ export async function init (obj,holder, debugmode) {
 
 	try {
 
-		//await initdataset( obj )
-
-		if( obj.plotlist) {
-			if(!Array.isArray(obj.plotlist)) throw '.plotlist should be array'
-			for(const p of obj.plotlist) {
-				const plot = validatePlot_initDom( p, obj )
-				loadPlot( plot, obj )
-			}
-		}
+		await init_next( obj )
 
 	} catch(e) {
+		if(e.stack) console.log(e.stack)
 		obj.sayerror('Cannot make plot: '+(e.message||e))
-		return
 	}
 }
 
+
+
+
+async function init_next( obj ) {
+/* feel free to throw
+*/
+
+	await initdataset( obj )
+
+	if( obj.plotlist) {
+		/*
+		show plots rightaway
+		no ui for creating plot
+		*/
+		if(!Array.isArray(obj.plotlist)) throw '.plotlist should be array'
+		for(const p of obj.plotlist) {
+			const plot = validatePlot_initDom( p, obj )
+			loadPlot( plot, obj )
+		}
+		return
+	}
+
+	init_plotmaker( obj )
+}
 
 
 
@@ -87,18 +107,175 @@ export async function init (obj,holder, debugmode) {
 function initdataset (obj) {
 	const par = {
 		genome: obj.genome.name,
-		dslabel: obj.dslabel,
+		dslabel: obj.mds.label,
 		init: 1,
 	}
 	return client.dofetch('mdssurvivalplot', par)
 	.then(data=>{
 		if(data.error) throw data.error
 		if(!data.plottypes) throw 'plottypes[] missing'
-		obj.plottypes = {}
-		for(const a of data.plottypes) {
-			obj.plottypes[ a.key ] = a
-		}
+		obj.plottypes = data.plottypes
+		obj.samplegroupings = data.samplegroupings
 	})
+}
+
+
+
+function init_plotmaker( obj ) {
+/*
+init ui for plot maker
+each time it runs it should create a plot
+*/
+	const p = {
+		samplerule:{
+			full:{}
+		},
+	}
+
+	const div = obj.uidiv.append('div')
+		.style('margin','20px')
+
+	if(obj.plottypes.length==1) {
+		p.type = obj.plottypes[0].key
+	} else {
+		const s = div
+			.append('div')
+			.style('margin-bottom','10px')
+			.append('select')
+			.on('change',()=>{
+				p.type = d3event.target.options[ d3event.target.selectedIndex].value
+			})
+		for(const t of obj.plottypes) {
+			s.append('option')
+				.text(t.name)
+				.property('value', t.key)
+		}
+		p.type = obj.plottypes[0].key
+	}
+
+	if(obj.geneexpression) {
+		/*
+		expression cutoff
+		*/
+		p.samplerule.set = {
+			genevaluepercentilecutoff:1,
+			cutoff: 50,
+			gene: obj.geneexpression.gene,
+			chr: obj.geneexpression.chr,
+			start: obj.geneexpression.start,
+			stop: obj.geneexpression.stop
+		}
+		const row = div.append('div')
+			.style('margin-bottom','10px')
+		row.append('span')
+			.html('Divide samples by '+obj.geneexpression.gene+' expression&nbsp;')
+
+		const s = row.append('select')
+			.on('change',()=>{
+				const o = d3event.target.options[ d3event.target.selectedIndex]
+				if(o.median) {
+					p.samplerule.set.genevaluepercentilecutoff=1
+					p.samplerule.set.cutoff=50
+					delete p.samplerule.set.genevaluequartile
+				} else if(o.quartile){
+					p.samplerule.set.genevaluequartile=1
+					delete p.samplerule.set.genevaluepercentilecutoff
+					delete p.samplerule.set.cutoff
+				}
+			})
+
+		s.append('option')
+			.text('median (group=2)')
+			.property('median',1)
+		s.append('option')
+			.text('quartile (group=4)')
+			.property('quartile',1)
+
+		// other percentile
+	}
+
+	if(obj.samplegroupings) {
+
+		// default setting
+		p.samplerule.full.byattr = 1
+		p.samplerule.full.key = obj.samplegroupings[0].key
+		p.samplerule.full.value = obj.samplegroupings[0].values[0].value
+
+		const row = div.append('div')
+			.style('margin-bottom','20px')
+
+		row.append('span')
+			.html('Use samples from&nbsp;')
+
+		const attr2select = {}
+
+		const s = row.append('select')
+			.style('margin-right','5px')
+			.on('change',()=>{
+				for(const k in attr2select) {
+					attr2select[ k ].style('display','none')
+				}
+				const o = d3event.target.options[ d3event.target.selectedIndex ]
+				if(o.useall) {
+					p.samplerule.full.useall = 1
+					delete p.samplerule.full.byattr
+					return
+				}
+				delete p.samplerule.full.useall
+				p.samplerule.full.byattr = 1
+				const s3 = attr2select[ o.key ]
+				s3.style('display', 'inline')
+				p.samplerule.full.value = s3.options[ s3.selectedIndex ].innerHTML
+			})
+
+		for(const [i,attr] of obj.samplegroupings.entries() ) {
+
+			s.append('option')
+				.text(attr.label)
+				.property('key', attr.key)
+
+			const s2 = row.append('select')
+				.on('change',()=>{
+					p.samplerule.full.value = d3event.target.options[d3event.target.selectedIndex].value
+				})
+
+			attr2select[ attr.key ] = s2
+			if(i>0) {
+				// initially only show the first
+				s2.style('display','none')
+			}
+
+			for(const v of attr.values) {
+				s2.append('option')
+					.text(v.value+' (n='+v.count+')')
+					.property('value',v.value)
+			}
+		}
+
+		s.append('option')
+			.text('all samples')
+			.property('useall',1)
+
+	} else {
+		p.samplerule.full.useall = 1
+	}
+
+	div.append('button')
+		.text('Make plot')
+		.on('click',()=>{
+
+			// do things hard way
+			obj.plots = []
+			obj.plotdiv.selectAll('*').remove()
+
+			try {
+				const plot = validatePlot_initDom( p, obj)
+				loadPlot( plot, obj)
+			} catch(e) {
+				if(e.stack) console.log(e.stack)
+				obj.sayerror(e.message || e)
+			}
+		})
 }
 
 
@@ -215,7 +392,7 @@ function doPlot( plot, obj ) {
 function loadPlot (plot, obj) {
 	const par = {
 		genome: obj.genome.name,
-		dslabel: obj.dslabel,
+		dslabel: obj.mds.label,
 		type: plot.type,
 		samplerule: plot.samplerule,
 	}
