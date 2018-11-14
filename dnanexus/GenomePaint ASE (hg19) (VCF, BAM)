@@ -8,10 +8,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>GenomePaint</title>
 	<script src='https://platform.dnanexus.com/javascript/file-viewer-1.1.min.js'></script>
-	<!--
 	<script src='https://proteinpaint.stjude.org/bin/proteinpaint.js'></script>
-	-->
+	<!--
 	<script src='http://localhost:3001/bin/proteinpaint.js'></script>
+	-->
     <style type="text/css">
   
 	body {
@@ -200,12 +200,12 @@
 
 		if(tk) {
 			runproteinpaint({
-				//host:'https://proteinpaint.stjude.org',
-				host:'http://localhost:3001',
+				host:'https://proteinpaint.stjude.org',
+				//host:'http://localhost:3001',
 				holder:document.getElementById('proteinpaintdiv'),
 				block:true,
 				genome:'hg19',
-				position:'chr1:47681961-47698007',
+				//position:'chr1:47681961-47698007',
 				nobox:true,
 				noheader:true,
 				nativetracks:'refgene',
