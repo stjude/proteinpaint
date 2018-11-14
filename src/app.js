@@ -912,7 +912,6 @@ function launchmdssurvivalplot(arg, holder) {
 		error0('invalid dataset for mdssurvivalplot')
 		return
 	}
-	arg.dslabel = arg.dataset
 	delete arg.dataset
 	import('./mds.survivalplot').then(_=>{
 		_.init(arg, holder, debugmode)
