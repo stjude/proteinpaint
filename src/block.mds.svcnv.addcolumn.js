@@ -14,7 +14,6 @@ import {focus_singlesample,
 	rnabamtk_copyparam
 	} from './block.mds.svcnv'
 
-
 /*
 
 ********************** EXPORTED
@@ -22,11 +21,12 @@ render_multi_genebar
 multi_show_geneboxplot
 
 ********************** INTERNAL
-genebar_config
-	findgene4fix
 genebar_printtooltip
 addcolumn_autogene
 addcolumn_fixedgene
+	genebarconfig_auto
+		findgene4fix
+	genebarconfig_fixed
 addcolumn_attr
 
 
@@ -130,15 +130,6 @@ export function render_multi_genebar( tk, block) {
 	const genes_fixed = tk.gecfg ? tk.gecfg.fixed : []
 
 
-/*
-	if(genes_auto.size + genes_fixed.length + attrlst.length == 0) {
-		// nothing
-		if(tk.gecfg) {
-			// TODO render button to select gene and show as fixed
-		}
-		return 0
-	}
-	*/
 
 
 	let autogenename
@@ -524,16 +515,11 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 			.attr('class','sja_clbtext2')
 			.on('click',()=>{
 
-				tk.tkconfigtip.clear()
-					.showunder(d3event.target)
-
-				genebar_config(
-					tk.tkconfigtip.d,
+				genebarconfig_auto(
 					autogenename,
 					genes_auto,
 					tk,
-					block,
-					true
+					block
 				)
 			})
 
@@ -760,22 +746,7 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 		.text(fixedgene.gene + ' rank')
 		.on('click',()=>{
 
-			tk.tkconfigtip.clear()
-				.showunder(d3event.target)
-
-			tk.tkconfigtip.d
-				.append('div')
-				.attr('class','sja_menuoption')
-				.text('Remove')
-				.on('click',()=>{
-					tk.tkconfigtip.hide()
-					for(let i=0; i<tk.gecfg.fixed.length; i++) {
-						if(tk.gecfg.fixed[i].gene == fixedgene.gene) {
-							tk.gecfg.fixed.splice(i,1)
-						}
-					}
-					render_multi_genebar(tk,block)
-				})
+			genebarconfig_fixed( fixedgene, tk, block )
 		})
 	
 
@@ -897,11 +868,17 @@ function addcolumn_attr(attr, tk, block, column_xoff) {
 
 
 
-function genebar_config( holder, usegene, genes, tk, block, isauto ) {
+function genebarconfig_auto( usegene, genes, tk, block ) {
 	/*
+	for auto gene
+	usegene: str
+	genes:
 	*/
 
+	tk.tkconfigtip.clear()
+		.showunder(d3event.target)
 
+	const holder = tk.tkconfigtip.d
 /*
 	createbutton_addfeature({
 		m: {
@@ -914,9 +891,7 @@ function genebar_config( holder, usegene, genes, tk, block, isauto ) {
 	})
 	*/
 
-	if(isauto) {
-		findgene4fix_searchui( holder, tk, block )
-	}
+	findgene4fix_searchui( holder, tk, block )
 
 
 	if(genes.size>1) {
@@ -951,6 +926,18 @@ function genebar_config( holder, usegene, genes, tk, block, isauto ) {
 		}
 	}
 
+	// auto gene should be in tk.gene2coord
+	mayadd_survivaloption(
+		holder, 
+		{
+			gene: usegene,
+			chr: tk.gene2coord[usegene].chr,
+			start: tk.gene2coord[usegene].start,
+			stop: tk.gene2coord[usegene].stop
+		},
+		tk,
+		block )
+
 	if(!tk.gecfg.no_ase) {
 		expressionstat.ui_config( holder, tk.gecfg, tk, ()=>{
 			tk.tkconfigtip.hide()
@@ -960,6 +947,59 @@ function genebar_config( holder, usegene, genes, tk, block, isauto ) {
 	}
 }
 
+
+
+function genebarconfig_fixed( fixedgene, tk, block ) {
+	tk.tkconfigtip.clear()
+		.showunder(d3event.target)
+
+	mayadd_survivaloption(
+		tk.tkconfigtip.d, 
+		fixedgene,
+		tk,
+		block
+		)
+
+	tk.tkconfigtip.d
+		.append('div')
+		.attr('class','sja_menuoption')
+		.text('Remove')
+		.on('click',()=>{
+			tk.tkconfigtip.hide()
+			for(let i=0; i<tk.gecfg.fixed.length; i++) {
+				if(tk.gecfg.fixed[i].gene == fixedgene.gene) {
+					tk.gecfg.fixed.splice(i,1)
+				}
+			}
+			render_multi_genebar(tk,block)
+		})
+}
+
+
+
+
+function mayadd_survivaloption( holder, gene, tk, block ) {
+	if(!tk.mds || !tk.mds.survivalplot) return
+	holder.append('div')
+		.text('Survival plot by '+gene.gene+' '+tk.gecfg.datatype)
+		.attr('class','sja_menuoption')
+		.on('click',()=>{
+			tk.tkconfigtip.hide()
+
+			const pane = client.newpane({x:100, y: 100})
+			pane.header
+				.text('Survival plot by '+gene.gene+' '+tk.gecfg.datatype)
+			const arg = {
+				genome: block.genome,
+				mds: tk.mds,
+				geneexpression:gene
+			}
+
+			import('./mds.survivalplot').then(_=>{
+				_.init( arg, pane.body, true )
+			})
+		})
+}
 
 
 
