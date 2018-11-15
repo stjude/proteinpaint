@@ -9050,7 +9050,13 @@ function handle_mdssurvivalplot_getfullsamples (q, ds, plottype) {
 			}
 		}
 	} else if(q.samplerule.full.useall) {
-		// TODO
+		for(const sn in ds.cohort.annotation) {
+			const o = ds.cohort.annotation[sn]
+			lst1.push({
+				name: sn,
+				o: o
+			})
+		}
 	} else {
 		throw 'unknown rule for samplerule.full'
 	}

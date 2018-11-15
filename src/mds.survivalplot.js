@@ -223,9 +223,10 @@ each time it runs it should create a plot
 				}
 				delete p.samplerule.full.useall
 				p.samplerule.full.byattr = 1
+				p.samplerule.key = o.key
 				const s3 = attr2select[ o.key ]
 				s3.style('display', 'inline')
-				p.samplerule.full.value = s3.options[ s3.selectedIndex ].innerHTML
+				p.samplerule.full.value = s3.node().options[ s3.node().selectedIndex ].innerHTML
 			})
 
 		for(const [i,attr] of obj.samplegroupings.entries() ) {
@@ -414,7 +415,9 @@ function validatePlot_initDom( p, obj ) {
 	if(!p.type) throw '.type missing from a plot'
 	if(!p.samplerule) throw '.samplerule{} missing from a plot'
 	if(!p.samplerule.full) throw '.samplerule.full{} missing from a plot'
-	if(p.samplerule.full.byattr) {
+
+	if(p.samplerule.full.useall) {
+	} else if(p.samplerule.full.byattr) {
 		if(!p.samplerule.full.key) throw '.samplerule.full.key missing from a plot'
 		if(!p.samplerule.full.value) throw '.samplerule.full.value missing from a plot'
 	} else {
