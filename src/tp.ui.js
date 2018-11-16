@@ -13,6 +13,7 @@ import tp_pathway        from './tp.pathway'
 import inithcmap         from './hcmap'
 import tp_e2pca          from './tp.e2pca'
 import tp_getgeneexpression from './tp.gene.geneexpression'
+import {getsjcharts}     from './getsjcharts'
 
 
 
@@ -27,7 +28,7 @@ and show various apps depending on the data attributes
 */
 
 
-export default function tpui(cohort,holder,hostURL,debugmode)
+export default async function tpui(cohort,holder,hostURL,debugmode)
 {
 
 
@@ -239,7 +240,6 @@ if(hassamplelst.length || personcount>0) {
 	}
 }
 
-
 if(cohort.show_heatmap) {
 	showheatmap=true
 }
@@ -247,7 +247,8 @@ let hm_main;
 if(showheatmap) {
 	const [hmbtn,hmdiv]=makefolder(cohort)
 	hmbtn.text('HEATMAP').style('font-size','.8em')
-	window.sjcharts.heatmap({
+	const sjcharts = await getsjcharts()
+	sjcharts.heatmap({
 		appname:'hm_main',
 		cohort,
 		hassamplelst,
@@ -286,7 +287,8 @@ if(cohort.hardcodemap) {
 if(cohort.survivalJSON) {
 	const [srvbut,srvdiv]=makefolder(cohort,cohort.show_hardcodemap)
 	srvbut.text('SURVIVAL CURVE').style('font-size','.8em').style('border-color','transparent')
-	window.sjcharts.survival({
+	const sjcharts = await getsjcharts()
+	sjcharts.survival({
 		cohort,
 		dom: {
 			butt: srvbut.node(),
@@ -320,7 +322,8 @@ if(hasdiseaselst.length) {
 	skbtn.style('font-size','.8em')
 		 .text('RIBBON GRAPH')
 		 .attr('title','A flow or Sankey diagram showing associated quantities by proportional ribbon widths.')
-	window.sjcharts.sankey({
+	const sjcharts = await getsjcharts()
+	sjcharts.sankey({
 		cohort,
 		dom: {
 			butt: skbtn.node(),
@@ -333,7 +336,8 @@ if (hasdiseaselst.length || cohort.piebarJSON) {
 	const [piebtn,piediv]=makefolder(cohort)
 	piebtn.style('font-size','.8em').text('PIE CHARTS')
 		  .attr('title', 'A sample group by gene group matrix of piecharts, with each pie wedge representing the number of hits by variant class.')
-	window.sjcharts.piebar({
+    const sjcharts = await getsjcharts()
+	sjcharts.piebar({
 		cohort,
 		dom: {
 			butt: piebtn.node(),

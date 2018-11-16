@@ -1,6 +1,7 @@
 import * as common from './common'
 import * as client from './client'
 import {string2pos, invalidcoord} from './coord'
+import {getsjcharts}     from './getsjcharts'
 
 
 /*
@@ -200,7 +201,7 @@ function addnewfeature_nosamplefilter( nf, tk, block) {
 
 
 
-export function createnewmatrix_withafeature(_p) {
+export async function createnewmatrix_withafeature(_p) {
 	// create new instance
 	const {feature, tk, block, limitsamplebyeitherannotation} = _p
 
@@ -275,14 +276,14 @@ export function createnewmatrix_withafeature(_p) {
 	}
 
 	// dynamic import works with static values, not expressions
-	if (window.sjcharts && window.location.search.includes('smx=3')) {
+	if (window.location.search.includes('smx=3')) {
 		arg.client = client
 		arg.common = common
 		arg.string2pos = string2pos
 		arg.invalidcoord = invalidcoord
 		arg.block = import('./block.js')
-
-		window.sjcharts.dthm(arg).then(m=>{
+		const sjcharts = await getsjcharts()
+		sjcharts.dthm(arg).then(m=>{
 			m._pane = pane
 			tk.samplematrices.push( m )
 		})
