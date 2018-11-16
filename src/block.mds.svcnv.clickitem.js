@@ -10,6 +10,7 @@ import {
 	multi_sample_removehighlight
 	} from './block.mds.svcnv'
 import { createbutton_addfeature, createnewmatrix_withafeature } from './block.mds.svcnv.samplematrix'
+import {getsjcharts}     from './getsjcharts'
 
 
 /*
@@ -1164,7 +1165,7 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 
 
 
-export function click_multi_singleitem( p ) {
+export async function click_multi_singleitem( p ) {
 	/*
 	click on a single item, of any type
 	launch a panel to show details
@@ -1237,6 +1238,7 @@ export function click_multi_singleitem( p ) {
 		const holder = pane.body.append('div')
 			.style('margin','10px')
 			.style('display','none')
+		const sjcharts = await getsjcharts()
 		const discoPromise = sjcharts.dtDisco({
 			holderSelector: holder,
 			settings: {

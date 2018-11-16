@@ -12,6 +12,7 @@ import {string2pos, invalidcoord} from './coord'
 import {loadstudycohort} from './tp.init'
 import {rgb as d3rgb} from 'd3-color'
 import blockinit from './block.init'
+import {getsjcharts}     from './getsjcharts'
 
 
 
@@ -943,7 +944,7 @@ function launchhic(hic, holder) {
 
 
 
-function launchsamplematrix(cfg, holder) {
+async function launchsamplematrix(cfg, holder) {
 	if(!cfg.genome) {
 		error0('missing genome for launching samplematrix')
 		return
@@ -963,7 +964,8 @@ function launchsamplematrix(cfg, holder) {
 		cfg.string2pos = string2pos
 		cfg.invalidcoord = invalidcoord
 		cfg.block = import('./block.js')
-		window.sjcharts.dthm( cfg )
+		const sjcharts = await getsjcharts()
+		sjcharts.dthm( cfg )
 	}
 	else {
 		import('./samplematrix').then(_=>{
