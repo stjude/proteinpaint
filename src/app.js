@@ -856,7 +856,7 @@ function parseembedthenurl(arg, holder, selectgenome) {
 	}
 
 	if (arg.project) {
-		bulkui(0,0,genomes, hostURL);
+		bulkui(0,0,genomes, hostURL)
 	}
 }
 
@@ -1132,7 +1132,7 @@ function launchblock(arg,holder) {
 		blockinitarg.dogtag= arg.dogtag || arg.genome
 	}
 	if(arg.position) {
-		const pos=string2pos(arg.position,genomes[arg.genome])
+		const pos=string2pos(arg.position, genomeobj)
 		if(pos) {
 			blockinitarg.chr=pos.chr
 			blockinitarg.start=pos.start
@@ -1154,6 +1154,36 @@ function launchblock(arg,holder) {
 		also for launching gene view
 		*/
 		blockinitarg.datasetqueries=arg.datasetqueries
+	}
+
+	// apply url parameter
+	if( location.search) {
+		const h = new Map()
+		for(const tmp of decodeURIComponent( location.search.substr(1) ).split('&')) {
+			const l = tmp.split('=')
+			const key = l[0].toLowerCase()
+			h.set( key, l[1] || 1 )
+		}
+		if(h.has('position')) {
+			const pos = string2pos( h.get('position'), genomeobj )
+			if(pos) {
+				blockinitarg.chr=pos.chr
+				blockinitarg.start=pos.start
+				blockinitarg.stop=pos.stop
+			}
+		}
+		if(h.has('hlregion')) {
+			const lst = []
+			for(const tmp of h.get('hlregion').split(',')) {
+				const pos = string2pos( tmp, genomeobj )
+				if(pos) {
+					lst.push(pos)
+				}
+			}
+			if(lst.length) {
+				blockinitarg.hlregions = lst
+			}
+		}
 	}
 
 	// return a promise resolving to block

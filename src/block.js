@@ -495,6 +495,7 @@ constructor(arg) {
 		lst:[],
 	}
 
+
 	init_cursorhlbar( this )
 
 
@@ -591,6 +592,11 @@ constructor(arg) {
 
 	this.updateruler()
 
+	if(arg.hlregions) {
+		for(const r of arg.hlregions) {
+			this.addhlregion( r.chr, r.start, r.stop, r.color )
+		}
+	}
 
 
 	if(arg.tklst) {
