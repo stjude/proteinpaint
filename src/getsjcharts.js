@@ -10,7 +10,7 @@ export function getsjcharts() {
 	else { //console.log('requesting')
 		prom = new Promise((resolve,reject)=>{
 			const hostname = window.location.hostname.split('.')[0]
-			const codehost = ['ppr','pecan'].includes(hostname) ? 'pecan.stjude.cloud' : 'pecan-test.stjude.org'
+			const codehost = ['pecan-test'].includes(hostname) ? 'pecan-test.stjude.org' : 'pecan.stjude.cloud'
 			const filename = `https://${codehost}/sjcharts/bin/sjcharts.js`
 			const fileref = document.createElement('script')
 	        fileref.setAttribute("type","text/javascript")
