@@ -926,17 +926,23 @@ function genebarconfig_auto( usegene, genes, tk, block ) {
 		}
 	}
 
-	// auto gene should be in tk.gene2coord
-	mayadd_survivaloption(
-		holder, 
-		{
-			gene: usegene,
-			chr: tk.gene2coord[usegene].chr,
-			start: tk.gene2coord[usegene].start,
-			stop: tk.gene2coord[usegene].stop
-		},
-		tk,
-		block )
+	if( tk.mds ) {
+		/*
+		rnabam mode will not have .mds
+		auto gene should be in tk.gene2coord
+		*/
+		mayadd_survivaloption(
+			holder, 
+			{
+				gene: usegene,
+				chr: tk.gene2coord[usegene].chr,
+				start: tk.gene2coord[usegene].start,
+				stop: tk.gene2coord[usegene].stop
+			},
+			tk,
+			block )
+	}
+
 
 	if(!tk.gecfg.no_ase) {
 		expressionstat.ui_config( holder, tk.gecfg, tk, ()=>{
