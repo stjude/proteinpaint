@@ -8870,15 +8870,15 @@ plottype{}
 		if(!Number.isInteger(st.cutoff)) throw '.cutoff not integer from samplerule.set'
 		if(st.cutoff<=0 || st.cutoff>=100) throw '.cutoff not a valid percentile 0-100'
 		return await handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff( samples, q, ds, plottype )
-	} else if(st.genevaluequartile) {
+	}
+	if(st.genevaluequartile) {
 		if(!st.gene) throw '.gene missing from samplerule.set'
 		if(!st.chr) throw '.chr missing from samplerule.set'
 		if(!Number.isInteger(st.start)) throw '.start not integer from samplerule.set'
 		if(!Number.isInteger(st.stop)) throw '.start not integer from samplerule.set'
 		return await handle_mdssurvivalplot_dividesamples_genevaluequartile( samples, q, ds, plottype )
-	} else {
-		throw 'unknown rule for samplerule.set{}'
 	}
+	throw 'unknown rule for samplerule.set{}'
 }
 
 
@@ -8889,21 +8889,24 @@ async function handle_mdssurvivalplot_dividesamples_genevaluequartile ( samples,
 	const i1 = Math.ceil(samplewithvalue.length * .25 )
 	const i2 = Math.ceil(samplewithvalue.length * .5 )
 	const i3 = Math.ceil(samplewithvalue.length * .75 )
+	const v1 = samplewithvalue[i1-1].genevalue
+	const v2 = samplewithvalue[i2-1].genevalue
+	const v3 = samplewithvalue[i3-1].genevalue
 	return [
 		{
-			name: st.gene+' '+genenumquery.datatype+' from 1st quartile (n='+i1+')',
+			name: st.gene+' '+genenumquery.datatype+' from 1st quartile (n='+i1+', value<'+v1+')',
 			lst: samplewithvalue.slice(0, i1)
 		},
 		{
-			name: st.gene+' '+genenumquery.datatype+' from 2nd quartile (n='+(i2-i1)+')',
+			name: st.gene+' '+genenumquery.datatype+' from 2nd quartile (n='+(i2-i1)+', '+v1+'<=value<'+v2+')',
 			lst: samplewithvalue.slice( i1, i2 )
 		},
 		{
-			name: st.gene+' '+genenumquery.datatype+' from 3rd quartile (n='+(i3-i2)+')',
+			name: st.gene+' '+genenumquery.datatype+' from 3rd quartile (n='+(i3-i2)+', '+v2+'<=value<'+v3+')',
 			lst: samplewithvalue.slice( i2, i3 )
 		},
 		{
-			name: st.gene+' '+genenumquery.datatype+' from 4th quartile (n='+(samplewithvalue.length-i3)+')',
+			name: st.gene+' '+genenumquery.datatype+' from 4th quartile (n='+(samplewithvalue.length-i3)+', value>='+v3+')',
 			lst: samplewithvalue.slice( i3, samplewithvalue.length )
 		},
 	]
@@ -8915,13 +8918,14 @@ async function handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff ( 
 	const st = q.samplerule.set
 	const [ genenumquery, samplewithvalue ] = await handle_mdssurvivalplot_dividesamples_genevalue_get( samples, q, ds )
 	const i = Math.ceil(samplewithvalue.length * st.cutoff / 100)
+	const v = samplewithvalue[i-1].genevalue
 	return [
 		{
-			name: st.gene+' '+genenumquery.datatype+' below '+st.cutoff+' percentile (n='+i+')',
+			name: st.gene+' '+genenumquery.datatype+' below '+st.cutoff+' percentile (n='+i+', value<'+v+')',
 			lst: samplewithvalue.slice(0, i)
 		},
 		{
-			name: st.gene+' '+genenumquery.datatype+' above '+st.cutoff+' percentile (n='+(samplewithvalue.length-i)+')',
+			name: st.gene+' '+genenumquery.datatype+' above '+st.cutoff+' percentile (n='+(samplewithvalue.length-i)+', value>='+v+')',
 			lst: samplewithvalue.slice( i, samplewithvalue.length )
 		},
 	]
