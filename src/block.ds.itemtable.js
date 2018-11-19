@@ -2335,6 +2335,52 @@ function mayshowgenotype2boxplot(m, tk, holder) {
 	const cfg=tk.ds.genotype2boxplot
 	if(!cfg) return false
 
+	if(cfg.boxplotvaluekey) {
+		const v = m.info[ cfg.boxplotvaluekey ]
+		if(!v) return false
+		const tmp = v.split('|')
+		const plots = []
+		for(const s of tmp) {
+			const x = s.split('/')
+
+			const p1 = Number.parseFloat(x[1])
+			const p2 = Number.parseFloat(x[2])
+			const p3 = Number.parseFloat(x[3])
+			const p4 = Number.parseFloat(x[4])
+			const p5 = Number.parseFloat(x[5])
+			if(Number.isNaN(p1) || Number.isNaN(p2) || Number.isNaN(p3) || Number.isNaN(p4) || Number.isNaN(p5)) {
+				continue
+			}
+
+			plots.push({
+				label: x[0],
+				color:'#4F8F38',
+				minvalue: p1,
+				maxvalue: p5,
+				percentile:{
+					p05:p1,
+					p25:p2,
+					p50:p3,
+					p75:p4,
+					p95:p5
+				}
+			})
+		}
+		const div=holder.append('div')
+			.style('display','inline-block')
+		import('./plot.boxplot').then(p=>{
+			const err=p.default({
+				holder:div,
+				axislabel:cfg.axislabel,
+				list: plots
+			})
+			if(err) {
+				client.sayerror(div,'Boxplot: '+err)
+			}
+		})
+		return true
+	}
+
 	if(!tk.ds.cohort || !tk.ds.cohort.annotation || !tk.ds.cohort.key4annotation) {
 		console.log('genotype2boxplot but ds.cohort is incomplete')
 		return false

@@ -146,7 +146,10 @@ export default function vcf2dstk(arg) {
 	}
 
 	if(arg.genotype2boxplot) {
-		if(arg.genotype2boxplot.sampleannotationkey) {
+		if(arg.genotype2boxplot.boxplotvaluekey) {
+			// precomputed boxplot values
+
+		} else if(arg.genotype2boxplot.sampleannotationkey) {
 			if(!tk.ds.cohort) return ['sampleannotation missing when using genotype2boxplot.sampleannotationkey']
 			if(!tk.ds.cohort.annotation) return ['sampleannotation.annotation missing when using genotype2boxplot.sampleannotationkey']
 			let found=false

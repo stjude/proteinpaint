@@ -54,7 +54,7 @@ for(const group of arg.list) {
 		// no samples, must have below
 		if(!Number.isFinite(group.minvalue)) return '.minvalue missing for a group'
 		if(!Number.isFinite(group.maxvalue)) return '.maxvalue missing for a group'
-		if(!Number.isFinite(group.samplecount)) return '.samplecount missing for a group'
+		//if(!Number.isFinite(group.samplecount)) return '.samplecount missing for a group'
 		if(!group.percentile) return '.percentile{} missing from a group'
 		if(!Number.isFinite(group.percentile.p05)) return '.percentile.p05 missing for a group'
 		if(!Number.isFinite(group.percentile.p25)) return '.percentile.p25 missing for a group'
@@ -80,9 +80,13 @@ let axisheight=40,
 let maxlabelw=0
 let minv=null
 let maxv=null
-arg.list.forEach(g=>{
+
+for(const g of arg.list) {
+
+	const samplecount = g.samplecount ? g.samplecount : (g.samples? g.samples.length : null)
+
 	svg.append('text')
-		.text(g.label+' ('+( g.samplecount || g.samples.length)+')')
+		.text(g.label+ (samplecount? ' (n='+samplecount+')' : '') )
 		.attr('font-family',client.font)
 		.attr('font-size',fontsize)
 		.each(function(){
@@ -90,8 +94,8 @@ arg.list.forEach(g=>{
 		})
 		.remove()
 	if(g.samples) {
-		g.samples.forEach(s=>{
-			if(s.value==undefined) return
+		for(const s of g.samples) {
+			if(s.value==undefined) continue
 			if(minv==null) {
 				minv=s.value
 				maxv=s.value
@@ -99,7 +103,7 @@ arg.list.forEach(g=>{
 				minv=Math.min(minv, s.value)
 				maxv=Math.max(maxv, s.value)
 			}
-		})
+		}
 	} else {
 		if(minv==null) {
 			minv=g.minvalue
@@ -109,7 +113,7 @@ arg.list.forEach(g=>{
 			maxv=Math.max(maxv,g.maxvalue)
 		}
 	}
-})
+}
 
 svg.attr('width',maxlabelw+xpad+width+xpad)
 	.attr('height',axisheight+(ypad+boxheight)*arg.list.length+10)
@@ -138,14 +142,16 @@ if(arg.axislabel) {
 }
 let y=0
 
-arg.list.forEach(grp=>{
+for(const grp of arg.list) {
 	y+=ypad
 	const sg = g.append('g')
 		.attr('transform','translate(0,'+y+')')
 	y+=boxheight
 
+	const samplecount = grp.samplecount ? grp.samplecount : (grp.samples? grp.samples.length : null)
+
 	sg.append('text')
-		.text(grp.label+' ('+ (grp.samplecount || grp.samples.length) +')')
+		.text(grp.label+ (samplecount ? ' (n='+samplecount+')' : '') )
 		.attr('x',-xpad)
 		.attr('y',boxheight/2)
 		.attr('text-anchor','end')
@@ -213,6 +219,7 @@ arg.list.forEach(grp=>{
 		.attr('stroke',color)
 		.attr('shape-rendering','crispEdges')
 
-})
+}
+
 return null
 }
