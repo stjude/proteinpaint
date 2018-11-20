@@ -188,16 +188,16 @@ export default function vcf2dstk(arg) {
 	{
 		const g = arg.genotypebynumericvalue
 		if( g ) {
-			if(!g.refref) return ['refref missing from genotypebynumericvalue']
-			if(!g.refalt) return ['refalt missing from genotypebynumericvalue']
-			if(!g.altalt) return ['altalt missing from genotypebynumericvalue']
-			if(!g.refref.infokey) return ['refref.infokey missing from genotypebynumericvalue']
-			if(!g.refalt.infokey) return ['refalt.infokey missing from genotypebynumericvalue']
-			if(!g.altalt.infokey) return ['altalt.infokey missing from genotypebynumericvalue']
+			if(!g.refref) return [tk.name+': refref missing from genotypebynumericvalue']
+			if(!g.refalt) return [tk.name+': refalt missing from genotypebynumericvalue']
+			if(!g.altalt) return [tk.name+': altalt missing from genotypebynumericvalue']
+			if(!g.refref.infokey) return [tk.name+': refref.infokey missing from genotypebynumericvalue']
+			if(!g.refalt.infokey) return [tk.name+': refalt.infokey missing from genotypebynumericvalue']
+			if(!g.altalt.infokey) return [tk.name+': altalt.infokey missing from genotypebynumericvalue']
 			if( g.refref.genotypeCountInfokey || g.refalt.genotypeCountInfokey || g.altalt.genotypeCountInfokey ) {
-				if( !g.refref.genotypeCountInfokey ) return ['genotypeCountInfokey missing from genotypebynumericvalue.refref{}']
-				if( !g.refalt.genotypeCountInfokey ) return ['genotypeCountInfokey missing from genotypebynumericvalue.refalt{}']
-				if( !g.altalt.genotypeCountInfokey ) return ['genotypeCountInfokey missing from genotypebynumericvalue.altalt{}']
+				if( !g.refref.genotypeCountInfokey ) return [tk.name+': genotypeCountInfokey missing from genotypebynumericvalue.refref{}']
+				if( !g.refalt.genotypeCountInfokey ) return [tk.name+': genotypeCountInfokey missing from genotypebynumericvalue.refalt{}']
+				if( !g.altalt.genotypeCountInfokey ) return [tk.name+': genotypeCountInfokey missing from genotypebynumericvalue.altalt{}']
 			}
 			tk.ds.genotypebynumericvalue = g
 		}
