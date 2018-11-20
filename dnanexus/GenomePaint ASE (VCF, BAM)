@@ -155,7 +155,7 @@
 					let totalreads = Number.parseInt(lst[0])
 					let samplename
 					if(Number.isNaN(totalreads)) {
-						sayerror('Cannot get total number of mapped reads from BAM file name '+filename+', using the placeholder value 1000000. For proper result, add this number to your file name in the format of [number].[sampleName].bam; number and sampleName should not contain dot')
+						sayerror('Cannot get total number of mapped reads from BAM file "'+filename+'". Using placeholder value 1000000 instead. For proper result, add this number to your file name in the format of [number].[sampleName].bam; number and sampleName should not contain dot')
 						totalreads = 1000000
 						samplename = lst[0]
 					} else {
