@@ -1505,14 +1505,17 @@ export function detailtable_singlesample(p) {
 
 					if(isperallelevalue) {
 						// per allele value
+
 						const alleles= []
 						const values = []
+						let altvalue
 
 						// add alt first
 						for(const ale in p.m_sample[ formatfield ]) {
 							if(ale == m.ref) continue
 							alleles.push(ale)
-							values.push(p.m_sample[ formatfield ][ ale ])
+							altvalue = p.m_sample[ formatfield ][ ale ]
+							values.push( altvalue )
 						}
 
 						// add ref after alt
@@ -1522,9 +1525,14 @@ export function detailtable_singlesample(p) {
 							values.push( refvalue )
 						}
 
+						let barsvg
+						if(refvalue+altvalue>0) {
+							barsvg = client.fillbar(null, {f:(altvalue/(altvalue+refvalue))})
+						}
+
 						lst.push({
 							k: formatfield,
-							v: '<span style="font-size:.8em;opacity:.5">'+alleles.join(' / ')+'</span> '+values.join(' / ')
+							v: (barsvg ? barsvg+' ' : '' ) + '<span style="font-size:.8em;opacity:.5">'+alleles.join(' / ')+'</span> '+values.join(' / ')
 								+(formatdesc.Description ? ' <span style="font-size:.7em;opacity:.5">'+formatdesc.Description+'</span>' : '')
 						})
 						continue
