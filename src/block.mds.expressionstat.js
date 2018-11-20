@@ -247,8 +247,13 @@ export function showsingleitem_table(v, cfg, table) {
 				lst.push(
 					'<tr>'
 					+'<td>'+m.chr+':'+(m.pos+1)+' '+m.ref+'>'+m.alt+'</td>'
-					+'<td>'+m.dnacount.ref+'/'+m.dnacount.alt+'</td>'
-					+'<td>'+( m.rnacount.nocoverage ? '<span style="font-size:.8em;opacity:.5">No coverage</span>' : m.rnacount.ref+'/'+m.rnacount.alt)
+					+'<td>'
+						+client.fillbar(null,{f:m.dnacount.f})+' '
+						+m.dnacount.ref+'/'+m.dnacount.alt
+						+'</td>'
+					+'<td>'
+						+( m.rnacount.nocoverage ? '<span style="font-size:.8em;opacity:.5">No coverage</span>'
+						: client.fillbar(null,{f:m.rnacount.f})+' '+m.rnacount.ref+'/'+m.rnacount.alt)
 					+'</td>'
 					+'<td>'+(m.rnacount.pvalue || '-')+'</td>'
 					+'</tr>'
