@@ -1656,9 +1656,11 @@ function mayaddRnabamstatusForsnp ( tk, m, samplename, lst ) {
 		})
 		return
 	}
+
 	lst.push({
 		k: 'RNA-seq read count',
-		v: '<span style="font-size:.8em;opacity:.5">'+m.alt+' / '+m.ref+'</span> '+rnasnp.rnacount.alt+' / '+rnasnp.rnacount.ref
+		v: client.fillbar(null,{f:rnasnp.rnacount.f})+' '
+			+'<span style="font-size:.8em;opacity:.5">'+m.alt+' / '+m.ref+'</span> '+rnasnp.rnacount.alt+' / '+rnasnp.rnacount.ref
 			+(rnasnp.rnacount.pvalue ? ' <span style="font-size:.8em;opacity:.5">Binomial p</span> '+rnasnp.rnacount.pvalue : '')
 	})
 }
