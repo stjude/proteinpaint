@@ -1181,9 +1181,9 @@ at:
 
 	let y=0
 	// fill bg
-	g.append('rect').attr('y',y).attr('width',w).attr('height',h).attr('fill', at.fillbg || '#ccccff')
+	g.append('rect').attr('y',y).attr('width',w).attr('height',h).attr('fill', at.fillbg || '#CBE2F5')
 	// fill fg
-	g.append('rect').attr('y',y).attr('width',w*v.f).attr('height',h).attr('fill',at.fill || '#4d4dff')
+	g.append('rect').attr('y',y).attr('width',w*v.f).attr('height',h).attr('fill',at.fill || '#69A1D1')
 
 	if( at.readcountcredible && v.v2<at.readcountcredible) {
 		// wash with gray
