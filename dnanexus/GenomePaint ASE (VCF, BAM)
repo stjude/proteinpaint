@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GenomePaint</title>
+    <title>GenomePaint ASE track</title>
 	<script src='https://platform.dnanexus.com/javascript/file-viewer-1.1.min.js'></script>
 	<script src='https://proteinpaint.stjude.org/bin/proteinpaint.js'></script>
 	<!--
@@ -102,16 +102,26 @@
 			<li><a href="https://platform.stjude.cloud/visualizations/cohort">Visualizations</a></li>
         </ul>
         <a href="index.html" class="logo"><img src="https://pecan.stjude.org/static/stjude-logo-child.png" alt="St. Jude Cloud" title="St. Jude Cloud" /></a>
-        <h1 class="site-title"><a href="index.html">St. Jude Cloud</a> GenomePaint</h1>   
+        <h1 class="site-title"><a href="index.html">St. Jude Cloud</a> GenomePaint ASE track</h1>   
     </div>
 
 
 
     <div class="container-fluid" id="proteinpaintdiv"></div>
     <div class="container-fluid" id="refselect"></div>
+    <div class="container-fluid" id="errdiv" style="margin-top:20px"></div>
 
     <script type="text/javascript">
       getOptions(function(options) {
+
+	    function sayerror(m) {
+			const b = document.createElement('div')
+			b.style.background='#F7D0D4'
+			b.style.margin='5px 30px'
+			b.style.padding='4px 10px'
+			b.innerHTML = m
+			document.getElementById('errdiv').appendChild(b)
+		}
 
         function getPath(file) {
           return file.folder + "/" + file.name;
@@ -123,8 +133,7 @@
         }
 
 		let vcf
-		let bamcount = 0
-		const sample2bam = {}
+		const sample2bam = new Map()
 
 		for(var path in pathToURL) {
 			var filename = path.split('/').pop()
@@ -137,29 +146,31 @@
 						indexURL: indexfile,
 					}
 				} else {
-					window.alert("You chose a 'vcf.gz' file (" + filename + ") but no associated index file (.tbi or .csi)");
+					sayerror('Missing index file (.tbi or .csi) for VCF file ' + filename)
 				}
 			} else if(path.endsWith('.bam')) {
 				var indexfile = pathToURL[path+'.bai']
 				if(indexfile) {
 					const lst = filename.split('.')
-					const totalreads = Number.parseInt(lst[0])
+					let totalreads = Number.parseInt(lst[0])
+					let samplename
 					if(Number.isNaN(totalreads)) {
-						window.alert('Invalid total number of mapped reads from a BAM file')
-						continue
+						sayerror('Cannot get total number of mapped reads from BAM file name '+filename+', using the placeholder value 1000000. For proper result, add this number to your file name in the format of [number].[sampleName].bam; number and sampleName should not contain dot')
+						totalreads = 1000000
+						samplename = lst[0]
+					} else {
+						samplename = lst[1]
 					}
-					const samplename = lst[1]
 					if(!samplename) {
-						window.alert('Missing sample name from a BAM file name')
+						sayerror('Missing sample name from a BAM file name')
 						continue
 					}
-					bamcount++
-					sample2bam[ samplename ] = {
+					sample2bam.set(samplename, {
 						totalreads: totalreads,
 						pairedend: true,
 						url:pathToURL[path],
 						indexURL: indexfile,
-					}
+					})
 				}
 			}
 		}
@@ -167,22 +178,18 @@
 		let tk
 
 		if(!vcf) {
-			window.alert('No VCF file')
+			sayerror('No VCF file')
 			return
 		}
-		if(bamcount==0) {
-			window.alert('No BAM file')
+		if(sample2bam.size==0) {
+			sayerror('No BAM file')
 			return
 		}
-		if(bamcount==1) {
-			let bam, sample
-			for(const k in sample2bam) {
-				sample = k
-				bam = sample2bam[k]
-			}
+		if(sample2bam.size==1) {
+			const [[sample,bam]] = [...sample2bam]
 			tk = {
 				type:'ase',
-				name: vcf.name+' ASE',
+				name: sample+' ASE',
 				samplename: sample,
 				vcfurl: vcf.url,
 				vcfindexURL: vcf.indexURL,
@@ -198,8 +205,11 @@
 				name: vcf.name+' ASE',
 				checkvcf: vcf,
 				checkrnabam:{
-					samples: sample2bam
+					samples: {}
 				}
+			}
+			for(const [n,b] of sample2bam) {
+				tk.checkrnabam.samples[n] = b
 			}
 		}
 
