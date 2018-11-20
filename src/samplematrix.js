@@ -4,6 +4,7 @@ import {event as d3event} from 'd3-selection'
 import * as common from './common'
 import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 import {showMenu_isgenevalue, showMenu_iscnv, showMenu_isloh, showMenu_ismutation} from './samplematrix.featuremenu'
+import {vcfparsemeta} from './vcf'
 
 
 
