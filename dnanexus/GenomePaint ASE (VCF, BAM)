@@ -108,7 +108,7 @@
 
 
     <div class="container-fluid" id="proteinpaintdiv"></div>
-    <div class="container-fluid" id="refselect"></div>
+    <div class="container-fluid" id="refselect" style="margin:30px;padding:20px;border:solid 1px #bbb;display:inline-block"></div>
     <div class="container-fluid" id="errdiv" style="margin-top:20px"></div>
 
     <script type="text/javascript">
@@ -200,6 +200,11 @@
 			}
 
 		} else {
+
+			if(sample2bam.size>4) {
+				sayerror('You submitted '+sample2bam.size+' BAM files. To avoid network timeout, only the first 4 BAM files will be used. We apologize for this inconvenience.')
+			}
+
 			tk = {
 				type: 'mdssvcnv',
 				name: vcf.name+' ASE',
@@ -208,8 +213,12 @@
 					samples: {}
 				}
 			}
+			let count=0
 			for(const [n,b] of sample2bam) {
 				tk.checkrnabam.samples[n] = b
+				if(++count > 3) {
+					break
+				}
 			}
 		}
 
@@ -237,7 +246,7 @@
 			{name:'human hg19', key:'hg19'},
 			{name:'human hg38', key:'hg38'},
 			{name:'mouse mm9', key:'mm9'},
-			{name:'kouse mm10', key:'mm10'}
+			{name:'mouse mm10', key:'mm10'}
 		]
 
 		const h = document.createElement('h2')
