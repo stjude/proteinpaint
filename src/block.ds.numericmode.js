@@ -474,22 +474,44 @@ if(nm.showsamplebar ) {
 				}
 			}
 
-			if(!m.sampledata) continue
+			// to get number of samples carrying each genotype
 			let num_refref=0,
 				num_altalt=0,
 				num_refalt=0
-			for(const s of m.sampledata) {
-				if(!s.allele2readcount) continue
-				if(s.allele2readcount[m.alt]) {
-					if(s.allele2readcount[m.ref]) {
-						num_refalt++
+
+			if( tk.ds.genotypebynumericvalue.refref.genotypeCountInfokey ) {
+				// get sample count from info field but not individuals
+
+				let v = m.info[ tk.ds.genotypebynumericvalue.refref.genotypeCountInfokey]
+				if(Number.isFinite(v)) {
+					num_refref = v
+				}
+				v = m.info[ tk.ds.genotypebynumericvalue.refalt.genotypeCountInfokey]
+				if(Number.isFinite(v)) {
+					num_refalt = v
+				}
+				v = m.info[ tk.ds.genotypebynumericvalue.altalt.genotypeCountInfokey]
+				if(Number.isFinite(v)) {
+					num_altalt = v
+				}
+
+			} else {
+
+				if(!m.sampledata) continue
+				for(const s of m.sampledata) {
+					if(!s.allele2readcount) continue
+					if(s.allele2readcount[m.alt]) {
+						if(s.allele2readcount[m.ref]) {
+							num_refalt++
+						} else {
+							num_altalt++
+						}
 					} else {
-						num_altalt++
+						num_refref++
 					}
-				} else {
-					num_refref++
 				}
 			}
+
 			genotypebyvaluesamplemax = Math.max(genotypebyvaluesamplemax, num_refref, num_refalt, num_altalt)
 
 		}
