@@ -6952,6 +6952,9 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 				if(anno) {
 					const toclient = [] // annotations to client
 					for(const key in ds.cohort.sampleAttribute.attributes) {
+						if(ds.cohort.sampleAttribute.attributes[key].clientnoshow) {
+							continue
+						}
 						const value = anno[ key ]
 						if(value!=undefined) {
 							toclient.push({k: key, v: value})
