@@ -2240,7 +2240,7 @@ async function may_findmatchingsnp_printintable( m, block, table ) {
 	const td = tr.append('td')
 	const wait = td.append('div').text('Loading...')
 	try {
-		const hits = await may_findmatchingsnp( m.chr, [m.pos], block)
+		const hits = await client.may_findmatchingsnp( m.chr, [m.pos], block.genome)
 		if(!hits || hits.length==0) {
 			wait.text('No SNP')
 			return
@@ -2248,44 +2248,9 @@ async function may_findmatchingsnp_printintable( m, block, table ) {
 		wait.remove()
 		for(const s of hits) {
 			const row = td.append('div')
-			snp_printhtml(s, row)
+			client.snp_printhtml(s, row)
 		}
 	} catch(e) {
 		wait.text(e.message||e)
 	}
-}
-
-
-
-
-function may_findmatchingsnp( chr, poslst, block ) {
-	if(!block || !block.genome || !block.genome.hasSNP) return
-	const p = {
-		genome: block.genome.name,
-		chr: chr,
-		ranges: poslst.map( i=> {return {start:i, stop:(i+1)}})
-	}
-	return client.dofetch('snp', p)
-	.then(data=>{
-		if(data.error) throw data.error
-		return data.results
-	})
-}
-
-
-
-function snp_printhtml( m, d ) {
-	d.append('a').text(m.name).attr('href','http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?type=rs&rs='+m.name).attr('target','_blank')
-	d.append('div')
-		.attr('class','sja_tinylogo_body')
-		.text(m.class)
-	d.append('div')
-		.attr('class','sja_tinylogo_head')
-		.text('CLASS')
-	d.append('div')
-		.attr('class','sja_tinylogo_body')
-		.text(m.observed)
-	d.append('div')
-		.attr('class','sja_tinylogo_head')
-		.text('ALLELE')
 }

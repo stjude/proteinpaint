@@ -1372,3 +1372,44 @@ export function rgb2hex(rgb){
 export function keyupEnter() {
 	return d3event.code=='Enter' || d3event.code=='NumpadEnter'
 }
+
+
+
+
+export function may_findmatchingsnp( chr, poslst, genome) {
+	if(!genome || !genome.hasSNP) return
+	const p = {
+		genome: genome.name,
+		chr: chr,
+		ranges: poslst.map( i=> {return {start:i, stop:(i+1)}})
+	}
+	return dofetch('snp', p)
+	.then(data=>{
+		if(data.error) throw data.error
+		return data.results
+	})
+}
+
+
+
+export function snp_printhtml( m, d ) {
+/*
+m{}
+	.name
+	.class
+	.observed
+*/
+	d.append('a').text(m.name).attr('href','http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?type=rs&rs='+m.name).attr('target','_blank')
+	d.append('div')
+		.attr('class','sja_tinylogo_body')
+		.text(m.class)
+	d.append('div')
+		.attr('class','sja_tinylogo_head')
+		.text('CLASS')
+	d.append('div')
+		.attr('class','sja_tinylogo_body')
+		.text(m.observed)
+	d.append('div')
+		.attr('class','sja_tinylogo_head')
+		.text('ALLELE')
+}
