@@ -7,7 +7,8 @@ module.exports={
 	},
 	snp:{
 		dbfile:'anno/db/snp128.mm9.db',
-		tablename:'snp'
+		statement_getbyname:'select * from snp where name=?',
+		statement_getbycoord:'select * from snp where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
 	},
 	tracks:[
 		{
