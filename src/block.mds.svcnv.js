@@ -3461,6 +3461,7 @@ function may_allow_samplesearch(tk, block) {
 	/*
 	for official track, allow search for sample
 	single or multi
+	may query server to see if is allowed
 	*/
 	if(tk.iscustom) return
 
