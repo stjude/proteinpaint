@@ -1,3 +1,10 @@
+/*
+.mattr{} is required for all items
+*/
+
+
+
+
 function abort(m) {
 	console.log(m)
 	process.exit()
@@ -32,6 +39,14 @@ const dt2totalcount = new Map()
 // v: count
 
 
+
+/*
+arbitrary things may be configurable in future
+*/
+const mattr_dnaassay = 'dna_assay'
+const dt2dnaassay = new Map()
+
+
 const rl = readline.createInterface({input: fs.createReadStream( infile ).pipe(zlib.createGunzip()) })
 rl.on('line',line=>{
 
@@ -47,6 +62,8 @@ rl.on('line',line=>{
 	const j = JSON.parse(l[3])
 	if(!Number.isInteger(j.dt)) abort('dt missing: '+line)
 
+	j.start = start
+	j.stop = stop
 
 
 	if(j.dt==2 || j.dt==5) {
@@ -86,23 +103,13 @@ rl.on('line',line=>{
 		chr2dt.get(chr).set( j.dt, chr2dt.get(chr).get(j.dt)+1 )
 	}
 
-	//pmid
-	{
-		if(!j.mattr) abort('mattr missing: '+line)
-		const PMID = j.mattr.pmid
-		if (PMID){
-			for(const pid of PMID.split(',')) {
-				if(!pmid2dt.has(pid)) pmid2dt.set(pid, new Map())
-				if(!pmid2dt.get(pid).has(j.dt)) pmid2dt.get(pid).set(j.dt, 0)
-				pmid2dt.get(pid).set(j.dt, pmid2dt.get(pid).get(j.dt)+1)
-			}
-		}
-		else{
-			if(!pmid2dt.has('pmidMissed')) pmid2dt.pmidMissed = []
-			pmid2dt.pmidMissed.push(j.sample)
-		}
+	// all the rest requires mattr
+	if(!j.mattr) abort('mattr missing: '+line)
+
+	apply_pmid(j)
 		
-	}
+
+	apply_dnaassay(j)
 })
 
 rl.on('close',()=>{
@@ -110,6 +117,17 @@ rl.on('close',()=>{
 	console.log('TOTAL per dt')
 	for(const [dt,c] of dt2totalcount) {
 		console.log(dt2name.get(dt)+': '+c)
+	}
+
+	console.log('\nDNA assay per dt')
+	for(const [dt,c] of dt2dnaassay) {
+		console.log(dt2name.get(dt)+':')
+		for(const [v,c2] of c.assayname2count) {
+			console.log('\t'+v+': '+c2)
+		}
+		if(c.missingnumber) {
+			console.log('\tNo DNA assay: '+c.missingnumber)
+		}
 	}
 
 
@@ -139,3 +157,40 @@ rl.on('close',()=>{
 	console.log('\nSamples missing pmid:')
 	console.log(pmid2dt.pmidMissed.join('\t'))
 })
+
+
+function apply_pmid(j) {
+	const PMID = j.mattr.pmid
+	if (PMID){
+		for(const pid of PMID.split(',')) {
+			if(!pmid2dt.has(pid)) pmid2dt.set(pid, new Map())
+			if(!pmid2dt.get(pid).has(j.dt)) pmid2dt.get(pid).set(j.dt, 0)
+			pmid2dt.get(pid).set(j.dt, pmid2dt.get(pid).get(j.dt)+1)
+		}
+		return
+	}
+	if(!pmid2dt.has('pmidMissed')) pmid2dt.pmidMissed = []
+	pmid2dt.pmidMissed.push(j.sample)
+}
+
+function apply_dnaassay(j) {
+	if(!dt2dnaassay.has(j.dt)) {
+		dt2dnaassay.set(j.dt, {
+			missingnumber:0,
+			assayname2count: new Map()
+		})
+	}
+
+	// temp filter for arm-level loh
+	if(j.dt==10) {
+		if(j.stop-j.start < 2000000 ) return
+	}
+	const a = dt2dnaassay.get(j.dt)
+	const v = j.mattr[ mattr_dnaassay ]
+	if(v) {
+		a.assayname2count.set(v, (a.assayname2count.get(v) || 0)+1)
+	} else {
+		// missing dna assay
+		a.missingnumber++
+	}
+}
