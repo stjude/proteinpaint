@@ -1377,11 +1377,24 @@ export function keyupEnter() {
 
 
 export function may_findmatchingsnp( chr, poslst, genome) {
+/*
+chr: string
+poslst[]
+	int, or {start, stop}
+genome{ name }
+*/
 	if(!genome || !genome.hasSNP) return
 	const p = {
 		genome: genome.name,
 		chr: chr,
-		ranges: poslst.map( i=> {return {start:i, stop:(i+1)}})
+		ranges: []
+	}
+	for(const i of poslst) {
+		if(Number.isFinite(i)) {
+			p.ranges.push({start: i, stop:(i+1)})
+		} else if(i.start & i.stop) {
+			p.ranges.push(i)
+		}
 	}
 	return dofetch('snp', p)
 	.then(data=>{

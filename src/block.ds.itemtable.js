@@ -470,33 +470,16 @@ if(mlst.length==1) {
 }
 
 if(hasSNP && snpfind.bprange.length) {
-	fetch( new Request(block.hostURL+'/snp', {
-		method:'POST',
-		body:JSON.stringify({ jwt:block.jwt, genome:block.genome.name, chr:snpfind.chr, ranges:snpfind.bprange })
-	}))
-	.then(data=>{return data.json()})
-	.then(data=>{
-		if(data.error) throw({message:data.error})
-		if(!data.results || data.results.length==0) throw({message:'no SNP'})
+	client.may_findmatchingsnp( snpfind.chr, snpfind.bprange, block.genome)
+	.then(hits=>{
+		if(!hits || hits.length==0) throw {message:'no SNP'}
 		snpfind.says.text('')
 		if(snpfind.button) {
-			snpfind.button.text(data.results.length+' SNP'+(data.results.length>1?'s':''))
+			snpfind.button.text(hits.length+' SNP'+(hits.length>1?'s':''))
 		}
-		for(const item of data.results) {
+		for(const item of hits) {
 			const d=snpfind.says.append('div')
-			d.append('a').text(item.name).attr('href','http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?type=rs&rs='+item.name).attr('target','_blank')
-			d.append('div')
-				.attr('class','sja_tinylogo_body')
-				.text(item.class)
-			d.append('div')
-				.attr('class','sja_tinylogo_head')
-				.text('CLASS')
-			d.append('div')
-				.attr('class','sja_tinylogo_body')
-				.text(item.observed)
-			d.append('div')
-				.attr('class','sja_tinylogo_head')
-				.text('ALLELE')
+			client.snp_printhtml( item, d)
 		}
 	})
 	.catch(err=>{
