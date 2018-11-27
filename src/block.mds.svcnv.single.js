@@ -328,6 +328,7 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 					item: m,
 					m_sample: m.sampledata[0],
 					tk: tk,
+					block: block
 				})
 			})
 			.on('mouseout',()=>{
