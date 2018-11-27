@@ -27,6 +27,7 @@ const express=require('express'),
 	path=require('path'),
 	sqlite3=require('sqlite3').verbose(), // TODO  replaced by sqlite
 	sqlite=require('sqlite'),
+	bettersqlite = require('better-sqlite3'),
 	Canvas=require('canvas'),
 	d3color=require('d3-color'),
 	d3stratify=require('d3-hierarchy').stratify,
@@ -2392,58 +2393,41 @@ function strokearrow(ctx,strand,x,y,w,h) {
 
 
 function handle_snpbyname(req,res) {
-	try {
-		req.query=JSON.parse(req.body)
-	} catch(e){
-		res.send({error:'invalid request body'})
-		return
-	}
-	log(req)
+	if(reqbodyisinvalidjson(req,res)) return
 	const n=req.query.genome
 	if(!n) return res.send({error:'no genome'})
 	const g=genomes[n]
 	if(!g) return res.send({error:'invalid genome'})
 	if(!g.snp) return res.send({error:'snp is not configured for this genome'})
-	const lst=req.query.lst.map(i=>'name=\''+i+'\'')
-	const qstr='select * from '+g.snp.tablename+' where '+lst.join(' or ')
-	g.snp.db.all(qstr,(err,data)=>{
-		if(err) {
-			res.send({error:err})
-			return
+	const hits=[]
+	for(const n of req.query.lst) {
+		const lst = g.snp.getbyname.all(n)
+		for(const i of lst) {
+			hits.push(i)
 		}
-		res.send({lst:data})
-	})
+	}
+	res.send({lst:hits})
 }
 
 
 
 function handle_snpbycoord(req,res) {
-	try {
-		req.query=JSON.parse(req.body)
-	} catch(e){
-		res.send({error:'invalid request body'})
-		return
-	}
-	log(req)
+	if(reqbodyisinvalidjson(req,res)) return
 	const n=req.query.genome
 	if(!n) return res.send({error:'no genome'})
 	const g=genomes[n]
 	if(!g) return res.send({error:'invalid genome'})
 	if(!g.snp) return res.send({error:'snp is not configured for this genome'})
-	const sql=[]
+	const hits=[]
 	for(const r of req.query.ranges) {
 		const bin=getbin(r.start,r.stop)
 		if(bin==null) continue
-		sql.push("(chrom='"+req.query.chr+"' and bin="+bin+" and chromStart>="+r.start+" and chromEnd<="+r.stop+")")
-	}
-	if(sql.length==0) return res.send({error:'no valid coordinate'})
-	g.snp.db.all('select * from '+g.snp.tablename+' where '+sql.join(' or '),(err,data)=>{
-		if(err) {
-			res.send({error:err})
-			return
+		const lst = g.snp.getbycoord.all( req.query.chr, bin, r.start, r.stop )
+		for(const i of lst) {
+			hits.push(i)
 		}
-		res.send({results:data})
-	})
+	}
+	res.send({results:hits})
 }
 
 
@@ -11171,9 +11155,10 @@ for(const genomename in genomes) {
 	validate each genome
 	*/
 
+
 	const g=genomes[genomename]
-	if(!g.majorchr)     return gnfile+': majorchr missing'
-	if(!g.defaultcoord) return gnfile+': defaultcoord missing'
+	if(!g.majorchr)     return genomename+': majorchr missing'
+	if(!g.defaultcoord) return genomename+': defaultcoord missing'
 	// test samtools and genomefile
 	const cmd= samtools+' faidx '+g.genomefile+' '+g.defaultcoord.chr+':'+g.defaultcoord.start+'-'+g.defaultcoord.stop
 	try {
@@ -11213,9 +11198,9 @@ for(const genomename in genomes) {
 	}
 
 
-	if(!g.genedb) return gnfile+': .genedb{} missing'
-	if(!g.genedb.dbfile) return gnfile+': .genedb.dbfile missing'
-	if(!g.genedb.genetable) return gnfile+': .genedb.genetable missing'
+	if(!g.genedb) return genomename+': .genedb{} missing'
+	if(!g.genedb.dbfile) return genomename+': .genedb.dbfile missing'
+	if(!g.genedb.genetable) return genomename+': .genedb.genetable missing'
 	{
 		const file=path.join(serverconfig.tpmasterdir, g.genedb.dbfile)
 		Promise.all([ sqlite.open(file,{Promise})])
@@ -11248,7 +11233,7 @@ for(const genomename in genomes) {
 
 
 	if(g.proteindomain) {
-		if(!g.proteindomain.dbfile) return gnfile+'.'+genomename+'.proteindomain: missing dbfile for sqlite db'
+		if(!g.proteindomain.dbfile) return genomename+'.proteindomain: missing dbfile for sqlite db'
 		const file=path.join(serverconfig.tpmasterdir,g.proteindomain.dbfile)
 
 		Promise.all( [ sqlite.open(file,{Promise}) ] )
@@ -11262,17 +11247,19 @@ for(const genomename in genomes) {
 	}
 
 	if(g.snp) {
-		// TODO migrate to sqlite
-		if(!g.snp.dbfile) return gnfile+'.'+genomename+'.snp: missing dbfile for sqlite'
-		const file=path.join(serverconfig.tpmasterdir,g.snp.dbfile)
-		g.snp.db=new sqlite3.Database(file,sqlite3.OPEN_READONLY,err=>{
-			if(err) {
-				console.error('Error open db at '+file+': '+err)
-				process.exit()
-			} else {
-				console.log('Db opened: '+file)
-			}
-		})
+		if(!g.snp.dbfile) return genomename+'.snp: missing sqlite dbfile'
+
+		if(!g.snp.statement_getbyname) return genomename+'.snp: missing statement_getbyname'
+		if(!g.snp.statement_getbycoord) return genomename+'.snp: missing statement_getbycoord'
+
+		let db
+		try {
+			db = bettersqlite( path.join(serverconfig.tpmasterdir,g.snp.dbfile), {readonly:true, fileMustExist:true} )
+		} catch(e) {
+			return 'cannot read dbfile: '+g.snp.dbfile
+		}
+		g.snp.getbyname = db.prepare( g.snp.statement_getbyname )
+		g.snp.getbycoord = db.prepare( g.snp.statement_getbycoord )
 	}
 
 	if(g.hicenzymefragment) {
