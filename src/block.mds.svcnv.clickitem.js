@@ -978,6 +978,7 @@ export function click_multi_vcfdense( g, tk, block ) {
 							sample: sample,
 							samplegroup: samplegroup,
 							tk: tk,
+							block: block
 						})
 					})
 					.on('mouseout',()=>{
@@ -995,6 +996,7 @@ export function click_multi_vcfdense( g, tk, block ) {
 						})
 					})
 			}
+			may_findmatchingsnp_printintable( m, block, table)
 		} else {
 			throw('Unknown dt: '+m.dt)
 		}
@@ -1054,6 +1056,7 @@ export function click_multi_vcfdense( g, tk, block ) {
 								sample: s,
 								samplegroup: sg,
 								tk: tk,
+								block: block
 							})
 						})
 						.on('mouseout',()=>{
@@ -1111,13 +1114,13 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 					sample: sample,
 					samplegroup: samplegroup,
 					tk: tk,
+					block: block
 				})
 				return
 			}
 
 			// multiple samples have this variant
 			const lst = printer_snvindel( m, tk )
-			console.log(m.sampledata.length)
 			lst.push({
 				k:'Samples',
 				v: (m.sampledata.length>10 ?
@@ -1556,6 +1559,7 @@ export function detailtable_singlesample(p) {
 			mayaddRnabamstatusForsnp( p.tk, m, p.m_sample.sampleobj.name, lst )
 		}
 
+
 	} else {
 		lst.push({k:'Unknown dt!!', v: m.dt })
 	}
@@ -1613,7 +1617,11 @@ export function detailtable_singlesample(p) {
 
 	mayAddRnabamGenease( p, lst )
 
-	client.make_table_2col( p.holder, lst )
+	const table = client.make_table_2col( p.holder, lst )
+
+	if( m.dt == common.dtsnvindel ) {
+		may_findmatchingsnp_printintable( m, p.block, table )
+	}
 }
 
 

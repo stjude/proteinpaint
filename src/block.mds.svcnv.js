@@ -1644,6 +1644,7 @@ function render_multi_cnvloh(tk,block) {
 									sample: sample,
 									samplegroup: samplegroup,
 									tk:tk,
+									block:block
 								})
 							})
 							.on('mouseout',()=>{
