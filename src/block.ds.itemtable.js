@@ -796,11 +796,14 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 
 
 	// if the variant has sample-level data
+	// condition testingdoesn't make sense that .sampledata[] is there for all
 
-	if(m.sampledata) {
+	const div = holder.append('div')
+	if( mayshowgenotype2boxplot( m, tk, div)) {
+		// boxplot shown
+		div.style('margin-top','10px')
+	} else if(m.sampledata) {
 	
-		const div = holder.append('div')
-			.style('margin-top','10px')
 		const wait = div.append('div')
 
 		Promise.resolve()
@@ -842,8 +845,11 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 			*/
 
 			if(mayshowgermline2dvaf(m, tk, div)) {
+				div.style('margin-top','10px')
 			} else if( mayshowcovmafplot( m, tk, div) ) {
+				div.style('margin-top','10px')
 			} else if( mayshowgenotype2boxplot( m, tk, div)) {
+				div.style('margin-top','10px')
 			} else {
 				vcfsamplelistbutton( m, row1, tk )
 			}
