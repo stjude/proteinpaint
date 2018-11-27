@@ -1117,11 +1117,18 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 
 			// multiple samples have this variant
 			const lst = printer_snvindel( m, tk )
+			console.log(m.sampledata.length)
 			lst.push({
 				k:'Samples',
-				v: m.sampledata.map(i=>i.sampleobj.name).join('<br>')
+				v: (m.sampledata.length>10 ?
+					m.sampledata.slice(0,6).map(i=>i.sampleobj.name).join('<br>')+'<br><i>... and '+(m.sampledata.length-6)+' more samples</i>'
+					: m.sampledata.map(i=>i.sampleobj.name).join('<br>')
+				)
 			})
-			client.make_table_2col( tk.tktip.d, lst)
+
+			const table = client.make_table_2col( tk.tktip.d, lst)
+			may_findmatchingsnp_printintable( m, block, table )
+
 
 		} else {
 
@@ -2210,4 +2217,67 @@ function getisoform ( p, chr, pos ) {
 		if(data.error) throw data.error
 		return data.lst
 	})
+}
+
+
+
+async function may_findmatchingsnp_printintable( m, block, table ) {
+	if(!block || !block.genome || !block.genome.hasSNP) return
+	const tr = table.append('tr')
+	tr.append('td')
+		.attr('colspan',2)
+		.text('dbSNP')
+		.style('opacity',.4)
+		.style('padding','3px')
+	const td = tr.append('td')
+	const wait = td.append('div').text('Loading...')
+	try {
+		const hits = await may_findmatchingsnp( m.chr, [m.pos], block)
+		if(!hits || hits.length==0) {
+			wait.text('No SNP')
+			return
+		}
+		wait.remove()
+		for(const s of hits) {
+			const row = td.append('div')
+			snp_printhtml(s, row)
+		}
+	} catch(e) {
+		wait.text(e.message||e)
+	}
+}
+
+
+
+
+function may_findmatchingsnp( chr, poslst, block ) {
+	if(!block || !block.genome || !block.genome.hasSNP) return
+	const p = {
+		genome: block.genome.name,
+		chr: chr,
+		ranges: poslst.map( i=> {return {start:i, stop:(i+1)}})
+	}
+	return client.dofetch('snp', p)
+	.then(data=>{
+		if(data.error) throw data.error
+		return data.results
+	})
+}
+
+
+
+function snp_printhtml( m, d ) {
+	d.append('a').text(m.name).attr('href','http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?type=rs&rs='+m.name).attr('target','_blank')
+	d.append('div')
+		.attr('class','sja_tinylogo_body')
+		.text(m.class)
+	d.append('div')
+		.attr('class','sja_tinylogo_head')
+		.text('CLASS')
+	d.append('div')
+		.attr('class','sja_tinylogo_body')
+		.text(m.observed)
+	d.append('div')
+		.attr('class','sja_tinylogo_head')
+		.text('ALLELE')
 }
