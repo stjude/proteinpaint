@@ -2459,7 +2459,6 @@ function handle_clinvarVCF(req,res) {
 						// match
 						const k = m.info[ g.clinvarVCF.infokey ]
 						const v = g.clinvarVCF.categories[k]
-						console.log(m.vcf_ID)
 						res.send({hit:{
 							id: m.vcf_ID,
 							value: (v ? v.label : k),
