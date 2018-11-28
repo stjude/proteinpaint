@@ -523,37 +523,48 @@ function mayupdateeventsetlabel(arg) {
 export function displayspliceevents(events, holder) {
 	// select one event and display diagram
 	const evt2showidx = getdefault_exonskipalt(events)
-	const restevents=[]
-	for(let i=0; i<evt2showidx; i++) {
-		restevents.push(events[i])
-	}
-	for(let i=evt2showidx+1; i<events.length; i++) {
-		restevents.push(events[i])
-	}
 
-	import('./spliceevent.exonskip.diagram').then(p=>{
-		p.default({
-			event:events[evt2showidx],
-			holder:holder
-		})
-		console.log(events[evt2showidx])
-	})
-
-	if(restevents.length>0) {
+	if(events.length>1) {
 		// more events, show phrase only
 		holder.append('div')
 			.style('margin','3px 0px')
 			.style('color','#858585')
 			.text('Additional interpretations:')
-		for(const evt of restevents) {
-			holder.append('div')
+		const name = Math.random().toString()
+		for(const [idx,evt] of events.entries()) {
+			const id = name+idx
+			const row = holder.append('div')
 				.style('margin-top','3px')
-				.html(spliceeventphrase(evt))
+			row.append('input')
+				.attr('type','radio')
+				.property('checked', idx==evt2showidx)
+				.attr('name',name)
+				.attr('id', id)
+				.on('change',()=>{
+					displayspliceevents_show( events, idx, showdiv )
+				})
+			row.append('label')
+				.attr('for', id)
+				.html('&nbsp;'+spliceeventphrase(evt))
 		}
 	}
+
+	const showdiv = holder.append('div')
+
+	displayspliceevents_show( events, evt2showidx, showdiv )
 }
 
 
+function displayspliceevents_show( events, idx, div ) {
+	div.selectAll('*').remove()
+	import('./spliceevent.exonskip.diagram').then(p=>{
+		p.default({
+			event: events[idx],
+			holder: div,
+			nophrase: events.length>1
+		})
+	})
+}
 
 
 
