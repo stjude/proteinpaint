@@ -1464,10 +1464,12 @@ m{}
 	d.append('div')
 		.style('display','inline-block')
 		.style('background', m.bg)
-		.style('padding','5px')
+		.style('padding','3px')
 		.append('a')
 		.attr('href', 'https://www.ncbi.nlm.nih.gov/clinvar/variation/'+m.id)
 		.attr('target','_blank')
 		.style('color',m.textcolor)
 		.text(m.value)
+		.style('font-size','.9em')
+		.style('text-decoration','none')
 }
