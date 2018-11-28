@@ -1131,6 +1131,8 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 			})
 
 			const table = client.make_table_2col( tk.tktip.d, lst)
+
+			// mds may indicate whether to perform snp/clinvar checking 
 			may_findmatchingsnp_printintable( m, block, table )
 			may_findmatchingclinvar_printintable( m, block, table )
 
