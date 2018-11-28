@@ -158,6 +158,7 @@ app.post('/tkbigwig',handle_tkbigwig)
 app.post('/tkaicheck',handle_tkaicheck)
 
 app.post('/snp',handle_snpbycoord)
+app.post('/clinvarVCF',handle_clinvarVCF)
 app.post('/isoformlst',handle_isoformlst)
 app.post('/dbdata',handle_dbdata)
 app.post('/img',handle_img)
@@ -223,6 +224,7 @@ function handle_genomes(req,res) {
 			species:g.species,
 			name:genomename,
 			hasSNP:(g.snp ? true : false),
+			hasClinvarVCF: (g.clinvarVCF ? true : false),
 			geneset:g.geneset,
 			defaultcoord:g.defaultcoord,
 			isdefault:g.isdefault,
@@ -2429,6 +2431,53 @@ function handle_snpbycoord(req,res) {
 	}
 	res.send({results:hits})
 }
+
+
+
+function handle_clinvarVCF(req,res) {
+	if(reqbodyisinvalidjson(req,res)) return
+	try {
+		const g = genomes[ req.query.genome]
+		if(!g) throw 'unknown genome'
+		if(!g.clinvarVCF) throw 'no clinvar for this genome'
+
+		const ps = spawn(tabix, [
+			g.clinvarVCF.file,
+			(g.clinvarVCF.nochr ? req.query.chr.replace('chr','') : req.query.chr)+':'+req.query.pos+'-'+(req.query.pos+1)])
+		const out=[], out2=[]
+		ps.stdout.on('data',i=>out.push(i))
+		ps.on('close',()=>{
+			const str = out.join('').trim()
+			if(!str) {
+				res.send({})
+				return
+			}
+			for(const line of str.split('\n')) {
+				const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, g.clinvarVCF )
+				for(const m of mlst) {
+					if(m.pos==req.query.pos && m.ref==req.query.ref && m.alt==req.query.alt) {
+						// match
+						const k = m.info[ g.clinvarVCF.infokey ]
+						const v = g.clinvarVCF.categories[k]
+						console.log(m.vcf_ID)
+						res.send({hit:{
+							id: m.vcf_ID,
+							value: (v ? v.label : k),
+							bg: (v ? v.color : '#858585'),
+							textcolor: (v && v.textcolor) ? v.textcolor : 'black'
+						}})
+						return
+					}
+				}
+			}
+			res.send({})
+		})
+
+	} catch(e) {
+		res.send({error:(e.message||e)})
+	}
+}
+
 
 
 
@@ -11260,6 +11309,28 @@ for(const genomename in genomes) {
 		}
 		g.snp.getbyname = db.prepare( g.snp.statement_getbyname )
 		g.snp.getbycoord = db.prepare( g.snp.statement_getbycoord )
+	}
+
+	if(g.clinvarVCF) {
+		if(!g.clinvarVCF.file) return genomename+'.clinvarVCF: VCF file missing'
+		g.clinvarVCF.file = path.join(serverconfig.tpmasterdir,g.clinvarVCF.file)
+		if(!g.clinvarVCF.infokey) return genomename+'.clinvarVCF.infokey missing'
+		if(!g.clinvarVCF.categories) return genomename+'.clinvarVCF.categories{} missing'
+
+		{
+			const tmp=child_process.execSync(tabix+' -H '+g.clinvarVCF.file, {encoding:'utf8'}).trim()
+			if(!tmp) return genomename+'.clinvarVCF: no meta/header lines'
+			const [info, format, samples, errs] = vcf.vcfparsemeta(tmp.split('\n'))
+			if(errs) return genomename+'.clinvarVCF: error parsing vcf meta: '+errs.join('\n')
+			if(!info[ g.clinvarVCF.infokey]) return genomename+'.clinvarVCF: unknown INFO key for '+g.clinvarVCF.infokey
+			g.clinvarVCF.info = info
+			g.clinvarVCF.format = format
+		}
+		{
+			const tmp=child_process.execSync(tabix+' -l '+g.clinvarVCF.file,{encoding:'utf8'}).trim()
+			if(tmp=='') return genomename+'.clinvarVCF: no chr listing'
+			g.clinvarVCF.nochr = common.contigNameNoChr( g, tmp.split('\n') )
+		}
 	}
 
 	if(g.hicenzymefragment) {

@@ -997,6 +997,7 @@ export function click_multi_vcfdense( g, tk, block ) {
 					})
 			}
 			may_findmatchingsnp_printintable( m, block, table)
+			may_findmatchingclinvar_printintable( m, block, table )
 		} else {
 			throw('Unknown dt: '+m.dt)
 		}
@@ -1131,6 +1132,7 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 
 			const table = client.make_table_2col( tk.tktip.d, lst)
 			may_findmatchingsnp_printintable( m, block, table )
+			may_findmatchingclinvar_printintable( m, block, table )
 
 
 		} else {
@@ -1621,6 +1623,7 @@ export function detailtable_singlesample(p) {
 
 	if( m.dt == common.dtsnvindel ) {
 		may_findmatchingsnp_printintable( m, p.block, table )
+		may_findmatchingclinvar_printintable( m, p.block, table )
 	}
 }
 
@@ -2250,6 +2253,31 @@ async function may_findmatchingsnp_printintable( m, block, table ) {
 			const row = td.append('div')
 			client.snp_printhtml(s, row)
 		}
+	} catch(e) {
+		wait.text(e.message||e)
+	}
+}
+
+
+
+async function may_findmatchingclinvar_printintable( m, block, table ) {
+	if(!block || !block.genome || !block.genome.hasClinvarVCF) return
+	const tr = table.append('tr')
+	tr.append('td')
+		.attr('colspan',2)
+		.text('ClinVar')
+		.style('opacity',.4)
+		.style('padding','3px')
+	const td = tr.append('td')
+	const wait = td.append('div').text('Loading...')
+	try {
+		const hit = await client.may_findmatchingclinvar( m.chr, m.pos, m.ref, m.alt, block.genome)
+		if(!hit) {
+			wait.text('No match')
+			return
+		}
+		wait.remove()
+		client.clinvar_printhtml(hit, td)
 	} catch(e) {
 		wait.text(e.message||e)
 	}

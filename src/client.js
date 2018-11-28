@@ -1426,3 +1426,48 @@ m{}
 		.attr('class','sja_tinylogo_head')
 		.text('ALLELE')
 }
+
+
+
+export function may_findmatchingclinvar( chr, pos, ref, alt, genome) {
+/*
+chr: string
+pos
+	int, or {start, stop}
+genome{ name }
+*/
+	if(!genome || !genome.hasClinvarVCF) return
+	const p = {
+		genome: genome.name,
+		chr: chr,
+		pos: pos,
+		ref: ref,
+		alt: alt
+	}
+	return dofetch('clinvarVCF', p)
+	.then(data=>{
+		if(data.error) throw data.error
+		return data.hit
+	})
+}
+
+
+
+export function clinvar_printhtml( m, d ) {
+/*
+m{}
+	.id
+	.value
+	.bg
+	.textcolor
+*/
+	d.append('div')
+		.style('display','inline-block')
+		.style('background', m.bg)
+		.style('padding','5px')
+		.append('a')
+		.attr('href', 'https://www.ncbi.nlm.nih.gov/clinvar/variation/'+m.id)
+		.attr('target','_blank')
+		.style('color',m.textcolor)
+		.text(m.value)
+}
