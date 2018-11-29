@@ -1,9 +1,5 @@
 const common=require('../src/common')
 
-const cohorthierarchy=[
-	{k:'Genomic_subgroup',label:'Group',full:'Genomic_subgroup'}
-]
-
 const samplenamekey = 'sample_name'
 
 module.exports={
@@ -39,14 +35,6 @@ module.exports={
 
 			}
 		},
-		hierarchies:{
-			lst:[
-				{
-					name:'Group',
-					levels:cohorthierarchy
-				}
-			]
-		},
 
 		sampleAttribute:{
 			attributes:{
@@ -60,12 +48,6 @@ module.exports={
 					filter:1,
 				}
 			}
-		}
-	},
-
-	annotationsampleset2matrix:{
-		key:'Genomic_subgroup',
-		groups:{
 		}
 	},
 
@@ -96,6 +78,7 @@ module.exports={
 			vcf_querykey:'snvindel',
 			multihidelabel_vcf:true,
 			multihidelabel_sv:true,
+			no_loh:1,
 		},
 
 		snvindel:{
@@ -133,7 +116,8 @@ module.exports={
 				attributes:[
 					{k:'Genomic_subgroup',label:'Group',full:'Genomic_subgroup'}
 				]
-			}
+			},
+			no_ase:1,
 		}
 		
 	}
