@@ -1040,7 +1040,7 @@ function launchgeneview(arg, holder) {
 
 
 
-function launchblock(arg,holder) {
+async function launchblock(arg,holder) {
 	/*
 	launch genome browser, rather than gene-view
 	may load a study file at same time, to add as .genome.tkset[]
@@ -1140,7 +1140,20 @@ function launchblock(arg,holder) {
 			blockinitarg.start=pos.start
 			blockinitarg.stop=pos.stop
 		}
+	} else if(arg.positionbygene) {
+		try {
+			const data = await client.dofetch('genelookup',{deep:1,input:arg.positionbygene,genome:arg.genome})
+			if(data.error) throw data.error
+			if(!data.gmlst || data.gmlst.length==0) throw 'No gene found by '+arg.positionbygene
+			const gm = data.gmlst[0]
+			blockinitarg.chr = gm.chr
+			blockinitarg.start = gm.start
+			blockinitarg.stop = gm.stop
+		} catch(e){
+			error0(e)
+		}
 	}
+
 	if(!blockinitarg.chr) {
 		blockinitarg.chr=genomeobj.defaultcoord.chr
 		blockinitarg.start=genomeobj.defaultcoord.start
