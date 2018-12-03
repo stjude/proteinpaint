@@ -7075,11 +7075,17 @@ function handle_mdsgeneboxplot( req, res ) {
 	if(req.query.getgroup) {
 		// getting sample data for a group, no making boxplot
 		if(!ds.cohort || !ds.cohort.annotation) return res.send({error:'no sample annotation for getting group'})
-		// getgroup value is same as attributes[]
-		if(!Array.isArray(req.query.getgroup)) return res.send({error:'getgroup should be array'})
-		for(const a of req.query.getgroup) {
-			if(!a.k) return res.send({error:'k missing from one of getgroup'})
-			if(!a.kvalue) return res.send({error:'kvalue missing from one of getgroup'})
+		if(req.query.getgroup_unannotated) {
+			// find unannotated samples
+			if(!dsquery.boxplotbysamplegroup) return res.send({error:'dsquery.boxplotbysamplegroup{} missing when getgroup_unannotated'})
+		} else {
+			// find annotated samples
+			// getgroup value is same as attributes[]
+			if(!Array.isArray(req.query.getgroup)) return res.send({error:'getgroup should be array'})
+			for(const a of req.query.getgroup) {
+				if(!a.k) return res.send({error:'k missing from one of getgroup'})
+				if(!a.kvalue) return res.send({error:'kvalue missing from one of getgroup'})
+			}
 		}
 	}
 
@@ -7139,7 +7145,28 @@ function handle_mdsgeneboxplot( req, res ) {
 
 				if(req.query.getgroup) {
 					if(!j.sample) return
+
 					const sanno = ds.cohort.annotation[j.sample]
+
+					if(req.query.getgroup_unannotated) {
+						/* in case of getting samples without annotation,
+						could be that the sample is not in sampletable at all
+						or it lacks annotation for the given term
+						*/
+						if(!sanno) {
+							getgroupdata.push(j)
+							return
+						}
+						for(const a of dsquery.boxplotbysamplegroup.attributes) {
+							if(sanno[a.k]==undefined) {
+								getgroupdata.push(j)
+								return
+							}
+						}
+						return
+					}
+
+					// find sample matching with specified annotation
 					if(!sanno) return
 					for(const a of req.query.getgroup) {
 						if(a.kvalue != sanno[ a.k ]) {

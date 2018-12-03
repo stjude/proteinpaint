@@ -7,6 +7,9 @@ import * as expressionstat from './block.mds.expressionstat'
 
 
 /*
+sloppy design!!!
+
+
 # native track
 .dslabel
 .querykey
@@ -758,7 +761,15 @@ function init2(x,y, plot, group) {
 		_plot:plot,
 		holder: pane.body,
 		uselog: plot.uselog,
-		getgroup: group.attributes
+	}
+
+	if(group.attributes) {
+		// the group is associated with valid attributes
+		pp.getgroup = group.attributes
+	} else {
+		// the group is unannoated
+		pp.getgroup = 1
+		pp.getgroup_unannotated = 1
 	}
 
 
@@ -1156,6 +1167,7 @@ function loadplot2(pp) {
 		start: _p.start,
 		stop: _p.stop,
 		getgroup: pp.getgroup,
+		getgroup_unannotated: pp.getgroup_unannotated,
 		svcnv: _p.svcnv,
 	}
 	if(_p.dslabel) {
