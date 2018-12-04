@@ -370,9 +370,11 @@ function mds_clientcopy(ds) {
 		if(ds.cohort.survivalplot) {
 			ds2.survivalplot = { plots:[] }
 			for(const k in ds.cohort.survivalplot.plots) {
+				const p = ds.cohort.survivalplot.plots[k]
 				ds2.survivalplot.plots.push({
 					key: k,
-					name: ds.cohort.survivalplot.plots[k].name
+					name: p.name,
+					timelabel: p.timelabel
 				})
 			}
 		}
@@ -8835,7 +8837,11 @@ async function handle_mdssurvivalplot (req,res) {
 			}
 
 			for(const k in sp.plots) {
-				result.plottypes.push({ key: k, name: sp.plots[k].name })
+				result.plottypes.push({
+					key: k,
+					name: sp.plots[k].name,
+					timelabel: sp.plots[k].timelabel,
+				})
 			}
 
 			if(sp.samplegroupattrlst) {
@@ -11723,6 +11729,7 @@ function mds_init(ds,genome, _servconfig) {
 				if(!p.serialtimekey) return '.serialtimekey missing from survivalplot '+k
 				if(!p.iscensoredkey) return '.iscensoredkey missing from survivalplot '+k
 				p.key = k
+				if(!p.timelabel) p.timelabel = 'Years'
 			}
 		}
 
