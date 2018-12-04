@@ -944,13 +944,7 @@ function genebarconfig_auto( usegene, genes, tk, block ) {
 	}
 
 
-	if(!tk.gecfg.no_ase) {
-		expressionstat.ui_config( holder, tk.gecfg, tk, ()=>{
-			tk.tkconfigtip.hide()
-			multi_expressionstatus_ase_outlier(tk)
-			render_multi_genebar(tk,block)
-		})
-	}
+	mayadd_aseohe( holder, tk, block )
 }
 
 
@@ -982,6 +976,22 @@ function genebarconfig_fixed( fixedgene, tk, block ) {
 }
 
 
+
+
+function mayadd_aseohe( holder, tk, block ) {
+	if(!tk.gecfg || tk.gecfg.no_ase) return
+	holder.append('div')
+		.text('Customize ASE/OHE parameters')
+		.attr('class','sja_menuoption')
+		.on('click',()=>{
+			holder.selectAll('*').remove()
+			expressionstat.ui_config( holder, tk.gecfg, tk, ()=>{
+				tk.tkconfigtip.hide()
+				multi_expressionstatus_ase_outlier(tk)
+				render_multi_genebar(tk,block)
+			})
+		})
+}
 
 
 function mayadd_survivaloption( holder, gene, tk, block ) {
