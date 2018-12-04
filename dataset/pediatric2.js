@@ -73,11 +73,12 @@ module.exports={
 			{file:'hg19/Pediatric/sampletable/2016_ALL'},
 			{file:'hg19/Pediatric/sampletable/2016_AML'},
 			{file:'hg19/Pediatric/sampletable/target.samples'},
+			{file:'hg19/Pediatric/sampletable/target.samples.outcome'},
 			{file:'hg19/Pediatric/sampletable/target.samples.tallsnp6array'},
 			{file:'hg19/Pediatric/sampletable/pedccl.celllines'},
 			{file:'hg19/Pediatric/sampletable/pcgp.telomerecall'},
-			{file:'hg19/Pediatric/sampletable/pediatric.sampletable'}, // to catch any missing samples
-			{file:'hg19/Pediatric/sampletable/fpkmOnly.samples'}, // rna only
+			{file:'hg19/Pediatric/sampletable/pediatric.sampletable'},
+			{file:'hg19/Pediatric/sampletable/fpkmOnly.samples'},
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
@@ -138,8 +139,51 @@ module.exports={
 						LOSS:{ name:'Loss',color:'blue'},
 						NO_CHANGE:{name:'No change',color:'gray'}
 					}
+				},
+				'event-free survival (days)':{
+					label:'Event free survival, days',
+					isinteger:1,
+					clientnoshow:1
+				},
+				'event-free is censored':{
+					label:'Event free survival, censored',
+					isinteger:1,
+					clientnoshow:1
+				},
+				'overall survival (days)':{
+					label:'Overall survival, days',
+					isinteger:1,
+					clientnoshow:1
+				},
+				'overall is censored':{
+					label:'Overall survival, censored',
+					isinteger:1,
+					clientnoshow:1
 				}
 			},
+		},
+
+
+		survivalplot: {
+			plots:{
+				efs: {
+					name:'Event-free survival',
+					serialtimekey:'event-free survival (days)',
+					iscensoredkey:'event-free is censored',
+					timelabel:'Days',
+				},
+				os: {
+					name:'Overall survival',
+					serialtimekey:'overall survival (days)',
+					iscensoredkey:'overall is censored',
+					timelabel:'Days',
+				},
+			},
+			samplegroupattrlst:[
+				{
+					key:'diagnosis_short'
+				},
+			]
 		}
 	},
 
