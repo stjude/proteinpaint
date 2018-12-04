@@ -368,9 +368,10 @@ function doPlot( plot, obj ) {
 			fontsize:plot.tickfontsize
 		})
 		plot.svg.append('text')
-			.text('Years')
+			.attr('font-size', plot.labfontsize)
+			.text( obj.plottypes.find(i=>i.key==plot.type).timelabel )
 			.attr('x', plot.yaxisw+plot.yaxispad+plot.width/2)
-			.attr('y', plot.toppad+plot.height+plot.xaxispad+plot.xaxish)
+			.attr('y', plot.toppad+plot.height+plot.xaxispad+plot.xaxish-3)
 	}
 	plot.svg
 		.attr('width', plot.yaxisw+plot.yaxispad+plot.width+plot.rightpad)
