@@ -8946,8 +8946,148 @@ plottype{}
 		if(!Number.isInteger(st.stop)) throw '.start not integer from samplerule.set'
 		return await handle_mdssurvivalplot_dividesamples_genevaluequartile( samples, q, ds, plottype )
 	}
+	if(st.mutation_anyOrNone) {
+		if(!st.chr) throw '.chr missing from samplerule.set'
+		if(!Number.isInteger(st.start)) throw '.start not integer from samplerule.set'
+		if(!Number.isInteger(st.stop)) throw '.start not integer from samplerule.set'
+		return await handle_mdssurvivalplot_dividesamples_mutationanyornone( samples, q, ds, plottype )
+	}
 	throw 'unknown rule for samplerule.set{}'
 }
+
+
+
+
+async function handle_mdssurvivalplot_dividesamples_mutationanyornone ( samples, q, ds, plottype ) {
+	const st = q.samplerule.set
+	const samples_withmut = await handle_mdssurvivalplot_getmutatedsamples( samples, q, ds )
+	const samples_nomut = []
+	for(const s of samples) {
+		if(!samples_withmut.find(i=>i.name==s.name)) {
+			samples_nomut.push(s)
+		}
+	}
+	const returnsets = []
+	if(samples_withmut.length) {
+		returnsets.push({
+			name:'With mutation (n='+samples_withmut.length+')',
+			lst: samples_withmut
+		})
+	}
+	if(samples_nomut.length) {
+		returnsets.push({
+			name:'No mutation (n='+samples_nomut.length+')',
+			lst: samples_nomut
+		})
+	}
+	return returnsets
+}
+
+
+
+async function handle_mdssurvivalplot_getmutatedsamples( samples, q, ds ) {
+/*
+st{}
+	.cnv
+	.loh
+	.sv
+	.fusion
+	.itd
+	.snvindel
+
+*/
+	const samplenameset = new Set( samples.map(i=>i.name) )
+
+	const st = q.samplerule.set
+	let vcfquery
+	let svcnvquery
+	for(const k in ds.queries) {
+		const v = ds.queries[k]
+		if(v.type==common.tkt.mdsvcf) {
+			vcfquery = v
+		} else if(v.type==common.tkt.mdssvcnv) {
+			svcnvquery=v
+		}
+	}
+
+	const mutsamples = new Set()
+
+	if(st.snvindel) {
+		if(!vcfquery) throw 'no vcf found in ds.queries'
+		for(const tk of vcfquery.tracks) {
+			const samplenames = await handle_mdssurvivalplot_getmutatedsamples_queryvcf( vcfquery, tk, samplenameset, q )
+			for(const n of samplenames) {
+				mutsamples.add(n)
+			}
+		}
+	}
+
+	const samples_withmut = []
+	for(const s of samples) {
+		if(mutsamples.has(s.name)) {
+			samples_withmut.push(s)
+		}
+	}
+	return samples_withmut
+}
+
+
+
+async function handle_mdssurvivalplot_getmutatedsamples_queryvcf( vcfquery, tk, samplenameset, q ) {
+
+	// more configs are here
+	const st = q.samplerule.set
+
+	let dir
+	if(tk.url) {
+		dir = await cache_index_promise( tk.indexURL || tk.url+'.tbi' )
+	}
+	return new Promise((resolve,reject)=>{
+
+		const samplenames = new Set()
+		const ps=spawn( tabix,
+			[
+				tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
+				(tk.nochr ? st.chr.replace('chr','') : st.chr) +':'+st.start+'-'+ (st.stop+1)
+			], {cwd: dir }
+		)
+		const rl = readline.createInterface({ input:ps.stdout })
+		rl.on('line',line=>{
+
+			if(tk.type==common.mdsvcftype.vcf) {
+
+				// vcf
+
+				const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, {nochr:tk.nochr, samples:tk.samples, info:vcfquery.info, format:tk.format} )
+
+				for(const m of mlst) {
+					if(!m.sampledata) {
+						continue
+					}
+
+					for(const s of m.sampledata) {
+						if(samplenameset.has( s.sampleobj.name )) {
+							samplenames.add( s.sampleobj.name )
+						}
+					}
+				}
+			}
+		})
+
+		const errout=[]
+		ps.stderr.on('data',i=> errout.push(i) )
+		ps.on('close', code=>{
+			const e=errout.join('')
+			if(e && !tabixnoterror(e)) {
+				reject(e)
+				return
+			}
+			console.log(samplenames.size)
+			resolve( samplenames )
+		})
+	})
+}
+
 
 
 
