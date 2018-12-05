@@ -8958,8 +8958,47 @@ plottype{}
 
 
 
-async function handle_mdssurvivalplot_dividesamples_mutationanyornone ( samples, q, ds, plottype ) {
+async function handle_mdssurvivalplot_dividesamples_mutationanyornone ( samples, q, ds ) {
 	const st = q.samplerule.set
+
+	if(st.cnv && !st.snvindel && !st.loh && !st.sv && !st.fusion && !st.itd) {
+		// just cnv, samples will be divided into loss/gain/nochange
+		const [gainset,lossset] = await handle_mdssurvivalplot_getmutatedsamples( samples, q, ds, true )
+		const samples_gain=[]
+		const samples_loss=[]
+		const samples_nomut=[]
+		for(const s of samples) {
+			if(gainset.has(s.name)) {
+				samples_gain.push(s)
+			} else if(lossset.has(s.name)) {
+				samples_loss.push(s)
+			} else {
+				samples_nomut.push(s)
+			}
+		}
+		const returnsets=[]
+		if(samples_gain.length) {
+			returnsets.push({
+				name: 'Copy number gain (n='+samples_gain.length+')',
+				lst: samples_gain
+			})
+		}
+		if(samples_loss.length) {
+			returnsets.push({
+				name: 'Copy number loss (n='+samples_loss.length+')',
+				lst: samples_loss
+			})
+		}
+		if(samples_nomut.length) {
+			returnsets.push({
+				name:'No copy number change (n='+samples_nomut.length+')',
+				lst: samples_nomut
+			})
+		}
+		return returnsets
+	}
+
+	// otherwise, divide to 2 groups: has mut/no mut
 	const samples_withmut = await handle_mdssurvivalplot_getmutatedsamples( samples, q, ds )
 	const samples_nomut = []
 	for(const s of samples) {
@@ -8970,7 +9009,7 @@ async function handle_mdssurvivalplot_dividesamples_mutationanyornone ( samples,
 	const returnsets = []
 	if(samples_withmut.length) {
 		returnsets.push({
-			name:'With mutation (n='+samples_withmut.length+')',
+			name: 'With mutation (n='+samples_withmut.length+')',
 			lst: samples_withmut
 		})
 	}
@@ -8985,20 +9024,15 @@ async function handle_mdssurvivalplot_dividesamples_mutationanyornone ( samples,
 
 
 
-async function handle_mdssurvivalplot_getmutatedsamples( samples, q, ds ) {
+async function handle_mdssurvivalplot_getmutatedsamples( samples, q, ds, cnvonly ) {
 /*
-st{}
-	.cnv
-	.loh
-	.sv
-	.fusion
-	.itd
-	.snvindel
-
+if is cnvonly, will return two groups of samples, gain and loss each
+if not, will return all mutated samples
 */
 	const samplenameset = new Set( samples.map(i=>i.name) )
 
 	const st = q.samplerule.set
+
 	let vcfquery
 	let svcnvquery
 	for(const k in ds.queries) {
@@ -9011,6 +9045,22 @@ st{}
 	}
 
 	const mutsamples = new Set()
+
+	if(st.cnv || st.loh || st.sv || st.fusion || st.itd) {
+		if(!svcnvquery) throw 'no svcnv found in ds.queries'
+
+		if( cnvonly ) {
+			// cnv only, returns two groups for gain or loss
+			return await handle_mdssurvivalplot_getmutatedsamples_querysvcnv( svcnvquery, samplenameset, q, true )
+		}
+
+		// not just cnv
+		const samplenames = await handle_mdssurvivalplot_getmutatedsamples_querysvcnv( svcnvquery, samplenameset, q )
+		for(const n of samplenames) {
+			mutsamples.add(n)
+		}
+	}
+
 
 	if(st.snvindel) {
 		if(!vcfquery) throw 'no vcf found in ds.queries'
@@ -9033,7 +9083,106 @@ st{}
 
 
 
+async function handle_mdssurvivalplot_getmutatedsamples_querysvcnv( tk, samplenameset, q, cnvonly ) {
+/*
+if not cnvonly, return set of altered sample names
+if cnvonly, return two sets, for gain/loss
+tk is from ds.queries{}
+*/
+
+	// more configs are here
+	const st = q.samplerule.set
+
+	let dir
+	if(tk.url) {
+		dir = await cache_index_promise( tk.indexURL || tk.url+'.tbi' )
+	}
+	return new Promise((resolve,reject)=>{
+
+		const samplenames = new Set()
+		const gain = new Set() // use if cnvonly
+		const loss = new Set()
+
+		const ps=spawn( tabix,
+			[
+				tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
+				(tk.nochr ? st.chr.replace('chr','') : st.chr) +':'+st.start+'-'+ (st.stop+1)
+			], {cwd: dir }
+		)
+		const rl = readline.createInterface({ input:ps.stdout })
+		rl.on('line',line=>{
+
+			const l = line.split('\t')
+			const start = Number.parseInt(l[1])
+			const stop  = Number.parseInt(l[2])
+			const j = JSON.parse(l[3])
+
+			if(j.dt==common.dtcnv) {
+				if(!st.cnv) {
+					// not look at cnv
+					return
+				}
+				if(st.cnv.focalsizelimit) {
+					if(stop-start >= st.cnv.focalsizelimit) {
+						return
+					}
+				}
+				if(st.cnv.valuecutoff && Math.abs(j.value)<st.cnv.valuecutoff) {
+					return
+				}
+				if(cnvonly) {
+					if(j.value>0) {
+						gain.add(j.sample)
+					} else {
+						loss.add(j.sample)
+					}
+				} else {
+					samplenames.add(j.sample)
+				}
+				return
+			}
+			if(j.dt==common.dtloh) {
+				samplenames.add(j.sample)
+				return
+			}
+			if(j.dt==common.dtsv) {
+				samplenames.add(j.sample)
+				return
+			}
+			if(j.dt==common.dtfusion) {
+				samplenames.add(j.sample)
+				return
+			}
+			if(j.dt==common.dtitd) {
+				samplenames.add(j.sample)
+				return
+			}
+		})
+
+		const errout=[]
+		ps.stderr.on('data',i=> errout.push(i) )
+		ps.on('close', code=>{
+			const e=errout.join('')
+			if(e && !tabixnoterror(e)) {
+				reject(e)
+				return
+			}
+			if(cnvonly) {
+				resolve( [gain, loss])
+			} else {
+				resolve( samplenames )
+			}
+		})
+	})
+}
+
+
+
+
 async function handle_mdssurvivalplot_getmutatedsamples_queryvcf( vcfquery, tk, samplenameset, q ) {
+/*
+only return the set of mutated sample names
+*/
 
 	// more configs are here
 	const st = q.samplerule.set
@@ -9065,6 +9214,13 @@ async function handle_mdssurvivalplot_getmutatedsamples_queryvcf( vcfquery, tk, 
 						continue
 					}
 
+					if( st.snvindel.ref ) {
+						// client provided specific alleles, to restrict to it
+						if(m.ref!=st.snvindel.ref || m.alt!=st.snvindel.alt) {
+							continue
+						}
+					}
+
 					for(const s of m.sampledata) {
 						if(samplenameset.has( s.sampleobj.name )) {
 							samplenames.add( s.sampleobj.name )
@@ -9082,7 +9238,6 @@ async function handle_mdssurvivalplot_getmutatedsamples_queryvcf( vcfquery, tk, 
 				reject(e)
 				return
 			}
-			console.log(samplenames.size)
 			resolve( samplenames )
 		})
 	})

@@ -17,6 +17,7 @@ obj:
 init()
 ********************** INTERNAL
 initdataset
+init_plotmaker
 validatePlot_initDom
 loadPlot
 doPlot
@@ -34,10 +35,34 @@ export async function init (obj,holder, debugmode) {
 obj{}
 .genome
 .mds
-.plotlist[]
+
+.plotlist[ {} ]
+	optional, predefined sample sets, the same from embedding api
+	when provided, will show plot rightaway and won't show controls
+	.type
+	.samplerule{}
+		.full{}
+			.byattr
+		.set{}
+
+when plotlist is missing, following will be used to set up control ui
+thus to be made into samplerule.set{}
+
 .geneexpression{}
 	.gene{}
-		name/chr/start/stop
+		.name/chr/start/stop
+
+.mutation{}
+	.anyornone
+	.chr/start/stop
+
+	providing following to apply a type of mutation in dividing sample
+	.snvindel{}
+	.cnv{}
+	.loh{}
+	.fusion{}
+	.sv{}
+	.itd{}
 */
 
 	if(debugmode) {
@@ -124,8 +149,11 @@ function initdataset (obj) {
 function init_plotmaker( obj ) {
 /*
 init ui for plot maker
-each time it runs it should create a plot
+each time it runs it create a plot object along with control options
+currently it only run once
+user need to press button to actually render the plot
 */
+	// the plot object, to be added 
 	const p = {
 		samplerule:{
 			full:{}
@@ -155,7 +183,8 @@ each time it runs it should create a plot
 
 	if(obj.geneexpression) {
 		/*
-		expression cutoff
+		divide samples by expression cutoff
+		TODO validate or throw
 		*/
 		p.samplerule.set = {
 			genevaluepercentilecutoff:1,
@@ -193,6 +222,53 @@ each time it runs it should create a plot
 
 		// other percentile
 	}
+
+
+	if(obj.mutation) {
+		/*
+		divide samples by mutations
+		TODO validate or throw
+		*/
+		p.samplerule.set = {
+			mutation_anyOrNone:1,
+			chr: obj.mutation.chr,
+			start: obj.mutation.start,
+			stop: obj.mutation.stop,
+			snvindel: obj.mutation.snvindel,
+			cnv: obj.mutation.cnv,
+			loh: obj.mutation.loh,
+			sv: obj.mutation.sv,
+			fusion: obj.mutation.fusion,
+			itd: obj.mutation.itd,
+		}
+		if(obj.mutation.snvindel) {
+			const row = div.append('div')
+				.style('margin-bottom','20px')
+
+			if(obj.mutation.snvindel.name) {
+				// name is the mutation, allow to choose whether to limit to this specific mutation
+
+				row.append('span').html('SNV/indel&nbsp;')
+
+				const s = row.append('select')
+				s.append('option')
+					.text(obj.mutation.snvindel.name)
+					.property('named',1)
+				s.append('option')
+					.text('any mutation at '+obj.mutation.chr+':'+obj.mutation.start)
+
+			} else {
+				// no mutation name
+				row.append('span').text('SNV/indel at '+obj.mutation.chr+':'+obj.mutation.start)
+			}
+		}
+		if(obj.mutation.cnv) {
+			const row = div.append('div')
+				.style('margin-bottom','20px')
+			row.text('cnv')
+		}
+	}
+
 
 	if(obj.samplegroupings) {
 
@@ -378,13 +454,11 @@ function doPlot( plot, obj ) {
 		.attr('height', plot.toppad+plot.height+plot.xaxispad+plot.xaxish)
 
 	// legend
-	if(plot.samplesets.length>1) {
-		plot.legend.d_curves.selectAll('*').remove()
-		for(const c of plot.samplesets) {
-			plot.legend.d_curves.append('div')
-				.style('margin','3px')
-				.html('<span style="background:'+c.color+'">&nbsp;&nbsp;</span> '+c.name)
-		}
+	plot.legend.d_curves.selectAll('*').remove()
+	for(const c of plot.samplesets) {
+		plot.legend.d_curves.append('div')
+			.style('margin','3px')
+			.html('<span style="background:'+c.color+'">&nbsp;&nbsp;</span> '+c.name)
 	}
 }
 

@@ -951,6 +951,13 @@ export function click_multi_vcfdense( g, tk, block ) {
 				pane: pane
 			})
 
+			may_createbutton_survival_onemutation({
+				holder: butrow,
+				tk: tk,
+				block: block,
+				m: m,
+			})
+
 			const lst = printer_snvindel( m, tk )
 			const table = client.make_table_2col( pane.body, lst)
 			const tr = table.append('tr')
@@ -1243,7 +1250,7 @@ export async function click_multi_singleitem( p ) {
 	}
 
 
-	if(!p.tk.iscustom && p.tk.singlesampledirectory && window.sjcharts) {
+	if(!p.tk.iscustom && p.tk.singlesampledirectory) {
 		/*
 		is official dataset, and equipped with single-sample files
 		click button to retrieve all mutations and show in disco plot
@@ -1323,6 +1330,14 @@ export async function click_multi_singleitem( p ) {
 		block: p.block,
 		pane: pane
 	})
+
+	may_createbutton_survival_onemutation({
+		holder: buttonrow,
+		tk: p.tk,
+		block: p.block,
+		m: p.item
+	})
+
 
 	p.holder = pane.body
 	detailtable_singlesample( p )
@@ -2283,4 +2298,70 @@ async function may_findmatchingclinvar_printintable( m, block, table ) {
 	} catch(e) {
 		wait.text(e.message||e)
 	}
+}
+
+
+
+function may_createbutton_survival_onemutation(arg) {
+/*
+may create a 'survival plot' button and use one mutation to divide samples
+holder
+tk
+block
+*/
+	if(!arg.tk.mds || !arg.tk.mds.survivalplot) {
+		return
+	}
+
+	arg.holder.append('div')
+	.style('display','inline-block')
+	.text('Survival plot')
+	.attr('class','sja_menuoption')
+	.on('click',()=>{
+
+		const m = arg.m
+		const p = {
+			genome: arg.block.genome,
+			mds: arg.tk.mds,
+		}
+
+		if(m.dt == common.dtsnvindel) {
+			// default to use this specific mutation
+			p.mutation = {
+				chr: m.chr,
+				start: m.pos,
+				stop: m.pos,
+				snvindel:{
+					name: (m.gene ? m.gene+' ' : '') + m.mname,
+					ref: m.ref,
+					alt: m.alt,
+				}
+			}
+		} else if(m.dt == common.dtcnv) {
+			p.mutation = {
+				chr: m.chr,
+				start: m.start,
+				stop: m.stop,
+				cnv: {
+					focalsizelimit: arg.tk.bplengthUpperLimit,
+					valuecutoff: arg.tk.valueCutoff,
+				}
+			}
+		} else if(m.dt == common.dtloh) {
+		} else if(m.dt == common.dtsv) {
+		} else if(m.dt == common.dtfusion) {
+		} else if(m.dt == common.dtitd) {
+		}
+		
+		p.mutation.anyornone = 1
+
+		const pane = client.newpane({x:100, y: 100})
+		pane.header
+			.text('Survival plot by ')
+
+		import('./mds.survivalplot').then(_=>{
+			_.init( p, pane.body, arg.block.debugmode )
+		})
+
+	})
 }
