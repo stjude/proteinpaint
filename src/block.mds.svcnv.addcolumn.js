@@ -1012,7 +1012,7 @@ function mayadd_survivaloption( holder, gene, tk, block ) {
 			}
 
 			import('./mds.survivalplot').then(_=>{
-				_.init( arg, pane.body, true )
+				_.init( arg, pane.body, block.debugmode )
 			})
 		})
 }
