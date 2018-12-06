@@ -8946,7 +8946,7 @@ plottype{}
 		if(!Number.isInteger(st.stop)) throw '.start not integer from samplerule.set'
 		return await handle_mdssurvivalplot_dividesamples_genevaluequartile( samples, q, ds, plottype )
 	}
-	if(st.mutation_anyOrNone) {
+	if(st.mutation) {
 		if(!st.chr) throw '.chr missing from samplerule.set'
 		if(!Number.isInteger(st.start)) throw '.start not integer from samplerule.set'
 		if(!Number.isInteger(st.stop)) throw '.start not integer from samplerule.set'
@@ -8977,21 +8977,21 @@ async function handle_mdssurvivalplot_dividesamples_mutationanyornone ( samples,
 			}
 		}
 		const returnsets=[]
-		if(samples_gain.length) {
-			returnsets.push({
-				name: 'Copy number gain (n='+samples_gain.length+')',
-				lst: samples_gain
-			})
-		}
 		if(samples_loss.length) {
 			returnsets.push({
 				name: 'Copy number loss (n='+samples_loss.length+')',
 				lst: samples_loss
 			})
 		}
+		if(samples_gain.length) {
+			returnsets.push({
+				name: 'Copy number gain (n='+samples_gain.length+')',
+				lst: samples_gain
+			})
+		}
 		if(samples_nomut.length) {
 			returnsets.push({
-				name:'No copy number change (n='+samples_nomut.length+')',
+				name:'No copy number variation (n='+samples_nomut.length+')',
 				lst: samples_nomut
 			})
 		}
