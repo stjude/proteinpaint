@@ -16,9 +16,8 @@ obj:
 ********************** EXPORTED
 init()
 ********************** INTERNAL
-initdataset
-init_plotmaker
-validatePlot_initDom
+init_dataset_config
+init_a_plot
 loadPlot
 doPlot
 
@@ -93,7 +92,26 @@ thus to be made into samplerule.set{}
 
 	try {
 
-		await init_next( obj )
+		await init_dataset_config( obj )
+		/* got:
+		.plottypes[]
+		.samplegroupings[ {} ]
+		*/
+
+		if(!obj.plotlist) {
+			obj.plotlist = []
+		}
+		if(!Array.isArray(obj.plotlist)) throw '.plotlist should be array'
+		if(obj.plotlist.length==0) {
+			// init a default plot with just plot type, no other detail
+			const p = {
+				type: obj.plottypes[0].key
+			}
+			obj.plotlist.push(p)
+		}
+		for(const p of obj.plotlist) {
+			init_a_plot( p, obj )
+		}
 
 	} catch(e) {
 		if(e.stack) console.log(e.stack)
@@ -104,32 +122,11 @@ thus to be made into samplerule.set{}
 
 
 
-async function init_next( obj ) {
-/* feel free to throw
-*/
-
-	await initdataset( obj )
-
-	if( obj.plotlist) {
-		/*
-		show plots rightaway
-		no ui for creating plot
-		*/
-		if(!Array.isArray(obj.plotlist)) throw '.plotlist should be array'
-		for(const p of obj.plotlist) {
-			const plot = validatePlot_initDom( p, obj )
-			loadPlot( plot, obj )
-		}
-		return
-	}
-
-	init_plotmaker( obj )
-}
 
 
 
 
-function initdataset (obj) {
+function init_dataset_config(obj) {
 	const par = {
 		genome: obj.genome.name,
 		dslabel: obj.mds.label,
@@ -146,26 +143,33 @@ function initdataset (obj) {
 
 
 
-function init_plotmaker( obj ) {
+function init_a_plot( p, obj ) {
 /*
 init ui for plot maker
 each time it runs it create a plot object along with control options
 currently it only run once
 user need to press button to actually render the plot
+
+options for making sample rules
+must push button to re-render
 */
-	// the plot object, to be added 
-	const p = {
-		samplerule:{
-			full:{}
-		},
+
+
+	// necessary init
+	if(!p.samplerule) {
+		p.samplerule = {}
+	}
+	if(!p.samplerule.full) {
+		p.samplerule.full = {}
 	}
 
+
+	// contains all pieces of this plot
 	const div = obj.uidiv.append('div')
 		.style('margin','20px')
 
-	if(obj.plottypes.length==1) {
-		p.type = obj.plottypes[0].key
-	} else {
+	if(obj.plottypes.length>1) {
+		// multiple plot types, select one
 		const s = div
 			.append('div')
 			.style('margin-bottom','10px')
@@ -178,110 +182,37 @@ user need to press button to actually render the plot
 				.text(t.name)
 				.property('value', t.key)
 		}
-		p.type = obj.plottypes[0].key
-	}
-
-	if(obj.geneexpression) {
-		/*
-		divide samples by expression cutoff
-		TODO validate or throw
-		*/
-		p.samplerule.set = {
-			genevaluepercentilecutoff:1,
-			cutoff: 50,
-			gene: obj.geneexpression.gene,
-			chr: obj.geneexpression.chr,
-			start: obj.geneexpression.start,
-			stop: obj.geneexpression.stop
-		}
-		const row = div.append('div')
-			.style('margin-bottom','10px')
-		row.append('span')
-			.html('Divide samples by '+obj.geneexpression.gene+' expression&nbsp;')
-
-		const s = row.append('select')
-			.on('change',()=>{
-				const o = d3event.target.options[ d3event.target.selectedIndex]
-				if(o.median) {
-					p.samplerule.set.genevaluepercentilecutoff=1
-					p.samplerule.set.cutoff=50
-					delete p.samplerule.set.genevaluequartile
-				} else if(o.quartile){
-					p.samplerule.set.genevaluequartile=1
-					delete p.samplerule.set.genevaluepercentilecutoff
-					delete p.samplerule.set.cutoff
-				}
-			})
-
-		s.append('option')
-			.text('median (group=2)')
-			.property('median',1)
-		s.append('option')
-			.text('quartile (group=4)')
-			.property('quartile',1)
-
-		// other percentile
-	}
-
-
-	if(obj.mutation) {
-		/*
-		divide samples by mutations
-		TODO validate or throw
-		*/
-		p.samplerule.set = {
-			mutation_anyOrNone:1,
-			chr: obj.mutation.chr,
-			start: obj.mutation.start,
-			stop: obj.mutation.stop,
-			snvindel: obj.mutation.snvindel,
-			cnv: obj.mutation.cnv,
-			loh: obj.mutation.loh,
-			sv: obj.mutation.sv,
-			fusion: obj.mutation.fusion,
-			itd: obj.mutation.itd,
-		}
-		if(obj.mutation.snvindel) {
-			const row = div.append('div')
-				.style('margin-bottom','20px')
-
-			if(obj.mutation.snvindel.name) {
-				// name is the mutation, allow to choose whether to limit to this specific mutation
-
-				row.append('span').html('SNV/indel&nbsp;')
-
-				const s = row.append('select')
-				s.append('option')
-					.text(obj.mutation.snvindel.name)
-					.property('named',1)
-				s.append('option')
-					.text('any mutation at '+obj.mutation.chr+':'+obj.mutation.start)
-
-			} else {
-				// no mutation name
-				row.append('span').text('SNV/indel at '+obj.mutation.chr+':'+obj.mutation.start)
-			}
-		}
-		if(obj.mutation.cnv) {
-			const row = div.append('div')
-				.style('margin-bottom','20px')
-			row.text('cnv')
-		}
 	}
 
 
 	if(obj.samplegroupings) {
+		/*
+		sample groupings is for setting samplerule.full
 
-		// default setting
-		p.samplerule.full.byattr = 1
-		p.samplerule.full.key = obj.samplegroupings[0].key
-		p.samplerule.full.value = obj.samplegroupings[0].values[0].value
+		[ {} ]
+		.key
+		.label
+		.values[ {} ]
+			.value
+			.count
+		*/
 
 		const row = div.append('div')
 			.style('margin-bottom','20px')
-
 		row.append('span')
-			.html('Use samples from&nbsp;')
+			.html('Choose samples from&nbsp;')
+			.style('opacity',.5)
+
+		// apply default setting if not set
+		if(!p.samplerule.full.useall) {
+			p.samplerule.full.byattr = 1
+			if(!p.samplerule.full.key) {
+				p.samplerule.full.key   = obj.samplegroupings[0].key
+				p.samplerule.full.value = obj.samplegroupings[0].values[0].value
+			}
+		}
+
+		// generate controls and set <select> according to what's defined in samplerule.full{}
 
 		const attr2select = {}
 
@@ -293,6 +224,7 @@ user need to press button to actually render the plot
 				}
 				const o = d3event.target.options[ d3event.target.selectedIndex ]
 				if(o.useall) {
+					// user selects to use all samples
 					p.samplerule.full.useall = 1
 					delete p.samplerule.full.byattr
 					return
@@ -302,14 +234,20 @@ user need to press button to actually render the plot
 				p.samplerule.key = o.key
 				const s3 = attr2select[ o.key ]
 				s3.style('display', 'inline')
-				p.samplerule.full.value = s3.node().options[ s3.node().selectedIndex ].innerHTML
+				p.samplerule.full.value = s3.node().options[ s3.node().selectedIndex ].value
 			})
 
 		for(const [i,attr] of obj.samplegroupings.entries() ) {
 
-			s.append('option')
+			const o = s.append('option')
 				.text(attr.label)
 				.property('key', attr.key)
+
+			const usingthisattr = p.samplerule.full.byattr && p.samplerule.full.key==attr.key
+			if(usingthisattr) {
+				// flip
+				o.property('selected',1)
+			}
 
 			const s2 = row.append('select')
 				.on('change',()=>{
@@ -317,10 +255,8 @@ user need to press button to actually render the plot
 				})
 
 			attr2select[ attr.key ] = s2
-			if(i>0) {
-				// initially only show the first
-				s2.style('display','none')
-			}
+
+			s2.style('display', usingthisattr ? 'inline' : 'none')
 
 			for(const v of attr.values) {
 				s2.append('option')
@@ -329,30 +265,137 @@ user need to press button to actually render the plot
 			}
 		}
 
-		s.append('option')
+		// option of using all samples
+		const o = s.append('option')
 			.text('all samples')
 			.property('useall',1)
+		if(p.samplerule.full.useall) {
+			o.property('selected',1)
+		}
 
 	} else {
 		p.samplerule.full.useall = 1
 	}
 
+
+	/*
+	possible group-dividing rules are now driven by what's in samplerule.set
+	*/
+
+	if(p.samplerule.set) {
+
+		const st = p.samplerule.set // shorthand
+
+		if(obj.geneexpression) {
+			/*
+			divide samples by expression cutoff
+			TODO validate or throw
+			*/
+			p.samplerule.set = {
+				genevaluepercentilecutoff:1,
+				cutoff: 50,
+				gene: obj.geneexpression.gene,
+				chr: obj.geneexpression.chr,
+				start: obj.geneexpression.start,
+				stop: obj.geneexpression.stop
+			}
+			const row = div.append('div')
+				.style('margin-bottom','10px')
+			row.append('span')
+				.html('Divide samples by '+obj.geneexpression.gene+' expression&nbsp;')
+
+			const s = row.append('select')
+				.on('change',()=>{
+					const o = d3event.target.options[ d3event.target.selectedIndex]
+					if(o.median) {
+						p.samplerule.set.genevaluepercentilecutoff=1
+						p.samplerule.set.cutoff=50
+						delete p.samplerule.set.genevaluequartile
+					} else if(o.quartile){
+						p.samplerule.set.genevaluequartile=1
+						delete p.samplerule.set.genevaluepercentilecutoff
+						delete p.samplerule.set.cutoff
+					}
+				})
+
+			s.append('option')
+				.text('median (group=2)')
+				.property('median',1)
+			s.append('option')
+				.text('quartile (group=4)')
+				.property('quartile',1)
+
+			// other percentile
+		}
+
+
+		if(st.mutation) {
+			/*
+			divide samples by mutations
+			*/
+			if(st.snvindel) {
+				const row = div.append('div')
+					.style('margin-bottom','20px')
+
+				if(st.snvindel.name) {
+					// name is the mutation, allow to choose whether to limit to this specific mutation
+
+					row.append('span').html('SNV/indel&nbsp;')
+
+					const s = row.append('select')
+					s.append('option')
+						.text(st.snvindel.name)
+						.property('named',1)
+					s.append('option')
+						.text('any mutation at '+st.chr+':'+st.start)
+
+				} else {
+					// no mutation name
+					row.append('span').text('SNV/indel at '+st.chr+':'+st.start)
+				}
+			}
+			if(st.cnv) {
+				const row = div.append('div')
+					.style('margin-bottom','20px')
+				row.append('span').html('Copy number variation over '+st.chr+':'+st.start+'-'+st.stop+' <span style="font-size:.7em">'+common.bplen(st.stop-st.start)+'</span>&nbsp;')
+			}
+		}
+	}
+
+
 	div.append('button')
 		.text('Make plot')
 		.on('click',()=>{
-
-			// do things hard way
-			obj.plots = []
-			obj.plotdiv.selectAll('*').remove()
-
-			try {
-				const plot = validatePlot_initDom( p, obj)
-				loadPlot( plot, obj)
-			} catch(e) {
-				if(e.stack) console.log(e.stack)
-				obj.sayerror(e.message || e)
-			}
+			loadPlot( p, obj)
 		})
+
+
+	if(!p.width) p.width=500
+	if(!p.height) p.height=500
+	if(!p.toppad) p.toppad=10
+	if(!p.rightpad) p.rightpad=10
+	if(!p.xaxispad) p.xaxispad=10
+	if(!p.yaxispad) p.yaxispad=10
+	if(!p.xaxish) p.xaxish=40
+	if(!p.yaxisw) p.yaxisw=65
+	if(!p.censorticksize) p.censorticksize=6
+	if(!p.tickfontsize) p.tickfontsize=14
+	if(!p.labfontsize) p.labfontsize=15
+
+
+	p.d = obj.plotdiv.append('div').style('margin','20px'),
+
+	p.legend = {
+		d_samplefull: p.d.append('div').style('margin','10px'),
+		d_curves: p.d.append('div').style('margin','10px')
+	}
+
+	p.svg = p.d.append('svg')
+
+
+	if(p.renderplot) {
+		loadPlot( p, obj )
+	}
 }
 
 
@@ -486,64 +529,7 @@ function loadPlot (plot, obj) {
 
 
 
-function validatePlot_initDom( p, obj ) {
-	if(!p.type) throw '.type missing from a plot'
-	if(!p.samplerule) throw '.samplerule{} missing from a plot'
-	if(!p.samplerule.full) throw '.samplerule.full{} missing from a plot'
 
-	if(p.samplerule.full.useall) {
-	} else if(p.samplerule.full.byattr) {
-		if(!p.samplerule.full.key) throw '.samplerule.full.key missing from a plot'
-		if(!p.samplerule.full.value) throw '.samplerule.full.value missing from a plot'
-	} else {
-		throw 'unknown rule for samplerule.full for a plot'
-	}
-
-	const plot = {
-		type: p.type,
-		samplerule: p.samplerule,
-		width: 500,
-		height: 500,
-		toppad:10,
-		rightpad:10,
-		xaxispad:10,
-		yaxispad:10,
-		xaxish: 40,
-		yaxisw: 65,
-		censorticksize:6,
-		tickfontsize:14,
-		labfontsize:15,
-		d: obj.plotdiv.append('div').style('margin','20px'),
-		legend:{}
-	}
-
-	if(plot.name) {
-		plot.d.append('div')
-			.text(plot.name)
-			.style('margin','10px')
-	}
-
-
-	// legend
-	if(p.samplerule.full.byattr) {
-		plot.d.append('div')
-			.style('margin','10px')
-			.text( p.samplerule.full.key+': '+p.samplerule.full.value )
-	} else {
-		// new samplerule for full set
-	}
-
-	if(p.samplerule.set) {
-		// to fill in curve legend after doing plot
-		plot.legend.d_curves = plot.d.append('div')
-			.style('margin','10px')
-	}
-
-	plot.svg = plot.d.append('svg')
-
-	obj.plots.push( plot )
-	return plot
-}
 
 
 
