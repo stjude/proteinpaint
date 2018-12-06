@@ -9121,10 +9121,8 @@ tk is from ds.queries{}
 					// not look at cnv
 					return
 				}
-				if(st.cnv.focalsizelimit) {
-					if(stop-start >= st.cnv.focalsizelimit) {
-						return
-					}
+				if(st.cnv.focalsizelimit && stop-start >= st.cnv.focalsizelimit) {
+					return
 				}
 				if(st.cnv.valuecutoff && Math.abs(j.value)<st.cnv.valuecutoff) {
 					return
@@ -9141,6 +9139,9 @@ tk is from ds.queries{}
 				return
 			}
 			if(j.dt==common.dtloh) {
+				if(!st.loh) return
+				if(st.loh.focalsizelimit && stop-start>=st.loh.focalsizelimit) return
+				if(st.loh.valuecutoff && j.segmean<st.loh.valuecutoff) return
 				samplenames.add(j.sample)
 				return
 			}
