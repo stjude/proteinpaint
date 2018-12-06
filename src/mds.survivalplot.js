@@ -149,24 +149,11 @@ init ui for a plot
 push button to re-render
 */
 
-
-	// necessary init
-	if(!p.samplerule) {
-		p.samplerule = {}
-	}
-	if(!p.samplerule.full) {
-		p.samplerule.full = {}
-	}
-
+	init_a_plot_filldefault( p, obj )
 
 	// contains all pieces of this plot
 	const div = obj.uidiv.append('div')
 		.style('margin','20px')
-
-	if(!p.type) {
-		// just assign a default
-		p.type = obj.plottypes[0].key
-	}
 
 	if(obj.plottypes.length>1) {
 		// multiple plot types, select one
@@ -205,15 +192,6 @@ push button to re-render
 		row.append('span')
 			.html('Choose samples from&nbsp;')
 			.style('opacity',.5)
-
-		// apply default setting if not set
-		if(!p.samplerule.full.useall) {
-			p.samplerule.full.byattr = 1
-			if(!p.samplerule.full.key) {
-				p.samplerule.full.key   = obj.samplegroupings[0].key
-				p.samplerule.full.value = obj.samplegroupings[0].values[0].value
-			}
-		}
 
 		// generate controls and set <select> according to what's defined in samplerule.full{}
 
@@ -279,10 +257,6 @@ push button to re-render
 		if(p.samplerule.full.useall) {
 			s.node().selectedIndex = obj.samplegroupings.length
 		}
-
-	} else {
-		// no sample grouping available for this mds
-		p.samplerule.full.useall = 1
 	}
 
 
@@ -378,18 +352,6 @@ push button to re-render
 		})
 
 
-	if(!p.width) p.width=500
-	if(!p.height) p.height=500
-	if(!p.toppad) p.toppad=10
-	if(!p.rightpad) p.rightpad=10
-	if(!p.xaxispad) p.xaxispad=10
-	if(!p.yaxispad) p.yaxispad=10
-	if(!p.xaxish) p.xaxish=40
-	if(!p.yaxisw) p.yaxisw=65
-	if(!p.censorticksize) p.censorticksize=6
-	if(!p.tickfontsize) p.tickfontsize=14
-	if(!p.labfontsize) p.labfontsize=15
-
 
 	p.d = obj.plotdiv.append('div').style('margin','20px'),
 
@@ -404,6 +366,58 @@ push button to re-render
 	if(p.renderplot) {
 		loadPlot( p, obj )
 	}
+}
+
+
+
+function init_a_plot_filldefault( p, obj ) {
+	// if missing, fill in default setting
+	if(!p.type) {
+		// just assign a default
+		p.type = obj.plottypes[0].key
+	}
+	if(!p.samplerule) {
+		p.samplerule = {}
+	}
+	if(!p.samplerule.full) {
+		p.samplerule.full = {}
+	}
+	if(obj.samplegroupings) {
+		// apply default setting if not set
+		if(!p.samplerule.full.useall) {
+			p.samplerule.full.byattr = 1
+			if(!p.samplerule.full.key) {
+				p.samplerule.full.key   = obj.samplegroupings[0].key
+				p.samplerule.full.value = obj.samplegroupings[0].values[0].value
+			}
+		}
+	} else {
+		// no sample grouping available for this mds
+		p.samplerule.full.useall = 1
+	}
+	if(p.samplerule.set) {
+		const st = p.samplerule.set // shorthand
+		if(st.geneexpression) {
+			/*
+			divide samples by expression cutoff
+			*/
+			if(!st.bymedian && !st.byquartile) {
+				// none of the methods is set -- use default
+				st.bymedian = 1
+			}
+		}
+	}
+	if(!p.width) p.width=500
+	if(!p.height) p.height=500
+	if(!p.toppad) p.toppad=10
+	if(!p.rightpad) p.rightpad=10
+	if(!p.xaxispad) p.xaxispad=10
+	if(!p.yaxispad) p.yaxispad=10
+	if(!p.xaxish) p.xaxish=40
+	if(!p.yaxisw) p.yaxisw=65
+	if(!p.censorticksize) p.censorticksize=6
+	if(!p.tickfontsize) p.tickfontsize=14
+	if(!p.labfontsize) p.labfontsize=15
 }
 
 
