@@ -914,6 +914,12 @@ function launchmdssurvivalplot(arg, holder) {
 		return
 	}
 	delete arg.dataset
+	if(arg.plotlist) {
+		for(const p of arg.plotlist) {
+			// instruct this plot to be shown by default
+			p.renderplot=1
+		}
+	}
 	import('./mds.survivalplot').then(_=>{
 		_.init(arg, holder, debugmode)
 	})
