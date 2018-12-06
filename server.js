@@ -368,7 +368,10 @@ function mds_clientcopy(ds) {
 			ds2.cohortHiddenAttr=ds.cohort.attributes.defaulthidden
 		}
 		if(ds.cohort.survivalplot) {
-			ds2.survivalplot = { plots:[] }
+			ds2.survivalplot = {
+				samplegroupattrlst: ds.cohort.survivalplot.samplegroupattrlst,
+				plots:[]
+			}
 			for(const k in ds.cohort.survivalplot.plots) {
 				const p = ds.cohort.survivalplot.plots[k]
 				ds2.survivalplot.plots.push({
