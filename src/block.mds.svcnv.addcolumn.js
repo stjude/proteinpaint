@@ -28,6 +28,7 @@ addcolumn_fixedgene
 		findgene4fix
 	genebarconfig_fixed
 addcolumn_attr
+mayadd_survivaloption
 
 
 add columns
@@ -1008,7 +1009,14 @@ function mayadd_survivaloption( holder, gene, tk, block ) {
 			const arg = {
 				genome: block.genome,
 				mds: tk.mds,
-				geneexpression:gene
+				plotlist:[ {
+					geneexpression: 1,
+					bymedian: 1,
+					gene: gene.gene,
+					chr: gene.chr,
+					start: gene.start,
+					stop: gene.stop
+				}]
 			}
 
 			import('./mds.survivalplot').then(_=>{
