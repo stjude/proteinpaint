@@ -4,7 +4,6 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "els": "webpack --config=scripts/webpack.config.els.js --watch --progress --colors",
     "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js --watch --progress --colors",
     "ppdev": "node scripts/deploy.ppdev.js",
     "ppr": "node ./scripts/deploy.ppr.js",

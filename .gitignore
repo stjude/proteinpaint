@@ -12,6 +12,7 @@ public/.htaccess
 public/dev.html
 public/svcnv.html
 public/ALCL.html
+public/sjcharts.html
 .htaccess
 public/builds/*
 public/no-babel-polyfill/*
@@ -24,9 +25,6 @@ public/no-babel-polyfill/*
 /utils/countbamallele.phased/bin.js
 
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
-
-
-sjcharts.html
 
 package-lock.json
 
