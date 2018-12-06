@@ -34,6 +34,7 @@ make_svgraph
 ********************** INTERNAL
 printer_snvindel
 may_show_matrixbutton
+may_createbutton_survival_onemutation
 matrix_view()
 
 
@@ -956,6 +957,9 @@ export function click_multi_vcfdense( g, tk, block ) {
 				tk: tk,
 				block: block,
 				m: m,
+				sample: {
+					samplename: m.sampledata[0].sampleobj.name
+				}
 			})
 
 			const lst = printer_snvindel( m, tk )
@@ -1335,7 +1339,8 @@ export async function click_multi_singleitem( p ) {
 		holder: buttonrow,
 		tk: p.tk,
 		block: p.block,
-		m: p.item
+		m: p.item,
+		sample: p.sample,
 	})
 
 
@@ -2320,48 +2325,75 @@ block
 	.on('click',()=>{
 
 		const m = arg.m
-		const p = {
-			genome: arg.block.genome,
-			mds: arg.tk.mds,
+
+		// sample dividing rules
+		const st = {
+			mutation: 1
 		}
 
 		if(m.dt == common.dtsnvindel) {
 			// default to use this specific mutation
-			p.mutation = {
-				chr: m.chr,
-				start: m.pos,
-				stop: m.pos,
-				snvindel:{
-					name: (m.gene ? m.gene+' ' : '') + m.mname,
-					ref: m.ref,
-					alt: m.alt,
-				}
+			st.chr = m.chr
+			st.start = m.pos
+			st.stop = m.pos
+			st.snvindel = {
+				name: (m.gene ? m.gene+' ' : '') + m.mname,
+				ref: m.ref,
+				alt: m.alt,
 			}
 		} else if(m.dt == common.dtcnv) {
-			p.mutation = {
-				chr: m.chr,
-				start: m.start,
-				stop: m.stop,
-				cnv: {
-					focalsizelimit: arg.tk.bplengthUpperLimit,
-					valuecutoff: arg.tk.valueCutoff,
-				}
+			st.chr = m.chr
+			st.start = m.start
+			st.stop = m.stop
+			st.cnv = {
+				focalsizelimit: arg.tk.bplengthUpperLimit,
+				valuecutoff: arg.tk.valueCutoff,
 			}
 		} else if(m.dt == common.dtloh) {
 		} else if(m.dt == common.dtsv) {
 		} else if(m.dt == common.dtfusion) {
 		} else if(m.dt == common.dtitd) {
 		}
-		
-		p.mutation.anyornone = 1
+
+		const plot = {
+			renderplot: 1, // instruct the plot to be rendered, no wait
+			samplerule:{
+				full:{},
+				set: st
+			}
+		}
+
+		if(arg.tk.mds.survivalplot.samplegroupattrlst && arg.sample ) {
+			// the survivalplot has samplegrouping, and there is a single sample
+			// will just use the first attribute
+			const attr = arg.tk.mds.survivalplot.samplegroupattrlst[0]
+			const sampleanno = arg.tk.sampleAttribute ? arg.tk.sampleAttribute.samples[ arg.sample.samplename ]  : null
+			if(sampleanno) {
+				const v = sampleanno[ attr.key ]
+				if(v) {
+					plot.samplerule.full.byattr = 1
+					plot.samplerule.full.key = attr.key
+					plot.samplerule.full.value = v
+				}
+			}
+		} else {
+			// do not set rule for sample-full
+		}
 
 		const pane = client.newpane({x:100, y: 100})
 		pane.header
-			.text('Survival plot by ')
+			.text('Survival plot')
 
 		import('./mds.survivalplot').then(_=>{
-			_.init( p, pane.body, arg.block.debugmode )
+			_.init(
+				{
+					genome: arg.block.genome,
+					mds: arg.tk.mds,
+					plotlist:[ plot ]
+				},
+				pane.body,
+				arg.block.debugmode
+			)
 		})
-
 	})
 }
