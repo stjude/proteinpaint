@@ -168,6 +168,11 @@ must push button to re-render
 	const div = obj.uidiv.append('div')
 		.style('margin','20px')
 
+	if(!p.type) {
+		// just assign a default
+		p.type = obj.plottypes[0].key
+	}
+
 	if(obj.plottypes.length>1) {
 		// multiple plot types, select one
 		const s = div
@@ -177,10 +182,13 @@ must push button to re-render
 			.on('change',()=>{
 				p.type = d3event.target.options[ d3event.target.selectedIndex].value
 			})
-		for(const t of obj.plottypes) {
+		for(const [i,t] of obj.plottypes.entries()) {
 			s.append('option')
 				.text(t.name)
 				.property('value', t.key)
+			if(t.key == p.type) {
+				s.node().selectedIndex = i
+			}
 		}
 	}
 
@@ -216,6 +224,7 @@ must push button to re-render
 
 		const attr2select = {}
 
+		// selector for obj.samplegroupings
 		const s = row.append('select')
 			.style('margin-right','5px')
 			.on('change',()=>{
@@ -239,14 +248,14 @@ must push button to re-render
 
 		for(const [i,attr] of obj.samplegroupings.entries() ) {
 
-			const o = s.append('option')
+			s.append('option')
 				.text(attr.label)
 				.property('key', attr.key)
 
 			const usingthisattr = p.samplerule.full.byattr && p.samplerule.full.key==attr.key
 			if(usingthisattr) {
 				// flip
-				o.property('selected',1)
+				s.node().selectedIndex = i
 			}
 
 			const s2 = row.append('select')
@@ -258,22 +267,26 @@ must push button to re-render
 
 			s2.style('display', usingthisattr ? 'inline' : 'none')
 
-			for(const v of attr.values) {
+			for(const [j,v] of attr.values.entries()) {
 				s2.append('option')
 					.text(v.value+' (n='+v.count+')')
 					.property('value',v.value)
+				if(usingthisattr && v.value==p.samplerule.full.value) {
+					s2.node().selectedIndex = j
+				}
 			}
 		}
 
 		// option of using all samples
-		const o = s.append('option')
+		s.append('option')
 			.text('all samples')
 			.property('useall',1)
 		if(p.samplerule.full.useall) {
-			o.property('selected',1)
+			s.node().selectedIndex = obj.samplegroupings.length
 		}
 
 	} else {
+		// no sample grouping available for this mds
 		p.samplerule.full.useall = 1
 	}
 
