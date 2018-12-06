@@ -8933,21 +8933,17 @@ plottype{}
 		// no rule for sets -- make one
 		return [ {name:'All', lst: samples} ]
 	}
-	if(st.genevaluepercentilecutoff) {
+	if(st.geneexpression) {
 		if(!st.gene) throw '.gene missing from samplerule.set'
 		if(!st.chr) throw '.chr missing from samplerule.set'
 		if(!Number.isInteger(st.start)) throw '.start not integer from samplerule.set'
 		if(!Number.isInteger(st.stop)) throw '.start not integer from samplerule.set'
-		if(!Number.isInteger(st.cutoff)) throw '.cutoff not integer from samplerule.set'
-		if(st.cutoff<=0 || st.cutoff>=100) throw '.cutoff not a valid percentile 0-100'
-		return await handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff( samples, q, ds, plottype )
-	}
-	if(st.genevaluequartile) {
-		if(!st.gene) throw '.gene missing from samplerule.set'
-		if(!st.chr) throw '.chr missing from samplerule.set'
-		if(!Number.isInteger(st.start)) throw '.start not integer from samplerule.set'
-		if(!Number.isInteger(st.stop)) throw '.start not integer from samplerule.set'
-		return await handle_mdssurvivalplot_dividesamples_genevaluequartile( samples, q, ds, plottype )
+		if(st.bymedian) {
+			return await handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff( samples, q, ds, plottype )
+		}
+		if(st.byquartile) {
+			return await handle_mdssurvivalplot_dividesamples_genevaluequartile( samples, q, ds, plottype )
+		}
 	}
 	if(st.mutation) {
 		if(!st.chr) throw '.chr missing from samplerule.set'
@@ -9281,17 +9277,18 @@ async function handle_mdssurvivalplot_dividesamples_genevaluequartile ( samples,
 
 
 async function handle_mdssurvivalplot_dividesamples_genevaluepercentilecutoff ( samples, q, ds, plottype ) {
+	// hardcoded median
 	const st = q.samplerule.set
 	const [ genenumquery, samplewithvalue ] = await handle_mdssurvivalplot_dividesamples_genevalue_get( samples, q, ds )
-	const i = Math.ceil(samplewithvalue.length * st.cutoff / 100)
+	const i = Math.ceil(samplewithvalue.length / 2 )
 	const v = samplewithvalue[i-1].genevalue
 	return [
 		{
-			name: st.gene+' '+genenumquery.datatype+' below '+st.cutoff+' percentile (n='+i+', value<'+v+')',
+			name: st.gene+' '+genenumquery.datatype+' below median (n='+i+', value<'+v+')',
 			lst: samplewithvalue.slice(0, i)
 		},
 		{
-			name: st.gene+' '+genenumquery.datatype+' above '+st.cutoff+' percentile (n='+(samplewithvalue.length-i)+', value>='+v+')',
+			name: st.gene+' '+genenumquery.datatype+' above median (n='+(samplewithvalue.length-i)+', value>='+v+')',
 			lst: samplewithvalue.slice( i, samplewithvalue.length )
 		},
 	]
