@@ -2350,6 +2350,13 @@ block
 				valuecutoff: arg.tk.valueCutoff,
 			}
 		} else if(m.dt == common.dtloh) {
+			st.chr = m.chr
+			st.start = m.start
+			st.stop = m.stop
+			st.loh = {
+				focalsizelimit: arg.tk.lohLengthUpperLimit,
+				valuecutoff: arg.tk.segmeanValueCutoff,
+			}
 		} else if(m.dt == common.dtsv) {
 		} else if(m.dt == common.dtfusion) {
 		} else if(m.dt == common.dtitd) {
