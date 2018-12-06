@@ -145,13 +145,8 @@ function init_dataset_config(obj) {
 
 function init_a_plot( p, obj ) {
 /*
-init ui for plot maker
-each time it runs it create a plot object along with control options
-currently it only run once
-user need to press button to actually render the plot
-
-options for making sample rules
-must push button to re-render
+init ui for a plot
+push button to re-render
 */
 
 
@@ -299,35 +294,31 @@ must push button to re-render
 
 		const st = p.samplerule.set // shorthand
 
-		if(obj.geneexpression) {
+		if(st.geneexpression) {
 			/*
 			divide samples by expression cutoff
-			TODO validate or throw
 			*/
-			p.samplerule.set = {
-				genevaluepercentilecutoff:1,
-				cutoff: 50,
-				gene: obj.geneexpression.gene,
-				chr: obj.geneexpression.chr,
-				start: obj.geneexpression.start,
-				stop: obj.geneexpression.stop
+
+			if(!st.bymedian && !st.byquartile) {
+				// none of the methods is set -- use default
+				st.bymedian = 1
 			}
+
 			const row = div.append('div')
 				.style('margin-bottom','10px')
 			row.append('span')
-				.html('Divide samples by '+obj.geneexpression.gene+' expression&nbsp;')
+				.style('opacity',.5)
+				.html('Divide samples by '+st.gene+' expression with&nbsp;')
 
 			const s = row.append('select')
 				.on('change',()=>{
 					const o = d3event.target.options[ d3event.target.selectedIndex]
 					if(o.median) {
-						p.samplerule.set.genevaluepercentilecutoff=1
-						p.samplerule.set.cutoff=50
-						delete p.samplerule.set.genevaluequartile
+						p.samplerule.set.bymedian=1
+						delete p.samplerule.set.byquartile
 					} else if(o.quartile){
-						p.samplerule.set.genevaluequartile=1
-						delete p.samplerule.set.genevaluepercentilecutoff
-						delete p.samplerule.set.cutoff
+						p.samplerule.set.byquartile = 1
+						delete p.samplerule.set.bymedian
 					}
 				})
 
@@ -338,7 +329,11 @@ must push button to re-render
 				.text('quartile (group=4)')
 				.property('quartile',1)
 
-			// other percentile
+			if(st.bymedian) {
+				s.node().selectedIndex=0
+			} else if(st.bymedian) {
+				s.node().selectedIndex=1
+			}
 		}
 
 
