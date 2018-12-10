@@ -341,6 +341,26 @@ push button to re-render
 					.style('margin-bottom','20px')
 				row.append('span').html('Copy number variation over '+st.chr+':'+st.start+'-'+st.stop+' <span style="font-size:.7em">'+common.bplen(st.stop-st.start)+'</span>&nbsp;')
 			}
+			if(st.loh) {
+				const row = div.append('div')
+					.style('margin-bottom','20px')
+				row.append('span').html('LOH over '+st.chr+':'+st.start+'-'+st.stop+' <span style="font-size:.7em">'+common.bplen(st.stop-st.start)+'</span>&nbsp;')
+			}
+			if(st.sv) {
+				const row = div.append('div')
+					.style('margin-bottom','20px')
+				row.append('span').html('SV at '+st.chr+':'+st.start+'&nbsp;')
+			}
+			if(st.fusion) {
+				const row = div.append('div')
+					.style('margin-bottom','20px')
+				row.append('span').html('fusion at '+st.chr+':'+st.start+'&nbsp;')
+			}
+			if(st.itd) {
+				const row = div.append('div')
+					.style('margin-bottom','20px')
+				row.append('span').html('ITD over '+st.chr+':'+st.start+'-'+st.stop+' <span style="font-size:.7em">'+common.bplen(st.stop-st.start)+'</span>&nbsp;')
+			}
 		}
 	}
 

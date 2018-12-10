@@ -2358,8 +2358,21 @@ block
 				valuecutoff: arg.tk.segmeanValueCutoff,
 			}
 		} else if(m.dt == common.dtsv) {
+			st.chr = m._chr
+			st.start = m._pos
+			st.stop = m._pos
+			st.sv = {}
+
 		} else if(m.dt == common.dtfusion) {
+			st.chr = m._chr
+			st.start = m._pos
+			st.stop = m._pos
+			st.fusion = {}
 		} else if(m.dt == common.dtitd) {
+			st.chr = m.chr
+			st.start = m.start
+			st.stop = m.stop
+			st.itd = {}
 		}
 
 		const plot = {
