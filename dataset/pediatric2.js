@@ -184,6 +184,60 @@ module.exports={
 					key:'diagnosis_short'
 				},
 			]
+		},
+
+		mutation_signature: {
+			sets:{
+				pantargetsignature: {
+					name:'Pan-TARGET mutation signature',
+					signatures:{
+						1:{
+							name:'Accumulation with age (COSMIC 1)',
+							color:'#1DA850'
+						},
+						2:{
+							name:'APOBEC 3A/3B (COSMIC 2)',
+							color:'#F7ACB4',
+						},
+						3:{
+							name:'Failure of HR repair (COSMIC 3)',
+							color:'#F7941F',
+						},
+						4:{
+							name:'Accumulation with age (COSMIC 5)',
+							color:'#12693A',
+						},
+						5:{
+							name:'Exposure to UV light (COSMIC 7)',
+							color:'#F7EE20',
+						},
+						6:{
+							name:'Unknown (COSMIC 8)',
+							color:'#24A9E0',
+						},
+						7:{
+							name:'APOBEC 3A/3B + REV1 (COSMIC 13)',
+							color:'#F15C47',
+						},
+						8:{
+							name:'Reactive oxygen species (COSMIC 18)',
+							color:'#2C3590',
+						},
+						9:{
+							name:'MSI signatures (COSMIC 26)',
+							color:'#8B603D',
+						},
+						10:{
+							name:'N/A (COSMIC 23)',
+							color:'#1CA89E',
+						},
+						11:{
+							name:'N/A (COSMIC 3)',
+							color:'#652F90',
+						},
+					}
+				}
+			}
 		}
 	},
 
@@ -231,6 +285,9 @@ module.exports={
 			pmid:{
 				label:'PubMed',
 				appendto_link:'http://www.ncbi.nlm.nih.gov/pubmed/'
+			},
+			mutation_signature:{
+				label:'Mutation signature'
 			}
 		}
 	},

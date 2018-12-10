@@ -1509,6 +1509,25 @@ export function detailtable_singlesample(p) {
 					continue
 				}
 
+				/*
+				if this format field could be mutation signature
+				*/
+				if(p.tk.mds && p.tk.mds.mutation_signature ) {
+					const sigset = p.tk.mds.mutation_signature.sets[ formatfield ]
+					if(sigset) {
+						// this format field is a signature
+						const key = p.m_sample[ formatfield ]
+						const v = sigset.signatures[ key ]
+						const label = v ? v.name : 'Unknown ('+key+')'
+						const color = v ? v.color : 'black'
+						lst.push({
+							k: sigset.name,
+							v: '<span style="background:'+color+'">&nbsp;&nbsp;&nbsp;</span> '+label
+						})
+						continue
+					}
+				}
+
 				if(p.tk.mutationAttribute && p.tk.mutationAttribute.attributes) {
 					// has it; test whether this format is actually attribute
 					if(p.tk.mutationAttribute.attributes[ formatfield ]) {
@@ -1518,7 +1537,7 @@ export function detailtable_singlesample(p) {
 				}
 
 				/*
-				this formatfield is not declared in mds.mutationAttribute
+				this format field is not declared in mds.mutationAttribute
 				confusing here
 				e.g. allele count
 				*/

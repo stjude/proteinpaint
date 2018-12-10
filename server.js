@@ -367,6 +367,7 @@ function mds_clientcopy(ds) {
 			*/
 			ds2.cohortHiddenAttr=ds.cohort.attributes.defaulthidden
 		}
+
 		if(ds.cohort.survivalplot) {
 			ds2.survivalplot = {
 				samplegroupattrlst: ds.cohort.survivalplot.samplegroupattrlst,
@@ -380,6 +381,10 @@ function mds_clientcopy(ds) {
 					timelabel: p.timelabel
 				})
 			}
+		}
+
+		if(ds.cohort.mutation_signature) {
+			ds2.mutation_signature = ds.cohort.mutation_signature
 		}
 	}
 
@@ -4701,7 +4706,9 @@ function handle_mdssvcnv_vcf ( ds, dsquery, req, filteralleleattr, hiddendt, hid
 
 	if(req.query.singlesample) {
 		// still limit in singlesample
-		viewrangeupperlimit *= 5
+		//viewrangeupperlimit *= 5
+		// wants no range limit for showing snvindel in single sample
+		viewrangeupperlimit = 0
 	}
 
 	if(viewrangeupperlimit) {
@@ -12848,6 +12855,19 @@ function mds_init_mdsvcf(query, ds, genome) {
 		}
 
 		console.log( '('+query.type+') '+_file+': '+tk.samples.length+' samples, '+ (tk.nochr ? 'no chr':'has chr') )
+	}
+
+	if(query.singlesamples) {
+		if(!query.singlesamples.tablefile) return '.singlesamples.tablefile missing for the VCF query'
+		query.singlesamples.sample2vcf = {}
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,query.singlesamples.tablefile),{encoding:'utf8'}).trim().split('\n')) {
+			if(!line) continue
+			if(line[0]=='#') continue
+			const l = line.split('\t')
+			if(l[0] && l[1]) {
+				query.singlesamples.sample2vcf[ l[0] ] = l[1]
+			}
+		}
 	}
 }
 
