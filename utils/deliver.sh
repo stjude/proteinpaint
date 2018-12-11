@@ -31,8 +31,7 @@ cp server.js deploys/deliver/proteinpaint/server.js
 
 cd deploys/deliver/proteinpaint
 
-sed 's%https://pecan.stjude.org/pp/bin/%__PP_URL__%' public/bin/proteinpaint.js >public/bin/template.js
-sed 's%__PP_URL__%http://localhost:3000/bin/%' public/bin/template.js >public/bin/proteinpaint.js
+sed 's%http://localhost:3000/bin/%__PP_URL__%' public/bin/proteinpaint.js >public/bin/template.js
 
 cd ..
 tar zcvf ~/sourcecode.tgz proteinpaint/
