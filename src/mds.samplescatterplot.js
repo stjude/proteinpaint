@@ -24,9 +24,15 @@ obj:
 .colorbyattributes [ {} ]
 	.key
 	.label
-	.values
 	.__inuse
 	.labelhandle
+	.values MAP
+		k: value name
+		v: {}
+			.color
+			.name
+			.count INT
+			.cell <div>
 .colorbygeneexpression{}
 	.querykey
 	.labelhandle
@@ -338,6 +344,7 @@ function init_dotcolor_legend(obj) {
 				.text(attr.label)
 				.attr('class','sja_clb')
 				.on('click',()=>{
+					// click an attribute to select it for coloring dots
 					for(const attr2 of obj.colorbyattributes) {
 						attr2.__inuse=false
 						attr2.labelhandle.style('background','').style('border-bottom','')
@@ -382,9 +389,31 @@ function init_dotcolor_legend(obj) {
 			const cellholder = tr.append('td')
 
 			for(const [value,o] of attr.values) {
+				// for each value
+
 				const cell = cellholder.append('div')
 					.style('display','inline-block')
 					.attr('class','sja_clb')
+					.on('click', ()=>{
+						// clicking a value from this attribute to toggle the select on this value, if selected, only show such dots
+
+						if(o.selected) {
+							// already selected, turn off
+							o.selected=false
+							cell.style('border','')
+							obj.dotselection.transition().attr('r', radius)
+							return
+						}
+
+						// not yet, select this one
+						for(const o2 of attr.values.values()) {
+							o2.selected = false
+							o2.cell.style('border','')
+						}
+						o.selected = true
+						cell.style('border','solid 1px #858585')
+						obj.dotselection.transition().attr('r', d=> d.s[attr.key]==value ? radius : 0 )
+					})
 				cell.append('div')
 					.style('display','inline-block')
 					.attr('class','sja_mcdot')
@@ -395,6 +424,7 @@ function init_dotcolor_legend(obj) {
 					.style('display','inline-block')
 					.style('color',o.color)
 					.text( o.name || value )
+				o.cell = cell
 			}
 		}
 	}
