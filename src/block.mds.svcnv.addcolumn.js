@@ -585,6 +585,15 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 	/*
 	*/
 
+
+	// surely the coord of this fixed gene is not in cache
+	if(!tk.gene2coord) tk.gene2coord = {}
+	tk.gene2coord[ fixedgene.gene ] = {
+		chr: fixedgene.chr,
+		start: fixedgene.start,
+		stop: fixedgene.stop
+	}
+
 	// TODO enable column-specific width config
 
 	// hardcoded bar width for expression rank
@@ -693,14 +702,6 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 						multi_sample_removehighlight(s)
 					})
 					.on('click',()=>{
-
-						// surely the coord of this fixed gene is not in cache
-						if(!tk.gene2coord) tk.gene2coord = {}
-						tk.gene2coord[ fixedgene.gene ] = {
-							chr: fixedgene.chr,
-							start: fixedgene.start,
-							stop: fixedgene.stop
-						}
 
 						multi_show_geneboxplot({
 							gene: fixedgene.gene,
@@ -927,6 +928,8 @@ function genebarconfig_auto( usegene, genes, tk, block ) {
 		}
 	}
 
+	addbutton_boxplot( holder, usegene, tk, block )
+
 	if( tk.mds ) {
 		/*
 		rnabam mode will not have .mds
@@ -953,6 +956,8 @@ function genebarconfig_auto( usegene, genes, tk, block ) {
 function genebarconfig_fixed( fixedgene, tk, block ) {
 	tk.tkconfigtip.clear()
 		.showunder(d3event.target)
+
+	addbutton_boxplot( tk.tkconfigtip.d, fixedgene.gene, tk, block )
 
 	mayadd_survivaloption(
 		tk.tkconfigtip.d, 
@@ -1328,5 +1333,22 @@ function drawgenebar_rnabam ( expbarwidth, maxvalue, row, gene, s, tk, block ) {
 	})
 	.on('click',()=>{
 		rnabam_click_genebar( gene, s, tk, block )
+	})
+}
+
+
+
+function addbutton_boxplot(holder, usegene, tk, block) {
+	// dedicated button for boxplot
+	holder.append('div')
+	.text(usegene+' '+tk.gecfg.datatype+' boxplot')
+	.attr('class','sja_menuoption')
+	.on('click',()=>{
+		tk.tkconfigtip.hide()
+		multi_show_geneboxplot({
+			gene: usegene,
+			tk:tk,
+			block:block
+		})
 	})
 }
