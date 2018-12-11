@@ -37,9 +37,10 @@
     "uglify-es": "^3.3.9",
     "uglify-js": "^3.4.6",
     "uglifyjs-webpack-plugin": "^1.2.7",
-    "webpack": "^3.6.0",
+    "webpack": "^4.27.1",
+    "webpack-cli": "^3.1.2",
     "webpack-node-externals": "^1.7.2",
-    "webpack-notifier": "^1.4.1"
+    "webpack-notifier": "^1.7.0"
   },
   "dependencies": {
     "async": "^2.6.0",

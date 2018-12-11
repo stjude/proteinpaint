@@ -19,17 +19,18 @@ module.exports = function(env) {
 		config.output.path= __dirname+'/../public/builds/'+(env.subdomain?env.subdomain:'pecan-test')
 	}
 
-	config.plugins = [
-		new UglifyJsPlugin({
-		  cache: true,
-		  parallel: true,
-		  uglifyOptions: {
-		  	mangle: true,
-		  	compress: true
-		  }
-	    }),
-	    new webpack.optimize.OccurrenceOrderPlugin(),
-	]
+	config.optimization = {
+		minimizer: [
+			new UglifyJsPlugin({
+				cache: true,
+				parallel: true,
+				uglifyOptions: {
+					mangle: true,
+					compress: true
+				}
+		    })
+		]
+	}
 
 	delete config.devtool
 
