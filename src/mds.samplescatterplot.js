@@ -212,6 +212,7 @@ function init_plot (obj) {
 
 	const circles=dots.append('circle')
 		.attr('stroke','none')
+		.attr('r', radius)
 		.on('mouseover',d=>{
 			d3event.target.setAttribute('stroke','white')
 			const lst=[ 
@@ -265,7 +266,7 @@ function init_plot (obj) {
 			showline:true,
 		})
 		dots.attr('transform',d=>'translate('+xscale(d.x)+','+yscale(d.y)+')')
-		circles.attr('r',radius)
+		//circles.attr('r',radius)
 	}
 	resize()
 
