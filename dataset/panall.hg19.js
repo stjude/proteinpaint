@@ -36,6 +36,7 @@ module.exports={
 		files:[
 			{file:'hg19/pan-all/sampletable/samples.ball'},
 			{file:'hg19/pan-all/sampletable/samples.ball.normal'},
+			{file:'hg19/pan-all/sampletable/normalCell.sample'},
 			{file:'hg19/pan-all/sampletable/outcome.ball'},
 		],
 		samplenamekey:samplenamekey,
