@@ -21,7 +21,7 @@
   "license": "ISC",
   "devDependencies": {
     "babel-cli": "^6.18.0",
-    "babel-core": "^6.25.0",
+    "babel-core": "^6.26.3",
     "babel-loader": "^7.1.1",
     "babel-plugin-syntax-dynamic-import": "^6.18.0",
     "babel-preset-env": "^1.7.0",
@@ -62,7 +62,7 @@
     "lazy": "^1.0.11",
     "loader-utils": "^0.2.17",
     "normalize.css": "^4.2.0",
-    "request": "^2.78.0",
+    "request": "^2.88.0",
     "sqlite": "^2.8.0",
     "sqlite3": "^3.1.4"
   }
