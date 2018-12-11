@@ -2,6 +2,7 @@ const webpack=require('webpack')
 const path = require('path')
 
 module.exports={
+	mode: 'production', // default
 	entry:'./src/app.js',
 	output:{
 		path: __dirname+'/public/bin',
@@ -36,10 +37,5 @@ module.exports={
 		}
 		]
 	},
-	devtool:'source-map',
-
-		
-	plugins:[
-		new webpack.IgnorePlugin(/jquery/),
-	]
+	devtool:'source-map'
 }
