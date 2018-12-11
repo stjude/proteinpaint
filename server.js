@@ -4014,7 +4014,7 @@ async function handle_mdssvcnv(req,res) {
 	// for both single- and multi sample
 	// each member track has its own data type
 	// querying procedure is the same for all types, data parsing will be different
-	const [ vcfrangelimit, data_vcf ] = await handle_mdssvcnv_vcf( ds, dsquery, req, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr )
+	const [ vcfrangelimit, data_vcf ] = await handle_mdssvcnv_vcf( gn, ds, dsquery, req, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr )
 
 
 
@@ -4680,7 +4680,7 @@ function handle_mdssvcnv_end ( ds, result ) {
 
 
 
-function handle_mdssvcnv_vcf ( ds, dsquery, req, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr ) {
+async function handle_mdssvcnv_vcf ( genome, ds, dsquery, req, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr ) {
 
 	let vcfquery
 	if(dsquery.iscustom) {
@@ -4698,6 +4698,27 @@ function handle_mdssvcnv_vcf ( ds, dsquery, req, filteralleleattr, hiddendt, hid
 		return [ null, null ]
 	}
 
+	if(req.query.singlesample && vcfquery.singlesamples) {
+		const tmp = vcfquery.singlesamples.samples[ req.query.singlesample ]
+		if(tmp) {
+			// has a vcf file for this sample, query this instead
+			const thisvcf = {
+				file: path.join(serverconfig.tpmasterdir, tmp),
+			}
+
+			// meta and header
+			const mlines = await tabix_getvcfmeta( thisvcf.file )
+
+			const [info, format, samples, err] = vcf.vcfparsemeta( mlines )
+			if(err) throw err
+			thisvcf.info = info
+			thisvcf.format = format
+			thisvcf.samples = samples
+			thisvcf.nochr = await tabix_ifnochr( thisvcf.file, genome )
+			return handle_mdssvcnv_vcf_singlesample( req, thisvcf, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr )
+		}
+	}
+
 	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 	if(!viewrangeupperlimit && dsquery.iscustom) {
 		// no limit set for custom track, set a hard limit
@@ -4706,9 +4727,7 @@ function handle_mdssvcnv_vcf ( ds, dsquery, req, filteralleleattr, hiddendt, hid
 
 	if(req.query.singlesample) {
 		// still limit in singlesample
-		//viewrangeupperlimit *= 5
-		// wants no range limit for showing snvindel in single sample
-		viewrangeupperlimit = 0
+		viewrangeupperlimit *= 5
 	}
 
 	if(viewrangeupperlimit) {
@@ -5011,6 +5030,204 @@ function handle_mdssvcnv_vcf ( ds, dsquery, req, filteralleleattr, hiddendt, hid
 		return [ null, mmerge ]
 	})
 }
+
+
+
+
+
+function handle_mdssvcnv_vcf_singlesample( req, thisvcf, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr ) {
+/*
+query variants for a single sample, from a single vcf file
+
+bad repetition
+*/
+	const variants = []
+
+	const tasks=[]
+	for(const r of req.query.rglst) {
+
+		const task = new Promise((resolve,reject)=>{
+			const ps=spawn( tabix, [ thisvcf.file, (thisvcf.nochr ? r.chr.replace('chr','') : r.chr) +':'+r.start+'-'+r.stop ] )
+			const rl = readline.createInterface({ input:ps.stdout })
+			rl.on('line',line=>{
+
+				const [badinfok, mlst, altinvalid] = vcf.vcfparseline( line, thisvcf )
+
+				for(const m of mlst) {
+
+					if(!m.sampledata) {
+						// do not allow
+						continue
+					}
+
+					// restrict to queried sample
+					const thissampleobj = m.sampledata.find( i=> i.sampleobj.name == req.query.singlesample )
+					if(!thissampleobj) {
+						// this variant is not in this sample
+						continue
+					}
+					// delete the obsolete attr
+					delete thissampleobj.allele2readcount
+					// alter
+					m.sampledata = [ thissampleobj ]
+
+
+					if(filteralleleattr) {
+						// filter using allele INFO
+
+						let todrop=false
+
+						for(const key in filteralleleattr) {
+
+							const value = m.altinfo[ key ]
+							if(value==undefined) {
+								// no value
+								todrop=true
+								break
+							}
+
+							const attr = filteralleleattr[key]
+							if(attr.cutoffvalue != undefined) {
+
+								// is a numeric cutoff
+
+								if(!Number.isFinite(value)) {
+									// value of this mutation is not a number
+									todrop=true
+									break
+								}
+
+								if(attr.keeplowerthan) {
+									if(value > attr.cutoffvalue) {
+										todrop=true
+										break
+									}
+								} else {
+									if(value < attr.cutoffvalue) {
+										todrop=true
+										break
+									}
+								}
+							}
+						}
+						if(todrop) {
+							// drop this variant
+							continue
+						}
+					}
+
+
+					// TODO filter with locus INFO
+
+
+					// for germline track:
+					if(thissampleobj.gtallref) {
+						// drop ref/ref sample, should only happen for germline vcf
+						continue
+					}
+					if(thissampleobj.__gtalleles) {
+						// germline - m.sampledata[] always have all the samples due to the old vcf processing
+						// even if the sample does not carry m's alt allele
+						if(thissampleobj.__gtalleles.indexOf(m.alt)==-1) {
+							continue
+						}
+						delete thissampleobj.__gtalleles
+					}
+
+
+
+
+					if(hiddenmattr) {
+						const samplesnothidden = []
+						for(const s of m.sampledata) {
+							
+							let nothidden=true
+							for(const key in hiddenmattr) {
+								// attribute keys are FORMAT fields
+								let value = s[ key ]
+								if(value==undefined) {
+									value = common.not_annotated
+								}
+								if(hiddenmattr[key].has( value )) {
+									nothidden=false
+									break
+								}
+							}
+							if(nothidden) {
+								samplesnothidden.push( s )
+							}
+						}
+						if(samplesnothidden.length==0) {
+							// skip this variant
+							continue
+						}
+						m.sampledata = samplesnothidden
+					}
+
+
+					if(hiddensampleattr && ds.cohort && ds.cohort.annotation) {
+						/*
+						drop sample by annotation
+						FIXME this is not efficient
+						ideally should identify samples from this vcf file to be dropped, the column # of them
+						after querying the vcf file, cut these columns away
+						*/
+						const samplesnothidden = []
+						for(const s of m.sampledata) {
+							const sanno = ds.cohort.annotation[ s.sampleobj.name ]
+							if(!sanno) {
+								// sample has no annotation?
+								continue
+							}
+							let nothidden=true
+							for(const key in hiddensampleattr) {
+								const value = sanno[ key ]
+								if(hiddensampleattr[ key ].has( value )) {
+									nothidden=false
+									break
+								}
+							}
+							if(nothidden) {
+								samplesnothidden.push( s )
+							}
+						}
+						if(samplesnothidden.length==0) {
+							// skip this variant
+							continue
+						}
+						m.sampledata = samplesnothidden
+					}
+
+
+					delete m._m
+					delete m.vcf_ID
+					delete m.name
+
+					m.dt = common.dtsnvindel
+					variants.push(m)
+				}
+			})
+			const errout=[]
+			ps.stderr.on('data',i=> errout.push(i) )
+			ps.on('close',code=>{
+				const e=errout.join('')
+				if(e && !tabixnoterror(e)) {
+					reject(e)
+					return
+				}
+				resolve()
+			})
+		})
+		tasks.push(task)
+	}
+
+	return Promise.all(tasks)
+		.then(()=>{
+			return [null, variants]
+		})
+}
+
+
 
 
 
@@ -12859,13 +13076,13 @@ function mds_init_mdsvcf(query, ds, genome) {
 
 	if(query.singlesamples) {
 		if(!query.singlesamples.tablefile) return '.singlesamples.tablefile missing for the VCF query'
-		query.singlesamples.sample2vcf = {}
+		query.singlesamples.samples = {}
 		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,query.singlesamples.tablefile),{encoding:'utf8'}).trim().split('\n')) {
 			if(!line) continue
 			if(line[0]=='#') continue
 			const l = line.split('\t')
 			if(l[0] && l[1]) {
-				query.singlesamples.sample2vcf[ l[0] ] = l[1]
+				query.singlesamples.samples[ l[0] ] = l[1]
 			}
 		}
 	}
