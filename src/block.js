@@ -4438,7 +4438,7 @@ mds_load_query_bykey(ds, q) {
 
 	if(tk0.isgenenumeric) {
 		// gene numeric values, show gene search box
-		window.alert('todo')
+		// TODO not doing anything yet
 		return
 	}
 
