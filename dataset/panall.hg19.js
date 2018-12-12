@@ -108,11 +108,11 @@ module.exports={
 							color:'#1b9e77'
 							},
 						'Childhood HR':{
-							name:'Childhood HR, age < 16 years',
+							name:'Children high-risk: age <1 or >9 year or WBC count >50e9/L',
 							color:'#d95f02'
 							},
 						'Childhood SR':{
-							name:'Childhood SR, age < 16 years',
+							name:'Children standard-risk: age 1 ~ 9 years and WBC count <50e9/L',
 							color:'#027CD9'
 							},
 						AYA:{
