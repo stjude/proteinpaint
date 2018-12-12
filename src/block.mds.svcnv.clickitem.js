@@ -1275,7 +1275,8 @@ export async function click_multi_singleitem( p ) {
 		buttonrow.append('div')
 			.style('display','inline-block')
 			.attr('class', 'sja_menuoption')
-			.text(p.sample.samplename+' genome')
+			//.text(p.sample.samplename+' genome')
+			.text('Genome view')
 			.on('click',()=>{
 
 				if(holder.style('display')=='none') {
