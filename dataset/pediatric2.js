@@ -438,7 +438,10 @@ module.exports={
 					file:'hg19/Pediatric/pediatric.somatic.hg19.vcf.gz',
 					type:'vcf',
 				}
-			]
+			],
+			singlesamples:{
+				tablefile:'hg19/Pediatric/split.vcf/table'
+			}
 		},
 
 
