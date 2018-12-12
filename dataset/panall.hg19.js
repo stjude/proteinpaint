@@ -83,7 +83,7 @@ module.exports={
 						'PAX5 P80R':{ color:'#FF4500', },
 						'PAX5alt':{color:'#FFA620'},
 						'Ph':{color:'#CD00CD'},
-						'Ph-like':{color:'#8B0000'},
+						//'Ph-like':{color:'#8B0000'},
 						'TCF3-PBX1':{color:'#8B6508'},
 						'ZNF384':{color:'#A8DD00'},
 						'iAMP21':{color:'#8470FF'},
@@ -97,7 +97,7 @@ module.exports={
 						'Ph-like(ABL-class)':{color:'#FF6A6A'},
 						'Ph-like(CRLF2)':{color:'#6A147D'},
 						'Ph-like(other JAK/STAT)':{color:'#8B0000'},
-						'Ph-like(Other)':{color:'#FFC0CB'},
+						'Ph-like(other)':{color:'#FFC0CB'},
 					}
 				},
 				ageGroup: {
@@ -107,9 +107,13 @@ module.exports={
 							name:'Adult, age >= 40 years',
 							color:'#1b9e77'
 							},
-						Childhood:{
-							name:'Childhood, age < 16 years',
+						'Childhood HR':{
+							name:'Childhood HR, age < 16 years',
 							color:'#d95f02'
+							},
+						'Childhood SR':{
+							name:'Childhood SR, age < 16 years',
+							color:'#027CD9'
 							},
 						AYA:{
 							name:'Adolescent and young adult (AYA), age 16~40 years',
