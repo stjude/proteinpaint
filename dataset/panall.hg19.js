@@ -94,6 +94,10 @@ module.exports={
 						'Low hyperdiploid':{color:'#BFBFBF'},
 						'ZNF384-like':{color:'#BFBFBF'},
 						'Other':{color:'#BFBFBF'},
+						'Ph-like(ABL-class)':{color:'#FF6A6A'},
+						'Ph-like(CRLF2)':{color:'#6A147D'},
+						'Ph-like(other JAK/STAT)':{color:'#8B0000'},
+						'Ph-like(Other)':{color:'#FFC0CB'},
 					}
 				},
 				ageGroup: {
