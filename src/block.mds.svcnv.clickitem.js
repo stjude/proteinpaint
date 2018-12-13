@@ -1275,7 +1275,6 @@ export async function click_multi_singleitem( p ) {
 		buttonrow.append('div')
 			.style('display','inline-block')
 			.attr('class', 'sja_menuoption')
-			//.text(p.sample.samplename+' genome')
 			.text('Genome view')
 			.on('click',()=>{
 
@@ -1299,9 +1298,7 @@ export async function click_multi_singleitem( p ) {
 						if(data.error) throw(data.error)
 						if(!data.text) throw('.text missing')
 						/*
-						parsing text to json should be handled here in pp
-						then pass the json to sjchart
-						edgar: please modify if there can be better way to parse json and capture error
+						parse the text into json
 						*/
 						let json
 						try{
@@ -1310,14 +1307,33 @@ export async function click_multi_singleitem( p ) {
 							throw(e.message)
 						}
 
-						// TODO provide json to sjcharts
+						const disco_arg = {
+							sampleName: p.sample.samplename,
+							data: json
+						}
 
-						discoPromise.then(renderer=>{
-							renderer.main({
-								sampleName: p.sample.samplename,
-								data: JSON.parse(data.text),
-							})
-						})
+						if(p.tk.mds.mutation_signature) {
+							let hassig=false
+							for(const k in p.tk.mds.mutation_signature.sets) {
+								for(const m of json) {
+									if(m[k]) {
+										hassig = k
+										break
+									}
+								}
+								if(hassig) break
+							}
+							if(hassig) {
+								const o = p.tk.mds.mutation_signature.sets[hassig]
+								disco_arg.mutation_signature = {
+									key: hassig,
+									name: o.name,
+									signatures: o.signatures
+								}
+							}
+						}
+
+						discoPromise.then(renderer=> renderer.main( disco_arg ) )
 					})
 					.catch(err=>{
 						client.sayerror(holder, typeof(err)=='string'?err:err.message)
