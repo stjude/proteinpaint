@@ -2694,10 +2694,13 @@ function maysortsamplesingroupbydt(g) {
 
 
 function makeTk(tk, block) {
+/*
+for both multi- and single-sample
+*/
 
 	if(tk.mds) {
 		/*
-		in ds.js, these two attributes belong to mds, but not the svcnv query track,
+		in ds.js, these attributes belong to mds, but not the svcnv query track,
 		meant to be applied to all tracks of this mds
 		previously, on client, these two attributes were recorded on the svcnv track object
 		now they reside in the mds registry object of genome
@@ -2727,7 +2730,30 @@ function makeTk(tk, block) {
 	}
 
 
-	if(!tk.singlesample) {
+	if(tk.singlesample) {
+		// single-sample
+
+		tk.waterfall = {
+			inuse: false,
+			axisheight: 100,
+			bottompad: 10,
+			axisgg: tk.gleft.append('g'),
+		}
+		tk.waterfall.axisg = tk.waterfall.axisgg.append('g')
+		tk.waterfall.lab1 = tk.waterfall.axisgg.append('text')
+			.attr('font-size',13)
+			.attr('text-anchor','end')
+			.attr('x',-10)
+		tk.waterfall.lab2 = tk.waterfall.axisgg.append('text')
+			.attr('font-size',13)
+			.attr('text-anchor','end')
+			.attr('x',-10)
+		tk.waterfall.lab3 = tk.waterfall.axisgg.append('text')
+			.attr('font-size',13)
+			.attr('text-anchor','end')
+			.attr('x',-10)
+
+	} else {
 		// in multi-sample
 
 		tk.samplematrices = []

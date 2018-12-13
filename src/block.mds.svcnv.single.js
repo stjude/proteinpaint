@@ -1,6 +1,7 @@
 import * as client from './client'
 import * as common from './common'
-import {scaleLinear} from 'd3-scale'
+import {scaleLinear,scaleLog} from 'd3-scale'
+import {axisRight} from 'd3-axis'
 import {event as d3event} from 'd3-selection'
 import { tooltip_singleitem, svcoord2html, make_svgraph, detailtable_singlesample } from './block.mds.svcnv.clickitem'
 import { map_cnv,
@@ -135,6 +136,8 @@ export function render_singlesample( tk, block ) {
 	*/
 	tk.cnv_g.attr('transform','translate(0,'+ svheight +')')
 
+	tk.waterfall.axisgg.attr('transform','translate(0,'+svheight+')')
+
 	const items = [ ...cnvlst, ...lohlst, ...itdlst ] // stack bar items
 	if(tk.data_vcf) {
 		for(const m of tk.data_vcf) {
@@ -231,6 +234,23 @@ function group_sv(lst) {
 
 
 
+function getcolor_snvindel( m, tk ) {
+	if(tk.mds && tk.mds.mutation_signature) {
+		if(m.sampledata && m.sampledata[0]) {
+			// which signature set this sample has
+			for(const setkey in tk.mds.mutation_signature.sets) {
+				const v = m.sampledata[0][setkey]
+				if(v) {
+					return tk.mds.mutation_signature.sets[ setkey ].signatures[ v ].color
+				}
+			}
+		}
+	}
+	return common.mclass[m.class].color
+}
+
+
+
 
 function render_singlesample_stack( items, tk, block, svheight ) {
 
@@ -244,35 +264,299 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 	const stackheight = 12 // hardcoded
 	const stackspace  = 1
 
-	// prep & pre-render snvindel
-	for(const m of items) {
+tk.waterfall.inuse=1
 
-		if(m.dt != common.dtsnvindel) continue
+	let waterfall_shown = false
 
-		const g = tk.cnv_g.append('g')
-		m._p = {
-			g:g
+	if(tk.waterfall.inuse) {
+		/* has waterfall, only show snvindel
+		segment items still in stack plot
+		*/
+		const snvindels = items.filter( m=> m.dt==common.dtsnvindel )
+		if(snvindels.length>1) {
+			if( plot_waterfall( snvindels, tk, block ) ) {
+				waterfall_shown=true
+			}
 		}
-		/* for later use:
-		stackw
-		stackx
-		g_x
+	}
+
+
+	if(!waterfall_shown) {
+		/* no waterfall
+		prep & pre-render snvindel
 		*/
 
-		const color = common.mclass[ m.class ].color
+		tk.waterfall.axisg.selectAll('*').remove()
+		tk.waterfall.lab1.text('')
+		tk.waterfall.lab2.text('')
+		tk.waterfall.lab3.text('')
 
-		/////////////////////////////////// label is the same for snvindel/itd
-		// mouseover event not on label but on cover box
-		const lab = g.append('text')
-			.attr('font-size', stackheight)
-			.attr('font-family', client.font)
-			.attr('fill', color)
-			.attr('dominant-baseline','central')
-			.text( m.mname )
+		for(const m of items) {
+
+			if(m.dt != common.dtsnvindel) continue
+
+			const g = tk.cnv_g.append('g')
+			m._p = {
+				g:g
+			}
+			/* for later use:
+			stackw
+			stackx
+			g_x
+			*/
+
+			const color = getcolor_snvindel( m, tk )
+
+			/////////////////////////////////// label is the same for snvindel/itd
+			// mouseover event not on label but on cover box
+			const lab = g.append('text')
+				.attr('font-size', stackheight)
+				.attr('font-family', client.font)
+				.attr('fill', color)
+				.attr('dominant-baseline','central')
+				.text( m.mname )
 
 
-		let labelw
-		lab.each(function(){ labelw = this.getBBox().width })
+			let labelw
+			lab.each(function(){ labelw = this.getBBox().width })
+
+			const bgbox = g.append('rect')
+				.attr('x', -stackheight/2)
+				.attr('y', -stackheight/2)
+				.attr('width', stackheight)
+				.attr('height', stackheight)
+				.attr('fill', color)
+				.attr('fill-opacity', 0)
+
+			let fgline1,
+				fgline2
+
+			if( m.sampledata && vcfvariantisgermline(m.sampledata[0], tk) ) {
+				fgline1 = g.append('line')
+					.attr('stroke', color)
+					.attr('stroke-width',2)
+					.attr('y1', 1-stackheight/2)
+					.attr('y2', stackheight/2-1)
+				fgline2 = g.append('line')
+					.attr('stroke', color)
+					.attr('stroke-width',2)
+					.attr('x1', 1-stackheight/2)
+					.attr('x2', stackheight/2-1)
+			} else {
+				fgline1 = g.append('line')
+					.attr('stroke', color)
+					.attr('stroke-width',2)
+					.attr('x1', 1-stackheight/2)
+					.attr('x2', stackheight/2-1)
+					.attr('y1', 1-stackheight/2)
+					.attr('y2', stackheight/2-1)
+				fgline2 = g.append('line')
+					.attr('stroke', color)
+					.attr('stroke-width',2)
+					.attr('x1', 1-stackheight/2)
+					.attr('x2', stackheight/2-1)
+					.attr('y1', stackheight/2-1)
+					.attr('y2', 1-stackheight/2)
+			}
+
+			// to cover both cross & label, will be placed after deciding whether label is on left/right
+			m._p.cover = g.append('rect')
+				.attr('y', -stackheight/2)
+				.attr('width', stackheight+labelspace+labelw)
+				.attr('height', stackheight)
+				.attr('fill','white')
+				.attr('fill-opacity', 0)
+				.on('mouseover',()=>{
+					bgbox.attr('fill-opacity',1)
+					fgline1.attr('stroke','white')
+					fgline2.attr('stroke','white')
+					tooltip_singleitem({
+						item: m,
+						m_sample: m.sampledata[0],
+						tk: tk,
+						block: block
+					})
+				})
+				.on('mouseout',()=>{
+					tk.tktip.hide()
+					bgbox.attr('fill-opacity',0)
+					fgline1.attr('stroke',color)
+					fgline2.attr('stroke',color)
+				})
+
+			//////////////////////////////// set position for text label & cover
+
+			m._p.stackw = stackheight + 5 + labelw
+
+			if(block.width - m.x > labelw + labelspace + stackheight/2) {
+				// label on right
+				m._p.stackx = m.x-stackheight/2
+				m._p.g_x = stackheight/2
+				lab.attr('x', stackheight/2+labelspace)
+				m._p.cover.attr('x', -stackheight/2)
+
+			} else {
+				// label on left
+				m._p.stackx = m.x-stackheight/2-labelspace-labelw
+				m._p.g_x = stackheight/2+labelspace+labelw
+				lab
+					.attr('x', -stackheight/2-labelspace)
+					.attr('text-anchor','end')
+				m._p.cover.attr('x', -labelw-labelspace-stackheight/2 )
+			}
+		}
+	}
+
+
+	items.sort( (i,j)=> {
+		const xi = i._p ? i._p.stackx : Math.min(i.x1,i.x2)
+		const xj = j._p ? j._p.stackx : Math.min(j.x1,j.x2)
+		return xi - xj
+	})
+
+
+	const stacks=[ 0 ]
+	for(const item of items) {
+
+		if(waterfall_shown && item.dt==common.dtsnvindel) continue
+
+		const itemstart = item._p ? item._p.stackx : Math.min(item.x1, item.x2)
+		const itemwidth = item._p ? item._p.stackw : Math.abs(item.x1-item.x2)
+
+		for(let i=0; i<stacks.length; i++) {
+			if(stacks[i] <= itemstart ) {
+				stacks[i] = itemstart + itemwidth
+				item.stack=i
+				break
+			}
+		}
+		if(item.stack==undefined) {
+			item.stack=stacks.length
+			stacks.push( itemstart + itemwidth )
+		}
+	}
+
+	const yoff = waterfall_shown ? tk.waterfall.axisheight+tk.waterfall.bottompad : 0
+
+	for(const item of items) {
+
+		if(item.dt==common.dtloh || item.dt==common.dtcnv || item.dt==common.dtitd) {
+
+			let color
+
+			if(item.dt==common.dtloh) {
+
+				color = 'rgba('+tk.cnvcolor.loh.r+','+tk.cnvcolor.loh.g+','+tk.cnvcolor.loh.b+','+(item.segmean/tk.cnvcolor.segmeanmax)+')'
+
+			} else if(item.dt==common.dtcnv){
+
+				if(item.value>0) {
+					color = 'rgba('+tk.cnvcolor.gain.r+','+tk.cnvcolor.gain.g+','+tk.cnvcolor.gain.b+','+(item.value/tk.cnvcolor.cnvmax)+')'
+				} else {
+					color = 'rgba('+tk.cnvcolor.loss.r+','+tk.cnvcolor.loss.g+','+tk.cnvcolor.loss.b+','+(-item.value/tk.cnvcolor.cnvmax)+')'
+				}
+			} else if(item.dt==common.dtitd) {
+
+				color = common.mclass[common.mclassitd].color
+			}
+
+			tk.cnv_g.append('rect')
+				.attr('x', Math.min(item.x1, item.x2) )
+				.attr('y', yoff + (stackheight+stackspace)*item.stack)
+				.attr('width', Math.max(1, Math.abs(item.x2-item.x1) ) )
+				.attr('height', stackheight)
+				.attr('fill',color)
+				.attr('shape-rendering','crispEdges')
+				.attr('stroke','none')
+				.attr('class','sja_aa_skkick')
+				.on('mouseover',()=>{
+					tooltip_singleitem({
+						item:item,
+						tk: tk
+					})
+				})
+				.on('mouseout',()=> {
+					tk.tktip.hide()
+				})
+			continue
+		}
+
+		if(item.dt==common.dtsnvindel && !waterfall_shown) {
+
+			item._p.g
+				.attr('transform','translate('+(item._p.stackx+item._p.g_x)+','+(stackheight/2 + (stackheight+stackspace)*item.stack)+')')
+			continue
+		}
+	}
+
+	return yoff + stacks.length*(stackheight+stackspace)-stackspace
+}
+
+
+
+
+function plot_waterfall( snvindels, tk, block ) {
+/*
+waterfall only plots snvindel, not breakpoint
+plot them in cnv_g, axis shown in .waterfall.axisgg{}
+*/
+
+	let maxdist = 0
+	for(let i=1; i<snvindels.length; i++) {
+		const m = snvindels[i]
+		m.water = {
+			bpdist: m.pos-snvindels[i-1].pos
+		}
+		maxdist = Math.max(maxdist, m.water.bpdist)
+	}
+
+	if(maxdist<2) {
+		// cannot draw
+		return false
+	}
+
+	// show axis
+	client.axisstyle({
+		axis: tk.waterfall.axisg.call(
+			axisRight()
+				.ticks(3, '.0f')
+				.scale(
+					scaleLog().domain([1, maxdist]).range([tk.waterfall.axisheight,0]),
+				)
+		),
+		color:'black',
+		showline:1,
+	})
+	tk.waterfall.lab1.text('Log10')
+		.attr('y', tk.waterfall.axisheight/2-14)
+	tk.waterfall.lab2.text('intermutation')
+		.attr('y', tk.waterfall.axisheight/2)
+	tk.waterfall.lab3.text('distance')
+		.attr('y', tk.waterfall.axisheight/2+14)
+
+
+	snvindels[0].water = {
+		h: tk.waterfall.axisheight
+	}
+	for(let i=1; i<snvindels.length; i++) {
+		const m = snvindels[i]
+		if(m.water.bpdist==0) {
+			m.water.h = 0
+		} else {
+			m.water.h = Math.log10( m.water.bpdist ) * tk.waterfall.axisheight / Math.log10(maxdist)
+		}
+	}
+
+	// repetition of code
+
+	const stackheight = 12 // hardcoded
+	const stackspace  = 1
+	for(const m of snvindels) {
+
+		const g = tk.cnv_g.append('g')
+			.attr('transform','translate('+m.x+','+(tk.waterfall.axisheight-m.water.h)+')')
+
+		const color = getcolor_snvindel( m, tk )
 
 		const bgbox = g.append('rect')
 			.attr('x', -stackheight/2)
@@ -314,9 +598,10 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 		}
 
 		// to cover both cross & label, will be placed after deciding whether label is on left/right
-		m._p.cover = g.append('rect')
+		g.append('rect')
 			.attr('y', -stackheight/2)
-			.attr('width', stackheight+labelspace+labelw)
+			.attr('x',-stackheight/2)
+			.attr('width', stackheight)
 			.attr('height', stackheight)
 			.attr('fill','white')
 			.attr('fill-opacity', 0)
@@ -337,108 +622,9 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 				fgline1.attr('stroke',color)
 				fgline2.attr('stroke',color)
 			})
-
-		//////////////////////////////// set position for text label & cover
-
-		m._p.stackw = stackheight + 5 + labelw
-
-		if(block.width - m.x > labelw + labelspace + stackheight/2) {
-			// label on right
-			m._p.stackx = m.x-stackheight/2
-			m._p.g_x = stackheight/2
-			lab.attr('x', stackheight/2+labelspace)
-			m._p.cover.attr('x', -stackheight/2)
-
-		} else {
-			// label on left
-			m._p.stackx = m.x-stackheight/2-labelspace-labelw
-			m._p.g_x = stackheight/2+labelspace+labelw
-			lab
-				.attr('x', -stackheight/2-labelspace)
-				.attr('text-anchor','end')
-			m._p.cover.attr('x', -labelw-labelspace-stackheight/2 )
-		}
+		delete m.water
 	}
-
-
-	items.sort( (i,j)=> {
-		const xi = i._p ? i._p.stackx : Math.min(i.x1,i.x2)
-		const xj = j._p ? j._p.stackx : Math.min(j.x1,j.x2)
-		return xi - xj
-	})
-
-
-	const stacks=[ 0 ]
-	for(const item of items) {
-
-		const itemstart = item._p ? item._p.stackx : Math.min(item.x1, item.x2)
-		const itemwidth = item._p ? item._p.stackw : Math.abs(item.x1-item.x2)
-
-		for(let i=0; i<stacks.length; i++) {
-			if(stacks[i] <= itemstart ) {
-				stacks[i] = itemstart + itemwidth
-				item.stack=i
-				break
-			}
-		}
-		if(item.stack==undefined) {
-			item.stack=stacks.length
-			stacks.push( itemstart + itemwidth )
-		}
-	}
-
-	for(const item of items) {
-
-		if(item.dt==common.dtloh || item.dt==common.dtcnv || item.dt==common.dtitd) {
-
-			let color
-
-			if(item.dt==common.dtloh) {
-
-				color = 'rgba('+tk.cnvcolor.loh.r+','+tk.cnvcolor.loh.g+','+tk.cnvcolor.loh.b+','+(item.segmean/tk.cnvcolor.segmeanmax)+')'
-
-			} else if(item.dt==common.dtcnv){
-
-				if(item.value>0) {
-					color = 'rgba('+tk.cnvcolor.gain.r+','+tk.cnvcolor.gain.g+','+tk.cnvcolor.gain.b+','+(item.value/tk.cnvcolor.cnvmax)+')'
-				} else {
-					color = 'rgba('+tk.cnvcolor.loss.r+','+tk.cnvcolor.loss.g+','+tk.cnvcolor.loss.b+','+(-item.value/tk.cnvcolor.cnvmax)+')'
-				}
-			} else if(item.dt==common.dtitd) {
-
-				color = common.mclass[common.mclassitd].color
-			}
-
-			tk.cnv_g.append('rect')
-				.attr('x', Math.min(item.x1, item.x2) )
-				.attr('y', (stackheight+stackspace)*item.stack)
-				.attr('width', Math.max(1, Math.abs(item.x2-item.x1) ) )
-				.attr('height', stackheight)
-				.attr('fill',color)
-				.attr('shape-rendering','crispEdges')
-				.attr('stroke','none')
-				.attr('class','sja_aa_skkick')
-				.on('mouseover',()=>{
-					tooltip_singleitem({
-						item:item,
-						tk: tk
-					})
-				})
-				.on('mouseout',()=> {
-					tk.tktip.hide()
-				})
-			continue
-		}
-
-		if(item.dt==common.dtsnvindel) {
-
-			item._p.g
-				.attr('transform','translate('+(item._p.stackx+item._p.g_x)+','+(stackheight/2 + (stackheight+stackspace)*item.stack)+')')
-			continue
-		}
-	}
-
-	return stacks.length*(stackheight+stackspace)-stackspace
+	return true // successfully drawn
 }
 
 
