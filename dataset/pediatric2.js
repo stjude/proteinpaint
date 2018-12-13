@@ -189,7 +189,7 @@ module.exports={
 		mutation_signature: {
 			sets:{
 				pantargetsignature: {
-					name:'Pan-TARGET mutation signature',
+					name:'Mutation signature',
 					signatures:{
 						1:{
 							name:'Accumulation with age (COSMIC 1)',
@@ -235,6 +235,10 @@ module.exports={
 							name:'N/A (COSMIC 3)',
 							color:'#652F90',
 						},
+						n:{
+							nodata:1,
+							color:'#aaa'
+						}
 					}
 				}
 			}
