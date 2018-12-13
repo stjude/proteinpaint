@@ -18,6 +18,7 @@ updateLegend_multiSample
 may_legend_svchr
 may_legend_mclass
 may_legend_attribute
+may_legend_signature
 */
 
 
@@ -57,6 +58,9 @@ export function makeTk_legend(block, tk) {
 		create_svchrcolor( tk )
 	}
 
+
+	create_mutationsignature_single( tk )
+
 	create_sampleAttribute( tk )
 
 	create_mutationAttribute(tk)
@@ -86,6 +90,7 @@ export function update_legend(tk, block) {
 	may_legend_mclass(tk, block)
 	if(tk.singlesample) {
 		// only do above for single sample case
+		may_legend_signature_singlesample(tk, block )
 		return
 	}
 	// is multi-sample: also do following
@@ -388,6 +393,37 @@ function create_sampleAttribute(tk) {
 			.text(attr.label)
 
 		attr.legendholder = attr.legendrow.append('td')
+	}
+}
+
+
+
+function create_mutationsignature_single( tk ) {
+	if(!tk.singlesample) return
+	if(!tk.mds || !tk.mds.mutation_signature) return
+	/* dataset has mutation signature
+	will create legend for this track
+	but does not know if this sample has signature or not
+	so the legend <tr> remains hidden
+	and only show if it has signature for data in view range
+
+	also one sample could have mutation from more than one set of signature
+	thus, one legend <tr> should be shown for each signature set
+
+	*/
+	tk.mutation_signature_legend = {
+		sets:{}
+	}
+	for(const k in tk.mds.mutation_signature.sets) {
+		const tr = tk.legend_table.append('tr')
+			.style('display','none')
+		tr.append('td')
+			.text( tk.mds.mutation_signature.sets[k].name )
+		const td = tr.append('td')
+		tk.mutation_signature_legend.sets[ k ] = {
+			tr: tr,
+			td: td
+		}
 	}
 }
 
@@ -721,6 +757,70 @@ function may_legend_mclass(tk, block) {
 	const applychange = ()=>{
 		tk.tip2.hide()
 		loadTk(tk, block)
+	}
+}
+
+
+
+
+function may_legend_signature_singlesample(tk, block) {
+	/*
+	only for single sample
+	if mds has signature
+	*/
+
+	if( !tk.mds || !tk.mds.mutation_signature ) return
+	if(!tk.data_vcf) {
+		// currently signature data all come from vcf
+		return
+	}
+
+	// clear legend
+	for(const k in tk.mutation_signature_legend.sets) {
+		tk.mutation_signature_legend.sets[k].tr.style('display','none')
+	}
+
+	const set2signatures = new Map()
+
+	for(const m of tk.data_vcf) {
+		if(m.x==undefined) continue
+		if(!m.sampledata || !m.sampledata[0]) continue
+		for(const k in tk.mds.mutation_signature.sets) {
+			const v = m.sampledata[0][k]
+			if(v==undefined) continue
+			const obj = tk.mds.mutation_signature.sets[k].signatures[v]
+			if(obj) {
+				// has a valid signature for this set
+				// but will not count the 'no data' placeholder
+				if(obj.nodata) continue
+				if(!set2signatures.has(k)) set2signatures.set(k, new Map())
+				set2signatures.get(k).set( v, 1+(set2signatures.get(k).get(v) || 0))
+			}
+		}
+	}
+
+	for(const [k,o1] of set2signatures) {
+		const leg = tk.mutation_signature_legend.sets[k]
+		// turn on this tr
+		leg.tr.style('display','table-row')
+		leg.td.selectAll('*').remove()
+		const lst = [...o1].sort((i,j)=>j[1]-i[1])
+		for(const [v, count] of lst) {
+
+			const obj = tk.mds.mutation_signature.sets[k].signatures[v]
+
+			const cell = leg.td.append('div')
+				//.attr('class', 'sja_clb')
+				//.style('display','inline-block')
+			cell.append('div')
+				.style('display','inline-block')
+				.attr('class','sja_mcdot')
+				.style('background', obj.color)
+				.html( count>1 ? count : '&nbsp;')
+			cell.append('div')
+				.style('display','inline-block')
+				.html('&nbsp;'+obj.name)
+		}
 	}
 }
 
