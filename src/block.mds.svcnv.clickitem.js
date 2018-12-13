@@ -1519,12 +1519,15 @@ export function detailtable_singlesample(p) {
 						// this format field is a signature
 						const key = p.m_sample[ formatfield ]
 						const v = sigset.signatures[ key ]
-						const label = v ? v.name : 'Unknown ('+key+')'
-						const color = v ? v.color : 'black'
-						lst.push({
-							k: sigset.name,
-							v: '<span style="background:'+color+'">&nbsp;&nbsp;&nbsp;</span> '+label
-						})
+						// quick fix that there may be "nodata" as the decoy for indel
+						if(!v.nodata) {
+							const label = v ? v.name : 'Unknown ('+key+')'
+							const color = v ? v.color : 'black'
+							lst.push({
+								k: sigset.name,
+								v: '<span style="background:'+color+'">&nbsp;&nbsp;&nbsp;</span> '+label
+							})
+						}
 						continue
 					}
 				}
