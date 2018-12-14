@@ -4,6 +4,7 @@ import {legend_newrow} from './block.legend'
 import * as common from './common'
 import {loadTk} from './block.mds.svcnv'
 import {event as d3event} from 'd3-selection'
+import {rgb as d3rgb} from 'd3-color'
 
 /*
 *********** exported:
@@ -18,7 +19,7 @@ updateLegend_multiSample
 may_legend_svchr
 may_legend_mclass
 may_legend_attribute
-may_legend_signature
+may_legend_signature_singlesample
 */
 
 
@@ -417,12 +418,21 @@ function create_mutationsignature_single( tk ) {
 	for(const k in tk.mds.mutation_signature.sets) {
 		const tr = tk.legend_table.append('tr')
 			.style('display','none')
+
 		tr.append('td')
 			.text( tk.mds.mutation_signature.sets[k].name )
+			.style('text-align','right')
+			.style('opacity',.5)
+
 		const td = tr.append('td')
+		const table = td.append('table')
+			.style('border-spacing','0px')
+			.style('margin','10px')
+
 		tk.mutation_signature_legend.sets[ k ] = {
 			tr: tr,
-			td: td
+			td: td,
+			table: table
 		}
 	}
 }
@@ -770,15 +780,19 @@ function may_legend_signature_singlesample(tk, block) {
 	*/
 
 	if( !tk.mds || !tk.mds.mutation_signature ) return
+
+	// dataset is equipped with signature, but the sample may not have it, or there may not be any variants from view range
+	// still need to clear legend
+	for(const k in tk.mutation_signature_legend.sets) {
+		tk.mutation_signature_legend.sets[k].tr.style('display','none')
+	}
+
+
 	if(!tk.data_vcf) {
 		// currently signature data all come from vcf
 		return
 	}
 
-	// clear legend
-	for(const k in tk.mutation_signature_legend.sets) {
-		tk.mutation_signature_legend.sets[k].tr.style('display','none')
-	}
 
 	const set2signatures = new Map()
 
@@ -803,23 +817,25 @@ function may_legend_signature_singlesample(tk, block) {
 		const leg = tk.mutation_signature_legend.sets[k]
 		// turn on this tr
 		leg.tr.style('display','table-row')
-		leg.td.selectAll('*').remove()
+		leg.table.selectAll('*').remove()
+
 		const lst = [...o1].sort((i,j)=>j[1]-i[1])
 		for(const [v, count] of lst) {
 
 			const obj = tk.mds.mutation_signature.sets[k].signatures[v]
 
-			const cell = leg.td.append('div')
-				//.attr('class', 'sja_clb')
-				//.style('display','inline-block')
-			cell.append('div')
-				.style('display','inline-block')
-				.attr('class','sja_mcdot')
+			const tr = leg.table.append('tr')
+			tr.append('td')
 				.style('background', obj.color)
-				.html( count>1 ? count : '&nbsp;')
-			cell.append('div')
-				.style('display','inline-block')
+				.style('padding','0px 4px')
+				.style('color','white')
+				.style('text-align','right')
+				.html( count>1 ? count : '')
+			const c = d3rgb(obj.color)
+			tr.append('td')
 				.html('&nbsp;'+obj.name)
+				.style('background','rgba('+c.r+','+c.g+','+c.b+',.2)')
+				.style('opacity',.6)
 		}
 	}
 }
