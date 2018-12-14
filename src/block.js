@@ -7,7 +7,7 @@ import * as client from './client'
 import * as common from './common'
 import * as coord from './coord'
 import vcf2dstk from './vcf.tkconvert'
-
+import blockinit from './block.init'
 import * as Legend from    './block.legend'
 
 // track types
@@ -3117,9 +3117,73 @@ bedj_tooltip(tk, data, panel) {
 		.on('mouseout',()=>{
 			tk.tktip.hide()
 		})
+
+		/*
+		may enable clicking on a isoform to launch protein view
+		*/
+		if(data.mapisoform && data.mapisoform.find(i=>i.isoform)) {
+			// has isoform, enable clicking
+			img.on('click',()=>{
+				const p=d3mouse(img.node())
+				for(const i of data.mapisoform) {
+					const y=(i.y-1)*(tk.stackheight+tk.stackspace)
+					if(i.x1<p[0] && i.x2>p[0] && y<p[1] && y+tk.stackheight>p[1] && i.isoform) {
+						// hit an isoform
+						tk.tkconfigtip.clear()
+						.show(d3event.clientX-40, d3event.clientY)
+						.d
+						.append('div')
+						.attr('class','sja_menuoption')
+						.text('Gene/protein view for '+i.isoform)
+						.on('click',()=>{
+							tk.tkconfigtip.hide()
+							this.to_proteinview( i.isoform, tk )
+						})
+						return
+					}
+				}
+			})
+		} else {
+			img.on('click',null)
+		}
+
 	} else {
 		img.on('mouseover',null)
+			.on('click',null)
 	}
+}
+
+
+
+to_proteinview( isoform, fromgenetk ) {
+/*
+show protein view for a given isoform
+and bring along current tracks
+if fromgenetk is provided, will skip this track
+*/
+	const pane = client.newpane({x:100,y:100})
+	pane.header.text(isoform)
+	const arg = {
+		genome: this.genome,
+		debugmode: this.debugmode,
+		holder: pane.body,
+		jwt: this.jwt,
+		hostURL: this.hostURL,
+		tklst: [],
+		query: isoform
+	}
+	// bring along current tracks
+	for(const tk of this.tklst) {
+		if(fromgenetk && tk.tkid==fromgenetk.tkid) {
+			continue
+		}
+		if(tk.type == common.tkt.mdsexpressionrank) {
+			// FIXME somehow this track won't work
+			continue
+		}
+		arg.tklst.push(tk)
+	}
+	blockinit(arg)
 }
 
 
