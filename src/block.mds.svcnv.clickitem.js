@@ -1297,9 +1297,7 @@ export async function click_multi_singleitem( p ) {
 					.then(data=>{
 						if(data.error) throw(data.error)
 						if(!data.text) throw('.text missing')
-						/*
-						parse the text into json
-						*/
+
 						let json
 						try{
 							json = JSON.parse(data.text)
