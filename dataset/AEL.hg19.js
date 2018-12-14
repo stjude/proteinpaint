@@ -76,7 +76,7 @@ module.exports={
 
 			expressionrank_querykey:'genefpkm',
 			vcf_querykey:'snvindel',
-			multihidelabel_vcf:true,
+			multihidelabel_vcf:false,
 			multihidelabel_sv:true,
 			no_loh:1,
 		},
@@ -100,7 +100,7 @@ module.exports={
 			name:'AEL FPKM',
 			isgenenumeric:true,
 			file:'hg19/ael-mds/AEL.fpkm.gz',
-			datatype:'FPKM',
+			datatype:'log2CPM',
 
 			// for boxplots & circles, and the standalone expression track
 			itemcolor:'green',
