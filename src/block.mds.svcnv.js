@@ -3074,11 +3074,48 @@ function configPanel(tk, block) {
 
 	may_allow_showhidelabel_multi( tk, block )
 
+	may_allow_togglewaterfall_single(tk, block)
+
 	configPanel_cnvloh( tk, block )
 
 	configPanel_rnabam( tk, block, loadTk )
 }
 
+
+
+
+function may_allow_togglewaterfall_single(tk, block) {
+/*
+in single sample, when snvindel has more than 1, may show as waterfall
+the cutoff "1" may be configurable
+*/
+	if(!tk.singlesample) return
+
+	const row = tk.tkconfigtip.d.append('div')
+		.style('margin-bottom','15px')
+
+	if(!tk.data_vcf || tk.data_vcf.length<2) {
+		// not enough snvindel
+		row
+			.style('opacity',.5)
+			.text('No waterfall plot: not enough SNV/indels')
+		return
+	}
+
+	const id = Math.random()
+	row.append('input')
+		.attr('type','checkbox')
+		.attr('id',id)
+		.property('checked', tk.waterfall.inuse)
+		.on('change',()=>{
+			tk.waterfall.inuse = d3event.target.checked
+			render_singlesample(tk, block)
+			block.block_setheight()
+		})
+	row.append('label')
+		.attr('for', id)
+		.html('&nbsp;use Waterfall plot for SNV/indels')
+}
 
 
 
