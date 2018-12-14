@@ -264,8 +264,6 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 	const stackheight = 12 // hardcoded
 	const stackspace  = 1
 
-tk.waterfall.inuse=1
-
 	let waterfall_shown = false
 
 	if(tk.waterfall.inuse) {
