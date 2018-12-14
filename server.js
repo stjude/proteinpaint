@@ -1355,6 +1355,10 @@ should guard against file content error e.g. two tabs separating columns
 								x1:pxa,
 								x2:pxb,
 								y:1,
+								/*
+								isoform is for client to select one and launch protein view
+								*/
+								isoform: item.isoform,
 								name:show.join(' ')+printcoord(item.chr, e[0], e[1])
 							})
 						}
@@ -1381,6 +1385,7 @@ should guard against file content error e.g. two tabs separating columns
 								x1:pxa,
 								x2:pxb,
 								y:1,
+								isoform: item.isoform,
 								name:show.join(' ')+printcoord(item.chr, e[0], e[1])
 							})
 						}
@@ -1560,6 +1565,7 @@ should guard against file content error e.g. two tabs separating columns
 					x1:item.canvas.start,
 					x2:item.canvas.stop,
 					y:item.canvas.stack,
+					isoform: item.isoform,
 					name:show.join(' ')+printcoord(item.chr, item.start, item.stop)
 				})
 			}
