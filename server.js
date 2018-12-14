@@ -11660,9 +11660,13 @@ function parse_textfilewithheader( text ) {
 	parse each line as an item
 	*/
 	const lines = text.split(/\r?\n/)
+	/*
 	if(lines.length<=1) return ['no content']
-
 	if(lines[0] == '') return ['empty header line']
+	*/
+
+	// allow empty file
+	if(lines.length<=1 || !lines[0]) return [null,[]]
 
 	const header = lines[0].split('\t')
 	const items = []
@@ -12374,7 +12378,7 @@ function mds_init(ds,genome, _servconfig) {
 			if(!file.file) return '.file missing from one of .cohort.files'
 			const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
 			if(err) return 'cohort annotation file "'+file.file+'": '+err
-			if(items.length==0) return 'no content from sample annotation file '+file.file
+			//if(items.length==0) return 'no content from sample annotation file '+file.file
 			console.log(items.length+' samples loaded from annotation file '+file.file)
 			items.forEach( i=> {
 
