@@ -127,6 +127,8 @@ thus to be made into samplerule.set{}
 
 
 function init_dataset_config(obj) {
+/* this step is not essential, keep it here in case need to load more
+*/
 	const par = {
 		genome: obj.genome.name,
 		dslabel: obj.mds.label,
