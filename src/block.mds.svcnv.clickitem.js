@@ -753,7 +753,16 @@ export function tooltip_multi_svdense(g, tk, block) {
 	tk.tktip.clear()
 		.show(d3event.clientX,d3event.clientY)
 
-	const lst = [{k:'Cancer',v:g.name}]
+	let grouplabel = 'Group'
+	if(tk.groupsamplebyattr && tk.groupsamplebyattr.attrlst) {
+		// passed from mds.query
+		grouplabel = tk.groupsamplebyattr.attrlst[ tk.groupsamplebyattr.attrlst.length-1 ].label
+	}
+		
+	const lst = [{
+		k: grouplabel,
+		v: g.name
+	}]
 
 	let svnum=0,
 		fusionnum=0
