@@ -2400,7 +2400,7 @@ block
 			st.stop = m._pos
 			st.sv = {}
 
-		} else if(m.dt == common.dtfusion) {
+		} else if(m.dt == common.dtfusionrna) {
 			st.chr = m._chr
 			st.start = m._pos
 			st.stop = m._pos
