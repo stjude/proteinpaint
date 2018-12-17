@@ -9150,6 +9150,8 @@ async function handle_mdssurvivalplot (req,res) {
 
 		const samplesets = await handle_mdssurvivalplot_dividesamples( samples, q, ds, samples )
 
+		const pvalue = await handle_mdssurvivalplot_pvalue( samplesets )
+
 		for(const s of samplesets) {
 			handle_mdssurvivalplot_plot( s )
 		}
@@ -9157,12 +9159,87 @@ async function handle_mdssurvivalplot (req,res) {
 		for(const s of samplesets) {
 			delete s.lst
 		}
-		res.send({ samplesets: samplesets })
+		res.send({
+			samplesets: samplesets,
+			pvalue: pvalue
+			})
 
 	} catch(err) {
 		if(err.stack) console.error(err.stack)
 		res.send({error: (err.message || err)})
 	}
+}
+
+
+async function handle_mdssurvivalplot_pvalue ( samplesets ) {
+/* [ each_set ]
+.lst[]
+	.serialtime
+	.censored
+*/
+	const lines = ['futime\tfustat\trx']
+	for(const [i, set] of samplesets.entries()) {
+		for(const v of set.lst) {
+			lines.push(v.serialtime+'\t'+v.censored+'\t'+i)
+		}
+	}
+	const datafile = await handle_mdssurvivalplot_pvalue_write1( lines)
+	const {scriptfile,outfile} = await handle_mdssurvivalplot_pvalue_write2( datafile )
+	await handle_mdssurvivalplot_pvalue_test( scriptfile)
+	const p = handle_mdssurvivalplot_pvalue_read(outfile)
+	fs.unlink( datafile, ()=>{} )
+	fs.unlink( scriptfile, ()=>{} )
+	fs.unlink( outfile, ()=>{} )
+	return p
+}
+
+function handle_mdssurvivalplot_pvalue_read ( file ) {
+	return new Promise((resolve, reject)=>{
+		fs.readFile( file, {encoding:'utf8'}, (err,data)=>{
+			if(err) reject('cannot read result')
+			const lst = data.trim().split('\n')
+			const v = lst[lst.length-1].split('p= ')[1]
+			resolve(Number.parseFloat(v))
+		})
+	})
+}
+
+function handle_mdssurvivalplot_pvalue_write1 ( lines ) {
+	const file = path.join(serverconfig.cachedir, Math.random().toString() )+'.tab'
+	return new Promise((resolve, reject)=>{
+		fs.writeFile( file, lines.join('\n')+'\n', (err)=>{
+			if(err) reject('cannot write')
+			resolve( file )
+		})
+	})
+}
+function handle_mdssurvivalplot_pvalue_write2 ( datafile ) {
+	const scriptfile = path.join(serverconfig.cachedir, Math.random().toString() )+'.R'
+	const outfile = scriptfile+'.out'
+	const lines=['dat<-read.table("'+datafile+'",sep="\t",header=TRUE)',
+		'library(survival)',
+		'sink("'+outfile+'")',
+		'print(survdiff(Surv(futime, fustat) ~ rx,data=dat))',
+		'sink()'
+		]
+
+	return new Promise((resolve, reject)=>{
+		fs.writeFile( scriptfile, lines.join('\n')+'\n', (err)=>{
+			if(err) reject('cannot write')
+			resolve( {scriptfile:scriptfile, outfile:outfile})
+		})
+	})
+}
+function handle_mdssurvivalplot_pvalue_test ( scriptfile ) {
+	return new Promise((resolve, reject)=>{
+		const sp = spawn( 'Rscript', [scriptfile] )
+		sp.on('close', ()=>{
+			resolve()
+		})
+		sp.on('error', (e)=>{
+			reject( 'cannot run survdiff' )
+		})
+	})
 }
 
 

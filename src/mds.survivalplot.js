@@ -376,6 +376,7 @@ push button to re-render
 	p.d = obj.plotdiv.append('div').style('margin','20px'),
 
 	p.legend = {
+		d_pvalue: p.d.append('div').style('margin','10px'),
 		d_samplefull: p.d.append('div').style('margin','10px'),
 		d_curves: p.d.append('div').style('margin','10px')
 	}
@@ -539,6 +540,14 @@ function doPlot( plot, obj ) {
 		.attr('height', plot.toppad+plot.height+plot.xaxispad+plot.xaxish)
 
 	// legend
+	if(Number.isFinite(plot.pvalue)) {
+		plot.legend.d_pvalue
+			.style('display','block')
+			.text('P-value: '+plot.pvalue)
+	} else {
+		plot.legend.d_pvalue
+			.style('display','none')
+	}
 	plot.legend.d_curves.selectAll('*').remove()
 	for(const c of plot.samplesets) {
 		plot.legend.d_curves.append('div')
@@ -557,11 +566,17 @@ function loadPlot (plot, obj) {
 		type: plot.type,
 		samplerule: plot.samplerule,
 	}
+	
+	plot.svg.append('text')
+		.text('Loading...')
+		.attr('y',20)
+
 	client.dofetch('mdssurvivalplot', par)
 	.then(data=>{
 		if(data.error) throw data.error
 		if(!data.samplesets) throw 'samplesets[] missing'
 		plot.samplesets = data.samplesets
+		plot.pvalue = data.pvalue
 		doPlot( plot, obj )
 	})
 	.catch(e=>{
