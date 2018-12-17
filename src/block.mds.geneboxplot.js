@@ -98,7 +98,8 @@ export function init(p) {
 
 	plot.table_boxplotstats = plot.holder.append('table')
 		.style('margin','10px')
-		.style('border-spacing','2px')
+		.style('border-spacing','4px')
+		.style('border-collapse','separate')
 
 	// TODO no log conversion if there is negative value (z-score)
 	buttonrow.append('button')
@@ -774,7 +775,8 @@ only when .data.lst[] is returned by server
 		const pane = client.newpane({x:100,y:100})
 		pane.header.text(plot.gene+' '+plot.gecfg.datatype)
 		const table = pane.body.append('table')
-			.style('border-spacing','2px')
+			.style('border-spacing','4px')
+			.style('border-collapse','separate')
 		const tr=table.append('tr')
 		tr.append('td').text('Sample')
 			.style('font-size','.8em')
@@ -824,7 +826,8 @@ server may deny the request!
 			if(data.error) throw data.error
 			wait.remove()
 			const table = pane.body.append('table')
-				.style('border-spacing','2px')
+				.style('border-spacing','4px')
+				.style('border-collapse','separate')
 			const tr=table.append('tr')
 			tr.append('td').text('Sample')
 				.style('font-size','.8em')
@@ -906,6 +909,7 @@ function init2(x,y, plot, group) {
 			pane2.header.text( pane.header.node().innerHTML )
 			const table=pane2.body.append('table')
 				.style('border-spacing','2px')
+				.style('border-collapse','separate')
 			const tr=table.append('tr')
 			tr.append('td')
 				.text('Sample')
