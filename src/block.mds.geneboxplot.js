@@ -35,6 +35,13 @@ sloppy design!!!
 	.querykey
 	.valueCutoff
 	.bplengthUpperLimit
+
+
+plot.data{} is returned by server
+if .data.lst[], then there is no sample grouping
+if .data.groups[], then there is boxplots for each group
+
+
 */
 
 
@@ -80,6 +87,8 @@ export function init(p) {
 	const buttonrow=plot.holder.append('div')
 		.style('margin','10px')
 
+	plot.buttonrow = buttonrow
+
 	// below button row, show/hide boxes
 	const configdiv=plot.holder.append('div')
 		.style('margin','10px')
@@ -87,8 +96,9 @@ export function init(p) {
 		.style('padding','10px')
 		.style('display','none')
 
-	const showdatatable = plot.holder.append('table')
+	plot.table_boxplotstats = plot.holder.append('table')
 		.style('margin','10px')
+		.style('border-spacing','2px')
 
 	// TODO no log conversion if there is negative value (z-score)
 	buttonrow.append('button')
@@ -361,44 +371,10 @@ export function init(p) {
 	}
 
 
-	buttonrow.append('button')
-		.text('Data')
-		.on('click',()=>{
-			if(showdatatable.style('display')=='block') {
-				client.disappear(showdatatable)
-				return
-			}
-
-			showdatatable.selectAll('*').remove()
-			const tr=showdatatable.append('tr')
-			tr.append('td').text('Group')
-				.style('font-size','.8em')
-				.style('opacity',.5)
-			tr.append('td').text('1st quartile')
-				.style('font-size','.8em')
-				.style('opacity',.5)
-			tr.append('td').text('Median')
-				.style('font-size','.8em')
-				.style('opacity',.5)
-			tr.append('td').text('3rd quartile')
-				.style('font-size','.8em')
-				.style('opacity',.5)
-			if(plot.data && plot.data.groups) {
-				for(const [i,g] of plot.data.groups.entries()) {
-					const tr = showdatatable.append('tr')
-						.style('background', i%2 ? '' : '#f1f1f1' )
-					tr.append('td').text(g.name)
-
-					const boxplot = g.boxplots ? g.boxplots[0] : null
-
-					tr.append('td').text( boxplot ? boxplot.p25 : '')
-					tr.append('td').text( boxplot ? boxplot.p50 : '')
-					tr.append('td').text( boxplot ? boxplot.p75 : '')
-				}
-			}
-
-			client.appear(showdatatable)
-		})
+	/*
+	since it will only know if the gene has boxplots or not after server returns
+	the boxplot button is shown after that
+	*/
 
 
 	plot.svg=plot.holder.append('svg')
@@ -553,7 +529,6 @@ export function init(p) {
 
 function loadplot(plot) {
 	const arg={
-		jwt: plot.jwt,
 		genome: plot.genome.name,
 		gene:plot.gene,
 		chr:plot.chr,
@@ -579,11 +554,7 @@ function loadplot(plot) {
 		.attr('x',plot.svg.attr('width')/2)
 		.attr('y',plot.svg.attr('height')/2)
 
-	fetch(new Request(plot.hostURL+'/mdsgeneboxplot',{
-		method:'POST',
-		body:JSON.stringify(arg)
-	}))
-	.then(data=>{return data.json()})
+	client.dofetch('mdsgeneboxplot',arg)
 	.then(data=>{
 
 		if(data.error) throw({message:data.error})
@@ -608,6 +579,9 @@ function loadplot(plot) {
 			/* all samples are in one group
 			no boxplot; show waterfall plot
 			*/
+
+			addbutton_showdata_fromlst(plot)
+
 			for(const d of data.lst) {
 				d.circle=plot.g0.append('circle')
 					.attr('fill','white')
@@ -630,6 +604,10 @@ function loadplot(plot) {
 			/* samples in groups
 			one boxplot per group
 			*/
+
+			addbutton_boxplotstats( plot )
+			addbutton_showdata_newquery(plot)
+
 			for(const [i,g] of data.groups.entries()) {
 
 				g.g = plot.g0.append('g')
@@ -743,6 +721,132 @@ function loadplot(plot) {
 
 
 
+function addbutton_boxplotstats ( plot ) {
+/*
+call when server returns .data.groups[] but not .data.lst[]
+*/
+	plot.buttonrow.append('button')
+		.text('Boxplots')
+		.on('click',()=>{
+			if(plot.table_boxplotstats.style('display')=='block') {
+				client.disappear(plot.table_boxplotstats)
+				return
+			}
+
+			plot.table_boxplotstats.selectAll('*').remove()
+			const tr=plot.table_boxplotstats.append('tr')
+			tr.append('td').text('Group')
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			tr.append('td').text('1st quartile')
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			tr.append('td').text('Median')
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			tr.append('td').text('3rd quartile')
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			for(const [i,g] of plot.data.groups.entries()) {
+				const tr = plot.table_boxplotstats.append('tr')
+					.style('background', i%2 ? '' : '#f1f1f1' )
+				tr.append('td').text(g.name)
+
+				const boxplot = g.boxplots ? g.boxplots[0] : null
+
+				tr.append('td').text( boxplot ? boxplot.p25 : '')
+				tr.append('td').text( boxplot ? boxplot.p50 : '')
+				tr.append('td').text( boxplot ? boxplot.p75 : '')
+			}
+			client.appear(plot.table_boxplotstats)
+		})
+}
+
+
+
+function addbutton_showdata_fromlst ( plot ) {
+/*
+only when .data.lst[] is returned by server
+*/
+	plot.buttonrow.append('button')
+	.text(plot.gecfg.datatype)
+	.on('click',()=>{
+		const pane = client.newpane({x:100,y:100})
+		pane.header.text(plot.gene+' '+plot.gecfg.datatype)
+		const table = pane.body.append('table')
+			.style('border-spacing','2px')
+		const tr=table.append('tr')
+		tr.append('td').text('Sample')
+			.style('font-size','.8em')
+			.style('opacity',.5)
+		tr.append('td').text(plot.gecfg.datatype)
+			.style('font-size','.8em')
+			.style('opacity',.5)
+		for(const i of plot.data.lst) {
+			const tr=table.append('tr')
+			tr.append('td').text(i.sample)
+			tr.append('td').text(i.value)
+		}
+	})
+}
+
+
+function addbutton_showdata_newquery ( plot ) {
+/*
+only when .data.lst[] is not returned by server
+to query server for it
+only for official mds
+server may deny the request!
+*/
+	plot.buttonrow.append('button')
+	.text(plot.gecfg.datatype)
+	.on('click',()=>{
+		const pane = client.newpane({x:100,y:100})
+		pane.header.text(plot.gene+' '+plot.gecfg.datatype)
+		const wait = pane.body.append('div')
+			.style('margin','30px')
+			.text('Loading...')
+
+		const arg={
+			genome: plot.genome.name,
+			gene:plot.gene,
+			chr:plot.chr,
+			start:plot.start,
+			stop:plot.stop,
+			dslabel:plot.dslabel,
+			querykey:plot.querykey,
+			getalllst:1
+		}
+
+		client.dofetch('mdsgeneboxplot',arg)
+		.then(data=>{
+
+			if(data.error) throw data.error
+			wait.remove()
+			const table = pane.body.append('table')
+				.style('border-spacing','2px')
+			const tr=table.append('tr')
+			tr.append('td').text('Sample')
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			tr.append('td').text(plot.gecfg.datatype)
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			for(const i of data.lst) {
+				const tr=table.append('tr')
+				tr.append('td').text(i.sample)
+				tr.append('td').text(i.value)
+			}
+		})
+		.catch(e=>{
+			wait.text('Error: '+(e.message || e))
+			if(e.stack) console.log(e.stack)
+		})
+	})
+}
+
+
+
 
 
 
@@ -801,13 +905,20 @@ function init2(x,y, plot, group) {
 			const pane2=client.newpane({x:200, y:200})
 			pane2.header.text( pane.header.node().innerHTML )
 			const table=pane2.body.append('table')
+				.style('border-spacing','2px')
 			const tr=table.append('tr')
-			tr.append('td').text('sample')
-			tr.append('td').text(plot.gecfg.datatype)
+			tr.append('td')
+				.text('Sample')
+				.style('font-size','.8em')
+				.style('opacity',.5)
+			tr.append('td')
+				.text(plot.gecfg.datatype)
+				.style('font-size','.8em')
+				.style('opacity',.5)
 
 			for(const [i,d] of pp.data.lst.entries()) {
 				const tr=table.append('tr')
-				if(!(i%2)) tr.style('background','#f1f1f1')
+				//if(!(i%2)) tr.style('background','#f1f1f1')
 
 				const td=tr.append('td').text(d.sample)
 
@@ -1160,7 +1271,6 @@ function init2(x,y, plot, group) {
 function loadplot2(pp) {
 	const _p=pp._plot
 	const arg={
-		jwt: _p.jwt,
 		genome: _p.genome.name,
 		gene: _p.gene,
 		chr: _p.chr,
@@ -1188,11 +1298,7 @@ function loadplot2(pp) {
 		.attr('x',pp.svg.attr('width')/2)
 		.attr('y',pp.svg.attr('height')/2)
 
-	fetch(new Request(_p.hostURL+'/mdsgeneboxplot',{
-		method:'POST',
-		body:JSON.stringify(arg)
-	}))
-	.then(data=>{return data.json()})
+	client.dofetch('mdsgeneboxplot',arg)
 	.then(data=>{
 
 		// incoming new data

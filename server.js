@@ -7324,6 +7324,11 @@ function handle_mdsgeneboxplot( req, res ) {
 		}
 	}
 
+	if(req.query.getalllst) {
+		// to get expression data for all samples but not boxplots
+		// server may not allow and deny
+	}
+
 
 	Promise.resolve()
 	.then(()=>{
@@ -7362,6 +7367,7 @@ function handle_mdsgeneboxplot( req, res ) {
 
 			/* use following when making boxplot for official dataset
 			store those samples without annotation to be shown as separate group
+			also as a holder for getalllst
 			*/
 			const nogroupvalues=[]
 
@@ -7377,6 +7383,11 @@ function handle_mdsgeneboxplot( req, res ) {
 				if(!j.gene) return
 				if(j.gene!=req.query.gene) return
 				if(!Number.isFinite(j.value)) return
+
+				if(req.query.getalllst) {
+					nogroupvalues.push( {sample:j.sample, value:j.value} ) // hardcoded key
+					return
+				}
 
 				if(req.query.getgroup) {
 					if(!j.sample) return
@@ -7508,6 +7519,10 @@ function handle_mdsgeneboxplot( req, res ) {
 	})
 	.then( groups =>{
 
+		if(req.query.getalllst) {
+			return groups[0].values
+		}
+
 		// sv/cnv/loh overlaying
 		
 		if(!svcnv || (!req.query.svcnv.useloss && !req.query.svcnv.usegain && !req.query.svcnv.usesv)) {
@@ -7589,6 +7604,10 @@ function handle_mdsgeneboxplot( req, res ) {
 
 	})
 	.then(data=>{
+
+		if(req.query.getalllst) {
+			return res.send({lst: data})
+		}
 
 		const {groups, sample2event} = data
 
