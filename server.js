@@ -9150,7 +9150,10 @@ async function handle_mdssurvivalplot (req,res) {
 
 		const samplesets = await handle_mdssurvivalplot_dividesamples( samples, q, ds, samples )
 
-		const pvalue = await handle_mdssurvivalplot_pvalue( samplesets )
+		let pvalue
+		if(samplesets.length>1) {
+			pvalue = await handle_mdssurvivalplot_pvalue( samplesets )
+		}
 
 		for(const s of samplesets) {
 			handle_mdssurvivalplot_plot( s )
