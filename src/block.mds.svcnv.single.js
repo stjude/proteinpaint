@@ -417,6 +417,10 @@ function render_singlesample_stack( items, tk, block, svheight ) {
 	for(const item of items) {
 
 		if(waterfall_shown && item.dt==common.dtsnvindel) continue
+		/*
+		must delete
+		*/
+		delete item.stack
 
 		const itemstart = item._p ? item._p.stackx : Math.min(item.x1, item.x2)
 		const itemwidth = item._p ? item._p.stackw : Math.abs(item.x1-item.x2)
