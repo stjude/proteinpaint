@@ -743,46 +743,8 @@ function render_multi_vcfdense( tk, block) {
 
 	if(!tk.data_vcf || tk.data_vcf.length==0) return 0
 
-	// list of bins
-	const binw=10 // pixel
-	const bins=[]
-	let x=0
-	while(x<block.width) {
-		bins.push({
-			x1:x,
-			x2:x+binw,
-			lst:[]
-		})
-		x+=binw
-	}
-	x=block.width
-	for(const p of block.subpanels) {
-		x+=p.leftpad
-		let b=0
-		while(b<p.width) {
-			bins.push({
-				x1:x+b,
-				x2:x+b+binw,
-				lst:[]
-			})
-			b+=binw
-		}
-		x+=p.width
-	}
+	const bins = render_multi_vcfdense_2bins( tk, block )
 
-	// m to bins
-	for(const m of tk.data_vcf) {
-		if(m.x==undefined) {
-			// unmapped
-			continue
-		}
-		for(const b of bins) {
-			if(b.x1<=m.x && b.x2>=m.x) {
-				b.lst.push(m)
-				break
-			}
-		}
-	}
 
 	// group m in each bin by class
 	for(const b of bins) {
@@ -884,7 +846,7 @@ function render_multi_vcfdense( tk, block) {
 	for(const b of bins) {
 		if(!b.groups) continue
 
-		const g=tk.vcfdensityg.append('g').attr('transform','translate('+((b.x1+b.x2)/2)+',0)')
+		const g=tk.vcfdensityg.append('g').attr('transform','translate('+b.x+',0)')
 
 		let y=b.offset
 
@@ -953,6 +915,74 @@ function render_multi_vcfdense( tk, block) {
 
 
 
+function render_multi_vcfdense_2bins ( tk, block ) {
+
+	if(block.exonsf>=3) {
+		// group by basepairs
+		const bp2lst = new Map()
+		for(const m of tk.data_vcf) {
+			if(m.x==undefined) continue
+			if(!bp2lst.has(m.pos)) {
+				bp2lst.set(m.pos,{
+					x: m.x,
+					lst: []
+				})
+			}
+			bp2lst.get(m.pos).lst.push(m)
+		}
+		const bins = []
+		for(const b of bp2lst.values()) {
+			bins.push(b)
+		}
+		return bins
+	}
+
+	// fixed pixel width
+	const binw=10 // pixel
+	const bins=[]
+	let x=0
+	while(x<block.width) {
+		bins.push({
+			x1:x,
+			x2:x+binw,
+			x: x+binw/2,
+			lst:[]
+		})
+		x+=binw
+	}
+	x=block.width
+	for(const p of block.subpanels) {
+		x+=p.leftpad
+		let b=0
+		while(b<p.width) {
+			bins.push({
+				x1:x+b,
+				x2:x+b+binw,
+				lst:[]
+			})
+			b+=binw
+		}
+		x+=p.width
+	}
+
+	// m to bins
+	for(const m of tk.data_vcf) {
+		if(m.x==undefined) {
+			// unmapped
+			continue
+		}
+		for(const b of bins) {
+			if(b.x1<=m.x && b.x2>=m.x) {
+				b.lst.push(m)
+				break
+			}
+		}
+	}
+	return bins
+}
+
+
+
 
 
 function render_multi_svdense( svlst, tk,block) {
@@ -965,43 +995,8 @@ function render_multi_svdense( svlst, tk,block) {
 	*/
 	if(!tk.isdense || svlst.length==0) return 0
 
-	// list of bins
-	const binw=10 // pixel
-	const tmpbins=[]
-	let x=0
-	while(x<block.width) {
-		tmpbins.push({
-			x1:x,
-			x2:x+binw,
-			lst:[]
-		})
-		x+=binw
-	}
+	const tmpbins = render_multi_svdense_2bins( svlst, tk, block )
 
-	x=block.width
-	for(const p of block.subpanels) {
-		x+=p.leftpad
-		let b=0
-		while(b<p.width) {
-			tmpbins.push({
-				x1:x+b,
-				x2:x+b+binw,
-				lst:[]
-			})
-			b+=binw
-		}
-		x+=p.width
-	}
-
-	// sv to bins
-	for(const sv of svlst) {
-		for(const b of tmpbins) {
-			if(b.x1<=sv.x && b.x2>=sv.x) {
-				b.lst.push(sv)
-				break
-			}
-		}
-	}
 
 	// since sv are breakends, one sv with both ends may be in the same bin, so much dedup
 	const bins = []
@@ -1099,7 +1094,7 @@ function render_multi_svdense( svlst, tk,block) {
 
 	for(const b of bins) {
 
-		const g=tk.svdensityg.append('g').attr('transform','translate('+((b.x1+b.x2)/2)+',0)')
+		const g=tk.svdensityg.append('g').attr('transform','translate('+b.x+',0)')
 
 		let y=b.offset
 
@@ -1154,6 +1149,70 @@ function render_multi_svdense( svlst, tk,block) {
 			.attr('stroke', b.groups[0].color)
 	}
 	return maxheight
+}
+
+
+function render_multi_svdense_2bins( svlst, tk, block ) {
+	// repetitive 
+	if(block.exonsf >= 3) {
+		// group by basepairs
+		const bp2lst = new Map()
+		for(const m of svlst) {
+			if(m.x==undefined) continue
+			if(!bp2lst.has(m._pos)) {
+				bp2lst.set(m._pos,{
+					x: m.x,
+					lst: []
+				})
+			}
+			bp2lst.get(m._pos).lst.push(m)
+		}
+		const bins = []
+		for(const b of bp2lst.values()) {
+			bins.push(b)
+		}
+		return bins
+	}
+
+	// list of bins
+	const binw=10 // pixel
+	const tmpbins=[]
+	let x=0
+	while(x<block.width) {
+		tmpbins.push({
+			x1:x,
+			x2:x+binw,
+			x: x+binw/2,
+			lst:[]
+		})
+		x+=binw
+	}
+
+	x=block.width
+	for(const p of block.subpanels) {
+		x+=p.leftpad
+		let b=0
+		while(b<p.width) {
+			tmpbins.push({
+				x1:x+b,
+				x2:x+b+binw,
+				lst:[]
+			})
+			b+=binw
+		}
+		x+=p.width
+	}
+
+	// sv to bins
+	for(const sv of svlst) {
+		for(const b of tmpbins) {
+			if(b.x1<=sv.x && b.x2>=sv.x) {
+				b.lst.push(sv)
+				break
+			}
+		}
+	}
+	return tmpbins
 }
 
 
