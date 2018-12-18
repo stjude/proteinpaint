@@ -351,12 +351,12 @@ push button to re-render
 			if(st.sv) {
 				const row = div.append('div')
 					.style('margin-bottom','20px')
-				row.append('span').html('SV at '+st.chr+':'+st.start+'&nbsp;')
+				row.append('span').html('SV at '+st.chr+':'+ (st.start==st.stop ? st.start : st.start+'-'+st.stop) +'&nbsp;')
 			}
 			if(st.fusion) {
 				const row = div.append('div')
 					.style('margin-bottom','20px')
-				row.append('span').html('fusion at '+st.chr+':'+st.start+'&nbsp;')
+				row.append('span').html('Fusion at '+st.chr+':'+ (st.start==st.stop ? st.start : st.start+'-'+st.stop) +'&nbsp;')
 			}
 			if(st.itd) {
 				const row = div.append('div')
