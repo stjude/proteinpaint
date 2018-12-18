@@ -669,6 +669,14 @@ function render_samplegroups( tk, block ) {
 				.attr('x1', -leftlabelticksize)
 				.attr('y1',vcfdensityheight/2)
 				.attr('y2',vcfdensityheight/2)
+			tk.vcfdensitylabelg.append('line')
+				.attr('stroke',color)
+				.attr('stroke-width',1)
+				.attr('shape-rendering','crispEdges')
+				.attr('stroke-dasharray','1,3')
+				.attr('x2', block.width)
+				.attr('y1',vcfdensityheight)
+				.attr('y2',vcfdensityheight)
 		}
 
 		if(svdensityheight) {
@@ -696,6 +704,14 @@ function render_samplegroups( tk, block ) {
 				.attr('x1', -leftlabelticksize)
 				.attr('y1',svdensityheight/2)
 				.attr('y2',svdensityheight/2)
+			tk.svdensitylabelg.append('line')
+				.attr('stroke',color)
+				.attr('stroke-width',1)
+				.attr('shape-rendering','crispEdges')
+				.attr('stroke-dasharray','1,3')
+				.attr('x2', block.width)
+				.attr('y1',svdensityheight)
+				.attr('y2',svdensityheight)
 		}
 	}
 
