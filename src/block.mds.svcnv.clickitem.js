@@ -35,6 +35,7 @@ make_svgraph
 printer_snvindel
 may_show_matrixbutton
 may_createbutton_survival_onemutation
+may_createbutton_survival_grouplab
 matrix_view()
 
 
@@ -2477,12 +2478,14 @@ function may_createbutton_survival_grouplab (arg) {
 /*
 in multi-sample mode, either dense or expanded
 click on group label to show button
-use current range
+use current range for finding mutations
+observe those in legend_mclass.hiddenvalues
 
 holder
 tk
 block
 samplegroup
+	.attributes
 */
 	if(!arg.tk.mds || !arg.tk.mds.survivalplot) {
 		return
@@ -2511,7 +2514,21 @@ samplegroup
 			st.stop = Math.max(a,b)
 		}
 
-		st.snvindel = {}
+		st.snvindel = {
+			hiddenclass: {}
+		}
+		{
+			let hashidden=false
+			for(const c of arg.tk.legend_mclass.hiddenvalues) {
+				if(common.mclass[c].dt == common.dtsnvindel) {
+					st.snvindel.hiddenclass[ c ] = 1
+					hashidden=true
+				}
+			}
+			if(!hashidden) {
+				delete st.snvindel.hiddenclass
+			}
+		}
 
 		if(!arg.tk.legend_mclass.hiddenvalues.has( common.dtcnv )) {
 			st.cnv = {

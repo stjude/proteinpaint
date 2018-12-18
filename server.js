@@ -9550,6 +9550,14 @@ only return the set of mutated sample names
 						}
 					}
 
+					if( st.snvindel.hiddenclass ) {
+						// filtering on mclass, must set mclass for the variant
+						common.vcfcopymclass( m, {} )
+						if(st.snvindel.hiddenclass[ m.class]) {
+							continue
+						}
+					}
+
 					for(const s of m.sampledata) {
 						if(samplenameset.has( s.sampleobj.name )) {
 							samplenames.add( s.sampleobj.name )
