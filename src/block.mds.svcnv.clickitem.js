@@ -137,6 +137,13 @@ export function click_samplegroup_showmenu ( samplegroup, tk, block ) {
 
 
 	may_show_matrixbutton(samplegroup, tk, block)
+
+	may_createbutton_survival_grouplab({
+		tk: tk,
+		block: block,
+		holder: tk.tip2.d,
+		samplegroup: samplegroup
+	})
 }
 
 
@@ -2444,6 +2451,107 @@ block
 			}
 		} else {
 			// do not set rule for sample-full
+		}
+
+		const pane = client.newpane({x:100, y: 100})
+		pane.header
+			.text('Survival plot')
+
+		import('./mds.survivalplot').then(_=>{
+			_.init(
+				{
+					genome: arg.block.genome,
+					mds: arg.tk.mds,
+					plotlist:[ plot ]
+				},
+				pane.body,
+				arg.block.debugmode
+			)
+		})
+	})
+}
+
+
+
+function may_createbutton_survival_grouplab (arg) {
+/*
+in multi-sample mode, either dense or expanded
+click on group label to show button
+use current range
+
+holder
+tk
+block
+samplegroup
+*/
+	if(!arg.tk.mds || !arg.tk.mds.survivalplot) {
+		return
+	}
+
+	arg.holder.append('div')
+	.text('Survival plot')
+	.attr('class','sja_menuoption')
+	.on('click',()=>{
+
+		arg.tk.tip2.hide()
+
+		const m = arg.m
+
+		// sample dividing rules
+		const st = {
+			mutation: 1
+		}
+		// get look range
+		{
+			const lst = arg.block.rglst
+			st.chr = lst[arg.block.startidx].chr
+			const a = lst[arg.block.startidx].start
+			const b = lst[arg.block.stopidx].stop
+			st.start = Math.min(a,b)
+			st.stop = Math.max(a,b)
+		}
+
+		st.snvindel = {}
+
+		if(!arg.tk.legend_mclass.hiddenvalues.has( common.dtcnv )) {
+			st.cnv = {
+				focalsizelimit: arg.tk.bplengthUpperLimit,
+				valuecutoff: arg.tk.valueCutoff,
+			}
+		}
+		if(!arg.tk.legend_mclass.hiddenvalues.has( common.dtloh )) {
+			st.loh = {
+				focalsizelimit: arg.tk.lohLengthUpperLimit,
+				valuecutoff: arg.tk.segmeanValueCutoff,
+			}
+		}
+		if(!arg.tk.legend_mclass.hiddenvalues.has( common.dtsv )) {
+			st.sv = {}
+		}
+		if(!arg.tk.legend_mclass.hiddenvalues.has( common.dtfusionrna )) {
+			st.fusion = {}
+		}
+		if(!arg.tk.legend_mclass.hiddenvalues.has( common.dtitd )) {
+			st.itd = {}
+		}
+
+		const plot = {
+			renderplot: 1, // instruct the plot to be rendered, no wait
+			samplerule:{
+				full:{},
+				set: st
+			}
+		}
+
+		/*
+		samplegroup.attributes[] can be more than 1
+		but samplerule.full only works for 1
+		*/
+		const attr = arg.samplegroup.attributes[ arg.samplegroup.attributes.length-1 ]
+		plot.samplerule.full = {
+			byattr:1,
+			key: attr.k,
+			value: attr.kvalue
 		}
 
 		const pane = client.newpane({x:100, y: 100})
