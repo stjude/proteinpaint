@@ -44,6 +44,7 @@ $ node utils/install.pp.js [options]
          
          Optional keys:
          URL     - URL of your PP server, to be inserted into public/bin/proteinpaint.js
+		           do not include trailing /bin/
                    default: http://localhost:3000/
          PORT    - port number for the node server
                    default: 3000
@@ -143,7 +144,7 @@ if( UC.USER ) {
 // replace url in js bundle
 if( UC.URL ) {
 	if( fs.existsSync('public/bin/template.js')) {
-		exec("sed 's%__PP_URL__%" + UC.URL + "%' public/bin/template.js > public/bin/proteinpaint.js")
+		exec("sed 's%__PP_URL__%" + path.join(UC.URL,'bin/') + "%' public/bin/template.js > public/bin/proteinpaint.js")
 	} else {
 		console.log('public/bin/template.js is missing; won\'t update URL.')
 	}
