@@ -262,109 +262,7 @@ push button to re-render
 	}
 
 
-	/*
-	possible group-dividing rules are now driven by what's in samplerule.set
-	*/
-
-	if(p.samplerule.set) {
-
-		const st = p.samplerule.set // shorthand
-
-		if(st.geneexpression) {
-			/*
-			divide samples by expression cutoff
-			*/
-
-			if(!st.bymedian && !st.byquartile) {
-				// none of the methods is set -- use default
-				st.bymedian = 1
-			}
-
-			const row = div.append('div')
-				.style('margin-bottom','10px')
-			row.append('span')
-				.style('opacity',.5)
-				.html('Divide samples by '+st.gene+' expression with&nbsp;')
-
-			const s = row.append('select')
-				.on('change',()=>{
-					const o = d3event.target.options[ d3event.target.selectedIndex]
-					if(o.median) {
-						p.samplerule.set.bymedian=1
-						delete p.samplerule.set.byquartile
-					} else if(o.quartile){
-						p.samplerule.set.byquartile = 1
-						delete p.samplerule.set.bymedian
-					}
-				})
-
-			s.append('option')
-				.text('median (group=2)')
-				.property('median',1)
-			s.append('option')
-				.text('quartile (group=4)')
-				.property('quartile',1)
-
-			if(st.bymedian) {
-				s.node().selectedIndex=0
-			} else if(st.bymedian) {
-				s.node().selectedIndex=1
-			}
-		}
-
-
-		if(st.mutation) {
-			/*
-			divide samples by mutations
-			*/
-			if(st.snvindel) {
-				const row = div.append('div')
-					.style('margin-bottom','20px')
-
-				if(st.snvindel.name) {
-					// name is the mutation, allow to choose whether to limit to this specific mutation
-
-					row.append('span').html('SNV/indel&nbsp;')
-
-					const s = row.append('select')
-					s.append('option')
-						.text(st.snvindel.name)
-						.property('named',1)
-					s.append('option')
-						.text('any mutation at '+st.chr+':'+st.start)
-
-				} else {
-					// no mutation name
-					row.append('span').text('SNV/indel at '+st.chr+':'+st.start)
-				}
-			}
-			if(st.cnv) {
-				const row = div.append('div')
-					.style('margin-bottom','20px')
-				row.append('span').html('Copy number variation over '+st.chr+':'+st.start+'-'+st.stop+' <span style="font-size:.7em">'+common.bplen(st.stop-st.start)+'</span>&nbsp;')
-			}
-			if(st.loh) {
-				const row = div.append('div')
-					.style('margin-bottom','20px')
-				row.append('span').html('LOH over '+st.chr+':'+st.start+'-'+st.stop+' <span style="font-size:.7em">'+common.bplen(st.stop-st.start)+'</span>&nbsp;')
-			}
-			if(st.sv) {
-				const row = div.append('div')
-					.style('margin-bottom','20px')
-				row.append('span').html('SV at '+st.chr+':'+ (st.start==st.stop ? st.start : st.start+'-'+st.stop) +'&nbsp;')
-			}
-			if(st.fusion) {
-				const row = div.append('div')
-					.style('margin-bottom','20px')
-				row.append('span').html('Fusion at '+st.chr+':'+ (st.start==st.stop ? st.start : st.start+'-'+st.stop) +'&nbsp;')
-			}
-			if(st.itd) {
-				const row = div.append('div')
-					.style('margin-bottom','20px')
-				row.append('span').html('ITD over '+st.chr+':'+st.start+'-'+st.stop+' <span style="font-size:.7em">'+common.bplen(st.stop-st.start)+'</span>&nbsp;')
-			}
-		}
-	}
+	show_dividerules( p, div )
 
 
 	div.append('button')
@@ -580,6 +478,15 @@ function loadPlot (plot, obj) {
 		plot.samplesets = data.samplesets
 		plot.pvalue = data.pvalue
 		doPlot( plot, obj )
+		if(plot.samplerule.set && plot.samplerule.set.mutation) {
+			// update sample count
+			if(plot.mutation_count.cnv) plot.mutation_count.cnv.html('(n='+data.count_cnv+')&nbsp;')
+			if(plot.mutation_count.loh) plot.mutation_count.loh.html('(n='+data.count_loh+')&nbsp;')
+			if(plot.mutation_count.snvindel) plot.mutation_count.snvindel.html('(n='+data.count_snvindel+')&nbsp;')
+			if(plot.mutation_count.sv) plot.mutation_count.sv.html('(n='+data.count_sv+')&nbsp;')
+			if(plot.mutation_count.fusion) plot.mutation_count.fusion.html('(n='+data.count_fusion+')&nbsp;')
+			if(plot.mutation_count.itd) plot.mutation_count.itd.html('(n='+data.count_itd+')&nbsp;')
+		}
 	})
 	.catch(e=>{
 		obj.sayerror(e)
@@ -592,12 +499,117 @@ function loadPlot (plot, obj) {
 
 
 
+function show_dividerules ( p, div ) {
+/*
+call during initing dom for a plot
+TODO allow config for each rule, e.g. mutation filters
+*/
+	if(!p.samplerule.set) return
+
+	const st = p.samplerule.set
+
+	if(st.geneexpression) {
+		/*
+		divide samples by expression cutoff
+		*/
+
+		if(!st.bymedian && !st.byquartile) {
+			// none of the methods is set -- use default
+			st.bymedian = 1
+		}
+
+		const row = div.append('div')
+			.style('margin-bottom','10px')
+		row.append('span')
+			.style('opacity',.5)
+			.html('Divide samples by '+st.gene+' expression with&nbsp;')
+
+		const s = row.append('select')
+			.on('change',()=>{
+				const o = d3event.target.options[ d3event.target.selectedIndex]
+				if(o.median) {
+					p.samplerule.set.bymedian=1
+					delete p.samplerule.set.byquartile
+				} else if(o.quartile){
+					p.samplerule.set.byquartile = 1
+					delete p.samplerule.set.bymedian
+				}
+			})
+
+		s.append('option')
+			.text('median (group=2)')
+			.property('median',1)
+		s.append('option')
+			.text('quartile (group=4)')
+			.property('quartile',1)
+
+		if(st.bymedian) {
+			s.node().selectedIndex=0
+		} else if(st.byquartile) {
+			s.node().selectedIndex=1
+		}
+	}
 
 
+	if(st.mutation) {
+		/*
+		divide samples by mutations
+		*/
 
+		p.mutation_count = {} // html place for showing # samples with each type of mutation, after data loaded
 
+		if(st.snvindel) {
+			const row = div.append('div')
+				.style('margin-bottom','20px')
 
+			p.mutation_count.snvindel = row.append('span')
 
+			if(st.snvindel.name) {
+				// name is the mutation, allow to choose whether to limit to this specific mutation
 
+				row.append('span').html('SNV/indel&nbsp;')
 
+				const s = row.append('select')
+				s.append('option')
+					.text(st.snvindel.name)
+					.property('named',1)
+				s.append('option')
+					.text('any mutation at '+st.chr+':'+st.start)
 
+			} else {
+				// no mutation name
+				row.append('span').text('SNV/indel at '+st.chr+':'+(st.start==st.stop ? st.start : st.start+'-'+st.stop))
+			}
+		}
+		if(st.cnv) {
+			const row = div.append('div')
+				.style('margin-bottom','20px')
+			p.mutation_count.cnv = row.append('span')
+			row.append('span').html('Copy number variation over '+st.chr+':'+st.start+'-'+st.stop+' <span style="font-size:.7em">'+common.bplen(st.stop-st.start)+'</span>&nbsp;')
+		}
+		if(st.loh) {
+			const row = div.append('div')
+				.style('margin-bottom','20px')
+			p.mutation_count.loh = row.append('span')
+			row.append('span').html('LOH over '+st.chr+':'+st.start+'-'+st.stop+' <span style="font-size:.7em">'+common.bplen(st.stop-st.start)+'</span>&nbsp;')
+		}
+		if(st.sv) {
+			const row = div.append('div')
+				.style('margin-bottom','20px')
+			p.mutation_count.sv = row.append('span')
+			row.append('span').html('SV at '+st.chr+':'+ (st.start==st.stop ? st.start : st.start+'-'+st.stop) +'&nbsp;')
+		}
+		if(st.fusion) {
+			const row = div.append('div')
+				.style('margin-bottom','20px')
+			p.mutation_count.fusion = row.append('span')
+			row.append('span').html('Fusion at '+st.chr+':'+ (st.start==st.stop ? st.start : st.start+'-'+st.stop) +'&nbsp;')
+		}
+		if(st.itd) {
+			const row = div.append('div')
+				.style('margin-bottom','20px')
+			p.mutation_count.itd = row.append('span')
+			row.append('span').html('ITD over '+st.chr+':'+st.start+'-'+st.stop+' <span style="font-size:.7em">'+common.bplen(st.stop-st.start)+'</span>&nbsp;')
+		}
+	}
+}
