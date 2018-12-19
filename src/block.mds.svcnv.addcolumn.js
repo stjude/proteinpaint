@@ -928,7 +928,7 @@ function genebarconfig_auto( usegene, genes, tk, block ) {
 		}
 	}
 
-	addbutton_boxplot( holder, usegene, tk, block )
+	mayadd_boxplotbutton( holder, usegene, tk, block )
 
 	if( tk.mds ) {
 		/*
@@ -957,7 +957,7 @@ function genebarconfig_fixed( fixedgene, tk, block ) {
 	tk.tkconfigtip.clear()
 		.showunder(d3event.target)
 
-	addbutton_boxplot( tk.tkconfigtip.d, fixedgene.gene, tk, block )
+	mayadd_boxplotbutton( tk.tkconfigtip.d, fixedgene.gene, tk, block )
 
 	mayadd_survivaloption(
 		tk.tkconfigtip.d, 
@@ -1338,8 +1338,10 @@ function drawgenebar_rnabam ( expbarwidth, maxvalue, row, gene, s, tk, block ) {
 
 
 
-function addbutton_boxplot(holder, usegene, tk, block) {
-	// dedicated button for boxplot
+function mayadd_boxplotbutton(holder, usegene, tk, block) {
+	// dedicated button for boxplot, for non rna-bam mode
+	if(tk.checkrnabam) return
+
 	holder.append('div')
 	.text(usegene+' '+tk.gecfg.datatype+' boxplot')
 	.attr('class','sja_menuoption')
