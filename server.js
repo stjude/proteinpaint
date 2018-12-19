@@ -9162,10 +9162,19 @@ async function handle_mdssurvivalplot (req,res) {
 		for(const s of samplesets) {
 			delete s.lst
 		}
-		res.send({
+		const result = {
 			samplesets: samplesets,
 			pvalue: pvalue
-			})
+			}
+		if(q.samplerule.set && q.samplerule.set.mutation) {
+			result.count_snvindel = q.samplerule.set.samples_snvindel.size
+			result.count_cnv = q.samplerule.set.samples_cnv.size
+			result.count_loh = q.samplerule.set.samples_loh.size
+			result.count_sv = q.samplerule.set.samples_sv.size
+			result.count_fusion = q.samplerule.set.samples_fusion.size
+			result.count_itd = q.samplerule.set.samples_itd.size
+		}
+		res.send( result )
 
 	} catch(err) {
 		if(err.stack) console.error(err.stack)
@@ -9289,6 +9298,14 @@ plottype{}
 async function handle_mdssurvivalplot_dividesamples_mutationanyornone ( samples, q, ds ) {
 	const st = q.samplerule.set
 
+	// init sample count for each type of mutation, to be returned to client
+	st.samples_snvindel = new Set()
+	st.samples_cnv = new Set()
+	st.samples_loh = new Set()
+	st.samples_sv = new Set()
+	st.samples_fusion = new Set()
+	st.samples_itd = new Set()
+
 	if(st.cnv && !st.snvindel && !st.loh && !st.sv && !st.fusion && !st.itd) {
 		// just cnv, samples will be divided into loss/gain/nochange
 		const [gainset,lossset] = await handle_mdssurvivalplot_getmutatedsamples( samples, q, ds, true )
@@ -9352,12 +9369,12 @@ async function handle_mdssurvivalplot_dividesamples_mutationanyornone ( samples,
 
 
 
-async function handle_mdssurvivalplot_getmutatedsamples( samples, q, ds, cnvonly ) {
+async function handle_mdssurvivalplot_getmutatedsamples( fullsamples, q, ds, cnvonly ) {
 /*
 if is cnvonly, will return two groups of samples, gain and loss each
 if not, will return all mutated samples
 */
-	const samplenameset = new Set( samples.map(i=>i.name) )
+	const fullsamplenameset = new Set( fullsamples.map(i=>i.name) )
 
 	const st = q.samplerule.set
 
@@ -9379,12 +9396,12 @@ if not, will return all mutated samples
 
 		if( cnvonly ) {
 			// cnv only, returns two groups for gain or loss
-			return await handle_mdssurvivalplot_getmutatedsamples_querysvcnv( svcnvquery, samplenameset, q, true )
+			return await handle_mdssurvivalplot_getmutatedsamples_querysvcnv( svcnvquery, fullsamplenameset, q, true )
 		}
 
 		// not just cnv
-		const samplenames = await handle_mdssurvivalplot_getmutatedsamples_querysvcnv( svcnvquery, samplenameset, q )
-		for(const n of samplenames) {
+		const names = await handle_mdssurvivalplot_getmutatedsamples_querysvcnv( svcnvquery, fullsamplenameset, q )
+		for(const n of names) {
 			mutsamples.add(n)
 		}
 	}
@@ -9393,20 +9410,11 @@ if not, will return all mutated samples
 	if(st.snvindel) {
 		if(!vcfquery) throw 'no vcf found in ds.queries'
 		for(const tk of vcfquery.tracks) {
-			const samplenames = await handle_mdssurvivalplot_getmutatedsamples_queryvcf( vcfquery, tk, samplenameset, q )
-			for(const n of samplenames) {
-				mutsamples.add(n)
-			}
+			await handle_mdssurvivalplot_getmutatedsamples_queryvcf( vcfquery, tk, fullsamplenameset, mutsamples, q )
 		}
 	}
 
-	const samples_withmut = []
-	for(const s of samples) {
-		if(mutsamples.has(s.name)) {
-			samples_withmut.push(s)
-		}
-	}
-	return samples_withmut
+	return fullsamples.filter(i=> mutsamples.has(i.name) )
 }
 
 
@@ -9427,9 +9435,9 @@ tk is from ds.queries{}
 	}
 	return new Promise((resolve,reject)=>{
 
-		const samplenames = new Set()
 		const gain = new Set() // use if cnvonly
 		const loss = new Set()
+		const mutsamples = new Set() // use if has other types in addition to cnv
 
 		const ps=spawn( tabix,
 			[
@@ -9445,6 +9453,11 @@ tk is from ds.queries{}
 			const stop  = Number.parseInt(l[2])
 			const j = JSON.parse(l[3])
 
+			if(!samplenameset.has(j.sample)) {
+				// sample not from the full set
+				return
+			}
+
 			if(j.dt==common.dtcnv) {
 				if(!st.cnv) {
 					// not look at cnv
@@ -9456,6 +9469,7 @@ tk is from ds.queries{}
 				if(st.cnv.valuecutoff && Math.abs(j.value)<st.cnv.valuecutoff) {
 					return
 				}
+
 				if(cnvonly) {
 					if(j.value>0) {
 						gain.add(j.sample)
@@ -9463,27 +9477,36 @@ tk is from ds.queries{}
 						loss.add(j.sample)
 					}
 				} else {
-					samplenames.add(j.sample)
+					mutsamples.add(j.sample)
 				}
+
+				st.samples_cnv.add(j.sample)
 				return
 			}
 			if(j.dt==common.dtloh) {
 				if(!st.loh) return
 				if(st.loh.focalsizelimit && stop-start>=st.loh.focalsizelimit) return
 				if(st.loh.valuecutoff && j.segmean<st.loh.valuecutoff) return
-				samplenames.add(j.sample)
+				mutsamples.add(j.sample)
+				st.samples_loh.add(j.sample)
 				return
 			}
 			if(j.dt==common.dtsv) {
-				samplenames.add(j.sample)
+				if(!st.sv) return
+				mutsamples.add(j.sample)
+				st.samples_sv.add(j.sample)
 				return
 			}
 			if(j.dt==common.dtfusion) {
-				samplenames.add(j.sample)
+				if(!st.fusion) return
+				mutsamples.add(j.sample)
+				st.samples_fusion.add(j.sample)
 				return
 			}
 			if(j.dt==common.dtitd) {
-				samplenames.add(j.sample)
+				if(!st.itd) return
+				mutsamples.add(j.sample)
+				st.samples_itd.add(j.sample)
 				return
 			}
 		})
@@ -9499,7 +9522,7 @@ tk is from ds.queries{}
 			if(cnvonly) {
 				resolve( [gain, loss])
 			} else {
-				resolve( samplenames )
+				resolve( mutsamples )
 			}
 		})
 	})
@@ -9508,7 +9531,7 @@ tk is from ds.queries{}
 
 
 
-async function handle_mdssurvivalplot_getmutatedsamples_queryvcf( vcfquery, tk, samplenameset, q ) {
+async function handle_mdssurvivalplot_getmutatedsamples_queryvcf( vcfquery, tk, samplenameset, mutsamples, q ) {
 /*
 only return the set of mutated sample names
 */
@@ -9522,7 +9545,6 @@ only return the set of mutated sample names
 	}
 	return new Promise((resolve,reject)=>{
 
-		const samplenames = new Set()
 		const ps=spawn( tabix,
 			[
 				tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
@@ -9560,7 +9582,8 @@ only return the set of mutated sample names
 
 					for(const s of m.sampledata) {
 						if(samplenameset.has( s.sampleobj.name )) {
-							samplenames.add( s.sampleobj.name )
+							mutsamples.add( s.sampleobj.name )
+							st.samples_snvindel.add(s.sampleobj.name)
 						}
 					}
 				}
@@ -9575,7 +9598,7 @@ only return the set of mutated sample names
 				reject(e)
 				return
 			}
-			resolve( samplenames )
+			resolve()
 		})
 	})
 }
