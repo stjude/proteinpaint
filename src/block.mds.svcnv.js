@@ -2816,7 +2816,6 @@ for both multi- and single-sample
 
 	if(tk.singlesample) {
 		// single-sample
-		console.log(tk.singlesample)
 
 		tk.waterfall = {
 			inuse: false,
