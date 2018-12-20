@@ -4060,9 +4060,7 @@ zoombutton_mouseover( fold, zoomout, button) {
 
 	const table = this.blocktip.d.append('table')
 
-	for(let panelidx=0; panelidx<this.subpanels.length; panelidx++) {
-
-		const panel = this.subpanels[panelidx]
+	for(const [panelidx, panel] of this.subpanels.entries()) {
 
 		const tr = table.append('tr')
 		tr.append('td')
@@ -4073,6 +4071,8 @@ zoombutton_mouseover( fold, zoomout, button) {
 				const mid = Math.ceil( (panel.start+panel.stop)/2 )
 				const span = Math.ceil( Math.max( (panel.stop-panel.start) * (zoomout ? fold : (1/fold)),   panel.width/ntpxwidth ) )
 				const chrlen = this.genome.chrlookup[panel.chr.toUpperCase()].len
+
+				// buggy!
 				if(mid < span/2) {
 					panel.start = 0
 					panel.stop = span
@@ -4083,6 +4083,9 @@ zoombutton_mouseover( fold, zoomout, button) {
 					panel.start = mid-Math.ceil(span/2)
 					panel.stop = panel.start+span
 				}
+
+				panel.start = Math.max(0, panel.start)
+				panel.stop = Math.min( panel.stop, chrlen )
 
 				panel.exonsf = panel.width / (panel.stop-panel.start)
 
