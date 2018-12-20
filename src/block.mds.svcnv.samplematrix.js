@@ -10,6 +10,7 @@ import {getsjcharts}     from './getsjcharts'
 may_show_samplematrix_button
 createbutton_addfeature
 createnewmatrix_withafeature
+
 ********************** INTERNAL
 addnewfeature_nosamplefilter
 
@@ -62,6 +63,16 @@ export function createbutton_addfeature( p ) {
 	const {m, tk, block, holder} = p
 
 	if(!m) return
+
+	if(m.dt==common.dtcnv || m.dt==common.dtloh) {
+		/*
+		server has 10mb range limit hardcoded
+		to avoid embarrassment, do not show button when out of limit
+		*/
+		if(m.stop - m.start >= 10000000) {
+			return
+		}
+	}
 
 	// generate new feature beforehand
 	let nf
