@@ -503,9 +503,21 @@ waterfall only plots snvindel, not breakpoint
 plot them in cnv_g, axis shown in .waterfall.axisgg{}
 */
 
+	// first item has no dist
+	snvindels[0].water = {
+		h: tk.waterfall.axisheight
+	}
+
 	let maxdist = 0
 	for(let i=1; i<snvindels.length; i++) {
 		const m = snvindels[i]
+		if(m.chr != snvindels[i-1].chr) {
+			// saw a new chr; snv from subpanel could be in different chr
+			m.water = {
+				h: tk.waterfall.axisheight
+			}
+			continue
+		}
 		m.water = {
 			bpdist: m.pos-snvindels[i-1].pos
 		}
@@ -537,11 +549,12 @@ plot them in cnv_g, axis shown in .waterfall.axisgg{}
 		.attr('y', tk.waterfall.axisheight/2+14)
 
 
-	snvindels[0].water = {
-		h: tk.waterfall.axisheight
-	}
 	for(let i=1; i<snvindels.length; i++) {
 		const m = snvindels[i]
+		if(m.water.h) {
+			// already set
+			continue
+		}
 		if(m.water.bpdist==0) {
 			m.water.h = 0
 		} else {
