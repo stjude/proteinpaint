@@ -400,6 +400,10 @@ function loadTk_do( tk, block ) {
 
 export function trackclear(tk) {
 	if(tk.singlesample) {
+		tk.waterfall.axisg.selectAll('*').remove()
+		tk.waterfall.lab1.text('')
+		tk.waterfall.lab2.text('')
+		tk.waterfall.lab3.text('')
 		tk.svvcf_g.selectAll('*').remove()
 		tk.cnv_g.selectAll('*').remove()
 		if(tk.cnvcolor.cnvlegend) tk.cnvcolor.cnvlegend.row.style('display','none')
