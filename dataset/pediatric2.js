@@ -190,6 +190,11 @@ module.exports={
 			sets:{
 				pantargetsignature: {
 					name:'Mutation signature',
+					samples:{
+						file:'hg19/TARGET/mutationsignature/sample2signature',
+						valuename: 'Number of somatic mutations per MB attributed to each signature',
+						skipzero:true,
+					},
 					signatures:{
 						1:{
 							name:'Accumulation with age (COSMIC 1)',

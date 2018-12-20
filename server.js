@@ -185,6 +185,7 @@ app.post('/hicdata',handle_hicdata)
 app.post('/checkrank',handle_checkrank)
 app.post('/samplematrix', handle_samplematrix)
 app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
+app.post('/mdssamplesignature',handle_mdssamplesignature)
 app.post('/mdssurvivalplot',handle_mdssurvivalplot)
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
@@ -384,7 +385,15 @@ function mds_clientcopy(ds) {
 		}
 
 		if(ds.cohort.mutation_signature) {
-			ds2.mutation_signature = ds.cohort.mutation_signature
+			const sets = {}
+			for(const k in ds.cohort.mutation_signature.sets) {
+				const s = ds.cohort.mutation_signature.sets[k]
+				sets[k] = {
+					name: s.name,
+					signatures: s.signatures
+				}
+			}
+			ds2.mutation_signature = { sets: sets }
 		}
 	}
 
@@ -9064,6 +9073,44 @@ function handle_mdssamplescatterplot (req,res) {
 
 
 
+function handle_mdssamplesignature(req,res) {
+	if(reqbodyisinvalidjson(req,res)) return
+	try {
+		const q = req.query
+		if(!q.sample) throw '.sample missing'
+		const gn = genomes[q.genome]
+		if(!gn) throw 'invalid genome'
+		const ds = gn.datasets[ q.dslabel ]
+		if(!ds) throw 'invalid dataset'
+		if(!ds.cohort) throw 'no cohort for dataset'
+		if(!ds.cohort.mutation_signature) throw 'no mutation_signature for cohort'
+		const lst = []
+		for(const k in ds.cohort.mutation_signature.sets) {
+			const s = ds.cohort.mutation_signature.sets[k]
+			if(!s.samples) continue
+			const v = s.samples.map.get(q.sample)
+			if(!v) continue
+			const l = []
+			for(const x in s.signatures) {
+				if(v[x]) {
+					l.push({k: x, v: v[x]})
+				}
+			}
+			if(l.length) {
+				lst.push({
+					key: k,
+					valuename: s.samples.valuename,
+					annotation: l.sort((i,j)=>j.v-i.v)
+				})
+			}
+		}
+		res.send({lst: lst})
+
+	} catch(err) {
+		if(err.stack) console.error(err.stack)
+		res.send({error: (err.message || err)})
+	}
+}
 
 
 
@@ -12390,6 +12437,39 @@ function mds_init(ds,genome, _servconfig) {
 				if(!p.iscensoredkey) return '.iscensoredkey missing from survivalplot '+k
 				p.key = k
 				if(!p.timelabel) p.timelabel = 'Years'
+			}
+		}
+
+		if( ds.cohort.mutation_signature) {
+			const s = ds.cohort.mutation_signature
+			if(!s.sets) return '.mutation_signature.sets missing'
+			for(const k in s.sets) {
+				const ss = s.sets[k]
+				if(!ss.name) ss.name = k
+				if(!ss.signatures) return '.signatures{} missing from a signature set'
+				if(ss.samples) {
+					if(!ss.samples.file) return '.samples.file missing from a signature set'
+					const [err,items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, ss.samples.file ), {encoding:'utf8'}).trim() )
+					ss.samples.map = new Map()
+					for(const i of items) {
+						const sample = i[ds.cohort.samplenamekey]
+						if(!sample) return ds.cohort.samplenamekey+' missing in file '+ss.samples.file
+						ss.samples.map.set( sample, i )
+
+						// parse to float
+						for(const sk in ss.signatures) {
+							if(i[sk]) {
+								const v = Number.parseFloat(i[sk])
+								if(Number.isNaN(v)) return 'mutation signature value is not float: '+i[sk]+' from sample '+sample
+								if(ss.samples.skipzero && v==0) {
+									delete i[sk]
+								} else {
+									i[sk] = v
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 

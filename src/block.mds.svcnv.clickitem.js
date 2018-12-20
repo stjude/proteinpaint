@@ -1,4 +1,6 @@
 import {event as d3event} from 'd3-selection'
+import {axisTop} from 'd3-axis'
+import {scaleLinear} from 'd3-scale'
 import * as client from './client'
 import * as common from './common'
 import {
@@ -1232,15 +1234,17 @@ export async function click_multi_singleitem( p ) {
 
 	const buttonrow = pane.body.append('div')
 		.style('margin','10px')
+	const folderdiv = pane.body.append('div')
+		.style('margin','10px')
 
 
-	may_show_svgraph( p, buttonrow, pane.body )
+	may_show_svgraph( p, buttonrow, folderdiv )
 
 
-	createbutton_focus( buttonrow, pane.body, p )
+	createbutton_focus( buttonrow, folderdiv, p )
 
 
-	may_createbutton_disco( buttonrow, pane.body, p )
+	may_createbutton_disco( buttonrow, folderdiv, p )
 
 
 	createbutton_addfeature( {
@@ -1251,7 +1255,7 @@ export async function click_multi_singleitem( p ) {
 		pane: pane
 	})
 
-	//may_createbutton_samplesignature( buttonrow, p.sample.samplename, p.tk, p.block )
+	may_createbutton_samplesignature( buttonrow, folderdiv, p.sample.samplename, p.tk, p.block )
 
 	may_createbutton_survival_onemutation({
 		holder: buttonrow,
@@ -2376,7 +2380,86 @@ async function may_createbutton_disco ( buttonrow, div, p ) {
 
 
 
-function may_createbutton_samplesignature( holder, samplename, tk, block ) {
+function may_createbutton_samplesignature( buttonrow, div, samplename, tk, block ) {
+	if(tk.iscustom || !tk.mds || !tk.mds.mutation_signature) return
+	client.dofetch('mdssamplesignature', {sample:samplename, genome:block.genome.name, dslabel:tk.mds.label} )
+	.then(data=>{
+		if(data.error) throw data.error
+		if(!data.lst) throw '.lst[] missing'
+		if(data.lst.length==0) {
+			// no
+			return
+		}
+		const holder = div.append('div')
+			.style('margin','10px')
+		for(const s of data.lst) {
+		console.log(s)
+			const ss = tk.mds.mutation_signature.sets[s.key]
+			const d2 = holder.append('div')
+				.style('margin-bottom','20px')
+			d2.append('div')
+				.text( ss.name )
+			d2.append('div')
+				.text( s.valuename)
+			const svg = d2.append('svg')
+			const fontsize=14,
+				rowh = 16,
+				barw = 200,
+				pad = 20,
+				rowspace = 2,
+				labelspace = 6,
+				axish = 40
+			const maxv = s.annotation[0].v
+			const minv = s.annotation[s.annotation.length-1].v
+			const scale = scaleLinear().domain([minv, maxv]).range([0, barw])
+			let labelw = 0
+			for(const i of s.annotation) {
+				svg.append('text')
+					.attr('font-family',client.font)
+					.attr('font-size',fontsize)
+					.text(ss.signatures[i.k].name)
+					.each(function(){ console.log(this.getBBox().width);labelw = Math.max(labelw, this.getBBox().width) })
+					.remove()
+			}
+			const g = svg.append('g')
+				.attr('transform','translate('+(pad+labelw+labelspace)+','+(pad+axish+rowspace)+')')
+			for(const [i,a] of s.annotation.entries()) {
+				const row = g.append('g')
+					.attr('transform','translate(0,'+((rowh+rowspace)*i)+')')
+				row.append('text')
+					.attr('font-family',client.font)
+					.attr('font-size',fontsize)
+					.attr('x',-labelspace)
+					.attr('text-anchor','end')
+					.attr('y',rowh/2)
+					.text(ss.signatures[a.k].name)
+					.attr('dominant-baseline','central')
+				row.append('rect')
+					.attr('width', Math.max(1,scale(a.v)))
+					.attr('height', rowh)
+					.attr('shape-rendering','crispEdges')
+					.attr('fill', ss.signatures[a.k].color)
+			}
+			svg.attr('width', pad+labelw+labelspace+barw+pad)
+				.attr('height', pad+axish+rowspace+(rowh+rowspace)*s.annotation.length+pad)
+		}
+		holder.style('display','none')
+		buttonrow.append('div')
+			.style('display','inline-block')
+			.attr('class', 'sja_menuoption')
+			.text('Mutation signature')
+			.on('click',()=>{
+				if(holder.style('display')=='none') {
+					client.appear(holder)
+				} else {
+					client.disappear(holder)
+				}
+			})
+	})
+	.catch(e=>{
+		if(e.stack) console.log(e.stack)
+		console.log(e.message||e)
+	})
 }
 
 
