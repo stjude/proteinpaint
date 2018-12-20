@@ -2804,9 +2804,15 @@ for both multi- and single-sample
 		}
 	}
 
+	/*
+	must do this first
+	it may set singlesample{} as is defined in datasetqueries of embedding call
+	*/
+	apply_customization_oninit( tk, block )
 
 	if(tk.singlesample) {
 		// single-sample
+		console.log(tk.singlesample)
 
 		tk.waterfall = {
 			inuse: false,
@@ -2814,6 +2820,11 @@ for both multi- and single-sample
 			bottompad: 10,
 			axisgg: tk.gleft.append('g'),
 		}
+		if(tk.singlesample.waterfall) {
+			// default setting sneaked in from embedding call
+			tk.waterfall.inuse = tk.singlesample.waterfall.inuse
+		}
+
 		tk.waterfall.axisg = tk.waterfall.axisgg.append('g')
 		tk.waterfall.lab1 = tk.waterfall.axisgg.append('text')
 			.attr('font-size',13)
@@ -2847,7 +2858,6 @@ for both multi- and single-sample
 	}
 
 
-	apply_customization_oninit( tk, block )
 
 	// if not set, will set default mode here
 	if(!tk.singlesample && !tk.isdense && !tk.isfull) {
