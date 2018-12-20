@@ -3716,10 +3716,14 @@ export function map_cnv(item, tk, block) {
 	cnv, loh, itd
 	*/
 	const main = block.tkarg_maygm( tk )[0]
+
 	if(item.chr==main.chr && Math.max(item.start,main.start)<Math.min(item.stop,main.stop)) {
 		item.x1=block.seekcoord(item.chr, Math.max(item.start,main.start))[0].x
-		item.x2=block.seekcoord(item.chr, Math.min(item.stop,main.stop))[0].x
+		// in case item.stop is beyond chr length,
+		// main.stop has to -1 to allow it to work with seekcoord
+		item.x2=block.seekcoord(item.chr, Math.min(item.stop, main.stop-1))[0].x
 	}
+
 	let x=block.width
 	for(const p of block.subpanels) {
 		x+=p.leftpad
