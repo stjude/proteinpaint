@@ -4721,7 +4721,7 @@ async function handle_mdssvcnv_vcf ( genome, ds, dsquery, req, filteralleleattr,
 			thisvcf.format = format
 			thisvcf.samples = samples
 			thisvcf.nochr = await tabix_ifnochr( thisvcf.file, genome )
-			return handle_mdssvcnv_vcf_singlesample( req, thisvcf, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr )
+			return handle_mdssvcnv_vcf_singlesample( req, ds, thisvcf, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr )
 		}
 	}
 
@@ -5041,7 +5041,7 @@ async function handle_mdssvcnv_vcf ( genome, ds, dsquery, req, filteralleleattr,
 
 
 
-function handle_mdssvcnv_vcf_singlesample( req, thisvcf, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr ) {
+function handle_mdssvcnv_vcf_singlesample( req, ds, thisvcf, filteralleleattr, hiddendt, hiddenmattr, hiddensampleattr ) {
 /*
 query variants for a single sample, from a single vcf file
 
