@@ -34,6 +34,7 @@ make_svgraph
 ********************** INTERNAL
 printer_snvindel
 may_show_matrixbutton
+may_createbutton_samplesignature
 may_createbutton_survival_onemutation
 may_createbutton_survival_grouplab
 matrix_view()
@@ -1236,127 +1237,10 @@ export async function click_multi_singleitem( p ) {
 	may_show_svgraph( p, buttonrow, pane.body )
 
 
-	// click focus button to show block in holder
-	{
-		let blocknotshown = true
-		const holder = pane.body.append('div')
-			.style('margin','10px')
-			.style('display','none')
-
-		// focus button
-		buttonrow.append('div')
-			.style('display','inline-block')
-			.attr('class', 'sja_menuoption')
-			.text('Focus')
-			.on('click',()=>{
-
-				if(holder.style('display')=='none') {
-					client.appear(holder)
-				} else {
-					client.disappear(holder)
-				}
-
-				if(blocknotshown) {
-					blocknotshown=false
-					focus_singlesample({
-						holder: holder,
-						m: p.item,
-						sample: p.sample,
-						samplegroup: p.samplegroup,
-						tk: p.tk,
-						block: p.block
-					})
-				}
-			})
-	}
+	createbutton_focus( buttonrow, pane.body, p )
 
 
-	if(!p.tk.iscustom && p.tk.singlesampledirectory) {
-		/*
-		is official dataset, and equipped with single-sample files
-		click button to retrieve all mutations and show in disco plot
-		*/
-		let plotnotshown = true
-		const holder = pane.body.append('div')
-			.style('margin','10px')
-			.style('display','none')
-		const sjcharts = await getsjcharts()
-		const discoPromise = sjcharts.dtDisco({
-			holderSelector: holder,
-			settings: {
-				showControls: false,
-				selectedSamples: []
-			}
-		})
-
-		buttonrow.append('div')
-			.style('display','inline-block')
-			.attr('class', 'sja_menuoption')
-			.text('Genome view')
-			.on('click',()=>{
-
-				if(holder.style('display')=='none') {
-					client.appear(holder)
-				} else {
-					client.disappear(holder)
-				}
-
-				if(plotnotshown) {
-					plotnotshown=false
-
-					const arg = {
-						genome: p.block.genome.name,
-						dslabel: p.tk.mds.label,
-						querykey: p.tk.querykey,
-						getsample4disco: p.sample.samplename
-					}
-					client.dofetch('/mdssvcnv', arg)
-					.then(data=>{
-						if(data.error) throw(data.error)
-						if(!data.text) throw('.text missing')
-
-						let json
-						try{
-							json = JSON.parse(data.text)
-						} catch(e){
-							throw(e.message)
-						}
-
-						const disco_arg = {
-							sampleName: p.sample.samplename,
-							data: json
-						}
-
-						if(p.tk.mds.mutation_signature) {
-							let hassig=false
-							for(const k in p.tk.mds.mutation_signature.sets) {
-								for(const m of json) {
-									if(m[k]) {
-										hassig = k
-										break
-									}
-								}
-								if(hassig) break
-							}
-							if(hassig) {
-								const o = p.tk.mds.mutation_signature.sets[hassig]
-								disco_arg.mutation_signature = {
-									key: hassig,
-									name: o.name,
-									signatures: o.signatures
-								}
-							}
-						}
-
-						discoPromise.then(renderer=> renderer.main( disco_arg ) )
-					})
-					.catch(err=>{
-						client.sayerror(holder, typeof(err)=='string'?err:err.message)
-						if(err.stack) console.log(err.stack)
-					})
-				}
-			})
-	}
+	may_createbutton_disco( buttonrow, pane.body, p )
 
 
 	createbutton_addfeature( {
@@ -1366,6 +1250,8 @@ export async function click_multi_singleitem( p ) {
 		block: p.block,
 		pane: pane
 	})
+
+	//may_createbutton_samplesignature( buttonrow, p.sample.samplename, p.tk, p.block )
 
 	may_createbutton_survival_onemutation({
 		holder: buttonrow,
@@ -2357,6 +2243,140 @@ async function may_findmatchingclinvar_printintable( m, block, table ) {
 	} catch(e) {
 		wait.text(e.message||e)
 	}
+}
+
+
+
+
+function createbutton_focus( buttonrow, div, p ) {
+	// click focus button to show block in holder
+	let blocknotshown = true
+	const holder = div.append('div')
+		.style('margin','10px')
+		.style('display','none')
+
+	// focus button
+	buttonrow.append('div')
+		.style('display','inline-block')
+		.attr('class', 'sja_menuoption')
+		.text('Focus')
+		.on('click',()=>{
+
+			if(holder.style('display')=='none') {
+				client.appear(holder)
+			} else {
+				client.disappear(holder)
+			}
+
+			if(blocknotshown) {
+				blocknotshown=false
+				focus_singlesample({
+					holder: holder,
+					m: p.item,
+					sample: p.sample,
+					samplegroup: p.samplegroup,
+					tk: p.tk,
+					block: p.block
+				})
+			}
+		})
+}
+
+
+
+async function may_createbutton_disco ( buttonrow, div, p ) {
+	if(p.tk.iscustom || !p.tk.singlesampledirectory) return
+
+	/*
+	is official dataset, and equipped with single-sample files
+	click button to retrieve all mutations and show in disco plot
+	*/
+	let plotnotshown = true
+	const holder = div.append('div')
+		.style('margin','10px')
+		.style('display','none')
+	const sjcharts = await getsjcharts()
+	const discoPromise = sjcharts.dtDisco({
+		holderSelector: holder,
+		settings: {
+			showControls: false,
+			selectedSamples: []
+		}
+	})
+
+	buttonrow.append('div')
+		.style('display','inline-block')
+		.attr('class', 'sja_menuoption')
+		.text('Genome view')
+		.on('click',()=>{
+
+			if(holder.style('display')=='none') {
+				client.appear(holder)
+			} else {
+				client.disappear(holder)
+			}
+
+			if(plotnotshown) {
+				plotnotshown=false
+
+				const arg = {
+					genome: p.block.genome.name,
+					dslabel: p.tk.mds.label,
+					querykey: p.tk.querykey,
+					getsample4disco: p.sample.samplename
+				}
+				client.dofetch('/mdssvcnv', arg)
+				.then(data=>{
+					if(data.error) throw(data.error)
+					if(!data.text) throw('.text missing')
+
+					let json
+					try{
+						json = JSON.parse(data.text)
+					} catch(e){
+						throw(e.message)
+					}
+
+					const disco_arg = {
+						sampleName: p.sample.samplename,
+						data: json
+					}
+
+					if(p.tk.mds.mutation_signature) {
+						let hassig=false
+						for(const k in p.tk.mds.mutation_signature.sets) {
+							for(const m of json) {
+								if(m[k]) {
+									hassig = k
+									break
+								}
+							}
+							if(hassig) break
+						}
+						if(hassig) {
+							const o = p.tk.mds.mutation_signature.sets[hassig]
+							disco_arg.mutation_signature = {
+								key: hassig,
+								name: o.name,
+								signatures: o.signatures
+							}
+						}
+					}
+
+					discoPromise.then(renderer=> renderer.main( disco_arg ) )
+				})
+				.catch(err=>{
+					client.sayerror(holder, typeof(err)=='string'?err:err.message)
+					if(err.stack) console.log(err.stack)
+				})
+			}
+		})
+}
+
+
+
+
+function may_createbutton_samplesignature( holder, samplename, tk, block ) {
 }
 
 
