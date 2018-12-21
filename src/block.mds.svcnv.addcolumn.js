@@ -447,11 +447,11 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 						}
 
 						cover.on('mouseover',()=>{
-							tk.tktip
-								.clear()
-								.show(d3event.clientX, d3event.clientY)
+							tk.tktip.clear()
 
 							genebar_printtooltip( autogenename, v, s, tk.tktip.d, tk )
+
+							tk.tktip.show(d3event.clientX, d3event.clientY)
 
 							multi_sample_addhighlight(s)
 						})
@@ -547,9 +547,8 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 		.attr('font-size',14)
 		.text('ADD GENE')
 		.on('click',()=>{
-			tk.tkconfigtip.clear()
-				.showunder(d3event.target)
-			findgene4fix_searchui( tk.tkconfigtip.d, tk, block )
+			findgene4fix_searchui( tk.tkconfigtip.clear().d, tk, block )
+			tk.tkconfigtip.showunder(d3event.target)
 		})
 
 		if( tk.expressionrangelimit ) {
@@ -675,9 +674,7 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 					}
 
 					cover.on('mouseover',()=>{
-						tk.tktip
-							.clear()
-							.show(d3event.clientX, d3event.clientY)
+						tk.tktip.clear()
 
 						const lst=[{k:'Sample',v:s.samplename}]
 						may_add_sampleannotation( s.samplename, tk, lst )
@@ -694,6 +691,8 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 						const table = client.make_table_2col(tk.tktip.d,lst)
 
 						expressionstat.showsingleitem_table( v, tk.gecfg, table )
+
+						tk.tktip.show(d3event.clientX, d3event.clientY)
 
 						multi_sample_addhighlight(s)
 					})
@@ -812,14 +811,14 @@ function addcolumn_attr(attr, tk, block, column_xoff) {
 					s.columnbars.push(cover)
 
 					cover.on('mouseover',()=>{
-						tk.tktip
-							.clear()
-							.show(d3event.clientX, d3event.clientY)
+						tk.tktip.clear()
 
 						const lst=[{k:'Sample',v:s.samplename}]
 						may_add_sampleannotation( s.samplename, tk, lst )
-
 						client.make_table_2col(tk.tktip.d,lst)
+
+						tk.tktip.show(d3event.clientX, d3event.clientY)
+
 						multi_sample_addhighlight(s)
 					})
 					.on('mouseout',()=>{
@@ -878,7 +877,6 @@ function genebarconfig_auto( usegene, genes, tk, block ) {
 	*/
 
 	tk.tkconfigtip.clear()
-		.showunder(d3event.target)
 
 	const holder = tk.tkconfigtip.d
 /*
@@ -947,15 +945,15 @@ function genebarconfig_auto( usegene, genes, tk, block ) {
 			block )
 	}
 
-
 	mayadd_aseohe( holder, tk, block )
+
+	tk.tkconfigtip.showunder(d3event.target)
 }
 
 
 
 function genebarconfig_fixed( fixedgene, tk, block ) {
 	tk.tkconfigtip.clear()
-		.showunder(d3event.target)
 
 	mayadd_boxplotbutton( tk.tkconfigtip.d, fixedgene.gene, tk, block )
 
@@ -979,6 +977,8 @@ function genebarconfig_fixed( fixedgene, tk, block ) {
 			}
 			render_multi_genebar(tk,block)
 		})
+
+	tk.tkconfigtip.showunder(d3event.target)
 }
 
 
@@ -1319,11 +1319,11 @@ function drawgenebar_rnabam ( expbarwidth, maxvalue, row, gene, s, tk, block ) {
 	}
 
 	cover.on('mouseover',()=>{
-		tk.tktip
-			.clear()
-			.show(d3event.clientX, d3event.clientY)
+		tk.tktip.clear()
 
 		genebar_printtooltip( gene.gene, gene, s, tk.tktip.d, tk )
+
+		tk.tktip.show(d3event.clientX, d3event.clientY)
 
 		multi_sample_addhighlight(s)
 	})

@@ -290,10 +290,8 @@ function samplegroup_setShowhide( g, tk, tohide ) {
 
 
 export function tooltip_samplegroup( g, tk ) {
-	tk.tktip.clear()
-		.show( d3event.clientX, d3event.clientY )
 
-	const d = tk.tktip.d.append('div')
+	const d = tk.tktip.clear().d.append('div')
 	
 	if(g.attributes) {
 		// official only
@@ -308,6 +306,8 @@ export function tooltip_samplegroup( g, tk ) {
 	const p= tk.tktip.d.append('div').style('margin-top','10px').style('color','#858585')
 	p.html( g.samples.length+' sample'+(g.samples.length>1?'s':'')
 		+ (g.sampletotalnum ?  '<br>'+g.sampletotalnum+' samples total, '+Math.ceil(100*g.samples.length/g.sampletotalnum)+'%' : ''))
+
+	tk.tktip.show( d3event.clientX, d3event.clientY )
 }
 
 
@@ -762,7 +762,6 @@ export function tooltip_multi_svdense(g, tk, block) {
 	}
 
 	tk.tktip.clear()
-		.show(d3event.clientX,d3event.clientY)
 
 	let grouplabel = 'Group'
 	if(tk.groupsamplebyattr && tk.groupsamplebyattr.attrlst) {
@@ -786,6 +785,7 @@ export function tooltip_multi_svdense(g, tk, block) {
 	if(fusionnum) lst.push({k:'# of fusion', v:fusionnum})
 
 	client.make_table_2col( tk.tktip.d, lst )
+	tk.tktip.show(d3event.clientX,d3event.clientY)
 }
 
 
@@ -1124,7 +1124,6 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 	mouseover a dot
 	*/
 	tk.tktip.clear()
-		.show(d3event.clientX,d3event.clientY)
 
 	if(g.items.length == 1) {
 
@@ -1167,6 +1166,7 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 			may_findmatchingsnp_printintable( m, block, table )
 			may_findmatchingclinvar_printintable( m, block, table )
 
+			tk.tktip.show(d3event.clientX,d3event.clientY)
 
 		} else {
 
@@ -1206,6 +1206,8 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 			td.text('unknown dt: '+m.dt)
 		}
 	}
+
+	tk.tktip.show(d3event.clientX,d3event.clientY)
 }
 
 
@@ -1283,12 +1285,12 @@ export function tooltip_singleitem( p ) {
 
 	multi_sample_addhighlight(p.sample)
 
-	p.tk.tktip.clear()
-		.show(d3event.clientX, d3event.clientY)
-
-	p.holder = p.tk.tktip.d
+	p.holder = p.tk.tktip.clear().d
 
 	detailtable_singlesample( p )
+
+	// show tip after content is made
+	p.tk.tktip.show(d3event.clientX, d3event.clientY)
 }
 
 

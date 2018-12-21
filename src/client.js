@@ -148,6 +148,15 @@ export class Menu{
 		const topy  = y+this.offsetY
 		const p=this.d.node().getBoundingClientRect()
 
+		// x adjust
+		if(leftx+p.width > window.innerWidth) {
+			this.d.style('left',null)
+				.style('right',(window.innerWidth-x-window.scrollX+this.offsetX)+'px')
+		} else {
+			this.d.style('left',(leftx+window.scrollX)+'px')
+				.style('right',null)
+		}
+/*
 		if(leftx+p.width > window.innerWidth) {
 			if(window.innerWidth-x > p.width) {
 				this.d.style('left',null)
@@ -161,6 +170,8 @@ export class Menu{
 			this.d.style('left',(leftx+window.scrollX)+'px')
 				.style('right',null)
 		}
+		*/
+
 		if(topy+p.height > window.innerHeight) {
 			if(window.innerHeight-y > p.height) {
 				this.d.style('top',null)
@@ -180,9 +191,14 @@ export class Menu{
 	}
 
 	showunder(dom, yspace) {
-		// not well thought of yet
-		// this.d should find optimum position around the dom
+		// route to .show()
 		const p=dom.getBoundingClientRect()
+		return this.show(
+			p.left-this.offsetX,
+			p.top + p.height + (yspace || 5) - this.offsetY
+			)
+
+		/*
 		this.d
 			.style('display','block')
 			.style('right',null)
@@ -191,6 +207,7 @@ export class Menu{
 			.style('top',  (p.top + p.height + window.scrollY + (yspace || 5) )+'px' )
 			.transition().style('opacity',1)
 		return this
+		*/
 	}
 
 	hide() {

@@ -692,10 +692,8 @@ function may_legend_mclass(tk, block) {
 			.attr('class', 'sja_clb')
 			.style('display','inline-block')
 			.on('click',()=>{
-				tk.tip2.showunder(cell.node())
-					.clear()
 
-				tk.tip2.d.append('div')
+				tk.tip2.clear().d.append('div')
 					.attr('class','sja_menuoption')
 					.text('Hide')
 					.on('click',()=>{
@@ -729,6 +727,8 @@ function may_legend_mclass(tk, block) {
 					.style('font-size','.8em')
 					.style('width','150px')
 					.text(desc)
+
+				tk.tip2.showunder(cell.node())
 			})
 
 		cell.append('div')
@@ -947,8 +947,7 @@ function may_legend_attribute(tk, block) {
 					.style('display','inline-block')
 					.attr('class','sja_clb')
 					.on('click',()=>{
-						tk.tip2.showunder(cell.node())
-							.clear()
+						tk.tip2.clear()
 
 						if(attr.hiddenvalues.has(valuestr)) {
 							tk.tip2.d.append('div')
@@ -1018,6 +1017,7 @@ function may_legend_attribute(tk, block) {
 									.text( count )
 							}
 						}
+						tk.tip2.showunder(cell.node())
 					})
 
 				const color = attrGrp=='sampleAttribute' && tk.legend_samplegroups && tk.legend_samplegroups.color(valuestr)
@@ -1090,7 +1090,7 @@ function may_process_hideable_rows(tk,block,hiddenAttributes) {
 			.attr('class','sja_legend_more_btn')
 			.html('MORE...')
 			.on('click',()=>{
-				tk.tip2.showunder(btn.node()).clear()
+				tk.tip2.clear()
 				
 				for(const hideable of tk.legend_hideable) {
 					if (!hideable.hidden) continue
@@ -1134,6 +1134,8 @@ function may_process_hideable_rows(tk,block,hiddenAttributes) {
 					div.append('span')
 						.html('&nbsp;' + attr.label )
 				}
+
+				tk.tip2.showunder(btn.node())
 			})
 	}
 }

@@ -1807,9 +1807,9 @@ sort samples by f.issampleattribute
 
 
 	showTip_feature(f) {
-		this.tip.showunder( d3event.target)
-			.clear()
+		this.tip.clear()
 		this.tipContent_feature(f, this.tip.d)
+		this.tip.showunder( d3event.target)
 	}
 
 
@@ -1904,7 +1904,9 @@ sort samples by f.issampleattribute
 
 
 	showTip_sample(sample) {
-		this.tip.d.append('div')
+		this.tip.clear()
+			.d
+			.append('div')
 			.text(sample.name)
 			.style('padding','10px')
 			.style('font-size','.7em')
@@ -2019,7 +2021,6 @@ sort samples by f.issampleattribute
 			console.error('sample tooltip: Unknown feature type')
 		}
 
-		this.tip.clear()
 		client.make_table_2col(this.tip.d, lst)
 		// show tip after filling it with html so that 
 		// computed bounding width, height are accurate

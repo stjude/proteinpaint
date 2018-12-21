@@ -1345,9 +1345,9 @@ function render_multi_cnvloh(tk,block) {
 					tk.tktip.hide()
 				})
 				.on('click',()=>{
-					tk.tip2.showunder(d3event.target)
-						.clear()
+					tk.tip2.clear()
 					click_samplegroup_showmenu( samplegroup, tk, block )
+					tk.tip2.showunder(d3event.target)
 				})
 
 			// v span
@@ -3152,7 +3152,6 @@ function multi_changemode(tk, block) {
 
 function configPanel(tk, block) {
 	tk.tkconfigtip.clear()
-		.showunder(tk.config_handle.node())
 
 	may_show_samplematrix_button( tk, block)
 
@@ -3167,6 +3166,8 @@ function configPanel(tk, block) {
 	configPanel_cnvloh( tk, block )
 
 	configPanel_rnabam( tk, block, loadTk )
+
+	tk.tkconfigtip.showunder(tk.config_handle.node())
 }
 
 

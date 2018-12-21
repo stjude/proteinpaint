@@ -227,8 +227,7 @@ function init_plot (obj) {
 				} )
 			}
 
-			obj.tip.clear()
-			client.make_table_2col(obj.tip.d, lst)
+			client.make_table_2col(obj.tip.clear().d, lst)
 			obj.tip.show(d3event.clientX, d3event.clientY)
 		})
 		.on('mouseout',d=>{

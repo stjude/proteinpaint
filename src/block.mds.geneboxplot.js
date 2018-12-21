@@ -591,11 +591,11 @@ function loadplot(plot) {
 					.attr('stroke-opacity',.8)
 					.on('mouseover',()=>{
 						plot.tip.clear()
-							.show(d3event.clientX,d3event.clientY)
 							.d
 							.append('div')
 							.style('margin','10px')
 							.html(d.sample+'<br>'+d.value)
+						plot.tip.show(d3event.clientX,d3event.clientY)
 					})
 					.on('mouseout',()=>plot.tip.hide())
 			}
@@ -678,11 +678,11 @@ function loadplot(plot) {
 							.attr('fill-opacity',0)
 							.on('mouseover',()=>{
 								plot.tip.clear()
-									.show(d3event.clientX,d3event.clientY)
 									.d
 									.append('div')
 									.style('margin','10px')
 									.html(d.sample+'<br>'+d.value)
+								plot.tip.show(d3event.clientX,d3event.clientY)
 							})
 							.on('mouseout',()=>{
 								plot.tip.hide()
@@ -1193,9 +1193,8 @@ function init2(x,y, plot, group) {
 				.attr('fill-opacity', 0)
 				.attr('stroke', '#858585')
 				.on('mouseover',()=>{
-					_p.tip.clear()
-						.show(d3event.clientX,d3event.clientY)
-					tooltip_pp( d, _p.tip.d, pp )
+					tooltip_pp( d, _p.tip.clear().d, pp )
+					_p.tip.show(d3event.clientX,d3event.clientY)
 				})
 				.on('mouseout',()=>{
 					_p.tip.hide()
