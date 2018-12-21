@@ -598,6 +598,12 @@ function loadplot(plot) {
 						plot.tip.show(d3event.clientX,d3event.clientY)
 					})
 					.on('mouseout',()=>plot.tip.hide())
+
+				if(plot.clicksample) {
+					d.circle.on('click',()=>{
+						plot.clicksample( d, null, plot )
+					})
+				}
 			}
 
 		} else {
