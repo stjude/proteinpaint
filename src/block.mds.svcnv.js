@@ -192,10 +192,12 @@ function may_showgeneexp_nomutationdata(tk,block) {
 		return
 	}
 
+	// must reset cnvrightg y pos since it will be shifted if there was data previously
+	tk.cnvrightg.attr('transform','translate(0,'+(4 + tk.height_main/2)+')')
+
 	const text = tk.cnvrightg.append('text')
 		.attr('font-size',12)
-		.attr('class','sja_clbtext')
-		//.attr('y',12)
+		.attr('class','sja_clbtext2')
 
 	if(genenames.length==1) {
 		text.text(genenames[0]+' '+tk.gecfg.datatype)
