@@ -2393,7 +2393,6 @@ function may_createbutton_samplesignature( buttonrow, div, samplename, tk, block
 		const holder = div.append('div')
 			.style('margin','10px')
 		for(const s of data.lst) {
-		console.log(s)
 			const ss = tk.mds.mutation_signature.sets[s.key]
 			const d2 = holder.append('div')
 				.style('margin-bottom','20px')
@@ -2404,11 +2403,11 @@ function may_createbutton_samplesignature( buttonrow, div, samplename, tk, block
 			const svg = d2.append('svg')
 			const fontsize=14,
 				rowh = 16,
-				barw = 200,
+				barw = 250,
 				pad = 20,
 				rowspace = 2,
 				labelspace = 6,
-				axish = 40
+				axish = 5
 			const maxv = s.annotation[0].v
 			const minv = s.annotation[s.annotation.length-1].v
 			const scale = scaleLinear().domain([minv, maxv]).range([0, barw])
@@ -2418,7 +2417,7 @@ function may_createbutton_samplesignature( buttonrow, div, samplename, tk, block
 					.attr('font-family',client.font)
 					.attr('font-size',fontsize)
 					.text(ss.signatures[i.k].name)
-					.each(function(){ console.log(this.getBBox().width);labelw = Math.max(labelw, this.getBBox().width) })
+					.each(function(){labelw = Math.max(labelw, this.getBBox().width) })
 					.remove()
 			}
 			const g = svg.append('g')
@@ -2440,6 +2439,15 @@ function may_createbutton_samplesignature( buttonrow, div, samplename, tk, block
 					.attr('shape-rendering','crispEdges')
 					.attr('fill', ss.signatures[a.k].color)
 			}
+
+			client.axisstyle({
+				axis: g.append('g')
+					.attr('transform','translate(0,-'+rowspace+')')
+					.call(axisTop().scale(scale).ticks(4)),
+				showline:1,
+				fontsize: fontsize-2,
+			})
+
 			svg.attr('width', pad+labelw+labelspace+barw+pad)
 				.attr('height', pad+axish+rowspace+(rowh+rowspace)*s.annotation.length+pad)
 		}
