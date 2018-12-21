@@ -440,11 +440,7 @@ module.exports={
 			viewrangeupperlimit:2000000,
 			tracks:[
 				{
-					file:'hg19/PCGP/vcf.germline/NEJMGermline_sorted.vep.out.vcf.gz',
-					type:'vcf',
-				},
-				{
-					file:'hg19/Pediatric/pediatric.somatic.hg19.vcf.gz',
+					file:'hg19/Pediatric/pediatric.hg19.vcf.gz',
 					type:'vcf',
 				}
 			],
