@@ -324,16 +324,29 @@ export function multi_show_geneboxplot(arg) {
 		const sample={
 			samplename:thissample.sample
 		}
-		const samplegroup={
-			attributes: group.attributes
-		}
-		const tk={} // svcnv track
-		if(plot.svcnv.iscustom) {
-		} else {
-			for(const k in plot.svcnv) {
-				tk[k] = plot.svcnv[k]
+
+		let samplegroup
+		if(group) {
+			samplegroup={
+				attributes: group.attributes
 			}
-			tk.mds = plot.block.genome.datasets[ plot.svcnv.dslabel ]
+		}
+
+		const tk2={} // build a svcnv track
+
+		for(const k in plot.svcnv) {
+			tk2[k] = plot.svcnv[k]
+		}
+
+		if(plot.svcnv.iscustom) {
+			tk2.checkexpressionrank = {
+				file: plot.file,
+				url: plot.url,
+				indexURL: plot.indexURL,
+				datatype: plot.gecfg.datatype,
+			}
+		} else {
+			tk2.mds = plot.block.genome.datasets[ plot.svcnv.dslabel ]
 		}
 		focus_singlesample({
 			m: {
@@ -344,7 +357,7 @@ export function multi_show_geneboxplot(arg) {
 			},
 			sample: sample,
 			samplegroup: samplegroup,
-			tk: tk,
+			tk: tk2,
 			block: plot.block
 		})
 	}
