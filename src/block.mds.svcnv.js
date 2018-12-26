@@ -465,7 +465,26 @@ function addLoadParameter( par, tk ) {
 	if(tk.lohLengthUpperLimit) par.lohLengthUpperLimit=tk.lohLengthUpperLimit
 
 	if(tk.singlesample) {
+		// single sample
 		par.singlesample = tk.singlesample.name
+	} else {
+		// multi sample
+		// here are things not to be applied to single sample
+		if(tk.sampleAttribute) {
+			// mutation attribute applicable to all data types
+			const key2value={}
+			let hashidden=false
+			for(const key in tk.sampleAttribute.attributes) {
+				const attr = tk.sampleAttribute.attributes[key]
+				if(attr.hiddenvalues && attr.hiddenvalues.size) {
+					key2value[key] = [...attr.hiddenvalues]
+					hashidden=true
+				}
+			}
+			if(hashidden) {
+				par.hiddensampleattr = key2value
+			}
+		}
 	}
 
 	if(tk.mutationAttribute) {
@@ -484,21 +503,6 @@ function addLoadParameter( par, tk ) {
 		}
 	}
 
-	if(tk.sampleAttribute) {
-		// mutation attribute applicable to all data types
-		const key2value={}
-		let hashidden=false
-		for(const key in tk.sampleAttribute.attributes) {
-			const attr = tk.sampleAttribute.attributes[key]
-			if(attr.hiddenvalues && attr.hiddenvalues.size) {
-				key2value[key] = [...attr.hiddenvalues]
-				hashidden=true
-			}
-		}
-		if(hashidden) {
-			par.hiddensampleattr = key2value
-		}
-	}
 
 	if(tk.alleleAttribute) {
 		// mutation attribute applicable to all data types
