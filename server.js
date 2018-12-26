@@ -7204,9 +7204,36 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 		}
 	}
 
-	// done finding samples
+	// list of samples ready to be returned to client
+	// now append attributes to found samples
 
-	// append attributes to found samples
+	// get the svcnv query for checking stuff
+	for(const k in ds.queries) {
+		const q = ds.queries[k]
+		if(q.type==common.tkt.mdssvcnv) {
+			if(q.groupsamplebyattr) {
+				for(const s of result) {
+					const a = ds.cohort.annotation[s.name]
+					if(!a) continue
+					const lst = []
+					for(const attr of q.groupsamplebyattr.attrlst) {
+						const v = a[ attr.k ]
+						if(v) {
+							lst.push({
+								k: attr.k,
+								kvalue: v,
+							})
+						}
+					}
+					if(lst.length) {
+						s.attributes = lst
+						s.grouplabel = lst.map(i=>i.kvalue).join( q.groupsamplebyattr.attrnamespacer )
+					}
+				}
+			}
+		}
+	}
+
 	if(ds.cohort && ds.cohort.sampleAttribute && ds.cohort.sampleAttribute.attributes && ds.cohort.annotation) {
 		for(const sample of result) {
 			const anno = ds.cohort.annotation[ sample.name ]
