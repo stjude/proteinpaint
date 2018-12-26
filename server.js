@@ -7204,6 +7204,66 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 		}
 	}
 
+	// done finding samples
+
+	// append attributes to found samples
+	if(ds.cohort && ds.cohort.sampleAttribute && ds.cohort.sampleAttribute.attributes && ds.cohort.annotation) {
+		for(const sample of result) {
+			const anno = ds.cohort.annotation[ sample.name ]
+			if(!anno) continue
+			const toclient = [] // annotations to client
+			for(const key in ds.cohort.sampleAttribute.attributes) {
+				if(ds.cohort.sampleAttribute.attributes[key].clientnoshow) {
+					continue
+				}
+				const value = anno[ key ]
+				if(value!=undefined) {
+					toclient.push({k: key, v: value})
+				}
+			}
+			if(toclient.length) {
+				sample.attr = toclient
+			}
+		}
+	}
+
+	if(ds.sampleAssayTrack) {
+		for(const sample of result) {
+			const a = ds.sampleAssayTrack.samples.get(sample.name)
+			if(a) {
+				sample.num_assay_tracks = a.length
+			}
+		}
+	}
+
+	if(ds.cohort && ds.cohort.mutation_signature) {
+		for(const k in ds.cohort.mutation_signature.sets) {
+			const s = ds.cohort.mutation_signature.sets[k]
+			if(s.samples) {
+				for(const ss of result) {
+					if(s.samples.map.has( ss.name )) {
+						ss.mutation_signature = 1
+					}
+				}
+			}
+		}
+	}
+
+	{
+		// if has disco
+		// this attribute should be at ds rather than a query
+		// also there should be a sample2disc hash for checking availability
+		for(const k in ds.queries) {
+			if(ds.queries[k].singlesampledirectory) {
+				// has it
+				for(const s of result) {
+					s.disco = 1
+				}
+			}
+		}
+	}
+
+
 	return res.send({result:result})
 
 	function findadd(samples) {
@@ -7222,25 +7282,6 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 				continue
 			}
 			result.push( sample )
-
-			if(ds.cohort && ds.cohort.sampleAttribute && ds.cohort.sampleAttribute.attributes && ds.cohort.annotation) {
-				const anno = ds.cohort.annotation[ samplename ]
-				if(anno) {
-					const toclient = [] // annotations to client
-					for(const key in ds.cohort.sampleAttribute.attributes) {
-						if(ds.cohort.sampleAttribute.attributes[key].clientnoshow) {
-							continue
-						}
-						const value = anno[ key ]
-						if(value!=undefined) {
-							toclient.push({k: key, v: value})
-						}
-					}
-					if(toclient.length) {
-						sample.attr = toclient
-					}
-				}
-			}
 		}
 	}
 }

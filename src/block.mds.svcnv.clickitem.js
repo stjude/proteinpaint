@@ -92,19 +92,43 @@ export async function may_allow_samplesearch(tk, block) {
 				cell.append('span')
 					.text(sample.name)
 
-				if(sample.attributes) {
-					const groupname = sample.attributes.map(i=>i.kvalue).join(', ') // tk.attrnamespacer
-					cell.append('div')
-						.style('display','inline-block')
-						.style('margin-left','10px')
+				if(sample.num_assay_tracks) {
+					cell.append('span')
 						.style('font-size','.7em')
-						.style('color', tk.legend_samplegroup.color( groupname ) )
-						.html( groupname )
+						.style('padding','1px 5px')
+						.style('margin-left','10px')
+						.style('background','#bbb')
+						.style('color','white')
+						.style('border-radius','3px')
+						.text(sample.num_assay_tracks+' track'+(sample.num_assay_tracks>1?'s':''))
+				}
+
+				if(sample.disco) {
+					cell.append('span')
+						.style('font-size','.7em')
+						.style('padding','1px 5px')
+						.style('margin-left','10px')
+						.style('background','#bbb')
+						.style('color','white')
+						.style('border-radius','3px')
+						.text('Genome view')
+				}
+				if(sample.mutation_signature) {
+					cell.append('span')
+						.style('font-size','.7em')
+						.style('padding','1px 5px')
+						.style('margin-left','10px')
+						.style('background','#bbb')
+						.style('color','white')
+						.style('border-radius','3px')
+						.text('Mutation signature')
 				}
 
 				cell
 					.attr('class','sja_menuoption')
 					.on('click',()=>{
+
+						tk.tkconfigtip.hide()
 
 						const pane = client.newpane({x:100, y:100})
 						pane.header.text( sample.name )
