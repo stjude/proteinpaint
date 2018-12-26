@@ -92,6 +92,13 @@ export async function may_allow_samplesearch(tk, block) {
 				cell.append('span')
 					.text(sample.name)
 
+				if(sample.grouplabel) {
+					cell.append('span')
+						.style('margin-left','10px')
+						.style('font-size','.7em')
+						.text( sample.grouplabel)
+				}
+
 				if(sample.num_assay_tracks) {
 					cell.append('span')
 						.style('font-size','.7em')
@@ -132,13 +139,35 @@ export async function may_allow_samplesearch(tk, block) {
 
 						const pane = client.newpane({x:100, y:100})
 						pane.header.text( sample.name )
-						focus_singlesample({
-							sample: {samplename: sample.name},
-							samplegroup: {attributes: sample.attributes},
+
+						const buttonrow = pane.body.append('div')
+							.style('margin','10px')
+						const folderdiv = pane.body.append('div')
+							.style('margin','10px')
+
+						createbutton_focus( buttonrow, folderdiv, {
 							tk: tk,
 							block: block,
-							holder: pane.body.append('div'),
+							sample: {
+								samplename: sample.name
+							},
+							samplegroup: {attributes: sample.attributes}
+						}, true)
+
+
+						may_createbutton_disco( buttonrow, folderdiv, {
+							tk: tk,
+							block: block,
+							sample: {
+								samplename: sample.name
+							},
+							//samplegroup: {attributes: sample.attributes}
 						})
+
+
+						may_createbutton_samplesignature( buttonrow, folderdiv, sample.name, tk, block )
+
+
 						if(sample.attr) {
 							if(tk.sampleAttribute && tk.sampleAttribute.attributes) {
 								for(const attr of sample.attr) {
@@ -2368,12 +2397,12 @@ async function may_findmatchingclinvar_printintable( m, block, table ) {
 
 
 
-function createbutton_focus( buttonrow, div, p ) {
+function createbutton_focus( buttonrow, div, p, defaultshow ) {
 	// click focus button to show block in holder
-	let blocknotshown = true
+	let blocknotshown = !defaultshow
 	const holder = div.append('div')
 		.style('margin','10px')
-		.style('display','none')
+		.style('display', defaultshow ? 'block' : 'none')
 
 	// focus button
 	buttonrow.append('div')
@@ -2400,6 +2429,17 @@ function createbutton_focus( buttonrow, div, p ) {
 				})
 			}
 		})
+
+	if(defaultshow) {
+		focus_singlesample({
+			holder: holder,
+			m: p.item,
+			sample: p.sample,
+			samplegroup: p.samplegroup,
+			tk: p.tk,
+			block: p.block
+		})
+	}
 }
 
 
