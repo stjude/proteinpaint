@@ -15,7 +15,8 @@ import {
 	tooltip_samplegroup,
 	click_samplegroup_showtable,
 	click_samplegroup_showmenu,
-	may_add_sampleannotation
+	may_add_sampleannotation,
+	may_allow_samplesearch
 	} from './block.mds.svcnv.clickitem'
 import { makeTk_legend, update_legend } from './block.mds.svcnv.legend'
 import {render_singlesample} from './block.mds.svcnv.single'
@@ -3615,92 +3616,6 @@ function may_allow_showhidelabel_multi(tk, block) {
 }
 
 
-
-function may_allow_samplesearch(tk, block) {
-	/*
-	for official track, allow search for sample
-	single or multi
-	may query server to see if is allowed
-	*/
-	if(tk.iscustom) return
-
-	const row=tk.tkconfigtip.d.append('div')
-		.style('margin-bottom','15px')
-	row.append('input')
-		.attr('size',20)
-		.attr('placeholder', 'Find sample')
-		.on('keyup',()=>{
-
-			tk.tip2.showunder(d3event.target)
-				.clear()
-			
-			const str = d3event.target.value
-			if(!str) return
-
-			const par={
-				jwt:block.jwt,
-				genome:block.genome.name,
-				dslabel:tk.mds.label,
-				querykey:tk.querykey,
-				findsamplename: str
-			}
-			return fetch( new Request(block.hostURL+'/mdssvcnv', {
-				method:'POST',
-				body:JSON.stringify(par)
-			}))
-			.then(data=>{return data.json()})
-			.then(data=>{
-
-				if(data.error) throw({message:data.error})
-				if(!data.result) return
-				for(const sample of data.result) {
-
-					const cell= tk.tip2.d.append('div')
-					cell.append('span')
-						.text(sample.name)
-
-					if(sample.attributes) {
-						const groupname = sample.attributes.map(i=>i.kvalue).join(', ') // tk.attrnamespacer
-						cell.append('div')
-							.style('display','inline-block')
-							.style('margin-left','10px')
-							.style('font-size','.7em')
-							.style('color', tk.legend_samplegroup.color( groupname ) )
-							.html( groupname )
-					}
-
-					cell
-						.attr('class','sja_menuoption')
-						.on('click',()=>{
-							tk.tip2.hide()
-
-							const pane = client.newpane({x:100, y:100})
-							pane.header.text( sample.name )
-							focus_singlesample({
-								sample: {samplename: sample.name},
-								samplegroup: {attributes: sample.attributes},
-								tk: tk,
-								block: block,
-								holder: pane.body.append('div'),
-							})
-							if(sample.attr) {
-								if(tk.sampleAttribute && tk.sampleAttribute.attributes) {
-									for(const attr of sample.attr) {
-										const a = tk.sampleAttribute.attributes[attr.k]
-										if(a) attr.k = a.label
-									}
-								}
-								client.make_table_2col( pane.body, sample.attr)
-							}
-						})
-				}
-			})
-			.catch(err=>{
-				client.sayerror( tk.tip2.d, err.message)
-				if(err.stack) console.log(err.stack)
-			})
-		})
-}
 
 
 
