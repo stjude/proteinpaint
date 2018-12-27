@@ -174,11 +174,13 @@ module.exports={
 					name:'Event-free survival',
 					serialtimekey:'F_efstime (yrs)',
 					iscensoredkey:'F_efscensor',
+					timelabel:'Years',
 				},
 				os: {
 					name:'Overall survival',
 					serialtimekey:'F_ostime (yrs)',
 					iscensoredkey:'F_oscensor',
+					timelabel:'Years',
 				},
 			},
 			samplegroupattrlst:[
