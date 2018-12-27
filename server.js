@@ -349,6 +349,10 @@ function mds_clientcopy(ds) {
 		alleleAttribute: ds.alleleAttribute,
 	}
 
+	if(ds.singlesamplemutationjson) {
+		ds2.singlesamplemutationjson = 1
+	}
+
 	if(ds.cohort && ds.cohort.sampleAttribute) {
 		// attr may be hidden from client
 		const toclient = {}
@@ -409,12 +413,6 @@ function mds_clientcopy(ds) {
 			clientquery.istrack=true
 			clientquery.type = q.type
 			// track attributes, some are common, many are track type-specific
-			if(q.tracks) {
-				clientquery.sampleTotalNumber = q.tracks.reduce((num,tk)=>num+(tk.samples ? tk.samples.length : 0),0)
-			}
-			if(q.samples) {
-				clientquery.sampleTotalNumber = q.samples.length
-			}
 			if(q.nochr!=undefined) {
 				clientquery.nochr=q.nochr
 			}
@@ -448,10 +446,6 @@ function mds_clientcopy(ds) {
 				if(q.groupsamplebyattr) {
 					clientquery.groupsamplebyattr = q.groupsamplebyattr
 				}
-				if(q.singlesampledirectory) {
-					clientquery.singlesampledirectory = 1
-				}
-
 
 				// flags
 				clientquery.multihidelabel_fusion = q.multihidelabel_fusion
@@ -6983,9 +6977,9 @@ function mdssvcnv_exit_getsample4disco( req, res, gn, ds, dsquery ) {
 	only for official dataset
 	*/
 	if(req.query.iscustom) return res.send({error:'not for custom track'})
-	if(!dsquery.singlesampledirectory) return res.send({error:'singlesampledirectory not defined in dataset config'})
+	if(!ds.singlesamplemutationjson) return res.send({error:'singlesamplemutationjson not available for this dataset'})
 	const samplename = req.query.getsample4disco
-	const file = path.join(serverconfig.tpmasterdir, dsquery.singlesampledirectory, samplename)
+	const file = path.join(serverconfig.tpmasterdir, ds.singlesamplemutationjson.samples[ samplename] )
 	fs.readFile(file, {encoding:'utf8'}, (err,data)=>{
 		if(err) return res.send({error:'error getting data for this sample'})
 		res.send({text:data})
@@ -7276,16 +7270,11 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 		}
 	}
 
-	{
+	if(ds.singlesamplemutationjson) {
 		// if has disco
-		// this attribute should be at ds rather than a query
-		// also there should be a sample2disc hash for checking availability
-		for(const k in ds.queries) {
-			if(ds.queries[k].singlesampledirectory) {
-				// has it
-				for(const s of result) {
-					s.disco = 1
-				}
+		for(const s of result) {
+			if(ds.singlesamplemutationjson.samples[ s.name ]) {
+				s.disco = 1
 			}
 		}
 	}
@@ -12484,6 +12473,24 @@ function mds_init(ds,genome, _servconfig) {
 		}
 	}
 
+
+	if(ds.singlesamplemutationjson) {
+		const m = ds.singlesamplemutationjson
+		if(!m.file) return '.file missing from singlesamplemutationjson'
+		m.samples = {}
+		let count=0
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir, m.file),{encoding:'utf8'}).trim().split('\n')) {
+			if(!line) continue
+			if(line[0]=='#') continue
+			const [sample, file] = line.split('\t')
+			if(sample && file) {
+				count++
+				m.samples[ sample ] = file
+			}
+		}
+		console.log( count+' samples for disco plot')
+	}
+
 	if(ds.cohort) {
 		if(!ds.cohort.files) return '.files[] missing from .cohort'
 		if(!Array.isArray(ds.cohort.files)) return '.cohort.files is not array'
@@ -13365,14 +13372,17 @@ function mds_init_mdsvcf(query, ds, genome) {
 	if(query.singlesamples) {
 		if(!query.singlesamples.tablefile) return '.singlesamples.tablefile missing for the VCF query'
 		query.singlesamples.samples = {}
+		let count=0
 		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,query.singlesamples.tablefile),{encoding:'utf8'}).trim().split('\n')) {
 			if(!line) continue
 			if(line[0]=='#') continue
 			const l = line.split('\t')
 			if(l[0] && l[1]) {
 				query.singlesamples.samples[ l[0] ] = l[1]
+				count++
 			}
 		}
+		console.log( count+' single-sample VCF files')
 	}
 }
 

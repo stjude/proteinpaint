@@ -2445,7 +2445,7 @@ function createbutton_focus( buttonrow, div, p, defaultshow ) {
 
 
 async function may_createbutton_disco ( buttonrow, div, p ) {
-	if(p.tk.iscustom || !p.tk.singlesampledirectory) return
+	if(!p.tk.mds || !p.tk.mds.singlesamplemutationjson) return
 
 	/*
 	is official dataset, and equipped with single-sample files

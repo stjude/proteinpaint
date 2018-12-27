@@ -47,6 +47,10 @@ module.exports={
 		file:'hg19/Pediatric/tracktable/__table'
 	},
 
+	singlesamplemutationjson:{
+		file:'hg19/Pediatric/mutationpersample/table'
+	},
+
 
 	/*
 	cohort and sample annotation
@@ -427,7 +431,6 @@ module.exports={
 				germline:'germline'
 			},
 
-			singlesampledirectory:'hg19/Pediatric/mutationpersample/',
 		},
 
 
