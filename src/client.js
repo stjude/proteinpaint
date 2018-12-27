@@ -150,15 +150,8 @@ export class Menu{
 
 		// x adjust
 		if(leftx+p.width > window.innerWidth) {
-			this.d.style('left',null)
-				.style('right',(window.innerWidth-x-window.scrollX+this.offsetX)+'px')
-		} else {
-			this.d.style('left',(leftx+window.scrollX)+'px')
-				.style('right',null)
-		}
-/*
-		if(leftx+p.width > window.innerWidth) {
-			if(window.innerWidth-x > p.width) {
+			//if(window.innerWidth-x > p.width)
+			if(x > p.width) {
 				this.d.style('left',null)
 					.style('right',(window.innerWidth-x-window.scrollX+this.offsetX)+'px')
 			} else {
@@ -170,10 +163,10 @@ export class Menu{
 			this.d.style('left',(leftx+window.scrollX)+'px')
 				.style('right',null)
 		}
-		*/
 
 		if(topy+p.height > window.innerHeight) {
-			if(window.innerHeight-y > p.height) {
+			//if(window.innerHeight-y > p.height)
+			if(y > p.height) {
 				this.d.style('top',null)
 					.style('bottom',(window.innerHeight-y-window.scrollY+this.offsetY)+'px')
 			} else {
