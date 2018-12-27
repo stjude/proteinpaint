@@ -3942,6 +3942,7 @@ async function handle_mdssvcnv(req,res) {
 	if(req.query.findsamplename) return mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery )
 	if(req.query.getsample4disco) return mdssvcnv_exit_getsample4disco( req, res, gn, ds, dsquery )
 	if(req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene( req, res, gn, ds, dsquery )
+	if(req.query.ifsamplehasvcf) return mdssvcnv_exit_ifsamplehasvcf( req, res, gn, ds, dsquery )
 
 
 	if(!req.query.rglst) return res.send({error:'rglst missing'})
@@ -6967,6 +6968,19 @@ function mdssvcnv_exit_gettrack4singlesample( req, res, gn, ds, dsquery ) {
 	return res.send({
 		tracks: ds.sampleAssayTrack.samples.get( samplename )
 	})
+}
+
+
+
+function mdssvcnv_exit_ifsamplehasvcf( req, res, gn, ds, dsquery ) {
+	if(req.query.iscustom) return res.send({no:1})
+	if(!dsquery.vcf_querykey) {
+		// no vcf query, should be speedy and allow
+		return res.send({yes:1})
+	}
+	const vcfq = ds.queries[ dsquery.vcf_querykey ]
+	if(!vcfq) return res.send({error:'vcf query missing'})
+	res.send( vcfq.singlesamples ? {yes:1} : {no:1} )
 }
 
 
