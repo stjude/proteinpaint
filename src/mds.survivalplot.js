@@ -18,6 +18,7 @@ init()
 ********************** INTERNAL
 init_dataset_config
 init_a_plot
+	init_a_plot_filldefault
 loadPlot
 doPlot
 
@@ -127,7 +128,9 @@ thus to be made into samplerule.set{}
 
 
 function init_dataset_config(obj) {
-/* this step is not essential, keep it here in case need to load more
+/* this step is essential
+when attributes are available for defining full set, server returns counts for all sets for each attribute
+shown as the dropdown menu
 */
 	const par = {
 		genome: obj.genome.name,
@@ -265,7 +268,7 @@ push button to re-render
 	show_dividerules( p, div )
 
 
-	div.append('button')
+	p.button = div.append('button')
 		.text('Make plot')
 		.on('click',()=>{
 			loadPlot( p, obj)
@@ -460,16 +463,16 @@ function doPlot( plot, obj ) {
 
 
 function loadPlot (plot, obj) {
+
+	plot.button.text('Loading...')
+		.attr('disabled',1)
+
 	const par = {
 		genome: obj.genome.name,
 		dslabel: obj.mds.label,
 		type: plot.type,
 		samplerule: plot.samplerule,
 	}
-	
-	plot.svg.append('text')
-		.text('Loading...')
-		.attr('y',20)
 
 	client.dofetch('mdssurvivalplot', par)
 	.then(data=>{
@@ -490,6 +493,10 @@ function loadPlot (plot, obj) {
 	})
 	.catch(e=>{
 		obj.sayerror(e)
+	})
+	.then(()=>{
+		plot.button.text('Update plot')
+			.attr('disabled',null)
 	})
 }
 
