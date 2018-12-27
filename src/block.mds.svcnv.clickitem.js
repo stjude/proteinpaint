@@ -1391,6 +1391,8 @@ export async function click_multi_singleitem( p ) {
 
 	may_createbutton_disco( buttonrow, folderdiv, p )
 
+	may_createbutton_genome( buttonrow, folderdiv, p )
+
 
 	createbutton_addfeature( {
 		m: p.item,
@@ -2444,6 +2446,79 @@ function createbutton_focus( buttonrow, div, p, defaultshow ) {
 
 
 
+function may_createbutton_genome ( buttonrow, div, p ) {
+/*
+if the sample has a single vcf file
+will allow genome view
+also allow if there is no vcf query at all
+show entirety of each chr, and the mds single sample track
+
+may allow for custom track without vcf
+*/
+	if(!p.tk.mds) return
+	client.dofetch('mdssvcnv',{
+		genome: p.block.genome.name,
+		dslabel: p.tk.mds.label,
+		querykey: p.tk.mds.querykey,
+		ifsamplehasvcf: p.sample.samplename
+	})
+	.then(data=>{
+		if(data.no) return
+
+		// has single-sample vcf
+		const holder = div.append('div')
+			.style('margin','10px')
+			.style('display','none')
+		let plotnotshown=true
+
+		buttonrow.append('div')
+		.style('display','inline-block')
+		.attr('class','sja_menuoption')
+		.text('Genome')
+		.on('click',()=>{
+			if(holder.style('display')=='none') {
+				client.appear(holder)
+			} else {
+				client.disappear(holder)
+			}
+			if(!plotnotshown) return
+			plotnotshown=false
+			for(const chr in p.block.genome.majorchr) {
+				const chrdiv = holder.append('div')
+					.style('display','inline-block')
+				const t = {}
+
+				if(p.tk.iscustom) {
+					// TODO
+				} else {
+					t.mds = p.tk.mds
+					t.querykey = p.tk.querykey
+					t.singlesample = {
+						name: p.sample.samplename,
+						waterfall:{ inuse:1 }
+					}
+					for(const k in p.tk.mds.queries[p.tk.querykey]) {
+						if(k=='bplengthUpperLimit' || k=='valueCutoff') {
+							// do not use default
+							continue
+						}
+						t[k] = p.tk.mds.queries[p.tk.querykey][k]
+					}
+				}
+				p.block.newblock({
+					holder: chrdiv,
+					block:1,
+					chr: chr,
+					start: 0,
+					stop: p.block.genome.majorchr[chr],
+					tklst: [ t ]
+				})
+			}
+		})
+	})
+}
+
+
 async function may_createbutton_disco ( buttonrow, div, p ) {
 	if(!p.tk.mds || !p.tk.mds.singlesamplemutationjson) return
 
@@ -2467,7 +2542,7 @@ async function may_createbutton_disco ( buttonrow, div, p ) {
 	buttonrow.append('div')
 		.style('display','inline-block')
 		.attr('class', 'sja_menuoption')
-		.text('Genome view')
+		.text('Disco')
 		.on('click',()=>{
 
 			if(holder.style('display')=='none') {
