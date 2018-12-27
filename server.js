@@ -9187,61 +9187,9 @@ async function handle_mdssurvivalplot (req,res) {
 		if(!sp.plots) throw '.plots{} missing'
 
 		if(req.query.init) {
-
-			const result = {
-				plottypes: []
-			}
-
-			for(const k in sp.plots) {
-				result.plottypes.push({
-					key: k,
-					name: sp.plots[k].name,
-					timelabel: sp.plots[k].timelabel,
-				})
-			}
-
-			if(sp.samplegroupattrlst) {
-				result.samplegroupings = []
-
-				for(const a of sp.samplegroupattrlst) {
-					const attr = ds.cohort.sampleAttribute.attributes[ a.key ]
-					const value2count = new Map()
-					for(const n in ds.cohort.annotation) {
-						const sobj = ds.cohort.annotation[n]
-						const v = sobj[a.key]
-						if(v!=undefined) {
-
-							let hasoutcome = false
-							// if the sample has info in any plot, will count it
-							for(const k in sp.plots) {
-								if( sobj[ sp.plots[k].serialtimekey ]!=undefined ) {
-									hasoutcome=true
-									break
-								}
-							}
-
-							if(hasoutcome) {
-								if(value2count.has(v)) {
-									value2count.set(v, value2count.get(v)+1)
-								} else {
-									value2count.set(v, 1)
-								}
-							}
-						}
-					}
-					const lst = []
-					for(const [v,c] of value2count) {
-						lst.push({value:v, count: c})
-					}
-					result.samplegroupings.push({
-						key: a.key,
-						label: attr.label,
-						values: lst
-					})
-				}
-			}
-			res.send( result )
+			res.send( sp.init )
 			return
+
 		}
 
 		// make plot
@@ -12503,17 +12451,6 @@ function mds_init(ds,genome, _servconfig) {
 		ds.cohort.annotation = {}
 		// should allow both sample/individual level as key
 
-		if( ds.cohort.survivalplot ) {
-			if(!ds.cohort.survivalplot.plots) return '.plots{} missing from survivalplot'
-			for(const k in ds.cohort.survivalplot.plots) {
-				const p = ds.cohort.survivalplot.plots[k]
-				if(!p.name) return '.name missing from survivalplot '+k
-				if(!p.serialtimekey) return '.serialtimekey missing from survivalplot '+k
-				if(!p.iscensoredkey) return '.iscensoredkey missing from survivalplot '+k
-				p.key = k
-				if(!p.timelabel) p.timelabel = 'Years'
-			}
-		}
 
 		if( ds.cohort.mutation_signature) {
 			const s = ds.cohort.mutation_signature
@@ -12683,6 +12620,83 @@ function mds_init(ds,genome, _servconfig) {
 
 				ds.cohort.tohash(i, ds)
 			})
+		}
+
+
+
+		if( ds.cohort.survivalplot ) {
+			// ds.cohort.annotation needs to be loaded for initing survival
+			const sp = ds.cohort.survivalplot
+			if(!sp.plots) return '.plots{} missing from survivalplot'
+
+			// make the object for initiating client
+			sp.init = {
+				plottypes: []
+			}
+
+			for(const k in sp.plots) {
+				const p = sp.plots[k]
+				if(!p.name) return '.name missing from survivalplot '+k
+				if(!p.serialtimekey) return '.serialtimekey missing from survivalplot '+k
+				if(!p.iscensoredkey) return '.iscensoredkey missing from survivalplot '+k
+				if(!p.timelabel) return '.timelabel missing from survivalplot '+k
+				p.key = k
+
+				sp.init.plottypes.push({
+					key: k,
+					name: p.name,
+					timelabel: p.timelabel,
+				})
+			}
+
+			if(sp.samplegroupattrlst) {
+				sp.init.samplegroupings = []
+				for(const a of sp.samplegroupattrlst) {
+					
+					if(!a.key) return '.key missing from an attr of samplegroupattrlst for survival'
+
+					const attr = ds.cohort.sampleAttribute.attributes[ a.key ]
+					if(!attr) return 'unknown attribute key "'+a.key+'" from survival samplegroupattrlst'
+
+					const value2count = new Map()
+					for(const samplename in ds.cohort.annotation) {
+						const sobj = ds.cohort.annotation[ samplename ]
+						const v = sobj[a.key]
+						if(v==undefined) {
+							// sample not annotated by it
+							continue
+						}
+
+						let hasoutcome = false
+						// if the sample has info in any plot, will count it
+						for(const k in sp.plots) {
+							if( sobj[ sp.plots[k].serialtimekey ]!=undefined ) {
+								hasoutcome=true
+								break
+							}
+						}
+
+						if(hasoutcome) {
+							if(value2count.has(v)) {
+								value2count.set(v, value2count.get(v)+1)
+							} else {
+								value2count.set(v, 1)
+							}
+						}
+					}
+					if(value2count.size==0) return 'no value found for "'+a.key+'" from survival samplegroupattrlst'
+
+					const lst = []
+					for(const [v,c] of value2count) {
+						lst.push({value:v, count: c})
+					}
+					sp.init.samplegroupings.push({
+						key: a.key,
+						label: attr.label,
+						values: lst
+					})
+				}
+			}
 		}
 	}
 
