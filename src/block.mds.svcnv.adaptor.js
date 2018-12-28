@@ -5,9 +5,7 @@ export function mdssvcnvfromtemplate(tk,template) {
 	}
 	if(template.singlesample) {
 		if(!template.singlesample.name) return 'singlesample.name missing'
-		tk.singlesample = {
-			name: template.singlesample.name
-		}
+		tk.singlesample = template.singlesample
 	}
 	if(template.checkexpressionrank) {
 		if(tk.iscustom) {
