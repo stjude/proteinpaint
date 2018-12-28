@@ -2660,7 +2660,8 @@ function may_createbutton_samplesignature( buttonrow, div, samplename, tk, block
 				labelspace = 6,
 				axish = 5
 			const maxv = s.annotation[0].v
-			const minv = s.annotation[s.annotation.length-1].v
+			//const minv = s.annotation[s.annotation.length-1].v
+			const minv = 0 // hardcode the #mutation per mb minimum value as 0
 			const scale = scaleLinear().domain([minv, maxv]).range([0, barw])
 			let labelw = 0
 			for(const i of s.annotation) {
