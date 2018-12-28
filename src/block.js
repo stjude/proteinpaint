@@ -278,7 +278,8 @@ constructor(arg) {
 		const div=this.holder.append('div')
 			.style('margin-top','5px')
 
-		let shown=true
+		let shown = !arg.foldlegend
+
 		div.append('div')
 			.text('LEGEND')
 			.attr('class','sja_clb')
@@ -299,6 +300,9 @@ constructor(arg) {
 		const div2=this.holder.append('div')
 			.style('border-top','solid 1px '+this.legend.legendcolor)
 			.style('background-color','#FCFBF7')
+		if(arg.foldlegend) {
+			div2.style('display','none')
+		}
 
 		this.legend.holder=div2.append('table')
 			.style('border-spacing','15px')
