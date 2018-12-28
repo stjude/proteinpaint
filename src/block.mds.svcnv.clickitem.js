@@ -2483,6 +2483,12 @@ may allow for custom track without vcf
 			}
 			if(!plotnotshown) return
 			plotnotshown=false
+
+			let maxbp = 0
+			for(const chr in p.block.genome.majorchr) {
+				maxbp = Math.max(maxbp, p.block.genome.majorchr[chr])
+			}
+
 			for(const chr in p.block.genome.majorchr) {
 				const chrdiv = holder.append('div')
 					.style('display','inline-block')
@@ -2491,6 +2497,7 @@ may allow for custom track without vcf
 				if(p.tk.iscustom) {
 					// TODO
 				} else {
+					t.fixname = chr.toUpperCase()
 					t.mds = p.tk.mds
 					t.querykey = p.tk.querykey
 					t.singlesample = {
@@ -2506,6 +2513,9 @@ may allow for custom track without vcf
 					}
 				}
 				p.block.newblock({
+					foldlegend:true,
+					hide_mdsHandleHolder:1,
+					width: Math.ceil( 900 * p.block.genome.majorchr[chr] / maxbp ),
 					holder: chrdiv,
 					block:1,
 					chr: chr,
