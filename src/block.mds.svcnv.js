@@ -2904,7 +2904,13 @@ for both multi- and single-sample
 		if(!tk.lohLengthUpperLimit) tk.lohLengthUpperLimit = 2000000
 		if(!tk.segmeanValueCutoff) tk.segmeanValueCutoff = 0.1
 
-		tk.tklabel.text( (tk.name? tk.name+', ' : '') + tk.singlesample.name )
+		if(tk.fixname) {
+			tk.name = tk.fixname
+			tk.tklabel.text(tk.name)
+			delete tk.fixname
+		} else {
+			tk.tklabel.text( (tk.name? tk.name+', ' : '') + tk.singlesample.name )
+		}
 
 		tk.svvcf_g=tk.glider.append('g') // show sv as lollipops
 		tk.cnv_g=tk.glider.append('g') // show cnv/loh as bed track
