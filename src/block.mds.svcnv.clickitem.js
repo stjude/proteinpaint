@@ -40,6 +40,8 @@ may_show_matrixbutton
 may_createbutton_samplesignature
 may_createbutton_survival_onemutation
 may_createbutton_survival_grouplab
+may_createbutton_disco
+may_createbutton_genome
 matrix_view()
 
 
@@ -156,6 +158,14 @@ export async function may_allow_samplesearch(tk, block) {
 
 
 						may_createbutton_disco( buttonrow, folderdiv, {
+							tk: tk,
+							block: block,
+							sample: {
+								samplename: sample.name
+							},
+							//samplegroup: {attributes: sample.attributes}
+						})
+						may_createbutton_genome( buttonrow, folderdiv, {
 							tk: tk,
 							block: block,
 							sample: {
