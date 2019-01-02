@@ -1154,6 +1154,7 @@ function facetmake(block, tkset, flet) {
 	const table=scrollholder.append('table')
 		.style('margin','10px')
 		.style('border-spacing','3px')
+		.style('border-collapse','separate')
 		.attr('class','sja_simpletable')
 
 	///////////////// header row
