@@ -284,7 +284,17 @@ push button to re-render
 		d_curves: p.d.append('div').style('margin','10px')
 	}
 
-	p.svg = p.d.append('svg')
+	const relative_d = p.d.append('div')
+		.style('position','relative')
+		.style('display','inline')
+
+	p.svg = relative_d.append('svg')
+	p.resize_handle = relative_d.append('div')
+		.style('position','absolute')
+		.style('right','0px')
+		.style('bottom','-15px')
+		.attr('class','sja_clbtext')
+		.text('drag to resize')
 
 
 	if(p.renderplot) {
@@ -366,10 +376,37 @@ function doPlot( plot, obj ) {
 	}
 
 	plot.svg.selectAll('*').remove()
+
 	// curves
-	{
-		const g = plot.svg.append('g')
-			.attr('transform','translate('+(plot.yaxisw+plot.yaxispad)+','+(plot.toppad)+')')
+	const curves_g = plot.svg.append('g')
+	for(const curve of plot.samplesets) {
+		curve.path = curves_g.append('path')
+			.attr('stroke',curve.color)
+			.attr('fill','none')
+		curve.ticks = curves_g.append('path')
+			.attr('stroke', curve.color)
+			.attr('fill','none')
+	}
+
+	// y axis
+	const yaxis_g = plot.svg.append('g')
+	const yaxis_scale = scaleLinear().domain([0,1])
+	const yaxis_lab_g = plot.svg.append('g')
+	const yaxis_lab = yaxis_lab_g.append('text')
+		.text('Survival')
+		.attr('transform','rotate(-90)')
+
+	// x axis
+	const xaxis_g = plot.svg.append('g')
+	const xaxis_scale = scaleLinear().domain([0,maxx])
+	const xaxis_lab = plot.svg.append('text')
+			.attr('font-size', plot.labfontsize)
+			.text( obj.plottypes.find(i=>i.key==plot.type).timelabel )
+			.attr('x', plot.yaxisw+plot.yaxispad+plot.width/2)
+			.attr('y', plot.toppad+plot.height+plot.xaxispad+plot.xaxish-3)
+
+	function resize () {
+		curves_g.attr('transform','translate('+(plot.yaxisw+plot.yaxispad)+','+(plot.toppad)+')')
 		for(const curve of plot.samplesets) {
 			const ticks = []
 			const pathd = ['M 0 0']
@@ -389,58 +426,66 @@ function doPlot( plot, obj ) {
 					}
 				}
 			}
-			g.append('path')
-				.attr('d', pathd.join(' '))
-				.attr('stroke',curve.color)
-				.attr('fill','none')
+			curve.path.attr('d', pathd.join(' '))
 			if(ticks.length) {
-				g.append('path')
-					.attr('d', ticks.join(' '))
-					.attr('stroke', curve.color)
-					.attr('fill','none')
+				curve.ticks.attr('d', ticks.join(' '))
 			}
 		}
-	}
-	// y axis
-	{
-		const g = plot.svg.append('g')
-			.attr('transform','translate('+(plot.yaxisw)+','+(plot.toppad)+')')
+
+		yaxis_g.attr('transform','translate('+(plot.yaxisw)+','+(plot.toppad)+')')
 		client.axisstyle({
-			axis: g.call( axisLeft().scale(
-				scaleLinear().domain([0,1]).range([plot.height,0])
+			axis: yaxis_g.call(
+				axisLeft().scale( 
+					yaxis_scale.range([plot.height,0])
 				)
 			),
 			showline:1,
 			fontsize:plot.tickfontsize,
 		})
-		plot.svg.append('g')
-			.attr('transform','translate('+(plot.labfontsize)+','+(plot.toppad+plot.height/2)+')')
-			.append('text')
-			.text('Survival')
-			.attr('font-size',plot.labfontsize)
-			.attr('transform','rotate(-90)')
-	}
-	// x axis
-	{
-		const g = plot.svg.append('g')
-			.attr('transform','translate('+(plot.yaxisw+plot.yaxispad)+','+(plot.toppad+plot.height+plot.xaxispad)+')')
+		yaxis_lab_g.attr('transform','translate('+(plot.labfontsize)+','+(plot.toppad+plot.height/2)+')')
+		yaxis_lab.attr('font-size',plot.labfontsize)
+
+		xaxis_g.attr('transform','translate('+(plot.yaxisw+plot.yaxispad)+','+(plot.toppad+plot.height+plot.xaxispad)+')')
 		client.axisstyle({
-			axis: g.call( axisBottom().scale(
-				scaleLinear().domain([0,maxx]).range([0,plot.width])
+			axis: xaxis_g.call(
+				axisBottom().scale(
+					xaxis_scale.range([0,plot.width])
 				)
 			),
 			showline:1,
 			fontsize:plot.tickfontsize
 		})
-		plot.svg.append('text')
+		xaxis_lab
 			.attr('font-size', plot.labfontsize)
-			.text( obj.plottypes.find(i=>i.key==plot.type).timelabel )
 			.attr('x', plot.yaxisw+plot.yaxispad+plot.width/2)
 			.attr('y', plot.toppad+plot.height+plot.xaxispad+plot.xaxish-3)
+
+		plot.svg
+			.attr('width', plot.yaxisw+plot.yaxispad+plot.width+plot.rightpad)
+			.attr('height', plot.toppad+plot.height+plot.xaxispad+plot.xaxish)
 	}
-	plot.svg
-		.attr('width', plot.yaxisw+plot.yaxispad+plot.width+plot.rightpad)
-		.attr('height', plot.toppad+plot.height+plot.xaxispad+plot.xaxish)
+	resize()
+
+
+	plot.resize_handle
+		.on('mousedown',()=>{
+			d3event.preventDefault()
+			const b=d3select(document.body)
+			const x=d3event.clientX
+			const y=d3event.clientY
+			const w0=plot.width
+			const h0=plot.height
+			b.on('mousemove',()=>{
+				plot.width=w0+d3event.clientX-x
+				plot.height=h0+d3event.clientY-y
+				resize()
+			})
+			b.on('mouseup',()=>{
+				b.on('mousemove',null).on('mouseup',null)
+			})
+		})
+
+
 
 	// legend
 	if(Number.isFinite(plot.pvalue)) {
