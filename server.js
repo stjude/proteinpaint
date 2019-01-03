@@ -9563,7 +9563,7 @@ tk is from ds.queries{}
 				st.samples_sv.add(j.sample)
 				return
 			}
-			if(j.dt==common.dtfusion) {
+			if(j.dt==common.dtfusionrna) {
 				if(!st.fusion) return
 				mutsamples.add(j.sample)
 				st.samples_fusion.add(j.sample)
