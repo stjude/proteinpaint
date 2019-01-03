@@ -319,7 +319,7 @@ module.exports={
 
 
 		junction: {
-			name:'PCGP tumor RNA splice junction',
+			name:'BALL tumor RNA splice junction',
 			istrack:true,
 			type:common.tkt.mdsjunction,
 			viewrangeupperlimit:500000,
