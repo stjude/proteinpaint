@@ -210,7 +210,8 @@ module.exports={
 						},
 						3:{
 							name:'Failure of HR repair (COSMIC 3)',
-							color:'#F7941F',
+							//color:'#F7941F',
+							color:'#1CA89E', // from 10
 						},
 						4:{
 							name:'Accumulation with age (COSMIC 5)',
@@ -238,7 +239,8 @@ module.exports={
 						},
 						10:{
 							name:'N/A (COSMIC 23)',
-							color:'#1CA89E',
+							//color:'#1CA89E',
+							color:'#F7941F', // from 3
 						},
 						11:{
 							name:'N/A (COSMIC 3)',
