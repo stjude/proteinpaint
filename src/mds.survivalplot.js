@@ -367,6 +367,7 @@ function doPlot( plot, obj ) {
 	*/
 	const colorfunc = scaleOrdinal(schemeCategory10)
 
+	const minx = 0 // min value is hardcoded
 	let maxx = 0
 	for(const curve of plot.samplesets) {
 		curve.color = colorfunc( curve.name )
@@ -374,6 +375,7 @@ function doPlot( plot, obj ) {
 			maxx = Math.max(maxx, s.x)
 		}
 	}
+
 
 	plot.svg.selectAll('*').remove()
 
@@ -398,7 +400,7 @@ function doPlot( plot, obj ) {
 
 	// x axis
 	const xaxis_g = plot.svg.append('g')
-	const xaxis_scale = scaleLinear().domain([0,maxx])
+	const xaxis_scale = scaleLinear().domain([ minx, maxx ])
 	const xaxis_lab = plot.svg.append('text')
 			.attr('font-size', plot.labfontsize)
 			.text( obj.plottypes.find(i=>i.key==plot.type).timelabel )
@@ -435,9 +437,11 @@ function doPlot( plot, obj ) {
 		yaxis_g.attr('transform','translate('+(plot.yaxisw)+','+(plot.toppad)+')')
 		client.axisstyle({
 			axis: yaxis_g.call(
-				axisLeft().scale( 
-					yaxis_scale.range([plot.height,0])
-				)
+				axisLeft()
+					.scale( 
+						yaxis_scale.range([plot.height,0])
+					)
+					.ticks( Math.floor( plot.height / (plot.tickfontsize+20) ) )
 			),
 			showline:1,
 			fontsize:plot.tickfontsize,
@@ -446,11 +450,21 @@ function doPlot( plot, obj ) {
 		yaxis_lab.attr('font-size',plot.labfontsize)
 
 		xaxis_g.attr('transform','translate('+(plot.yaxisw+plot.yaxispad)+','+(plot.toppad+plot.height+plot.xaxispad)+')')
+		let xticknumber
+		xaxis_g.append('text')
+			.text(maxx)
+			.attr('font-size',plot.tickfontsize)
+			.each(function(){
+				xticknumber = Math.floor( plot.width / ( this.getBBox().width+30) )
+			})
+			.remove()
 		client.axisstyle({
 			axis: xaxis_g.call(
-				axisBottom().scale(
-					xaxis_scale.range([0,plot.width])
-				)
+				axisBottom()
+					.scale(
+						xaxis_scale.range([0,plot.width])
+					)
+					.ticks( xticknumber )
 			),
 			showline:1,
 			fontsize:plot.tickfontsize
