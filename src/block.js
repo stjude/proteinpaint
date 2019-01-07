@@ -2295,7 +2295,6 @@ block_addtk_template(template) {
 		tk.rowspace=5
 		tk.uninit=true
 		break
-	case client.tkt.bedgraph:
 	*/
 	case client.tkt.aicheck:
 		aicheckfromtemplate(tk,template)
@@ -3261,6 +3260,7 @@ tkarg_q(tk) {
 		width:this.width,
 		file:tk.file,
 		url:tk.url,
+		indexURL: tk.indexURL, // for bedgraph
 		barheight:tk.barheight,
 		minv:tk.scale.min,
 		maxv:tk.scale.max,

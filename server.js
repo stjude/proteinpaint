@@ -718,20 +718,99 @@ function handle_pdomain(req,res) {
 }
 
 
+function handle_tkbigwig_bedgraph_region( req, r, xoff, minv, maxv, file, bedgraphdir, ctx ) {
 
-function handle_tkbigwig(req,res) {
+	const hscale=makeyscale().height(req.query.barheight).min(minv).max(maxv)
+	const sf = r.width / (r.stop-r.start)
+
+	return new Promise((resolve,reject)=>{
+
+	const ps = spawn( tabix, [ file, r.chr+':'+r.start+'-'+r.stop ], {cwd: bedgraphdir} )
+	const rl = readline.createInterface({input: ps.stdout})
+	rl.on('line',line=>{
+		const l = line.split('\t')
+		const start = Number.parseInt(l[1])
+		if(Number.isNaN(start)) return
+		const stop = Number.parseInt(l[2])
+		if(Number.isNaN(stop)) return
+		const v = Number.parseFloat(l[3])
+		if(Number.isNaN(v)) return
+		ctx.fillStyle = v>0 ? req.query.pcolor : req.query.ncolor
+		const tmp=hscale(v)
+		const x1 = xoff + (Math.max(start,r.start)-r.start) * sf
+		const x2 = xoff + (Math.min(stop,r.stop) - r.start) * sf
+		const w = Math.max(1, x2-x1)
+
+		ctx.fillRect(x1, tmp.y, w, tmp.h)
+
+		if(v>maxv) {
+			ctx.fillStyle = req.query.pcolor2
+			ctx.fillRect(x1,0,w,2)
+		} else if(v<minv) {
+			ctx.fillStyle = req.query.ncolor2
+			ctx.fillRect(x1,req.query.barheight-2,w,2)
+		}
+
+	})
+
+	ps.on('close',()=>{
+		resolve()
+	})
+
+	})
+}
+
+
+async function handle_tkbigwig_bedgraph( req, res, minv, maxv, file, bedgraphdir ) {
+/* 
+*/
+	if(minv==undefined || maxv==undefined) throw 'Y axis scale must be defined for bedgraph track'
+	const canvas=new Canvas(req.query.width, req.query.barheight)
+	const ctx=canvas.getContext('2d')
+	let xoff=0
+	for(let r of req.query.rglst) {
+		await handle_tkbigwig_bedgraph_region( req, r, xoff, minv, maxv, file, bedgraphdir, ctx )
+		xoff += r.width + req.query.regionspace
+	}
+	res.send({ src: canvas.toDataURL() })
+}
+
+
+
+
+
+async function handle_tkbigwig(req,res) {
+/*
+if file/url ends with .gz, it is bedgraph
+	- all bedgraph data from view range will be kept in mem, risk of running out of mem
+	- not to be used in production!!!
+	- bedgraph should render bars while reading data, with predefined y axis; no storing data
+*/
 	if(reqbodyisinvalidjson(req,res)) return
+
 
 	let fixminv,
 		fixmaxv,
 		percentile,
-		autoscale=false
+		autoscale=false,
+		isbedgraph=false,
+		bedgraphdir
+
+	const [e,file,isurl]=fileurl(req)
+	if(e) return res.send({error:e})
+
+	if(file.endsWith('.gz')) {
+		// is bedgraph, will cache index if is url
+		isbedgraph = true
+		if(isurl) {
+			bedgraphdir = await cache_index_promise( req.query.indexURL || file+'.tbi' )
+		}
+	}
 
 	Promise.resolve()
 	.then(()=>{
 
-		const [e,file,isurl]=fileurl(req)
-		if(e) throw e
+
 
 		if(req.query.autoscale) {
 			autoscale=true
@@ -750,6 +829,10 @@ function handle_tkbigwig(req,res) {
 		if(!req.query.rglst) throw 'region list missing'
 		if(req.query.dotplotfactor) {
 			if(!Number.isInteger(req.query.dotplotfactor)) throw 'dotplotfactor value should be positive integer'
+		}
+
+		if(isbedgraph) {
+			return handle_tkbigwig_bedgraph( req, res, fixminv, fixmaxv, file, bedgraphdir )
 		}
 
 		const tasks = [] // one task per region
@@ -792,6 +875,9 @@ function handle_tkbigwig(req,res) {
 		return Promise.all( tasks )
 	})
 	.then( ()=>{
+
+		if(isbedgraph) return
+
 		let nodata=true
 		for(const r of req.query.rglst) {
 			if(r.values) nodata=false
