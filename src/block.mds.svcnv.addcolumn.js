@@ -57,7 +57,6 @@ export function render_multi_genebar( tk, block) {
 	// it may have been cleared in trunk, but local func could still call to re-render
 	tk.cnvrightg.selectAll('*').remove()
 
-
 	const attrlst = [] // list of sample attributes to show alongside expression
 
 	// TODO support categorical attributes
@@ -235,6 +234,22 @@ export function render_multi_genebar( tk, block) {
 		)
 
 	}
+
+
+
+
+	/* sloppy
+	should await for data to be loaded for all fixed genes
+	*/
+	if(tk.gecfg.fixed_pend) {
+		const i = tk.gecfg.fixed_pend.shift()
+		if(tk.gecfg.fixed_pend.length==0) {
+			delete tk.gecfg.fixed_pend
+		}
+		// not using predefined position
+		findgene4fix( i.gene, tk, block )
+	}
+
 
 
 	// adjust block right width
@@ -1109,7 +1124,7 @@ function findgene4fix_searchui( holder, tk, block ) {
 
 
 
-async function findgene4fix( name, tk, block ) {
+async function findgene4fix( name, tk, block, norender ) {
 
 	tk.tkconfigtip.clear()
 
@@ -1158,8 +1173,11 @@ async function findgene4fix( name, tk, block ) {
 
 		tk.tkconfigtip.hide()
 
-		render_multi_genebar(tk,block)
-		// done
+		if(norender) {
+			// upon init and add genes from custom param, won't render until exp data is loaded for each pending fixed gene then render just once
+		} else {
+			render_multi_genebar(tk,block)
+		}
 
 	} catch(err) {
 

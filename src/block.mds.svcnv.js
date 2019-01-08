@@ -2986,27 +2986,31 @@ for both multi- and single-sample
 	makeTk_legend(block, tk)
 
 	// gene expression config
+	// make sure do not overwrite gecfg from custom setting
 
 	let hasexpression = false
 	if(tk.iscustom) {
 		// custom
 		if(tk.checkexpressionrank) {
 			hasexpression = true
-			tk.gecfg = {
-				datatype: tk.checkexpressionrank.datatype
-			}
+			if(!tk.gecfg) tk.gecfg = {}
+			tk.gecfg.datatype = tk.checkexpressionrank.datatype
 		} else if( tk.checkrnabam ) {
 			hasexpression = true
-			tk.gecfg = {
-				datatype: 'FPKM'
-			}
+			if(!tk.gecfg) tk.gecfg = {}
+			tk.gecfg.datatype = 'FPKM'
 		}
 
 	} else {
 		// official
 		if(tk.mds.queries[tk.querykey].checkexpressionrank) {
 			hasexpression=true
-			tk.gecfg = tk.mds.queries[ tk.mds.queries[tk.querykey].checkexpressionrank.querykey ]
+			const cp = tk.mds.queries[ tk.mds.queries[tk.querykey].checkexpressionrank.querykey ]
+			if(tk.gecfg && tk.gecfg.fixed_pend) {
+				// copy over custom settings
+				cp.fixed_pend = tk.gecfg.fixed_pend
+			}
+			tk.gecfg = cp
 		}
 	}
 	if(hasexpression) {
@@ -3128,6 +3132,10 @@ function apply_customization_oninit(tk, block) {
 	}
 	if(c.itd) {
 		if(c.itd.hidden) tk.legend_mclass.hiddenvalues.add(common.dtitd)
+	}
+	if(c.fixedgeneexpression) {
+		if(!tk.gecfg) tk.gecfg = {}
+		tk.gecfg.fixed_pend = c.fixedgeneexpression
 	}
 }
 
