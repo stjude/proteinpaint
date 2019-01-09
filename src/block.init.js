@@ -29,6 +29,7 @@ export default function (arg) {
 	}
 	paint.holder=arg.holder instanceof Element ? select(arg.holder) : arg.holder
 	paint.dataset=arg.dataset
+	paint.mset = arg.mset
 	paint.hidedatasetexpression=arg.hidedatasetexpression
 	paint.hidegenecontrol=arg.hidegenecontrol
 	paint.hidegenelegend=arg.hidegenelegend
@@ -291,6 +292,7 @@ function step3(paint) {
 		gmstackheight:37,
 		allgm:paint.allmodels,
 		datasetlst:paint.dataset,
+		mset:paint.mset,
 		hlaachange:paint.hlaachange,
 		hlvariants:paint.hlvariants,
 		gmmode:mode,
