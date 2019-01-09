@@ -1003,6 +1003,7 @@ function launchgeneview(arg, holder) {
 		samplecart:samplecart,
 		debugmode:debugmode,
 		datasetqueries: arg.datasetqueries,
+		mset: arg.mset,
 		tklst: arg.tracks
 	}
 	let ds=null
