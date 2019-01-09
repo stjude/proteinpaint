@@ -341,7 +341,7 @@ for(const t of tk.tracks) {
 					block.tkprogress(tk,donenum/tk.tracks.length)
 				}
 				if(!data) reject('server error for getting member track '+t.name)
-				if(data.error) reject('Cannot get data for '+t.name+': '+data.error)
+				if(data.error) reject('Cannot get data: '+data.error)
 				if(!data.lst && !data.bins) reject('wrong response when getting data for '+t.name)
 				if(data.lst) {
 					// actual junction data retrieved
