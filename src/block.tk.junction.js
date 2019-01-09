@@ -544,6 +544,8 @@ Promise.all(tasks)
 	rendertk(junc,tk,block)
 })
 .catch(err=>{
+	// clear tk
+	tk.glider.selectAll('*').remove()
 	block.tkcloakoff(tk,{error:err})
 	block.block_setheight()
 })
