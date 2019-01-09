@@ -3531,6 +3531,10 @@ function handle_junction(req,res) {
 		return res.send({error:'rglst missing'})
 	}
 
+	if(req.query.rglst.reduce((i,j)=>j.stop-j.start+i, 0) > 1000000) {
+		return res.send({error:'Zoom in below 1 Mb to show junctions'})
+	}
+
 	const junctionloader=(usedir)=>{
 		const errout=[]
 		const items=[]
