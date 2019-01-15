@@ -16,7 +16,9 @@ follows bigwig track, main & subpanel rendered separately
 function makeTk(tk,block) {
 
 	tk.img=tk.glider.append('image')
-	tk.dotsize = 1
+	if(!tk.dotsize) {
+		tk.dotsize = 1
+	}
 
 	if(!tk.coveragemax) {
 		tk.coveragemax=100
