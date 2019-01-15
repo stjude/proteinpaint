@@ -38,6 +38,7 @@ function makeTk(tk,block) {
 		.each(function(){
 			tk.leftLabelMaxwidth = this.getBBox().width
 		})
+	block.setllabel()
 
 	// left side axes
 	tk.Tvafaxis = tk.gleft.append('g')
@@ -134,12 +135,7 @@ export function loadTk(tk,block) {
 
 	const par=tkarg(tk,block)
 
-	const req = new Request(block.hostURL+'/tkaicheck', {
-		method:'POST',
-		body:JSON.stringify(par)
-	})
-	fetch(req)
-	.then(data=>{return data.json()})
+	client.dofetch('tkaicheck', par)
 	.then(data=>{
 		if(data.error) throw({message:data.error})
 
