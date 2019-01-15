@@ -871,8 +871,8 @@ function configpanel(tk, block) {
 	const row=holder.append('div').style('margin-bottom','10px')
 	row.append('span').html('Read count cutoff&nbsp;')
 	row.append('input').property('value',tk.readcountcutoff || 0).attr('type','number').style('width','50px').on('keyup',()=>{
-		if(d3event.code!='Enter') return
-		const v=d3event.target.value
+		if(!client.keyupEnter()) return
+		const v=Number.parseFloat(d3event.target.value)
 		if(v==0) {
 			if(tk.readcountcutoff) {
 				// cutoff has been set, cancel and refetch data
