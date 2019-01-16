@@ -332,7 +332,7 @@ if(hasdiseaselst.length) {
 	})
 }
 
-if (hasdiseaselst.length || cohort.piebarJSON || (cohort.heatmapJSON.samplegroup && cohort.heatmapJSON.samplegroup.length)) {
+if (hasdiseaselst.length || cohort.piebarJSON || (cohort.heatmapJSON && cohort.heatmapJSON.samplegroup && cohort.heatmapJSON.samplegroup.length)) {
 	const [piebtn,piediv]=makefolder(cohort)
 	piebtn.style('font-size','.8em').text('PIE CHARTS')
 		  .attr('title', 'A sample group by gene group matrix of piecharts, with each pie wedge representing the number of hits by variant class.')
