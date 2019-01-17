@@ -652,6 +652,19 @@ export function horiplace(lst,width,tk) {
 		}
 	}
 
+	/*
+	no longer does shifting
+	*/
+	for(const i of lst) {
+		i.x=i.tox
+	}
+	set_all(tk)
+	return
+
+
+
+
+
 	todo.sort((a,b)=>{
 		return a.tox-b.tox
 	})
@@ -723,6 +736,14 @@ export function horiplace(lst,width,tk) {
 
 
 export function automode(tk,usemode,blockwidth) {
+/*
+no longer fold junctions
+*/
+	for(const i of tk.data) {
+		if(!i.mode) i.mode = moderaise
+	}
+	return
+
 	const samplecountlst=[]
 	for(let i=0; i<tk.data.length; i++) {
 		samplecountlst.push({
