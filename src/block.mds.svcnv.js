@@ -2451,6 +2451,13 @@ export function focus_singlesample( p ) {
 			arg.start = Math.max(0, m.start-span)
 			arg.stop = Math.min( block.genome.chrlookup[ m.chr.toUpperCase()].len, m.stop+span )
 
+		} else if( m.dt==common.dtsnvindel) {
+
+			const span = 10000 // hardcoded
+			arg.chr = m.chr
+			arg.start = Math.max(0, m.pos-span)
+			arg.stop = Math.min( block.genome.chrlookup[ m.chr.toUpperCase()].len, m.pos+span)
+
 		} else if( m.dt==common.dtsv || m.dt==common.dtfusionrna ) {
 
 			if(m.chrA==m.chrB) {
