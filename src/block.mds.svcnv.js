@@ -3302,7 +3302,7 @@ function configPanel_cnvloh ( tk, block ) {
 			})
 		row.append('div')
 			.style('font-size','.7em').style('color','#858585')
-			.html('Only show CNV with absolute log2(ratio) no less than cutoff.<br>Set to 0 to cancel.')
+			.html('Only show CNV with absolute log2(ratio) no less than cutoff.<br>Set to 0 to show all. Press ENTER to update.')
 	}
 
 	// focal cnv
@@ -3350,7 +3350,7 @@ function configPanel_cnvloh ( tk, block ) {
 		row.append('span').text('bp')
 		row.append('div')
 			.style('font-size','.7em').style('color','#858585')
-			.html('Limit the CNV segment length to show only focal events.<br>Set to 0 to cancel.')
+			.html('Limit the CNV segment length to show only focal events.<br>Set to 0 to show all. Press ENTER to update.')
 	}
 
 	// cnv color
