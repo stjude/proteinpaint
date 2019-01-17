@@ -1053,10 +1053,6 @@ function handle_tkaicheck(req,res) {
 	Promise.resolve()
 	.then(()=>{
 
-		/*********************************
-		    1 - cache url index
-		*********************************/
-
 		if(!isurl) return {file:file}
 		const indexurl = req.query.indexURL || file+'.tbi'
 
@@ -1121,15 +1117,27 @@ function handle_tkaicheck(req,res) {
 						ctx.fillRect(x, vafheight*2+rowspace*4+coverageheight*2+vafheight*(1-ai), dotsize, 2)
 
 						// coverage bars
-						ctx.fillStyle = tintumor>=coveragemax ? coverageabovemaxcolor : barcolor
+						//ctx.fillStyle = tintumor>=coveragemax ? coverageabovemaxcolor : barcolor
+						ctx.fillStyle = barcolor
 						let barh = (tintumor >= coveragemax ? coveragemax : tintumor) * coverageheight / coveragemax
 						let y = coverageheight-barh
 						ctx.fillRect(x, y + vafheight+rowspace, dotsize, barh)
 			
-						ctx.fillStyle = tinnormal >=coveragemax ? coverageabovemaxcolor : barcolor
+						//ctx.fillStyle = tinnormal >=coveragemax ? coverageabovemaxcolor : barcolor
+						ctx.fillStyle = barcolor
 						barh = (tinnormal >= coveragemax ? coveragemax : tinnormal) * coverageheight / coveragemax
 						y = coverageheight-barh
 						ctx.fillRect(x, y + 3*rowspace + 2*vafheight + coverageheight, dotsize, barh)
+
+						// coverage above max
+						if(tintumor>=coveragemax) {
+							ctx.fillStyle = coverageabovemaxcolor
+							ctx.fillRect(x, vafheight+rowspace, dotsize, 2 )
+						}
+						if(tinnormal >= coveragemax) {
+							ctx.fillStyle = coverageabovemaxcolor
+							ctx.fillRect(x, 3*rowspace + 2*vafheight + coverageheight, dotsize, 2)
+						}
 					}
 					resolve()
 				})
