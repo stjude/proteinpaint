@@ -1008,7 +1008,7 @@ function launchhic(hic, holder) {
 
 
 
-async function launchsamplematrix(cfg, holder) {
+function launchsamplematrix(cfg, holder) {
 	if(!cfg.genome) {
 		error0('missing genome for launching samplematrix')
 		return
@@ -1028,8 +1028,9 @@ async function launchsamplematrix(cfg, holder) {
 		cfg.string2pos = string2pos
 		cfg.invalidcoord = invalidcoord
 		cfg.block = import('./block.js')
-		const sjcharts = await getsjcharts()
-		sjcharts.dthm( cfg )
+		getsjcharts(sjcharts => {
+			sjcharts.dthm( cfg )
+		})
 	}
 	else {
 		import('./samplematrix').then(_=>{
@@ -1106,7 +1107,7 @@ function launchgeneview(arg, holder) {
 
 
 
-async function launchblock(arg,holder) {
+function launchblock(arg,holder) {
 	/*
 	launch genome browser, rather than gene-view
 	may load a study file at same time, to add as .genome.tkset[]
@@ -1208,13 +1209,17 @@ async function launchblock(arg,holder) {
 		}
 	} else if(arg.positionbygene) {
 		try {
-			const data = await client.dofetch('genelookup',{deep:1,input:arg.positionbygene,genome:arg.genome})
-			if(data.error) throw data.error
-			if(!data.gmlst || data.gmlst.length==0) throw 'No gene found by '+arg.positionbygene
-			const gm = data.gmlst[0]
-			blockinitarg.chr = gm.chr
-			blockinitarg.start = gm.start
-			blockinitarg.stop = gm.stop
+			client.dofetch('genelookup',{
+				deep:1,input:arg.positionbygene,
+				genome:arg.genome
+			}).then(data=>{
+				if(data.error) throw data.error
+				if(!data.gmlst || data.gmlst.length==0) throw 'No gene found by '+arg.positionbygene
+				const gm = data.gmlst[0]
+				blockinitarg.chr = gm.chr
+				blockinitarg.start = gm.start
+				blockinitarg.stop = gm.stop
+			})
 		} catch(e){
 			error0(e)
 		}
