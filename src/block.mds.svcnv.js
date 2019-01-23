@@ -2451,12 +2451,6 @@ export function focus_singlesample( p ) {
 			arg.start = Math.max(0, m.start-span)
 			arg.stop = Math.min( block.genome.chrlookup[ m.chr.toUpperCase()].len, m.stop+span )
 
-		} else if( m.dt==common.dtsnvindel) {
-
-			const span = 10000 // hardcoded
-			arg.chr = m.chr
-			arg.start = Math.max(0, m.pos-span)
-			arg.stop = Math.min( block.genome.chrlookup[ m.chr.toUpperCase()].len, m.pos+span)
 
 		} else if( m.dt==common.dtsv || m.dt==common.dtfusionrna ) {
 
@@ -2485,9 +2479,30 @@ export function focus_singlesample( p ) {
 	if(!arg.chr) {
 		// no view range set
 		const r = block.tkarg_maygm(tk)[0]
-		arg.chr=r.chr
-		arg.start=r.start
-		arg.stop=r.stop
+
+		if( m.dt==common.dtsnvindel) {
+			// is snvindel
+
+			const span = 10000 // hardcoded
+
+			if( span < r.stop-r.start ) {
+				// current view range is bigger than span, use span
+				arg.chr = m.chr
+				arg.start = Math.max(0, m.pos-span)
+				arg.stop = Math.min( block.genome.chrlookup[ m.chr.toUpperCase()].len, m.pos+span)
+			} else {
+				arg.chr=r.chr
+				arg.start=r.start
+				arg.stop=r.stop
+			}
+		} else {
+
+			// is not snvindel
+
+			arg.chr=r.chr
+			arg.start=r.start
+			arg.stop=r.stop
+		}
 	}
 
 
@@ -3450,7 +3465,7 @@ function configPanel_cnvloh ( tk, block ) {
 				})
 			row.append('div')
 				.style('font-size','.7em').style('color','#858585')
-				.html('Only show LOH with seg.mean no less than cutoff.<br>Set to 0 to cancel.')
+				.html('Only show LOH with seg.mean no less than cutoff.<br>Set to 0 to show all. Press ENTER to update.')
 		}
 
 		// focal loh
@@ -3498,7 +3513,7 @@ function configPanel_cnvloh ( tk, block ) {
 			row.append('span').text('bp')
 			row.append('div')
 				.style('font-size','.7em').style('color','#858585')
-				.html('Limit the LOH segment length to show only focal events.<br>Set to 0 to cancel.')
+				.html('Limit the LOH segment length to show only focal events.<br>Set to 0 to show all. Press ENTER to update.')
 		}
 
 		// loh color
