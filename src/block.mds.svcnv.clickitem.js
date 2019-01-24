@@ -2880,15 +2880,19 @@ samplegroup
 		st.snvindel = {
 			hiddenclass: {}
 		}
+
+		// hiddenvalues is a mix of dt and mclass
 		{
-			let hashidden=false
+			// check mclass first
+			let hashiddensnv = false
 			for(const c of arg.tk.legend_mclass.hiddenvalues) {
-				if(common.mclass[c].dt == common.dtsnvindel) {
+
+				if( typeof c == 'string' ) {
 					st.snvindel.hiddenclass[ c ] = 1
-					hashidden=true
+					hashiddensnv = true
 				}
 			}
-			if(!hashidden) {
+			if( !hashiddensnv ) {
 				delete st.snvindel.hiddenclass
 			}
 		}
