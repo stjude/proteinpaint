@@ -2480,7 +2480,7 @@ export function focus_singlesample( p ) {
 		// no view range set
 		const r = block.tkarg_maygm(tk)[0]
 
-		if( m.dt==common.dtsnvindel) {
+		if( m &&  m.dt==common.dtsnvindel) {
 			// is snvindel
 
 			const span = 10000 // hardcoded
@@ -2490,12 +2490,10 @@ export function focus_singlesample( p ) {
 				arg.chr = m.chr
 				arg.start = Math.max(0, m.pos-span)
 				arg.stop = Math.min( block.genome.chrlookup[ m.chr.toUpperCase()].len, m.pos+span)
-			} else {
-				arg.chr=r.chr
-				arg.start=r.start
-				arg.stop=r.stop
 			}
-		} else {
+		}
+
+		if( !arg.chr ) {
 
 			// is not snvindel
 
