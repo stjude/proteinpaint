@@ -2799,6 +2799,23 @@ function maysortsamplesingroupbydt(g) {
 
 
 
+function copy_attributes ( from, to ) {
+	// from mds.mutationAttribute to tk.mutationAttribute
+	for(const k in from) {
+		to[ k ] = from[ k ]
+	}
+	if(from.attributes) {
+		to.attributes = {}
+		for(const m in from.attributes) {
+			to.attributes[ m ] = {}
+			for(const n in from.attributes[m]) {
+				to.attributes[m][n] = from.attributes[m][n]
+			}
+		}
+	}
+}
+
+
 function makeTk(tk, block) {
 /*
 for both multi- and single-sample
@@ -2811,11 +2828,29 @@ for both multi- and single-sample
 		previously, on client, these two attributes were recorded on the svcnv track object
 		now they reside in the mds registry object of genome
 		however, they are still copied to tk object so that all the code will work!!
-		*/
+
 		tk.mutationAttribute = tk.mds.mutationAttribute
 		tk.sampleAttribute = tk.mds.sampleAttribute
 		tk.locusAttribute = tk.mds.locusAttribute
 		tk.alleleAttribute = tk.mds.alleleAttribute
+		*/
+
+		if(tk.mds.mutationAttribute) {
+			tk.mutationAttribute = {}
+			copy_attributes( tk.mds.mutationAttribute, tk.mutationAttribute )
+		}
+		if(tk.mds.sampleAttribute) {
+			tk.sampleAttribute = {}
+			copy_attributes( tk.mds.sampleAttribute, tk.sampleAttribute )
+		}
+		if(tk.mds.locusAttribute) {
+			tk.locusAttribute = {}
+			copy_attributes( tk.mds.locusAttribute, tk.locusAttribute )
+		}
+		if(tk.mds.alleleAttribute) {
+			tk.alleleAttribute = {}
+			copy_attributes( tk.mds.alleleAttribute, tk.alleleAttribute )
+		}
 
 		tk.nocnvlohsv = true
 		if( tk.mds.queries ) {
