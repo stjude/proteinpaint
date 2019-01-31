@@ -64,9 +64,9 @@ module.exports={
 		{
 			__isgene:true,
 			translatecoding:true,
-			file:'anno/gencode.v24.hg19.gz',
+			file:'anno/gencode.v28.hg19.gz',
 			type:'bedj',
-			name:'GENCODE',
+			name:'GENCODE v28',
 			stackheight:16,
 			stackspace:1,
 			vpad:4,

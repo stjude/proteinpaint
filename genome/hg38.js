@@ -61,10 +61,11 @@ module.exports={
 		},
 		{
 			__isgene:true,
+			translatecoding:true,
 			categories:{"coding":{"color":"#004D99","label":"Coding gene"},"nonCoding":{"color":"#009933","label":"Noncoding gene"},"problem":{"color":"#FF3300","label":"Problem"},"pseudo":{"color":"#FF00CC","label":"Pseudogene"}},
-			file:'anno/gencode.v23.hg38.gz',
+			file:'anno/gencode.v28.hg38.gz',
 			type:'bedj',
-			name:'GENCODE',
+			name:'GENCODE v28',
 			stackheight:16,
 			stackspace:1,
 			vpad:4,

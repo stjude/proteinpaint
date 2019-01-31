@@ -14,8 +14,8 @@ var desc={}
 if(reflink!='NA') {
 	fs.readFileSync(reflink,'utf8').trim().split('\n').forEach(function(s){
 		var l=s.split('\t')
-		if(l[1] && l[2]) {
-			desc[l[2]]=l[1];
+		if(l[0] && l[3]) {
+			desc[ l[0].split('.')[0] ]=l[3]
 		}
 	})
 }
@@ -127,15 +127,18 @@ fs.readFileSync(refgene,'utf8').trim().split('\n').forEach(function(line){
 			}
 		}
 	}
+
+	const isoform = l[1].split('.')[0]
+
 	var obj={
 		name:l[12],
-		isoform:l[1],
+		isoform: isoform,
 		strand:strand,
 		exon:exon,
 		rnalen:rnalen,
 	}
-	if(l[1] in desc) {
-		obj.description=desc[l[1]]
+	if(isoform in desc) {
+		obj.description=desc[ isoform]
 	}
 	if(intron.length>0) {
 		obj.intron=intron
