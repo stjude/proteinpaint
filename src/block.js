@@ -3079,8 +3079,12 @@ bedj_tooltip(tk, data, panel) {
 				for(const i of data.mapisoform) {
 					const y=(i.y-1)*(tk.stackheight+tk.stackspace)
 					if(i.x1<p[0] && i.x2>p[0] && y<p[1] && y+tk.stackheight>p[1]) {
-						stacknumber=i.y
-						lst.push(i.name)
+						stacknumber = i.y
+						lst.push(i.name
+							+' <span style="opacity:.5;font-size:.7em">'
+							+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
+							+' '+common.bplen(i.stop-i.start)
+							+'</span>')
 					}
 				}
 			}
@@ -3089,7 +3093,11 @@ bedj_tooltip(tk, data, panel) {
 					const y=(i.y-1)*(tk.stackheight+tk.stackspace)
 					if(i.x1<p[0] && i.x2>p[0] && y<p[1] && y+tk.stackheight>p[1]) {
 						stacknumber=i.y
-						lst.push(i.name)
+						lst.push(i.name
+							+' <span style="opacity:.5;font-size:.7em">'
+							+i.chr+':'+(i.start+1)+'-'+(i.stop+1)
+							+' '+common.bplen(i.stop-i.start)
+							+'</span>')
 					}
 				}
 			}
