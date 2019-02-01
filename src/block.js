@@ -3130,30 +3130,51 @@ bedj_tooltip(tk, data, panel) {
 		})
 
 		/*
-		may enable clicking on a isoform to launch protein view
+		isoform is also for singular bed item
 		*/
-		if(data.mapisoform && data.mapisoform.find(i=>i.isoform)) {
-			// has isoform, enable clicking
-			img.on('click',()=>{
-				const p=d3mouse(img.node())
-				for(const i of data.mapisoform) {
-					const y=(i.y-1)*(tk.stackheight+tk.stackspace)
-					if(i.x1<p[0] && i.x2>p[0] && y<p[1] && y+tk.stackheight>p[1] && i.isoform) {
-						// hit an isoform
-						tk.tkconfigtip.clear()
-						.show(d3event.clientX-40, d3event.clientY)
-						.d
-						.append('div')
-						.attr('class','sja_menuoption')
-						.text('Gene/protein view for '+i.isoform)
-						.on('click',()=>{
-							tk.tkconfigtip.hide()
-							this.to_proteinview( i.isoform, tk )
-						})
-						return
+		if( data.mapisoform ) {
+			// has isoform, may enable clicking for different reasons
+
+			if( tk.itemurl_appendname ) {
+				// append item name to url for clicking
+				img.on('click',()=>{
+					const p=d3mouse(img.node())
+					for(const i of data.mapisoform) {
+						const y=(i.y-1)*(tk.stackheight+tk.stackspace)
+						if(i.x1<p[0] && i.x2>p[0] && y<p[1] && y+tk.stackheight>p[1] && i.name ) {
+							// hit an item with name
+							window.open( tk.itemurl_appendname + i.name )
+							return
+						}
 					}
-				}
-			})
+				})
+
+			} else if( data.mapisoform.find(i=>i.isoform)) {
+				// has isoform name, enable clicking on a isoform to launch protein view
+
+				img.on('click',()=>{
+					const p=d3mouse(img.node())
+					for(const i of data.mapisoform) {
+						const y=(i.y-1)*(tk.stackheight+tk.stackspace)
+						if(i.x1<p[0] && i.x2>p[0] && y<p[1] && y+tk.stackheight>p[1] && i.isoform) {
+							// hit an isoform
+							tk.tkconfigtip.clear()
+							.show(d3event.clientX-40, d3event.clientY)
+							.d
+							.append('div')
+							.attr('class','sja_menuoption')
+							.text('Gene/protein view for '+i.isoform)
+							.on('click',()=>{
+								tk.tkconfigtip.hide()
+								this.to_proteinview( i.isoform, tk )
+							})
+							return
+						}
+					}
+				})
+			} else {
+				img.on('click',null)
+			}
 		} else {
 			img.on('click',null)
 		}
