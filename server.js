@@ -1444,21 +1444,7 @@ should guard against file content error e.g. two tabs separating columns
 						const pxa = cumx+r.scale(r.reverse ? b : a)
 						const pxb = cumx+r.scale(r.reverse ? a : b)
 						ctx.fillRect(pxa,thinpad,Math.max(1,pxb-pxa),stackheight-thinpad*2)
-						if(mapisoform && (item.name || item.isoform)) {
-							const show=[]
-							if(item.name) show.push(item.name)
-							if(item.isoform) show.push(item.isoform)
-							mapisoform.push({
-								x1:pxa,
-								x2:pxb,
-								y:1,
-								/*
-								isoform is for client to select one and launch protein view
-								*/
-								isoform: item.isoform,
-								name:show.join(' ')+printcoord(item.chr, e[0], e[1])
-							})
-						}
+						bedj_may_mapisoform( mapisoform, pxa, pxb, 1, item )
 					}
 					const thick=[]
 					if(item.exon) {
@@ -1474,18 +1460,7 @@ should guard against file content error e.g. two tabs separating columns
 						const pxa = cumx+r.scale(r.reverse ? b : a)
 						const pxb = cumx+r.scale(r.reverse ? a : b)
 						ctx.fillRect(pxa,0,Math.max(1,pxb-pxa),stackheight)
-						if(mapisoform && (item.name || item.isoform)) {
-							const show=[]
-							if(item.name) show.push(item.name)
-							if(item.isoform) show.push(item.isoform)
-							mapisoform.push({
-								x1:pxa,
-								x2:pxb,
-								y:1,
-								isoform: item.isoform,
-								name:show.join(' ')+printcoord(item.chr, e[0], e[1])
-							})
-						}
+						bedj_may_mapisoform( mapisoform, pxa, pxb, 1, item )
 						if(item.strand && notmanyitem) {
 							ctx.strokeStyle='white'
 							strokearrow(ctx,item.strand,pxa,thinpad,pxb-pxa,stackheight-thinpad*2)
@@ -1654,18 +1629,7 @@ should guard against file content error e.g. two tabs separating columns
 				stack[maxstack]=boxstop
 				item.canvas.stack=maxstack
 			}
-			if(mapisoform && (item.name || item.isoform)) {
-				const show=[]
-				if(item.name) show.push(item.name)
-				if(item.isoform) show.push(item.isoform)
-				mapisoform.push({
-					x1:item.canvas.start,
-					x2:item.canvas.stop,
-					y:item.canvas.stack,
-					isoform: item.isoform,
-					name:show.join(' ')+printcoord(item.chr, item.start, item.stop)
-				})
-			}
+			bedj_may_mapisoform( mapisoform, item.canvas.start, item.canvas.stop, item.canvas.stack, item )
 		}
 
 		// render
@@ -1771,10 +1735,13 @@ should guard against file content error e.g. two tabs separating columns
 							const x1=cumx+region.scale( region.reverse ? b : a)
 							const x2=cumx+region.scale( region.reverse ? a : b)
 							mapexon.push({
+								chr: item.chr,
+								start: Math.min(e[0],e[1]),
+								stop: Math.max(e[0],e[1]),
 								x1:x1,
 								x2:x2,
 								y:c.stack,
-								name:'Exon '+(i+1)+'/'+item.exon.length + printcoord(item.chr, e[0], e[1])
+								name:'Exon '+(i+1)+'/'+item.exon.length
 							})
 						}
 					}
@@ -1789,10 +1756,13 @@ should guard against file content error e.g. two tabs separating columns
 							const x2= cumx+region.scale( region.reverse ? a : b)
 							if(x2<0) continue
 							mapexon.push({
+								chr: item.chr,
+								start: istart,
+								stop: istop,
 								x1:x1,
 								x2:x2,
 								y:c.stack,
-								name:'Intron '+i+'/'+(item.exon.length-1) + printcoord(item.chr, istart, istop)
+								name:'Intron '+i+'/'+(item.exon.length-1)
 							})
 						}
 					}
@@ -2046,6 +2016,32 @@ should guard against file content error e.g. two tabs separating columns
 
 
 
+function bedj_may_mapisoform ( lst, pxa, pxb, y, item ) {
+/* only handle singular bed items, or entire isoform
+do not handle exon/intron parts
+may return additional info for:
+- creating url for clicking items
+*/
+	if(!lst) return // not to map
+	if(!item.name && !item.isoform) return // no name
+	const show=[]
+	if(item.name) show.push(item.name)
+	if(item.isoform) show.push(item.isoform)
+	lst.push({
+		// return position for displaying in tooltip
+		chr: item.chr,
+		start: item.start,
+		stop: item.stop,
+		x1: pxa,
+		x2: pxb,
+		y:  y, // stack number
+		/* isoform is for client to select one and launch protein view
+		*/
+		isoform: item.isoform,
+		//name:show.join(' ')+printcoord(item.chr, e[0], e[1])
+		name: show.join(' ')
+	})
+}
 
 
 
