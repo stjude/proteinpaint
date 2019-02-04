@@ -1581,6 +1581,8 @@ should guard against file content error e.g. two tabs separating columns
 				if(namestr) {
 					item.canvas.namestr=namestr
 					const namewidth=ctx.measureText( namestr ).width
+					item.canvas.namewidth=namewidth
+
 					if(hasstruct) {
 						if(item.canvas.start>=namewidth+namespace) {
 							item.canvas.namestart=item.canvas.start-namespace
@@ -1592,7 +1594,6 @@ should guard against file content error e.g. two tabs separating columns
 							item.canvas.textalign='left'
 						} else {
 							item.canvas.namehover=true
-							item.canvas.namewidth=namewidth
 							item.canvas.textalign='left'
 						}
 					} else {
@@ -1706,9 +1707,24 @@ should guard against file content error e.g. two tabs separating columns
 						const pxa=cumx+region.scale( region.reverse ? b : a)
 						const pxb=cumx+region.scale( region.reverse ? a : b )
 						ctx.fillRect(pxa,y,Math.max(1,pxb-pxa),stackheight)
+
+						// strand marks inside box
+
 						if(c.stranded && !item.willtranslate) {
 							ctx.strokeStyle='white'
-							strokearrow(ctx,_strand,pxa,y+thinpad,pxb-pxa,stackheight-thinpad*2)
+
+							if( c.namein ) {
+								/*
+								patch!!!
+								to acknowledge name inside box cases
+								this always happens to a singular item with no exon structure
+								*/
+								const w = (pxb-pxa-c.namewidth)/2
+								strokearrow(ctx,_strand,pxa,y+thinpad, w, stackheight-thinpad*2)
+								strokearrow(ctx,_strand,pxa+ w + c.namewidth, y+thinpad, w,stackheight-thinpad*2)
+							} else {
+								strokearrow(ctx,_strand,pxa,y+thinpad,pxb-pxa,stackheight-thinpad*2)
+							}
 						}
 					}
 				}
