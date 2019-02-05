@@ -83,6 +83,7 @@ module.exports={
 			{file:'hg19/Pediatric/sampletable/pcgp.telomerecall'},
 			{file:'hg19/Pediatric/sampletable/pediatric.sampletable'},
 			{file:'hg19/Pediatric/sampletable/fpkmOnly.samples'},
+			{file:'hg19/Pediatric/sampletable/2017xenografts.sampletable'},
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
