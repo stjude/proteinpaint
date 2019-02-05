@@ -373,9 +373,18 @@ export function init(p) {
 
 
 	/*
+	make button holders for:
+	- boxplot stats
+	- sample fpkm
+
 	since it will only know if the gene has boxplots or not after server returns
 	the boxplot button is shown after that
+
+	each time the plot is updated the buttons are remade, thus the need for holders
 	*/
+	plot.buttonholder_boxplot = buttonrow.append('span')
+	plot.buttonholder_sampleexpdata = buttonrow.append('span')
+
 
 
 	plot.svg=plot.holder.append('svg')
@@ -732,7 +741,10 @@ function addbutton_boxplotstats ( plot ) {
 /*
 call when server returns .data.groups[] but not .data.lst[]
 */
-	plot.buttonrow.append('button')
+	plot.buttonholder_boxplot
+		.selectAll('*').remove()
+	plot.buttonholder_boxplot
+		.append('button')
 		.text('Boxplots')
 		.on('click',()=>{
 			if(plot.table_boxplotstats.style('display')=='block') {
@@ -806,7 +818,11 @@ to query server for it
 only for official mds
 server may deny the request!
 */
-	plot.buttonrow.append('button')
+	plot.buttonholder_sampleexpdata
+		.selectAll('*').remove()
+
+	plot.buttonholder_sampleexpdata
+	.append('button')
 	.text(plot.gecfg.datatype)
 	.on('click',()=>{
 		const pane = client.newpane({x:100,y:100})
