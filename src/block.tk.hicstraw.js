@@ -704,7 +704,13 @@ function drawCanvas(tk, block) {
 	// dynamic height
 	let canvasheight=0
 	if(tk.mode_hm) {
-		canvasheight = tk.data.reduce( (i,j)=>Math.max(i, (j[3]-j[0])/2 ), 0)
+		/*
+		at tiny region the span from data may be huge, limit it
+		*/
+		canvasheight = Math.min(
+			block.width,
+			tk.data.reduce( (i,j)=>Math.max(i, (j[3]-j[0])/2 ), 0)
+			)
 	} else if(tk.mode_arc) {
 		for(const i of tk.data) {
 			const arcxspan = (i[2]+i[3])/2 - (i[0]+i[1])/2
