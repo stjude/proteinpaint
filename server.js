@@ -7830,6 +7830,7 @@ or, export all samples from a group
 				l.sort((i,j)=>i.value-j.value)
 				const {w1,w2,p25,p50,p75,out} = boxplot_getvalue( l )
 				return res.send({
+					n: l.length,
 					min:l[0].value,
 					max:l[l.length-1].value,
 					w1: w1,
@@ -9590,6 +9591,11 @@ async function run_fimo ( q, gn, fasta ) {
 					name: tfname,
 					logpvalue: logp
 				}
+
+				if(gn.fimo_motif.tf2attr) {
+					j.attr = gn.fimo_motif.tf2attr[ j.name ]
+				}
+
 				items.push(j)
 			}
 			resolve( items )
@@ -12514,6 +12520,15 @@ for(const genomename in genomes) {
 	if(g.fimo_motif) {
 		if(!g.fimo_motif.db) return genomename+'.fimo_motif: db file missing'
 		g.fimo_motif.db = path.join( serverconfig.tpmasterdir, g.fimo_motif.db )
+		if(g.fimo_motif.annotationfile) {
+			const [err,items] = parse_textfilewithheader( fs.readFileSync( path.join(serverconfig.tpmasterdir, g.fimo_motif.annotationfile),{encoding:'utf8'}).trim() )
+			g.fimo_motif.tf2attr = {}
+			for(const i of items) {
+				i.gene = i['Transcription factor']
+				delete i['Transcription factor']
+				g.fimo_motif.tf2attr[ i.Model.split('_')[0] ] = i
+			}
+		}
 	}
 
 	if(g.hicenzymefragment) {
