@@ -774,7 +774,7 @@ function factorprofile_genevalue_updatescale ( obj, profile ) {
 	client.axisstyle({
 		axis: profile.axisg.transition().call(
 			axisTop().scale( scale )
-			//.ticks(4)
+			.ticks(4)
 		),
 		showline:1,
 	})
