@@ -1647,31 +1647,16 @@ block_jump_gene(s) {
 			}
 			return
 		}
+
 		// update valid gene name to pgv
 		for(const t of this.tklst) {
 			if(t.type==client.tkt.pgv) {
 				t.genename=s
 			}
 		}
-		const locs=[]
-		for(const f of data.gmlst) {
-			let nooverlap=true
-			for(const r of locs) {
-				if(f.chr==r.chr && Math.max(f.start,r.start)<Math.min(f.stop,r.stop)) {
-					r.start=Math.min(r.start, f.start)
-					r.stop=Math.max(r.stop, f.stop)
-					nooverlap=false
-				}
-			}
-			if(nooverlap) {
-				locs.push({
-					name: f.isoform,
-					chr: f.chr,
-					start:f.start,
-					stop:f.stop
-				})
-			}
-		}
+
+		const locs = client.gmlst2loci( data.gmlst )
+
 		if(locs.length==1) {
 			const r=locs[0]
 			const e=coord.invalidcoord(this.genome,r.chr,r.start,r.stop)

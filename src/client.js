@@ -1483,3 +1483,29 @@ m{}
 		.style('font-size','.9em')
 		.style('text-decoration','none')
 }
+
+
+
+export function gmlst2loci ( gmlst ) {
+	// gmlst as is returned by genelookup:deep
+	const locs=[]
+	for(const f of gmlst) {
+		let nooverlap=true
+		for(const r of locs) {
+			if(f.chr==r.chr && Math.max(f.start,r.start)<Math.min(f.stop,r.stop)) {
+				r.start=Math.min(r.start, f.start)
+				r.stop=Math.max(r.stop, f.stop)
+				nooverlap=false
+			}
+		}
+		if(nooverlap) {
+			locs.push({
+				name: f.isoform,
+				chr: f.chr,
+				start:f.start,
+				stop:f.stop
+			})
+		}
+	}
+	return locs
+}
