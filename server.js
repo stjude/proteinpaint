@@ -68,6 +68,7 @@ const bcftools = serverconfig.bcftools || 'bcftools'
 const bigwigsummary= serverconfig.bigwigsummary || 'bigWigSummary'
 const hicstat = serverconfig.hicstat || 'python read_hic_header.py'
 const hicstraw = serverconfig.hicstraw || 'straw'
+const fimo = serverconfig.fimo || 'fimo'
 
 
 
@@ -187,6 +188,7 @@ app.post('/samplematrix', handle_samplematrix)
 app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
 app.post('/mdssamplesignature',handle_mdssamplesignature)
 app.post('/mdssurvivalplot',handle_mdssurvivalplot)
+app.post('/fimo',handle_fimo)
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
@@ -226,6 +228,7 @@ function handle_genomes(req,res) {
 			name:genomename,
 			hasSNP:(g.snp ? true : false),
 			hasClinvarVCF: (g.clinvarVCF ? true : false),
+			fimo_motif: (g.fimo_motif ? true : false),
 			geneset:g.geneset,
 			defaultcoord:g.defaultcoord,
 			isdefault:g.isdefault,
@@ -408,6 +411,7 @@ function mds_clientcopy(ds) {
 			name:q.name,
 			hideforthemoment: q.hideforthemoment, // hide track not ready to show on client
 		}
+
 
 		if(q.istrack) {
 			clientquery.istrack=true
@@ -9295,6 +9299,268 @@ function handle_mdssamplesignature(req,res) {
 
 
 
+
+async function handle_fimo (req, res) {
+	if(reqbodyisinvalidjson(req,res)) return
+	try {
+		const q = req.query
+		if(!q.m) throw 'no mutation'
+		if(!q.m.chr) throw 'mutation chr missing'
+		if(!Number.isInteger(q.m.pos)) throw 'mutation position is not integer'
+		if(!q.m.ref) throw 'mutation ref allele missing'
+		if(!q.m.alt) throw 'mutation alt allele missing'
+		const gn = genomes[q.genome]
+		if(!gn) throw 'invalid genome'
+		if(!gn.fimo_motif) throw 'motif finding not supported on this genome'
+		const result = await handle_fimo_do( q, gn )
+		res.send( result )
+	} catch(e) {
+		if(e.stack) console.log(e.stack)
+		res.send({error: (e.message || e)})
+	}
+}
+
+
+
+
+async function get_fasta( gn, pos ) {
+	return new Promise((resolve,reject)=>{
+		const ps = spawn(samtools, ['faidx', gn.genomefile, pos])
+		const out=[]
+		ps.stdout.on('data',i=> out.push(i))
+		ps.on('close',code=>{
+			resolve( out.join('') )
+		})
+	})
+}
+
+
+
+
+
+async function handle_fimo_do ( q, gn ) {
+/*
+do motif finding on ref sequence
+mutate ref seq
+do motif finding on mutant seq
+then find motif change
+*/
+	const flankspan = 15 // bp length flanking the mutation
+
+	///////// scan reference sequence
+
+	const refstart = q.m.pos-flankspan
+	const refstop = q.m.pos+flankspan
+
+	const ref_fasta = await get_fasta( gn, q.m.chr+':'+refstart+'-'+refstop )
+	const ref_motifs = await run_fimo( q, gn, ref_fasta )
+
+	// index ref motifs by tf name
+	const allmotifs = {}
+	// k: tf name
+	// v: [ {} ]
+	//   .isref
+	//   .isalt
+	//   .logpvaluediff
+	for(const i of ref_motifs) {
+		i.isref = 1
+		if(!allmotifs[ i.name ]) {
+			allmotifs[ i.name ] = []
+		}
+		allmotifs[ i.name ].push( i )
+	}
+
+
+	const alt_fasta = fimo_mutate_seq( q.m, refstart, refstop, ref_fasta )
+	const alt_motifs = await run_fimo( q, gn, alt_fasta )
+
+	// index alt motifs and compare
+	// for each alt, find matching ref motifs
+	for(const i of alt_motifs) {
+		i.isalt = 1
+		if(!allmotifs[ i.name ]) {
+			allmotifs[ i.name ] = []
+		}
+
+		// see if any ref match
+		let nomatch=true
+		for(const j of allmotifs[ i.name ]) {
+			if(j.isref
+				&& j.strand == i.strand
+				&& Math.abs(i.start-j.start)<=2
+				&& Math.abs(i.stop-j.stop)<=2
+				) {
+				// alt (i) match to ref (j)
+				// keep j and modify
+				delete j.isref
+				j.logpvaluediff = i.logpvalue - j.logpvalue
+				if(j.logpvaluediff > 0) {
+					j.gain = 1
+				} else {
+					j.loss = 1
+				}
+				nomatch=false
+				break
+			}
+		}
+		if(nomatch) {
+			allmotifs[ i.name ].push( i )
+		}
+	}
+
+
+	let valuemax=0,
+		valuemin=0
+	const items = [] // items to go to bed track, with gain/loss indicated (color)
+	for(const tf in allmotifs) {
+
+		for(const i of allmotifs[ tf ]) {
+
+			if(i.isref) {
+				i.loss=1
+				i.logpvaluediff = -i.logpvalue
+			} else if(i.isalt) {
+				i.gain = 1
+				i.logpvaluediff = i.logpvalue
+			}
+
+			if(i.logpvaluediff > 0) {
+				valuemax = Math.max( valuemax, i.logpvaluediff)
+			} else {
+				valuemin = Math.min( valuemin, i.logpvaluediff)
+			}
+			
+			items.push(i)
+		}
+	}
+
+	return {
+		items, 
+		valuemin,
+		valuemax,
+		refstart,
+		refstop,
+		refseq: ref_fasta.split('\n').slice(1).join('')
+	}
+}
+
+
+
+
+
+
+
+function fimo_mutate_seq ( m, start, stop, fasta ) {
+	const lines = fasta.split('\n')
+	const ref = lines.slice(1).join('')
+	return lines[0]
+		+'\n'
+		+ref.substr( 0, m.pos - start )
+		+ (m.alt=='-' ? '' : m.alt)
+		+ ref.substr( m.pos - start + (m.ref=='-' ? 0 : m.ref.length) )
+}
+
+
+function util_write_file_async ( str ) {
+	const file = path.join(serverconfig.cachedir, Math.random().toString() )
+	return new Promise((resolve, reject)=>{
+		fs.writeFile( file, str, (err)=>{
+			if(err) {
+				reject('cannot write')
+			}
+			resolve( file )
+		})
+	})
+}
+
+
+
+async function run_fimo ( q, gn, fasta ) {
+/*
+ * return {}
+ * k: motif name
+ * v: []
+ */
+
+	const fastafile = await util_write_file_async( fasta )
+
+	return new Promise(( resolve, reject ) => {
+
+		const lst = ['--parse-genomic-coord', '--verbosity', 1, '--text']
+
+		if(q.fimo_thresh) {
+			lst.push('--thresh')
+			lst.push(q.fimo_thresh)
+		}
+
+		lst.push( gn.fimo_motif.db )
+		lst.push( fastafile )
+
+
+		const ps = spawn( fimo, lst )
+		const out = []
+		ps.stdout.on('data',i=> out.push(i))
+		ps.on('close',code=>{
+
+			//fs.unlink( fastafile, ()=>{} )
+
+			const tmp = out.join('').trim()
+
+			if(!tmp) {
+				// no hits
+				resolve([])
+			}
+
+			/*
+			1	motif_id	AP2B_HUMAN.H11MO.0.B
+			2	motif_alt_id	
+			3	sequence_name	chr5
+			4	start	1295121
+			5	stop	1295130
+			6	strand	+
+			7	score	12.5056
+			8	p-value	2.6e-05
+			9	q-value	
+			10	matched_sequence	GGCCGGGGAC
+			*/
+
+			const items = []
+
+			const lines = tmp.split('\n')
+			for(let i=1; i<lines.length; i++) {
+				const line = lines[i]
+				const l = line.split('\t')
+				const tfname = l[0].split('_')[0]
+
+				const start = Number.parseInt(l[4-1])
+				const stop =  Number.parseInt(l[5-1])
+
+				if( start> q.m.pos || stop< q.m.pos ) continue
+
+				const logp = -Math.log10( Number.parseFloat( l[8-1] ) )
+
+				const j = {
+					start: start,
+					stop: stop,
+					strand: l[6-1],
+					name: tfname,
+					logpvalue: logp
+				}
+				items.push(j)
+			}
+			resolve( items )
+		})
+	})
+}
+
+
+
+
+
+
+
+
+
 async function handle_mdssurvivalplot (req,res) {
 	if(reqbodyisinvalidjson(req,res)) return
 	try {
@@ -12077,7 +12343,7 @@ for(const genomename in genomes) {
 	if(!g.majorchr)     return genomename+': majorchr missing'
 	if(!g.defaultcoord) return genomename+': defaultcoord missing'
 	// test samtools and genomefile
-	const cmd= samtools+' faidx '+g.genomefile+' '+g.defaultcoord.chr+':'+g.defaultcoord.start+'-'+g.defaultcoord.stop
+	const cmd= samtools+' faidx '+g.genomefile+' '+g.defaultcoord.chr+':'+g.defaultcoord.start+'-'+(g.defaultcoord.start+1)
 	try {
 		child_process.execSync(cmd)
 	} catch(e) {
@@ -12199,6 +12465,11 @@ for(const genomename in genomes) {
 			if(tmp=='') return genomename+'.clinvarVCF: no chr listing'
 			g.clinvarVCF.nochr = common.contigNameNoChr( g, tmp.split('\n') )
 		}
+	}
+
+	if(g.fimo_motif) {
+		if(!g.fimo_motif.db) return genomename+'.fimo_motif: db file missing'
+		g.fimo_motif.db = path.join( serverconfig.tpmasterdir, g.fimo_motif.db )
 	}
 
 	if(g.hicenzymefragment) {

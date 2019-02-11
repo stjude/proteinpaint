@@ -41,6 +41,7 @@ launchhic()
 launchsamplematrix()
 launchmdssamplescatterplot
 launchmdssurvivalplot
+launch_fimo
 
 
 */
@@ -747,6 +748,11 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		}
 	}
 
+	if(arg.fimo) {
+		launch_fimo( arg.fimo, holder )
+		return
+	}
+
 	if(arg.mdssurvivalplot) {
 		if(arg.genome) arg.mdssurvivalplot.genome = arg.genome
 		launchmdssurvivalplot(arg.mdssurvivalplot, holder)
@@ -922,6 +928,24 @@ function launchmdssurvivalplot(arg, holder) {
 	}
 	import('./mds.survivalplot').then(_=>{
 		_.init(arg, holder, debugmode)
+	})
+}
+
+
+function launch_fimo ( arg, holder ) {
+	if(!arg.genome) {
+		error0('missing genome for mdssurvivalplot')
+		return
+	}
+	const genome = genomes[arg.genome]
+	if(!genome) {
+		error0('invalid genome for mdssurvivalplot')
+		return
+	}
+	arg.genome = genome
+	arg.div = holder
+	import('./mds.fimo').then(_=>{
+		_.init( arg )
 	})
 }
 

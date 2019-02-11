@@ -1422,6 +1422,15 @@ export async function click_multi_singleitem( p ) {
 		sample: p.sample,
 	})
 
+	may_createbutton_fimo({
+		holder: buttonrow,
+		folderdiv: folderdiv,
+		tk: p.tk,
+		block: p.block,
+		m: p.item,
+		sample: p.sample,
+	})
+
 
 	p.holder = pane.body
 	detailtable_singlesample( p )
@@ -2721,6 +2730,82 @@ function may_createbutton_samplesignature( buttonrow, div, samplename, tk, block
 		console.log(e.message||e)
 	})
 }
+
+
+
+
+function may_createbutton_fimo ( arg ) {
+/*
+may create a tf motif find button for mutation
+*/
+	if(!arg.tk || !arg.block || !arg.block.genome || !arg.block.genome.fimo_motif) {
+		return
+	}
+	if(!arg.m || arg.m.dt!=common.dtsnvindel) {
+		return
+	}
+
+	let loaded = false
+	let shown = false
+
+	const button = arg.holder.append('button')
+	.text('TF motif')
+
+	const div = arg.folderdiv.append('div')
+
+	button.on('click',()=>{
+
+		if(loaded) {
+			// data already loaded, toggle div visibility
+			if(shown) {
+				client.disappear(div)
+				shown=false
+			} else {
+				client.appear(div)
+				shown=true
+			}
+			return
+		}
+
+		button.text('Loading...')
+			.property('disabled',1)
+
+		// generate fimo query param
+		const fimoarg = {
+			genome: arg.block.genome,
+			div: div,
+			m: {
+				chr: arg.m.chr,
+				pos: arg.m.pos,
+				ref: arg.m.ref,
+				alt: arg.m.alt
+			}
+		}
+		// if fpkm is available and how to query
+		if(arg.tk.iscustom) {
+			if(arg.tk.checkexpressionrank) {
+				fimoarg.expression = {
+					file: arg.tk.checkexpressionrank.file,
+					url: arg.tk.checkexpressionrank.url,
+					indexURL: arg.tk.checkexpressionrank.indexURL,
+				}
+			}
+		} else {
+			// native
+			if(arg.tk.checkexpressionrank) {
+				fimoarg.expression = {
+					datatype: arg.tk.checkexpressionrank.datatype,
+					querykey: arg.tk.checkexpressionrank.querykey,
+					mdslabel: arg.tk.mds.label
+				}
+			}
+		}
+		import('./mds.fimo').then(_=>{
+			_.init( fimoarg )
+		})
+	})
+}
+
 
 
 
