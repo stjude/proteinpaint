@@ -7437,25 +7437,42 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 
 
 function handle_mdsgeneboxplot( req, res ) {
-	/*
-	2nd-gen epaint
-	for one gene, over entire cohort
-	native or custom
-	if native, group samples by hierarchy
-	if custom, all samples in one group
+/*
+.gene str
+.chr/start/stop
+.dslabel
+.querykey
+.iscustom
+.file
+.url
+.getgroup[ {} ]
+	list of attributes
+	if provided, will get actual list of samples with gene value based on filter
+	.k
+	.kvalue
+
+.stillmakeboxplot
+	if provided, yield a boxplot for .getgroup
 
 
-	divide into groups by L1/L2 hierarchy levels
-		for each group, divid into subgroups by sv/cnv/loh status
-			one boxplot for each subgroup
-			boxplot will be generated solely on numeric value
-			the expression status (ase, outlier) will be ignored
+2nd-gen epaint
+for one gene, over entire cohort
+native or custom
+if native, group samples by hierarchy
+if custom, all samples in one group
 
-	or, export all samples from a group
-		returned data on samples will include following for rendering:
-			overlapping sv/cnv/loh
-			ase, outlier status
-	*/
+
+divide into groups by L1/L2 hierarchy levels
+	for each group, divid into subgroups by sv/cnv/loh status
+		one boxplot for each subgroup
+		boxplot will be generated solely on numeric value
+		the expression status (ase, outlier) will be ignored
+
+or, export all samples from a group
+	returned data on samples will include following for rendering:
+		overlapping sv/cnv/loh
+		ase, outlier status
+*/
 
 	if(reqbodyisinvalidjson(req,res)) return
 	if(!req.query.gene) return res.send({error:'gene name missing'})
@@ -7805,6 +7822,27 @@ function handle_mdsgeneboxplot( req, res ) {
 
 		const {groups, sample2event} = data
 
+		// bad logic!!
+		// just an exit for both official and custom
+		if( req.query.stillmakeboxplot ) {
+			if(groups[0]) {
+				const l=groups[0].values
+				l.sort((i,j)=>i.value-j.value)
+				const {w1,w2,p25,p50,p75,out} = boxplot_getvalue( l )
+				return res.send({
+					min:l[0].value,
+					max:l[l.length-1].value,
+					w1: w1,
+					w2: w2,
+					p25: p25,
+					p50: p50,
+					p75: p75,
+					out: out
+				})
+			}
+			return res.send({nodata:1})
+		}
+
 		if(req.query.iscustom || groups.length==1) {
 			// a custom track
 			if(groups[0]) {
@@ -7820,6 +7858,7 @@ function handle_mdsgeneboxplot( req, res ) {
 			if(groups[0]) {
 				const lst=groups[0].values
 				lst.sort((i,j)=>j.value-i.value)
+
 
 				if(sample2event) {
 					for(const i of lst) {
@@ -7903,7 +7942,8 @@ function handle_mdsgeneboxplot( req, res ) {
 
 
 function boxplot_getvalue(lst) {
-	/* each element: {value}
+	/* ascending order
+	each element: {value}
 	*/
 	const l=lst.length
 	if(l<5) {
@@ -9345,12 +9385,10 @@ mutate ref seq
 do motif finding on mutant seq
 then find motif change
 */
-	const flankspan = 15 // bp length flanking the mutation
-
 	///////// scan reference sequence
 
-	const refstart = q.m.pos-flankspan
-	const refstop = q.m.pos+flankspan
+	const refstart = q.m.pos-q.flankspan
+	const refstop = q.m.pos+q.flankspan
 
 	const ref_fasta = await get_fasta( gn, q.m.chr+':'+refstart+'-'+refstop )
 	const ref_motifs = await run_fimo( q, gn, ref_fasta )
@@ -9422,6 +9460,12 @@ then find motif change
 			} else if(i.isalt) {
 				i.gain = 1
 				i.logpvaluediff = i.logpvalue
+			}
+
+			if(q.minabslogp) {
+				if(Math.abs(i.logpvaluediff) < q.minabslogp) {
+					continue
+				}
 			}
 
 			if(i.logpvaluediff > 0) {
