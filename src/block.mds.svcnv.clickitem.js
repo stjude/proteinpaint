@@ -1428,7 +1428,7 @@ export async function click_multi_singleitem( p ) {
 		tk: p.tk,
 		block: p.block,
 		m: p.item,
-		sample: p.sample,
+		samplegroup: p.samplegroup,
 	})
 
 
@@ -2752,20 +2752,19 @@ may create a tf motif find button for mutation
 	.text('TF motif')
 
 	const div = arg.folderdiv.append('div')
+		.style('display','none')
 
 	button.on('click',()=>{
 
-		if(loaded) {
-			// data already loaded, toggle div visibility
-			if(shown) {
-				client.disappear(div)
-				shown=false
-			} else {
-				client.appear(div)
-				shown=true
-			}
-			return
+		// toggle
+		if(shown) {
+			client.disappear(div)
+			shown=false
+		} else {
+			client.appear(div)
+			shown=true
 		}
+		if(loaded) return // already loaded
 
 		button.text('Loading...')
 			.property('disabled',1)
@@ -2776,28 +2775,43 @@ may create a tf motif find button for mutation
 			div: div,
 			m: {
 				chr: arg.m.chr,
-				pos: arg.m.pos,
+				pos: (arg.m.pos+1), // 1 based
 				ref: arg.m.ref,
 				alt: arg.m.alt
+			},
+			callback_once:()=>{
+				loaded=1
+				button.text('TF motif')
+					.property('disabled',0)
 			}
 		}
 		// if fpkm is available and how to query
 		if(arg.tk.iscustom) {
 			if(arg.tk.checkexpressionrank) {
-				fimoarg.expression = {
+				fimoarg.factor_profiles = [ {
+					isgenevalue:1,
 					file: arg.tk.checkexpressionrank.file,
 					url: arg.tk.checkexpressionrank.url,
 					indexURL: arg.tk.checkexpressionrank.indexURL,
-				}
+				} ]
 			}
 		} else {
 			// native
 			if(arg.tk.checkexpressionrank) {
-				fimoarg.expression = {
+				const fpro = {
+					isgenevalue: 1,
 					datatype: arg.tk.checkexpressionrank.datatype,
 					querykey: arg.tk.checkexpressionrank.querykey,
 					mdslabel: arg.tk.mds.label
 				}
+				if(arg.samplegroup) {
+					if(arg.samplegroup.attributes) {
+						// restrict expression to a group
+						fpro.name = arg.samplegroup.name
+						fpro.samplegroup_attrlst = arg.samplegroup.attributes
+					}
+				}
+				fimoarg.factor_profiles = [ fpro ]
 			}
 		}
 		import('./mds.fimo').then(_=>{

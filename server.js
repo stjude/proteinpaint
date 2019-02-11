@@ -9547,7 +9547,7 @@ async function run_fimo ( q, gn, fasta ) {
 		ps.stdout.on('data',i=> out.push(i))
 		ps.on('close',code=>{
 
-			//fs.unlink( fastafile, ()=>{} )
+			fs.unlink( fastafile, ()=>{} )
 
 			const tmp = out.join('').trim()
 
@@ -9582,14 +9582,15 @@ async function run_fimo ( q, gn, fasta ) {
 
 				if( start> q.m.pos || stop< q.m.pos ) continue
 
-				const logp = -Math.log10( Number.parseFloat( l[8-1] ) )
+				const pvalue = Number.parseFloat( l[8-1] )
 
 				const j = {
 					start: start,
 					stop: stop,
 					strand: l[6-1],
 					name: tfname,
-					logpvalue: logp
+					pvalue: pvalue,
+					logpvalue: -Math.log10( pvalue ),
 				}
 
 				if(gn.fimo_motif.tf2attr) {
