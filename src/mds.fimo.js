@@ -60,14 +60,21 @@ data{} returned by /fimo
 	.start
 	.stop
 	.strand +/-
-	.g <>
+	.g<>
+	.layer1_g<>
+	.layer2_g<>
+	.bgbox<>
+	.coverbox<>
 
 
 
 ********************** EXPORTED
 init()
 ********************** INTERNAL
-
+show_result()
+draw_motif_simplified()
+load_factorprofile
+load_factorprofile_genevalue
 */
 
 
@@ -76,9 +83,8 @@ init()
 // header height, for all panels
 const headerheight = 80
 const headerunderpad = 5
-// color for all boxplots
+// color for all boxplot line color
 const color = 'green'
-
 
 
 
@@ -111,6 +117,8 @@ function init_ui ( obj ) {
 			if(!p.width) p.width = 300
 		}
 	}
+
+	obj.tip = new client.Menu()
 
 	obj.div.append('div')
 		.text(obj.m.chr+':'+obj.m.pos+' '+obj.m.ref+'>'+obj.m.alt)
@@ -242,7 +250,7 @@ function do_query ( obj ) {
 		// get gene name
 		for(const m of data.items) {
 			if(m.attr) {
-				m.gene = m.attr.gene
+				m.gene = m.attr['Transcription factor']
 			} else {
 				m.gene = m.name
 			}
@@ -286,13 +294,22 @@ if expression is available, draw placeholder for each factor and query
 			for(const motif of data.items) {
 				profile.motifs.push({
 					motif: motif,
-					g: motif.g.append('g').attr('transform','translate('+(width+profile.leftpad)+',0)')
+					g: motif.layer1_g
+						.append('g')
+						.attr('transform','translate('+(width+profile.leftpad)+',0)')
 				})
 			}
 
 			await load_factorprofile( obj, profile )
 
 			width += profile.leftpad + profile.width
+
+			// extend row bg/cover box width
+			for(const m of data.items) {
+				m.bgbox.attr('width', width)
+				m.coverbox.attr('width',width)
+			}
+
 			obj.svg.attr('width', width+5)
 		}
 	}
@@ -368,16 +385,30 @@ function draw_motif_simplified ( data, obj ) {
 	// each motif
 	for(const [i, motif] of data.items.entries()) {
 
+		// at vertical center
 		motif.g = g.append('g')
 			.attr('transform','translate(0,'+( obj.motifrowheight * (i+.5) + rowspace*i )+')')
+
+		// layer 1: row background, motif bar, factor profiles
+		motif.layer1_g = motif.g.append('g')
+
+		// layer 2: mouse over
+		motif.layer2_g = motif.g.append('g')
+
+		// bg box to flicker by mouse over and stretch across all profile panels
+		motif.bgbox = motif.layer1_g.append('rect')
+			.attr('y', -obj.motifrowheight/2)
+			.attr('width', motifgraphwidth)
+			.attr('height', obj.motifrowheight)
+			.attr('fill','white')
 
 		const x = (motif.start-data.refstart)*ntwidth
 		const w = ( Math.min(motif.stop,data.refstop) - motif.start) * ntwidth
 
 		// motif color by change
 
-		// box
-		motif.g.append('rect')
+		// motif box
+		motif.layer1_g.append('rect')
 			.attr('x',x)
 			.attr('y', -obj.motifrowheight/2 )
 			.attr('width', w)
@@ -392,7 +423,7 @@ function draw_motif_simplified ( data, obj ) {
 		} else {
 			str = '<  '+motif.name+'  <'
 		}
-		motif.g.append('text')
+		motif.layer1_g.append('text')
 			.text( str )
 			.attr('x', x+w/2)
 			.attr('dominant-baseline','central')
@@ -402,7 +433,7 @@ function draw_motif_simplified ( data, obj ) {
 			.attr('font-size', obj.motifrowheight-3)
 			.attr('font-family',client.font)
 			.style('white-space','pre')
-		motif.g.append('text')
+		motif.layer1_g.append('text')
 			.text( str )
 			.attr('x', x+w/2)
 			.attr('dominant-baseline','central')
@@ -410,6 +441,21 @@ function draw_motif_simplified ( data, obj ) {
 			.attr('font-size', obj.motifrowheight-3)
 			.attr('font-family',client.font)
 			.style('white-space','pre')
+
+		motif.coverbox = motif.layer2_g.append('rect')
+			.attr('y', -obj.motifrowheight/2)
+			.attr('width', motifgraphwidth)
+			.attr('height', obj.motifrowheight)
+			.attr('fill','white')
+			.attr('fill-opacity',0)
+			.on('mouseover', ()=>{
+				motif.bgbox.attr('fill', '#f9fabd')
+				motif_tooltip( motif, obj )
+			})
+			.on('mouseout',()=>{
+				motif.bgbox.attr('fill','white')
+				obj.tip.hide()
+			})
 	}
 
 
@@ -421,6 +467,39 @@ function draw_motif_simplified ( data, obj ) {
 		.attr('height', svgheight )
 }
 
+
+
+function motif_tooltip ( motif, obj ) {
+
+	obj.tip.clear()
+	if(motif.attr) {
+		obj.tip.d.append('div')
+			.text('MOTIF')
+			.style('font-weight','bold')
+		const lst1 = [
+			{k: 'P-value', v: motif.pvalue},
+			{k:'Strand', v:motif.strand}
+		]
+		client.make_table_2col( obj.tip.d, lst1 )
+
+		obj.tip.d.append('div')
+			.text('FACTOR')
+			.style('font-weight','bold')
+		const lst2 = []
+		for(const k in motif.attr) {
+			lst2.push({k:k, v: motif.attr[k]})
+		}
+		client.make_table_2col( obj.tip.d, lst2 )
+	} else {
+		const lst = [
+			{k:'TF', v: motif.name},
+			{k: 'P-value', v: motif.pvalue},
+			{k:'Strand', v:motif.strand}
+		]
+		client.make_table_2col( obj.tip.d, lst )
+	}
+	obj.tip.show( d3event.clientX, d3event.clientY )
+}
 
 
 
