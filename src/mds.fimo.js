@@ -690,15 +690,17 @@ function factorprofile_genevalue_onegene_makeboxplot( obj, profile, gene, data )
 				.attr('stroke',color).attr('shape-rendering','crispEdges')
 		}
 		// outliers
-		for(const d of data.out) {
-			const circle = m.g.append('circle')
-				.attr('stroke',color)
-				.attr('fill','white')
-				.attr('fill-opacity',0)
-			m.boxplot.out.push({
-				value: d.value,
-				circle: circle
-			})
+		if(data.out) {
+			for(const d of data.out) {
+				const circle = m.g.append('circle')
+					.attr('stroke',color)
+					.attr('fill','white')
+					.attr('fill-opacity',0)
+				m.boxplot.out.push({
+					value: d.value,
+					circle: circle
+				})
+			}
 		}
 	}
 }
@@ -790,13 +792,13 @@ function factorprofile_genevalue_onegene_loadboxplot ( obj, profile, gene ) {
 		chr: r.chr,
 		start: r.start,
 		stop: r.stop,
+		stillmakeboxplot: 1
 	}
 	if(profile.mdslabel) {
 		arg.dslabel = profile.mdslabel
 		arg.querykey = profile.querykey
 		if(profile.samplegroup_attrlst) {
 			arg.getgroup = profile.samplegroup_attrlst
-			arg.stillmakeboxplot = 1
 		}
 	} else {
 		arg.iscustom = 1
