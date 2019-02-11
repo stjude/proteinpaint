@@ -75,6 +75,7 @@ show_result()
 draw_motif_simplified()
 load_factorprofile
 load_factorprofile_genevalue
+factorprofile_genevalue_onegene_loadboxplot
 */
 
 
@@ -690,11 +691,14 @@ function factorprofile_genevalue_onegene_makeboxplot( obj, profile, gene, data )
 		}
 		// outliers
 		for(const d of data.out) {
-			d.circle = m.g.append('circle')
+			const circle = m.g.append('circle')
 				.attr('stroke',color)
 				.attr('fill','white')
 				.attr('fill-opacity',0)
-			m.boxplot.out.push(d)
+			m.boxplot.out.push({
+				value: d.value,
+				circle: circle
+			})
 		}
 	}
 }
@@ -722,6 +726,7 @@ function factorprofile_genevalue_updatescale ( obj, profile ) {
 			if(m.motif.gene != g) continue
 
 			const bp = m.boxplot
+			if(!bp) continue
 
 			if(bp.hline) {
 				const w1=scale(r.w1)
