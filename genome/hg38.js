@@ -17,6 +17,10 @@ module.exports={
 		statement_getbyname:'select * from snp146 where name=?',
 		statement_getbycoord:'select * from snp146 where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
 	},
+	fimo_motif:{
+		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',
+		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv',
+	},
 	clinvarVCF:{
 		file:'hg38/clinvar.hg38.vcf.gz',
 		infokey:'CLNSIG',
