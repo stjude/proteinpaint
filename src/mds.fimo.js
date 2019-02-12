@@ -33,6 +33,7 @@ obj{}:
 		.motif    ---> one of data.items[]
 		.g
 		.boxplot{}
+			.out[]
 	=== PROFILE TYPE ===
 	.isgenevalue
 		.mdslabel
@@ -306,17 +307,17 @@ if expression is available, draw placeholder for each factor and query
 				})
 			}
 
-			await load_factorprofile( obj, profile )
-
 			width += profile.leftpad + profile.width
+
+			obj.svg.attr('width', width+5)
+
+			await load_factorprofile( obj, profile )
 
 			// extend row bg/cover box width
 			for(const m of data.items) {
 				m.bgbox.attr('width', width)
 				m.coverbox.attr('width',width)
 			}
-
-			obj.svg.attr('width', width+5)
 		}
 	}
 }
