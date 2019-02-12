@@ -240,6 +240,9 @@ function may_init_factorprofiles ( obj ) {
 		profile.headerg = obj.svg.append('g')
 		profile.textlabel = profile.headerg.append('text')
 			.text( profile.name )
+			.attr('x', profile.width/2 )
+			.attr('text-anchor', 'middle')
+			.attr('y', -30)
 
 		if(profile.isgenevalue) {
 			profile.color = 'green'
