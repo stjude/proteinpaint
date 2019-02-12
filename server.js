@@ -9580,7 +9580,7 @@ async function run_fimo ( q, gn, fasta ) {
 				const start = Number.parseInt(l[4-1])
 				const stop =  Number.parseInt(l[5-1])
 
-				if( start> q.m.pos || stop< q.m.pos ) continue
+				if( start> q.m.pos || stop< q.m.pos+1 ) continue
 
 				const pvalue = Number.parseFloat( l[8-1] )
 

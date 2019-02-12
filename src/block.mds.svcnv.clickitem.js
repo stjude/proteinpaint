@@ -2789,6 +2789,7 @@ may create a tf motif find button for mutation
 		if(arg.tk.iscustom) {
 			if(arg.tk.checkexpressionrank) {
 				fimoarg.factor_profiles = [ {
+					name: 'Gene '+arg.tk.gecfg.datatype,
 					isgenevalue:1,
 					file: arg.tk.checkexpressionrank.file,
 					url: arg.tk.checkexpressionrank.url,
@@ -2807,9 +2808,12 @@ may create a tf motif find button for mutation
 				if(arg.samplegroup) {
 					if(arg.samplegroup.attributes) {
 						// restrict expression to a group
-						fpro.name = arg.samplegroup.name
+						fpro.name = arg.samplegroup.name+' '+arg.tk.gecfg.datatype
 						fpro.samplegroup_attrlst = arg.samplegroup.attributes
 					}
+				}
+				if(!fpro.name) {
+					fpro.name = 'Gene '+arg.tk.gecfg.datatype
 				}
 				fimoarg.factor_profiles = [ fpro ]
 			}

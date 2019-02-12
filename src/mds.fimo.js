@@ -82,7 +82,9 @@ factorprofile_genevalue_onegene_loadboxplot
 
 
 // header height, for all panels
+// this may be dynamic as certain profile may increase it
 const headerheight = 80
+
 const headerunderpad = 5
 // color for all boxplot line color
 const color = 'green'
@@ -120,9 +122,6 @@ function init_ui ( obj ) {
 	}
 
 	obj.tip = new client.Menu()
-
-	obj.div.append('div')
-		.text(obj.m.chr+':'+obj.m.pos+' '+obj.m.ref+'>'+obj.m.alt)
 
 	const table = obj.div.append('table')
 		.style('border-spacing','3px')
@@ -238,15 +237,16 @@ function do_query ( obj ) {
 	}
 	client.dofetch('fimo', arg)
 	.then(data=>{
-		if(data.error) throw 'cannot do motif finding: '+data.error
-
-		obj.wait.style('display','none')
-
+		if(data.error) throw 'Error: cannot do motif finding: '+data.error
 
 		if(obj.callback_once) {
 			obj.callback_once()
 			delete obj.callback_once
 		}
+
+		if(!data.items || data.items.length==0) throw 'Found no motif change due to this mutation'
+
+		obj.wait.style('display','none')
 
 		// get gene name
 		for(const m of data.items) {
@@ -262,7 +262,7 @@ function do_query ( obj ) {
 	.catch(e=>{
 		obj.wait
 			.style('display','block')
-			.text( 'ERROR: '+ (e.message || e ) )
+			.text( e.message || e )
 		if(e.stack) console.log(e.stack)
 	})
 }
@@ -293,11 +293,16 @@ if expression is available, draw placeholder for each factor and query
 			// even if two motifs are of same factor
 			profile.motifs = []
 			for(const motif of data.items) {
+				const pg = motif.layer1_g
+					.append('g')
+					.attr('transform','translate('+(width+profile.leftpad)+',0)')
 				profile.motifs.push({
 					motif: motif,
-					g: motif.layer1_g
-						.append('g')
-						.attr('transform','translate('+(width+profile.leftpad)+',0)')
+					g: pg,
+					message: pg.append('text')
+						.text('Loading...')
+						.attr('dominant-baseline','central')
+						.attr('fill','#ccc')
 				})
 			}
 
@@ -368,6 +373,24 @@ function draw_motif_simplified ( data, obj ) {
 	}
 	*/
 
+	// instead of ruler, plot mutation
+	{
+		const x = (obj.m.pos-data.refstart + .5 )*ntwidth
+		const g = obj.svg.append('g')
+			.attr('transform','translate('+x+','+headerheight+')')
+		g.append('rect')
+			.attr('x', -ntwidth/2)
+			.attr('y', -10)
+			.attr('width', ntwidth)
+			.attr('height', 10)
+			.attr('fill', '#666')
+		g.append('text')
+			.attr('y', -15)
+			.attr('text-anchor','middle')
+			.text( obj.m.chr+':'+obj.m.pos+' '+obj.m.ref+'>'+obj.m.alt )
+	}
+
+
 	// cumulative height
 	let svgheight = headerheight+headerunderpad
 
@@ -376,12 +399,6 @@ function draw_motif_simplified ( data, obj ) {
 	const g = obj.svg.append('g')
 		.attr('transform','translate(0,'+svgheight+')')
 
-	// vertical highlight m
-	g.append('rect')
-		.attr('x', (obj.m.pos-data.refstart)*ntwidth)
-		.attr('width', ntwidth)
-		.attr('height', data.items.length * (obj.motifrowheight+rowspace) )
-		.attr('fill','#8DFC85')
 
 	// each motif
 	for(const [i, motif] of data.items.entries()) {
@@ -643,18 +660,24 @@ async function load_factorprofile_genevalue ( obj, profile ) {
 	// also do type specific initiation
 	profile.axisg = profile.headerg.append('g')
 
-	profile.gene2result = {}
+	profile.gene2result = new Map()
+	// k: gene name
+	// v: boxplot data
+
 	for(const gene in obj.gene2position) {
 
 		const data = await factorprofile_genevalue_onegene_loadboxplot( obj, profile, gene )
 
-		factorprofile_genevalue_onegene_makeboxplot( obj, profile, gene, data )
+		if(data) {
+			// has valid data for this factor
+			factorprofile_genevalue_onegene_makeboxplot( obj, profile, gene, data )
 
-		// collect data so far
-		profile.gene2result[ gene ] = data
+			// collect data so far
+			profile.gene2result.set( gene, data )
 
-		// update scale based on collected data
-		factorprofile_genevalue_updatescale( obj, profile )
+			// update scale based on collected data
+			factorprofile_genevalue_updatescale( obj, profile )
+		}
 	}
 
 	factorprofile_genevalue_finish( obj, profile )
@@ -712,18 +735,16 @@ function factorprofile_genevalue_updatescale ( obj, profile ) {
 	// calls every time boxplot data is loaded for a gene
 	let min=0,
 		max=0
-	for(const g in profile.gene2result) {
-		const r = profile.gene2result[g]
-		min = Math.min(min, r.min)
-		max = Math.max(max, r.max)
+	for(const g of profile.gene2result.values()) {
+		min = Math.min(min, g.min)
+		max = Math.max(max, g.max)
 	}
 
 	const scale = scaleLinear().domain([min,max]).range([0, profile.width])
 
 	const h = obj.motifrowheight-2
 
-	for(const g in profile.gene2result) {
-		const r = profile.gene2result[ g ]
+	for(const [g,r] of profile.gene2result) {
 		for(const m of profile.motifs) {
 			if(m.motif.gene != g) continue
 
@@ -808,17 +829,34 @@ function factorprofile_genevalue_onegene_loadboxplot ( obj, profile, gene ) {
 	}
 	return client.dofetch('mdsgeneboxplot',arg)
 	.then(data=>{
-		if(data.error) throw data.error
+		if(data.error) throw 'Error: '+data.error
+		if(data.nodata) throw 'No data'
+		// hide message for motifs of this gene
+		for(const m of profile.motifs) {
+			if(m.motif.gene == gene) {
+				m.message.text('')
+			}
+		}
 		return data
+	})
+	.catch(e=>{
+		// update message for motifs of this gene
+		if(e.stack) console.log(e.stack)
+		for(const m of profile.motifs) {
+			if(m.motif.gene == gene) {
+				m.message.text( e.message || e )
+			}
+		}
 	})
 }
 
 
 function factorprofile_genevalue_finish ( obj, profile ) {
+
 	// update sample size
 	let n=0
-	for(const g in profile.gene2result) {
-		n = Math.max(n, profile.gene2result[g].n)
+	for(const g of profile.gene2result.values()) {
+		n = Math.max(n, g.n)
 	}
 	profile.headerg
 		.append('text')
