@@ -78,6 +78,7 @@ show_result()
 draw_motif_simplified()
 load_factorprofile
 load_factorprofile_genevalue
+load_factorprofile_genevalueonesample
 factorprofile_genevalue_onegene_loadboxplot
 */
 
@@ -89,8 +90,6 @@ factorprofile_genevalue_onegene_loadboxplot
 const headerheight = 80
 
 const headerunderpad = 5
-// color for all boxplot line color
-const color = 'green'
 
 
 
@@ -100,7 +99,15 @@ export function init ( obj  ) {
 */
 window.obj = obj
 
-	init_ui( obj )
+	obj.errdiv = obj.div.append('div')
+
+	try {
+		init_ui( obj )
+	} catch(e) {
+		obj.errdiv.text(e.message||e)
+		if(e.stack) console.log(e.stack)
+		return
+	}
 
 	do_query( obj )
 }
@@ -117,12 +124,7 @@ function init_ui ( obj ) {
 	obj.flankspan = 15
 	if(!obj.fimo_thresh) obj.fimo_thresh = 1e-4
 	if(!obj.minabslogp) obj.minabslogp = 1
-	if(obj.factor_profiles) {
-		for(const p of obj.factor_profiles) {
-			if(!p.leftpad) p.leftpad = 20
-			if(!p.width) p.width = 300
-		}
-	}
+
 
 	obj.tip = new client.Menu()
 
@@ -218,17 +220,48 @@ function init_ui ( obj ) {
 	// dom
 	obj.wait = obj.div.append('div')
 	obj.svg = obj.div.append('svg')
+	obj.dynamic_g = obj.svg.append('g') // all dynamic components rendered after loading data
 	obj.legend = {}
 	obj.legend.logpvaluediv = obj.div.append('div')
+
+	may_init_factorprofiles( obj )
 }
 
+
+
+function may_init_factorprofiles ( obj ) {
+	if(!obj.factor_profiles) return
+	if(!Array.isArray(obj.factor_profiles)) throw 'factor_profiles is not array'
+	for(const profile of obj.factor_profiles) {
+		if(!profile.name) throw 'name missing for a profile'
+		if(!profile.leftpad) profile.leftpad = 20
+		if(!profile.width) profile.width = 300
+
+		profile.headerg = obj.svg.append('g')
+		profile.textlabel = profile.headerg.append('text')
+			.text( profile.name )
+
+		if(profile.isgenevalue) {
+			profile.color = 'green'
+			profile.axisg = profile.headerg.append('g')
+			continue
+		}
+		if(profile.isgenevalueonesample) {
+			if(!profile.samplename) throw 'samplename missing for isgenevalueonesample'
+			profile.barcolor = '#62945B'
+			profile.axisg = profile.headerg.append('g')
+			continue
+		}
+		throw 'unknown profile type'
+	}
+}
 
 
 
 function do_query ( obj ) {
 
 	client.appear( obj.wait.text('Loading...') )
-	obj.svg.selectAll('*')
+	obj.dynamic_g.selectAll('*')
 		.remove()
 
 	const arg = {
@@ -289,7 +322,7 @@ if expression is available, draw placeholder for each factor and query
 
 		for(const profile of obj.factor_profiles) {
 
-			profile.headerg = obj.svg.append('g')
+			profile.headerg
 				.attr('transform','translate('+(width+profile.leftpad)+','+(headerheight)+')')
 
 			// for this profile, every motif gets a holder
@@ -379,7 +412,7 @@ function draw_motif_simplified ( data, obj ) {
 	// instead of ruler, plot mutation
 	{
 		const x = (obj.m.pos-data.refstart + .5 )*ntwidth
-		const g = obj.svg.append('g')
+		const g = obj.dynamic_g.append('g')
 			.attr('transform','translate('+x+','+headerheight+')')
 		g.append('rect')
 			.attr('x', -ntwidth/2)
@@ -399,7 +432,7 @@ function draw_motif_simplified ( data, obj ) {
 
 	const rowspace = 1
 
-	const g = obj.svg.append('g')
+	const g = obj.dynamic_g.append('g')
 		.attr('transform','translate(0,'+svgheight+')')
 
 
@@ -652,7 +685,92 @@ function load_factorprofile ( obj, profile ) {
 	if(profile.isgenevalue) {
 		return load_factorprofile_genevalue( obj, profile )
 	}
+	if(profile.isgenevalueonesample) {
+		return load_factorprofile_genevalueonesample( obj, profile )
+	}
 	throw 'unknown profile type'
+}
+
+
+async function load_factorprofile_genevalueonesample ( obj, profile ) {
+// get value for each gene for a sample
+
+	const arg = {
+		genome: obj.genome.name,
+		genes: [],
+		sample: profile.samplename
+	}
+	if(profile.mdslabel) {
+		arg.dslabel = profile.mdslabel
+		arg.querykey = profile.querykey
+		if(profile.samplegroup_attrlst) {
+			arg.getgroup = profile.samplegroup_attrlst
+		}
+	} else {
+		arg.iscustom = 1
+		arg.file = profile.file
+		arg.url = profile.url
+		arg.indexURL = profile.indexURL
+	}
+	for(const g in obj.gene2position) {
+		const r = obj.gene2position[g]
+		arg.genes.push( {
+			gene: g,
+			chr: r.chr,
+			start: r.start,
+			stop: r.stop
+		})
+	}
+	return client.dofetch('mdsgenevalueonesample',arg)
+	.then(data=>{
+		if(data.error) throw data.error
+		// defaults message of all genes to no data
+		// for any gene with data, will remove message
+		for(const m of profile.motifs) {
+			m.message.text('No data')
+		}
+		if(data.nodata) return
+		if(!data.result) throw 'error'
+		// bar plot
+		let min=0, max=0
+		for(const g in data.result) {
+			min = Math.min(min, data.result[g])
+			max = Math.max(max, data.result[g])
+		}
+		const scale = scaleLinear().domain([min,max]).range([0, profile.width])
+
+		client.axisstyle({
+			axis: profile.axisg.call(
+				axisTop().scale( scale )
+				.ticks(4)
+			),
+			showline:1,
+		})
+
+		for(const m of profile.motifs) {
+			const v = data.result[ m.motif.gene ]
+			if(Number.isFinite(v)) {
+				// this gene has valid value
+				m.message.text('')
+				m.g.append('rect')
+					.attr('y', -obj.motifrowheight/2)
+					.attr('width', Math.max(1,scale(v)) )
+					.attr('height', obj.motifrowheight)
+					.attr('shape-rendering','crispEdges')
+					.attr('fill', profile.barcolor)
+			}
+		}
+
+		profile.textlabel
+			.attr('x', profile.width/2 )
+			.attr('text-anchor', 'middle')
+			.attr('y', -30)
+
+	})
+	.catch(e=>{
+		if(e.stack) console.log(e.stack)
+		client.appear(obj.wait.text(e.message||e))
+	})
 }
 
 
@@ -660,8 +778,6 @@ function load_factorprofile ( obj, profile ) {
 async function load_factorprofile_genevalue ( obj, profile ) {
 	// get data for each uniq factor
 
-	// also do type specific initiation
-	profile.axisg = profile.headerg.append('g')
 
 	profile.gene2result = new Map()
 	// k: gene name
@@ -704,22 +820,27 @@ function factorprofile_genevalue_onegene_makeboxplot( obj, profile, gene, data )
 		if(data.w1!=undefined) {
 			// has valid values for boxplot, could be missing
 			m.boxplot.hline = m.g.append('line')
-				.attr('stroke',color).attr('shape-rendering','crispEdges')
+				.attr('stroke',profile.color)
+				.attr('shape-rendering','crispEdges')
 			m.boxplot.linew1 = m.g.append('line')
-				.attr('stroke',color).attr('shape-rendering','crispEdges')
+				.attr('stroke',profile.color)
+				.attr('shape-rendering','crispEdges')
 			m.boxplot.linew2 = m.g.append('line')
-				.attr('stroke',color).attr('shape-rendering','crispEdges')
+				.attr('stroke',profile.color)
+				.attr('shape-rendering','crispEdges')
 			m.boxplot.box = m.g.append('rect')
 				.attr('fill','white')
-				.attr('stroke',color).attr('shape-rendering','crispEdges')
+				.attr('stroke',profile.color)
+				.attr('shape-rendering','crispEdges')
 			m.boxplot.linep50 = m.g.append('line')
-				.attr('stroke',color).attr('shape-rendering','crispEdges')
+				.attr('stroke',profile.color)
+				.attr('shape-rendering','crispEdges')
 		}
 		// outliers
 		if(data.out) {
 			for(const d of data.out) {
 				const circle = m.g.append('circle')
-					.attr('stroke',color)
+					.attr('stroke',profile.color)
 					.attr('fill','white')
 					.attr('fill-opacity',0)
 				m.boxplot.out.push({
@@ -861,9 +982,8 @@ function factorprofile_genevalue_finish ( obj, profile ) {
 	for(const g of profile.gene2result.values()) {
 		n = Math.max(n, g.n)
 	}
-	profile.headerg
-		.append('text')
-		.text( (profile.name || 'Gene expression')+ ' (n='+n+')' )
+	profile.textlabel
+		.text( profile.name+ ' (n='+n+')' ) // update name showing n
 		.attr('x', profile.width/2 )
 		.attr('text-anchor', 'middle')
 		.attr('y', -30)

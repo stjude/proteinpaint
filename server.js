@@ -174,6 +174,7 @@ app.post('/mdscnv',handle_mdscnv)
 app.post('/mdssvcnv',handle_mdssvcnv)
 app.post('/mdsexpressionrank',handle_mdsexpressionrank) // expression rank as a browser track
 app.post('/mdsgeneboxplot',handle_mdsgeneboxplot)
+app.post('/mdsgenevalueonesample',handle_mdsgenevalueonesample)
 //app.post('/mdsgeneboxplot_svcnv',handle_mdsgeneboxplot_svcnv) // no longer used
 
 app.post('/vcf',handle_vcf) // for old ds/vcf and old junction
@@ -7432,6 +7433,104 @@ function mdssvcnv_exit_findsamplename( req, res, gn, ds, dsquery ) {
 
 
 
+
+
+async function handle_mdsgenevalueonesample( req, res ) {
+/*
+.genes[]
+.dslabel
+.querykey
+.iscustom
+.file
+.url
+.sample
+*/
+
+	if(reqbodyisinvalidjson(req,res)) return
+	const q = req.query
+
+	try {
+		if(!q.sample) throw '.sample missing'
+		if(!q.genes) throw '.genes[] missing'
+
+		let gn, ds, dsquery 
+
+		if(req.query.iscustom) {
+			gn = genomes[ q.genome ]
+			if(!gn) throw 'invalid genome'
+			if(!q.file && !q.url) throw 'no file or url for expression data'
+			ds = {}
+			dsquery = {
+				file: q.file,
+				url:  q.url,
+				indexURL: q.indexURL
+			}
+		} else {
+			const [err, gn1, ds1, dsquery1] = mds_query_arg_check( q )
+			if(err) throw err
+			gn = gn1
+			ds = ds1
+			dsquery = dsquery1
+		}
+
+		const gene2value = {}
+		let nodata=true
+		for(const gene of q.genes) {
+			const v = await handle_mdsgenevalueonesample_get( ds, dsquery, gene, q.sample )
+			if(Number.isFinite(v)) {
+				gene2value[ gene.gene ] = v
+				nodata=false
+			}
+		}
+		if(nodata) {
+			res.send({nodata:1})
+		} else {
+			res.send({result:gene2value})
+		}
+
+	} catch(e) {
+		if(e.stack) console.log(e.stack)
+		res.send({error:(e.message || e)})
+	}
+}
+
+
+
+async function handle_mdsgenevalueonesample_get( ds, dsquery, gene, sample ) {
+/*
+gene{}
+	.gene
+	.chr
+	.start
+	.stop
+sample STR
+*/
+	if(dsquery.url) {
+		dsquery.dir = await cache_index_promise(dsquery.indexURL || dsquery.url+'.tbi')
+	}
+	return new Promise((resolve,reject)=>{
+		const sp = spawn(tabix,
+			[ dsquery.file ? path.join(serverconfig.tpmasterdir,dsquery.file) : dsquery.url,
+			gene.chr+':'+gene.start+'-'+gene.stop
+			],
+			{cwd: dsquery.dir}
+			)
+		const rl = readline.createInterface({
+			input: sp.stdout
+		})
+		rl.on('line',line=>{
+			const l = line.split('\t')
+			if(!l[3]) return
+			const j = JSON.parse(l[3])
+			if(j.gene == gene.gene && j.sample == sample) {
+				resolve(j.value)
+			}
+		})
+		sp.on('close',()=>{
+			resolve(null)
+		})
+	})
+}
 
 
 

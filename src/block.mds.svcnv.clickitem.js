@@ -1428,6 +1428,7 @@ export async function click_multi_singleitem( p ) {
 		tk: p.tk,
 		block: p.block,
 		m: p.item,
+		sample: p.sample,
 		samplegroup: p.samplegroup,
 	})
 
@@ -2789,12 +2790,23 @@ may create a tf motif find button for mutation
 		if(arg.tk.iscustom) {
 			if(arg.tk.checkexpressionrank) {
 				fimoarg.factor_profiles = [ {
-					name: 'Gene '+arg.tk.gecfg.datatype,
 					isgenevalue:1,
+					name: 'Gene '+arg.tk.gecfg.datatype,
 					file: arg.tk.checkexpressionrank.file,
 					url: arg.tk.checkexpressionrank.url,
 					indexURL: arg.tk.checkexpressionrank.indexURL,
 				} ]
+
+				if(arg.sample) {
+					fimoarg.factor_profiles.push( {
+						isgenevalueonesample:1,
+						name: arg.sample.samplename+' '+arg.tk.gecfg.datatype,
+						samplename: arg.sample.samplename,
+						file: arg.tk.checkexpressionrank.file,
+						url: arg.tk.checkexpressionrank.url,
+						indexURL: arg.tk.checkexpressionrank.indexURL,
+					} )
+				}
 			}
 		} else {
 			// native
@@ -2816,6 +2828,17 @@ may create a tf motif find button for mutation
 					fpro.name = 'Gene '+arg.tk.gecfg.datatype
 				}
 				fimoarg.factor_profiles = [ fpro ]
+
+				if(arg.sample) {
+					fimoarg.factor_profiles.push( {
+						isgenevalueonesample:1,
+						name: arg.sample.samplename+' '+arg.tk.gecfg.datatype,
+						samplename: arg.sample.samplename,
+						datatype: arg.tk.checkexpressionrank.datatype,
+						querykey: arg.tk.checkexpressionrank.querykey,
+						mdslabel: arg.tk.mds.label
+					})
+				}
 			}
 		}
 		import('./mds.fimo').then(_=>{
