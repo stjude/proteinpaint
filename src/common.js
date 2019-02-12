@@ -452,15 +452,12 @@ function nt2aa(gm) {
 	const enlst=[]
 	if(gm.coding) {
 		for(const e of gm.coding) {
-			let s=gm.genomicseq.substr(e[0]-gm.start,e[1]-e[0])
+			const s=gm.genomicseq.substr(e[0]-gm.start,e[1]-e[0])
 			if(gm.strand=='-') {
-				const s2=[]
-				for(let i=s.length-1; i>=0; i--) {
-					s2.push(basecompliment(s[i]))
-				}
-				s=s2.join('')
+				enlst.push( reversecompliment(s) )
+			} else {
+				enlst.push(s)
 			}
-			enlst.push(s)
 		}
 	}
 	const nt=enlst.join('')
@@ -513,6 +510,14 @@ function basecompliment(nt) {
 exports.basecompliment=basecompliment
 
 
+function reversecompliment ( s ) {
+	const tmp=[]
+	for(let i=s.length-1; i>=0; i--) {
+		tmp.push(basecompliment(s[i]))
+	}
+	return tmp.join('')
+}
+exports.reversecompliment = reversecompliment
 
 
 exports.spliceeventchangegmexon=function(gm, evt) {

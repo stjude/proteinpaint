@@ -6,6 +6,8 @@ import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-s
 
 /*
 
+
+
 obj{}:
 .genome {}
 .fimo_thresh
@@ -188,7 +190,7 @@ function init_ui ( obj ) {
 	{
 		const tr = table.append('tr')
 		tr.append('td')
-			.text('Minimum absolute log10 p-value')
+			.text('Minimum log10 p-value difference')
 		const td = tr.append('td')
 		td.append('input')
 			.attr('type','number')

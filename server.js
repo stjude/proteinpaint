@@ -9364,7 +9364,7 @@ async function handle_fimo (req, res) {
 
 
 
-async function get_fasta( gn, pos ) {
+async function util_get_fasta( gn, pos ) {
 	return new Promise((resolve,reject)=>{
 		const ps = spawn(samtools, ['faidx', gn.genomefile, pos])
 		const out=[]
@@ -9376,6 +9376,40 @@ async function get_fasta( gn, pos ) {
 }
 
 
+
+
+function fimo_may_updateallele ( q, start, ref_fasta ) {
+// retrieved seq flanking the q.m from forward strand
+// tell if the q.m alleles are from reverse strand, and if so change to forward
+
+	// do not deal with these
+	if(!q.m.ref) return
+	if(q.m.ref=='-') return
+
+	// remove fasta header
+	const seq = ref_fasta.split('\n').slice(1).join('').toUpperCase()
+
+	// nt string at m.pos matching length of m.ref
+	const forward = seq.substring( q.m.pos - start, q.m.pos-start+q.m.ref.length )
+
+	if(forward == q.m.ref.toUpperCase()) {
+		// ref is from forward strand
+		//console.log('forward')
+		return
+	}
+
+	// make reverse compliment using forward
+	const reverse = common.reversecompliment( forward )
+	if(reverse == q.m.ref.toUpperCase()) {
+		//console.log('is reverse')
+		q.m.ref = forward
+		if(q.m.alt!='-') {
+			q.m.alt = common.reversecompliment( q.m.alt )
+		}
+		return
+	}
+	//console.log('dont know')
+}
 
 
 
@@ -9391,7 +9425,9 @@ then find motif change
 	const refstart = q.m.pos-q.flankspan
 	const refstop = q.m.pos+q.flankspan
 
-	const ref_fasta = await get_fasta( gn, q.m.chr+':'+refstart+'-'+refstop )
+	const ref_fasta = await util_get_fasta( gn, q.m.chr+':'+refstart+'-'+refstop )
+	fimo_may_updateallele( q, refstart, ref_fasta )
+
 	const ref_motifs = await run_fimo( q, gn, ref_fasta )
 
 	// index ref motifs by tf name
