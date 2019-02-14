@@ -3421,38 +3421,45 @@ setgmmode(mode, willupdate) {
 		this.exonsf=(this.width-(inw>this.width*.4 ? 0 : inw))/exonlen
 		this.width=exonlen*this.exonsf+inw
 	}
-	let hasgene=false
-	for(const tk of this.tklst) {
-		if(tk.__isgene) hasgene=true
-	}
-	if(addgene) {
-		if(!hasgene) {
-			// add
-			for(const tk of this.genome.tracks) {
-				if(tk.__isgene) {
-					this.block_addtk_template(tk)
-					// by breaking, block will only add the first gene track, but not more than 1
-					break
-				}
-			}
+
+	if(this.gbase) {
+		let hasgene=false
+		for(const tk of this.tklst) {
+			if(tk.__isgene) hasgene=true
 		}
-	} else {
-		if(hasgene) {
-			// remove
-			while(hasgene) {
-				for(let i=0; i<this.tklst.length; i++) {
-					if(this.tklst[i].__isgene) {
-						this.tk_remove(i)
+		if(addgene) {
+			if(!hasgene) {
+				// add
+				for(const tk of this.genome.tracks) {
+					if(tk.__isgene) {
+						this.block_addtk_template(tk)
+						// by breaking, block will only add the first gene track, but not more than 1
 						break
 					}
 				}
-				hasgene=false
+			}
+		} else {
+			if(hasgene) {
+				// remove
+				while(hasgene) {
+					for(let i=0; i<this.tklst.length; i++) {
+						if(this.tklst[i].__isgene) {
+							this.tk_remove(i)
+							break
+						}
+					}
+					hasgene=false
+				}
 			}
 		}
-	}
-	if(willupdate) {
-		delete this.pannedpx
-		this.block_coord_updated()
+		if(willupdate) {
+			delete this.pannedpx
+			this.block_coord_updated()
+		}
+	} else {
+		// gbase is missing
+		// this is setting gmmode at init
+		// somehow this will also prevent from adding default gene track
 	}
 }
 

@@ -30,6 +30,7 @@ export default function (arg) {
 	paint.holder=arg.holder instanceof Element ? select(arg.holder) : arg.holder
 	paint.dataset=arg.dataset
 	paint.mset = arg.mset
+	paint.gmmode = arg.gmmode
 	paint.hidedatasetexpression=arg.hidedatasetexpression
 	paint.hidegenecontrol=arg.hidegenecontrol
 	paint.hidegenelegend=arg.hidegenelegend
@@ -276,11 +277,13 @@ function step2_getpdomain(paint) {
 
 function step3(paint) {
 	// mode
-	let mode
-	if(paint.model.cdslen) {
-		mode=client.gmmode.protein
-	} else {
-		mode=client.gmmode.exononly
+	let mode = paint.gmmode
+	if(!mode) {
+		if(paint.model.cdslen) {
+			mode=client.gmmode.protein
+		} else {
+			mode=client.gmmode.exononly
+		}
 	}
 	import('./block').then(b=>new b.Block({
 		jwt: paint.jwt,
