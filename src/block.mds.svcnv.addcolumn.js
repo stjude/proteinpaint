@@ -241,7 +241,7 @@ export function render_multi_genebar( tk, block) {
 	/* sloppy
 	should await for data to be loaded for all fixed genes
 	*/
-	if(tk.gecfg.fixed_pend) {
+	if(tk.gecfg && tk.gecfg.fixed_pend) {
 		const i = tk.gecfg.fixed_pend.shift()
 		if(tk.gecfg.fixed_pend.length==0) {
 			delete tk.gecfg.fixed_pend
