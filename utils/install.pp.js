@@ -125,6 +125,9 @@ if( validateurlmode) {
 }
 
 
+
+
+// server config json object, to be serialized to the file "serverconfig.json"
 const SC = {
 	genomes: [],
 	tpmasterdir: UC.TP,
@@ -196,11 +199,12 @@ mkdir( path_tpgenome )
 
 
 
+
+
 SC.genomes = []
 
 
 
-// hg19
 if( UC.GENOMES.has('hg19')) add_hg19()
 if( UC.GENOMES.has('hg38')) add_hg38()
 if( UC.GENOMES.has('mm9')) add_mm9()
@@ -208,6 +212,7 @@ if( UC.GENOMES.has('mm10')) add_mm10()
 if( UC.GENOMES.has('dm3')) add_dm3()
 if( UC.GENOMES.has('dm6')) add_dm6()
 if( UC.GENOMES.has('danRer10')) add_danRer10()
+
 
 
 
@@ -379,6 +384,15 @@ function add_hg38 () {
 		trydownload( path.join(a,'clinvar.hg38.vcf.gz'), 'https://pecan.stjude.cloud/static/hg38/clinvar.hg38.vcf.gz')
 		trydownload( path.join(a,'clinvar.hg38.vcf.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/clinvar.hg38.vcf.gz.tbi')
 	}
+
+	// human meme file is build-independent
+	{
+		const a = path.join(UC.TP,'utils/meme/motif_databases/HUMAN/')
+		mkdir( a )
+		trydownload( path.join(a,'HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'), 'https://pecan.stjude.cloud/static/hg19/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme')
+		trydownload( path.join(a,'HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'), 'https://pecan.stjude.cloud/static/hg19/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv')
+	}
+
 	SC.genomes.push({
 		name:'hg38',
 		species:'human',
@@ -455,6 +469,15 @@ function add_hg19 () {
 		file:'./genome/hg19.js',
 		datasets:[ {name:'ClinVar',jsfile:'./dataset/clinvar.hg19.js'} ]
 	})
+
+	// meme
+	{
+		const a = path.join(UC.TP,'utils/meme/motif_databases/HUMAN/')
+		mkdir( a )
+		trydownload( path.join(a,'HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'), 'https://pecan.stjude.cloud/static/hg19/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme')
+		trydownload( path.join(a,'HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'), 'https://pecan.stjude.cloud/static/hg19/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv')
+	}
+
 }
 
 
@@ -488,7 +511,7 @@ function mkdir ( s ) {
 		return
 	}
 	try{
-		fs.mkdirSync( s )
+		fs.mkdirSync( s, {recursive:true} )
 		console.log('Directory created: '+s)
 	} catch(e) {
 		abort('unable to create directory: '+s)
@@ -550,3 +573,6 @@ function urlfilesize (url) {
 scp utils/install.pp.js $prp1:/home/genomeuser/static_files/genomepaint-support/
 https://pecan.stjude.cloud/static/genomepaint-support/install.pp.js
 */
+
+
+
