@@ -30,7 +30,7 @@ const abort = (m)=>{
 
 
 
-if(process.argv.length!=3) abort('<phenotree txt file> (term2term to stdout; unique terms at L1-5 to stderr) | sort -u')
+if(process.argv.length!=3) abort('<phenotree txt file> outputs to files "term2term" and "termjson"')
 
 
 const fs=require('fs')
@@ -54,18 +54,6 @@ const str2level = str => {
 }
 
 
-const show_level_stats = ()=>{
-	console.error('\n\nLevel 1: '+set1.size)
-	console.error([...set1].sort().join('\n'))
-	console.error('\n\nLevel 2: '+set2.size)
-	console.error([...set2].sort().join('\n'))
-	console.error('\n\nLevel 3: '+set3.size)
-	console.error([...set3].sort().join('\n'))
-	console.error('\n\nLevel 4: '+set4.size)
-	console.error([...set4].sort().join('\n'))
-	console.error('\n\nLevel 5: '+set5.size)
-	console.error([...set5].sort().join('\n'))
-}
 
 
 
@@ -77,6 +65,102 @@ const set3 = new Set()
 const set4 = new Set()
 const set5 = new Set()
 
+
+const t2t = new Map()
+// k: parent
+// v: set of children
+
+
+const check_terms_overlap = () => {
+	// check if terms from different levels overlap
+	for(const n of set1) {
+		if(set2.has(n)) abort(n+': L1 and L2')
+		if(set3.has(n)) abort(n+': L1 and L3')
+		if(set4.has(n)) abort(n+': L1 and L4')
+		if(set5.has(n)) abort(n+': L1 and L5')
+	}
+	for(const n of set2) {
+		if(set3.has(n)) abort(n+': L2 and L3')
+		if(set4.has(n)) abort(n+': L2 and L4')
+		if(set5.has(n)) abort(n+': L2 and L5')
+	}
+	for(const n of set3) {
+		if(set4.has(n)) abort(n+': L3 and L4')
+		if(set5.has(n)) abort(n+': L3 and L5')
+	}
+	for(const n of set4) {
+		if(set5.has(n)) abort(n+': L4 and L5')
+	}
+}
+
+
+
+
+const output_termjson = () => {
+	// output "termjson" file
+	// col1: term id
+	// col2: {}
+	// lines beginning with # are ignored
+	const out = [ '#level1: '+set1.size ]
+	for(const n of set1) {
+		const j = {
+			name: n
+		}
+		out.push( n+'\t'+JSON.stringify(j) )
+	}
+
+	out.push('#level 2: '+set2.size)
+	for(const n of set2) {
+		const j = {
+			name: n
+		}
+		out.push( n+'\t'+JSON.stringify(j) )
+	}
+
+	out.push('#level 3: '+set3.size)
+	for(const n of set3) {
+		const j = {
+			name: n
+		}
+		out.push( n+'\t'+JSON.stringify(j) )
+	}
+
+	out.push('#level 4: '+set4.size)
+	for(const n of set4) {
+		const j = {
+			name: n
+		}
+		out.push( n+'\t'+JSON.stringify(j) )
+	}
+
+	out.push('#level 5: '+set5.size)
+	for(const n of set5) {
+		const j = {
+			name: n
+		}
+		out.push( n+'\t'+JSON.stringify(j) )
+	}
+
+	fs.writeFileSync('termjson', out.join('\n')+'\n' )
+}
+
+
+
+
+const output_t2t = () => {
+	//
+	const out = []
+	for(const [parentterm, children] of t2t) {
+
+		if( children.size ) {
+			for(const childterm of children) {
+				out.push( parentterm+'\t'+childterm )
+			}
+		}
+	}
+
+	fs.writeFileSync('term2term', out.join('\n')+'\n' )
+}
 
 
 
@@ -101,26 +185,37 @@ for(let i=1; i<lines.length; i++) {
 
 	if(level1) {
 		set1.add(level1)
+		if(!t2t.has( level1 )) t2t.set( level1, new Set() )
 	}
 
 	if(level2) {
 		set2.add(level2)
-		console.log(level1+'\t'+level2)
+
+		t2t.get( level1 ).add( level2 )
+
+		if(!t2t.has( level2 )) t2t.set( level2, new Set() )
 	}
 
 	if(level3) {
 		set3.add(level3)
-		console.log(level2+'\t'+level3)
+
+		t2t.get( level2 ).add( level3 )
+		
+		if(!t2t.has( level3 )) t2t.set( level3, new Set() )
 	}
 
 	if(level4) {
 		set4.add(level4)
-		console.log(level3+'\t'+level4)
+
+		t2t.get( level3 ).add( level4 )
+
+		if(!t2t.has( level4 )) t2t.set( level4, new Set() )
 	}
 
 	if(level5) {
 		set5.add(level5)
-		console.log(level4+'\t'+level5)
+
+		t2t.get( level4 ).add( level5 )
 	}
 }
 
@@ -128,4 +223,10 @@ for(let i=1; i<lines.length; i++) {
 
 
 // done parsing file
-show_level_stats()
+
+check_terms_overlap()
+
+
+output_termjson()
+
+output_t2t()
