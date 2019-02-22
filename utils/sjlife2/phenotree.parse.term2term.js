@@ -101,40 +101,40 @@ const output_termjson = () => {
 	// col1: term id
 	// col2: {}
 	// lines beginning with # are ignored
-	const out = [ '#level1: '+set1.size ]
-	for(const n of set1) {
+	const out = [ '#root: '+set1.size ]
+	for(const n of [...set1].sort() ) {
 		const j = {
 			name: n
 		}
 		out.push( n+'\t'+JSON.stringify(j) )
 	}
 
-	out.push('#level 2: '+set2.size)
-	for(const n of set2) {
+	out.push('#level 1: '+set2.size)
+	for(const n of [...set2].sort() ) {
 		const j = {
 			name: n
 		}
 		out.push( n+'\t'+JSON.stringify(j) )
 	}
 
-	out.push('#level 3: '+set3.size)
-	for(const n of set3) {
+	out.push('#level 2: '+set3.size)
+	for(const n of [...set3].sort() ) {
 		const j = {
 			name: n
 		}
 		out.push( n+'\t'+JSON.stringify(j) )
 	}
 
-	out.push('#level 4: '+set4.size)
-	for(const n of set4) {
+	out.push('#level 3: '+set4.size)
+	for(const n of [...set4].sort() ) {
 		const j = {
 			name: n
 		}
 		out.push( n+'\t'+JSON.stringify(j) )
 	}
 
-	out.push('#level 5: '+set5.size)
-	for(const n of set5) {
+	out.push('#level 4: '+set5.size)
+	for(const n of [...set5].sort() ) {
 		const j = {
 			name: n
 		}
