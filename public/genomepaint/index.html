@@ -13,6 +13,10 @@
 	<script src="../bin/proteinpaint.js" charset="utf-8"></script>
 	<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 	<style>
+		h2{
+			font-family: Verdana, Geneva, sans-serif;
+		}
+
 		a{
 			color:#555555;
 		}
@@ -21,55 +25,71 @@
 			color: #901739;
 		}
 
+		.main-tabs{
+			margin-left: 20px;
+			margin-right: 20px;
+		}
+
 		.nav-pills .nav-link.active{
 			color: #555555;
 			background-color: rgb(204, 204, 204);
 		}
 
+		.tab-pane{
+			margin: 50px;
+		}
+
+		.genome-home{
+			margin: 50px 5%;
+		}
+
+		.user-data-form{
+			width: 50%;
+			margin: auto;
+		}
+
+		.btn-submit{
+			color: #555555;
+			background-color: rgb(204, 204, 204);
+			border:0px solid transparent;
+		}
+
+		.btn-submit:hover{
+			color: #901739;;
+			background-color: rgb(204, 204, 204);
+			border:0px solid transparent;
+		}
+
 	</style>
 </head>
 <body>
-	<nav class="navbar navbar-expand-lg navbar-light bg-light">
-		<a class="navbar-brand" href="#">
-			<img src="/static/st_jude_logo.png" height="30" class="d-inline-block align-top" alt="">
-			Genome Paint
-		</a>
-		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-			<span class="navbar-toggler-icon"></span>
-		</button>
-			
-		<div class="collapse navbar-collapse" id="navbarSupportedContent">
-			<ul class="navbar-nav mr-auto">
-			</ul>
-			<form class="form-inline my-2 my-lg-0">
-			<input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-			<button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-			</form>
-		</div>
+	<nav class="navbar navbar-expand-lg">
+			<img src="/static/st_jude_logo.png" height="40" class="d-inline-block align-top" alt="">
+			<div class="tool-title" style="margin:auto;"><h2>GenomePaint</h2></div>
 	</nav>
 
-	<div class="card" style="margin:50px 5%;">
-		<div class="card-header">
-			<ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+	<div style="margin:50px 0;">
+		<div style="margin:auto;">
+			<ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
 				<li class="nav-item">
-					<a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Existing Datasets</a>
+					<a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true"><h5 class="main-tabs">Existing Datasets</h5></a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" id="userdata-tab" data-toggle="tab" href="#userdata" role="tab" aria-controls="userdata" aria-selected="false">Add Your Data</a>
+					<a class="nav-link" id="userdata-tab" data-toggle="tab" href="#userdata" role="tab" aria-controls="userdata" aria-selected="false"><h5 class="main-tabs">Add Your Data</h5></a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" id="figures-tab" data-toggle="tab" href="#figures" role="tab" aria-controls="figures" aria-selected="false">Figures</a>
+					<a class="nav-link" id="figures-tab" data-toggle="tab" href="#figures" role="tab" aria-controls="figures" aria-selected="false"><h5 class="main-tabs">Figures</h5></a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" id="tutorial-tab" data-toggle="tab" href="#tutorial" role="tab" aria-controls="tutorial" aria-selected="false">Tutorial</a>
+					<a class="nav-link" id="tutorial-tab" data-toggle="tab" href="#tutorial" role="tab" aria-controls="tutorial" aria-selected="false" ><h5 class="main-tabs">Tutorial</h5></a>
 				</li>
 			</ul>
 		</div>
-			<div class="card-block">
-				<div class="tab-content" id="myTabContent">
-				<div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">  
-						<ul class="nav nav-pills nav-fill" id="pills-tab" role="tablist" style="margin:10px;">                                        
-							<li class="nav-item">
+			<div>
+				<div class="tab-content" id="myTabContent" style="align-content: center;">
+				<div class="tab-pane fade show active genome-home" id="home" role="tabpanel" aria-labelledby="home-tab">  
+						<ul class="nav nav-pills nav-fill" id="pills-tab" role="tablist" style="margin:50px 15%;">                                        
+							<li class="nav-item" style="justify-content: center;">
 								<a class="nav-link active" href="#pills-pc" id="pills-pc-tab" data-toggle="pill" href="#pills-pc" role="tab" aria-controls="pills-pc" aria-selected="true">Hg19 Pediatric Cancer</a>
 							</li>
 							<li class="nav-item">
@@ -85,7 +105,55 @@
 							<div class="tab-pane fade" id="pills-skcm" role="tabpanel" aria-labelledby="pills-skcm-tab"><div id="hg38-skcm"></div></div>
 						</div>
 				</div>
-				<div class="tab-pane fade" id="userdata" role="tabpanel" aria-labelledby="userdata-tab"></br></div>
+				<div class="tab-pane fade" id="userdata" role="tabpanel" aria-labelledby="userdata-tab">
+					<form class="user-data-form" id="user-track-form">
+						<div class="form-group row">
+							<label for="genome" class="col-sm-3 col-form-label">Species & Genome</label>
+							<div class="col-sm-9">
+								<select class="custom-select mr-sm-2" id="genome">
+									<option value="hg19" selected>Human hg19</option>
+									<option value="hg38">Human hg38</option>
+									<option value="mm9">Mouse mm9</option>
+									<option value="mm10">Mouse mm10</option>
+									<option value="danrer10">Zebrafish danRer10</option>
+									<option value="dm3">Fruit fly dm3</option>
+									<option value="dm6">Fruit fly dm6</option>
+								</select>
+							</div>
+						</div>
+						<div class="form-group row">
+							<label for="track-name" class="col-sm-3 col-form-label">Track Name</label>
+							<div class="col-sm-9">
+								<input type="text" class="form-control" id="track-name" placeholder="Free Text (e.g. FPKM, CNV, XYZ etc.)">
+							</div>
+						</div>
+						<div class="form-group row">
+							<label for="svcnv" class="col-sm-3 col-form-label">SV, CNV URL</label>
+							<div class="col-sm-9">
+								<input type="url" class="form-control" id="svcnv" placeholder="(required) http://" required>
+							</div>
+						</div>
+						<div class="form-group row">
+							<label for="vcf" class="col-sm-3 col-form-label">VCF URL</label>
+							<div class="col-sm-9">
+								<input type="url" class="form-control" id="vcf" placeholder="(required) http://" required>
+							</div>
+						</div>
+						<div class="form-group row">
+							<label for="fpkm" class="col-sm-3 col-form-label">FPKM URL</label>
+							<div class="col-sm-9">
+								<input type="url" class="form-control" id="fpkm" placeholder="(Optional) http://">
+							</div>
+						</div>
+						<div style="text-align:center">
+							<button id="usedata-btn" type="submit" class="btn btn-primary btn-submit" style="width: 100px; margin: 0 auto;">Submit</button>
+						</div>
+					</form>
+					<div>
+						<button id="return-button" type="submit" class="btn btn-primary btn-submit" style="width: 200px; margin: 0 auto; display :none;">Return to the Form</button>
+					</div>
+					<div id="user-custom-track" class="tab-pane" style="display:none;"></div>
+				</div>
 				<div class="tab-pane fade" id="figures" role="tabpanel" aria-labelledby="figures-tab"></br></div>
 				<div class="tab-pane fade" id="tutorial" role="tabpanel" aria-labelledby="tutorial-tab"></br></div>
 				</div>
@@ -141,6 +209,86 @@
 					vcf:{hiddenclass:['Intron']}
 				}]
 			})
+
+			function ValidURL(str) {
+				var pattern = new RegExp("((http|https)(:\/\/))?([a-zA-Z0-9]+[.]{1}){2}[a-zA-z0-9]+(\/{1}[a-zA-Z0-9]+)*\/?", "i"); 
+				if(!pattern.test(str)) {
+					alert("Please enter a valid URL.");
+					return false;
+				} else {
+					return true;
+				}
+			}
+
+			document.getElementById("usedata-btn").addEventListener("click", function(event){
+				event.preventDefault();
+				var genome_list = document.getElementById("genome");
+				var genome_select = genome_list.options[genome_list.selectedIndex].value;
+				var trackName = document.getElementById("track-name").value;
+				var svcnv_url = document.getElementById("svcnv").value;
+				var vcf_url = document.getElementById("vcf").value;
+				var fpkm_url = document.getElementById("fpkm").value;
+				var form = document.getElementById("user-track-form");
+				var return_btn = document.getElementById("return-button");
+				var genome_view = document.getElementById('user-custom-track');
+
+				genome_view.style.display = "block";
+				
+				if (svcnv_url == "" || vcf_url == ""){
+					alert("Please provide required fields.");
+					return false;
+				} else if(ValidURL(svcnv_url) && ValidURL(vcf_url) && (fpkm_url !== "" && ValidURL(fpkm_url))){
+					runproteinpaint({
+						holder:document.getElementById('user-custom-track'),
+						host:'https://proteinpaint.stjude.org',
+						genome: genome_select,
+						block:1,
+						nobox:1,
+						noheader:1,
+						nativetracks:'refgene',
+						tracks:[{
+							name:trackName,
+							type:'mdssvcnv',
+							url:svcnv_url,
+							checkexpressionrank:{url:fpkm_url},
+							checkvcf:{url:vcf_url},
+					}]
+				})
+					form.style.display = "none";
+					return_btn.style.display = "block";
+					console.log(genome_select, trackName, svcnv, vcf, fpkm);
+				}else{
+					runproteinpaint({
+						holder:document.getElementById('user-custom-track'),
+						host:'https://proteinpaint.stjude.org',
+						genome: genome_select,
+						block:1,
+						nobox:1,
+						noheader:1,
+						nativetracks:'refgene',
+						tracks:[{
+							name:trackName,
+							type:'mdssvcnv',
+							url:svcnv_url,
+							checkvcf:{url:vcf_url},
+					}]
+				})
+				form.style.display = "none";
+				return_btn.style.display = "block";
+				}
+			});
+
+			document.getElementById("return-button").addEventListener("click", function(event){
+				event.preventDefault();
+				var form = document.getElementById("user-track-form");
+				var return_btn = document.getElementById("return-button");
+				var genome_view = document.getElementById('user-custom-track');
+
+				form.style.display = "block";
+				genome_view.innerHTML = "";	
+				this.style.display = "none";
+
+			});
 		</script>
 </body>
 </html>
