@@ -50,6 +50,7 @@ const str2level = str => {
 	// parses column 1-5
 	const v = str.trim()
 	if(!v || v=='-') return null
+	if(v.indexOf('"')!=-1) abort('Level name has double quote')
 	return v
 }
 

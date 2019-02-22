@@ -337,10 +337,7 @@ function handle_genomes(req,res) {
 
 function mds_clientcopy(ds) {
 	// make client-side copy of a mds
-	if(!ds.queries) {
-		// this ds has no queries, will not reveal to client
-		return
-	}
+
 	const ds2={
 		isMds:true,
 		noHandleOnClient:ds.noHandleOnClient,
@@ -351,6 +348,10 @@ function mds_clientcopy(ds) {
 		mutationAttribute: ds.mutationAttribute,
 		locusAttribute: ds.locusAttribute,
 		alleleAttribute: ds.alleleAttribute,
+	}
+
+	if(ds.queries) {
+		ds2.queries = {}
 	}
 
 	if(ds.singlesamplemutationjson) {
@@ -369,6 +370,13 @@ function mds_clientcopy(ds) {
 
 
 	if(ds.cohort) {
+
+		if(ds.cohort.termdb) {
+			// let client know the existance, do not reveal details unless needed
+			ds2.termdb = 1
+		}
+
+
 		if( ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
 			/*
 			.attributes.lst[] are not released to client
@@ -13190,7 +13198,7 @@ function mds_init(ds,genome, _servconfig) {
 			const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
 			if(err) return 'cohort annotation file "'+file.file+'": '+err
 			//if(items.length==0) return 'no content from sample annotation file '+file.file
-			console.log(items.length+' samples loaded from annotation file '+file.file)
+			console.log(ds.label+': '+items.length+' samples loaded from annotation file '+file.file)
 			items.forEach( i=> {
 
 				// may need to parse certain values into particular format
@@ -13209,6 +13217,19 @@ function mds_init(ds,genome, _servconfig) {
 
 				ds.cohort.tohash(i, ds)
 			})
+		}
+		{
+			let c=0
+			for(const n in ds.cohort.annotation) c++
+			console.log(ds.label+': total samples from sample table: '+c)
+		}
+
+		if(ds.cohort.termdb) {
+			try {
+				init_termdb( ds )
+			} catch(e) {
+				return 'error with termdb: '+e
+			}
 		}
 
 
@@ -14183,3 +14204,63 @@ function checkrank_bedj(req,res) {
 
 
 ///////////// end of __rank
+
+
+
+
+
+
+
+//////////// __termdb
+
+
+function init_termdb ( ds ) {
+/* to initiate termdb for a mds dataset
+*/
+	const termdb = ds.cohort.termdb
+	
+	if(!termdb.term2term) throw '.term2term{} missing'
+	init_termdb_parse_term2term( termdb )
+
+	if(!termdb.termjson) throw '.termjson{} missing'
+	init_termdb_parse_termjson( termdb )
+}
+
+
+
+function init_termdb_parse_term2term ( termdb ) {
+
+	if(termdb.term2term.file) {
+		// one single text file
+		termdb.term2term.map = new Map()
+		// k: parent
+		// v: [] children
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.term2term.file),{encoding:'utf8'}).trim().split('\n') ) {
+			if(line[0]=='#') continue
+			const l = line.split('\t')
+			if(!termdb.term2term.map.has( l[0] )) termdb.term2term.map.set( l[0], [] )
+			termdb.term2term.map.get( l[0] ).push( l[1] )
+		}
+		return
+	}
+	// maybe sqlitedb
+	throw 'term2term: unknown data source'
+}
+
+
+function init_termdb_parse_termjson ( termdb ) {
+	if(termdb.termjson.file) {
+		termdb.termjson.map = new Map()
+		// k: term
+		// v: {}
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.termjson.file),{encoding:'utf8'}).trim().split('\n') ) {
+			if(line[0]=='#') continue
+			const l = line.split('\t')
+			termdb.termjson.map.set( l[0], JSON.parse(l[1]) )
+		}
+		return
+	}
+	throw 'termjson: unknown data source'
+}
+
+//////////// end of __termdb
