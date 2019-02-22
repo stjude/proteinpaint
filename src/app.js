@@ -42,7 +42,7 @@ launchsamplematrix()
 launchmdssamplescatterplot
 launchmdssurvivalplot
 launch_fimo
-
+launch_termdb
 
 */
 
@@ -748,6 +748,11 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		}
 	}
 
+	if(arg.display_termdb) {
+		launch_termdb( arg.display_termdb, holder )
+		return
+	}
+
 	if(arg.fimo) {
 		launch_fimo( arg.fimo, holder )
 		return
@@ -932,14 +937,43 @@ function launchmdssurvivalplot(arg, holder) {
 }
 
 
-function launch_fimo ( arg, holder ) {
+
+function launch_termdb ( arg, holder ) {
 	if(!arg.genome) {
-		error0('missing genome for mdssurvivalplot')
+		error0('missing genome for termdb')
 		return
 	}
 	const genome = genomes[arg.genome]
 	if(!genome) {
-		error0('invalid genome for mdssurvivalplot')
+		error0('invalid genome for termdb')
+		return
+	}
+	arg.genome = genome
+	if(!arg.dslabel) {
+		error0('missing dslabel for termdb')
+		return
+	}
+	arg.mds = genome.datasets[ arg.dslabel ]
+	if(!arg.mds) {
+		error0('unknown dataset for termdb')
+		return
+	}
+	arg.div = holder
+	import('./mds.termdb').then(_=>{
+		_.init(arg)
+	})
+}
+
+
+
+function launch_fimo ( arg, holder ) {
+	if(!arg.genome) {
+		error0('missing genome for fimo')
+		return
+	}
+	const genome = genomes[arg.genome]
+	if(!genome) {
+		error0('invalid genome for fimo')
 		return
 	}
 	arg.genome = genome
