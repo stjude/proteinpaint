@@ -60,16 +60,8 @@
 			border:0px solid transparent;
 		}
 
-		#figures .collapse{
-			text-align: justify;
-			padding: 20px;
-		}
-
-		#figures img{
-			width: 60%;
-			height: 60%;
-			display: block;
-			margin: 30px auto;
+		#figures a{
+			color: #901739;
 		}
 
 	</style>
@@ -166,164 +158,44 @@
 					</div>
 					<div id="user-custom-track" class="tab-pane" style="display:none;"></div>
 				</div>
-				<div class="tab-pane fade" id="figures" role="tabpanel" aria-labelledby="figures-tab"></br>
+				<div class="tab-pane fade" id="figures" role="tabpanel" aria-labelledby="figures-tab">
 					<div class="col-md-10 offset-md-1">
 						<ul class="list-group">
-							<li class="list-group-item"><strong>Figure 1:</strong> Navigating between the Cohort and the Sample View in GenomePaint to assess aberrant splicing in CREBBP caused by somatic splice site variant.
-								<a data-toggle="collapse" href="#fig1" role="button" aria-expanded="false" aria-controls="fig1">(Details)</a></br>
-								<div class="collapse" id="fig1"><strong>a</strong>, A “dense” Cohort View of somatic SNV/indels across the genomic region encoding CREBBP. Dot colors indicate mutation classes and size for number of cases. Zoomed in view shows a recurrent variant (n=4) disrupting the canonical splice donor site (cyan) in intron 20. <strong>b</strong>, Informational panel showing the four tumors harboring the variant from a, a matching dbSNP, and its “pathogenic” status in ClinVar. <strong>c</strong>, Sample View of one of the tumors (PANWHJ) showing RNA-seq splice junction and coverage. In the splice junction track, dot size and Y-axis position indicate junction read count. A novel junction (arrow) skips exon 20. Diagram of this exon skipping event (box) displays junction read counts and translation frame prediction (in-frame). <strong>d</strong>, CREBBP protein view of the same set of tracks in c. The RING domain (blue) spans exons 19 to 21.
-								<img src="/static/picture1.png"></img>
-								</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/crebbp.splicesite.html " target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/crebbp.splicesite.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/crebbp.splicesite.html" target="_blank"><strong>Figure 1:</strong> Navigating between the Cohort and the Sample View in GenomePaint to assess aberrant splicing in CREBBP caused by somatic splice site variant.</a>
 							</li>
-							<li class="list-group-item"><strong>Figure 2:</strong> MYC dysregulation by enhancer duplications in pediatric cancers.
-								<a data-toggle="collapse" href="#fig2" role="button" aria-expanded="false" aria-controls="fig2">(Details)</a></br>
-								<div class="collapse" id="fig2"><strong>a</strong>, CNVs from BALL, TALL, and AML over the 2 Mb region spanning MYC (orange, left), and two enhancers (N-Me: cyan, BENC: gray). CNV segments are limited to under 2 Mb, and all other types of mutations are hidden. Arrow points to an amplification in NALM6 that overlaps with N-Me. On the right shows MYC expression rank (bar width) in each respective cancer type, ASE (bar colors), and OHE (red/blue dots). <strong>b</strong>, Detailed assay results of NALM6, including in-situ Hi-C (heatmap), stranded total RNA-seq (blue for forward strand, red for reverse strand), H3K27ac ChIP-seq (green), ATAC-seq (black), and Capture-C using MYC promoter as bait (purple).</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.html" target="_blank"><strong>Figure 2:</strong> MYC dysregulation by enhancer duplications in pediatric cancers.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 1: </strong> Cohort View shows different mutation mechanisms causing loss-of-function in tumor suppressors. 
-								<a data-toggle="collapse" href="#Supfig1" role="button" aria-expanded="false" aria-controls="Supfig1">(Details)</a></br>
-								<div class="collapse" id="Supfig1"><strong>a</strong>, In B-cell acute lymphoblastic leukemia (BALL), IKZF1 is subject to whole locus or intragenic deletions (blue bars, limited to focal events under 2 Mb), translocations (not shown), and coding mutations (ticks). The IKZF1 coding mutations (n=28) rarely co-occur with either type of deletions (n=69), supporting the haploinsufficiency of the tumor suppressor function of IKZF1 established from the mouse model20. <strong>b</strong>, In adrenocortical tumor (ACT), TP53 is subject to bi-allelic loss21. TP53 germline mutations (+ marks) co-occur with gross LOH (dark bars). There is no segment length restriction for showing gross LOH. These tumors all retain the mutant alleles of the TP53 germline mutations. In one tumor (SJACT062_D), the Arg337His mutant allele is nearly 100% in tumor DNA due to LOH.</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/ikzf1.tp53.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/ikzf1.tp53.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/ikzf1.tp53.html" target="_blank"><strong>Supplementary figure 1: </strong> Cohort View shows different mutation mechanisms causing loss-of-function in tumor suppressors.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 2:</strong> Illustrating TAL1-activating alterations with integrated view of DNA alterations and gene expression.
-								<a data-toggle="collapse" href="#Supfig2" role="button" aria-expanded="false" aria-controls="Supfig2">(Details)</a></br>
-								<div class="collapse" id="Supfig2"><strong>a</strong>, Cohort View of TAL1 mutations and gene expression in 78 T-cell acute lymphoblastic leukemia17. Three types of TAL1-activating alterations are shown: recurrent deletions encompassing 5’ exon of TAL1 and the upstream gene STIL (blue bars), intra-chromosomal rearrangements (n=2, gray circles) and T-cell receptor loci translocation (n=6, colored circles), and sequence insertions creating a MYB enhancer (n=19, red x marks). In deletion samples, RNA-seq identified STIL-TAL1 fusion breakpoints supporting the deletions (circles). The deletions are identified by single nucleotide polymorphism microarray and the breakpoint positions are approximate; the fusions and translocations are identified by RNA-seq; the sequence insertions are identified by amplicon sequencing. On the right shows TAL1 expression rank of each tumor amongst all TALLs (bar width), along with ASE (bar color) and OHE (red dots) status. In TALLs with activating alterations, TAL1 exhibit highest expression ranking with no evidence for bi-allelic expression. <strong>b</strong>, In one TALL (PASXUC) with deletion and TAL1 mono-allelic expression, the nearby gene CMPK1 shows bi-allelic expression, indicating the specificity of the cis-regulation.</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/tall.tal1.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/tall.tal1.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/tall.tal1.html" target="_blank"><strong>Supplementary figure 2:</strong> Illustrating TAL1-activating alterations with integrated view of DNA alterations and gene expression.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 3:</strong> Linking MYC expression with the duplications of a distal enhancer.
-								<a data-toggle="collapse" href="#Supfig3" role="button" aria-expanded="false" aria-controls="Supfig3">(Details)</a></br>
-								<div class="collapse" id="Supfig3">In 23 TALL patients, the NOTCH1-MYC enhancer is duplicated17 (red bars). The enhancer functions across 1.4 Mb distance to upregulate MYC expression in these tumors.</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="hhttps://ppr.stjude.org/F/hg19/pediatric.mds.example/myc.nme.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.nme.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.nme.html" target="_blank"><strong>Supplementary figure 3:</strong> Linking MYC expression with the duplications of a distal enhancer.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 4:</strong> Kaplan-Meier plot shows MYB alterations are correlated with poor outcome in TALL patients.
-								<a data-toggle="collapse" href="#Supfig4" role="button" aria-expanded="false" aria-controls="Supfig4">(Details)</a></br>
-								<div class="collapse" id="Supfig4"><strong>a</strong>, Genomic alterations affecting MYB in TALL17, including amplification (red bars), coding mutation (x marks), truncating fusions (circles), and intergenic translocations leading to enhancer hijacking (TCRB, T-cell receptor beta locus). <strong>b</strong>, Kaplan-Meier plot of event-free survival of TALL patients, stratified by presence of MYB alteration in a. To make this plot, click the “TALL” label in a on left, and select “Survival plot”.</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/tall.myb.survival.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/tall.myb.survival.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/tall.myb.survival.html" target="_blank"><strong>Supplementary figure 4:</strong> Kaplan-Meier plot shows MYB alterations are correlated with poor outcome in TALL patients.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 5:</strong> MDM2 high expression correlates with poor outcome in acute myeloid leukemia (AML) patients.
-								<a data-toggle="collapse" href="#Supfig5" role="button" aria-expanded="false" aria-controls="Supfig5">(Details)</a></br>
-								<div class="collapse" id="Supfig5">Kaplan-Meier plot of AML patients stratified by the quartile values of MDM2 expression levels22. To make this plot, at MDM2 locus in Cohort View, click “MDM2 rank” label on top of expression axis, and select option “Survival plot”. </div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/aml.mdm2.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/aml.mdm2.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/aml.mdm2.html" target="_blank"><strong>Supplementary figure 5:</strong> MDM2 high expression correlates with poor outcome in acute myeloid leukemia (AML) patients.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 6:</strong> Mutual-exclusive pattern of MYCN and ATRX mutations in neuroblastoma (NBL).
-								<a data-toggle="collapse" href="#Supfig6" role="button" aria-expanded="false" aria-controls="Supfig6">(Details)</a></br>
-								<div class="collapse" id="Supfig6"><strong>a</strong>, Matrix View of MYCN and ATRX mutations from 137 NBL tumors, which rarely overlaps23. Colored patterns symbolize presence of different types of mutation of each tumor in each gene. Patient PAPZYP (female) has both MYCN amplification and ATRX frameshift mutation. By viewing the details of the frameshift mutation, it is not detected by RNA-seq, indicating the frameshift mutation occurred on the inactivated X chromosome of the tumor cells2, explaining its coexistence with MYCN amplification. <strong>b</strong>and <strong>c</strong>, Dense view of MYCN and ATRX mutations in NBL that are part of the Matrix View in <strong>a</strong>.
-									</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/matrix.mycnatrx.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/matrix.mycnatrx.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/matrix.mycnatrx.html" target="_blank"><strong>Supplementary figure 6:</strong> Mutual-exclusive pattern of MYCN and ATRX mutations in neuroblastoma (NBL).</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 7:</strong> A TP53 splice site mutation from osteosarcoma causes intron retention.
-								<a data-toggle="collapse" href="#Supfig7" role="button" aria-expanded="false" aria-controls="Supfig7">(Details)</a></br>
-								<div class="collapse" id="Supfig7"><strong>a</strong>, Dense view of sequence mutations over part of TP53 gene body. A mutation (arrow) disrupts the splice donor site of intron 7. This mutation is from an osteosarcoma patient (PASSLM), and is homozygous in tumor DNA. Its mutant allele is expressed at 100% in the tumor RNA. <strong>b</strong>, Sample View of PASSLM. TP53 intron 7 is highlighted in cyan. RNA-seq shows substantial read coverage across intron 7, as well as diminished splicing from exon 7 to 8. Intron 7 retention is predicted to be out of frame (data not shown).
-									</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/tp53.splicesite.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/tp53.splicesite.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/tp53.splicesite.html" target="_blank"><strong>Supplementary figure 7:</strong> A TP53 splice site mutation from osteosarcoma causes intron retention.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 8:</strong> MYC dysregulation by enhancer-hijacking in pediatric cancers.
-								<a data-toggle="collapse" href="#Supfig8" role="button" aria-expanded="false" aria-controls="Supfig8">(Details)</a></br>
-								<div class="collapse" id="Supfig8"><strong>a</strong>, a, Presence of inter-chromosomal translocations in various pediatric tumors and cell lines in the 1 Mb region spanning MYC (highlighted in orange). Circles indicate SV or fusion. SNV/indels are hidden. MYC expression rank is indicated by bar plots on right. NBL cell lines show MYC overexpression with nearby translocations9 (t(4;8) in NB69 and SKNAS, t(7;8) in SH-SY5Y). Arrows point to previously unreported cases: t(8;9) in PASFIC, t(8;10) in SJHGG001_A, t(2;8) in SJBALL247_D. <strong>b</strong>, In NBL cell line NB69, in-situ Hi-C result shows extensive chromatin interaction between MYC and chr4 following the t(4;8) translocation (oval). The chr4 region also shows strong H3K27ac signal (box), indicating MYC-regulating enhancers.
-									</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/myc.sv.nb69.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.sv.nb69.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.sv.nb69.html" target="_blank"><strong>Supplementary figure 8:</strong> MYC dysregulation by enhancer-hijacking in pediatric cancers.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 9:</strong> APOBEC mutation mechanism causes kataegis in osteosarcoma.
-								<a data-toggle="collapse" href="#Supfig9" role="button" aria-expanded="false" aria-controls="Supfig9">(Details)</a></br>
-								<div class="collapse" id="Supfig9"><strong>a</strong>, In the Sample View for an osteosarcoma (OS) tumor (PALKDP), the rain fall plot shows somatic mutations using inter-mutation distance as Y axis, along with structural variations, over two entire chromosomes. In chromosome 11, the APOBEC-signature mutations (pink and red) cluster at kataegis sites (arrows) and co-occur with SV. In comparison, chromosome 10 shows no kataegis, and mostly “failure of HR repair”-signature mutations. The bar chart on top lists the abundance of five mutation signatures found in this tumor. <strong>b</strong>, In a BALL tumor (PAPLDL), its mutations primarily belong to the UV signature, likely resulted from the radiation treatment2..
-									</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/os.apobec.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/os.apobec.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/os.apobec.html" target="_blank"><strong>Supplementary figure 9:</strong> APOBEC mutation mechanism causes kataegis in osteosarcoma.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 10:</strong> BALL shows diverse alterations targeting the RING domain of CREBBP.
-								<a data-toggle="collapse" href="#Supfig10" role="button" aria-expanded="false" aria-controls="Supfig10">(Details)</a></br>
-								<div class="collapse" id="Supfig10"><strong>a</strong>, Cohort View of pediatric cancer alterations around CREBBP exon 20, in which BALL displays most of the alterations. As shown in Fig. 1, recurrent splice site mutation at exon 20 (n=4) likely causes exon 20 skipping, leading to in-frame truncation of CREBBP RING domain. Similarly, additional splice site/region mutations at exon 21 (n=3) may lead to skipping of exon 21 which also results in in-frame RING truncation (data not shown). Also, there are two cases of exon 20 focal deletion (SJHYPO056_D and PANSXG). Gene expression plot on right indicates availability of RNA-seq, especially for BALL (dashed lines). <strong>b</strong>, Sample View of SJHYPO056_D. Agreeing with the focal deletion (blue bar) and break points (joined lines), whole-genome sequencing coverage track shows a complete loss of exon 20 region in tumor. The “homozygous” deletion of exon 20 likely results from a subsequent loss of the wild type chromosome and the doubling of the mutant chromosome, as is indicated by the chr16 copy neutral LOH (black bar). RNA-seq is not available for SJHYPO056_D. <strong>c</strong>, Sample View of PANSXG. RNA-seq of this tumor shows exon 20 skipping (aberrant junction from exon 19 to 21, and reduced RNA-seq coverage at exon 20 compared to exons 19 and 21). Complete Genomics sequencing (CGI) reported a somatic SV with breakpoints inside introns 19 and 20 (top, genomic range highlighted in cyan) but did not report a focal deletion. Upon examining the “aicheck” track of CGI results (bottom) which plots mutant allele fractions (MAF) of germline heterozygous SNPs in both germline (G) and tumor (T) of PANSXG, a SNP (1) between the SV breakpoints is homozygous in tumor indicating one allele loss, while two neighboring SNPs (2 and 3) outside SV remains heterozygous in tumor. This provides evidence for the focal deletion at the SV region in this tumor, resulting in the loss of exon 20 from RNA transcript.
-									</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/crebbp.deletion.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/crebbp.deletion.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/crebbp.deletion.html" target="_blank"><strong>Supplementary figure 10:</strong> BALL shows diverse alterations targeting the RING domain of CREBBP.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 11:</strong> MYC focal amplification is recurrent among pediatric solid tumors and brain tumors but not found in leukemia.
-								<a data-toggle="collapse" href="#Supfig11" role="button" aria-expanded="false" aria-controls="Supfig11">(Details)</a></br>
-								<div class="collapse" id="Supfig11">Pediatric leukemias show focal amplifications, mutations and ITD over MYC. Focal CNVs are limited to under 2 Mb, fusions and SVs are hidden. On the right, MYC expression rank is shown for each tumor with MYC mutation, overlaying with ASE and outlier status. ST: solid tumor. BT: brain tumor. HM: hematopoietic malignancies. ACT: adrenocortical tumor. OS: osteosarcoma. EWS: Ewing’s Sarcoma. NBL: neuroblastoma. RHB: rhabdosarcoma. MB: medulloblastoma. HGG: high-grade glioma. BALL: B-cell acute lymphoblastic leukemia. TALL: T-cell acute lymphoblastic leukemia. AML: acute myeloid leukemia.</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/myc.amp.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.amp.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.amp.html" target="_blank"><strong>Supplementary figure 11:</strong> MYC focal amplification is recurrent among pediatric solid tumors and brain tumors but not found in leukemia.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 12:</strong> Previously unreported cases of likely MYC enhancer duplication/amplification in pediatric tumors and cell line.
-								<a data-toggle="collapse" href="#Supfig12" role="button" aria-expanded="false" aria-controls="Supfig12">(Details)</a></br>
-								<div class="collapse" id="Supfig12">Arrows point to two relapse tumors of the same RHB patient, one NBL relapse tumor, one HGG autopsy tumor, two BALLs, and the NALM6 cell line, each with copy number gain overlapping with either or both of N-Me and BENC enhancers. Same as NALM6, SJERG002_D shows both high MYC expression and copy number gain at N-Me. SJERG002_D RNA-seq does not show presence of eRNA at the duplicated region (data not shown), likely due to the fact that its RNA-seq is of poly(A)-selected protocol.
-									</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.newcases.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.newcases.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.newcases.html" target="_blank"><strong>Supplementary figure 12:</strong> Previously unreported cases of likely MYC enhancer duplication/amplification in pediatric tumors and cell line.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 13:</strong> In-situ Hi-C shows MYC interaction with duplicated enhancers in NALM6 and NALM16.
-								<a data-toggle="collapse" href="#Supfig13" role="button" aria-expanded="false" aria-controls="Supfig13">(Details)</a></br>
-								<div class="collapse" id="Supfig13"><strong>a</strong>, NALM6 shows amplification at the N-Me locus (red bar). Its Hi-C data shows interactions of MYC with both N-Me and BENC enhancers (circles). <strong>b</strong>, NALM16 shows amplification at BENC (red bar). Its Hi-C shows interaction between MYC and BENC (circle).
-									</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.nalm16.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.nalm16.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.nalm16.html" target="_blank"><strong>Supplementary figure 13:</strong> In-situ Hi-C shows MYC interaction with duplicated enhancers in NALM6 and NALM16.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 14:</strong> Phased sequencing coverage in NALM6.
-								<a data-toggle="collapse" href="#Supfig14" role="button" aria-expanded="false" aria-controls="Supfig14">(Details)</a></br>
-								<div class="collapse" id="Supfig14">The screenshot shows sequencing coverage of following assays from NALM6: WGS, stranded RNA-seq, H3K27ac ChIP-seq, ATAC-seq, and Capture-C (using MYC promoter as bait), over the region containing MYC and its enhancers (N-Me and BENC). For each assay, two versions of the sequencing coverage are shown: one shows total read count at all sequenced genomic positions, the other (labeled “phased”) shows allele-specific coverage at heterozygous SNPs with phased alleles. The phased chromosomes are denoted as C1 and C2, and all phased SNPs within the view range (chr8:128562195-130790266) are in one phase set (colored box at bottom). A, B, D, F are BENC modules reported in Bahr, C. et al.7
-									</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.phased.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.phased.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.phased.html" target="_blank"><strong>Supplementary figure 14:</strong> Phased sequencing coverage in NALM6.</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 15:</strong> CDKN2A/2B focal deletion and sequence mutations from adult diffuse large B-cell lymphoma (DLBC).
-								<a data-toggle="collapse" href="#Supfig15" role="button" aria-expanded="false" aria-controls="Supfig15">(Details)</a></br>
-								<div class="collapse" id="Supfig15">A GenomePaint custom track showing recurrent deletions of CDKN2A/CDKN2B, as well as sequence mutations and gene expression, for 31 adult DLBC tumors. The dataset belongs to the Cancer Genome Atlas (TCGA) and was downloaded from NCI GDC. The mutation data is shown in human GRCh38/hg38 reference genome. Details about downloading this dataset and custom track file preparation can be found in Supplementary Tutorial.
-									</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/tcga.dlbc.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/tcga.dlbc.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg38/pediatric.mds.example/tcga.dlbc.html" target="_blank"><strong>Supplementary figure 15:</strong> CDKN2A/2B focal deletion and sequence mutations from adult diffuse large B-cell lymphoma (DLBC).</a>
 							</li>
-							<li class="list-group-item"><strong>Supplementary figure 16:</strong> TERT sequence mutations in adult cutaneous melanoma (SKCM).
-								<a data-toggle="collapse" href="#Supfig16" role="button" aria-expanded="false" aria-controls="Supfig16">(Details)</a></br>
-								<div class="collapse" id="Supfig16">A GenomePaint custom track showing somatic mutations, as well as copy number change and gene expression over TERT, from 200 adult SKCM tumors. The dataset belongs to the Cancer Genome Atlas (TCGA) and was downloaded from NCI GDC. The genomic variants are based on human GRCh38/hg38 reference genome. Somatic mutations were detected using whole-exome sequencing, and four cases show TERT promoter mutations along with high TERT expression (box).
-									</div>
-								<div style="margin:10px;">
-									<a class="btn btn-submit" href="https://ppr.stjude.org/F/hg19/pediatric.mds.example/tcga.skcm.html" target="_blank">Internal Link</a>
-									<a class="btn btn-submit" href="https://proteinpaint.stjude.org/F/hg38/pediatric.mds.example/tcga.skcm.html" target="_blank">External Link</a>
-								</div>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg38/pediatric.mds.example/tcga.skcm.html" target="_blank"><strong>Supplementary figure 16:</strong> TERT sequence mutations in adult cutaneous melanoma (SKCM).</a>
 							</li>
 						</ul>
 					</div>
@@ -332,8 +204,8 @@
 					<div>
 						<h5 style="text-align:center;">GenomePaint User Tutorial</h5>
 						<div class="col-md-8 offset-md-2">
-								<a class="btn btn-submit col-md-2 offset-md-5" style="margin-top: 20px; margin-bottom: 20px;" href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing" target="_blank">Open in Google Doc</a>
-							<iframe src="/static/GenomePaint_user_guide.pdf" width="100%" height="800px"></iframe>
+							<a class="btn btn-submit col-md-4 offset-md-4" style="margin-top: 20px; margin-bottom: 20px;" href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing" target="_blank">Open in Google Doc</a>
+							<iframe src="https://docs.google.com/document/d/e/2PACX-1vShn3jGO7Q5AFUkRyjw8rksGkv1sOPKxOectzgiJvkRD4Dj2tsO7VtelNcVN9wbxK6TGudiDUf4Mn-5/pub?embedded=true" width="100%" height="800px"></iframe>
 						</div>
 					</div>
 				</div>
