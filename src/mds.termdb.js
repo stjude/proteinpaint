@@ -129,9 +129,51 @@ arg{}
 
 	// term function buttons
 
-	//may_make_term_graphbutton( term, row, obj )
+	may_make_term_graphbutton( term, row, obj )
 }
 
+
+
+function may_make_term_graphbutton ( term, row, obj ) {
+/*
+if term.graph{} is there, make a button to trigger it
+*/
+	if(!term.graph) {
+		// no graph
+		return
+	}
+
+	const button = row.append('div')
+		.style('display','inline-block')
+		.style('padding-left','20px')
+		.style('font-size','.8em')
+		.attr('class', 'sja_clbtext2')
+
+	if(term.graph.barchart) {
+		term_graphbutton_barchart( term, button, obj )
+		return
+	}
+
+	// to add other graph types
+}
+
+
+
+
+function term_graphbutton_barchart ( term, button, obj ) {
+/*
+click button to launch barchart for a term
+
+there may be other conditions to apply, e.g. patients carrying alt alleles of a variant
+such conditions may be carried by obj
+*/
+
+	button.text('BARCHART')
+	.on('click',()=>{
+
+		
+	})
+}
 
 
 
