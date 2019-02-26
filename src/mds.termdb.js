@@ -51,10 +51,14 @@ window.obj = obj
 		if(!obj.genome) throw '.genome{} missing'
 		if(!obj.mds) throw '.mds{} missing'
 
+		// handle triggers
+
 		if( obj.default_rootterm ) {
 			await show_default_rootterm( obj )
 			return
 		}
+
+		// to allow other triggers
 
 
 	} catch(e) {
@@ -95,6 +99,8 @@ async function show_default_rootterm ( obj ) {
 
 function print_one_term ( arg, obj ) {
 /* print a term
+for non-leaf term, show the expand/fold button
+upon clicking button, to retrieve children and make recursive call to render children
 
 arg{}
 .row <DIV>
