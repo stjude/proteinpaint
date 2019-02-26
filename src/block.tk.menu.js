@@ -328,26 +328,40 @@ function customtracktypeui(block, div) {
 
 	const d1=div.append('div')
 		.style('margin','20px')
+
+	// bigwig
 	d1.append('div')
 		.attr('class','sja_menuoption')
 		.html('bigWig <span style="opacity:.5;font-size:.8em">numerical data</span>')
 		.on('click',()=> newtk_bw(block,div))
+
+	// json bed
 	d1.append('div')
 		.attr('class','sja_menuoption')
 		.html('JSON-BED <span style="opacity:.5;font-size:.8em">positional annotations</span>')
 		.on('click',()=> newtk_bedj(block,div) )
+
+	// junction
 	d1.append('div')
 		.attr('class','sja_menuoption')
 		.text('Splice junction')
 		.on('click',()=> newtk_junction(block,div) )
+
+	// vcf
 	d1.append('div')
 		.attr('class','sja_menuoption')
 		.html('VCF <span style="opacity:.5;font-size:.8em">SNV/indel</span>')
 		.on('click',()=> newtk_vcf(block,div) )
+
+	// interaction
 	d1.append('div')
 		.attr('class','sja_menuoption')
 		.html('Interaction <span style="opacity:.5;font-size:.8em">pairs of genomic regions</span>')
 		.on('click',()=> newtk_interaction(block,div) )
+
+	// mds to be added here
+
+	//// add new track type here
 
 	const d2=div.append('div')
 		.style('margin','20px')
@@ -441,28 +455,31 @@ function newtk_bw(block,div) {
 			.attr('placeholder','URL or server-side file path')
 			.attr('size',40)
 		const p2=box.append('p')
-		p2.append('button').text('Add bigWig track').on('click',()=>{
-			const text=iurl.property('value').trim()
-			if(text=='') return
-			let file,
-				url
-			if(stringisurl(text)) {
-				url=text
-			} else {
-				file=text
-			}
-			const tk = {
-				type:client.tkt.bigwig,
-				name: iname.property('value').trim() || 'bigwig track',
-				scale:{
-					auto:1
-				},
-				file:file,
-				url:url,
-				iscustom:true,
-			}
-			may_add_customtk( tk, block, div )
-		})
+
+		p2.append('button')
+			.text('Add bigWig track')
+			.on('click',()=>{
+				const text=iurl.property('value').trim()
+				if(text=='') return
+				let file,
+					url
+				if(stringisurl(text)) {
+					url=text
+				} else {
+					file=text
+				}
+				const tk = {
+					type:client.tkt.bigwig,
+					name: iname.property('value').trim() || 'bigwig track',
+					scale:{
+						auto:1
+					},
+					file:file,
+					url:url,
+					iscustom:true,
+				}
+				may_add_customtk( tk, block, div )
+			})
 		p2.append('button').text('Clear').on('click',()=> iurl.node().value=iname.node().value='')
 	}
 
