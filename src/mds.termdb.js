@@ -119,75 +119,7 @@ arg{}
 	*/
 	const row = arg.row.append('div')
 
-	// expand/fold button, if the term is not leaf
-	if( !term.isleaf ) {
-
-		let children_loaded = false, // whether this term has children loaded already
-			isloading = false
-
-		// row to display children terms
-		const crow = arg.row.append('div')
-			.style('display','none')
-			.style('padding-left', '30px')
-
-		const button = row.append('div')
-			.style('display','inline-block')
-			.style('font-family','courier')
-			.attr('class','sja_menuoption')
-			.text('+')
-
-		button.on('click',()=>{
-
-			if(isloading) return // guard against repeated clicking while loading
-
-			if(children_loaded) {
-				// children has been loaded, toggle visibility
-				if(crow.style('display') === 'none') {
-					client.appear(crow)
-					button.text('-')
-				} else {
-					client.disappear(crow)
-					button.text('+')
-				}
-				return
-			}
-
-			// to load children terms
-			isloading = true
-			const param = {
-				genome: obj.genome.name,
-				dslabel: obj.mds.label,
-				get_children: {
-					id: term.id
-				}
-			}
-			client.dofetch('termdb', param)
-			.then(data=>{
-				if(data.error) throw data.error
-				if(!data.lst || data.lst.length===0) throw 'error getting children'
-				// got children
-				for(const cterm of data.lst) {
-					print_one_term(
-						{
-							term: cterm,
-							row: crow,
-						},
-						obj
-					)
-				}
-			})
-			.catch(e=>{
-				crow.text( e.message || e)
-				if(e.stack) console.log(e.stack)
-			})
-			.then( ()=>{
-				isloading=false
-				children_loaded = true
-				client.appear( crow )
-				button.text('-')
-			})
-		})
-	}
+	may_make_term_foldbutton( term, row, arg.row, obj )
 
 	// term name
 	row.append('div')
@@ -196,4 +128,90 @@ arg{}
 		.html( term.name )
 
 	// term function buttons
+
+	//may_make_term_graphbutton( term, row, obj )
+}
+
+
+
+
+function may_make_term_foldbutton ( term, buttonholder, row, obj ) {
+/*
+may show expand/fold button for a term
+
+buttonholder: div in which to show the button, term label is also in it
+row: the parent of buttonholder for creating the div for children terms
+*/
+
+	if(term.isleaf) {
+		// is leaf term, no button
+		return
+	}
+
+	let children_loaded = false, // whether this term has children loaded already
+		isloading = false
+
+	// row to display children terms
+	const childrenrow = row.append('div')
+		.style('display','none')
+		.style('padding-left', '30px')
+
+	const button = buttonholder.append('div')
+		.style('display','inline-block')
+		.style('font-family','courier')
+		.attr('class','sja_menuoption')
+		.text('+')
+
+	button.on('click',()=>{
+
+		if(isloading) return // guard against repeated clicking while loading
+
+		if(children_loaded) {
+			// children has been loaded, toggle visibility
+			if(childrenrow.style('display') === 'none') {
+				client.appear(childrenrow)
+				button.text('-')
+			} else {
+				client.disappear(childrenrow)
+				button.text('+')
+			}
+			return
+		}
+
+		// to load children terms
+		isloading = true
+
+		const param = {
+			genome: obj.genome.name,
+			dslabel: obj.mds.label,
+			get_children: {
+				id: term.id
+			}
+		}
+		client.dofetch('termdb', param)
+		.then(data=>{
+			if(data.error) throw data.error
+			if(!data.lst || data.lst.length===0) throw 'error getting children'
+			// got children
+			for(const cterm of data.lst) {
+				print_one_term(
+					{
+						term: cterm,
+						row: childrenrow,
+					},
+					obj
+				)
+			}
+		})
+		.catch(e=>{
+			childrenrow.text( e.message || e)
+			if(e.stack) console.log(e.stack)
+		})
+		.then( ()=>{
+			isloading=false
+			children_loaded = true
+			client.appear( childrenrow )
+			button.text('-')
+		})
+	})
 }
