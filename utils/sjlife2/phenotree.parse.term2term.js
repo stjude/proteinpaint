@@ -18,9 +18,21 @@ for columns 1-5:
 - blank cell or '-' means no value
 
 
-output is the term2term table
+second optional input is keep/termjson, 2 column:
+1  term_id
+2  {}
+
+to override automatically generated contents in termjson file
+
+
+outputs two files
+* term2term
+* termjson
+
 
 */
+
+
 
 
 const abort = (m)=>{
@@ -30,7 +42,7 @@ const abort = (m)=>{
 
 
 
-if(process.argv.length!=3) abort('<phenotree txt file> outputs to files "term2term" and "termjson"')
+if(process.argv.length<3) abort('<phenotree txt file> <keep/termjson file> outputs to files "term2term" and "termjson"')
 
 
 const fs=require('fs')
@@ -97,6 +109,38 @@ const check_terms_overlap = () => {
 
 
 
+
+const termjson_outputoneset = (set, lines) => {
+/*
+arg is set of words from root or a level, e.g. set1
+each word is a term
+*/
+	let leafcount = 0
+	for(const n of [...set].sort() ) {
+
+		let j = keep_termjson.get( n )
+		if(!j) {
+			// this term not found in keep
+			j = {
+				name: n
+			}
+		}
+
+		// test if it is leaf
+		if( !t2t.has( n ) ) {
+			j.isleaf = true
+			leafcount++
+		}
+
+		lines.push( n+'\t'+JSON.stringify(j) )
+	}
+	return set.size+' terms, '+leafcount+' leaf terms'
+}
+
+
+
+
+
 const output_termjson = () => {
 /* output "termjson" file
 
@@ -114,77 +158,33 @@ manual inspection:
 */
 	const lines = [ '######## root' ]
 
-	console.log('ROOT: '+set1.size+' terms')
-	for(const n of [...set1].sort() ) {
-		// root cannot be leaf, so do not detect
-		const j = {
-			name: n
-		}
-		lines.push( n+'\t'+JSON.stringify(j) )
+	{
+		const str = termjson_outputoneset( set1, lines )
+		console.log( 'ROOT: '+str )
 	}
 
 	lines.push('################# Level 1')
 	{
-		let leafc = 0
-		for(const n of [...set2].sort() ) {
-			const j = {
-				name: n
-			}
-			if( !t2t.has( n ) ) {
-				j.isleaf = true
-				leafc++
-			}
-			lines.push( n+'\t'+JSON.stringify(j) )
-		}
-		console.log('Level 1: '+set2.size+' terms, '+leafc+' leaf terms')
+		const str = termjson_outputoneset( set2, lines )
+		console.log( 'Level 1: '+str )
 	}
 
 	lines.push('################# Level 2')
 	{
-		let leafc = 0
-		for(const n of [...set3].sort() ) {
-			const j = {
-				name: n
-			}
-			if( !t2t.has( n ) ) {
-				j.isleaf = true
-				leafc++
-			}
-			lines.push( n+'\t'+JSON.stringify(j) )
-		}
-		console.log('Level 2: '+set3.size+' terms, '+leafc+' leaf terms')
+		const str = termjson_outputoneset( set3, lines )
+		console.log( 'Level 2: '+str )
 	}
 
 	lines.push('################# Level 3')
 	{
-		let leafc = 0
-		for(const n of [...set4].sort() ) {
-			const j = {
-				name: n
-			}
-			if( !t2t.has( n ) ) {
-				j.isleaf = true
-				leafc++
-			}
-			lines.push( n+'\t'+JSON.stringify(j) )
-		}
-		console.log('Level 3: '+set4.size+' terms, '+leafc+' leaf terms')
+		const str = termjson_outputoneset( set4, lines )
+		console.log( 'Level 3: '+str )
 	}
 
 	lines.push('################# Level 4')
 	{
-		let leafc = 0
-		for(const n of [...set5].sort() ) {
-			const j = {
-				name: n
-			}
-			if( !t2t.has( n ) ) {
-				j.isleaf = true
-				leafc++
-			}
-			lines.push( n+'\t'+JSON.stringify(j) )
-		}
-		console.log('Level 4: '+set5.size+' terms, '+leafc+' leaf terms')
+		const str = termjson_outputoneset( set5, lines )
+		console.log( 'Level 4: '+str )
 	}
 
 	fs.writeFileSync('termjson', lines.join('\n')+'\n' )
@@ -268,7 +268,7 @@ for(let i=1; i<lines.length; i++) {
 
 
 
-/* done parsing file
+/* done parsing phenotree file
 
 clean t2t by removing leaf terms with no children; leaf should not appear in t2t
 */
@@ -282,6 +282,19 @@ for(const [n,s] of t2t) {
 
 
 check_terms_overlap()
+
+
+
+const keep_termjson = new Map()
+if( process.argv[3] ) {
+	// keep/termjson file is given
+	for(const line of fs.readFileSync(process.argv[3],{encoding:'utf8'}).trim().split('\n')) {
+		const l = line.split('\t')
+		keep_termjson.set( l[0], JSON.parse( l[1] ) )
+	}
+}
+
+
 
 
 output_termjson()

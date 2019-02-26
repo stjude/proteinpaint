@@ -9471,6 +9471,8 @@ async function handle_termdb (req, res) {
 			for(const i of tdb.default_rootterm) {
 				const t = tdb.termjson.map.get( i.id )
 				if(t) {
+					const t2 = termdb_copyterm( t )
+					t2.id = t.id
 					// do not directly hand over t to client; many attr to be kept on server
 					const t2 = {
 						id: i.id,
@@ -9490,11 +9492,8 @@ async function handle_termdb (req, res) {
 				for(const cid of cidlst) {
 					const t = tdb.termjson.map.get( cid )
 					if(t) {
-						const t2 = {
-							id: cid,
-							name: t.name,
-							isleaf: t.isleaf,
-						}
+						const t2 = termdb_copyterm( t )
+						t2.id = cid
 						lst.push( t2 )
 					}
 				}
@@ -9508,6 +9507,23 @@ async function handle_termdb (req, res) {
 		if(e.stack) console.log(e.stack)
 	}
 }
+
+
+function termdb_copyterm ( t ) {
+/*
+t is the {} from termjson
+
+do not directly hand over the term object to client; many attr to be kept on server
+*/
+	const t2 = {
+		name: t.name,
+		isleaf: t.isleaf,
+	}
+
+}
+
+
+
 
 
 
