@@ -33,10 +33,10 @@ module.exports={
 			termjson:{
 				file:'files/hg38/sjlife/clinical/termjson'
 			},
-			default_rootnodes:[
-				{name:'Cancer-related Variables'},
-				{name:'Demographics/health behaviors'},
-				{name:'Outcomes'}
+			default_rootterm:[
+				{id:'Cancer-related Variables'},
+				{id:'Demographics/health behaviors'},
+				{id:'Outcomes'}
 			]
 		},
 	},
