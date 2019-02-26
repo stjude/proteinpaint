@@ -190,6 +190,7 @@ app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
 app.post('/mdssamplesignature',handle_mdssamplesignature)
 app.post('/mdssurvivalplot',handle_mdssurvivalplot)
 app.post('/fimo',handle_fimo)
+app.post('/termdb',handle_termdb)
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
@@ -9442,6 +9443,69 @@ function handle_mdssamplesignature(req,res) {
 	} catch(err) {
 		if(err.stack) console.error(err.stack)
 		res.send({error: (err.message || err)})
+	}
+}
+
+
+
+
+
+
+
+
+async function handle_termdb (req, res) {
+	if(reqbodyisinvalidjson(req,res)) return
+	try {
+		const q = req.query
+		const gn = genomes[ q.genome ]
+		if(!gn) throw 'invalid genome'
+		const ds = gn.datasets[ q.dslabel ]
+		if(!ds) throw 'invalid dslabel'
+		if(!ds.cohort) throw 'ds.cohort missing'
+		const tdb = ds.cohort.termdb
+		if(!tdb) throw 'no termdb for this dataset'
+
+		if(q.default_rootterm) {
+			if(!tdb.default_rootterm) throw 'no default_rootterm for termdb'
+			const lst = []
+			for(const i of tdb.default_rootterm) {
+				const t = tdb.termjson.map.get( i.id )
+				if(t) {
+					// do not directly hand over t to client; many attr to be kept on server
+					const t2 = {
+						id: i.id,
+						name: t.name
+					}
+					lst.push( t2 )
+				}
+			}
+			res.send({lst: lst})
+			return
+		}
+
+		if(q.get_children) {
+			const cidlst = tdb.term2term.map.get( q.get_children.id ) // list of children id
+			const lst = [] // list of children terms
+			if(cidlst) {
+				for(const cid of cidlst) {
+					const t = tdb.termjson.map.get( cid )
+					if(t) {
+						const t2 = {
+							id: cid,
+							name: t.name,
+							isleaf: t.isleaf,
+						}
+						lst.push( t2 )
+					}
+				}
+			}
+			res.send({lst: lst})
+		}
+
+
+	} catch(e) {
+		res.send({error: (e.message || e)})
+		if(e.stack) console.log(e.stack)
 	}
 }
 
