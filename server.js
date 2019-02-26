@@ -9472,12 +9472,7 @@ async function handle_termdb (req, res) {
 				const t = tdb.termjson.map.get( i.id )
 				if(t) {
 					const t2 = termdb_copyterm( t )
-					t2.id = t.id
-					// do not directly hand over t to client; many attr to be kept on server
-					const t2 = {
-						id: i.id,
-						name: t.name
-					}
+					t2.id = i.id
 					lst.push( t2 )
 				}
 			}
@@ -9520,6 +9515,14 @@ do not directly hand over the term object to client; many attr to be kept on ser
 		isleaf: t.isleaf,
 	}
 
+	if(t.graph) {
+		// pass over graph instruction
+		t2.graph = {}
+		if(t.graph.barchart) {
+			t2.graph.barchart = {}
+		}
+	}
+	return t2
 }
 
 
