@@ -98,51 +98,96 @@ const check_terms_overlap = () => {
 
 
 const output_termjson = () => {
-	// output "termjson" file
-	// col1: term id
-	// col2: {}
-	// lines beginning with # are ignored
-	const out = [ '#root: '+set1.size ]
+/* output "termjson" file
+
+each term is one row
+
+col1: term id
+col2: {}
+lines beginning with # are ignored
+
+manual inspection:
+	- terms are sorted alphabetically for inspecting suspicious similar names;
+	- this is just a lookup table
+	- the order of terms in this table does not impact the order of display
+	- #### are level dividers also to assist inspection
+*/
+	const lines = [ '######## root' ]
+
+	console.log('ROOT: '+set1.size+' terms')
 	for(const n of [...set1].sort() ) {
+		// root cannot be leaf, so do not detect
 		const j = {
 			name: n
 		}
-		out.push( n+'\t'+JSON.stringify(j) )
+		lines.push( n+'\t'+JSON.stringify(j) )
 	}
 
-	out.push('#level 1: '+set2.size)
-	for(const n of [...set2].sort() ) {
-		const j = {
-			name: n
+	lines.push('################# Level 1')
+	{
+		let leafc = 0
+		for(const n of [...set2].sort() ) {
+			const j = {
+				name: n
+			}
+			if( !t2t.has( n ) ) {
+				j.isleaf = true
+				leafc++
+			}
+			lines.push( n+'\t'+JSON.stringify(j) )
 		}
-		out.push( n+'\t'+JSON.stringify(j) )
+		console.log('Level 1: '+set2.size+' terms, '+leafc+' leaf terms')
 	}
 
-	out.push('#level 2: '+set3.size)
-	for(const n of [...set3].sort() ) {
-		const j = {
-			name: n
+	lines.push('################# Level 2')
+	{
+		let leafc = 0
+		for(const n of [...set3].sort() ) {
+			const j = {
+				name: n
+			}
+			if( !t2t.has( n ) ) {
+				j.isleaf = true
+				leafc++
+			}
+			lines.push( n+'\t'+JSON.stringify(j) )
 		}
-		out.push( n+'\t'+JSON.stringify(j) )
+		console.log('Level 2: '+set3.size+' terms, '+leafc+' leaf terms')
 	}
 
-	out.push('#level 3: '+set4.size)
-	for(const n of [...set4].sort() ) {
-		const j = {
-			name: n
+	lines.push('################# Level 3')
+	{
+		let leafc = 0
+		for(const n of [...set4].sort() ) {
+			const j = {
+				name: n
+			}
+			if( !t2t.has( n ) ) {
+				j.isleaf = true
+				leafc++
+			}
+			lines.push( n+'\t'+JSON.stringify(j) )
 		}
-		out.push( n+'\t'+JSON.stringify(j) )
+		console.log('Level 3: '+set4.size+' terms, '+leafc+' leaf terms')
 	}
 
-	out.push('#level 4: '+set5.size)
-	for(const n of [...set5].sort() ) {
-		const j = {
-			name: n
+	lines.push('################# Level 4')
+	{
+		let leafc = 0
+		for(const n of [...set5].sort() ) {
+			const j = {
+				name: n
+			}
+			if( !t2t.has( n ) ) {
+				j.isleaf = true
+				leafc++
+			}
+			lines.push( n+'\t'+JSON.stringify(j) )
 		}
-		out.push( n+'\t'+JSON.stringify(j) )
+		console.log('Level 4: '+set5.size+' terms, '+leafc+' leaf terms')
 	}
 
-	fs.writeFileSync('termjson', out.join('\n')+'\n' )
+	fs.writeFileSync('termjson', lines.join('\n')+'\n' )
 }
 
 
@@ -223,7 +268,18 @@ for(let i=1; i<lines.length; i++) {
 
 
 
-// done parsing file
+/* done parsing file
+
+clean t2t by removing leaf terms with no children; leaf should not appear in t2t
+*/
+for(const [n,s] of t2t) {
+	if(s.size == 0) {
+		t2t.delete(n)
+	}
+}
+
+
+
 
 check_terms_overlap()
 
