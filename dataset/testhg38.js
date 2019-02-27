@@ -6,6 +6,7 @@ module.exports = {
 	genome:'hg38',
 	dbfile:'anno/db/test/hg38test.db',
 
+/*
 	cohort:{
 		levels:[
 			{k:'race',label:'Race'}
@@ -29,6 +30,7 @@ module.exports = {
 		key4annotation:'patient',
 		// use the value of "patient" to find metadata annotation
 	},
+	*/
 
 
 
@@ -43,7 +45,7 @@ module.exports = {
 			tidy:m=> {
 				m.isoform=m.Transcript_Id
 				delete m.Transcript_Id
-				m.chr='chr'+m.Chromosome
+				m.chr=m.Chromosome
 				delete m.Chromosome
 				m.pos=m.Start_Position-1
 				delete m.Start_Position
@@ -80,6 +82,7 @@ module.exports = {
 				return m
 			},
 		},
+		/*
 		{
 			name:'fpkm gene expression',
 			isgeneexpression:true,
@@ -106,5 +109,6 @@ module.exports = {
 				hlcolor2:'#FFBEA8',
 			},
 		},
+		*/
 	],
 }
