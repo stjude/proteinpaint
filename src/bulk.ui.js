@@ -48,39 +48,39 @@ export function bulkui(x,y,genomes, hostURL) {
 	  <li>SNV and indel</li>
 	  <ul>
 	    <li><a href=https://drive.google.com/open?id=1OJ9aXq2_-a3BfIQdKLYCYzrJRTpu4_9i3gephTY-Z38 target=_blank>Format</a>,
-	        <a href=https://www.dropbox.com/s/h61yiotf0x8ciji/example.snvindel.txt?dl=0 target=_blank>example file</a></li>
+	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.snvindel.txt target=_blank>example file</a></li>
 	  </ul>
 	  <li>SV or fusion transcript</li>
 	  <ul>
 	    <li><a href=https://drive.google.com/open?id=1klDZ0MHVkQTW2-lCu_AvpRE4_FcbhdB-yI17wNdPaOM target=_blank>Tabular format</a>,
-	        <a href=https://www.dropbox.com/s/4nu35t7s4ux0k36/example.svfusion.txt?dl=0 target=_blank>example file</a>
+	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.svfusion.txt target=_blank>example file</a>
 		</li>
 		<li>JSON-format, to come</li>
 	  </ul>
 	  <li>CNV, gene-level</li>
 	  <ul>
 	    <li><a href=https://drive.google.com/open?id=1WHptqOWNf96V0bYEDpj-EsKZGYnbBNc9aQIrhzdEJaU target=_blank>Format</a>, 
-	        <a href=https://www.dropbox.com/s/qg0dq2yq76wj8mi/example.cnv.txt?dl=0 target=_blank>example file</a>
+	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.cnv.txt target=_blank>example file</a>
 		</li>
 	  </ul>
 	  <li>ITD</li>
 	  <ul>
 	  	<li>Internal tandem duplication, in-frame</li>
 	    <li><a href=https://drive.google.com/open?id=1Bh9awBsraoHbV8iWXv_3oDeXMsjIAHaOKHr973IJyZc target=_blank>Format</a>, 
-	        <a href=https://www.dropbox.com/s/h4enlvtti2n8flu/example.itd.txt?dl=0 target=_blank>example file</a>
+	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.itd.txt target=_blank>example file</a>
 		</li>
 	  </ul>
 	  <li>Intragenic deletion, in-frame</li>
 	  <ul>
 	    <li><a href=https://drive.google.com/open?id=1tWbf3rg3BmVIZPGGPk023P0aBkDw_ry5XuZLGyGodyg target=_blank>Format</a>, 
-	        <a href=https://www.dropbox.com/s/kyedh7ronyyb4xu/example.deletion.txt?dl=0 target=_blank>example file</a>
+	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.deletion.txt target=_blank>example file</a>
 		</li>
 	  </ul>
 	  <li>Truncation</li>
 	  <ul>
 	  	<li>Either N-terminus loss or C-terminus loss</li>
 	    <li><a href=https://drive.google.com/open?id=1P1g-Y8r30pSKfan1BhYZcsUtSk7wRb4plaO1S-JCJr4 target=_blank>Format</a>, 
-	        <a href=https://www.dropbox.com/s/2a1fvyzmcjrrpyi/example.truncation.txt?dl=0 target=_blank>example file</a>
+	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.truncation.txt target=_blank>example file</a>
 		</li>
 	  </ul>
 	</ul>`)
@@ -88,7 +88,7 @@ export function bulkui(x,y,genomes, hostURL) {
 
 	const fileui=()=>{
 		filediv.selectAll('*').remove()
-		
+
 		// create a separate project handler for each bulk ui pane
 		new ProjectHandler({
 			bulkin,
