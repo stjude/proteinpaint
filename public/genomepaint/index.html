@@ -10,7 +10,7 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-	<script src="../bin/proteinpaint.js" charset="utf-8"></script>
+	<script src="https://proteinpaint.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
 	<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 	<style>
 		h2{
@@ -60,7 +60,7 @@
 			border:0px solid transparent;
 		}
 
-		#figures a{
+		#figures a, #userdata a{
 			color: #901739;
 		}
 
@@ -68,7 +68,7 @@
 </head>
 <body>
 	<nav class="navbar navbar-expand-lg">
-			<img src="/static/st_jude_logo.png" height="40" class="d-inline-block align-top" alt="">
+			<img src="https://www.freelogovectors.net/wp-content/uploads/2018/03/st_jude_children_s_research_hospital-logo.png" height="40" class="d-inline-block align-top" alt="">
 			<div class="tool-title" style="margin:auto;"><h2>GenomePaint</h2></div>
 	</nav>
 
@@ -76,7 +76,7 @@
 		<div style="margin:auto;">
 			<ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
 				<li class="nav-item">
-					<a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true"><h5 class="main-tabs">Existing Datasets</h5></a>
+					<a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true"><h5 class="main-tabs">Pediatric Cancer Dataset</h5></a>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link" id="userdata-tab" data-toggle="tab" href="#userdata" role="tab" aria-controls="userdata" aria-selected="false"><h5 class="main-tabs">Add Your Data</h5></a>
@@ -91,32 +91,17 @@
 		</div>
 			<div>
 				<div class="tab-content" id="myTabContent" style="align-content: center;">
-				<div class="tab-pane fade show active genome-home" id="home" role="tabpanel" aria-labelledby="home-tab">  
-						<ul class="nav nav-pills nav-fill" id="pills-tab" role="tablist" style="margin:50px 15%;">                                        
-							<li class="nav-item" style="justify-content: center;">
-								<a class="nav-link active" href="#pills-pc" id="pills-pc-tab" data-toggle="pill" href="#pills-pc" role="tab" aria-controls="pills-pc" aria-selected="true">Hg19 Pediatric Cancer</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link" href="#pills-dlbc" id="pills-dlbc-tab" data-toggle="pill" href="#pills-dlbc" role="tab" aria-controls="pills-dlbc" aria-selected="false">Hg38 TCGA DLBC</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link" href="#pills-skcm" id="pills-skcm-tab" data-toggle="pill" href="#pills-skcm" role="tab" aria-controls="pills-skcm" aria-selected="false">Hg38 TCGA SKCM</a>
-							</li>
-						</ul>
-						<div class="tab-content" id="pills-tabContent">
-							<div class="tab-pane fade show active" id="pills-pc" role="tabpanel" aria-labelledby="pills-pc-tab"><div id="PeCan"></div></div>
-							<div class="tab-pane fade" id="pills-dlbc" role="tabpanel" aria-labelledby="pills-dlbc-tab"><div id="hg38-dlbc"></div></div>
-							<div class="tab-pane fade" id="pills-skcm" role="tabpanel" aria-labelledby="pills-skcm-tab"><div id="hg38-skcm"></div></div>
-						</div>
+					<div class="tab-pane fade show active genome-home" id="home" role="tabpanel" aria-labelledby="home-tab">  
+						<div id="PediatricCancer"></div>
 				</div>
 				<div class="tab-pane fade" id="userdata" role="tabpanel" aria-labelledby="userdata-tab">
 					<form class="user-data-form" id="user-track-form">
 						<div class="form-group row">
-							<label for="genome" class="col-sm-3 col-form-label">Species & Genome</label>
-							<div class="col-sm-9">
+							<label for="genome" class="col-sm-4 col-form-label">Species & Genome</label>
+							<div class="col-sm-8">
 								<select class="custom-select mr-sm-2" id="genome">
-									<option value="hg19" selected>Human hg19</option>
-									<option value="hg38">Human hg38</option>
+									<option value="hg19">Human hg19</option>
+									<option value="hg38" selected>Human hg38</option>
 									<option value="mm9">Mouse mm9</option>
 									<option value="mm10">Mouse mm10</option>
 									<option value="danrer10">Zebrafish danRer10</option>
@@ -126,31 +111,39 @@
 							</div>
 						</div>
 						<div class="form-group row">
-							<label for="track-name" class="col-sm-3 col-form-label">Track Name</label>
-							<div class="col-sm-9">
-								<input type="text" class="form-control" id="track-name" placeholder="(optional) free-form text (e.g. tumor_sample, patient_id, xyz, etc.)">
+							<label for="track-name" class="col-sm-4 col-form-label">Track Name</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control" id="track-name" value="Demo Track">
 							</div>
 						</div>
 						<div class="form-group row">
-							<label for="svcnv" class="col-sm-3 col-form-label">SV, CNV URL</label>
-							<div class="col-sm-9">
-								<input type="url" class="form-control" id="svcnv" placeholder="(required) http://" required>
+							<label for="svcnv" class="col-sm-4 col-form-label"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.57qr5fp90wn9" target="_blank" data-toggle="tooltip" title="Click for help with file format"> SV, CNV File URL (required)</a></label>
+							<div class="col-sm-8">
+								<input type="url" class="form-control" id="svcnv" value="https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.CNV.gz" required>
 							</div>
 						</div>
 						<div class="form-group row">
-							<label for="vcf" class="col-sm-3 col-form-label">VCF URL</label>
-							<div class="col-sm-9">
-								<input type="url" class="form-control" id="vcf" placeholder="(required) http://" required>
+							<label for="vcf" class="col-sm-4 col-form-label"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.hce6nejglfdx" target="_blank" data-toggle="tooltip" title="Click for help with file format"> VCF File URL (required)</a></label>
+							<div class="col-sm-8">
+								<input type="url" class="form-control" id="vcf" value="https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.vcf.gz" required>
 							</div>
 						</div>
 						<div class="form-group row">
-							<label for="fpkm" class="col-sm-3 col-form-label">FPKM URL</label>
-							<div class="col-sm-9">
-								<input type="url" class="form-control" id="fpkm" placeholder="(optional) http://">
+							<label for="fpkm" class="col-sm-4 col-form-label"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.v8yrfg1dqvdy" target="_blank" data-toggle="tooltip" title="Click for help with file format">FPKM File URL (optional)</a></label>
+							<div class="col-sm-8">
+								<input type="url" class="form-control" id="fpkm" value="https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.fpkm.gz">
 							</div>
 						</div>
 						<div style="text-align:center">
 							<button id="usedata-btn" type="submit" class="btn btn-primary btn-submit" style="width: 100px; margin: 0 auto;">Submit</button>
+						<div style="margin:40px">
+							<h5>OR</h5>
+							<h6 style="margin-top:10px"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.62y4gp2dq4ud" target="_blank">Host and launch custom GenomePaint track from DNAnexus</a></h6>
+						</div>
+						<div style="margin:40px">
+								<h5>OR</h5>
+								<h6 style="margin-top:10px"><a href="https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit" target="_blank">Tutorial on downloading data from NCI Genomic Data Commons and converting to custom tracks</a></h6>
+							</div>
 						</div>
 					</form>
 					<div>
@@ -215,7 +208,7 @@
 		<script>
 			runproteinpaint({
 				host:'https://proteinpaint.stjude.org',
-				holder:document.getElementById('PeCan'),
+				holder:document.getElementById('PediatricCancer'),
 				parseurl:true,
 				block:true,
 				nobox:1,
@@ -223,44 +216,6 @@
 				genome:'hg19',
 				nativetracks:'RefGene',
 				datasetqueries:[{dataset:'Pediatric2',querykey:'svcnv'}]
-			}),
-
-			runproteinpaint({
-				holder:document.getElementById('hg38-dlbc'),
-				host:'https://proteinpaint.stjude.org',
-				genome:'hg38',
-				block:1,
-				nobox:1,
-				noheader:1,
-				position:'chr9:21605424-22275865',
-				nativetracks:'refgene',
-				tracks:[{
-					name:'TCGA DLBC',
-					type:'mdssvcnv',
-					file:'hg38/tcga-gdc/DLBC/TCGA_DLBC.CNV.gz',
-					checkexpressionrank:{file:'hg38/tcga-gdc/DLBC/TCGA_DLBC.fpkm.gz'},
-					checkvcf:{file:'hg38/tcga-gdc/DLBC/TCGA_DLBC.vcf.gz'}
-				}]
-			})
-
-			runproteinpaint({
-				holder:document.getElementById('hg38-skcm'),
-				host:'https://proteinpaint.stjude.org',
-				genome:'hg38',
-				block:1,
-				nobox:1,
-				noheader:1,
-				position:'chr5:1252821-1296942',
-				nativetracks:'refgene',
-				tracks:[{
-					name:'TCGA SKCM',
-					type:'mdssvcnv',
-					file:'hg38/tcga-gdc/SKCM/TCGA_SKCM.hg38.svcnv.gz',
-					checkexpressionrank:{file:'hg38/tcga-gdc/SKCM/TCGA_SKCM.hg38.fpkm.gz'},
-					checkvcf:{file:'hg38/tcga-gdc/SKCM/TCGA_SKCM.hg38.vcf.gz'},
-					isdense:true,
-					vcf:{hiddenclass:['Intron']}
-				}]
 			})
 
 			function ValidURL(str) {
@@ -284,7 +239,7 @@
 				var form = document.getElementById("user-track-form");
 				var return_btn = document.getElementById("return-button");
 				var genome_view = document.getElementById('user-custom-track');
-
+				console.log(genome_select, trackName, svcnv_url, vcf_url, fpkm_url);
 				genome_view.style.display = "block";
 				
 				if (svcnv_url == "" || vcf_url == ""){
