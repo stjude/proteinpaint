@@ -82,7 +82,6 @@ module.exports = {
 				return m
 			},
 		},
-		/*
 		{
 			name:'fpkm gene expression',
 			isgeneexpression:true,
@@ -109,6 +108,5 @@ module.exports = {
 				hlcolor2:'#FFBEA8',
 			},
 		},
-		*/
 	],
 }
