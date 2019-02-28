@@ -1073,10 +1073,9 @@ function findgene4fix_searchui( holder, tk, block ) {
 	// for auto gene column, show 
 	const row = holder.append('div')
 	const input = row.append('input')
-		.attr('type','text')
+		//.attr('type','text')
 		.attr('placeholder','Search gene')
 		.style('width','100px')
-	input.node().focus()
 
 	const showdiv = row.append('div')
 		.append('div')
@@ -1120,6 +1119,9 @@ function findgene4fix_searchui( holder, tk, block ) {
 			showdiv.append('div').text( err.message ? err.message : err )
 		})
 	})
+
+	input.node().focus()
+	// FIXME why this <input> cannot get focus
 }
 
 
