@@ -53,7 +53,7 @@ module.exports = {
 				delete m.Reference_Allele
 				m.alt=m.Alternate_Allele
 				delete m.Alternate_Allele
-				m.mname= m.HGVSp_Short || m.p.Lys4892Glu
+				m.mname= m.HGVSp_Short
 
 				// dataset-specific logic of fixing sample/patient names
 				{
