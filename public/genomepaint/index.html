@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html5>
 <html>
 <head>
 	<meta charset="utf-8">
@@ -12,21 +12,34 @@
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 	<script src="https://proteinpaint.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
 	<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+	<!-- custom CSS style for the page -->
 	<style>
 
 		nav, .nav-tabs{
-			background-color:#eeeeee;
+			background-color:#222F3F;
 		}
+
+		nav{
+			height: 30px;
+		}
+
+		nav img{
+			margin-top:55px;
+		}
+
 		h2{
 			font-family: Verdana, Geneva, sans-serif;
+			color: #E8F1F8;
+			margin-top:60px;
 		}
 
 		a{
-			color:#555555;
+			color:#ADC4D6;
 		}
 
 		a:hover{
-			color: #901739;
+			color: #E8F1F8;
 		}
 
 		.main-tabs{
@@ -53,14 +66,14 @@
 		}
 
 		.btn-submit{
-			color: #555555;
-			background-color: rgb(204, 204, 204);
+			color: #ADC4D6;
+			background-color: #222F3F;
 			border:0px solid transparent;
 		}
 
 		.btn-submit:hover{
-			color: #901739;
-			background-color: rgb(204, 204, 204);
+			color: #E8F1F8;
+			background-color: #222F3F;
 			border:0px solid transparent;
 		}
 
@@ -69,13 +82,17 @@
 		}
 
 	</style>
+
 </head>
 <body>
-	<nav class="navbar navbar-expand-lg" style="padding:40px;">
-			<img src="https://www.freelogovectors.net/wp-content/uploads/2018/03/st_jude_children_s_research_hospital-logo.png" height="40" class="d-inline-block align-top" alt="">
-			<div class="tool-title" style="margin:auto;"><h2>GenomePaint</h2></div>
+
+	<!-- header with logo and tool-title -->
+	<nav class="navbar navbar-expand-lg">
+			<a href="https://www.stjude.org/"><img src="https://stjude.github.io/sjcloud-docs/images/stjude-logo-child-white.png" height="40" class="d-inline-block align-top" alt=""></a>
+			<div class="tool-title" style="margin:20px;"><h2>GenomePaint</h2></div>
 	</nav>
 
+	<!-- tabs for different pages -->
 	<div>
 		<div style="margin:auto; background-color:#e2e1e1;">
 			<ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
@@ -91,14 +108,22 @@
 				<li class="nav-item">
 					<a class="nav-link" id="tutorial-tab" data-toggle="tab" href="#tutorial" role="tab" aria-controls="tutorial" aria-selected="false" ><h5 class="main-tabs">Tutorial</h5></a>
 				</li>
-				<!-- add Help for google group -->
+				<li class="nav-item">
+					<a class="nav-link" id="help-tab" data-toggle="tab" href="#help" role="tab" aria-controls="help" aria-selected="false" ><h5 class="main-tabs">Help</h5></a>
+				</li>
 			</ul>
 		</div>
+
+		<!-- Content for differnt tabs -->
 			<div>
 				<div class="tab-content" id="myTabContent" style="align-content: center;">
-					<div class="tab-pane fade show active genome-home" id="home" role="tabpanel" aria-labelledby="home-tab">  
-						<div id="PediatricCancer"></div>
+
+				<!-- home page -->
+				<div class="tab-pane fade show active genome-home" id="home" role="tabpanel" aria-labelledby="home-tab">  
+					<div id="PediatricCancer"></div>
 				</div>
+
+				<!-- Custom user tracks -->
 				<div class="tab-pane fade" id="userdata" role="tabpanel" aria-labelledby="userdata-tab">
 					<form class="user-data-form" id="user-track-form">
 						<div class="form-group row">
@@ -118,7 +143,7 @@
 						<div class="form-group row">
 							<label for="track-name" class="col-sm-4 col-form-label">Track Name</label>
 							<div class="col-sm-8">
-								<input type="text" class="form-control" id="track-name" value="Demo Track">
+								<input type="text" class="form-control" id="track-name" value="DemoTrack">
 							</div>
 						</div>
 						<div class="form-group row">
@@ -133,7 +158,7 @@
 								<input type="url" class="form-control" id="vcf" value="https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.vcf.gz" required>
 							</div>
 						</div>
-						<div>Note: either SVCNV file or VCF file is required; you can also submit both.</div>
+						<div><p class="small"><strong>Note:</strong> Either SVCNV file or VCF file is required; you can also submit both.</p></div>
 						<div class="form-group row">
 							<label for="fpkm" class="col-sm-4 col-form-label"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.v8yrfg1dqvdy" target="_blank" data-toggle="tooltip" title="Click for help with file format">FPKM File URL (optional)</a></label>
 							<div class="col-sm-8">
@@ -141,20 +166,30 @@
 							</div>
 						</div>
 						<div style="text-align:center">
-							<button id="usedata-btn" type="submit" class="btn btn-primary btn-submit" style="width: 100px; margin: 0 auto;">Submit</button>
-						<div style="margin:40px">
-							<h5>More on custom track (please keep visible after track submission)</h5>
-							<h6 style="margin-top:10px"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.62y4gp2dq4ud" target="_blank">Host and launch custom GenomePaint track from DNAnexus</a></h6>
-								<h6 style="margin-top:20px"><a href="https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit" target="_blank">Tutorial on downloading data from NCI Genomic Data Commons and converting to custom tracks</a></h6>
-						</div>
+							<button id="clear-btn" type="submit" class="btn btn-primary btn-submit" style="width: 150px; margin: 0 auto;">Clear Form</button>
+							<button id="usedata-btn" type="submit" class="btn btn-primary btn-submit" style="width: 150px; margin: 0 auto;">Submit</button>
 						</div>
 					</form>
-					<div>
-						<button id="return-button" type="submit" class="btn btn-primary btn-submit" style="width: 200px; margin: 0 auto; display :none;">Return to the Form</button>
-						<!-- please add button to show embedding code, and url link -->
-					</div>
 					<div id="user-custom-track" class="tab-pane" style="display:none;"></div>
+					<div id="code-snippet">
+						<h6 style="text-align:center;"> Add following Javascript code to your webpage to display this track </h6>
+						<pre id="snippet" class="border border-secondary" style="padding:20px;"></pre>
+					</div>
+					<div id="url-div">
+							<h6 style="text-align:center; margin-top:20px;"> URL for this track</h6>
+							<a href="" id="custom-track-link" target="_blank">Oepn in new tab</a>
+					</div>	
+					<button id="show-snippet" type="submit" class="btn btn-primary btn-submit" style="width: 250px; margin: 10px auto; display :none;">Show Embedding JS Code</button>
+					<button id="show-custom-url" type="submit" class="btn btn-primary btn-submit" style="width: 250px; margin: 10px auto; display :none;">Custom Track URL</button>
+					<button id="return-button" type="submit" class="btn btn-primary btn-submit" style="width: 250px; margin: 10px auto; display :none;">Return to the Form</button>
+					<div style="margin:40px; text-align:center;">
+						<h5 class="margin-bottom:40px;">More on custom track</h5>
+						<h6 style="margin-top:40px"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.62y4gp2dq4ud" target="_blank">Host and launch custom GenomePaint track from DNAnexus</a></h6>
+						<h6 style="margin-top:20px"><a href="https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit" target="_blank">Tutorial on downloading data from NCI Genomic Data Commons and converting to custom tracks</a></h6>
+					</div>
 				</div>
+
+				<!-- Figures -->
 				<div class="tab-pane fade" id="figures" role="tabpanel" aria-labelledby="figures-tab">
 					<div class="col-md-10 offset-md-1">
 						<ul class="list-group">
@@ -197,6 +232,8 @@
 						</ul>
 					</div>
 				</div>
+
+				<!-- Tutorial page -->
 				<div class="tab-pane fade" id="tutorial" role="tabpanel" aria-labelledby="tutorial-tab">
 					<div>
 						<h5 style="text-align:center;">GenomePaint User Tutorial</h5>
@@ -206,10 +243,25 @@
 						</div>
 					</div>
 				</div>
+				
+				<!-- Help page -->
+				<div class="tab-pane fade" id="help" role="tabpanel" aria-labelledby="help-tab">
+					<div>
+						<h5 style="text-align:center;">Google Group</h5>
+						<div class="col-md-8 offset-md-2">
+								<a class="btn btn-submit col-md-4 offset-md-4" style="margin-top: 20px; margin-bottom: 20px;" href="https://groups.google.com/forum/#!forum/genomepaint" target="_blank">Ask us at Google Group</a>
+						</div>
+					</div>
+				</div>
+
 				</div>
 			</div>
 		</div>
+
+		<!-- Custom Javascript -->
 		<script>
+
+			// ---- Home page code ---- //
 			runproteinpaint({
 				host:'https://proteinpaint.stjude.org',
 				holder:document.getElementById('PediatricCancer'),
@@ -222,35 +274,46 @@
 				datasetqueries:[{dataset:'Pediatric2',querykey:'svcnv'}]
 			})
 
+			// Helper function for url check
 			function ValidURL(str) {
 				var pattern = new RegExp("((http|https)(:\/\/))?([a-zA-Z0-9]+[.]{1}){2}[a-zA-z0-9]+(\/{1}[a-zA-Z0-9]+)*\/?", "i"); 
 				if(!pattern.test(str)) {
 					alert("Please enter a valid URL.");
-					return false;
+					return false
 				} else {
-					return true;
+					return true
 				}
 			}
 
+			// ----- Custom user track page ------ //
+			$("#code-snippet").hide()
+			$("#url-div").hide()
+
+			// Function when custom track form submitted
 			document.getElementById("usedata-btn").addEventListener("click", function(event){
 				event.preventDefault();
 				const genome_list = document.getElementById("genome")
-				var genome_select = genome_list.options[genome_list.selectedIndex].value
-				var trackName = document.getElementById("track-name").value || 'Custom track'
-				var svcnv_url = document.getElementById("svcnv").value;
-				var vcf_url = document.getElementById("vcf").value;
-				var fpkm_url = document.getElementById("fpkm").value;
-				var form = document.getElementById("user-track-form");
-				var return_btn = document.getElementById("return-button");
-				var genome_view = document.getElementById('user-custom-track');
-				console.log(genome_select, trackName, svcnv_url, vcf_url, fpkm_url);
-				genome_view.style.display = "block";
+				const genome_select = genome_list.options[genome_list.selectedIndex].value
+				const trackName = document.getElementById("track-name").value || 'Custom track'
+				const svcnv_url = document.getElementById("svcnv").value
+				const vcf_url = document.getElementById("vcf").value
+				const fpkm_url = document.getElementById("fpkm").value
+				const form = document.getElementById("user-track-form")
+				const return_btn = document.getElementById("return-button")
+				const snippet_btn = document.getElementById("show-snippet")
+				const url_btn = document.getElementById("show-custom-url")
+				const genome_view = document.getElementById('user-custom-track')
+				const code_snippet = document.getElementById('code-snippet')
+				// console.log(genome_select, trackName, svcnv_url, vcf_url, fpkm_url)
+				genome_view.style.display = "block"
 				
 				if (svcnv_url == "" && vcf_url == ""){
-					alert("Either SVCNV or VCF track is required.");
+					alert("Either SVCNV or VCF track is required.")
 					return false;
 				}
 
+				var custom_track_url = 'https://proteinpaint.stjude.org?block=on&genome=' + genome_select
+										+ '&svcnvfpkmurl=' + trackName
 
 				const tk = {
 					name:trackName,
@@ -261,14 +324,20 @@
 				// test what file is given
 				if( svcnv_url ) {
 					tk.url = svcnv_url
+					custom_track_url += ',svcnv,'
+					custom_track_url += svcnv_url
 				}
 
 				if( vcf_url ) {
 					tk.checkvcf = { url:vcf_url }
+					custom_track_url += ',vcf,' + vcf_url
+
 				}
 
 				if( fpkm_url ) {
 					tk.checkexpressionrank = { url:fpkm_url }
+					custom_track_url += ',fpkm,' + fpkm_url
+
 				}
 
 				runproteinpaint({
@@ -282,60 +351,69 @@
 					tracks: [ tk ]
 				})
 
-/*
+				// to show embedding code
+					const runpp_arg = {
+						host:'https://proteinpaint.stjude.org',
+						genome: genome_select,
+						block:1,
+						nobox:1,
+						noheader:1,
+						nativetracks:'refgene',
+						tracks: [ tk ]
+					}
+				
+				$("#snippet").text('runproteinpaint(' + JSON.stringify(runpp_arg, null, 2) + ')' )
+				
+				// custom URL track
+				const a = document.getElementById('custom-track-link')
+				a.href = custom_track_url
+				a.text = custom_track_url
 
-				if(ValidURL(svcnv_url) && ValidURL(vcf_url) && (fpkm_url !== "" && ValidURL(fpkm_url))){
-					runproteinpaint({
-						holder:document.getElementById('user-custom-track'),
-						host:'https://proteinpaint.stjude.org',
-						genome: genome_select,
-						block:1,
-						nobox:1,
-						noheader:1,
-						nativetracks:'refgene',
-						tracks:[{
-							name:trackName,
-							type:'mdssvcnv',
-							url:svcnv_url,
-							checkexpressionrank:{url:fpkm_url},
-							checkvcf:{url:vcf_url},
-						}]
-					})
-					form.style.display = "none";
-					return_btn.style.display = "block";
-					// console.log(genome_select, trackName, svcnv, vcf, fpkm);
-				}else{
-					runproteinpaint({
-						holder:document.getElementById('user-custom-track'),
-						host:'https://proteinpaint.stjude.org',
-						genome: genome_select,
-						block:1,
-						nobox:1,
-						noheader:1,
-						nativetracks:'refgene',
-						tracks:[{
-							name:trackName,
-							type:'mdssvcnv',
-							url:svcnv_url,
-							checkvcf:{url:vcf_url},
-					}]
-				})
-				}
-				*/
-				form.style.display = "none";
-				return_btn.style.display = "block";
+				form.style.display = "none"
+				return_btn.style.display = "block"
+				snippet_btn.style.display = "block"
+				url_btn.style.display = "block"
+
 			});
 
-			document.getElementById("return-button").addEventListener("click", function(event){
+			// Fucntion for clearing form data
+			document.getElementById("clear-btn").addEventListener("click", function(event){
 				event.preventDefault();
-				var form = document.getElementById("user-track-form");
-				var return_btn = document.getElementById("return-button");
-				var genome_view = document.getElementById('user-custom-track');
+				document.getElementById("track-name").value = ""
+				document.getElementById("svcnv").value = ""
+				document.getElementById("vcf").value = ""
+				document.getElementById("fpkm").value = ""
+			});
 
-				form.style.display = "block";
-				genome_view.innerHTML = "";	
-				this.style.display = "none";
+			// Function for shwoing code snippet
+			document.getElementById("show-snippet").addEventListener("click", function(event){
+				event.preventDefault()
+				$("#code-snippet").show()
+				this.style.display = "none"
+			});
 
+			// Function for showing custom track URL
+			document.getElementById("show-custom-url").addEventListener("click", function(event){
+				event.preventDefault()
+				$("#url-div").show()
+				this.style.display = "none"
+			});
+
+			//function when clicking return to custom track Form
+			document.getElementById("return-button").addEventListener("click", function(event){
+				event.preventDefault()
+				const form = document.getElementById("user-track-form")
+				const return_btn = document.getElementById("return-button")
+				const genome_view = document.getElementById('user-custom-track')
+				const code_snippet = document.getElementById('code-snippet')
+				const snippet_btn = document.getElementById("show-snippet");
+
+				form.style.display = "block"
+				genome_view.innerHTML = ""
+				this.style.display = "none"
+				snippet_btn.style.display = "none"
+				$("#code-snippet").hide()
+				$("#url-div").hide()
 			});
 		</script>
 </body>
