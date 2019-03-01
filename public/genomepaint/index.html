@@ -80,7 +80,30 @@
 		#figures a, #userdata a{
 			color: #901739;
 		}
+	
+	/* For laptop */
+	@media only screen and (max-width: 1600px) { 
+		h2{
+			font-size: 28px;
+		}
+		.nav-link h5{
+			margin: 5px;
+			font-size: 18px;
+		}
+	}
 
+	/* Form tables */
+	@media only screen and (max-width: 1300px) { 
+		h2{
+			font-size: 25px;
+		}
+		.tool-title{
+			width: 100%;
+		}
+		.nav-link h5{
+			font-size: 15px;
+		}
+	}
 	</style>
 
 </head>
@@ -415,6 +438,12 @@
 				$("#code-snippet").hide()
 				$("#url-div").hide()
 			});
+
+		// For small screen align tabs to right	
+		if($(window).width() < 1300) {
+		   $("#myTab").removeClass("justify-content-center");  
+		   $("#myTab").addClass("justify-content-end");
+        }  
 		</script>
 </body>
 </html>
