@@ -113,6 +113,7 @@
 		}
 	}
 
+	/* for small tablets and phone */
 	@media only screen and (max-width:1200px){
 		nav{
 			height: 60px;
@@ -323,6 +324,7 @@
 				nobox:1,
 				noheader:1,
 				genome:'hg19',
+				position:'chr1:47661752-47798811',
 				nativetracks:'RefGene',
 				datasetqueries:[{dataset:'Pediatric2',querykey:'svcnv'}]
 			})
@@ -469,11 +471,6 @@
 				$("#url-div").hide()
 			});
 
-		// For small screen align tabs to right	
-		// if($(window).width() < 1300) {
-		//    $("#myTab").removeClass("justify-content-center");  
-		//    $("#myTab").addClass("justify-content-end");
-        // }  
 		</script>
 </body>
 </html>
