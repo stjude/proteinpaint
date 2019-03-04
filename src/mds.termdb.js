@@ -168,13 +168,68 @@ there may be other conditions to apply, e.g. patients carrying alt alleles of a 
 such conditions may be carried by obj
 */
 
-	const button = row.append('button')
+	const button = row.append('div')
+		.style('display','inline-block')
 		.style('margin-left','20px')
 		.style('font-size','.8em')
+		.attr('class','sja_menuoption')
 		.text('BARCHART')
 
+	// by clicking button for first time, query server to load data
+	// set to true to prevent from loading repeatedly
+	let loading = false
+	// make one panel per button; no duplicated panels
+	let panel
+
 	button.on('click',()=>{
-		
+
+		if( loading ) return
+
+		if( panel ) {
+			// panel has been created, toggle its visibility
+			if(panel.pane.style('display') == 'none') {
+				panel.pane.style('display', 'block')
+				client.flyindi( button, panel.pane )
+				button.style('border', null)
+			} else {
+				client.flyindi( button, panel.pane )
+				panel.pane.style('display', 'none')
+				button.style('border', 'solid 1px black')
+			}
+			return
+		}
+
+		button.text('Loading')
+			.property('disabled',1)
+
+		loading = true
+
+		panel = client.newpane({x: d3event.clientX+200, y: d3event.clientY-100})
+
+		panel.header.text('Barplot for '+term.name)
+
+		const arg = {
+			genome: obj.genome.name,
+			dslabel: obj.mds.label,
+			barplot: {
+				id: term.id
+			}
+		}
+
+		client.dofetch( 'termdb', arg )
+		.then(data=>{
+			if(data.error) throw data.error
+			if(!data.lst) throw 'no data for barplot'
+		})
+		.catch(e=>{
+			client.sayerror( panel.body, e.message || e)
+			if(e.stack) console.log(e.stack)
+		})
+		.then(()=>{
+			loading = false
+			button.text('BARPLOT')
+				.property('disabled',false)
+		})
 	})
 }
 
