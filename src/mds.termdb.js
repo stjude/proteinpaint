@@ -21,8 +21,13 @@ init()
 ********************** INTERNAL
 
 
+
 Notes:
 * as it is called "termdb", use "term" rather than "node", to increase consistency
+
+
+server returns json objects as terms, which are from the termjson table
+
 
 
 planned features:
@@ -137,21 +142,16 @@ arg{}
 function may_make_term_graphbutton ( term, row, obj ) {
 /*
 if term.graph{} is there, make a button to trigger it
+allow to make 
 */
 	if(!term.graph) {
 		// no graph
 		return
 	}
 
-	const button = row.append('div')
-		.style('display','inline-block')
-		.style('padding-left','20px')
-		.style('font-size','.8em')
-		.attr('class', 'sja_clbtext2')
 
 	if(term.graph.barchart) {
-		term_graphbutton_barchart( term, button, obj )
-		return
+		term_graphbutton_barchart( term, row, obj )
 	}
 
 	// to add other graph types
@@ -160,7 +160,7 @@ if term.graph{} is there, make a button to trigger it
 
 
 
-function term_graphbutton_barchart ( term, button, obj ) {
+function term_graphbutton_barchart ( term, row, obj ) {
 /*
 click button to launch barchart for a term
 
@@ -168,9 +168,12 @@ there may be other conditions to apply, e.g. patients carrying alt alleles of a 
 such conditions may be carried by obj
 */
 
-	button.text('BARCHART')
-	.on('click',()=>{
+	const button = row.append('button')
+		.style('margin-left','20px')
+		.style('font-size','.8em')
+		.text('BARCHART')
 
+	button.on('click',()=>{
 		
 	})
 }
