@@ -190,6 +190,7 @@ app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
 app.post('/mdssamplesignature',handle_mdssamplesignature)
 app.post('/mdssurvivalplot',handle_mdssurvivalplot)
 app.post('/fimo',handle_fimo)
+app.post('/termdb',handle_termdb)
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
@@ -337,10 +338,7 @@ function handle_genomes(req,res) {
 
 function mds_clientcopy(ds) {
 	// make client-side copy of a mds
-	if(!ds.queries) {
-		// this ds has no queries, will not reveal to client
-		return
-	}
+
 	const ds2={
 		isMds:true,
 		noHandleOnClient:ds.noHandleOnClient,
@@ -351,6 +349,10 @@ function mds_clientcopy(ds) {
 		mutationAttribute: ds.mutationAttribute,
 		locusAttribute: ds.locusAttribute,
 		alleleAttribute: ds.alleleAttribute,
+	}
+
+	if(ds.queries) {
+		ds2.queries = {}
 	}
 
 	if(ds.singlesamplemutationjson) {
@@ -369,6 +371,13 @@ function mds_clientcopy(ds) {
 
 
 	if(ds.cohort) {
+
+		if(ds.cohort.termdb) {
+			// let client know the existance, do not reveal details unless needed
+			ds2.termdb = 1
+		}
+
+
 		if( ds.cohort.attributes && ds.cohort.attributes.defaulthidden) {
 			/*
 			.attributes.lst[] are not released to client
@@ -9440,6 +9449,105 @@ function handle_mdssamplesignature(req,res) {
 
 
 
+
+
+
+
+async function handle_termdb (req, res) {
+	if(reqbodyisinvalidjson(req,res)) return
+	try {
+		const q = req.query
+		const gn = genomes[ q.genome ]
+		if(!gn) throw 'invalid genome'
+		const ds = gn.datasets[ q.dslabel ]
+		if(!ds) throw 'invalid dslabel'
+		if(!ds.cohort) throw 'ds.cohort missing'
+		const tdb = ds.cohort.termdb
+		if(!tdb) throw 'no termdb for this dataset'
+
+		// process triggers, supports await
+
+		if( termdb_trigger_rootterm( q, res, tdb ) ) return
+		if( termdb_trigger_children( q, res, tdb ) ) return
+
+
+
+	} catch(e) {
+		res.send({error: (e.message || e)})
+		if(e.stack) console.log(e.stack)
+	}
+}
+
+
+
+function termdb_trigger_rootterm ( q, res, tdb ) {
+
+	if( !q.default_rootterm) return false
+
+	if(!tdb.default_rootterm) throw 'no default_rootterm for termdb'
+	const lst = []
+	for(const i of tdb.default_rootterm) {
+		const t = tdb.termjson.map.get( i.id )
+		if(t) {
+			const t2 = termdb_copyterm( t )
+			t2.id = i.id
+			lst.push( t2 )
+		}
+	}
+	res.send({lst: lst})
+	return true
+}
+
+
+function termdb_trigger_children ( q, res, tdb ) {
+	if( !q.get_children) return false
+	// list of children id
+	const cidlst = tdb.term2term.map.get( q.get_children.id )
+	// list of children terms
+	const lst = []
+	if(cidlst) {
+		for(const cid of cidlst) {
+			const t = tdb.termjson.map.get( cid )
+			if(t) {
+				const t2 = termdb_copyterm( t )
+				t2.id = cid
+				lst.push( t2 )
+			}
+		}
+	}
+	res.send({lst: lst})
+	return true
+}
+
+
+
+function termdb_copyterm ( t ) {
+/*
+t is the {} from termjson
+
+do not directly hand over the term object to client; many attr to be kept on server
+*/
+	const t2 = {
+		name: t.name,
+		isleaf: t.isleaf,
+	}
+
+	if(t.graph) {
+		// pass over graph instruction
+		t2.graph = {}
+		if(t.graph.barchart) {
+			t2.graph.barchart = {}
+		}
+	}
+	return t2
+}
+
+
+
+
+
+
+
 async function handle_fimo (req, res) {
 	if(reqbodyisinvalidjson(req,res)) return
 	try {
@@ -13190,7 +13298,7 @@ function mds_init(ds,genome, _servconfig) {
 			const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
 			if(err) return 'cohort annotation file "'+file.file+'": '+err
 			//if(items.length==0) return 'no content from sample annotation file '+file.file
-			console.log(items.length+' samples loaded from annotation file '+file.file)
+			console.log(ds.label+': '+items.length+' samples loaded from annotation file '+file.file)
 			items.forEach( i=> {
 
 				// may need to parse certain values into particular format
@@ -13209,6 +13317,19 @@ function mds_init(ds,genome, _servconfig) {
 
 				ds.cohort.tohash(i, ds)
 			})
+		}
+		{
+			let c=0
+			for(const n in ds.cohort.annotation) c++
+			console.log(ds.label+': total samples from sample table: '+c)
+		}
+
+		if(ds.cohort.termdb) {
+			try {
+				init_termdb( ds )
+			} catch(e) {
+				return 'error with termdb: '+e
+			}
 		}
 
 
@@ -14183,3 +14304,63 @@ function checkrank_bedj(req,res) {
 
 
 ///////////// end of __rank
+
+
+
+
+
+
+
+//////////// __termdb
+
+
+function init_termdb ( ds ) {
+/* to initiate termdb for a mds dataset
+*/
+	const termdb = ds.cohort.termdb
+	
+	if(!termdb.term2term) throw '.term2term{} missing'
+	init_termdb_parse_term2term( termdb )
+
+	if(!termdb.termjson) throw '.termjson{} missing'
+	init_termdb_parse_termjson( termdb )
+}
+
+
+
+function init_termdb_parse_term2term ( termdb ) {
+
+	if(termdb.term2term.file) {
+		// one single text file
+		termdb.term2term.map = new Map()
+		// k: parent
+		// v: [] children
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.term2term.file),{encoding:'utf8'}).trim().split('\n') ) {
+			if(line[0]=='#') continue
+			const l = line.split('\t')
+			if(!termdb.term2term.map.has( l[0] )) termdb.term2term.map.set( l[0], [] )
+			termdb.term2term.map.get( l[0] ).push( l[1] )
+		}
+		return
+	}
+	// maybe sqlitedb
+	throw 'term2term: unknown data source'
+}
+
+
+function init_termdb_parse_termjson ( termdb ) {
+	if(termdb.termjson.file) {
+		termdb.termjson.map = new Map()
+		// k: term
+		// v: {}
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.termjson.file),{encoding:'utf8'}).trim().split('\n') ) {
+			if(line[0]=='#') continue
+			const l = line.split('\t')
+			termdb.termjson.map.set( l[0], JSON.parse(l[1]) )
+		}
+		return
+	}
+	throw 'termjson: unknown data source'
+}
+
+//////////// end of __termdb
