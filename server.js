@@ -9465,36 +9465,11 @@ async function handle_termdb (req, res) {
 		const tdb = ds.cohort.termdb
 		if(!tdb) throw 'no termdb for this dataset'
 
-		if(q.default_rootterm) {
-			if(!tdb.default_rootterm) throw 'no default_rootterm for termdb'
-			const lst = []
-			for(const i of tdb.default_rootterm) {
-				const t = tdb.termjson.map.get( i.id )
-				if(t) {
-					const t2 = termdb_copyterm( t )
-					t2.id = i.id
-					lst.push( t2 )
-				}
-			}
-			res.send({lst: lst})
-			return
-		}
+		// process triggers, supports await
 
-		if(q.get_children) {
-			const cidlst = tdb.term2term.map.get( q.get_children.id ) // list of children id
-			const lst = [] // list of children terms
-			if(cidlst) {
-				for(const cid of cidlst) {
-					const t = tdb.termjson.map.get( cid )
-					if(t) {
-						const t2 = termdb_copyterm( t )
-						t2.id = cid
-						lst.push( t2 )
-					}
-				}
-			}
-			res.send({lst: lst})
-		}
+		if( termdb_trigger_rootterm( q, res, tdb ) ) return
+		if( termdb_trigger_children( q, res, tdb ) ) return
+
 
 
 	} catch(e) {
@@ -9502,6 +9477,48 @@ async function handle_termdb (req, res) {
 		if(e.stack) console.log(e.stack)
 	}
 }
+
+
+
+function termdb_trigger_rootterm ( q, res, tdb ) {
+
+	if( !q.default_rootterm) return false
+
+	if(!tdb.default_rootterm) throw 'no default_rootterm for termdb'
+	const lst = []
+	for(const i of tdb.default_rootterm) {
+		const t = tdb.termjson.map.get( i.id )
+		if(t) {
+			const t2 = termdb_copyterm( t )
+			t2.id = i.id
+			lst.push( t2 )
+		}
+	}
+	res.send({lst: lst})
+	return true
+}
+
+
+function termdb_trigger_children ( q, res, tdb ) {
+	if( !q.get_children) return false
+	// list of children id
+	const cidlst = tdb.term2term.map.get( q.get_children.id )
+	// list of children terms
+	const lst = []
+	if(cidlst) {
+		for(const cid of cidlst) {
+			const t = tdb.termjson.map.get( cid )
+			if(t) {
+				const t2 = termdb_copyterm( t )
+				t2.id = cid
+				lst.push( t2 )
+			}
+		}
+	}
+	res.send({lst: lst})
+	return true
+}
+
 
 
 function termdb_copyterm ( t ) {
