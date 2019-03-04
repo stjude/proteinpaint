@@ -26,6 +26,7 @@
 
 		nav img{
 			margin-top:55px;
+			margin-right: 20px;
 		}
 
 		h2{
@@ -90,18 +91,47 @@
 			margin: 5px;
 			font-size: 18px;
 		}
+		.user-data-form{
+			width:70%;
+		}
 	}
 
 	/* Form tables */
 	@media only screen and (max-width: 1300px) { 
 		h2{
 			font-size: 25px;
+			margin-top: 40px;
 		}
-		.tool-title{
-			width: 100%;
+		nav img{
+			margin-top:40px;
 		}
 		.nav-link h5{
 			font-size: 15px;
+		}
+		.user-data-form{
+			width:80%;
+		}
+	}
+
+	@media only screen and (max-width:1200px){
+		nav{
+			height: 60px;
+		}
+		nav img{
+			margin-top:10px;
+			margin: auto;
+		}
+		h2{
+			margin-top:10px;
+			margin: auto;
+			text-align: center;
+		}
+		.tool-title{
+			width: 80%;
+			align-items: center;
+		}
+		.user-data-form{
+			width:100%;
 		}
 	}
 	</style>
@@ -112,7 +142,7 @@
 	<!-- header with logo and tool-title -->
 	<nav class="navbar navbar-expand-lg">
 			<a href="https://www.stjude.org/"><img src="https://stjude.github.io/sjcloud-docs/images/stjude-logo-child-white.png" height="40" class="d-inline-block align-top" alt=""></a>
-			<div class="tool-title" style="margin:20px;"><h2>GenomePaint</h2></div>
+			<div class="tool-title"><h2>GenomePaint</h2></div>
 	</nav>
 
 	<!-- tabs for different pages -->
@@ -440,10 +470,10 @@
 			});
 
 		// For small screen align tabs to right	
-		if($(window).width() < 1300) {
-		   $("#myTab").removeClass("justify-content-center");  
-		   $("#myTab").addClass("justify-content-end");
-        }  
+		// if($(window).width() < 1300) {
+		//    $("#myTab").removeClass("justify-content-center");  
+		//    $("#myTab").addClass("justify-content-end");
+        // }  
 		</script>
 </body>
 </html>
