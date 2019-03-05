@@ -177,6 +177,7 @@ if [[ "$ENV" != "scp-prod" ]]; then
 		cp public/pp-int-test.html $APP/public/index.html
 	else
 		cp public/index.html $APP/public/index.html
+		sed "s%src=\"https://ppr.stjude.org/\"%src=\"/sjcharts/\"%" < ../public/index.html > ./public/index.html
 	fi
 
 	if [[ "$ENV" == "public-prod" ]]; then
