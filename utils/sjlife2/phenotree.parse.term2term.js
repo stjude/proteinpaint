@@ -286,11 +286,16 @@ check_terms_overlap()
 
 
 const keep_termjson = new Map()
+
 if( process.argv[3] ) {
-	// keep/termjson file is given
-	for(const line of fs.readFileSync(process.argv[3],{encoding:'utf8'}).trim().split('\n')) {
-		const l = line.split('\t')
-		keep_termjson.set( l[0], JSON.parse( l[1] ) )
+	/* keep/termjson file is given
+	this file is one single object, of key:value pairs
+	key: term id
+	value: term json definition
+	*/
+	const j = JSON.parse( fs.readFileSync(process.argv[3],{encoding:'utf8'}) )
+	for(const id in j) {
+		keep_termjson.set( id, j[id] )
 	}
 }
 
