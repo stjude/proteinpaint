@@ -10,7 +10,7 @@ export function getsjcharts() {
 	else { //console.log('requesting')
 		prom = new Promise((resolve,reject)=>{
 			const hostname = window.location.hostname.split('.')[0]
-			const codehost = ['localhost','ppr','pecan-test'].includes(hostname) ? 'ppr.stjude.org' : 'proteinpaint.stjude.org'
+			const codehost = ['ppr','pecan-test'].includes(hostname) ? 'ppr.stjude.org' : 'proteinpaint.stjude.org'
 			const filename = `https://${codehost}/sjcharts/bin/sjcharts.js`
 			const fileref = document.createElement('script')
 	        fileref.setAttribute("type","text/javascript")
