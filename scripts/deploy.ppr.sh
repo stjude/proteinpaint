@@ -22,7 +22,6 @@ cp public/bin/* tmpbuild/public/bin/
 cp public/dev.html tmpbuild/public/
 
 sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/bin/proteinpaint.js > tmpbuild/public/bin/proteinpaint.js
-sed "s%src=\"https://ppr.stjude.org/\"%src=\"/sjcharts/\"%" < public/index.html > tmpbuild/public/index.html
 
 tar zcvf sourcecode.tgz tmpbuild/
 
