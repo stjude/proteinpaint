@@ -192,26 +192,36 @@ such conditions may be carried by obj
 				client.flyindi( button, panel.pane )
 				button.style('border', null)
 			} else {
-				client.flyindi( button, panel.pane )
+				client.flyindi( panel.pane, button )
 				panel.pane.style('display', 'none')
 				button.style('border', 'solid 1px black')
 			}
 			return
 		}
 
+		// ask server to make data for barchart
+
 		button.text('Loading')
 			.property('disabled',1)
 
 		loading = true
 
-		panel = client.newpane({x: d3event.clientX+200, y: d3event.clientY-100})
+		panel = client.newpane({
+			x: d3event.clientX+200,
+			y: d3event.clientY-100,
+			close:()=>{
+				client.flyindi( panel.pane, button )
+				panel.pane.style('display', 'none')
+				button.style('border', 'solid 1px black')
+			}
+		})
 
 		panel.header.text('Barplot for '+term.name)
 
 		const arg = {
 			genome: obj.genome.name,
 			dslabel: obj.mds.label,
-			barplot: {
+			barchart: {
 				id: term.id
 			}
 		}
@@ -219,7 +229,15 @@ such conditions may be carried by obj
 		client.dofetch( 'termdb', arg )
 		.then(data=>{
 			if(data.error) throw data.error
-			if(!data.lst) throw 'no data for barplot'
+			if(!data.lst) throw 'no data for barchart'
+
+			// make barchart
+			const plot = {
+				bars: data.lst,
+				holder: panel.body
+			}
+
+			barchart_plot( plot )
 		})
 		.catch(e=>{
 			client.sayerror( panel.body, e.message || e)
@@ -314,4 +332,23 @@ row: the parent of buttonholder for creating the div for children terms
 			button.text('-')
 		})
 	})
+}
+
+
+
+
+
+//////////////// plotters
+
+
+function barchart_plot ( arg ) {
+/*
+.bars[]
+	[0] item name
+	[1] count
+.holder
+*/
+
+	const svg = arg.holder.append('svg')
+
 }

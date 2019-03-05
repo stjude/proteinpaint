@@ -9469,8 +9469,9 @@ async function handle_termdb (req, res) {
 
 		if( termdb_trigger_rootterm( q, res, tdb ) ) return
 		if( termdb_trigger_children( q, res, tdb ) ) return
+		if( termdb_trigger_barchart( q, res, tdb, ds ) ) return
 
-
+		throw 'termdb: don\'t know what to do'
 
 	} catch(e) {
 		res.send({error: (e.message || e)})
@@ -9478,6 +9479,37 @@ async function handle_termdb (req, res) {
 	}
 }
 
+
+
+function termdb_trigger_barchart ( q, res, tdb, ds ) {
+	if( !q.barchart ) return false
+
+	// validate
+	if(!q.barchart.id) throw 'barchart.id missing'
+	const term = tdb.termjson.map.get( q.barchart.id )
+	if(!term) throw 'barchart.id is invalid'
+	if(!term.graph) throw 'graph is not available for said term'
+	if(!term.graph.barchart) throw 'graph.barchart is not available for said term'
+	if(!ds.cohort) throw 'cohort missing from ds'
+	if(!ds.cohort.annotation) throw 'cohort.annotation missing'
+	
+	const value2count = new Map()
+	// k: value
+	// v: number of samples
+
+	for(const s in ds.cohort.annotation) {
+		const v = ds.cohort.annotation[ s ][ q.barchart.id ]
+		if(v!=undefined) {
+			if(!value2count.has(v)) {
+				value2count.set(v, 0)
+			}
+			value2count.set(v, value2count.get(v)+1 )
+		}
+	}
+
+	res.send({ lst: [ ...value2count ].sort((i,j)=>j[1]-i[1]) })
+	return true
+}
 
 
 function termdb_trigger_rootterm ( q, res, tdb ) {
@@ -9536,7 +9568,11 @@ do not directly hand over the term object to client; many attr to be kept on ser
 		// pass over graph instruction
 		t2.graph = {}
 		if(t.graph.barchart) {
-			t2.graph.barchart = {}
+			const p = t.graph.barchart
+			t2.graph.barchart = {
+				barwidth: p.barwidth,
+				labelfontsize: p.labelfontsize
+			}
 		}
 	}
 	return t2
