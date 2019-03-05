@@ -223,6 +223,8 @@ ssh -t $DEPLOYER@$REMOTEHOST "
 	mv $REMOTEDIR/$APP-new $REMOTEDIR/$APP
 	chmod -R 755 $REMOTEDIR/$APP
 
+	ln -s /opt/app/pecan/portal/www/sjcharts/public $REMOTEDIR/$APP/public/sjcharts
+
 	cd $REMOTEDIR/$APP/
 	$REMOTEDIR/proteinpaint_run_node.sh
 

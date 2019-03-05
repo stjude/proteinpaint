@@ -10,13 +10,12 @@ export function getsjcharts() {
 	else { //console.log('requesting')
 		prom = new Promise((resolve,reject)=>{
 			const hostname = window.location.hostname.split('.')[0]
-			const codehost = ['pecan-test'].includes(hostname) ? 'pecan-test.stjude.org' : 'pecan.stjude.cloud'
+			const codehost = ['ppr','pecan-test'].includes(hostname) ? 'ppr.stjude.org' : 'proteinpaint.stjude.org'
 			const filename = `https://${codehost}/sjcharts/bin/sjcharts.js`
 			const fileref = document.createElement('script')
 	        fileref.setAttribute("type","text/javascript")
 	        fileref.setAttribute("src", filename)
 	        document.getElementsByTagName("head")[0].appendChild(fileref)
-	        let interval, i=0
 	        fileref.onload = ()=>{
 	        	resolve(window.sjcharts)
 	        }
