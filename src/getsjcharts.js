@@ -13,15 +13,20 @@ export function getsjcharts() {
 			const codehost = ['ppr','pecan-test'].includes(hostname) ? 'ppr.stjude.org' : 'proteinpaint.stjude.org'
 			const filename = `https://${codehost}/sjcharts/bin/sjcharts.js`
 			const fileref = document.createElement('script')
-	        fileref.setAttribute("type","text/javascript")
-	        fileref.setAttribute("src", filename)
-	        document.getElementsByTagName("head")[0].appendChild(fileref)
-	        fileref.onload = ()=>{
-	        	resolve(window.sjcharts)
-	        }
-	    })
+      fileref.setAttribute("type","text/javascript")
+      fileref.setAttribute("src", filename)
+      document.getElementsByTagName("head")[0].appendChild(fileref)
+      fileref.onload = ()=>{
+      	resolve(window.sjcharts)
+      }
+      fileref.onerror = ()=>{
+      	const message = "Unable to load SJCharts from "+ filename 
+      	alert(message)
+      	reject(message)
+      }
+    })
 
-	    return prom
+	  return prom
 	}
 }
 
