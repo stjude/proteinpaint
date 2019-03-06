@@ -9492,23 +9492,93 @@ function termdb_trigger_barchart ( q, res, tdb, ds ) {
 	if(!term.graph.barchart) throw 'graph.barchart is not available for said term'
 	if(!ds.cohort) throw 'cohort missing from ds'
 	if(!ds.cohort.annotation) throw 'cohort.annotation missing'
-	
-	const value2count = new Map()
-	// k: value
-	// v: number of samples
 
-	for(const s in ds.cohort.annotation) {
-		const v = ds.cohort.annotation[ s ][ q.barchart.id ]
-		if(v!=undefined) {
-			if(!value2count.has(v)) {
-				value2count.set(v, 0)
+	// there are different types of barcharts
+
+	if(term.graph.barchart.categorical) {
+		// each bar is a singular categorical value, string
+		const value2count = new Map()
+		// k: value
+		// v: number of samples
+
+		for(const s in ds.cohort.annotation) {
+			const v = ds.cohort.annotation[ s ][ q.barchart.id ]
+			if(v!=undefined) {
+				if(!value2count.has(v)) {
+					value2count.set(v, 0)
+				}
+				value2count.set(v, value2count.get(v)+1 )
 			}
-			value2count.set(v, value2count.get(v)+1 )
 		}
+
+		res.send({ lst: [ ...value2count ].sort((i,j)=>j[1]-i[1]) })
+		return true
 	}
 
-	res.send({ lst: [ ...value2count ].sort((i,j)=>j[1]-i[1]) })
-	return true
+	if( term.graph.barchart.numeric_bin ) {
+		// numeric value: each bar is one bin
+
+		// step 1, get values from all samples
+		const values = []
+		for(const s in ds.cohort.annotation) {
+			const v = ds.cohort.annotation[ s ][ q.barchart.id ]
+			if( Number.isFinite( v ) ) {
+				values.push(v)
+			}
+		}
+		if(values.length==0) {
+			throw 'No numeric values found for any sample'
+		}
+
+		// step 2, decide bins
+
+		const nb = term.graph.barchart.numeric_bin
+
+		let bins = []
+		if( nb.fixed_bins ) {
+			for(const i of nb.fixed_bins) {
+				const copy = { count: 0 }
+				for(const k in i) {
+					copy[ k ] = i[ k ]
+				}
+				bins.push( copy )
+			}
+		} else if( nb.auto_bins ) {
+			// auto bins
+			// given start and bin size, use max from value to decide how many bins there are
+			const max = Math.max( ...values )
+			let v = nb.auto_bins.start_value
+			while( v < max ) {
+				const v2 = v + nb.auto_bins.bin_size
+				bins.push({
+					start: v,
+					stop: v2,
+					count: 0,
+					startinclusive:1,
+					label: v+' to '+v2,
+				})
+				v += nb.auto_bins.bin_size
+			}
+		} else {
+			throw 'unknown ways to decide bins'
+		}
+
+		for(const v of values) {
+			for(const b of bins) {
+				if( b.startinclusive  && v <  b.start ) continue
+				if( !b.startinclusive && v <= b.start ) continue
+				if( b.stopinclusive   && v >  b.stop  ) continue
+				if( !b.stopinclusive  && v >= b.stop  ) continue
+				b.count++
+				break
+			}
+		}
+		
+		res.send({ lst: bins.map( i=> [ i.label, i.count ] ) })
+		return true
+	}
+
+	throw 'unknown barchart type'
 }
 
 
