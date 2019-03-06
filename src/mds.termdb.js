@@ -3,6 +3,7 @@ import * as common from './common'
 //import {axisTop} from 'd3-axis'
 //import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
+import {barchart_make} from './mds.termdb.barchart'
 
 /*
 
@@ -233,11 +234,12 @@ such conditions may be carried by obj
 
 			// make barchart
 			const plot = {
-				bars: data.lst,
-				holder: panel.body
+				items: data.lst,
+				holder: panel.body,
+				term: term
 			}
 
-			barchart_plot( plot )
+			barchart_make( plot )
 		})
 		.catch(e=>{
 			client.sayerror( panel.body, e.message || e)
@@ -245,7 +247,7 @@ such conditions may be carried by obj
 		})
 		.then(()=>{
 			loading = false
-			button.text('BARPLOT')
+			button.text('BARCHART')
 				.property('disabled',false)
 		})
 	})
@@ -338,17 +340,3 @@ row: the parent of buttonholder for creating the div for children terms
 
 
 
-//////////////// plotters
-
-
-function barchart_plot ( arg ) {
-/*
-.bars[]
-	[0] item name
-	[1] count
-.holder
-*/
-
-	const svg = arg.holder.append('svg')
-
-}
