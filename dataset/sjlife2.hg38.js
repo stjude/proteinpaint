@@ -39,6 +39,15 @@ module.exports={
 				{id:'Outcomes'}
 			]
 		},
+
+		sampleAttribute:{
+			attributes:{
+				'Age at Cancer Diagnosis':{
+					label:'Age at Cancer Diagnosis',
+					isfloat:1
+				},
+			}
+		}
 	},
 
 /*
