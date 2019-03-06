@@ -21,7 +21,7 @@ import {
 import { makeTk_legend, update_legend } from './block.mds.svcnv.legend'
 import {render_singlesample} from './block.mds.svcnv.single'
 import {createbutton_addfeature, may_show_samplematrix_button} from './block.mds.svcnv.samplematrix'
-import {render_multi_genebar, multi_show_geneboxplot} from './block.mds.svcnv.addcolumn'
+import {render_multi_genebar, genebarconfig_fixed} from './block.mds.svcnv.addcolumn'
 import {vcfparsemeta} from './vcf'
 import {rnabamtk_initparam,configPanel_rnabam} from './block.mds.svcnv.share'
 
@@ -201,32 +201,56 @@ function may_showgeneexp_nomutationdata(tk,block) {
 		.attr('class','sja_clbtext2')
 
 	if(genenames.length==1) {
-		text.text(genenames[0]+' '+tk.gecfg.datatype)
+		/*
+		just one gene in view range
+		pretend it to be fixed gene
+		and show the menu option
+		*/
+
+		text.text(genenames[0])
 		.on('click',()=>{
-			multi_show_geneboxplot({
-				gene:genenames[0],
-				tk:tk,
-				block:block
-			})
+			const c = tk.gene2coord[ genenames[0] ]
+			genebarconfig_fixed(
+				{
+					gene: genenames[0],
+					chr: c.chr,
+					start: c.start,
+					stop: c.stop
+				},
+				tk,
+				block
+			)
+			tk.tkconfigtip.showunder( d3event.target )
 		})
 		return
 	}
 
-	text.text('Genes '+tk.gecfg.datatype)
+	/*
+	multiple genes in view range
+	allow to select one gene and show menu like above
+	*/
+
+	text.text('Select gene')
 	.on('click',()=>{
-		tk.tktip.clear()
+		tk.tkconfigtip.clear()
 			.showunder(text.node())
 		for(const gene of genenames) {
-			tk.tktip.d.append('div')
+			tk.tkconfigtip.d.append('div')
 				.text(gene)
 				.attr('class','sja_menuoption')
 				.on('click',()=>{
-					tk.tktip.hide()
-					multi_show_geneboxplot({
-						gene:gene,
-						tk:tk,
-						block:block
-					})
+
+					const c = tk.gene2coord[ gene ]
+					genebarconfig_fixed(
+						{
+							gene: gene,
+							chr: c.chr,
+							start: c.start,
+							stop: c.stop
+						},
+						tk,
+						block
+					)
 				})
 		}
 	})
