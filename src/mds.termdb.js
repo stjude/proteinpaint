@@ -3,6 +3,7 @@ import * as common from './common'
 //import {axisTop} from 'd3-axis'
 //import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
+import {barchart_make} from './mds.termdb.barchart'
 
 /*
 
@@ -192,26 +193,36 @@ such conditions may be carried by obj
 				client.flyindi( button, panel.pane )
 				button.style('border', null)
 			} else {
-				client.flyindi( button, panel.pane )
+				client.flyindi( panel.pane, button )
 				panel.pane.style('display', 'none')
 				button.style('border', 'solid 1px black')
 			}
 			return
 		}
 
+		// ask server to make data for barchart
+
 		button.text('Loading')
 			.property('disabled',1)
 
 		loading = true
 
-		panel = client.newpane({x: d3event.clientX+200, y: d3event.clientY-100})
+		panel = client.newpane({
+			x: d3event.clientX+200,
+			y: d3event.clientY-100,
+			close:()=>{
+				client.flyindi( panel.pane, button )
+				panel.pane.style('display', 'none')
+				button.style('border', 'solid 1px black')
+			}
+		})
 
 		panel.header.text('Barplot for '+term.name)
 
 		const arg = {
 			genome: obj.genome.name,
 			dslabel: obj.mds.label,
-			barplot: {
+			barchart: {
 				id: term.id
 			}
 		}
@@ -219,7 +230,16 @@ such conditions may be carried by obj
 		client.dofetch( 'termdb', arg )
 		.then(data=>{
 			if(data.error) throw data.error
-			if(!data.lst) throw 'no data for barplot'
+			if(!data.lst) throw 'no data for barchart'
+
+			// make barchart
+			const plot = {
+				items: data.lst,
+				holder: panel.body,
+				term: term
+			}
+
+			barchart_make( plot )
 		})
 		.catch(e=>{
 			client.sayerror( panel.body, e.message || e)
@@ -227,7 +247,7 @@ such conditions may be carried by obj
 		})
 		.then(()=>{
 			loading = false
-			button.text('BARPLOT')
+			button.text('BARCHART')
 				.property('disabled',false)
 		})
 	})
@@ -315,3 +335,8 @@ row: the parent of buttonholder for creating the div for children terms
 		})
 	})
 }
+
+
+
+
+
