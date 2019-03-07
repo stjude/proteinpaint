@@ -9187,7 +9187,7 @@ function handle_mdsjunction_singlejunction(req,res,ds,dsquery) {
 		if(samples.length==0) throw({message:'no sample passing filters'})
 
 		// test test
-		for(const s of jd.samples) {
+		for(const s of samples) {
 			console.log(dsquery.samples[s.i],s.readcount)
 		}
 
