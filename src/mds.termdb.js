@@ -7,12 +7,10 @@ import {barchart_make} from './mds.termdb.barchart'
 
 /*
 
+init() accepts following triggers:
+- show term tree starting with default terms, at terms show graph buttons
+- show term tree, for selecting a term (what are selectable?), no graph buttons
 
-
-obj{}:
-.genome {}
-.mds{}
-.div
 
 
 
@@ -45,6 +43,10 @@ planned features:
 
 export async function init ( obj  ) {
 /*
+obj{}:
+.genome {}
+.mds{}
+.div
 */
 window.obj = obj
 
