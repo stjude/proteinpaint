@@ -11,6 +11,8 @@ init() accepts following triggers:
 - show term tree starting with default terms, at terms show graph buttons
 - show term tree, for selecting a term (what are selectable?), no graph buttons
 
+init accepts obj{}
+obj has modifiers for modifying the behavior/display of the term tree
 
 
 
@@ -18,7 +20,12 @@ init() accepts following triggers:
 ********************** EXPORTED
 init()
 ********************** INTERNAL
-
+show_default_rootterm
+print_one_term
+may_make_term_foldbutton
+may_make_term_graphbuttons
+may_make_term_crosstabulatebutton
+term_addbutton_barchart
 
 
 Notes:
@@ -40,7 +47,6 @@ planned features:
 
 
 
-
 export async function init ( obj  ) {
 /*
 obj{}:
@@ -51,8 +57,8 @@ obj{}:
 window.obj = obj
 
 	obj.errdiv = obj.div.append('div')
-
 	obj.treediv = obj.div.append('div')
+	obj.tip = new client.Menu({padding:'5px'})
 
 	try {
 
@@ -80,6 +86,11 @@ window.obj = obj
 
 async function show_default_rootterm ( obj ) {
 /* for showing default terms, as defined by ds config
+
+also for showing term tree, allowing to select certain terms
+
+obj has modifiers to modify how to print the terms
+
 */
 	const arg = {
 		genome: obj.genome.name,
@@ -137,15 +148,57 @@ arg{}
 
 	// term function buttons
 
-	may_make_term_graphbutton( term, row, obj )
+	may_make_term_graphbuttons( term, row, obj )
+
+	may_make_term_crosstabulatebutton( term, row, obj )
 }
 
 
 
-function may_make_term_graphbutton ( term, row, obj ) {
+function may_make_term_crosstabulatebutton ( term, row, obj ) {
+/*
+add button for cross-tabulating
+currently defaults this to barchart-equipped terms
+later may define a specific rule for enabling cross-tabulating
+*/
+	if(!term.graph || !term.graph.barchart ) return
+
+	const button = row.append('div')
+		.style('display','inline-block')
+		.style('margin-left','20px')
+		.style('padding','3px 5px')
+		.style('font-size','.8em')
+		.attr('class','sja_menuoption')
+		.text('CROSSTAB')
+
+	// click button to show term tree
+	// generate a temp obj for running init()
+
+	button.on('click',()=>{
+
+		obj.tip.clear()
+			.showunder( button.node() )
+
+		const obj2 = {
+			genome: obj.genome,
+			mds: obj.mds,
+			default_rootterm: {
+				// add modifier
+				allow_select_term:1
+			},
+			div: obj.tip.d
+		}
+
+		init( obj2 )
+	})
+}
+
+
+
+function may_make_term_graphbuttons ( term, row, obj ) {
 /*
 if term.graph{} is there, make a button to trigger it
-allow to make 
+allow to make multiple buttons
 */
 	if(!term.graph) {
 		// no graph
@@ -154,8 +207,10 @@ allow to make
 
 
 	if(term.graph.barchart) {
-		term_graphbutton_barchart( term, row, obj )
+		// barchart button
+		term_addbutton_barchart( term, row, obj )
 	}
+
 
 	// to add other graph types
 }
@@ -163,7 +218,7 @@ allow to make
 
 
 
-function term_graphbutton_barchart ( term, row, obj ) {
+function term_addbutton_barchart ( term, row, obj ) {
 /*
 click button to launch barchart for a term
 
@@ -174,6 +229,7 @@ such conditions may be carried by obj
 	const button = row.append('div')
 		.style('display','inline-block')
 		.style('margin-left','20px')
+		.style('padding','3px 5px')
 		.style('font-size','.8em')
 		.attr('class','sja_menuoption')
 		.text('BARCHART')
@@ -211,7 +267,7 @@ such conditions may be carried by obj
 
 		panel = client.newpane({
 			x: d3event.clientX+200,
-			y: d3event.clientY-100,
+			y: Math.max( 80, d3event.clientY-100 ),
 			close:()=>{
 				client.flyindi( panel.pane, button )
 				panel.pane.style('display', 'none')
@@ -286,7 +342,7 @@ row: the parent of buttonholder for creating the div for children terms
 
 	button.on('click',()=>{
 
-		if(isloading) return // guard against repeated clicking while loading
+		if(isloading) return // guard against clicking while loading
 
 		if(children_loaded) {
 			// children has been loaded, toggle visibility
