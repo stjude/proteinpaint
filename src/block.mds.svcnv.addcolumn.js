@@ -18,15 +18,15 @@ import {focus_singlesample,
 
 ********************** EXPORTED
 render_multi_genebar
-multi_show_geneboxplot
+	genebarconfig_fixed
 
 ********************** INTERNAL
+multi_show_geneboxplot
 genebar_printtooltip
 addcolumn_autogene
 addcolumn_fixedgene
 	genebarconfig_auto
 		findgene4fix
-	genebarconfig_fixed
 addcolumn_attr
 mayadd_survivaloption
 
@@ -273,7 +273,7 @@ export function render_multi_genebar( tk, block) {
 
 
 
-export function multi_show_geneboxplot(arg) {
+function multi_show_geneboxplot(arg) {
 	/*
 	multi-sample
 	for a given gene, show expression across all samples
@@ -776,6 +776,7 @@ function addcolumn_fixedgene( fixedgene, tk, block, column_xoff) {
 		.on('click',()=>{
 
 			genebarconfig_fixed( fixedgene, tk, block )
+			tk.tkconfigtip.showunder( d3event.target )
 		})
 	
 
@@ -980,7 +981,7 @@ function genebarconfig_auto( usegene, genes, tk, block ) {
 
 
 
-function genebarconfig_fixed( fixedgene, tk, block ) {
+export function genebarconfig_fixed( fixedgene, tk, block ) {
 	tk.tkconfigtip.clear()
 
 	mayadd_boxplotbutton( tk.tkconfigtip.d, fixedgene.gene, tk, block )
@@ -998,15 +999,21 @@ function genebarconfig_fixed( fixedgene, tk, block ) {
 		.text('Remove')
 		.on('click',()=>{
 			tk.tkconfigtip.hide()
-			for(let i=0; i<tk.gecfg.fixed.length; i++) {
-				if(tk.gecfg.fixed[i].gene == fixedgene.gene) {
-					tk.gecfg.fixed.splice(i,1)
-				}
+
+			const idx = tk.gecfg.fixed.findIndex( i=> i.gene == fixedgene.gene )
+			if(idx == -1) {
+				/*
+				this gene is not found as a fixed gene
+				remove function should not do anything
+				this because fixed gene config is hijacked by cases
+				such as when there's no mutation data for a gene in view range
+				still allows to show this menu for that gene
+				*/
+				return
 			}
+			tk.gecfg.fixed.splice(idx,1)
 			render_multi_genebar(tk,block)
 		})
-
-	tk.tkconfigtip.showunder(d3event.target)
 }
 
 
@@ -1073,10 +1080,9 @@ function findgene4fix_searchui( holder, tk, block ) {
 	// for auto gene column, show 
 	const row = holder.append('div')
 	const input = row.append('input')
-		.attr('type','text')
+		//.attr('type','text')
 		.attr('placeholder','Search gene')
 		.style('width','100px')
-	input.node().focus()
 
 	const showdiv = row.append('div')
 		.append('div')
@@ -1120,6 +1126,9 @@ function findgene4fix_searchui( holder, tk, block ) {
 			showdiv.append('div').text( err.message ? err.message : err )
 		})
 	})
+
+	input.node().focus()
+	// FIXME why this <input> cannot get focus
 }
 
 

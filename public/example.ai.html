@@ -4,7 +4,7 @@
 	 <meta charset="utf-8">
 </head>
 <body>
-	
+
 <script src="bin/proteinpaint.js" charset="utf-8"></script>
 
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
@@ -15,6 +15,24 @@
 runproteinpaint({
 	holder:document.getElementById('aaa'),
 	parseurl:true,
+	nobox:1,
+	block:1,
+	position:'chr9:34921825-38945922',
+	genome:'hg19',
+	//gene:'tp53', dataset:'pediatric',
+	nativetracks:'refgene',
+
+
+	tracks:[
+
+
+		{
+			type:'aicheck',
+			name:'test',
+			file:'hg19/TARGET/DNA/ai-cgi/fullMaf_TARGET-10-PANSXG-03A-01D_NormalVsPrimary.maf.txt.gz'
+		},
+
+	],
 })
 </script>
 

@@ -13,10 +13,11 @@ public/.htaccess
 public/dev.html
 public/svcnv.html
 public/ALCL.html
-public/example.*
 .htaccess
 public/builds/*
 public/no-babel-polyfill/*
+public/static/*.docx
+public/static/*.pdf
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html

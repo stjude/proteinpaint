@@ -4,7 +4,7 @@
 	 <meta charset="utf-8">
 </head>
 <body>
-	
+
 <script src="bin/proteinpaint.js" charset="utf-8"></script>
 
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
@@ -12,9 +12,18 @@
 <div id=aaa style="margin:10px"></div>
 
 <script>
+
 runproteinpaint({
 	holder:document.getElementById('aaa'),
-	parseurl:true,
+	noheader:1,
+	nobox:true,
+
+
+	display_termdb:{
+		dslabel:'SJLife',
+		genome:'hg38',
+		default_rootterm:{},
+	},
 })
 </script>
 

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	noheader:1,
+
+
+	genome:'hg19',
+
+	mdssurvivalplot:{
+		dataset:'Pediatric2',
+		plotlist:[
+			{
+				type:'efs',
+				samplerule:{
+					full:{
+						byattr:1,
+						key:'diagnosis_short',
+						value:'BALL'
+					},
+					/*
+					set:{
+						geneexpression:1,
+						bymedian:1,
+						gene: 'PAX5',
+						chr:'chr9',
+						start:36833271,
+						stop:37034476
+					},
+					set:{
+						mutation:1,
+						snvindel:{},
+						chr:'chr12',
+						start:25398118,
+						stop:25398420
+					}
+					*/
+					set:{
+						mutation:1,
+						cnv:{focalsizelimit:2000000,valuecutoff:0.1},
+						snvindel:{},
+						chr:'chr9',
+						start:21967750,
+						stop:21995300
+					},
+				}
+			}
+		]
+	},
+})
+</script>
+
+</body>
+</html>

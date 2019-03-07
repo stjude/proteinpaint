@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html5>
 <html>
 <head>
 	<meta charset="utf-8">
@@ -10,19 +10,37 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-	<script src="../bin/proteinpaint.js" charset="utf-8"></script>
+	<script src="https://proteinpaint.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
 	<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+	<!-- custom CSS style for the page -->
 	<style>
+
+		nav, .nav-tabs{
+			background-color:#222F3F;
+		}
+
+		nav{
+			height: 30px;
+		}
+
+		nav img{
+			margin-top:55px;
+			margin-right: 20px;
+		}
+
 		h2{
 			font-family: Verdana, Geneva, sans-serif;
+			color: #E8F1F8;
+			margin-top:60px;
 		}
 
 		a{
-			color:#555555;
+			color:#ADC4D6;
 		}
 
 		a:hover{
-			color: #901739;
+			color: #E8F1F8;
 		}
 
 		.main-tabs{
@@ -49,30 +67,91 @@
 		}
 
 		.btn-submit{
-			color: #555555;
-			background-color: rgb(204, 204, 204);
+			color: #ADC4D6;
+			background-color: #222F3F;
 			border:0px solid transparent;
 		}
 
 		.btn-submit:hover{
-			color: #901739;;
-			background-color: rgb(204, 204, 204);
+			color: #E8F1F8;
+			background-color: #222F3F;
 			border:0px solid transparent;
 		}
 
+		#figures a, #userdata a{
+			color: #901739;
+		}
+	
+	/* For laptop */
+	@media only screen and (max-width: 1600px) { 
+		h2{
+			font-size: 28px;
+		}
+		.nav-link h5{
+			margin: 5px;
+			font-size: 18px;
+		}
+		.user-data-form{
+			width:70%;
+		}
+	}
+
+	/* Form tables */
+	@media only screen and (max-width: 1300px) { 
+		h2{
+			font-size: 25px;
+			margin-top: 40px;
+		}
+		nav img{
+			margin-top:40px;
+		}
+		.nav-link h5{
+			font-size: 15px;
+		}
+		.user-data-form{
+			width:80%;
+		}
+	}
+
+	/* for small tablets and phone */
+	@media only screen and (max-width:1200px){
+		nav{
+			height: 60px;
+		}
+		nav img{
+			margin-top:10px;
+			margin: auto;
+		}
+		h2{
+			margin-top:10px;
+			margin: auto;
+			text-align: center;
+		}
+		.tool-title{
+			width: 80%;
+			align-items: center;
+		}
+		.user-data-form{
+			width:100%;
+		}
+	}
 	</style>
+
 </head>
 <body>
+
+	<!-- header with logo and tool-title -->
 	<nav class="navbar navbar-expand-lg">
-			<img src="/static/st_jude_logo.png" height="40" class="d-inline-block align-top" alt="">
-			<div class="tool-title" style="margin:auto;"><h2>GenomePaint</h2></div>
+			<a href="https://www.stjude.org/"><img src="https://stjude.github.io/sjcloud-docs/images/stjude-logo-child-white.png" height="40" class="d-inline-block align-top" alt=""></a>
+			<div class="tool-title"><h2>GenomePaint</h2></div>
 	</nav>
 
-	<div style="margin:50px 0;">
-		<div style="margin:auto;">
+	<!-- tabs for different pages -->
+	<div>
+		<div style="margin:auto; background-color:#e2e1e1;">
 			<ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
 				<li class="nav-item">
-					<a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true"><h5 class="main-tabs">Existing Datasets</h5></a>
+					<a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true"><h5 class="main-tabs">Pediatric Cancer Dataset</h5></a>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link" id="userdata-tab" data-toggle="tab" href="#userdata" role="tab" aria-controls="userdata" aria-selected="false"><h5 class="main-tabs">Add Your Data</h5></a>
@@ -83,36 +162,30 @@
 				<li class="nav-item">
 					<a class="nav-link" id="tutorial-tab" data-toggle="tab" href="#tutorial" role="tab" aria-controls="tutorial" aria-selected="false" ><h5 class="main-tabs">Tutorial</h5></a>
 				</li>
+				<li class="nav-item">
+					<a class="nav-link" id="help-tab" data-toggle="tab" href="#help" role="tab" aria-controls="help" aria-selected="false" ><h5 class="main-tabs">Help</h5></a>
+				</li>
 			</ul>
 		</div>
+
+		<!-- Content for differnt tabs -->
 			<div>
 				<div class="tab-content" id="myTabContent" style="align-content: center;">
+
+				<!-- home page -->
 				<div class="tab-pane fade show active genome-home" id="home" role="tabpanel" aria-labelledby="home-tab">  
-						<ul class="nav nav-pills nav-fill" id="pills-tab" role="tablist" style="margin:50px 15%;">                                        
-							<li class="nav-item" style="justify-content: center;">
-								<a class="nav-link active" href="#pills-pc" id="pills-pc-tab" data-toggle="pill" href="#pills-pc" role="tab" aria-controls="pills-pc" aria-selected="true">Hg19 Pediatric Cancer</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link" href="#pills-dlbc" id="pills-dlbc-tab" data-toggle="pill" href="#pills-dlbc" role="tab" aria-controls="pills-dlbc" aria-selected="false">Hg38 TCGA DLBC</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link" href="#pills-skcm" id="pills-skcm-tab" data-toggle="pill" href="#pills-skcm" role="tab" aria-controls="pills-skcm" aria-selected="false">Hg38 TCGA SKCM</a>
-							</li>
-						</ul>
-						<div class="tab-content" id="pills-tabContent">
-							<div class="tab-pane fade show active" id="pills-pc" role="tabpanel" aria-labelledby="pills-pc-tab"><div id="PeCan"></div></div>
-							<div class="tab-pane fade" id="pills-dlbc" role="tabpanel" aria-labelledby="pills-dlbc-tab"><div id="hg38-dlbc"></div></div>
-							<div class="tab-pane fade" id="pills-skcm" role="tabpanel" aria-labelledby="pills-skcm-tab"><div id="hg38-skcm"></div></div>
-						</div>
+					<div id="PediatricCancer"></div>
 				</div>
+
+				<!-- Custom user tracks -->
 				<div class="tab-pane fade" id="userdata" role="tabpanel" aria-labelledby="userdata-tab">
 					<form class="user-data-form" id="user-track-form">
 						<div class="form-group row">
-							<label for="genome" class="col-sm-3 col-form-label">Species & Genome</label>
-							<div class="col-sm-9">
+							<label for="genome" class="col-sm-4 col-form-label">Species & Genome</label>
+							<div class="col-sm-8">
 								<select class="custom-select mr-sm-2" id="genome">
-									<option value="hg19" selected>Human hg19</option>
-									<option value="hg38">Human hg38</option>
+									<option value="hg19">Human hg19</option>
+									<option value="hg38" selected>Human hg38</option>
 									<option value="mm9">Mouse mm9</option>
 									<option value="mm10">Mouse mm10</option>
 									<option value="danrer10">Zebrafish danRer10</option>
@@ -122,173 +195,282 @@
 							</div>
 						</div>
 						<div class="form-group row">
-							<label for="track-name" class="col-sm-3 col-form-label">Track Name</label>
-							<div class="col-sm-9">
-								<input type="text" class="form-control" id="track-name" placeholder="(optional) free-form text (e.g. tumor_sample, patient_id, xyz, etc.)">
+							<label for="track-name" class="col-sm-4 col-form-label">Track Name</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control" id="track-name" value="DemoTrack">
 							</div>
 						</div>
 						<div class="form-group row">
-							<label for="svcnv" class="col-sm-3 col-form-label">SV, CNV URL</label>
-							<div class="col-sm-9">
-								<input type="url" class="form-control" id="svcnv" placeholder="(required) http://" required>
+							<label for="svcnv" class="col-sm-4 col-form-label"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.57qr5fp90wn9" target="_blank" data-toggle="tooltip" title="Click for help with file format"> SV, CNV File URL</a></label>
+							<div class="col-sm-8">
+								<input type="url" class="form-control" id="svcnv" value="https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.CNV.gz" required>
 							</div>
 						</div>
 						<div class="form-group row">
-							<label for="vcf" class="col-sm-3 col-form-label">VCF URL</label>
-							<div class="col-sm-9">
-								<input type="url" class="form-control" id="vcf" placeholder="(required) http://" required>
+							<label for="vcf" class="col-sm-4 col-form-label"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.hce6nejglfdx" target="_blank" data-toggle="tooltip" title="Click for help with file format"> VCF File URL</a></label>
+							<div class="col-sm-8">
+								<input type="url" class="form-control" id="vcf" value="https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.vcf.gz" required>
 							</div>
 						</div>
+						<div><p class="small"><strong>Note:</strong> Either SVCNV file or VCF file is required; you can also submit both.</p></div>
 						<div class="form-group row">
-							<label for="fpkm" class="col-sm-3 col-form-label">FPKM URL</label>
-							<div class="col-sm-9">
-								<input type="url" class="form-control" id="fpkm" placeholder="(optional) http://">
+							<label for="fpkm" class="col-sm-4 col-form-label"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.v8yrfg1dqvdy" target="_blank" data-toggle="tooltip" title="Click for help with file format">FPKM File URL (optional)</a></label>
+							<div class="col-sm-8">
+								<input type="url" class="form-control" id="fpkm" value="https://pecan.stjude.cloud/static/hg38/tcga-gdc/DLBC/TCGA_DLBC.fpkm.gz">
 							</div>
 						</div>
 						<div style="text-align:center">
-							<button id="usedata-btn" type="submit" class="btn btn-primary btn-submit" style="width: 100px; margin: 0 auto;">Submit</button>
+							<button id="clear-btn" type="submit" class="btn btn-primary btn-submit" style="width: 150px; margin: 0 auto;">Clear Form</button>
+							<button id="usedata-btn" type="submit" class="btn btn-primary btn-submit" style="width: 150px; margin: 0 auto;">Submit</button>
 						</div>
 					</form>
-					<div>
-						<button id="return-button" type="submit" class="btn btn-primary btn-submit" style="width: 200px; margin: 0 auto; display :none;">Return to the Form</button>
-					</div>
 					<div id="user-custom-track" class="tab-pane" style="display:none;"></div>
+					<div id="code-snippet">
+						<h6 style="text-align:center;"> Add following Javascript code to your webpage to display this track </h6>
+						<pre id="snippet" class="border border-secondary" style="padding:20px;"></pre>
+					</div>
+					<div id="url-div">
+							<h6 style="text-align:center; margin-top:20px;"> URL for this track</h6>
+							<a href="" id="custom-track-link" target="_blank">Oepn in new tab</a>
+					</div>	
+					<button id="show-snippet" type="submit" class="btn btn-primary btn-submit" style="width: 250px; margin: 10px auto; display :none;">Show Embedding JS Code</button>
+					<button id="show-custom-url" type="submit" class="btn btn-primary btn-submit" style="width: 250px; margin: 10px auto; display :none;">Custom Track URL</button>
+					<button id="return-button" type="submit" class="btn btn-primary btn-submit" style="width: 250px; margin: 10px auto; display :none;">Return to the Form</button>
+					<div style="margin:40px; text-align:center;">
+						<h5 class="margin-bottom:40px;">More on custom track</h5>
+						<h6 style="margin-top:40px"><a href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.62y4gp2dq4ud" target="_blank">Host and launch custom GenomePaint track from DNAnexus</a></h6>
+						<h6 style="margin-top:20px"><a href="https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit" target="_blank">Tutorial on downloading data from NCI Genomic Data Commons and converting to custom tracks</a></h6>
+					</div>
 				</div>
-				<div class="tab-pane fade" id="figures" role="tabpanel" aria-labelledby="figures-tab"></br></div>
-				<div class="tab-pane fade" id="tutorial" role="tabpanel" aria-labelledby="tutorial-tab"></br></div>
+
+				<!-- Figures -->
+				<div class="tab-pane fade" id="figures" role="tabpanel" aria-labelledby="figures-tab">
+					<div class="col-md-10 offset-md-1">
+						<ul class="list-group">
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/crebbp.splicesite.html" target="_blank"><strong>Figure 1:</strong> Navigating between the Cohort and the Sample View in GenomePaint to assess aberrant splicing in CREBBP caused by somatic splice site variant.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.html" target="_blank"><strong>Figure 2:</strong> MYC dysregulation by enhancer duplications in pediatric cancers.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/ikzf1.tp53.html" target="_blank"><strong>Supplementary figure 1: </strong> Cohort View shows different mutation mechanisms causing loss-of-function in tumor suppressors.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/tall.tal1.html" target="_blank"><strong>Supplementary figure 2:</strong> Illustrating TAL1-activating alterations with integrated view of DNA alterations and gene expression.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.nme.html" target="_blank"><strong>Supplementary figure 3:</strong> Linking MYC expression with the duplications of a distal enhancer.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/tall.myb.survival.html" target="_blank"><strong>Supplementary figure 4:</strong> Kaplan-Meier plot shows MYB alterations are correlated with poor outcome in TALL patients.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/aml.mdm2.html" target="_blank"><strong>Supplementary figure 5:</strong> MDM2 high expression correlates with poor outcome in acute myeloid leukemia (AML) patients.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/matrix.mycnatrx.html" target="_blank"><strong>Supplementary figure 6:</strong> Mutual-exclusive pattern of MYCN and ATRX mutations in neuroblastoma (NBL).</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/tp53.splicesite.html" target="_blank"><strong>Supplementary figure 7:</strong> A TP53 splice site mutation from osteosarcoma causes intron retention.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.sv.nb69.html" target="_blank"><strong>Supplementary figure 8:</strong> MYC dysregulation by enhancer-hijacking in pediatric cancers.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/os.apobec.html" target="_blank"><strong>Supplementary figure 9:</strong> APOBEC mutation mechanism causes kataegis in osteosarcoma.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/crebbp.deletion.html" target="_blank"><strong>Supplementary figure 10:</strong> BALL shows diverse alterations targeting the RING domain of CREBBP.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.amp.html" target="_blank"><strong>Supplementary figure 11:</strong> MYC focal amplification is recurrent among pediatric solid tumors and brain tumors but not found in leukemia.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.newcases.html" target="_blank"><strong>Supplementary figure 12:</strong> Previously unreported cases of likely MYC enhancer duplication/amplification in pediatric tumors and cell line.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.nalm16.html" target="_blank"><strong>Supplementary figure 13:</strong> In-situ Hi-C shows MYC interaction with duplicated enhancers in NALM6 and NALM16.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg19/pediatric.mds.example/myc.enhancer.nalm6.phased.html" target="_blank"><strong>Supplementary figure 14:</strong> Phased sequencing coverage in NALM6.</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg38/pediatric.mds.example/tcga.dlbc.html" target="_blank"><strong>Supplementary figure 15:</strong> CDKN2A/2B focal deletion and sequence mutations from adult diffuse large B-cell lymphoma (DLBC).</a>
+							</li>
+							<li class="list-group-item"><a href="https://proteinpaint.stjude.org/F/hg38/pediatric.mds.example/tcga.skcm.html" target="_blank"><strong>Supplementary figure 16:</strong> TERT sequence mutations in adult cutaneous melanoma (SKCM).</a>
+							</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- Tutorial page -->
+				<div class="tab-pane fade" id="tutorial" role="tabpanel" aria-labelledby="tutorial-tab">
+					<div>
+						<h5 style="text-align:center;">GenomePaint User Tutorial</h5>
+						<div class="col-md-8 offset-md-2">
+							<a class="btn btn-submit col-md-4 offset-md-4" style="margin-top: 20px; margin-bottom: 20px;" href="https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing" target="_blank">Open in Google Doc</a>
+							<iframe src="https://docs.google.com/document/d/e/2PACX-1vShn3jGO7Q5AFUkRyjw8rksGkv1sOPKxOectzgiJvkRD4Dj2tsO7VtelNcVN9wbxK6TGudiDUf4Mn-5/pub?embedded=true" width="100%" height="800px"></iframe>
+						</div>
+					</div>
+				</div>
+				
+				<!-- Help page -->
+				<div class="tab-pane fade" id="help" role="tabpanel" aria-labelledby="help-tab">
+					<div>
+						<h5 style="text-align:center;">Google Group</h5>
+						<div class="col-md-8 offset-md-2">
+								<a class="btn btn-submit col-md-4 offset-md-4" style="margin-top: 20px; margin-bottom: 20px;" href="https://groups.google.com/forum/#!forum/genomepaint" target="_blank">Ask us at Google Group</a>
+						</div>
+					</div>
+				</div>
+
 				</div>
 			</div>
 		</div>
+
+		<!-- Custom Javascript -->
 		<script>
+
+			// ---- Home page code ---- //
 			runproteinpaint({
 				host:'https://proteinpaint.stjude.org',
-				holder:document.getElementById('PeCan'),
+				holder:document.getElementById('PediatricCancer'),
 				parseurl:true,
 				block:true,
 				nobox:1,
 				noheader:1,
 				genome:'hg19',
+				position:'chr1:47661752-47798811',
 				nativetracks:'RefGene',
 				datasetqueries:[{dataset:'Pediatric2',querykey:'svcnv'}]
-			}),
-
-			runproteinpaint({
-				holder:document.getElementById('hg38-dlbc'),
-				host:'https://proteinpaint.stjude.org',
-				genome:'hg38',
-				block:1,
-				nobox:1,
-				noheader:1,
-				position:'chr9:21605424-22275865',
-				nativetracks:'refgene',
-				tracks:[{
-					name:'TCGA DLBC',
-					type:'mdssvcnv',
-					file:'hg38/tcga-gdc/DLBC/TCGA_DLBC.CNV.gz',
-					checkexpressionrank:{file:'hg38/tcga-gdc/DLBC/TCGA_DLBC.fpkm.gz'},
-					checkvcf:{file:'hg38/tcga-gdc/DLBC/TCGA_DLBC.vcf.gz'}
-				}]
 			})
 
-			runproteinpaint({
-				holder:document.getElementById('hg38-skcm'),
-				host:'https://proteinpaint.stjude.org',
-				genome:'hg38',
-				block:1,
-				nobox:1,
-				noheader:1,
-				position:'chr5:1252821-1296942',
-				nativetracks:'refgene',
-				tracks:[{
-					name:'TCGA SKCM',
-					type:'mdssvcnv',
-					file:'hg38/tcga-gdc/SKCM/TCGA_SKCM.hg38.svcnv.gz',
-					checkexpressionrank:{file:'hg38/tcga-gdc/SKCM/TCGA_SKCM.hg38.fpkm.gz'},
-					checkvcf:{file:'hg38/tcga-gdc/SKCM/TCGA_SKCM.hg38.vcf.gz'},
-					isdense:true,
-					vcf:{hiddenclass:['Intron']}
-				}]
-			})
-
+			// Helper function for url check
 			function ValidURL(str) {
 				var pattern = new RegExp("((http|https)(:\/\/))?([a-zA-Z0-9]+[.]{1}){2}[a-zA-z0-9]+(\/{1}[a-zA-Z0-9]+)*\/?", "i"); 
 				if(!pattern.test(str)) {
 					alert("Please enter a valid URL.");
-					return false;
+					return false
 				} else {
-					return true;
+					return true
 				}
 			}
 
+			// ----- Custom user track page ------ //
+			$("#code-snippet").hide()
+			$("#url-div").hide()
+
+			// Function when custom track form submitted
 			document.getElementById("usedata-btn").addEventListener("click", function(event){
 				event.preventDefault();
-				var genome_list = document.getElementById("genome");
-				var genome_select = genome_list.options[genome_list.selectedIndex].value;
-				var trackName = document.getElementById("track-name").value;
-				var svcnv_url = document.getElementById("svcnv").value;
-				var vcf_url = document.getElementById("vcf").value;
-				var fpkm_url = document.getElementById("fpkm").value;
-				var form = document.getElementById("user-track-form");
-				var return_btn = document.getElementById("return-button");
-				var genome_view = document.getElementById('user-custom-track');
-
-				genome_view.style.display = "block";
+				const genome_list = document.getElementById("genome")
+				const genome_select = genome_list.options[genome_list.selectedIndex].value
+				const trackName = document.getElementById("track-name").value || 'Custom track'
+				const svcnv_url = document.getElementById("svcnv").value
+				const vcf_url = document.getElementById("vcf").value
+				const fpkm_url = document.getElementById("fpkm").value
+				const form = document.getElementById("user-track-form")
+				const return_btn = document.getElementById("return-button")
+				const snippet_btn = document.getElementById("show-snippet")
+				const url_btn = document.getElementById("show-custom-url")
+				const genome_view = document.getElementById('user-custom-track')
+				const code_snippet = document.getElementById('code-snippet')
+				// console.log(genome_select, trackName, svcnv_url, vcf_url, fpkm_url)
+				genome_view.style.display = "block"
 				
-				if (svcnv_url == "" || vcf_url == ""){
-					alert("Please provide required fields.");
+				if (svcnv_url == "" && vcf_url == ""){
+					alert("Either SVCNV or VCF track is required.")
 					return false;
-				} else if(ValidURL(svcnv_url) && ValidURL(vcf_url) && (fpkm_url !== "" && ValidURL(fpkm_url))){
-					runproteinpaint({
-						holder:document.getElementById('user-custom-track'),
-						host:'https://proteinpaint.stjude.org',
-						genome: genome_select,
-						block:1,
-						nobox:1,
-						noheader:1,
-						nativetracks:'refgene',
-						tracks:[{
-							name:trackName,
-							type:'mdssvcnv',
-							url:svcnv_url,
-							checkexpressionrank:{url:fpkm_url},
-							checkvcf:{url:vcf_url},
-					}]
-				})
-					form.style.display = "none";
-					return_btn.style.display = "block";
-					console.log(genome_select, trackName, svcnv, vcf, fpkm);
-				}else{
-					runproteinpaint({
-						holder:document.getElementById('user-custom-track'),
-						host:'https://proteinpaint.stjude.org',
-						genome: genome_select,
-						block:1,
-						nobox:1,
-						noheader:1,
-						nativetracks:'refgene',
-						tracks:[{
-							name:trackName,
-							type:'mdssvcnv',
-							url:svcnv_url,
-							checkvcf:{url:vcf_url},
-					}]
-				})
-				form.style.display = "none";
-				return_btn.style.display = "block";
 				}
+
+				var custom_track_url = 'https://proteinpaint.stjude.org?block=on&genome=' + genome_select
+										+ '&svcnvfpkmurl=' + trackName
+
+				const tk = {
+					name:trackName,
+					type:'mdssvcnv',
+				}
+
+
+				// test what file is given
+				if( svcnv_url ) {
+					tk.url = svcnv_url
+					custom_track_url += ',svcnv,'
+					custom_track_url += svcnv_url
+				}
+
+				if( vcf_url ) {
+					tk.checkvcf = { url:vcf_url }
+					custom_track_url += ',vcf,' + vcf_url
+
+				}
+
+				if( fpkm_url ) {
+					tk.checkexpressionrank = { url:fpkm_url }
+					custom_track_url += ',fpkm,' + fpkm_url
+
+				}
+
+				runproteinpaint({
+					holder:document.getElementById('user-custom-track'),
+					host:'https://proteinpaint.stjude.org',
+					genome: genome_select,
+					block:1,
+					nobox:1,
+					noheader:1,
+					nativetracks:'refgene',
+					tracks: [ tk ]
+				})
+
+				// to show embedding code
+					const runpp_arg = {
+						host:'https://proteinpaint.stjude.org',
+						genome: genome_select,
+						block:1,
+						nobox:1,
+						noheader:1,
+						nativetracks:'refgene',
+						tracks: [ tk ]
+					}
+				
+				$("#snippet").text('runproteinpaint(' + JSON.stringify(runpp_arg, null, 2) + ')' )
+				
+				// custom URL track
+				const a = document.getElementById('custom-track-link')
+				a.href = custom_track_url
+				a.text = custom_track_url
+
+				form.style.display = "none"
+				return_btn.style.display = "block"
+				snippet_btn.style.display = "block"
+				url_btn.style.display = "block"
+
 			});
 
-			document.getElementById("return-button").addEventListener("click", function(event){
+			// Fucntion for clearing form data
+			document.getElementById("clear-btn").addEventListener("click", function(event){
 				event.preventDefault();
-				var form = document.getElementById("user-track-form");
-				var return_btn = document.getElementById("return-button");
-				var genome_view = document.getElementById('user-custom-track');
-
-				form.style.display = "block";
-				genome_view.innerHTML = "";	
-				this.style.display = "none";
-
+				document.getElementById("track-name").value = ""
+				document.getElementById("svcnv").value = ""
+				document.getElementById("vcf").value = ""
+				document.getElementById("fpkm").value = ""
 			});
+
+			// Function for shwoing code snippet
+			document.getElementById("show-snippet").addEventListener("click", function(event){
+				event.preventDefault()
+				$("#code-snippet").show()
+				this.style.display = "none"
+			});
+
+			// Function for showing custom track URL
+			document.getElementById("show-custom-url").addEventListener("click", function(event){
+				event.preventDefault()
+				$("#url-div").show()
+				this.style.display = "none"
+			});
+
+			//function when clicking return to custom track Form
+			document.getElementById("return-button").addEventListener("click", function(event){
+				event.preventDefault()
+				const form = document.getElementById("user-track-form")
+				const return_btn = document.getElementById("return-button")
+				const genome_view = document.getElementById('user-custom-track')
+				const code_snippet = document.getElementById('code-snippet')
+				const snippet_btn = document.getElementById("show-snippet");
+
+				form.style.display = "block"
+				genome_view.innerHTML = ""
+				this.style.display = "none"
+				snippet_btn.style.display = "none"
+				$("#code-snippet").hide()
+				$("#url-div").hide()
+			});
+
 		</script>
 </body>
 </html>

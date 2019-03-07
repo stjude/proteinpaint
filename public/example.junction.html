@@ -4,7 +4,7 @@
 	 <meta charset="utf-8">
 </head>
 <body>
-	
+
 <script src="bin/proteinpaint.js" charset="utf-8"></script>
 
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
@@ -15,6 +15,25 @@
 runproteinpaint({
 	holder:document.getElementById('aaa'),
 	parseurl:true,
+	nobox:1,
+	block:1,
+	position:'chr16:3775054-3930727',
+	genome:'hg19',
+	//gene:'tp53', dataset:'pediatric',
+	nativetracks:'refgene',
+	width:600,
+
+
+	tracks:[
+
+
+		{
+			type:'junction',
+			name:'test',
+			file:'hg19/TARGET/junction/ball/10-PANWHJ-diagnosis-SJCOGALL010890_D2.gz'
+		},
+
+	],
 })
 </script>
 

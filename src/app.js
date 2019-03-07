@@ -42,7 +42,7 @@ launchsamplematrix()
 launchmdssamplescatterplot
 launchmdssurvivalplot
 launch_fimo
-
+launch_termdb
 
 */
 
@@ -748,6 +748,11 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		}
 	}
 
+	if(arg.display_termdb) {
+		launch_termdb( arg.display_termdb, holder )
+		return
+	}
+
 	if(arg.fimo) {
 		launch_fimo( arg.fimo, holder )
 		return
@@ -932,14 +937,43 @@ function launchmdssurvivalplot(arg, holder) {
 }
 
 
-function launch_fimo ( arg, holder ) {
+
+function launch_termdb ( arg, holder ) {
 	if(!arg.genome) {
-		error0('missing genome for mdssurvivalplot')
+		error0('missing genome for termdb')
 		return
 	}
 	const genome = genomes[arg.genome]
 	if(!genome) {
-		error0('invalid genome for mdssurvivalplot')
+		error0('invalid genome for termdb')
+		return
+	}
+	arg.genome = genome
+	if(!arg.dslabel) {
+		error0('missing dslabel for termdb')
+		return
+	}
+	arg.mds = genome.datasets[ arg.dslabel ]
+	if(!arg.mds) {
+		error0('unknown dataset for termdb')
+		return
+	}
+	arg.div = holder
+	import('./mds.termdb').then(_=>{
+		_.init(arg)
+	})
+}
+
+
+
+function launch_fimo ( arg, holder ) {
+	if(!arg.genome) {
+		error0('missing genome for fimo')
+		return
+	}
+	const genome = genomes[arg.genome]
+	if(!genome) {
+		error0('invalid genome for fimo')
 		return
 	}
 	arg.genome = genome
@@ -974,7 +1008,7 @@ function launchhic(hic, holder) {
 
 
 
-async function launchsamplematrix(cfg, holder) {
+function launchsamplematrix(cfg, holder) {
 	if(!cfg.genome) {
 		error0('missing genome for launching samplematrix')
 		return
@@ -994,8 +1028,9 @@ async function launchsamplematrix(cfg, holder) {
 		cfg.string2pos = string2pos
 		cfg.invalidcoord = invalidcoord
 		cfg.block = import('./block.js')
-		const sjcharts = await getsjcharts()
-		sjcharts.dthm( cfg )
+		getsjcharts(sjcharts => {
+			sjcharts.dthm( cfg )
+		})
 	}
 	else {
 		import('./samplematrix').then(_=>{
@@ -1072,7 +1107,7 @@ function launchgeneview(arg, holder) {
 
 
 
-async function launchblock(arg,holder) {
+function launchblock(arg,holder) {
 	/*
 	launch genome browser, rather than gene-view
 	may load a study file at same time, to add as .genome.tkset[]
@@ -1174,13 +1209,17 @@ async function launchblock(arg,holder) {
 		}
 	} else if(arg.positionbygene) {
 		try {
-			const data = await client.dofetch('genelookup',{deep:1,input:arg.positionbygene,genome:arg.genome})
-			if(data.error) throw data.error
-			if(!data.gmlst || data.gmlst.length==0) throw 'No gene found by '+arg.positionbygene
-			const gm = data.gmlst[0]
-			blockinitarg.chr = gm.chr
-			blockinitarg.start = gm.start
-			blockinitarg.stop = gm.stop
+			client.dofetch('genelookup',{
+				deep:1,input:arg.positionbygene,
+				genome:arg.genome
+			}).then(data=>{
+				if(data.error) throw data.error
+				if(!data.gmlst || data.gmlst.length==0) throw 'No gene found by '+arg.positionbygene
+				const gm = data.gmlst[0]
+				blockinitarg.chr = gm.chr
+				blockinitarg.start = gm.start
+				blockinitarg.stop = gm.stop
+			})
 		} catch(e){
 			error0(e)
 		}

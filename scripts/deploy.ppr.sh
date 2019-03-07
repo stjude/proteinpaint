@@ -15,7 +15,6 @@ mkdir tmpbuild/dataset
 mkdir tmpbuild/src
 
 cp server.js tmpbuild/
-cp public/index.html tmpbuild/public/
 cp genome/* tmpbuild/genome/
 cp dataset/* tmpbuild/dataset/
 cp src/common.js src/vcf.js src/bulk* src/tree.js tmpbuild/src/
