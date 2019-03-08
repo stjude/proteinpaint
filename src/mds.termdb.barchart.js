@@ -111,6 +111,7 @@ export function barchart_make ( arg ) {
 		color:'black'
 	})
 
+	// console.log(arg)
 	// Y axis scale toggle 
 
 	scale_btn.on('click',()=>{ 
@@ -147,7 +148,7 @@ export function barchart_make ( arg ) {
 
 		// X axis
 		svg.append('text')
-		.text(j[0])
+		.text(j['label'])
 		.attr("transform", "translate("+ (x+barwidth/2) +","+ (axisheight+4) +") rotate(-65)")
 		.attr('text-anchor','end')
 		.attr('font-size',label_fontsize)
@@ -158,9 +159,9 @@ export function barchart_make ( arg ) {
 		// bars for barplot
 		svg.append('rect')
 		.attr('x',x)
-		.attr('y',axisheight-sf*j[1])
+		.attr('y',axisheight - (sf * j['value']))
 		.attr('width',barwidth)
-		.attr('height',sf*j[1])
+		.attr('height',sf * j['value'])
 		.attr('fill','#901739')
 		x+=barwidth+barspace
 	}
@@ -180,11 +181,11 @@ function set_yscale ( arg ) {
 
 
 	// get min/max from bar numeric values
-	let min = arg.items[0][1],
+	let min = arg.items[0]['value'],
 		max = min
 	for( let i of arg.items ) {
-		min = Math.min( min, i[1] )
-		max = Math.max( max, i[1] )
+		min = Math.min( min, i['value'] )
+		max = Math.max( max, i['value'] )
 	}
 
 
@@ -206,7 +207,7 @@ function get_max_labelheight ( arg, fontsize, svg ) {
 
 	for(const i of arg.items) {
 		svg.append('text')
-			.text( i[0] )
+			.text( i['label'] )
 			.attr('font-family', client.font)
 			.attr('font-size', fontsize)
 			.each( function() {
