@@ -42,6 +42,33 @@ export function barchart_make ( arg ) {
 	maxvalue=0
 
 	const items_len = arg.items.length
+	const button_row = arg.holder.append('div')
+		.style('height','30px')
+		.style('margin','2px 0')
+	
+	button_row.append('span')
+		.text('Y Axis - Log Scale')
+		.style('font-size','.8em')
+		.style('margin','10px 0')
+		.style('position', 'absolute')
+		.style('right','60px')
+	
+	const scale_btn = button_row.append('input')
+		.attr('type', 'checkbox')
+		.attr('class','scale_switch')
+		.style('position', 'absolute')
+		.style('margin','10px 0')
+		.style('right','40px')
+	
+	const button = button_row.append('div')
+		.style('display','inline-block')
+		.style('right','200px')
+		.style('position', 'absolute')
+		.style('margin-top','5px')
+		.style('font-size','.8em')
+		.attr('class','sja_menuoption')
+		.text('CROSSTAB')
+
 	const svg = arg.holder.append('svg')
 	const axisg=svg.append('g')
 
@@ -85,22 +112,9 @@ export function barchart_make ( arg ) {
 	})
 
 	// Y axis scale toggle 
-	svg.append('text')
-	.text('Y axis log scale')
-	.attr("transform", "translate("+ (svg_width - 70) +"," + (space+5) + ")")
-	.attr('text-anchor','end')
-	.attr('font-size',label_fontsize)
-	.attr('font-family',client.font)
-	.attr('dominant-baseline','central')
 
-	d3selectAll('.sja_pane').append('input')
-		.attr('type', 'checkbox')
-		.attr('id','scale_switch')
-		.style('position', 'absolute')
-		.style('top', '60px')
-		.style('right','120px')
-		.on('change', function(){
-			if (d3select('#scale_switch').property('checked') == false){
+	scale_btn.on('click',()=>{ 
+			if (d3select('.scale_switch').property('checked') == false){
 				axisg.attr('transform','translate('+yaxis_width+','+space+')')
 				.call(axisLeft().scale(
 					scaleLinear().domain([yscale_max,0]).range([0,barheight])
