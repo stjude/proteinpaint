@@ -4,6 +4,7 @@ import * as common from './common'
 //import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {barchart_make} from './mds.termdb.barchart'
+//import {crosstabulate} from './mds.termdb.crosstabulate'
 
 /*
 
@@ -12,7 +13,11 @@ init() accepts following triggers:
 - show term tree, for selecting a term (what are selectable?), no graph buttons
 
 init accepts obj{}
-obj has modifiers for modifying the behavior/display of the term tree
+modifiers:
+	obj has modifiers for modifying the behavior/display of the term tree
+	obj.default_rootterm
+		.modifier_click_term() is a modifier
+
 
 
 
@@ -53,8 +58,11 @@ obj{}:
 .genome {}
 .mds{}
 .div
+.default_rootterm{}
+	.modifier_click_term()
 */
-window.obj = obj
+
+	window.obj = obj // for testing
 
 	obj.errdiv = obj.div.append('div')
 	obj.treediv = obj.div.append('div')
@@ -74,7 +82,6 @@ window.obj = obj
 
 		// to allow other triggers
 
-
 	} catch(e) {
 		obj.errdiv.text('Error: '+ (e.message||e) )
 		if(e.stack) console.log(e.stack)
@@ -89,7 +96,6 @@ async function show_default_rootterm ( obj ) {
 
 also for showing term tree, allowing to select certain terms
 
-obj has modifiers to modify how to print the terms
 
 */
 	const arg = {
@@ -109,6 +115,13 @@ obj has modifiers to modify how to print the terms
 			term: i,
 			isroot: 1,
 		}
+
+		// pass on modifier
+		if( obj.default_rootterm.modifier_click_term ) {
+			arg.modifier_click_term = obj.default_rootterm.modifier_click_term
+		}
+		// maybe other type of modifiers too
+
 		print_one_term( arg, obj )
 	}
 }
@@ -128,6 +141,9 @@ arg{}
 	.isleaf
 	...
 .isroot
+
+possible modifiers:
+.modifier_click_term() callback function
 */
 
 	const term = arg.term
@@ -138,13 +154,29 @@ arg{}
 	*/
 	const row = arg.row.append('div')
 
-	may_make_term_foldbutton( term, row, arg.row, obj )
+	may_make_term_foldbutton( arg, row, obj )
 
 	// term name
-	row.append('div')
+	const namebox = row.append('div')
 		.style('display','inline-block')
 		.style('padding','5px 3px 5px 1px')
 		.html( term.name )
+
+	if( arg.modifier_click_term ) {
+		/*
+		a modifier to be applied to namebox
+		for clicking box and collect this term and done
+		will not render remaining buttons
+		*/
+		namebox
+			.attr('class', 'sja_menuoption')
+			.style('margin-left','5px')
+			.on('click',()=>{
+				arg.modifier_click_term( term )
+			})
+		return
+	}
+
 
 	// term function buttons
 
@@ -179,19 +211,41 @@ later may define a specific rule for enabling cross-tabulating
 		obj.tip.clear()
 			.showunder( button.node() )
 
+		const treediv = obj.tip.d.append('div')
+		const errdiv = obj.tip.d.append('div')
+
 		const obj2 = {
 			genome: obj.genome,
 			mds: obj.mds,
+			div: treediv,
 			default_rootterm: {
-				// add modifier
-				allow_select_term:1
+				// add click handler as the modifier to tree display
+				modifier_click_term: (term2) => {
+					// term2 is selected
+					if(term2.id == term.id) {
+						errdiv.text('Cannot select the same term')
+						return
+					}
+					obj.tip.hide()
+					const c = button.node().getBoundingClientRect()
+					const pane = client.newpane({ x: c.x+100, y: c.y })
+					pane.header.html( term.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+term2.name )
+					/*
+					crosstabulate( {
+						obj: obj,
+						term1: term,
+						term2: term2,
+						div: pane.body
+					})
+					*/
+				}
 			},
-			div: obj.tip.d
 		}
 
 		init( obj2 )
 	})
 }
+
 
 
 
@@ -313,15 +367,21 @@ such conditions may be carried by obj
 
 
 
-function may_make_term_foldbutton ( term, buttonholder, row, obj ) {
+function may_make_term_foldbutton ( arg, buttonholder, obj ) {
 /*
 may show expand/fold button for a term
+modifiers available from arg also needs to be propagated to children
+
+arg{}
+	.term
+	.row
+		the parent of buttonholder for creating the div for children terms
+	possible modifiers
 
 buttonholder: div in which to show the button, term label is also in it
-row: the parent of buttonholder for creating the div for children terms
 */
 
-	if(term.isleaf) {
+	if(arg.term.isleaf) {
 		// is leaf term, no button
 		return
 	}
@@ -330,7 +390,7 @@ row: the parent of buttonholder for creating the div for children terms
 		isloading = false
 
 	// row to display children terms
-	const childrenrow = row.append('div')
+	const childrenrow = arg.row.append('div')
 		.style('display','none')
 		.style('padding-left', '30px')
 
@@ -363,7 +423,7 @@ row: the parent of buttonholder for creating the div for children terms
 			genome: obj.genome.name,
 			dslabel: obj.mds.label,
 			get_children: {
-				id: term.id
+				id: arg.term.id
 			}
 		}
 		client.dofetch('termdb', param)
@@ -376,6 +436,8 @@ row: the parent of buttonholder for creating the div for children terms
 					{
 						term: cterm,
 						row: childrenrow,
+						// propagate modifiers
+						modifier_click_term: arg.modifier_click_term,
 					},
 					obj
 				)
