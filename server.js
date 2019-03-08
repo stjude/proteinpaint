@@ -9511,7 +9511,15 @@ function termdb_trigger_barchart ( q, res, tdb, ds ) {
 			}
 		}
 
-		res.send({ lst: [ ...value2count ].sort((i,j)=>j[1]-i[1]) })
+		// format to {} to return to client
+		const lst = []
+		for(const [n,v] of [ ...value2count].sort((i,j)=>j[1]-i[1]) ) {
+			lst.push({
+				label: n,
+				value: v
+			})
+		}
+		res.send({ lst: lst })
 		return true
 	}
 
@@ -9537,7 +9545,9 @@ function termdb_trigger_barchart ( q, res, tdb, ds ) {
 		let bins = []
 		if( nb.fixed_bins ) {
 			for(const i of nb.fixed_bins) {
-				const copy = { count: 0 }
+				const copy = {
+					value: 0
+				}
 				for(const k in i) {
 					copy[ k ] = i[ k ]
 				}
@@ -9553,9 +9563,9 @@ function termdb_trigger_barchart ( q, res, tdb, ds ) {
 				bins.push({
 					start: v,
 					stop: v2,
-					count: 0,
+					value: 0,
 					startinclusive:1,
-					label: v+' to '+v2,
+					name: v+' to '+v2,
 				})
 				v += nb.auto_bins.bin_size
 			}
@@ -9569,12 +9579,12 @@ function termdb_trigger_barchart ( q, res, tdb, ds ) {
 				if( !b.startinclusive && v <= b.start ) continue
 				if( b.stopinclusive   && v >  b.stop  ) continue
 				if( !b.stopinclusive  && v >= b.stop  ) continue
-				b.count++
+				b.value++
 				break
 			}
 		}
 		
-		res.send({ lst: bins.map( i=> [ i.label, i.count ] ) })
+		res.send({ lst: bins.map( i => {return {name: i.name, value: i.value}} ) })
 		return true
 	}
 
