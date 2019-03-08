@@ -52,3 +52,4 @@ p4/node_modules/
 p4/public/bin/*
 p4/config.json
 p4/public/dev.html
+.vscode/launch.json
