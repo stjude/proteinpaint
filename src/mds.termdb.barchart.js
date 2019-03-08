@@ -2,7 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {axisLeft} from 'd3-axis'
 import {format as d3format} from 'd3-format'
-import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
+import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import { stringify } from 'querystring';
 
@@ -55,7 +55,7 @@ export function barchart_make ( arg ) {
 
 	// set y axis height
 
-	const yaxis_width = 50
+	const yaxis_width = 70
 
 	/* plot vertical bars
 	each bar has equal width
@@ -63,9 +63,11 @@ export function barchart_make ( arg ) {
 	plot item labels under bar, with 45. rotation
 	*/
 	
-	// const barwidth = barchart_setbarwidth( arg )
-	svg.attr('width',items_len*(barwidth+barspace)+(space*2)+yaxis_width)
-	.attr('height',axisheight+max_label_height+space)
+	// define svg height and width
+	const svg_width = items_len*(barwidth+barspace)+(space*2)+yaxis_width,
+	svg_height = axisheight+max_label_height+space
+	svg.attr('width', svg_width)
+	.attr('height', svg_height)
 
 
 	// Y axis
@@ -82,7 +84,47 @@ export function barchart_make ( arg ) {
 		color:'black'
 	})
 
-	// barplot format
+	// Y axis scale toggle 
+	svg.append('text')
+	.text('Y axis log scale')
+	.attr("transform", "translate("+ (svg_width - 70) +"," + (space+5) + ")")
+	.attr('text-anchor','end')
+	.attr('font-size',label_fontsize)
+	.attr('font-family',client.font)
+	.attr('dominant-baseline','central')
+
+	d3selectAll('.sja_pane').append('input')
+		.attr('type', 'checkbox')
+		.attr('id','scale_switch')
+		.style('position', 'absolute')
+		.style('top', '60px')
+		.style('right','120px')
+		.on('change', function(){
+			if (d3select('#scale_switch').property('checked') == false){
+				axisg.attr('transform','translate('+yaxis_width+','+space+')')
+				.call(axisLeft().scale(
+					scaleLinear().domain([yscale_max,0]).range([0,barheight])
+					)
+					.tickFormat(d3format('d'))
+				)
+			} else {
+				axisg.attr('transform','translate('+yaxis_width+','+space+')')
+				.call(axisLeft().scale(
+					scaleLog().domain([yscale_max,1]).range([0,barheight])
+					)
+					.ticks(10, d3format('d'))
+				)
+			}
+			client.axisstyle({
+				axis:axisg,
+				showline:true,
+				fontsize:barwidth*.8,
+				color:'black'
+			})
+		})
+
+	// barplot design
+
 	let x=yaxis_width+space
 	const sf=barheight/yscale_max
 
