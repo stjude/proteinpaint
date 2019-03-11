@@ -4,7 +4,6 @@ import * as common from './common'
 //import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {barchart_make} from './mds.termdb.barchart'
-//import {crosstabulate} from './mds.termdb.crosstabulate'
 
 /*
 
@@ -24,13 +23,15 @@ modifiers:
 
 ********************** EXPORTED
 init()
+may_make_term_crosstabulatebutton
+
 ********************** INTERNAL
 show_default_rootterm
 print_one_term
 may_make_term_foldbutton
 may_make_term_graphbuttons
-may_make_term_crosstabulatebutton
 term_addbutton_barchart
+
 
 
 Notes:
@@ -182,69 +183,13 @@ possible modifiers:
 
 	may_make_term_graphbuttons( term, row, obj )
 
-	may_make_term_crosstabulatebutton( term, row, obj )
+	//may_make_term_crosstabulatebutton( term, row, obj )
 }
 
 
 
-function may_make_term_crosstabulatebutton ( term, row, obj ) {
-/*
-add button for cross-tabulating
-currently defaults this to barchart-equipped terms
-later may define a specific rule for enabling cross-tabulating
-*/
-	if(!term.graph || !term.graph.barchart ) return
 
-	const button = row.append('div')
-		.style('display','inline-block')
-		.style('margin-left','20px')
-		.style('padding','3px 5px')
-		.style('font-size','.8em')
-		.attr('class','sja_menuoption')
-		.text('CROSSTAB')
 
-	// click button to show term tree
-	// generate a temp obj for running init()
-
-	button.on('click',()=>{
-
-		obj.tip.clear()
-			.showunder( button.node() )
-
-		const treediv = obj.tip.d.append('div')
-		const errdiv = obj.tip.d.append('div')
-
-		const obj2 = {
-			genome: obj.genome,
-			mds: obj.mds,
-			div: treediv,
-			default_rootterm: {
-				// add click handler as the modifier to tree display
-				modifier_click_term: (term2) => {
-					// term2 is selected
-					if(term2.id == term.id) {
-						errdiv.text('Cannot select the same term')
-						return
-					}
-					obj.tip.hide()
-					const c = button.node().getBoundingClientRect()
-					const pane = client.newpane({ x: c.x+100, y: c.y })
-					pane.header.html( term.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+term2.name )
-					/*
-					crosstabulate( {
-						obj: obj,
-						term1: term,
-						term2: term2,
-						div: pane.body
-					})
-					*/
-				}
-			},
-		}
-
-		init( obj2 )
-	})
-}
 
 
 
@@ -348,7 +293,8 @@ such conditions may be carried by obj
 			const plot = {
 				items: data.lst,
 				holder: panel.body,
-				term: term
+				term: term,
+				obj: obj,
 			}
 
 			barchart_make( plot )

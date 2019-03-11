@@ -4,7 +4,8 @@ import {axisLeft} from 'd3-axis'
 import {format as d3format} from 'd3-format'
 import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import { stringify } from 'querystring';
+import { stringify } from 'querystring'; // what's this?
+import {init} from './mds.termdb'
 
 
 
@@ -23,14 +24,16 @@ export function barchart_make ( arg ) {
 	[0] item name
 	[1] count
 .holder
+.obj
 .term{}
+	.id
 	.graph.barchart{}
 		provides predefined chart customization, to be implemented:
 		- fixed y scale
 		- log scale
+
 */
 
-	// console.log(arg) // for testing only
 
 	//constant variables
 	let barheight=300,
@@ -43,23 +46,44 @@ export function barchart_make ( arg ) {
 
 	const items_len = arg.items.length
 	const button_row = arg.holder.append('div')
-		.style('height','30px')
-		.style('margin','2px 0')
+		.style('margin','10px 0px')
+	const error_row = arg.holder.append('div')
 	
 	button_row.append('span')
 		.text('Y Axis - Log Scale')
+		/*
 		.style('font-size','.8em')
 		.style('margin','10px 0')
 		.style('position', 'absolute')
 		.style('right','60px')
+		*/
 	
 	const scale_btn = button_row.append('input')
 		.attr('type', 'checkbox')
+		/*
 		.attr('class','scale_switch')
 		.style('position', 'absolute')
 		.style('margin','10px 0')
 		.style('right','40px')
-	
+		*/
+
+	const legend_div = arg.holder.append('div')
+		.style('margin','10px 0px')
+
+	const svg = arg.holder.append('svg')
+
+	addbutton_crosstabulate({
+		term: arg.term,
+		button_row: button_row,
+		obj: obj,
+		plot:{
+			svg: svg,
+			legend_div: legend_div,
+			error_row: error_row,
+		}
+	})
+
+/*
 	const button = button_row.append('div')
 		.style('display','inline-block')
 		.style('right','200px')
@@ -68,8 +92,8 @@ export function barchart_make ( arg ) {
 		.style('font-size','.8em')
 		.attr('class','sja_menuoption')
 		.text('CROSSTAB')
+		*/
 
-	const svg = arg.holder.append('svg')
 	const axisg=svg.append('g')
 
 	// set y axis min/max scale
@@ -218,3 +242,132 @@ function get_max_labelheight ( arg, fontsize, svg ) {
 
 	return textwidth
 }
+
+
+
+function addbutton_crosstabulate ( arg ) {
+/*
+add button for cross-tabulating
+currently defaults this to barchart-equipped terms
+later may define a specific rule for enabling cross-tabulating
+
+.term
+.button_row
+.obj
+.plot{}
+
+*/
+
+	const term1 = arg.term
+
+	if(!term1.graph || !term1.graph.barchart ) return
+
+	const button = arg.button_row.append('div')
+		.style('display','inline-block')
+		.style('margin-left','20px')
+		.attr('class','sja_menuoption')
+		.text('CROSSTAB')
+
+	// click button to show term tree
+	// generate a temp obj for running init()
+
+	button.on('click',()=>{
+
+		arg.obj.tip.clear()
+			.showunder( button.node() )
+
+		const treediv = arg.obj.tip.d.append('div')
+		const errdiv = arg.obj.tip.d.append('div')
+
+		const obj2 = {
+			genome: arg.obj.genome,
+			mds: arg.obj.mds,
+			div: treediv,
+			default_rootterm: {
+				// add click handler as the modifier to tree display
+				modifier_click_term: (term2) => {
+					// term2 is selected
+					if(term2.id == term1.id) {
+						window.alert('Cannot select the same term')
+						return
+					}
+					arg.obj.tip.hide()
+
+					crosstabulate_2terms( {
+						term1: {
+							id: term1.id
+						},
+						term2: {
+							id: term2.id
+						},
+						obj: arg.obj
+					})
+					.then( data=>{
+						const arg2 = {
+							items: data.lst,
+							obj: arg.obj,
+						}
+						for(const k in arg.plot) arg2[k] = arg.plot[k]
+						plot_stackbar( arg2 )
+					})
+					.catch(e=>{
+						window.alert( e.message || e)
+						if(e.stack) console.log(e.stack)
+					})
+				}
+			},
+		}
+
+		init( obj2 )
+	})
+}
+
+
+
+function plot_stackbar ( arg ) {
+/*
+.items[ {} ]
+	.label
+	.lst[]
+		.label
+		.value
+.obj
+.svg
+.legend_div
+*/
+	console.log( arg.items )
+}
+
+
+
+
+function crosstabulate_2terms ( arg ) {
+/*
+.term1{}
+.term2{}
+.obj{}
+
+for numeric term:
+	if is based on custom binning, must return the binning scheme
+
+return promise
+*/
+	const param = {
+		crosstab2term: 1,
+		term1:{
+			id: arg.term1.id
+		},
+		term2:{
+			id: arg.term2.id
+		},
+		genome: arg.obj.genome.name,
+		dslabel: arg.obj.mds.label
+	}
+	return client.dofetch('termdb', param)
+	.then(data=>{
+		if(data.error) throw 'error cross-tabulating: '+data.error
+		console.log(data.lst)
+		return data.lst
+	})
+}
+
