@@ -2,7 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {axisLeft} from 'd3-axis'
 import {format as d3format} from 'd3-format'
-import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog} from 'd3-scale'
+import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import { stringify } from 'querystring'; // what's this?
 import {init} from './mds.termdb'
@@ -45,32 +45,27 @@ export function barchart_make ( arg ) {
 	maxvalue=0
 
 	const items_len = arg.items.length
+
+	// initiate holders
+
 	const button_row = arg.holder.append('div')
 		.style('margin','10px 0px')
-	const error_row = arg.holder.append('div')
-	
-	button_row.append('span')
-		.text('Y Axis - Log Scale')
-		/*
-		.style('font-size','.8em')
-		.style('margin','10px 0')
-		.style('position', 'absolute')
-		.style('right','60px')
-		*/
-	
-	const scale_btn = button_row.append('input')
-		.attr('type', 'checkbox')
-		/*
-		.attr('class','scale_switch')
-		.style('position', 'absolute')
-		.style('margin','10px 0')
-		.style('right','40px')
-		*/
 
 	const legend_div = arg.holder.append('div')
 		.style('margin','10px 0px')
 
 	const svg = arg.holder.append('svg')
+
+
+	// fill in buttons
+	
+	button_row.append('span')
+		.text('Y Axis - Log Scale')
+	
+	const scale_btn = button_row.append('input')
+		.attr('type', 'checkbox')
+
+
 
 	addbutton_crosstabulate({
 		term: arg.term,
@@ -79,20 +74,9 @@ export function barchart_make ( arg ) {
 		plot:{
 			svg: svg,
 			legend_div: legend_div,
-			error_row: error_row,
 		}
 	})
 
-/*
-	const button = button_row.append('div')
-		.style('display','inline-block')
-		.style('right','200px')
-		.style('position', 'absolute')
-		.style('margin-top','5px')
-		.style('font-size','.8em')
-		.attr('class','sja_menuoption')
-		.text('CROSSTAB')
-		*/
 
 	const axisg=svg.append('g')
 
@@ -336,6 +320,24 @@ function plot_stackbar ( arg ) {
 .legend_div
 */
 	console.log( arg.items )
+
+	// to get 
+	const term2values = new Set()
+	for(const i of arg.items) {
+		for(const j of i.lst) {
+			term2values.add( j.label )
+		}
+	}
+
+	let term2valuecolor
+	if( term2values.size > 10 ) {
+		term2valuecolor = scaleOrdinal( schemeCategory20 )
+	} else {
+		term2valuecolor = scaleOrdinal( schemeCategory10 )
+	}
+
+	//
+
 }
 
 
