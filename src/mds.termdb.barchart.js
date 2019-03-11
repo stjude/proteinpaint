@@ -41,6 +41,7 @@ export function barchart_make ( arg ) {
 	maxlabelwidth=0,
 	maxvalue=0
 
+	const term_name = arg.term.name.replace(/\s/g, '')
 	const items_len = arg.items.length
 	const button_row = arg.holder.append('div')
 		.style('height','30px')
@@ -56,11 +57,12 @@ export function barchart_make ( arg ) {
 	const scale_btn = button_row.append('input')
 		.attr('type', 'checkbox')
 		.attr('class','scale_switch')
+		.attr('id',term_name)
 		.style('position', 'absolute')
 		.style('margin','10px 0')
 		.style('right','40px')
 	
-	const button = button_row.append('div')
+	const crosstab_btn = button_row.append('div')
 		.style('display','inline-block')
 		.style('right','200px')
 		.style('position', 'absolute')
@@ -96,12 +98,14 @@ export function barchart_make ( arg ) {
 	svg.attr('width', svg_width)
 	.attr('height', svg_height)
 
+	// define Y axis - linear and log
+
+	const y_linear_scale = scaleLinear().domain([yscale_max,0]).range([0,barheight])
+	const y_log_scale = scaleLog().domain([yscale_max,1]).range([0,barheight])
 
 	// Y axis
 	axisg.attr('transform','translate('+yaxis_width+','+space+')')
-		.call(axisLeft().scale(
-			scaleLinear().domain([yscale_max,0]).range([0,barheight])
-			)
+		.call(axisLeft().scale(y_linear_scale)
 			.tickFormat(d3format('d'))
 		)
 	client.axisstyle({
@@ -111,37 +115,9 @@ export function barchart_make ( arg ) {
 		color:'black'
 	})
 
-	// console.log(arg)
-	// Y axis scale toggle 
-
-	scale_btn.on('click',()=>{ 
-			if (d3select('.scale_switch').property('checked') == false){
-				axisg.attr('transform','translate('+yaxis_width+','+space+')')
-				.call(axisLeft().scale(
-					scaleLinear().domain([yscale_max,0]).range([0,barheight])
-					)
-					.tickFormat(d3format('d'))
-				)
-			} else {
-				axisg.attr('transform','translate('+yaxis_width+','+space+')')
-				.call(axisLeft().scale(
-					scaleLog().domain([yscale_max,1]).range([0,barheight])
-					)
-					.ticks(10, d3format('d'))
-				)
-			}
-			client.axisstyle({
-				axis:axisg,
-				showline:true,
-				fontsize:barwidth*.8,
-				color:'black'
-			})
-		})
-
 	// barplot design
 
 	let x=yaxis_width+space
-	const sf=barheight/yscale_max
 
 	for(let i=0; i<items_len; i++) {
 		const j=arg.items[i]
@@ -158,13 +134,48 @@ export function barchart_make ( arg ) {
 
 		// bars for barplot
 		svg.append('rect')
+		.attr('id',j['label'].replace(/\s|\(|\)|\/|\'/g, ''))
 		.attr('x',x)
-		.attr('y',axisheight - (sf * j['value']))
+		.attr('y',y_linear_scale(j['value']))
 		.attr('width',barwidth)
-		.attr('height',sf * j['value'])
+		.attr('height',axisheight - y_linear_scale(j['value']))
 		.attr('fill','#901739')
 		x+=barwidth+barspace
 	}
+
+	// Y axis scale toggle 
+
+	d3select('#' + term_name).on('click',()=>{ 
+		if (d3select('#' + term_name).property('checked') == false){
+			axisg.attr('transform','translate('+yaxis_width+','+space+')')
+			.call(axisLeft().scale(y_linear_scale)
+				.tickFormat(d3format('d'))
+			)
+			for(let i=0; i<items_len; i++) {
+				const j=arg.items[i]
+				d3select('#' + j['label'].replace(/\s|\(|\)|\/|\'/g, ''))
+				.attr('y',y_linear_scale(j['value']))
+				.attr('height',axisheight - y_linear_scale(j['value']))
+			}
+		} else {
+			axisg.attr('transform','translate('+yaxis_width+','+space+')')
+			.call(axisLeft().scale(y_log_scale)
+				.ticks(10, d3format('d'))
+			)
+			for(let i=0; i<items_len; i++) {
+				const j=arg.items[i]
+				d3select('#' + j['label'].replace(/\s|\(|\)|\/|\'/g, ''))
+				.attr('y',y_log_scale(j['value']))
+				.attr('height',axisheight - y_log_scale(j['value']))
+			}
+		}
+		client.axisstyle({
+			axis:axisg,
+			showline:true,
+			fontsize:barwidth*.8,
+			color:'black'
+		})
+	})
 
 }
 
