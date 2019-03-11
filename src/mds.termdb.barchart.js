@@ -151,7 +151,7 @@ export function barchart_make ( arg ) {
 		const g = svg.append('g')
 			.attr('transform','translate('+(x+barwidth/2)+','+axisheight+')')
 
-		label2bar.set( j.label, g )
+		label2bar.set( j.label, g)
 
 		g.append('rect')
 			.attr('x', -barwidth/2)
@@ -164,7 +164,8 @@ export function barchart_make ( arg ) {
 	}
 
 	const bar_labels = [...label2bar.keys()]
-	console.log(label2bar)
+	const rects = [...label2bar.values()]
+	// console.log(rects)
 	// Y axis scale toggle 
 
 	scale_btn.on('click',()=>{ 
@@ -175,8 +176,8 @@ export function barchart_make ( arg ) {
 			)
 			for(let i=0; i<items_len; i++) {
 				const j=arg.items[i]
-				d3select('#' + j['label'].replace(/\s|\(|\)|\/|\'/g, ''))
-				.attr('y',y_linear_scale(j['value']))
+				d3select(label2bar.get(bar_labels[i])._groups[0][0]).selectAll('rect')
+				.attr('y',y_linear_scale(j['value'])-barheight-space)
 				.attr('height',axisheight - y_linear_scale(j['value']))
 			}
 		} else {
@@ -186,11 +187,10 @@ export function barchart_make ( arg ) {
 			)
 			for(let i=0; i<items_len; i++) {
 				const j=arg.items[i]
-				console.log(label2bar.get(bar_labels[i]) )
-				// const rect = label2bar.get(bar_labels[i])
-				// d3select('#' + j['label'].replace(/\s|\(|\)|\/|\'/g, ''))
-				// .attr('y',y_log_scale(j['value']))
-				// .attr('height',axisheight - y_log_scale(j['value']))
+				const value = (j.value !=0 ) ? j.value : 1
+				d3select(label2bar.get(bar_labels[i])._groups[0][0]).selectAll('rect')
+					.attr('y',y_log_scale(value)-barheight-space)
+					.attr('height',axisheight - y_log_scale(value))
 			}
 		}
 		client.axisstyle({
