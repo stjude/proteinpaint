@@ -54,7 +54,7 @@ export function barchart_make ( arg ) {
 		// v: <g>
 	}
 
-	const term_name = arg.term.name.replace(/\s/g, '')
+	const term_name = arg.term.name
 	const items_len = arg.items.length
 
 	// initiate holders
@@ -90,6 +90,17 @@ export function barchart_make ( arg ) {
 		plot: plot
 	})
 
+	// set y axis min/max scale
+	const [yscale_min, yscale_max] = set_yscale( plot )
+
+	// define Y axis - linear and log
+
+	plot.y_scale
+	if( plot.use_logscale ) {
+		plot.y_scale = scaleLog().domain([yscale_max,1]).range([0,plot.barheight])
+	} else {
+		plot.y_scale = scaleLinear().domain([yscale_max,0]).range([0,plot.barheight])
+	}
 
 	// initiate the plot components
 
@@ -112,12 +123,9 @@ or stacked bar plot for cross-tabulating
 plot()
 */
 
-	// set y axis min/max scale
-	const [yscale_min, yscale_max] = set_yscale( plot )
-
 	// also derive label font size
 
-	const max_label_height = get_max_labelheight( plot  )
+	const max_label_height = get_max_labelheight( plot )
 
 
 	/* plot vertical bars
@@ -134,21 +142,15 @@ plot()
 		.attr('width', svg_width)
 		.attr('height', svg_height)
 
-	// define Y axis - linear and log
-
-	let y_scale
-	if( plot.use_logscale ) {
-		y_scale = scaleLog().domain([yscale_max,1]).range([0,plot.barheight])
-	} else {
-		y_scale = scaleLinear().domain([yscale_max,0]).range([0,plot.barheight])
-	}
-
 	// Y axis
+	if( plot.items[0].lst ) {
+		// this is a stacked bar
+	} else {
 	plot.axisg
 		.attr('transform','translate('+plot.yaxis_width+','+plot.space+')')
 		.call(
 			axisLeft()
-				.scale(y_scale)
+				.scale(plot.y_scale)
 				.tickFormat(d3format('d'))
 		)
 	client.axisstyle({
@@ -157,6 +159,7 @@ plot()
 		fontsize:plot.barwidth*.8,
 		color:'black'
 	})
+	}
 
 	// if is stacked-bar, need to get color mapping for term2 values
 	let term2valuecolor
@@ -175,21 +178,17 @@ plot()
 		}
 	}
 
-
+	console.log(plot.items)
 	// plot each bar
 
 	let x = plot.yaxis_width+ plot.space
 
-	for(const item of plot.items) {
+	const xlabels = plot.svg.append('g')
+	.attr('class','xlabels')
 
-		// X axis
-		plot.svg.append('text')
-			.text(item.label)
-			.attr("transform", "translate("+ (x+plot.barwidth/2) +","+ (plot.axisheight+4) +") rotate(-65)")
-			.attr('text-anchor','end')
-			.attr('font-size',plot.label_fontsize)
-			.attr('font-family',client.font)
-			.attr('dominant-baseline','central')
+	xlabels.selectAll('.xlabels').remove()
+
+	for(const item of plot.items) {
 		
 		// bars for barplot
 		const g = plot.label2bar.get( item.label )
@@ -200,19 +199,50 @@ plot()
 
 		g.attr('transform','translate('+(x+plot.barwidth/2)+','+plot.axisheight+')')
 
-		// clear existing bars
+		// clear existing bars and axis
 		g.selectAll('*').remove()
+
+		// X axis
+		plot.svg.append('text')
+		.text(item.label)
+		.attr("transform", "translate("+ (x+plot.barwidth/2) +","+ (plot.axisheight+4) +") rotate(-65)")
+		.attr('text-anchor','end')
+		.attr('font-size',plot.label_fontsize)
+		.attr('font-family',client.font)
+		.attr('dominant-baseline','central')
 
 		if( item.lst ) {
 			// this is a stacked bar
+			for (const sub_item of item.lst){
+
+				// rect for bars
+
+				// console.log(sub_item.label, sub_item.value)
+				const index = item.lst.findIndex(x => x.value==sub_item.value)
+				g.append('rect')
+				.attr('x', -plot.barwidth/2)
+				.attr('y', plot.y_scale(sub_item.value)-plot.barheight-plot.space)
+				.attr('width',plot.barwidth)
+				.attr('height', plot.axisheight - plot.y_scale(sub_item.value))
+				.attr('fill',term2valuecolor(index))
+			}
 		} else {
 			// this is a single bar plot
+			// X axis
+			xlabels.append('text')
+				.text(item.label)
+				.attr("transform", "translate("+ (x+plot.barwidth/2) +","+ (plot.axisheight+4) +") rotate(-65)")
+				.attr('text-anchor','end')
+				.attr('font-size',plot.label_fontsize)
+				.attr('font-family',client.font)
+				.attr('dominant-baseline','central')
 
+			// rect for bars	
 			g.append('rect')
 				.attr('x', -plot.barwidth/2)
-				.attr('y', y_scale(item.value)-plot.barheight-plot.space)
+				.attr('y', plot.y_scale(item.value)-plot.barheight-plot.space)
 				.attr('width',plot.barwidth)
-				.attr('height', plot.axisheight - y_scale(item.value))
+				.attr('height', plot.axisheight - plot.y_scale(item.value))
 				.attr('fill','#901739')
 		}
 
