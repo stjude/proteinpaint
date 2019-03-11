@@ -35,14 +35,24 @@ export function barchart_make ( arg ) {
 */
 
 
-	//constant variables
-	let barheight=300,
-	barwidth=20,
-	space=5,
-	axisheight=barheight+5,
-	barspace=2,
-	maxlabelwidth=0,
-	maxvalue=0
+	// initiating the plot object
+	// it will be updated later by axis toggle or cross tabulate
+	const plot = {
+		term: arg.term,
+		items: arg.items,
+		barheight:300,
+		barwidth:20,
+		space:5,
+		axisheight: 305,
+		barspace:2,
+		maxlabelwidth:0,
+		maxvalue:0,
+		label_fontsize: 15,
+		yaxis_width: 70,
+		label2bar: new Map(),
+		// k: label of this term
+		// v: <g>
+	}
 
 	const term_name = arg.term.name.replace(/\s/g, '')
 	const items_len = arg.items.length
@@ -52,17 +62,10 @@ export function barchart_make ( arg ) {
 	const button_row = arg.holder.append('div')
 		.style('margin','10px 0px')
 
-	const legend_div = arg.holder.append('div')
+	plot.legend_div = arg.holder.append('div')
 		.style('margin','10px 0px')
 
-	const svg = arg.holder.append('svg')
-
-
-	// initiate label to bar mapping
-	const label2bar = new Map()
-	// k: label of this term
-	// v: <g>
-
+	plot.svg = arg.holder.append('svg')
 
 
 
@@ -73,33 +76,49 @@ export function barchart_make ( arg ) {
 	
 	const scale_btn = button_row.append('input')
 		.attr('type', 'checkbox')
+		/*
+		.on('change',()=>{
+			update_axis( plot )
+		})
+		*/
 
 	// button - cross tabulate
 	addbutton_crosstabulate({
 		term: arg.term,
 		button_row: button_row,
 		obj: obj,
-		plot:{
-			svg: svg,
-			label2bar: label2bar,
-			legend_div: legend_div,
-		}
+		plot: plot
 	})
 
 
-	const axisg=svg.append('g')
+	// initiate the plot components
+
+	plot.axisg = plot.svg.append('g')
+	for(const j of arg.items) {
+		plot.label2bar.set( j.label, plot.svg.append('g') )
+	}
+
+	do_plot( plot )
+}
+
+
+
+function do_plot ( plot ) {
+/*
+make the bar plot based on configs in the plot object
+called by showing the single-term plot at the beginning
+or stacked bar plot for cross-tabulating
+
+plot()
+*/
 
 	// set y axis min/max scale
-	const [yscale_min, yscale_max] = set_yscale( arg )
+	const [yscale_min, yscale_max] = set_yscale( plot )
 
 	// also derive label font size
-	const label_fontsize = 15
 
-	const max_label_height = get_max_labelheight( arg, label_fontsize, svg  )
+	const max_label_height = get_max_labelheight( plot  )
 
-	// set y axis height
-
-	const yaxis_width = 70
 
 	/* plot vertical bars
 	each bar has equal width
@@ -108,60 +127,102 @@ export function barchart_make ( arg ) {
 	*/
 	
 	// define svg height and width
-	const svg_width = items_len*(barwidth+barspace)+(space*2)+yaxis_width,
-	svg_height = axisheight+max_label_height+space
-	svg.attr('width', svg_width)
-	.attr('height', svg_height)
+	const svg_width = plot.items.length * (plot.barwidth+plot.barspace)+(plot.space*2)+plot.yaxis_width
+	const svg_height = plot.axisheight+max_label_height+plot.space
+
+	plot.svg
+		.attr('width', svg_width)
+		.attr('height', svg_height)
 
 	// define Y axis - linear and log
 
-	const y_linear_scale = scaleLinear().domain([yscale_max,0]).range([0,barheight])
-	const y_log_scale = scaleLog().domain([yscale_max,1]).range([0,barheight])
+	let y_scale
+	if( plot.use_logscale ) {
+		y_scale = scaleLog().domain([yscale_max,1]).range([0,plot.barheight])
+	} else {
+		y_scale = scaleLinear().domain([yscale_max,0]).range([0,plot.barheight])
+	}
 
 	// Y axis
-	axisg.attr('transform','translate('+yaxis_width+','+space+')')
-		.call(axisLeft().scale(y_linear_scale)
-			.tickFormat(d3format('d'))
+	plot.axisg
+		.attr('transform','translate('+plot.yaxis_width+','+plot.space+')')
+		.call(
+			axisLeft()
+				.scale(y_scale)
+				.tickFormat(d3format('d'))
 		)
 	client.axisstyle({
-		axis:axisg,
+		axis:plot.axisg,
 		showline:true,
-		fontsize:barwidth*.8,
+		fontsize:plot.barwidth*.8,
 		color:'black'
 	})
 
-	// barplot design
+	// if is stacked-bar, need to get color mapping for term2 values
+	let term2valuecolor
+	if( plot.items[0].lst ) {
+		// to get all values for term2
+		const term2values = new Set()
+		for(const i of plot.items) {
+			for(const j of i.lst) {
+				term2values.add( j.label )
+			}
+		}
+		if( term2values.size > 10 ) {
+			term2valuecolor = scaleOrdinal( schemeCategory20 )
+		} else {
+			term2valuecolor = scaleOrdinal( schemeCategory10 )
+		}
+	}
 
-	let x=yaxis_width+space
 
-	for(let i=0; i<items_len; i++) {
-		const j=arg.items[i]
+	// plot each bar
+
+	let x = plot.yaxis_width+ plot.space
+
+	for(const item of plot.items) {
 
 		// X axis
-		svg.append('text')
-		.text(j['label'])
-		.attr("transform", "translate("+ (x+barwidth/2) +","+ (axisheight+4) +") rotate(-65)")
-		.attr('text-anchor','end')
-		.attr('font-size',label_fontsize)
-		.attr('font-family',client.font)
-		.attr('dominant-baseline','central')
+		plot.svg.append('text')
+			.text(item.label)
+			.attr("transform", "translate("+ (x+plot.barwidth/2) +","+ (plot.axisheight+4) +") rotate(-65)")
+			.attr('text-anchor','end')
+			.attr('font-size',plot.label_fontsize)
+			.attr('font-family',client.font)
+			.attr('dominant-baseline','central')
 		
-
 		// bars for barplot
-		const g = svg.append('g')
-			.attr('transform','translate('+(x+barwidth/2)+','+axisheight+')')
+		const g = plot.label2bar.get( item.label )
+		if(!g) {
+			console.log('barplot unknown label: '+item.label)
+			continue
+		}
 
-		label2bar.set( j.label, g)
+		g.attr('transform','translate('+(x+plot.barwidth/2)+','+plot.axisheight+')')
 
-		g.append('rect')
-			.attr('x', -barwidth/2)
-			.attr('y', y_linear_scale(j.value)-barheight-space)
-			.attr('width',barwidth)
-			.attr('height', axisheight - y_linear_scale(j.value))
-			.attr('fill','#901739')
+		// clear existing bars
+		g.selectAll('*').remove()
 
-		x+=barwidth+barspace
+		if( item.lst ) {
+			// this is a stacked bar
+		} else {
+			// this is a single bar plot
+
+			g.append('rect')
+				.attr('x', -plot.barwidth/2)
+				.attr('y', y_scale(item.value)-plot.barheight-plot.space)
+				.attr('width',plot.barwidth)
+				.attr('height', plot.axisheight - y_scale(item.value))
+				.attr('fill','#901739')
+		}
+
+		x+=plot.barwidth+plot.barspace
 	}
+}
+
+
+function update_axis ( plot ) {
+	// TODO
 
 	const bar_labels = [...label2bar.keys()]
 	const rects = [...label2bar.values()]
@@ -200,27 +261,26 @@ export function barchart_make ( arg ) {
 			color:'black'
 		})
 	})
-
 }
 
 
 
-function set_yscale ( arg ) {
+function set_yscale ( plot ) {
 /* determine y axis range
 */
 	/* TODO if term predefines y scale, return it
-	if( arg.term.graph.barchart.fixedyscale) {
-		return arg.term.graph.barchart.fixedyscale
+	if( plot.term.graph.barchart.fixedyscale) {
+		return plot.term.graph.barchart.fixedyscale
 	}
 	*/
 
 
 	// get min/max from bar numeric values
-	let min = arg.items[0]['value'],
+	let min = plot.items[0].value,
 		max = min
-	for( let i of arg.items ) {
-		min = Math.min( min, i['value'] )
-		max = Math.max( max, i['value'] )
+	for( let i of plot.items ) {
+		min = Math.min( min, i.value )
+		max = Math.max( max, i.value )
 	}
 
 
@@ -236,15 +296,15 @@ function set_yscale ( arg ) {
 
 
 
-function get_max_labelheight ( arg, fontsize, svg ) {
+function get_max_labelheight ( plot ) {
 
 	let textwidth = 0
 
-	for(const i of arg.items) {
-		svg.append('text')
-			.text( i['label'] )
+	for(const i of plot.items) {
+		plot.svg.append('text')
+			.text( i.label )
 			.attr('font-family', client.font)
-			.attr('font-size', fontsize)
+			.attr('font-size', plot.label_fontsize)
 			.each( function() {
 				textwidth = Math.max( textwidth, this.getBBox().width )
 			})
@@ -314,12 +374,11 @@ later may define a specific rule for enabling cross-tabulating
 						obj: arg.obj
 					})
 					.then( data=>{
-						const arg2 = {
-							items: data.lst,
-							obj: arg.obj,
-						}
-						for(const k in arg.plot) arg2[k] = arg.plot[k]
-						plot_stackbar( arg2 )
+
+						// update the plot data using the server-returned new data
+						arg.plot.items = data.lst
+
+						do_plot( arg.plot )
 					})
 					.catch(e=>{
 						window.alert( e.message || e)
@@ -334,38 +393,6 @@ later may define a specific rule for enabling cross-tabulating
 }
 
 
-
-function plot_stackbar ( arg ) {
-/*
-.items[ {} ]
-	.label
-	.lst[]
-		.label
-		.value
-.obj
-.label2bar
-.legend_div
-*/
-	console.log( arg.items )
-
-	// to get 
-	const term2values = new Set()
-	for(const i of arg.items) {
-		for(const j of i.lst) {
-			term2values.add( j.label )
-		}
-	}
-
-	let term2valuecolor
-	if( term2values.size > 10 ) {
-		term2valuecolor = scaleOrdinal( schemeCategory20 )
-	} else {
-		term2valuecolor = scaleOrdinal( schemeCategory10 )
-	}
-
-	//
-
-}
 
 
 
@@ -395,8 +422,7 @@ return promise
 	return client.dofetch('termdb', param)
 	.then(data=>{
 		if(data.error) throw 'error cross-tabulating: '+data.error
-		console.log(data.lst)
-		return data.lst
+		return data
 	})
 }
 
