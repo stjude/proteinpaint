@@ -57,7 +57,15 @@ export function barchart_make ( arg ) {
 	const svg = arg.holder.append('svg')
 
 
-	// fill in buttons
+	// initiate label to bar mapping
+	const label2bar = new Map()
+	// k: label of this term
+	// v: <g>
+
+
+
+
+	// button - scale toggle
 	
 	button_row.append('span')
 		.text('Y Axis - Log Scale')
@@ -65,14 +73,14 @@ export function barchart_make ( arg ) {
 	const scale_btn = button_row.append('input')
 		.attr('type', 'checkbox')
 
-
-
+	// button - cross tabulate
 	addbutton_crosstabulate({
 		term: arg.term,
 		button_row: button_row,
 		obj: obj,
 		plot:{
 			svg: svg,
+			label2bar: label2bar,
 			legend_div: legend_div,
 		}
 	})
@@ -165,12 +173,18 @@ export function barchart_make ( arg ) {
 		
 
 		// bars for barplot
-		svg.append('rect')
-		.attr('x',x)
-		.attr('y',axisheight - (sf * j['value']))
-		.attr('width',barwidth)
-		.attr('height',sf * j['value'])
-		.attr('fill','#901739')
+		const g = svg.append('g')
+			.attr('transform','translate('+(x+barwidth/2)+','+axisheight+')')
+
+		label2bar.set( j.label, g )
+
+		g.append('rect')
+			.attr('x', -barwidth/2)
+			.attr('y', -(sf * j.value))
+			.attr('width',barwidth)
+			.attr('height', sf * j.value)
+			.attr('fill','#901739')
+
 		x+=barwidth+barspace
 	}
 
@@ -316,7 +330,7 @@ function plot_stackbar ( arg ) {
 		.label
 		.value
 .obj
-.svg
+.label2bar
 .legend_div
 */
 	console.log( arg.items )
