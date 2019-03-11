@@ -2,9 +2,10 @@ import * as client from './client'
 import * as common from './common'
 import {axisLeft} from 'd3-axis'
 import {format as d3format} from 'd3-format'
-import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog} from 'd3-scale'
+import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import { stringify } from 'querystring';
+import { stringify } from 'querystring'; // what's this?
+import {init} from './mds.termdb'
 
 
 
@@ -23,14 +24,16 @@ export function barchart_make ( arg ) {
 	[0] item name
 	[1] count
 .holder
+.obj
 .term{}
+	.id
 	.graph.barchart{}
 		provides predefined chart customization, to be implemented:
 		- fixed y scale
 		- log scale
+
 */
 
-	// console.log(arg) // for testing only
 
 	//constant variables
 	let barheight=300,
@@ -43,35 +46,47 @@ export function barchart_make ( arg ) {
 
 	const term_name = arg.term.name.replace(/\s/g, '')
 	const items_len = arg.items.length
+
+	// initiate holders
+
 	const button_row = arg.holder.append('div')
-		.style('height','30px')
-		.style('margin','2px 0')
+		.style('margin','10px 0px')
+
+	const legend_div = arg.holder.append('div')
+		.style('margin','10px 0px')
+
+	const svg = arg.holder.append('svg')
+
+
+	// initiate label to bar mapping
+	const label2bar = new Map()
+	// k: label of this term
+	// v: <g>
+
+
+
+
+	// button - scale toggle
 	
 	button_row.append('span')
 		.text('Y Axis - Log Scale')
-		.style('font-size','.8em')
-		.style('margin','10px 0')
-		.style('position', 'absolute')
-		.style('right','60px')
 	
 	const scale_btn = button_row.append('input')
 		.attr('type', 'checkbox')
-		.attr('class','scale_switch')
-		.attr('id',term_name)
-		.style('position', 'absolute')
-		.style('margin','10px 0')
-		.style('right','40px')
-	
-	const crosstab_btn = button_row.append('div')
-		.style('display','inline-block')
-		.style('right','200px')
-		.style('position', 'absolute')
-		.style('margin-top','5px')
-		.style('font-size','.8em')
-		.attr('class','sja_menuoption')
-		.text('CROSSTAB')
 
-	const svg = arg.holder.append('svg')
+	// button - cross tabulate
+	addbutton_crosstabulate({
+		term: arg.term,
+		button_row: button_row,
+		obj: obj,
+		plot:{
+			svg: svg,
+			label2bar: label2bar,
+			legend_div: legend_div,
+		}
+	})
+
+
 	const axisg=svg.append('g')
 
 	// set y axis min/max scale
@@ -133,20 +148,27 @@ export function barchart_make ( arg ) {
 		
 
 		// bars for barplot
-		svg.append('rect')
-		.attr('id',j['label'].replace(/\s|\(|\)|\/|\'/g, ''))
-		.attr('x',x)
-		.attr('y',y_linear_scale(j['value']))
-		.attr('width',barwidth)
-		.attr('height',axisheight - y_linear_scale(j['value']))
-		.attr('fill','#901739')
+		const g = svg.append('g')
+			.attr('transform','translate('+(x+barwidth/2)+','+axisheight+')')
+
+		label2bar.set( j.label, g )
+
+		g.append('rect')
+			.attr('x', -barwidth/2)
+			.attr('y', y_linear_scale(j.value)-barheight-space)
+			.attr('width',barwidth)
+			.attr('height', axisheight - y_linear_scale(j.value))
+			.attr('fill','#901739')
+
 		x+=barwidth+barspace
 	}
 
+	const bar_labels = [...label2bar.keys()]
+	console.log(label2bar)
 	// Y axis scale toggle 
 
-	d3select('#' + term_name).on('click',()=>{ 
-		if (d3select('#' + term_name).property('checked') == false){
+	scale_btn.on('click',()=>{ 
+		if (scale_btn.property('checked') == false){
 			axisg.attr('transform','translate('+yaxis_width+','+space+')')
 			.call(axisLeft().scale(y_linear_scale)
 				.tickFormat(d3format('d'))
@@ -164,9 +186,11 @@ export function barchart_make ( arg ) {
 			)
 			for(let i=0; i<items_len; i++) {
 				const j=arg.items[i]
-				d3select('#' + j['label'].replace(/\s|\(|\)|\/|\'/g, ''))
-				.attr('y',y_log_scale(j['value']))
-				.attr('height',axisheight - y_log_scale(j['value']))
+				console.log(label2bar.get(bar_labels[i]) )
+				// const rect = label2bar.get(bar_labels[i])
+				// d3select('#' + j['label'].replace(/\s|\(|\)|\/|\'/g, ''))
+				// .attr('y',y_log_scale(j['value']))
+				// .attr('height',axisheight - y_log_scale(j['value']))
 			}
 		}
 		client.axisstyle({
@@ -229,3 +253,150 @@ function get_max_labelheight ( arg, fontsize, svg ) {
 
 	return textwidth
 }
+
+
+
+function addbutton_crosstabulate ( arg ) {
+/*
+add button for cross-tabulating
+currently defaults this to barchart-equipped terms
+later may define a specific rule for enabling cross-tabulating
+
+.term
+.button_row
+.obj
+.plot{}
+
+*/
+
+	const term1 = arg.term
+
+	if(!term1.graph || !term1.graph.barchart ) return
+
+	const button = arg.button_row.append('div')
+		.style('display','inline-block')
+		.style('margin-left','20px')
+		.attr('class','sja_menuoption')
+		.text('CROSSTAB')
+
+	// click button to show term tree
+	// generate a temp obj for running init()
+
+	button.on('click',()=>{
+
+		arg.obj.tip.clear()
+			.showunder( button.node() )
+
+		const treediv = arg.obj.tip.d.append('div')
+		const errdiv = arg.obj.tip.d.append('div')
+
+		const obj2 = {
+			genome: arg.obj.genome,
+			mds: arg.obj.mds,
+			div: treediv,
+			default_rootterm: {
+				// add click handler as the modifier to tree display
+				modifier_click_term: (term2) => {
+					// term2 is selected
+					if(term2.id == term1.id) {
+						window.alert('Cannot select the same term')
+						return
+					}
+					arg.obj.tip.hide()
+
+					crosstabulate_2terms( {
+						term1: {
+							id: term1.id
+						},
+						term2: {
+							id: term2.id
+						},
+						obj: arg.obj
+					})
+					.then( data=>{
+						const arg2 = {
+							items: data.lst,
+							obj: arg.obj,
+						}
+						for(const k in arg.plot) arg2[k] = arg.plot[k]
+						plot_stackbar( arg2 )
+					})
+					.catch(e=>{
+						window.alert( e.message || e)
+						if(e.stack) console.log(e.stack)
+					})
+				}
+			},
+		}
+
+		init( obj2 )
+	})
+}
+
+
+
+function plot_stackbar ( arg ) {
+/*
+.items[ {} ]
+	.label
+	.lst[]
+		.label
+		.value
+.obj
+.label2bar
+.legend_div
+*/
+	console.log( arg.items )
+
+	// to get 
+	const term2values = new Set()
+	for(const i of arg.items) {
+		for(const j of i.lst) {
+			term2values.add( j.label )
+		}
+	}
+
+	let term2valuecolor
+	if( term2values.size > 10 ) {
+		term2valuecolor = scaleOrdinal( schemeCategory20 )
+	} else {
+		term2valuecolor = scaleOrdinal( schemeCategory10 )
+	}
+
+	//
+
+}
+
+
+
+
+function crosstabulate_2terms ( arg ) {
+/*
+.term1{}
+.term2{}
+.obj{}
+
+for numeric term:
+	if is based on custom binning, must return the binning scheme
+
+return promise
+*/
+	const param = {
+		crosstab2term: 1,
+		term1:{
+			id: arg.term1.id
+		},
+		term2:{
+			id: arg.term2.id
+		},
+		genome: arg.obj.genome.name,
+		dslabel: arg.obj.mds.label
+	}
+	return client.dofetch('termdb', param)
+	.then(data=>{
+		if(data.error) throw 'error cross-tabulating: '+data.error
+		console.log(data.lst)
+		return data.lst
+	})
+}
+
