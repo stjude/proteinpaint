@@ -9470,6 +9470,7 @@ async function handle_termdb (req, res) {
 		if( termdb_trigger_rootterm( q, res, tdb ) ) return
 		if( termdb_trigger_children( q, res, tdb ) ) return
 		if( termdb_trigger_barchart( q, res, tdb, ds ) ) return
+		if( termdb_trigger_crosstab2term( q, res, tdb, ds ) ) return
 
 		throw 'termdb: don\'t know what to do'
 
@@ -9481,7 +9482,263 @@ async function handle_termdb (req, res) {
 
 
 
+function termdb_trigger_crosstab2term ( q, res, tdb, ds ) {
+/*
+cross tabulate two terms
+
+numeric term may have custom binning
+
+for each category/bin of term1, divide its samples by category/bin of term2
+*/
+	if( !q.crosstab2term ) return false
+	// validate
+	if(!q.term1) throw 'term1 missing'
+	if(!q.term1.id) throw 'term1.id missing'
+	const term1 = tdb.termjson.map.get( q.term1.id )
+	if(!term1) throw 'term1.id invalid'
+	if(!q.term2) throw 'term2 missing'
+	if(!q.term2.id) throw 'term2.id missing'
+	const term2 = tdb.termjson.map.get( q.term2.id )
+	if(!term2) throw 'term2.id invalid'
+	if(!ds.cohort) throw 'ds.cohort missing'
+	if(!ds.cohort.annotation) throw 'ds.cohort.annotation missing'
+
+
+	// for now, require these terms to have barcharts, and use that to tell if the term is categorical/numeric
+	// later switch to term type
+
+
+	let t1categories,
+		t1bins,
+		t2bins
+
+	// premake numeric bins for t1 and t2
+	if( term1.graph.barchart.numeric_bin ) {
+		const [ bins, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
+		t1bins = bins
+	}
+	if( term2.graph.barchart.numeric_bin ) {
+		const [ bins, values ] = termdb_get_numericbins( q.term2.id, term2, ds )
+		t2bins = bins
+	}
+
+
+	if(term1.graph.barchart.categorical) {
+		t1categories = new Map()
+		// k: t1 category value
+		// v: {}
+		for(const s in ds.cohort.annotation) {
+			const sampleobj = ds.cohort.annotation[ s ]
+			const v1 = sampleobj[ q.term1.id ]
+			if( v1 == undefined) continue
+
+			if(!t1categories.has( v1 )) {
+				t1categories.set( v1, {} )
+			}
+
+			// look at term2 for this sample
+
+			if( term2.graph.barchart.categorical ) {
+
+				if( !t1categories.get( v1 ).categories ) {
+					t1categories.get( v1 ).categories = new Map()
+					// k: t2 category value
+					// v: int
+				}
+
+				const v2 = sampleobj[ q.term2.id ]
+				if( v2 == undefined ) continue
+
+				t1categories.get(v1).categories.set( v2,
+					( t1categories.get(v1).categories.get(v2) || 0 ) + 1
+				)
+
+			} else if( term2.graph.barchart.numeric_bin ) {
+				if( !t1categories.get( v1 ).bins ) {
+					// make a copy of term2 bins
+					const lst = []
+					for(const b of t2bins) {
+						const c = {
+							value: 0
+						}
+						for(const k in b) c[k] = b[k]
+						lst.push(c)
+					}
+					t1categories.get( v1 ).bins = lst
+				}
+
+				const v2 = sampleobj[ q.term2.id ]
+				if(!Number.isFinite(v2)) continue
+				for(const b of t1categories.get( v1 ).bins ) {
+					if( b.startinclusive  && v2 <  b.start ) continue
+					if( !b.startinclusive && v2 <= b.start ) continue
+					if( b.stopinclusive   && v2 >  b.stop  ) continue
+					if( !b.stopinclusive  && v2 >= b.stop  ) continue
+					b.value++
+					break
+				}
+
+			} else {
+				throw 'term2 uknown type'
+			}
+		}
+
+	} else if( term1.graph.barchart.numeric_bin ) {
+
+		// term1 bins already made
+
+		for(const s in ds.cohort.annotation) {
+			const sampleobj = ds.cohort.annotation[ s ]
+			const v1 = sampleobj[ q.term1.id ]
+			if( !Number.isFinite( v1 )) continue
+
+			// get the bin for this sample
+			let bin
+			for(const b of t1bins ) {
+				if( b.startinclusive  && v1 <  b.start ) continue
+				if( !b.startinclusive && v1 <= b.start ) continue
+				if( b.stopinclusive   && v1 >  b.stop  ) continue
+				if( !b.stopinclusive  && v1 >= b.stop  ) continue
+				bin = b
+				break
+			}
+			if(!bin) {
+				// somehow this sample does not fit to a bin
+				continue
+			}
+
+			// look at term2 for this sample
+
+			if( term2.graph.barchart.categorical ) {
+
+				if( !bin.categories ) {
+					bin.categories = new Map()
+					// k: t2 category value
+					// v: int
+				}
+
+				const v2 = sampleobj[ q.term2.id ]
+				if( v2 == undefined ) continue
+
+				bin.categories.set( v2,
+					( bin.categories.get(v2) || 0 ) + 1
+				)
+
+			} else if( term2.graph.barchart.numeric_bin ) {
+				if( !bin.bins ) {
+					// make a copy of term2 bins
+					const lst = []
+					for(const b of t2bins) {
+						const c = {
+							value: 0
+						}
+						for(const k in b) c[k] = b[k]
+						lst.push(c)
+					}
+					bin.bins = lst
+				}
+
+				const v2 = sampleobj[ q.term2.id ]
+				if(!Number.isFinite(v2)) continue
+				for(const b of bin.bins ) {
+					if( b.startinclusive  && v2 <  b.start ) continue
+					if( !b.startinclusive && v2 <= b.start ) continue
+					if( b.stopinclusive   && v2 >  b.stop  ) continue
+					if( !b.stopinclusive  && v2 >= b.stop  ) continue
+					b.value++
+					break
+				}
+
+			} else {
+				throw 'term2 uknown type'
+			}
+		}
+
+	} else {
+		throw 'term1 unknown type'
+	}
+
+	// return result
+	const lst = [] // list of t1 categories/bins
+	if(t1categories) {
+		for(const [ v1, o ] of t1categories) {
+			const group = {
+				label: v1,
+				lst: []
+			}
+
+			if( o.categories ) {
+				for(const [v2,c] of o.categories) {
+					group.lst.push({
+						label: v2,
+						value: c
+					})
+				}
+			} else if( o.bins ) {
+				for(const b of o.bins) {
+					if(b.value>0) {
+						group.lst.push({
+							label: b.label,
+							value: b.value
+						})
+					}
+				}
+				// sort
+				group.lst.sort((i,j)=>j.value-i.value)
+			} else {
+				// this term1 category has no value
+				continue
+			}
+
+			lst.push(group)
+		}
+	} else {
+		for(const b1 of t1bins ) {
+
+			const group = {
+				value: 0,
+				label: b1.label,
+				lst: []
+			}
+
+			if( b1.categories) {
+				for(const [k, v] of b1.categories) {
+					group.lst.push({
+						label: k,
+						value: v
+					})
+					group.value += v
+				}
+			} else if( b1.bins) {
+				for(const b2 of b1.bins) {
+					group.push({
+						label: b2.label,
+						value: b2.value,
+					})
+					group.value += b2.value
+				}
+			} else {
+				// means this term1 bin has no value
+				continue
+			}
+
+			lst.push( group )
+		}
+
+		lst.sort((i,j)=>j.value-i.value)
+	}
+
+	res.send({lst: lst})
+	return true
+}
+
+
+
 function termdb_trigger_barchart ( q, res, tdb, ds ) {
+/*
+create barchar solely based on server config
+no client customization yet
+*/
 	if( !q.barchart ) return false
 
 	// validate
@@ -9526,52 +9783,8 @@ function termdb_trigger_barchart ( q, res, tdb, ds ) {
 	if( term.graph.barchart.numeric_bin ) {
 		// numeric value: each bar is one bin
 
-		// step 1, get values from all samples
-		const values = []
-		for(const s in ds.cohort.annotation) {
-			const v = ds.cohort.annotation[ s ][ q.barchart.id ]
-			if( Number.isFinite( v ) ) {
-				values.push(v)
-			}
-		}
-		if(values.length==0) {
-			throw 'No numeric values found for any sample'
-		}
+		const [ bins, values ] = termdb_get_numericbins( q.barchart.id, term, ds )
 
-		// step 2, decide bins
-
-		const nb = term.graph.barchart.numeric_bin
-
-		let bins = []
-		if( nb.fixed_bins ) {
-			for(const i of nb.fixed_bins) {
-				const copy = {
-					value: 0
-				}
-				for(const k in i) {
-					copy[ k ] = i[ k ]
-				}
-				bins.push( copy )
-			}
-		} else if( nb.auto_bins ) {
-			// auto bins
-			// given start and bin size, use max from value to decide how many bins there are
-			const max = Math.max( ...values )
-			let v = nb.auto_bins.start_value
-			while( v < max ) {
-				const v2 = v + nb.auto_bins.bin_size
-				bins.push({
-					start: v,
-					stop: v2,
-					value: 0,
-					startinclusive:1,
-					name: v+' to '+v2,
-				})
-				v += nb.auto_bins.bin_size
-			}
-		} else {
-			throw 'unknown ways to decide bins'
-		}
 
 		for(const v of values) {
 			for(const b of bins) {
@@ -9584,12 +9797,70 @@ function termdb_trigger_barchart ( q, res, tdb, ds ) {
 			}
 		}
 		
-		res.send({ lst: bins.map( i => {return {name: i.name, value: i.value}} ) })
+		res.send({ lst: bins.map( i => {return {label: i.label, value: i.value}} ) })
 		return true
 	}
 
 	throw 'unknown barchart type'
 }
+
+
+
+
+function termdb_get_numericbins ( id, term, ds ) {
+	// step 1, get values from all samples
+	const values = []
+	for(const s in ds.cohort.annotation) {
+		const v = ds.cohort.annotation[ s ][ id ]
+		if( Number.isFinite( v ) ) {
+			values.push(v)
+		}
+	}
+	if(values.length==0) {
+		throw 'No numeric values found for any sample'
+	}
+
+	// step 2, decide bins
+	const nb = term.graph.barchart.numeric_bin
+
+	const bins = []
+
+	if( nb.fixed_bins ) {
+		// server predefined
+		// return copy of the bin, not direct obj, as bins will be modified later
+
+		for(const i of nb.fixed_bins) {
+			const copy = {
+				value: 0
+			}
+			for(const k in i) {
+				copy[ k ] = i[ k ]
+			}
+			bins.push( copy )
+		}
+	} else if( nb.auto_bins ) {
+		// auto bins
+		// given start and bin size, use max from value to decide how many bins there are
+		const max = Math.max( ...values )
+		let v = nb.auto_bins.start_value
+		while( v < max ) {
+			const v2 = v + nb.auto_bins.bin_size
+			bins.push({
+				start: v,
+				stop: v2,
+				value: 0,
+				startinclusive:1,
+				label: v+' to '+v2,
+			})
+			v += nb.auto_bins.bin_size
+		}
+	} else {
+		throw 'unknown ways to decide bins'
+	}
+	return [ bins, values ]
+}
+
+
 
 
 function termdb_trigger_rootterm ( q, res, tdb ) {
