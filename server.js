@@ -9506,11 +9506,15 @@ for each category/bin of term1, divide its samples by category/bin of term2
 
 	// for now, require these terms to have barcharts, and use that to tell if the term is categorical/numeric
 	// later switch to term type
+	if(!term1.graph) throw 'term1.graph missing'
+	if(!term1.graph.barchart) throw 'term1.graph.barchart missing'
+	if(!term2.graph) throw 'term2.graph missing'
+	if(!term2.graph.barchart) throw 'term2.graph.barchart missing'
 
 
-	let t1categories,
-		t1bins,
-		t2bins
+	let t1categories, // store cross-tab data
+		t1bins, // store cross-tab data
+		t2bins  // for temp use
 
 	// premake numeric bins for t1 and t2
 	if( term1.graph.barchart.numeric_bin ) {
@@ -9522,6 +9526,9 @@ for each category/bin of term1, divide its samples by category/bin of term2
 		t2bins = bins
 	}
 
+
+	/* below deal with each sample based on conditions of term1/2
+	*/
 
 	if(term1.graph.barchart.categorical) {
 		t1categories = new Map()
@@ -9664,7 +9671,8 @@ for each category/bin of term1, divide its samples by category/bin of term2
 		for(const [ v1, o ] of t1categories) {
 			const group = {
 				label: v1,
-				lst: []
+				lst: [],
+				value: 0
 			}
 
 			if( o.categories ) {
@@ -9673,6 +9681,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 						label: v2,
 						value: c
 					})
+					group.value += c
 				}
 			} else if( o.bins ) {
 				for(const b of o.bins) {
@@ -9681,14 +9690,16 @@ for each category/bin of term1, divide its samples by category/bin of term2
 							label: b.label,
 							value: b.value
 						})
+						group.value += b.value
 					}
 				}
 				// sort
-				group.lst.sort((i,j)=>j.value-i.value)
 			} else {
 				// this term1 category has no value
 				continue
 			}
+
+			group.lst.sort((i,j)=>j.value-i.value)
 
 			lst.push(group)
 		}
@@ -9696,9 +9707,9 @@ for each category/bin of term1, divide its samples by category/bin of term2
 		for(const b1 of t1bins ) {
 
 			const group = {
-				value: 0,
 				label: b1.label,
-				lst: []
+				lst: [],
+				value: 0,
 			}
 
 			if( b1.categories) {
@@ -9724,9 +9735,10 @@ for each category/bin of term1, divide its samples by category/bin of term2
 
 			lst.push( group )
 		}
-
-		lst.sort((i,j)=>j.value-i.value)
 	}
+
+	// sort the bars
+	lst.sort((i,j)=>j.value-i.value)
 
 	res.send({lst: lst})
 	return true
