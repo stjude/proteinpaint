@@ -4,7 +4,6 @@ import {axisLeft} from 'd3-axis'
 import {format as d3format} from 'd3-format'
 import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import { stringify } from 'querystring'; // what's this?
 import {init} from './mds.termdb'
 
 
@@ -47,7 +46,7 @@ export function barchart_make ( arg ) {
 	// initiating the plot object
 	// it will be updated later by axis toggle or cross tabulate
 	const plot = {
-		tip: new client.Menu({padding:'5px'}),
+		tip: new client.Menu({padding:'18px'}),
 		term: arg.term,
 		items: arg.items,
 		barheight:300, // total height of bar and y axis
@@ -60,35 +59,19 @@ export function barchart_make ( arg ) {
 		label_fontsize: 15,
 		yaxis_width: 70,
 		use_logscale:0
-		// no longer doing this
-		//label2bar: new Map(),
-		// k: label of this term
-		// v: <g>
 	}
-
-	// i don't think these are used
-	const term_name = arg.term.name
-	const items_len = arg.items.length
 
 	// a row of buttons
 
 	const button_row = arg.holder.append('div')
 		.style('margin','10px 0px')
 
-
-
 	// button - scale toggle
-	
 	button_row.append('span')
 		.text('Y Axis - Log Scale')
 	
 	plot.scale_btn = button_row.append('input')
 		.attr('type', 'checkbox')
-		/*
-		.on('change',()=>{
-			update_axis( plot )
-		})
-		*/
 
 	// button - cross tabulate
 	addbutton_crosstabulate({
@@ -160,7 +143,8 @@ plot()
 		.call(
 			axisLeft()
 				.scale(plot.y_scale)
-				.tickFormat(d3format('d'))
+				// .tickFormat(d3format('d'))
+				.ticks(10, d3format('d'))
 		)
 
 	client.axisstyle({
@@ -206,6 +190,7 @@ plot()
 		const g = plot.graph_g.append('g')
 			.attr('transform','translate('+(itemidx*(plot.barwidth+plot.barspace))+',0)')
 
+		// X axis labels	
 		g.append('text')
 			.text(item.label)
 			.attr("transform", "translate(0,4) rotate(-65)")
@@ -238,7 +223,7 @@ plot()
 							.append('div')
 							.html(
 								plot.term.name+': '+ item.label+'<br>'
-								+plot.term2.name+': '+ sub_item.label+'<br>'
+								+plot.term2.name+': '+ sub_item.label+'<span style="height: 15px; width: 15px; position: absolute; margin:0 2px; background-color:'+ term2valuecolor( sub_item.label ) +';"></span><br>'
 								+'# patients: '+sub_item.value
 								)
 					})
@@ -250,11 +235,12 @@ plot()
 			}
 		} else {
 			// this is a single bar plot
+			let value = (plot.use_logscale && item.value <= 1) ?  1.3 : item.value
 			g.append('rect')
 				.attr('x', -plot.barwidth/2)
-				.attr('y', plot.y_scale(item.value)-plot.barheight)
+				.attr('y', plot.y_scale(value)-plot.barheight)
 				.attr('width',plot.barwidth)
-				.attr('height', plot.barheight - plot.y_scale(item.value))
+				.attr('height', plot.barheight - plot.y_scale(value))
 				.attr('fill','#901739')
 				.on('mouseover',()=>{
 					plot.tip.clear()
@@ -272,20 +258,19 @@ plot()
 		}
 	}
 
+	// Y-axis toggle for log vs. linear
 	plot.scale_btn.on('click',()=>{
-		if ( plot.use_logscale){
-			plot.use_logscale = 0
-			do_plot(plot)
-		}else{
-			plot.use_logscale = 1
-			do_plot(plot)
-		}
+		if ( plot.use_logscale){plot.use_logscale = 0}
+		else { plot.use_logscale = 1 }
+		do_plot(plot)
 	})
 	
+	// legend for 2nd term selection
 	if( plot.items[0].lst ) {
 
 		plot.legend_div.selectAll('*').remove()
 
+		// legend title - term2
 		plot.legend_div.append('span')
 			.text('Legend for ' + plot.term2.name)
 			.attr('font-size',plot.label_fontsize )
@@ -293,11 +278,14 @@ plot()
 
 
 		for (const i of term2_labels){
+
+			// div for each label
 			const lenged_span = plot
 				.legend_div.append('div')
 				.style('width', '100%')
 				.style('margin', '2px')
 			
+			// square color for the label	
 			lenged_span.append('div')
 				.style('display','inline-block')
 				.style('height', '15px')
@@ -305,7 +293,7 @@ plot()
 				.style('background-color',term2valuecolor( i ))
 				.style('margin-right', '5px')
 
-
+			//label text
 			lenged_span.append('span')
 				.text(i)
 				.attr('font-size',plot.label_fontsize)
@@ -313,50 +301,6 @@ plot()
 		}
 	}
 }
-
-
-function update_axis ( plot ) {
-	// TODO
-
-	const bar_labels = [...label2bar.keys()]
-	// console.log(rects)
-	// Y axis scale toggle 
-
-	scale_btn.on('click',()=>{ 
-		if (scale_btn.property('checked') == false){
-			axisg.attr('transform','translate('+yaxis_width+','+space+')')
-			.call(axisLeft().scale(y_linear_scale)
-				.tickFormat(d3format('d'))
-			)
-			for(let i=0; i<items_len; i++) {
-				const j=arg.items[i]
-				d3select(label2bar.get(bar_labels[i])._groups[0][0]).selectAll('rect')
-				.attr('y',y_linear_scale(j['value'])-barheight-space)
-				.attr('height',axisheight - y_linear_scale(j['value']))
-			}
-		} else {
-			axisg.attr('transform','translate('+yaxis_width+','+space+')')
-			.call(axisLeft().scale(y_log_scale)
-				.ticks(10, d3format('d'))
-			)
-			for(let i=0; i<items_len; i++) {
-				const j=arg.items[i]
-				const value = (j.value !=0 ) ? j.value : 1
-				d3select(label2bar.get(bar_labels[i])._groups[0][0]).selectAll('rect')
-					.attr('y',y_log_scale(value)-barheight-space)
-					.attr('height',axisheight - y_log_scale(value))
-			}
-		}
-		client.axisstyle({
-			axis:axisg,
-			showline:true,
-			fontsize:barwidth*.8,
-			color:'black'
-		})
-	})
-}
-
-
 
 function set_yscale ( plot ) {
 /* determine y axis range
