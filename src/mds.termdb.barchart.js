@@ -47,6 +47,7 @@ export function barchart_make ( arg ) {
 	// initiating the plot object
 	// it will be updated later by axis toggle or cross tabulate
 	const plot = {
+		tip: new client.Menu({padding:'5px'}),
 		term: arg.term,
 		items: arg.items,
 		barheight:300, // total height of bar and y axis
@@ -230,6 +231,20 @@ plot()
 					.attr('width',plot.barwidth)
 					.attr('height', previous_y - this_y )
 					.attr('fill',term2valuecolor( sub_item.label ))
+					.on('mouseover',()=>{
+						plot.tip.clear()
+							.show(d3event.clientX,d3event.clientY)
+							.d
+							.append('div')
+							.html(
+								plot.term.name+': '+ item.label+'<br>'
+								+plot.term2.name+': '+ sub_item.label+'<br>'
+								+'# patients: '+sub_item.value
+								)
+					})
+					.on('mouseout',()=>{
+						plot.tip.hide()
+					})
 
 				term2_labels.add(sub_item.label)
 			}
@@ -241,6 +256,19 @@ plot()
 				.attr('width',plot.barwidth)
 				.attr('height', plot.barheight - plot.y_scale(item.value))
 				.attr('fill','#901739')
+				.on('mouseover',()=>{
+					plot.tip.clear()
+						.show(d3event.clientX,d3event.clientY)
+						.d
+						.append('div')
+						.html(
+							plot.term.name+': '+ item.label+'<br>'
+							+'# patients: '+item.value
+							)
+				})
+				.on('mouseout',()=>{
+					plot.tip.hide()
+				})
 		}
 	}
 
