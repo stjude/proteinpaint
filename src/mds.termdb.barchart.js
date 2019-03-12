@@ -183,11 +183,6 @@ plot()
 
 	let x = plot.yaxis_width+ plot.space
 
-	const xlabels = plot.svg.append('g')
-	.attr('class','xlabels')
-
-	xlabels.selectAll('.xlabels').remove()
-
 	for(const item of plot.items) {
 		
 		// bars for barplot
@@ -202,16 +197,17 @@ plot()
 		// clear existing bars and axis
 		g.selectAll('*').remove()
 
-		// X axis
-		plot.svg.append('text')
-		.text(item.label)
-		.attr("transform", "translate("+ (x+plot.barwidth/2) +","+ (plot.axisheight+4) +") rotate(-65)")
-		.attr('text-anchor','end')
-		.attr('font-size',plot.label_fontsize)
-		.attr('font-family',client.font)
-		.attr('dominant-baseline','central')
-
 		if( item.lst ) {
+
+			// X axis
+			g.append('text')
+			.text(item.label)
+			.attr("transform", "translate(0,4) rotate(-65)")
+			.attr('text-anchor','end')
+			.attr('font-size',plot.label_fontsize)
+			.attr('font-family',client.font)
+			.attr('dominant-baseline','central')
+
 			// this is a stacked bar
 			for (const sub_item of item.lst){
 
@@ -229,9 +225,10 @@ plot()
 		} else {
 			// this is a single bar plot
 			// X axis
-			xlabels.append('text')
+			g.append('text')
 				.text(item.label)
-				.attr("transform", "translate("+ (x+plot.barwidth/2) +","+ (plot.axisheight+4) +") rotate(-65)")
+				.attr("transform", "translate(0,4) rotate(-65)")
+				// .attr("transform", "translate("+ (x+plot.barwidth/2) +","+ (plot.axisheight+4) +") rotate(-65)")
 				.attr('text-anchor','end')
 				.attr('font-size',plot.label_fontsize)
 				.attr('font-family',client.font)
