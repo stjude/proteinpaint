@@ -259,7 +259,7 @@ plot()
 		plot.legend_div.selectAll('*').remove()
 
 		plot.legend_div.append('span')
-			.text('Legends for ' + plot.term2.name)
+			.text('Legend for ' + plot.term2.name)
 			.attr('font-size',plot.label_fontsize )
 				.attr('font-family',client.font)
 
