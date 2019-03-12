@@ -9703,6 +9703,12 @@ for each category/bin of term1, divide its samples by category/bin of term2
 
 			lst.push(group)
 		}
+
+		/* term1 is categorical so sort the groups to decending order
+		because the groups are unordered
+		*/
+		lst.sort((i,j)=>j.value-i.value)
+
 	} else {
 		for(const b1 of t1bins ) {
 
@@ -9735,10 +9741,9 @@ for each category/bin of term1, divide its samples by category/bin of term2
 
 			lst.push( group )
 		}
+		// term1 is numeric bin and is naturally ordered, so do not sort them to decending order
 	}
 
-	// sort the bars
-	lst.sort((i,j)=>j.value-i.value)
 
 	res.send({lst: lst})
 	return true
