@@ -58,6 +58,7 @@ export function barchart_make ( arg ) {
 		maxvalue:0,
 		label_fontsize: 15,
 		yaxis_width: 70,
+		use_logscale:0
 		// no longer doing this
 		//label2bar: new Map(),
 		// k: label of this term
@@ -80,7 +81,7 @@ export function barchart_make ( arg ) {
 	button_row.append('span')
 		.text('Y Axis - Log Scale')
 	
-	const scale_btn = button_row.append('input')
+	plot.scale_btn = button_row.append('input')
 		.attr('type', 'checkbox')
 		/*
 		.on('change',()=>{
@@ -215,7 +216,7 @@ plot()
 		if( item.lst ) {
 
 			// a stacked bar
-			let previous_value = 0
+			let previous_value = (plot.use_logscale) ?  1 : 0
 
 			for (const sub_item of item.lst){
 
@@ -242,8 +243,26 @@ plot()
 				.attr('fill','#901739')
 		}
 	}
+
+	plot.scale_btn.on('click',()=>{
+		if ( plot.use_logscale){
+			plot.use_logscale = 0
+			do_plot(plot)
+		}else{
+			plot.use_logscale = 1
+			do_plot(plot)
+		}
+	})
 	
 	if( plot.items[0].lst ) {
+
+		plot.legend_div.selectAll('*').remove()
+
+		plot.legend_div.append('span')
+			.text('Legends for ' + plot.term2.name)
+			.attr('font-size',plot.label_fontsize )
+				.attr('font-family',client.font)
+
 
 		for (const i of term2_labels){
 			const lenged_span = plot
@@ -272,7 +291,6 @@ function update_axis ( plot ) {
 	// TODO
 
 	const bar_labels = [...label2bar.keys()]
-	const rects = [...label2bar.values()]
 	// console.log(rects)
 	// Y axis scale toggle 
 
@@ -472,8 +490,4 @@ return promise
 		if(data.error) throw 'error cross-tabulating: '+data.error
 		return data
 	})
-}
-
-function onlyUnique(value, index, self) { 
-    return self.indexOf(value) === index;
 }
