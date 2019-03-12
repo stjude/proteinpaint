@@ -188,7 +188,10 @@ plot()
 
 	// plot each bar
 	let x = plot.yaxis_width+ plot.barspace + plot.barwidth/2
-	let legend_temp = []
+
+	// in case of stacked bar, collect uniq set of term2 labels for showing in legend
+	// this does not allow ordering the labels by certain way, may update later
+	const term2_labels = new Set()
 
 	plot.graph_g
 		.attr('transform','translate('+x+','+(plot.toppad + plot.barheight)+')')
@@ -219,7 +222,6 @@ plot()
 				const previous_y = plot.y_scale( previous_value ) - plot.barheight
 				previous_value += sub_item.value
 				const this_y = plot.y_scale( previous_value ) - plot.barheight
-				legend_temp.push(sub_item.label)
 
 				g.append('rect')
 					.attr('x', -plot.barwidth/2)
@@ -227,6 +229,8 @@ plot()
 					.attr('width',plot.barwidth)
 					.attr('height', previous_y - this_y )
 					.attr('fill',term2valuecolor( sub_item.label ))
+
+				term2_labels.add(sub_item.label)
 			}
 		} else {
 			// this is a single bar plot
@@ -238,12 +242,10 @@ plot()
 				.attr('fill','#901739')
 		}
 	}
-	const legends_labs = legend_temp.filter((v, i, a) => a.indexOf(v) === i); 
-			console.log(legends_labs)
 	
 	if( plot.items[0].lst ) {
 
-		for (const i in legends_labs){
+		for (const i of term2_labels){
 			const lenged_span = plot
 				.legend_div.append('div')
 				.style('width', '100%')
@@ -253,12 +255,12 @@ plot()
 				.style('display','inline-block')
 				.style('height', '15px')
 				.style('width', '15px')
-				.style('background-color',term2valuecolor( legends_labs[i] ))
+				.style('background-color',term2valuecolor( i ))
 				.style('margin-right', '5px')
 
 
 			lenged_span.append('span')
-				.text(legends_labs[i])
+				.text(i)
 				.attr('font-size',plot.label_fontsize)
 				.attr('font-family',client.font)
 		}
