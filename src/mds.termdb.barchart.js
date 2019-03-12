@@ -424,6 +424,7 @@ later may define a specific rule for enabling cross-tabulating
 
 						// update the plot data using the server-returned new data
 						arg.plot.items = data.lst
+						arg.plot.term2 = term2
 
 						do_plot( arg.plot )
 					})
