@@ -188,6 +188,7 @@ plot()
 
 	// plot each bar
 	let x = plot.yaxis_width+ plot.barspace + plot.barwidth/2
+	let legend_temp = []
 
 	plot.graph_g
 		.attr('transform','translate('+x+','+(plot.toppad + plot.barheight)+')')
@@ -218,6 +219,7 @@ plot()
 				const previous_y = plot.y_scale( previous_value ) - plot.barheight
 				previous_value += sub_item.value
 				const this_y = plot.y_scale( previous_value ) - plot.barheight
+				legend_temp.push(sub_item.label)
 
 				g.append('rect')
 					.attr('x', -plot.barwidth/2)
@@ -226,7 +228,6 @@ plot()
 					.attr('height', previous_y - this_y )
 					.attr('fill',term2valuecolor( sub_item.label ))
 			}
-
 		} else {
 			// this is a single bar plot
 			g.append('rect')
@@ -235,6 +236,31 @@ plot()
 				.attr('width',plot.barwidth)
 				.attr('height', plot.barheight - plot.y_scale(item.value))
 				.attr('fill','#901739')
+		}
+	}
+	const legends_labs = legend_temp.filter((v, i, a) => a.indexOf(v) === i); 
+			console.log(legends_labs)
+	
+	if( plot.items[0].lst ) {
+
+		for (const i in legends_labs){
+			const lenged_span = plot
+				.legend_div.append('div')
+				.style('width', '100%')
+				.style('margin', '2px')
+			
+			lenged_span.append('div')
+				.style('display','inline-block')
+				.style('height', '15px')
+				.style('width', '15px')
+				.style('background-color',term2valuecolor( legends_labs[i] ))
+				.style('margin-right', '5px')
+
+
+			lenged_span.append('span')
+				.text(legends_labs[i])
+				.attr('font-size',plot.label_fontsize)
+				.attr('font-family',client.font)
 		}
 	}
 }
@@ -445,3 +471,6 @@ return promise
 	})
 }
 
+function onlyUnique(value, index, self) { 
+    return self.indexOf(value) === index;
+}
