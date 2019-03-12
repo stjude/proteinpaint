@@ -182,13 +182,15 @@ possible modifiers:
 
 	may_make_term_graphbuttons( term, row, obj )
 
-	may_make_term_crosstabulatebutton( term, row, obj )
+	//may_make_term_crosstabulatebutton( term, row, obj )
 }
 
 
 
 function may_make_term_crosstabulatebutton ( term, row, obj ) {
 /*
+not in use
+
 add button for cross-tabulating
 currently defaults this to barchart-equipped terms
 later may define a specific rule for enabling cross-tabulating
