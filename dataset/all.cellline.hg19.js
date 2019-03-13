@@ -96,6 +96,15 @@ module.exports={
 			}
 		}
 	},
+	
+	locusAttribute:{
+		attributes:{
+			COSMIC:{
+				label:'COSMIC',
+				appendto_link:'https://cancer.sanger.ac.uk/cosmic/mutation/overview?id='
+			}
+		}
+	},
 
 	queries:{
 		svcnv:{
