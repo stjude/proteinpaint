@@ -9753,8 +9753,12 @@ for each category/bin of term1, divide its samples by category/bin of term2
 
 function termdb_trigger_barchart ( q, res, tdb, ds ) {
 /*
-create barchar solely based on server config
-no client customization yet
+summarize numbers to create barchar based on server config
+
+if is a numeric term, also calculate boxplot
+
+todo:
+support client-side config, e.g. bin size for numeric term
 */
 	if( !q.barchart ) return false
 
@@ -9767,9 +9771,10 @@ no client customization yet
 	if(!ds.cohort) throw 'cohort missing from ds'
 	if(!ds.cohort.annotation) throw 'cohort.annotation missing'
 
-	// there are different types of barcharts
+	// different types of barcharts
 
 	if(term.graph.barchart.categorical) {
+
 		// each bar is a singular categorical value, string
 		const value2count = new Map()
 		// k: value
@@ -9797,10 +9802,13 @@ no client customization yet
 		return true
 	}
 
+
 	if( term.graph.barchart.numeric_bin ) {
 		// numeric value: each bar is one bin
 
 		const [ bins, values ] = termdb_get_numericbins( q.barchart.id, term, ds )
+
+		values.sort((i,j)=> i-j ) // for boxplot
 
 
 		for(const v of values) {
@@ -9814,7 +9822,10 @@ no client customization yet
 			}
 		}
 		
-		res.send({ lst: bins.map( i => {return {label: i.label, value: i.value}} ) })
+		res.send({
+			lst: bins.map( i => {return {label: i.label, value: i.value}} ),
+			boxplot: boxplot_getvalue( values.map( i=>{return {value:i}} ) )
+		})
 		return true
 	}
 
