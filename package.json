@@ -64,6 +64,6 @@
     "normalize.css": "^4.2.0",
     "request": "^2.88.0",
     "sqlite": "^2.8.0",
-    "sqlite3": "^3.1.4"
+    "sqlite3": "4.0.6"
   }
 }
