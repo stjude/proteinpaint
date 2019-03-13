@@ -13509,6 +13509,10 @@ function mds_init(ds,genome, _servconfig) {
 			if(a.isnumeric) {
 				continue
 			}
+			if(a.appendto_link) {
+				// no .values{}
+				continue
+			}
 			// not numeric value
 			if(!a.values) return '.values{} missing for non-numeric key '+key+' from locusAttribute.attributes'
 			for(const v in a.values) {
