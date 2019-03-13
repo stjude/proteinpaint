@@ -191,13 +191,15 @@ plot()
 			.attr('transform','translate('+(itemidx*(plot.barwidth+plot.barspace))+',0)')
 
 		// X axis labels	
-		g.append('text')
+		const xlabel = g.append('text')
 			.text(item.label)
 			.attr("transform", "translate(0,4) rotate(-65)")
 			.attr('text-anchor','end')
 			.attr('font-size',plot.label_fontsize)
 			.attr('font-family',client.font)
 			.attr('dominant-baseline','central')
+
+		let x_lab_tip = ''
 
 		if( item.lst ) {
 
@@ -232,6 +234,7 @@ plot()
 					})
 
 				term2_labels.add(sub_item.label)
+				x_lab_tip += '<span style="height: 15px; width: 15px; position: absolute; margin:0 2px; background-color:'+ term2valuecolor( sub_item.label ) +';"></span><span style="margin-left:20px">'+sub_item.label+' ('+ sub_item.value+')</span><br>'
 			}
 		} else {
 			// this is a single bar plot
@@ -255,6 +258,37 @@ plot()
 				.on('mouseout',()=>{
 					plot.tip.hide()
 				})
+		}
+		// x-label tooltip
+		if( item.lst ){
+			xlabel.on('mouseover',()=>{
+				plot.tip.clear()
+					.show(d3event.clientX,d3event.clientY)
+					.d
+					.append('div')
+					.html(
+						plot.term.name+': ' + item.label + '<br>'
+						+ '# patients: '+ item.value + '<br>'
+						+ x_lab_tip
+						)
+			})
+			.on('mouseout',()=>{
+				plot.tip.hide()
+			})
+		}else{	
+			xlabel.on('mouseover',()=>{
+				plot.tip.clear()
+					.show(d3event.clientX,d3event.clientY)
+					.d
+					.append('div')
+					.html(
+						plot.term.name+': '+ item.label+'<br>'
+						+'# patients: '+item.value
+						)
+			})
+			.on('mouseout',()=>{
+				plot.tip.hide()
+			})
 		}
 	}
 
