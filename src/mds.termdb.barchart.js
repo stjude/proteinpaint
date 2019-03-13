@@ -9,8 +9,56 @@ import {init} from './mds.termdb'
 
 
 /*
-make bachart for data from a term
-
+	Purpose: make bachart for data from a term, select 2nd term to create stacked barchart
+	Workflow: 
+	1.	When BARCHART button clicked, div for button was created with CROSSTAB (with addbutton_crosstabulate()) and Y Axis checkbox. 
+		and svg element appended to 'div .sja_pane' ('arg' holder). 
+	2. 	Plot object was created which has been used by do_plot(), set_yscale() and get_max_labelheight().
+		plot = {
+			tip: new client.Menu({padding:'18px'}), //tip from clinent.Menu for tooltip while hoverover bar or x-axis label
+			term: arg.term,   // 1st term 
+			items: arg.items, // with all items in the term with item.label and item.value
+			barheight:300,    // total height of bar and y axis
+			barwidth:20, 
+			toppad:20,        // top padding
+			axisheight: 305,  //yaxis height
+			barspace:2,       //space between 2 bars
+			maxlabelwidth:0,  //will be calculated by 
+			maxvalue:0,
+			label_fontsize: 15,
+			yaxis_width: 70, 
+			use_logscale:0   // flag for y-axis scale type, 0=linear, 1=log
+			y_scale,         // depending upon scale_btn status, it changes between scaleLiner() and scaleLog()
+			scale_btn,       // y-axis toggle checkbox for log-scale
+			svg,
+			yaxis_g,         // for y axis
+			graph_g,         // for bar and label of each data item
+			legend_div,      // div for legends
+		}
+	3. 	For single term, do_plot() creates barplot for all terms. 
+		First Y-axis added then X-axis labels created. 
+		Depending upon single or 2 terms data check, bars create for each item. 
+		If scale_btn clicked, plot.y_scale changed to log scale and do_plot() called again with use_logscale:1.
+	4. 	If CROSSTAB clicked and 2nd term selected, plot object updated with crosstabulate_2terms().   
+		plot = {
+			items: Array(items1_n)			// array with term1 total items
+			0 :  
+				label: item1_label
+				value: item2_value
+				lst: Array(item2_n)			// array with items1 divided into term2 catagories 
+				0:
+					label: item2_label
+					value: item2_value 
+				1:
+					label: item2_label
+					value: item2_value 
+			term2: term2.name
+		}
+	5. 	do_plot() called again with updated plot object. Y-axis stays same, X-axis updated. 
+		Bars recreted with individual rect added for each term2 as stacked bar for single item1.
+	6.	Tooltip added to individual bar and X-axis label with patient #. 
+		If 2nd term selected, tooltip added to each rect of term2 items and for X-axis labels, it will display total patient and individual patient # for term2 items. 
+	7. 	Legend added to plot if 2nd term selected.  
 */
 
 
