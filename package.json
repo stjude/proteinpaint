@@ -47,7 +47,7 @@
     "babel-polyfill": "^6.9.1",
     "better-sqlite3": "^5.0.1",
     "body-parser": "^1.15.2",
-    "canvas": "^1.6.9",
+    "canvas": "^2.3.1",
     "colorbrewer": "^1.0.0",
     "compression": "^1.6.2",
     "d3": "^4.12.2",
@@ -64,6 +64,6 @@
     "normalize.css": "^4.2.0",
     "request": "^2.88.0",
     "sqlite": "^2.8.0",
-    "sqlite3": "^3.1.4"
+    "sqlite3": "4.0.6"
   }
 }

@@ -28,7 +28,7 @@ const express=require('express'),
 	sqlite3=require('sqlite3').verbose(), // TODO  replaced by sqlite
 	sqlite=require('sqlite'),
 	bettersqlite = require('better-sqlite3'),
-	Canvas=require('canvas'),
+	createCanvas = require('canvas').createCanvas,
 	d3color=require('d3-color'),
 	d3stratify=require('d3-hierarchy').stratify,
 	stratinput=require('./src/tree').stratinput,
@@ -779,7 +779,7 @@ async function handle_tkbigwig_bedgraph( req, res, minv, maxv, file, bedgraphdir
 /* 
 */
 	if(minv==undefined || maxv==undefined) throw 'Y axis scale must be defined for bedgraph track'
-	const canvas=new Canvas(req.query.width, req.query.barheight)
+	const canvas=createCanvas(req.query.width, req.query.barheight)
 	const ctx=canvas.getContext('2d')
 	let xoff=0
 	for(let r of req.query.rglst) {
@@ -896,7 +896,7 @@ if file/url ends with .gz, it is bedgraph
 		for(const r of req.query.rglst) {
 			if(r.values) nodata=false
 		}
-		const canvas=new Canvas(req.query.width, req.query.barheight)
+		const canvas=createCanvas(req.query.width, req.query.barheight)
 		const ctx=canvas.getContext('2d')
 		if(nodata) {
 			// bigwig hard-coded stuff
@@ -1053,7 +1053,7 @@ function handle_tkaicheck(req,res) {
 
 	if(!req.query.rglst) return res.send({error:'region list missing'})
 
-	const canvas=new Canvas(req.query.width, vafheight*3 + rowspace*4 + coverageheight*2 )
+	const canvas=createCanvas(req.query.width, vafheight*3 + rowspace*4 + coverageheight*2 )
 	const ctx=canvas.getContext('2d')
 
 	// vaf track background
@@ -1412,7 +1412,7 @@ should guard against file content error e.g. two tabs separating columns
 
 		if(items.length==0) {
 			// will draw, but no data
-			const canvas=new Canvas(width,stackheight)
+			const canvas=createCanvas(width,stackheight)
 			const ctx=canvas.getContext('2d')
 			ctx.font=stackheight+'px Arial'
 			ctx.fillStyle='#aaa'
@@ -1430,7 +1430,7 @@ should guard against file content error e.g. two tabs separating columns
 			// __onerow__
 			// may render strand
 			const notmanyitem=items.length<200
-			const canvas=new Canvas(width,stackheight)
+			const canvas=createCanvas(width,stackheight)
 			const ctx=canvas.getContext('2d')
 			const mapisoform=items.length<=200 ? [] : null
 			for(const item of items) {
@@ -1509,7 +1509,7 @@ should guard against file content error e.g. two tabs separating columns
 		const translateitem=[]
 		const namespace=1
 		const namepad=10 // box no struct: [pad---name---pad]
-		const canvas=new Canvas(10,10) // for measuring text only
+		const canvas=createCanvas(10,10) // for measuring text only
 		let ctx=canvas.getContext('2d')
 		ctx.font='bold '+fontsize+'px Arial'
 		const packfull=items.length<200
@@ -2374,7 +2374,7 @@ function handle_tkbampile(req,res) {
 
 	function render() {
 		const height=allheight+midpad+fineheight
-		const canvas=new Canvas(width,height)
+		const canvas=createCanvas(width,height)
 		const itemcount=rglst.reduce((i,j)=>i+j.items.length,0)
 		const ctx=canvas.getContext('2d')
 		if(itemcount==0) {
@@ -3865,7 +3865,7 @@ function handle_mdscnv(req,res) {
 
 		// canvas width
 		const width = req.query.rglst.reduce((i,j)=>i+j.width+req.query.regionspace,0) - req.query.regionspace
-		const canvas = new Canvas(width, req.query.gain.barheight+req.query.loss.barheight)
+		const canvas = createCanvas(width, req.query.gain.barheight+req.query.loss.barheight)
 		const ctx=canvas.getContext('2d')
 
 		const result={
@@ -6287,7 +6287,7 @@ function handle_ase_bamcoverage2ndpass ( q, start, stop, snps, rnamax ) {
 		}
 	}
 
-	const canvas = new Canvas( q.width, q.rnabarheight + q.barypad + q.dnabarheight )
+	const canvas = createCanvas( q.width, q.rnabarheight + q.barypad + q.dnabarheight )
 	const ctx = canvas.getContext('2d')
 
 	let isbp=false,
@@ -8300,7 +8300,7 @@ function handle_mdsgeneboxplot_svcnv( req, res ) {
 		const scale= (req.query.uselog ? d3scale.scaleLog() : d3scale.scaleLinear()).domain([min, max]).range([0, width])
 
 		for(const g of plots) {
-			const canvas=new Canvas(width, height)
+			const canvas=createCanvas(width, height)
 			const ctx=canvas.getContext('2d')
 
 			// boxplot
@@ -9182,14 +9182,14 @@ function handle_mdsjunction_singlejunction(req,res,ds,dsquery) {
 	})
 	.then( jd=>{
 
-		// test test
-		for(const s of jd.samples) {
-			console.log(dsquery.samples[s.i],s.readcount)
-		}
-
 
 		const samples = filtersamples4onejunction(jd, req.query, ds, dsquery) // TODO iscustom
 		if(samples.length==0) throw({message:'no sample passing filters'})
+
+		// test test
+		for(const s of samples) {
+			console.log(dsquery.samples[s.i],s.readcount)
+		}
 
 
 		const report={
@@ -12491,7 +12491,7 @@ function load(dir) {
 		})
 		var reads=readsf.concat(readsr)
 		//reads.sort((i,j)=>{ return i.boxes[0].start-j.boxes[0].start})
-		var canvas=new Canvas(this.width, reads.length*this.stackheight)
+		var canvas=createCanvas(this.width, reads.length*this.stackheight)
 		var ctx=canvas.getContext('2d')
 		var fontsize=this.stackheight
 		ctx.font=fontsize+'px arial'
@@ -13875,6 +13875,10 @@ function mds_init(ds,genome, _servconfig) {
 			const a = ds.locusAttribute.attributes[key]
 			if(!a.label) return '.label missing for key '+key+' from locusAttribute.attributes'
 			if(a.isnumeric) {
+				continue
+			}
+			if(a.appendto_link) {
+				// no .values{}
 				continue
 			}
 			// not numeric value

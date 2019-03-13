@@ -499,12 +499,12 @@ module.exports={
 			}
 		},
 		junction: {
-			name:'PCGP tumor RNA splice junction',
+			name:'Pediatric tumor RNA splice junction',
 			istrack:true,
 			type:common.tkt.mdsjunction,
 			viewrangeupperlimit:500000,
 			readcountCutoff:5,
-			file:'hg19/PCGP/junction/junction.gz',
+			file:'hg19/Pediatric/pcgp.target.junction.hg19.gz',
 			infoFilter:{ // client handles junction-level attributes
 				lst:[
 					{

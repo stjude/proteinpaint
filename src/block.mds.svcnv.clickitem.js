@@ -2028,6 +2028,23 @@ function printer_snvindel( m, tk ) {
 	if(tk && tk.locusAttribute && tk.locusAttribute.attributes) {
 		for(const key in tk.locusAttribute.attributes) {
 			const attr = tk.locusAttribute.attributes[key]
+
+			const vstr = m.info ? m.info[key] : ''
+
+			// locus attribute support adding hyper links
+			if(attr.appendto_link) {
+				if(!vstr) {
+					// no value, do not add link
+					continue
+				}
+
+				lst.push({
+					k: attr.label,
+					v: vstr.split(',').map(id=> '<a target=_blank href='+attr.appendto_link + id+'>'+id+'</a>').join(' ')
+				})
+				continue
+			}
+
 			lst.push({
 				k: attr.label,
 				v: ( m.info ? m.info[key] : '')
