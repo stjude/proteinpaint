@@ -9810,7 +9810,6 @@ support client-side config, e.g. bin size for numeric term
 
 		const [ bins, values ] = termdb_get_numericbins( q.barchart.id, term, ds )
 
-		values.sort((i,j)=> i-j ) // for boxplot
 
 
 		for(const v of values) {
@@ -9823,10 +9822,15 @@ support client-side config, e.g. bin size for numeric term
 				break
 			}
 		}
-		
+
+		values.sort((i,j)=> i-j ) // values to be sorted to ascending order for boxplot
+		const boxplotresult = boxplot_getvalue( values.map( i=>{return {value:i}} ) )
+		// get mean value
+		boxplotresult.mean = values.reduce((i,j)=>j+i, 0) / values.length
+
 		res.send({
 			lst: bins.map( i => {return {label: i.label, value: i.value}} ),
-			boxplot: boxplot_getvalue( values.map( i=>{return {value:i}} ) )
+			boxplot: boxplotresult,
 		})
 		return true
 	}
