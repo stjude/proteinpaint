@@ -207,14 +207,16 @@ possible modifiers:
 			// show table
 			const table = pane.body.append('table')
 				.style('border-spacing','3px')
-				.style('border-collapse','separate')
+				.style('border-collapse','collapse')
+				.style('border', '1px solid black')
 
 			// header
 			const tr = table.append('tr')
 			tr.append('td') // column 1
 			for(const i of term2values) {
-				tr.append('td')
+				tr.append('th')
 					.text( i )
+					.style('border', '1px solid black')
 			}
 
 			// rows are term1 values, columns are term2 values
@@ -222,12 +224,14 @@ possible modifiers:
 				const tr = table.append('tr')
 
 				// column 1
-				tr.append('td')
+				tr.append('th')
 					.text( t1v.label )
+					.style('border', '1px solid black')
 
 				// other columns
 				for(const t2label of term2values) {
 					const td = tr.append('td')
+						.style('border', '1px solid black')
 					const v = t1v.lst.find( i=> i.label == t2label )
 					if( v ) {
 						td.text( v.value )
