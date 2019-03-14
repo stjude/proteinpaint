@@ -135,8 +135,9 @@ export function barchart_make ( arg ) {
 	plot.yaxis_g = plot.svg.append('g') // for y axis
 	plot.graph_g = plot.svg.append('g') // for bar and label of each data item
 	if (arg.boxplot){
-		plot.boxplot_div  = arg.holder.append('div') // for boxplot 
+		plot.boxplot_div  = arg.holder.append('div') // for boxplot stats table
 			.style('margin','10px 0px')
+		plot.boxplot_g = plot.svg.append('g')
 	}
 
 	plot.legend_div = arg.holder.append('div')
@@ -172,6 +173,9 @@ plot()
 
 	const max_label_height = get_max_labelheight( plot )
 
+	// space for boxplot
+	let box_plot_space = (plot.boxplot) ?  30 : 4
+
 
 	/* plot vertical bars
 	each bar has equal width
@@ -181,7 +185,7 @@ plot()
 	
 	// define svg height and width
 	const svg_width = plot.items.length * (plot.barwidth+plot.barspace) + plot.yaxis_width
-	const svg_height = plot.toppad + plot.barheight+max_label_height
+	const svg_height = plot.toppad + plot.barheight+max_label_height + box_plot_space
 
 	plot.svg
 		.transition()
@@ -245,7 +249,7 @@ plot()
 		// X axis labels	
 		const xlabel = g.append('text')
 			.text(item.label)
-			.attr("transform", "translate(0,4) rotate(-65)")
+			.attr("transform", "translate(0,"+ box_plot_space +") rotate(-65)")
 			.attr('text-anchor','end')
 			.attr('font-size',plot.label_fontsize)
 			.attr('font-family',client.font)
@@ -387,9 +391,11 @@ plot()
 		}
 	}
 
-	// table for discrete value catagory
+	// for continous catagory, will create stat table and boxplot
 	if (plot.boxplot){
 		console.log(plot)
+
+		// table for statistical summary
 		plot.boxplot_div
 		.attr('transform','translate('+x+','+(plot.toppad + plot.barheight + max_label_height)+')')
 		.selectAll('*')
@@ -418,6 +424,60 @@ plot()
 
 		boxplot_table.selectAll('th, td')
 			.style('padding', '2px 10px')
+
+		// Boxplot
+		plot.boxplot_g
+			.attr('transform','translate(' + (plot.yaxis_width + plot.barspace) + ',' + (plot.toppad + plot.barheight)+')')
+			.selectAll('*')
+			.remove()
+
+		plot.boxplot_g.append("line")
+			.attr("x1", plot.boxplot.w1)
+			.attr("y1", 15)
+			.attr("x2", (((plot.barwidth + plot.barspace) * plot.boxplot.w2)))
+			.attr("y2",15)
+			.attr("stroke-width", 2)
+			.attr("stroke", "black")
+
+		plot.boxplot_g.append("rect")
+			.attr('x', (plot.boxplot.p25 * (plot.barwidth + plot.barspace)))
+			.attr('y', 5)
+			.attr('width', (plot.boxplot.p75-plot.boxplot.p25) * (plot.barwidth + plot.barspace))
+			.attr('height', 20)
+			.attr('fill','#901739')
+		
+		plot.boxplot_g.append("line")
+			.attr("x1", plot.boxplot.w1 * (plot.barwidth + plot.barspace))
+			.attr("y1", 5)
+			.attr("x2", plot.boxplot.w1 * (plot.barwidth + plot.barspace))
+			.attr("y2",25)
+			.attr("stroke-width", 2)
+			.attr("stroke", "black")
+
+		plot.boxplot_g.append("line")
+			.attr("x1", plot.boxplot.p50 * (plot.barwidth + plot.barspace))
+			.attr("y1", 5)
+			.attr("x2", plot.boxplot.p50 * (plot.barwidth + plot.barspace))
+			.attr("y2",25)
+			.attr("stroke-width", 2)
+			.attr("stroke", "white")
+		
+		plot.boxplot_g.append("line")
+			.attr("x1", plot.boxplot.w2 * (plot.barwidth + plot.barspace))
+			.attr("y1", 5)
+			.attr("x2", plot.boxplot.w2 * (plot.barwidth + plot.barspace))
+			.attr("y2",25)
+			.attr("stroke-width", 2)
+			.attr("stroke", "black")
+
+		for(const outlier of plot.boxplot.out){
+			plot.boxplot_g.append("circle")
+			.attr('cx', (outlier.value * (plot.barwidth + plot.barspace)))
+			.attr('cy', 15)
+			.attr('r', 4)
+			.attr('fill','#901739')
+		}	
+
 	}
 }
 
