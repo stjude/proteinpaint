@@ -8070,7 +8070,7 @@ function boxplot_getvalue(lst) {
 	const j=lst.findIndex(i=>i.value>p75+iqr)
 	const w2=lst[j==-1 ? l-1 : j-1].value
 	const out=lst.filter(i=>i.value<p25-iqr || i.value>p75+iqr)
-	return { w1, w2, p05, p25, p50, p75, p95, out }
+	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
 
 
@@ -9827,6 +9827,14 @@ support client-side config, e.g. bin size for numeric term
 		const boxplotresult = boxplot_getvalue( values.map( i=>{return {value:i}} ) )
 		// get mean value
 		boxplotresult.mean = values.reduce((i,j)=>j+i, 0) / values.length
+		// get sd
+		{
+			let s = 0
+			for(const v of values) {
+				s += Math.pow( v - boxplotresult.mean, 2 )
+			}
+			boxplotresult.sd = Math.sqrt( s / (values.length-1) )
+		}
 
 		res.send({
 			lst: bins.map( i => {return {label: i.label, value: i.value}} ),
