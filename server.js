@@ -8062,13 +8062,15 @@ function boxplot_getvalue(lst) {
 	const p50=lst[Math.floor(l/2)].value
 	const p25=lst[Math.floor(l/4)].value
 	const p75=lst[Math.floor(l*3/4)].value
+	const p05 = lst[Math.floor(l*0.05)].value
+	const p95 = lst[Math.floor(l*0.95)].value
 	const iqr=(p75-p25)*1.5
 	const i=lst.findIndex(i=>i.value>p25-iqr)
 	const w1=lst[i==-1 ? 0 : i].value
 	const j=lst.findIndex(i=>i.value>p75+iqr)
 	const w2=lst[j==-1 ? l-1 : j-1].value
 	const out=lst.filter(i=>i.value<p25-iqr || i.value>p75+iqr)
-	return {w1:w1,w2:w2, p25:p25,p50:p50,p75:p75,out:out}
+	return { w1, w2, p05, p25, p50, p75, p95, out }
 }
 
 
