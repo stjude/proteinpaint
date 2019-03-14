@@ -5,6 +5,7 @@ import {format as d3format} from 'd3-format'
 import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init} from './mds.termdb'
+import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 
 
@@ -122,11 +123,16 @@ export function barchart_make ( arg ) {
 		.attr('type', 'checkbox')
 
 	// button - cross tabulate
-	addbutton_crosstabulate({
-		term: arg.term,
+	may_makebutton_crosstabulate({
+		term1: arg.term,
 		button_row: button_row,
 		obj: obj,
-		plot: plot
+		callback: result=>{
+			// update the plot data using the server-returned new data
+			plot.items = result.items
+			plot.term2 = result.term2
+			do_plot( plot )
+		}
 	})
 
 	// other holders/components
@@ -528,117 +534,4 @@ function get_max_labelheight ( plot ) {
 	}
 
 	return textwidth
-}
-
-
-
-function addbutton_crosstabulate ( arg ) {
-/*
-add button for cross-tabulating
-currently defaults this to barchart-equipped terms
-later may define a specific rule for enabling cross-tabulating
-
-.term
-.button_row
-.obj
-.plot{}
-
-*/
-
-	const term1 = arg.term
-
-	if(!term1.graph || !term1.graph.barchart ) return
-
-	const button = arg.button_row.append('div')
-		.style('display','inline-block')
-		.style('margin-left','20px')
-		.attr('class','sja_menuoption')
-		.text('CROSSTAB')
-
-	// click button to show term tree
-	// generate a temp obj for running init()
-
-	button.on('click',()=>{
-
-		arg.obj.tip.clear()
-			.showunder( button.node() )
-
-		const treediv = arg.obj.tip.d.append('div')
-		const errdiv = arg.obj.tip.d.append('div')
-
-		const obj2 = {
-			genome: arg.obj.genome,
-			mds: arg.obj.mds,
-			div: treediv,
-			default_rootterm: {
-				// add click handler as the modifier to tree display
-				modifier_click_term: (term2) => {
-					// term2 is selected
-					if(term2.id == term1.id) {
-						window.alert('Cannot select the same term')
-						return
-					}
-					arg.obj.tip.hide()
-
-					crosstabulate_2terms( {
-						term1: {
-							id: term1.id
-						},
-						term2: {
-							id: term2.id
-						},
-						obj: arg.obj
-					})
-					.then( data=>{
-
-						// update the plot data using the server-returned new data
-						arg.plot.items = data.lst
-						arg.plot.term2 = term2
-
-						do_plot( arg.plot )
-					})
-					.catch(e=>{
-						window.alert( e.message || e)
-						if(e.stack) console.log(e.stack)
-					})
-				}
-			},
-		}
-
-		init( obj2 )
-	})
-}
-
-
-
-
-
-
-function crosstabulate_2terms ( arg ) {
-/*
-.term1{}
-.term2{}
-.obj{}
-
-for numeric term:
-	if is based on custom binning, must return the binning scheme
-
-return promise
-*/
-	const param = {
-		crosstab2term: 1,
-		term1:{
-			id: arg.term1.id
-		},
-		term2:{
-			id: arg.term2.id
-		},
-		genome: arg.obj.genome.name,
-		dslabel: arg.obj.mds.label
-	}
-	return client.dofetch('termdb', param)
-	.then(data=>{
-		if(data.error) throw 'error cross-tabulating: '+data.error
-		return data
-	})
 }

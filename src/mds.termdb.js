@@ -1,10 +1,8 @@
 import * as client from './client'
 import * as common from './common'
-//import {axisTop} from 'd3-axis'
-//import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {barchart_make} from './mds.termdb.barchart'
-//import {crosstabulate} from './mds.termdb.crosstabulate'
+import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 /*
 
@@ -13,10 +11,17 @@ init() accepts following triggers:
 - show term tree, for selecting a term (what are selectable?), no graph buttons
 
 init accepts obj{}
-modifiers:
-	obj has modifiers for modifying the behavior/display of the term tree
-	obj.default_rootterm
-		.modifier_click_term() is a modifier
+.genome{}
+.mds{}
+.div
+
+obj has triggers
+obj.default_rootterm{}
+
+
+default_rootterm has modifiers, for modifying the behavior/display of the term tree
+	.modifier_click_term()
+		when this is provided, will allow selecting terms, do not show graph buttons
 
 
 
@@ -29,7 +34,6 @@ show_default_rootterm
 print_one_term
 may_make_term_foldbutton
 may_make_term_graphbuttons
-may_make_term_crosstabulatebutton
 term_addbutton_barchart
 
 
@@ -130,7 +134,7 @@ also for showing term tree, allowing to select certain terms
 
 
 function print_one_term ( arg, obj ) {
-/* print a term
+/* print a term, in the term tree
 for non-leaf term, show the expand/fold button
 upon clicking button, to retrieve children and make recursive call to render children
 
@@ -179,74 +183,61 @@ possible modifiers:
 
 
 	// term function buttons
+	// including barchart, and cross-tabulate
 
 	may_make_term_graphbuttons( term, row, obj )
 
-	//may_make_term_crosstabulatebutton( term, row, obj )
-}
+	may_makebutton_crosstabulate( {
+		term1: term,
+		button_row: row,
+		obj: obj,
+		callback: result=>{
+			// got result
+			const c = result._button.node().getBoundingClientRect()
+			const pane = client.newpane({ x: c.x+100, y: Math.max( 10, c.y-100) })
+			pane.header.html( term.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+result.term2.name )
 
-
-
-function may_make_term_crosstabulatebutton ( term, row, obj ) {
-/*
-not in use
-
-add button for cross-tabulating
-currently defaults this to barchart-equipped terms
-later may define a specific rule for enabling cross-tabulating
-*/
-	if(!term.graph || !term.graph.barchart ) return
-
-	const button = row.append('div')
-		.style('display','inline-block')
-		.style('margin-left','20px')
-		.style('padding','3px 5px')
-		.style('font-size','.8em')
-		.attr('class','sja_menuoption')
-		.text('CROSSTAB')
-
-	// click button to show term tree
-	// generate a temp obj for running init()
-
-	button.on('click',()=>{
-
-		obj.tip.clear()
-			.showunder( button.node() )
-
-		const treediv = obj.tip.d.append('div')
-		const errdiv = obj.tip.d.append('div')
-
-		const obj2 = {
-			genome: obj.genome,
-			mds: obj.mds,
-			div: treediv,
-			default_rootterm: {
-				// add click handler as the modifier to tree display
-				modifier_click_term: (term2) => {
-					// term2 is selected
-					if(term2.id == term.id) {
-						errdiv.text('Cannot select the same term')
-						return
-					}
-					obj.tip.hide()
-					const c = button.node().getBoundingClientRect()
-					const pane = client.newpane({ x: c.x+100, y: c.y })
-					pane.header.html( term.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+term2.name )
-					/*
-					crosstabulate( {
-						obj: obj,
-						term1: term,
-						term2: term2,
-						div: pane.body
-					})
-					*/
+			const term2values = new Set()
+			for(const t1v of result.items) {
+				for(const j of t1v.lst) {
+					term2values.add( j.label )
 				}
-			},
-		}
+			}
 
-		init( obj2 )
+			// show table
+			const table = pane.body.append('table')
+				.style('border-spacing','3px')
+				.style('border-collapse','separate')
+
+			// header
+			const tr = table.append('tr')
+			tr.append('td') // column 1
+			for(const i of term2values) {
+				tr.append('td')
+					.text( i )
+			}
+
+			// rows are term1 values, columns are term2 values
+			for(const t1v of result.items) {
+				const tr = table.append('tr')
+
+				// column 1
+				tr.append('td')
+					.text( t1v.label )
+
+				// other columns
+				for(const t2label of term2values) {
+					const td = tr.append('td')
+					const v = t1v.lst.find( i=> i.label == t2label )
+					if( v ) {
+						td.text( v.value )
+					}
+				}
+			}
+		}
 	})
 }
+
 
 
 
