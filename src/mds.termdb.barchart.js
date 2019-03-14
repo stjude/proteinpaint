@@ -90,13 +90,13 @@ export function barchart_make ( arg ) {
 
 */
 
-
 	// initiating the plot object
 	// it will be updated later by axis toggle or cross tabulate
 	const plot = {
 		tip: new client.Menu({padding:'18px'}),
 		term: arg.term,
 		items: arg.items,
+		boxplot: arg.boxplot,
 		barheight:300, // total height of bar and y axis
 		barwidth:20,
 		toppad:20, // top padding
@@ -134,6 +134,10 @@ export function barchart_make ( arg ) {
 	plot.svg = arg.holder.append('svg')
 	plot.yaxis_g = plot.svg.append('g') // for y axis
 	plot.graph_g = plot.svg.append('g') // for bar and label of each data item
+	if (arg.boxplot){
+		plot.boxplot_div  = arg.holder.append('div') // for boxplot 
+			.style('margin','10px 0px')
+	}
 
 	plot.legend_div = arg.holder.append('div')
 		.style('margin','10px 0px')
@@ -356,7 +360,7 @@ plot()
 		plot.legend_div.append('span')
 			.text('Legend for ' + plot.term2.name)
 			.attr('font-size',plot.label_fontsize )
-				.attr('font-family',client.font)
+			.attr('font-family',client.font)
 
 
 		for (const i of term2_labels){
@@ -381,6 +385,39 @@ plot()
 				.attr('font-size',plot.label_fontsize)
 				.attr('font-family',client.font)
 		}
+	}
+
+	// table for discrete value catagory
+	if (plot.boxplot){
+		console.log(plot)
+		plot.boxplot_div
+		.attr('transform','translate('+x+','+(plot.toppad + plot.barheight + max_label_height)+')')
+		.selectAll('*')
+		.remove()
+
+		const boxplot_table = plot.boxplot_div
+			.html(
+				'<table><tr><th></th><th>Value</th></tr>'
+				+ '<tr><td colspan="2">Among All Patients</td></tr>'
+				+ '<tr><td>Exposed</td><td>'+ '5522' +'</td></tr>'
+				+ '<tr><td>Not Exposed</td><td>'+ '0' +'</td></tr>'
+				+ '<tr><td colspan="2">Among Patients treated</td></tr>'
+				+ '<tr><td>Mean (SD)</td><td>'+ plot.boxplot.mean.toFixed(2) + ' (' + plot.boxplot.sd.toFixed(2) +') </td></tr>'
+				+ '<tr><td>Median (IQR)</td><td>'+ plot.boxplot.p50.toFixed(2) + ' (' + plot.boxplot.iqr.toFixed(2) +') </td></tr>'
+				+ '<tr><td>5th Percentile</td><td>'+ plot.boxplot.p05.toFixed(2) +'</td></tr>'
+				+ '<tr><td>25th Percentile</td><td>'+ plot.boxplot.p25.toFixed(2) +'</td></tr>'
+				+ '<tr><td>75th Percentile</td><td>'+ plot.boxplot.p75.toFixed(2) +'</td></tr>'
+				+ '<tr><td>95th Percentile</td><td>'+ plot.boxplot.p95.toFixed(2) +'</td></tr>'
+				+ '</table>'
+			)
+
+		boxplot_table.selectAll('td, th, table')
+			.style('border', '1px solid black')
+			.style('padding', '0')
+			.style('border-collapse', 'collapse')
+
+		boxplot_table.selectAll('th, td')
+			.style('padding', '2px 10px')
 	}
 }
 
