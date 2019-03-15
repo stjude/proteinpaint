@@ -143,7 +143,7 @@ export function barchart_make ( arg ) {
 	if (arg.boxplot){
 		plot.boxplot_div  = arg.holder.append('div') // for boxplot stats table
 			.style('margin','10px 0px')
-		plot.boxplot_g = plot.svg.append('g')
+		//plot.boxplot_g = plot.svg.append('g')
 	}
 
 	plot.legend_div = arg.holder.append('div')
@@ -180,7 +180,8 @@ plot()
 	const max_label_height = get_max_labelheight( plot )
 
 	// space for boxplot
-	let box_plot_space = (plot.boxplot) ?  30 : 4
+	// let box_plot_space = (plot.boxplot) ?  30 : 4
+	let box_plot_space = 4
 
 
 	/* plot vertical bars
@@ -399,7 +400,6 @@ plot()
 
 	// for continous catagory, will create stat table and boxplot
 	if (plot.boxplot){
-		console.log(plot)
 
 		// table for statistical summary
 		plot.boxplot_div
@@ -432,6 +432,7 @@ plot()
 			.style('padding', '2px 10px')
 
 		// Boxplot
+		/*
 		plot.boxplot_g
 			.attr('transform','translate(' + (plot.yaxis_width + plot.barspace) + ',' + (plot.toppad + plot.barheight)+')')
 			.selectAll('*')
@@ -483,7 +484,7 @@ plot()
 			.attr('r', 4)
 			.attr('fill','#901739')
 		}	
-
+		*/
 	}
 }
 
