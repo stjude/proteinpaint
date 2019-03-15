@@ -42,7 +42,7 @@ module.exports={
 
 		sampleAttribute:{
 			attributes:{
-				'Age at Cancer Diagnosis':{
+				agedx:{
 					label:'Age at Cancer Diagnosis',
 					isfloat:1
 				},
