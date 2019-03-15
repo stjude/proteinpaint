@@ -4,18 +4,20 @@ names are case-sensitive
 
 
 1	Root note	Cancer-related Variables
-2	First Branch	Diagnosis
+2	First Branch	Diagnosis 
 3	Second Branch	Diagnosis Group
-4	Third Branch
-5	Fourth Branch
-6	SJLIFE Variable Name
-7	Include Now	Y
-8	Presentation Structure	Slide 8
-9	Notes	From Lancet dataset
+4	Third Branch	-
+5	Fourth Branch	-
+6	SJLIFE Variable Names	diaggrpb
 
 
 for columns 1-5:
 - blank cell or '-' means no value
+
+
+column 6:
+	if given, is the term id and will match with the column header at file 'test/matrix'
+	if not given, use the term name as term id
 
 
 second optional input is keep/termjson, 2 column:
@@ -71,12 +73,24 @@ const str2level = str => {
 
 
 
-// unique words from levels 1-5, to be printed out in alphabetic order for identifying suspicious duplicated words
-const set1 = new Set()
-const set2 = new Set()
-const set3 = new Set()
-const set4 = new Set()
-const set5 = new Set()
+/* unique words from levels 1-5, to be printed out in alphabetic order for identifying suspicious duplicated words
+key: id
+	if column 6 is given, use as key, else, use term name as key
+value: term name
+*/
+const map1 = new Map()
+const map2 = new Map()
+const map3 = new Map()
+const map4 = new Map()
+const map5 = new Map()
+
+
+/* for recalling id from a non-leaf level name
+k: name
+v: id
+*/
+const name2id = new Map()
+
 
 
 const t2t = new Map()
@@ -89,31 +103,31 @@ const t2t = new Map()
 
 
 
-const termjson_outputoneset = (set, lines) => {
+const termjson_outputoneset = (map, lines) => {
 /*
 arg is set of words from root or a level, e.g. set1
 each word is a term
 */
 	let leafcount = 0
-	for(const n of [...set].sort() ) {
+	for(const id of [...map.keys()].sort() ) {
 
-		let j = keep_termjson.get( n )
+		let j = keep_termjson.get( id )
 		if(!j) {
 			// this term not found in keep
 			j = {
-				name: n
+				name: map.get( id )
 			}
 		}
 
 		// test if it is leaf
-		if( !t2t.has( n ) ) {
+		if( !t2t.has( id ) ) {
 			j.isleaf = true
 			leafcount++
 		}
 
-		lines.push( n+'\t'+JSON.stringify(j) )
+		lines.push( id+'\t'+JSON.stringify(j) )
 	}
-	return set.size+' terms, '+leafcount+' leaf terms'
+	return map.size+' terms, '+leafcount+' leaf terms'
 }
 
 
@@ -138,31 +152,31 @@ manual inspection:
 	const lines = [ '######## root' ]
 
 	{
-		const str = termjson_outputoneset( set1, lines )
+		const str = termjson_outputoneset( map1, lines )
 		console.log( 'ROOT: '+str )
 	}
 
 	lines.push('################# Level 1')
 	{
-		const str = termjson_outputoneset( set2, lines )
+		const str = termjson_outputoneset( map2, lines )
 		console.log( 'Level 1: '+str )
 	}
 
 	lines.push('################# Level 2')
 	{
-		const str = termjson_outputoneset( set3, lines )
+		const str = termjson_outputoneset( map3, lines )
 		console.log( 'Level 2: '+str )
 	}
 
 	lines.push('################# Level 3')
 	{
-		const str = termjson_outputoneset( set4, lines )
+		const str = termjson_outputoneset( map4, lines )
 		console.log( 'Level 3: '+str )
 	}
 
 	lines.push('################# Level 4')
 	{
-		const str = termjson_outputoneset( set5, lines )
+		const str = termjson_outputoneset( map5, lines )
 		console.log( 'Level 4: '+str )
 	}
 
@@ -206,73 +220,177 @@ for(let i=1; i<lines.length; i++) {
 	if(line.startsWith('\t')) abort('line '+(i+1)+' starts with tab')
 
 	const l = line.split('\t')
-	
-	const level1 = str2level( l[0] )
-	const level2 = str2level( l[1] )
-	const level3 = str2level( l[2] )
-	const level4 = str2level( l[3] )
-	const level5 = str2level( l[4] )
+
+	let level1 = str2level( l[0] ),
+		level2 = str2level( l[1] ),
+		level3 = str2level( l[2] ),
+		level4 = str2level( l[3] ),
+		level5 = str2level( l[4] )
+
+	let leaflevel = 5 // which level is leaf: 1,2,3,4,5
+
+
+	/* trim leaf
+	if a leaf level is identical as its direct parent, trim this leaf
+	*/
+	if( !level2 ) {
+
+		leaflevel = 1
+		// no need to trim level1
+
+	} else if( !level3 ) {
+
+		// level2 is leaf
+		leaflevel = 2
+		if( level2 == level1 ) {
+			// trim level2
+			level2 = null
+			leaflevel = 1
+		}
+
+	} else if( !level4 ) {
+
+		// level3 is leaf
+		leaflevel = 3
+		if( level3 == level2 ) {
+			level3 = null
+			leaflevel = 2
+		}
+
+	} else if( !level5 ) {
+
+		// level4 is leaf
+		leaflevel = 4
+		if( level4 == level3 ) {
+			level4 = null
+			leaflevel = 3
+		}
+
+	} else if( level5 == level4 ) {
+
+		// trim level5
+		level5 = null
+		leaflevel = 4
+	}
+
+
+	// this only applies to the leaf level of this line
+	const tempid = str2level( l[5] )
+
 
 	if(level1) {
-		set1.add(level1)
-		if(!t2t.has( level1 )) t2t.set( level1, new Set() )
+
+		let id
+		if( leaflevel == 1 ) {
+			if( tempid ) {
+				id = tempid
+				name2id.set( level1, id )
+			} else {
+				id = level1
+			}
+		} else {
+			// not a leaf, so tempid doesn't apply to it, has to recall id
+			id = name2id.get( level1 ) || level1
+		}
+
+		map1.set( id, level1 )
+
+		if(!t2t.has( id )) {
+			t2t.set( id, new Set() )
+		}
 	}
 
 	if(level2) {
-		// ignore case such as level2 name same of level1, but no level3
-		if( !level3 ) {
-			if( level2 == level1 ) {
-				console.log('ignored level2 (leaf), same as level1: '+line)
-				continue
+
+		let id
+		if( leaflevel == 2 ) {
+			if( tempid ) {
+				id = tempid
+				name2id.set( level2, id )
+			} else {
+				id = level2
 			}
+		} else {
+			// recall id
+			id = name2id.get( level2 ) || level2
 		}
 
-		set2.add(level2)
+		map2.set( id, level2 )
 
-		t2t.get( level1 ).add( level2 )
+		// child of level1
+		t2t.get( name2id.get(level1) || level1 ).add( id )
 
-		if(!t2t.has( level2 )) t2t.set( level2, new Set() )
+		if(!t2t.has( id )) {
+			t2t.set( id, new Set() )
+		}
 	}
 
 	if(level3) {
-		if( !level4 ) {
-			if( level3 == level2 ) {
-				console.log('ignored level3 (leaf), same as level2: '+line)
-				continue
+
+		let id
+		if( leaflevel == 3 ) {
+			if( tempid ) {
+				id = tempid
+				name2id.set( level3, id )
+			} else {
+				id = level3
 			}
+		} else {
+			id = name2id.get( level3 ) || level3
 		}
 
-		set3.add(level3)
+		map3.set( id, level3 )
 
-		t2t.get( level2 ).add( level3 )
-		
-		if(!t2t.has( level3 )) t2t.set( level3, new Set() )
+		// child of level2
+		t2t.get( name2id.get(level2) || level2 ).add( id )
+
+		if(!t2t.has( id )) {
+			t2t.set( id, new Set() )
+		}
 	}
 
 	if(level4) {
-		if( !level5 ) {
-			if( level4 == level3 ) {
-				console.log('ignored level4 (leaf), same as level3: '+line)
-				continue
+
+		let id
+		if( leaflevel == 4 ) {
+			if( tempid ) {
+				id = tempid
+				name2id.set( level4, id )
+			} else {
+				id = level4
 			}
+		} else {
+			id = name2id.get( level4 ) || level4
 		}
 
-		set4.add(level4)
+		map4.set( id, level4 )
 
-		t2t.get( level3 ).add( level4 )
+		// child of level3
+		t2t.get( name2id.get(level3) || level3 ).add( id )
 
-		if(!t2t.has( level4 )) t2t.set( level4, new Set() )
+		if(!t2t.has( id )) {
+			t2t.set( id, new Set() )
+		}
 	}
 
 	if(level5) {
-		if( level5 == level4 ) {
-			console.log('ignored level5 (leaf), same as level4: '+line)
-			continue
+
+		let id
+		if( leaflevel == 5 ) {
+			if( tempid ) {
+				id = tempid
+				name2id.set( level5, id )
+			} else {
+				id = level5
+			}
+		} else {
+			id = name2id.get( level5 ) || level5
 		}
 
-		set5.add(level5)
+		map5.set( id, level5)
 
-		t2t.get( level4 ).add( level5 )
+		// child of level4
+		t2t.get( name2id.get(level4) || level4 ).add( id )
 	}
 }
 
@@ -293,29 +411,30 @@ for(const [n,s] of t2t) {
 
 
 // check if terms from different levels overlap
-for(const n of set1) {
-	if(set2.has(n)) abort(n+': L1 and L2')
-	if(set3.has(n)) abort(n+': L1 and L3')
-	if(set4.has(n)) abort(n+': L1 and L4')
-	if(set5.has(n)) abort(n+': L1 and L5')
+for(const n of map1.keys()) {
+	if(map2.has(n)) abort(n+': L1 and L2')
+	if(map3.has(n)) abort(n+': L1 and L3')
+	if(map4.has(n)) abort(n+': L1 and L4')
+	if(map5.has(n)) abort(n+': L1 and L5')
 }
-for(const n of set2) {
-	if(set3.has(n)) abort(n+': L2 and L3')
-	if(set4.has(n)) abort(n+': L2 and L4')
-	if(set5.has(n)) abort(n+': L2 and L5')
+for(const n of map2.keys()) {
+	if(map3.has(n)) abort(n+': L2 and L3')
+	if(map4.has(n)) abort(n+': L2 and L4')
+	if(map5.has(n)) abort(n+': L2 and L5')
 }
-for(const n of set3) {
-	if(set4.has(n)) abort(n+': L3 and L4')
-	if(set5.has(n)) abort(n+': L3 and L5')
+for(const n of map3.keys()) {
+	if(map4.has(n)) abort(n+': L3 and L4')
+	if(map5.has(n)) abort(n+': L3 and L5')
 }
-for(const n of set4) {
-	if(set5.has(n)) abort(n+': L4 and L5')
+for(const n of map4.keys()) {
+	if(map5.has(n)) abort(n+': L4 and L5')
 }
 
 
 
 
 const keep_termjson = new Map()
+
 
 if( process.argv[3] ) {
 	/* keep/termjson file is given
