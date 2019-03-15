@@ -46,6 +46,14 @@ module.exports={
 					label:'Age at Cancer Diagnosis',
 					isfloat:1
 				},
+				DOXED_sum:{
+					label:'Cumulative Anthracycline (Doxorubicin Equivalent Dose)',
+					isfloat:1
+				},
+				CED_sum:{
+					label:'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
+					isfloat:1
+				},
 			}
 		}
 	},
