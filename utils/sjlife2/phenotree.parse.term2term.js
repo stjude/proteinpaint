@@ -62,7 +62,7 @@ const str2level = str => {
 	// parses column 1-5
 	const v = str.trim()
 	if(!v || v=='-') return null
-	if(v.indexOf('"')!=-1) abort('Level name has double quote')
+	if(v.indexOf('"')!=-1) abort( 'Level name should not have double quote: '+str )
 	return v
 }
 
@@ -84,27 +84,6 @@ const t2t = new Map()
 // v: set of children
 
 
-const check_terms_overlap = () => {
-	// check if terms from different levels overlap
-	for(const n of set1) {
-		if(set2.has(n)) abort(n+': L1 and L2')
-		if(set3.has(n)) abort(n+': L1 and L3')
-		if(set4.has(n)) abort(n+': L1 and L4')
-		if(set5.has(n)) abort(n+': L1 and L5')
-	}
-	for(const n of set2) {
-		if(set3.has(n)) abort(n+': L2 and L3')
-		if(set4.has(n)) abort(n+': L2 and L4')
-		if(set5.has(n)) abort(n+': L2 and L5')
-	}
-	for(const n of set3) {
-		if(set4.has(n)) abort(n+': L3 and L4')
-		if(set5.has(n)) abort(n+': L3 and L5')
-	}
-	for(const n of set4) {
-		if(set5.has(n)) abort(n+': L4 and L5')
-	}
-}
 
 
 
@@ -221,7 +200,12 @@ const lines = fs.readFileSync(process.argv[2],{encoding:'utf8'}).trim().split('\
 
 
 for(let i=1; i<lines.length; i++) {
-	const l = lines[i].split('\t')
+
+	const line = lines[i]
+
+	if(line.startsWith('\t')) abort('line '+(i+1)+' starts with tab')
+
+	const l = line.split('\t')
 	
 	const level1 = str2level( l[0] )
 	const level2 = str2level( l[1] )
@@ -235,6 +219,14 @@ for(let i=1; i<lines.length; i++) {
 	}
 
 	if(level2) {
+		// ignore case such as level2 name same of level1, but no level3
+		if( !level3 ) {
+			if( level2 == level1 ) {
+				console.log('ignored level2 (leaf), same as level1: '+line)
+				continue
+			}
+		}
+
 		set2.add(level2)
 
 		t2t.get( level1 ).add( level2 )
@@ -243,6 +235,13 @@ for(let i=1; i<lines.length; i++) {
 	}
 
 	if(level3) {
+		if( !level4 ) {
+			if( level3 == level2 ) {
+				console.log('ignored level3 (leaf), same as level2: '+line)
+				continue
+			}
+		}
+
 		set3.add(level3)
 
 		t2t.get( level2 ).add( level3 )
@@ -251,6 +250,13 @@ for(let i=1; i<lines.length; i++) {
 	}
 
 	if(level4) {
+		if( !level5 ) {
+			if( level4 == level3 ) {
+				console.log('ignored level4 (leaf), same as level3: '+line)
+				continue
+			}
+		}
+
 		set4.add(level4)
 
 		t2t.get( level3 ).add( level4 )
@@ -259,6 +265,11 @@ for(let i=1; i<lines.length; i++) {
 	}
 
 	if(level5) {
+		if( level5 == level4 ) {
+			console.log('ignored level5 (leaf), same as level4: '+line)
+			continue
+		}
+
 		set5.add(level5)
 
 		t2t.get( level4 ).add( level5 )
@@ -281,7 +292,26 @@ for(const [n,s] of t2t) {
 
 
 
-check_terms_overlap()
+// check if terms from different levels overlap
+for(const n of set1) {
+	if(set2.has(n)) abort(n+': L1 and L2')
+	if(set3.has(n)) abort(n+': L1 and L3')
+	if(set4.has(n)) abort(n+': L1 and L4')
+	if(set5.has(n)) abort(n+': L1 and L5')
+}
+for(const n of set2) {
+	if(set3.has(n)) abort(n+': L2 and L3')
+	if(set4.has(n)) abort(n+': L2 and L4')
+	if(set5.has(n)) abort(n+': L2 and L5')
+}
+for(const n of set3) {
+	if(set4.has(n)) abort(n+': L3 and L4')
+	if(set5.has(n)) abort(n+': L3 and L5')
+}
+for(const n of set4) {
+	if(set5.has(n)) abort(n+': L4 and L5')
+}
+
 
 
 
