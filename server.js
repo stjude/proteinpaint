@@ -9863,6 +9863,7 @@ support client-side config, e.g. bin size for numeric term
 
 
 function termdb_get_numericbins ( id, term, ds ) {
+
 	// step 1, get values from all samples
 	const values = []
 	for(const s in ds.cohort.annotation) {
@@ -9893,20 +9894,46 @@ function termdb_get_numericbins ( id, term, ds ) {
 			}
 			bins.push( copy )
 		}
+
 	} else if( nb.auto_bins ) {
-		// auto bins
-		// given start and bin size, use max from value to decide how many bins there are
+
+		/* auto bins
+		given start and bin size, use max from value to decide how many bins there are
+
+		if bin size is integer,
+		to make nicer labels
+		*/
+
 		const max = Math.max( ...values )
 		let v = nb.auto_bins.start_value
 		while( v < max ) {
 			const v2 = v + nb.auto_bins.bin_size
-			bins.push({
+
+			const bin = {
 				start: v,
 				stop: v2,
 				value: 0,
 				startinclusive:1,
-				label: v+' to '+v2,
-			})
+			}
+
+			if( Number.isInteger( nb.auto_bins.bin_size ) ) {
+				// bin size is integer, make nicer label
+
+				if( nb.auto_bins.bin_size == 1 ) {
+					// bin size is 1; use just start value as label, not a range
+					bin.label = v
+				} else {
+					// bin size bigger than 1, reduce right bound by 1, in label only!
+					bin.label = v + ' to ' + (v2-1)
+				}
+			} else {
+				
+				// bin size is not integer
+				bin.label = v+' to '+v2
+			}
+
+			bins.push( bin )
+
 			v += nb.auto_bins.bin_size
 		}
 	} else {
