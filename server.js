@@ -9515,8 +9515,9 @@ for each category/bin of term1, divide its samples by category/bin of term2
 
 
 	let t1categories, // store cross-tab data
-		t1bins, // store cross-tab data
-		t2bins  // for temp use
+		// k: category value, v: {}
+		t1bins, // [], store cross-tab data
+		t2bins  // [], for temp use
 
 	// premake numeric bins for t1 and t2
 	if( term1.graph.barchart.numeric_bin ) {
@@ -9801,10 +9802,10 @@ support client-side config, e.g. bin size for numeric term
 			})
 		}
 
-		if( term.graph.barchart.categorical.order ) {
+		if( term.graph.barchart.order ) {
 			// has predefined order
 			const lst2 = []
-			for(const v of term.graph.barchart.categorical.order) {
+			for(const v of term.graph.barchart.order) {
 				const i = lst.find( i=> i.label == v )
 				if( i ) {
 					lst2.push(i)
@@ -9822,7 +9823,6 @@ support client-side config, e.g. bin size for numeric term
 		// numeric value: each bar is one bin
 
 		const [ bins, values ] = termdb_get_numericbins( q.barchart.id, term, ds )
-
 
 
 		for(const v of values) {
@@ -9977,7 +9977,8 @@ do not directly hand over the term object to client; many attr to be kept on ser
 			const p = t.graph.barchart
 			t2.graph.barchart = {
 				barwidth: p.barwidth,
-				labelfontsize: p.labelfontsize
+				labelfontsize: p.labelfontsize,
+				order: p.order,
 			}
 		}
 	}
