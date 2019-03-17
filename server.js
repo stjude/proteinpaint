@@ -9793,13 +9793,26 @@ support client-side config, e.g. bin size for numeric term
 		}
 
 		// format to {} to return to client
-		const lst = []
+		let lst = []
 		for(const [n,v] of [ ...value2count].sort((i,j)=>j[1]-i[1]) ) {
 			lst.push({
 				label: n,
 				value: v
 			})
 		}
+
+		if( term.graph.barchart.categorical.order ) {
+			// has predefined order
+			const lst2 = []
+			for(const v of term.graph.barchart.categorical.order) {
+				const i = lst.find( i=> i.label == v )
+				if( i ) {
+					lst2.push(i)
+				}
+			}
+			lst = lst2
+		}
+
 		res.send({ lst: lst })
 		return true
 	}
