@@ -192,20 +192,48 @@ possible modifiers:
 		button_row: row,
 		obj: obj,
 		callback: result=>{
-			// got result
+
+			/* got result
+			.term2{}
+			.items[]
+			._button
+
+			term1 is term
+
+			to make new panel and display a table
+			observe predefined order of values for both term1/2
+			*/
+
 			const c = result._button.node().getBoundingClientRect()
 			const pane = client.newpane({ x: c.x+100, y: Math.max( 10, c.y-100) })
 			pane.header.html( term.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+result.term2.name )
 
-			const term2values = new Set()
-			for(const t1v of result.items) {
-				for(const j of t1v.lst) {
-					term2values.add( j.label )
+			// columns are term2 values, order may be predefined
+			const column_keys = []
+			if( result.term2.graph && result.term2.graph.barchart && result.term2.graph.barchart.order ) {
+
+				for(const v of result.term2.graph.barchart.order) {
+					column_keys.push(v)
+				}
+
+			} else {
+
+				// no predefined order, get unique values from data
+				const term2values = new Set()
+				for(const t1v of result.items) {
+					for(const j of t1v.lst) {
+						term2values.add( j.label )
+					}
+				}
+				for(const s of term2values) {
+					column_keys.push( s )
 				}
 			}
 
+
 			// show table
 			const table = pane.body.append('table')
+				.style('margin-top','20px')
 				.style('border-spacing','3px')
 				.style('border-collapse','collapse')
 				.style('border', '1px solid black')
@@ -213,14 +241,28 @@ possible modifiers:
 			// header
 			const tr = table.append('tr')
 			tr.append('td') // column 1
-			for(const i of term2values) {
+			// print term2 values as rest of columns
+			for(const i of column_keys) {
 				tr.append('th')
 					.text( i )
 					.style('border', '1px solid black')
 			}
 
-			// rows are term1 values, columns are term2 values
-			for(const t1v of result.items) {
+			// rows are term1 values
+			let rows = []
+			// order of rows maybe predefined
+			if( term.graph && term.graph.barchart && term.graph.barchart.order ) {
+				for(const v of term.graph.barchart.order ) {
+					const i = result.items.find( i=> i.label == v )
+					if( i ) {
+						rows.push( i )
+					}
+				}
+			} else {
+				rows = result.items
+			}
+			
+			for(const t1v of rows) {
 				const tr = table.append('tr')
 
 				// column 1
@@ -229,7 +271,7 @@ possible modifiers:
 					.style('border', '1px solid black')
 
 				// other columns
-				for(const t2label of term2values) {
+				for(const t2label of column_keys) {
 					const td = tr.append('td')
 						.style('border', '1px solid black')
 					const v = t1v.lst.find( i=> i.label == t2label )
