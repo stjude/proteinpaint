@@ -223,12 +223,10 @@ just a wrapper for may_makebutton_crosstabulate with its callback function
 			pane.header.html( term1.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+result.term2.name )
 
 			// columns are term2 values, order may be predefined
-			const column_keys = []
-			if( result.term2.graph && result.term2.graph.barchart && result.term2.graph.barchart.order ) {
+			let column_keys = []
+			if( result.term2_order ) {
 
-				for(const v of result.term2.graph.barchart.order) {
-					column_keys.push(v)
-				}
+				column_keys = result.term2_order
 
 			} else {
 
