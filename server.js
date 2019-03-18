@@ -9514,19 +9514,22 @@ for each category/bin of term1, divide its samples by category/bin of term2
 	if(!term2.graph.barchart) throw 'term2.graph.barchart missing'
 
 
-	let t1categories, // store cross-tab data
-		// k: category value, v: {}
-		t1bins, // [], store cross-tab data
-		t2bins  // [], for temp use
+	// if term1 is categorical, use to store crosstab data in each category
+	// k: category value, v: {}
+	let t1categories
+	// if term1 is numerical, use to store crosstab data in each bin
+	let t1binconfig
+	// if term2 is numerical, for temp use while iterating over term1
+	let t2binconfig
 
 	// premake numeric bins for t1 and t2
 	if( term1.graph.barchart.numeric_bin ) {
-		const [ bins, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
-		t1bins = bins
+		const [ bc, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
+		t1binconfig = bc
 	}
 	if( term2.graph.barchart.numeric_bin ) {
-		const [ bins, values ] = termdb_get_numericbins( q.term2.id, term2, ds )
-		t2bins = bins
+		const [ bc, values ] = termdb_get_numericbins( q.term2.id, term2, ds )
+		t2binconfig = bc
 	}
 
 
@@ -9534,6 +9537,9 @@ for each category/bin of term1, divide its samples by category/bin of term2
 	*/
 
 	if(term1.graph.barchart.categorical) {
+
+		//// term1 categorical
+
 		t1categories = new Map()
 		// k: t1 category value
 		// v: {}
@@ -9546,9 +9552,9 @@ for each category/bin of term1, divide its samples by category/bin of term2
 				t1categories.set( v1, {} )
 			}
 
-			// look at term2 for this sample
-
 			if( term2.graph.barchart.categorical ) {
+
+				// both term1/2 categorical
 
 				if( !t1categories.get( v1 ).categories ) {
 					t1categories.get( v1 ).categories = new Map()
@@ -9564,29 +9570,17 @@ for each category/bin of term1, divide its samples by category/bin of term2
 				)
 
 			} else if( term2.graph.barchart.numeric_bin ) {
-				if( !t1categories.get( v1 ).bins ) {
+			
+				// term1 categorical, term2 numerical
+
+				if( !t1categories.get( v1 ).binconfig ) {
 					// make a copy of term2 bins
-					const lst = []
-					for(const b of t2bins) {
-						const c = {
-							value: 0
-						}
-						for(const k in b) c[k] = b[k]
-						lst.push(c)
-					}
-					t1categories.get( v1 ).bins = lst
+					t1categories.get(v1).binconfig = JSON.parse(JSON.stringify(t2binconfig))
 				}
 
 				const v2 = sampleobj[ q.term2.id ]
 				if(!Number.isFinite(v2)) continue
-				for(const b of t1categories.get( v1 ).bins ) {
-					if( b.startinclusive  && v2 <  b.start ) continue
-					if( !b.startinclusive && v2 <= b.start ) continue
-					if( b.stopinclusive   && v2 >  b.stop  ) continue
-					if( !b.stopinclusive  && v2 >= b.stop  ) continue
-					b.value++
-					break
-				}
+				termdb_value2bin( v2, t1categories.get( v1 ).binconfig )
 
 			} else {
 				throw 'term2 uknown type'
@@ -9603,23 +9597,17 @@ for each category/bin of term1, divide its samples by category/bin of term2
 			if( !Number.isFinite( v1 )) continue
 
 			// get the bin for this sample
-			let bin
-			for(const b of t1bins ) {
-				if( b.startinclusive  && v1 <  b.start ) continue
-				if( !b.startinclusive && v1 <= b.start ) continue
-				if( b.stopinclusive   && v1 >  b.stop  ) continue
-				if( !b.stopinclusive  && v1 >= b.stop  ) continue
-				bin = b
-				break
-			}
+			const bin = termdb_value2bin( v1, t1binconfig )
+
 			if(!bin) {
 				// somehow this sample does not fit to a bin
 				continue
 			}
-
-			// look at term2 for this sample
+			bin.value--
 
 			if( term2.graph.barchart.categorical ) {
+
+				// term1 numerical, term2 categorical
 
 				if( !bin.categories ) {
 					bin.categories = new Map()
@@ -9635,29 +9623,17 @@ for each category/bin of term1, divide its samples by category/bin of term2
 				)
 
 			} else if( term2.graph.barchart.numeric_bin ) {
-				if( !bin.bins ) {
+
+				// both term1/2 numerical
+
+				if( !bin.binconfig ) {
 					// make a copy of term2 bins
-					const lst = []
-					for(const b of t2bins) {
-						const c = {
-							value: 0
-						}
-						for(const k in b) c[k] = b[k]
-						lst.push(c)
-					}
-					bin.bins = lst
+					bin.binconfig = JSON.parse(JSON.stringify(t2binconfig))
 				}
 
 				const v2 = sampleobj[ q.term2.id ]
 				if(!Number.isFinite(v2)) continue
-				for(const b of bin.bins ) {
-					if( b.startinclusive  && v2 <  b.start ) continue
-					if( !b.startinclusive && v2 <= b.start ) continue
-					if( b.stopinclusive   && v2 >  b.stop  ) continue
-					if( !b.stopinclusive  && v2 >= b.stop  ) continue
-					b.value++
-					break
-				}
+				termdb_value2bin( v2, bin.binconfig )
 
 			} else {
 				throw 'term2 uknown type'
@@ -9669,6 +9645,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 	}
 
 	// return result
+
 	const lst = [] // list of t1 categories/bins
 	if(t1categories) {
 		for(const [ v1, o ] of t1categories) {
@@ -9686,8 +9663,8 @@ for each category/bin of term1, divide its samples by category/bin of term2
 					})
 					group.value += c
 				}
-			} else if( o.bins ) {
-				for(const b of o.bins) {
+			} else if( o.binconfig ) {
+				for(const b of o.binconfig.bins) {
 					if(b.value>0) {
 						group.lst.push({
 							label: b.label,
@@ -9696,7 +9673,10 @@ for each category/bin of term1, divide its samples by category/bin of term2
 						group.value += b.value
 					}
 				}
-				// sort
+				if( o.binconfig.unannotated) {
+					group.lst.push( o.binconfig.unannotated )
+					group.value += o.binconfig.unannotated.value
+				}
 			} else {
 				// this term1 category has no value
 				continue
@@ -9713,7 +9693,13 @@ for each category/bin of term1, divide its samples by category/bin of term2
 		lst.sort((i,j)=>j.value-i.value)
 
 	} else {
-		for(const b1 of t1bins ) {
+
+		// term1 is numeric; merge unannotated bin into regular bins
+		if( t1binconfig.unannotated ) {
+			t1binconfig.bins.push( t1binconfig.unannotated )
+		}
+
+		for(const b1 of t1binconfig.bins ) {
 
 			const group = {
 				label: b1.label,
@@ -9722,6 +9708,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 			}
 
 			if( b1.categories) {
+
 				for(const [k, v] of b1.categories) {
 					group.lst.push({
 						label: k,
@@ -9729,14 +9716,21 @@ for each category/bin of term1, divide its samples by category/bin of term2
 					})
 					group.value += v
 				}
-			} else if( b1.bins) {
-				for(const b2 of b1.bins) {
-					group.push({
+
+			} else if( b1.binconfig) {
+
+				for(const b2 of b1.binconfig.bins) {
+					group.lst.push({
 						label: b2.label,
 						value: b2.value,
 					})
 					group.value += b2.value
 				}
+				if(b1.binconfig.unannotated) {
+					group.lst.push( b1.binconfig.unannotated )
+					group.value += b1.binconfig.unannotated.value
+				}
+
 			} else {
 				// means this term1 bin has no value
 				continue
@@ -9822,37 +9816,32 @@ support client-side config, e.g. bin size for numeric term
 	if( term.graph.barchart.numeric_bin ) {
 		// numeric value: each bar is one bin
 
-		const [ bins, values ] = termdb_get_numericbins( q.barchart.id, term, ds )
-
+		const [ binconfig, values ] = termdb_get_numericbins( q.barchart.id, term, ds )
 
 		for(const v of values) {
-			for(const b of bins) {
-				if( b.startinclusive  && v <  b.start ) continue
-				if( !b.startinclusive && v <= b.start ) continue
-				if( b.stopinclusive   && v >  b.stop  ) continue
-				if( !b.stopinclusive  && v >= b.stop  ) continue
-				b.value++
-				break
-			}
+			termdb_value2bin( v, binconfig )
 		}
 
-		values.sort((i,j)=> i-j ) // values to be sorted to ascending order for boxplot
-		const boxplotresult = boxplot_getvalue( values.map( i=>{return {value:i}} ) )
+		const result = {
+			lst: binconfig.bins.map( i => {return {label: i.label, value: i.value}} ),
+			unannotated: binconfig.unannotated
+		}
+
+		// values to be sorted to ascending order for boxplot
+		values.sort((i,j)=> i-j )
+		result.boxplot = boxplot_getvalue( values.map( i=>{return {value:i}} ) )
 		// get mean value
-		boxplotresult.mean = values.reduce((i,j)=>j+i, 0) / values.length
+		result.boxplot.mean = values.reduce((i,j)=>j+i, 0) / values.length
 		// get sd
 		{
 			let s = 0
 			for(const v of values) {
-				s += Math.pow( v - boxplotresult.mean, 2 )
+				s += Math.pow( v - result.boxplot.mean, 2 )
 			}
-			boxplotresult.sd = Math.sqrt( s / (values.length-1) )
+			result.boxplot.sd = Math.sqrt( s / (values.length-1) )
 		}
 
-		res.send({
-			lst: bins.map( i => {return {label: i.label, value: i.value}} ),
-			boxplot: boxplotresult,
-		})
+		res.send( result )
 		return true
 	}
 
@@ -9861,8 +9850,70 @@ support client-side config, e.g. bin size for numeric term
 
 
 
+function termdb_value2bin ( v, binconfig ) {
+/* bins returned by termdb_get_numericbins
+given one single value
+find its residing bin and increment bin.value
+
+if found a matching bin, return for use in crosstab
+*/
+	if(binconfig.unannotated && v == binconfig.unannotated._value) {
+		// match with unannotated value
+		binconfig.unannotated.value++
+		return binconfig.unannotated
+	}
+
+	for(const b of binconfig.bins) {
+		if( b.startunbound ) {
+			if( b.stopinclusive && v <= b.stop  ) {
+				b.value++
+				return b
+			}
+			if( !b.stopinclusive && v < b.stop ) {
+				b.value++
+				return b
+			}
+		}
+		if( b.stopunbound ) {
+			if( b.startinclusive && v >= b.start  ) {
+				b.value++
+				return b
+			}
+			if( !b.stopinclusive && v > b.start ) {
+				b.value++
+				return b
+			}
+		}
+		if( b.startinclusive  && v <  b.start ) continue
+		if( !b.startinclusive && v <= b.start ) continue
+		if( b.stopinclusive   && v >  b.stop  ) continue
+		if( !b.stopinclusive  && v >= b.stop  ) continue
+		b.value++
+		return b
+	}
+
+	// no matching bin found
+	return null
+}
+
+
 
 function termdb_get_numericbins ( id, term, ds ) {
+/*
+return an object for binning setting {}
+rather than a list of bins
+this is to accommondate settings where a valid value e.g. 0 is used for unannotated samples, and need to collect this count
+
+.bins[]
+	each element is one bin
+	.start
+	.stop
+	etc
+.unannotated{}
+	.value
+	.samplecount
+	for counting unannotated samples if unannotated{} is set on server
+*/
 
 	// step 1, get values from all samples
 	const values = []
@@ -9879,6 +9930,7 @@ function termdb_get_numericbins ( id, term, ds ) {
 	// step 2, decide bins
 	const nb = term.graph.barchart.numeric_bin
 
+// TODO
 	const bins = []
 
 	if( nb.fixed_bins ) {
@@ -9939,7 +9991,21 @@ function termdb_get_numericbins ( id, term, ds ) {
 	} else {
 		throw 'unknown ways to decide bins'
 	}
-	return [ bins, values ]
+
+	const binconfig = {
+		bins: bins
+	}
+
+	if( nb.unannotated ) {
+		// in case of using this numeric term as term2 in crosstab, this object can also work as a bin, to be put into the bins array
+		binconfig.unannotated = {
+			_value: nb.unannotated.value,
+			label: nb.unannotated.label,
+			value: 0 // to be replaced by samplecount
+		}
+	}
+
+	return [ binconfig, values ]
 }
 
 
