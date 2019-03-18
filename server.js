@@ -9527,7 +9527,13 @@ for each category/bin of term1, divide its samples by category/bin of term2
 		const [ bc, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
 		t1binconfig = bc
 	}
+
 	if( term2.graph.barchart.numeric_bin ) {
+		/*
+		term2 is numeric bin
+		in case of agedx, may use a different set of bins compared to when doing a barchart
+		TODO will need to use a temp copy of term2
+		*/
 		const [ bc, values ] = termdb_get_numericbins( q.term2.id, term2, ds )
 		t2binconfig = bc
 	}
@@ -9592,6 +9598,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 		// term1 bins already made
 
 		for(const s in ds.cohort.annotation) {
+
 			const sampleobj = ds.cohort.annotation[ s ]
 			const v1 = sampleobj[ q.term1.id ]
 			if( !Number.isFinite( v1 )) continue
@@ -9742,9 +9749,26 @@ for each category/bin of term1, divide its samples by category/bin of term2
 	}
 
 
-	res.send({lst: lst})
+	const result = {
+		lst: lst
+	}
+
+	/* return order of term2 values
+	this can come from two places:
+	.barchart.order[] for categorical terms
+	.barchart.numeric_bin.fixed_bins[] for numeric terms with fixed bins
+	*/
+	if( term2.graph.barchart.order ) {
+		result.term2_order = term2.graph.barchart.order
+	} else if(term2.graph.barchart.numeric_bin && term2.graph.barchart.numeric_bin.fixed_bins) {
+		result.term2_order = term2.graph.barchart.numeric_bin.fixed_bins.map( i=> i.label )
+	}
+
+	res.send( result )
 	return true
 }
+
+
 
 
 
