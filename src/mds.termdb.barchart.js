@@ -6,6 +6,7 @@ import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog,schemeCategory20} fro
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init} from './mds.termdb'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
+import { platform } from 'os';
 
 
 
@@ -106,7 +107,7 @@ export function barchart_make ( arg ) {
 		maxlabelwidth:0,
 		maxvalue:0,
 		label_fontsize: 15,
-		yaxis_width: 70,
+		yaxis_width: 100,
 		use_logscale:0
 	}
 
@@ -148,6 +149,9 @@ export function barchart_make ( arg ) {
 
 	plot.legend_div = arg.holder.append('div')
 		.style('margin','10px 0px')
+
+	//Exposed - not exponsed data
+	plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
 
 	do_plot( plot )
 }
@@ -407,13 +411,19 @@ plot()
 		.selectAll('*')
 		.remove()
 
+		let exposed_data = ''
+
+		if(plot.unannotated){
+			exposed_data = '<tr><td colspan="2">Among All Patients</td></tr>'
+			+ '<tr><td>'+ plot.unannotated.label_annotated +'</td><td>'+ plot.unannotated.value_annotated +'</td></tr>'
+			+ '<tr><td>'+ plot.unannotated.label +'</td><td>'+ plot.unannotated.value +'</td></tr>'
+			+ '<tr><td colspan="2">Among Patients treated</td></tr>'
+		}
+
 		const boxplot_table = plot.boxplot_div
 			.html(
 				'<table><tr><th></th><th>Value</th></tr>'
-				+ '<tr><td colspan="2">Among All Patients</td></tr>'
-				+ '<tr><td>Exposed</td><td>'+ '5522' +'</td></tr>'
-				+ '<tr><td>Not Exposed</td><td>'+ '0' +'</td></tr>'
-				+ '<tr><td colspan="2">Among Patients treated</td></tr>'
+				+ exposed_data
 				+ '<tr><td>Mean (SD)</td><td>'+ plot.boxplot.mean.toFixed(2) + ' (' + plot.boxplot.sd.toFixed(2) +') </td></tr>'
 				+ '<tr><td>Median (IQR)</td><td>'+ plot.boxplot.p50.toFixed(2) + ' (' + plot.boxplot.iqr.toFixed(2) +') </td></tr>'
 				+ '<tr><td>5th Percentile</td><td>'+ plot.boxplot.p05.toFixed(2) +'</td></tr>'
