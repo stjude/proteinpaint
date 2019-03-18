@@ -187,8 +187,22 @@ possible modifiers:
 
 	may_make_term_graphbuttons( term, row, obj )
 
+	may_enable_crosstabulate( term, row, obj )
+}
+
+
+
+
+
+
+
+function may_enable_crosstabulate ( term1, row, obj ) {
+/*
+may enable a standalone crosstab button for a term in the tree
+just a wrapper for may_makebutton_crosstabulate with its callback function
+*/
 	may_makebutton_crosstabulate( {
-		term1: term,
+		term1: term1,
 		button_row: row,
 		obj: obj,
 		callback: result=>{
@@ -206,7 +220,7 @@ possible modifiers:
 
 			const c = result._button.node().getBoundingClientRect()
 			const pane = client.newpane({ x: c.x+100, y: Math.max( 10, c.y-100) })
-			pane.header.html( term.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+result.term2.name )
+			pane.header.html( term1.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+result.term2.name )
 
 			// columns are term2 values, order may be predefined
 			const column_keys = []
@@ -251,8 +265,8 @@ possible modifiers:
 			// rows are term1 values
 			let rows = []
 			// order of rows maybe predefined
-			if( term.graph && term.graph.barchart && term.graph.barchart.order ) {
-				for(const v of term.graph.barchart.order ) {
+			if( term1.graph && term1.graph.barchart && term1.graph.barchart.order ) {
+				for(const v of term1.graph.barchart.order ) {
 					const i = result.items.find( i=> i.label == v )
 					if( i ) {
 						rows.push( i )
