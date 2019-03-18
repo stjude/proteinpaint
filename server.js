@@ -9524,18 +9524,32 @@ for each category/bin of term1, divide its samples by category/bin of term2
 
 	// premake numeric bins for t1 and t2
 	if( term1.graph.barchart.numeric_bin ) {
-		const [ bc, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
-		t1binconfig = bc
+
+		if( term1.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
+			// a dedicated binning scheme to be used here
+			// make a temp term
+			const tempterm = JSON.parse(JSON.stringify(term1))
+			// pretend this is the fixed_bins
+			tempterm.graph.barchart.numeric_bin.fixed_bins = term1.graph.barchart.numeric_bin.crosstab_fixed_bins
+			const [ bc, values ] = termdb_get_numericbins( q.term1.id, tempterm, ds )
+			t1binconfig = bc
+		} else {
+			const [ bc, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
+			t1binconfig = bc
+		}
 	}
 
 	if( term2.graph.barchart.numeric_bin ) {
-		/*
-		term2 is numeric bin
-		in case of agedx, may use a different set of bins compared to when doing a barchart
-		TODO will need to use a temp copy of term2
-		*/
-		const [ bc, values ] = termdb_get_numericbins( q.term2.id, term2, ds )
-		t2binconfig = bc
+
+		if( term2.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
+			const tempterm = JSON.parse(JSON.stringify(term2))
+			tempterm.graph.barchart.numeric_bin.fixed_bins = term2.graph.barchart.numeric_bin.crosstab_fixed_bins
+			const [ bc, values ] = termdb_get_numericbins( q.term2.id, tempterm, ds )
+			t2binconfig = bc
+		} else {
+			const [ bc, values ] = termdb_get_numericbins( q.term2.id, term2, ds )
+			t2binconfig = bc
+		}
 	}
 
 
@@ -9962,7 +9976,6 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 	// step 2, decide bins
 	const nb = term.graph.barchart.numeric_bin
 
-// TODO
 	const bins = []
 
 	if( nb.fixed_bins ) {
