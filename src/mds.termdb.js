@@ -386,6 +386,7 @@ such conditions may be carried by obj
 			// make barchart
 			const plot = {
 				items: data.lst,
+				unannotated: data.unannotated,
 				boxplot: data.boxplot, // available for numeric terms
 				holder: panel.body,
 				term: term
