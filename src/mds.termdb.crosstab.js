@@ -60,6 +60,7 @@ then pass term2 and crosstab result to callback
 					}
 
 					arg.obj.tip.hide()
+
 					cross_tabulate( {
 						term1: {
 							id: arg.term1.id
@@ -72,10 +73,12 @@ then pass term2 and crosstab result to callback
 					.then( data=>{
 
 						if( !data.lst ) throw 'error doing cross-tabulation'
+
 						// update the plot data using the server-returned new data
 						arg.callback( {
 							items: data.lst,
 							term2: term2,
+							term2_order: data.term2_order,
 							_button: button,
 						})
 					})
