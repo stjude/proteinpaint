@@ -9854,13 +9854,21 @@ function termdb_value2bin ( v, binconfig ) {
 /* bins returned by termdb_get_numericbins
 given one single value
 find its residing bin and increment bin.value
+this value is from one sample
 
 if found a matching bin, return for use in crosstab
 */
-	if(binconfig.unannotated && v == binconfig.unannotated._value) {
-		// match with unannotated value
-		binconfig.unannotated.value++
-		return binconfig.unannotated
+	if( binconfig.unannotated ) {
+
+		if( v == binconfig.unannotated._value ) {
+			// this value/sample is unannotated
+			binconfig.unannotated.value++
+			return binconfig.unannotated
+		}
+
+		// this value/sample is annotated, still increment the annotated counter but do not return the bin
+		// find the bin that contains this value below and return that
+		binconfig.unannotated.value_annotated++
 	}
 
 	for(const b of binconfig.bins) {
@@ -10001,7 +10009,11 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 		binconfig.unannotated = {
 			_value: nb.unannotated.value,
 			label: nb.unannotated.label,
-			value: 0 // to be replaced by samplecount
+			label_annotated: nb.unannotated.label_annotated,
+			// for unannotated samples; to be replaced by samplecount
+			value: 0,
+			// for annotated samples
+			value_annotated: 0,
 		}
 	}
 
