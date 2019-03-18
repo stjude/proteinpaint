@@ -172,12 +172,22 @@ possible modifiers:
 		for clicking box and collect this term and done
 		will not render remaining buttons
 		*/
-		namebox
-			.attr('class', 'sja_menuoption')
-			.style('margin-left','5px')
-			.on('click',()=>{
-				arg.modifier_click_term( term )
-			})
+
+		if( arg.modifier_click_term.disable_terms && arg.modifier_click_term.disable_terms.has( term.id ) ) {
+
+			// this term is disabled, no clicking
+			namebox.style('opacity','.5')
+
+		} else {
+
+			// enable clicking this term
+			namebox
+				.attr('class', 'sja_menuoption')
+				.style('margin-left','5px')
+				.on('click',()=>{
+					arg.modifier_click_term.callback( term )
+				})
+		}
 		return
 	}
 
