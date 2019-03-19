@@ -14,7 +14,7 @@ module.exports={
 	dsinfo:[
 		{k:'Courtesy of',v:'<img style="margin-bottom:20px" src=http://cancer.sanger.ac.uk/cancergenome/gfx/logo_cosmic.png>'},
 		{k:'Link',v:'<a href=http://cancer.sanger.ac.uk/cosmic target=_blank>http://cancer.sanger.ac.uk/cosmic</a>'},
-		{k:'Version',v:'83'},
+		{k:'Version',v:'87'},
 		{k:'Genome',v:'GRCh37/hg19'},
 		{k:'Note',v:'This data is made available with permission and under <a href=http://cancer.sanger.ac.uk/cosmic/license target=_blank>license</a> from COSMIC.'}
 	],
