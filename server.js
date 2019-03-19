@@ -9457,7 +9457,9 @@ function handle_mdssamplesignature(req,res) {
 
 async function handle_termdb (req, res) {
 	if(reqbodyisinvalidjson(req,res)) return
+
 	try {
+
 		const q = req.query
 		const gn = genomes[ q.genome ]
 		if(!gn) throw 'invalid genome'
@@ -9467,7 +9469,8 @@ async function handle_termdb (req, res) {
 		const tdb = ds.cohort.termdb
 		if(!tdb) throw 'no termdb for this dataset'
 
-		// process triggers, supports await
+		// process triggers
+		// to support await, need to detect triggers here
 
 		if( termdb_trigger_rootterm( q, res, tdb ) ) return
 		if( termdb_trigger_children( q, res, tdb ) ) return
@@ -9525,6 +9528,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 	// premake numeric bins for t1 and t2
 	if( term1.graph.barchart.numeric_bin ) {
 
+		/*
 		if( term1.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
 			// a dedicated binning scheme to be used here
 			// make a temp term
@@ -9537,6 +9541,15 @@ for each category/bin of term1, divide its samples by category/bin of term2
 			const [ bc, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
 			t1binconfig = bc
 		}
+		*/
+
+		/* when a barchart has been created for numeric term1,
+		it will be based on either auto bin or fixed bins
+		but not by the special crosstab bins
+		so do not apply the special bin when it is term1
+		*/
+		const [ bc, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
+		t1binconfig = bc
 	}
 
 	if( term2.graph.barchart.numeric_bin ) {
@@ -9667,7 +9680,8 @@ for each category/bin of term1, divide its samples by category/bin of term2
 
 	// return result
 
-	const lst = [] // list of t1 categories/bins
+	let lst = [] // list of t1 categories/bins
+
 	if(t1categories) {
 		for(const [ v1, o ] of t1categories) {
 			const group = {
@@ -9708,10 +9722,20 @@ for each category/bin of term1, divide its samples by category/bin of term2
 			lst.push(group)
 		}
 
-		/* term1 is categorical so sort the groups to decending order
-		because the groups are unordered
-		*/
-		lst.sort((i,j)=>j.value-i.value)
+		if( term1.graph.barchart.order ) {
+			// term1 has predefined order
+			const lst2 = []
+			for(const i of term1.graph.barchart.order) {
+				const j = lst.find( m=> m.label == i )
+				if( j ) {
+					lst2.push( j )
+				}
+			}
+			lst = lst2
+		} else {
+			// no predefined order, sort to descending order
+			lst.sort((i,j)=>j.value-i.value)
+		}
 
 	} else {
 
@@ -9900,33 +9924,33 @@ if found a matching bin, return for use in crosstab
 
 		if( v == binconfig.unannotated._value ) {
 			// this value/sample is unannotated
-			binconfig.unannotated.value++
+			binconfig.unannotated.value++ // v2s
 			return binconfig.unannotated
 		}
 
 		// this value/sample is annotated, still increment the annotated counter but do not return the bin
 		// find the bin that contains this value below and return that
-		binconfig.unannotated.value_annotated++
+		binconfig.unannotated.value_annotated++ // v2s
 	}
 
 	for(const b of binconfig.bins) {
 		if( b.startunbound ) {
 			if( b.stopinclusive && v <= b.stop  ) {
-				b.value++
+				b.value++ // v2s
 				return b
 			}
 			if( !b.stopinclusive && v < b.stop ) {
-				b.value++
+				b.value++ // v2s
 				return b
 			}
 		}
 		if( b.stopunbound ) {
 			if( b.startinclusive && v >= b.start  ) {
-				b.value++
+				b.value++ // v2s
 				return b
 			}
 			if( !b.stopinclusive && v > b.start ) {
-				b.value++
+				b.value++ // v2s
 				return b
 			}
 		}
@@ -9934,7 +9958,7 @@ if found a matching bin, return for use in crosstab
 		if( !b.startinclusive && v <= b.start ) continue
 		if( b.stopinclusive   && v >  b.stop  ) continue
 		if( !b.stopinclusive  && v >= b.stop  ) continue
-		b.value++
+		b.value++ // v2s
 		return b
 	}
 
@@ -9984,7 +10008,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
 		for(const i of nb.fixed_bins) {
 			const copy = {
-				value: 0
+				value: 0 // v2s
 			}
 			for(const k in i) {
 				copy[ k ] = i[ k ]
@@ -10009,7 +10033,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 			const bin = {
 				start: v,
 				stop: v2,
-				value: 0,
+				value: 0, // v2s
 				startinclusive:1,
 			}
 
@@ -10047,10 +10071,10 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 			_value: nb.unannotated.value,
 			label: nb.unannotated.label,
 			label_annotated: nb.unannotated.label_annotated,
-			// for unannotated samples; to be replaced by samplecount
-			value: 0,
+			// for unannotated samples
+			value: 0, // v2s
 			// for annotated samples
-			value_annotated: 0,
+			value_annotated: 0, // v2s
 		}
 	}
 
