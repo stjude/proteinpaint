@@ -95,6 +95,8 @@ export function barchart_make ( arg ) {
 	// initiating the plot object
 	// it will be updated later by axis toggle or cross tabulate
 	const plot = {
+		genome: arg.genome,
+		dslabel: arg.dslabel,
 		tip: new client.Menu({padding:'18px'}),
 		term: arg.term,
 		items: arg.items,
@@ -113,20 +115,28 @@ export function barchart_make ( arg ) {
 
 	// a row of buttons
 
-	const button_row = arg.holder.append('div')
+	plot.button_row = arg.holder.append('div')
 		.style('margin','10px 0px')
 
 	// button - scale toggle
-	button_row.append('span')
+	plot.button_row.append('span')
 		.text('Y Axis - Log Scale')
-	
-	plot.scale_btn = button_row.append('input')
-		.attr('type', 'checkbox')
+		.style('font-size','.8em')
+		.style('display','inline-block')
+		.style('padding-right','3px')
+
+	plot.scale_btn = plot.button_row.append('input')
+	.attr('type', 'checkbox')
+	.style('display','inline-block')
+
+	const term2_div = plot.button_row.append('div')
+	.attr('class', 'term2_div')
+	.style('display','inline-block')
 
 	// button - cross tabulate
 	may_makebutton_crosstabulate({
 		term1: arg.term,
-		button_row: button_row,
+		button_row: term2_div,
 		obj: obj,
 		callback: result=>{
 			// update the plot data using the server-returned new data
@@ -154,6 +164,11 @@ export function barchart_make ( arg ) {
 	plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
 
 	do_plot( plot )
+
+	// button_row.select('#remove_term2').on('click',()=>{
+	// 	plot.term2 = 0
+	// 	do_plot(plot)
+	// })
 }
 
 
@@ -168,6 +183,55 @@ or stacked bar plot for cross-tabulating
 plot()
 */
 
+	// Change corsstab button text to 'select 2nd term'
+	plot.button_row.selectAll('.sja_menuoption')
+	.text('Select Second Term')
+
+	//show term2 if selected
+	if(plot.term2){
+
+		plot.button_row.selectAll('.sja_menuoption')
+		.text('Change Second Term')
+		.style('margin-left','5px')
+		
+		const term2_div = plot.button_row.selectAll('.term2_div')
+		.style('display','inline-block')
+		.style('margin','3px 10px')
+		.style('padding','3px 10px')
+		.style('border-style','solid')
+		.style('border-width','1px')
+		.style('border-color','#d4d4d4')
+
+		const term2 = term2_div.append('div')
+		.attr('class','sja_menuoption')
+		.attr('id','term2_btn')
+		.style('display','inline-block')
+		.style('margin-left','10px')
+		.style('padding','3px 5px')
+		.style('font-size','.8em')
+		.style('background-color', '#cfe2f3ff')
+		.text(plot.term2.name)
+		
+		const term2_close = term2_div.append('div')
+		.attr('id','remove_term2')
+		.attr('class','sja_menuoption')
+		.style('display','inline-block')
+		.style('margin-left','1px')
+		.style('padding','3px 5px')
+		.style('font-size','.8em')
+		.style('background-color', '#cfe2f3ff')
+		.text('X')
+		.on('click',()=>{
+			delete plot.term2
+			term2.selectAll('*').remove()
+			term2_div.select('#remove_term2').remove()
+			term2_div.select('#term2_btn').remove()
+			term2_div.style('border-style','none')
+			plot.legend_div.selectAll('*').remove()
+
+			update_plot(plot)
+		})
+	}
 	// set y axis min/max scale
 	const [yscale_min, yscale_max] = set_yscale( plot )
 
@@ -546,3 +610,24 @@ function get_max_labelheight ( plot ) {
 
 	return textwidth
 }
+
+function update_plot (plot) {
+	
+	const arg = {
+		genome: plot.genome,
+		dslabel: plot.dslabel,
+		barchart: {
+			id: plot.term.id
+		}
+	}
+
+	client.dofetch( 'termdb', arg )
+	.then(data=>{
+		if(data.error) throw data.error
+		if(!data.lst) throw 'no data for barchart'
+
+		plot.items =  data.lst
+
+		do_plot( plot )
+		})
+	}

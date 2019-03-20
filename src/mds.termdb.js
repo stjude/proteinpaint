@@ -407,6 +407,8 @@ such conditions may be carried by obj
 
 			// make barchart
 			const plot = {
+				genome: obj.genome.name,
+				dslabel: obj.mds.label,
 				items: data.lst,
 				unannotated: data.unannotated,
 				boxplot: data.boxplot, // available for numeric terms
