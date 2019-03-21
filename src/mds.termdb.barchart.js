@@ -151,6 +151,8 @@ export function barchart_make ( arg ) {
 		}
 	})
 
+	plot.crosstab_button.text('Select Second Term')
+
 	// term2 handle holder
 	plot.term2_handle_div = plot.term2_border_div
 		.append('div')
@@ -195,12 +197,58 @@ export function barchart_make ( arg ) {
 
 
 function update_term2_header ( plot ) {
-/* update term2 header
+/* update term2 header for events like select / remove / change term2
+	Updaate plot object based on term2 events
 */
 	// clear handle holder
+	plot.term2_handle_div.selectAll('*').remove()
+
+	// Change corsstab button text to 'select 2nd term'
+	plot.crosstab_button
+	.text('Select Second Term')
+
+	//show term2 if selected
+	if(plot.term2){
+
+		plot.crosstab_button
+		.text('Change Second Term')
+		.style('margin-left','5px')
+		
+		plot.term2_border_div
+		.style('margin','3px 10px')
+		.style('padding','3px 10px')
+		.style('border-style','solid')
+		.style('border-width','1px')
+		.style('border-color','#d4d4d4')
+
+		plot.term2_handle_div.append('div')
+		.attr('class','sja_menuoption')
+		.style('display','inline-block')
+		.style('margin-left','10px')
+		.style('padding','3px 5px')
+		.style('font-size','.8em')
+		.style('background-color', '#cfe2f3ff')
+		.text(plot.term2.name)
+		
+		plot.term2_handle_div.append('div')
+		.attr('class','sja_menuoption')
+		.style('display','inline-block')
+		.style('margin-left','1px')
+		.style('padding','3px 5px')
+		.style('font-size','.8em')
+		.style('background-color', '#cfe2f3ff')
+		.text('X')
+		.on('click',()=>{
+			delete plot.term2
+			plot.term2_handle_div.selectAll('*').remove()
+			plot.term2_border_div.style('border-style','none')
+			plot.legend_div.selectAll('*').remove()
+			plot.crosstab_button.text('Select Second Term')
+
+			update_plot(plot)
+		})
+	}
 }
-
-
 
 
 function do_plot ( plot ) {
@@ -212,55 +260,6 @@ or stacked bar plot for cross-tabulating
 plot()
 */
 
-	// Change corsstab button text to 'select 2nd term'
-	plot.button_row.selectAll('.sja_menuoption')
-	.text('Select Second Term')
-
-	//show term2 if selected
-	if(plot.term2){
-
-		plot.button_row.selectAll('.sja_menuoption')
-		.text('Change Second Term')
-		.style('margin-left','5px')
-		
-		const term2_div = plot.button_row.selectAll('.term2_div')
-		.style('display','inline-block')
-		.style('margin','3px 10px')
-		.style('padding','3px 10px')
-		.style('border-style','solid')
-		.style('border-width','1px')
-		.style('border-color','#d4d4d4')
-
-		const term2 = term2_div.append('div')
-		.attr('class','sja_menuoption')
-		.attr('id','term2_btn')
-		.style('display','inline-block')
-		.style('margin-left','10px')
-		.style('padding','3px 5px')
-		.style('font-size','.8em')
-		.style('background-color', '#cfe2f3ff')
-		.text(plot.term2.name)
-		
-		const term2_close = term2_div.append('div')
-		.attr('id','remove_term2')
-		.attr('class','sja_menuoption')
-		.style('display','inline-block')
-		.style('margin-left','1px')
-		.style('padding','3px 5px')
-		.style('font-size','.8em')
-		.style('background-color', '#cfe2f3ff')
-		.text('X')
-		.on('click',()=>{
-			delete plot.term2
-			term2.selectAll('*').remove()
-			term2_div.select('#remove_term2').remove()
-			term2_div.select('#term2_btn').remove()
-			term2_div.style('border-style','none')
-			plot.legend_div.selectAll('*').remove()
-
-			update_plot(plot)
-		})
-	}
 	// set y axis min/max scale
 	const [yscale_min, yscale_max] = set_yscale( plot )
 
