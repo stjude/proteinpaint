@@ -129,22 +129,41 @@ export function barchart_make ( arg ) {
 	.attr('type', 'checkbox')
 	.style('display','inline-block')
 
-	const term2_div = plot.button_row.append('div')
-	.attr('class', 'term2_div')
-	.style('display','inline-block')
+	plot.term2_border_div = plot.button_row
+		.append('div')
+		.style('display','inline-block')
+		.style('padding','10px')
+
 
 	// button - cross tabulate
-	may_makebutton_crosstabulate({
+	plot.crosstab_button = may_makebutton_crosstabulate({
 		term1: arg.term,
-		button_row: term2_div,
+		button_row: plot.term2_border_div,
 		obj: obj,
 		callback: result=>{
+			// either adding term2 for the first time or replacing term2
+			plot.term2 = result.term2
+			update_term2_header( plot )
+
 			// update the plot data using the server-returned new data
 			plot.items = result.items
-			plot.term2 = result.term2
 			do_plot( plot )
 		}
 	})
+
+	// term2 handle holder
+	plot.term2_handle_div = plot.term2_border_div
+		.append('div')
+		.style('display','inline-block')
+		.style('margin-left','10px')
+
+	// term2 display mode select holder
+	plot.term2_displaymode_div = plot.term2_border_div
+		.append('div')
+		.style('display','inline-block')
+		.style('margin-left','10px')
+
+
 
 	// other holders/components
 
@@ -169,6 +188,16 @@ export function barchart_make ( arg ) {
 	// 	plot.term2 = 0
 	// 	do_plot(plot)
 	// })
+}
+
+
+
+
+
+function update_term2_header ( plot ) {
+/* update term2 header
+*/
+	// clear handle holder
 }
 
 
