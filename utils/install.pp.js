@@ -121,7 +121,7 @@ if( validateurlmode) {
 	mkdir( UC.BINPATH )
 	if( !UC.PYTHON2 ) abort('PYTHON2 command is undefined')
 	if( !UC.GENOMES ) abort('GENOMES is undefined')
-	UC.GENOMES = new Set( UC.GENOMES.split(',') )
+	UC.GENOMES = new Set( UC.GENOMES.replace(/ /g,'').split(',') )
 }
 
 
