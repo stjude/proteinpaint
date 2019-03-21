@@ -120,14 +120,22 @@ export function barchart_make ( arg ) {
 
 	// button - scale toggle
 	plot.button_row.append('span')
-		.text('Y Axis - Log Scale')
+		.text('Y Axis')
 		.style('font-size','.8em')
 		.style('display','inline-block')
 		.style('padding-right','3px')
 
-	plot.scale_btn = plot.button_row.append('input')
-	.attr('type', 'checkbox')
+	plot.yaxis_options = plot.button_row.append('select')
 	.style('display','inline-block')
+	.style('font-size','.8em')
+
+	plot.yaxis_options.append('option')
+		.attr('value','linear')
+		.text('Linear')
+
+	plot.yaxis_options.append('option')
+		.attr('value','log')
+		.text('Log10')
 
 	plot.term2_border_div = plot.button_row
 		.append('div')
@@ -186,14 +194,7 @@ export function barchart_make ( arg ) {
 
 	do_plot( plot )
 
-	// button_row.select('#remove_term2').on('click',()=>{
-	// 	plot.term2 = 0
-	// 	do_plot(plot)
-	// })
 }
-
-
-
 
 
 function update_term2_header ( plot ) {
@@ -202,6 +203,14 @@ function update_term2_header ( plot ) {
 */
 	// clear handle holder
 	plot.term2_handle_div.selectAll('*').remove()
+	plot.term2_displaymode_div.selectAll('*').remove()
+
+	// for term2 allow option for Y axis as percentage bar
+	if(plot.yaxis_options.selectAll('option').size() == 2){
+		plot.yaxis_options.append('option')
+		.attr('value','percent')
+		.text('Percentage')
+	}
 
 	// Change corsstab button text to 'select 2nd term'
 	plot.crosstab_button
@@ -210,10 +219,12 @@ function update_term2_header ( plot ) {
 	//show term2 if selected
 	if(plot.term2){
 
+		//change crosstab button text to "Change Second term"
 		plot.crosstab_button
 		.text('Change Second Term')
 		.style('margin-left','5px')
 		
+		// display border for the div 
 		plot.term2_border_div
 		.style('margin','3px 10px')
 		.style('padding','3px 10px')
@@ -221,15 +232,16 @@ function update_term2_header ( plot ) {
 		.style('border-width','1px')
 		.style('border-color','#d4d4d4')
 
+		// display term2 
 		plot.term2_handle_div.append('div')
 		.attr('class','sja_menuoption')
 		.style('display','inline-block')
-		.style('margin-left','10px')
 		.style('padding','3px 5px')
 		.style('font-size','.8em')
 		.style('background-color', '#cfe2f3ff')
 		.text(plot.term2.name)
 		
+		// button with 'X' to remove term2
 		plot.term2_handle_div.append('div')
 		.attr('class','sja_menuoption')
 		.style('display','inline-block')
@@ -239,14 +251,37 @@ function update_term2_header ( plot ) {
 		.style('background-color', '#cfe2f3ff')
 		.text('X')
 		.on('click',()=>{
+			plot.yaxis_options.select(':nth-last-child(1)').remove()
 			delete plot.term2
 			plot.term2_handle_div.selectAll('*').remove()
+			plot.term2_displaymode_div.selectAll('*').remove()
 			plot.term2_border_div.style('border-style','none')
 			plot.legend_div.selectAll('*').remove()
 			plot.crosstab_button.text('Select Second Term')
+			
 
 			update_plot(plot)
 		})
+
+		// display options for crosstab data
+		plot.term2_displaymode_options = plot.term2_displaymode_div.append('select')
+		.style('display','inline-block')
+		.style('font-size','.8em')
+
+		plot.term2_displaymode_options.append('option')
+		.attr('value','stacked')
+		.text('Stacked Barchart')
+
+		plot.term2_displaymode_options.append('option')
+		.attr('value','table')
+		.text('Table View')
+
+		if(!plot.term2.graph.barchart.order){
+			plot.term2_displaymode_options.append('option')
+			.attr('value','boxplot')
+			.text('Boxplot')
+		}
+
 	}
 }
 
@@ -452,9 +487,9 @@ plot()
 	}
 
 	// Y-axis toggle for log vs. linear
-	plot.scale_btn.on('click',()=>{
-		if ( plot.use_logscale){plot.use_logscale = 0}
-		else { plot.use_logscale = 1 }
+	plot.yaxis_options.on('change',()=>{
+		if ( plot.yaxis_options.node().value == 'log'){plot.use_logscale = 1}
+		else { plot.use_logscale = 0 }
 		do_plot(plot)
 	})
 	
@@ -590,6 +625,7 @@ plot()
 	}
 }
 
+
 function set_yscale ( plot ) {
 /* determine y axis range
 */
@@ -620,7 +656,6 @@ function set_yscale ( plot ) {
 }
 
 
-
 function get_max_labelheight ( plot ) {
 
 	let textwidth = 0
@@ -638,6 +673,7 @@ function get_max_labelheight ( plot ) {
 
 	return textwidth
 }
+
 
 function update_plot (plot) {
 	
