@@ -178,6 +178,7 @@ export function barchart_make ( arg ) {
 	// other holders/components
 
 	plot.svg = arg.holder.append('svg')
+	plot.table_div = arg.holder.append('div')
 	plot.yaxis_g = plot.svg.append('g') // for y axis
 	plot.graph_g = plot.svg.append('g') // for bar and label of each data item
 	if (arg.boxplot){
@@ -200,7 +201,8 @@ export function barchart_make ( arg ) {
 function update_term2_header ( plot ) {
 /* update term2 header for events like select / remove / change term2
 	Updaate plot object based on term2 events
-*/
+*/	
+	console.log(plot)
 	// clear handle holder
 	plot.term2_handle_div.selectAll('*').remove()
 	plot.term2_displaymode_div.selectAll('*').remove()
@@ -258,8 +260,10 @@ function update_term2_header ( plot ) {
 			plot.term2_border_div.style('border-style','none')
 			plot.legend_div.selectAll('*').remove()
 			plot.crosstab_button.text('Select Second Term')
+			plot.table_div.selectAll('*').remove()
+			plot.svg.style('display','block')
+			plot.legend_div.style('display','block')
 			
-
 			update_plot(plot)
 		})
 
@@ -281,6 +285,18 @@ function update_term2_header ( plot ) {
 			.attr('value','boxplot')
 			.text('Boxplot')
 		}
+
+		plot.term2_displaymode_options
+		.on('change',()=>{
+			if ( plot.term2_displaymode_options.node().value == 'table'){
+				plot.table_div.style('display','block')
+				make_table(plot)
+			}else if(plot.term2_displaymode_options.node().value == 'stacked'){
+				plot.table_div.style('display','none')
+				plot.svg.style('display','block')
+				plot.legend_div.style('display','block')
+			}
+		})
 
 	}
 }
@@ -695,3 +711,81 @@ function update_plot (plot) {
 		do_plot( plot )
 		})
 	}
+
+
+function make_table (plot) {
+	// hide svg
+	plot.svg.style('display','none')
+	plot.legend_div.style('display','none')
+
+	plot.table_div.selectAll('*').remove()
+
+	let column_keys = []
+	if( plot.term2.graph.barchart.order ) {
+
+		column_keys = plot.term2.graph.barchart.order
+
+	} else {
+
+		// no predefined order, get unique values from data
+		const term2values = new Set()
+		for(const t1v of plot.items) {
+			for(const j of t1v.lst) {
+				term2values.add( j.label )
+			}
+		}
+		for(const s of term2values) {
+			column_keys.push( s )
+		}
+	}
+
+	// show table
+	const table = plot.table_div.append('table')
+	.style('margin-top','20px')
+	.style('border-spacing','3px')
+	.style('border-collapse','collapse')
+	.style('border', '1px solid black')
+
+	// header
+	const tr = table.append('tr')
+	tr.append('td') // column 1
+	// print term2 values as rest of columns
+	for(const i of column_keys) {
+		tr.append('th')
+			.text( i )
+			.style('border', '1px solid black')
+	}
+
+	// rows are term1 values
+	let rows = []
+	// order of rows maybe predefined
+	if( plot.term.graph && plot.term.graph.barchart && plot.term.graph.barchart.order ) {
+		for(const v of plot.term.graph.barchart.order ) {
+			const i = plot.result.items.find( i=> i.label == v )
+			if( i ) {
+				rows.push( i )
+			}
+		}
+	} else {
+		rows = plot.items
+	}
+	
+	for(const t1v of rows) {
+		const tr = table.append('tr')
+
+		// column 1
+		tr.append('th')
+			.text( t1v.label )
+			.style('border', '1px solid black')
+
+		// other columns
+		for(const t2label of column_keys) {
+			const td = tr.append('td')
+				.style('border', '1px solid black')
+			const v = t1v.lst.find( i=> i.label == t2label )
+			if( v ) {
+				td.text( v.value )
+			}
+		}
+	}
+}
