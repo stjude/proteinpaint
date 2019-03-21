@@ -72,6 +72,8 @@ then pass term2 and crosstab result to callback
 
 		init( obj )
 	})
+
+	return button
 }
 
 
