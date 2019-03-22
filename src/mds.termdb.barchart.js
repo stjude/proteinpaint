@@ -121,13 +121,11 @@ export function barchart_make ( arg ) {
 	// button - scale toggle
 	plot.button_row.append('span')
 		.text('Y Axis')
-		.style('font-size','.8em')
 		.style('display','inline-block')
 		.style('padding-right','3px')
 
 	plot.yaxis_options = plot.button_row.append('select')
-	.style('display','inline-block')
-	.style('font-size','.8em')
+		.style('display','inline-block')
 
 	plot.yaxis_options.append('option')
 		.attr('value','linear')
@@ -137,10 +135,18 @@ export function barchart_make ( arg ) {
 		.attr('value','log')
 		.text('Log10')
 
+	plot.yaxis_option_percentage = plot.yaxis_options
+		.append('option')
+		.attr('value','percentage')
+		.text('Percentage')
+		.attr('disabled',1)
+
 	plot.term2_border_div = plot.button_row
 		.append('div')
 		.style('display','inline-block')
 		.style('padding','10px')
+		.style('margin-left','10px')
+		.style('border','solid 1px transparent')
 
 
 	// button - cross tabulate
@@ -159,7 +165,9 @@ export function barchart_make ( arg ) {
 		}
 	})
 
-	plot.crosstab_button.text('Select Second Term')
+	plot.crosstab_button
+		.style('font-size','1em')
+		.text('Select Second Term')
 
 	// term2 handle holder
 	plot.term2_handle_div = plot.term2_border_div
@@ -200,18 +208,16 @@ export function barchart_make ( arg ) {
 
 function update_term2_header ( plot ) {
 /* update term2 header for events like select / remove / change term2
-	Updaate plot object based on term2 events
+	Update plot object based on term2 events
 */	
 	console.log(plot)
 	// clear handle holder
 	plot.term2_handle_div.selectAll('*').remove()
 	plot.term2_displaymode_div.selectAll('*').remove()
 
-	// for term2 allow option for Y axis as percentage bar
-	if(plot.yaxis_options.selectAll('option').size() == 2){
-		plot.yaxis_options.append('option')
-		.attr('value','percent')
-		.text('Percentage')
+	if( plot.term2 ) {
+		// has term2 so enable this option
+		plot.yaxis_option_percentage.attr('disabled',null)
 	}
 
 	// Change corsstab button text to 'select 2nd term'
@@ -228,10 +234,6 @@ function update_term2_header ( plot ) {
 		
 		// display border for the div 
 		plot.term2_border_div
-		.style('margin','3px 10px')
-		.style('padding','3px 10px')
-		.style('border-style','solid')
-		.style('border-width','1px')
 		.style('border-color','#d4d4d4')
 
 		// display term2 
@@ -239,7 +241,6 @@ function update_term2_header ( plot ) {
 		.attr('class','sja_menuoption')
 		.style('display','inline-block')
 		.style('padding','3px 5px')
-		.style('font-size','.8em')
 		.style('background-color', '#cfe2f3ff')
 		.text(plot.term2.name)
 		
@@ -249,15 +250,15 @@ function update_term2_header ( plot ) {
 		.style('display','inline-block')
 		.style('margin-left','1px')
 		.style('padding','3px 5px')
-		.style('font-size','.8em')
 		.style('background-color', '#cfe2f3ff')
 		.text('X')
 		.on('click',()=>{
-			plot.yaxis_options.select(':nth-last-child(1)').remove()
+
 			delete plot.term2
+			plot.yaxis_option_percentage.attr('disabled',1)
 			plot.term2_handle_div.selectAll('*').remove()
 			plot.term2_displaymode_div.selectAll('*').remove()
-			plot.term2_border_div.style('border-style','none')
+			plot.term2_border_div.style('border-color','transparent')
 			plot.legend_div.selectAll('*').remove()
 			plot.crosstab_button.text('Select Second Term')
 			plot.table_div.selectAll('*').remove()
@@ -270,7 +271,6 @@ function update_term2_header ( plot ) {
 		// display options for crosstab data
 		plot.term2_displaymode_options = plot.term2_displaymode_div.append('select')
 		.style('display','inline-block')
-		.style('font-size','.8em')
 
 		plot.term2_displaymode_options.append('option')
 		.attr('value','stacked')
@@ -280,12 +280,24 @@ function update_term2_header ( plot ) {
 		.attr('value','table')
 		.text('Table View')
 
+		// create boxplot option for numerical term
+		// FIXME to provide explicit term value type, e.g. numerical
 		if(!plot.term2.graph.barchart.order){
 			plot.term2_displaymode_options.append('option')
 			.attr('value','boxplot')
 			.text('Boxplot')
 		}
 
+
+		/*
+		every time the 'table' option is selected, render the table
+			table is made based on current plot.items[]
+			which may have been updated by either term1/2 binning change
+		every time the 'boxplot' option is selected, query server for boxplot data and render boxplot
+			query server using current term1 bins, which may have been changed
+
+		rerendering every time may be wasteful but guard against binning update
+		*/
 		plot.term2_displaymode_options
 		.on('change',()=>{
 			if ( plot.term2_displaymode_options.node().value == 'table'){
@@ -296,8 +308,8 @@ function update_term2_header ( plot ) {
 				plot.svg.style('display','block')
 				plot.legend_div.style('display','block')
 			}
+			// TODO boxplot - query server for data
 		})
-
 	}
 }
 
@@ -709,8 +721,8 @@ function update_plot (plot) {
 		plot.items =  data.lst
 
 		do_plot( plot )
-		})
-	}
+	})
+}
 
 
 function make_table (plot) {
