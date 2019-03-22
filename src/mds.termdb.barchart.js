@@ -141,6 +141,22 @@ export function barchart_make ( arg ) {
 		.text('Percentage')
 		.attr('disabled',1)
 
+	if( plot.term.graph.barchart.numeric_bin ) {
+		// bin customization button
+		plot.button_row
+			.append('div')
+			.text('x')
+			.on('click',()=>{
+				new_fun( {
+					term1: plot.term,
+					plot: plot
+				})
+			})
+	}
+
+
+	////////////// term2 stuff
+
 	plot.term2_border_div = plot.button_row
 		.append('div')
 		.style('display','inline-block')
