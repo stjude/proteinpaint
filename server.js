@@ -9814,10 +9814,8 @@ function termdb_trigger_barchart ( q, res, tdb, ds ) {
 /*
 summarize numbers to create barchar based on server config
 
-if is a numeric term, also calculate boxplot
+if is a numeric term, also get distribution
 
-todo:
-support client-side config, e.g. bin size for numeric term
 */
 	if( !q.barchart ) return false
 
@@ -9889,18 +9887,34 @@ support client-side config, e.g. bin size for numeric term
 			unannotated: binconfig.unannotated
 		}
 
-		// values to be sorted to ascending order for boxplot
-		values.sort((i,j)=> i-j )
-		result.boxplot = boxplot_getvalue( values.map( i=>{return {value:i}} ) )
-		// get mean value
-		result.boxplot.mean = values.reduce((i,j)=>j+i, 0) / values.length
-		// get sd
 		{
+			/* get the value distribution
+			values[] has value for all samples
+			if the term has value for unannotated, need to exclude them from stat
+			*/
+			let values2 = []
+			if( term.graph.barchart.numeric_bin.unannotated ) {
+				// exclude unannotated
+				for(const v of values) {
+					if(v != term.graph.barchart.numeric_bin.unannotated.value) {
+						values2.push(v)
+					}
+				}
+			} else {
+				values2 = values
+			}
+
+			// values to be sorted to ascending order for boxplot
+			values2.sort((i,j)=> i-j )
+			result.boxplot = boxplot_getvalue( values2.map( i=>{return {value:i}} ) )
+			// get mean value
+			result.boxplot.mean = values2.reduce((i,j)=>j+i, 0) / values2.length
+			// get sd
 			let s = 0
-			for(const v of values) {
+			for(const v of values2) {
 				s += Math.pow( v - result.boxplot.mean, 2 )
 			}
-			result.boxplot.sd = Math.sqrt( s / (values.length-1) )
+			result.boxplot.sd = Math.sqrt( s / (values2.length-1) )
 		}
 
 		res.send( result )
@@ -9970,6 +9984,12 @@ if found a matching bin, return for use in crosstab
 
 function termdb_get_numericbins ( id, term, ds ) {
 /*
+must return values from all samples, not to exclude unannotated values
+
+do not count sample for any bin here, including annotated/unannotated
+only initiate the bins without count
+barchart or crosstab will do the counting in different ways
+
 return an object for binning setting {}
 rather than a list of bins
 this is to accommondate settings where a valid value e.g. 0 is used for unannotated samples, and need to collect this count
@@ -9989,6 +10009,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 	const values = []
 	for(const s in ds.cohort.annotation) {
 		const v = ds.cohort.annotation[ s ][ id ]
+
 		if( Number.isFinite( v ) ) {
 			values.push(v)
 		}
