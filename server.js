@@ -10134,6 +10134,9 @@ do not directly hand over the term object to client; many attr to be kept on ser
 	const t2 = {
 		name: t.name,
 		isleaf: t.isleaf,
+		iscategorical: t.iscategorical,
+		isinteger: t.isinteger,
+		isfloat: t.isfloat,
 	}
 
 	if(t.graph) {
@@ -13902,6 +13905,14 @@ function mds_init(ds,genome, _servconfig) {
 			}
 		}
 
+		if(ds.cohort.termdb) {
+			try {
+				init_termdb( ds )
+			} catch(e) {
+				return 'error with termdb: '+e
+			}
+		}
+
 		for(const file of ds.cohort.files) {
 			if(!file.file) return '.file missing from one of .cohort.files'
 			const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
@@ -13911,9 +13922,22 @@ function mds_init(ds,genome, _servconfig) {
 			items.forEach( i=> {
 
 				// may need to parse certain values into particular format
-				if(ds.cohort.sampleAttribute) {
+
+				if( ds.cohort.sampleAttribute ) {
 					for(const k in i) {
 						const attr = ds.cohort.sampleAttribute.attributes[ k ]
+						if(attr) {
+							if(attr.isfloat) {
+								i[k] = Number.parseFloat(i[k])
+							} else if(attr.isinteger) {
+								i[k] = Number.parseInt(i[k])
+							}
+						}
+					}
+				} else if( ds.cohort.termdb && ds.cohort.termdb.termjson && ds.cohort.termdb.termjson.map ) {
+					// access from termdb.termjson
+					for(const k in i) {
+						const attr = ds.cohort.termdb.termjson.map.get( k )
 						if(attr) {
 							if(attr.isfloat) {
 								i[k] = Number.parseFloat(i[k])
@@ -13927,19 +13951,13 @@ function mds_init(ds,genome, _servconfig) {
 				ds.cohort.tohash(i, ds)
 			})
 		}
+
 		{
 			let c=0
 			for(const n in ds.cohort.annotation) c++
 			console.log(ds.label+': total samples from sample table: '+c)
 		}
 
-		if(ds.cohort.termdb) {
-			try {
-				init_termdb( ds )
-			} catch(e) {
-				return 'error with termdb: '+e
-			}
-		}
 
 
 
