@@ -9526,22 +9526,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 	let t2binconfig
 
 	// premake numeric bins for t1 and t2
-	if( term1.graph.barchart.numeric_bin ) {
-
-		/*
-		if( term1.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
-			// a dedicated binning scheme to be used here
-			// make a temp term
-			const tempterm = JSON.parse(JSON.stringify(term1))
-			// pretend this is the fixed_bins
-			tempterm.graph.barchart.numeric_bin.fixed_bins = term1.graph.barchart.numeric_bin.crosstab_fixed_bins
-			const [ bc, values ] = termdb_get_numericbins( q.term1.id, tempterm, ds )
-			t1binconfig = bc
-		} else {
-			const [ bc, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
-			t1binconfig = bc
-		}
-		*/
+	if( term1.isinteger || term1.isfloat ) {
 
 		/* when a barchart has been created for numeric term1,
 		it will be based on either auto bin or fixed bins
@@ -9552,7 +9537,9 @@ for each category/bin of term1, divide its samples by category/bin of term2
 		t1binconfig = bc
 	}
 
-	if( term2.graph.barchart.numeric_bin ) {
+	if( term2.isinteger || term2.isfloat ) {
+
+		// when term2 is numeric, may apply its fixed bins special for crosstab
 
 		if( term2.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
 			const tempterm = JSON.parse(JSON.stringify(term2))
@@ -9569,7 +9556,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 	/* below deal with each sample based on conditions of term1/2
 	*/
 
-	if(term1.graph.barchart.categorical) {
+	if( term1.iscategorical ) {
 
 		//// term1 categorical
 
@@ -9585,7 +9572,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 				t1categories.set( v1, {} )
 			}
 
-			if( term2.graph.barchart.categorical ) {
+			if( term2.iscategorical ) {
 
 				// both term1/2 categorical
 
@@ -9602,7 +9589,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 					( t1categories.get(v1).categories.get(v2) || 0 ) + 1
 				)
 
-			} else if( term2.graph.barchart.numeric_bin ) {
+			} else if( term2.isinteger || term2.isfloat ) {
 			
 				// term1 categorical, term2 numerical
 
@@ -9616,11 +9603,12 @@ for each category/bin of term1, divide its samples by category/bin of term2
 				termdb_value2bin( v2, t1categories.get( v1 ).binconfig )
 
 			} else {
+
 				throw 'term2 uknown type'
 			}
 		}
 
-	} else if( term1.graph.barchart.numeric_bin ) {
+	} else if( term1.isinteger || term1.isfloat ) {
 
 		// term1 bins already made
 
@@ -9639,7 +9627,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 			}
 			bin.value--
 
-			if( term2.graph.barchart.categorical ) {
+			if( term2.iscategorical ) {
 
 				// term1 numerical, term2 categorical
 
@@ -9656,7 +9644,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 					( bin.categories.get(v2) || 0 ) + 1
 				)
 
-			} else if( term2.graph.barchart.numeric_bin ) {
+			} else if( term2.isinteger || term2.isfloat ) {
 
 				// both term1/2 numerical
 
