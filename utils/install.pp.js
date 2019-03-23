@@ -121,8 +121,16 @@ if( validateurlmode) {
 	mkdir( UC.BINPATH )
 	if( !UC.PYTHON2 ) abort('PYTHON2 command is undefined')
 	if( !UC.GENOMES ) abort('GENOMES is undefined')
-	UC.GENOMES = new Set( UC.GENOMES.split(',') )
+	UC.GENOMES = new Set( UC.GENOMES.replace(/ /g,'').split(',') )
+
+	// arguments look good
+	if( fs.existsSync( 'serverconfig.json' )) {
+		abort('\n"serverconfig.json" found in the current directory. Installer will not overwrite it to avoid accidents.\nPlease back it up and delete it from the current location.')
+	}
 }
+
+
+
 
 
 

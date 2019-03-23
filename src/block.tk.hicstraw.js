@@ -708,7 +708,7 @@ function drawCanvas(tk, block) {
 		at tiny region the span from data may be huge, limit it
 		*/
 		canvasheight = Math.min(
-			block.width,
+			canvaswidth,
 			tk.data.reduce( (i,j)=>Math.max(i, (j[3]-j[0])/2 ), 0)
 			)
 	} else if(tk.mode_arc) {
