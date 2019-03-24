@@ -160,14 +160,12 @@ if [[ "$ENV" != "scp-prod" ]]; then
 	mkdir $APP/public
 	mkdir $APP/src
 
-	# server.js has async syntax, which breaks babel/uglify
-	./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-es/bin/uglifyjs --compress --mangle --output server.min.js
-
-	mv server.min.js $APP/server.js 
+	npm run build-server
+	mv server.js $APP/
 	mv package.json $APP/
 	mv public/builds/$SUBDOMAIN $APP/public/bin
 	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
-	mv utils test.embed $APP/
+	mv utils test.embed modules $APP/
 	mv genome $APP/
 	mv dataset $APP/
 

@@ -15,7 +15,8 @@
     "irt": "./scripts/deploy.sh internal-stage",
     "test": "karma start karma.conf.js",
     "deliver": "sh utils/deliver.sh",
-    "server": "./node_modules/.bin/webpack --config=webpack.config.server.js --mode=development --watch --progress --colors"
+    "server": "./node_modules/.bin/webpack --config=webpack.config.server.js --mode=development --watch --progress --colors && node server",
+  	"build-server": "./node_modules/.bin/webpack --config=webpack.config.server.js --mode=production"
   },
   "author": "",
   "license": "ISC",
