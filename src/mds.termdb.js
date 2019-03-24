@@ -1,18 +1,28 @@
 import * as client from './client'
 import * as common from './common'
-//import {axisTop} from 'd3-axis'
-//import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {barchart_make} from './mds.termdb.barchart'
+import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 /*
 
+init() accepts following triggers:
+- show term tree starting with default terms, at terms show graph buttons
+- show term tree, for selecting a term (what are selectable?), no graph buttons
 
-
-obj{}:
-.genome {}
+init accepts obj{}
+.genome{}
 .mds{}
 .div
+
+obj has triggers
+obj.default_rootterm{}
+
+
+default_rootterm has modifiers, for modifying the behavior/display of the term tree
+	.modifier_click_term()
+		when this is provided, will allow selecting terms, do not show graph buttons
+
 
 
 
@@ -20,7 +30,11 @@ obj{}:
 ********************** EXPORTED
 init()
 ********************** INTERNAL
-
+show_default_rootterm
+print_one_term
+may_make_term_foldbutton
+may_make_term_graphbuttons
+term_addbutton_barchart
 
 
 Notes:
@@ -42,15 +56,21 @@ planned features:
 
 
 
-
 export async function init ( obj  ) {
 /*
+obj{}:
+.genome {}
+.mds{}
+.div
+.default_rootterm{}
+	.modifier_click_term()
 */
-window.obj = obj
+
+	window.obj = obj // for testing
 
 	obj.errdiv = obj.div.append('div')
-
 	obj.treediv = obj.div.append('div')
+	obj.tip = new client.Menu({padding:'5px'})
 
 	try {
 
@@ -66,7 +86,6 @@ window.obj = obj
 
 		// to allow other triggers
 
-
 	} catch(e) {
 		obj.errdiv.text('Error: '+ (e.message||e) )
 		if(e.stack) console.log(e.stack)
@@ -78,6 +97,10 @@ window.obj = obj
 
 async function show_default_rootterm ( obj ) {
 /* for showing default terms, as defined by ds config
+
+also for showing term tree, allowing to select certain terms
+
+
 */
 	const arg = {
 		genome: obj.genome.name,
@@ -96,6 +119,13 @@ async function show_default_rootterm ( obj ) {
 			term: i,
 			isroot: 1,
 		}
+
+		// pass on modifier
+		if( obj.default_rootterm.modifier_click_term ) {
+			arg.modifier_click_term = obj.default_rootterm.modifier_click_term
+		}
+		// maybe other type of modifiers too
+
 		print_one_term( arg, obj )
 	}
 }
@@ -104,7 +134,7 @@ async function show_default_rootterm ( obj ) {
 
 
 function print_one_term ( arg, obj ) {
-/* print a term
+/* print a term, in the term tree
 for non-leaf term, show the expand/fold button
 upon clicking button, to retrieve children and make recursive call to render children
 
@@ -115,6 +145,9 @@ arg{}
 	.isleaf
 	...
 .isroot
+
+possible modifiers:
+.modifier_click_term() callback function
 */
 
 	const term = arg.term
@@ -125,25 +158,162 @@ arg{}
 	*/
 	const row = arg.row.append('div')
 
-	may_make_term_foldbutton( term, row, arg.row, obj )
+	may_make_term_foldbutton( arg, row, obj )
 
 	// term name
-	row.append('div')
+	const namebox = row.append('div')
 		.style('display','inline-block')
 		.style('padding','5px 3px 5px 1px')
 		.html( term.name )
 
-	// term function buttons
+	if( arg.modifier_click_term ) {
+		/*
+		a modifier to be applied to namebox
+		for clicking box and collect this term and done
+		will not render remaining buttons
+		*/
 
-	may_make_term_graphbutton( term, row, obj )
+		if( arg.modifier_click_term.disable_terms && arg.modifier_click_term.disable_terms.has( term.id ) ) {
+
+			// this term is disabled, no clicking
+			namebox.style('opacity','.5')
+
+		} else {
+
+			// enable clicking this term
+			namebox
+				.attr('class', 'sja_menuoption')
+				.style('margin-left','5px')
+				.on('click',()=>{
+					arg.modifier_click_term.callback( term )
+				})
+		}
+		return
+	}
+
+
+	// term function buttons
+	// including barchart, and cross-tabulate
+
+	may_make_term_graphbuttons( term, row, obj )
+
+	may_enable_crosstabulate( term, row, obj )
 }
 
 
 
-function may_make_term_graphbutton ( term, row, obj ) {
+
+
+
+
+function may_enable_crosstabulate ( term1, row, obj ) {
+/*
+may enable a standalone crosstab button for a term in the tree
+just a wrapper for may_makebutton_crosstabulate with its callback function
+*/
+	may_makebutton_crosstabulate( {
+		term1: term1,
+		button_row: row,
+		obj: obj,
+		callback: result=>{
+
+			/* got result
+			.term2{}
+			.items[]
+			._button
+
+			term1 is term
+
+			to make new panel and display a table
+			observe predefined order of values for both term1/2
+			*/
+
+			const c = result._button.node().getBoundingClientRect()
+			const pane = client.newpane({ x: c.x+100, y: Math.max( 10, c.y-100) })
+			pane.header.html( term1.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+result.term2.name )
+
+			// columns are term2 values, order may be predefined
+			let column_keys = []
+			if( result.term2_order ) {
+
+				column_keys = result.term2_order
+
+			} else {
+
+				// no predefined order, get unique values from data
+				const term2values = new Set()
+				for(const t1v of result.items) {
+					for(const j of t1v.lst) {
+						term2values.add( j.label )
+					}
+				}
+				for(const s of term2values) {
+					column_keys.push( s )
+				}
+			}
+
+
+			// show table
+			const table = pane.body.append('table')
+				.style('margin-top','20px')
+				.style('border-spacing','3px')
+				.style('border-collapse','collapse')
+				.style('border', '1px solid black')
+
+			// header
+			const tr = table.append('tr')
+			tr.append('td') // column 1
+			// print term2 values as rest of columns
+			for(const i of column_keys) {
+				tr.append('th')
+					.text( i )
+					.style('border', '1px solid black')
+			}
+
+			// rows are term1 values
+			let rows = []
+			// order of rows maybe predefined
+			if( term1.graph && term1.graph.barchart && term1.graph.barchart.order ) {
+				for(const v of term1.graph.barchart.order ) {
+					const i = result.items.find( i=> i.label == v )
+					if( i ) {
+						rows.push( i )
+					}
+				}
+			} else {
+				rows = result.items
+			}
+			
+			for(const t1v of rows) {
+				const tr = table.append('tr')
+
+				// column 1
+				tr.append('th')
+					.text( t1v.label )
+					.style('border', '1px solid black')
+
+				// other columns
+				for(const t2label of column_keys) {
+					const td = tr.append('td')
+						.style('border', '1px solid black')
+					const v = t1v.lst.find( i=> i.label == t2label )
+					if( v ) {
+						td.text( v.value )
+					}
+				}
+			}
+		}
+	})
+}
+
+
+
+
+
+function may_make_term_graphbuttons ( term, row, obj ) {
 /*
 if term.graph{} is there, make a button to trigger it
-allow to make 
+allow to make multiple buttons
 */
 	if(!term.graph) {
 		// no graph
@@ -152,8 +322,10 @@ allow to make
 
 
 	if(term.graph.barchart) {
-		term_graphbutton_barchart( term, row, obj )
+		// barchart button
+		term_addbutton_barchart( term, row, obj )
 	}
+
 
 	// to add other graph types
 }
@@ -161,7 +333,7 @@ allow to make
 
 
 
-function term_graphbutton_barchart ( term, row, obj ) {
+function term_addbutton_barchart ( term, row, obj ) {
 /*
 click button to launch barchart for a term
 
@@ -172,6 +344,7 @@ such conditions may be carried by obj
 	const button = row.append('div')
 		.style('display','inline-block')
 		.style('margin-left','20px')
+		.style('padding','3px 5px')
 		.style('font-size','.8em')
 		.attr('class','sja_menuoption')
 		.text('BARCHART')
@@ -209,7 +382,7 @@ such conditions may be carried by obj
 
 		panel = client.newpane({
 			x: d3event.clientX+200,
-			y: d3event.clientY-100,
+			y: Math.max( 80, d3event.clientY-100 ),
 			close:()=>{
 				client.flyindi( panel.pane, button )
 				panel.pane.style('display', 'none')
@@ -234,7 +407,11 @@ such conditions may be carried by obj
 
 			// make barchart
 			const plot = {
+				genome: obj.genome.name,
+				dslabel: obj.mds.label,
 				items: data.lst,
+				unannotated: data.unannotated,
+				boxplot: data.boxplot, // available for numeric terms
 				holder: panel.body,
 				term: term
 			}
@@ -255,15 +432,21 @@ such conditions may be carried by obj
 
 
 
-function may_make_term_foldbutton ( term, buttonholder, row, obj ) {
+function may_make_term_foldbutton ( arg, buttonholder, obj ) {
 /*
 may show expand/fold button for a term
+modifiers available from arg also needs to be propagated to children
+
+arg{}
+	.term
+	.row
+		the parent of buttonholder for creating the div for children terms
+	possible modifiers
 
 buttonholder: div in which to show the button, term label is also in it
-row: the parent of buttonholder for creating the div for children terms
 */
 
-	if(term.isleaf) {
+	if(arg.term.isleaf) {
 		// is leaf term, no button
 		return
 	}
@@ -272,7 +455,7 @@ row: the parent of buttonholder for creating the div for children terms
 		isloading = false
 
 	// row to display children terms
-	const childrenrow = row.append('div')
+	const childrenrow = arg.row.append('div')
 		.style('display','none')
 		.style('padding-left', '30px')
 
@@ -284,7 +467,7 @@ row: the parent of buttonholder for creating the div for children terms
 
 	button.on('click',()=>{
 
-		if(isloading) return // guard against repeated clicking while loading
+		if(isloading) return // guard against clicking while loading
 
 		if(children_loaded) {
 			// children has been loaded, toggle visibility
@@ -305,7 +488,7 @@ row: the parent of buttonholder for creating the div for children terms
 			genome: obj.genome.name,
 			dslabel: obj.mds.label,
 			get_children: {
-				id: term.id
+				id: arg.term.id
 			}
 		}
 		client.dofetch('termdb', param)
@@ -318,6 +501,8 @@ row: the parent of buttonholder for creating the div for children terms
 					{
 						term: cterm,
 						row: childrenrow,
+						// propagate modifiers
+						modifier_click_term: arg.modifier_click_term,
 					},
 					obj
 				)

@@ -3,6 +3,7 @@ cp utils/install.pp.js deploys/deliver/proteinpaint/utils/
 cp utils/binom.R deploys/deliver/proteinpaint/utils/
 cp genome/* deploys/deliver/proteinpaint/genome/
 cp dataset/clinvar* deploys/deliver/proteinpaint/dataset/
+cp public/index.html deploys/deliver/proteinpaint/public/
 
 node utils/uglify.js src/bulk.cnv.js    deploys/deliver/proteinpaint/src/
 node utils/uglify.js src/bulk.del.js    deploys/deliver/proteinpaint/src/
@@ -26,7 +27,7 @@ rm -rf deploys/deliver/proteinpaint/public/bin/*
 
 ./node_modules/.bin/webpack --config=scripts/webpack.config.deliver.js
 
-#./node_modules/babel-cli/bin/babel.js server.js | ./node_modules/uglify-js/bin/uglifyjs --compress --mangle > deploys/deliver/proteinpaint/server.js
+./node_modules/babel-cli/bin/babel.js -q server.js | ./node_modules/uglify-es/bin/uglifyjs --compress --mangle --output deploys/deliver/proteinpaint/server.js
 cp server.js deploys/deliver/proteinpaint/server.js
 
 cd deploys/deliver/proteinpaint

@@ -34,6 +34,7 @@ cairo-*/*
 canvas/*
 pixman-*/*
 serverconfig.json
+server.js
 setup/*gz*
 setup/*
 tmpbuild/*
@@ -52,3 +53,4 @@ p4/node_modules/
 p4/public/bin/*
 p4/config.json
 p4/public/dev.html
+.vscode/launch.json
