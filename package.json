@@ -15,7 +15,7 @@
     "irt": "./scripts/deploy.sh internal-stage",
     "test": "karma start karma.conf.js",
     "deliver": "sh utils/deliver.sh",
-    "servermin": "./node_modules/babel-cli/bin/babel.js server.js | ./node_modules/uglify-es/bin/uglifyjs --compress --mangle --output server.min.js"
+    "server": "./node_modules/.bin/webpack --config=webpack.config.server.js --mode=development"
   },
   "author": "",
   "license": "ISC",
