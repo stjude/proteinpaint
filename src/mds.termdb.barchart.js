@@ -91,7 +91,7 @@ export function barchart_make ( arg ) {
 		- log scale
 
 */
-
+	// console.log(arg)
 	// initiating the plot object
 	// it will be updated later by axis toggle or cross tabulate
 	const plot = {
@@ -110,7 +110,8 @@ export function barchart_make ( arg ) {
 		maxvalue:0,
 		label_fontsize: 15,
 		yaxis_width: 100,
-		use_logscale:0
+		use_logscale:0,
+		use_percentage: 0
 	}
 
 	// a row of buttons
@@ -118,7 +119,9 @@ export function barchart_make ( arg ) {
 	plot.button_row = arg.holder.append('div')
 		.style('margin','10px 0px')
 
-	// button - scale toggle
+	////////////// Y Axis options
+
+	// button - Y axis scale selection 
 	plot.button_row.append('span')
 		.text('Y Axis')
 		.style('display','inline-block')
@@ -141,11 +144,16 @@ export function barchart_make ( arg ) {
 		.text('Percentage')
 		.attr('disabled',1)
 
-	if( plot.term.graph.barchart.numeric_bin ) {
+	////////////// Custom Bin button	
+	if( plot.term.isfloat ) {
 		// bin customization button
 		plot.button_row
 			.append('div')
-			.text('x')
+			.text('Custom Bin')
+			.attr('class','sja_menuoption')
+			.style('display','inline-block')
+			.style('margin-left','30px')
+			.style('padding','3px 10px')
 			.on('click',()=>{
 				new_fun( {
 					term1: plot.term,
@@ -155,7 +163,7 @@ export function barchart_make ( arg ) {
 	}
 
 
-	////////////// term2 stuff
+	////////////// term2 buttons
 
 	plot.term2_border_div = plot.button_row
 		.append('div')
@@ -226,10 +234,14 @@ function update_term2_header ( plot ) {
 /* update term2 header for events like select / remove / change term2
 	Update plot object based on term2 events
 */	
-	console.log(plot)
+	// console.log(plot)
 	// clear handle holder
 	plot.term2_handle_div.selectAll('*').remove()
 	plot.term2_displaymode_div.selectAll('*').remove()
+	plot.table_div.selectAll('*').remove()
+	plot.table_div.style('display','none')
+	plot.svg.style('display','block')
+	plot.legend_div.style('display','block')
 
 	if( plot.term2 ) {
 		// has term2 so enable this option
@@ -272,6 +284,8 @@ function update_term2_header ( plot ) {
 
 			delete plot.term2
 			plot.yaxis_option_percentage.attr('disabled',1)
+			plot.use_percentage = 0
+			plot.yaxis_options.node().value = 'linear'
 			plot.term2_handle_div.selectAll('*').remove()
 			plot.term2_displaymode_div.selectAll('*').remove()
 			plot.term2_border_div.style('border-color','transparent')
@@ -280,6 +294,9 @@ function update_term2_header ( plot ) {
 			plot.table_div.selectAll('*').remove()
 			plot.svg.style('display','block')
 			plot.legend_div.style('display','block')
+			if (plot.boxplot_div){
+				plot.boxplot_div.style('display','block')
+			}
 			
 			update_plot(plot)
 		})
@@ -296,9 +313,8 @@ function update_term2_header ( plot ) {
 		.attr('value','table')
 		.text('Table View')
 
-		// create boxplot option for numerical term
-		// FIXME to provide explicit term value type, e.g. numerical
-		if(!plot.term2.graph.barchart.order){
+		// create boxplot option for numerical term (isfloat: true)
+		if(plot.term2.isfloat){
 			plot.term2_displaymode_options.append('option')
 			.attr('value','boxplot')
 			.text('Boxplot')
@@ -323,6 +339,9 @@ function update_term2_header ( plot ) {
 				plot.table_div.style('display','none')
 				plot.svg.style('display','block')
 				plot.legend_div.style('display','block')
+				if(plot.boxplot_div){
+					plot.boxplot_div.style('display','block')
+				}
 			}
 			// TODO boxplot - query server for data
 		})
@@ -338,7 +357,7 @@ or stacked bar plot for cross-tabulating
 
 plot()
 */
-
+	console.log(plot)
 	// set y axis min/max scale
 	const [yscale_min, yscale_max] = set_yscale( plot )
 
@@ -346,7 +365,10 @@ plot()
 
 	if( plot.use_logscale ) {
 		plot.y_scale = scaleLog().domain([yscale_max,1]).range([0,plot.barheight])
-	} else {
+	} else if(plot.use_percentage){
+		plot.y_scale = scaleLinear().domain([100,0]).range([0,plot.barheight])
+	}
+	else {
 		plot.y_scale = scaleLinear().domain([yscale_max,0]).range([0,plot.barheight])
 	}
 
@@ -446,8 +468,10 @@ plot()
 
 			for (const sub_item of item.lst){
 
-				const previous_y = plot.y_scale( previous_value ) - plot.barheight
-				previous_value += sub_item.value
+				// if y-scale percentage selected, calculate fraction for each sub_item
+				const sub_item_value = (plot.use_percentage) ? (sub_item.value*100/item.value) : sub_item.value 
+				let previous_y = plot.y_scale( previous_value ) - plot.barheight
+				previous_value += sub_item_value
 				const this_y = plot.y_scale( previous_value ) - plot.barheight
 
 				g.append('rect')
@@ -532,8 +556,18 @@ plot()
 
 	// Y-axis toggle for log vs. linear
 	plot.yaxis_options.on('change',()=>{
-		if ( plot.yaxis_options.node().value == 'log'){plot.use_logscale = 1}
-		else { plot.use_logscale = 0 }
+		if ( plot.yaxis_options.node().value == 'log'){
+			plot.use_logscale = 1
+			plot.use_percentage = 0
+		}
+		else if(plot.yaxis_options.node().value == 'percentage'){ 
+			plot.use_percentage = 1
+			plot.use_logscale = 0
+		}
+		else{
+			plot.use_logscale = 0
+			plot.use_percentage = 0
+		}
 		do_plot(plot)
 	})
 	
@@ -745,6 +779,9 @@ function make_table (plot) {
 	// hide svg
 	plot.svg.style('display','none')
 	plot.legend_div.style('display','none')
+	if(plot.boxplot_div){
+		plot.boxplot_div.style('display','none')
+	}
 
 	plot.table_div.selectAll('*').remove()
 
