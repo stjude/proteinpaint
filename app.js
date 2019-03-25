@@ -194,7 +194,7 @@ app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
 app.post('/mdssamplesignature',handle_mdssamplesignature)
 app.post('/mdssurvivalplot',handle_mdssurvivalplot)
 app.post('/fimo',handle_fimo)
-app.post('/termdb', termdb.handle_termdb_closure( genomes ) )
+app.post('/termdb', handle_termdb )
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
@@ -14250,6 +14250,18 @@ function checkrank_bedj(req,res) {
 
 
 //////////// __termdb
+
+function handle_termdb ( req, res ) {
+	if( reqbodyisinvalidjson(req,res) ) return
+
+	const gn = genomes[ req.query.genome ]
+	if(!gn) {
+		res.send({error:'invalid genome'})
+		return
+	}
+
+	termdb.handle_request( req, res, gn )
+}
 
 
 function init_termdb ( ds ) {

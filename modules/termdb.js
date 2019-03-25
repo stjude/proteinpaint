@@ -4,37 +4,33 @@ const app = require('../app')
 
 
 
-exports.handle_termdb_closure = ( genomes ) => {
+exports.handle_request = ( req, res, genome ) => {
+/*
+this function is ready to be turned into async to support await
+*/
 
-	return function (req, res) {
+	try {
 
-		if( app.reqbodyisinvalidjson(req,res) ) return
+		const q = req.query
+		const ds = genome.datasets[ q.dslabel ]
+		if(!ds) throw 'invalid dslabel'
+		if(!ds.cohort) throw 'ds.cohort missing'
+		const tdb = ds.cohort.termdb
+		if(!tdb) throw 'no termdb for this dataset'
 
-		try {
+		// process triggers
+		// to support await, need to detect triggers here
 
-			const q = req.query
-			const gn = genomes[ q.genome ]
-			if(!gn) throw 'invalid genome'
-			const ds = gn.datasets[ q.dslabel ]
-			if(!ds) throw 'invalid dslabel'
-			if(!ds.cohort) throw 'ds.cohort missing'
-			const tdb = ds.cohort.termdb
-			if(!tdb) throw 'no termdb for this dataset'
+		if( termdb_trigger_rootterm( q, res, tdb ) ) return
+		if( termdb_trigger_children( q, res, tdb ) ) return
+		if( termdb_trigger_barchart( q, res, tdb, ds ) ) return
+		if( termdb_trigger_crosstab2term( q, res, tdb, ds ) ) return
 
-			// process triggers
-			// to support await, need to detect triggers here
+		throw 'termdb: don\'t know what to do'
 
-			if( termdb_trigger_rootterm( q, res, tdb ) ) return
-			if( termdb_trigger_children( q, res, tdb ) ) return
-			if( termdb_trigger_barchart( q, res, tdb, ds ) ) return
-			if( termdb_trigger_crosstab2term( q, res, tdb, ds ) ) return
-
-			throw 'termdb: don\'t know what to do'
-
-		} catch(e) {
-			res.send({error: (e.message || e)})
-			if(e.stack) console.log(e.stack)
-		}
+	} catch(e) {
+		res.send({error: (e.message || e)})
+		if(e.stack) console.log(e.stack)
 	}
 }
 
