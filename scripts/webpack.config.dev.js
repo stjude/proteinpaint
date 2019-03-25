@@ -1,6 +1,7 @@
 const webpack=require('webpack')
 const config=require('../webpack.config')
 const _c=require('../serverconfig')
+const wpserver=require('../webpack.config.server')
 const WebpackNotifierPlugin = require('webpack-notifier')
 
 config.mode = 'development'
@@ -11,5 +12,5 @@ config.plugins=[
 	new WebpackNotifierPlugin()
 ]
 
-module.exports=config
+module.exports=[wpserver, config]
 process.traceDeprecation=true
