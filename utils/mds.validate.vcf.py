@@ -1,5 +1,13 @@
 #!/usr/bin/python3
-
+"""
+vcf file validation:
+1. if number of columns consistant with the number in header line
+2. check if chromsome is consistant with header contigs
+3. check if VEP annotated
+4. check if sample contain all values for each element of FORMAT field and Cases
+5. check if position of insertion or deletion starts with the one nucleotide before the insertion or deletion site
+6. and more... including total number of variants from each chromosome and total cases.
+"""
 import json,sys,re,gzip
 import argparse
 
@@ -13,46 +21,65 @@ if not args.vcf:
 
 #_______________________________
 #functions
-
-#extract header info
-def GETINFO(l):
-	if l.startswith('##FORMAT'):
-		FORMAT.append(re.search("ID=(.*?),",l).group(1))
-	elif l.startswith('##contig'):
-		CHROMSOME.append(re.search("ID=(.*?),",l).group(1))
-	elif l.startswith('#CHROM'):
-		SAMPLES.extend(l.strip().split('\t')[9:])
-#required fileds check
-
-#check chromsome
-def CKCHROM(c):
-	if c not in CHROMSOME:
-		print("Erro: Chromsome: "+c+" is not a valid chromsome value!",file=sys.stderr)
-		sys.exit(1) 
-#check insertion or deletion coordinate system
-def CKINSPOS(r,a):
-	if not r.replace('-','').strip() or not a.replace('-','').strip():
-		print("Erro: Please use the correct coordinate system(use the base BEFORE the insertion or deletion)",file=sys.stderr)
-		sys.exit(1)
-
-#check if sample value length is eaqual to format length
-def CKSAMVALLEN(f,v):
-	SAMVALLENSET = set(v)
-	CONVS = {ev for ev in SAMVALLENSET if len(ev.split(':')) != len(f.split(':'))}
-	if CONVS:
-		print("Erro: the length of info is not equal to FORMAT length "+f,file=sys.stderr)
-		sys.exit(1)
-
-#Get samples missing pubmed ID
-def GETSAMNOPMID(f,v):
-	if 'pmid' in f:
-		FORMATL = f.split(':')
-		fidx = FORMATL.index('pmid')
-		SAM = {SAMPLES[x] for x,ev in enumerate(v) if ev.split(':')[fidx] == '.' and ',' in ev}
-		if SAM:
-			return SAM
+def PARSEMETAINFO(metaInfoL):
+# retrieve few informations from meta info lines
+# 1. total number of columns in header line
+# 2. formats in meta info lines
+# 3. all chromosomes in meta info lines
+	colnum = 0
+	format = []
+	allchrom = []
+	info = []
+	for m in metaInfoL:
+		if m.startswith('#CHROM'):
+			colnum = len(m.strip().split('\t'))
+		if m.startswith('##FORMAT'):
+			format.append(re.search("ID=(.*?),",m).group(1))
+		if m.startswith('##contig'):
+			allchrom.append(re.search("ID=(.*?),",m).group(1))
+	return colnum,format,allchrom		
+def CHECKVAR(varL,colN,chrs):
+	# 1. if number of columns consistant with the number in header line
+	if len(varL) < colN:
+		ColNumCK = 'less'
+	elif len(varL) > colN:
+		ColNumCK = 'more'
+	else:
+		ColNumCK = []
+	# 2. check if chromsome is consistant with header contigs
+	if varL[0] in chrs:
+		DiffChr = 'Same'
+	else:
+		DiffChr = 'Diff'
+	# 3. check if VEP annotated
+	if 'CSQ' in varL[7]:
+		vep = True
+	else:
+		vep = False
+	# 4. check if sample contain all values for each element of FORMAT field and Cases
+	if len(varL) > 10:
+		SAMVALLENSET = varL[9:]
+		CONVS = {ev for ev in SAMVALLENSET if len(ev.split(':')) != len(varL[8].split(':'))}
+		if CONVS:
+			AllValIn = False
 		else:
-			return False
+			AllValIn = True
+		EMTCASE = ':'.join(['.']*len(varL[8].split(':')))
+		CASES = len([1 for x in SAMVALLENSET if x != EMTCASE])
+	else:
+		AllValIn = 'NA'
+		CASES = 'NA'
+	# 5. check if position of insertion or deletion starts with the one nucleotide before the insertion or deletion site
+	CORSYS = True
+	if len(varL[3]) != len(varL[4]):
+		if not varL[3].replace('-','').strip() or not varL[4].replace('-','').strip():
+			CORSYS = False
+	return ColNumCK,DiffChr,vep,AllValIn,CORSYS,CASES
+		
+	
+
+
+
 
 #vcf file
 vcf = args.vcf
@@ -61,44 +88,109 @@ if vcf.endswith('.gz'):
 else:
 	vcffh = open(vcf)
 
+#ColNum = 0 #Header line coloumn number
+#FORMAT = [] #Formats in VCF meta info lines
+#CHROMOSOMES = [] # All chromosomes in VCF meta info lines
+metainfo = [] # Meta-information lines
 
-FORMAT = []
-CHROMSOME = []
-SAMPLES = []
-CASES = 0
-SAMNOPMID = set()
+#CK PART
+MissCHR = [] # 2
+NCOR = [] # 5
+SAMFORMTVAL = [] # 4
+VEPANNO = True # 3
+VarMissCol = {'less':[],'more':[]} # 1
+TOTALCASE = 0
+VARNumPerC = {}
 for vcf in vcffh:
 	if isinstance(vcf,bytes):
 		vcf = vcf.decode('utf-8')
 	if vcf.startswith('#'):
-		GETINFO(vcf)
+		metainfo.append(vcf)
 		continue
-	line = vcf.replace('\n','')
-	L = line.split('\t')
-	CKCHROM(L[0]) #check if chromsome is consistant with header contigs 
-	if len(L[3]) != len(L[4]): #check insertion or deletion coordinate system
-		CKINSPOS(L[3],L[4])
-	if L[7] == '.': #Check if VEP annotated
-		print("Erro: Please annotate VCF file using VEP",file=sys.stderr)
-		sys.exit(1)
-	CKSAMVALLEN(L[8],L[9:]) #check if sample value length is eaqual to format length
-	SAMSMISSPID = GETSAMNOPMID(L[8],L[9:])
-	if SAMSMISSPID:
-		SAMNOPMID = SAMNOPMID.union(SAMSMISSPID)
-	CASE = [1 for x in L[9:] if ',' in x]
-	CASES += len(CASE)
+	ColNum,FORMAT,CHROMOSOMES = PARSEMETAINFO(metainfo)
+	L = vcf.strip().split('\t')
+	ID = '\t'.join(L[0:2]+L[3:5])
+	ColNumCK,DiffCHR,VEP,ALLVALIN,CORSYS,CASES = CHECKVAR(L,ColNum,CHROMOSOMES)
+	# 1 
+	if ColNumCK:
+		VarMissCol[ColNumCK].append(ID)
+	# 2
+	if DiffCHR == 'Diff' and L[0] not in MissCHR:
+		MissCHR.append(L[0])
+
+	# 3
+	if VEPANNO and not VEP:
+		VEPANNO = False
+
+	# 4
+	if ALLVALIN != 'NA':
+		if not ALLVALIN:
+			SAMFORMTVAL.append(ID)
+	if CASES != 'NA':
+		TOTALCASE += CASES
+	
+	# 5
+	if not CORSYS:
+		NCOR.append(ID)
+
+	if L[0] not in VARNumPerC: #Total number of variants on each chr
+		VARNumPerC[L[0]] = 1
+	else:
+		VARNumPerC[L[0]] += 1
 vcffh.close()
 
+print('VCF file stats:')
 
-#OUTPUT statinfo
-print('Chromsomes are consistant with header contigs!')
-print('Coordinate system for INDELS is correct!')
-print('No info was missed for elements in FORMAT field!')
-print('VCF file is successfully validated\n\n')
+# 1
+print('1. Check if number of columns for each variant consistant with the number in header line:')
+if VarMissCol['less'] or VarMissCol['more']:
+	print('\tVariants with more columns:')
+	for i in VarMissCol['more']:
+		print('\t\t'+i)
+	print('\tVariants with less columns:')
+	for i in VarMissCol['less']:
+		print('\t\t'+i)
+else:
+	print('\tYes')
 
-print("SAMPLES missing pmid:")
-for sam in SAMNOPMID:
-	print(sam)
+# 2
+print('2. check if chromsome is consistant with header contigs:')
+if MissCHR:
+	print('\tThe following chromosomes from variants can not be found from VCF meta info lines:')
+	for c in MissCHR:
+		print('\t\t'+c)
 
-print('\nTotal cases:')
-print(CASES)
+# 3
+print('3. check if VEP annotated:')
+if not VEPANNO:
+	print('\tNo VEP annotation for some or all Variants.')
+else:
+	print('\tVEP annotated')
+
+# 4
+print('4. check if sample contain all values for each element of FORMAT field and Cases')
+if SAMFORMTVAL:
+	print('\tSome of values from FORMAT field are missed from samples in the following variants:')
+	for v in SAMFORMTVAL:
+		print('\t'+v)
+else:
+	print('\tVerified!')
+print('\tTotal number of cases: '+str(TOTALCASE))
+
+# 5
+print('5. check if position of insertion or deletion starts with the one nucleotide before the insertion or deletion site')
+if NCOR:
+	print('\tThe coordinate system was not correct for total str(len(NCOR)) indels!')
+else:
+	print('\tVerified!\n')
+
+# more
+print('more...\n')
+TotalVar = 0
+
+print('Total variants on each chromosome:')
+for c in VARNumPerC:
+	print('\tchr'+c+'\t'+str(VARNumPerC[c]))
+	TotalVar += VARNumPerC[c]
+
+print('\nTotal variants: '+str(TotalVar))
