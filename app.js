@@ -8076,6 +8076,7 @@ function boxplot_getvalue(lst) {
 	const out=lst.filter(i=>i.value<p25-iqr || i.value>p75+iqr)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
+exports.boxplot_getvalue = boxplot_getvalue
 
 
 

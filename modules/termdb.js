@@ -1,4 +1,4 @@
-const server = require('../app')
+const app = require('../app')
 
 
 
@@ -8,7 +8,7 @@ exports.handle_termdb_closure = ( genomes ) => {
 
 	return function (req, res) {
 
-		if( server.reqbodyisinvalidjson(req,res) ) return
+		if( app.reqbodyisinvalidjson(req,res) ) return
 
 		try {
 
@@ -449,7 +449,7 @@ if is a numeric term, also get distribution
 
 			// values to be sorted to ascending order for boxplot
 			values2.sort((i,j)=> i-j )
-			result.boxplot = boxplot_getvalue( values2.map( i=>{return {value:i}} ) )
+			result.boxplot = app.boxplot_getvalue( values2.map( i=>{return {value:i}} ) )
 			// get mean value
 			result.boxplot.mean = values2.reduce((i,j)=>j+i, 0) / values2.length
 			// get sd
