@@ -1,4 +1,7 @@
 const app = require('../app')
+const fs = require('fs')
+const path = require('path')
+const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 
 
@@ -712,4 +715,63 @@ do not directly hand over the term object to client; many attr to be kept on ser
 		}
 	}
 	return t2
+}
+
+
+
+
+
+
+
+
+///////////// server init
+
+
+exports.server_init = ( ds ) => {
+/* to initiate termdb for a mds dataset
+*/
+	const termdb = ds.cohort.termdb
+
+	if(!termdb.term2term) throw '.term2term{} missing'
+	server_init_parse_term2term( termdb )
+
+	if(!termdb.termjson) throw '.termjson{} missing'
+	server_init_parse_termjson( termdb )
+}
+
+
+
+function server_init_parse_term2term ( termdb ) {
+
+	if(termdb.term2term.file) {
+		// one single text file
+		termdb.term2term.map = new Map()
+		// k: parent
+		// v: [] children
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.term2term.file),{encoding:'utf8'}).trim().split('\n') ) {
+			if(line[0]=='#') continue
+			const l = line.split('\t')
+			if(!termdb.term2term.map.has( l[0] )) termdb.term2term.map.set( l[0], [] )
+			termdb.term2term.map.get( l[0] ).push( l[1] )
+		}
+		return
+	}
+	// maybe sqlitedb
+	throw 'term2term: unknown data source'
+}
+
+
+function server_init_parse_termjson ( termdb ) {
+	if(termdb.termjson.file) {
+		termdb.termjson.map = new Map()
+		// k: term
+		// v: {}
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.termjson.file),{encoding:'utf8'}).trim().split('\n') ) {
+			if(line[0]=='#') continue
+			const l = line.split('\t')
+			termdb.termjson.map.set( l[0], JSON.parse(l[1]) )
+		}
+		return
+	}
+	throw 'termjson: unknown data source'
 }

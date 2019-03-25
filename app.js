@@ -13214,7 +13214,7 @@ function mds_init(ds,genome, _servconfig) {
 
 		if(ds.cohort.termdb) {
 			try {
-				init_termdb( ds )
+				termdb.server_init( ds )
 			} catch(e) {
 				return 'error with termdb: '+e
 			}
@@ -14264,53 +14264,5 @@ function handle_termdb ( req, res ) {
 }
 
 
-function init_termdb ( ds ) {
-/* to initiate termdb for a mds dataset
-*/
-	const termdb = ds.cohort.termdb
-	
-	if(!termdb.term2term) throw '.term2term{} missing'
-	init_termdb_parse_term2term( termdb )
-
-	if(!termdb.termjson) throw '.termjson{} missing'
-	init_termdb_parse_termjson( termdb )
-}
-
-
-
-function init_termdb_parse_term2term ( termdb ) {
-
-	if(termdb.term2term.file) {
-		// one single text file
-		termdb.term2term.map = new Map()
-		// k: parent
-		// v: [] children
-		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.term2term.file),{encoding:'utf8'}).trim().split('\n') ) {
-			if(line[0]=='#') continue
-			const l = line.split('\t')
-			if(!termdb.term2term.map.has( l[0] )) termdb.term2term.map.set( l[0], [] )
-			termdb.term2term.map.get( l[0] ).push( l[1] )
-		}
-		return
-	}
-	// maybe sqlitedb
-	throw 'term2term: unknown data source'
-}
-
-
-function init_termdb_parse_termjson ( termdb ) {
-	if(termdb.termjson.file) {
-		termdb.termjson.map = new Map()
-		// k: term
-		// v: {}
-		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.termjson.file),{encoding:'utf8'}).trim().split('\n') ) {
-			if(line[0]=='#') continue
-			const l = line.split('\t')
-			termdb.termjson.map.set( l[0], JSON.parse(l[1]) )
-		}
-		return
-	}
-	throw 'termjson: unknown data source'
-}
 
 //////////// end of __termdb
