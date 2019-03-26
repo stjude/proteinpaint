@@ -210,6 +210,12 @@ function may_enable_crosstabulate ( term1, row, obj ) {
 /*
 may enable a standalone crosstab button for a term in the tree
 just a wrapper for may_makebutton_crosstabulate with its callback function
+
+benefit of having this standalone button is that user having such need in mind will be able to find it directly,
+rather than having to remember to click on the barchart button first, and get to crosstab from the barchart panel
+
+for showing crosstab output, should show in barchart panel instead with the instrument panel
+providing all the customization options
 */
 	may_makebutton_crosstabulate( {
 		term1: term1,
@@ -221,87 +227,25 @@ just a wrapper for may_makebutton_crosstabulate with its callback function
 			.term2{}
 			.items[]
 			._button
-
-			term1 is term
-
-			to make new panel and display a table
-			observe predefined order of values for both term1/2
 			*/
 
 			const c = result._button.node().getBoundingClientRect()
 			const pane = client.newpane({ x: c.x+100, y: Math.max( 10, c.y-100) })
 			pane.header.html( term1.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+result.term2.name )
 
-			// columns are term2 values, order may be predefined
-			let column_keys = []
-			if( result.term2_order ) {
-
-				column_keys = result.term2_order
-
-			} else {
-
-				// no predefined order, get unique values from data
-				const term2values = new Set()
-				for(const t1v of result.items) {
-					for(const j of t1v.lst) {
-						term2values.add( j.label )
-					}
-				}
-				for(const s of term2values) {
-					column_keys.push( s )
-				}
+			const plot = {
+				genome: obj.genome.name,
+				dslabel: obj.mds.label,
+				//unannotated: data.unannotated,
+				//boxplot: data.boxplot, // available for numeric terms
+				holder: pane.body,
+				term: term1,
+				term2: result.term2,
+				items: result.items,
+				default2showtable: true // a flag for barchart to show html table view by default
 			}
 
-
-			// show table
-			const table = pane.body.append('table')
-				.style('margin-top','20px')
-				.style('border-spacing','3px')
-				.style('border-collapse','collapse')
-				.style('border', '1px solid black')
-
-			// header
-			const tr = table.append('tr')
-			tr.append('td') // column 1
-			// print term2 values as rest of columns
-			for(const i of column_keys) {
-				tr.append('th')
-					.text( i )
-					.style('border', '1px solid black')
-			}
-
-			// rows are term1 values
-			let rows = []
-			// order of rows maybe predefined
-			if( term1.graph && term1.graph.barchart && term1.graph.barchart.order ) {
-				for(const v of term1.graph.barchart.order ) {
-					const i = result.items.find( i=> i.label == v )
-					if( i ) {
-						rows.push( i )
-					}
-				}
-			} else {
-				rows = result.items
-			}
-			
-			for(const t1v of rows) {
-				const tr = table.append('tr')
-
-				// column 1
-				tr.append('th')
-					.text( t1v.label )
-					.style('border', '1px solid black')
-
-				// other columns
-				for(const t2label of column_keys) {
-					const td = tr.append('td')
-						.style('border', '1px solid black')
-					const v = t1v.lst.find( i=> i.label == t2label )
-					if( v ) {
-						td.text( v.value )
-					}
-				}
-			}
+			barchart_make( plot )
 		}
 	})
 }
