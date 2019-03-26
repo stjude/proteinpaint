@@ -7,27 +7,41 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 
 
-exports.handle_request = ( req, res, genome ) => {
+exports.handle_request_closure = ( genomes ) => {
 /*
 this function is ready to be turned into async to support await
 */
 
+return async (req, res) => {
+
+	if( app.reqbodyisinvalidjson(req,res) ) return
+
+	const q = req.query
+
 	try {
 
-		const q = req.query
+		const genome = genomes[ q.genome ]
+		if(!genome) throw 'invalid genome'
 		const ds = genome.datasets[ q.dslabel ]
 		if(!ds) throw 'invalid dslabel'
 		if(!ds.cohort) throw 'ds.cohort missing'
 		const tdb = ds.cohort.termdb
 		if(!tdb) throw 'no termdb for this dataset'
 
+		let ds_filtered = ds
+		/*
+		if needs filter, ds_filtered to point to a copy of ds with modified cohort.annotation{} with those samples passing filter
+		filter by metadata
+		filter by genotype of a variant
+		*/
+
 		// process triggers
 		// to support await, need to detect triggers here
 
 		if( termdb_trigger_rootterm( q, res, tdb ) ) return
 		if( termdb_trigger_children( q, res, tdb ) ) return
-		if( termdb_trigger_barchart( q, res, tdb, ds ) ) return
-		if( termdb_trigger_crosstab2term( q, res, tdb, ds ) ) return
+		if( termdb_trigger_barchart( q, res, tdb, ds_filtered ) ) return
+		if( termdb_trigger_crosstab2term( q, res, tdb, ds_filtered ) ) return
 
 		throw 'termdb: don\'t know what to do'
 
@@ -35,6 +49,7 @@ this function is ready to be turned into async to support await
 		res.send({error: (e.message || e)})
 		if(e.stack) console.log(e.stack)
 	}
+}
 }
 
 
