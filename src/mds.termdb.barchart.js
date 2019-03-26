@@ -148,7 +148,7 @@ export function barchart_make ( arg ) {
 	////////////// Custom Bin button	
 	if( plot.term.isfloat ) {
 		// bin customization button
-		plot.button_row
+		plot.custom_bin_button = plot.button_row
 			.append('div')
 			.text('Customize Bins')
 			.attr('class','sja_menuoption')
@@ -156,10 +156,7 @@ export function barchart_make ( arg ) {
 			.style('margin-left','30px')
 			.style('padding','3px 5px')
 			.on('click',()=>{
-				// new_fun( {
-				// 	term1: plot.term,
-				// 	plot: plot
-				// })
+				custom_bin(plot)
 			})
 	}
 
@@ -872,4 +869,107 @@ function make_table (plot) {
 			}
 		}
 	}
+}
+
+function custom_bin(plot){
+	plot.tip.clear()
+			.showunder( plot.custom_bin_button.node() )
+
+	const custom_bin_div = plot.tip.d.append('div')
+		.style('margin','10px 0px')
+		.style('align-items','flex-start')
+		.style('display','flex')
+
+	// Bin Size
+	const bin_size_div = custom_bin_div.append('div')
+		.style('display','inline-block')
+		.style('margin-left','10px')
+
+	
+	bin_size_div.append('div')
+		.text('Bin Size')
+		.style('padding-right','3px')
+		.style('text-align','center')
+
+	plot.custom_bin_size = bin_size_div.append('input')
+		.style('margin-top','42px')
+		.attr('size','8')
+		.style('text-align','center')
+
+	// First Bin
+	const first_bin_div = custom_bin_div.append('div')
+		.style('display','inline-block')
+		.style('margin-left','25px')
+
+	first_bin_div.append('div')
+		.text('First Bin')
+		.style('padding-right','3px')
+		.style('text-align','center')
+
+	plot.first_bin_options = first_bin_div.append('select')
+		.style('margin-top','10px')
+
+	plot.first_bin_options.append('option')
+		.attr('value','auto')
+		.text('Automatic')
+
+	plot.first_bin_options.append('option')
+		.attr('value','value')
+		.text('Value')
+
+	plot.first_bin_options.append('option')
+		.attr('value','percentile')
+		.text('Percentile')
+
+	let first_bin_input_div = first_bin_div.append('div')
+		.style('margin-top','10px')
+		.style('display','block')
+	
+	first_bin_input_div.append('span')
+		.style('display','inline-block')
+		.text('<=')
+
+	plot.first_bin_size = first_bin_input_div.append('input')
+		.style('display','inline-block')
+		.style('margin-left','5px')
+		.attr('size','8')
+
+	// Last Bin
+	const last_bin_div = custom_bin_div.append('div')
+		.style('display','inline-block')
+		.style('margin-left','25px')
+		.style('margin-right','10px')
+
+	last_bin_div.append('div')
+		.text('Last Bin')
+		.style('padding-right','3px')
+		.style('text-align','center')
+
+	plot.last_bin_options = last_bin_div.append('select')
+		.style('margin-top','10px')
+
+	plot.last_bin_options.append('option')
+		.attr('value','auto')
+		.text('Automatic')
+
+	plot.last_bin_options.append('option')
+		.attr('value','value')
+		.text('Value')
+
+	plot.last_bin_options.append('option')
+		.attr('value','percentile')
+		.text('Percentile')
+
+	let last_bin_input_div = last_bin_div.append('div')
+		.style('margin-top','10px')
+		.style('display','block')
+	
+	last_bin_input_div.append('span')
+		.style('display','inline-block')
+		.text('>=')
+
+	plot.last_bin_size = last_bin_input_div.append('input')
+		.style('display','inline-block')
+		.style('margin-left','5px')
+		.attr('size','8')
 }
