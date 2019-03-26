@@ -154,7 +154,7 @@ export function barchart_make ( arg ) {
 			.attr('class','sja_menuoption')
 			.style('display','inline-block')
 			.style('margin-left','30px')
-			.style('padding','3px 10px')
+			.style('padding','3px 5px')
 			.on('click',()=>{
 				// new_fun( {
 				// 	term1: plot.term,
@@ -187,6 +187,11 @@ export function barchart_make ( arg ) {
 			// update the plot data using the server-returned new data
 			plot.items = result.items
 			do_plot( plot )
+
+			//for crosstab button update table
+			if(plot.default2showtable){
+				make_table(plot)
+			}
 		}
 	})
 
