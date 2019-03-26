@@ -111,7 +111,8 @@ export function barchart_make ( arg ) {
 		label_fontsize: 15,
 		yaxis_width: 100,
 		use_logscale:0,
-		use_percentage: 0
+		use_percentage: 0,
+		default2showtable: 0
 	}
 
 	// a row of buttons
@@ -149,16 +150,16 @@ export function barchart_make ( arg ) {
 		// bin customization button
 		plot.button_row
 			.append('div')
-			.text('Custom Bin')
+			.text('Customize Bins')
 			.attr('class','sja_menuoption')
 			.style('display','inline-block')
 			.style('margin-left','30px')
 			.style('padding','3px 10px')
 			.on('click',()=>{
-				new_fun( {
-					term1: plot.term,
-					plot: plot
-				})
+				// new_fun( {
+				// 	term1: plot.term,
+				// 	plot: plot
+				// })
 			})
 	}
 
@@ -224,6 +225,12 @@ export function barchart_make ( arg ) {
 
 	//Exposed - not exponsed data
 	plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
+
+	if(arg.default2showtable && arg.term2){
+		plot.default2showtable = 1
+		plot.term2 = arg.term2
+		update_term2_header(plot)
+	}
 
 	do_plot( plot )
 
@@ -320,6 +327,12 @@ function update_term2_header ( plot ) {
 			.text('Boxplot')
 		}
 
+		//for croasstab button show table by default
+		if(plot.default2showtable){
+			plot.term2_displaymode_options.node().value = 'table'
+			plot.table_div.style('display','block')
+			make_table(plot)
+		}
 
 		/*
 		every time the 'table' option is selected, render the table
@@ -342,6 +355,7 @@ function update_term2_header ( plot ) {
 				if(plot.boxplot_div){
 					plot.boxplot_div.style('display','block')
 				}
+				do_plot(plot)
 			}
 			// TODO boxplot - query server for data
 		})
@@ -357,7 +371,7 @@ or stacked bar plot for cross-tabulating
 
 plot()
 */
-	console.log(plot)
+	// console.log(plot)
 	// set y axis min/max scale
 	const [yscale_min, yscale_max] = set_yscale( plot )
 
