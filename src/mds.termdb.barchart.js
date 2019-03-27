@@ -91,7 +91,7 @@ export function barchart_make ( arg ) {
 		- log scale
 
 */
-	// console.log(arg)
+	console.log(arg)
 	// initiating the plot object
 	// it will be updated later by axis toggle or cross tabulate
 	const plot = {
@@ -112,7 +112,8 @@ export function barchart_make ( arg ) {
 		yaxis_width: 100,
 		use_logscale:0,
 		use_percentage: 0,
-		default2showtable: 0
+		default2showtable: 0,
+		term2_boxplot: 0
 	}
 
 	// a row of buttons
@@ -135,7 +136,7 @@ export function barchart_make ( arg ) {
 		.attr('value','linear')
 		.text('Linear')
 
-	plot.yaxis_options.append('option')
+	plot.yaxis_option_log = plot.yaxis_options.append('option')
 		.attr('value','log')
 		.text('Log10')
 
@@ -293,6 +294,7 @@ function update_term2_header ( plot ) {
 
 			delete plot.term2
 			plot.yaxis_option_percentage.attr('disabled',1)
+			plot.yaxis_option_log.attr('disabled',null)
 			plot.use_percentage = 0
 			plot.yaxis_options.node().value = 'linear'
 			plot.term2_handle_div.selectAll('*').remove()
@@ -306,6 +308,7 @@ function update_term2_header ( plot ) {
 			if (plot.boxplot_div){
 				plot.boxplot_div.style('display','block')
 			}
+			plot.term2_boxplot = 0
 			
 			update_plot(plot)
 		})
@@ -348,18 +351,31 @@ function update_term2_header ( plot ) {
 		plot.term2_displaymode_options
 		.on('change',()=>{
 			if ( plot.term2_displaymode_options.node().value == 'table'){
+				plot.term2_boxplot = 0
 				plot.table_div.style('display','block')
-				make_table(plot)
+				update_plot(plot)
 			}else if(plot.term2_displaymode_options.node().value == 'stacked'){
+				plot.term2_boxplot = 0
+				plot.yaxis_option_percentage.attr('disabled',null)
+				plot.yaxis_option_log.attr('disabled',null)
 				plot.table_div.style('display','none')
 				plot.svg.style('display','block')
 				plot.legend_div.style('display','block')
 				if(plot.boxplot_div){
 					plot.boxplot_div.style('display','block')
 				}
-				do_plot(plot)
+				update_plot(plot)
 			}
-			// TODO boxplot - query server for data
+			// if 'boxplot' selected - query server for data
+			else if(plot.term2_displaymode_options.node().value == 'boxplot'){
+				plot.term2_boxplot = 1
+				plot.table_div.style('display','none')
+				plot.svg.style('display','block')
+				plot.legend_div.style('display','none')
+				plot.yaxis_option_percentage.attr('disabled',1)
+				plot.yaxis_option_log.attr('disabled',1)
+				update_plot(plot)
+			}
 		})
 	}
 }
@@ -373,7 +389,7 @@ or stacked bar plot for cross-tabulating
 
 plot()
 */
-	// console.log(plot)
+	console.log(plot)
 	// set y axis min/max scale
 	const [yscale_min, yscale_max] = set_yscale( plot )
 
@@ -383,6 +399,8 @@ plot()
 		plot.y_scale = scaleLog().domain([yscale_max,1]).range([0,plot.barheight])
 	} else if(plot.use_percentage){
 		plot.y_scale = scaleLinear().domain([100,0]).range([0,plot.barheight])
+	}else if(plot.term2_boxplot){
+		plot.y_scale = scaleLinear().domain([plot.yscale_max,0]).range([0,plot.barheight])
 	}
 	else {
 		plot.y_scale = scaleLinear().domain([yscale_max,0]).range([0,plot.barheight])
@@ -514,7 +532,55 @@ plot()
 				term2_labels.add(sub_item.label)
 				x_lab_tip += '<span style="height: 15px; width: 15px; position: absolute; margin:0 2px; background-color:'+ term2valuecolor( sub_item.label ) +';"></span><span style="margin-left:20px">'+sub_item.label+' ('+ sub_item.value+')</span><br>'
 			}
-		} else {
+		} else if(item.boxplot){
+			//this is for boxplot for 2nd numerical term 
+			g.append("line")
+				.attr("x1", 0)
+				.attr("y1", plot.y_scale(item.boxplot.w1)-plot.barheight)
+				.attr("x2", 0)
+				.attr("y2", plot.y_scale(item.boxplot.w2)-plot.barheight)
+				.attr("stroke-width", 2)
+				.attr("stroke", "black")
+
+			g.append("rect")
+				.attr('x', -plot.barwidth/2)
+				.attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
+				.attr('width', plot.barwidth)
+				.attr('height', plot.barheight - plot.y_scale(item.boxplot.p75-item.boxplot.p25))
+				.attr('fill','#901739')
+
+			g.append("line")
+				.attr("x1", -plot.barwidth/2.2)
+				.attr("y1", plot.y_scale(item.boxplot.w1)-plot.barheight)
+				.attr("x2", plot.barwidth/2.2)
+				.attr("y2",plot.y_scale(item.boxplot.w1)-plot.barheight)
+				.attr("stroke-width", 2)
+				.attr("stroke", "black")
+	
+			g.append("line")
+				.attr("x1", -plot.barwidth/2.2)
+				.attr("y1", plot.y_scale(item.boxplot.p50)-plot.barheight)
+				.attr("x2", plot.barwidth/2.2)
+				.attr("y2",plot.y_scale(item.boxplot.p50)-plot.barheight)
+				.attr("stroke-width", 1.5)
+				.attr("stroke", "white")
+			
+			g.append("line")
+				.attr("x1", -plot.barwidth/2.2)
+				.attr("y1", plot.y_scale(item.boxplot.w2)-plot.barheight)
+				.attr("x2", plot.barwidth/2.2)
+				.attr("y2",plot.y_scale(item.boxplot.w2)-plot.barheight)
+				.attr("stroke-width", 2)
+				.attr("stroke", "black")
+
+			for(const outlier of item.boxplot.out){
+				g.append("circle")
+					.attr('cx', 0)
+					.attr('cy', plot.y_scale(outlier.value)-plot.barheight)
+					.attr('r', 2)
+					.attr('fill','#901739')
+			}	
+		}else{
 			// this is a single bar plot
 			let value = (plot.use_logscale && item.value <= 1) ?  1.3 : item.value
 			g.append('rect')
@@ -773,10 +839,18 @@ function update_plot (plot) {
 	
 	const arg = {
 		genome: plot.genome,
-		dslabel: plot.dslabel,
-		barchart: {
-			id: plot.term.id
+		dslabel: plot.dslabel
+	}
+
+	if(plot.term2){
+		arg.crosstab2term = 1
+		arg.term1 = { id : plot.term.id }
+		arg.term2 = { id : plot.term2.id}
+		if(plot.term2_boxplot){
+			arg.boxplot = 1
 		}
+	}else{
+		arg.barchart = { id : plot.term.id }
 	}
 
 	client.dofetch( 'termdb', arg )
@@ -785,8 +859,13 @@ function update_plot (plot) {
 		if(!data.lst) throw 'no data for barchart'
 
 		plot.items =  data.lst
+		if (data.binmax){ plot.yscale_max = data.binmax}
 
-		do_plot( plot )
+		if(plot.term2_displaymode_options.node().value != 'table'){
+			do_plot( plot )
+		}else{
+			make_table(plot)
+		}
 	})
 }
 
