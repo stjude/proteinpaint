@@ -219,7 +219,10 @@ termdb_trigger_crosstab2term already complicated, don't want to add any more
 		// term1 is numeric bin and is naturally ordered, so do not sort them to decending order
 	}
 
-	res.send( {lst: lst} )
+	res.send( {
+		lst: lst,
+		binmax: binmax,
+		} )
 }
 
 
