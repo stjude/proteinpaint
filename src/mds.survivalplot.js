@@ -284,17 +284,13 @@ push button to re-render
 		d_curves: p.d.append('div').style('margin','10px')
 	}
 
-	const relative_d = p.d.append('div')
-		.style('position','relative')
-		.style('display','inline')
-
-	p.svg = relative_d.append('svg')
-	p.resize_handle = relative_d.append('div')
-		.style('position','absolute')
-		.style('right','0px')
-		.style('bottom','-15px')
+	p.svg = p.d.append('svg')
+	p.resize_handle = p.d
+		.append('div') // div containing the handle
+		.append('div')
 		.attr('class','sja_clbtext')
 		.text('drag to resize')
+		.style('float','right')
 
 
 	if(p.renderplot) {
