@@ -171,7 +171,7 @@ termdb_trigger_crosstab2term already complicated, don't want to add any more
 
 			o.values.sort((i,j)=>i.value-j.value)
 
-			binmax = Math.max( binmax, o.values[ o.values.length-1 ] )
+			binmax = Math.max( binmax, o.values[ o.values.length-1 ].value )
 
 			const group = {
 				label: v1,
@@ -207,7 +207,7 @@ termdb_trigger_crosstab2term already complicated, don't want to add any more
 
 			b.values.sort((i,j)=>i.value-j.value)
 
-			binmax = Math.max( binmax, b.values[ b.values.length-1 ] )
+			binmax = Math.max( binmax, b.values[ b.values.length-1 ].value )
 
 			const group = {
 				label: b1.label,
