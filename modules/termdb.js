@@ -9,7 +9,6 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 exports.handle_request_closure = ( genomes ) => {
 /*
-this function is ready to be turned into async to support await
 */
 
 return async (req, res) => {
@@ -41,7 +40,14 @@ return async (req, res) => {
 		if( termdb_trigger_rootterm( q, res, tdb ) ) return
 		if( termdb_trigger_children( q, res, tdb ) ) return
 		if( termdb_trigger_barchart( q, res, tdb, ds_filtered ) ) return
-		if( termdb_trigger_crosstab2term( q, res, tdb, ds_filtered ) ) return
+		if( q.crosstab2term ) {
+			if( q.boxplot ) {
+				termdb_trigger_crosstab2term_boxplot( q, res, tdb, ds_filtered )
+			} else {
+				termdb_trigger_crosstab2term( q, res, tdb, ds_filtered )
+			}
+			return
+		}
 
 		throw 'termdb: don\'t know what to do'
 
@@ -56,6 +62,169 @@ return async (req, res) => {
 
 
 
+
+function termdb_trigger_crosstab2term_boxplot ( q, res, tdb, ds ) {
+/*
+code replication
+
+termdb_trigger_crosstab2term already complicated, don't want to add any more
+*/
+	if(!q.term1) throw 'term1 missing'
+	if(!q.term1.id) throw 'term1.id missing'
+	const term1 = tdb.termjson.map.get( q.term1.id )
+	if(!term1) throw 'term1.id invalid'
+	if(!q.term2) throw 'term2 missing'
+	if(!q.term2.id) throw 'term2.id missing'
+	const term2 = tdb.termjson.map.get( q.term2.id )
+	if(!term2) throw 'term2.id invalid'
+	if(!ds.cohort) throw 'ds.cohort missing'
+	if(!ds.cohort.annotation) throw 'ds.cohort.annotation missing'
+
+
+	// for now, require these terms to have barcharts, and use that to tell if the term is categorical/numeric
+	// later switch to term type
+	if(!term1.graph) throw 'term1.graph missing'
+	if(!term1.graph.barchart) throw 'term1.graph.barchart missing'
+	if(!term2.graph) throw 'term2.graph missing'
+	if(!term2.graph.barchart) throw 'term2.graph.barchart missing'
+
+	if(!(term2.isinteger || term2.isfloat)) throw 'boxplot: term2 is not numerical'
+
+
+	// if term1 is categorical, use to store crosstab data in each category
+	// k: category value, v: {}
+	let t1categories
+	// if term1 is numerical, use to store crosstab data in each bin
+	let t1binconfig
+
+	// premake numeric bins for t1 and t2
+	if( term1.isinteger || term1.isfloat ) {
+
+		/* when a barchart has been created for numeric term1,
+		it will be based on either auto bin or fixed bins
+		but not by the special crosstab bins
+		so do not apply the special bin when it is term1
+		*/
+		const [ bc, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
+		t1binconfig = bc
+	} else if( term1.iscategorical ) {
+		t1categories = new Map()
+		// k: t1 category value
+		// v: {}
+	} else {
+		throw 'unknown term1 value type'
+	}
+
+
+
+	for(const s in ds.cohort.annotation) {
+		const sampleobj = ds.cohort.annotation[ s ]
+
+		// test term2 value first
+		const v2 = sampleobj[ q.term2.id ]
+		if( !Number.isFinite( v2 )) continue
+
+		if(term2.graph.barchart.numeric_bin.unannotated) {
+			if( v2 == term2.graph.barchart.numeric_bin.unannotated.value ) {
+				// exclude unannotated value for term2
+				continue
+			}
+		}
+
+		// slot v2 into term1 bin
+		const v1 = sampleobj[ q.term1.id ]
+
+		if( t1categories ) {
+
+			if( v1 == undefined) continue
+
+			if(!t1categories.has( v1 )) {
+				t1categories.set( v1, { values: [] } )
+			}
+			t1categories.get(v1).values.push( {value:v2} )
+
+		} else {
+
+			// t1 is numerical
+			if( !Number.isFinite( v1 )) continue
+			// get the bin for this sample
+			const bin = termdb_value2bin( v1, t1binconfig )
+			if(!bin) {
+				// somehow this sample does not fit to a bin
+				continue
+			}
+			bin.value--
+			if(!bin.values) {
+				bin.values = []
+			}
+			bin.values.push( {value:v2} )
+		}
+	}
+
+	// return result
+
+	let lst = [] // list of t1 categories/bins
+	let binmax = 0 // max number of samples for each bin
+
+	if(t1categories) {
+		for(const [ v1, o ] of t1categories) {
+
+			o.values.sort((i,j)=>i.value-j.value)
+
+			binmax = Math.max( binmax, o.values[ o.values.length-1 ] )
+
+			const group = {
+				label: v1,
+				boxplot: app.boxplot_getvalue( o.values )
+			}
+
+			lst.push(group)
+		}
+
+		if( term1.graph.barchart.order ) {
+			// term1 has predefined order
+			const lst2 = []
+			for(const i of term1.graph.barchart.order) {
+				const j = lst.find( m=> m.label == i )
+				if( j ) {
+					lst2.push( j )
+				}
+			}
+			lst = lst2
+		} else {
+			// no predefined order, sort to descending order
+			lst.sort((i,j)=>j.value-i.value)
+		}
+
+	} else {
+
+		// term1 is numeric; merge unannotated bin into regular bins
+		if( t1binconfig.unannotated ) {
+			t1binconfig.bins.push( t1binconfig.unannotated )
+		}
+
+		for(const b of t1binconfig.bins ) {
+
+			b.values.sort((i,j)=>i.value-j.value)
+
+			binmax = Math.max( binmax, b.values[ b.values.length-1 ] )
+
+			const group = {
+				label: b1.label,
+				boxplot: app.boxplot_getvalue( b.values )
+			}
+
+			lst.push( group )
+		}
+		// term1 is numeric bin and is naturally ordered, so do not sort them to decending order
+	}
+
+	res.send( {lst: lst} )
+}
+
+
+
+
 function termdb_trigger_crosstab2term ( q, res, tdb, ds ) {
 /*
 cross tabulate two terms
@@ -64,8 +233,6 @@ numeric term may have custom binning
 
 for each category/bin of term1, divide its samples by category/bin of term2
 */
-	if( !q.crosstab2term ) return false
-	// validate
 	if(!q.term1) throw 'term1 missing'
 	if(!q.term1.id) throw 'term1.id missing'
 	const term1 = tdb.termjson.map.get( q.term1.id )
@@ -360,7 +527,6 @@ for each category/bin of term1, divide its samples by category/bin of term2
 	}
 
 	res.send( result )
-	return true
 }
 
 
