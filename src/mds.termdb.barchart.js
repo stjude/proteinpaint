@@ -373,7 +373,6 @@ function update_term2_header ( plot ) {
 				plot.svg.style('display','block')
 				plot.legend_div.style('display','none')
 				plot.yaxis_option_percentage.attr('disabled',1)
-				plot.yaxis_option_log.attr('disabled',1)
 				update_plot(plot)
 			}
 		})
@@ -397,6 +396,9 @@ plot()
 
 	if( plot.use_logscale ) {
 		plot.y_scale = scaleLog().domain([yscale_max,1]).range([0,plot.barheight])
+		if(plot.term2_boxplot){
+			plot.y_scale = scaleLog().domain([plot.yscale_max,1]).range([0,plot.barheight])
+		}
 	} else if(plot.use_percentage){
 		plot.y_scale = scaleLinear().domain([100,0]).range([0,plot.barheight])
 	}else if(plot.term2_boxplot){
@@ -542,12 +544,21 @@ plot()
 				.attr("stroke-width", 2)
 				.attr("stroke", "black")
 
-			g.append("rect")
+			if(plot.use_logscale){
+				g.append("rect")
+				.attr('x', -plot.barwidth/2)
+				.attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
+				.attr('width', plot.barwidth)
+				.attr('height', plot.barheight - plot.y_scale(item.boxplot.p75 / item.boxplot.p25))
+				.attr('fill','#901739')
+			}else{
+				g.append("rect")
 				.attr('x', -plot.barwidth/2)
 				.attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
 				.attr('width', plot.barwidth)
 				.attr('height', plot.barheight - plot.y_scale(item.boxplot.p75-item.boxplot.p25))
 				.attr('fill','#901739')
+			}
 
 			g.append("line")
 				.attr("x1", -plot.barwidth/2.2)
