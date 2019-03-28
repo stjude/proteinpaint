@@ -5,8 +5,9 @@
 </head>
 <body style="background-color:#f1f1f1">
 
-<script src="https://pecan.stjude.org/sjcharts/bin/sjcharts.js" charset="utf-8"></script>
-<script src="https://proteinpaint.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
+<!--<script src="https://proteinpaint.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
+-->
+<script src="http://localhost:3001/bin/proteinpaint.js" charset="utf-8"></script>
 
 <div style="margin:30px"><a href=https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing>Tutorial for embedding ProteinPaint</a></div>
 
@@ -303,7 +304,8 @@ SJBALL021516	ERG	NM_182918	{"typecode":7,"rnaposition":361,"rnadellength":577,"i
 
 
 runproteinpaint({
-	host:'https://proteinpaint.stjude.org',
+	//host:'https://proteinpaint.stjude.org',
+	host:'http://localhost:3001',
 	holder:document.getElementById('aaa'),
 	genome:'hg19',
 	//gene:'alk',
@@ -318,7 +320,10 @@ runproteinpaint({
 		svjson:svdata,
 		name:'ERG study',
 		genome:'hg19',
-		show_genetable:1
+		show_genetable:1,
+		runpp_tracks:[
+			{type:'vcf',name:'test',file:'hg19/clinvar.hg19.vcf.gz'}
+		]
 	}
 })
 </script>
