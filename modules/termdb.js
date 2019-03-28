@@ -27,24 +27,19 @@ return async (req, res) => {
 		const tdb = ds.cohort.termdb
 		if(!tdb) throw 'no termdb for this dataset'
 
-		let ds_filtered = ds
-		/*
-		if needs filter, ds_filtered to point to a copy of ds with modified cohort.annotation{} with those samples passing filter
-		filter by metadata
-		filter by genotype of a variant
-		*/
+		const ds_filtered = may_filter_samples( q, tdb, ds )
 
 		// process triggers
 		// to support await, need to detect triggers here
 
-		if( termdb_trigger_rootterm( q, res, tdb ) ) return
-		if( termdb_trigger_children( q, res, tdb ) ) return
-		if( termdb_trigger_barchart( q, res, tdb, ds_filtered ) ) return
+		if( trigger_rootterm( q, res, tdb ) ) return
+		if( trigger_children( q, res, tdb ) ) return
+		if( trigger_barchart( q, res, tdb, ds_filtered ) ) return
 		if( q.crosstab2term ) {
 			if( q.boxplot ) {
-				termdb_trigger_crosstab2term_boxplot( q, res, tdb, ds_filtered )
+				trigger_crosstab2term_boxplot( q, res, tdb, ds_filtered )
 			} else {
-				termdb_trigger_crosstab2term( q, res, tdb, ds_filtered )
+				trigger_crosstab2term( q, res, tdb, ds_filtered )
 			}
 			return
 		}
@@ -61,13 +56,23 @@ return async (req, res) => {
 
 
 
+function may_filter_samples ( q, tdb, ds ) {
+/*
+if needs filter, ds_filtered to point to a copy of ds with modified cohort.annotation{} with those samples passing filter
+filter by keeping only samples annotated to certain term (e.g. wgs)
+filter by genotype of a variant
+*/
+	return ds
+}
 
 
-function termdb_trigger_crosstab2term_boxplot ( q, res, tdb, ds ) {
+
+
+function trigger_crosstab2term_boxplot ( q, res, tdb, ds ) {
 /*
 code replication
 
-termdb_trigger_crosstab2term already complicated, don't want to add any more
+trigger_crosstab2term already complicated, don't want to add any more
 */
 	if(!q.term1) throw 'term1 missing'
 	if(!q.term1.id) throw 'term1.id missing'
@@ -228,7 +233,7 @@ termdb_trigger_crosstab2term already complicated, don't want to add any more
 
 
 
-function termdb_trigger_crosstab2term ( q, res, tdb, ds ) {
+function trigger_crosstab2term ( q, res, tdb, ds ) {
 /*
 cross tabulate two terms
 
@@ -536,7 +541,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 
 
 
-function termdb_trigger_barchart ( q, res, tdb, ds ) {
+function trigger_barchart ( q, res, tdb, ds ) {
 /*
 summarize numbers to create barchar based on server config
 
@@ -831,7 +836,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
 
 
-function termdb_trigger_rootterm ( q, res, tdb ) {
+function trigger_rootterm ( q, res, tdb ) {
 
 	if( !q.default_rootterm) return false
 
@@ -850,7 +855,7 @@ function termdb_trigger_rootterm ( q, res, tdb ) {
 }
 
 
-function termdb_trigger_children ( q, res, tdb ) {
+function trigger_children ( q, res, tdb ) {
 	if( !q.get_children) return false
 	// list of children id
 	const cidlst = tdb.term2term.map.get( q.get_children.id )
