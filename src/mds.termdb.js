@@ -173,6 +173,11 @@ possible modifiers:
 		will not render remaining buttons
 		*/
 
+		// update styling
+		namebox
+			.style('padding','5px')
+			.style('margin-left','5px')
+
 		if( arg.modifier_click_term.disable_terms && arg.modifier_click_term.disable_terms.has( term.id ) ) {
 
 			// this term is disabled, no clicking
@@ -183,7 +188,6 @@ possible modifiers:
 			// enable clicking this term
 			namebox
 				.attr('class', 'sja_menuoption')
-				.style('margin-left','5px')
 				.on('click',()=>{
 					arg.modifier_click_term.callback( term )
 				})
@@ -320,7 +324,6 @@ such conditions may be carried by obj
 		// ask server to make data for barchart
 
 		button.text('Loading')
-			.property('disabled',1)
 
 		loading = true
 
@@ -369,7 +372,6 @@ such conditions may be carried by obj
 		.then(()=>{
 			loading = false
 			button.text('BARCHART')
-				.property('disabled',false)
 		})
 	})
 }
@@ -411,22 +413,21 @@ buttonholder: div in which to show the button, term label is also in it
 
 	button.on('click',()=>{
 
-		if(isloading) return // guard against clicking while loading
-
-		if(children_loaded) {
-			// children has been loaded, toggle visibility
-			if(childrenrow.style('display') === 'none') {
-				client.appear(childrenrow)
-				button.text('-')
-			} else {
-				client.disappear(childrenrow)
-				button.text('+')
-			}
-			return
+		if(childrenrow.style('display') === 'none') {
+			client.appear(childrenrow)
+			button.text('-')
+		} else {
+			client.disappear(childrenrow)
+			button.text('+')
 		}
 
-		// to load children terms
-		isloading = true
+		if( children_loaded ) return
+
+		// to load children terms, should run only once
+		const wait = childrenrow.append('div')
+			.text('Loading...')
+			.style('opacity',.5)
+			.style('margin','3px 0px')
 
 		const param = {
 			genome: obj.genome.name,
@@ -453,12 +454,14 @@ buttonholder: div in which to show the button, term label is also in it
 			}
 		})
 		.catch(e=>{
-			childrenrow.text( e.message || e)
+			wait
+				.text( e.message || e)
+				.style('color','red')
 			if(e.stack) console.log(e.stack)
 		})
 		.then( ()=>{
-			isloading=false
 			children_loaded = true
+			wait.remove()
 			client.appear( childrenrow )
 			button.text('-')
 		})
