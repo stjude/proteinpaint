@@ -44,13 +44,13 @@ then pass term2 and crosstab result to callback
 			.showunder( button.node() )
 
 
-		const treediv = arg.obj.tip.d.append('div')
 		const errdiv = arg.obj.tip.d.append('div')
+			.style('margin-bottom','5px')
+			.style('color','#C67C73')
+		const treediv = arg.obj.tip.d.append('div')
 
 		// TODO term search
 
-		// encapsulate the environment, so the callback can be used for both term search and tree browsing
-		const term2_callback = make_term2_callback( arg, button, errdiv )
 
 		// a new object as init() argument for launching the tree
 		// with modifiers
@@ -63,10 +63,10 @@ then pass term2 and crosstab result to callback
 				// following is the modifier that modifies tree behavior
 
 				modifier_click_term: {
+					// TODO when switching term2 while there is already a term2, add term2 id here also
 					disable_terms: new Set([ arg.term1.id ]),
-					callback: term2_callback,
+					callback: make_term2_callback( arg, button, errdiv )
 				}
-
 			},
 		}
 
@@ -81,19 +81,18 @@ then pass term2 and crosstab result to callback
 
 
 function make_term2_callback ( arg, button, errdiv ) {
+/*
+a callback to handle the click on term2 in tree
+as the modifier
+also a closure with the arguments and buttons
+*/
 	return (term2) => {
-		/*
-		a callback to handle the click on term2 in tree
-		as the modifier
-		*/
 
 		// term2 is selected
 		if(term2.id == arg.term1.id) {
 			errdiv.text('Cannot select the same term')
 			return
 		}
-
-		arg.obj.tip.hide()
 
 		cross_tabulate( {
 			term1: {
@@ -106,7 +105,11 @@ function make_term2_callback ( arg, button, errdiv ) {
 		})
 		.then( data=>{
 
+			if( data.error ) throw data.error
 			if( !data.lst ) throw 'error doing cross-tabulation'
+
+			// no error, can hide tip
+			arg.obj.tip.hide()
 
 			// update the plot data using the server-returned new data
 			arg.callback( {
