@@ -475,16 +475,27 @@ buttonholder: div in which to show the button, term label is also in it
 
 
 export function add_searchbox_4term ( obj, holder, callback ) {
-	const input = holder.append('input')
+/*
+add a search box to find term and run callback on it
+*/
+
+	const div = holder.append('div')
+	const input = div.append('div')
+		.append('input')
 		.attr('type','text')
 		.style('width','150px')
 		.attr('placeholder','Search term')
+
 	input.node().focus()
 
-	const resultholder = holder.append('div')
+	const resultholder = div
+		.append('div')
 		.style('margin-bottom','10px')
+		.style('display','inline-block')
 
 	let lastterm = null
+
+	// TODO keyup event listner needs debounce
 
 	input.on('keyup', async ()=>{
 		
@@ -498,8 +509,9 @@ export function add_searchbox_4term ( obj, holder, callback ) {
 		}
 
 		if( client.keyupEnter() ) {
-			// pressed enter, if terms already found, use first one
+			// pressed enter, if terms already found, use that
 			if(lastterm) {
+				callback( lastterm )
 				return
 			}
 		}
@@ -517,11 +529,13 @@ export function add_searchbox_4term ( obj, holder, callback ) {
 
 		resultholder.selectAll('*').remove()
 		if(!data.lst || data.lst.length==0) {
-			result.holder.append('div')
+			resultholder.append('div')
 				.text('No match')
 				.style('opacity',.5)
 			return
 		}
+
+		lastterm = data.lst[0]
 
 		for(const term of data.lst) {
 			resultholder.append('div')
