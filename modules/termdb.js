@@ -43,6 +43,10 @@ return async (req, res) => {
 			}
 			return
 		}
+		if( q.findterm ) {
+			trigger_findterm( q, res, tdb )
+			return
+		}
 
 		throw 'termdb: don\'t know what to do'
 
@@ -845,9 +849,7 @@ function trigger_rootterm ( q, res, tdb ) {
 	for(const i of tdb.default_rootterm) {
 		const t = tdb.termjson.map.get( i.id )
 		if(t) {
-			const t2 = termdb_copyterm( t )
-			t2.id = i.id
-			lst.push( t2 )
+			lst.push( termdb_copyterm( t ) )
 		}
 	}
 	res.send({lst: lst})
@@ -865,9 +867,7 @@ function trigger_children ( q, res, tdb ) {
 		for(const cid of cidlst) {
 			const t = tdb.termjson.map.get( cid )
 			if(t) {
-				const t2 = termdb_copyterm( t )
-				t2.id = cid
-				lst.push( t2 )
+				lst.push( termdb_copyterm( t ) )
 			}
 		}
 	}
@@ -884,6 +884,7 @@ t is the {} from termjson
 do not directly hand over the term object to client; many attr to be kept on server
 */
 	const t2 = {
+		id: t.id,
 		name: t.name,
 		isleaf: t.isleaf,
 		iscategorical: t.iscategorical,
@@ -950,6 +951,7 @@ function server_init_parse_term2term ( termdb ) {
 }
 
 
+
 function server_init_parse_termjson ( termdb ) {
 	if(termdb.termjson.file) {
 		termdb.termjson.map = new Map()
@@ -958,9 +960,28 @@ function server_init_parse_termjson ( termdb ) {
 		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.termjson.file),{encoding:'utf8'}).trim().split('\n') ) {
 			if(line[0]=='#') continue
 			const l = line.split('\t')
-			termdb.termjson.map.set( l[0], JSON.parse(l[1]) )
+			const term = JSON.parse( l[1] )
+			term.id = l[0]
+			termdb.termjson.map.set( l[0], term )
 		}
 		return
 	}
 	throw 'termjson: unknown data source'
+}
+
+
+
+
+function trigger_findterm ( q, res, termdb ) {
+	const str = q.findterm.str.toLowerCase()
+	const lst = []
+	for(const term of termdb.termjson.map.values()) {
+		if(term.name.toLowerCase().indexOf( str ) != -1) {
+			lst.push( termdb_copyterm( term ) )
+			if(lst.length>=10) {
+				break
+			}
+		}
+	}
+	res.send({lst:lst})
 }

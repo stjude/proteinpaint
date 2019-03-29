@@ -1,4 +1,4 @@
-import {init} from './mds.termdb'
+import {init,add_searchbox_4term} from './mds.termdb'
 import * as client from './client'
 import {event as d3event} from 'd3-selection'
 
@@ -43,14 +43,16 @@ then pass term2 and crosstab result to callback
 		arg.obj.tip.clear()
 			.showunder( button.node() )
 
-
 		const errdiv = arg.obj.tip.d.append('div')
 			.style('margin-bottom','5px')
 			.style('color','#C67C73')
+
+		// this function will be used for both tree and search
+		const term2_selected_callback = make_term2_callback( arg, button, errdiv )
+
+		add_searchbox_4term( arg.obj, arg.obj.tip.d, term2_selected_callback )
+
 		const treediv = arg.obj.tip.d.append('div')
-
-		// TODO term search
-
 
 		// a new object as init() argument for launching the tree
 		// with modifiers
@@ -65,7 +67,7 @@ then pass term2 and crosstab result to callback
 				modifier_click_term: {
 					// TODO when switching term2 while there is already a term2, add term2 id here also
 					disable_terms: new Set([ arg.term1.id ]),
-					callback: make_term2_callback( arg, button, errdiv )
+					callback: term2_selected_callback
 				}
 			},
 		}
@@ -160,4 +162,3 @@ return promise
 		return data
 	})
 }
-

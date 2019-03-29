@@ -29,6 +29,7 @@ default_rootterm has modifiers, for modifying the behavior/display of the term t
 
 ********************** EXPORTED
 init()
+add_searchbox_4term
 ********************** INTERNAL
 show_default_rootterm
 print_one_term
@@ -77,6 +78,13 @@ obj{}:
 		if(!obj.genome) throw '.genome{} missing'
 		if(!obj.mds) throw '.mds{} missing'
 
+		// if all queries are handled at termdb route, can use this closure to simplify
+		obj.do_query = (arg) => {
+			arg.genome = obj.genome.name
+			arg.dslabel = obj.mds.label
+			return client.dofetch('termdb', arg)
+		}
+
 		// handle triggers
 
 		if( obj.default_rootterm ) {
@@ -100,14 +108,11 @@ async function show_default_rootterm ( obj ) {
 
 also for showing term tree, allowing to select certain terms
 
-
 */
-	const arg = {
-		genome: obj.genome.name,
-		dslabel: obj.mds.label,
+
+	const data = await obj.do_query( {
 		default_rootterm: 1
-	}
-	const data = await client.dofetch( 'termdb', arg )
+	})
 	if(data.error) throw 'error getting default root terms: '+data.error
 	if(!data.lst) throw 'no default root term: .lst missing'
 
@@ -238,6 +243,7 @@ providing all the customization options
 			pane.header.html( term1.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+result.term2.name )
 
 			const plot = {
+				obj: obj,
 				genome: obj.genome.name,
 				dslabel: obj.mds.label,
 				//unannotated: data.unannotated,
@@ -337,17 +343,15 @@ such conditions may be carried by obj
 			}
 		})
 
-		panel.header.text('Barplot for '+term.name)
+		panel.header.text('Barchart for '+term.name)
 
 		const arg = {
-			genome: obj.genome.name,
-			dslabel: obj.mds.label,
 			barchart: {
 				id: term.id
 			}
 		}
 
-		client.dofetch( 'termdb', arg )
+		obj.do_query( arg )
 		.then(data=>{
 			if(data.error) throw data.error
 			if(!data.lst) throw 'no data for barchart'
@@ -430,13 +434,12 @@ buttonholder: div in which to show the button, term label is also in it
 			.style('margin','3px 0px')
 
 		const param = {
-			genome: obj.genome.name,
-			dslabel: obj.mds.label,
 			get_children: {
 				id: arg.term.id
 			}
 		}
-		client.dofetch('termdb', param)
+
+		obj.do_query( param )
 		.then(data=>{
 			if(data.error) throw data.error
 			if(!data.lst || data.lst.length===0) throw 'error getting children'
@@ -471,4 +474,62 @@ buttonholder: div in which to show the button, term label is also in it
 
 
 
+export function add_searchbox_4term ( obj, holder, callback ) {
+	const input = holder.append('input')
+		.attr('type','text')
+		.style('width','150px')
+		.attr('placeholder','Search term')
+	input.node().focus()
 
+	const resultholder = holder.append('div')
+		.style('margin-bottom','10px')
+
+	let lastterm = null
+
+	input.on('keyup', async ()=>{
+		
+		const str = input.property('value')
+		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
+
+		if( str==' ' || str=='' ) {
+			// blank
+			resultholder.selectAll('*').remove()
+			return
+		}
+
+		if( client.keyupEnter() ) {
+			// pressed enter, if terms already found, use first one
+			if(lastterm) {
+				return
+			}
+		}
+
+		// query
+		const par = { findterm: {
+			str: str
+		}}
+
+		const data = await obj.do_query( par )
+
+		if(data.error) {
+			return
+		}
+
+		resultholder.selectAll('*').remove()
+		if(!data.lst || data.lst.length==0) {
+			result.holder.append('div')
+				.text('No match')
+				.style('opacity',.5)
+			return
+		}
+
+		for(const term of data.lst) {
+			resultholder.append('div')
+				.attr('class','sja_menuoption')
+				.text(term.name)
+				.on('click',()=>{
+					callback( term )
+				})
+		}
+	})
+}
