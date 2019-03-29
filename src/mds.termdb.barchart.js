@@ -91,7 +91,7 @@ export function barchart_make ( arg ) {
 		- log scale
 
 */
-	console.log(arg)
+	// console.log(arg)
 	// initiating the plot object
 	// it will be updated later by axis toggle or cross tabulate
 	const plot = {
@@ -184,7 +184,13 @@ export function barchart_make ( arg ) {
 
 			// update the plot data using the server-returned new data
 			plot.items = result.items
-			do_plot( plot )
+			if (plot.term2.isfloat && plot.term2_boxplot){ 
+				plot.term2_displaymode_options.node().value = 'boxplot'
+				update_plot(plot)
+			}else{
+				plot.term2_boxplot = 0
+				do_plot( plot )
+			}
 
 			//for crosstab button update table
 			if(plot.default2showtable){
@@ -870,7 +876,10 @@ function update_plot (plot) {
 		if(!data.lst) throw 'no data for barchart'
 
 		plot.items =  data.lst
-		if (data.binmax){ plot.yscale_max = data.binmax}
+		if (data.binmax){ 
+			plot.yscale_max = data.binmax
+			plot.legend_div.style('display','none')
+		}
 
 		if(plot.term2_displaymode_options.node().value != 'table'){
 			do_plot( plot )
