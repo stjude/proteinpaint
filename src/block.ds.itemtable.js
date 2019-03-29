@@ -1863,9 +1863,17 @@ function mayshowcovmafplot(m, tk, holder) {
 	let err=0
 	for(const s of m.sampledata) {
 
-		if(s.DP==undefined || !s.allele2readcount) {
+		if(!s.allele2readcount) {
+			// this is required
 			err++
 			continue
+		}
+
+		if(s.DP==undefined) {
+			s.DP = 0
+			for(const k in s.allele2readcount) {
+				s.DP += s.allele2readcount[k]
+			}
 		}
 
 		/*
