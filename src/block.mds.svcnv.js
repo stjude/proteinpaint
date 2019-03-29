@@ -1790,16 +1790,26 @@ function render_multi_cnvloh(tk,block) {
 
 	if( !tk.nocnvlohsv ) {
 		if(tk.cnvcolor.cnvmax==novalue_max_cnvloh) {
-			tk.cnvcolor.cnvlegend.row.style('display','none')
+			// hide svg and show 'nodata'
+			tk.cnvcolor.cnvlegend.svg.style('display','none')
+			tk.cnvcolor.cnvlegend.nodatadiv.style('display','block')
 		} else {
+			// hide 'nodata' and show svg
+			tk.cnvcolor.cnvlegend.svg.style('display','block')
+			tk.cnvcolor.cnvlegend.nodatadiv.style('display','none')
 			draw_colorscale_cnv(tk)
 		}
 
 		if(tk.cnvcolor.segmeanmax==novalue_max_cnvloh) {
 			if(tk.cnvcolor.lohlegend) {
-				tk.cnvcolor.lohlegend.row.style('display','none')
+				// hide svg and show 'nodata'
+				tk.cnvcolor.lohlegend.svg.style('display','none')
+				tk.cnvcolor.lohlegend.nodatadiv.style('display','block')
 			}
 		} else {
+			// hide 'nodata' and show svg
+			tk.cnvcolor.lohlegend.svg.style('display','block')
+			tk.cnvcolor.lohlegend.nodatadiv.style('display','none')
 			draw_colorscale_loh(tk)
 		}
 	}

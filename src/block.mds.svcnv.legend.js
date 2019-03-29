@@ -206,73 +206,82 @@ function create_cnv(tk) {
 		.text('CNV log2(ratio)')
 	tk.legend_hideable.push(tk.cnvcolor.cnvlegend)
 
-	const svg = tk.cnvcolor.cnvlegend.row
-			.append('td')
-			.append('svg')
-			.attr('width', (leftpad+tk.cnvcolor.cnvlegend.barw)*2)
-			.attr('height',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh)
+	const td = tk.cnvcolor.cnvlegend.row
+		.append('td')
 
-		tk.cnvcolor.cnvlegend.axisg = svg.append('g')
-			.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.cnvlegend.axistickh)+')')
+	const svg = td
+		.append('svg')
+		.attr('width', (leftpad+tk.cnvcolor.cnvlegend.barw)*2)
+		.attr('height',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh)
 
-		const gain_id = Math.random().toString()
-		const loss_id = Math.random().toString()
+	tk.cnvcolor.cnvlegend.svg = svg
 
-		const defs = svg.append('defs')
-		{
-			// loss
-			const grad = defs.append('linearGradient')
-				.attr('id', loss_id)
-			tk.cnvcolor.cnvlegend.loss_stop = grad.append('stop')
-				.attr('offset','0%')
-				.attr('stop-color', tk.cnvcolor.loss.str)
-			grad.append('stop')
-				.attr('offset','100%')
-				.attr('stop-color', 'white')
-		}
-		{
-			// gain
-			const grad = defs.append('linearGradient')
-				.attr('id', gain_id)
-			grad.append('stop')
-				.attr('offset','0%')
-				.attr('stop-color', 'white')
-			tk.cnvcolor.cnvlegend.gain_stop = grad.append('stop')
-				.attr('offset','100%')
-				.attr('stop-color', tk.cnvcolor.gain.str)
-		}
+	tk.cnvcolor.cnvlegend.nodatadiv = td.append('div')
+		.text('no data')
+		.style('opacity',.3)
+		.style('padding-left','10px')
 
-		svg.append('rect')
-			.attr('x',leftpad)
-			.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
-			.attr('width', tk.cnvcolor.cnvlegend.barw)
-			.attr('height',barh)
-			.attr('fill', 'url(#'+loss_id+')')
+	tk.cnvcolor.cnvlegend.axisg = svg.append('g')
+		.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.cnvlegend.axistickh)+')')
 
-		svg.append('rect')
-			.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw)
-			.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
-			.attr('width', tk.cnvcolor.cnvlegend.barw)
-			.attr('height',barh)
-			.attr('fill', 'url(#'+gain_id+')')
+	const gain_id = Math.random().toString()
+	const loss_id = Math.random().toString()
 
-		svg.append('text')
-			.attr('x',leftpad-5)
-			.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
-			.attr('font-family',client.font)
-			.attr('font-size',fontsize)
-			.attr('text-anchor','end')
-			.attr('dominant-baseline','central')
-			.attr('fill','black')
-			.text('Loss')
-		svg.append('text')
-			.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw*2+5)
-			.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
-			.attr('font-family',client.font)
-			.attr('font-size',fontsize)
-			.attr('dominant-baseline','central')
-			.attr('fill','black')
-			.text('Gain')
+	const defs = svg.append('defs')
+	{
+		// loss
+		const grad = defs.append('linearGradient')
+			.attr('id', loss_id)
+		tk.cnvcolor.cnvlegend.loss_stop = grad.append('stop')
+			.attr('offset','0%')
+			.attr('stop-color', tk.cnvcolor.loss.str)
+		grad.append('stop')
+			.attr('offset','100%')
+			.attr('stop-color', 'white')
+	}
+	{
+		// gain
+		const grad = defs.append('linearGradient')
+			.attr('id', gain_id)
+		grad.append('stop')
+			.attr('offset','0%')
+			.attr('stop-color', 'white')
+		tk.cnvcolor.cnvlegend.gain_stop = grad.append('stop')
+			.attr('offset','100%')
+			.attr('stop-color', tk.cnvcolor.gain.str)
+	}
+
+	svg.append('rect')
+		.attr('x',leftpad)
+		.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
+		.attr('width', tk.cnvcolor.cnvlegend.barw)
+		.attr('height',barh)
+		.attr('fill', 'url(#'+loss_id+')')
+
+	svg.append('rect')
+		.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw)
+		.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh)
+		.attr('width', tk.cnvcolor.cnvlegend.barw)
+		.attr('height',barh)
+		.attr('fill', 'url(#'+gain_id+')')
+
+	svg.append('text')
+		.attr('x',leftpad-5)
+		.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
+		.attr('font-family',client.font)
+		.attr('font-size',fontsize)
+		.attr('text-anchor','end')
+		.attr('dominant-baseline','central')
+		.attr('fill','black')
+		.text('Loss')
+	svg.append('text')
+		.attr('x', leftpad+tk.cnvcolor.cnvlegend.barw*2+5)
+		.attr('y',fontsize+tk.cnvcolor.cnvlegend.axistickh+barh/2)
+		.attr('font-family',client.font)
+		.attr('font-size',fontsize)
+		.attr('dominant-baseline','central')
+		.attr('fill','black')
+		.text('Gain')
 }
 
 
@@ -304,11 +313,19 @@ function create_loh(tk) {
 		.text('LOH seg.mean')
 	tk.legend_hideable.push(tk.cnvcolor.lohlegend)
 
-	const svg = tk.cnvcolor.lohlegend.row
+	const td = tk.cnvcolor.lohlegend.row
 		.append('td')
+
+	const svg = td
 		.append('svg')
 		.attr('width', (leftpad+tk.cnvcolor.lohlegend.barw)*2)
 		.attr('height',fontsize+tk.cnvcolor.lohlegend.axistickh+barh)
+
+	tk.cnvcolor.lohlegend.svg = svg
+	tk.cnvcolor.lohlegend.nodatadiv = td.append('div')
+		.text('no data')
+		.style('opacity',.3)
+		.style('padding-left','10px')
 
 	tk.cnvcolor.lohlegend.axisg = svg.append('g')
 		.attr('transform','translate('+leftpad+','+(fontsize+tk.cnvcolor.lohlegend.axistickh)+')')

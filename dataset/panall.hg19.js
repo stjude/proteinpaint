@@ -155,7 +155,7 @@ module.exports={
 				{key:'primary subtype'},
 				{key:'ageGroup'}
 			],
-			colorbygeneexpression:{ querykey:'generlog' }, // not about mds
+			colorbygeneexpression:{ querykey:'genefpkm' }, // not about mds
 			querykey:'svcnv', // combine with mds
 
 			tracks:[
@@ -271,7 +271,7 @@ module.exports={
 				attrnamespacer:', ',
 			},
 
-		    expressionrank_querykey:'generlog',
+		    expressionrank_querykey:'genefpkm',
 		    vcf_querykey:'snvindel',
 
 			multihidelabel_vcf:false,
@@ -296,11 +296,11 @@ module.exports={
 		
 
 
-		generlog:{
-			name:'BALL RNA-seq gene rlog values',
+		genefpkm:{
+			name:'BALL RNA-seq gene log2(FPKM) values',
 			isgenenumeric:true,
 			file:'hg19/pan-all/rlog.ball/rlog.gz',
-			datatype:'rlog',
+			datatype:'log2(FPKM)',
 			no_ase: true,
 
 			// for boxplots & circles, and the standalone expression track

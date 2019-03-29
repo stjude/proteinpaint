@@ -1509,3 +1509,18 @@ export function gmlst2loci ( gmlst ) {
 	}
 	return locs
 }
+
+
+
+export function findgenemodel_bysymbol ( genome, str ) {
+	return dofetch('genelookup',{
+		deep:1,
+		input: str,
+		genome: genome
+	})
+	.then(data=>{
+		if(data.error) throw data.error
+		if(!data.gmlst || data.gmlst.length==0) return null
+		return data.gmlst
+	})
+}
