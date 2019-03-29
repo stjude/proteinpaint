@@ -941,7 +941,7 @@ function make_table (plot) {
 	// order of rows maybe predefined
 	if( plot.term.graph && plot.term.graph.barchart && plot.term.graph.barchart.order ) {
 		for(const v of plot.term.graph.barchart.order ) {
-			const i = plot.result.items.find( i=> i.label == v )
+			const i = plot.items.find( i=> i.label == v )
 			if( i ) {
 				rows.push( i )
 			}
