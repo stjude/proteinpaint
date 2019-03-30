@@ -373,6 +373,7 @@ const tkt={
 	expressionrank:'expressionrank',
 	aicheck:'aicheck',
 	ase:'ase',
+	mds2:'mds2', // mds 2nd generation
 }
 exports.tkt = tkt
 
