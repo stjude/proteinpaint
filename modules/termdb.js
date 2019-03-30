@@ -4,6 +4,13 @@ const path = require('path')
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 
+/*
+********************** EXPORTED
+handle_request_closure
+server_init
+********************** INTERNAL
+copy_term
+*/
 
 
 
@@ -849,7 +856,7 @@ function trigger_rootterm ( q, res, tdb ) {
 	for(const i of tdb.default_rootterm) {
 		const t = tdb.termjson.map.get( i.id )
 		if(t) {
-			lst.push( termdb_copyterm( t ) )
+			lst.push( copy_term( t ) )
 		}
 	}
 	res.send({lst: lst})
@@ -867,7 +874,7 @@ function trigger_children ( q, res, tdb ) {
 		for(const cid of cidlst) {
 			const t = tdb.termjson.map.get( cid )
 			if(t) {
-				lst.push( termdb_copyterm( t ) )
+				lst.push( copy_term( t ) )
 			}
 		}
 	}
@@ -877,33 +884,16 @@ function trigger_children ( q, res, tdb ) {
 
 
 
-function termdb_copyterm ( t ) {
+function copy_term ( t ) {
 /*
 t is the {} from termjson
 
 do not directly hand over the term object to client; many attr to be kept on server
 */
-	const t2 = {
-		id: t.id,
-		name: t.name,
-		isleaf: t.isleaf,
-		iscategorical: t.iscategorical,
-		isinteger: t.isinteger,
-		isfloat: t.isfloat,
-	}
+	const t2 = JSON.parse(JSON.stringify( t ))
 
-	if(t.graph) {
-		// pass over graph instruction
-		t2.graph = {}
-		if(t.graph.barchart) {
-			const p = t.graph.barchart
-			t2.graph.barchart = {
-				barwidth: p.barwidth,
-				labelfontsize: p.labelfontsize,
-				order: p.order,
-			}
-		}
-	}
+	// delete things not to be revealed to client
+
 	return t2
 }
 
@@ -977,7 +967,7 @@ function trigger_findterm ( q, res, termdb ) {
 	const lst = []
 	for(const term of termdb.termjson.map.values()) {
 		if(term.name.toLowerCase().indexOf( str ) != -1) {
-			lst.push( termdb_copyterm( term ) )
+			lst.push( copy_term( term ) )
 			if(lst.length>=10) {
 				break
 			}
