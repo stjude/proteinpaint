@@ -1,4 +1,3 @@
-const common=require('../src/common')
 
 
 const samplenamekey = 'sjlid_w88'
@@ -40,4 +39,21 @@ module.exports={
 			]
 		},
 	},
+
+	// mds2 track
+	track: {
+		vcf: {
+			file:'hg38/sjlife/vcf.2019aacr/SJLIFE.vep.vcf.gz'
+		},
+		/*
+		svcnv: {
+		},
+		genevalues: {
+			list: [
+				// fpkm
+				// protein
+			]
+		}
+		*/
+	}
 }

@@ -49,7 +49,8 @@ const express=require('express'),
 	d3scale=require('d3-scale'),
 	d3dsv=require('d3-dsv'),
 	basicAuth = require('express-basic-auth'),
-	termdb = require('./modules/termdb')
+	termdb = require('./modules/termdb'),
+	mds2_init = require('./modules/mds2.init')
 
 
 
@@ -13424,6 +13425,9 @@ function mds_init(ds,genome, _servconfig) {
 
 
 	if(ds.queries) {
+
+		// ds.queries is the 1st generation track
+	
 		for(const querykey in ds.queries) {
 
 			// server may choose to remove it
@@ -13484,6 +13488,19 @@ function mds_init(ds,genome, _servconfig) {
 	}
 
 
+	if( ds.track ) {
+		// 2nd generation track
+		mds2_init_wrap( ds )
+		/*
+		try {
+			mds2_init( ds )
+		} catch(e) {
+			return e
+		}
+		*/
+	}
+
+
 
 	if(ds.annotationsampleset2matrix) {
 		if(!ds.cohort) return 'ds.cohort misssing when annotationsampleset2matrix is in use'
@@ -13537,26 +13554,23 @@ function mds_init(ds,genome, _servconfig) {
 		delete ds.annotationsampleset2matrix.commonfeatureattributes
 	}
 
-/*
-************* not ready to migrate to general track yet
-
-	if(ds.key2generalTracks) {
-		if(!ds.queries) return '.queries{} missing when key2generalTracks is in use'
-		for(const key in ds.key2generalTracks) {
-			const tk = ds.key2generalTracks[key]
-			tk.key = key
-			if(!tk.label) tk.label = ds.label + ' general track'
-			if(!tk.querykeys) return '.querykeys[] missing for general track by key '+key
-			if(!Array.isArray(tk.querykeys)) return 'querykeys[] should be array'
-		}
-	}
-	*/
-
 	return null
 }
 
 
 
+
+async function mds2_init_wrap( ds ) {
+/*
+because mds_init is sync, so has to improvise to catch exception from mds2_init
+*/
+	try {
+		await mds2_init( ds )
+	} catch(e) {
+		console.log('ERROR init mds2 track: '+e)
+		process.exit()
+	}
+}
 
 
 function mds_init_mdsjunction(query, ds, genome) {
