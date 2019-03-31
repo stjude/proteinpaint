@@ -1,7 +1,20 @@
 const fs = require('fs')
+const spawn = require('child_process').spawn
+const readline = require('readline')
+const vcf = require('../src/vcf')
 
 
-// p4 ready
+const serverconfig = __non_webpack_require__('./serverconfig.json')
+const tabix= serverconfig.tabix || 'tabix'
+
+
+/* p4 ready
+********************** EXPORTED
+validate_tabixfile
+get_header_vcf
+get_lines_tabix
+********************** INTERNAL
+*/
 
 
 
@@ -48,3 +61,37 @@ function file_not_readable ( file ) {
 		})
 	})
 }
+
+
+exports.get_header_vcf = async(file)=> {
+/* file is full path file or url
+*/
+
+	const lines = []
+	await get_lines_tabix(
+		[ file, '-H' ],
+		(line)=> {
+			lines.push( line )
+		}
+	)
+
+	return vcf.vcfparsemeta( lines )
+}
+
+
+
+
+
+function get_lines_tabix ( args, callback ) {
+	return new Promise((resolve,reject)=>{
+		const ps = spawn( tabix, args )
+		const rl = readline.createInterface({ input: ps.stdout })
+		rl.on('line', line=>{
+			callback( line )
+		})
+		ps.on('close',()=>{
+			resolve()
+		})
+	})
+}
+exports.get_lines_tabix = get_lines_tabix

@@ -43,7 +43,7 @@ module.exports={
 	// mds2 track
 	track: {
 		vcf: {
-			file:'hg38/sjlife/vcf.2019aacr/SJLIFE.vep.vcf.gz'
+			file:'hg38/sjlife/vcf.2019aacr/cohort.vcf.gz'
 		},
 		/*
 		svcnv: {

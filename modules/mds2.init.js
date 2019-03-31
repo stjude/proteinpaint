@@ -8,7 +8,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 const tabix= serverconfig.tabix || 'tabix'
 
 
-/* for initiating the mds2 track, can be all synchronized
+/* for initiating the mds2 track
 */
 
 
@@ -34,9 +34,17 @@ async function initsubtk_vcf ( vcftk ) {
 
 	if( vcftk.file ) {
 
-		//const [info, format] = 
 		vcftk.file = path.join( serverconfig.tpmasterdir, vcftk.file )
 		await utils.validate_tabixfile( vcftk.file )
+		const [info,format,samples,errors] = await utils.get_header_vcf( vcftk.file )
+		if(errors) {
+			console.log(errors.join('\n'))
+			throw 'got above errors parsing vcf'
+		}
+		vcftk.info = info
+		vcftk.format = format
+		vcftk.samples = samples
+		console.log(vcftk.file+': '+vcftk.samples.length+' samples')
 
 	} else if( vcftk.chr2file ) {
 

@@ -13491,13 +13491,6 @@ function mds_init(ds,genome, _servconfig) {
 	if( ds.track ) {
 		// 2nd generation track
 		mds2_init_wrap( ds )
-		/*
-		try {
-			mds2_init( ds )
-		} catch(e) {
-			return e
-		}
-		*/
 	}
 
 
@@ -13568,6 +13561,7 @@ because mds_init is sync, so has to improvise to catch exception from mds2_init
 		await mds2_init( ds )
 	} catch(e) {
 		console.log('ERROR init mds2 track: '+e)
+		if(e.stack) console.log(e.stack)
 		process.exit()
 	}
 }
