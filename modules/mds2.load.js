@@ -98,6 +98,9 @@ async function query_vcf_test ( q, ds, result ) {
 				const newline = line.split( '\t', 8 ).join('\t')
 				const [e,mlst,e2] = vcf.vcfparseline( newline, vcftk )
 				for(const m of mlst) {
+					delete m._m
+					delete m.vcf_ID
+					delete m.sampledata
 					r.variants.push(m)
 				}
 			}
