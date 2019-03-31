@@ -1,25 +1,32 @@
 const app = require('../app')
 const fs = require('fs')
-const path = require('path')
 const utils = require('./utils')
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
-
-const tabix= serverconfig.tabix || 'tabix'
 
 
-/* for initiating the mds2 track
+
+/*
+********************** EXPORTED
+init
+client_copy
+********************** INTERNAL
 */
 
 
-module.exports = async ( ds ) => {
+
+
+exports.init = async function ( ds, genome ) {
+/* initiate the mds2 track upon launching server
+*/
 
 	if( !ds.track ) throw 'no mds2 track; missing ds.track{}'
 
 	const tk = ds.track
 
+	if(!tk.name) tk.name = ds.label
+
 	if(tk.vcf) {
-		await initsubtk_vcf( tk.vcf )
+		await initsubtk_vcf( tk.vcf, genome )
 	}
 
 	if(tk.svcnv) {
@@ -28,28 +35,29 @@ module.exports = async ( ds ) => {
 }
 
 
+exports.client_copy = function ( ds ) {
+/* make client copy of the track
+*/
+	const tk = {
+		name: ds.track.name
+	}
+
+	return tk
+}
 
 
-async function initsubtk_vcf ( vcftk ) {
+
+
+async function initsubtk_vcf ( vcftk, genome ) {
 
 	if( vcftk.file ) {
 
-		vcftk.file = path.join( serverconfig.tpmasterdir, vcftk.file )
-		await utils.validate_tabixfile( vcftk.file )
-		const [info,format,samples,errors] = await utils.get_header_vcf( vcftk.file )
-		if(errors) {
-			console.log(errors.join('\n'))
-			throw 'got above errors parsing vcf'
-		}
-		vcftk.info = info
-		vcftk.format = format
-		vcftk.samples = samples
-		console.log(vcftk.file+': '+vcftk.samples.length+' samples')
+		await utils.init_one_vcf( vcftk, genome )
+		console.log(vcftk.file+': '+vcftk.samples.length+' samples, '+(vcftk.nochr ? 'no chr' : 'has chr'))
 
 	} else if( vcftk.chr2file ) {
 
 	} else {
 		throw 'vcf has no file or chr2file'
 	}
-
 }

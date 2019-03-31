@@ -50,7 +50,8 @@ const express=require('express'),
 	d3dsv=require('d3-dsv'),
 	basicAuth = require('express-basic-auth'),
 	termdb = require('./modules/termdb'),
-	mds2_init = require('./modules/mds2.init')
+	mds2_init = require('./modules/mds2.init'),
+	mds2_load = require('./modules/mds2.load')
 
 
 
@@ -177,6 +178,7 @@ app.post('/junction',handle_junction)       // legacy
 app.post('/mdsjunction',handle_mdsjunction)
 app.post('/mdscnv',handle_mdscnv)
 app.post('/mdssvcnv',handle_mdssvcnv)
+app.post('/mds2', mds2_load.handle_request(genomes) )
 app.post('/mdsexpressionrank',handle_mdsexpressionrank) // expression rank as a browser track
 app.post('/mdsgeneboxplot',handle_mdsgeneboxplot)
 app.post('/mdsgenevalueonesample',handle_mdsgenevalueonesample)
@@ -350,7 +352,6 @@ function mds_clientcopy(ds) {
 		label:ds.label,
 		about:ds.about,
 		annotationsampleset2matrix: ds.annotationsampleset2matrix,
-		queries:{},
 		mutationAttribute: ds.mutationAttribute,
 		locusAttribute: ds.locusAttribute,
 		alleleAttribute: ds.alleleAttribute,
@@ -358,6 +359,10 @@ function mds_clientcopy(ds) {
 
 	if(ds.queries) {
 		ds2.queries = {}
+	}
+
+	if(ds.track) {
+		ds2.track = mds2_init.client_copy( ds )
 	}
 
 	if(ds.singlesamplemutationjson) {
@@ -11748,6 +11753,7 @@ return new Promise((resolve,reject)=>{
 	})
 })
 }
+exports.cache_index_promise = cache_index_promise
 
 
 
@@ -13490,7 +13496,7 @@ function mds_init(ds,genome, _servconfig) {
 
 	if( ds.track ) {
 		// 2nd generation track
-		mds2_init_wrap( ds )
+		mds2_init_wrap( ds, genome )
 	}
 
 
@@ -13553,12 +13559,12 @@ function mds_init(ds,genome, _servconfig) {
 
 
 
-async function mds2_init_wrap( ds ) {
+async function mds2_init_wrap( ds, genome ) {
 /*
 because mds_init is sync, so has to improvise to catch exception from mds2_init
 */
 	try {
-		await mds2_init( ds )
+		await mds2_init.init( ds, genome )
 	} catch(e) {
 		console.log('ERROR init mds2 track: '+e)
 		if(e.stack) console.log(e.stack)

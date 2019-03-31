@@ -1,6 +1,8 @@
 const fs = require('fs')
+const path =require('path')
 const spawn = require('child_process').spawn
 const readline = require('readline')
+const common = require('../src/common')
 const vcf = require('../src/vcf')
 
 
@@ -10,17 +12,55 @@ const tabix= serverconfig.tabix || 'tabix'
 
 /* p4 ready
 ********************** EXPORTED
+init_one_vcf
 validate_tabixfile
-get_header_vcf
 get_lines_tabix
 ********************** INTERNAL
+get_header_vcf
 */
 
 
 
-exports.validate_tabixfile = async ( file ) => {
+
+exports.init_one_vcf = async ( tk, genome ) => {
+
+	let filelocation
+	if( tk.file ) {
+
+		tk.file = path.join( serverconfig.tpmasterdir, tk.file )
+		filelocation = tk.file
+		await validate_tabixfile( tk.file )
+
+	} else if( tk.url ) {
+
+		filelocation = tk.url
+		tk.dir = await app.cache_index_promise( tk.indexURL || tk.url+'.tbi' )
+
+	} else {
+		throw 'no file or url given for vcf file'
+	}
+
+	const [info,format,samples,errors] = await get_header_vcf( filelocation, tk.dir )
+	if(errors) {
+		console.log(errors.join('\n'))
+		throw 'got above errors parsing vcf'
+	}
+	tk.info = info
+	tk.format = format
+	tk.samples = samples
+	if( await tabix_is_nochr( filelocation, tk.dir, genome ) ) {
+		tk.nochr = true
+	}
+}
+
+
+
+
+
+async function validate_tabixfile ( file ) {
 	/*
-	file is full path, legal
+	file is full path
+	url not accepted
 	*/
 	if( !file.endsWith( '.gz' )) throw 'tabix file not ending with .gz'
 	if( await file_not_exist(file)) throw '.gz file not exist'
@@ -36,6 +76,19 @@ exports.validate_tabixfile = async ( file ) => {
 		// tbi exists
 		if(await file_not_readable(tbi)) throw '.tbi index file not readable'
 	}
+}
+exports.validate_tabixfile = validate_tabixfile
+
+
+
+async function tabix_is_nochr ( file, dir, genome ) {
+	const lines = []
+	await get_lines_tabix( [ file, '-l' ], dir,
+		(line)=> {
+			lines.push( line )
+		}
+	)
+	return common.contigNameNoChr( genome, lines )
 }
 
 
@@ -63,13 +116,11 @@ function file_not_readable ( file ) {
 }
 
 
-exports.get_header_vcf = async(file)=> {
+async function get_header_vcf ( file, dir ) {
 /* file is full path file or url
 */
-
 	const lines = []
-	await get_lines_tabix(
-		[ file, '-H' ],
+	await get_lines_tabix( [ file, '-H' ], dir,
 		(line)=> {
 			lines.push( line )
 		}
@@ -82,9 +133,9 @@ exports.get_header_vcf = async(file)=> {
 
 
 
-function get_lines_tabix ( args, callback ) {
+function get_lines_tabix ( args, dir, callback ) {
 	return new Promise((resolve,reject)=>{
-		const ps = spawn( tabix, args )
+		const ps = spawn( tabix, args, {cwd:dir} )
 		const rl = readline.createInterface({ input: ps.stdout })
 		rl.on('line', line=>{
 			callback( line )

@@ -27,6 +27,7 @@ import {mdsjunctionfromtemplate,mdsjunctionmaketk,mdsjunctionload} from './block
 import {mdscnvfromtemplate,mdscnvmaketk,mdscnvload} from './block.mds.cnv.adaptor'
 import {mdssvcnvfromtemplate,mdssvcnvmaketk,mdssvcnvload} from './block.mds.svcnv.adaptor'
 import {mdsexpressionrankfromtemplate,mdsexpressionrankmaketk,mdsexpressionrankload} from './block.mds.expressionrank.adaptor'
+import {mds2_fromtemplate,mds2_maketk,mds2_load} from './block.mds2.adaptor'
 
 // ds tk special case
 import * as blockds from   './block.ds'
@@ -2316,6 +2317,13 @@ block_addtk_template(template) {
 			return
 		}
 		break
+	case client.tkt.mds2:
+		const e10 = mds2_fromtemplate(tk, template)
+		if(e10) {
+			this.error(e10)
+			return
+		}
+		break
 	case client.tkt.mdsexpressionrank:
 		const e8 = mdsexpressionrankfromtemplate(tk, template, this)
 		if(e8) {
@@ -2460,6 +2468,9 @@ block_maketk(tk) {
 		break
 	case client.tkt.mdssvcnv:
 		mdssvcnvmaketk(tk,this)
+		break
+	case client.tkt.mds2:
+		mds2_maketk(tk,this)
 		break
 	case client.tkt.mdsexpressionrank:
 		mdsexpressionrankmaketk(tk,this)
@@ -2828,6 +2839,9 @@ tk_load(tk) {
 		break
 	case client.tkt.mdssvcnv:
 		mdssvcnvload(tk,this)
+		break
+	case client.tkt.mds2:
+		mds2_load(tk,this)
 		break
 	case client.tkt.mdsexpressionrank:
 		mdsexpressionrankload(tk,this)
@@ -3847,6 +3861,9 @@ add_subpanel() {
 				break
 			case client.tkt.mdssvcnv:
 				mdssvcnvload(tk,this)
+				break
+			case client.tkt.mds2:
+				mds2_load(tk,this)
 				break
 			case client.tkt.mdsexpressionrank:
 				mdsexpressionrankload(tk,this)

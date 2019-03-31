@@ -42,8 +42,9 @@ module.exports={
 
 	// mds2 track
 	track: {
+		name:'SJLife germline SNV',
 		vcf: {
-			file:'hg38/sjlife/vcf.2019aacr/cohort.vcf.gz'
+			file:'hg38/sjlife/cohort.vcf.gz'
 		},
 		/*
 		svcnv: {
