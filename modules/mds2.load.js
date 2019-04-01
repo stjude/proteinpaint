@@ -88,7 +88,7 @@ async function query_vcf_test ( q, ds, result ) {
 	for(const r of q.rglst) {
 
 		r.variants = []
-		r.density = null // if too many, convert to density
+		r.canvas = null // if too many, plot to image
 
 		const coord = (tk0.nochr ? r.chr.replace('chr','') : r.chr)+':'+r.start+'-'+r.stop
 
