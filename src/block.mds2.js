@@ -4,6 +4,7 @@ import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
+import * as vcf_numericaxis from './block.mds2.vcf.numericaxis'
 
 
 
@@ -76,6 +77,7 @@ function makeTk ( tk, block ) {
 
 	// vcf row
 	tk.g_vcfrow = tk.glider.append('g')
+	tk.leftaxis_vcfrow = tk.gleft.append('g')
 
 	// config
 	tk.config_handle = block.maketkconfighandle(tk)
@@ -181,9 +183,9 @@ function addparameter_rangequery ( tk, block ) {
 function may_render_vcf ( data, tk, block ) {
 /* for now, assume always in variant-only mode for vcf
 */
-	if( !tk.mds.track.vcf ) return
-	if( !data.vcf ) return
-	if( !data.vcf.rglst ) return
+	if( !tk.mds.track.vcf ) return 0
+	if( !data.vcf ) return 0
+	if( !data.vcf.rglst ) return 0
 
 	tk.g_vcfrow.selectAll('*').remove()
 
@@ -221,7 +223,7 @@ function may_render_vcf ( data, tk, block ) {
 		}
 
 		if( r.variants ) {
-			const height = render_variants( r, g, tk )
+			const height = vcf_render_variants( r, g, tk, block )
 			rowheight = Math.max( rowheight, height )
 			continue
 		}
@@ -240,16 +242,32 @@ function may_render_vcf ( data, tk, block ) {
 
 
 
-function render_variants ( r, g, tk ) {
+function vcf_render_variants ( r, g, tk, block ) {
 /*
-r: region
-	.scale
-g:
-tk:
+got the actual list of variants at r.variants[], render them
 */
-	return tk.mds.track.vcf.axisheight
+
+	// maybe other type of numeric axis, e.g. hbf level
+
+	if( tk.mds.track.vcf.numerical_axis && tk.mds.track.vcf.numerical_axis.use_key ) {
+		// numerical axis by info field
+		const height = vcf_numericaxis.render( r, g, tk, block )
+		return height
+	}
+
+	// not numerical axis
+	return 50
 }
 
+
+
+
+
+
+
+export function vcf_m_color ( m, tk ) {
+	return 'blue'
+}
 
 
 /*
