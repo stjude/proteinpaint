@@ -46,7 +46,11 @@ exports.client_copy = ( ds ) => {
 	}
 	if(t0.vcf) {
 		tk.vcf = {
-			axisheight: t0.vcf.axisheight
+			numerical_axis: t0.vcf.numerical_axis,
+			/*
+			format: t0.vcf.format,
+			info: t0.vcf.info,
+			*/
 		}
 	}
 	return tk
@@ -67,8 +71,6 @@ async function init_vcf ( vcftk, genome ) {
 	} else {
 		throw 'vcf has no file or chr2file'
 	}
-
-	if(!vcftk.axisheight) vcftk.axisheight = 150
 }
 
 
