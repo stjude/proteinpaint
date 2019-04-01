@@ -40,13 +40,31 @@ module.exports={
 		},
 	},
 
+	mutationAttribute: {
+		attributes: {
+			AF: {
+				label:'Cohort frequency',
+				isfloat:1,
+			},
+			AF_gnomAD: {
+				label:'gnomAD frequency',
+				isfloat:1
+			},
+		}
+	},
+
 	// mds2 track
 	track: {
 		name:'SJLife germline SNV',
 		vcf: {
 			file:'hg38/sjlife/cohort.vcf.gz',
 			viewrangeupperlimit: 200000,
-			axisheight: 150,
+			numerical_axis: {
+				axis_height: 150,
+				keys: ['AF','AF_gnomAD'],
+				use_key: 'AF'
+				// how to define complex things such as boxplot or on the fly summarized data from samples
+			}
 		},
 		/*
 		svcnv: {
