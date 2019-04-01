@@ -44,7 +44,9 @@ module.exports={
 	track: {
 		name:'SJLife germline SNV',
 		vcf: {
-			file:'hg38/sjlife/cohort.vcf.gz'
+			file:'hg38/sjlife/cohort.vcf.gz',
+			viewrangeupperlimit: 200000,
+			axisheight: 150,
 		},
 		/*
 		svcnv: {

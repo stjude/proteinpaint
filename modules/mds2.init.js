@@ -40,10 +40,15 @@ exports.init = async ( ds, genome ) => {
 exports.client_copy = ( ds ) => {
 /* make client copy of the track
 */
+	const t0 = ds.track
 	const tk = {
-		name: ds.track.name
+		name: t0.name
 	}
-
+	if(t0.vcf) {
+		tk.vcf = {
+			axisheight: t0.vcf.axisheight
+		}
+	}
 	return tk
 }
 
@@ -62,6 +67,8 @@ async function init_vcf ( vcftk, genome ) {
 	} else {
 		throw 'vcf has no file or chr2file'
 	}
+
+	if(!vcftk.axisheight) vcftk.axisheight = 150
 }
 
 
