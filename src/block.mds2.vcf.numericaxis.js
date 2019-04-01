@@ -166,7 +166,6 @@ value may be singular number, or boxplot
 	}
 
 	numeric_make( nm, r, _g, datagroup, tk, block )
-	console.log(nm)
 
 	return nm.toplabelheight
 		+nm.maxradius
