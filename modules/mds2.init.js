@@ -15,7 +15,7 @@ client_copy
 
 
 
-exports.init = async function ( ds, genome ) {
+exports.init = async ( ds, genome ) => {
 /* initiate the mds2 track upon launching server
 */
 
@@ -26,7 +26,7 @@ exports.init = async function ( ds, genome ) {
 	if(!tk.name) tk.name = ds.label
 
 	if(tk.vcf) {
-		await initsubtk_vcf( tk.vcf, genome )
+		await init_vcf( tk.vcf, genome )
 	}
 
 	if(tk.svcnv) {
@@ -35,7 +35,9 @@ exports.init = async function ( ds, genome ) {
 }
 
 
-exports.client_copy = function ( ds ) {
+
+
+exports.client_copy = ( ds ) => {
 /* make client copy of the track
 */
 	const tk = {
@@ -48,7 +50,7 @@ exports.client_copy = function ( ds ) {
 
 
 
-async function initsubtk_vcf ( vcftk, genome ) {
+async function init_vcf ( vcftk, genome ) {
 
 	if( vcftk.file ) {
 
@@ -60,4 +62,9 @@ async function initsubtk_vcf ( vcftk, genome ) {
 	} else {
 		throw 'vcf has no file or chr2file'
 	}
+}
+
+
+
+async function init_svcnv ( sctk, genome ) {
 }
