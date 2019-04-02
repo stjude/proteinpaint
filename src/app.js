@@ -43,6 +43,7 @@ launchmdssamplescatterplot
 launchmdssurvivalplot
 launch_fimo
 launch_termdb
+launch_singlecell
 
 */
 
@@ -748,6 +749,10 @@ function parseembedthenurl(arg, holder, selectgenome) {
 		}
 	}
 
+	if(arg.singlecell) {
+		launch_singlecell( arg.singlecell, holder )
+		return
+	}
 	if(arg.display_termdb) {
 		launch_termdb( arg.display_termdb, holder )
 		return
@@ -1353,3 +1358,17 @@ function launchjdv(arg, holder) {
 	})
 }
 */
+
+
+async function launch_singlecell ( arg, holder ) {
+	try {
+		const genome=genomes[arg.genome]
+		if(!genome) throw 'Invalid genome: '+arg.genome
+		arg.genome = genome
+		const _ = await import('./singlecell')
+		await _.init( arg, holder )
+	}catch(e){
+		error0('Error launching single cell viewer: '+e)
+		if(e.stack) console.log(e.stack)
+	}
+}
