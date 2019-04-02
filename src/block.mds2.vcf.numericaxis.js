@@ -9,6 +9,16 @@ import * as mds2 from './block.mds2'
 /*
 adapted from legacy code
 
+
+based on zoom level, toggle between two views:
+1. cozy view, showing stem, x-shift, labels showing for all discs and point up
+   at this mode, default is to draw a single circle for each variant
+   alternatively, allow to show graphs e.g. boxplot
+   such kind of values should all be server-computed
+
+
+2. crowded view, no stem, no x-shift, only show label for top/bottom items
+
 */
 
 const minbpwidth=4
@@ -29,137 +39,7 @@ value may be singular number, or boxplot
 
 */
 
-	const x2mlst=new Map()
-	for(const m of r.variants) {
-		m.__x = r.scale( m.pos )
-		if(!x2mlst.has(m.__x)) {
-			x2mlst.set(m.__x,[])
-		}
-		x2mlst.get(m.__x).push(m)
-	}
-	const datagroup=[]
-	const topxbins=[]
-	// by resolution
-	if(block.exonsf>=minbpwidth) {
-		// # pixel per nt is big enough
-		// group by each nt
-		for(const [x,mlst] of x2mlst) {
-			datagroup.push({
-				chr:mlst[0].chr,
-				pos:mlst[0].pos,
-				mlst:mlst,
-				x:x,
-			})
-		}
-	} else {
-		// # pixel per nt is too small
-		if(block.usegm && block.usegm.coding && block.gmmode!=client.gmmode.genomic) {
-			// by aa
-			// in gmsum, rglst may include introns, need to distinguish symbolic and rglst introns, use __x difference by a exonsf*3 limit
-			const aa2mlst=new Map()
-			for(const [x,mlst] of x2mlst) {
-				if(mlst[0].chr!=block.usegm.chr) {
-					continue
-				}
-				// TODO how to identify if mlst belongs to regulatory region rather than gm
-				let aapos=undefined
-				for(const m of mlst) {
-					if(Number.isFinite(m.aapos)) aapos=m.aapos
-				}
-				if(aapos==undefined) {
-					aapos=coord.genomic2gm(mlst[0].pos,block.usegm).aapos
-				}
-				if(aapos==undefined) {
-					console.error('data item cannot map to aaposition')
-					console.log(mlst[0])
-					continue
-				}
-
-				// this group can be anchored to a aa
-				x2mlst.delete(x)
-
-				if(!aa2mlst.has(aapos)) {
-					aa2mlst.set(aapos,[])
-				}
-				let notmet=true
-				for(const lst of aa2mlst.get(aapos)) {
-					if(Math.abs(lst[0].__x-mlst[0].__x)<=block.exonsf*3) {
-						for(const m of mlst) {
-							lst.push(m)
-						}
-						notmet=false
-						break
-					}
-				}
-				if(notmet) {
-					aa2mlst.get(aapos).push(mlst)
-				}
-			}
-			const utr5len=block.usegm.utr5 ? block.usegm.utr5.reduce((i,j)=>i+j[1]-j[0],0) : 0
-			for(const llst of aa2mlst.values()) {
-				for(const mlst of llst) {
-					let m=null
-					for(const m2 of mlst) {
-						if(Number.isFinite(m2.rnapos)) m=m2
-					}
-					if(m==null) {
-						console.log('trying to map mlst to codon, but no rnapos found')
-						for(const m of mlst) {
-							console.log(m)
-						}
-						continue
-					}
-					datagroup.push({
-						chr:mlst[0].chr,
-						pos:m.pos,
-						mlst:mlst,
-						x:mlst[0].__x,
-					})
-				}
-			}
-		}
-		// leftover by px bin
-		const pxbin=[]
-		const binpx=2
-		for(const [x,mlst] of x2mlst) {
-			const i=Math.floor(x/binpx)
-			if(!pxbin[i]) {
-				pxbin[i]=[]
-			}
-			pxbin[i]=[...pxbin[i], ...mlst]
-		}
-		for(const mlst of pxbin) {
-			if(!mlst) continue
-			const xsum=mlst.reduce((i,j)=>i+j.__x,0)
-			datagroup.push({
-				isbin:true,
-				chr:mlst[0].chr,
-				pos:mlst[0].pos,
-				mlst:mlst,
-				x:xsum/mlst.length,
-			})
-		}
-	}
-
-	datagroup.sort((a,b)=>a.x-b.x)
-
-	if(tk.data && block.pannedpx!=undefined && (!block.usegm || block.gmmode==client.gmmode.genomic)) {
-		// inherit genomic mode and panned
-		const pastmode={}
-		for(const g of tk.data) {
-			pastmode[g.chr+'.'+g.pos]={
-				xoffset:g.xoffset,
-				}
-		}
-		for(const g of datagroup) {
-			const k=g.chr+'.'+g.pos
-			if(pastmode[k]) {
-				g.xoffset=pastmode[k].xoffset
-			}
-		}
-	}
-
-	tk.data=datagroup
+	const datagroup = divide_data_to_group( r, block )
 
 	const nm = {
 		axisheight: tk.mds.track.vcf.numerical_axis.axis_height
@@ -179,10 +59,10 @@ value may be singular number, or boxplot
 
 
 
+
 function numeric_make ( nm, r, _g, data, tk, block ) {
 /*
 */
-
 
 	for(const d of data) {
 		d.x0=d.x
@@ -214,7 +94,6 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 	const showstem = adjustview( data, nm, tk, block )
 
 /*
-TODO
 	nm.showsamplebar = showstem && tk.ds && tk.ds.samplebynumericvalue
 
 	if(!nm.showsamplebar) {
@@ -225,166 +104,16 @@ TODO
 	*/
 
 
-	// v is for variant-level values
-	let mcset
-	let vmin=null
-	let vmax=null
+	// how the numeric axis is configured
+	const axisconfig = tk.mds.track.vcf.numerical_axis
+	// attributes from axisconfig will be modified here
 
-	// in case of plotting genotype circles, circle radius is set by relative # of samples
-	let genotypebyvaluesamplemax=0
-	let genotypebyvaluecircleradiusscale=null
-
-	if(nm.showsamplebar ) {
-		mcset = { name:tk.ds.samplebynumericvalue.axislabel }
-		for(const d of tk.data) {
-			for(const m of d.mlst) {
-				if(!m.sampledata) continue
-				for(const s of m.sampledata) {
-					const sn=s.sampleobj[tk.ds.cohort.key4annotation]
-					if(!sn) continue
-					const a = tk.ds.cohort.annotation[sn]
-					if(!a) continue
-					const v=a[tk.ds.samplebynumericvalue.attrkey]
-					if(!Number.isFinite(v)) continue
-					if(vmin==null) {
-						vmin=v
-						vmax=v
-					} else {
-						vmin=Math.min(vmin,v)
-						vmax=Math.max(vmax,v)
-					}
-				}
-			}
-		}
-
-	} else if(nm.showgenotypebyvalue) {
-
-		mcset = { name:tk.ds.genotypebynumericvalue.axislabel }
-		for(const d of tk.data) {
-			for(const m of d.mlst) {
-				let v = m.info[ tk.ds.genotypebynumericvalue.refref.infokey ]
-				if(v!=undefined) {
-					if(vmin==null) {
-						vmin=v
-						vmax=v
-					} else {
-						vmin = Math.min(vmin,v)
-						vmax = Math.max(vmax,v)
-					}
-				}
-				v = m.info[ tk.ds.genotypebynumericvalue.refalt.infokey ]
-				if(v!=undefined) {
-					if(vmin==null) {
-						vmin=v
-						vmax=v
-					} else {
-						vmin = Math.min(vmin,v)
-						vmax = Math.max(vmax,v)
-					}
-				}
-				v = m.info[ tk.ds.genotypebynumericvalue.altalt.infokey ]
-				if(v!=undefined) {
-					if(vmin==null) {
-						vmin=v
-						vmax=v
-					} else {
-						vmin = Math.min(vmin,v)
-						vmax = Math.max(vmax,v)
-					}
-				}
-
-				// to get number of samples carrying each genotype
-				let num_refref=0,
-					num_altalt=0,
-					num_refalt=0
-
-				if( tk.ds.genotypebynumericvalue.refref.genotypeCountInfokey ) {
-					// get sample count from info field but not individuals
-
-					let v = m.info[ tk.ds.genotypebynumericvalue.refref.genotypeCountInfokey]
-					if(Number.isFinite(v)) {
-						num_refref = v
-					}
-					v = m.info[ tk.ds.genotypebynumericvalue.refalt.genotypeCountInfokey]
-					if(Number.isFinite(v)) {
-						num_refalt = v
-					}
-					v = m.info[ tk.ds.genotypebynumericvalue.altalt.genotypeCountInfokey]
-					if(Number.isFinite(v)) {
-						num_altalt = v
-					}
-
-				} else {
-
-					if(!m.sampledata) continue
-					for(const s of m.sampledata) {
-						if(!s.allele2readcount) continue
-						if(s.allele2readcount[m.alt]) {
-							if(s.allele2readcount[m.ref]) {
-								num_refalt++
-							} else {
-								num_altalt++
-							}
-						} else {
-							num_refref++
-						}
-					}
-				}
-
-				genotypebyvaluesamplemax = Math.max(genotypebyvaluesamplemax, num_refref, num_refalt, num_altalt)
-
-			}
-		}
-
-		//genotypebyvaluecircleradiusscale = scaleLinear().domain([0, genotypebyvaluesamplemax]).range([4, 10])
-		/*
-		genotypebyvaluecircleradiusscale = (x)=>{
-			return 2+ 8* (1 - Math.pow( (1- x/genotypebyvaluesamplemax), 4))
-		}
-		*/
-		const w=Math.pow(12/2,2)*Math.PI // unit area
-		/*
-		let mrd=0 // max disc radius
-		if(genotypebyvaluesamplemax<=10) mrd=w*genotypebyvaluesamplemax*.9
-		else if(genotypebyvaluesamplemax<=100) mrd=w*10
-		else if(genotypebyvaluesamplemax<=1000) mrd=w*14
-		else mrd=w*20
-		*/
-		const mrd = w*10
-		// scale for disc radius
-		genotypebyvaluecircleradiusscale = scaleLinear()
-			.domain([1,
-				genotypebyvaluesamplemax*.1,
-				genotypebyvaluesamplemax*.3,
-				genotypebyvaluesamplemax*.6,
-				genotypebyvaluesamplemax*.8,
-				genotypebyvaluesamplemax])
-			.range([w,
-				w+(mrd-w)*.8,
-				w+(mrd-w)*.85,
-				w+(mrd-w)*.9,
-				w+(mrd-w)*.95,
-				mrd])
+	setup_axis_scale( r, axisconfig, tk )
 
 
-	} else {
-
-		const axiskey = tk.mds.track.vcf.numerical_axis.use_key
-		
-		for(const m of r.variants) {
-			const v = m.info[axiskey]
-			if(Number.isFinite( v )) {
-
-				m._v = v // ?
-
-				vmin = Math.min( vmin, v )
-				vmax = Math.max( vmax, v )
-			}
-		}
-	}
-
-
-	const numscale = scaleLinear().domain([vmin, vmax]).range([0, nm.axisheight])
+	const numscale = scaleLinear()
+		.domain([axisconfig.minvalue, axisconfig.maxvalue])
+		.range([0, nm.axisheight])
 
 	// set m._y
 	for(const d of data) {
@@ -503,16 +232,16 @@ TODO
 		.remove()
 	{
 		// axis is inverse of numscale
-		const thisscale = scaleLinear().domain([vmin, vmax]).range([nm.axisheight, 0])
+		const thisscale = scaleLinear().domain([axisconfig.minvalue, axisconfig.maxvalue]).range([nm.axisheight, 0])
 		const thisaxis  = axisLeft().scale(thisscale).ticks(4)
-		if( tk.mds.mutationAttribute.attributes[ tk.mds.track.vcf.numerical_axis.use_key ].isinteger ) {
+		if( axisconfig.isinteger ) {
 			thisaxis.tickFormat(d3format('d'))
-			if(vmax-vmin < 3) {
+			if(axisconfig.maxvalue - axisconfig.minvalue < 3) {
 				/*
 				must do this to avoid axis showing redundant labels that doesn't make sense
 				e.g. -1 -2 -2
 				*/
-				thisaxis.ticks( vmax-vmin)
+				thisaxis.ticks( axisconfig.maxvalue - axisconfig.minvalue )
 			}
 		}
 		client.axisstyle({
@@ -521,14 +250,14 @@ TODO
 			fontsize:dotwidth
 		})
 
-		if(vmin==vmax) {
+		if(axisconfig.minvalue == axisconfig.maxvalue) {
 			tk.leftaxis.append('text')
 				.attr('text-anchor','end')
 				.attr('font-size',dotwidth)
 				.attr('dominant-baseline','central')
 				.attr('x', block.tkleftlabel_xshift)
 				.attr('y',nm.axisheight)
-				.text(vmin)
+				.text(axisconfig.minvalue)
 				.attr('fill','black')
 		}
 		// axis label, text must wrap
@@ -539,7 +268,7 @@ TODO
 				.each(function(){
 					maxw=Math.max(maxw,this.getBBox().width)
 				})
-			const lst = tk.mds.mutationAttribute.attributes[ tk.mds.track.vcf.numerical_axis.use_key ].label.split(' ')
+			const lst = axisconfig.label.split(' ')
 			const y=(nm.axisheight-lst.length*(dotwidth+1))/2
 			let maxlabelw=0
 			lst.forEach((text,i)=>{
@@ -694,9 +423,6 @@ function adjustview ( data, nm, tk, block) {
 	for .data[0].mlst[], add:
 		.xoff
 	
-	toggle between two views:
-	1. cozy view, showing stem, x-shift, labels showing for all discs and point up
-	2. crowded view, no stem, no x-shift, only show label for top/bottom items
 
 	*/
 
@@ -715,7 +441,7 @@ function adjustview ( data, nm, tk, block) {
 		if(d.mlst.length==1) {
 			d.width = w
 		} else {
-			
+
 			// cluster, apply maximum allowed span
 			d.width = Math.min( maxclusterwidth, w )
 
@@ -1102,4 +828,168 @@ function m_click(m, p, tk, block) {
 		tk:tk,
 		block:block
 	})
+}
+
+
+
+
+function divide_data_to_group ( r, block ) {
+// legacy method
+	const x2mlst=new Map()
+	for(const m of r.variants) {
+		m.__x = r.scale( m.pos )
+		if(!x2mlst.has(m.__x)) {
+			x2mlst.set(m.__x,[])
+		}
+		x2mlst.get(m.__x).push(m)
+	}
+	const datagroup=[]
+	// by resolution
+	if(block.exonsf>=minbpwidth) {
+		// # pixel per nt is big enough
+		// group by each nt
+		for(const [x,mlst] of x2mlst) {
+			datagroup.push({
+				chr:mlst[0].chr,
+				pos:mlst[0].pos,
+				mlst:mlst,
+				x:x,
+			})
+		}
+	} else {
+		// # pixel per nt is too small
+		if(block.usegm && block.usegm.coding && block.gmmode!=client.gmmode.genomic) {
+			// by aa
+			// in gmsum, rglst may include introns, need to distinguish symbolic and rglst introns, use __x difference by a exonsf*3 limit
+			const aa2mlst=new Map()
+			for(const [x,mlst] of x2mlst) {
+				if(mlst[0].chr!=block.usegm.chr) {
+					continue
+				}
+				// TODO how to identify if mlst belongs to regulatory region rather than gm
+				let aapos=undefined
+				for(const m of mlst) {
+					if(Number.isFinite(m.aapos)) aapos=m.aapos
+				}
+				if(aapos==undefined) {
+					aapos=coord.genomic2gm(mlst[0].pos,block.usegm).aapos
+				}
+				if(aapos==undefined) {
+					console.error('data item cannot map to aaposition')
+					console.log(mlst[0])
+					continue
+				}
+
+				// this group can be anchored to a aa
+				x2mlst.delete(x)
+
+				if(!aa2mlst.has(aapos)) {
+					aa2mlst.set(aapos,[])
+				}
+				let notmet=true
+				for(const lst of aa2mlst.get(aapos)) {
+					if(Math.abs(lst[0].__x-mlst[0].__x)<=block.exonsf*3) {
+						for(const m of mlst) {
+							lst.push(m)
+						}
+						notmet=false
+						break
+					}
+				}
+				if(notmet) {
+					aa2mlst.get(aapos).push(mlst)
+				}
+			}
+			const utr5len=block.usegm.utr5 ? block.usegm.utr5.reduce((i,j)=>i+j[1]-j[0],0) : 0
+			for(const llst of aa2mlst.values()) {
+				for(const mlst of llst) {
+					let m=null
+					for(const m2 of mlst) {
+						if(Number.isFinite(m2.rnapos)) m=m2
+					}
+					if(m==null) {
+						console.log('trying to map mlst to codon, but no rnapos found')
+						for(const m of mlst) {
+							console.log(m)
+						}
+						continue
+					}
+					datagroup.push({
+						chr:mlst[0].chr,
+						pos:m.pos,
+						mlst:mlst,
+						x:mlst[0].__x,
+					})
+				}
+			}
+		}
+		// leftover by px bin
+		const pxbin=[]
+		const binpx=2
+		for(const [x,mlst] of x2mlst) {
+			const i=Math.floor(x/binpx)
+			if(!pxbin[i]) {
+				pxbin[i]=[]
+			}
+			pxbin[i]=[...pxbin[i], ...mlst]
+		}
+		for(const mlst of pxbin) {
+			if(!mlst) continue
+			const xsum=mlst.reduce((i,j)=>i+j.__x,0)
+			datagroup.push({
+				isbin:true,
+				chr:mlst[0].chr,
+				pos:mlst[0].pos,
+				mlst:mlst,
+				x:xsum/mlst.length,
+			})
+		}
+	}
+
+	datagroup.sort((a,b)=>a.x-b.x)
+
+	return datagroup
+}
+
+
+
+
+
+
+
+function setup_axis_scale ( r, axisconfig, tk ) {
+/*
+based on the source of axis scaling,
+decide following things about the y axis:
+- scale range, by different types of scales
+- name label
+*/
+
+	axisconfig.minvalue = 0
+	axisconfig.maxvalue = 0
+
+	delete axisconfig.isinteger
+
+	// conditional - using a single info key
+	if( axisconfig.use_info_key ) {
+
+		for(const m of r.variants) {
+			const v = m.info[axisconfig.use_info_key]
+			if(Number.isFinite( v )) {
+
+				m._v = v // ?
+
+				axisconfig.minvalue = Math.min( axisconfig.minvalue, v )
+				axisconfig.maxvalue = Math.max( axisconfig.maxvalue, v )
+			}
+		}
+
+		const a = tk.mds.mutationAttribute.attributes[ axisconfig.use_info_key ]
+		if( !a ) throw 'unknown info field: '+axisconfig.use_info_key
+		if( a.isinteger ) axisconfig.isinteger = true
+		axisconfig.label = a.label
+		return
+	}
+
+	throw 'unknown source of axis scaling'
 }
