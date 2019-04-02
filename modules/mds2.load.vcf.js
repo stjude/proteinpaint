@@ -69,6 +69,8 @@ for range query
 						delete m.vcf_ID
 						delete m.sampledata
 
+						if( tk0.nochr ) m.chr = 'chr'+m.chr
+
 						common.vcfcopymclass( m, mockblock )
 						delete m.csq
 
