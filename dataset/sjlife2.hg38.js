@@ -62,7 +62,8 @@ module.exports={
 			numerical_axis: {
 				axis_height: 150,
 				info_keys: ['AF','AF_gnomAD'],
-				use_info_key: 'AF'
+				use_info_key: 'AF',
+				in_use: true // to use numerical axis by default
 				// how to define complex things such as boxplot or on the fly summarized data from samples
 			}
 		},
