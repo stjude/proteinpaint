@@ -247,9 +247,7 @@ function vcf_render_variants ( r, g, tk, block ) {
 got the actual list of variants at r.variants[], render them
 */
 
-	// maybe other type of numeric axis, e.g. hbf level
-
-	if( tk.mds.track.vcf.numerical_axis && tk.mds.track.vcf.numerical_axis.use_key ) {
+	if( tk.mds.track.vcf.numerical_axis && tk.mds.track.vcf.numerical_axis.in_use ) {
 		// numerical axis by info field
 		const height = vcf_numericaxis.render( r, g, tk, block )
 		return height
