@@ -8,6 +8,14 @@ import * as vcf_numericaxis from './block.mds2.vcf.numericaxis'
 
 
 
+/*
+********************** EXPORTED
+loadTk
+********************** INTERNAL
+addparameter_rangequery
+
+
+*/
 
 
 export async function loadTk( tk, block ) {
@@ -127,16 +135,22 @@ function addparameter_rangequery ( tk, block ) {
 	const par={
 		genome:block.genome.name,
 		dslabel: tk.dslabel,
-		rglst: block.tkarg_maygm(tk),
+		rglst: block.tkarg_rglst(tk), // note here: not tkarg_usegm
 	}
 
 	if( block.usegm ) {
-		/* for vcf, when rendering image on server, variants from the block region will have mclass decided by whether the block is in gmmode or not
+		/* to merge par.rglst[] into one region
 		this does not apply to subpanels
-
-		in p4, should apply to all panels
 		*/
-		for(const r of par.rglst) r.usegm_isoform = block.usegm.isoform
+		const r = par.rglst[0]
+		r.usegm_isoform = block.usegm.isoform
+		for(let i=1; i<par.rglst.length; i++) {
+			const ri = par.rglst[i]
+			r.width += ri.width + block.regionspace
+			r.start = Math.min( r.start, ri.start )
+			r.stop  = Math.max( r.stop,  ri.stop )
+		}
+		par.rglst = [ r ]
 	}
 
 	// append xoff to each r from block
@@ -193,7 +207,7 @@ function may_render_vcf ( data, tk, block ) {
 	to be fixed in p4
 	*/
 
-	apply_scale_to_region( data.vcf.rglst )
+	//apply_scale_to_region( data.vcf.rglst )
 
 	let rowheight = 0
 
@@ -263,28 +277,10 @@ got the actual list of variants at r.variants[], render them
 
 
 
-export function vcf_m_color ( m, tk ) {
-	return 'blue'
-}
-
-
-/*
-function getheight_vcf_row ( tk, vcfdata ) {
-// for range query, based on returned data, get height for the vcf row across all regions
-	let h = 0
-	for(const r of vcfdata.rglst) {
-		if(r.rangetoobig) {
-			h = Math.max( h, 50 )
-		} else {
-			h = Math.max( h,  )
-		}
-	}
-}
-*/
-
 
 
 function apply_scale_to_region ( rglst ) {
+// do not use, this does not account for rglst under gm mode
 	// such as data.vcf.rglst
 	for(const r of rglst) {
 		r.scale = scaleLinear()
