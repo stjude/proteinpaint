@@ -3,7 +3,8 @@ import {axisTop, axisLeft, axisRight} from 'd3-axis'
 import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
-import * as mds2 from './block.mds2'
+import * as coord from './coord'
+//import * as mds2 from './block.mds2'
 
 
 /*
@@ -15,8 +16,6 @@ based on zoom level, toggle between two views:
    at this mode, default is to draw a single circle for each variant
    alternatively, allow to show graphs e.g. boxplot
    such kind of values should all be server-computed
-
-
 2. crowded view, no stem, no x-shift, only show label for top/bottom items
 
 */
@@ -320,7 +319,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		tk.skewer2.append('path')
 			.attr('class','sja_aa_stem')
 			.attr('d',d=> skewer2_setstem(d,nm))
-			.attr('stroke',d=> mds2.vcf_m_color(d.mlst[0],tk) )
+			.attr('stroke',d=> vcf_m_color(d.mlst[0],tk) )
 			.attr('fill',d=> d.mlst.length==1 ? 'none' : '#ededed')
 	}
 
@@ -348,7 +347,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 	// full filled
 	discdot
 		//.filter(m=> m.dt==common.dtsnvindel || m.dt==common.dtsv || m.dt==common.dtfusionrna)
-		.attr('fill',m=> mds2.vcf_m_color(m,tk) )
+		.attr('fill',m=> vcf_m_color(m,tk) )
 		.attr('stroke','white')
 		.attr('r',m=>m.radius-.5)
 
@@ -358,7 +357,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 	// disc kick
 	discg.append('circle')
 		.attr('r',m=> m.radius-.5)
-		.attr('stroke',m=> mds2.vcf_m_color(m,tk))
+		.attr('stroke',m=> vcf_m_color(m,tk))
 		.attr('class','sja_aa_disckick')
 		.attr('fill','white')
 		.attr('fill-opacity',0)
@@ -393,7 +392,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 			m._labfontsize= Math.max(12,m.radius*1.2)
 			return m._labfontsize
 			})
-		.attr('fill',m=> mds2.vcf_m_color(m,tk))
+		.attr('fill',m=> vcf_m_color(m,tk))
 		.attr('x',m=> (nm.showsamplebar || nm.showgenotypebyvalue) ? nm.axisheight+nm.maxradius+4 : m.radius+m.rimwidth+disclabelspacing)
 		.attr('y',m=> m._labfontsize*middlealignshift)
 		.attr('class','sja_aa_disclabel')
@@ -661,7 +660,7 @@ function m_mouseover(m,tk) {
 	const linelen=10
 	const boxpad=4
 	const fontsize = m._labfontsize || 13 // _labfontsize is undefined if this m has no lab
-	const color = mds2.vcf_m_color(m, tk)
+	const color = vcf_m_color(m, tk)
 
 	let textw=0,
 		showlab=false
@@ -837,7 +836,18 @@ function divide_data_to_group ( r, block ) {
 // legacy method
 	const x2mlst=new Map()
 	for(const m of r.variants) {
-		m.__x = r.scale( m.pos )
+
+		const hits=block.seekcoord(m.chr,m.pos)
+		if(hits.length==0) {
+			continue
+		}
+		if(hits.length==1) {
+			m.__x=hits[0].x
+		} else {
+			// hit at multiple regions, still use first hit as following code is not finished
+			m.__x=hits[0].x
+		}
+
 		if(!x2mlst.has(m.__x)) {
 			x2mlst.set(m.__x,[])
 		}
@@ -859,21 +869,29 @@ function divide_data_to_group ( r, block ) {
 	} else {
 		// # pixel per nt is too small
 		if(block.usegm && block.usegm.coding && block.gmmode!=client.gmmode.genomic) {
-			// by aa
+			// in protein view of a coding gene, see if to map to aa
 			// in gmsum, rglst may include introns, need to distinguish symbolic and rglst introns, use __x difference by a exonsf*3 limit
+
+			for(const mlst of x2mlst.values()) {
+				const t = coord.genomic2gm(mlst[0].pos,block.usegm)
+				for(const m of mlst) {
+					m.aapos = t.aapos
+					m.rnapos = t.rnapos
+				}
+			}
+
 			const aa2mlst=new Map()
+			// k: aa position
+			// v: [ [m], [], ... ]
+
 			for(const [x,mlst] of x2mlst) {
 				if(mlst[0].chr!=block.usegm.chr) {
 					continue
 				}
 				// TODO how to identify if mlst belongs to regulatory region rather than gm
-				let aapos=undefined
-				for(const m of mlst) {
-					if(Number.isFinite(m.aapos)) aapos=m.aapos
-				}
-				if(aapos==undefined) {
-					aapos=coord.genomic2gm(mlst[0].pos,block.usegm).aapos
-				}
+
+				const aapos = mlst[0].aapos
+
 				if(aapos==undefined) {
 					console.error('data item cannot map to aaposition')
 					console.log(mlst[0])
@@ -883,11 +901,11 @@ function divide_data_to_group ( r, block ) {
 				// this group can be anchored to a aa
 				x2mlst.delete(x)
 
-				if(!aa2mlst.has(aapos)) {
+				if(!aa2mlst.has( aapos )) {
 					aa2mlst.set(aapos,[])
 				}
 				let notmet=true
-				for(const lst of aa2mlst.get(aapos)) {
+				for(const lst of aa2mlst.get( aapos)) {
 					if(Math.abs(lst[0].__x-mlst[0].__x)<=block.exonsf*3) {
 						for(const m of mlst) {
 							lst.push(m)
@@ -923,6 +941,7 @@ function divide_data_to_group ( r, block ) {
 				}
 			}
 		}
+
 		// leftover by px bin
 		const pxbin=[]
 		const binpx=2
@@ -992,4 +1011,11 @@ decide following things about the y axis:
 	}
 
 	throw 'unknown source of axis scaling'
+}
+
+
+
+function vcf_m_color ( m, tk ) {
+// TODO using categorical attribute
+	return common.mclass[m.class].color
 }
