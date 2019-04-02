@@ -61,8 +61,8 @@ module.exports={
 			viewrangeupperlimit: 200000,
 			numerical_axis: {
 				axis_height: 150,
-				keys: ['AF','AF_gnomAD'],
-				use_key: 'AF'
+				info_keys: ['AF','AF_gnomAD'],
+				use_info_key: 'AF'
 				// how to define complex things such as boxplot or on the fly summarized data from samples
 			}
 		},
