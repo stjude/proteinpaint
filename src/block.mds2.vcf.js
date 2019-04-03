@@ -1,9 +1,13 @@
 import * as numericaxis from './block.mds2.vcf.numericaxis'
+import * as common from './common'
+import * as client from './client'
 
 
 /*
 ********************** EXPORTED
 may_render_vcf
+vcf_m_color
+vcf_m_click
 ********************** INTERNAL
 
 
@@ -87,4 +91,67 @@ got the actual list of variants at r.variants[], render them
 	// not numerical axis
 	// TODO
 	return 50
+}
+
+
+
+export function vcf_m_color ( m, tk ) {
+// TODO using categorical attribute
+	return common.mclass[m.class].color
+}
+
+
+
+export function vcf_m_click ( m, p, tk, block ) {
+/*
+p{}
+	.left
+	.top
+*/
+	// if to show sunburst, do it here, no pane
+
+	const pane = client.newpane({x: p.left, y: p.top})
+
+	if( tk.vcf.plot_mafcov ) {
+		const div = pane.body.append('div')
+			.style('margin','20px')
+		may_show_mafcovplot( div, m, tk, block )
+	}
+}
+
+
+
+
+function may_show_mafcovplot ( div, m, tk, block ) {
+	const wait = div.append('div')
+		.text('Loading...')
+	const par = {
+		genome: block.genome.name,
+		trigger_mafcovplot:1,
+		m: {
+			chr: m.chr,
+			pos: m.pos,
+			ref: m.ref,
+			alt: m.alt
+		}
+	}
+	if(tk.mds) {
+		par.dslabel = tk.mds.label
+	} else {
+		par.vcf = {
+			file: tk.vcf.file,
+			url: tk.vcf.url,
+			indexURL: tk.vcf.indexURL
+		}
+	}
+	client.dofetch('mds2',par)
+	.then(data=>{
+		if(data.error) throw data.error
+		wait.remove()
+		console.log(data)
+	})
+	.catch(e=>{
+		wait.text('ERROR: '+(e.message||e))
+		if(e.stack) console.log(e.stack)
+	})
 }

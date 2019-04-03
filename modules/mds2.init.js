@@ -52,6 +52,9 @@ exports.client_copy = ( ds ) => {
 			info: t0.vcf.info,
 			*/
 		}
+		if(t0.vcf.plot_mafcov) {
+			tk.vcf.plot_mafcov = true
+		}
 	}
 	return tk
 }

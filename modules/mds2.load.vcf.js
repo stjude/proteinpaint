@@ -173,3 +173,13 @@ if is custom track, will parse header
 		tk.dir = await app.cache_index_promise( tk.indexURL || tk.url+'.tbi' )
 	}
 }
+
+
+
+exports.handle_mafcovplot = async ( q, genome, ds, result ) => {
+	try {
+		
+	}catch(e) {
+		result.error = e.message || e
+	}
+}

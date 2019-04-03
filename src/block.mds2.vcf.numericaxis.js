@@ -4,8 +4,7 @@ import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
 import * as coord from './coord'
-//import * as mds2 from './block.mds2'
-
+import {vcf_m_color,vcf_m_click} from './block.mds2.vcf'
 
 /*
 adapted from legacy code
@@ -381,7 +380,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		})
 		.on('click',m=>{
 			const p=d3event.target.getBoundingClientRect()
-			m_click(m, p, tk, block)
+			vcf_m_click(m, p, tk, block)
 		})
 
 
@@ -411,7 +410,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		.on('mouseover',m=>m_mouseover( m,nm,tk ))
 		.on('mouseout',m=>m_mouseout(m,tk))
 		.on('click',m=>{
-			m_click(m,{left:d3event.clientX,top:d3event.clientY},tk,block)
+			vcf_m_click(m,{left:d3event.clientX,top:d3event.clientY},tk,block)
 			if(block.debugmode) {
 				console.log(m)
 			}
@@ -768,15 +767,6 @@ function m_mouseout(m,tk) {
 
 
 
-function m_click(m, p, tk, block) {
-/* clicking on a single variant
-TODO sunburst?
-*/
-}
-
-
-
-
 function divide_data_to_group ( r, block ) {
 // legacy method
 	const x2mlst=new Map()
@@ -964,7 +954,3 @@ decide following things about the y axis:
 
 
 
-function vcf_m_color ( m, tk ) {
-// TODO using categorical attribute
-	return common.mclass[m.class].color
-}

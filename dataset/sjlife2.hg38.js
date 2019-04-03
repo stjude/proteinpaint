@@ -65,6 +65,9 @@ module.exports={
 				use_info_key: 'AF',
 				in_use: true // to use numerical axis by default
 				// how to define complex things such as boxplot or on the fly summarized data from samples
+			},
+			plot_mafcov: {
+				// may allow jwt
 			}
 		},
 		/*

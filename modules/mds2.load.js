@@ -19,6 +19,7 @@ handle_request
 
 
 exports.handle_request = ( genomes ) => {
+// dispatcher of trigger handlers
 
 return async (req,res) => {
 
@@ -55,6 +56,9 @@ return async (req,res) => {
 
 		// by triggers
 
+		if( q.trigger_mafcovplot ) {
+			await loader_vcf.handle_mafcovplot( q, genome, ds, result )
+		}
 		if( q.trigger_vcfbyrange ) {
 			await loader_vcf.handle_vcfbyrange( q, genome, ds, result )
 		}
