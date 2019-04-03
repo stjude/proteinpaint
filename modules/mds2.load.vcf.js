@@ -71,14 +71,25 @@ ds is either official or custom
 
 				if( mlst ) {
 					for(const m of mlst) {
+
+						common.vcfcopymclass( m, mockblock )
+
+						// m.class is decided, add to counter
+						result.mclass2count[m.class] = ( result.mclass2count[m.class] || 0 ) + 1
+
+						// if to drop this variant
+						if( q.hidden_mclass && q.hidden_mclass.has(m.class) ) {
+							continue
+						}
+
+
+						delete m.csq
 						delete m._m
 						delete m.vcf_ID
 						delete m.sampledata
 
 						if( tk0.nochr ) m.chr = 'chr'+m.chr
 
-						common.vcfcopymclass( m, mockblock )
-						delete m.csq
 
 						r.variants.push(m)
 					}

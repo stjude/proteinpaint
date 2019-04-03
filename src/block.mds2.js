@@ -12,6 +12,8 @@ import * as mds2vcf from './block.mds2.vcf'
 ********************** EXPORTED
 loadTk
 ********************** INTERNAL
+makeTk
+loadTk_finish_closure
 addparameter_rangequery
 
 
@@ -51,27 +53,13 @@ export async function loadTk( tk, block ) {
 		// set height_main
 		tk.height_main = rowheight_vcf
 
-		_finish()
+		_finish(data)
 
 	} catch( e ) {
 
 		tk.height_main = 50
-
-		if(e.nodata) {
-			/*
-			central place to handle "no data", no mutation data in any sample
-			for both single/multi-sample
-			*/
-			trackclear( tk )
-			// remove old data so the legend can update properly
-			//delete tk.data_vcf
-
-			_finish({message:tk.name+': no data in view range'})
-			return
-		}
-
+		_finish({error: (e.message||e)})
 		if(e.stack) console.log( e.stack )
-		_finish( e )
 		return
 	}
 }
@@ -80,15 +68,14 @@ export async function loadTk( tk, block ) {
 
 function makeTk ( tk, block ) {
 
-	/* step 1
-	*/
+	tk.tip2 = new client.Menu({padding:'0px'})
 
 	if( tk.dslabel ) {
 		// official dataset
 		tk.mds = block.genome.datasets[ tk.dslabel ]
 		if(!tk.mds) throw 'dataset not found for '+tk.dslabel
 		if(!tk.mds.track) throw 'mds.track{} missing: dataset not configured for mds2 track'
-		tk.tklabel.text( tk.mds.track.name )
+		tk.name = tk.mds.track.name
 
 		// copy server-side configs
 		if( tk.mds.track.vcf ) {
@@ -100,8 +87,9 @@ function makeTk ( tk, block ) {
 	} else {
 		// custom
 		if(!tk.name) tk.name = 'Unamed'
-		tk.tklabel.text( tk.name )
 	}
+
+	tk.tklabel.text( tk.name )
 
 	if( tk.vcf ) {
 		// vcf row
@@ -139,9 +127,9 @@ async function loadTk_do ( tk, block ) {
 
 
 function loadTk_finish_closure ( tk, block ) {
-	return (error)=>{
-		mds2legend.update(tk, block)
-		block.tkcloakoff( tk, {error: (error ? error.message||error : null)})
+	return (data)=>{
+		mds2legend.update( data, tk, block)
+		block.tkcloakoff( tk, {error: data.error} )
 		block.block_setheight()
 		block.setllabel()
 	}
@@ -158,6 +146,10 @@ function addparameter_rangequery ( tk, block ) {
 	*/
 	const par={
 		genome:block.genome.name,
+	}
+
+	if(tk.legend.mclass.hiddenvalues.size) {
+		par.hidden_mclass = [...tk.legend.mclass.hiddenvalues]
 	}
 
 	if( tk.mds ) {

@@ -46,7 +46,12 @@ return async (req,res) => {
 			}
 		}
 
-		const result = {} // one place to collect result
+		if( q.hidden_mclass ) q.hidden_mclass = new Set(q.hidden_mclass)
+
+		// one place to collect result
+		const result = {
+			mclass2count: {}, // k: dt or mclass, v: number of variants, to collect all classes
+		}
 
 		// by triggers
 
