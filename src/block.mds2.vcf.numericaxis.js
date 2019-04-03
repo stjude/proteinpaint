@@ -10,6 +10,15 @@ import * as coord from './coord'
 /*
 adapted from legacy code
 
+********************** EXPORTED
+render
+********************** INTERNAL
+numeric_make
+setup_axis_scale
+adjustview
+verticallabplace
+
+
 
 based on zoom level, toggle between two views:
 1. cozy view, showing stem, x-shift, labels showing for all discs and point up
@@ -40,9 +49,8 @@ value may be singular number, or boxplot
 
 	const datagroup = divide_data_to_group( r, block )
 
-	const nm = {
-		axisheight: tk.mds.track.vcf.numerical_axis.axis_height
-	}
+	// just a shorthand used for hundreds of times here
+	const nm = tk.vcf.numerical_axis
 
 	numeric_make( nm, r, _g, datagroup, tk, block )
 
@@ -103,15 +111,11 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 	*/
 
 
-	// how the numeric axis is configured
-	const axisconfig = tk.mds.track.vcf.numerical_axis
-	// attributes from axisconfig will be modified here
-
-	setup_axis_scale( r, axisconfig, tk )
+	setup_axis_scale( r, nm, tk )
 
 
 	const numscale = scaleLinear()
-		.domain([axisconfig.minvalue, axisconfig.maxvalue])
+		.domain([ nm.minvalue, nm.maxvalue])
 		.range([0, nm.axisheight])
 
 	// set m._y
@@ -231,16 +235,16 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		.remove()
 	{
 		// axis is inverse of numscale
-		const thisscale = scaleLinear().domain([axisconfig.minvalue, axisconfig.maxvalue]).range([nm.axisheight, 0])
+		const thisscale = scaleLinear().domain([nm.minvalue, nm.maxvalue]).range([nm.axisheight, 0])
 		const thisaxis  = axisLeft().scale(thisscale).ticks(4)
-		if( axisconfig.isinteger ) {
+		if( nm.isinteger ) {
 			thisaxis.tickFormat(d3format('d'))
-			if(axisconfig.maxvalue - axisconfig.minvalue < 3) {
+			if(nm.maxvalue - nm.minvalue < 3) {
 				/*
 				must do this to avoid axis showing redundant labels that doesn't make sense
 				e.g. -1 -2 -2
 				*/
-				thisaxis.ticks( axisconfig.maxvalue - axisconfig.minvalue )
+				thisaxis.ticks( nm.maxvalue - nm.minvalue )
 			}
 		}
 		client.axisstyle({
@@ -249,14 +253,14 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 			fontsize:dotwidth
 		})
 
-		if(axisconfig.minvalue == axisconfig.maxvalue) {
+		if(nm.minvalue == nm.maxvalue) {
 			tk.leftaxis.append('text')
 				.attr('text-anchor','end')
 				.attr('font-size',dotwidth)
 				.attr('dominant-baseline','central')
 				.attr('x', block.tkleftlabel_xshift)
 				.attr('y',nm.axisheight)
-				.text(axisconfig.minvalue)
+				.text(nm.minvalue)
 				.attr('fill','black')
 		}
 		// axis label, text must wrap
@@ -267,24 +271,28 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 				.each(function(){
 					maxw=Math.max(maxw,this.getBBox().width)
 				})
-			const lst = axisconfig.label.split(' ')
-			const y=(nm.axisheight-lst.length*(dotwidth+1))/2
-			let maxlabelw=0
-			lst.forEach((text,i)=>{
-				tk.leftaxis_vcfrow.append('text')
-					.attr('fill','black')
-					.attr('font-size',dotwidth)
-					.attr('dominant-baseline','central')
-					.attr('text-anchor','end')
-					.attr('y', y+(dotwidth+1)*i)
-					.attr('x', -(maxw+15))
-					.text(text)
-					.each(function(){
-						maxlabelw = Math.max( maxlabelw, this.getBBox().width+15+maxw)
-					})
-			})
+			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw+15)
 
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
+			if( nm.label ) {
+				const lst = nm.label.split(' ')
+				const y=(nm.axisheight-lst.length*(dotwidth+1))/2
+				let maxlabelw=0
+				lst.forEach((text,i)=>{
+					tk.leftaxis_vcfrow.append('text')
+						.attr('fill','black')
+						.attr('font-size',dotwidth)
+						.attr('dominant-baseline','central')
+						.attr('text-anchor','end')
+						.attr('y', y+(dotwidth+1)*i)
+						.attr('x', -(maxw+15))
+						.text(text)
+						.each(function(){
+							maxlabelw = Math.max( maxlabelw, this.getBBox().width+15+maxw)
+						})
+				})
+				tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
+			}
+
 		}
 	}
 
@@ -913,7 +921,7 @@ function divide_data_to_group ( r, block ) {
 
 
 
-function setup_axis_scale ( r, axisconfig, tk ) {
+function setup_axis_scale ( r, nm, tk ) {
 /*
 based on the source of axis scaling,
 decide following things about the y axis:
@@ -921,29 +929,33 @@ decide following things about the y axis:
 - name label
 */
 
-	axisconfig.minvalue = 0
-	axisconfig.maxvalue = 0
+	// TODO may allow predefined scale
 
-	delete axisconfig.isinteger
+	nm.minvalue = 0
+	nm.maxvalue = 0
+
+	delete nm.isinteger
 
 	// conditional - using a single info key
-	if( axisconfig.use_info_key ) {
+	if( nm.use_info_key ) {
 
 		for(const m of r.variants) {
-			const v = m.info[axisconfig.use_info_key]
+			const v = m.info[nm.use_info_key]
 			if(Number.isFinite( v )) {
 
 				m._v = v // ?
 
-				axisconfig.minvalue = Math.min( axisconfig.minvalue, v )
-				axisconfig.maxvalue = Math.max( axisconfig.maxvalue, v )
+				nm.minvalue = Math.min( nm.minvalue, v )
+				nm.maxvalue = Math.max( nm.maxvalue, v )
 			}
 		}
 
-		const a = tk.mds.mutationAttribute.attributes[ axisconfig.use_info_key ]
-		if( !a ) throw 'unknown info field: '+axisconfig.use_info_key
-		if( a.isinteger ) axisconfig.isinteger = true
-		axisconfig.label = a.label
+		if( tk.mds && tk.mds.mutationAttribute ) {
+			const a = tk.mds.mutationAttribute.attributes[ nm.use_info_key ]
+			if( !a ) throw 'unknown info field: '+nm.use_info_key
+			if( a.isinteger ) nm.isinteger = true
+			nm.label = a.label
+		}
 		return
 	}
 

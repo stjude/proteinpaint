@@ -29,16 +29,29 @@ return async (req,res) => {
 	try {
 		const genome = genomes[q.genome]
 		if(!genome) throw 'invalid genome'
-		const ds = genome.datasets[ q.dslabel ]
-		if(!ds) throw 'invalid dslabel'
-		if(!ds.track) throw 'no mds2 track found for dataset'
+
+		let ds // official or custom
+
+		if( q.dslabel ) {
+			ds = genome.datasets[ q.dslabel ]
+			if(!ds) throw 'invalid dslabel'
+			if(!ds.track) throw 'no mds2 track found for dataset'
+		} else {
+			ds = {
+				iscustom: 1,
+				track: {
+					vcf: q.vcf
+					// TODO other 
+				}
+			}
+		}
 
 		const result = {} // one place to collect result
 
 		// by triggers
 
 		if( q.trigger_vcfbyrange ) {
-			await loader_vcf.handle_vcfbyrange( q, ds, result )
+			await loader_vcf.handle_vcfbyrange( q, genome, ds, result )
 		}
 
 		// other vcf triggers

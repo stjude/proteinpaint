@@ -5,14 +5,20 @@ const common = require('../src/common')
 
 
 
-exports.handle_vcfbyrange = async ( q, ds, result ) => {
+exports.handle_vcfbyrange = async ( q, genome, ds, result ) => {
 /*
 for range query
+
+ds is either official or custom
 */
 	if(!q.rglst) throw '.rglst[] missing'
 
 	const tk0 = ds.track.vcf
 	if(!tk0) throw 'ds.track.vcf missing'
+
+	if( ds.iscustom ) {
+		await utils.init_one_vcf( tk0, genome )
+	}
 
 	// temporary vcf tk object, may with altered .samples[]
 	const vcftk = {
@@ -143,4 +149,16 @@ function query_vcf_applymode_variantonly ( vcftk, q ) {
 function make_mockblock ( r ) {
 	if( r.usegm_isoform ) return {gmmode:'protein',usegm:{isoform:r.usegm_isoform}}
 	return {}
+}
+
+
+
+async function may_process_customtrack ( tk ) {
+/*
+if is url, will cache index
+if is custom track, will parse header
+*/
+	if( tk.url ) {
+		tk.dir = await app.cache_index_promise( tk.indexURL || tk.url+'.tbi' )
+	}
 }

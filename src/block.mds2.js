@@ -15,6 +15,14 @@ loadTk
 addparameter_rangequery
 
 
+
+if track is official:
+- has .mds{}
+
+track object:
+.vcf{}
+	if is official, will be a copy of .mds.track.vcf{}
+
 */
 
 
@@ -25,7 +33,7 @@ export async function loadTk( tk, block ) {
 	block.tkcloakon(tk)
 	block.block_setheight()
 
-	const _finish = loadTk_finish( tk, block ) // function used at multiple places
+	const _finish = loadTk_finish_closure( tk, block ) // function used at multiple places
 
 	try {
 
@@ -73,19 +81,35 @@ export async function loadTk( tk, block ) {
 function makeTk ( tk, block ) {
 
 	/* step 1
-	validate tk
-	upon error, throw
 	*/
-	if( !tk.dslabel ) throw '.dslabel missing'
-	tk.mds = block.genome.datasets[ tk.dslabel ]
-	if(!tk.mds) throw 'dataset not found for '+tk.dslabel
-	if(!tk.mds.track) throw 'mds.track{} missing: dataset not configured for mds2 track'
 
-	tk.tklabel.text( tk.mds.track.name )
+	if( tk.dslabel ) {
+		// official dataset
+		tk.mds = block.genome.datasets[ tk.dslabel ]
+		if(!tk.mds) throw 'dataset not found for '+tk.dslabel
+		if(!tk.mds.track) throw 'mds.track{} missing: dataset not configured for mds2 track'
+		tk.tklabel.text( tk.mds.track.name )
 
-	// vcf row
-	tk.g_vcfrow = tk.glider.append('g')
-	tk.leftaxis_vcfrow = tk.gleft.append('g')
+		// copy server-side configs
+		if( tk.mds.track.vcf ) {
+			// do not allow dom
+			tk.vcf = JSON.parse(JSON.stringify(tk.mds.track.vcf))
+		}
+		// TODO other file types
+
+	} else {
+		// custom
+		if(!tk.name) tk.name = 'Unamed'
+		tk.tklabel.text( tk.name )
+	}
+
+	if( tk.vcf ) {
+		// vcf row
+		tk.g_vcfrow = tk.glider.append('g')
+		tk.leftaxis_vcfrow = tk.gleft.append('g')
+	}
+
+	// TODO <g> for other file types
 
 	// config
 	tk.config_handle = block.maketkconfighandle(tk)
@@ -114,7 +138,7 @@ async function loadTk_do ( tk, block ) {
 
 
 
-function loadTk_finish ( tk, block ) {
+function loadTk_finish_closure ( tk, block ) {
 	return (error)=>{
 		mds2legend.update(tk, block)
 		block.tkcloakoff( tk, {error: (error ? error.message||error : null)})
@@ -134,10 +158,33 @@ function addparameter_rangequery ( tk, block ) {
 	*/
 	const par={
 		genome:block.genome.name,
-		dslabel: tk.dslabel,
-		rglst: block.tkarg_rglst(tk), // note here: not tkarg_usegm
 	}
 
+	if( tk.mds ) {
+		// official
+		par.dslabel = tk.mds.label
+	} else {
+		// custom, add available file types
+		if( tk.vcf ) {
+			par.vcf = {
+				file: tk.vcf.file,
+				url: tk.vcf.url,
+				indexURL: tk.vcf.indexURL
+			}
+		}
+	}
+
+	if( tk.vcf ) {
+		par.trigger_vcfbyrange = 1
+	}
+	// add trigger for other data types
+	/* TODO
+	for vcf, when rendering image on server, need to know 
+	if any categorical attr is used to class variants instead of mclass
+	*/
+
+
+	par.rglst = block.tkarg_rglst(tk) // note here: not tkarg_usegm
 	if( block.usegm ) {
 		/* to merge par.rglst[] into one region
 		this does not apply to subpanels
@@ -178,15 +225,6 @@ function addparameter_rangequery ( tk, block ) {
 		}
 	}
 
-	if( tk.mds.track.vcf ) {
-		par.trigger_vcfbyrange = 1
-	}
-	// add trigger for other data types
-
-	/* TODO
-	for vcf, when rendering image on server, need to know 
-	if any categorical attr is used to class variants instead of mclass
-	*/
 
 	return par
 }
@@ -214,4 +252,10 @@ function apply_scale_to_region ( rglst ) {
 			r.scale.domain([r.start, r.stop]).range([0,r.width])
 		}
 	}
+}
+
+
+
+
+function configPanel ( tk, block ) {
 }

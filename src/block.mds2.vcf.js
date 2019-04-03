@@ -15,7 +15,7 @@ export function may_render_vcf ( data, tk, block ) {
 /* for now, assume always in variant-only mode for vcf
 return vcf row height
 */
-	if( !tk.mds.track.vcf ) return 0
+	if( !tk.vcf ) return 0
 	if( !data.vcf ) return 0
 	if( !data.vcf.rglst ) return 0
 
@@ -78,7 +78,7 @@ function vcf_render_variants ( r, g, tk, block ) {
 got the actual list of variants at r.variants[], render them
 */
 
-	if( tk.mds.track.vcf.numerical_axis && tk.mds.track.vcf.numerical_axis.in_use ) {
+	if( tk.vcf.numerical_axis && tk.vcf.numerical_axis.in_use ) {
 		// numerical axis by info field
 		const height = numericaxis.render( r, g, tk, block )
 		return height
