@@ -366,7 +366,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 			d3event.stopPropagation()
 		})
 		.on('mouseover',m=>{
-			m_mouseover(m,tk)
+			m_mouseover( m,nm,tk )
 		})
 		.on('mouseout',m=>{
 			m_mouseout(m,tk)
@@ -400,7 +400,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		.on('mousedown',()=>{
 			d3event.stopPropagation()
 		})
-		.on('mouseover',m=>m_mouseover(m,tk))
+		.on('mouseover',m=>m_mouseover( m,nm,tk ))
 		.on('mouseout',m=>m_mouseout(m,tk))
 		.on('click',m=>{
 			m_click(m,{left:d3event.clientX,top:d3event.clientY},tk,block)
@@ -646,11 +646,11 @@ function skewer2_setstem(d,nm) {
 
 
 
-function m_mouseover(m,tk) {
+function m_mouseover( m, nm, tk ) {
 	if(m.textlabel) {
 		d3select(m.textlabel).attr('font-size',m._labfontsize*1.1)
 	}
-	const nm=tk.numericmode
+
 	if(nm.showsamplebar) return
 	if(nm.showgenotypebyvalue) return
 
@@ -761,72 +761,9 @@ function m_mouseout(m,tk) {
 
 
 function m_click(m, p, tk, block) {
-	if(m.dt==common.dtfusionrna || m.dt==common.dtsv) {
-		// should not happen
-		itemtable({
-			mlst:[m],
-			pane:true,
-			x:p.left-10,y:p.top-10,
-			tk:tk,
-			block:block,
-			svgraph:true
-			})
-		return
-	}
-
-	if(m.sampledata && tk.ds.cohort && tk.ds.cohort.levels && tk.ds.cohort.variantsunburst) {
-		/*
-		conditions met
-		to use the sampledata from this variant and make a sunburst instead of itemtable
-		*/
-		if(m.sampledata.length==0 && tk.ds.vcfcohorttrack) {
-			// when this tk is available must always query, since m.sampledata is default empty array!
-			tk.pica.g.append('text')
-				.text('Loading ...')
-				.attr('font-family',client.font)
-				.attr('font-size',13)
-				.attr('stroke','white')
-				.attr('stroke-width',3)
-				.attr('text-anchor','middle')
-				.attr('dominant-baseline','central')
-			tk.pica.g.append('text')
-				.text('Loading ...')
-				.attr('font-family',client.font)
-				.attr('font-size',13)
-				.attr('fill','black')
-				.attr('text-anchor','middle')
-				.attr('dominant-baseline','central')
-			tk.pica.g.attr('transform','translate('+(m.aa.x+m.xoff)+','+(tk.numericmode.toplabelheight+tk.numericmode.axisheight+m.radius-m._y)+')')
-			query_vcfcohorttrack(m, tk, block)
-			.then(m2=>{
-				tk.pica.g.selectAll('*').remove()
-				if(m2) {
-					m.sampledata=m2.sampledata
-					m2sunburst( m, tk, block)
-				} else {
-					// this site is not found
-				}
-			})
-			.catch(err=>{
-				tk.pica.g.selectAll('*').remove()
-				block.error('Error getting data: '+err)
-			})
-			return
-		}
-		if(m.sampledata.length>1) {
-			m2sunburst( m, tk, block)
-			return
-		}
-	}
-
-	itemtable({
-		mlst:[m],
-		pane:true,
-		x:p.left-10,
-		y:p.top-10,
-		tk:tk,
-		block:block
-	})
+/* clicking on a single variant
+TODO sunburst?
+*/
 }
 
 
