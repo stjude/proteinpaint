@@ -60,7 +60,7 @@ module.exports={
 			file:'hg38/sjlife/cohort.vcf.gz',
 			viewrangeupperlimit: 200000,
 			numerical_axis: {
-				axis_height: 150,
+				axisheight: 150,
 				info_keys: ['AF','AF_gnomAD'],
 				use_info_key: 'AF',
 				in_use: true // to use numerical axis by default
