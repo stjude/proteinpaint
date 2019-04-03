@@ -4,7 +4,7 @@ import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
-import * as vcf_numericaxis from './block.mds2.vcf.numericaxis'
+import * as mds2vcf from './block.mds2.vcf'
 
 
 
@@ -38,7 +38,7 @@ export async function loadTk( tk, block ) {
 
 		const data = await loadTk_do( tk, block )
 
-		const rowheight_vcf = may_render_vcf( data, tk, block )
+		const rowheight_vcf = mds2vcf.may_render_vcf( data, tk, block )
 
 		// set height_main
 		tk.height_main = rowheight_vcf
@@ -194,83 +194,6 @@ function addparameter_rangequery ( tk, block ) {
 
 
 
-function may_render_vcf ( data, tk, block ) {
-/* for now, assume always in variant-only mode for vcf
-*/
-	if( !tk.mds.track.vcf ) return 0
-	if( !data.vcf ) return 0
-	if( !data.vcf.rglst ) return 0
-
-	tk.g_vcfrow.selectAll('*').remove()
-
-	/* current implementation ignore subpanels
-	to be fixed in p4
-	*/
-
-	//apply_scale_to_region( data.vcf.rglst )
-
-	let rowheight = 0
-
-	for(const r of data.vcf.rglst) {
-		
-		const g = tk.g_vcfrow.append('g')
-			.attr('transform','translate('+r.xoff+',0)')
-
-		if( r.rangetoobig ) {
-			r.text_rangetoobig = g.append('text')
-				.text( r.rangetoobig )
-				.attr('text-anchor','middle')
-				.attr('dominant-baseline','central')
-				.attr('x', r.width/2 )
-				// set y after row height is decided
-			rowheight = Math.max( rowheight, 50 )
-			continue
-		}
-
-		if( r.imgsrc ) {
-			g.append('image')
-				.attr('width', r.width)
-				.attr('height', r.imgheight)
-				.attr('xlink:href', r.imgsrc)
-			rowheight = Math.max( rowheight, r.imgheight )
-			continue
-		}
-
-		if( r.variants ) {
-			const height = vcf_render_variants( r, g, tk, block )
-			rowheight = Math.max( rowheight, height )
-			continue
-		}
-	}
-
-	// row height set
-	for(const r of data.vcf.rglst) {
-		if(r.rangetoobig) {
-			r.text_rangetoobig.attr('y', rowheight/2 )
-		}
-	}
-
-	return rowheight
-}
-
-
-
-
-function vcf_render_variants ( r, g, tk, block ) {
-/*
-got the actual list of variants at r.variants[], render them
-*/
-
-	if( tk.mds.track.vcf.numerical_axis && tk.mds.track.vcf.numerical_axis.in_use ) {
-		// numerical axis by info field
-		const height = vcf_numericaxis.render( r, g, tk, block )
-		return height
-	}
-
-	// not numerical axis
-	return 50
-}
-
 
 
 
@@ -280,7 +203,8 @@ got the actual list of variants at r.variants[], render them
 
 
 function apply_scale_to_region ( rglst ) {
-// do not use, this does not account for rglst under gm mode
+// do not use
+// this does not account for rglst under gm mode
 	// such as data.vcf.rglst
 	for(const r of rglst) {
 		r.scale = scaleLinear()
