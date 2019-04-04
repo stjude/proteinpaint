@@ -67,6 +67,7 @@ module.exports={
 				// how to define complex things such as boxplot or on the fly summarized data from samples
 			},
 			plot_mafcov: {
+				//show_samplename: 1
 				// may allow jwt
 			}
 		},

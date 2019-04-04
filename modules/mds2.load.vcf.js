@@ -4,6 +4,13 @@ const common = require('../src/common')
 
 
 
+/*
+********************** EXPORTED
+handle_vcfbyrange
+********************** INTERNAL
+*/
+
+
 
 exports.handle_vcfbyrange = async ( q, genome, ds, result ) => {
 /*
@@ -176,10 +183,3 @@ if is custom track, will parse header
 
 
 
-exports.handle_mafcovplot = async ( q, genome, ds, result ) => {
-	try {
-		
-	}catch(e) {
-		result.error = e.message || e
-	}
-}

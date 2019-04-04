@@ -4,6 +4,7 @@ const path = require('path')
 const utils = require('./utils')
 const common = require('../src/common')
 const loader_vcf = require('./mds2.load.vcf')
+const loader_vcf_mafcov = require('./mds2.load.vcf.plot.mafcovplot')
 // add loaders for other file types
 
 
@@ -57,7 +58,7 @@ return async (req,res) => {
 		// by triggers
 
 		if( q.trigger_mafcovplot ) {
-			await loader_vcf.handle_mafcovplot( q, genome, ds, result )
+			await loader_vcf_mafcov.handle_mafcovplot( q, genome, ds, result )
 		}
 		if( q.trigger_vcfbyrange ) {
 			await loader_vcf.handle_vcfbyrange( q, genome, ds, result )

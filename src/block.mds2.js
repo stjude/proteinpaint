@@ -40,7 +40,7 @@ export async function loadTk( tk, block ) {
 	try {
 
 		if(tk.uninitialized) {
-			makeTk(tk,block)
+			await makeTk(tk,block)
 			delete tk.uninitialized
 		}
 
@@ -66,12 +66,14 @@ export async function loadTk( tk, block ) {
 
 
 
-function makeTk ( tk, block ) {
+async function makeTk ( tk, block ) {
 
 	tk.tip2 = new client.Menu({padding:'0px'})
 
 	if( tk.dslabel ) {
+
 		// official dataset
+
 		tk.mds = block.genome.datasets[ tk.dslabel ]
 		if(!tk.mds) throw 'dataset not found for '+tk.dslabel
 		if(!tk.mds.track) throw 'mds.track{} missing: dataset not configured for mds2 track'
@@ -85,8 +87,13 @@ function makeTk ( tk, block ) {
 		// TODO other file types
 
 	} else {
+
 		// custom
 		if(!tk.name) tk.name = 'Unamed'
+
+		if( tk.vcf ) {
+			await mds2vcf.getvcfheader_customtk( tk.vcf, block.genome )
+		}
 	}
 
 	tk.tklabel.text( tk.name )

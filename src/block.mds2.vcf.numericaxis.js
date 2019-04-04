@@ -253,7 +253,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		})
 
 		if(nm.minvalue == nm.maxvalue) {
-			tk.leftaxis.append('text')
+			tk.leftaxis_vcfrow.append('text')
 				.attr('text-anchor','end')
 				.attr('font-size',dotwidth)
 				.attr('dominant-baseline','central')
@@ -929,8 +929,23 @@ decide following things about the y axis:
 	// conditional - using a single info key
 	if( nm.use_info_key ) {
 
+		// if the INFO is A, apply to m.altinfo, else, to m.info
+		let usealtinfo = tk.vcf.info[ nm.use_info_key ].Number == 'A'
+
 		for(const m of r.variants) {
-			const v = m.info[nm.use_info_key]
+
+			let v = null
+
+			if( usealtinfo ) {
+				if( m.altinfo ) {
+					v = m.altinfo[ nm.use_info_key ]
+				}
+			} else {
+				if( m.info ) {
+					v = m.info[ nm.use_info_key ]
+				}
+			}
+
 			if(Number.isFinite( v )) {
 
 				m._v = v // ?

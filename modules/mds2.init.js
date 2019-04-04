@@ -48,10 +48,8 @@ exports.client_copy = ( ds ) => {
 	if(t0.vcf) {
 		tk.vcf = {
 			numerical_axis: t0.vcf.numerical_axis,
-			/*
 			format: t0.vcf.format,
 			info: t0.vcf.info,
-			*/
 		}
 		if(t0.vcf.plot_mafcov) {
 			tk.vcf.plot_mafcov = true
@@ -87,6 +85,7 @@ async function init_vcf ( vcftk, genome ) {
 				const a = vcftk.info[ key ]
 				if( !a ) throw 'INFO field "'+key+'" not found for numerical_axis'
 				if( a.Type!='Float' && a.Type!='Integer' ) throw 'INFO field "'+key+'" from numerical_axis not of integer or float type'
+				if( a.Number!='1' && a.Number!='A' ) throw 'for numerical axis, INFO field "'+key+'" only allows to be Number=1 or Number=A'
 			}
 		}
 		if(vcftk.numerical_axis.use_info_key) {
@@ -95,6 +94,7 @@ async function init_vcf ( vcftk, genome ) {
 			if( !a ) throw 'INFO field "'+vcftk.numerical_axis.use_info_key+'" not found for numerical_axis'
 			if( a.Type!='Float' && a.Type!='Integer' ) throw 'INFO field "'+vcftk.numerical_axis.use_info_key+'" from numerical_axis not of integer or float type'
 		}
+		// TODO allow other type of plot e.g. boxplot
 	}
 
 	if( vcftk.plot_mafcov ) {

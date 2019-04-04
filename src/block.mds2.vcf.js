@@ -1,6 +1,8 @@
-import * as numericaxis from './block.mds2.vcf.numericaxis'
 import * as common from './common'
 import * as client from './client'
+import {vcfparsemeta} from './vcf'
+import * as numericaxis from './block.mds2.vcf.numericaxis'
+import {may_show_mafcovplot} from './block.mds2.vcf.mafcovplot'
 
 
 /*
@@ -8,8 +10,8 @@ import * as client from './client'
 may_render_vcf
 vcf_m_color
 vcf_m_click
+getvcfheader_customtk
 ********************** INTERNAL
-
 
 */
 
@@ -122,36 +124,26 @@ p{}
 
 
 
-function may_show_mafcovplot ( div, m, tk, block ) {
-	const wait = div.append('div')
-		.text('Loading...')
-	const par = {
-		genome: block.genome.name,
-		trigger_mafcovplot:1,
-		m: {
-			chr: m.chr,
-			pos: m.pos,
-			ref: m.ref,
-			alt: m.alt
-		}
+
+
+
+
+export function getvcfheader_customtk ( tk, genome ) {
+
+	const arg = {
+		file: tk.file,
+		url: tk.url,
+		indexURL: tk.indexURL
 	}
-	if(tk.mds) {
-		par.dslabel = tk.mds.label
-	} else {
-		par.vcf = {
-			file: tk.vcf.file,
-			url: tk.vcf.url,
-			indexURL: tk.vcf.indexURL
-		}
-	}
-	client.dofetch('mds2',par)
-	.then(data=>{
+	return client.dofetch('vcfheader', arg)
+	.then( data => {
 		if(data.error) throw data.error
-		wait.remove()
-		console.log(data)
-	})
-	.catch(e=>{
-		wait.text('ERROR: '+(e.message||e))
-		if(e.stack) console.log(e.stack)
+
+		const [info,format,samples,errs]=vcfparsemeta(data.metastr.split('\n'))
+		if(errs) throw 'Error parsing VCF meta lines: '+errs.join('; ')
+		tk.info = info
+		tk.format = format
+		tk.samples = samples
+		tk.nochr = common.contigNameNoChr( genome, data.chrstr.split('\n') )
 	})
 }
