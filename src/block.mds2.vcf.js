@@ -114,10 +114,41 @@ p{}
 
 	const pane = client.newpane({x: p.left, y: p.top})
 
+	const buttonrow = pane.body.append('div')
+		.style('margin','20px')
+
+	const showholder = pane.body.append('div')
+
+
 	if( tk.vcf.plot_mafcov ) {
-		const div = pane.body.append('div')
-			.style('margin','20px')
-		may_show_mafcovplot( div, m, tk, block )
+
+		let loading = false,
+			loaded = false
+
+		const button = buttonrow.append('div')
+			.style('display','inline-block')
+			.attr('class','sja_menuoption')
+			.text('Coverage-maf plot')
+
+		const plotdiv = showholder.append('div')
+
+		button.on('click', async ()=>{
+
+			if( loading ) return
+			if( loaded ) {
+				if(plotdiv.style('display')=='none') {
+					client.appear(plotdiv)
+				} else {
+					client.disappear(plotdiv)
+				}
+				return
+			}
+			loading=true
+			await may_show_mafcovplot( plotdiv, m, tk, block )
+			loading=false
+			loaded=true
+		})
+
 	}
 }
 
