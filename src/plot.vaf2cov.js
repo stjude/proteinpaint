@@ -45,6 +45,13 @@ export default function plot_vaf2cov(arg)
 
 
 
+
+// sampleobj is optional
+for(const i of arg.data) {
+	if(!i.sampleobj) i.sampleobj = {}
+}
+
+
 let width = arg.width || 200
 let height= arg.height || 200
 const gray=arg.color || '#999'
