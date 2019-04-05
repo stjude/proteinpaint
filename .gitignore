@@ -4,6 +4,7 @@
 npm-debug.log
 
 public/bin/*
+public/tmp/*
 public/data/*
 public/stage/*
 public/prod/*
