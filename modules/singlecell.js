@@ -92,7 +92,6 @@ HEIGHT 800
 VIEWPOINT 0 0 0 1 0 0 0
 POINTS 960000
 DATA ascii
-X Y Z
 `
 
 	const filename = 'tmp/'+Math.random()+'.pcd'

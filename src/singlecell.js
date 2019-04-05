@@ -4,7 +4,8 @@ import {axisTop} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 
-
+var container, stats
+var camera, controls, scene, renderer
 
 export async function init ( arg, holder ) {
 
@@ -20,9 +21,10 @@ export async function init ( arg, holder ) {
 	*/
 
 	const filename = ( await load_cell_pcd(obj) ).pcdfile
-	console.log('http://localhost:3001/'+filename)
+	// console.log('http://localhost:3001/'+filename)
 
-	point_cloud()
+	point_cloud(filename)
+	animate()
 }
 
 
@@ -105,15 +107,10 @@ or selected a gene for overlaying
 
 
 
-function point_cloud(){
+function point_cloud(filename){
 	if ( WEBGL.isWebGLAvailable() === false ) {
-
 		document.body.appendChild( WEBGL.getWebGLErrorMessage() )
-	
 	}
-
-	let container, stats
-	let camera, controls, scene, renderer
 
 
 	scene = new THREE.Scene();
@@ -147,4 +144,80 @@ function point_cloud(){
 	renderer.setPixelRatio( window.devicePixelRatio )
 	renderer.setSize( window.innerWidth, window.innerHeight )
 	document.body.appendChild( renderer.domElement )
+
+	// const pcd_ab = str2ab(pcddata)
+
+	var loader = new THREE.PCDLoader();
+	// loader.parse( pcd_ab, 'scRNA.pcd', function ( points ) {
+		loader.load( filename, function ( points ) {
+		
+		points.material.size = 0.05
+		scene.add( points )
+		var center = points.geometry.boundingSphere.center
+		controls.target.set( center.x, center.y, center.z )
+		controls.update()
+	
+	} )
+
+	container = document.createElement( 'div' )
+	document.body.appendChild( container )
+	container.appendChild( renderer.domElement )
+
+	// stats = new Stats()
+	// container.appendChild( stats.dom )
+
+	window.addEventListener( 'resize', onWindowResize, false )
+
+	// window.addEventListener( 'keypress', keyboard )
+}
+
+function str2ab(str) {
+    const array = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) {
+        array[i] = str.charCodeAt(i);
+	}
+    return array.buffer;
+}
+
+function onWindowResize() {
+
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	controls.handleResize();
+
+}
+
+function keyboard( ev ) {
+
+	var points = scene.getObjectByName( 'scRNA.pcd' );
+
+	switch ( ev.key || String.fromCharCode( ev.keyCode || ev.charCode ) ) {
+
+		case '+':
+			points.material.size *= 1.2;
+			points.material.needsUpdate = true;
+			break;
+
+		case '-':
+			points.material.size /= 1.2;
+			points.material.needsUpdate = true;
+			break;
+
+		case 'c':
+			points.material.color.setHex( Math.random() * 0xffffff );
+			points.material.needsUpdate = true;
+			break;
+
+	}
+
+}
+
+function animate() {
+
+	requestAnimationFrame( animate );
+	controls.update();
+	renderer.render( scene, camera );
+	// stats.update();
+
 }
