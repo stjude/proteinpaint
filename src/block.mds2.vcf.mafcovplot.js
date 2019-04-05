@@ -12,8 +12,6 @@ may_show_mafcovplot
 
 
 export function may_show_mafcovplot ( holder, m, tk, block ) {
-	const wait = holder.append('div')
-		.text('Loading...')
 	const par = {
 		genome: block.genome.name,
 		trigger_mafcovplot:1,
@@ -33,11 +31,10 @@ export function may_show_mafcovplot ( holder, m, tk, block ) {
 			indexURL: tk.vcf.indexURL
 		}
 	}
-	client.dofetch('mds2',par)
+
+	return client.dofetch('mds2',par)
 	.then(data=>{
 		if(data.error) throw data.error
-		wait.remove()
-
 
 
 		// TODO if is server rendered image
@@ -48,7 +45,7 @@ export function may_show_mafcovplot ( holder, m, tk, block ) {
 		}
 	})
 	.catch(e=>{
-		wait.text('ERROR: '+(e.message||e))
+		holder.text('ERROR: '+(e.message||e))
 		if(e.stack) console.log(e.stack)
 	})
 }

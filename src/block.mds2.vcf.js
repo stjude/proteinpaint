@@ -144,9 +144,11 @@ p{}
 				return
 			}
 			loading=true
+			button.text('Loading...')
 			await may_show_mafcovplot( plotdiv, m, tk, block )
 			loading=false
 			loaded=true
+			button.text('Coverage-maf plot')
 		})
 
 	}
