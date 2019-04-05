@@ -14,8 +14,13 @@ export async function init ( arg, holder ) {
 	obj.genome = arg.genome
 	obj.holder = holder
 
-	const pcddata = await load_cell_pcd( obj )
+/*
+	const pcddata = ( await load_cell_pcd( obj ) ).pcd
 	console.log(pcddata.split('\n').slice(0,50))
+	*/
+
+	const filename = ( await load_cell_pcd(obj) ).pcdfile
+	console.log('http://localhost:3001/'+filename)
 
 	point_cloud()
 }
@@ -92,7 +97,7 @@ or selected a gene for overlaying
 		if(data.error) throw data.error
 
 		wait.remove()
-		return data.pcd
+		return data
 	})
 }
 

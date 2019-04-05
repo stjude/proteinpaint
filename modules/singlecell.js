@@ -25,9 +25,12 @@ exports.handle_singlecell_closure = ( genomes ) => {
 			if(!gn) throw 'invalid genome'
 
 			if( q.getpcd ) {
-				await get_pcd( q, gn, res )
+				//await get_pcd( q, gn, res )
+				await get_pcd_tempfile( q, gn, res )
 				return
 			}
+
+			// other triggers
 
 		} catch(e) {
 			res.send({error: (e.message || e)})
@@ -64,6 +67,53 @@ X Y Z
 `
 	res.send({pcd: header + lines.join('\n')})
 }
+
+
+
+
+async function get_pcd_tempfile ( q, gn, res ) {
+
+/* hardcoded to 3d
+TODO 2d
+*/
+
+	const lines = await slice_file( q, gn, res )
+	// one line per cell
+
+
+	const header = `# .PCD v.7 - Point Cloud Data file format
+VERSION .7
+FIELDS x y z rgb
+SIZE 4 4 4 4
+TYPE F F F F
+COUNT 20 20 20 20
+WIDTH 1200
+HEIGHT 800
+VIEWPOINT 0 0 0 1 0 0 0
+POINTS 960000
+DATA ascii
+X Y Z
+`
+
+	const filename = 'tmp/'+Math.random()+'.pcd'
+	await write_file( header+lines.join('\n'), './public/'+filename)
+	res.send({pcdfile:filename})
+}
+
+
+
+
+
+function write_file ( text, filepath ) {
+// this func should go to module/utils.js
+	return new Promise((resolve, reject)=>{
+		fs.writeFile( filepath, text, (err)=>{
+			if(err) reject('cannot write')
+			resolve()
+		})
+	})
+}
+
 
 
 
