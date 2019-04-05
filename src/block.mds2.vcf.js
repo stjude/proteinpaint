@@ -2,7 +2,8 @@ import * as common from './common'
 import * as client from './client'
 import {vcfparsemeta} from './vcf'
 import * as numericaxis from './block.mds2.vcf.numericaxis'
-import {may_show_mafcovplot} from './block.mds2.vcf.mafcovplot'
+import {show_mafcovplot} from './block.mds2.vcf.mafcovplot'
+import {termdb_bygenotype} from './block.mds2.vcf.termdb'
 
 
 /*
@@ -119,39 +120,8 @@ p{}
 
 	const showholder = pane.body.append('div')
 
-
-	if( tk.vcf.plot_mafcov ) {
-
-		let loading = false,
-			loaded = false
-
-		const button = buttonrow.append('div')
-			.style('display','inline-block')
-			.attr('class','sja_menuoption')
-			.text('Coverage-maf plot')
-
-		const plotdiv = showholder.append('div')
-
-		button.on('click', async ()=>{
-
-			if( loading ) return
-			if( loaded ) {
-				if(plotdiv.style('display')=='none') {
-					client.appear(plotdiv)
-				} else {
-					client.disappear(plotdiv)
-				}
-				return
-			}
-			loading=true
-			button.text('Loading...')
-			await may_show_mafcovplot( plotdiv, m, tk, block )
-			loading=false
-			loaded=true
-			button.text('Coverage-maf plot')
-		})
-
-	}
+	maymakebutton_vcf_termdbbygenotype( buttonrow, showholder, m, tk, block )
+	maymakebutton_vcf_mafcovplot( buttonrow, showholder, m, tk, block )
 }
 
 
@@ -178,5 +148,83 @@ export function getvcfheader_customtk ( tk, genome ) {
 		tk.format = format
 		tk.samples = samples
 		tk.nochr = common.contigNameNoChr( genome, data.chrstr.split('\n') )
+	})
+}
+
+
+
+
+function maymakebutton_vcf_mafcovplot ( buttonrow, showholder, m, tk, block ) {
+// only for vcf item
+
+	if(!tk.vcf) return
+	if(!tk.vcf.plot_mafcov ) return
+
+	let loading = false,
+		loaded = false
+
+	const button = buttonrow.append('div')
+		.style('display','inline-block')
+		.attr('class','sja_menuoption')
+		.text('Coverage-maf plot')
+
+	const plotdiv = showholder.append('div')
+
+	button.on('click', async ()=>{
+
+		if( loading ) return
+		if( loaded ) {
+			if(plotdiv.style('display')=='none') {
+				client.appear(plotdiv)
+			} else {
+				client.disappear(plotdiv)
+			}
+			return
+		}
+		loading=true
+		button.text('Loading...')
+		await show_mafcovplot( plotdiv, m, tk, block )
+		loading=false
+		loaded=true
+		button.text('Coverage-maf plot')
+	})
+}
+
+
+
+
+function maymakebutton_vcf_termdbbygenotype ( buttonrow, showholder, m, tk, block ) {
+// only for vcf, by variant genotype
+
+	if(!tk.vcf) return
+	if(!tk.vcf.termdb_bygenotype) return
+
+	let loading = false,
+		loaded = false
+
+	const button = buttonrow.append('div')
+		.style('display','inline-block')
+		.attr('class','sja_menuoption')
+		.text('Clinical info')
+
+	const plotdiv = showholder.append('div')
+
+	button.on('click', async ()=>{
+
+		if( loading ) return
+		if( loaded ) {
+			if(plotdiv.style('display')=='none') {
+				client.appear(plotdiv)
+			} else {
+				client.disappear(plotdiv)
+			}
+			return
+		}
+		loading=true
+		button.text('Loading...')
+		await termdb_bygenotype( plotdiv, m, tk, block )
+		loading=false
+		loaded=true
+		button.text('Clinical info')
 	})
 }

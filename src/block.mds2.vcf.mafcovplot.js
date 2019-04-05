@@ -3,7 +3,7 @@ import * as client from './client'
 
 /*
 ********************** EXPORTED
-may_show_mafcovplot
+show_mafcovplot
 ********************** INTERNAL
 */
 
@@ -11,7 +11,7 @@ may_show_mafcovplot
 
 
 
-export function may_show_mafcovplot ( holder, m, tk, block ) {
+export function show_mafcovplot ( holder, m, tk, block ) {
 	const par = {
 		genome: block.genome.name,
 		trigger_mafcovplot:1,

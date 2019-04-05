@@ -67,8 +67,12 @@ module.exports={
 				// how to define complex things such as boxplot or on the fly summarized data from samples
 			},
 			plot_mafcov: {
-				//show_samplename: 1
+				show_samplename: 1
 				// may allow jwt
+			},
+			termdb_bygenotype: {
+				// this only works for stratifying samples by mutation genotype
+				// svcnv or svcnv+snv combined may need its own trigger
 			}
 		},
 		/*

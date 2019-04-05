@@ -27,11 +27,11 @@ exports.init = async ( ds, genome ) => {
 	if(!tk.name) tk.name = ds.label
 
 	if(tk.vcf) {
-		await init_vcf( tk.vcf, genome )
+		await init_vcf( tk.vcf, genome, ds )
 	}
 
 	if(tk.svcnv) {
-		init_svcnv( tk.svcnv )
+		init_svcnv( tk.svcnv, genome, ds )
 	}
 }
 
@@ -40,6 +40,7 @@ exports.init = async ( ds, genome ) => {
 
 exports.client_copy = ( ds ) => {
 /* make client copy of the track
+the client copy stays at .mds.track{}
 */
 	const t0 = ds.track
 	const tk = {
@@ -54,6 +55,9 @@ exports.client_copy = ( ds ) => {
 		if(t0.vcf.plot_mafcov) {
 			tk.vcf.plot_mafcov = true
 		}
+		if(t0.vcf.termdb_bygenotype) {
+			tk.vcf.termdb_bygenotype = true
+		}
 	}
 	return tk
 }
@@ -61,7 +65,7 @@ exports.client_copy = ( ds ) => {
 
 
 
-async function init_vcf ( vcftk, genome ) {
+async function init_vcf ( vcftk, genome, ds ) {
 
 	if( vcftk.file ) {
 
@@ -103,6 +107,11 @@ async function init_vcf ( vcftk, genome ) {
 		if(!vcftk.format.AD) throw '.plot_mafcov enabled but the AD FORMAT field is missing'
 		if(vcftk.format.AD.Number!='R') throw 'AD FORMAT field Number=R is not true'
 		if(vcftk.format.AD.Type!='Integer') throw 'AD FORMAT field Type=Integer is not true'
+	}
+
+	if( vcftk.termdb_bygenotype ) {
+		if(!ds.cohort) throw 'termdb_bygenotype but ds.cohort missing'
+		if(!ds.cohort.termdb) throw 'termdb_bygenotype but ds.cohort.termdb missing'
 	}
 }
 
