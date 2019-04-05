@@ -13,6 +13,8 @@ export async function init ( arg, holder ) {
 
 	obj.cells = await load_cell_list( obj )
 	console.log('number of cells: ', obj.cells.length, ' first cell: ', obj.cells[0])
+
+	point_cloud()
 }
 
 
@@ -74,4 +76,48 @@ async function load_cell_list ( obj ) {
 		cells.push(j)
 	}
 	return cells
+}
+
+function point_cloud(){
+	if ( WEBGL.isWebGLAvailable() === false ) {
+
+		document.body.appendChild( WEBGL.getWebGLErrorMessage() )
+	
+	}
+
+	let container, stats
+	let camera, controls, scene, renderer
+
+
+	scene = new THREE.Scene();
+	scene.background = new THREE.Color( 0x000000 )
+
+	camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 )
+
+	camera.position.x = 20
+	camera.position.y = -10
+	camera.position.z = 20
+	camera.up.set( 0, 0, 1 )
+
+	controls = new THREE.TrackballControls( camera )
+
+	controls.rotateSpeed = 2.0
+	controls.zoomSpeed = 0.7
+	controls.panSpeed = 0.7
+
+	controls.noZoom = false
+	controls.noPan = false
+
+	controls.staticMoving = true
+	controls.dynamicDampingFactor = 0.3
+
+	controls.minDistance = 0.3
+	controls.maxDistance = 0.3 * 200
+
+	scene.add( camera )
+
+	renderer = new THREE.WebGLRenderer( { antialias: true } )
+	renderer.setPixelRatio( window.devicePixelRatio )
+	renderer.setSize( window.innerWidth, window.innerHeight )
+	document.body.appendChild( renderer.domElement )
 }
