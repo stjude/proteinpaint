@@ -11,8 +11,11 @@ export async function init ( arg, holder ) {
 	const obj = await load_json( arg )
 	validate_obj( obj )
 
-	obj.cells = await load_cell_list( obj )
-	console.log('number of cells: ', obj.cells.length, ' first cell: ', obj.cells[0])
+	obj.genome = arg.genome
+	obj.holder = holder
+
+	const pcddata = await load_cell_pcd( obj )
+	console.log(pcddata.split('\n').slice(0,50))
 
 	point_cloud()
 }
@@ -32,6 +35,7 @@ function validate_obj ( obj ) {
 	if( !obj.cells.file ) throw '.cells.file missing'
 	if( !obj.cells.axis2columnidx) throw '.cells.axis2columnidx missing'
 	if(obj.cells.categories) {
+		if(!Array.isArray(obj.cells.categories)) throw '.cells.categories should be an array'
 		for(const c of obj.cells.categories) {
 			if(!c.columnidx) throw 'columnidx missing from category '+c
 			if(c.autocolor) {
@@ -43,40 +47,58 @@ function validate_obj ( obj ) {
 
 
 
-async function load_cell_list ( obj ) {
-	
-	const delimiter = obj.cells.delimiter || '\t'
 
-	const tmp = await client.dofetch('textfile',{file:obj.cells.file})
+async function load_cell_pcd ( obj ) {
+/*
+to load a new pcd file
+call this when using a new category,
+or selected a gene for overlaying
+*/
 
-	const lines = tmp.text.split('\n')
+	const wait = obj.holder.append('div')
+		.text('Loading data...')
 
-	// if to use a column (cell type) to color the cells
-	let use_category
-	if( obj.cells.categories ) {
-		use_category = obj.cells.categories.find( i=> i.in_use )
-		if( !use_category ) {
-			// just use the first
-			use_category = obj.cells.categories[0]
+	const arg = {
+		genome: obj.genome.name,
+		textfile: obj.cells.file,
+		delimiter: obj.cells.delimiter || '\t',
+		getpcd: {
+			coord: obj.cells.axis2columnidx
 		}
 	}
 
-	const cells = []
+	if( Number.isInteger(obj.use_category_index) ) {
+		/*
+		this is the array index of obj.categories[]
+		to use this category for coloring cells
+		*/
+		if(!obj.cells.categories) throw 'using category index but cells.categories[] missing'
+		const cat = obj.cells.categories[ obj.use_category_index ]
+		if(!cat) throw 'category array index out of bound'
+		arg.getpcd.category_index = cat.columnidx
+		if( cat.autocolor ) {
+			arg.getpcd.category_autocolor = true
+		} else {
+			throw 'unknow coloring scheme for category '+cat.name
+		}
 
-	for(let i=1; i<lines.length; i++) {
-		const l = lines[i].split( delimiter )
-		const j = {}
-		for(const k in obj.cells.axis2columnidx) {
-			j[k] = Number.parseFloat(l[ obj.cells.axis2columnidx[ k ] ])
-		}
-		if( use_category ) {
-			const v = l[ use_category.columnidx ]
-			j.c = use_category.autocolor ? use_category.autocolor(v) : use_category.values[v]
-		}
-		cells.push(j)
+	} else {
+		// TODO gene expression
+		throw 'unknown method to color the cells'
 	}
-	return cells
+
+	return client.dofetch('singlecell',arg)
+	.then(data=>{
+		if(data.error) throw data.error
+
+		wait.remove()
+		return data.pcd
+	})
 }
+
+
+
+
 
 function point_cloud(){
 	if ( WEBGL.isWebGLAvailable() === false ) {

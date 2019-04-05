@@ -49,7 +49,8 @@ const express=require('express'),
 	d3scale=require('d3-scale'),
 	d3dsv=require('d3-dsv'),
 	basicAuth = require('express-basic-auth'),
-	termdb = require('./modules/termdb')
+	termdb = require('./modules/termdb'),
+	singlecell = require('./modules/singlecell')
 
 
 
@@ -195,6 +196,7 @@ app.post('/mdssamplesignature',handle_mdssamplesignature)
 app.post('/mdssurvivalplot',handle_mdssurvivalplot)
 app.post('/fimo',handle_fimo)
 app.post('/termdb', termdb.handle_termdb_closure( genomes ) )
+app.post('/singlecell', singlecell.handle_singlecell_closure( genomes ) )
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
