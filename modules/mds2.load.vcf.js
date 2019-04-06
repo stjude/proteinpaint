@@ -1,3 +1,4 @@
+const path = require('path')
 const utils = require('./utils')
 const vcf = require('../src/vcf')
 const common = require('../src/common')
@@ -7,8 +8,75 @@ const common = require('../src/common')
 /*
 ********************** EXPORTED
 handle_vcfbyrange
+handle_ssidbyonem
 ********************** INTERNAL
 */
+
+
+const serverconfig = __non_webpack_require__('./serverconfig.json')
+
+
+
+
+exports.handle_ssidbyonem =  async ( q, genome, ds, result ) => {
+/*
+ssid: sample set id
+get ssid by one m from vcf
+*/
+	if(ds.iscustom) throw 'custom ds not allowed'
+	const tk = ds.track.vcf
+	if(!tk) throw 'ds.track.vcf missing'
+	if(!q.m) throw 'q.m missing'
+
+	// query for this variant
+	const coord = (tk.nochr ? q.m.chr.replace('chr','') : q.m.chr)+':'+(q.m.pos+1)+'-'+(q.m.pos+1)
+
+	let m
+	await utils.get_lines_tabix( [ tk.file, coord ], tk.dir, (line)=>{
+		const [e,mlst,e2] = vcf.vcfparseline( line, tk )
+		for(const m2 of mlst) {
+			if( m2.pos==q.m.pos && m2.ref==q.m.ref && m2.alt==q.m.alt ) {
+				m = m2
+				return
+			}
+		}
+	})
+
+	if( !m ) throw 'variant not found'
+
+	const rr = [], // hom ref
+		ra = [], // het
+		aa = [] // hom alt
+	for(const sample of m.sampledata) {
+		if(!sample.genotype ) continue
+		const hasref = sample.genotype.indexOf(q.m.ref)!=-1
+		const hasalt = sample.genotype.indexOf(q.m.alt)!=-1
+		if(hasref) {
+			if(hasalt) ra.push(sample.sampleobj.name)
+			else rr.push(sample.sampleobj.name)
+		} else {
+			if(hasalt) aa.push(sample.sampleobj.name)
+		}
+	}
+	const filename = Math.random().toString()
+	result.ssid = filename
+	result.groups = []
+	const lines = []
+	if( rr.length ) {
+		result.groups.push('Homozygous reference')
+		lines.push('Homozygous reference\t'+rr.join(','))
+	}
+	if( ra.length ) {
+		result.groups.push('Heterozygous')
+		lines.push('Heterozygous\t'+ra.join(','))
+	}
+	if( aa.length ) {
+		result.groups.push('Homozygous alternative')
+		lines.push('Homozygous alternative\t'+rr.join(','))
+	}
+	await utils.write_file( path.join(serverconfig.cachedir, 'ssid', filename ), lines.join('\n') )
+}
+
 
 
 

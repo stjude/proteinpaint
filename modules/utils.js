@@ -15,6 +15,7 @@ const tabix= serverconfig.tabix || 'tabix'
 init_one_vcf
 validate_tabixfile
 get_lines_tabix
+write_file
 ********************** INTERNAL
 get_header_vcf
 */
@@ -146,3 +147,14 @@ function get_lines_tabix ( args, dir, callback ) {
 	})
 }
 exports.get_lines_tabix = get_lines_tabix
+
+
+function write_file ( file, text ) {
+	return new Promise((resolve, reject)=>{
+		fs.writeFile( file, text, (err)=>{
+			if(err) reject('cannot write')
+			resolve()
+		})
+	})
+}
+exports.write_file = write_file

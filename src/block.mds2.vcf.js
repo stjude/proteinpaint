@@ -183,7 +183,11 @@ function maymakebutton_vcf_mafcovplot ( buttonrow, showholder, m, tk, block ) {
 		}
 		loading=true
 		button.text('Loading...')
-		await show_mafcovplot( plotdiv, m, tk, block )
+		try {
+			await show_mafcovplot( plotdiv, m, tk, block )
+		}catch(e){
+			plotdiv.text('Error: '+(e.message||e))
+		}
 		loading=false
 		loaded=true
 		button.text('Coverage-maf plot')
@@ -222,7 +226,11 @@ function maymakebutton_vcf_termdbbygenotype ( buttonrow, showholder, m, tk, bloc
 		}
 		loading=true
 		button.text('Loading...')
-		await termdb_bygenotype( plotdiv, m, tk, block )
+		try {
+			await termdb_bygenotype( plotdiv, m, tk, block )
+		}catch(e){
+			plotdiv.text('Error: '+(e.message||e))
+		}
 		loading=false
 		loaded=true
 		button.text('Clinical info')

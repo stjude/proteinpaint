@@ -110,6 +110,9 @@ async function init_vcf ( vcftk, genome, ds ) {
 	}
 
 	if( vcftk.termdb_bygenotype ) {
+		if(!vcftk.samples) throw '.termdb_bygenotype enabled but no samples from vcf'
+		if(!vcftk.format) throw '.termdb_bygenotype enabled but no FORMAT fields from vcf'
+		if(!vcftk.format.GT) throw '.termdb_bygenotype enabled but the GT FORMAT field is missing'
 		if(!ds.cohort) throw 'termdb_bygenotype but ds.cohort missing'
 		if(!ds.cohort.termdb) throw 'termdb_bygenotype but ds.cohort.termdb missing'
 	}

@@ -45,17 +45,13 @@ exports.handle_mafcovplot = async ( q, genome, ds, result ) => {
 			}
 		})
 
-		if( m ) {
+		if( !m ) throw 'variant not found'
 
-			// hardcoded to use AD
+		// hardcoded to use AD
 
-			// conditional, may do server-side rendering instead
+		// conditional, may do server-side rendering instead
 
-			result.plotgroups = mafcov_getdata4clientrendering ( m, tk )
-
-		} else {
-			result.error = 'No match to '+q.m.chr+':'+(q.m.pos+1)+' '+q.m.ref+'>'+q.m.alt
-		}
+		result.plotgroups = mafcov_getdata4clientrendering ( m, tk )
 
 	}catch(e) {
 		result.error = e.message || e
