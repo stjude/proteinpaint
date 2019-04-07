@@ -149,6 +149,8 @@ function get_lines_tabix ( args, dir, callback ) {
 exports.get_lines_tabix = get_lines_tabix
 
 
+
+
 function write_file ( file, text ) {
 	return new Promise((resolve, reject)=>{
 		fs.writeFile( file, text, (err)=>{
@@ -158,3 +160,16 @@ function write_file ( file, text ) {
 	})
 }
 exports.write_file = write_file
+
+
+
+function read_file ( file ) {
+	return new Promise((resolve,reject)=>{
+		fs.readFile( file, {encoding:'utf8'}, (err,txt)=>{
+			// must use reject in callback, not throw
+			if(err) reject('cannot read file')
+			resolve(txt)
+		})
+	})
+}
+exports.read_file = read_file
