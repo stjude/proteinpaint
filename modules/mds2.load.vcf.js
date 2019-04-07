@@ -44,6 +44,7 @@ get ssid by one m from vcf
 
 	if( !m ) throw 'variant not found'
 
+	// divide samples by genotype
 	const rr = [], // hom ref
 		ra = [], // het
 		aa = [] // hom alt
@@ -60,19 +61,22 @@ get ssid by one m from vcf
 	}
 	const filename = Math.random().toString()
 	result.ssid = filename
-	result.groups = []
+	result.groups = {}
 	const lines = []
 	if( rr.length ) {
-		result.groups.push('Homozygous reference')
-		lines.push('Homozygous reference\t'+rr.join(','))
+		const k = 'Homozygous reference'
+		result.groups[k] = { size:rr.length }
+		lines.push(k+'\t'+rr.join(','))
 	}
 	if( ra.length ) {
-		result.groups.push('Heterozygous')
-		lines.push('Heterozygous\t'+ra.join(','))
+		const k = 'Heterozygous'
+		result.groups[k] = { size:ra.length }
+		lines.push(k+'\t'+ra.join(','))
 	}
 	if( aa.length ) {
-		result.groups.push('Homozygous alternative')
-		lines.push('Homozygous alternative\t'+rr.join(','))
+		const k='Homozygous alternative'
+		result.groups[k] = { size:aa.length }
+		lines.push(k+'\t'+aa.join(','))
 	}
 	await utils.write_file( path.join(serverconfig.cachedir, 'ssid', filename ), lines.join('\n') )
 }

@@ -129,7 +129,9 @@ also for showing term tree, allowing to select certain terms
 		if( obj.default_rootterm.modifier_click_term ) {
 			arg.modifier_click_term = obj.default_rootterm.modifier_click_term
 		}
-		// maybe other type of modifiers too
+		if( obj.default_rootterm.modifier_ssid ) {
+			arg.modifier_ssid = obj.default_rootterm.modifier_ssid
+		}
 
 		print_one_term( arg, obj )
 	}
@@ -433,16 +435,21 @@ buttonholder: div in which to show the button, term label is also in it
 			.style('opacity',.5)
 			.style('margin','3px 0px')
 
+		// parameter for getting children terms
 		const param = {
 			get_children: {
 				id: arg.term.id
 			}
+		}
+		if( arg.modifier_ssid ) {
+			param.get_children.ssid = arg.modifier_ssid.ssid
 		}
 
 		obj.do_query( param )
 		.then(data=>{
 			if(data.error) throw data.error
 			if(!data.lst || data.lst.length===0) throw 'error getting children'
+			wait.remove()
 			// got children
 			for(const cterm of data.lst) {
 				print_one_term(
@@ -464,7 +471,6 @@ buttonholder: div in which to show the button, term label is also in it
 		})
 		.then( ()=>{
 			children_loaded = true
-			wait.remove()
 			client.appear( childrenrow )
 			button.text('-')
 		})

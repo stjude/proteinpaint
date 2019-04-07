@@ -1,6 +1,9 @@
 const app = require('../app')
 const fs = require('fs')
 const path = require('path')
+
+
+
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 
@@ -37,10 +40,12 @@ return async (req, res) => {
 		const ds_filtered = may_filter_samples( q, tdb, ds )
 
 		// process triggers
-		// to support await, need to detect triggers here
 
 		if( trigger_rootterm( q, res, tdb ) ) return
-		if( trigger_children( q, res, tdb ) ) return
+		if( q.get_children ) {
+			await trigger_children( q, res, tdb )
+			return
+		}
 		if( trigger_barchart( q, res, tdb, ds_filtered ) ) return
 		if( q.crosstab2term ) {
 			if( q.boxplot ) {
@@ -864,8 +869,10 @@ function trigger_rootterm ( q, res, tdb ) {
 }
 
 
-function trigger_children ( q, res, tdb ) {
-	if( !q.get_children) return false
+async function trigger_children ( q, res, tdb ) {
+/* get children terms
+may apply ssid: a premade sample set
+*/
 	// list of children id
 	const cidlst = tdb.term2term.map.get( q.get_children.id )
 	// list of children terms
@@ -878,8 +885,19 @@ function trigger_children ( q, res, tdb ) {
 			}
 		}
 	}
+
+	if( q.get_children.ssid ) {
+		// based on premade sample sets, count how many samples from each set are annotated to each term
+		const samplesets = await load_ssid( q.get_children.id )
+		for(const term of lst) {
+			term.ss2count = {}
+			for(const sampleset of samplesets) {
+				term.ss2count[ sampleset.name ] = term_getcount_4sampleset( term, sampleset.lst )
+			}
+		}
+	}
+
 	res.send({lst: lst})
-	return true
 }
 
 
@@ -974,4 +992,19 @@ function trigger_findterm ( q, res, termdb ) {
 		}
 	}
 	res.send({lst:lst})
+}
+
+
+
+async function load_ssid ( ssid ) {
+/* ssid is the file name under cache/ssid/
+*/
+}
+
+
+function term_getcount_4sampleset ( term, samples ) {
+/*
+term
+samples[] array of sample names
+*/
 }
