@@ -114,6 +114,10 @@ p{}
 	// if to show sunburst, do it here, no pane
 
 	const pane = client.newpane({x: p.left, y: p.top})
+	pane.header.html(
+		'<span style="font-weight:bold;color:'+common.mclass[m.class].color+'">'+m.mname+'</span>'
+		+' <span style="font-size:.7em">'+common.mclass[m.class].label+'</span>'
+	)
 
 	const buttonrow = pane.body.append('div')
 		.style('margin','20px')

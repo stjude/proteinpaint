@@ -65,6 +65,7 @@ obj{}:
 .div
 .default_rootterm{}
 	.modifier_click_term()
+.modifier_ssid_barchart{}
 */
 
 	window.obj = obj // for testing
@@ -127,10 +128,8 @@ also for showing term tree, allowing to select certain terms
 
 		// pass on modifier
 		if( obj.default_rootterm.modifier_click_term ) {
+			// FIXME this modifier should be moved to obj so no need to attach to arg
 			arg.modifier_click_term = obj.default_rootterm.modifier_click_term
-		}
-		if( obj.default_rootterm.modifier_ssid ) {
-			arg.modifier_ssid = obj.default_rootterm.modifier_ssid
 		}
 
 		print_one_term( arg, obj )
@@ -311,7 +310,7 @@ such conditions may be carried by obj
 	// make one panel per button; no duplicated panels
 	let panel
 
-	button.on('click',()=>{
+	button.on('click', async ()=>{
 
 		if( loading ) return
 
@@ -335,6 +334,7 @@ such conditions may be carried by obj
 
 		loading = true
 
+		// FIXME no floating panel, show barchart in-place
 		panel = client.newpane({
 			x: d3event.clientX+200,
 			y: Math.max( 80, d3event.clientY-100 ),
@@ -352,9 +352,13 @@ such conditions may be carried by obj
 				id: term.id
 			}
 		}
+		/// modifier
+		if( obj.modifier_ssid_barchart ) {
+			arg.ssid = obj.modifier_ssid_barchart.ssid
+		}
 
-		obj.do_query( arg )
-		.then(data=>{
+		try {
+			const data = await obj.do_query( arg )
 			if(data.error) throw data.error
 			if(!data.lst) throw 'no data for barchart'
 
@@ -369,16 +373,34 @@ such conditions may be carried by obj
 				term: term
 			}
 
+			if( obj.modifier_ssid_barchart ) {
+				const g2c = {}
+				for(const k in obj.modifier_ssid_barchart.groups) {
+					g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
+				}
+				plot.mutation_lst = [
+					{
+						mutation_name: obj.modifier_ssid_barchart.mutation_name,
+						ssid: obj.modifier_ssid_barchart.ssid,
+						genotype2color: g2c
+					}
+				]
+				plot.overlay_with_genotype_idx = 0
+
+				// this doesn't work
+				plot.term2 = {name:'genotype'}
+
+			}
+
 			barchart_make( plot )
-		})
-		.catch(e=>{
+
+		} catch(e) {
 			client.sayerror( panel.body, e.message || e)
 			if(e.stack) console.log(e.stack)
-		})
-		.then(()=>{
-			loading = false
-			button.text('BARCHART')
-		})
+		}
+
+		loading = false
+		button.text('BARCHART')
 	})
 }
 
@@ -441,8 +463,8 @@ buttonholder: div in which to show the button, term label is also in it
 				id: arg.term.id
 			}
 		}
-		if( arg.modifier_ssid ) {
-			param.get_children.ssid = arg.modifier_ssid.ssid
+		if( arg.modifier_ssid_onterm ) {
+			param.get_children.ssid = arg.modifier_ssid_onterm.ssid
 		}
 
 		obj.do_query( param )

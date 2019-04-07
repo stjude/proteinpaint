@@ -51,11 +51,11 @@ official track only
 		mds: tk.mds,
 		genome: block.genome,
 		div: plotdiv,
-		default_rootterm: {
-			modifier_ssid: {
-				ssid: ssid,
-				groups: groups
-			}
+		default_rootterm: {},
+		modifier_ssid_barchart: {
+			mutation_name: m.mname,
+			ssid: ssid,
+			groups: groups
 		}
 	}
 	const _ = await import('./mds.termdb')
