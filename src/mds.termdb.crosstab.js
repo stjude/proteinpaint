@@ -118,7 +118,6 @@ also a closure with the arguments and buttons
 				items: data.lst,
 				term2: term2,
 				term2_order: data.term2_order,
-				_button: button,
 			})
 		})
 		.catch(e=>{

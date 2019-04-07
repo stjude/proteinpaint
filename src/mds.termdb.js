@@ -158,12 +158,14 @@ possible modifiers:
 
 	const term = arg.term
 
-	/* a row to show this term
-	if the term is parent, will also contain the expand/fold button
-	children to be shown in a separate row
+	/* a row for:
+	[+] [term name] [graph button]
 	*/
 	const row = arg.row.append('div')
+	// another under row, for adding graphs
+	const row_graph = arg.row.append('div')
 
+	// if [+] button is created, will add another row under row for showing children
 	may_make_term_foldbutton( arg, row, obj )
 
 	// term name
@@ -205,12 +207,143 @@ possible modifiers:
 	// term function buttons
 	// including barchart, and cross-tabulate
 
-	may_make_term_graphbuttons( term, row, obj )
-
-	may_enable_crosstabulate( term, row, obj )
+	may_make_term_graphbuttons( term, row, row_graph, obj )
 }
 
 
+
+
+function may_make_term_graphbuttons ( term, row, row_graph, obj ) {
+/*
+if term.graph{} is there, make a button to trigger it
+allow to make multiple buttons
+*/
+	if(!term.graph) {
+		// no graph
+		return
+	}
+
+
+	if(term.graph.barchart) {
+		// barchart button
+		term_addbutton_barchart( term, row, row_graph, obj )
+
+		may_enable_crosstabulate( term, row,  obj )
+	}
+
+
+	// to add other graph types
+}
+
+
+
+
+
+
+function term_addbutton_barchart ( term, row, row_graph, obj ) {
+/*
+click button to launch barchart for a term
+
+there may be other conditions to apply, e.g. patients carrying alt alleles of a variant
+such conditions may be carried by obj
+
+*/
+
+	const button = row.append('div')
+		.style('display','inline-block')
+		.style('margin-left','20px')
+		.style('padding','3px 5px')
+		.style('font-size','.8em')
+		.style('border','solid 1px black')
+		.attr('class','sja_opaque8')
+		.text('BARCHART')
+
+	const div = row_graph.append('div')
+		.style('border','solid 1px #ccc')
+		.style('border-radius','5px')
+		.style('margin','10px')
+		.style('padding','10px')
+		.style('display','none')
+
+	// these to be shared for crosstab function
+	term.graph.barchart.dom = {
+		button: button,
+		loaded: false,
+		div: div
+	}
+
+	button.on('click', async ()=>{
+
+		if(div.style('display') == 'none') {
+			client.appear(div, 'inline-block')
+			button.style('background','#ededed')
+				.style('color','black')
+		} else {
+			client.disappear(div)
+			button.style('background','#aaa')
+				.style('color','white')
+		}
+
+		if( term.graph.barchart.dom.loaded ) return
+
+		button.text('Loading')
+
+		const arg = {
+			barchart: {
+				id: term.id
+			}
+		}
+		/// modifier
+		if( obj.modifier_ssid_barchart ) {
+			arg.ssid = obj.modifier_ssid_barchart.ssid
+		}
+
+		try {
+			const data = await obj.do_query( arg )
+			if(data.error) throw data.error
+			if(!data.lst) throw 'no data for barchart'
+
+			// make barchart
+			const plot = {
+				holder: div,
+				genome: obj.genome.name,
+				dslabel: obj.mds.label,
+				items: data.lst,
+				unannotated: data.unannotated,
+				boxplot: data.boxplot, // available for numeric terms
+				term: term
+			}
+
+			if( obj.modifier_ssid_barchart ) {
+				const g2c = {}
+				for(const k in obj.modifier_ssid_barchart.groups) {
+					g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
+				}
+				plot.mutation_lst = [
+					{
+						mutation_name: obj.modifier_ssid_barchart.mutation_name,
+						ssid: obj.modifier_ssid_barchart.ssid,
+						genotype2color: g2c
+					}
+				]
+				plot.overlay_with_genotype_idx = 0
+
+				// this doesn't work
+				plot.term2 = {name:'genotype'}
+
+			}
+
+			barchart_make( plot )
+
+		} catch(e) {
+			client.sayerror( div, e.message || e)
+			if(e.stack) console.log(e.stack)
+		}
+
+		button.text('BARCHART')
+		term.graph.barchart.dom.loaded=true
+	})
+}
 
 
 
@@ -239,17 +372,19 @@ providing all the customization options
 			._button
 			*/
 
-			const c = result._button.node().getBoundingClientRect()
-			const pane = client.newpane({ x: c.x+100, y: Math.max( 10, c.y-100) })
-			pane.header.html( term1.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+result.term2.name )
+			// display result through barchart button
+			term1.graph.barchart.dom.loaded=true
+			term1.graph.barchart.dom.div.selectAll('*').remove()
+			client.appear( term1.graph.barchart.dom.div, 'inline-block' )
+			term1.graph.barchart.dom.button
+				.style('background','#ededed')
+				.style('color','black')
 
 			const plot = {
 				obj: obj,
 				genome: obj.genome.name,
 				dslabel: obj.mds.label,
-				//unannotated: data.unannotated,
-				//boxplot: data.boxplot, // available for numeric terms
-				holder: pane.body,
+				holder: term1.graph.barchart.dom.div,
 				term: term1,
 				term2: result.term2,
 				items: result.items,
@@ -265,144 +400,7 @@ providing all the customization options
 
 
 
-function may_make_term_graphbuttons ( term, row, obj ) {
-/*
-if term.graph{} is there, make a button to trigger it
-allow to make multiple buttons
-*/
-	if(!term.graph) {
-		// no graph
-		return
-	}
 
-
-	if(term.graph.barchart) {
-		// barchart button
-		term_addbutton_barchart( term, row, obj )
-	}
-
-
-	// to add other graph types
-}
-
-
-
-
-function term_addbutton_barchart ( term, row, obj ) {
-/*
-click button to launch barchart for a term
-
-there may be other conditions to apply, e.g. patients carrying alt alleles of a variant
-such conditions may be carried by obj
-*/
-
-	const button = row.append('div')
-		.style('display','inline-block')
-		.style('margin-left','20px')
-		.style('padding','3px 5px')
-		.style('font-size','.8em')
-		.attr('class','sja_menuoption')
-		.text('BARCHART')
-
-	// by clicking button for first time, query server to load data
-	// set to true to prevent from loading repeatedly
-	let loading = false
-	// make one panel per button; no duplicated panels
-	let panel
-
-	button.on('click', async ()=>{
-
-		if( loading ) return
-
-		if( panel ) {
-			// panel has been created, toggle its visibility
-			if(panel.pane.style('display') == 'none') {
-				panel.pane.style('display', 'block')
-				client.flyindi( button, panel.pane )
-				button.style('border', null)
-			} else {
-				client.flyindi( panel.pane, button )
-				panel.pane.style('display', 'none')
-				button.style('border', 'solid 1px black')
-			}
-			return
-		}
-
-		// ask server to make data for barchart
-
-		button.text('Loading')
-
-		loading = true
-
-		// FIXME no floating panel, show barchart in-place
-		panel = client.newpane({
-			x: d3event.clientX+200,
-			y: Math.max( 80, d3event.clientY-100 ),
-			close:()=>{
-				client.flyindi( panel.pane, button )
-				panel.pane.style('display', 'none')
-				button.style('border', 'solid 1px black')
-			}
-		})
-
-		panel.header.text('Barchart for '+term.name)
-
-		const arg = {
-			barchart: {
-				id: term.id
-			}
-		}
-		/// modifier
-		if( obj.modifier_ssid_barchart ) {
-			arg.ssid = obj.modifier_ssid_barchart.ssid
-		}
-
-		try {
-			const data = await obj.do_query( arg )
-			if(data.error) throw data.error
-			if(!data.lst) throw 'no data for barchart'
-
-			// make barchart
-			const plot = {
-				genome: obj.genome.name,
-				dslabel: obj.mds.label,
-				items: data.lst,
-				unannotated: data.unannotated,
-				boxplot: data.boxplot, // available for numeric terms
-				holder: panel.body,
-				term: term
-			}
-
-			if( obj.modifier_ssid_barchart ) {
-				const g2c = {}
-				for(const k in obj.modifier_ssid_barchart.groups) {
-					g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
-				}
-				plot.mutation_lst = [
-					{
-						mutation_name: obj.modifier_ssid_barchart.mutation_name,
-						ssid: obj.modifier_ssid_barchart.ssid,
-						genotype2color: g2c
-					}
-				]
-				plot.overlay_with_genotype_idx = 0
-
-				// this doesn't work
-				plot.term2 = {name:'genotype'}
-
-			}
-
-			barchart_make( plot )
-
-		} catch(e) {
-			client.sayerror( panel.body, e.message || e)
-			if(e.stack) console.log(e.stack)
-		}
-
-		loading = false
-		button.text('BARCHART')
-	})
-}
 
 
 

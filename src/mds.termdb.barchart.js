@@ -235,9 +235,10 @@ export function barchart_make ( arg ) {
 	//Exposed - not exponsed data
 	plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
 
-	if(arg.default2showtable && arg.term2){
+	plot.term2 = arg.term2
+	if(arg.default2showtable){
+		if( !plot.term2 ) throw 'term2 is required for default2showtable'
 		plot.default2showtable = 1
-		plot.term2 = arg.term2
 		update_term2_header(plot)
 	}
 

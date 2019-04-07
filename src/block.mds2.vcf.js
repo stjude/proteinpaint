@@ -13,6 +13,9 @@ vcf_m_color
 vcf_m_click
 getvcfheader_customtk
 ********************** INTERNAL
+vcf_render_variants
+maymakebutton_vcf_mafcovplot
+maymakebutton_vcf_termdbbygenotype
 
 */
 
