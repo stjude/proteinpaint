@@ -4,7 +4,7 @@ import {axisTop} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 
-var container, stats
+var container, stats, control_panel, canvas
 var camera, controls, scene, renderer
 
 
@@ -32,6 +32,7 @@ export async function init ( arg, holder ) {
 
 	point_cloud( data.pcdfile )
 	animate()
+	plot_update(data.category2color)
 }
 
 
@@ -178,9 +179,19 @@ function point_cloud(filename){
 	} )
 
 	container = document.createElement( 'div' )
+	container.id = 'point_cloud_div'
 	document.body.appendChild( container )
-	container.appendChild( renderer.domElement )
+	container.style.position = 'relative'
+	container.style.direction = 'rtl'
 
+	canvas = document.createElement( 'div' )
+	canvas.id = 'canvas_div'
+	container.appendChild( canvas )
+	canvas.style.zIndex = -1
+	canvas.style.position = 'absolute'
+	canvas.appendChild( renderer.domElement )
+
+	/* small stats window at top right corner of canvas to show Frame rate per sec, cpu and memory load */	
 	// stats = new Stats()
 	// container.appendChild( stats.dom )
 
@@ -238,4 +249,48 @@ function animate() {
 	renderer.render( scene, camera );
 	// stats.update();
 
+}
+
+function plot_update(legend_data) {
+
+	control_panel = d3selectAll('#point_cloud_div').append('div')
+		.attr('id','ctrl_div')
+		.style('padding','10px 40px')
+		.style('display','block')
+		.style('position','absolute')
+		.style('float','right')
+		.style('background-color','#dddddd')
+		.style('z-index',2)
+
+	control_panel.append('button')
+		.attr('class','collapsible')
+		.text('Legend & Settings')
+
+	const settings_div = control_panel.append('div')
+		.attr('class','collapse')
+		.attr('id','settings')
+		.style('margin','10px')
+
+	for (let type in legend_data){
+
+		// div for each label
+		const lenged_span = settings_div.append('div')
+			.style('width', '100%')
+			.style('margin', '2px')
+			.style('direction','ltr')
+		
+		// square color for the label	
+		lenged_span.append('div')
+			.style('display','inline-block')
+			.style('height', '15px')
+			.style('width', '15px')
+			.style('background-color',legend_data[type])
+			.style('margin-right', '15px')
+
+		//label text
+		lenged_span.append('span')
+			.text(type)
+			.attr('font-size',15)
+			.attr('font-family',client.font)
+	}
 }
