@@ -2,7 +2,10 @@ const app = require('../app')
 const fs = require('fs')
 const readline = require('readline')
 const path = require('path')
-const d3scale =  require('d3-scale')
+const d3scale = require('d3-scale')
+const d3color = require('d3-color')
+const d3interpolate = require('d3-interpolate')
+const utils = require('./utils')
 
 
 
@@ -93,7 +96,7 @@ DATA ascii
 `
 
 	const filename = 'tmp/'+Math.random()+'.pcd'
-	await write_file( header+lines.join('\n'), './public/'+filename)
+	await utils.write_file( './public/'+filename, header+lines.join('\n') )
 	result.pcdfile = filename
 	res.send( result )
 }
@@ -102,15 +105,6 @@ DATA ascii
 
 
 
-function write_file ( text, filepath ) {
-// this func should go to module/utils.js
-	return new Promise((resolve, reject)=>{
-		fs.writeFile( filepath, text, (err)=>{
-			if(err) reject('cannot write')
-			resolve()
-		})
-	})
-}
 
 
 
@@ -125,7 +119,7 @@ may attach coloring scheme to result{} for returning to client
 
 	// set up coloring scheme
 	let categorical_color_function
-	let numeric_color
+	let cell2color_byexp  // color by gene expression values 
 	let collect_category2color
 	// if color scheme is automatic, collect colors here for returning to client
 
@@ -137,6 +131,59 @@ may attach coloring scheme to result{} for returning to client
 		// k: category, v: color
 
 	} else if( q.getpcd.gene_expression ) {
+
+		const ge = q.getpcd.gene_expression
+		if(!ge.file) throw 'gene_expression.file missing'
+		ge.file = path.join( serverconfig.tpmasterdir, ge.file )
+		if(!Number.isInteger( ge.barcodecolumnidx )) throw 'gene_expression.barcodecolumnidx missing'
+		if(!ge.chr) throw 'gene_expression.chr missing'
+		if(!ge.start) throw 'gene_expression.start missing'
+		if(!ge.stop)  throw 'gene_expression.stop missing'
+		if(!ge.genename) throw 'gene_expression.genename missing'
+		if(ge.autoscale) {
+			if(!ge.color_min) throw 'gene_expression.color_min missing at autoscale'
+			if(!ge.color_max) throw 'gene_expression.color_max missing at autoscale'
+		} else {
+			throw 'gene_expression: unknown scaling method'
+		}
+
+		const coord = (ge.nochr ? ge.chr.replace('chr','') : ge.chr)+':'+ge.start+'-'+ge.stop
+		const cell2value = new Map()
+		const cell2color_byexp = new Map()
+
+		let minexpvalue = 0,
+			maxexpvalue = 0
+
+		await utils.get_lines_tabix( [ge.file,coord], null, line=>{
+			const j = JSON.parse( line.split('\t')[3] )
+			if(j.gene != ge.genename) return
+			if(!Number.isFinite( j.value )) return
+
+			if( ge.autoscale ) {
+				minexpvalue = Math.min( minexpvalue, j.value )
+				maxexpvalue = Math.max( maxexpvalue, j.value )
+			}
+
+			cell2value.set( j.sample, j.value )
+		})
+
+		// record scaling to return to client
+		if( ge.autoscale ) {
+			result.minexpvalue = minexpvalue
+			result.maxexpvalue = maxexpvalue
+			const interpolate = d3interpolate.interpolate.Rgb( ge.color_min, ge.color_max )
+			for(const [k,v] of cell2value ) {
+				cell2color_byexp.set(
+					k,
+					Number.parseInt(
+						d3color(
+							interpolate( (v-minexpvalue)/(maxexpvalue-minexpvalue) )
+						).hex().slice(1),
+						16
+					)
+				)
+			}
+		}
 	}
 
 
@@ -169,6 +216,11 @@ may attach coloring scheme to result{} for returning to client
 			if( collect_category2color ) {
 				collect_category2color[ ca ] = co
 			}
+		} else if( cell2color_byexp ) {
+			const barcode = l[ q.getpcd.gene_expression.barcodecolumnidx ]
+			const color = cell2color_byexp.has(barcode)
+			if(!color) return
+			newl.push(color)
 		}
 
 		lines.push( newl.join(' ') )
