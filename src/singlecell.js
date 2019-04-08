@@ -7,6 +7,12 @@ import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-s
 var container, stats
 var camera, controls, scene, renderer
 
+
+
+
+
+
+
 export async function init ( arg, holder ) {
 
 	const obj = await load_json( arg )
@@ -38,18 +44,29 @@ async function load_json ( arg ) {
 
 
 
+
+
 function validate_obj ( obj ) {
 	if( !obj.cells ) throw '.cells{} missing'
 	if( !obj.cells.file ) throw '.cells.file missing'
 	if( !obj.cells.axis2columnidx) throw '.cells.axis2columnidx missing'
 	if(obj.cells.categories) {
 		if(!Array.isArray(obj.cells.categories)) throw '.cells.categories should be an array'
+		if(obj.cells.categories.length==0) throw '.cells.categories[] is empty array'
 		for(const c of obj.cells.categories) {
 			if(!c.columnidx) throw 'columnidx missing from category '+c
 			if(c.autocolor) {
 				c.autocolor = scaleOrdinal( schemeCategory20 )
 			}
 		}
+		if(!Number.isInteger( obj.use_category_index )) {
+			obj.use_category_index = 0
+		}
+		if( !obj.cells.categories[ obj.use_category_index ] ) throw 'use_category_index out of bound'
+	}
+	if( obj.gene_expression ) {
+		if(!obj.gene_expression.file) throw '.gene_expression.file missing'
+		if(!Number.isInteger(obj.cells.barcodecolumnidx)) throw '.gene_expression in use but .cells.barcodecolumnidx is missing'
 	}
 }
 

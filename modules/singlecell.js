@@ -43,9 +43,8 @@ exports.handle_singlecell_closure = ( genomes ) => {
 
 
 async function get_pcd ( q, gn, res ) {
-
-/* hardcoded to 3d
-TODO 2d
+/*
+not in use
 */
 
 	const lines = await slice_file( q, gn, res )
@@ -72,14 +71,13 @@ X Y Z
 
 
 async function get_pcd_tempfile ( q, gn, res ) {
-
 /* hardcoded to 3d
 TODO 2d
 */
 
-	const [ lines, category2color ] = await slice_file( q, gn )
-	// one line per cell
+	const result = {}
 
+	const lines = await slice_file_add_color( q, gn, result )
 
 	const header = `# .PCD v.7 - Point Cloud Data file format
 VERSION .7
@@ -96,10 +94,8 @@ DATA ascii
 
 	const filename = 'tmp/'+Math.random()+'.pcd'
 	await write_file( header+lines.join('\n'), './public/'+filename)
-	res.send({
-		pcdfile: filename,
-		category2color: category2color
-	})
+	result.pcdfile = filename
+	res.send( result )
 }
 
 
@@ -119,20 +115,29 @@ function write_file ( text, filepath ) {
 
 
 
-function slice_file ( q, gn, res ) {
+async function slice_file_add_color ( q, gn, result ) {
+/*
+to slice the csv/tab file of all cells
+for each cell, assign color based on desired method
+return pcd format data
+may attach coloring scheme to result{} for returning to client
+*/
 
 	// set up coloring scheme
 	let categorical_color_function
 	let numeric_color
-	let collect_category2color = null
+	let collect_category2color
 	// if color scheme is automatic, collect colors here for returning to client
 
 	if( q.getpcd.category_autocolor ) {
+
+		// using a category with automatic color
 		categorical_color_function = d3scale.scaleOrdinal( d3scale.schemeCategory20 )
 		collect_category2color = {}
 		// k: category, v: color
+
+	} else if( q.getpcd.gene_expression ) {
 	}
-	// TODO gene expression
 
 
 	return new Promise((resolve,reject)=>{
@@ -170,7 +175,12 @@ function slice_file ( q, gn, res ) {
 
 	})
 	rl.on('close',()=>{
-		resolve( [ lines, collect_category2color ] )
+
+		if( collect_category2color ) {
+			result.category2color = collect_category2color
+		}
+
+		resolve( lines )
 	})
 
 	})
