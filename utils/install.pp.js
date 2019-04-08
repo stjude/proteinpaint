@@ -115,8 +115,12 @@ if( validateurlmode) {
 
 	if( !UC.TP) abort('TP directory is undefined')
 	mkdir( UC.TP )
-	if( !UC.CACHE) abort('CACHE directory is undefined')
+	if( !UC.CACHE ) abort('CACHE directory is undefined')
 	mkdir( UC.CACHE )
+
+	// create folder CACHE/ssid/
+	mkdir( path.join(UC.CACHE,'ssid') )
+
 	if( !UC.BINPATH ) abort('BINPATH directory is undefined')
 	mkdir( UC.BINPATH )
 	if( !UC.PYTHON2 ) abort('PYTHON2 command is undefined')

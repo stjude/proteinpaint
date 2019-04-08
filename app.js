@@ -50,6 +50,8 @@ const express=require('express'),
 	d3dsv=require('d3-dsv'),
 	basicAuth = require('express-basic-auth'),
 	termdb = require('./modules/termdb'),
+	mds2_init = require('./modules/mds2.init'),
+	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell')
 
 
@@ -177,6 +179,7 @@ app.post('/junction',handle_junction)       // legacy
 app.post('/mdsjunction',handle_mdsjunction)
 app.post('/mdscnv',handle_mdscnv)
 app.post('/mdssvcnv',handle_mdssvcnv)
+app.post('/mds2', mds2_load.handle_request(genomes) )
 app.post('/mdsexpressionrank',handle_mdsexpressionrank) // expression rank as a browser track
 app.post('/mdsgeneboxplot',handle_mdsgeneboxplot)
 app.post('/mdsgenevalueonesample',handle_mdsgenevalueonesample)
@@ -195,7 +198,7 @@ app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
 app.post('/mdssamplesignature',handle_mdssamplesignature)
 app.post('/mdssurvivalplot',handle_mdssurvivalplot)
 app.post('/fimo',handle_fimo)
-app.post('/termdb', termdb.handle_termdb_closure( genomes ) )
+app.post('/termdb', termdb.handle_request_closure( genomes ) )
 app.post('/singlecell', singlecell.handle_singlecell_closure( genomes ) )
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
@@ -351,7 +354,6 @@ function mds_clientcopy(ds) {
 		label:ds.label,
 		about:ds.about,
 		annotationsampleset2matrix: ds.annotationsampleset2matrix,
-		queries:{},
 		mutationAttribute: ds.mutationAttribute,
 		locusAttribute: ds.locusAttribute,
 		alleleAttribute: ds.alleleAttribute,
@@ -359,6 +361,10 @@ function mds_clientcopy(ds) {
 
 	if(ds.queries) {
 		ds2.queries = {}
+	}
+
+	if(ds.track) {
+		ds2.track = mds2_init.client_copy( ds )
 	}
 
 	if(ds.singlesamplemutationjson) {
@@ -8078,6 +8084,7 @@ function boxplot_getvalue(lst) {
 	const out=lst.filter(i=>i.value<p25-iqr || i.value>p75+iqr)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
+exports.boxplot_getvalue = boxplot_getvalue
 
 
 
@@ -11748,6 +11755,7 @@ return new Promise((resolve,reject)=>{
 	})
 })
 }
+exports.cache_index_promise = cache_index_promise
 
 
 
@@ -13215,7 +13223,7 @@ function mds_init(ds,genome, _servconfig) {
 
 		if(ds.cohort.termdb) {
 			try {
-				init_termdb( ds )
+				termdb.server_init( ds )
 			} catch(e) {
 				return 'error with termdb: '+e
 			}
@@ -13425,6 +13433,9 @@ function mds_init(ds,genome, _servconfig) {
 
 
 	if(ds.queries) {
+
+		// ds.queries is the 1st generation track
+	
 		for(const querykey in ds.queries) {
 
 			// server may choose to remove it
@@ -13485,6 +13496,12 @@ function mds_init(ds,genome, _servconfig) {
 	}
 
 
+	if( ds.track ) {
+		// 2nd generation track
+		mds2_init_wrap( ds, genome )
+	}
+
+
 
 	if(ds.annotationsampleset2matrix) {
 		if(!ds.cohort) return 'ds.cohort misssing when annotationsampleset2matrix is in use'
@@ -13538,26 +13555,24 @@ function mds_init(ds,genome, _servconfig) {
 		delete ds.annotationsampleset2matrix.commonfeatureattributes
 	}
 
-/*
-************* not ready to migrate to general track yet
-
-	if(ds.key2generalTracks) {
-		if(!ds.queries) return '.queries{} missing when key2generalTracks is in use'
-		for(const key in ds.key2generalTracks) {
-			const tk = ds.key2generalTracks[key]
-			tk.key = key
-			if(!tk.label) tk.label = ds.label + ' general track'
-			if(!tk.querykeys) return '.querykeys[] missing for general track by key '+key
-			if(!Array.isArray(tk.querykeys)) return 'querykeys[] should be array'
-		}
-	}
-	*/
-
 	return null
 }
 
 
 
+
+async function mds2_init_wrap( ds, genome ) {
+/*
+because mds_init is sync, so has to improvise to catch exception from mds2_init
+*/
+	try {
+		await mds2_init.init( ds, genome )
+	} catch(e) {
+		console.log('ERROR init mds2 track: '+e)
+		if(e.stack) console.log(e.stack)
+		process.exit()
+	}
+}
 
 
 function mds_init_mdsjunction(query, ds, genome) {
@@ -14250,56 +14265,4 @@ function checkrank_bedj(req,res) {
 
 
 
-//////////// __termdb
 
-
-function init_termdb ( ds ) {
-/* to initiate termdb for a mds dataset
-*/
-	const termdb = ds.cohort.termdb
-	
-	if(!termdb.term2term) throw '.term2term{} missing'
-	init_termdb_parse_term2term( termdb )
-
-	if(!termdb.termjson) throw '.termjson{} missing'
-	init_termdb_parse_termjson( termdb )
-}
-
-
-
-function init_termdb_parse_term2term ( termdb ) {
-
-	if(termdb.term2term.file) {
-		// one single text file
-		termdb.term2term.map = new Map()
-		// k: parent
-		// v: [] children
-		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.term2term.file),{encoding:'utf8'}).trim().split('\n') ) {
-			if(line[0]=='#') continue
-			const l = line.split('\t')
-			if(!termdb.term2term.map.has( l[0] )) termdb.term2term.map.set( l[0], [] )
-			termdb.term2term.map.get( l[0] ).push( l[1] )
-		}
-		return
-	}
-	// maybe sqlitedb
-	throw 'term2term: unknown data source'
-}
-
-
-function init_termdb_parse_termjson ( termdb ) {
-	if(termdb.termjson.file) {
-		termdb.termjson.map = new Map()
-		// k: term
-		// v: {}
-		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.termjson.file),{encoding:'utf8'}).trim().split('\n') ) {
-			if(line[0]=='#') continue
-			const l = line.split('\t')
-			termdb.termjson.map.set( l[0], JSON.parse(l[1]) )
-		}
-		return
-	}
-	throw 'termjson: unknown data source'
-}
-
-//////////// end of __termdb

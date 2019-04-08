@@ -1,48 +1,259 @@
-const server = require('../app')
+const app = require('../app')
+const fs = require('fs')
+const path = require('path')
+const utils = require('./utils')
 
 
 
+const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 
-exports.handle_termdb_closure = ( genomes ) => {
+/*
+********************** EXPORTED
+handle_request_closure
+server_init
+********************** INTERNAL
+copy_term
+*/
 
-	return function (req, res) {
 
-		if( server.reqbodyisinvalidjson(req,res) ) return
 
-		try {
+exports.handle_request_closure = ( genomes ) => {
+/*
+*/
 
-			const q = req.query
-			const gn = genomes[ q.genome ]
-			if(!gn) throw 'invalid genome'
-			const ds = gn.datasets[ q.dslabel ]
-			if(!ds) throw 'invalid dslabel'
-			if(!ds.cohort) throw 'ds.cohort missing'
-			const tdb = ds.cohort.termdb
-			if(!tdb) throw 'no termdb for this dataset'
+return async (req, res) => {
 
-			// process triggers
-			// to support await, need to detect triggers here
+	if( app.reqbodyisinvalidjson(req,res) ) return
 
-			if( termdb_trigger_rootterm( q, res, tdb ) ) return
-			if( termdb_trigger_children( q, res, tdb ) ) return
-			if( termdb_trigger_barchart( q, res, tdb, ds ) ) return
-			if( termdb_trigger_crosstab2term( q, res, tdb, ds ) ) return
+	const q = req.query
 
-			throw 'termdb: don\'t know what to do'
+	try {
 
-		} catch(e) {
-			res.send({error: (e.message || e)})
-			if(e.stack) console.log(e.stack)
+		const genome = genomes[ q.genome ]
+		if(!genome) throw 'invalid genome'
+		const ds = genome.datasets[ q.dslabel ]
+		if(!ds) throw 'invalid dslabel'
+		if(!ds.cohort) throw 'ds.cohort missing'
+		const tdb = ds.cohort.termdb
+		if(!tdb) throw 'no termdb for this dataset'
+
+		const ds_filtered = may_filter_samples( q, tdb, ds )
+
+		// process triggers
+
+		if( trigger_rootterm( q, res, tdb ) ) return
+		if( q.get_children ) {
+			await trigger_children( q, res, tdb )
+			return
 		}
+		if( q.barchart ) {
+			await trigger_barchart( q, res, tdb, ds_filtered )
+			return
+		}
+		if( q.crosstab2term ) {
+			if( q.boxplot ) {
+				trigger_crosstab2term_boxplot( q, res, tdb, ds_filtered )
+			} else {
+				trigger_crosstab2term( q, res, tdb, ds_filtered )
+			}
+			return
+		}
+		if( q.findterm ) {
+			trigger_findterm( q, res, tdb )
+			return
+		}
+
+		throw 'termdb: don\'t know what to do'
+
+	} catch(e) {
+		res.send({error: (e.message || e)})
+		if(e.stack) console.log(e.stack)
 	}
+}
 }
 
 
 
 
+function may_filter_samples ( q, tdb, ds ) {
+/*
+if needs filter, ds_filtered to point to a copy of ds with modified cohort.annotation{} with those samples passing filter
+filter by keeping only samples annotated to certain term (e.g. wgs)
+filter by genotype of a variant
+*/
+	return ds
+}
 
-function termdb_trigger_crosstab2term ( q, res, tdb, ds ) {
+
+
+
+function trigger_crosstab2term_boxplot ( q, res, tdb, ds ) {
+/*
+code replication
+
+trigger_crosstab2term already complicated, don't want to add any more
+*/
+	if(!q.term1) throw 'term1 missing'
+	if(!q.term1.id) throw 'term1.id missing'
+	const term1 = tdb.termjson.map.get( q.term1.id )
+	if(!term1) throw 'term1.id invalid'
+	if(!q.term2) throw 'term2 missing'
+	if(!q.term2.id) throw 'term2.id missing'
+	const term2 = tdb.termjson.map.get( q.term2.id )
+	if(!term2) throw 'term2.id invalid'
+	if(!ds.cohort) throw 'ds.cohort missing'
+	if(!ds.cohort.annotation) throw 'ds.cohort.annotation missing'
+
+
+	// for now, require these terms to have barcharts, and use that to tell if the term is categorical/numeric
+	// later switch to term type
+	if(!term1.graph) throw 'term1.graph missing'
+	if(!term1.graph.barchart) throw 'term1.graph.barchart missing'
+	if(!term2.graph) throw 'term2.graph missing'
+	if(!term2.graph.barchart) throw 'term2.graph.barchart missing'
+
+	if(!(term2.isinteger || term2.isfloat)) throw 'boxplot: term2 is not numerical'
+
+
+	// if term1 is categorical, use to store crosstab data in each category
+	// k: category value, v: {}
+	let t1categories
+	// if term1 is numerical, use to store crosstab data in each bin
+	let t1binconfig
+
+	// premake numeric bins for t1 and t2
+	if( term1.isinteger || term1.isfloat ) {
+
+		/* when a barchart has been created for numeric term1,
+		it will be based on either auto bin or fixed bins
+		but not by the special crosstab bins
+		so do not apply the special bin when it is term1
+		*/
+		const [ bc, values ] = termdb_get_numericbins( q.term1.id, term1, ds )
+		t1binconfig = bc
+	} else if( term1.iscategorical ) {
+		t1categories = new Map()
+		// k: t1 category value
+		// v: {}
+	} else {
+		throw 'unknown term1 value type'
+	}
+
+
+
+	for(const s in ds.cohort.annotation) {
+		const sampleobj = ds.cohort.annotation[ s ]
+
+		// test term2 value first
+		const v2 = sampleobj[ q.term2.id ]
+		if( !Number.isFinite( v2 )) continue
+
+		if(term2.graph.barchart.numeric_bin.unannotated) {
+			if( v2 == term2.graph.barchart.numeric_bin.unannotated.value ) {
+				// exclude unannotated value for term2
+				continue
+			}
+		}
+
+		// slot v2 into term1 bin
+		const v1 = sampleobj[ q.term1.id ]
+
+		if( t1categories ) {
+
+			if( v1 == undefined) continue
+
+			if(!t1categories.has( v1 )) {
+				t1categories.set( v1, { values: [] } )
+			}
+			t1categories.get(v1).values.push( {value:v2} )
+
+		} else {
+
+			// t1 is numerical
+			if( !Number.isFinite( v1 )) continue
+			// get the bin for this sample
+			const bin = termdb_value2bin( v1, t1binconfig )
+			if(!bin) {
+				// somehow this sample does not fit to a bin
+				continue
+			}
+			bin.value--
+			if(!bin.values) {
+				bin.values = []
+			}
+			bin.values.push( {value:v2} )
+		}
+	}
+
+	// return result
+
+	let lst = [] // list of t1 categories/bins
+	let binmax = 0 // max number of samples for each bin
+
+	if(t1categories) {
+		for(const [ v1, o ] of t1categories) {
+
+			o.values.sort((i,j)=>i.value-j.value)
+
+			binmax = Math.max( binmax, o.values[ o.values.length-1 ].value )
+
+			const group = {
+				label: v1,
+				boxplot: app.boxplot_getvalue( o.values )
+			}
+
+			lst.push(group)
+		}
+
+		if( term1.graph.barchart.order ) {
+			// term1 has predefined order
+			const lst2 = []
+			for(const i of term1.graph.barchart.order) {
+				const j = lst.find( m=> m.label == i )
+				if( j ) {
+					lst2.push( j )
+				}
+			}
+			lst = lst2
+		} else {
+			// no predefined order, sort to descending order
+			lst.sort((i,j)=>j.value-i.value)
+		}
+
+	} else {
+
+		// term1 is numeric; merge unannotated bin into regular bins
+		if( t1binconfig.unannotated ) {
+			t1binconfig.bins.push( t1binconfig.unannotated )
+		}
+
+		for(const b of t1binconfig.bins ) {
+
+			b.values.sort((i,j)=>i.value-j.value)
+
+			binmax = Math.max( binmax, b.values[ b.values.length-1 ].value )
+
+			const group = {
+				label: b1.label,
+				boxplot: app.boxplot_getvalue( b.values )
+			}
+
+			lst.push( group )
+		}
+		// term1 is numeric bin and is naturally ordered, so do not sort them to decending order
+	}
+
+	res.send( {
+		lst: lst,
+		binmax: binmax,
+		} )
+}
+
+
+
+
+function trigger_crosstab2term ( q, res, tdb, ds ) {
 /*
 cross tabulate two terms
 
@@ -50,8 +261,6 @@ numeric term may have custom binning
 
 for each category/bin of term1, divide its samples by category/bin of term2
 */
-	if( !q.crosstab2term ) return false
-	// validate
 	if(!q.term1) throw 'term1 missing'
 	if(!q.term1.id) throw 'term1.id missing'
 	const term1 = tdb.termjson.map.get( q.term1.id )
@@ -346,22 +555,19 @@ for each category/bin of term1, divide its samples by category/bin of term2
 	}
 
 	res.send( result )
-	return true
 }
 
 
 
 
 
-function termdb_trigger_barchart ( q, res, tdb, ds ) {
+async function trigger_barchart ( q, res, tdb, ds ) {
 /*
 summarize numbers to create barchar based on server config
 
 if is a numeric term, also get distribution
 
 */
-	if( !q.barchart ) return false
-
 	// validate
 	if(!q.barchart.id) throw 'barchart.id missing'
 	const term = tdb.termjson.map.get( q.barchart.id )
@@ -370,6 +576,12 @@ if is a numeric term, also get distribution
 	if(!term.graph.barchart) throw 'graph.barchart is not available for said term'
 	if(!ds.cohort) throw 'cohort missing from ds'
 	if(!ds.cohort.annotation) throw 'cohort.annotation missing'
+
+	if( q.ssid ) {
+		await barchart_byssid( q, term, ds, res )
+		return
+	}
+
 
 	// different types of barcharts
 
@@ -412,7 +624,7 @@ if is a numeric term, also get distribution
 		}
 
 		res.send({ lst: lst })
-		return true
+		return
 	}
 
 
@@ -449,7 +661,7 @@ if is a numeric term, also get distribution
 
 			// values to be sorted to ascending order for boxplot
 			values2.sort((i,j)=> i-j )
-			result.boxplot = boxplot_getvalue( values2.map( i=>{return {value:i}} ) )
+			result.boxplot = app.boxplot_getvalue( values2.map( i=>{return {value:i}} ) )
 			// get mean value
 			result.boxplot.mean = values2.reduce((i,j)=>j+i, 0) / values2.length
 			// get sd
@@ -465,6 +677,123 @@ if is a numeric term, also get distribution
 	}
 
 	throw 'unknown barchart type'
+}
+
+
+
+async function barchart_byssid ( q, term, ds, res ) {
+/* only iterate through samples used in sets,
+not the complete set in ds.cohort
+*/
+	const samplesets = await load_ssid( q.ssid )
+
+	if(term.iscategorical) {
+
+		const category2set = new Map()
+		// k: category, v: {samplecount,sets:{}}
+
+		for(const sampleset of samplesets) {
+			for(const sample of sampleset.samples) {
+				const o = ds.cohort.annotation[ sample ]
+				if(!o) continue
+
+				const category = o[ term.id ]
+				if(!category) continue
+
+				if(!category2set.has(category)) category2set.set( category, {value:0, sets:{}})
+				category2set.get(category).value++
+				category2set.get(category).sets[ sampleset.name ] = (category2set.get(category).sets[ sampleset.name ] || 0) + 1
+			}
+		}
+		// replace sets{} with lst[]
+		const lst = []
+		for(const [k,v] of category2set) {
+			v.label = k
+			v.lst = []
+			for(const k in v.sets) {
+				v.lst.push({
+					label: k,
+					value: v.sets[ k ]
+				})
+			}
+			delete v.sets
+			lst.push(v)
+		}
+		if( term.graph.barchart.order ) {
+			res.send({ lst : term.graph.barchart.order.map( i=> lst.find(j=>j.label==i) ) })
+			return
+		}
+
+		res.send({ lst: lst.sort((i,j)=> j.value - i.value ) })
+		return
+	}
+
+	if( term.isfloat || term.isinteger ) {
+
+		const [ binconfig, values ] = termdb_get_numericbins( term.id, term, ds )
+
+		for(const sampleset of samplesets) {
+			for(const sample of sampleset.samples) {
+				const o = ds.cohort.annotation[ sample ]
+				if(!o) continue
+
+				const v = o[ term.id ]
+				if(!Number.isFinite(v)) continue
+				const bin = termdb_value2bin( v, binconfig )
+
+				if(!bin.sets) bin.sets = {}
+				bin.sets[ sampleset.name ] = (bin.sets[sampleset.name] || 0) + 1
+			}
+		}
+		const result = {
+			lst: [],
+			unannotated: binconfig.unannotated
+		}
+		// replace sets with lst
+		for(const b of binconfig.bins) {
+			b.lst = []
+			for(const k in b.sets) {
+				b.lst.push({
+					label: k,
+					value: b.sets[k]
+				})
+			}
+			delete b.sets
+			result.lst.push(b)
+		}
+
+		{
+			/* get the value distribution
+			values[] has value for all samples
+			if the term has value for unannotated, need to exclude them from stat
+			*/
+			let values2 = []
+			if( term.graph.barchart.numeric_bin.unannotated ) {
+				// exclude unannotated
+				for(const v of values) {
+					if(v != term.graph.barchart.numeric_bin.unannotated.value) {
+						values2.push(v)
+					}
+				}
+			} else {
+				values2 = values
+			}
+
+			// values to be sorted to ascending order for boxplot
+			values2.sort((i,j)=> i-j )
+			result.boxplot = app.boxplot_getvalue( values2.map( i=>{return {value:i}} ) )
+			// get mean value
+			result.boxplot.mean = values2.reduce((i,j)=>j+i, 0) / values2.length
+			// get sd
+			let s = 0
+			for(const v of values2) {
+				s += Math.pow( v - result.boxplot.mean, 2 )
+			}
+			result.boxplot.sd = Math.sqrt( s / (values2.length-1) )
+		}
+
+		res.send( result )
+	}
 }
 
 
@@ -648,7 +977,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
 
 
-function termdb_trigger_rootterm ( q, res, tdb ) {
+function trigger_rootterm ( q, res, tdb ) {
 
 	if( !q.default_rootterm) return false
 
@@ -657,9 +986,7 @@ function termdb_trigger_rootterm ( q, res, tdb ) {
 	for(const i of tdb.default_rootterm) {
 		const t = tdb.termjson.map.get( i.id )
 		if(t) {
-			const t2 = termdb_copyterm( t )
-			t2.id = i.id
-			lst.push( t2 )
+			lst.push( copy_term( t ) )
 		}
 	}
 	res.send({lst: lst})
@@ -667,8 +994,10 @@ function termdb_trigger_rootterm ( q, res, tdb ) {
 }
 
 
-function termdb_trigger_children ( q, res, tdb ) {
-	if( !q.get_children) return false
+async function trigger_children ( q, res, tdb ) {
+/* get children terms
+may apply ssid: a premade sample set
+*/
 	// list of children id
 	const cidlst = tdb.term2term.map.get( q.get_children.id )
 	// list of children terms
@@ -677,43 +1006,144 @@ function termdb_trigger_children ( q, res, tdb ) {
 		for(const cid of cidlst) {
 			const t = tdb.termjson.map.get( cid )
 			if(t) {
-				const t2 = termdb_copyterm( t )
-				t2.id = cid
-				lst.push( t2 )
+				lst.push( copy_term( t ) )
 			}
 		}
 	}
+
+	if( 0 && q.get_children.ssid ) {
+		/*
+		may not do this
+		but to apply this to barchart
+		*/
+		// based on premade sample sets, count how many samples from each set are annotated to each term
+		const samplesets = await load_ssid( q.get_children.ssid )
+		for(const term of lst) {
+			term.ss2count = {}
+			for(const sampleset of samplesets) {
+				term.ss2count[ sampleset.name ] = term_getcount_4sampleset( term, sampleset.samples )
+			}
+		}
+	}
+
 	res.send({lst: lst})
-	return true
 }
 
 
 
-function termdb_copyterm ( t ) {
+function copy_term ( t ) {
 /*
 t is the {} from termjson
 
 do not directly hand over the term object to client; many attr to be kept on server
 */
-	const t2 = {
-		name: t.name,
-		isleaf: t.isleaf,
-		iscategorical: t.iscategorical,
-		isinteger: t.isinteger,
-		isfloat: t.isfloat,
-	}
+	const t2 = JSON.parse(JSON.stringify( t ))
 
-	if(t.graph) {
-		// pass over graph instruction
-		t2.graph = {}
-		if(t.graph.barchart) {
-			const p = t.graph.barchart
-			t2.graph.barchart = {
-				barwidth: p.barwidth,
-				labelfontsize: p.labelfontsize,
-				order: p.order,
+	// delete things not to be revealed to client
+
+	return t2
+}
+
+
+
+
+
+
+
+
+///////////// server init
+
+
+exports.server_init = ( ds ) => {
+/* to initiate termdb for a mds dataset
+*/
+	const termdb = ds.cohort.termdb
+
+	if(!termdb.term2term) throw '.term2term{} missing'
+	server_init_parse_term2term( termdb )
+
+	if(!termdb.termjson) throw '.termjson{} missing'
+	server_init_parse_termjson( termdb )
+}
+
+
+
+function server_init_parse_term2term ( termdb ) {
+
+	if(termdb.term2term.file) {
+		// one single text file
+		termdb.term2term.map = new Map()
+		// k: parent
+		// v: [] children
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.term2term.file),{encoding:'utf8'}).trim().split('\n') ) {
+			if(line[0]=='#') continue
+			const l = line.split('\t')
+			if(!termdb.term2term.map.has( l[0] )) termdb.term2term.map.set( l[0], [] )
+			termdb.term2term.map.get( l[0] ).push( l[1] )
+		}
+		return
+	}
+	// maybe sqlitedb
+	throw 'term2term: unknown data source'
+}
+
+
+
+function server_init_parse_termjson ( termdb ) {
+	if(termdb.termjson.file) {
+		termdb.termjson.map = new Map()
+		// k: term
+		// v: {}
+		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.termjson.file),{encoding:'utf8'}).trim().split('\n') ) {
+			if(line[0]=='#') continue
+			const l = line.split('\t')
+			const term = JSON.parse( l[1] )
+			term.id = l[0]
+			termdb.termjson.map.set( l[0], term )
+		}
+		return
+	}
+	throw 'termjson: unknown data source'
+}
+
+
+
+
+function trigger_findterm ( q, res, termdb ) {
+	const str = q.findterm.str.toLowerCase()
+	const lst = []
+	for(const term of termdb.termjson.map.values()) {
+		if(term.name.toLowerCase().indexOf( str ) != -1) {
+			lst.push( copy_term( term ) )
+			if(lst.length>=10) {
+				break
 			}
 		}
 	}
-	return t2
+	res.send({lst:lst})
+}
+
+
+
+async function load_ssid ( ssid ) {
+/* ssid is the file name under cache/ssid/
+*/
+	const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', ssid ) )
+	const samplesets = []
+	for(const line of text.split('\n')) {
+		const l = line.split('\t')
+		samplesets.push({
+			name: l[0],
+			samples: l[1].split(',')
+		})
+	}
+	return samplesets
+}
+
+
+function term_getcount_4sampleset ( term, samples ) {
+/*
+term
+samples[] array of sample names
+*/
 }

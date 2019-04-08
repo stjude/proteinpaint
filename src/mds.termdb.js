@@ -29,6 +29,7 @@ default_rootterm has modifiers, for modifying the behavior/display of the term t
 
 ********************** EXPORTED
 init()
+add_searchbox_4term
 ********************** INTERNAL
 show_default_rootterm
 print_one_term
@@ -64,6 +65,7 @@ obj{}:
 .div
 .default_rootterm{}
 	.modifier_click_term()
+.modifier_ssid_barchart{}
 */
 
 	window.obj = obj // for testing
@@ -76,6 +78,13 @@ obj{}:
 
 		if(!obj.genome) throw '.genome{} missing'
 		if(!obj.mds) throw '.mds{} missing'
+
+		// if all queries are handled at termdb route, can use this closure to simplify
+		obj.do_query = (arg) => {
+			arg.genome = obj.genome.name
+			arg.dslabel = obj.mds.label
+			return client.dofetch('termdb', arg)
+		}
 
 		// handle triggers
 
@@ -100,14 +109,11 @@ async function show_default_rootterm ( obj ) {
 
 also for showing term tree, allowing to select certain terms
 
-
 */
-	const arg = {
-		genome: obj.genome.name,
-		dslabel: obj.mds.label,
+
+	const data = await obj.do_query( {
 		default_rootterm: 1
-	}
-	const data = await client.dofetch( 'termdb', arg )
+	})
 	if(data.error) throw 'error getting default root terms: '+data.error
 	if(!data.lst) throw 'no default root term: .lst missing'
 
@@ -122,9 +128,9 @@ also for showing term tree, allowing to select certain terms
 
 		// pass on modifier
 		if( obj.default_rootterm.modifier_click_term ) {
+			// FIXME this modifier should be moved to obj so no need to attach to arg
 			arg.modifier_click_term = obj.default_rootterm.modifier_click_term
 		}
-		// maybe other type of modifiers too
 
 		print_one_term( arg, obj )
 	}
@@ -152,12 +158,14 @@ possible modifiers:
 
 	const term = arg.term
 
-	/* a row to show this term
-	if the term is parent, will also contain the expand/fold button
-	children to be shown in a separate row
+	/* a row for:
+	[+] [term name] [graph button]
 	*/
 	const row = arg.row.append('div')
+	// another under row, for adding graphs
+	const row_graph = arg.row.append('div')
 
+	// if [+] button is created, will add another row under row for showing children
 	may_make_term_foldbutton( arg, row, obj )
 
 	// term name
@@ -173,6 +181,11 @@ possible modifiers:
 		will not render remaining buttons
 		*/
 
+		// update styling
+		namebox
+			.style('padding','5px')
+			.style('margin-left','5px')
+
 		if( arg.modifier_click_term.disable_terms && arg.modifier_click_term.disable_terms.has( term.id ) ) {
 
 			// this term is disabled, no clicking
@@ -183,7 +196,6 @@ possible modifiers:
 			// enable clicking this term
 			namebox
 				.attr('class', 'sja_menuoption')
-				.style('margin-left','5px')
 				.on('click',()=>{
 					arg.modifier_click_term.callback( term )
 				})
@@ -195,122 +207,13 @@ possible modifiers:
 	// term function buttons
 	// including barchart, and cross-tabulate
 
-	may_make_term_graphbuttons( term, row, obj )
-
-	may_enable_crosstabulate( term, row, obj )
+	may_make_term_graphbuttons( term, row, row_graph, obj )
 }
 
 
 
 
-
-
-
-function may_enable_crosstabulate ( term1, row, obj ) {
-/*
-may enable a standalone crosstab button for a term in the tree
-just a wrapper for may_makebutton_crosstabulate with its callback function
-*/
-	may_makebutton_crosstabulate( {
-		term1: term1,
-		button_row: row,
-		obj: obj,
-		callback: result=>{
-
-			/* got result
-			.term2{}
-			.items[]
-			._button
-
-			term1 is term
-
-			to make new panel and display a table
-			observe predefined order of values for both term1/2
-			*/
-
-			const c = result._button.node().getBoundingClientRect()
-			const pane = client.newpane({ x: c.x+100, y: Math.max( 10, c.y-100) })
-			pane.header.html( term1.name+' <span style="font-size:.7em;opacity:.5">CROSSTABULATE WITH</span> '+result.term2.name )
-
-			// columns are term2 values, order may be predefined
-			let column_keys = []
-			if( result.term2_order ) {
-
-				column_keys = result.term2_order
-
-			} else {
-
-				// no predefined order, get unique values from data
-				const term2values = new Set()
-				for(const t1v of result.items) {
-					for(const j of t1v.lst) {
-						term2values.add( j.label )
-					}
-				}
-				for(const s of term2values) {
-					column_keys.push( s )
-				}
-			}
-
-
-			// show table
-			const table = pane.body.append('table')
-				.style('margin-top','20px')
-				.style('border-spacing','3px')
-				.style('border-collapse','collapse')
-				.style('border', '1px solid black')
-
-			// header
-			const tr = table.append('tr')
-			tr.append('td') // column 1
-			// print term2 values as rest of columns
-			for(const i of column_keys) {
-				tr.append('th')
-					.text( i )
-					.style('border', '1px solid black')
-			}
-
-			// rows are term1 values
-			let rows = []
-			// order of rows maybe predefined
-			if( term1.graph && term1.graph.barchart && term1.graph.barchart.order ) {
-				for(const v of term1.graph.barchart.order ) {
-					const i = result.items.find( i=> i.label == v )
-					if( i ) {
-						rows.push( i )
-					}
-				}
-			} else {
-				rows = result.items
-			}
-			
-			for(const t1v of rows) {
-				const tr = table.append('tr')
-
-				// column 1
-				tr.append('th')
-					.text( t1v.label )
-					.style('border', '1px solid black')
-
-				// other columns
-				for(const t2label of column_keys) {
-					const td = tr.append('td')
-						.style('border', '1px solid black')
-					const v = t1v.lst.find( i=> i.label == t2label )
-					if( v ) {
-						td.text( v.value )
-					}
-				}
-			}
-		}
-	})
-}
-
-
-
-
-
-function may_make_term_graphbuttons ( term, row, obj ) {
+function may_make_term_graphbuttons ( term, row, row_graph, obj ) {
 /*
 if term.graph{} is there, make a button to trigger it
 allow to make multiple buttons
@@ -323,7 +226,9 @@ allow to make multiple buttons
 
 	if(term.graph.barchart) {
 		// barchart button
-		term_addbutton_barchart( term, row, obj )
+		term_addbutton_barchart( term, row, row_graph, obj )
+
+		may_enable_crosstabulate( term, row,  obj )
 	}
 
 
@@ -333,12 +238,15 @@ allow to make multiple buttons
 
 
 
-function term_addbutton_barchart ( term, row, obj ) {
+
+
+function term_addbutton_barchart ( term, row, row_graph, obj ) {
 /*
 click button to launch barchart for a term
 
 there may be other conditions to apply, e.g. patients carrying alt alleles of a variant
 such conditions may be carried by obj
+
 */
 
 	const button = row.append('div')
@@ -346,89 +254,153 @@ such conditions may be carried by obj
 		.style('margin-left','20px')
 		.style('padding','3px 5px')
 		.style('font-size','.8em')
-		.attr('class','sja_menuoption')
+		.style('border','solid 1px black')
+		.attr('class','sja_opaque8')
 		.text('BARCHART')
 
-	// by clicking button for first time, query server to load data
-	// set to true to prevent from loading repeatedly
-	let loading = false
-	// make one panel per button; no duplicated panels
-	let panel
+	const div = row_graph.append('div')
+		.style('border','solid 1px #ccc')
+		.style('border-radius','5px')
+		.style('margin','10px')
+		.style('padding','10px')
+		.style('display','none')
 
-	button.on('click',()=>{
+	// these to be shared for crosstab function
+	term.graph.barchart.dom = {
+		button: button,
+		loaded: false,
+		div: div
+	}
 
-		if( loading ) return
+	button.on('click', async ()=>{
 
-		if( panel ) {
-			// panel has been created, toggle its visibility
-			if(panel.pane.style('display') == 'none') {
-				panel.pane.style('display', 'block')
-				client.flyindi( button, panel.pane )
-				button.style('border', null)
-			} else {
-				client.flyindi( panel.pane, button )
-				panel.pane.style('display', 'none')
-				button.style('border', 'solid 1px black')
-			}
-			return
+		if(div.style('display') == 'none') {
+			client.appear(div, 'inline-block')
+			button.style('background','#ededed')
+				.style('color','black')
+		} else {
+			client.disappear(div)
+			button.style('background','#aaa')
+				.style('color','white')
 		}
 
-		// ask server to make data for barchart
+		if( term.graph.barchart.dom.loaded ) return
 
 		button.text('Loading')
-			.property('disabled',1)
-
-		loading = true
-
-		panel = client.newpane({
-			x: d3event.clientX+200,
-			y: Math.max( 80, d3event.clientY-100 ),
-			close:()=>{
-				client.flyindi( panel.pane, button )
-				panel.pane.style('display', 'none')
-				button.style('border', 'solid 1px black')
-			}
-		})
-
-		panel.header.text('Barplot for '+term.name)
 
 		const arg = {
-			genome: obj.genome.name,
-			dslabel: obj.mds.label,
 			barchart: {
 				id: term.id
 			}
 		}
+		/// modifier
+		if( obj.modifier_ssid_barchart ) {
+			arg.ssid = obj.modifier_ssid_barchart.ssid
+		}
 
-		client.dofetch( 'termdb', arg )
-		.then(data=>{
+		try {
+			const data = await obj.do_query( arg )
 			if(data.error) throw data.error
 			if(!data.lst) throw 'no data for barchart'
 
 			// make barchart
 			const plot = {
+				holder: div,
 				genome: obj.genome.name,
 				dslabel: obj.mds.label,
 				items: data.lst,
 				unannotated: data.unannotated,
 				boxplot: data.boxplot, // available for numeric terms
-				holder: panel.body,
 				term: term
 			}
 
+			if( obj.modifier_ssid_barchart ) {
+				const g2c = {}
+				for(const k in obj.modifier_ssid_barchart.groups) {
+					g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
+				}
+				plot.mutation_lst = [
+					{
+						mutation_name: obj.modifier_ssid_barchart.mutation_name,
+						ssid: obj.modifier_ssid_barchart.ssid,
+						genotype2color: g2c
+					}
+				]
+				plot.overlay_with_genotype_idx = 0
+
+				// this doesn't work
+				plot.term2 = {name:'genotype'}
+
+			}
+
 			barchart_make( plot )
-		})
-		.catch(e=>{
-			client.sayerror( panel.body, e.message || e)
+
+		} catch(e) {
+			client.sayerror( div, e.message || e)
 			if(e.stack) console.log(e.stack)
-		})
-		.then(()=>{
-			loading = false
-			button.text('BARCHART')
-				.property('disabled',false)
-		})
+		}
+
+		button.text('BARCHART')
+		term.graph.barchart.dom.loaded=true
 	})
 }
+
+
+
+
+
+function may_enable_crosstabulate ( term1, row, obj ) {
+/*
+may enable a standalone crosstab button for a term in the tree
+just a wrapper for may_makebutton_crosstabulate with its callback function
+
+benefit of having this standalone button is that user having such need in mind will be able to find it directly,
+rather than having to remember to click on the barchart button first, and get to crosstab from the barchart panel
+
+for showing crosstab output, should show in barchart panel instead with the instrument panel
+providing all the customization options
+*/
+	may_makebutton_crosstabulate( {
+		term1: term1,
+		button_row: row,
+		obj: obj,
+		callback: result=>{
+
+			/* got result
+			.term2{}
+			.items[]
+			._button
+			*/
+
+			// display result through barchart button
+			term1.graph.barchart.dom.loaded=true
+			term1.graph.barchart.dom.div.selectAll('*').remove()
+			client.appear( term1.graph.barchart.dom.div, 'inline-block' )
+			term1.graph.barchart.dom.button
+				.style('background','#ededed')
+				.style('color','black')
+
+			const plot = {
+				obj: obj,
+				genome: obj.genome.name,
+				dslabel: obj.mds.label,
+				holder: term1.graph.barchart.dom.div,
+				term: term1,
+				term2: result.term2,
+				items: result.items,
+				default2showtable: true // a flag for barchart to show html table view by default
+			}
+
+			barchart_make( plot )
+		}
+	})
+}
+
+
+
+
+
+
 
 
 
@@ -467,34 +439,37 @@ buttonholder: div in which to show the button, term label is also in it
 
 	button.on('click',()=>{
 
-		if(isloading) return // guard against clicking while loading
-
-		if(children_loaded) {
-			// children has been loaded, toggle visibility
-			if(childrenrow.style('display') === 'none') {
-				client.appear(childrenrow)
-				button.text('-')
-			} else {
-				client.disappear(childrenrow)
-				button.text('+')
-			}
-			return
+		if(childrenrow.style('display') === 'none') {
+			client.appear(childrenrow)
+			button.text('-')
+		} else {
+			client.disappear(childrenrow)
+			button.text('+')
 		}
 
-		// to load children terms
-		isloading = true
+		if( children_loaded ) return
 
+		// to load children terms, should run only once
+		const wait = childrenrow.append('div')
+			.text('Loading...')
+			.style('opacity',.5)
+			.style('margin','3px 0px')
+
+		// parameter for getting children terms
 		const param = {
-			genome: obj.genome.name,
-			dslabel: obj.mds.label,
 			get_children: {
 				id: arg.term.id
 			}
 		}
-		client.dofetch('termdb', param)
+		if( arg.modifier_ssid_onterm ) {
+			param.get_children.ssid = arg.modifier_ssid_onterm.ssid
+		}
+
+		obj.do_query( param )
 		.then(data=>{
 			if(data.error) throw data.error
 			if(!data.lst || data.lst.length===0) throw 'error getting children'
+			wait.remove()
 			// got children
 			for(const cterm of data.lst) {
 				print_one_term(
@@ -509,11 +484,12 @@ buttonholder: div in which to show the button, term label is also in it
 			}
 		})
 		.catch(e=>{
-			childrenrow.text( e.message || e)
+			wait
+				.text( e.message || e)
+				.style('color','red')
 			if(e.stack) console.log(e.stack)
 		})
 		.then( ()=>{
-			isloading=false
 			children_loaded = true
 			client.appear( childrenrow )
 			button.text('-')
@@ -524,4 +500,76 @@ buttonholder: div in which to show the button, term label is also in it
 
 
 
+export function add_searchbox_4term ( obj, holder, callback ) {
+/*
+add a search box to find term and run callback on it
+*/
 
+	const div = holder.append('div')
+	const input = div.append('div')
+		.append('input')
+		.attr('type','text')
+		.style('width','150px')
+		.attr('placeholder','Search term')
+
+	input.node().focus()
+
+	const resultholder = div
+		.append('div')
+		.style('margin-bottom','10px')
+		.style('display','inline-block')
+
+	let lastterm = null
+
+	// TODO keyup event listner needs debounce
+
+	input.on('keyup', async ()=>{
+		
+		const str = input.property('value')
+		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
+
+		if( str==' ' || str=='' ) {
+			// blank
+			resultholder.selectAll('*').remove()
+			return
+		}
+
+		if( client.keyupEnter() ) {
+			// pressed enter, if terms already found, use that
+			if(lastterm) {
+				callback( lastterm )
+				return
+			}
+		}
+
+		// query
+		const par = { findterm: {
+			str: str
+		}}
+
+		const data = await obj.do_query( par )
+
+		if(data.error) {
+			return
+		}
+
+		resultholder.selectAll('*').remove()
+		if(!data.lst || data.lst.length==0) {
+			resultholder.append('div')
+				.text('No match')
+				.style('opacity',.5)
+			return
+		}
+
+		lastterm = data.lst[0]
+
+		for(const term of data.lst) {
+			resultholder.append('div')
+				.attr('class','sja_menuoption')
+				.text(term.name)
+				.on('click',()=>{
+					callback( term )
+				})
+		}
+	})
+}

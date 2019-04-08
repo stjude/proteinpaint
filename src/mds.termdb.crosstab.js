@@ -1,4 +1,4 @@
-import {init} from './mds.termdb'
+import {init,add_searchbox_4term} from './mds.termdb'
 import * as client from './client'
 import {event as d3event} from 'd3-selection'
 
@@ -43,14 +43,16 @@ then pass term2 and crosstab result to callback
 		arg.obj.tip.clear()
 			.showunder( button.node() )
 
+		const errdiv = arg.obj.tip.d.append('div')
+			.style('margin-bottom','5px')
+			.style('color','#C67C73')
+
+		// this function will be used for both tree and search
+		const term2_selected_callback = make_term2_callback( arg, button, errdiv )
+
+		add_searchbox_4term( arg.obj, arg.obj.tip.d, term2_selected_callback )
 
 		const treediv = arg.obj.tip.d.append('div')
-		const errdiv = arg.obj.tip.d.append('div')
-
-		// TODO term search
-
-		// encapsulate the environment, so the callback can be used for both term search and tree browsing
-		const term2_callback = make_term2_callback( arg, button, errdiv )
 
 		// a new object as init() argument for launching the tree
 		// with modifiers
@@ -63,10 +65,10 @@ then pass term2 and crosstab result to callback
 				// following is the modifier that modifies tree behavior
 
 				modifier_click_term: {
+					// TODO when switching term2 while there is already a term2, add term2 id here also
 					disable_terms: new Set([ arg.term1.id ]),
-					callback: term2_callback,
+					callback: term2_selected_callback
 				}
-
 			},
 		}
 
@@ -81,19 +83,18 @@ then pass term2 and crosstab result to callback
 
 
 function make_term2_callback ( arg, button, errdiv ) {
+/*
+a callback to handle the click on term2 in tree
+as the modifier
+also a closure with the arguments and buttons
+*/
 	return (term2) => {
-		/*
-		a callback to handle the click on term2 in tree
-		as the modifier
-		*/
 
 		// term2 is selected
 		if(term2.id == arg.term1.id) {
 			errdiv.text('Cannot select the same term')
 			return
 		}
-
-		arg.obj.tip.hide()
 
 		cross_tabulate( {
 			term1: {
@@ -106,14 +107,17 @@ function make_term2_callback ( arg, button, errdiv ) {
 		})
 		.then( data=>{
 
+			if( data.error ) throw data.error
 			if( !data.lst ) throw 'error doing cross-tabulation'
+
+			// no error, can hide tip
+			arg.obj.tip.hide()
 
 			// update the plot data using the server-returned new data
 			arg.callback( {
 				items: data.lst,
 				term2: term2,
 				term2_order: data.term2_order,
-				_button: button,
 			})
 		})
 		.catch(e=>{
@@ -157,4 +161,3 @@ return promise
 		return data
 	})
 }
-

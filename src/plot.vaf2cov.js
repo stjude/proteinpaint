@@ -34,6 +34,7 @@ export default function plot_vaf2cov(arg)
 	.height
 	.bincount
 	.color
+	.samplecolor
 	.maxtotal
 	.automax  bool
 	.genotype bool
@@ -42,6 +43,13 @@ export default function plot_vaf2cov(arg)
 .data will be modified
 */
 
+
+
+
+// sampleobj is optional
+for(const i of arg.data) {
+	if(!i.sampleobj) i.sampleobj = {}
+}
 
 
 let width = arg.width || 200
@@ -175,13 +183,13 @@ const spg=boxg.selectAll()
 	.append('g')
 const spgl1=spg.append('line')
 	.attr('stroke-opacity',.6)
-	.attr('stroke',(d)=> d.color ? d.color : (d.sampleobj.color || 'black'))
+	.attr('stroke',(d)=> d.color ? d.color : (d.sampleobj.color || arg.samplecolor ))
 	.each(function(d){
 		d.crosshair1=d3select(this)
 		})
 const spgl2=spg.append('line')
 	.attr('stroke-opacity',.6)
-	.attr('stroke',(d)=> d.color ? d.color : (d.sampleobj.color || 'black'))
+	.attr('stroke',(d)=> d.color ? d.color : (d.sampleobj.color || arg.samplecolor ))
 	.each(function(d){
 		d.crosshair2=d3select(this)
 		})

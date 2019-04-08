@@ -91,7 +91,7 @@ export function barchart_make ( arg ) {
 		- log scale
 
 */
-
+	// console.log(arg)
 	// initiating the plot object
 	// it will be updated later by axis toggle or cross tabulate
 	const plot = {
@@ -110,7 +110,10 @@ export function barchart_make ( arg ) {
 		maxvalue:0,
 		label_fontsize: 15,
 		yaxis_width: 100,
-		use_logscale:0
+		use_logscale:0,
+		use_percentage: 0,
+		default2showtable: 0,
+		term2_boxplot: 0
 	}
 
 	// a row of buttons
@@ -118,7 +121,9 @@ export function barchart_make ( arg ) {
 	plot.button_row = arg.holder.append('div')
 		.style('margin','10px 0px')
 
-	// button - scale toggle
+	////////////// Y Axis options
+
+	// button - Y axis scale selection 
 	plot.button_row.append('span')
 		.text('Y Axis')
 		.style('display','inline-block')
@@ -131,7 +136,7 @@ export function barchart_make ( arg ) {
 		.attr('value','linear')
 		.text('Linear')
 
-	plot.yaxis_options.append('option')
+	plot.yaxis_option_log = plot.yaxis_options.append('option')
 		.attr('value','log')
 		.text('Log10')
 
@@ -141,21 +146,23 @@ export function barchart_make ( arg ) {
 		.text('Percentage')
 		.attr('disabled',1)
 
-	if( plot.term.graph.barchart.numeric_bin ) {
+	////////////// Custom Bin button	
+	if( plot.term.isfloat ) {
 		// bin customization button
-		plot.button_row
+		plot.custom_bin_button = plot.button_row
 			.append('div')
-			.text('x')
+			.text('Customize Bins')
+			.attr('class','sja_menuoption')
+			.style('display','inline-block')
+			.style('margin-left','30px')
+			.style('padding','3px 5px')
 			.on('click',()=>{
-				new_fun( {
-					term1: plot.term,
-					plot: plot
-				})
+				custom_bin(plot)
 			})
 	}
 
 
-	////////////// term2 stuff
+	////////////// term2 buttons
 
 	plot.term2_border_div = plot.button_row
 		.append('div')
@@ -177,7 +184,18 @@ export function barchart_make ( arg ) {
 
 			// update the plot data using the server-returned new data
 			plot.items = result.items
-			do_plot( plot )
+			if (plot.term2.isfloat && plot.term2_boxplot){ 
+				plot.term2_displaymode_options.node().value = 'boxplot'
+				update_plot(plot)
+			}else{
+				plot.term2_boxplot = 0
+				do_plot( plot )
+			}
+
+			//for crosstab button update table
+			if(plot.default2showtable){
+				make_table(plot)
+			}
 		}
 	})
 
@@ -217,6 +235,13 @@ export function barchart_make ( arg ) {
 	//Exposed - not exponsed data
 	plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
 
+	plot.term2 = arg.term2
+	if(arg.default2showtable){
+		if( !plot.term2 ) throw 'term2 is required for default2showtable'
+		plot.default2showtable = 1
+		update_term2_header(plot)
+	}
+
 	do_plot( plot )
 
 }
@@ -226,10 +251,14 @@ function update_term2_header ( plot ) {
 /* update term2 header for events like select / remove / change term2
 	Update plot object based on term2 events
 */	
-	console.log(plot)
+	// console.log(plot)
 	// clear handle holder
 	plot.term2_handle_div.selectAll('*').remove()
 	plot.term2_displaymode_div.selectAll('*').remove()
+	plot.table_div.selectAll('*').remove()
+	plot.table_div.style('display','none')
+	plot.svg.style('display','block')
+	plot.legend_div.style('display','block')
 
 	if( plot.term2 ) {
 		// has term2 so enable this option
@@ -272,6 +301,9 @@ function update_term2_header ( plot ) {
 
 			delete plot.term2
 			plot.yaxis_option_percentage.attr('disabled',1)
+			plot.yaxis_option_log.attr('disabled',null)
+			plot.use_percentage = 0
+			plot.yaxis_options.node().value = 'linear'
 			plot.term2_handle_div.selectAll('*').remove()
 			plot.term2_displaymode_div.selectAll('*').remove()
 			plot.term2_border_div.style('border-color','transparent')
@@ -280,6 +312,10 @@ function update_term2_header ( plot ) {
 			plot.table_div.selectAll('*').remove()
 			plot.svg.style('display','block')
 			plot.legend_div.style('display','block')
+			if (plot.boxplot_div){
+				plot.boxplot_div.style('display','block')
+			}
+			plot.term2_boxplot = 0
 			
 			update_plot(plot)
 		})
@@ -296,14 +332,19 @@ function update_term2_header ( plot ) {
 		.attr('value','table')
 		.text('Table View')
 
-		// create boxplot option for numerical term
-		// FIXME to provide explicit term value type, e.g. numerical
-		if(!plot.term2.graph.barchart.order){
+		// create boxplot option for numerical term (isfloat: true)
+		if(plot.term2.isfloat){
 			plot.term2_displaymode_options.append('option')
 			.attr('value','boxplot')
 			.text('Boxplot')
 		}
 
+		//for croasstab button show table by default
+		if(plot.default2showtable){
+			plot.term2_displaymode_options.node().value = 'table'
+			plot.table_div.style('display','block')
+			make_table(plot)
+		}
 
 		/*
 		every time the 'table' option is selected, render the table
@@ -317,14 +358,30 @@ function update_term2_header ( plot ) {
 		plot.term2_displaymode_options
 		.on('change',()=>{
 			if ( plot.term2_displaymode_options.node().value == 'table'){
+				plot.term2_boxplot = 0
 				plot.table_div.style('display','block')
-				make_table(plot)
+				update_plot(plot)
 			}else if(plot.term2_displaymode_options.node().value == 'stacked'){
+				plot.term2_boxplot = 0
+				plot.yaxis_option_percentage.attr('disabled',null)
+				plot.yaxis_option_log.attr('disabled',null)
 				plot.table_div.style('display','none')
 				plot.svg.style('display','block')
 				plot.legend_div.style('display','block')
+				if(plot.boxplot_div){
+					plot.boxplot_div.style('display','block')
+				}
+				update_plot(plot)
 			}
-			// TODO boxplot - query server for data
+			// if 'boxplot' selected - query server for data
+			else if(plot.term2_displaymode_options.node().value == 'boxplot'){
+				plot.term2_boxplot = 1
+				plot.table_div.style('display','none')
+				plot.svg.style('display','block')
+				plot.legend_div.style('display','none')
+				plot.yaxis_option_percentage.attr('disabled',1)
+				update_plot(plot)
+			}
 		})
 	}
 }
@@ -338,7 +395,7 @@ or stacked bar plot for cross-tabulating
 
 plot()
 */
-
+	console.log(plot)
 	// set y axis min/max scale
 	const [yscale_min, yscale_max] = set_yscale( plot )
 
@@ -346,7 +403,15 @@ plot()
 
 	if( plot.use_logscale ) {
 		plot.y_scale = scaleLog().domain([yscale_max,1]).range([0,plot.barheight])
-	} else {
+		if(plot.term2_boxplot){
+			plot.y_scale = scaleLog().domain([plot.yscale_max,1]).range([0,plot.barheight])
+		}
+	} else if(plot.use_percentage){
+		plot.y_scale = scaleLinear().domain([100,0]).range([0,plot.barheight])
+	}else if(plot.term2_boxplot){
+		plot.y_scale = scaleLinear().domain([plot.yscale_max,0]).range([0,plot.barheight])
+	}
+	else {
 		plot.y_scale = scaleLinear().domain([yscale_max,0]).range([0,plot.barheight])
 	}
 
@@ -446,8 +511,10 @@ plot()
 
 			for (const sub_item of item.lst){
 
-				const previous_y = plot.y_scale( previous_value ) - plot.barheight
-				previous_value += sub_item.value
+				// if y-scale percentage selected, calculate fraction for each sub_item
+				const sub_item_value = (plot.use_percentage) ? (sub_item.value*100/item.value) : sub_item.value 
+				let previous_y = plot.y_scale( previous_value ) - plot.barheight
+				previous_value += sub_item_value
 				const this_y = plot.y_scale( previous_value ) - plot.barheight
 
 				g.append('rect')
@@ -474,7 +541,64 @@ plot()
 				term2_labels.add(sub_item.label)
 				x_lab_tip += '<span style="height: 15px; width: 15px; position: absolute; margin:0 2px; background-color:'+ term2valuecolor( sub_item.label ) +';"></span><span style="margin-left:20px">'+sub_item.label+' ('+ sub_item.value+')</span><br>'
 			}
-		} else {
+		} else if(item.boxplot){
+			//this is for boxplot for 2nd numerical term 
+			g.append("line")
+				.attr("x1", 0)
+				.attr("y1", plot.y_scale(item.boxplot.w1)-plot.barheight)
+				.attr("x2", 0)
+				.attr("y2", plot.y_scale(item.boxplot.w2)-plot.barheight)
+				.attr("stroke-width", 2)
+				.attr("stroke", "black")
+
+			if(plot.use_logscale){
+				g.append("rect")
+				.attr('x', -plot.barwidth/2)
+				.attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
+				.attr('width', plot.barwidth)
+				.attr('height', plot.barheight - plot.y_scale(item.boxplot.p75 / item.boxplot.p25))
+				.attr('fill','#901739')
+			}else{
+				g.append("rect")
+				.attr('x', -plot.barwidth/2)
+				.attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
+				.attr('width', plot.barwidth)
+				.attr('height', plot.barheight - plot.y_scale(item.boxplot.p75-item.boxplot.p25))
+				.attr('fill','#901739')
+			}
+
+			g.append("line")
+				.attr("x1", -plot.barwidth/2.2)
+				.attr("y1", plot.y_scale(item.boxplot.w1)-plot.barheight)
+				.attr("x2", plot.barwidth/2.2)
+				.attr("y2",plot.y_scale(item.boxplot.w1)-plot.barheight)
+				.attr("stroke-width", 2)
+				.attr("stroke", "black")
+	
+			g.append("line")
+				.attr("x1", -plot.barwidth/2.2)
+				.attr("y1", plot.y_scale(item.boxplot.p50)-plot.barheight)
+				.attr("x2", plot.barwidth/2.2)
+				.attr("y2",plot.y_scale(item.boxplot.p50)-plot.barheight)
+				.attr("stroke-width", 1.5)
+				.attr("stroke", "white")
+			
+			g.append("line")
+				.attr("x1", -plot.barwidth/2.2)
+				.attr("y1", plot.y_scale(item.boxplot.w2)-plot.barheight)
+				.attr("x2", plot.barwidth/2.2)
+				.attr("y2",plot.y_scale(item.boxplot.w2)-plot.barheight)
+				.attr("stroke-width", 2)
+				.attr("stroke", "black")
+
+			for(const outlier of item.boxplot.out){
+				g.append("circle")
+					.attr('cx', 0)
+					.attr('cy', plot.y_scale(outlier.value)-plot.barheight)
+					.attr('r', 2)
+					.attr('fill','#901739')
+			}	
+		}else{
 			// this is a single bar plot
 			let value = (plot.use_logscale && item.value <= 1) ?  1.3 : item.value
 			g.append('rect')
@@ -532,8 +656,18 @@ plot()
 
 	// Y-axis toggle for log vs. linear
 	plot.yaxis_options.on('change',()=>{
-		if ( plot.yaxis_options.node().value == 'log'){plot.use_logscale = 1}
-		else { plot.use_logscale = 0 }
+		if ( plot.yaxis_options.node().value == 'log'){
+			plot.use_logscale = 1
+			plot.use_percentage = 0
+		}
+		else if(plot.yaxis_options.node().value == 'percentage'){ 
+			plot.use_percentage = 1
+			plot.use_logscale = 0
+		}
+		else{
+			plot.use_logscale = 0
+			plot.use_percentage = 0
+		}
 		do_plot(plot)
 	})
 	
@@ -723,10 +857,18 @@ function update_plot (plot) {
 	
 	const arg = {
 		genome: plot.genome,
-		dslabel: plot.dslabel,
-		barchart: {
-			id: plot.term.id
+		dslabel: plot.dslabel
+	}
+
+	if(plot.term2){
+		arg.crosstab2term = 1
+		arg.term1 = { id : plot.term.id }
+		arg.term2 = { id : plot.term2.id}
+		if(plot.term2_boxplot){
+			arg.boxplot = 1
 		}
+	}else{
+		arg.barchart = { id : plot.term.id }
 	}
 
 	client.dofetch( 'termdb', arg )
@@ -735,8 +877,16 @@ function update_plot (plot) {
 		if(!data.lst) throw 'no data for barchart'
 
 		plot.items =  data.lst
+		if (data.binmax){ 
+			plot.yscale_max = data.binmax
+			plot.legend_div.style('display','none')
+		}
 
-		do_plot( plot )
+		if(plot.term2_displaymode_options.node().value != 'table'){
+			do_plot( plot )
+		}else{
+			make_table(plot)
+		}
 	})
 }
 
@@ -745,6 +895,9 @@ function make_table (plot) {
 	// hide svg
 	plot.svg.style('display','none')
 	plot.legend_div.style('display','none')
+	if(plot.boxplot_div){
+		plot.boxplot_div.style('display','none')
+	}
 
 	plot.table_div.selectAll('*').remove()
 
@@ -789,7 +942,7 @@ function make_table (plot) {
 	// order of rows maybe predefined
 	if( plot.term.graph && plot.term.graph.barchart && plot.term.graph.barchart.order ) {
 		for(const v of plot.term.graph.barchart.order ) {
-			const i = plot.result.items.find( i=> i.label == v )
+			const i = plot.items.find( i=> i.label == v )
 			if( i ) {
 				rows.push( i )
 			}
@@ -816,4 +969,107 @@ function make_table (plot) {
 			}
 		}
 	}
+}
+
+function custom_bin(plot){
+	plot.tip.clear()
+			.showunder( plot.custom_bin_button.node() )
+
+	const custom_bin_div = plot.tip.d.append('div')
+		.style('margin','10px 0px')
+		.style('align-items','flex-start')
+		.style('display','flex')
+
+	// Bin Size
+	const bin_size_div = custom_bin_div.append('div')
+		.style('display','inline-block')
+		.style('margin-left','10px')
+
+	
+	bin_size_div.append('div')
+		.text('Bin Size')
+		.style('padding-right','3px')
+		.style('text-align','center')
+
+	plot.custom_bin_size = bin_size_div.append('input')
+		.style('margin-top','42px')
+		.attr('size','8')
+		.style('text-align','center')
+
+	// First Bin
+	const first_bin_div = custom_bin_div.append('div')
+		.style('display','inline-block')
+		.style('margin-left','25px')
+
+	first_bin_div.append('div')
+		.text('First Bin')
+		.style('padding-right','3px')
+		.style('text-align','center')
+
+	plot.first_bin_options = first_bin_div.append('select')
+		.style('margin-top','10px')
+
+	plot.first_bin_options.append('option')
+		.attr('value','auto')
+		.text('Automatic')
+
+	plot.first_bin_options.append('option')
+		.attr('value','value')
+		.text('Value')
+
+	plot.first_bin_options.append('option')
+		.attr('value','percentile')
+		.text('Percentile')
+
+	let first_bin_input_div = first_bin_div.append('div')
+		.style('margin-top','10px')
+		.style('display','block')
+	
+	first_bin_input_div.append('span')
+		.style('display','inline-block')
+		.text('<=')
+
+	plot.first_bin_size = first_bin_input_div.append('input')
+		.style('display','inline-block')
+		.style('margin-left','5px')
+		.attr('size','8')
+
+	// Last Bin
+	const last_bin_div = custom_bin_div.append('div')
+		.style('display','inline-block')
+		.style('margin-left','25px')
+		.style('margin-right','10px')
+
+	last_bin_div.append('div')
+		.text('Last Bin')
+		.style('padding-right','3px')
+		.style('text-align','center')
+
+	plot.last_bin_options = last_bin_div.append('select')
+		.style('margin-top','10px')
+
+	plot.last_bin_options.append('option')
+		.attr('value','auto')
+		.text('Automatic')
+
+	plot.last_bin_options.append('option')
+		.attr('value','value')
+		.text('Value')
+
+	plot.last_bin_options.append('option')
+		.attr('value','percentile')
+		.text('Percentile')
+
+	let last_bin_input_div = last_bin_div.append('div')
+		.style('margin-top','10px')
+		.style('display','block')
+	
+	last_bin_input_div.append('span')
+		.style('display','inline-block')
+		.text('>=')
+
+	plot.last_bin_size = last_bin_input_div.append('input')
+		.style('display','inline-block')
+		.style('margin-left','5px')
+		.attr('size','8')
 }
