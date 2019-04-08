@@ -265,10 +265,15 @@ function plot_update(legend_data) {
 	control_panel.append('button')
 		.attr('class','collapsible')
 		.text('Legend & Settings')
+		.on('click',()=>{
+			control_panel.classed("active", control_panel.classed("active") ? true : false)
+			settings_div.style("display", settings_div.display = (settings_div.display == "none" ? "block" : "none"));
+		})
 
 	const settings_div = control_panel.append('div')
-		.attr('class','collapse')
-		.attr('id','settings')
+		.attr('class','content')
+		.attr('overflow','hidden')
+		.style('display','block')
 		.style('margin','10px')
 
 	for (let type in legend_data){
