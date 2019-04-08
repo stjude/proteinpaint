@@ -77,7 +77,7 @@ async function get_pcd_tempfile ( q, gn, res ) {
 TODO 2d
 */
 
-	const lines = await slice_file( q, gn, res )
+	const [ lines, category2color ] = await slice_file( q, gn )
 	// one line per cell
 
 
@@ -96,7 +96,10 @@ DATA ascii
 
 	const filename = 'tmp/'+Math.random()+'.pcd'
 	await write_file( header+lines.join('\n'), './public/'+filename)
-	res.send({pcdfile:filename})
+	res.send({
+		pcdfile: filename,
+		category2color: category2color
+	})
 }
 
 
@@ -119,11 +122,15 @@ function write_file ( text, filepath ) {
 function slice_file ( q, gn, res ) {
 
 	// set up coloring scheme
-	let categorical_color
+	let categorical_color_function
 	let numeric_color
+	let collect_category2color = null
+	// if color scheme is automatic, collect colors here for returning to client
 
 	if( q.getpcd.category_autocolor ) {
-		categorical_color = d3scale.scaleOrdinal( d3scale.schemeCategory20 )
+		categorical_color_function = d3scale.scaleOrdinal( d3scale.schemeCategory20 )
+		collect_category2color = {}
+		// k: category, v: color
 	}
 	// TODO gene expression
 
@@ -150,15 +157,20 @@ function slice_file ( q, gn, res ) {
 			newl.push( l[i] )
 		}
 
-		if( categorical_color ) {
-			newl.push( Number.parseInt( categorical_color( l[ q.getpcd.category_index ] ).slice(1), 16 ) )
+		if( categorical_color_function ) {
+			const ca = l[ q.getpcd.category_index ]
+			const co = categorical_color_function( ca )
+			newl.push( Number.parseInt( co.slice(1) , 16 ) )
+			if( collect_category2color ) {
+				collect_category2color[ ca ] = co
+			}
 		}
 
 		lines.push( newl.join(' ') )
 
 	})
 	rl.on('close',()=>{
-		resolve( lines )
+		resolve( [ lines, collect_category2color ] )
 	})
 
 	})

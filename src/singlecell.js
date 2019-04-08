@@ -16,14 +16,15 @@ export async function init ( arg, holder ) {
 	obj.holder = holder
 
 /*
+	cannot load text data
 	const pcddata = ( await load_cell_pcd( obj ) ).pcd
 	console.log(pcddata.split('\n').slice(0,50))
 	*/
 
-	const filename = ( await load_cell_pcd(obj) ).pcdfile
-	// console.log('http://localhost:3001/'+filename)
+	const data = ( await load_cell_pcd(obj) )
+	console.log(data.category2color)
 
-	point_cloud(filename)
+	point_cloud( data.pcdfile )
 	animate()
 }
 
