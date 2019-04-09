@@ -4,7 +4,8 @@ import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
 import * as coord from './coord'
-import {vcf_m_color,vcf_m_click} from './block.mds2.vcf'
+import {vcf_m_color} from './block.mds2.vcf'
+import {vcf_clickvariant} from './block.mds2.vcf.clickvariant'
 
 /*
 adapted from legacy code
@@ -380,7 +381,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		})
 		.on('click',m=>{
 			const p=d3event.target.getBoundingClientRect()
-			vcf_m_click(m, p, tk, block)
+			vcf_clickvariant(m, p, tk, block)
 		})
 
 
@@ -410,7 +411,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		.on('mouseover',m=>m_mouseover( m,nm,tk ))
 		.on('mouseout',m=>m_mouseout(m,tk))
 		.on('click',m=>{
-			vcf_m_click(m,{left:d3event.clientX,top:d3event.clientY},tk,block)
+			vcf_clickvariant(m,{left:d3event.clientX,top:d3event.clientY},tk,block)
 			if(block.debugmode) {
 				console.log(m)
 			}
