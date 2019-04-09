@@ -231,6 +231,9 @@ export class Menu{
 	}
 }
 
+const tip = new Menu({padding:''})
+exports.tip = tip
+
 
 
 
