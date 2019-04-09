@@ -266,6 +266,22 @@ function init_controlpanel( obj ) {
 				// hide menu, update use_category_index, and redo load_cell_pcd
 			}
 		}
+	
+	obj.minimize_btn = panel.append('button')
+		.attr('class','collapsible')
+		.style('margin-left','10px')
+		.style('display','inline-block')
+		.style('float','right')
+		.text('-')
+		.on('click',()=>{
+			obj.minimize_btn.classed("active", obj.minimize_btn.classed("active") ? false : true)
+			if(obj.minimize_btn.classed("active")){
+				obj.minimize_btn.text('+')
+			}else{
+				obj.minimize_btn.text('-')
+			}
+			obj.menu_output.style("display", obj.menu_output.display = (obj.menu_output.display == "none" ? "block" : "none"));
+		})
 
 	obj.menu_output = panel.append('div')
 		.style('margin-top','10px')
