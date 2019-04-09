@@ -2,6 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {barchart_make} from './mds.termdb.barchart'
+import {barchart_make2} from './mds.termdb.barchart2'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 /*
