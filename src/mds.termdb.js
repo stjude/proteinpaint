@@ -251,12 +251,9 @@ such conditions may be carried by obj
 */
 
 	const button = row.append('div')
-		.style('display','inline-block')
-		.style('margin-left','20px')
-		.style('padding','3px 5px')
 		.style('font-size','.8em')
-		.style('border','solid 1px black')
-		.attr('class','sja_opaque8')
+		.style('margin-left','20px')
+		.attr('class','sja_button')
 		.text('BARCHART')
 
 	const div = row_graph.append('div')
@@ -277,12 +274,10 @@ such conditions may be carried by obj
 
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
-			button.style('background','#ededed')
-				.style('color','black')
+			button.attr('class','sja_button_open')
 		} else {
 			client.disappear(div)
-			button.style('background','#aaa')
-				.style('color','white')
+			button.attr('class','sja_button_fold')
 		}
 
 		if( term.graph.barchart.dom.loaded ) return

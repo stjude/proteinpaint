@@ -66,6 +66,9 @@ return async (req,res) => {
 		if( q.trigger_ssid_onevcfm ) {
 			await loader_vcf.handle_ssidbyonem( q, genome, ds, result )
 		}
+		if( q.trigger_getvcfcsq ) {
+			await loader_vcf.handle_getcsq( q, genome, ds, result )
+		}
 
 		// other vcf triggers
 		// svcnv triggers
