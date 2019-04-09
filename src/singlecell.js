@@ -108,9 +108,6 @@ or selected a gene for overlaying
 		} else {
 			throw 'unknow coloring scheme for category '+cat.name
 		}
-		// update menu_button here
-		// obj.menu_button.html( cat.name + '&nbsp;&nbsp;&#9660;')
-		obj.use_category_index = cat.columnidx
 
 	} else {
 		// TODO gene expression
@@ -182,11 +179,22 @@ function init_view ( obj ) {
 
 
 function render_cloud( obj, pcdfilename ){
+
+	// remove old points before adding new
+	obj.scene.children.forEach(function(v,i) {
+		if(v.material){
+			v.material.dispose()
+			v.geometry.dispose()
+			obj.scene.remove(v)
+		}
+	})
+
+	// add new points using loader
 	const loader = new THREE.PCDLoader()
 	loader.load( pcdfilename, function ( points ) {
 
 		points.material.size = 0.05
-		obj.scene.add( points )
+		obj.scene.add(points)
 		const center = points.geometry.boundingSphere.center
 		obj.controls.target.set( center.x, center.y, center.z )
 		obj.controls.update()
@@ -253,19 +261,36 @@ function init_controlpanel( obj ) {
 
 	obj.menu_button = panel.append('select')
 		.style('display','inline-block')
-		.on('change',()=> update_plot( obj))
-	
-		if( obj.cells.categories ) {
-			for (var key in obj.cells.categories){
-				var cat = obj.cells.categories[key]
-				// show this category as an option in menu
-				obj.menu_button.append('option')
-					.attr('value',cat.columnidx)
-					.text(cat.name)
-				// when choosing this category
-				// hide menu, update use_category_index, and redo load_cell_pcd
+		.on('change',async ()=>{
+			const cat = obj.cells.categories[parseInt(obj.menu_button.node().value)]
+			if (obj.cells.categories.includes(cat)){
+				obj.use_category_index = parseInt(obj.menu_button.node().value)
+				
+				const data = await load_cell_pcd(obj)
+				render_cloud( obj, data.pcdfile )
+				update_controlpanel( obj, data )
+
+				animate()
+
+				function animate() {
+					requestAnimationFrame( animate )
+					obj.controls.update()
+					obj.renderer.render( obj.scene, obj.camera )
+				}
+				console.log(obj.renderer.info)
 			}
+		})
+	
+	if( obj.cells.categories ) {
+		for(const [index,cat] of obj.cells.categories.entries()){
+			// show this category as an option in menu
+			obj.menu_button.append('option')
+				.attr('value',index)
+				.text(cat.name)
+			// when choosing this category
+			// hide menu, update use_category_index, and redo load_cell_pcd
 		}
+	}
 	
 	obj.minimize_btn = panel.append('button')
 		.attr('class','collapsible')
@@ -321,68 +346,4 @@ function update_controlpanel ( obj, data ) {
 				.attr('font-family',client.font)
 		}
 	}
-}
-
-
-
-
-// function show_menu ( obj ) {
-// 	// obj.menu
-// 	// 	.clear()
-// 	// 	.showunder( obj.menu_button.node())
-
-// 	if( obj.cells.categories ) {
-// 		// display categories as options; skip the one currently in use
-// 		// console.log(obj.cells.categories)
-// 		for (var key in obj.cells.categories){
-// 			var cat = obj.cells.categories[key]
-// 			if( cat.columnidx == obj.use_category_index ) {
-// 				// this category is in use, do not show in menu
-// 				continue
-// 			}else{
-// 				// show this category as an option in menu
-// 				obj.menu_button.append('option')
-// 					.attr('value',cat.name)
-// 					.text(cat.name)
-// 			}
-// 			// when choosing this category
-// 			// hide menu, update use_category_index, and redo load_cell_pcd
-// 		}
-// 		// for( let i=0; i<obj.cells.categories.length; i++ ) {}
-// 	}
-
-// 	if( obj.gene_expression ) {
-// 		// show option for gene expression, if it's not in use currently
-// 	}
-// }
-
-function update_plot( obj){
-	
-	const arg = {
-		genome: obj.genome.name,
-		textfile: obj.cells.file,
-		delimiter: obj.cells.delimiter,
-		getpcd: {
-			coord: obj.cells.axis2columnidx,
-			category_index: obj.menu_button.node().value,
-			category_autocolor: true
-		}
-	}
-
-	client.dofetch( 'singlecell', arg )
-	.then(data=>{
-		if(data.error) throw data.error
-		obj.use_category_index = obj.menu_button.node().value
-		render_cloud( obj, data.pcdfile )
-		update_controlpanel( obj, data )
-
-		animate()
-
-		function animate() {
-			requestAnimationFrame( animate )
-			obj.controls.update()
-			obj.renderer.render( obj.scene, obj.camera )
-		}
-	})
-	
 }
