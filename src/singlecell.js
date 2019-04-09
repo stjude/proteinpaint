@@ -4,9 +4,6 @@ import {axisTop} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 
-var container, stats, control_panel, canvas
-var camera, controls, scene, renderer
-
 
 
 
@@ -21,18 +18,20 @@ export async function init ( arg, holder ) {
 	obj.genome = arg.genome
 	obj.holder = holder
 
-/*
-	cannot load text data
-	const pcddata = ( await load_cell_pcd( obj ) ).pcd
-	console.log(pcddata.split('\n').slice(0,50))
-	*/
+	init_view( obj )
+	init_controlpanel( obj )
 
-	const data = ( await load_cell_pcd(obj) )
-	console.log(data.category2color)
+	const data = await load_cell_pcd( obj )
+	render_cloud( obj, data.pcdfile )
+	update_controlpanel( obj, data )
 
-	point_cloud( data.pcdfile )
 	animate()
-	plot_update(data.category2color)
+
+	function animate() {
+		requestAnimationFrame( animate )
+		obj.controls.update()
+		obj.renderer.render( obj.scene, obj.camera )
+	}
 }
 
 
@@ -69,6 +68,8 @@ function validate_obj ( obj ) {
 		if(!obj.gene_expression.file) throw '.gene_expression.file missing'
 		if(!Number.isInteger(obj.cells.barcodecolumnidx)) throw '.gene_expression in use but .cells.barcodecolumnidx is missing'
 	}
+	if(!obj.width) obj.width = window.innerWidth*.9
+	if(!obj.height) obj.height = window.innerHeight*.9
 }
 
 
@@ -107,6 +108,8 @@ or selected a gene for overlaying
 		} else {
 			throw 'unknow coloring scheme for category '+cat.name
 		}
+		// update menu_button here
+		obj.menu_button.html( cat.name + '&nbsp;&nbsp;&#9660;')
 
 	} else {
 		// TODO gene expression
@@ -126,96 +129,85 @@ or selected a gene for overlaying
 
 
 
-function point_cloud(filename){
+function init_view ( obj ) {
+
 	if ( WEBGL.isWebGLAvailable() === false ) {
-		document.body.appendChild( WEBGL.getWebGLErrorMessage() )
+		obj.holder.node().appendChild( WEBGL.getWebGLErrorMessage() )
+		return
 	}
 
 
-	scene = new THREE.Scene();
-	scene.background = new THREE.Color( 0x000000 )
+	obj.scene = new THREE.Scene()
+	obj.scene.background = new THREE.Color( 0x000000 )
 
-	camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 )
 
-	camera.position.x = 20
-	camera.position.y = -10
-	camera.position.z = 20
-	camera.up.set( 0, 0, 1 )
+	obj.camera = new THREE.PerspectiveCamera( 45, obj.width/obj.height, 0.1, 1000 )
 
-	controls = new THREE.TrackballControls( camera )
+	obj.camera.position.x = 20
+	obj.camera.position.y = -10
+	obj.camera.position.z = 20
+	obj.camera.up.set( 0, 0, 1 )
 
-	controls.rotateSpeed = 2.0
-	controls.zoomSpeed = 0.7
-	controls.panSpeed = 0.7
+	obj.controls = new THREE.TrackballControls( obj.camera )
 
-	controls.noZoom = false
-	controls.noPan = false
+	obj.controls.rotateSpeed = 2.0
+	obj.controls.zoomSpeed = 0.7
+	obj.controls.panSpeed = 0.7
 
-	controls.staticMoving = true
-	controls.dynamicDampingFactor = 0.3
+	obj.controls.noZoom = false
+	obj.controls.noPan = false
 
-	controls.minDistance = 0.3
-	controls.maxDistance = 0.3 * 200
+	obj.controls.staticMoving = true
+	obj.controls.dynamicDampingFactor = 0.3
 
-	scene.add( camera )
+	obj.controls.minDistance = 0.3
+	obj.controls.maxDistance = 0.3 * 200
 
-	renderer = new THREE.WebGLRenderer( { antialias: true } )
-	renderer.setPixelRatio( window.devicePixelRatio )
-	renderer.setSize( window.innerWidth, window.innerHeight )
-	document.body.appendChild( renderer.domElement )
+	obj.scene.add( obj.camera )
 
-	// const pcd_ab = str2ab(pcddata)
+	obj.renderer = new THREE.WebGLRenderer( { antialias: true } )
+	obj.renderer.setPixelRatio( window.devicePixelRatio )
+	obj.renderer.setSize( obj.width, obj.height )
 
-	var loader = new THREE.PCDLoader();
-	// loader.parse( pcd_ab, 'scRNA.pcd', function ( points ) {
-		loader.load( filename, function ( points ) {
-		
-		points.material.size = 0.05
-		scene.add( points )
-		var center = points.geometry.boundingSphere.center
-		controls.target.set( center.x, center.y, center.z )
-		controls.update()
-	
-	} )
+	obj.holder
+		.style('display','inline-block')
+		.style('position','relative')
+		.node().appendChild( obj.renderer.domElement )
 
-	container = document.createElement( 'div' )
-	container.id = 'point_cloud_div'
-	document.body.appendChild( container )
-	container.style.position = 'relative'
-	container.style.direction = 'rtl'
-
-	canvas = document.createElement( 'div' )
-	canvas.id = 'canvas_div'
-	container.appendChild( canvas )
-	canvas.style.zIndex = -1
-	canvas.style.position = 'absolute'
-	canvas.appendChild( renderer.domElement )
-
-	/* small stats window at top right corner of canvas to show Frame rate per sec, cpu and memory load */	
-	// stats = new Stats()
-	// container.appendChild( stats.dom )
-
-	window.addEventListener( 'resize', onWindowResize, false )
-
+	//window.addEventListener( 'resize', onWindowResize(obj), false )
 	// window.addEventListener( 'keypress', keyboard )
 }
 
-function str2ab(str) {
-    const array = new Uint8Array(str.length);
-    for (let i = 0; i < str.length; i++) {
-        array[i] = str.charCodeAt(i);
+
+
+function render_cloud( obj, pcdfilename ){
+	const loader = new THREE.PCDLoader()
+	loader.load( pcdfilename, function ( points ) {
+
+		points.material.size = 0.05
+		obj.scene.add( points )
+		const center = points.geometry.boundingSphere.center
+		obj.controls.target.set( center.x, center.y, center.z )
+		obj.controls.update()
+
+	} )
+
+}
+
+
+function onWindowResize( obj ) {
+
+	return ()=>{
+		const brect = obj.holder.node().getBoundingClientRect()
+		obj.camera.aspect = (brect.width-40) / (brect.height-40)
+		obj.camera.updateProjectionMatrix()
+		obj.renderer.setSize( brect.width-40, brect.height-40 )
+		obj.controls.handleResize()
 	}
-    return array.buffer;
 }
 
-function onWindowResize() {
 
-	camera.aspect = window.innerWidth / window.innerHeight;
-	camera.updateProjectionMatrix();
-	renderer.setSize( window.innerWidth, window.innerHeight );
-	controls.handleResize();
 
-}
 
 function keyboard( ev ) {
 
@@ -239,63 +231,90 @@ function keyboard( ev ) {
 			break;
 
 	}
-
 }
 
-function animate() {
 
-	requestAnimationFrame( animate );
-	controls.update();
-	renderer.render( scene, camera );
-	// stats.update();
 
-}
 
-function plot_update(legend_data) {
 
-	control_panel = d3selectAll('#point_cloud_div').append('div')
-		.attr('id','ctrl_div')
-		.style('padding','10px 40px')
-		.style('display','block')
+function init_controlpanel( obj ) {
+
+	obj.menu = new client.Menu()
+
+	const panel = obj.holder
+		.append('div')
+		.style('padding','10px')
 		.style('position','absolute')
-		.style('float','right')
+		.style('border-radius','5px')
+		.style('top','20px')
+		.style('right','20px')
 		.style('background-color','#dddddd')
-		.style('z-index',2)
 
-	control_panel.append('button')
-		.attr('class','collapsible')
-		.text('Legend & Settings')
-		.on('click',()=>{
-			control_panel.classed("active", control_panel.classed("active") ? true : false)
-			settings_div.style("display", settings_div.display = (settings_div.display == "none" ? "block" : "none"));
-		})
+	obj.menu_button = panel.append('button')
+		.on('click',()=> show_menu(obj) )
 
-	const settings_div = control_panel.append('div')
-		.attr('class','content')
-		.attr('overflow','hidden')
-		.style('display','block')
-		.style('margin','10px')
+	obj.menu_output = panel.append('div')
+		.style('margin-top','10px')
 
-	for (let type in legend_data){
+}
 
-		// div for each label
-		const lenged_span = settings_div.append('div')
-			.style('width', '100%')
-			.style('margin', '2px')
-			.style('direction','ltr')
-		
-		// square color for the label	
-		lenged_span.append('div')
-			.style('display','inline-block')
-			.style('height', '15px')
-			.style('width', '15px')
-			.style('background-color',legend_data[type])
-			.style('margin-right', '15px')
 
-		//label text
-		lenged_span.append('span')
-			.text(type)
-			.attr('font-size',15)
-			.attr('font-family',client.font)
+function update_controlpanel ( obj, data ) {
+
+	obj.menu_output.selectAll('*').remove()
+
+	if( data.category2color ) {
+		/*
+		showing the color legend for the current category
+		TODO
+			predefined colors
+			at each type, show checkbox for filtering cells
+		*/
+		for (const type in data.category2color){
+
+			// div for each label
+			const row = obj.menu_output
+				.append('div')
+				.style('margin', '2px')
+			
+			// square color for the label	
+			row.append('div')
+				.style('display','inline-block')
+				.style('height', '15px')
+				.style('width', '15px')
+				.style('background-color', data.category2color[type])
+				.style('margin-right', '10px')
+
+			//label text
+			row.append('span')
+				.text(type)
+				.attr('font-family',client.font)
+		}
+	}
+}
+
+
+
+
+function show_menu ( obj ) {
+	obj.menu
+		.clear()
+		.showunder( obj.menu_button.node())
+
+	if( obj.cells.categories ) {
+		// display categories as options; skip the one currently in use
+		for( let i=0; i<obj.cells.categories.length; i++ ) {
+			if( i == obj.use_category_index ) {
+				// this category is in use, do not show in menu
+				continue
+			}
+			// show this category as an option in menu
+			// when choosing this category
+			// hide menu, update use_category_index, and redo load_cell_pcd
+		}
+	}
+
+	if( obj.gene_expression ) {
+		// show option for gene expression, if it's not in use currently
 	}
 }
