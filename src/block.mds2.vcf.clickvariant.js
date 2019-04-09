@@ -133,18 +133,20 @@ function maymakebutton_vcf_termdbbygenotype ( buttonrow, showholder, m, tk, bloc
 
 
 function show_functionalannotation ( div, m, tk, block ) {
+
+	// first row about the variant
 	div.append('span').html(
 		(m.gene ? '<i>'+m.gene+'</i> ' : '')
 		+(m.isoform ? '<span style="font-size:.8em;text-decoration:italic">'+m.isoform+'</span> ' : '')
 		+m.mname
 		+' <span style="font-size:.7em;padding:3px;color:white;background:'+common.mclass[m.class].color+'">'+common.mclass[m.class].label+'</span>'
-		// may print alleles if hgvsp
-		+( m.ref+'>'+m.alt == m.mname ? ''
-			: ' <span style="font-size:.7em;opacity:.5">REF</span> '+m.ref+' <span style="font-size:.7em;opacity:.5">ALT</span> '+m.alt )
 	)
+
 	if( m.csq_count && m.csq_count>1 ) {
+		// variant does not keep csq on client
+		// a button to retrieve actual csq
 		const button = div.append('div')
-			.style('margin-left','10px')
+			.style('margin-left','20px')
 			.text((m.csq_count-1)+' other interpretations')
 			.attr('class','sja_button')
 			.style('zoom','.7')
@@ -175,6 +177,76 @@ function show_functionalannotation ( div, m, tk, block ) {
 			loading=false
 			button.text((m.csq_count-1)+' other interpretations')
 		})
+	}
+
+	const lst=[] // items for showing in a table
+
+	// genomic position
+	{
+		let text = m.chr+':'+(m.pos+1)
+		if( m.ref+'>'+m.alt != m.mname ) {
+			// m has hgvs, so display alleles
+			text += ' <span style="font-size:.7em;opacity:.5">REF</span> '+m.ref+' <span style="font-size:.7em;opacity:.5">ALT</span> '+m.alt
+		}
+		lst.push({k:'Genomic',v:text})
+	}
+
+	// info fields add to lst
+	if( m.altinfo ) {
+		// alt allele info
+		for(const k in m.altinfo) {
+			// value from altinfo maybe array
+			const infovalue = Array.isArray( m.altinfo[k] ) ? m.altinfo[k] : [ m.altinfo[k] ]
+			const showvalue = infovalue
+			/*
+			let showvalue
+			if( altkey2category[ k ] ) {
+				showvalue = infovalue.map( i=> {
+					const cat = altkey2category[k][i]
+					if(cat) {
+						return '<span style="padding:1px 3px;background:'+cat.color+';color:'+(cat.textcolor || 'black')+';">'+i+'</span>'
+					}
+					return i
+				})
+			} else {
+				showvalue = infovalue
+			}
+			*/
+			lst.push({
+				k:k,
+				v: showvalue.join(', ') + (tk.vcf.info && tk.vcf.info[k] ? ' <span style="font-size:.7em;opacity:.5">'+tk.vcf.info[k].Description+'</span>' : '')
+			})
+		}
+	}
+
+	if( m.info ) {
+		// locus info
+		for(const k in m.info) {
+			const infovalue = Array.isArray( m.info[k] ) ? m.info[k] : [m.info[k]]
+			const showvalue = infovalue
+			/*
+			let showvalue
+			if( lockey2category[ k ] ) {
+				showvalue = infovalue.map( i=> {
+					const cat = lockey2category[k][i]
+					if(cat) {
+						return '<span style="padding:1px 3px;background:'+cat.color+';color:'+(cat.textcolor || 'black')+';">'+i+'</span>'
+					}
+					return i
+				})
+			} else {
+				showvalue = infovalue
+			}
+			*/
+			lst.push({
+				k:k,
+				v: showvalue.join(', ') + (tk.vcf.info && tk.vcf.info[k] ? ' <span style="font-size:.7em;opacity:.5">'+tk.vcf.info[k].Description+'</span>' : '')
+			})
+		}
+	}
+	if(lst.length) {
+		client.make_table_2col(div,lst)
+		.style('margin','20px 0px 0px 0px')
 	}
 }
 
@@ -210,16 +282,16 @@ function get_csq ( div, m, tk, block ) {
 			{
 				const lst=[]
 				if(item.HGVSp) {
-					lst.push('<span style="font-size:.7em;color:#858585">HGVSp</span> '+item.HGVSp)
+					lst.push('<span style="font-size:.7em;opacity:.5">HGVSp</span> '+item.HGVSp)
 				} else if(item.HGVSc) {
-					lst.push('<span style="font-size:.7em;color:#858585">HGVSc</span> '+item.HGVSc)
-				} else {
-					lst.push('no_HGVS')
+					lst.push('<span style="font-size:.7em;opacity:.5">HGVSc</span> '+item.HGVSc)
+				} else if(item.Feature) { // no hgvs
+					lst.push('<span style="font-size:.7em;opacity:.5">no HGVS</span> '+item.Feature)
 				}
 				if(item.Consequence) {
-					lst.push('<span style="font-size:.7em;color:#858585">CONSEQUENCE</span> '+item.Consequence)
+					lst.push('<span style="font-size:.7em;opacity:.5">CONSEQUENCE</span> '+item.Consequence)
 				} else {
-					lst.push('no_consequence')
+					lst.push('<span style="font-size:.7em;opacity:.5">no CONSEQUENCE</span>')
 				}
 				thislabel=lst.join(' ')
 			}
