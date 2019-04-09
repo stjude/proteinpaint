@@ -109,7 +109,8 @@ or selected a gene for overlaying
 			throw 'unknow coloring scheme for category '+cat.name
 		}
 		// update menu_button here
-		obj.menu_button.html( cat.name + '&nbsp;&nbsp;&#9660;')
+		// obj.menu_button.html( cat.name + '&nbsp;&nbsp;&#9660;')
+		obj.use_category_index = cat.columnidx
 
 	} else {
 		// TODO gene expression
@@ -174,7 +175,7 @@ function init_view ( obj ) {
 		.style('position','relative')
 		.node().appendChild( obj.renderer.domElement )
 
-	//window.addEventListener( 'resize', onWindowResize(obj), false )
+	// window.addEventListener( 'resize', onWindowResize(obj), false )
 	// window.addEventListener( 'keypress', keyboard )
 }
 
@@ -250,8 +251,21 @@ function init_controlpanel( obj ) {
 		.style('right','20px')
 		.style('background-color','#dddddd')
 
-	obj.menu_button = panel.append('button')
-		.on('click',()=> show_menu(obj) )
+	obj.menu_button = panel.append('select')
+		.style('display','inline-block')
+		.on('change',()=> update_plot( obj))
+	
+		if( obj.cells.categories ) {
+			for (var key in obj.cells.categories){
+				var cat = obj.cells.categories[key]
+				// show this category as an option in menu
+				obj.menu_button.append('option')
+					.attr('value',cat.columnidx)
+					.text(cat.name)
+				// when choosing this category
+				// hide menu, update use_category_index, and redo load_cell_pcd
+			}
+		}
 
 	obj.menu_output = panel.append('div')
 		.style('margin-top','10px')
@@ -296,25 +310,63 @@ function update_controlpanel ( obj, data ) {
 
 
 
-function show_menu ( obj ) {
-	obj.menu
-		.clear()
-		.showunder( obj.menu_button.node())
+// function show_menu ( obj ) {
+// 	// obj.menu
+// 	// 	.clear()
+// 	// 	.showunder( obj.menu_button.node())
 
-	if( obj.cells.categories ) {
-		// display categories as options; skip the one currently in use
-		for( let i=0; i<obj.cells.categories.length; i++ ) {
-			if( i == obj.use_category_index ) {
-				// this category is in use, do not show in menu
-				continue
-			}
-			// show this category as an option in menu
-			// when choosing this category
-			// hide menu, update use_category_index, and redo load_cell_pcd
+// 	if( obj.cells.categories ) {
+// 		// display categories as options; skip the one currently in use
+// 		// console.log(obj.cells.categories)
+// 		for (var key in obj.cells.categories){
+// 			var cat = obj.cells.categories[key]
+// 			if( cat.columnidx == obj.use_category_index ) {
+// 				// this category is in use, do not show in menu
+// 				continue
+// 			}else{
+// 				// show this category as an option in menu
+// 				obj.menu_button.append('option')
+// 					.attr('value',cat.name)
+// 					.text(cat.name)
+// 			}
+// 			// when choosing this category
+// 			// hide menu, update use_category_index, and redo load_cell_pcd
+// 		}
+// 		// for( let i=0; i<obj.cells.categories.length; i++ ) {}
+// 	}
+
+// 	if( obj.gene_expression ) {
+// 		// show option for gene expression, if it's not in use currently
+// 	}
+// }
+
+function update_plot( obj){
+	
+	const arg = {
+		genome: obj.genome.name,
+		textfile: obj.cells.file,
+		delimiter: obj.cells.delimiter,
+		getpcd: {
+			coord: obj.cells.axis2columnidx,
+			category_index: obj.menu_button.node().value,
+			category_autocolor: true
 		}
 	}
 
-	if( obj.gene_expression ) {
-		// show option for gene expression, if it's not in use currently
-	}
+	client.dofetch( 'singlecell', arg )
+	.then(data=>{
+		if(data.error) throw data.error
+		obj.use_category_index = obj.menu_button.node().value
+		render_cloud( obj, data.pcdfile )
+		update_controlpanel( obj, data )
+
+		animate()
+
+		function animate() {
+			requestAnimationFrame( animate )
+			obj.controls.update()
+			obj.renderer.render( obj.scene, obj.camera )
+		}
+	})
+	
 }
