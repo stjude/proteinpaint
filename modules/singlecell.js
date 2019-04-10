@@ -149,7 +149,7 @@ may attach coloring scheme to result{} for returning to client
 
 		const coord = (ge.nochr ? ge.chr.replace('chr','') : ge.chr)+':'+ge.start+'-'+ge.stop
 		const cell2value = new Map()
-		const cell2color_byexp = new Map()
+		cell2color_byexp = new Map()
 
 		let minexpvalue = 0,
 			maxexpvalue = 0
