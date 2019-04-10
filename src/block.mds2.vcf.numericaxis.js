@@ -970,8 +970,9 @@ export function may_setup_numerical_axis ( tk ) {
 	call this at initiating the track
 	and switching numeric axis category
 	*/
-	delete nm.isinteger
-	delete nm.label
+	if( !nm.info_keys ) throw 'numerical_axis.info_keys[] missing'
+	if(!Array.isArray(nm.info_keys)) throw 'numerical_axis.info_keys[] is not an array'
+	if(nm.info_keys.length==0) throw 'numerical_axis.info_keys[] array is empty'
 
 	let info_element = nm.info_keys.find( i=> i.in_use ) // which element from tk.vcf.numerical_axis.info_keys is in use
 	if( !info_element ) {
@@ -983,6 +984,9 @@ export function may_setup_numerical_axis ( tk ) {
 	if(!tk.vcf.info) throw 'VCF file has no INFO fields'
 	const info_field = tk.vcf.info[ info_element.key ]
 	if( !info_field ) throw 'unknown INFO field for numerical axis: '+info_element.key
+
+	delete nm.isinteger
+	delete nm.label
 
 	if( tk.mds && tk.mds.mutationAttribute ) {
 		const a = tk.mds.mutationAttribute.attributes[ info_element.key ]
