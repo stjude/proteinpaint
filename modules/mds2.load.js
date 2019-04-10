@@ -41,11 +41,16 @@ return async (req,res) => {
 		} else {
 			ds = {
 				iscustom: 1,
-				track: {
-					vcf: q.vcf
-					// TODO other 
-				}
+				track: {}
 			}
+
+			if( q.vcf ) {
+				ds.track.vcf = q.vcf
+				await utils.init_one_vcf( ds.track.vcf, genome )
+			}
+
+			// other type of tracks
+
 		}
 
 		if( q.hidden_mclass ) q.hidden_mclass = new Set(q.hidden_mclass)

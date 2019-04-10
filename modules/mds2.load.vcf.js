@@ -96,10 +96,6 @@ ds is either official or custom
 	const tk0 = ds.track.vcf
 	if(!tk0) throw 'ds.track.vcf missing'
 
-	if( ds.iscustom ) {
-		await utils.init_one_vcf( tk0, genome )
-	}
-
 	// temporary vcf tk object, may with altered .samples[]
 	const vcftk = {
 		info: tk0.info,
@@ -264,7 +260,6 @@ exports.handle_getcsq =  async ( q, genome, ds, result ) => {
 /*
 get csq from one variant
 */
-	if(ds.iscustom) throw 'custom ds not allowed'
 	const tk = ds.track.vcf
 	if(!tk) throw 'ds.track.vcf missing'
 	if(!q.m) throw 'q.m missing'
