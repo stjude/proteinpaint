@@ -171,12 +171,12 @@ may attach coloring scheme to result{} for returning to client
 		if( ge.autoscale ) {
 			result.minexpvalue = minexpvalue
 			result.maxexpvalue = maxexpvalue
-			const interpolate = d3interpolate.interpolate.Rgb( ge.color_min, ge.color_max )
+			const interpolate = d3interpolate.interpolateRgb( ge.color_min, ge.color_max )
 			for(const [k,v] of cell2value ) {
 				cell2color_byexp.set(
 					k,
 					Number.parseInt(
-						d3color(
+						d3color.color(
 							interpolate( (v-minexpvalue)/(maxexpvalue-minexpvalue) )
 						).hex().slice(1),
 						16
