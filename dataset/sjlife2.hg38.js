@@ -75,7 +75,8 @@ module.exports={
 						key:'AF_gnomAD',
 						min_value: 0,
 						max_value: 1,
-						cutoff: [ 0.0001, 0.001, 0.01, 0.1 ]
+						cutoff: [ 0.0001, 0.001, 0.01, 0.1 ],
+						missing_value: 0
 					}
 				],
 				in_use: true // to use numerical axis by default

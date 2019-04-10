@@ -944,13 +944,15 @@ decide following things about the y axis:
 			}
 		}
 
-		if(Number.isFinite( v )) {
-
-			m._v = v // ?
-
-			nm.minvalue = Math.min( nm.minvalue, v )
-			nm.maxvalue = Math.max( nm.maxvalue, v )
+		if(!Number.isFinite( v )) {
+			// missing value, if there is a predefined one
+			v = Number.isFinite(nm.missing_value) ? nm.missing_value : 0
 		}
+
+		m._v = v // for later use
+
+		nm.minvalue = Math.min( nm.minvalue, v )
+		nm.maxvalue = Math.max( nm.maxvalue, v )
 	}
 }
 
