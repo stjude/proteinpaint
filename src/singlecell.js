@@ -261,24 +261,8 @@ function init_controlpanel( obj ) {
 
 	obj.menu_button = panel.append('select')
 		.style('display','inline-block')
-		.on('change',async ()=>{
-			const cat = obj.cells.categories[parseInt(obj.menu_button.node().value)]
-			if (obj.cells.categories.includes(cat)){
-				obj.use_category_index = parseInt(obj.menu_button.node().value)
-				
-				const data = await load_cell_pcd(obj)
-				render_cloud( obj, data.pcdfile )
-				update_controlpanel( obj, data )
-
-				animate()
-
-				function animate() {
-					requestAnimationFrame( animate )
-					obj.controls.update()
-					obj.renderer.render( obj.scene, obj.camera )
-				}
-				console.log(obj.renderer.info)
-			}
+		.on('change', ()=>{
+			menu_option_changed( obj )
 		})
 	
 	if( obj.cells.categories ) {
@@ -287,9 +271,11 @@ function init_controlpanel( obj ) {
 			obj.menu_button.append('option')
 				.attr('value',index)
 				.text(cat.name)
-			// when choosing this category
-			// hide menu, update use_category_index, and redo load_cell_pcd
 		}
+	}
+
+	if( obj.gene_expression ) {
+		// TODO add option for gene expression
 	}
 	
 	obj.minimize_btn = panel.append('button')
@@ -345,5 +331,31 @@ function update_controlpanel ( obj, data ) {
 				.text(type)
 				.attr('font-family',client.font)
 		}
+	}
+}
+
+
+
+
+async function menu_option_changed( obj ) {
+/*
+perform action depending on what type of option is chosen
+*/
+
+	const cat = obj.cells.categories[parseInt(obj.menu_button.node().value)]
+	if (obj.cells.categories.includes(cat)){
+		obj.use_category_index = parseInt(obj.menu_button.node().value)
+	}
+
+	const data = await load_cell_pcd(obj)
+	render_cloud( obj, data.pcdfile )
+	update_controlpanel( obj, data )
+
+	animate()
+
+	function animate() {
+		requestAnimationFrame( animate )
+		obj.controls.update()
+		obj.renderer.render( obj.scene, obj.camera )
 	}
 }
