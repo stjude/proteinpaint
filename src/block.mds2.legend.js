@@ -4,6 +4,9 @@ import * as client from './client'
 import {legend_newrow} from './block.legend'
 import * as common from './common'
 import * as mds2 from './block.mds2'
+import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
+
+
 
 /*
 ********************** EXPORTED
@@ -30,7 +33,7 @@ export function init ( tk, block ) {
 	tk.legend.table = table
 
 	create_mclass( tk )
-	create_vcflegend( tk )
+	create_vcflegend( tk, block )
 }
 
 
@@ -62,24 +65,61 @@ legend.mclass{}
 
 
 
-function create_vcflegend(tk) {
+function create_vcflegend( tk, block ) {
 /*
 vcf related legends
 */
 	if( !tk.vcf ) return
-	if( tk.vcf.numerical_axis ) {
-		// one row for configuring numerical axis
-		const row = tk.legend.table.append('tr')
-		// td1
-		row
-			.append('td')
-			.style('text-align','right')
-			.style('opacity',.5)
-			.text('Numerical axis')
-		// td2
-		const td = row.append('td')
-		if(!tk.legend.numerical_axis) tk.legend.numerical_axis = {}
-		// requires info_keys[]
+	const nm = tk.vcf.numerical_axis
+	if( !nm ) return
+
+	const row = tk.legend.table.append('tr')
+
+	// td1
+	row
+		.append('td')
+		.style('text-align','right')
+		.style('opacity',.5)
+		.text('Numerical axis')
+
+	// td2
+	const td = row.append('td')
+	if(!tk.legend.numerical_axis) tk.legend.numerical_axis = {}
+
+	// a select box
+	const select = td.append('select')
+		.style('margin','0px 10px')
+		.on('change',()=>{
+
+			const i = select.property('selectedIndex')
+			if( i == nm.info_keys.length ) {
+				nm.in_use = false
+			} else {
+				for(const e of nm.info_keys) e.in_use=false
+				nm.info_keys[ i ].in_use = true
+				may_setup_numerical_axis( tk )
+			}
+			mds2.loadTk(tk, block)
+		})
+
+	for(const [idx,ele] of nm.info_keys.entries()) {
+		select.append('option')
+			.attr('value',idx)
+			.text(
+				tk.mds && tk.mds.mutationAttribute ?
+					tk.mds.mutationAttribute.attributes[ ele.key ].label
+					: ele.key
+			)
+	}
+	/*
+	select.append('option')
+		.attr('value',-1)
+		.text('Do not apply')
+		*/
+	if( nm.in_use ) {
+		select.property('selectedIndex', nm.info_keys.findIndex( i=> i.in_use ) )
+	} else {
+		select.property('selectedIndex', nm.info_keys.length )
 	}
 }
 
