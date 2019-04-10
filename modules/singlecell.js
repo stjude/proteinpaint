@@ -173,14 +173,11 @@ may attach coloring scheme to result{} for returning to client
 			result.maxexpvalue = maxexpvalue
 			const interpolate = d3interpolate.interpolateRgb( ge.color_min, ge.color_max )
 			for(const [k,v] of cell2value ) {
+				const c = d3color.color( interpolate( (v-minexpvalue)/(maxexpvalue-minexpvalue) ) )
+
 				cell2color_byexp.set(
 					k,
-					Number.parseInt(
-						d3color.color(
-							interpolate( (v-minexpvalue)/(maxexpvalue-minexpvalue) )
-						).hex().slice(1),
-						16
-					)
+					Number.parseInt( rgbToHex( c.r, c.g, c.b ), 16 )
 				)
 			}
 		}
@@ -236,4 +233,16 @@ may attach coloring scheme to result{} for returning to client
 	})
 
 	})
+}
+
+
+
+
+function componentToHex(c) {
+    const hex = c.toString(16)
+    return hex.length == 1 ? "0" + hex : hex
+}
+
+function rgbToHex(r, g, b) {
+    return componentToHex(r) + componentToHex(g) + componentToHex(b)
 }
