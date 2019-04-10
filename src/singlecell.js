@@ -3,7 +3,7 @@ import * as common from './common'
 import {axisTop} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-
+import {gene_searchbox} from './gene'
 
 
 
@@ -108,16 +108,23 @@ or selected a gene for overlaying
 		} else {
 			throw 'unknow coloring scheme for category '+cat.name
 		}
+		// update menu_button here
+		obj.menu_button.html( cat.name + '&nbsp;&nbsp;&#9660;')
+
 
 	} else if( Number.isInteger( obj.use_gene_index ) ) {
 		const gene = obj.gene_expression.genes[ obj.use_gene_index ]
+		obj.menu_button.html( gene.gene + '&nbsp;&nbsp;&#9660;')
 		arg.getpcd.gene_expression = {
 			file: obj.gene_expression.file,
 			barcodecolumnidx: obj.cells.barcodecolumnidx,
 			chr: gene.chr,
 			start: gene.start,
 			stop: gene.stop,
-			autoscale: true
+			autoscale: true,
+			genename: gene.gene, 
+			color_min: 'black',
+			color_max: 'red'
 		}
 	} else {
 		throw 'unknown method to color the cells'
@@ -268,7 +275,7 @@ function init_controlpanel( obj ) {
 		.style('right','20px')
 		.style('background-color','#dddddd')
 
-	obj.menu_button = panel.append('select')
+	obj.menu_button = panel.append('button')
 		.style('display','inline-block')
 		/*
 		.on('change', ()=>{
@@ -383,26 +390,29 @@ function make_menu ( obj ) {
 
 	if( obj.cells.categories ) {
 		obj.cells.categories.forEach( (category, i) => {
-			// add option
-			obj.menu.d
-			.append('div')
-			.text(category.name)
-			.on('click',()=>{
-				obj.menu.hide()
+			if( i != obj.use_category_index ) {
+				// add option
+				obj.menu.d
+				.append('div')
+				.text(category.name)
+				.on('click',async ()=>{
+					obj.menu.hide()
 
-				obj.use_category_index = i
-				load_cell_pcd( obj )
-				render_cloud( obj, data.pcdfile )
-				update_controlpanel( obj, data )
+					obj.use_category_index = i
+					const data = await load_cell_pcd(obj)
+					render_cloud( obj, data.pcdfile )
+					update_controlpanel( obj, data )
 
-				animate()
+					animate()
 
-				function animate() {
-					requestAnimationFrame( animate )
-					obj.controls.update()
-					obj.renderer.render( obj.scene, obj.camera )
-				}
-			})
+					function animate() {
+						requestAnimationFrame( animate )
+						obj.controls.update()
+						obj.renderer.render( obj.scene, obj.camera )
+					}
+				
+				})
+			}
 		})
 	}
 
@@ -413,31 +423,75 @@ function make_menu ( obj ) {
 			.text('Gene expression')
 			.on('click',()=>{
 				obj.menu.clear()
+				const gene_search_div = obj.menu.d.append('div')
 
-				// run gene_searchbox
-				// with a callback e.g. (genename)=>{  
-				// client.findgenemodel_bysymbol( obj.genome.name, genename )
-				// .then( gmlst => {   } )
-				// refer to line 1220 from app.js
-				// to get chr/start/stop from the first gene model
-				
-				obj.use_category_index = null
+				gene_searchbox({
+					div: gene_search_div,
+					genome: obj.genome.name,
+					callback: async (genename)=>{
+						const gmlst = await client.findgenemodel_bysymbol( obj.genome.name, genename )
+						if( gmlst && gmlst[0] ) {
+							const gm = gmlst[0]
+							if(!obj.gene_expression.genes) obj.gene_expression.genes = []
+							const geneidx = obj.gene_expression.genes.findIndex( i=> i.gene == genename )
+							if( geneidx == -1 ) {
+								obj.gene_expression.genes.push({
+									gene: genename,
+									chr: gm.chr,
+									start: gm.start,
+									stop: gm.stop
+								})
+								obj.use_gene_index = obj.gene_expression.genes.length - 1
+							} else {
+								obj.use_gene_index = geneidx
+							}
+						}
+						obj.use_category_index = null
+						obj.menu.hide()
 
-				if(!obj.gene_expression.genes) obj.gene_expression.genes = []
-				const geneidx = obj.gene_expression.genes.findIndex( i=> i.gene == genename )
-				if( geneidx == -1 ) {
-					obj.gene_expression.genes.push({
-						gene: genename,
-						chr: chr,
-						start: start,
-						stop: stop
-					})
-					obj.use_gene_index = obj.gene_expression.genes.length-1
-				} else {
-					obj.use_gene_index = geneidx
-				}
-				// call load_cell_pcd
+						const data = await load_cell_pcd(obj)
+						render_cloud( obj, data.pcdfile )
+						update_controlpanel( obj, data )
+
+						animate()
+
+						function animate() {
+							requestAnimationFrame( animate )
+							obj.controls.update()
+							obj.renderer.render( obj.scene, obj.camera )
+						}
+					}
+				})
 
 			})
+	}
+
+	if(obj.gene_expression.genes){
+		obj.gene_expression.genes.forEach( (gene, i) => {
+			if( i != obj.use_gene_index ) {
+				// add option
+				obj.menu.d
+				.append('div')
+				.text(gene.gene)
+				.on('click',async ()=>{
+					obj.menu.hide()
+
+					obj.use_category_index = null
+					obj.use_gene_index = i
+					const data = await load_cell_pcd(obj)
+					render_cloud( obj, data.pcdfile )
+					update_controlpanel( obj, data )
+
+					animate()
+
+					function animate() {
+						requestAnimationFrame( animate )
+						obj.controls.update()
+						obj.renderer.render( obj.scene, obj.camera )
+					}
+				
+				})
+			}
+		})
 	}
 }
