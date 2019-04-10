@@ -215,7 +215,7 @@ may attach coloring scheme to result{} for returning to client
 			}
 		} else if( cell2color_byexp ) {
 			const barcode = l[ q.getpcd.gene_expression.barcodecolumnidx ]
-			const color = cell2color_byexp.has(barcode)
+			const color = cell2color_byexp.get(barcode)
 			if(!color) return
 			newl.push(color)
 		}
