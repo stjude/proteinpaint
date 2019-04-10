@@ -18,7 +18,8 @@ vcf_render_variants
 
 export function may_render_vcf ( data, tk, block ) {
 /* for now, assume always in variant-only mode for vcf
-return vcf row height
+render all variants in one row
+and return row height
 */
 	if( !tk.vcf ) return 0
 	if( !data.vcf ) return 0

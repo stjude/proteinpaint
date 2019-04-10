@@ -61,10 +61,24 @@ module.exports={
 			viewrangeupperlimit: 200000,
 			numerical_axis: {
 				axisheight: 150,
-				info_keys: ['AF','AF_gnomAD'],
-				use_info_key: 'AF',
+				info_keys: [
+					{
+						key:'AF',
+						in_use:true,
+						// may config axis
+						min_value: 0,
+						max_value: 1,
+						cutoff: [ 0.0001, 0.001, 0.01, 0.1 ] // predefined cutoff values
+						// TODO bind complex things such as boxplot to one of the info fields
+					},
+					{
+						key:'AF_gnomAD',
+						min_value: 0,
+						max_value: 1,
+						cutoff: [ 0.0001, 0.001, 0.01, 0.1 ]
+					}
+				],
 				in_use: true // to use numerical axis by default
-				// how to define complex things such as boxplot or on the fly summarized data from samples
 			},
 			plot_mafcov: {
 				show_samplename: 1

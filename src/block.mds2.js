@@ -5,6 +5,7 @@ import * as common from './common'
 import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
 import * as mds2vcf from './block.mds2.vcf'
+import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
 
 
 
@@ -96,12 +97,16 @@ async function makeTk ( tk, block ) {
 		}
 	}
 
+
 	tk.tklabel.text( tk.name )
 
 	if( tk.vcf ) {
+
 		// vcf row
 		tk.g_vcfrow = tk.glider.append('g')
 		tk.leftaxis_vcfrow = tk.gleft.append('g')
+
+		may_setup_numerical_axis( tk )
 	}
 
 	// TODO <g> for other file types

@@ -86,17 +86,11 @@ async function init_vcf ( vcftk, genome, ds ) {
 		if(vcftk.numerical_axis.info_keys) {
 			if(!Array.isArray(vcftk.numerical_axis.info_keys)) throw 'numerical_axis.info_keys should be an array'
 			for(const key of vcftk.numerical_axis.info_keys) {
-				const a = vcftk.info[ key ]
-				if( !a ) throw 'INFO field "'+key+'" not found for numerical_axis'
-				if( a.Type!='Float' && a.Type!='Integer' ) throw 'INFO field "'+key+'" from numerical_axis not of integer or float type'
-				if( a.Number!='1' && a.Number!='A' ) throw 'for numerical axis, INFO field "'+key+'" only allows to be Number=1 or Number=A'
+				const a = vcftk.info[ key.key ]
+				if( !a ) throw 'INFO field "'+key.key+'" not found for numerical_axis'
+				if( a.Type!='Float' && a.Type!='Integer' ) throw 'INFO field "'+key.key+'" from numerical_axis not of integer or float type'
+				if( a.Number!='1' && a.Number!='A' ) throw 'for numerical axis, INFO field "'+key.key+'" only allows to be Number=1 or Number=A'
 			}
-		}
-		if(vcftk.numerical_axis.use_info_key) {
-			if( typeof vcftk.numerical_axis.use_info_key != 'string' ) throw 'numerical_axis.use_info_key value should be string'
-			const a = vcftk.info[ vcftk.numerical_axis.use_info_key ]
-			if( !a ) throw 'INFO field "'+vcftk.numerical_axis.use_info_key+'" not found for numerical_axis'
-			if( a.Type!='Float' && a.Type!='Integer' ) throw 'INFO field "'+vcftk.numerical_axis.use_info_key+'" from numerical_axis not of integer or float type'
 		}
 		// TODO allow other type of plot e.g. boxplot
 	}

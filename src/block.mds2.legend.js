@@ -10,6 +10,10 @@ import * as mds2 from './block.mds2'
 init
 update
 ********************** INTERNAL
+create_mclass
+create_vcflegend
+update_mclass
+update_vcflegend
 */
 
 
@@ -26,6 +30,7 @@ export function init ( tk, block ) {
 	tk.legend.table = table
 
 	create_mclass( tk )
+	create_vcflegend( tk )
 }
 
 
@@ -57,6 +62,29 @@ legend.mclass{}
 
 
 
+function create_vcflegend(tk) {
+/*
+vcf related legends
+*/
+	if( !tk.vcf ) return
+	if( tk.vcf.numerical_axis ) {
+		// one row for configuring numerical axis
+		const row = tk.legend.table.append('tr')
+		// td1
+		row
+			.append('td')
+			.style('text-align','right')
+			.style('opacity',.5)
+			.text('Numerical axis')
+		// td2
+		const td = row.append('td')
+		if(!tk.legend.numerical_axis) tk.legend.numerical_axis = {}
+		// requires info_keys[]
+	}
+}
+
+
+
 
 export function update ( data, tk, block ) {
 /*
@@ -64,6 +92,9 @@ data is returned by xhr
 */
 	if( data.mclass2count ) {
 		update_mclass( data.mclass2count, tk, block )
+	}
+	if( data.vcf ) {
+		update_vcflegend( data.vcf, tk, block )
 	}
 }
 
@@ -205,4 +236,9 @@ function update_mclass ( mclass2count, tk, block ) {
 		tk.tip2.hide()
 		mds2.loadTk(tk, block)
 	}
+}
+
+
+
+function update_vcflegend ( data, tk, block ) {
 }

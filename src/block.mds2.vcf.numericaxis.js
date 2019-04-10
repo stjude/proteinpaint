@@ -12,6 +12,7 @@ adapted from legacy code
 
 ********************** EXPORTED
 render
+may_setup_numerical_axis
 ********************** INTERNAL
 numeric_make
 setup_axis_scale
@@ -920,53 +921,78 @@ decide following things about the y axis:
 - name label
 */
 
-	// TODO may allow predefined scale
 
 	nm.minvalue = 0
 	nm.maxvalue = 0
 
-	delete nm.isinteger
+	const info_key = nm.info_keys.find( i=> i.in_use ).key // setup_numerical_axis guarantee this is valid
 
-	// conditional - using a single info key
-	if( nm.use_info_key ) {
+	// if the INFO is A, apply to m.altinfo, else, to m.info
+	const usealtinfo = tk.vcf.info[ info_key ].Number == 'A'
 
-		// if the INFO is A, apply to m.altinfo, else, to m.info
-		let usealtinfo = tk.vcf.info[ nm.use_info_key ].Number == 'A'
+	for(const m of r.variants) {
 
-		for(const m of r.variants) {
+		let v = null
 
-			let v = null
-
-			if( usealtinfo ) {
-				if( m.altinfo ) {
-					v = m.altinfo[ nm.use_info_key ]
-				}
-			} else {
-				if( m.info ) {
-					v = m.info[ nm.use_info_key ]
-				}
+		if( usealtinfo ) {
+			if( m.altinfo ) {
+				v = m.altinfo[ info_key ]
 			}
-
-			if(Number.isFinite( v )) {
-
-				m._v = v // ?
-
-				nm.minvalue = Math.min( nm.minvalue, v )
-				nm.maxvalue = Math.max( nm.maxvalue, v )
+		} else {
+			if( m.info ) {
+				v = m.info[ info_key ]
 			}
 		}
 
-		if( tk.mds && tk.mds.mutationAttribute ) {
-			const a = tk.mds.mutationAttribute.attributes[ nm.use_info_key ]
-			if( !a ) throw 'unknown info field: '+nm.use_info_key
-			if( a.isinteger ) nm.isinteger = true
-			nm.label = a.label
+		if(Number.isFinite( v )) {
+
+			m._v = v // ?
+
+			nm.minvalue = Math.min( nm.minvalue, v )
+			nm.maxvalue = Math.max( nm.maxvalue, v )
 		}
-		return
 	}
-
-	throw 'unknown source of axis scaling'
 }
 
 
 
+export function may_setup_numerical_axis ( tk ) {
+	const nm = tk.vcf.numerical_axis
+	if( !nm.in_use ) {
+		// not using numerical axis, do not set up
+		return
+	}
+		
+	/*
+	to validate the numerical axis info field setting
+	and set the .isinteger and .label of nm
+
+	call this at initiating the track
+	and switching numeric axis category
+	*/
+	delete nm.isinteger
+	delete nm.label
+
+	let info_element = nm.info_keys.find( i=> i.in_use ) // which element from tk.vcf.numerical_axis.info_keys is in use
+	if( !info_element ) {
+		info_element = nm.info_keys[0]
+		if( !info_element ) throw 'numerical_axis.info_keys is empty array'
+		info_element.in_use = true
+	}
+
+	if(!tk.vcf.info) throw 'VCF file has no INFO fields'
+	const info_field = tk.vcf.info[ info_element.key ]
+	if( !info_field ) throw 'unknown INFO field for numerical axis: '+info_element.key
+
+	if( tk.mds && tk.mds.mutationAttribute ) {
+		const a = tk.mds.mutationAttribute.attributes[ info_element.key ]
+		if( a ) {
+			if( a.isinteger ) nm.isinteger = true
+			nm.label = a.label
+		}
+	}
+	if( !nm.label ) {
+		if( info_field.Type=='Integer' ) nm.isinteger=true
+		nm.label = info_element.key
+	}
+}
