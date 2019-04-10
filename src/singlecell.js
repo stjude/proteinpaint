@@ -1,6 +1,6 @@
 import * as client from './client'
 import * as common from './common'
-import {axisTop} from 'd3-axis'
+import {axisTop, axisRight} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {gene_searchbox} from './gene'
@@ -123,8 +123,8 @@ or selected a gene for overlaying
 			stop: gene.stop,
 			autoscale: true,
 			genename: gene.gene, 
-			color_min: 'black',
-			color_max: 'red'
+			color_min: obj.gene_expression.color_min,
+			color_max: obj.gene_expression.color_max
 		}
 	} else {
 		throw 'unknown method to color the cells'
@@ -352,6 +352,58 @@ function update_controlpanel ( obj, data ) {
 				.text(type)
 				.attr('font-family',client.font)
 		}
+	} else if(data.maxexpvalue){
+
+		const scale_div = obj.menu_output
+			.append('div')
+			.style('margin', '10px')
+			.style('width','120px')
+			
+		scale_div.append('div')
+			.text('Gene Expression (FPKM)')
+			.style('text-align','center')
+			.style('margin-bottom','20px')
+
+		const svg = scale_div.append('svg').append('g')
+
+		const colorRange = [obj.gene_expression.color_max, obj.gene_expression.color_min]
+
+		const colorScale = scaleLinear()
+			.range(colorRange)
+			.domain([data.minexpvalue, data.maxexpvalue])
+
+		const linearGradient = svg.append("defs")
+            .append("linearGradient")
+			.attr("id", "linear-gradient")
+			.attr('gradientTransform', 'rotate(90)')
+			
+		linearGradient.append("stop")
+            .attr("offset", "0%")
+			.attr("stop-color", colorScale(data.minexpvalue))
+			
+		linearGradient.append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", colorScale(data.maxexpvalue))
+
+		svg.append('rect')
+			.attr('x', 0)
+			.attr('y', 0 )
+			.attr('width',30)
+			.attr('height', 100 )
+			.style('fill', "url(#linear-gradient)")
+
+		const y = scaleLinear()
+			.range([100, 0])
+			.domain([data.minexpvalue, data.maxexpvalue])
+
+		const legendAxis = axisRight()
+			.scale(y)
+			.ticks(5)
+
+		svg.append("g")
+			.attr("class", "legend axis")
+			.attr("transform", "translate(" + 30 + ", 0)")
+			.call(legendAxis)
 	}
 }
 
