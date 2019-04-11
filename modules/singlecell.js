@@ -9,7 +9,7 @@ const utils = require('./utils')
 
 
 
-const serverconfig = __non_webpack_require__('./serverconfig.json')
+//const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 
 
@@ -28,12 +28,14 @@ exports.handle_singlecell_closure = ( genomes ) => {
 			if(!gn) throw 'invalid genome'
 
 			if( q.getpcd ) {
-				//await get_pcd( q, gn, res )
 				await get_pcd_tempfile( q, gn, res )
 				return
 			}
+			if( q.getgeneboxplot ) {
+				await get_geneboxplot( q, gn, res )
+				return
+			}
 
-			// other triggers
 
 		} catch(e) {
 			res.send({error: (e.message || e)})
@@ -117,6 +119,13 @@ return pcd format data
 may attach coloring scheme to result{} for returning to client
 */
 
+	if( !q.textfile ) throw '.textfile missing'
+	{
+		const [e,file,isurl] = app.fileurl( {query:{file:q.textfile}} )
+		if(e) throw '.textfile error: '+e
+		q.textfile = file
+	}
+
 	// set up coloring scheme
 	let categorical_color_function
 	let cell2color_byexp  // color by gene expression values 
@@ -134,7 +143,11 @@ may attach coloring scheme to result{} for returning to client
 
 		const ge = q.getpcd.gene_expression
 		if(!ge.file) throw 'gene_expression.file missing'
-		ge.file = path.join( serverconfig.tpmasterdir, ge.file )
+		{
+			const [e,file,isurl] = app.fileurl( {query:{file:ge.file}} )
+			if(e) throw e
+			ge.file = file
+		}
 		if(!Number.isInteger( ge.barcodecolumnidx )) throw 'gene_expression.barcodecolumnidx missing'
 		if(!ge.chr) throw 'gene_expression.chr missing'
 		if(!ge.start) throw 'gene_expression.start missing'
@@ -187,8 +200,7 @@ may attach coloring scheme to result{} for returning to client
 	return new Promise((resolve,reject)=>{
 
 	const lines = []
-	const file = path.join( serverconfig.tpmasterdir, q.textfile )
-	const rl = readline.createInterface({input: fs.createReadStream(file)})
+	const rl = readline.createInterface({input: fs.createReadStream( q.textfile )})
 	let firstline = true
 
 	rl.on('line',line=>{
@@ -245,4 +257,101 @@ function componentToHex(c) {
 
 function rgbToHex(r, g, b) {
     return componentToHex(r) + componentToHex(g) + componentToHex(b)
+}
+
+
+
+
+async function get_geneboxplot ( q, gn, res ) {
+
+	const ge = q.getgeneboxplot
+
+	if(!ge.expfile) throw 'getgeneboxplot.expfile missing'
+	{
+		const [e,file,isurl] = app.fileurl({query:{file:ge.expfile}})
+		if(e) throw 'getgeneboxplot.expfile error: '+e
+		ge.expfile = file
+	}
+	if(!ge.chr) throw 'getgeneboxplot.chr missing'
+	if(!ge.start) throw 'getgeneboxplot.start missing'
+	if(!ge.stop)  throw 'getgeneboxplot.stop missing'
+	if(!ge.genename) throw 'getgeneboxplot.genename missing'
+
+	const barcode2category = await cellfile_get_barcode2category( ge )
+	// k: barcode, v: category
+
+	const coord = (ge.nochr ? ge.chr.replace('chr','') : ge.chr)+':'+ge.start+'-'+ge.stop
+	const category2values = new Map()
+	// k: category, v: array of exp values
+
+
+	let minexpvalue = 0,
+		maxexpvalue = 0
+
+	await utils.get_lines_tabix( [ge.expfile,coord], null, line=>{
+		const j = JSON.parse( line.split('\t')[3] )
+		if(j.gene != ge.genename) return
+		if(!j.sample) return
+		const category = barcode2category.get( j.sample )
+		if(!category) return
+		if(!category2values.has(category)) category2values.set( category, [] )
+		if(!Number.isFinite( j.value )) return
+		category2values.get(category).push( {value:j.value} )
+
+		minexpvalue = Math.min( minexpvalue, j.value )
+		maxexpvalue = Math.max( maxexpvalue, j.value )
+	})
+
+	
+
+	const boxplots = []
+
+	for(const [category, values] of category2values ) {
+		values.sort((i,j)=> i.value-j.value )
+		const b = app.boxplot_getvalue( values )
+		b.category = category
+		boxplots.push( b )
+	}
+
+	res.send({ boxplots, minexpvalue, maxexpvalue })
+}
+
+
+
+function cellfile_get_barcode2category ( p ) {
+/*
+.cellfile
+.barcodecolumnidx
+.categorycolumnidx
+.delimiter
+*/
+	if(!p.cellfile) throw 'cellfile missing'
+	{
+		const [e,file,isurl] = app.fileurl({query:{file:p.cellfile}})
+		if(e) throw 'cellfile error: '+e
+		p.cellfile = file
+	}
+	if(!p.delimiter) throw 'delimiter missing'
+	if(!Number.isInteger( p.barcodecolumnidx ) ) throw 'barcodecolumnidx missing'
+	if(!Number.isInteger( p.categorycolumnidx) ) throw 'categorycolumnidx missing'
+
+	return new Promise((resolve,reject)=>{
+
+		const barcode2category = new Map()
+
+		const rl = readline.createInterface({ input: fs.createReadStream( p.cellfile ) })
+		let first=true
+		rl.on('line',line=>{
+			if(first) {
+				first=false
+				return
+			}
+			const l = line.split( p.delimiter )
+			barcode2category.set( l[ p.barcodecolumnidx ], l[ p.categorycolumnidx ] )
+		})
+		rl.on('close',()=>{
+			resolve( barcode2category )
+		})
+
+	})
 }
