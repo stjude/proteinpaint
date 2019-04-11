@@ -21,17 +21,7 @@ export async function init ( arg, holder ) {
 	init_view( obj )
 	init_controlpanel( obj )
 
-	const data = await load_cell_pcd( obj )
-	render_cloud( obj, data.pcdfile )
-	update_controlpanel( obj, data )
-
-	animate()
-
-	function animate() {
-		requestAnimationFrame( animate )
-		obj.controls.update()
-		obj.renderer.render( obj.scene, obj.camera )
-	}
+	pcd_pipeline(obj)
 }
 
 
@@ -72,7 +62,20 @@ function validate_obj ( obj ) {
 	if(!obj.height) obj.height = window.innerHeight*.9
 }
 
+async function pcd_pipeline (obj) {
 
+	const data = await load_cell_pcd( obj )
+	render_cloud( obj, data.pcdfile )
+	update_controlpanel( obj, data )
+
+	animate()
+
+	function animate() {
+		requestAnimationFrame( animate )
+		obj.controls.update()
+		obj.renderer.render( obj.scene, obj.camera )
+	}
+}
 
 
 async function load_cell_pcd ( obj ) {
@@ -265,6 +268,7 @@ function keyboard( ev ) {
 function init_controlpanel( obj ) {
 
 	obj.menu = new client.Menu()
+	obj.menu.d.style('padding','3px')
 
 	const panel = obj.holder
 		.append('div')
@@ -360,7 +364,7 @@ function update_controlpanel ( obj, data ) {
 			.style('width','120px')
 			
 		scale_div.append('div')
-			.text('Gene Expression (FPKM)')
+			.text('Gene Expression ' + obj.gene_expression.datatype)
 			.style('text-align','center')
 			.style('margin-bottom','20px')
 
@@ -447,21 +451,12 @@ function make_menu ( obj ) {
 				obj.menu.d
 				.append('div')
 				.text(category.name)
+				.attr('class','sja_menuoption')
 				.on('click',async ()=>{
 					obj.menu.hide()
 
 					obj.use_category_index = i
-					const data = await load_cell_pcd(obj)
-					render_cloud( obj, data.pcdfile )
-					update_controlpanel( obj, data )
-
-					animate()
-
-					function animate() {
-						requestAnimationFrame( animate )
-						obj.controls.update()
-						obj.renderer.render( obj.scene, obj.camera )
-					}
+					pcd_pipeline(obj)
 				
 				})
 			}
@@ -473,9 +468,11 @@ function make_menu ( obj ) {
 		obj.menu.d
 			.append('div')
 			.text('Gene expression')
+			.attr('class','sja_menuoption')
 			.on('click',()=>{
 				obj.menu.clear()
 				const gene_search_div = obj.menu.d.append('div')
+					.style('padding','10px')
 
 				gene_searchbox({
 					div: gene_search_div,
@@ -501,17 +498,7 @@ function make_menu ( obj ) {
 						obj.use_category_index = null
 						obj.menu.hide()
 
-						const data = await load_cell_pcd(obj)
-						render_cloud( obj, data.pcdfile )
-						update_controlpanel( obj, data )
-
-						animate()
-
-						function animate() {
-							requestAnimationFrame( animate )
-							obj.controls.update()
-							obj.renderer.render( obj.scene, obj.camera )
-						}
+						pcd_pipeline(obj)
 					}
 				})
 
@@ -525,22 +512,14 @@ function make_menu ( obj ) {
 				obj.menu.d
 				.append('div')
 				.text(gene.gene)
+				.attr('class','sja_menuoption')
 				.on('click',async ()=>{
 					obj.menu.hide()
 
 					obj.use_category_index = null
 					obj.use_gene_index = i
-					const data = await load_cell_pcd(obj)
-					render_cloud( obj, data.pcdfile )
-					update_controlpanel( obj, data )
-
-					animate()
-
-					function animate() {
-						requestAnimationFrame( animate )
-						obj.controls.update()
-						obj.renderer.render( obj.scene, obj.camera )
-					}
+					
+					pcd_pipeline(obj)
 				
 				})
 			}
