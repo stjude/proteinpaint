@@ -362,6 +362,7 @@ function update_controlpanel ( obj, data ) {
 			.append('div')
 			.style('margin', '10px')
 			.style('width','120px')
+			.style('height','200px')
 			
 		scale_div.append('div')
 			.text('Gene Expression ' + obj.gene_expression.datatype)
@@ -409,6 +410,52 @@ function update_controlpanel ( obj, data ) {
 			.attr("transform", "translate(" + 30 + ", 0)")
 			.call(legendAxis)
 	}
+
+	const back_color_div = obj.menu_output.append('div')
+	.style('display','block')
+	.text('Background Color')
+	.style('margin-top','20px')
+
+	const black_div = back_color_div.append('div')
+		.style('margin','3px')
+		.style('display','block')
+
+	black_div.append('input')
+		.attr('type','radio')
+		.style('display','inline-block')
+		.attr('checked','checked')
+		.attr('name','color')
+		.attr('value','black')
+		.on('click',()=>{
+			if(d3select('input[name="color"]:checked').node().value == 'black'){
+				obj.scene.background = new THREE.Color( 0x000000 )
+			}
+		})
+
+	black_div.append('label')
+		.style('display','inline-block')
+		.text('Black')
+		.style('padding-left','10px')
+
+	const white_div = back_color_div.append('div')
+		.style('margin','3px')
+		.style('display','block')
+
+	white_div.append('input')
+		.attr('type','radio')
+		.style('display','inline-block')
+		.attr('name','color')
+		.attr('value','white')
+		.on('click',()=>{
+			if(d3select('input[name="color"]:checked').node().value == 'white'){
+				obj.scene.background = new THREE.Color( 0xffffff )
+			}
+		})
+
+	white_div.append('label')
+		.style('display','inline-block')
+		.text('White')
+		.style('padding-left','10px')
 }
 
 
