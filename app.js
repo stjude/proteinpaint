@@ -12356,6 +12356,7 @@ function illegalpath(s) {
 
 
 function fileurl(req) {
+// must use it to scrutinize every requested file path
 	let file=null,
 		isurl=false
 	if(req.query.file) {
@@ -12369,6 +12370,7 @@ function fileurl(req) {
 	if(!file) return ['file unspecified']
 	return [null,file,isurl]
 }
+exports.fileurl = fileurl
 
 
 
