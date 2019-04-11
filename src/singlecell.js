@@ -1,9 +1,10 @@
 import * as client from './client'
 import * as common from './common'
-import {axisTop, axisRight} from 'd3-axis'
+import {axisTop, axisRight, axisBottom} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {gene_searchbox} from './gene'
+import { version } from 'core-js';
 
 
 
@@ -281,27 +282,7 @@ function init_controlpanel( obj ) {
 
 	obj.menu_button = panel.append('button')
 		.style('display','inline-block')
-		/*
-		.on('change', ()=>{
-			menu_option_changed( obj )
-		})
-		*/
 		.on('click',()=> make_menu( obj ))
-	
-	/*
-	if( obj.cells.categories ) {
-		for(const [index,cat] of obj.cells.categories.entries()){
-			// show this category as an option in menu
-			obj.menu_button.append('option')
-				.attr('value',index)
-				.text(cat.name)
-		}
-	}
-
-	if( obj.gene_expression ) {
-		// TODO add option for gene expression
-	}
-	*/
 	
 	obj.minimize_btn = panel.append('button')
 		.attr('class','collapsible')
@@ -358,15 +339,21 @@ function update_controlpanel ( obj, data ) {
 		}
 	} else if(data.maxexpvalue){
 
+		// for gene expression data show gradient scale with unit
+
+		const scale_height = 30
+		const scale_width = 120
+
 		const scale_div = obj.menu_output
 			.append('div')
 			.style('margin', '10px')
 			.style('width','120px')
-			.style('height','200px')
+			.style('height','130px')
 			
 		scale_div.append('div')
 			.text('Gene Expression ' + obj.gene_expression.datatype)
 			.style('text-align','center')
+			.style('width','150px')
 			.style('margin-bottom','20px')
 
 		const svg = scale_div.append('svg').append('g')
@@ -380,37 +367,88 @@ function update_controlpanel ( obj, data ) {
 		const linearGradient = svg.append("defs")
             .append("linearGradient")
 			.attr("id", "linear-gradient")
-			.attr('gradientTransform', 'rotate(90)')
+			// .attr('gradientTransform', 'rotate(90)')
 			
 		linearGradient.append("stop")
             .attr("offset", "0%")
-			.attr("stop-color", colorScale(data.minexpvalue))
+			.attr("stop-color", colorScale(data.maxexpvalue))
 			
 		linearGradient.append("stop")
             .attr("offset", "100%")
-            .attr("stop-color", colorScale(data.maxexpvalue))
+            .attr("stop-color", colorScale(data.minexpvalue))
 
 		svg.append('rect')
 			.attr('x', 0)
 			.attr('y', 0 )
-			.attr('width',30)
-			.attr('height', 100 )
+			.attr('width',scale_width)
+			.attr('height', scale_height )
+			.attr("transform", 'translate(5, 0)')
 			.style('fill', "url(#linear-gradient)")
 
 		const y = scaleLinear()
-			.range([100, 0])
+			.range([0, scale_width])
 			.domain([data.minexpvalue, data.maxexpvalue])
 
-		const legendAxis = axisRight()
+		const legendAxis = axisBottom()
 			.scale(y)
 			.ticks(5)
 
 		svg.append("g")
 			.attr("class", "legend axis")
-			.attr("transform", "translate(" + 30 + ", 0)")
+			.attr("transform", 'translate(5,'+ scale_height+')')
 			.call(legendAxis)
+
+		// Show option for Boxplot for Gene Expression by catagories
+		const boxplot_div = obj.menu_output.append('div')
+			
+		boxplot_div.append('div')
+			.style('display','block')
+			.style('padding-bottom','5px')
+			.text('Boxplot of Expression by')
+			
+		const boxplot_cat_select = boxplot_div.append('select')
+		.style('display','block')
+
+		boxplot_cat_select.append('option')
+		.attr('value','none')
+		.text('-- Select--')
+
+		if( obj.cells.categories ) {
+			obj.cells.categories.forEach( (category,i) => {
+				boxplot_cat_select.append('option')
+				.attr('value',category.columnidx)
+				.text(category.name)
+			})
+		}
+		boxplot_cat_select.on('change',()=>{
+			const gene = obj.gene_expression.genes[ obj.use_gene_index ]
+			const arg = {
+				genome: obj.genome.name,
+				getgeneboxplot: {
+					expfile: obj.gene_expression.file,
+					chr: gene.chr,
+					start: gene.start,
+					stop: gene.stop,
+					genename: gene.gene,
+					cellfile: obj.cells.file,
+					barcodecolumnidx: obj.cells.barcodecolumnidx,
+					categorycolumnidx: parseInt(boxplot_cat_select.node().value),
+					delimiter: obj.cells.delimiter || '\t'
+				}
+			}
+			console.log(arg)
+			client.dofetch( 'singlecell', arg )
+			.then(data=>{
+				if(data.error) throw data.error
+				console.log(data)
+				obj.box_plot = new client.Menu()
+				make_boxplot(data, obj)
+			})
+
+		})
 	}
 
+	// Background Color change option
 	const back_color_div = obj.menu_output.append('div')
 	.style('display','block')
 	.text('Background Color')
@@ -572,4 +610,124 @@ function make_menu ( obj ) {
 			}
 		})
 	}
+}
+
+function make_boxplot(data, obj){
+
+	const gene = obj.gene_expression.genes[ obj.use_gene_index ]
+	const pane = client.newpane({x:600, y:400})
+	pane.header.text( 'Boxplot for ' + gene.gene )
+	const svg = pane.pane.append('svg')
+		.style('margin','10px')
+
+	let box_height = 20,
+	box_width = 200,
+	barspace = 2,
+	// label_width = 100,
+	axis_height = 30
+
+	const label_width = get_max_labelwidth(data.boxplots, svg)
+	
+	const y_scale = scaleLinear()
+		.range([0, box_width])
+		.domain([data.minexpvalue, data.maxexpvalue])
+
+	const svg_height = data.boxplots.length * (box_height + barspace) + axis_height
+	const svg_width = box_width + label_width + 20
+
+	svg.transition()
+		.attr('width', svg_width)
+		.attr('height', svg_height)
+
+	if(data.boxplots){
+		data.boxplots.forEach( (boxplot, i) => {
+
+			const g = svg.append('g')
+				.attr('transform','translate('+ label_width +',' + (i*(box_height + barspace)) + ')')
+
+			const xlabel = g.append('text')
+				.text(boxplot.category )
+				.attr("transform", "translate(0,"+ box_height/2 +")")
+				.attr('text-anchor','end')
+				.attr('font-size',15)
+				.attr('font-family',client.font)
+				.attr('dominant-baseline','central')
+
+			if(boxplot.w1){
+				g.append("line")
+					.attr("x1", y_scale(boxplot.w1))
+					.attr("y1", box_height/2)
+					.attr("x2", y_scale(boxplot.w2))
+					.attr("y2", box_height/2)
+					.attr("stroke-width", 2)
+					.attr("stroke", "black")
+
+				g.append("rect")
+					.attr('x', y_scale(boxplot.p25))
+					.attr('y', 0)
+					.attr('width', y_scale(boxplot.p75 - boxplot.p25))
+					.attr('height', box_height)
+					.attr('fill','#901739')
+
+				g.append("line")
+					.attr("x1", y_scale(boxplot.w1))
+					.attr("y1", 0)
+					.attr("x2", y_scale(boxplot.w1))
+					.attr("y2",box_height)
+					.attr("stroke-width", 2)
+					.attr("stroke", "black")
+
+				g.append("line")
+					.attr("x1", y_scale(boxplot.p50))
+					.attr("y1", 0)
+					.attr("x2", y_scale(boxplot.p50))
+					.attr("y2",box_height)
+					.attr("stroke-width", 2)
+					.attr("stroke", "white")
+
+				g.append("line")
+					.attr("x1", y_scale(boxplot.w2))
+					.attr("y1", 0)
+					.attr("x2", y_scale(boxplot.w2))
+					.attr("y2",box_height)
+					.attr("stroke-width", 2)
+					.attr("stroke", "black")
+
+				for(const outlier of boxplot.out){
+					g.append("circle")
+						.attr('cx', y_scale(outlier.value))
+						.attr('cy', box_height/2)
+						.attr('r', 2)
+						.attr('fill','#901739')
+				}	
+			}
+		})
+		
+		const legendAxis = axisBottom()
+			.scale(y_scale)
+			.ticks(5)
+
+		svg.append("g")
+			.attr("class", "legend axis")
+			.attr("transform", 'translate('+ label_width +','+ data.boxplots.length * (box_height + barspace) +')')
+			.call(legendAxis)
+	}
+
+}
+
+function get_max_labelwidth ( items, svg ) {
+
+	let textwidth = 0
+
+	for(const i of items) {
+		svg.append('text')
+			.text( i.category)
+			.attr('font-family', client.font)
+			.attr('font-size', 15)
+			.each( function() {
+				textwidth = Math.max( textwidth, this.getBBox().width )
+			})
+			.remove()
+	}
+	return textwidth
 }
