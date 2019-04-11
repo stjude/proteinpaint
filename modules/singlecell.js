@@ -77,7 +77,7 @@ X Y Z
 
 async function get_pcd_tempfile ( q, gn, res ) {
 /* hardcoded to 3d
-TODO 2d
+TODO 2d, svg
 */
 
 	const result = {}
@@ -167,10 +167,15 @@ may attach coloring scheme to result{} for returning to client
 		let minexpvalue = 0,
 			maxexpvalue = 0
 
+		// collect number of cells
+		result.numbercellwithgeneexp = 0
+		result.numbercelltotal = 0
+
 		await utils.get_lines_tabix( [ge.file,coord], null, line=>{
 			const j = JSON.parse( line.split('\t')[3] )
 			if(j.gene != ge.genename) return
 			if(!Number.isFinite( j.value )) return
+			result.numbercellwithgeneexp++
 
 			if( ge.autoscale ) {
 				minexpvalue = Math.min( minexpvalue, j.value )
@@ -233,6 +238,10 @@ may attach coloring scheme to result{} for returning to client
 		}
 
 		lines.push( newl.join(' ') )
+
+		if( q.getpcd.gene_expression ) {
+			result.numbercelltotal++
+		}
 
 	})
 	rl.on('close',()=>{
@@ -310,6 +319,7 @@ async function get_geneboxplot ( q, gn, res ) {
 		values.sort((i,j)=> i.value-j.value )
 		const b = app.boxplot_getvalue( values )
 		b.category = category
+		b.numberofcells = values.length
 		boxplots.push( b )
 	}
 
