@@ -381,7 +381,7 @@ function update_controlpanel ( obj, data ) {
 			.attr('y', 0 )
 			.attr('width',scale_width)
 			.attr('height', scale_height )
-			.attr("transform", 'translate(5, 0)')
+			.attr("transform", 'translate(12, 0)')
 			.style('fill', "url(#linear-gradient)")
 
 		const y = scaleLinear()
@@ -394,21 +394,22 @@ function update_controlpanel ( obj, data ) {
 
 		svg.append("g")
 			.attr("class", "legend axis")
-			.attr("transform", 'translate(5,'+ scale_height+')')
+			.attr("transform", 'translate(12,'+ scale_height+')')
 			.call(legendAxis)
 
 		const stats_div = obj.menu_output.append('div')
 			.style('padding-bottom','20px')
+			.style('text-align','center')
 
 		stats_div.append('p')
 			.style('font-size','13px')
 			.style('margin','2px 0')
-			.html('<b>Cells with Expression :</b> ' + data.numbercellwithgeneexp)
+			.html('<b>Cells with Expression Data</b> ')
 
 		stats_div.append('p')
 			.style('font-size','13px')
 			.style('margin','2px 0')
-			.html('<b>Total number of cells :</b> ' + data.numbercelltotal)
+			.html(data.numbercellwithgeneexp + ' / ' + data.numbercelltotal)
 			
 
 		// Show option for Boxplot for Gene Expression by catagories
