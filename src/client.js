@@ -376,6 +376,7 @@ export function newpane(pm) {
 	const toprow=pp.pane.append('div')
 		.on('mousedown',()=>{
 			d3event.preventDefault()
+			d3event.stopPropagation()
 			const oldx=Number.parseInt(pp.pane.style('left')),
 				oldy=Number.parseInt(pp.pane.style('top'))
 			const x0=d3event.clientX,
