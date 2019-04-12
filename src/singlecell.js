@@ -363,8 +363,9 @@ function update_controlpanel ( obj, data ) {
 			.range(colorRange)
 			.domain([data.minexpvalue, data.maxexpvalue])
 
-		const linearGradient = svg.append("defs")
-            .append("linearGradient")
+		const defs = svg.append('defs')
+
+		const linearGradient = defs.append("linearGradient")
 			.attr("id", "linear-gradient")
 			// .attr('gradientTransform', 'rotate(90)')
 			
@@ -609,7 +610,7 @@ function make_menu ( obj ) {
 		if(obj.gene_expression.genes.length >1){
 		obj.menu.d.append('div')
 			.style('padding','5px 10px')
-			.text('Prviously Selected')
+			.text('Previously Selected')
 		}
 
 		obj.gene_expression.genes.forEach( (gene, i) => {
@@ -653,12 +654,48 @@ function make_boxplot(data, obj, colidx){
 		.range([0, box_width])
 		.domain([data.minexpvalue, data.maxexpvalue])
 
+	const colorRange = [obj.gene_expression.color_max, obj.gene_expression.color_min]
+
+	const colorScale = scaleLinear()
+		.range(colorRange)
+		.domain([data.minexpvalue, data.maxexpvalue])
+
+	const defs = svg.append('defs')
+
+	const linearGradient = defs.append("linearGradient")
+		.attr("id", "linear-gradient" + colidx)
+		// .attr('gradientTransform', 'rotate(90)')
+		
+	linearGradient.append("stop")
+		.attr("offset", "0%")
+		.attr("stop-color", colorScale(data.maxexpvalue))
+		
+	linearGradient.append("stop")
+		.attr("offset", "100%")
+		.attr("stop-color", colorScale(data.minexpvalue))
+
+	const clip_def = defs
+		.append('clipPath')
+		.attr('id', 'clip-bar-rects'+ colidx)
+
 	const svg_height = data.boxplots.length * (box_height + barspace) + axis_height
 	const svg_width = box_width + label_width + 20
 
 	svg.transition()
 		.attr('width', svg_width)
 		.attr('height', svg_height)
+
+	const clipPath = svg.append('g')
+		.attr('clip-path', 'url(#clip-bar-rects'+ colidx +')')
+
+	clipPath
+		.append('rect')
+		.attr('x', label_width)
+		.attr('y', axis_height)
+		.attr('width', box_width)
+		.attr('height', svg_height)
+		.style('fill', 'url(#linear-gradient' + colidx + ')')
+
 
 	if(data.boxplots){
 		data.boxplots.forEach( (boxplot, i) => {
@@ -678,17 +715,31 @@ function make_boxplot(data, obj, colidx){
 				g.append("line")
 					.attr("x1", y_scale(boxplot.w1))
 					.attr("y1", box_height/2)
+					.attr("x2", y_scale(boxplot.p25))
+					.attr("y2", box_height/2)
+					.attr("stroke-width", 2)
+					.attr("stroke", "black")
+
+				g.append("line")
+					.attr("x1", y_scale(boxplot.p75))
+					.attr("y1", box_height/2)
 					.attr("x2", y_scale(boxplot.w2))
 					.attr("y2", box_height/2)
 					.attr("stroke-width", 2)
 					.attr("stroke", "black")
 
-				g.append("rect")
-					.attr('x', y_scale(boxplot.p25))
-					.attr('y', 0)
+				// g.append("rect")
+				// 	.attr('x', y_scale(boxplot.p25))
+				// 	.attr('y', 0)
+				// 	.attr('width', y_scale(boxplot.p75 - boxplot.p25))
+				// 	.attr('height', box_height)
+				// 	.attr('fill','#901739')
+
+				clip_def.append("rect")
+					.attr('x', y_scale(boxplot.p25) + label_width)
+					.attr('y', (i*(box_height + barspace) + axis_height))
 					.attr('width', y_scale(boxplot.p75 - boxplot.p25))
 					.attr('height', box_height)
-					.attr('fill','#901739')
 
 				g.append("line")
 					.attr("x1", y_scale(boxplot.w1))
@@ -715,11 +766,17 @@ function make_boxplot(data, obj, colidx){
 					.attr("stroke", "black")
 
 				for(const outlier of boxplot.out){
-					g.append("circle")
-						.attr('cx', y_scale(outlier.value))
-						.attr('cy', box_height/2)
+					clip_def.append("circle")
+						.attr('cx', y_scale(outlier.value)+ label_width)
+						.attr('cy', (i*(box_height + barspace) + axis_height + (box_height/2)))
 						.attr('r', 2)
 						.attr('fill','#901739')
+
+					// g.append("circle")
+					// 	.attr('cx', y_scale(outlier.value))
+					// 	.attr('cy', box_height/2)
+					// 	.attr('r', 2)
+					// 	.attr('fill','#901739')
 				}	
 			}
 		})
