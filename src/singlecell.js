@@ -4,7 +4,6 @@ import {axisTop, axisRight, axisBottom} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {gene_searchbox} from './gene'
-import { version } from 'core-js';
 
 
 
@@ -454,7 +453,7 @@ function update_controlpanel ( obj, data ) {
 			.then(data=>{
 				if(data.error) throw data.error
 				obj.box_plot = new client.Menu()
-				make_boxplot(data, obj)
+				make_boxplot(data, obj, boxplot_cat_select.node().value)
 			})
 
 		})
@@ -631,18 +630,18 @@ function make_menu ( obj ) {
 	}
 }
 
-function make_boxplot(data, obj){
+function make_boxplot(data, obj, colidx){
 
 	const gene = obj.gene_expression.genes[ obj.use_gene_index ]
 	const pane = client.newpane({x:600, y:400})
-	pane.header.text( 'Boxplot for ' + gene.gene )
+	const cat = obj.cells.categories.find(x => x.columnidx == colidx)
+	pane.header.text( 'Boxplot for ' + gene.gene + ' Expression by ' +  cat.name)
 	const svg = pane.pane.append('svg')
 		.style('margin','10px')
 
 	let box_height = 20,
 	box_width = 200,
 	barspace = 2,
-	// label_width = 100,
 	axis_height = 30
 
 	const label_width = get_max_labelwidth(data.boxplots, svg)
@@ -662,10 +661,10 @@ function make_boxplot(data, obj){
 		data.boxplots.forEach( (boxplot, i) => {
 
 			const g = svg.append('g')
-				.attr('transform','translate('+ label_width +',' + (i*(box_height + barspace)) + ')')
+				.attr('transform','translate('+ label_width +',' + (i*(box_height + barspace) + axis_height) + ')')
 
 			const xlabel = g.append('text')
-				.text(boxplot.category )
+				.text(boxplot.category + ' (' + boxplot.numberofcells + ')')
 				.attr("transform", "translate(0,"+ box_height/2 +")")
 				.attr('text-anchor','end')
 				.attr('font-size',15)
@@ -722,13 +721,13 @@ function make_boxplot(data, obj){
 			}
 		})
 		
-		const legendAxis = axisBottom()
+		const legendAxis = axisTop()
 			.scale(y_scale)
 			.ticks(5)
 
 		svg.append("g")
 			.attr("class", "legend axis")
-			.attr("transform", 'translate('+ label_width +','+ data.boxplots.length * (box_height + barspace) +')')
+			.attr("transform", 'translate('+ label_width +','+ (axis_height -10) +')')
 			.call(legendAxis)
 	}
 
@@ -740,7 +739,7 @@ function get_max_labelwidth ( items, svg ) {
 
 	for(const i of items) {
 		svg.append('text')
-			.text( i.category)
+			.text( i.category+ ' (' + i.numberofcells + ')')
 			.attr('font-family', client.font)
 			.attr('font-size', 15)
 			.each( function() {
