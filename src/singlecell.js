@@ -118,7 +118,7 @@ or selected a gene for overlaying
 
 	} else if( Number.isInteger( obj.use_gene_index ) ) {
 		const gene = obj.gene_expression.genes[ obj.use_gene_index ]
-		obj.menu_button.html( gene.gene + '&nbsp;&nbsp;&#9660;')
+		obj.menu_button.html( 'Gene : ' + gene.gene + '&nbsp;&nbsp;&#9660;')
 		arg.getpcd.gene_expression = {
 			file: obj.gene_expression.file,
 			barcodecolumnidx: obj.cells.barcodecolumnidx,
@@ -348,7 +348,7 @@ function update_controlpanel ( obj, data ) {
 			.append('div')
 			.style('margin', '10px')
 			.style('width','120px')
-			.style('height','130px')
+			.style('height','100px')
 			
 		scale_div.append('div')
 			.text('Gene Expression ' + obj.gene_expression.datatype)
@@ -398,6 +398,20 @@ function update_controlpanel ( obj, data ) {
 			.attr("transform", 'translate(5,'+ scale_height+')')
 			.call(legendAxis)
 
+		const stats_div = obj.menu_output.append('div')
+			.style('padding-bottom','20px')
+
+		stats_div.append('p')
+			.style('font-size','13px')
+			.style('margin','2px 0')
+			.html('<b>Cells with Expression :</b> ' + data.numbercellwithgeneexp)
+
+		stats_div.append('p')
+			.style('font-size','13px')
+			.style('margin','2px 0')
+			.html('<b>Total number of cells :</b> ' + data.numbercelltotal)
+			
+
 		// Show option for Boxplot for Gene Expression by catagories
 		const boxplot_div = obj.menu_output.append('div')
 			
@@ -436,11 +450,9 @@ function update_controlpanel ( obj, data ) {
 					delimiter: obj.cells.delimiter || '\t'
 				}
 			}
-			console.log(arg)
 			client.dofetch( 'singlecell', arg )
 			.then(data=>{
 				if(data.error) throw data.error
-				console.log(data)
 				obj.box_plot = new client.Menu()
 				make_boxplot(data, obj)
 			})
@@ -591,12 +603,19 @@ function make_menu ( obj ) {
 	}
 
 	if(obj.gene_expression.genes){
+		
+		if(obj.gene_expression.genes.length >1){
+		obj.menu.d.append('div')
+			.style('padding','5px 10px')
+			.text('Prviously Selected')
+		}
+
 		obj.gene_expression.genes.forEach( (gene, i) => {
 			if( i != obj.use_gene_index ) {
 				// add option
 				obj.menu.d
 				.append('div')
-				.text(gene.gene)
+				.text('Gene : ' + gene.gene)
 				.attr('class','sja_menuoption')
 				.on('click',async ()=>{
 					obj.menu.hide()
