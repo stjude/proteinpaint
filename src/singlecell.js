@@ -3,7 +3,7 @@ import * as common from './common'
 import {axisTop, axisRight, axisBottom} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import {gene_searchbox} from './gene'
+import {gene_searchbox, findgenemodel_bysymbol} from './gene'
 
 
 
@@ -568,14 +568,16 @@ function make_menu ( obj ) {
 			.attr('class','sja_menuoption')
 			.on('click',()=>{
 				obj.menu.clear()
+
 				const gene_search_div = obj.menu.d.append('div')
 					.style('padding','10px')
 
 				gene_searchbox({
-					div: gene_search_div,
+					div: gene_search_div.append('div'),
+					resultdiv: gene_search_div.append('div'),
 					genome: obj.genome.name,
 					callback: async (genename)=>{
-						const gmlst = await client.findgenemodel_bysymbol( obj.genome.name, genename )
+						const gmlst = await findgenemodel_bysymbol( obj.genome.name, genename )
 						if( gmlst && gmlst[0] ) {
 							const gm = gmlst[0]
 							if(!obj.gene_expression.genes) obj.gene_expression.genes = []
