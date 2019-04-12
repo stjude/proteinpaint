@@ -3,6 +3,7 @@ import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-s
 import {stratify} from 'd3-hierarchy'
 import {scaleOrdinal,schemeCategory20} from 'd3-scale'
 import * as client from './client'
+import {findgenemodel_bysymbol} from './gene'
 import 'normalize.css'
 import './style.css'
 import * as common from './common'
@@ -1216,7 +1217,7 @@ async function launchblock(arg,holder) {
 
 		try {
 
-			const gmlst = await client.findgenemodel_bysymbol( arg.genome, arg.positionbygene )
+			const gmlst = await findgenemodel_bysymbol( arg.genome, arg.positionbygene )
 			if( gmlst && gmlst[0] ) {
 				const gm = gmlst[0]
 				blockinitarg.chr = gm.chr
