@@ -224,13 +224,18 @@ may attach coloring scheme to result{} for returning to client
 		}
 
 		if( categorical_color_function ) {
+
 			const ca = l[ q.getpcd.category_index ]
 			const co = categorical_color_function( ca )
 			newl.push( Number.parseInt( co.slice(1) , 16 ) )
 			if( collect_category2color ) {
 				collect_category2color[ ca ] = co
 			}
+
 		} else if( cell2color_byexp ) {
+
+			result.numbercelltotal++
+
 			const barcode = l[ q.getpcd.gene_expression.barcodecolumnidx ]
 			const color = cell2color_byexp.get(barcode)
 			if(!color) return
@@ -238,10 +243,6 @@ may attach coloring scheme to result{} for returning to client
 		}
 
 		lines.push( newl.join(' ') )
-
-		if( q.getpcd.gene_expression ) {
-			result.numbercelltotal++
-		}
 
 	})
 	rl.on('close',()=>{
