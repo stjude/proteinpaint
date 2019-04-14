@@ -1,6 +1,6 @@
 
 
-const samplenamekey = 'sjlid_w88'
+const samplenamekey = 'sjlid'
 
 
 module.exports={
