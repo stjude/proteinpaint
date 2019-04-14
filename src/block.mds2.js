@@ -180,12 +180,24 @@ function addparameter_rangequery ( tk, block ) {
 
 	if( tk.vcf ) {
 		par.trigger_vcfbyrange = 1
+		if( tk.vcf.numerical_axis && tk.vcf.numerical_axis.in_use && tk.vcf.numerical_axis.info_keys) {
+			const key = tk.vcf.numerical_axis.info_keys.find( i=> i.in_use )
+			if( key.cutoff && key.cutoff.in_use ) {
+				// applying cutoff
+				par.numerical_info_cutoff = {
+					key: key.key,
+					side: key.cutoff.side,
+					value: key.cutoff.value
+				}
+			}
+		}
 	}
 	// add trigger for other data types
 	/* TODO
 	for vcf, when rendering image on server, need to know 
 	if any categorical attr is used to class variants instead of mclass
 	*/
+
 
 
 	par.rglst = block.tkarg_rglst(tk) // note here: not tkarg_usegm

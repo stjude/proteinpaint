@@ -158,6 +158,31 @@ ds is either official or custom
 							continue
 						}
 
+						if( q.numerical_info_cutoff ) {
+							let v
+							if( m.info ) {
+								v = m.info[ q.numerical_info_cutoff.key ]
+							}
+							if( !Number.isFinite( v )) {
+								if( m.altinfo ) {
+									v = m.altinfo[ q.numerical_info_cutoff.key ]
+								}
+							}
+							if(Number.isFinite( v )) {
+								if( q.numerical_info_cutoff.side == '<' ) {
+									if( v >= q.numerical_info_cutoff.value ) return
+								} else if( q.numerical_info_cutoff.side == '<=' ) {
+									if( v > q.numerical_info_cutoff.value ) return
+								} else if( q.numerical_info_cutoff.side == '>' ) {
+									if( v <= q.numerical_info_cutoff.value ) return
+								} else {
+									if( v < q.numerical_info_cutoff.value ) return
+								}
+							} else {
+								return
+							}
+						}
+
 						if( m.csq ) {
 							// not to release the whole csq, only to show number of interpretations
 							m.csq_count = m.csq.length

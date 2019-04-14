@@ -68,15 +68,23 @@ module.exports={
 						// may config axis
 						min_value: 0,
 						max_value: 1,
-						cutoff: [ 0.0001, 0.001, 0.01, 0.1 ] // predefined cutoff values
+						cutoff: {
+							in_use:false,
+							side:'<',
+							value:0.001
+						},
 						// TODO bind complex things such as boxplot to one of the info fields
 					},
 					{
 						key:'AF_gnomAD',
 						min_value: 0,
 						max_value: 1,
-						cutoff: [ 0.0001, 0.001, 0.01, 0.1 ],
-						missing_value: 0
+						missing_value: 0,
+						cutoff: {
+							in_use:false,
+							side:'<',
+							value:0.001
+						},
 					}
 				],
 				in_use: true // to use numerical axis by default
