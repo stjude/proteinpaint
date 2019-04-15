@@ -10,6 +10,7 @@ vcf_clickvariant
 ********************** INTERNAL
 maymakebutton_vcf_termdbbygenotype
 maymakebutton_vcf_mafcovplot
+show_functionalannotation
 
 */
 
@@ -134,7 +135,8 @@ function maymakebutton_vcf_termdbbygenotype ( buttonrow, showholder, m, tk, bloc
 
 function show_functionalannotation ( div, m, tk, block ) {
 
-	// first row about the variant
+	// first row: brief info about the variant
+
 	div.append('span').html(
 		(m.gene ? '<i>'+m.gene+'</i> ' : '')
 		+(m.isoform ? '<span style="font-size:.8em;text-decoration:italic">'+m.isoform+'</span> ' : '')
@@ -189,6 +191,10 @@ function show_functionalannotation ( div, m, tk, block ) {
 			text += ' <span style="font-size:.7em;opacity:.5">REF</span> '+m.ref+' <span style="font-size:.7em;opacity:.5">ALT</span> '+m.alt
 		}
 		lst.push({k:'Genomic',v:text})
+	}
+
+	if( m.name && m.name.startsWith('rs') ) {
+		lst.push({k:'dbSNP',v:'<a href=https://www.ncbi.nlm.nih.gov/snp/'+m.name+' target=_blank>'+m.name+'</span>'})
 	}
 
 	// info fields add to lst
