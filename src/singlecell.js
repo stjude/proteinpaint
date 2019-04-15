@@ -273,6 +273,9 @@ function init_controlpanel( obj ) {
 	obj.menu = new client.Menu()
 	obj.menu.d.style('padding','3px')
 
+	obj.settings = new client.Menu()
+	obj.settings.d.style('padding','3px')
+
 	const panel = obj.holder
 		.append('div')
 		.style('padding','10px')
@@ -284,23 +287,45 @@ function init_controlpanel( obj ) {
 
 	obj.menu_button = panel.append('button')
 		.style('display','inline-block')
+		.style('padding','2px')
 		.on('click',()=> make_menu( obj ))
 	
 	obj.minimize_btn = panel.append('button')
-		.attr('class','collapsible')
 		.style('margin-left','10px')
 		.style('display','inline-block')
+		.style('padding','0 2px')
 		.style('float','right')
-		.text('-')
+
+	obj.minimize_btn.icon = obj.minimize_btn.append('i')
+		.attr('class','material-icons')
+		.style('font-size','16px')
+		.style('padding-top','2px')
+		.text('remove')
 		.on('click',()=>{
 			obj.minimize_btn.classed("active", obj.minimize_btn.classed("active") ? false : true)
 			if(obj.minimize_btn.classed("active")){
-				obj.minimize_btn.text('+')
+				obj.minimize_btn.icon
+					.text('add')
 			}else{
-				obj.minimize_btn.text('-')
+				obj.minimize_btn.icon
+					.text('remove')
 			}
 			obj.menu_output.style("display", obj.menu_output.display = (obj.menu_output.display == "none" ? "block" : "none"));
 		})
+
+		obj.use_background_color = 0
+		obj.settings_btn = panel.append('button')
+		.style('margin-left','10px')
+		.style('display','inline-block')
+		.style('padding','0 2px')
+		.style('float','right')
+	
+	obj.settings_btn.icon = obj.settings_btn.append('i')
+		.attr('class','material-icons')
+		.style('font-size','16px')
+		.style('padding-top','2px')
+		.text('settings')
+		.on('click',()=> make_settings( obj))
 
 	obj.menu_output = panel.append('div')
 		.style('margin-top','10px')
@@ -463,53 +488,6 @@ function update_controlpanel ( obj, data ) {
 
 		})
 	}
-
-	// Background Color change option
-	const back_color_div = obj.menu_output.append('div')
-	.style('display','block')
-	.text('Background Color')
-	.style('margin-top','20px')
-
-	const black_div = back_color_div.append('div')
-		.style('margin','3px')
-		.style('display','block')
-
-	black_div.append('input')
-		.attr('type','radio')
-		.style('display','inline-block')
-		.attr('checked','checked')
-		.attr('name','color')
-		.attr('value','black')
-		.on('click',()=>{
-			if(d3select('input[name="color"]:checked').node().value == 'black'){
-				obj.scene.background = new THREE.Color( 0x000000 )
-			}
-		})
-
-	black_div.append('label')
-		.style('display','inline-block')
-		.text('Black')
-		.style('padding-left','10px')
-
-	const white_div = back_color_div.append('div')
-		.style('margin','3px')
-		.style('display','block')
-
-	white_div.append('input')
-		.attr('type','radio')
-		.style('display','inline-block')
-		.attr('name','color')
-		.attr('value','white')
-		.on('click',()=>{
-			if(d3select('input[name="color"]:checked').node().value == 'white'){
-				obj.scene.background = new THREE.Color( 0xffffff )
-			}
-		})
-
-	white_div.append('label')
-		.style('display','inline-block')
-		.text('White')
-		.style('padding-left','10px')
 }
 
 
@@ -634,6 +612,71 @@ function make_menu ( obj ) {
 				})
 			}
 		})
+	}
+}
+
+function make_settings(obj){
+	obj.settings.clear()
+		.showunder( obj.settings_btn.node() )
+
+	// Background Color change option
+	const back_color_div = obj.settings.d.append('div')
+	.style('display','block')
+	.text('Background Color')
+	.style('margin','5px')
+
+	const black_div = back_color_div.append('div')
+		.style('margin','3px')
+		.style('display','block')
+
+	black_div.append('input')
+		.attr('type','radio')
+		.style('display','inline-block')
+		.attr('name','color')
+		.attr('value','black')
+		.attr('id','black')
+		.on('click',()=>{
+			if(d3select('input[name="color"]:checked').node().value == 'black'){
+				obj.scene.background = new THREE.Color( 0x000000 )
+				obj.use_background_color = 0
+			}
+		})
+
+	black_div.append('label')
+		.style('display','inline-block')
+		.text('Black')
+		.attr('for','black')
+		.style('padding-left','10px')
+
+	const white_div = back_color_div.append('div')
+		.style('margin','3px')
+		.style('display','block')
+
+	white_div.append('input')
+		.attr('type','radio')
+		.style('display','inline-block')
+		.attr('name','color')
+		.attr('value','white')
+		.attr('id','white')
+		.on('click',()=>{
+			if(d3select('input[name="color"]:checked').node().value == 'white'){
+				obj.scene.background = new THREE.Color( 0xffffff )
+				obj.use_background_color = 1
+			}
+		})
+
+	white_div.append('label')
+		.style('display','inline-block')
+		.text('White')
+		.attr('for','white')
+		.style('padding-left','10px')
+
+	if(obj.use_background_color == 0){
+		black_div.select('input')
+		.attr('checked','checked')
+	}else{
+		white_div.select('input')
+		.attr('checked','checked')
 	}
 }
 
