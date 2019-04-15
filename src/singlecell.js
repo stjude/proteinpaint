@@ -215,11 +215,11 @@ function render_cloud( obj, pcd_buffer ){
 	const points = loader.parse(pcd_buffer,'')
 	// loader.load( pcdfilename, function ( points ) {
 
-		points.material.size = 0.05
-		obj.scene.add(points)
-		const center = points.geometry.boundingSphere.center
-		obj.controls.target.set( center.x, center.y, center.z )
-		obj.controls.update()
+	points.material.size = 0.05
+	obj.scene.add(points)
+	const center = points.geometry.boundingSphere.center
+	obj.controls.target.set( center.x, center.y, center.z )
+	obj.controls.update()
 
 	// } )
 
@@ -731,13 +731,6 @@ function make_boxplot(data, obj, colidx){
 					.attr("stroke-width", 2)
 					.attr("stroke", "black")
 
-				// g.append("rect")
-				// 	.attr('x', y_scale(boxplot.p25))
-				// 	.attr('y', 0)
-				// 	.attr('width', y_scale(boxplot.p75 - boxplot.p25))
-				// 	.attr('height', box_height)
-				// 	.attr('fill','#901739')
-
 				clip_def.append("rect")
 					.attr('x', y_scale(boxplot.p25) + label_width)
 					.attr('y', (i*(box_height + barspace) + axis_height))
@@ -767,21 +760,15 @@ function make_boxplot(data, obj, colidx){
 					.attr("y2",box_height)
 					.attr("stroke-width", 2)
 					.attr("stroke", "black")
-
-				for(const outlier of boxplot.out){
-					clip_def.append("circle")
-						.attr('cx', y_scale(outlier.value)+ label_width)
-						.attr('cy', (i*(box_height + barspace) + axis_height + (box_height/2)))
-						.attr('r', 2)
-						.attr('fill','#901739')
-
-					// g.append("circle")
-					// 	.attr('cx', y_scale(outlier.value))
-					// 	.attr('cy', box_height/2)
-					// 	.attr('r', 2)
-					// 	.attr('fill','#901739')
-				}	
 			}
+
+			for(const outlier of boxplot.out){
+				clip_def.append("circle")
+					.attr('cx', y_scale(outlier.value)+ label_width)
+					.attr('cy', (i*(box_height + barspace) + axis_height + (box_height/2)))
+					.attr('r', 2)
+					.attr('fill','#901739')
+			}	
 		})
 		
 		const legendAxis = axisTop()
