@@ -11,7 +11,7 @@ module.exports={
 
 	cohort:{
 		files:[
-			{file:'files/hg38/sjlife/clinical/test/matrix'}
+			{file:'files/hg38/sjlife/clinical/matrix'}
 		],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds)=>{
