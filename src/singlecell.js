@@ -65,7 +65,9 @@ function validate_obj ( obj ) {
 async function pcd_pipeline (obj) {
 
 	const data = await load_cell_pcd( obj )
-	render_cloud( obj, data.pcdfile )
+	const enc = new TextEncoder()
+	const pcd_buffer = enc.encode(data.pcddata).buffer
+	render_cloud( obj, pcd_buffer )
 	update_controlpanel( obj, data )
 
 	animate()
@@ -197,7 +199,7 @@ function init_view ( obj ) {
 
 
 
-function render_cloud( obj, pcdfilename ){
+function render_cloud( obj, pcd_buffer ){
 
 	// remove old points before adding new
 	obj.scene.children.forEach(function(v,i) {
@@ -210,7 +212,8 @@ function render_cloud( obj, pcdfilename ){
 
 	// add new points using loader
 	const loader = new THREE.PCDLoader()
-	loader.load( pcdfilename, function ( points ) {
+	const points = loader.parse(pcd_buffer,'')
+	// loader.load( pcdfilename, function ( points ) {
 
 		points.material.size = 0.05
 		obj.scene.add(points)
@@ -218,7 +221,7 @@ function render_cloud( obj, pcdfilename ){
 		obj.controls.target.set( center.x, center.y, center.z )
 		obj.controls.update()
 
-	} )
+	// } )
 
 }
 

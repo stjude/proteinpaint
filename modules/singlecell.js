@@ -97,9 +97,10 @@ POINTS 960000
 DATA ascii
 `
 
-	const filename = 'tmp/'+Math.random()+'.pcd'
-	await utils.write_file( './public/'+filename, header+lines.join('\n') )
-	result.pcdfile = filename
+	// const filename = 'tmp/'+Math.random()+'.pcd'
+	// await utils.write_file( './public/'+filename, header+lines.join('\n') )
+	// result.pcdfile = filename
+	result.pcddata = header + lines.join('\n')
 	res.send( result )
 }
 
