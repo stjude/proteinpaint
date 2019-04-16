@@ -715,7 +715,7 @@ not the complete set in ds.cohort
 		// replace sets{} with lst[]
 		const lst = []
 		for(const [k,v] of category2set) {
-			v.label = k
+			v.label = term.values ? term.values[ k ].label : k
 			v.lst = []
 			for(const k in v.sets) {
 				v.lst.push({
