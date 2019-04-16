@@ -287,46 +287,39 @@ function init_controlpanel( obj ) {
 
 	obj.menu_button = panel.append('button')
 		.style('display','inline-block')
-		.style('padding','2px')
+		.style('padding','4px')
 		.on('click',()=> make_menu( obj ))
 	
-	obj.minimize_btn = panel.append('button')
-		.style('margin-left','10px')
-		.style('display','inline-block')
-		.style('padding','0 2px')
-		.style('float','right')
+	 obj.minimize_btn = panel.append('button')
+        .style('margin-left','10px')
+        .style('display','inline-block')
+        .style('padding-left','0px')
+		.style('padding-right','2px')
+        .style('float','right')
+        .html(' &#65293;')
+        .on('click',()=>{
+            obj.minimize_btn.classed("active", obj.minimize_btn.classed("active") ? false : true)
+            if(obj.minimize_btn.classed("active")){
+                obj.minimize_btn
+                    .html(' &#65291;')
+            }else{
+                obj.minimize_btn
+                .html(' &#65293;')
+            }
+            obj.menu_output.style("display", obj.menu_output.display = (obj.menu_output.display == "none" ? "block" : "none"));
+        })
 
-	obj.minimize_btn.icon = obj.minimize_btn.append('i')
-		.attr('class','material-icons')
-		.style('font-size','16px')
-		.style('padding-top','2px')
-		.text('remove')
-		.on('click',()=>{
-			obj.minimize_btn.classed("active", obj.minimize_btn.classed("active") ? false : true)
-			if(obj.minimize_btn.classed("active")){
-				obj.minimize_btn.icon
-					.text('add')
-			}else{
-				obj.minimize_btn.icon
-					.text('remove')
-			}
-			obj.menu_output.style("display", obj.menu_output.display = (obj.menu_output.display == "none" ? "block" : "none"));
-		})
+	obj.use_background_color = 0
 
-		obj.use_background_color = 0
-		obj.settings_btn = panel.append('button')
-		.style('margin-left','10px')
-		.style('display','inline-block')
-		.style('padding','0 2px')
-		.style('float','right')
-	
-	obj.settings_btn.icon = obj.settings_btn.append('i')
-		.attr('class','material-icons')
-		.style('font-size','16px')
-		.style('padding-top','2px')
-		.text('settings')
-		.on('click',()=> make_settings( obj))
-
+	obj.settings_btn = panel.append('button')
+        .style('margin-left','10px')
+        .style('display','inline-block')
+        .style('padding-left','3px')
+		.style('padding-right','3px')
+        .style('float','right')
+        .html('&#9187;')
+        .on('click',()=> make_settings( obj))
+		
 	obj.menu_output = panel.append('div')
 		.style('margin-top','10px')
 
