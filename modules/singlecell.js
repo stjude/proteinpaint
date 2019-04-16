@@ -313,7 +313,11 @@ async function get_geneboxplot ( q, gn, res ) {
 		maxexpvalue = Math.max( maxexpvalue, j.value )
 	})
 
-	
+	// how many cell total from this category? show the total number for each boxplot/category
+	const category2total = new Map()
+	for(const c of barcode2category.values()) {
+		category2total.set( c, 1 + (category2total.get(c) || 0 ) )
+	}
 
 	const boxplots = []
 
@@ -321,7 +325,11 @@ async function get_geneboxplot ( q, gn, res ) {
 		values.sort((i,j)=> i.value-j.value )
 		const b = app.boxplot_getvalue( values )
 		b.category = category
-		b.numberofcells = values.length
+
+		// TODO kernal density estimation
+
+		b.numberofcells = values.length + '/' + category2total.get( category )
+
 		boxplots.push( b )
 	}
 
