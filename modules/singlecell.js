@@ -6,10 +6,19 @@ const d3scale = require('d3-scale')
 const d3color = require('d3-color')
 const d3interpolate = require('d3-interpolate')
 const utils = require('./utils')
+const common = require('../src/common')
 
 
 
-//const serverconfig = __non_webpack_require__('./serverconfig.json')
+
+/*
+********************** EXPORTED
+handle_singlecell_closure
+********************** INTERNAL
+get_pcd
+slice_file_add_color
+get_geneboxplot
+*/
 
 
 
@@ -28,7 +37,7 @@ exports.handle_singlecell_closure = ( genomes ) => {
 			if(!gn) throw 'invalid genome'
 
 			if( q.getpcd ) {
-				await get_pcd_tempfile( q, gn, res )
+				await get_pcd( q, gn, res )
 				return
 			}
 			if( q.getgeneboxplot ) {
@@ -47,35 +56,10 @@ exports.handle_singlecell_closure = ( genomes ) => {
 
 
 
+
+
+
 async function get_pcd ( q, gn, res ) {
-/*
-not in use
-*/
-
-	const lines = await slice_file( q, gn, res )
-	// one line per cell
-
-
-	const header = `# .PCD v.7 - Point Cloud Data file format
-VERSION .7
-FIELDS x y z rgb
-SIZE 4 4 4 4
-TYPE F F F F
-COUNT 20 20 20 20
-WIDTH 1200
-HEIGHT 800
-VIEWPOINT 0 0 0 1 0 0 0
-POINTS 960000
-DATA ascii
-X Y Z
-`
-	res.send({pcd: header + lines.join('\n')})
-}
-
-
-
-
-async function get_pcd_tempfile ( q, gn, res ) {
 /* hardcoded to 3d
 TODO 2d, svg
 */
@@ -97,9 +81,6 @@ POINTS 960000
 DATA ascii
 `
 
-	// const filename = 'tmp/'+Math.random()+'.pcd'
-	// await utils.write_file( './public/'+filename, header+lines.join('\n') )
-	// result.pcdfile = filename
 	result.pcddata = header + lines.join('\n')
 	res.send( result )
 }
@@ -274,6 +255,7 @@ function rgbToHex(r, g, b) {
 
 
 async function get_geneboxplot ( q, gn, res ) {
+// also get kernel density for violin plot
 
 	const ge = q.getgeneboxplot
 
@@ -288,47 +270,53 @@ async function get_geneboxplot ( q, gn, res ) {
 	if(!ge.stop)  throw 'getgeneboxplot.stop missing'
 	if(!ge.genename) throw 'getgeneboxplot.genename missing'
 
-	const barcode2category = await cellfile_get_barcode2category( ge )
-	// k: barcode, v: category
+	const barcode2catvalue = await cellfile_get_barcode2category( ge )
+	// k: barcode, v: {category, expvalue}
 
 	const coord = (ge.nochr ? ge.chr.replace('chr','') : ge.chr)+':'+ge.start+'-'+ge.stop
-	const category2values = new Map()
-	// k: category, v: array of exp values
-
 
 	let minexpvalue = 0,
 		maxexpvalue = 0
 
 	await utils.get_lines_tabix( [ge.expfile,coord], null, line=>{
+
 		const j = JSON.parse( line.split('\t')[3] )
 		if(j.gene != ge.genename) return
 		if(!j.sample) return
-		const category = barcode2category.get( j.sample )
-		if(!category) return
-		if(!category2values.has(category)) category2values.set( category, [] )
 		if(!Number.isFinite( j.value )) return
-		category2values.get(category).push( {value:j.value} )
+
+		const c = barcode2catvalue.get( j.sample )
+		if(!c) return
+		c.expvalue = j.value
 
 		minexpvalue = Math.min( minexpvalue, j.value )
 		maxexpvalue = Math.max( maxexpvalue, j.value )
 	})
 
-	// how many cell total from this category? show the total number for each boxplot/category
-	const category2total = new Map()
-	for(const c of barcode2category.values()) {
-		category2total.set( c, 1 + (category2total.get(c) || 0 ) )
+	const category2values = new Map()
+	// k: category, v: array of exp values, from all cells of that category
+
+	// divide cells to categories
+	for(const [barcode,v] of barcode2catvalue) {
+		if(!category2values.has(v.category)) category2values.set( v.category, [] )
+		category2values.get( v.category ).push( { value: v.expvalue } )
 	}
 
 	const boxplots = []
+	// each element is one category
+
+	const scaleticks = d3scale.scaleLinear().domain([minexpvalue,maxexpvalue]).range([0,1]).ticks(20)
 
 	for(const [category, values] of category2values ) {
 		values.sort((i,j)=> i.value-j.value )
 		const b = app.boxplot_getvalue( values )
 		b.category = category
 
-		// TODO kernal density estimation
+		b.numberofcells = values.length // now is just the total number of cells
 
-		b.numberofcells = values.length + '/' + category2total.get( category )
+
+  		const kde = common.kernelDensityEstimator( common.kernelEpanechnikov(7), scaleticks )
+  		b.density =  kde( values.map( i=> i.value ) )
 
 		boxplots.push( b )
 	}
@@ -344,6 +332,10 @@ function cellfile_get_barcode2category ( p ) {
 .barcodecolumnidx
 .categorycolumnidx
 .delimiter
+
+returns map, note the value is an object!!
+k: barcode
+v: { category, expvalue }
 */
 	if(!p.cellfile) throw 'cellfile missing'
 	{
@@ -367,7 +359,13 @@ function cellfile_get_barcode2category ( p ) {
 				return
 			}
 			const l = line.split( p.delimiter )
-			barcode2category.set( l[ p.barcodecolumnidx ], l[ p.categorycolumnidx ] )
+			//barcode2category.set( l[ p.barcodecolumnidx ], l[ p.categorycolumnidx ] )
+			barcode2category.set( l[ p.barcodecolumnidx ], 
+				{
+					category: l[ p.categorycolumnidx ],
+					expvalue: 0 // FIXME hardcoded baseline value (e.g. the gene is not expressed in this sample)
+				}
+			)
 		})
 		rl.on('close',()=>{
 			resolve( barcode2category )
