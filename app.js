@@ -8077,10 +8077,17 @@ function boxplot_getvalue(lst) {
 	const p05 = lst[Math.floor(l*0.05)].value
 	const p95 = lst[Math.floor(l*0.95)].value
 	const iqr=(p75-p25)*1.5
-	const i=lst.findIndex(i=>i.value>p25-iqr)
-	const w1=lst[i==-1 ? 0 : i].value
-	const j=lst.findIndex(i=>i.value>p75+iqr)
-	const w2=lst[j==-1 ? l-1 : j-1].value
+
+	let w1, w2
+	if( iqr == 0 ) {
+		w1 = 0
+		w2 = 0
+	} else {
+		const i=lst.findIndex(i=>i.value>p25-iqr)
+		w1=lst[i==-1 ? 0 : i].value
+		const j=lst.findIndex(i=>i.value>p75+iqr)
+		w2=lst[j==-1 ? l-1 : j-1].value
+	}
 	const out=lst.filter(i=>i.value<p25-iqr || i.value>p75+iqr)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }

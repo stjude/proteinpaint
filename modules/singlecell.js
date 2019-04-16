@@ -308,8 +308,12 @@ async function get_geneboxplot ( q, gn, res ) {
 	const scaleticks = d3scale.scaleLinear().domain([minexpvalue,maxexpvalue]).range([0,1]).ticks(20)
 
 	for(const [category, values] of category2values ) {
+
 		values.sort((i,j)=> i.value-j.value )
+
 		const b = app.boxplot_getvalue( values )
+		delete b.out // remove outliers
+
 		b.category = category
 
 		b.numberofcells = values.length // now is just the total number of cells
