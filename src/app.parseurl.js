@@ -91,15 +91,6 @@ if( urlp.has('singlecell') ) {
 		})
 	})
 	.then(()=>{
-		return new Promise((resolve,reject)=>{
-			const l = document.createElement('link')
-			l.setAttribute('rel', 'stylesheet')
-			l.setAttribute('href', 'https://fonts.googleapis.com/icon?family=Material+Icons')
-			document.head.appendChild(l)
-			l.onload = resolve
-		})
-	})
-	.then(()=>{
 	
 		import('./singlecell')
 		.then(_=>{
