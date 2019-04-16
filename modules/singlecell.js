@@ -205,6 +205,10 @@ may attach coloring scheme to result{} for returning to client
 			newl.push( l[i] )
 		}
 
+		if(q.getpcd.coord.length == 2){
+			newl.push( '0' )
+		}
+
 		if( categorical_color_function ) {
 
 			const ca = l[ q.getpcd.category_index ]
