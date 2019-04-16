@@ -629,54 +629,52 @@ function make_settings(obj){
 		.style('margin','3px')
 		.style('display','block')
 
-	black_div.append('input')
+	const name = Math.random(),
+		idblack = Math.random(),
+		idwhite = Math.random()
+
+	const inputblack = black_div.append('input')
 		.attr('type','radio')
 		.style('display','inline-block')
-		.attr('name','color')
-		.attr('value','black')
-		.attr('id','black')
-		.on('click',()=>{
-			if(d3select('input[name="color"]:checked').node().value == 'black'){
-				obj.scene.background = new THREE.Color( 0x000000 )
-				obj.use_background_color = 0
-			}
-		})
+		.attr('name',name)
+		.attr('id',idblack)
+		.on('change', toggle_background )
 
 	black_div.append('label')
 		.style('display','inline-block')
 		.text('Black')
-		.attr('for','black')
 		.style('padding-left','10px')
+		.attr('for',idblack)
 
 	const white_div = back_color_div.append('div')
 		.style('margin','3px')
 		.style('display','block')
 
-	white_div.append('input')
+	const inputwhite = white_div.append('input')
 		.attr('type','radio')
 		.style('display','inline-block')
-		.attr('name','color')
-		.attr('value','white')
-		.attr('id','white')
-		.on('click',()=>{
-			if(d3select('input[name="color"]:checked').node().value == 'white'){
-				obj.scene.background = new THREE.Color( 0xffffff )
-				obj.use_background_color = 1
-			}
-		})
+		.attr('name',name)
+		.attr('id',idwhite)
+		.on('change', toggle_background )
 
 	white_div.append('label')
 		.style('display','inline-block')
 		.text('White')
-		.attr('for','white')
 		.style('padding-left','10px')
+		.attr('for',idwhite)
 
 	if(obj.use_background_color == 0){
-		black_div.select('input')
-		.attr('checked','checked')
-	}else{
-		white_div.select('input')
-		.attr('checked','checked')
+		inputblack.property('checked',1)
+	} else {
+		inputwhite.property('checked',1)
+	}
+
+
+	function toggle_background () {
+		const isblack = inputblack.property('checked')
+		const iswhite = inputwhite.property('checked')
+		obj.scene.background = new THREE.Color( isblack ? 0x000000 : 0xffffff )
+		obj.use_background_color = isblack ? 0 : 1
 	}
 }
 
