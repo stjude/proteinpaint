@@ -250,9 +250,37 @@ function show_functionalannotation ( div, m, tk, block ) {
 			})
 		}
 	}
-	if(lst.length) {
-		client.make_table_2col(div,lst)
+
+	const table = client.make_table_2col(div,lst)
 		.style('margin','20px 0px 0px 0px')
+
+	// add dynamic columns
+
+	if( tk.vcf.check_pecanpie ) {
+		const tr = table.append('tr')
+		tr.append('td')
+			.attr('colspan',2)
+			.text('PeCAN-PIE')
+			.style('opacity',.5)
+		const td = tr.append('td')
+			.text('Loading...')
+		fetch( 'https://pecan.stjude.cloud/variant/decision/'+block.genome.name+'/'+m.chr.replace('chr','')+'/'+(m.pos+1)+'/'+m.ref+'/'+m.alt)
+		.then(data=>{return data.json()})
+		.then(data=>{
+			if(data.length==0) throw 'Not in PeCAN-PIE'
+			const v=data[0].paneldecision
+			if(!v) throw 'Not in PeCAN-PIE'
+
+			const info = tk.vcf.check_pecanpie.info
+			td.html('<a href=https://pecan.stjude.cloud/variant/'+block.genome.name+'/'+m.chr.replace('chr','')+'/'+(m.pos+1)+'/'+m.ref+'/'+m.alt
+				+' target=_blank '
+				+' style="font-size:.8em;text-decoration:none;background:'+info[v].fill+';color:'+(info[v].color||'white')+';padding:3px 5px">'
+				+'PeCAN-PIE: '+info[v].label+'</a>')
+		})
+		.catch(e=>{
+			td.text( e.message || e )
+			if(e.stack) console.log(e.stack)
+		})
 	}
 }
 

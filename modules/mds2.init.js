@@ -51,6 +51,7 @@ the client copy stays at .mds.track{}
 			numerical_axis: t0.vcf.numerical_axis,
 			format: t0.vcf.format,
 			info: t0.vcf.info,
+			check_pecanpie: t0.vcf.check_pecanpie,
 		}
 		if(t0.vcf.plot_mafcov) {
 			tk.vcf.plot_mafcov = true

@@ -96,6 +96,17 @@ module.exports={
 			termdb_bygenotype: {
 				// this only works for stratifying samples by mutation genotype
 				// svcnv or svcnv+snv combined may need its own trigger
+			},
+			check_pecanpie: {
+				info: {
+					P: {fill:"#f04124", label:"Pathogenic"},
+					LP: {fill:"#e99002", label:"Likely Pathogenic"},
+					Uncertain: {fill:"#e7e7e7", label:"Uncertain Pathogenicity", color:'#333'},
+					U: {fill:"#e7e7e7", label:"Uncertain Pathogenicity", color:'#333'},
+					"null": {fill:"#e7e7e7", label:"Uncertain Pathogenicity",color:'#333'},
+					LB:{fill: "#5bc0de", label:"Likely Benign"},
+					B: {fill:"#43ac6a", label:"Benign"}
+				}
 			}
 		},
 		/*
