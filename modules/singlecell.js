@@ -6,7 +6,7 @@ const d3scale = require('d3-scale')
 const d3color = require('d3-color')
 const d3interpolate = require('d3-interpolate')
 const utils = require('./utils')
-const common = require('../src/common')
+//const common = require('../src/common')
 
 
 
@@ -309,7 +309,12 @@ async function get_geneboxplot ( q, gn, res ) {
 	const boxplots = []
 	// each element is one category
 
-	const scaleticks = d3scale.scaleLinear().domain([minexpvalue,maxexpvalue]).range([0,1]).ticks(20)
+	const scaleticks = d3scale.scaleLinear().domain([minexpvalue,maxexpvalue]).ticks(20)
+
+	// kde doesn't work -- using the wrong kernel??
+	//const kde = kernelDensityEstimator( kernelEpanechnikov(7), scaleticks )
+
+	const histofunc = get_histogram( scaleticks )
 
 	for(const [category, values] of category2values ) {
 
@@ -323,14 +328,37 @@ async function get_geneboxplot ( q, gn, res ) {
 		b.numberofcells = values.length // now is just the total number of cells
 
 
-  		const kde = common.kernelDensityEstimator( common.kernelEpanechnikov(7), scaleticks )
-  		b.density =  kde( values.map( i=> i.value ) )
+  		//b.density =  kde( values.map( i=> i.value ) )
+		b.density = histofunc( values )
 
 		boxplots.push( b )
 	}
 
 	res.send({ boxplots, minexpvalue, maxexpvalue })
 }
+
+
+
+
+
+function get_histogram ( ticks ) {
+	return (values) => {
+		// array of {value}
+		const bins = []
+		for(let i=1; i<ticks.length; i++) bins.push(0)
+		for(const v of values) {
+			for(let i=1; i<ticks.length; i++) {
+				if( v.value <= ticks[i] ) {
+					bins[i-1]++
+					break
+				}
+			}
+		}
+		return bins
+	}
+}
+
+
 
 
 
