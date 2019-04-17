@@ -1,5 +1,6 @@
 import * as client from './client'
 import * as common from './common'
+import * as d3 from 'd3'
 import {axisTop, axisRight, axisBottom} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
@@ -680,40 +681,20 @@ function make_boxplot(data, obj, colidx){
 	const svg = pane.pane.append('svg')
 		.style('margin','10px')
 
-	let box_height = 20,
+	let box_height = 80,
 	box_width = 200,
 	barspace = 2,
 	axis_height = 30
 
 	const label_width = get_max_labelwidth(data.boxplots, svg)
 	
-	const y_scale = scaleLinear()
+	const x_scale = scaleLinear()
 		.range([0, box_width])
 		.domain([data.minexpvalue, data.maxexpvalue])
 
-	const colorRange = [obj.gene_expression.color_max, obj.gene_expression.color_min]
-
-	const colorScale = scaleLinear()
-		.range(colorRange)
-		.domain([data.minexpvalue, data.maxexpvalue])
-
-	const defs = svg.append('defs')
-
-	const linearGradient = defs.append("linearGradient")
-		.attr("id", "linear-gradient" + colidx)
-		// .attr('gradientTransform', 'rotate(90)')
-		
-	linearGradient.append("stop")
-		.attr("offset", "0%")
-		.attr("stop-color", colorScale(data.maxexpvalue))
-		
-	linearGradient.append("stop")
-		.attr("offset", "100%")
-		.attr("stop-color", colorScale(data.minexpvalue))
-
-	const clip_def = defs
-		.append('clipPath')
-		.attr('id', 'clip-bar-rects'+ colidx)
+	const y_scale = scaleLinear()
+		.range([box_height, 0])
+		.domain([0, 1])
 
 	const svg_height = data.boxplots.length * (box_height + barspace) + axis_height
 	const svg_width = box_width + label_width + 20
@@ -721,20 +702,10 @@ function make_boxplot(data, obj, colidx){
 	svg.transition()
 		.attr('width', svg_width)
 		.attr('height', svg_height)
-
-	const clipPath = svg.append('g')
-		.attr('clip-path', 'url(#clip-bar-rects'+ colidx +')')
-
-	clipPath
-		.append('rect')
-		.attr('x', label_width)
-		.attr('y', axis_height)
-		.attr('width', box_width)
-		.attr('height', svg_height)
-		.style('fill', 'url(#linear-gradient' + colidx + ')')
-
+		
 
 	if(data.boxplots){
+		console.log(data.boxplots)
 		data.boxplots.forEach( (boxplot, i) => {
 
 			const g = svg.append('g')
@@ -742,71 +713,105 @@ function make_boxplot(data, obj, colidx){
 
 			const xlabel = g.append('text')
 				.text(boxplot.category + ' (' + boxplot.numberofcells + ')')
-				.attr("transform", "translate(0,"+ box_height/2 +")")
+				.attr("transform", "translate(-4,"+ box_height/2 +")")
 				.attr('text-anchor','end')
 				.attr('font-size',15)
 				.attr('font-family',client.font)
 				.attr('dominant-baseline','central')
 
-			if(boxplot.w1){
-				g.append("line")
-					.attr("x1", y_scale(boxplot.w1))
-					.attr("y1", box_height/2)
-					.attr("x2", y_scale(boxplot.p25))
-					.attr("y2", box_height/2)
-					.attr("stroke-width", 2)
-					.attr("stroke", "black")
+			if(boxplot.density){
 
-				g.append("line")
-					.attr("x1", y_scale(boxplot.p75))
-					.attr("y1", box_height/2)
-					.attr("x2", y_scale(boxplot.w2))
-					.attr("y2", box_height/2)
-					.attr("stroke-width", 2)
-					.attr("stroke", "black")
+				const line = d3.line()
+					.x(function(d, j) { return x_scale(j*data.maxexpvalue/boxplot.density.length) }) // set the x values for the line generator
+					.y(function(d) { return (y_scale(d / boxplot.numberofcells)/2) }) // set the y values for the line generator 
+					.curve(d3.curveMonotoneX) // apply smoothing to the line
 
-				clip_def.append("rect")
-					.attr('x', y_scale(boxplot.p25) + label_width)
-					.attr('y', (i*(box_height + barspace) + axis_height))
-					.attr('width', y_scale(boxplot.p75 - boxplot.p25))
-					.attr('height', box_height)
+				const area = d3.area()
+					.x(function(d,j) { return x_scale(j*data.maxexpvalue/boxplot.density.length) })
+					.y0(function(d) { 
+						const temp =  y_scale(d / boxplot.numberofcells)/2 
+						return box_height - temp
+					})
+					.y1(function(d) { return (y_scale(d / boxplot.numberofcells)/2) })
+					.curve(d3.curveMonotoneX)
 
-				g.append("line")
-					.attr("x1", y_scale(boxplot.w1))
-					.attr("y1", 0)
-					.attr("x2", y_scale(boxplot.w1))
-					.attr("y2",box_height)
-					.attr("stroke-width", 2)
-					.attr("stroke", "black")
+				g.append('path')
+					.datum(boxplot.density)
+					.attr('class', 'area')
+					.attr('d', area)
+					.style('fill','lightsteelblue')
+					.style('stroke','black')
+					.style('stroke-width',1)
 
-				g.append("line")
-					.attr("x1", y_scale(boxplot.p50))
-					.attr("y1", 0)
-					.attr("x2", y_scale(boxplot.p50))
-					.attr("y2",box_height)
-					.attr("stroke-width", 2)
-					.attr("stroke", "white")
-
-				g.append("line")
-					.attr("x1", y_scale(boxplot.w2))
-					.attr("y1", 0)
-					.attr("x2", y_scale(boxplot.w2))
-					.attr("y2",box_height)
-					.attr("stroke-width", 2)
-					.attr("stroke", "black")
+				// g.append('path')
+				// 	.datum(boxplot.density) // Binds data to the line 
+				// 	.attr('class', 'line') // Assign a class for styling 
+				// 	.attr('d', line) // Calls the line generator 
+				// 	.style('fill','none')
+				// 	.style('stroke','black')
+				// 	.style('stroke-width',1)
 			}
 
-			for(const outlier of boxplot.out){
-				clip_def.append("circle")
-					.attr('cx', y_scale(outlier.value)+ label_width)
-					.attr('cy', (i*(box_height + barspace) + axis_height + (box_height/2)))
-					.attr('r', 2)
-					.attr('fill','#901739')
-			}	
+			// if(boxplot.w1){
+
+				// g.append("line")
+				// 	.attr("x1", y_scale(boxplot.w1))
+				// 	.attr("y1", box_height/2)
+				// 	.attr("x2", y_scale(boxplot.p25))
+				// 	.attr("y2", box_height/2)
+				// 	.attr("stroke-width", 2)
+				// 	.attr("stroke", "black")
+
+				// g.append("line")
+				// 	.attr("x1", y_scale(boxplot.p75))
+				// 	.attr("y1", box_height/2)
+				// 	.attr("x2", y_scale(boxplot.w2))
+				// 	.attr("y2", box_height/2)
+				// 	.attr("stroke-width", 2)
+				// 	.attr("stroke", "black")
+
+				// clip_def.append("rect")
+				// 	.attr('x', y_scale(boxplot.p25) + label_width)
+				// 	.attr('y', (i*(box_height + barspace) + axis_height))
+				// 	.attr('width', y_scale(boxplot.p75 - boxplot.p25))
+				// 	.attr('height', box_height)
+
+				// g.append("line")
+				// 	.attr("x1", y_scale(boxplot.w1))
+				// 	.attr("y1", 0)
+				// 	.attr("x2", y_scale(boxplot.w1))
+				// 	.attr("y2",box_height)
+				// 	.attr("stroke-width", 2)
+				// 	.attr("stroke", "black")
+
+				// g.append("line")
+				// 	.attr("x1", y_scale(boxplot.p50))
+				// 	.attr("y1", 0)
+				// 	.attr("x2", y_scale(boxplot.p50))
+				// 	.attr("y2",box_height)
+				// 	.attr("stroke-width", 2)
+				// 	.attr("stroke", "white")
+
+				// g.append("line")
+				// 	.attr("x1", y_scale(boxplot.w2))
+				// 	.attr("y1", 0)
+				// 	.attr("x2", y_scale(boxplot.w2))
+				// 	.attr("y2",box_height)
+				// 	.attr("stroke-width", 2)
+				// 	.attr("stroke", "black")
+			// }
+
+			// for(const outlier of boxplot.out){
+			// 	clip_def.append("circle")
+			// 		.attr('cx', y_scale(outlier.value)+ label_width)
+			// 		.attr('cy', (i*(box_height + barspace) + axis_height + (box_height/2)))
+			// 		.attr('r', 2)
+			// 		.attr('fill','#901739')
+			// }	
 		})
 		
 		const legendAxis = axisTop()
-			.scale(y_scale)
+			.scale(x_scale)
 			.ticks(5)
 
 		svg.append("g")
@@ -831,5 +836,5 @@ function get_max_labelwidth ( items, svg ) {
 			})
 			.remove()
 	}
-	return textwidth
+	return (textwidth+4)
 }
