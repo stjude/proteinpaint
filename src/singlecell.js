@@ -161,18 +161,22 @@ function init_view ( obj ) {
 	obj.scene.background = new THREE.Color( 0x000000 )
 
 
-	obj.camera = new THREE.PerspectiveCamera( 45, obj.width/obj.height, 0.1, 1000 )
+	if(obj.canvas_2d){
+		obj.camera = new THREE.PerspectiveCamera( 60, obj.width/obj.height, 0.1, 1000 )
+	}else{
+		obj.camera = new THREE.PerspectiveCamera( 45, obj.width/obj.height, 0.1, 1000 )
+	}
 
-	obj.camera.position.x = 20
-	obj.camera.position.y = -10
-	obj.camera.position.z = 20
+	obj.camera.position.x = obj.canvas_2d ? 0 : 20
+	obj.camera.position.y = obj.canvas_2d ? 0 : -10
+	obj.camera.position.z = obj.canvas_2d ? 300 : 20
 	obj.camera.up.set( 0, 0, 1 )
 
 	obj.controls = new THREE.TrackballControls( obj.camera )
 
-	obj.controls.rotateSpeed = 2.0
-	obj.controls.zoomSpeed = 0.7
-	obj.controls.panSpeed = 0.7
+	obj.controls.rotateSpeed = obj.canvas_2d ? 0 : 2.0
+	obj.controls.zoomSpeed = obj.canvas_2d ? 3.0 : 0.7
+	obj.controls.panSpeed = obj.canvas_2d ? 3.0 : 0.7
 
 	obj.controls.noZoom = false
 	obj.controls.noPan = false
@@ -181,7 +185,7 @@ function init_view ( obj ) {
 	obj.controls.dynamicDampingFactor = 0.3
 
 	obj.controls.minDistance = 0.3
-	obj.controls.maxDistance = 0.3 * 200
+	obj.controls.maxDistance = obj.canvas_2d ? (0.3 * 1500) : (0.3 * 200)
 
 	obj.scene.add( obj.camera )
 
@@ -216,7 +220,7 @@ function render_cloud( obj, pcd_buffer ){
 	const points = loader.parse(pcd_buffer,'')
 	// loader.load( pcdfilename, function ( points ) {
 
-	points.material.size = 0.05
+	points.material.size = obj.canvas_2d ? 0.3 : 0.05
 	obj.scene.add(points)
 	const center = points.geometry.boundingSphere.center
 	obj.controls.target.set( center.x, center.y, center.z )
@@ -705,7 +709,6 @@ function make_boxplot(data, obj, colidx){
 		
 
 	if(data.boxplots){
-		console.log(data.boxplots)
 		data.boxplots.forEach( (boxplot, i) => {
 
 			const g = svg.append('g')
