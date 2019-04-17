@@ -11,6 +11,8 @@ init
 client_copy
 ********************** INTERNAL
 init_vcf
+init_svcnv
+may_sum_samples
 */
 
 
@@ -33,6 +35,8 @@ exports.init = async ( ds, genome ) => {
 	if(tk.svcnv) {
 		init_svcnv( tk.svcnv, genome, ds )
 	}
+
+	may_sum_samples( tk )
 }
 
 
@@ -116,4 +120,24 @@ async function init_vcf ( vcftk, genome, ds ) {
 
 
 async function init_svcnv ( sctk, genome ) {
+}
+
+
+
+
+function may_sum_samples ( tk ) {
+/* sum up samples from individual track types
+*/
+	const samples = new Set() // union of sample names
+	if( tk.vcf && tk.vcf.samples ) {
+		for(const s of tk.vcf.samples) {
+			// just keep sample name
+			samples.add( s.name )
+		}
+	}
+	if( tk.svcnv ) {
+	}
+	if( samples.size ) {
+		tk.samples = [ ...samples ]
+	}
 }

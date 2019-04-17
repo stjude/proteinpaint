@@ -117,7 +117,7 @@ async function makeTk ( tk, block ) {
 			configPanel(tk, block)
 		})
 
-	mds2legend.init( tk, block )
+	await mds2legend.init( tk, block )
 }
 
 

@@ -14,13 +14,14 @@ init
 update
 ********************** INTERNAL
 create_mclass
-create_vcflegend_numericalaxis
+may_create_vcflegend_numericalaxis
+may_create_termdb_population
 update_mclass
 update_vcflegend
 */
 
 
-export function init ( tk, block ) {
+export async function init ( tk, block ) {
 
 	if(!tk.legend) tk.legend = {}
 
@@ -33,7 +34,9 @@ export function init ( tk, block ) {
 	tk.legend.table = table
 
 	create_mclass( tk )
-	create_vcflegend_numericalaxis( tk, block )
+	may_create_vcflegend_numericalaxis( tk, block )
+
+	await may_create_termdb_population( tk, block )
 }
 
 
@@ -65,7 +68,7 @@ legend.mclass{}
 
 
 
-function create_vcflegend_numericalaxis( tk, block ) {
+function may_create_vcflegend_numericalaxis( tk, block ) {
 /*
 vcf related legends
 */
@@ -84,7 +87,7 @@ vcf related legends
 
 	// td2
 	const td = row.append('td')
-	if(!tk.legend.numerical_axis) tk.legend.numerical_axis = {}
+	//if(!tk.legend.numerical_axis) tk.legend.numerical_axis = {}
 
 	// select between info keys
 
@@ -131,7 +134,6 @@ vcf related legends
 		select.property('selectedIndex', nm.info_keys.length )
 	}
 
-	tk.legend.numerical_axis.modeselect = select // ?
 
 	// following <select>, show options for setting filter
 
@@ -375,4 +377,44 @@ function update_mclass ( mclass2count, tk, block ) {
 
 
 function update_vcflegend ( data, tk, block ) {
+}
+
+
+
+
+async function may_create_termdb_population ( tk, block ) {
+/*
+population group by termdb
+applies to all type of data, not just vcf
+
+*/
+
+	if( !tk.samplegroups ) tk.samplegroups = []
+
+	if( !tk.mds ) return
+	if( !tk.mds.termdb ) return
+
+	/*
+	if the track is preconfigured to have sample groups
+	initialize the groups here, async
+	tk.groups = [ {ssid} ]
+	*/
+
+	const row = tk.legend.table.append('tr')
+
+	// td1
+	row
+		.append('td')
+		.style('text-align','right')
+		.style('opacity',.3)
+		.text('Population groups')
+
+	// td2
+	const td = row.append('td')
+		.style('padding','10px')
+
+	td.append('button')
+		.text('Add filter')
+		.on('click',()=>{
+		})
 }
