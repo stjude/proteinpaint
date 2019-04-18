@@ -9,6 +9,7 @@ const common = require('../src/common')
 ********************** EXPORTED
 handle_vcfbyrange
 handle_ssidbyonem
+handle_getcsq
 ********************** INTERNAL
 */
 
@@ -95,10 +96,6 @@ ds is either official or custom
 	const tk0 = ds.track.vcf
 	if(!tk0) throw 'ds.track.vcf missing'
 
-	if( ds.iscustom ) {
-		await utils.init_one_vcf( tk0, genome )
-	}
-
 	// temporary vcf tk object, may with altered .samples[]
 	const vcftk = {
 		info: tk0.info,
@@ -161,8 +158,36 @@ ds is either official or custom
 							continue
 						}
 
+						if( q.numerical_info_cutoff ) {
+							let v
+							if( m.info ) {
+								v = m.info[ q.numerical_info_cutoff.key ]
+							}
+							if( !Number.isFinite( v )) {
+								if( m.altinfo ) {
+									v = m.altinfo[ q.numerical_info_cutoff.key ]
+								}
+							}
+							if(Number.isFinite( v )) {
+								if( q.numerical_info_cutoff.side == '<' ) {
+									if( v >= q.numerical_info_cutoff.value ) return
+								} else if( q.numerical_info_cutoff.side == '<=' ) {
+									if( v > q.numerical_info_cutoff.value ) return
+								} else if( q.numerical_info_cutoff.side == '>' ) {
+									if( v <= q.numerical_info_cutoff.value ) return
+								} else {
+									if( v < q.numerical_info_cutoff.value ) return
+								}
+							} else {
+								return
+							}
+						}
 
-						delete m.csq
+						if( m.csq ) {
+							// not to release the whole csq, only to show number of interpretations
+							m.csq_count = m.csq.length
+							delete m.csq
+						}
 						delete m._m
 						delete m.vcf_ID
 						delete m.sampledata
@@ -255,3 +280,25 @@ if is custom track, will parse header
 
 
 
+
+exports.handle_getcsq =  async ( q, genome, ds, result ) => {
+/*
+get csq from one variant
+*/
+	const tk = ds.track.vcf
+	if(!tk) throw 'ds.track.vcf missing'
+	if(!q.m) throw 'q.m missing'
+
+	// query for this variant
+	const coord = (tk.nochr ? q.m.chr.replace('chr','') : q.m.chr)+':'+(q.m.pos+1)+'-'+(q.m.pos+1)
+
+	await utils.get_lines_tabix( [ tk.file, coord ], tk.dir, (line)=>{
+		const [e,mlst,e2] = vcf.vcfparseline( line, tk )
+		for(const m2 of mlst) {
+			if( m2.pos==q.m.pos && m2.ref==q.m.ref && m2.alt==q.m.alt ) {
+				result.csq = m2.csq
+				return
+			}
+		}
+	})
+}

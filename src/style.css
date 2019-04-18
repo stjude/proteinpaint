@@ -425,3 +425,9 @@ table {
     text-decoration: none;
     color: initial;
 }
+.sja_button {display:inline-block;background:white;padding:3px 5px;border:solid 1px black;opacity:.8;cursor:default;}
+.sja_button:hover {opacity:1;}
+.sja_button_open {display:inline-block;background:#ddd;padding:3px 5px;border:solid 1px black;opacity:.8;cursor:default;}
+.sja_button_open:hover {opacity:1;}
+.sja_button_fold {display:inline-block;background:#aaa;color:white;padding:3px 5px;border:solid 1px black;opacity:.8;cursor:default;}
+.sja_button_fold:hover {opacity:1;}

@@ -1,6 +1,6 @@
 
 
-const samplenamekey = 'sjlid_w88'
+const samplenamekey = 'sjlid'
 
 
 module.exports={
@@ -11,7 +11,7 @@ module.exports={
 
 	cohort:{
 		files:[
-			{file:'files/hg38/sjlife/clinical/test/matrix'}
+			{file:'files/hg38/sjlife/clinical/matrix'}
 		],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds)=>{
@@ -61,10 +61,33 @@ module.exports={
 			viewrangeupperlimit: 200000,
 			numerical_axis: {
 				axisheight: 150,
-				info_keys: ['AF','AF_gnomAD'],
-				use_info_key: 'AF',
+				info_keys: [
+					{
+						key:'AF',
+						in_use:true,
+						// may config axis
+						min_value: 0,
+						max_value: 1,
+						cutoff: {
+							in_use:false,
+							side:'<',
+							value:0.001
+						},
+						// TODO bind complex things such as boxplot to one of the info fields
+					},
+					{
+						key:'AF_gnomAD',
+						min_value: 0,
+						max_value: 1,
+						missing_value: 0,
+						cutoff: {
+							in_use:false,
+							side:'<',
+							value:0.001
+						},
+					}
+				],
 				in_use: true // to use numerical axis by default
-				// how to define complex things such as boxplot or on the fly summarized data from samples
 			},
 			plot_mafcov: {
 				show_samplename: 1
@@ -73,6 +96,17 @@ module.exports={
 			termdb_bygenotype: {
 				// this only works for stratifying samples by mutation genotype
 				// svcnv or svcnv+snv combined may need its own trigger
+			},
+			check_pecanpie: {
+				info: {
+					P: {fill:"#f04124", label:"Pathogenic"},
+					LP: {fill:"#e99002", label:"Likely Pathogenic"},
+					Uncertain: {fill:"#e7e7e7", label:"Uncertain Pathogenicity", color:'#333'},
+					U: {fill:"#e7e7e7", label:"Uncertain Pathogenicity", color:'#333'},
+					"null": {fill:"#e7e7e7", label:"Uncertain Pathogenicity",color:'#333'},
+					LB:{fill: "#5bc0de", label:"Likely Benign"},
+					B: {fill:"#43ac6a", label:"Benign"}
+				}
 			}
 		},
 		/*

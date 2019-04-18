@@ -4,13 +4,15 @@ import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
 import * as coord from './coord'
-import {vcf_m_color,vcf_m_click} from './block.mds2.vcf'
+import {vcf_m_color} from './block.mds2.vcf'
+import {vcf_clickvariant} from './block.mds2.vcf.clickvariant'
 
 /*
 adapted from legacy code
 
 ********************** EXPORTED
 render
+may_setup_numerical_axis
 ********************** INTERNAL
 numeric_make
 setup_axis_scale
@@ -380,7 +382,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		})
 		.on('click',m=>{
 			const p=d3event.target.getBoundingClientRect()
-			vcf_m_click(m, p, tk, block)
+			vcf_clickvariant(m, p, tk, block)
 		})
 
 
@@ -410,7 +412,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		.on('mouseover',m=>m_mouseover( m,nm,tk ))
 		.on('mouseout',m=>m_mouseout(m,tk))
 		.on('click',m=>{
-			vcf_m_click(m,{left:d3event.clientX,top:d3event.clientY},tk,block)
+			vcf_clickvariant(m,{left:d3event.clientX,top:d3event.clientY},tk,block)
 			if(block.debugmode) {
 				console.log(m)
 			}
@@ -919,53 +921,84 @@ decide following things about the y axis:
 - name label
 */
 
-	// TODO may allow predefined scale
 
 	nm.minvalue = 0
 	nm.maxvalue = 0
 
-	delete nm.isinteger
+	const info_key = nm.info_keys.find( i=> i.in_use ).key // setup_numerical_axis guarantee this is valid
 
-	// conditional - using a single info key
-	if( nm.use_info_key ) {
+	// if the INFO is A, apply to m.altinfo, else, to m.info
+	const usealtinfo = tk.vcf.info[ info_key ].Number == 'A'
 
-		// if the INFO is A, apply to m.altinfo, else, to m.info
-		let usealtinfo = tk.vcf.info[ nm.use_info_key ].Number == 'A'
+	for(const m of r.variants) {
 
-		for(const m of r.variants) {
+		let v = null
 
-			let v = null
-
-			if( usealtinfo ) {
-				if( m.altinfo ) {
-					v = m.altinfo[ nm.use_info_key ]
-				}
-			} else {
-				if( m.info ) {
-					v = m.info[ nm.use_info_key ]
-				}
+		if( usealtinfo ) {
+			if( m.altinfo ) {
+				v = m.altinfo[ info_key ]
 			}
-
-			if(Number.isFinite( v )) {
-
-				m._v = v // ?
-
-				nm.minvalue = Math.min( nm.minvalue, v )
-				nm.maxvalue = Math.max( nm.maxvalue, v )
+		} else {
+			if( m.info ) {
+				v = m.info[ info_key ]
 			}
 		}
 
-		if( tk.mds && tk.mds.mutationAttribute ) {
-			const a = tk.mds.mutationAttribute.attributes[ nm.use_info_key ]
-			if( !a ) throw 'unknown info field: '+nm.use_info_key
-			if( a.isinteger ) nm.isinteger = true
-			nm.label = a.label
+		if(!Number.isFinite( v )) {
+			// missing value, if there is a predefined one
+			v = Number.isFinite(nm.missing_value) ? nm.missing_value : 0
 		}
-		return
+
+		m._v = v // for later use
+
+		nm.minvalue = Math.min( nm.minvalue, v )
+		nm.maxvalue = Math.max( nm.maxvalue, v )
 	}
-
-	throw 'unknown source of axis scaling'
 }
 
 
 
+export function may_setup_numerical_axis ( tk ) {
+	const nm = tk.vcf.numerical_axis
+	if( !nm.in_use ) {
+		// not using numerical axis, do not set up
+		return
+	}
+		
+	/*
+	to validate the numerical axis info field setting
+	and set the .isinteger and .label of nm
+
+	call this at initiating the track
+	and switching numeric axis category
+	*/
+	if( !nm.info_keys ) throw 'numerical_axis.info_keys[] missing'
+	if(!Array.isArray(nm.info_keys)) throw 'numerical_axis.info_keys[] is not an array'
+	if(nm.info_keys.length==0) throw 'numerical_axis.info_keys[] array is empty'
+
+	let info_element = nm.info_keys.find( i=> i.in_use ) // which element from tk.vcf.numerical_axis.info_keys is in use
+	if( !info_element ) {
+		info_element = nm.info_keys[0]
+		if( !info_element ) throw 'numerical_axis.info_keys is empty array'
+		info_element.in_use = true
+	}
+
+	if(!tk.vcf.info) throw 'VCF file has no INFO fields'
+	const info_field = tk.vcf.info[ info_element.key ]
+	if( !info_field ) throw 'unknown INFO field for numerical axis: '+info_element.key
+
+	delete nm.isinteger
+	delete nm.label
+
+	if( tk.mds && tk.mds.mutationAttribute ) {
+		const a = tk.mds.mutationAttribute.attributes[ info_element.key ]
+		if( a ) {
+			if( a.isinteger ) nm.isinteger = true
+			nm.label = a.label
+		}
+	}
+	if( !nm.label ) {
+		if( info_field.Type=='Integer' ) nm.isinteger=true
+		nm.label = info_element.key
+	}
+}

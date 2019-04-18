@@ -2,6 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {barchart_make} from './mds.termdb.barchart'
+import {barchart_make2} from './mds.termdb.barchart2'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 /*
@@ -226,6 +227,9 @@ allow to make multiple buttons
 
 	if(term.graph.barchart) {
 		// barchart button
+
+		may_list_genotypecount_peritem( term, row, row_graph, obj )
+
 		term_addbutton_barchart( term, row, row_graph, obj )
 
 		may_enable_crosstabulate( term, row,  obj )
@@ -250,12 +254,9 @@ such conditions may be carried by obj
 */
 
 	const button = row.append('div')
-		.style('display','inline-block')
-		.style('margin-left','20px')
-		.style('padding','3px 5px')
 		.style('font-size','.8em')
-		.style('border','solid 1px black')
-		.attr('class','sja_opaque8')
+		.style('margin-left','20px')
+		.attr('class','sja_button')
 		.text('BARCHART')
 
 	const div = row_graph.append('div')
@@ -276,12 +277,10 @@ such conditions may be carried by obj
 
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
-			button.style('background','#ededed')
-				.style('color','black')
+			button.attr('class','sja_button_open')
 		} else {
 			client.disappear(div)
-			button.style('background','#aaa')
-				.style('color','white')
+			button.attr('class','sja_button_fold')
 		}
 
 		if( term.graph.barchart.dom.loaded ) return
@@ -342,6 +341,87 @@ such conditions may be carried by obj
 
 		button.text('BARCHART')
 		term.graph.barchart.dom.loaded=true
+	})
+}
+
+
+
+
+function may_list_genotypecount_peritem ( term, row, row_graph, obj ) {
+
+	if( !obj.modifier_ssid_barchart ) return
+
+	// similar to barchart, but show a list instead, for each item, display number of samples per genotype
+
+	const button = row.append('div')
+		.style('font-size','.8em')
+		.style('margin-left','20px')
+		.attr('class','sja_button')
+		.text('LIST')
+
+	const div = row_graph.append('div')
+		.style('border','solid 1px #ccc')
+		.style('border-radius','5px')
+		.style('margin','10px')
+		.style('padding','10px')
+		.style('display','none')
+
+	let loaded=false,
+		loading=false
+
+	button.on('click', async ()=>{
+
+		if(div.style('display') == 'none') {
+			client.appear(div, 'inline-block')
+			button.attr('class','sja_button_open')
+		} else {
+			client.disappear(div)
+			button.attr('class','sja_button_fold')
+		}
+
+		if( loaded || loading ) return
+
+		loading=true
+
+		button.text('Loading')
+
+		const arg = {
+			ssid: obj.modifier_ssid_barchart.ssid,
+			barchart: {
+				id: term.id
+			}
+		}
+
+		try {
+			const data = await obj.do_query( arg )
+			if(data.error) throw data.error
+			if(!data.lst) throw 'no data for barchart'
+
+			const table = div.append('table')
+			for(const item of data.lst) {
+
+				if(!item.lst) continue
+
+				const tr = table.append('tr')
+				tr.append('td')
+					.style('text-align','right')
+					.html( item.lst.map( i=>
+						// {label,value}
+						'<span style="background:'+obj.modifier_ssid_barchart.groups[i.label].color+';color:white;font-size:.8em;padding:2px">'+i.value+'</span>'
+						).join('')
+					)
+				tr.append('td').text( item.label )
+			}
+
+
+		} catch(e) {
+			client.sayerror( div, e.message || e)
+			if(e.stack) console.log(e.stack)
+		}
+
+		loaded=true
+		loading=false
+		button.text('LIST')
 	})
 }
 

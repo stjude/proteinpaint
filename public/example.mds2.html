@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+
+
+
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	noheader:1,
+
+	genome:'hg38',
+	block:true,
+
+	tracks:[
+
+		{
+			type:'mds2',
+			dslabel:'SJLife'
+		},
+
+		{
+			hidden:1,
+			type:'mds2',
+			name:'test mds2',
+			vcf:{
+				file:'hg38/sjlife/cohort.vcf.gz',
+				numerical_axis: {
+                    axisheight: 150,
+                    info_keys: [
+						{
+							key:'AF',
+							in_use:true,
+							min_value: 0,
+							max_value: 1,
+							cutoff: [ 0.0001, 0.001, 0.01, 0.1 ] // predefined cutoff values
+						},
+						{
+							key:'AF_gnomAD',
+							min_value: 0,
+							max_value: 1,
+							missing_value: 0,
+							cutoff: [ 0.0001, 0.001, 0.01, 0.1 ]
+						}
+					],
+                    in_use: true // to use numerical axis by default
+                },
+                plot_mafcov: {
+                    show_samplename: 1
+                },
+			}
+		}
+
+	],
+	nativetracks:'RefGene',
+	noheader:true,
+	nobox:true
+})
+</script>
+
+</body>
+</html>

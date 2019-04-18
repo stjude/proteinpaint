@@ -11,6 +11,8 @@ init
 client_copy
 ********************** INTERNAL
 init_vcf
+init_svcnv
+may_sum_samples
 */
 
 
@@ -33,6 +35,8 @@ exports.init = async ( ds, genome ) => {
 	if(tk.svcnv) {
 		init_svcnv( tk.svcnv, genome, ds )
 	}
+
+	may_sum_samples( tk )
 }
 
 
@@ -51,6 +55,7 @@ the client copy stays at .mds.track{}
 			numerical_axis: t0.vcf.numerical_axis,
 			format: t0.vcf.format,
 			info: t0.vcf.info,
+			check_pecanpie: t0.vcf.check_pecanpie,
 		}
 		if(t0.vcf.plot_mafcov) {
 			tk.vcf.plot_mafcov = true
@@ -86,17 +91,11 @@ async function init_vcf ( vcftk, genome, ds ) {
 		if(vcftk.numerical_axis.info_keys) {
 			if(!Array.isArray(vcftk.numerical_axis.info_keys)) throw 'numerical_axis.info_keys should be an array'
 			for(const key of vcftk.numerical_axis.info_keys) {
-				const a = vcftk.info[ key ]
-				if( !a ) throw 'INFO field "'+key+'" not found for numerical_axis'
-				if( a.Type!='Float' && a.Type!='Integer' ) throw 'INFO field "'+key+'" from numerical_axis not of integer or float type'
-				if( a.Number!='1' && a.Number!='A' ) throw 'for numerical axis, INFO field "'+key+'" only allows to be Number=1 or Number=A'
+				const a = vcftk.info[ key.key ]
+				if( !a ) throw 'INFO field "'+key.key+'" not found for numerical_axis'
+				if( a.Type!='Float' && a.Type!='Integer' ) throw 'INFO field "'+key.key+'" from numerical_axis not of integer or float type'
+				if( a.Number!='1' && a.Number!='A' ) throw 'for numerical axis, INFO field "'+key.key+'" only allows to be Number=1 or Number=A'
 			}
-		}
-		if(vcftk.numerical_axis.use_info_key) {
-			if( typeof vcftk.numerical_axis.use_info_key != 'string' ) throw 'numerical_axis.use_info_key value should be string'
-			const a = vcftk.info[ vcftk.numerical_axis.use_info_key ]
-			if( !a ) throw 'INFO field "'+vcftk.numerical_axis.use_info_key+'" not found for numerical_axis'
-			if( a.Type!='Float' && a.Type!='Integer' ) throw 'INFO field "'+vcftk.numerical_axis.use_info_key+'" from numerical_axis not of integer or float type'
 		}
 		// TODO allow other type of plot e.g. boxplot
 	}
@@ -121,4 +120,24 @@ async function init_vcf ( vcftk, genome, ds ) {
 
 
 async function init_svcnv ( sctk, genome ) {
+}
+
+
+
+
+function may_sum_samples ( tk ) {
+/* sum up samples from individual track types
+*/
+	const samples = new Set() // union of sample names
+	if( tk.vcf && tk.vcf.samples ) {
+		for(const s of tk.vcf.samples) {
+			// just keep sample name
+			samples.add( s.name )
+		}
+	}
+	if( tk.svcnv ) {
+	}
+	if( samples.size ) {
+		tk.samples = [ ...samples ]
+	}
 }

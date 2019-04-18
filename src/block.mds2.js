@@ -5,6 +5,7 @@ import * as common from './common'
 import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
 import * as mds2vcf from './block.mds2.vcf'
+import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
 
 
 
@@ -96,12 +97,16 @@ async function makeTk ( tk, block ) {
 		}
 	}
 
+
 	tk.tklabel.text( tk.name )
 
 	if( tk.vcf ) {
+
 		// vcf row
 		tk.g_vcfrow = tk.glider.append('g')
 		tk.leftaxis_vcfrow = tk.gleft.append('g')
+
+		may_setup_numerical_axis( tk )
 	}
 
 	// TODO <g> for other file types
@@ -112,7 +117,7 @@ async function makeTk ( tk, block ) {
 			configPanel(tk, block)
 		})
 
-	mds2legend.init( tk, block )
+	await mds2legend.init( tk, block )
 }
 
 
@@ -175,12 +180,24 @@ function addparameter_rangequery ( tk, block ) {
 
 	if( tk.vcf ) {
 		par.trigger_vcfbyrange = 1
+		if( tk.vcf.numerical_axis && tk.vcf.numerical_axis.in_use && tk.vcf.numerical_axis.info_keys) {
+			const key = tk.vcf.numerical_axis.info_keys.find( i=> i.in_use )
+			if( key.cutoff && key.cutoff.in_use ) {
+				// applying cutoff
+				par.numerical_info_cutoff = {
+					key: key.key,
+					side: key.cutoff.side,
+					value: key.cutoff.value
+				}
+			}
+		}
 	}
 	// add trigger for other data types
 	/* TODO
 	for vcf, when rendering image on server, need to know 
 	if any categorical attr is used to class variants instead of mclass
 	*/
+
 
 
 	par.rglst = block.tkarg_rglst(tk) // note here: not tkarg_usegm
