@@ -273,10 +273,13 @@ such conditions may be carried by obj
 		div: div
 	}
 
-	const barsApp = new BarsApp({
-		holder: div,
-		settings: {}
-	})
+	let barsApp
+	if (window.location.search.includes("termdb=2")) {
+		barsApp = new BarsApp({
+			holder: div,
+			settings: {}
+		})
+	}
 
 	button.on('click', async ()=>{
 

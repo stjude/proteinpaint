@@ -1,15 +1,8 @@
-//import * as client from './client'
-//import * as common from './common'
-//import {axisLeft} from 'd3-axis'
-//import {format as d3format} from 'd3-format'
-import {scaleOrdinal,schemeCategory10,schemeCategory20} from 'd3-scale'
-//import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-//import {init} from './mds.termdb'
-//import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
-
 import settings from "./bars.settings"
 import barsRenderer from "./bars.renderer"
 import { select, event } from "d3-selection"
+import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
+import { rgb } from 'd3-color'
 import { Menu } from './client'
 
 const colors = {
@@ -129,10 +122,12 @@ export default class BarsApp{
           tip.hide()
         },
         rectFill(d) {
-          if (self.settings.term2 === "") return "rgb(144, 23, 57)"
-          return self.settings.rows.length < 11 
-            ? colors.c10(d.term2)
-            : colors.c20(d.term2)
+          return self.settings.term2 === ""
+            ? "rgb(144, 23, 57)"
+            : rgb(self.settings.rows.length < 11 
+              ? colors.c10(d.term2)
+              : colors.c20(d.term2)
+            ).toString().replace('rgb(','rgba(').replace(')', ',0.7)')
         }
       },
       colLabel: {
