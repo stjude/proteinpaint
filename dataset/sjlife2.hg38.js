@@ -43,11 +43,11 @@ module.exports={
 	mutationAttribute: {
 		attributes: {
 			AF: {
-				label:'Cohort frequency',
+				label:'SJLIFE allele frequency',
 				isfloat:1,
 			},
 			AF_gnomAD: {
-				label:'gnomAD frequency',
+				label:'gnomAD allele frequency',
 				isfloat:1
 			},
 		}
