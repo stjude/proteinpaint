@@ -135,15 +135,7 @@ function getPj(settings) {
       },
       seriesgrps(row, context) {
         const grps = Object.values(context.self.byTerm1).map(d=>d.serieses)
-        for(const series of grps) {
-          const subarr = []
-          let cumulative = 0
-          for(const result of series) {
-            subarr.push(result)
-            cumulative += result.total
-            result.lastTotal = cumulative
-          }
-        }
+        // stacking of serieses will be sorted on the client side
         const orderedGrps = [];
         context.root.term1vals.forEach(term1 => {
           const grp = grps.find(d => d[0].term1 == term1); 

@@ -2,7 +2,7 @@
 //import * as common from './common'
 //import {axisLeft} from 'd3-axis'
 //import {format as d3format} from 'd3-format'
-//import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog,schemeCategory20} from 'd3-scale'
+import {scaleOrdinal,schemeCategory10,schemeCategory20} from 'd3-scale'
 //import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 //import {init} from './mds.termdb'
 //import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
@@ -10,10 +10,15 @@
 import settings from "./bars.settings"
 import barsRenderer from "./bars.renderer"
 import { select, event } from "d3-selection"
-//import { tooltip } from "./client.js";
+import { Menu } from './client'
 
-//const tip = tooltip({ zIndex: 1001 });
-console.log(settings)
+const colors = {
+  c10: scaleOrdinal( schemeCategory10 ),
+  c20: scaleOrdinal( schemeCategory20 )
+} 
+
+const tip = new Menu({padding:'5px'})
+tip.d.style('text-align', 'center')
 
 export default class BarsApp{
   constructor(opts={settings:{}}) {
@@ -52,7 +57,7 @@ export default class BarsApp{
     }
   }
 
-  render(chartsData) { console.log(chartsData)
+  render(chartsData) {
     const self = this
     const charts = this.holder.selectAll('.pp-sbar-div')
       .data(chartsData, chart => chart.chartId)
@@ -66,6 +71,7 @@ export default class BarsApp{
     charts.each(function(chart) {
       chart.settings = Object.assign(self.settings, chart.settings)
       chart.handlers = self.handlers
+      chart.seriesgrps.forEach(series => self.sortStacking(series))
       self.renderers[chart.chartId](chart)
     })
 
@@ -77,30 +83,56 @@ export default class BarsApp{
     .each(function(chart,i) {
       chart.settings = Object.assign(self.settings, chart.settings)
       chart.handlers = self.handlers
-      self.renderers[chart.chartId] = barsRenderer(select(this)) 
+      self.renderers[chart.chartId] = barsRenderer(select(this))
+      chart.seriesgrps.forEach(series => self.sortStacking(series))
       self.renderers[chart.chartId](chart)
     })
   }
 
+  sortStacking(series) {
+    series.sort((a,b) => {
+      return a.term2 < b.term2 ? -1 : 1 
+    });
+    for(const result of series) {
+      result.lastTotal = 0
+    }
+    let cumulative = 0
+    for(const result of series) {
+      cumulative += result.total
+      result.lastTotal = cumulative
+    }
+  }
+
+  sortSeries(a,b) {
+    console.log(a[this.settings.term2] < b[this.settings.term1])
+    return a[this.settings.term2] < b[this.settings.term1] 
+      ? -1
+      : 1 
+  }
+
   getEventHandlers() {
+    const self = this
     return {
       svg: {
-        mouseout() {
-          //tip.hide()
+        mouseout: ()=>{
+          tip.hide()
         },
       },
       series: {
         mouseover(d) {
           const html = d.term1 + " " + d.term2 + 
             "<br/>Total: " + d.count + 
-            "<br/>Percentage: " + (100*d.count/d.groupTotal).toFixed(1) + "%" ;
-          //tip.show(event, html);
+            (!d.term2 ? "" : "<br/>Percentage: " + (100*d.count/d.groupTotal).toFixed(1) + "%");
+          tip.show(event.clientX, event.clientY).d.html(html);
         },
-        mouseout() {
-          //tip.hide()
+        mouseout: ()=>{
+          tip.hide()
         },
         rectFill(d) {
-          return '#ccc'
+          if (self.settings.term2 === "") return "rgb(144, 23, 57)"
+          return self.settings.rows.length < 11 
+            ? colors.c10(d.term2)
+            : colors.c20(d.term2)
         }
       },
       colLabel: {
@@ -150,7 +182,7 @@ export default class BarsApp{
     this.addSelectOpts('term2', 'Stack By', terms)
   }
 
-  addSelectOpts(key, label, opts) { console.log([key, this.settings[key]])
+  addSelectOpts(key, label, opts) {
     const selectDiv = this.controlsDiv.append('div')
       .style('display', 'inline-block')
       .style('padding', '3px')
