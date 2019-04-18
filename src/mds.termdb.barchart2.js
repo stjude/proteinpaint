@@ -27,42 +27,8 @@ export default class BarsApp{
     }, this.defaults, opts.settings)
     this.renderers = {}
     this.serverData = {}
-    this.handlers = {
-      svg: {
-        mouseout() {
-          //tip.hide()
-        },
-      },
-      series: {
-        mouseover(d) {
-          const html = d.term1 + " " + d.term2 + 
-            "<br/>Total: " + d.count + 
-            "<br/>Percentage: " + (100*d.count/d.groupTotal).toFixed(1) + "%" ;
-          //tip.show(event, html);
-        },
-        mouseout() {
-          //tip.hide()
-        },
-        rectFill(d) {
-          return '#ccc'
-        }
-      },
-      colLabel: {
-        text: d => d
-      },
-      rowLabel: {},
-      legend: {},
-      yAxis: {
-        text: () => {
-          return this.settings.unit == "abs" ? "Total" : "Percentage"
-        }
-      },
-      xAxis: {
-        text: () => {
-          return this.settings.term1[0].toUpperCase() + this.settings.term1.slice(1)
-        }
-      }
-    }
+    this.handlers = this.getEventHandlers()
+    this.setControls()
   }
 
   main(_settings={}) {
@@ -114,5 +80,96 @@ export default class BarsApp{
       self.renderers[chart.chartId] = barsRenderer(select(this)) 
       self.renderers[chart.chartId](chart)
     })
+  }
+
+  getEventHandlers() {
+    return {
+      svg: {
+        mouseout() {
+          //tip.hide()
+        },
+      },
+      series: {
+        mouseover(d) {
+          const html = d.term1 + " " + d.term2 + 
+            "<br/>Total: " + d.count + 
+            "<br/>Percentage: " + (100*d.count/d.groupTotal).toFixed(1) + "%" ;
+          //tip.show(event, html);
+        },
+        mouseout() {
+          //tip.hide()
+        },
+        rectFill(d) {
+          return '#ccc'
+        }
+      },
+      colLabel: {
+        text: d => d
+      },
+      rowLabel: {},
+      legend: {},
+      yAxis: {
+        text: () => {
+          return this.settings.unit == "abs" ? "Total" : "Percentage"
+        }
+      },
+      xAxis: {
+        text: () => {
+          return this.settings.term1[0].toUpperCase() + this.settings.term1.slice(1)
+        }
+      }
+    }
+  }
+
+  setControls() {
+    this.controlsDiv = this.holder.append('div')
+    /*
+    this.addSelectOpts('orientation', 'Orientation', [
+      {value: 'x', label: 'X axis'},
+      {value: 'y', label: 'Y axis'}
+    ])
+    */
+    this.addSelectOpts('unit', 'Unit', [
+      {value: 'abs', label: 'Absolute'},
+      {value: 'pct', label: 'Percent'}
+    ])
+
+    /*this.addSelectOpts('scale', 'Scale', [
+      {value: 'linear', label: 'Linear'},
+      {value: 'log', label: 'Log'}
+    ])*/
+    
+    const terms = [
+      {value: '', label: 'N/A'},
+      {value: 'racegrp', label: 'Race'},
+      {value: 'sex', label: 'Gender'},
+      {value: 'diaggrp', label: 'Diagnosis Group'}
+    ]
+    this.addSelectOpts('term0', 'Chart By', terms)
+    this.addSelectOpts('term1', 'Columns By', terms)
+    this.addSelectOpts('term2', 'Stack By', terms)
+  }
+
+  addSelectOpts(key, label, opts) { console.log([key, this.settings[key]])
+    const selectDiv = this.controlsDiv.append('div')
+      .style('display', 'inline-block')
+      .style('padding', '3px')
+      .style('text-align', 'center')
+      .append('label')
+    
+    selectDiv.append('span')
+      .html(label + '<br/>')
+    
+    const selectElem = selectDiv.append('select')
+      .on('change', () => {
+        this.main({[key]: selectElem.property('value')})
+      })
+
+    selectElem.selectAll('options')
+      .data(opts)
+    .enter().append('option')
+      .property('selected', d => d.value == this.settings[key] ? "selected" : "") 
+      .attr('value', d => d.value)
+      .html(d => d.label)
   }
 }

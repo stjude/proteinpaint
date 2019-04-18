@@ -1,17 +1,10 @@
 const app = require('../app')
 const Partjson = require('./partjson')
 
-
-
-const serverconfig = __non_webpack_require__('./serverconfig.json')
-
-
 /*
 ********************** EXPORTED
 handle_request_closure
-server_init
-********************** INTERNAL
-copy_term
+********************** 
 */
 
 
