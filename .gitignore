@@ -4,6 +4,7 @@
 npm-debug.log
 
 public/bin/*
+public/tmp/*
 public/data/*
 public/stage/*
 public/prod/*
@@ -54,3 +55,4 @@ p4/public/bin/*
 p4/config.json
 p4/public/dev.html
 .vscode/launch.json
+.vscode/settings.json

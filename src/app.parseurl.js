@@ -46,6 +46,65 @@ if(urlp.has('genome') && arg.selectgenome) {
 
 
 
+if( urlp.has('singlecell') ) {
+	if(!urlp.has('genome')) return '"genome" is required for "singlecell"'
+	const genomename=urlp.get('genome')
+	const genomeobj=arg.genomes[genomename]
+	if(!genomeobj) return 'invalid genome: '+genomename
+
+	new Promise((resolve,reject)=>{
+		const script = document.createElement('script')
+		script.setAttribute('src', window.location.origin+'/static/js/three.js')
+		document.head.appendChild(script)
+		script.onload = resolve
+	})
+	.then(()=>{
+		return new Promise((resolve,reject)=>{
+			const script = document.createElement('script')
+			script.setAttribute('src', window.location.origin+'/static/js/loaders/PCDLoader.js')
+			document.head.appendChild(script)
+			script.onload = resolve
+		})
+	})
+	.then(()=>{
+		return new Promise((resolve,reject)=>{
+			const script = document.createElement('script')
+			script.setAttribute('src', window.location.origin+'/static/js/controls/TrackballControls.js')
+			document.head.appendChild(script)
+			script.onload = resolve
+		})
+	})
+	.then(()=>{
+		return new Promise((resolve,reject)=>{
+			const script = document.createElement('script')
+			script.setAttribute('src', window.location.origin+'/static/js/WebGL.js')
+			document.head.appendChild(script)
+			script.onload = resolve
+		})
+	})
+	.then(()=>{
+		return new Promise((resolve,reject)=>{
+			const script = document.createElement('script')
+			script.setAttribute('src', window.location.origin+'/static/js/libs/stats.min.js')
+			document.head.appendChild(script)
+			script.onload = resolve
+		})
+	})
+	.then(()=>{
+	
+		import('./singlecell')
+		.then(_=>{
+			_.init( {
+				genome: genomeobj,
+				jsonfile: urlp.get('singlecell')
+			},
+			arg.holder)
+		})
+	})
+	return
+}
+
+
 
 if(urlp.has('block')) {
 	if(!urlp.has('genome')) {

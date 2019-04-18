@@ -863,3 +863,27 @@ used in:
 	mdssvcnv track, mutation attributes, items that are not annotated by an attribute for showing in legend, and server-side filtering
 */
 exports.not_annotated = 'Unannotated'
+
+
+
+
+
+// kernal density estimator as from https://www.d3-graph-gallery.com/graph/density_basic.html
+
+exports.kernelDensityEstimator = (kernel, X) => {
+	return function(V) {
+		return X.map( x => {
+			return [x,
+				V.map( v => kernel(x-v) )
+				.reduce( (i,j) => i+j,0 )
+				/ V.length
+			]
+		})
+	}
+}
+
+exports.kernelEpanechnikov = (k) => {
+	return function(v) {
+		return Math.abs(v /= k) <= 1 ? 0.75 * (1 - v * v) / k : 0
+	}
+}

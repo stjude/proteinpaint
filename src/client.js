@@ -231,6 +231,9 @@ export class Menu{
 	}
 }
 
+export const tip = new Menu({ padding:''})
+tip.d.style('z-index',1000)
+
 
 
 
@@ -373,6 +376,7 @@ export function newpane(pm) {
 	const toprow=pp.pane.append('div')
 		.on('mousedown',()=>{
 			d3event.preventDefault()
+			d3event.stopPropagation()
 			const oldx=Number.parseInt(pp.pane.style('left')),
 				oldy=Number.parseInt(pp.pane.style('top'))
 			const x0=d3event.clientX,
@@ -1508,19 +1512,4 @@ export function gmlst2loci ( gmlst ) {
 		}
 	}
 	return locs
-}
-
-
-
-export function findgenemodel_bysymbol ( genome, str ) {
-	return dofetch('genelookup',{
-		deep:1,
-		input: str,
-		genome: genome
-	})
-	.then(data=>{
-		if(data.error) throw data.error
-		if(!data.gmlst || data.gmlst.length==0) return null
-		return data.gmlst
-	})
 }

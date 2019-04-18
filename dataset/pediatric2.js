@@ -124,7 +124,6 @@ module.exports={
 				},
 				gender:{
 					label:'Gender',
-					filter:1,
 					values:{
 						male:{name:'Male'},
 						female:{name:'Female'}
@@ -132,7 +131,6 @@ module.exports={
 				},
 				race:{
 					label:'Race',
-					filter:1,
 				},
 				age_dx_years:{
 					label:'Age at diagnosis'

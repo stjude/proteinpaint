@@ -50,8 +50,10 @@ const express=require('express'),
 	d3dsv=require('d3-dsv'),
 	basicAuth = require('express-basic-auth'),
 	termdb = require('./modules/termdb'),
+	termdb2 = require('./modules/termdb2'),
 	mds2_init = require('./modules/mds2.init'),
-	mds2_load = require('./modules/mds2.load')
+	mds2_load = require('./modules/mds2.load'),
+	singlecell = require('./modules/singlecell')
 
 
 
@@ -198,6 +200,8 @@ app.post('/mdssamplesignature',handle_mdssamplesignature)
 app.post('/mdssurvivalplot',handle_mdssurvivalplot)
 app.post('/fimo',handle_fimo)
 app.post('/termdb', termdb.handle_request_closure( genomes ) )
+app.get('/termdb2', termdb2.handle_request_closure( genomes ) )
+app.post('/singlecell', singlecell.handle_singlecell_closure( genomes ) )
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
 app.post('/bamnochr', handle_bamnochr)
@@ -8075,10 +8079,17 @@ function boxplot_getvalue(lst) {
 	const p05 = lst[Math.floor(l*0.05)].value
 	const p95 = lst[Math.floor(l*0.95)].value
 	const iqr=(p75-p25)*1.5
-	const i=lst.findIndex(i=>i.value>p25-iqr)
-	const w1=lst[i==-1 ? 0 : i].value
-	const j=lst.findIndex(i=>i.value>p75+iqr)
-	const w2=lst[j==-1 ? l-1 : j-1].value
+
+	let w1, w2
+	if( iqr == 0 ) {
+		w1 = 0
+		w2 = 0
+	} else {
+		const i=lst.findIndex(i=>i.value>p25-iqr)
+		w1=lst[i==-1 ? 0 : i].value
+		const j=lst.findIndex(i=>i.value>p75+iqr)
+		w2=lst[j==-1 ? l-1 : j-1].value
+	}
 	const out=lst.filter(i=>i.value<p25-iqr || i.value>p75+iqr)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
@@ -12364,6 +12375,7 @@ function illegalpath(s) {
 
 
 function fileurl(req) {
+// must use it to scrutinize every requested file path
 	let file=null,
 		isurl=false
 	if(req.query.file) {
@@ -12377,6 +12389,7 @@ function fileurl(req) {
 	if(!file) return ['file unspecified']
 	return [null,file,isurl]
 }
+exports.fileurl = fileurl
 
 
 
@@ -13233,6 +13246,7 @@ function mds_init(ds,genome, _servconfig) {
 			if(err) return 'cohort annotation file "'+file.file+'": '+err
 			//if(items.length==0) return 'no content from sample annotation file '+file.file
 			console.log(ds.label+': '+items.length+' samples loaded from annotation file '+file.file)
+			ds.cohort['parsed-'+file.file] = items
 			items.forEach( i=> {
 
 				// may need to parse certain values into particular format

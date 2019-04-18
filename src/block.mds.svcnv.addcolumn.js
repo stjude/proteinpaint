@@ -6,6 +6,7 @@ import * as common from './common'
 import * as expressionstat from './block.mds.expressionstat'
 import { may_add_sampleannotation } from './block.mds.svcnv.clickitem'
 import {createbutton_addfeature} from './block.mds.svcnv.samplematrix'
+import {gene_searchbox} from './gene'
 import {focus_singlesample,
 	coverbarcolor_silent,
 	multi_sample_addhighlight,
@@ -1078,57 +1079,13 @@ function mayadd_survivaloption( holder, gene, tk, block ) {
 
 function findgene4fix_searchui( holder, tk, block ) {
 	// for auto gene column, show 
-	const row = holder.append('div')
-	const input = row.append('input')
-		//.attr('type','text')
-		.attr('placeholder','Search gene')
-		.style('width','100px')
-
-	const showdiv = row.append('div')
-		.append('div')
-		.style('display','inline-block')
-
-	input.on('keyup',()=>{
-
-		const str = d3event.target.value
-		if(str.length<=1) {
-			showdiv.selectAll('*').remove()
-			return
+	gene_searchbox({
+		div: holder,
+		genome: block.genome.name,
+		callback: (genename)=>{
+			findgene4fix( genename, tk, block )
 		}
-
-		if(d3event.key=='Enter') {
-			const hitgene = showdiv.select('.sja_menuoption')
-			if( hitgene.size()>0 ) {
-				findgene4fix( hitgene.text(), tk, block )
-			}
-			return
-		}
-
-		client.dofetch('genelookup',{genome:block.genome.name,input:str})
-		.then(data=>{
-			if(data.error) throw data.error
-			if(!data.hits) throw '.hits[] missing'
-
-			showdiv.selectAll('*').remove()
-
-			for(const name of data.hits) {
-				showdiv
-				.append('div')
-				.attr('class','sja_menuoption')
-				.text(name)
-				.on('click',()=>{
-					findgene4fix( name, tk, block )
-				})
-			}
-		})
-		.catch(err=>{
-			if(err.stack) console.log(err.stack)
-			showdiv.append('div').text( err.message ? err.message : err )
-		})
 	})
-
-	input.node().focus()
-	// FIXME why this <input> cannot get focus
 }
 
 
