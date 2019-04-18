@@ -685,7 +685,7 @@ function make_boxplot(data, obj, colidx){
 	const svg = pane.pane.append('svg')
 		.style('margin','10px')
 
-	let box_height = 80,
+	let box_height = 50,
 	box_width = 200,
 	barspace = 2,
 	axis_height = 30
@@ -744,7 +744,7 @@ function make_boxplot(data, obj, colidx){
 					.attr('d', area)
 					.style('fill','lightsteelblue')
 					.style('stroke','black')
-					.style('stroke-width',1)
+					.style('stroke-width',0.5)
 
 				// g.append('path')
 				// 	.datum(boxplot.density) // Binds data to the line 
