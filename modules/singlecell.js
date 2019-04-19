@@ -44,6 +44,10 @@ exports.handle_singlecell_closure = ( genomes ) => {
 				await get_geneboxplot( q, gn, res )
 				return
 			}
+			if( q.getheatmap ) {
+				await get_heatmap( q, gn, res )
+				return
+			}
 
 
 		} catch(e) {
@@ -360,6 +364,75 @@ function get_histogram ( ticks ) {
 
 
 
+async function get_heatmap ( q, gn, res ) {
+	const ge = q.getheatmap
+	const gene_heatmap = [] //for each gene, new array will be created with each catagory
+
+	if(!ge.expfile) throw 'getgeneboxplot.expfile missing'
+	{
+		const [e,file,isurl] = app.fileurl({query:{file:ge.expfile}})
+		if(e) throw 'getgeneboxplot.expfile error: '+e
+		ge.expfile = file
+	}
+	ge.gene_list.forEach( (gene) => {
+		if(!gene.chr) throw 'getgeneboxplot.chr missing'
+		if(!gene.start) throw 'getgeneboxplot.start missing'
+		if(!gene.stop)  throw 'getgeneboxplot.stop missing'
+		if(!gene.gene) throw 'getgeneboxplot.genename missing'
+	})
+
+	const barcode2catvalue = await cellfile_get_barcode2category( ge )
+
+	ge.gene_list.forEach( async (gene) => {
+		const coord = (gene.nochr ? gene.chr.replace('chr','') : gene.chr)+':'+gene.start+'-'+gene.stop
+
+		let minexpvalue = 0,
+			maxexpvalue = 0
+
+		await utils.get_lines_tabix( [ge.expfile,coord], null, line=>{
+
+			const j = JSON.parse( line.split('\t')[3] )
+			if(j.gene != gene.gene) return
+			if(!j.sample) return
+			if(!Number.isFinite( j.value )) return
+
+			const c = barcode2catvalue.get( j.sample )
+			if(!c) return
+			c.expvalue = j.value
+
+			minexpvalue = Math.min( minexpvalue, j.value )
+			maxexpvalue = Math.max( maxexpvalue, j.value )
+		})
+
+		const category2values = new Map()
+		// k: category, v: array of exp values, from all cells of that category
+
+		// divide cells to categories
+		for(const [barcode,v] of barcode2catvalue) {
+			if(!category2values.has(v.category)) category2values.set( v.category, [] )
+			category2values.get( v.category ).push( { value: v.expvalue } )
+		}
+
+		const boxplots = []
+		// each element is one category
+
+		for(const [category, values] of category2values ) {
+
+			values.sort((i,j)=> i.value-j.value )
+	
+			const b = app.boxplot_getvalue( values )
+			delete b.out // remove outliers
+	
+			b.category = category
+	
+			b.numberofcells = values.length // now is just the total number of cells
+			boxplots.push( b )
+		}
+		// const heatmap_data = {boxplots, maxexpvalue, minexpvalue}
+		gene_heatmap.push(boxplots)
+	})
+	res.send( {gene_heatmap} )
+}
 
 
 function cellfile_get_barcode2category ( p ) {

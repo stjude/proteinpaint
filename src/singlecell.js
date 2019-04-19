@@ -488,34 +488,6 @@ function update_controlpanel ( obj, data ) {
 	}
 }
 
-
-
-
-async function menu_option_changed( obj ) {
-/*
-perform action depending on what type of option is chosen
-*/
-
-	const cat = obj.cells.categories[parseInt(obj.menu_button.node().value)]
-	if (obj.cells.categories.includes(cat)){
-		obj.use_category_index = parseInt(obj.menu_button.node().value)
-	}
-
-	const data = await load_cell_pcd(obj)
-	render_cloud( obj, data.pcdfile )
-	update_controlpanel( obj, data )
-
-	animate()
-
-	function animate() {
-		requestAnimationFrame( animate )
-		obj.controls.update()
-		obj.renderer.render( obj.scene, obj.camera )
-	}
-}
-
-
-
 function make_menu ( obj ) {
 	obj.menu.clear()
 		.showunder( obj.menu_button.node() )
@@ -583,6 +555,15 @@ function make_menu ( obj ) {
 
 			})
 	}
+
+	// menu option for multi-gene heatmap
+
+	obj.menu.d.append('div')
+	.text('Multi-Gene Heatmap')
+	.attr('class','sja_menuoption')
+	.on('click', ()=>{
+		heatmap_menu(obj)
+	})
 
 	if(obj.gene_expression.genes){
 		
@@ -674,6 +655,120 @@ function make_settings(obj){
 		obj.scene.background = new THREE.Color( isblack ? 0x000000 : 0xffffff )
 		obj.use_background_color = isblack ? 0 : 1
 	}
+}
+
+function heatmap_menu(obj){
+	obj.menu.clear()
+	obj.gene_expression.heatmap_genes = []
+	obj.use_heatmap_category_index = null
+
+	const heatmap_menu_div = obj.menu.d.append('div')
+		.style('display', 'block')
+		.style('padding','10px')
+
+	const genes_div = heatmap_menu_div.append('div')
+	.style('display', 'block')
+
+	const gene_search_div = genes_div.append('div')
+		.style('display', 'inline-block')
+		.style('vertical-align','top')
+		.style('padding','10px')
+
+	gene_search_div.append('div')
+		.style('display','block')
+		.style('padding-bottom','5px')
+		.text('Add Genes')
+
+	const gene_list_div = genes_div.append('div')
+		.style('display', 'none')
+		.style('vertical-align','top')
+		.style('padding','10px')
+
+	gene_list_div.append('div')
+		.style('display','block')
+		.style('padding-bottom','5px')
+		.text('Selected Genes')
+
+	gene_searchbox({
+		div: gene_search_div.append('div'),
+		resultdiv: gene_search_div.append('div'),
+		genome: obj.genome.name,
+		callback: async (genename)=>{
+			const gmlst = await findgenemodel_bysymbol( obj.genome.name, genename )
+			if( gmlst && gmlst[0] ) {
+				const gm = gmlst[0]
+				if(!obj.gene_expression.heatmap_genes) obj.gene_expression.heatmap_genes = []
+				const geneidx = obj.gene_expression.heatmap_genes.findIndex( i=> i.gene == genename )
+				if( geneidx == -1 ) {
+					obj.gene_expression.heatmap_genes.push({
+						gene: genename,
+						chr: gm.chr,
+						start: gm.start,
+						stop: gm.stop
+					})
+					gene_list_div.style('display', 'inline-block')
+					gene_list_div.append('div')
+						.text(genename)
+						.attr('class','sja_menuoption')
+				} else {
+					alert('Gene already added to list')
+				}
+			}
+		}
+	})
+
+	// Show option for Boxplot for Gene Expression by catagories
+	const catagory_div = heatmap_menu_div.append('div')
+		
+	catagory_div.append('div')
+		.style('display','block')
+		.style('padding-bottom','5px')
+		.text('Heatmap by')
+		
+	const cat_select = catagory_div.append('select')
+	.style('display','block')
+
+	cat_select.append('option')
+	.attr('value','none')
+	.text('-- Select--')
+
+	if( obj.cells.categories ) {
+		obj.cells.categories.forEach( (category,i) => {
+			cat_select.append('option')
+			.attr('value',category.columnidx)
+			.text(category.name)
+		})
+	}
+
+	cat_select.on('change',()=>{
+		obj.use_heatmap_category_index = parseInt(cat_select.node().value)
+	})
+
+	// button to generate heatmap
+	heatmap_menu_div.append('button')
+		.text('Heatmap')
+		.style('display', 'block')
+		.style('float','right')
+		.style('margin','5px')
+		.on('click', ()=>{
+			const arg = {
+				genome: obj.genome.name,
+				getheatmap: {
+					expfile: obj.gene_expression.file,
+					gene_list : obj.gene_expression.heatmap_genes,
+					cellfile: obj.cells.file,
+					barcodecolumnidx: obj.cells.barcodecolumnidx,
+					categorycolumnidx: parseInt(cat_select.node().value),
+					delimiter: obj.cells.delimiter || '\t'
+				}
+			}
+			client.dofetch( 'singlecell', arg )
+			.then(data=>{
+				if(data.error) throw data.error
+				console.log(data)
+				// obj.heat_map = new client.Menu()
+			})
+	})
 }
 
 function make_boxplot(data, obj, colidx){
