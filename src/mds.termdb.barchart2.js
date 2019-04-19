@@ -50,10 +50,10 @@ export default class BarsApp{
     }
   }
 
-  render(chartsData) {
+  render(chartsData) { console.log(chartsData)
     const self = this
     const charts = this.holder.selectAll('.pp-sbar-div')
-      .data(chartsData, chart => chart.chartId)
+      .data(chartsData.charts, chart => chart.chartId)
 
     charts.exit()
     .each(function(chart){
@@ -62,9 +62,10 @@ export default class BarsApp{
     })
 
     charts.each(function(chart) {
-      chart.settings = Object.assign(self.settings, chart.settings)
+      chart.settings = Object.assign(self.settings, chartsData.refs)
+      chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
-      chart.seriesgrps.forEach(series => self.sortStacking(series))
+      chart.seriesgrps.forEach(series => self.sortStacking(series, chartsData))
       self.renderers[chart.chartId](chart)
     })
 
@@ -74,23 +75,24 @@ export default class BarsApp{
     .style("display", "inline-block")
     .style("padding", "20px")
     .each(function(chart,i) {
-      chart.settings = Object.assign(self.settings, chart.settings)
+      chart.settings = Object.assign(self.settings, chartsData.refs)
+      chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       self.renderers[chart.chartId] = barsRenderer(select(this))
-      chart.seriesgrps.forEach(series => self.sortStacking(series))
+      chart.seriesgrps.forEach(series => self.sortStacking(series, chartsData))
       self.renderers[chart.chartId](chart)
     })
   }
 
-  sortStacking(series) {
+  sortStacking(series, chartsData) { 
     series.sort((a,b) => {
       return a.dataId < b.dataId ? -1 : 1 
     });
-    series.seriesId = series[0] ? series[0].seriesId : ""
+    series.seriesId = series[0] ? series[0].seriesId : "";
     for(const result of series) {
       result.lastTotal = 0
       result.scaleId = result.seriesId
-    }
+    } 
     let cumulative = 0
     for(const result of series) {
       cumulative += result.total

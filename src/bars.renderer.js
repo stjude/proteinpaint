@@ -334,10 +334,11 @@ export default function barsRenderer(holder) {
   }
 
   function setIds(s) {
-    s.map(c => {
-      if (c) s.seriesId = c[hm.serieskey];
-    });
-    // s.seriesId=s[0]?s[0][hm.serieskey]
+    if (!('seriesId' in s)) {
+      s.map(c => {
+        if (c) s.seriesId = c[hm.serieskey];
+      });
+    }
     s.map(d => {
       d.rowId = d[hm.rowkey];
       d.colId = d[hm.colkey];

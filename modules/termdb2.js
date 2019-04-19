@@ -1,13 +1,13 @@
 const app = require('../app')
 const Partjson = require('./partjson')
+const settings = {}
+const pj = getPj(settings)
 
 /*
 ********************** EXPORTED
 handle_request_closure
 ********************** 
 */
-
-
 
 exports.handle_request_closure = ( genomes ) => {
   return async (req, res) => {
@@ -50,9 +50,9 @@ if is a numeric term, also get distribution
   if(!ds.cohort) throw 'cohort missing from ds'
   const filename = 'files/hg38/sjlife/clinical/matrix'
   if(!ds.cohort['parsed-'+filename]) throw `the parsed cohort matrix=${filename} is missing`
-  const pj = getPj(q)
+  Object.assign(settings, q)
   pj.refresh({data: ds.cohort['parsed-' + filename]})
-  res.send(pj.tree.results.charts)
+  res.send(pj.tree.results)
 }
 
 function getPj(settings) {
@@ -63,14 +63,32 @@ function getPj(settings) {
       },
       results: {
         "_5:maxAcrossCharts": "=maxAcrossCharts()",
-        "_4:charts": "@root.byTerm0.@values"
+        "_4:charts": "@root.byTerm0.@values",
+        refs: {
+          //chartkey: "&vals.term0",
+          "__:cols": "@root.term1vals",
+          colgrps: ["-"], 
+          rows: ["&vals.dataId"],
+          rowgrps: ["-"],
+          col2name: {
+            "&vals.seriesId": {
+              name: "&vals.seriesId",
+              grp: "-"
+            }
+          },
+          row2name: {
+            "&vals.dataId": {
+              name: "&vals.dataId",
+              grp: "-"
+            }
+          }
+        }
       },
       term1vals: ["&vals.seriesId"],
       byTerm0: {
         "&vals.chartId": {
           chartId: "&vals.chartId",
           total: "+1",
-          "_6:maxAcrossCharts": "@root.results.maxAcrossCharts",
           "_3:maxGroupTotal": "=maxGroupTotal()",
           "_2:seriesgrps": "=seriesgrps()",
           byTerm1: {
@@ -87,25 +105,6 @@ function getPj(settings) {
                 }
               }
             },
-          },
-          settings: {
-            //chartkey: "&vals.term0",
-            "__:cols": "@root.term1vals",
-            colgrps: ["-"], 
-            rows: ["&vals.dataId"],
-            rowgrps: ["-"],
-            col2name: {
-              "&vals.seriesId": {
-                name: "&vals.seriesId",
-                grp: "-"
-              }
-            },
-            row2name: {
-              "&vals.dataId": {
-                name: "&vals.dataId",
-                grp: "-"
-              }
-            }
           },
           "@done()": "=cleanChartData()"
         }
