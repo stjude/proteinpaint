@@ -315,11 +315,11 @@ export default function barsRenderer(holder) {
     for (const series of chart.seriesgrps) {
       if (series[0]) {
         const min = hm.unit == "log" ? 1 : 0
-        const max = hm.unit == "pct" 
-          ? series[0].groupTotal
-          : chart.maxAcrossCharts
+        const max = hm.unit == "pct" ? series[0].groupTotal
+          : hm.unit == "log" ? chart.maxGrpLogTotal
+          : chart.maxGroupTotal // maxAcrossCharts
 
-        hm.h.yScale[series.seriesId] = (hm.unit == 'log' ? scaleLog() : scaleLinear())
+        hm.h.yScale[series.seriesId] = scaleLinear()
           .domain([min, max / ratio])
           .range([0, hm.svgh - hm.collabelh])
 
@@ -441,9 +441,10 @@ export default function barsRenderer(holder) {
   }
 
   function getRectHeight(d) {
-    const height = hm.h.yScale[d.scaleId](d.total) - hm.rowspace
+    const total = hm.unit == "log" ? d.logTotal : d.total
+    const height = hm.h.yScale[d.seriesId](total) - hm.rowspace
     hm.h.yPrevBySeries[d.seriesId] += height + hm.rowspace
-    // console.log(d.seriesId, height, hm.h.yPrevBySeries[d.seriesId])
+    // console.log(d.seriesId, total, height, hm.h.yPrevBySeries[d.seriesId])
     return Math.max(1, height);
   }
 
@@ -570,13 +571,15 @@ export default function barsRenderer(holder) {
     const ratio =
       hm.scale == "byChart" || hm.clickedAge
         ? 1
-        : chart.maxGroupTotal / chart.maxAcrossCharts;
+        : chart.maxGroupTotal / chart.maxAcrossCharts
     const min = hm.unit == "log" ? 1 : 0
-    const max = hm.unit == "pct" ? 100 : chart.maxAcrossCharts
+    const max = hm.unit == "pct" ? 100 
+      : hm.unit == "log" ? chart.maxGrpLogTotal
+      : chart.maxGroupTotal //maxAcrossCharts
 
     yAxis.call(
       axisLeft(
-        (hm.unit == 'log' ? scaleLog() : scaleLinear())
+        scaleLinear()
           .domain([max / ratio, min])
           .range([
             s.colgrplabelh,

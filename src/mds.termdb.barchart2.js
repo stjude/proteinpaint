@@ -82,7 +82,8 @@ export default class BarsApp{
       chart.settings = Object.assign(self.settings, chartsData.refs)
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
-      chart.seriesgrps.forEach(series => self.sortStacking(series, chartsData))
+      chart.maxGrpLogTotal = 0
+      chart.seriesgrps.forEach(series => self.sortStacking(series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
 
@@ -96,24 +97,25 @@ export default class BarsApp{
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       self.renderers[chart.chartId] = barsRenderer(select(this))
-      chart.seriesgrps.forEach(series => self.sortStacking(series, chartsData))
+      chart.maxGrpLogTotal = 0
+      chart.seriesgrps.forEach(series => self.sortStacking(series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
   }
 
-  sortStacking(series, chartsData) { 
+  sortStacking(series, chart, chartsData) { 
     series.sort((a,b) => {
       return a.dataId < b.dataId ? -1 : 1 
     });
     series.seriesId = series[0] ? series[0].seriesId : "";
+    let grpLogTotal = 0
     for(const result of series) {
-      result.lastTotal = 0
-      result.scaleId = result.seriesId
-    } 
-    let cumulative = 0
-    for(const result of series) {
-      cumulative += result.total
-      result.lastTotal = cumulative
+      result.seriesId = result.seriesId
+      result.logTotal = Math.log10(result.total)
+      grpLogTotal += result.logTotal
+    }
+    if (grpLogTotal > chart.maxGrpLogTotal) {
+      chart.maxGrpLogTotal = grpLogTotal
     }
   }
 
@@ -228,7 +230,7 @@ export default class BarsApp{
       button_row: this.controlsDiv,
       obj: this.opts.obj,
       callback: result => {
-        console.log(result)
+        //console.log(result)
         this.terms[key] = result.term2
         this.main({[key]: result.term2.id})
       }
