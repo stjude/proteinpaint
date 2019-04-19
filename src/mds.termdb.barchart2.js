@@ -4,6 +4,7 @@ import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import { Menu } from './client'
+import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 const colors = {
   c10: scaleOrdinal( schemeCategory10 ),
@@ -26,13 +27,21 @@ export default class BarsApp{
     this.renderers = {}
     this.serverData = {}
     this.handlers = this.getEventHandlers()
+    this.terms = {
+      term0: null,
+      term1: this.opts.term1,
+      term2: null
+    }
+    this.controls = {}
     this.setControls()
   }
 
   main(_settings={}) {
-    Object.assign(this.settings, _settings)
+    this.updateSettings(_settings)
 
-    const dataName = '?genome=hg38&dslabel=SJLife'
+    const dataName = '?'
+      + 'genome=' + this.settings.genome
+      + '&dslabel=' + this.settings.dslabel
       + '&term0=' + this.settings.term0
       + '&term1=' + this.settings.term1
       + '&term2=' + this.settings.term2
@@ -48,6 +57,14 @@ export default class BarsApp{
         this.render(chartsData)
       })
     }
+  }
+
+  updateSettings(settings) {
+    Object.assign(this.settings, settings)
+    if (this.settings.term2 == "" && this.settings.unit == "pct") {
+      this.settings.unit = "abs"
+    }
+    this.updateControls()
   }
 
   render(chartsData) { console.log(chartsData)
@@ -141,7 +158,7 @@ export default class BarsApp{
       legend: {},
       yAxis: {
         text: () => {
-          return this.settings.unit == "abs" ? "# of patients" : "% of patients"
+          return this.settings.unit == "pct" ? "% of patients" : "# of patients"
         }
       },
       xAxis: {
@@ -160,38 +177,27 @@ export default class BarsApp{
       {value: 'y', label: 'Y axis'}
     ])
     */
-    this.addSelectOpts('unit', 'Unit', [
-      {value: 'abs', label: '# Patients'},
-      {value: 'pct', label: '% Patients'}
+    this.addSelectOpts('unit', 'Y axis', [
+      {value: 'abs', label: 'Linear'},
+      //{value: 'log', label: 'Log'},
+      {value: 'pct', label: 'Percent'},
     ])
-
-    /*this.addSelectOpts('scale', 'Scale', [
-      {value: 'linear', label: 'Linear'},
-      {value: 'log', label: 'Log'}
-    ])*/
     
-    const terms = [
-      {value: '', label: 'N/A'},
-      {value: 'racegrp', label: 'Race'},
-      {value: 'sex', label: 'Gender'},
-      {value: 'diaggrp', label: 'Diagnosis Group'}
-    ]
-    this.addSelectOpts('term0', 'Chart By', terms)
-    // this.addSelectOpts('term1', 'Columns By', terms)
-    this.addSelectOpts('term2', 'Stack By', terms)
+    this.addCrossTabBtn('term0', 'Chart By')
+    this.addCrossTabBtn('term2', 'Select Second Term')
   }
 
   addSelectOpts(key, label, opts) {
     const selectDiv = this.controlsDiv.append('div')
-      .style('display', 'inline-block')
       .style('padding', '3px')
       .style('text-align', 'center')
-      .append('label')
-    
-    selectDiv.append('span')
+      .style('display', 'none')
+      
+    const selectLabel = selectDiv.append('label')
+    selectLabel.append('span')
       .html(label + '<br/>')
     
-    const selectElem = selectDiv.append('select')
+    const selectElem = selectLabel.append('select')
       .on('change', () => {
         this.main({[key]: selectElem.property('value')})
       })
@@ -202,5 +208,63 @@ export default class BarsApp{
       .property('selected', d => d.value == this.settings[key] ? "selected" : "") 
       .attr('value', d => d.value)
       .html(d => d.label)
+
+    this.controls[key] = {
+      div: selectDiv,
+      elem: selectElem,
+      set: () => {
+        selectElem.property('value', this.settings[key])
+        selectElem
+          .selectAll('option')
+          .filter(d => d.value == 'pct')
+          .property('disabled', () => this.settings.term2 === "")
+      }
+    }
+  }
+
+  addCrossTabBtn(key, label) {
+    const btn = may_makebutton_crosstabulate({
+      term1: this.terms.term1,
+      button_row: this.controlsDiv,
+      obj: this.opts.obj,
+      callback: result => {
+        console.log(result)
+        this.terms[key] = result.term2
+        this.main({[key]: result.term2.id})
+      }
+    })
+
+    btn.style('font-size','1em')
+      .text(label)
+
+    const closer = this.controlsDiv.append('div')
+      .attr('class', 'sja-menu-option')
+      .style('font-size', '1em')
+      .style('display', 'none')
+      .style('margin-right', '20px')
+      .style('padding', '2px')
+      .style('cursor', 'pointer')
+      .style('background', '#f2f2f2')
+      .html('X')
+      .on('click', ()=>{
+        this.terms[key] = undefined
+        this.main({[key]: ''})
+      })
+
+    this.controls[key] = {
+      div: btn,
+      elem: null,
+      set: () => {
+        btn.text(this.settings[key] ? this.terms[key].name : label)
+        closer.style('display', this.settings[key] ? 'inline-block' : 'none')
+      }
+    }
+  }
+
+  updateControls() {
+    for(const key in this.controls) {
+      this.controls[key].set()
+      this.controls[key].div.style("display", "inline-block")
+    }
   }
 }

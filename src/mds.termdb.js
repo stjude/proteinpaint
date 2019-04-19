@@ -277,7 +277,9 @@ such conditions may be carried by obj
 	if (window.location.search.includes("termdb=2")) {
 		barsApp = new BarsApp({
 			holder: div,
-			settings: {}
+			settings: {},
+			term1: term,
+			obj
 		})
 	}
 
@@ -297,8 +299,10 @@ such conditions may be carried by obj
 		
 		if (window.location.search.includes("termdb=2")) {
 			barsApp.main({
-				term, 
-				term1: term.id
+				genome: obj.genome.name,
+				dslabel: obj.dslabel,
+				term1: term.id,
+				term2: ''
 			})
 		} else {
 

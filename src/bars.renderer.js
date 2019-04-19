@@ -1,7 +1,8 @@
 import { select, event } from "d3-selection";
-import { scaleLinear as d3Linear } from "d3-scale";
+import { scaleLinear, scaleLog } from "d3-scale";
 import htmlLegend from "./html.legend";
 import { axisLeft } from "d3-axis";
+import { format } from 'd3-format'
 import { newpane } from "./client.js";
 
 /*
@@ -27,7 +28,6 @@ returns:
           seriesId: string,
           groupTotal: number, // aggregate total for this series
           maxGroupTotal: number, // maximum among groupTotals,
-          lastTotal: number // the stacked value total
         },{
           ...
         }
@@ -41,22 +41,22 @@ returns:
     // see bars.settings.js for a full example
     settings: {
       scale: "byChart", // | "byGroup"
-      serieskey: "seriesId",
-      colkey: "term1",
-      rowkey: "term2",
-      cols: ["&vals.term1"],
+      serieskey: $seriesId,
+      colkey: "seriesId",
+      rowkey: "dataId",
+      cols: [ $seriesId ],
       colgrps: ["-"], 
-      rows: ["&vals.term2"],
+      rows: [ $dataId ],
       rowgrps: ["-"],
       col2name: {
-        "&vals.term1": {
-          name: "&vals.term1",
+        "$seriesId": {
+          name: $seriesId,
           grp: "-"
         }
       },
       row2name: {
-        "&vals.term2": {
-          name: "&vals.term2",
+        "$dataId": {
+          name: $dataId,
           grp: "-"
         }
       },
@@ -307,19 +307,27 @@ export default function barsRenderer(holder) {
         + 2*hm.borderwidth*/
 
     hm.h.yScale = {}
+    hm.h.yPrevBySeries = {}
     const ratio =
       hm.scale == "byChart"
         ? 1
-        : chart.maxGroupTotal / chart.maxAcrossCharts; 
+        : chart.maxGroupTotal / chart.maxAcrossCharts;
     for (const series of chart.seriesgrps) {
       if (series[0]) {
-        const max =
-          hm.unit == "abs"
-            ? chart.maxAcrossCharts
-            : chart.maxGroupTotal
-        hm.h.yScale[series.seriesId] = d3Linear()
-          .domain([0, (hm.unit == "abs" ? max : series[0].groupTotal) / ratio])
+        const min = hm.unit == "log" ? 1 : 0
+        const max = hm.unit == "pct" 
+          ? series[0].groupTotal
+          : chart.maxAcrossCharts
+
+        hm.h.yScale[series.seriesId] = (hm.unit == 'log' ? scaleLog() : scaleLinear())
+          .domain([min, max / ratio])
           .range([0, hm.svgh - hm.collabelh])
+
+        hm.h.yPrevBySeries[series.seriesId] = 0
+        for(const data of series) {
+          data.height = getRectHeight(data)
+          data.y = getRectY(data)
+        }
       }
     }
 
@@ -380,9 +388,9 @@ export default function barsRenderer(holder) {
       .transition()
       .duration(hm.duration)
       .attr("width", hm.colw)
-      .attr("height", getRectHeight)
+      .attr("height", d => d.height)
       .attr("x", getRectX)
-      .attr("y", getRectY)
+      .attr("y", d => d.y)
       .attr("fill", hm.handlers.series.rectFill);
 
     g.enter()
@@ -413,9 +421,9 @@ export default function barsRenderer(holder) {
 
     g.append("rect")
       .attr("width", hm.colw)
-      .attr("height", getRectHeight)
+      .attr("height", d => d.height)
       .attr("x", getRectX)
-      .attr("y", getRectY)
+      .attr("y", d => d.y)
       .attr("fill", hm.handlers.series.rectFill)
       .attr("shape-rendering", "crispEdges")
       .style("opacity", 0)
@@ -433,7 +441,10 @@ export default function barsRenderer(holder) {
   }
 
   function getRectHeight(d) {
-    return Math.max(1, hm.h.yScale[d.scaleId](d.total) - hm.rowspace);
+    const height = hm.h.yScale[d.scaleId](d.total) - hm.rowspace
+    hm.h.yPrevBySeries[d.seriesId] += height + hm.rowspace
+    // console.log(d.seriesId, height, hm.h.yPrevBySeries[d.seriesId])
+    return Math.max(1, height);
   }
 
   function getRectX(d) {
@@ -441,8 +452,9 @@ export default function barsRenderer(holder) {
     return hm.cols.indexOf(d.colId) * (hm.colw + hm.colspace) + grpoffset;
   }
 
-  function getRectY(d) { //console.log(d.scaleId, d.lastTotal, hm.h.yScale[d.scaleId](5))
-    return hm.svgh - hm.collabelh - hm.h.yScale[d.scaleId](d.lastTotal);
+  function getRectY(d) {
+    // console.log(d.seriesId,  hm.h.yPrevBySeries[d.seriesId], hm.svgh - hm.collabelh - hm.h.yPrevBySeries[d.seriesId])
+    return hm.svgh - hm.collabelh - hm.h.yPrevBySeries[d.seriesId]
   }
 
   function colLabelsTransform() {
@@ -559,19 +571,18 @@ export default function barsRenderer(holder) {
       hm.scale == "byChart" || hm.clickedAge
         ? 1
         : chart.maxGroupTotal / chart.maxAcrossCharts;
-    const max =
-       hm.unit == "abs"
-            ? chart.maxAcrossCharts
-            : chart.maxGroupTotal
+    const min = hm.unit == "log" ? 1 : 0
+    const max = hm.unit == "pct" ? 100 : chart.maxAcrossCharts
+
     yAxis.call(
       axisLeft(
-        d3Linear()
-          .domain(hm.unit == "abs" ? [max, 0] : [100 / ratio, 0])
+        (hm.unit == 'log' ? scaleLog() : scaleLinear())
+          .domain([max / ratio, min])
           .range([
             s.colgrplabelh,
             s.svgh - s.collabelh + s.colgrplabelh - s.borderwidth
           ])
-      ).ticks(5)
+      ).ticks(8, format('d'))
     );
 
     yTitle.selectAll("*").remove();
