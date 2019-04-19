@@ -1,4 +1,5 @@
 export default JSON.stringify({
+    h: {},
     relayTiles: false,
     svgw: 400,
     svgh: 400,
@@ -6,10 +7,10 @@ export default JSON.stringify({
     scale: "byChart", // byGroup | byChart
     currAge: 20,
 
-    rowkey: "chc",
-    colkey: "age",
-    colgrpkey: "colgrp",
+    rowkey: "dataId",
     rowgrpkey: "rowgrp",
+    colkey: "seriesId",
+    colgrpkey: "colgrp",
 
     rowh: 22,
     colw: 36,
@@ -26,8 +27,12 @@ export default JSON.stringify({
     rowlabelw: 50,
     rowheadleft: true,
     colheadtop: false,
+    
     legendontop: false,
     legendpadleft: 30,
+    legendh: 0,
+    legendpadleft: 170,
+    hidelegend: false,
 
     showgrid: true,
     gridstroke: "#fff",
@@ -64,7 +69,5 @@ export default JSON.stringify({
       right: 10,
       bottom: 30
     },
-    axisTitleFontSize: 16,
-
-    legendh: 0
+    axisTitleFontSize: 16
 })

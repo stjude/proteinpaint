@@ -294,9 +294,12 @@ such conditions may be carried by obj
 		if( term.graph.barchart.dom.loaded ) return
 
 		button.text('Loading')
-
+		
 		if (window.location.search.includes("termdb=2")) {
-			barsApp.main({term1: term.id})
+			barsApp.main({
+				term, 
+				term1: term.id
+			})
 		} else {
 
 			const arg = {

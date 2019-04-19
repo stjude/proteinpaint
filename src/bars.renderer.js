@@ -15,14 +15,14 @@ returns:
     
     // *** COMPUTED DATA ***
 
-    count: number,
+    total: number,
     maxAcrossCharts: number, // max series total among all serieses from all charts
     maxGroupTotal: number, // max series total among serieses within the same chart
     seriesgrps: [
       [
         {
-        term1: string metadata-dimension-name, // sex, race, etc
-        term2: string metadata-dimension-name,
+        val1: string metadata-dimension-name, // sex, race, etc
+        val2: string metadata-dimension-name,
           total: number,
           seriesId: string,
           groupTotal: number, // aggregate total for this series
@@ -313,15 +313,11 @@ export default function barsRenderer(holder) {
         : chart.maxGroupTotal / chart.maxAcrossCharts; 
     for (const series of chart.seriesgrps) {
       if (series[0]) {
-        const term1 = series[0].term1
         const max =
-          /*hm.scale == "byChart"
-            ? chart.maxGroupTotal
-            : chart.maxAcrossCharts;*/ //console.log(ratio, max, chart.maxGroupTotal, chart.maxAcrossCharts)
           hm.unit == "abs"
             ? chart.maxAcrossCharts
             : chart.maxGroupTotal
-        hm.h.yScale[term1] = d3Linear()
+        hm.h.yScale[series.seriesId] = d3Linear()
           .domain([0, (hm.unit == "abs" ? max : series[0].groupTotal) / ratio])
           .range([0, hm.svgh - hm.collabelh])
       }

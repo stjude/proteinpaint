@@ -65,80 +65,66 @@ function getPj(settings) {
         "_5:maxAcrossCharts": "=maxAcrossCharts()",
         "_4:charts": "@root.byTerm0.@values"
       },
-      term1vals: ["&vals.term1"],
+      term1vals: ["&vals.seriesId"],
       byTerm0: {
-        "&vals.term0": {
-          chartId: "&vals.term0",
-          count: "+1",
+        "&vals.chartId": {
+          chartId: "&vals.chartId",
+          total: "+1",
           "_6:maxAcrossCharts": "@root.results.maxAcrossCharts",
           "_3:maxGroupTotal": "=maxGroupTotal()",
           "_2:seriesgrps": "=seriesgrps()",
           byTerm1: {
-            "&vals.term1": {
-              count: "+1",
+            "&vals.seriesId": {
+              total: "+1",
               "_1:serieses": "@.byTerm2.@values",
               byTerm2: {
-                "&vals.term2": {
-                  term1: "&vals.term1",
-                  term2: "&vals.term2",
-                  count: "+1",
+                "&vals.dataId": {
+                  chartId: "&vals.chartId",
+                  seriesId: "&vals.seriesId",
+                  dataId: "&vals.dataId",
                   total: "+1",
-                  seriesId: "=seriesId()",
-                  "__:groupTotal": "@parent.@parent.count",
-                  "_4:maxGroupTotal": "@parent.@parent.maxGroupTotal",
-                  scaleId: "&vals.term1",
-                  chartId: "&vals.term0"
+                  "__:groupTotal": "@parent.@parent.total"
                 }
               }
             },
           },
           settings: {
             //chartkey: "&vals.term0",
-            scale: "byChart",
-            serieskey: "seriesId",
-            colkey: "term1",
-            rowkey: "term2",
             "__:cols": "@root.term1vals",
             colgrps: ["-"], 
-            rows: ["&vals.term2"],
+            rows: ["&vals.dataId"],
             rowgrps: ["-"],
             col2name: {
-              "&vals.term1": {
-                name: "&vals.term1",
+              "&vals.seriesId": {
+                name: "&vals.seriesId",
                 grp: "-"
               }
             },
             row2name: {
-              "&vals.term2": {
-                name: "&vals.term2",
+              "&vals.dataId": {
+                name: "&vals.dataId",
                 grp: "-"
               }
-            },
-            h: {},
-            legendpadleft: 170,
-            hidelegend: false,
-            //"@done()": "=extendSettings()"
-          }
+            }
+          },
+          "@done()": "=cleanChartData()"
         }
       }
     },
     "=": {
-      seriesId(row) {
-        return row[settings.term1] + ";;" + row[settings.term2]
-      },
       vals(row) {
         return {
-          term0: "" + settings.term0 ? row[settings.term0] : "",
-          term1: row[settings.term1],
-          term2: "" + settings.term2 ? row[settings.term2] : ""
+          chartId: "" + settings.term0 ? row[settings.term0] : "",
+          seriesId: row[settings.term1],
+          dataId: "" + settings.term2 ? row[settings.term2] : ""
         }
       },
       seriesgrps(row, context) {
         const grps = Object.values(context.self.byTerm1).map(d=>d.serieses)
         // stacking of serieses will be sorted on the client side
         const orderedGrps = [];
-        context.root.term1vals.forEach(term1 => {
-          const grp = grps.find(d => d[0].term1 == term1); 
+        context.root.term1vals.forEach(seriesId => {
+          const grp = grps.find(d => d[0].seriesId == seriesId); 
           orderedGrps.push(grp ? grp : [])
         })
         return orderedGrps
@@ -160,6 +146,10 @@ function getPj(settings) {
           }
         }
         return maxAcrossCharts
+      },
+      cleanChartData(result) {
+        // byTerm1 values will be stored in seriesgrps
+        delete result.byTerm1
       }
     }
   })

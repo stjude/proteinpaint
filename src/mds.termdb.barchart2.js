@@ -84,10 +84,12 @@ export default class BarsApp{
 
   sortStacking(series) {
     series.sort((a,b) => {
-      return a.term2 < b.term2 ? -1 : 1 
+      return a.dataId < b.dataId ? -1 : 1 
     });
+    series.seriesId = series[0] ? series[0].seriesId : ""
     for(const result of series) {
       result.lastTotal = 0
+      result.scaleId = result.seriesId
     }
     let cumulative = 0
     for(const result of series) {
@@ -113,9 +115,9 @@ export default class BarsApp{
       },
       series: {
         mouseover(d) {
-          const html = d.term1 + " " + d.term2 + 
-            "<br/>Total: " + d.count + 
-            (!d.term2 ? "" : "<br/>Percentage: " + (100*d.count/d.groupTotal).toFixed(1) + "%");
+          const html = d.seriesId + " " + d.dataId + 
+            "<br/>Total: " + d.total + 
+            (!d.dataId ? "" : "<br/>Percentage: " + (100*d.total/d.groupTotal).toFixed(1) + "%");
           tip.show(event.clientX, event.clientY).d.html(html);
         },
         mouseout: ()=>{
@@ -125,8 +127,8 @@ export default class BarsApp{
           return self.settings.term2 === ""
             ? "rgb(144, 23, 57)"
             : rgb(self.settings.rows.length < 11 
-              ? colors.c10(d.term2)
-              : colors.c20(d.term2)
+              ? colors.c10(d.dataId)
+              : colors.c20(d.dataId)
             ).toString().replace('rgb(','rgba(').replace(')', ',0.7)')
         }
       },
@@ -137,7 +139,7 @@ export default class BarsApp{
       legend: {},
       yAxis: {
         text: () => {
-          return this.settings.unit == "abs" ? "Total" : "Percentage"
+          return this.settings.unit == "abs" ? "# of patients" : "% of patients"
         }
       },
       xAxis: {
@@ -157,8 +159,8 @@ export default class BarsApp{
     ])
     */
     this.addSelectOpts('unit', 'Unit', [
-      {value: 'abs', label: 'Absolute'},
-      {value: 'pct', label: 'Percent'}
+      {value: 'abs', label: '# Patients'},
+      {value: 'pct', label: '% Patients'}
     ])
 
     /*this.addSelectOpts('scale', 'Scale', [
@@ -173,7 +175,7 @@ export default class BarsApp{
       {value: 'diaggrp', label: 'Diagnosis Group'}
     ]
     this.addSelectOpts('term0', 'Chart By', terms)
-    this.addSelectOpts('term1', 'Columns By', terms)
+    // this.addSelectOpts('term1', 'Columns By', terms)
     this.addSelectOpts('term2', 'Stack By', terms)
   }
 
