@@ -66,11 +66,23 @@ function getPj(settings) {
         vals: "=vals()"
       },
       results: {
-        "_5:maxAcrossCharts": "=maxAcrossCharts()",
-        "_4:charts": "@root.byTerm0.@values",
+        "_2:maxAcrossCharts": "=maxAcrossCharts()",
+        charts: [{
+          chartId: "&vals.chartId",
+          total: "+1",
+          "_1:maxSeriesTotal": "=maxSeriesTotal()",
+          serieses: [{
+            total: "+1",
+            seriesId: "&vals.seriesId",
+            data: [{
+              dataId: "&vals.dataId",
+              total: "+1"
+            }, "&vals.fullId"]
+          }, "&vals.chartSeriesId"]
+        }, "&vals.chartId"],
         refs: {
           //chartkey: "&vals.term0",
-          "__:cols": "@root.term1vals",
+          "cols": ["&vals.seriesId"],
           colgrps: ["-"], 
           rows: ["&vals.dataId"],
           rowgrps: ["-"],
@@ -87,72 +99,38 @@ function getPj(settings) {
             }
           }
         }
-      },
-      term1vals: ["&vals.seriesId"],
-      byTerm0: {
-        "&vals.chartId": {
-          chartId: "&vals.chartId",
-          total: "+1",
-          "_3:maxGroupTotal": "=maxGroupTotal()",
-          "_2:seriesgrps": "=seriesgrps()",
-          byTerm1: {
-            "&vals.seriesId": {
-              total: "+1",
-              "_1:serieses": "@.byTerm2.@values",
-              byTerm2: {
-                "&vals.dataId": {
-                  chartId: "&vals.chartId",
-                  seriesId: "&vals.seriesId",
-                  dataId: "&vals.dataId",
-                  total: "+1",
-                  "__:groupTotal": "@parent.@parent.total"
-                }
-              }
-            },
-          },
-          "@done()": "=cleanChartData()"
-        }
       }
     },
     "=": {
       vals(row) {
+        const chartId = joinFxns[settings.term0](row)
+        const seriesId = joinFxns[settings.term1](row)
+        const dataId = joinFxns[settings.term2](row) 
         return {
-          chartId: joinFxns[settings.term0](row),
-          seriesId: joinFxns[settings.term1](row),
-          dataId: joinFxns[settings.term2](row)
+          chartId,
+          seriesId,
+          dataId,
+          chartSeriesId: chartId + ";;" + seriesId,
+          fullId: chartId + ";;" + seriesId + ";;" + dataId,
         }
       },
-      seriesgrps(row, context) {
-        const grps = Object.values(context.self.byTerm1).map(d=>d.serieses)
-        // stacking of serieses will be sorted on the client side
-        const orderedGrps = [];
-        context.root.term1vals.forEach(seriesId => {
-          const grp = grps.find(d => d[0].seriesId == seriesId); 
-          orderedGrps.push(grp ? grp : [])
-        })
-        return orderedGrps
-      },
-      maxGroupTotal(row, context) {
-        let maxGroupTotal = 0
-        for(const grp of context.self.seriesgrps) {
-          if (grp[0] && grp[0].groupTotal > maxGroupTotal) {
-            maxGroupTotal = grp[0].groupTotal
+      maxSeriesTotal(row, context) {
+        let maxSeriesTotal = 0
+        for(const grp of context.self.serieses) {
+          if (grp && grp.total > maxSeriesTotal) {
+            maxSeriesTotal = grp.total
           }
         }
-        return maxGroupTotal
+        return maxSeriesTotal
       },
       maxAcrossCharts(row, context) {
         let maxAcrossCharts = 0
         for(const chart of context.self.charts) {
-          if (chart.maxGroupTotal > maxAcrossCharts) {
-            maxAcrossCharts = chart.maxGroupTotal
+          if (chart.maxSeriesTotal > maxAcrossCharts) {
+            maxAcrossCharts = chart.maxSeriesTotal
           }
         }
         return maxAcrossCharts
-      },
-      cleanChartData(result) {
-        // byTerm1 values will be stored in seriesgrps
-        delete result.byTerm1
       }
     }
   })

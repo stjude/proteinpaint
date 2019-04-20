@@ -120,6 +120,9 @@ class ValFiller {
   constructor(e) {
     this.Pj = e
   }
+  getFxn(e, t) {
+    return this[this.getValType(e.templateVal) + "Filler"](e, t, e.templateVal)
+  }
   getValType(e) {
     return "string" == typeof e
       ? "str"
@@ -128,9 +131,6 @@ class ValFiller {
       : e && "object" == typeof e
       ? "obj"
       : "default"
-  }
-  getFxn(e, t) {
-    return this[this.getValType(e.templateVal) + "Filler"](e, t, e.templateVal)
   }
   strFiller(e, t, s, r) {
     const [o, i] = this.Pj.converter.default(this.Pj, e, t, s)
@@ -206,7 +206,7 @@ class ValFiller {
         const l = e(r, n)
         t.ignore(l, o, r, n) || s(i, o, l)
       }
-    t.errors.push(["val", "INVALID-OPTION"])
+    t.errors.push(["val", "INVALID-[]-OPTION"])
   }),
   (ValFiller.prototype["[],()"] = ValFiller.prototype["[],"]),
   (ValFiller.prototype["[],[]"] = function(e, t) {
@@ -221,12 +221,29 @@ class ValFiller {
   (ValFiller.prototype["[],(]"] = ValFiller.prototype["[],[]"]),
   (ValFiller.prototype["[{}]"] = function(e, t) {
     this.Pj.parseTemplate(e, t.inheritedIgnore, t.lineage)
-    this.Pj.fillers.get(e)
-    return (t, s, r) => {
-      this.Pj.setResultContext("[]", s, r)
-      const o = this.Pj.setResultContext("{}", r[s].length, r[s])
-      this.Pj.processRow(t, e, o)
+    const s = t.templateVal && t.templateVal.length > 1 ? t.templateVal[1] : ""
+    if (!s)
+      return (t, s, r) => {
+        this.Pj.setResultContext("[]", s, r)
+        const o = this.Pj.setResultContext("{}", r[s].length, r[s])
+        this.Pj.processRow(t, e, o)
+      }
+    if ("string" == typeof s) {
+      const r = this.getFxn({ templateVal: s, errors: [] }, t.inheritedIgnore),
+        o = new Map()
+      return (t, s, i) => {
+        this.Pj.setResultContext("[]", s, i)
+        const n = []
+        r(t, 0, n)
+        const l = n[0]
+        if (o.has(l)) this.Pj.processRow(t, e, o.get(l))
+        else {
+          const r = this.Pj.setResultContext("{}", i[s].length, i[s])
+          o.set(l, r), this.Pj.processRow(t, e, r)
+        }
+      }
     }
+    t.errors.push(["val", "INVALID-[{}]-OPTION"])
   }),
   (ValFiller.prototype["[[,]]"] = function(e, t) {
     const s = []

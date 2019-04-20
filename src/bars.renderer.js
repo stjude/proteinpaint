@@ -10,96 +10,83 @@ arguments:
   - holder: d3-selected DOM element
 
 returns: 
-  a renderer (main) function with the following argument 
+  a bar chart renderer (main) function with the following argument 
   {
-    chartId: string chart label, 
-    
-    // *** COMPUTED DATA ***
+    // *** COMPUTED AGGREGATES ***
+    maxAcrossCharts: number,   
+    charts: [{
+      chartId: string | number,
+      total: number,
+      maxSeriesTotal: number,
+      serieses: [{
+        seriesId: string | number,
+        total: number,
+        data: [{
+          dataId: string | number,
+          total: "+1"
+        }]
+      },
 
-    total: number,
-    maxAcrossCharts: number, // max series total among all serieses from all charts
-    maxGroupTotal: number, // max series total among serieses within the same chart
-    seriesgrps: [
-      [
-        {
-        val1: string metadata-dimension-name, // sex, race, etc
-        val2: string metadata-dimension-name,
-          total: number,
-          seriesId: string,
-          groupTotal: number, // aggregate total for this series
-          maxGroupTotal: number, // maximum among groupTotals,
-        },{
-          ...
-        }
-      ],
-      ...
-    ]
-    
-    // *** RENDERER SETTINGS ***
-
-    // below is a partial settings based on the data
-    // see bars.settings.js for a full example
-    settings: {
-      scale: "byChart", // | "byGroup"
-      serieskey: $seriesId,
-      colkey: "seriesId",
-      rowkey: "dataId",
-      cols: [ $seriesId ],
-      colgrps: ["-"], 
-      rows: [ $dataId ],
-      rowgrps: ["-"],
-      col2name: {
-        "$seriesId": {
-          name: $seriesId,
-          grp: "-"
+      // *** RENDERER SETTINGS ***
+      // will extend instance settings
+      // partial example below, see
+      // bar.settings for a full example,
+      // reuses config keys from tp.schema
+      settings: {
+        cols: [$seriesId],
+        colgrps: [col2name.$seriesId.grp], 
+        rows: [$dataId],
+        rowgrps: [row2name.$seriesId.grp], // for clustering bars
+        col2name: {
+          $seriesId: {
+            name: $seriesId,
+            grp: string | number
+          }
+        },
+        row2name: {
+          $dataId: {
+            name: $dataId,
+            grp: string | number
+          }
         }
       },
-      row2name: {
-        "$dataId": {
-          name: $dataId,
-          grp: "-"
-        }
-      },
-      h: {},
-      legendpadleft: 170,
-      hidelegend: false,
-    },
 
-    // *** EVENT CALLBACK FUNCTIONS ***
-    // for optional user interactivity
-    // see bars.app.js for example event handlers
-    handlers: {
-      svg: {
-        mouseover(d) {},
-        mouseout() {}
-      },
-      series: {
-        mouseover(d) {},
-        mouseout() {},
-        rectFill(d) {}
-      },
-      colLabel: {
-        text: d => d,
-        mouseover(d) {},
-        mouseout() {}
-      },
-      rowLabel: {
-        text: d => d,
-        mouseover(d) {},
-        mouseout() {}
-      },
-      legend: {
-        text: d => d,
-        mouseover(d) {},
-        mouseout() {}
-      },
-      yAxis: {
-        text: () => {}
-      },
-      xAxis: {
-        text: () => {}
+      // *** EVENT CALLBACK FUNCTIONS ***
+      // for optional user interactivity
+      // see bars.app.js for example event handlers
+      handlers: {
+        svg: {
+          mouseover(d) {},
+          mouseout() {}
+        },
+        series: {
+          mouseover(d) {},
+          mouseout() {},
+          rectFill(d) {}
+        },
+        colLabel: {
+          text: d => d,
+          mouseover(d) {},
+          mouseout() {}
+        },
+        rowLabel: {
+          text: d => d,
+          mouseover(d) {},
+          mouseout() {}
+        },
+        legend: {
+          text: d => d,
+          mouseover(d) {},
+          mouseout() {}
+        },
+        yAxis: {
+          text: () => {}
+        },
+        xAxis: {
+          text: () => {}
+        }
       }
-    }
+    }]
   }
 */
 
@@ -108,7 +95,7 @@ export default function barsRenderer(holder) {
   const emptyObj = {}; //used to represent any empty cell
   let chart
   let chartTitle
-  let svg, mainG, seriesgrps, collabels;
+  let svg, mainG, series, collabels;
   // eslint-disable-next-line
   let yAxis, yTitle, xAxis, xTitle, xLine;
   // eslint-disable-next-line
@@ -117,7 +104,7 @@ export default function barsRenderer(holder) {
   // eslint-disable-next-line
   let legendDiv, legendRenderer;
   let defaults; //will have key values in init
-  let currSeriesGrps = [];
+  let currseries = [];
   let unstackedBarsPanes;
 
   function main(_chart, _unstackedBarsPanes) {
@@ -128,9 +115,9 @@ export default function barsRenderer(holder) {
     if (!svg) init();
 
     setDimensions();
-    currSeriesGrps.map(setIds);
-    chart.seriesgrps.map(setIds);
-    currSeriesGrps = chart.seriesgrps;
+    currseries.map(setIds);
+    chart.serieses.map(setIds);
+    currseries = chart.serieses;
 
     chartTitle.style("width", hm.svgw + "px")
       .html(chart.chartId);
@@ -139,10 +126,10 @@ export default function barsRenderer(holder) {
 
     mainG.attr("transform", "translate(" + hm.rowlabelw + ",0)");
 
-    const s = seriesgrps
+    const s = series
       .attr("transform", seriesGrpTransform)
       .selectAll(".bars-cell-grp")
-      .data(chart.seriesgrps, seriesBindKey);
+      .data(chart.serieses, seriesBindKey);
     s.exit().each(seriesExit);
     s.each(seriesUpdate);
     s.enter()
@@ -160,7 +147,7 @@ export default function barsRenderer(holder) {
       .append("g")
       .each(addColLabel);
 
-    currRects = seriesgrps.selectAll("rect");
+    currRects = series.selectAll("rect");
     currColTexts = collabels.selectAll("text");
 
     if (!hm.hidelegend) {
@@ -255,9 +242,9 @@ export default function barsRenderer(holder) {
       .on("mouseout.tphm2", colLabelMouseout)
       .on("click.tphm2", hm.handlers.colLabel.click);
 
-    seriesgrps = mainG
+    series = mainG
       .append("g")
-      .attr("class", "bars-seriesgrps")
+      .attr("class", "bars-series")
       .on("mouseover.tphm2", seriesMouseOver)
       .on("mouseout.tphm2", seriesMouseOut)
       .on("click", seriesBreakOut);
@@ -311,20 +298,20 @@ export default function barsRenderer(holder) {
     const ratio =
       hm.scale == "byChart"
         ? 1
-        : chart.maxGroupTotal / chart.maxAcrossCharts;
-    for (const series of chart.seriesgrps) {
-      if (series[0]) {
+        : chart.maxSeriesTotal / chart.maxAcrossCharts;
+    for (const series of chart.serieses) {
+      if (series.data[0]) {
         const min = hm.unit == "log" ? 1 : 0
-        const max = hm.unit == "pct" ? series[0].groupTotal
-          : hm.unit == "log" ? chart.maxGrpLogTotal
-          : chart.maxGroupTotal // maxAcrossCharts
+        const max = hm.unit == "pct" ? series.total
+          : hm.unit == "log" ? chart.maxSeriesLogTotal
+          : chart.maxSeriesTotal
 
         hm.h.yScale[series.seriesId] = scaleLinear()
           .domain([min, max / ratio])
           .range([0, hm.svgh - hm.collabelh])
 
         hm.h.yPrevBySeries[series.seriesId] = 0
-        for(const data of series) {
+        for(const data of series.data) {
           data.height = getRectHeight(data)
           data.y = getRectY(data)
         }
@@ -341,20 +328,20 @@ export default function barsRenderer(holder) {
     );
   }
 
-  function setIds(s) {
-    if (!('seriesId' in s)) {
-      s.map(c => {
-        if (c) s.seriesId = c[hm.serieskey];
+  function setIds(series) {
+    if (!('seriesId' in series)) {
+      series.data.map(data => {
+        if (data) series.seriesId = data[hm.serieskey];
       });
     }
-    s.map(d => {
+    series.data.map(d => {
       d.rowId = d[hm.rowkey];
       d.colId = d[hm.colkey];
     });
   }
 
-  function seriesBindKey(d) {
-    return d[0] ? d[0].seriesId : "";
+  function seriesBindKey(series) {
+    return series.seriesId
   }
 
   function cellKey(d) {
@@ -369,18 +356,16 @@ export default function barsRenderer(holder) {
     select(this).remove();
   }
 
-  function seriesUpdate(d) {
+  function seriesUpdate(series) {
     const g = select(this)
       .selectAll(".bars-cell")
-      .data(d, cellKey);
+      .data(series.data, cellKey);
 
     g.exit().each(function() {
-      //if (d.rowId=='Arrhythmias') console.log(d.colId)
       select(this).style("display", "none");
     });
 
     g.style("display", d => {
-      //if (d.rowId=='Arrhythmias') console.log(d.colId)
       return hm.cols.includes(d.colId) ? "block" : "none";
     });
 
@@ -398,12 +383,12 @@ export default function barsRenderer(holder) {
       .each(addCell);
   }
 
-  function seriesEnter(d) {
-    if (!d || !d[0]) return;
+  function seriesEnter(series) {
+    if (!series || !series.data.length) return;
     select(this)
       .attr("class", "bars-cell-grp")
       .selectAll("g")
-      .data(d, cellKey)
+      .data(series.data, cellKey)
       .enter()
       .append("g")
       .each(addCell);
@@ -571,11 +556,11 @@ export default function barsRenderer(holder) {
     const ratio =
       hm.scale == "byChart" || hm.clickedAge
         ? 1
-        : chart.maxGroupTotal / chart.maxAcrossCharts
+        : chart.maxSeriesTotal / chart.maxAcrossCharts
     const min = hm.unit == "log" ? 1 : 0
     const max = hm.unit == "pct" ? 100 
-      : hm.unit == "log" ? chart.maxGrpLogTotal
-      : chart.maxGroupTotal //maxAcrossCharts
+      : hm.unit == "log" ? chart.maxSeriesLogTotal
+      : chart.maxSeriesTotal //maxAcrossCharts
 
     yAxis.call(
       axisLeft(
