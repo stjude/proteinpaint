@@ -77,8 +77,8 @@ function getPj(settings) {
             data: [{
               dataId: "&vals.dataId",
               total: "+1"
-            }, "&vals.fullId"]
-          }, "&vals.chartSeriesId"]
+            }, "&vals.dataId"]
+          }, "&vals.seriesId"]
         }, "&vals.chartId"],
         refs: {
           //chartkey: "&vals.term0",
@@ -109,9 +109,7 @@ function getPj(settings) {
         return {
           chartId,
           seriesId,
-          dataId,
-          chartSeriesId: chartId + ";;" + seriesId,
-          fullId: chartId + ";;" + seriesId + ";;" + dataId,
+          dataId
         }
       },
       maxSeriesTotal(row, context) {

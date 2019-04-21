@@ -229,17 +229,24 @@ class ValFiller {
         this.Pj.processRow(t, e, o)
       }
     if ("string" == typeof s) {
-      const r = this.getFxn({ templateVal: s, errors: [] }, t.inheritedIgnore),
-        o = new Map()
-      return (t, s, i) => {
-        this.Pj.setResultContext("[]", s, i)
-        const n = []
-        r(t, 0, n)
-        const l = n[0]
-        if (o.has(l)) this.Pj.processRow(t, e, o.get(l))
+      const [r, o] = this.Pj.converter.default(
+        this.Pj,
+        Object.assign({}, { templateVal: s }),
+        t.inheritedIgnore,
+        s
+      )
+      if (o.aggr || o.skip || o.timing)
+        return void t.errors.push(["val", "INVALID-[{}]-KEY-OPTION-TOKEN"])
+      const i = Object.create(null)
+      return (t, s, o, n) => {
+        n.branch in i || (i[n.branch] = new Map())
+        const l = i[n.branch]
+        this.Pj.setResultContext("[]", s, o)
+        const c = r(t, n)
+        if (l.has(c)) this.Pj.processRow(t, e, l.get(c))
         else {
-          const r = this.Pj.setResultContext("{}", i[s].length, i[s])
-          o.set(l, r), this.Pj.processRow(t, e, r)
+          const r = this.Pj.setResultContext("{}", o[s].length, o[s])
+          this.Pj.processRow(t, e, r), l.set(c, r)
         }
       }
     }

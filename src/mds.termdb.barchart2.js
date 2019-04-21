@@ -26,12 +26,12 @@ export default class BarsApp{
     }, this.defaults, opts.settings)
     this.renderers = {}
     this.serverData = {}
-    this.handlers = this.getEventHandlers()
     this.terms = {
       term0: null,
       term1: this.opts.term1,
       term2: null
     }
+    this.handlers = this.getEventHandlers()
     this.controls = {}
     this.setControls()
   }
@@ -128,7 +128,8 @@ export default class BarsApp{
   }
 
   getEventHandlers() {
-    const self = this
+    const terms = this.terms
+    const s = this.settings
     return {
       svg: {
         mouseout: ()=>{
@@ -136,19 +137,24 @@ export default class BarsApp{
         },
       },
       series: {
-        mouseover(d) {
-          const html = d.seriesId + " " + d.dataId + 
+        mouseover(d) { 
+          const html = terms.term1.name +': ' + d.seriesId +
+            (!terms.term2 ? "" : "<br/>" + terms.term2.name +": "+ d.dataId) + 
             "<br/>Total: " + d.total + 
-            (!d.dataId ? "" : "<br/>Percentage: " + (100*d.total/d.groupTotal).toFixed(1) + "%");
+            (
+              !terms.term2 
+              ? "" 
+              : "<br/>Percentage: " + (100*d.total/d.seriesTotal).toFixed(1) + "% of " + d.seriesId
+            );
           tip.show(event.clientX, event.clientY).d.html(html);
         },
         mouseout: ()=>{
           tip.hide()
         },
         rectFill(d) {
-          return self.settings.term2 === ""
+          return s.term2 === ""
             ? "rgb(144, 23, 57)"
-            : rgb(self.settings.rows.length < 11 
+            : rgb(s.rows.length < 11 
               ? colors.c10(d.dataId)
               : colors.c20(d.dataId)
             ).toString().replace('rgb(','rgba(').replace(')', ',0.7)')
@@ -161,12 +167,12 @@ export default class BarsApp{
       legend: {},
       yAxis: {
         text: () => {
-          return this.settings.unit == "pct" ? "% of patients" : "# of patients"
+          return s.unit == "pct" ? "% of patients" : "# of patients"
         }
       },
       xAxis: {
         text: () => {
-          return this.settings.term1[0].toUpperCase() + this.settings.term1.slice(1)
+          return s.term1[0].toUpperCase() + s.term1.slice(1)
         }
       }
     }
