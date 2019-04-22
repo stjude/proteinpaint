@@ -45,6 +45,8 @@ export default class BarsApp{
       + '&term0=' + this.settings.term0
       + '&term1=' + this.settings.term1
       + '&term2=' + this.settings.term2
+      + '&ssid=' + this.settings.ssid
+      + '&mname=' + this.settings.mname
 
     if (this.serverData[dataName]) {
       this.render(this.serverData[dataName]) 
@@ -64,11 +66,21 @@ export default class BarsApp{
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
       this.settings.unit = "abs"
     }
+    if (this.settings.term2 == "genotype") {
+      this.terms.term2 = {name: this.settings.mname}
+    }
     this.updateControls()
   }
 
-  render(chartsData) { console.log(chartsData)
+  render(chartsData) {
     const self = this
+    self.seriesOrder = chartsData.charts[0].serieses
+      .sort((a,b) => !isNaN(a.seriesId)
+        ? +b.seriesId - +a.seriesId
+        : a.total - b.total
+      )
+      .map(d => d.seriesId)
+
     const charts = this.holder.selectAll('.pp-sbar-div')
       .data(chartsData.charts, chart => chart.chartId)
 
@@ -80,10 +92,16 @@ export default class BarsApp{
 
     charts.each(function(chart) {
       chart.settings = Object.assign(self.settings, chartsData.refs)
+      chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(b) - self.seriesOrder.indexOf(a))
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
-      chart.serieses.forEach(series => self.sortStacking(series, chart, chartsData))
+      const rows = chart.serieses
+        .find(series => series.seriesId == chart.settings.cols[0])
+        .data
+        .sort((a,b) => b.total - a.total)
+        .map(d => d.dataId)
+      chart.serieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
 
@@ -94,21 +112,31 @@ export default class BarsApp{
     .style("padding", "20px")
     .each(function(chart,i) {
       chart.settings = Object.assign(self.settings, chartsData.refs)
+      chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(b) - self.seriesOrder.indexOf(a))
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
-      self.renderers[chart.chartId] = barsRenderer(select(this))
       chart.maxSeriesLogTotal = 0
-      chart.serieses.forEach(series => self.sortStacking(series, chart, chartsData))
+      self.renderers[chart.chartId] = barsRenderer(select(this))
+      const rows = chart.serieses
+        .find(series => series.seriesId == chart.settings.cols[0])
+        .data
+        .sort((a,b) => b.total - a.total)
+        .map(d => d.dataId)
+      chart.serieses
+        //.sort((a,b) => b.total - a.total)
+        .forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
   }
 
-  sortStacking(series, chart, chartsData) { 
+  sortStacking(rows, series, chart, chartsData) {
     series.data.sort((a,b) => {
-      return a.dataId < b.dataId ? -1 : 1 
+      return rows.indexOf(a.dataId) < rows.indexOf(b.dataId) ? -1 : 1 
     });
     let seriesLogTotal = 0
     for(const result of series.data) {
+      result.colgrp = "-"
+      result.rowgrp = "-"
       result.chartId = chart.chartId
       result.seriesId = series.seriesId
       result.seriesTotal = series.total
@@ -264,7 +292,7 @@ export default class BarsApp{
       div: btn,
       elem: null,
       set: () => {
-        btn.text(this.settings[key] ? this.terms[key].name : label)
+        btn.text(this.terms[key] ? this.terms[key].name : label)
         closer.style('display', this.settings[key] ? 'inline-block' : 'none')
       }
     }

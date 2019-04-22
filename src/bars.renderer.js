@@ -114,6 +114,7 @@ export default function barsRenderer(holder) {
     if (_unstackedBarsPanes) unstackedBarsPanes = _unstackedBarsPanes;
     if (!svg) init();
 
+    const unadjustedColw = hm.colw
     setDimensions();
     currseries.map(setIds);
     chart.serieses.map(setIds);
@@ -158,6 +159,7 @@ export default function barsRenderer(holder) {
 
     hm.delay = 0.35 * hm.duration
     renderAxes(yAxis, yTitle, xTitle, hm);
+    hm.colw = unadjustedColw
   }
 
   function init() {
@@ -276,10 +278,11 @@ export default function barsRenderer(holder) {
       hm.cols.length * hm.colspace +
       (hm.colgrps.length - 1) * hm.colgspace +
       hm.rowlabelw +
-      hm.rowgrplabelw;
-    hm.colw = hm.clickedAge
-      ? 20
-      : Math.max(1, Math.round((svgw - spacing) / hm.cols.length));
+      hm.rowgrplabelw
+    hm.colw = Math.min(
+      Math.max(16, Math.round((svgw - spacing) / hm.cols.length)),
+      100
+    );
     hm.svgw =
       hm.cols.length * (hm.colw + hm.colspace) -
       hm.colspace +
@@ -419,7 +422,7 @@ export default function barsRenderer(holder) {
   }
 
   function seriesGrpTransform() {
-    let x = 5 + hm.colspace; //hm.rowheadleft ? hm.rowlabelw : hm.rowgrplabelw
+    let x = 1 + hm.colspace
     let y = hm.colheadtop ? hm.collabelh : hm.colgrplabelh;
     if (hm.legendontop) y += hm.legendh;
     return "translate(" + x + "," + y + ")";
@@ -427,24 +430,23 @@ export default function barsRenderer(holder) {
 
   function getRectHeight(d) {
     const total = hm.unit == "log" ? d.logTotal : d.total
-    const height = hm.h.yScale[d.seriesId](total) - hm.rowspace
-    hm.h.yPrevBySeries[d.seriesId] += height + hm.rowspace
-    // console.log(d.seriesId, total, height, hm.h.yPrevBySeries[d.seriesId])
-    return Math.max(1, height);
+    const height = hm.h.yScale[d.seriesId](total)
+    const rowspace = 0; //Math.round(height) > 1 ? hm.rowspace : 0;
+    hm.h.yPrevBySeries[d.seriesId] += height + rowspace
+    return Math.max(0, height - rowspace);
   }
 
-  function getRectX(d) {
-    const grpoffset = (hm.colgrps.indexOf(d[hm.colgrpkey]) - 1) * hm.colgspace;
-    return hm.cols.indexOf(d.colId) * (hm.colw + hm.colspace) + grpoffset;
+  function getRectX(d) { 
+    const grpoffset = hm.colgrps.indexOf(d[hm.colgrpkey]) * hm.colgspace
+    return hm.cols.indexOf(d.colId) * (hm.colw + hm.colspace) + grpoffset
   }
 
   function getRectY(d) {
-    // console.log(d.seriesId,  hm.h.yPrevBySeries[d.seriesId], hm.svgh - hm.collabelh - hm.h.yPrevBySeries[d.seriesId])
     return hm.svgh - hm.collabelh - hm.h.yPrevBySeries[d.seriesId]
   }
 
   function colLabelsTransform() {
-    let x = 5 + hm.colspace; //hm.rowheadleft ? hm.rowlabelw : hm.rowgrplabelw
+    let x = 5 + hm.colspace
     let y = hm.colheadtop
       ? /*hm.collabelh -*/ hm.borderwidth + 1
       : hm.svgh - hm.collabelh + 20;

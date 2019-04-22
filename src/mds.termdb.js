@@ -252,7 +252,6 @@ there may be other conditions to apply, e.g. patients carrying alt alleles of a 
 such conditions may be carried by obj
 
 */
-
 	const button = row.append('div')
 		.style('font-size','.8em')
 		.style('margin-left','20px')
@@ -296,13 +295,15 @@ such conditions may be carried by obj
 		if( term.graph.barchart.dom.loaded ) return
 
 		button.text('Loading')
-		
+
 		if (window.location.search.includes("termdb=2")) {
 			barsApp.main({
 				genome: obj.genome.name,
-				dslabel: obj.dslabel,
+				dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
 				term1: term.id,
-				term2: ''
+				term2: obj.modifier_ssid_barchart ? 'genotype' : '',
+				ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
+				mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : ''
 			})
 		} else {
 

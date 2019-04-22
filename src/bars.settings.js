@@ -1,7 +1,7 @@
 export default JSON.stringify({
     h: {},
     relayTiles: false,
-    svgw: 400,
+    svgw: 600,
     svgh: 400,
     unit: "abs", // abs | pct
     scale: "byChart", // byGroup | byChart

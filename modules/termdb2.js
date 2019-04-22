@@ -1,5 +1,9 @@
 const app = require('../app')
+const path = require('path')
+const utils = require('./utils')
+const serverconfig = __non_webpack_require__('./serverconfig.json')
 const Partjson = require('./partjson')
+
 const settings = {}
 const pj = getPj(settings)
 const joinFxns = {
@@ -53,7 +57,7 @@ if is a numeric term, also get distribution
   if(!ds.cohort) throw 'cohort missing from ds'
   const filename = 'files/hg38/sjlife/clinical/matrix'
   if(!ds.cohort['parsed-'+filename]) throw `the parsed cohort matrix=${filename} is missing`
-  setValFxns(q, tdb, ds) 
+  await setValFxns(q, tdb, ds) 
   Object.assign(settings, q)
   pj.refresh({data: ds.cohort['parsed-' + filename]})
   res.send(pj.tree.results)
@@ -105,11 +109,13 @@ function getPj(settings) {
       vals(row) {
         const chartId = joinFxns[settings.term0](row)
         const seriesId = joinFxns[settings.term1](row)
-        const dataId = joinFxns[settings.term2](row) 
-        return {
-          chartId,
-          seriesId,
-          dataId
+        const dataId = joinFxns[settings.term2](row)
+        if (chartId !== undefined && seriesId !== undefined && dataId !== undefined) {
+          return {
+            chartId,
+            seriesId,
+            dataId
+          }
         }
       },
       maxSeriesTotal(row, context) {
@@ -134,9 +140,16 @@ function getPj(settings) {
   })
 }
 
-function setValFxns(q, tdb, ds) {
+async function setValFxns(q, tdb, ds) {
   for(const term of ['term0', 'term1', 'term2']) {
     const key = q[term]
+    if (key == "genotype") {
+      if (!q.ssid) `missing ssid for genotype`
+      const bySample = await load_genotype_by_sample(q.ssid); console.log(Object.keys(bySample).slice(0,5))
+      const skey = ds.cohort.samplenamekey
+      joinFxns[key] = row => bySample[row[skey]]
+      continue
+    }
     if (key in joinFxns) continue
     const t = tdb.termjson.map.get(key)
     if (!t) throw `Unknown ${term}="${q[term]}"`
@@ -145,44 +158,49 @@ function setValFxns(q, tdb, ds) {
     if (t.iscategorical) {
       /*** TODO: handle unannotated categorical values?  ***/
       joinFxns[key] = row => row[key] 
+    } else if (t.isinteger || t.isfloat) {
+      return get_numeric_bin_name(key, t, ds)
+    } else {
+      throw "unsupported term binning"
     }
-    else {
-      const [ binconfig, values ] = termdb_get_numericbins( key, t, ds )
-      //console.log(key, binconfig, t)
-      joinFxns[key] = row => {
-        const v = row[key]
-        if( binconfig.unannotated && v == binconfig.unannotated._value ) {
-          /*** 
-            TODO: how are unannotated values
-            filtered on server and/or client-side?  
-          ***/
-          return binconfig.unannotated.label
-        }
+  }
+}
 
-        for(const b of binconfig.bins) {
-          if( b.startunbound ) {
-            if( b.stopinclusive && v <= b.stop  ) {
-              return b.label
-            }
-            if( !b.stopinclusive && v < b.stop ) {
-              return b.label
-            }
-          }
-          if( b.stopunbound ) {
-            if( b.startinclusive && v >= b.start  ) {
-              return b.label
-            }
-            if( !b.stopinclusive && v > b.start ) {
-              return b.label
-            }
-          }
-          if( b.startinclusive  && v <  b.start ) continue
-          if( !b.startinclusive && v <= b.start ) continue
-          if( b.stopinclusive   && v >  b.stop  ) continue
-          if( !b.stopinclusive  && v >= b.stop  ) continue
+function get_numeric_bin_name ( key, t, ds ) {
+  const [ binconfig, values ] = termdb_get_numericbins( key, t, ds )
+  //console.log(key, binconfig, t)
+  joinFxns[key] = row => {
+    const v = row[key]
+    if( binconfig.unannotated && v == binconfig.unannotated._value ) {
+      /*** 
+        TODO: how are unannotated values
+        filtered on server and/or client-side?  
+      ***/
+      return binconfig.unannotated.label
+    }
+
+    for(const b of binconfig.bins) {
+      if( b.startunbound ) {
+        if( b.stopinclusive && v <= b.stop  ) {
+          return b.label
+        }
+        if( !b.stopinclusive && v < b.stop ) {
           return b.label
         }
       }
+      if( b.stopunbound ) {
+        if( b.startinclusive && v >= b.start  ) {
+          return b.label
+        }
+        if( !b.stopinclusive && v > b.start ) {
+          return b.label
+        }
+      }
+      if( b.startinclusive  && v <  b.start ) continue
+      if( !b.startinclusive && v <= b.start ) continue
+      if( b.stopinclusive   && v >  b.stop  ) continue
+      if( !b.stopinclusive  && v >= b.stop  ) continue
+      return b.label
     }
   }
 }
@@ -306,3 +324,19 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
   return [ binconfig, values ]
 }
+
+async function load_genotype_by_sample ( id ) {
+/* id is the file name under cache/samples-by-genotype/
+*/
+  const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', id ) )
+  const bySample = Object.create(null)
+  for(const line of text.split('\n')) {
+    const [type, samplesStr] = line.split('\t')
+    const samples = samplesStr.split(",")
+    for(const sample of samples) {
+      bySample[sample] = type
+    }
+  }
+  return bySample
+}
+
