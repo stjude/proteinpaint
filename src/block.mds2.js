@@ -4,8 +4,8 @@ import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
+import {makeTk} from './block.mds2.makeTk'
 import * as mds2vcf from './block.mds2.vcf'
-import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
 
 
 
@@ -14,6 +14,7 @@ import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
 loadTk
 ********************** INTERNAL
 makeTk
+makeTk_parse_client_config
 loadTk_finish_closure
 addparameter_rangequery
 
@@ -67,58 +68,7 @@ export async function loadTk( tk, block ) {
 
 
 
-async function makeTk ( tk, block ) {
 
-	tk.tip2 = new client.Menu({padding:'0px'})
-
-	if( tk.dslabel ) {
-
-		// official dataset
-
-		tk.mds = block.genome.datasets[ tk.dslabel ]
-		if(!tk.mds) throw 'dataset not found for '+tk.dslabel
-		if(!tk.mds.track) throw 'mds.track{} missing: dataset not configured for mds2 track'
-		tk.name = tk.mds.track.name
-
-		// copy server-side configs
-		if( tk.mds.track.vcf ) {
-			// do not allow dom
-			tk.vcf = JSON.parse(JSON.stringify(tk.mds.track.vcf))
-		}
-		// TODO other file types
-
-	} else {
-
-		// custom
-		if(!tk.name) tk.name = 'Unamed'
-
-		if( tk.vcf ) {
-			await mds2vcf.getvcfheader_customtk( tk.vcf, block.genome )
-		}
-	}
-
-
-	tk.tklabel.text( tk.name )
-
-	if( tk.vcf ) {
-
-		// vcf row
-		tk.g_vcfrow = tk.glider.append('g')
-		tk.leftaxis_vcfrow = tk.gleft.append('g')
-
-		may_setup_numerical_axis( tk )
-	}
-
-	// TODO <g> for other file types
-
-	// config
-	tk.config_handle = block.maketkconfighandle(tk)
-		.on('click', ()=>{
-			configPanel(tk, block)
-		})
-
-	await mds2legend.init( tk, block )
-}
 
 
 
@@ -179,16 +129,24 @@ function addparameter_rangequery ( tk, block ) {
 	}
 
 	if( tk.vcf ) {
+
 		par.trigger_vcfbyrange = 1
-		if( tk.vcf.numerical_axis && tk.vcf.numerical_axis.in_use && tk.vcf.numerical_axis.info_keys) {
-			const key = tk.vcf.numerical_axis.info_keys.find( i=> i.in_use )
-			if( key.cutoff && key.cutoff.in_use ) {
-				// applying cutoff
-				par.numerical_info_cutoff = {
-					key: key.key,
-					side: key.cutoff.side,
-					value: key.cutoff.value
+
+		const nm = tk.vcf.numerical_axis
+		if( nm && nm.in_use ) {
+
+			if( nm.inuse_infokey ) {
+				const key = nm.info_keys.find( i=> i.in_use )
+				if( key.cutoff && key.cutoff.in_use ) {
+					// applying cutoff
+					par.numerical_info_cutoff = {
+						key: key.key,
+						side: key.cutoff.side,
+						value: key.cutoff.value
+					}
 				}
+			} else if( nm.inuse_termdb2groupAF ) {
+				par.termdb2groupAF = nm.termdb2groupAF
 			}
 		}
 	}

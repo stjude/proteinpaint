@@ -87,7 +87,8 @@ module.exports={
 						},
 					}
 				],
-				in_use: true // to use numerical axis by default
+				in_use: true, // to use numerical axis by default
+				//inuse_infokey: true
 			},
 			plot_mafcov: {
 				show_samplename: 1

@@ -15,9 +15,12 @@ render
 may_setup_numerical_axis
 ********************** INTERNAL
 numeric_make
+render_axis
 setup_axis_scale
 adjustview
 verticallabplace
+m_mouseover
+m_mouseout
 
 
 
@@ -229,73 +232,20 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 	}
 
 
-	// 1: axis
-	tk.leftaxis_vcfrow
-		.attr('transform','translate(-'+(dotwidth/2)+','+(nm.toplabelheight+nm.maxradius)+')')
-		.selectAll('*')
-		.remove()
-	{
-		// axis is inverse of numscale
-		const thisscale = scaleLinear().domain([nm.minvalue, nm.maxvalue]).range([nm.axisheight, 0])
-		const thisaxis  = axisLeft().scale(thisscale).ticks(4)
-		if( nm.isinteger ) {
-			thisaxis.tickFormat(d3format('d'))
-			if(nm.maxvalue - nm.minvalue < 3) {
-				/*
-				must do this to avoid axis showing redundant labels that doesn't make sense
-				e.g. -1 -2 -2
-				*/
-				thisaxis.ticks( nm.maxvalue - nm.minvalue )
-			}
-		}
-		client.axisstyle({
-			axis:tk.leftaxis_vcfrow.call( thisaxis),
-			showline:true,
-			fontsize:dotwidth
-		})
-
-		if(nm.minvalue == nm.maxvalue) {
-			tk.leftaxis_vcfrow.append('text')
-				.attr('text-anchor','end')
-				.attr('font-size',dotwidth)
-				.attr('dominant-baseline','central')
-				.attr('x', block.tkleftlabel_xshift)
-				.attr('y',nm.axisheight)
-				.text(nm.minvalue)
-				.attr('fill','black')
-		}
-		// axis label, text must wrap
-		{
-			// read the max tick label width first
-			let maxw=0
-			tk.leftaxis_vcfrow.selectAll('text')
-				.each(function(){
-					maxw=Math.max(maxw,this.getBBox().width)
-				})
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw+15)
-
-			if( nm.label ) {
-				const lst = nm.label.split(' ')
-				const y=(nm.axisheight-lst.length*(dotwidth+1))/2
-				let maxlabelw=0
-				lst.forEach((text,i)=>{
-					tk.leftaxis_vcfrow.append('text')
-						.attr('fill','black')
-						.attr('font-size',dotwidth)
-						.attr('dominant-baseline','central')
-						.attr('text-anchor','end')
-						.attr('y', y+(dotwidth+1)*i)
-						.attr('x', -(maxw+15))
-						.text(text)
-						.each(function(){
-							maxlabelw = Math.max( maxlabelw, this.getBBox().width+15+maxw)
-						})
-				})
-				tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
-			}
-
-		}
+	render_axis( _g, tk, nm, block )
+	/*
+	if( nm.inuse_termdb2groupAF ) {
+		// show horizontal line at 0
+		_g
+			.append('line')
+			//.attr('y1', nm.toplabelheight+nm.maxradius+ numscale(0) )
+			.attr('y1',  numscale(0) )
+			.attr('y2', nm.toplabelheight+nm.maxradius+ numscale(0) )
+			.attr('x2', r.width )
+			.attr('stroke','black')
+			.attr('shape-rendering','crispEdges')
 	}
+	*/
 
 
 	_g.append('line')
@@ -660,9 +610,6 @@ function m_mouseover( m, nm, tk ) {
 		d3select(m.textlabel).attr('font-size',m._labfontsize*1.1)
 	}
 
-	if(nm.showsamplebar) return
-	if(nm.showgenotypebyvalue) return
-
 	// pica moves to center of m disc
 	tk.pica.g.attr('transform','translate('+(m.aa.x+m.xoff)+','+(nm.toplabelheight+nm.maxradius+nm.axisheight-m._y)+')')
 
@@ -671,29 +618,31 @@ function m_mouseover( m, nm, tk ) {
 	const fontsize = m._labfontsize || 13 // _labfontsize is undefined if this m has no lab
 	const color = vcf_m_color(m, tk)
 
-	let textw=0,
-		showlab=false
-	// measure text w for value
-	tk.pica.g.append('text')
+	const words = []
+	if( nm.inuse_termdb2groupAF ) {
+		// may add label
+		words.push( m.AF2group[0] )
+		words.push( m.AF2group[1] )
+	} else if( nm.inuse_infokey ) {
+		words.push( m._v )
+	}
+	if(!m.labattop && !m.labatbottom) {
+		words.push( m.mname )
+	}
+
+	let textw=0
+		//showlab=false
+	for(const w of words) {
+		tk.pica.g.append('text')
 		.attr('font-size',fontsize)
 		.attr('font-family',client.font)
-		.text(m._v)
+		.text( w )
 		.each(function(){
-			textw=this.getBBox().width
+			textw = Math.max( textw, this.getBBox().width )
 		})
 		.remove()
-	if(!m.labattop && !m.labatbottom) {
-		// pica also show label
-		showlab=true
-		tk.pica.g.append('text')
-			.attr('font-size',fontsize)
-			.attr('font-family',client.font)
-			.text(m.mname)
-			.each(function(){
-				textw=Math.max(textw,this.getBBox().width)
-			})
-			.remove()
 	}
+
 	const boxw = boxpad*2+textw
 	let boxx,
 		linex1,
@@ -709,12 +658,14 @@ function m_mouseover( m, nm, tk ) {
 		boxx = linex1-boxw
 	}
 
+	const boxh = fontsize * words.length
+
 	// bg box for white rim
 	tk.pica.g.append('rect')
 		.attr('x',boxx-2)
-		.attr('y', -2-boxpad-( showlab ? fontsize : fontsize/2))
+		.attr('y', -2-boxpad-boxh/2 )
 		.attr('width',4+boxw)
-		.attr('height', 4+boxpad*2+fontsize*(showlab?2:1))
+		.attr('height', 4+boxpad*2 + boxh )
 		.attr('fill','white')
 	tk.pica.g.append('line')
 		.attr('x1',linex1)
@@ -729,31 +680,25 @@ function m_mouseover( m, nm, tk ) {
 		.attr('shape-rendering','crispEdges')
 	tk.pica.g.append('rect')
 		.attr('x',boxx)
-		.attr('y', -boxpad-( showlab ? fontsize : fontsize/2))
+		.attr('y', -boxpad- boxh/2 )
 		.attr('width',boxw)
-		.attr('height', boxpad*2+fontsize*(showlab?2:1))
+		.attr('height', boxpad*2+ boxh )
 		.attr('fill','none')
 		.attr('stroke',color)
 		.attr('shape-rendering','crispEdges')
-	tk.pica.g.append('text')
-		.text(m._v)
+	
+	let y = ( fontsize - boxh )/2
+	for(const w of words ) {
+		tk.pica.g.append('text')
+		.text( w )
 		.attr('text-anchor', onleft ? 'end' : 'start')
 		.attr('font-size',fontsize)
 		.attr('font-family',client.font)
 		.attr('x', onleft ? linex1-boxpad : boxx+boxpad)
-		.attr('y', showlab ? -fontsize/2 : 0)
+		.attr('y', y )
 		.attr('fill',color)
 		.attr('dominant-baseline','central')
-	if(showlab) {
-		tk.pica.g.append('text')
-			.text(m.mname)
-			.attr('text-anchor', onleft ? 'end' : 'start')
-			.attr('font-size',fontsize)
-			.attr('font-family',client.font)
-			.attr('x', onleft ? linex1-boxpad : boxx+boxpad)
-			.attr('y', showlab ? fontsize/2 : 0)
-			.attr('fill',color)
-			.attr('dominant-baseline','central')
+		y += fontsize
 	}
 }
 
@@ -925,19 +870,32 @@ decide following things about the y axis:
 	nm.minvalue = 0
 	nm.maxvalue = 0
 
-	const info_key = nm.info_keys.find( i=> i.in_use ).key // setup_numerical_axis guarantee this is valid
+	let info_key,
+		use_altinfo,
+		use_AF2group
 
-	// if the INFO is A, apply to m.altinfo, else, to m.info
-	const usealtinfo = tk.vcf.info[ info_key ].Number == 'A'
+	if( nm.inuse_termdb2groupAF ) {
+		use_AF2group = true
+	} else if( nm.inuse_infokey ) {
+		info_key = nm.info_keys.find( i=> i.in_use ).key // setup_numerical_axis guarantee this is valid
+		// if the INFO is A, apply to m.altinfo, else, to m.info
+		use_altinfo = tk.vcf.info[ info_key ].Number == 'A'
+	}
 
 	for(const m of r.variants) {
 
 		let v = null
 
-		if( usealtinfo ) {
+		if( use_AF2group ) {
+
+			v = m.AF2group[0] - m.AF2group[1]
+
+		} else if( use_altinfo ) {
+
 			if( m.altinfo ) {
 				v = m.altinfo[ info_key ]
 			}
+
 		} else {
 			if( m.info ) {
 				v = m.info[ info_key ]
@@ -959,46 +917,150 @@ decide following things about the y axis:
 
 
 export function may_setup_numerical_axis ( tk ) {
+/*
+to validate the numerical axis info field setting
+and set the .isinteger and .label of nm
+
+call this at initiating the track
+and switching numeric axis category
+*/
+
+	if(!tk.vcf) return
+
 	const nm = tk.vcf.numerical_axis
 	if( !nm.in_use ) {
-		// not using numerical axis, do not set up
+		// not in use, do not set up
 		return
 	}
-		
-	/*
-	to validate the numerical axis info field setting
-	and set the .isinteger and .label of nm
-
-	call this at initiating the track
-	and switching numeric axis category
-	*/
-	if( !nm.info_keys ) throw 'numerical_axis.info_keys[] missing'
-	if(!Array.isArray(nm.info_keys)) throw 'numerical_axis.info_keys[] is not an array'
-	if(nm.info_keys.length==0) throw 'numerical_axis.info_keys[] array is empty'
-
-	let info_element = nm.info_keys.find( i=> i.in_use ) // which element from tk.vcf.numerical_axis.info_keys is in use
-	if( !info_element ) {
-		info_element = nm.info_keys[0]
-		if( !info_element ) throw 'numerical_axis.info_keys is empty array'
-		info_element.in_use = true
-	}
-
-	if(!tk.vcf.info) throw 'VCF file has no INFO fields'
-	const info_field = tk.vcf.info[ info_element.key ]
-	if( !info_field ) throw 'unknown INFO field for numerical axis: '+info_element.key
 
 	delete nm.isinteger
 	delete nm.label
 
-	if( tk.mds && tk.mds.mutationAttribute ) {
-		const a = tk.mds.mutationAttribute.attributes[ info_element.key ]
-		if( a ) {
-			if( a.isinteger ) nm.isinteger = true
-			nm.label = a.label
+	if( nm.info_keys ) {
+
+		// info keys
+		if(!Array.isArray(nm.info_keys)) throw 'numerical_axis.info_keys[] is not an array'
+		if(nm.info_keys.length==0) throw 'numerical_axis.info_keys[] array is empty'
+
+		let info_element = nm.info_keys.find( i=> i.in_use ) // which element from tk.vcf.numerical_axis.info_keys is in use
+		if( !info_element ) {
+			info_element = nm.info_keys[0]
+			if( !info_element ) throw 'numerical_axis.info_keys is empty array'
+			info_element.in_use = true
+		}
+
+		if(!tk.vcf.info) throw 'VCF file has no INFO fields'
+		const info_field = tk.vcf.info[ info_element.key ]
+		if( !info_field ) throw 'unknown INFO field for numerical axis: '+info_element.key
+
+		if( tk.mds && tk.mds.mutationAttribute ) {
+			const a = tk.mds.mutationAttribute.attributes[ info_element.key ]
+			if( a ) {
+				if( a.isinteger ) nm.isinteger = true
+				nm.label = a.label
+			}
+		}
+		if( !nm.label ) {
+			if( info_field.Type=='Integer' ) nm.isinteger=true
+			nm.label = info_element.key
 		}
 	}
-	if( !nm.label ) {
-		if( info_field.Type=='Integer' ) nm.isinteger=true
-		nm.label = info_element.key
+
+	if( nm.termdb2groupAF ) {
+		const g = nm.termdb2groupAF
+		if(!g.group1) throw '.group1{} missing'
+		if(!g.group1.terms) throw '.group1.terms[] missing'
+		if(!g.group2) throw '.group2{} missing'
+		if(!g.group2.terms) throw '.group2.terms[] missing'
+		// TODO more valid
 	}
+
+	// which option to use
+	if( !nm.info_keys && !nm.termdb2groupAF ) throw 'no options for numerical axis'
+
+	if( nm.inuse_infokey ) {
+		if( !nm.info_keys ) throw '.info_keys[] missing when inuse_infokey is true'
+	} else if( nm.inuse_termdb2groupAF ) {
+		if( !nm.termdb2groupAF ) throw '.termdb2groupAF missing when inuse_termdb2groupAF is true'
+	} else {
+		// no option in use, use one by default
+		if( nm.termdb2groupAF ) {
+			nm.inuse_termdb2groupAF = true
+		} else if ( nm.info_keys ) {
+			nm.inuse_infokey = true
+		}
+	}
+}
+
+
+
+
+function render_axis ( _g, tk, nm, block ) {
+/*
+render axis
+*/
+	tk.leftaxis_vcfrow
+		.attr('transform','translate(-'+(nm.dotwidth/2)+','+(nm.toplabelheight+nm.maxradius)+')')
+		.selectAll('*')
+		.remove()
+
+	// axis is inverse of numscale
+	const thisscale = scaleLinear().domain([nm.minvalue, nm.maxvalue]).range([nm.axisheight, 0])
+	const thisaxis  = axisLeft().scale(thisscale).ticks(4)
+	if( nm.isinteger ) {
+		thisaxis.tickFormat(d3format('d'))
+		if(nm.maxvalue - nm.minvalue < 3) {
+			/*
+			must do this to avoid axis showing redundant labels that doesn't make sense
+			e.g. -1 -2 -2
+			*/
+			thisaxis.ticks( nm.maxvalue - nm.minvalue )
+		}
+	}
+	client.axisstyle({
+		axis:tk.leftaxis_vcfrow.call( thisaxis),
+		showline:true,
+		fontsize: nm.dotwidth
+	})
+
+	if(nm.minvalue == nm.maxvalue) {
+		tk.leftaxis_vcfrow.append('text')
+			.attr('text-anchor','end')
+			.attr('font-size', nm.dotwidth)
+			.attr('dominant-baseline','central')
+			.attr('x', block.tkleftlabel_xshift)
+			.attr('y',nm.axisheight)
+			.text(nm.minvalue)
+			.attr('fill','black')
+	}
+
+	// axis label, text must wrap
+	// read the max tick label width first
+	let maxw=0
+	tk.leftaxis_vcfrow.selectAll('text')
+		.each(function(){
+			maxw=Math.max(maxw,this.getBBox().width)
+		})
+	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw+15)
+
+	if( nm.label ) {
+		const lst = nm.label.split(' ')
+		const y=(nm.axisheight-lst.length*( nm.dotwidth+1))/2
+		let maxlabelw=0
+		lst.forEach((text,i)=>{
+			tk.leftaxis_vcfrow.append('text')
+				.attr('fill','black')
+				.attr('font-size', nm.dotwidth)
+				.attr('dominant-baseline','central')
+				.attr('text-anchor','end')
+				.attr('y', y+(nm.dotwidth+1)*i)
+				.attr('x', -(maxw+15))
+				.text(text)
+				.each(function(){
+					maxlabelw = Math.max( maxlabelw, this.getBBox().width+15+maxw)
+				})
+		})
+		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
+	}
+
 }

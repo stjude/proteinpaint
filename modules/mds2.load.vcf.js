@@ -11,6 +11,8 @@ handle_vcfbyrange
 handle_ssidbyonem
 handle_getcsq
 ********************** INTERNAL
+parseline_termdb2groupAF
+parseline_termdb2groupAF_onegroup
 */
 
 
@@ -104,21 +106,19 @@ ds is either official or custom
 	}
 
 	// different modes of query
-	let mode_range_variantonly = true
-	let mode_singevariant = false
+	const [
+		mode_range_variantonly,
+		slicecolumnindex,
+		mode_range_termdb2groupAF,
+		columnidx_group1,
+		columnidx_group2
+		] = vcf_getquerymode( q, vcftk, ds )
 
-	let slicecolumnindex = null
-	/* in case of sample filtering
-	from tk0.samples[], decide samples to keep
-	update that to vcftk.samples
-	and get the column indices for these samples for slicing
-	*/
+	//console.log(columnidx_group1.length, columnidx_group2.length)
 
-
-	if( mode_range_variantonly ) {
+	if( mode_range_variantonly || mode_range_termdb2groupAF ) {
 		query_vcf_applymode_variantonly( vcftk, q )
 	}
-
 
 	for(const r of q.rglst) {
 
@@ -133,9 +133,10 @@ ds is either official or custom
 
 		await utils.get_lines_tabix( [ tk0.file, coord ], tk0.dir, (line)=>{
 
+			let mlst
+
 			if( mode_range_variantonly ) {
 
-				let mlst
 				if( slicecolumnindex ) {
 					// TODO do slicing, parse reduced line with samples, and decide if the variant exist in the sliced samples
 				} else {
@@ -144,59 +145,62 @@ ds is either official or custom
 					const [e,mlst2,e2] = vcf.vcfparseline( newline, vcftk )
 					mlst = mlst2
 				}
+			} else if( mode_range_termdb2groupAF ) {
 
-				if( mlst ) {
-					for(const m of mlst) {
+				mlst = parseline_termdb2groupAF( line, columnidx_group1, columnidx_group2, vcftk )
+			}
 
-						common.vcfcopymclass( m, mockblock )
+			if( mlst ) {
+				for(const m of mlst) {
 
-						// m.class is decided, add to counter
-						result.mclass2count[m.class] = ( result.mclass2count[m.class] || 0 ) + 1
+					common.vcfcopymclass( m, mockblock )
 
-						// if to drop this variant
-						if( q.hidden_mclass && q.hidden_mclass.has(m.class) ) {
-							continue
-						}
+					// m.class is decided, add to counter
+					result.mclass2count[m.class] = ( result.mclass2count[m.class] || 0 ) + 1
 
-						if( q.numerical_info_cutoff ) {
-							let v
-							if( m.info ) {
-								v = m.info[ q.numerical_info_cutoff.key ]
-							}
-							if( !Number.isFinite( v )) {
-								if( m.altinfo ) {
-									v = m.altinfo[ q.numerical_info_cutoff.key ]
-								}
-							}
-							if(Number.isFinite( v )) {
-								if( q.numerical_info_cutoff.side == '<' ) {
-									if( v >= q.numerical_info_cutoff.value ) return
-								} else if( q.numerical_info_cutoff.side == '<=' ) {
-									if( v > q.numerical_info_cutoff.value ) return
-								} else if( q.numerical_info_cutoff.side == '>' ) {
-									if( v <= q.numerical_info_cutoff.value ) return
-								} else {
-									if( v < q.numerical_info_cutoff.value ) return
-								}
-							} else {
-								return
-							}
-						}
-
-						if( m.csq ) {
-							// not to release the whole csq, only to show number of interpretations
-							m.csq_count = m.csq.length
-							delete m.csq
-						}
-						delete m._m
-						delete m.vcf_ID
-						delete m.sampledata
-
-						if( tk0.nochr ) m.chr = 'chr'+m.chr
-
-
-						r.variants.push(m)
+					// if to drop this variant
+					if( q.hidden_mclass && q.hidden_mclass.has(m.class) ) {
+						continue
 					}
+
+					if( q.numerical_info_cutoff ) {
+						let v
+						if( m.info ) {
+							v = m.info[ q.numerical_info_cutoff.key ]
+						}
+						if( !Number.isFinite( v )) {
+							if( m.altinfo ) {
+								v = m.altinfo[ q.numerical_info_cutoff.key ]
+							}
+						}
+						if(Number.isFinite( v )) {
+							if( q.numerical_info_cutoff.side == '<' ) {
+								if( v >= q.numerical_info_cutoff.value ) return
+							} else if( q.numerical_info_cutoff.side == '<=' ) {
+								if( v > q.numerical_info_cutoff.value ) return
+							} else if( q.numerical_info_cutoff.side == '>' ) {
+								if( v <= q.numerical_info_cutoff.value ) return
+							} else {
+								if( v < q.numerical_info_cutoff.value ) return
+							}
+						} else {
+							return
+						}
+					}
+
+					if( m.csq ) {
+						// not to release the whole csq, only to show number of interpretations
+						m.csq_count = m.csq.length
+						delete m.csq
+					}
+					delete m._m
+					delete m.vcf_ID
+					delete m.sampledata
+
+					if( tk0.nochr ) m.chr = 'chr'+m.chr
+
+
+					r.variants.push(m)
 				}
 			}
 		})
@@ -205,6 +209,66 @@ ds is either official or custom
 	vcfbyrange_collect_result( result, q.rglst )
 }
 
+
+
+function vcf_getquerymode ( q, vcftk, ds ) {
+
+	if( q.termdb2groupAF ) {
+		return [
+			false,
+			false,
+			true,
+			vcf_getcolumnidx_termdbgroup( q.termdb2groupAF.group1.terms, ds, vcftk.samples ),
+			vcf_getcolumnidx_termdbgroup( q.termdb2groupAF.group2.terms, ds, vcftk.samples )
+		]
+	}
+
+	return [
+		true,
+		false,
+		false,
+		false,
+		false
+	]
+	/*
+	slicecolumnindex
+	in case of sample filtering
+	from tk0.samples[], decide samples to keep
+	update that to vcftk.samples
+	and get the column indices for these samples for slicing
+	*/
+}
+
+
+
+function vcf_getcolumnidx_termdbgroup ( terms, ds, vcfsamples ) {
+/*
+a sample must meet all term conditions
+*/
+	const usesampleidx = []
+	for( const [i, sample] of vcfsamples.entries() ) {
+		const sanno = ds.cohort.annotation[ sample.name ]
+		if(!sanno) continue
+		
+		let match=true
+		for(const t of terms ) {
+			const t0 = ds.cohort.termdb.termjson.map.get( t.term_id )
+			if( !t0 ) {
+				continue
+			}
+			if( t0.iscategorical ) {
+				if( sanno[ t.term_id ] != t.value ) {
+					match=false
+					break
+				}
+			}
+		}
+		if(match) {
+			usesampleidx.push( i )
+		}
+	}
+	return usesampleidx
+}
 
 
 
@@ -301,4 +365,76 @@ get csq from one variant
 			}
 		}
 	})
+}
+
+
+
+
+
+function parseline_termdb2groupAF ( line, columnidx_group1, columnidx_group2, vcftk ) {
+	const l = line.split('\t')
+	const samples = vcftk.samples
+	delete vcftk.samples
+
+	const alleles = [ l[3], ...l[4].split(',') ]
+
+	const g1 = parseline_termdb2groupAF_onegroup( alleles, l, columnidx_group1 )
+	const g2 = parseline_termdb2groupAF_onegroup( alleles, l, columnidx_group2 )
+	if( g1.allref && g2.allref ) {
+		return
+	}
+
+	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
+
+	for(const m of mlst) {
+		let g1AF,
+			g2AF
+		{
+			const ref = g1.alleles.get( m.ref ) || 0
+			const alt = g1.alleles.get( m.alt ) || 0
+			g1AF = (ref+alt==0) ? 0 : alt/(ref+alt)
+		}
+		{
+			const ref = g2.alleles.get( m.ref ) || 0
+			const alt = g2.alleles.get( m.alt ) || 0
+			g2AF = (ref+alt==0) ? 0 : alt/(ref+alt)
+		}
+		m.AF2group = [ g1AF, g2AF ]
+	}
+
+	vcftk.samples = samples
+
+	return mlst
+}
+
+
+
+function parseline_termdb2groupAF_onegroup ( alleles, l, columnidx ) {
+	let allref = true
+
+	const allele2count = new Map()
+	// k: allele, v: count
+	for(const a of alleles) {
+		allele2count.set( a, 0 )
+	}
+
+	for(const i of columnidx ) {
+		if(!l[9+i]) continue
+		const gt = l[9+i].split(':')[0]
+		if(gt=='.') continue
+		gt.split( gt.indexOf('/')==-1 ? '|' : '/' ).forEach( s=> {
+			const i = Number.parseInt(s)
+			if(Number.isNaN(i)) return
+			const allele = alleles[ i ]
+			if(!allele) return
+			if(i!=0) {
+				allref = false
+			}
+			allele2count.set( allele, 1 + allele2count.get(allele) )
+		})
+	}
+	return {
+		allref,
+		alleles: allele2count
+	}
 }
