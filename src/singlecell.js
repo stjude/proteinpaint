@@ -806,18 +806,19 @@ function make_boxplot(data, obj, colidx){
 
 			if(boxplot.density){
 
+				const density_max = Math.max(...boxplot.density)
 				const line = d3.line()
 					.x(function(d, j) { return x_scale(j*data.maxexpvalue/boxplot.density.length) }) // set the x values for the line generator
-					.y(function(d) { return (y_scale(d / boxplot.numberofcells)/2) }) // set the y values for the line generator 
+					.y(function(d) { return (y_scale(d / density_max)/2) }) // set the y values for the line generator 
 					.curve(d3.curveMonotoneX) // apply smoothing to the line
 
 				const area = d3.area()
 					.x(function(d,j) { return x_scale(j*data.maxexpvalue/boxplot.density.length) })
 					.y0(function(d) { 
-						const temp =  y_scale(d / boxplot.numberofcells)/2 
+						const temp =  y_scale(d / density_max)/2 
 						return box_height - temp
 					})
-					.y1(function(d) { return (y_scale(d / boxplot.numberofcells)/2) })
+					.y1(function(d) { return (y_scale(d / density_max)/2) })
 					.curve(d3.curveMonotoneX)
 
 				g.append('path')
