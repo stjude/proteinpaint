@@ -930,17 +930,18 @@ function make_heatmap(data, obj, colidx){
 	const max_mean = Math.max(...means)
 
 	let categories = []
-	for(const category of data.gene_heatmap[0].heatmap) categories.push(category.category)
+	for(const category of data.gene_heatmap[0].heatmap) categories.push(category.category + ' (' + category.numberofcells+ ')')
 	
 	let box_height = 20,
 	box_width = 80,
 	barspace = 2, 
-	gene_lable_height = 30
+	gene_lable_height = 30,
+	legend_width = 60
 
 	const label_width = get_max_labelwidth(data.gene_heatmap[0].heatmap, svg)
 
 	const svg_height = ((box_height + barspace) * categories.length) + gene_lable_height
-	const svg_width = ((box_width + barspace) * gene_list.length) + label_width + 20
+	const svg_width = ((box_width + barspace) * gene_list.length) + label_width + legend_width + 20
 
 	svg.transition()
 		.attr('width', svg_width)
@@ -975,8 +976,14 @@ function make_heatmap(data, obj, colidx){
 		.interpolator(d3.interpolatePlasma)
 		.domain([0,max_mean])
 
-	const div = pane.pane.append("div")   
-		.attr("class", "tooltip")               
+	const div = pane.pane.append("div") 
+		.style('position','absolute')  
+		.attr("class", "tooltip")
+		.style("background-color", "white")
+		.style("border", "solid")
+		.style("border-width", "2px")
+		.style("border-radius", "5px")
+		.style("padding", "5px")               
 		.style("opacity", 0)
 
 	data.gene_heatmap.forEach( (gene, i) => {
@@ -988,7 +995,7 @@ function make_heatmap(data, obj, colidx){
 			
 			g.append('rect')
 				.attr("x", x_scale(gene.genename))
-				.attr("y", y_scale(category.category))
+				.attr("y", y_scale(category.category + ' (' + category.numberofcells+ ')'))
 				.attr("width", x_scale.bandwidth() )
 				.attr("height", y_scale.bandwidth() )
 				.style("fill", myColor(category.mean))
@@ -1002,9 +1009,9 @@ function make_heatmap(data, obj, colidx){
 						.duration(200)      
 						.style("opacity", .9)
 
-					div.html("<b> Mean Expression: "+category.mean+"</b>")  
-						.style("left", (d3.event.pageX + 3) + "px")     
-						.style("top", (d3.event.pageY - 55) + "px")   
+					div.html("Mean Expression: "+category.mean)  
+						.style("left", (d3.mouse(this)[0]+70) + "px")
+						.style("top", (d3.mouse(this)[1]+20) + "px")
 					})                  
 				.on("mouseout", function(d) {  
 
@@ -1015,6 +1022,28 @@ function make_heatmap(data, obj, colidx){
 
 		})
 	})
+	const legend_data = myColor.ticks(10).reverse()
+	legend_data.unshift(max_mean.toFixed(2))
+
+	// Add a legend for the color values
+	const legend = svg.selectAll('.legend')
+		.data(legend_data)
+   	.enter().append('g')
+		.attr('class', 'legend')
+		.attr('transform', function(d, i) { return 'translate(' + (svg_width - legend_width) + ',' + (30 + i * 20) + ')' })
+
+	legend.append('rect')
+		.attr('width', 20)
+		.attr('height', 20)
+		.style('fill', myColor)
+		.style("opacity", 0.8)
+
+	legend.append('text')
+		.attr('x', 26)
+		.attr('y', 10)
+		.attr('dy', '.35em')
+		.text(String)
+		
 }
 
 function get_max_labelwidth ( items, svg ) {
