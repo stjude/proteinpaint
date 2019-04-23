@@ -1,4 +1,3 @@
-const app = require('../app')
 const path = require('path')
 const utils = require('./utils')
 const serverconfig = __non_webpack_require__('./serverconfig.json')
@@ -18,7 +17,6 @@ handle_request_closure
 
 exports.handle_request_closure = ( genomes ) => {
   return async (req, res) => {
-    //if( app.reqbodyisinvalidjson(req,res) ) return
     const q = req.query
 
     try {

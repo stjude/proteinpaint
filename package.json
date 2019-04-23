@@ -13,7 +13,8 @@
     "public-prod": "./scripts/deploy.sh public-prod",
     "old-prod": "./scripts/deploy.sh old-prod",
     "irt": "./scripts/deploy.sh internal-stage",
-    "test": "karma start karma.conf.js",
+    "test": "tape test/**/*.route.spec.js",
+    "unit": "webpack --config=scripts/webpack.config.test.js && tape test/**/*.unit.spec.js",
     "deliver": "sh utils/deliver.sh",
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset",
     "build-server": "webpack --config=webpack.config.server.js --mode=production"
@@ -36,6 +37,7 @@
     "karma-webpack": "^1.8.0",
     "nodemon": "^1.18.10",
     "style-loader": "^0.13.1",
+    "tape": "^4.10.1",
     "uglify-es": "^3.3.9",
     "uglify-js": "^3.4.6",
     "uglifyjs-webpack-plugin": "^1.2.7",
