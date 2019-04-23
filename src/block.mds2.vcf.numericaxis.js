@@ -1,4 +1,5 @@
 import {select as d3select,event as d3event} from 'd3-selection'
+import {format as d3format} from 'd3-format'
 import {axisTop, axisLeft, axisRight} from 'd3-axis'
 import {scaleLinear} from 'd3-scale'
 import * as common from './common'
@@ -13,6 +14,8 @@ adapted from legacy code
 ********************** EXPORTED
 render
 may_setup_numerical_axis
+get_axis_label
+get_axis_label_termdb2groupAF
 ********************** INTERNAL
 numeric_make
 render_axis
@@ -936,6 +939,22 @@ and switching numeric axis category
 	delete nm.isinteger
 	delete nm.label
 
+	// which option to use
+	if( !nm.info_keys && !nm.termdb2groupAF ) throw 'no options for numerical axis'
+
+	if( nm.inuse_infokey ) {
+		if( !nm.info_keys ) throw '.info_keys[] missing when inuse_infokey is true'
+	} else if( nm.inuse_termdb2groupAF ) {
+		if( !nm.termdb2groupAF ) throw '.termdb2groupAF missing when inuse_termdb2groupAF is true'
+	} else {
+		// no option in use, use one by default
+		if( nm.termdb2groupAF ) {
+			nm.inuse_termdb2groupAF = true
+		} else if ( nm.info_keys ) {
+			nm.inuse_infokey = true
+		}
+	}
+
 	if( nm.info_keys ) {
 
 		// info keys
@@ -953,16 +972,18 @@ and switching numeric axis category
 		const info_field = tk.vcf.info[ info_element.key ]
 		if( !info_field ) throw 'unknown INFO field for numerical axis: '+info_element.key
 
-		if( tk.mds && tk.mds.mutationAttribute ) {
-			const a = tk.mds.mutationAttribute.attributes[ info_element.key ]
-			if( a ) {
-				if( a.isinteger ) nm.isinteger = true
-				nm.label = a.label
+		if( nm.inuse_infokey ) {
+			if( tk.mds && tk.mds.mutationAttribute ) {
+				const a = tk.mds.mutationAttribute.attributes[ info_element.key ]
+				if( a ) {
+					if( a.isinteger ) nm.isinteger = true
+					nm.label = a.label || info_element.key
+				}
 			}
-		}
-		if( !nm.label ) {
-			if( info_field.Type=='Integer' ) nm.isinteger=true
-			nm.label = info_element.key
+			if( !nm.label ) {
+				if( info_field.Type=='Integer' ) nm.isinteger=true
+				nm.label = info_element.key
+			}
 		}
 	}
 
@@ -972,25 +993,16 @@ and switching numeric axis category
 		if(!g.group1.terms) throw '.group1.terms[] missing'
 		if(!g.group2) throw '.group2{} missing'
 		if(!g.group2.terms) throw '.group2.terms[] missing'
-		// TODO more valid
-	}
-
-	// which option to use
-	if( !nm.info_keys && !nm.termdb2groupAF ) throw 'no options for numerical axis'
-
-	if( nm.inuse_infokey ) {
-		if( !nm.info_keys ) throw '.info_keys[] missing when inuse_infokey is true'
-	} else if( nm.inuse_termdb2groupAF ) {
-		if( !nm.termdb2groupAF ) throw '.termdb2groupAF missing when inuse_termdb2groupAF is true'
-	} else {
-		// no option in use, use one by default
-		if( nm.termdb2groupAF ) {
-			nm.inuse_termdb2groupAF = true
-		} else if ( nm.info_keys ) {
-			nm.inuse_infokey = true
+		// allow terms array to be empty
+		// TODO more validation
+		if( nm.inuse_termdb2groupAF ) {
+			nm.label = 'Two-group AF comparison' // TODO to make a more informative label
 		}
 	}
 }
+
+
+
 
 
 
@@ -1062,5 +1074,30 @@ render axis
 		})
 		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
 	}
+}
 
+
+
+
+export function get_axis_label ( tk ) {
+	if(!tk.vcf) return
+	const nm = tk.vcf.numerical_axis
+	if(!nm) return
+	if(!nm.in_use) return 'Not in use'
+	if( nm.inuse_infokey ) {
+		const key = nm.info_keys.find( i=> i.in_use )
+		if(!key) return 'Error: no key in_use'
+		if( tk.mds && tk.mds.mutationAttribute ) {
+			const a = tk.mds.mutationAttribute.attributes[ key.key ]
+			if( a && a.label ) return a.label
+		}
+		return key.key
+	}
+	if( nm.inuse_termdb2groupAF ) return get_axis_label_termdb2groupAF(tk)
+
+	return 'Error: unknown type of axis'
+}
+export function get_axis_label_termdb2groupAF ( tk ) {
+	// TODO need to synthesize a more informative label based on term settings of group1/2
+	return 'Two-group AF comparison'
 }

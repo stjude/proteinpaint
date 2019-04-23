@@ -3,11 +3,25 @@ import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
 import * as mds2 from './block.mds2'
-import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
+import {
+	may_setup_numerical_axis,
+	get_axis_label,
+	get_axis_label_termdb2groupAF
+	} from './block.mds2.vcf.numericaxis'
 
 
 
 
+/*
+
+********************** EXPORTED
+may_create_vcflegend_numericalaxiss
+********************** INTERNAL
+showmenu_numericaxis
+__update_legend
+update_legend_by_infokey
+update_legend_by_termdb2groupAF
+*/
 
 
 
@@ -44,28 +58,9 @@ run only upon initiating track
 
 	update_legend_func()
 
-	menubutton.on('click', ()=> showmenu_numericaxis( menubutton, tk, block, update_legend_func ) )
-
-		/*
-		.on('change', async ()=>{
-
-			const tt = d3event.target
-
-			if( tt.selectedIndex == nm.info_keys.length ) {
-				nm.in_use = false
-			} else {
-				for(const e of nm.info_keys) e.in_use=false
-				nm.info_keys[ tt.selectedIndex ].in_use = true
-				may_setup_numerical_axis( tk )
-			}
-
-			tt.disabled=true
-
-
-			tt.disabled=false
-			update_filteroption()
-		})
-		*/
+	menubutton.on('click', ()=> {
+		showmenu_numericaxis( menubutton, tk, block, update_legend_func )
+	})
 }
 
 
@@ -94,17 +89,14 @@ show menu for numerical axis, under menubutton
 					key.key
 				)
 				.attr('class','sja_menuoption')
-				.on('click', async ()=>{
+				.on('click', ()=>{
 					// selected an info key
 					tk.legend.tip.hide()
 					nm.inuse_termdb2groupAF = false
 					nm.inuse_infokey = true
 					nm.info_keys.forEach( i=> i.in_use=false )
 					key.in_use = true
-					menubutton.node().disabled = true
-					await mds2.loadTk( tk, block )
-					menubutton.node().disabled = false
-					update_legend_func()
+					update()
 				})
 		}
 	}
@@ -112,20 +104,25 @@ show menu for numerical axis, under menubutton
 	if( nm.termdb2groupAF &&  !nm.inuse_termdb2groupAF ) {
 		// show this option when the data structure is available and is not in use
 		menudiv.append('div')
+			.style('margin-top','10px')
 			.attr('class','sja_menuoption')
-			.text('Two group comp') // TODO update text to make it more informative
-			.on('click', async ()=>{
+			.text( get_axis_label_termdb2groupAF( tk ) )
+			.on('click', ()=>{
 				tk.legend.tip.hide()
 				nm.inuse_infokey = false
 				nm.inuse_termdb2groupAF = true
-				menubutton.node().disabled = true
-				await mds2.loadTk( tk, block )
-				menubutton.node().disabled = false
-				update_legend_func()
+				update()
 			})
 	}
 
 	tk.legend.tip.showunder( menubutton.node() )
+
+	async function update() {
+		update_legend_func()
+		menubutton.node().disabled = true
+		await mds2.loadTk( tk, block )
+		menubutton.node().disabled = false
+	}
 }
 
 
@@ -145,6 +142,9 @@ function __update_legend ( menubutton, settingholder, tk, block ) {
 		but will not update track
 		*/
 
+		may_setup_numerical_axis( tk )
+		menubutton.html( get_axis_label(tk) + ' &#9660;' )
+
 		settingholder.selectAll('*').remove()
 
 		const nm = tk.vcf.numerical_axis
@@ -154,22 +154,23 @@ function __update_legend ( menubutton, settingholder, tk, block ) {
 		}
 
 		if( nm.inuse_infokey ) {
-			update_legend_by_infokey( menubutton, settingholder, tk, block )
+			update_legend_by_infokey( settingholder, tk, block )
 			return
 		}
 
 		if( nm.inuse_termdb2groupAF ) {
-			update_legend_by_termdb2groupAF( menubutton, settingholder, tk, block )
+			update_legend_by_termdb2groupAF( settingholder, tk, block )
 			return
 		}
 
 		throw 'do not know what is in use for numerical axis'
+		// FIXME exceptions thrown here are not caught
 	}
 }
 
 
 
-function update_legend_by_infokey ( menubutton, settingholder, tk, block ) {
+function update_legend_by_infokey ( settingholder, tk, block ) {
 /*
 dispatched by __update_legend
 only updates legend
@@ -181,13 +182,6 @@ will not update track
 		// should not happen
 		return
 	}
-	menubutton.text(
-		(tk.mds && tk.mds.mutationAttribute && tk.mds.mutationAttribute.attributes[ key.key ])
-		?
-		tk.mds.mutationAttribute.attributes[ key.key ].label
-		:
-		key.key
-		)
 
 	settingholder.append('span')
 		.style('opacity',.5)
@@ -255,9 +249,7 @@ will not update track
 
 
 
-function update_legend_by_termdb2groupAF ( menubutton, settingholder, tk ) {
-
-	menubutton.text('Two group comparison') // TODO update text
+function update_legend_by_termdb2groupAF ( settingholder, tk ) {
 
 	settingholder.append('div').text('TODO') // TODO
 }

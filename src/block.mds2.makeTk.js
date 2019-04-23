@@ -10,7 +10,6 @@ import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
 ********************** EXPORTED
 makeTk
 ********************** INTERNAL
-may_setup_numerical_axis
 parse_client_config
 configPanel
 */
