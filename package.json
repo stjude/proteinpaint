@@ -14,7 +14,7 @@
     "old-prod": "./scripts/deploy.sh old-prod",
     "irt": "./scripts/deploy.sh internal-stage",
     "test": "tape test/**/*.route.spec.js",
-    "unit": "webpack --config=scripts/webpack.config.test.js && tape test/**/*.unit.spec.js",
+    "unit": "./test/copy-modules.js && tape test/**/*.unit.spec.js",
     "deliver": "sh utils/deliver.sh",
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset",
     "build-server": "webpack --config=webpack.config.server.js --mode=production"

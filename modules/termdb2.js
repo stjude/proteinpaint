@@ -1,6 +1,5 @@
 const path = require('path')
 const utils = require('./utils')
-const serverconfig = __non_webpack_require__('./serverconfig.json')
 const Partjson = require('./partjson')
 
 const settings = {}
@@ -8,6 +7,8 @@ const pj = getPj(settings)
 const joinFxns = {
   "": () => ""
 }
+
+const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 /*
 ********************** EXPORTED
