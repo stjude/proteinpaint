@@ -4,7 +4,7 @@ import * as client from './client'
 import {legend_newrow} from './block.legend'
 import * as common from './common'
 import * as mds2 from './block.mds2'
-import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
+import {may_create_vcflegend_numericalaxis} from './block.mds2.vcf.numericaxis.legend'
 
 
 
@@ -14,7 +14,6 @@ init
 update
 ********************** INTERNAL
 create_mclass
-may_create_vcflegend_numericalaxis
 may_create_termdb_population
 update_mclass
 update_vcflegend
@@ -24,6 +23,7 @@ update_vcflegend
 export async function init ( tk, block ) {
 
 	if(!tk.legend) tk.legend = {}
+	tk.legend.tip = new client.Menu({padding:'0px'})
 
 	const [tr,td] = legend_newrow(block,tk.name)
 
@@ -67,157 +67,6 @@ legend.mclass{}
 }
 
 
-
-function may_create_vcflegend_numericalaxis( tk, block ) {
-/*
-vcf related legends
-*/
-	if( !tk.vcf ) return
-	const nm = tk.vcf.numerical_axis
-	if( !nm ) return
-
-	const row = tk.legend.table.append('tr')
-
-	// td1
-	row
-		.append('td')
-		.style('text-align','right')
-		.style('opacity',.3)
-		.text('Numerical axis')
-
-	// td2
-	const td = row.append('td')
-	//if(!tk.legend.numerical_axis) tk.legend.numerical_axis = {}
-
-	// select between info keys
-
-	const select = td.append('select')
-		.style('margin','0px 10px')
-		.on('change', async ()=>{
-
-			const tt = d3event.target
-
-			if( tt.selectedIndex == nm.info_keys.length ) {
-				nm.in_use = false
-			} else {
-				for(const e of nm.info_keys) e.in_use=false
-				nm.info_keys[ tt.selectedIndex ].in_use = true
-				may_setup_numerical_axis( tk )
-			}
-
-			tt.disabled=true
-
-			await mds2.loadTk(tk, block)
-
-			tt.disabled=false
-			update_filteroption()
-		})
-
-	for(const [idx,ele] of nm.info_keys.entries()) {
-		select.append('option')
-			.attr('value',idx)
-			.text(
-				tk.mds && tk.mds.mutationAttribute ?
-					tk.mds.mutationAttribute.attributes[ ele.key ].label
-					: ele.key
-			)
-	}
-	/*
-	select.append('option')
-		.attr('value',-1)
-		.text('Do not apply')
-		*/
-
-	if( nm.in_use ) {
-		select.property('selectedIndex', nm.info_keys.findIndex( i=> i.in_use ) )
-	} else {
-		select.property('selectedIndex', nm.info_keys.length )
-	}
-
-
-	// following <select>, show options for setting filter
-
-	const filterholder = td.append('div')
-		.style('display','inline-block')
-
-	function update_filteroption () {
-		// call this after changing <select>
-		filterholder.selectAll('*').remove()
-		if( !nm.in_use ) {
-			// not in use
-			return
-		}
-		const key = nm.info_keys.find( i=> i.in_use )
-		if(!key) {
-			// should not happen
-			return
-		}
-		filterholder.append('span')
-			.style('opacity',.5)
-			.style('font-size','.8em')
-			.html('APPLY CUTOFF&nbsp;')
-
-		const sideselect = filterholder.append('select')
-			.style('margin-right','3px')
-			.on('change', async ()=>{
-				const tt = d3event.target
-				const side = tt.options[ tt.selectedIndex ].value
-				if( side == 'no' ) {
-					valueinput.style('display','none')
-					key.cutoff.in_use = false
-				} else {
-					key.cutoff.in_use = true
-					key.cutoff.side = side
-					valueinput.style('display','inline')
-				}
-				tt.disabled = true
-				await mds2.loadTk(tk, block)
-				tt.disabled = false
-			})
-
-		const valueinput = filterholder.append('input')
-			.attr('type','number')
-			.style('width','80px')
-			.on('keyup', async ()=>{
-				if(client.keyupEnter()) {
-					const tt = d3event.target
-					const v = Number.parseFloat( tt.value )
-					if(!Number.isNaN( v )) {
-						key.cutoff.value = v
-						tt.disabled=true
-						await mds2.loadTk(tk, block)
-						tt.disabled=false
-					}
-				}
-			})
-		// show default cutoff value; it maybe missing in custom track
-		if( !Number.isFinite( key.cutoff.value ) ) {
-			key.cutoff.value = ( key.max_value + key.min_value ) / 2
-		}
-		valueinput.property('value',key.cutoff.value)
-
-
-		sideselect.append('option').attr('value','no').text('no')
-		sideselect.append('option').attr('value','<').text('<')
-		sideselect.append('option').attr('value','<=').text('<=')
-		sideselect.append('option').attr('value','>').text('>')
-		sideselect.append('option').attr('value','>=').text('>=')
-
-		// initiate cutoff setting
-		if( key.cutoff.in_use ) {
-			// hardcoded index
-			sideselect.node().selectedIndex = key.cutoff.side=='<' ? 1 : 
-				key.cutoff.side=='<=' ? 2 :
-				key.cutoff.side=='>' ? 3 : 4
-			valueinput.property( 'value', key.cutoff.value )
-		} else {
-			sideselect.node().selectedIndex = 0
-			valueinput.style('display','none')
-		}
-	}
-
-	update_filteroption()
-}
 
 
 
