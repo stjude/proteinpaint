@@ -46,7 +46,11 @@ run only upon initiating track
 	// td2
 	const td = row.append('td')
 
-	const menubutton = td.append('button')
+	const menubutton_div = td.append('div')
+		.style('display', 'inline-block')
+		.style('vertical-align', 'top')
+
+	const menubutton = menubutton_div.append('button')
 		.style('margin','0px 10px')
 
 	// following menubutton, show settings folder
@@ -251,7 +255,111 @@ will not update track
 
 function update_legend_by_termdb2groupAF ( settingholder, tk ) {
 
-	settingholder.append('div').text('TODO') // TODO
+	console.log(tk)
+
+	const termdb2group_div = settingholder
+        .append('div')
+        .style('display', 'block')
+
+    // Group 1 div
+    const group1_div = termdb2group_div
+        .append('div')
+        .style('display', 'block')
+         .style('margin','0px 10px')
+		.style('padding','3px 10px')
+		.style('border','solid 1px')
+		.style('border-color','#d4d4d4')
+
+	group1_div.append('div')
+		.style('display', 'inline-block')
+			.style('opacity',.5)
+			.style('font-size','.8em')
+			.text('GROUP 1')
+
+	// display term and category
+	for(const term of tk.vcf.numerical_axis.termdb2groupAF.group1.terms){
+		group1_div.append('div')
+		.attr('class','sja_menuoption')
+		.style('display','inline-block')
+		.style('padding','3px 5px')
+		.style('margin-left','10px')
+		.style('background-color', '#cfe2f3ff')
+		.text(term.term_id + ' : ' + term.value)
+		
+		// button with 'X' to remove term2
+		group1_div.append('div')
+		.attr('class','sja_menuoption')
+		.style('display','inline-block')
+		.style('margin-left','1px')
+		.style('padding','3px 5px')
+		.style('background-color', '#cfe2f3ff')
+		.html('&#215;')
+		.on('click',()=>{
+			//TODO - remove term
+		})
+	}
+
+	group1_div.append('div')
+		.attr('class','sja_menuoption')
+		.style('display','inline-block')
+		.style('padding','3px 5px')
+		.style('margin-left','10px')
+		.style('background-color', '#cfe2f3ff')
+		.html('&#43;')
+		.on('click',()=>{
+			//TODO - start term tree
+		})
+
+	// Group 2 div
+	    const group2_div = termdb2group_div
+	        .append('div')
+	        .style('display', 'block')
+	        .style('margin','5px 10px')
+			.style('padding','3px 10px')
+			.style('border','solid 1px')
+			.style('border-color','#d4d4d4')
+	
+		group2_div.append('div')
+			.style('display', 'inline-block')
+			.style('opacity',.5)
+			.style('font-size','.8em')
+			.text('GROUP 2')
+	
+		// display term and category
+		for(const term of tk.vcf.numerical_axis.termdb2groupAF.group2.terms){
+			group2_div.append('div')
+			.attr('class','sja_menuoption')
+			.style('display','inline-block')
+			.style('padding','3px 5px')
+			.style('margin-left','10px')
+			.style('background-color', '#cfe2f3ff')
+			.text(term.term_id + ' : ' + term.value)
+			
+			// button with 'X' to remove term2
+			group2_div.append('div')
+			.attr('class','sja_menuoption')
+			.style('display','inline-block')
+			.style('margin-left','1px')
+			.style('padding','3px 5px')
+			.style('background-color', '#cfe2f3ff')
+			.html('&#215;')
+			.on('click',()=>{
+			
+			})
+		}
+
+		group2_div.append('div')
+		.attr('class','sja_menuoption')
+		.style('display','inline-block')
+		.style('padding','3px 5px')
+		.style('margin-left','10px')
+		.style('background-color', '#cfe2f3ff')
+		.html('&#43;')
+		.on('click',()=>{
+			//TODO - start term tree
+		})
+
+
 }
 
 
