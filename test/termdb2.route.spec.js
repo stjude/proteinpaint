@@ -41,7 +41,6 @@ tape("term1", function (test) {
       test.fail("invalid status")
     }
   })
-
   
   const url1 = baseUrl + "&term0=" + "&term1=unknown" + "&term2=" + "&ssid=" + "&mname="
   request(url1,(error,response,body)=>{
@@ -91,7 +90,6 @@ tape("term1 + term2", function (test) {
       test.fail("invalid status")
     }
   })
-
   
   const url1 = baseUrl + "&term0=" + "&term1=sex" + "&term2=missing" + "&ssid=" + "&mname="
   request(url1,(error,response,body)=>{
@@ -119,7 +117,6 @@ tape("term0 + term1 + term2", function (test) {
     + serverconfig.port
     + "/termdb2?genome=hg38"
     + "&dslabel=SJLife"
-  
   
   const url0 = baseUrl + "&term0=sex" + "&term1=racegrp" + "&term2=agedx" + "&ssid=" + "&mname="
   request(url0,(error,response,body)=>{
@@ -152,7 +149,7 @@ tape("term0 + term1 + term2", function (test) {
     // the status on error should not be 200, but will do for now
     case 200:
       const data = JSON.parse(body)
-      test.deepEqual(data, {error: 'Unknown term0="unknown"'}, "should error on unknown term2")
+      test.deepEqual(data, {error: 'Unknown term0="unknown"'}, "should error on unknown term0")
       break;
     default:
       test.fail("invalid status")

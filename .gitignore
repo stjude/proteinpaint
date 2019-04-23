@@ -29,6 +29,8 @@ public/static/*.pdf
 
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 
+test/copies/*
+
 package-lock.json
 
 cairo-*/*
