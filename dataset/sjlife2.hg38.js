@@ -3,6 +3,7 @@
 const samplenamekey = 'sjlid'
 
 
+
 module.exports={
 
 	isMds:true,
@@ -11,7 +12,8 @@ module.exports={
 
 	cohort:{
 		files:[
-			{file:'files/hg38/sjlife/clinical/matrix'}
+			{file:'files/hg38/sjlife/clinical/matrix'},
+			{file:'files/hg38/sjlife/cohort/admix'}
 		],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds)=>{
@@ -22,6 +24,23 @@ module.exports={
 				}
 			} else {
 				ds.cohort.annotation[ n ] = item
+			}
+		},
+
+		sampleAttribute: {
+			attributes: {
+				CEU: {
+					label:'Non-finish European',
+					isfloat:1
+				},
+				YRI: {
+					label:'African American',
+					isfloat:1
+				},
+				ASA: {
+					label:'East Asian',
+					isfloat:1
+				},
 			}
 		},
 
@@ -85,10 +104,22 @@ module.exports={
 							side:'<',
 							value:0.001
 						},
-					}
+					},
+					{
+						key:'AC_eas',
+						missing_value: 0,
+						cutoff: {
+							in_use:false,
+							side:'<',
+							value:2
+						},
+					},
 				],
 				in_use: true, // to use numerical axis by default
-				//inuse_infokey: true
+
+				ebgatest: {
+				},
+				inuse_ebgatest: true
 			},
 			plot_mafcov: {
 				show_samplename: 1
