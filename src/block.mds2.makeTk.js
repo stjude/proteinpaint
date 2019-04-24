@@ -78,6 +78,7 @@ function parse_client_config ( tk ) {
 configurations and their location are not stable
 */
 	if( tk.termdb2groupAF ) {
+		// temp
 		if(!tk.mds) throw '.mds missing'
 		if(!tk.mds.termdb) throw '.mds.termdb missing'
 		// hardcoded for vcf numeric axis
@@ -89,6 +90,17 @@ configurations and their location are not stable
 		tk.vcf.numerical_axis.termdb2groupAF = tk.termdb2groupAF
 		delete tk.termdb2groupAF
 		// will be validated in may_setup_numerical_axis
+	}
+	if( tk.numericaxis_inuse_ebgatest ) {
+		// temp
+		// this may be a convenient way for customizing the numerical axis type on client
+		if(!tk.vcf) throw 'tk.vcf missing'
+		if(!tk.vcf.numerical_axis) {
+			tk.vcf.numerical_axis = {}
+		}
+		tk.vcf.numerical_axis.inuse_ebgatest = true
+		delete tk.vcf.numerical_axis.inuse_infokey
+		delete tk.vcf.numerical_axis.inuse_termdb2groupAF
 	}
 }
 

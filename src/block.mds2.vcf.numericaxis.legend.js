@@ -6,7 +6,8 @@ import * as mds2 from './block.mds2'
 import {
 	may_setup_numerical_axis,
 	get_axis_label,
-	get_axis_label_termdb2groupAF
+	get_axis_label_termdb2groupAF,
+	get_axis_label_ebgatest
 	} from './block.mds2.vcf.numericaxis'
 
 
@@ -21,6 +22,7 @@ showmenu_numericaxis
 __update_legend
 update_legend_by_infokey
 update_legend_by_termdb2groupAF
+update_legend_by_ebgatest
 */
 
 
@@ -95,8 +97,8 @@ show menu for numerical axis, under menubutton
 				.attr('class','sja_menuoption')
 				.on('click', ()=>{
 					// selected an info key
-					tk.legend.tip.hide()
 					nm.inuse_termdb2groupAF = false
+					nm.inuse_ebgatest = false
 					nm.inuse_infokey = true
 					nm.info_keys.forEach( i=> i.in_use=false )
 					key.in_use = true
@@ -112,16 +114,32 @@ show menu for numerical axis, under menubutton
 			.attr('class','sja_menuoption')
 			.text( get_axis_label_termdb2groupAF( tk ) )
 			.on('click', ()=>{
-				tk.legend.tip.hide()
 				nm.inuse_infokey = false
+				nm.inuse_ebgatest = false
 				nm.inuse_termdb2groupAF = true
 				update()
 			})
 	}
 
+	if( nm.ebgatest && !nm.inuse_ebgatest ) {
+		// show this option when the data structure is available and is not in use
+		menudiv.append('div')
+			.style('margin-top','10px')
+			.attr('class','sja_menuoption')
+			.text( get_axis_label_ebgatest( tk ) )
+			.on('click', ()=>{
+				nm.inuse_infokey = false
+				nm.inuse_termdb2groupAF = false
+				nm.inuse_ebgatest = true
+				update()
+			})
+	}
+
+	// all contents for the menu created
 	tk.legend.tip.showunder( menubutton.node() )
 
 	async function update() {
+		tk.legend.tip.hide()
 		update_legend_func()
 		menubutton.node().disabled = true
 		await mds2.loadTk( tk, block )
@@ -140,6 +158,8 @@ function __update_legend ( menubutton, settingholder, tk, block ) {
 		returned function to be called at two occasions:
 		1. at initiating legend options
 		2. after changing menu option
+
+		no need to call this at customizing details for an axis type (AF cutoff, change terms etc)
 
 		will update menubutton content,
 		and settingholder content
@@ -167,8 +187,13 @@ function __update_legend ( menubutton, settingholder, tk, block ) {
 			return
 		}
 
+		if( nm.inuse_ebgatest ) {
+			update_legend_by_ebgatest( settingholder, tk, block )
+			return
+		}
+
 		throw 'do not know what is in use for numerical axis'
-		// FIXME exceptions thrown here are not caught
+		// exceptions are caught
 	}
 }
 
@@ -333,4 +358,6 @@ function update_legend_by_termdb2groupAF ( settingholder, tk, block ) {
 }
 
 
-
+function update_legend_by_ebgatest( settingholder, tk, block ) {
+	settingholder.append('div').text('TODO')
+}

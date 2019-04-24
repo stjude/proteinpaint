@@ -118,8 +118,31 @@ module.exports={
 				in_use: true, // to use numerical axis by default
 
 				ebgatest: {
+					terms:[
+						{
+							term:{id:'diaggrp',name:'Diagnosis Group'},
+							value:'Acute lymphoblastic leukemia'
+						}
+					],
+					populations:[
+						// per variant, the control population allele counts are hardcoded to be info fields
+						{
+							key:'CEU',
+							infokey_AC: 'AC_nfe',
+							infokey_AN: 'AN_nfe'
+						},
+						{
+							key:'YRI',
+							infokey_AC: 'AC_afr',
+							infokey_AN: 'AN_afr'
+						},
+						{
+							key:'ASA',
+							infokey_AC: 'AC_eas',
+							infokey_AN: 'AN_eas'
+						}
+					]
 				},
-				inuse_ebgatest: true
 			},
 			plot_mafcov: {
 				show_samplename: 1

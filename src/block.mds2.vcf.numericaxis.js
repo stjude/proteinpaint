@@ -16,6 +16,7 @@ render
 may_setup_numerical_axis
 get_axis_label
 get_axis_label_termdb2groupAF
+get_axis_label_ebgatest
 maygetparameter_numericaxis
 ********************** INTERNAL
 numeric_make
@@ -938,7 +939,6 @@ and switching numeric axis category
 	}
 
 	delete nm.isinteger
-	delete nm.label
 
 	// which option to use
 	if( !nm.info_keys && !nm.termdb2groupAF ) throw 'no options for numerical axis'
@@ -947,12 +947,16 @@ and switching numeric axis category
 		if( !nm.info_keys ) throw '.info_keys[] missing when inuse_infokey is true'
 	} else if( nm.inuse_termdb2groupAF ) {
 		if( !nm.termdb2groupAF ) throw '.termdb2groupAF missing when inuse_termdb2groupAF is true'
+	} else if( nm.inuse_ebgatest ) {
+		if( !nm.ebgatest ) throw '.ebgatest missing when inuse_ebgatest is true'
 	} else {
 		// no option in use, use one by default
 		if( nm.termdb2groupAF ) {
 			nm.inuse_termdb2groupAF = true
 		} else if ( nm.info_keys ) {
 			nm.inuse_infokey = true
+		} else if ( nm.ebgatest ) {
+			nm.inuse_ebgatest = true
 		}
 	}
 
@@ -974,16 +978,16 @@ and switching numeric axis category
 		if( !info_field ) throw 'unknown INFO field for numerical axis: '+info_element.key
 
 		if( nm.inuse_infokey ) {
+			let notset=true
 			if( tk.mds && tk.mds.mutationAttribute ) {
 				const a = tk.mds.mutationAttribute.attributes[ info_element.key ]
 				if( a ) {
+					notset=false
 					if( a.isinteger ) nm.isinteger = true
-					nm.label = a.label || info_element.key
 				}
 			}
-			if( !nm.label ) {
+			if( notset ) {
 				if( info_field.Type=='Integer' ) nm.isinteger=true
-				nm.label = info_element.key
 			}
 		}
 	}
@@ -995,13 +999,34 @@ and switching numeric axis category
 		if(!g.group2) throw '.group2{} missing'
 		if(!g.group2.terms) throw '.group2.terms[] missing'
 		// allow terms array to be empty
-		// TODO more validation
-		if( nm.inuse_termdb2groupAF ) {
-			nm.label = 'Two-group AF comparison' // TODO to make a more informative label
+		validate_termlst( g.group1.terms, 'termdb2groupAF.group1' )
+		validate_termlst( g.group2.terms, 'termdb2groupAF.group2' )
+	}
+
+	if( nm.ebgatest ) {
+		const e = nm.ebgatest
+		if( !e.terms ) throw '.ebgatest.terms[] missing'
+		validate_termlst( e.terms, 'ebgatest' )
+		if( !e.populations ) throw 'ebgatest.populations[] missing'
+		for( const i of e.populations ) {
+			if(!i.key) throw '.key missing from a population of ebgatest'
+			if(!i.infokey_AC) throw '.infokey_AC missing from a population of ebgatest'
+			if(!i.infokey_AN) throw '.infokey_AN missing from a population of ebgatest'
 		}
 	}
+
+	nm.label = get_axis_label( tk )
 }
 
+
+
+function validate_termlst ( lst, from ) {
+	for(const t of lst) {
+		if(!t.term) throw '.term{} missing from a '+from+' term'
+		if(!t.term.id) throw '.term.term.id missing from a '+from+' term'
+		if(t.value==undefined) throw '.value missing from a '+from+' term'
+	}
+}
 
 
 
@@ -1098,7 +1123,7 @@ export function get_axis_label ( tk ) {
 		return key.key
 	}
 	if( nm.inuse_termdb2groupAF ) return get_axis_label_termdb2groupAF(tk)
-
+	if( nm.inuse_ebgatest ) return get_axis_label_ebgatest(tk)
 	return 'Error: unknown type of axis'
 }
 
@@ -1107,6 +1132,11 @@ export function get_axis_label ( tk ) {
 export function get_axis_label_termdb2groupAF ( tk ) {
 	// TODO need to synthesize a more informative label based on term settings of group1/2
 	return 'Two-group AF comparison'
+}
+
+export function get_axis_label_ebgatest ( tk ) {
+	// TODO 
+	return 'Ethnic background adjusted test'
 }
 
 
@@ -1142,5 +1172,11 @@ append numeric axis parameter to object for loadTk
 		}
 		return
 	}
-	// TODO ebga
+	if( nm.inuse_ebgatest && nm.ebgatest ) {
+		par.ebgatest = {
+			terms: nm.ebgatest.terms.map( i=>{ return {term_id:i.term.id, value:i.value} } ),
+			populations: nm.ebgatest.populations
+		}
+	}
+	// add more axis type
 }
