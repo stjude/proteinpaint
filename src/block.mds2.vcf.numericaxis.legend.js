@@ -253,7 +253,7 @@ will not update track
 
 
 
-function update_legend_by_termdb2groupAF ( settingholder, tk ) {
+function update_legend_by_termdb2groupAF ( settingholder, tk, block ) {
 
 	console.log(tk)
 
@@ -261,57 +261,13 @@ function update_legend_by_termdb2groupAF ( settingholder, tk ) {
         .append('div')
         .style('display', 'block')
 
-    // Group 1 div
-    const group1_div = termdb2group_div
-        .append('div')
-        .style('display', 'block')
-         .style('margin','0px 10px')
-		.style('padding','3px 10px')
-		.style('border','solid 1px')
-		.style('border-color','#d4d4d4')
+	create_group_legend(tk.vcf.numerical_axis.termdb2groupAF.group1)
+	create_group_legend(tk.vcf.numerical_axis.termdb2groupAF.group2)
 
-	group1_div.append('div')
-		.style('display', 'inline-block')
-			.style('opacity',.5)
-			.style('font-size','.8em')
-			.text('GROUP 1')
-
-	// display term and category
-	for(const term of tk.vcf.numerical_axis.termdb2groupAF.group1.terms){
-		group1_div.append('div')
-		.attr('class','sja_menuoption')
-		.style('display','inline-block')
-		.style('padding','3px 5px')
-		.style('margin-left','10px')
-		.style('background-color', '#cfe2f3ff')
-		.text(term.term_id + ' : ' + term.value)
+	function create_group_legend(group){
 		
-		// button with 'X' to remove term2
-		group1_div.append('div')
-		.attr('class','sja_menuoption')
-		.style('display','inline-block')
-		.style('margin-left','1px')
-		.style('padding','3px 5px')
-		.style('background-color', '#cfe2f3ff')
-		.html('&#215;')
-		.on('click',()=>{
-			//TODO - remove term
-		})
-	}
-
-	group1_div.append('div')
-		.attr('class','sja_menuoption')
-		.style('display','inline-block')
-		.style('padding','3px 5px')
-		.style('margin-left','10px')
-		.style('background-color', '#cfe2f3ff')
-		.html('&#43;')
-		.on('click',()=>{
-			//TODO - start term tree
-		})
-
-	// Group 2 div
-	    const group2_div = termdb2group_div
+		// Group div
+	    const group_div = termdb2group_div
 	        .append('div')
 	        .style('display', 'block')
 	        .style('margin','5px 10px')
@@ -319,36 +275,20 @@ function update_legend_by_termdb2groupAF ( settingholder, tk ) {
 			.style('border','solid 1px')
 			.style('border-color','#d4d4d4')
 	
-		group2_div.append('div')
+		group_div.append('div')
 			.style('display', 'inline-block')
 			.style('opacity',.5)
 			.style('font-size','.8em')
-			.text('GROUP 2')
-	
-		// display term and category
-		for(const term of tk.vcf.numerical_axis.termdb2groupAF.group2.terms){
-			group2_div.append('div')
-			.attr('class','sja_menuoption')
-			.style('display','inline-block')
-			.style('padding','3px 5px')
-			.style('margin-left','10px')
-			.style('background-color', '#cfe2f3ff')
-			.text(term.term_id + ' : ' + term.value)
-			
-			// button with 'X' to remove term2
-			group2_div.append('div')
-			.attr('class','sja_menuoption')
-			.style('display','inline-block')
-			.style('margin-left','1px')
-			.style('padding','3px 5px')
-			.style('background-color', '#cfe2f3ff')
-			.html('&#215;')
-			.on('click',()=>{
-			
-			})
-		}
+			.text(group.name.toUpperCase())
 
-		group2_div.append('div')
+		const terms_div = group_div.append('div')
+			.style('display','inline-block')
+		
+		// display term and category
+		update_terms_div(terms_div, group)
+		
+
+		group_div.append('div')
 		.attr('class','sja_menuoption')
 		.style('display','inline-block')
 		.style('padding','3px 5px')
@@ -358,7 +298,37 @@ function update_legend_by_termdb2groupAF ( settingholder, tk ) {
 		.on('click',()=>{
 			//TODO - start term tree
 		})
+	}
 
+	function update_terms_div(terms_div, group){
+
+		terms_div.selectAll('*').remove()
+
+		for(const [i, term] of group.terms.entries()){
+			terms_div.append('div')
+			.attr('class','sja_menuoption')
+			.style('display','inline-block')
+			.style('padding','3px 5px')
+			.style('margin-left','10px')
+			.style('background-color', '#cfe2f3ff')
+			.text(term.term.name + ' : ' + term.value)
+			
+			// button with 'X' to remove term2
+			terms_div.append('div')
+			.attr('class','sja_menuoption')
+			.style('display','inline-block')
+			.style('margin-left','1px')
+			.style('padding','3px 5px')
+			.style('background-color', '#cfe2f3ff')
+			.html('&#215;')
+			.on('click',async ()=>{
+				group.terms.splice(i, 1)
+	            console.log(group)
+				update_terms_div(terms_div, group)
+	            await mds2.loadTk( tk, block )
+			})
+		}
+	}
 
 }
 
