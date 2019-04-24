@@ -13251,27 +13251,21 @@ function mds_init(ds,genome, _servconfig) {
 
 				// may need to parse certain values into particular format
 
-				if( ds.cohort.sampleAttribute ) {
-					for(const k in i) {
-						const attr = ds.cohort.sampleAttribute.attributes[ k ]
-						if(attr) {
-							if(attr.isfloat) {
-								i[k] = Number.parseFloat(i[k])
-							} else if(attr.isinteger) {
-								i[k] = Number.parseInt(i[k])
-							}
+				for(const k in i) {
+					let attr
+					if( ds.cohort.sampleAttribute ) {
+						attr = ds.cohort.sampleAttribute.attributes[ k ]
+					}
+					if( !attr ) {
+						if( ds.cohort.termdb && ds.cohort.termdb.termjson && ds.cohort.termdb.termjson.map ) {
+							attr = ds.cohort.termdb.termjson.map.get( k )
 						}
 					}
-				} else if( ds.cohort.termdb && ds.cohort.termdb.termjson && ds.cohort.termdb.termjson.map ) {
-					// access from termdb.termjson
-					for(const k in i) {
-						const attr = ds.cohort.termdb.termjson.map.get( k )
-						if(attr) {
-							if(attr.isfloat) {
-								i[k] = Number.parseFloat(i[k])
-							} else if(attr.isinteger) {
-								i[k] = Number.parseInt(i[k])
-							}
+					if(attr) {
+						if(attr.isfloat) {
+							i[k] = Number.parseFloat(i[k])
+						} else if(attr.isinteger) {
+							i[k] = Number.parseInt(i[k])
 						}
 					}
 				}
