@@ -144,7 +144,7 @@ async function setValFxns(q, tdb, ds) {
     const key = q[term]
     if (key == "genotype") {
       if (!q.ssid) `missing ssid for genotype`
-      const bySample = await load_genotype_by_sample(q.ssid); console.log(Object.keys(bySample).slice(0,5))
+      const bySample = await load_genotype_by_sample(q.ssid)
       const skey = ds.cohort.samplenamekey
       joinFxns[key] = row => bySample[row[skey]]
       continue
@@ -232,8 +232,8 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
   for(const s in ds.cohort.annotation) {
     const v = ds.cohort.annotation[ s ][ id ]
 
-    if( Number.isFinite( v ) ) {
-      values.push(v)
+    if( !isNaN(parseFloat(v)) && isFinite(v) && v !== "" ) {
+      values.push(+v)
     }
   }
   if(values.length==0) {
