@@ -16,6 +16,7 @@ render
 may_setup_numerical_axis
 get_axis_label
 get_axis_label_termdb2groupAF
+maygetparameter_numericaxis
 ********************** INTERNAL
 numeric_make
 render_axis
@@ -1079,6 +1080,9 @@ render axis
 
 
 
+/////////////////////// exported helper functions
+
+
 export function get_axis_label ( tk ) {
 	if(!tk.vcf) return
 	const nm = tk.vcf.numerical_axis
@@ -1097,7 +1101,46 @@ export function get_axis_label ( tk ) {
 
 	return 'Error: unknown type of axis'
 }
+
+
+
 export function get_axis_label_termdb2groupAF ( tk ) {
 	// TODO need to synthesize a more informative label based on term settings of group1/2
 	return 'Two-group AF comparison'
+}
+
+
+
+export function maygetparameter_numericaxis ( tk, par ) {
+/*
+append numeric axis parameter to object for loadTk
+*/
+	if(!tk.vcf) return
+	const nm = tk.vcf.numerical_axis
+	if(!nm) return
+	if(!nm.in_use) return
+	if( nm.inuse_infokey ) {
+		const key = nm.info_keys.find( i=> i.in_use )
+		if( key.cutoff && key.cutoff.in_use ) {
+			// applying cutoff
+			par.numerical_info_cutoff = {
+				key: key.key,
+				side: key.cutoff.side,
+				value: key.cutoff.value
+			}
+		}
+		return
+	}
+	if( nm.inuse_termdb2groupAF && nm.termdb2groupAF ) {
+		par.termdb2groupAF = {
+			group1: {
+				terms: nm.termdb2groupAF.group1.terms.map( i =>{ return {term_id:i.term.id,value:i.value}} )
+			},
+			group2: {
+				terms: nm.termdb2groupAF.group2.terms.map( i =>{ return {term_id:i.term.id,value:i.value}} )
+			},
+		}
+		return
+	}
+	// TODO ebga
 }

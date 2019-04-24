@@ -6,6 +6,7 @@ import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
 import {makeTk} from './block.mds2.makeTk'
 import * as mds2vcf from './block.mds2.vcf'
+import {maygetparameter_numericaxis} from './block.mds2.vcf.numericaxis'
 
 
 
@@ -132,23 +133,7 @@ function addparameter_rangequery ( tk, block ) {
 
 		par.trigger_vcfbyrange = 1
 
-		const nm = tk.vcf.numerical_axis
-		if( nm && nm.in_use ) {
-
-			if( nm.inuse_infokey ) {
-				const key = nm.info_keys.find( i=> i.in_use )
-				if( key.cutoff && key.cutoff.in_use ) {
-					// applying cutoff
-					par.numerical_info_cutoff = {
-						key: key.key,
-						side: key.cutoff.side,
-						value: key.cutoff.value
-					}
-				}
-			} else if( nm.inuse_termdb2groupAF ) {
-				par.termdb2groupAF = nm.termdb2groupAF
-			}
-		}
+		maygetparameter_numericaxis( tk, par )
 	}
 	// add trigger for other data types
 	/* TODO
