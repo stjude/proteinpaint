@@ -16,6 +16,7 @@ init_one_vcf
 validate_tabixfile
 get_lines_tabix
 write_file
+read_file
 ********************** INTERNAL
 get_header_vcf
 */

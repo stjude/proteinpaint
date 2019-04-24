@@ -1,4 +1,6 @@
+const fs = require('fs')
 const path = require('path')
+const spawn = require('child_process').spawn
 const utils = require('./utils')
 const vcf = require('../src/vcf')
 const common = require('../src/common')
@@ -11,8 +13,12 @@ handle_vcfbyrange
 handle_ssidbyonem
 handle_getcsq
 ********************** INTERNAL
+vcf_getcolumnidx_termdbgroup
+vcf_getquerymode
+query_vcf_applymode
 parseline_termdb2groupAF
 parseline_termdb2groupAF_onegroup
+parseline_ebgatest
 */
 
 
@@ -105,20 +111,9 @@ ds is either official or custom
 		samples: tk0.samples
 	}
 
-	// different modes of query
-	const [
-		mode_range_variantonly,
-		slicecolumnindex,
-		mode_range_termdb2groupAF,
-		columnidx_group1,
-		columnidx_group2
-		] = vcf_getquerymode( q, vcftk, ds )
+	const querymode = vcf_getquerymode( q, vcftk, ds ) // this is critical
 
-	//console.log(columnidx_group1.length, columnidx_group2.length)
-
-	if( mode_range_variantonly || mode_range_termdb2groupAF ) {
-		query_vcf_applymode_variantonly( vcftk, q )
-	}
+	query_vcf_applymode( querymode, vcftk, q )
 
 	for(const r of q.rglst) {
 
@@ -135,9 +130,9 @@ ds is either official or custom
 
 			let mlst
 
-			if( mode_range_variantonly ) {
+			if( querymode.range_variantonly ) {
 
-				if( slicecolumnindex ) {
+				if( querymode.slicecolumnindex ) {
 					// TODO do slicing, parse reduced line with samples, and decide if the variant exist in the sliced samples
 				} else {
 					// no sample filtering, do not look at sample, just the variant
@@ -145,9 +140,14 @@ ds is either official or custom
 					const [e,mlst2,e2] = vcf.vcfparseline( newline, vcftk )
 					mlst = mlst2
 				}
-			} else if( mode_range_termdb2groupAF ) {
 
-				mlst = parseline_termdb2groupAF( line, columnidx_group1, columnidx_group2, vcftk )
+			} else if( querymode.range_termdb2groupAF ) {
+
+				mlst = parseline_termdb2groupAF( line, querymode.columnidx_group1, querymode.columnidx_group2, vcftk )
+
+			} else if( querymode.range_ebgatest ) {
+
+				mlst = parseline_ebgatest( line, querymode.columnidx, querymode.pop2average, vcftk, ds )
 			}
 
 			if( mlst ) {
@@ -199,12 +199,13 @@ ds is either official or custom
 
 					if( tk0.nochr ) m.chr = 'chr'+m.chr
 
-
 					r.variants.push(m)
 				}
 			}
 		})
 	}
+
+	await may_apply_chisqtest_ebgatest( q.rglst, querymode )
 
 	vcfbyrange_collect_result( result, q.rglst )
 }
@@ -214,22 +215,55 @@ ds is either official or custom
 function vcf_getquerymode ( q, vcftk, ds ) {
 
 	if( q.termdb2groupAF ) {
-		return [
-			false,
-			false,
-			true,
-			vcf_getcolumnidx_termdbgroup( q.termdb2groupAF.group1.terms, ds, vcftk.samples ),
-			vcf_getcolumnidx_termdbgroup( q.termdb2groupAF.group2.terms, ds, vcftk.samples )
-		]
+		return {
+			range_termdb2groupAF: true,
+			columnidx_group1: vcf_getcolumnidx_termdbgroup( q.termdb2groupAF.group1.terms, ds, vcftk.samples ),
+			columnidx_group2: vcf_getcolumnidx_termdbgroup( q.termdb2groupAF.group2.terms, ds, vcftk.samples ),
+		}
+	}
+	if( q.ebgatest ) {
+		// vcf header column idx for the current term
+		const columnidx = vcf_getcolumnidx_termdbgroup( q.ebgatest.terms, ds, vcftk.samples )
+
+		// to get population admix average for this subset of samples, initiate 0 for each population
+		const pop2average = new Map()
+		for(const p of q.ebgatest.populations) {
+			pop2average.set(
+				p.key,
+				{
+					infokey_AC: p.infokey_AC,
+					infokey_AN: p.infokey_AN,
+					average: 0
+				}
+			)
+		}
+		let poptotal = 0 // sum for all populations
+		// sum up admix for everybody from this set
+		for(const idx of columnidx) {
+			const samplename = vcftk.samples[idx].name
+			const anno = ds.cohort.annotation[ samplename ]
+			if( !anno ) continue
+			for(const p of q.ebgatest.populations) {
+				const v = anno[ p.key ]
+				if(!Number.isFinite(v)) continue
+				pop2average.get( p.key ).average += v
+				poptotal += v
+			}
+		}
+		// after sum, make average
+		for(const [k,v] of pop2average) {
+			v.average /= poptotal
+		}
+		return {
+			range_ebgatest: true,
+			columnidx,
+			pop2average
+		}
 	}
 
-	return [
-		true,
-		false,
-		false,
-		false,
-		false
-	]
+	return {
+		range_variantonly: true
+	}
 	/*
 	slicecolumnindex
 	in case of sample filtering
@@ -261,6 +295,9 @@ a sample must meet all term conditions
 					match=false
 					break
 				}
+			}
+			if( t0.isinteger || t0.isfloat ) {
+				// TODO
 			}
 		}
 		if(match) {
@@ -305,21 +342,27 @@ function vcfbyrange_collect_result ( result, rglst ) {
 
 
 
-function query_vcf_applymode_variantonly ( vcftk, q ) {
+function query_vcf_applymode ( querymode, vcftk, q ) {
 /* at variant only mode, apply changes and prepare for querying
 */
-	delete vcftk.samples // not to parse samples
-	for(const r of q.rglst) {
-		r.variants = []
-		/* if r.variants[] is valid, store variants here
-		if number of variants is above cutoff, render them into image
-		in that case
-		will create r.canvas
-		render all current r.variants into canvas
-		and delete r.variants
-		so that subsequent variants will all be rendered into canvas
-		canvas rendering will mimick client-side display
-		*/
+	if( querymode.range_variantonly
+		|| querymode.range_termdb2groupAF
+		|| querymode.range_ebgatest
+		) {
+
+		delete vcftk.samples // not to parse samples
+		for(const r of q.rglst) {
+			r.variants = []
+			/* if r.variants[] is valid, store variants here
+			if number of variants is above cutoff, render them into image
+			in that case
+			will create r.canvas
+			render all current r.variants into canvas
+			and delete r.variants
+			so that subsequent variants will all be rendered into canvas
+			canvas rendering will mimick client-side display
+			*/
+		}
 	}
 }
 
@@ -373,8 +416,6 @@ get csq from one variant
 
 function parseline_termdb2groupAF ( line, columnidx_group1, columnidx_group2, vcftk ) {
 	const l = line.split('\t')
-	const samples = vcftk.samples
-	delete vcftk.samples
 
 	const alleles = [ l[3], ...l[4].split(',') ]
 
@@ -401,8 +442,6 @@ function parseline_termdb2groupAF ( line, columnidx_group1, columnidx_group2, vc
 		}
 		m.AF2group = [ g1AF, g2AF ]
 	}
-
-	vcftk.samples = samples
 
 	return mlst
 }
@@ -437,4 +476,99 @@ function parseline_termdb2groupAF_onegroup ( alleles, l, columnidx ) {
 		allref,
 		alleles: allele2count
 	}
+}
+
+
+
+
+function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds ) {
+	const l = line.split('\t')
+
+	const alleles = [ l[3], ...l[4].split(',') ]
+
+	const g = parseline_termdb2groupAF_onegroup( alleles, l, columnidx )
+	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
+
+	for(const m of mlst) {
+		const refcount = g.alleles.get( m.ref ) || 0
+		const altcount = g.alleles.get( m.alt ) || 0
+		// get control population allele count, for the current variant
+		let controltotal = 0
+		const pop2control = new Map()
+		for(const [k,v] of pop2average) {
+			const AC = parseline_ebgatest_getkey( m, v.infokey_AC )
+			const AN = parseline_ebgatest_getkey( m, v.infokey_AN )
+			pop2control.set( k, { AC, AN })
+			controltotal += AN
+		}
+		// adjust control population based on pop2average
+		let ACadj = 0,
+			ANadj = 0
+		for( const [k,v] of pop2control ) {
+			const AN2 = v.AN * pop2average.get(k).average
+			const AC2 = AN2 == 0 ? 0 : v.AC * AN2 / v.AN
+			ACadj += AC2
+			ANadj += AN2
+		}
+		m.testline = m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj)
+	}
+	return mlst
+}
+
+
+
+function parseline_ebgatest_getkey ( m, key ) {
+	// for either AC or AN, it could be in info or altinfo
+	if( m.info ) {
+		const v = m.info[ key ]
+		if( v ) return Number.parseInt(v)
+	}
+	if( m.altinfo ) {
+		const v = m.altinfo[ key ]
+		if( v ) return Number.parseInt(v)
+	}
+	return 0
+}
+
+
+
+async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
+	if(!querymode.range_ebgatest) return
+	const lines = []
+	const mlst = {}
+	for(const r of rglst) {
+		if(r.variants) {
+			for(const m of r.variants) {
+				if(m.testline) {
+					lines.push(m.testline)
+					mlst[ m.testline.split('\t',1)[0] ] = m
+				}
+			}
+		}
+	}
+	const tmpfile = path.join(serverconfig.cachedir,Math.random().toString())
+	await utils.write_file( tmpfile, lines.join('\n') )
+	const pfile = await run_chisqtest( tmpfile )
+	const text = await utils.read_file( pfile )
+	for(const line of text.trim().split('\n')) {
+		const l = line.split('\t')
+		const m = mlst[ l[0] ]
+		if( m ) {
+			const v = Number.parseFloat(l[5])
+			m.lpvalue = Number.isNaN(v) ? 0 : -Math.log10(v)
+		}
+	}
+	fs.unlink(tmpfile,()=>{})
+	fs.unlink(pfile,()=>{})
+}
+
+
+
+function run_chisqtest( tmpfile ) {
+	const pfile = tmpfile+'.pvalue'
+	return new Promise((resolve,reject)=>{
+		const sp = spawn('Rscript',['utils/chisq.R',tmpfile,pfile])
+		sp.on('close',()=> resolve(pfile))
+		sp.on('error',()=> reject(error))
+	})
 }
