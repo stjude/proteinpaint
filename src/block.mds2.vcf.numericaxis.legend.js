@@ -3,6 +3,7 @@ import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
 import * as mds2 from './block.mds2'
+import {init,add_searchbox_4term} from './mds.termdb'
 import {
 	may_setup_numerical_axis,
 	get_axis_label,
@@ -311,9 +312,11 @@ function update_legend_by_termdb2groupAF ( settingholder, tk, block ) {
 		
 		// display term and category
 		update_terms_div(terms_div, group)
-		
 
-		group_div.append('div')
+		const tip = new client.Menu({padding:'5px'})
+		
+		// add new term
+		const add_term_btn = group_div.append('div')
 		.attr('class','sja_menuoption')
 		.style('display','inline-block')
 		.style('padding','3px 5px')
@@ -321,7 +324,27 @@ function update_legend_by_termdb2groupAF ( settingholder, tk, block ) {
 		.style('background-color', '#cfe2f3ff')
 		.html('&#43;')
 		.on('click',()=>{
-			//TODO - start term tree
+			
+			tip.clear()
+			.showunder( add_term_btn.node() )
+
+			const errdiv = tip.d.append('div')
+				.style('margin-bottom','5px')
+				.style('color','#C67C73')
+
+			const treediv = tip.d.append('div')
+
+			// a new object as init() argument for launching the tree with modifiers
+            const obj = {
+                genome: block.genome,
+                mds: tk.mds,
+                div: treediv,
+                default_rootterm: {},
+				modifier_barchart_selectbar: {
+					callback: callback_add(errdiv)
+				}
+            }
+            init(obj)
 		})
 	}
 
@@ -329,16 +352,37 @@ function update_legend_by_termdb2groupAF ( settingholder, tk, block ) {
 
 		terms_div.selectAll('*').remove()
 
+		const tip = new client.Menu({padding:'5px'})
+
 		for(const [i, term] of group.terms.entries()){
-			terms_div.append('div')
+			const term_btn = terms_div.append('div')
 			.attr('class','sja_menuoption')
 			.style('display','inline-block')
 			.style('padding','3px 5px')
 			.style('margin-left','10px')
 			.style('background-color', '#cfe2f3ff')
 			.text(term.term.name + ' : ' + term.value)
+			.on('click',()=>{
 			
-			// button with 'X' to remove term2
+				tip.clear()
+				.showunder( term_btn.node() )
+	
+				const treediv = tip.d.append('div')
+	
+				// a new object as init() argument for launching the tree with modifiers
+	            const obj = {
+	                genome: block.genome,
+	                mds: tk.mds,
+	                div: treediv,
+	                default_rootterm: {},
+					modifier_barchart_selectbar: {
+						callback: callback_replace()
+					}
+	            }
+	            init(obj)
+			})
+			
+			// button with 'x' to remove term2
 			terms_div.append('div')
 			.attr('class','sja_menuoption')
 			.style('display','inline-block')
@@ -353,6 +397,14 @@ function update_legend_by_termdb2groupAF ( settingholder, tk, block ) {
 	            await mds2.loadTk( tk, block )
 			})
 		}
+	}
+
+	function callback_add(errdiv){
+		//TODO
+	}
+
+	function callback_replace(){
+		//TODO
 	}
 
 }
