@@ -232,7 +232,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
   for(const s in ds.cohort.annotation) {
     const v = ds.cohort.annotation[ s ][ id ]
 
-    if( !isNaN(parseFloat(v)) && isFinite(v) && v !== "" ) {
+    if(Number.isFinite(v)) {
       values.push(+v)
     }
   }
