@@ -170,10 +170,14 @@ possible modifiers:
 	may_make_term_foldbutton( arg, row, obj )
 
 	// term name
-	const namebox = row.append('div')
-		.style('display','inline-block')
-		.style('padding','5px 3px 5px 1px')
-		.html( term.name )
+	let namebox = row.append('div')
+
+	if(term.graph && obj.modifier_barchart_selectbar){
+	}else{
+		namebox.style('display','inline-block')
+			.style('padding','5px 3px 5px 1px')
+			.html( term.name )
+	}
 
 	if( arg.modifier_click_term ) {
 		/*
@@ -232,7 +236,7 @@ allow to make multiple buttons
 
 		term_addbutton_barchart( term, row, row_graph, obj )
 
-		may_enable_crosstabulate( term, row,  obj )
+		if(!obj.modifier_barchart_selectbar) may_enable_crosstabulate( term, row,  obj )
 	}
 
 
@@ -252,11 +256,22 @@ there may be other conditions to apply, e.g. patients carrying alt alleles of a 
 such conditions may be carried by obj
 
 */
-	const button = row.append('div')
-		.style('font-size','.8em')
-		.style('margin-left','20px')
-		.attr('class','sja_button')
-		.text('BARCHART')
+	let button = row.append('div')
+
+	if(obj.modifier_barchart_selectbar){
+		button
+			.style('display','inline-block')
+			.style('margin-left','20px')
+			.style('padding','3px 5px')
+			.attr('class','sja_menuoption')
+			.text(term.name)
+	}else{
+		button
+			.style('font-size','.8em')
+			.style('margin-left','20px')
+			.attr('class','sja_button')
+			.text('BARCHART')
+	}
 
 	const div = row_graph.append('div')
 		.style('border','solid 1px #ccc')
@@ -286,10 +301,10 @@ such conditions may be carried by obj
 
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
-			button.attr('class','sja_button_open')
+			if(!obj.modifier_barchart_selectbar) button.attr('class','sja_button_open')
 		} else {
 			client.disappear(div)
-			button.attr('class','sja_button_fold')
+			if(!obj.modifier_barchart_selectbar) button.attr('class','sja_button_fold')
 		}
 
 		if( term.graph.barchart.dom.loaded ) return
@@ -359,7 +374,11 @@ such conditions may be carried by obj
 			}
 		}
 
-		button.text('BARCHART')
+		if(obj.modifier_barchart_selectbar){
+			button.text(term.name)
+		}else{
+			button.text('BARCHART')
+		}
 		term.graph.barchart.dom.loaded=true
 	})
 }
