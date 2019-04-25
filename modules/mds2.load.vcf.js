@@ -207,12 +207,15 @@ ds is either official or custom
 
 	await may_apply_chisqtest_ebgatest( q.rglst, querymode )
 
-	vcfbyrange_collect_result( result, q.rglst )
+	vcfbyrange_collect_result( result, q.rglst, querymode )
 }
 
 
 
 function vcf_getquerymode ( q, vcftk, ds ) {
+/*
+generate the "querymode" object that drives subsequent queries
+*/
 
 	if( q.termdb2groupAF ) {
 		return {
@@ -311,8 +314,12 @@ a sample must meet all term conditions
 
 
 
-function vcfbyrange_collect_result ( result, rglst ) {
-	// done querying, collect result, also clear rglst which is shared by others
+function vcfbyrange_collect_result ( result, rglst, querymode ) {
+/*
+done querying, collect result, also clear rglst which is shared by others
+
+for specific type of query mode, send additional info
+*/
 
 	result.vcf = {
 		rglst: []
@@ -336,6 +343,20 @@ function vcfbyrange_collect_result ( result, rglst ) {
 		} else if( r.canvas ) {
 			r2.img = r.canvas.toDataURL()
 			delete r.canvas
+		}
+	}
+
+	if( querymode.range_termdb2groupAF ) {
+		result.group1numbersamples = querymode.columnidx_group1.length
+		result.group2numbersamples = querymode.columnidx_group2.length
+	} else if( querymode.range_ebgatest ) {
+		result.numbersamples = querymode.columnidx.length
+		result.populationaverage = []
+		for(const [k,v] of querymode.pop2average ) {
+			result.populationaverage.push({
+				key: k,
+				v: v.average
+			})
 		}
 	}
 }
