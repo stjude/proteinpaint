@@ -284,15 +284,15 @@ a sample must meet all term conditions
 		const sanno = ds.cohort.annotation[ sample.name ]
 		if(!sanno) continue
 		
-		let match=true
+		let match = false
 		for(const t of terms ) {
 			const t0 = ds.cohort.termdb.termjson.map.get( t.term_id )
 			if( !t0 ) {
 				continue
 			}
 			if( t0.iscategorical ) {
-				if( sanno[ t.term_id ] != t.value ) {
-					match=false
+				if( sanno[ t.term_id ] == t.value ) {
+					match = true
 					break
 				}
 			}
