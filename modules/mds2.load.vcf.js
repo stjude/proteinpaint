@@ -532,6 +532,7 @@ function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds ) {
 			ANadj += AN2
 		}
 		m.testline = m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj)
+		m.contingencytable = [altcount, refcount, ACadj, ANadj-ACadj]
 	}
 	return mlst
 }

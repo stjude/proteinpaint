@@ -1029,7 +1029,11 @@ and switching numeric axis category
 		}
 	}
 
-	nm.label = get_axis_label( tk )
+	if( nm.inuse_ebgatest ) {
+		nm.label = '-log10 P-value'
+	} else {
+		nm.label = get_axis_label( tk )
+	}
 }
 
 

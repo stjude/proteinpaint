@@ -133,7 +133,41 @@ function maymakebutton_vcf_termdbbygenotype ( buttonrow, showholder, m, tk, bloc
 
 
 
+function may_show_ebgatest_table( div, m, tk ) {
+	if(!tk.vcf.numerical_axis || !tk.vcf.numerical_axis.inuse_ebgatest || !m.contingencytable) return
+	const table = div.append('table')
+		.style('margin','20px')
+		.style('border','1px solid #ccc')
+		.style('border-collapse','collapse')
+	{
+		const tr = table.append('tr')
+		tr.append('td')
+		tr.append('th').text('#ALT alleles')
+		tr.append('th').text('#REF alleles')
+	}
+	{
+		const tr = table.append('tr')
+		tr.append('th').text('Case') // TODO may show informative name based on term
+		tr.append('td').text( m.contingencytable[0] )
+			.style('padding','5px')
+		tr.append('td').text( m.contingencytable[1] )
+			.style('padding','5px')
+	}
+	{
+		const tr = table.append('tr')
+		tr.append('th').text('Control')
+		tr.append('td').text( m.contingencytable[2] )
+			.style('padding','5px')
+		tr.append('td').text( m.contingencytable[3] )
+			.style('padding','5px')
+	}
+}
+
+
+
 function show_functionalannotation ( div, m, tk, block ) {
+
+	may_show_ebgatest_table( div, m, tk )
 
 	// first row: brief info about the variant
 
