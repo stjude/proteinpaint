@@ -281,56 +281,96 @@ will not update track
 
 function update_legend_by_termdb2groupAF ( settingholder, tk, block ) {
 
-	console.log(tk)
+	create_group_legend(settingholder, tk.vcf.numerical_axis.termdb2groupAF.group1, tk, block)
+	create_group_legend(settingholder, tk.vcf.numerical_axis.termdb2groupAF.group2, tk, block)
 
-	const termdb2group_div = settingholder
+}
+
+
+function update_legend_by_ebgatest( settingholder, tk, block ) {
+	
+	create_group_legend(settingholder, tk.vcf.numerical_axis.ebgatest, tk, block)
+}
+
+
+function create_group_legend(setting_div, group, tk, block){
+	
+	// Group div
+    const group_div = setting_div
         .append('div')
         .style('display', 'block')
+        .style('margin','5px 10px')
+		.style('padding','3px 10px')
+		.style('border','solid 1px')
+		.style('border-color','#d4d4d4')
 
-	create_group_legend(tk.vcf.numerical_axis.termdb2groupAF.group1)
-	create_group_legend(tk.vcf.numerical_axis.termdb2groupAF.group2)
+	const group_name = tk.vcf.numerical_axis.inuse_termdb2groupAF ? group.name : 'Test group'
 
-	function create_group_legend(group){
-		
-		// Group div
-	    const group_div = termdb2group_div
-	        .append('div')
-	        .style('display', 'block')
-	        .style('margin','5px 10px')
-			.style('padding','3px 10px')
-			.style('border','solid 1px')
-			.style('border-color','#d4d4d4')
+	group_div.append('div')
+		.style('display', 'inline-block')
+		.style('opacity',.5)
+		.style('font-size','.8em')
+		.text(group_name.toUpperCase())
+
+	const terms_div = group_div.append('div')
+		.style('display','inline-block')
 	
-		group_div.append('div')
-			.style('display', 'inline-block')
-			.style('opacity',.5)
-			.style('font-size','.8em')
-			.text(group.name.toUpperCase())
+	// display term and category
+	update_terms_div(terms_div, group, tk, block)
 
-		const terms_div = group_div.append('div')
-			.style('display','inline-block')
+	const tip = new client.Menu({padding:'5px'})
+	
+	// add new term
+	const add_term_btn = group_div.append('div')
+	.attr('class','sja_menuoption')
+	.style('display','inline-block')
+	.style('padding','3px 5px')
+	.style('margin-left','10px')
+	.style('background-color', '#cfe2f3ff')
+	.html('&#43;')
+	.on('click',()=>{
 		
-		// display term and category
-		update_terms_div(terms_div, group)
+		tip.clear()
+		.showunder( add_term_btn.node() )
 
-		const tip = new client.Menu({padding:'5px'})
-		
-		// add new term
-		const add_term_btn = group_div.append('div')
+		const errdiv = tip.d.append('div')
+			.style('margin-bottom','5px')
+			.style('color','#C67C73')
+
+		const treediv = tip.d.append('div')
+
+		// a new object as init() argument for launching the tree with modifiers
+            const obj = {
+                genome: block.genome,
+                mds: tk.mds,
+                div: treediv,
+                default_rootterm: {},
+			modifier_barchart_selectbar: {
+				callback: callback_add(errdiv)
+			}
+            }
+            init(obj)
+	})
+}
+
+function update_terms_div(terms_div, group, tk, block){
+
+	terms_div.selectAll('*').remove()
+
+	const tip = new client.Menu({padding:'5px'})
+
+	for(const [i, term] of group.terms.entries()){
+		const term_btn = terms_div.append('div')
 		.attr('class','sja_menuoption')
 		.style('display','inline-block')
 		.style('padding','3px 5px')
 		.style('margin-left','10px')
 		.style('background-color', '#cfe2f3ff')
-		.html('&#43;')
+		.text(term.term.name + ' : ' + term.value)
 		.on('click',()=>{
-			
+		
 			tip.clear()
-			.showunder( add_term_btn.node() )
-
-			const errdiv = tip.d.append('div')
-				.style('margin-bottom','5px')
-				.style('color','#C67C73')
+			.showunder( term_btn.node() )
 
 			const treediv = tip.d.append('div')
 
@@ -341,75 +381,32 @@ function update_legend_by_termdb2groupAF ( settingholder, tk, block ) {
                 div: treediv,
                 default_rootterm: {},
 				modifier_barchart_selectbar: {
-					callback: callback_add(errdiv)
+					callback: callback_replace()
 				}
             }
             init(obj)
 		})
+		
+		// button with 'x' to remove term2
+		terms_div.append('div')
+		.attr('class','sja_menuoption')
+		.style('display','inline-block')
+		.style('margin-left','1px')
+		.style('padding','3px 5px')
+		.style('background-color', '#cfe2f3ff')
+		.html('&#215;')
+		.on('click',async ()=>{
+			group.terms.splice(i, 1)
+			update_terms_div(terms_div, group)
+            await mds2.loadTk( tk, block )
+		})
 	}
-
-	function update_terms_div(terms_div, group){
-
-		terms_div.selectAll('*').remove()
-
-		const tip = new client.Menu({padding:'5px'})
-
-		for(const [i, term] of group.terms.entries()){
-			const term_btn = terms_div.append('div')
-			.attr('class','sja_menuoption')
-			.style('display','inline-block')
-			.style('padding','3px 5px')
-			.style('margin-left','10px')
-			.style('background-color', '#cfe2f3ff')
-			.text(term.term.name + ' : ' + term.value)
-			.on('click',()=>{
-			
-				tip.clear()
-				.showunder( term_btn.node() )
-	
-				const treediv = tip.d.append('div')
-	
-				// a new object as init() argument for launching the tree with modifiers
-	            const obj = {
-	                genome: block.genome,
-	                mds: tk.mds,
-	                div: treediv,
-	                default_rootterm: {},
-					modifier_barchart_selectbar: {
-						callback: callback_replace()
-					}
-	            }
-	            init(obj)
-			})
-			
-			// button with 'x' to remove term2
-			terms_div.append('div')
-			.attr('class','sja_menuoption')
-			.style('display','inline-block')
-			.style('margin-left','1px')
-			.style('padding','3px 5px')
-			.style('background-color', '#cfe2f3ff')
-			.html('&#215;')
-			.on('click',async ()=>{
-				group.terms.splice(i, 1)
-	            console.log(group)
-				update_terms_div(terms_div, group)
-	            await mds2.loadTk( tk, block )
-			})
-		}
-	}
-
-	function callback_add(errdiv){
-		//TODO
-	}
-
-	function callback_replace(){
-		//TODO
-	}
-
 }
 
+function callback_add(errdiv){
+	//TODO
+}
 
-function update_legend_by_ebgatest( settingholder, tk, block ) {
-	settingholder.append('div').text('TODO')
+function callback_replace(){
+	//TODO
 }
