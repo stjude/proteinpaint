@@ -877,30 +877,25 @@ decide following things about the y axis:
 	nm.minvalue = 0
 	nm.maxvalue = 0
 
+	// these are only for inuse_infokey
 	let info_key,
-		use_altinfo,
-		use_AF2group,
-		use_ebgatest
+		use_altinfo
 
-	if( nm.inuse_termdb2groupAF ) {
-		use_AF2group = true
-	} else if( nm.inuse_infokey ) {
+	if( nm.inuse_infokey ) {
 		info_key = nm.info_keys.find( i=> i.in_use ).key // setup_numerical_axis guarantee this is valid
 		// if the INFO is A, apply to m.altinfo, else, to m.info
 		use_altinfo = tk.vcf.info[ info_key ].Number == 'A'
-	} else if( nm.inuse_ebgatest ) {
-		use_ebgatest = true
 	}
 
 	for(const m of r.variants) {
 
 		let v = null
 
-		if( use_AF2group ) {
+		if( nm.inuse_termdb2groupAF ) {
 
 			v = m.AF2group[0] - m.AF2group[1]
 
-		} else if( use_ebgatest ) {
+		} else if( nm.inuse_ebgatest ) {
 
 			v = m.lpvalue || 0
 
@@ -925,6 +920,13 @@ decide following things about the y axis:
 
 		nm.minvalue = Math.min( nm.minvalue, v )
 		nm.maxvalue = Math.max( nm.maxvalue, v )
+	}
+
+	if( nm.inuse_termdb2groupAF ) {
+		// for two group comparison, use the same range for two sides
+		const v = Math.max( Math.abs(nm.minvalue), Math.abs(nm.maxvalue) )
+		nm.minvalue = -v
+		nm.maxvalue = v
 	}
 }
 
