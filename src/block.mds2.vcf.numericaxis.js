@@ -26,6 +26,7 @@ adjustview
 verticallabplace
 m_mouseover
 m_mouseout
+may_printinfo_axistype
 
 
 
@@ -47,7 +48,7 @@ const clustercrowdlimit = 7 // at least 8 px per disc, otherwise won't show mnam
 
 
 
-export function render ( r, _g, tk, block ) {
+export function render ( data, r, _g, tk, block ) {
 /*
 numerical axis
 info field as sources of values
@@ -56,12 +57,14 @@ value may be singular number, or boxplot
 
 */
 
+
 	const datagroup = divide_data_to_group( r, block )
 
-	// just a shorthand used for hundreds of times here
 	const nm = tk.vcf.numerical_axis
 
 	numeric_make( nm, r, _g, datagroup, tk, block )
+
+	may_printinfo_axistype( data, nm )
 
 	return nm.toplabelheight
 		+nm.maxradius
@@ -1190,4 +1193,27 @@ append numeric axis parameter to object for loadTk
 		}
 	}
 	// add more axis type
+}
+
+
+
+
+function may_printinfo_axistype ( data, nm ) {
+// data{} is returned by server
+	if( nm.inuse_termdb2groupAF ) {
+		nm.termdb2groupAF.group1.div_numbersamples.text( '#patients: '+data.group1numbersamples )
+		nm.termdb2groupAF.group2.div_numbersamples.text( '#patients: '+data.group2numbersamples )
+		return
+	}
+	if( nm.inuse_ebgatest ) {
+		nm.ebgatest.div_numbersamples.text( '#patients: '+data.numbersamples )
+		nm.ebgatest.div_populationaverage.selectAll('*').remove()
+		data.populationaverage.forEach(i=>{
+			nm.ebgatest.div_populationaverage.append('div')
+				.style('display','inline-block')
+				.style('margin','0px 10px')
+				.text(i.key+': '+i.v.toFixed(3))
+		})
+		return
+	}
 }

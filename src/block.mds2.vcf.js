@@ -60,7 +60,7 @@ and return row height
 		}
 
 		if( r.variants ) {
-			const height = vcf_render_variants( r, g, tk, block )
+			const height = vcf_render_variants( data, r, g, tk, block )
 			rowheight = Math.max( rowheight, height )
 			continue
 		}
@@ -79,14 +79,14 @@ and return row height
 
 
 
-function vcf_render_variants ( r, g, tk, block ) {
+function vcf_render_variants ( data, r, g, tk, block ) {
 /*
 got the actual list of variants at r.variants[], render them
 */
 
 	if( tk.vcf.numerical_axis && tk.vcf.numerical_axis.in_use ) {
 		// numerical axis by info field
-		const height = numericaxis.render( r, g, tk, block )
+		const height = numericaxis.render( data, r, g, tk, block )
 		return height
 	}
 

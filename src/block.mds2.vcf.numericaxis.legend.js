@@ -24,6 +24,8 @@ __update_legend
 update_legend_by_infokey
 update_legend_by_termdb2groupAF
 update_legend_by_ebgatest
+create_group_legend
+update_terms_div
 */
 
 
@@ -48,18 +50,20 @@ run only upon initiating track
 
 	// td2
 	const td = row.append('td')
+	// contains a table to make sure things are in one row
 
-	const menubutton_div = td.append('div')
-		.style('display', 'inline-block')
-		.style('vertical-align', 'top')
+	const tr = td.append('table').append('tr')
 
-	const menubutton = menubutton_div.append('button')
+	const menubutton = tr
+		.append('td')
+		.style('vertical-align', 'middle')
+		.append('button')
 		.style('margin','0px 10px')
 
 	// following menubutton, show settings folder
 
-	const settingholder = td.append('div')
-		.style('display','inline-block')
+	const settingholder = tr
+		.append('td')
 
 	const update_legend_func = __update_legend( menubutton, settingholder, tk, block )
 
@@ -290,10 +294,26 @@ function update_legend_by_termdb2groupAF ( settingholder, tk, block ) {
 function update_legend_by_ebgatest( settingholder, tk, block ) {
 	
 	create_group_legend(settingholder, tk.vcf.numerical_axis.ebgatest, tk, block)
+
+	// a place to show the population average
+	const row = settingholder.append('div')
+	row.append('div')
+		.style('display','inline-block')
+		.style('margin','0px 10px')
+		.style('font-size','.8em')
+		.style('opacity',.5)
+		.text('Average admixture:')
+	tk.vcf.numerical_axis.ebgatest.div_populationaverage = row.append('div').style('display','inline-block')
 }
 
 
 function create_group_legend(setting_div, group, tk, block){
+/*
+group{}
+	.terms[]
+
+will attach div_numbersamples to group{}
+*/
 	
 	// Group div
     const group_div = setting_div
@@ -304,13 +324,21 @@ function create_group_legend(setting_div, group, tk, block){
 		.style('border','solid 1px')
 		.style('border-color','#d4d4d4')
 
-	const group_name = tk.vcf.numerical_axis.inuse_termdb2groupAF ? group.name : 'Test group'
 
-	group_div.append('div')
+	if( group.name ) {
+		group_div.append('div')
+			.style('display', 'inline-block')
+			.style('opacity',.5)
+			.style('font-size','.8em')
+			.style('margin-right','10px')
+			.text(group.name)
+	}
+
+	group.div_numbersamples = group_div.append('div')
 		.style('display', 'inline-block')
 		.style('opacity',.5)
 		.style('font-size','.8em')
-		.text(group_name.toUpperCase())
+		.text('Loading...')
 
 	const terms_div = group_div.append('div')
 		.style('display','inline-block')
@@ -397,6 +425,10 @@ function update_terms_div(terms_div, group, tk, block){
 		.html('&#215;')
 		.on('click',async ()=>{
 			group.terms.splice(i, 1)
+			group.div_numbersamples.text('Loading...')
+			if(group.div_populationaverage) {
+				group.div_populationaverage.text('Loading...')
+			}
 			update_terms_div(terms_div, group)
             await mds2.loadTk( tk, block )
 		})
