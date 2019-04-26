@@ -52,7 +52,7 @@ export default class BarsApp{
       this.render(this.serverData[dataName]) 
     }
     else {
-      fetch('/termdb2' + dataName)
+      fetch('/termdb-barchart' + dataName)
       .then(response => response.json())
       .then(chartsData => {
         this.serverData[dataName] = chartsData
