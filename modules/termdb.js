@@ -45,6 +45,8 @@ return async (req, res) => {
 		// process triggers
 
 		if( trigger_rootterm( q, res, tdb ) ) return
+
+		if( q.getcategories ) return trigger_getcategories( q, res, tdb, ds_filtered )
 		if( q.get_children ) {
 			await trigger_children( q, res, tdb )
 			return
@@ -1153,4 +1155,34 @@ function term_getcount_4sampleset ( term, samples ) {
 term
 samples[] array of sample names
 */
+}
+
+
+
+
+function trigger_getcategories ( q, res, tdb, ds ) {
+// to get the list of categories for a categorical term
+	const t = tdb.termjson.map.get( q.termid )
+	if(!t) throw 'unknown term id'
+	if(!t.iscategorical) throw 'term not categorical'
+	const category2count = new Map()
+	for(const n in ds.cohort.annotation) {
+		const a = ds.cohort.annotation[n]
+		const v = a[ q.termid ]
+		if(!v) continue
+		category2count.set( v, 1 + (category2count.get(v)||0) )
+	}
+	const lst = [...category2count].sort((i,j)=>j[1]-i[1])
+	res.send({lst: lst.map(i=>{
+			let label
+			if( t.values && t.values[i[0]] ) {
+				label = t.values[i[0]].label
+			}
+			return {
+				label: (label || i[0]),
+				value: i[0],
+				samplecount: i[1]
+			}
+		})
+	})
 }
