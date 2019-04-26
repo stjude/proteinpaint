@@ -13,6 +13,7 @@ mkdir tmpbuild/public/bin
 mkdir tmpbuild/genome
 mkdir tmpbuild/dataset
 mkdir tmpbuild/src
+mkdir tmpbuild/utils
 
 cp server.js tmpbuild/
 cp genome/* tmpbuild/genome/
@@ -20,6 +21,8 @@ cp dataset/* tmpbuild/dataset/
 cp src/common.js src/vcf.js src/bulk* src/tree.js tmpbuild/src/
 cp public/bin/* tmpbuild/public/bin/
 cp public/dev.html tmpbuild/public/
+cp utils/binom.R tmpbuild/utils/
+cp utils/chisq.R tmpbuild/utils/
 
 sed "s%$DEVHOST/bin/%https://ppr.stjude.org/bin/%" < public/bin/proteinpaint.js > tmpbuild/public/bin/proteinpaint.js
 
@@ -37,7 +40,8 @@ ssh -tt genomeuser@ppr.stjude.org "
 	mv tmpbuild/public/index.html es6_proteinpaint/public/
 	mv tmpbuild/public/bin/* es6_proteinpaint/public/bin/
 	mv tmpbuild/src/* es6_proteinpaint/src/
-	
+	mv tmpbuild/utils/* es6_proteinpaint/utils/
+
 	rm -rf tmpbuild/ sourcecode.tgz
 	
 	cd es6_proteinpaint
