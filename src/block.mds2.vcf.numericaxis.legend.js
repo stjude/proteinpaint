@@ -314,7 +314,7 @@ group{}
 
 will attach div_numbersamples to group{}
 */
-	
+	console.log(tk)	
 	// Group div
     const group_div = setting_div
         .append('div')
@@ -394,33 +394,121 @@ function update_terms_div(terms_div, group, tk, block){
 		.style('padding','3px 5px')
 		.style('margin-left','10px')
 		.style('background-color', '#cfe2f3ff')
-		.html(
-			term.term.name
-			+' <span style="background-color:#aaa;color:white;font-size:.7em;padding:3px">'
-			+(term.isnot ? 'IS NOT' : 'IS')
-			+'</span> '
-			+ term.value
-			)
+
+		const term_name_btn = term_btn.append('div')
+			.style('display','inline-block')
+			.text(term.term.name)
+			.on('click',()=>{
+		
+				tip.clear()
+				.showunder( term_name_btn.node() )
+	
+				const treediv = tip.d.append('div')
+	
+				// a new object as init() argument for launching the tree with modifiers
+	            const obj = {
+	                genome: block.genome,
+	                mds: tk.mds,
+	                div: treediv,
+	                default_rootterm: {},
+					modifier_barchart_selectbar: {
+						callback: callback_replace()
+					}
+	            }
+	            init(obj)
+			})
+
+		const condition_btn = term_btn.append('div')
+			.style('display','inline-block')
+			.style('background-color','#aaa')
+			.style('color', 'white')
+			.style('font-size','.7em')
+			.style('padding','3px')
+			.style('margin','0 4px')
+
+		if(term.term.iscategorical){
+			condition_btn
+				.text(term.isnot ? 'IS NOT' : 'IS')
+				.on('click',()=>{
+
+					tip.clear()
+					.showunder( condition_btn.node() )
+
+					tip.d.append('div')
+						.style('background-color','#aaa')
+						.style('color', 'white')
+						.style('font-size','.7em')
+						.style('padding','5px')
+						.text(term.isnot ? 'IS' : 'IS NOT')
+						.on('click', async()=>{
+							tip.hide()
+							group.terms[i].isnot = term.isnot ? false : true
+							group.div_numbersamples.text('Loading...')
+							if(group.div_populationaverage) {
+								group.div_populationaverage.text('Loading...')
+							}
+							update_terms_div(terms_div, group, tk, block)
+				            await mds2.loadTk( tk, block )
+						})
+				})
+			}else{
+				condition_btn.text('RANGE')
+			}
+
+		const term_value_btn = term_btn.append('div')
+		.style('display','inline-block')
+		.text(term.value)
 		.on('click',()=>{
-		
 			tip.clear()
-			.showunder( term_btn.node() )
+				.showunder( term_value_btn.node() )
 
-			const treediv = tip.d.append('div')
-
-			// a new object as init() argument for launching the tree with modifiers
-            const obj = {
-                genome: block.genome,
-                mds: tk.mds,
-                div: treediv,
-                default_rootterm: {},
-				modifier_barchart_selectbar: {
-					callback: callback_replace()
+				const arg = {
+					genome: block.genome.name,
+					dslabel: tk.mds.label, 
+					getcategories: 1,
+					termid : term.term.id
 				}
-            }
-            init(obj)
+				client.dofetch( 'termdb', arg )
+				.then(data=>{
+					if(data.error) throw data.error
+
+					const list_div = tip.d.append('div')
+						.style('display','block')
+
+					for (const category of data.lst){
+						const row = list_div.append('div')
+							.attr('class','sja_menuoption')
+							.style('display','block')
+
+						row.append('div')
+							.style('font-size','.7em')
+							.style('color','white')
+							.style('display','inline-block')
+							.style('background','#1f77b4')
+							.style('padding','2px 4px')
+							.text(category.samplecount)
+
+						row.append('div')
+							.style('display','inline-block')
+							.style('padding','1px 5px')
+							.style('margin-right','5px')
+							.text(category.label)
+
+						row.on('click',async ()=>{
+							tip.hide()
+
+							group.terms[i].value = category.value
+							group.div_numbersamples.text('Loading...')
+							if(group.div_populationaverage) {
+								group.div_populationaverage.text('Loading...')
+							}
+							update_terms_div(terms_div, group, tk, block)
+				            await mds2.loadTk( tk, block )
+						})
+					}
+				})
 		})
-		
+
 		// button with 'x' to remove term2
 		terms_div.append('div')
 		.attr('class','sja_menuoption')
@@ -435,7 +523,7 @@ function update_terms_div(terms_div, group, tk, block){
 			if(group.div_populationaverage) {
 				group.div_populationaverage.text('Loading...')
 			}
-			update_terms_div(terms_div, group)
+			update_terms_div(terms_div, group, tk, block)
             await mds2.loadTk( tk, block )
 		})
 	}
