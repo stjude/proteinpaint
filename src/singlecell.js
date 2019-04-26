@@ -169,7 +169,7 @@ function init_view ( obj ) {
 
 	obj.camera.position.x = obj.canvas_2d ? 0 : 20
 	obj.camera.position.y = obj.canvas_2d ? 0 : -10
-	obj.camera.position.z = obj.canvas_2d ? 300 : 20
+	obj.camera.position.z = obj.canvas_2d ? 120 : 20
 	obj.camera.up.set( 0, 0, 1 )
 
 	obj.controls = new THREE.TrackballControls( obj.camera )
@@ -185,7 +185,7 @@ function init_view ( obj ) {
 	obj.controls.dynamicDampingFactor = 0.3
 
 	obj.controls.minDistance = 0.3
-	obj.controls.maxDistance = obj.canvas_2d ? (0.3 * 1500) : (0.3 * 200)
+	obj.controls.maxDistance = obj.canvas_2d ? (0.3 * 600) : (0.3 * 200)
 
 	obj.scene.add( obj.camera )
 
