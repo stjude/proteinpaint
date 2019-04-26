@@ -19,6 +19,8 @@ query_vcf_applymode
 parseline_termdb2groupAF
 parseline_termdb2groupAF_onegroup
 parseline_ebgatest
+may_apply_chisqtest_ebgatest
+vcfbyrange_collect_result
 */
 
 
@@ -406,16 +408,6 @@ function make_mockblock ( r ) {
 
 
 
-async function may_process_customtrack ( tk ) {
-/*
-if is url, will cache index
-if is custom track, will parse header
-*/
-	if( tk.url ) {
-		tk.dir = await app.cache_index_promise( tk.indexURL || tk.url+'.tbi' )
-	}
-}
-
 
 
 
@@ -542,8 +534,10 @@ function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds ) {
 			ACadj += AC2
 			ANadj += AN2
 		}
-		m.testline = m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj)
-		m.contingencytable = [altcount, refcount, ACadj, ANadj-ACadj]
+		m.ebga = {
+			line: m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj),
+			table: [altcount, refcount, ACadj, ANadj-ACadj]
+		}
 	}
 	return mlst
 }
@@ -573,9 +567,10 @@ async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
 	for(const r of rglst) {
 		if(r.variants) {
 			for(const m of r.variants) {
-				if(m.testline) {
-					lines.push(m.testline)
-					mlst[ m.testline.split('\t',1)[0] ] = m
+				if(m.ebga) {
+					lines.push(m.ebga.line)
+					mlst[ m.ebga.line.split('\t',1)[0] ] = m
+					delete m.ebga.line
 				}
 			}
 		}
@@ -589,7 +584,8 @@ async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
 		const m = mlst[ l[0] ]
 		if( m ) {
 			const v = Number.parseFloat(l[5])
-			m.lpvalue = Number.isNaN(v) ? 0 : -Math.log10(v)
+			m.ebga.pvalue = v
+			m.ebga.lpvalue = Number.isNaN(v) ? 0 : -Math.log10(v)
 		}
 	}
 	fs.unlink(tmpfile,()=>{})

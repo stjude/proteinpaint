@@ -632,7 +632,7 @@ function m_mouseover( m, nm, tk ) {
 		words.push( m.AF2group[0] )
 		words.push( m.AF2group[1] )
 	} else if( nm.inuse_ebgatest ) {
-		words.push( m.lpvalue )
+		words.push( m.ebga.lpvalue )
 	} else if( nm.inuse_infokey ) {
 		words.push( m._v )
 	}
@@ -900,7 +900,7 @@ decide following things about the y axis:
 
 		} else if( nm.inuse_ebgatest ) {
 
-			v = m.lpvalue || 0
+			v = m.ebga ? (m.ebga.lpvalue || 0) : 0
 
 		} else if( use_altinfo ) {
 

@@ -11,7 +11,7 @@ vcf_clickvariant
 maymakebutton_vcf_termdbbygenotype
 maymakebutton_vcf_mafcovplot
 show_functionalannotation
-
+may_show_ebgatest_table
 */
 
 
@@ -134,9 +134,9 @@ function maymakebutton_vcf_termdbbygenotype ( buttonrow, showholder, m, tk, bloc
 
 
 function may_show_ebgatest_table( div, m, tk ) {
-	if(!tk.vcf.numerical_axis || !tk.vcf.numerical_axis.inuse_ebgatest || !m.contingencytable) return
+	if(!tk.vcf.numerical_axis || !tk.vcf.numerical_axis.inuse_ebgatest || !m.ebga || !m.ebga.table) return
 	const table = div.append('table')
-		.style('margin','20px')
+		.style('margin','20px 0px')
 		.style('border','1px solid #ccc')
 		.style('border-collapse','collapse')
 	{
@@ -148,19 +148,24 @@ function may_show_ebgatest_table( div, m, tk ) {
 	{
 		const tr = table.append('tr')
 		tr.append('th').text('Case') // TODO may show informative name based on term
-		tr.append('td').text( m.contingencytable[0] )
+		tr.append('td').text( m.ebga.table[0] )
 			.style('padding','5px')
-		tr.append('td').text( m.contingencytable[1] )
+		tr.append('td').text( m.ebga.table[1] )
 			.style('padding','5px')
 	}
 	{
 		const tr = table.append('tr')
 		tr.append('th').text('Control')
-		tr.append('td').text( m.contingencytable[2] )
+		tr.append('td').text( m.ebga.table[2] )
 			.style('padding','5px')
-		tr.append('td').text( m.contingencytable[3] )
+		tr.append('td').text( m.ebga.table[3] )
 			.style('padding','5px')
 	}
+	table.append('tr').append('td')
+		.attr('colspan',3)
+		.style('border','1px solid #ccc')
+		.style('padding','5px')
+		.html('<span style="opacity:.5">Chi-square test p-value:</span> '+m.ebga.pvalue)
 }
 
 
