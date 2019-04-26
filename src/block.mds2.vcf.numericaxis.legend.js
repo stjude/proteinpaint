@@ -394,7 +394,13 @@ function update_terms_div(terms_div, group, tk, block){
 		.style('padding','3px 5px')
 		.style('margin-left','10px')
 		.style('background-color', '#cfe2f3ff')
-		.text(term.term.name + ' : ' + term.value)
+		.html(
+			term.term.name
+			+' <span style="background-color:#aaa;color:white;font-size:.7em;padding:3px">'
+			+(term.isnot ? 'IS NOT' : 'IS')
+			+'</span> '
+			+ term.value
+			)
 		.on('click',()=>{
 		
 			tip.clear()
