@@ -383,11 +383,14 @@ async function get_heatmap ( q, gn, res ) {
 
 	const barcode2catvalue = await cellfile_get_barcode2category( ge )
 
-	ge.gene_list.forEach( async (gene) => {
+	for(const gene of ge.gene_list){
+
 		const coord = (gene.nochr ? gene.chr.replace('chr','') : gene.chr)+':'+gene.start+'-'+gene.stop
 
 		let minexpvalue = 0,
 			maxexpvalue = 0
+
+		const genename = gene.gene
 
 		await utils.get_lines_tabix( [ge.expfile,coord], null, line=>{
 
@@ -413,24 +416,24 @@ async function get_heatmap ( q, gn, res ) {
 			category2values.get( v.category ).push( { value: v.expvalue } )
 		}
 
-		const boxplots = []
+		const heatmap = []
 		// each element is one category
 
 		for(const [category, values] of category2values ) {
 
-			values.sort((i,j)=> i.value-j.value )
-	
-			const b = app.boxplot_getvalue( values )
-			delete b.out // remove outliers
-	
-			b.category = category
-	
-			b.numberofcells = values.length // now is just the total number of cells
-			boxplots.push( b )
+			// values.sort((i,j)=> i.value-j.value )
+			let total = 0
+			for (const v of values) {total += v.value}
+			
+			const numberofcells = values.length
+
+			const mean = (total/numberofcells).toFixed(3)
+
+			heatmap.push( {category, mean, numberofcells} )
 		}
 		// const heatmap_data = {boxplots, maxexpvalue, minexpvalue}
-		gene_heatmap.push(boxplots)
-	})
+		gene_heatmap.push({genename, heatmap})
+	}
 	res.send( {gene_heatmap} )
 }
 
