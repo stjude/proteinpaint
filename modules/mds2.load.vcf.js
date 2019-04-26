@@ -288,32 +288,29 @@ a sample must meet all term conditions
 	for( const [i, sample] of vcfsamples.entries() ) {
 		const sanno = ds.cohort.annotation[ sample.name ]
 		if(!sanno) continue
-		
-		let match = false
+
+		// for AND, require all terms to match
+		let alltermmatch = true
 		for(const t of terms ) {
 			const t0 = ds.cohort.termdb.termjson.map.get( t.term_id )
 			if( !t0 ) {
 				continue
 			}
+			let thistermmatch
 			if( t0.iscategorical ) {
-				if( t.isnot ) {
-					// negate
-					if( sanno[ t.term_id ] != t.value ) {
-						match = true
-						break
-					}
-				} else {
-					if( sanno[ t.term_id ] == t.value ) {
-						match = true
-						break
-					}
-				}
-			}
-			if( t0.isinteger || t0.isfloat ) {
+
+				thistermmatch = t.isnot ? sanno[ t.term_id ] != t.value : sanno[ t.term_id ] == t.value
+
+			} else if( t0.isinteger || t0.isfloat ) {
 				// TODO
 			}
+			if( !thistermmatch ) {
+				// not matching, end
+				alltermmatch=false
+				break
+			}
 		}
-		if(match) {
+		if(alltermmatch) {
 			usesampleidx.push( i )
 		}
 	}
