@@ -13,8 +13,8 @@ handle_vcfbyrange
 handle_ssidbyonem
 handle_getcsq
 ********************** INTERNAL
-vcf_getcolumnidx_termdbgroup
-vcf_getquerymode
+get_columnidx_byterms
+get_querymode
 query_vcf_applymode
 parseline_termdb2groupAF
 parseline_termdb2groupAF_onegroup
@@ -111,7 +111,7 @@ ds is either official or custom
 		samples: tk0.samples
 	}
 
-	const querymode = vcf_getquerymode( q, vcftk, ds ) // this is critical
+	const querymode = get_querymode( q, vcftk, ds ) // this is critical
 
 	query_vcf_applymode( querymode, vcftk, q )
 
@@ -212,7 +212,7 @@ ds is either official or custom
 
 
 
-function vcf_getquerymode ( q, vcftk, ds ) {
+function get_querymode ( q, vcftk, ds ) {
 /*
 generate the "querymode" object that drives subsequent queries
 */
@@ -220,13 +220,13 @@ generate the "querymode" object that drives subsequent queries
 	if( q.termdb2groupAF ) {
 		return {
 			range_termdb2groupAF: true,
-			columnidx_group1: vcf_getcolumnidx_termdbgroup( q.termdb2groupAF.group1.terms, ds, vcftk.samples ),
-			columnidx_group2: vcf_getcolumnidx_termdbgroup( q.termdb2groupAF.group2.terms, ds, vcftk.samples ),
+			columnidx_group1: get_columnidx_byterms( q.termdb2groupAF.group1.terms, ds, vcftk.samples ),
+			columnidx_group2: get_columnidx_byterms( q.termdb2groupAF.group2.terms, ds, vcftk.samples ),
 		}
 	}
 	if( q.ebgatest ) {
 		// vcf header column idx for the current term
-		const columnidx = vcf_getcolumnidx_termdbgroup( q.ebgatest.terms, ds, vcftk.samples )
+		const columnidx = get_columnidx_byterms( q.ebgatest.terms, ds, vcftk.samples )
 
 		// to get population admix average for this subset of samples, initiate 0 for each population
 		const pop2average = new Map()
@@ -278,7 +278,7 @@ generate the "querymode" object that drives subsequent queries
 
 
 
-function vcf_getcolumnidx_termdbgroup ( terms, ds, vcfsamples ) {
+function get_columnidx_byterms ( terms, ds, vcfsamples ) {
 /*
 a sample must meet all term conditions
 */
@@ -352,11 +352,13 @@ for specific type of query mode, send additional info
 	} else if( querymode.range_ebgatest ) {
 		result.numbersamples = querymode.columnidx.length
 		result.populationaverage = []
-		for(const [k,v] of querymode.pop2average ) {
-			result.populationaverage.push({
-				key: k,
-				v: v.average
-			})
+		if( querymode.columnidx.length ) {
+			for(const [k,v] of querymode.pop2average ) {
+				result.populationaverage.push({
+					key: k,
+					v: v.average
+				})
+			}
 		}
 	}
 }
@@ -503,6 +505,7 @@ function parseline_termdb2groupAF_onegroup ( alleles, l, columnidx ) {
 
 
 function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds ) {
+
 	const l = line.split('\t')
 
 	const alleles = [ l[3], ...l[4].split(',') ]
@@ -556,6 +559,7 @@ function parseline_ebgatest_getkey ( m, key ) {
 
 async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
 	if(!querymode.range_ebgatest) return
+	if(querymode.columnidx.length==0) return
 	const lines = []
 	const mlst = {}
 	for(const r of rglst) {
