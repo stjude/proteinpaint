@@ -1182,21 +1182,33 @@ append numeric axis parameter to object for loadTk
 	if( nm.inuse_termdb2groupAF && nm.termdb2groupAF ) {
 		par.termdb2groupAF = {
 			group1: {
-				terms: nm.termdb2groupAF.group1.terms.map( i =>{ return {term_id:i.term.id,value:i.value}} )
+				terms: terms2parameter( nm.termdb2groupAF.group1.terms )
 			},
 			group2: {
-				terms: nm.termdb2groupAF.group2.terms.map( i =>{ return {term_id:i.term.id,value:i.value}} )
+				terms: terms2parameter( nm.termdb2groupAF.group2.terms )
 			},
 		}
 		return
 	}
 	if( nm.inuse_ebgatest && nm.ebgatest ) {
 		par.ebgatest = {
-			terms: nm.ebgatest.terms.map( i=>{ return {term_id:i.term.id, value:i.value} } ),
+			terms: terms2parameter( nm.ebgatest.terms ),
 			populations: nm.ebgatest.populations
 		}
 	}
 	// add more axis type
+}
+
+function terms2parameter ( terms ) {
+// works for list of terms from either termdb2groupAF or ebgatest
+// TODO and/or
+	return terms.map( i=> {
+		return {
+			term_id: i.term.id,
+			value: i.value,
+			isnot: i.isnot
+		}
+	})
 }
 
 

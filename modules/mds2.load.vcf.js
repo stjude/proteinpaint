@@ -294,9 +294,17 @@ a sample must meet all term conditions
 				continue
 			}
 			if( t0.iscategorical ) {
-				if( sanno[ t.term_id ] == t.value ) {
-					match = true
-					break
+				if( t.isnot ) {
+					// negate
+					if( sanno[ t.term_id ] != t.value ) {
+						match = true
+						break
+					}
+				} else {
+					if( sanno[ t.term_id ] == t.value ) {
+						match = true
+						break
+					}
 				}
 			}
 			if( t0.isinteger || t0.isfloat ) {

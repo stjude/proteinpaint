@@ -117,6 +117,28 @@ module.exports={
 				],
 				in_use: true, // to use numerical axis by default
 
+				termdb2groupAF:{
+					group1:{
+						name:'GROUP 1',
+						terms:[
+							{
+							term: { id:'diaggrp', name:'Diagnosis Group'},
+							value:'Acute lymphoblastic leukemia'
+							}
+						]
+					},
+					group2:{
+						name:'GROUP 2',
+						terms:[
+							{
+							term: { id:'diaggrp', name:'Diagnosis Group'},
+							value:'Acute lymphoblastic leukemia',
+							isnot: true,
+							}
+						]
+					}
+				},
+
 				ebgatest: {
 					terms:[
 						{
