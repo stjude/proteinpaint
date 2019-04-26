@@ -940,7 +940,7 @@ export function may_setup_numerical_axis ( tk ) {
 to validate the numerical axis info field setting
 and set the .isinteger and .label of nm
 
-call this at initiating the track
+call this in makeTk()
 and switching numeric axis category
 */
 
@@ -955,7 +955,7 @@ and switching numeric axis category
 	delete nm.isinteger
 
 	// which option to use
-	if( !nm.info_keys && !nm.termdb2groupAF ) throw 'no options for numerical axis'
+	if( !nm.info_keys && !nm.termdb2groupAF && !nm.ebgatest ) throw 'no options for numerical axis'
 
 	if( nm.inuse_infokey ) {
 		if( !nm.info_keys ) throw '.info_keys[] missing when inuse_infokey is true'
@@ -1042,6 +1042,7 @@ function validate_termlst ( lst, from ) {
 	for(const t of lst) {
 		if(!t.term) throw '.term{} missing from a '+from+' term'
 		if(!t.term.id) throw '.term.term.id missing from a '+from+' term'
+		if(!t.term.iscategorical && !t.term.isinteger && !t.term.isfloat) throw '.term{} missing type flag'
 		if(t.value==undefined) throw '.value missing from a '+from+' term'
 	}
 }

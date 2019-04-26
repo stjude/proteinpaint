@@ -122,7 +122,7 @@ module.exports={
 						name:'GROUP 1',
 						terms:[
 							{
-							term: { id:'diaggrp', name:'Diagnosis Group'},
+							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
 							value:'Acute lymphoblastic leukemia'
 							}
 						]
@@ -131,7 +131,7 @@ module.exports={
 						name:'GROUP 2',
 						terms:[
 							{
-							term: { id:'diaggrp', name:'Diagnosis Group'},
+							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
 							value:'Acute lymphoblastic leukemia',
 							isnot: true,
 							}
@@ -142,7 +142,7 @@ module.exports={
 				ebgatest: {
 					terms:[
 						{
-							term:{id:'diaggrp',name:'Diagnosis Group'},
+							term:{id:'diaggrp',name:'Diagnosis Group', iscategorical:true },
 							value:'Acute lymphoblastic leukemia'
 						}
 					],

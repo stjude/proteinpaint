@@ -14,7 +14,7 @@ init
 update
 ********************** INTERNAL
 create_mclass
-may_create_termdb_population
+may_create_termdb_population not used
 update_mclass
 update_vcflegend
 */
@@ -36,7 +36,7 @@ export async function init ( tk, block ) {
 	create_mclass( tk )
 	may_create_vcflegend_numericalaxis( tk, block )
 
-	await may_create_termdb_population( tk, block )
+	//await may_create_termdb_population( tk, block )
 }
 
 
@@ -233,6 +233,7 @@ function update_vcflegend ( data, tk, block ) {
 
 async function may_create_termdb_population ( tk, block ) {
 /*
+not used
 population group by termdb
 applies to all type of data, not just vcf
 

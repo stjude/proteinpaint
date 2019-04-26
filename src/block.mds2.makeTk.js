@@ -6,12 +6,17 @@ import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
 
 
 /*
+1. initialize tk object
+2. parse client configurations
+3. validate
+4. initialize legend
 
 ********************** EXPORTED
 makeTk
 ********************** INTERNAL
 parse_client_config
 configPanel
+may_initiate_vcf
 */
 
 
@@ -52,13 +57,7 @@ export async function makeTk ( tk, block ) {
 
 	tk.tklabel.text( tk.name )
 
-	if( tk.vcf ) {
-		// vcf row
-		tk.g_vcfrow = tk.glider.append('g')
-		tk.leftaxis_vcfrow = tk.gleft.append('g')
-	}
-
-	may_setup_numerical_axis( tk )
+	may_initiate_vcf( tk )
 
 	// TODO <g> for other file types
 
@@ -111,4 +110,21 @@ configurations and their location are not stable
 
 
 function configPanel ( tk, block ) {
+}
+
+
+
+
+function may_initiate_vcf ( tk ) {
+	if( !tk.vcf ) return
+	
+	// vcf row
+	tk.g_vcfrow = tk.glider.append('g')
+	tk.leftaxis_vcfrow = tk.gleft.append('g')
+
+	try {
+		may_setup_numerical_axis( tk )
+	} catch(e) {
+		throw 'numerical axis error: '+e
+	}
 }
