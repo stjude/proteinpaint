@@ -36,7 +36,8 @@ export default class BarsApp{
     this.setControls()
   }
 
-  main(_settings={}) {
+  main(_settings={}, obj=null) {
+    this.obj = obj
     this.updateSettings(_settings)
 
     const dataName = '?'
@@ -116,7 +117,7 @@ export default class BarsApp{
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
-      self.renderers[chart.chartId] = barsRenderer(select(this))
+      self.renderers[chart.chartId] = barsRenderer(self, select(this))
       const rows = chart.serieses
         .find(series => series.seriesId == chart.settings.cols[0])
         .data
@@ -186,6 +187,25 @@ export default class BarsApp{
               ? colors.c10(d.dataId)
               : colors.c20(d.dataId)
             ).toString().replace('rgb(','rgba(').replace(')', ',0.7)')
+        },
+        click(d) {
+          if (!obj.modifier_barchart_selectbar || !obj.modifier_barchart_selectbar.callback) return
+          const t = []
+          for(const termNum in terms) {
+            const term = terms[termNum]
+            if (termNum != 'term0' && term) {
+              t.push({
+                term,
+                value: termNum=="term1" ? d.seriesTotal : d.total,
+                label: !term.values 
+                  ? d.seriesId
+                  : termNum=="term1"
+                    ? term.values[d.seriesId] 
+                    : term.values[d.dataId]
+              })
+            }
+          } //console.log(t, d, terms)
+          obj.modifier_barchart_selectbar.callback({terms: t})
         }
       },
       colLabel: {

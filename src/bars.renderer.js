@@ -90,7 +90,7 @@ returns:
   }
 */
 
-export default function barsRenderer(holder) {
+export default function barsRenderer(barsapp, holder) {
   const hm = {}
   const emptyObj = {}; //used to represent any empty cell
   let chart
@@ -249,7 +249,7 @@ export default function barsRenderer(holder) {
       .attr("class", "bars-series")
       .on("mouseover.tphm2", seriesMouseOver)
       .on("mouseout.tphm2", seriesMouseOut)
-      .on("click", seriesBreakOut);
+      .on("click", seriesClick);
 
     yAxis = mainG.append("g").attr("class", "sjpcb-bar-chart-y-axis");
     yTitle = mainG
@@ -663,58 +663,9 @@ export default function barsRenderer(holder) {
     if (hm.handlers.colLabel.mouseout) hm.handlers.colLabel.mouseout();
   }
 
-  function seriesBreakOut() {
-    const d = event.target.__data__;
-    if (hm.clickedAge) {
-      viz.chcClick(d.chc);
-      hm.pane.close();
-      return;
-    }
-
-    const pane = newpane({
-      x: unstackedBarsPanes.reduce((a, b) => {
-        return a + +b.body.select("svg").attr("width");
-      }, 0), //event.clientX + 10,
-      y: 20, //event.clientY + 10,
-      setzindex: 1000,
-      toshrink: true,
-      preCloseFxn: () => {
-        const i = unstackedBarsPanes.indexOf(pane);
-        if (i == -1) return;
-        unstackedBarsPanes.splice(i, 1);
-      }
-    });
-
-    pane.header.html("Total at age " + d.age);
-
-    const tempBars = bars(viz, pane.body.append("div"));
-    tempBars(hm.h.currData, {
-      unit: "abs",
-      clickedAge: d.age,
-      origSeriesId: d.origSeriesId,
-      colkey: "chc",
-      rowkey: "age",
-      duration: 0,
-      hidelegend: true,
-      pane
-    });
-
-    setTimeout(() => {
-      const b = pane.body
-        .select("svg")
-        .node()
-        .getBBox();
-      pane.body
-        .selectAll("svg")
-        .attr("height", b.height + 50)
-        .attr("width", b.width + 50);
-
-      pane.body
-        .selectAll(".sjpcb-bars-mainG")
-        .attr("transform", "translate(100,0)");
-    }, 0);
-
-    unstackedBarsPanes.push(pane);
+  function seriesClick() {
+    const d = event.target.__data__
+    barsapp.handlers.series.click(d)
   }
 
   main.hm = hm;

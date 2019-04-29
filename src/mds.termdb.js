@@ -2,7 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {barchart_make} from './mds.termdb.barchart'
-import BarsApp from './mds.termdb.barchart2'
+import Barchart from './mds.termdb.barchart2'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 /*
@@ -294,9 +294,9 @@ such conditions may be carried by obj
 		div: div
 	}
 
-	let barsApp
+	let barchart
 	if (window.location.search.includes("termdb=2")) {
-		barsApp = new BarsApp({
+		barchart = new Barchart({
 			holder: div,
 			settings: {},
 			term1: term,
@@ -319,14 +319,14 @@ such conditions may be carried by obj
 		button.text('Loading')
 
 		if (window.location.search.includes("termdb=2")) {
-			barsApp.main({
+			barchart.main({
 				genome: obj.genome.name,
 				dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
 				term1: term.id,
 				term2: obj.modifier_ssid_barchart ? 'genotype' : '',
 				ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
 				mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : ''
-			})
+			}, obj)
 		} else {
 
 			const arg = {
