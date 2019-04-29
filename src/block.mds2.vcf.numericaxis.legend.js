@@ -443,10 +443,7 @@ function update_terms_div(terms_div, group, tk, block){
 						.on('click', async()=>{
 							tip.hide()
 							group.terms[i].isnot = term.isnot ? false : true
-							group.div_numbersamples.text('Loading...')
-							if(group.div_populationaverage) {
-								group.div_populationaverage.text('Loading...')
-							}
+							may_settoloading_termgroup( group )
 							update_terms_div(terms_div, group, tk, block)
 				            await mds2.loadTk( tk, block )
 						})
@@ -512,10 +509,9 @@ function update_terms_div(terms_div, group, tk, block){
 								tip.hide()
 
 								group.terms[i].value = category.value
-								group.div_numbersamples.text('Loading...')
-								if(group.div_populationaverage) {
-									group.div_populationaverage.text('Loading...')
-								}
+
+								may_settoloading_termgroup( group )
+
 								update_terms_div(terms_div, group, tk, block)
 					            await mds2.loadTk( tk, block )
 							})
@@ -540,15 +536,25 @@ function update_terms_div(terms_div, group, tk, block){
 		.html('&#215;')
 		.on('click',async ()=>{
 			group.terms.splice(i, 1)
-			group.div_numbersamples.text('Loading...')
-			if(group.div_populationaverage) {
-				group.div_populationaverage.text('Loading...')
-			}
+			may_settoloading_termgroup( group )
 			update_terms_div(terms_div, group, tk, block)
             await mds2.loadTk( tk, block )
 		})
 	}
 }
+
+
+
+function may_settoloading_termgroup ( group ) {
+	if( group.div_numbersamples ) group.div_numbersamples.text('Loading...')
+	if(group.div_populationaverage) {
+		group.div_populationaverage.selectAll('*').remove()
+		group.div_populationaverage.append('div').text('Loading...')
+	}
+}
+
+
+
 
 function callback_add(errdiv){
 	//TODO
