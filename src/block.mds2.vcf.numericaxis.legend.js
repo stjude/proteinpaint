@@ -451,16 +451,23 @@ function update_terms_div(terms_div, group, tk, block){
 				            await mds2.loadTk( tk, block )
 						})
 				})
-			}else{
-				condition_btn.text('RANGE')
-			}
+		} else {
+			// range label is not clickable
+			condition_btn.text('RANGE')
+		}
 
 		const term_value_btn = term_btn.append('div')
 		.style('display','inline-block')
-		.text(term.value)
-		.on('click',()=>{
-			tip.clear()
-				.showunder( term_value_btn.node() )
+
+		if( term.term.iscategorical ) {
+			// furbish value button for a categorical term
+			term_value_btn
+			.text(term.value)
+			.on('click', async ()=>{
+				tip.clear()
+					.showunder( term_value_btn.node() )
+
+				const wait = tip.d.append('div').text('Loading...')
 
 				const arg = {
 					genome: block.genome.name,
@@ -468,17 +475,17 @@ function update_terms_div(terms_div, group, tk, block){
 					getcategories: 1,
 					termid : term.term.id
 				}
-				client.dofetch( 'termdb', arg )
-				.then(data=>{
+
+				try {
+					const data = await client.dofetch( 'termdb', arg )
 					if(data.error) throw data.error
+					wait.remove()
 
 					const list_div = tip.d.append('div')
 						.style('display','block')
 
 					for (const category of data.lst){
 						const row = list_div.append('div')
-							.attr('class','sja_menuoption')
-							.style('display','block')
 
 						row.append('div')
 							.style('font-size','.7em')
@@ -494,20 +501,34 @@ function update_terms_div(terms_div, group, tk, block){
 							.style('margin-right','5px')
 							.text(category.label)
 
-						row.on('click',async ()=>{
-							tip.hide()
+						if( category.value == group.terms[i].value ) {
+							// the same
+							continue
+						}
 
-							group.terms[i].value = category.value
-							group.div_numbersamples.text('Loading...')
-							if(group.div_populationaverage) {
-								group.div_populationaverage.text('Loading...')
-							}
-							update_terms_div(terms_div, group, tk, block)
-				            await mds2.loadTk( tk, block )
-						})
+						row
+							.attr('class','sja_menuoption')
+							.on('click',async ()=>{
+								tip.hide()
+
+								group.terms[i].value = category.value
+								group.div_numbersamples.text('Loading...')
+								if(group.div_populationaverage) {
+									group.div_populationaverage.text('Loading...')
+								}
+								update_terms_div(terms_div, group, tk, block)
+					            await mds2.loadTk( tk, block )
+							})
 					}
-				})
-		})
+				} catch(e) {
+					wait.text( e.message || e )
+				}
+			})
+
+		} else if( term.term.isinteger || term.term.isfloat ) {
+			// TODO numerical term, print range in value button and apply the suitable click callback
+
+		}
 
 		// button with 'x' to remove term2
 		terms_div.append('div')
