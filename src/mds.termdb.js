@@ -317,7 +317,7 @@ such conditions may be carried by obj
 		if( term.graph.barchart.dom.loaded ) return
 
 		button.text('Loading')
-
+		
 		if (window.location.search.includes("termdb=2")) {
 			barchart.main({
 				genome: obj.genome.name,

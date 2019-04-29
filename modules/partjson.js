@@ -236,7 +236,7 @@ class ValFiller {
         s
       )
       if (o.aggr || o.skip || o.timing)
-        return void t.errors.push(["val", "INVALID-[{}]-KEY-OPTION-TOKEN"])
+        return void t.errors.push(["val", "INVALID-[{}]-OPTION-TOKEN"])
       const i = Object.create(null)
       return (t, s, o, n) => {
         n.branch in i || (i[n.branch] = new Map())
@@ -688,6 +688,7 @@ class Partjson {
       parent: s,
       self: r,
       root: this.tree ? this.tree : r,
+      joins: this.joins,
       errors: []
     }
     return this.contexts.set(r, o), null !== t && (s[t] = r), r

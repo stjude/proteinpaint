@@ -1,3 +1,4 @@
+const app = require('../app')
 const path = require('path')
 const utils = require('./utils')
 const Partjson = require('./partjson')
@@ -7,8 +8,11 @@ const pj = getPj(settings)
 const joinFxns = {
   "": () => ""
 }
-
+const numValFxns = {
+  "": () => {}
+}
 const serverconfig = __non_webpack_require__('./serverconfig.json')
+const unannotated = {}
 
 /*
 ********************** EXPORTED
@@ -58,7 +62,10 @@ if is a numeric term, also get distribution
   if(!ds.cohort['parsed-'+filename]) throw `the parsed cohort matrix=${filename} is missing`
   await setValFxns(q, tdb, ds) 
   Object.assign(settings, q)
-  pj.refresh({data: ds.cohort['parsed-' + filename]})
+  pj.refresh({
+    data: ds.cohort['parsed-' + filename],
+    seed: `{"values": []}`
+  })
   res.send(pj.tree.results)
 }
 
@@ -68,6 +75,8 @@ function getPj(settings) {
       "@join()": {
         vals: "=vals()"
       },
+      sum: "+&vals.value",
+      values: ["&vals.value"],
       results: {
         "_2:maxAcrossCharts": "=maxAcrossCharts()",
         charts: [{
@@ -83,6 +92,13 @@ function getPj(settings) {
             }, "&vals.dataId"]
           }, "&vals.seriesId"]
         }, "&vals.chartId"],
+        "__:boxplot": "=boxplot()",
+        unannotated: {
+          label: "",
+          label_unannotated: "",
+          value: "+=unannotated()",
+          value_annotated: "+=annotated()"
+        },
         refs: {
           //chartkey: "&vals.term0",
           "cols": ["&vals.seriesId"],
@@ -113,7 +129,10 @@ function getPj(settings) {
           return {
             chartId,
             seriesId,
-            dataId
+            dataId,
+            value: typeof numValFxns[settings.term1] == 'function'
+              ? numValFxns[settings.term1](row)
+              : undefined
           }
         }
       },
@@ -134,6 +153,22 @@ function getPj(settings) {
           }
         }
         return maxAcrossCharts
+      },
+      boxplot(row, context) {
+        if (!context.root.values.length) return;
+        context.root.values.sort((i,j)=> i - j )
+        const stat = app.boxplot_getvalue( context.root.values.map(v => {return {value: v}}) )
+        stat.mean = context.root.sum /  context.root.values.length
+        return stat
+      },
+      unannotated(row, context) {
+        const vals = context.joins.get('vals')
+        //console.log(context.joins)
+        return vals.seriesId === unannotated.label ? 1 : 0
+      },
+      annotated(row, context) {
+        const vals = context.joins.get('vals')
+        return vals.seriesId === unannotated.label ? 0 : 1
       }
     }
   })
@@ -168,13 +203,11 @@ async function setValFxns(q, tdb, ds) {
 function get_numeric_bin_name ( key, t, ds, termNum ) {
   const [ binconfig, values ] = termdb_get_numericbins( key, t, ds, termNum )
   //console.log(key, binconfig, t)
+  Object.assign(unannotated, binconfig.unannotated)
+
   joinFxns[key] = row => {
     const v = row[key]
     if( binconfig.unannotated && v == binconfig.unannotated._value ) {
-      /*** 
-        TODO: how are unannotated values
-        filtered on server and/or client-side?  
-      ***/
       return binconfig.unannotated.label
     }
 
@@ -200,6 +233,13 @@ function get_numeric_bin_name ( key, t, ds, termNum ) {
       if( b.stopinclusive   && v >  b.stop  ) continue
       if( !b.stopinclusive  && v >= b.stop  ) continue
       return b.label
+    }
+  }
+
+  numValFxns[key] = row => {
+    const v = row[key]
+    if(!binconfig.unannotated || v !== binconfig.unannotated._value ) {
+      return v
     }
   }
 }
