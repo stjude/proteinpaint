@@ -242,6 +242,9 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
   // step 2, decide bins
   const nb = term.graph.barchart.numeric_bin
+  if (nb.crosstab_fixed_bins) {
+    nb.fixed_bins = nb.crosstab_fixed_bins
+  }
 
   const bins = []
 
