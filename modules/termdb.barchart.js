@@ -158,15 +158,15 @@ async function setValFxns(q, tdb, ds) {
       /*** TODO: handle unannotated categorical values?  ***/
       joinFxns[key] = row => row[key] 
     } else if (t.isinteger || t.isfloat) {
-      return get_numeric_bin_name(key, t, ds)
+      return get_numeric_bin_name(key, t, ds, term)
     } else {
       throw "unsupported term binning"
     }
   }
 }
 
-function get_numeric_bin_name ( key, t, ds ) {
-  const [ binconfig, values ] = termdb_get_numericbins( key, t, ds )
+function get_numeric_bin_name ( key, t, ds, termNum ) {
+  const [ binconfig, values ] = termdb_get_numericbins( key, t, ds, termNum )
   //console.log(key, binconfig, t)
   joinFxns[key] = row => {
     const v = row[key]
@@ -204,7 +204,7 @@ function get_numeric_bin_name ( key, t, ds ) {
   }
 }
 
-function termdb_get_numericbins ( id, term, ds ) {
+function termdb_get_numericbins ( id, term, ds, termNum ) {
 /*
 must return values from all samples, not to exclude unannotated values
 
@@ -242,7 +242,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
   // step 2, decide bins
   const nb = term.graph.barchart.numeric_bin
-  if (nb.crosstab_fixed_bins) {
+  if (termNum=='term2' && nb.crosstab_fixed_bins) {
     nb.fixed_bins = nb.crosstab_fixed_bins
   }
 

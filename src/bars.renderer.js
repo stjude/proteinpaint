@@ -141,7 +141,7 @@ export default function barsRenderer(barsapp, holder) {
       .attr("transform", colLabelsTransform)
       .style("display", hm.colw < 6 ? "none" : "")
       .selectAll("g")
-      .data(hm.cols, returnD);
+      .data(hm.cols, returnD)
     c.exit().remove();
     c.each(updateColLabel);
     c.enter()
@@ -467,7 +467,7 @@ export default function barsRenderer(barsapp, holder) {
   }
 
   function addColLabel(d) {
-    if (!this || !d) return;
+    if (!this || d === undefined) return;
     const g = select(this)
       .attr("transform", colLabelTransform)
       .style("opacity", 0);
