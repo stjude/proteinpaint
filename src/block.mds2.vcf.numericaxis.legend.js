@@ -314,7 +314,7 @@ group{}
 
 will attach div_numbersamples to group{}
 */
-	console.log(tk)	
+	// console.log(tk)	
 	// Group div
     const group_div = setting_div
         .append('div')
@@ -373,16 +373,19 @@ will attach div_numbersamples to group{}
                 mds: tk.mds,
                 div: treediv,
                 default_rootterm: {},
-			modifier_barchart_selectbar: {
-				callback: callback_add(errdiv)
-			}
+				modifier_barchart_selectbar: {
+					callback: callback_add()
+				}
             }
             init(obj)
 	})
+
+	function callback_add(){
+		//TODO
+	}
 }
 
 function update_terms_div(terms_div, group, tk, block){
-
 	terms_div.selectAll('*').remove()
 
 	const tip = new client.Menu({padding:'5px'})
@@ -398,7 +401,7 @@ function update_terms_div(terms_div, group, tk, block){
 		const term_name_btn = term_btn.append('div')
 			.style('display','inline-block')
 			.text(term.term.name)
-			.on('click',()=>{
+			.on('click',async ()=>{
 		
 				tip.clear()
 				.showunder( term_name_btn.node() )
@@ -412,7 +415,10 @@ function update_terms_div(terms_div, group, tk, block){
 	                div: treediv,
 	                default_rootterm: {},
 					modifier_barchart_selectbar: {
-						callback: callback_replace()
+						callback: result => {
+							tip.hide()
+							replace_term(result, i)
+						}
 					}
 	            }
 	            init(obj)
@@ -541,8 +547,43 @@ function update_terms_div(terms_div, group, tk, block){
             await mds2.loadTk( tk, block )
 		})
 	}
-}
+	
+	async function replace_term(result, term_replce_index){
+		// console.log(group.terms, result.terms)
 
+		// create new array with updated terms
+		let new_terms = []
+
+		for(const [i, term] of group.terms.entries()){
+
+			// replace the term by index of clicked term
+			if(i == term_replce_index){
+				for(const [j, bar_term] of result.terms.entries()){
+					const new_term = {
+						value: bar_term.label,
+						term: {
+							id: bar_term.term.id,
+							iscategorical: bar_term.term.iscategorical,
+							name: bar_term.term.name
+						} 
+					}
+					new_term.isnot  = term.isnot ? true : false
+					new_terms.push(new_term)
+				}
+			}else{
+				new_terms.push(term)
+			}
+		}
+
+		// assing new terms to group
+		group.terms = new_terms
+		
+		// // update the group div with new terms
+		may_settoloading_termgroup( group )
+		update_terms_div(terms_div, group, tk, block)
+		await mds2.loadTk( tk, block )
+	}
+}
 
 
 function may_settoloading_termgroup ( group ) {
@@ -554,12 +595,3 @@ function may_settoloading_termgroup ( group ) {
 }
 
 
-
-
-function callback_add(errdiv){
-	//TODO
-}
-
-function callback_replace(){
-	//TODO
-}
