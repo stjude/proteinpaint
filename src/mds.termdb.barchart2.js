@@ -196,7 +196,7 @@ export default class BarsApp{
             if (termNum != 'term0' && term) {
               t.push({
                 term,
-                value: termNum=="term1" ? d.seriesTotal : d.total,
+                value: d.seriesId,
                 label: !term.values 
                   ? d.seriesId
                   : termNum=="term1"
