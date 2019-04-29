@@ -3,7 +3,6 @@ module.exports={
 	genomefile:'genomes/mm10.gz',
 	genedb:{
 		dbfile:'anno/genes.mm10.db',
-		genetable:'genes'
 	},
 	snp:{
 		dbfile:'anno/db/snp142.mm10.db',

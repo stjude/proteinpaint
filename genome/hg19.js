@@ -3,14 +3,11 @@ module.exports={
 	genomefile:'genomes/hg19.gz',
 	genedb:{
 		dbfile:'anno/genes.hg19.db',
-		genetable:'genes',
-		genealiastable:'genealias'
+		hasalias:true
 	},
 	proteindomain:{
 		dbfile:'anno/db/proteindomain.db',
-		makequery: (isoform) => {
-			return 'select * from domain where isoform=\''+isoform+'\' collate nocase'
-		}
+		statement: 'select data from domain where isoform=? collate nocase'
 	},
 	snp:{
 		dbfile:'anno/db/snp146.hg19.db',

@@ -25,8 +25,7 @@ const express=require('express'),
 	spawn=child_process.spawn,
 	exec=child_process.exec,
 	path=require('path'),
-	sqlite3=require('sqlite3').verbose(), // TODO  replaced by sqlite
-	sqlite=require('sqlite'),
+	sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	bettersqlite = require('better-sqlite3'),
 	createCanvas = require('canvas').createCanvas,
 	d3color=require('d3-color'),
@@ -537,67 +536,27 @@ function handle_genelookup(req,res) {
 		// isoform query must be converted to symbol first, so as to retrieve all gene models related to this gene
 
 		// see if query string match directly with gene symbol
-		g.genedb.db.all('select name from '+g.genedb.genetable+' where name="'+req.query.input+'"')
-		.then(rows=>{
-			if(rows.length==0) {
-				// no match to gene symbol
-				return null
+		let symbol
+		{
+			const tmp = g.genedb.getnamebynameorisoform.get(req.query.input,req.query.input)
+			if(tmp) symbol = tmp.name
+		}
+		if(!symbol) {
+			if(g.genedb.hasalias) {
+				const tmp = g.genedb.getnamebyalias.get(req.query.input)
+				if(tmp) symbol = tmp.name
 			}
-			return rows[0].name
-		})
-		.then(symbol=>{
-			if(symbol) {
-				// got a valid gene symbol
-				return symbol
-			}
-			// no symbol yet, try isoform accession
-			return g.genedb.db.all('select name from '+g.genedb.genetable+' where isoform="'+req.query.input+'"')
-				.then(rows=>{
-					if(rows.length==0) {
-						// no match to isoform
-						return null
-					}
-					return rows[0].name
-				})
-		})
-		.then( symbol=>{
-			if(symbol) {
-				return symbol
-			}
-			// not a gene symbol, try alias to symbol
-			if(g.genedb.genealiastable) {
-				return g.genedb.db.all('select name from '+g.genedb.genealiastable+' where alias="'+req.query.input+'"')
-					.then(rows=>{
-						if(rows.length==0) {
-							// no match to alias
-							return null
-						}
-						return rows[0].name
-					})
-			}
+		}
+		if(!symbol) {
 			// no other means of matching it to symbol
-			return req.query.input
-		})
-		.then(symbol=>{
-			// get gene models by symbol
-			return g.genedb.db.all('select isdefault,genemodel from '+g.genedb.genetable+' where name="'+symbol+'"')
-				.then(rows=>{
-					const lst=[]
-					rows.forEach(r=>{
-						const model=JSON.parse(r.genemodel) // must parse, otherwise still string
-						if(r.isdefault) {
-							model.isdefault=true
-						}
-						lst.push(model)
-					})
-					return lst
-				})
-		})
-		.then(out=>{
-			res.send({gmlst:out})
-		})
-		.catch(err=>{
-			res.send({error:err.message})
+			symbol = req.query.input
+		}
+		const tmp = g.genedb.getjsonbyname.all( symbol )
+		res.send({gmlst: tmp.map(i=>{
+			const j = JSON.parse(i.genemodel)
+			if(i.isdefault) j.isdefault=true
+			return j
+			})
 		})
 		return
 	}
@@ -605,37 +564,21 @@ function handle_genelookup(req,res) {
 	const input=req.query.input.toUpperCase()
 	const lst=[]
 	const s=input.substr(0,2)
-	g.genedb.db.all('select distinct name from '+g.genedb.genetable+' where name like "'+s+'%"')
-	.then( rows=>{
-		const out=[]
-		rows.forEach(r=>{
-			if(r.name.toUpperCase().startsWith(input)) {
-				out.push(r.name)
-			}
-		})
-		if(out.length==0) return []
-		out.sort()
-		return out.slice(0,20)
-	})
-	.then(out=>{
-		if(out.length) return out
-		// no direct name match, try alias
-		if(g.genedb.genealiastable) {
-			return g.genedb.db.all('select name from '+g.genedb.genealiastable+' where alias="'+input+'"')
-				.then(rows=>{
-					const lst=[]
-					rows.forEach(r=>lst.push(r.name))
-					return lst
-				})
+	const tmp = g.genedb.getnameslike.all( input+'%' )
+	if( tmp.length ) {
+		tmp.sort()
+		res.send({hits: tmp.map(i=>i.name)})
+		return
+	}
+	// no direct name match, try alias
+	if( g.genedb.hasalias ) {
+		const tmp = g.genedb.getnamebyalias.all( input )
+		if(tmp.length) {
+			res.send({hits: tmp.map(i=>i.name)})
+			return
 		}
-		return []
-	})
-	.then(out=>{
-		res.send({hits:out})
-	})
-	.catch(err=>{
-		res.send({error:err.message})
-	})
+	}
+	res.send({hits:[]})
 }
 
 
@@ -699,50 +642,33 @@ function handle_ntseq(req,res) {
 
 
 function handle_pdomain(req,res) {
+	if(reqbodyisinvalidjson(req,res)) return
 	try {
-		req.query=JSON.parse(req.body)
-	} catch(e){
-		res.send({error:'invalid request body'})
-		return
+		const gn=req.query.genome
+		if(!gn) throw 'no genome'
+		const g=genomes[gn]
+		if(!g) throw 'invalid genome '+gn
+		if(!g.proteindomain) {
+			// no error
+			return res.send({lst:[]})
+		}
+		if(!req.query.isoforms) throw 'isoforms missing'
+
+		const lst = []
+		for(const isoform of req.query.isoforms) {
+			const tmp = g.proteindomain.getbyisoform.all( isoform )
+			// FIXME returned {data} is text not json
+			lst.push({
+				name: isoform,
+				pdomains: tmp.map( i=>{ const j=JSON.parse(i.data);j.refseq=isoform;return j })
+			})
+		}
+		res.send({lst})
+
+	}catch(e) {
+		res.send({error: (e.message||e)})
+		if(e.stack) console.log(e.stack)
 	}
-	log(req)
-	const gn=req.query.genome
-	if(!gn) return res.send({error:'no genome'})
-	const g=genomes[gn]
-	if(!g) return res.send({error:'invalid genome '+n})
-	if(!g.proteindomain) {
-		// no error
-		return res.send({lst:[]})
-	}
-	if(!req.query.isoforms) return res.send({error:'isoforms missing'})
-
-	const tasks=[]
-
-	for(const isoform of req.query.isoforms) {
-		const sqlstr=g.proteindomain.makequery(isoform)
-		const task = g.proteindomain.db.all(sqlstr)
-		.then(rows=>{
-			return {
-				name:isoform,
-				pdomains : rows.map(i=>{
-
-					const j = JSON.parse(i.data)
-					j.refseq = isoform // legacy, "refseq" should be updated to "isoform"
-
-					return j
-				})
-			}
-		})
-		tasks.push( task )
-	}
-
-	Promise.all( tasks )
-	.then( data =>{
-		res.send({lst:data})
-	})
-	.catch(err=>{
-		res.send({error:err.message})
-	})
 }
 
 
@@ -2766,39 +2692,26 @@ function handle_dsdata(req,res) {
 
 
 function handle_isoformlst(req,res) {
+	if(reqbodyisinvalidjson(req,res)) return
 	try {
-		req.query=JSON.parse(req.body)
-	} catch(e){
-		res.send({error:'invalid request body'})
-		return
-	}
-	log(req)
-	const g=genomes[req.query.genome]
-	if(!g) return res.send({error:'invalid genome'})
-	if(!req.query.lst) return res.send({lst:[]})
-	const lst=[]
-	req.query.lst.forEach( name=>{
-		lst.push(g.genedb.db.all('select isdefault,genemodel from '+g.genedb.genetable+' where isoform="'+name+'"')
-			.then(rows=>{
-				return rows.map(r=>{
-					const model=JSON.parse(r.genemodel)
-					if(r.isdefault) model.isdefault=true
-					return model
-				})
+		const g=genomes[req.query.genome]
+		if(!g) throw 'invalid genome'
+		if(!req.query.lst) return res.send({lst:[]})
+		const lst=[]
+		for(const isoform of req.query.lst) {
+			const tmp = g.genedb.getjsonbyisoform.all( isoform )
+			lst.push( tmp.map(i=>{
+				const j = JSON.parse(i.genemodel)
+				if(i.isdefault) j.isdefault=true
+				return j
 			})
-		)
-	})
-	Promise.all(lst)
-	.then(output=>{
-		const result=[]
-		output.forEach(r=>{
-			if(r.length) result.push(r)
-		})
-		res.send({lst:result})
-	})
-	.catch(err=>{
-		res.send({error:err.message})
-	})
+			)
+		}
+		res.send({lst})
+	} catch(e){
+		res.send({error:(e.message||e)})
+		if(e.stack)console.log(e.stack)
+	}
 }
 
 
@@ -10489,9 +10402,11 @@ async function handle_isoformbycoord (req, res) {
 
 		const isoforms = await isoformbycoord_tabix( genome, req.query.chr, req.query.pos )
 		for(const i of isoforms) {
-			const tmp = await isoformbycoord_db( genome, i.isoform )
-			i.name = tmp.name
-			i.isdefault = tmp.isdefault
+			const tmp = genome.genedb.getjsonbyisoform.get( i.isoform )
+			if( tmp ) {
+				i.name = JSON.parse(tmp.genemodel).name
+				i.isdefault = tmp.isdefault
+			}
 		}
 		res.send({lst: isoforms})
 
@@ -10527,12 +10442,6 @@ function isoformbycoord_tabix ( genome, chr, pos ) {
 	})
 }
 
-function isoformbycoord_db ( genome, isoform ) {
-	return genome.genedb.db.all('select name, isdefault from '+genome.genedb.genetable+' where isoform="'+isoform+'"')
-	.then(rows=>{
-		return rows[0]
-	})
-}
 
 
 
@@ -12617,17 +12526,21 @@ for(const genomename in genomes) {
 
 	if(!g.genedb) return genomename+': .genedb{} missing'
 	if(!g.genedb.dbfile) return genomename+': .genedb.dbfile missing'
-	if(!g.genedb.genetable) return genomename+': .genedb.genetable missing'
 	{
-		const file=path.join(serverconfig.tpmasterdir, g.genedb.dbfile)
-		Promise.all([ sqlite.open(file,{Promise})])
-		.then(out=>{
-			g.genedb.db=out[0]
-			console.log('Db opened: '+file)
-		})
-		.catch(err=>{
-			throw(err)
-		})
+		let db
+		try {
+			db = new bettersqlite( path.join(serverconfig.tpmasterdir, g.genedb.dbfile), {readonly:true,fileMustExist:true})
+		}catch(e){
+			return 'cannot read dbfile: '+g.genedb.dbfile
+		}
+		g.genedb.getnamebynameorisoform = db.prepare( 'select name from genes where name=? or isoform=?' )
+		g.genedb.getnamebyisoform = db.prepare( 'select distinct name from genes where isoform=?' )
+		g.genedb.getjsonbyname = db.prepare( 'select isdefault,genemodel from genes where name=?')
+		g.genedb.getjsonbyisoform = db.prepare( 'select isdefault,genemodel from genes where isoform=?')
+		g.genedb.getnameslike = db.prepare( 'select distinct name from genes where name like ? limit 20' )
+		if( g.genedb.hasalias ) {
+			g.genedb.getnamebyalias = db.prepare('select name from genealias where alias=?')
+		}
 	}
 
 
@@ -12651,16 +12564,14 @@ for(const genomename in genomes) {
 
 	if(g.proteindomain) {
 		if(!g.proteindomain.dbfile) return genomename+'.proteindomain: missing dbfile for sqlite db'
-		const file=path.join(serverconfig.tpmasterdir,g.proteindomain.dbfile)
-
-		Promise.all( [ sqlite.open(file,{Promise}) ] )
-		.then( out=>{
-			g.proteindomain.db = out[0]
-			console.log('Db opened: '+file)
-		})
-		.catch(err=>{
-			throw(err)
-		})
+		if(!g.proteindomain.statement) return genomename+'.proteindomain: missing statement for sqlite db'
+		let db
+		try {
+			db = new bettersqlite( path.join(serverconfig.tpmasterdir,g.proteindomain.dbfile), {readonly:true,fileMustExist:true} )
+		} catch(e){
+			return 'cannot read dbfile: '+g.proteindomain.dbfile
+		}
+		g.proteindomain.getbyisoform = db.prepare( g.proteindomain.statement )
 	}
 
 	if(g.snp) {
@@ -12671,7 +12582,7 @@ for(const genomename in genomes) {
 
 		let db
 		try {
-			db = bettersqlite( path.join(serverconfig.tpmasterdir,g.snp.dbfile), {readonly:true, fileMustExist:true} )
+			db = new bettersqlite( path.join(serverconfig.tpmasterdir,g.snp.dbfile), {readonly:true, fileMustExist:true} )
 		} catch(e) {
 			return 'cannot read dbfile: '+g.snp.dbfile
 		}
