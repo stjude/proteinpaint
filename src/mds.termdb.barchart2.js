@@ -14,7 +14,7 @@ const colors = {
 const tip = new Menu({padding:'5px'})
 tip.d.style('text-align', 'center')
 
-export default class BarsApp{
+export class Barchart{
   constructor(opts={settings:{}}) {
     this.opts = opts
     this.holder = opts.holder
@@ -189,7 +189,7 @@ export default class BarsApp{
             ).toString().replace('rgb(','rgba(').replace(')', ',0.7)')
         },
         click(d) {
-          if (!obj.modifier_barchart_selectbar || !obj.modifier_barchart_selectbar.callback) return
+          if (!self.obj.modifier_barchart_selectbar || !self.obj.modifier_barchart_selectbar.callback) return
           const t = []
           for(const termNum in terms) {
             const term = terms[termNum]
@@ -236,7 +236,7 @@ export default class BarsApp{
     */
     this.addSelectOpts('unit', 'Y axis', [
       {value: 'abs', label: 'Linear'},
-      //{value: 'log', label: 'Log'},
+      {value: 'log', label: 'Log'},
       {value: 'pct', label: 'Percent'},
     ])
     
@@ -320,8 +320,60 @@ export default class BarsApp{
 
   updateControls() {
     for(const key in this.controls) {
+      if (key == 'unit' && this.settings.term2 && this.settings.unit == 'log') {
+        this.settings.unit = 'abs'
+      }
       this.controls[key].set()
       this.controls[key].div.style("display", "inline-block")
     }
+    this.controls['unit'].elem
+      .selectAll('option')
+      .filter(d=>d.value=='log')
+      .property("disabled", this.settings.term2 != "")
   }
+}
+
+const instances = new WeakMap()
+
+export function barchart_make2(plot, obj) {
+  if (!instances.has(plot.holder)) {
+    instances.set(plot.holder, new Barchart({
+      holder: plot.holder,
+      settings: {},
+      term1: plot.term,
+      obj
+    }))
+  }
+  const barchart = instances.get(plot.holder)
+  barchart.main({
+    genome: obj.genome.name,
+    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
+    term1: plot.term.id,
+    term2: obj.modifier_ssid_barchart ? 'genotype' : '',
+    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
+    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : ''
+  }, obj)
+}
+
+export function barchart_create(plot) {
+  const obj = plot.obj; console.log(plot)
+  if (!instances.has(plot.bar_div)) {
+    instances.set(plot.bar_div, new Barchart({
+      holder: plot.bar_div,
+      settings: {},
+      term1: plot.term,
+      obj
+    }))
+  }
+  const barchart = instances.get(plot.bar_div)
+  barchart.main({
+    genome: obj.genome.name,
+    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
+    term1: plot.term.id,
+    term2: obj.modifier_ssid_barchart ? 'genotype' 
+      : plot.term2 ? plot.term2.id
+      : '',
+    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
+    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : ''
+  }, obj)
 }

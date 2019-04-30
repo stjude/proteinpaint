@@ -561,12 +561,12 @@ export default function barsRenderer(barsapp, holder) {
         : chart.maxSeriesTotal / chart.maxAcrossCharts
     const min = hm.unit == "log" ? 1 : 0
     const max = hm.unit == "pct" ? 100 
-      : hm.unit == "log" ? chart.maxSeriesLogTotal
+      //: hm.unit == "log" ? chart.maxSeriesLogTotal
       : chart.maxSeriesTotal //maxAcrossCharts
 
     yAxis.call(
       axisLeft(
-        scaleLinear()
+        (hm.unit == "log" ? scaleLog() : scaleLinear())
           .domain([max / ratio, min])
           .range([
             s.colgrplabelh,

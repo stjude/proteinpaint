@@ -2,8 +2,9 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {barchart_make} from './mds.termdb.barchart'
-import Barchart from './mds.termdb.barchart2'
+import {barchart_make2} from './mds.termdb.barchart2'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
+import {table_make} from './mds.termdb.table'
 
 /*
 
@@ -294,16 +295,6 @@ such conditions may be carried by obj
 		div: div
 	}
 
-	let barchart
-	if (window.location.search.includes("termdb=2")) {
-		barchart = new Barchart({
-			holder: div,
-			settings: {},
-			term1: term,
-			obj
-		})
-	}
-
 	button.on('click', async ()=>{
 
 		if(div.style('display') == 'none') {
@@ -317,18 +308,16 @@ such conditions may be carried by obj
 		if( term.graph.barchart.dom.loaded ) return
 
 		button.text('Loading')
-		
-		if (window.location.search.includes("termdb=2")) {
-			barchart.main({
+
+		if (window.location.search.includes('termdb=2')) {
+			barchart_make2({
+				holder: div,
 				genome: obj.genome.name,
-				dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
-				term1: term.id,
-				term2: obj.modifier_ssid_barchart ? 'genotype' : '',
-				ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
-				mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : ''
+				dslabel: obj.mds.label,
+				term,
+				obj
 			}, obj)
 		} else {
-
 			const arg = {
 				barchart: {
 					id: term.id
@@ -374,7 +363,7 @@ such conditions may be carried by obj
 
 				}
 
-				barchart_make( plot )
+				barchart_make( plot, obj )
 			} catch(e) {
 				client.sayerror( div, e.message || e)
 				if(e.stack) console.log(e.stack)
@@ -513,7 +502,7 @@ providing all the customization options
 				default2showtable: true // a flag for barchart to show html table view by default
 			}
 
-			barchart_make( plot )
+			table_make( plot )
 		}
 	})
 }
