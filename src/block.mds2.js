@@ -18,6 +18,7 @@ makeTk
 makeTk_parse_client_config
 loadTk_finish_closure
 addparameter_rangequery
+may_generate_filters
 
 
 
@@ -114,6 +115,8 @@ function addparameter_rangequery ( tk, block ) {
 	if(tk.legend.mclass.hiddenvalues.size) {
 		par.hidden_mclass = [...tk.legend.mclass.hiddenvalues]
 	}
+
+	par.locusAttribute = may_generate_filters( tk.locusAttribute )
 
 	if( tk.mds ) {
 		// official
@@ -217,4 +220,49 @@ function apply_scale_to_region ( rglst ) {
 
 
 function configPanel ( tk, block ) {
+}
+
+
+
+function may_generate_filters ( _attr ) {
+/*
+one of
+	.sampleAttribute
+	.mutationAttribute
+	.locusAttribute
+	.alleleAttribute
+
+sends this:
+{
+	attrkey: {
+		hiddenvalues: { vk1, vk2, ...}
+		unannotated_ishidden: true
+	}
+}
+
+gets this:
+{
+	attrkey: {
+		unannotated_count: int
+		value2count: { vk1:int, vk2:int, ... }
+	}
+}
+*/
+	if(!_attr || !_attr.attributes) return
+	const keys = {}
+	for(const attrkey in _attr.attributes) {
+		keys[attrkey] = {
+			hiddenvalues:{}
+		}
+		const attr = _attr.attributes[attrkey]
+		if(attr.unannotated_ishidden) {
+			keys[attrkey].unannotated_ishidden=true
+		}
+		for(const valuekey in attr.values) {
+			if( attr.values[valuekey].ishidden ) {
+				keys[attrkey].hiddenvalues[ valuekey ] = 1
+			}
+		}
+	}
+	return keys
 }

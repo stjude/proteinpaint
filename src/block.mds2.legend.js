@@ -14,9 +14,10 @@ init
 update
 ********************** INTERNAL
 create_mclass
+may_create_locusAttribute
 may_create_termdb_population not used
 update_mclass
-update_vcflegend
+update_locusAttribute
 */
 
 
@@ -33,8 +34,9 @@ export async function init ( tk, block ) {
 
 	tk.legend.table = table
 
-	create_mclass( tk )
 	may_create_vcflegend_numericalaxis( tk, block )
+	create_mclass( tk )
+	may_create_locusAttribute( tk )
 
 	//await may_create_termdb_population( tk, block )
 }
@@ -75,18 +77,20 @@ export function update ( data, tk, block ) {
 /*
 data is returned by xhr
 */
+	const applychange = _applychange(tk,block)
+
 	if( data.mclass2count ) {
-		update_mclass( data.mclass2count, tk, block )
+		update_mclass( data.mclass2count, tk, applychange )
 	}
-	if( data.vcf ) {
-		update_vcflegend( data.vcf, tk, block )
+	if( data.locusAttribute2count ) {
+		update_locusAttribute( data.locusAttribute2count, tk, applychange )
 	}
 }
 
 
 
 
-function update_mclass ( mclass2count, tk, block ) {
+function update_mclass ( mclass2count, tk, applychange ) {
 
 	tk.legend.mclass.holder.selectAll('*').remove()
 
@@ -139,7 +143,7 @@ function update_mclass ( mclass2count, tk, block ) {
 			.style('display','inline-block')
 			.on('click',()=>{
 
-				tk.tip2.clear()
+				tk.legend.tip.clear()
 					.d.append('div')
 					.attr('class','sja_menuoption')
 					.text('Hide')
@@ -148,7 +152,7 @@ function update_mclass ( mclass2count, tk, block ) {
 						applychange()
 					})
 
-				tk.tip2.d
+				tk.legend.tip.d
 					.append('div')
 					.attr('class','sja_menuoption')
 					.text('Show only')
@@ -161,7 +165,7 @@ function update_mclass ( mclass2count, tk, block ) {
 					})
 
 				if(hiddenlst.length) {
-					tk.tip2.d
+					tk.legend.tip.d
 						.append('div')
 						.attr('class','sja_menuoption')
 						.text('Show all')
@@ -171,14 +175,14 @@ function update_mclass ( mclass2count, tk, block ) {
 						})
 				}
 
-				tk.tip2.d
+				tk.legend.tip.d
 					.append('div')
 					.style('padding','10px')
 					.style('font-size','.8em')
 					.style('width','150px')
 					.text(desc)
 
-				tk.tip2.showunder(cell.node())
+				tk.legend.tip.showunder(cell.node())
 			})
 
 		cell.append('div')
@@ -216,16 +220,164 @@ function update_mclass ( mclass2count, tk, block ) {
 				applychange()
 			})
 	}
+}
 
-	const applychange = ()=>{
-		tk.tip2.hide()
-		mds2.loadTk(tk, block)
+
+
+
+
+function update_locusAttribute ( locusAttribute2count, tk, applychange ) {
+/*
+TODO may be a generic function applied to locusAttribute alleleAttribute mutationAttribute
+*/
+
+	if( !tk.locusAttribute || !tk.locusAttribute.attributes) return
+
+	for(const attrkey in tk.locusAttribute.attributes) {
+
+		const attr = tk.locusAttribute.attributes[ attrkey ]
+		attr.legend.holder.selectAll('*').remove()
+
+		const showlst = [],
+			hiddenlst = []
+
+		if( locusAttribute2count[attrkey].unannotated_count) {
+			const c = {
+				isunannotated:true,
+				count: locusAttribute2count[attrkey].unannotated_count
+			}
+			if( attr.unannotated_ishidden ) {
+				hiddenlst.push(c)
+			} else {
+				showlst.push(c)
+			}
+		}
+		for(const valuekey in locusAttribute2count[ attrkey ].value2count) {
+			const c = {
+				key: valuekey,
+				count: locusAttribute2count[ attrkey ].value2count[ valuekey ]
+			}
+			if( attr.values[ valuekey ].ishidden ) {
+				hiddenlst.push(c)
+			} else {
+				showlst.push(c)
+			}
+		}
+		showlst.sort((i,j)=>j.count-i.count)
+		hiddenlst.sort((i,j)=>j.count-i.count)
+
+		for(const c of showlst) {
+			// { key, count, isunannotated }
+
+			const label = c.isunannotated ? 'Unannotated' : attr.values[ c.key ].name
+			const color = '#858585'
+
+			const cell = attr.legend.holder
+				.append('div')
+				.attr('class', 'sja_clb')
+				.style('display','inline-block')
+				.on('click',()=>{
+
+					tk.legend.tip
+						.clear()
+						.d.append('div')
+						.attr('class','sja_menuoption')
+						.text('Hide')
+						.on('click',()=>{
+							if( c.isunannotated ) {
+								attr.unannotated_ishidden = true
+							} else {
+								attr.values[ c.key ].ishidden = true
+							}
+							applychange()
+						})
+
+					tk.legend.tip.d
+						.append('div')
+						.attr('class','sja_menuoption')
+						.text('Show only')
+						.on('click',()=>{
+							for(const c2 of showlst) {
+								if(c2.isunannotated) {
+									attr.unannotated_ishidden=true
+								} else {
+									attr.values[c2.key].ishidden=true
+								}
+							}
+							if( c.isunannotated ) {
+								delete attr.unannotated_ishidden
+							} else {
+								delete attr.values[c.key].ishidden
+							}
+							applychange()
+						})
+
+					if(hiddenlst.length) {
+						tk.legend.tip.d
+							.append('div')
+							.attr('class','sja_menuoption')
+							.text('Show all')
+							.on('click',()=>{
+								delete attr.unannotated_ishidden
+								for(const k in attr.values) {
+									delete attr.values[k].ishidden
+								}
+								applychange()
+							})
+					}
+
+					tk.legend.tip.showunder(cell.node())
+				})
+
+			cell.append('div')
+				.style('display','inline-block')
+				.attr('class','sja_mcdot')
+				.style('background', color)
+				.html( c.count>1 ? c.count : '&nbsp;')
+			cell.append('div')
+				.style('display','inline-block')
+				.style('color',color)
+				.html('&nbsp;'+label)
+		}
+
+		// hidden ones
+		for(const c of hiddenlst) {
+			// { key, count, isunannotated }
+
+			const label = c.isunannotated ? 'Unannotated' : attr.values[ c.key ].name
+			const color = '#858585'
+			let loading = false
+
+			attr.legend.holder.append('div')
+				.style('display','inline-block')
+				.attr('class','sja_clb')
+				.style('text-decoration','line-through')
+				.style('opacity',.3)
+				.text( '('+c.count+') '+label )
+				.on('click',()=>{
+
+					if(loading) return
+					loading = true
+
+					if( c.isunannotated ) {
+						delete attr.unannotated_ishidden
+					} else {
+						delete attr.values[c.key].ishidden
+					}
+					d3event.target.innerHTML = 'Updating...'
+					applychange()
+				})
+		}
 	}
 }
 
 
 
-function update_vcflegend ( data, tk, block ) {
+function _applychange (tk,block) {
+	return ()=>{
+		tk.legend.tip.hide()
+		mds2.loadTk(tk, block)
+	}
 }
 
 
@@ -267,4 +419,29 @@ applies to all type of data, not just vcf
 		.text('Add filter')
 		.on('click',()=>{
 		})
+}
+
+
+
+function may_create_locusAttribute ( tk ) {
+/*
+list all mutation classes
+attribute may have already been created with customization
+legend.mclass{}
+	.hiddenvalues
+	.row
+	.holder
+*/
+	if(!tk.locusAttribute || !tk.locusAttribute.attributes) return
+	for(const k in tk.locusAttribute.attributes) {
+		const attr = tk.locusAttribute.attributes[ k ]
+		attr.legend = {}
+		attr.legend.row = tk.legend.table.append('tr')
+		attr.legend.row
+			.append('td')
+			.style('text-align','right')
+			.style('opacity',.3)
+			.text(attr.label)
+		attr.legend.holder = attr.legend.row.append('td')
+	}
 }

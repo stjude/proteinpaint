@@ -14,9 +14,11 @@ import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
 ********************** EXPORTED
 makeTk
 ********************** INTERNAL
+copy_official_configs
 parse_client_config
 configPanel
 may_initiate_vcf
+validate_tk
 */
 
 
@@ -31,17 +33,8 @@ export async function makeTk ( tk, block ) {
 		tk.mds = block.genome.datasets[ tk.dslabel ]
 		if(!tk.mds) throw 'dataset not found for '+tk.dslabel
 		if(!tk.mds.track) throw 'mds.track{} missing: dataset not configured for mds2 track'
-		tk.name = tk.mds.track.name
 
-		// copy server-side configs
-
-		if( tk.mds.track.vcf ) {
-			// do not allow dom
-			tk.vcf = JSON.parse(JSON.stringify(tk.mds.track.vcf))
-		}
-
-		// TODO other file types
-
+		copy_official_configs( tk )
 
 	} else {
 
@@ -54,6 +47,8 @@ export async function makeTk ( tk, block ) {
 	}
 
 	parse_client_config( tk )
+
+	validate_tk( tk )
 
 	tk.tklabel.text( tk.name )
 
@@ -127,4 +122,45 @@ function may_initiate_vcf ( tk ) {
 	} catch(e) {
 		throw 'numerical axis error: '+e
 	}
+}
+
+
+
+
+function copy_official_configs ( tk ) {
+/*
+for official tk only
+requires tk.mds{}
+make hard copy of attributes to tk
+so multiple instances of the same tk won't cross-react
+*/
+	if(!tk.mds) return
+	tk.name = tk.mds.track.name
+
+	if( tk.mds.track.vcf ) {
+		// do not allow dom
+		tk.vcf = JSON.parse(JSON.stringify(tk.mds.track.vcf))
+	}
+
+	// TODO other file types
+
+	// for the sample/variant attributes, must not overwrite existing configs coming from embedded view
+	if( tk.mds.mutationAttribute ) {
+		if( !tk.mutationAttribute ) tk.mutationAttribute = {attributes: {}}
+		Object.assign( tk.mutationAttribute.attributes, JSON.parse(JSON.stringify(tk.mds.mutationAttribute.attributes)) )
+	}
+
+	if( tk.mds.locusAttribute ) {
+		if( !tk.locusAttribute ) tk.locusAttribute = {attributes: {}}
+		Object.assign( tk.locusAttribute.attributes, JSON.parse(JSON.stringify(tk.mds.locusAttribute.attributes)) )
+	}
+
+	if( tk.mds.alleleAttribute ) {
+		if( !tk.alleleAttribute ) tk.alleleAttribute = {attributes: {}}
+		Object.assign( tk.alleleAttribute.attributes, JSON.parse(JSON.stringify(tk.mds.alleleAttribute.attributes)) )
+	}
+}
+
+
+function validate_tk ( tk ) {
 }
