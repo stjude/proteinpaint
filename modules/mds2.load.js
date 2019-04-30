@@ -59,6 +59,14 @@ return async (req,res) => {
 		const result = {
 			mclass2count: {}, // k: dt or mclass, v: number of variants, to collect all classes
 		}
+		if( q.locusAttribute ) {
+			result.locusAttribute2count = {}
+			for(const k in q.locusAttribute) {
+				result.locusAttribute2count[k] = {
+					value2count:{}
+				}
+			}
+		}
 
 		// by triggers
 

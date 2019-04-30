@@ -21,6 +21,7 @@ parseline_termdb2groupAF_onegroup
 parseline_ebgatest
 may_apply_chisqtest_ebgatest
 vcfbyrange_collect_result
+_m_is_filtered
 */
 
 
@@ -125,6 +126,7 @@ ds is either official or custom
 		}
 
 		const mockblock = make_mockblock( r )
+		const m_is_filtered = _m_is_filtered( q, result, mockblock )
 
 		const coord = (tk0.nochr ? r.chr.replace('chr','') : r.chr)+':'+r.start+'-'+r.stop
 
@@ -140,55 +142,31 @@ ds is either official or custom
 					// no sample filtering, do not look at sample, just the variant
 					const newline = line.split( '\t', 8 ).join('\t')
 					const [e,mlst2,e2] = vcf.vcfparseline( newline, vcftk )
-					mlst = mlst2
+					mlst = mlst2.reduce(
+						(uselst, m) => {
+							if( m_is_filtered( m ) ) {
+							} else {
+								uselst.push(m)
+							}
+							return uselst
+						},
+						[]
+					)
 				}
 
 			} else if( querymode.range_termdb2groupAF ) {
 
-				mlst = parseline_termdb2groupAF( line, querymode.columnidx_group1, querymode.columnidx_group2, vcftk )
+				mlst = parseline_termdb2groupAF( line, querymode.columnidx_group1, querymode.columnidx_group2, vcftk, m_is_filtered )
 
 			} else if( querymode.range_ebgatest ) {
 
-				mlst = parseline_ebgatest( line, querymode.columnidx, querymode.pop2average, vcftk, ds )
+				mlst = parseline_ebgatest( line, querymode.columnidx, querymode.pop2average, vcftk, ds, m_is_filtered )
 			}
 
 			if( mlst ) {
 				for(const m of mlst) {
 
-					common.vcfcopymclass( m, mockblock )
 
-					// m.class is decided, add to counter
-					result.mclass2count[m.class] = ( result.mclass2count[m.class] || 0 ) + 1
-
-					// if to drop this variant
-					if( q.hidden_mclass && q.hidden_mclass.has(m.class) ) {
-						continue
-					}
-
-					if( q.numerical_info_cutoff ) {
-						let v
-						if( m.info ) {
-							v = m.info[ q.numerical_info_cutoff.key ]
-						}
-						if( !Number.isFinite( v )) {
-							if( m.altinfo ) {
-								v = m.altinfo[ q.numerical_info_cutoff.key ]
-							}
-						}
-						if(Number.isFinite( v )) {
-							if( q.numerical_info_cutoff.side == '<' ) {
-								if( v >= q.numerical_info_cutoff.value ) return
-							} else if( q.numerical_info_cutoff.side == '<=' ) {
-								if( v > q.numerical_info_cutoff.value ) return
-							} else if( q.numerical_info_cutoff.side == '>' ) {
-								if( v <= q.numerical_info_cutoff.value ) return
-							} else {
-								if( v < q.numerical_info_cutoff.value ) return
-							}
-						} else {
-							return
-						}
-					}
 
 					if( m.csq ) {
 						// not to release the whole csq, only to show number of interpretations
@@ -434,7 +412,7 @@ get csq from one variant
 
 
 
-function parseline_termdb2groupAF ( line, columnidx_group1, columnidx_group2, vcftk ) {
+function parseline_termdb2groupAF ( line, columnidx_group1, columnidx_group2, vcftk, m_is_filtered ) {
 	const l = line.split('\t')
 
 	const alleles = [ l[3], ...l[4].split(',') ]
@@ -447,21 +425,32 @@ function parseline_termdb2groupAF ( line, columnidx_group1, columnidx_group2, vc
 
 	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
 
-	for(const m of mlst) {
-		let g1AF,
-			g2AF
-		{
-			const ref = g1.alleles.get( m.ref ) || 0
-			const alt = g1.alleles.get( m.alt ) || 0
-			g1AF = (ref+alt==0) ? 0 : alt/(ref+alt)
-		}
-		{
-			const ref = g2.alleles.get( m.ref ) || 0
-			const alt = g2.alleles.get( m.alt ) || 0
-			g2AF = (ref+alt==0) ? 0 : alt/(ref+alt)
-		}
-		m.AF2group = [ g1AF, g2AF ]
-	}
+	return mlst.reduce(
+		(uselst,m) =>{
+
+			if( m_is_filtered( m ) ) {
+				// skip
+			} else {
+
+				let g1AF,
+					g2AF
+				{
+					const ref = g1.alleles.get( m.ref ) || 0
+					const alt = g1.alleles.get( m.alt ) || 0
+					g1AF = (ref+alt==0) ? 0 : alt/(ref+alt)
+				}
+				{
+					const ref = g2.alleles.get( m.ref ) || 0
+					const alt = g2.alleles.get( m.alt ) || 0
+					g2AF = (ref+alt==0) ? 0 : alt/(ref+alt)
+				}
+				m.AF2group = [ g1AF, g2AF ]
+				uselst.push(m)
+			}
+			return uselst
+		},
+		[]
+	)
 
 	return mlst
 }
@@ -501,7 +490,7 @@ function parseline_termdb2groupAF_onegroup ( alleles, l, columnidx ) {
 
 
 
-function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds ) {
+function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds, m_is_filtered ) {
 
 	const l = line.split('\t')
 
@@ -510,33 +499,43 @@ function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds ) {
 	const g = parseline_termdb2groupAF_onegroup( alleles, l, columnidx )
 	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
 
-	for(const m of mlst) {
-		const refcount = g.alleles.get( m.ref ) || 0
-		const altcount = g.alleles.get( m.alt ) || 0
-		// get control population allele count, for the current variant
-		let controltotal = 0
-		const pop2control = new Map()
-		for(const [k,v] of pop2average) {
-			const AC = parseline_ebgatest_getkey( m, v.infokey_AC )
-			const AN = parseline_ebgatest_getkey( m, v.infokey_AN )
-			pop2control.set( k, { AC, AN })
-			controltotal += AN
-		}
-		// adjust control population based on pop2average
-		let ACadj = 0,
-			ANadj = 0
-		for( const [k,v] of pop2control ) {
-			const AN2 = v.AN * pop2average.get(k).average
-			const AC2 = AN2 == 0 ? 0 : v.AC * AN2 / v.AN
-			ACadj += AC2
-			ANadj += AN2
-		}
-		m.ebga = {
-			line: m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj),
-			table: [altcount, refcount, ACadj, ANadj-ACadj]
-		}
-	}
-	return mlst
+	return mlst.reduce(
+		(uselst, m) => {
+			if( m_is_filtered( m ) ) {
+				// skip
+			} else {
+
+				const refcount = g.alleles.get( m.ref ) || 0
+				const altcount = g.alleles.get( m.alt ) || 0
+				// get control population allele count, for the current variant
+				let controltotal = 0
+				const pop2control = new Map()
+				for(const [k,v] of pop2average) {
+					const AC = parseline_ebgatest_getkey( m, v.infokey_AC )
+					const AN = parseline_ebgatest_getkey( m, v.infokey_AN )
+					pop2control.set( k, { AC, AN })
+					controltotal += AN
+				}
+				// adjust control population based on pop2average
+				let ACadj = 0,
+					ANadj = 0
+				for( const [k,v] of pop2control ) {
+					const AN2 = v.AN * pop2average.get(k).average
+					const AC2 = AN2 == 0 ? 0 : v.AC * AN2 / v.AN
+					ACadj += AC2
+					ANadj += AN2
+				}
+				m.ebga = {
+					line: m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj),
+					table: [altcount, refcount, ACadj, ANadj-ACadj]
+				}
+
+				uselst.push(m)
+			}
+			return uselst
+		},
+		[]
+	)
 }
 
 
@@ -598,4 +597,76 @@ function run_chisqtest( tmpfile ) {
 		sp.on('close',()=> resolve(pfile))
 		sp.on('error',()=> reject(error))
 	})
+}
+
+
+
+
+function _m_is_filtered ( q, result, mockblock ) {
+
+	return m => {
+		let todrop = false
+
+		if( q.locusAttribute ) {
+			for(const attrkey in q.locusAttribute) {
+				const attr = q.locusAttribute[attrkey]
+				const re = result.locusAttribute2count[ attrkey ]
+				const attrvalue = m.info ? m.info[ attrkey ] : undefined
+				if( attrvalue==undefined ) {
+					re.unannotated_count = 1 + (re.unannotated_count||0)
+					if(attr.unannotated_ishidden) {
+						todrop=true
+					}
+					continue
+				}
+				re.value2count[ attrvalue ] = 1 + (re.value2count[attrvalue]||0)
+				if( attr.hiddenvalues[ attrvalue ] ) {
+					todrop=true
+				}
+			}
+		}
+
+		if( q.alleleAttribute ) {
+		}
+
+		if( q.mutationAttribute ) {
+		}
+
+		common.vcfcopymclass( m, mockblock )
+
+		// m.class is decided, add to counter
+		result.mclass2count[m.class] = ( result.mclass2count[m.class] || 0 ) + 1
+
+		// if to drop this variant
+		if( q.hidden_mclass && q.hidden_mclass.has(m.class) ) {
+			todrop=true
+		}
+
+		if( q.numerical_info_cutoff ) {
+			let v
+			if( m.info ) {
+				v = m.info[ q.numerical_info_cutoff.key ]
+			}
+			if( !Number.isFinite( v )) {
+				if( m.altinfo ) {
+					v = m.altinfo[ q.numerical_info_cutoff.key ]
+				}
+			}
+			if(Number.isFinite( v )) {
+				if( q.numerical_info_cutoff.side == '<' ) {
+					if( v >= q.numerical_info_cutoff.value ) todrop=true
+				} else if( q.numerical_info_cutoff.side == '<=' ) {
+					if( v > q.numerical_info_cutoff.value ) todrop=true
+				} else if( q.numerical_info_cutoff.side == '>' ) {
+					if( v <= q.numerical_info_cutoff.value ) todrop=true
+				} else {
+					if( v < q.numerical_info_cutoff.value ) todrop=true
+				}
+			} else {
+				todrop=true
+			}
+		}
+
+		return todrop
+	}
 }
