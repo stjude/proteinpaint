@@ -61,6 +61,7 @@ module.exports={
 
 	mutationAttribute: {
 		attributes: {
+			// FIXME to be moved to locus/alleleAttribute
 			AF: {
 				label:'SJLIFE allele frequency',
 				isfloat:1,
@@ -69,6 +70,22 @@ module.exports={
 				label:'gnomAD allele frequency',
 				isfloat:1
 			},
+		}
+	},
+	locusAttribute:{
+		attributes:{
+			QC: {
+				label:'Good/Bad List',
+				isfilter:true,
+				values:{
+					Good:{
+						name:'Good'
+					},
+					Bad:{
+						name:'Bad'
+					}
+				}
+			}
 		}
 	},
 
