@@ -37,7 +37,12 @@ export class Barchart{
   }
 
   main(_settings={}, obj=null) {
-    this.obj = obj
+    if (obj) {
+      this.obj = obj; //console.log(obj, this.obj)
+      if (obj.modifier_barchart_selectbar) {
+        this.click_callback =  obj.modifier_barchart_selectbar.callback
+      }
+    }
     this.updateSettings(_settings)
 
     const dataName = '?'
@@ -157,6 +162,7 @@ export class Barchart{
   }
 
   getEventHandlers() {
+    const self = this
     const terms = this.terms
     const s = this.settings
     return {
@@ -189,7 +195,7 @@ export class Barchart{
             ).toString().replace('rgb(','rgba(').replace(')', ',0.7)')
         },
         click(d) {
-          if (!self.obj.modifier_barchart_selectbar || !self.obj.modifier_barchart_selectbar.callback) return
+          if (!self.click_callback) return
           const t = []
           for(const termNum in terms) {
             const term = terms[termNum]
@@ -205,7 +211,7 @@ export class Barchart{
               })
             }
           } //console.log(t, d, terms)
-          obj.modifier_barchart_selectbar.callback({terms: t})
+          self.click_callback({terms: t})
         }
       },
       colLabel: {

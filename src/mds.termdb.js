@@ -4,7 +4,6 @@ import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-s
 import {barchart_make} from './mds.termdb.barchart'
 import {barchart_make2} from './mds.termdb.barchart2'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
-import {table_make} from './mds.termdb.table'
 
 /*
 
@@ -502,7 +501,7 @@ providing all the customization options
 				default2showtable: true // a flag for barchart to show html table view by default
 			}
 
-			table_make( plot )
+			barchart_make( plot )
 		}
 	})
 }
