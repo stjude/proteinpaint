@@ -346,7 +346,8 @@ will attach div_numbersamples to group{}
 	// display term and category
 	update_terms_div(terms_div, group, tk, block)
 
-	const tip = new client.Menu({padding:'5px'})
+	const tip = tk.legend.tip
+	tip.d.style('padding','5px')
 	
 	// add new term
 	const add_term_btn = group_div.append('div')
@@ -356,7 +357,7 @@ will attach div_numbersamples to group{}
 	.style('margin-left','10px')
 	.style('background-color', '#cfe2f3ff')
 	.html('&#43;')
-	.on('click',()=>{
+	.on('click',async ()=>{
 		
 		tip.clear()
 		.showunder( add_term_btn.node() )
@@ -374,21 +375,43 @@ will attach div_numbersamples to group{}
                 div: treediv,
                 default_rootterm: {},
 				modifier_barchart_selectbar: {
-					callback: callback_add()
+					callback: result => {
+						tip.hide()
+						add_term(result)
+					}
 				}
             }
             init(obj)
 	})
 
-	function callback_add(){
-		//TODO
+	async function add_term(result){
+
+		// Add new term to group.terms
+		for(let i=0; i < result.terms.length; i++){
+			const bar_term = result.terms[i]
+			const new_term = {
+				value: bar_term.label,
+				term: {
+					id: bar_term.term.id,
+					iscategorical: bar_term.term.iscategorical,
+					name: bar_term.term.name
+				} 
+			}
+			group.terms.push(new_term)
+		}
+		
+		// // update the group div with new terms
+		may_settoloading_termgroup( group )
+		update_terms_div(terms_div, group, tk, block)
+		await mds2.loadTk( tk, block )
 	}
 }
 
 function update_terms_div(terms_div, group, tk, block){
 	terms_div.selectAll('*').remove()
 
-	const tip = new client.Menu({padding:'5px'})
+	const tip = tk.legend.tip
+	tip.d.style('padding','5px')
 
 	for(const [i, term] of group.terms.entries()){
 		const term_btn = terms_div.append('div')
@@ -506,6 +529,8 @@ function update_terms_div(terms_div, group, tk, block){
 
 						if( category.value == group.terms[i].value ) {
 							// the same
+							row.style('padding','5px 10px')
+								.style('margin','1px')
 							continue
 						}
 
@@ -549,7 +574,6 @@ function update_terms_div(terms_div, group, tk, block){
 	}
 	
 	async function replace_term(result, term_replce_index){
-		// console.log(group.terms, result.terms)
 
 		// create new array with updated terms
 		let new_terms = []
