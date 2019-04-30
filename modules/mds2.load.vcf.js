@@ -520,7 +520,7 @@ function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds, m_is_filt
 				let ACadj = 0,
 					ANadj = 0
 				for( const [k,v] of pop2control ) {
-					const AN2 = v.AN * pop2average.get(k).average
+					const AN2 = controltotal * pop2average.get(k).average
 					const AC2 = AN2 == 0 ? 0 : v.AC * AN2 / v.AN
 					ACadj += AC2
 					ANadj += AN2
@@ -529,7 +529,6 @@ function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds, m_is_filt
 					line: m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj),
 					table: [altcount, refcount, ACadj, ANadj-ACadj]
 				}
-
 				uselst.push(m)
 			}
 			return uselst
@@ -573,7 +572,8 @@ async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
 	}
 	const tmpfile = path.join(serverconfig.cachedir,Math.random().toString())
 	await utils.write_file( tmpfile, lines.join('\n') )
-	const pfile = await run_chisqtest( tmpfile )
+	//const pfile = await run_chisqtest( tmpfile )
+	const pfile = await run_fishertest( tmpfile )
 	const text = await utils.read_file( pfile )
 	for(const line of text.trim().split('\n')) {
 		const l = line.split('\t')
@@ -594,6 +594,14 @@ function run_chisqtest( tmpfile ) {
 	const pfile = tmpfile+'.pvalue'
 	return new Promise((resolve,reject)=>{
 		const sp = spawn('Rscript',['utils/chisq.R',tmpfile,pfile])
+		sp.on('close',()=> resolve(pfile))
+		sp.on('error',()=> reject(error))
+	})
+}
+function run_fishertest( tmpfile ) {
+	const pfile = tmpfile+'.pvalue'
+	return new Promise((resolve,reject)=>{
+		const sp = spawn('Rscript',['utils/fisher.R',tmpfile,pfile])
 		sp.on('close',()=> resolve(pfile))
 		sp.on('error',()=> reject(error))
 	})
