@@ -679,43 +679,10 @@ function heatmap_menu(obj){
 		.style('padding-bottom','5px')
 		.text('Add Genes')
 
-	const gene_list_div = genes_div.append('div')
-		.style('display', 'none')
-		.style('vertical-align','top')
-		.style('padding','10px')
-
-	gene_list_div.append('div')
-		.style('display','block')
-		.style('padding-bottom','5px')
-		.text('Selected Genes')
-
-	gene_searchbox({
-		div: gene_search_div.append('div'),
-		resultdiv: gene_search_div.append('div'),
-		genome: obj.genome.name,
-		callback: async (genename)=>{
-			const gmlst = await findgenemodel_bysymbol( obj.genome.name, genename )
-			if( gmlst && gmlst[0] ) {
-				const gm = gmlst[0]
-				if(!obj.gene_expression.heatmap_genes) obj.gene_expression.heatmap_genes = []
-				const geneidx = obj.gene_expression.heatmap_genes.findIndex( i=> i.gene == genename )
-				if( geneidx == -1 ) {
-					obj.gene_expression.heatmap_genes.push({
-						gene: genename,
-						chr: gm.chr,
-						start: gm.start,
-						stop: gm.stop
-					})
-					gene_list_div.style('display', 'inline-block')
-					gene_list_div.append('div')
-						.text(genename)
-						.attr('class','sja_menuoption')
-				} else {
-					alert('Gene already added to list')
-				}
-			}
-		}
-	})
+	gene_search_div.append('textarea')
+		.attr('rows','4')
+		.attr('cols','20')
+		.attr('placeholder','Type gene names seperated by space')	
 
 	// Show option for Boxplot for Gene Expression by catagories
 	const catagory_div = heatmap_menu_div.append('div')
@@ -723,10 +690,12 @@ function heatmap_menu(obj){
 	catagory_div.append('div')
 		.style('display','block')
 		.style('padding-bottom','5px')
+		.style('padding-left','10px')
 		.text('Heatmap by')
 		
 	const cat_select = catagory_div.append('select')
 	.style('display','block')
+	.style('margin-left','10px')
 
 	cat_select.append('option')
 	.attr('value','none')
@@ -750,7 +719,25 @@ function heatmap_menu(obj){
 		.style('display', 'block')
 		.style('float','right')
 		.style('margin','5px')
-		.on('click', ()=>{
+		.on('click', async ()=>{
+			const input_genelist = gene_search_div.select('textarea').node().value
+			const genelist = input_genelist.split(' ')
+			for(const gene of genelist){
+				const gmlst = await findgenemodel_bysymbol( obj.genome.name, gene )
+				if( gmlst && gmlst[0] ) {
+					const gm = gmlst[0]
+					if(!obj.gene_expression.heatmap_genes) obj.gene_expression.heatmap_genes = []
+					const geneidx = obj.gene_expression.heatmap_genes.findIndex( i=> i.gene == gene )
+					if( geneidx == -1 ) {
+						obj.gene_expression.heatmap_genes.push({
+							gene: gene.charAt(0).toUpperCase() + gene.slice(1),
+							chr: gm.chr,
+							start: gm.start,
+							stop: gm.stop
+						})
+					}
+				}
+			}
 			const arg = {
 				genome: obj.genome.name,
 				getheatmap: {
@@ -765,8 +752,8 @@ function heatmap_menu(obj){
 			client.dofetch( 'singlecell', arg )
 			.then(data=>{
 				if(data.error) throw data.error
-				console.log(data)
-				// obj.heat_map = new client.Menu()
+				obj.menu.hide()
+				make_heatmap(data, obj, cat_select.node().value)
 			})
 	})
 }
@@ -819,18 +806,19 @@ function make_boxplot(data, obj, colidx){
 
 			if(boxplot.density){
 
+				const density_max = Math.max(...boxplot.density)
 				const line = d3.line()
 					.x(function(d, j) { return x_scale(j*data.maxexpvalue/boxplot.density.length) }) // set the x values for the line generator
-					.y(function(d) { return (y_scale(d / boxplot.numberofcells)/2) }) // set the y values for the line generator 
+					.y(function(d) { return (y_scale(d / density_max)/2) }) // set the y values for the line generator 
 					.curve(d3.curveMonotoneX) // apply smoothing to the line
 
 				const area = d3.area()
 					.x(function(d,j) { return x_scale(j*data.maxexpvalue/boxplot.density.length) })
 					.y0(function(d) { 
-						const temp =  y_scale(d / boxplot.numberofcells)/2 
+						const temp =  y_scale(d / density_max)/2 
 						return box_height - temp
 					})
-					.y1(function(d) { return (y_scale(d / boxplot.numberofcells)/2) })
+					.y1(function(d) { return (y_scale(d / density_max)/2) })
 					.curve(d3.curveMonotoneX)
 
 				g.append('path')
@@ -918,6 +906,144 @@ function make_boxplot(data, obj, colidx){
 			.call(legendAxis)
 	}
 
+}
+
+function make_heatmap(data, obj, colidx){
+	
+	const pane = client.newpane({x:600, y:400})
+	const cat = obj.cells.categories.find(x => x.columnidx == colidx)
+	pane.header.text( 'Heatmap for Gene Expression by ' +  cat.name)
+	const svg = pane.pane.append('svg')
+		.style('margin','10px')
+	
+	// labels of x and y axis
+	let gene_list = []
+	for(const gene of data.gene_heatmap) gene_list.push(gene.genename)
+
+	//find max value for heatmap
+	let means = []
+	data.gene_heatmap.forEach( (gene, i) => {
+		data.gene_heatmap[i].heatmap.forEach((category) =>{
+			means.push(category.mean)
+		})
+	})
+	const max_mean = Math.max(...means)
+
+	let categories = []
+	for(const category of data.gene_heatmap[0].heatmap) categories.push(category.category + ' (' + category.numberofcells+ ')')
+	
+	let box_height = 20,
+	box_width = 80,
+	barspace = 2, 
+	gene_lable_height = 30,
+	legend_width = 60
+
+	const label_width = get_max_labelwidth(data.gene_heatmap[0].heatmap, svg)
+
+	const svg_height = ((box_height + barspace) * categories.length) + gene_lable_height
+	const svg_width = ((box_width + barspace) * gene_list.length) + label_width + legend_width + 20
+
+	svg.transition()
+		.attr('width', svg_width)
+		.attr('height', svg_height)
+
+	// Build X scales and axis:
+	const x_scale = d3.scaleBand()
+		.range([ 0, ((box_width+ barspace) * gene_list.length) ])
+		.domain(gene_list)
+		.padding(0.05)
+	
+	svg.append('g')
+		.style('font-size', 15)
+		.attr('transform', 'translate('+ label_width +',0)')
+		.call(d3.axisBottom(x_scale).tickSize(0))
+		.select(".domain").remove()
+
+  	// Build Y scales and axis:
+  	const y_scale = d3.scaleBand()
+		.range([ ((box_height + barspace) * categories.length), 0 ])
+		.domain(categories)
+		.padding(0.05)
+
+	svg.append("g")
+		.style("font-size", 15)
+		.attr('transform', 'translate('+ label_width + ',' + gene_lable_height +')')
+		.call(d3.axisLeft(y_scale).tickSize(0))
+		.select(".domain").remove()
+
+	// Build color scale
+	var myColor = d3.scaleSequential()
+		.interpolator(d3.interpolatePlasma)
+		.domain([0,max_mean])
+
+	const div = pane.pane.append("div") 
+		.style('position','absolute')  
+		.attr("class", "tooltip")
+		.style("background-color", "white")
+		.style("border", "solid")
+		.style("border-width", "2px")
+		.style("border-radius", "5px")
+		.style("padding", "5px")               
+		.style("opacity", 0)
+
+	data.gene_heatmap.forEach( (gene, i) => {
+
+		data.gene_heatmap[i].heatmap.forEach((category, j) =>{
+
+			const g = svg.append('g')
+				.attr('transform','translate('+ label_width +',' + gene_lable_height + ')')
+			
+			g.append('rect')
+				.attr("x", x_scale(gene.genename))
+				.attr("y", y_scale(category.category + ' (' + category.numberofcells+ ')'))
+				.attr("width", x_scale.bandwidth() )
+				.attr("height", y_scale.bandwidth() )
+				.style("fill", myColor(category.mean))
+				.style("stroke-width", 4)
+				.style("stroke", "none")
+				.style("opacity", 0.8)
+				//tooltip
+				.on("mouseover", function(d) {   
+	
+					div.transition()        
+						.duration(200)      
+						.style("opacity", .9)
+
+					div.html("Mean Expression: "+category.mean)  
+						.style("left", (d3.mouse(this)[0]+70) + "px")
+						.style("top", (d3.mouse(this)[1]+20) + "px")
+					})                  
+				.on("mouseout", function(d) {  
+
+					div.transition()        
+						.duration(500)      
+						.style("opacity", 0)
+				}) 
+
+		})
+	})
+	const legend_data = myColor.ticks(10).reverse()
+	legend_data.unshift(max_mean.toFixed(2))
+
+	// Add a legend for the color values
+	const legend = svg.selectAll('.legend')
+		.data(legend_data)
+   	.enter().append('g')
+		.attr('class', 'legend')
+		.attr('transform', function(d, i) { return 'translate(' + (svg_width - legend_width) + ',' + (30 + i * 20) + ')' })
+
+	legend.append('rect')
+		.attr('width', 20)
+		.attr('height', 20)
+		.style('fill', myColor)
+		.style("opacity", 0.8)
+
+	legend.append('text')
+		.attr('x', 26)
+		.attr('y', 10)
+		.attr('dy', '.35em')
+		.text(String)
+		
 }
 
 function get_max_labelwidth ( items, svg ) {

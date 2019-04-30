@@ -91,7 +91,9 @@ fetch( new Request( hostURL+'/isoformlst', {
 .then(data=>{
 	if(data.error) throw({message:data.error})
 	for(const ilst of data.lst) {
-		genome.isoformcache.set(ilst[0].isoform.toUpperCase(),ilst)
+		if(ilst[0]) {
+			genome.isoformcache.set(ilst[0].isoform.toUpperCase(),ilst)
+		}
 	}
 	const errlst=[]
 	for(const node of nolst) {
