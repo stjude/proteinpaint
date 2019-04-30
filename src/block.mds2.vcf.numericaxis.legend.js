@@ -355,6 +355,7 @@ will attach div_numbersamples to group{}
 	.style('display','inline-block')
 	.style('padding','3px 5px')
 	.style('margin-left','10px')
+	.style('border-radius','3px 3px 3px 3px')
 	.style('background-color', '#cfe2f3ff')
 	.html('&#43;')
 	.on('click',async ()=>{
@@ -390,7 +391,7 @@ will attach div_numbersamples to group{}
 		for(let i=0; i < result.terms.length; i++){
 			const bar_term = result.terms[i]
 			const new_term = {
-				value: bar_term.label,
+				value: bar_term.value,
 				term: {
 					id: bar_term.term.id,
 					iscategorical: bar_term.term.iscategorical,
@@ -419,11 +420,20 @@ function update_terms_div(terms_div, group, tk, block){
 		.style('display','inline-block')
 		.style('padding','3px 5px')
 		.style('margin-left','10px')
-		.style('background-color', '#cfe2f3ff')
+		.style('border-radius','3px 0 0 3px')
+		.style('background-color', '#cfe2f3')
 
 		const term_name_btn = term_btn.append('div')
 			.style('display','inline-block')
 			.text(term.term.name)
+			.on('mouseover',()=>{
+				term_name_btn
+					.style('text-decoration', 'underline')
+			})
+			.on('mouseout',()=>{
+				term_name_btn
+					.style('text-decoration', 'none')
+			})
 			.on('click',async ()=>{
 		
 				tip.clear()
@@ -453,7 +463,16 @@ function update_terms_div(terms_div, group, tk, block){
 			.style('color', 'white')
 			.style('font-size','.7em')
 			.style('padding','3px')
+			.style('border-radius','3px')
 			.style('margin','0 4px')
+			.on('mouseover',()=>{
+				condition_btn
+					.style('text-decoration', 'underline')
+			})
+			.on('mouseout',()=>{
+				condition_btn
+					.style('text-decoration', 'none')
+			})
 
 		if(term.term.iscategorical){
 			condition_btn
@@ -489,6 +508,14 @@ function update_terms_div(terms_div, group, tk, block){
 			// furbish value button for a categorical term
 			term_value_btn
 			.text(term.value)
+			.on('mouseover',()=>{
+				term_value_btn
+					.style('text-decoration', 'underline')
+			})
+			.on('mouseout',()=>{
+				term_value_btn
+					.style('text-decoration', 'none')
+			})
 			.on('click', async ()=>{
 				tip.clear()
 					.showunder( term_value_btn.node() )
@@ -563,6 +590,7 @@ function update_terms_div(terms_div, group, tk, block){
 		.style('display','inline-block')
 		.style('margin-left','1px')
 		.style('padding','3px 5px')
+		.style('border-radius','0 3px 3px 0')
 		.style('background-color', '#cfe2f3ff')
 		.html('&#215;')
 		.on('click',async ()=>{
@@ -584,7 +612,7 @@ function update_terms_div(terms_div, group, tk, block){
 			if(i == term_replce_index){
 				for(const [j, bar_term] of result.terms.entries()){
 					const new_term = {
-						value: bar_term.label,
+						value: bar_term.value,
 						term: {
 							id: bar_term.term.id,
 							iscategorical: bar_term.term.iscategorical,
