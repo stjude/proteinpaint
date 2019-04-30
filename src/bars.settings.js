@@ -24,7 +24,7 @@ export default JSON.stringify({
     collabtickspace: 4,
 
     collabelh: 100,
-    rowlabelw: 50,
+    rowlabelw: 100,
     rowheadleft: true,
     colheadtop: false,
     

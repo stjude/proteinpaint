@@ -102,7 +102,7 @@ export default function barsRenderer(barsapp, holder) {
   let currCell, currRects, currRowTexts, currColTexts;
   let clusterRenderer;
   // eslint-disable-next-line
-  let legendDiv, legendRenderer;
+  let legendRenderer;
   let defaults; //will have key values in init
   let currseries = [];
   let unstackedBarsPanes;
@@ -150,16 +150,20 @@ export default function barsRenderer(barsapp, holder) {
 
     currRects = series.selectAll("rect");
     currColTexts = collabels.selectAll("text");
-
-    if (!hm.hidelegend) {
-      //legendDiv.selectAll('*').remove()
-      //legendDiv.attr('transform','translate(0,0)')
-      //legendRenderer(hm.h.legendHolder);
-    }
-
+    setLegend()
     hm.delay = 0.35 * hm.duration
     renderAxes(yAxis, yTitle, xTitle, hm);
     hm.colw = unadjustedColw
+
+    setTimeout(()=>{
+      const bbox = svg.node().getBBox();
+      const x = bbox.width - svg.attr('width') + hm.rowlabelw
+      svg.transition().duration(100)
+        .attr('width', bbox.width + 20)
+        .attr('height', bbox.height + 20)
+      mainG.transition().duration(100)
+        .attr('transform', 'translate(' + x +',0)' )
+    },10) //, hm.duration)
   }
 
   function init() {
@@ -263,12 +267,15 @@ export default function barsRenderer(barsapp, holder) {
       .attr("class", "sjpcb-bar-chart-x-title")
       .style("cursor", "default");
 
-    legendDiv = svg.append("g").attr("class", "sjpcb-bars-legend");
+    //legendDiv = svg.append("g").attr("class", "sjpcb-bars-legend");
     legendRenderer = htmlLegend(
-      hm,
-      hm.handlers.legend.rectFill,
-      hm.handlers.legend.text,
-      hm.handlers.legend.iconStroke
+      barsapp.opts.legendDiv,
+      () => {},
+      {
+        settings: {
+          legendOrientation: 'vertical'
+        }
+      }
     );
   }
 
@@ -666,6 +673,22 @@ export default function barsRenderer(barsapp, holder) {
   function seriesClick() {
     const d = event.target.__data__
     barsapp.handlers.series.click(d)
+  }
+
+  function setLegend() {
+    if (!hm.hidelegend && barsapp.terms.term2 && barsapp.term2toColor) {
+      const colors = {}
+      const legendData = {
+        name: barsapp.terms.term2.name,
+        items: hm.rows.map(d => {
+          return {
+            text: d,
+            color: barsapp.term2toColor[d]
+          }
+        }).sort((a,b) => a.text < b.text ? -1 : 1)
+      }
+      legendRenderer([legendData]);
+    }
   }
 
   main.hm = hm;

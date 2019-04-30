@@ -33,7 +33,8 @@ export class Barchart{
     }
     this.handlers = this.getEventHandlers()
     this.controls = {}
-    this.setControls()
+    //this.setControls()
+    this.term2toColor = {}
   }
 
   main(_settings={}, obj=null) {
@@ -75,7 +76,8 @@ export class Barchart{
     if (this.settings.term2 == "genotype") {
       this.terms.term2 = {name: this.settings.mname}
     }
-    this.updateControls()
+    this.terms.term2 = settings.term2 ? settings.term2Obj : null
+    //this.updateControls()
   }
 
   render(chartsData) {
@@ -148,6 +150,15 @@ export class Barchart{
       result.seriesTotal = series.total
       result.logTotal = Math.log10(result.total)
       seriesLogTotal += result.logTotal
+      if (!(result.dataId in this.term2toColor)) {
+        this.term2toColor[result.dataId] = this.settings.term2 === ""
+        ? "rgb(144, 23, 57)"
+        : rgb(this.settings.rows.length < 11 
+          ? colors.c10(result.dataId)
+          : colors.c20(result.dataId)
+        ).toString().replace('rgb(','rgba(').replace(')', ',0.7)')
+      } 
+      result.color = this.term2toColor[result.dataId]
     }
     if (seriesLogTotal > chart.maxSeriesLogTotal) {
       chart.maxSeriesLogTotal = seriesLogTotal
@@ -155,7 +166,6 @@ export class Barchart{
   }
 
   sortSeries(a,b) {
-    console.log(a[this.settings.term2] < b[this.settings.term1])
     return a[this.settings.term2] < b[this.settings.term1] 
       ? -1
       : 1 
@@ -163,7 +173,6 @@ export class Barchart{
 
   getEventHandlers() {
     const self = this
-    const terms = this.terms
     const s = this.settings
     return {
       svg: {
@@ -173,6 +182,7 @@ export class Barchart{
       },
       series: {
         mouseover(d) { 
+          const terms = self.terms
           const html = terms.term1.name +': ' + d.seriesId +
             (!terms.term2 ? "" : "<br/>" + terms.term2.name +": "+ d.dataId) + 
             "<br/>Total: " + d.total + 
@@ -187,15 +197,11 @@ export class Barchart{
           tip.hide()
         },
         rectFill(d) {
-          return s.term2 === ""
-            ? "rgb(144, 23, 57)"
-            : rgb(s.rows.length < 11 
-              ? colors.c10(d.dataId)
-              : colors.c20(d.dataId)
-            ).toString().replace('rgb(','rgba(').replace(')', ',0.7)')
+          return d.color
         },
         click(d) {
           if (!self.click_callback) return
+          const terms = self.terms
           const t = []
           for(const termNum in terms) {
             const term = terms[termNum]
@@ -226,7 +232,8 @@ export class Barchart{
       },
       xAxis: {
         text: () => {
-          return s.term1[0].toUpperCase() + s.term1.slice(1)
+          const term = self.terms.term1
+          return term.name[0].toUpperCase() + term.name.slice(1)
         }
       }
     }
@@ -341,13 +348,24 @@ export class Barchart{
 
 const instances = new WeakMap()
 
-export function barchart_make2(plot, obj) {
+export function barchart_make(plot, obj) {
+  if (plot.term2_boxplot || plot.default2showtable) {
+    plot.bar_div.style('display','none')
+    return
+  }
+  plot.bar_div.style('display','block')
+  plot.svg.style('display','none')
+  plot.legend_div.style('display','block')
+  if(plot.boxplot_div){
+    plot.boxplot_div.style('display','none')
+  }
   if (!instances.has(plot.holder)) {
     instances.set(plot.holder, new Barchart({
       holder: plot.holder,
       settings: {},
       term1: plot.term,
-      obj
+      obj,
+      legendDiv: plot.legend_div
     }))
   }
   const barchart = instances.get(plot.holder)
@@ -362,13 +380,25 @@ export function barchart_make2(plot, obj) {
 }
 
 export function barchart_create(plot) {
-  const obj = plot.obj; console.log(plot)
+  if (plot.term2_boxplot || plot.default2showtable) {
+    plot.bar_div.style('display','none')
+    return
+  }
+  plot.bar_div.style('display','block')
+  plot.svg.style('display','none')
+  plot.legend_div.style('display','block')
+  if(plot.boxplot_div){
+    plot.boxplot_div.style('display','none')
+  }
+
+  const obj = plot.obj
   if (!instances.has(plot.bar_div)) {
     instances.set(plot.bar_div, new Barchart({
       holder: plot.bar_div,
       settings: {},
       term1: plot.term,
-      obj
+      obj,
+      legendDiv: plot.legend_div
     }))
   }
   const barchart = instances.get(plot.bar_div)
@@ -380,6 +410,8 @@ export function barchart_create(plot) {
       : plot.term2 ? plot.term2.id
       : '',
     ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
-    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : ''
+    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
+    term2Obj: plot.term2,
+    unit: plot.unit
   }, obj)
 }
