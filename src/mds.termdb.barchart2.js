@@ -202,9 +202,9 @@ export class Barchart{
             if (termNum != 'term0' && term) {
               t.push({
                 term,
-                value: d.seriesId,
+                value: termNum=="term1" ? d.seriesId : d.dataId,
                 label: !term.values 
-                  ? d.seriesId
+                  ? (termNum=="term1" ? d.seriesId : d.dataId)
                   : termNum=="term1"
                     ? term.values[d.seriesId] 
                     : term.values[d.dataId]
