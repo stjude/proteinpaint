@@ -347,8 +347,7 @@ will attach div_numbersamples to group{}
 	update_terms_div(terms_div, group, tk, block)
 
 	const tip = tk.legend.tip
-	tip.d.style('padding','5px')
-	
+
 	// add new term
 	const add_term_btn = group_div.append('div')
 	.attr('class','sja_menuoption')
@@ -411,7 +410,6 @@ function update_terms_div(terms_div, group, tk, block){
 	terms_div.selectAll('*').remove()
 
 	const tip = tk.legend.tip
-	tip.d.style('padding','5px')
 
 	for(const [i, term] of group.terms.entries()){
 		const term_btn = terms_div.append('div')
