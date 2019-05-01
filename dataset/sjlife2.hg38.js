@@ -59,24 +59,12 @@ module.exports={
 		},
 	},
 
-	mutationAttribute: {
-		attributes: {
-			// FIXME to be moved to locus/alleleAttribute
-			AF: {
-				label:'SJLIFE allele frequency',
-				isfloat:1,
-			},
-			AF_gnomAD: {
-				label:'gnomAD allele frequency',
-				isfloat:1
-			},
-		}
-	},
 	locusAttribute:{
 		attributes:{
 			QC: {
 				label:'Good/Bad List',
 				isfilter:true,
+				iscategorical:true,
 				values:{
 					Good:{
 						name:'Good'
@@ -85,7 +73,17 @@ module.exports={
 						name:'Bad'
 					}
 				}
-			}
+			},
+			AF: {
+				label:'SJLIFE allele frequency',
+				isnumeric:1, // back compatible
+				isfloat:1,
+			},
+			AF_gnomAD: {
+				label:'gnomAD allele frequency',
+				isnumeric:1, // back compatible
+				isfloat:1
+			},
 		}
 	},
 
@@ -101,35 +99,15 @@ module.exports={
 					{
 						key:'AF',
 						in_use:true,
-						// may config axis
-						min_value: 0,
-						max_value: 1,
-						cutoff: {
-							in_use:false,
-							side:'<',
-							value:0.001
-						},
 						// TODO bind complex things such as boxplot to one of the info fields
 					},
 					{
 						key:'AF_gnomAD',
-						min_value: 0,
-						max_value: 1,
 						missing_value: 0,
-						cutoff: {
-							in_use:false,
-							side:'<',
-							value:0.001
-						},
 					},
 					{
 						key:'AC_eas',
 						missing_value: 0,
-						cutoff: {
-							in_use:false,
-							side:'<',
-							value:2
-						},
 					},
 				],
 				in_use: true, // to use numerical axis by default
