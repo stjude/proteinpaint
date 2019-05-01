@@ -489,7 +489,6 @@ providing all the customization options
 				items: result.items,
 				default2showtable: true // a flag for barchart to show html table view by default
 			}
-console.log('test')
 			render( plot, obj )
 		}
 	})

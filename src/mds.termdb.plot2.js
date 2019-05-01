@@ -36,7 +36,7 @@ import { platform } from 'os';
       svg,
       yaxis_g,         // for y axis
       graph_g,         // for bar and label of each data item
-      legend_div,      // div for legends
+      legend_div,      // div for legends,
     }
   3.  For single term, do_plot() creates barplot for all terms. 
     First Y-axis added then X-axis labels created. 
@@ -356,10 +356,12 @@ function update_term2_header ( plot ) {
     .on('change',()=>{
       const value = plot.term2_displaymode_options.node().value
       if (value  == 'table'){
+        plot.default2showtable = 1
         plot.term2_boxplot = 0
         plot.table_div.style('display','block')
         update_plot(plot)
       }else if(value == 'stacked'){
+        plot.default2showtable = 0
         plot.term2_boxplot = 0
         plot.yaxis_option_percentage.property('disabled',null)
         plot.yaxis_option_log.property('disabled',true)
@@ -373,6 +375,7 @@ function update_term2_header ( plot ) {
       }
       // if 'boxplot' selected - query server for data
       else if(value == 'boxplot'){
+        plot.default2showtable = 0
         plot.term2_boxplot = 1
         plot.table_div.style('display','none')
         plot.svg.style('display','block')
