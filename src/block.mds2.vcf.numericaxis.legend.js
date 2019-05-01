@@ -183,7 +183,8 @@ function __update_legend ( menubutton, settingholder, tk, block ) {
 		}
 
 		if( nm.inuse_infokey ) {
-			update_legend_by_infokey( settingholder, tk, block )
+			// do nothing
+			//update_legend_by_infokey( settingholder, tk, block )
 			return
 		}
 
@@ -206,6 +207,7 @@ function __update_legend ( menubutton, settingholder, tk, block ) {
 
 function update_legend_by_infokey ( settingholder, tk, block ) {
 /*
+not in use
 dispatched by __update_legend
 only updates legend
 will not update track
