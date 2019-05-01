@@ -112,7 +112,8 @@ export default function barsRenderer(barsapp, holder) {
     Object.assign(hm, chart.settings)
     hm.handlers = chart.handlers
     if (_unstackedBarsPanes) unstackedBarsPanes = _unstackedBarsPanes;
-    if (!svg) init();
+    const nosvg = !svg
+    if (nosvg) init();
 
     const unadjustedColw = hm.colw
     setDimensions();
@@ -122,10 +123,13 @@ export default function barsRenderer(barsapp, holder) {
 
     chartTitle.style("width", hm.svgw + "px")
       .html(chart.chartId);
-    svg.attr("height", hm.svgh);
-    svg.attr("width", hm.svgw);
 
-    mainG.attr("transform", "translate(" + hm.rowlabelw + ",0)");
+    // only set this initially to prevent 
+    // jerky svg resize on update
+    if (nosvg) {
+      svg.attr("height", hm.svgh).attr("width", hm.svgw).style('opacity',0); 
+      mainG.attr("transform", "translate(" + hm.rowlabelw + ",0)");
+    }
 
     const s = series
       .attr("transform", seriesGrpTransform)
@@ -155,15 +159,21 @@ export default function barsRenderer(barsapp, holder) {
     renderAxes(yAxis, yTitle, xTitle, hm);
     hm.colw = unadjustedColw
 
-    setTimeout(()=>{
-      const bbox = svg.node().getBBox();
-      const x = bbox.width - svg.attr('width') + hm.rowlabelw
+    if (nosvg) {
       svg.transition().duration(100)
-        .attr('width', bbox.width + 20)
-        .attr('height', bbox.height + 20)
-      mainG.transition().duration(100)
-        .attr('transform', 'translate(' + x +',0)' )
-    },10)
+        .attr("height", hm.svgh)
+        .attr("width", hm.svgw)
+        .style("opacity",1);
+      setTimeout(()=>{
+        const bbox = svg.node().getBBox();
+        const x = bbox.width - svg.attr('width') + hm.rowlabelw
+        svg.transition().duration(100)
+          .attr('width', bbox.width + 20)
+          .attr('height', bbox.height + 20)
+        mainG.transition().duration(100)
+          .attr('transform', 'translate(' + x +',0)' )
+      },110)
+    }
   }
 
   function init() {
