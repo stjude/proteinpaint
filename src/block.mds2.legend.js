@@ -14,14 +14,15 @@ init
 update
 ********************** INTERNAL
 create_mclass
-may_create_locusAttribute
-may_create_termdb_population not used
+may_create_variantfilter
 update_mclass
-update_locusAttribute
+display_active_variantfilter_infofields
+list_inactive_variantfilter
+configure_one_infofield
 */
 
 
-export async function init ( tk, block ) {
+export function init ( tk, block ) {
 
 	if(!tk.legend) tk.legend = {}
 	tk.legend.tip = new client.Menu({padding:'0px'})
@@ -35,10 +36,8 @@ export async function init ( tk, block ) {
 	tk.legend.table = table
 
 	may_create_vcflegend_numericalaxis( tk, block )
+	may_create_variantfilter( tk, block )
 	create_mclass( tk )
-	may_create_locusAttribute( tk )
-
-	//await may_create_termdb_population( tk, block )
 }
 
 
@@ -82,8 +81,8 @@ data is returned by xhr
 	if( data.mclass2count ) {
 		update_mclass( data.mclass2count, tk, applychange )
 	}
-	if( data.locusAttribute2count ) {
-		update_locusAttribute( data.locusAttribute2count, tk, applychange )
+	if( data.info_fields) {
+		update_info_fields( data.info_fields, tk )
 	}
 }
 
@@ -226,150 +225,6 @@ function update_mclass ( mclass2count, tk, applychange ) {
 
 
 
-function update_locusAttribute ( locusAttribute2count, tk, applychange ) {
-/*
-TODO may be a generic function applied to locusAttribute alleleAttribute mutationAttribute
-*/
-
-	if( !tk.locusAttribute || !tk.locusAttribute.attributes) return
-
-	for(const attrkey in tk.locusAttribute.attributes) {
-
-		const attr = tk.locusAttribute.attributes[ attrkey ]
-		attr.legend.holder.selectAll('*').remove()
-
-		const showlst = [],
-			hiddenlst = []
-
-		if( locusAttribute2count[attrkey].unannotated_count) {
-			const c = {
-				isunannotated:true,
-				count: locusAttribute2count[attrkey].unannotated_count
-			}
-			if( attr.unannotated_ishidden ) {
-				hiddenlst.push(c)
-			} else {
-				showlst.push(c)
-			}
-		}
-		for(const valuekey in locusAttribute2count[ attrkey ].value2count) {
-			const c = {
-				key: valuekey,
-				count: locusAttribute2count[ attrkey ].value2count[ valuekey ]
-			}
-			if( attr.values[ valuekey ].ishidden ) {
-				hiddenlst.push(c)
-			} else {
-				showlst.push(c)
-			}
-		}
-		showlst.sort((i,j)=>j.count-i.count)
-		hiddenlst.sort((i,j)=>j.count-i.count)
-
-		for(const c of showlst) {
-			// { key, count, isunannotated }
-
-			const label = c.isunannotated ? 'Unannotated' : attr.values[ c.key ].name
-			const color = '#858585'
-
-			const cell = attr.legend.holder
-				.append('div')
-				.attr('class', 'sja_clb')
-				.style('display','inline-block')
-				.on('click',()=>{
-
-					tk.legend.tip
-						.clear()
-						.d.append('div')
-						.attr('class','sja_menuoption')
-						.text('Hide')
-						.on('click',()=>{
-							if( c.isunannotated ) {
-								attr.unannotated_ishidden = true
-							} else {
-								attr.values[ c.key ].ishidden = true
-							}
-							applychange()
-						})
-
-					tk.legend.tip.d
-						.append('div')
-						.attr('class','sja_menuoption')
-						.text('Show only')
-						.on('click',()=>{
-							for(const c2 of showlst) {
-								if(c2.isunannotated) {
-									attr.unannotated_ishidden=true
-								} else {
-									attr.values[c2.key].ishidden=true
-								}
-							}
-							if( c.isunannotated ) {
-								delete attr.unannotated_ishidden
-							} else {
-								delete attr.values[c.key].ishidden
-							}
-							applychange()
-						})
-
-					if(hiddenlst.length) {
-						tk.legend.tip.d
-							.append('div')
-							.attr('class','sja_menuoption')
-							.text('Show all')
-							.on('click',()=>{
-								delete attr.unannotated_ishidden
-								for(const k in attr.values) {
-									delete attr.values[k].ishidden
-								}
-								applychange()
-							})
-					}
-
-					tk.legend.tip.showunder(cell.node())
-				})
-
-			cell.append('div')
-				.style('display','inline-block')
-				.attr('class','sja_mcdot')
-				.style('background', color)
-				.html( c.count>1 ? c.count : '&nbsp;')
-			cell.append('div')
-				.style('display','inline-block')
-				.style('color',color)
-				.html('&nbsp;'+label)
-		}
-
-		// hidden ones
-		for(const c of hiddenlst) {
-			// { key, count, isunannotated }
-
-			const label = c.isunannotated ? 'Unannotated' : attr.values[ c.key ].name
-			const color = '#858585'
-			let loading = false
-
-			attr.legend.holder.append('div')
-				.style('display','inline-block')
-				.attr('class','sja_clb')
-				.style('text-decoration','line-through')
-				.style('opacity',.3)
-				.text( '('+c.count+') '+label )
-				.on('click',()=>{
-
-					if(loading) return
-					loading = true
-
-					if( c.isunannotated ) {
-						delete attr.unannotated_ishidden
-					} else {
-						delete attr.values[c.key].ishidden
-					}
-					d3event.target.innerHTML = 'Updating...'
-					applychange()
-				})
-		}
-	}
-}
 
 
 
@@ -383,65 +238,216 @@ function _applychange (tk,block) {
 
 
 
-async function may_create_termdb_population ( tk, block ) {
+
+
+
+function may_create_variantfilter ( tk, block ) {
 /*
-not used
-population group by termdb
-applies to all type of data, not just vcf
-
+called upon initiating the track
+variant filters by both info fields and variantcase_fields
 */
+	if(!tk.info_fields && !tk.variantcase_fields) return
+	tk.legend.variantfilter = {}
 
-	if( !tk.samplegroups ) tk.samplegroups = []
-
-	if( !tk.mds ) return
-	if( !tk.mds.termdb ) return
-
-	/*
-	if the track is preconfigured to have sample groups
-	initialize the groups here, async
-	tk.groups = [ {ssid} ]
-	*/
-
-	const row = tk.legend.table.append('tr')
-
-	// td1
-	row
-		.append('td')
+	const tr = tk.legend.table.append('tr')
+	tr.append('td')
 		.style('text-align','right')
 		.style('opacity',.3)
-		.text('Population groups')
+		.text('Variant Filters')
 
-	// td2
-	const td = row.append('td')
-		.style('padding','10px')
+	const tr2 = tr.append('td')
+		.style('padding-left','5px')
+		.append('table')
+		.append('tr')
 
-	td.append('button')
-		.text('Add filter')
+	// button to list inactive filters
+	tk.legend.variantfilter.button = tr2
+		.append('td')
+		.append('div')
+		.style('display','inline-block')
+		.attr('class','sja_menuoption')
+		.text('+')
+		.style('border-radius','3px')
+		.style('border','solid 1px #ddd')
 		.on('click',()=>{
+			list_inactive_variantfilter( tk, block )
+		})
+
+	tk.legend.variantfilter.holder = tr2.append('td').style('padding-left','10px')
+
+	// display filters active by default
+	if( tk.info_fields ) {
+		for(const i of tk.info_fields) {
+			if(!i.isfilter) continue
+			if(i.variantfilter_inuse) {
+				display_active_variantfilter_infofields( tk, i, block )
+			}
+		}
+	}
+	if( tk.variantcase_fields ) {
+		console.log('to list active variantcase fields')
+	}
+}
+
+
+
+function display_active_variantfilter_infofields ( tk, i, block ) {
+/*
+i is an element from tk.info_fields[]
+add it as a new element to the holder
+allow interacting with it, to update settings of i, and update track
+*/
+	const row = tk.legend.variantfilter.holder
+		.append('div')
+
+	// this row should contain those nice-looking elements
+
+	row.append('span')
+		.style('margin-right','20px')
+		.text(i.label)
+
+	if( i.iscategorical ) {
+		for(const v of i.values ) {
+			if(v.ishidden) {
+				v.htmlspan = row.append('span')
+					.text(
+						(i._data ? '('+i._data.value2count[v.key]+') ' : '')
+						+v.label
+					)
+					.style('text-decoration','line-through')
+			} else {
+				delete v.htmlspan
+			}
+		}
+		if( i.unannotated_ishidden ) {
+			i.unannotated_htmlspan = row.append('span')
+				.text( (i._data ? '('+i._data.unannotated_count+') ' : '')+'Unannotated' )
+		} else {
+			delete i.unannotated_htmlspan
+		}
+	} else {
+		// numerical
+		const span = row.append('span')
+			.style('margin-right','10px')
+		const x = '<span style="font-family:Times;font-style:italic">x</span>'
+		if( i.range.startunbounded ) {
+			span.html(x+' '+(i.range.stopinclusive?'&le;':'&lt;')+' '+i.range.stop)
+		} else if( i.range.stopunbounded ) {
+			span.html(x+' '+(i.range.startinclusive?'&ge;':'&gt;')+' '+i.range.start)
+		} else {
+			span.html(
+				i.range.start
+				+' '+(i.range.startinclusive?'&le;':'&lt;')
+				+' '+x
+				+' '+(i.range.stopinclusive?'&le;':'&lt;')
+				+' '+i.range.stop
+			)
+		}
+		i.htmlspan = row.append('span')
+			.text( i._data ? '('+i._data.filteredcount+' filtered)' : '')
+	}
+
+	row.append('span')
+		.text('delete')
+		.style('margin-left','10px')
+		.on('click', async ()=>{
+			row.remove()
+			delete i.variantfilter_inuse
+			await tk.load()
 		})
 }
 
 
 
-function may_create_locusAttribute ( tk ) {
+function list_inactive_variantfilter ( tk, block ) {
 /*
-list all mutation classes
-attribute may have already been created with customization
-legend.mclass{}
-	.hiddenvalues
-	.row
-	.holder
+from info_fields and variantcase_fields
+list inactive filters
 */
-	if(!tk.locusAttribute || !tk.locusAttribute.attributes) return
-	for(const k in tk.locusAttribute.attributes) {
-		const attr = tk.locusAttribute.attributes[ k ]
-		attr.legend = {}
-		attr.legend.row = tk.legend.table.append('tr')
-		attr.legend.row
-			.append('td')
-			.style('text-align','right')
-			.style('opacity',.3)
-			.text(attr.label)
-		attr.legend.holder = attr.legend.row.append('td')
+	tk.legend.tip.clear()
+	if(tk.info_fields) {
+		for(const i of tk.info_fields) {
+			if(!i.isfilter || i.variantfilter_inuse) continue
+			tk.legend.tip.d
+			.append('div')
+			.text(i.label)
+			.attr('class','sja_menuoption')
+			.on('click',()=>{
+				tk.legend.tip.clear()
+				configure_one_infofield( i, tk, block )
+			})
+		}
+	}
+	if(tk.variantcase_fields) {
+	}
+	tk.legend.tip.showunder( tk.legend.variantfilter.button.node() )
+}
+
+
+
+function configure_one_infofield ( i, tk, block ) {
+
+	// for categorical field, to catch categories selected to be hidden
+	let hiddencategories
+
+	const div = tk.legend.tip.d.append('div')
+		.style('margin','5px')
+
+	if( i.iscategorical ) {
+		// TODO display all categories
+		hiddencategories = new Set()
+	} else {
+		// show range setter
+	}
+
+	tk.legend.tip.d.append('div')
+		.attr('class','sja_menuoption')
+		.text('APPLY')
+		.on('click', async ()=>{
+
+			if( hiddencategories ) {
+				if(hiddencategories.size==0) return
+				for(const v of i.values) {
+					if(hiddencategories.has(v.key)) {
+						v.ishidden=true
+					}
+				}
+			} else {
+			}
+
+			i.variantfilter_inuse = true
+			display_active_variantfilter_infofields( tk, i, block )
+			tk.legend.tip.hide()
+			await tk.load()
+		})
+}
+
+
+
+function update_info_fields ( data, tk ) {
+/*
+data is data.info_fields{}
+*/
+	for(const key in data) {
+		const i = tk.info_fields.find( i=> i.key == key )
+		if(!i) {
+			console.log('info field not found by key: '+key)
+			continue
+		}
+		i._data = data[key]
+		if( i.variantfilter_inuse ) {
+			// an active filter; update stats
+			if( i.iscategorical ) {
+				// update counts from htmlspan
+				if( i.unannotated_htmlspan ) i.unannotated_htmlspan.text = '('+(i._data.unannotated_count||0)+') Unannotated'
+				for(const v of i.values) {
+					if( v.htmlspan ) {
+						v.htmlspan.text('('+(i._data.value2count[v.key]||0)+') '+v.label)
+					}
+				}
+			} else {
+				i.htmlspan.text('('+i._data.filteredcount+' filtered)')
+			}
+		}
 	}
 }

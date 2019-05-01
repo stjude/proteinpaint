@@ -59,33 +59,53 @@ module.exports={
 		},
 	},
 
-	locusAttribute:{
-		attributes:{
-			QC: {
-				label:'Good/Bad List',
-				isfilter:true,
-				iscategorical:true,
-				values:{
-					Good:{
-						name:'Good'
-					},
-					Bad:{
-						name:'Bad'
-					}
+
+	info_fields: [
+		{
+			key:'QC',
+			label:'Good/Bad List',
+			isfilter:true,
+			variantfilter_inuse:true,
+			iscategorical:true,
+			values:[
+				{
+					key:'Good',
+					label:'Good'
+				},
+				{
+					key:'Bad',
+					label:'Bad',
+					ishidden:true
 				}
-			},
-			AF: {
-				label:'SJLIFE allele frequency',
-				isnumeric:1, // back compatible
-				isfloat:1,
-			},
-			AF_gnomAD: {
-				label:'gnomAD allele frequency',
-				isnumeric:1, // back compatible
-				isfloat:1
-			},
-		}
-	},
+			]
+		},
+		{
+			key:'AF',
+			label:'SJLIFE allele frequency',
+			isfilter:true,
+			isfloat:1,
+			range: {
+				startunbounded:true,
+				//startinclusive: bool
+				stop: 0.1,
+				stopinclusive:true
+			}
+		},
+		{
+			key:'AF_gnomAD',
+			label:'gnomAD allele frequency',
+			isfilter:true,
+			isfloat:1,
+			variantfilter_inuse:true,
+			range: {
+				start: 0.1,
+				startinclusive: true,
+				stop: 1,
+				stopinclusive:true
+			}
+		},
+	],
+
 
 	// mds2 track
 	track: {

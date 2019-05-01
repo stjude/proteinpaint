@@ -615,30 +615,51 @@ function _m_is_filtered ( q, result, mockblock ) {
 	return m => {
 		let todrop = false
 
-		if( q.locusAttribute ) {
-			for(const attrkey in q.locusAttribute) {
-				const attr = q.locusAttribute[attrkey]
-				const re = result.locusAttribute2count[ attrkey ]
-				const attrvalue = m.info ? m.info[ attrkey ] : undefined
-				if( attrvalue==undefined ) {
-					re.unannotated_count = 1 + (re.unannotated_count||0)
-					if(attr.unannotated_ishidden) {
+		if( q.info_fields ) {
+			for(const i of q.info_fields) {
+				const re = result.info_fields[ i.key ]
+
+				// get info field value
+				let value=undefined
+				if( m.info ) value = m.info[i.key]
+				if(value==undefined && m.altinfo) value = m.altinfo[i.key]
+
+				if( i.iscategorical ) {
+					if(value==undefined) {
+						re.unannotated_count = 1 + (re.unannotated_count||0)
+						if(i.unannotated_ishidden) {
+							todrop=true
+						}
+						continue
+					}
+					re.value2count[ value ] = 1 + (re.value2count[value]||0)
+					if( i.hiddenvalues[ value ] ) {
 						todrop=true
 					}
-					continue
-				}
-				re.value2count[ attrvalue ] = 1 + (re.value2count[attrvalue]||0)
-				if( attr.hiddenvalues[ attrvalue ] ) {
-					todrop=true
+
+				} else if( i.isnumerical ) {
+
+					// test start
+					if( !i.range.startunbounded ) {
+						if( i.range.startinclusive ) {
+							if( value < i.range.start ) todrop=true
+						} else {
+							if( value <= i.range.start ) todrop=true
+						}
+					}
+					// test stop
+					if( !i.range.stopunbounded ) {
+						if( i.range.stopinclusive ) {
+							if( value > i.range.stop ) todrop=true
+						} else {
+							if( value >= i.range.stop ) todrop=true
+						}
+					}
+					if( todrop ) re.filteredcount++
 				}
 			}
 		}
 
-		if( q.alleleAttribute ) {
-		}
-
-		if( q.mutationAttribute ) {
-		}
 
 		common.vcfcopymclass( m, mockblock )
 
@@ -648,31 +669,6 @@ function _m_is_filtered ( q, result, mockblock ) {
 		// if to drop this variant
 		if( q.hidden_mclass && q.hidden_mclass.has(m.class) ) {
 			todrop=true
-		}
-
-		if( q.numerical_info_cutoff ) {
-			let v
-			if( m.info ) {
-				v = m.info[ q.numerical_info_cutoff.key ]
-			}
-			if( !Number.isFinite( v )) {
-				if( m.altinfo ) {
-					v = m.altinfo[ q.numerical_info_cutoff.key ]
-				}
-			}
-			if(Number.isFinite( v )) {
-				if( q.numerical_info_cutoff.side == '<' ) {
-					if( v >= q.numerical_info_cutoff.value ) todrop=true
-				} else if( q.numerical_info_cutoff.side == '<=' ) {
-					if( v > q.numerical_info_cutoff.value ) todrop=true
-				} else if( q.numerical_info_cutoff.side == '>' ) {
-					if( v <= q.numerical_info_cutoff.value ) todrop=true
-				} else {
-					if( v < q.numerical_info_cutoff.value ) todrop=true
-				}
-			} else {
-				todrop=true
-			}
 		}
 
 		return todrop

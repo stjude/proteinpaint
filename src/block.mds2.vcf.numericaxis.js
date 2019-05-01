@@ -993,8 +993,8 @@ and switching numeric axis category
 
 		if( nm.inuse_infokey ) {
 			let notset=true
-			if( tk.locusAttribute && tk.locusAttribute.attributes) {
-				const a = tk.locusAttribute.attributes[ info_element.key ]
+			if( tk.info_fields ) {
+				const a = tk.info_fields.find( i=> i.key == info_element.key )
 				if( a ) {
 					notset=false
 					if( a.isinteger ) nm.isinteger = true
@@ -1135,8 +1135,8 @@ export function get_axis_label ( tk ) {
 	if( nm.inuse_infokey ) {
 		const key = nm.info_keys.find( i=> i.in_use )
 		if(!key) return 'Error: no key in_use'
-		if( tk.locusAttribute ) {
-			const a = tk.locusAttribute.attributes[ key.key ]
+		if( tk.info_fields ) {
+			const a = tk.info_fields.find( i=> i.key == key.key )
 			if( a && a.label ) return a.label
 		}
 		return key.key

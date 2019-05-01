@@ -91,14 +91,13 @@ show menu for numerical axis, under menubutton
 				// using this info key right now, do not show it in menu
 				continue
 			}
+			let name = key.key
+			if( tk.info_fields ) {
+				const i = tk.info_fields.find( i=> i.key == key.key )
+				if(i) name = i.label
+			}
 			menudiv.append('div')
-				.text(
-					(tk.mds && tk.mds.mutationAttribute && tk.mds.mutationAttribute.attributes[ key.key ])
-					?
-					tk.mds.mutationAttribute.attributes[ key.key ].label
-					:
-					key.key
-				)
+				.text( name )
 				.attr('class','sja_menuoption')
 				.on('click', ()=>{
 					// selected an info key

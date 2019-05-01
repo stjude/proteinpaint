@@ -18,7 +18,6 @@ makeTk
 makeTk_parse_client_config
 loadTk_finish_closure
 addparameter_rangequery
-may_generate_filters
 
 
 
@@ -112,11 +111,12 @@ function addparameter_rangequery ( tk, block ) {
 		genome:block.genome.name,
 	}
 
+	rangequery_add_filters( par, tk )
+
 	if(tk.legend.mclass.hiddenvalues.size) {
 		par.hidden_mclass = [...tk.legend.mclass.hiddenvalues]
 	}
 
-	par.locusAttribute = may_generate_filters( tk.locusAttribute )
 
 	if( tk.mds ) {
 		// official
@@ -224,45 +224,46 @@ function configPanel ( tk, block ) {
 
 
 
-function may_generate_filters ( _attr ) {
+
+
+
+function rangequery_add_filters ( par, tk ) {
 /*
-one of
-	.sampleAttribute
-	.mutationAttribute
-	.locusAttribute
-	.alleleAttribute
-
-sends this:
-{
-	attrkey: {
-		hiddenvalues: { vk1, vk2, ...}
-		unannotated_ishidden: true
-	}
-}
-
-gets this:
-{
-	attrkey: {
-		unannotated_count: int
-		value2count: { vk1:int, vk2:int, ... }
-	}
-}
+may add filter parameter for range query
+by info_fields[] and variantcase_fields[]
 */
-	if(!_attr || !_attr.attributes) return
-	const keys = {}
-	for(const attrkey in _attr.attributes) {
-		keys[attrkey] = {
-			hiddenvalues:{}
-		}
-		const attr = _attr.attributes[attrkey]
-		if(attr.unannotated_ishidden) {
-			keys[attrkey].unannotated_ishidden=true
-		}
-		for(const valuekey in attr.values) {
-			if( attr.values[valuekey].ishidden ) {
-				keys[attrkey].hiddenvalues[ valuekey ] = 1
-			}
-		}
+	if( tk.info_fields ) {
+		par.info_fields = tk.info_fields.reduce(
+			(lst,i) => {
+				if( i.isfilter ) {
+					if( i.iscategorical ) {
+						// for categorical term, always register in parameter
+						// server will collect #variants for each category
+						const j = {
+							key: i.key,
+							iscategorical:true,
+							unannotated_ishidden: i.unannotated_ishidden,
+							hiddenvalues:{}
+						}
+						for(const v of i.values) {
+							if(v.ishidden) j.hiddenvalues[v.key] = 1
+						}
+						lst.push(j)
+					} else {
+						// numerical
+						if( i.variantfilter_inuse ) {
+							// only apply when the numerical filter is in use
+							lst.push({
+								key: i.key,
+								isnumerical:true,
+								range: i.range
+							})
+						}
+					}
+				}
+				return lst
+			},
+			[]
+		)
 	}
-	return keys
 }

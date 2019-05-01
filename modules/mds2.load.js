@@ -59,11 +59,18 @@ return async (req,res) => {
 		const result = {
 			mclass2count: {}, // k: dt or mclass, v: number of variants, to collect all classes
 		}
-		if( q.locusAttribute ) {
-			result.locusAttribute2count = {}
-			for(const k in q.locusAttribute) {
-				result.locusAttribute2count[k] = {
-					value2count:{}
+
+		if( q.info_fields ) {
+			result.info_fields = {}
+			for(const i of q.info_fields) {
+				if( i.iscategorical ) {
+					result.info_fields[ i.key ] = {
+						value2count:{}
+					}
+				} else {
+					result.info_fields[ i.key ] = {
+						filteredcount:0
+					}
 				}
 			}
 		}
