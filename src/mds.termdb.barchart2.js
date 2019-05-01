@@ -82,10 +82,13 @@ export class Barchart{
 
   render(chartsData) {
     const self = this
+    const cols = chartsData.refs.cols
     self.seriesOrder = chartsData.charts[0].serieses
-      .sort((a,b) => !isNaN(a.seriesId)
-        ? +b.seriesId - +a.seriesId
-        : a.total - b.total
+      .sort(chartsData.refs.useColOrder
+        ? (a,b) => cols.indexOf(b.seriesId) - cols.indexOf(a.seriesId)
+        : (a,b) => !isNaN(a.seriesId)
+          ? +b.seriesId - +a.seriesId
+          : a.total - b.total
       )
       .map(d => d.seriesId)
 
@@ -100,7 +103,9 @@ export class Barchart{
 
     charts.each(function(chart) {
       chart.settings = Object.assign(self.settings, chartsData.refs)
-      chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(b) - self.seriesOrder.indexOf(a))
+      if (!chartsData.refs.useColOrder) {
+        chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(b) - self.seriesOrder.indexOf(a))
+      }
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0

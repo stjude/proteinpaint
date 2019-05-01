@@ -163,7 +163,7 @@ export default function barsRenderer(barsapp, holder) {
         .attr('height', bbox.height + 20)
       mainG.transition().duration(100)
         .attr('transform', 'translate(' + x +',0)' )
-    },10) //, hm.duration)
+    },10)
   }
 
   function init() {
@@ -540,27 +540,26 @@ export default function barsRenderer(barsapp, holder) {
 
     xTitle.selectAll("*").remove()
     const xLabel = hm.handlers.xAxis.text()
-    xTitle
-      .attr(
-        "transform",
-        "translate(" +
-          (s.svgw -
-            s.svgPadding.left -
-            s.svgPadding.right -
-            12*xLabel.length) /
-            2 +
-          "," +
-          (colLabelBox.height +
-            hm.svgh -
-            hm.collabelh +
-            20 +
-            s.axisTitleFontSize) +
-          ")"
-      )
-      .append("text")
+    xTitle.append("text")
       .style("text-anchor", "middle")
       .style("font-size", s.axisTitleFontSize + "px")
       .text(xLabel);
+
+    const textBBox = xTitle.node().getBBox()
+    setTimeout(()=>{
+      xTitle.attr(
+          "transform",
+          "translate(" + 
+            (s.svgw - s.svgPadding.left - s.svgPadding.right - s.rowlabelw)/2 +
+            "," +
+            (colLabelBox.height +
+              hm.svgh -
+              hm.collabelh +
+              20 +
+              s.axisTitleFontSize) +
+            ")"
+        )
+    }, 0)
 
     const ratio =
       hm.scale == "byChart" || hm.clickedAge

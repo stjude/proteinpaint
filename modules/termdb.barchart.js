@@ -13,6 +13,7 @@ const numValFxns = {
 }
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const unannotated = {}
+const orderedLabels = {}
 
 /*
 ********************** EXPORTED
@@ -101,7 +102,7 @@ function getPj(settings) {
         },
         refs: {
           //chartkey: "&vals.term0",
-          "cols": ["&vals.seriesId"],
+          cols: ["&vals.seriesId"],
           colgrps: ["-"], 
           rows: ["&vals.dataId"],
           rowgrps: ["-"],
@@ -116,7 +117,9 @@ function getPj(settings) {
               name: "&vals.dataId",
               grp: "-"
             }
-          }
+          },
+          "__:useColOrder": "=useColOrder()", 
+          "@done()": "=sortCols()"
         }
       }
     },
@@ -171,6 +174,13 @@ function getPj(settings) {
       annotated(row, context) {
         const vals = context.joins.get('vals')
         return vals.seriesId === unannotated.label ? 0 : 1
+      },
+      sortCols(result) {
+        if (!orderedLabels[settings.term1].length) return
+        result.cols.sort((a,b) => orderedLabels[settings.term1].indexOf(a) - orderedLabels[settings.term1].indexOf(b))
+      },
+      useColOrder() {
+        return orderedLabels[settings.term1].length > 0
       }
     }
   })
@@ -179,6 +189,9 @@ function getPj(settings) {
 async function setValFxns(q, tdb, ds) {
   for(const term of ['term0', 'term1', 'term2']) {
     const key = q[term]
+    if (!orderedLabels[key]) {
+      orderedLabels[key] = []
+    }
     if (key == "genotype") {
       if (!q.ssid) `missing ssid for genotype`
       const bySample = await load_genotype_by_sample(q.ssid)
@@ -195,6 +208,7 @@ async function setValFxns(q, tdb, ds) {
       /*** TODO: handle unannotated categorical values?  ***/
       joinFxns[key] = row => row[key] 
     } else if (t.isinteger || t.isfloat) {
+
       return get_numeric_bin_name(key, t, ds, term)
     } else {
       throw "unsupported term binning"
@@ -203,8 +217,8 @@ async function setValFxns(q, tdb, ds) {
 }
 
 function get_numeric_bin_name ( key, t, ds, termNum ) {
-  const [ binconfig, values ] = termdb_get_numericbins( key, t, ds, termNum )
-  //console.log(key, binconfig, t)
+  const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum )
+  orderedLabels[key] = _orderedLabels
   Object.assign(unannotated, binconfig.unannotated)
 
   joinFxns[key] = row => {
@@ -289,6 +303,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
   }
 
   const bins = []
+  const orderedLabels = []
 
   if( nb.fixed_bins ) {
     // server predefined
@@ -302,6 +317,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
         copy[ k ] = i[ k ]
       }
       bins.push( copy )
+      orderedLabels.push(i.label)
     }
 
   } else if( nb.auto_bins ) {
@@ -342,6 +358,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       }
 
       bins.push( bin )
+      orderedLabels.push(bin.label)
 
       v += nb.auto_bins.bin_size
     }
@@ -366,7 +383,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
     }
   }
 
-  return [ binconfig, values ]
+  return [ binconfig, values, orderedLabels ]
 }
 
 async function load_genotype_by_sample ( id ) {
