@@ -352,11 +352,20 @@ will attach div_numbersamples to group{}
 	const add_term_btn = group_div.append('div')
 	.attr('class','sja_menuoption')
 	.style('display','inline-block')
-	.style('padding','3px 5px')
+	.style('padding','2px 7px')
 	.style('margin-left','10px')
-	.style('border-radius','3px 3px 3px 3px')
-	.style('background-color', '#cfe2f3ff')
+	.style('border-radius','6px')
+	.style('background-color', '#4888BF')
+	.style('color','#fff')
 	.html('&#43;')
+	.on('mouseover',()=>{
+		add_term_btn
+			.style('background-color','#6c9bca') // change to light backgorund on hover
+	})
+	.on('mouseout',()=>{
+		add_term_btn
+			.style('background-color','#4888bf')
+	})
 	.on('click',async ()=>{
 		
 		tip.clear()
@@ -414,23 +423,27 @@ function update_terms_div(terms_div, group, tk, block){
 
 	for(const [i, term] of group.terms.entries()){
 		const term_btn = terms_div.append('div')
-		.attr('class','sja_menuoption')
 		.style('display','inline-block')
-		.style('padding','3px 5px')
 		.style('margin-left','10px')
-		.style('border-radius','3px 0 0 3px')
-		.style('background-color', '#cfe2f3')
+		.style('border-radius','6px 0 0 6px')
+		.style('background-color', '#4888BF')
+		.style('color','#fff')
 
 		const term_name_btn = term_btn.append('div')
 			.style('display','inline-block')
+			.style('margin','0 2px')
+			.style('padding','4px 2px 4px 8px')
+			.style('font-size','.7em')
 			.text(term.term.name)
+			.style('text-transform','uppercase')
 			.on('mouseover',()=>{
 				term_name_btn
-					.style('text-decoration', 'underline')
+					.style('background-color','#6c9bca')
+					.style('cursor','default')
 			})
 			.on('mouseout',()=>{
 				term_name_btn
-					.style('text-decoration', 'none')
+				.style('background-color','#4888bf')
 			})
 			.on('click',async ()=>{
 		
@@ -457,35 +470,34 @@ function update_terms_div(terms_div, group, tk, block){
 
 		const condition_btn = term_btn.append('div')
 			.style('display','inline-block')
-			.style('background-color','#aaa')
-			.style('color', 'white')
+			.style('background-color','#eeeeee')
 			.style('font-size','.7em')
 			.style('padding','3px')
-			.style('border-radius','3px')
-			.style('margin','0 4px')
 			.on('mouseover',()=>{
 				condition_btn
-					.style('text-decoration', 'underline')
+					.style('background-color', term.isnot ? '#734a93' : '#337273') // change to light backgorund on hover
+					.style('cursor','default')
 			})
 			.on('mouseout',()=>{
 				condition_btn
-					.style('text-decoration', 'none')
+					.style('background-color', term.isnot ? '#511e78' : '#015051')
 			})
 
 		if(term.term.iscategorical){
 			condition_btn
 				.text(term.isnot ? 'IS NOT' : 'IS')
+				.style('background-color', term.isnot ? '#511e78' : '#015051')
 				.on('click',()=>{
 
 					tip.clear()
-					.showunder( condition_btn.node() )
+						.showunder( condition_btn.node() )
 
 					tip.d.append('div')
-						.style('background-color','#aaa')
-						.style('color', 'white')
 						.style('font-size','.7em')
+						.style('color','#fff')
 						.style('padding','5px')
 						.text(term.isnot ? 'IS' : 'IS NOT')
+						.style('background-color', term.isnot ? '#015051' : '#511e78')
 						.on('click', async()=>{
 							tip.hide()
 							group.terms[i].isnot = term.isnot ? false : true
@@ -500,7 +512,8 @@ function update_terms_div(terms_div, group, tk, block){
 		}
 
 		const term_value_btn = term_btn.append('div')
-		.style('display','inline-block')
+			.style('padding','2px 4px 3px 4px')
+			.style('display','inline-block')
 
 		if( term.term.iscategorical ) {
 			// furbish value button for a categorical term
@@ -508,11 +521,12 @@ function update_terms_div(terms_div, group, tk, block){
 			.text(term.value)
 			.on('mouseover',()=>{
 				term_value_btn
-					.style('text-decoration', 'underline')
+					.style('background-color','#6c9bca')
+					.style('cursor','default')
 			})
 			.on('mouseout',()=>{
 				term_value_btn
-					.style('text-decoration', 'none')
+					.style('background-color','#4888bf') // change to light backgorund on hover
 			})
 			.on('click', async ()=>{
 				tip.clear()
@@ -583,14 +597,23 @@ function update_terms_div(terms_div, group, tk, block){
 		}
 
 		// button with 'x' to remove term2
-		terms_div.append('div')
+		const term_remove_btn = terms_div.append('div')
 		.attr('class','sja_menuoption')
 		.style('display','inline-block')
 		.style('margin-left','1px')
-		.style('padding','3px 5px')
-		.style('border-radius','0 3px 3px 0')
-		.style('background-color', '#cfe2f3ff')
+		.style('padding','2px 6px 3px 4px')
+		.style('border-radius','0 6px 6px 0')
+		.style('background-color', '#4888BF')
+		.style('color','#fff')
 		.html('&#215;')
+		.on('mouseover',()=>{
+			term_remove_btn
+				.style('background-color','#6c9bca') // change to light backgorund on hover
+		})
+		.on('mouseout',()=>{
+			term_remove_btn
+				.style('background-color','#4888bf')
+		})
 		.on('click',async ()=>{
 			group.terms.splice(i, 1)
 			may_settoloading_termgroup( group )
