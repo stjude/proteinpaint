@@ -14,6 +14,7 @@ const numValFxns = {
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const unannotated = {}
 const orderedLabels = {}
+const unannotatedLabels = {}
 
 /*
 ********************** EXPORTED
@@ -118,7 +119,8 @@ function getPj(settings) {
               grp: "-"
             }
           },
-          "__:useColOrder": "=useColOrder()", 
+          "__:useColOrder": "=useColOrder()",
+          "__:unannotatedLabels": "=unannotatedLabels()",
           "@done()": "=sortCols()"
         }
       }
@@ -181,6 +183,12 @@ function getPj(settings) {
       },
       useColOrder() {
         return orderedLabels[settings.term1].length > 0
+      },
+      unannotatedLabels() {
+        return {
+          term1: unannotatedLabels[settings.term1], 
+          term2: unannotatedLabels[settings.term2]
+        }
       }
     }
   })
@@ -191,6 +199,7 @@ async function setValFxns(q, tdb, ds) {
     const key = q[term]
     if (!orderedLabels[key]) {
       orderedLabels[key] = []
+      unannotatedLabels[key] = ""
     }
     if (key == "genotype") {
       if (!q.ssid) `missing ssid for genotype`
@@ -219,6 +228,9 @@ async function setValFxns(q, tdb, ds) {
 function get_numeric_bin_name ( key, t, ds, termNum ) {
   const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum )
   orderedLabels[key] = _orderedLabels
+  if (binconfig.unannotated) {
+    unannotatedLabels[key] = binconfig.unannotated.label
+  }
   Object.assign(unannotated, binconfig.unannotated)
 
   joinFxns[key] = row => {

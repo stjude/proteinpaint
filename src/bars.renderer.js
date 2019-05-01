@@ -104,22 +104,23 @@ export default function barsRenderer(barsapp, holder) {
   // eslint-disable-next-line
   let legendRenderer;
   let defaults; //will have key values in init
-  let currseries = [];
+  let currserieses = [];
   let unstackedBarsPanes;
 
   function main(_chart, _unstackedBarsPanes) {
     chart = _chart
     Object.assign(hm, chart.settings)
     hm.handlers = chart.handlers
+    hm.cols = hm.cols.filter(d => !hm.exclude.cols.includes(d))
     if (_unstackedBarsPanes) unstackedBarsPanes = _unstackedBarsPanes;
     const nosvg = !svg
     if (nosvg) init();
 
     const unadjustedColw = hm.colw
     setDimensions();
-    currseries.map(setIds);
+    currserieses = chart.serieses.filter(d => !hm.exclude.cols.includes(d.seriesId));
+    currserieses.map(setIds);
     chart.serieses.map(setIds);
-    currseries = chart.serieses;
 
     chartTitle.style("width", hm.svgw + "px")
       .html(chart.chartId);
@@ -134,7 +135,7 @@ export default function barsRenderer(barsapp, holder) {
     const s = series
       .attr("transform", seriesGrpTransform)
       .selectAll(".bars-cell-grp")
-      .data(chart.serieses, seriesBindKey);
+      .data(currserieses, seriesBindKey);
     s.exit().each(seriesExit);
     s.each(seriesUpdate);
     s.enter()
@@ -254,6 +255,7 @@ export default function barsRenderer(barsapp, holder) {
     collabels = mainG
       .append("g")
       .attr("class", "bars-collabels")
+      .style("cursor", hm.handlers.colLabel.click ? "pointer" : "")
       .on("mouseover.tphm2", colLabelMouseover)
       .on("mouseout.tphm2", colLabelMouseout)
       .on("click.tphm2", hm.handlers.colLabel.click);
@@ -280,11 +282,11 @@ export default function barsRenderer(barsapp, holder) {
     //legendDiv = svg.append("g").attr("class", "sjpcb-bars-legend");
     legendRenderer = htmlLegend(
       barsapp.opts.legendDiv,
-      () => {},
       {
         settings: {
           legendOrientation: 'vertical'
-        }
+        },
+        handlers: barsapp.handlers
       }
     );
   }
@@ -318,13 +320,13 @@ export default function barsRenderer(barsapp, holder) {
     const ratio =
       hm.scale == "byChart"
         ? 1
-        : chart.maxSeriesTotal / chart.maxAcrossCharts;
+        : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts;
     for (const series of chart.serieses) {
       if (series.data[0]) {
         const min = hm.unit == "log" ? 1 : 0
         const max = hm.unit == "pct" ? series.total
           : hm.unit == "log" ? chart.maxSeriesLogTotal
-          : chart.maxSeriesTotal
+          : chart.maxVisibleSeriesTotal
 
         hm.h.yScale[series.seriesId] = scaleLinear()
           .domain([min, max / ratio])
@@ -574,11 +576,11 @@ export default function barsRenderer(barsapp, holder) {
     const ratio =
       hm.scale == "byChart" || hm.clickedAge
         ? 1
-        : chart.maxSeriesTotal / chart.maxAcrossCharts
+        : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts
     const min = hm.unit == "log" ? 1 : 0
     const max = hm.unit == "pct" ? 100 
       //: hm.unit == "log" ? chart.maxSeriesLogTotal
-      : chart.maxSeriesTotal //maxAcrossCharts
+      : chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
 
     yAxis.call(
       axisLeft(
@@ -685,19 +687,39 @@ export default function barsRenderer(barsapp, holder) {
   }
 
   function setLegend() {
+    const legendGrps = []; //console.log(hm.hidelegend, barsapp.terms.term2, barsapp.term2toColor)
+    if (hm.exclude.cols.length) {
+      legendGrps.push({
+        name: "Hidden " + barsapp.terms.term1.name + " value",
+        items: hm.exclude.cols.map(collabel => {
+          const total = chart.serieses
+            .filter(c => c.seriesId == collabel)
+            .reduce((sum, b) => sum + b.total, 0)
+          return {
+            text: collabel,
+            color: "#fff",
+            textColor: "#000",
+            border: "1px solid #333",
+            inset: total ? total : '',
+            type: 'col'
+          }
+        })
+      })
+    }
     if (!hm.hidelegend && barsapp.terms.term2 && barsapp.term2toColor) {
       const colors = {}
-      const legendData = {
+      legendGrps.push({
         name: barsapp.terms.term2.name,
         items: hm.rows.map(d => {
           return {
             text: d,
-            color: barsapp.term2toColor[d]
+            color: barsapp.term2toColor[d],
+            type: 'row'
           }
         }).sort((a,b) => a.text < b.text ? -1 : 1)
-      }
-      legendRenderer([legendData]);
+      })
     }
+    legendRenderer(legendGrps);
   }
 
   main.hm = hm;

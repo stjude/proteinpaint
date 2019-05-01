@@ -69,5 +69,12 @@ export default JSON.stringify({
       right: 10,
       bottom: 30
     },
+
+    exclude: {
+      rows:[],
+      cols:[],
+      colgrps:[], // used when expanding a column group
+      rowgrps:[]
+    },
     axisTitleFontSize: 16
 })

@@ -76,7 +76,9 @@ export class Barchart{
     if (this.settings.term2 == "genotype") {
       this.terms.term2 = {name: this.settings.mname}
     }
-    this.terms.term2 = settings.term2 ? settings.term2Obj : null
+    if ('term2' in settings) {
+      this.terms.term2 = settings.term2Obj 
+    }
     //this.updateControls()
   }
 
@@ -92,6 +94,8 @@ export class Barchart{
       )
       .map(d => d.seriesId)
 
+    self.setMaxVisibleTotals(chartsData)
+
     const charts = this.holder.selectAll('.pp-sbar-div')
       .data(chartsData.charts, chart => chart.chartId)
 
@@ -102,7 +106,6 @@ export class Barchart{
     })
 
     charts.each(function(chart) {
-      chart.settings = Object.assign(self.settings, chartsData.refs)
       if (!chartsData.refs.useColOrder) {
         chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(b) - self.seriesOrder.indexOf(a))
       }
@@ -124,8 +127,9 @@ export class Barchart{
     .style("display", "inline-block")
     .style("padding", "20px")
     .each(function(chart,i) {
-      chart.settings = Object.assign(self.settings, chartsData.refs)
-      chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(b) - self.seriesOrder.indexOf(a))
+      if (!chartsData.refs.useColOrder) {
+        chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(b) - self.seriesOrder.indexOf(a))
+      }
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
@@ -138,8 +142,34 @@ export class Barchart{
       chart.serieses
         //.sort((a,b) => b.total - a.total)
         .forEach(series => self.sortStacking(rows, series, chart, chartsData))
+      
       self.renderers[chart.chartId](chart)
     })
+  }
+
+  setMaxVisibleTotals(chartsData) {
+    const term1 = this.settings.term1
+    let maxVisibleAcrossCharts = 0
+    for(const chart of chartsData.charts) {
+      if (!this.renderers[chart.chartId]) {
+        const unannotatedLabel = chartsData.refs.unannotatedLabels.term1
+        if (unannotatedLabel) {
+          if (!this.settings.exclude.cols.includes(unannotatedLabel)) {
+            this.settings.exclude.cols.push(unannotatedLabel)
+          }
+        }
+      }
+      chart.settings = Object.assign(this.settings, chartsData.refs)
+      chart.maxVisibleSeriesTotal = chart.serieses.reduce((max,b) => {
+        return b.total > max && !chart.settings.exclude.cols.includes(b.seriesId) ? b.total : max
+      }, 0)
+      if (chart.maxVisibleSeriesTotal > maxVisibleAcrossCharts) {
+        maxVisibleAcrossCharts = chart.maxVisibleSeriesTotal
+      }
+    }
+    for(const chart of chartsData.charts) {
+      chart.maxVisibleAcrossCharts = maxVisibleAcrossCharts
+    }
   }
 
   sortStacking(rows, series, chart, chartsData) {
@@ -154,7 +184,7 @@ export class Barchart{
       result.seriesId = series.seriesId
       result.seriesTotal = series.total
       result.logTotal = Math.log10(result.total)
-      seriesLogTotal += result.logTotal
+      seriesLogTotal += result.logTotal;
       if (!(result.dataId in this.term2toColor)) {
         this.term2toColor[result.dataId] = this.settings.term2 === ""
         ? "rgb(144, 23, 57)"
@@ -226,10 +256,42 @@ export class Barchart{
         }
       },
       colLabel: {
-        text: d => d
+        text: d => d,
+        click: () => { 
+          const d = event.target.__data__
+          if (!d) return
+          self.settings.exclude.cols.push(d)
+          self.main()
+        },
+        mouseover: () => {
+          event.stopPropagation()
+          tip.show(event.clientX, event.clientY).d.html("Click to hide bar");
+        },
+        mouseout: () => {
+          tip.hide()
+        }
       },
       rowLabel: {},
-      legend: {},
+      legend: {
+        click: () => {
+          event.stopPropagation()
+          const d = event.target.__data__
+          if (!d) return
+          if (d.type == 'col') {
+            const i = self.settings.exclude.cols.indexOf(d.text)
+            if (i == -1) return
+            self.settings.exclude.cols.splice(i,1)
+            self.main()
+          }
+        },
+        mouseover: () => {
+          event.stopPropagation()
+          tip.show(event.clientX, event.clientY).d.html("Click to unhide bar");
+        },
+        mouseout: () => {
+          tip.hide()
+        }
+      },
       yAxis: {
         text: () => {
           return s.unit == "pct" ? "% of patients" : "# of patients"

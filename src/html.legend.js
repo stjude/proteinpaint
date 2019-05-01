@@ -1,6 +1,6 @@
 import {select} from 'd3-selection'
 
-export default function htmlLegend(legendDiv, legendItemClickCallback=null, viz={settings:{}}) {
+export default function htmlLegend(legendDiv, viz={settings:{}, handlers:{}}) {
   const isHidden = {}
 
   function render(data) {
@@ -105,13 +105,18 @@ export default function htmlLegend(legendDiv, legendItemClickCallback=null, viz=
       div.append('div')
         .style('display', 'inline-block')
         .style('position','relative')
-        .style('width','12px')
+        .style('min-width', '12px')
         .style('height','12px')
         .style('top','1px')
-        .style('border','1px solid '+ color)
+        .style('border', d.border ? d.border : '1px solid '+ color)
         .style('border-radius', d.shape=='circle' ? '6px' : '')
         .style('background-color', d.shape=='circle' ? '' : color)
         .style('cursor','pointer')
+        .style('color', d.textColor ? d.textColor : '#fff')
+        .style('font-size', '10px')
+        .style('vertical-align', d.inset ? 'top' : '')
+        .style('padding', d.inset ? '0 3px' : '')
+        .text(d.inset)
     }
 
     div.append('div')
@@ -123,20 +128,10 @@ export default function htmlLegend(legendDiv, legendItemClickCallback=null, viz=
       .style('vertical-align', d.svg ? 'top' : null)
       .html(d.text)
 
-    if (d.gArr) {
-      div.on('click',()=>{
-        d.gArr.forEach(g=>{
-          g.style('display', g.style('display')=='none' ? '' : 'none')
-        })
-        isHidden[d.text] = !isHidden[d.text]
-        div.style('opacity', isHidden[d.text] ? 0.3 : 1)
-      })
-    }
-    else if (legendItemClickCallback) {
-      div.on('click',()=>{
-        legendItemClickCallback(d.text)
-      })
-    }
+   
+    div.on('click',viz.handlers.legend.click)
+      .on('mouseover',viz.handlers.legend.mouseover)
+      .on('mouseout',viz.handlers.legend.mouseout)
   }
 
   return render

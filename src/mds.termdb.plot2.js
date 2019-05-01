@@ -222,6 +222,7 @@ export function render ( arg, obj ) {
   // other holders/components
   plot.bar_div = arg.holder.append('div')
   plot.legend_div = arg.holder.append('div')
+    .style('margin','10px 0px')
   plot.svg = arg.holder.append('svg')
   plot.table_div = arg.holder.append('div')
   plot.yaxis_g = plot.svg.append('g') // for y axis
@@ -231,9 +232,6 @@ export function render ( arg, obj ) {
       .style('margin','10px 0px')
     //plot.boxplot_g = plot.svg.append('g')
   }
-
-  plot.legend_div = arg.holder.append('div')
-    .style('margin','10px 0px')
 
   //Exposed - not exponsed data
   plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
