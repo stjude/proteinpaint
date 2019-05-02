@@ -71,7 +71,7 @@ module.exports={
 				key:'QC',
 				label:'Good/Bad List',
 				isfilter:true,
-				variantfilter_inuse:true,
+				isactivefilter:true,
 				iscategorical:true,
 				values:[
 					{
@@ -101,8 +101,8 @@ module.exports={
 				key:'AF_gnomAD',
 				label:'gnomAD allele frequency',
 				isfilter:true,
+				isactivefilter:true,
 				isfloat:1,
-				variantfilter_inuse:true,
 				range: {
 					start: 0.1,
 					startinclusive: true,

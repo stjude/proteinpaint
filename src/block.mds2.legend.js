@@ -265,7 +265,7 @@ variant filters by both info fields and variantcase_fields
 	if( tk.info_fields ) {
 		for(const i of tk.info_fields) {
 			if(!i.isfilter) continue
-			if(i.variantfilter_inuse) {
+			if(i.isactivefilter) {
 				display_active_variantfilter_infofields( tk, i, block )
 			}
 		}
@@ -338,7 +338,7 @@ allow interacting with it, to update settings of i, and update track
 		.style('margin-left','10px')
 		.on('click', async ()=>{
 			row.remove()
-			delete i.variantfilter_inuse
+			delete i.isactivefilter
 			await tk.load()
 		})
 }
@@ -353,7 +353,7 @@ list inactive filters
 	tk.legend.tip.clear()
 	if(tk.info_fields) {
 		for(const i of tk.info_fields) {
-			if(!i.isfilter || i.variantfilter_inuse) continue
+			if(!i.isfilter || i.isactivefilter) continue
 			tk.legend.tip.d
 			.append('div')
 			.text(i.label)
@@ -401,7 +401,7 @@ function configure_one_infofield ( i, tk, block ) {
 			} else {
 			}
 
-			i.variantfilter_inuse = true
+			i.isactivefilter = true
 			display_active_variantfilter_infofields( tk, i, block )
 			tk.legend.tip.hide()
 			await tk.load()
@@ -421,7 +421,7 @@ data is data.info_fields{}
 			continue
 		}
 		i._data = data[key]
-		if( i.variantfilter_inuse ) {
+		if( i.isactivefilter ) {
 			// an active filter; update stats
 			if( i.iscategorical ) {
 				// update counts from htmlspan

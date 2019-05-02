@@ -251,7 +251,7 @@ by info_fields[] and variantcase_fields[]
 						lst.push(j)
 					} else {
 						// numerical
-						if( i.variantfilter_inuse ) {
+						if( i.isactivefilter ) {
 							// only apply when the numerical filter is in use
 							lst.push({
 								key: i.key,
