@@ -36,7 +36,12 @@ export const gmmode = common.gmmode
 
 export const domaincolorlst=[ '#8dd3c7', '#bebada', '#fb8072', '#80b1d3', '#E8E89E', "#a6d854", '#fdb462', "#ffd92f","#e5c494","#b3b3b3" ]
 
-
+// track fetch urls to restrict
+// simultaneous reporting for the same issue
+const fetchTimers = {}
+const fetchReported = {}
+const maxAcceptableFetchResponseTime = 15000
+const maxNumReportsPerSession = 2
 
 export function dofetch(path,arg) {
 	// path should be "path" but not "/path"
@@ -62,10 +67,45 @@ export function dofetch(path,arg) {
 		url = path
 	}
 
+	// report slowness if the fetch does not respond
+	// within the acceptableResponseTime;
+	// if the server does respond in time,
+	// this timer will just be cleared by the
+	// fetch promise handler
+	if (!fetchTimers[url] 
+		&& !fetchReported[url]
+		&& Object.keys(fetchReported).length <= maxNumReportsPerSession
+		&& (window.location.hostname == "proteinpaint.stjude.org" 
+		|| localStorage.hostURL == "proteinpaint.stjude.org")
+	) {
+		fetchTimers[url] = setTimeout(() => {
+			// do not send multiple reports for the same page
+			fetchReported[url] = 1
+			// will need to create an issue-tracker route
+			fetch("https://pecan-test.stjude.org/api/issue-tracker", { 
+    		method: 'POST', 
+			  headers: {
+			    "content-type": "application/json"
+			  }, 
+    		body:JSON.stringify({
+    			issue: "slow response",
+			    url, // server route
+			    arg, // request body
+			    page: window.location.href
+    		}) 
+    	})
+		}, maxAcceptableFetchResponseTime)
+	}
+
 	return fetch(
 		new Request( url, { method: 'POST', body:JSON.stringify(arg) })
 	)
-	.then(data=>{return data.json()})
+	.then(data=>{
+		if (fetchTimers[url]) {
+			clearTimeout(fetchTimers[url])
+		}
+		return data.json()
+	})
 }
 
 
