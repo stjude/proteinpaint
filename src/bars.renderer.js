@@ -112,13 +112,14 @@ export default function barsRenderer(barsapp, holder) {
     Object.assign(hm, chart.settings)
     hm.handlers = chart.handlers
     hm.cols = hm.cols.filter(d => !hm.exclude.cols.includes(d))
+    hm.rows = hm.rows.filter(d => !hm.exclude.rows.includes(d))
     if (_unstackedBarsPanes) unstackedBarsPanes = _unstackedBarsPanes;
     const nosvg = !svg
     if (nosvg) init();
 
     const unadjustedColw = hm.colw
-    setDimensions();
     currserieses = chart.serieses.filter(d => !hm.exclude.cols.includes(d.seriesId));
+    setDimensions();
     currserieses.map(setIds);
     chart.serieses.map(setIds);
 
@@ -155,7 +156,7 @@ export default function barsRenderer(barsapp, holder) {
 
     currRects = series.selectAll("rect");
     currColTexts = collabels.selectAll("text");
-    setLegend()
+    legendRenderer(barsapp.getLegendGrps(chart))
     hm.delay = 0.35 * hm.duration
     renderAxes(yAxis, yTitle, xTitle, hm);
     hm.colw = unadjustedColw
@@ -321,10 +322,10 @@ export default function barsRenderer(barsapp, holder) {
       hm.scale == "byChart"
         ? 1
         : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts;
-    for (const series of chart.serieses) {
-      if (series.data[0]) {
+    for (const series of currserieses) {
+      if (series.visibleData[0]) {
         const min = hm.unit == "log" ? 1 : 0
-        const max = hm.unit == "pct" ? series.total
+        const max = hm.unit == "pct" ? series.visibleTotal
           : hm.unit == "log" ? chart.maxSeriesLogTotal
           : chart.maxVisibleSeriesTotal
 
@@ -333,7 +334,7 @@ export default function barsRenderer(barsapp, holder) {
           .range([0, hm.svgh - hm.collabelh])
 
         hm.h.yPrevBySeries[series.seriesId] = 0
-        for(const data of series.data) {
+        for(const data of series.visibleData) {
           data.height = getRectHeight(data)
           data.y = getRectY(data)
         }
@@ -381,7 +382,7 @@ export default function barsRenderer(barsapp, holder) {
   function seriesUpdate(series) {
     const g = select(this)
       .selectAll(".bars-cell")
-      .data(series.data, cellKey);
+      .data(series.data.filter(filterData), cellKey);
 
     g.exit().each(function() {
       select(this).style("display", "none");
@@ -410,10 +411,14 @@ export default function barsRenderer(barsapp, holder) {
     select(this)
       .attr("class", "bars-cell-grp")
       .selectAll("g")
-      .data(series.data, cellKey)
+      .data(series.data.filter(filterData), cellKey)
       .enter()
       .append("g")
       .each(addCell);
+  }
+
+  function filterData(d) {
+    return hm.rows.includes(d.dataId)
   }
 
   function addCell(d) {
@@ -684,42 +689,6 @@ export default function barsRenderer(barsapp, holder) {
   function seriesClick() {
     const d = event.target.__data__
     barsapp.handlers.series.click(d)
-  }
-
-  function setLegend() {
-    const legendGrps = []; //console.log(hm.hidelegend, barsapp.terms.term2, barsapp.term2toColor)
-    if (hm.exclude.cols.length) {
-      legendGrps.push({
-        name: "Hidden " + barsapp.terms.term1.name + " value",
-        items: hm.exclude.cols.map(collabel => {
-          const total = chart.serieses
-            .filter(c => c.seriesId == collabel)
-            .reduce((sum, b) => sum + b.total, 0)
-          return {
-            text: collabel,
-            color: "#fff",
-            textColor: "#000",
-            border: "1px solid #333",
-            inset: total ? total : '',
-            type: 'col'
-          }
-        })
-      })
-    }
-    if (!hm.hidelegend && barsapp.terms.term2 && barsapp.term2toColor) {
-      const colors = {}
-      legendGrps.push({
-        name: barsapp.terms.term2.name,
-        items: hm.rows.map(d => {
-          return {
-            text: d,
-            color: barsapp.term2toColor[d],
-            type: 'row'
-          }
-        }).sort((a,b) => a.text < b.text ? -1 : 1)
-      })
-    }
-    legendRenderer(legendGrps);
   }
 
   main.hm = hm;

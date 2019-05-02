@@ -161,7 +161,10 @@ export class Barchart{
       }
       chart.settings = Object.assign(this.settings, chartsData.refs)
       chart.maxVisibleSeriesTotal = chart.serieses.reduce((max,b) => {
-        return b.total > max && !chart.settings.exclude.cols.includes(b.seriesId) ? b.total : max
+        if (chart.settings.exclude.cols.includes(b.seriesId)) return max
+        b.visibleData = b.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))
+        b.visibleTotal = b.visibleData.reduce((sum, a) => sum + a.total, 0)
+        return b.visibleTotal > max ? b.visibleTotal : max
       }, 0)
       if (chart.maxVisibleSeriesTotal > maxVisibleAcrossCharts) {
         maxVisibleAcrossCharts = chart.maxVisibleSeriesTotal
@@ -177,7 +180,7 @@ export class Barchart{
       return rows.indexOf(a.dataId) < rows.indexOf(b.dataId) ? -1 : 1 
     });
     let seriesLogTotal = 0
-    for(const result of series.data) {
+    for(const result of series.visibleData) {
       result.colgrp = "-"
       result.rowgrp = "-"
       result.chartId = chart.chartId
@@ -281,6 +284,15 @@ export class Barchart{
             const i = self.settings.exclude.cols.indexOf(d.text)
             if (i == -1) return
             self.settings.exclude.cols.splice(i,1)
+            self.main()
+          }
+          if (d.type == 'row') {
+            const i = self.settings.exclude.rows.indexOf(d.text)
+            if (i == -1) {
+              self.settings.exclude.rows.push(d.text)
+            } else {
+              self.settings.exclude.rows.splice(i,1)
+            }
             self.main()
           }
         },
@@ -410,6 +422,44 @@ export class Barchart{
       .selectAll('option')
       .filter(d=>d.value=='log')
       .property("disabled", this.settings.term2 != "")
+  }
+
+  getLegendGrps(chart) {
+    const legendGrps = []; 
+    const s = this.settings
+    if (s.exclude.cols.length) {
+      legendGrps.push({
+        name: "Hidden " + this.terms.term1.name + " value",
+        items: s.exclude.cols.map(collabel => {
+          const total = chart.serieses
+            .filter(c => c.seriesId == collabel)
+            .reduce((sum, b) => sum + b.total, 0)
+          return {
+            text: collabel,
+            color: "#fff",
+            textColor: "#000",
+            border: "1px solid #333",
+            inset: total ? total : '',
+            type: 'col'
+          }
+        })
+      })
+    }
+    if (!s.hidelegend && this.terms.term2 && this.term2toColor) {
+      const colors = {}
+      legendGrps.push({
+        name: this.terms.term2.name,
+        items: s.rows.map(d => {
+          return {
+            text: d,
+            color: this.term2toColor[d],
+            type: 'row',
+            isHidden: s.exclude.rows.includes(d)
+          }
+        }).sort((a,b) => a.text < b.text ? -1 : 1)
+      })
+    }
+    return legendGrps;
   }
 }
 
