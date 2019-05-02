@@ -124,8 +124,8 @@ export function render ( arg, obj ) {
     .on('click', ()=>{
       // the same comments in mds.termdb.plot2
       // obj.div.on('click.tdb', ...) applies here
-      d3event.stopPropagation()
-      if (d3event.target == plot.button_row) {
+      d3event.stopPropagation();
+      if (d3event.target == plot.button_row || !d3select(d3event.target).on('click')) {
         obj.tip.hide()
       }
     })
