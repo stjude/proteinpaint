@@ -66,6 +66,14 @@ function validate_obj ( obj ) {
 async function pcd_pipeline (obj) {
 
 	const data = await load_cell_pcd( obj )
+
+	// get sphere radius from max of x, y and z coordinates and assign it to camera and controls
+	obj.data_sphere_r = data.data_sphere_r
+	if(!obj.camera.position.z){
+		obj.camera.position.z = obj.data_sphere_r * 3
+		obj.controls.maxDistance = obj.data_sphere_r * 4
+		obj.controls.minDistance = obj.data_sphere_r / 10
+	}
 	const enc = new TextEncoder()
 	const pcd_buffer = enc.encode(data.pcddata).buffer
 	render_cloud( obj, pcd_buffer )
@@ -161,16 +169,16 @@ function init_view ( obj ) {
 	obj.scene.background = new THREE.Color( 0x000000 )
 
 
-	if(obj.canvas_2d){
-		obj.camera = new THREE.PerspectiveCamera( 60, obj.width/obj.height, 0.1, 1000 )
-	}else{
-		obj.camera = new THREE.PerspectiveCamera( 45, obj.width/obj.height, 0.1, 1000 )
-	}
+	obj.camera = new THREE.PerspectiveCamera( 45, obj.width/obj.height, 0.1, 1000 )
 
 	obj.camera.position.x = obj.canvas_2d ? 0 : 20
 	obj.camera.position.y = obj.canvas_2d ? 0 : -10
-	obj.camera.position.z = obj.canvas_2d ? 300 : 20
-	obj.camera.up.set( 0, 0, 1 )
+
+	if(obj.canvas_2d){
+		obj.camera.up.set( 0, 1, 0 )
+	}else{
+		obj.camera.up.set( 0, 0, 1 )
+	}
 
 	obj.controls = new THREE.TrackballControls( obj.camera )
 
@@ -183,9 +191,6 @@ function init_view ( obj ) {
 
 	obj.controls.staticMoving = true
 	obj.controls.dynamicDampingFactor = 0.3
-
-	obj.controls.minDistance = 0.3
-	obj.controls.maxDistance = obj.canvas_2d ? (0.3 * 1500) : (0.3 * 200)
 
 	obj.scene.add( obj.camera )
 
