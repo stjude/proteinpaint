@@ -4,6 +4,7 @@ import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
 import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
 import {loadTk} from './block.mds2'
+import {getvcfheader_customtk} from './block.mds2.vcf'
 
 
 /*
@@ -24,7 +25,7 @@ may_initiate_vcf
 
 function _load ( tk, block ) {
 	return ()=>{
-		loadTk(tk,block)
+		return loadTk(tk,block)
 	}
 }
 
@@ -50,7 +51,7 @@ export async function makeTk ( tk, block ) {
 		if(!tk.name) tk.name = 'Unamed'
 
 		if( tk.vcf ) {
-			await mds2vcf.getvcfheader_customtk( tk.vcf, block.genome )
+			await getvcfheader_customtk( tk.vcf, block.genome )
 		}
 	}
 

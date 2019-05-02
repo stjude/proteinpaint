@@ -50,7 +50,7 @@ the client copy stays at .mds.track{}
 	const t0 = ds.track
 	const tk = {
 		name: t0.name,
-		info_fields: ds.info_fields,
+		info_fields: t0.info_fields,
 	}
 	if(t0.vcf) {
 		tk.vcf = {
