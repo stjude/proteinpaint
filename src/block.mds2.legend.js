@@ -285,23 +285,50 @@ allow interacting with it, to update settings of i, and update track
 */
 	const row = tk.legend.variantfilter.holder
 		.append('div')
+		.style('margin-top','5px')
 
 	// this row should contain those nice-looking elements
 
-	row.append('span')
-		.style('margin-right','20px')
+	row.append('div')
+		.style('display','inline-block')
+		.style('border-radius','6px 0 0 6px')
+		.style('background-color', '#ddd')
+		.style('color','#000')
+		.style('padding','6px 6px 6px 6px')
+		.style('margin-left', '5px')
+		.style('margin-right','1px')
+		.style('font-size','.7em')
+		.style('text-transform','uppercase')
 		.text(i.label)
 
 	if( i.iscategorical ) {
 		for(const v of i.values ) {
 			if(v.ishidden) {
-				v.htmlspan = row.append('span')
-					.style('margin-right','10px')
+				v.htmlspan = row.append('div')
+					.style('display','inline-block')
+					.style('background-color', '#ddd')
+					.style('color','#000')
+					.style('padding','3px 6px 5px 6px')
+					.style('margin-right','1px')
+					.style('font-size','.9em')
 					.text(
 						(i._data ? '('+i._data.value2count[v.key]+') ' : '')
 						+v.label
 					)
 					.style('text-decoration','line-through')
+					.on('mouseover',()=>{
+						v.htmlspan
+							.style('background-color','#e6e6e6')
+							.style('cursor','default')
+					})
+					.on('mouseout',()=>{
+						v.htmlspan
+							.style('background-color','#ddd')
+					})
+					.on('click',()=>{
+						//TODO
+					})
+
 			} else {
 				delete v.htmlspan
 			}
@@ -314,10 +341,25 @@ allow interacting with it, to update settings of i, and update track
 		} else {
 			delete i.unannotated_htmlspan
 		}
+
+		row.append('div')
+			.style('display','inline-block')
+			.style('background-color', '#ddd')
+			.style('color','#000')
+			.style('padding','2px 6px 4px 6px')
+			.style('margin-right','1px')
+			.html('&#43;')
+
 	} else {
 		// numerical
-		const span = row.append('span')
-			.style('margin-right','10px')
+		const span = row.append('div')
+			.style('display','inline-block')
+			.style('background-color', '#ddd')
+			.style('color','#000')
+			.style('padding','3px 6px 4px 6px')
+			.style('margin-right','1px')
+			.style('font-size','.9em')
+
 		const x = '<span style="font-family:Times;font-style:italic">x</span>'
 		if( i.range.startunbounded ) {
 			span.html(x+' '+(i.range.stopinclusive?'&le;':'&lt;')+' '+i.range.stop)
@@ -332,17 +374,35 @@ allow interacting with it, to update settings of i, and update track
 				+' '+i.range.stop
 			)
 		}
-		i.htmlspan = row.append('span')
+		i.htmlspan = span.append('div')
+			.style('display','inline-block')
+			.style('background-color', '#ddd')
+			.style('color','#000')
+			.style('padding-left','3px')
 			.text( i._data ? '('+i._data.filteredcount+' filtered)' : '')
 	}
 
-	row.append('span')
-		.text('delete')
-		.style('margin-left','10px')
+	const remove_filter_btn = row.append('div')
+		.style('display','inline-block')
+		.style('border-radius','0 6px 6px 0')
+		.style('background-color', '#ddd')
+		.style('color','#000')
+		.style('padding','2px 6px 4px 6px')
+		.style('margin-right','1px')
+		.html('&#215;')
 		.on('click', async ()=>{
 			row.remove()
 			delete i.isactivefilter
 			await tk.load()
+		})
+		.on('mouseover',()=>{
+			remove_filter_btn
+				.style('background-color','#e6e6e6')
+				.style('cursor','default')
+		})
+		.on('mouseout',()=>{
+			remove_filter_btn
+				.style('background-color','#ddd')
 		})
 }
 

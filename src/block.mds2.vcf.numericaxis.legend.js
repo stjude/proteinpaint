@@ -273,48 +273,48 @@ will attach div_numbersamples to group{}
 
 	// add new term
 	const add_term_btn = group_div.append('div')
-	.attr('class','sja_menuoption')
-	.style('display','inline-block')
-	.style('padding','2px 7px')
-	.style('margin-left','10px')
-	.style('border-radius','6px')
-	.style('background-color', '#4888BF')
-	.style('color','#fff')
-	.html('&#43;')
-	.on('mouseover',()=>{
-		add_term_btn
-			.style('background-color','#6c9bca') // change to light backgorund on hover
-	})
-	.on('mouseout',()=>{
-		add_term_btn
-			.style('background-color','#4888bf')
-	})
-	.on('click',async ()=>{
-		
-		tip.clear()
-		.showunder( add_term_btn.node() )
+		.attr('class','sja_menuoption')
+		.style('display','inline-block')
+		.style('padding','2px 7px')
+		.style('margin-left','10px')
+		.style('border-radius','6px')
+		.style('background-color', '#4888BF')
+		.style('color','#fff')
+		.html('&#43;')
+		.on('mouseover',()=>{
+			add_term_btn
+				.style('background-color','#6c9bca') // change to light backgorund on hover
+		})
+		.on('mouseout',()=>{
+			add_term_btn
+				.style('background-color','#4888bf')
+		})
+		.on('click',async ()=>{
+			
+			tip.clear()
+			.showunder( add_term_btn.node() )
 
-		const errdiv = tip.d.append('div')
-			.style('margin-bottom','5px')
-			.style('color','#C67C73')
+			const errdiv = tip.d.append('div')
+				.style('margin-bottom','5px')
+				.style('color','#C67C73')
 
-		const treediv = tip.d.append('div')
+			const treediv = tip.d.append('div')
 
-		// a new object as init() argument for launching the tree with modifiers
-            const obj = {
-                genome: block.genome,
-                mds: tk.mds,
-                div: treediv,
-                default_rootterm: {},
-				modifier_barchart_selectbar: {
-					callback: result => {
-						tip.hide()
-						add_term(result)
+			// a new object as init() argument for launching the tree with modifiers
+	            const obj = {
+	                genome: block.genome,
+	                mds: tk.mds,
+	                div: treediv,
+	                default_rootterm: {},
+					modifier_barchart_selectbar: {
+						callback: result => {
+							tip.hide()
+							add_term(result)
+						}
 					}
-				}
-            }
-            init(obj)
-	})
+	            }
+	            init(obj)
+		})
 
 	async function add_term(result){
 
