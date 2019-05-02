@@ -2,7 +2,6 @@ import {scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
-import * as mds2 from './block.mds2'
 import {init,add_searchbox_4term} from './mds.termdb'
 import {
 	may_setup_numerical_axis,
@@ -146,7 +145,7 @@ show menu for numerical axis, under menubutton
 		tk.legend.tip.hide()
 		update_legend_func()
 		menubutton.node().disabled = true
-		await mds2.loadTk( tk, block )
+		await tk.load()
 		menubutton.node().disabled = false
 	}
 }
@@ -237,7 +236,7 @@ will not update track
 				valueinput.style('display','inline')
 			}
 			tt.disabled = true
-			await mds2.loadTk(tk, block)
+			await tk.load()
 			tt.disabled = false
 		})
 
@@ -251,7 +250,7 @@ will not update track
 				if(!Number.isNaN( v )) {
 					key.cutoff.value = v
 					tt.disabled=true
-					await mds2.loadTk(tk, block)
+					await tk.load()
 					tt.disabled=false
 				}
 			}
@@ -413,7 +412,7 @@ will attach div_numbersamples to group{}
 		// // update the group div with new terms
 		may_settoloading_termgroup( group )
 		update_terms_div(terms_div, group, tk, block)
-		await mds2.loadTk( tk, block )
+		await tk.load()
 	}
 }
 
@@ -504,7 +503,7 @@ function update_terms_div(terms_div, group, tk, block){
 							group.terms[i].isnot = term.isnot ? false : true
 							may_settoloading_termgroup( group )
 							update_terms_div(terms_div, group, tk, block)
-				            await mds2.loadTk( tk, block )
+				            await tk.load()
 						})
 				})
 		} else {
@@ -584,7 +583,7 @@ function update_terms_div(terms_div, group, tk, block){
 								may_settoloading_termgroup( group )
 
 								update_terms_div(terms_div, group, tk, block)
-					            await mds2.loadTk( tk, block )
+					            await tk.load()
 							})
 					}
 				} catch(e) {
@@ -619,7 +618,7 @@ function update_terms_div(terms_div, group, tk, block){
 			group.terms.splice(i, 1)
 			may_settoloading_termgroup( group )
 			update_terms_div(terms_div, group, tk, block)
-            await mds2.loadTk( tk, block )
+            await tk.load()
 		})
 	}
 	
@@ -655,7 +654,7 @@ function update_terms_div(terms_div, group, tk, block){
 		// // update the group div with new terms
 		may_settoloading_termgroup( group )
 		update_terms_div(terms_div, group, tk, block)
-		await mds2.loadTk( tk, block )
+		await tk.load()
 	}
 }
 

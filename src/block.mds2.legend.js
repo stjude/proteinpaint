@@ -3,7 +3,6 @@ import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import {legend_newrow} from './block.legend'
 import * as common from './common'
-import * as mds2 from './block.mds2'
 import {may_create_vcflegend_numericalaxis} from './block.mds2.vcf.numericaxis.legend'
 
 
@@ -76,10 +75,8 @@ export function update ( data, tk, block ) {
 /*
 data is returned by xhr
 */
-	const applychange = _applychange(tk,block)
-
 	if( data.mclass2count ) {
-		update_mclass( data.mclass2count, tk, applychange )
+		update_mclass( data.mclass2count, tk )
 	}
 	if( data.info_fields) {
 		update_info_fields( data.info_fields, tk )
@@ -89,7 +86,7 @@ data is returned by xhr
 
 
 
-function update_mclass ( mclass2count, tk, applychange ) {
+function update_mclass ( mclass2count, tk ) {
 
 	tk.legend.mclass.holder.selectAll('*').remove()
 
@@ -148,7 +145,8 @@ function update_mclass ( mclass2count, tk, applychange ) {
 					.text('Hide')
 					.on('click',()=>{
 						tk.legend.mclass.hiddenvalues.add( c.k )
-						applychange()
+						tk.legend.tip.hide()
+						tk.load()
 					})
 
 				tk.legend.tip.d
@@ -160,7 +158,8 @@ function update_mclass ( mclass2count, tk, applychange ) {
 							tk.legend.mclass.hiddenvalues.add( c2.k )
 						}
 						tk.legend.mclass.hiddenvalues.delete( c.k )
-						applychange()
+						tk.legend.tip.hide()
+						tk.load()
 					})
 
 				if(hiddenlst.length) {
@@ -170,7 +169,8 @@ function update_mclass ( mclass2count, tk, applychange ) {
 						.text('Show all')
 						.on('click',()=>{
 							tk.legend.mclass.hiddenvalues.clear()
-							applychange()
+							tk.legend.tip.hide()
+							tk.load()
 						})
 				}
 
@@ -209,31 +209,17 @@ function update_mclass ( mclass2count, tk, applychange ) {
 				'('+c.count+') '
 				+(Number.isInteger(c.k) ? common.dt2label[c.k] : common.mclass[c.k].label )
 			)
-			.on('click',()=>{
+			.on('click', async ()=>{
 
 				if(loading) return
 				loading = true
-
 				tk.legend.mclass.hiddenvalues.delete( c.k )
 				d3event.target.innerHTML = 'Updating...'
-				applychange()
+				await tk.load()
 			})
 	}
 }
 
-
-
-
-
-
-
-
-function _applychange (tk,block) {
-	return ()=>{
-		tk.legend.tip.hide()
-		mds2.loadTk(tk, block)
-	}
-}
 
 
 
