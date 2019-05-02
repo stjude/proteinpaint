@@ -118,7 +118,7 @@ export default function barsRenderer(barsapp, holder) {
     if (nosvg) init();
 
     const unadjustedColw = hm.colw
-    currserieses = chart.serieses.filter(d => !hm.exclude.cols.includes(d.seriesId));
+    currserieses = chart.visibleSerieses;
     setDimensions();
     currserieses.map(setIds);
     chart.serieses.map(setIds);

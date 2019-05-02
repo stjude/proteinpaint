@@ -112,12 +112,13 @@ export class Barchart{
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
+      const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
       const rows = chart.serieses
-        .find(series => series.seriesId == chart.settings.cols[0])
+        .find(series => !refColId || series.seriesId == refColId)
         .data
         .sort((a,b) => b.total - a.total)
         .map(d => d.dataId)
-      chart.serieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
+      chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
 
@@ -134,15 +135,13 @@ export class Barchart{
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
       self.renderers[chart.chartId] = barsRenderer(self, select(this))
+      const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
       const rows = chart.serieses
-        .find(series => series.seriesId == chart.settings.cols[0])
+        .find(series => !refColId || series.seriesId == refColId)
         .data
         .sort((a,b) => b.total - a.total)
         .map(d => d.dataId)
-      chart.serieses
-        //.sort((a,b) => b.total - a.total)
-        .forEach(series => self.sortStacking(rows, series, chart, chartsData))
-      
+      chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
   }
@@ -160,8 +159,10 @@ export class Barchart{
         }
       }
       chart.settings = Object.assign(this.settings, chartsData.refs)
-      chart.maxVisibleSeriesTotal = chart.serieses.reduce((max,b) => {
-        if (chart.settings.exclude.cols.includes(b.seriesId)) return max
+      chart.visibleSerieses = chart.serieses.filter(d=>{
+        return !chart.settings.exclude.cols.includes(d.seriesId)
+      })
+      chart.maxVisibleSeriesTotal = chart.visibleSerieses.reduce((max,b) => {
         b.visibleData = b.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))
         b.visibleTotal = b.visibleData.reduce((sum, a) => sum + a.total, 0)
         return b.visibleTotal > max ? b.visibleTotal : max
@@ -176,7 +177,7 @@ export class Barchart{
   }
 
   sortStacking(rows, series, chart, chartsData) {
-    series.data.sort((a,b) => {
+    series.visibleData.sort((a,b) => {
       return rows.indexOf(a.dataId) < rows.indexOf(b.dataId) ? -1 : 1 
     });
     let seriesLogTotal = 0

@@ -121,7 +121,14 @@ export function render ( arg, obj ) {
   // a row of buttons
   plot.button_row = arg.holder.append('div')
     .style('margin','10px 0px')
-    .on('click', ()=>d3event.stopPropagation())
+    .on('click', ()=>{
+      // the same comments in mds.termdb.plot2
+      // obj.div.on('click.tdb', ...) applies here
+      d3event.stopPropagation()
+      if (d3event.target == plot.button_row) {
+        obj.tip.hide()
+      }
+    })
   ////////////// Y Axis options
 
   // button - Y axis scale selection 
