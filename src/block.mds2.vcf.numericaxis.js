@@ -1168,18 +1168,6 @@ append numeric axis parameter to object for loadTk
 	const nm = tk.vcf.numerical_axis
 	if(!nm) return
 	if(!nm.in_use) return
-	if( nm.inuse_infokey ) {
-		const key = nm.info_keys.find( i=> i.in_use )
-		if( key.cutoff && key.cutoff.in_use ) {
-			// applying cutoff
-			par.numerical_info_cutoff = {
-				key: key.key,
-				side: key.cutoff.side,
-				value: key.cutoff.value
-			}
-		}
-		return
-	}
 	if( nm.inuse_termdb2groupAF && nm.termdb2groupAF ) {
 		par.termdb2groupAF = {
 			group1: {
