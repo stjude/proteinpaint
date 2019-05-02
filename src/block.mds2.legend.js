@@ -296,6 +296,7 @@ allow interacting with it, to update settings of i, and update track
 		for(const v of i.values ) {
 			if(v.ishidden) {
 				v.htmlspan = row.append('span')
+					.style('margin-right','10px')
 					.text(
 						(i._data ? '('+i._data.value2count[v.key]+') ' : '')
 						+v.label
@@ -307,7 +308,9 @@ allow interacting with it, to update settings of i, and update track
 		}
 		if( i.unannotated_ishidden ) {
 			i.unannotated_htmlspan = row.append('span')
+				.style('margin-right','10px')
 				.text( (i._data ? '('+i._data.unannotated_count+') ' : '')+'Unannotated' )
+				.style('text-decoration','line-through')
 		} else {
 			delete i.unannotated_htmlspan
 		}
@@ -425,7 +428,7 @@ data is data.info_fields{}
 			// an active filter; update stats
 			if( i.iscategorical ) {
 				// update counts from htmlspan
-				if( i.unannotated_htmlspan ) i.unannotated_htmlspan.text = '('+(i._data.unannotated_count||0)+') Unannotated'
+				if( i.unannotated_htmlspan ) i.unannotated_htmlspan.text('('+(i._data.unannotated_count||0)+') Unannotated')
 				for(const v of i.values) {
 					if( v.htmlspan ) {
 						v.htmlspan.text('('+(i._data.value2count[v.key]||0)+') '+v.label)
