@@ -119,10 +119,9 @@ export function render ( arg, obj ) {
   }
 
   // a row of buttons
-
   plot.button_row = arg.holder.append('div')
     .style('margin','10px 0px')
-
+    .on('click', ()=>d3event.stopPropagation())
   ////////////// Y Axis options
 
   // button - Y axis scale selection 

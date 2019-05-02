@@ -72,10 +72,20 @@ obj{}:
 */
 
 	window.obj = obj // for testing
-
 	obj.errdiv = obj.div.append('div')
 	obj.treediv = obj.div.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
+	obj.div.on('click.tdb', ()=>{
+		// the plot.button_row in mds.termdb.plot2 and
+		// individual buttons in the term tree captures
+		// the click event, so stopPropagation in here 
+		// does not affect those event handlers/callbacks 
+		d3event.stopPropagation()
+		// since the click event is not propagated to body,
+		// handle the tip hiding here since the body.click
+		// handler in client.js Menu will not be triggered
+		obj.tip.hide()
+	})
 
 	try {
 
