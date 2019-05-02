@@ -422,17 +422,14 @@ function update_terms_div(terms_div, group, tk, block){
 	const tip = tk.legend.tip
 
 	for(const [i, term] of group.terms.entries()){
-		const term_btn = terms_div.append('div')
-		.style('display','inline-block')
-		.style('margin-left','10px')
-		.style('border-radius','6px 0 0 6px')
-		.style('background-color', '#4888BF')
-		.style('color','#fff')
 
-		const term_name_btn = term_btn.append('div')
+		const term_name_btn = terms_div.append('div')
 			.style('display','inline-block')
-			.style('margin','0 2px')
-			.style('padding','4px 2px 4px 8px')
+			.style('border-radius','6px 0 0 6px')
+			.style('background-color', '#4888BF')
+			.style('color','#fff')
+			.style('padding','7px 6px 5px 6px')
+			.style('margin-left', '5px')
 			.style('font-size','.7em')
 			.text(term.term.name)
 			.style('text-transform','uppercase')
@@ -468,11 +465,12 @@ function update_terms_div(terms_div, group, tk, block){
 	            init(obj)
 			})
 
-		const condition_btn = term_btn.append('div')
+		const condition_btn = terms_div.append('div')
 			.style('display','inline-block')
+			.style('color','#fff')
 			.style('background-color','#eeeeee')
 			.style('font-size','.7em')
-			.style('padding','3px')
+			.style('padding','7px 6px 5px 6px')
 			.on('mouseover',()=>{
 				condition_btn
 					.style('background-color', term.isnot ? '#734a93' : '#337273') // change to light backgorund on hover
@@ -511,8 +509,11 @@ function update_terms_div(terms_div, group, tk, block){
 			condition_btn.text('RANGE')
 		}
 
-		const term_value_btn = term_btn.append('div')
-			.style('padding','2px 4px 3px 4px')
+		const term_value_btn = terms_div.append('div')
+			.style('font-size','1em')
+			.style('padding','3px 4px 3px 4px')
+			.style('background-color', '#4888BF')
+			.style('color','#fff')
 			.style('display','inline-block')
 
 		if( term.term.iscategorical ) {
@@ -601,7 +602,7 @@ function update_terms_div(terms_div, group, tk, block){
 		.attr('class','sja_menuoption')
 		.style('display','inline-block')
 		.style('margin-left','1px')
-		.style('padding','2px 6px 3px 4px')
+		.style('padding','3px 6px 3px 4px')
 		.style('border-radius','0 6px 6px 0')
 		.style('background-color', '#4888BF')
 		.style('color','#fff')
