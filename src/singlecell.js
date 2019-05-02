@@ -140,6 +140,7 @@ or selected a gene for overlaying
 			color_min: obj.gene_expression.color_min,
 			color_max: obj.gene_expression.color_max
 		}
+		if(obj.gene_expression.color_no_exp) arg.getpcd.gene_expression.color_no_exp = obj.gene_expression.color_no_exp
 	} else {
 		throw 'unknown method to color the cells'
 	}
@@ -166,7 +167,11 @@ function init_view ( obj ) {
 
 
 	obj.scene = new THREE.Scene()
-	obj.scene.background = new THREE.Color( 0x000000 )
+	if(obj.background_color){
+		obj.scene.background = new THREE.Color( obj.background_color )
+	}else{
+		obj.scene.background = new THREE.Color( 0x000000 )
+	}
 
 
 	obj.camera = new THREE.PerspectiveCamera( 45, obj.width/obj.height, 0.1, 1000 )
@@ -442,6 +447,22 @@ function update_controlpanel ( obj, data ) {
 			.style('font-size','13px')
 			.style('margin','2px 0')
 			.html(data.numbercellwithgeneexp + ' / ' + data.numbercelltotal)
+
+		const no_exp_div = stats_div.append('div')
+			.style('display','block')
+			.style('margin-top', '10px')
+		
+		no_exp_div.append('div')
+			.style('display','inline-block')
+			.style('height', '15px')
+			.style('width', '15px')
+			.style('background-color', (obj.gene_expression.color_no_exp) ? obj.gene_expression.color_no_exp : '#2C2C2C')
+			.style('margin-right', '10px')
+
+		no_exp_div.append('div')
+			.style('display','inline-block')
+			.style('font-size','13px')
+			.html(' Cells without Expression')
 			
 
 		// Show option for Boxplot for Gene Expression by catagories

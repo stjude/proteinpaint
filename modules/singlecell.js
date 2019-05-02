@@ -236,8 +236,15 @@ may attach coloring scheme to result{} for returning to client
 			// if(!color) return
 
 			// add color for cells without expression to retain cluster shape
-			if(!color) color = '2894892' // dark grey
-			// if(!color) color = '14540253' //light grey
+			if(!color){
+				if(q.getpcd.gene_expression.color_no_exp){
+					const c = d3color.color( q.getpcd.gene_expression.color_no_exp )
+					color = Number.parseInt( rgbToHex( c.r, c.g, c.b ), 16 )
+				}else{
+					color = '2894892' // dark grey
+					//color = '14540253' //light grey
+				}
+			} 
 			newl.push(color)
 		}
 
