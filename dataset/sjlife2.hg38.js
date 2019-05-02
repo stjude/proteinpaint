@@ -140,7 +140,8 @@ module.exports={
 						terms:[
 							{
 							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-							value:'Acute lymphoblastic leukemia'
+							//value:'Acute lymphoblastic leukemia'
+							values:['Acute lymphoblastic leukemia','Neuroblastoma']
 							}
 						]
 					},

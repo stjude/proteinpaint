@@ -7,6 +7,8 @@ import * as client from './client'
 import * as coord from './coord'
 import {vcf_m_color} from './block.mds2.vcf'
 import {vcf_clickvariant} from './block.mds2.vcf.clickvariant'
+import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
+
 
 /*
 adapted from legacy code
@@ -1013,14 +1015,14 @@ and switching numeric axis category
 		if(!g.group2) throw '.group2{} missing'
 		if(!g.group2.terms) throw '.group2.terms[] missing'
 		// allow terms array to be empty
-		validate_termlst( g.group1.terms, 'termdb2groupAF.group1' )
-		validate_termlst( g.group2.terms, 'termdb2groupAF.group2' )
+		validate_termvaluesetting( g.group1.terms, 'termdb2groupAF.group1' )
+		validate_termvaluesetting( g.group2.terms, 'termdb2groupAF.group2' )
 	}
 
 	if( nm.ebgatest ) {
 		const e = nm.ebgatest
 		if( !e.terms ) throw '.ebgatest.terms[] missing'
-		validate_termlst( e.terms, 'ebgatest' )
+		validate_termvaluesetting( e.terms, 'ebgatest' )
 		if( !e.populations ) throw 'ebgatest.populations[] missing'
 		for( const i of e.populations ) {
 			if(!i.key) throw '.key missing from a population of ebgatest'
@@ -1038,14 +1040,7 @@ and switching numeric axis category
 
 
 
-function validate_termlst ( lst, from ) {
-	for(const t of lst) {
-		if(!t.term) throw '.term{} missing from a '+from+' term'
-		if(!t.term.id) throw '.term.term.id missing from a '+from+' term'
-		if(!t.term.iscategorical && !t.term.isinteger && !t.term.isfloat) throw '.term{} missing type flag'
-		if(t.value==undefined) throw '.value missing from a '+from+' term'
-	}
-}
+
 
 
 
@@ -1190,12 +1185,19 @@ append numeric axis parameter to object for loadTk
 
 function terms2parameter ( terms ) {
 // works for list of terms from either termdb2groupAF or ebgatest
-// TODO and/or
+// TODO and/or between multiple terms
 	return terms.map( i=> {
 		return {
-			term_id: i.term.id,
-			value: i.value,
-			isnot: i.isnot
+			term: {
+				id: i.term.id,
+				iscategorical: i.term.iscategorical,
+				isfloat: i.term.isfloat,
+				isinteger: i.term.isinteger,
+			},
+			value: i.value, // backward compatible
+			values: i.values,
+			range: i.range,
+			isnot: i.isnot,
 		}
 	})
 }

@@ -4,6 +4,7 @@ const spawn = require('child_process').spawn
 const utils = require('./utils')
 const vcf = require('../src/vcf')
 const common = require('../src/common')
+const validate_termvaluesetting = require('../src/mds.termdb.termvaluesetting').validate_termvaluesetting
 
 
 
@@ -14,6 +15,8 @@ handle_ssidbyonem
 handle_getcsq
 ********************** INTERNAL
 get_columnidx_byterms
+wrap_validate_termvaluesetting
+sample_match_termvaluesetting
 get_querymode
 query_vcf_applymode
 parseline_termdb2groupAF
@@ -198,6 +201,8 @@ generate the "querymode" object that drives subsequent queries
 */
 
 	if( q.termdb2groupAF ) {
+		wrap_validate_termvaluesetting(q.termdb2groupAF.group1.terms,'termdb2groupAF.group1')
+		wrap_validate_termvaluesetting(q.termdb2groupAF.group2.terms,'termdb2groupAF.group2')
 		return {
 			range_termdb2groupAF: true,
 			columnidx_group1: get_columnidx_byterms( q.termdb2groupAF.group1.terms, ds, vcftk.samples ),
@@ -205,6 +210,7 @@ generate the "querymode" object that drives subsequent queries
 		}
 	}
 	if( q.ebgatest ) {
+		wrap_validate_termvaluesetting(q.ebgatest.terms,'ebgatest')
 		// vcf header column idx for the current term
 		const columnidx = get_columnidx_byterms( q.ebgatest.terms, ds, vcftk.samples )
 
@@ -260,35 +266,14 @@ generate the "querymode" object that drives subsequent queries
 
 function get_columnidx_byterms ( terms, ds, vcfsamples ) {
 /*
+terms is a list, each ele is one term-value setting
 a sample must meet all term conditions
 */
 	const usesampleidx = []
 	for( const [i, sample] of vcfsamples.entries() ) {
 		const sanno = ds.cohort.annotation[ sample.name ]
 		if(!sanno) continue
-
-		// for AND, require all terms to match
-		let alltermmatch = true
-		for(const t of terms ) {
-			const t0 = ds.cohort.termdb.termjson.map.get( t.term_id )
-			if( !t0 ) {
-				continue
-			}
-			let thistermmatch
-			if( t0.iscategorical ) {
-
-				thistermmatch = t.isnot ? sanno[ t.term_id ] != t.value : sanno[ t.term_id ] == t.value
-
-			} else if( t0.isinteger || t0.isfloat ) {
-				// TODO
-			}
-			if( !thistermmatch ) {
-				// not matching, end
-				alltermmatch=false
-				break
-			}
-		}
-		if(alltermmatch) {
+		if( sample_match_termvaluesetting( sanno, terms, ds ) ) {
 			usesampleidx.push( i )
 		}
 	}
@@ -678,4 +663,78 @@ function _m_is_filtered ( q, result, mockblock ) {
 
 		return todrop
 	}
+}
+
+
+
+
+function wrap_validate_termvaluesetting ( terms, where ) {
+	validate_termvaluesetting(terms,where)
+	for(const t of terms) {
+		if(t.term.iscategorical) {
+			if(!t.values) t.values = [t.value]
+			// convert values[] to set
+			t.valueset = new Set(t.values)
+		}
+	}
+}
+
+
+
+function sample_match_termvaluesetting ( sanno, terms ) {
+	// for AND, require all terms to match
+
+	let usingAND = true
+
+	let numberofmatchedterms = 0
+
+	for(const t of terms ) {
+
+		const samplevalue = sanno[ t.term.id ]
+		if(samplevalue==undefined) {
+			// this sample has no anno for this term, do not count
+			continue
+		}
+
+		let thistermmatch
+
+		if( t.term.iscategorical ) {
+
+			thistermmatch = t.valueset.has( samplevalue )
+
+		} else if( t.term.isinteger || t.term.isfloat ) {
+
+			let left, right
+			if( t.range.startunbounded ) {
+				left = true
+			} else {
+				if(t.range.startinclusive) {
+					left = samplevalue >= t.range.start
+				} else {
+					left = samplevalue > t.range.start
+				}
+			}
+			if( t.range.stopunbounded ) {
+				right = true
+			} else {
+				if(t.range.stopinclusive) {
+					right = samplevalue <= t.range.stop
+				} else {
+					right = samplevalue < t.range.stop
+				}
+			}
+			thistermmatch = left && right
+		}
+
+		if( t.isnot ) {
+			thistermmatch = !thistermmatch
+		}
+		if( thistermmatch ) numberofmatchedterms++
+	}
+
+	if( usingAND ) {
+		return numberofmatchedterms == terms.length
+	}
+	// using OR
+	return numberofmatchedterms > 0
 }
