@@ -660,6 +660,11 @@ function _m_is_filtered ( q, result, mockblock ) {
 			}
 		}
 
+		// final step is mclass
+		if( todrop ) {
+			// this variant has been filtered, do not add to mclass counter
+			return true
+		}
 
 		common.vcfcopymclass( m, mockblock )
 
