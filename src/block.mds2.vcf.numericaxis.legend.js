@@ -432,89 +432,186 @@ function update_terms_div(terms_div, group, tk, block){
 			condition_btn.text('RANGE')
 		}
 
-		const term_value_btn = terms_div.append('div')
-			.style('font-size','1em')
-			.style('padding','3px 4px 3px 4px')
-			.style('background-color', '#4888BF')
-			.style('color','#fff')
+		const term_value_div = terms_div.append('div')
 			.style('display','inline-block')
 
 		if( term.term.iscategorical ) {
-			// furbish value button for a categorical term
-			term_value_btn
-			.text(term.value)
-			.on('mouseover',()=>{
-				term_value_btn
-					.style('background-color','#6c9bca')
-					.style('cursor','default')
-			})
-			.on('mouseout',()=>{
-				term_value_btn
-					.style('background-color','#4888bf') // change to light backgorund on hover
-			})
-			.on('click', async ()=>{
-				tip.clear()
-					.showunder( term_value_btn.node() )
+			
+			for (let j=0; j<term.values.length; j++){
+				const term_value_btn = term_value_div.append('div')
+					.style('display','inline-block')
+					.style('font-size','1em')
+					.style('padding','3px 4px 3px 4px')
+					.style('margin-right','1px')
+					.style('background-color', '#4888BF')
+					.style('color','#fff')
+					.text(term.values[j])
+					.on('mouseover',()=>{
+						term_value_btn
+							.style('background-color','#6c9bca')
+							.style('cursor','default')
+					})
+					.on('mouseout',()=>{
+						term_value_btn
+							.style('background-color','#4888bf') // change to light backgorund on hover
+					})
+					.on('click', async ()=>{
+						tip.clear()
+							.showunder( term_value_btn.node() )
 
-				const wait = tip.d.append('div').text('Loading...')
+						const wait = tip.d.append('div').text('Loading...')
 
-				const arg = {
-					genome: block.genome.name,
-					dslabel: tk.mds.label, 
-					getcategories: 1,
-					samplecountbyvcf: 1, // quick n dirty solution, to count using vcf samples
-					termid : term.term.id
-				}
-
-				try {
-					const data = await client.dofetch( 'termdb', arg )
-					if(data.error) throw data.error
-					wait.remove()
-
-					const list_div = tip.d.append('div')
-						.style('display','block')
-
-					for (const category of data.lst){
-						const row = list_div.append('div')
-
-						row.append('div')
-							.style('font-size','.7em')
-							.style('color','white')
-							.style('display','inline-block')
-							.style('background','#1f77b4')
-							.style('padding','2px 4px')
-							.text(category.samplecount)
-
-						row.append('div')
-							.style('display','inline-block')
-							.style('padding','1px 5px')
-							.style('margin-right','5px')
-							.text(category.label)
-
-						if( category.value == group.terms[i].value ) {
-							// the same
-							row.style('padding','5px 10px')
-								.style('margin','1px')
-							continue
+						const arg = {
+							genome: block.genome.name,
+							dslabel: tk.mds.label, 
+							getcategories: 1,
+							termid : term.term.id
 						}
 
-						row
-							.attr('class','sja_menuoption')
-							.on('click',async ()=>{
-								tip.hide()
+						try {
+							const data = await client.dofetch( 'termdb', arg )
+							if(data.error) throw data.error
+							wait.remove()
 
-								group.terms[i].value = category.value
+							const list_div = tip.d.append('div')
+								.style('display','block')
 
-								may_settoloading_termgroup( group )
+							for (const category of data.lst){
+								const row = list_div.append('div')
 
-								update_terms_div(terms_div, group, tk, block)
-					            await tk.load()
+								row.append('div')
+									.style('font-size','.7em')
+									.style('color','white')
+									.style('display','inline-block')
+									.style('background','#1f77b4')
+									.style('padding','2px 4px')
+									.text(category.samplecount)
+
+								row.append('div')
+									.style('display','inline-block')
+									.style('padding','1px 5px')
+									.style('margin-right','5px')
+									.text(category.label)
+
+								if( category.value == group.terms[i].values[j] ) {
+									// the same
+									row.style('padding','5px 10px')
+										.style('margin','1px')
+									continue
+								}
+
+								row
+									.attr('class','sja_menuoption')
+									.on('click',async ()=>{
+										tip.hide()
+
+										group.terms[i].values[j] = category.value
+
+										may_settoloading_termgroup( group )
+
+										update_terms_div(terms_div, group, tk, block)
+							            await tk.load()
+									})
+							}
+						} catch(e) {
+							wait.text( e.message || e )
+						}
+					})
+
+					// 'OR' button in between values
+					if(j<term.values.length-1){
+						term_value_div.append('div')
+							.style('display','inline-block')
+							.style('color','#fff')
+							.style('background-color','#4888BF')
+							.style('margin-right','1px')
+							.style('padding','7px 6px 5px 6px')
+							.style('font-size','.7em')
+							.style('text-transform','uppercase')
+							.text('or')
+					}else{
+						// '+' button at end of all values to add to list of values
+						const add_value_btn = term_value_div.append('div')
+							.style('display','inline-block')
+							.style('color','#fff')
+							.style('background-color','#4888BF')
+							.style('margin-right','1px')
+							.style('padding','3px 5px')
+							.style('text-transform','uppercase')
+							.html('&#43;')
+							.on('mouseover',()=>{
+								add_value_btn
+									.style('background-color','#6c9bca')
+									.style('cursor','default')
+							})
+							.on('mouseout',()=>{
+								add_value_btn
+									.style('background-color','#4888bf') // change to light backgorund on hover
+							})
+							.on('click', async ()=>{
+								tip.clear()
+									.showunder( add_value_btn.node() )
+		
+								const wait = tip.d.append('div').text('Loading...')
+		
+								const arg = {
+									genome: block.genome.name,
+									dslabel: tk.mds.label, 
+									getcategories: 1,
+									termid : term.term.id
+								}
+		
+								try {
+									const data = await client.dofetch( 'termdb', arg )
+									if(data.error) throw data.error
+									wait.remove()
+		
+									const list_div = tip.d.append('div')
+										.style('display','block')
+		
+									for (const category of data.lst){
+										const row = list_div.append('div')
+		
+										row.append('div')
+											.style('font-size','.7em')
+											.style('color','white')
+											.style('display','inline-block')
+											.style('background','#1f77b4')
+											.style('padding','2px 4px')
+											.text(category.samplecount)
+		
+										row.append('div')
+											.style('display','inline-block')
+											.style('padding','1px 5px')
+											.style('margin-right','5px')
+											.text(category.label)
+		
+										if( group.terms[i].values.includes(category.value)) {
+											// the same
+											row.style('padding','5px 10px')
+												.style('margin','1px')
+											continue
+										}
+		
+										row
+											.attr('class','sja_menuoption')
+											.on('click',async ()=>{
+												tip.hide()
+		
+												group.terms[i].values.push(category.value)
+		
+												may_settoloading_termgroup( group )
+		
+												update_terms_div(terms_div, group, tk, block)
+									            await tk.load()
+											})
+									}
+								} catch(e) {
+									wait.text( e.message || e )
+								}
 							})
 					}
-				} catch(e) {
-					wait.text( e.message || e )
-				}
-			})
+			}
 
 		} else if( term.term.isinteger || term.term.isfloat ) {
 			// TODO numerical term, print range in value button and apply the suitable click callback
@@ -523,9 +620,7 @@ function update_terms_div(terms_div, group, tk, block){
 
 		// button with 'x' to remove term2
 		const term_remove_btn = terms_div.append('div')
-		.attr('class','sja_menuoption')
 		.style('display','inline-block')
-		.style('margin-left','1px')
 		.style('padding','3px 6px 3px 4px')
 		.style('border-radius','0 6px 6px 0')
 		.style('background-color', '#4888BF')
