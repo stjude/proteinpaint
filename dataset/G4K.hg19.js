@@ -25,7 +25,7 @@ module.exports={
 	],
 	
 	sampleAssayTrack:{
-		file:'hg19/G4K/tracktable/__table'
+		file:'hg19/clingen/subset/G4K/tracktable/__table'
 	},
 	
 
@@ -35,7 +35,7 @@ module.exports={
 
 	cohort:{
 		files:[
-			{file:'hg19/G4K/sampletable/G4K.sample'},
+			{file:'hg19/clingen/subset/G4K/sampletable/G4K.sample'},
 		],
 		samplenamekey:samplenamekey,
 		tohash:(item, ds)=>{
@@ -92,7 +92,7 @@ module.exports={
 			name:'G4K mutation',
 			istrack:true,
 			type:common.tkt.mdssvcnv,
-			file:'hg19/G4K/G4K.svcnv.gz',
+			file:'hg19/clingen/subset/G4K/G4K.svcnv.gz',
 
 			no_loh:1,
 
@@ -131,7 +131,7 @@ module.exports={
 			viewrangeupperlimit:2000000,
 			tracks:[
 				{
-					file:'hg19/G4K/G4K.vcf.gz',
+					file:'hg19/clingen/subset/G4K/G4K.vcf.gz',
 					type:'vcf',
 				}
 			]
@@ -141,7 +141,7 @@ module.exports={
 			hideforthemoment:1,
 			name:'G4K RNA-seq gene FPKM',
 			isgenenumeric:true,
-			file:'hg19/G4K/G4K.fpkm.gz',
+			file:'hg19/clingen/subset/G4K/G4K.fpkm.gz',
 			datatype:'FPKM',
 
 			// for boxplots & circles, and the standalone expression track
