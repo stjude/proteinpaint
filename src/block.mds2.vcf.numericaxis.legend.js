@@ -465,6 +465,7 @@ function update_terms_div(terms_div, group, tk, block){
 							genome: block.genome.name,
 							dslabel: tk.mds.label, 
 							getcategories: 1,
+							samplecountbyvcf: 1, // quick n dirty solution, to count using vcf samples
 							termid : term.term.id
 						}
 
@@ -493,10 +494,11 @@ function update_terms_div(terms_div, group, tk, block){
 									.style('margin-right','5px')
 									.text(category.label)
 
-								if( category.value == group.terms[i].values[j] ) {
-									// the same
+								if( group.terms[i].values.includes(category.value )) {
+									// from the list
 									row.style('padding','5px 10px')
 										.style('margin','1px')
+										.style('color','#999')
 									continue
 								}
 
@@ -590,6 +592,7 @@ function update_terms_div(terms_div, group, tk, block){
 											// the same
 											row.style('padding','5px 10px')
 												.style('margin','1px')
+												.style('color','#999')
 											continue
 										}
 		

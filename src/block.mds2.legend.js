@@ -286,9 +286,7 @@ allow interacting with it, to update settings of i, and update track
 	const row = tk.legend.variantfilter.holder
 		.append('div')
 		.style('margin-top','5px')
-
-	// this row should contain those nice-looking elements
-
+	console.log(i)
 	row.append('div')
 		.style('display','inline-block')
 		.style('border-radius','6px 0 0 6px')
@@ -301,54 +299,11 @@ allow interacting with it, to update settings of i, and update track
 		.style('text-transform','uppercase')
 		.text(i.label)
 
+	const active_filter_div = row.append('div')
+		.style('display','inline-block')
+
 	if( i.iscategorical ) {
-		for(const v of i.values ) {
-			if(v.ishidden) {
-				v.htmlspan = row.append('div')
-					.style('display','inline-block')
-					.style('background-color', '#ddd')
-					.style('color','#000')
-					.style('padding','3px 6px 5px 6px')
-					.style('margin-right','1px')
-					.style('font-size','.9em')
-					.text(
-						(i._data ? '('+i._data.value2count[v.key]+') ' : '')
-						+v.label
-					)
-					.style('text-decoration','line-through')
-					.on('mouseover',()=>{
-						v.htmlspan
-							.style('background-color','#e6e6e6')
-							.style('cursor','default')
-					})
-					.on('mouseout',()=>{
-						v.htmlspan
-							.style('background-color','#ddd')
-					})
-					.on('click',()=>{
-						//TODO
-					})
-
-			} else {
-				delete v.htmlspan
-			}
-		}
-		if( i.unannotated_ishidden ) {
-			i.unannotated_htmlspan = row.append('span')
-				.style('margin-right','10px')
-				.text( (i._data ? '('+i._data.unannotated_count+') ' : '')+'Unannotated' )
-				.style('text-decoration','line-through')
-		} else {
-			delete i.unannotated_htmlspan
-		}
-
-		row.append('div')
-			.style('display','inline-block')
-			.style('background-color', '#ddd')
-			.style('color','#000')
-			.style('padding','2px 6px 4px 6px')
-			.style('margin-right','1px')
-			.html('&#43;')
+		update_numerical_filter(tk, i, active_filter_div, row)
 
 	} else {
 		// numerical
@@ -382,6 +337,7 @@ allow interacting with it, to update settings of i, and update track
 			.text( i._data ? '('+i._data.filteredcount+' filtered)' : '')
 	}
 
+	// 'x' button to remove filter
 	const remove_filter_btn = row.append('div')
 		.style('display','inline-block')
 		.style('border-radius','0 6px 6px 0')
@@ -499,4 +455,81 @@ data is data.info_fields{}
 			}
 		}
 	}
+}
+
+function update_numerical_filter(tk, i, active_filter_div, row){
+
+	active_filter_div.selectAll('*').remove()
+
+	let hidden_term_count = 0
+
+	for(const v of i.values ) {
+
+		if(v.ishidden) {
+			
+			hidden_term_count = hidden_term_count + 1
+
+			v.htmlspan = active_filter_div.append('div')
+				.style('display','inline-block')
+				.style('background-color', '#ddd')
+				.style('color','#000')
+				.style('padding','3px 6px 5px 6px')
+				.style('margin-right','1px')
+				.style('font-size','.9em')
+				.text(
+					(i._data ? '('+i._data.value2count[v.key]+') ' : '')
+					+v.label
+				)
+				.style('text-decoration','line-through')
+				.on('mouseover',()=>{
+					v.htmlspan
+						.style('background-color','#e6e6e6')
+						.style('cursor','default')
+				})
+				.on('mouseout',()=>{
+					v.htmlspan
+						.style('background-color','#ddd')
+				})
+				.on('click',async ()=>{
+					delete v.ishidden
+					update_numerical_filter(tk, i, active_filter_div)
+					if(hidden_term_count == 1){
+						delete i.isactivefilter
+						row.remove()
+					}
+					await tk.load()
+				})
+		} else {
+			delete v.htmlspan
+		}
+	}
+	if( i.unannotated_ishidden ) {
+		i.unannotated_htmlspan = active_filter_div.append('span')
+			.style('margin-right','10px')
+			.text( (i._data ? '('+i._data.unannotated_count+') ' : '')+'Unannotated' )
+			.style('text-decoration','line-through')
+	} else {
+		delete i.unannotated_htmlspan
+	}
+
+	// '+' button to add filter for same category
+	const add_filter_btn = active_filter_div.append('div')
+		.style('display','inline-block')
+		.style('background-color', '#ddd')
+		.style('color','#000')
+		.style('padding','2px 6px 4px 6px')
+		.style('margin-right','1px')
+		.html('&#43;')
+		.on('mouseover',()=>{
+			add_filter_btn
+				.style('background-color','#e6e6e6')
+				.style('cursor','default')
+		})
+		.on('mouseout',()=>{
+			add_filter_btn
+				.style('background-color','#ddd')
+		})
+		.on('click',()=>{
+			//TODO
+		})
 }
