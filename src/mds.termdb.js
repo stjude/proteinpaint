@@ -81,6 +81,8 @@ obj{}:
 		// the click event, so stopPropagation in here 
 		// does not affect those event handlers/callbacks 
 		d3event.stopPropagation()
+		
+		if (d3event.target.innerHTML == "CROSSTAB") return
 		// since the click event is not propagated to body,
 		// handle the tip hiding here since the body.click
 		// handler in client.js Menu will not be triggered
