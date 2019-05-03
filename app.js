@@ -9751,7 +9751,7 @@ async function handle_mdssurvivalplot (req,res) {
 		const result = {
 			samplesets: samplesets,
 			pvalue: pvalue
-			}
+		}
 		if(q.samplerule.set && q.samplerule.set.mutation) {
 			result.count_snvindel = q.samplerule.set.samples_snvindel.size
 			result.count_cnv = q.samplerule.set.samples_cnv.size
@@ -9852,6 +9852,30 @@ ds{}
 	.queries{}
 plottype{}
 */
+	if( q.samplerule.hardcodesets ) {
+		/*
+		each set
+		{
+			name:STR,
+			samplenames:[ name ]
+		}
+		*/
+		const nomutsampleset = new Set(samples.map(i=>i.name)) // to remove mutated samples leaving only unmutated ones
+		const sets = q.samplerule.hardcodesets.reduce( (sets, s)=>{
+			const thisset = new Set(s.samplenames)
+			s.lst = samples.filter(i=>thisset.has(i.name))
+			for(const n of s.samplenames) nomutsampleset.delete(n)
+			delete s.samplenames
+			sets.push(s)
+			return sets
+		}, [] )
+		sets.push({
+			name: 'No mutation (n='+nomutsampleset.size+')',
+			lst: samples.filter(i=>nomutsampleset.has(i.name))
+		})
+		return sets
+	}
+
 	const st = q.samplerule.set
 	if(!st) {
 		// no rule for sets -- make one

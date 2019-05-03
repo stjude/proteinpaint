@@ -180,7 +180,7 @@ push button to re-render
 	}
 
 
-	if(obj.samplegroupings) {
+	if(obj.samplegroupings && !p.samplerule.full.immutable) {
 		/*
 		sample groupings is for setting samplerule.full
 
