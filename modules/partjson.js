@@ -235,20 +235,18 @@ class ValFiller {
         t.inheritedIgnore,
         s
       )
-      if (o.aggr || o.skip || o.timing)
-        return void t.errors.push(["val", "INVALID-[{}]-OPTION-TOKEN"])
-      const i = Object.create(null)
-      return (t, s, o, n) => {
-        n.branch in i || (i[n.branch] = new Map())
-        const l = i[n.branch]
-        this.Pj.setResultContext("[]", s, o)
-        const c = r(t, n)
-        if (l.has(c)) this.Pj.processRow(t, e, l.get(c))
-        else {
-          const r = this.Pj.setResultContext("{}", o[s].length, o[s])
-          this.Pj.processRow(t, e, r), l.set(c, r)
-        }
-      }
+      return o.aggr || o.skip || o.timing
+        ? void t.errors.push(["val", "INVALID-[{}]-OPTION-TOKEN"])
+        : (t, s, o, i) => {
+            const n = this.Pj.setResultContext("[]", s, o, !0),
+              l = this.Pj.contexts.get(n).tracker,
+              c = r(t, i)
+            if (l.has(c)) this.Pj.processRow(t, e, l.get(c))
+            else {
+              const s = this.Pj.setResultContext("{}", n.length, n, !0)
+              l.set(c, s), this.Pj.processRow(t, e, s)
+            }
+          }
     }
     t.errors.push(["val", "INVALID-[{}]-OPTION"])
   }),
@@ -587,11 +585,7 @@ const subs = {
         {
           const t = (e, t) => (e ? e[t] : null)
           e.joins.get(o)
-          return (
-            console.log(o),
-            console.log(r.reduce(t, e.joins.get(o))),
-            s => r.reduce(t, e.joins.get(o))
-          )
+          return s => r.reduce(t, e.joins.get(o))
         }
       }
       return () => e.joins.get(o)
@@ -680,18 +674,23 @@ class Partjson {
       this.opts.data && this.add(this.opts.data, !1),
       this.errors.log(this.fillers)
   }
-  setResultContext(e, t = null, s = null) {
-    const r = null !== t && t in s ? s[t] : JSON.parse(e)
-    if (this.contexts.has(r)) return r
-    const o = {
+  setResultContext(e, t = null, s = null, r = !1) {
+    const o = null !== t && t in s ? s[t] : JSON.parse(e)
+    if (this.contexts.has(o)) return o
+    const i = {
       branch: t,
       parent: s,
-      self: r,
-      root: this.tree ? this.tree : r,
+      self: o,
+      root: this.tree ? this.tree : o,
       joins: this.joins,
       errors: []
     }
-    return this.contexts.set(r, o), null !== t && (s[t] = r), r
+    return (
+      r && (i.tracker = new Map()),
+      this.contexts.set(o, i),
+      null !== t && (s[t] = o),
+      o
+    )
   }
   parseTemplate(e, t, s = []) {
     const r = Object.create(null)

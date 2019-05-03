@@ -91,8 +91,8 @@ function getPj(settings) {
             data: [{
               dataId: "&vals.dataId",
               total: "+1"
-            }, "&vals.fullId"]
-          }, "&vals.chartSeriesId"]
+            }, "&vals.dataId"]
+          }, "&vals.seriesId"]
         }, "&vals.chartId"],
         "__:boxplot": "=boxplot()",
         unannotated: {
@@ -135,8 +135,6 @@ function getPj(settings) {
             chartId,
             seriesId,
             dataId,
-            chartSeriesId: chartId + '-' + seriesId,
-            fullId: chartId + '-' + seriesId + '-' + dataId,
             value: typeof numValFxns[settings.term1] == 'function'
               ? numValFxns[settings.term1](row)
               : undefined
