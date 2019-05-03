@@ -462,6 +462,7 @@ function update_terms_div(terms_div, group, tk, block){
 					genome: block.genome.name,
 					dslabel: tk.mds.label, 
 					getcategories: 1,
+					samplecountbyvcf: 1, // quick n dirty solution, to count using vcf samples
 					termid : term.term.id
 				}
 
