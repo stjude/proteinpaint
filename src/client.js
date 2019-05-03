@@ -82,7 +82,7 @@ export function dofetch(path,arg) {
 			// do not send multiple reports for the same page
 			fetchReported[url] = 1
 			// will need to create an issue-tracker route
-			fetch("https://pecan-test.stjude.org/api/issue-tracker", { 
+			fetch("https://pecan.stjude.org/api/issue-tracker", { 
     		method: 'POST', 
 			  headers: {
 			    "content-type": "application/json"
