@@ -260,7 +260,10 @@ export class Barchart{
         }
       },
       colLabel: {
-        text: d => d,
+        text: d => {
+          return !self.terms.term1.values ? d
+            : self.terms.term1.values[d].label
+        },
         click: () => { 
           const d = event.target.__data__
           if (!d) return
