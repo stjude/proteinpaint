@@ -28,6 +28,8 @@ export function init ( tk, block ) {
 
 	const [tr,td] = legend_newrow(block,tk.name)
 
+	tk.tr_legend = tr // to be compatible with block.tk_remove()
+
 	const table = td.append('table')
 		.style('border-spacing','5px')
 		.style('border-collapse','separate')
