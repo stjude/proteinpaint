@@ -308,7 +308,7 @@ will attach div_numbersamples to group{}
 		for(let i=0; i < result.terms.length; i++){
 			const bar_term = result.terms[i]
 			const new_term = {
-				values: [bar_term.value],
+				values: [{key: bar_term.value, label: bar_term.label}],
 				term: {
 					id: bar_term.term.id,
 					iscategorical: bar_term.term.iscategorical,
@@ -594,7 +594,7 @@ function update_terms_div(terms_div, group, tk, block){
 			if(i == term_replce_index){
 				for(const [j, bar_term] of result.terms.entries()){
 					const new_term = {
-						values: [bar_term.value],
+						values: [{key: bar_term.value, label: bar_term.label}],
 						term: {
 							id: bar_term.term.id,
 							iscategorical: bar_term.term.iscategorical,
