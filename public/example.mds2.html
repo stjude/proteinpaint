@@ -33,6 +33,53 @@ runproteinpaint({
 			hidden:1,
 			type:'mds2',
 			name:'test mds2',
+
+			info_fields: [
+				{
+					key:'QC',
+					label:'Good/Bad List',
+					isfilter:true,
+					isactivefilter:true,
+					iscategorical:true,
+					values:[
+						{
+							key:'Good',
+							label:'Good'
+						},
+						{
+							key:'Bad',
+							label:'Bad',
+							ishidden:true
+						}
+					]
+				},
+				{
+					key:'AF',
+					label:'SJLIFE allele frequency',
+					isfilter:true,
+					isfloat:1,
+					range: {
+						startunbounded:true,
+						//startinclusive: bool
+						stop: 0.1,
+						stopinclusive:true
+					}
+				},
+				{
+					key:'AF_gnomAD',
+					label:'gnomAD allele frequency',
+					isfilter:true,
+					isactivefilter:true,
+					isfloat:1,
+					range: {
+						start: 0.1,
+						startinclusive: true,
+						stop: 1,
+						stopinclusive:true
+					}
+				},
+			],
+
 			vcf:{
 				file:'hg38/sjlife/cohort.vcf.gz',
 				numerical_axis: {
@@ -43,17 +90,15 @@ runproteinpaint({
 							in_use:true,
 							min_value: 0,
 							max_value: 1,
-							cutoff: [ 0.0001, 0.001, 0.01, 0.1 ] // predefined cutoff values
 						},
 						{
 							key:'AF_gnomAD',
 							min_value: 0,
 							max_value: 1,
 							missing_value: 0,
-							cutoff: [ 0.0001, 0.001, 0.01, 0.1 ]
 						}
 					],
-                    in_use: true // to use numerical axis by default
+                    in_use: true, // to use numerical axis by default
                 },
                 plot_mafcov: {
                     show_samplename: 1
