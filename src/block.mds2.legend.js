@@ -338,27 +338,18 @@ allow interacting with it, to update settings of i, and update track
 	}
 
 	// 'x' button to remove filter
-	const remove_filter_btn = row.append('div')
-		.style('display','inline-block')
+	row.append('div')
+		.attr('class','sja_filter_tag_btn')
 		.style('border-radius','0 6px 6px 0')
 		.style('background-color', '#ddd')
-		.style('color','#000')
 		.style('padding','2px 6px 4px 6px')
 		.style('margin-right','1px')
+		.style('color','#000')
 		.html('&#215;')
 		.on('click', async ()=>{
 			row.remove()
 			delete i.isactivefilter
 			await tk.load()
-		})
-		.on('mouseover',()=>{
-			remove_filter_btn
-				.style('background-color','#e6e6e6')
-				.style('cursor','default')
-		})
-		.on('mouseout',()=>{
-			remove_filter_btn
-				.style('background-color','#ddd')
 		})
 }
 
@@ -470,26 +461,17 @@ function update_numerical_filter(tk, i, active_filter_div, row){
 			hidden_term_count = hidden_term_count + 1
 
 			v.htmlspan = active_filter_div.append('div')
-				.style('display','inline-block')
+				.attr('class','sja_filter_tag_btn')
 				.style('background-color', '#ddd')
-				.style('color','#000')
 				.style('padding','3px 6px 5px 6px')
 				.style('margin-right','1px')
 				.style('font-size','.9em')
+				.style('color','#000')
 				.text(
 					(i._data ? '('+i._data.value2count[v.key]+') ' : '')
 					+v.label
 				)
 				.style('text-decoration','line-through')
-				.on('mouseover',()=>{
-					v.htmlspan
-						.style('background-color','#e6e6e6')
-						.style('cursor','default')
-				})
-				.on('mouseout',()=>{
-					v.htmlspan
-						.style('background-color','#ddd')
-				})
 				.on('click',async ()=>{
 					delete v.ishidden
 					update_numerical_filter(tk, i, active_filter_div)
@@ -513,22 +495,13 @@ function update_numerical_filter(tk, i, active_filter_div, row){
 	}
 
 	// '+' button to add filter for same category
-	const add_filter_btn = active_filter_div.append('div')
-		.style('display','inline-block')
+	active_filter_div.append('div')
+		.attr('class','sja_filter_tag_btn')
 		.style('background-color', '#ddd')
 		.style('color','#000')
 		.style('padding','2px 6px 4px 6px')
 		.style('margin-right','1px')
 		.html('&#43;')
-		.on('mouseover',()=>{
-			add_filter_btn
-				.style('background-color','#e6e6e6')
-				.style('cursor','default')
-		})
-		.on('mouseout',()=>{
-			add_filter_btn
-				.style('background-color','#ddd')
-		})
 		.on('click',()=>{
 			//TODO
 		})

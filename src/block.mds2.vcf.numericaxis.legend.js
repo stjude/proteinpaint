@@ -273,30 +273,16 @@ will attach div_numbersamples to group{}
 
 	// add new term
 	const add_term_btn = group_div.append('div')
-		.attr('class','sja_menuoption')
-		.style('display','inline-block')
+		.attr('class','sja_filter_tag_btn')
 		.style('padding','2px 7px')
 		.style('margin-left','10px')
 		.style('border-radius','6px')
 		.style('background-color', '#4888BF')
-		.style('color','#fff')
 		.html('&#43;')
-		.on('mouseover',()=>{
-			add_term_btn
-				.style('background-color','#6c9bca') // change to light backgorund on hover
-		})
-		.on('mouseout',()=>{
-			add_term_btn
-				.style('background-color','#4888bf')
-		})
 		.on('click',async ()=>{
 			
 			tip.clear()
 			.showunder( add_term_btn.node() )
-
-			const errdiv = tip.d.append('div')
-				.style('margin-bottom','5px')
-				.style('color','#C67C73')
 
 			const treediv = tip.d.append('div')
 
@@ -347,24 +333,14 @@ function update_terms_div(terms_div, group, tk, block){
 	for(const [i, term] of group.terms.entries()){
 
 		const term_name_btn = terms_div.append('div')
-			.style('display','inline-block')
+			.attr('class','sja_filter_tag_btn')
 			.style('border-radius','6px 0 0 6px')
 			.style('background-color', '#4888BF')
-			.style('color','#fff')
 			.style('padding','7px 6px 5px 6px')
 			.style('margin-left', '5px')
 			.style('font-size','.7em')
 			.text(term.term.name)
 			.style('text-transform','uppercase')
-			.on('mouseover',()=>{
-				term_name_btn
-					.style('background-color','#6c9bca')
-					.style('cursor','default')
-			})
-			.on('mouseout',()=>{
-				term_name_btn
-				.style('background-color','#4888bf')
-			})
 			.on('click',async ()=>{
 		
 				tip.clear()
@@ -389,20 +365,10 @@ function update_terms_div(terms_div, group, tk, block){
 			})
 
 		const condition_btn = terms_div.append('div')
-			.style('display','inline-block')
-			.style('color','#fff')
+			.attr('class','sja_filter_tag_btn')
 			.style('background-color','#eeeeee')
 			.style('font-size','.7em')
 			.style('padding','7px 6px 5px 6px')
-			.on('mouseover',()=>{
-				condition_btn
-					.style('background-color', term.isnot ? '#734a93' : '#337273') // change to light backgorund on hover
-					.style('cursor','default')
-			})
-			.on('mouseout',()=>{
-				condition_btn
-					.style('background-color', term.isnot ? '#511e78' : '#015051')
-			})
 
 		if(term.term.iscategorical){
 			condition_btn
@@ -439,22 +405,12 @@ function update_terms_div(terms_div, group, tk, block){
 			
 			for (let j=0; j<term.values.length; j++){
 				const term_value_btn = term_value_div.append('div')
-					.style('display','inline-block')
+					.attr('class','sja_filter_tag_btn')
 					.style('font-size','1em')
 					.style('padding','3px 4px 3px 4px')
 					.style('margin-right','1px')
 					.style('background-color', '#4888BF')
-					.style('color','#fff')
 					.text(term.values[j])
-					.on('mouseover',()=>{
-						term_value_btn
-							.style('background-color','#6c9bca')
-							.style('cursor','default')
-					})
-					.on('mouseout',()=>{
-						term_value_btn
-							.style('background-color','#4888bf') // change to light backgorund on hover
-					})
 					.on('click', async ()=>{
 						tip.clear()
 							.showunder( term_value_btn.node() )
@@ -534,22 +490,12 @@ function update_terms_div(terms_div, group, tk, block){
 					}else{
 						// '+' button at end of all values to add to list of values
 						const add_value_btn = term_value_div.append('div')
-							.style('display','inline-block')
-							.style('color','#fff')
+							.attr('class','sja_filter_tag_btn')
 							.style('background-color','#4888BF')
 							.style('margin-right','1px')
 							.style('padding','3px 5px')
 							.style('text-transform','uppercase')
 							.html('&#43;')
-							.on('mouseover',()=>{
-								add_value_btn
-									.style('background-color','#6c9bca')
-									.style('cursor','default')
-							})
-							.on('mouseout',()=>{
-								add_value_btn
-									.style('background-color','#4888bf') // change to light backgorund on hover
-							})
 							.on('click', async ()=>{
 								tip.clear()
 									.showunder( add_value_btn.node() )
@@ -622,21 +568,12 @@ function update_terms_div(terms_div, group, tk, block){
 		}
 
 		// button with 'x' to remove term2
-		const term_remove_btn = terms_div.append('div')
-		.style('display','inline-block')
+		terms_div.append('div')
+		.attr('class','sja_filter_tag_btn')
 		.style('padding','3px 6px 3px 4px')
 		.style('border-radius','0 6px 6px 0')
 		.style('background-color', '#4888BF')
-		.style('color','#fff')
 		.html('&#215;')
-		.on('mouseover',()=>{
-			term_remove_btn
-				.style('background-color','#6c9bca') // change to light backgorund on hover
-		})
-		.on('mouseout',()=>{
-			term_remove_btn
-				.style('background-color','#4888bf')
-		})
 		.on('click',async ()=>{
 			group.terms.splice(i, 1)
 			may_settoloading_termgroup( group )
