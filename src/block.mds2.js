@@ -111,7 +111,7 @@ function addparameter_rangequery ( tk, block ) {
 		genome:block.genome.name,
 	}
 
-	rangequery_add_filters( par, tk )
+	rangequery_add_variantfilters( par, tk )
 
 	if(tk.legend.mclass.hiddenvalues.size) {
 		par.hidden_mclass = [...tk.legend.mclass.hiddenvalues]
@@ -227,7 +227,7 @@ function configPanel ( tk, block ) {
 
 
 
-function rangequery_add_filters ( par, tk ) {
+function rangequery_add_variantfilters ( par, tk ) {
 /*
 may add filter parameter for range query
 by info_fields[] and variantcase_fields[]

@@ -1196,8 +1196,8 @@ otherwise, count from all samples
 				label = t.values[i[0]].label
 			}
 			return {
+				key: i[0],
 				label: (label || i[0]),
-				value: i[0],
 				samplecount: i[1]
 			}
 		})

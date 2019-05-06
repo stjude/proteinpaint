@@ -140,7 +140,10 @@ module.exports={
 						terms:[
 							{
 							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-							values:['Acute lymphoblastic leukemia','Neuroblastoma']
+							values:[
+								{ key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'},
+								{key:'Neuroblastoma',label:'Neuroblastoma'}
+							]
 							}
 						]
 					},
@@ -149,7 +152,7 @@ module.exports={
 						terms:[
 							{
 							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-							values:['Acute lymphoblastic leukemia'],
+							values:[ {key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'} ],
 							isnot: true,
 							}
 						]
@@ -160,7 +163,7 @@ module.exports={
 					terms:[
 						{
 							term:{id:'diaggrp',name:'Diagnosis Group', iscategorical:true },
-							values:['Acute lymphoblastic leukemia']
+							values:[ {key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'} ]
 						}
 					],
 					populations:[

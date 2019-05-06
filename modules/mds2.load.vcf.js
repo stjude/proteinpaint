@@ -672,9 +672,8 @@ function wrap_validate_termvaluesetting ( terms, where ) {
 	validate_termvaluesetting(terms,where)
 	for(const t of terms) {
 		if(t.term.iscategorical) {
-			if(!t.values) t.values = [t.value]
-			// convert values[] to set
-			t.valueset = new Set(t.values)
+			// convert values[{key,label}] to set
+			t.valueset = new Set( t.values.map(i=>i.key) )
 		}
 	}
 }

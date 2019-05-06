@@ -1179,9 +1179,13 @@ append numeric axis parameter to object for loadTk
 			terms: terms2parameter( nm.ebgatest.terms ),
 			populations: nm.ebgatest.populations
 		}
+		return
 	}
 	// add more axis type
 }
+
+
+
 
 function terms2parameter ( terms ) {
 // works for list of terms from either termdb2groupAF or ebgatest
@@ -1194,7 +1198,6 @@ function terms2parameter ( terms ) {
 				isfloat: i.term.isfloat,
 				isinteger: i.term.isinteger,
 			},
-			value: i.value, // backward compatible
 			values: i.values,
 			range: i.range,
 			isnot: i.isnot,

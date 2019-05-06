@@ -410,7 +410,7 @@ function update_terms_div(terms_div, group, tk, block){
 					.style('padding','3px 4px 3px 4px')
 					.style('margin-right','1px')
 					.style('background-color', '#4888BF')
-					.text(term.values[j])
+					.text(term.values[j].label)
 					.on('click', async ()=>{
 						tip.clear()
 							.showunder( term_value_btn.node() )
@@ -450,7 +450,7 @@ function update_terms_div(terms_div, group, tk, block){
 									.style('margin-right','5px')
 									.text(category.label)
 
-								if( group.terms[i].values.includes(category.value )) {
+								if( group.terms[i].values.find(v=>v.key == category.key )) {
 									// from the list
 									row.style('padding','5px 10px')
 										.style('margin','1px')
@@ -463,7 +463,7 @@ function update_terms_div(terms_div, group, tk, block){
 									.on('click',async ()=>{
 										tip.hide()
 
-										group.terms[i].values[j] = category.value
+										group.terms[i].values[j] = {key:category.key,label:category.label}
 
 										may_settoloading_termgroup( group )
 
@@ -506,6 +506,7 @@ function update_terms_div(terms_div, group, tk, block){
 									genome: block.genome.name,
 									dslabel: tk.mds.label, 
 									getcategories: 1,
+									samplecountbyvcf: 1, // quick n dirty solution, to count using vcf samples
 									termid : term.term.id
 								}
 		
@@ -534,7 +535,7 @@ function update_terms_div(terms_div, group, tk, block){
 											.style('margin-right','5px')
 											.text(category.label)
 		
-										if( group.terms[i].values.includes(category.value)) {
+										if( group.terms[i].values.find(v=>v.key == category.key)) {
 											// the same
 											row.style('padding','5px 10px')
 												.style('margin','1px')
@@ -547,7 +548,7 @@ function update_terms_div(terms_div, group, tk, block){
 											.on('click',async ()=>{
 												tip.hide()
 		
-												group.terms[i].values.push(category.value)
+												group.terms[i].values.push({key:category.key,label:category.label})
 		
 												may_settoloading_termgroup( group )
 		
