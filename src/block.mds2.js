@@ -249,7 +249,7 @@ by info_fields[] and variantcase_fields[]
 							if(v.ishidden) j.hiddenvalues[v.key] = 1
 						}
 						lst.push(j)
-					} else {
+					} else if( i.isinteger || i.isfloat ) {
 						// numerical
 						if( i.isactivefilter ) {
 							// only apply when the numerical filter is in use
@@ -259,6 +259,17 @@ by info_fields[] and variantcase_fields[]
 								range: i.range
 							})
 						}
+					} else if( i.isflag ) {
+						if( i.isactivefilter ) {
+							lst.push({
+								key: i.key,
+								isflag: true,
+								remove_no: i.remove_no,
+								remove_yes: i.remove_yes,
+							})
+						}
+					} else {
+						throw 'unknown type of info filter'
 					}
 				}
 				return lst
