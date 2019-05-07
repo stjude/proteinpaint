@@ -537,7 +537,7 @@ function update_categorical_filter(tk, i, active_filter_div, row){
 				.style('text-decoration','line-through')
 				.on('click',async ()=>{
 					delete v.ishidden
-					update_numerical_filter(tk, i, active_filter_div)
+					update_categorical_filter(tk, i, active_filter_div)
 					if(hidden_term_count == 1){
 						delete i.isactivefilter
 						row.remove()
@@ -590,7 +590,7 @@ function update_categorical_filter(tk, i, active_filter_div, row){
 							.on('click',async ()=>{
 								tip.hide()
 								v.ishidden = true
-								update_numerical_filter(tk, i, active_filter_div)
+								update_categorical_filter(tk, i, active_filter_div)
 								visible_term_count = visible_term_count - 1
 								await tk.load()
 							})
