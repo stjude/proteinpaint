@@ -62,7 +62,7 @@ then perform kmplot
 		renderplot:1,
 		samplerule:{
 			full:{},
-			hardcodesets:[
+			mutated_sets:[
 				{ name: f1.label+' mutated (n='+s1.length+')', samplenames:s1 },
 				{ name: f2.label+' mutated (n='+s2.length+')', samplenames:s2 },
 				{ name: f1.label+' and '+f2.label+' mutated (n='+s12.length+')', samplenames:s12 }

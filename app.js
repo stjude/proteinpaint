@@ -9741,17 +9741,15 @@ async function handle_mdssurvivalplot (req,res) {
 			pvalue = await handle_mdssurvivalplot_pvalue( samplesets )
 		}
 
-		for(const s of samplesets) {
-			handle_mdssurvivalplot_plot( s )
-		}
+		await handle_mdssurvivalplot_pvalue_may4eachmutatedset( q, samplesets )
 
 		for(const s of samplesets) {
+			handle_mdssurvivalplot_plot( s )
 			delete s.lst
 		}
-		const result = {
-			samplesets: samplesets,
-			pvalue: pvalue
-		}
+
+		const result = { samplesets, pvalue }
+
 		if(q.samplerule.set && q.samplerule.set.mutation) {
 			result.count_snvindel = q.samplerule.set.samples_snvindel.size
 			result.count_cnv = q.samplerule.set.samples_cnv.size
@@ -9790,6 +9788,22 @@ async function handle_mdssurvivalplot_pvalue ( samplesets ) {
 	fs.unlink( outfile, ()=>{} )
 	return p
 }
+
+
+
+async function handle_mdssurvivalplot_pvalue_may4eachmutatedset ( q, samplesets ) {
+	if(!q.samplerule.mutated_sets) return
+	const nomut_set = samplesets.find( i=> i.is_notmutated )
+	if( !nomut_set ) return
+	for(const s of samplesets) {
+		if(s.is_notmutated) continue
+		// is a not mutated set
+		const pvalue = await handle_mdssurvivalplot_pvalue( [ s, nomut_set ] )
+		s.pvalue = pvalue
+	}
+}
+
+
 
 function handle_mdssurvivalplot_pvalue_read ( file ) {
 	return new Promise((resolve, reject)=>{
@@ -9852,7 +9866,7 @@ ds{}
 	.queries{}
 plottype{}
 */
-	if( q.samplerule.hardcodesets ) {
+	if( q.samplerule.mutated_sets ) {
 		/*
 		each set
 		{
@@ -9861,17 +9875,22 @@ plottype{}
 		}
 		*/
 		const nomutsampleset = new Set(samples.map(i=>i.name)) // to remove mutated samples leaving only unmutated ones
-		const sets = q.samplerule.hardcodesets.reduce( (sets, s)=>{
-			const thisset = new Set(s.samplenames)
-			s.lst = samples.filter(i=>thisset.has(i.name))
-			for(const n of s.samplenames) nomutsampleset.delete(n)
-			delete s.samplenames
-			sets.push(s)
-			return sets
-		}, [] )
+		const sets = q.samplerule.mutated_sets.reduce(
+			(sets, s)=>{
+				const thisset = new Set(s.samplenames)
+				s.lst = samples.filter(i=>thisset.has(i.name))
+				for(const n of s.samplenames) nomutsampleset.delete(n)
+				delete s.samplenames
+				sets.push(s)
+				return sets
+			},
+			[]
+		)
 		sets.push({
 			name: 'No mutation (n='+nomutsampleset.size+')',
-			lst: samples.filter(i=>nomutsampleset.has(i.name))
+			lst: samples.filter(i=>nomutsampleset.has(i.name)),
+			// to be compared against by each other mutated sets to get p-value for each set
+			is_notmutated: true
 		})
 		return sets
 	}
