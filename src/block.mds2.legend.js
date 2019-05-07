@@ -17,6 +17,9 @@ create_mclass
 may_create_variantfilter
 update_mclass
 display_active_variantfilter_infofields
+update_categorical_filter
+update_flag_filter
+// update_numeric_filter
 list_inactive_variantfilter
 configure_one_infofield
 */
@@ -644,17 +647,29 @@ function operator_menu(show_div, unbound_flag, inclusive_flag){
 function update_flag_filter(tk, i, active_filter_div, row){
 
 	active_filter_div.selectAll('*').remove()
-	const tip = tk.legend.tip
 
-	const cell = row.append('div')
+	const cell = active_filter_div.append('div')
 		.attr('class','sja_filter_tag_btn')
 		.style('background-color', '#ddd')
 		.style('color','#000')
 		.style('padding','3px 6px 4px 6px')
 		.style('margin-right','1px')
 		.style('font-size','.9em')
+		.on('click', async ()=>{
+			i.remove_no = !i.remove_no
+			i.remove_yes = !i.remove_yes
+			i.htmlspan.text('Loading...')
+			await tk.load()
+			update_flag_filter(tk, i, active_filter_div, row)
+		})
 
-	// TODO indicate i.remove_no, i.remove_yes
+	cell.append('div')
+		.style('display','inline-block')
+		.style('background-color', '#ddd')
+		.style('color','#000')
+		.style('padding-left','3px')
+		.style('text-decoration','line-through')
+		.text( i.remove_no ? 'No' : 'Yes' )
 
 	i.htmlspan = cell.append('div')
 		.style('display','inline-block')
