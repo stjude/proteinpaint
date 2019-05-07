@@ -309,97 +309,14 @@ allow interacting with it, to update settings of i, and update track
 		.style('display','inline-block')
 
 	if( i.iscategorical ) {
+
+		// categorical category filter
 		update_categorical_filter(tk, i, active_filter_div, row)
 
 	} else if( i.isinteger || i.isfloat ) {
 
-		// numerical
-		const numeric_div = row.append('div')
-			.attr('class','sja_filter_tag_btn')
-			.style('background-color', '#ddd')
-			.style('color','#000')
-			.style('padding','3px 6px 4px 6px')
-			.style('margin-right','1px')
-			.style('font-size','.9em')
-
-		const x = '<span style="font-family:Times;font-style:italic">x</span>'
-		if( i.range.startunbounded ) {
-			numeric_div.html(x+' '+(i.range.stopinclusive?'&le;':'&lt;')+' '+i.range.stop)
-		} else if( i.range.stopunbounded ) {
-			numeric_div.html(x+' '+(i.range.startinclusive?'&ge;':'&gt;')+' '+i.range.start)
-		} else {
-			numeric_div.html(
-				i.range.start
-				+' '+(i.range.startinclusive?'&le;':'&lt;')
-				+' '+x
-				+' '+(i.range.stopinclusive?'&le;':'&lt;')
-				+' '+i.range.stop
-			)
-		}
-		i.htmlspan = numeric_div.append('div')
-			.style('display','inline-block')
-			.style('background-color', '#ddd')
-			.style('color','#000')
-			.style('padding-left','3px')
-			.text( i._data ? '('+i._data.filteredcount+' filtered)' : '')
-
-		numeric_div.on('click', ()=>{
-			const tip = tk.legend.tip
-			tip.clear()
-				.showunder( numeric_div.node() )
-	
-			const euqation_div = tip.d.append('div')
-				.style('display','block')
-				.style('padding','3px 5px')
-				.style('background-color', '#ddd')
-	
-			euqation_div.append('input')
-				.style('display','inline-block')
-				.attr('value',i.range.start)
-				.attr('size',5)
-
-			const operator_left_div = euqation_div.append('div')
-				.style('display','inline-block')
-				.attr('class','sja_menuoption')
-				.style('font-size','.9em')
-				.style('margin-left','10px')
-				.html(
-					(i.range.startunbounded?'&#8734;':i.range.startinclusive? '&le;':'&lt;') 
-					+ ' &#9660;'
-				).on('click',()=>{
-					operator_menu(operator_left_div, i.range.startunbounded, i.range.startinclusive)
-				})
-
-			euqation_div.append('div')
-				.style('display','inline-block')
-				.style('padding','3px 10px')
-				.html(x)
-
-			const operator_right_div = euqation_div.append('div')
-				.style('display','inline-block')
-				.attr('class','sja_menuoption')
-				.style('font-size','.9em')
-				.style('margin-right','10px')
-				.html(
-					(i.range.stopunbounded?'&#8734;':i.range.stopinclusive? '&le;':'&lt;') 
-					+ ' &#9660;'
-				).on('click',()=>{
-					operator_menu(operator_right_div, i.range.stopunbounded, i.range.stopinclusive)
-				})
-				
-			euqation_div.append('input')
-				.style('display','inline-block')
-				.attr('value',i.range.stop)
-				.attr('size',5)
-		
-			tip.d.append('div')
-				.attr('class','sja_menuoption')
-				.style('text-align','center')
-				.text('APPLY')
-				.on('click', async ()=>{
-					//TODO
-				})
-			})
+		// numerical category filter
+		update_numeric_filter(tk, i, active_filter_div, row)
 
 	} else if( i.isflag ) {
 		update_flag_filter(tk, i, active_filter_div, row)
@@ -613,7 +530,165 @@ function update_categorical_filter(tk, i, active_filter_div, row){
 	}
 }
 
-function operator_menu(show_div, unbound_flag, inclusive_flag){
+function update_numeric_filter(tk, i, active_filter_div, row){
+
+	active_filter_div.selectAll('*').remove()
+
+	const numeric_div = active_filter_div.append('div')
+		.attr('class','sja_filter_tag_btn')
+		.style('background-color', '#ddd')
+		.style('color','#000')
+		.style('padding','3px 6px 4px 6px')
+		.style('margin-right','1px')
+		.style('font-size','.9em')
+
+	numeric_div.selectAll('*').remove()
+
+	const x = '<span style="font-family:Times;font-style:italic">x</span>'
+	if( i.range.startunbounded ) {
+		numeric_div.html(x+' '+(i.range.stopinclusive?'&le;':'&lt;')+' '+i.range.stop)
+	} else if( i.range.stopunbounded ) {
+		numeric_div.html(x+' '+(i.range.startinclusive?'&ge;':'&gt;')+' '+i.range.start)
+	} else {
+		numeric_div.html(
+			i.range.start
+			+' '+(i.range.startinclusive?'&le;':'&lt;')
+			+' '+x
+			+' '+(i.range.stopinclusive?'&le;':'&lt;')
+			+' '+i.range.stop
+		)
+	}
+
+	i.htmlspan = numeric_div.append('div')
+		.style('display','inline-block')
+		.style('background-color', '#ddd')
+		.style('color','#000')
+		.style('padding-left','3px')
+		.text( i._data ? '('+i._data.filteredcount+' filtered)' : '')
+
+	numeric_div.on('click', ()=>{
+		const tip = tk.legend.tip
+		tip.clear()
+			.showunder( numeric_div.node() )
+
+		const euqation_div = tip.d.append('div')
+			.style('display','block')
+			.style('padding','3px 5px')
+			.style('background-color', '#ddd')
+
+		const start_input = euqation_div.append('input')
+			.style('display','inline-block')
+			.attr('value',i.range.start)
+			.attr('size',5)
+
+		if(i.range.startunbounded) start_input.property('disabled', true)
+		else start_input.property('disabled', false)
+
+		const operator_start_div = euqation_div.append('div')
+			.style('display','inline-block')
+			.attr('class','sja_menuoption')
+			.style('font-size','.9em')
+			.style('margin-left','10px')
+			.html(
+				(i.range.startunbounded?'&#8734;':i.range.startinclusive? '&le;':'&lt;') 
+				+ ' &#9660;'
+			).on('click',()=>{
+				operator_menu(operator_start_div, i.range.startunbounded, i.range.startinclusive, function(new_operator){
+					if(new_operator == 'lessthan'){
+						i.range.startunbounded = false
+						i.range.startinclusive = false
+						start_input.property('disabled', false)
+					}else if(new_operator == 'lesseq'){
+						i.range.startunbounded = false
+						i.range.startinclusive = true
+						start_input.property('disabled', false)
+					}else if(new_operator == 'infinity'){
+						i.range.startinclusive = false
+						i.range.startunbounded = true
+						start_input.node().value = ''
+						start_input.property('disabled', true)
+					}
+					
+					 operator_start_div.html(
+						(i.range.startunbounded?'&#8734;':i.range.startinclusive? '&le;':'&lt;') 
+						+ ' &#9660;'
+					)
+				})
+			})
+
+		euqation_div.append('div')
+			.style('display','inline-block')
+			.style('padding','3px 10px')
+			.html(x)
+
+		const operator_end_div = euqation_div.append('div')
+			.style('display','inline-block')
+			.attr('class','sja_menuoption')
+			.style('font-size','.9em')
+			.style('margin-right','10px')
+			.html(
+				(i.range.stopunbounded?'&#8734;':i.range.stopinclusive? '&le;':'&lt;') 
+				+ ' &#9660;'
+			).on('click',()=>{
+				operator_menu(operator_end_div, i.range.stopunbounded, i.range.stopinclusive, function(new_operator){
+				
+					if(new_operator == 'lessthan'){
+						i.range.stopunbounded = false
+						i.range.stopinclusive = false
+						stop_input.property('disabled', false)
+					}else if(new_operator == 'lesseq'){
+						i.range.stopunbounded = false
+						i.range.stopinclusive = true
+						stop_input.property('disabled', false)
+					}else if(new_operator == 'infinity'){
+						i.range.stopinclusive = false
+						i.range.stopunbounded = true
+						stop_input.node().value = ''
+						stop_input.property('disabled', true)
+					}
+					
+					operator_end_div.html(
+						(i.range.stopunbounded?'&#8734;':i.range.stopinclusive? '&le;':'&lt;') 
+						+ ' &#9660;'
+					)
+				})	
+			})
+			
+		const stop_input = euqation_div.append('input')
+			.style('display','inline-block')
+			.attr('value',i.range.stop)
+			.attr('size',5)
+			
+		if(i.range.stopunbounded) stop_input.property('disabled', true)
+		else stop_input.property('disabled', false)
+
+		tip.d.append('div')
+			.attr('class','sja_menuoption')
+			.style('text-align','center')
+			.text('APPLY')
+			.on('click', async ()=>{
+				tip.hide()
+
+				//set start and stop values from input fields
+				if(i.range.startunbounded){
+					delete i.range.start 
+				}else{
+					i.range.start = start_input.node().value
+				}
+
+				if(i.range.stopunbounded){
+					delete i.range.stop 
+				}else{
+					i.range.stop = stop_input.node().value
+				}
+
+				update_numeric_filter(tk, i, active_filter_div, row)
+				await tk.load()
+			})
+		})
+}
+
+function operator_menu(show_div, unbound_flag, inclusive_flag, callback){
 	const operator_tip = new client.Menu({padding:'0px'})
 
 	operator_tip.clear()
@@ -640,6 +715,10 @@ function operator_menu(show_div, unbound_flag, inclusive_flag){
 			.style('display','inline-block')
 			.style('padding','1px 5px')
 			.html(value)
+			.on('click',()=>{
+                operator_tip.hide()
+                callback(key)
+            })
 	}
 }
 
@@ -652,7 +731,7 @@ function update_flag_filter(tk, i, active_filter_div, row){
 		.attr('class','sja_filter_tag_btn')
 		.style('background-color', '#ddd')
 		.style('color','#000')
-		.style('padding','3px 6px 4px 6px')
+		.style('padding','3px 6px 5px 6px')
 		.style('margin-right','1px')
 		.style('font-size','.9em')
 		.on('click', async ()=>{
