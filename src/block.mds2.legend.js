@@ -4,6 +4,7 @@ import * as client from './client'
 import {legend_newrow} from './block.legend'
 import * as common from './common'
 import {may_create_vcflegend_numericalaxis} from './block.mds2.vcf.numericaxis.legend'
+import { toUnicode } from 'punycode';
 
 
 
@@ -305,12 +306,12 @@ allow interacting with it, to update settings of i, and update track
 		.style('display','inline-block')
 
 	if( i.iscategorical ) {
-		update_numerical_filter(tk, i, active_filter_div, row)
+		update_categorical_filter(tk, i, active_filter_div, row)
 
 	} else {
 		// numerical
-		const span = row.append('div')
-			.style('display','inline-block')
+		const numeric_div = row.append('div')
+			.attr('class','sja_filter_tag_btn')
 			.style('background-color', '#ddd')
 			.style('color','#000')
 			.style('padding','3px 6px 4px 6px')
@@ -319,11 +320,11 @@ allow interacting with it, to update settings of i, and update track
 
 		const x = '<span style="font-family:Times;font-style:italic">x</span>'
 		if( i.range.startunbounded ) {
-			span.html(x+' '+(i.range.stopinclusive?'&le;':'&lt;')+' '+i.range.stop)
+			numeric_div.html(x+' '+(i.range.stopinclusive?'&le;':'&lt;')+' '+i.range.stop)
 		} else if( i.range.stopunbounded ) {
-			span.html(x+' '+(i.range.startinclusive?'&ge;':'&gt;')+' '+i.range.start)
+			numeric_div.html(x+' '+(i.range.startinclusive?'&ge;':'&gt;')+' '+i.range.start)
 		} else {
-			span.html(
+			numeric_div.html(
 				i.range.start
 				+' '+(i.range.startinclusive?'&le;':'&lt;')
 				+' '+x
@@ -331,12 +332,70 @@ allow interacting with it, to update settings of i, and update track
 				+' '+i.range.stop
 			)
 		}
-		i.htmlspan = span.append('div')
+		i.htmlspan = numeric_div.append('div')
 			.style('display','inline-block')
 			.style('background-color', '#ddd')
 			.style('color','#000')
 			.style('padding-left','3px')
 			.text( i._data ? '('+i._data.filteredcount+' filtered)' : '')
+
+		numeric_div.on('click', ()=>{
+			const tip = tk.legend.tip
+			tip.clear()
+				.showunder( numeric_div.node() )
+	
+			const euqation_div = tip.d.append('div')
+				.style('display','block')
+				.style('padding','3px 5px')
+				.style('background-color', '#ddd')
+	
+			euqation_div.append('input')
+				.style('display','inline-block')
+				.attr('value',i.range.start)
+				.attr('size',5)
+
+			const operator_left_div = euqation_div.append('div')
+				.style('display','inline-block')
+				.attr('class','sja_menuoption')
+				.style('font-size','.9em')
+				.style('margin-left','10px')
+				.html(
+					(i.range.startunbounded?'&#8734;':i.range.startinclusive? '&le;':'&lt;') 
+					+ ' &#9660;'
+				).on('click',()=>{
+					operator_menu(operator_left_div, i.range.startunbounded, i.range.startinclusive)
+				})
+
+			euqation_div.append('div')
+				.style('display','inline-block')
+				.style('padding','3px 10px')
+				.html(x)
+
+			const operator_right_div = euqation_div.append('div')
+				.style('display','inline-block')
+				.attr('class','sja_menuoption')
+				.style('font-size','.9em')
+				.style('margin-right','10px')
+				.html(
+					(i.range.stopunbounded?'&#8734;':i.range.stopinclusive? '&le;':'&lt;') 
+					+ ' &#9660;'
+				).on('click',()=>{
+					operator_menu(operator_right_div, i.range.stopunbounded, i.range.stopinclusive)
+				})
+				
+			euqation_div.append('input')
+				.style('display','inline-block')
+				.attr('value',i.range.stop)
+				.attr('size',5)
+		
+			tip.d.append('div')
+				.attr('class','sja_menuoption')
+				.style('text-align','center')
+				.text('APPLY')
+				.on('click', async ()=>{
+					//TODO
+				})
+			})
 	}
 
 	// 'x' button to remove filter
@@ -450,11 +509,13 @@ data is data.info_fields{}
 	}
 }
 
-function update_numerical_filter(tk, i, active_filter_div, row){
+function update_categorical_filter(tk, i, active_filter_div, row){
 
 	active_filter_div.selectAll('*').remove()
+	const tip = tk.legend.tip
 
-	let hidden_term_count = 0
+	let hidden_term_count = 0,
+		visible_term_count = 0
 
 	for(const v of i.values ) {
 
@@ -485,6 +546,7 @@ function update_numerical_filter(tk, i, active_filter_div, row){
 				})
 		} else {
 			delete v.htmlspan
+			visible_term_count = visible_term_count + 1
 		}
 	}
 	if( i.unannotated_ishidden ) {
@@ -496,15 +558,74 @@ function update_numerical_filter(tk, i, active_filter_div, row){
 		delete i.unannotated_htmlspan
 	}
 
-	// '+' button to add filter for same category
-	active_filter_div.append('div')
-		.attr('class','sja_filter_tag_btn')
-		.style('background-color', '#ddd')
-		.style('color','#000')
-		.style('padding','2px 6px 4px 6px')
-		.style('margin-right','1px')
-		.html('&#43;')
-		.on('click',()=>{
-			//TODO
+	// '+' button to add filter for same category, only if visible terms exist
+	if(visible_term_count > 0){
+		const add_filter_btn = active_filter_div.append('div')
+			.attr('class','sja_filter_tag_btn')
+			.style('background-color', '#ddd')
+			.style('color','#000')
+			.style('padding','2px 6px 4px 6px')
+			.style('margin-right','1px')
+			.html('&#43;')
+			.on('click',()=>{
+				tip.clear()
+					.showunder( add_filter_btn.node() )
+
+				const list_div = tip.d.append('div')
+					.style('display','block')
+
+				for(const v of i.values ) {
+
+					if(!v.ishidden) {
+						const row = list_div.append('div')
+
+						row.append('div')
+							.attr('class','sja_menuoption')
+							.style('display','inline-block')
+							.style('padding','1px 5px')
+							.text(
+								(i._data ? '('+i._data.value2count[v.key]+') ' : '')
+								+v.label
+							)
+							.on('click',async ()=>{
+								tip.hide()
+								v.ishidden = true
+								update_numerical_filter(tk, i, active_filter_div)
+								visible_term_count = visible_term_count - 1
+								await tk.load()
+							})
+					}
+				}
 		})
+	}
+}
+
+function operator_menu(show_div, unbound_flag, inclusive_flag){
+	const operator_tip = new client.Menu({padding:'0px'})
+
+	operator_tip.clear()
+		.showunder( show_div.node() )
+
+	const list_div = operator_tip.d.append('div')
+		.style('display','block')
+
+	const operators = {lessthan:'&lt;',lesseq:'&le;',infinity:'&#8734;'}
+	
+	for (const [key, value] of Object.entries(operators)){
+		
+		const row = list_div.append('div')
+
+		if(!unbound_flag && !inclusive_flag && key == 'lessthan'){	
+			continue
+		}else if(inclusive_flag && key == 'lesseq'){
+			continue
+		}else if(unbound_flag && key == 'infinity'){
+			continue
+		}
+		row.append('div')
+			.attr('class','sja_menuoption')
+			.style('display','inline-block')
+			.style('padding','1px 5px')
+			.html(value)
+	}
 }
