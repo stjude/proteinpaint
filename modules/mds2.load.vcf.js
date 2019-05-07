@@ -641,6 +641,14 @@ function _m_is_filtered ( q, result, mockblock ) {
 						}
 					}
 					if( todrop ) re.filteredcount++
+
+				} else if( i.isflag ) {
+					if( (i.remove_yes && value) || (i.remove_no && !value) ) {
+						todrop = true
+						re.filteredcount++
+					}
+				} else {
+					throw 'unknown info type'
 				}
 			}
 		}

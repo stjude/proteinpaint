@@ -308,7 +308,8 @@ allow interacting with it, to update settings of i, and update track
 	if( i.iscategorical ) {
 		update_categorical_filter(tk, i, active_filter_div, row)
 
-	} else {
+	} else if( i.isinteger || i.isfloat ) {
+
 		// numerical
 		const numeric_div = row.append('div')
 			.attr('class','sja_filter_tag_btn')
@@ -396,6 +397,11 @@ allow interacting with it, to update settings of i, and update track
 					//TODO
 				})
 			})
+
+	} else if( i.isflag ) {
+		update_flag_filter(tk, i, active_filter_div, row)
+	} else {
+		throw 'unknown info type'
 	}
 
 	// 'x' button to remove filter
@@ -502,8 +508,12 @@ data is data.info_fields{}
 						v.htmlspan.text('('+(i._data.value2count[v.key]||0)+') '+v.label)
 					}
 				}
-			} else {
+			} else if( i.isinteger || i.isfloat ) {
 				i.htmlspan.text('('+i._data.filteredcount+' filtered)')
+			} else if( i.isflag ) {
+				i.htmlspan.text('('+i._data.filteredcount+' filtered)')
+			} else {
+				throw 'unknown info type'
 			}
 		}
 	}
@@ -628,4 +638,28 @@ function operator_menu(show_div, unbound_flag, inclusive_flag){
 			.style('padding','1px 5px')
 			.html(value)
 	}
+}
+
+
+function update_flag_filter(tk, i, active_filter_div, row){
+
+	active_filter_div.selectAll('*').remove()
+	const tip = tk.legend.tip
+
+	const cell = row.append('div')
+		.attr('class','sja_filter_tag_btn')
+		.style('background-color', '#ddd')
+		.style('color','#000')
+		.style('padding','3px 6px 4px 6px')
+		.style('margin-right','1px')
+		.style('font-size','.9em')
+
+	// TODO indicate i.remove_no, i.remove_yes
+
+	i.htmlspan = cell.append('div')
+		.style('display','inline-block')
+		.style('background-color', '#ddd')
+		.style('color','#000')
+		.style('padding-left','3px')
+		.text( i._data ? '('+i._data.filteredcount+' filtered)' : '')
 }
