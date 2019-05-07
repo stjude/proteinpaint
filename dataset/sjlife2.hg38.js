@@ -110,6 +110,14 @@ module.exports={
 					stopinclusive:true
 				}
 			},
+			{
+				key:'DB',
+				label:'dbSNP membership',
+				isflag:true,
+				isfilter:true,
+				isactivefilter:true,
+				remove_no:true
+			},
 		],
 
 		vcf: {
