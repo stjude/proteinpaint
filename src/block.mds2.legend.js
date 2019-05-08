@@ -621,14 +621,6 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 			i.range.stopunbounded ? 2 :
 			i.range.stopinclusive ? 0 : 1
 
-		if(i.range.startunbounded){
-			startselect.node().selectedIndex = 2
-		}else if(i.range.startinclusive){
-			startselect.node().selectedIndex = 0
-		}else{
-			startselect.node().selectedIndex = 1
-		}
-
 		const stop_input = equation_div.append('input')
 			.attr('type','number')
 			.style('width','60px')
