@@ -5,7 +5,7 @@ import * as common from './common'
 import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
 import {makeTk} from './block.mds2.makeTk'
-import * as mds2vcf from './block.mds2.vcf'
+import {may_render_vcf} from './block.mds2.vcf'
 import {maygetparameter_numericaxis} from './block.mds2.vcf.numericaxis'
 
 
@@ -51,7 +51,9 @@ export async function loadTk( tk, block ) {
 
 		const data = await loadTk_do( tk, block )
 
-		const rowheight_vcf = mds2vcf.may_render_vcf( data, tk, block )
+		tk.clear()
+
+		const rowheight_vcf = may_render_vcf( data, tk, block )
 
 		// set height_main
 		tk.height_main = rowheight_vcf
