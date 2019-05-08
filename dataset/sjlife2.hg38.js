@@ -182,6 +182,7 @@ module.exports={
 					{ key:'gnomAD_AF_nfe', missing_value: 0, }
 				],
 				in_use: true, // to use numerical axis by default
+				inuse_infokey:true,
 
 				termdb2groupAF:{
 					group1:{
