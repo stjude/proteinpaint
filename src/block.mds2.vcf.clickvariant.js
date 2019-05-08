@@ -8,8 +8,9 @@ import {termdb_bygenotype} from './block.mds2.vcf.termdb'
 ********************** EXPORTED
 vcf_clickvariant
 ********************** INTERNAL
-maymakebutton_vcf_termdbbygenotype
-maymakebutton_vcf_mafcovplot
+maymakebutton_termdbbygenotype
+maymakebutton_mafcovplot
+maymakebutton_fimo
 show_functionalannotation
 may_show_ebgatest_table
 */
@@ -36,8 +37,9 @@ p{}
 
 	const showholder = pane.body.append('div')
 
-	maymakebutton_vcf_termdbbygenotype( buttonrow, showholder, m, tk, block )
-	maymakebutton_vcf_mafcovplot( buttonrow, showholder, m, tk, block )
+	maymakebutton_termdbbygenotype( buttonrow, showholder, m, tk, block )
+	maymakebutton_mafcovplot( buttonrow, showholder, m, tk, block )
+	maymakebutton_fimo( buttonrow, showholder, m, tk, block )
 
 	show_functionalannotation( pane.body.append('div').style('margin','20px'), m, tk, block )
 }
@@ -49,7 +51,7 @@ p{}
 
 
 
-function maymakebutton_vcf_mafcovplot ( buttonrow, showholder, m, tk, block ) {
+function maymakebutton_mafcovplot ( buttonrow, showholder, m, tk, block ) {
 // only for vcf item
 
 	if(!tk.vcf) return
@@ -92,7 +94,7 @@ function maymakebutton_vcf_mafcovplot ( buttonrow, showholder, m, tk, block ) {
 
 
 
-function maymakebutton_vcf_termdbbygenotype ( buttonrow, showholder, m, tk, block ) {
+function maymakebutton_termdbbygenotype ( buttonrow, showholder, m, tk, block ) {
 // only for vcf, by variant genotype
 
 	if(!tk.vcf) return
@@ -393,5 +395,56 @@ function get_csq ( div, m, tk, block ) {
 	})
 	.catch(e=>{
 		div.text(e.message||e)
+	})
+}
+
+
+
+
+function maymakebutton_fimo ( buttonrow, showholder, m, tk, block ) {
+/*
+may create a tf motif find button for mutation
+*/
+	if(!block.genome.fimo_motif) return
+
+	let loaded=false, loading=false
+
+	const button = buttonrow.append('div')
+		.attr('class','sja_button')
+		.style('margin-left','2px')
+		.text('TF motif')
+
+	const plotdiv = showholder.append('div')
+		.style('display','none')
+
+	button.on('click', async ()=>{
+
+		if(plotdiv.style('display')=='none') {
+			client.appear(plotdiv)
+			button.attr('class','sja_button_open')
+		} else {
+			client.disappear(plotdiv)
+			button.attr('class','sja_button_fold')
+		}
+		if( loaded || loading ) return
+		loading = true // prevent clicking while loading
+		button.text('Loading...')
+
+		const fimoarg = {
+			genome: block.genome,
+			div: plotdiv,
+			m: {
+				chr: m.chr,
+				pos: (m.pos+1), // 1 based
+				ref: m.ref,
+				alt: m.alt
+			},
+		}
+		const _ = await import('./mds.fimo')
+		await _.init( fimoarg )
+
+		loaded=true
+		loading=false
+		button.text('TF motif')
 	})
 }
