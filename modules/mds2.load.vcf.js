@@ -201,6 +201,7 @@ generate the "querymode" object that drives subsequent queries
 */
 
 	if( q.termdb2groupAF ) {
+		if(ds.iscustom) throw 'custom track does not support termdb2groupAF'
 		wrap_validate_termvaluesetting(q.termdb2groupAF.group1.terms,'termdb2groupAF.group1')
 		wrap_validate_termvaluesetting(q.termdb2groupAF.group2.terms,'termdb2groupAF.group2')
 		return {
@@ -209,7 +210,9 @@ generate the "querymode" object that drives subsequent queries
 			columnidx_group2: get_columnidx_byterms( q.termdb2groupAF.group2.terms, ds, vcftk.samples ),
 		}
 	}
+
 	if( q.ebgatest ) {
+		if(ds.iscustom) throw 'custom track does not support ebgatest'
 		wrap_validate_termvaluesetting(q.ebgatest.terms,'ebgatest')
 		// vcf header column idx for the current term
 		const columnidx = get_columnidx_byterms( q.ebgatest.terms, ds, vcftk.samples )
