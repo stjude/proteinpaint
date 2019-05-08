@@ -94,7 +94,7 @@ const headerunderpad = 5
 
 
 
-export function init ( obj  ) {
+export async function init ( obj  ) {
 /*
 */
 window.obj = obj
@@ -102,14 +102,14 @@ window.obj = obj
 	obj.errdiv = obj.div.append('div')
 
 	try {
+
 		init_ui( obj )
+		await do_query( obj )
+
 	} catch(e) {
 		obj.errdiv.text(e.message||e)
 		if(e.stack) console.log(e.stack)
-		return
 	}
-
-	do_query( obj )
 }
 
 
@@ -274,7 +274,8 @@ function do_query ( obj ) {
 		flankspan: obj.flankspan,
 		minabslogp: obj.minabslogp,
 	}
-	client.dofetch('fimo', arg)
+
+	return client.dofetch('fimo', arg)
 	.then(data=>{
 		if(data.error) throw 'Error: cannot do motif finding: '+data.error
 
