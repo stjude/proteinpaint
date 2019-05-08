@@ -2,6 +2,7 @@ const common=require('../src/common')
 
 
 const cohorthierarchy = [
+	{k:'Tumor_Site_Broad',label:'Site'},
 	{k:'Diagnosis_Broad',label:'Cancer'}
 ]
 
@@ -69,7 +70,8 @@ module.exports={
 			attributes:{
 				G4K_sequenced_type:{
 					label:'Sequenced type',
-					filter:1
+					filter:1,
+					hidden:1
 				},
 				Tumor_Site_Broad:{
 					label:'Tumor site',
@@ -132,8 +134,14 @@ module.exports={
 			
 			groupsamplebyattr:{
 				attrlst:[
+					{k:'Tumor_Site_Broad',label:'Site'},
 					{k:'Diagnosis_Broad',label:'Cancer'}
-				]
+				],
+				sortgroupby:{
+					key:'Tumor_Site_Broad',
+					order:['ST','Heme','CNS/Brain']
+				},
+				attrnamespacer:', ',
 			},
 			
 
@@ -162,7 +170,10 @@ module.exports={
 					file:'hg19/clingen/subset/G4K/G4K.vcf.gz',
 					type:'vcf',
 				}
-			]
+			],
+			singlesamples:{
+				tablefile:'hg19/clingen/subset/G4K/split.vcf/table'
+			}
 		},
 
 		genefpkm:{
