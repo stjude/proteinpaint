@@ -1,6 +1,10 @@
 const common=require('../src/common')
 
 
+const cohorthierarchy = [
+	{k:'Diagnosis_Broad',label:'Cancer'}
+]
+
 const samplenamekey = 'sample_name'
 
 const valuePerSample={
@@ -51,11 +55,33 @@ module.exports={
 				ds.cohort.annotation[samplename] = item
 			}
 		},
-		/*
-		sampleAttribute:{
 
+		hierarchies:{
+			lst:[
+				{
+					name:'Cancer',
+					levels:cohorthierarchy
+				}
+			]
+		},
+		
+		sampleAttribute:{
+			attributes:{
+				G4K_sequenced_type:{
+					label:'Sequenced type',
+					filter:1
+				},
+				Tumor_Site_Broad:{
+					label:'Tumor site',
+					filter:1
+				},
+				Diagnosis_Broad:{
+					label:'Cancer',
+					filter:1
+				}
+			}
 		}
-		*/
+		
 	},
 	mutationAttribute:{
 		attributes:{
@@ -103,11 +129,13 @@ module.exports={
 			// loh
 			segmeanValueCutoff:0.1,
 			lohLengthUpperLimit:2000000,
-			/*
+			
 			groupsamplebyattr:{
-
+				attrlst:[
+					{k:'Diagnosis_Broad',label:'Cancer'}
+				]
 			},
-			*/
+			
 
 			expressionrank_querykey:'genefpkm',
 			vcf_querykey:'snvindel',
