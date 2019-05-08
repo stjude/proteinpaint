@@ -20,7 +20,7 @@ display_active_variantfilter_infofields
 update_categorical_filter
 update_flag_filter
 update_numeric_filter
-list_inactive_variantfilter
+list_all_variantfilter
 configure_one_infofield
 */
 
@@ -262,7 +262,7 @@ variant filters by both info fields and variantcase_fields
 		.style('border-radius','3px')
 		.style('border','solid 1px #ddd')
 		.on('click',()=>{
-			list_inactive_variantfilter( tk, block )
+			list_all_variantfilter( tk, block )
 		})
 
 	tk.legend.variantfilter.holder = tr2.append('td').style('padding-left','10px')
@@ -292,7 +292,7 @@ allow interacting with it, to update settings of i, and update track
 	const row = tk.legend.variantfilter.holder
 		.append('div')
 		.style('margin-top','5px')
-	console.log(i)
+	
 	row.append('div')
 		.style('display','inline-block')
 		.style('border-radius','6px 0 0 6px')
@@ -342,31 +342,304 @@ allow interacting with it, to update settings of i, and update track
 
 
 
-function list_inactive_variantfilter ( tk, block ) {
-/*
-from info_fields and variantcase_fields
-list inactive filters
-*/
-	tk.legend.tip.clear()
-	if(tk.info_fields) {
-		for(const i of tk.info_fields) {
-			if(!i.isfilter || i.isactivefilter) continue
-			tk.legend.tip.d
-			.append('div')
-			.text(i.label)
-			.attr('class','sja_menuoption')
-			.on('click',()=>{
-				tk.legend.tip.clear()
-				configure_one_infofield( i, tk, block )
-			})
+function list_all_variantfilter ( tk, block ) {
+	/*
+	from info_fields and variantcase_fields
+	list inactive filters
+	*/	
+		// console.log(tk.info_fields)
+		const tip = tk.legend.tip
+		tip.clear()
+	
+		const filter_table = tip.d.append('table')
+			.style('border-spacing','5px')
+			.style('border-collapse','separate')
+	
+		if(tk.info_fields) {
+			for(const i of tk.info_fields) {
+	
+				const filter_row = filter_table.append('tr')
+				const filter_title = filter_row.append('td')
+					.style('padding','5px')
+				const filter_terms_td = filter_row.append('td')
+					.style('padding','5px')
+	
+				filter_title
+					.style('text-align','right')
+					.style('opacity',.5)
+					.text(i.label)
+	
+				if( i.iscategorical ) {
+					
+					update_categorical_filter_all(i, filter_terms_td)
+	
+				} else if( i.isinteger || i.isfloat ) {
+	
+					update_numeric_filter_all(i, filter_terms_td)
+	
+				} else if( i.isflag ) {
+	
+					update_flag_filter_all(i, filter_terms_td)
+	
+				}else{
+	
+					throw 'unknown info type'
+				}
+			}
+		}
+	
+		if(tk.variantcase_fields) {
+		}
+	
+		tk.legend.tip.showunder( tk.legend.variantfilter.button.node() )
+	
+		function update_categorical_filter_all(i, filter_terms_td){
+	
+			filter_terms_td.selectAll('*').remove()
+	
+			for(const v of i.values ) {
+						
+				const filter_term_div = filter_terms_td.append('div')
+					.style('display','inline-block')
+					.style('padding','2px 10px')
+	
+				const varient_count = filter_term_div.append('div')
+					.attr('class','sja_mcdot')
+					.style('display','inline-block')
+					.style('background', '#aaa')
+					.style('padding','2px 3px')
+					.text(i._data ? i._data.value2count[v.key.toLowerCase()] : '')
+	
+				const filter_term = filter_term_div.append('div')
+					.style('display','inline-block')
+					.style('background', '#fff')
+					.style('padding','2px 5px')
+					.text(v.label)
+	
+				if(v.ishidden){
+					varient_count.style('text-decoration','line-through')
+					filter_term.style('text-decoration','line-through')
+				}
+	
+				filter_term_div.on('click',async ()=>{
+	
+					v.ishidden =  v.ishidden ? false : true
+					await tk.load()
+					list_all_variantfilter(tk, block)
+					update_active_filter_div(tk, block)
+					
+				})
+			}
+		}
+	
+		function update_numeric_filter_all(i, filter_terms_td){
+	
+			filter_terms_td.selectAll('*').remove()
+	
+			const x = '<span style="font-family:Times;font-style:italic">x</span>'
+	
+			const start_input = filter_terms_td.append('input')
+				.attr('type','number')
+				.attr('value',i.range.start)
+				.style('width','60px')
+				.on('keyup', async ()=>{
+					if(!client.keyupEnter()) return
+					start_input.property('disabled',true)
+					await apply()
+					start_input.property('disabled',false)
+				})
+	
+			// select operator from dropdown to set start value relation
+			const startselect = filter_terms_td.append('select')
+			.style('margin-left','10px')
+	
+			startselect.append('option')
+				.html('&le;')
+			startselect.append('option')
+				.html('&lt;')
+			startselect.append('option')
+				.html('&#8734;')
+	
+			startselect.node().selectedIndex =
+				i.range.startunbounded ? 2 :
+				i.range.startinclusive ? 0 : 1
+	
+			filter_terms_td.append('div')
+				.style('display','inline-block')
+				.style('padding','3px 10px')
+				.html(x)
+	
+			// select operator from dropdown to set end value relation
+			const stopselect = filter_terms_td.append('select')
+				.style('margin-right','10px')
+	
+			stopselect.append('option')
+				.html('&le;')
+			stopselect.append('option')
+				.html('&lt;')
+			stopselect.append('option')
+				.html('&#8734;')
+	
+			stopselect.node().selectedIndex =
+				i.range.stopunbounded ? 2 :
+				i.range.stopinclusive ? 0 : 1
+	
+			const stop_input = filter_terms_td.append('input')
+				.attr('type','number')
+				.style('width','60px')
+				.attr('value',i.range.stop)
+				.on('keyup', async ()=>{
+					if(!client.keyupEnter()) return
+					stop_input.property('disabled',true)
+					await apply()
+					stop_input.property('disabled',false)
+				})
+	
+			const apply_checkbox_div = filter_terms_td.append('div')
+				.style('display','inline-block')
+				.style('padding','3px 10px')
+				.style('font-size','.8em')
+				.text('Apply')
+			
+			
+			const apply_checkbox = apply_checkbox_div.append('input')
+				.attr('type','checkbox')
+				.style('font-size','1em')
+				.style('margin','0 10px')
+	
+			if(i.isactivefilter){
+				apply_checkbox.property('checked',true)
+			}
+	
+			const update_btn = filter_terms_td.append('div')
+				.attr('class','sja_menuoption')
+				.style('display','inline-block')
+				.style('font-size','.8em')
+				.style('margin-left','5px')
+				.style('padding','3px 5px')
+				.text('Update')
+				.on('click',()=>{
+					apply()
+				})
+	
+			async function apply () {
+	
+				try {
+					if(apply_checkbox.node().checked == false) {
+						i.isactivefilter = false
+					}else{
+						i.isactivefilter = true
+						i.htmlspan = filter_terms_td.append('div')
+							.style('display','none')
+					}
+	
+					if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
+	
+					const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
+					const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
+					if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
+	
+					if( startselect.node().selectedIndex == 2 ) {
+						i.range.startunbounded = true
+						delete i.range.start
+					} else {
+						delete i.range.startunbounded
+						i.range.start = start
+						i.range.startinclusive = startselect.node().selectedIndex == 0
+					}
+					if( stopselect.node().selectedIndex == 2 ) {
+						i.range.stopunbounded = true
+						delete i.range.stop
+					} else {
+						delete i.range.stopunbounded
+						i.range.stop = stop
+						i.range.stopinclusive = stopselect.node().selectedIndex == 0
+					}
+					await tk.load()
+					list_all_variantfilter(tk, block)
+					update_active_filter_div(tk, block)
+				} catch(e) {
+					window.alert(e)
+				}
+			}
+		}
+	
+		function update_flag_filter_all(i, filter_terms_td){
+			const yes_flag_div = filter_terms_td.append('div')
+				.style('display','inline-block')
+				.style('padding','3px 10px')
+				.on('click',async ()=>{
+					
+					i.remove_yes =  i.remove_yes ? false : true
+					i.remove_no =  i.remove_no ? false : true
+					await tk.load()
+					list_all_variantfilter(tk, block)
+					update_active_filter_div(tk, block)
+					
+				})
+	
+			const yes_count = yes_flag_div.append('div')
+				.attr('class','sja_mcdot')
+				.style('display','inline-block')
+				.style('background', '#aaa')
+				.style('padding','2px 3px')
+				.text(i._data ? i._data.filteredcount : '')
+	
+			const yes_div = yes_flag_div.append('div')
+				.style('display','inline-block')
+				.style('background', '#fff')
+				.style('padding','4px 5px')
+				.text('Yes')
+	
+			
+			const no_flag_div = filter_terms_td.append('div')
+				.style('display','inline-block')
+				.style('padding','3px 10px')
+				.on('click',async ()=>{
+					
+					i.remove_yes =  i.remove_yes ? false : true
+					i.remove_no =  i.remove_no ? false : true
+					await tk.load()
+					list_all_variantfilter(tk, block)
+					update_active_filter_div(tk, block)
+					
+				})	
+	
+			const no_count = no_flag_div.append('div')
+				.attr('class','sja_mcdot')
+				.style('display','inline-block')
+				.style('background', '#aaa')
+				.style('padding','2px 3px')
+				.text(i._data ? i._data.filteredcount : '')
+	
+			const no_div = no_flag_div.append('div')
+				.style('display','inline-block')
+				.style('background', '#fff')
+				.style('padding','4px 5px')
+				.text('No')
+	
+			if(i.remove_no){
+				no_div.style('text-decoration','line-through')
+			}else{
+				yes_div.style('text-decoration','line-through')
+			}
 		}
 	}
-	if(tk.variantcase_fields) {
+
+
+function update_active_filter_div(tk, block){
+
+	tk.legend.variantfilter.holder.selectAll('*').remove()
+
+	if( tk.info_fields ) {
+		for(const i of tk.info_fields) {
+			if(!i.isfilter) continue
+			if(i.isactivefilter) {
+				display_active_variantfilter_infofields( tk, i, block )
+			}
+		}
 	}
-	tk.legend.tip.showunder( tk.legend.variantfilter.button.node() )
-}
-
-
+}	
 
 function configure_one_infofield ( i, tk, block ) {
 
@@ -425,7 +698,7 @@ data is data.info_fields{}
 				if( i.unannotated_htmlspan ) i.unannotated_htmlspan.text('('+(i._data.unannotated_count||0)+') Unannotated')
 				for(const v of i.values) {
 					if( v.htmlspan ) {
-						v.htmlspan.text('('+(i._data.value2count[v.key]||0)+') '+v.label)
+						v.htmlspan.text('('+(i._data.value2count[v.key.toLowerCase()]||0)+') '+v.label)
 					}
 				}
 			} else if( i.isinteger || i.isfloat ) {
@@ -461,7 +734,7 @@ function update_categorical_filter(tk, i, active_filter_div, row){
 				.style('font-size','.9em')
 				.style('color','#000')
 				.text(
-					(i._data ? '('+i._data.value2count[v.key]+') ' : '')
+					(i._data ? '('+i._data.value2count[v.key.toLowerCase()]+') ' : '')
 					+v.label
 				)
 				.style('text-decoration','line-through')
@@ -514,7 +787,7 @@ function update_categorical_filter(tk, i, active_filter_div, row){
 							.style('display','inline-block')
 							.style('padding','1px 5px')
 							.text(
-								(i._data ? '('+i._data.value2count[v.key]+') ' : '')
+								(i._data ? '('+i._data.value2count[v.key.toLowerCase()]+') ' : '')
 								+v.label
 							)
 							.on('click',async ()=>{
