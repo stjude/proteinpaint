@@ -146,7 +146,7 @@ show menu for numerical axis, under menubutton
 		menudiv.append('div')
 			.style('margin-top','10px')
 			.attr('class','sja_menuoption')
-			.text('Do not use numerical axis')
+			.html('&times;&nbsp;&nbsp;Disable')
 			.on('click', ()=>{
 				nm.in_use = false
 				update()

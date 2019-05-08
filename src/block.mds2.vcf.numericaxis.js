@@ -4,8 +4,7 @@ import {axisTop, axisLeft, axisRight} from 'd3-axis'
 import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
-import * as coord from './coord'
-import {vcf_m_color} from './block.mds2.vcf'
+import {vcf_m_color, divide_data_to_group} from './block.mds2.vcf'
 import {vcf_clickvariant} from './block.mds2.vcf.clickvariant'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 
@@ -41,7 +40,6 @@ based on zoom level, toggle between two views:
 
 */
 
-const minbpwidth=4
 const disclabelspacing = 1 // px spacing between disc and label
 const middlealignshift = .3
 const labyspace = 5
@@ -726,146 +724,6 @@ function m_mouseout(m,tk) {
 
 
 
-function divide_data_to_group ( r, block ) {
-// legacy method
-	const x2mlst=new Map()
-	for(const m of r.variants) {
-
-		const hits=block.seekcoord(m.chr,m.pos)
-		if(hits.length==0) {
-			continue
-		}
-		if(hits.length==1) {
-			m.__x=hits[0].x
-		} else {
-			// hit at multiple regions, still use first hit as following code is not finished
-			m.__x=hits[0].x
-		}
-
-		if(!x2mlst.has(m.__x)) {
-			x2mlst.set(m.__x,[])
-		}
-		x2mlst.get(m.__x).push(m)
-	}
-	const datagroup=[]
-	// by resolution
-	if(block.exonsf>=minbpwidth) {
-		// # pixel per nt is big enough
-		// group by each nt
-		for(const [x,mlst] of x2mlst) {
-			datagroup.push({
-				chr:mlst[0].chr,
-				pos:mlst[0].pos,
-				mlst:mlst,
-				x:x,
-			})
-		}
-	} else {
-		// # pixel per nt is too small
-		if(block.usegm && block.usegm.coding && block.gmmode!=client.gmmode.genomic) {
-			// in protein view of a coding gene, see if to map to aa
-			// in gmsum, rglst may include introns, need to distinguish symbolic and rglst introns, use __x difference by a exonsf*3 limit
-
-			for(const mlst of x2mlst.values()) {
-				const t = coord.genomic2gm(mlst[0].pos,block.usegm)
-				for(const m of mlst) {
-					m.aapos = t.aapos
-					m.rnapos = t.rnapos
-				}
-			}
-
-			const aa2mlst=new Map()
-			// k: aa position
-			// v: [ [m], [], ... ]
-
-			for(const [x,mlst] of x2mlst) {
-				if(mlst[0].chr!=block.usegm.chr) {
-					continue
-				}
-				// TODO how to identify if mlst belongs to regulatory region rather than gm
-
-				const aapos = mlst[0].aapos
-
-				if(aapos==undefined) {
-					console.error('data item cannot map to aaposition')
-					console.log(mlst[0])
-					continue
-				}
-
-				// this group can be anchored to a aa
-				x2mlst.delete(x)
-
-				if(!aa2mlst.has( aapos )) {
-					aa2mlst.set(aapos,[])
-				}
-				let notmet=true
-				for(const lst of aa2mlst.get( aapos)) {
-					if(Math.abs(lst[0].__x-mlst[0].__x)<=block.exonsf*3) {
-						for(const m of mlst) {
-							lst.push(m)
-						}
-						notmet=false
-						break
-					}
-				}
-				if(notmet) {
-					aa2mlst.get(aapos).push(mlst)
-				}
-			}
-			const utr5len=block.usegm.utr5 ? block.usegm.utr5.reduce((i,j)=>i+j[1]-j[0],0) : 0
-			for(const llst of aa2mlst.values()) {
-				for(const mlst of llst) {
-					let m=null
-					for(const m2 of mlst) {
-						if(Number.isFinite(m2.rnapos)) m=m2
-					}
-					if(m==null) {
-						console.log('trying to map mlst to codon, but no rnapos found')
-						for(const m of mlst) {
-							console.log(m)
-						}
-						continue
-					}
-					datagroup.push({
-						chr:mlst[0].chr,
-						pos:m.pos,
-						mlst:mlst,
-						x:mlst[0].__x,
-					})
-				}
-			}
-		}
-
-		// leftover by px bin
-		const pxbin=[]
-		const binpx=2
-		for(const [x,mlst] of x2mlst) {
-			const i=Math.floor(x/binpx)
-			if(!pxbin[i]) {
-				pxbin[i]=[]
-			}
-			pxbin[i]=[...pxbin[i], ...mlst]
-		}
-		for(const mlst of pxbin) {
-			if(!mlst) continue
-			const xsum=mlst.reduce((i,j)=>i+j.__x,0)
-			datagroup.push({
-				isbin:true,
-				chr:mlst[0].chr,
-				pos:mlst[0].pos,
-				mlst:mlst,
-				x:xsum/mlst.length,
-			})
-		}
-	}
-
-	datagroup.sort((a,b)=>a.x-b.x)
-
-	return datagroup
-}
-
-
-
 
 
 
@@ -1126,7 +984,7 @@ export function get_axis_label ( tk ) {
 	if(!tk.vcf) return
 	const nm = tk.vcf.numerical_axis
 	if(!nm) return
-	if(!nm.in_use) return 'Not in use'
+	if(!nm.in_use) return 'Disabled'
 	if( nm.inuse_infokey ) {
 		const key = nm.info_keys.find( i=> i.in_use )
 		if(!key) return 'Error: no key in_use'
