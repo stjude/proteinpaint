@@ -597,13 +597,9 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 		startselect.append('option')
 			.html('&#8734;')
 
-		if(i.range.startunbounded){
-			startselect.node().selectedIndex = 2
-		}else if(i.range.startinclusive){
-			startselect.node().selectedIndex = 0
-		}else{
-			startselect.node().selectedIndex = 1
-		}
+		startselect.node().selectedIndex =
+			i.range.startunbounded ? 2 :
+			i.range.startinclusive ? 0 : 1
 
 		equation_div.append('div')
 			.style('display','inline-block')
@@ -620,6 +616,18 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 			.html('&lt;')
 		stopselect.append('option')
 			.html('&#8734;')
+
+		stopselect.node().selectedIndex =
+			i.range.stopunbounded ? 2 :
+			i.range.stopinclusive ? 0 : 1
+
+		if(i.range.startunbounded){
+			startselect.node().selectedIndex = 2
+		}else if(i.range.startinclusive){
+			startselect.node().selectedIndex = 0
+		}else{
+			startselect.node().selectedIndex = 1
+		}
 
 		const stop_input = equation_div.append('input')
 			.attr('type','number')
@@ -653,6 +661,7 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 				if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
 
 				if( startselect.node().selectedIndex == 2 ) {
+					i.range.startunbounded = true
 					delete i.range.start
 				} else {
 					delete i.range.startunbounded
@@ -660,6 +669,7 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 					i.range.startinclusive = startselect.node().selectedIndex == 0
 				}
 				if( stopselect.node().selectedIndex == 2 ) {
+					i.range.stopunbounded = true
 					delete i.range.stop
 				} else {
 					delete i.range.stopunbounded
