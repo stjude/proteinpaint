@@ -567,19 +567,24 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 		.text( i._data ? '('+i._data.filteredcount+' filtered)' : '')
 
 	numeric_div.on('click', ()=>{
+
 		const tip = tk.legend.tip
 		tip.clear()
-			.showunder( numeric_div.node() )
 
 		const equation_div = tip.d.append('div')
 			.style('display','block')
 			.style('padding','3px 5px')
-			//.style('background-color', '#ddd')
 
 		const start_input = equation_div.append('input')
-			.style('display','inline-block')
+			.attr('type','number')
 			.attr('value',i.range.start)
-			.attr('size',5)
+			.style('width','60px')
+			.on('keyup', async ()=>{
+				if(!client.keyupEnter()) return
+				start_input.property('disabled',true)
+				await apply()
+				start_input.property('disabled',false)
+			})
 
 		// to replace operator_start_div
 		const startselect = equation_div.append('select')
@@ -617,57 +622,60 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 			.html('&#8734;')
 
 		const stop_input = equation_div.append('input')
-			.style('display','inline-block')
+			.attr('type','number')
+			.style('width','60px')
 			.attr('value',i.range.stop)
-			.attr('size',5)
+			.on('keyup', async ()=>{
+				if(!client.keyupEnter()) return
+				stop_input.property('disabled',true)
+				await apply()
+				stop_input.property('disabled',false)
+			})
 
 		tip.d.append('div')
 			.attr('class','sja_menuoption')
 			.style('text-align','center')
 			.text('APPLY')
-			.on('click', async ()=>{
+			.on('click', ()=>{
 				tip.hide()
+				apply()
+			})
 
-				if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) {
-					window.alert('Both ends can not be unbounded.')
-					return
+		// tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
+		tip.showunder( numeric_div.node() )
+
+		async function apply () {
+			try {
+				if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
+
+				const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
+				const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
+				if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
+
+				if( startselect.node().selectedIndex == 2 ) {
+					delete i.range.start
+				} else {
+					delete i.range.startunbounded
+					i.range.start = start
+					i.range.startinclusive = startselect.node().selectedIndex == 0
 				}
-
-				//set start value, startunbound and startinclusive flags from user input
-				if(startselect.node().selectedIndex == 2){
-					i.range.startunbounded = true
-					i.range.startinclusive = false
-					delete i.range.start 
-				}else if(startselect.node().selectedIndex == 0){
-					i.range.startinclusive = true
-					i.range.startunbounded = false
-					i.range.start = start_input.node().value
-				}else if(startselect.node().selectedIndex == 1){
-					i.range.startinclusive = false
-					i.range.startunbounded = false
-					i.range.start = start_input.node().value
+				if( stopselect.node().selectedIndex == 2 ) {
+					delete i.range.stop
+				} else {
+					delete i.range.stopunbounded
+					i.range.stop = stop
+					i.range.stopinclusive = stopselect.node().selectedIndex == 0
 				}
-
-				//set stop value, stopunbound and stopinclusive flags from user input
-				if(stopselect.node().selectedIndex == 2){
-					i.range.stopunbounded = true
-					i.range.stopinclusive = false
-					delete i.range.stop 
-				}else if(stopselect.node().selectedIndex == 0){
-					i.range.stopinclusive = true
-					i.range.stopunbounded = false
-					i.range.stop = stop_input.node().value
-				}else if(stopselect.node().selectedIndex == 1){
-					i.range.stopinclusive = false
-					i.range.stopunbounded = false
-					i.range.stop = stop_input.node().value
-				}
-
 				i.htmlspan.text('Loading...')
 				await tk.load()
 				update_numeric_filter(tk, i, active_filter_div, row)
-			})
-		})
+			} catch(e) {
+				window.alert(e)
+			}
+		}
+	})
+
+
 }
 
 function update_flag_filter(tk, i, active_filter_div, row){
