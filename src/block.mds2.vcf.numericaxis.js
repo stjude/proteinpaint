@@ -330,7 +330,8 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		.attr('fill-opacity',0)
 		.attr('stroke-opacity',0)
 		.on('mousedown',()=>{
-			d3event.stopPropagation()
+			d3event.preventDefault()
+			//d3event.stopPropagation()
 		})
 		.on('mouseover',m=>{
 			m_mouseover( m,nm,tk )
@@ -339,6 +340,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 			m_mouseout(m,tk)
 		})
 		.on('click',m=>{
+			// FIXME prevent triggering click after panning
 			const p=d3event.target.getBoundingClientRect()
 			vcf_clickvariant(m, p, tk, block)
 		})
@@ -365,7 +367,8 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		.attr('class','sja_aa_disclabel')
 		.attr('transform', m=> 'rotate('+(m.labattop?'-':'')+'90)')
 		.on('mousedown',()=>{
-			d3event.stopPropagation()
+			d3event.preventDefault()
+			//d3event.stopPropagation()
 		})
 		.on('mouseover',m=>m_mouseover( m,nm,tk ))
 		.on('mouseout',m=>m_mouseout(m,tk))
