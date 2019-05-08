@@ -193,6 +193,9 @@ may attach coloring scheme to result{} for returning to client
 	const lines = []
 	const rl = readline.createInterface({input: fs.createReadStream( q.textfile )})
 	let firstline = true
+	// get max and min from all 3 coordinates and to get radius of point cloud
+	let maxcord = 0, 
+		mincord = 0
 
 	rl.on('line',line=>{
 
@@ -207,6 +210,8 @@ may attach coloring scheme to result{} for returning to client
 
 		for(const i of q.getpcd.coord) {
 			newl.push( l[i] )
+			maxcord = Math.max( maxcord, l[i] )
+			mincord = Math.min( mincord, l[i] )
 		}
 
 		if(q.getpcd.coord.length == 2){
@@ -227,8 +232,12 @@ may attach coloring scheme to result{} for returning to client
 			result.numbercelltotal++
 
 			const barcode = l[ q.getpcd.gene_expression.barcodecolumnidx ]
-			const color = cell2color_byexp.get(barcode)
-			if(!color) return
+			let color = cell2color_byexp.get(barcode)
+			// if(!color) return
+
+			// add color for cells without expression to retain cluster shape
+			if(!color) color = '2894892' // dark grey
+			// if(!color) color = '14540253' //light grey
 			newl.push(color)
 		}
 
@@ -241,6 +250,8 @@ may attach coloring scheme to result{} for returning to client
 			result.category2color = collect_category2color
 		}
 
+		// get abs of min and max to get radius of point cloud
+		result.data_sphere_r = Math.max(Math.abs(maxcord), Math.abs(mincord))
 		resolve( lines )
 	})
 
