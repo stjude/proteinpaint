@@ -581,42 +581,10 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 			.attr('value',i.range.start)
 			.attr('size',5)
 
-		if(i.range.startunbounded) start_input.property('disabled', true)
-		else start_input.property('disabled', false)
-
-		const operator_start_div = equation_div.append('div')
-			.style('display','inline-block')
-			.attr('class','sja_menuoption')
-			.style('font-size','.9em')
-			.style('margin-left','10px')
-			.html(
-				(i.range.startunbounded?'&#8734;':i.range.startinclusive? '&le;':'&lt;') 
-				+ ' &#9660;'
-			).on('click',()=>{
-				operator_menu(operator_start_div, i.range.startunbounded, i.range.startinclusive, function(new_operator){
-					if(new_operator == 'lessthan'){
-						i.range.startunbounded = false
-						i.range.startinclusive = false
-						start_input.property('disabled', false)
-					}else if(new_operator == 'lesseq'){
-						i.range.startunbounded = false
-						i.range.startinclusive = true
-						start_input.property('disabled', false)
-					}else if(new_operator == 'infinity'){
-						i.range.startinclusive = false
-						i.range.startunbounded = true
-						start_input.node().value = ''
-						start_input.property('disabled', true)
-					}
-					
-					 operator_start_div.html(
-						(i.range.startunbounded?'&#8734;':i.range.startinclusive? '&le;':'&lt;') 
-						+ ' &#9660;'
-					)
-				})
-			})
 		// to replace operator_start_div
 		const startselect = equation_div.append('select')
+		.style('margin-left','10px')
+
 		startselect.append('option')
 			.html('&le;')
 		startselect.append('option')
@@ -624,46 +592,23 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 		startselect.append('option')
 			.html('&#8734;')
 
+		if(i.range.startunbounded){
+			startselect.node().selectedIndex = 2
+		}else if(i.range.startinclusive){
+			startselect.node().selectedIndex = 0
+		}else{
+			startselect.node().selectedIndex = 1
+		}
+
 		equation_div.append('div')
 			.style('display','inline-block')
 			.style('padding','3px 10px')
 			.html(x)
 
-		const operator_end_div = equation_div.append('div')
-			.style('display','inline-block')
-			.attr('class','sja_menuoption')
-			.style('font-size','.9em')
-			.style('margin-right','10px')
-			.html(
-				(i.range.stopunbounded?'&#8734;':i.range.stopinclusive? '&le;':'&lt;') 
-				+ ' &#9660;'
-			).on('click',()=>{
-				operator_menu(operator_end_div, i.range.stopunbounded, i.range.stopinclusive, function(new_operator){
-				
-					if(new_operator == 'lessthan'){
-						i.range.stopunbounded = false
-						i.range.stopinclusive = false
-						stop_input.property('disabled', false)
-					}else if(new_operator == 'lesseq'){
-						i.range.stopunbounded = false
-						i.range.stopinclusive = true
-						stop_input.property('disabled', false)
-					}else if(new_operator == 'infinity'){
-						i.range.stopinclusive = false
-						i.range.stopunbounded = true
-						stop_input.node().value = ''
-						stop_input.property('disabled', true)
-					}
-					
-					operator_end_div.html(
-						(i.range.stopunbounded?'&#8734;':i.range.stopinclusive? '&le;':'&lt;') 
-						+ ' &#9660;'
-					)
-				})	
-			})
-
 		// to replace operator_end_div
 		const stopselect = equation_div.append('select')
+			.style('margin-right','10px')
+
 		stopselect.append('option')
 			.html('&le;')
 		stopselect.append('option')
@@ -675,9 +620,6 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 			.style('display','inline-block')
 			.attr('value',i.range.stop)
 			.attr('size',5)
-			
-		if(i.range.stopunbounded) stop_input.property('disabled', true)
-		else stop_input.property('disabled', false)
 
 		tip.d.append('div')
 			.attr('class','sja_menuoption')
@@ -691,59 +633,42 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 					return
 				}
 
-				//set start and stop values from input fields
-				if(i.range.startunbounded){
+				//set start value, startunbound and startinclusive flags from user input
+				if(startselect.node().selectedIndex == 2){
+					i.range.startunbounded = true
+					i.range.startinclusive = false
 					delete i.range.start 
-				}else{
+				}else if(startselect.node().selectedIndex == 0){
+					i.range.startinclusive = true
+					i.range.startunbounded = false
+					i.range.start = start_input.node().value
+				}else if(startselect.node().selectedIndex == 1){
+					i.range.startinclusive = false
+					i.range.startunbounded = false
 					i.range.start = start_input.node().value
 				}
 
-				if(i.range.stopunbounded){
+				//set stop value, stopunbound and stopinclusive flags from user input
+				if(stopselect.node().selectedIndex == 2){
+					i.range.stopunbounded = true
+					i.range.stopinclusive = false
 					delete i.range.stop 
-				}else{
+				}else if(stopselect.node().selectedIndex == 0){
+					i.range.stopinclusive = true
+					i.range.stopunbounded = false
+					i.range.stop = stop_input.node().value
+				}else if(stopselect.node().selectedIndex == 1){
+					i.range.stopinclusive = false
+					i.range.stopunbounded = false
 					i.range.stop = stop_input.node().value
 				}
 
-				update_numeric_filter(tk, i, active_filter_div, row)
+				i.htmlspan.text('Loading...')
 				await tk.load()
+				update_numeric_filter(tk, i, active_filter_div, row)
 			})
 		})
 }
-
-function operator_menu(show_div, unbound_flag, inclusive_flag, callback){
-	const operator_tip = new client.Menu({padding:'0px'})
-
-	operator_tip.clear()
-		.showunder( show_div.node() )
-
-	const list_div = operator_tip.d.append('div')
-		.style('display','block')
-
-	const operators = {lessthan:'&lt;',lesseq:'&le;',infinity:'&#8734;'}
-	
-	for (const [key, value] of Object.entries(operators)){
-		
-		const row = list_div.append('div')
-
-		if(!unbound_flag && !inclusive_flag && key == 'lessthan'){	
-			continue
-		}else if(inclusive_flag && key == 'lesseq'){
-			continue
-		}else if(unbound_flag && key == 'infinity'){
-			continue
-		}
-		row.append('div')
-			.attr('class','sja_menuoption')
-			.style('display','inline-block')
-			.style('padding','1px 5px')
-			.html(value)
-			.on('click',()=>{
-                operator_tip.hide()
-                callback(key)
-            })
-	}
-}
-
 
 function update_flag_filter(tk, i, active_filter_div, row){
 
