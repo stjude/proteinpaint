@@ -1,8 +1,7 @@
 import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import {barchart_make} from './mds.termdb.barchart'
-import {barchart_make2} from './mds.termdb.barchart2'
+import {render} from './mds.termdb.plot2'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 /*
@@ -73,10 +72,22 @@ obj{}:
 */
 
 	window.obj = obj // for testing
-
 	obj.errdiv = obj.div.append('div')
 	obj.treediv = obj.div.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
+	obj.div.on('click.tdb', ()=>{
+		// the plot.button_row in mds.termdb.plot2 and
+		// individual buttons in the term tree captures
+		// the click event, so stopPropagation in here 
+		// does not affect those event handlers/callbacks 
+		d3event.stopPropagation()
+		
+		if (d3event.target.innerHTML == "CROSSTAB") return
+		// since the click event is not propagated to body,
+		// handle the tip hiding here since the body.click
+		// handler in client.js Menu will not be triggered
+		obj.tip.hide()
+	})
 
 	try {
 
@@ -308,65 +319,55 @@ such conditions may be carried by obj
 
 		button.text('Loading')
 
-		if (window.location.search.includes('termdb=2')) {
-			barchart_make2({
+		const arg = {
+			barchart: {
+				id: term.id
+			}
+		}
+		/// modifier
+		if( obj.modifier_ssid_barchart ) {
+			arg.ssid = obj.modifier_ssid_barchart.ssid
+		}
+
+		try {
+			const data = await obj.do_query( arg )
+			if(data.error) throw data.error
+			if(!data.lst) throw 'no data for barchart'
+
+			// make barchart
+			const plot = {
 				holder: div,
 				genome: obj.genome.name,
 				dslabel: obj.mds.label,
-				term,
-				obj
-			}, obj)
-		} else {
-			const arg = {
-				barchart: {
-					id: term.id
-				}
+				items: data.lst,
+				unannotated: data.unannotated,
+				boxplot: data.boxplot, // available for numeric terms
+				term: term
 			}
-			/// modifier
+
 			if( obj.modifier_ssid_barchart ) {
-				arg.ssid = obj.modifier_ssid_barchart.ssid
-			}
-
-			try {
-				const data = await obj.do_query( arg )
-				if(data.error) throw data.error
-				if(!data.lst) throw 'no data for barchart'
-
-				// make barchart
-				const plot = {
-					holder: div,
-					genome: obj.genome.name,
-					dslabel: obj.mds.label,
-					items: data.lst,
-					unannotated: data.unannotated,
-					boxplot: data.boxplot, // available for numeric terms
-					term: term
+				const g2c = {}
+				for(const k in obj.modifier_ssid_barchart.groups) {
+					g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
 				}
-
-				if( obj.modifier_ssid_barchart ) {
-					const g2c = {}
-					for(const k in obj.modifier_ssid_barchart.groups) {
-						g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
+				plot.mutation_lst = [
+					{
+						mutation_name: obj.modifier_ssid_barchart.mutation_name,
+						ssid: obj.modifier_ssid_barchart.ssid,
+						genotype2color: g2c
 					}
-					plot.mutation_lst = [
-						{
-							mutation_name: obj.modifier_ssid_barchart.mutation_name,
-							ssid: obj.modifier_ssid_barchart.ssid,
-							genotype2color: g2c
-						}
-					]
-					plot.overlay_with_genotype_idx = 0
+				]
+				plot.overlay_with_genotype_idx = 0
 
-					// this doesn't work
-					plot.term2 = {name:'genotype'}
+				// this doesn't work
+				plot.term2 = {name:'genotype'}
 
-				}
-
-				barchart_make( plot, obj )
-			} catch(e) {
-				client.sayerror( div, e.message || e)
-				if(e.stack) console.log(e.stack)
 			}
+
+			render( plot, obj )
+		} catch(e) {
+			client.sayerror( div, e.message || e)
+			if(e.stack) console.log(e.stack)
 		}
 
 		button.text('BARCHART')
@@ -500,8 +501,7 @@ providing all the customization options
 				items: result.items,
 				default2showtable: true // a flag for barchart to show html table view by default
 			}
-
-			barchart_make( plot )
+			render( plot, obj )
 		}
 	})
 }

@@ -24,7 +24,7 @@ export default JSON.stringify({
     collabtickspace: 4,
 
     collabelh: 100,
-    rowlabelw: 50,
+    rowlabelw: 100,
     rowheadleft: true,
     colheadtop: false,
     
@@ -68,6 +68,13 @@ export default JSON.stringify({
       left: 30,
       right: 10,
       bottom: 30
+    },
+
+    exclude: {
+      rows:[],
+      cols:[],
+      colgrps:[], // used when expanding a column group
+      rowgrps:[]
     },
     axisTitleFontSize: 16
 })

@@ -37,6 +37,7 @@ exports.init = async ( ds, genome ) => {
 	}
 
 	may_sum_samples( tk )
+	// gets tk.samples[] a list of sample names
 }
 
 
@@ -48,7 +49,8 @@ the client copy stays at .mds.track{}
 */
 	const t0 = ds.track
 	const tk = {
-		name: t0.name
+		name: t0.name,
+		info_fields: t0.info_fields,
 	}
 	if(t0.vcf) {
 		tk.vcf = {

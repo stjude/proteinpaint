@@ -1161,16 +1161,33 @@ samples[] array of sample names
 
 
 function trigger_getcategories ( q, res, tdb, ds ) {
-// to get the list of categories for a categorical term
+/*
+to get the list of categories for a categorical term
+supply sample count annotated to each category
+if q.samplecountbyvcf, will count from vcf samples
+otherwise, count from all samples
+*/
 	const t = tdb.termjson.map.get( q.termid )
 	if(!t) throw 'unknown term id'
 	if(!t.iscategorical) throw 'term not categorical'
 	const category2count = new Map()
-	for(const n in ds.cohort.annotation) {
-		const a = ds.cohort.annotation[n]
-		const v = a[ q.termid ]
-		if(!v) continue
-		category2count.set( v, 1 + (category2count.get(v)||0) )
+
+	if( q.samplecountbyvcf ) {
+		if(!ds.track || !ds.track.vcf || !ds.track.vcf.samples ) throw 'cannot use vcf samples, necessary parts missing'
+		for(const s of ds.track.vcf.samples) {
+			const a = ds.cohort.annotation[s.name]
+			if(!a) continue
+			const v = a[ q.termid ]
+			if(!v) continue
+			category2count.set( v, 1 + (category2count.get(v)||0) )
+		}
+	} else {
+		for(const n in ds.cohort.annotation) {
+			const a = ds.cohort.annotation[n]
+			const v = a[ q.termid ]
+			if(!v) continue
+			category2count.set( v, 1 + (category2count.get(v)||0) )
+		}
 	}
 	const lst = [...category2count].sort((i,j)=>j[1]-i[1])
 	res.send({lst: lst.map(i=>{
@@ -1179,8 +1196,8 @@ function trigger_getcategories ( q, res, tdb, ds ) {
 				label = t.values[i[0]].label
 			}
 			return {
+				key: i[0],
 				label: (label || i[0]),
-				value: i[0],
 				samplecount: i[1]
 			}
 		})

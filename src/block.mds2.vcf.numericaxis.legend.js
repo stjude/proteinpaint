@@ -2,7 +2,6 @@ import {scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
-import * as mds2 from './block.mds2'
 import {init,add_searchbox_4term} from './mds.termdb'
 import {
 	may_setup_numerical_axis,
@@ -91,17 +90,17 @@ show menu for numerical axis, under menubutton
 				// using this info key right now, do not show it in menu
 				continue
 			}
+			let name = key.key
+			if( tk.info_fields ) {
+				const i = tk.info_fields.find( i=> i.key == key.key )
+				if(i) name = i.label
+			}
 			menudiv.append('div')
-				.text(
-					(tk.mds && tk.mds.mutationAttribute && tk.mds.mutationAttribute.attributes[ key.key ])
-					?
-					tk.mds.mutationAttribute.attributes[ key.key ].label
-					:
-					key.key
-				)
+				.text( name )
 				.attr('class','sja_menuoption')
 				.on('click', ()=>{
 					// selected an info key
+					nm.in_use=true
 					nm.inuse_termdb2groupAF = false
 					nm.inuse_ebgatest = false
 					nm.inuse_infokey = true
@@ -119,6 +118,7 @@ show menu for numerical axis, under menubutton
 			.attr('class','sja_menuoption')
 			.text( get_axis_label_termdb2groupAF( tk ) )
 			.on('click', ()=>{
+				nm.in_use=true
 				nm.inuse_infokey = false
 				nm.inuse_ebgatest = false
 				nm.inuse_termdb2groupAF = true
@@ -133,9 +133,22 @@ show menu for numerical axis, under menubutton
 			.attr('class','sja_menuoption')
 			.text( get_axis_label_ebgatest( tk ) )
 			.on('click', ()=>{
+				nm.in_use=true
 				nm.inuse_infokey = false
 				nm.inuse_termdb2groupAF = false
 				nm.inuse_ebgatest = true
+				update()
+			})
+	}
+
+	if( nm.in_use ) {
+		// show cancel option
+		menudiv.append('div')
+			.style('margin-top','10px')
+			.attr('class','sja_menuoption')
+			.html('&times;&nbsp;&nbsp;Disable')
+			.on('click', ()=>{
+				nm.in_use = false
 				update()
 			})
 	}
@@ -147,7 +160,7 @@ show menu for numerical axis, under menubutton
 		tk.legend.tip.hide()
 		update_legend_func()
 		menubutton.node().disabled = true
-		await mds2.loadTk( tk, block )
+		await tk.load()
 		menubutton.node().disabled = false
 	}
 }
@@ -183,7 +196,8 @@ function __update_legend ( menubutton, settingholder, tk, block ) {
 		}
 
 		if( nm.inuse_infokey ) {
-			update_legend_by_infokey( settingholder, tk, block )
+			// do nothing
+			//update_legend_by_infokey( settingholder, tk, block )
 			return
 		}
 
@@ -203,82 +217,6 @@ function __update_legend ( menubutton, settingholder, tk, block ) {
 }
 
 
-
-function update_legend_by_infokey ( settingholder, tk, block ) {
-/*
-dispatched by __update_legend
-only updates legend
-will not update track
-*/
-	const nm = tk.vcf.numerical_axis
-	const key = nm.info_keys.find( i=> i.in_use )
-	if(!key) {
-		// should not happen
-		return
-	}
-
-	settingholder.append('span')
-		.style('opacity',.5)
-		.style('font-size','.8em')
-		.html('APPLY CUTOFF&nbsp;')
-
-	const sideselect = settingholder.append('select')
-		.style('margin-right','3px')
-		.on('change', async ()=>{
-			const tt = d3event.target
-			const side = tt.options[ tt.selectedIndex ].value
-			if( side == 'no' ) {
-				valueinput.style('display','none')
-				key.cutoff.in_use = false
-			} else {
-				key.cutoff.in_use = true
-				key.cutoff.side = side
-				valueinput.style('display','inline')
-			}
-			tt.disabled = true
-			await mds2.loadTk(tk, block)
-			tt.disabled = false
-		})
-
-	const valueinput = settingholder.append('input')
-		.attr('type','number')
-		.style('width','80px')
-		.on('keyup', async ()=>{
-			if(client.keyupEnter()) {
-				const tt = d3event.target
-				const v = Number.parseFloat( tt.value )
-				if(!Number.isNaN( v )) {
-					key.cutoff.value = v
-					tt.disabled=true
-					await mds2.loadTk(tk, block)
-					tt.disabled=false
-				}
-			}
-		})
-	// show default cutoff value; it maybe missing in custom track
-	if( !Number.isFinite( key.cutoff.value ) ) {
-		key.cutoff.value = ( key.max_value + key.min_value ) / 2
-	}
-	valueinput.property('value',key.cutoff.value)
-
-	sideselect.append('option').attr('value','no').text('no')
-	sideselect.append('option').attr('value','<').text('<')
-	sideselect.append('option').attr('value','<=').text('<=')
-	sideselect.append('option').attr('value','>').text('>')
-	sideselect.append('option').attr('value','>=').text('>=')
-
-	// initiate cutoff setting
-	if( key.cutoff.in_use ) {
-		// hardcoded index
-		sideselect.node().selectedIndex = key.cutoff.side=='<' ? 1 : 
-			key.cutoff.side=='<=' ? 2 :
-			key.cutoff.side=='>' ? 3 : 4
-		valueinput.property( 'value', key.cutoff.value )
-	} else {
-		sideselect.node().selectedIndex = 0
-		valueinput.style('display','none')
-	}
-}
 
 
 
@@ -350,39 +288,34 @@ will attach div_numbersamples to group{}
 
 	// add new term
 	const add_term_btn = group_div.append('div')
-	.attr('class','sja_menuoption')
-	.style('display','inline-block')
-	.style('padding','3px 5px')
-	.style('margin-left','10px')
-	.style('border-radius','3px 3px 3px 3px')
-	.style('background-color', '#cfe2f3ff')
-	.html('&#43;')
-	.on('click',async ()=>{
-		
-		tip.clear()
-		.showunder( add_term_btn.node() )
+		.attr('class','sja_filter_tag_btn')
+		.style('padding','2px 7px')
+		.style('margin-left','10px')
+		.style('border-radius','6px')
+		.style('background-color', '#4888BF')
+		.html('&#43;')
+		.on('click',async ()=>{
+			
+			tip.clear()
+			.showunder( add_term_btn.node() )
 
-		const errdiv = tip.d.append('div')
-			.style('margin-bottom','5px')
-			.style('color','#C67C73')
+			const treediv = tip.d.append('div')
 
-		const treediv = tip.d.append('div')
-
-		// a new object as init() argument for launching the tree with modifiers
-            const obj = {
-                genome: block.genome,
-                mds: tk.mds,
-                div: treediv,
-                default_rootterm: {},
-				modifier_barchart_selectbar: {
-					callback: result => {
-						tip.hide()
-						add_term(result)
+			// a new object as init() argument for launching the tree with modifiers
+	            const obj = {
+	                genome: block.genome,
+	                mds: tk.mds,
+	                div: treediv,
+	                default_rootterm: {},
+					modifier_barchart_selectbar: {
+						callback: result => {
+							tip.hide()
+							add_term(result)
+						}
 					}
-				}
-            }
-            init(obj)
-	})
+	            }
+	            init(obj)
+		})
 
 	async function add_term(result){
 
@@ -390,7 +323,7 @@ will attach div_numbersamples to group{}
 		for(let i=0; i < result.terms.length; i++){
 			const bar_term = result.terms[i]
 			const new_term = {
-				value: bar_term.value,
+				values: [{key: bar_term.value, label: bar_term.label}],
 				term: {
 					id: bar_term.term.id,
 					iscategorical: bar_term.term.iscategorical,
@@ -403,7 +336,7 @@ will attach div_numbersamples to group{}
 		// // update the group div with new terms
 		may_settoloading_termgroup( group )
 		update_terms_div(terms_div, group, tk, block)
-		await mds2.loadTk( tk, block )
+		await tk.load()
 	}
 }
 
@@ -413,25 +346,16 @@ function update_terms_div(terms_div, group, tk, block){
 	const tip = tk.legend.tip
 
 	for(const [i, term] of group.terms.entries()){
-		const term_btn = terms_div.append('div')
-		.attr('class','sja_menuoption')
-		.style('display','inline-block')
-		.style('padding','3px 5px')
-		.style('margin-left','10px')
-		.style('border-radius','3px 0 0 3px')
-		.style('background-color', '#cfe2f3')
 
-		const term_name_btn = term_btn.append('div')
-			.style('display','inline-block')
+		const term_name_btn = terms_div.append('div')
+			.attr('class','sja_filter_tag_btn')
+			.style('border-radius','6px 0 0 6px')
+			.style('background-color', '#4888BF')
+			.style('padding','7px 6px 5px 6px')
+			.style('margin-left', '5px')
+			.style('font-size','.7em')
 			.text(term.term.name)
-			.on('mouseover',()=>{
-				term_name_btn
-					.style('text-decoration', 'underline')
-			})
-			.on('mouseout',()=>{
-				term_name_btn
-					.style('text-decoration', 'none')
-			})
+			.style('text-transform','uppercase')
 			.on('click',async ()=>{
 		
 				tip.clear()
@@ -455,43 +379,33 @@ function update_terms_div(terms_div, group, tk, block){
 	            init(obj)
 			})
 
-		const condition_btn = term_btn.append('div')
-			.style('display','inline-block')
-			.style('background-color','#aaa')
-			.style('color', 'white')
+		const condition_btn = terms_div.append('div')
+			.attr('class','sja_filter_tag_btn')
+			.style('background-color','#eeeeee')
 			.style('font-size','.7em')
-			.style('padding','3px')
-			.style('border-radius','3px')
-			.style('margin','0 4px')
-			.on('mouseover',()=>{
-				condition_btn
-					.style('text-decoration', 'underline')
-			})
-			.on('mouseout',()=>{
-				condition_btn
-					.style('text-decoration', 'none')
-			})
+			.style('padding','7px 6px 5px 6px')
 
 		if(term.term.iscategorical){
 			condition_btn
 				.text(term.isnot ? 'IS NOT' : 'IS')
+				.style('background-color', term.isnot ? '#511e78' : '#015051')
 				.on('click',()=>{
 
 					tip.clear()
-					.showunder( condition_btn.node() )
+						.showunder( condition_btn.node() )
 
 					tip.d.append('div')
-						.style('background-color','#aaa')
-						.style('color', 'white')
 						.style('font-size','.7em')
+						.style('color','#fff')
 						.style('padding','5px')
 						.text(term.isnot ? 'IS' : 'IS NOT')
+						.style('background-color', term.isnot ? '#015051' : '#511e78')
 						.on('click', async()=>{
 							tip.hide()
 							group.terms[i].isnot = term.isnot ? false : true
 							may_settoloading_termgroup( group )
 							update_terms_div(terms_div, group, tk, block)
-				            await mds2.loadTk( tk, block )
+				            await tk.load()
 						})
 				})
 		} else {
@@ -499,83 +413,170 @@ function update_terms_div(terms_div, group, tk, block){
 			condition_btn.text('RANGE')
 		}
 
-		const term_value_btn = term_btn.append('div')
-		.style('display','inline-block')
+		const term_value_div = terms_div.append('div')
+			.style('display','inline-block')
 
 		if( term.term.iscategorical ) {
-			// furbish value button for a categorical term
-			term_value_btn
-			.text(term.value)
-			.on('mouseover',()=>{
-				term_value_btn
-					.style('text-decoration', 'underline')
-			})
-			.on('mouseout',()=>{
-				term_value_btn
-					.style('text-decoration', 'none')
-			})
-			.on('click', async ()=>{
-				tip.clear()
-					.showunder( term_value_btn.node() )
+			
+			for (let j=0; j<term.values.length; j++){
+				const term_value_btn = term_value_div.append('div')
+					.attr('class','sja_filter_tag_btn')
+					.style('font-size','1em')
+					.style('padding','3px 4px 3px 4px')
+					.style('margin-right','1px')
+					.style('background-color', '#4888BF')
+					.text(term.values[j].label)
+					.on('click', async ()=>{
+						tip.clear()
+							.showunder( term_value_btn.node() )
 
-				const wait = tip.d.append('div').text('Loading...')
+						const wait = tip.d.append('div').text('Loading...')
 
-				const arg = {
-					genome: block.genome.name,
-					dslabel: tk.mds.label, 
-					getcategories: 1,
-					termid : term.term.id
-				}
-
-				try {
-					const data = await client.dofetch( 'termdb', arg )
-					if(data.error) throw data.error
-					wait.remove()
-
-					const list_div = tip.d.append('div')
-						.style('display','block')
-
-					for (const category of data.lst){
-						const row = list_div.append('div')
-
-						row.append('div')
-							.style('font-size','.7em')
-							.style('color','white')
-							.style('display','inline-block')
-							.style('background','#1f77b4')
-							.style('padding','2px 4px')
-							.text(category.samplecount)
-
-						row.append('div')
-							.style('display','inline-block')
-							.style('padding','1px 5px')
-							.style('margin-right','5px')
-							.text(category.label)
-
-						if( category.value == group.terms[i].value ) {
-							// the same
-							row.style('padding','5px 10px')
-								.style('margin','1px')
-							continue
+						const arg = {
+							genome: block.genome.name,
+							dslabel: tk.mds.label, 
+							getcategories: 1,
+							samplecountbyvcf: 1, // quick n dirty solution, to count using vcf samples
+							termid : term.term.id
 						}
 
-						row
-							.attr('class','sja_menuoption')
-							.on('click',async ()=>{
-								tip.hide()
+						try {
+							const data = await client.dofetch( 'termdb', arg )
+							if(data.error) throw data.error
+							wait.remove()
 
-								group.terms[i].value = category.value
+							const list_div = tip.d.append('div')
+								.style('display','block')
 
-								may_settoloading_termgroup( group )
+							for (const category of data.lst){
+								const row = list_div.append('div')
 
-								update_terms_div(terms_div, group, tk, block)
-					            await mds2.loadTk( tk, block )
+								row.append('div')
+									.style('font-size','.7em')
+									.style('color','white')
+									.style('display','inline-block')
+									.style('background','#1f77b4')
+									.style('padding','2px 4px')
+									.text(category.samplecount)
+
+								row.append('div')
+									.style('display','inline-block')
+									.style('padding','1px 5px')
+									.style('margin-right','5px')
+									.text(category.label)
+
+								if( group.terms[i].values.find(v=>v.key == category.key )) {
+									// from the list
+									row.style('padding','5px 10px')
+										.style('margin','1px')
+										.style('color','#999')
+									continue
+								}
+
+								row
+									.attr('class','sja_menuoption')
+									.on('click',async ()=>{
+										tip.hide()
+
+										group.terms[i].values[j] = {key:category.key,label:category.label}
+
+										may_settoloading_termgroup( group )
+
+										update_terms_div(terms_div, group, tk, block)
+							            await tk.load()
+									})
+							}
+						} catch(e) {
+							wait.text( e.message || e )
+						}
+					})
+
+					// 'OR' button in between values
+					if(j<term.values.length-1){
+						term_value_div.append('div')
+							.style('display','inline-block')
+							.style('color','#fff')
+							.style('background-color','#4888BF')
+							.style('margin-right','1px')
+							.style('padding','7px 6px 5px 6px')
+							.style('font-size','.7em')
+							.style('text-transform','uppercase')
+							.text('or')
+					}else{
+						// '+' button at end of all values to add to list of values
+						const add_value_btn = term_value_div.append('div')
+							.attr('class','sja_filter_tag_btn')
+							.style('background-color','#4888BF')
+							.style('margin-right','1px')
+							.style('padding','3px 5px')
+							.style('text-transform','uppercase')
+							.html('&#43;')
+							.on('click', async ()=>{
+								tip.clear()
+									.showunder( add_value_btn.node() )
+		
+								const wait = tip.d.append('div').text('Loading...')
+		
+								const arg = {
+									genome: block.genome.name,
+									dslabel: tk.mds.label, 
+									getcategories: 1,
+									samplecountbyvcf: 1, // quick n dirty solution, to count using vcf samples
+									termid : term.term.id
+								}
+		
+								try {
+									const data = await client.dofetch( 'termdb', arg )
+									if(data.error) throw data.error
+									wait.remove()
+		
+									const list_div = tip.d.append('div')
+										.style('display','block')
+		
+									for (const category of data.lst){
+										const row = list_div.append('div')
+		
+										row.append('div')
+											.style('font-size','.7em')
+											.style('color','white')
+											.style('display','inline-block')
+											.style('background','#1f77b4')
+											.style('padding','2px 4px')
+											.text(category.samplecount)
+		
+										row.append('div')
+											.style('display','inline-block')
+											.style('padding','1px 5px')
+											.style('margin-right','5px')
+											.text(category.label)
+		
+										if( group.terms[i].values.find(v=>v.key == category.key)) {
+											// the same
+											row.style('padding','5px 10px')
+												.style('margin','1px')
+												.style('color','#999')
+											continue
+										}
+		
+										row
+											.attr('class','sja_menuoption')
+											.on('click',async ()=>{
+												tip.hide()
+		
+												group.terms[i].values.push({key:category.key,label:category.label})
+		
+												may_settoloading_termgroup( group )
+		
+												update_terms_div(terms_div, group, tk, block)
+									            await tk.load()
+											})
+									}
+								} catch(e) {
+									wait.text( e.message || e )
+								}
 							})
 					}
-				} catch(e) {
-					wait.text( e.message || e )
-				}
-			})
+			}
 
 		} else if( term.term.isinteger || term.term.isfloat ) {
 			// TODO numerical term, print range in value button and apply the suitable click callback
@@ -584,18 +585,16 @@ function update_terms_div(terms_div, group, tk, block){
 
 		// button with 'x' to remove term2
 		terms_div.append('div')
-		.attr('class','sja_menuoption')
-		.style('display','inline-block')
-		.style('margin-left','1px')
-		.style('padding','3px 5px')
-		.style('border-radius','0 3px 3px 0')
-		.style('background-color', '#cfe2f3ff')
+		.attr('class','sja_filter_tag_btn')
+		.style('padding','3px 6px 3px 4px')
+		.style('border-radius','0 6px 6px 0')
+		.style('background-color', '#4888BF')
 		.html('&#215;')
 		.on('click',async ()=>{
 			group.terms.splice(i, 1)
 			may_settoloading_termgroup( group )
 			update_terms_div(terms_div, group, tk, block)
-            await mds2.loadTk( tk, block )
+            await tk.load()
 		})
 	}
 	
@@ -610,7 +609,7 @@ function update_terms_div(terms_div, group, tk, block){
 			if(i == term_replce_index){
 				for(const [j, bar_term] of result.terms.entries()){
 					const new_term = {
-						value: bar_term.value,
+						values: [{key: bar_term.value, label: bar_term.label}],
 						term: {
 							id: bar_term.term.id,
 							iscategorical: bar_term.term.iscategorical,
@@ -631,7 +630,7 @@ function update_terms_div(terms_div, group, tk, block){
 		// // update the group div with new terms
 		may_settoloading_termgroup( group )
 		update_terms_div(terms_div, group, tk, block)
-		await mds2.loadTk( tk, block )
+		await tk.load()
 	}
 }
 

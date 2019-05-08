@@ -46,7 +46,12 @@ table {
 .sja_menuoption:hover { background-color:#e6e6e6}
 .sja_menuoption:active { color:#cc0000; background-color:#FCE2E1;}
 
-
+.sja_filter_tag_btn {
+	display :inline-block;
+	color:white;
+}
+.sja_filter_tag_btn:hover { opacity: 0.8; cursor:default}
+.sja_filter_tag_btn:active {color:#cc0000; opacity: 0.6;}
 
 
 /* mostly for table tr */

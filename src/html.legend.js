@@ -1,18 +1,20 @@
 import {select} from 'd3-selection'
 
-export default function htmlLegend(legendDiv, legendItemClickCallback=null, viz={settings:{}}) {
+export default function htmlLegend(legendDiv, viz={settings:{}, handlers:{}}) {
   const isHidden = {}
 
   function render(data) {
+    const s = viz.settings
     legendDiv.selectAll('*').remove()
     legendDiv
-      .style('text-align', data.legendTextAlign ? data.legendTextAlign : 'center')
+      .style('text-align', data.legendTextAlign ? data.legendTextAlign 
+        : s.legendOrientation == "vertical" ? "left"
+        : 'center')
     .selectAll('div')
       .data(data)
     .enter().append('div')
       .each(addLegendRow)
 
-    const s = viz.settings
     if (s.legendChartSide=='right') {
       setTimeout(()=>{
         const pbox = viz.dom.container.node().parentNode.getBoundingClientRect()
@@ -31,6 +33,8 @@ export default function htmlLegend(legendDiv, legendItemClickCallback=null, viz=
   function addLegendRow(d) {
     const s = viz.settings
     const div = select(this)
+      .style('display', s.legendOrientation == "vertical" ? "block" : "inline-block")
+
     if (d.name) {
       if (s.legendChartSide == 'right') {
         div.style('text-align','left')
@@ -44,14 +48,14 @@ export default function htmlLegend(legendDiv, legendItemClickCallback=null, viz=
           .selectAll('div')
           .data(d.items)
         .enter().append('div')
-          .style('display','inline-block')
+          .style('display', s.legendOrientation == "vertical" ? 'block' : 'inline-block')
           .style('margin-right','5px')
           .each(addLegendItem)
       }
       else {
         div.style('white-space','nowrap')
         div.append('div')
-          .style('display', 'inline-block')
+          .style('display', s.legendOrientation == "vertical" ? 'block' : 'inline-block')
           .style('width', d.rowLabelHangLeft ? d.rowLabelHangLeft+'px' : null)
           .style('text-align', d.rowLabelHangLeft ? 'right' : null)
           .style('font-weight',600)
@@ -59,7 +63,7 @@ export default function htmlLegend(legendDiv, legendItemClickCallback=null, viz=
           .html(d.name)
 
         div.append('div')
-          .style('display','inline-block')
+          .style('display', s.legendOrientation == "vertical" ? 'block' : 'inline-block')
           .style('max-width',  1.2*d.rowLabelHangLeft+'px')
           .style('white-space','normal')
           .style('vertical-align','top')
@@ -75,18 +79,19 @@ export default function htmlLegend(legendDiv, legendItemClickCallback=null, viz=
       div.selectAll('div')
         .data(d.items)
       .enter().append('div')
-        .style('display','inline-block')
+        .style('display', s.legendOrientation == "vertical" ? 'block' : 'inline-block')
         .style('margin-left','15px')
         .each(addLegendItem)
     }
   }
 
   function addLegendItem(d) {
-    const s = viz.settings
+    const s = viz.settings;
     const div = select(this)
     const color = d.fill ? d.fill : d.stroke ? d.stroke : d.color
 
     div.style('opacity', d.isHidden ? 0.3 : 1)
+      .style('display', s.legendOrientation == "vertical" ? 'block' : 'inline-block')
     
     if (d.svg) {
       div.append('svg')
@@ -98,15 +103,20 @@ export default function htmlLegend(legendDiv, legendItemClickCallback=null, viz=
     }
     else {
       div.append('div')
-        .style('display','inline-block')
+        .style('display', 'inline-block')
         .style('position','relative')
-        .style('width','12px')
+        .style('min-width', '12px')
         .style('height','12px')
         .style('top','1px')
-        .style('border','1px solid '+ color)
+        .style('border', d.border ? d.border : '1px solid '+ color)
         .style('border-radius', d.shape=='circle' ? '6px' : '')
         .style('background-color', d.shape=='circle' ? '' : color)
         .style('cursor','pointer')
+        .style('color', d.textColor ? d.textColor : '#fff')
+        .style('font-size', '10px')
+        .style('vertical-align', d.inset ? 'top' : '')
+        .style('padding', d.inset ? '0 3px' : '')
+        .text(d.inset)
     }
 
     div.append('div')
@@ -118,20 +128,10 @@ export default function htmlLegend(legendDiv, legendItemClickCallback=null, viz=
       .style('vertical-align', d.svg ? 'top' : null)
       .html(d.text)
 
-    if (d.gArr) {
-      div.on('click',()=>{
-        d.gArr.forEach(g=>{
-          g.style('display', g.style('display')=='none' ? '' : 'none')
-        })
-        isHidden[d.text] = !isHidden[d.text]
-        div.style('opacity', isHidden[d.text] ? 0.3 : 1)
-      })
-    }
-    else if (legendItemClickCallback) {
-      div.on('click',()=>{
-        legendItemClickCallback(d.text)
-      })
-    }
+   
+    div.on('click',viz.handlers.legend.click)
+      .on('mouseover',viz.handlers.legend.mouseover)
+      .on('mouseout',viz.handlers.legend.mouseout)
   }
 
   return render

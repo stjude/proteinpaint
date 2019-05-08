@@ -3,6 +3,8 @@ import * as common from './common'
 import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
 import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
+import {loadTk} from './block.mds2'
+import {getvcfheader_customtk} from './block.mds2.vcf'
 
 
 /*
@@ -18,11 +20,18 @@ copy_official_configs
 parse_client_config
 configPanel
 may_initiate_vcf
-validate_tk
 */
 
 
+function _load ( tk, block ) {
+	return ()=>{
+		return loadTk(tk,block)
+	}
+}
+
 export async function makeTk ( tk, block ) {
+
+	tk.load = _load(tk, block)
 
 	tk.tip2 = new client.Menu({padding:'0px'})
 
@@ -42,17 +51,22 @@ export async function makeTk ( tk, block ) {
 		if(!tk.name) tk.name = 'Unamed'
 
 		if( tk.vcf ) {
-			await mds2vcf.getvcfheader_customtk( tk.vcf, block.genome )
+			await getvcfheader_customtk( tk.vcf, block.genome )
 		}
 	}
 
 	parse_client_config( tk )
 
-	validate_tk( tk )
+	may_validate_info_fields( tk )
 
 	tk.tklabel.text( tk.name )
 
 	may_initiate_vcf( tk )
+
+	tk.clear = ()=>{
+		if(tk.g_vcfrow) tk.g_vcfrow.selectAll('*').remove()
+		if(tk.leftaxis_vcfrow) tk.leftaxis_vcfrow.selectAll('*').remove()
+	}
 
 	// TODO <g> for other file types
 
@@ -62,7 +76,7 @@ export async function makeTk ( tk, block ) {
 			configPanel(tk, block)
 		})
 
-	await mds2legend.init( tk, block )
+	mds2legend.init( tk, block )
 }
 
 
@@ -133,34 +147,62 @@ for official tk only
 requires tk.mds{}
 make hard copy of attributes to tk
 so multiple instances of the same tk won't cross-react
+
+Note: must keep customizations of official tk through embedding api
 */
 	if(!tk.mds) return
 	tk.name = tk.mds.track.name
 
 	if( tk.mds.track.vcf ) {
-		// do not allow dom
-		tk.vcf = JSON.parse(JSON.stringify(tk.mds.track.vcf))
+		if(!tk.vcf) tk.vcf = {}
+		const c = JSON.parse(JSON.stringify(tk.mds.track.vcf)) // a hard copy to be planted to tk.vcf{}
+		for(const k in c) {
+			if(tk.vcf[k]==undefined) tk.vcf[k] = c[k]
+		}
+		// preserve customizations of numerical axis
+		if(c.numerical_axis) {
+			for(const k in c.numerical_axis) {
+				if(tk.vcf.numerical_axis[k]==undefined) tk.vcf.numerical_axis[k] = c.numerical_axis[k]
+			}
+		}
 	}
 
 	// TODO other file types
 
-	// for the sample/variant attributes, must not overwrite existing configs coming from embedded view
-	if( tk.mds.mutationAttribute ) {
-		if( !tk.mutationAttribute ) tk.mutationAttribute = {attributes: {}}
-		Object.assign( tk.mutationAttribute.attributes, JSON.parse(JSON.stringify(tk.mds.mutationAttribute.attributes)) )
-	}
-
-	if( tk.mds.locusAttribute ) {
-		if( !tk.locusAttribute ) tk.locusAttribute = {attributes: {}}
-		Object.assign( tk.locusAttribute.attributes, JSON.parse(JSON.stringify(tk.mds.locusAttribute.attributes)) )
-	}
-
-	if( tk.mds.alleleAttribute ) {
-		if( !tk.alleleAttribute ) tk.alleleAttribute = {attributes: {}}
-		Object.assign( tk.alleleAttribute.attributes, JSON.parse(JSON.stringify(tk.mds.alleleAttribute.attributes)) )
+	if( tk.mds.track.info_fields ) {
+		// TODO accept customizations
+		tk.info_fields = JSON.parse(JSON.stringify(tk.mds.track.info_fields))
 	}
 }
 
 
-function validate_tk ( tk ) {
+function may_validate_info_fields ( tk ) {
+	if(!tk.info_fields) return
+	if(!Array.isArray(tk.info_fields)) throw 'info_fields should be an array'
+	for(const i of tk.info_fields) {
+		if(!i.key) throw 'key missing from one of info_fields'
+		if(!i.label) i.label = i.key
+
+		if( !i.isfilter ) continue
+
+		// for info fields serving as filters
+
+		if(i.iscategorical) {
+			if(!i.values) throw '.values[] missing from a categorical info field '+i.label
+			if(!Array.isArray(i.values)) throw '.values[] not an array from info field '+i.label
+			for(const v of i.values) {
+				if(!v.key) throw '.key missing from a value of info field '+i.label
+				if(!v.label) v.label = v.key
+			}
+		} else if( i.isinteger || i.isfloat ) {
+			if(!i.range) throw '.range{} missing from a numeric info field '+i.label
+		} else if( i.isflag ) {
+			if(!i.remove_yes && !i.remove_no) {
+				// neither set, pick one
+				i.remove_no = true
+			}
+		} else {
+			throw 'info field '+i.label+' neither numerical or categorical'
+		}
+	}
 }

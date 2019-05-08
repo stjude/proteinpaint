@@ -102,35 +102,41 @@ export default function barsRenderer(barsapp, holder) {
   let currCell, currRects, currRowTexts, currColTexts;
   let clusterRenderer;
   // eslint-disable-next-line
-  let legendDiv, legendRenderer;
+  let legendRenderer;
   let defaults; //will have key values in init
-  let currseries = [];
+  let currserieses = [];
   let unstackedBarsPanes;
 
   function main(_chart, _unstackedBarsPanes) {
     chart = _chart
     Object.assign(hm, chart.settings)
     hm.handlers = chart.handlers
+    hm.cols = hm.cols.filter(d => !hm.exclude.cols.includes(d))
+    hm.rows = hm.rows.filter(d => !hm.exclude.rows.includes(d))
     if (_unstackedBarsPanes) unstackedBarsPanes = _unstackedBarsPanes;
-    if (!svg) init();
+    const nosvg = !svg
+    if (nosvg) init();
 
     const unadjustedColw = hm.colw
+    currserieses = chart.visibleSerieses;
     setDimensions();
-    currseries.map(setIds);
+    currserieses.map(setIds);
     chart.serieses.map(setIds);
-    currseries = chart.serieses;
 
     chartTitle.style("width", hm.svgw + "px")
       .html(chart.chartId);
-    svg.attr("height", hm.svgh);
-    svg.attr("width", hm.svgw);
 
-    mainG.attr("transform", "translate(" + hm.rowlabelw + ",0)");
+    // only set this initially to prevent 
+    // jerky svg resize on update
+    if (nosvg) {
+      svg.attr("height", hm.svgh).attr("width", hm.svgw).style('opacity',0); 
+      mainG.attr("transform", "translate(" + hm.rowlabelw + ",0)");
+    }
 
     const s = series
       .attr("transform", seriesGrpTransform)
       .selectAll(".bars-cell-grp")
-      .data(chart.serieses, seriesBindKey);
+      .data(currserieses, seriesBindKey);
     s.exit().each(seriesExit);
     s.each(seriesUpdate);
     s.enter()
@@ -150,16 +156,26 @@ export default function barsRenderer(barsapp, holder) {
 
     currRects = series.selectAll("rect");
     currColTexts = collabels.selectAll("text");
-
-    if (!hm.hidelegend) {
-      //legendDiv.selectAll('*').remove()
-      //legendDiv.attr('transform','translate(0,0)')
-      //legendRenderer(hm.h.legendHolder);
-    }
-
+    legendRenderer(barsapp.getLegendGrps(chart))
     hm.delay = 0.35 * hm.duration
     renderAxes(yAxis, yTitle, xTitle, hm);
     hm.colw = unadjustedColw
+
+    if (nosvg) {
+      svg.transition().duration(100)
+        .attr("height", hm.svgh)
+        .attr("width", hm.svgw)
+        .style("opacity",1);
+      setTimeout(()=>{
+        const bbox = svg.node().getBBox();
+        const x = bbox.width - svg.attr('width') + hm.rowlabelw
+        svg.transition().duration(100)
+          .attr('width', bbox.width + 20)
+          .attr('height', bbox.height + 20)
+        mainG.transition().duration(100)
+          .attr('transform', 'translate(' + x +',0)' )
+      },110)
+    }
   }
 
   function init() {
@@ -240,6 +256,7 @@ export default function barsRenderer(barsapp, holder) {
     collabels = mainG
       .append("g")
       .attr("class", "bars-collabels")
+      .style("cursor", hm.handlers.colLabel.click ? "pointer" : "")
       .on("mouseover.tphm2", colLabelMouseover)
       .on("mouseout.tphm2", colLabelMouseout)
       .on("click.tphm2", hm.handlers.colLabel.click);
@@ -263,12 +280,15 @@ export default function barsRenderer(barsapp, holder) {
       .attr("class", "sjpcb-bar-chart-x-title")
       .style("cursor", "default");
 
-    legendDiv = svg.append("g").attr("class", "sjpcb-bars-legend");
+    //legendDiv = svg.append("g").attr("class", "sjpcb-bars-legend");
     legendRenderer = htmlLegend(
-      hm,
-      hm.handlers.legend.rectFill,
-      hm.handlers.legend.text,
-      hm.handlers.legend.iconStroke
+      barsapp.opts.legendDiv,
+      {
+        settings: {
+          legendOrientation: 'vertical'
+        },
+        handlers: barsapp.handlers
+      }
     );
   }
 
@@ -301,20 +321,20 @@ export default function barsRenderer(barsapp, holder) {
     const ratio =
       hm.scale == "byChart"
         ? 1
-        : chart.maxSeriesTotal / chart.maxAcrossCharts;
-    for (const series of chart.serieses) {
-      if (series.data[0]) {
+        : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts;
+    for (const series of currserieses) {
+      if (series.visibleData[0]) {
         const min = hm.unit == "log" ? 1 : 0
-        const max = hm.unit == "pct" ? series.total
+        const max = hm.unit == "pct" ? series.visibleTotal
           : hm.unit == "log" ? chart.maxSeriesLogTotal
-          : chart.maxSeriesTotal
+          : chart.maxVisibleSeriesTotal
 
         hm.h.yScale[series.seriesId] = scaleLinear()
           .domain([min, max / ratio])
           .range([0, hm.svgh - hm.collabelh])
 
         hm.h.yPrevBySeries[series.seriesId] = 0
-        for(const data of series.data) {
+        for(const data of series.visibleData) {
           data.height = getRectHeight(data)
           data.y = getRectY(data)
         }
@@ -362,7 +382,7 @@ export default function barsRenderer(barsapp, holder) {
   function seriesUpdate(series) {
     const g = select(this)
       .selectAll(".bars-cell")
-      .data(series.data, cellKey);
+      .data(series.data.filter(filterData), cellKey);
 
     g.exit().each(function() {
       select(this).style("display", "none");
@@ -391,10 +411,14 @@ export default function barsRenderer(barsapp, holder) {
     select(this)
       .attr("class", "bars-cell-grp")
       .selectAll("g")
-      .data(series.data, cellKey)
+      .data(series.data.filter(filterData), cellKey)
       .enter()
       .append("g")
       .each(addCell);
+  }
+
+  function filterData(d) {
+    return hm.rows.includes(d.dataId)
   }
 
   function addCell(d) {
@@ -533,36 +557,35 @@ export default function barsRenderer(barsapp, holder) {
 
     xTitle.selectAll("*").remove()
     const xLabel = hm.handlers.xAxis.text()
-    xTitle
-      .attr(
-        "transform",
-        "translate(" +
-          (s.svgw -
-            s.svgPadding.left -
-            s.svgPadding.right -
-            12*xLabel.length) /
-            2 +
-          "," +
-          (colLabelBox.height +
-            hm.svgh -
-            hm.collabelh +
-            20 +
-            s.axisTitleFontSize) +
-          ")"
-      )
-      .append("text")
+    xTitle.append("text")
       .style("text-anchor", "middle")
       .style("font-size", s.axisTitleFontSize + "px")
       .text(xLabel);
 
+    const textBBox = xTitle.node().getBBox()
+    setTimeout(()=>{
+      xTitle.attr(
+          "transform",
+          "translate(" + 
+            (s.svgw - s.svgPadding.left - s.svgPadding.right - s.rowlabelw)/2 +
+            "," +
+            (colLabelBox.height +
+              hm.svgh -
+              hm.collabelh +
+              20 +
+              s.axisTitleFontSize) +
+            ")"
+        )
+    }, 0)
+
     const ratio =
       hm.scale == "byChart" || hm.clickedAge
         ? 1
-        : chart.maxSeriesTotal / chart.maxAcrossCharts
+        : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts
     const min = hm.unit == "log" ? 1 : 0
     const max = hm.unit == "pct" ? 100 
       //: hm.unit == "log" ? chart.maxSeriesLogTotal
-      : chart.maxSeriesTotal //maxAcrossCharts
+      : chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
 
     yAxis.call(
       axisLeft(

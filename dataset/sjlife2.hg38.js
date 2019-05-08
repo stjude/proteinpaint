@@ -59,78 +59,127 @@ module.exports={
 		},
 	},
 
-	mutationAttribute: {
-		attributes: {
-			// FIXME to be moved to locus/alleleAttribute
-			AF: {
-				label:'SJLIFE allele frequency',
-				isfloat:1,
-			},
-			AF_gnomAD: {
-				label:'gnomAD allele frequency',
-				isfloat:1
-			},
-		}
-	},
-	locusAttribute:{
-		attributes:{
-			QC: {
-				label:'Good/Bad List',
-				isfilter:true,
-				values:{
-					Good:{
-						name:'Good'
-					},
-					Bad:{
-						name:'Bad'
-					}
-				}
-			}
-		}
-	},
+
+
 
 	// mds2 track
 	track: {
 		name:'SJLife germline SNV',
+
+		info_fields: [
+			{
+				key:'QC',
+				label:'Good/Bad List',
+				isfilter:true,
+				isactivefilter:true,
+				iscategorical:true,
+				values:[
+					{
+						key:'Good',
+						label:'Good'
+					},
+					{
+						key:'Bad',
+						label:'Bad',
+						ishidden:true
+					}
+				]
+			},
+			{
+				key:'AF',
+				label:'SJLIFE allele frequency',
+				isfilter:true,
+				isfloat:1,
+				range: {
+					startunbounded:true,
+					//startinclusive: bool
+					stop: 0.1,
+					stopinclusive:true
+				}
+			},
+			{
+				key:'gnomAD_AF',
+				label:'gnomAD allele frequency',
+				isfilter:true,
+				isactivefilter:true,
+				isfloat:1,
+				range: {
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive:true
+				}
+			},
+			{
+				key:'gnomAD_AF_afr',
+				label:'gnomAD African-American allele frequency',
+				isfilter:true,
+				isfloat:1,
+				range: {
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive:true
+				}
+			},
+			{
+				key:'gnomAD_AF_eas',
+				label:'gnomAD East Asian allele frequency',
+				isfilter:true,
+				isfloat:1,
+				range: {
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive:true
+				}
+			},
+			{
+				key:'gnomAD_AF_nfe',
+				label:'gnomAD non-Finnish European allele frequency',
+				isfilter:true,
+				isfloat:1,
+				range: {
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive:true
+				}
+			},
+			{
+				key:'BadBLAT',
+				isflag:true,
+				isfilter:true,
+				isactivefilter:true,
+				remove_yes:true
+			},
+			/*
+			{
+				key:'DB',
+				label:'dbSNP membership',
+				isflag:true,
+				isfilter:true,
+				isactivefilter:true,
+				remove_no:true
+			},
+			*/
+		],
+
 		vcf: {
-			file:'hg38/sjlife/cohort.vcf.gz',
-			viewrangeupperlimit: 200000,
+			file:'files/hg38/sjlife/vcf/SJLIFE.vcf.gz',
+			viewrangeupperlimit: 1000000,
 			numerical_axis: {
 				axisheight: 150,
 				info_keys: [
 					{
 						key:'AF',
 						in_use:true,
-						// may config axis
-						min_value: 0,
-						max_value: 1,
-						cutoff: {
-							in_use:false,
-							side:'<',
-							value:0.001
-						},
 						// TODO bind complex things such as boxplot to one of the info fields
 					},
-					{
-						key:'AF_gnomAD',
-						min_value: 0,
-						max_value: 1,
-						missing_value: 0,
-						cutoff: {
-							in_use:false,
-							side:'<',
-							value:0.001
-						},
-					},
-					{
-						key:'AC_eas',
-						missing_value: 0,
-						cutoff: {
-							in_use:false,
-							side:'<',
-							value:2
-						},
-					},
+					{ key:'gnomAD_AF', missing_value: 0, },
+					{ key:'gnomAD_AF_afr', missing_value: 0, },
+					{ key:'gnomAD_AF_eas', missing_value: 0, },
+					{ key:'gnomAD_AF_nfe', missing_value: 0, }
 				],
 				in_use: true, // to use numerical axis by default
 
@@ -140,7 +189,10 @@ module.exports={
 						terms:[
 							{
 							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-							value:'Acute lymphoblastic leukemia'
+							values:[
+								{ key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'},
+								{key:'Neuroblastoma',label:'Neuroblastoma'}
+							]
 							}
 						]
 					},
@@ -149,7 +201,7 @@ module.exports={
 						terms:[
 							{
 							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-							value:'Acute lymphoblastic leukemia',
+							values:[ {key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'} ],
 							isnot: true,
 							}
 						]
@@ -160,25 +212,25 @@ module.exports={
 					terms:[
 						{
 							term:{id:'diaggrp',name:'Diagnosis Group', iscategorical:true },
-							value:'Acute lymphoblastic leukemia'
+							values:[ {key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'} ]
 						}
 					],
 					populations:[
 						// per variant, the control population allele counts are hardcoded to be info fields
 						{
 							key:'CEU',
-							infokey_AC: 'AC_nfe',
-							infokey_AN: 'AN_nfe'
+							infokey_AC: 'gnomAD_AC_nfe',
+							infokey_AN: 'gnomAD_AN_nfe'
 						},
 						{
 							key:'YRI',
-							infokey_AC: 'AC_afr',
-							infokey_AN: 'AN_afr'
+							infokey_AC: 'gnomAD_AC_afr',
+							infokey_AN: 'gnomAD_AN_afr'
 						},
 						{
 							key:'ASA',
-							infokey_AC: 'AC_eas',
-							infokey_AN: 'AN_eas'
+							infokey_AC: 'gnomAD_AC_eas',
+							infokey_AN: 'gnomAD_AN_eas'
 						}
 					]
 				},

@@ -4,6 +4,7 @@ const spawn = require('child_process').spawn
 const utils = require('./utils')
 const vcf = require('../src/vcf')
 const common = require('../src/common')
+const validate_termvaluesetting = require('../src/mds.termdb.termvaluesetting').validate_termvaluesetting
 
 
 
@@ -14,6 +15,8 @@ handle_ssidbyonem
 handle_getcsq
 ********************** INTERNAL
 get_columnidx_byterms
+wrap_validate_termvaluesetting
+sample_match_termvaluesetting
 get_querymode
 query_vcf_applymode
 parseline_termdb2groupAF
@@ -198,13 +201,19 @@ generate the "querymode" object that drives subsequent queries
 */
 
 	if( q.termdb2groupAF ) {
+		if(ds.iscustom) throw 'custom track does not support termdb2groupAF'
+		wrap_validate_termvaluesetting(q.termdb2groupAF.group1.terms,'termdb2groupAF.group1')
+		wrap_validate_termvaluesetting(q.termdb2groupAF.group2.terms,'termdb2groupAF.group2')
 		return {
 			range_termdb2groupAF: true,
 			columnidx_group1: get_columnidx_byterms( q.termdb2groupAF.group1.terms, ds, vcftk.samples ),
 			columnidx_group2: get_columnidx_byterms( q.termdb2groupAF.group2.terms, ds, vcftk.samples ),
 		}
 	}
+
 	if( q.ebgatest ) {
+		if(ds.iscustom) throw 'custom track does not support ebgatest'
+		wrap_validate_termvaluesetting(q.ebgatest.terms,'ebgatest')
 		// vcf header column idx for the current term
 		const columnidx = get_columnidx_byterms( q.ebgatest.terms, ds, vcftk.samples )
 
@@ -260,35 +269,14 @@ generate the "querymode" object that drives subsequent queries
 
 function get_columnidx_byterms ( terms, ds, vcfsamples ) {
 /*
+terms is a list, each ele is one term-value setting
 a sample must meet all term conditions
 */
 	const usesampleidx = []
 	for( const [i, sample] of vcfsamples.entries() ) {
 		const sanno = ds.cohort.annotation[ sample.name ]
 		if(!sanno) continue
-
-		// for AND, require all terms to match
-		let alltermmatch = true
-		for(const t of terms ) {
-			const t0 = ds.cohort.termdb.termjson.map.get( t.term_id )
-			if( !t0 ) {
-				continue
-			}
-			let thistermmatch
-			if( t0.iscategorical ) {
-
-				thistermmatch = t.isnot ? sanno[ t.term_id ] != t.value : sanno[ t.term_id ] == t.value
-
-			} else if( t0.isinteger || t0.isfloat ) {
-				// TODO
-			}
-			if( !thistermmatch ) {
-				// not matching, end
-				alltermmatch=false
-				break
-			}
-		}
-		if(alltermmatch) {
+		if( sample_match_termvaluesetting( sanno, terms, ds ) ) {
 			usesampleidx.push( i )
 		}
 	}
@@ -520,7 +508,7 @@ function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds, m_is_filt
 				let ACadj = 0,
 					ANadj = 0
 				for( const [k,v] of pop2control ) {
-					const AN2 = v.AN * pop2average.get(k).average
+					const AN2 = controltotal * pop2average.get(k).average
 					const AC2 = AN2 == 0 ? 0 : v.AC * AN2 / v.AN
 					ACadj += AC2
 					ANadj += AN2
@@ -529,7 +517,6 @@ function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds, m_is_filt
 					line: m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj),
 					table: [altcount, refcount, ACadj, ANadj-ACadj]
 				}
-
 				uselst.push(m)
 			}
 			return uselst
@@ -573,7 +560,8 @@ async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
 	}
 	const tmpfile = path.join(serverconfig.cachedir,Math.random().toString())
 	await utils.write_file( tmpfile, lines.join('\n') )
-	const pfile = await run_chisqtest( tmpfile )
+	//const pfile = await run_chisqtest( tmpfile )
+	const pfile = await run_fishertest( tmpfile )
 	const text = await utils.read_file( pfile )
 	for(const line of text.trim().split('\n')) {
 		const l = line.split('\t')
@@ -598,6 +586,14 @@ function run_chisqtest( tmpfile ) {
 		sp.on('error',()=> reject(error))
 	})
 }
+function run_fishertest( tmpfile ) {
+	const pfile = tmpfile+'.pvalue'
+	return new Promise((resolve,reject)=>{
+		const sp = spawn('Rscript',['utils/fisher.R',tmpfile,pfile])
+		sp.on('close',()=> resolve(pfile))
+		sp.on('error',()=> reject(error))
+	})
+}
 
 
 
@@ -607,29 +603,63 @@ function _m_is_filtered ( q, result, mockblock ) {
 	return m => {
 		let todrop = false
 
-		if( q.locusAttribute ) {
-			for(const attrkey in q.locusAttribute) {
-				const attr = q.locusAttribute[attrkey]
-				const re = result.locusAttribute2count[ attrkey ]
-				const attrvalue = m.info ? m.info[ attrkey ] : undefined
-				if( attrvalue==undefined ) {
-					re.unannotated_count = 1 + (re.unannotated_count||0)
-					if(attr.unannotated_ishidden) {
+		if( q.info_fields ) {
+			for(const i of q.info_fields) {
+				const re = result.info_fields[ i.key ]
+
+				// get info field value
+				let value=undefined
+				if( m.info ) value = m.info[i.key]
+				if(value==undefined && m.altinfo) value = m.altinfo[i.key]
+
+				if( i.iscategorical ) {
+					if(value==undefined) {
+						re.unannotated_count = 1 + (re.unannotated_count||0)
+						if(i.unannotated_ishidden) {
+							todrop=true
+						}
+						continue
+					}
+					re.value2count[ value ] = 1 + (re.value2count[value]||0)
+					if( i.hiddenvalues[ value ] ) {
 						todrop=true
 					}
-					continue
-				}
-				re.value2count[ attrvalue ] = 1 + (re.value2count[attrvalue]||0)
-				if( attr.hiddenvalues[ attrvalue ] ) {
-					todrop=true
+
+				} else if( i.isnumerical ) {
+
+					// test start
+					if( !i.range.startunbounded ) {
+						if( i.range.startinclusive ) {
+							if( value < i.range.start ) todrop=true
+						} else {
+							if( value <= i.range.start ) todrop=true
+						}
+					}
+					// test stop
+					if( !i.range.stopunbounded ) {
+						if( i.range.stopinclusive ) {
+							if( value > i.range.stop ) todrop=true
+						} else {
+							if( value >= i.range.stop ) todrop=true
+						}
+					}
+					if( todrop ) re.filteredcount++
+
+				} else if( i.isflag ) {
+					if( (i.remove_yes && value) || (i.remove_no && !value) ) {
+						todrop = true
+						re.filteredcount++
+					}
+				} else {
+					throw 'unknown info type'
 				}
 			}
 		}
 
-		if( q.alleleAttribute ) {
-		}
-
-		if( q.mutationAttribute ) {
+		// final step is mclass
+		if( todrop ) {
+			// this variant has been filtered, do not add to mclass counter
+			return true
 		}
 
 		common.vcfcopymclass( m, mockblock )
@@ -642,31 +672,79 @@ function _m_is_filtered ( q, result, mockblock ) {
 			todrop=true
 		}
 
-		if( q.numerical_info_cutoff ) {
-			let v
-			if( m.info ) {
-				v = m.info[ q.numerical_info_cutoff.key ]
-			}
-			if( !Number.isFinite( v )) {
-				if( m.altinfo ) {
-					v = m.altinfo[ q.numerical_info_cutoff.key ]
-				}
-			}
-			if(Number.isFinite( v )) {
-				if( q.numerical_info_cutoff.side == '<' ) {
-					if( v >= q.numerical_info_cutoff.value ) todrop=true
-				} else if( q.numerical_info_cutoff.side == '<=' ) {
-					if( v > q.numerical_info_cutoff.value ) todrop=true
-				} else if( q.numerical_info_cutoff.side == '>' ) {
-					if( v <= q.numerical_info_cutoff.value ) todrop=true
-				} else {
-					if( v < q.numerical_info_cutoff.value ) todrop=true
-				}
-			} else {
-				todrop=true
-			}
-		}
-
 		return todrop
 	}
+}
+
+
+
+
+function wrap_validate_termvaluesetting ( terms, where ) {
+	validate_termvaluesetting(terms,where)
+	for(const t of terms) {
+		if(t.term.iscategorical) {
+			// convert values[{key,label}] to set
+			t.valueset = new Set( t.values.map(i=>i.key) )
+		}
+	}
+}
+
+
+
+function sample_match_termvaluesetting ( sanno, terms ) {
+	// for AND, require all terms to match
+
+	let usingAND = true
+
+	let numberofmatchedterms = 0
+
+	for(const t of terms ) {
+
+		const samplevalue = sanno[ t.term.id ]
+		if(samplevalue==undefined) {
+			// this sample has no anno for this term, do not count
+			continue
+		}
+
+		let thistermmatch
+
+		if( t.term.iscategorical ) {
+
+			thistermmatch = t.valueset.has( samplevalue )
+
+		} else if( t.term.isinteger || t.term.isfloat ) {
+
+			let left, right
+			if( t.range.startunbounded ) {
+				left = true
+			} else {
+				if(t.range.startinclusive) {
+					left = samplevalue >= t.range.start
+				} else {
+					left = samplevalue > t.range.start
+				}
+			}
+			if( t.range.stopunbounded ) {
+				right = true
+			} else {
+				if(t.range.stopinclusive) {
+					right = samplevalue <= t.range.stop
+				} else {
+					right = samplevalue < t.range.stop
+				}
+			}
+			thistermmatch = left && right
+		}
+
+		if( t.isnot ) {
+			thistermmatch = !thistermmatch
+		}
+		if( thistermmatch ) numberofmatchedterms++
+	}
+
+	if( usingAND ) {
+		return numberofmatchedterms == terms.length
+	}
+	// using OR
+	return numberofmatchedterms > 0
 }
