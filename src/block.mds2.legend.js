@@ -19,7 +19,7 @@ update_mclass
 display_active_variantfilter_infofields
 update_categorical_filter
 update_flag_filter
-// update_numeric_filter
+update_numeric_filter
 list_inactive_variantfilter
 configure_one_infofield
 */
@@ -571,12 +571,12 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 		tip.clear()
 			.showunder( numeric_div.node() )
 
-		const euqation_div = tip.d.append('div')
+		const equation_div = tip.d.append('div')
 			.style('display','block')
 			.style('padding','3px 5px')
-			.style('background-color', '#ddd')
+			//.style('background-color', '#ddd')
 
-		const start_input = euqation_div.append('input')
+		const start_input = equation_div.append('input')
 			.style('display','inline-block')
 			.attr('value',i.range.start)
 			.attr('size',5)
@@ -584,7 +584,7 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 		if(i.range.startunbounded) start_input.property('disabled', true)
 		else start_input.property('disabled', false)
 
-		const operator_start_div = euqation_div.append('div')
+		const operator_start_div = equation_div.append('div')
 			.style('display','inline-block')
 			.attr('class','sja_menuoption')
 			.style('font-size','.9em')
@@ -615,13 +615,21 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 					)
 				})
 			})
+		// to replace operator_start_div
+		const startselect = equation_div.append('select')
+		startselect.append('option')
+			.html('&le;')
+		startselect.append('option')
+			.html('&lt;')
+		startselect.append('option')
+			.html('&#8734;')
 
-		euqation_div.append('div')
+		equation_div.append('div')
 			.style('display','inline-block')
 			.style('padding','3px 10px')
 			.html(x)
 
-		const operator_end_div = euqation_div.append('div')
+		const operator_end_div = equation_div.append('div')
 			.style('display','inline-block')
 			.attr('class','sja_menuoption')
 			.style('font-size','.9em')
@@ -653,8 +661,17 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 					)
 				})	
 			})
-			
-		const stop_input = euqation_div.append('input')
+
+		// to replace operator_end_div
+		const stopselect = equation_div.append('select')
+		stopselect.append('option')
+			.html('&le;')
+		stopselect.append('option')
+			.html('&lt;')
+		stopselect.append('option')
+			.html('&#8734;')
+
+		const stop_input = equation_div.append('input')
 			.style('display','inline-block')
 			.attr('value',i.range.stop)
 			.attr('size',5)
@@ -668,6 +685,11 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 			.text('APPLY')
 			.on('click', async ()=>{
 				tip.hide()
+
+				if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) {
+					window.alert('Both ends can not be unbounded.')
+					return
+				}
 
 				//set start and stop values from input fields
 				if(i.range.startunbounded){
