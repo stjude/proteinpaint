@@ -195,7 +195,7 @@ export class Barchart{
         : rgb(this.settings.rows.length < 11 
           ? colors.c10(result.dataId)
           : colors.c20(result.dataId)
-        ).toString().replace('rgb(','rgba(').replace(')', ',0.7)')
+        ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
       } 
       result.color = this.term2toColor[result.dataId]
     }
