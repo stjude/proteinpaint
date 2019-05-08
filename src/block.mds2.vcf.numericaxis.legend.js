@@ -100,6 +100,7 @@ show menu for numerical axis, under menubutton
 				.attr('class','sja_menuoption')
 				.on('click', ()=>{
 					// selected an info key
+					nm.in_use=true
 					nm.inuse_termdb2groupAF = false
 					nm.inuse_ebgatest = false
 					nm.inuse_infokey = true
@@ -117,6 +118,7 @@ show menu for numerical axis, under menubutton
 			.attr('class','sja_menuoption')
 			.text( get_axis_label_termdb2groupAF( tk ) )
 			.on('click', ()=>{
+				nm.in_use=true
 				nm.inuse_infokey = false
 				nm.inuse_ebgatest = false
 				nm.inuse_termdb2groupAF = true
@@ -131,9 +133,22 @@ show menu for numerical axis, under menubutton
 			.attr('class','sja_menuoption')
 			.text( get_axis_label_ebgatest( tk ) )
 			.on('click', ()=>{
+				nm.in_use=true
 				nm.inuse_infokey = false
 				nm.inuse_termdb2groupAF = false
 				nm.inuse_ebgatest = true
+				update()
+			})
+	}
+
+	if( nm.in_use ) {
+		// show cancel option
+		menudiv.append('div')
+			.style('margin-top','10px')
+			.attr('class','sja_menuoption')
+			.text('Do not use numerical axis')
+			.on('click', ()=>{
+				nm.in_use = false
 				update()
 			})
 	}
