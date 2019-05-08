@@ -63,6 +63,11 @@ export async function makeTk ( tk, block ) {
 
 	may_initiate_vcf( tk )
 
+	tk.clear = ()=>{
+		if(tk.g_vcfrow) tk.g_vcfrow.selectAll('*').remove()
+		if(tk.leftaxis_vcfrow) tk.leftaxis_vcfrow.selectAll('*').remove()
+	}
+
 	// TODO <g> for other file types
 
 	// config
@@ -142,20 +147,31 @@ for official tk only
 requires tk.mds{}
 make hard copy of attributes to tk
 so multiple instances of the same tk won't cross-react
+
+Note: must keep customizations of official tk through embedding api
 */
 	if(!tk.mds) return
 	tk.name = tk.mds.track.name
 
 	if( tk.mds.track.vcf ) {
-		// do not allow dom
-		tk.vcf = JSON.parse(JSON.stringify(tk.mds.track.vcf))
+		if(!tk.vcf) tk.vcf = {}
+		const c = JSON.parse(JSON.stringify(tk.mds.track.vcf)) // a hard copy to be planted to tk.vcf{}
+		for(const k in c) {
+			if(tk.vcf[k]==undefined) tk.vcf[k] = c[k]
+		}
+		// preserve customizations of numerical axis
+		if(c.numerical_axis) {
+			for(const k in c.numerical_axis) {
+				if(tk.vcf.numerical_axis[k]==undefined) tk.vcf.numerical_axis[k] = c.numerical_axis[k]
+			}
+		}
 	}
 
 	// TODO other file types
 
 	if( tk.mds.track.info_fields ) {
-		if( !tk.info_fields ) tk.info_fields=[]
-		Object.assign( tk.info_fields, JSON.parse(JSON.stringify(tk.mds.track.info_fields)) )
+		// TODO accept customizations
+		tk.info_fields = JSON.parse(JSON.stringify(tk.mds.track.info_fields))
 	}
 }
 
