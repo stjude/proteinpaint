@@ -73,7 +73,8 @@ return async (req,res) => {
 					}
 				} else if( i.isflag ) {
 					result.info_fields[ i.key ] = {
-						filteredcount:0
+						count_yes:0,
+						count_no:0
 					}
 				} else {
 					throw 'unknown info type'

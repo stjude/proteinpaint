@@ -16,10 +16,11 @@ update
 create_mclass
 may_create_variantfilter
 update_mclass
+update_info_fields
 display_active_variantfilter_infofields
-update_categorical_filter
-update_flag_filter
-update_numeric_filter
+display_categorical_filter
+display_flag_filter
+display_numeric_filter
 list_all_variantfilter
 configure_one_infofield
 */
@@ -311,15 +312,15 @@ allow interacting with it, to update settings of i, and update track
 	if( i.iscategorical ) {
 
 		// categorical category filter
-		update_categorical_filter(tk, i, active_filter_div, row)
+		display_categorical_filter(tk, i, active_filter_div, row)
 
 	} else if( i.isinteger || i.isfloat ) {
 
 		// numerical category filter
-		update_numeric_filter(tk, i, active_filter_div, row)
+		display_numeric_filter(tk, i, active_filter_div, row)
 
 	} else if( i.isflag ) {
-		update_flag_filter(tk, i, active_filter_div, row)
+		display_flag_filter(tk, i, active_filter_div, row)
 	} else {
 		throw 'unknown info type'
 	}
@@ -347,284 +348,284 @@ function list_all_variantfilter ( tk, block ) {
 	from info_fields and variantcase_fields
 	list inactive filters
 	*/	
-		// console.log(tk.info_fields)
-		const tip = tk.legend.tip
-		tip.clear()
-	
-		const filter_table = tip.d.append('table')
-			.style('border-spacing','5px')
-			.style('border-collapse','separate')
-	
-		if(tk.info_fields) {
-			for(const i of tk.info_fields) {
-	
-				const filter_row = filter_table.append('tr')
-				const filter_title = filter_row.append('td')
-					.style('padding','5px')
-				const filter_terms_td = filter_row.append('td')
-					.style('padding','5px')
-	
-				filter_title
-					.style('text-align','right')
-					.style('opacity',.5)
-					.text(i.label)
-	
-				if( i.iscategorical ) {
-					
-					update_categorical_filter_all(i, filter_terms_td)
-	
-				} else if( i.isinteger || i.isfloat ) {
-	
-					update_numeric_filter_all(i, filter_terms_td)
-	
-				} else if( i.isflag ) {
-	
-					update_flag_filter_all(i, filter_terms_td)
-	
-				}else{
-	
-					throw 'unknown info type'
-				}
-			}
-		}
-	
-		if(tk.variantcase_fields) {
-		}
-	
-		tk.legend.tip.showunder( tk.legend.variantfilter.button.node() )
-	
-		function update_categorical_filter_all(i, filter_terms_td){
-	
-			filter_terms_td.selectAll('*').remove()
-	
-			for(const v of i.values ) {
-						
-				const filter_term_div = filter_terms_td.append('div')
-					.style('display','inline-block')
-					.style('padding','2px 10px')
-	
-				const varient_count = filter_term_div.append('div')
-					.attr('class','sja_mcdot')
-					.style('display','inline-block')
-					.style('background', '#aaa')
-					.style('padding','2px 3px')
-					.text(i._data ? i._data.value2count[v.key] : '')
-	
-				const filter_term = filter_term_div.append('div')
-					.style('display','inline-block')
-					.style('background', '#fff')
-					.style('padding','2px 5px')
-					.text(v.label)
-	
-				if(v.ishidden){
-					varient_count.style('text-decoration','line-through')
-					filter_term.style('text-decoration','line-through')
-				}
-	
-				filter_term_div.on('click',async ()=>{
-	
-					v.ishidden =  v.ishidden ? false : true
-					await tk.load()
-					list_all_variantfilter(tk, block)
-					update_active_filter_div(tk, block)
-					
-				})
-			}
-		}
-	
-		function update_numeric_filter_all(i, filter_terms_td){
-	
-			filter_terms_td.selectAll('*').remove()
-	
-			const x = '<span style="font-family:Times;font-style:italic">x</span>'
-	
-			const start_input = filter_terms_td.append('input')
-				.attr('type','number')
-				.attr('value',i.range.start)
-				.style('width','60px')
-				.on('keyup', async ()=>{
-					if(!client.keyupEnter()) return
-					start_input.property('disabled',true)
-					await apply()
-					start_input.property('disabled',false)
-				})
-	
-			// select operator from dropdown to set start value relation
-			const startselect = filter_terms_td.append('select')
-			.style('margin-left','10px')
-	
-			startselect.append('option')
-				.html('&le;')
-			startselect.append('option')
-				.html('&lt;')
-			startselect.append('option')
-				.html('&#8734;')
-	
-			startselect.node().selectedIndex =
-				i.range.startunbounded ? 2 :
-				i.range.startinclusive ? 0 : 1
-	
-			filter_terms_td.append('div')
-				.style('display','inline-block')
-				.style('padding','3px 10px')
-				.html(x)
-	
-			// select operator from dropdown to set end value relation
-			const stopselect = filter_terms_td.append('select')
-				.style('margin-right','10px')
-	
-			stopselect.append('option')
-				.html('&le;')
-			stopselect.append('option')
-				.html('&lt;')
-			stopselect.append('option')
-				.html('&#8734;')
-	
-			stopselect.node().selectedIndex =
-				i.range.stopunbounded ? 2 :
-				i.range.stopinclusive ? 0 : 1
-	
-			const stop_input = filter_terms_td.append('input')
-				.attr('type','number')
-				.style('width','60px')
-				.attr('value',i.range.stop)
-				.on('keyup', async ()=>{
-					if(!client.keyupEnter()) return
-					stop_input.property('disabled',true)
-					await apply()
-					stop_input.property('disabled',false)
-				})
-	
-			const apply_checkbox_div = filter_terms_td.append('div')
-				.style('display','inline-block')
-				.style('padding','3px 10px')
-				.style('font-size','.8em')
-				.text('Apply')
-			
-			
-			const apply_checkbox = apply_checkbox_div.append('input')
-				.attr('type','checkbox')
-				.style('font-size','1em')
-				.style('margin','0 10px')
-	
-			if(i.isactivefilter){
-				apply_checkbox.property('checked',true)
-			}
-	
-			const update_btn = filter_terms_td.append('div')
-				.attr('class','sja_menuoption')
-				.style('display','inline-block')
-				.style('font-size','.8em')
-				.style('margin-left','5px')
-				.style('padding','3px 5px')
-				.text('Update')
-				.on('click',()=>{
-					apply()
-				})
-	
-			async function apply () {
-	
-				try {
-					if(apply_checkbox.node().checked == false) {
-						i.isactivefilter = false
-					}else{
-						i.isactivefilter = true
-						i.htmlspan = filter_terms_td.append('div')
-							.style('display','none')
-					}
-	
-					if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
-	
-					const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
-					const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
-					if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
-	
-					if( startselect.node().selectedIndex == 2 ) {
-						i.range.startunbounded = true
-						delete i.range.start
-					} else {
-						delete i.range.startunbounded
-						i.range.start = start
-						i.range.startinclusive = startselect.node().selectedIndex == 0
-					}
-					if( stopselect.node().selectedIndex == 2 ) {
-						i.range.stopunbounded = true
-						delete i.range.stop
-					} else {
-						delete i.range.stopunbounded
-						i.range.stop = stop
-						i.range.stopinclusive = stopselect.node().selectedIndex == 0
-					}
-					await tk.load()
-					list_all_variantfilter(tk, block)
-					update_active_filter_div(tk, block)
-				} catch(e) {
-					window.alert(e)
-				}
-			}
-		}
-	
-		function update_flag_filter_all(i, filter_terms_td){
-			const yes_flag_div = filter_terms_td.append('div')
-				.style('display','inline-block')
-				.style('padding','3px 10px')
-				.on('click',async ()=>{
-					
-					i.remove_yes =  i.remove_yes ? false : true
-					i.remove_no =  i.remove_no ? false : true
-					await tk.load()
-					list_all_variantfilter(tk, block)
-					update_active_filter_div(tk, block)
-					
-				})
-	
-			const yes_count = yes_flag_div.append('div')
-				.attr('class','sja_mcdot')
-				.style('display','inline-block')
-				.style('background', '#aaa')
-				.style('padding','2px 3px')
-				.text(i._data ? i._data.filteredcount : '')
-	
-			const yes_div = yes_flag_div.append('div')
-				.style('display','inline-block')
-				.style('background', '#fff')
-				.style('padding','4px 5px')
-				.text('Yes')
-	
-			
-			const no_flag_div = filter_terms_td.append('div')
-				.style('display','inline-block')
-				.style('padding','3px 10px')
-				.on('click',async ()=>{
-					
-					i.remove_yes =  i.remove_yes ? false : true
-					i.remove_no =  i.remove_no ? false : true
-					await tk.load()
-					list_all_variantfilter(tk, block)
-					update_active_filter_div(tk, block)
-					
-				})	
-	
-			const no_count = no_flag_div.append('div')
-				.attr('class','sja_mcdot')
-				.style('display','inline-block')
-				.style('background', '#aaa')
-				.style('padding','2px 3px')
-				.text(i._data ? i._data.filteredcount : '')
-	
-			const no_div = no_flag_div.append('div')
-				.style('display','inline-block')
-				.style('background', '#fff')
-				.style('padding','4px 5px')
-				.text('No')
-	
-			if(i.remove_no){
-				no_div.style('text-decoration','line-through')
+	// console.log(tk.info_fields)
+	const tip = tk.legend.tip
+	tip.clear()
+
+	const filter_table = tip.d.append('table')
+		.style('border-spacing','5px')
+		.style('border-collapse','separate')
+
+	if(tk.info_fields) {
+		for(const i of tk.info_fields) {
+
+			const filter_row = filter_table.append('tr')
+			const filter_title = filter_row.append('td')
+				.style('padding','5px')
+			const filter_terms_td = filter_row.append('td')
+				.style('padding','5px')
+
+			filter_title
+				.style('text-align','right')
+				.style('opacity',.5)
+				.text(i.label)
+
+			if( i.iscategorical ) {
+				
+				update_categorical_filter_all(i, filter_terms_td)
+
+			} else if( i.isinteger || i.isfloat ) {
+
+				update_numeric_filter_all(i, filter_terms_td)
+
+			} else if( i.isflag ) {
+
+				update_flag_filter_all(i, filter_terms_td)
+
 			}else{
-				yes_div.style('text-decoration','line-through')
+
+				throw 'unknown info type'
 			}
 		}
 	}
+
+	if(tk.variantcase_fields) {
+	}
+
+	tk.legend.tip.showunder( tk.legend.variantfilter.button.node() )
+
+	function update_categorical_filter_all(i, filter_terms_td){
+
+		filter_terms_td.selectAll('*').remove()
+
+		for(const v of i.values ) {
+					
+			const filter_term_div = filter_terms_td.append('div')
+				.style('display','inline-block')
+				.style('padding','2px 10px')
+
+			const varient_count = filter_term_div.append('div')
+				.attr('class','sja_mcdot')
+				.style('display','inline-block')
+				.style('background', '#aaa')
+				.style('padding','2px 3px')
+				.text(i._data ? i._data.value2count[v.key] : '')
+
+			const filter_term = filter_term_div.append('div')
+				.style('display','inline-block')
+				.style('background', '#fff')
+				.style('padding','2px 5px')
+				.text(v.label)
+
+			if(v.ishidden){
+				varient_count.style('text-decoration','line-through')
+				filter_term.style('text-decoration','line-through')
+			}
+
+			filter_term_div.on('click',async ()=>{
+
+				v.ishidden =  v.ishidden ? false : true
+				await tk.load()
+				list_all_variantfilter(tk, block)
+				update_active_filter_div(tk, block)
+				
+			})
+		}
+	}
+
+	function update_numeric_filter_all(i, filter_terms_td){
+
+		filter_terms_td.selectAll('*').remove()
+
+		const x = '<span style="font-family:Times;font-style:italic">x</span>'
+
+		const start_input = filter_terms_td.append('input')
+			.attr('type','number')
+			.attr('value',i.range.start)
+			.style('width','60px')
+			.on('keyup', async ()=>{
+				if(!client.keyupEnter()) return
+				start_input.property('disabled',true)
+				await apply()
+				start_input.property('disabled',false)
+			})
+
+		// select operator from dropdown to set start value relation
+		const startselect = filter_terms_td.append('select')
+		.style('margin-left','10px')
+
+		startselect.append('option')
+			.html('&le;')
+		startselect.append('option')
+			.html('&lt;')
+		startselect.append('option')
+			.html('&#8734;')
+
+		startselect.node().selectedIndex =
+			i.range.startunbounded ? 2 :
+			i.range.startinclusive ? 0 : 1
+
+		filter_terms_td.append('div')
+			.style('display','inline-block')
+			.style('padding','3px 10px')
+			.html(x)
+
+		// select operator from dropdown to set end value relation
+		const stopselect = filter_terms_td.append('select')
+			.style('margin-right','10px')
+
+		stopselect.append('option')
+			.html('&le;')
+		stopselect.append('option')
+			.html('&lt;')
+		stopselect.append('option')
+			.html('&#8734;')
+
+		stopselect.node().selectedIndex =
+			i.range.stopunbounded ? 2 :
+			i.range.stopinclusive ? 0 : 1
+
+		const stop_input = filter_terms_td.append('input')
+			.attr('type','number')
+			.style('width','60px')
+			.attr('value',i.range.stop)
+			.on('keyup', async ()=>{
+				if(!client.keyupEnter()) return
+				stop_input.property('disabled',true)
+				await apply()
+				stop_input.property('disabled',false)
+			})
+
+		const apply_checkbox_div = filter_terms_td.append('div')
+			.style('display','inline-block')
+			.style('padding','3px 10px')
+			.style('font-size','.8em')
+			.text('Apply')
+		
+		
+		const apply_checkbox = apply_checkbox_div.append('input')
+			.attr('type','checkbox')
+			.style('font-size','1em')
+			.style('margin','0 10px')
+
+		if(i.isactivefilter){
+			apply_checkbox.property('checked',true)
+		}
+
+		const update_btn = filter_terms_td.append('div')
+			.attr('class','sja_menuoption')
+			.style('display','inline-block')
+			.style('font-size','.8em')
+			.style('margin-left','5px')
+			.style('padding','3px 5px')
+			.text('Update')
+			.on('click',()=>{
+				apply()
+			})
+
+		async function apply () {
+
+			try {
+				if(apply_checkbox.node().checked == false) {
+					i.isactivefilter = false
+				}else{
+					i.isactivefilter = true
+					i.htmlspan = filter_terms_td.append('div')
+						.style('display','none')
+				}
+
+				if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
+
+				const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
+				const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
+				if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
+
+				if( startselect.node().selectedIndex == 2 ) {
+					i.range.startunbounded = true
+					delete i.range.start
+				} else {
+					delete i.range.startunbounded
+					i.range.start = start
+					i.range.startinclusive = startselect.node().selectedIndex == 0
+				}
+				if( stopselect.node().selectedIndex == 2 ) {
+					i.range.stopunbounded = true
+					delete i.range.stop
+				} else {
+					delete i.range.stopunbounded
+					i.range.stop = stop
+					i.range.stopinclusive = stopselect.node().selectedIndex == 0
+				}
+				await tk.load()
+				list_all_variantfilter(tk, block)
+				update_active_filter_div(tk, block)
+			} catch(e) {
+				window.alert(e)
+			}
+		}
+	}
+
+	function update_flag_filter_all(i, filter_terms_td){
+		const yes_flag_div = filter_terms_td.append('div')
+			.style('display','inline-block')
+			.style('padding','3px 10px')
+			.on('click',async ()=>{
+				
+				i.remove_yes =  i.remove_yes ? false : true
+				i.remove_no =  i.remove_no ? false : true
+				await tk.load()
+				list_all_variantfilter(tk, block)
+				update_active_filter_div(tk, block)
+				
+			})
+
+		const yes_count = yes_flag_div.append('div')
+			.attr('class','sja_mcdot')
+			.style('display','inline-block')
+			.style('background', '#aaa')
+			.style('padding','2px 3px')
+			.text(i._data ? i._data.count_yes : 0)
+
+		const yes_div = yes_flag_div.append('div')
+			.style('display','inline-block')
+			.style('background', '#fff')
+			.style('padding','4px 5px')
+			.text('Yes')
+
+		
+		const no_flag_div = filter_terms_td.append('div')
+			.style('display','inline-block')
+			.style('padding','3px 10px')
+			.on('click',async ()=>{
+				
+				i.remove_yes =  i.remove_yes ? false : true
+				i.remove_no =  i.remove_no ? false : true
+				await tk.load()
+				list_all_variantfilter(tk, block)
+				update_active_filter_div(tk, block)
+				
+			})	
+
+		const no_count = no_flag_div.append('div')
+			.attr('class','sja_mcdot')
+			.style('display','inline-block')
+			.style('background', '#aaa')
+			.style('padding','2px 3px')
+			.text(i._data ? i._data.count_no : 0)
+
+		const no_div = no_flag_div.append('div')
+			.style('display','inline-block')
+			.style('background', '#fff')
+			.style('padding','4px 5px')
+			.text('No')
+
+		if(i.remove_no){
+			no_div.style('text-decoration','line-through')
+		}else{
+			yes_div.style('text-decoration','line-through')
+		}
+	}
+}
 
 
 function update_active_filter_div(tk, block){
@@ -704,7 +705,7 @@ data is data.info_fields{}
 			} else if( i.isinteger || i.isfloat ) {
 				i.htmlspan.text('('+i._data.filteredcount+' filtered)')
 			} else if( i.isflag ) {
-				i.htmlspan.text('('+i._data.filteredcount+' filtered)')
+				i.htmlspan.text('('+(i.remove_yes?i._data.count_yes:i._data.count_no)+' filtered)')
 			} else {
 				throw 'unknown info type'
 			}
@@ -712,7 +713,7 @@ data is data.info_fields{}
 	}
 }
 
-function update_categorical_filter(tk, i, active_filter_div, row){
+function display_categorical_filter(tk, i, active_filter_div, row){
 
 	active_filter_div.selectAll('*').remove()
 	const tip = tk.legend.tip
@@ -740,7 +741,7 @@ function update_categorical_filter(tk, i, active_filter_div, row){
 				.style('text-decoration','line-through')
 				.on('click',async ()=>{
 					delete v.ishidden
-					update_categorical_filter(tk, i, active_filter_div)
+					display_categorical_filter(tk, i, active_filter_div)
 					if(hidden_term_count == 1){
 						delete i.isactivefilter
 						row.remove()
@@ -793,7 +794,7 @@ function update_categorical_filter(tk, i, active_filter_div, row){
 							.on('click',async ()=>{
 								tip.hide()
 								v.ishidden = true
-								update_categorical_filter(tk, i, active_filter_div)
+								display_categorical_filter(tk, i, active_filter_div)
 								visible_term_count = visible_term_count - 1
 								await tk.load()
 							})
@@ -803,7 +804,7 @@ function update_categorical_filter(tk, i, active_filter_div, row){
 	}
 }
 
-function update_numeric_filter(tk, i, active_filter_div, row){
+function display_numeric_filter(tk, i, active_filter_div, row){
 
 	active_filter_div.selectAll('*').remove()
 
@@ -943,7 +944,7 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 				}
 				i.htmlspan.text('Loading...')
 				await tk.load()
-				update_numeric_filter(tk, i, active_filter_div, row)
+				display_numeric_filter(tk, i, active_filter_div, row)
 			} catch(e) {
 				window.alert(e)
 			}
@@ -953,7 +954,7 @@ function update_numeric_filter(tk, i, active_filter_div, row){
 
 }
 
-function update_flag_filter(tk, i, active_filter_div, row){
+function display_flag_filter(tk, i, active_filter_div, row){
 
 	active_filter_div.selectAll('*').remove()
 
@@ -969,7 +970,7 @@ function update_flag_filter(tk, i, active_filter_div, row){
 			i.remove_yes = !i.remove_yes
 			i.htmlspan.text('Loading...')
 			await tk.load()
-			update_flag_filter(tk, i, active_filter_div, row)
+			display_flag_filter(tk, i, active_filter_div, row)
 		})
 
 	cell.append('div')
@@ -985,5 +986,7 @@ function update_flag_filter(tk, i, active_filter_div, row){
 		.style('background-color', '#ddd')
 		.style('color','#000')
 		.style('padding-left','3px')
-		.text( i._data ? '('+i._data.filteredcount+' filtered)' : '')
+	if(i._data) {
+		i.htmlspan.text('('+(i.remove_yes?i._data.count_yes:i._data.count_no)+' filtered)')
+	}
 }

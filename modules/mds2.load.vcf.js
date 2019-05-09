@@ -646,10 +646,12 @@ function _m_is_filtered ( q, result, mockblock ) {
 					if( todrop ) re.filteredcount++
 
 				} else if( i.isflag ) {
-					if( (i.remove_yes && value) || (i.remove_no && !value) ) {
-						todrop = true
-						re.filteredcount++
+					if( value ) {
+						re.count_yes++
+					} else {
+						re.count_no++
 					}
+					todrop = (i.remove_yes && value) || (i.remove_no && !value)
 				} else {
 					throw 'unknown info type'
 				}
