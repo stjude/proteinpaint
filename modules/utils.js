@@ -17,6 +17,8 @@ validate_tabixfile
 get_lines_tabix
 write_file
 read_file
+file_not_exist
+file_not_readable
 ********************** INTERNAL
 get_header_vcf
 */
@@ -105,6 +107,7 @@ function file_not_exist ( file ) {
 		})
 	})
 }
+exports.file_not_exist = file_not_exist
 
 
 
@@ -116,6 +119,7 @@ function file_not_readable ( file ) {
 		})
 	})
 }
+exports.file_not_readable = file_not_readable
 
 
 async function get_header_vcf ( file, dir ) {

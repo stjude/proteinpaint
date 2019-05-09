@@ -13,16 +13,22 @@ import {gene_searchbox, findgenemodel_bysymbol} from './gene'
 
 export async function init ( arg, holder ) {
 
-	const obj = await load_json( arg )
-	validate_obj( obj )
+	try {
 
-	obj.genome = arg.genome
-	obj.holder = holder
+		const obj = await load_json( arg )
+		validate_obj( obj )
 
-	init_view( obj )
-	init_controlpanel( obj )
+		obj.genome = arg.genome
+		obj.holder = holder
 
-	pcd_pipeline(obj)
+		init_view( obj )
+		init_controlpanel( obj )
+
+		await pcd_pipeline(obj)
+
+	} catch(e) {
+		client.sayerror(holder, e.message||e)
+	}
 }
 
 

@@ -18,6 +18,9 @@ handle_singlecell_closure
 get_pcd
 slice_file_add_color
 get_geneboxplot
+
+
+TODO need to test the existence of the json file
 */
 
 
@@ -109,6 +112,12 @@ may attach coloring scheme to result{} for returning to client
 	{
 		const [e,file,isurl] = app.fileurl( {query:{file:q.textfile}} )
 		if(e) throw '.textfile error: '+e
+
+		if(!isurl) {
+			if(await utils.file_not_exist(file)) throw 'file not exist: '+q.textfile
+			if(await utils.file_not_readable(file)) throw 'file not readable: '+q.textfile
+		}
+
 		q.textfile = file
 	}
 
