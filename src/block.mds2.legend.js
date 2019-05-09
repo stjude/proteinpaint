@@ -408,7 +408,7 @@ function list_all_variantfilter ( tk, block ) {
 					.style('display','inline-block')
 					.style('background', '#aaa')
 					.style('padding','2px 3px')
-					.text(i._data ? i._data.value2count[v.key.toLowerCase()] : '')
+					.text(i._data ? i._data.value2count[v.key] : '')
 	
 				const filter_term = filter_term_div.append('div')
 					.style('display','inline-block')
@@ -698,7 +698,7 @@ data is data.info_fields{}
 				if( i.unannotated_htmlspan ) i.unannotated_htmlspan.text('('+(i._data.unannotated_count||0)+') Unannotated')
 				for(const v of i.values) {
 					if( v.htmlspan ) {
-						v.htmlspan.text('('+(i._data.value2count[v.key.toLowerCase()]||0)+') '+v.label)
+						v.htmlspan.text('('+(i._data.value2count[v.key]||0)+') '+v.label)
 					}
 				}
 			} else if( i.isinteger || i.isfloat ) {
@@ -734,7 +734,7 @@ function update_categorical_filter(tk, i, active_filter_div, row){
 				.style('font-size','.9em')
 				.style('color','#000')
 				.text(
-					(i._data ? '('+i._data.value2count[v.key.toLowerCase()]+') ' : '')
+					(i._data ? '('+i._data.value2count[v.key]+') ' : '')
 					+v.label
 				)
 				.style('text-decoration','line-through')
@@ -787,7 +787,7 @@ function update_categorical_filter(tk, i, active_filter_div, row){
 							.style('display','inline-block')
 							.style('padding','1px 5px')
 							.text(
-								(i._data ? '('+i._data.value2count[v.key.toLowerCase()]+') ' : '')
+								(i._data ? '('+i._data.value2count[v.key]+') ' : '')
 								+v.label
 							)
 							.on('click',async ()=>{

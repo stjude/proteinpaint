@@ -75,11 +75,11 @@ module.exports={
 				iscategorical:true,
 				values:[
 					{
-						key:'Good',
+						key:'good',
 						label:'Good'
 					},
 					{
-						key:'Bad',
+						key:'bad',
 						label:'Bad',
 						ishidden:true
 					}
