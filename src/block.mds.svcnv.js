@@ -89,7 +89,7 @@ export const coverbarcolor_active='#ED8600'
 
 const minlabfontsize=7
 const minsvradius=5
-const svdensitynogroupcolor='#40859C'
+const svdensitynogroupcolor='#aaa'
 const leftlabelticksize=5
 
 const hardcode_cellline='CELLLINE'

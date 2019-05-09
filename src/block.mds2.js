@@ -4,7 +4,9 @@ import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
-import * as mds2vcf from './block.mds2.vcf'
+import {makeTk} from './block.mds2.makeTk'
+import {may_render_vcf} from './block.mds2.vcf'
+import {maygetparameter_numericaxis} from './block.mds2.vcf.numericaxis'
 
 
 
@@ -13,6 +15,7 @@ import * as mds2vcf from './block.mds2.vcf'
 loadTk
 ********************** INTERNAL
 makeTk
+makeTk_parse_client_config
 loadTk_finish_closure
 addparameter_rangequery
 
@@ -48,7 +51,9 @@ export async function loadTk( tk, block ) {
 
 		const data = await loadTk_do( tk, block )
 
-		const rowheight_vcf = mds2vcf.may_render_vcf( data, tk, block )
+		tk.clear()
+
+		const rowheight_vcf = may_render_vcf( data, tk, block )
 
 		// set height_main
 		tk.height_main = rowheight_vcf
@@ -66,54 +71,7 @@ export async function loadTk( tk, block ) {
 
 
 
-async function makeTk ( tk, block ) {
 
-	tk.tip2 = new client.Menu({padding:'0px'})
-
-	if( tk.dslabel ) {
-
-		// official dataset
-
-		tk.mds = block.genome.datasets[ tk.dslabel ]
-		if(!tk.mds) throw 'dataset not found for '+tk.dslabel
-		if(!tk.mds.track) throw 'mds.track{} missing: dataset not configured for mds2 track'
-		tk.name = tk.mds.track.name
-
-		// copy server-side configs
-		if( tk.mds.track.vcf ) {
-			// do not allow dom
-			tk.vcf = JSON.parse(JSON.stringify(tk.mds.track.vcf))
-		}
-		// TODO other file types
-
-	} else {
-
-		// custom
-		if(!tk.name) tk.name = 'Unamed'
-
-		if( tk.vcf ) {
-			await mds2vcf.getvcfheader_customtk( tk.vcf, block.genome )
-		}
-	}
-
-	tk.tklabel.text( tk.name )
-
-	if( tk.vcf ) {
-		// vcf row
-		tk.g_vcfrow = tk.glider.append('g')
-		tk.leftaxis_vcfrow = tk.gleft.append('g')
-	}
-
-	// TODO <g> for other file types
-
-	// config
-	tk.config_handle = block.maketkconfighandle(tk)
-		.on('click', ()=>{
-			configPanel(tk, block)
-		})
-
-	mds2legend.init( tk, block )
-}
 
 
 
@@ -155,9 +113,12 @@ function addparameter_rangequery ( tk, block ) {
 		genome:block.genome.name,
 	}
 
+	rangequery_add_variantfilters( par, tk )
+
 	if(tk.legend.mclass.hiddenvalues.size) {
 		par.hidden_mclass = [...tk.legend.mclass.hiddenvalues]
 	}
+
 
 	if( tk.mds ) {
 		// official
@@ -174,13 +135,17 @@ function addparameter_rangequery ( tk, block ) {
 	}
 
 	if( tk.vcf ) {
+
 		par.trigger_vcfbyrange = 1
+
+		maygetparameter_numericaxis( tk, par )
 	}
 	// add trigger for other data types
 	/* TODO
 	for vcf, when rendering image on server, need to know 
 	if any categorical attr is used to class variants instead of mclass
 	*/
+
 
 
 	par.rglst = block.tkarg_rglst(tk) // note here: not tkarg_usegm
@@ -257,4 +222,61 @@ function apply_scale_to_region ( rglst ) {
 
 
 function configPanel ( tk, block ) {
+}
+
+
+
+
+
+
+function rangequery_add_variantfilters ( par, tk ) {
+/*
+may add filter parameter for range query
+by info_fields[] and variantcase_fields[]
+*/
+	if( tk.info_fields ) {
+		par.info_fields = tk.info_fields.reduce(
+			(lst,i) => {
+				if( i.isfilter ) {
+					if( i.iscategorical ) {
+						// for categorical term, always register in parameter
+						// server will collect #variants for each category
+						const j = {
+							key: i.key,
+							iscategorical:true,
+							unannotated_ishidden: i.unannotated_ishidden,
+							hiddenvalues:{}
+						}
+						for(const v of i.values) {
+							if(v.ishidden) j.hiddenvalues[v.key] = 1
+						}
+						lst.push(j)
+					} else if( i.isinteger || i.isfloat ) {
+						// numerical
+						if( i.isactivefilter ) {
+							// only apply when the numerical filter is in use
+							lst.push({
+								key: i.key,
+								isnumerical:true,
+								range: i.range
+							})
+						}
+					} else if( i.isflag ) {
+						if( i.isactivefilter ) {
+							lst.push({
+								key: i.key,
+								isflag: true,
+								remove_no: i.remove_no,
+								remove_yes: i.remove_yes,
+							})
+						}
+					} else {
+						throw 'unknown type of info filter'
+					}
+				}
+				return lst
+			},
+			[]
+		)
+	}
 }

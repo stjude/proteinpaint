@@ -21,8 +21,6 @@ exports.handle_mafcovplot = async ( q, genome, ds, result ) => {
 				show_samplename:1
 			}
 
-			await utils.init_one_vcf( tk, genome )
-
 		} else {
 			if(!tk.plot_mafcov) throw 'maf-cov plot is not supported on this track'
 			// TODO jwt access control

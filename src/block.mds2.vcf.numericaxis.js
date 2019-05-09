@@ -1,21 +1,33 @@
 import {select as d3select,event as d3event} from 'd3-selection'
+import {format as d3format} from 'd3-format'
 import {axisTop, axisLeft, axisRight} from 'd3-axis'
 import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
-import * as coord from './coord'
-import {vcf_m_color,vcf_m_click} from './block.mds2.vcf'
+import {vcf_m_color, divide_data_to_group} from './block.mds2.vcf'
+import {vcf_clickvariant} from './block.mds2.vcf.clickvariant'
+import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
+
 
 /*
 adapted from legacy code
 
 ********************** EXPORTED
 render
+may_setup_numerical_axis
+get_axis_label
+get_axis_label_termdb2groupAF
+get_axis_label_ebgatest
+maygetparameter_numericaxis
 ********************** INTERNAL
 numeric_make
+render_axis
 setup_axis_scale
 adjustview
 verticallabplace
+m_mouseover
+m_mouseout
+may_printinfo_axistype
 
 
 
@@ -28,7 +40,6 @@ based on zoom level, toggle between two views:
 
 */
 
-const minbpwidth=4
 const disclabelspacing = 1 // px spacing between disc and label
 const middlealignshift = .3
 const labyspace = 5
@@ -37,7 +48,7 @@ const clustercrowdlimit = 7 // at least 8 px per disc, otherwise won't show mnam
 
 
 
-export function render ( r, _g, tk, block ) {
+export function render ( data, r, _g, tk, block ) {
 /*
 numerical axis
 info field as sources of values
@@ -46,12 +57,14 @@ value may be singular number, or boxplot
 
 */
 
+
 	const datagroup = divide_data_to_group( r, block )
 
-	// just a shorthand used for hundreds of times here
 	const nm = tk.vcf.numerical_axis
 
 	numeric_make( nm, r, _g, datagroup, tk, block )
+
+	may_printinfo_axistype( data, nm )
 
 	return nm.toplabelheight
 		+nm.maxradius
@@ -227,73 +240,20 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 	}
 
 
-	// 1: axis
-	tk.leftaxis_vcfrow
-		.attr('transform','translate(-'+(dotwidth/2)+','+(nm.toplabelheight+nm.maxradius)+')')
-		.selectAll('*')
-		.remove()
-	{
-		// axis is inverse of numscale
-		const thisscale = scaleLinear().domain([nm.minvalue, nm.maxvalue]).range([nm.axisheight, 0])
-		const thisaxis  = axisLeft().scale(thisscale).ticks(4)
-		if( nm.isinteger ) {
-			thisaxis.tickFormat(d3format('d'))
-			if(nm.maxvalue - nm.minvalue < 3) {
-				/*
-				must do this to avoid axis showing redundant labels that doesn't make sense
-				e.g. -1 -2 -2
-				*/
-				thisaxis.ticks( nm.maxvalue - nm.minvalue )
-			}
-		}
-		client.axisstyle({
-			axis:tk.leftaxis_vcfrow.call( thisaxis),
-			showline:true,
-			fontsize:dotwidth
-		})
-
-		if(nm.minvalue == nm.maxvalue) {
-			tk.leftaxis_vcfrow.append('text')
-				.attr('text-anchor','end')
-				.attr('font-size',dotwidth)
-				.attr('dominant-baseline','central')
-				.attr('x', block.tkleftlabel_xshift)
-				.attr('y',nm.axisheight)
-				.text(nm.minvalue)
-				.attr('fill','black')
-		}
-		// axis label, text must wrap
-		{
-			// read the max tick label width first
-			let maxw=0
-			tk.leftaxis_vcfrow.selectAll('text')
-				.each(function(){
-					maxw=Math.max(maxw,this.getBBox().width)
-				})
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw+15)
-
-			if( nm.label ) {
-				const lst = nm.label.split(' ')
-				const y=(nm.axisheight-lst.length*(dotwidth+1))/2
-				let maxlabelw=0
-				lst.forEach((text,i)=>{
-					tk.leftaxis_vcfrow.append('text')
-						.attr('fill','black')
-						.attr('font-size',dotwidth)
-						.attr('dominant-baseline','central')
-						.attr('text-anchor','end')
-						.attr('y', y+(dotwidth+1)*i)
-						.attr('x', -(maxw+15))
-						.text(text)
-						.each(function(){
-							maxlabelw = Math.max( maxlabelw, this.getBBox().width+15+maxw)
-						})
-				})
-				tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
-			}
-
-		}
+	render_axis( _g, tk, nm, block )
+	/*
+	if( nm.inuse_termdb2groupAF ) {
+		// show horizontal line at 0
+		_g
+			.append('line')
+			//.attr('y1', nm.toplabelheight+nm.maxradius+ numscale(0) )
+			.attr('y1',  numscale(0) )
+			.attr('y2', nm.toplabelheight+nm.maxradius+ numscale(0) )
+			.attr('x2', r.width )
+			.attr('stroke','black')
+			.attr('shape-rendering','crispEdges')
 	}
+	*/
 
 
 	_g.append('line')
@@ -380,7 +340,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		})
 		.on('click',m=>{
 			const p=d3event.target.getBoundingClientRect()
-			vcf_m_click(m, p, tk, block)
+			vcf_clickvariant(m, p, tk, block)
 		})
 
 
@@ -410,7 +370,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		.on('mouseover',m=>m_mouseover( m,nm,tk ))
 		.on('mouseout',m=>m_mouseout(m,tk))
 		.on('click',m=>{
-			vcf_m_click(m,{left:d3event.clientX,top:d3event.clientY},tk,block)
+			vcf_clickvariant(m,{left:d3event.clientX,top:d3event.clientY},tk,block)
 			if(block.debugmode) {
 				console.log(m)
 			}
@@ -658,9 +618,6 @@ function m_mouseover( m, nm, tk ) {
 		d3select(m.textlabel).attr('font-size',m._labfontsize*1.1)
 	}
 
-	if(nm.showsamplebar) return
-	if(nm.showgenotypebyvalue) return
-
 	// pica moves to center of m disc
 	tk.pica.g.attr('transform','translate('+(m.aa.x+m.xoff)+','+(nm.toplabelheight+nm.maxradius+nm.axisheight-m._y)+')')
 
@@ -669,29 +626,33 @@ function m_mouseover( m, nm, tk ) {
 	const fontsize = m._labfontsize || 13 // _labfontsize is undefined if this m has no lab
 	const color = vcf_m_color(m, tk)
 
-	let textw=0,
-		showlab=false
-	// measure text w for value
-	tk.pica.g.append('text')
+	const words = []
+	if( nm.inuse_termdb2groupAF ) {
+		// may add label
+		words.push( m.AF2group[0] )
+		words.push( m.AF2group[1] )
+	} else if( nm.inuse_ebgatest ) {
+		words.push( m.ebga.lpvalue )
+	} else if( nm.inuse_infokey ) {
+		words.push( m._v )
+	}
+	if(!m.labattop && !m.labatbottom) {
+		words.push( m.mname )
+	}
+
+	let textw=0
+		//showlab=false
+	for(const w of words) {
+		tk.pica.g.append('text')
 		.attr('font-size',fontsize)
 		.attr('font-family',client.font)
-		.text(m._v)
+		.text( w )
 		.each(function(){
-			textw=this.getBBox().width
+			textw = Math.max( textw, this.getBBox().width )
 		})
 		.remove()
-	if(!m.labattop && !m.labatbottom) {
-		// pica also show label
-		showlab=true
-		tk.pica.g.append('text')
-			.attr('font-size',fontsize)
-			.attr('font-family',client.font)
-			.text(m.mname)
-			.each(function(){
-				textw=Math.max(textw,this.getBBox().width)
-			})
-			.remove()
 	}
+
 	const boxw = boxpad*2+textw
 	let boxx,
 		linex1,
@@ -707,12 +668,14 @@ function m_mouseover( m, nm, tk ) {
 		boxx = linex1-boxw
 	}
 
+	const boxh = fontsize * words.length
+
 	// bg box for white rim
 	tk.pica.g.append('rect')
 		.attr('x',boxx-2)
-		.attr('y', -2-boxpad-( showlab ? fontsize : fontsize/2))
+		.attr('y', -2-boxpad-boxh/2 )
 		.attr('width',4+boxw)
-		.attr('height', 4+boxpad*2+fontsize*(showlab?2:1))
+		.attr('height', 4+boxpad*2 + boxh )
 		.attr('fill','white')
 	tk.pica.g.append('line')
 		.attr('x1',linex1)
@@ -727,31 +690,25 @@ function m_mouseover( m, nm, tk ) {
 		.attr('shape-rendering','crispEdges')
 	tk.pica.g.append('rect')
 		.attr('x',boxx)
-		.attr('y', -boxpad-( showlab ? fontsize : fontsize/2))
+		.attr('y', -boxpad- boxh/2 )
 		.attr('width',boxw)
-		.attr('height', boxpad*2+fontsize*(showlab?2:1))
+		.attr('height', boxpad*2+ boxh )
 		.attr('fill','none')
 		.attr('stroke',color)
 		.attr('shape-rendering','crispEdges')
-	tk.pica.g.append('text')
-		.text(m._v)
+	
+	let y = ( fontsize - boxh )/2
+	for(const w of words ) {
+		tk.pica.g.append('text')
+		.text( w )
 		.attr('text-anchor', onleft ? 'end' : 'start')
 		.attr('font-size',fontsize)
 		.attr('font-family',client.font)
 		.attr('x', onleft ? linex1-boxpad : boxx+boxpad)
-		.attr('y', showlab ? -fontsize/2 : 0)
+		.attr('y', y )
 		.attr('fill',color)
 		.attr('dominant-baseline','central')
-	if(showlab) {
-		tk.pica.g.append('text')
-			.text(m.mname)
-			.attr('text-anchor', onleft ? 'end' : 'start')
-			.attr('font-size',fontsize)
-			.attr('font-family',client.font)
-			.attr('x', onleft ? linex1-boxpad : boxx+boxpad)
-			.attr('y', showlab ? fontsize/2 : 0)
-			.attr('fill',color)
-			.attr('dominant-baseline','central')
+		y += fontsize
 	}
 }
 
@@ -767,146 +724,6 @@ function m_mouseout(m,tk) {
 
 
 
-function divide_data_to_group ( r, block ) {
-// legacy method
-	const x2mlst=new Map()
-	for(const m of r.variants) {
-
-		const hits=block.seekcoord(m.chr,m.pos)
-		if(hits.length==0) {
-			continue
-		}
-		if(hits.length==1) {
-			m.__x=hits[0].x
-		} else {
-			// hit at multiple regions, still use first hit as following code is not finished
-			m.__x=hits[0].x
-		}
-
-		if(!x2mlst.has(m.__x)) {
-			x2mlst.set(m.__x,[])
-		}
-		x2mlst.get(m.__x).push(m)
-	}
-	const datagroup=[]
-	// by resolution
-	if(block.exonsf>=minbpwidth) {
-		// # pixel per nt is big enough
-		// group by each nt
-		for(const [x,mlst] of x2mlst) {
-			datagroup.push({
-				chr:mlst[0].chr,
-				pos:mlst[0].pos,
-				mlst:mlst,
-				x:x,
-			})
-		}
-	} else {
-		// # pixel per nt is too small
-		if(block.usegm && block.usegm.coding && block.gmmode!=client.gmmode.genomic) {
-			// in protein view of a coding gene, see if to map to aa
-			// in gmsum, rglst may include introns, need to distinguish symbolic and rglst introns, use __x difference by a exonsf*3 limit
-
-			for(const mlst of x2mlst.values()) {
-				const t = coord.genomic2gm(mlst[0].pos,block.usegm)
-				for(const m of mlst) {
-					m.aapos = t.aapos
-					m.rnapos = t.rnapos
-				}
-			}
-
-			const aa2mlst=new Map()
-			// k: aa position
-			// v: [ [m], [], ... ]
-
-			for(const [x,mlst] of x2mlst) {
-				if(mlst[0].chr!=block.usegm.chr) {
-					continue
-				}
-				// TODO how to identify if mlst belongs to regulatory region rather than gm
-
-				const aapos = mlst[0].aapos
-
-				if(aapos==undefined) {
-					console.error('data item cannot map to aaposition')
-					console.log(mlst[0])
-					continue
-				}
-
-				// this group can be anchored to a aa
-				x2mlst.delete(x)
-
-				if(!aa2mlst.has( aapos )) {
-					aa2mlst.set(aapos,[])
-				}
-				let notmet=true
-				for(const lst of aa2mlst.get( aapos)) {
-					if(Math.abs(lst[0].__x-mlst[0].__x)<=block.exonsf*3) {
-						for(const m of mlst) {
-							lst.push(m)
-						}
-						notmet=false
-						break
-					}
-				}
-				if(notmet) {
-					aa2mlst.get(aapos).push(mlst)
-				}
-			}
-			const utr5len=block.usegm.utr5 ? block.usegm.utr5.reduce((i,j)=>i+j[1]-j[0],0) : 0
-			for(const llst of aa2mlst.values()) {
-				for(const mlst of llst) {
-					let m=null
-					for(const m2 of mlst) {
-						if(Number.isFinite(m2.rnapos)) m=m2
-					}
-					if(m==null) {
-						console.log('trying to map mlst to codon, but no rnapos found')
-						for(const m of mlst) {
-							console.log(m)
-						}
-						continue
-					}
-					datagroup.push({
-						chr:mlst[0].chr,
-						pos:m.pos,
-						mlst:mlst,
-						x:mlst[0].__x,
-					})
-				}
-			}
-		}
-
-		// leftover by px bin
-		const pxbin=[]
-		const binpx=2
-		for(const [x,mlst] of x2mlst) {
-			const i=Math.floor(x/binpx)
-			if(!pxbin[i]) {
-				pxbin[i]=[]
-			}
-			pxbin[i]=[...pxbin[i], ...mlst]
-		}
-		for(const mlst of pxbin) {
-			if(!mlst) continue
-			const xsum=mlst.reduce((i,j)=>i+j.__x,0)
-			datagroup.push({
-				isbin:true,
-				chr:mlst[0].chr,
-				pos:mlst[0].pos,
-				mlst:mlst,
-				x:xsum/mlst.length,
-			})
-		}
-	}
-
-	datagroup.sort((a,b)=>a.x-b.x)
-
-	return datagroup
-}
-
-
-
 
 
 
@@ -919,53 +736,352 @@ decide following things about the y axis:
 - name label
 */
 
-	// TODO may allow predefined scale
 
 	nm.minvalue = 0
 	nm.maxvalue = 0
 
-	delete nm.isinteger
+	// these are only for inuse_infokey
+	let info_key,
+		use_altinfo
 
-	// conditional - using a single info key
-	if( nm.use_info_key ) {
-
+	if( nm.inuse_infokey ) {
+		info_key = nm.info_keys.find( i=> i.in_use ).key // setup_numerical_axis guarantee this is valid
 		// if the INFO is A, apply to m.altinfo, else, to m.info
-		let usealtinfo = tk.vcf.info[ nm.use_info_key ].Number == 'A'
-
-		for(const m of r.variants) {
-
-			let v = null
-
-			if( usealtinfo ) {
-				if( m.altinfo ) {
-					v = m.altinfo[ nm.use_info_key ]
-				}
-			} else {
-				if( m.info ) {
-					v = m.info[ nm.use_info_key ]
-				}
-			}
-
-			if(Number.isFinite( v )) {
-
-				m._v = v // ?
-
-				nm.minvalue = Math.min( nm.minvalue, v )
-				nm.maxvalue = Math.max( nm.maxvalue, v )
-			}
-		}
-
-		if( tk.mds && tk.mds.mutationAttribute ) {
-			const a = tk.mds.mutationAttribute.attributes[ nm.use_info_key ]
-			if( !a ) throw 'unknown info field: '+nm.use_info_key
-			if( a.isinteger ) nm.isinteger = true
-			nm.label = a.label
-		}
-		return
+		use_altinfo = tk.vcf.info[ info_key ].Number == 'A'
 	}
 
-	throw 'unknown source of axis scaling'
+	for(const m of r.variants) {
+
+		let v = null
+
+		if( nm.inuse_termdb2groupAF ) {
+
+			v = m.AF2group[0] - m.AF2group[1]
+
+		} else if( nm.inuse_ebgatest ) {
+
+			v = m.ebga ? (m.ebga.lpvalue || 0) : 0
+
+		} else if( use_altinfo ) {
+
+			if( m.altinfo ) {
+				v = m.altinfo[ info_key ]
+			}
+
+		} else {
+			if( m.info ) {
+				v = m.info[ info_key ]
+			}
+		}
+
+		if(!Number.isFinite( v )) {
+			// missing value, if there is a predefined one
+			v = Number.isFinite(nm.missing_value) ? nm.missing_value : 0
+		}
+
+		m._v = v // for later use
+
+		nm.minvalue = Math.min( nm.minvalue, v )
+		nm.maxvalue = Math.max( nm.maxvalue, v )
+	}
+
+	if( nm.inuse_termdb2groupAF ) {
+		// for two group comparison, use the same range for two sides
+		const v = Math.max( Math.abs(nm.minvalue), Math.abs(nm.maxvalue) )
+		nm.minvalue = -v
+		nm.maxvalue = v
+	}
 }
 
 
 
+export function may_setup_numerical_axis ( tk ) {
+/*
+to validate the numerical axis info field setting
+and set the .isinteger and .label of nm
+
+call this in makeTk()
+and switching numeric axis category
+*/
+
+	if(!tk.vcf) return
+
+	const nm = tk.vcf.numerical_axis
+	if( !nm.in_use ) {
+		// not in use, do not set up
+		return
+	}
+
+	delete nm.isinteger
+
+	// which option to use
+	if( !nm.info_keys && !nm.termdb2groupAF && !nm.ebgatest ) throw 'no options for numerical axis'
+
+	if( nm.inuse_infokey ) {
+		if( !nm.info_keys ) throw '.info_keys[] missing when inuse_infokey is true'
+	} else if( nm.inuse_termdb2groupAF ) {
+		if( !nm.termdb2groupAF ) throw '.termdb2groupAF missing when inuse_termdb2groupAF is true'
+	} else if( nm.inuse_ebgatest ) {
+		if( !nm.ebgatest ) throw '.ebgatest missing when inuse_ebgatest is true'
+	} else {
+		// no option in use, use one by default
+		if( nm.termdb2groupAF ) {
+			nm.inuse_termdb2groupAF = true
+		} else if ( nm.info_keys ) {
+			nm.inuse_infokey = true
+		} else if ( nm.ebgatest ) {
+			nm.inuse_ebgatest = true
+		}
+	}
+
+	if( nm.info_keys ) {
+
+		// info keys
+		if(!Array.isArray(nm.info_keys)) throw 'numerical_axis.info_keys[] is not an array'
+		if(nm.info_keys.length==0) throw 'numerical_axis.info_keys[] array is empty'
+
+		let info_element = nm.info_keys.find( i=> i.in_use ) // which element from tk.vcf.numerical_axis.info_keys is in use
+		if( !info_element ) {
+			info_element = nm.info_keys[0]
+			if( !info_element ) throw 'numerical_axis.info_keys is empty array'
+			info_element.in_use = true
+		}
+
+		if(!tk.vcf.info) throw 'VCF file has no INFO fields'
+		const info_field = tk.vcf.info[ info_element.key ]
+		if( !info_field ) throw 'unknown INFO field for numerical axis: '+info_element.key
+
+		if( nm.inuse_infokey ) {
+			let notset=true
+			if( tk.info_fields ) {
+				const a = tk.info_fields.find( i=> i.key == info_element.key )
+				if( a ) {
+					notset=false
+					if( a.isinteger ) nm.isinteger = true
+				}
+			}
+			if( notset ) {
+				if( info_field.Type=='Integer' ) nm.isinteger=true
+			}
+		}
+	}
+
+	if( nm.termdb2groupAF ) {
+		const g = nm.termdb2groupAF
+		if(!g.group1) throw '.group1{} missing'
+		if(!g.group1.terms) throw '.group1.terms[] missing'
+		if(!g.group2) throw '.group2{} missing'
+		if(!g.group2.terms) throw '.group2.terms[] missing'
+		// allow terms array to be empty
+		validate_termvaluesetting( g.group1.terms, 'termdb2groupAF.group1' )
+		validate_termvaluesetting( g.group2.terms, 'termdb2groupAF.group2' )
+	}
+
+	if( nm.ebgatest ) {
+		const e = nm.ebgatest
+		if( !e.terms ) throw '.ebgatest.terms[] missing'
+		validate_termvaluesetting( e.terms, 'ebgatest' )
+		if( !e.populations ) throw 'ebgatest.populations[] missing'
+		for( const i of e.populations ) {
+			if(!i.key) throw '.key missing from a population of ebgatest'
+			if(!i.infokey_AC) throw '.infokey_AC missing from a population of ebgatest'
+			if(!i.infokey_AN) throw '.infokey_AN missing from a population of ebgatest'
+		}
+	}
+
+	if( nm.inuse_ebgatest ) {
+		nm.label = '-log10 P-value'
+	} else {
+		nm.label = get_axis_label( tk )
+	}
+}
+
+
+
+
+
+
+
+
+
+
+function render_axis ( _g, tk, nm, block ) {
+/*
+render axis
+*/
+	tk.leftaxis_vcfrow
+		.attr('transform','translate(-'+(nm.dotwidth/2)+','+(nm.toplabelheight+nm.maxradius)+')')
+		.selectAll('*')
+		.remove()
+
+	// axis is inverse of numscale
+	const thisscale = scaleLinear().domain([nm.minvalue, nm.maxvalue]).range([nm.axisheight, 0])
+	const thisaxis  = axisLeft().scale(thisscale).ticks(4)
+	if( nm.isinteger ) {
+		thisaxis.tickFormat(d3format('d'))
+		if(nm.maxvalue - nm.minvalue < 3) {
+			/*
+			must do this to avoid axis showing redundant labels that doesn't make sense
+			e.g. -1 -2 -2
+			*/
+			thisaxis.ticks( nm.maxvalue - nm.minvalue )
+		}
+	}
+	client.axisstyle({
+		axis:tk.leftaxis_vcfrow.call( thisaxis),
+		showline:true,
+		fontsize: nm.dotwidth
+	})
+
+	if(nm.minvalue == nm.maxvalue) {
+		tk.leftaxis_vcfrow.append('text')
+			.attr('text-anchor','end')
+			.attr('font-size', nm.dotwidth)
+			.attr('dominant-baseline','central')
+			.attr('x', block.tkleftlabel_xshift)
+			.attr('y',nm.axisheight)
+			.text(nm.minvalue)
+			.attr('fill','black')
+	}
+
+	// axis label, text must wrap
+	// read the max tick label width first
+	let maxw=0
+	tk.leftaxis_vcfrow.selectAll('text')
+		.each(function(){
+			maxw=Math.max(maxw,this.getBBox().width)
+		})
+	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw+15)
+
+	if( nm.label ) {
+		const lst = nm.label.split(' ')
+		const y=(nm.axisheight-lst.length*( nm.dotwidth+1))/2
+		let maxlabelw=0
+		lst.forEach((text,i)=>{
+			tk.leftaxis_vcfrow.append('text')
+				.attr('fill','black')
+				.attr('font-size', nm.dotwidth)
+				.attr('dominant-baseline','central')
+				.attr('text-anchor','end')
+				.attr('y', y+(nm.dotwidth+1)*i)
+				.attr('x', -(maxw+15))
+				.text(text)
+				.each(function(){
+					maxlabelw = Math.max( maxlabelw, this.getBBox().width+15+maxw)
+				})
+		})
+		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
+	}
+}
+
+
+
+
+/////////////////////// exported helper functions
+
+
+export function get_axis_label ( tk ) {
+	if(!tk.vcf) return
+	const nm = tk.vcf.numerical_axis
+	if(!nm) return
+	if(!nm.in_use) return 'Disabled'
+	if( nm.inuse_infokey ) {
+		const key = nm.info_keys.find( i=> i.in_use )
+		if(!key) return 'Error: no key in_use'
+		if( tk.info_fields ) {
+			const a = tk.info_fields.find( i=> i.key == key.key )
+			if( a && a.label ) return a.label
+		}
+		return key.key
+	}
+	if( nm.inuse_termdb2groupAF ) return get_axis_label_termdb2groupAF(tk)
+	if( nm.inuse_ebgatest ) return get_axis_label_ebgatest(tk)
+	return 'Error: unknown type of axis'
+}
+
+
+
+export function get_axis_label_termdb2groupAF ( tk ) {
+	// TODO need to synthesize a more informative label based on term settings of group1/2
+	return 'Two-group AF comparison'
+}
+
+export function get_axis_label_ebgatest ( tk ) {
+	// TODO 
+	return 'Ethnic background adjusted test'
+}
+
+
+
+export function maygetparameter_numericaxis ( tk, par ) {
+/*
+append numeric axis parameter to object for loadTk
+*/
+	if(!tk.vcf) return
+	const nm = tk.vcf.numerical_axis
+	if(!nm) return
+	if(!nm.in_use) return
+	if( nm.inuse_termdb2groupAF && nm.termdb2groupAF ) {
+		par.termdb2groupAF = {
+			group1: {
+				terms: terms2parameter( nm.termdb2groupAF.group1.terms )
+			},
+			group2: {
+				terms: terms2parameter( nm.termdb2groupAF.group2.terms )
+			},
+		}
+		return
+	}
+	if( nm.inuse_ebgatest && nm.ebgatest ) {
+		par.ebgatest = {
+			terms: terms2parameter( nm.ebgatest.terms ),
+			populations: nm.ebgatest.populations
+		}
+		return
+	}
+	// add more axis type
+}
+
+
+
+
+function terms2parameter ( terms ) {
+// works for list of terms from either termdb2groupAF or ebgatest
+// TODO and/or between multiple terms
+	return terms.map( i=> {
+		return {
+			term: {
+				id: i.term.id,
+				iscategorical: i.term.iscategorical,
+				isfloat: i.term.isfloat,
+				isinteger: i.term.isinteger,
+			},
+			values: i.values,
+			range: i.range,
+			isnot: i.isnot,
+		}
+	})
+}
+
+
+
+
+function may_printinfo_axistype ( data, nm ) {
+// data{} is returned by server
+	if( nm.inuse_termdb2groupAF ) {
+		nm.termdb2groupAF.group1.div_numbersamples.text( '#patients: '+data.group1numbersamples )
+		nm.termdb2groupAF.group2.div_numbersamples.text( '#patients: '+data.group2numbersamples )
+		return
+	}
+	if( nm.inuse_ebgatest ) {
+		nm.ebgatest.div_numbersamples.text( '#patients: '+data.numbersamples )
+		nm.ebgatest.div_populationaverage.selectAll('*').remove()
+		data.populationaverage.forEach(i=>{
+			nm.ebgatest.div_populationaverage.append('div')
+				.style('display','inline-block')
+				.style('margin','0px 10px')
+				.text(i.key+': '+i.v.toFixed(3))
+		})
+		return
+	}
+}

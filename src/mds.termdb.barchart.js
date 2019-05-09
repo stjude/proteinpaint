@@ -395,7 +395,7 @@ or stacked bar plot for cross-tabulating
 
 plot()
 */
-	console.log(plot)
+	// console.log(plot)
 	// set y axis min/max scale
 	const [yscale_min, yscale_max] = set_yscale( plot )
 

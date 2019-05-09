@@ -2,34 +2,34 @@ import * as common from './common'
 import * as client from './client'
 import {vcfparsemeta} from './vcf'
 import * as numericaxis from './block.mds2.vcf.numericaxis'
-import {show_mafcovplot} from './block.mds2.vcf.mafcovplot'
-import {termdb_bygenotype} from './block.mds2.vcf.termdb'
+import * as plain from './block.mds2.vcf.plain'
+import * as coord from './coord'
 
 
 /*
 ********************** EXPORTED
 may_render_vcf
 vcf_m_color
-vcf_m_click
 getvcfheader_customtk
+divide_data_to_group
 ********************** INTERNAL
-vcf_render_variants
-maymakebutton_vcf_mafcovplot
-maymakebutton_vcf_termdbbygenotype
+vcf_rendervariants_oneregion
 
 */
 
+
+
+const minbpwidth=4
 
 
 export function may_render_vcf ( data, tk, block ) {
 /* for now, assume always in variant-only mode for vcf
-return vcf row height
+render all variants in one row
+and return row height
 */
 	if( !tk.vcf ) return 0
 	if( !data.vcf ) return 0
 	if( !data.vcf.rglst ) return 0
-
-	tk.g_vcfrow.selectAll('*').remove()
 
 	/* current implementation ignore subpanels
 	to be fixed in p4
@@ -64,7 +64,7 @@ return vcf row height
 		}
 
 		if( r.variants ) {
-			const height = vcf_render_variants( r, g, tk, block )
+			const height = vcf_rendervariants_oneregion( data, r, g, tk, block )
 			rowheight = Math.max( rowheight, height )
 			continue
 		}
@@ -83,20 +83,22 @@ return vcf row height
 
 
 
-function vcf_render_variants ( r, g, tk, block ) {
+function vcf_rendervariants_oneregion ( data, r, g, tk, block ) {
 /*
 got the actual list of variants at r.variants[], render them
 */
 
+	let height = 50
+
 	if( tk.vcf.numerical_axis && tk.vcf.numerical_axis.in_use ) {
 		// numerical axis by info field
-		const height = numericaxis.render( r, g, tk, block )
-		return height
+		height = numericaxis.render( data, r, g, tk, block )
+	} else {
+		// not numerical axis
+		height = plain.render( data, r, g, tk, block )
 	}
 
-	// not numerical axis
-	// TODO
-	return 50
+	return height
 }
 
 
@@ -104,31 +106,6 @@ got the actual list of variants at r.variants[], render them
 export function vcf_m_color ( m, tk ) {
 // TODO using categorical attribute
 	return common.mclass[m.class].color
-}
-
-
-
-export function vcf_m_click ( m, p, tk, block ) {
-/*
-p{}
-	.left
-	.top
-*/
-	// if to show sunburst, do it here, no pane
-
-	const pane = client.newpane({x: p.left, y: p.top})
-	pane.header.html(
-		'<span style="font-weight:bold;color:'+common.mclass[m.class].color+'">'+m.mname+'</span>'
-		+' <span style="font-size:.7em">'+common.mclass[m.class].label+'</span>'
-	)
-
-	const buttonrow = pane.body.append('div')
-		.style('margin','20px')
-
-	const showholder = pane.body.append('div')
-
-	maymakebutton_vcf_termdbbygenotype( buttonrow, showholder, m, tk, block )
-	maymakebutton_vcf_mafcovplot( buttonrow, showholder, m, tk, block )
 }
 
 
@@ -161,85 +138,141 @@ export function getvcfheader_customtk ( tk, genome ) {
 
 
 
-function maymakebutton_vcf_mafcovplot ( buttonrow, showholder, m, tk, block ) {
-// only for vcf item
 
-	if(!tk.vcf) return
-	if(!tk.vcf.plot_mafcov ) return
+export function divide_data_to_group ( r, block ) {
+// legacy method
+	const x2mlst=new Map()
+	for(const m of r.variants) {
 
-	let loading = false,
-		loaded = false
+		const hits=block.seekcoord(m.chr,m.pos)
+		if(hits.length==0) {
+			continue
+		}
+		if(hits.length==1) {
+			m.__x=hits[0].x
+		} else {
+			// hit at multiple regions, still use first hit as following code is not finished
+			m.__x=hits[0].x
+		}
 
-	const button = buttonrow.append('div')
-		.style('display','inline-block')
-		.attr('class','sja_menuoption')
-		.text('Coverage-maf plot')
+		if(!x2mlst.has(m.__x)) {
+			x2mlst.set(m.__x,[])
+		}
+		x2mlst.get(m.__x).push(m)
+	}
+	const datagroup=[]
+	// by resolution
+	if(block.exonsf>=minbpwidth) {
+		// # pixel per nt is big enough
+		// group by each nt
+		for(const [x,mlst] of x2mlst) {
+			datagroup.push({
+				chr:mlst[0].chr,
+				pos:mlst[0].pos,
+				mlst:mlst,
+				x:x,
+			})
+		}
+	} else {
+		// # pixel per nt is too small
+		if(block.usegm && block.usegm.coding && block.gmmode!=client.gmmode.genomic) {
+			// in protein view of a coding gene, see if to map to aa
+			// in gmsum, rglst may include introns, need to distinguish symbolic and rglst introns, use __x difference by a exonsf*3 limit
 
-	const plotdiv = showholder.append('div')
-
-	button.on('click', async ()=>{
-
-		if( loading ) return
-		if( loaded ) {
-			if(plotdiv.style('display')=='none') {
-				client.appear(plotdiv)
-			} else {
-				client.disappear(plotdiv)
+			for(const mlst of x2mlst.values()) {
+				const t = coord.genomic2gm(mlst[0].pos,block.usegm)
+				for(const m of mlst) {
+					m.aapos = t.aapos
+					m.rnapos = t.rnapos
+				}
 			}
-			return
-		}
-		loading=true
-		button.text('Loading...')
-		try {
-			await show_mafcovplot( plotdiv, m, tk, block )
-		}catch(e){
-			plotdiv.text('Error: '+(e.message||e))
-		}
-		loading=false
-		loaded=true
-		button.text('Coverage-maf plot')
-	})
-}
 
+			const aa2mlst=new Map()
+			// k: aa position
+			// v: [ [m], [], ... ]
 
+			for(const [x,mlst] of x2mlst) {
+				if(mlst[0].chr!=block.usegm.chr) {
+					continue
+				}
+				// TODO how to identify if mlst belongs to regulatory region rather than gm
 
+				const aapos = mlst[0].aapos
 
-function maymakebutton_vcf_termdbbygenotype ( buttonrow, showholder, m, tk, block ) {
-// only for vcf, by variant genotype
+				if(aapos==undefined) {
+					console.error('data item cannot map to aaposition')
+					console.log(mlst[0])
+					continue
+				}
 
-	if(!tk.vcf) return
-	if(!tk.vcf.termdb_bygenotype) return
+				// this group can be anchored to a aa
+				x2mlst.delete(x)
 
-	let loading = false,
-		loaded = false
-
-	const button = buttonrow.append('div')
-		.style('display','inline-block')
-		.attr('class','sja_menuoption')
-		.text('Clinical info')
-
-	const plotdiv = showholder.append('div')
-
-	button.on('click', async ()=>{
-
-		if( loading ) return
-		if( loaded ) {
-			if(plotdiv.style('display')=='none') {
-				client.appear(plotdiv)
-			} else {
-				client.disappear(plotdiv)
+				if(!aa2mlst.has( aapos )) {
+					aa2mlst.set(aapos,[])
+				}
+				let notmet=true
+				for(const lst of aa2mlst.get( aapos)) {
+					if(Math.abs(lst[0].__x-mlst[0].__x)<=block.exonsf*3) {
+						for(const m of mlst) {
+							lst.push(m)
+						}
+						notmet=false
+						break
+					}
+				}
+				if(notmet) {
+					aa2mlst.get(aapos).push(mlst)
+				}
 			}
-			return
+			const utr5len=block.usegm.utr5 ? block.usegm.utr5.reduce((i,j)=>i+j[1]-j[0],0) : 0
+			for(const llst of aa2mlst.values()) {
+				for(const mlst of llst) {
+					let m=null
+					for(const m2 of mlst) {
+						if(Number.isFinite(m2.rnapos)) m=m2
+					}
+					if(m==null) {
+						console.log('trying to map mlst to codon, but no rnapos found')
+						for(const m of mlst) {
+							console.log(m)
+						}
+						continue
+					}
+					datagroup.push({
+						chr:mlst[0].chr,
+						pos:m.pos,
+						mlst:mlst,
+						x:mlst[0].__x,
+					})
+				}
+			}
 		}
-		loading=true
-		button.text('Loading...')
-		try {
-			await termdb_bygenotype( plotdiv, m, tk, block )
-		}catch(e){
-			plotdiv.text('Error: '+(e.message||e))
+
+		// leftover by px bin
+		const pxbin=[]
+		const binpx=2
+		for(const [x,mlst] of x2mlst) {
+			const i=Math.floor(x/binpx)
+			if(!pxbin[i]) {
+				pxbin[i]=[]
+			}
+			pxbin[i]=[...pxbin[i], ...mlst]
 		}
-		loading=false
-		loaded=true
-		button.text('Clinical info')
-	})
+		for(const mlst of pxbin) {
+			if(!mlst) continue
+			const xsum=mlst.reduce((i,j)=>i+j.__x,0)
+			datagroup.push({
+				isbin:true,
+				chr:mlst[0].chr,
+				pos:mlst[0].pos,
+				mlst:mlst,
+				x:xsum/mlst.length,
+			})
+		}
+	}
+
+	datagroup.sort((a,b)=>a.x-b.x)
+
+	return datagroup
 }

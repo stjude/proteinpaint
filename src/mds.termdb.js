@@ -1,7 +1,7 @@
 import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import {barchart_make} from './mds.termdb.barchart'
+import {render} from './mds.termdb.plot2'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 /*
@@ -19,9 +19,13 @@ obj has triggers
 obj.default_rootterm{}
 
 
-default_rootterm has modifiers, for modifying the behavior/display of the term tree
-	.modifier_click_term()
-		when this is provided, will allow selecting terms, do not show graph buttons
+modifiers, for modifying the behavior/display of the term tree
+attach to obj{}
+** modifier_click_term
+	when this is provided, will allow selecting terms, do not show graph buttons
+** modifier_ssid_barchart
+** modifier_barchart_selectbar
+** modifier_ssid_onterm
 
 
 
@@ -64,15 +68,26 @@ obj{}:
 .mds{}
 .div
 .default_rootterm{}
-	.modifier_click_term()
-.modifier_ssid_barchart{}
+... modifiers
 */
 
 	window.obj = obj // for testing
-
 	obj.errdiv = obj.div.append('div')
 	obj.treediv = obj.div.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
+	obj.div.on('click.tdb', ()=>{
+		// the plot.button_row in mds.termdb.plot2 and
+		// individual buttons in the term tree captures
+		// the click event, so stopPropagation in here 
+		// does not affect those event handlers/callbacks 
+		d3event.stopPropagation()
+		
+		if (d3event.target.innerHTML == "CROSSTAB") return
+		// since the click event is not propagated to body,
+		// handle the tip hiding here since the body.click
+		// handler in client.js Menu will not be triggered
+		obj.tip.hide()
+	})
 
 	try {
 
@@ -126,12 +141,6 @@ also for showing term tree, allowing to select certain terms
 			isroot: 1,
 		}
 
-		// pass on modifier
-		if( obj.default_rootterm.modifier_click_term ) {
-			// FIXME this modifier should be moved to obj so no need to attach to arg
-			arg.modifier_click_term = obj.default_rootterm.modifier_click_term
-		}
-
 		print_one_term( arg, obj )
 	}
 }
@@ -152,8 +161,8 @@ arg{}
 	...
 .isroot
 
-possible modifiers:
-.modifier_click_term() callback function
+and deal with modifiers
+try to keep the logic clear
 */
 
 	const term = arg.term
@@ -168,48 +177,73 @@ possible modifiers:
 	// if [+] button is created, will add another row under row for showing children
 	may_make_term_foldbutton( arg, row, obj )
 
+	// if be able to apply these modifiers, can just exist and not doing anything else
+	if( may_apply_modifier_click_term( obj, term, row ) ) return
+	if( may_apply_modifier_barchart_selectbar( obj, term, row, row_graph ) ) return
+
 	// term name
-	const namebox = row.append('div')
+	row.append('div')
 		.style('display','inline-block')
 		.style('padding','5px 3px 5px 1px')
 		.html( term.name )
 
-	if( arg.modifier_click_term ) {
-		/*
-		a modifier to be applied to namebox
-		for clicking box and collect this term and done
-		will not render remaining buttons
-		*/
-
-		// update styling
-		namebox
-			.style('padding','5px')
-			.style('margin-left','5px')
-
-		if( arg.modifier_click_term.disable_terms && arg.modifier_click_term.disable_terms.has( term.id ) ) {
-
-			// this term is disabled, no clicking
-			namebox.style('opacity','.5')
-
-		} else {
-
-			// enable clicking this term
-			namebox
-				.attr('class', 'sja_menuoption')
-				.on('click',()=>{
-					arg.modifier_click_term.callback( term )
-				})
-		}
-		return
-	}
-
-
-	// term function buttons
-	// including barchart, and cross-tabulate
+	// term function buttons, including barchart, and cross-tabulate
 
 	may_make_term_graphbuttons( term, row, row_graph, obj )
 }
 
+
+
+function may_apply_modifier_barchart_selectbar ( obj, term, row, row_graph ) {
+	if(!obj.modifier_barchart_selectbar) return false
+	/*
+	for a term equipped with graph.barchart{}, allow to click the term and directly show the barchart
+	*/
+	row.append('div')
+		.style('display','inline-block')
+		.style('padding','5px')
+		.style('margin-left','5px')
+		.text(term.name)
+	if(!term.graph || !term.graph.barchart) {
+		// no chart, this term is not clickable
+		return true
+	}
+	term_addbutton_barchart ( term, row, row_graph, obj )
+	return true
+}
+
+
+
+function may_apply_modifier_click_term ( obj, term, row ) {
+	if( !obj.modifier_click_term ) return false
+	/*
+	a modifier to be applied to namebox
+	for clicking box and collect this term and done
+	will not show any other buttons
+	*/
+
+	const namebox = row.append('div')
+		.style('display','inline-block')
+		.style('padding','5px')
+		.style('margin-left','5px')
+		.text(term.name)
+
+	if( obj.modifier_click_term.disable_terms && obj.modifier_click_term.disable_terms.has( term.id ) ) {
+
+		// this term is disabled, no clicking
+		namebox.style('opacity','.5')
+
+	} else {
+
+		// enable clicking this term
+		namebox
+			.attr('class', 'sja_menuoption')
+			.on('click',()=>{
+				obj.modifier_click_term.callback( term )
+			})
+	}
+	return true
+}
 
 
 
@@ -226,6 +260,9 @@ allow to make multiple buttons
 
 	if(term.graph.barchart) {
 		// barchart button
+
+		may_list_genotypecount_peritem( term, row, row_graph, obj )
+
 		term_addbutton_barchart( term, row, row_graph, obj )
 
 		may_enable_crosstabulate( term, row,  obj )
@@ -248,14 +285,10 @@ there may be other conditions to apply, e.g. patients carrying alt alleles of a 
 such conditions may be carried by obj
 
 */
-
 	const button = row.append('div')
-		.style('display','inline-block')
-		.style('margin-left','20px')
-		.style('padding','3px 5px')
 		.style('font-size','.8em')
-		.style('border','solid 1px black')
-		.attr('class','sja_opaque8')
+		.style('margin-left','20px')
+		.attr('class','sja_button')
 		.text('BARCHART')
 
 	const div = row_graph.append('div')
@@ -276,12 +309,10 @@ such conditions may be carried by obj
 
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
-			button.style('background','#ededed')
-				.style('color','black')
+			button.attr('class','sja_button_open')
 		} else {
 			client.disappear(div)
-			button.style('background','#aaa')
-				.style('color','white')
+			button.attr('class','sja_button_fold')
 		}
 
 		if( term.graph.barchart.dom.loaded ) return
@@ -333,8 +364,7 @@ such conditions may be carried by obj
 
 			}
 
-			barchart_make( plot )
-
+			render( plot, obj )
 		} catch(e) {
 			client.sayerror( div, e.message || e)
 			if(e.stack) console.log(e.stack)
@@ -342,6 +372,87 @@ such conditions may be carried by obj
 
 		button.text('BARCHART')
 		term.graph.barchart.dom.loaded=true
+	})
+}
+
+
+
+
+function may_list_genotypecount_peritem ( term, row, row_graph, obj ) {
+
+	if( !obj.modifier_ssid_barchart ) return
+
+	// similar to barchart, but show a list instead, for each item, display number of samples per genotype
+
+	const button = row.append('div')
+		.style('font-size','.8em')
+		.style('margin-left','20px')
+		.attr('class','sja_button')
+		.text('LIST')
+
+	const div = row_graph.append('div')
+		.style('border','solid 1px #ccc')
+		.style('border-radius','5px')
+		.style('margin','10px')
+		.style('padding','10px')
+		.style('display','none')
+
+	let loaded=false,
+		loading=false
+
+	button.on('click', async ()=>{
+
+		if(div.style('display') == 'none') {
+			client.appear(div, 'inline-block')
+			button.attr('class','sja_button_open')
+		} else {
+			client.disappear(div)
+			button.attr('class','sja_button_fold')
+		}
+
+		if( loaded || loading ) return
+
+		loading=true
+
+		button.text('Loading')
+
+		const arg = {
+			ssid: obj.modifier_ssid_barchart.ssid,
+			barchart: {
+				id: term.id
+			}
+		}
+
+		try {
+			const data = await obj.do_query( arg )
+			if(data.error) throw data.error
+			if(!data.lst) throw 'no data for barchart'
+
+			const table = div.append('table')
+			for(const item of data.lst) {
+
+				if(!item.lst) continue
+
+				const tr = table.append('tr')
+				tr.append('td')
+					.style('text-align','right')
+					.html( item.lst.map( i=>
+						// {label,value}
+						'<span style="background:'+obj.modifier_ssid_barchart.groups[i.label].color+';color:white;font-size:.8em;padding:2px">'+i.value+'</span>'
+						).join('')
+					)
+				tr.append('td').text( item.label )
+			}
+
+
+		} catch(e) {
+			client.sayerror( div, e.message || e)
+			if(e.stack) console.log(e.stack)
+		}
+
+		loaded=true
+		loading=false
+		button.text('LIST')
 	})
 }
 
@@ -390,8 +501,7 @@ providing all the customization options
 				items: result.items,
 				default2showtable: true // a flag for barchart to show html table view by default
 			}
-
-			barchart_make( plot )
+			render( plot, obj )
 		}
 	})
 }
@@ -476,8 +586,6 @@ buttonholder: div in which to show the button, term label is also in it
 					{
 						term: cterm,
 						row: childrenrow,
-						// propagate modifiers
-						modifier_click_term: arg.modifier_click_term,
 					},
 					obj
 				)

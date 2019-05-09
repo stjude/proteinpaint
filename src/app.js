@@ -1153,6 +1153,10 @@ async function launchblock(arg,holder) {
 	if(arg.tracks) {
 		// tracks have to be labeled custom, even for smuggled native tracks
 		for(const t of arg.tracks) {
+			if( t.type == client.tkt.mds2 && t.dslabel ) {
+				// is an official mds2, do not flag as custom
+				continue
+			}
 			t.iscustom=true
 		}
 	}

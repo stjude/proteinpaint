@@ -3,7 +3,6 @@ module.exports={
 	genomefile:'genomes/dm3.gz',
 	genedb:{
 		dbfile:'anno/genes.dm3.db',
-		genetable:'genes'
 	},
 	tracks:[
 		{

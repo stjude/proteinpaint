@@ -349,7 +349,9 @@ step_isoform(items) {
 		if(data.error) throw({ message: 'Cannot load isoforms: '+data.error })
 		wait.remove()
 		for(const ilst of data.lst) {
-			this.genome.isoformcache.set(ilst[0].isoform,ilst)
+			if(ilst[0]) {
+				this.genome.isoformcache.set(ilst[0].isoform,ilst)
+			}
 		}
 		// invalid isoforms
 		const isoformErr=[]

@@ -14,6 +14,8 @@ handle_request_closure
 server_init
 ********************** INTERNAL
 copy_term
+trigger_rootterm
+trigger_barchart
 */
 
 
@@ -43,6 +45,8 @@ return async (req, res) => {
 		// process triggers
 
 		if( trigger_rootterm( q, res, tdb ) ) return
+
+		if( q.getcategories ) return trigger_getcategories( q, res, tdb, ds_filtered )
 		if( q.get_children ) {
 			await trigger_children( q, res, tdb )
 			return
@@ -199,7 +203,8 @@ trigger_crosstab2term already complicated, don't want to add any more
 			binmax = Math.max( binmax, o.values[ o.values.length-1 ].value )
 
 			const group = {
-				label: v1,
+				vvalue: v1,
+				label: q.term1.values ? q.term1.values[v1].label : v1,
 				boxplot: app.boxplot_getvalue( o.values )
 			}
 
@@ -210,7 +215,7 @@ trigger_crosstab2term already complicated, don't want to add any more
 			// term1 has predefined order
 			const lst2 = []
 			for(const i of term1.graph.barchart.order) {
-				const j = lst.find( m=> m.label == i )
+				const j = lst.find( m=> m.vvalue == i )
 				if( j ) {
 					lst2.push( j )
 				}
@@ -437,39 +442,41 @@ for each category/bin of term1, divide its samples by category/bin of term2
 	if(t1categories) {
 		for(const [ v1, o ] of t1categories) {
 			const group = {
-				label: v1,
+				vvalue: v1,
+				label: term1.values ? term1.values[v1].label : v1,
 				lst: [],
-				value: 0
+				value: 0 // v2s
 			}
 
 			if( o.categories ) {
 				for(const [v2,c] of o.categories) {
 					group.lst.push({
-						label: v2,
-						value: c
+						vvalue: v2,
+						label: term2.values ? term2.values[v2].label : v2,
+						value: c // v2s
 					})
-					group.value += c
+					group.value += c // v2s
 				}
 			} else if( o.binconfig ) {
 				for(const b of o.binconfig.bins) {
 					if(b.value>0) {
 						group.lst.push({
 							label: b.label,
-							value: b.value
+							value: b.value // v2s
 						})
-						group.value += b.value
+						group.value += b.value // v2s
 					}
 				}
 				if( o.binconfig.unannotated) {
 					group.lst.push( o.binconfig.unannotated )
-					group.value += o.binconfig.unannotated.value
+					group.value += o.binconfig.unannotated.value // v2s
 				}
 			} else {
 				// this term1 category has no value
 				continue
 			}
 
-			group.lst.sort((i,j)=>j.value-i.value)
+			group.lst.sort((i,j)=>j.value-i.value) // v2s
 
 			lst.push(group)
 		}
@@ -478,7 +485,7 @@ for each category/bin of term1, divide its samples by category/bin of term2
 			// term1 has predefined order
 			const lst2 = []
 			for(const i of term1.graph.barchart.order) {
-				const j = lst.find( m=> m.label == i )
+				const j = lst.find( m=> m.vvalue == i )
 				if( j ) {
 					lst2.push( j )
 				}
@@ -508,7 +515,8 @@ for each category/bin of term1, divide its samples by category/bin of term2
 
 				for(const [k, v] of b1.categories) {
 					group.lst.push({
-						label: k,
+						vvalue: k,
+						label: term2.values ? term2.values[k].label: k,
 						value: v
 					})
 					group.value += v
@@ -585,7 +593,7 @@ if is a numeric term, also get distribution
 
 	// different types of barcharts
 
-	if(term.graph.barchart.categorical) {
+	if(term.iscategorical) {
 
 		// each bar is a singular categorical value, string
 		const value2count = new Map()
@@ -606,8 +614,9 @@ if is a numeric term, also get distribution
 		let lst = []
 		for(const [n,v] of [ ...value2count].sort((i,j)=>j[1]-i[1]) ) {
 			lst.push({
-				label: n,
-				value: v
+				label: term.values ? term.values[n].label : n,
+				value: v, // v2s
+				vvalue: n // use as "value" after changing into samplecount
 			})
 		}
 
@@ -615,7 +624,7 @@ if is a numeric term, also get distribution
 			// has predefined order
 			const lst2 = []
 			for(const v of term.graph.barchart.order) {
-				const i = lst.find( i=> i.label == v )
+				const i = lst.find( i=> i.vvalue == v )
 				if( i ) {
 					lst2.push(i)
 				}
@@ -628,7 +637,7 @@ if is a numeric term, also get distribution
 	}
 
 
-	if( term.graph.barchart.numeric_bin ) {
+	if( term.isinteger || term.isfloat ) {
 		// numeric value: each bar is one bin
 
 		const [ binconfig, values ] = termdb_get_numericbins( q.barchart.id, term, ds )
@@ -708,7 +717,7 @@ not the complete set in ds.cohort
 		// replace sets{} with lst[]
 		const lst = []
 		for(const [k,v] of category2set) {
-			v.label = k
+			v.label = term.values ? term.values[ k ].label : k
 			v.lst = []
 			for(const k in v.sets) {
 				v.lst.push({
@@ -1146,4 +1155,51 @@ function term_getcount_4sampleset ( term, samples ) {
 term
 samples[] array of sample names
 */
+}
+
+
+
+
+function trigger_getcategories ( q, res, tdb, ds ) {
+/*
+to get the list of categories for a categorical term
+supply sample count annotated to each category
+if q.samplecountbyvcf, will count from vcf samples
+otherwise, count from all samples
+*/
+	const t = tdb.termjson.map.get( q.termid )
+	if(!t) throw 'unknown term id'
+	if(!t.iscategorical) throw 'term not categorical'
+	const category2count = new Map()
+
+	if( q.samplecountbyvcf ) {
+		if(!ds.track || !ds.track.vcf || !ds.track.vcf.samples ) throw 'cannot use vcf samples, necessary parts missing'
+		for(const s of ds.track.vcf.samples) {
+			const a = ds.cohort.annotation[s.name]
+			if(!a) continue
+			const v = a[ q.termid ]
+			if(!v) continue
+			category2count.set( v, 1 + (category2count.get(v)||0) )
+		}
+	} else {
+		for(const n in ds.cohort.annotation) {
+			const a = ds.cohort.annotation[n]
+			const v = a[ q.termid ]
+			if(!v) continue
+			category2count.set( v, 1 + (category2count.get(v)||0) )
+		}
+	}
+	const lst = [...category2count].sort((i,j)=>j[1]-i[1])
+	res.send({lst: lst.map(i=>{
+			let label
+			if( t.values && t.values[i[0]] ) {
+				label = t.values[i[0]].label
+			}
+			return {
+				key: i[0],
+				label: (label || i[0]),
+				samplecount: i[1]
+			}
+		})
+	})
 }

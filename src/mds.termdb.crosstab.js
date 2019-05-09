@@ -60,15 +60,12 @@ then pass term2 and crosstab result to callback
 			genome: arg.obj.genome,
 			mds: arg.obj.mds,
 			div: treediv,
-			default_rootterm: {
+			default_rootterm: {},
 
-				// following is the modifier that modifies tree behavior
-
-				modifier_click_term: {
-					// TODO when switching term2 while there is already a term2, add term2 id here also
-					disable_terms: new Set([ arg.term1.id ]),
-					callback: term2_selected_callback
-				}
+			modifier_click_term: {
+				// TODO when switching term2 while there is already a term2, add term2 id here also
+				disable_terms: new Set([ arg.term1.id ]),
+				callback: term2_selected_callback
 			},
 		}
 

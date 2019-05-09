@@ -41,11 +41,16 @@ return async (req,res) => {
 		} else {
 			ds = {
 				iscustom: 1,
-				track: {
-					vcf: q.vcf
-					// TODO other 
-				}
+				track: {}
 			}
+
+			if( q.vcf ) {
+				ds.track.vcf = q.vcf
+				await utils.init_one_vcf( ds.track.vcf, genome )
+			}
+
+			// other type of tracks
+
 		}
 
 		if( q.hidden_mclass ) q.hidden_mclass = new Set(q.hidden_mclass)
@@ -53,6 +58,27 @@ return async (req,res) => {
 		// one place to collect result
 		const result = {
 			mclass2count: {}, // k: dt or mclass, v: number of variants, to collect all classes
+		}
+
+		if( q.info_fields ) {
+			result.info_fields = {}
+			for(const i of q.info_fields) {
+				if( i.iscategorical ) {
+					result.info_fields[ i.key ] = {
+						value2count:{}
+					}
+				} else if( i.isnumerical ) {
+					result.info_fields[ i.key ] = {
+						filteredcount:0
+					}
+				} else if( i.isflag ) {
+					result.info_fields[ i.key ] = {
+						filteredcount:0
+					}
+				} else {
+					throw 'unknown info type'
+				}
+			}
 		}
 
 		// by triggers
@@ -65,6 +91,9 @@ return async (req,res) => {
 		}
 		if( q.trigger_ssid_onevcfm ) {
 			await loader_vcf.handle_ssidbyonem( q, genome, ds, result )
+		}
+		if( q.trigger_getvcfcsq ) {
+			await loader_vcf.handle_getcsq( q, genome, ds, result )
 		}
 
 		// other vcf triggers
