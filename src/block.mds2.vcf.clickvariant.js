@@ -158,16 +158,16 @@ function may_show_ebgatest_table( div, m, tk ) {
 	{
 		const tr = table.append('tr')
 		tr.append('th').text('Control')
-		tr.append('td').text( m.ebga.table[2] )
+		tr.append('td').text( m.ebga.table[2].toFixed(0) )
 			.style('padding','5px')
-		tr.append('td').text( m.ebga.table[3] )
+		tr.append('td').text( m.ebga.table[3].toFixed(0) )
 			.style('padding','5px')
 	}
 	table.append('tr').append('td')
 		.attr('colspan',3)
 		.style('border','1px solid #ccc')
 		.style('padding','5px')
-		.html('<span style="opacity:.5">Chi-square test p-value:</span> '+m.ebga.pvalue)
+		.html('<span style="opacity:.5">Fisher exact p-value:</span> '+m.ebga.pvalue)
 }
 
 
