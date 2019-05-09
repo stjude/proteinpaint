@@ -398,6 +398,8 @@ function list_all_variantfilter ( tk, block ) {
 
 		filter_terms_td.selectAll('*').remove()
 
+		let hidden_term_count = 0
+
 		for(const v of i.values ) {
 					
 			const filter_term_div = filter_terms_td.append('div')
@@ -420,10 +422,14 @@ function list_all_variantfilter ( tk, block ) {
 			if(v.ishidden){
 				varient_count.style('text-decoration','line-through')
 				filter_term.style('text-decoration','line-through')
+				hidden_term_count = hidden_term_count + 1
 			}
 
 			filter_term_div.on('click',async ()=>{
 
+				hidden_term_count = v.ishidden ? (hidden_term_count - 1) : (hidden_term_count + 1)
+				if (hidden_term_count == 0) delete i.isactivefilter
+				else i.isactivefilter = true
 				v.ishidden =  v.ishidden ? false : true
 				await tk.load()
 				list_all_variantfilter(tk, block)
@@ -431,6 +437,43 @@ function list_all_variantfilter ( tk, block ) {
 				
 			})
 		}
+
+		if(i._data.unannotated_count){
+
+			const filter_term_div = filter_terms_td.append('div')
+				.style('display','inline-block')
+				.style('padding','2px 10px')
+
+			const varient_count = filter_term_div.append('div')
+				.attr('class','sja_mcdot')
+				.style('display','inline-block')
+				.style('background', '#aaa')
+				.style('padding','2px 3px')
+				.text( i._data ? i._data.unannotated_count : 0 )
+
+			const filter_term = filter_term_div.append('div')
+				.style('display','inline-block')
+				.style('background', '#fff')
+				.style('padding','2px 5px')
+				.text('Unannotated')
+
+			if(i.unannotated_ishidden){
+				varient_count.style('text-decoration','line-through')
+				filter_term.style('text-decoration','line-through')
+				hidden_term_count = hidden_term_count + 1
+			}
+				
+			filter_term_div.on('click',async ()=>{
+				hidden_term_count = i.unannotated_ishidden ? (hidden_term_count - 1) : (hidden_term_count + 1)
+				if (hidden_term_count == 0) delete i.isactivefilter
+				else i.isactivefilter = true
+				i.unannotated_ishidden =  i.unannotated_ishidden ? false : true
+				list_all_variantfilter(tk, block)
+				update_active_filter_div(tk, block)
+				await tk.load()
+			})
+		}
+
 	}
 
 	function update_numeric_filter_all(i, filter_terms_td){
@@ -741,7 +784,7 @@ function display_categorical_filter(tk, i, active_filter_div, row){
 				.style('text-decoration','line-through')
 				.on('click',async ()=>{
 					delete v.ishidden
-					display_categorical_filter(tk, i, active_filter_div)
+					display_categorical_filter(tk, i, active_filter_div, row)
 					if(hidden_term_count == 1){
 						delete i.isactivefilter
 						row.remove()
@@ -754,12 +797,28 @@ function display_categorical_filter(tk, i, active_filter_div, row){
 		}
 	}
 	if( i.unannotated_ishidden ) {
-		i.unannotated_htmlspan = active_filter_div.append('span')
-			.style('margin-right','10px')
+		hidden_term_count = hidden_term_count + 1
+		i.unannotated_htmlspan = active_filter_div.append('div')
+			.attr('class','sja_filter_tag_btn')
+			.style('background-color', '#ddd')
+			.style('padding','3px 6px 5px 6px')
+			.style('margin-right','1px')
+			.style('font-size','.9em')
+			.style('color','#000')
 			.text( (i._data ? '('+i._data.unannotated_count+') ' : '')+'Unannotated' )
 			.style('text-decoration','line-through')
+			.on('click',async ()=>{
+				delete i.unannotated_ishidden
+				display_categorical_filter(tk, i, active_filter_div, row)
+				if(hidden_term_count == 1){
+					delete i.isactivefilter
+					row.remove()
+				}
+				await tk.load()
+			})
 	} else {
 		delete i.unannotated_htmlspan
+		visible_term_count = visible_term_count + 1
 	}
 
 	// '+' button to add filter for same category, only if visible terms exist
@@ -781,24 +840,43 @@ function display_categorical_filter(tk, i, active_filter_div, row){
 				for(const v of i.values ) {
 
 					if(!v.ishidden) {
-						const row = list_div.append('div')
-
-						row.append('div')
+						const tip_row = list_div.append('div')
 							.attr('class','sja_menuoption')
+
+						tip_row.append('div')
 							.style('display','inline-block')
 							.style('padding','1px 5px')
 							.text(
 								(i._data ? '('+i._data.value2count[v.key]+') ' : '')
 								+v.label
 							)
-							.on('click',async ()=>{
+
+						tip_row.on('click',async ()=>{
 								tip.hide()
 								v.ishidden = true
-								display_categorical_filter(tk, i, active_filter_div)
+								display_categorical_filter(tk, i, active_filter_div, row)
 								visible_term_count = visible_term_count - 1
 								await tk.load()
 							})
 					}
+				}
+
+				if(i._data.unannotated_count && !i.unannotated_ishidden){
+					const tip_row = list_div.append('div')
+						.attr('class','sja_menuoption')
+
+					tip_row.append('div')
+						.style('display','inline-block')
+						.style('padding','1px 5px')
+						.text( (i._data ? '('+i._data.unannotated_count+') ' : '')+'Unannotated' )
+						
+					tip_row.on('click',async ()=>{
+						tip.hide()
+						i.unannotated_ishidden = true
+						display_categorical_filter(tk, i, active_filter_div, row)
+						visible_term_count = visible_term_count - 1
+						await tk.load()
+					})
 				}
 		})
 	}
