@@ -1,6 +1,11 @@
 const common=require('../src/common')
 
 
+const cohorthierarchy = [
+	{k:'Tumor_Site_Broad',label:'Site'},
+	{k:'Diagnosis_Broad',label:'Cancer'}
+]
+
 const samplenamekey = 'sample_name'
 
 const valuePerSample={
@@ -51,11 +56,34 @@ module.exports={
 				ds.cohort.annotation[samplename] = item
 			}
 		},
-		/*
-		sampleAttribute:{
 
+		hierarchies:{
+			lst:[
+				{
+					name:'Cancer',
+					levels:cohorthierarchy
+				}
+			]
+		},
+		
+		sampleAttribute:{
+			attributes:{
+				G4K_sequenced_type:{
+					label:'Sequenced type',
+					filter:1,
+					hidden:1
+				},
+				Tumor_Site_Broad:{
+					label:'Tumor site',
+					filter:1
+				},
+				Diagnosis_Broad:{
+					label:'Cancer',
+					filter:1
+				}
+			}
 		}
-		*/
+		
 	},
 	mutationAttribute:{
 		attributes:{
@@ -103,11 +131,19 @@ module.exports={
 			// loh
 			segmeanValueCutoff:0.1,
 			lohLengthUpperLimit:2000000,
-			/*
+			
 			groupsamplebyattr:{
-
+				attrlst:[
+					{k:'Tumor_Site_Broad',label:'Site'},
+					{k:'Diagnosis_Broad',label:'Cancer'}
+				],
+				sortgroupby:{
+					key:'Tumor_Site_Broad',
+					order:['ST','Heme','CNS/Brain']
+				},
+				attrnamespacer:', ',
 			},
-			*/
+			
 
 			expressionrank_querykey:'genefpkm',
 			vcf_querykey:'snvindel',
@@ -134,7 +170,10 @@ module.exports={
 					file:'hg19/clingen/subset/G4K/G4K.vcf.gz',
 					type:'vcf',
 				}
-			]
+			],
+			singlesamples:{
+				tablefile:'hg19/clingen/subset/G4K/split.vcf/table'
+			}
 		},
 
 		genefpkm:{
