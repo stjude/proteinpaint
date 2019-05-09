@@ -1072,12 +1072,12 @@ function terms2parameter ( terms ) {
 function may_printinfo_axistype ( data, nm ) {
 // data{} is returned by server
 	if( nm.inuse_termdb2groupAF ) {
-		nm.termdb2groupAF.group1.div_numbersamples.text( '#patients: '+data.group1numbersamples )
-		nm.termdb2groupAF.group2.div_numbersamples.text( '#patients: '+data.group2numbersamples )
+		nm.termdb2groupAF.group1.div_numbersamples.text( 'n='+data.group1numbersamples )
+		nm.termdb2groupAF.group2.div_numbersamples.text( 'n='+data.group2numbersamples )
 		return
 	}
 	if( nm.inuse_ebgatest ) {
-		nm.ebgatest.div_numbersamples.text( '#patients: '+data.numbersamples )
+		nm.ebgatest.div_numbersamples.text( 'n='+data.numbersamples )
 		nm.ebgatest.div_populationaverage.selectAll('*').remove()
 		data.populationaverage.forEach(i=>{
 			nm.ebgatest.div_populationaverage.append('div')

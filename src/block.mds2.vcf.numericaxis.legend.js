@@ -19,12 +19,12 @@ import {
 may_create_vcflegend_numericalaxiss
 ********************** INTERNAL
 showmenu_numericaxis
+update_terms_div
 __update_legend
 update_legend_by_infokey
 update_legend_by_termdb2groupAF
 update_legend_by_ebgatest
 create_group_legend
-update_terms_div
 */
 
 
@@ -427,10 +427,11 @@ function update_terms_div(terms_div, group, tk, block){
 					.style('background-color', '#4888BF')
 					.text(term.values[j].label)
 					.on('click', async ()=>{
+
 						tip.clear()
-							.showunder( term_value_btn.node() )
 
 						const wait = tip.d.append('div').text('Loading...')
+						tip.showunder( term_value_btn.node() )
 
 						const arg = {
 							genome: block.genome.name,
@@ -445,47 +446,39 @@ function update_terms_div(terms_div, group, tk, block){
 							if(data.error) throw data.error
 							wait.remove()
 
-							const list_div = tip.d.append('div')
-								.style('display','block')
+							tip.d.append('div')
+								.attr('class','sja_menuoption')
+								.html('&times;&nbsp;&nbsp;Delete')
+								.on('click', async ()=>{
+									group.terms[i].values.splice(j,1)
+									if(group.terms[i].values.length==0) {
+										group.terms.splice(i,1)
+									}
+									tip.hide()
+									may_settoloading_termgroup( group )
+									update_terms_div(terms_div, group, tk, block)
+									await tk.load()
+								})
 
 							for (const category of data.lst){
-								const row = list_div.append('div')
 
-								row.append('div')
-									.style('font-size','.7em')
-									.style('color','white')
-									.style('display','inline-block')
-									.style('background','#1f77b4')
-									.style('padding','2px 4px')
-									.text(category.samplecount)
+								if(term.values.find(v=>v.key == category.key)) continue
 
-								row.append('div')
-									.style('display','inline-block')
-									.style('padding','1px 5px')
-									.style('margin-right','5px')
-									.text(category.label)
-
-								if( group.terms[i].values.find(v=>v.key == category.key )) {
-									// from the list
-									row.style('padding','5px 10px')
-										.style('margin','1px')
-										.style('color','#999')
-									continue
-								}
-
-								row
+								tip.d.append('div')
+									.html('<span style="font-size:.8em;opacity:.6">n='+category.samplecount+'</span> '+category.label)
 									.attr('class','sja_menuoption')
 									.on('click',async ()=>{
+										// replace the old category with the new one
 										tip.hide()
-
 										group.terms[i].values[j] = {key:category.key,label:category.label}
-
 										may_settoloading_termgroup( group )
-
 										update_terms_div(terms_div, group, tk, block)
-							            await tk.load()
+										await tk.load()
 									})
 							}
+
+							tip.showunder( term_value_btn.node() )
+
 						} catch(e) {
 							wait.text( e.message || e )
 						}
@@ -513,15 +506,15 @@ function update_terms_div(terms_div, group, tk, block){
 							.html('&#43;')
 							.on('click', async ()=>{
 								tip.clear()
-									.showunder( add_value_btn.node() )
 		
 								const wait = tip.d.append('div').text('Loading...')
+								tip.showunder( add_value_btn.node() )
 		
 								const arg = {
 									genome: block.genome.name,
 									dslabel: tk.mds.label, 
 									getcategories: 1,
-									samplecountbyvcf: 1, // quick n dirty solution, to count using vcf samples
+									samplecountbyvcf: 1,
 									termid : term.term.id
 								}
 		
@@ -530,47 +523,20 @@ function update_terms_div(terms_div, group, tk, block){
 									if(data.error) throw data.error
 									wait.remove()
 		
-									const list_div = tip.d.append('div')
-										.style('display','block')
-		
 									for (const category of data.lst){
-										const row = list_div.append('div')
-		
-										row.append('div')
-											.style('font-size','.7em')
-											.style('color','white')
-											.style('display','inline-block')
-											.style('background','#1f77b4')
-											.style('padding','2px 4px')
-											.text(category.samplecount)
-		
-										row.append('div')
-											.style('display','inline-block')
-											.style('padding','1px 5px')
-											.style('margin-right','5px')
-											.text(category.label)
-		
-										if( group.terms[i].values.find(v=>v.key == category.key)) {
-											// the same
-											row.style('padding','5px 10px')
-												.style('margin','1px')
-												.style('color','#999')
-											continue
-										}
-		
-										row
+										if(term.values.find(v=>v.key == category.key)) continue
+										tip.d.append('div')
+											.html('<span style="font-size:.8em;opacity:.6">n='+category.samplecount+'</span> '+category.label)
 											.attr('class','sja_menuoption')
 											.on('click',async ()=>{
-												tip.hide()
-		
 												group.terms[i].values.push({key:category.key,label:category.label})
-		
+												tip.hide()
 												may_settoloading_termgroup( group )
-		
 												update_terms_div(terms_div, group, tk, block)
 									            await tk.load()
 											})
 									}
+									tip.showunder( add_value_btn.node() )
 								} catch(e) {
 									wait.text( e.message || e )
 								}
