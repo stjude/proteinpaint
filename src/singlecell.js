@@ -176,7 +176,7 @@ function init_view ( obj ) {
 	if(obj.background_color){
 		obj.scene.background = new THREE.Color( obj.background_color )
 	}else{
-		obj.scene.background = new THREE.Color( 0x000000 )
+		obj.scene.background = new THREE.Color( 0xffffff )
 	}
 
 
@@ -208,11 +208,15 @@ function init_view ( obj ) {
 	obj.renderer = new THREE.WebGLRenderer( { antialias: true } )
 	obj.renderer.setPixelRatio( window.devicePixelRatio )
 	obj.renderer.setSize( obj.width, obj.height )
+	obj.renderer.domElement.style.backgroundColor = "#ffffff"
+	obj.renderer.domElement.style.border = 'solid #dddddd 2px'
 
 	obj.holder
 		.style('display','inline-block')
 		.style('position','relative')
 		.node().appendChild( obj.renderer.domElement )
+	
+	obj.renderer.render( obj.scene, obj.camera )
 
 	// window.addEventListener( 'resize', onWindowResize(obj), false )
 	// window.addEventListener( 'keypress', keyboard )
@@ -697,9 +701,9 @@ function make_settings(obj){
 		})
 		
 	if(obj.use_background_color == 0){
-		inputblack.property('checked',1)
-	} else {
 		inputwhite.property('checked',1)
+	} else {
+		inputblack.property('checked',1)
 	}
 
 
