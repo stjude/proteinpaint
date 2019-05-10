@@ -63,6 +63,10 @@ export default function vcf2dstk(arg) {
 		vcfobj.samplenamemap = arg.samplenamemap
 	}
 
+	if( arg.variant2img ) {
+		if(!arg.variant2img.path) return ['.path missing from .variant2img{}']
+	}
+
 
 	const tk={
 		type:client.tkt.ds,
@@ -76,6 +80,7 @@ export default function vcf2dstk(arg) {
 		vcfinfofilter:  arg.vcfinfofilter,
 		itemlabelname:  arg.itemlabelname,
 		viewrangeupperlimit: arg.viewrangeupperlimit,
+		variant2img: arg.variant2img,
 		axisheight: arg.axisheight,
 	}
 

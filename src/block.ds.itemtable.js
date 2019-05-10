@@ -2,6 +2,7 @@ import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
 import * as vcf from './vcf'
+import * as path from 'path'
 
 
 
@@ -775,6 +776,16 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 	if(vcfobj.info && vcfobj.info.ANN && vcfobj.info.ANN.annheader && m.ann) {
 		// has ANN
 		vcfannbutton( m.ann, row1, tk, vcfobj.info.ANN.annheader)
+	}
+
+	if(tk.variant2img) {
+		variant2imgbutton(
+			m,
+			row1, 
+			holder.append('div'),
+			tk,
+			block
+		)
 	}
 
 
@@ -1817,6 +1828,29 @@ function vcfannbutton(annolst, holder, tk, headers) {
 					}
 				})
 		}
+	})
+}
+
+
+
+function variant2imgbutton ( m, buttonrow, imgholder, tk, block ) {
+	let loaded=false
+
+	buttonrow.append('div')
+	.attr('class','sja_menuoption')
+	.style('display','inline-block')
+	.style('margin-right','10px')
+	.text('Image')
+	.on('click',()=>{
+		if(loaded) return
+		client.dofetch('img',{file: path.join( tk.variant2img.path, m.chr+'.'+(m.pos+1)+'.'+m.ref+'.'+m.alt+'.'+tk.variant2img.ext ) })
+		.then(data=>{
+			loaded=true
+			imgholder.append('img')
+				.attr('src',data.src)
+				.style('width', data.size.width+'px')
+				.style('height', data.size.height+'px')
+		})
 	})
 }
 
