@@ -197,7 +197,7 @@ function init_view ( obj ) {
 	obj.controls.zoomSpeed = obj.canvas_2d ? 3.0 : 0.7
 	obj.controls.panSpeed = obj.canvas_2d ? 3.0 : 0.7
 
-	obj.controls.noZoom = false
+	obj.controls.noZoom = true
 	obj.controls.noPan = false
 
 	obj.controls.staticMoving = true
@@ -683,6 +683,18 @@ function make_settings(obj){
 		.style('padding-left','10px')
 		.attr('for',idwhite)
 
+	if(obj.use_background_color == 0){
+		inputwhite.property('checked',1)
+	} else {
+		inputblack.property('checked',1)
+	}
+	
+	function toggle_background () {
+		const isblack = inputblack.property('checked')
+		const iswhite = inputwhite.property('checked')
+		obj.scene.background = new THREE.Color( isblack ? 0x000000 : 0xffffff )
+		obj.use_background_color = isblack ? 0 : 1
+	}
 	// point size change 
 	const point_size_div = obj.settings.d.append('div')
 		.style('display','block')
@@ -699,20 +711,66 @@ function make_settings(obj){
 		.on('change', ()=>{
 			obj.scene.children[1].material.size = (point_size_slider.node().value/100)
 		})
-		
-	if(obj.use_background_color == 0){
-		inputwhite.property('checked',1)
-	} else {
-		inputblack.property('checked',1)
-	}
 
+	// zoom in / zoom out
+	const zoom_div = obj.settings.d.append('div')
+		.style('display','block')
+		.text('Zoom In / Out')
+		.style('margin','20px 5px')
 
-	function toggle_background () {
-		const isblack = inputblack.property('checked')
-		const iswhite = inputwhite.property('checked')
-		obj.scene.background = new THREE.Color( isblack ? 0x000000 : 0xffffff )
-		obj.use_background_color = isblack ? 0 : 1
-	}
+	const cam_pos_z = obj.data_sphere_r * 3
+
+	const zoom_slider = zoom_div.append('input')
+		.style('display','block')
+		.style('padding','5px')
+		.attr('type','range')
+		.attr('min', cam_pos_z/5)
+		.attr('max', cam_pos_z*1.5)
+		.attr('value',obj.camera.position.z)
+		.style('direction','rtl')
+		.on('change', ()=>{
+			obj.camera.position.z = zoom_slider.node().value
+		})
+	
+	// info for panning
+	obj.settings.d.append('div')
+		.style('margin','5px')
+		.text('Panning')
+
+	obj.settings.d.append('div')
+		.style('font-size','.8em')
+		.style('text-align','center')
+		.style('margin-bottom','10px')
+		.html('<p>Right mouse click </br>+ Mouse move</p>')
+
+	// reset button
+	obj.settings.d.append('div')
+		.attr('class','sja_menuoption')
+		.text('Reset view')
+		.style('width','80px')
+		.style('margin','auto')
+		.style('margin-top','10px')
+		.style('margin-bottom','10px')
+		.on('click', ()=>{
+			// reset background checkbox
+			inputwhite.property('checked',1)
+			obj.scene.background = new THREE.Color( obj.background_color ? obj.background_color : 0xffffff )
+
+			// reset point size
+			point_size_slider.node().value = obj.point_size? (obj.point_size*100) : obj.canvas_2d ? 30 : 5
+			obj.scene.children[1].material.size = obj.point_size ? obj.point_size : obj.canvas_2d ? 0.3 : 0.05
+
+			//reset zoom
+			obj.camera.position.z = cam_pos_z
+			zoom_slider.node().value = obj.camera.position.z
+
+			//reset panning
+			console.log(obj.controls)
+			obj.controls.target.x = 0
+			obj.controls.target.y = 0
+			obj.controls.target.z = 0
+
+		})
 }
 
 function heatmap_menu(obj){
