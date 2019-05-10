@@ -1841,16 +1841,21 @@ function variant2imgbutton ( m, buttonrow, imgholder, tk, block ) {
 	.style('display','inline-block')
 	.style('margin-right','10px')
 	.text('Image')
-	.on('click',()=>{
+	.on('click', async ()=>{
 		if(loaded) return
-		client.dofetch('img',{file: path.join( tk.variant2img.path, m.chr+'.'+(m.pos+1)+'.'+m.ref+'.'+m.alt+'.'+tk.variant2img.ext ) })
-		.then(data=>{
-			loaded=true
+		loaded=true
+		const wait = imgholder.append('div').style('margin','20px').text('Loading...')
+		try {
+			const data = await client.dofetch('img',{file: path.join( tk.variant2img.path, m.chr+'.'+(m.pos+1)+'.'+m.ref+'.'+m.alt+'.'+tk.variant2img.ext ) })
+			if(data.error) throw data.error
+			wait.remove()
 			imgholder.append('img')
 				.attr('src',data.src)
 				.style('width', data.size.width+'px')
 				.style('height', data.size.height+'px')
-		})
+		}catch(e) {
+			wait.text('Error loading image')
+		}
 	})
 }
 
