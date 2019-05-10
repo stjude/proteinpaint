@@ -552,6 +552,10 @@ async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
 			}
 		}
 	}
+	if(lines.length==0) {
+		// no data
+		return
+	}
 	const tmpfile = path.join(serverconfig.cachedir,Math.random().toString())
 	await utils.write_file( tmpfile, lines.join('\n') )
 	//const pfile = await run_chisqtest( tmpfile )
