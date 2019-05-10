@@ -646,7 +646,7 @@ function make_settings(obj){
 	.style('margin','5px')
 
 	const black_div = back_color_div.append('div')
-		.style('margin','3px')
+		.style('margin','5px')
 		.style('display','block')
 
 	const name = Math.random(),
@@ -662,12 +662,13 @@ function make_settings(obj){
 
 	black_div.append('label')
 		.style('display','inline-block')
+		.style('font-size','.8em')
 		.text('Black')
 		.style('padding-left','10px')
 		.attr('for',idblack)
 
 	const white_div = back_color_div.append('div')
-		.style('margin','3px')
+		.style('margin','5px')
 		.style('display','block')
 
 	const inputwhite = white_div.append('input')
@@ -679,6 +680,7 @@ function make_settings(obj){
 
 	white_div.append('label')
 		.style('display','inline-block')
+		.style('font-size','.8em')
 		.text('White')
 		.style('padding-left','10px')
 		.attr('for',idwhite)
@@ -741,7 +743,7 @@ function make_settings(obj){
 		.style('font-size','.8em')
 		.style('text-align','center')
 		.style('margin-bottom','10px')
-		.html('<p>Right mouse click </br>+ Mouse move</p>')
+		.html('<p style="margin:3px;">Right mouse click </br>+ Mouse move</p>')
 
 	// reset button
 	obj.settings.d.append('div')
@@ -749,8 +751,8 @@ function make_settings(obj){
 		.text('Reset view')
 		.style('width','80px')
 		.style('margin','auto')
-		.style('margin-top','10px')
-		.style('margin-bottom','10px')
+		.style('margin-top','15px')
+		.style('margin-bottom','15px')
 		.on('click', ()=>{
 			// reset background checkbox
 			inputwhite.property('checked',1)
