@@ -236,7 +236,12 @@ function render_cloud( obj, pcd_buffer ){
 	const points = loader.parse(pcd_buffer,'')
 	// loader.load( pcdfilename, function ( points ) {
 
-	points.material.size = obj.canvas_2d ? 0.3 : 0.05
+	if(obj.point_size){
+		points.material.size = obj.point_size
+	}else{
+		points.material.size = obj.canvas_2d ? 0.3 : 0.05
+	}
+	
 	obj.scene.add(points)
 	const center = points.geometry.boundingSphere.center
 	obj.controls.target.set( center.x, center.y, center.z )
@@ -674,6 +679,23 @@ function make_settings(obj){
 		.style('padding-left','10px')
 		.attr('for',idwhite)
 
+	// point size change 
+	const point_size_div = obj.settings.d.append('div')
+		.style('display','block')
+		.text('Point Size')
+		.style('margin','20px 5px')
+
+	const point_size_slider = point_size_div.append('input')
+		.style('display','block')
+		.style('padding','5px')
+		.attr('type','range')
+		.attr('min', 1)
+		.attr('max', 50)
+		.attr('value',obj.point_size? (obj.point_size*100) : obj.canvas_2d ? 30 : 5)
+		.on('change', ()=>{
+			obj.scene.children[1].material.size = (point_size_slider.node().value/100)
+		})
+		
 	if(obj.use_background_color == 0){
 		inputblack.property('checked',1)
 	} else {
@@ -762,7 +784,7 @@ function heatmap_menu(obj){
 					const geneidx = obj.gene_expression.heatmap_genes.findIndex( i=> i.gene == gene )
 					if( geneidx == -1 ) {
 						obj.gene_expression.heatmap_genes.push({
-							gene: gene.charAt(0).toUpperCase() + gene.slice(1),
+							gene: gene.charAt(0).toUpperCase() + gene.slice(1).toLowerCase(),
 							chr: gm.chr,
 							start: gm.start,
 							stop: gm.stop
