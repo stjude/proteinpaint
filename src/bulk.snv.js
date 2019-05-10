@@ -223,7 +223,7 @@ exports.parseline=function(linei,line,flag) {
 	} else if(m.class=='S') {
 		flag.snv.silent++
 	}
-	const n=m.gene.toUpperCase()
+	const n=flag.geneToUpper ? m.gene.toUpperCase() : m.gene
 	if(!flag.data[n]) {
 		flag.data[n]=[]
 	}

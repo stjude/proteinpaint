@@ -87,7 +87,7 @@ exports.parseline=function(i,line,flag) {
 	}
 	m.dt=common.dtcnv
 	flag.good++
-	const n=m.gene.toUpperCase()
+	const n=flag.geneToUpper ? m.gene.toUpperCase() : m.gene
 	if(!(n in flag.data)) {
 		flag.data[n]=[]
 	}

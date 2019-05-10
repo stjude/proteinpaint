@@ -107,6 +107,8 @@ export function bulkui(x,y,genomes, hostURL) {
 		// TODO vcf, new tabular formats
 		const butt=filediv.append('input').attr('type','file').on('change',()=>{
 			const flag=bulk.init_bulk_flag(genomes[gselect.options[gselect.selectedIndex].innerHTML])
+			flag.geneToUpper = geneToUpper.property('checked')
+			
 			saydiv.text('')
 			const file=d3event.target.files[0]
 			if(!file) {
@@ -146,6 +148,11 @@ export function bulkui(x,y,genomes, hostURL) {
 		butt.node().focus()
 	}
 	fileui()
+
+	filediv.append('span').html('<br/>Convert gene name to uppercase &nbsp;')
+	const geneToUpper = filediv.append('span').append('input')
+		.attr('type', 'checkbox')
+		.property('checked', true)
 
 	// has to keep this function here because 
 	// of referece to x,y,hostURL,etc closured variables 

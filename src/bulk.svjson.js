@@ -138,7 +138,7 @@ exports.parseline=function(i,line,flag,header) {
 				json[k]=m[k]
 			}
 		}
-		const n=json.gene.toUpperCase()
+		const n=flag.geneToUpper ? json.gene.toUpperCase() : json.gene.toUpperCase()
 		if(!flag.data[n]) {
 			flag.data[n]=[]
 		}

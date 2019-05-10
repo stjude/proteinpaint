@@ -115,7 +115,7 @@ exports.parseline=function(i,line,flag) {
 	m.class=common.mclassitd
 	m.mname='ITD'
 	flag.good++
-	var n=m.gene.toUpperCase()
+	var n=flag.geneToUpper ? m.gene.toUpperCase() : m.gene
 	if(!(n in flag.data)) {
 		flag.data[n]=[]
 	}

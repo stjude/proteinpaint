@@ -21,7 +21,9 @@ for(const n in cohort.dsset) {
 	}
 	dslst.push(ds)
 }
-const config={}
+const config={
+	geneToUpper: cohort.geneToUpper
+}
 if(cohort.diseasecolor) {
 	config.diseasecolor=cohort.diseasecolor
 }
@@ -162,7 +164,8 @@ function makegraph(ds,json,holder,config) {
 	for(const node of json.nodes) {
 		for(const gene of node.root.leaves()) {
 			gene.datasize=0
-			const mlst=ds.bulkdata[gene.data.gene.toUpperCase()]
+			const genename=config.geneToUpper ? gene.data.gene.toUpperCase() : gene.data.gene
+			const mlst=ds.bulkdata[genename]
 			if(mlst) {
 				if(ds.hasdisease && ds.hassample) {
 					// disease as pie

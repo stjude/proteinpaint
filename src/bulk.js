@@ -28,6 +28,7 @@ exports.init_bulk_flag=function(genome) {
 	// k: patient, v: { k: sampletype, v: sample }
 	// new sample names always override old
 	good:0,
+	geneToUpper: true, // option to not force uppercase on gene names 
 	snv:{
 		loaded:false,
 		header:null,

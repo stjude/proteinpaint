@@ -118,7 +118,7 @@ exports.parseline=function(i,line,flag) {
 		m.mname='C-loss'
 	}
 	flag.good++
-	const n=m.gene.toUpperCase()
+	const n=flag.geneToUpper ? m.gene.toUpperCase() : m.gene
 	if(!(n in flag.data)) {
 		flag.data[n]=[]
 	}

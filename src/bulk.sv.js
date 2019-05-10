@@ -177,7 +177,7 @@ exports.parseline=function(i,line,flag,issv) {
 				}
 			}]
 		}
-		const n=m.gene1.toUpperCase()
+		const n=flag.geneToUpper ? m.gene1.toUpperCase() : m.gene1
 		if(!flag.data[n]) {
 			flag.data[n]=[]
 		}
@@ -213,7 +213,7 @@ exports.parseline=function(i,line,flag,issv) {
 				}
 			}]
 		}
-		const n=m.gene2.toUpperCase()
+		const n=flag.geneToUpper ? m.gene2.toUpperCase() : m.gene2
 		if(!flag.data[n]) {
 			flag.data[n]=[]
 		}

@@ -88,7 +88,9 @@ toprow.append('input')
 			d3select('.sja_menu').remove()
 			return
 		}
-		n=n.toUpperCase()
+		if (cohort.geneToUpper) {
+			n=n.toUpperCase()
+		}
 		if(d3event.code=='Enter') {
 			d3select('.sja_menu').remove()
 			d3event.target.value=''
@@ -174,7 +176,7 @@ oprow2.append('button').text('Submit').on('click',()=>{
 		nomatch=[]
 	for(const s of lst) {
 		if(s=='') continue
-		const n=s.trim().toUpperCase()
+		const n=cohort.geneToUpper ? s.trim().toUpperCase() : s.trim()
 		if(n in union) {
 			good.push(n)
 		} else {
@@ -182,7 +184,7 @@ oprow2.append('button').text('Submit').on('click',()=>{
 		}
 	}
 	if(nomatch.length) {
-		sayerr('No match found for '+nomatch.join(', '))
+		sayerror('No match found for '+nomatch.join(', '))
 	}
 	if(good.length==0) return
 	genelst=good
