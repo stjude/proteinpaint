@@ -548,7 +548,7 @@ function update_controlpanel ( obj, data ) {
 		// document.body.appendChild(imgNode)
 		screenshot_btn.append('span')
 			.style('display','none')
-			.html('<a download="scRNA.png" href="'+ imgNode.src +'" title="ImageName">Camera</a>')	
+			.html('<a download="scRNA_'+ new Date().toLocaleString() +'.png" href="'+ imgNode.src +'" title="ImageName">Camera</a>')	
 		// download_btn.node().click()		
 	})
 	.on('mouseup', ()=>{
