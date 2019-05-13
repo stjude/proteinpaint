@@ -205,7 +205,7 @@ function init_view ( obj ) {
 
 	obj.scene.add( obj.camera )
 
-	obj.renderer = new THREE.WebGLRenderer( { antialias: true } )
+	obj.renderer = new THREE.WebGLRenderer( { antialias: true, preserveDrawingBuffer: true } )
 	obj.renderer.setPixelRatio( window.devicePixelRatio )
 	obj.renderer.setSize( obj.width, obj.height )
 	obj.renderer.domElement.style.backgroundColor = "#ffffff"
@@ -321,36 +321,36 @@ function init_controlpanel( obj ) {
 		.on('click',()=> make_menu( obj ))
 	
 	 obj.minimize_btn = panel.append('button')
-        .style('margin-left','10px')
-        .style('display','inline-block')
-        .style('padding-left','0px')
+		.style('margin-left','10px')
+		.style('display','inline-block')
+		.style('padding-left','0px')
 		.style('padding-right','2px')
-        .style('float','right')
-        .html(' &#65293;')
-        .on('click',()=>{
-            obj.minimize_btn.classed("active", obj.minimize_btn.classed("active") ? false : true)
-            if(obj.minimize_btn.classed("active")){
-                obj.minimize_btn
-                    .html(' &#65291;')
-            }else{
-                obj.minimize_btn
-                .html(' &#65293;')
-            }
-            obj.menu_output.style("display", obj.menu_output.display = (obj.menu_output.display == "none" ? "block" : "none"));
-        })
+		.style('float','right')
+		.html(' &#65293;')
+		.on('click',()=>{
+			obj.minimize_btn.classed("active", obj.minimize_btn.classed("active") ? false : true)
+			if(obj.minimize_btn.classed("active")){
+				obj.minimize_btn
+					.html(' &#65291;')
+			}else{
+				obj.minimize_btn
+					.html(' &#65293;')
+			}
+			obj.menu_output.style("display", obj.menu_output.display = (obj.menu_output.display == "none" ? "block" : "none"));
+		})
 
 	obj.use_background_color = 0
 
 	obj.settings_btn = panel.append('button')
-        .style('margin-left','10px')
-        .style('display','inline-block')
-        .style('padding-left','3px')
+		.style('margin-left','10px')
+		.style('display','inline-block')
+		.style('padding-left','3px')
 		.style('padding-right','3px')
-        .style('float','right')
-        .html('&#9187;')
-        .on('click',()=> make_settings( obj))
+		.style('float','right')
+		.html('&#9187;')
+		.on('click',()=> make_settings( obj))
 		
-	obj.menu_output = panel.append('div')
+		obj.menu_output = panel.append('div')
 		.style('margin-top','10px')
 
 }
@@ -527,6 +527,34 @@ function update_controlpanel ( obj, data ) {
 
 		})
 	}
+
+	// screenshot button
+	const screenshot_btn = obj.holder
+	.append('div')
+	.style('padding','5px')
+	.style('position','absolute')
+	.style('border-radius','5px')
+	.style('bottom','20px')
+	.style('right','20px')
+	.style('background-color','#dddddd')
+	.html('<b>&#10697;</b> Capture')
+	.style('font-size','1em')
+	.on('mousedown', ()=>{
+		const imgData = obj.renderer.domElement.toDataURL()
+		// console.log(imgData)
+
+		let imgNode = document.createElement("img")
+		imgNode.src = imgData
+		// document.body.appendChild(imgNode)
+		screenshot_btn.append('span')
+			.style('display','none')
+			.html('<a download="scRNA.png" href="'+ imgNode.src +'" title="ImageName">Camera</a>')	
+		// download_btn.node().click()		
+	})
+	.on('mouseup', ()=>{
+		screenshot_btn.select('a').node().click()
+		screenshot_btn.selectAll('span').remove()
+	})
 }
 
 function make_menu ( obj ) {
