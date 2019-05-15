@@ -3162,6 +3162,7 @@ bedj_tooltip(tk, data, panel) {
 							tk.tkconfigtip.clear()
 							.show(d3event.clientX-40, d3event.clientY)
 							.d
+							.style('z-index','20000')
 							.append('div')
 							.attr('class','sja_menuoption')
 							.text('Gene/protein view for '+i.isoform)

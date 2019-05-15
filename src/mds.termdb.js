@@ -233,7 +233,7 @@ function may_apply_modifier_click_term ( obj, term, row ) {
 		// this term is disabled, no clicking
 		namebox.style('opacity','.5')
 
-	} else {
+	} else if(term.isleaf) {
 
 		// enable clicking this term
 		namebox
