@@ -484,7 +484,8 @@ function update_plot (plot) {
   
   const arg = {
     genome: plot.genome,
-    dslabel: plot.dslabel
+    dslabel: plot.dslabel,
+    obj: plot.obj
   }
 
   if(plot.term2){

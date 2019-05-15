@@ -1011,7 +1011,7 @@ export function get_axis_label_termdb2groupAF ( tk ) {
 
 export function get_axis_label_ebgatest ( tk ) {
 	// TODO 
-	return 'Ethnic background adjusted test'
+	return 'Race background adjusted test'
 }
 
 

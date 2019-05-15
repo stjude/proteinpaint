@@ -18,6 +18,9 @@ handle_singlecell_closure
 get_pcd
 slice_file_add_color
 get_geneboxplot
+
+
+TODO need to test the existence of the json file
 */
 
 
@@ -109,6 +112,12 @@ may attach coloring scheme to result{} for returning to client
 	{
 		const [e,file,isurl] = app.fileurl( {query:{file:q.textfile}} )
 		if(e) throw '.textfile error: '+e
+
+		if(!isurl) {
+			if(await utils.file_not_exist(file)) throw 'file not exist: '+q.textfile
+			if(await utils.file_not_readable(file)) throw 'file not readable: '+q.textfile
+		}
+
 		q.textfile = file
 	}
 
@@ -236,8 +245,15 @@ may attach coloring scheme to result{} for returning to client
 			// if(!color) return
 
 			// add color for cells without expression to retain cluster shape
-			if(!color) color = '2894892' // dark grey
-			// if(!color) color = '14540253' //light grey
+			if(!color){
+				if(q.getpcd.gene_expression.color_no_exp){
+					const c = d3color.color( q.getpcd.gene_expression.color_no_exp )
+					color = Number.parseInt( rgbToHex( c.r, c.g, c.b ), 16 )
+				}else{
+					color = '2894892' // dark grey
+					//color = '14540253' //light grey
+				}
+			} 
 			newl.push(color)
 		}
 

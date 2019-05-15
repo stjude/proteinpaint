@@ -20,7 +20,7 @@ sample_match_termvaluesetting
 get_querymode
 query_vcf_applymode
 parseline_termdb2groupAF
-parseline_termdb2groupAF_onegroup
+getallelecount_samplegroup_vcfline
 parseline_ebgatest
 may_apply_chisqtest_ebgatest
 vcfbyrange_collect_result
@@ -403,49 +403,44 @@ get csq from one variant
 function parseline_termdb2groupAF ( line, columnidx_group1, columnidx_group2, vcftk, m_is_filtered ) {
 	const l = line.split('\t')
 
+	// parse only the variants first
+	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
+
+	// get those passing filter
+	const mlstpass = mlst.filter( m => !m_is_filtered( m ) )
+	if( mlstpass.length == 0 ) {
+		// stop, no need to parse samples
+		return
+	}
+
 	const alleles = [ l[3], ...l[4].split(',') ]
 
-	const g1 = parseline_termdb2groupAF_onegroup( alleles, l, columnidx_group1 )
-	const g2 = parseline_termdb2groupAF_onegroup( alleles, l, columnidx_group2 )
+	const g1 = getallelecount_samplegroup_vcfline( alleles, l, columnidx_group1 )
+	const g2 = getallelecount_samplegroup_vcfline( alleles, l, columnidx_group2 )
 	if( g1.allref && g2.allref ) {
 		return
 	}
 
-	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
+	for(const m of mlstpass) {
 
-	return mlst.reduce(
-		(uselst,m) =>{
-
-			if( m_is_filtered( m ) ) {
-				// skip
-			} else {
-
-				let g1AF,
-					g2AF
-				{
-					const ref = g1.alleles.get( m.ref ) || 0
-					const alt = g1.alleles.get( m.alt ) || 0
-					g1AF = (ref+alt==0) ? 0 : alt/(ref+alt)
-				}
-				{
-					const ref = g2.alleles.get( m.ref ) || 0
-					const alt = g2.alleles.get( m.alt ) || 0
-					g2AF = (ref+alt==0) ? 0 : alt/(ref+alt)
-				}
-				m.AF2group = [ g1AF, g2AF ]
-				uselst.push(m)
-			}
-			return uselst
-		},
-		[]
-	)
-
-	return mlst
+		m.AF2group = [] // put the allele frequency of two groups here
+		{
+			const ref = g1.alleles.get( m.ref ) || 0
+			const alt = g1.alleles.get( m.alt ) || 0
+			m.AF2group.push( (ref+alt==0) ? 0 : alt/(ref+alt) )
+		}
+		{
+			const ref = g2.alleles.get( m.ref ) || 0
+			const alt = g2.alleles.get( m.alt ) || 0
+			m.AF2group.push( (ref+alt==0) ? 0 : alt/(ref+alt) )
+		}
+	}
+	return mlstpass
 }
 
 
 
-function parseline_termdb2groupAF_onegroup ( alleles, l, columnidx ) {
+function getallelecount_samplegroup_vcfline ( alleles, l, columnidx ) {
 	let allref = true
 
 	const allele2count = new Map()
@@ -482,47 +477,46 @@ function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds, m_is_filt
 
 	const l = line.split('\t')
 
+	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
+	// get those passing filter
+	const mlstpass = mlst.filter( m => !m_is_filtered( m ) )
+	if( mlstpass.length == 0 ) {
+		// stop, no need to parse samples
+		return
+	}
+
 	const alleles = [ l[3], ...l[4].split(',') ]
 
-	const g = parseline_termdb2groupAF_onegroup( alleles, l, columnidx )
-	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
+	const g = getallelecount_samplegroup_vcfline( alleles, l, columnidx )
 
-	return mlst.reduce(
-		(uselst, m) => {
-			if( m_is_filtered( m ) ) {
-				// skip
-			} else {
+	for(const m of mlstpass) {
 
-				const refcount = g.alleles.get( m.ref ) || 0
-				const altcount = g.alleles.get( m.alt ) || 0
-				// get control population allele count, for the current variant
-				let controltotal = 0
-				const pop2control = new Map()
-				for(const [k,v] of pop2average) {
-					const AC = parseline_ebgatest_getkey( m, v.infokey_AC )
-					const AN = parseline_ebgatest_getkey( m, v.infokey_AN )
-					pop2control.set( k, { AC, AN })
-					controltotal += AN
-				}
-				// adjust control population based on pop2average
-				let ACadj = 0,
-					ANadj = 0
-				for( const [k,v] of pop2control ) {
-					const AN2 = controltotal * pop2average.get(k).average
-					const AC2 = AN2 == 0 ? 0 : v.AC * AN2 / v.AN
-					ACadj += AC2
-					ANadj += AN2
-				}
-				m.ebga = {
-					line: m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj),
-					table: [altcount, refcount, ACadj, ANadj-ACadj]
-				}
-				uselst.push(m)
-			}
-			return uselst
-		},
-		[]
-	)
+		const refcount = g.alleles.get( m.ref ) || 0
+		const altcount = g.alleles.get( m.alt ) || 0
+		// get control population allele count, for the current variant
+		let controltotal = 0
+		const pop2control = new Map()
+		for(const [k,v] of pop2average) {
+			const AC = parseline_ebgatest_getkey( m, v.infokey_AC )
+			const AN = parseline_ebgatest_getkey( m, v.infokey_AN )
+			pop2control.set( k, { AC, AN })
+			controltotal += AN
+		}
+		// adjust control population based on pop2average
+		let ACadj = 0,
+			ANadj = 0
+		for( const [k,v] of pop2control ) {
+			const AN2 = controltotal * pop2average.get(k).average
+			const AC2 = AN2 == 0 ? 0 : v.AC * AN2 / v.AN
+			ACadj += AC2
+			ANadj += AN2
+		}
+		m.ebga = {
+			line: m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj),
+			table: [altcount, refcount, ACadj, ANadj-ACadj]
+		}
+	}
+	return mlstpass
 }
 
 
@@ -557,6 +551,10 @@ async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
 				}
 			}
 		}
+	}
+	if(lines.length==0) {
+		// no data
+		return
 	}
 	const tmpfile = path.join(serverconfig.cachedir,Math.random().toString())
 	await utils.write_file( tmpfile, lines.join('\n') )
