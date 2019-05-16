@@ -53,7 +53,10 @@ export default function htmlLegend(legendDiv, viz={settings:{}, handlers:{}}) {
           .each(addLegendItem)
       }
       else {
-        div.style('white-space','nowrap')
+        div
+          .style('white-space','nowrap')
+          .style('width', s.legendOrientation == "vertical" ? 'fit-content' : null)
+          
         div.append('div')
           .style('display', s.legendOrientation == "vertical" ? 'block' : 'inline-block')
           .style('width', d.rowLabelHangLeft ? d.rowLabelHangLeft+'px' : null)
@@ -92,7 +95,8 @@ export default function htmlLegend(legendDiv, viz={settings:{}, handlers:{}}) {
 
     div.style('opacity', d.isHidden ? 0.3 : 1)
       .style('display', s.legendOrientation == "vertical" ? 'block' : 'inline-block')
-    
+      .style('width', s.legendOrientation == "vertical" ? 'fit-content' : null)
+
     if (d.svg) {
       div.append('svg')
         .attr('width', d.svgw)
