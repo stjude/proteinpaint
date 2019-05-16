@@ -467,40 +467,7 @@ export class Barchart{
   }
 }
 
-const instances = new WeakMap()
-
-export function barchart_make(plot, obj) {
-  if (plot.term2_boxplot || plot.default2showtable) {
-    plot.bar_div.style('display','none')
-    return
-  }
-  plot.bar_div.style('display','block')
-  plot.svg.style('display','none')
-  plot.legend_div.style('display','block')
-  if(plot.boxplot_div){
-    plot.boxplot_div.style('display','none')
-  }
-  if (!instances.has(plot.holder)) {
-    instances.set(plot.holder, new Barchart({
-      holder: plot.holder,
-      settings: {},
-      term1: plot.term,
-      obj,
-      legendDiv: plot.legend_div
-    }))
-  }
-  const barchart = instances.get(plot.holder)
-  barchart.main({
-    genome: obj.genome.name,
-    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
-    term1: plot.term.id,
-    term2: obj.modifier_ssid_barchart ? 'genotype' : '',
-    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
-    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : ''
-  }, obj)
-}
-
-export function barchart_create(plot) {
+export function may_make_barchart(plot) {
   if (plot.term2_boxplot || plot.default2showtable) {
     plot.bar_div.style('display','none')
     return
@@ -513,17 +480,16 @@ export function barchart_create(plot) {
   }
 
   const obj = plot.obj
-  if (!instances.has(plot.bar_div)) {
-    instances.set(plot.bar_div, new Barchart({
+  if (!plot.barchart) {
+    plot.barchart = new Barchart({
       holder: plot.bar_div,
       settings: {},
       term1: plot.term,
       obj,
       legendDiv: plot.legend_div
-    }))
+    })
   }
-  const barchart = instances.get(plot.bar_div)
-  barchart.main({
+  plot.barchart.main({
     genome: obj.genome.name,
     dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
     term1: plot.term.id,

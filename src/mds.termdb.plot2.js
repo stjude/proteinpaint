@@ -5,7 +5,7 @@ import {format as d3format} from 'd3-format'
 import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init} from './mds.termdb'
-import {barchart_create} from './mds.termdb.barchart2'
+import {may_make_barchart} from './mds.termdb.barchart2'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 import { platform } from 'os';
 
@@ -129,30 +129,8 @@ export function render ( arg, obj ) {
         obj.tip.hide()
       }
     })
-  ////////////// Y Axis options
 
-  // button - Y axis scale selection 
-  plot.button_row.append('span')
-    .text('Y Axis')
-    .style('display','inline-block')
-    .style('padding-right','3px')
-
-  plot.yaxis_options = plot.button_row.append('select')
-    .style('display','inline-block')
-
-  plot.yaxis_options.append('option')
-    .attr('value','linear')
-    .text('Linear')
-
-  plot.yaxis_option_log = plot.yaxis_options.append('option')
-    .attr('value','log')
-    .text('Log10')
-
-  plot.yaxis_option_percentage = plot.yaxis_options
-    .append('option')
-    .attr('value','percentage')
-    .text('Percentage')
-    .property('disabled',1)
+  set_yaxis_options(plot)
 
   ////////////// Custom Bin button  
   if( plot.term.isfloat ) {
@@ -250,6 +228,49 @@ export function render ( arg, obj ) {
   }
 
   do_plot( plot )
+}
+
+////////////// Y Axis options
+function set_yaxis_options(plot) {
+  // button - Y axis scale selection 
+  plot.button_row.append('span')
+    .text('Y Axis')
+    .style('display','inline-block')
+    .style('padding-right','3px')
+
+  plot.yaxis_options = plot.button_row.append('select')
+    .style('display','inline-block')
+    // Y-axis toggle for log vs. linear
+    .on('change',()=>{
+      const value = plot.yaxis_options.node().value
+      if ( value == 'log'){
+        plot.use_logscale = 1
+        plot.use_percentage = 0
+      }
+      else if(value == 'percentage'){ 
+        plot.use_percentage = 1
+        plot.use_logscale = 0
+      }
+      else{
+        plot.use_logscale = 0
+        plot.use_percentage = 0
+      }
+      do_plot(plot)
+    })
+
+  plot.yaxis_options.append('option')
+    .attr('value','linear')
+    .text('Linear')
+
+  plot.yaxis_option_log = plot.yaxis_options.append('option')
+    .attr('value','log')
+    .text('Log10')
+
+  plot.yaxis_option_percentage = plot.yaxis_options
+    .append('option')
+    .attr('value','percentage')
+    .text('Percentage')
+    .property('disabled',1)
 }
 
 
@@ -407,27 +428,9 @@ plot()
   plot.yaxis_option_percentage.property('disabled', plot.term2 ? false : true)
   plot.yaxis_option_log.property('disabled', plot.term2 ? true : false)
 
-  barchart_create(plot)
-  make_boxplot(plot)
-  make_stat(plot)
-
-  // Y-axis toggle for log vs. linear
-  plot.yaxis_options.on('change',()=>{
-    const value = plot.yaxis_options.node().value
-    if ( value == 'log'){
-      plot.use_logscale = 1
-      plot.use_percentage = 0
-    }
-    else if(value == 'percentage'){ 
-      plot.use_percentage = 1
-      plot.use_logscale = 0
-    }
-    else{
-      plot.use_logscale = 0
-      plot.use_percentage = 0
-    }
-    do_plot(plot)
-  })
+  may_make_barchart(plot)
+  may_make_boxplot(plot)
+  may_make_stat(plot)
 }
 
 
@@ -703,7 +706,7 @@ function custom_bin(plot){
     .attr('size','8')
 }
 
-function make_boxplot(plot) {
+function may_make_boxplot(plot) {
   if (!plot.term2_boxplot) {
     plot.svg.style('display','none')
     return
@@ -887,7 +890,7 @@ function make_boxplot(plot) {
   }
 }
 
-function make_stat(plot) {
+function may_make_stat(plot) {
   if (!plot.boxplot) {
     if (plot.boxplot_div) {
       plot.boxplot_div.style("display", "none")
