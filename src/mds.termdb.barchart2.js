@@ -33,6 +33,7 @@ export class Barchart{
     }
     this.handlers = this.getEventHandlers()
     this.controls = {}
+    this.currChartsData = null
     //this.setControls()
     this.term2toColor = {}
   }
@@ -54,6 +55,11 @@ export class Barchart{
       + '&term2=' + this.settings.term2
       + '&ssid=' + this.settings.ssid
       + '&mname=' + this.settings.mname
+      + '&custom_bins=' + (
+        !this.settings.custom_bins 
+        ? '' 
+        : encodeURIComponent(JSON.stringify(this.settings.custom_bins))
+      )
 
     if (this.serverData[dataName]) {
       this.render(this.serverData[dataName]) 
@@ -96,6 +102,23 @@ export class Barchart{
 
     self.setMaxVisibleTotals(chartsData)
 
+    const bins = self.settings.term2 
+      && self.terms.term2.graph 
+      && self.terms.term2.graph.barchart
+      && self.terms.term2.graph.barchart.numeric_bin
+      ? self.terms.term2.graph.barchart.numeric_bin
+      : null
+
+    self.binLabels = bins && bins.fixed_bins
+      ? bins.fixed_bins.map(d=>d.label).reverse()
+      : bins && bins.crosstab_fixed_bins 
+      ? bins.crosstab_fixed_bins.map(d=>d.label).reverse()
+      : null
+
+    self.rowSorter = self.binLabels
+      ? (a,b) => self.binLabels.indexOf(b.dataId) - self.binLabels.indexOf(a.dataId)
+      : (a,b) => b.total - a.total
+
     const charts = this.holder.selectAll('.pp-sbar-div')
       .data(chartsData.charts, chart => chart.chartId)
 
@@ -116,7 +139,7 @@ export class Barchart{
       const rows = chart.serieses
         .find(series => !refColId || series.seriesId == refColId)
         .data
-        .sort((a,b) => b.total - a.total)
+        .sort(self.rowSorter)
         .map(d => d.dataId)
       chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
@@ -139,7 +162,7 @@ export class Barchart{
       const rows = chart.serieses
         .find(series => !refColId || series.seriesId == refColId)
         .data
-        .sort((a,b) => b.total - a.total)
+        .sort(self.rowSorter)
         .map(d => d.dataId)
       chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
@@ -150,12 +173,14 @@ export class Barchart{
     const term1 = this.settings.term1
     let maxVisibleAcrossCharts = 0
     for(const chart of chartsData.charts) {
-      if (!this.renderers[chart.chartId]) {
-        const unannotatedLabel = chartsData.refs.unannotatedLabels.term1
-        if (unannotatedLabel) {
-          if (!this.settings.exclude.cols.includes(unannotatedLabel)) {
-            this.settings.exclude.cols.push(unannotatedLabel)
-          }
+      if (this.currChartsData != chartsData) {
+        const unannotatedCol = chartsData.refs.unannotatedLabels.term1
+        if (unannotatedCol && !this.settings.exclude.cols.includes(unannotatedCol)) {
+          this.settings.exclude.cols.push(unannotatedCol)
+        }
+        const unannotatedRow = chartsData.refs.unannotatedLabels.term2
+        if (unannotatedRow && !this.settings.exclude.rows.includes(unannotatedRow)) {
+          this.settings.exclude.rows.push(unannotatedRow)
         }
       }
       chart.settings = Object.assign(this.settings, chartsData.refs)
@@ -174,6 +199,7 @@ export class Barchart{
     for(const chart of chartsData.charts) {
       chart.maxVisibleAcrossCharts = maxVisibleAcrossCharts
     }
+    this.currChartsData = chartsData
   }
 
   sortStacking(rows, series, chart, chartsData) {
@@ -201,6 +227,19 @@ export class Barchart{
     }
     if (seriesLogTotal > chart.maxSeriesLogTotal) {
       chart.maxSeriesLogTotal = seriesLogTotal
+    }
+    // assign color to hidden data
+    // for use in legend
+    for(const result of series.data) {
+      if (!(result.dataId in this.term2toColor)) {
+        this.term2toColor[result.dataId] = this.settings.term2 === ""
+        ? "rgb(144, 23, 57)"
+        : rgb(this.settings.rows.length < 11 
+          ? colors.c10(result.dataId)
+          : colors.c20(result.dataId)
+        ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
+      } 
+      result.color = this.term2toColor[result.dataId]
     }
   }
 
@@ -455,52 +494,24 @@ export class Barchart{
         name: this.terms.term2.name,
         items: s.rows.map(d => {
           return {
+            dataId: d,
             text: d,
             color: this.term2toColor[d],
             type: 'row',
             isHidden: s.exclude.rows.includes(d)
           }
-        }).sort((a,b) => a.text < b.text ? -1 : 1)
+        }).sort(
+          this.settings.term2 && this.binLabels
+          ? this.rowSorter 
+          : (a,b) => a.text < b.text ? -1 : 1
+        )
       })
     }
     return legendGrps;
   }
 }
 
-const instances = new WeakMap()
-
-export function barchart_make(plot, obj) {
-  if (plot.term2_boxplot || plot.default2showtable) {
-    plot.bar_div.style('display','none')
-    return
-  }
-  plot.bar_div.style('display','block')
-  plot.svg.style('display','none')
-  plot.legend_div.style('display','block')
-  if(plot.boxplot_div){
-    plot.boxplot_div.style('display','none')
-  }
-  if (!instances.has(plot.holder)) {
-    instances.set(plot.holder, new Barchart({
-      holder: plot.holder,
-      settings: {},
-      term1: plot.term,
-      obj,
-      legendDiv: plot.legend_div
-    }))
-  }
-  const barchart = instances.get(plot.holder)
-  barchart.main({
-    genome: obj.genome.name,
-    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
-    term1: plot.term.id,
-    term2: obj.modifier_ssid_barchart ? 'genotype' : '',
-    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
-    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : ''
-  }, obj)
-}
-
-export function barchart_create(plot) {
+export function may_make_barchart(plot) {
   if (plot.term2_boxplot || plot.default2showtable) {
     plot.bar_div.style('display','none')
     return
@@ -513,17 +524,16 @@ export function barchart_create(plot) {
   }
 
   const obj = plot.obj
-  if (!instances.has(plot.bar_div)) {
-    instances.set(plot.bar_div, new Barchart({
+  if (!plot.barchart) {
+    plot.barchart = new Barchart({
       holder: plot.bar_div,
       settings: {},
       term1: plot.term,
       obj,
       legendDiv: plot.legend_div
-    }))
+    })
   }
-  const barchart = instances.get(plot.bar_div)
-  barchart.main({
+  plot.barchart.main({
     genome: obj.genome.name,
     dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
     term1: plot.term.id,
@@ -533,6 +543,7 @@ export function barchart_create(plot) {
     ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
     mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
     term2Obj: plot.term2,
-    unit: plot.unit
+    unit: plot.unit,
+    custom_bins: plot.custom_bins
   }, obj)
 }

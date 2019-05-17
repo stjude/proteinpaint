@@ -5,7 +5,7 @@ import {format as d3format} from 'd3-format'
 import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init} from './mds.termdb'
-import {barchart_create} from './mds.termdb.barchart2'
+import {may_make_barchart} from './mds.termdb.barchart2'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 import { platform } from 'os';
 
@@ -129,30 +129,8 @@ export function render ( arg, obj ) {
         obj.tip.hide()
       }
     })
-  ////////////// Y Axis options
 
-  // button - Y axis scale selection 
-  plot.button_row.append('span')
-    .text('Y Axis')
-    .style('display','inline-block')
-    .style('padding-right','3px')
-
-  plot.yaxis_options = plot.button_row.append('select')
-    .style('display','inline-block')
-
-  plot.yaxis_options.append('option')
-    .attr('value','linear')
-    .text('Linear')
-
-  plot.yaxis_option_log = plot.yaxis_options.append('option')
-    .attr('value','log')
-    .text('Log10')
-
-  plot.yaxis_option_percentage = plot.yaxis_options
-    .append('option')
-    .attr('value','percentage')
-    .text('Percentage')
-    .property('disabled',1)
+  set_yaxis_options(plot)
 
   ////////////// Custom Bin button  
   if( plot.term.isfloat ) {
@@ -250,6 +228,49 @@ export function render ( arg, obj ) {
   }
 
   do_plot( plot )
+}
+
+////////////// Y Axis options
+function set_yaxis_options(plot) {
+  // button - Y axis scale selection 
+  plot.button_row.append('span')
+    .text('Y Axis')
+    .style('display','inline-block')
+    .style('padding-right','3px')
+
+  plot.yaxis_options = plot.button_row.append('select')
+    .style('display','inline-block')
+    // Y-axis toggle for log vs. linear
+    .on('change',()=>{
+      const value = plot.yaxis_options.node().value
+      if ( value == 'log'){
+        plot.use_logscale = 1
+        plot.use_percentage = 0
+      }
+      else if(value == 'percentage'){ 
+        plot.use_percentage = 1
+        plot.use_logscale = 0
+      }
+      else{
+        plot.use_logscale = 0
+        plot.use_percentage = 0
+      }
+      do_plot(plot)
+    })
+
+  plot.yaxis_options.append('option')
+    .attr('value','linear')
+    .text('Linear')
+
+  plot.yaxis_option_log = plot.yaxis_options.append('option')
+    .attr('value','log')
+    .text('Log10')
+
+  plot.yaxis_option_percentage = plot.yaxis_options
+    .append('option')
+    .attr('value','percentage')
+    .text('Percentage')
+    .property('disabled',1)
 }
 
 
@@ -394,11 +415,9 @@ function update_term2_header ( plot ) {
 
 function do_plot ( plot ) {
 /*
-make the bar plot based on configs in the plot object
-called by showing the single-term plot at the beginning
-or stacked bar plot for cross-tabulating
-
-plot()
+make a barchart, boxplot, or stat table based on configs 
+in the plot object called by showing the single-term plot 
+at the beginning or stacked bar plot for cross-tabulating
 */ 
   // console.log(plot)
   plot.unit = plot.use_logscale ? 'log' 
@@ -407,27 +426,9 @@ plot()
   plot.yaxis_option_percentage.property('disabled', plot.term2 ? false : true)
   plot.yaxis_option_log.property('disabled', plot.term2 ? true : false)
 
-  barchart_create(plot)
-  make_boxplot(plot)
-  make_stat(plot)
-
-  // Y-axis toggle for log vs. linear
-  plot.yaxis_options.on('change',()=>{
-    const value = plot.yaxis_options.node().value
-    if ( value == 'log'){
-      plot.use_logscale = 1
-      plot.use_percentage = 0
-    }
-    else if(value == 'percentage'){ 
-      plot.use_percentage = 1
-      plot.use_logscale = 0
-    }
-    else{
-      plot.use_logscale = 0
-      plot.use_percentage = 0
-    }
-    do_plot(plot)
-  })
+  may_make_barchart(plot)
+  may_make_boxplot(plot)
+  may_make_stat(plot)
 }
 
 
@@ -624,6 +625,7 @@ function custom_bin(plot){
     .style('margin-top','42px')
     .attr('size','8')
     .style('text-align','center')
+    .property('value', plot.custom_bins ? plot.custom_bins.size : null)
 
   // First Bin
   const first_bin_div = custom_bin_div.append('div')
@@ -639,16 +641,14 @@ function custom_bin(plot){
     .style('margin-top','10px')
 
   plot.first_bin_options.append('option')
-    .attr('value','auto')
-    .text('Automatic')
-
-  plot.first_bin_options.append('option')
     .attr('value','value')
     .text('Value')
+    .property('selected', plot.custom_bins && plot.custom_bins.first_bin_option == 'value' ? true : false)
 
   plot.first_bin_options.append('option')
     .attr('value','percentile')
     .text('Percentile')
+    .property('selected', plot.custom_bins && plot.custom_bins.first_bin_option == 'percentile' ? true : false)
 
   let first_bin_input_div = first_bin_div.append('div')
     .style('margin-top','10px')
@@ -662,6 +662,12 @@ function custom_bin(plot){
     .style('display','inline-block')
     .style('margin-left','5px')
     .attr('size','8')
+    .attr('placeholder', 'auto')
+    .property('value', !plot.custom_bins 
+      ? null
+      : plot.custom_bins.first_bin_size == "auto"
+      ? null
+      : plot.custom_bins.first_bin_size)
 
   // Last Bin
   const last_bin_div = custom_bin_div.append('div')
@@ -678,16 +684,14 @@ function custom_bin(plot){
     .style('margin-top','10px')
 
   plot.last_bin_options.append('option')
-    .attr('value','auto')
-    .text('Automatic')
-
-  plot.last_bin_options.append('option')
     .attr('value','value')
     .text('Value')
+    .property('selected', plot.custom_bins && plot.custom_bins.last_bin_option == 'value' ? true : false)
 
   plot.last_bin_options.append('option')
     .attr('value','percentile')
     .text('Percentile')
+    .property('selected', plot.custom_bins && plot.custom_bins.last_bin_option == 'percentile' ? true : false)
 
   let last_bin_input_div = last_bin_div.append('div')
     .style('margin-top','10px')
@@ -701,9 +705,50 @@ function custom_bin(plot){
     .style('display','inline-block')
     .style('margin-left','5px')
     .attr('size','8')
+    .attr('placeholder', 'auto')
+    .property('value', !plot.custom_bins 
+      ? null
+      : plot.custom_bins.last_bin_size == "auto"
+      ? null
+      : plot.custom_bins.last_bin_size)
+
+  const btndiv = plot.tip.d.append('div')
+    .style('text-align','center')
+    
+  btndiv.append('button')
+    .html('Submit')
+    .on('click', ()=>{
+      const size = plot.custom_bin_size.property('value')
+      const first_bin_size = plot.first_bin_size.property('value')
+      const first_bin_option = plot.first_bin_options.property('value')
+      const last_bin_size = plot.last_bin_size.property('value')
+      const last_bin_option = plot.last_bin_options.property('value')
+      if (!size || isNaN(size)) {
+        alert('Invalid bin size.' + size)
+      } else {
+        //if (!first_bin_size || !isNaN(first_bin_size)) errs.push('Invalid first')
+        plot.custom_bins = {
+          size: +size,
+          first_bin_size: first_bin_size != '' && !isNaN(first_bin_size) ? +first_bin_size : 'auto',
+          first_bin_option,
+          last_bin_size: last_bin_size != '' && !isNaN(last_bin_size) ? +last_bin_size : 'auto',
+          last_bin_option
+        }
+        do_plot(plot)
+        plot.tip.hide()
+      }
+    })
+
+  btndiv.append('button')
+    .html('Reset')
+    .on('click', ()=>{
+      plot.custom_bins = null
+      do_plot(plot)
+      plot.tip.hide()
+    })
 }
 
-function make_boxplot(plot) {
+function may_make_boxplot(plot) {
   if (!plot.term2_boxplot) {
     plot.svg.style('display','none')
     return
@@ -798,53 +843,57 @@ function make_boxplot(plot) {
     let x_lab_tip = ''
 
     //this is for boxplot for 2nd numerical term 
-    g.append("line")
-      .attr("x1", 0)
-      .attr("y1", plot.y_scale(item.boxplot.w1)-plot.barheight)
-      .attr("x2", 0)
-      .attr("y2", plot.y_scale(item.boxplot.w2)-plot.barheight)
-      .attr("stroke-width", 2)
-      .attr("stroke", "black")
-
-    if(plot.use_logscale){
-      g.append("rect")
-      .attr('x', -plot.barwidth/2)
-      .attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
-      .attr('width', plot.barwidth)
-      .attr('height', plot.barheight - plot.y_scale(item.boxplot.p75 / item.boxplot.p25))
-      .attr('fill','#901739')
-    }else{
-      g.append("rect")
-      .attr('x', -plot.barwidth/2)
-      .attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
-      .attr('width', plot.barwidth)
-      .attr('height', plot.barheight - plot.y_scale(item.boxplot.p75-item.boxplot.p25))
-      .attr('fill','#901739')
-    }
-
-    g.append("line")
-      .attr("x1", -plot.barwidth/2.2)
-      .attr("y1", plot.y_scale(item.boxplot.w1)-plot.barheight)
-      .attr("x2", plot.barwidth/2.2)
-      .attr("y2",plot.y_scale(item.boxplot.w1)-plot.barheight)
-      .attr("stroke-width", 2)
-      .attr("stroke", "black")
-
-    g.append("line")
-      .attr("x1", -plot.barwidth/2.2)
-      .attr("y1", plot.y_scale(item.boxplot.p50)-plot.barheight)
-      .attr("x2", plot.barwidth/2.2)
-      .attr("y2",plot.y_scale(item.boxplot.p50)-plot.barheight)
-      .attr("stroke-width", 1.5)
-      .attr("stroke", "white")
+    //if (isNaN(plot.y_scale(item.boxplot.w1))) console.log(item.boxplot)
     
-    g.append("line")
-      .attr("x1", -plot.barwidth/2.2)
-      .attr("y1", plot.y_scale(item.boxplot.w2)-plot.barheight)
-      .attr("x2", plot.barwidth/2.2)
-      .attr("y2",plot.y_scale(item.boxplot.w2)-plot.barheight)
-      .attr("stroke-width", 2)
-      .attr("stroke", "black")
+    if ('w1' in item.boxplot) {
+      g.append("line")
+        .attr("x1", 0)
+        .attr("y1", plot.y_scale(item.boxplot.w1)-plot.barheight)
+        .attr("x2", 0)
+        .attr("y2", plot.y_scale(item.boxplot.w2)-plot.barheight)
+        .attr("stroke-width", 2)
+        .attr("stroke", "black")
+
+      if(plot.use_logscale){
+        g.append("rect")
+        .attr('x', -plot.barwidth/2)
+        .attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
+        .attr('width', plot.barwidth)
+        .attr('height', plot.barheight - plot.y_scale(item.boxplot.p75 / item.boxplot.p25))
+        .attr('fill','#901739')
+      }else{
+        g.append("rect")
+        .attr('x', -plot.barwidth/2)
+        .attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
+        .attr('width', plot.barwidth)
+        .attr('height', plot.barheight - plot.y_scale(item.boxplot.p75-item.boxplot.p25))
+        .attr('fill','#901739')
+      }
+
+      g.append("line")
+        .attr("x1", -plot.barwidth/2.2)
+        .attr("y1", plot.y_scale(item.boxplot.w1)-plot.barheight)
+        .attr("x2", plot.barwidth/2.2)
+        .attr("y2", plot.y_scale(item.boxplot.w1)-plot.barheight)
+        .attr("stroke-width", 2)
+        .attr("stroke", "black")
+
+      g.append("line")
+        .attr("x1", -plot.barwidth/2.2)
+        .attr("y1", plot.y_scale(item.boxplot.p50)-plot.barheight)
+        .attr("x2", plot.barwidth/2.2)
+        .attr("y2", plot.y_scale(item.boxplot.p50)-plot.barheight)
+        .attr("stroke-width", 1.5)
+        .attr("stroke", "white")
+      
+      g.append("line")
+        .attr("x1", -plot.barwidth/2.2)
+        .attr("y1", plot.y_scale(item.boxplot.w2)-plot.barheight)
+        .attr("x2", plot.barwidth/2.2)
+        .attr("y2", plot.y_scale(item.boxplot.w2)-plot.barheight)
+        .attr("stroke-width", 2)
+        .attr("stroke", "black")
+    }
 
     for(const outlier of item.boxplot.out){
       g.append("circle")
@@ -887,7 +936,7 @@ function make_boxplot(plot) {
   }
 }
 
-function make_stat(plot) {
+function may_make_stat(plot) {
   if (!plot.boxplot) {
     if (plot.boxplot_div) {
       plot.boxplot_div.style("display", "none")
@@ -912,7 +961,7 @@ function make_stat(plot) {
     + '<tr><td colspan="2">Among Patients treated</td></tr>'
   }
 
-  const boxplot_table = plot.boxplot_div
+  const boxplot_div = plot.boxplot_div
     .html(
       '<table><tr><th></th><th>Value</th></tr>'
       + exposed_data
@@ -925,11 +974,11 @@ function make_stat(plot) {
       + '</table>'
     )
 
-  boxplot_table.selectAll('td, th, table')
+  boxplot_div.selectAll('td, th, table')
     .style('border', '1px solid black')
     .style('padding', '0')
     .style('border-collapse', 'collapse')
 
-  boxplot_table.selectAll('th, td')
+  boxplot_div.selectAll('th, td')
     .style('padding', '2px 10px')
 }

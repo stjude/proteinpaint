@@ -145,16 +145,10 @@ ds is either official or custom
 					// no sample filtering, do not look at sample, just the variant
 					const newline = line.split( '\t', 8 ).join('\t')
 					const [e,mlst2,e2] = vcf.vcfparseline( newline, vcftk )
-					mlst = mlst2.reduce(
-						(uselst, m) => {
-							if( m_is_filtered( m ) ) {
-							} else {
-								uselst.push(m)
-							}
-							return uselst
-						},
-						[]
-					)
+					mlst = []
+					for(const m of mlst2) {
+						if(!m_is_filtered(m)) mlst.push(m)
+					}
 				}
 
 			} else if( querymode.range_termdb2groupAF ) {
@@ -168,8 +162,6 @@ ds is either official or custom
 
 			if( mlst ) {
 				for(const m of mlst) {
-
-
 
 					if( m.csq ) {
 						// not to release the whole csq, only to show number of interpretations
@@ -599,7 +591,9 @@ function run_fishertest( tmpfile ) {
 function _m_is_filtered ( q, result, mockblock ) {
 
 	return m => {
+
 		let todrop = false
+		// ***warning*** down here, can only set todrop to true, must not set it to false...
 
 		if( q.info_fields ) {
 			for(const i of q.info_fields) {
@@ -616,11 +610,11 @@ function _m_is_filtered ( q, result, mockblock ) {
 						if(i.unannotated_ishidden) {
 							todrop=true
 						}
-						continue
-					}
-					re.value2count[ value ] = 1 + (re.value2count[value]||0)
-					if( i.hiddenvalues[ value ] ) {
-						todrop=true
+					} else {
+						re.value2count[ value ] = 1 + (re.value2count[value]||0)
+						if( i.hiddenvalues[ value ] ) {
+							todrop=true
+						}
 					}
 
 				} else if( i.isnumerical ) {
@@ -649,7 +643,9 @@ function _m_is_filtered ( q, result, mockblock ) {
 					} else {
 						re.count_no++
 					}
-					todrop = (i.remove_yes && value) || (i.remove_no && !value)
+					if( (i.remove_yes && value) || (i.remove_no && !value) ) {
+						todrop=true
+					}
 				} else {
 					throw 'unknown info type'
 				}

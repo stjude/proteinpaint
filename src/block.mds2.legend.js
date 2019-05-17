@@ -21,7 +21,7 @@ display_active_variantfilter_infofields
 display_categorical_filter
 display_flag_filter
 display_numeric_filter
-list_all_variantfilter
+menu_list_all_variantfilter
 configure_one_infofield
 */
 
@@ -263,7 +263,7 @@ variant filters by both info fields and variantcase_fields
 		.style('border-radius','3px')
 		.style('border','solid 1px #ddd')
 		.on('click',()=>{
-			list_all_variantfilter( tk, block )
+			menu_list_all_variantfilter( tk, block )
 		})
 
 	tk.legend.variantfilter.holder = tr2.append('td').style('padding-left','10px')
@@ -343,12 +343,10 @@ allow interacting with it, to update settings of i, and update track
 
 
 
-function list_all_variantfilter ( tk, block ) {
-	/*
-	from info_fields and variantcase_fields
-	list inactive filters
-	*/	
-	// console.log(tk.info_fields)
+function menu_list_all_variantfilter ( tk, block ) {
+/*
+list all variant filters in the menu of the plus button
+*/	
 	const tip = tk.legend.tip
 	tip.clear()
 
@@ -359,28 +357,38 @@ function list_all_variantfilter ( tk, block ) {
 	if(tk.info_fields) {
 		for(const i of tk.info_fields) {
 
-			const filter_row = filter_table.append('tr')
-			const filter_title = filter_row.append('td')
-				.style('padding','5px')
-			const filter_terms_td = filter_row.append('td')
-				.style('padding','5px')
+			const tr = filter_table.append('tr')
 
-			filter_title
+			tr.append('td')
+				.style('padding','5px')
 				.style('text-align','right')
 				.style('opacity',.5)
 				.text(i.label)
 
+			const td = tr.append('td')
+				.style('padding','5px')
+
 			if( i.iscategorical ) {
-				
-				update_categorical_filter_all(i, filter_terms_td)
+
+				menu_show_categorical_filter( i, td,
+					async ()=>{
+						i.isactivefilter =
+							(
+								i.values.reduce((x,y)=>x+y.ishidden?1:0,0)
+								+ (i.unannotated_ishidden?1:0)
+							) > 0
+						await tk.load()
+						update_active_filter_div(tk, block)
+					}
+				)
 
 			} else if( i.isinteger || i.isfloat ) {
 
-				update_numeric_filter_all(i, filter_terms_td)
+				menu_show_numeric_filter(i, td)
 
 			} else if( i.isflag ) {
 
-				update_flag_filter_all(i, filter_terms_td)
+				menu_show_flag_filter(i, td)
 
 			}else{
 
@@ -394,89 +402,71 @@ function list_all_variantfilter ( tk, block ) {
 
 	tk.legend.tip.showunder( tk.legend.variantfilter.button.node() )
 
-	function update_categorical_filter_all(i, filter_terms_td){
 
-		filter_terms_td.selectAll('*').remove()
 
-		let hidden_term_count = 0
+
+	function menu_show_categorical_filter ( i, td, update ) {
+
+		td.selectAll('*').remove()
 
 		for(const v of i.values ) {
-					
-			const filter_term_div = filter_terms_td.append('div')
+
+			const cell = td.append('div')
 				.style('display','inline-block')
 				.style('padding','2px 10px')
+				.attr('class','sja_clb')
 
-			const varient_count = filter_term_div.append('div')
+			cell.append('div')
 				.attr('class','sja_mcdot')
 				.style('display','inline-block')
 				.style('background', '#aaa')
 				.style('padding','2px 3px')
 				.text(i._data ? i._data.value2count[v.key] : '')
 
-			const filter_term = filter_term_div.append('div')
+			const label = cell.append('div')
 				.style('display','inline-block')
-				.style('background', '#fff')
 				.style('padding','2px 5px')
+				.style('text-decoration', v.ishidden ? 'line-through' : 'none' )
 				.text(v.label)
 
-			if(v.ishidden){
-				varient_count.style('text-decoration','line-through')
-				filter_term.style('text-decoration','line-through')
-				hidden_term_count = hidden_term_count + 1
-			}
-
-			filter_term_div.on('click',async ()=>{
-
-				hidden_term_count = v.ishidden ? (hidden_term_count - 1) : (hidden_term_count + 1)
-				if (hidden_term_count == 0) delete i.isactivefilter
-				else i.isactivefilter = true
-				v.ishidden =  v.ishidden ? false : true
-				await tk.load()
-				list_all_variantfilter(tk, block)
-				update_active_filter_div(tk, block)
-				
+			cell.on('click',async ()=>{
+				label.text('Loading...')
+				v.ishidden = !v.ishidden
+				await update()
+				menu_show_categorical_filter(i,td,update)
 			})
 		}
 
 		if(i._data.unannotated_count){
 
-			const filter_term_div = filter_terms_td.append('div')
+			const cell = td.append('div')
 				.style('display','inline-block')
 				.style('padding','2px 10px')
+				.attr('class','sja_clb')
 
-			const varient_count = filter_term_div.append('div')
+			cell.append('div')
 				.attr('class','sja_mcdot')
 				.style('display','inline-block')
 				.style('background', '#aaa')
 				.style('padding','2px 3px')
 				.text( i._data ? i._data.unannotated_count : 0 )
 
-			const filter_term = filter_term_div.append('div')
+			const label = cell.append('div')
 				.style('display','inline-block')
-				.style('background', '#fff')
 				.style('padding','2px 5px')
+				.style('text-decoration', i.unannotated_ishidden ? 'line-through' : 'none' )
 				.text('Unannotated')
 
-			if(i.unannotated_ishidden){
-				varient_count.style('text-decoration','line-through')
-				filter_term.style('text-decoration','line-through')
-				hidden_term_count = hidden_term_count + 1
-			}
-				
-			filter_term_div.on('click',async ()=>{
-				hidden_term_count = i.unannotated_ishidden ? (hidden_term_count - 1) : (hidden_term_count + 1)
-				if (hidden_term_count == 0) delete i.isactivefilter
-				else i.isactivefilter = true
-				i.unannotated_ishidden =  i.unannotated_ishidden ? false : true
-				list_all_variantfilter(tk, block)
-				update_active_filter_div(tk, block)
-				await tk.load()
+			cell.on('click', async ()=>{
+				label.text('Loading...')
+				i.unannotated_ishidden = !i.unannotated_ishidden
+				await update()
+				menu_show_categorical_filter(i,td,update)
 			})
 		}
-
 	}
 
-	function update_numeric_filter_all(i, filter_terms_td){
+	function menu_show_numeric_filter(i, filter_terms_td){
 
 		filter_terms_td.selectAll('*').remove()
 
@@ -600,7 +590,7 @@ function list_all_variantfilter ( tk, block ) {
 					i.range.stopinclusive = stopselect.node().selectedIndex == 0
 				}
 				await tk.load()
-				list_all_variantfilter(tk, block)
+				menu_list_all_variantfilter(tk, block)
 				update_active_filter_div(tk, block)
 			} catch(e) {
 				window.alert(e)
@@ -608,7 +598,7 @@ function list_all_variantfilter ( tk, block ) {
 		}
 	}
 
-	function update_flag_filter_all(i, filter_terms_td){
+	function menu_show_flag_filter(i, filter_terms_td){
 		const yes_flag_div = filter_terms_td.append('div')
 			.style('display','inline-block')
 			.style('padding','3px 10px')
@@ -617,7 +607,7 @@ function list_all_variantfilter ( tk, block ) {
 				i.remove_yes =  i.remove_yes ? false : true
 				i.remove_no =  i.remove_no ? false : true
 				await tk.load()
-				list_all_variantfilter(tk, block)
+				menu_list_all_variantfilter(tk, block)
 				update_active_filter_div(tk, block)
 				
 			})
@@ -644,7 +634,7 @@ function list_all_variantfilter ( tk, block ) {
 				i.remove_yes =  i.remove_yes ? false : true
 				i.remove_no =  i.remove_no ? false : true
 				await tk.load()
-				list_all_variantfilter(tk, block)
+				menu_list_all_variantfilter(tk, block)
 				update_active_filter_div(tk, block)
 				
 			})	
