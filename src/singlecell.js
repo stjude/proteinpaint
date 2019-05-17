@@ -176,7 +176,7 @@ function init_view ( obj ) {
 	if(obj.background_color){
 		obj.scene.background = new THREE.Color( obj.background_color )
 	}else{
-		obj.scene.background = new THREE.Color( 0x000000 )
+		obj.scene.background = new THREE.Color( 0xffffff )
 	}
 
 
@@ -197,7 +197,7 @@ function init_view ( obj ) {
 	obj.controls.zoomSpeed = obj.canvas_2d ? 3.0 : 0.7
 	obj.controls.panSpeed = obj.canvas_2d ? 3.0 : 0.7
 
-	obj.controls.noZoom = false
+	obj.controls.noZoom = true
 	obj.controls.noPan = false
 
 	obj.controls.staticMoving = true
@@ -205,14 +205,18 @@ function init_view ( obj ) {
 
 	obj.scene.add( obj.camera )
 
-	obj.renderer = new THREE.WebGLRenderer( { antialias: true } )
+	obj.renderer = new THREE.WebGLRenderer( { antialias: true, preserveDrawingBuffer: true } )
 	obj.renderer.setPixelRatio( window.devicePixelRatio )
 	obj.renderer.setSize( obj.width, obj.height )
+	obj.renderer.domElement.style.backgroundColor = "#ffffff"
+	obj.renderer.domElement.style.border = 'solid #dddddd 2px'
 
 	obj.holder
 		.style('display','inline-block')
 		.style('position','relative')
 		.node().appendChild( obj.renderer.domElement )
+	
+	obj.renderer.render( obj.scene, obj.camera )
 
 	// window.addEventListener( 'resize', onWindowResize(obj), false )
 	// window.addEventListener( 'keypress', keyboard )
@@ -317,36 +321,36 @@ function init_controlpanel( obj ) {
 		.on('click',()=> make_menu( obj ))
 	
 	 obj.minimize_btn = panel.append('button')
-        .style('margin-left','10px')
-        .style('display','inline-block')
-        .style('padding-left','0px')
+		.style('margin-left','10px')
+		.style('display','inline-block')
+		.style('padding-left','0px')
 		.style('padding-right','2px')
-        .style('float','right')
-        .html(' &#65293;')
-        .on('click',()=>{
-            obj.minimize_btn.classed("active", obj.minimize_btn.classed("active") ? false : true)
-            if(obj.minimize_btn.classed("active")){
-                obj.minimize_btn
-                    .html(' &#65291;')
-            }else{
-                obj.minimize_btn
-                .html(' &#65293;')
-            }
-            obj.menu_output.style("display", obj.menu_output.display = (obj.menu_output.display == "none" ? "block" : "none"));
-        })
+		.style('float','right')
+		.html(' &#65293;')
+		.on('click',()=>{
+			obj.minimize_btn.classed("active", obj.minimize_btn.classed("active") ? false : true)
+			if(obj.minimize_btn.classed("active")){
+				obj.minimize_btn
+					.html(' &#65291;')
+			}else{
+				obj.minimize_btn
+					.html(' &#65293;')
+			}
+			obj.menu_output.style("display", obj.menu_output.display = (obj.menu_output.display == "none" ? "block" : "none"));
+		})
 
 	obj.use_background_color = 0
 
 	obj.settings_btn = panel.append('button')
-        .style('margin-left','10px')
-        .style('display','inline-block')
-        .style('padding-left','3px')
+		.style('margin-left','10px')
+		.style('display','inline-block')
+		.style('padding-left','3px')
 		.style('padding-right','3px')
-        .style('float','right')
-        .html('&#9187;')
-        .on('click',()=> make_settings( obj))
+		.style('float','right')
+		.html('&#9187;')
+		.on('click',()=> make_settings( obj))
 		
-	obj.menu_output = panel.append('div')
+		obj.menu_output = panel.append('div')
 		.style('margin-top','10px')
 
 }
@@ -523,6 +527,34 @@ function update_controlpanel ( obj, data ) {
 
 		})
 	}
+
+	// screenshot button
+	const screenshot_btn = obj.holder
+	.append('div')
+	.style('padding','5px')
+	.style('position','absolute')
+	.style('border-radius','5px')
+	.style('bottom','20px')
+	.style('right','20px')
+	.style('background-color','#dddddd')
+	.html('<b>&#10697;</b> Capture')
+	.style('font-size','1em')
+	.on('mousedown', ()=>{
+		const imgData = obj.renderer.domElement.toDataURL()
+		// console.log(imgData)
+
+		let imgNode = document.createElement("img")
+		imgNode.src = imgData
+		// document.body.appendChild(imgNode)
+		screenshot_btn.append('span')
+			.style('display','none')
+			.html('<a download="scRNA_'+ new Date().toLocaleString() +'.png" href="'+ imgNode.src +'" title="ImageName">Camera</a>')	
+		// download_btn.node().click()		
+	})
+	.on('mouseup', ()=>{
+		screenshot_btn.select('a').node().click()
+		screenshot_btn.selectAll('span').remove()
+	})
 }
 
 function make_menu ( obj ) {
@@ -642,7 +674,7 @@ function make_settings(obj){
 	.style('margin','5px')
 
 	const black_div = back_color_div.append('div')
-		.style('margin','3px')
+		.style('margin','5px')
 		.style('display','block')
 
 	const name = Math.random(),
@@ -658,12 +690,13 @@ function make_settings(obj){
 
 	black_div.append('label')
 		.style('display','inline-block')
+		.style('font-size','.8em')
 		.text('Black')
 		.style('padding-left','10px')
 		.attr('for',idblack)
 
 	const white_div = back_color_div.append('div')
-		.style('margin','3px')
+		.style('margin','5px')
 		.style('display','block')
 
 	const inputwhite = white_div.append('input')
@@ -675,10 +708,23 @@ function make_settings(obj){
 
 	white_div.append('label')
 		.style('display','inline-block')
+		.style('font-size','.8em')
 		.text('White')
 		.style('padding-left','10px')
 		.attr('for',idwhite)
 
+	if(obj.use_background_color == 0){
+		inputwhite.property('checked',1)
+	} else {
+		inputblack.property('checked',1)
+	}
+	
+	function toggle_background () {
+		const isblack = inputblack.property('checked')
+		const iswhite = inputwhite.property('checked')
+		obj.scene.background = new THREE.Color( isblack ? 0x000000 : 0xffffff )
+		obj.use_background_color = isblack ? 0 : 1
+	}
 	// point size change 
 	const point_size_div = obj.settings.d.append('div')
 		.style('display','block')
@@ -695,20 +741,66 @@ function make_settings(obj){
 		.on('change', ()=>{
 			obj.scene.children[1].material.size = (point_size_slider.node().value/100)
 		})
-		
-	if(obj.use_background_color == 0){
-		inputblack.property('checked',1)
-	} else {
-		inputwhite.property('checked',1)
-	}
 
+	// zoom in / zoom out
+	const zoom_div = obj.settings.d.append('div')
+		.style('display','block')
+		.text('Zoom In / Out')
+		.style('margin','20px 5px')
 
-	function toggle_background () {
-		const isblack = inputblack.property('checked')
-		const iswhite = inputwhite.property('checked')
-		obj.scene.background = new THREE.Color( isblack ? 0x000000 : 0xffffff )
-		obj.use_background_color = isblack ? 0 : 1
-	}
+	const cam_pos_z = obj.data_sphere_r * 3
+
+	const zoom_slider = zoom_div.append('input')
+		.style('display','block')
+		.style('padding','5px')
+		.attr('type','range')
+		.attr('min', cam_pos_z/5)
+		.attr('max', cam_pos_z*1.5)
+		.attr('value',obj.camera.position.z)
+		.style('direction','rtl')
+		.on('change', ()=>{
+			obj.camera.position.z = zoom_slider.node().value
+		})
+	
+	// info for panning
+	obj.settings.d.append('div')
+		.style('margin','5px')
+		.text('Panning')
+
+	obj.settings.d.append('div')
+		.style('font-size','.8em')
+		.style('text-align','center')
+		.style('margin-bottom','10px')
+		.html('<p style="margin:3px;">Right mouse click </br>+ Mouse move</p>')
+
+	// reset button
+	obj.settings.d.append('div')
+		.attr('class','sja_menuoption')
+		.text('Reset view')
+		.style('width','80px')
+		.style('margin','auto')
+		.style('margin-top','15px')
+		.style('margin-bottom','15px')
+		.on('click', ()=>{
+			// reset background checkbox
+			inputwhite.property('checked',1)
+			obj.scene.background = new THREE.Color( obj.background_color ? obj.background_color : 0xffffff )
+
+			// reset point size
+			point_size_slider.node().value = obj.point_size? (obj.point_size*100) : obj.canvas_2d ? 30 : 5
+			obj.scene.children[1].material.size = obj.point_size ? obj.point_size : obj.canvas_2d ? 0.3 : 0.05
+
+			//reset zoom
+			obj.camera.position.z = cam_pos_z
+			zoom_slider.node().value = obj.camera.position.z
+
+			//reset panning
+			console.log(obj.controls)
+			obj.controls.target.x = 0
+			obj.controls.target.y = 0
+			obj.controls.target.z = 0
+
+		})
 }
 
 function heatmap_menu(obj){

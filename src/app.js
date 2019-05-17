@@ -1370,6 +1370,13 @@ async function launch_singlecell ( arg, holder ) {
 		const genome=genomes[arg.genome]
 		if(!genome) throw 'Invalid genome: '+arg.genome
 		arg.genome = genome
+
+		await client.add_scriptTag( '/static/js/three.js' )
+		await client.add_scriptTag('/static/js/loaders/PCDLoader.js')
+		await client.add_scriptTag('/static/js/controls/TrackballControls.js')
+		await client.add_scriptTag('/static/js/WebGL.js')
+		await client.add_scriptTag('/static/js/libs/stats.min.js')
+
 		const _ = await import('./singlecell')
 		await _.init( arg, holder )
 	}catch(e){

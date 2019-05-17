@@ -52,46 +52,20 @@ if( urlp.has('singlecell') ) {
 	const genomeobj=arg.genomes[genomename]
 	if(!genomeobj) return 'invalid genome: '+genomename
 
-	new Promise((resolve,reject)=>{
-		const script = document.createElement('script')
-		script.setAttribute('src', window.location.origin+'/static/js/three.js')
-		document.head.appendChild(script)
-		script.onload = resolve
+	client.add_scriptTag( '/static/js/three.js' )
+	.then(()=>{
+		return client.add_scriptTag('/static/js/loaders/PCDLoader.js')
 	})
 	.then(()=>{
-		return new Promise((resolve,reject)=>{
-			const script = document.createElement('script')
-			script.setAttribute('src', window.location.origin+'/static/js/loaders/PCDLoader.js')
-			document.head.appendChild(script)
-			script.onload = resolve
-		})
+		return client.add_scriptTag('/static/js/controls/TrackballControls.js')
 	})
 	.then(()=>{
-		return new Promise((resolve,reject)=>{
-			const script = document.createElement('script')
-			script.setAttribute('src', window.location.origin+'/static/js/controls/TrackballControls.js')
-			document.head.appendChild(script)
-			script.onload = resolve
-		})
+		return client.add_scriptTag('/static/js/WebGL.js')
 	})
 	.then(()=>{
-		return new Promise((resolve,reject)=>{
-			const script = document.createElement('script')
-			script.setAttribute('src', window.location.origin+'/static/js/WebGL.js')
-			document.head.appendChild(script)
-			script.onload = resolve
-		})
+		return client.add_scriptTag('/static/js/libs/stats.min.js')
 	})
 	.then(()=>{
-		return new Promise((resolve,reject)=>{
-			const script = document.createElement('script')
-			script.setAttribute('src', window.location.origin+'/static/js/libs/stats.min.js')
-			document.head.appendChild(script)
-			script.onload = resolve
-		})
-	})
-	.then(()=>{
-	
 		import('./singlecell')
 		.then(_=>{
 			_.init( {
