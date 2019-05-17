@@ -55,6 +55,11 @@ export class Barchart{
       + '&term2=' + this.settings.term2
       + '&ssid=' + this.settings.ssid
       + '&mname=' + this.settings.mname
+      + '&custom_bins=' + (
+        !this.settings.custom_bins 
+        ? '' 
+        : encodeURIComponent(JSON.stringify(this.settings.custom_bins))
+      )
 
     if (this.serverData[dataName]) {
       this.render(this.serverData[dataName]) 
@@ -538,6 +543,7 @@ export function may_make_barchart(plot) {
     ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
     mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
     term2Obj: plot.term2,
-    unit: plot.unit
+    unit: plot.unit,
+    custom_bins: plot.custom_bins
   }, obj)
 }

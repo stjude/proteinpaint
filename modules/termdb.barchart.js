@@ -2,6 +2,7 @@ const app = require('../app')
 const path = require('path')
 const utils = require('./utils')
 const Partjson = require('./partjson')
+const d3format = require('d3-format')
 
 const settings = {}
 const pj = getPj(settings)
@@ -15,6 +16,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 const unannotated = {}
 const orderedLabels = {}
 const unannotatedLabels = {}
+const binLabelFormatter = d3format.format('r')
 
 /*
 ********************** EXPORTED
@@ -25,7 +27,9 @@ handle_request_closure
 exports.handle_request_closure = ( genomes ) => {
   return async (req, res) => {
     const q = req.query
-
+    if (q.custom_bins) {
+      q.custom_bins = JSON.parse(decodeURIComponent(q.custom_bins))
+    } 
     try {
       const genome = genomes[ q.genome ]
       if(!genome) throw 'invalid genome'
@@ -206,8 +210,8 @@ async function setValFxns(q, tdb, ds) {
       joinFxns[key] = row => bySample[row[skey]]
       continue
     }
-    if (key in joinFxns) continue
     const t = tdb.termjson.map.get(key)
+    if ((!key || t.iscategorical) && key in joinFxns) continue
     if (!t) throw `Unknown ${term}="${q[term]}"`
     if (!t.graph) throw `${term}.graph missing`
     if (!t.graph.barchart) throw `${term}.graph.barchart missing`
@@ -215,16 +219,15 @@ async function setValFxns(q, tdb, ds) {
       /*** TODO: handle unannotated categorical values?  ***/
       joinFxns[key] = row => row[key] 
     } else if (t.isinteger || t.isfloat) {
-
-      return get_numeric_bin_name(key, t, ds, term)
+      return get_numeric_bin_name(key, t, ds, term, q.custom_bins)
     } else {
       throw "unsupported term binning"
     }
   }
 }
 
-function get_numeric_bin_name ( key, t, ds, termNum ) {
-  const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum )
+function get_numeric_bin_name ( key, t, ds, termNum, custom_bins ) {
+  const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum, custom_bins )
   orderedLabels[key] = _orderedLabels
   if (binconfig.unannotated) {
     unannotatedLabels[key] = binconfig.unannotated.label
@@ -270,7 +273,7 @@ function get_numeric_bin_name ( key, t, ds, termNum ) {
   }
 }
 
-function termdb_get_numericbins ( id, term, ds, termNum ) {
+function termdb_get_numericbins ( id, term, ds, termNum, custom_bins ) {
 /*
 must return values from all samples, not to exclude unannotated values
 
@@ -282,7 +285,7 @@ return an object for binning setting {}
 rather than a list of bins
 this is to accommondate settings where a valid value e.g. 0 is used for unannotated samples, and need to collect this count
 
-.bins[]
+.bins[{}]
   each element is one bin
   .start
   .stop
@@ -295,8 +298,20 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
   // step 1, get values from all samples
   const values = []
+  let observedMin, observedMax
   for(const s in ds.cohort.annotation) {
     const v = ds.cohort.annotation[ s ][ id ]
+
+    if (!values.length) {
+      observedMin = v
+      observedMax = v
+    }
+    else if (v < observedMin) {
+      observedMin = v
+    }
+    else if (v > observedMax) {
+      observedMax = v
+    }
 
     if(Number.isFinite(v)) {
       values.push(+v)
@@ -305,95 +320,177 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
   if(values.length==0) {
     throw 'No numeric values found for any sample'
   }
-
-  // step 2, decide bins
   const nb = term.graph.barchart.numeric_bin
-  if (termNum=='term2' && nb.crosstab_fixed_bins) {
-    nb.fixed_bins = nb.crosstab_fixed_bins
-  }
-
   const bins = []
   const orderedLabels = []
 
-  if( nb.fixed_bins ) {
-    // server predefined
-    // return copy of the bin, not direct obj, as bins will be modified later
-
-    for(const i of nb.fixed_bins) {
-      const copy = {
-        value: 0 // v2s
-      }
-      for(const k in i) {
-        copy[ k ] = i[ k ]
-      }
-      bins.push( copy )
-      orderedLabels.push(i.label)
+  // step 2, decide bins
+  if(custom_bins) {
+    if (custom_bins.first_bin_option == "percentile" || custom_bins.last_bin_option == "percentile") {
+      values.sort((a,b) => a - b)
     }
-
-  } else if( nb.auto_bins ) {
-
-    /* auto bins
-    given start and bin size, use max from value to decide how many bins there are
-
-    if bin size is integer,
-    to make nicer labels
-    */
-
-    const max = Math.max( ...values )
-    let v = nb.auto_bins.start_value
-    while( v < max ) {
-      const v2 = v + nb.auto_bins.bin_size
+    const min = custom_bins.first_bin_size == 'auto' 
+      ? observedMin 
+      : custom_bins.first_bin_option == 'percentile' 
+      ? values[ Math.floor((custom_bins.first_bin_size / 100) * values.length) ]
+      : custom_bins.first_bin_size
+    const max = custom_bins.last_bin_size == 'auto' 
+      ? observedMax 
+      : custom_bins.last_bin_option == 'percentile'
+      ? values[ Math.floor((custom_bins.last_bin_size / 100) * values.length) ]
+      : custom_bins.last_bin_size
+    let v = custom_bins.first_bin_size == 'auto' 
+      ? observedMin 
+      : custom_bins.first_bin_option == 'percentile'
+      ? min
+      : custom_bins.first_bin_size
+    let startunbound = v <= min ? 1 : 0
+    
+    while( v <= observedMax ) {
+      const upper = v + custom_bins.size
+      const v2 = upper > max ? max : upper
 
       const bin = {
-        start: v,
-        stop: v2,
+        start: v >= max ? max : v,
+        stop: startunbound ? min : v2,
+        startunbound,
+        stopunbound: v >= max ? 1 : 0,
         value: 0, // v2s
         startinclusive:1,
       }
-
-      if( Number.isInteger( nb.auto_bins.bin_size ) ) {
+      
+      if (startunbound) {
+        bin.label = "\u2264 " + binLabelFormatter(min)
+      } else if (v >= max) {
+        bin.label = "\u2265 " +  binLabelFormatter(max)
+      } else if( Number.isInteger( custom_bins.size ) ) {
         // bin size is integer, make nicer label
-
-        if( nb.auto_bins.bin_size == 1 ) {
+        if( custom_bins.size == 1 ) {
           // bin size is 1; use just start value as label, not a range
-          bin.label = v
+          bin.label = binLabelFormatter(v)
         } else {
           // bin size bigger than 1, reduce right bound by 1, in label only!
-          bin.label = v + ' to ' + (v2-1)
+          bin.label = binLabelFormatter(v) + ' to ' +  binLabelFormatter(v2)
         }
-      } else {
-        
+      } else {        
         // bin size is not integer
-        bin.label = v+' to '+v2
+        bin.label = v.toPrecision(4)+' to '+ binLabelFormatter(v2)
       }
 
       bins.push( bin )
       orderedLabels.push(bin.label)
 
-      v += nb.auto_bins.bin_size
+      if (v >= max) break
+      v += startunbound ? 0 : custom_bins.size;
+      startunbound = 0
     }
-  } else {
-    throw 'unknown ways to decide bins'
-  }
 
-  const binconfig = {
-    bins: bins
-  }
-
-  if( nb.unannotated ) {
-    // in case of using this numeric term as term2 in crosstab, this object can also work as a bin, to be put into the bins array
-    binconfig.unannotated = {
-      _value: nb.unannotated.value,
-      label: nb.unannotated.label,
-      label_annotated: nb.unannotated.label_annotated,
-      // for unannotated samples
-      value: 0, // v2s
-      // for annotated samples
-      value_annotated: 0, // v2s
+    const binconfig = {
+      bins: bins
     }
-  }
 
-  return [ binconfig, values, orderedLabels ]
+    if( nb.unannotated ) {
+      // in case of using this numeric term as term2 in crosstab, 
+      // this object can also work as a bin, to be put into the bins array
+      binconfig.unannotated = {
+        _value: nb.unannotated.value,
+        label: nb.unannotated.label,
+        label_annotated: nb.unannotated.label_annotated,
+        // for unannotated samples
+        value: 0, // v2s
+        // for annotated samples
+        value_annotated: 0, // v2s
+      }
+    }
+
+    return [ binconfig, values, orderedLabels ]
+  }
+  else {
+    if (termNum=='term2' && nb.crosstab_fixed_bins) {
+      nb.fixed_bins = nb.crosstab_fixed_bins
+    }
+
+    if( nb.fixed_bins ) {
+      // server predefined
+      // return copy of the bin, not direct obj, as bins will be modified later
+
+      for(const i of nb.fixed_bins) {
+        const copy = {
+          value: 0 // v2s
+        }
+        for(const k in i) {
+          copy[ k ] = i[ k ]
+        }
+        bins.push( copy )
+        orderedLabels.push(i.label)
+      }
+
+    } else if( nb.auto_bins ) {
+
+      /* auto bins
+      given start and bin size, use max from value to decide how many bins there are
+
+      if bin size is integer,
+      to make nicer labels
+      */
+
+      const max = Math.max( ...values )
+      let v = nb.auto_bins.start_value
+      while( v < max ) {
+        const v2 = v + nb.auto_bins.bin_size
+
+        const bin = {
+          start: v,
+          stop: v2,
+          value: 0, // v2s
+          startinclusive:1,
+        }
+
+        if( Number.isInteger( nb.auto_bins.bin_size ) ) {
+          // bin size is integer, make nicer label
+
+          if( nb.auto_bins.bin_size == 1 ) {
+            // bin size is 1; use just start value as label, not a range
+            bin.label = v
+          } else {
+            // bin size bigger than 1, reduce right bound by 1, in label only!
+            bin.label = v + ' to ' + (v2-1)
+          }
+        } else {
+          
+          // bin size is not integer
+          bin.label = v+' to '+v2
+        }
+
+        bins.push( bin )
+        orderedLabels.push(bin.label)
+
+        v += nb.auto_bins.bin_size
+      }
+    } else {
+      throw 'unknown ways to decide bins'
+    }
+
+    const binconfig = {
+      bins: bins
+    }
+
+    if( nb.unannotated ) {
+      // in case of using this numeric term as term2 in crosstab, 
+      // this object can also work as a bin, to be put into the bins array
+      binconfig.unannotated = {
+        _value: nb.unannotated.value,
+        label: nb.unannotated.label,
+        label_annotated: nb.unannotated.label_annotated,
+        // for unannotated samples
+        value: 0, // v2s
+        // for annotated samples
+        value_annotated: 0, // v2s
+      }
+    }
+
+    return [ binconfig, values, orderedLabels ]
+  }
 }
 
 async function load_genotype_by_sample ( id ) {

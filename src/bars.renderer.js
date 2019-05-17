@@ -175,6 +175,12 @@ export default function barsRenderer(barsapp, holder) {
         mainG.transition().duration(100)
           .attr('transform', 'translate(' + x +',0)' )
       },110)
+    } else {
+      setTimeout(()=>{
+        const bbox = svg.node().getBBox();
+        svg.transition().duration(100)
+          .attr('height', bbox.height + 20)
+      },110)
     }
   }
 
