@@ -1553,3 +1553,15 @@ export function gmlst2loci ( gmlst ) {
 	}
 	return locs
 }
+
+
+
+export function add_scriptTag ( path ) {
+	// path like /static/js/three.js, must begin with /
+	return new Promise((resolve,reject)=>{
+		const script = document.createElement('script')
+		script.setAttribute('src', window.location.origin+path)
+		document.head.appendChild(script)
+		script.onload = resolve
+	})
+}
