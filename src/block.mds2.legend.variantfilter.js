@@ -131,67 +131,6 @@ allow interacting with it, to update settings of i, and update track
 
 
 
-function menu_show_categorical_filter ( i, td, update ) {
-
-	td.selectAll('*').remove()
-
-	for(const v of i.values ) {
-
-		const cell = td.append('div')
-			.style('display','inline-block')
-			.style('padding','2px 10px')
-			.attr('class','sja_clb')
-
-		cell.append('div')
-			.attr('class','sja_mcdot')
-			.style('display','inline-block')
-			.style('background', '#aaa')
-			.style('padding','2px 3px')
-			.text(i._data ? i._data.value2count[v.key] : '')
-
-		const label = cell.append('div')
-			.style('display','inline-block')
-			.style('padding','2px 5px')
-			.style('text-decoration', v.ishidden ? 'line-through' : 'none' )
-			.text(v.label)
-
-		cell.on('click',async ()=>{
-			label.text('Loading...')
-			v.ishidden = !v.ishidden
-			await update()
-			menu_show_categorical_filter(i,td,update)
-		})
-	}
-
-	if(i._data.unannotated_count){
-
-		const cell = td.append('div')
-			.style('display','inline-block')
-			.style('padding','2px 10px')
-			.attr('class','sja_clb')
-
-		cell.append('div')
-			.attr('class','sja_mcdot')
-			.style('display','inline-block')
-			.style('background', '#aaa')
-			.style('padding','2px 3px')
-			.text( i._data ? i._data.unannotated_count : 0 )
-
-		const label = cell.append('div')
-			.style('display','inline-block')
-			.style('padding','2px 5px')
-			.style('text-decoration', i.unannotated_ishidden ? 'line-through' : 'none' )
-			.text('Unannotated')
-
-		cell.on('click', async ()=>{
-			label.text('Loading...')
-			i.unannotated_ishidden = !i.unannotated_ishidden
-			await update()
-			menu_show_categorical_filter(i,td,update)
-		})
-	}
-}
-
 
 
 
@@ -223,13 +162,9 @@ list all variant filters in the menu of the plus button
 
 			if( i.iscategorical ) {
 
-				menu_show_categorical_filter( i, td,
+				menu_show_categorical( i, td,
 					async ()=>{
-						i.isactivefilter =
-							(
-								i.values.reduce((x,y)=>x+y.ishidden?1:0,0)
-								+ (i.unannotated_ishidden?1:0)
-							) > 0
+						i.isactivefilter = count_hiddencategories(i) > 0
 						await tk.load()
 						display_all_activefilters(tk, block)
 					}
@@ -237,13 +172,13 @@ list all variant filters in the menu of the plus button
 
 			} else if( i.isinteger || i.isfloat ) {
 
-				menu_show_numeric_filter(i, td)
+				menu_show_numeric(i, td, tk, block)
 
 			} else if( i.isflag ) {
 
-				menu_show_flag_filter(i, td)
+				menu_show_flag(i, td, tk, block)
 
-			}else{
+			} else {
 
 				throw 'unknown info type'
 			}
@@ -251,200 +186,274 @@ list all variant filters in the menu of the plus button
 	}
 
 	if(tk.variantcase_fields) {
+		console.log('list variantcase fields in menu')
 	}
 
 	tk.legend.tip.showunder( tk.legend.variantfilter.button.node() )
+}
 
 
 
 
+function menu_show_categorical( i, td, update ) {
+// show one categorical filter in + button menu
 
-	function menu_show_numeric_filter(i, filter_terms_td){
+	td.selectAll('*').remove()
 
-		filter_terms_td.selectAll('*').remove()
+	for(const v of i.values ) {
 
-		const x = '<span style="font-family:Times;font-style:italic">x</span>'
-
-		const start_input = filter_terms_td.append('input')
-			.attr('type','number')
-			.attr('value',i.range.start)
-			.style('width','60px')
-			.on('keyup', async ()=>{
-				if(!client.keyupEnter()) return
-				start_input.property('disabled',true)
-				await apply()
-				start_input.property('disabled',false)
-			})
-
-		// select operator from dropdown to set start value relation
-		const startselect = filter_terms_td.append('select')
-		.style('margin-left','10px')
-
-		startselect.append('option')
-			.html('&le;')
-		startselect.append('option')
-			.html('&lt;')
-		startselect.append('option')
-			.html('&#8734;')
-
-		startselect.node().selectedIndex =
-			i.range.startunbounded ? 2 :
-			i.range.startinclusive ? 0 : 1
-
-		filter_terms_td.append('div')
+		const cell = td.append('div')
 			.style('display','inline-block')
-			.style('padding','3px 10px')
-			.html(x)
+			.style('padding','2px 10px')
+			.attr('class','sja_clb')
 
-		// select operator from dropdown to set end value relation
-		const stopselect = filter_terms_td.append('select')
-			.style('margin-right','10px')
-
-		stopselect.append('option')
-			.html('&le;')
-		stopselect.append('option')
-			.html('&lt;')
-		stopselect.append('option')
-			.html('&#8734;')
-
-		stopselect.node().selectedIndex =
-			i.range.stopunbounded ? 2 :
-			i.range.stopinclusive ? 0 : 1
-
-		const stop_input = filter_terms_td.append('input')
-			.attr('type','number')
-			.style('width','60px')
-			.attr('value',i.range.stop)
-			.on('keyup', async ()=>{
-				if(!client.keyupEnter()) return
-				stop_input.property('disabled',true)
-				await apply()
-				stop_input.property('disabled',false)
-			})
-
-		const apply_checkbox_div = filter_terms_td.append('div')
+		cell.append('div')
+			.attr('class','sja_mcdot')
 			.style('display','inline-block')
-			.style('padding','3px 10px')
-			.style('font-size','.8em')
-			.text('Apply')
-		
-		
-		const apply_checkbox = apply_checkbox_div.append('input')
-			.attr('type','checkbox')
-			.style('font-size','1em')
-			.style('margin','0 10px')
+			.style('background', '#aaa')
+			.style('padding','2px 3px')
+			.text(i._data ? i._data.value2count[v.key] : '')
 
-		if(i.isactivefilter){
-			apply_checkbox.property('checked',true)
-		}
-
-		const update_btn = filter_terms_td.append('div')
-			.attr('class','sja_menuoption')
+		const label = cell.append('div')
 			.style('display','inline-block')
-			.style('font-size','.8em')
-			.style('margin-left','5px')
-			.style('padding','3px 5px')
-			.text('Update')
-			.on('click',()=>{
-				apply()
-			})
+			.style('padding','2px 5px')
+			.style('text-decoration', v.ishidden ? 'line-through' : 'none' )
+			.text(v.label)
 
-		async function apply () {
-
-			try {
-				if(apply_checkbox.node().checked == false) {
-					i.isactivefilter = false
-				}else{
-					i.isactivefilter = true
-					i.htmlspan = filter_terms_td.append('div')
-						.style('display','none')
-				}
-
-				if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
-
-				const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
-				const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
-				if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
-
-				if( startselect.node().selectedIndex == 2 ) {
-					i.range.startunbounded = true
-					delete i.range.start
-				} else {
-					delete i.range.startunbounded
-					i.range.start = start
-					i.range.startinclusive = startselect.node().selectedIndex == 0
-				}
-				if( stopselect.node().selectedIndex == 2 ) {
-					i.range.stopunbounded = true
-					delete i.range.stop
-				} else {
-					delete i.range.stopunbounded
-					i.range.stop = stop
-					i.range.stopinclusive = stopselect.node().selectedIndex == 0
-				}
-				await tk.load()
-				menu_list_all_variantfilter(tk, block)
-				display_all_activefilters(tk, block)
-			} catch(e) {
-				window.alert(e)
-			}
-		}
+		cell.on('click',async ()=>{
+			label.text('Loading...')
+			v.ishidden = !v.ishidden
+			await update()
+			menu_show_categorical(i,td,update)
+		})
 	}
 
-	function menu_show_flag_filter(i, filter_terms_td){
-		const yes_flag_div = filter_terms_td.append('div')
-			.style('display','inline-block')
-			.style('padding','3px 10px')
-			.on('click',async ()=>{
-				i.remove_yes =  i.remove_yes ? false : true
-				i.remove_no =  i.remove_no ? false : true
-				await tk.load()
-				menu_list_all_variantfilter(tk, block)
-				display_all_activefilters(tk, block)
-			})
+	if(i._data.unannotated_count){
 
-		const yes_count = yes_flag_div.append('div')
+		const cell = td.append('div')
+			.style('display','inline-block')
+			.style('padding','2px 10px')
+			.attr('class','sja_clb')
+
+		cell.append('div')
 			.attr('class','sja_mcdot')
 			.style('display','inline-block')
 			.style('background', '#aaa')
 			.style('padding','2px 3px')
-			.text(i._data ? i._data.count_yes : 0)
+			.text( i._data ? i._data.unannotated_count : 0 )
 
-		const yes_div = yes_flag_div.append('div')
+		const label = cell.append('div')
 			.style('display','inline-block')
-			.style('background', '#fff')
-			.style('padding','4px 5px')
-			.text('Yes')
+			.style('padding','2px 5px')
+			.style('text-decoration', i.unannotated_ishidden ? 'line-through' : 'none' )
+			.text('Unannotated')
 
-		
-		const no_flag_div = filter_terms_td.append('div')
-			.style('display','inline-block')
-			.style('padding','3px 10px')
-			.on('click',async ()=>{
-				i.remove_yes =  i.remove_yes ? false : true
-				i.remove_no =  i.remove_no ? false : true
-				await tk.load()
-				menu_list_all_variantfilter(tk, block)
-				display_all_activefilters(tk, block)
-			})
+		cell.on('click', async ()=>{
+			label.text('Loading...')
+			i.unannotated_ishidden = !i.unannotated_ishidden
+			await update()
+			menu_show_categorical(i,td,update)
+		})
+	}
+}
 
-		const no_count = no_flag_div.append('div')
-			.attr('class','sja_mcdot')
-			.style('display','inline-block')
-			.style('background', '#aaa')
-			.style('padding','2px 3px')
-			.text(i._data ? i._data.count_no : 0)
 
-		const no_div = no_flag_div.append('div')
-			.style('display','inline-block')
-			.style('background', '#fff')
-			.style('padding','4px 5px')
-			.text('No')
 
-		if(i.remove_no){
-			no_div.style('text-decoration','line-through')
-		}else{
-			yes_div.style('text-decoration','line-through')
+
+
+function menu_show_flag ( i, filter_terms_td, tk, block ){
+	const yes_flag_div = filter_terms_td.append('div')
+		.style('display','inline-block')
+		.style('padding','3px 10px')
+		.attr('class','sja_clb')
+		.on('click',async ()=>{
+			if( i.remove_yes ) {
+				i.remove_yes = false
+			} else {
+				i.remove_yes = true
+				i.remove_no = false
+			}
+			i.isactivefilter = i.remove_yes || i.remove_no
+			await tk.load()
+			menu_list_all_variantfilter(tk, block)
+			display_all_activefilters(tk, block)
+		})
+
+	yes_flag_div.append('div')
+		.attr('class','sja_mcdot')
+		.style('display','inline-block')
+		.style('background', '#aaa')
+		.style('padding','2px 3px')
+		.text(i._data ? i._data.count_yes : 0)
+
+	yes_flag_div.append('div')
+		.style('display','inline-block')
+		.style('padding','4px 5px')
+		.style('text-decoration', i.remove_yes ? 'line-through' : 'default')
+		.text('Yes')
+
+	const no_flag_div = filter_terms_td.append('div')
+		.style('display','inline-block')
+		.style('padding','3px 10px')
+		.attr('class','sja_clb')
+		.on('click',async ()=>{
+			if(i.remove_no) {
+				i.remove_no=false
+			} else {
+				i.remove_no=true
+				i.remove_yes=false
+			}
+			i.isactivefilter = i.remove_yes || i.remove_no
+			await tk.load()
+			menu_list_all_variantfilter(tk, block)
+			display_all_activefilters(tk, block)
+		})
+
+	no_flag_div.append('div')
+		.attr('class','sja_mcdot')
+		.style('display','inline-block')
+		.style('background', '#aaa')
+		.style('padding','2px 3px')
+		.text(i._data ? i._data.count_no : 0)
+
+	no_flag_div.append('div')
+		.style('display','inline-block')
+		.style('padding','4px 5px')
+		.style('text-decoration', i.remove_no ? 'line-through' : 'default')
+		.text('No')
+}
+
+
+
+
+function menu_show_numeric ( i, filter_terms_td, tk, block ) {
+
+	filter_terms_td.selectAll('*').remove()
+
+	const x = '<span style="font-family:Times;font-style:italic">x</span>'
+
+	const start_input = filter_terms_td.append('input')
+		.attr('type','number')
+		.attr('value',i.range.start)
+		.style('width','60px')
+		.on('keyup', async ()=>{
+			if(!client.keyupEnter()) return
+			start_input.property('disabled',true)
+			await apply()
+			start_input.property('disabled',false)
+		})
+
+	// select operator from dropdown to set start value relation
+	const startselect = filter_terms_td.append('select')
+	.style('margin-left','10px')
+
+	startselect.append('option')
+		.html('&le;')
+	startselect.append('option')
+		.html('&lt;')
+	startselect.append('option')
+		.html('&#8734;')
+
+	startselect.node().selectedIndex =
+		i.range.startunbounded ? 2 :
+		i.range.startinclusive ? 0 : 1
+
+	filter_terms_td.append('div')
+		.style('display','inline-block')
+		.style('padding','3px 10px')
+		.html(x)
+
+	// select operator from dropdown to set end value relation
+	const stopselect = filter_terms_td.append('select')
+		.style('margin-right','10px')
+
+	stopselect.append('option')
+		.html('&le;')
+	stopselect.append('option')
+		.html('&lt;')
+	stopselect.append('option')
+		.html('&#8734;')
+
+	stopselect.node().selectedIndex =
+		i.range.stopunbounded ? 2 :
+		i.range.stopinclusive ? 0 : 1
+
+	const stop_input = filter_terms_td.append('input')
+		.attr('type','number')
+		.style('width','60px')
+		.attr('value',i.range.stop)
+		.on('keyup', async ()=>{
+			if(!client.keyupEnter()) return
+			stop_input.property('disabled',true)
+			await apply()
+			stop_input.property('disabled',false)
+		})
+
+	const apply_checkbox_div = filter_terms_td.append('div')
+		.style('display','inline-block')
+		.style('padding','3px 10px')
+		.style('font-size','.8em')
+		.text('Apply')
+	
+	
+	const apply_checkbox = apply_checkbox_div.append('input')
+		.attr('type','checkbox')
+		.style('font-size','1em')
+		.style('margin','0 10px')
+
+	if(i.isactivefilter){
+		apply_checkbox.property('checked',true)
+	}
+
+	const update_btn = filter_terms_td.append('div')
+		.attr('class','sja_menuoption')
+		.style('display','inline-block')
+		.style('font-size','.8em')
+		.style('margin-left','5px')
+		.style('padding','3px 5px')
+		.text('Update')
+		.on('click',()=>{
+			apply()
+		})
+
+	async function apply () {
+
+		try {
+			if(apply_checkbox.node().checked == false) {
+				i.isactivefilter = false
+			}else{
+				i.isactivefilter = true
+				i.htmlspan = filter_terms_td.append('div')
+					.style('display','none')
+			}
+
+			if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
+
+			const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
+			const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
+			if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
+
+			if( startselect.node().selectedIndex == 2 ) {
+				i.range.startunbounded = true
+				delete i.range.start
+			} else {
+				delete i.range.startunbounded
+				i.range.start = start
+				i.range.startinclusive = startselect.node().selectedIndex == 0
+			}
+			if( stopselect.node().selectedIndex == 2 ) {
+				i.range.stopunbounded = true
+				delete i.range.stop
+			} else {
+				delete i.range.stopunbounded
+				i.range.stop = stop
+				i.range.stopinclusive = stopselect.node().selectedIndex == 0
+			}
+			await tk.load()
+			menu_list_all_variantfilter(tk, block)
+			display_all_activefilters(tk, block)
+		} catch(e) {
+			window.alert(e)
 		}
 	}
 }
@@ -810,39 +819,6 @@ function display_flag_filter(tk, i, active_filter_div, row){
 			await tk.load()
 			display_flag_filter(tk, i, active_filter_div, row)
 		})
-		return
-
-	const cell = active_filter_div.append('div')
-		.attr('class','sja_filter_tag_btn')
-		.style('background-color', '#ddd')
-		.style('color','#000')
-		.style('padding','3px 6px 5px 6px')
-		.style('margin-right','1px')
-		.style('font-size','.9em')
-		.on('click', async ()=>{
-			i.remove_no = !i.remove_no
-			i.remove_yes = !i.remove_yes
-			i.htmlspan.text('Loading...')
-			await tk.load()
-			display_flag_filter(tk, i, active_filter_div, row)
-		})
-
-	cell.append('div')
-		.style('display','inline-block')
-		.style('background-color', '#ddd')
-		.style('color','#000')
-		.style('padding-left','3px')
-		.style('text-decoration','line-through')
-		.text( i.remove_no ? 'No' : 'Yes' )
-
-	i.htmlspan = cell.append('div')
-		.style('display','inline-block')
-		.style('background-color', '#ddd')
-		.style('color','#000')
-		.style('padding-left','3px')
-	if(i._data) {
-		i.htmlspan.text('('+(i.remove_yes?i._data.count_yes:i._data.count_no)+' filtered)')
-	}
 }
 
 
