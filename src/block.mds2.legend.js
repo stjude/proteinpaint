@@ -17,7 +17,7 @@ create_mclass
 may_create_variantfilter
 update_mclass
 update_info_fields
-display_active_variantfilter_infofields
+display_active_variantfilter_infofield
 display_categorical_filter
 display_flag_filter
 display_numeric_filter
@@ -273,7 +273,7 @@ variant filters by both info fields and variantcase_fields
 		for(const i of tk.info_fields) {
 			if(!i.isfilter) continue
 			if(i.isactivefilter) {
-				display_active_variantfilter_infofields( tk, i, block )
+				display_active_variantfilter_infofield( tk, i, block )
 			}
 		}
 	}
@@ -284,7 +284,7 @@ variant filters by both info fields and variantcase_fields
 
 
 
-function display_active_variantfilter_infofields ( tk, i, block ) {
+function display_active_variantfilter_infofield ( tk, i, block ) {
 /*
 i is an element from tk.info_fields[]
 add it as a new element to the holder
@@ -337,6 +337,13 @@ allow interacting with it, to update settings of i, and update track
 		.on('click', async ()=>{
 			row.remove()
 			delete i.isactivefilter
+			if(i.iscategorical) {
+				delete i.unannotated_ishidden
+				for(const v of i.values) delete v.ishidden
+			} else if(i.isflag) {
+				delete i.remove_yes
+				delete i.remove_no
+			}
 			await tk.load()
 		})
 }
@@ -669,7 +676,7 @@ function update_active_filter_div(tk, block){
 		for(const i of tk.info_fields) {
 			if(!i.isfilter) continue
 			if(i.isactivefilter) {
-				display_active_variantfilter_infofields( tk, i, block )
+				display_active_variantfilter_infofield( tk, i, block )
 			}
 		}
 	}
@@ -706,7 +713,7 @@ function configure_one_infofield ( i, tk, block ) {
 			}
 
 			i.isactivefilter = true
-			display_active_variantfilter_infofields( tk, i, block )
+			display_active_variantfilter_infofield( tk, i, block )
 			tk.legend.tip.hide()
 			await tk.load()
 		})
