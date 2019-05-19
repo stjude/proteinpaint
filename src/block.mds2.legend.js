@@ -326,6 +326,7 @@ allow interacting with it, to update settings of i, and update track
 	}
 
 	// 'x' button to remove filter
+	let loading=false
 	row.append('div')
 		.attr('class','sja_filter_tag_btn')
 		.style('border-radius','0 6px 6px 0')
@@ -335,7 +336,9 @@ allow interacting with it, to update settings of i, and update track
 		.style('color','#000')
 		.html('&#215;')
 		.on('click', async ()=>{
-			row.remove()
+			if(loading) return
+			loading=true
+			d3event.target.innerHTML = 'deleting...'
 			delete i.isactivefilter
 			if(i.iscategorical) {
 				delete i.unannotated_ishidden
@@ -345,6 +348,7 @@ allow interacting with it, to update settings of i, and update track
 				delete i.remove_no
 			}
 			await tk.load()
+			row.remove()
 		})
 }
 
