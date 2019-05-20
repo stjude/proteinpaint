@@ -535,7 +535,7 @@ function motif_tooltip ( motif, obj ) {
 			.text('MOTIF')
 			.style('font-weight','bold')
 		const lst1 = [
-			{k: 'P-value', v: motif.pvalue},
+			{k: 'P-values', v: htmlpvalue(motif,obj)},
 			{k:'Strand', v:motif.strand}
 		]
 		client.make_table_2col( obj.tip.d, lst1 )
@@ -551,12 +551,21 @@ function motif_tooltip ( motif, obj ) {
 	} else {
 		const lst = [
 			{k:'TF', v: motif.name},
-			{k: 'P-value', v: motif.pvalue},
+			{k: 'P-values', v: htmlpvalue(motif,obj)},
 			{k:'Strand', v:motif.strand}
 		]
 		client.make_table_2col( obj.tip.d, lst )
 	}
 	obj.tip.show( d3event.clientX, d3event.clientY )
+}
+
+
+function htmlpvalue ( m, obj ) {
+	return ( m.pvalue_ref==undefined?'<span style="opacity:.5;padding:2px"><span style="font-size:.7em">REF</span> not found</span>'
+		: '<span style="background-color:'+obj.losscolor+';padding:2px;color:white;"><span style="font-size:.7em">REF</span> '+m.pvalue_ref+'</span>' )
+		+'<br>'
+		+ ( m.pvalue_alt==undefined?'<span style="opacity:.5;padding:2px"><span style="font-size:.7em">ALT</span> not found</span>'
+		: '<span style="background-color:'+obj.gaincolor+';padding:2px;color:white;"><span style="font-size:.7em">ALT</span> '+m.pvalue_alt+'</span>' )
 }
 
 

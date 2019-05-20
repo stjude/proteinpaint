@@ -84,26 +84,28 @@ then find motif change
 	const refstop = q.m.pos+q.flankspan
 
 	const ref_fasta = await utils.get_fasta( gn, q.m.chr+':'+refstart+'-'+refstop )
-	console.log(ref_fasta)
 	fimo_may_updateallele( q, refstart, ref_fasta )
 
 	const ref_motifs = await run_fimo( q, gn, ref_fasta )
 
 	// index ref motifs by tf name
-	const allmotifs = {}
-	// k: tf name
-	// v: [ {} ]
-	//   .isref
-	//   .isalt
-	//   .logpvaluediff
-	for(const i of ref_motifs) {
-		i.isref = 1
-		if(!allmotifs[ i.name ]) {
-			allmotifs[ i.name ] = []
-		}
-		allmotifs[ i.name ].push( i )
-	}
+	const allmotifs = new Map()
+	/* k: tf name
+	   v: [ {} ]
+		 .pvalue_ref
+		 .pvalue_alt
+	     .logpvaluediff
+	*/
 
+	for(const i of ref_motifs) {
+		i.pvalue_ref = i.pvalue
+		delete i.pvalue
+		i.logpvalue_ref = i.logpvalue
+		delete i.logpvalue
+
+		if(!allmotifs.has( i.name )) allmotifs.set( i.name, [] )
+		allmotifs.get( i.name ).push( i )
+	}
 
 	const alt_fasta = fimo_mutate_seq( q.m, refstart, refstop, ref_fasta )
 	const alt_motifs = await run_fimo( q, gn, alt_fasta )
@@ -111,54 +113,65 @@ then find motif change
 	// index alt motifs and compare
 	// for each alt, find matching ref motifs
 	for(const i of alt_motifs) {
-		i.isalt = 1
-		if(!allmotifs[ i.name ]) {
-			allmotifs[ i.name ] = []
-		}
+		i.pvalue_alt = i.pvalue
+		delete i.pvalue
+		i.logpvalue_alt = i.logpvalue
+		delete i.logpvalue
+
+		if(!allmotifs.has( i.name )) allmotifs.set( i.name, [] )
 
 		// see if any ref match
 		let nomatch=true
-		for(const j of allmotifs[ i.name ]) {
-			if(j.isref
+		for(const j of allmotifs.get( i.name )) {
+			if(j.logpvalue_ref!=undefined
 				&& j.strand == i.strand
 				&& Math.abs(i.start-j.start)<=2
 				&& Math.abs(i.stop-j.stop)<=2
 				) {
-				// alt (i) match to ref (j)
-				// keep j and modify
-				delete j.isref
-				j.logpvaluediff = i.logpvalue - j.logpvalue
+
+				/* alt (i) match to ref (j)
+				   keep j and modify
+				*/
+				j.pvalue_alt = i.pvalue_alt
+				j.logpvalue_alt = i.logpvalue_alt
+
+				j.logpvaluediff = i.logpvalue_alt - j.logpvalue_ref
 				if(j.logpvaluediff > 0) {
-					j.gain = 1
+					j.gain = true
 				} else {
-					j.loss = 1
+					j.loss = true
 				}
 				nomatch=false
+
 				break
 			}
 		}
 		if(nomatch) {
-			allmotifs[ i.name ].push( i )
+			allmotifs.get( i.name ).push( i )
 		}
 	}
 
-
 	let valuemax=0,
 		valuemin=0
-	const items = [] // items to go to bed track, with gain/loss indicated (color)
-	for(const tf in allmotifs) {
+	const tflst = []
+	for(const items of allmotifs.values()) {
 
-		for(const i of allmotifs[ tf ]) {
+		for(const i of items) {
 
-			if(i.isref) {
-				i.loss=1
-				i.logpvaluediff = -i.logpvalue
-			} else if(i.isalt) {
-				i.gain = 1
-				i.logpvaluediff = i.logpvalue
+			if( i.logpvaluediff == undefined ) {
+				if( i.pvalue_ref == undefined ) {
+					// only alt
+					i.gain = true
+					i.logpvaluediff = i.logpvalue_alt
+				} else if( i.pvalue_alt == undefined ) {
+					// only ref
+					i.loss = true
+					i.logpvaluediff = -i.logpvalue_ref
+				}
 			}
+			// now each tf hit gets logpvaluediff
 
-			if(q.minabslogp) {
+			if(q.minabslogp!=undefined) {
 				if(Math.abs(i.logpvaluediff) < q.minabslogp) {
 					continue
 				}
@@ -169,13 +182,13 @@ then find motif change
 			} else {
 				valuemin = Math.min( valuemin, i.logpvaluediff)
 			}
-			
-			items.push(i)
+
+			tflst.push(i)
 		}
 	}
 
 	return {
-		items, 
+		items: tflst, 
 		valuemin,
 		valuemax,
 		refstart,
