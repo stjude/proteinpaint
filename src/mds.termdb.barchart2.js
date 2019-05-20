@@ -3,7 +3,7 @@ import barsRenderer from "./bars.renderer"
 import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
-import { Menu } from './client'
+import { Menu, dofetch2 } from './client'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 const colors = {
@@ -65,8 +65,7 @@ export class Barchart{
       this.render(this.serverData[dataName]) 
     }
     else {
-      fetch('/termdb-barchart' + dataName)
-      .then(response => response.json())
+      dofetch2('/termdb-barchart' + dataName)
       .then(chartsData => {
         this.serverData[dataName] = chartsData
         this.render(chartsData)

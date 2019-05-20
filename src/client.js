@@ -67,6 +67,66 @@ export function dofetch(path,arg) {
 		url = path
 	}
 
+	trackfetch(url, arg)
+
+	return fetch(
+		new Request( url, { method: 'POST', body:JSON.stringify(arg) })
+	)
+	.then(data=>{
+		if (fetchTimers[url]) {
+			clearTimeout(fetchTimers[url])
+		}
+		return data.json()
+	})
+}
+ 
+export function dofetch2(path,init={}) {
+/*
+	path "" string URL path
+	init {}
+		// "init" will be supplied as the second argument to
+		// the native fetch api, so the method, headers, body
+		// may be optionally supplied in the "init" argument
+		// see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
+*/
+	// path should be "path" but not "/path"
+	if(path[0]=='/') {
+		path = path.slice(1)
+	}
+
+	const jwt = localStorage.getItem('jwt')
+	if(jwt) {
+		if (!init.headers) {
+			init.headers = {}
+		}
+		init.headers.authorization = "Bearer " + jwt
+	}
+
+	let url
+	const host = localStorage.getItem('hostURL')
+	if(host) {
+		// hostURL can end with / or not, must use 'host/path'
+		if(host.endsWith('/')) {
+			url = host+path
+		} else {
+			url = host +'/'+ path
+		}
+	} else {
+		url = path
+	}
+
+	trackfetch(url, init)
+
+	return fetch( url, init)
+	.then(data=>{
+		if (fetchTimers[url]) {
+			clearTimeout(fetchTimers[url])
+		}
+		return data.json()
+	})
+}
+
+function trackfetch(url, arg) {
 	// report slowness if the fetch does not respond
 	// within the acceptableResponseTime;
 	// if the server does respond in time,
@@ -96,19 +156,7 @@ export function dofetch(path,arg) {
     	})
 		}, maxAcceptableFetchResponseTime)
 	}
-
-	return fetch(
-		new Request( url, { method: 'POST', body:JSON.stringify(arg) })
-	)
-	.then(data=>{
-		if (fetchTimers[url]) {
-			clearTimeout(fetchTimers[url])
-		}
-		return data.json()
-	})
 }
-
-
 
 export function appear(d,display) {
 	d.style('opacity',0)

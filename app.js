@@ -117,15 +117,23 @@ app.use(compression())
 if(serverconfig.jwt) {
 	console.log('JWT is activated')
 	app.use( (req,res,next)=>{
-		let j
-		try{
-			j=JSON.parse(req.body)
-		} catch(err) {
-			res.send({error:'Invalid JSON for request body'})
-			return
+		let j = {}
+		if (req.body && req.method == "POST") {
+			try{
+				j=JSON.parse(req.body)
+			} catch(err) {
+				res.send({error:'Invalid JSON for request body'})
+				return
+			}
 		}
-		if(!j.jwt) return res.send({error:'json web token missing'})
-		jsonwebtoken.verify( j.jwt, serverconfig.jwt.secret, (err, decode)=>{
+		const jwt = j.jwt 
+			? j.jwt 
+			: req.headers && req.headers.authorization && req.headers.authorization.startsWith('Bearer ') 
+			? req.headers.authorization.split(" ")[1]
+			: null
+		if(!jwt) return res.send({error:'json web token missing'})
+		
+		jsonwebtoken.verify( jwt, serverconfig.jwt.secret, (err, decode)=>{
 			if(err) return res.send({error:'Invalid token'})
 
 			// FIXME do not hardcode required attribute, replace with a list
@@ -133,20 +141,6 @@ if(serverconfig.jwt) {
 
 			next()
 		})
-
-/*
-		if(!req.headers || !req.headers.jwt) {
-			res.send({error:'No authorization'})
-			return
-		}
-		jsonwebtoken.verify( req.headers.jwt, serverconfig.jwt, (err, decode)=>{
-			if(err) {
-				res.send({error:'Not authorized'})
-				return
-			}
-			next()
-		})
-		*/
 	})
 }
 
