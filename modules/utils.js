@@ -8,6 +8,7 @@ const vcf = require('../src/vcf')
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 const tabix= serverconfig.tabix || 'tabix'
+const samtools = serverconfig.samtools || 'samtools'
 
 
 /* p4 ready
@@ -178,3 +179,18 @@ function read_file ( file ) {
 	})
 }
 exports.read_file = read_file
+
+
+
+
+exports.get_fasta = ( gn, pos ) => {
+// chr:start-stop, positions are 1-based
+	return new Promise((resolve,reject)=>{
+		const ps = spawn(samtools, ['faidx', gn.genomefile, pos])
+		const out=[]
+		ps.stdout.on('data',i=> out.push(i))
+		ps.on('close',code=>{
+			resolve( out.join('') )
+		})
+	})
+}
