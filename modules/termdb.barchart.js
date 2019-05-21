@@ -227,7 +227,7 @@ async function setValFxns(q, tdb, ds) {
       /*** TODO: handle unannotated categorical values?  ***/
       joinFxns[key] = row => row[key] 
     } else if (t.isinteger || t.isfloat) {
-      return get_numeric_bin_name(key, t, ds, term, q.custom_bins)
+      get_numeric_bin_name(key, t, ds, term, q.custom_bins)
     } else {
       throw "unsupported term binning"
     }

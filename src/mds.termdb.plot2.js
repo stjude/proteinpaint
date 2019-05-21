@@ -159,6 +159,7 @@ export function render ( arg, obj ) {
     .style('padding','10px')
     .style('margin-left','10px')
     .style('border','solid 1px transparent')
+    .style('white-space','nowrap')
 
 
   // button - cross tabulate
@@ -204,7 +205,10 @@ export function render ( arg, obj ) {
     .style('display','inline-block')
     .style('margin-left','10px')
 
-
+  plot.term2_custom_div = plot.term2_border_div
+    .append('div')
+    .style('display','inline-block')
+    .style('margin-left','10px')
 
   // other holders/components
   plot.bar_div = arg.holder.append('div')
@@ -285,6 +289,7 @@ function update_term2_header ( plot ) {
   // clear handle holder
   plot.term2_handle_div.selectAll('*').remove()
   plot.term2_displaymode_div.selectAll('*').remove()
+  plot.term2_custom_div.selectAll('*').remove()
   plot.table_div.selectAll('*').remove()
   plot.table_div.style('display','none')
   plot.svg.style('display','block')
@@ -331,6 +336,7 @@ function update_term2_header ( plot ) {
     plot.yaxis_options.node().value = 'linear'
     plot.term2_handle_div.selectAll('*').remove()
     plot.term2_displaymode_div.selectAll('*').remove()
+    plot.term2_custom_div.selectAll('*').remove()
     plot.term2_border_div.style('border-color','transparent')
     plot.legend_div.selectAll('*').remove()
     plot.crosstab_button.text('Select Second Term')
@@ -417,12 +423,11 @@ function update_term2_header ( plot ) {
   if( plot.term2.isfloat ) {
     // bin customization button
     plot.bin_controls[2] = {} 
-    plot.bin_controls[2].btn = plot.button_row
+    plot.bin_controls[2].btn = plot.term2_custom_div
       .append('div')
       .text('Customize Bins')
       .attr('class','sja_menuoption')
       .style('display','inline-block')
-      .style('margin-left','30px')
       .style('padding','3px 5px')
       .on('click',()=>{
         custom_bin(plot, 2)
@@ -673,6 +678,7 @@ function custom_bin(plot, binNum=1){
   const first_bin_input_div = first_bin_div.append('div')
     .style('margin-top','10px')
     .style('display','block')
+    .style('white-space','nowrap')
   
   first_bin_input_div.append('span')
     .style('display','inline-block')
@@ -716,6 +722,7 @@ function custom_bin(plot, binNum=1){
   const last_bin_input_div = last_bin_div.append('div')
     .style('margin-top','10px')
     .style('display','block')
+    .style('white-space','nowrap')
   
   last_bin_input_div.append('span')
     .style('display','inline-block')
