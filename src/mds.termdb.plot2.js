@@ -5,7 +5,7 @@ import {format as d3format} from 'd3-format'
 import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog,schemeCategory20} from 'd3-scale'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init} from './mds.termdb'
-import {may_make_barchart} from './mds.termdb.barchart2'
+import {may_make_barchart, custom_table_data} from './mds.termdb.barchart2'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 import { platform } from 'os';
 
@@ -181,11 +181,6 @@ export function render ( arg, obj ) {
         plot.term2_boxplot = 0
         do_plot( plot )
       }
-
-      //for crosstab button update table
-      if(plot.default2showtable){
-        make_table(plot)
-      }
     }
   })
 
@@ -233,8 +228,9 @@ export function render ( arg, obj ) {
     plot.default2showtable = 1
     update_term2_header(plot)
   }
-
-  do_plot( plot )
+  else {
+    do_plot( plot )
+  }
 }
 
 ////////////// Y Axis options
@@ -373,7 +369,6 @@ function update_term2_header ( plot ) {
   //for croasstab button show table by default
   if(plot.default2showtable){
     plot.term2_displaymode_options.node().value = 'table'
-    plot.table_div.style('display','block')
     make_table(plot)
   }
 
@@ -452,6 +447,7 @@ at the beginning or stacked bar plot for cross-tabulating
   may_make_barchart(plot)
   may_make_boxplot(plot)
   may_make_stat(plot)
+  make_table(plot)
 }
 
 
@@ -533,32 +529,78 @@ function update_plot (plot) {
       plot.yscale_max = data.binmax
       plot.legend_div.style('display','none')
     }
-
-    if(plot.term2_displaymode_options.node().value != 'table'){
-      do_plot( plot )
-    }else{
-      make_table(plot)
-    }
+    do_plot( plot )
   })
 }
 
 
 function make_table (plot) {
+  if (!plot.term2_displaymode_options 
+    || plot.term2_displaymode_options.node().value != 'table') {
+    plot.table_div.style('display','none')
+    return
+  } 
+
   // hide svg
   plot.bar_div.style('display','none')
   plot.svg.style('display','none')
   plot.legend_div.style('display','none')
+  plot.table_div.style('display','block')
   if(plot.boxplot_div){
     plot.boxplot_div.style('display','none')
   }
 
   plot.table_div.selectAll('*').remove()
+  const table_data = plot.custom_bins["1"] || plot.custom_bins["2"]
+    ? custom_table_data
+    : default_table_data
 
+  table_data(plot)
+  .then(data => {
+    const {column_keys, rows} = data
+    
+    // show table
+    const table = plot.table_div.append('table')
+    .style('margin-top','20px')
+    .style('border-spacing','3px')
+    .style('border-collapse','collapse')
+    .style('border', '1px solid black')
+
+    // header
+    const tr = table.append('tr')
+    tr.append('td') // column 1
+    // print term2 values as rest of columns
+    for(const i of column_keys) {
+      tr.append('th')
+        .text( i )
+        .style('border', '1px solid black')
+    }
+
+    for(const t1v of rows) {
+      const tr = table.append('tr')
+
+      // column 1
+      tr.append('th')
+        .text( t1v.label )
+        .style('border', '1px solid black')
+
+      // other columns
+      for(const t2label of column_keys) {
+        const td = tr.append('td')
+          .style('border', '1px solid black')
+        const v = t1v.lst.find( i=> i.label == t2label )
+        if( v ) {
+          td.text( v.value )
+        }
+      }
+    }
+  })
+}
+
+function default_table_data(plot) {
   let column_keys = []
   if( plot.term2.graph.barchart.order ) {
-
     column_keys = plot.term2.graph.barchart.order
-
   } else {
 
     // no predefined order, get unique values from data
@@ -571,23 +613,6 @@ function make_table (plot) {
     for(const s of term2values) {
       column_keys.push( s )
     }
-  }
-
-  // show table
-  const table = plot.table_div.append('table')
-  .style('margin-top','20px')
-  .style('border-spacing','3px')
-  .style('border-collapse','collapse')
-  .style('border', '1px solid black')
-
-  // header
-  const tr = table.append('tr')
-  tr.append('td') // column 1
-  // print term2 values as rest of columns
-  for(const i of column_keys) {
-    tr.append('th')
-      .text( i )
-      .style('border', '1px solid black')
   }
 
   // rows are term1 values
@@ -603,25 +628,8 @@ function make_table (plot) {
   } else {
     rows = plot.items
   }
-  
-  for(const t1v of rows) {
-    const tr = table.append('tr')
 
-    // column 1
-    tr.append('th')
-      .text( t1v.label )
-      .style('border', '1px solid black')
-
-    // other columns
-    for(const t2label of column_keys) {
-      const td = tr.append('td')
-        .style('border', '1px solid black')
-      const v = t1v.lst.find( i=> i.label == t2label )
-      if( v ) {
-        td.text( v.value )
-      }
-    }
-  }
+  return Promise.resolve({column_keys, rows})
 }
 
 function custom_bin(plot, binNum=1){

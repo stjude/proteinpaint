@@ -42,25 +42,12 @@ export class Barchart{
     if (obj) {
       this.obj = obj; //console.log(obj, this.obj)
       if (obj.modifier_barchart_selectbar) {
-        this.click_callback =  obj.modifier_barchart_selectbar.callback
+        this.click_callback = obj.modifier_barchart_selectbar.callback
       }
     }
     this.updateSettings(_settings)
 
-    const dataName = '?'
-      + 'genome=' + this.settings.genome
-      + '&dslabel=' + this.settings.dslabel
-      + '&term0=' + this.settings.term0
-      + '&term1=' + this.settings.term1
-      + '&term2=' + this.settings.term2
-      + '&ssid=' + this.settings.ssid
-      + '&mname=' + this.settings.mname
-      + '&custom_bins=' + (
-        !this.settings.custom_bins 
-        ? '' 
-        : encodeURIComponent(JSON.stringify(this.settings.custom_bins))
-      )
-
+    const dataName = this.getDataName()
     if (this.serverData[dataName]) {
       this.render(this.serverData[dataName]) 
     }
@@ -71,6 +58,23 @@ export class Barchart{
         this.render(chartsData)
       })
     }
+  }
+
+  getDataName() {
+    const s = this.settings
+    return '?'
+      + 'genome=' + s.genome
+      + '&dslabel=' + s.dslabel
+      + '&term0=' + s.term0
+      + '&term1=' + s.term1
+      + '&term2=' + s.term2
+      + '&ssid=' + s.ssid
+      + '&mname=' + s.mname
+      + '&custom_bins=' + (
+        !s.custom_bins 
+        ? '' 
+        : encodeURIComponent(JSON.stringify(s.custom_bins))
+      )
   }
 
   updateSettings(settings) {
@@ -508,6 +512,28 @@ export class Barchart{
     }
     return legendGrps;
   }
+
+  getTableData(_settings={}, obj=null) {
+    if (obj) {
+      this.obj = obj; //console.log(obj, this.obj)
+      if (obj.modifier_barchart_selectbar) {
+        this.click_callback = obj.modifier_barchart_selectbar.callback
+      }
+    }
+    this.updateSettings(_settings)
+
+    const dataName = this.getDataName()
+    if (this.serverData[dataName]) {
+      return Promise.resolve(this.serverData[dataName]) 
+    }
+    else {
+      return dofetch2('/termdb-barchart' + dataName)
+      .then(chartsData => {
+        this.serverData[dataName] = chartsData
+        return chartsData
+      })
+    }
+  }
 }
 
 export function may_make_barchart(plot) {
@@ -545,4 +571,49 @@ export function may_make_barchart(plot) {
     unit: plot.unit,
     custom_bins: plot.custom_bins
   }, obj)
+}
+
+export function custom_table_data(plot) {
+  const obj = plot.obj
+  if (!plot.barchart) {
+    plot.barchart = new Barchart({
+      holder: plot.bar_div,
+      settings: {},
+      term1: plot.term,
+      obj,
+      legendDiv: plot.legend_div
+    })
+  }
+  return plot.barchart.getTableData({
+    genome: obj.genome.name,
+    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
+    term1: plot.term.id,
+    term2: obj.modifier_ssid_barchart ? 'genotype' 
+      : plot.term2 ? plot.term2.id
+      : '',
+    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
+    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
+    term2Obj: plot.term2,
+    unit: plot.unit,
+    custom_bins: plot.custom_bins
+  }, obj)
+  .then(chartsData => {
+    const column_keys = chartsData.refs.rows
+    const rows = chartsData.refs.cols.map(t1 => {
+      return {
+        label: t1,
+        lst: chartsData.charts[0].serieses
+            .find(d => d.seriesId == t1)
+            .data.slice()
+            .sort((a,b) => column_keys.indexOf(a.dataId) - column_keys.indexOf(b.dataId))
+            .map(d => {
+              return {
+                label: d.dataId,
+                value: d.total
+              }
+            })
+      }
+    })
+    return {column_keys, rows}
+  })
 }
