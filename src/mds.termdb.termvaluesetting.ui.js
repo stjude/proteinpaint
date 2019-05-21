@@ -2,14 +2,14 @@ import * as client from './client'
 import {init} from './mds.termdb'
 
 
-export function make_termvalueselection_ui( hodler_div, group, tk, genome){
+export function make_termvalueselection_ui( holder_div, group, tk, genome){
 /*
 group{}
 	.terms[]
 */
     
     // Group div
-	const group_div = hodler_div
+	const group_div = holder_div
         .append('div')
         .style('display', 'block')
         .style('margin','5px 10px')
@@ -89,6 +89,7 @@ group{}
         // update the group div with new terms
         may_settoloading_termgroup( group )
         update(terms_div, group)
+		await tk.load()
     }
 
     function update(terms_div, group) {
