@@ -15,12 +15,6 @@ update
 create_mclass
 update_mclass
 update_info_fields
-display_active_variantfilter_infofield
-display_categorical_filter
-display_flag_filter
-display_numeric_filter
-menu_list_all_variantfilter
-configure_one_infofield
 */
 
 

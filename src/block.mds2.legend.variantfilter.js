@@ -15,7 +15,9 @@ display_categorical_filter
 display_flag_filter
 display_numeric_filter
 menu_list_all_variantfilter
-configure_one_infofield
+menu_show_categorical
+menu_show_numeric
+menu_show_flag 
 count_hiddencategories
 */
 
@@ -480,48 +482,6 @@ display/update all active filters
 		console.log('to list active variantcase fields')
 	}
 }
-
-
-
-
-function configure_one_infofield ( i, tk, block ) {
-
-	// for categorical field, to catch categories selected to be hidden
-	let hiddencategories
-
-	const div = tk.legend.tip.d.append('div')
-		.style('margin','5px')
-
-	if( i.iscategorical ) {
-		// TODO display all categories
-		hiddencategories = new Set()
-	} else {
-		// show range setter
-	}
-
-	tk.legend.tip.d.append('div')
-		.attr('class','sja_menuoption')
-		.text('APPLY')
-		.on('click', async ()=>{
-
-			if( hiddencategories ) {
-				if(hiddencategories.size==0) return
-				for(const v of i.values) {
-					if(hiddencategories.has(v.key)) {
-						v.ishidden=true
-					}
-				}
-			} else {
-			}
-
-			i.isactivefilter = true
-			display_one_activefilter( tk, i, block )
-			tk.legend.tip.hide()
-			await tk.load()
-		})
-}
-
-
 
 
 function display_categorical_filter ( tk, i, active_filter_div, row ) {
