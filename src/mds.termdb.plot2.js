@@ -115,7 +115,9 @@ export function render ( arg, obj ) {
     use_percentage: 0,
     default2showtable: 0,
     term2_boxplot: 0,
-    obj
+    obj,
+    custom_bins: {},
+    bin_controls: {1:{}, 2:{}}
   }
 
   // a row of buttons
@@ -135,7 +137,8 @@ export function render ( arg, obj ) {
   ////////////// Custom Bin button  
   if( plot.term.isfloat ) {
     // bin customization button
-    plot.custom_bin_button = plot.button_row
+    plot.bin_controls[1] = {}
+    plot.bin_controls[1].btn = plot.button_row
       .append('div')
       .text('Customize Bins')
       .attr('class','sja_menuoption')
@@ -292,123 +295,138 @@ function update_term2_header ( plot ) {
   .text('Select Second Term')
 
   //show term2 if selected
-  if(plot.term2){
+  if(!plot.term2) return
 
-    //change crosstab button text to "Change Second term"
-    plot.crosstab_button
-    .text('Change Second Term')
-    .style('margin-left','5px')
+  //change crosstab button text to "Change Second term"
+  plot.crosstab_button
+  .text('Change Second Term')
+  .style('margin-left','5px')
+  
+  // display border for the div 
+  plot.term2_border_div
+  .style('border-color','#d4d4d4')
+
+  // display term2 
+  plot.term2_handle_div.append('div')
+  .attr('class','sja_menuoption')
+  .style('display','inline-block')
+  .style('padding','3px 5px')
+  .style('background-color', '#cfe2f3ff')
+  .text(plot.term2.name)
+  
+  // button with 'X' to remove term2
+  plot.term2_handle_div.append('div')
+  .attr('class','sja_menuoption')
+  .style('display','inline-block')
+  .style('margin-left','1px')
+  .style('padding','3px 5px')
+  .style('background-color', '#cfe2f3ff')
+  .text('X')
+  .on('click',()=>{
+
+    delete plot.term2
+    plot.yaxis_option_percentage.property('disabled',true)
+    plot.yaxis_option_log.property('disabled',false)
+    plot.use_percentage = 0
+    plot.yaxis_options.node().value = 'linear'
+    plot.term2_handle_div.selectAll('*').remove()
+    plot.term2_displaymode_div.selectAll('*').remove()
+    plot.term2_border_div.style('border-color','transparent')
+    plot.legend_div.selectAll('*').remove()
+    plot.crosstab_button.text('Select Second Term')
+    plot.table_div.selectAll('*').remove()
+    plot.svg.style('display','block')
+    plot.legend_div.style('display','block')
+    if (plot.boxplot_div){
+      plot.boxplot_div.style('display','block')
+    }
+    plot.term2_boxplot = 0
     
-    // display border for the div 
-    plot.term2_border_div
-    .style('border-color','#d4d4d4')
+    update_plot(plot)
+  })
 
-    // display term2 
-    plot.term2_handle_div.append('div')
-    .attr('class','sja_menuoption')
-    .style('display','inline-block')
-    .style('padding','3px 5px')
-    .style('background-color', '#cfe2f3ff')
-    .text(plot.term2.name)
-    
-    // button with 'X' to remove term2
-    plot.term2_handle_div.append('div')
-    .attr('class','sja_menuoption')
-    .style('display','inline-block')
-    .style('margin-left','1px')
-    .style('padding','3px 5px')
-    .style('background-color', '#cfe2f3ff')
-    .text('X')
-    .on('click',()=>{
+  // display options for crosstab data
+  plot.term2_displaymode_options = plot.term2_displaymode_div.append('select')
+  .style('display','inline-block')
 
-      delete plot.term2
-      plot.yaxis_option_percentage.property('disabled',true)
-      plot.yaxis_option_log.property('disabled',false)
-      plot.use_percentage = 0
-      plot.yaxis_options.node().value = 'linear'
-      plot.term2_handle_div.selectAll('*').remove()
-      plot.term2_displaymode_div.selectAll('*').remove()
-      plot.term2_border_div.style('border-color','transparent')
-      plot.legend_div.selectAll('*').remove()
-      plot.crosstab_button.text('Select Second Term')
-      plot.table_div.selectAll('*').remove()
+  plot.term2_displaymode_options.append('option')
+  .attr('value','stacked')
+  .text('Stacked Barchart')
+
+  plot.term2_displaymode_options.append('option')
+  .attr('value','table')
+  .text('Table View')
+
+  // create boxplot option for numerical term (isfloat: true)
+  if(plot.term2.isfloat){
+    plot.term2_displaymode_options.append('option')
+    .attr('value','boxplot')
+    .text('Boxplot')
+  }
+
+  //for croasstab button show table by default
+  if(plot.default2showtable){
+    plot.term2_displaymode_options.node().value = 'table'
+    plot.table_div.style('display','block')
+    make_table(plot)
+  }
+
+  /*
+  every time the 'table' option is selected, render the table
+    table is made based on current plot.items[]
+    which may have been updated by either term1/2 binning change
+  every time the 'boxplot' option is selected, query server for boxplot data and render boxplot
+    query server using current term1 bins, which may have been changed
+
+  rerendering every time may be wasteful but guard against binning update
+  */
+  plot.term2_displaymode_options
+  .on('change',()=>{
+    const value = plot.term2_displaymode_options.node().value
+    if (value  == 'table'){
+      plot.default2showtable = 1
+      plot.term2_boxplot = 0
+      plot.table_div.style('display','block')
+      update_plot(plot)
+    }else if(value == 'stacked'){
+      plot.default2showtable = 0
+      plot.term2_boxplot = 0
+      plot.yaxis_option_percentage.property('disabled',null)
+      plot.yaxis_option_log.property('disabled',true)
+      plot.table_div.style('display','none')
       plot.svg.style('display','block')
       plot.legend_div.style('display','block')
-      if (plot.boxplot_div){
+      if(plot.boxplot_div){
         plot.boxplot_div.style('display','block')
       }
-      plot.term2_boxplot = 0
-      
       update_plot(plot)
-    })
-
-    // display options for crosstab data
-    plot.term2_displaymode_options = plot.term2_displaymode_div.append('select')
-    .style('display','inline-block')
-
-    plot.term2_displaymode_options.append('option')
-    .attr('value','stacked')
-    .text('Stacked Barchart')
-
-    plot.term2_displaymode_options.append('option')
-    .attr('value','table')
-    .text('Table View')
-
-    // create boxplot option for numerical term (isfloat: true)
-    if(plot.term2.isfloat){
-      plot.term2_displaymode_options.append('option')
-      .attr('value','boxplot')
-      .text('Boxplot')
     }
-
-    //for croasstab button show table by default
-    if(plot.default2showtable){
-      plot.term2_displaymode_options.node().value = 'table'
-      plot.table_div.style('display','block')
-      make_table(plot)
+    // if 'boxplot' selected - query server for data
+    else if(value == 'boxplot'){
+      plot.default2showtable = 0
+      plot.term2_boxplot = 1
+      plot.table_div.style('display','none')
+      plot.svg.style('display','block')
+      plot.legend_div.style('display','none')
+      plot.yaxis_option_percentage.property('disabled',1)
+      update_plot(plot)
     }
-
-    /*
-    every time the 'table' option is selected, render the table
-      table is made based on current plot.items[]
-      which may have been updated by either term1/2 binning change
-    every time the 'boxplot' option is selected, query server for boxplot data and render boxplot
-      query server using current term1 bins, which may have been changed
-
-    rerendering every time may be wasteful but guard against binning update
-    */
-    plot.term2_displaymode_options
-    .on('change',()=>{
-      const value = plot.term2_displaymode_options.node().value
-      if (value  == 'table'){
-        plot.default2showtable = 1
-        plot.term2_boxplot = 0
-        plot.table_div.style('display','block')
-        update_plot(plot)
-      }else if(value == 'stacked'){
-        plot.default2showtable = 0
-        plot.term2_boxplot = 0
-        plot.yaxis_option_percentage.property('disabled',null)
-        plot.yaxis_option_log.property('disabled',true)
-        plot.table_div.style('display','none')
-        plot.svg.style('display','block')
-        plot.legend_div.style('display','block')
-        if(plot.boxplot_div){
-          plot.boxplot_div.style('display','block')
-        }
-        update_plot(plot)
-      }
-      // if 'boxplot' selected - query server for data
-      else if(value == 'boxplot'){
-        plot.default2showtable = 0
-        plot.term2_boxplot = 1
-        plot.table_div.style('display','none')
-        plot.svg.style('display','block')
-        plot.legend_div.style('display','none')
-        plot.yaxis_option_percentage.property('disabled',1)
-        update_plot(plot)
-      }
-    })
+  })
+  
+  ////////////// Custom Bin button  
+  if( plot.term2.isfloat ) {
+    // bin customization button
+    plot.bin_controls[2] = {} 
+    plot.bin_controls[2].btn = plot.button_row
+      .append('div')
+      .text('Customize Bins')
+      .attr('class','sja_menuoption')
+      .style('display','inline-block')
+      .style('margin-left','30px')
+      .style('padding','3px 5px')
+      .on('click',()=>{
+        custom_bin(plot, 2)
+      })
   }
 }
 
@@ -601,9 +619,12 @@ function make_table (plot) {
   }
 }
 
-function custom_bin(plot){
+function custom_bin(plot, binNum=1){
   plot.tip.clear()
-      .showunder( plot.custom_bin_button.node() )
+      .showunder( plot.bin_controls[binNum].btn.node() )
+
+  const custom_bins = binNum in plot.custom_bins ? plot.custom_bins[binNum] : null
+  const controls = plot.bin_controls[binNum]
 
   const custom_bin_div = plot.tip.d.append('div')
     .style('margin','10px 0px')
@@ -615,17 +636,16 @@ function custom_bin(plot){
     .style('display','inline-block')
     .style('margin-left','10px')
 
-  
   bin_size_div.append('div')
     .text('Bin Size')
     .style('padding-right','3px')
     .style('text-align','center')
 
-  plot.custom_bin_size = bin_size_div.append('input')
+  controls.custom_bin_size = bin_size_div.append('input')
     .style('margin-top','42px')
     .attr('size','8')
     .style('text-align','center')
-    .property('value', plot.custom_bins ? plot.custom_bins.size : null)
+    .property('value', custom_bins ? custom_bins.size : null)
 
   // First Bin
   const first_bin_div = custom_bin_div.append('div')
@@ -637,20 +657,20 @@ function custom_bin(plot){
     .style('padding-right','3px')
     .style('text-align','center')
 
-  plot.first_bin_options = first_bin_div.append('select')
+  controls.first_bin_options = first_bin_div.append('select')
     .style('margin-top','10px')
 
-  plot.first_bin_options.append('option')
+  controls.first_bin_options.append('option')
     .attr('value','value')
     .text('Value')
-    .property('selected', plot.custom_bins && plot.custom_bins.first_bin_option == 'value' ? true : false)
+    .property('selected', custom_bins && custom_bins.first_bin_option == 'value' ? true : false)
 
-  plot.first_bin_options.append('option')
+  controls.first_bin_options.append('option')
     .attr('value','percentile')
     .text('Percentile')
-    .property('selected', plot.custom_bins && plot.custom_bins.first_bin_option == 'percentile' ? true : false)
+    .property('selected', custom_bins && custom_bins.first_bin_option == 'percentile' ? true : false)
 
-  let first_bin_input_div = first_bin_div.append('div')
+  const first_bin_input_div = first_bin_div.append('div')
     .style('margin-top','10px')
     .style('display','block')
   
@@ -658,16 +678,16 @@ function custom_bin(plot){
     .style('display','inline-block')
     .text('<=')
 
-  plot.first_bin_size = first_bin_input_div.append('input')
+  controls.first_bin_size = first_bin_input_div.append('input')
     .style('display','inline-block')
     .style('margin-left','5px')
     .attr('size','8')
     .attr('placeholder', 'auto')
-    .property('value', !plot.custom_bins 
+    .property('value', !custom_bins 
       ? null
-      : plot.custom_bins.first_bin_size == "auto"
+      : custom_bins.first_bin_size == "auto"
       ? null
-      : plot.custom_bins.first_bin_size)
+      : custom_bins.first_bin_size)
 
   // Last Bin
   const last_bin_div = custom_bin_div.append('div')
@@ -680,20 +700,20 @@ function custom_bin(plot){
     .style('padding-right','3px')
     .style('text-align','center')
 
-  plot.last_bin_options = last_bin_div.append('select')
+  controls.last_bin_options = last_bin_div.append('select')
     .style('margin-top','10px')
 
-  plot.last_bin_options.append('option')
+  controls.last_bin_options.append('option')
     .attr('value','value')
     .text('Value')
-    .property('selected', plot.custom_bins && plot.custom_bins.last_bin_option == 'value' ? true : false)
+    .property('selected', custom_bins && custom_bins.last_bin_option == 'value' ? true : false)
 
-  plot.last_bin_options.append('option')
+  controls.last_bin_options.append('option')
     .attr('value','percentile')
     .text('Percentile')
-    .property('selected', plot.custom_bins && plot.custom_bins.last_bin_option == 'percentile' ? true : false)
+    .property('selected', custom_bins && custom_bins.last_bin_option == 'percentile' ? true : false)
 
-  let last_bin_input_div = last_bin_div.append('div')
+  const last_bin_input_div = last_bin_div.append('div')
     .style('margin-top','10px')
     .style('display','block')
   
@@ -701,16 +721,16 @@ function custom_bin(plot){
     .style('display','inline-block')
     .text('>=')
 
-  plot.last_bin_size = last_bin_input_div.append('input')
+  controls.last_bin_size = last_bin_input_div.append('input')
     .style('display','inline-block')
     .style('margin-left','5px')
     .attr('size','8')
     .attr('placeholder', 'auto')
-    .property('value', !plot.custom_bins 
+    .property('value', !custom_bins 
       ? null
-      : plot.custom_bins.last_bin_size == "auto"
+      : custom_bins.last_bin_size == "auto"
       ? null
-      : plot.custom_bins.last_bin_size)
+      : custom_bins.last_bin_size)
 
   const btndiv = plot.tip.d.append('div')
     .style('text-align','center')
@@ -718,16 +738,16 @@ function custom_bin(plot){
   btndiv.append('button')
     .html('Submit')
     .on('click', ()=>{
-      const size = plot.custom_bin_size.property('value')
-      const first_bin_size = plot.first_bin_size.property('value')
-      const first_bin_option = plot.first_bin_options.property('value')
-      const last_bin_size = plot.last_bin_size.property('value')
-      const last_bin_option = plot.last_bin_options.property('value')
+      const size = controls.custom_bin_size.property('value')
+      const first_bin_size = controls.first_bin_size.property('value')
+      const first_bin_option = controls.first_bin_options.property('value')
+      const last_bin_size = controls.last_bin_size.property('value')
+      const last_bin_option = controls.last_bin_options.property('value')
       if (!size || isNaN(size)) {
         alert('Invalid bin size.' + size)
       } else {
         //if (!first_bin_size || !isNaN(first_bin_size)) errs.push('Invalid first')
-        plot.custom_bins = {
+        plot.custom_bins[binNum] = {
           size: +size,
           first_bin_size: first_bin_size != '' && !isNaN(first_bin_size) ? +first_bin_size : 'auto',
           first_bin_option,
@@ -742,7 +762,7 @@ function custom_bin(plot){
   btndiv.append('button')
     .html('Reset')
     .on('click', ()=>{
-      plot.custom_bins = null
+      plot.custom_bins[binNum] = null
       do_plot(plot)
       plot.tip.hide()
     })

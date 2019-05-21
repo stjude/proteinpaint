@@ -124,8 +124,9 @@ function getPj(settings) {
             }
           },
           "__:useColOrder": "=useColOrder()",
+          "__:useRowOrder": "=useRowOrder()",
           "__:unannotatedLabels": "=unannotatedLabels()",
-          "@done()": "=sortCols()"
+          "@done()": "=sortColsRows()"
         }
       }
     },
@@ -179,12 +180,19 @@ function getPj(settings) {
         const vals = context.joins.get('vals')
         return vals.seriesId === unannotated.label ? 0 : 1
       },
-      sortCols(result) {
-        if (!orderedLabels[settings.term1].length) return
-        result.cols.sort((a,b) => orderedLabels[settings.term1].indexOf(a) - orderedLabels[settings.term1].indexOf(b))
+      sortColsRows(result) {
+        if (orderedLabels[settings.term1].length) {
+          result.cols.sort((a,b) => orderedLabels[settings.term1].indexOf(a) - orderedLabels[settings.term1].indexOf(b))
+        }
+        if (orderedLabels[settings.term2].length) {
+          result.rows.sort((a,b) => orderedLabels[settings.term2].indexOf(a) - orderedLabels[settings.term2].indexOf(b))
+        }
       },
       useColOrder() {
         return orderedLabels[settings.term1].length > 0
+      },
+      useRowOrder() {
+        return orderedLabels[settings.term2].length > 0
       },
       unannotatedLabels() {
         return {
@@ -227,7 +235,7 @@ async function setValFxns(q, tdb, ds) {
 }
 
 function get_numeric_bin_name ( key, t, ds, termNum, custom_bins ) {
-  const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum, custom_bins )
+  const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum, custom_bins[termNum.slice(-1)] )
   orderedLabels[key] = _orderedLabels
   if (binconfig.unannotated) {
     unannotatedLabels[key] = binconfig.unannotated.label
@@ -406,15 +414,15 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
     return [ binconfig, values, orderedLabels ]
   }
   else {
-    if (termNum=='term2' && nb.crosstab_fixed_bins) {
-      nb.fixed_bins = nb.crosstab_fixed_bins
-    }
+    const fixed_bins = termNum=='term2' && nb.crosstab_fixed_bins ? nb.crosstab_fixed_bins 
+      : nb.fixed_bins ? nb.fixed_bins
+      : undefined
 
-    if( nb.fixed_bins ) {
+    if( fixed_bins ) {
       // server predefined
       // return copy of the bin, not direct obj, as bins will be modified later
 
-      for(const i of nb.fixed_bins) {
+      for(const i of fixed_bins) {
         const copy = {
           value: 0 // v2s
         }
