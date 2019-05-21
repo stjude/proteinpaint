@@ -34,6 +34,7 @@ then pass term2 and crosstab result to callback
 		.style('margin-left','20px')
 		.style('padding','3px 5px')
 		.style('font-size','.8em')
+		.style('display', arg.obj && arg.obj.modifier_ssid_barchart ? 'none' : 'inline-block')
 		.attr('class','sja_menuoption')
 		.text('CROSSTAB')
 
