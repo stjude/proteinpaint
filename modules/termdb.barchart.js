@@ -16,7 +16,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 const unannotated = {}
 const orderedLabels = {}
 const unannotatedLabels = {}
-const binLabelFormatter = d3format.format('r')
+const binLabelFormatter = d3format.format('.3r')
 
 /*
 ********************** EXPORTED
@@ -370,7 +370,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       if (startunbound) {
         bin.label = "\u2264 " + binLabelFormatter(min)
       } else if (v >= max) {
-        bin.label = "\u2265 " +  binLabelFormatter(max)
+        bin.label = "\u2265 " + binLabelFormatter(max)
       } else if( Number.isInteger( custom_bins.size ) ) {
         // bin size is integer, make nicer label
         if( custom_bins.size == 1 ) {
@@ -382,7 +382,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
         }
       } else {        
         // bin size is not integer
-        bin.label = v.toPrecision(4)+' to '+ binLabelFormatter(v2)
+        bin.label = binLabelFormatter(v) +' to '+ binLabelFormatter(v2)
       }
 
       bins.push( bin )
