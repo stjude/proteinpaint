@@ -13,7 +13,8 @@ module.exports={
 	cohort:{
 		files:[
 			{file:'files/hg38/sjlife/clinical/matrix'},
-			{file:'files/hg38/sjlife/cohort/admix'}
+			{file:'files/hg38/sjlife/cohort/admix'},
+			{file:'files/hg38/sjlife/cohort/geneticrace'}
 		],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds)=>{
