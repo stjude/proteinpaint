@@ -258,6 +258,7 @@ by info_fields[] and variantcase_fields[]
 							lst.push({
 								key: i.key,
 								isnumerical:true,
+								missing_value: i.missing_value,
 								range: i.range
 							})
 						}

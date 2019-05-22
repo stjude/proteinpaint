@@ -619,6 +619,10 @@ function _m_is_filtered ( q, result, mockblock ) {
 
 				} else if( i.isnumerical ) {
 
+					if( value == undefined ) {
+						if( i.missing_value!=undefined ) value = i.missing_value
+					}
+
 					// test start
 					if( !i.range.startunbounded ) {
 						if( i.range.startinclusive ) {
