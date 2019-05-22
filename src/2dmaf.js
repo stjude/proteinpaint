@@ -853,7 +853,7 @@ for(const m of mlst) {
 	mclasses[m.class]++
 }
 
-const a=Math.min(document.body.clientWidth,document.body.clientHeight)
+const a=Math.min( window.innerWidth, window.innerHeight )
 
 const axiswidth=50,
 	sharewidth=a*.5,
