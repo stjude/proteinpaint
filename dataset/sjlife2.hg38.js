@@ -103,6 +103,7 @@ module.exports={
 				isfilter:true,
 				isactivefilter:true,
 				isfloat:1,
+				missing_value:0,
 				range: {
 					start: 0.1,
 					startinclusive: true,
@@ -115,6 +116,7 @@ module.exports={
 				label:'gnomAD African-American allele frequency',
 				isfilter:true,
 				isfloat:1,
+				missing_value:0,
 				range: {
 					start: 0.1,
 					startinclusive: true,
@@ -127,6 +129,7 @@ module.exports={
 				label:'gnomAD East Asian allele frequency',
 				isfilter:true,
 				isfloat:1,
+				missing_value:0,
 				range: {
 					start: 0.1,
 					startinclusive: true,
@@ -139,6 +142,7 @@ module.exports={
 				label:'gnomAD non-Finnish European allele frequency',
 				isfilter:true,
 				isfloat:1,
+				missing_value:0,
 				range: {
 					start: 0.1,
 					startinclusive: true,
@@ -176,10 +180,10 @@ module.exports={
 						in_use:true,
 						// TODO bind complex things such as boxplot to one of the info fields
 					},
-					{ key:'gnomAD_AF', missing_value: 0, },
-					{ key:'gnomAD_AF_afr', missing_value: 0, },
-					{ key:'gnomAD_AF_eas', missing_value: 0, },
-					{ key:'gnomAD_AF_nfe', missing_value: 0, }
+					{ key:'gnomAD_AF' },
+					{ key:'gnomAD_AF_afr' },
+					{ key:'gnomAD_AF_eas' },
+					{ key:'gnomAD_AF_nfe' }
 				],
 				in_use: true, // to use numerical axis by default
 				inuse_infokey:true,

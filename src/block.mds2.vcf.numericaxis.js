@@ -44,7 +44,8 @@ const disclabelspacing = 1 // px spacing between disc and label
 const middlealignshift = .3
 const labyspace = 5
 const clustercrowdlimit = 7 // at least 8 px per disc, otherwise won't show mname label
-
+// when using an info field, if the variant is not annotated and no missing_value is available from the info field, use this
+const hardcode_missing_value = 0
 
 
 
@@ -745,12 +746,19 @@ decide following things about the y axis:
 
 	// these are only for inuse_infokey
 	let info_key,
-		use_altinfo
+		use_altinfo,
+		missing_value
 
 	if( nm.inuse_infokey ) {
 		info_key = nm.info_keys.find( i=> i.in_use ).key // setup_numerical_axis guarantee this is valid
 		// if the INFO is A, apply to m.altinfo, else, to m.info
 		use_altinfo = tk.vcf.info[ info_key ].Number == 'A'
+		if(tk.info_fields) {
+			const i = tk.info_fields.find(i=>i.key == info_key )
+			if(i) {
+				missing_value = i.missing_value
+			}
+		}
 	}
 
 	for(const m of r.variants) {
@@ -778,8 +786,9 @@ decide following things about the y axis:
 		}
 
 		if(!Number.isFinite( v )) {
-			// missing value, if there is a predefined one
-			v = Number.isFinite(nm.missing_value) ? nm.missing_value : 0
+			// should only happen for info field, when this variant is not annotated by it
+			// may use the predefined missing value
+			v = Number.isFinite(missing_value) ? missing_value : hardcode_missing_value
 		}
 
 		m._v = v // for later use
