@@ -1,7 +1,7 @@
 import { select, event } from "d3-selection";
 import { scaleLinear, scaleLog } from "d3-scale";
 import htmlLegend from "./html.legend";
-import { axisLeft } from "d3-axis";
+import { axisLeft, axisTop } from "d3-axis";
 import { format } from 'd3-format'
 import { newpane } from "./client.js";
 
@@ -95,9 +95,9 @@ export default function barsRenderer(barsapp, holder) {
   const emptyObj = {}; //used to represent any empty cell
   let chart
   let chartTitle
-  let svg, mainG, series, collabels;
+  let svg, mainG, series, collabels, rowlabels;
   // eslint-disable-next-line
-  let yAxis, yTitle, xAxis, xTitle, xLine;
+  let yAxis, yTitle, yLine, xAxis, xTitle, xLine;
   // eslint-disable-next-line
   let currCell, currRects, currRowTexts, currColTexts;
   let clusterRenderer;
@@ -119,9 +119,9 @@ export default function barsRenderer(barsapp, holder) {
 
     const unadjustedColw = hm.colw
     currserieses = chart.visibleSerieses;
-    setDimensions();
     currserieses.map(setIds);
     chart.serieses.map(setIds);
+    setDimensions();
 
     chartTitle.style("width", hm.svgw + "px")
       .html(chart.chartId);
@@ -145,7 +145,7 @@ export default function barsRenderer(barsapp, holder) {
 
     const c = collabels
       .attr("transform", colLabelsTransform)
-      .style("display", hm.colw < 6 ? "none" : "")
+      .style("display", hm.orientation != 'vertical' || hm.colw < 6 ? "none" : "")
       .selectAll("g")
       .data(hm.cols, returnD)
     c.exit().remove();
@@ -154,11 +154,22 @@ export default function barsRenderer(barsapp, holder) {
       .append("g")
       .each(addColLabel);
 
+    const r = rowlabels
+      .attr("transform", rowLabelsTransform)
+      .style("display", hm.orientation != "horizontal" || hm.colw < 6 ? "none" : "")
+      .selectAll("g")
+      .data(hm.cols, returnD)
+    r.exit().remove();
+    r.each(updateRowLabel);
+    r.enter()
+      .append("g")
+      .each(addRowLabel);
+
     currRects = series.selectAll("rect");
     currColTexts = collabels.selectAll("text");
     legendRenderer(barsapp.getLegendGrps(chart))
     hm.delay = 0.35 * hm.duration
-    renderAxes(yAxis, yTitle, xTitle, hm);
+    renderAxes(hm)
     hm.colw = unadjustedColw
 
     if (nosvg) {
@@ -267,6 +278,14 @@ export default function barsRenderer(barsapp, holder) {
       .on("mouseout.tphm2", colLabelMouseout)
       .on("click.tphm2", hm.handlers.colLabel.click);
 
+    rowlabels = mainG
+      .append("g")
+      .attr("class", "bars-rowlabels")
+      .style("cursor", hm.handlers.rowLabel.click ? "pointer" : "")
+      .on("mouseover.tphm2", colLabelMouseover)
+      .on("mouseout.tphm2", colLabelMouseout)
+      .on("click.tphm2", hm.handlers.rowLabel.click);
+
     series = mainG
       .append("g")
       .attr("class", "bars-series")
@@ -275,12 +294,14 @@ export default function barsRenderer(barsapp, holder) {
       .on("click", seriesClick);
 
     yAxis = mainG.append("g").attr("class", "sjpcb-bar-chart-y-axis");
+    yLine = yAxis.append("line").attr("class", "sjpcb-bar-chart-y-line").style("stroke", "#000")
     yTitle = mainG
       .append("g")
       .attr("class", "sjpcb-bar-chart-y-title")
       .style("cursor", "default");
+    
     xAxis = mainG.append("g").attr("class", "sjpcb-bar-chart-x-axis");
-    xLine = xAxis.append("line").style("stroke", "#000")
+    xLine = xAxis.append("line").attr("class", "sjpcb-bar-chart-x-line").style("stroke", "#000")
     xTitle = mainG
       .append("g")
       .attr("class", "sjpcb-bar-chart-x-title")
@@ -323,7 +344,9 @@ export default function barsRenderer(barsapp, holder) {
         + 2*hm.borderwidth*/
 
     hm.h.yScale = {}
+    hm.h.xScale = {}
     hm.h.yPrevBySeries = {}
+    hm.h.xPrevBySeries = {}
     const ratio =
       hm.scale == "byChart"
         ? 1
@@ -339,10 +362,20 @@ export default function barsRenderer(barsapp, holder) {
           .domain([min, max / ratio])
           .range([0, hm.svgh - hm.collabelh])
 
+        hm.h.xScale[series.seriesId] = scaleLinear()
+          .domain([min, max / ratio])
+          .range([0, hm.svgw - hm.rowlabelw])
+
         hm.h.yPrevBySeries[series.seriesId] = 0
+        hm.h.xPrevBySeries[series.seriesId] = 0
+        // y or x positions are calculated based on 
+        // previous bar height or width total, respectively
         for(const data of series.visibleData) {
           data.height = getRectHeight(data)
           data.y = getRectY(data)
+          // calculate x before width
+          data.x = getRectX(data)
+          data.width = getRectWidth(data)
         }
       }
     }
@@ -401,9 +434,9 @@ export default function barsRenderer(barsapp, holder) {
     g.select("rect")
       .transition()
       .duration(hm.duration)
-      .attr("width", hm.colw)
+      .attr("width", d => d.width)
       .attr("height", d => d.height)
-      .attr("x", getRectX)
+      .attr("x", d => d.x)
       .attr("y", d => d.y)
       .attr("fill", hm.handlers.series.rectFill);
 
@@ -438,9 +471,9 @@ export default function barsRenderer(barsapp, holder) {
     });
 
     g.append("rect")
-      .attr("width", hm.colw)
+      .attr("width", d => d.width)
       .attr("height", d => d.height)
-      .attr("x", getRectX)
+      .attr("x", d => d.x)
       .attr("y", d => d.y)
       .attr("fill", hm.handlers.series.rectFill)
       .attr("shape-rendering", "crispEdges")
@@ -452,7 +485,7 @@ export default function barsRenderer(barsapp, holder) {
   }
 
   function seriesGrpTransform() {
-    let x = 1 + hm.colspace
+    const x = 1 + hm.colspace
     let y = hm.colheadtop ? hm.collabelh : hm.colgrplabelh;
     if (hm.legendontop) y += hm.legendh;
     return "translate(" + x + "," + y + ")";
@@ -460,19 +493,36 @@ export default function barsRenderer(barsapp, holder) {
 
   function getRectHeight(d) {
     const total = hm.unit == "log" ? d.logTotal : d.total
-    const height = hm.h.yScale[d.seriesId](total)
+    const height = hm.orientation == "vertical"
+      ? hm.h.yScale[d.seriesId](total)
+      : hm.rowh
     const rowspace = 0; //Math.round(height) > 1 ? hm.rowspace : 0;
     hm.h.yPrevBySeries[d.seriesId] += height + rowspace
     return Math.max(0, height - rowspace);
   }
 
-  function getRectX(d) { 
+  function getRectY(d) {
     const grpoffset = hm.colgrps.indexOf(d[hm.colgrpkey]) * hm.colgspace
-    return hm.cols.indexOf(d.colId) * (hm.colw + hm.colspace) + grpoffset
+    return hm.orientation == "vertical"
+      ? hm.svgh - hm.collabelh - hm.h.yPrevBySeries[d.seriesId]
+      : hm.cols.indexOf(d.colId) * (hm.rowh + hm.rowspace) + grpoffset
   }
 
-  function getRectY(d) {
-    return hm.svgh - hm.collabelh - hm.h.yPrevBySeries[d.seriesId]
+  function getRectWidth(d) {
+    const total = hm.unit == "log" ? d.logTotal : d.total
+    const width = hm.orientation == "vertical"
+      ? hm.colw 
+      : hm.h.xScale[d.seriesId](total)
+    const colspace = 0; //Math.round(width) > 1 ? hm.colspace : 0;
+    hm.h.xPrevBySeries[d.seriesId] += width + colspace
+    return Math.max(0, width - colspace);
+  }
+
+  function getRectX(d) {
+    const grpoffset = hm.colgrps.indexOf(d[hm.colgrpkey]) * hm.colgspace
+    return hm.orientation == "vertical" 
+      ? hm.cols.indexOf(d.colId) * (hm.colw + hm.colspace) + grpoffset
+      : hm.h.xPrevBySeries[d.seriesId]
   }
 
   function colLabelsTransform() {
@@ -528,6 +578,57 @@ export default function barsRenderer(barsapp, holder) {
       .text(hm.handlers.colLabel.text);
   }
 
+  function rowLabelsTransform() {
+    const y = hm.colheadtop ? hm.collabelh : hm.colgrplabelh //5 + hm.rowspace
+    const x = hm.rowheadleft
+      ? /*hm.collabelh -*/ hm.borderwidth + 1
+      : hm.svgw - hm.rowlabelw + 20;
+    return "translate(" + x + "," + y + ")";
+  }
+
+  function rowLabelTransform(d) {
+    const grp = hm.row2name[d] ? hm.row2name[d].grp : "";
+    const y =
+      hm.colgrps.indexOf(grp) * hm.rowgspace +
+      hm.cols.indexOf(d) * (hm.rowh + hm.rowspace) +
+      hm.rowh; // / 4;
+    const x = hm.rowheadleft
+      ? -1 * (hm.rowtick + hm.rowlabtickspace)
+      : hm.rowtick + hm.rowlabtickspace;
+    return "translate(" + x + "," + y + ")";
+  }
+
+  function addRowLabel(d) {
+    if (!this || d === undefined) return;
+    const g = select(this)
+      .attr("transform", rowLabelTransform)
+      .style("opacity", 0);
+
+    g.append("text")
+      .attr("x", 2) //hm.colw / 3)
+      .attr("text-anchor", "end")
+      .attr("font-size", hm.rowlabfontsize)
+      .text(hm.handlers.rowLabel.text);
+
+    g.transition()
+      .delay(hm.delay)
+      .duration(hm.duration)
+      .style("opacity", 1);
+  }
+
+  function updateRowLabel() {
+    const g = select(this);
+
+    g.attr("transform", rowLabelTransform); //.transition().duration(hm.duration)
+
+    g.selectAll("text") //.transition().duration(hm.duration)
+      //.attr('transform', 'rotate(-90)')
+      .attr("x", 2) //hm.colw / 3)
+      .attr("text-anchor", "end")
+      .attr("font-size", hm.rowlabfontsize)
+      .text(hm.handlers.rowLabel.text);
+  }
+
   function rowTextWeight(d) {
     return d == currCell.rowId ? 700 : "";
   }
@@ -552,10 +653,21 @@ export default function barsRenderer(barsapp, holder) {
     return d == currCell.colId ? "#00f" : "";
   }
 
-  function renderAxes(yAxis, yTitle, xTitle, s) {
+  function renderAxes(hm) {
+    if (hm.orientation == "vertical") {
+      renderAxesOnVertical(hm);
+    } else {
+      renderAxesOnHorizontal(hm);
+    }
+  }
+
+  function renderAxesOnVertical(s) {
+    xAxis.style('display','none')
+    yLine.style('display','none')
     const colLabelBox = collabels.node().getBBox()
     const lineY = s.svgh - s.collabelh + 24
     xLine
+    .style('display','block')
     .attr("x1", 1)
     .attr("x2", s.svgw - s.svgPadding.left - hm.rowlabelw + s.cols.length*s.colspace)
     .attr("y1", lineY)
@@ -568,7 +680,7 @@ export default function barsRenderer(barsapp, holder) {
       .style("font-size", s.axisTitleFontSize + "px")
       .text(xLabel);
 
-    const textBBox = xTitle.node().getBBox()
+    //const textBBox = xTitle.node().getBBox()
     setTimeout(()=>{
       xTitle.attr(
           "transform",
@@ -593,7 +705,9 @@ export default function barsRenderer(barsapp, holder) {
       //: hm.unit == "log" ? chart.maxSeriesLogTotal
       : chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
 
-    yAxis.call(
+    yAxis
+    .style('display','block')
+    .call(
       axisLeft(
         (hm.unit == "log" ? scaleLog() : scaleLinear())
           .domain([max / ratio, min])
@@ -619,6 +733,78 @@ export default function barsRenderer(barsapp, holder) {
       .style("text-anchor", "middle")
       .style("font-size", s.axisTitleFontSize + "px")
       .text(hm.handlers.yAxis.text());
+  }
+
+  function renderAxesOnHorizontal(s) {
+    yAxis.style('display','none')
+    xLine.style('display','none')
+    const lineX = s.svgw - s.rowlabelw + 24
+    yLine
+    .style('display','block')
+    .attr("x1", lineX)
+    .attr("x2", lineX)
+    .attr("y1", s.svgPadding.top)
+    .attr("y2", s.svgh -s.svgPadding.top - s.collabelh + s.rows.length*s.rowspace)
+
+    yTitle.selectAll("*").remove()
+    const yLabel = hm.handlers.yAxis.text()
+    yTitle.append("text")
+      .style("text-anchor", "middle")
+      .style("font-size", s.axisTitleFontSize + "px")
+      .text(yLabel);
+
+
+    const rowLabelBox = rowlabels.node().getBBox()
+    setTimeout(()=>{
+      yTitle
+        .style('text-anchor', 'middle')
+        .attr(
+          "transform",
+          "translate(" + 
+            -rowLabelBox.width/2 +
+            ",0)"
+        )
+    }, 0)
+
+    const ratio =
+      hm.scale == "byChart" || hm.clickedAge
+        ? 1
+        : chart.maxVisibleSeriesTotal / chart.maxVisibleAcrossCharts
+    const min = hm.unit == "log" ? 1 : 0
+    const max = hm.unit == "pct" ? 100 
+      //: hm.unit == "log" ? chart.maxSeriesLogTotal
+      : chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
+
+    let y = s.colheadtop ? s.collabelh : s.colgrplabelh;
+    if (s.legendontop) y += s.legendh;
+
+    xAxis
+    .style('display','block')
+    .attr('transform', 'translate(0,'+ y +')')
+    .call(
+      axisTop(
+        (hm.unit == "log" ? scaleLog() : scaleLinear())
+          .domain([min, max / ratio])
+          .range([
+            2,
+            s.svgw - s.rowlabelw // + s.rowgrplabelw - s.borderwidth
+          ])
+      ).ticks(8, format('d'))
+    );
+
+    xTitle.selectAll("*").remove();
+    const w = s.svgw - s.rowlabelw;
+    xTitle
+      .attr(
+        "transform",
+        "translate(" +
+          w/2 +
+          ",0)" 
+      )
+      .append("text")
+      .style("text-anchor", "middle")
+      .style("font-size", s.axisTitleFontSize + "px")
+      .text(hm.handlers.xAxis.text());
   }
 
   function seriesMouseOver() {

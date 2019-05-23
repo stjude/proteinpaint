@@ -320,7 +320,25 @@ export class Barchart{
           tip.hide()
         }
       },
-      rowLabel: {},
+      rowLabel: {
+        text: d => {
+          return !self.terms.term1.values ? d
+            : self.terms.term1.values[d].label
+        },
+        click: () => { 
+          const d = event.target.__data__
+          if (!d) return
+          self.settings.exclude.cols.push(d)
+          self.main()
+        },
+        mouseover: () => {
+          event.stopPropagation()
+          tip.show(event.clientX, event.clientY).d.html("Click to hide bar");
+        },
+        mouseout: () => {
+          tip.hide()
+        }
+      },
       legend: {
         click: () => {
           event.stopPropagation()
@@ -352,13 +370,22 @@ export class Barchart{
       },
       yAxis: {
         text: () => {
-          return s.unit == "pct" ? "% of patients" : "# of patients"
+          if (s.orientation == "vertical") { 
+            return s.unit == "pct" ? "% of patients" : "# of patients"
+          } else {
+            const term = self.terms.term1
+            return term.name[0].toUpperCase() + term.name.slice(1)
+          }
         }
       },
       xAxis: {
         text: () => {
-          const term = self.terms.term1
-          return term.name[0].toUpperCase() + term.name.slice(1)
+          if (s.orientation == "vertical") { 
+            const term = self.terms.term1
+            return term.name[0].toUpperCase() + term.name.slice(1)
+          } else {
+            return s.unit == "pct" ? "% of patients" : "# of patients"
+          }
         }
       }
     }
