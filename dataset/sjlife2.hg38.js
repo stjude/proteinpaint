@@ -187,7 +187,8 @@ module.exports={
 					{ key:'gnomAD_AF_nfe' }
 				],
 				in_use: true, // to use numerical axis by default
-				inuse_infokey:true,
+				//inuse_infokey:true,
+				inuse_ebgatest:true,
 
 				termdb2groupAF:{
 					group1:{
@@ -216,9 +217,20 @@ module.exports={
 
 				ebgatest: {
 					terms:[
+					/*
 						{
 							term:{id:'diaggrp',name:'Diagnosis Group', iscategorical:true },
 							values:[ {key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'} ]
+						}
+						*/
+						{
+							term:{id:'agedx',name:'Age at dx',isfloat:true},
+							range:{
+								start:0,
+								stop:4,
+								startinclusive:true,
+								stopinclusive:true
+							}
 						}
 					],
 					populations:[
