@@ -111,6 +111,8 @@ group{}
             } else {
                 // range label is not clickable
                 condition_btn.text('RANGE')
+                    .style('background-color', '#015051')
+                    .style('pointer-events','none')
             }
 
             const term_value_div = terms_div.append('div')
@@ -247,7 +249,7 @@ group{}
 
             } else if( term.term.isinteger || term.term.isfloat ) {
                 // TODO numerical term, print range in value button and apply the suitable click callback
-
+                display_numeric_filter(term, term_value_div)
             }
 
             // button with 'x' to remove term2
@@ -306,10 +308,13 @@ group{}
                 values: [{key: bar_term.value, label: bar_term.label}],
                 term: {
                     id: bar_term.term.id,
-                    iscategorical: bar_term.term.iscategorical,
                     name: bar_term.term.name
                 }
             }
+            if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
+            if(bar_term.term.isfloat) new_term.term.isfloat = bar_term.term.isfloat
+            if(bar_term.term.isinteger) new_term.term.isinteger = bar_term.term.isinteger
+
             group.terms.push(new_term)
         }
         
@@ -332,11 +337,15 @@ group{}
                         values: [{key: bar_term.value, label: bar_term.label}],
                         term: {
                             id: bar_term.term.id,
-                            iscategorical: bar_term.term.iscategorical,
                             name: bar_term.term.name
                         } 
                     }
                     new_term.isnot  = term.isnot ? true : false
+
+                    if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
+                    if(bar_term.term.isfloat) new_term.term.isfloat = bar_term.term.isfloat
+                    if(bar_term.term.isinteger) new_term.term.isinteger = bar_term.term.isinteger
+
                     new_terms.push(new_term)
                 }
             }else{
@@ -350,6 +359,145 @@ group{}
         // // update the group div with new terms
         may_settoloading_termgroup( group )
         await callback()
+    }
+
+    function display_numeric_filter(i, value_div){
+
+        value_div.selectAll('*').remove()
+    
+        const numeric_div = value_div.append('div')
+            .attr('class','sja_filter_tag_btn')
+            .style('font-size','1em')
+            .style('padding','3px 5px 3px 5px')
+            .style('margin-right','1px')
+            .style('background-color', '#4888BF')
+    
+        numeric_div.selectAll('*').remove()
+    
+        const x = '<span style="font-family:Times;font-style:italic">x</span>'
+        if( i.range.startunbounded ) {
+            numeric_div.html(x+' '+(i.range.stopinclusive?'&le;':'&lt;')+' '+i.range.stop)
+        } else if( i.range.stopunbounded ) {
+            numeric_div.html(x+' '+(i.range.startinclusive?'&ge;':'&gt;')+' '+i.range.start)
+        } else {
+            numeric_div.html(
+                i.range.start
+                +' '+(i.range.startinclusive?'&le;':'&lt;')
+                +' '+x
+                +' '+(i.range.stopinclusive?'&le;':'&lt;')
+                +' '+i.range.stop
+            )
+        }
+    
+        numeric_div.on('click', ()=>{
+    
+            tip.clear()
+    
+            const equation_div = tip.d.append('div')
+                .style('display','block')
+                .style('padding','3px 5px')
+    
+            const start_input = equation_div.append('input')
+                .attr('type','number')
+                .attr('value',i.range.start)
+                .style('width','60px')
+                .on('keyup', async ()=>{
+                    if(!client.keyupEnter()) return
+                    start_input.property('disabled',true)
+                    await apply()
+                    start_input.property('disabled',false)
+                })
+    
+            // to replace operator_start_div
+            const startselect = equation_div.append('select')
+            .style('margin-left','10px')
+    
+            startselect.append('option')
+                .html('&le;')
+            startselect.append('option')
+                .html('&lt;')
+            startselect.append('option')
+                .html('&#8734;')
+    
+            startselect.node().selectedIndex =
+                i.range.startunbounded ? 2 :
+                i.range.startinclusive ? 0 : 1
+    
+            equation_div.append('div')
+                .style('display','inline-block')
+                .style('padding','3px 10px')
+                .html(x)
+    
+            // to replace operator_end_div
+            const stopselect = equation_div.append('select')
+                .style('margin-right','10px')
+    
+            stopselect.append('option')
+                .html('&le;')
+            stopselect.append('option')
+                .html('&lt;')
+            stopselect.append('option')
+                .html('&#8734;')
+    
+            stopselect.node().selectedIndex =
+                i.range.stopunbounded ? 2 :
+                i.range.stopinclusive ? 0 : 1
+    
+            const stop_input = equation_div.append('input')
+                .attr('type','number')
+                .style('width','60px')
+                .attr('value',i.range.stop)
+                .on('keyup', async ()=>{
+                    if(!client.keyupEnter()) return
+                    stop_input.property('disabled',true)
+                    await apply()
+                    stop_input.property('disabled',false)
+                })
+    
+            tip.d.append('div')
+                .attr('class','sja_menuoption')
+                .style('text-align','center')
+                .text('APPLY')
+                .on('click', ()=>{
+                    tip.hide()
+                    apply()
+                })
+    
+            // tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
+            tip.showunder( numeric_div.node() )
+    
+            async function apply () {
+                try {
+                    if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
+    
+                    const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
+                    const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
+                    if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
+    
+                    if( startselect.node().selectedIndex == 2 ) {
+                        i.range.startunbounded = true
+                        delete i.range.start
+                    } else {
+                        delete i.range.startunbounded
+                        i.range.start = start
+                        i.range.startinclusive = startselect.node().selectedIndex == 0
+                    }
+                    if( stopselect.node().selectedIndex == 2 ) {
+                        i.range.stopunbounded = true
+                        delete i.range.stop
+                    } else {
+                        delete i.range.stopunbounded
+                        i.range.stop = stop
+                        i.range.stopinclusive = stopselect.node().selectedIndex == 0
+                    }
+                    display_numeric_filter(i, value_div)
+                    tip.hide()
+                    await callback()
+                } catch(e) {
+                    window.alert(e)
+                }
+            }
+        })
     }
 }
 
