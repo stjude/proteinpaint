@@ -349,8 +349,14 @@ group{}
                     new_term.isnot  = term.isnot ? true : false
 
                     if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
-                    if(bar_term.term.isfloat) new_term.term.isfloat = bar_term.term.isfloat
-                    if(bar_term.term.isinteger) new_term.term.isinteger = bar_term.term.isinteger
+                    if(bar_term.term.isfloat) {
+                        new_term.term.isfloat = bar_term.term.isfloat
+                        new_term.range = bar_term.range
+                    }
+                    if(bar_term.term.isinteger) {
+                        new_term.term.isinteger = bar_term.term.isinteger
+                        new_term.range = bar_term.range
+                    }
 
                     new_terms.push(new_term)
                 }
