@@ -2,7 +2,7 @@ const common=require('../src/common')
 
 
 const cohorthierarchy= [
-	{k:'group',label:'Group'},
+	{k:'group',label:'Group',full:'subtype'},
 ]
 
 const samplenamekey = 'sample_name'
@@ -190,7 +190,7 @@ module.exports={
 			lohLengthUpperLimit:2000000,
 			groupsamplebyattr:{
 				attrlst:[
-					{k:'group',label:'Group'},
+					{k:'group',label:'Group',full:'Subtype'},
 				],
 			},
 			expressionrank_querykey:'genefpkm',
@@ -234,7 +234,7 @@ module.exports={
 	
 			boxplotbysamplegroup:{
 				attributes:[
-					{k:'primary subtype',label:'Subtype'},
+					{k:'group',label:'Subtype'},
 				]
 			}
 		}
