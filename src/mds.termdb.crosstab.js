@@ -76,7 +76,38 @@ then pass term2 and crosstab result to callback
 	return button
 }
 
+export function may_trigger_crosstabulate( arg, btn ) {
+	arg.obj.tip.clear()
+			.showunder( btn )
 
+	const errdiv = arg.obj.tip.d.append('div')
+		.style('margin-bottom','5px')
+		.style('color','#C67C73')
+
+	// this function will be used for both tree and search
+	const term2_selected_callback = make_term2_callback( arg, btn, errdiv )
+
+	add_searchbox_4term( arg.obj, arg.obj.tip.d, term2_selected_callback )
+
+	const treediv = arg.obj.tip.d.append('div')
+
+	// a new object as init() argument for launching the tree
+	// with modifiers
+	const obj = {
+		genome: arg.obj.genome,
+		mds: arg.obj.mds,
+		div: treediv,
+		default_rootterm: {},
+
+		modifier_click_term: {
+			// TODO when switching term2 while there is already a term2, add term2 id here also
+			disable_terms: new Set([ arg.term1.id ]),
+			callback: term2_selected_callback
+		},
+	}
+
+	init(obj)
+}
 
 
 

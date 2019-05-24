@@ -178,20 +178,29 @@ export default function barsRenderer(barsapp, holder) {
         .attr("width", hm.svgw)
         .style("opacity",1);
       setTimeout(()=>{
-        const bbox = svg.node().getBBox();
+        const bbox = svg.node().getBBox()
         const x = bbox.width - svg.attr('width') + hm.rowlabelw
         svg.transition().duration(100)
           .attr('width', bbox.width + 20)
           .attr('height', bbox.height + 20)
+        
         mainG.transition().duration(100)
-          .attr('transform', 'translate(' + x +',0)' )
+          .attr('transform', 'translate(' + x +',0)')
       },110)
     } else {
       setTimeout(()=>{
-        const bbox = svg.node().getBBox();
+        const bbox = mainG.node().getBBox()
         svg.transition().duration(100)
+          .attr('width', bbox.width + 20)
           .attr('height', bbox.height + 20)
-      },110)
+        
+        const rowbox = rowlabels.node().getBBox()
+        mainG.transition().duration(100)
+          .attr('transform', 
+            hm.orientation == 'vertical'
+            ? 'translate('+ hm.rowlabelw + ',0)'
+            : 'translate('+ rowbox.width +',0)')
+      },510)
     }
   }
 
@@ -498,7 +507,7 @@ export default function barsRenderer(barsapp, holder) {
       : hm.rowh
     const rowspace = 0; //Math.round(height) > 1 ? hm.rowspace : 0;
     hm.h.yPrevBySeries[d.seriesId] += height + rowspace
-    return Math.max(0, height - rowspace);
+    return Math.max(1, height - rowspace);
   }
 
   function getRectY(d) {
@@ -514,8 +523,8 @@ export default function barsRenderer(barsapp, holder) {
       ? hm.colw 
       : hm.h.xScale[d.seriesId](total)
     const colspace = 0; //Math.round(width) > 1 ? hm.colspace : 0;
-    hm.h.xPrevBySeries[d.seriesId] += width + colspace
-    return Math.max(0, width - colspace);
+    hm.h.xPrevBySeries[d.seriesId] += Math.max(1, width + colspace)
+    return Math.max(1, width - colspace);
   }
 
   function getRectX(d) {
@@ -529,7 +538,7 @@ export default function barsRenderer(barsapp, holder) {
     let x = 5 + hm.colspace
     let y = hm.colheadtop
       ? /*hm.collabelh -*/ hm.borderwidth + 1
-      : hm.svgh - hm.collabelh + 20;
+      : hm.svgh - hm.collabelh + 25;
     if (hm.legendontop) y += hm.legendh;
     return "translate(" + x + "," + y + ")";
   }
@@ -678,6 +687,7 @@ export default function barsRenderer(barsapp, holder) {
     xTitle.append("text")
       .style("text-anchor", "middle")
       .style("font-size", s.axisTitleFontSize + "px")
+      .style("font-weight", 600)
       .text(xLabel);
 
     //const textBBox = xTitle.node().getBBox()
@@ -721,6 +731,7 @@ export default function barsRenderer(barsapp, holder) {
     yTitle.selectAll("*").remove();
     const h = s.svgh - s.collabelh;
     yTitle
+      .style("font-weight", 600)
       .attr(
         "transform",
         "translate(" +
@@ -749,19 +760,20 @@ export default function barsRenderer(barsapp, holder) {
     yTitle.selectAll("*").remove()
     const yLabel = hm.handlers.yAxis.text()
     yTitle.append("text")
-      .style("text-anchor", "middle")
+      .style("text-anchor", "end")
       .style("font-size", s.axisTitleFontSize + "px")
+      .style("font-weight", 600)
       .text(yLabel);
 
 
     const rowLabelBox = rowlabels.node().getBBox()
     setTimeout(()=>{
       yTitle
-        .style('text-anchor', 'middle')
+        .style('text-anchor', 'end')
         .attr(
           "transform",
           "translate(" + 
-            -rowLabelBox.width/2 +
+            0 + //-rowLabelBox.width/2 +
             ",0)"
         )
     }, 0)
@@ -804,6 +816,7 @@ export default function barsRenderer(barsapp, holder) {
       .append("text")
       .style("text-anchor", "middle")
       .style("font-size", s.axisTitleFontSize + "px")
+      .style("font-weight", 600)
       .text(hm.handlers.xAxis.text());
   }
 

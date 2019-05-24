@@ -595,8 +595,9 @@ export function may_make_barchart(plot) {
     ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
     mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
     term2Obj: plot.term2,
-    unit: plot.unit,
-    custom_bins: plot.custom_bins
+    unit: plot.bar_settings.unit,
+    custom_bins: plot.custom_bins,
+    orientation: plot.bar_settings.orientation
   }, obj)
 }
 

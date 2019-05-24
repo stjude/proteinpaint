@@ -297,6 +297,7 @@ such conditions may be carried by obj
 		.style('margin','10px')
 		.style('padding','10px')
 		.style('display','none')
+		.style('position','relative')
 
 	// these to be shared for crosstab function
 	term.graph.barchart.dom = {
