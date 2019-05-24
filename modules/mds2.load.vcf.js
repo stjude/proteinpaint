@@ -17,12 +17,9 @@ handle_getcsq
 get_columnidx_byterms
 wrap_validate_termvaluesetting
 sample_match_termvaluesetting
-get_querymode
+set_querymode
 query_vcf_applymode
-parseline_termdb2groupAF
 getallelecount_samplegroup_vcfline
-parseline_ebgatest
-may_apply_chisqtest_ebgatest
 vcfbyrange_collect_result
 _m_is_filtered
 */
@@ -117,9 +114,9 @@ ds is either official or custom
 		samples: tk0.samples
 	}
 
-	const querymode = get_querymode( q, vcftk, ds ) // this is critical
+	set_querymode( q, vcftk, ds )
 
-	query_vcf_applymode( querymode, vcftk, q )
+	query_vcf_applymode( vcftk, q )
 
 	for(const r of q.rglst) {
 
@@ -137,9 +134,9 @@ ds is either official or custom
 
 			let mlst
 
-			if( querymode.range_variantonly ) {
+			if( q.querymode.range_variantonly ) {
 
-				if( querymode.slicecolumnindex ) {
+				if( q.querymode.slicecolumnindex ) {
 					// TODO do slicing, parse reduced line with samples, and decide if the variant exist in the sliced samples
 				} else {
 					// no sample filtering, do not look at sample, just the variant
@@ -150,14 +147,8 @@ ds is either official or custom
 						if(!m_is_filtered(m)) mlst.push(m)
 					}
 				}
-
-			} else if( querymode.range_termdb2groupAF ) {
-
-				mlst = parseline_termdb2groupAF( line, querymode.columnidx_group1, querymode.columnidx_group2, vcftk, m_is_filtered )
-
-			} else if( querymode.range_ebgatest ) {
-
-				mlst = parseline_ebgatest( line, querymode.columnidx, querymode.pop2average, vcftk, ds, m_is_filtered )
+			} else if( q.querymode.range_AFtest ) {
+				mlst = parseline_AFtest( line, q, vcftk, ds, m_is_filtered )
 			}
 
 			if( mlst ) {
@@ -180,74 +171,58 @@ ds is either official or custom
 		})
 	}
 
-	await may_apply_chisqtest_ebgatest( q.rglst, querymode )
+	await may_apply_fishertest( q )
 
-	vcfbyrange_collect_result( result, q.rglst, querymode )
+	vcfbyrange_collect_result( result, q )
 }
 
 
 
-function get_querymode ( q, vcftk, ds ) {
+function set_querymode ( q, vcftk, ds ) {
 /*
 generate the "querymode" object that drives subsequent queries
 */
 
-	if( q.termdb2groupAF ) {
-		if(ds.iscustom) throw 'custom track does not support termdb2groupAF'
-		wrap_validate_termvaluesetting(q.termdb2groupAF.group1.terms,'termdb2groupAF.group1')
-		wrap_validate_termvaluesetting(q.termdb2groupAF.group2.terms,'termdb2groupAF.group2')
-		return {
-			range_termdb2groupAF: true,
-			columnidx_group1: get_columnidx_byterms( q.termdb2groupAF.group1.terms, ds, vcftk.samples ),
-			columnidx_group2: get_columnidx_byterms( q.termdb2groupAF.group2.terms, ds, vcftk.samples ),
+	q.querymode = {}
+
+	if( q.AFtest ) {
+		if(ds.iscustom) throw 'custom track does not support AFtest'
+		for(const g of q.AFtest.groups) {
+			if( g.is_infofield ) {
+				continue
+			}
+			if(g.is_termdb) {
+				wrap_validate_termvaluesetting(g.terms,'AFtest.group')
+				g.columnidx = get_columnidx_byterms( g.terms, ds, vcftk.samples )
+				continue
+			}
+			if(g.is_population) {
+				if(!ds.track.populations) throw 'ds.track.populations missing'
+				g.population = ds.track.populations[ g.key ]
+				if(!g.population) throw 'unknown population key: '+g.key
+				continue
+			}
+			throw 'unknown group type'
 		}
-	}
 
-	if( q.ebgatest ) {
-		if(ds.iscustom) throw 'custom track does not support ebgatest'
-		wrap_validate_termvaluesetting(q.ebgatest.terms,'ebgatest')
-		// vcf header column idx for the current term
-		const columnidx = get_columnidx_byterms( q.ebgatest.terms, ds, vcftk.samples )
-
-		// to get population admix average for this subset of samples, initiate 0 for each population
-		const pop2average = new Map()
-		for(const p of q.ebgatest.populations) {
-			pop2average.set(
-				p.key,
-				{
-					infokey_AC: p.infokey_AC,
-					infokey_AN: p.infokey_AN,
-					average: 0
-				}
+		if( q.adjust_race ) {
+			const group_termdb = q.AFtest.groups.find( i=> i.is_termdb )
+			if(!group_termdb) throw '.is_termdb group missing'
+			const group_population = q.AFtest.groups.find( i=> i.is_population )
+			if(!group_population) throw '.is_population group missing'
+			group_termdb.pop2average = get_pop2average( 
+				group_population.population,
+				group_termdb.columnidx,
+				ds,
+				vcftk
 			)
 		}
-		let poptotal = 0 // sum for all populations
-		// sum up admix for everybody from this set
-		for(const idx of columnidx) {
-			const samplename = vcftk.samples[idx].name
-			const anno = ds.cohort.annotation[ samplename ]
-			if( !anno ) continue
-			for(const p of q.ebgatest.populations) {
-				const v = anno[ p.key ]
-				if(!Number.isFinite(v)) continue
-				pop2average.get( p.key ).average += v
-				poptotal += v
-			}
-		}
-		// after sum, make average
-		for(const [k,v] of pop2average) {
-			v.average /= poptotal
-		}
-		return {
-			range_ebgatest: true,
-			columnidx,
-			pop2average
-		}
+
+		q.querymode.range_AFtest = true
+		return
 	}
 
-	return {
-		range_variantonly: true
-	}
+	q.querymode.range_variantonly = true
 	/*
 	slicecolumnindex
 	in case of sample filtering
@@ -256,6 +231,43 @@ generate the "querymode" object that drives subsequent queries
 	and get the column indices for these samples for slicing
 	*/
 }
+
+
+
+
+function get_pop2average ( populations, columnidx, ds, vcftk ) {
+	// to get population admix average for this subset of samples, initiate 0 for each population
+	const pop2average = new Map()
+	for(const p of populations) {
+		pop2average.set(
+			p.key,
+			{
+				infokey_AC: p.infokey_AC,
+				infokey_AN: p.infokey_AN,
+				average: 0
+			}
+		)
+	}
+	let poptotal = 0 // sum for all populations
+	// sum up admix for everybody from this set
+	for(const idx of columnidx) {
+		const samplename = vcftk.samples[idx].name
+		const anno = ds.cohort.annotation[ samplename ]
+		if( !anno ) continue
+		for(const p of populations) {
+			const v = anno[ p.key ]
+			if(!Number.isFinite(v)) continue
+			pop2average.get( p.key ).average += v
+			poptotal += v
+		}
+	}
+	// after sum, make average
+	for(const [k,v] of pop2average) {
+		v.average /= poptotal
+	}
+	return pop2average
+}
+
 
 
 
@@ -279,7 +291,7 @@ a sample must meet all term conditions
 
 
 
-function vcfbyrange_collect_result ( result, rglst, querymode ) {
+function vcfbyrange_collect_result ( result, q ) {
 /*
 done querying, collect result, also clear rglst which is shared by others
 
@@ -289,7 +301,7 @@ for specific type of query mode, send additional info
 	result.vcf = {
 		rglst: []
 	}
-	for(const r of rglst) {
+	for(const r of q.rglst) {
 		const r2 = {
 			chr: r.chr,
 			start: r.start,
@@ -310,33 +322,14 @@ for specific type of query mode, send additional info
 			delete r.canvas
 		}
 	}
-
-	if( querymode.range_termdb2groupAF ) {
-		result.group1numbersamples = querymode.columnidx_group1.length
-		result.group2numbersamples = querymode.columnidx_group2.length
-	} else if( querymode.range_ebgatest ) {
-		result.numbersamples = querymode.columnidx.length
-		result.populationaverage = []
-		if( querymode.columnidx.length ) {
-			for(const [k,v] of querymode.pop2average ) {
-				result.populationaverage.push({
-					key: k,
-					v: v.average
-				})
-			}
-		}
-	}
 }
 
 
 
-function query_vcf_applymode ( querymode, vcftk, q ) {
+function query_vcf_applymode ( vcftk, q ) {
 /* at variant only mode, apply changes and prepare for querying
 */
-	if( querymode.range_variantonly
-		|| querymode.range_termdb2groupAF
-		|| querymode.range_ebgatest
-		) {
+	if( q.querymode.range_variantonly || q.querymode.range_AFtest ) {
 
 		delete vcftk.samples // not to parse samples
 		for(const r of q.rglst) {
@@ -392,120 +385,47 @@ get csq from one variant
 
 
 
-function parseline_termdb2groupAF ( line, columnidx_group1, columnidx_group2, vcftk, m_is_filtered ) {
+
+function parseline_AFtest ( line, q, vcftk, ds, m_is_filtered ) {
+/*
+there may be 2 or more groups
+a group can be determined by termdb, or info field
+*/
 	const l = line.split('\t')
-
-	// parse only the variants first
 	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
-
 	// get those passing filter
 	const mlstpass = mlst.filter( m => !m_is_filtered( m ) )
 	if( mlstpass.length == 0 ) {
 		// stop, no need to parse samples
 		return
 	}
-
 	const alleles = [ l[3], ...l[4].split(',') ]
 
-	const g1 = getallelecount_samplegroup_vcfline( alleles, l, columnidx_group1 )
-	const g2 = getallelecount_samplegroup_vcfline( alleles, l, columnidx_group2 )
-	if( g1.allref && g2.allref ) {
-		return
-	}
+	for( const m of mlstpass ) {
 
-	for(const m of mlstpass) {
+		const mgroups = AFtest_getdata_onem( l, m, alleles, q )
 
-		m.AF2group = [] // put the allele frequency of two groups here
-		{
-			const ref = g1.alleles.get( m.ref ) || 0
-			const alt = g1.alleles.get( m.alt ) || 0
-			m.AF2group.push( (ref+alt==0) ? 0 : alt/(ref+alt) )
-		}
-		{
-			const ref = g2.alleles.get( m.ref ) || 0
-			const alt = g2.alleles.get( m.alt ) || 0
-			m.AF2group.push( (ref+alt==0) ? 0 : alt/(ref+alt) )
-		}
-	}
-	return mlstpass
-}
-
-
-
-function getallelecount_samplegroup_vcfline ( alleles, l, columnidx ) {
-	let allref = true
-
-	const allele2count = new Map()
-	// k: allele, v: count
-	for(const a of alleles) {
-		allele2count.set( a, 0 )
-	}
-
-	for(const i of columnidx ) {
-		if(!l[9+i]) continue
-		const gt = l[9+i].split(':')[0]
-		if(gt=='.') continue
-		gt.split( gt.indexOf('/')==-1 ? '|' : '/' ).forEach( s=> {
-			const i = Number.parseInt(s)
-			if(Number.isNaN(i)) return
-			const allele = alleles[ i ]
-			if(!allele) return
-			if(i!=0) {
-				allref = false
+		// hardcoded to deal with 2 groups
+		if( q.AFtest.testby_AFdiff ) {
+			for(const g of mgroups) {
+				if(g.is_infofield) {
+					g.v = g.infofieldvalue
+				} else if(g.is_termdb || g.is_population) {
+					g.v = g.altcount / (g.refcount+g.altcount)
+				} else {
+					throw 'unknown group type'
+				}
 			}
-			allele2count.set( allele, 1 + allele2count.get(allele) )
-		})
-	}
-	return {
-		allref,
-		alleles: allele2count
-	}
-}
-
-
-
-
-function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds, m_is_filtered ) {
-
-	const l = line.split('\t')
-
-	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
-	// get those passing filter
-	const mlstpass = mlst.filter( m => !m_is_filtered( m ) )
-	if( mlstpass.length == 0 ) {
-		// stop, no need to parse samples
-		return
-	}
-
-	const alleles = [ l[3], ...l[4].split(',') ]
-
-	const g = getallelecount_samplegroup_vcfline( alleles, l, columnidx )
-
-	for(const m of mlstpass) {
-
-		const refcount = g.alleles.get( m.ref ) || 0
-		const altcount = g.alleles.get( m.alt ) || 0
-		// get control population allele count, for the current variant
-		let controltotal = 0
-		const pop2control = new Map()
-		for(const [k,v] of pop2average) {
-			const AC = parseline_ebgatest_getkey( m, v.infokey_AC )
-			const AN = parseline_ebgatest_getkey( m, v.infokey_AN )
-			pop2control.set( k, { AC, AN })
-			controltotal += AN
-		}
-		// adjust control population based on pop2average
-		let ACadj = 0,
-			ANadj = 0
-		for( const [k,v] of pop2control ) {
-			const AN2 = controltotal * pop2average.get(k).average
-			const AC2 = AN2 == 0 ? 0 : v.AC * AN2 / v.AN
-			ACadj += AC2
-			ANadj += AN2
-		}
-		m.ebga = {
-			line: m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt+'\t'+altcount+'\t'+refcount+'\t'+ACadj+'\t'+(ANadj-ACadj),
-			table: [altcount, refcount, ACadj, ANadj-ACadj]
+			m.AFtest_group_values = [ mgroups[0].v, mgroups[1].v ]
+			m.nm_axis_value = mgroups[0].v - mgroups[1].v // for axis
+		} else if( q.AFtest.testby_fisher ) {
+			m.contigencytable = [
+				mgroups[0].altcount,
+				mgroups[0].refcount,
+				mgroups[1].altcount,
+				mgroups[1].refcount
+			]
+			// collect table from all variants and run one test
 		}
 	}
 	return mlstpass
@@ -513,33 +433,112 @@ function parseline_ebgatest ( line, columnidx, pop2average, vcftk, ds, m_is_filt
 
 
 
-function parseline_ebgatest_getkey ( m, key ) {
-	// for either AC or AN, it could be in info or altinfo
+
+function AFtest_getdata_onem ( l, m, alleles, q ) {
+/*
+AFtest
+for one variant, get data for each group
+*/
+	return q.AFtest.groups.reduce( (lst, g)=>{
+		if( g.is_infofield ) {
+			lst.push({
+				is_infofield:true,
+				infofieldvalue: get_infovalue( m, g )
+			})
+		} else if( g.is_termdb ) {
+			const _ = getallelecount_samplegroup_vcfline( alleles, l, g.columnidx )
+			lst.push({
+				is_termdb:true,
+				allref: _.allref,
+				refcount: _.alleles.get( m.ref ) || 0,
+				altcount: _.alleles.get( m.alt ) || 0,
+			})
+		} else if( g.is_population ) {
+			const set2value = new Map()
+			for(const aset of g.population.sets) {
+				const AC = get_infovalue( m, {key:aset.infokey_AC,missing_value:0} ) // fine to hardcode missing value here
+				const AN = get_infovalue( m, {key:aset.infokey_AN,missing_value:0} )
+				set2value.set( aset.key, { AC, AN } )
+			}
+			// for a population group, if to adjust race
+			let refcount=0, altcount=0
+			if( q.AFtest.adjust_race ) {
+				[refcount,altcount] = AFtest_adjust_race(
+					set2value,
+					q.AFtest.groups.find( i=> i.is_termdb )
+				)
+			} else {
+				// not adjust race, add up AC AN
+				for(const v of set2value.values()) {
+					altcount += v.AC
+					refcount += v.AN-v.AC
+				}
+			}
+			lst.push({
+				is_population:true,
+				refcount,
+				altcount
+			})
+		} else {
+			throw 'unknown group type'
+		}
+		return lst
+	}, [] )
+}
+
+
+
+function AFtest_adjust_race ( set2value, group_termdb ) {
+	if(!group_termdb) throw 'group_termdb missing'
+	if(!group_termdb.pop2average) throw 'group_termdb.pop2average missing'
+	let controltotal = 0
+	for(const v of set2value.values()) {
+		controltotal += vAN
+	}
+	// adjust control population based on pop2average
+	let ACadj = 0,
+		ANadj = 0
+	for( const [k,v] of set2value ) {
+		const AN2 = controltotal * group_termdb.pop2average.get(k).average
+		const AC2 = AN2 == 0 ? 0 : v.AC * AN2 / v.AN
+		ACadj += AC2
+		ANadj += AN2
+	}
+	return [ ANadj-ACadj, ACadj ]
+}
+
+
+
+
+
+
+function get_infovalue ( m, f ) {
+// field is {key,missing_value}
 	if( m.info ) {
-		const v = m.info[ key ]
-		if( v ) return Number.parseInt(v)
+		const v = m.info[ f.key ]
+		if( v!=undefined ) return v
 	}
 	if( m.altinfo ) {
-		const v = m.altinfo[ key ]
-		if( v ) return Number.parseInt(v)
+		const v = m.altinfo[ f.key ]
+		if( v!=undefined ) return v
 	}
-	return 0
+	return f.missing_value
 }
 
 
 
-async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
-	if(!querymode.range_ebgatest) return
-	if(querymode.columnidx.length==0) return
+async function may_apply_fishertest ( q ) {
+	if(!q.querymode.range_AFtest) return
+	if(!q.querymode.range_AFtest.testby_fisher) return
 	const lines = []
 	const mlst = {}
-	for(const r of rglst) {
+	for(const r of q.rglst) {
 		if(r.variants) {
 			for(const m of r.variants) {
-				if(m.ebga) {
-					lines.push(m.ebga.line)
-					mlst[ m.ebga.line.split('\t',1)[0] ] = m
-					delete m.ebga.line
+				if(m.contigencytable) {
+					const kstr = m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt
+					lines.push( kstr +'\t'+m.contigencytable.join('\t'))
+					mlst[ kstr ] = m
 				}
 			}
 		}
@@ -550,7 +549,6 @@ async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
 	}
 	const tmpfile = path.join(serverconfig.cachedir,Math.random().toString())
 	await utils.write_file( tmpfile, lines.join('\n') )
-	//const pfile = await run_chisqtest( tmpfile )
 	const pfile = await run_fishertest( tmpfile )
 	const text = await utils.read_file( pfile )
 	for(const line of text.trim().split('\n')) {
@@ -558,8 +556,8 @@ async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
 		const m = mlst[ l[0] ]
 		if( m ) {
 			const v = Number.parseFloat(l[5])
-			m.ebga.pvalue = v
-			m.ebga.lpvalue = Number.isNaN(v) ? 0 : -Math.log10(v)
+			m.AFtest_pvalue = v
+			m.nm_axis_value = Number.isNaN(v) ? 0 : -Math.log10(v) // for axis
 		}
 	}
 	fs.unlink(tmpfile,()=>{})
@@ -568,14 +566,6 @@ async function may_apply_chisqtest_ebgatest ( rglst, querymode ) {
 
 
 
-function run_chisqtest( tmpfile ) {
-	const pfile = tmpfile+'.pvalue'
-	return new Promise((resolve,reject)=>{
-		const sp = spawn('Rscript',['utils/chisq.R',tmpfile,pfile])
-		sp.on('close',()=> resolve(pfile))
-		sp.on('error',()=> reject(error))
-	})
-}
 function run_fishertest( tmpfile ) {
 	const pfile = tmpfile+'.pvalue'
 	return new Promise((resolve,reject)=>{
@@ -747,4 +737,36 @@ function sample_match_termvaluesetting ( sanno, terms ) {
 	}
 	// using OR
 	return numberofmatchedterms > 0
+}
+
+
+
+function getallelecount_samplegroup_vcfline ( alleles, l, columnidx ) {
+	let allref = true
+
+	const allele2count = new Map()
+	// k: allele, v: count
+	for(const a of alleles) {
+		allele2count.set( a, 0 )
+	}
+
+	for(const i of columnidx ) {
+		if(!l[9+i]) continue
+		const gt = l[9+i].split(':')[0]
+		if(gt=='.') continue
+		gt.split( gt.indexOf('/')==-1 ? '|' : '/' ).forEach( s=> {
+			const i = Number.parseInt(s)
+			if(Number.isNaN(i)) return
+			const allele = alleles[ i ]
+			if(!allele) return
+			if(i!=0) {
+				allref = false
+			}
+			allele2count.set( allele, 1 + allele2count.get(allele) )
+		})
+	}
+	return {
+		allref,
+		alleles: allele2count
+	}
 }

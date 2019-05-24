@@ -17,13 +17,12 @@ import {
 /*
 
 ********************** EXPORTED
-may_create_vcflegend_numericalaxiss
+may_create_vcflegend_numericalaxis
 ********************** INTERNAL
 showmenu_numericaxis
 update_terms_div
 __update_legend
-update_legend_by_infokey
-update_legend_by_termdb2groupAF
+update_legend_by_AFtest
 update_legend_by_ebgatest
 create_group_legend
 */
@@ -56,7 +55,6 @@ run only upon initiating track
 
 	const menubutton = tr
 		.append('td')
-		.style('vertical-align', 'middle')
 		.append('button')
 		.style('margin','0px 10px')
 
@@ -102,8 +100,7 @@ show menu for numerical axis, under menubutton
 				.on('click', ()=>{
 					// selected an info key
 					nm.in_use=true
-					nm.inuse_termdb2groupAF = false
-					nm.inuse_ebgatest = false
+					nm.inuse_AFtest = false
 					nm.inuse_infokey = true
 					nm.info_keys.forEach( i=> i.in_use=false )
 					key.in_use = true
@@ -112,32 +109,16 @@ show menu for numerical axis, under menubutton
 		}
 	}
 
-	if( nm.termdb2groupAF &&  !nm.inuse_termdb2groupAF ) {
+	if( nm.AFtest && !nm.inuse_AFtest ) {
 		// show this option when the data structure is available and is not in use
 		menudiv.append('div')
 			.style('margin-top','10px')
 			.attr('class','sja_menuoption')
-			.text( get_axis_label_termdb2groupAF( tk ) )
+			.text( 'Allele frequency test of 2 groups' )
 			.on('click', ()=>{
 				nm.in_use=true
 				nm.inuse_infokey = false
-				nm.inuse_ebgatest = false
-				nm.inuse_termdb2groupAF = true
-				update()
-			})
-	}
-
-	if( nm.ebgatest && !nm.inuse_ebgatest ) {
-		// show this option when the data structure is available and is not in use
-		menudiv.append('div')
-			.style('margin-top','10px')
-			.attr('class','sja_menuoption')
-			.text( get_axis_label_ebgatest( tk ) )
-			.on('click', ()=>{
-				nm.in_use=true
-				nm.inuse_infokey = false
-				nm.inuse_termdb2groupAF = false
-				nm.inuse_ebgatest = true
+				nm.inuse_AFtest = true
 				update()
 			})
 	}
@@ -150,6 +131,8 @@ show menu for numerical axis, under menubutton
 			.html('&times;&nbsp;&nbsp;Disable')
 			.on('click', ()=>{
 				nm.in_use = false
+				nm.inuse_infokey=false
+				nm.inuse_AFtest=false
 				update()
 			})
 	}
@@ -170,20 +153,19 @@ show menu for numerical axis, under menubutton
 
 
 function __update_legend ( menubutton, settingholder, tk, block ) {
+/*
+returned function to be called at two occasions:
+1. at initiating legend options
+2. after changing menu option
+
+no need to call this at customizing details for an axis type (AF cutoff, change terms etc)
+
+will update menubutton content,
+and settingholder content
+but will not update track
+*/
 
 	return () => {
-
-		/*
-		returned function to be called at two occasions:
-		1. at initiating legend options
-		2. after changing menu option
-
-		no need to call this at customizing details for an axis type (AF cutoff, change terms etc)
-
-		will update menubutton content,
-		and settingholder content
-		but will not update track
-		*/
 
 		may_setup_numerical_axis( tk )
 		menubutton.html( get_axis_label(tk) + ' &#9660;' )
@@ -197,18 +179,12 @@ function __update_legend ( menubutton, settingholder, tk, block ) {
 		}
 
 		if( nm.inuse_infokey ) {
-			// do nothing
-			//update_legend_by_infokey( settingholder, tk, block )
+			// do not show any controls for info field
 			return
 		}
 
-		if( nm.inuse_termdb2groupAF ) {
-			update_legend_by_termdb2groupAF( settingholder, tk, block )
-			return
-		}
-
-		if( nm.inuse_ebgatest ) {
-			update_legend_by_ebgatest( settingholder, tk, block )
+		if( nm.inuse_AFtest ) {
+			update_legend_by_AFtest( settingholder, tk, block )
 			return
 		}
 
@@ -219,22 +195,49 @@ function __update_legend ( menubutton, settingholder, tk, block ) {
 
 
 
+function update_legend_by_AFtest ( settingholder, tk, block ) {
+	// works for arbitrary number of groups
+	const table = settingholder.append('table')
+		.style('border-spacing','3px')
+		.style('border-collapse','separate')
 
+	// one row for each group
+	for( const [i, g] of tk.vcf.numerical_axis.AFtest.groups.entries() ) {
+		const tr = table.append('tr')
+		// column 1
+		tr.append('td')
+			.text('Group '+(i+1))
+			.style('opacity',.3)
+			.style('text-align','right')
+		// column 2
+		const td = tr.append('td')
+		if( g.is_termdb ) {
+			make_termvalueselection_ui( td, g, tk.mds, block.genome, true,
+				async ()=>{
+					await tk.load()
+				}
+			)
+			// TODO if doing race adjustment, need to show the average admix
+		} else if( g.is_infofield ) {
+			const f = tk.info_fields.find( j=> j.key == g.key )
+			td.append('span').text( f.label )
+		}
+		// TODO add change button to change to change the content type of this group
+	}
 
-
-function update_legend_by_termdb2groupAF ( settingholder, tk, block ) {
-
-	const count_limit_vcf = true
-	make_termvalueselection_ui(settingholder, tk.vcf.numerical_axis.termdb2groupAF.group1, tk.mds, block.genome, count_limit_vcf,
-		async ()=>{
-			await tk.load()
-		})
-	make_termvalueselection_ui(settingholder, tk.vcf.numerical_axis.termdb2groupAF.group2, tk.mds, block.genome, count_limit_vcf,
-		async (terms_div)=>{
-			await tk.load()
-		})
+	// method of test
+	{
+		const tr = table.append('tr')
+		tr.append('td')
+			.text('Test method')
+			.style('opacity',.3)
+			.style('text-align','right')
+		const select = tr.append('td')
+		// TODO
+	}
 
 }
+
 
 
 function update_legend_by_ebgatest( settingholder, tk, block ) {
