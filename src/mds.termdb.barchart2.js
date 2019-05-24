@@ -564,7 +564,7 @@ export class Barchart{
 }
 
 export function may_make_barchart(plot) {
-  if (plot.term2_boxplot || plot.default2showtable) {
+  if (plot.term2_displaymode != "stacked") {
     plot.bar_div.style('display','none')
     return
   }
@@ -601,7 +601,7 @@ export function may_make_barchart(plot) {
   }, obj)
 }
 
-export function custom_table_data(plot) {
+export function custom_table_data(plot) { 
   const obj = plot.obj
   if (!plot.barchart) {
     plot.barchart = new Barchart({

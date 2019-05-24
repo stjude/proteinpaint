@@ -114,7 +114,7 @@ export function render ( arg, obj ) {
     yaxis_width: 100,
     use_logscale:0,
     use_percentage: 0,
-    default2showtable: 0,
+    term2_displaymode: "stacked",
     term2_boxplot: 0,
     obj,
     custom_bins: {},
@@ -146,9 +146,9 @@ export function render ( arg, obj ) {
   plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
 
   plot.term2 = arg.term2
-  if(arg.default2showtable){
-    if( !plot.term2 ) throw 'term2 is required for default2showtable'
-    plot.default2showtable = 1
+  if(arg.term2_displaymode == "table"){
+    if( !plot.term2 ) throw 'term2 is required for table view'
+    plot.term2_displaymode = "table"
     update_term2_header(plot)
   }
   else {
@@ -170,8 +170,7 @@ function update_term2_header ( plot ) {
   plot.legend_div.style('display','block')
 
   //for croasstab button show table by default
-  if(plot.default2showtable){
-    plot.term2_displaymode = 'table'
+  if(plot.term2_displaymode == "table"){
     plot.bar_settings.overlay = "tree"
     may_make_table(plot)
   }
@@ -309,7 +308,7 @@ function may_make_table (plot) {
 
 function default_table_data(plot) {
   let column_keys = []
-  if( plot.term2.graph.barchart.order ) {
+  if(plot.term2 && plot.term2.graph.barchart.order ) {
     column_keys = plot.term2.graph.barchart.order
   } else {
 

@@ -103,6 +103,7 @@ function setOverlayOpts(tip, plot, do_plot, table, arg) {
       plot.bar_settings.overlay = value
       if (value == "none") {
         plot.term2 = undefined
+        plot.term2_displaymode = 'stacked'
         do_plot(plot)
         tip.hide()
       } else if (value == "tree") {
@@ -207,12 +208,10 @@ function setViewOpts(tip, plot, update_plot, table, arg) {
       const value = view.property('value')
       plot.term2_displaymode = value
       if (value  == 'table'){
-        plot.default2showtable = 1
         plot.term2_boxplot = 0
         plot.table_div.style('display','block')
         update_plot(plot)
       }else if(value == 'stacked'){
-        plot.default2showtable = 0
         plot.term2_boxplot = 0
         plot.table_div.style('display','none')
         plot.svg.style('display','block')
@@ -224,7 +223,6 @@ function setViewOpts(tip, plot, update_plot, table, arg) {
       }
       // if 'boxplot' selected - query server for data
       else if(value == 'boxplot'){
-        plot.default2showtable = 0
         plot.term2_boxplot = 1
         plot.table_div.style('display','none')
         plot.svg.style('display','block')

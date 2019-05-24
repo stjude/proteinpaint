@@ -194,12 +194,15 @@ export default function barsRenderer(barsapp, holder) {
           .attr('width', bbox.width + 20)
           .attr('height', bbox.height + 20)
         
-        const rowbox = rowlabels.node().getBBox()
-        mainG.transition().duration(100)
-          .attr('transform', 
-            hm.orientation == 'vertical'
-            ? 'translate('+ hm.rowlabelw + ',0)'
-            : 'translate('+ rowbox.width +',0)')
+        if (hm.orientation == "vertical") {
+          mainG.transition().duration(100)
+          .attr('transform','translate('+ hm.rowlabelw + ',0)')
+        } else {
+          const rbox = rowlabels.node().getBBox()
+          const tbox = yTitle.node().getBBox()
+          mainG.transition().duration(100)
+          .attr('transform', 'translate('+ Math.max(rbox.width, tbox.width) +',0)')
+        }
       },510)
     }
   }

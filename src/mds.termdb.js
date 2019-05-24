@@ -500,7 +500,8 @@ providing all the customization options
 				term: term1,
 				term2: result.term2,
 				items: result.items,
-				default2showtable: true // a flag for barchart to show html table view by default
+				default2showtable: true, // a flag for barchart to show html table view by default,
+				term2_displaymode: 'table'
 			}
 			render( plot, obj )
 		}
