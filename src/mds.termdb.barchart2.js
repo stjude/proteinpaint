@@ -105,12 +105,16 @@ export class Barchart{
 
     self.setMaxVisibleTotals(chartsData)
 
-    const bins = self.settings.term2 
-      && self.terms.term2.graph 
-      && self.terms.term2.graph.barchart
-      && self.terms.term2.graph.barchart.numeric_bin
+    const bins = chartsData.refs.bins 
+      ? chartsData.refs.bins
+      : self.settings.term2 
+        && self.terms.term2.graph 
+        && self.terms.term2.graph.barchart
+        && self.terms.term2.graph.barchart.numeric_bin
       ? self.terms.term2.graph.barchart.numeric_bin
       : null
+
+    self.bins = bins
 
     self.binLabels = bins && bins.fixed_bins
       ? bins.fixed_bins.map(d=>d.label).reverse()
@@ -282,22 +286,23 @@ export class Barchart{
         },
         click(d) {
           if (!self.click_callback) return
-          const terms = self.terms
           const t = []
-          for(const termNum in terms) {
-            const term = terms[termNum]
+          for(const termNum in self.terms) {
+            const term = self.terms[termNum]
+            const bins = self.bins[termNum.slice(-1)]
+            const value = termNum=="term1" ? d.seriesId : d.dataId
+            const label = !term || !term.values 
+              ? value
+              : termNum=="term1"
+                ? term.values[d.seriesId] 
+                : term.values[d.dataId]
+
             if (termNum != 'term0' && term) {
-              t.push({
-                term,
-                value: termNum=="term1" ? d.seriesId : d.dataId,
-                label: !term.values 
-                  ? (termNum=="term1" ? d.seriesId : d.dataId)
-                  : termNum=="term1"
-                    ? term.values[d.seriesId] 
-                    : term.values[d.dataId]
-              })
+              const bin = !bins ? null : bins.find(d => d.label == value)
+              term.range = bin
+              t.push({term, label, value, range: bin})
             }
-          } //console.log(t, d, terms)
+          }
           self.click_callback({terms: t})
         }
       },

@@ -17,6 +17,7 @@ const unannotated = {}
 const orderedLabels = {}
 const unannotatedLabels = {}
 const binLabelFormatter = d3format.format('.3r')
+const bins = {}
 
 /*
 ********************** EXPORTED
@@ -126,6 +127,7 @@ function getPj(settings) {
           "__:useColOrder": "=useColOrder()",
           "__:useRowOrder": "=useRowOrder()",
           "__:unannotatedLabels": "=unannotatedLabels()",
+          "__:bins": "=bins()",
           "@done()": "=sortColsRows()"
         }
       }
@@ -199,6 +201,9 @@ function getPj(settings) {
           term1: unannotatedLabels[settings.term1], 
           term2: unannotatedLabels[settings.term2]
         }
+      },
+      bins() {
+        return bins
       }
     }
   })
@@ -236,6 +241,8 @@ async function setValFxns(q, tdb, ds) {
 
 function get_numeric_bin_name ( key, t, ds, termNum, custom_bins ) {
   const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum, custom_bins[termNum.slice(-1)] )
+  bins[termNum.slice(-1)] = binconfig.bins
+
   orderedLabels[key] = _orderedLabels
   if (binconfig.unannotated) {
     unannotatedLabels[key] = binconfig.unannotated.label
@@ -352,37 +359,47 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       : custom_bins.first_bin_option == 'percentile'
       ? min
       : custom_bins.first_bin_size
-    let startunbound = v <= min ? 1 : 0
+    let startunbound = v <= min
+    let afterFirst = false
+    let beforeLast = false
     
     while( v <= observedMax ) {
-      const upper = v + custom_bins.size
+      const upper = custom_bins.size == "auto" ? custom_bins.last_bin_size : v + custom_bins.size
       const v2 = upper > max ? max : upper
+      beforeLast = upper < max && v2 + custom_bins.size > max
 
       const bin = {
         start: v >= max ? max : v,
         stop: startunbound ? min : v2,
         startunbound,
-        stopunbound: v >= max ? 1 : 0,
+        stopunbound: v >= max,
         value: 0, // v2s
-        startinclusive:1,
+        startinclusive: !startunbound || custom_bins.first_bin_oper == "lteq",
+        stopinclusive: v >= max && custom_bins.last_bin_oper == "gteq",
       }
       
-      if (startunbound) {
-        bin.label = "\u2264 " + binLabelFormatter(min)
-      } else if (v >= max) {
-        bin.label = "\u2265 " + binLabelFormatter(max)
+      if (bin.startunbound) { 
+        const oper = bin.startinclusive ? "\u2264" : "<"
+        bin.label = oper + binLabelFormatter(min);
+      } else if (bin.stopunbound) {
+        const oper = bin.stopinclusive ? "\u2265" : ">"
+        bin.label = oper + binLabelFormatter(max)
       } else if( Number.isInteger( custom_bins.size ) ) {
         // bin size is integer, make nicer label
         if( custom_bins.size == 1 ) {
           // bin size is 1; use just start value as label, not a range
-          bin.label = binLabelFormatter(v)
+          bin.label = v //binLabelFormatter(v)
         } else {
           // bin size bigger than 1, reduce right bound by 1, in label only!
-          bin.label = binLabelFormatter(v) + ' to ' +  binLabelFormatter(v2)
+          const oper0 = !afterFirst || custom_bins.first_bin_oper == "lt" ? "\u2264" : "<"
+          const oper1 = "" //!beforeLast || custom_bins.last_bin_oper == "gteq" ? "<" : "\u2665"
+          bin.label = oper0 + binLabelFormatter(v) +' to '+ oper1 + binLabelFormatter(v2)
         }
       } else {        
         // bin size is not integer
-        bin.label = binLabelFormatter(v) +' to '+ binLabelFormatter(v2)
+        const oper0 = !afterFirst || custom_bins.first_bin_oper == "lt" ? "\u2264" : "<"
+        const oper1 = "" //!beforeLast || custom_bins.last_bin_oper == "gteq" ? "<" : "\u2665"
+        bin.label = oper0 + binLabelFormatter(v) +' to '+ oper1 + binLabelFormatter(v2)
       }
 
       bins.push( bin )
@@ -390,6 +407,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
       if (v >= max) break
       v += startunbound ? 0 : custom_bins.size;
+      afterFirst = !afterFirst && startunbound ? true : false
       startunbound = 0
     }
 

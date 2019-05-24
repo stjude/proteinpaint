@@ -285,31 +285,42 @@ function custom_bin(tip, plot, do_plot, binNum=1, btn){
     .style('align-items','flex-start')
     .style('display','flex')
 
-  // Bin Size
-  const bin_size_div = custom_bin_div.append('div')
-    .style('display','inline-block')
-    .style('margin-left','10px')
-
-  bin_size_div.append('div')
-    .text('Bin Size')
-    .style('padding-right','3px')
-    .style('text-align','center')
-
-  controls.custom_bin_size = bin_size_div.append('input')
-    .style('margin-top','42px')
-    .attr('size','8')
-    .style('text-align','center')
-    .property('value', custom_bins ? custom_bins.size : null)
-
   // First Bin
   const first_bin_div = custom_bin_div.append('div')
     .style('display','inline-block')
     .style('margin-left','25px')
+    .style('text-align','center')
 
   first_bin_div.append('div')
     .text('First Bin')
     .style('padding-right','3px')
     .style('text-align','center')
+
+  const first_bin_input_div = first_bin_div.append('div')
+    .style('margin-top','10px')
+    .style('display','block')
+    .style('white-space','nowrap')
+  
+  controls.first_bin_oper = first_bin_input_div.append('select')
+    .property('selected', custom_bins && custom_bins.first_bin_oper == "lteq")
+  controls.first_bin_oper.append('option')
+    .attr('value', 'lt')
+    .html('&lt;')
+    .property('selected', custom_bins && custom_bins.first_bin_oper == "lt")
+  controls.first_bin_oper.append('option')
+    .attr('value', 'lteq')
+    .html('&lt;=')
+
+  controls.first_bin_size = first_bin_input_div.append('input')
+    .style('display','inline-block')
+    .style('margin-left','5px')
+    .attr('size','8')
+    .attr('placeholder', 'auto')
+    .property('value', !custom_bins 
+      ? null
+      : custom_bins.first_bin_size == "auto"
+      ? null
+      : custom_bins.first_bin_size)
 
   controls.first_bin_options = first_bin_div.append('select')
     .style('margin-top','10px')
@@ -324,36 +335,61 @@ function custom_bin(tip, plot, do_plot, binNum=1, btn){
     .text('Percentile')
     .property('selected', custom_bins && custom_bins.first_bin_option == 'percentile' ? true : false)
 
-  const first_bin_input_div = first_bin_div.append('div')
-    .style('margin-top','10px')
-    .style('display','block')
-    .style('white-space','nowrap')
-  
-  first_bin_input_div.append('span')
+  // Bin Size
+  const bin_size_div = custom_bin_div.append('div')
     .style('display','inline-block')
-    .text('<=')
+    .style('margin-left','25px')
+    .style('margin-right','10px')
 
-  controls.first_bin_size = first_bin_input_div.append('input')
-    .style('display','inline-block')
-    .style('margin-left','5px')
+  bin_size_div.append('div')
+    .text('Bin Size')
+    .style('padding-right','3px')
+    .style('text-align','center')
+
+  controls.custom_bin_size = bin_size_div.append('input')
+    .style('margin-top','10px')
     .attr('size','8')
+    .style('text-align','center')
+    .property('value', custom_bins ? custom_bins.size : null)
     .attr('placeholder', 'auto')
-    .property('value', !custom_bins 
-      ? null
-      : custom_bins.first_bin_size == "auto"
-      ? null
-      : custom_bins.first_bin_size)
 
   // Last Bin
   const last_bin_div = custom_bin_div.append('div')
     .style('display','inline-block')
     .style('margin-left','25px')
     .style('margin-right','10px')
+    .style('text-align','center')
 
   last_bin_div.append('div')
     .text('Last Bin')
     .style('padding-right','3px')
     .style('text-align','center')
+
+  const last_bin_input_div = last_bin_div.append('div')
+    .style('margin-top','10px')
+    .style('display','block')
+    .style('white-space','nowrap')
+  
+  controls.last_bin_oper = last_bin_input_div.append('select')
+  controls.last_bin_oper.append('option')
+    .attr('value', 'gt')
+    .html('&gt;')
+    .property('selected', custom_bins && custom_bins.first_bin_oper == "gt")
+  controls.last_bin_oper.append('option')
+    .attr('value', 'gteq')
+    .html('&gt;=')
+    .property('selected', custom_bins && custom_bins.first_bin_oper == "gteq")
+
+  controls.last_bin_size = last_bin_input_div.append('input')
+    .style('display','inline-block')
+    .style('margin-left','5px')
+    .attr('size','8')
+    .attr('placeholder', 'auto')
+    .property('value', !custom_bins 
+      ? null
+      : custom_bins.last_bin_size == "auto"
+      ? null
+      : custom_bins.last_bin_size)
 
   controls.last_bin_options = last_bin_div.append('select')
     .style('margin-top','10px')
@@ -368,26 +404,7 @@ function custom_bin(tip, plot, do_plot, binNum=1, btn){
     .text('Percentile')
     .property('selected', custom_bins && custom_bins.last_bin_option == 'percentile' ? true : false)
 
-  const last_bin_input_div = last_bin_div.append('div')
-    .style('margin-top','10px')
-    .style('display','block')
-    .style('white-space','nowrap')
-  
-  last_bin_input_div.append('span')
-    .style('display','inline-block')
-    .text('>=')
-
-  controls.last_bin_size = last_bin_input_div.append('input')
-    .style('display','inline-block')
-    .style('margin-left','5px')
-    .attr('size','8')
-    .attr('placeholder', 'auto')
-    .property('value', !custom_bins 
-      ? null
-      : custom_bins.last_bin_size == "auto"
-      ? null
-      : custom_bins.last_bin_size)
-
+  // submit, reset buttons
   const btndiv = plot.tip.d.append('div')
     .style('text-align','center')
     
@@ -397,18 +414,22 @@ function custom_bin(tip, plot, do_plot, binNum=1, btn){
       const size = controls.custom_bin_size.property('value')
       const first_bin_size = controls.first_bin_size.property('value')
       const first_bin_option = controls.first_bin_options.property('value')
+      const first_bin_oper = controls.first_bin_oper.property('value')
       const last_bin_size = controls.last_bin_size.property('value')
       const last_bin_option = controls.last_bin_options.property('value')
-      if (!size || isNaN(size)) {
+      const last_bin_oper = controls.last_bin_oper.property('value')
+      if (size !== "" && isNaN(size)) {
         alert('Invalid bin size.' + size)
       } else {
         //if (!first_bin_size || !isNaN(first_bin_size)) errs.push('Invalid first')
         plot.custom_bins[binNum] = {
-          size: +size,
+          size: size ? +size : "auto",
           first_bin_size: first_bin_size != '' && !isNaN(first_bin_size) ? +first_bin_size : 'auto',
           first_bin_option,
+          first_bin_oper,
           last_bin_size: last_bin_size != '' && !isNaN(last_bin_size) ? +last_bin_size : 'auto',
-          last_bin_option
+          last_bin_option,
+          last_bin_oper
         }
         do_plot(plot)
         plot.tip.hide()
@@ -421,6 +442,13 @@ function custom_bin(tip, plot, do_plot, binNum=1, btn){
     .on('click', ()=>{
       plot.custom_bins[binNum] = null
       do_plot(plot)
+      plot.tip.hide()
+      tip.hide()
+    })
+
+  btndiv.append('button')
+    .html('Cancel')
+    .on('click', ()=>{
       plot.tip.hide()
       tip.hide()
     })
