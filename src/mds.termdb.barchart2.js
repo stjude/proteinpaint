@@ -299,7 +299,6 @@ export class Barchart{
 
             if (termNum != 'term0' && term) {
               const bin = !bins ? null : bins.find(d => d.label == value)
-              term.range = bin
               t.push({term, label, value, range: bin})
             }
           }

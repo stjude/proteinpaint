@@ -379,10 +379,10 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       }
       
       if (bin.startunbound) { 
-        const oper = bin.startinclusive ? "\u2264" : "<"
+        const oper = bin.startinclusive ? "\u2265" : "<"
         bin.label = oper + binLabelFormatter(min);
       } else if (bin.stopunbound) {
-        const oper = bin.stopinclusive ? "\u2265" : ">"
+        const oper = bin.stopinclusive ? "\u2264" : ">"
         bin.label = oper + binLabelFormatter(max)
       } else if( Number.isInteger( custom_bins.size ) ) {
         // bin size is integer, make nicer label
@@ -391,13 +391,13 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
           bin.label = v //binLabelFormatter(v)
         } else {
           // bin size bigger than 1, reduce right bound by 1, in label only!
-          const oper0 = !afterFirst || custom_bins.first_bin_oper == "lt" ? "\u2264" : "<"
+          const oper0 = !afterFirst || custom_bins.first_bin_oper == "lt" ? "\u2265" : "<"
           const oper1 = "" //!beforeLast || custom_bins.last_bin_oper == "gteq" ? "<" : "\u2665"
           bin.label = oper0 + binLabelFormatter(v) +' to '+ oper1 + binLabelFormatter(v2)
         }
       } else {        
         // bin size is not integer
-        const oper0 = !afterFirst || custom_bins.first_bin_oper == "lt" ? "\u2264" : "<"
+        const oper0 = !afterFirst || custom_bins.first_bin_oper == "lt" ? "\u2265" : "<"
         const oper1 = "" //!beforeLast || custom_bins.last_bin_oper == "gteq" ? "<" : "\u2665"
         bin.label = oper0 + binLabelFormatter(v) +' to '+ oper1 + binLabelFormatter(v2)
       }
