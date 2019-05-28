@@ -14,8 +14,7 @@ group{}
         .style('display', 'block')
         .style('margin','5px 10px')
         .style('padding','3px 10px')
-        .style('border','solid 1px')
-        .style('border-color','#d4d4d4')
+        //.style('border','solid 1px') .style('border-color','#d4d4d4')
 
     if( group.name ) {
         group_div.append('div')

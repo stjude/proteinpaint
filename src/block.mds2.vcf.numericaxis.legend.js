@@ -19,10 +19,8 @@ import {
 may_create_vcflegend_numericalaxis
 ********************** INTERNAL
 showmenu_numericaxis
-update_terms_div
 __update_legend
 update_legend_by_AFtest
-create_group_legend
 */
 
 
@@ -236,15 +234,35 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 			.text('Fisher exact test')
 		testmethod.node().selectedIndex = af.testby_AFdiff ? 0 : 1
 
+		// may allow race adjustment
+		if(af.allowto_adjust_race) {
+			const id = Math.random()
+			af.adjust_race_checkbox = td.append('input')
+				.attr('type','checkbox')
+				.attr('id',id)
+				.property('disabled', (!af.groups.find(i=>i.is_termdb) || !af.groups.find(i=>i.is_population)) )
+				.property('checked', af.adjust_race)
+				.on('change',()=>{
+					af.adjust_race = !af.adjust_race
+					tk.load()
+				})
+			td.append('label')
+				.html('&nbsp;Adjust race background')
+				.attr('class','sja_clbtext')
+				.attr('for',id)
+		}
+
 		{
 			const button = td.append('button')
 				.text('Edit groups')
+				.style('margin-right','5px')
 				.on('click',()=>{
 					tk.legend.tip.clear()
 					menu_edit_AFtest_groups( tk, tk.legend.tip.d )
 					tk.legend.tip.showunder( button.node() )
 				})
 		}
+
 	}
 }
 
@@ -273,7 +291,6 @@ function legend_show_onegroup_AFtest ( tk, block, group, holder ) {
 				await tk.load()
 			}
 		)
-		// TODO if doing race adjustment, need to show average admix
 		return
 	}
 	if( group.is_infofield ) {

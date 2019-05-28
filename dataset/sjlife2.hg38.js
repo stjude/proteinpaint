@@ -164,7 +164,7 @@ module.exports={
 
 		populations:[
 			{
-				key:'gnomad',
+				key:'gnomAD',
 				label:'gnomAD, NFE+AFR+EAS combined',
 				sets:[
 					// per variant, the control population allele counts are hardcoded to be info fields
@@ -209,11 +209,11 @@ module.exports={
 				inuse_AFtest:true,
 
 				AFtest:{
-					testby_AFdiff:true,
-					testby_fisher:false,
-					adjust_race:false,
+					testby_AFdiff:false,
+					testby_fisher:true,
+					allowto_adjust_race:true, // can adjust based on admix
+					adjust_race:true,
 					groups:[
-						{ is_population:true, key:'gnomad' },
 						{
 							is_termdb:true,
 							terms:[
@@ -225,6 +225,7 @@ module.exports={
 								}
 							]
 						},
+						{ is_population:true, key:'gnomAD' },
 						/*
 						{
 							is_termdb:true,
@@ -247,7 +248,7 @@ module.exports={
 						{ key:'gnomAD_AF_eas' },
 						{ key:'gnomAD_AF_nfe' }
 					],
-					allowed_populations:[ 'gnomad' ]
+					allowed_populations:[ 'gnomAD' ]
 				},
 
 

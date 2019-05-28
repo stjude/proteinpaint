@@ -205,13 +205,13 @@ generate the "querymode" object that drives subsequent queries
 			throw 'Cannot set query mode: unknown group type'
 		}
 
-		if( q.adjust_race ) {
+		if( q.AFtest.adjust_race ) {
 			const group_termdb = q.AFtest.groups.find( i=> i.is_termdb )
 			if(!group_termdb) throw 'Cannot adjust race: .is_termdb group missing'
 			const group_population = q.AFtest.groups.find( i=> i.is_population )
 			if(!group_population) throw 'Cannot adjust race: .is_population group missing'
 			group_termdb.pop2average = get_pop2average( 
-				group_population.population,
+				group_population.population.sets,
 				group_termdb.columnidx,
 				ds,
 				vcftk
@@ -235,10 +235,10 @@ generate the "querymode" object that drives subsequent queries
 
 
 
-function get_pop2average ( populations, columnidx, ds, vcftk ) {
+function get_pop2average ( popsets, columnidx, ds, vcftk ) {
 	// to get population admix average for this subset of samples, initiate 0 for each population
 	const pop2average = new Map()
-	for(const p of populations) {
+	for(const p of popsets) {
 		pop2average.set(
 			p.key,
 			{
@@ -248,13 +248,13 @@ function get_pop2average ( populations, columnidx, ds, vcftk ) {
 			}
 		)
 	}
-	let poptotal = 0 // sum for all populations
+	let poptotal = 0 // sum for all sets
 	// sum up admix for everybody from this set
 	for(const idx of columnidx) {
 		const samplename = vcftk.samples[idx].name
 		const anno = ds.cohort.annotation[ samplename ]
 		if( !anno ) continue
-		for(const p of populations) {
+		for(const p of popsets) {
 			const v = anno[ p.key ]
 			if(!Number.isFinite(v)) continue
 			pop2average.get( p.key ).average += v
@@ -320,6 +320,17 @@ for specific type of query mode, send additional info
 		} else if( r.canvas ) {
 			r2.img = r.canvas.toDataURL()
 			delete r.canvas
+		}
+	}
+
+	if( q.AFtest && q.AFtest.adjust_race ) {
+		// did adjustment, return back average admix
+		const g = q.AFtest.groups.find(i=>i.is_termdb)
+		if(g && g.pop2average) {
+			result.popsetaverage = []
+			for(const [k,v] of g.pop2average) {
+				result.popsetaverage.push([k,v.average])
+			}
 		}
 	}
 }
@@ -427,6 +438,17 @@ a group can be determined by termdb, or info field
 			]
 			// collect table from all variants and run one test
 		}
+
+		if( q.AFtest.adjust_race ) {
+			// adjusting race, for the population group, append the set2value to m
+			const g = mgroups.find( i=>i.is_population )
+			if( g && g.set2value ) {
+				m.popsetadjvalue = []
+				for(const [s,v] of g.set2value) {
+					m.popsetadjvalue.push([ s, v.ACraw, v.ANraw-v.ACraw, Number.parseInt(v.ACadj), Number.parseInt(v.ANadj-v.ACadj) ])
+				}
+			}
+		}
 	}
 	return mlstpass
 }
@@ -438,6 +460,7 @@ function AFtest_getdata_onem ( l, m, alleles, q ) {
 /*
 AFtest
 for one variant, get data for each group
+return an array of same length and group typing of AFtest.groups[]
 */
 	return q.AFtest.groups.reduce( (lst, g)=>{
 		if( g.is_infofield ) {
@@ -455,10 +478,16 @@ for one variant, get data for each group
 			})
 		} else if( g.is_population ) {
 			const set2value = new Map()
+			/*  k: population set key
+				v: { ACraw, ANraw, ACadj, ANadj }
+			*/
 			for(const aset of g.population.sets) {
-				const AC = get_infovalue( m, {key:aset.infokey_AC,missing_value:0} ) // fine to hardcode missing value here
-				const AN = get_infovalue( m, {key:aset.infokey_AN,missing_value:0} )
-				set2value.set( aset.key, { AC, AN } )
+				set2value.set( aset.key,
+					{
+						ACraw: get_infovalue( m, {key:aset.infokey_AC,missing_value:0} ),
+						ANraw: get_infovalue( m, {key:aset.infokey_AN,missing_value:0} )
+					}
+				)
 			}
 			// for a population group, if to adjust race
 			let refcount=0, altcount=0
@@ -470,14 +499,15 @@ for one variant, get data for each group
 			} else {
 				// not adjust race, add up AC AN
 				for(const v of set2value.values()) {
-					altcount += v.AC
-					refcount += v.AN-v.AC
+					altcount += v.ACraw
+					refcount += v.ANraw - v.ACraw
 				}
 			}
 			lst.push({
 				is_population:true,
 				refcount,
-				altcount
+				altcount,
+				set2value
 			})
 		} else {
 			throw 'unknown group type'
@@ -493,16 +523,19 @@ function AFtest_adjust_race ( set2value, group_termdb ) {
 	if(!group_termdb.pop2average) throw 'group_termdb.pop2average missing'
 	let controltotal = 0
 	for(const v of set2value.values()) {
-		controltotal += vAN
+		controltotal += v.ANraw
 	}
 	// adjust control population based on pop2average
 	let ACadj = 0,
 		ANadj = 0
 	for( const [k,v] of set2value ) {
-		const AN2 = controltotal * group_termdb.pop2average.get(k).average
-		const AC2 = AN2 == 0 ? 0 : v.AC * AN2 / v.AN
-		ACadj += AC2
-		ANadj += AN2
+
+		// record adjusted value per set for sending back to client
+		v.ANadj = controltotal * group_termdb.pop2average.get(k).average
+		v.ACadj = v.ANadj == 0 ? 0 : v.ACraw * v.ANadj / v.ANraw
+
+		ACadj += v.ACadj
+		ANadj += v.ANadj
 	}
 	return [ ANadj-ACadj, ACadj ]
 }
@@ -529,7 +562,7 @@ function get_infovalue ( m, f ) {
 
 async function may_apply_fishertest ( q ) {
 	if(!q.querymode.range_AFtest) return
-	if(!q.querymode.range_AFtest.testby_fisher) return
+	if(!q.AFtest.testby_fisher) return
 	const lines = []
 	const mlst = {}
 	for(const r of q.rglst) {
