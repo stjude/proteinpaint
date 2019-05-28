@@ -7,8 +7,7 @@ import {make_termvalueselection_ui} from './mds.termdb.termvaluesetting.ui'
 import {
 	may_setup_numerical_axis,
 	get_axis_label,
-	get_axis_label_termdb2groupAF,
-	get_axis_label_ebgatest
+	get_axis_label_AFtest,
 	} from './block.mds2.vcf.numericaxis'
 
 
@@ -23,7 +22,6 @@ showmenu_numericaxis
 update_terms_div
 __update_legend
 update_legend_by_AFtest
-update_legend_by_ebgatest
 create_group_legend
 */
 
@@ -114,7 +112,7 @@ show menu for numerical axis, under menubutton
 		menudiv.append('div')
 			.style('margin-top','10px')
 			.attr('class','sja_menuoption')
-			.text( 'Allele frequency test of 2 groups' )
+			.text( get_axis_label_AFtest() )
 			.on('click', ()=>{
 				nm.in_use=true
 				nm.inuse_infokey = false
@@ -198,64 +196,95 @@ but will not update track
 function update_legend_by_AFtest ( settingholder, tk, block ) {
 	// works for arbitrary number of groups
 	const table = settingholder.append('table')
-		.style('border-spacing','3px')
+		.style('border-spacing','5px')
 		.style('border-collapse','separate')
+		.style('border-left','solid 1px #ccc')
+
+	const af = tk.vcf.numerical_axis.AFtest
 
 	// one row for each group
-	for( const [i, g] of tk.vcf.numerical_axis.AFtest.groups.entries() ) {
+	for( const [i, g] of af.groups.entries() ) {
 		const tr = table.append('tr')
-		// column 1
 		tr.append('td')
 			.text('Group '+(i+1))
 			.style('opacity',.3)
-			.style('text-align','right')
-		// column 2
-		const td = tr.append('td')
-		if( g.is_termdb ) {
-			make_termvalueselection_ui( td, g, tk.mds, block.genome, true,
-				async ()=>{
-					await tk.load()
-				}
-			)
-			// TODO if doing race adjustment, need to show the average admix
-		} else if( g.is_infofield ) {
-			const f = tk.info_fields.find( j=> j.key == g.key )
-			td.append('span').text( f.label )
-		}
-		// TODO add change button to change to change the content type of this group
+		legend_show_onegroup_AFtest( tk, block, g, tr.append('td') )
 	}
 
-	// method of test
+	// a row of controls
 	{
 		const tr = table.append('tr')
-		tr.append('td')
-			.text('Test method')
-			.style('opacity',.3)
-			.style('text-align','right')
-		const select = tr.append('td')
-		// TODO
+		const td = tr.append('td')
+			.attr('colspan',2)
+
+		const testmethod = td.append('select')
+			.style('margin-right','5px')
+			.on('change',()=>{
+				af.testby_AFdiff=false
+				af.testby_fisher=false
+				const i = testmethod.node().selectedIndex
+				if(i==0) {
+					af.testby_AFdiff=true
+				} else if(i==1) {
+					af.testby_fisher=true
+				}
+				tk.load()
+			})
+		testmethod.append('option')
+			.text('Allele frequency difference')
+		testmethod.append('option')
+			.text('Fisher exact test')
+		testmethod.node().selectedIndex = af.testby_AFdiff ? 0 : 1
+
+		{
+			const button = td.append('button')
+				.text('Edit groups')
+				.on('click',()=>{
+					tk.legend.tip.clear()
+					menu_edit_AFtest_groups( tk, tk.legend.tip.d )
+					tk.legend.tip.showunder( button.node() )
+				})
+		}
 	}
-
 }
 
 
 
-function update_legend_by_ebgatest( settingholder, tk, block ) {
-	
-	const count_limit_vcf = true
-	make_termvalueselection_ui(settingholder, tk.vcf.numerical_axis.ebgatest, tk.mds, block.genome, count_limit_vcf,
-		async ()=>{
-			await tk.load()
-	})
 
-	// a place to show the population average
-	const row = settingholder.append('div')
-	row.append('div')
-		.style('display','inline-block')
-		.style('margin','0px 10px')
-		.style('font-size','.8em')
-		.style('opacity',.5)
-		.text('Average admixture:')
-	tk.vcf.numerical_axis.ebgatest.div_populationaverage = row.append('div').style('display','inline-block')
+function menu_edit_AFtest_groups ( tk, holder ) {
+// a menu for changing type/content of AFtest groups
+	const af = tk.vcf.numerical_axis.AFtest
+
+	// display each group from af.groups
+
+	// for each group, allow to change to a different type: is_termdb is_infofield is_population
+	// for is_termdb, allow to define exact term-value setting
+	// for is_infofield, display <select> for choosing one of af.allowed_infofields[]
+	// for is_population, display <select> for choosing one of tk.populations[]
 }
 
+
+
+function legend_show_onegroup_AFtest ( tk, block, group, holder ) {
+// display one AFtest group in legend
+	if( group.is_termdb ) {
+		make_termvalueselection_ui( holder, group, tk.mds, block.genome, true,
+			async ()=>{
+				await tk.load()
+			}
+		)
+		// TODO if doing race adjustment, need to show average admix
+		return
+	}
+	if( group.is_infofield ) {
+		const f = tk.info_fields.find( j=> j.key == group.key )
+		holder.append('span').text( f.label )
+		return
+	}
+	if( group.is_population ) {
+		const p = tk.populations.find(i=>i.key==group.key)
+		holder.append('span').text( p.label )
+		return
+	}
+	holder.text('Cannot display group in legend: unknown group type')
+}

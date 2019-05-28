@@ -173,6 +173,9 @@ Note: must keep customizations of official tk through embedding api
 		// TODO accept customizations
 		tk.info_fields = JSON.parse(JSON.stringify(tk.mds.track.info_fields))
 	}
+	if( tk.mds.track.populations ) {
+		tk.populations = JSON.parse(JSON.stringify(tk.mds.track.populations))
+	}
 }
 
 

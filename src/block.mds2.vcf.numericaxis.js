@@ -16,8 +16,7 @@ adapted from legacy code
 render
 may_setup_numerical_axis
 get_axis_label
-get_axis_label_termdb2groupAF
-get_axis_label_ebgatest
+get_axis_label_AFtest
 maygetparameter_numericaxis
 ********************** INTERNAL
 numeric_make
@@ -879,13 +878,17 @@ and switching numeric axis category
 		if(!Array.isArray(nm.AFtest.allowed_infofields)) throw 'AFtest.allowed_infofields[] is not array'
 		if(!nm.AFtest.groups) throw 'AFtest.groups[] missing'
 		if(!Array.isArray(nm.AFtest.groups)) throw 'AFtest.groups[] is not array'
-		if(nm.AFtest.groups.length!=2) throw 'AFtest.groups[] must have two elements' // may allow multiple later
+		if(nm.AFtest.groups.length<2) throw 'AFtest.groups[] must have at least two elements'
 		for(const g of nm.AFtest.groups) {
 			if( g.is_termdb ) {
 				validate_termvaluesetting( g.terms, 'one group of AFtest.groups' )
 			} else if( g.is_infofield ) {
 				if(!g.key) throw 'key missing from a is_infofield group'
 				if(!nm.AFtest.allowed_infofields.find( i=>i.key==g.key )) throw 'info key not found in allowed_infofields: '+g.key
+			} else if( g.is_population ) {
+				if(!g.key) throw 'key missing from a is_population group'
+				if(!tk.populations) throw 'tk.populations{} missing when using a population group'
+				if(!tk.populations.find(i=>i.key==g.key)) throw 'unknown population by key: '+g.key
 			} else {
 				throw 'unknown type of group from AFtest.groups[]'
 			}
@@ -900,7 +903,13 @@ and switching numeric axis category
 		}
 	}
 
-	nm.label = get_axis_label( tk )
+	// axis label
+	if( nm.inuse_AFtest ) {
+		if(nm.AFtest.testby_AFdiff) nm.label = 'Allele frequency difference'
+		else if(nm.AFtest.testby_fisher) nm.label = '-log10 P-value'
+	} else {
+		nm.label = get_axis_label( tk )
+	}
 }
 
 
@@ -1001,21 +1010,17 @@ export function get_axis_label ( tk ) {
 		}
 		return key.key
 	}
-	if( nm.inuse_AFtest ) return 'Allele frequency test of 2 groups'
+	if( nm.inuse_AFtest ) return get_axis_label_AFtest()
 	return 'Error: unknown type of axis'
 }
 
 
 
-export function get_axis_label_termdb2groupAF ( tk ) {
+export function get_axis_label_AFtest () {
 	// TODO need to synthesize a more informative label based on term settings of group1/2
-	return 'Two-group AF comparison'
+	return 'Compare two groups'
 }
 
-export function get_axis_label_ebgatest ( tk ) {
-	// TODO 
-	return 'Race background adjusted test'
-}
 
 
 
@@ -1052,8 +1057,13 @@ append numeric axis parameter to object for loadTk
 						}
 					}
 					lst.push( par )
+				} else if( g.is_population ) {
+					lst.push({
+						is_population:true,
+						key: g.key
+					})
 				} else {
-					throw 'unknown group type'
+					throw 'unknown group type at xhr parameter'
 				}
 				return lst
 			}, [])

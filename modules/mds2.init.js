@@ -65,6 +65,9 @@ the client copy stays at .mds.track{}
 		if(t0.vcf.termdb_bygenotype) {
 			tk.vcf.termdb_bygenotype = true
 		}
+		if(t0.populations) {
+			tk.populations = t0.populations
+		}
 	}
 	return tk
 }

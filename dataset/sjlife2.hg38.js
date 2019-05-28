@@ -153,27 +153,19 @@ module.exports={
 			},
 			{
 				key:'BadBLAT',
+				label:'Bad blat',
 				isflag:true,
 				isfilter:true,
-				isactivefilter:true,
+				//isactivefilter:true,
 				remove_yes:true
 			},
-			/*
-			{
-				key:'DB',
-				label:'dbSNP membership',
-				isflag:true,
-				isfilter:true,
-				isactivefilter:true,
-				remove_no:true
-			},
-			*/
 		],
 
 
-		populations:{
-			gnomad:{
-				name:'gnomAD, NFE+AFR+EAS combined',
+		populations:[
+			{
+				key:'gnomad',
+				label:'gnomAD, NFE+AFR+EAS combined',
 				sets:[
 					// per variant, the control population allele counts are hardcoded to be info fields
 					{
@@ -193,8 +185,7 @@ module.exports={
 					}
 				],
 			}
-			// 'topmed':[] TODO
-		},
+		],
 
 
 		vcf: {
@@ -222,6 +213,7 @@ module.exports={
 					testby_fisher:false,
 					adjust_race:false,
 					groups:[
+						{ is_population:true, key:'gnomad' },
 						{
 							is_termdb:true,
 							terms:[
@@ -233,6 +225,7 @@ module.exports={
 								}
 							]
 						},
+						/*
 						{
 							is_termdb:true,
 							terms:[
@@ -244,15 +237,8 @@ module.exports={
 								}
 							]
 						},
-						{
-							is_infofield:true,
-							key:'gnomAD_AF'
-						},
-						/*
-						{
-							is_infofield:true,
-							key:'gnomAD_AF_afr'
-						},
+						{ is_infofield:true, key:'gnomAD_AF' },
+						{ is_infofield:true, key:'gnomAD_AF_afr' },
 						*/
 					],
 					allowed_infofields:[

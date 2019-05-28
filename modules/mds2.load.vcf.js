@@ -198,18 +198,18 @@ generate the "querymode" object that drives subsequent queries
 			}
 			if(g.is_population) {
 				if(!ds.track.populations) throw 'ds.track.populations missing'
-				g.population = ds.track.populations[ g.key ]
+				g.population = ds.track.populations.find(i=>i.key==g.key)
 				if(!g.population) throw 'unknown population key: '+g.key
 				continue
 			}
-			throw 'unknown group type'
+			throw 'Cannot set query mode: unknown group type'
 		}
 
 		if( q.adjust_race ) {
 			const group_termdb = q.AFtest.groups.find( i=> i.is_termdb )
-			if(!group_termdb) throw '.is_termdb group missing'
+			if(!group_termdb) throw 'Cannot adjust race: .is_termdb group missing'
 			const group_population = q.AFtest.groups.find( i=> i.is_population )
-			if(!group_population) throw '.is_population group missing'
+			if(!group_population) throw 'Cannot adjust race: .is_population group missing'
 			group_termdb.pop2average = get_pop2average( 
 				group_population.population,
 				group_termdb.columnidx,
