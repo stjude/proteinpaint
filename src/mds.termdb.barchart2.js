@@ -378,7 +378,9 @@ export class Barchart{
             return s.unit == "pct" ? "% of patients" : "# of patients"
           } else {
             const term = self.terms.term1
-            return term.name[0].toUpperCase() + term.name.slice(1)
+            return term.iscategorical || !term.unit
+              ? ''
+              : term.unit //term.name[0].toUpperCase() + term.name.slice(1)
           }
         }
       },
@@ -386,7 +388,9 @@ export class Barchart{
         text: () => {
           if (s.orientation == "vertical") { 
             const term = self.terms.term1
-            return term.name[0].toUpperCase() + term.name.slice(1)
+            return term.iscategorical || !term.unit
+              ? ''
+              : term.unit // term.name[0].toUpperCase() + term.name.slice(1)
           } else {
             return s.unit == "pct" ? "% of patients" : "# of patients"
           }
