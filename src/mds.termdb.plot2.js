@@ -125,11 +125,12 @@ export function render ( arg, obj ) {
     }
   }
 
-  // set configuration controls
-  controls(arg, plot, do_plot, update_plot)
-
   // other holders/components
   plot.bar_div = arg.holder.append('div')
+    .attr('class','pp-bar-holder')
+    .style('display','inline-block')
+  // set configuration controls
+  controls(arg, plot, do_plot, update_plot)
   plot.legend_div = arg.holder.append('div')
     .style('margin','10px 0px')
   plot.svg = arg.holder.append('svg')

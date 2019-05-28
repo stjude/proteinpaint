@@ -1,35 +1,38 @@
-import {Menu} from './client'
 import {event as d3event} from 'd3-selection'
 import {may_trigger_crosstabulate} from './mds.termdb.crosstab'
 
 export function controls(arg, plot, do_plot, update_plot) {
-  const tip = new Menu({padding:'18px'})
+  const config_holder = arg.holder.append('div')
+    .style('display','inline-block')
+    .style('vertical-align','top')
+    .style('margin', '8px')
 
-  plot.config_div = arg.holder.append('div')
-    .style('position', 'absolute')
-    .style('right', '5px')
+  // label
+  config_holder.append('div')
     .style('color', '#aaa')
     .style('font-size', '12px')
     .style('cursor', 'pointer')
     .html('CONFIG')
     .on('click',()=>{
       plot.controls.forEach(update => update())
-      tip.showunder(plot.config_div.node(), 0)
+      const display = tip.style('display')
+      tip.style('display', display == "none" ? "inline-block" : "none")
     })
 
+  const tip = config_holder.append('div').style("display","none")
   // will be used to track control elements
   // for contextual updates
   plot.controls = []
-  const table = tip.d.append('table')
-  setOrientationOpts(tip, plot, do_plot, table)
-  setScaleOpts(tip, plot, do_plot, table)
-  setBinOpts(tip, plot, do_plot, table, 'term1', 'Primary Bins')
-  setOverlayOpts(tip, plot, do_plot, table, arg)
-  setViewOpts(tip, plot, update_plot, table)
-  setBinOpts(tip, plot, do_plot, table, 'term2', 'Stacked Bins')
+  const table = tip.append('table')
+  setOrientationOpts(plot, do_plot, table)
+  setScaleOpts(plot, do_plot, table)
+  setBinOpts(plot, do_plot, table, 'term1', 'Primary Bins')
+  setOverlayOpts(plot, do_plot, table, arg)
+  setViewOpts(plot, update_plot, table)
+  setBinOpts(plot, do_plot, table, 'term2', 'Stacked Bins')
 }
 
-function setOrientationOpts(tip, plot, do_plot, table) {
+function setOrientationOpts(plot, do_plot, table) {
   const tr = table.append('tr')
   
   tr.append('td')
@@ -40,7 +43,6 @@ function setOrientationOpts(tip, plot, do_plot, table) {
     .on('change', () => {
       plot.bar_settings.orientation = orientation.property('value')
       do_plot(plot)
-      tip.hide()
     })
 
   orientation.append('option')
@@ -54,7 +56,7 @@ function setOrientationOpts(tip, plot, do_plot, table) {
     .html('Horizontal')
 }
 
-function setScaleOpts(tip, plot, do_plot, table) {
+function setScaleOpts(plot, do_plot, table) {
   const tr = table.append('tr')
 
   tr.append('td')
@@ -65,7 +67,6 @@ function setScaleOpts(tip, plot, do_plot, table) {
     .on('change', () => {
       plot.bar_settings.unit = unit.property('value')
       do_plot(plot)
-      tip.hide()
     })
 
   const abs = unit.append('option')
@@ -89,7 +90,7 @@ function setScaleOpts(tip, plot, do_plot, table) {
   })
 }
 
-function setOverlayOpts(tip, plot, do_plot, table, arg) {
+function setOverlayOpts(plot, do_plot, table, arg) {
   const tr = table.append('tr')
   
   tr.append('td')
@@ -105,7 +106,6 @@ function setOverlayOpts(tip, plot, do_plot, table, arg) {
         plot.term2 = undefined
         plot.term2_displaymode = 'stacked'
         do_plot(plot)
-        tip.hide()
       } else if (value == "tree") {
         const _arg = {
           term1: arg.term,
@@ -124,8 +124,6 @@ function setOverlayOpts(tip, plot, do_plot, table, arg) {
               plot.term2_boxplot = 0
               do_plot( plot )
             }
-
-            tip.hide()
           }
         }
         may_trigger_crosstabulate( _arg, tr.node() )
@@ -172,8 +170,6 @@ function setOverlayOpts(tip, plot, do_plot, table, arg) {
             plot.term2_boxplot = 0
             do_plot( plot )
           }
-
-          tip.hide()
         }
       }
       may_trigger_crosstabulate( _arg, tr.node() )
@@ -196,7 +192,7 @@ function setOverlayOpts(tip, plot, do_plot, table, arg) {
   })
 }
 
-function setViewOpts(tip, plot, update_plot, table, arg) {
+function setViewOpts(plot, update_plot, table, arg) {
   const tr = table.append('tr')
 
   tr.append('td')
@@ -229,7 +225,6 @@ function setViewOpts(tip, plot, update_plot, table, arg) {
         plot.legend_div.style('display','none')
         update_plot(plot)
       }
-      tip.hide()
     })
 
   view.append('option')
@@ -254,7 +249,7 @@ function setViewOpts(tip, plot, update_plot, table, arg) {
   })
 }
 
-function setBinOpts(tip, plot, do_plot, table, termNum, label) {
+function setBinOpts(plot, do_plot, table, termNum, label) {
   const tr = table.append('tr')
   
   tr.append('td')
@@ -265,7 +260,7 @@ function setBinOpts(tip, plot, do_plot, table, termNum, label) {
     .style("cursor", "pointer")
     .html('edit ...')
     .on('click', () => {
-      custom_bin(tip, plot, do_plot, termNum.slice(-1), tr.node())
+      custom_bin(plot, do_plot, termNum.slice(-1), tr.node())
     })
 
   plot.controls.push(() => {
@@ -274,7 +269,7 @@ function setBinOpts(tip, plot, do_plot, table, termNum, label) {
   })
 }
 
-function custom_bin(tip, plot, do_plot, binNum=1, btn){
+function custom_bin(plot, do_plot, binNum=1, btn){
   plot.tip.clear().showunder(btn)
 
   const custom_bins = binNum in plot.custom_bins ? plot.custom_bins[binNum] : null
@@ -433,7 +428,6 @@ function custom_bin(tip, plot, do_plot, binNum=1, btn){
         }
         do_plot(plot)
         plot.tip.hide()
-        tip.hide()
       }
     })
 
@@ -443,13 +437,11 @@ function custom_bin(tip, plot, do_plot, binNum=1, btn){
       plot.custom_bins[binNum] = null
       do_plot(plot)
       plot.tip.hide()
-      tip.hide()
     })
 
   btndiv.append('button')
     .html('Cancel')
     .on('click', ()=>{
       plot.tip.hide()
-      tip.hide()
     })
 }

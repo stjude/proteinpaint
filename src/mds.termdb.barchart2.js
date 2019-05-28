@@ -576,7 +576,7 @@ export function may_make_barchart(plot) {
     plot.bar_div.style('display','none')
     return
   }
-  plot.bar_div.style('display','block')
+  plot.bar_div.style('display','inline-block')
   plot.svg.style('display','none')
   plot.legend_div.style('display','block')
   if(plot.boxplot_div){
