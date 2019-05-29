@@ -215,18 +215,16 @@ function setViewOpts(plot, update_plot, table, arg) {
       }else if(value == 'stacked'){
         plot.term2_boxplot = 0
         plot.table_div.style('display','none')
-        plot.svg.style('display','block')
+        plot.box_svg.style('display','block')
         plot.legend_div.style('display','block')
-        if(plot.boxplot_div){
-          plot.boxplot_div.style('display','block')
-        }
+        plot.stat_div.style('display','block')
         update_plot(plot)
       }
       // if 'boxplot' selected - query server for data
       else if(value == 'boxplot'){
         plot.term2_boxplot = 1
         plot.table_div.style('display','none')
-        plot.svg.style('display','block')
+        plot.box_svg.style('display','block')
         plot.legend_div.style('display','none')
         update_plot(plot)
       }

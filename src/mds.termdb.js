@@ -1,7 +1,7 @@
 import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import {render} from './mds.termdb.plot2'
+import {render} from './mds.termdb.plot'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 /*
