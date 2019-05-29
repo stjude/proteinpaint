@@ -2,33 +2,37 @@ import {event as d3event} from 'd3-selection'
 import {may_trigger_crosstabulate} from './mds.termdb.crosstab'
 
 export function controls(arg, plot, do_plot, update_plot) {
-  const config_holder = arg.holder.append('div')
+  plot.config_div = arg.holder.append('div')
     .style('display','inline-block')
     .style('vertical-align','top')
     .style('margin', '8px')
 
+  plot.controls_update = () => {
+    plot.controls.forEach(update => update())
+  }
+
   // label
-  config_holder.append('div')
+  plot.config_div.append('div')
     .style('color', '#aaa')
     .style('font-size', '12px')
     .style('cursor', 'pointer')
     .html('CONFIG')
-    .on('click',()=>{
+    .on('click', () => {
       plot.controls.forEach(update => update())
       const display = tip.style('display')
       tip.style('display', display == "none" ? "inline-block" : "none")
     })
 
-  const tip = config_holder.append('div').style("display","none")
+  const tip = plot.config_div.append('div').style("display","none")
   // will be used to track control elements
   // for contextual updates
   plot.controls = []
   const table = tip.append('table')
+  setOverlayOpts(plot, do_plot, table, arg)
+  setViewOpts(plot, update_plot, table)
   setOrientationOpts(plot, do_plot, table)
   setScaleOpts(plot, do_plot, table)
   setBinOpts(plot, do_plot, table, 'term1', 'Primary Bins')
-  setOverlayOpts(plot, do_plot, table, arg)
-  setViewOpts(plot, update_plot, table)
   setBinOpts(plot, do_plot, table, 'term2', 'Stacked Bins')
 }
 
@@ -54,6 +58,10 @@ function setOrientationOpts(plot, do_plot, table) {
     .attr('value', 'horizontal')
     .property('selected', plot.bar_settings.orientation == "horizontal")
     .html('Horizontal')
+
+  plot.controls.push(() => {
+    tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
+  })
 }
 
 function setScaleOpts(plot, do_plot, table) {
@@ -109,12 +117,10 @@ function setOverlayOpts(plot, do_plot, table, arg) {
       } else if (value == "tree") {
         const _arg = {
           term1: arg.term,
-          button_row: plot.term2_border_div,
           obj: plot.obj,
           callback: result=>{
-            // either adding term2 for the first time or replacing term2
+            // adding term2 for the first time
             plot.term2 = result.term2
-
             // update the plot data using the server-returned new data
             plot.items = result.items
             if (plot.term2.isfloat && plot.term2_boxplot){ 
@@ -148,19 +154,18 @@ function setOverlayOpts(plot, do_plot, table, arg) {
     .html('Genotype')
 
   td.append('span').html('&nbsp;') 
-  const edit = td.append('span')  
-    .html('change')
+  const editbtn = td.append('span')  
+    .attr('class', 'crosstab-btn')
+    .html('replace')
     .style('cursor', 'pointer')
     .style('text-decoration', 'underline')
     .on('click', () =>{
       const _arg = {
         term1: arg.term,
-        button_row: plot.term2_border_div,
         obj: plot.obj,
         callback: result=>{
-          // either adding term2 for the first time or replacing term2
+          // replacing term2
           plot.term2 = result.term2
-
           // update the plot data using the server-returned new data
           plot.items = result.items
           if (plot.term2.isfloat && plot.term2_boxplot){ 
@@ -178,7 +183,7 @@ function setOverlayOpts(plot, do_plot, table, arg) {
   plot.controls.push(() => {
     // hide all options when opened from genome browser view 
     tr.style("display", plot.obj.modifier_ssid_barchart ? "none" : "table-row")
-    edit.style("display", plot.bar_settings.overlay == "tree" ? "inline" : "none")
+    editbtn.style("display", plot.bar_settings.overlay == "tree" ? "inline" : "none")
     // do not show genoetype overlay option when opened from stand-alone page
     if (!plot.bar_settings.overlay) {
       plot.bar_settings.overlay = plot.obj.modifier_ssid_barchart

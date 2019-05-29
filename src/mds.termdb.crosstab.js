@@ -62,7 +62,6 @@ then pass term2 and crosstab result to callback
 			mds: arg.obj.mds,
 			div: treediv,
 			default_rootterm: {},
-
 			modifier_click_term: {
 				// TODO when switching term2 while there is already a term2, add term2 id here also
 				disable_terms: new Set([ arg.term1.id ]),
@@ -90,7 +89,6 @@ export function may_trigger_crosstabulate( arg, btn ) {
 	add_searchbox_4term( arg.obj, arg.obj.tip.d, term2_selected_callback )
 
 	const treediv = arg.obj.tip.d.append('div')
-
 	// a new object as init() argument for launching the tree
 	// with modifiers
 	const obj = {
@@ -98,7 +96,6 @@ export function may_trigger_crosstabulate( arg, btn ) {
 		mds: arg.obj.mds,
 		div: treediv,
 		default_rootterm: {},
-
 		modifier_click_term: {
 			// TODO when switching term2 while there is already a term2, add term2 id here also
 			disable_terms: new Set([ arg.term1.id ]),

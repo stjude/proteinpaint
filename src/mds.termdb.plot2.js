@@ -125,16 +125,19 @@ export function render ( arg, obj ) {
     }
   }
 
+  arg.holder.style('white-space', 'nowrap')
+
   // other holders/components
   plot.bar_div = arg.holder.append('div')
     .attr('class','pp-bar-holder')
     .style('display','inline-block')
-  // set configuration controls
-  controls(arg, plot, do_plot, update_plot)
-  plot.legend_div = arg.holder.append('div')
-    .style('margin','10px 0px')
   plot.svg = arg.holder.append('svg')
   plot.table_div = arg.holder.append('div')
+  // set configuration controls
+  controls(arg, plot, do_plot, update_plot)
+
+  plot.legend_div = arg.holder.append('div')
+    .style('margin','10px 0px')
   plot.yaxis_g = plot.svg.append('g') // for y axis
   plot.graph_g = plot.svg.append('g') // for bar and label of each data item
   if (arg.boxplot){
@@ -142,6 +145,7 @@ export function render ( arg, obj ) {
       .style('margin','10px 0px')
     //plot.boxplot_g = plot.svg.append('g')
   }
+  
 
   //Exposed - not exponsed data
   plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
@@ -185,6 +189,7 @@ in the plot object called by showing the single-term plot
 at the beginning or stacked bar plot for cross-tabulating
 */ 
   // console.log(plot)
+  plot.controls_update()
   may_make_barchart(plot)
   may_make_boxplot(plot)
   may_make_stat(plot)
@@ -255,7 +260,7 @@ function may_make_table (plot) {
   plot.bar_div.style('display','none')
   plot.svg.style('display','none')
   plot.legend_div.style('display','none')
-  plot.table_div.style('display','block')
+  plot.table_div.style('display','inline-block')
   if(plot.boxplot_div){
     plot.boxplot_div.style('display','none')
   }
@@ -284,6 +289,8 @@ function may_make_table (plot) {
       tr.append('th')
         .text( i )
         .style('border', '1px solid black')
+        .style('padding', '3px')
+        .style('text-align', 'center')
     }
 
     for(const t1v of rows) {
@@ -293,11 +300,14 @@ function may_make_table (plot) {
       tr.append('th')
         .text( t1v.label )
         .style('border', '1px solid black')
+        .style('padding', '3px')
 
       // other columns
       for(const t2label of column_keys) {
         const td = tr.append('td')
           .style('border', '1px solid black')
+          .style('padding', '3px')
+          .style('text-align', 'right')
         const v = t1v.lst.find( i=> i.label == t2label )
         if( v ) {
           td.text( v.value )
@@ -347,7 +357,7 @@ function may_make_boxplot(plot) {
     plot.svg.style('display','none')
     return
   }
-  plot.svg.style('display','block')
+  plot.svg.style('display','inline-block')
   if (plot.use_logscale) {
     plot.y_scale = scaleLog().domain([plot.yscale_max,1]).range([0,plot.barheight])
   } else if (plot.use_percentage) {

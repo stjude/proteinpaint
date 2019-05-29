@@ -61,7 +61,7 @@ planned features:
 
 
 
-export async function init ( obj  ) {
+export async function init ( obj ) {
 /*
 obj{}:
 .genome {}
@@ -70,7 +70,7 @@ obj{}:
 .default_rootterm{}
 ... modifiers
 */
-
+const crosstab_btn = obj.crosstab_btn
 	window.obj = obj // for testing
 	obj.errdiv = obj.div.append('div')
 	obj.treediv = obj.div.append('div')
@@ -81,8 +81,7 @@ obj{}:
 		// the click event, so stopPropagation in here 
 		// does not affect those event handlers/callbacks 
 		d3event.stopPropagation()
-		
-		if (d3event.target.innerHTML == "CROSSTAB") return
+		if (d3event.target.innerHTML == "CROSSTAB" || d3event.target.className == "crosstab-btn") return
 		// since the click event is not propagated to body,
 		// handle the tip hiding here since the body.click
 		// handler in client.js Menu will not be triggered
