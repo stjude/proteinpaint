@@ -12,7 +12,6 @@ group{}
 	const group_div = holder_div
         .append('div')
         .style('display', 'block')
-        .style('margin','5px 10px')
         .style('padding','3px 10px')
         //.style('border','solid 1px') .style('border-color','#d4d4d4')
 
@@ -25,11 +24,17 @@ group{}
             .text(group.name)
     }
 
-    group.div_numbersamples = group_div.append('div')
+    // group.div_numbersamples = group_div.append('div')
+    //     .style('display', 'inline-block')
+    //     .style('opacity',.5)
+    //     .style('font-size','.8em')
+    //     .text('Loading...')
+
+    group.div_value_info = group_div.append('div')
         .style('display', 'inline-block')
         .style('opacity',.5)
         .style('font-size','.8em')
-        .text('Loading...')
+        .text('ALLELE FREQUENCY OF')
 
     const terms_div = group_div.append('div')
         .style('display','inline-block')
@@ -102,7 +107,7 @@ group{}
                             .on('click', async()=>{
                                 tip.hide()
                                 group.terms[i].isnot = term.isnot ? false : true
-                                may_settoloading_termgroup( group )
+                                // may_settoloading_termgroup( group )
                                 await callback()
                                 update_terms(terms_div)
                             })
@@ -157,7 +162,7 @@ group{}
                                             group.terms.splice(i,1)
                                         }
                                         tip.hide()
-                                        may_settoloading_termgroup( group )
+                                        // may_settoloading_termgroup( group )
                                         await callback()
                                         update_terms(terms_div)
                                     })
@@ -173,7 +178,7 @@ group{}
                                             // replace the old category with the new one
                                             tip.hide()
                                             group.terms[i].values[j] = {key:category.key,label:category.label}
-                                            may_settoloading_termgroup( group )
+                                            // may_settoloading_termgroup( group )
                                             await callback()
                                             update_terms(terms_div)
                                         })
@@ -233,7 +238,7 @@ group{}
                                                 .on('click',async ()=>{
                                                     group.terms[i].values.push({key:category.key,label:category.label})
                                                     tip.hide()
-                                                    may_settoloading_termgroup( group )
+                                                    // may_settoloading_termgroup( group )
                                                     await callback()
                                                     update_terms(terms_div)
                                                 })
@@ -260,7 +265,7 @@ group{}
                 .html('&#215;')
                 .on('click',async ()=>{
                     group.terms.splice(i, 1)
-                    may_settoloading_termgroup( group )
+                    // may_settoloading_termgroup( group )
                     await callback()
                     update_terms(terms_div)
                 })
@@ -368,7 +373,7 @@ group{}
         group.terms = new_terms
         
         // // update the group div with new terms
-        may_settoloading_termgroup( group )
+        // may_settoloading_termgroup( group )
         await callback()
     }
 

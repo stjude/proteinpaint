@@ -203,9 +203,18 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 	// one row for each group
 	for( const [i, g] of af.groups.entries() ) {
 		const tr = table.append('tr')
-		tr.append('td')
+		const group_td = tr.append('td')
+
+		group_td.append('div')
 			.text('Group '+(i+1))
-			.style('opacity',.3)
+			.style('border-radius','6px')
+			.style('background-color', '#ddd')
+			.style('color','#000')
+			.style('padding','6px')
+			.style('margin','3px 5px')
+			.style('font-size','.7em')
+			.style('text-transform','uppercase')
+
 		legend_show_onegroup_AFtest( tk, block, g, tr.append('td') )
 	}
 
@@ -214,6 +223,16 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 		const tr = table.append('tr')
 		const td = tr.append('td')
 			.attr('colspan',2)
+
+		td.append('div')
+			.text('Test Method')
+			.style('border-radius','6px')
+			.style('display', 'inline-block')
+			.style('color','#000')
+			.style('padding','6px')
+			.style('margin','3px 5px')
+			.style('font-size','.7em')
+			.style('text-transform','uppercase')
 
 		const testmethod = td.append('select')
 			.style('margin-right','5px')
@@ -235,33 +254,33 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 		testmethod.node().selectedIndex = af.testby_AFdiff ? 0 : 1
 
 		// may allow race adjustment
-		if(af.allowto_adjust_race) {
-			const id = Math.random()
-			af.adjust_race_checkbox = td.append('input')
-				.attr('type','checkbox')
-				.attr('id',id)
-				.property('disabled', (!af.groups.find(i=>i.is_termdb) || !af.groups.find(i=>i.is_population)) )
-				.property('checked', af.adjust_race)
-				.on('change',()=>{
-					af.adjust_race = !af.adjust_race
-					tk.load()
-				})
-			td.append('label')
-				.html('&nbsp;Adjust race background')
-				.attr('class','sja_clbtext')
-				.attr('for',id)
-		}
+		// if(af.allowto_adjust_race) {
+		// 	const id = Math.random()
+		// 	af.adjust_race_checkbox = td.append('input')
+		// 		.attr('type','checkbox')
+		// 		.attr('id',id)
+		// 		.property('disabled', (!af.groups.find(i=>i.is_termdb) || !af.groups.find(i=>i.is_population)) )
+		// 		.property('checked', af.adjust_race)
+		// 		.on('change',()=>{
+		// 			af.adjust_race = !af.adjust_race
+		// 			tk.load()
+		// 		})
+		// 	td.append('label')
+		// 		.html('&nbsp;Adjust race background')
+		// 		.attr('class','sja_clbtext')
+		// 		.attr('for',id)
+		// }
 
-		{
-			const button = td.append('button')
-				.text('Edit groups')
-				.style('margin-right','5px')
-				.on('click',()=>{
-					tk.legend.tip.clear()
-					menu_edit_AFtest_groups( tk, tk.legend.tip.d )
-					tk.legend.tip.showunder( button.node() )
-				})
-		}
+		// {
+			// const button = td.append('button')
+			// 	.text('Edit groups')
+			// 	.style('margin-right','5px')
+			// 	.on('click',()=>{
+			// 		tk.legend.tip.clear()
+			// 		menu_edit_AFtest_groups( tk, tk.legend.tip.d )
+			// 		tk.legend.tip.showunder( button.node() )
+			// 	})
+		// }
 
 	}
 }
@@ -294,14 +313,165 @@ function legend_show_onegroup_AFtest ( tk, block, group, holder ) {
 		return
 	}
 	if( group.is_infofield ) {
-		const f = tk.info_fields.find( j=> j.key == group.key )
-		holder.append('span').text( f.label )
+		make_infofiled_ui(group, holder, tk)
 		return
 	}
 	if( group.is_population ) {
-		const p = tk.populations.find(i=>i.key==group.key)
-		holder.append('span').text( p.label )
+		make_population_ui(group, holder, tk)
 		return
 	}
 	holder.text('Cannot display group in legend: unknown group type')
+}
+
+
+function make_infofiled_ui(group, holder, tk){
+
+	const f = tk.info_fields.find( j=> j.key == group.key )
+
+	// Group div
+	const group_div = holder.append('div')
+        .style('display', 'block')
+		.style('padding','3px 10px')
+
+	group.div_value_info = group_div.append('div')
+        .style('display', 'inline-block')
+        .style('opacity',.5)
+		.style('font-size','.8em')
+		.style('width','152px')
+		.style('text-align','right')
+		.text('VALUE OF')
+		
+	const info_field_div = group_div.append('div')
+		.style('display','inline-block')
+		
+	update_info_field(info_field_div)
+
+
+	function update_info_field(info_field_div){
+
+		info_field_div.selectAll('*').remove()
+		
+		//hidden select and options on top of info_field_btn
+		const info_select = info_field_div.append('select')
+			.style('padding','3px 6px 3px 6px')
+			.style('position','absolute')
+			.style('opacity',0)
+
+		for( const info_field of tk.info_fields ){
+
+			info_select.append('option')
+				.attr('value',info_field.key)
+				.text(info_field.label)
+		}
+
+		info_select.node().value = f.key
+
+		//info field button with selected info field
+		const info_field_btn = info_field_div.append('div')
+			// .attr('class','sja_filter_tag_btn')
+			.style('color','#FFF')
+			.style('border-radius','6px')
+			.style('background-color', '#674EA7')
+			.style('padding','3px 6px 3px 6px')
+			.style('margin-left', '5px')
+			.style('font-size','1em')
+			.text(f.label)
+
+		info_select.on('change',async()=>{
+			
+			//change value of button 
+			const new_info = tk.info_fields.find( j=> j.key == info_select.node().value )
+			info_field_btn.text(new_info.label)
+
+			//update gorup and load tk
+			group.key = new_info.key
+			await tk.load()
+		})
+	}
+}
+
+
+function make_population_ui(group, holder, tk){
+	
+	const p = tk.populations.find(i=>i.key==group.key)
+
+	// Group div
+	const group_div = holder.append('div')
+        .style('display', 'block')
+		.style('padding','3px 10px')
+
+	group.div_value_info = group_div.append('div')
+        .style('display', 'inline-block')
+        .style('opacity',.5)
+        .style('font-size','.8em')
+		.text('ALLELE FREQUENCY OF')
+		
+	const population_div = group_div.append('div')
+		.style('display','inline-block')
+		
+	update_population(population_div)
+
+	const af = tk.vcf.numerical_axis.AFtest
+
+	// may allow race adjustment
+	if(af.allowto_adjust_race) {
+
+		const id = Math.random()
+		af.adjust_race_checkbox = group_div.append('input')
+			.attr('type','checkbox')
+			.attr('id',id)
+			.style('margin-left','10px')
+			.property('disabled', (!af.groups.find(i=>i.is_termdb) || !af.groups.find(i=>i.is_population)) )
+			.property('checked', af.adjust_race)
+			.on('change',()=>{
+				af.adjust_race = !af.adjust_race
+				tk.load()
+			})
+
+		group_div.append('label')
+			.html('&nbsp;Adjust race background')
+			.attr('class','sja_clbtext')
+			.attr('for',id)
+	}
+
+	function update_population(population_div){
+
+		population_div.selectAll('*').remove()
+		
+		//hidden select and options on top of population_btn
+		const population_select = population_div.append('select')
+			.style('padding','3px 6px 3px 6px')
+			.style('position','absolute')
+			.style('opacity',0)
+
+		for( const population of tk.populations ){
+			population_select.append('option')
+				.attr('value',population.value)
+				.text(population.label)
+		}
+
+		population_select.node().value = p.key
+
+		const population_btn = population_div.append('div')
+			// .attr('class','sja_filter_tag_btn')
+			.style('color','#FFF')
+			.style('border-radius','6px')
+			.style('background-color', '#A64D79')
+			.style('padding','3px 6px 3px 6px')
+			.style('margin-left', '5px')
+			.style('font-size','1em')
+			.style('z-index','-1')
+			.text(p.label)
+
+		population_select.on('change',async()=>{
+			
+			//change value of button 
+			const new_population = tk.populations.find( i=>i.key == population_select.node().value )
+			population_btn.text(new_population.label)
+
+			//update gorup and load tk
+			group.key = new_population.key
+			await tk.load()
+		})
+	}
 }
