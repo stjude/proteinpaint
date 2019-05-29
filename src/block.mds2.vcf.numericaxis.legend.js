@@ -21,6 +21,8 @@ may_create_vcflegend_numericalaxis
 showmenu_numericaxis
 __update_legend
 update_legend_by_AFtest
+make_infofiled_ui
+make_population_ui
 */
 
 
@@ -206,6 +208,7 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 		const group_td = tr.append('td')
 
 		group_td.append('div')
+			.attr('class','sja_filter_tag_btn')
 			.text('Group '+(i+1))
 			.style('border-radius','6px')
 			.style('background-color', '#ddd')
@@ -214,6 +217,9 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 			.style('margin','3px 5px')
 			.style('font-size','.7em')
 			.style('text-transform','uppercase')
+			.on('click',()=>{
+				menu_edit_AFtest_groups(tk, block, group_td)
+			})
 
 		legend_show_onegroup_AFtest( tk, block, g, tr.append('td') )
 	}
@@ -288,16 +294,68 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 
 
 
-function menu_edit_AFtest_groups ( tk, holder ) {
-// a menu for changing type/content of AFtest groups
-	const af = tk.vcf.numerical_axis.AFtest
-
-	// display each group from af.groups
-
+function menu_edit_AFtest_groups (tk, block, group_td) {
+	
 	// for each group, allow to change to a different type: is_termdb is_infofield is_population
 	// for is_termdb, allow to define exact term-value setting
 	// for is_infofield, display <select> for choosing one of af.allowed_infofields[]
 	// for is_population, display <select> for choosing one of tk.populations[]
+
+
+	// a menu for changing type/content of AFtest groups
+	const af = tk.vcf.numerical_axis.AFtest
+
+	const tip = tk.legend.tip
+	tip.clear()
+	tip.showunder( group_td.node(), -65 )
+
+	// display each group from af.groups
+	const table = tip.d.append('table')
+		.style('border-spacing','15px')
+		.style('border-collapse','separate')
+		.style('border-left','solid 1px #ccc')
+
+	// one row for each group
+	for( const [i, g] of af.groups.entries() ) {
+		const tr = table.append('tr')
+		const group_td = tr.append('td')
+
+		group_td.append('div')
+			.text('Group '+(i+1))
+			.style('display','inline-block')
+			.style('border-radius','6px')
+			.style('color','#000')
+			.style('padding','6px')
+			.style('margin','3px 5px')
+			.style('font-size','.7em')
+			.style('text-transform','uppercase')
+
+		group_td.append('div')
+			.text('edit')
+			.attr('class','sja_filter_tag_btn')
+			.style('display','inline-block')
+			.style('border-radius','6px')
+			.style('background-color', '#ddd')
+			.style('color','#000')
+			.style('padding','6px')
+			.style('margin','3px 5px')
+			.style('font-size','.7em')
+			.style('text-transform','uppercase')
+			.on('click',()=>{
+
+			})
+
+		legend_show_onegroup_AFtest( tk, block, g, tr.append('td') )
+	}
+
+	tip.d.append('div')
+		.attr('margin-top','15px')
+		.attr('class','sja_menuoption')
+		.style('text-align','center')
+		.text('APPLY')
+		.on('click', ()=>{
+			tip.hide()
+		})
 }
 
 
@@ -357,11 +415,15 @@ function make_infofiled_ui(group, holder, tk){
 			.style('position','absolute')
 			.style('opacity',0)
 
-		for( const info_field of tk.info_fields ){
+		const af = tk.vcf.numerical_axis.AFtest
+
+		for( const info_field of af.allowed_infofields ){
+
+			const info = tk.info_fields.find( j=> j.key == info_field.key )
 
 			info_select.append('option')
 				.attr('value',info_field.key)
-				.text(info_field.label)
+				.text(info.label)
 		}
 
 		info_select.node().value = f.key
