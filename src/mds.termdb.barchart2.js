@@ -34,7 +34,6 @@ export class Barchart{
     this.handlers = this.getEventHandlers()
     this.controls = {}
     this.currChartsData = null
-    //this.setControls()
     this.term2toColor = {}
   }
 
@@ -88,7 +87,6 @@ export class Barchart{
     if ('term2' in settings) {
       this.terms.term2 = settings.term2Obj 
     }
-    //this.updateControls()
   }
 
   render(chartsData) {
@@ -222,14 +220,7 @@ export class Barchart{
       result.seriesTotal = series.total
       result.logTotal = Math.log10(result.total)
       seriesLogTotal += result.logTotal;
-      if (!(result.dataId in this.term2toColor)) {
-        this.term2toColor[result.dataId] = this.settings.term2 === ""
-        ? "rgb(144, 23, 57)"
-        : rgb(this.settings.rows.length < 11 
-          ? colors.c10(result.dataId)
-          : colors.c20(result.dataId)
-        ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
-      } 
+      this.setTerm2Color(result)
       result.color = this.term2toColor[result.dataId]
     }
     if (seriesLogTotal > chart.maxSeriesLogTotal) {
@@ -238,14 +229,7 @@ export class Barchart{
     // assign color to hidden data
     // for use in legend
     for(const result of series.data) {
-      if (!(result.dataId in this.term2toColor)) {
-        this.term2toColor[result.dataId] = this.settings.term2 === ""
-        ? "rgb(144, 23, 57)"
-        : rgb(this.settings.rows.length < 11 
-          ? colors.c10(result.dataId)
-          : colors.c20(result.dataId)
-        ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
-      } 
+      this.setTerm2Color(result)
       result.color = this.term2toColor[result.dataId]
     }
   }
@@ -399,110 +383,17 @@ export class Barchart{
     }
   }
 
-  setControls() {
-    this.controlsDiv = this.holder.append('div')
-    /*
-    this.addSelectOpts('orientation', 'Orientation', [
-      {value: 'x', label: 'X axis'},
-      {value: 'y', label: 'Y axis'}
-    ])
-    */
-    this.addSelectOpts('unit', 'Y axis', [
-      {value: 'abs', label: 'Linear'},
-      {value: 'log', label: 'Log'},
-      {value: 'pct', label: 'Percent'},
-    ])
-    
-    this.addCrossTabBtn('term0', 'Chart By')
-    this.addCrossTabBtn('term2', 'Select Second Term')
-  }
-
-  addSelectOpts(key, label, opts) {
-    const selectDiv = this.controlsDiv.append('div')
-      .style('padding', '3px')
-      .style('text-align', 'center')
-      .style('display', 'none')
-      
-    const selectLabel = selectDiv.append('label')
-    selectLabel.append('span')
-      .html(label + '<br/>')
-    
-    const selectElem = selectLabel.append('select')
-      .on('change', () => {
-        this.main({[key]: selectElem.property('value')})
-      })
-
-    selectElem.selectAll('options')
-      .data(opts)
-    .enter().append('option')
-      .property('selected', d => d.value == this.settings[key] ? "selected" : "") 
-      .attr('value', d => d.value)
-      .html(d => d.label)
-
-    this.controls[key] = {
-      div: selectDiv,
-      elem: selectElem,
-      set: () => {
-        selectElem.property('value', this.settings[key])
-        selectElem
-          .selectAll('option')
-          .filter(d => d.value == 'pct')
-          .property('disabled', () => this.settings.term2 === "")
-      }
+  setTerm2Color(result) {
+    if (this.settings.groups && result.dataId in this.settings.groups) {
+      this.term2toColor[result.dataId] = this.settings.groups[result.dataId].color
     }
-  }
-
-  addCrossTabBtn(key, label) {
-    const btn = may_makebutton_crosstabulate({
-      term1: this.terms.term1,
-      button_row: this.controlsDiv,
-      obj: this.opts.obj,
-      callback: result => {
-        //console.log(result)
-        this.terms[key] = result.term2
-        this.main({[key]: result.term2.id})
-      }
-    })
-
-    btn.style('font-size','1em')
-      .text(label)
-
-    const closer = this.controlsDiv.append('div')
-      .attr('class', 'sja-menu-option')
-      .style('font-size', '1em')
-      .style('display', 'none')
-      .style('margin-right', '20px')
-      .style('padding', '2px')
-      .style('cursor', 'pointer')
-      .style('background', '#f2f2f2')
-      .html('X')
-      .on('click', ()=>{
-        this.terms[key] = undefined
-        this.main({[key]: ''})
-      })
-
-    this.controls[key] = {
-      div: btn,
-      elem: null,
-      set: () => {
-        btn.text(this.terms[key] ? this.terms[key].name : label)
-        closer.style('display', this.settings[key] ? 'inline-block' : 'none')
-      }
-    }
-  }
-
-  updateControls() {
-    for(const key in this.controls) {
-      if (key == 'unit' && this.settings.term2 && this.settings.unit == 'log') {
-        this.settings.unit = 'abs'
-      }
-      this.controls[key].set()
-      this.controls[key].div.style("display", "inline-block")
-    }
-    this.controls['unit'].elem
-      .selectAll('option')
-      .filter(d=>d.value=='log')
-      .property("disabled", this.settings.term2 != "")
+    if (result.dataId in this.term2toColor) return 
+    this.term2toColor[result.dataId] = this.settings.term2 === ""
+      ? "rgb(144, 23, 57)"
+      : rgb(this.settings.rows.length < 11 
+        ? colors.c10(result.dataId)
+        : colors.c20(result.dataId)
+      ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
   }
 
   getLegendGrps(chart) {
@@ -602,6 +493,7 @@ export function may_make_barchart(plot) {
       : '',
     ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
     mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
+    groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
     term2Obj: plot.term2,
     unit: plot.bar_settings.unit,
     custom_bins: plot.custom_bins,
@@ -629,6 +521,7 @@ export function custom_table_data(plot) {
       : '',
     ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
     mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
+    groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
     term2Obj: plot.term2,
     unit: plot.unit,
     custom_bins: plot.custom_bins
