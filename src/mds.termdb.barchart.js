@@ -1,4 +1,4 @@
-import settings from "./bars.settings"
+import rendererSettings from "./bars.settings"
 import barsRenderer from "./bars.renderer"
 import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
@@ -14,7 +14,7 @@ const colors = {
 const tip = new Menu({padding:'5px'})
 tip.d.style('text-align', 'center')
 
-export class Barchart{
+export class TermdbBarchart{
   constructor(opts={settings:{}}) {
     this.opts = opts
     this.dom = {
@@ -22,12 +22,16 @@ export class Barchart{
       barDiv: opts.holder.append('div'),
       legendDiv: opts.holder.append('div')
     }
-    this.defaults = JSON.parse(settings)
-    this.settings = Object.assign({
-      term0: '',
-      term1: 'sex',
-      term2: ''
-    }, this.defaults, opts.settings)
+    this.defaults = Object.assign(
+      JSON.parse(rendererSettings),
+      {
+        isVisible: false,
+        term0: '',
+        term1: 'sex',
+        term2: ''
+      }
+    ) 
+    this.settings = Object.assign(this.defaults, opts.settings)
     this.renderers = {}
     this.serverData = {}
     this.terms = {
@@ -49,6 +53,7 @@ export class Barchart{
       }
     }
     this.updateSettings(_settings)
+    if (!this.setVisibility()) return
 
     const dataName = this.getDataName()
     if (this.serverData[dataName]) {
@@ -91,6 +96,13 @@ export class Barchart{
     if ('term2' in settings) {
       this.terms.term2 = settings.term2Obj 
     }
+  }
+
+  setVisibility() {
+    const display = this.settings.isVisible ? 'block' : 'none'
+    this.dom.barDiv.style('display', display)
+    this.dom.legendDiv.style('display', display)
+    return this.settings.isVisible
   }
 
   render(chartsData) {
@@ -464,53 +476,6 @@ export class Barchart{
       })
     }
   }
-}
-
-// track barchart instance by div
-const renderers = new WeakMap()
-
-export function init({dom, term, obj}) {
-  const holder = dom.viz
-  const barchart = renderers.get(holder)
-  if (barchart) return barchart
-  
-  renderers.set(holder, new Barchart({
-    holder: dom.viz,
-    settings: {},
-    term1: term,
-    obj,
-  }))
-  return renderers.get(holder)
-}
-
-// convenience function that translates
-// plot properties into the expected 
-// barchart settings keys
-export function may_make_barchart(plot) {
-  const barchart = init(plot)
-  if (plot.term2_displaymode != "stacked") {
-    barchart.dom.barDiv.style('display','none')
-    barchart.dom.legendDiv.style('display','none')
-    return
-  }
-  barchart.dom.barDiv.style('display','block')
-  barchart.dom.legendDiv.style('display','block')
-  const obj = plot.obj
-  barchart.main({
-    genome: obj.genome.name,
-    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
-    term1: plot.term.id,
-    term2: obj.modifier_ssid_barchart ? 'genotype' 
-      : plot.term2 ? plot.term2.id
-      : '',
-    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
-    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
-    groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
-    term2Obj: plot.term2,
-    unit: plot.bar_settings.unit,
-    custom_bins: plot.custom_bins,
-    orientation: plot.bar_settings.orientation
-  }, obj)
 }
 
 export function custom_table_data(plot) {

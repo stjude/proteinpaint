@@ -1,19 +1,15 @@
 import * as client from './client'
 import * as common from './common'
-import {init as bar_init, may_make_barchart} from './mds.termdb.barchart'
+import {TermdbBarchart} from './mds.termdb.barchart'
 import {may_make_table} from './mds.termdb.table'
 import {may_make_boxplot} from './mds.termdb.boxplot'
 import {may_make_stattable} from './mds.termdb.stattable'
 import {controls} from './mds.termdb.controls'
-import { platform } from 'os';
-
-
 
 /*
-  Purpose: make bachart for data from a term, select 2nd term to create stacked barchart
+  Purpose: coordinate the rendering of barchart, boxplot, crosstab, stat views
   Workflow: 
-  1.  When BARCHART button clicked, div for button was created with CROSSTAB (with addbutton_crosstabulate()) and Y Axis checkbox. 
-    and svg element appended to 'div .sja_pane' ('arg' holder). 
+  1.  When BARCHART button clicked, div for button was created with CROSSTAB (with addbutton_crosstabulate()).
   2.  Plot object was created which has been used by do_plot(), set_yscale() and get_max_labelheight().
     plot = {
       tip: new client.Menu({padding:'18px'}), //tip from clinent.Menu for tooltip while hoverover bar or x-axis label
@@ -30,10 +26,8 @@ import { platform } from 'os';
       yaxis_width: 70, 
       use_logscale:0   // flag for y-axis scale type, 0=linear, 1=log
       y_scale,         // depending upon scale_btn status, it changes between scaleLiner() and scaleLog()
-      svg,
       yaxis_g,         // for y axis
       graph_g,         // for bar and label of each data item
-      legend_div,      // div for legends,
     }
   3.  For single term, do_plot() creates barplot for all terms. 
     First Y-axis added then X-axis labels created. 
@@ -62,12 +56,10 @@ import { platform } from 'os';
 */
 
 
-
-export function render ( arg, obj ) {
+export function render(arg) {
 /*
-
+arg: server returned data
 .items[]
-  server returned data
   for single-term sample count:
   .label
   .value
@@ -87,37 +79,37 @@ export function render ( arg, obj ) {
     provides predefined chart customization, to be implemented:
     - fixed y scale
     - log scale
-
 */
-  // console.log(arg)
   // initiating the plot object
   // it will be updated later by axis toggle or cross tabulate
   const plot = {
+    obj: arg.obj,
     genome: arg.genome,
     dslabel: arg.dslabel,
     tip: new client.Menu({padding:'18px'}),
     term: arg.term,
     items: arg.items,
     boxplot: arg.boxplot,
-    barheight:300, // total height of bar and y axis
-    barwidth:20,
     toppad:20, // top padding
     axisheight: 305,
-    barspace:2,
     maxlabelwidth:0,
     maxvalue:0,
     label_fontsize: 15,
     yaxis_width: 100,
-    use_logscale:0,
+    use_logscale: 0,
     use_percentage: 0,
     term2_displaymode: arg.term2_displaymode ? arg.term2_displaymode : "stacked",
     term2_boxplot: 0,
-    obj,
     custom_bins: {},
     bin_controls: {1:{}, 2:{}},
-    bar_settings: {
-      orientation: 'horizontal',
-      unit: 'abs'
+    settings: {
+      bar: {
+        barheight:300, // total height of bar and y axis
+        barwidth:20,
+        barspace:2,
+        orientation: 'horizontal',
+        unit: 'abs'
+      }
     },
     // plot sets the relative layout of divs for viz and controls
     dom: {
@@ -130,9 +122,15 @@ export function render ( arg, obj ) {
   }
 
   arg.holder.style('white-space', 'nowrap')
-  // 
+  
+  // set view functions or instances
   plot.views = {
-    barchart: bar_init(plot)
+    barchart: new TermdbBarchart({
+      holder: plot.dom.viz,
+      settings: {},
+      term1: arg.term,
+      obj,
+    })
   }
 
   // boxplot svg
@@ -214,4 +212,31 @@ function get_max_labelheight ( plot ) {
   }
 
   return textwidth
+}
+
+// translate plot properties into the expected 
+// barchart settings keys
+export function may_make_barchart(plot) {
+  const obj = plot.obj
+  plot.views.barchart.main({
+    isVisible: plot.term2_displaymode == "stacked",
+    genome: obj.genome.name,
+    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
+    term1: plot.term.id,
+    term2: obj.modifier_ssid_barchart ? 'genotype' 
+      : plot.term2 ? plot.term2.id
+      : '',
+    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
+    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
+    groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
+    term2Obj: plot.term2,
+    unit: plot.settings.bar.unit,
+    custom_bins: plot.custom_bins,
+    orientation: plot.settings.bar.orientation,
+    // normalize bar thickness regardless of orientation
+    colw: plot.settings.bar.barwidth,
+    rowh: plot.settings.bar.barwidth,
+    colspace: plot.settings.bar.barspace,
+    rowspace: plot.settings.bar.barspace,
+  }, obj)
 }

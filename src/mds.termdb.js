@@ -336,6 +336,7 @@ such conditions may be carried by obj
 
 			// make barchart
 			const plot = {
+				obj,
 				holder: div,
 				genome: obj.genome.name,
 				dslabel: obj.mds.label,
@@ -364,7 +365,7 @@ such conditions may be carried by obj
 
 			}
 
-			render( plot, obj )
+			render( plot )
 		} catch(e) {
 			client.sayerror( div, e.message || e)
 			if(e.stack) console.log(e.stack)
@@ -492,7 +493,7 @@ providing all the customization options
 				.style('color','black')
 
 			const plot = {
-				obj: obj,
+				obj,
 				genome: obj.genome.name,
 				dslabel: obj.mds.label,
 				holder: term1.graph.barchart.dom.div,
@@ -502,7 +503,7 @@ providing all the customization options
 				default2showtable: true, // a flag for barchart to show html table view by default,
 				term2_displaymode: 'table'
 			}
-			render( plot, obj )
+			render( plot )
 		}
 	})
 }

@@ -47,18 +47,18 @@ function setOrientationOpts(plot, do_plot, table) {
   const orientation = tr.append('td')
     .append('select')
     .on('change', () => {
-      plot.bar_settings.orientation = orientation.property('value')
+      plot.settings.bar.orientation = orientation.property('value')
       do_plot(plot)
     })
 
   orientation.append('option')
     .attr('value', 'vertical')
-    .property('selected', plot.bar_settings.orientation == "vertical")
+    .property('selected', plot.settings.bar.orientation == "vertical")
     .html('Vertical')
 
   orientation.append('option')
     .attr('value', 'horizontal')
-    .property('selected', plot.bar_settings.orientation == "horizontal")
+    .property('selected', plot.settings.bar.orientation == "horizontal")
     .html('Horizontal')
 
   plot.controls.push(() => {
@@ -75,23 +75,23 @@ function setScaleOpts(plot, do_plot, table) {
   const unit = tr.append('td')
     .append('select')
     .on('change', () => {
-      plot.bar_settings.unit = unit.property('value')
+      plot.settings.bar.unit = unit.property('value')
       do_plot(plot)
     })
 
   const abs = unit.append('option')
     .attr('value', 'abs')
-    .property('selected', plot.bar_settings.unit == "abs")
+    .property('selected', plot.settings.bar.unit == "abs")
     .html('Linear')
 
   const log = unit.append('option')
     .attr('value', 'log')
-    .property('selected', plot.bar_settings.unit == "log")
+    .property('selected', plot.settings.bar.unit == "log")
     .html('Log')
 
   const pct = unit.append('option')
     .attr('value', 'pct')
-    .property('selected', plot.bar_settings.unit == "pct")
+    .property('selected', plot.settings.bar.unit == "pct")
     .html('Percentage')
 
   plot.controls.push(() => {
@@ -111,7 +111,7 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
   const overlay = td.append('select')
     .on('change', () => {
       const value = overlay.property('value')
-      plot.bar_settings.overlay = value
+      plot.settings.bar.overlay = value
       if (value == "none") {
         plot.term2 = undefined
         plot.term2_displaymode = 'stacked'
@@ -142,17 +142,17 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
 
   overlay.append('option')
     .attr('value', 'none')
-    .property('selected', plot.bar_settings.overlay == "none")
+    .property('selected', plot.settings.bar.overlay == "none")
     .html('None')
 
  overlay.append('option')
     .attr('value', 'tree')
-    .property('selected', plot.bar_settings.overlay == "tree")
+    .property('selected', plot.settings.bar.overlay == "tree")
     .html('Second term')
 
   const genotype = overlay.append('option')
     .attr('value', 'genotype')
-    .property('selected', plot.bar_settings.overlay == "genotype")
+    .property('selected', plot.settings.bar.overlay == "genotype")
     .html('Genotype')
 
   td.append('span').html('&nbsp;') 
@@ -185,16 +185,16 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
   plot.controls.push(() => {
     // hide all options when opened from genome browser view 
     tr.style("display", plot.obj.modifier_ssid_barchart ? "none" : "table-row")
-    editbtn.style("display", plot.bar_settings.overlay == "tree" ? "inline" : "none")
+    editbtn.style("display", plot.settings.bar.overlay == "tree" ? "inline" : "none")
     // do not show genoetype overlay option when opened from stand-alone page
-    if (!plot.bar_settings.overlay) {
-      plot.bar_settings.overlay = plot.obj.modifier_ssid_barchart
+    if (!plot.settings.bar.overlay) {
+      plot.settings.bar.overlay = plot.obj.modifier_ssid_barchart
         ? 'genotype'
         : plot.term2 
         ? 'tree'
         : 'none'
     }
-    overlay.property('value', plot.bar_settings.overlay)
+    overlay.property('value', plot.settings.bar.overlay)
     genotype.style('display', plot.obj.modifier_ssid_barchart ? 'block' : 'none')
   })
 }
@@ -217,7 +217,7 @@ function setViewOpts(plot, update_plot, table, arg) {
   view.append('option')
     .attr('value', 'stacked')
     .property('selected', plot.term2_displaymode == "stacked")
-    .html('Stacked')
+    .html('Stacked Bars')
 
   view.append('option')
     .attr('value', 'table')

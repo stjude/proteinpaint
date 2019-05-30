@@ -1,3 +1,4 @@
+// barchart renderer settings
 export default JSON.stringify({
     orientation: 'horizontal', // vertical | horizontal
     h: {},
