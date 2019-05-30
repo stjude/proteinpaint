@@ -93,7 +93,6 @@ module.exports={
 				isfloat:1,
 				range: {
 					startunbounded:true,
-					//startinclusive: bool
 					stop: 0.1,
 					stopinclusive:true
 				}
@@ -156,8 +155,6 @@ module.exports={
 				label:'Bad blat',
 				isflag:true,
 				isfilter:true,
-				//isactivefilter:true,
-				remove_yes:true
 			},
 		],
 
@@ -165,7 +162,7 @@ module.exports={
 		populations:[
 			{
 				key:'gnomAD',
-				label:'gnomAD, NFE+AFR+EAS combined',
+				label:'gnomAD',
 				sets:[
 					// per variant, the control population allele counts are hardcoded to be info fields
 					{
