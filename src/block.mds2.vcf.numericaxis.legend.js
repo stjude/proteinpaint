@@ -218,7 +218,7 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 			.style('font-size','.7em')
 			.style('text-transform','uppercase')
 			.on('click',()=>{
-				menu_edit_AFtest_groups(tk, block, group_td)
+				menu_edit_AFtest_groups(tk, block, group_td, settingholder)
 			})
 
 		legend_show_onegroup_AFtest( tk, block, g, tr.append('td') )
@@ -294,7 +294,7 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 
 
 
-function menu_edit_AFtest_groups (tk, block, group_td) {
+function menu_edit_AFtest_groups (tk, block, group_td, settingholder) {
 	
 	// for each group, allow to change to a different type: is_termdb is_infofield is_population
 	// for is_termdb, allow to define exact term-value setting
@@ -319,6 +319,7 @@ function menu_edit_AFtest_groups (tk, block, group_td) {
 	for( const [i, g] of af.groups.entries() ) {
 		const tr = table.append('tr')
 		const group_td = tr.append('td')
+		const term_btn = tr.append('td')
 
 		group_td.append('div')
 			.text('Group '+(i+1))
@@ -330,7 +331,7 @@ function menu_edit_AFtest_groups (tk, block, group_td) {
 			.style('font-size','.7em')
 			.style('text-transform','uppercase')
 
-		group_td.append('div')
+		const group_edit_btn = group_td.append('div')
 			.text('edit')
 			.attr('class','sja_filter_tag_btn')
 			.style('display','inline-block')
@@ -342,10 +343,161 @@ function menu_edit_AFtest_groups (tk, block, group_td) {
 			.style('font-size','.7em')
 			.style('text-transform','uppercase')
 			.on('click',()=>{
+				
+				const edit_tip = new client.Menu({padding:'0'})
+				edit_tip.showunder( group_edit_btn.node())
+
+				edit_tip.d.style('display','table-row')
+
+				//tabs_div to display 3 tabs
+				const tabs_div = edit_tip.d.append('div')
+					.style('display','table-cell')
+					.style('vertical-align','top')
+					.style('padding','6px 0 6px 6px')
+
+				//clinical dictionary tab	
+				const clincial_dict_tab = make_one_tab('Clinical Dictionary','#4888BF',tabs_div)
+
+				//value field tab	
+				const value_field_tab = make_one_tab('Value field','#674EA7',tabs_div)
+
+				//Poplulation tab	
+				const population_tab = make_one_tab('Poplulation','#A64D79',tabs_div)
+
+				//flags for each tab
+				let clincial_dict_flag = true, value_field_flag = false, population_falg = false
+
+				//selection_div to display clicical_dcit and options for other 2 tabs
+				const selection_div = edit_tip.d.append('div')
+					.style('border-left','1px solid #ddd')
+					.style('display','table-cell')
+					.style('padding','6px')
+
+				update_selection_div()
+
+				//handel clicking event
+				clincial_dict_tab.on('click', ()=>{
+					selection_div.selectAll('*').remove()
+					clincial_dict_flag = true
+					value_field_flag = false
+					population_falg = false
+					update_selection_div()
+				})
+
+				value_field_tab.on('click', ()=>{
+					clincial_dict_flag = false
+					value_field_flag = true
+					population_falg = false
+					update_selection_div()
+				})
+
+				population_tab.on('click', ()=>{
+					clincial_dict_flag = false
+					value_field_flag = false
+					population_falg = true
+					update_selection_div()
+				})
+
+				
+				function update_selection_div(){
+
+					selection_div.selectAll('*').remove()
+
+					if(clincial_dict_flag){
+
+						clincial_dict_tab.style('background-color', '#ddd')
+						value_field_tab.style('background-color', '#f2f2f2')
+						population_tab.style('background-color', '#f2f2f2')
+				
+						// a new object as init() argument for launching the tree with modifiers
+						const obj = {
+							genome: block.genome,
+							mds: tk.mds,
+							div: selection_div,
+							default_rootterm: {},
+							modifier_barchart_selectbar: {
+								callback: result => {
+									edit_tip.hide()
+									update_group_term(result, g)
+
+									term_btn.selectAll('*').remove()
+									legend_show_onegroup_AFtest( tk, block, g, term_btn )
+								}
+							}
+						}
+						init(obj)
+					} else if(value_field_flag){
+
+						clincial_dict_tab.style('background-color', '#f2f2f2')
+						value_field_tab.style('background-color', '#ddd')
+						population_tab.style('background-color', '#f2f2f2')
+
+						const af = tk.vcf.numerical_axis.AFtest
+
+						for( const info_field of af.allowed_infofields ){
+
+							const info = tk.info_fields.find( j=> j.key == info_field.key )
+
+							const this_info = selection_div.append('div')
+								.attr('class','sja_menuoption')
+								.text(info.label)
+								.on('click',()=>{
+									edit_tip.hide()
+
+									g.is_termdb = false
+									g.is_infofield = true
+									g.is_population = false
+									af.allowto_adjust_race = false
+									af.adjust_race = false
+
+									g.key = info.key
+
+									term_btn.selectAll('*').remove()
+									legend_show_onegroup_AFtest( tk, block, g, term_btn )
+								})
+
+							if(g.key == info_field.key){ //check for existing group value
+								this_info.style('color','#777')
+									.style('pointer-events','none')
+							}
+						}
+
+					}else if(population_falg){
+
+						clincial_dict_tab.style('background-color', '#f2f2f2')
+						value_field_tab.style('background-color', '#f2f2f2')
+						population_tab.style('background-color', '#ddd')
+
+						for( const population of tk.populations ){
+
+							const pop = selection_div.append('div')
+								.attr('class','sja_menuoption')
+								.text(population.label)
+								.on('click',()=>{
+									edit_tip.hide()
+
+									g.is_termdb = false
+									g.is_infofield = false
+									g.is_population = true
+									af.allowto_adjust_race = true
+
+									g.key = population.key
+
+									term_btn.selectAll('*').remove()
+									legend_show_onegroup_AFtest( tk, block, g, term_btn )
+								})
+
+							if(g.key == population.key){ //check for existing group value
+								pop.style('color','#777')
+									.style('pointer-events','none')
+							}
+						}
+					}
+				}
 
 			})
 
-		legend_show_onegroup_AFtest( tk, block, g, tr.append('td') )
+		legend_show_onegroup_AFtest( tk, block, g, term_btn )
 	}
 
 	tip.d.append('div')
@@ -353,9 +505,72 @@ function menu_edit_AFtest_groups (tk, block, group_td) {
 		.attr('class','sja_menuoption')
 		.style('text-align','center')
 		.text('APPLY')
-		.on('click', ()=>{
+		.on('click', async()=>{
 			tip.hide()
+			await tk.load()
+			settingholder.selectAll('*').remove()
+			update_legend_by_AFtest ( settingholder, tk, block )
 		})
+
+	function make_one_tab(tab_name, tab_color, holder){
+
+		const tab = holder.append('div')
+			.attr('class','sja_menuoption')
+			.style('display','block')
+			.style('border-radius','6px 0 0 6px')
+			.style('margin','2px 0')
+
+		tab.append('div')
+			.style('display','inline-block')
+			.style('width', '15px')
+			.style('height', '15px')
+			.style('background-color', tab_color)
+
+		tab.append('div')
+			.style('display','inline-block')
+			.style('margin-left','10px')
+			.text(tab_name)
+
+		return tab
+	}
+
+	function update_group_term(result, group){
+
+        // create new array with updated terms
+		let new_terms = []
+
+		for(const [j, bar_term] of result.terms.entries()){
+			const new_term = {
+				values: [{key: bar_term.value, label: bar_term.label}],
+				term: {
+					id: bar_term.term.id,
+					name: bar_term.term.name
+				} 
+			}
+			new_term.isnot = false
+
+			if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
+			if(bar_term.term.isfloat) {
+				new_term.term.isfloat = bar_term.term.isfloat
+				new_term.range = bar_term.range
+			}
+			if(bar_term.term.isinteger) {
+				new_term.term.isinteger = bar_term.term.isinteger
+				new_term.range = bar_term.range
+			}
+
+			new_terms.push(new_term)
+		}
+
+		delete group.key
+		group.is_termdb = true
+		group.is_infofield = false
+		group.is_population = false
+		af.allowto_adjust_race = false
+		af.adjust_race = false
+
+		group.terms = new_terms
+	}
 }
 
 
