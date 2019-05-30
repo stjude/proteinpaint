@@ -425,8 +425,6 @@ function menu_show_numeric ( i, filter_terms_td, tk, block ) {
 				i.isactivefilter = false
 			}else{
 				i.isactivefilter = true
-				i.htmlspan = filter_terms_td.append('div')
-					.style('display','none')
 			}
 
 			if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
