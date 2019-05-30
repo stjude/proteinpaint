@@ -22,15 +22,14 @@ import { platform } from 'os';
       barheight:300,    // total height of bar and y axis
       barwidth:20, 
       toppad:20,        // top padding
-      axisheight: 305,  //yaxis height
-      barspace:2,       //space between 2 bars
-      maxlabelwidth:0,  //will be calculated by 
+      axisheight: 305,  // yaxis height
+      barspace:2,       // space between 2 bars
+      maxlabelwidth:0,  // will be calculated by 
       maxvalue:0,
       label_fontsize: 15,
       yaxis_width: 70, 
       use_logscale:0   // flag for y-axis scale type, 0=linear, 1=log
       y_scale,         // depending upon scale_btn status, it changes between scaleLiner() and scaleLog()
-      scale_btn,       // y-axis toggle checkbox for log-scale
       svg,
       yaxis_g,         // for y axis
       graph_g,         // for bar and label of each data item
@@ -120,15 +119,18 @@ export function render ( arg, obj ) {
       orientation: 'horizontal',
       unit: 'abs'
     },
-    get_max_labelheight
+    // plot sets the relative layout of divs for viz and controls
+    dom: {
+      // viz will hold the rendered view
+      viz: arg.holder.append('div').style('display','inline-block'),
+      // will hold the controls
+      controls: arg.holder.append('div').style('display','inline-block')
+    },
+    get_max_labelheight,
   }
 
   arg.holder.style('white-space', 'nowrap')
-  plot.dom = {
-    viz: arg.holder.append('div').style('display','inline-block'),
-    controls: arg.holder.append('div').style('display','inline-block')
-  }
-
+  // 
   plot.views = {
     barchart: bar_init(plot)
   }
@@ -143,9 +145,6 @@ export function render ( arg, obj ) {
   
   // set configuration controls
   controls(arg, plot, do_plot, update_plot)
-
-  plot.legend_div = arg.holder.append('div')
-    .style('margin','10px 0px')
 
   // div for stat summary table
   plot.stat_div = arg.holder.append('div') // for boxplot stats table

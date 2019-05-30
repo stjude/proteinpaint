@@ -210,26 +210,8 @@ function setViewOpts(plot, update_plot, table, arg) {
     .on('change', () => {
       const value = view.property('value')
       plot.term2_displaymode = value
-      if (value  == 'table'){
-        plot.term2_boxplot = 0
-        plot.table_div.style('display','block')
-        update_plot(plot)
-      }else if(value == 'stacked'){
-        plot.term2_boxplot = 0
-        plot.table_div.style('display','none')
-        plot.box_svg.style('display','block')
-        plot.legend_div.style('display','block')
-        plot.stat_div.style('display','block')
-        update_plot(plot)
-      }
-      // if 'boxplot' selected - query server for data
-      else if(value == 'boxplot'){
-        plot.term2_boxplot = 1
-        plot.table_div.style('display','none')
-        plot.box_svg.style('display','block')
-        plot.legend_div.style('display','none')
-        update_plot(plot)
-      }
+      plot.term2_boxplot = value == 'boxplot'
+      update_plot(plot)
     })
 
   view.append('option')
