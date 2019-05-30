@@ -226,7 +226,9 @@ function menu_show_categorical( i, td, update ) {
 			label.text('Loading...')
 			v.ishidden = !v.ishidden
 			await update()
-			menu_show_categorical(i,td,update)
+			label
+				.style('text-decoration', v.ishidden ? 'line-through' : 'none' )
+				.text(v.label)
 		})
 	}
 
@@ -254,7 +256,9 @@ function menu_show_categorical( i, td, update ) {
 			label.text('Loading...')
 			i.unannotated_ishidden = !i.unannotated_ishidden
 			await update()
-			menu_show_categorical(i,td,update)
+			label
+				.style('text-decoration', i.unannotated_ishidden ? 'line-through' : 'none' )
+				.text('Unannotated')
 		})
 	}
 }
@@ -263,8 +267,8 @@ function menu_show_categorical( i, td, update ) {
 
 
 
-function menu_show_flag ( i, filter_terms_td, tk, block ){
-	const yes_flag_div = filter_terms_td.append('div')
+function menu_show_flag ( i, td, tk, block ){
+	const yescell = td.append('div')
 		.style('display','inline-block')
 		.style('padding','3px 10px')
 		.attr('class','sja_clb')
@@ -275,26 +279,26 @@ function menu_show_flag ( i, filter_terms_td, tk, block ){
 				i.remove_yes = true
 				i.remove_no = false
 			}
+			yeslab.style('text-decoration', i.remove_yes ? 'line-through' : 'default')
 			i.isactivefilter = i.remove_yes || i.remove_no
 			await tk.load()
-			menu_list_all_variantfilter(tk, block)
 			display_all_activefilters(tk, block)
 		})
 
-	yes_flag_div.append('div')
+	yescell.append('div')
 		.attr('class','sja_mcdot')
 		.style('display','inline-block')
 		.style('background', '#aaa')
 		.style('padding','2px 3px')
 		.text(i._data ? i._data.count_yes : 0)
 
-	yes_flag_div.append('div')
+	const yeslab = yescell.append('div')
 		.style('display','inline-block')
 		.style('padding','4px 5px')
-		.style('text-decoration', i.remove_yes ? 'line-through' : 'default')
 		.text('Yes')
+		.style('text-decoration', i.remove_yes ? 'line-through' : 'default')
 
-	const no_flag_div = filter_terms_td.append('div')
+	const nocell = td.append('div')
 		.style('display','inline-block')
 		.style('padding','3px 10px')
 		.attr('class','sja_clb')
@@ -305,20 +309,20 @@ function menu_show_flag ( i, filter_terms_td, tk, block ){
 				i.remove_no=true
 				i.remove_yes=false
 			}
+			nolab.style('text-decoration', i.remove_no ? 'line-through' : 'default')
 			i.isactivefilter = i.remove_yes || i.remove_no
 			await tk.load()
-			menu_list_all_variantfilter(tk, block)
 			display_all_activefilters(tk, block)
 		})
 
-	no_flag_div.append('div')
+	nocell.append('div')
 		.attr('class','sja_mcdot')
 		.style('display','inline-block')
 		.style('background', '#aaa')
 		.style('padding','2px 3px')
 		.text(i._data ? i._data.count_no : 0)
 
-	no_flag_div.append('div')
+	const nolab = nocell.append('div')
 		.style('display','inline-block')
 		.style('padding','4px 5px')
 		.style('text-decoration', i.remove_no ? 'line-through' : 'default')
@@ -328,129 +332,125 @@ function menu_show_flag ( i, filter_terms_td, tk, block ){
 
 
 
-function menu_show_numeric ( i, filter_terms_td, tk, block ) {
+function menu_show_numeric ( i, td, tk, block ) {
 
-	filter_terms_td.selectAll('*').remove()
+	td.selectAll('*').remove()
 
 	const x = '<span style="font-family:Times;font-style:italic">x</span>'
 
-	const start_input = filter_terms_td.append('input')
+	const start_input = td.append('input')
 		.attr('type','number')
 		.attr('value',i.range.start)
 		.style('width','60px')
+		.property('disabled', i.range.startunbounded?true:false)
 		.on('keyup', async ()=>{
 			if(!client.keyupEnter()) return
+			if(!i.isactivefilter) return
 			start_input.property('disabled',true)
 			await apply()
-			start_input.property('disabled',false)
+			start_input.property('disabled',false).node().focus()
 		})
 
 	// select operator from dropdown to set start value relation
-	const startselect = filter_terms_td.append('select')
-	.style('margin-left','10px')
+	const startselect = td.append('select')
+		.style('margin-left','10px')
+		.on('change', async ()=>{
+			const si = d3event.target.selectedIndex
+			if( si == 2 ) {
+				i.range.startunbounded = true
+				start_input.property('disabled', true)
+			} else {
+				delete i.range.startunbounded
+				i.range.startinclusive = si == 0
+				start_input.property('disabled', false)
+			}
+			if(!i.isactivefilter) return
+			startselect.property('disabled',true)
+			await apply()
+			startselect.property('disabled',false).node().focus()
+		})
 
-	startselect.append('option')
-		.html('&le;')
-	startselect.append('option')
-		.html('&lt;')
-	startselect.append('option')
-		.html('&#8734;')
-
+	startselect.append('option').html('&le;')
+	startselect.append('option').html('&lt;')
+	startselect.append('option').html('&#8734;')
 	startselect.node().selectedIndex =
 		i.range.startunbounded ? 2 :
 		i.range.startinclusive ? 0 : 1
 
-	filter_terms_td.append('div')
+	td.append('div')
 		.style('display','inline-block')
 		.style('padding','3px 10px')
 		.html(x)
 
 	// select operator from dropdown to set end value relation
-	const stopselect = filter_terms_td.append('select')
+	const stopselect = td.append('select')
 		.style('margin-right','10px')
+		.on('change', async ()=>{
+			const si = d3event.target.selectedIndex
+			if( si == 2 ) {
+				i.range.stopunbounded = true
+				stop_input.property('disabled', true)
+			} else {
+				delete i.range.stopunbounded
+				i.range.stopinclusive = si == 0
+				stop_input.property('disabled', false)
+			}
+			if(!i.isactivefilter) return
+			stopselect.property('disabled',true)
+			await apply()
+			stopselect.property('disabled',false).node().focus()
+		})
 
-	stopselect.append('option')
-		.html('&le;')
-	stopselect.append('option')
-		.html('&lt;')
-	stopselect.append('option')
-		.html('&#8734;')
-
+	stopselect.append('option').html('&le;')
+	stopselect.append('option').html('&lt;')
+	stopselect.append('option').html('&#8734;')
 	stopselect.node().selectedIndex =
 		i.range.stopunbounded ? 2 :
 		i.range.stopinclusive ? 0 : 1
 
-	const stop_input = filter_terms_td.append('input')
+	const stop_input = td.append('input')
 		.attr('type','number')
 		.style('width','60px')
 		.attr('value',i.range.stop)
+		.property('disabled', i.range.stopunbounded?true:false)
 		.on('keyup', async ()=>{
 			if(!client.keyupEnter()) return
+			if(!i.isactivefilter) return
 			stop_input.property('disabled',true)
 			await apply()
-			stop_input.property('disabled',false)
+			stop_input.property('disabled',false).node().focus()
 		})
 
-	const apply_checkbox_div = filter_terms_td.append('div')
-		.style('display','inline-block')
-		.style('padding','3px 10px')
-		.style('font-size','.8em')
-		.text('Apply')
-	
-	
-	const apply_checkbox = apply_checkbox_div.append('input')
+	const id = Math.random()
+	const apply_checkbox = td
+		.append('input')
 		.attr('type','checkbox')
-		.style('font-size','1em')
-		.style('margin','0 10px')
-
-	if(i.isactivefilter){
-		apply_checkbox.property('checked',true)
-	}
-
-	const update_btn = filter_terms_td.append('div')
-		.attr('class','sja_menuoption')
-		.style('display','inline-block')
-		.style('font-size','.8em')
-		.style('margin-left','5px')
-		.style('padding','3px 5px')
-		.text('Update')
-		.on('click',()=>{
-			apply()
+		.style('margin','0px 5px 0px 10px')
+		.attr('id',id)
+		.property('checked', i.isactivefilter)
+		.on('change', async ()=>{
+			apply_checkbox.property('disabled',true)
+			await apply()
+			apply_checkbox.property('disabled',false)
 		})
+	td.append('label')
+		.attr('for',id)
+		.text('APPLY')
+		.style('font-size','.8em')
+		.attr('class','sja_clbtext')
 
 	async function apply () {
 
+		i.isactivefilter = apply_checkbox.node().checked
+
 		try {
-			if(apply_checkbox.node().checked == false) {
-				i.isactivefilter = false
-			}else{
-				i.isactivefilter = true
-			}
-
-			if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
-
-			const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
-			const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
+			if(i.range.startunbounded && i.range.stopunbounded) throw 'Both ends can not be unbounded'
+			const start = i.range.startunbounded ? null : Number( start_input.property('value') )
+			const stop  = i.range.stopunbounded  ? null : Number( stop_input.property('value') )
 			if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
-
-			if( startselect.node().selectedIndex == 2 ) {
-				i.range.startunbounded = true
-				delete i.range.start
-			} else {
-				delete i.range.startunbounded
-				i.range.start = start
-				i.range.startinclusive = startselect.node().selectedIndex == 0
-			}
-			if( stopselect.node().selectedIndex == 2 ) {
-				i.range.stopunbounded = true
-				delete i.range.stop
-			} else {
-				delete i.range.stopunbounded
-				i.range.stop = stop
-				i.range.stopinclusive = stopselect.node().selectedIndex == 0
-			}
+			i.range.start = start
+			i.range.stop = stop
 			await tk.load()
-			menu_list_all_variantfilter(tk, block)
 			display_all_activefilters(tk, block)
 		} catch(e) {
 			window.alert(e)
