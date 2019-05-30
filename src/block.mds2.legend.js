@@ -252,9 +252,9 @@ data is data.info_fields{}
 					}
 				}
 			} else if( i.isinteger || i.isfloat ) {
-				i.htmlspan.text('('+i._data.filteredcount+' filtered)')
+				if( i.htmlspan ) i.htmlspan.text('('+i._data.filteredcount+' filtered)')
 			} else if( i.isflag ) {
-				i.htmlspan.text('('+(i.remove_yes?i._data.count_yes:i._data.count_no)+') '+(i.remove_no?'No':'Yes'))
+				if( i.htmlspan ) i.htmlspan.text('('+(i.remove_yes?i._data.count_yes:i._data.count_no)+') '+(i.remove_no?'No':'Yes'))
 			} else {
 				throw 'unknown info type'
 			}
