@@ -240,7 +240,7 @@ trigger_crosstab2term already complicated, don't want to add any more
 			binmax = Math.max( binmax, b.values[ b.values.length-1 ].value )
 
 			const group = {
-				label: b1.label,
+				label: b.label,
 				boxplot: app.boxplot_getvalue( b.values )
 			}
 

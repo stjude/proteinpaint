@@ -28,7 +28,7 @@ export function controls(arg, plot, do_plot, update_plot) {
   // for contextual updates
   plot.controls = []
   const table = tip.append('table')
-  setOverlayOpts(plot, do_plot, table, arg)
+  setOverlayOpts(plot, do_plot, update_plot, table, arg)
   setViewOpts(plot, update_plot, table)
   setOrientationOpts(plot, do_plot, table)
   setScaleOpts(plot, do_plot, table)
@@ -98,7 +98,7 @@ function setScaleOpts(plot, do_plot, table) {
   })
 }
 
-function setOverlayOpts(plot, do_plot, table, arg) {
+function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
   const tr = table.append('tr')
   
   tr.append('td')
