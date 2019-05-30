@@ -18,6 +18,7 @@ makeTk
 makeTk_parse_client_config
 loadTk_finish_closure
 addparameter_rangequery
+rangequery_add_variantfilters
 
 
 
@@ -263,14 +264,13 @@ by info_fields[] and variantcase_fields[]
 							})
 						}
 					} else if( i.isflag ) {
-						if( i.isactivefilter ) {
-							lst.push({
-								key: i.key,
-								isflag: true,
-								remove_no: i.remove_no,
-								remove_yes: i.remove_yes,
-							})
-						}
+						// always register flag to collect counts
+						lst.push({
+							key: i.key,
+							isflag: true,
+							remove_no: i.remove_no,
+							remove_yes: i.remove_yes,
+						})
 					} else {
 						throw 'unknown type of info filter'
 					}
