@@ -17,7 +17,11 @@ tip.d.style('text-align', 'center')
 export class Barchart{
   constructor(opts={settings:{}}) {
     this.opts = opts
-    this.holder = opts.holder
+    this.dom = {
+      holder: opts.holder,
+      barDiv: opts.holder.append('div'),
+      legendDiv: opts.holder.append('div')
+    }
     this.defaults = JSON.parse(settings)
     this.settings = Object.assign({
       term0: '',
@@ -124,7 +128,7 @@ export class Barchart{
       ? (a,b) => self.binLabels.indexOf(b.dataId) - self.binLabels.indexOf(a.dataId)
       : (a,b) => b.total - a.total
 
-    const charts = this.holder.selectAll('.pp-sbar-div')
+    const charts = this.dom.barDiv.selectAll('.pp-sbar-div')
       .data(chartsData.charts, chart => chart.chartId)
 
     charts.exit()
@@ -462,27 +466,37 @@ export class Barchart{
   }
 }
 
+// track barchart instance by div
+const renderers = new WeakMap()
+
+export function init({dom, term, obj}) {
+  const holder = dom.viz
+  const barchart = renderers.get(holder)
+  if (barchart) return barchart
+  
+  renderers.set(holder, new Barchart({
+    holder: dom.viz,
+    settings: {},
+    term1: term,
+    obj,
+  }))
+  return renderers.get(holder)
+}
+
+// convenience function that translates
+// plot properties into the expected 
+// barchart settings keys
 export function may_make_barchart(plot) {
+  const barchart = init(plot)
   if (plot.term2_displaymode != "stacked") {
-    plot.bar_div.style('display','none')
+    barchart.dom.barDiv.style('display','none')
+    barchart.dom.legendDiv.style('display','none')
     return
   }
-  plot.bar_div.style('display','inline-block')
-  plot.box_svg.style('display','none')
-  plot.legend_div.style('display','block')
-  plot.stat_div.style('display','none')
-
+  barchart.dom.barDiv.style('display','block')
+  barchart.dom.legendDiv.style('display','block')
   const obj = plot.obj
-  if (!plot.barchart) {
-    plot.barchart = new Barchart({
-      holder: plot.bar_div,
-      settings: {},
-      term1: plot.term,
-      obj,
-      legendDiv: plot.legend_div
-    })
-  }
-  plot.barchart.main({
+  barchart.main({
     genome: obj.genome.name,
     dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
     term1: plot.term.id,
@@ -499,18 +513,11 @@ export function may_make_barchart(plot) {
   }, obj)
 }
 
-export function custom_table_data(plot) { 
+export function custom_table_data(plot) {
+  const barchart = init(plot)
   const obj = plot.obj
-  if (!plot.barchart) {
-    plot.barchart = new Barchart({
-      holder: plot.bar_div,
-      settings: {},
-      term1: plot.term,
-      obj,
-      legendDiv: plot.legend_div
-    })
-  }
-  return plot.barchart.getTableData({
+
+  return barchart.getTableData({
     genome: obj.genome.name,
     dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
     term1: plot.term.id,

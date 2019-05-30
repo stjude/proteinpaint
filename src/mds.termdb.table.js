@@ -6,12 +6,7 @@ export function may_make_table (plot) {
     return
   } 
   if( !plot.term2 ) throw 'term2 is required for table view'
-
-  plot.bar_div.style('display','none')
-  plot.box_svg.style('display','none')
-  plot.legend_div.style('display','none')
   plot.table_div.style('display','inline-block')
-  plot.stat_div.style('display','none')
 
   plot.table_div.selectAll('*').remove()
   const table_data = plot.custom_bins["1"] || plot.custom_bins["2"]

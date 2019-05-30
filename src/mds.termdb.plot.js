@@ -1,6 +1,6 @@
 import * as client from './client'
 import * as common from './common'
-import {may_make_barchart} from './mds.termdb.barchart'
+import {init as bar_init, may_make_barchart} from './mds.termdb.barchart'
 import {may_make_table} from './mds.termdb.table'
 import {may_make_boxplot} from './mds.termdb.boxplot'
 import {may_make_stattable} from './mds.termdb.stattable'
@@ -124,12 +124,15 @@ export function render ( arg, obj ) {
   }
 
   arg.holder.style('white-space', 'nowrap')
+  plot.dom = {
+    viz: arg.holder.append('div').style('display','inline-block'),
+    controls: arg.holder.append('div').style('display','inline-block')
+  }
 
-  // bachart div
-  plot.bar_div = arg.holder.append('div')
-    .attr('class','pp-bar-holder')
-    .style('display','inline-block')
-  
+  plot.views = {
+    barchart: bar_init(plot)
+  }
+
   // boxplot svg
   plot.box_svg = arg.holder.append('svg')
   plot.yaxis_g = plot.box_svg.append('g') // for y axis

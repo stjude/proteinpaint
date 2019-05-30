@@ -6,6 +6,7 @@ export function controls(arg, plot, do_plot, update_plot) {
     .style('display','inline-block')
     .style('vertical-align','top')
     .style('margin', '8px')
+    .style('padding', '5px')
 
   plot.controls_update = () => {
     plot.controls.forEach(update => update())
@@ -21,6 +22,7 @@ export function controls(arg, plot, do_plot, update_plot) {
       plot.controls.forEach(update => update())
       const display = tip.style('display')
       tip.style('display', display == "none" ? "inline-block" : "none")
+      plot.config_div.style('background', display == "none" ? '#ececec' : "")
     })
 
   const tip = plot.config_div.append('div').style("display","none")

@@ -321,7 +321,7 @@ export default function barsRenderer(barsapp, holder) {
 
     //legendDiv = svg.append("g").attr("class", "sjpcb-bars-legend");
     legendRenderer = htmlLegend(
-      barsapp.opts.legendDiv,
+      barsapp.dom.legendDiv,
       {
         settings: {
           legendOrientation: 'vertical'
