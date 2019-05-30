@@ -1,3 +1,10 @@
+import * as client from "./client"
+import {event as d3event} from "d3-selection"
+import {scaleLinear, scaleLog} from "d3-scale"
+import {format as d3format} from 'd3-format'
+import {axisLeft} from "d3-axis"
+
+
 export function may_make_boxplot(plot) {
   if (plot.term2_displaymode != "boxplot") {
     plot.box_svg.style('display','none')
@@ -12,7 +19,7 @@ export function may_make_boxplot(plot) {
     plot.y_scale = scaleLinear().domain([plot.yscale_max,0]).range([0,plot.barheight])
   }
 
-  const max_label_height = get_max_labelheight( plot )
+  const max_label_height = plot.get_max_labelheight( plot )
 
   // space for boxplot
   // let box_plot_space = (plot.boxplot) ?  30 : 4
@@ -66,15 +73,10 @@ export function may_make_boxplot(plot) {
   // plot each bar
   let x = plot.yaxis_width+ plot.barspace + plot.barwidth/2
 
-  // in case of stacked bar, collect uniq set of term2 labels for showing in legend
-  // this does not allow ordering the labels by certain way, may update later
-  const term2_labels = new Set()
-
   plot.graph_g
     .attr('transform','translate('+x+','+(plot.toppad + plot.barheight)+')')
     .selectAll('*')
     .remove()
-
 
   for(const [ itemidx, item] of plot.items.entries()) {
 

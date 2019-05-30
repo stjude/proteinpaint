@@ -76,7 +76,7 @@ const crosstab_btn = obj.crosstab_btn
 	obj.treediv = obj.div.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
 	obj.div.on('click.tdb', ()=>{
-		// the plot.button_row in mds.termdb.plot2 and
+		// the plot.button_row in mds.termdb.plot and
 		// individual buttons in the term tree captures
 		// the click event, so stopPropagation in here 
 		// does not affect those event handlers/callbacks 

@@ -1,15 +1,9 @@
 import * as client from './client'
 import * as common from './common'
-import {axisLeft} from 'd3-axis'
-import {format as d3format} from 'd3-format'
-import {scaleLinear,scaleOrdinal,schemeCategory10,scaleLog,schemeCategory20} from 'd3-scale'
-import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import {init} from './mds.termdb'
 import {may_make_barchart} from './mds.termdb.barchart'
 import {may_make_table} from './mds.termdb.table'
 import {may_make_boxplot} from './mds.termdb.boxplot'
 import {may_make_stattable} from './mds.termdb.stattable'
-import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 import {controls} from './mds.termdb.controls'
 import { platform } from 'os';
 
@@ -125,7 +119,8 @@ export function render ( arg, obj ) {
     bar_settings: {
       orientation: 'horizontal',
       unit: 'abs'
-    }
+    },
+    get_max_labelheight
   }
 
   arg.holder.style('white-space', 'nowrap')
@@ -185,9 +180,7 @@ function update_plot (plot) {
     arg.crosstab2term = 1
     arg.term1 = { id : plot.term.id }
     arg.term2 = { id : plot.term2.id}
-    if(plot.term2_boxplot){
-      arg.boxplot = 1
-    }
+    arg.boxplot = plot.term2_boxplot
   }else{
     arg.barchart = { id : plot.term.id }
   }
@@ -200,10 +193,23 @@ function update_plot (plot) {
     plot.items =  data.lst
     if (data.binmax){ 
       plot.yscale_max = data.binmax
-      plot.legend_div.style('display','none')
     }
     do_plot( plot )
   })
 }
 
+function get_max_labelheight ( plot ) {
+  let textwidth = 0
+  for(const i of plot.items) {
+    plot.box_svg.append('text')
+      .text( i.label )
+      .attr('font-family', client.font)
+      .attr('font-size', plot.label_fontsize)
+      .each( function() {
+        textwidth = Math.max( textwidth, this.getBBox().width )
+      })
+      .remove()
+  }
 
+  return textwidth
+}
