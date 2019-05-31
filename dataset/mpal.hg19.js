@@ -19,6 +19,9 @@ module.exports={
 		{k:'ITD',v:'ITD from either RNA or DNA'},
 		{k:'SNV/indel',v:'Somatic mutations of tumor, and germline pathogenic mutations'},
 	],
+	sampleAssayTrack:{
+		file:'files/hg19/MPAL/tracktable/MPAL_RNAjunction'
+	},
 	cohort:{
 		files:[
 			{file:'files/hg19/MPAL/sample/MPAL.sample'},
