@@ -1,9 +1,9 @@
 import * as client from './client'
 import * as common from './common'
 import {TermdbBarchart} from './mds.termdb.barchart'
-import {may_make_table} from './mds.termdb.table'
+import {init as table_init} from './mds.termdb.table'
 import {init as boxplot_init} from './mds.termdb.boxplot'
-import {may_make_stattable} from './mds.termdb.stattable'
+import {init as stattable_init} from './mds.termdb.stattable'
 import {controls} from './mds.termdb.controls'
 
 /*
@@ -123,15 +123,15 @@ arg: server returned data
   }
 
   arg.holder.style('white-space', 'nowrap')
-  // plot sets the relative layout of divs for viz and controls
+  // set the parent DOM elements for viz and controls
   plot.dom = {
-    // viz will hold the rendered view
+    // dom.viz will hold the rendered view
     viz: arg.holder.append('div').style('display','inline-block'),
-    // will hold the controls
+    // dom.controls will hold the config input, select, button elements
     controls: arg.holder.append('div').style('display','inline-block')
   }
 
-  // set view functions or instances
+  // set view functions or objects
   plot.views = {
     barchart: new TermdbBarchart({
       holder: plot.dom.viz,
@@ -139,24 +139,15 @@ arg: server returned data
       term1: arg.term,
       obj,
     }),
-    boxplot: boxplot_init(plot.dom.viz)
+    boxplot: boxplot_init(plot.dom.viz),
+    stattable: stattable_init(plot.dom.viz),
+    table: table_init(plot.dom.viz)
   }
-
-  // div for crosstab table 
-  // TO-DO: track within the mds.termdb.table module
-  plot.table_div = arg.holder.append('div')
-  
   // set configuration controls
   controls(arg, plot, do_plot, update_plot)
-
-  // div for stat summary table
-  // TO-DO: track within the mds.termdb.stattable module
-  plot.stat_div = arg.holder.append('div') // for boxplot stats table
-      .style('margin','10px 0px')
   
   //Exposed - not exponsed data
   plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
-  
   plot.term2 = arg.term2
   do_plot( plot )
 }
@@ -204,22 +195,6 @@ function update_plot (plot) {
   })
 }
 
-function get_max_labelheight ( plot ) {
-  let textwidth = 0
-  for(const i of plot.items) {
-    plot.box_svg.append('text')
-      .text( i.label )
-      .attr('font-family', client.font)
-      .attr('font-size', plot.label_fontsize)
-      .each( function() {
-        textwidth = Math.max( textwidth, this.getBBox().width )
-      })
-      .remove()
-  }
-
-  return textwidth
-}
-
 // translate plot properties into the expected 
 // barchart settings keys
 function may_make_barchart(plot) {
@@ -250,3 +225,12 @@ function may_make_barchart(plot) {
 function may_make_boxplot(plot) {
   plot.views.boxplot.main(plot, plot.term2_displaymode == "boxplot")
 }
+
+function may_make_stattable(plot) {
+  plot.views.stattable.main(plot, plot.boxplot != undefined)
+}
+
+function may_make_table(plot) {
+  plot.views.table.main(plot, plot.term2_displaymode == "table")
+}
+

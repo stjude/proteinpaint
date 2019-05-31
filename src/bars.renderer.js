@@ -728,7 +728,7 @@ export default function barsRenderer(barsapp, holder) {
             s.colgrplabelh,
             s.svgh - s.collabelh + s.colgrplabelh - s.borderwidth
           ])
-      ).ticks(8, format('d'))
+      ).ticks(4, format('d'))
     );
 
     yTitle.selectAll("*").remove();
@@ -804,7 +804,7 @@ export default function barsRenderer(barsapp, holder) {
             2,
             s.svgw - s.rowlabelw // + s.rowgrplabelw - s.borderwidth
           ])
-      ).ticks(8, format('d'))
+      ).ticks(4, format('d'))
     );
 
     xTitle.selectAll("*").remove();

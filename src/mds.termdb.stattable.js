@@ -1,10 +1,31 @@
-export function may_make_stattable(plot) {
-  if (!plot.boxplot) {
-    plot.stat_div.style("display", "none")
-    return
+// init is similar to a Class constructor
+// in that it returns an object "instance"
+export function init(holder) {
+/*
+  holder: a d3 selection
+*/
+  const self = {
+    dom: {
+      div: holder.append('div').style('margin','10px 0px')
+    },
+    // main() remembers the self "instance" via closure
+    // so that self does not need to be passed to it
+    // as an argument
+    main(plot, isVisible) {
+      if (!isVisible) {
+        self.dom.div.style('display','none')
+        return
+      }
+      render(self, plot)
+    }
   }
+  return self
+}
+
+
+export function render(self, plot) {
   // table for statistical summary
-  plot.stat_div
+  self.dom.div
     .style("display", "block")
   .selectAll('*')
     .remove()
@@ -18,8 +39,7 @@ export function may_make_stattable(plot) {
     + '<tr><td colspan="2">Among Patients treated</td></tr>'
   }
 
-  const stat_div = plot.stat_div
-    .html(
+  self.dom.div.html(
       '<table><tr><th></th><th>Value</th></tr>'
       + exposed_data
       + '<tr><td>Mean (SD)</td><td>'+ plot.boxplot.mean.toFixed(2) + ' (' + plot.boxplot.sd.toFixed(2) +') </td></tr>'
@@ -31,11 +51,11 @@ export function may_make_stattable(plot) {
       + '</table>'
     )
 
-  stat_div.selectAll('td, th, table')
+  self.dom.div.selectAll('td, th, table')
     .style('border', '1px solid black')
     .style('padding', '0')
     .style('border-collapse', 'collapse')
 
-  stat_div.selectAll('th, td')
+  self.dom.div.selectAll('th, td')
     .style('padding', '2px 10px')
 }

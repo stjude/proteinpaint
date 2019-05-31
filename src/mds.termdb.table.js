@@ -1,14 +1,39 @@
 import {custom_table_data} from './mds.termdb.barchart'
 
-export function may_make_table (plot) {
-  if (plot.term2_displaymode != 'table') {
-    plot.table_div.style('display','none')
-    return
-  } 
-  if( !plot.term2 ) throw 'term2 is required for table view'
-  plot.table_div.style('display','inline-block')
+// init is similar to a Class constructor
+// in that it returns an object "instance"
+export function init(holder) {
+/*
+  holder: a d3 selection
+*/
+  const self = {
+    dom: {
+      div: holder.append('div').style('margin','10px 0px')
+    },
+    // main() remembers the self "instance" via closure
+    // so that self does not need to be passed to it
+    // as an argument
+    main(plot, isVisible) {
+      if (!isVisible) {
+        self.dom.div.style('display','none')
+        return
+      }
+      if( !plot.term2 ) {
+        throw 'term2 is required for table view'
+      }
+      render(self, plot)
+    }
+  }
+  return self
+}
 
-  plot.table_div.selectAll('*').remove()
+
+export function render (self, plot) {
+  self.dom.div
+    .style('display','inline-block')
+  .selectAll('*')
+    .remove()
+
   const table_data = plot.custom_bins["1"] || plot.custom_bins["2"]
     ? custom_table_data
     : default_table_data
@@ -18,7 +43,7 @@ export function may_make_table (plot) {
     const {column_keys, rows} = data
     
     // show table
-    const table = plot.table_div.append('table')
+    const table = self.dom.div.append('table')
     .style('margin-top','20px')
     .style('border-spacing','3px')
     .style('border-collapse','collapse')
