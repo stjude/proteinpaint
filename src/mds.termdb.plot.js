@@ -2,7 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {TermdbBarchart} from './mds.termdb.barchart'
 import {may_make_table} from './mds.termdb.table'
-import {may_make_boxplot} from './mds.termdb.boxplot'
+import {init as boxplot_init} from './mds.termdb.boxplot'
 import {may_make_stattable} from './mds.termdb.stattable'
 import {controls} from './mds.termdb.controls'
 
@@ -15,19 +15,17 @@ import {controls} from './mds.termdb.controls'
       tip: new client.Menu({padding:'18px'}), //tip from clinent.Menu for tooltip while hoverover bar or x-axis label
       term: arg.term,   // 1st term 
       items: arg.items, // with all items in the term with item.label and item.value
-      barheight:300,    // total height of bar and y axis
-      barwidth:20, 
-      toppad:20,        // top padding
-      axisheight: 305,  // yaxis height
-      barspace:2,       // space between 2 bars
-      maxlabelwidth:0,  // will be calculated by 
-      maxvalue:0,
-      label_fontsize: 15,
-      yaxis_width: 70, 
-      use_logscale:0   // flag for y-axis scale type, 0=linear, 1=log
-      y_scale,         // depending upon scale_btn status, it changes between scaleLiner() and scaleLog()
-      yaxis_g,         // for y axis
-      graph_g,         // for bar and label of each data item
+      settings: {
+        // see comments in the render function
+      },
+      dom: {
+        // will hold parent DOM elements for the general layout
+        // view-specific DOM elements are not held here
+        // but within the view objects
+      },
+      views: {
+        // will hold view functions or instances
+      }
     }
   3.  For single term, do_plot() creates barplot for all terms. 
     First Y-axis added then X-axis labels created. 
@@ -87,42 +85,52 @@ arg: server returned data
     genome: arg.genome,
     dslabel: arg.dslabel,
     tip: new client.Menu({padding:'18px'}),
+    
+    // data
     term: arg.term,
     items: arg.items,
     boxplot: arg.boxplot,
-    toppad:20, // top padding
-    axisheight: 305,
-    maxlabelwidth:0,
-    maxvalue:0,
-    label_fontsize: 15,
-    yaxis_width: 100,
-    use_logscale: 0,
-    use_percentage: 0,
-    term2_displaymode: arg.term2_displaymode ? arg.term2_displaymode : "stacked",
-    term2_boxplot: 0,
+
+    // may need to put the following properties under
+    // a namespace or within the affected module
     custom_bins: {},
     bin_controls: {1:{}, 2:{}},
+    term2_displaymode: arg.term2_displaymode ? arg.term2_displaymode : "stacked",
+    term2_boxplot: 0,
+    
+    // namespaced configuration settings to indicate
+    // the scope affected by a setting key-value
     settings: {
+      common: {
+        use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
+        use_percentage: false,
+        barheight: 300, // maximum bar length 
+        barwidth: 20, // bar thickness
+        barspace: 2 // space between two bars
+      },
+      boxplot: {
+        toppad: 20, // top padding
+        yaxis_width: 100,
+        label_fontsize: 15,
+      },
       bar: {
-        barheight:300, // total height of bar and y axis
-        barwidth:20,
-        barspace:2,
         orientation: 'horizontal',
         unit: 'abs'
       }
     },
-    // plot sets the relative layout of divs for viz and controls
-    dom: {
-      // viz will hold the rendered view
-      viz: arg.holder.append('div').style('display','inline-block'),
-      // will hold the controls
-      controls: arg.holder.append('div').style('display','inline-block')
-    },
-    get_max_labelheight,
+    // dom: {} see below
+    // views: {} see below
   }
 
   arg.holder.style('white-space', 'nowrap')
-  
+  // plot sets the relative layout of divs for viz and controls
+  plot.dom = {
+    // viz will hold the rendered view
+    viz: arg.holder.append('div').style('display','inline-block'),
+    // will hold the controls
+    controls: arg.holder.append('div').style('display','inline-block')
+  }
+
   // set view functions or instances
   plot.views = {
     barchart: new TermdbBarchart({
@@ -130,21 +138,19 @@ arg: server returned data
       settings: {},
       term1: arg.term,
       obj,
-    })
+    }),
+    boxplot: boxplot_init(plot.dom.viz)
   }
 
-  // boxplot svg
-  plot.box_svg = arg.holder.append('svg')
-  plot.yaxis_g = plot.box_svg.append('g') // for y axis
-  plot.graph_g = plot.box_svg.append('g') // for bar and label of each data item
-
-  // div for crosstab table
+  // div for crosstab table 
+  // TO-DO: track within the mds.termdb.table module
   plot.table_div = arg.holder.append('div')
   
   // set configuration controls
   controls(arg, plot, do_plot, update_plot)
 
   // div for stat summary table
+  // TO-DO: track within the mds.termdb.stattable module
   plot.stat_div = arg.holder.append('div') // for boxplot stats table
       .style('margin','10px 0px')
   
@@ -192,7 +198,7 @@ function update_plot (plot) {
 
     plot.items =  data.lst
     if (data.binmax){ 
-      plot.yscale_max = data.binmax
+      plot.settings.boxplot.yscale_max = data.binmax
     }
     do_plot( plot )
   })
@@ -216,7 +222,7 @@ function get_max_labelheight ( plot ) {
 
 // translate plot properties into the expected 
 // barchart settings keys
-export function may_make_barchart(plot) {
+function may_make_barchart(plot) {
   const obj = plot.obj
   plot.views.barchart.main({
     isVisible: plot.term2_displaymode == "stacked",
@@ -234,9 +240,13 @@ export function may_make_barchart(plot) {
     custom_bins: plot.custom_bins,
     orientation: plot.settings.bar.orientation,
     // normalize bar thickness regardless of orientation
-    colw: plot.settings.bar.barwidth,
-    rowh: plot.settings.bar.barwidth,
-    colspace: plot.settings.bar.barspace,
-    rowspace: plot.settings.bar.barspace,
+    colw: plot.settings.common.barwidth,
+    rowh: plot.settings.common.barwidth,
+    colspace: plot.settings.common.barspace,
+    rowspace: plot.settings.common.barspace,
   }, obj)
+}
+
+function may_make_boxplot(plot) {
+  plot.views.boxplot.main(plot, plot.term2_displaymode == "boxplot")
 }

@@ -95,6 +95,7 @@ function setScaleOpts(plot, do_plot, table) {
     .html('Percentage')
 
   plot.controls.push(() => {
+    tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
     log.property('disabled', plot.term2 ? true : false)
     pct.property('disabled', plot.term2 ? false : true)
   })

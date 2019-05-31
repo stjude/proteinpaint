@@ -1,17 +1,13 @@
 export function may_make_stattable(plot) {
-  //plot.boxplot = plot.term2 && plot.term2.isfloat && plot.term2_boxplot ? 1 : 0
   if (!plot.boxplot) {
     plot.stat_div.style("display", "none")
     return
   }
-  plot.stat_div.style("display", "block")
-  const x = plot.yaxis_width+ plot.barspace + plot.barwidth/2
-  const max_label_height = plot.get_max_labelheight( plot )
   // table for statistical summary
   plot.stat_div
-  .attr('transform','translate('+x+','+(plot.toppad + plot.barheight + max_label_height)+')')
+    .style("display", "block")
   .selectAll('*')
-  .remove()
+    .remove()
 
   let exposed_data = ''
 

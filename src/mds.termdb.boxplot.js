@@ -1,55 +1,77 @@
 import * as client from "./client"
 import {event as d3event} from "d3-selection"
-import {scaleLinear, scaleLog} from "d3-scale"
+import {scaleLinear, scaleLog, scaleOrdinal} from "d3-scale"
 import {format as d3format} from 'd3-format'
 import {axisLeft} from "d3-axis"
 
-
-export function may_make_boxplot(plot) {
-  if (plot.term2_displaymode != "boxplot") {
-    plot.box_svg.style('display','none')
-    return
+// init is similar to a Class constructor
+// in that it returns an object "instance"
+export function init(holder) {
+/*
+  holder: a d3 selection
+*/
+  const svg = holder.append('svg')
+  const self = {
+    dom: {
+      svg,
+      yaxis_g: svg.append('g'), // for y axis
+      graph_g: svg.append('g') // for bar and label of each data item
+    },
+    // main() remembers the self "instance" via closure
+    // so that self does not need to be passed to it
+    // as an argument
+    main(plot, isVisible) {
+      if (!isVisible) {
+        self.dom.svg.style('display','none')
+        return
+      }
+      render(self, plot)
+    }
   }
-  plot.box_svg.style('display','inline-block')
-  if (plot.use_logscale) {
-    plot.y_scale = scaleLog().domain([plot.yscale_max,1]).range([0,plot.barheight])
-  } else if (plot.use_percentage) {
-    plot.y_scale = scaleLinear().domain([100,0]).range([0,plot.barheight])
-  } else {
-    plot.y_scale = scaleLinear().domain([plot.yscale_max,0]).range([0,plot.barheight])
-  }
+  return self
+}
 
-  const max_label_height = plot.get_max_labelheight( plot )
+function render(self, plot) {
+/*
+  self: see "self" object in the init function above
+  plot: supplied from mds.termdb.plot
+  isVisible: boolean
+*/
+  const sc = plot.settings.common
+  const s = plot.settings.boxplot
+  self.dom.svg.style('display','inline-block')
+  self.y_scale = scaleLinear().domain([s.yscale_max,0]).range([0,sc.barheight])
+  const max_label_height = get_max_labelheight( self, plot, s)
 
   // space for boxplot
   // let box_plot_space = (plot.boxplot) ?  30 : 4
-  let box_plot_space = 4
+  const box_plot_space = 4
 
   // define svg height and width
-  const svg_width = plot.items.length * (plot.barwidth+plot.barspace) + plot.yaxis_width
-  const svg_height = plot.toppad + plot.barheight+max_label_height + box_plot_space
+  const svg_width = plot.items.length * (sc.barwidth+sc.barspace) + s.yaxis_width
+  const svg_height = s.toppad + sc.barheight + max_label_height + box_plot_space
 
-  plot.box_svg
+  self.dom.svg
     .transition()
     .attr('width', svg_width)
     .attr('height', svg_height)
 
   // Y axis
-  plot.yaxis_g
-    .attr('transform','translate('+(plot.yaxis_width-2)+','+plot.toppad+')')
+  self.dom.yaxis_g
+    .attr('transform','translate('+(s.yaxis_width-2)+','+s.toppad+')')
     .transition()
     .call(
       axisLeft()
-        .scale(plot.y_scale)
+        .scale(self.y_scale)
         // .tickFormat(d3format('d'))
         .ticks(10, d3format('d'))
     )
 
   client.axisstyle({
-    axis:plot.yaxis_g,
-    showline:true,
-    fontsize:plot.barwidth*.8,
-    color:'black'
+    axis: self.dom.yaxis_g,
+    showline: true,
+    fontsize: sc.barwidth*.8,
+    color: 'black'
   })
 
   // if is stacked-bar, need to get color mapping for term2 values
@@ -71,78 +93,76 @@ export function may_make_boxplot(plot) {
   }
 
   // plot each bar
-  let x = plot.yaxis_width+ plot.barspace + plot.barwidth/2
+  let x = s.yaxis_width + sc.barspace + sc.barwidth/2
 
-  plot.graph_g
-    .attr('transform','translate('+x+','+(plot.toppad + plot.barheight)+')')
+  self.dom.graph_g
+    .attr('transform','translate('+x+','+(s.toppad + sc.barheight)+')')
     .selectAll('*')
     .remove()
 
   for(const [ itemidx, item] of plot.items.entries()) {
 
-    const g = plot.graph_g.append('g')
-      .attr('transform','translate('+(itemidx*(plot.barwidth+plot.barspace))+',0)')
+    const g = self.dom.graph_g.append('g')
+      .attr('transform','translate('+(itemidx*(sc.barwidth+sc.barspace))+',0)')
 
     // X axis labels  
     const xlabel = g.append('text')
       .text(item.label)
       .attr("transform", "translate(0,"+ box_plot_space +") rotate(-65)")
       .attr('text-anchor','end')
-      .attr('font-size',plot.label_fontsize)
-      .attr('font-family',client.font)
+      .attr('font-size', s.label_fontsize)
+      .attr('font-family', client.font)
       .attr('dominant-baseline','central')
 
     let x_lab_tip = ''
 
-    //this is for boxplot for 2nd numerical term 
-    //if (isNaN(plot.y_scale(item.boxplot.w1))) console.log(item.boxplot)
-    
+    //this is for boxplot for 2nd numerical term
     if ('w1' in item.boxplot) {
       g.append("line")
         .attr("x1", 0)
-        .attr("y1", plot.y_scale(item.boxplot.w1)-plot.barheight)
+        .attr("y1", self.y_scale(item.boxplot.w1)-sc.barheight)
         .attr("x2", 0)
-        .attr("y2", plot.y_scale(item.boxplot.w2)-plot.barheight)
+        .attr("y2", self.y_scale(item.boxplot.w2)-sc.barheight)
         .attr("stroke-width", 2)
         .attr("stroke", "black")
 
-      if(plot.use_logscale){
+      if(sc.use_logscale){
         g.append("rect")
-        .attr('x', -plot.barwidth/2)
-        .attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
-        .attr('width', plot.barwidth)
-        .attr('height', plot.barheight - plot.y_scale(item.boxplot.p75 / item.boxplot.p25))
+        .attr('x', -sc.barwidth/2)
+        .attr('y', self.y_scale(item.boxplot.p75)-sc.barheight)
+        .attr('width', sc.barwidth)
+        .attr('height', sc.barheight - self.y_scale(item.boxplot.p75 / item.boxplot.p25))
         .attr('fill','#901739')
       }else{
         g.append("rect")
-        .attr('x', -plot.barwidth/2)
-        .attr('y', plot.y_scale(item.boxplot.p75)-plot.barheight)
-        .attr('width', plot.barwidth)
-        .attr('height', plot.barheight - plot.y_scale(item.boxplot.p75-item.boxplot.p25))
+        .attr('x', -sc.barwidth/2)
+        .attr('y', self.y_scale(item.boxplot.p75)-sc.barheight)
+        .attr('width', sc.barwidth)
+        .attr('height', sc.barheight - self.y_scale(item.boxplot.p75-item.boxplot.p25))
         .attr('fill','#901739')
       }
 
       g.append("line")
-        .attr("x1", -plot.barwidth/2.2)
-        .attr("y1", plot.y_scale(item.boxplot.w1)-plot.barheight)
-        .attr("x2", plot.barwidth/2.2)
-        .attr("y2", plot.y_scale(item.boxplot.w1)-plot.barheight)
+        .attr("x1", -sc.barwidth/2.2)
+        .attr("y1", self.y_scale(item.boxplot.w1)-sc.barheight)
+        .attr("x2", sc.barwidth/2.2)
+        .attr("y2", self.y_scale(item.boxplot.w1)-sc.barheight)
         .attr("stroke-width", 2)
         .attr("stroke", "black")
 
       g.append("line")
-        .attr("x1", -plot.barwidth/2.2)
-        .attr("y1", plot.y_scale(item.boxplot.p50)-plot.barheight)
-        .attr("x2", plot.barwidth/2.2)
-        .attr("y2", plot.y_scale(item.boxplot.p50)-plot.barheight)
+        .attr("x1", -sc.barwidth/2.2)
+        .attr("y1", self.y_scale(item.boxplot.p50)-sc.barheight)
+        .attr("x2", sc.barwidth/2.2)
+        .attr("y2", self.y_scale(item.boxplot.p50)-sc.barheight)
         .attr("stroke-width", 1.5)
         .attr("stroke", "white")
       
       g.append("line")
-        .attr("x1", -plot.barwidth/2.2)
-        .attr("y1", plot.y_scale(item.boxplot.w2)-plot.barheight)
-        .attr("x2", plot.barwidth/2.2)
-        .attr("y2", plot.y_scale(item.boxplot.w2)-plot.barheight)
+        .attr("x1", -sc.barwidth/2.2)
+        .attr("y1", self.y_scale(item.boxplot.w2)-sc.barheight)
+        .attr("x2", sc.barwidth/2.2)
+        .attr("y2", self.y_scale(item.boxplot.w2)-sc.barheight)
         .attr("stroke-width", 2)
         .attr("stroke", "black")
     }
@@ -150,7 +170,7 @@ export function may_make_boxplot(plot) {
     for(const outlier of item.boxplot.out){
       g.append("circle")
         .attr('cx', 0)
-        .attr('cy', plot.y_scale(outlier.value)-plot.barheight)
+        .attr('cy', self.y_scale(outlier.value)-sc.barheight)
         .attr('r', 2)
         .attr('fill','#901739')
     } 
@@ -186,4 +206,20 @@ export function may_make_boxplot(plot) {
       })
     }
   }
+}
+
+function get_max_labelheight ( self, plot, s ) {
+  let textwidth = 0
+  for(const i of plot.items) {
+    self.dom.svg.append('text')
+      .text( i.label )
+      .attr('font-family', client.font)
+      .attr('font-size', s.label_fontsize)
+      .each( function() {
+        textwidth = Math.max( textwidth, this.getBBox().width )
+      })
+      .remove()
+  }
+
+  return textwidth
 }
