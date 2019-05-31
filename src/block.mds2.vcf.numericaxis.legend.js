@@ -201,26 +201,17 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 		.style('border-left','solid 1px #ccc')
 
 	const af = tk.vcf.numerical_axis.AFtest
-	console.log(af)
-	// 'allow_adjust_race' and 'adjust_race' is not active by default
-	af.allowto_adjust_race = false
-	af.adjust_race = false
-
-	let groups = []
-	for(const [i, g] of af.groups.entries()){
-		if(g.is_population)	groups.push('population')
-		else if(g.is_infofield) groups.push('info')
-		else if(g.is_termdb) groups.push('termdb')
-	}
 
 	// only allow adjusted tests if one group is 'termdb' and another 'population'
-	if(groups.includes('termdb') && groups.includes('population')){
+	if( af.groups.find(i=>i.is_population) && af.groups.find(i=>i.is_termdb)){
 		af.allowto_adjust_race = true
 		af.adjust_race = true
 	}else{
 	// make 'AFdiff test' as default for rest of the group type combination
 		af.testby_AFdiff = true
 		af.testby_fisher = false
+		af.allowto_adjust_race = false
+		af.adjust_race = false
 	}
 
 	// one row for each group
@@ -280,7 +271,7 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 			.text('Fisher exact test')
 		
 		// if one of the groups is info_field then disable fisher test	
-		if(groups.includes('info')){
+		if(af.groups.find(i=>i.is_infofield)){
 			fisher_option.property('disabled','true')
 		}
 		testmethod.node().selectedIndex = af.testby_AFdiff ? 0 : 1
