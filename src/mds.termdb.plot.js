@@ -156,7 +156,7 @@ arg: server returned data
   plot.term2 = arg.term2
   do_plot( plot )
   if (Array.isArray(arg.obj.filterCallbacks)) {
-    arg.obj.filterCallbacks.push(()=>do_plot(plot))
+    arg.obj.filterCallbacks.push(()=>update_plot(plot))
   }
 }
 
@@ -178,7 +178,8 @@ function update_plot (plot) {
   const arg = {
     genome: plot.genome,
     dslabel: plot.dslabel,
-    obj: plot.obj
+    obj: plot.obj,
+    termfilter: plot.obj.termfilter ? plot.obj.termfilter.terms : ''
   }
 
   if(plot.term2){

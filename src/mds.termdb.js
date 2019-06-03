@@ -103,6 +103,7 @@ obj{}:
 		obj.do_query = (arg) => {
 			arg.genome = obj.genome.name
 			arg.dslabel = obj.mds.label
+			arg.termfilter = obj.termfilter ? obj.termfilter.terms : ''
 			return client.dofetch('termdb', arg)
 		}
 
@@ -179,7 +180,7 @@ function may_display_termfilter ( obj ) {
 		obj.mds,
 		obj.genome,
 		false,
-		// callback
+		// callback when updating the filter
 		() => {
 			for(const fxn of obj.filterCallbacks) {
 				fxn()
@@ -549,7 +550,8 @@ providing all the customization options
 				term2: result.term2,
 				items: result.items,
 				default2showtable: true, // a flag for barchart to show html table view by default,
-				term2_displaymode: 'table'
+				term2_displaymode: 'table',
+				termfilter: obj.termfilter
 			}
 			render( plot )
 		}

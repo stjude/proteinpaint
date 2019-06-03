@@ -484,7 +484,7 @@ export class TermdbBarchart{
 }
 
 export function custom_table_data(plot) {
-  const barchart = init(plot)
+  const barchart = plot.views.barchart
   const obj = plot.obj
 
   return barchart.getTableData({

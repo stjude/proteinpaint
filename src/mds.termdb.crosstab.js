@@ -68,6 +68,7 @@ then pass term2 and crosstab result to callback
 				disable_terms: new Set([ arg.term1.id ]),
 				callback: term2_selected_callback
 			},
+			termfilter: arg.obj.termfilter
 		}
 
 		init( obj )
@@ -102,6 +103,7 @@ export function may_trigger_crosstabulate( arg, btn ) {
 			disable_terms: new Set([ arg.term1.id ]),
 			callback: term2_selected_callback
 		},
+		termfilter: arg.obj.termfilter
 	}
 
 	init(obj)
@@ -180,7 +182,8 @@ return promise
 			id: arg.term2.id
 		},
 		genome: arg.obj.genome.name,
-		dslabel: arg.obj.mds.label
+		dslabel: arg.obj.mds.label,
+		termfilter: arg.obj.termfilter ? arg.obj.termfilter.terms : ''
 	}
 	return client.dofetch('termdb', param)
 	.then(data=>{
