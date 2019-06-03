@@ -11,39 +11,18 @@ to_parameter
 
 
 
-export async function display ( holder_div, group, mds, genome, count_limit_vcf, callback){
+export async function display ( group_div, group, mds, genome, count_limit_vcf, callback){
 /*
 group{}
 	.terms[]
+		.term{}
+		.values[]
+		.range{}
+		.iscategorical
+		.isinteger
+		.isfloat
+		.isnot
 */
-    
-    // Group div
-	const group_div = holder_div
-        .append('div')
-        .style('display', 'block')
-        .style('padding','3px 10px')
-        //.style('border','solid 1px') .style('border-color','#d4d4d4')
-
-    if( group.name ) {
-        group_div.append('div')
-            .style('display', 'inline-block')
-            .style('opacity',.5)
-            .style('font-size','.8em')
-            .style('margin-right','10px')
-            .text(group.name)
-    }
-
-    // group.div_numbersamples = group_div.append('div')
-    //     .style('display', 'inline-block')
-    //     .style('opacity',.5)
-    //     .style('font-size','.8em')
-    //     .text('Loading...')
-
-    group.div_value_info = group_div.append('div')
-        .style('display', 'inline-block')
-        .style('opacity',.5)
-        .style('font-size','.8em')
-        .text('ALLELE FREQUENCY OF')
 
     const terms_div = group_div.append('div')
         .style('display','inline-block')
@@ -51,6 +30,42 @@ group{}
     const tip = new client.Menu({padding:'0'})
 
     update_terms(terms_div)
+
+
+    // add new term
+    const add_term_btn = group_div.append('div')
+        .attr('class','sja_filter_tag_btn')
+        .style('padding','2px 7px')
+        .style('margin-left','10px')
+        .style('border-radius','6px')
+        .style('background-color', '#4888BF')
+        .html('&#43;')
+        .on('click',async ()=>{
+            
+            tip.clear()
+            .showunder( add_term_btn.node() )
+
+            const treediv = tip.d.append('div')
+
+            // a new object as init() argument for launching the tree with modifiers
+            const obj = {
+                genome: genome,
+                mds: mds,
+                div: treediv,
+                default_rootterm: {},
+                modifier_barchart_selectbar: {
+                    callback: result => {
+                        tip.hide()
+                        add_term(result)
+                    }
+                }
+            }
+            init(obj)
+        })
+
+
+	// all private functions below
+
 
     function update_terms(terms_div){
 
@@ -281,37 +296,6 @@ group{}
         }
     }
 
-    // add new term
-    const add_term_btn = group_div.append('div')
-        .attr('class','sja_filter_tag_btn')
-        .style('padding','2px 7px')
-        .style('margin-left','10px')
-        .style('border-radius','6px')
-        .style('background-color', '#4888BF')
-        .html('&#43;')
-        .on('click',async ()=>{
-            
-            tip.clear()
-            .showunder( add_term_btn.node() )
-
-            const treediv = tip.d.append('div')
-
-            // a new object as init() argument for launching the tree with modifiers
-            const obj = {
-                genome: genome,
-                mds: mds,
-                div: treediv,
-                default_rootterm: {},
-                modifier_barchart_selectbar: {
-                    callback: result => {
-                        tip.hide()
-                        add_term(result)
-                    }
-                }
-            }
-            init(obj)
-        })
-
     async function add_term(result){
 
         // Add new term to group.terms
@@ -526,6 +510,9 @@ group{}
     }
 }
 
+
+
+
 function may_settoloading_termgroup ( group ) {
 	if( group.div_numbersamples ) group.div_numbersamples.text('Loading...')
 	if(group.div_populationaverage) {
@@ -538,7 +525,7 @@ function may_settoloading_termgroup ( group ) {
 
 
 export function to_parameter ( terms ) {
-// for one of term-value setting
+// apply on the terms[] array of a group
 // TODO and/or between multiple terms
 	return terms.map( i=> {
 		return {
