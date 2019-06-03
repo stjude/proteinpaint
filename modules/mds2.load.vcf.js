@@ -323,13 +323,18 @@ for specific type of query mode, send additional info
 		}
 	}
 
-	if( q.AFtest && q.AFtest.adjust_race ) {
+	if( q.AFtest ) {
 		// did adjustment, return back average admix
 		const g = q.AFtest.groups.find(i=>i.is_termdb)
-		if(g && g.pop2average) {
-			result.popsetaverage = []
-			for(const [k,v] of g.pop2average) {
-				result.popsetaverage.push([k,v.average])
+		if( g ) {
+			result.AFtest_termdbgroup = {
+				samplecount: g.columnidx.length
+			}
+			if( g.pop2average ) {
+				result.AFtest_termdbgroup.popsetaverage = []
+				for(const [k,v] of g.pop2average) {
+					result.AFtest_termdbgroup.popsetaverage.push([k,v.average])
+				}
 			}
 		}
 	}
