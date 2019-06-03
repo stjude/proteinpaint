@@ -3,6 +3,9 @@ import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {render} from './mds.termdb.plot'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
+import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
+import {make_termvalueselection_ui} from './mds.termdb.termvaluesetting.ui'
+
 
 /*
 
@@ -15,8 +18,10 @@ init accepts obj{}
 .mds{}
 .div
 
-obj has triggers
+
+triggers
 obj.default_rootterm{}
+	allow obj.filter_terms[]
 
 
 modifiers, for modifying the behavior/display of the term tree
@@ -26,6 +31,7 @@ attach to obj{}
 ** modifier_ssid_barchart
 ** modifier_barchart_selectbar
 ** modifier_ssid_onterm
+
 
 
 
@@ -70,9 +76,9 @@ obj{}:
 .default_rootterm{}
 ... modifiers
 */
-const crosstab_btn = obj.crosstab_btn
 	window.obj = obj // for testing
 	obj.errdiv = obj.div.append('div')
+	obj.termfilterdiv = obj.div.append('div')
 	obj.treediv = obj.div.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
 	obj.div.on('click.tdb', ()=>{
@@ -125,6 +131,8 @@ also for showing term tree, allowing to select certain terms
 
 */
 
+	may_display_termfilter( obj )
+
 	const data = await obj.do_query( {
 		default_rootterm: 1
 	})
@@ -142,6 +150,28 @@ also for showing term tree, allowing to select certain terms
 
 		print_one_term( arg, obj )
 	}
+}
+
+
+
+
+function may_display_termfilter ( obj ) {
+	if(!obj.termfilter) return
+	if(!obj.termfilter.terms) return
+	if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
+	validate_termvaluesetting( obj.termfilter.terms )
+	if( obj.termfilter.no_display ) {
+		// do not display the terms
+		return
+	}
+	make_termvalueselection_ui(
+		obj.termfilterdiv,
+		obj.termfilter,
+		obj.mds,
+		obj.genome,
+		false,
+		()=>{}
+	)
 }
 
 
