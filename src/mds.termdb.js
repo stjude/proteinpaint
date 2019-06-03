@@ -171,9 +171,15 @@ function may_display_termfilter ( obj ) {
 		.style('display','block')
 		.append('div')
 		.style('display','inline-block')
-		.style('border','solid 1px #ededed')
-		.style('padding','5px')
+		.style('border','solid 1px #ddd')
+		.style('padding','7px')
 		.style('margin-bottom','10px')
+	div.append('div')
+		.style('display','inline-block')
+		.style('margin','0px 5px')
+		.text('FILTER')
+		.style('opacity','.5')
+		.style('font-size','.7em')
 	termvaluesettingui.display(
 		div,
 		obj.termfilter,
