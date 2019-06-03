@@ -2,23 +2,10 @@ const app = require('../app')
 const path = require('path')
 const utils = require('./utils')
 const Partjson = require('./partjson')
-const d3format = require('d3-format')
-const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
-
-const settings = {}
-const pj = getPj(settings)
-const joinFxns = {
-  "": () => ""
-}
-const numValFxns = {
-  "": () => {}
-}
 const serverconfig = __non_webpack_require__('./serverconfig.json')
-const unannotated = {}
-const orderedLabels = {}
-const unannotatedLabels = {}
+const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
+const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
-const bins = {}
 
 /*
 ********************** EXPORTED
@@ -79,18 +66,28 @@ if is a numeric term, also get distribution
   //if(!term.graph) throw 'graph is not available for said term'
   //if(!term.graph.barchart) throw 'graph.barchart is not available for said term'
   if(!ds.cohort) throw 'cohort missing from ds'
-  const filename = 'files/hg38/sjlife/clinical/matrix'
-  if(!ds.cohort['parsed-'+filename]) throw `the parsed cohort matrix=${filename} is missing`
-  await setValFxns(q, tdb, ds) 
-  Object.assign(settings, q)
+  if(!ds.cohort.annorows) throw `cohort.annorows is missing`
+  // request-specific variables
+  const inReq = {
+    filterFxn: ()=>1, // default allow all rows, may be replaced via q.termfilter
+    joinFxns: {"": () => ""},
+    numValFxns: {"": () => {}},
+    unannotated: {},
+    orderedLabels: {},
+    unannotatedLabels: {},
+    bins: {}
+  }
+  const pj = getPj(q, inReq)
+  await setValFxns(q, tdb, ds, inReq)
+  
   pj.refresh({
-    data: ds.cohort['parsed-' + filename],
+    data: ds.cohort.annorows,
     seed: `{"values": []}`
   })
   res.send(pj.tree.results)
 }
 
-function getPj(settings) {
+function getPj(q, inReq) {
   return new Partjson({
     template: {
       "@join()": {
@@ -148,18 +145,18 @@ function getPj(settings) {
     },
     "=": {
       vals(row) {
-        if (settings.filterfxn && !settings.filterfxn(row)) return undefined
+        if (!inReq.filterFxn(row)) return undefined
 
-        const chartId = joinFxns[settings.term0](row)
-        const seriesId = joinFxns[settings.term1](row)
-        const dataId = joinFxns[settings.term2](row)
+        const chartId = inReq.joinFxns[q.term0](row)
+        const seriesId = inReq.joinFxns[q.term1](row)
+        const dataId = inReq.joinFxns[q.term2](row)
         if (chartId !== undefined && seriesId !== undefined && dataId !== undefined) {
           return {
             chartId,
             seriesId,
             dataId,
-            value: typeof numValFxns[settings.term1] == 'function'
-              ? numValFxns[settings.term1](row)
+            value: typeof inReq.numValFxns[q.term1] == 'function'
+              ? inReq.numValFxns[q.term1](row)
               : undefined
           }
         }
@@ -192,40 +189,40 @@ function getPj(settings) {
       unannotated(row, context) {
         const vals = context.joins.get('vals')
         //console.log(context.joins)
-        return vals.seriesId === unannotated.label ? 1 : 0
+        return vals.seriesId === inReq.unannotated.label ? 1 : 0
       },
       annotated(row, context) {
         const vals = context.joins.get('vals')
-        return vals.seriesId === unannotated.label ? 0 : 1
+        return vals.seriesId === inReq.unannotated.label ? 0 : 1
       },
       sortColsRows(result) {
-        if (orderedLabels[settings.term1].length) {
-          result.cols.sort((a,b) => orderedLabels[settings.term1].indexOf(a) - orderedLabels[settings.term1].indexOf(b))
+        if (inReq.orderedLabels[q.term1].length) {
+          result.cols.sort((a,b) => inReq.orderedLabels[q.term1].indexOf(a) - inReq.orderedLabels[q.term1].indexOf(b))
         }
-        if (orderedLabels[settings.term2].length) {
-          result.rows.sort((a,b) => orderedLabels[settings.term2].indexOf(a) - orderedLabels[settings.term2].indexOf(b))
+        if (inReq.orderedLabels[q.term2].length) {
+          result.rows.sort((a,b) => inReq.orderedLabels[q.term2].indexOf(a) - inReq.orderedLabels[q.term2].indexOf(b))
         }
       },
       useColOrder() {
-        return orderedLabels[settings.term1].length > 0
+        return inReq.orderedLabels[q.term1].length > 0
       },
       useRowOrder() {
-        return orderedLabels[settings.term2].length > 0
+        return inReq.orderedLabels[q.term2].length > 0
       },
       unannotatedLabels() {
         return {
-          term1: unannotatedLabels[settings.term1], 
-          term2: unannotatedLabels[settings.term2]
+          term1: inReq.unannotatedLabels[q.term1], 
+          term2: inReq.unannotatedLabels[q.term2]
         }
       },
       bins() {
-        return bins
+        return inReq.bins
       }
     }
   })
 }
 
-async function setValFxns(q, tdb, ds) {
+async function setValFxns(q, tdb, ds, inReq) {
   if(q.filter) {
     // for categorical terms, must convert values to valueset
     for(const t of q.filter) {
@@ -233,51 +230,51 @@ async function setValFxns(q, tdb, ds) {
         t.valueset = new Set( t.values.map(i=>i.key) )
       }
     }
-    q.filterfxn = (row) => {
+    inReq.filterFxn = (row) => {
       return sample_match_termvaluesetting( row, q.filter )
     }
   }
 
   for(const term of ['term0', 'term1', 'term2']) {
     const key = q[term]
-    if (!orderedLabels[key]) {
-      orderedLabels[key] = []
-      unannotatedLabels[key] = ""
+    if (!inReq.orderedLabels[key]) {
+      inReq.orderedLabels[key] = []
+      inReq.unannotatedLabels[key] = ""
     }
     if (key == "genotype") {
       if (!q.ssid) `missing ssid for genotype`
       const bySample = await load_genotype_by_sample(q.ssid)
       const skey = ds.cohort.samplenamekey
-      joinFxns[key] = row => bySample[row[skey]]
+      inReq.joinFxns[key] = row => bySample[row[skey]]
       continue
     }
     const t = tdb.termjson.map.get(key)
-    if ((!key || t.iscategorical) && key in joinFxns) continue
+    if ((!key || t.iscategorical) && key in inReq.joinFxns) continue
     if (!t) throw `Unknown ${term}="${q[term]}"`
     if (!t.graph) throw `${term}.graph missing`
     if (!t.graph.barchart) throw `${term}.graph.barchart missing`
     if (t.iscategorical) {
       /*** TODO: handle unannotated categorical values?  ***/
-      joinFxns[key] = row => row[key] 
+      inReq.joinFxns[key] = row => row[key] 
     } else if (t.isinteger || t.isfloat) {
-      get_numeric_bin_name(key, t, ds, term, q.custom_bins)
+      get_numeric_bin_name(key, t, ds, term, q.custom_bins, inReq)
     } else {
       throw "unsupported term binning"
     }
   }
 }
 
-function get_numeric_bin_name ( key, t, ds, termNum, custom_bins ) {
+function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
   const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum, custom_bins[termNum.slice(-1)] )
-  bins[termNum.slice(-1)] = binconfig.bins
+  inReq.bins[termNum.slice(-1)] = binconfig.bins
 
-  orderedLabels[key] = _orderedLabels
+  inReq.orderedLabels[key] = _orderedLabels
   if (binconfig.unannotated) {
-    unannotatedLabels[key] = binconfig.unannotated.label
+    inReq.unannotatedLabels[key] = binconfig.unannotated.label
   }
-  Object.assign(unannotated, binconfig.unannotated)
+  Object.assign(inReq.unannotated, binconfig.unannotated)
 
-  joinFxns[key] = row => {
+  inReq.joinFxns[key] = row => {
     const v = row[key]
     if( binconfig.unannotated && v == binconfig.unannotated._value ) {
       return binconfig.unannotated.label
@@ -308,7 +305,7 @@ function get_numeric_bin_name ( key, t, ds, termNum, custom_bins ) {
     }
   }
 
-  numValFxns[key] = row => {
+  inReq.numValFxns[key] = row => {
     const v = row[key]
     if(!binconfig.unannotated || v !== binconfig.unannotated._value ) {
       return v
@@ -561,31 +558,3 @@ async function load_genotype_by_sample ( id ) {
   }
   return bySample
 }
-
-function may_apply_termfilter ( q, ds ) {
-  if(!q.termfilter) return ds
-
-  // for categorical terms, must convert values to valueset
-  for(const t of q.termfilter) {
-    if(t.term.iscategorical) {
-      t.valueset = new Set( t.values.map(i=>i.key) )
-    }
-  }
-
-  /*
-  if needs filter, ds_filtered to point to a copy of ds with modified cohort.annotation{} with those samples passing filter
-  filter by keeping only samples annotated to certain term (e.g. wgs)
-  */
-  let all=0, use=0
-  const new_annotation = {}
-  for(const sample in ds.cohort.annotation) {
-    const sa = ds.cohort.annotation[ sample ]
-    if( sample_match_termvaluesetting( sa, q.termfilter ) ) {
-      new_annotation[ sample ] = sa
-    }
-  }
-  return {
-    cohort:{annotation: new_annotation}
-  }
-}
-
