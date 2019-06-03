@@ -80,9 +80,13 @@ data is returned by xhr
 	if( data.info_fields) {
 		update_info_fields( data.info_fields, tk )
 	}
-	if( data.popsetaverage ) {
-		tk.vcf.numerical_axis.AFtest.groups.find(i=>i.is_termdb).popsetaverage = data.popsetaverage
-		// for displaying in variant tooltip
+	if( data.AFtest_termdbgroup ) {
+		const group = tk.vcf.numerical_axis.AFtest.groups.find(i=>i.is_termdb)
+		if( data.AFtest_termdbgroup.popsetaverage) {
+			// for displaying in variant tooltip
+			group.popsetaverage = data.popsetaverage
+		}
+		group.dom.samplehandle.text('n='+data.AFtest_termdbgroup.samplecount+', view stats')
 	}
 }
 
