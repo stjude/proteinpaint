@@ -3,6 +3,7 @@ const path = require('path')
 const utils = require('./utils')
 const Partjson = require('./partjson')
 const d3format = require('d3-format')
+const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
 
 const settings = {}
 const pj = getPj(settings)
@@ -29,8 +30,21 @@ exports.handle_request_closure = ( genomes ) => {
   return async (req, res) => {
     const q = req.query
     if (q.custom_bins) {
-      q.custom_bins = JSON.parse(decodeURIComponent(q.custom_bins))
+      try {
+        q.custom_bins = JSON.parse(decodeURIComponent(q.custom_bins))
+      } catch(e) {
+        res.send({error: (e.message || e)})
+        if(e.stack) console.log(e.stack)
+      }
     } 
+    if (q.filter) {
+      try {
+        q.filter = JSON.parse(decodeURIComponent(q.filter))
+      } catch(e) {
+        res.send({error: (e.message || e)})
+        if(e.stack) console.log(e.stack)
+      }
+    }
     try {
       const genome = genomes[ q.genome ]
       if(!genome) throw 'invalid genome'
@@ -134,6 +148,8 @@ function getPj(settings) {
     },
     "=": {
       vals(row) {
+        if (settings.filterfxn && !settings.filterfxn(row)) return undefined
+
         const chartId = joinFxns[settings.term0](row)
         const seriesId = joinFxns[settings.term1](row)
         const dataId = joinFxns[settings.term2](row)
@@ -210,6 +226,18 @@ function getPj(settings) {
 }
 
 async function setValFxns(q, tdb, ds) {
+  if(q.filter) { console.log(q.filter)
+    // for categorical terms, must convert values to valueset
+    for(const t of q.filter) {
+      if(t.term.iscategorical) {
+        t.valueset = new Set( t.values.map(i=>i.key) )
+      }
+    }
+    q.filterfxn = (row) => {
+      return sample_match_termvaluesetting( row, q.filter )
+    }
+  }
+
   for(const term of ['term0', 'term1', 'term2']) {
     const key = q[term]
     if (!orderedLabels[key]) {
@@ -532,5 +560,32 @@ async function load_genotype_by_sample ( id ) {
     }
   }
   return bySample
+}
+
+function may_apply_termfilter ( q, ds ) {
+  if(!q.termfilter) return ds
+
+  // for categorical terms, must convert values to valueset
+  for(const t of q.termfilter) {
+    if(t.term.iscategorical) {
+      t.valueset = new Set( t.values.map(i=>i.key) )
+    }
+  }
+
+  /*
+  if needs filter, ds_filtered to point to a copy of ds with modified cohort.annotation{} with those samples passing filter
+  filter by keeping only samples annotated to certain term (e.g. wgs)
+  */
+  let all=0, use=0
+  const new_annotation = {}
+  for(const sample in ds.cohort.annotation) {
+    const sa = ds.cohort.annotation[ sample ]
+    if( sample_match_termvaluesetting( sa, q.termfilter ) ) {
+      new_annotation[ sample ] = sa
+    }
+  }
+  return {
+    cohort:{annotation: new_annotation}
+  }
 }
 

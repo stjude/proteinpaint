@@ -47,7 +47,7 @@ export class TermdbBarchart{
 
   main(_settings={}, obj=null) {
     if (obj) {
-      this.obj = obj; //console.log(obj, this.obj)
+      this.obj = obj
       if (obj.modifier_barchart_selectbar) {
         this.click_callback = obj.modifier_barchart_selectbar.callback
       }
@@ -78,6 +78,11 @@ export class TermdbBarchart{
       + '&term2=' + s.term2
       + '&ssid=' + s.ssid
       + '&mname=' + s.mname
+      + '&filter=' + (
+          !this.obj.termfilter 
+          ? ''
+          : encodeURIComponent(JSON.stringify(this.obj.termfilter.terms))
+      )
       + '&custom_bins=' + (
         !s.custom_bins 
         ? '' 

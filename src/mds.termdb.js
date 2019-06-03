@@ -164,6 +164,7 @@ function may_display_termfilter ( obj ) {
 		// do not display the terms
 		return
 	}
+	obj.filterCallbacks = []
 	// term filter in use
 	const div = obj.termfilterdiv
 		.style('display','block')
@@ -178,7 +179,12 @@ function may_display_termfilter ( obj ) {
 		obj.mds,
 		obj.genome,
 		false,
-		()=>{}
+		// callback
+		() => {
+			for(const fxn of obj.filterCallbacks) {
+				fxn()
+			}
+		} 
 	)
 }
 

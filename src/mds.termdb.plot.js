@@ -16,7 +16,12 @@ import {controls} from './mds.termdb.controls'
       term: arg.term,   // 1st term 
       items: arg.items, // with all items in the term with item.label and item.value
       settings: {
-        // see comments in the render function
+        common: {
+          // settings that affect more than view
+        },
+        bar | boxplot: { 
+          // see the settings and comments in the mds.termdb.[bar | boxplot] code 
+        }
       },
       dom: {
         // will hold parent DOM elements for the general layout
@@ -150,6 +155,9 @@ arg: server returned data
   plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
   plot.term2 = arg.term2
   do_plot( plot )
+  if (Array.isArray(arg.obj.filterCallbacks)) {
+    arg.obj.filterCallbacks.push(()=>do_plot(plot))
+  }
 }
 
 function do_plot ( plot ) {
