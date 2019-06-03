@@ -3,7 +3,7 @@ import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
 import {init,add_searchbox_4term} from './mds.termdb'
-import {make_termvalueselection_ui} from './mds.termdb.termvaluesetting.ui'
+import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 import {
 	may_setup_numerical_axis,
 	get_axis_label,
@@ -499,7 +499,7 @@ function menu_edit_one_group(tk, block, group, group_td, settingholder){
 function legend_show_onegroup_AFtest ( tk, block, group, holder ) {
 // display one AFtest group in legend
 	if( group.is_termdb ) {
-		make_termvalueselection_ui( holder, group, tk.mds, block.genome, true,
+		termvaluesettingui.display( holder, group, tk.mds, block.genome, true,
 			async ()=>{
 				await tk.load()
 			}

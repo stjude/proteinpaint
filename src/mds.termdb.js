@@ -4,7 +4,7 @@ import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-s
 import {render} from './mds.termdb.plot'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
-import {make_termvalueselection_ui} from './mds.termdb.termvaluesetting.ui'
+import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 
 
 /*
@@ -21,7 +21,7 @@ init accepts obj{}
 
 triggers
 obj.default_rootterm{}
-	allow obj.filter_terms[]
+	allow obj.termfilter[]
 
 
 modifiers, for modifying the behavior/display of the term tree
@@ -78,7 +78,7 @@ obj{}:
 */
 	window.obj = obj // for testing
 	obj.errdiv = obj.div.append('div')
-	obj.termfilterdiv = obj.div.append('div')
+	obj.termfilterdiv = obj.div.append('div').style('display','none')
 	obj.treediv = obj.div.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
 	obj.div.on('click.tdb', ()=>{
@@ -164,8 +164,16 @@ function may_display_termfilter ( obj ) {
 		// do not display the terms
 		return
 	}
-	make_termvalueselection_ui(
-		obj.termfilterdiv,
+	// term filter in use
+	const div = obj.termfilterdiv
+		.style('display','block')
+		.append('div')
+		.style('display','inline-block')
+		.style('border','solid 1px #ededed')
+		.style('padding','5px')
+		.style('margin-bottom','10px')
+	termvaluesettingui.display(
+		div,
 		obj.termfilter,
 		obj.mds,
 		obj.genome,
@@ -353,6 +361,10 @@ such conditions may be carried by obj
 			barchart: {
 				id: term.id
 			}
+		}
+		if( obj.termfilter ) {
+			arg.termfilter = termvaluesettingui.to_parameter( obj.termfilter.terms )
+			// may add other flags
 		}
 		/// modifier
 		if( obj.modifier_ssid_barchart ) {

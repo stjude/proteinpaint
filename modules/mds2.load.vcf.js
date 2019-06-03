@@ -13,10 +13,10 @@ const validate_termvaluesetting = require('../src/mds.termdb.termvaluesetting').
 handle_vcfbyrange
 handle_ssidbyonem
 handle_getcsq
+sample_match_termvaluesetting
 ********************** INTERNAL
 get_columnidx_byterms
 wrap_validate_termvaluesetting
-sample_match_termvaluesetting
 set_querymode
 query_vcf_applymode
 getallelecount_samplegroup_vcfline
@@ -280,7 +280,7 @@ a sample must meet all term conditions
 	for( const [i, sample] of vcfsamples.entries() ) {
 		const sanno = ds.cohort.annotation[ sample.name ]
 		if(!sanno) continue
-		if( sample_match_termvaluesetting( sanno, terms, ds ) ) {
+		if( sample_match_termvaluesetting( sanno, terms ) ) {
 			usesampleidx.push( i )
 		}
 	}
@@ -714,6 +714,7 @@ function wrap_validate_termvaluesetting ( terms, where ) {
 
 
 
+
 function sample_match_termvaluesetting ( sanno, terms ) {
 	// for AND, require all terms to match
 
@@ -771,6 +772,9 @@ function sample_match_termvaluesetting ( sanno, terms ) {
 	// using OR
 	return numberofmatchedterms > 0
 }
+exports.sample_match_termvaluesetting = sample_match_termvaluesetting
+
+
 
 
 

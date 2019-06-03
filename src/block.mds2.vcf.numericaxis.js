@@ -7,6 +7,7 @@ import * as client from './client'
 import {vcf_m_color, divide_data_to_group} from './block.mds2.vcf'
 import {vcf_clickvariant} from './block.mds2.vcf.clickvariant'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
+import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 
 
 /*
@@ -1042,7 +1043,7 @@ append numeric axis parameter to object for loadTk
 				if( g.is_termdb ) {
 					lst.push({
 						is_termdb: true,
-						terms: terms2parameter( g.terms ),
+						terms: termvaluesettingui.to_parameter( g.terms ),
 					})
 				} else if( g.is_infofield ) {
 					const par = {
@@ -1076,26 +1077,6 @@ append numeric axis parameter to object for loadTk
 	throw 'unknown type of numeric axis'
 }
 
-
-
-
-function terms2parameter ( terms ) {
-// for one of term-value setting
-// TODO and/or between multiple terms
-	return terms.map( i=> {
-		return {
-			term: {
-				id: i.term.id,
-				iscategorical: i.term.iscategorical,
-				isfloat: i.term.isfloat,
-				isinteger: i.term.isinteger,
-			},
-			values: i.values,
-			range: i.range,
-			isnot: i.isnot,
-		}
-	})
-}
 
 
 

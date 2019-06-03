@@ -2,7 +2,16 @@ import * as client from './client'
 import {init} from './mds.termdb'
 
 
-export async function make_termvalueselection_ui( holder_div, group, mds, genome, count_limit_vcf, callback){
+/*
+********************** EXPORTED
+display
+to_parameter
+********************** INTERNAL
+*/
+
+
+
+export async function display ( holder_div, group, mds, genome, count_limit_vcf, callback){
 /*
 group{}
 	.terms[]
@@ -523,4 +532,26 @@ function may_settoloading_termgroup ( group ) {
 		group.div_populationaverage.selectAll('*').remove()
 		group.div_populationaverage.append('div').text('Loading...')
 	}
+}
+
+
+
+
+export function to_parameter ( terms ) {
+// for one of term-value setting
+// TODO and/or between multiple terms
+	return terms.map( i=> {
+		return {
+			term: {
+				id: i.term.id,
+				iscategorical: i.term.iscategorical,
+				isfloat: i.term.isfloat,
+				isinteger: i.term.isinteger,
+			},
+			// must return original values[{key,label}] to keep the validator function happy on both client/server
+			values: i.values,
+			range: i.range,
+			isnot: i.isnot,
+		}
+	})
 }
