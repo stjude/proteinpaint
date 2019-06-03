@@ -226,7 +226,7 @@ function getPj(settings) {
 }
 
 async function setValFxns(q, tdb, ds) {
-  if(q.filter) { console.log(q.filter)
+  if(q.filter) {
     // for categorical terms, must convert values to valueset
     for(const t of q.filter) {
       if(t.term.iscategorical) {
