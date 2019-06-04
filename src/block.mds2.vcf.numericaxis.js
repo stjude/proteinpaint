@@ -7,6 +7,7 @@ import * as client from './client'
 import {vcf_m_color, divide_data_to_group} from './block.mds2.vcf'
 import {vcf_clickvariant} from './block.mds2.vcf.clickvariant'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
+import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 
 
 /*
@@ -16,8 +17,7 @@ adapted from legacy code
 render
 may_setup_numerical_axis
 get_axis_label
-get_axis_label_termdb2groupAF
-get_axis_label_ebgatest
+get_axis_label_AFtest
 maygetparameter_numericaxis
 ********************** INTERNAL
 numeric_make
@@ -44,7 +44,8 @@ const disclabelspacing = 1 // px spacing between disc and label
 const middlealignshift = .3
 const labyspace = 5
 const clustercrowdlimit = 7 // at least 8 px per disc, otherwise won't show mname label
-
+// when using an info field, if the variant is not annotated and no missing_value is available from the info field, use this
+const hardcode_missing_value = 0
 
 
 
@@ -63,8 +64,6 @@ value may be singular number, or boxplot
 	const nm = tk.vcf.numerical_axis
 
 	numeric_make( nm, r, _g, datagroup, tk, block )
-
-	may_printinfo_axistype( data, nm )
 
 	return nm.toplabelheight
 		+nm.maxradius
@@ -630,15 +629,19 @@ function m_mouseover( m, nm, tk ) {
 	const color = vcf_m_color(m, tk)
 
 	const words = []
-	if( nm.inuse_termdb2groupAF ) {
-		// may add label
-		words.push( m.AF2group[0] )
-		words.push( m.AF2group[1] )
-	} else if( nm.inuse_ebgatest ) {
-		words.push( m.ebga.lpvalue )
+
+	if( nm.inuse_AFtest ) {
+		if( m.AFtest_group_values ) {
+			for(const v of m.AFtest_group_values) words.push(v)
+		} else if( m.AFtest_pvalue!=undefined ) {
+			words.push( m.AFtest_pvalue )
+		}
 	} else if( nm.inuse_infokey ) {
-		words.push( m._v )
+		words.push(m._v)
+	} else {
+		throw 'unknown axis type'
 	}
+
 	if(!m.labattop && !m.labatbottom) {
 		words.push( m.mname )
 	}
@@ -745,41 +748,46 @@ decide following things about the y axis:
 
 	// these are only for inuse_infokey
 	let info_key,
-		use_altinfo
+		use_altinfo,
+		missing_value
 
 	if( nm.inuse_infokey ) {
 		info_key = nm.info_keys.find( i=> i.in_use ).key // setup_numerical_axis guarantee this is valid
 		// if the INFO is A, apply to m.altinfo, else, to m.info
 		use_altinfo = tk.vcf.info[ info_key ].Number == 'A'
+		if(tk.info_fields) {
+			const i = tk.info_fields.find(i=>i.key == info_key )
+			if(i) {
+				missing_value = i.missing_value
+			}
+		}
 	}
 
 	for(const m of r.variants) {
 
 		let v = null
 
-		if( nm.inuse_termdb2groupAF ) {
+		if( nm.inuse_AFtest) {
 
-			v = m.AF2group[0] - m.AF2group[1]
+			v = m.nm_axis_value
 
-		} else if( nm.inuse_ebgatest ) {
-
-			v = m.ebga ? (m.ebga.lpvalue || 0) : 0
-
-		} else if( use_altinfo ) {
-
-			if( m.altinfo ) {
-				v = m.altinfo[ info_key ]
+		} else if( nm.inuse_infokey) {
+			if( use_altinfo ) {
+				if( m.altinfo ) {
+					v = m.altinfo[ info_key ]
+				}
+			} else {
+				if( m.info ) {
+					v = m.info[ info_key ]
+				}
 			}
-
+			if(!Number.isFinite( v )) {
+				// should only happen for info field, when this variant is not annotated by it
+				// may use the predefined missing value
+				v = Number.isFinite(missing_value) ? missing_value : hardcode_missing_value
+			}
 		} else {
-			if( m.info ) {
-				v = m.info[ info_key ]
-			}
-		}
-
-		if(!Number.isFinite( v )) {
-			// missing value, if there is a predefined one
-			v = Number.isFinite(nm.missing_value) ? nm.missing_value : 0
+			throw 'unknown axis type'
 		}
 
 		m._v = v // for later use
@@ -788,7 +796,7 @@ decide following things about the y axis:
 		nm.maxvalue = Math.max( nm.maxvalue, v )
 	}
 
-	if( nm.inuse_termdb2groupAF ) {
+	if( nm.inuse_AFtest && nm.AFtest.testby_AFdiff ) {
 		// for two group comparison, use the same range for two sides
 		const v = Math.max( Math.abs(nm.minvalue), Math.abs(nm.maxvalue) )
 		nm.minvalue = -v
@@ -800,8 +808,9 @@ decide following things about the y axis:
 
 export function may_setup_numerical_axis ( tk ) {
 /*
-to validate the numerical axis info field setting
+to validate the numerical axis settings
 and set the .isinteger and .label of nm
+by default the numerical axis may not specify what to use as test
 
 call this in makeTk()
 and switching numeric axis category
@@ -817,28 +826,23 @@ and switching numeric axis category
 
 	delete nm.isinteger
 
-	// which option to use
-	if( !nm.info_keys && !nm.termdb2groupAF && !nm.ebgatest ) throw 'no options for numerical axis'
+	if( !nm.info_keys && !nm.AFtest ) throw 'no options for numerical axis'
 
+	// decide which option to use
 	if( nm.inuse_infokey ) {
 		if( !nm.info_keys ) throw '.info_keys[] missing when inuse_infokey is true'
-	} else if( nm.inuse_termdb2groupAF ) {
-		if( !nm.termdb2groupAF ) throw '.termdb2groupAF missing when inuse_termdb2groupAF is true'
-	} else if( nm.inuse_ebgatest ) {
-		if( !nm.ebgatest ) throw '.ebgatest missing when inuse_ebgatest is true'
+	} else if( nm.inuse_AFtest ) {
+		if( !nm.AFtest ) throw '.AFtest{} missing when inuse_AFtest is true'
 	} else {
 		// no option in use, use one by default
-		if( nm.termdb2groupAF ) {
-			nm.inuse_termdb2groupAF = true
-		} else if ( nm.info_keys ) {
+		if( nm.AFtest ) {
+			nm.inuse_AFtest = true
+		} else {
 			nm.inuse_infokey = true
-		} else if ( nm.ebgatest ) {
-			nm.inuse_ebgatest = true
 		}
 	}
 
 	if( nm.info_keys ) {
-
 		// info keys
 		if(!Array.isArray(nm.info_keys)) throw 'numerical_axis.info_keys[] is not an array'
 		if(nm.info_keys.length==0) throw 'numerical_axis.info_keys[] array is empty'
@@ -846,15 +850,13 @@ and switching numeric axis category
 		let info_element = nm.info_keys.find( i=> i.in_use ) // which element from tk.vcf.numerical_axis.info_keys is in use
 		if( !info_element ) {
 			info_element = nm.info_keys[0]
-			if( !info_element ) throw 'numerical_axis.info_keys is empty array'
 			info_element.in_use = true
 		}
 
 		if(!tk.vcf.info) throw 'VCF file has no INFO fields'
-		const info_field = tk.vcf.info[ info_element.key ]
-		if( !info_field ) throw 'unknown INFO field for numerical axis: '+info_element.key
 
 		if( nm.inuse_infokey ) {
+			// to decide if it's integer or floating point
 			let notset=true
 			if( tk.info_fields ) {
 				const a = tk.info_fields.find( i=> i.key == info_element.key )
@@ -864,36 +866,48 @@ and switching numeric axis category
 				}
 			}
 			if( notset ) {
-				if( info_field.Type=='Integer' ) nm.isinteger=true
+				// this info field is not found in tk.info_fields[], find it in vcf.info{}
+				const f = tk.vcf.info[ info_element.key ]
+				if( !f ) throw 'unknown INFO field for numerical axis: '+info_element.key
+				if( f.Type=='Integer' ) nm.isinteger=true
 			}
 		}
 	}
 
-	if( nm.termdb2groupAF ) {
-		const g = nm.termdb2groupAF
-		if(!g.group1) throw '.group1{} missing'
-		if(!g.group1.terms) throw '.group1.terms[] missing'
-		if(!g.group2) throw '.group2{} missing'
-		if(!g.group2.terms) throw '.group2.terms[] missing'
-		// allow terms array to be empty
-		validate_termvaluesetting( g.group1.terms, 'termdb2groupAF.group1' )
-		validate_termvaluesetting( g.group2.terms, 'termdb2groupAF.group2' )
-	}
-
-	if( nm.ebgatest ) {
-		const e = nm.ebgatest
-		if( !e.terms ) throw '.ebgatest.terms[] missing'
-		validate_termvaluesetting( e.terms, 'ebgatest' )
-		if( !e.populations ) throw 'ebgatest.populations[] missing'
-		for( const i of e.populations ) {
-			if(!i.key) throw '.key missing from a population of ebgatest'
-			if(!i.infokey_AC) throw '.infokey_AC missing from a population of ebgatest'
-			if(!i.infokey_AN) throw '.infokey_AN missing from a population of ebgatest'
+	if( nm.AFtest ) {
+		if(!nm.AFtest.allowed_infofields) throw 'AFtest.allowed_infofields[] is required'
+		if(!Array.isArray(nm.AFtest.allowed_infofields)) throw 'AFtest.allowed_infofields[] is not array'
+		if(!nm.AFtest.groups) throw 'AFtest.groups[] missing'
+		if(!Array.isArray(nm.AFtest.groups)) throw 'AFtest.groups[] is not array'
+		if(nm.AFtest.groups.length<2) throw 'AFtest.groups[] must have at least two elements'
+		for(const g of nm.AFtest.groups) {
+			if( g.is_termdb ) {
+				validate_termvaluesetting( g.terms, 'one group of AFtest.groups' )
+			} else if( g.is_infofield ) {
+				if(!g.key) throw 'key missing from a is_infofield group'
+				if(!nm.AFtest.allowed_infofields.find( i=>i.key==g.key )) throw 'info key not found in allowed_infofields: '+g.key
+			} else if( g.is_population ) {
+				if(!g.key) throw 'key missing from a is_population group'
+				if(!tk.populations) throw 'tk.populations{} missing when using a population group'
+				if(!tk.populations.find(i=>i.key==g.key)) throw 'unknown population by key: '+g.key
+			} else {
+				throw 'unknown type of group from AFtest.groups[]'
+			}
+		}
+		if( nm.AFtest.testby_AFdiff ) {
+			// validate AFdiff setting here
+		} else if( nm.AFtest.testby_fisher ) {
+			// require at least one termdb group
+			if( !nm.AFtest.groups.find( i=>i.is_termdb )) throw 'fisher test requires at least one termdb group'
+		} else {
+			throw 'AFtest: do not know how to do test'
 		}
 	}
 
-	if( nm.inuse_ebgatest ) {
-		nm.label = '-log10 P-value'
+	// axis label
+	if( nm.inuse_AFtest ) {
+		if(nm.AFtest.testby_AFdiff) nm.label = 'Allele frequency difference'
+		else if(nm.AFtest.testby_fisher) nm.label = '-log10 P-value'
 	} else {
 		nm.label = get_axis_label( tk )
 	}
@@ -997,22 +1011,17 @@ export function get_axis_label ( tk ) {
 		}
 		return key.key
 	}
-	if( nm.inuse_termdb2groupAF ) return get_axis_label_termdb2groupAF(tk)
-	if( nm.inuse_ebgatest ) return get_axis_label_ebgatest(tk)
+	if( nm.inuse_AFtest ) return get_axis_label_AFtest()
 	return 'Error: unknown type of axis'
 }
 
 
 
-export function get_axis_label_termdb2groupAF ( tk ) {
+export function get_axis_label_AFtest () {
 	// TODO need to synthesize a more informative label based on term settings of group1/2
-	return 'Two-group AF comparison'
+	return 'Compare two groups'
 }
 
-export function get_axis_label_ebgatest ( tk ) {
-	// TODO 
-	return 'Race background adjusted test'
-}
 
 
 
@@ -1024,47 +1033,50 @@ append numeric axis parameter to object for loadTk
 	const nm = tk.vcf.numerical_axis
 	if(!nm) return
 	if(!nm.in_use) return
-	if( nm.inuse_termdb2groupAF && nm.termdb2groupAF ) {
-		par.termdb2groupAF = {
-			group1: {
-				terms: terms2parameter( nm.termdb2groupAF.group1.terms )
-			},
-			group2: {
-				terms: terms2parameter( nm.termdb2groupAF.group2.terms )
-			},
-		}
+	if( nm.inuse_infokey ) {
+		// no parameter
 		return
 	}
-	if( nm.inuse_ebgatest && nm.ebgatest ) {
-		par.ebgatest = {
-			terms: terms2parameter( nm.ebgatest.terms ),
-			populations: nm.ebgatest.populations
+	if( nm.inuse_AFtest && nm.AFtest ) {
+		par.AFtest = {
+			groups: nm.AFtest.groups.reduce( (lst, g)=>{
+				if( g.is_termdb ) {
+					lst.push({
+						is_termdb: true,
+						terms: termvaluesettingui.to_parameter( g.terms ),
+					})
+				} else if( g.is_infofield ) {
+					const par = {
+						is_infofield:true,
+						key: g.key,
+					}
+					if(tk.info_fields) {
+						// attempt to get missing value
+						const i = tk.info_fields.find( j=>j.key==g.key )
+						if(i && i.missing_value!=undefined) {
+							par.missing_value = i.missing_value
+						}
+					}
+					lst.push( par )
+				} else if( g.is_population ) {
+					lst.push({
+						is_population:true,
+						key: g.key
+					})
+				} else {
+					throw 'unknown group type at xhr parameter'
+				}
+				return lst
+			}, [])
 		}
+		if(nm.AFtest.testby_AFdiff) par.AFtest.testby_AFdiff=true
+		if(nm.AFtest.testby_fisher) par.AFtest.testby_fisher=true
+		if(nm.AFtest.adjust_race) par.AFtest.adjust_race=true
 		return
 	}
-	// add more axis type
+	throw 'unknown type of numeric axis'
 }
 
-
-
-
-function terms2parameter ( terms ) {
-// works for list of terms from either termdb2groupAF or ebgatest
-// TODO and/or between multiple terms
-	return terms.map( i=> {
-		return {
-			term: {
-				id: i.term.id,
-				iscategorical: i.term.iscategorical,
-				isfloat: i.term.isfloat,
-				isinteger: i.term.isinteger,
-			},
-			values: i.values,
-			range: i.range,
-			isnot: i.isnot,
-		}
-	})
-}
 
 
 

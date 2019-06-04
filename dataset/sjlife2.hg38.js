@@ -13,7 +13,8 @@ module.exports={
 	cohort:{
 		files:[
 			{file:'files/hg38/sjlife/clinical/matrix'},
-			{file:'files/hg38/sjlife/cohort/admix'}
+			{file:'files/hg38/sjlife/cohort/admix'},
+			{file:'files/hg38/sjlife/cohort/geneticrace'}
 		],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds)=>{
@@ -92,7 +93,6 @@ module.exports={
 				isfloat:1,
 				range: {
 					startunbounded:true,
-					//startinclusive: bool
 					stop: 0.1,
 					stopinclusive:true
 				}
@@ -103,6 +103,7 @@ module.exports={
 				isfilter:true,
 				isactivefilter:true,
 				isfloat:1,
+				missing_value:0,
 				range: {
 					start: 0.1,
 					startinclusive: true,
@@ -112,9 +113,10 @@ module.exports={
 			},
 			{
 				key:'gnomAD_AF_afr',
-				label:'gnomAD African-American allele frequency',
+				label:'gnomAD allele frequency, African-American',
 				isfilter:true,
 				isfloat:1,
+				missing_value:0,
 				range: {
 					start: 0.1,
 					startinclusive: true,
@@ -124,9 +126,10 @@ module.exports={
 			},
 			{
 				key:'gnomAD_AF_eas',
-				label:'gnomAD East Asian allele frequency',
+				label:'gnomAD allele frequency, East Asian',
 				isfilter:true,
 				isfloat:1,
+				missing_value:0,
 				range: {
 					start: 0.1,
 					startinclusive: true,
@@ -136,9 +139,10 @@ module.exports={
 			},
 			{
 				key:'gnomAD_AF_nfe',
-				label:'gnomAD non-Finnish European allele frequency',
+				label:'gnomAD allele frequency, non-Finnish European',
 				isfilter:true,
 				isfloat:1,
+				missing_value:0,
 				range: {
 					start: 0.1,
 					startinclusive: true,
@@ -148,22 +152,38 @@ module.exports={
 			},
 			{
 				key:'BadBLAT',
+				label:'Bad blat',
 				isflag:true,
 				isfilter:true,
-				isactivefilter:true,
-				remove_yes:true
 			},
-			/*
-			{
-				key:'DB',
-				label:'dbSNP membership',
-				isflag:true,
-				isfilter:true,
-				isactivefilter:true,
-				remove_no:true
-			},
-			*/
 		],
+
+
+		populations:[
+			{
+				key:'gnomAD',
+				label:'gnomAD',
+				sets:[
+					// per variant, the control population allele counts are hardcoded to be info fields
+					{
+						key:'CEU', // header of file "cohort/admix"
+						infokey_AC: 'gnomAD_AC_nfe',
+						infokey_AN: 'gnomAD_AN_nfe'
+					},
+					{
+						key:'YRI',
+						infokey_AC: 'gnomAD_AC_afr',
+						infokey_AN: 'gnomAD_AN_afr'
+					},
+					{
+						key:'ASA',
+						infokey_AC: 'gnomAD_AC_eas',
+						infokey_AN: 'gnomAD_AN_eas'
+					}
+				],
+			}
+		],
+
 
 		vcf: {
 			file:'files/hg38/sjlife/vcf/SJLIFE.vcf.gz',
@@ -174,15 +194,66 @@ module.exports={
 					{
 						key:'AF',
 						in_use:true,
-						// TODO bind complex things such as boxplot to one of the info fields
+						// TODO bind complex rendering such as boxplot to one of the info fields
 					},
-					{ key:'gnomAD_AF', missing_value: 0, },
-					{ key:'gnomAD_AF_afr', missing_value: 0, },
-					{ key:'gnomAD_AF_eas', missing_value: 0, },
-					{ key:'gnomAD_AF_nfe', missing_value: 0, }
+					{ key:'gnomAD_AF' },
+					{ key:'gnomAD_AF_afr' },
+					{ key:'gnomAD_AF_eas' },
+					{ key:'gnomAD_AF_nfe' }
 				],
 				in_use: true, // to use numerical axis by default
-				inuse_infokey:true,
+				//inuse_infokey:true,
+				inuse_AFtest:true,
+
+				AFtest:{
+					testby_AFdiff:false,
+					testby_fisher:true,
+					allowto_adjust_race:true, // can adjust based on admix
+					adjust_race:true,
+					groups:[
+						{
+							is_termdb:true,
+							terms:[
+								{
+									term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
+									values:[
+										{ key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'},
+									]
+								}
+							]
+						},
+						{ is_population:true, key:'gnomAD' },
+						/*
+						{
+							is_termdb:true,
+							terms:[
+								{
+									term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
+									values:[
+										{key:'Neuroblastoma',label:'Neuroblastoma'}
+									]
+								}
+							]
+						},
+						{ is_infofield:true, key:'gnomAD_AF' },
+						{ is_infofield:true, key:'gnomAD_AF_afr' },
+						*/
+					],
+					allowed_infofields:[
+						{ key:'gnomAD_AF' },
+						{ key:'gnomAD_AF_afr' },
+						{ key:'gnomAD_AF_eas' },
+						{ key:'gnomAD_AF_nfe' }
+					],
+					allowed_populations:[ 'gnomAD' ]
+				},
+
+
+
+
+
+
+
 
 				termdb2groupAF:{
 					group1:{
@@ -211,9 +282,20 @@ module.exports={
 
 				ebgatest: {
 					terms:[
+					/*
 						{
 							term:{id:'diaggrp',name:'Diagnosis Group', iscategorical:true },
 							values:[ {key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'} ]
+						}
+						*/
+						{
+							term:{id:'agedx',name:'Age at dx',isfloat:true},
+							range:{
+								start:0,
+								stop:4,
+								startinclusive:true,
+								stopinclusive:true
+							}
 						}
 					],
 					populations:[

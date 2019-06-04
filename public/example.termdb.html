@@ -23,6 +23,14 @@ runproteinpaint({
 		dslabel:'SJLife',
 		genome:'hg38',
 		default_rootterm:{},
+		termfilter:{
+			terms:[
+				{
+				term:{id:'diaggrp',iscategorical:true,name:'diaggrp'},
+				values:[{key:'Acute lymphoblastic leukemia',label:'ALL'}]
+				}
+			]
+		}
 	},
 })
 </script>

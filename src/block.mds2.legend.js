@@ -15,12 +15,6 @@ update
 create_mclass
 update_mclass
 update_info_fields
-display_active_variantfilter_infofield
-display_categorical_filter
-display_flag_filter
-display_numeric_filter
-menu_list_all_variantfilter
-configure_one_infofield
 */
 
 
@@ -85,6 +79,14 @@ data is returned by xhr
 	}
 	if( data.info_fields) {
 		update_info_fields( data.info_fields, tk )
+	}
+	if( data.AFtest_termdbgroup ) {
+		const group = tk.vcf.numerical_axis.AFtest.groups.find(i=>i.is_termdb)
+		if( data.AFtest_termdbgroup.popsetaverage) {
+			// for displaying in variant tooltip
+			group.popsetaverage = data.popsetaverage
+		}
+		group.dom.samplehandle.text('n='+data.AFtest_termdbgroup.samplecount+', view stats')
 	}
 }
 
@@ -254,9 +256,9 @@ data is data.info_fields{}
 					}
 				}
 			} else if( i.isinteger || i.isfloat ) {
-				i.htmlspan.text('('+i._data.filteredcount+' filtered)')
+				if( i.htmlspan ) i.htmlspan.text('('+i._data.filteredcount+' filtered)')
 			} else if( i.isflag ) {
-				i.htmlspan.text('('+(i.remove_yes?i._data.count_yes:i._data.count_no)+') '+(i.remove_no?'No':'Yes'))
+				if( i.htmlspan ) i.htmlspan.text('('+(i.remove_yes?i._data.count_yes:i._data.count_no)+') '+(i.remove_no?'No':'Yes'))
 			} else {
 				throw 'unknown info type'
 			}

@@ -1,4 +1,6 @@
+// barchart renderer settings
 export default JSON.stringify({
+    orientation: 'horizontal', // vertical | horizontal
     h: {},
     relayTiles: false,
     svgw: 600,
@@ -20,8 +22,8 @@ export default JSON.stringify({
 
     rowtick: 8,
     coltick: 5,
-    rowlabtickspace: 4,
-    collabtickspace: 4,
+    rowlabtickspace: 0,
+    collabtickspace: 0,
 
     collabelh: 100,
     rowlabelw: 100,

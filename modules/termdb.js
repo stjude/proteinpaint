@@ -2,6 +2,7 @@ const app = require('../app')
 const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
+const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
 
 
 
@@ -40,7 +41,7 @@ return async (req, res) => {
 		const tdb = ds.cohort.termdb
 		if(!tdb) throw 'no termdb for this dataset'
 
-		const ds_filtered = may_filter_samples( q, tdb, ds )
+		const ds_filtered = may_apply_termfilter( q, ds )
 
 		// process triggers
 
@@ -80,13 +81,31 @@ return async (req, res) => {
 
 
 
-function may_filter_samples ( q, tdb, ds ) {
-/*
-if needs filter, ds_filtered to point to a copy of ds with modified cohort.annotation{} with those samples passing filter
-filter by keeping only samples annotated to certain term (e.g. wgs)
-filter by genotype of a variant
-*/
-	return ds
+function may_apply_termfilter ( q, ds ) {
+	if(!q.termfilter) return ds
+
+	// for categorical terms, must convert values to valueset
+	for(const t of q.termfilter) {
+		if(t.term.iscategorical) {
+			t.valueset = new Set( t.values.map(i=>i.key) )
+		}
+	}
+
+	/*
+	if needs filter, ds_filtered to point to a copy of ds with modified cohort.annotation{} with those samples passing filter
+	filter by keeping only samples annotated to certain term (e.g. wgs)
+	*/
+	let all=0, use=0
+	const new_annotation = {}
+	for(const sample in ds.cohort.annotation) {
+		const sa = ds.cohort.annotation[ sample ]
+		if( sample_match_termvaluesetting( sa, q.termfilter ) ) {
+			new_annotation[ sample ] = sa
+		}
+	}
+	return {
+		cohort:{annotation: new_annotation}
+	}
 }
 
 
@@ -240,7 +259,7 @@ trigger_crosstab2term already complicated, don't want to add any more
 			binmax = Math.max( binmax, b.values[ b.values.length-1 ].value )
 
 			const group = {
-				label: b1.label,
+				label: b.label,
 				boxplot: app.boxplot_getvalue( b.values )
 			}
 

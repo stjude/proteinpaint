@@ -1,8 +1,11 @@
 import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import {render} from './mds.termdb.plot2'
+import {render} from './mds.termdb.plot'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
+import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
+import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
+
 
 /*
 
@@ -15,8 +18,10 @@ init accepts obj{}
 .mds{}
 .div
 
-obj has triggers
+
+triggers
 obj.default_rootterm{}
+	allow obj.termfilter[]
 
 
 modifiers, for modifying the behavior/display of the term tree
@@ -26,6 +31,7 @@ attach to obj{}
 ** modifier_ssid_barchart
 ** modifier_barchart_selectbar
 ** modifier_ssid_onterm
+
 
 
 
@@ -61,7 +67,7 @@ planned features:
 
 
 
-export async function init ( obj  ) {
+export async function init ( obj ) {
 /*
 obj{}:
 .genome {}
@@ -70,19 +76,18 @@ obj{}:
 .default_rootterm{}
 ... modifiers
 */
-
 	window.obj = obj // for testing
 	obj.errdiv = obj.div.append('div')
+	obj.termfilterdiv = obj.div.append('div').style('display','none')
 	obj.treediv = obj.div.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
 	obj.div.on('click.tdb', ()=>{
-		// the plot.button_row in mds.termdb.plot2 and
+		// the plot.button_row in mds.termdb.plot and
 		// individual buttons in the term tree captures
 		// the click event, so stopPropagation in here 
 		// does not affect those event handlers/callbacks 
 		d3event.stopPropagation()
-		
-		if (d3event.target.innerHTML == "CROSSTAB") return
+		if (d3event.target.innerHTML == "CROSSTAB" || d3event.target.className == "crosstab-btn") return
 		// since the click event is not propagated to body,
 		// handle the tip hiding here since the body.click
 		// handler in client.js Menu will not be triggered
@@ -98,6 +103,7 @@ obj{}:
 		obj.do_query = (arg) => {
 			arg.genome = obj.genome.name
 			arg.dslabel = obj.mds.label
+			arg.termfilter = obj.termfilter ? obj.termfilter.terms : ''
 			return client.dofetch('termdb', arg)
 		}
 
@@ -126,6 +132,8 @@ also for showing term tree, allowing to select certain terms
 
 */
 
+	may_display_termfilter( obj )
+
 	const data = await obj.do_query( {
 		default_rootterm: 1
 	})
@@ -143,6 +151,48 @@ also for showing term tree, allowing to select certain terms
 
 		print_one_term( arg, obj )
 	}
+}
+
+
+
+
+function may_display_termfilter ( obj ) {
+	if(!obj.termfilter) return
+	if(!obj.termfilter.terms) return
+	if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
+	validate_termvaluesetting( obj.termfilter.terms )
+	if( obj.termfilter.no_display ) {
+		// do not display the terms
+		return
+	}
+	obj.filterCallbacks = []
+	// term filter in use
+	const div = obj.termfilterdiv
+		.style('display','block')
+		.append('div')
+		.style('display','inline-block')
+		.style('border','solid 1px #ddd')
+		.style('padding','7px')
+		.style('margin-bottom','10px')
+	div.append('div')
+		.style('display','inline-block')
+		.style('margin','0px 5px')
+		.text('FILTER')
+		.style('opacity','.5')
+		.style('font-size','.7em')
+	termvaluesettingui.display(
+		div,
+		obj.termfilter,
+		obj.mds,
+		obj.genome,
+		false,
+		// callback when updating the filter
+		() => {
+			for(const fxn of obj.filterCallbacks) {
+				fxn()
+			}
+		} 
+	)
 }
 
 
@@ -297,6 +347,7 @@ such conditions may be carried by obj
 		.style('margin','10px')
 		.style('padding','10px')
 		.style('display','none')
+		.style('position','relative')
 
 	// these to be shared for crosstab function
 	term.graph.barchart.dom = {
@@ -324,6 +375,10 @@ such conditions may be carried by obj
 				id: term.id
 			}
 		}
+		if( obj.termfilter ) {
+			arg.termfilter = termvaluesettingui.to_parameter( obj.termfilter.terms )
+			// may add other flags
+		}
 		/// modifier
 		if( obj.modifier_ssid_barchart ) {
 			arg.ssid = obj.modifier_ssid_barchart.ssid
@@ -336,6 +391,7 @@ such conditions may be carried by obj
 
 			// make barchart
 			const plot = {
+				obj,
 				holder: div,
 				genome: obj.genome.name,
 				dslabel: obj.mds.label,
@@ -364,7 +420,7 @@ such conditions may be carried by obj
 
 			}
 
-			render( plot, obj )
+			render( plot )
 		} catch(e) {
 			client.sayerror( div, e.message || e)
 			if(e.stack) console.log(e.stack)
@@ -492,16 +548,18 @@ providing all the customization options
 				.style('color','black')
 
 			const plot = {
-				obj: obj,
+				obj,
 				genome: obj.genome.name,
 				dslabel: obj.mds.label,
 				holder: term1.graph.barchart.dom.div,
 				term: term1,
 				term2: result.term2,
 				items: result.items,
-				default2showtable: true // a flag for barchart to show html table view by default
+				default2showtable: true, // a flag for barchart to show html table view by default,
+				term2_displaymode: 'table',
+				termfilter: obj.termfilter
 			}
-			render( plot, obj )
+			render( plot )
 		}
 	})
 }

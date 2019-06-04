@@ -12,7 +12,7 @@ maymakebutton_termdbbygenotype
 maymakebutton_mafcovplot
 maymakebutton_fimo
 show_functionalannotation
-may_show_ebgatest_table
+may_show_contigencytable
 */
 
 
@@ -135,8 +135,8 @@ function maymakebutton_termdbbygenotype ( buttonrow, showholder, m, tk, block ) 
 
 
 
-function may_show_ebgatest_table( div, m, tk ) {
-	if(!tk.vcf.numerical_axis || !tk.vcf.numerical_axis.inuse_ebgatest || !m.ebga || !m.ebga.table) return
+function may_show_contigencytable( div, m, tk ) {
+	if(!tk.vcf.numerical_axis || !tk.vcf.numerical_axis.inuse_AFtest || !tk.vcf.numerical_axis.AFtest || !tk.vcf.numerical_axis.AFtest.testby_fisher || !m.contigencytable) return
 	const table = div.append('table')
 		.style('margin','20px 0px')
 		.style('border','1px solid #ccc')
@@ -149,32 +149,95 @@ function may_show_ebgatest_table( div, m, tk ) {
 	}
 	{
 		const tr = table.append('tr')
-		tr.append('th').text('Case') // TODO may show informative name based on term
-		tr.append('td').text( m.ebga.table[0] )
+		tr.append('th').text('Group 1') // TODO may show informative name based on term
+		tr.append('td').text( m.contigencytable[0].toFixed(0) )
 			.style('padding','5px')
-		tr.append('td').text( m.ebga.table[1] )
+		tr.append('td').text( m.contigencytable[1].toFixed(0) )
 			.style('padding','5px')
 	}
 	{
 		const tr = table.append('tr')
-		tr.append('th').text('Control')
-		tr.append('td').text( m.ebga.table[2].toFixed(0) )
+		tr.append('th').text('Group 2')
+		tr.append('td').text( m.contigencytable[2].toFixed(0) )
 			.style('padding','5px')
-		tr.append('td').text( m.ebga.table[3].toFixed(0) )
+		tr.append('td').text( m.contigencytable[3].toFixed(0) )
 			.style('padding','5px')
 	}
 	table.append('tr').append('td')
 		.attr('colspan',3)
 		.style('border','1px solid #ccc')
 		.style('padding','5px')
-		.html('<span style="opacity:.5">Fisher exact p-value:</span> '+m.ebga.pvalue)
+		.html('<span style="opacity:.5">Fisher exact p-value:</span> '+m.AFtest_pvalue)
+}
+
+
+
+function may_show_popsetadjvalue ( div, m, tk ) {
+	if(!m.popsetadjvalue) return
+
+	const af = tk.vcf.numerical_axis.AFtest
+
+	const termdbgidx = af.groups.findIndex(i=>i.is_termdb)
+	const termdbg = af.groups.find(i=>i.is_termdb)
+	const popgrp = af.groups.find(i=>i.is_population)
+
+	const table = div.append('table')
+		.style('margin','20px 0px')
+		.style('border','1px solid #ccc')
+		.style('border-collapse','collapse')
+	{
+		const tr = table.append('tr')
+		tr.append('td')
+			.style('padding','5px')
+		for(const s of termdbg.popsetaverage) {
+			tr.append('th')
+				.text(s[0])
+				.style('padding','5px')
+		}
+	}
+	{
+		const tr = table.append('tr')
+		tr.append('th')
+			.text('Group '+(termdbgidx+1)+' average admix')
+			.style('padding','5px')
+		for(const s of termdbg.popsetaverage) {
+			tr.append('td')
+				.text(s[1].toFixed(2))
+				.style('padding','5px')
+		}
+	}
+	{
+		const tr = table.append('tr')
+		tr.append('th')
+			.text(popgrp.key+' raw ALT/REF')
+			.style('padding','5px')
+		for(const s of termdbg.popsetaverage) {
+			const v = m.popsetadjvalue.find(i=>i[0]==s[0])
+			tr.append('td')
+				.text( v[1]+'/'+v[2])
+				.style('padding','5px')
+		}
+	}
+	{
+		const tr = table.append('tr')
+		tr.append('th')
+			.text(popgrp.key+' adjusted ALT/REF')
+			.style('padding','5px')
+		for(const s of termdbg.popsetaverage) {
+			const v = m.popsetadjvalue.find(i=>i[0]==s[0])
+			tr.append('td')
+				.text( v[3]+'/'+v[4])
+				.style('padding','5px')
+		}
+	}
 }
 
 
 
 function show_functionalannotation ( div, m, tk, block ) {
 
-	may_show_ebgatest_table( div, m, tk )
+	may_show_contigencytable( div, m, tk )
+	may_show_popsetadjvalue( div, m, tk )
 
 	// first row: brief info about the variant
 

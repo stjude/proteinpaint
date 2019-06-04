@@ -173,6 +173,9 @@ Note: must keep customizations of official tk through embedding api
 		// TODO accept customizations
 		tk.info_fields = JSON.parse(JSON.stringify(tk.mds.track.info_fields))
 	}
+	if( tk.mds.track.populations ) {
+		tk.populations = JSON.parse(JSON.stringify(tk.mds.track.populations))
+	}
 }
 
 
@@ -197,10 +200,7 @@ function may_validate_info_fields ( tk ) {
 		} else if( i.isinteger || i.isfloat ) {
 			if(!i.range) throw '.range{} missing from a numeric info field '+i.label
 		} else if( i.isflag ) {
-			if(!i.remove_yes && !i.remove_no) {
-				// neither set, pick one
-				i.remove_no = true
-			}
+			// no setting
 		} else {
 			throw 'info field '+i.label+' neither numerical or categorical'
 		}

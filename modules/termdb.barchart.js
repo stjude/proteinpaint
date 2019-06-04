@@ -2,21 +2,10 @@ const app = require('../app')
 const path = require('path')
 const utils = require('./utils')
 const Partjson = require('./partjson')
-const d3format = require('d3-format')
-
-const settings = {}
-const pj = getPj(settings)
-const joinFxns = {
-  "": () => ""
-}
-const numValFxns = {
-  "": () => {}
-}
 const serverconfig = __non_webpack_require__('./serverconfig.json')
-const unannotated = {}
-const orderedLabels = {}
-const unannotatedLabels = {}
-const binLabelFormatter = d3format.format('r')
+const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
+const d3format = require('d3-format')
+const binLabelFormatter = d3format.format('.3r')
 
 /*
 ********************** EXPORTED
@@ -28,8 +17,21 @@ exports.handle_request_closure = ( genomes ) => {
   return async (req, res) => {
     const q = req.query
     if (q.custom_bins) {
-      q.custom_bins = JSON.parse(decodeURIComponent(q.custom_bins))
+      try {
+        q.custom_bins = JSON.parse(decodeURIComponent(q.custom_bins))
+      } catch(e) {
+        res.send({error: (e.message || e)})
+        if(e.stack) console.log(e.stack)
+      }
     } 
+    if (q.filter) {
+      try {
+        q.filter = JSON.parse(decodeURIComponent(q.filter))
+      } catch(e) {
+        res.send({error: (e.message || e)})
+        if(e.stack) console.log(e.stack)
+      }
+    }
     try {
       const genome = genomes[ q.genome ]
       if(!genome) throw 'invalid genome'
@@ -64,18 +66,28 @@ if is a numeric term, also get distribution
   //if(!term.graph) throw 'graph is not available for said term'
   //if(!term.graph.barchart) throw 'graph.barchart is not available for said term'
   if(!ds.cohort) throw 'cohort missing from ds'
-  const filename = 'files/hg38/sjlife/clinical/matrix'
-  if(!ds.cohort['parsed-'+filename]) throw `the parsed cohort matrix=${filename} is missing`
-  await setValFxns(q, tdb, ds) 
-  Object.assign(settings, q)
+  if(!ds.cohort.annorows) throw `cohort.annorows is missing`
+  // request-specific variables
+  const inReq = {
+    filterFxn: ()=>1, // default allow all rows, may be replaced via q.termfilter
+    joinFxns: {"": () => ""},
+    numValFxns: {"": () => {}},
+    unannotated: {},
+    orderedLabels: {},
+    unannotatedLabels: {},
+    bins: {}
+  }
+  const pj = getPj(q, inReq)
+  await setValFxns(q, tdb, ds, inReq)
+  
   pj.refresh({
-    data: ds.cohort['parsed-' + filename],
+    data: ds.cohort.annorows,
     seed: `{"values": []}`
   })
   res.send(pj.tree.results)
 }
 
-function getPj(settings) {
+function getPj(q, inReq) {
   return new Partjson({
     template: {
       "@join()": {
@@ -124,23 +136,27 @@ function getPj(settings) {
             }
           },
           "__:useColOrder": "=useColOrder()",
+          "__:useRowOrder": "=useRowOrder()",
           "__:unannotatedLabels": "=unannotatedLabels()",
-          "@done()": "=sortCols()"
+          "__:bins": "=bins()",
+          "@done()": "=sortColsRows()"
         }
       }
     },
     "=": {
       vals(row) {
-        const chartId = joinFxns[settings.term0](row)
-        const seriesId = joinFxns[settings.term1](row)
-        const dataId = joinFxns[settings.term2](row)
+        if (!inReq.filterFxn(row)) return undefined
+
+        const chartId = inReq.joinFxns[q.term0](row)
+        const seriesId = inReq.joinFxns[q.term1](row)
+        const dataId = inReq.joinFxns[q.term2](row)
         if (chartId !== undefined && seriesId !== undefined && dataId !== undefined) {
           return {
             chartId,
             seriesId,
             dataId,
-            value: typeof numValFxns[settings.term1] == 'function'
-              ? numValFxns[settings.term1](row)
+            value: typeof inReq.numValFxns[q.term1] == 'function'
+              ? inReq.numValFxns[q.term1](row)
               : undefined
           }
         }
@@ -173,68 +189,92 @@ function getPj(settings) {
       unannotated(row, context) {
         const vals = context.joins.get('vals')
         //console.log(context.joins)
-        return vals.seriesId === unannotated.label ? 1 : 0
+        return vals.seriesId === inReq.unannotated.label ? 1 : 0
       },
       annotated(row, context) {
         const vals = context.joins.get('vals')
-        return vals.seriesId === unannotated.label ? 0 : 1
+        return vals.seriesId === inReq.unannotated.label ? 0 : 1
       },
-      sortCols(result) {
-        if (!orderedLabels[settings.term1].length) return
-        result.cols.sort((a,b) => orderedLabels[settings.term1].indexOf(a) - orderedLabels[settings.term1].indexOf(b))
+      sortColsRows(result) {
+        if (inReq.orderedLabels[q.term1].length) {
+          result.cols.sort((a,b) => inReq.orderedLabels[q.term1].indexOf(a) - inReq.orderedLabels[q.term1].indexOf(b))
+        }
+        if (inReq.orderedLabels[q.term2].length) {
+          result.rows.sort((a,b) => inReq.orderedLabels[q.term2].indexOf(a) - inReq.orderedLabels[q.term2].indexOf(b))
+        }
       },
       useColOrder() {
-        return orderedLabels[settings.term1].length > 0
+        return inReq.orderedLabels[q.term1].length > 0
+      },
+      useRowOrder() {
+        return inReq.orderedLabels[q.term2].length > 0
       },
       unannotatedLabels() {
         return {
-          term1: unannotatedLabels[settings.term1], 
-          term2: unannotatedLabels[settings.term2]
+          term1: inReq.unannotatedLabels[q.term1], 
+          term2: inReq.unannotatedLabels[q.term2]
         }
+      },
+      bins() {
+        return inReq.bins
       }
     }
   })
 }
 
-async function setValFxns(q, tdb, ds) {
+async function setValFxns(q, tdb, ds, inReq) {
+  if(q.filter) {
+    // for categorical terms, must convert values to valueset
+    for(const t of q.filter) {
+      if(t.term.iscategorical) {
+        t.valueset = new Set( t.values.map(i=>i.key) )
+      }
+    }
+    inReq.filterFxn = (row) => {
+      return sample_match_termvaluesetting( row, q.filter )
+    }
+  }
+
   for(const term of ['term0', 'term1', 'term2']) {
     const key = q[term]
-    if (!orderedLabels[key]) {
-      orderedLabels[key] = []
-      unannotatedLabels[key] = ""
+    if (!inReq.orderedLabels[key]) {
+      inReq.orderedLabels[key] = []
+      inReq.unannotatedLabels[key] = ""
     }
     if (key == "genotype") {
       if (!q.ssid) `missing ssid for genotype`
       const bySample = await load_genotype_by_sample(q.ssid)
       const skey = ds.cohort.samplenamekey
-      joinFxns[key] = row => bySample[row[skey]]
+      inReq.joinFxns[key] = row => bySample[row[skey]]
       continue
     }
     const t = tdb.termjson.map.get(key)
-    if ((!key || t.iscategorical) && key in joinFxns) continue
+    if ((!key || t.iscategorical) && key in inReq.joinFxns) continue
     if (!t) throw `Unknown ${term}="${q[term]}"`
     if (!t.graph) throw `${term}.graph missing`
     if (!t.graph.barchart) throw `${term}.graph.barchart missing`
     if (t.iscategorical) {
       /*** TODO: handle unannotated categorical values?  ***/
-      joinFxns[key] = row => row[key] 
+      inReq.joinFxns[key] = row => row[key] 
     } else if (t.isinteger || t.isfloat) {
-      return get_numeric_bin_name(key, t, ds, term, q.custom_bins)
+      get_numeric_bin_name(key, t, ds, term, q.custom_bins, inReq)
     } else {
       throw "unsupported term binning"
     }
   }
 }
 
-function get_numeric_bin_name ( key, t, ds, termNum, custom_bins ) {
-  const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum, custom_bins )
-  orderedLabels[key] = _orderedLabels
-  if (binconfig.unannotated) {
-    unannotatedLabels[key] = binconfig.unannotated.label
-  }
-  Object.assign(unannotated, binconfig.unannotated)
+function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
+  const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum, custom_bins[termNum.slice(-1)] )
+  inReq.bins[termNum.slice(-1)] = binconfig.bins
 
-  joinFxns[key] = row => {
+  inReq.orderedLabels[key] = _orderedLabels
+  if (binconfig.unannotated) {
+    inReq.unannotatedLabels[key] = binconfig.unannotated.label
+  }
+  Object.assign(inReq.unannotated, binconfig.unannotated)
+
+  inReq.joinFxns[key] = row => {
     const v = row[key]
     if( binconfig.unannotated && v == binconfig.unannotated._value ) {
       return binconfig.unannotated.label
@@ -265,7 +305,7 @@ function get_numeric_bin_name ( key, t, ds, termNum, custom_bins ) {
     }
   }
 
-  numValFxns[key] = row => {
+  inReq.numValFxns[key] = row => {
     const v = row[key]
     if(!binconfig.unannotated || v !== binconfig.unannotated._value ) {
       return v
@@ -344,37 +384,47 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       : custom_bins.first_bin_option == 'percentile'
       ? min
       : custom_bins.first_bin_size
-    let startunbound = v <= min ? 1 : 0
+    let startunbound = v <= min
+    let afterFirst = false
+    let beforeLast = false
     
     while( v <= observedMax ) {
-      const upper = v + custom_bins.size
+      const upper = custom_bins.size == "auto" ? custom_bins.last_bin_size : v + custom_bins.size
       const v2 = upper > max ? max : upper
+      beforeLast = upper < max && v2 + custom_bins.size > max
 
       const bin = {
         start: v >= max ? max : v,
         stop: startunbound ? min : v2,
         startunbound,
-        stopunbound: v >= max ? 1 : 0,
+        stopunbound: v >= max,
         value: 0, // v2s
-        startinclusive:1,
+        startinclusive: !startunbound || custom_bins.first_bin_oper == "lteq",
+        stopinclusive: v >= max && custom_bins.last_bin_oper == "gteq",
       }
       
-      if (startunbound) {
-        bin.label = "\u2264 " + binLabelFormatter(min)
-      } else if (v >= max) {
-        bin.label = "\u2265 " +  binLabelFormatter(max)
+      if (bin.startunbound) { 
+        const oper = bin.startinclusive ? "\u2265" : "<"
+        bin.label = oper + binLabelFormatter(min);
+      } else if (bin.stopunbound) {
+        const oper = bin.stopinclusive ? "\u2264" : ">"
+        bin.label = oper + binLabelFormatter(max)
       } else if( Number.isInteger( custom_bins.size ) ) {
         // bin size is integer, make nicer label
         if( custom_bins.size == 1 ) {
           // bin size is 1; use just start value as label, not a range
-          bin.label = binLabelFormatter(v)
+          bin.label = v //binLabelFormatter(v)
         } else {
           // bin size bigger than 1, reduce right bound by 1, in label only!
-          bin.label = binLabelFormatter(v) + ' to ' +  binLabelFormatter(v2)
+          const oper0 = !afterFirst || custom_bins.first_bin_oper == "lt" ? "\u2265" : "<"
+          const oper1 = "" //!beforeLast || custom_bins.last_bin_oper == "gteq" ? "<" : "\u2665"
+          bin.label = oper0 + binLabelFormatter(v) +' to '+ oper1 + binLabelFormatter(v2)
         }
       } else {        
         // bin size is not integer
-        bin.label = v.toPrecision(4)+' to '+ binLabelFormatter(v2)
+        const oper0 = !afterFirst || custom_bins.first_bin_oper == "lt" ? "\u2265" : "<"
+        const oper1 = "" //!beforeLast || custom_bins.last_bin_oper == "gteq" ? "<" : "\u2665"
+        bin.label = oper0 + binLabelFormatter(v) +' to '+ oper1 + binLabelFormatter(v2)
       }
 
       bins.push( bin )
@@ -382,6 +432,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
       if (v >= max) break
       v += startunbound ? 0 : custom_bins.size;
+      afterFirst = !afterFirst && startunbound ? true : false
       startunbound = 0
     }
 
@@ -406,15 +457,15 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
     return [ binconfig, values, orderedLabels ]
   }
   else {
-    if (termNum=='term2' && nb.crosstab_fixed_bins) {
-      nb.fixed_bins = nb.crosstab_fixed_bins
-    }
+    const fixed_bins = termNum=='term2' && nb.crosstab_fixed_bins ? nb.crosstab_fixed_bins 
+      : nb.fixed_bins ? nb.fixed_bins
+      : undefined
 
-    if( nb.fixed_bins ) {
+    if( fixed_bins ) {
       // server predefined
       // return copy of the bin, not direct obj, as bins will be modified later
 
-      for(const i of nb.fixed_bins) {
+      for(const i of fixed_bins) {
         const copy = {
           value: 0 // v2s
         }
@@ -507,4 +558,3 @@ async function load_genotype_by_sample ( id ) {
   }
   return bySample
 }
-
