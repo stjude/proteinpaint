@@ -54,94 +54,101 @@ exports.handle_request_closure = ( genomes ) => {
 
 async function barchart_data ( q, ds, res, tdb ) {
 /*
-summarize numbers to create barchar based on server config
-
-if is a numeric term, also get distribution
-
+  q: objectified URL query string
+  ds: dataset
+  res: express route callback's response argument
+  tdb: cohort termdb tree 
 */
-  // validate
-  //if(!q.barchart.id) throw 'barchart.id missing'
-  //const term = tdb.termjson.map.get( q.barchart.id )
-  //if(!term) throw 'barchart.id is invalid'
-  //if(!term.graph) throw 'graph is not available for said term'
-  //if(!term.graph.barchart) throw 'graph.barchart is not available for said term'
   if(!ds.cohort) throw 'cohort missing from ds'
   if(!ds.cohort.annorows) throw `cohort.annorows is missing`
   // request-specific variables
   const inReq = {
     filterFxn: ()=>1, // default allow all rows, may be replaced via q.termfilter
-    joinFxns: {"": () => ""},
-    numValFxns: {"": () => {}},
+    joinFxns: {"": () => ""}, // keys are term0, term1, term2 names; ...
+    numValFxns: {"": () => {}}, // ... if key == empty string then the term is not specified
     unannotated: {},
     orderedLabels: {},
     unannotatedLabels: {},
     bins: {}
   }
-  await setValFxns(q, tdb, ds, inReq)
-  const pj = getPj(q, inReq, ds.cohort.annorows, `{"values": []}`)
+  await setValFxns(q, inReq, ds, tdb)
+  const pj = getPj(q, inReq, ds.cohort.annorows)
   res.send(pj.tree.results)
 }
 
-function getPj(q, inReq, data, seed) {
+// template for partjson, already stringified so that it does not 
+// have to be re-stringified within partjson refresh for every request
+const template = JSON.stringify({
+  "@join()": {
+    vals: "=vals()"
+  },
+  sum: "+&vals.value",
+  values: ["&vals.value"],
+  results: {
+    "_2:maxAcrossCharts": "=maxAcrossCharts()",
+    charts: [{
+      chartId: "&vals.chartId",
+      total: "+1",
+      "_1:maxSeriesTotal": "=maxSeriesTotal()",
+      serieses: [{
+        total: "+1",
+        seriesId: "&vals.seriesId",
+        data: [{
+          dataId: "&vals.dataId",
+          total: "+1"
+        }, "&vals.dataId"]
+      }, "&vals.seriesId"]
+    }, "&vals.chartId"],
+    "__:boxplot": "=boxplot()",
+    unannotated: {
+      label: "",
+      label_unannotated: "",
+      value: "+=unannotated()",
+      value_annotated: "+=annotated()"
+    },
+    refs: {
+      //chartkey: "&vals.term0",
+      cols: ["&vals.seriesId"],
+      colgrps: ["-"], 
+      rows: ["&vals.dataId"],
+      rowgrps: ["-"],
+      col2name: {
+        "&vals.seriesId": {
+          name: "&vals.seriesId",
+          grp: "-"
+        }
+      },
+      row2name: {
+        "&vals.dataId": {
+          name: "&vals.dataId",
+          grp: "-"
+        }
+      },
+      "__:useColOrder": "=useColOrder()",
+      "__:useRowOrder": "=useRowOrder()",
+      "__:unannotatedLabels": "=unannotatedLabels()",
+      "__:bins": "=bins()",
+      "@done()": "=sortColsRows()"
+    }
+  }
+})
+
+function getPj(q, inReq, data) {
+/*
+  q: objectified URL query string
+  inReq: request-specific closured functions and variables
+  data: rows of annotation data
+*/
   return new Partjson({
     data,
-    seed,
-    template: {
-      "@join()": {
-        vals: "=vals()"
-      },
-      sum: "+&vals.value",
-      values: ["&vals.value"],
-      results: {
-        "_2:maxAcrossCharts": "=maxAcrossCharts()",
-        charts: [{
-          chartId: "&vals.chartId",
-          total: "+1",
-          "_1:maxSeriesTotal": "=maxSeriesTotal()",
-          serieses: [{
-            total: "+1",
-            seriesId: "&vals.seriesId",
-            data: [{
-              dataId: "&vals.dataId",
-              total: "+1"
-            }, "&vals.dataId"]
-          }, "&vals.seriesId"]
-        }, "&vals.chartId"],
-        "__:boxplot": "=boxplot()",
-        unannotated: {
-          label: "",
-          label_unannotated: "",
-          value: "+=unannotated()",
-          value_annotated: "+=annotated()"
-        },
-        refs: {
-          //chartkey: "&vals.term0",
-          cols: ["&vals.seriesId"],
-          colgrps: ["-"], 
-          rows: ["&vals.dataId"],
-          rowgrps: ["-"],
-          col2name: {
-            "&vals.seriesId": {
-              name: "&vals.seriesId",
-              grp: "-"
-            }
-          },
-          row2name: {
-            "&vals.dataId": {
-              name: "&vals.dataId",
-              grp: "-"
-            }
-          },
-          "__:useColOrder": "=useColOrder()",
-          "__:useRowOrder": "=useRowOrder()",
-          "__:unannotatedLabels": "=unannotatedLabels()",
-          "__:bins": "=bins()",
-          "@done()": "=sortColsRows()"
-        }
-      }
-    },
+    seed: `{"values": []}`, // result seed 
+    template,
     "=": {
       vals(row) {
+        // vals() is used as a @join function in the partjson 
+        // template above. A join function that returns
+        // a falsy value for a data row will cause the
+        // exclusion of that row from farther processing
         if (!inReq.filterFxn(row)) return undefined
 
         const chartId = inReq.joinFxns[q.term0](row)
@@ -219,7 +226,11 @@ function getPj(q, inReq, data, seed) {
   })
 }
 
-async function setValFxns(q, tdb, ds, inReq) {
+async function setValFxns(q, inReq, ds, tdb) {
+/*
+  sets request-specific value and filter functions
+  unannotated values will be processed but tracked separately
+*/
   if(q.filter) {
     // for categorical terms, must convert values to valueset
     for(const t of q.filter) {
@@ -251,7 +262,6 @@ async function setValFxns(q, tdb, ds, inReq) {
     if (!t.graph) throw `${term}.graph missing`
     if (!t.graph.barchart) throw `${term}.graph.barchart missing`
     if (t.iscategorical) {
-      /*** TODO: handle unannotated categorical values?  ***/
       inReq.joinFxns[key] = row => row[key] 
     } else if (t.isinteger || t.isfloat) {
       get_numeric_bin_name(key, t, ds, term, q.custom_bins, inReq)
