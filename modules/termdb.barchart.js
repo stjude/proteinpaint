@@ -77,18 +77,15 @@ if is a numeric term, also get distribution
     unannotatedLabels: {},
     bins: {}
   }
-  const pj = getPj(q, inReq)
   await setValFxns(q, tdb, ds, inReq)
-  
-  pj.refresh({
-    data: ds.cohort.annorows,
-    seed: `{"values": []}`
-  })
+  const pj = getPj(q, inReq, ds.cohort.annorows, `{"values": []}`)
   res.send(pj.tree.results)
 }
 
-function getPj(q, inReq) {
+function getPj(q, inReq, data, seed) {
   return new Partjson({
+    data,
+    seed,
     template: {
       "@join()": {
         vals: "=vals()"
