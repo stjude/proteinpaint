@@ -120,7 +120,8 @@ arg: server returned data
       },
       bar: {
         orientation: 'horizontal',
-        unit: 'abs'
+        unit: 'abs',
+        divideBy: 'none',
       }
     },
     // dom: {} see below
@@ -212,6 +213,7 @@ function may_make_barchart(plot) {
     isVisible: plot.term2_displaymode == "stacked",
     genome: obj.genome.name,
     dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
+    term0: plot.term0 ? plot.term0.id : '',
     term1: plot.term.id,
     term2: obj.modifier_ssid_barchart ? 'genotype' 
       : plot.term2 ? plot.term2.id

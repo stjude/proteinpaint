@@ -464,7 +464,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
     return [ binconfig, values, orderedLabels ]
   }
   else {
-    const fixed_bins = termNum=='term2' && nb.crosstab_fixed_bins ? nb.crosstab_fixed_bins 
+    const fixed_bins = (termNum=='term2' || termNum=='term0') && nb.crosstab_fixed_bins ? nb.crosstab_fixed_bins 
       : nb.fixed_bins ? nb.fixed_bins
       : undefined
 

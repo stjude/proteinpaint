@@ -123,7 +123,11 @@ export default function barsRenderer(barsapp, holder) {
     chart.serieses.map(setIds);
     setDimensions();
 
-    chartTitle.style("width", hm.svgw + "px")
+    chartTitle 
+      //.style("width", hm.svgw + "px")
+      .style("font-weight", 600)
+      .style("font-size", "20px")
+      .style("margin-bottom", "16px")
       .html(chart.chartId);
 
     // only set this initially to prevent 

@@ -162,11 +162,8 @@ export class TermdbBarchart{
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
       const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
-      const rows = chart.serieses
-        .find(series => !refColId || series.seriesId == refColId)
-        .data
-        .sort(self.rowSorter)
-        .map(d => d.dataId)
+      const matchedRows = chart.serieses.find(series => !refColId || series.seriesId == refColId)
+      const rows = !matchedRows ? [] : matchedRows.data.sort(self.rowSorter).map(d => d.dataId)
       chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
@@ -185,11 +182,8 @@ export class TermdbBarchart{
       chart.maxSeriesLogTotal = 0
       self.renderers[chart.chartId] = barsRenderer(self, select(this))
       const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
-      const rows = chart.serieses
-        .find(series => !refColId || series.seriesId == refColId)
-        .data
-        .sort(self.rowSorter)
-        .map(d => d.dataId)
+      const matchedRows = chart.serieses.find(series => !refColId || series.seriesId == refColId)
+      const rows = !matchedRows ? [] : matchedRows.data.sort(self.rowSorter).map(d => d.dataId)
       chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
