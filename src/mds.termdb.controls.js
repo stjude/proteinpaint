@@ -119,9 +119,12 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
         plot.term2_displaymode = 'stacked'
         do_plot(plot)
       } else if (value == "tree") {
+        const obj = Object.assign({},plot.obj)
+        delete obj.termfilter
+        delete obj.termfilterdiv
         const _arg = {
           term1: arg.term,
-          obj: plot.obj,
+          obj,
           callback: result=>{
             // adding term2 for the first time
             plot.term2 = result.term2
