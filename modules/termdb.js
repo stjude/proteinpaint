@@ -1092,6 +1092,8 @@ exports.server_init = ( ds ) => {
 
 	if(!termdb.termjson) throw '.termjson{} missing'
 	server_init_parse_termjson( termdb )
+
+	server_init_mayparse_patientcondition( ds )
 }
 
 
@@ -1133,6 +1135,24 @@ function server_init_parse_termjson ( termdb ) {
 	}
 	throw 'termjson: unknown data source'
 }
+
+
+
+
+
+function server_init_mayparse_patientcondition ( ds ) {
+	if(!ds.cohort.termdb.patient_condition) return
+	if(!ds.cohort.termdb.patient_condition.file) throw 'file missing from termdb.patient_condition'
+	let count=0
+	for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,ds.cohort.termdb.patient_condition.file),{encoding:'utf8'}).trim().split('\n')) {
+		const l = line.split('\t')
+		ds.cohort.annotation[ l[0] ] = JSON.parse(l[1])
+		count++
+	}
+	console.log(ds.label+': '+count+' samples loaded with condition data from '+ds.cohort.termdb.patient_condition.file)
+}
+
+
 
 
 

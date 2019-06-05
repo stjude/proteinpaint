@@ -14,7 +14,7 @@ module.exports={
 		files:[
 			{file:'files/hg38/sjlife/clinical/matrix'},
 			{file:'files/hg38/sjlife/cohort/admix'},
-			{file:'files/hg38/sjlife/cohort/geneticrace'}
+			//{file:'files/hg38/sjlife/cohort/geneticrace'}
 		],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds)=>{
@@ -56,7 +56,12 @@ module.exports={
 				{id:'Cancer-related Variables'},
 				{id:'Demographics/health behaviors'},
 				{id:'Outcomes'}
-			]
+			],
+			patient_condition:{
+				file:'files/hg38/sjlife/clinical/outcomes_2017',
+				events_key:'conditionevents',
+				// additional configs for charts and tables
+			}
 		},
 	},
 

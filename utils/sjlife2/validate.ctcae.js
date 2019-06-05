@@ -3,6 +3,22 @@ if(process.argv.length!=4) {
 	process.exit()
 }
 
+/*
+load outcome terms from phenotree:
+level 2: organ system
+level 3: grouped condition
+level 4: individual condition
+
+use that to validate terms in "outcomes" file and find any mismatch
+
+output minimied outcome data with following fields:
+1. patient
+2. graded condition
+3. grade
+4. age graded
+
+*/
+
 const phenotreefile = process.argv[2]
 const outcomefile = process.argv[3]
 
@@ -30,18 +46,32 @@ for(let i=1; i<lines.length; i++) {
 	if(w4) L4words.add(w4)
 }
 
+/*
 console.log('L1',L1words.size)
 console.log('L2',L2words.size)
 console.log('L3',L3words.size)
 console.log('L4',L4words.size)
+*/
+
+
+
 
 
 const rl = readline.createInterface({input:fs.createReadStream(outcomefile)})
+
 let first=true
 const L1err = new Set(),
 	L2err = new Set(),
 	L3err = new Set(),
 	L4err = new Set()
+
+const patient2condition = new Map()
+/*
+k: patient
+v: {}
+   k: condition
+   v: [ {grade,age}, {} ]
+*/
 
 rl.on('line',line=>{
 	if(first) {
@@ -57,10 +87,43 @@ rl.on('line',line=>{
 	if(w2 && !L2words.has(w2)) L2err.add(w2)
 	if(w3 && !L3words.has(w3)) L3err.add(w3)
 	if(w4 && !L4words.has(w4)) L4err.add(w4)
+
+	const patient = l[0]
+	const condition = w4 ? w4 : (w3 ? w3 : w2)
+	if(!condition) console.error('unknown condition')
+	const age = Number(l[ 9-1 ])
+	if(Number.isNaN(age)) console.error('invalid age',l[9-1])
+	const grade = Number(l[ 10-1 ])
+	if(Number.isNaN(grade)) console.error('invalid grade',l[10-1])
+
+	if(!patient2condition.has(patient)) {
+		patient2condition.set( patient, {})
+	}
+	if(!patient2condition.get(patient)[condition]) {
+		patient2condition.get(patient)[condition] = []
+	}
+	patient2condition.get(patient)[condition].push( { grade, age } )
 })
+
 rl.on('close',()=>{
-	if(L1err.size) for(const w of L1err) console.log('First branch:', w)
-	if(L2err.size) for(const w of L2err) console.log('Second branch:', w)
-	if(L3err.size) for(const w of L3err) console.log('Third branch:', w)
-	if(L4err.size) for(const w of L4err) console.log('Forth branch:', w)
+	if(L1err.size) for(const w of L1err) console.error('First branch:', w)
+	if(L2err.size) for(const w of L2err) console.error('Second branch:', w)
+	if(L3err.size) for(const w of L3err) console.error('Third branch:', w)
+	if(L4err.size) for(const w of L4err) console.error('Forth branch:', w)
+
+	let numberofevents=0
+	const conditions=new Set()
+
+	for(const [patient,o] of patient2condition) {
+
+		const o2 = {}
+		for(const k in o) {
+			conditions.add(k)
+			numberofevents+=o[k].length
+			o2[k] = { conditionevents: o[k] }
+		}
+
+		console.log(patient+'\t'+JSON.stringify(o2))
+	}
+	console.error(patient2condition.size+' patients, '+conditions.size+' conditions, '+numberofevents+' events')
 })
