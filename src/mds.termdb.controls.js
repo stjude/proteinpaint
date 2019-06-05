@@ -167,9 +167,12 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
     .style('cursor', 'pointer')
     .style('text-decoration', 'underline')
     .on('click', () =>{
+      const obj = Object.assign({},plot.obj)
+      delete obj.termfilter
+      delete obj.termfilterdiv
       const _arg = {
         term1: arg.term,
-        obj: plot.obj,
+        obj,
         callback: result=>{
           // replacing term2
           plot.term2 = result.term2
@@ -258,9 +261,12 @@ function setDivideByOpts(plot, do_plot, update_plot, table, arg) {
         //plot.term2_displaymode = 'stacked'
         do_plot(plot)
       } else if (value == "tree") {
+        const obj = Object.assign({},plot.obj)
+        delete obj.termfilter
+        delete obj.termfilterdiv
         const _arg = {
           term1: arg.term,
-          obj: plot.obj,
+          obj,
           callback: result=>{
             plot.term0 = result.term2
             update_plot(plot)
@@ -294,9 +300,12 @@ function setDivideByOpts(plot, do_plot, update_plot, table, arg) {
     .style('cursor', 'pointer')
     .style('text-decoration', 'underline')
     .on('click', () =>{
+      const obj = Object.assign({},plot.obj)
+      delete obj.termfilter
+      delete obj.termfilterdiv
       const _arg = {
         term1: arg.term,
-        obj: plot.obj,
+        obj,
         callback: result=>{
           plot.term0 = result.term2
           update_plot(plot)
