@@ -194,13 +194,21 @@ export class TermdbBarchart{
     let maxVisibleAcrossCharts = 0
     for(const chart of chartsData.charts) {
       if (this.currChartsData != chartsData) {
-        const unannotatedCol = chartsData.refs.unannotatedLabels.term1
-        if (unannotatedCol && !this.settings.exclude.cols.includes(unannotatedCol)) {
-          this.settings.exclude.cols.push(unannotatedCol)
+        const unannotatedColLabels = chartsData.refs.unannotatedLabels.term1
+        if (unannotatedColLabels) {
+          for(const label of unannotatedColLabels) {
+            if (!this.settings.exclude.cols.includes(label)) {
+              this.settings.exclude.cols.push(label)
+            }
+          }
         }
-        const unannotatedRow = chartsData.refs.unannotatedLabels.term2
-        if (unannotatedRow && !this.settings.exclude.rows.includes(unannotatedRow)) {
-          this.settings.exclude.rows.push(unannotatedRow)
+        const unannotatedRowLabels = chartsData.refs.unannotatedLabels.term2
+        if (unannotatedRowLabels) {
+          for(const label of unannotatedRowLabels) {
+            if (!this.settings.exclude.rows.includes(label)) {
+              this.settings.exclude.rows.push(label)
+            }
+          }
         }
       }
       chart.settings = Object.assign(this.settings, chartsData.refs)
@@ -417,19 +425,21 @@ export class TermdbBarchart{
     if (s.exclude.cols.length) {
       legendGrps.push({
         name: "Hidden " + this.terms.term1.name + " value",
-        items: s.exclude.cols.map(collabel => {
-          const total = chart.serieses
-            .filter(c => c.seriesId == collabel)
-            .reduce((sum, b) => sum + b.total, 0)
-          return {
-            text: collabel,
-            color: "#fff",
-            textColor: "#000",
-            border: "1px solid #333",
-            inset: total ? total : '',
-            type: 'col'
-          }
-        })
+        items: s.exclude.cols
+          .filter(collabel => s.cols.includes(collabel))
+          .map(collabel => {
+            const total = chart.serieses
+              .filter(c => c.seriesId == collabel)
+              .reduce((sum, b) => sum + b.total, 0)
+            return {
+              text: collabel,
+              color: "#fff",
+              textColor: "#000",
+              border: "1px solid #333",
+              inset: total ? total : '',
+              type: 'col'
+            }
+          })
       })
     }
     if (!s.hidelegend && this.terms.term2 && this.term2toColor) {

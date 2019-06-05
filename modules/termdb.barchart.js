@@ -247,7 +247,7 @@ async function setValFxns(q, inReq, ds, tdb) {
     const key = q[term]
     if (!inReq.orderedLabels[key]) {
       inReq.orderedLabels[key] = []
-      inReq.unannotatedLabels[key] = ""
+      inReq.unannotatedLabels[key] = []
     }
     if (key == "genotype") {
       if (!q.ssid) `missing ssid for genotype`
@@ -277,14 +277,14 @@ function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
 
   inReq.orderedLabels[key] = _orderedLabels
   if (binconfig.unannotated) {
-    inReq.unannotatedLabels[key] = binconfig.unannotated.label
+    inReq.unannotatedLabels[key] = Object.values(binconfig.unannotated._labels)
   }
   Object.assign(inReq.unannotated, binconfig.unannotated)
 
   inReq.joinFxns[key] = row => {
     const v = row[key]
-    if( binconfig.unannotated && v == binconfig.unannotated._value ) {
-      return binconfig.unannotated.label
+    if( binconfig.unannotated && binconfig.unannotated._values.includes(v) ) {
+      return binconfig.unannotated._labels[v]
     }
 
     for(const b of binconfig.bins) {
@@ -314,7 +314,7 @@ function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
 
   inReq.numValFxns[key] = row => {
     const v = row[key]
-    if(!binconfig.unannotated || v !== binconfig.unannotated._value ) {
+    if(!binconfig.unannotated || !binconfig.unannotated._values.includes(v) ) {
       return v
     }
   }
@@ -451,13 +451,25 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       // in case of using this numeric term as term2 in crosstab, 
       // this object can also work as a bin, to be put into the bins array
       binconfig.unannotated = {
-        _value: nb.unannotated.value,
+        _values: [nb.unannotated.value],
+        _labels: {[nb.unannotated.value]: nb.unannotated.label},
         label: nb.unannotated.label,
         label_annotated: nb.unannotated.label_annotated,
         // for unannotated samples
         value: 0, // v2s
         // for annotated samples
         value_annotated: 0, // v2s
+      }
+
+      if (nb.unannotated.value_positive) {
+        binconfig.unannotated.value_positive = 0
+        binconfig.unannotated._values.push(nb.unannotated.value_positive)
+        binconfig.unannotated._labels[nb.unannotated.value_positive] = nb.unannotated.label_positive
+      }
+      if (nb.unannotated.value_negative) {
+        binconfig.unannotated.value_negative = 0
+        binconfig.unannotated._values.push(nb.unannotated.value_negative)
+        binconfig.unannotated._labels[nb.unannotated.value_negative] = nb.unannotated.label_negative
       }
     }
 
@@ -537,13 +549,25 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       // in case of using this numeric term as term2 in crosstab, 
       // this object can also work as a bin, to be put into the bins array
       binconfig.unannotated = {
-        _value: nb.unannotated.value,
+        _values: [nb.unannotated.value],
+        _labels: {[nb.unannotated.value]: nb.unannotated.label},
         label: nb.unannotated.label,
         label_annotated: nb.unannotated.label_annotated,
         // for unannotated samples
         value: 0, // v2s
         // for annotated samples
         value_annotated: 0, // v2s
+      }
+
+      if (nb.unannotated.value_positive) {
+        binconfig.unannotated.value_positive = 0
+        binconfig.unannotated._values.push(nb.unannotated.value_positive)
+        binconfig.unannotated._labels[nb.unannotated.value_positive] = nb.unannotated.label_positive
+      }
+      if (nb.unannotated.value_negative) {
+        binconfig.unannotated.value_negative = 0
+        binconfig.unannotated._values.push(nb.unannotated.value_negative)
+        binconfig.unannotated._labels[nb.unannotated.value_negative] = nb.unannotated.label_negative
       }
     }
 
