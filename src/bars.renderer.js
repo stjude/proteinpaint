@@ -97,7 +97,7 @@ export default function barsRenderer(barsapp, holder) {
   let chartTitle
   let svg, mainG, series, collabels, rowlabels;
   // eslint-disable-next-line
-  let yAxis, yTitle, yLine, xAxis, xTitle, xLine;
+  let axisG, yAxis, yTitle, yLine, xAxis, xTitle, xLine;
   // eslint-disable-next-line
   let currCell, currRects, currRowTexts, currColTexts;
   let clusterRenderer;
@@ -108,6 +108,7 @@ export default function barsRenderer(barsapp, holder) {
   let unstackedBarsPanes;
 
   function main(_chart, _unstackedBarsPanes) {
+    let prevOrientation = hm.orientation
     chart = _chart
     Object.assign(hm, chart.settings)
     hm.handlers = chart.handlers
@@ -133,7 +134,7 @@ export default function barsRenderer(barsapp, holder) {
     // only set this initially to prevent 
     // jerky svg resize on update
     if (nosvg) {
-      svg.attr("height", hm.svgh).attr("width", hm.svgw).style('opacity',0); 
+      svg.attr("height", 0).attr("width", 0).style('opacity',0); 
       mainG.attr("transform", "translate(" + hm.rowlabelw + ",0)");
     }
 
@@ -149,7 +150,8 @@ export default function barsRenderer(barsapp, holder) {
 
     const c = collabels
       .attr("transform", colLabelsTransform)
-      .style("display", hm.orientation != 'vertical' || hm.colw < 6 ? "none" : "")
+      .style("opacity", prevOrientation != hm.orientation ? 0.0001 : 1)
+      .style("display", hm.orientation != 'vertical' ? "none" : "")
       .selectAll("g")
       .data(hm.cols, returnD)
     c.exit().remove();
@@ -160,7 +162,8 @@ export default function barsRenderer(barsapp, holder) {
 
     const r = rowlabels
       .attr("transform", rowLabelsTransform)
-      .style("display", hm.orientation != "horizontal" || hm.colw < 6 ? "none" : "")
+      .style("opacity", prevOrientation != hm.orientation ? 0.0001 : 1)
+      .style("display", hm.orientation != "horizontal" ? "none" : "")
       .selectAll("g")
       .data(hm.cols, returnD)
     r.exit().remove();
@@ -173,23 +176,34 @@ export default function barsRenderer(barsapp, holder) {
     currColTexts = collabels.selectAll("text");
     legendRenderer(barsapp.getLegendGrps(chart))
     hm.delay = 0.35 * hm.duration
-    renderAxes(hm)
+    renderAxes(hm, prevOrientation)
     hm.colw = unadjustedColw
 
+    if (prevOrientation != hm.orientation) {
+      const labels = hm.orientation == "vertical" ? collabels : rowlabels
+      labels.transition().duration(1500).style('opacity', 1)
+    }
     if (nosvg) {
       svg.transition().duration(100)
-        .attr("height", hm.svgh)
-        .attr("width", hm.svgw)
+        .attr("height", 1)
+        .attr("width", 1)
         .style("opacity",1);
       setTimeout(()=>{
-        const bbox = svg.node().getBBox()
-        const x = bbox.width - svg.attr('width') + hm.rowlabelw
+        const bbox = mainG.node().getBBox()
         svg.transition().duration(100)
           .attr('width', bbox.width + 20)
           .attr('height', bbox.height + 20)
-        
-        mainG.transition().duration(100)
-          .attr('transform', 'translate(' + x +',0)')
+
+        const rbox = rowlabels.node().getBBox()
+        if (hm.orientation == "vertical") {
+          mainG.transition().duration(100)
+          .attr('transform','translate(' + rbox.width + ',0)')
+        } else {
+          const tbox = yTitle.node().getBBox()
+          const x = Math.max(rbox.width, tbox.width)
+          mainG.transition().duration(100)
+          .attr('transform', 'translate('+ x +',0)')
+        }
       },110)
     } else {
       setTimeout(()=>{
@@ -309,19 +323,13 @@ export default function barsRenderer(barsapp, holder) {
       .on("mouseout.tphm2", seriesMouseOut)
       .on("click", seriesClick);
 
-    yAxis = mainG.append("g").attr("class", "sjpcb-bar-chart-y-axis");
-    yLine = yAxis.append("line").attr("class", "sjpcb-bar-chart-y-line").style("stroke", "#000")
-    yTitle = mainG
-      .append("g")
-      .attr("class", "sjpcb-bar-chart-y-title")
-      .style("cursor", "default");
-    
-    xAxis = mainG.append("g").attr("class", "sjpcb-bar-chart-x-axis");
-    xLine = xAxis.append("line").attr("class", "sjpcb-bar-chart-x-line").style("stroke", "#000")
-    xTitle = mainG
-      .append("g")
-      .attr("class", "sjpcb-bar-chart-x-title")
-      .style("cursor", "default");
+    axisG = mainG.append('g').attr("class", "sjpcb-bar-chart-axis-g")
+    yAxis = axisG.append("g").attr("class", "sjpcb-bar-chart-y-axis")
+    yLine = axisG.append("line").attr("class", "sjpcb-bar-chart-y-line").style("stroke", "#000")
+    yTitle = axisG.append("g").attr("class", "sjpcb-bar-chart-y-title").style("cursor", "default")
+    xAxis = axisG.append("g").attr("class", "sjpcb-bar-chart-x-axis")
+    xLine = axisG.append("line").attr("class", "sjpcb-bar-chart-x-line").style("stroke", "#000")
+    xTitle = axisG.append("g").attr("class", "sjpcb-bar-chart-x-title").style("cursor", "default")
 
     //legendDiv = svg.append("g").attr("class", "sjpcb-bars-legend");
     legendRenderer = htmlLegend(
@@ -501,7 +509,7 @@ export default function barsRenderer(barsapp, holder) {
   }
 
   function seriesGrpTransform() {
-    const x = 1 + hm.colspace
+    const x = hm.colspace
     let y = hm.colheadtop ? hm.collabelh : hm.colgrplabelh;
     if (hm.legendontop) y += hm.legendh;
     return "translate(" + x + "," + y + ")";
@@ -669,7 +677,8 @@ export default function barsRenderer(barsapp, holder) {
     return d == currCell.colId ? "#00f" : "";
   }
 
-  function renderAxes(hm) {
+  function renderAxes(hm, prevOrientation) {
+    axisG.style('opacity', prevOrientation != hm.orientation ? 0 : 1).transition().duration(1500).style('opacity',1)
     if (hm.orientation == "vertical") {
       renderAxesOnVertical(hm);
     } else {
@@ -682,12 +691,14 @@ export default function barsRenderer(barsapp, holder) {
     yLine.style('display','none')
     const colLabelBox = collabels.node().getBBox()
     const lineY = s.svgh - s.collabelh + 24
+    /*
     xLine
     .style('display','block')
     .attr("x1", 1)
     .attr("x2", s.svgw - s.svgPadding.left - hm.rowlabelw + s.cols.length*s.colspace)
     .attr("y1", lineY)
     .attr("y2", lineY)
+    */
 
     xTitle.selectAll("*").remove()
     const xLabel = hm.handlers.xAxis.text()
@@ -730,7 +741,7 @@ export default function barsRenderer(barsapp, holder) {
           .domain([max / ratio, min])
           .range([
             s.colgrplabelh,
-            s.svgh - s.collabelh + s.colgrplabelh - s.borderwidth
+            s.svgh - s.collabelh + s.colgrplabelh - s.borderwidth + 0.5
           ])
       ).ticks(4, format('d'))
     );
@@ -756,15 +767,8 @@ export default function barsRenderer(barsapp, holder) {
   function renderAxesOnHorizontal(s) {
     yAxis.style('display','none')
     xLine.style('display','none')
-    const lineX = s.svgw - s.rowlabelw + 24
-    yLine
-    .style('display','block')
-    .attr("x1", lineX)
-    .attr("x2", lineX)
-    .attr("y1", s.svgPadding.top)
-    .attr("y2", s.svgh -s.svgPadding.top - s.collabelh + s.rows.length*s.rowspace)
-
     yTitle.selectAll("*").remove()
+
     const yLabel = hm.handlers.yAxis.text()
     yTitle.append("text")
       .style("text-anchor", "end")
@@ -794,12 +798,12 @@ export default function barsRenderer(barsapp, holder) {
       //: hm.unit == "log" ? chart.maxSeriesLogTotal
       : chart.maxVisibleSeriesTotal //maxVisibleAcrossCharts
 
-    let y = s.colheadtop ? s.collabelh : s.colgrplabelh;
+    let y = s.colheadtop ? s.collabelh -2 : s.colgrplabelh - 2;
     if (s.legendontop) y += s.legendh;
 
     xAxis
     .style('display','block')
-    .attr('transform', 'translate(0,'+ y +')')
+    .attr('transform', 'translate(0.5,'+ y +')')
     .call(
       axisTop(
         (hm.unit == "log" ? scaleLog() : scaleLinear())
@@ -810,6 +814,14 @@ export default function barsRenderer(barsapp, holder) {
           ])
       ).ticks(4, format('d'))
     );
+    /*
+    yLine
+    .style('display','block')
+    .attr("x1", 0)
+    .attr("x2", 0)
+    .attr("y1", y)
+    .attr("y2", y + s.cols.length*s.rowh + 2)
+    */
 
     xTitle.selectAll("*").remove();
     const w = s.svgw - s.rowlabelw;
