@@ -205,17 +205,25 @@ generate the "querymode" object that drives subsequent queries
 			throw 'Cannot set query mode: unknown group type'
 		}
 
-		if( q.AFtest.adjust_race ) {
-			const group_termdb = q.AFtest.groups.find( i=> i.is_termdb )
-			if(!group_termdb) throw 'Cannot adjust race: .is_termdb group missing'
-			const group_population = q.AFtest.groups.find( i=> i.is_population )
-			if(!group_population) throw 'Cannot adjust race: .is_population group missing'
-			group_termdb.pop2average = get_pop2average( 
-				group_population.population.sets,
-				group_termdb.columnidx,
-				ds,
-				vcftk
-			)
+		if( q.AFtest.testby_fisher ) {
+			if( q.AFtest.groups.find( i=> i.is_infofield ) ) throw 'cannot do fisher test for an INFO field'
+		}
+
+		// after validating each single group, validate adjust race
+		{
+			const popg = q.AFtest.groups.find( i=> i.is_population )
+			if( popg && popg.adjust_race ) {
+				// need termdb group
+				const tg = q.AFtest.groups.find( i=> i.is_termdb )
+				if(!tg) throw 'cannot adjust race: termdb group missing'
+				// compute pop average
+				tg.pop2average = get_pop2average( 
+					popg.population.sets,
+					tg.columnidx,
+					ds,
+					vcftk
+				)
+			}
 		}
 
 		q.querymode.range_AFtest = true
@@ -444,10 +452,12 @@ a group can be determined by termdb, or info field
 			// collect table from all variants and run one test
 		}
 
-		if( q.AFtest.adjust_race ) {
-			// adjusting race, for the population group, append the set2value to m
-			const g = mgroups.find( i=>i.is_population )
-			if( g && g.set2value ) {
+		// if adjusted race, for the population group, append the set2value to m
+		{
+			const g = q.AFtest.groups.find(i=>i.is_population)
+			if(g && g.adjust_race ) {
+				const g = mgroups.find( i=>i.is_population )
+				// g must have set2value
 				m.popsetadjvalue = []
 				for(const [s,v] of g.set2value) {
 					m.popsetadjvalue.push([ s, v.ACraw, v.ANraw-v.ACraw, Number.parseInt(v.ACadj), Number.parseInt(v.ANadj-v.ACadj) ])
@@ -496,7 +506,7 @@ return an array of same length and group typing of AFtest.groups[]
 			}
 			// for a population group, if to adjust race
 			let refcount=0, altcount=0
-			if( q.AFtest.adjust_race ) {
+			if( g.adjust_race ) {
 				[refcount,altcount] = AFtest_adjust_race(
 					set2value,
 					q.AFtest.groups.find( i=> i.is_termdb )
