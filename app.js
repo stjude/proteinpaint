@@ -12845,14 +12845,12 @@ function mds_init(ds,genome, _servconfig) {
 			}
 		}
 
-		ds.cohort.annorows = []
 		for(const file of ds.cohort.files) {
 			if(!file.file) return '.file missing from one of .cohort.files'
 			const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
 			if(err) return 'cohort annotation file "'+file.file+'": '+err
 			//if(items.length==0) return 'no content from sample annotation file '+file.file
 			console.log(ds.label+': '+items.length+' samples loaded from annotation file '+file.file)
-			ds.cohort.annorows.push(...items)
 			items.forEach( i=> {
 
 				// may need to parse certain values into particular format
@@ -12880,14 +12878,8 @@ function mds_init(ds,genome, _servconfig) {
 			})
 		}
 
-		{
-			let c=0
-			for(const n in ds.cohort.annotation) c++
-			console.log(ds.label+': total samples from sample table: '+c)
-		}
-
-
-
+		ds.cohort.annorows = Object.values(ds.cohort.annotation)
+		console.log(ds.label+': total samples from sample table: '+ds.cohort.annorows.length)
 
 		if( ds.cohort.survivalplot ) {
 			// ds.cohort.annotation needs to be loaded for initing survival

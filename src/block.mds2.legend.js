@@ -82,11 +82,8 @@ data is returned by xhr
 	}
 	if( data.AFtest_termdbgroup ) {
 		const group = tk.vcf.numerical_axis.AFtest.groups.find(i=>i.is_termdb)
-		if( data.AFtest_termdbgroup.popsetaverage) {
-			// for displaying in variant tooltip
-			group.popsetaverage = data.popsetaverage
-		}
 		group.dom.samplehandle.text('n='+data.AFtest_termdbgroup.samplecount+', view stats')
+		group.popsetaverage = data.AFtest_termdbgroup.popsetaverage // for displaying in tooltip
 	}
 }
 

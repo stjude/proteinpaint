@@ -54,97 +54,106 @@ exports.handle_request_closure = ( genomes ) => {
 
 async function barchart_data ( q, ds, res, tdb ) {
 /*
-summarize numbers to create barchar based on server config
-
-if is a numeric term, also get distribution
-
+  q: objectified URL query string
+  ds: dataset
+  res: express route callback's response argument
+  tdb: cohort termdb tree 
 */
-  // validate
-  //if(!q.barchart.id) throw 'barchart.id missing'
-  //const term = tdb.termjson.map.get( q.barchart.id )
-  //if(!term) throw 'barchart.id is invalid'
-  //if(!term.graph) throw 'graph is not available for said term'
-  //if(!term.graph.barchart) throw 'graph.barchart is not available for said term'
   if(!ds.cohort) throw 'cohort missing from ds'
   if(!ds.cohort.annorows) throw `cohort.annorows is missing`
   // request-specific variables
   const inReq = {
     filterFxn: ()=>1, // default allow all rows, may be replaced via q.termfilter
-    joinFxns: {"": () => ""},
-    numValFxns: {"": () => {}},
+    joinFxns: {"": () => ""}, // keys are term0, term1, term2 names; ...
+    numValFxns: {"": () => {}}, // ... if key == empty string then the term is not specified
     unannotated: {},
     orderedLabels: {},
     unannotatedLabels: {},
     bins: {}
   }
-  const pj = getPj(q, inReq)
-  await setValFxns(q, tdb, ds, inReq)
-  
-  pj.refresh({
-    data: ds.cohort.annorows,
-    seed: `{"values": []}`
-  })
+  await setValFxns(q, inReq, ds, tdb)
+  const pj = getPj(q, inReq, ds.cohort.annorows)
   res.send(pj.tree.results)
 }
 
-function getPj(q, inReq) {
-  return new Partjson({
-    template: {
-      "@join()": {
-        vals: "=vals()"
-      },
-      sum: "+&vals.value",
-      values: ["&vals.value"],
-      results: {
-        "_2:maxAcrossCharts": "=maxAcrossCharts()",
-        charts: [{
-          chartId: "&vals.chartId",
+// template for partjson, already stringified so that it does not 
+// have to be re-stringified within partjson refresh for every request
+const template = JSON.stringify({
+  "@errmode": ["","","",""],
+  "@join()": {
+    vals: "=vals()"
+  },
+  sum: "+&vals.value1",
+  values: ["&vals.value1"],
+  results: {
+    "_2:maxAcrossCharts": "=maxAcrossCharts()",
+    charts: [{
+      chartId: "&vals.chartId",
+      total: "+1",
+      "_1:maxSeriesTotal": "=maxSeriesTotal()",
+      serieses: [{
+        total: "+1",
+        seriesId: "&vals.seriesId",
+        data: [{
+          dataId: "&vals.dataId",
           total: "+1",
-          "_1:maxSeriesTotal": "=maxSeriesTotal()",
-          serieses: [{
-            total: "+1",
-            seriesId: "&vals.seriesId",
-            data: [{
-              dataId: "&vals.dataId",
-              total: "+1"
-            }, "&vals.dataId"]
-          }, "&vals.seriesId"]
-        }, "&vals.chartId"],
-        "__:boxplot": "=boxplot()",
-        unannotated: {
-          label: "",
-          label_unannotated: "",
-          value: "+=unannotated()",
-          value_annotated: "+=annotated()"
-        },
-        refs: {
-          //chartkey: "&vals.term0",
-          cols: ["&vals.seriesId"],
-          colgrps: ["-"], 
-          rows: ["&vals.dataId"],
-          rowgrps: ["-"],
-          col2name: {
-            "&vals.seriesId": {
-              name: "&vals.seriesId",
-              grp: "-"
-            }
-          },
-          row2name: {
-            "&vals.dataId": {
-              name: "&vals.dataId",
-              grp: "-"
-            }
-          },
-          "__:useColOrder": "=useColOrder()",
-          "__:useRowOrder": "=useRowOrder()",
-          "__:unannotatedLabels": "=unannotatedLabels()",
-          "__:bins": "=bins()",
-          "@done()": "=sortColsRows()"
-        }
-      }
+        }, "&vals.dataId"],
+        max: "<&vals.value2",
+        tempValues: ["&vals.value2"],
+        tempSum: "+&vals.value2",
+        "__:boxplot": "=boxplot2()"
+      }, "&vals.seriesId"]
+    }, "&vals.chartId"],
+    "__:boxplot": "=boxplot1()",
+    unannotated: {
+      label: "",
+      label_unannotated: "",
+      value: "+=unannotated()",
+      value_annotated: "+=annotated()"
     },
+    refs: {
+      //chartkey: "&vals.term0",
+      cols: ["&vals.seriesId"],
+      colgrps: ["-"], 
+      rows: ["&vals.dataId"],
+      rowgrps: ["-"],
+      col2name: {
+        "&vals.seriesId": {
+          name: "&vals.seriesId",
+          grp: "-"
+        }
+      },
+      row2name: {
+        "&vals.dataId": {
+          name: "&vals.dataId",
+          grp: "-"
+        }
+      },
+      "__:useColOrder": "=useColOrder()",
+      "__:useRowOrder": "=useRowOrder()",
+      "__:unannotatedLabels": "=unannotatedLabels()",
+      "__:bins": "=bins()",
+      "@done()": "=sortColsRows()"
+    }
+  }
+})
+
+function getPj(q, inReq, data) {
+/*
+  q: objectified URL query string
+  inReq: request-specific closured functions and variables
+  data: rows of annotation data
+*/
+  return new Partjson({
+    data,
+    seed: `{"values": []}`, // result seed 
+    template,
     "=": {
       vals(row) {
+        // vals() is used as a @join function in the partjson 
+        // template above. A join function that returns
+        // a falsy value for a data row will cause the
+        // exclusion of that row from farther processing
         if (!inReq.filterFxn(row)) return undefined
 
         const chartId = inReq.joinFxns[q.term0](row)
@@ -155,9 +164,12 @@ function getPj(q, inReq) {
             chartId,
             seriesId,
             dataId,
-            value: typeof inReq.numValFxns[q.term1] == 'function'
+            value1: typeof inReq.numValFxns[q.term1] == 'function'
               ? inReq.numValFxns[q.term1](row)
-              : undefined
+              : undefined,
+            value2: typeof inReq.numValFxns[q.term2] == 'function'
+              ? inReq.numValFxns[q.term2](row)
+              : undefined,
           }
         }
       },
@@ -179,11 +191,20 @@ function getPj(q, inReq) {
         }
         return maxAcrossCharts
       },
-      boxplot(row, context) {
+      boxplot1(row, context) {
         if (!context.root.values.length) return;
         context.root.values.sort((i,j)=> i - j )
         const stat = app.boxplot_getvalue( context.root.values.map(v => {return {value: v}}) )
-        stat.mean = context.root.sum /  context.root.values.length
+        stat.mean = context.root.sum / context.root.values.length
+        return stat
+      },
+      boxplot2(row, context) {
+        if (!context.self.tempValues || !context.self.tempValues.length) return;
+        context.self.tempValues.sort((i,j)=> i - j )
+        const stat = app.boxplot_getvalue( context.self.tempValues.map(v => {return {value: v}}) )
+        stat.mean = context.self.tempSum / context.self.tempValues.length
+        delete context.self.tempSum
+        delete context.self.tempValues
         return stat
       },
       unannotated(row, context) {
@@ -222,7 +243,11 @@ function getPj(q, inReq) {
   })
 }
 
-async function setValFxns(q, tdb, ds, inReq) {
+async function setValFxns(q, inReq, ds, tdb) {
+/*
+  sets request-specific value and filter functions
+  unannotated values will be processed but tracked separately
+*/
   if(q.filter) {
     // for categorical terms, must convert values to valueset
     for(const t of q.filter) {
@@ -239,7 +264,7 @@ async function setValFxns(q, tdb, ds, inReq) {
     const key = q[term]
     if (!inReq.orderedLabels[key]) {
       inReq.orderedLabels[key] = []
-      inReq.unannotatedLabels[key] = ""
+      inReq.unannotatedLabels[key] = []
     }
     if (key == "genotype") {
       if (!q.ssid) `missing ssid for genotype`
@@ -254,7 +279,6 @@ async function setValFxns(q, tdb, ds, inReq) {
     if (!t.graph) throw `${term}.graph missing`
     if (!t.graph.barchart) throw `${term}.graph.barchart missing`
     if (t.iscategorical) {
-      /*** TODO: handle unannotated categorical values?  ***/
       inReq.joinFxns[key] = row => row[key] 
     } else if (t.isinteger || t.isfloat) {
       get_numeric_bin_name(key, t, ds, term, q.custom_bins, inReq)
@@ -270,14 +294,14 @@ function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
 
   inReq.orderedLabels[key] = _orderedLabels
   if (binconfig.unannotated) {
-    inReq.unannotatedLabels[key] = binconfig.unannotated.label
+    inReq.unannotatedLabels[key] = Object.values(binconfig.unannotated._labels)
   }
   Object.assign(inReq.unannotated, binconfig.unannotated)
 
   inReq.joinFxns[key] = row => {
     const v = row[key]
-    if( binconfig.unannotated && v == binconfig.unannotated._value ) {
-      return binconfig.unannotated.label
+    if( binconfig.unannotated && binconfig.unannotated._values.includes(v) ) {
+      return binconfig.unannotated._labels[v]
     }
 
     for(const b of binconfig.bins) {
@@ -307,7 +331,7 @@ function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
 
   inReq.numValFxns[key] = row => {
     const v = row[key]
-    if(!binconfig.unannotated || v !== binconfig.unannotated._value ) {
+    if(!binconfig.unannotated || !binconfig.unannotated._values.includes(v) ) {
       return v
     }
   }
@@ -444,7 +468,8 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       // in case of using this numeric term as term2 in crosstab, 
       // this object can also work as a bin, to be put into the bins array
       binconfig.unannotated = {
-        _value: nb.unannotated.value,
+        _values: [nb.unannotated.value],
+        _labels: {[nb.unannotated.value]: nb.unannotated.label},
         label: nb.unannotated.label,
         label_annotated: nb.unannotated.label_annotated,
         // for unannotated samples
@@ -452,12 +477,23 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
         // for annotated samples
         value_annotated: 0, // v2s
       }
+
+      if (nb.unannotated.value_positive) {
+        binconfig.unannotated.value_positive = 0
+        binconfig.unannotated._values.push(nb.unannotated.value_positive)
+        binconfig.unannotated._labels[nb.unannotated.value_positive] = nb.unannotated.label_positive
+      }
+      if (nb.unannotated.value_negative) {
+        binconfig.unannotated.value_negative = 0
+        binconfig.unannotated._values.push(nb.unannotated.value_negative)
+        binconfig.unannotated._labels[nb.unannotated.value_negative] = nb.unannotated.label_negative
+      }
     }
 
     return [ binconfig, values, orderedLabels ]
   }
   else {
-    const fixed_bins = termNum=='term2' && nb.crosstab_fixed_bins ? nb.crosstab_fixed_bins 
+    const fixed_bins = (termNum=='term2' || termNum=='term0') && nb.crosstab_fixed_bins ? nb.crosstab_fixed_bins 
       : nb.fixed_bins ? nb.fixed_bins
       : undefined
 
@@ -530,13 +566,25 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       // in case of using this numeric term as term2 in crosstab, 
       // this object can also work as a bin, to be put into the bins array
       binconfig.unannotated = {
-        _value: nb.unannotated.value,
+        _values: [nb.unannotated.value],
+        _labels: {[nb.unannotated.value]: nb.unannotated.label},
         label: nb.unannotated.label,
         label_annotated: nb.unannotated.label_annotated,
         // for unannotated samples
         value: 0, // v2s
         // for annotated samples
         value_annotated: 0, // v2s
+      }
+
+      if (nb.unannotated.value_positive) {
+        binconfig.unannotated.value_positive = 0
+        binconfig.unannotated._values.push(nb.unannotated.value_positive)
+        binconfig.unannotated._labels[nb.unannotated.value_positive] = nb.unannotated.label_positive
+      }
+      if (nb.unannotated.value_negative) {
+        binconfig.unannotated.value_negative = 0
+        binconfig.unannotated._values.push(nb.unannotated.value_negative)
+        binconfig.unannotated._labels[nb.unannotated.value_negative] = nb.unannotated.label_negative
       }
     }
 

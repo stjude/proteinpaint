@@ -15,9 +15,17 @@ for columns 1-5:
 - blank cell or '-' means no value
 
 
+
+
 column 6:
 	if given, is the term id and will match with the column header at file 'test/matrix'
 	if not given, use the term name as term id
+
+
+
+
+children terms of "CTCAE Graded Events" are .has_patient_condition:true
+
 
 
 second optional input is keep/termjson, 2 column:
@@ -99,6 +107,9 @@ const t2t = new Map()
 
 
 
+const patientcondition_terms = new Set()
+// the set of terms under CTCAE and will have .has_patient_condition:true
+
 
 
 
@@ -123,6 +134,13 @@ each word is a term
 		if( !t2t.has( id ) ) {
 			j.isleaf = true
 			leafcount++
+		}
+
+		if( patientcondition_terms.has( id )) {
+			// belongs to patient conditions
+			j.iscondition = true
+			// enable chart
+			j.graph = {barchart:{}}
 		}
 
 		lines.push( id+'\t'+JSON.stringify(j) )
@@ -392,15 +410,25 @@ for(let i=1; i<lines.length; i++) {
 		// child of level4
 		t2t.get( name2id.get(level4) || level4 ).add( id )
 	}
+
+	// register terms belonging to "patient condition"
+	if(level2=='CTCAE Graded Events') {
+		if(level3) patientcondition_terms.add(level3)
+		if(level4) patientcondition_terms.add(level4)
+		if(level5) patientcondition_terms.add(level5)
+	}
 }
 
 
 
 
-/* done parsing phenotree file
+///////////// done parsing phenotree file
 
-clean t2t by removing leaf terms with no children; leaf should not appear in t2t
-*/
+
+console.log('Phenotree: '+patientcondition_terms.size+' terms for patient condition')
+
+
+// clean t2t by removing leaf terms with no children; leaf should not appear in t2t
 for(const [n,s] of t2t) {
 	if(s.size == 0) {
 		t2t.delete(n)

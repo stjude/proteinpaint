@@ -1,7 +1,7 @@
 import {event as d3event} from 'd3-selection'
 import {may_trigger_crosstabulate} from './mds.termdb.crosstab'
 
-export function controls(arg, plot, do_plot, update_plot) {
+export function controls(arg, plot, do_plot) {
   plot.config_div = arg.holder.append('div')
     .style('display','inline-block')
     .style('vertical-align','top')
@@ -30,12 +30,13 @@ export function controls(arg, plot, do_plot, update_plot) {
   // for contextual updates
   plot.controls = []
   const table = tip.append('table')
-  setOverlayOpts(plot, do_plot, update_plot, table, arg)
-  setViewOpts(plot, update_plot, table)
+  setOverlayOpts(plot, do_plot, table, arg)
+  setViewOpts(plot, do_plot, table)
   setOrientationOpts(plot, do_plot, table)
   setScaleOpts(plot, do_plot, table)
   setBinOpts(plot, do_plot, table, 'term1', 'Primary Bins')
   setBinOpts(plot, do_plot, table, 'term2', 'Stacked Bins')
+  setDivideByOpts(plot, do_plot, table, arg)
 }
 
 function setOrientationOpts(plot, do_plot, table) {
@@ -101,7 +102,7 @@ function setScaleOpts(plot, do_plot, table) {
   })
 }
 
-function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
+function setOverlayOpts(plot, do_plot, table, arg) {
   const tr = table.append('tr')
   
   tr.append('td')
@@ -118,9 +119,12 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
         plot.term2_displaymode = 'stacked'
         do_plot(plot)
       } else if (value == "tree") {
+        const obj = Object.assign({},plot.obj)
+        delete obj.termfilter
+        delete obj.termfilterdiv
         const _arg = {
           term1: arg.term,
-          obj: plot.obj,
+          obj,
           callback: result=>{
             // adding term2 for the first time
             plot.term2 = result.term2
@@ -128,8 +132,11 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
             plot.items = result.items
             if (plot.term2.isfloat && plot.term2_boxplot){ 
               plot.term2_displaymode = 'boxplot'
-              update_plot(plot)
+              do_plot(plot)
             }else{
+              if (plot.term2_displaymode == "boxplot") {
+                plot.term2_displaymode = "stacked"
+              }
               plot.term2_boxplot = 0
               do_plot( plot )
             }
@@ -146,10 +153,10 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
     .property('selected', plot.settings.bar.overlay == "none")
     .html('None')
 
- overlay.append('option')
+  overlay.append('option')
     .attr('value', 'tree')
     .property('selected', plot.settings.bar.overlay == "tree")
-    .html('Second term')
+    .html('Term')
 
   const genotype = overlay.append('option')
     .attr('value', 'genotype')
@@ -163,9 +170,12 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
     .style('cursor', 'pointer')
     .style('text-decoration', 'underline')
     .on('click', () =>{
+      const obj = Object.assign({},plot.obj)
+      delete obj.termfilter
+      delete obj.termfilterdiv
       const _arg = {
         term1: arg.term,
-        obj: plot.obj,
+        obj,
         callback: result=>{
           // replacing term2
           plot.term2 = result.term2
@@ -173,8 +183,11 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
           plot.items = result.items
           if (plot.term2.isfloat && plot.term2_boxplot){ 
             plot.term2_displaymode = 'boxplot'
-            update_plot(plot)
-          }else{
+            do_plot(plot)
+          } else {
+            if (plot.term2_displaymode == "boxplot") {
+              plot.term2_displaymode = "stacked"
+            }
             plot.term2_boxplot = 0
             do_plot( plot )
           }
@@ -200,7 +213,7 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
   })
 }
 
-function setViewOpts(plot, update_plot, table, arg) {
+function setViewOpts(plot, do_plot, table, arg) {
   const tr = table.append('tr')
 
   tr.append('td')
@@ -212,7 +225,7 @@ function setViewOpts(plot, update_plot, table, arg) {
       const value = view.property('value')
       plot.term2_displaymode = value
       plot.term2_boxplot = value == 'boxplot'
-      update_plot(plot)
+      do_plot(plot)
     })
 
   view.append('option')
@@ -234,6 +247,93 @@ function setViewOpts(plot, update_plot, table, arg) {
     tr.style("display", plot.term2 ? "table-row" : "none")
     view.property('value', plot.term2_displaymode)
     boxplot.style('display', plot.term2 && plot.term2.isfloat ? 'block' : 'none')
+  })
+}
+
+function setDivideByOpts(plot, do_plot, table, arg) {
+  const tr = table.append('tr')
+  
+  tr.append('td')
+    .html('Divide By')
+
+  const td = tr.append('td')
+  
+  const divideBy = td.append('select')
+    .on('change', () => {
+      const value = divideBy.property('value')
+      plot.settings.bar.divideBy = value
+      if (value == "none") {
+        plot.term0 = undefined
+        //plot.term2_displaymode = 'stacked'
+        do_plot(plot)
+      } else if (value == "tree") {
+        const obj = Object.assign({},plot.obj)
+        delete obj.termfilter
+        delete obj.termfilterdiv
+        const _arg = {
+          term1: arg.term,
+          obj,
+          callback: result=>{
+            plot.term0 = result.term2
+            do_plot(plot)
+          }
+        }
+        may_trigger_crosstabulate( _arg, tr.node() )
+      } else if (value == "genotype") {
+        // to-do
+      }
+    })
+
+  divideBy.append('option')
+    .attr('value', 'none')
+    .property('selected', plot.settings.bar.divideBy == "none")
+    .html('None')
+
+  divideBy.append('option')
+    .attr('value', 'tree')
+    .property('selected', plot.settings.bar.divideBy == "tree")
+    .html('Term')
+
+  const genotype = divideBy.append('option')
+    .attr('value', 'genotype')
+    .property('selected', plot.settings.bar.divideBy == "genotype")
+    .html('Genotype')
+
+  td.append('span').html('&nbsp;') 
+  const editbtn = td.append('span')  
+    .attr('class', 'crosstab-btn')
+    .html('replace')
+    .style('cursor', 'pointer')
+    .style('text-decoration', 'underline')
+    .on('click', () =>{
+      const obj = Object.assign({},plot.obj)
+      delete obj.termfilter
+      delete obj.termfilterdiv
+      const _arg = {
+        term1: arg.term,
+        obj,
+        callback: result=>{
+          plot.term0 = result.term2
+          do_plot(plot)
+        }
+      }
+      may_trigger_crosstabulate( _arg, tr.node() )
+    })
+
+  plot.controls.push(() => {
+    // hide all options when opened from genome browser view 
+    tr.style("display", plot.obj.modifier_ssid_barchart || plot.term2_displaymode != "stacked" ? "none" : "table-row")
+    editbtn.style("display", plot.settings.bar.divideBy == "tree" ? "inline" : "none")
+    // do not show genotype divideBy option when opened from stand-alone page
+    if (!plot.settings.bar.divideBy) {
+      plot.settings.bar.divideBy = plot.obj.modifier_ssid_barchart
+        ? 'genotype'
+        : plot.term2 
+        ? 'tree'
+        : 'none'
+    }
+    divideBy.property('value', plot.settings.bar.divideBy)
+    genotype.style('display', plot.obj.modifier_ssid_barchart ? 'block' : 'none')
   })
 }
 

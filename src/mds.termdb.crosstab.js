@@ -67,8 +67,7 @@ then pass term2 and crosstab result to callback
 				// TODO when switching term2 while there is already a term2, add term2 id here also
 				disable_terms: new Set([ arg.term1.id ]),
 				callback: term2_selected_callback
-			},
-			termfilter: arg.obj.termfilter
+			}
 		}
 
 		init( obj )

@@ -162,11 +162,8 @@ export class TermdbBarchart{
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
       const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
-      const rows = chart.serieses
-        .find(series => !refColId || series.seriesId == refColId)
-        .data
-        .sort(self.rowSorter)
-        .map(d => d.dataId)
+      const matchedRows = chart.serieses.find(series => !refColId || series.seriesId == refColId)
+      const rows = !matchedRows ? [] : matchedRows.data.sort(self.rowSorter).map(d => d.dataId)
       chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
@@ -185,11 +182,8 @@ export class TermdbBarchart{
       chart.maxSeriesLogTotal = 0
       self.renderers[chart.chartId] = barsRenderer(self, select(this))
       const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
-      const rows = chart.serieses
-        .find(series => !refColId || series.seriesId == refColId)
-        .data
-        .sort(self.rowSorter)
-        .map(d => d.dataId)
+      const matchedRows = chart.serieses.find(series => !refColId || series.seriesId == refColId)
+      const rows = !matchedRows ? [] : matchedRows.data.sort(self.rowSorter).map(d => d.dataId)
       chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
@@ -200,13 +194,21 @@ export class TermdbBarchart{
     let maxVisibleAcrossCharts = 0
     for(const chart of chartsData.charts) {
       if (this.currChartsData != chartsData) {
-        const unannotatedCol = chartsData.refs.unannotatedLabels.term1
-        if (unannotatedCol && !this.settings.exclude.cols.includes(unannotatedCol)) {
-          this.settings.exclude.cols.push(unannotatedCol)
+        const unannotatedColLabels = chartsData.refs.unannotatedLabels.term1
+        if (unannotatedColLabels) {
+          for(const label of unannotatedColLabels) {
+            if (!this.settings.exclude.cols.includes(label)) {
+              this.settings.exclude.cols.push(label)
+            }
+          }
         }
-        const unannotatedRow = chartsData.refs.unannotatedLabels.term2
-        if (unannotatedRow && !this.settings.exclude.rows.includes(unannotatedRow)) {
-          this.settings.exclude.rows.push(unannotatedRow)
+        const unannotatedRowLabels = chartsData.refs.unannotatedLabels.term2
+        if (unannotatedRowLabels) {
+          for(const label of unannotatedRowLabels) {
+            if (!this.settings.exclude.rows.includes(label)) {
+              this.settings.exclude.rows.push(label)
+            }
+          }
         }
       }
       chart.settings = Object.assign(this.settings, chartsData.refs)
@@ -423,19 +425,21 @@ export class TermdbBarchart{
     if (s.exclude.cols.length) {
       legendGrps.push({
         name: "Hidden " + this.terms.term1.name + " value",
-        items: s.exclude.cols.map(collabel => {
-          const total = chart.serieses
-            .filter(c => c.seriesId == collabel)
-            .reduce((sum, b) => sum + b.total, 0)
-          return {
-            text: collabel,
-            color: "#fff",
-            textColor: "#000",
-            border: "1px solid #333",
-            inset: total ? total : '',
-            type: 'col'
-          }
-        })
+        items: s.exclude.cols
+          .filter(collabel => s.cols.includes(collabel))
+          .map(collabel => {
+            const total = chart.serieses
+              .filter(c => c.seriesId == collabel)
+              .reduce((sum, b) => sum + b.total, 0)
+            return {
+              text: collabel,
+              color: "#fff",
+              textColor: "#000",
+              border: "1px solid #333",
+              inset: total ? total : '',
+              type: 'col'
+            }
+          })
       })
     }
     if (!s.hidelegend && this.terms.term2 && this.term2toColor) {
@@ -460,7 +464,7 @@ export class TermdbBarchart{
     return legendGrps;
   }
 
-  getTableData(_settings={}, obj=null) {
+  getData(_settings={}, obj=null) {
     if (obj) {
       this.obj = obj; //console.log(obj, this.obj)
       if (obj.modifier_barchart_selectbar) {
@@ -483,11 +487,11 @@ export class TermdbBarchart{
   }
 }
 
-export function custom_table_data(plot) {
+export function get_table_data(plot) {
   const barchart = plot.views.barchart
   const obj = plot.obj
 
-  return barchart.getTableData({
+  return barchart.getData({
     genome: obj.genome.name,
     dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
     term1: plot.term.id,
@@ -521,3 +525,38 @@ export function custom_table_data(plot) {
     return {column_keys, rows}
   })
 }
+
+export function get_boxplot_data(plot) {
+  const barchart = plot.views.barchart
+  const obj = plot.obj
+
+  return barchart.getData({
+    genome: obj.genome.name,
+    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
+    term1: plot.term.id,
+    term2: obj.modifier_ssid_barchart ? 'genotype' 
+      : plot.term2 ? plot.term2.id
+      : '',
+    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
+    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
+    groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
+    term2Obj: plot.term2,
+    unit: plot.unit,
+    custom_bins: plot.custom_bins
+  }, obj)
+  .then(chartsData => {
+    const column_keys = chartsData.refs.rows
+    let binmax = 0
+    const lst = chartsData.refs.cols.map(t1 => {
+      const d = chartsData.charts[0].serieses.find(d => d.seriesId == t1)
+      if (binmax < d.max) binmax = d.max
+      return {
+        label: t1,
+        vvalue: t1,
+        boxplot: d.boxplot
+      }
+    })
+    return {lst, binmax}
+  })
+}
+

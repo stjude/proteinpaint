@@ -205,14 +205,12 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 	const af = tk.vcf.numerical_axis.AFtest
 
 	// only allow adjusted tests if one group is 'termdb' and another 'population'
-	if( af.groups.find(i=>i.is_population) && af.groups.find(i=>i.is_termdb)){
-		af.allowto_adjust_race = true // FIXME allowto_adjust_race is readonly
+	if( af.groups.find(i=>i.is_population) && af.groups.find(i=>i.is_termdb) && af.allowto_adjust_race){
 		af.adjust_race = true
 	}else{
-	// make 'AFdiff test' as default for rest of the group type combination
+	// make 'AFdiff_test' as default for rest of the group type combination
 		af.testby_AFdiff = true
 		af.testby_fisher = false
-		af.allowto_adjust_race = false
 		af.adjust_race = false
 	}
 
@@ -301,21 +299,26 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 		.style('vertical-align','top')
 		.style('padding','6px 0 6px 6px')
 
-// FIXME detect termdb/info/population availability and show options
-
+	let clinical_dict_tab, value_field_tab, population_tab
+	
+	//detect termdb/info/population availability and show options
 	//clinical dictionary tab	
-	// typo
-	const clincial_dict_tab = make_one_tab('Clinical Dictionary','#4888BF',tabs_div)
+	if(tk.mds){
+		clinical_dict_tab = make_one_tab('Clinical Dictionary','#4888BF',tabs_div)
+	}
 
-	//value field tab	
-	const value_field_tab = make_one_tab('Value field','#674EA7',tabs_div)
+	//value field tab
+	if(af.allowed_infofields.length > 0){
+		value_field_tab = make_one_tab('Value field','#674EA7',tabs_div)
+	}
 
 	//Poplulation tab	
-	const population_tab = make_one_tab('Poplulation','#A64D79',tabs_div)
+	if(tk.populations.length > 0) {
+		population_tab = make_one_tab('Poplulation','#A64D79',tabs_div)
+	}
 
-	//flags for each tab
-	// typo
-	let clincial_dict_flag = true, value_field_flag = false, population_falg = false // typo
+	//flags to show options for each tab
+	let clinical_dict_flag = true, value_field_flag = false, population_falg = false
 
 	//selection_div to display clicical_dcit and options for other 2 tabs
 	const selection_div = tip.d.append('div')
@@ -329,38 +332,44 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 
 
 	// handle clicking event
-	clincial_dict_tab.on('click', ()=>{
-		selection_div.selectAll('*').remove()
-		clincial_dict_flag = true
-		value_field_flag = false
-		population_falg = false
-		update_selection_div()
-	})
+	if(clinical_dict_tab){
+		clinical_dict_tab.on('click', ()=>{
+			selection_div.selectAll('*').remove()
+			clinical_dict_flag = true
+			value_field_flag = false
+			population_falg = false
+			update_selection_div()
+		})
+	}
 
-	value_field_tab.on('click', ()=>{
-		clincial_dict_flag = false
-		value_field_flag = true
-		population_falg = false
-		update_selection_div()
-	})
+	if(value_field_tab){
+		value_field_tab.on('click', ()=>{
+			clinical_dict_flag = false
+			value_field_flag = true
+			population_falg = false
+			update_selection_div()
+		})
+	}
 
-	population_tab.on('click', ()=>{
-		clincial_dict_flag = false
-		value_field_flag = false
-		population_falg = true
-		update_selection_div()
-	})
+	if(population_tab){
+		population_tab.on('click', ()=>{
+			clinical_dict_flag = false
+			value_field_flag = false
+			population_falg = true
+			update_selection_div()
+		})
+	}
 
 		
 	function update_selection_div(){
 
 		selection_div.selectAll('*').remove()
 
-		if(clincial_dict_flag){
+		if(clinical_dict_flag){
 
-			clincial_dict_tab.style('background-color', '#ddd')
-			value_field_tab.style('background-color', '#f2f2f2')
-			population_tab.style('background-color', '#f2f2f2')
+			if(clinical_dict_tab) clinical_dict_tab.style('background-color', '#ddd')
+			if(value_field_tab) value_field_tab.style('background-color', '#f2f2f2')
+			if(population_tab) population_tab.style('background-color', '#f2f2f2')
 	
 			// a new object as init() argument for launching the tree with modifiers
 			const obj = {
@@ -384,9 +393,9 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 
 		} else if(value_field_flag){
 
-			clincial_dict_tab.style('background-color', '#f2f2f2')
-			value_field_tab.style('background-color', '#ddd')
-			population_tab.style('background-color', '#f2f2f2')
+			if(clinical_dict_tab) clinical_dict_tab.style('background-color', '#f2f2f2')
+			if(value_field_tab) value_field_tab.style('background-color', '#ddd')
+			if(population_tab) population_tab.style('background-color', '#f2f2f2')
 
 			const af = tk.vcf.numerical_axis.AFtest
 
@@ -421,9 +430,9 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 
 		}else if(population_falg){
 
-			clincial_dict_tab.style('background-color', '#f2f2f2')
-			value_field_tab.style('background-color', '#f2f2f2')
-			population_tab.style('background-color', '#ddd')
+			if(clinical_dict_tab) clinical_dict_tab.style('background-color', '#f2f2f2')
+			if(value_field_tab) value_field_tab.style('background-color', '#f2f2f2')
+			if(population_tab) population_tab.style('background-color', '#ddd')
 
 			for( const population of tk.populations ){
 
