@@ -134,6 +134,9 @@ function setOverlayOpts(plot, do_plot, table, arg) {
               plot.term2_displaymode = 'boxplot'
               do_plot(plot)
             }else{
+              if (plot.term2_displaymode == "boxplot") {
+                plot.term2_displaymode = "stacked"
+              }
               plot.term2_boxplot = 0
               do_plot( plot )
             }
@@ -181,7 +184,10 @@ function setOverlayOpts(plot, do_plot, table, arg) {
           if (plot.term2.isfloat && plot.term2_boxplot){ 
             plot.term2_displaymode = 'boxplot'
             do_plot(plot)
-          }else{
+          } else {
+            if (plot.term2_displaymode == "boxplot") {
+              plot.term2_displaymode = "stacked"
+            }
             plot.term2_boxplot = 0
             do_plot( plot )
           }
