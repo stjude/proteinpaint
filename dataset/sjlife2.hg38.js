@@ -14,7 +14,6 @@ module.exports={
 		files:[
 			{file:'files/hg38/sjlife/clinical/matrix'},
 			{file:'files/hg38/sjlife/cohort/admix'},
-			//{file:'files/hg38/sjlife/cohort/geneticrace'}
 		],
 		samplenamekey: samplenamekey,
 		tohash: (item, ds)=>{
@@ -60,6 +59,8 @@ module.exports={
 			patient_condition:{
 				file:'files/hg38/sjlife/clinical/outcomes_2017',
 				events_key:'conditionevents',
+				grade_key:'grade',
+				age_key:'age',
 				// additional configs for charts and tables
 			}
 		},
@@ -68,7 +69,6 @@ module.exports={
 
 
 
-	// mds2 track
 	track: {
 		name:'SJLife germline SNV',
 
@@ -168,6 +168,8 @@ module.exports={
 			{
 				key:'gnomAD',
 				label:'gnomAD',
+				allowto_adjust_race:true,
+				adjust_race:true,
 				sets:[
 					// per variant, the control population allele counts are hardcoded to be info fields
 					{
@@ -213,8 +215,6 @@ module.exports={
 				AFtest:{
 					testby_AFdiff:false,
 					testby_fisher:true,
-					allowto_adjust_race:true, // can adjust based on admix
-					adjust_race:true,
 					groups:[
 						{
 							is_termdb:true,
@@ -227,7 +227,7 @@ module.exports={
 								}
 							]
 						},
-						{ is_population:true, key:'gnomAD' },
+						{ is_population:true, key:'gnomAD', adjust_race:true },
 						/*
 						{
 							is_termdb:true,
