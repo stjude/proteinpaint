@@ -16,12 +16,15 @@ export function init(holder) {
         self.dom.div.style('display','none')
         return
       }
-      render(self, plot)
+      processData(self, plot)
     }
   }
   return self
 }
 
+function processData(self, plot, data) {
+  render(self, plot)
+}
 
 export function render(self, plot) {
   // table for statistical summary

@@ -1,7 +1,7 @@
 import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import {render} from './mds.termdb.plot'
+import {main as plot_main} from './mds.termdb.plot'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
@@ -420,7 +420,7 @@ such conditions may be carried by obj
 
 			}
 
-			render( plot )
+			plot_main( plot )
 		} catch(e) {
 			client.sayerror( div, e.message || e)
 			if(e.stack) console.log(e.stack)
@@ -559,7 +559,7 @@ providing all the customization options
 				term2_displaymode: 'table',
 				termfilter: obj.termfilter
 			}
-			render( plot )
+			plot_main( plot )
 		}
 	})
 }

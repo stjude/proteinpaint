@@ -58,8 +58,7 @@ import {controls} from './mds.termdb.controls'
   7.  Legend added to plot if 2nd term selected.  
 */
 
-
-export function render(arg) {
+export function main(arg) {
 /*
 arg: server returned data
 .items[]
@@ -157,11 +156,60 @@ arg: server returned data
   plot.term2 = arg.term2
   do_plot( plot )
   if (Array.isArray(arg.obj.filterCallbacks)) {
-    arg.obj.filterCallbacks.push(()=>update_plot(plot))
+    arg.obj.filterCallbacks.push(()=>do_plot(plot))
   }
 }
 
-function do_plot ( plot ) {
+// the same route + request payload/URL parameters
+// should produce the same response data, so the
+// results of the server request can be cached in the
+// client 
+const serverData = {}
+
+function do_plot(plot) {
+  const dataName = getDataName(plot)
+  if (serverData[dataName]) {
+    render(plot, serverData[dataName]) 
+  }
+  else {
+    client.dofetch2('/termdb-barchart' + dataName)
+    .then(chartsData => {
+      serverData[dataName] = chartsData
+      render(plot, chartsData)
+    })
+  }
+}
+
+// creates a unique request identifier to be used
+// for caching server response keys
+function getDataName(plot) {
+  const obj = plot.obj
+
+  return '?'
+    + 'genome=' + obj.genome.name
+    + '&dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label)
+    + '&term0=' + (plot.term0 ? plot.term0.id : '')
+    + '&term1=' + plot.term.id
+    + '&term2=' + (
+      obj.modifier_ssid_barchart ? 'genotype' 
+      : plot.term2 ? plot.term2.id
+      : ''
+    )
+    + '&ssid=' + (obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '')
+    + '&mname=' + (obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '')
+    + '&filter=' + (
+        !obj.termfilter 
+        ? ''
+        : encodeURIComponent(JSON.stringify(obj.termfilter.terms))
+    )
+    + '&custom_bins=' + (
+      !plot.custom_bins 
+      ? '' 
+      : encodeURIComponent(JSON.stringify(plot.custom_bins))
+    )
+}
+
+function render ( plot, data ) {
 /*
 make a barchart, boxplot, or stat table based on configs 
 in the plot object called by showing the single-term plot 
@@ -169,49 +217,9 @@ at the beginning or stacked bar plot for cross-tabulating
 */ 
   // console.log(plot)
   plot.controls_update()
-  may_make_barchart(plot)
-  may_make_boxplot(plot)
-  may_make_stattable(plot)
-  may_make_table(plot)
-}
-
-// translate plot properties into the expected 
-// barchart settings keys
-function may_make_barchart(plot) {
-  const obj = plot.obj
-  plot.views.barchart.main({
-    isVisible: plot.term2_displaymode == "stacked",
-    genome: obj.genome.name,
-    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
-    term0: plot.term0 ? plot.term0.id : '',
-    term1: plot.term.id,
-    term2: obj.modifier_ssid_barchart ? 'genotype' 
-      : plot.term2 ? plot.term2.id
-      : '',
-    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
-    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
-    groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
-    term2Obj: plot.term2,
-    unit: plot.settings.bar.unit,
-    custom_bins: plot.custom_bins,
-    orientation: plot.settings.bar.orientation,
-    // normalize bar thickness regardless of orientation
-    colw: plot.settings.common.barwidth,
-    rowh: plot.settings.common.barwidth,
-    colspace: plot.settings.common.barspace,
-    rowspace: plot.settings.common.barspace,
-  }, obj)
-}
-
-function may_make_boxplot(plot) {
-  plot.views.boxplot.main(plot, plot.term2_displaymode == "boxplot")
-}
-
-function may_make_stattable(plot) {
-  plot.views.stattable.main(plot, plot.boxplot != undefined)
-}
-
-function may_make_table(plot) {
-  plot.views.table.main(plot, plot.term2_displaymode == "table")
+  plot.views.barchart.main(plot, data, plot.term2_displaymode == "stacked", obj)
+  plot.views.boxplot.main(plot, data, plot.term2_displaymode == "boxplot")
+  plot.views.stattable.main(plot, data, plot.boxplot != undefined)
+  plot.views.table.main(plot, data, plot.term2_displaymode == "table")
 }
 
