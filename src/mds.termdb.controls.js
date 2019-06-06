@@ -97,8 +97,8 @@ function setScaleOpts(plot, main, table) {
 
   plot.controls.push(() => {
     tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
-    log.property('disabled', plot.term2 ? true : false)
-    pct.property('disabled', plot.term2 ? false : true)
+    log.style('display', plot.term2 ? 'none' : 'initial')
+    pct.style('display', plot.term2 ? 'initial' : 'none')
   })
 }
 

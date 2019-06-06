@@ -40,6 +40,11 @@ arg: server returned data
     
     // data
     term: arg.term,
+    term2: arg.term2 
+      ? arg.term2 
+      : arg.obj.modifier_ssid_barchart
+      ? {mname: obj.modifier_ssid_barchart.mutation_name}
+      : null, 
     items: arg.items,
     boxplot: arg.boxplot,
 
@@ -49,6 +54,8 @@ arg: server returned data
     bin_controls: {1:{}, 2:{}},
     term2_displaymode: arg.term2_displaymode ? arg.term2_displaymode : "stacked",
     term2_boxplot: 0,
+
+    unannotated: arg.unannotated ? arg.unannotated : '',
     
     // namespaced configuration settings to indicate
     // the scope affected by a setting key-value
@@ -99,9 +106,6 @@ arg: server returned data
   // set configuration controls
   controls(arg, plot, main)
   
-  //Exposed - not exponsed data
-  plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
-  plot.term2 = arg.term2
   main( plot )
   if (Array.isArray(arg.obj.filterCallbacks)) {
     arg.obj.filterCallbacks.push(()=>main(plot))

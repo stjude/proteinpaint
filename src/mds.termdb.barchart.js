@@ -72,7 +72,6 @@ export class TermdbBarchart{
       ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
       mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
       groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
-      term2Obj: plot.term2,
       unit: plot.settings.bar.unit,
       custom_bins: plot.custom_bins,
       orientation: plot.settings.bar.orientation,
@@ -88,9 +87,8 @@ export class TermdbBarchart{
     }
     if (this.settings.term2 == "genotype") {
       this.terms.term2 = {name: this.settings.mname}
-    }
-    if ('term2' in settings) {
-      this.terms.term2 = settings.term2Obj 
+    } else if ('term2' in this.settings && plot.term2) {
+      this.terms.term2 = plot.term2 
     }
   }
 
@@ -411,7 +409,7 @@ export class TermdbBarchart{
   }
 
   getLegendGrps(chart) {
-    const legendGrps = []; 
+    const legendGrps = [] 
     const s = this.settings
     if (s.exclude.cols.length) {
       legendGrps.push({
