@@ -1,7 +1,7 @@
 import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import {main as plot_main} from './mds.termdb.plot'
+import {init as plot_init} from './mds.termdb.plot'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
@@ -339,7 +339,7 @@ such conditions may be carried by obj
 		.style('font-size','.8em')
 		.style('margin-left','20px')
 		.attr('class','sja_button')
-		.text('BARCHART')
+		.text('VIEW')
 
 	const div = row_graph.append('div')
 		.style('border','solid 1px #ccc')
@@ -408,8 +408,8 @@ such conditions may be carried by obj
 			plot.overlay_with_genotype_idx = 0
 		}
 
-		plot_main( plot )
-		button.text('BARCHART')
+		plot_init( plot )
+		button.text('VIEW')
 		term.graph.barchart.dom.loaded=true
 	})
 }
@@ -536,7 +536,7 @@ providing all the customization options
 				default2showtable: true,
 				termfilter: obj.termfilter
 			}
-			plot_main( plot )
+			plot_init( plot )
 		}
 	})
 }
