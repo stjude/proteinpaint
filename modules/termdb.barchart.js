@@ -196,6 +196,11 @@ function getPj(q, inReq, data) {
         context.root.values.sort((i,j)=> i - j )
         const stat = app.boxplot_getvalue( context.root.values.map(v => {return {value: v}}) )
         stat.mean = context.root.sum / context.root.values.length
+        let s = 0
+        for(const v of context.root.values) {
+          s += Math.pow( v - stat.mean, 2 )
+        }
+        stat.sd = Math.sqrt( s / (context.root.values.length-1) )
         return stat
       },
       boxplot2(row, context) {
@@ -203,6 +208,11 @@ function getPj(q, inReq, data) {
         context.self.tempValues.sort((i,j)=> i - j )
         const stat = app.boxplot_getvalue( context.self.tempValues.map(v => {return {value: v}}) )
         stat.mean = context.self.tempSum / context.self.tempValues.length
+        let s = 0
+        for(const v of context.self.tempValues) {
+          s += Math.pow( v - stat.mean, 2 )
+        }
+        stat.sd = Math.sqrt( s / (context.self.tempValues.length-1) )
         delete context.self.tempSum
         delete context.self.tempValues
         return stat

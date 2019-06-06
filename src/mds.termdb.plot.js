@@ -219,7 +219,7 @@ at the beginning or stacked bar plot for cross-tabulating
   plot.controls_update()
   plot.views.barchart.main(plot, data, plot.term2_displaymode == "stacked", obj)
   plot.views.boxplot.main(plot, data, plot.term2_displaymode == "boxplot")
-  plot.views.stattable.main(plot, data, plot.boxplot != undefined)
+  plot.views.stattable.main(plot, data, data.boxplot != undefined)
   plot.views.table.main(plot, data, plot.term2_displaymode == "table")
 }
 
