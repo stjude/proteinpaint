@@ -150,7 +150,7 @@ arg: server returned data
     table: table_init(plot.dom.viz)
   }
   // set configuration controls
-  controls(arg, plot, do_plot, update_plot)
+  controls(arg, plot, do_plot)
   
   //Exposed - not exponsed data
   plot.unannotated = (arg.unannotated) ? arg.unannotated : ''
@@ -173,10 +173,6 @@ at the beginning or stacked bar plot for cross-tabulating
   may_make_boxplot(plot)
   may_make_stattable(plot)
   may_make_table(plot)
-}
-
-function update_plot (plot) {
-  do_plot( plot )
 }
 
 // translate plot properties into the expected 
