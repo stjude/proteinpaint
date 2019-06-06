@@ -193,6 +193,7 @@ function server_init_parse_term2term ( termdb ) {
 	if(termdb.term2term.file) {
 		// one single text file
 		termdb.term2term.map = new Map()
+		termdb.parentByChild = Object.create(null)
 		// k: parent
 		// v: [] children
 		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.term2term.file),{encoding:'utf8'}).trim().split('\n') ) {
@@ -200,6 +201,7 @@ function server_init_parse_term2term ( termdb ) {
 			const l = line.split('\t')
 			if(!termdb.term2term.map.has( l[0] )) termdb.term2term.map.set( l[0], [] )
 			termdb.term2term.map.get( l[0] ).push( l[1] )
+			termdb.parentByChild[ l[1] ] = l[0]
 		}
 		return
 	}
@@ -214,20 +216,32 @@ function server_init_parse_termjson ( termdb ) {
 		termdb.termjson.map = new Map()
 		// k: term
 		// v: {}
+		let currTerm = -1
+		let currLineage = []
 		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.termjson.file),{encoding:'utf8'}).trim().split('\n') ) {
 			if(line[0]=='#') continue
 			const l = line.split('\t')
 			const term = JSON.parse( l[1] )
 			term.id = l[0]
 			termdb.termjson.map.set( l[0], term )
+			if (term.iscondition && term.isleaf) {
+				term.conditionlineage = get_term_lineage([term.id], term.id, termdb.parentByChild)
+			}
 		}
 		return
 	}
 	throw 'termjson: unknown data source'
 }
 
-
-
+function get_term_lineage (lineage, termid, parentByChild) {
+	if (termid in parentByChild) {
+		const parent = parentByChild[termid]
+		lineage.push(parent)
+		return get_term_lineage(lineage, parent, parentByChild)
+	} else {
+		return lineage
+	}
+}
 
 
 function server_init_mayparse_patientcondition ( ds ) {

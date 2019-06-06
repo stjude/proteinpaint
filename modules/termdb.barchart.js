@@ -10,7 +10,7 @@ const binLabelFormatter = d3format.format('.3r')
 /*
 ********************** EXPORTED
 handle_request_closure
-********************** 
+**********************
 */
 
 exports.handle_request_closure = ( genomes ) => {
@@ -40,8 +40,6 @@ exports.handle_request_closure = ( genomes ) => {
       if(!ds.cohort) throw 'ds.cohort missing'
       const tdb = ds.cohort.termdb
       if(!tdb) throw 'no termdb for this dataset'
-
-      //const ds_filtered = may_filter_samples( q, tdb, ds )
 
       // process triggers
       await barchart_data( q, ds, res, tdb )
@@ -219,7 +217,6 @@ function getPj(q, inReq, data) {
       },
       unannotated(row, context) {
         const vals = context.joins.get('vals')
-        //console.log(context.joins)
         return vals.seriesId === inReq.unannotated.label ? 1 : 0
       },
       annotated(row, context) {
@@ -292,8 +289,30 @@ async function setValFxns(q, inReq, ds, tdb) {
       inReq.joinFxns[key] = row => row[key] 
     } else if (t.isinteger || t.isfloat) {
       get_numeric_bin_name(key, t, ds, term, q.custom_bins, inReq)
+    } else if (t.iscondition) {
+      set_condition_fxn(key, tdb, inReq)
     } else {
       throw "unsupported term binning"
+    }
+  }
+}
+
+function set_condition_fxn(key, tdb, inReq) {
+  // default to number of events for now
+  if (1) {
+    inReq.joinFxns[key] = row => {
+      let numEvents = 0
+      for(const k in row) {
+        const term = tdb.termjson.map.get(k)
+        if (term && term.iscondition && term.conditionlineage && term.conditionlineage.includes(key) && row[k].conditionevents) {
+          numEvents += row[k].conditionevents.length
+        }
+      }
+      return numEvents 
+    }
+  } else {
+    inReq.joinFxns[key] = row => {
+      
     }
   }
 }

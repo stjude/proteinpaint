@@ -374,7 +374,9 @@ export class TermdbBarchart{
             return s.unit == "pct" ? "% of patients" : "# of patients"
           } else {
             const term = self.terms.term1
-            return term.iscategorical || !term.unit
+            return term.iscondition 
+              ? '# of events'
+              : term.iscategorical || !term.unit
               ? ''
               : term.unit //term.name[0].toUpperCase() + term.name.slice(1)
           }
@@ -384,7 +386,9 @@ export class TermdbBarchart{
         text: () => {
           if (s.orientation == "vertical") { 
             const term = self.terms.term1
-            return term.iscategorical || !term.unit
+            return term.iscondition 
+              ? '# of events'
+              : term.iscategorical || !term.unit
               ? ''
               : term.unit // term.name[0].toUpperCase() + term.name.slice(1)
           } else {
