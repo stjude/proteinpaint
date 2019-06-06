@@ -42,24 +42,11 @@ init()
 add_searchbox_4term
 ********************** INTERNAL
 show_default_rootterm
+	may_display_termfilter
 print_one_term
 may_make_term_foldbutton
 may_make_term_graphbuttons
 term_addbutton_barchart
-
-
-Notes:
-* as it is called "termdb", use "term" rather than "node", to increase consistency
-
-
-server returns json objects as terms, which are from the termjson table
-
-
-
-planned features:
-* launch this vocabulary tree on a variant; limit patients to those carrying alt alleles of this variant
-
-
 */
 
 
@@ -157,13 +144,25 @@ also for showing term tree, allowing to select certain terms
 
 
 function may_display_termfilter ( obj ) {
-	if(!obj.termfilter) return
-	if(!obj.termfilter.terms) return
-	if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
-	validate_termvaluesetting( obj.termfilter.terms )
-	if( obj.termfilter.no_display ) {
-		// do not display the terms
-		return
+	if( obj.termfilter ) {
+		if(obj.termfilter.terms) {
+			if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
+			validate_termvaluesetting( obj.termfilter.terms )
+		} else {
+			obj.termfilter.terms = []
+		}
+		if( obj.termfilter.no_display ) {
+			/*
+			only not to do following when told
+			- display filter ui
+			- initiate callback collector
+			*/
+			return
+		}
+	} else {
+		obj.termfilter = {
+			terms: []
+		}
 	}
 	obj.filterCallbacks = []
 	// term filter in use
@@ -179,7 +178,7 @@ function may_display_termfilter ( obj ) {
 		.style('margin','0px 5px')
 		.text('FILTER')
 		.style('opacity','.5')
-		.style('font-size','.7em')
+		.style('font-size','.8em')
 	termvaluesettingui.display(
 		div,
 		obj.termfilter,
