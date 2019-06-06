@@ -4,7 +4,6 @@ import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import { Menu } from './client'
-import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 
 const colors = {
   c10: scaleOrdinal( schemeCategory10 ),

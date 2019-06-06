@@ -49,11 +49,12 @@ then pass term2 and crosstab result to callback
 			.style('color','#C67C73')
 
 		// this function will be used for both tree and search
-		const term2_selected_callback = make_term2_callback( arg, button, errdiv )
+		const term2_selected_callback = arg.callback 
 
 		add_searchbox_4term( arg.obj, arg.obj.tip.d, term2_selected_callback )
 
 		const treediv = arg.obj.tip.d.append('div')
+		const disable_terms = arg.term2 ? new Set([ arg.term1.id, arg.term2.id ]) : new Set([ arg.term1.id ])
 
 		// a new object as init() argument for launching the tree
 		// with modifiers
@@ -64,9 +65,8 @@ then pass term2 and crosstab result to callback
 			default_rootterm: {},
 			term2_displaymode: 'table',
 			modifier_click_term: {
-				// TODO when switching term2 while there is already a term2, add term2 id here also
-				disable_terms: new Set([ arg.term1.id ]),
-				callback: term2_selected_callback
+				disable_terms,
+				callback: term2_selected_callback 
 			}
 		}
 
@@ -85,11 +85,13 @@ export function may_trigger_crosstabulate( arg, btn ) {
 		.style('color','#C67C73')
 
 	// this function will be used for both tree and search
-	const term2_selected_callback = make_term2_callback( arg, btn, errdiv )
+	const term2_selected_callback = arg.callback
 
 	add_searchbox_4term( arg.obj, arg.obj.tip.d, term2_selected_callback )
 
 	const treediv = arg.obj.tip.d.append('div')
+	const disable_terms = arg.term2 ? new Set([ arg.term1.id, arg.term2.id ]) : new Set([ arg.term1.id ])
+	
 	// a new object as init() argument for launching the tree
 	// with modifiers
 	const obj = {
@@ -98,8 +100,7 @@ export function may_trigger_crosstabulate( arg, btn ) {
 		div: treediv,
 		default_rootterm: {},
 		modifier_click_term: {
-			// TODO when switching term2 while there is already a term2, add term2 id here also
-			disable_terms: new Set([ arg.term1.id ]),
+			disable_terms,
 			callback: term2_selected_callback
 		},
 		termfilter: arg.obj.termfilter
@@ -181,8 +182,7 @@ return promise
 			id: arg.term2.id
 		},
 		genome: arg.obj.genome.name,
-		dslabel: arg.obj.mds.label,
-		termfilter: arg.obj.termfilter ? arg.obj.termfilter.terms : ''
+		dslabel: arg.obj.mds.label
 	}
 	return client.dofetch('termdb', param)
 	.then(data=>{

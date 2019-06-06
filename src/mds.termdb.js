@@ -511,16 +511,11 @@ for showing crosstab output, should show in barchart panel instead with the inst
 providing all the customization options
 */
 	may_makebutton_crosstabulate( {
+		obj,
 		term1: term1,
 		button_row: row,
-		obj: obj,
-		callback: result=>{
-
-			/* got result
-			.term2{}
-			.items[]
-			._button
-			*/
+		callback: term2=>{
+			obj.tip.hide()
 
 			// display result through barchart button
 			term1.graph.barchart.dom.loaded=true
@@ -536,10 +531,9 @@ providing all the customization options
 				dslabel: obj.mds.label,
 				holder: term1.graph.barchart.dom.div,
 				term: term1,
-				term2: result.term2,
-				items: result.items,
-				default2showtable: true, // a flag for barchart to show html table view by default,
+				term2: term2,
 				term2_displaymode: 'table',
+				default2showtable: true,
 				termfilter: obj.termfilter
 			}
 			plot_main( plot )

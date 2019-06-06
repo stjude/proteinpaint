@@ -124,16 +124,17 @@ function setOverlayOpts(plot, do_plot, table, arg) {
         delete obj.termfilterdiv
         const _arg = {
           term1: arg.term,
+          term2: plot.term2,
           obj,
-          callback: result=>{
+          callback: term2 => {
+            obj.tip.hide()
+
             // adding term2 for the first time
-            plot.term2 = result.term2
-            // update the plot data using the server-returned new data
-            plot.items = result.items
-            if (plot.term2.isfloat && plot.term2_boxplot){ 
+            plot.term2 = term2
+            if (plot.term2.isfloat && plot.term2_boxplot) { 
               plot.term2_displaymode = 'boxplot'
               do_plot(plot)
-            }else{
+            } else {
               if (plot.term2_displaymode == "boxplot") {
                 plot.term2_displaymode = "stacked"
               }
@@ -175,12 +176,12 @@ function setOverlayOpts(plot, do_plot, table, arg) {
       delete obj.termfilterdiv
       const _arg = {
         term1: arg.term,
+        term2: plot.term2,
         obj,
-        callback: result=>{
+        callback: term2=>{
+          obj.tip.hide()
           // replacing term2
-          plot.term2 = result.term2
-          // update the plot data using the server-returned new data
-          plot.items = result.items
+          plot.term2 = term2
           if (plot.term2.isfloat && plot.term2_boxplot){ 
             plot.term2_displaymode = 'boxplot'
             do_plot(plot)
@@ -272,6 +273,7 @@ function setDivideByOpts(plot, do_plot, table, arg) {
         delete obj.termfilterdiv
         const _arg = {
           term1: arg.term,
+          term2: plot.term2,
           obj,
           callback: result=>{
             plot.term0 = result.term2
@@ -311,6 +313,7 @@ function setDivideByOpts(plot, do_plot, table, arg) {
       delete obj.termfilterdiv
       const _arg = {
         term1: arg.term,
+        term2: plot.term2,
         obj,
         callback: result=>{
           plot.term0 = result.term2
