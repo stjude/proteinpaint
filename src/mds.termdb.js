@@ -1,7 +1,7 @@
 import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
-import {render} from './mds.termdb.plot'
+import {init as plot_init} from './mds.termdb.plot'
 import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
@@ -339,7 +339,7 @@ such conditions may be carried by obj
 		.style('font-size','.8em')
 		.style('margin-left','20px')
 		.attr('class','sja_button')
-		.text('BARCHART')
+		.text('VIEW')
 
 	const div = row_graph.append('div')
 		.style('border','solid 1px #ccc')
@@ -384,49 +384,32 @@ such conditions may be carried by obj
 			arg.ssid = obj.modifier_ssid_barchart.ssid
 		}
 
-		try {
-			const data = await obj.do_query( arg )
-			if(data.error) throw data.error
-			if(!data.lst) throw 'no data for barchart'
-
-			// make barchart
-			const plot = {
-				obj,
-				holder: div,
-				genome: obj.genome.name,
-				dslabel: obj.mds.label,
-				items: data.lst,
-				unannotated: data.unannotated,
-				boxplot: data.boxplot, // available for numeric terms
-				term: term
-			}
-
-			if( obj.modifier_ssid_barchart ) {
-				const g2c = {}
-				for(const k in obj.modifier_ssid_barchart.groups) {
-					g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
-				}
-				plot.mutation_lst = [
-					{
-						mutation_name: obj.modifier_ssid_barchart.mutation_name,
-						ssid: obj.modifier_ssid_barchart.ssid,
-						genotype2color: g2c
-					}
-				]
-				plot.overlay_with_genotype_idx = 0
-
-				// this doesn't work
-				plot.term2 = {name:'genotype'}
-
-			}
-
-			render( plot )
-		} catch(e) {
-			client.sayerror( div, e.message || e)
-			if(e.stack) console.log(e.stack)
+		// make barchart
+		const plot = {
+			obj,
+			holder: div,
+			genome: obj.genome.name,
+			dslabel: obj.mds.label,
+			term: term
 		}
 
-		button.text('BARCHART')
+		if( obj.modifier_ssid_barchart ) {
+			const g2c = {}
+			for(const k in obj.modifier_ssid_barchart.groups) {
+				g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
+			}
+			plot.mutation_lst = [
+				{
+					mutation_name: obj.modifier_ssid_barchart.mutation_name,
+					ssid: obj.modifier_ssid_barchart.ssid,
+					genotype2color: g2c
+				}
+			]
+			plot.overlay_with_genotype_idx = 0
+		}
+
+		plot_init( plot )
+		button.text('VIEW')
 		term.graph.barchart.dom.loaded=true
 	})
 }
@@ -528,16 +511,11 @@ for showing crosstab output, should show in barchart panel instead with the inst
 providing all the customization options
 */
 	may_makebutton_crosstabulate( {
+		obj,
 		term1: term1,
 		button_row: row,
-		obj: obj,
-		callback: result=>{
-
-			/* got result
-			.term2{}
-			.items[]
-			._button
-			*/
+		callback: term2=>{
+			obj.tip.hide()
 
 			// display result through barchart button
 			term1.graph.barchart.dom.loaded=true
@@ -553,13 +531,12 @@ providing all the customization options
 				dslabel: obj.mds.label,
 				holder: term1.graph.barchart.dom.div,
 				term: term1,
-				term2: result.term2,
-				items: result.items,
-				default2showtable: true, // a flag for barchart to show html table view by default,
+				term2: term2,
 				term2_displaymode: 'table',
+				default2showtable: true,
 				termfilter: obj.termfilter
 			}
-			render( plot )
+			plot_init( plot )
 		}
 	})
 }

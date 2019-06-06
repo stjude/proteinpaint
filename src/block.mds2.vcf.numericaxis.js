@@ -1039,39 +1039,39 @@ append numeric axis parameter to object for loadTk
 	}
 	if( nm.inuse_AFtest && nm.AFtest ) {
 		par.AFtest = {
-			groups: nm.AFtest.groups.reduce( (lst, g)=>{
-				if( g.is_termdb ) {
-					lst.push({
-						is_termdb: true,
-						terms: termvaluesettingui.to_parameter( g.terms ),
-					})
-				} else if( g.is_infofield ) {
-					const par = {
-						is_infofield:true,
-						key: g.key,
-					}
-					if(tk.info_fields) {
-						// attempt to get missing value
-						const i = tk.info_fields.find( j=>j.key==g.key )
-						if(i && i.missing_value!=undefined) {
-							par.missing_value = i.missing_value
-						}
-					}
-					lst.push( par )
-				} else if( g.is_population ) {
-					lst.push({
-						is_population:true,
-						key: g.key
-					})
-				} else {
-					throw 'unknown group type at xhr parameter'
-				}
-				return lst
-			}, [])
+			testby_AFdiff: nm.AFtest.testby_AFdiff,
+			testby_fisher: nm.AFtest.testby_fisher
 		}
-		if(nm.AFtest.testby_AFdiff) par.AFtest.testby_AFdiff=true
-		if(nm.AFtest.testby_fisher) par.AFtest.testby_fisher=true
-		if(nm.AFtest.adjust_race) par.AFtest.adjust_race=true
+		par.AFtest.groups = nm.AFtest.groups.reduce( (lst, g)=>{
+			if( g.is_termdb ) {
+				lst.push({
+					is_termdb: true,
+					terms: termvaluesettingui.to_parameter( g.terms ),
+				})
+			} else if( g.is_infofield ) {
+				const par = {
+					is_infofield:true,
+					key: g.key,
+				}
+				if(tk.info_fields) {
+					// attempt to get missing value
+					const i = tk.info_fields.find( j=>j.key==g.key )
+					if(i && i.missing_value!=undefined) {
+						par.missing_value = i.missing_value
+					}
+				}
+				lst.push( par )
+			} else if( g.is_population ) {
+				lst.push({
+					is_population:true,
+					key: g.key,
+					adjust_race: g.adjust_race,
+				})
+			} else {
+				throw 'unknown group type at xhr parameter'
+			}
+			return lst
+		}, [])
 		return
 	}
 	throw 'unknown type of numeric axis'

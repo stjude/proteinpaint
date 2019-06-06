@@ -3,8 +3,7 @@ import barsRenderer from "./bars.renderer"
 import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
-import { Menu, dofetch2 } from './client'
-import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
+import { Menu } from './client'
 
 const colors = {
   c10: scaleOrdinal( schemeCategory10 ),
@@ -45,72 +44,62 @@ export class TermdbBarchart{
     this.term2toColor = {}
   }
 
-  main(_settings={}, obj=null) {
+  main(plot=null, data=null, isVisible=true, obj=null) {
+    if (data) this.currServerData = data
+    if (!this.setVisibility(isVisible)) return
     if (obj) {
       this.obj = obj
       if (obj.modifier_barchart_selectbar) {
         this.click_callback = obj.modifier_barchart_selectbar.callback
       }
     }
-    this.updateSettings(_settings)
-    if (!this.setVisibility()) return
-
-    const dataName = this.getDataName()
-    if (this.serverData[dataName]) {
-      this.render(this.serverData[dataName]) 
-    }
-    else {
-      dofetch2('/termdb-barchart' + dataName)
-      .then(chartsData => {
-        this.serverData[dataName] = chartsData
-        this.render(chartsData)
-      })
-    }
+    this.updateSettings(plot)
+    this.processData(this.currServerData) 
   }
 
-  getDataName() {
-    const s = this.settings
-    return '?'
-      + 'genome=' + s.genome
-      + '&dslabel=' + s.dslabel
-      + '&term0=' + s.term0
-      + '&term1=' + s.term1
-      + '&term2=' + s.term2
-      + '&ssid=' + s.ssid
-      + '&mname=' + s.mname
-      + '&filter=' + (
-          !this.obj.termfilter 
-          ? ''
-          : encodeURIComponent(JSON.stringify(this.obj.termfilter.terms))
-      )
-      + '&custom_bins=' + (
-        !s.custom_bins 
-        ? '' 
-        : encodeURIComponent(JSON.stringify(s.custom_bins))
-      )
-  }
-
-  updateSettings(settings) {
+  updateSettings(plot) {
+    if (!plot) return
+    // translate relevant plot keys to barchart settings keys
+    const obj = plot.obj
+    const settings = {
+      genome: obj.genome.name,
+      dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
+      term0: plot.term0 ? plot.term0.id : '',
+      term1: plot.term.id,
+      term2: obj.modifier_ssid_barchart ? 'genotype' 
+        : plot.term2 ? plot.term2.id
+        : '',
+      ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
+      mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
+      groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
+      unit: plot.settings.bar.unit,
+      custom_bins: plot.custom_bins,
+      orientation: plot.settings.bar.orientation,
+      // normalize bar thickness regardless of orientation
+      colw: plot.settings.common.barwidth,
+      rowh: plot.settings.common.barwidth,
+      colspace: plot.settings.common.barspace,
+      rowspace: plot.settings.common.barspace
+    }
     Object.assign(this.settings, settings)
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
       this.settings.unit = "abs"
     }
     if (this.settings.term2 == "genotype") {
       this.terms.term2 = {name: this.settings.mname}
-    }
-    if ('term2' in settings) {
-      this.terms.term2 = settings.term2Obj 
+    } else if ('term2' in this.settings && plot.term2) {
+      this.terms.term2 = plot.term2 
     }
   }
 
-  setVisibility() {
-    const display = this.settings.isVisible ? 'block' : 'none'
+  setVisibility(isVisible) {
+    const display = isVisible ? 'block' : 'none'
     this.dom.barDiv.style('display', display)
     this.dom.legendDiv.style('display', display)
-    return this.settings.isVisible
+    return isVisible
   }
 
-  render(chartsData) {
+  processData(chartsData) {
     const self = this
     const cols = chartsData.refs.cols
     self.seriesOrder = chartsData.charts[0].serieses
@@ -420,7 +409,7 @@ export class TermdbBarchart{
   }
 
   getLegendGrps(chart) {
-    const legendGrps = []; 
+    const legendGrps = [] 
     const s = this.settings
     if (s.exclude.cols.length) {
       legendGrps.push({
@@ -463,100 +452,4 @@ export class TermdbBarchart{
     }
     return legendGrps;
   }
-
-  getData(_settings={}, obj=null) {
-    if (obj) {
-      this.obj = obj; //console.log(obj, this.obj)
-      if (obj.modifier_barchart_selectbar) {
-        this.click_callback = obj.modifier_barchart_selectbar.callback
-      }
-    }
-    this.updateSettings(_settings)
-
-    const dataName = this.getDataName()
-    if (this.serverData[dataName]) {
-      return Promise.resolve(this.serverData[dataName]) 
-    }
-    else {
-      return dofetch2('/termdb-barchart' + dataName)
-      .then(chartsData => {
-        this.serverData[dataName] = chartsData
-        return chartsData
-      })
-    }
-  }
 }
-
-export function get_table_data(plot) {
-  const barchart = plot.views.barchart
-  const obj = plot.obj
-
-  return barchart.getData({
-    genome: obj.genome.name,
-    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
-    term1: plot.term.id,
-    term2: obj.modifier_ssid_barchart ? 'genotype' 
-      : plot.term2 ? plot.term2.id
-      : '',
-    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
-    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
-    groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
-    term2Obj: plot.term2,
-    unit: plot.unit,
-    custom_bins: plot.custom_bins
-  }, obj)
-  .then(chartsData => {
-    const column_keys = chartsData.refs.rows
-    const rows = chartsData.refs.cols.map(t1 => {
-      return {
-        label: t1,
-        lst: chartsData.charts[0].serieses
-            .find(d => d.seriesId == t1)
-            .data.slice()
-            .sort((a,b) => column_keys.indexOf(a.dataId) - column_keys.indexOf(b.dataId))
-            .map(d => {
-              return {
-                label: d.dataId,
-                value: d.total
-              }
-            })
-      }
-    })
-    return {column_keys, rows}
-  })
-}
-
-export function get_boxplot_data(plot) {
-  const barchart = plot.views.barchart
-  const obj = plot.obj
-
-  return barchart.getData({
-    genome: obj.genome.name,
-    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
-    term1: plot.term.id,
-    term2: obj.modifier_ssid_barchart ? 'genotype' 
-      : plot.term2 ? plot.term2.id
-      : '',
-    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
-    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
-    groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
-    term2Obj: plot.term2,
-    unit: plot.unit,
-    custom_bins: plot.custom_bins
-  }, obj)
-  .then(chartsData => {
-    const column_keys = chartsData.refs.rows
-    let binmax = 0
-    const lst = chartsData.refs.cols.map(t1 => {
-      const d = chartsData.charts[0].serieses.find(d => d.seriesId == t1)
-      if (binmax < d.max) binmax = d.max
-      return {
-        label: t1,
-        vvalue: t1,
-        boxplot: d.boxplot
-      }
-    })
-    return {lst, binmax}
-  })
-}
-

@@ -1,7 +1,7 @@
 import {event as d3event} from 'd3-selection'
 import {may_trigger_crosstabulate} from './mds.termdb.crosstab'
 
-export function controls(arg, plot, do_plot) {
+export function controls(arg, plot, main) {
   plot.config_div = arg.holder.append('div')
     .style('display','inline-block')
     .style('vertical-align','top')
@@ -30,16 +30,16 @@ export function controls(arg, plot, do_plot) {
   // for contextual updates
   plot.controls = []
   const table = tip.append('table')
-  setOverlayOpts(plot, do_plot, table, arg)
-  setViewOpts(plot, do_plot, table)
-  setOrientationOpts(plot, do_plot, table)
-  setScaleOpts(plot, do_plot, table)
-  setBinOpts(plot, do_plot, table, 'term1', 'Primary Bins')
-  setBinOpts(plot, do_plot, table, 'term2', 'Stacked Bins')
-  setDivideByOpts(plot, do_plot, table, arg)
+  setOverlayOpts(plot, main, table, arg)
+  setViewOpts(plot, main, table)
+  setOrientationOpts(plot, main, table)
+  setScaleOpts(plot, main, table)
+  setBinOpts(plot, main, table, 'term1', 'Primary Bins')
+  setBinOpts(plot, main, table, 'term2', 'Stacked Bins')
+  setDivideByOpts(plot, main, table, arg)
 }
 
-function setOrientationOpts(plot, do_plot, table) {
+function setOrientationOpts(plot, main, table) {
   const tr = table.append('tr')
   
   tr.append('td')
@@ -49,7 +49,7 @@ function setOrientationOpts(plot, do_plot, table) {
     .append('select')
     .on('change', () => {
       plot.settings.bar.orientation = orientation.property('value')
-      do_plot(plot)
+      main(plot)
     })
 
   orientation.append('option')
@@ -67,7 +67,7 @@ function setOrientationOpts(plot, do_plot, table) {
   })
 }
 
-function setScaleOpts(plot, do_plot, table) {
+function setScaleOpts(plot, main, table) {
   const tr = table.append('tr')
 
   tr.append('td')
@@ -77,7 +77,7 @@ function setScaleOpts(plot, do_plot, table) {
     .append('select')
     .on('change', () => {
       plot.settings.bar.unit = unit.property('value')
-      do_plot(plot)
+      main(plot)
     })
 
   const abs = unit.append('option')
@@ -97,12 +97,12 @@ function setScaleOpts(plot, do_plot, table) {
 
   plot.controls.push(() => {
     tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
-    log.property('disabled', plot.term2 ? true : false)
-    pct.property('disabled', plot.term2 ? false : true)
+    log.style('display', plot.term2 ? 'none' : 'initial')
+    pct.style('display', plot.term2 ? 'initial' : 'none')
   })
 }
 
-function setOverlayOpts(plot, do_plot, table, arg) {
+function setOverlayOpts(plot, main, table, arg) {
   const tr = table.append('tr')
   
   tr.append('td')
@@ -117,28 +117,29 @@ function setOverlayOpts(plot, do_plot, table, arg) {
       if (value == "none") {
         plot.term2 = undefined
         plot.term2_displaymode = 'stacked'
-        do_plot(plot)
+        main(plot)
       } else if (value == "tree") {
         const obj = Object.assign({},plot.obj)
         delete obj.termfilter
         delete obj.termfilterdiv
         const _arg = {
           term1: arg.term,
+          term2: plot.term2,
           obj,
-          callback: result=>{
+          callback: term2 => {
+            obj.tip.hide()
+
             // adding term2 for the first time
-            plot.term2 = result.term2
-            // update the plot data using the server-returned new data
-            plot.items = result.items
-            if (plot.term2.isfloat && plot.term2_boxplot){ 
+            plot.term2 = term2
+            if (plot.term2.isfloat && plot.term2_boxplot) { 
               plot.term2_displaymode = 'boxplot'
-              do_plot(plot)
-            }else{
+              main(plot)
+            } else {
               if (plot.term2_displaymode == "boxplot") {
                 plot.term2_displaymode = "stacked"
               }
               plot.term2_boxplot = 0
-              do_plot( plot )
+              main( plot )
             }
           }
         }
@@ -175,21 +176,20 @@ function setOverlayOpts(plot, do_plot, table, arg) {
       delete obj.termfilterdiv
       const _arg = {
         term1: arg.term,
+        term2: plot.term2,
         obj,
-        callback: result=>{
-          // replacing term2
-          plot.term2 = result.term2
-          // update the plot data using the server-returned new data
-          plot.items = result.items
+        callback: term2=>{
+          obj.tip.hide()
+          plot.term2 = term2
           if (plot.term2.isfloat && plot.term2_boxplot){ 
             plot.term2_displaymode = 'boxplot'
-            do_plot(plot)
+            main(plot)
           } else {
             if (plot.term2_displaymode == "boxplot") {
               plot.term2_displaymode = "stacked"
             }
             plot.term2_boxplot = 0
-            do_plot( plot )
+            main( plot )
           }
         }
       }
@@ -213,7 +213,7 @@ function setOverlayOpts(plot, do_plot, table, arg) {
   })
 }
 
-function setViewOpts(plot, do_plot, table, arg) {
+function setViewOpts(plot, main, table, arg) {
   const tr = table.append('tr')
 
   tr.append('td')
@@ -225,7 +225,7 @@ function setViewOpts(plot, do_plot, table, arg) {
       const value = view.property('value')
       plot.term2_displaymode = value
       plot.term2_boxplot = value == 'boxplot'
-      do_plot(plot)
+      main(plot)
     })
 
   view.append('option')
@@ -250,7 +250,7 @@ function setViewOpts(plot, do_plot, table, arg) {
   })
 }
 
-function setDivideByOpts(plot, do_plot, table, arg) {
+function setDivideByOpts(plot, main, table, arg) {
   const tr = table.append('tr')
   
   tr.append('td')
@@ -265,17 +265,19 @@ function setDivideByOpts(plot, do_plot, table, arg) {
       if (value == "none") {
         plot.term0 = undefined
         //plot.term2_displaymode = 'stacked'
-        do_plot(plot)
+        main(plot)
       } else if (value == "tree") {
         const obj = Object.assign({},plot.obj)
         delete obj.termfilter
         delete obj.termfilterdiv
         const _arg = {
           term1: arg.term,
+          term2: plot.term2,
           obj,
-          callback: result=>{
-            plot.term0 = result.term2
-            do_plot(plot)
+          callback: term2=>{
+            obj.tip.hide()
+            plot.term0 = term2
+            main(plot)
           }
         }
         may_trigger_crosstabulate( _arg, tr.node() )
@@ -311,10 +313,12 @@ function setDivideByOpts(plot, do_plot, table, arg) {
       delete obj.termfilterdiv
       const _arg = {
         term1: arg.term,
+        term2: plot.term2,
         obj,
-        callback: result=>{
-          plot.term0 = result.term2
-          do_plot(plot)
+        callback: term2 => {
+          obj.tip.hide()
+          plot.term0 = term2
+          main(plot)
         }
       }
       may_trigger_crosstabulate( _arg, tr.node() )
@@ -337,7 +341,7 @@ function setDivideByOpts(plot, do_plot, table, arg) {
   })
 }
 
-function setBinOpts(plot, do_plot, table, termNum, label) {
+function setBinOpts(plot, main, table, termNum, label) {
   const tr = table.append('tr')
   
   tr.append('td')
@@ -348,7 +352,7 @@ function setBinOpts(plot, do_plot, table, termNum, label) {
     .style("cursor", "pointer")
     .html('edit ...')
     .on('click', () => {
-      custom_bin(plot, do_plot, termNum.slice(-1), tr.node())
+      custom_bin(plot, main, termNum.slice(-1), tr.node())
     })
 
   plot.controls.push(() => {
@@ -357,7 +361,7 @@ function setBinOpts(plot, do_plot, table, termNum, label) {
   })
 }
 
-function custom_bin(plot, do_plot, binNum=1, btn){
+function custom_bin(plot, main, binNum=1, btn){
   plot.tip.clear().showunder(btn)
 
   const custom_bins = binNum in plot.custom_bins ? plot.custom_bins[binNum] : null
@@ -514,7 +518,7 @@ function custom_bin(plot, do_plot, binNum=1, btn){
           last_bin_option,
           last_bin_oper
         }
-        do_plot(plot)
+        main(plot)
         plot.tip.hide()
       }
     })
@@ -523,7 +527,7 @@ function custom_bin(plot, do_plot, binNum=1, btn){
     .html('Reset')
     .on('click', ()=>{
       plot.custom_bins[binNum] = null
-      do_plot(plot)
+      main(plot)
       plot.tip.hide()
     })
 

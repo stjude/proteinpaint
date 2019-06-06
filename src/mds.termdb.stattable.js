@@ -11,17 +11,21 @@ export function init(holder) {
     // main() remembers the self "instance" via closure
     // so that self does not need to be passed to it
     // as an argument
-    main(plot, isVisible) {
+    main(plot, data, isVisible) {
       if (!isVisible) {
         self.dom.div.style('display','none')
         return
       }
-      render(self, plot)
+      processData(self, plot, data)
     }
   }
   return self
 }
 
+function processData(self, plot, data) {
+  plot.boxplot = data.boxplot
+  render(self, plot)
+}
 
 export function render(self, plot) {
   // table for statistical summary
