@@ -464,7 +464,7 @@ export class TermdbBarchart{
     return legendGrps;
   }
 
-  getTableData(_settings={}, obj=null) {
+  getData(_settings={}, obj=null) {
     if (obj) {
       this.obj = obj; //console.log(obj, this.obj)
       if (obj.modifier_barchart_selectbar) {
@@ -487,11 +487,11 @@ export class TermdbBarchart{
   }
 }
 
-export function custom_table_data(plot) {
+export function get_table_data(plot) {
   const barchart = plot.views.barchart
   const obj = plot.obj
 
-  return barchart.getTableData({
+  return barchart.getData({
     genome: obj.genome.name,
     dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
     term1: plot.term.id,
@@ -525,3 +525,38 @@ export function custom_table_data(plot) {
     return {column_keys, rows}
   })
 }
+
+export function get_boxplot_data(plot) {
+  const barchart = plot.views.barchart
+  const obj = plot.obj
+
+  return barchart.getData({
+    genome: obj.genome.name,
+    dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
+    term1: plot.term.id,
+    term2: obj.modifier_ssid_barchart ? 'genotype' 
+      : plot.term2 ? plot.term2.id
+      : '',
+    ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
+    mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
+    groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
+    term2Obj: plot.term2,
+    unit: plot.unit,
+    custom_bins: plot.custom_bins
+  }, obj)
+  .then(chartsData => {
+    const column_keys = chartsData.refs.rows
+    let binmax = 0
+    const lst = chartsData.refs.cols.map(t1 => {
+      const d = chartsData.charts[0].serieses.find(d => d.seriesId == t1)
+      if (binmax < d.max) binmax = d.max
+      return {
+        label: t1,
+        vvalue: t1,
+        boxplot: d.boxplot
+      }
+    })
+    return {lst, binmax}
+  })
+}
+

@@ -176,33 +176,7 @@ at the beginning or stacked bar plot for cross-tabulating
 }
 
 function update_plot (plot) {
-  const arg = {
-    genome: plot.genome,
-    dslabel: plot.dslabel,
-    obj: plot.obj,
-    termfilter: plot.obj.termfilter ? plot.obj.termfilter.terms : ''
-  }
-
-  if(plot.term2){
-    arg.crosstab2term = 1
-    arg.term1 = { id : plot.term.id }
-    arg.term2 = { id : plot.term2.id}
-    arg.boxplot = plot.term2_boxplot
-  }else{
-    arg.barchart = { id : plot.term.id }
-  }
-
-  client.dofetch( 'termdb', arg )
-  .then(data=>{
-    if(data.error) throw data.error
-    if(!data.lst) throw 'no data for barchart'
-
-    plot.items =  data.lst
-    if (data.binmax){ 
-      plot.settings.boxplot.yscale_max = data.binmax
-    }
-    do_plot( plot )
-  })
+  do_plot( plot )
 }
 
 // translate plot properties into the expected 

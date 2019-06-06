@@ -1,7 +1,7 @@
 import {event as d3event} from 'd3-selection'
 import {may_trigger_crosstabulate} from './mds.termdb.crosstab'
 
-export function controls(arg, plot, do_plot, update_plot) {
+export function controls(arg, plot, do_plot) {
   plot.config_div = arg.holder.append('div')
     .style('display','inline-block')
     .style('vertical-align','top')
@@ -30,13 +30,13 @@ export function controls(arg, plot, do_plot, update_plot) {
   // for contextual updates
   plot.controls = []
   const table = tip.append('table')
-  setOverlayOpts(plot, do_plot, update_plot, table, arg)
-  setViewOpts(plot, update_plot, table)
+  setOverlayOpts(plot, do_plot, table, arg)
+  setViewOpts(plot, do_plot, table)
   setOrientationOpts(plot, do_plot, table)
   setScaleOpts(plot, do_plot, table)
   setBinOpts(plot, do_plot, table, 'term1', 'Primary Bins')
   setBinOpts(plot, do_plot, table, 'term2', 'Stacked Bins')
-  setDivideByOpts(plot, do_plot, update_plot, table, arg)
+  setDivideByOpts(plot, do_plot, table, arg)
 }
 
 function setOrientationOpts(plot, do_plot, table) {
@@ -102,7 +102,7 @@ function setScaleOpts(plot, do_plot, table) {
   })
 }
 
-function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
+function setOverlayOpts(plot, do_plot, table, arg) {
   const tr = table.append('tr')
   
   tr.append('td')
@@ -132,7 +132,7 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
             plot.items = result.items
             if (plot.term2.isfloat && plot.term2_boxplot){ 
               plot.term2_displaymode = 'boxplot'
-              update_plot(plot)
+              do_plot(plot)
             }else{
               plot.term2_boxplot = 0
               do_plot( plot )
@@ -180,7 +180,7 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
           plot.items = result.items
           if (plot.term2.isfloat && plot.term2_boxplot){ 
             plot.term2_displaymode = 'boxplot'
-            update_plot(plot)
+            do_plot(plot)
           }else{
             plot.term2_boxplot = 0
             do_plot( plot )
@@ -207,7 +207,7 @@ function setOverlayOpts(plot, do_plot, update_plot, table, arg) {
   })
 }
 
-function setViewOpts(plot, update_plot, table, arg) {
+function setViewOpts(plot, do_plot, table, arg) {
   const tr = table.append('tr')
 
   tr.append('td')
@@ -219,7 +219,7 @@ function setViewOpts(plot, update_plot, table, arg) {
       const value = view.property('value')
       plot.term2_displaymode = value
       plot.term2_boxplot = value == 'boxplot'
-      update_plot(plot)
+      do_plot(plot)
     })
 
   view.append('option')
@@ -244,7 +244,7 @@ function setViewOpts(plot, update_plot, table, arg) {
   })
 }
 
-function setDivideByOpts(plot, do_plot, update_plot, table, arg) {
+function setDivideByOpts(plot, do_plot, table, arg) {
   const tr = table.append('tr')
   
   tr.append('td')
@@ -269,7 +269,7 @@ function setDivideByOpts(plot, do_plot, update_plot, table, arg) {
           obj,
           callback: result=>{
             plot.term0 = result.term2
-            update_plot(plot)
+            do_plot(plot)
           }
         }
         may_trigger_crosstabulate( _arg, tr.node() )
@@ -308,7 +308,7 @@ function setDivideByOpts(plot, do_plot, update_plot, table, arg) {
         obj,
         callback: result=>{
           plot.term0 = result.term2
-          update_plot(plot)
+          do_plot(plot)
         }
       }
       may_trigger_crosstabulate( _arg, tr.node() )

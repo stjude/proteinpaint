@@ -1,4 +1,4 @@
-import {custom_table_data} from './mds.termdb.barchart'
+import {get_table_data} from './mds.termdb.barchart'
 
 // init is similar to a Class constructor
 // in that it returns an object "instance"
@@ -34,17 +34,13 @@ export function render (self, plot) {
   .selectAll('*')
     .remove()
 
-  const table_data = plot.custom_bins["1"] || plot.custom_bins["2"]
-    ? custom_table_data
-    : default_table_data
-
-  table_data(plot)
+  get_table_data(plot)
   .then(data => {
     const {column_keys, rows} = data
     
     // show table
     const table = self.dom.div.append('table')
-    .style('margin-top','20px')
+    //.style('margin-top','20px')
     .style('border-spacing','3px')
     .style('border-collapse','collapse')
     .style('border', '1px solid black')
@@ -83,40 +79,4 @@ export function render (self, plot) {
       }
     }
   })
-}
-
-
-function default_table_data(plot) {
-  let column_keys = []
-  if(plot.term2 && plot.term2.graph.barchart.order ) {
-    column_keys = plot.term2.graph.barchart.order
-  } else {
-
-    // no predefined order, get unique values from data
-    const term2values = new Set()
-    for(const t1v of plot.items) {
-      for(const j of t1v.lst) {
-        term2values.add( j.label )
-      }
-    }
-    for(const s of term2values) {
-      column_keys.push( s )
-    }
-  }
-
-  // rows are term1 values
-  let rows = []
-  // order of rows maybe predefined
-  if( plot.term.graph && plot.term.graph.barchart && plot.term.graph.barchart.order ) {
-    for(const v of plot.term.graph.barchart.order ) {
-      const i = plot.items.find( i=> i.label == v )
-      if( i ) {
-        rows.push( i )
-      }
-    }
-  } else {
-    rows = plot.items
-  }
-
-  return Promise.resolve({column_keys, rows})
 }

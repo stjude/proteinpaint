@@ -79,11 +79,12 @@ async function barchart_data ( q, ds, res, tdb ) {
 // template for partjson, already stringified so that it does not 
 // have to be re-stringified within partjson refresh for every request
 const template = JSON.stringify({
+  "@errmode": ["","","",""],
   "@join()": {
     vals: "=vals()"
   },
-  sum: "+&vals.value",
-  values: ["&vals.value"],
+  sum: "+&vals.value1",
+  values: ["&vals.value1"],
   results: {
     "_2:maxAcrossCharts": "=maxAcrossCharts()",
     charts: [{
@@ -95,11 +96,15 @@ const template = JSON.stringify({
         seriesId: "&vals.seriesId",
         data: [{
           dataId: "&vals.dataId",
-          total: "+1"
-        }, "&vals.dataId"]
+          total: "+1",
+        }, "&vals.dataId"],
+        max: "<&vals.value2",
+        tempValues: ["&vals.value2"],
+        tempSum: "+&vals.value2",
+        "__:boxplot": "=boxplot2()"
       }, "&vals.seriesId"]
     }, "&vals.chartId"],
-    "__:boxplot": "=boxplot()",
+    "__:boxplot": "=boxplot1()",
     unannotated: {
       label: "",
       label_unannotated: "",
@@ -159,9 +164,12 @@ function getPj(q, inReq, data) {
             chartId,
             seriesId,
             dataId,
-            value: typeof inReq.numValFxns[q.term1] == 'function'
+            value1: typeof inReq.numValFxns[q.term1] == 'function'
               ? inReq.numValFxns[q.term1](row)
-              : undefined
+              : undefined,
+            value2: typeof inReq.numValFxns[q.term2] == 'function'
+              ? inReq.numValFxns[q.term2](row)
+              : undefined,
           }
         }
       },
@@ -183,11 +191,20 @@ function getPj(q, inReq, data) {
         }
         return maxAcrossCharts
       },
-      boxplot(row, context) {
+      boxplot1(row, context) {
         if (!context.root.values.length) return;
         context.root.values.sort((i,j)=> i - j )
         const stat = app.boxplot_getvalue( context.root.values.map(v => {return {value: v}}) )
-        stat.mean = context.root.sum /  context.root.values.length
+        stat.mean = context.root.sum / context.root.values.length
+        return stat
+      },
+      boxplot2(row, context) {
+        if (!context.self.tempValues || !context.self.tempValues.length) return;
+        context.self.tempValues.sort((i,j)=> i - j )
+        const stat = app.boxplot_getvalue( context.self.tempValues.map(v => {return {value: v}}) )
+        stat.mean = context.self.tempSum / context.self.tempValues.length
+        delete context.self.tempSum
+        delete context.self.tempValues
         return stat
       },
       unannotated(row, context) {
