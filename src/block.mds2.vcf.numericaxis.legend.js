@@ -205,13 +205,17 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 	const af = tk.vcf.numerical_axis.AFtest
 
 	// only allow adjusted tests if one group is 'termdb' and another 'population'
-	if( af.groups.find(i=>i.is_population) && af.groups.find(i=>i.is_termdb) && af.allowto_adjust_race){
-		af.adjust_race = true
+	if( af.groups.find(i=>i.is_population) && af.groups.find(i=>i.is_termdb)){
+		const p_select = af.groups.find(i=>i.is_population)
+		p_select.adjust_race = true
 	}else{
 	// make 'AFdiff_test' as default for rest of the group type combination
 		af.testby_AFdiff = true
 		af.testby_fisher = false
-		af.adjust_race = false
+		if(af.groups.find(i=>i.is_population)){
+			const p_select = af.groups.find(i=>i.is_population)
+			p_select.adjust_race = false
+		}
 	}
 
 	// one row for each group
@@ -652,9 +656,10 @@ function legend_show_AFtest_onegroup_population ( group, holder, tk ){
 	update_population(population_div)
 
 	const af = tk.vcf.numerical_axis.AFtest
+	const p_select = af.groups.find(i=>i.key==group.key)
 
 	// may allow race adjustment
-	if(af.allowto_adjust_race) {
+	if(p_select.adjust_race) {
 
 		const id = Math.random()
 		af.adjust_race_checkbox = holder.append('input')
@@ -662,9 +667,9 @@ function legend_show_AFtest_onegroup_population ( group, holder, tk ){
 			.attr('id',id)
 			.style('margin-left','10px')
 			.property('disabled', (!af.groups.find(i=>i.is_termdb) || !af.groups.find(i=>i.is_population)) )
-			.property('checked', af.adjust_race)
+			.property('checked', p_select.adjust_race)
 			.on('change',()=>{
-				af.adjust_race = !af.adjust_race
+				p_select.adjust_race = !p_select.adjust_race
 				tk.load()
 			})
 
