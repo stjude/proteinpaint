@@ -19,13 +19,13 @@ export function init(holder) {
       if( !plot.term2 ) {
         throw 'term2 is required for table view'
       }
-      processData(self, plot, data)
+      processData(self, data)
     }
   }
   return self
 }
 
-function processData(self, plot, data) {
+function processData(self, data) {
   const column_keys = data.refs.rows
   const rows = data.refs.cols.map(t1 => {
     return {
@@ -42,10 +42,10 @@ function processData(self, plot, data) {
         })
     }
   })
-  render(self, plot, column_keys, rows)
+  render(self, column_keys, rows)
 }
 
-export function render(self, plot, column_keys, rows) {
+export function render(self, column_keys, rows) {
   self.dom.div
     .style('display','inline-block')
   .selectAll('*')

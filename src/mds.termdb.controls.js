@@ -180,7 +180,6 @@ function setOverlayOpts(plot, main, table, arg) {
         obj,
         callback: term2=>{
           obj.tip.hide()
-          // replacing term2
           plot.term2 = term2
           if (plot.term2.isfloat && plot.term2_boxplot){ 
             plot.term2_displaymode = 'boxplot'
@@ -275,8 +274,9 @@ function setDivideByOpts(plot, main, table, arg) {
           term1: arg.term,
           term2: plot.term2,
           obj,
-          callback: result=>{
-            plot.term0 = result.term2
+          callback: term2=>{
+            obj.tip.hide()
+            plot.term0 = term2
             main(plot)
           }
         }
@@ -315,8 +315,9 @@ function setDivideByOpts(plot, main, table, arg) {
         term1: arg.term,
         term2: plot.term2,
         obj,
-        callback: result=>{
-          plot.term0 = result.term2
+        callback: term2 => {
+          obj.tip.hide()
+          plot.term0 = term2
           main(plot)
         }
       }
