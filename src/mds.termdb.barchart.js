@@ -45,7 +45,8 @@ export class TermdbBarchart{
     this.term2toColor = {}
   }
 
-  main(plot, data, isVisible, obj=null) {
+  main(plot=null, data=null, isVisible=true, obj=null) {
+    if (data) this.currServerData = data
     if (!this.setVisibility(isVisible)) return
     if (obj) {
       this.obj = obj
@@ -54,10 +55,11 @@ export class TermdbBarchart{
       }
     }
     this.updateSettings(plot)
-    this.processData(data) 
+    this.processData(this.currServerData) 
   }
 
   updateSettings(plot) {
+    if (!plot) return
     // translate relevant plot keys to barchart settings keys
     const obj = plot.obj
     const settings = {
