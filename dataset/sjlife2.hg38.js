@@ -167,7 +167,7 @@ module.exports={
 		populations:[
 			{
 				key:'gnomAD',
-				label:'gnomAD',
+				label:'gnomAD (NFE+AFR+EAS)',
 				allowto_adjust_race:true,
 				adjust_race:true,
 				sets:[
