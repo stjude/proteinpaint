@@ -117,7 +117,7 @@ async function trigger_children ( q, res, tdb ) {
 may apply ssid: a premade sample set
 */
 	// list of children id
-	const cidlst = tdb.term2term.map.get( q.get_children.id )
+	const cidlst = tdb.parent2children.get( q.get_children.id )
 	// list of children terms
 	const lst = []
 	if(cidlst) {
@@ -192,16 +192,18 @@ function server_init_parse_term2term ( termdb ) {
 
 	if(termdb.term2term.file) {
 		// one single text file
-		termdb.term2term.map = new Map()
-		termdb.parentByChild = Object.create(null)
-		// k: parent
-		// v: [] children
+
+		termdb.parent2children = new Map()
+		// k: id, v: list of children id
+		termdb.child2parent = new Map()
+		// k: id, v: parent id
+
 		for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.term2term.file),{encoding:'utf8'}).trim().split('\n') ) {
 			if(line[0]=='#') continue
-			const l = line.split('\t')
-			if(!termdb.term2term.map.has( l[0] )) termdb.term2term.map.set( l[0], [] )
-			termdb.term2term.map.get( l[0] ).push( l[1] )
-			termdb.parentByChild[ l[1] ] = l[0]
+			const [pa,child] = line.split('\t')
+			termdb.child2parent.set( child, pa )
+			if(!termdb.parent2children.has( pa )) termdb.parent2children.set( pa, [] )
+			termdb.parent2children.get( pa ).push( child )
 		}
 		return
 	}
@@ -225,7 +227,7 @@ function server_init_parse_termjson ( termdb ) {
 			term.id = l[0]
 			termdb.termjson.map.set( l[0], term )
 			if (term.iscondition && term.isleaf) {
-				term.conditionlineage = get_term_lineage([term.id], term.id, termdb.parentByChild)
+				term.conditionlineage = get_term_lineage([term.id], term.id, termdb.child2parent)
 			}
 		}
 		return
@@ -233,11 +235,11 @@ function server_init_parse_termjson ( termdb ) {
 	throw 'termjson: unknown data source'
 }
 
-function get_term_lineage (lineage, termid, parentByChild) {
-	if (termid in parentByChild) {
-		const parent = parentByChild[termid]
-		lineage.push(parent)
-		return get_term_lineage(lineage, parent, parentByChild)
+function get_term_lineage (lineage, termid, child2parent) {
+	const pa = child2parent.get( termid )
+	if ( pa ) {
+		lineage.push( pa )
+		return get_term_lineage(lineage, pa , child2parent)
 	} else {
 		return lineage
 	}
