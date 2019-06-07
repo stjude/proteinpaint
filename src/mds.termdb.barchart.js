@@ -309,7 +309,7 @@ export class TermdbBarchart{
         },
         click: () => { 
           const d = event.target.__data__
-          if (!d) return
+          if (d === undefined) return
           self.settings.exclude.cols.push(d)
           self.main()
         },
@@ -328,7 +328,7 @@ export class TermdbBarchart{
         },
         click: () => { 
           const d = event.target.__data__
-          if (!d) return
+          if (d === undefined) return
           self.settings.exclude.cols.push(d)
           self.main()
         },
@@ -344,7 +344,7 @@ export class TermdbBarchart{
         click: () => {
           event.stopPropagation()
           const d = event.target.__data__
-          if (!d) return
+          if (d === undefined) return
           if (d.type == 'col') {
             const i = self.settings.exclude.cols.indexOf(d.text)
             if (i == -1) return
