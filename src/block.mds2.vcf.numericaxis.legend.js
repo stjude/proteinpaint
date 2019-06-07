@@ -205,17 +205,24 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 
 	const af = tk.vcf.numerical_axis.AFtest
 
-	// only allow adjusted tests if one group is 'termdb' and another 'population'
-	if( af.groups.find(i=>i.is_population) && af.groups.find(i=>i.is_termdb)){
-		const p_select = af.groups.find(i=>i.is_population)
-		p_select.adjust_race = true
-	}else{
-	// make 'AFdiff_test' as default for rest of the group type combination
-		af.testby_AFdiff = true
-		af.testby_fisher = false
-		if(af.groups.find(i=>i.is_population)){
-			const p_select = af.groups.find(i=>i.is_population)
-			p_select.adjust_race = false
+	{
+		const popgroup = af.groups.find(i=>i.is_population)
+		if( popgroup ) {
+			// has pop group
+			if( popgroup.allowto_adjust_race ) {
+				// allowed to adjust race
+				popgroup.adjust_race = af.groups.find(i=>i.is_termdb) != undefined
+			} else {
+				delete popgroup.adjust_race
+			}
+		}
+	}
+
+	if( af.testby_fisher ) {
+		// if using fisher test, do not allow info group
+		if( af.groups.find(i=>i.is_infofield) ) {
+			af.testby_fisher = false
+			af.testby_AFdiff = true
 		}
 	}
 
@@ -273,6 +280,7 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 				} else if(i==1) {
 					af.testby_fisher=true
 				}
+				may_setup_numerical_axis(tk)
 				tk.load()
 			})
 		testmethod.append('option')
@@ -291,196 +299,169 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 
 
 
-function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom){
+function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom) {
 // a menu for changing type/content of one group from AFtest
 
 	const af = tk.vcf.numerical_axis.AFtest
 
 	const tip = tk.legend.tip.clear()
+	const table_tr = tip.d.append('table')
+		.style('margin','13px')
+		.style('border-spacing','0px')
+		.style('border-collapse','separate')
+		.append('tr')
 
-	tip.d.style('display','table-row')
-
-	const tabs_div = tip.d.append('div')
-		.style('display','table-cell')
+	const tabs_div = table_tr.append('td')
 		.style('vertical-align','top')
 		.style('padding','6px 0 6px 6px')
 
-	let clinical_dict_tab, value_field_tab, population_tab
-	
-	//detect termdb/info/population availability and show options
-	//clinical dictionary tab	
-	if(tk.mds){
-		clinical_dict_tab = make_one_tab('Clinical Dictionary','#4888BF',tabs_div)
-	}
-
-	//value field tab
-	if(af.allowed_infofields.length > 0){
-		value_field_tab = make_one_tab('Value field','#674EA7',tabs_div)
-	}
-
-	//Poplulation tab	
-	if(tk.populations.length > 0) {
-		population_tab = make_one_tab('Poplulation','#A64D79',tabs_div)
-	}
-
-	//flags to show options for each tab
-	let clinical_dict_flag = true, value_field_flag = false, population_falg = false
-
-	//selection_div to display clicical_dcit and options for other 2 tabs
-	const selection_div = tip.d.append('div')
-		.style('border-left','1px solid #ddd')
-		.style('display','table-cell')
+	const selection_div = table_tr.append('td')
+		.style('vertical-align','top')
+		.style('border-left','1px solid #ccc')
 		.style('padding','6px')
+
+	let termdb_tab, // tabs
+		infofield_tab,
+		population_tab,
+		termdb_div, // div
+		infofield_div,
+		population_div,
+		termdb_flag=false, // flags to show options for each tab
+		infofield_flag=false,
+		population_flag=false
+	
+	// detect termdb/info/population availability and show options
+	// clinical dictionary tab	
+	if(tk.mds){
+		termdb_tab = make_one_tab('Clinical Dictionary','#4888BF',tabs_div)
+		termdb_flag = true
+		termdb_div = selection_div.append('div')
+		const obj = {
+			genome: block.genome,
+			mds: tk.mds,
+			div: termdb_div,
+			default_rootterm: {},
+			termfilter:{no_display:true},
+			modifier_barchart_selectbar: {
+				callback: (result) => {
+					tip.hide()
+					update_group_term(result, group)
+					_updatetk()
+				}
+			}
+		}
+		termdb.init(obj)
+	}
+
+	// value field tab
+	if( af.allowed_infofields ){
+		infofield_tab = make_one_tab('Value field','#674EA7',tabs_div)
+		if(!termdb_flag) infofield_flag=true
+		infofield_div = selection_div.append('div')
+		for( const i of af.allowed_infofields ){
+			if( group.is_infofield && group.key==i.key ) {
+				// group is currently this one
+				continue
+			}
+			const info = tk.info_fields.find( j=> j.key == i.key )
+			infofield_div.append('div')
+				.attr('class','sja_menuoption')
+				.text(info.label)
+				.on('click', async()=>{
+					tip.hide()
+					delete group.is_termdb
+					delete group.is_population
+					group.is_infofield = true
+					group.key = i.key
+					_updatetk()
+				})
+		}
+	}
+
+	// poplulation tab
+	if( tk.populations ) {
+		population_tab = make_one_tab('Poplulation','#A64D79',tabs_div)
+		if(!termdb_flag && !infofield_flag) population_flag=true
+		population_div = selection_div.append('div')
+		for( const population of tk.populations ){
+			if( group.is_population && group.key==population.key ) {
+				continue
+			}
+			population_div.append('div')
+				.attr('class','sja_menuoption')
+				.text(population.label)
+				.on('click', async()=>{
+					tip.hide()
+					delete group.is_termdb
+					delete group.is_infofield
+					group.is_population = true
+					group.key = population.key
+					group.allowto_adjust_race = population.allowto_adjust_race
+					group.adjust_race = population.adjust_race
+					_updatetk()
+				})
+		}
+	}
 
 	update_selection_div()
 
 	tip.showunder( clickeddom )
 
 
-	// handle clicking event
-	if(clinical_dict_tab){
-		clinical_dict_tab.on('click', ()=>{
-			selection_div.selectAll('*').remove()
-			clinical_dict_flag = true
-			value_field_flag = false
-			population_falg = false
+	// click on tab
+	if(termdb_tab){
+		termdb_tab.on('click', ()=>{
+			termdb_flag = true
+			infofield_flag = false
+			population_flag = false
 			update_selection_div()
 		})
 	}
 
-	if(value_field_tab){
-		value_field_tab.on('click', ()=>{
-			clinical_dict_flag = false
-			value_field_flag = true
-			population_falg = false
+	if(infofield_tab){
+		infofield_tab.on('click', ()=>{
+			infofield_flag = true
+			termdb_flag = false
+			population_flag = false
 			update_selection_div()
 		})
 	}
 
 	if(population_tab){
 		population_tab.on('click', ()=>{
-			clinical_dict_flag = false
-			value_field_flag = false
-			population_falg = true
+			population_flag = true
+			termdb_flag = false
+			infofield_flag = false
 			update_selection_div()
 		})
 	}
 
-		
 	function update_selection_div(){
-
-		selection_div.selectAll('*').remove()
-
-		if(clinical_dict_flag){
-
-			if(clinical_dict_tab) clinical_dict_tab.style('background-color', '#ddd')
-			if(value_field_tab) value_field_tab.style('background-color', '#f2f2f2')
-			if(population_tab) population_tab.style('background-color', '#f2f2f2')
-	
-			// a new object as init() argument for launching the tree with modifiers
-			const obj = {
-				genome: block.genome,
-				mds: tk.mds,
-				div: selection_div,
-				default_rootterm: {},
-				modifier_barchart_selectbar: {
-					callback: async (result) => {
-						tip.hide()
-						update_group_term(result, group)
-						settingholder.selectAll('*').remove()
-						update_legend_by_AFtest(settingholder, tk, block)
-						group.dom.td2.text('UPDATING...')
-						await tk.load()
-						group.dom.td2.text('ALLELE FREQUENCY OF')
-					}
-				}
-			}
-			termdb.init(obj)
-
-		} else if(value_field_flag){
-
-			if(clinical_dict_tab) clinical_dict_tab.style('background-color', '#f2f2f2')
-			if(value_field_tab) value_field_tab.style('background-color', '#ddd')
-			if(population_tab) population_tab.style('background-color', '#f2f2f2')
-
-			const af = tk.vcf.numerical_axis.AFtest
-
-			for( const info_field of af.allowed_infofields ){
-
-				const info = tk.info_fields.find( j=> j.key == info_field.key )
-
-				const this_info = selection_div.append('div')
-					.attr('class','sja_menuoption')
-					.text(info.label)
-					.on('click', async()=>{
-						tip.hide()
-
-						group.is_termdb = false
-						group.is_infofield = true
-						group.is_population = false
-
-						group.key = info.key
-
-						settingholder.selectAll('*').remove()
-						update_legend_by_AFtest(settingholder, tk, block)
-						group.dom.td2.text('UPDATING...')
-						await tk.load()
-						group.dom.td2.text('VALUE OF')
-					})
-
-				if(group.key == info_field.key){ //check for existing group value
-					this_info.style('color','#777')
-						.style('pointer-events','none')
-				}
-			}
-
-		}else if(population_falg){
-
-			if(clinical_dict_tab) clinical_dict_tab.style('background-color', '#f2f2f2')
-			if(value_field_tab) value_field_tab.style('background-color', '#f2f2f2')
-			if(population_tab) population_tab.style('background-color', '#ddd')
-
-			for( const population of tk.populations ){
-
-				const pop = selection_div.append('div')
-					.attr('class','sja_menuoption')
-					.text(population.label)
-					.on('click', async()=>{
-						tip.hide()
-
-						group.is_termdb = false
-						group.is_infofield = false
-						group.is_population = true
-
-						group.key = population.key
-
-						settingholder.selectAll('*').remove()
-						update_legend_by_AFtest(settingholder, tk, block)
-						group.dom.td2.text('UPDATING...')
-						await tk.load()
-						group.dom.td2.text('ALLELE FREQUENCY OF')
-					})
-
-				if(group.key == population.key){ //check for existing group value
-					pop.style('color','#777')
-						.style('pointer-events','none')
-				}
-			}
+		if(termdb_tab){
+			termdb_tab.classed('sja_menuoption', !termdb_flag)
+			termdb_div.style('display', termdb_flag ?'block':'none')
+		}
+		if(infofield_tab){
+			infofield_tab.classed('sja_menuoption', !infofield_flag)
+			infofield_div.style('display', infofield_flag ?'block':'none')
+		}
+		if(population_tab){
+			population_tab.classed('sja_menuoption', !population_flag)
+			population_div.style('display', population_flag ?'block':'none')
 		}
 	}
 	
 	function make_one_tab(tab_name, tab_color, holder){
 
 		const tab = holder.append('div')
-			.attr('class','sja_menuoption')
 			.style('display','block')
-			.style('border-radius','6px 0 0 6px')
-			.style('margin','2px 0')
+			.style('margin','0px 0px 1px 0px')
+			.style('padding','4px 8px')
 
 		tab.append('div')
 			.style('display','inline-block')
-			.style('width', '15px')
-			.style('height', '15px')
+			.style('width', '12px')
+			.style('height', '12px')
 			.style('background-color', tab_color)
 
 		tab.append('div')
@@ -495,7 +476,7 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 
         // create new array with updated terms
 		let new_terms = []
-
+		// following should be moved to termvaluesettingui and be exported as a function
 		for(const [j, bar_term] of result.terms.entries()){
 			const new_term = {
 				values: [{key: bar_term.value, label: bar_term.label}],
@@ -520,11 +501,19 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 		}
 
 		delete group.key
+		delete group.is_infofield
+		delete group.is_population
 		group.is_termdb = true
-		group.is_infofield = false
-		group.is_population = false
-
 		group.terms = new_terms
+	}
+
+	async function _updatetk () {
+		settingholder.selectAll('*').remove()
+		update_legend_by_AFtest(settingholder, tk, block)
+		group.dom.td2.text('UPDATING...')
+		may_setup_numerical_axis( tk )
+		await tk.load()
+		group.dom.td2.text( (group.is_termdb || group.is_population) ? 'ALLELE FREQUENCY OF' : 'VALUE OF' )
 	}
 }
 
@@ -672,7 +661,7 @@ function legend_show_AFtest_onegroup_population ( group, holder, tk ){
 	const p_select = af.groups.find(i=>i.key==group.key)
 
 	// may allow race adjustment
-	if(p_select.adjust_race) {
+	if(p_select.allowto_adjust_race) {
 
 		const id = Math.random()
 		af.adjust_race_checkbox = holder.append('input')

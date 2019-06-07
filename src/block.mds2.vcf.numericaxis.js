@@ -1018,7 +1018,6 @@ export function get_axis_label ( tk ) {
 
 
 export function get_axis_label_AFtest () {
-	// TODO need to synthesize a more informative label based on term settings of group1/2
 	return 'Compare two groups'
 }
 

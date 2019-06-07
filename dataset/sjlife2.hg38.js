@@ -166,7 +166,7 @@ module.exports={
 				key:'gnomAD',
 				label:'gnomAD (NFE+AFR+EAS)',
 				allowto_adjust_race:true,
-				adjust_race:true,
+				//adjust_race:true,
 				sets:[
 					// per variant, the control population allele counts are hardcoded to be info fields
 					{
@@ -224,7 +224,11 @@ module.exports={
 								}
 							]
 						},
-						{ is_population:true, key:'gnomAD', adjust_race:true },
+						{
+							is_population:true, key:'gnomAD',
+							// these flags must be duplicated from .populations[]
+							allowto_adjust_race:true, adjust_race:true
+						},
 						/*
 						{
 							is_termdb:true,
@@ -247,7 +251,6 @@ module.exports={
 						{ key:'gnomAD_AF_eas' },
 						{ key:'gnomAD_AF_nfe' }
 					],
-					allowed_populations:[ 'gnomAD' ]
 				},
 			},
 			plot_mafcov: {
