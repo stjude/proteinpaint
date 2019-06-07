@@ -59,6 +59,7 @@ module.exports={
 			patient_condition:{
 				file:'files/hg38/sjlife/clinical/outcomes_2017',
 				events_key:'conditionevents',
+				grades:[0,1,2,3,4,5],
 				grade_key:'grade',
 				age_key:'age',
 				// additional configs for charts and tables
