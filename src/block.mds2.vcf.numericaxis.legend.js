@@ -23,6 +23,7 @@ __update_legend
 	update_legend_by_AFtest
 		menu_edit_AFtest_onegroup
 		legend_show_AFtest_onegroup
+			legend_show_AFtest_onegroup_termdb
 			legend_show_AFtest_onegroup_infofield
 			legend_show_AFtest_onegroup_population
 */
@@ -533,37 +534,7 @@ function legend_show_AFtest_onegroup ( tk, block, group, tr ) {
 */
 	if( group.is_termdb ) {
 		group.dom.td2.text('ALLELE FREQUENCY OF')
-		termvaluesettingui.display(
-			group.dom.td3,
-			group,
-			tk.mds,
-			block.genome,
-			true,
-			async ()=>{
-				await tk.load()
-			}
-		)
-
-		// n=? handle and for porting to term tree filter
-		group.dom.samplehandle = group.dom.td3.append('span')
-			.style('margin-left','15px')
-			.style('opacity','.6')
-			.attr('class','sja_clbtext')
-			.text('Loading...')
-			.on('click',()=>{
-				tk.legend.tip.clear()
-					.showunder(group.dom.samplehandle.node())
-				termdb.init({
-					genome: block.genome,
-					mds: tk.mds,
-					div: tk.legend.tip.d,
-					default_rootterm: {},
-					termfilter:{
-						terms: JSON.parse(JSON.stringify(group.terms)),
-						no_display:true
-					}
-				})
-			})
+		legend_show_AFtest_onegroup_termdb(group, group.dom.td3, tk, block)
 		return
 	}
 	if( group.is_infofield ) {
@@ -579,6 +550,47 @@ function legend_show_AFtest_onegroup ( tk, block, group, tr ) {
 	group.dom.td3.text('Unknown group type!')
 }
 
+
+
+
+function legend_show_AFtest_onegroup_termdb ( group, holder, tk, block ) {
+	termvaluesettingui.display(
+		holder,
+		group,
+		tk.mds,
+		block.genome,
+		true,
+		async ()=>{
+			await tk.load()
+		}
+	)
+	// n=? handle and for porting to term tree filter
+	group.dom.samplehandle = holder.append('span')
+	.style('margin-left','15px')
+	.style('opacity','.6')
+	.attr('class','sja_clbtext')
+	.text('Loading...')
+	.on('click',()=>{
+		// click label to embed tree
+		const filterlst = JSON.parse( JSON.stringify(group.terms) ) // apply terms of this group as filter
+		if( tk.sample_termfilter ) {
+			// apply this filter too
+			for(const t of tk.sample_termfilter) filterlst.push( JSON.parse(JSON.stringify(t)) )
+		}
+		tk.legend.tip.clear()
+			.showunder(group.dom.samplehandle.node())
+		termdb.init({
+			genome: block.genome,
+			mds: tk.mds,
+			div: tk.legend.tip.d,
+			default_rootterm: {},
+			termfilter:{
+				terms: filterlst,
+				no_display:true
+			}
+		})
+	})
+}
 
 
 

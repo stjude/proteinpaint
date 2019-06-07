@@ -253,76 +253,6 @@ module.exports={
 					],
 					allowed_populations:[ 'gnomAD' ]
 				},
-
-
-
-
-
-
-
-
-				termdb2groupAF:{
-					group1:{
-						name:'GROUP 1',
-						terms:[
-							{
-							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-							values:[
-								{ key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'},
-								{key:'Neuroblastoma',label:'Neuroblastoma'}
-							]
-							}
-						]
-					},
-					group2:{
-						name:'GROUP 2',
-						terms:[
-							{
-							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-							values:[ {key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'} ],
-							isnot: true,
-							}
-						]
-					}
-				},
-
-				ebgatest: {
-					terms:[
-					/*
-						{
-							term:{id:'diaggrp',name:'Diagnosis Group', iscategorical:true },
-							values:[ {key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'} ]
-						}
-						*/
-						{
-							term:{id:'agedx',name:'Age at dx',isfloat:true},
-							range:{
-								start:0,
-								stop:4,
-								startinclusive:true,
-								stopinclusive:true
-							}
-						}
-					],
-					populations:[
-						// per variant, the control population allele counts are hardcoded to be info fields
-						{
-							key:'CEU',
-							infokey_AC: 'gnomAD_AC_nfe',
-							infokey_AN: 'gnomAD_AN_nfe'
-						},
-						{
-							key:'YRI',
-							infokey_AC: 'gnomAD_AC_afr',
-							infokey_AN: 'gnomAD_AN_afr'
-						},
-						{
-							key:'ASA',
-							infokey_AC: 'gnomAD_AC_eas',
-							infokey_AN: 'gnomAD_AN_eas'
-						}
-					]
-				},
 			},
 			plot_mafcov: {
 				show_samplename: 1
@@ -344,6 +274,8 @@ module.exports={
 				}
 			}
 		},
+		// to restrict samples 
+		sample_termfilter:[{term:{id:'wgs_sequenced',iscategorical:true},values:[{key:'1'}]}],
 		/*
 		svcnv: {
 		},

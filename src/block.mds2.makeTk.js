@@ -176,6 +176,7 @@ Note: must keep customizations of official tk through embedding api
 	if( tk.mds.track.populations ) {
 		tk.populations = JSON.parse(JSON.stringify(tk.mds.track.populations))
 	}
+	if( tk.mds.track.sample_termfilter ) tk.sample_termfilter = JSON.parse(JSON.stringify(tk.mds.track.sample_termfilter))
 }
 
 
