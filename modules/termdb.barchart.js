@@ -290,30 +290,45 @@ async function setValFxns(q, inReq, ds, tdb) {
     } else if (t.isinteger || t.isfloat) {
       get_numeric_bin_name(key, t, ds, term, q.custom_bins, inReq)
     } else if (t.iscondition) {
-      set_condition_fxn(key, tdb, inReq)
+      const unit = q.conditionUnits.split(",")[+term.slice(-1)] 
+      set_condition_fxn(key, tdb, unit, inReq)
     } else {
       throw "unsupported term binning"
     }
   }
 }
 
-function set_condition_fxn(key, tdb, inReq) {
-  // default to number of events for now
-  if (1) {
+function set_condition_fxn(key, tdb, unit, inReq) {
+  if (unit == 'max-grade') {
+    inReq.joinFxns[key] = row => {
+      let maxGrade = 0
+      for(const k in row) {
+        if (!row[k].conditionevents) continue
+        const term = tdb.termjson.map.get(k)
+        if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+          for(const event of row[k].conditionevents) {
+            if (maxGrade < event.grade) {
+              maxGrade = event.grade
+            }
+          }
+        }
+      }
+      return maxGrade
+    } 
+  } else if (unit == 'num-events') {
     inReq.joinFxns[key] = row => {
       let numEvents = 0
       for(const k in row) {
+        if (!row[k].conditionevents) continue
         const term = tdb.termjson.map.get(k)
-        if (term && term.iscondition && term.conditionlineage && term.conditionlineage.includes(key) && row[k].conditionevents) {
+        if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
           numEvents += row[k].conditionevents.length
         }
       }
       return numEvents 
     }
   } else {
-    inReq.joinFxns[key] = row => {
-      
-    }
+    throw `invalid condition unit: '${unit}'`
   }
 }
 

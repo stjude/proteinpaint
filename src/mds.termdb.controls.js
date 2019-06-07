@@ -30,13 +30,16 @@ export function controls(arg, plot, main) {
   // for contextual updates
   plot.controls = []
   const table = tip.append('table')
+  setConditionUnitOpts(plot, main, table, 'term', 'Bin unit', 1)
   setOverlayOpts(plot, main, table, arg)
+  setConditionUnitOpts(plot, main, table, 'term2', 'Overlay unit', 2)
   setViewOpts(plot, main, table)
   setOrientationOpts(plot, main, table)
   setScaleOpts(plot, main, table)
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
   setBinOpts(plot, main, table, 'term2', 'Stacked Bins')
   setDivideByOpts(plot, main, table, arg)
+  setConditionUnitOpts(plot, main, table, 'term0', 'Divide unit', 0)
 }
 
 function setOrientationOpts(plot, main, table) {
@@ -338,6 +341,35 @@ function setDivideByOpts(plot, main, table, arg) {
     }
     divideBy.property('value', plot.settings.bar.divideBy)
     genotype.style('display', plot.obj.modifier_ssid_barchart ? 'block' : 'none')
+  })
+}
+
+function setConditionUnitOpts(plot, main, table, termNum, label, index) {
+  const cu = plot.settings.common.conditionUnits
+  const tr = table.append('tr')
+
+  tr.append('td')
+    .html(label)
+
+  const unit = tr.append('td')
+    .append('select')
+    .on('change', () => {
+      cu[index] = unit.property('value')
+      main(plot)
+    })
+
+  const abs = unit.append('option')
+    .attr('value', 'max-grade')
+    .property('selected', cu[index] == "max-grade")
+    .html('Maximum grade')
+
+  const log = unit.append('option')
+    .attr('value', 'num-events')
+    .property('selected', cu[index] == "num-events")
+    .html('Number of events')
+
+  plot.controls.push(() => {
+    tr.style('display', plot[termNum] && plot[termNum].iscondition ? "table-row" : "none")
   })
 }
 

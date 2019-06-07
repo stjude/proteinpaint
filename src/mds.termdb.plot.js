@@ -65,7 +65,9 @@ arg: server returned data
         use_percentage: false,
         barheight: 300, // maximum bar length 
         barwidth: 20, // bar thickness
-        barspace: 2 // space between two bars
+        barspace: 2, // space between two bars
+        // conditionUits: [divide-unit, bin-unit, stack-unit]
+        conditionUnits: ['max-grade', 'max-grade', 'max-grade']
       },
       boxplot: {
         toppad: 20, // top padding
@@ -159,6 +161,7 @@ function getDataName(plot) {
       ? '' 
       : encodeURIComponent(JSON.stringify(plot.custom_bins))
     )
+    + '&conditionUnits=' + plot.settings.common.conditionUnits.join(",")
 }
 
 function render ( plot, data ) {

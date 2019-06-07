@@ -79,7 +79,8 @@ export class TermdbBarchart{
       colw: plot.settings.common.barwidth,
       rowh: plot.settings.common.barwidth,
       colspace: plot.settings.common.barspace,
-      rowspace: plot.settings.common.barspace
+      rowspace: plot.settings.common.barspace,
+      conditionUnits: plot.settings.common.conditionUnits
     }
     Object.assign(this.settings, settings)
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
@@ -374,7 +375,9 @@ export class TermdbBarchart{
             return s.unit == "pct" ? "% of patients" : "# of patients"
           } else {
             const term = self.terms.term1
-            return term.iscondition 
+            return term.iscondition && s.conditionUnits[1] == 'max-grade'
+              ? 'Maximum grade'
+              : term.iscondition && s.conditionUnits[1] == 'num-events'
               ? '# of events'
               : term.iscategorical || !term.unit
               ? ''
@@ -386,7 +389,9 @@ export class TermdbBarchart{
         text: () => {
           if (s.orientation == "vertical") { 
             const term = self.terms.term1
-            return term.iscondition 
+            return term.iscondition && s.conditionUnits[1] == 'max-grade'
+              ? 'Maximum grade'
+              : term.iscondition && s.conditionUnits[1] == 'num-events'
               ? '# of events'
               : term.iscategorical || !term.unit
               ? ''
