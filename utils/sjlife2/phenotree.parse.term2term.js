@@ -169,15 +169,18 @@ function makegraphconfig_conditionterm ( t ) {
 				{
 					// this option is available for both leaf and non-leaf terms
 					by_grade:true,
+					label:'Grades',
 				}
 			],
 
 			value_choices:[
 				{
 					max_grade_perperson:true
+					label:'Max grade per patient',
 				},
 				{
 					most_recent_grade:true
+					label:'Most recent grade',
 				}
 			]
 		}
@@ -187,6 +190,7 @@ function makegraphconfig_conditionterm ( t ) {
 		// has children, at bar_choices, allow immediate children to be bars
 		t.graph.barchart.bar_choices.push({
 			by_children: true,
+			label:'Conditions',
 			allow_to_stackby_grade: true,
 		})
 	}
