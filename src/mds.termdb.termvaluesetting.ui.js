@@ -36,7 +36,8 @@ group{}
     const add_term_btn = group_div.append('div')
         .attr('class','sja_filter_tag_btn')
         .style('padding','2px 7px')
-        .style('margin-left','10px')
+        .style('display','inline-block')
+        .style('margin-left','7px')
         .style('border-radius','6px')
         .style('background-color', '#4888BF')
         .html('&#43;')
@@ -74,7 +75,12 @@ group{}
 
         for(const [i, term] of group.terms.entries()){
 
-            const term_name_btn = terms_div.append('div')
+            const one_term_div = terms_div.append('div')
+                .style('white-space','nowrap')
+                .style('display','inline-block')
+                .style('padding','2px')
+
+            const term_name_btn = one_term_div.append('div')
                 .attr('class','sja_filter_tag_btn')
                 .style('border-radius','6px 0 0 6px')
                 .style('background-color', '#4888BF')
@@ -109,7 +115,7 @@ group{}
                     init(obj)
                 })
 
-            const condition_btn = terms_div.append('div')
+            const condition_btn = one_term_div.append('div')
                 .attr('class','sja_filter_tag_btn')
                 .style('background-color','#eeeeee')
                 .style('font-size','.7em')
@@ -145,7 +151,7 @@ group{}
                     .style('pointer-events','none')
             }
 
-            const term_value_div = terms_div.append('div')
+            const term_value_div = one_term_div.append('div')
                 .style('display','inline-block')
 
             if( term.term.iscategorical ) {
@@ -283,7 +289,7 @@ group{}
             }
 
             // button with 'x' to remove term2
-            terms_div.append('div')
+            one_term_div.append('div')
                 .attr('class','sja_filter_tag_btn')
                 .style('padding','3px 6px 3px 4px')
                 .style('border-radius','0 6px 6px 0')

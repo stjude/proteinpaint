@@ -226,6 +226,7 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 		td1.append('div')
 			.attr('class','sja_filter_tag_btn')
 			.text('Group '+(i+1))
+			.style('white-space','nowrap')
 			.style('border-radius','6px')
 			.style('background-color', '#ddd')
 			.style('color','#000')
