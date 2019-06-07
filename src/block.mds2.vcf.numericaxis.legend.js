@@ -196,16 +196,16 @@ but will not update track
 
 
 
-function update_legend_by_AFtest ( settingholder, tk, block ) {
-	// works for arbitrary number of groups
-	const table = settingholder.append('table')
-		.style('border-spacing','5px')
-		.style('border-collapse','separate')
-		.style('border-left','solid 1px #ccc')
 
-	const af = tk.vcf.numerical_axis.AFtest
 
-	{
+
+function AFtest_adjustsettingbygroup ( af ) {
+	if( af.groups[0].is_population && af.groups[1].is_population ) {
+		// both groups are populations, do not adjust race
+		af.groups[0].adjust_race=false
+		af.groups[1].adjust_race=false
+	} else {
+		// not both are population
 		const popgroup = af.groups.find(i=>i.is_population)
 		if( popgroup ) {
 			// has pop group
@@ -217,7 +217,6 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 			}
 		}
 	}
-
 	if( af.testby_fisher ) {
 		// if using fisher test, do not allow info group
 		if( af.groups.find(i=>i.is_infofield) ) {
@@ -225,6 +224,22 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 			af.testby_AFdiff = true
 		}
 	}
+}
+
+
+
+
+function update_legend_by_AFtest ( settingholder, tk, block ) {
+	// works for arbitrary number of groups
+
+	const af = tk.vcf.numerical_axis.AFtest
+
+	AFtest_adjustsettingbygroup( af )
+
+	const table = settingholder.append('table')
+		.style('border-spacing','5px')
+		.style('border-collapse','separate')
+		.style('border-left','solid 1px #ccc')
 
 	// one row for each group
 	for( const [i, group] of af.groups.entries() ) {
