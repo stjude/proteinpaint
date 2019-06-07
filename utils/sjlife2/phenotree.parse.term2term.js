@@ -175,11 +175,11 @@ function makegraphconfig_conditionterm ( t ) {
 
 			value_choices:[
 				{
-					max_grade_perperson:true
+					max_grade_perperson:true,
 					label:'Max grade per patient',
 				},
 				{
-					most_recent_grade:true
+					most_recent_grade:true,
 					label:'Most recent grade',
 				}
 			]
