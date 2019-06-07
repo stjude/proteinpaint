@@ -23,8 +23,11 @@ column 6:
 
 
 
+detect terms associated with chronic conditions:
+- all under "CTCAE Graded Events"
+- type flag ".iscondition:true"
+- chart configs
 
-children terms of "CTCAE Graded Events" are .has_patient_condition:true
 
 
 
@@ -139,13 +142,54 @@ each word is a term
 		if( patientcondition_terms.has( id )) {
 			// belongs to patient conditions
 			j.iscondition = true
-			// enable chart
-			j.graph = {barchart:{}}
+			makegraphconfig_conditionterm( j )
 		}
 
 		lines.push( id+'\t'+JSON.stringify(j) )
 	}
 	return map.size+' terms, '+leafcount+' leaf terms'
+}
+
+
+
+
+function makegraphconfig_conditionterm ( t ) {
+/* make graph config for a iscondition term
+   options a bit different for leaf and non-leaf terms
+*/
+
+	t.graph = {
+		barchart: {
+
+			grades:[0,1,2,3,4,5,9],
+			grade_key:'grade',
+			age_key:'age',
+
+			bar_choices:[
+				{
+					// this option is available for both leaf and non-leaf terms
+					by_grade:true,
+				}
+			],
+
+			value_choices:[
+				{
+					max_grade_perperson:true
+				},
+				{
+					most_recent_grade:true
+				}
+			]
+		}
+	}
+
+	if( !t.isleaf ) {
+		// has children, at bar_choices, allow immediate children to be bars
+		t.graph.barchart.bar_choices.push({
+			by_children: true,
+			allow_to_stackby_grade: true,
+		})
+	}
 }
 
 
