@@ -290,6 +290,9 @@ async function setValFxns(q, inReq, ds, tdb) {
     } else if (t.isinteger || t.isfloat) {
       get_numeric_bin_name(key, t, ds, term, q.custom_bins, inReq)
     } else if (t.iscondition) {
+      // tdb.patient_condition
+      if (!tdb.patient_condition) throw "missing termdb patient_condition"
+      if (!tdb.patient_condition.events_key) throw "missing termdb patient_condition.events_key"
       const unit = q.conditionUnits.split(",")[+term.slice(-1)] 
       set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq)
     } else {
@@ -299,14 +302,15 @@ async function setValFxns(q, inReq, ds, tdb) {
 }
 
 function set_condition_fxn(key, b, tdb, unit, inReq) {
+  const events_key = tdb.patient_condition.events_key
   if (unit == 'max_grade_perperson') {
     inReq.joinFxns[key] = row => {
       let maxGrade
       for(const k in row) {
-        if (!row[k].conditionevents) continue
+        if (!row[k][events_key]) continue
         const term = tdb.termjson.map.get(k)
         if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-          for(const event of row[k].conditionevents) {
+          for(const event of row[k][events_key]) {
             if (maxGrade === undefined || maxGrade < event[b.grade_key]) {
               maxGrade = event[b.grade_key]
             }
@@ -317,19 +321,20 @@ function set_condition_fxn(key, b, tdb, unit, inReq) {
     } 
   } else if (unit == 'most_recent_grade') {
     inReq.joinFxns[key] = row => {
-      let mostRecent
+      let mostRecentAge, mostRecentGrade
       for(const k in row) {
-        if (!row[k].conditionevents) continue
+        if (!row[k][events_key]) continue
         const term = tdb.termjson.map.get(k)
         if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-          for(const event of row[k].conditionevents) {
-            if (mostRecent === undefined || mostRecent < event[b.age_key]) {
-              mostRecent = Math.round(event[b.age_key])
+          for(const event of row[k][events_key]) {
+            if (mostRecentAge === undefined || mostRecentAge < event[b.age_key]) {
+              mostRecentAge = event[b.age_key]
+              mostRecentGrade = event[b.grade_key]
             }
           }
         }
       }
-      return mostRecent
+      return mostRecentGrade
     }
   } else {
     throw `invalid condition unit: '${unit}'`
