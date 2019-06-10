@@ -366,7 +366,7 @@ such conditions may be carried by obj
 		}
 
 		if( term.graph.barchart.dom.loaded ) return
-
+			
 		button.text('Loading')
 
 		const arg = {
@@ -407,8 +407,7 @@ such conditions may be carried by obj
 			plot.overlay_with_genotype_idx = 0
 		}
 
-		plot_init( plot )
-		button.text('VIEW')
+		plot_init( plot, () => button.text('VIEW'))
 		term.graph.barchart.dom.loaded=true
 	})
 }

@@ -375,10 +375,10 @@ export class TermdbBarchart{
             return s.unit == "pct" ? "% of patients" : "# of patients"
           } else {
             const term = self.terms.term1
-            return term.iscondition && s.conditionUnits[1] == 'max-grade'
+            return term.iscondition && s.conditionUnits[1] == 'max_grade_perperson'
               ? 'Maximum grade'
-              : term.iscondition && s.conditionUnits[1] == 'num-events'
-              ? '# of events'
+              : term.iscondition && s.conditionUnits[1] == 'most_recent_grade'
+              ? 'Most recent grade'
               : term.iscategorical || !term.unit
               ? ''
               : term.unit //term.name[0].toUpperCase() + term.name.slice(1)

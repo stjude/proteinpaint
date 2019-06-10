@@ -291,41 +291,45 @@ async function setValFxns(q, inReq, ds, tdb) {
       get_numeric_bin_name(key, t, ds, term, q.custom_bins, inReq)
     } else if (t.iscondition) {
       const unit = q.conditionUnits.split(",")[+term.slice(-1)] 
-      set_condition_fxn(key, tdb, unit, inReq)
+      set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq)
     } else {
       throw "unsupported term binning"
     }
   }
 }
 
-function set_condition_fxn(key, tdb, unit, inReq) {
-  if (unit == 'max-grade') {
+function set_condition_fxn(key, b, tdb, unit, inReq) {
+  if (unit == 'max_grade_perperson') {
     inReq.joinFxns[key] = row => {
-      let maxGrade = 0
+      let maxGrade
       for(const k in row) {
         if (!row[k].conditionevents) continue
         const term = tdb.termjson.map.get(k)
         if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
           for(const event of row[k].conditionevents) {
-            if (maxGrade < event.grade) {
-              maxGrade = event.grade
+            if (maxGrade === undefined || maxGrade < event[b.grade_key]) {
+              maxGrade = event[b.grade_key]
             }
           }
         }
       }
       return maxGrade
     } 
-  } else if (unit == 'num-events') {
+  } else if (unit == 'most_recent_grade') {
     inReq.joinFxns[key] = row => {
-      let numEvents = 0
+      let mostRecent
       for(const k in row) {
         if (!row[k].conditionevents) continue
         const term = tdb.termjson.map.get(k)
         if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-          numEvents += row[k].conditionevents.length
+          for(const event of row[k].conditionevents) {
+            if (mostRecent === undefined || mostRecent < event[b.age_key]) {
+              mostRecent = Math.round(event[b.age_key])
+            }
+          }
         }
       }
-      return numEvents 
+      return mostRecent
     }
   } else {
     throw `invalid condition unit: '${unit}'`

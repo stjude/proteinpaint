@@ -6,7 +6,7 @@ import {init as boxplot_init} from './mds.termdb.boxplot'
 import {init as stattable_init} from './mds.termdb.stattable'
 import {controls} from './mds.termdb.controls'
 
-export function init(arg) {
+export function init(arg, callback = ()=>{}) {
 /*
 arg: server returned data
 .items[]
@@ -67,7 +67,7 @@ arg: server returned data
         barwidth: 20, // bar thickness
         barspace: 2, // space between two bars
         // conditionUits: [divide-unit, bin-unit, stack-unit]
-        conditionUnits: ['max-grade', 'max-grade', 'max-grade']
+        conditionUnits: ['max_grade_perperson', 'max_grade_perperson', 'max_grade_perperson']
       },
       boxplot: {
         toppad: 20, // top padding
@@ -77,6 +77,7 @@ arg: server returned data
       bar: {
         orientation: 'horizontal',
         unit: 'abs',
+        overlay: 'none',
         divideBy: 'none',
       }
     },
@@ -108,7 +109,7 @@ arg: server returned data
   // set configuration controls
   controls(arg, plot, main)
   
-  main( plot )
+  main( plot, callback )
   if (Array.isArray(arg.obj.filterCallbacks)) {
     arg.obj.filterCallbacks.push(()=>main(plot))
   }
@@ -120,16 +121,18 @@ arg: server returned data
 // client 
 const serverData = {}
 
-function main(plot) {
+function main(plot, callback = ()=>{}) {
   const dataName = getDataName(plot)
   if (serverData[dataName]) {
-    render(plot, serverData[dataName]) 
+    render(plot, serverData[dataName])
+    callback()
   }
   else {
     client.dofetch2('/termdb-barchart' + dataName)
     .then(chartsData => {
       serverData[dataName] = chartsData
       render(plot, chartsData)
+      callback()
     })
   }
 }
