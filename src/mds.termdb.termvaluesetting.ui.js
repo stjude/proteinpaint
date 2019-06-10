@@ -307,25 +307,8 @@ group{}
     async function add_term(result){
 
         // Add new term to group.terms
-        for(let i=0; i < result.terms.length; i++){
-            const bar_term = result.terms[i]
-            const new_term = {
-                values: [{key: bar_term.value, label: bar_term.label}],
-                term: {
-                    id: bar_term.term.id,
-                    name: bar_term.term.name
-                }
-            }
-            if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
-            if(bar_term.term.isfloat) {
-                new_term.term.isfloat = bar_term.term.isfloat
-                new_term.range = bar_term.range
-            }
-            if(bar_term.term.isinteger) {
-                new_term.term.isinteger = bar_term.term.isinteger
-                new_term.range = bar_term.range
-            }
-
+        for(const [i, bar_term] of result.terms.entries()){
+            const new_term = make_new_term(bar_term)
             group.terms.push(new_term)
         }
         
@@ -344,25 +327,7 @@ group{}
             // replace the term by index of clicked term
             if(i == term_replce_index){
                 for(const [j, bar_term] of result.terms.entries()){
-                    const new_term = {
-                        values: [{key: bar_term.value, label: bar_term.label}],
-                        term: {
-                            id: bar_term.term.id,
-                            name: bar_term.term.name
-                        } 
-                    }
-                    new_term.isnot  = term.isnot ? true : false
-
-                    if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
-                    if(bar_term.term.isfloat) {
-                        new_term.term.isfloat = bar_term.term.isfloat
-                        new_term.range = bar_term.range
-                    }
-                    if(bar_term.term.isinteger) {
-                        new_term.term.isinteger = bar_term.term.isinteger
-                        new_term.range = bar_term.range
-                    }
-
+                    const new_term = make_new_term(bar_term)
                     new_terms.push(new_term)
                 }
             }else{
@@ -373,9 +338,31 @@ group{}
         // assing new terms to group
         group.terms = new_terms
         
-        // // update the group div with new terms
-        // may_settoloading_termgroup( group )
+        // update the group div with new terms
         await callback()
+    }
+
+
+    function make_new_term(bar_term){
+        
+        const new_term = {
+            values: [{key: bar_term.value, label: bar_term.label}],
+            term: {
+                id: bar_term.term.id,
+                name: bar_term.term.name
+            }
+        }
+        if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
+        if(bar_term.term.isfloat) {
+            new_term.term.isfloat = bar_term.term.isfloat
+            new_term.range = bar_term.range
+        }
+        if(bar_term.term.isinteger) {
+            new_term.term.isinteger = bar_term.term.isinteger
+            new_term.range = bar_term.range
+        }
+
+        return new_term
     }
 
     function display_numeric_filter(i, value_div){
