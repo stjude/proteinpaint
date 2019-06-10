@@ -1601,3 +1601,44 @@ export function gmlst2loci ( gmlst ) {
 	}
 	return locs
 }
+
+
+
+export function tab2box ( holder, numberofTabs ) {
+	const tr = holder.append('table')
+		.style('border-spacing','0px')
+		.style('border-collapse','separate')
+		.append('tr')
+	const tdleft = tr.append('td')
+		.style('vertical-align','top')
+		.style('padding','10px 0px 10px 10px')
+	const tdright = tr.append('td')
+		.style('vertical-align','top')
+		.style('border-left','solid 1px #aaa')
+		.style('padding','10px')
+	const tabs = []
+	const boxes = []
+	for(let i=0; i<numberofTabs; i++) {
+		tabs.push(
+			tdleft.append('div')
+			.style('padding','5px 10px')
+			.style('margin','0px')
+			.style('border-top','solid 1px #ddd')
+			.classed('sja_menuoption',true)
+			.on('click',()=>{
+				for(let j=0; j<numberofTabs; j++) {
+					tabs[j].classed('sja_menuoption', i!=j )
+					boxes[j].style('display', i==j ? 'block' : 'none' )
+				}
+			})
+		)
+		boxes.push(
+			tdright.append('div')
+			.style('padding','3px')
+			.style('display','none')
+		)
+	}
+	tabs[0].classed('sja_menuoption',false)
+	boxes[0].style('display','block')
+	return [tabs,boxes]
+}
