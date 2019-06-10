@@ -43,13 +43,19 @@ export function controls(arg, plot, main) {
 }
 
 function renderRadioInput(inputName, elem, opts, inputHandler) {
-  const divs = elem.append('td')
-    .selectAll('div')
-    .data(opts)
-  .enter().append('div')
-    .style('padding', '3px')
+  const divs = elem.selectAll('div')
+    .data(opts, d => d.value)
   
-  const labels = divs.append('label')
+  divs.exit().each(function(d){
+    select(this)
+    .on('input', null)
+    .on('click', null)
+    .remove()
+  })
+  
+  const labels = divs.enter().append('div')
+    .style('padding', '3px')
+    .append('label')
   
   const inputs = labels.append('input')
     .attr('type', 'radio')
@@ -62,7 +68,11 @@ function renderRadioInput(inputName, elem, opts, inputHandler) {
     .style('vertical-align','top')
     .html(d=>'&nbsp;'+d.label)
 
-  return {inputs, labels, divs}
+  return {
+    divs: elem.selectAll('div'), 
+    labels: elem.selectAll('label'),
+    inputs: labels.selectAll('input'),
+  }
 }
 
 function setOrientationOpts(plot, main, table) {
@@ -321,27 +331,39 @@ function setDivideByOpts(plot, main, table, arg) {
 }
 
 function setConditionUnitOpts(plot, main, table, termNum, label, index) {
+  if ( !plot[termNum]
+    || !plot[termNum].graph 
+    || !plot[termNum].graph.barchart 
+    || !plot[termNum].graph.barchart.value_choices
+  ) return
   const cu = plot.settings.common.conditionUnits
   const tr = table.append('tr')
-  tr.append('td').html(label)
+  const labeltd = tr.append('td').html(label)
   const td = tr.append('td')
-  const radio = renderRadioInput(
-    'pp-termdb-condition-unit-'+index, 
-    td, 
-    [
-      {label: 'Maximum grade', value: 'max_grade_perperson'},
-      {label: 'Most recent grade', value: 'most_recent_grade'}
-    ]
-  )
-
-  radio.inputs
-  .property('checked', d => d.value == cu[index])
-  .on('input', d => {
-    cu[index] = d.value
-    main(plot)
-  })
+  let prevRadio
 
   plot.controls.push(() => {
+    const radio = renderRadioInput(
+      'pp-termdb-condition-unit-'+index, 
+      td, 
+      plot[termNum].graph.barchart.value_choices
+      .filter(d => d.max_grade_perperson || d.most_recent_grade)
+      .map(d => {
+        let value = d.max_grade_perperson 
+          ? 'max_grade_perperson'
+          : 'most_recent_grade'
+
+        return {label: d.label, value}
+      })
+    )
+
+    radio.inputs
+    .property('checked', d => d.value == cu[index])
+    .on('input', d => {
+      cu[index] = d.value
+      main(plot)
+    })
+
     tr.style('display', plot[termNum] && plot[termNum].iscondition ? "table-row" : "none")
     radio.inputs.property('checked', d => cu[index] == d.value)
   })
