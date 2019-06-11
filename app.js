@@ -12044,7 +12044,7 @@ function log(req) {
 	)
 }
 
-
+exports.log = log
 
 function downloadFile(url, tofile, cb) {
 	const f = fs.createWriteStream(tofile);

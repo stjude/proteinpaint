@@ -15,6 +15,7 @@ handle_request_closure
 
 exports.handle_request_closure = ( genomes ) => {
   return async (req, res) => {
+    app.log(req)
     const q = req.query
     if (q.custom_bins) {
       try {
@@ -346,7 +347,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
       }
       return mostRecentGrade
     }
-  } else if (unit == 'by_children') { console.log(key, conditionParent)
+  } else if (unit == 'by_children') {
     if (!conditionParent) throw "conditionParent must be specified when categories is by children"
     inReq.joinFxns[key] = row => {
       const conditions = []
