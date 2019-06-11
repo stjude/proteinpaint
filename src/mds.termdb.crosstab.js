@@ -5,6 +5,9 @@ import {event as d3event} from 'd3-selection'
 
 export function may_makebutton_crosstabulate( arg ) {
 /*
+
+not in use
+
 add button for cross-tabulating
 
 arg{}
@@ -67,7 +70,8 @@ then pass term2 and crosstab result to callback
 			modifier_click_term: {
 				disable_terms,
 				callback: term2_selected_callback 
-			}
+			},
+			termfilter: {no_display:true}
 		}
 
 		init( obj )
@@ -103,90 +107,8 @@ export function may_trigger_crosstabulate( arg, btn ) {
 			disable_terms,
 			callback: term2_selected_callback
 		},
-		termfilter: arg.obj.termfilter
+		termfilter: {no_display:true}
 	}
 
 	init(obj)
-}
-
-
-
-function make_term2_callback ( arg, button, errdiv ) {
-/*
-a callback to handle the click on term2 in tree
-as the modifier
-also a closure with the arguments and buttons
-*/
-	return (term2) => {
-
-		// term2 is selected
-		if(term2.id == arg.term1.id) {
-			errdiv.text('Cannot select the same term')
-			return
-		}
-
-		cross_tabulate( {
-			term1: {
-				id: arg.term1.id
-			},
-			term2: {
-				id: term2.id
-			},
-			obj: arg.obj
-		})
-		.then( data=>{
-
-			if( data.error ) throw data.error
-			if( !data.lst ) throw 'error doing cross-tabulation'
-
-			// no error, can hide tip
-			arg.obj.tip.hide()
-
-			// update the plot data using the server-returned new data
-			arg.callback( {
-				items: data.lst,
-				term2: term2,
-				term2_order: data.term2_order,
-			})
-		})
-		.catch(e=>{
-			errdiv.text( e.message || e)
-			if(e.stack) console.log(e.stack)
-		})
-	}
-}
-
-
-
-
-
-function cross_tabulate( arg ) {
-/*
-do cross-tabulation for two terms
-
-.term1{}
-.term2{}
-.obj{}
-
-for numeric term:
-	if is based on custom binning, must return the binning scheme
-
-return promise
-*/
-	const param = {
-		crosstab2term: 1,
-		term1:{
-			id: arg.term1.id
-		},
-		term2:{
-			id: arg.term2.id
-		},
-		genome: arg.obj.genome.name,
-		dslabel: arg.obj.mds.label
-	}
-	return client.dofetch('termdb', param)
-	.then(data=>{
-		if(data.error) throw 'error cross-tabulating: '+data.error
-		return data
-	})
 }
