@@ -1,12 +1,21 @@
 import {select as d3select, event as d3event} from 'd3-selection'
 import {may_trigger_crosstabulate} from './mds.termdb.crosstab'
 
+// used to track controls unique "instances" by plot object
+// to be used to disambiguate between input names
+const plots = []
+
 export function controls(arg, plot, main) {
   plot.config_div = arg.holder.append('div')
     .style('display','inline-block')
     .style('vertical-align','top')
     .style('margin', '8px')
     .style('padding', '5px')
+
+  // controlsIndex to be used to assign unique radio input names
+  // by config div
+  plot.controlsIndex = plots.length
+  plots.push(plot)
 
   plot.controls_update = () => {
     plot.controls.forEach(update => update())
@@ -83,7 +92,7 @@ function setOrientationOpts(plot, main, table) {
   tr.append('td').html('Orientation')
   const td = tr.append('td')
   const radio = renderRadioInput(
-    'pp-termdb-condition-unit', 
+    'pp-termdb-condition-unit-' + plot.controlsIndex, 
     td, 
     [
       {label: 'Vertical', value: 'vertical'},
@@ -108,7 +117,7 @@ function setScaleOpts(plot, main, table) {
   tr.append('td').html('Scale')
   const td = tr.append('td')
   const radio = renderRadioInput(
-    'pp-termdb-scale-unit', 
+    'pp-termdb-scale-unit-' + plot.controlsIndex, 
     td, 
     [
       {label: 'Linear', value: 'abs'},
@@ -143,7 +152,7 @@ function setOverlayOpts(plot, main, table, arg) {
   tr.append('td').html('Overlay with')
   const td = tr.append('td')
   const radio = renderRadioInput(
-    'pp-termdb-overlay', 
+    'pp-termdb-overlay-' + plot.controlsIndex, 
     td, 
     [
       {label: 'None', value: 'none'},
@@ -232,7 +241,7 @@ function setViewOpts(plot, main, table, arg) {
   tr.append('td').html('Display mode')
   const td = tr.append('td')
   const radio = renderRadioInput(
-    'pp-termdb-display-mode', 
+    'pp-termdb-display-mode-' + plot.controlsIndex, 
     td, 
     [
       {label: 'Barchart', value: 'stacked'},
@@ -261,7 +270,7 @@ function setDivideByOpts(plot, main, table, arg) {
   tr.append('td').html('Divide by')
   const td = tr.append('td')
   const radio = renderRadioInput(
-    'pp-termdb-divide-by', 
+    'pp-termdb-divide-by-' + plot.controlsIndex, 
     td, 
     [
       {label: 'None', value: 'none'},
@@ -350,7 +359,7 @@ function setConditionsByOpts(plot, main, table) {
     )
     if (tr.style('display') == 'none') return
     const radio = renderRadioInput(
-      'pp-termdb-conditions-by', 
+      'pp-termdb-conditions-by-' + plot.controlsIndex, 
       td,
       [
         {label: 'Grade', value: 'by_grade'},
@@ -403,7 +412,7 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
 
   plot.controls.push(() => {
     const radio = renderRadioInput(
-      'pp-termdb-condition-unit-'+index, 
+      'pp-termdb-condition-unit-'+ index + '-' + plot.controlsIndex, 
       td,
       optionsSeed.concat( 
         plot[termNum].graph.barchart.value_choices
