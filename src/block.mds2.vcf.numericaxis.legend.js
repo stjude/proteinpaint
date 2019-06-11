@@ -437,7 +437,7 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 		let new_terms = []
 
 		for(const [i, bar_term] of result.terms.entries()){
-			const new_term = make_new_term(bar_term)
+			const new_term = termvaluesettingui.make_new_term(bar_term)
 			new_terms.push(new_term)
 		}
 
