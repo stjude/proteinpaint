@@ -43,17 +43,21 @@ export function render(self, plot) {
     + '<tr><td colspan="2">Among Patients treated</td></tr>'
   }
 
-  self.dom.div.html(
-      '<table><tr><th></th><th>Value</th></tr>'
-      + exposed_data
-      + '<tr><td>Mean (SD)</td><td>'+ plot.boxplot.mean.toFixed(2) + ' (' + plot.boxplot.sd.toFixed(2) +') </td></tr>'
-      + '<tr><td>Median (IQR)</td><td>'+ plot.boxplot.p50.toFixed(2) + ' (' + plot.boxplot.iqr.toFixed(2) +') </td></tr>'
+  let rows = '<tr><td>Mean (SD)</td><td>'+ plot.boxplot.mean.toFixed(2) + ' (' + plot.boxplot.sd.toFixed(2) +') </td></tr>'
+  if (plot.boxplot.p50) {
+    rows += '<tr><td>Median (IQR)</td><td>'+ plot.boxplot.p50.toFixed(2) + ' (' + plot.boxplot.iqr.toFixed(2) +') </td></tr>'
       + '<tr><td>5th Percentile</td><td>'+ plot.boxplot.p05.toFixed(2) +'</td></tr>'
       + '<tr><td>25th Percentile</td><td>'+ plot.boxplot.p25.toFixed(2) +'</td></tr>'
       + '<tr><td>75th Percentile</td><td>'+ plot.boxplot.p75.toFixed(2) +'</td></tr>'
       + '<tr><td>95th Percentile</td><td>'+ plot.boxplot.p95.toFixed(2) +'</td></tr>'
-      + '</table>'
-    )
+  }
+
+  self.dom.div.html(
+    '<table><tr><th></th><th>Value</th></tr>'
+    + exposed_data
+    + rows
+    + '</table>'
+  )
 
   self.dom.div.selectAll('td, th, table')
     .style('border', '1px solid black')
