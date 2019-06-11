@@ -75,7 +75,7 @@ function getTrackers() {
     unannotated: {},
     orderedLabels: {},
     unannotatedLabels: {},
-    bins: {}
+    bins: []
   }
 }
 
