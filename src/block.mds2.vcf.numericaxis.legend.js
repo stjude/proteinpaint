@@ -436,27 +436,8 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
         // create new array with updated terms
 		let new_terms = []
 
-		// following should be moved to termvaluesettingui and be exported as a function
-		for(const [j, bar_term] of result.terms.entries()){
-			const new_term = {
-				values: [{key: bar_term.value, label: bar_term.label}],
-				term: {
-					id: bar_term.term.id,
-					name: bar_term.term.name
-				}
-			}
-			new_term.isnot = false
-
-			if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
-			if(bar_term.term.isfloat) {
-				new_term.term.isfloat = bar_term.term.isfloat
-				new_term.range = bar_term.range
-			}
-			if(bar_term.term.isinteger) {
-				new_term.term.isinteger = bar_term.term.isinteger
-				new_term.range = bar_term.range
-			}
-
+		for(const [i, bar_term] of result.terms.entries()){
+			const new_term = make_new_term(bar_term)
 			new_terms.push(new_term)
 		}
 

@@ -343,28 +343,6 @@ group{}
     }
 
 
-    function make_new_term(bar_term){
-        
-        const new_term = {
-            values: [{key: bar_term.value, label: bar_term.label}],
-            term: {
-                id: bar_term.term.id,
-                name: bar_term.term.name
-            }
-        }
-        if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
-        if(bar_term.term.isfloat) {
-            new_term.term.isfloat = bar_term.term.isfloat
-            new_term.range = bar_term.range
-        }
-        if(bar_term.term.isinteger) {
-            new_term.term.isinteger = bar_term.term.isinteger
-            new_term.range = bar_term.range
-        }
-
-        return new_term
-    }
-
     function display_numeric_filter(i, value_div){
 
         value_div.selectAll('*').remove()
@@ -505,7 +483,27 @@ group{}
     }
 }
 
+export function make_new_term(bar_term){
+        
+    const new_term = {
+        values: [{key: bar_term.value, label: bar_term.label}],
+        term: {
+            id: bar_term.term.id,
+            name: bar_term.term.name
+        }
+    }
+    if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
+    if(bar_term.term.isfloat) {
+        new_term.term.isfloat = bar_term.term.isfloat
+        new_term.range = bar_term.range
+    }
+    if(bar_term.term.isinteger) {
+        new_term.term.isinteger = bar_term.term.isinteger
+        new_term.range = bar_term.range
+    }
 
+    return new_term
+}
 
 
 function may_settoloading_termgroup ( group ) {
