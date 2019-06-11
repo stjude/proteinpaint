@@ -527,8 +527,9 @@ export default function barsRenderer(barsapp, holder) {
 
   function getRectY(d) {
     const grpoffset = hm.colgrps.indexOf(d[hm.colgrpkey]) * hm.colgspace
+    const h = hm.unit == "log" ? Math.max(0, hm.h.yPrevBySeries[d.seriesId]) : hm.h.yPrevBySeries[d.seriesId]
     return hm.orientation == "vertical"
-      ? hm.svgh - hm.collabelh - hm.h.yPrevBySeries[d.seriesId]
+      ? hm.svgh - hm.collabelh - h
       : hm.cols.indexOf(d.colId) * (hm.rowh + hm.rowspace) + grpoffset
   }
 
