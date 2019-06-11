@@ -37,13 +37,14 @@ export function controls(arg, plot, main) {
   setOrientationOpts(plot, main, table)
   setScaleOpts(plot, main, table)
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
-  setBinOpts(plot, main, table, 'term2', 'Stacked Bins')
+  setBinOpts(plot, main, table, 'term2', 'Overlay Bins')
   setDivideByOpts(plot, main, table, arg)
   setConditionUnitOpts(plot, main, table, 'term0', 'Divide unit', 0)
 }
 
 function renderRadioInput(inputName, elem, opts, inputHandler) {
   const divs = elem.selectAll('div')
+    .style('display', 'inline-block')
     .data(opts, d => d.value)
   
   divs.exit().each(function(d){
@@ -54,7 +55,8 @@ function renderRadioInput(inputName, elem, opts, inputHandler) {
   })
   
   const labels = divs.enter().append('div')
-    .style('padding', '3px')
+    .style('display', 'inline-block')
+    .style('padding', '3px 5px')
     .append('label')
   
   const inputs = labels.append('input')
@@ -125,10 +127,11 @@ function setScaleOpts(plot, main, table) {
     tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
     radio.divs.style('display', d => {
       if (d.value == 'log') {
-        return plot.term2 ? 'none' : 'initial' 
-      }
-      if (d.value == 'pct') {
-        return plot.term2 ? 'initial' : 'none'
+        return plot.term2 ? 'none' : 'inline-block' 
+      } else if (d.value == 'pct') {
+        return plot.term2 ? 'inline-block' : 'none'
+      } else {
+        return 'inline-block'
       }
     })
   })
@@ -219,7 +222,7 @@ function setOverlayOpts(plot, main, table, arg) {
         : 'none'
     }
     radio.inputs.property('checked', d => d.value == plot.settings.bar.overlay)
-    radio.divs.style('display', d => d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? 'block' : 'none')
+    radio.divs.style('display', d => d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? 'inline-block' : 'none')
   })
 }
 
@@ -248,7 +251,7 @@ function setViewOpts(plot, main, table, arg) {
   plot.controls.push(() => {
     tr.style("display", plot.term2 ? "table-row" : "none")
     radio.inputs.property('checked', d => d.value == plot.term2_displaymode)
-    radio.divs.style('display', d => plot.term2 && (d.value != 'boxplot' || plot.term2.isfloat) ? 'block' : 'none')
+    radio.divs.style('display', d => plot.term2 && (d.value != 'boxplot' || plot.term2.isfloat) ? 'inline-block' : 'none')
   })
 }
 
@@ -326,7 +329,7 @@ function setDivideByOpts(plot, main, table, arg) {
         : 'none'
     }
     radio.inputs.property('checked', d => d.value == plot.settings.bar.divideBy)
-    radio.divs.style('display', d => d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? 'block' : 'none')
+    radio.divs.style('display', d => d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? 'inline-block' : 'none')
   })
 }
 
@@ -372,8 +375,7 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
 function setBinOpts(plot, main, table, termNum, label) {
   const tr = table.append('tr')
   
-  tr.append('td')
-    .html(label)
+  tr.append('td').html(label)
 
   tr.append('td')
     .style('text-decoration', 'underline')
