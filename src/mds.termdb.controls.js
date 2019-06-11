@@ -1,4 +1,4 @@
-import {event as d3event} from 'd3-selection'
+import {select as d3select, event as d3event} from 'd3-selection'
 import {may_trigger_crosstabulate} from './mds.termdb.crosstab'
 
 export function controls(arg, plot, main) {
@@ -14,7 +14,7 @@ export function controls(arg, plot, main) {
 
   // label
   plot.config_div.append('div')
-    .style('color', '#aaa')
+    .style('color', '#777')
     .style('font-size', '12px')
     .style('cursor', 'pointer')
     .html('CONFIG')
@@ -30,6 +30,7 @@ export function controls(arg, plot, main) {
   // for contextual updates
   plot.controls = []
   const table = tip.append('table')
+  if (window.location.search.includes("conditionBy=")) setConditionsByOpts(plot, main, table)
   setConditionUnitOpts(plot, main, table, 'term', 'Bin unit', 1)
   setOverlayOpts(plot, main, table, arg)
   setConditionUnitOpts(plot, main, table, 'term2', 'Overlay unit', 2)
@@ -48,7 +49,7 @@ function renderRadioInput(inputName, elem, opts, inputHandler) {
     .data(opts, d => d.value)
   
   divs.exit().each(function(d){
-    select(this)
+    d3select(this)
     .on('input', null)
     .on('click', null)
     .remove()
@@ -333,6 +334,60 @@ function setDivideByOpts(plot, main, table, arg) {
   })
 }
 
+function setConditionsByOpts(plot, main, table) {
+  const tr = table.append('tr')
+  const labeltd = tr.append('td').html('Categories By')
+  const td = tr.append('td')
+  plot.controls.push(() => {
+    //console.log(plot.term.iscondition, plot.term.graph, )
+
+    tr.style('display', plot.term.iscondition 
+      && plot.term.graph
+      && plot.term.graph.barchart
+      && plot.term.graph.barchart.bar_choices 
+      ? "table-row" 
+      : "none"
+    )
+    if (tr.style('display') == 'none') return
+    const radio = renderRadioInput(
+      'pp-termdb-conditions-by', 
+      td,
+      [
+        {label: 'Grade', value: 'by_grade'},
+        {label: 'Children', value: 'by_children'}
+      ]
+      /*plot.term.graph.barchart.bar_choices
+      .filter(d => d.by_grade || d.by_children)
+      .map(d => { console.log(d)
+        let value = d.by_grade ? 'by_grade' : 'by_children'
+        return {label: d.label, value}
+      })*/
+    )
+
+    radio.inputs
+    .property('checked', d => d.value == plot.settings.common.conditionsBy)
+    .on('input', d => {
+      plot.settings.common.conditionsBy = d.value
+      if (d.value == "by_grade") {
+        if (1) { //plot.settings.common.conditionUnits == "none") {
+          plot.settings.common.conditionUnits[1] = "max_grade_perperson"
+          plot.term2 = null
+        }
+      } else if (plot.settings.common.conditionUnits[1] == 'by_children') {
+        plot.term2 = null
+      } else {
+        plot.settings.common.conditionUnits[1] = d.value
+        plot.settings.common.conditionParent = plot.term.id
+        plot.term2 = Object.assign({}, plot.term)
+      }
+      main(plot)
+    })
+
+    radio.divs.style('display', 'block')
+    radio.inputs.property('checked', d => plot.settings.common.conditionsBy == d.value)
+  })
+}
+
 function setConditionUnitOpts(plot, main, table, termNum, label, index) {
   if ( !plot[termNum]
     || !plot[termNum].graph 
@@ -341,34 +396,48 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
   ) return
   const cu = plot.settings.common.conditionUnits
   const tr = table.append('tr')
-  const labeltd = tr.append('td').html(label)
+  const labeltd = tr.append('td').html(label) // delete??
   const td = tr.append('td')
-  let prevRadio
+  const optionsSeed = window.location.search.includes("conditionBy=") ? [{label: "None", value: "by_children"}] : [] 
+  let prevRadio // delete?? 
 
   plot.controls.push(() => {
     const radio = renderRadioInput(
       'pp-termdb-condition-unit-'+index, 
-      td, 
-      plot[termNum].graph.barchart.value_choices
-      .filter(d => d.max_grade_perperson || d.most_recent_grade)
-      .map(d => {
-        let value = d.max_grade_perperson 
-          ? 'max_grade_perperson'
-          : 'most_recent_grade'
+      td,
+      optionsSeed.concat( 
+        plot[termNum].graph.barchart.value_choices
+        .filter(d => d.max_grade_perperson || d.most_recent_grade)
+        .map(d => {
+          let value = d.max_grade_perperson 
+            ? 'max_grade_perperson'
+            : 'most_recent_grade'
 
-        return {label: d.label, value}
-      })
+          return {label: d.label, value}
+        })
+      )
     )
 
     radio.inputs
     .property('checked', d => d.value == cu[index])
     .on('input', d => {
       cu[index] = d.value
+      if (index == 1 && d.value == "by_children" && plot.settings.common.conditionParent) {
+        plot.term2 = null
+      }
       main(plot)
     })
 
-    tr.style('display', plot[termNum] && plot[termNum].iscondition ? "table-row" : "none")
-    radio.inputs.property('checked', d => cu[index] == d.value)
+    tr.style('display', 
+      termNum == 'term'
+      && plot[termNum] 
+      && plot[termNum].iscondition 
+      ? "table-row" 
+      : "none")
+    radio.divs.style('display', 
+      d => d.value != 'none' || plot.settings.common.conditionsBy == "by_children" ? 'block' : 'none'
+    )
+    radio.inputs.property('checked', d => cu[index] == d.value) 
   })
 }
 

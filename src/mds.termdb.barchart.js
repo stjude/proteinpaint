@@ -440,7 +440,7 @@ export class TermdbBarchart{
           })
       })
     }
-    if (!s.hidelegend && this.terms.term2 && this.term2toColor) {
+    if (s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
       const colors = {}
       legendGrps.push({
         name: this.terms.term2.name,

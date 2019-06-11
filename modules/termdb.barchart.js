@@ -60,8 +60,15 @@ async function barchart_data ( q, ds, res, tdb ) {
   if(!ds.cohort) throw 'cohort missing from ds'
   if(!ds.cohort.annorows) throw `cohort.annorows is missing`
   // request-specific variables
-  const inReq = {
-    filterFxn: ()=>1, // default allow all rows, may be replaced via q.termfilter
+  const inReqs = [getTrackers(), getTrackers(), getTrackers()]
+  inReqs.filterFxn = ()=>1 // default allow all rows, may be replaced via q.termfilter
+  await setValFxns(q, inReqs, ds, tdb)
+  const pj = getPj(q, inReqs, ds.cohort.annorows)
+  res.send(pj.tree.results)
+}
+
+function getTrackers() {
+  return {
     joinFxns: {"": () => ""}, // keys are term0, term1, term2 names; ...
     numValFxns: {"": () => {}}, // ... if key == empty string then the term is not specified
     unannotated: {},
@@ -69,9 +76,6 @@ async function barchart_data ( q, ds, res, tdb ) {
     unannotatedLabels: {},
     bins: {}
   }
-  await setValFxns(q, inReq, ds, tdb)
-  const pj = getPj(q, inReq, ds.cohort.annorows)
-  res.send(pj.tree.results)
 }
 
 // template for partjson, already stringified so that it does not 
@@ -136,7 +140,7 @@ const template = JSON.stringify({
   }
 })
 
-function getPj(q, inReq, data) {
+function getPj(q, inReqs, data) {
 /*
   q: objectified URL query string
   inReq: request-specific closured functions and variables
@@ -152,21 +156,21 @@ function getPj(q, inReq, data) {
         // template above. A join function that returns
         // a falsy value for a data row will cause the
         // exclusion of that row from farther processing
-        if (!inReq.filterFxn(row)) return undefined
+        if (!inReqs.filterFxn(row)) return undefined
 
-        const chartId = inReq.joinFxns[q.term0](row)
-        const seriesId = inReq.joinFxns[q.term1](row)
-        const dataId = inReq.joinFxns[q.term2](row)
+        const chartId = inReqs[0].joinFxns[q.term0](row)
+        const seriesId = inReqs[1].joinFxns[q.term1](row)
+        const dataId = inReqs[2].joinFxns[q.term2](row)
         if (chartId !== undefined && seriesId !== undefined && dataId !== undefined) {
           return {
             chartId,
             seriesId,
             dataId,
-            value1: typeof inReq.numValFxns[q.term1] == 'function'
-              ? inReq.numValFxns[q.term1](row)
+            value1: typeof inReqs[1].numValFxns[q.term1] == 'function'
+              ? inReqs[1].numValFxns[q.term1](row)
               : undefined,
-            value2: typeof inReq.numValFxns[q.term2] == 'function'
-              ? inReq.numValFxns[q.term2](row)
+            value2: typeof inReqs[2].numValFxns[q.term2] == 'function'
+              ? inReqs[2].numValFxns[q.term2](row)
               : undefined,
           }
         }
@@ -217,40 +221,44 @@ function getPj(q, inReq, data) {
       },
       unannotated(row, context) {
         const vals = context.joins.get('vals')
-        return vals.seriesId === inReq.unannotated.label ? 1 : 0
+        return vals.seriesId === inReqs[1].unannotated.label ? 1 : 0
       },
       annotated(row, context) {
         const vals = context.joins.get('vals')
-        return vals.seriesId === inReq.unannotated.label ? 0 : 1
+        return vals.seriesId === inReqs[1].unannotated.label ? 0 : 1
       },
       sortColsRows(result) {
-        if (inReq.orderedLabels[q.term1].length) {
-          result.cols.sort((a,b) => inReq.orderedLabels[q.term1].indexOf(a) - inReq.orderedLabels[q.term1].indexOf(b))
+        if (inReqs[1].orderedLabels[q.term1].length) {
+          result.cols.sort((a,b) => inReqs[1].orderedLabels[q.term1].indexOf(a) - inReqs[1].orderedLabels[q.term1].indexOf(b))
         }
-        if (inReq.orderedLabels[q.term2].length) {
-          result.rows.sort((a,b) => inReq.orderedLabels[q.term2].indexOf(a) - inReq.orderedLabels[q.term2].indexOf(b))
+        if (inReqs[2].orderedLabels[q.term2].length) {
+          result.rows.sort((a,b) => inReqs[2].orderedLabels[q.term2].indexOf(a) - inReqs[2].orderedLabels[q.term2].indexOf(b))
         }
       },
       useColOrder() {
-        return inReq.orderedLabels[q.term1].length > 0
+        return inReqs[1].orderedLabels[q.term1].length > 0
       },
       useRowOrder() {
-        return inReq.orderedLabels[q.term2].length > 0
+        return inReqs[2].orderedLabels[q.term2].length > 0
       },
       unannotatedLabels() {
         return {
-          term1: inReq.unannotatedLabels[q.term1], 
-          term2: inReq.unannotatedLabels[q.term2]
+          term1: inReqs[1].unannotatedLabels[q.term1], 
+          term2: inReqs[2].unannotatedLabels[q.term2]
         }
       },
       bins() {
-        return inReq.bins
+        return {
+          "0": inReqs[0].bins,
+          "1": inReqs[1].bins,
+          "2": inReqs[2].bins,
+        }
       }
     }
   })
 }
 
-async function setValFxns(q, inReq, ds, tdb) {
+async function setValFxns(q, inReqs, ds, tdb) {
 /*
   sets request-specific value and filter functions
   unannotated values will be processed but tracked separately
@@ -262,12 +270,14 @@ async function setValFxns(q, inReq, ds, tdb) {
         t.valueset = new Set( t.values.map(i=>i.key) )
       }
     }
-    inReq.filterFxn = (row) => {
+    inReqs.filterFxn = (row) => {
       return sample_match_termvaluesetting( row, q.filter )
     }
   }
 
-  for(const term of ['term0', 'term1', 'term2']) {
+  for(const i of [0, 1, 2]) {
+    const inReq = inReqs[i]
+    const term = 'term' + i
     const key = q[term]
     if (!inReq.orderedLabels[key]) {
       inReq.orderedLabels[key] = []
@@ -294,14 +304,14 @@ async function setValFxns(q, inReq, ds, tdb) {
       if (!tdb.patient_condition) throw "missing termdb patient_condition"
       if (!tdb.patient_condition.events_key) throw "missing termdb patient_condition.events_key"
       const unit = q.conditionUnits.split(",")[+term.slice(-1)] 
-      set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq)
+      set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq, q.conditionParent)
     } else {
       throw "unsupported term binning"
     }
   }
 }
 
-function set_condition_fxn(key, b, tdb, unit, inReq) {
+function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
   const events_key = tdb.patient_condition.events_key
   if (unit == 'max_grade_perperson') {
     inReq.joinFxns[key] = row => {
@@ -336,6 +346,19 @@ function set_condition_fxn(key, b, tdb, unit, inReq) {
       }
       return mostRecentGrade
     }
+  } else if (unit == 'by_children') { console.log(key, conditionParent)
+    if (!conditionParent) throw "conditionParent must be specified when categories is by children"
+    inReq.joinFxns[key] = row => {
+      const conditions = []
+      for(const k in row) {
+        const term = tdb.termjson.map.get(k)
+        if (!term || !term.conditionlineage) continue
+        const i = term.conditionlineage.indexOf(conditionParent)
+        if (i < 1) continue
+        return term.conditionlineage[i - 1]
+      }
+      return undefined
+    }
   } else {
     throw `invalid condition unit: '${unit}'`
   }
@@ -343,7 +366,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq) {
 
 function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
   const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum, custom_bins[termNum.slice(-1)] )
-  inReq.bins[termNum.slice(-1)] = binconfig.bins
+  inReq.bins = binconfig.bins
 
   inReq.orderedLabels[key] = _orderedLabels
   if (binconfig.unannotated) {
