@@ -294,8 +294,8 @@ export class TermdbBarchart{
             const label = !term || !term.values 
               ? value
               : termNum=="term1"
-                ? term.values[d.seriesId] 
-                : term.values[d.dataId]
+                ? term.values[d.seriesId].label
+                : term.values[d.dataId].label
 
             if (termNum != 'term0' && term) {
               const bin = !bins ? null : bins.find(d => d.label == value)
