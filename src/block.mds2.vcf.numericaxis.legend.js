@@ -347,7 +347,6 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 			mds: tk.mds,
 			div: thisbox,
 			default_rootterm: {},
-			termfilter:{no_display:true},
 			modifier_barchart_selectbar: {
 				callback: (result) => {
 					tip.hide()
@@ -489,7 +488,7 @@ function legend_show_AFtest_onegroup_termdb ( group, holder, tk, block ) {
 			await tk.load()
 		}
 	)
-	// n=? handle and for porting to term tree filter
+	// "n=?, view stats" handle and for porting to term tree filter
 	group.dom.samplehandle = holder.append('span')
 	.style('margin-left','15px')
 	.style('opacity','.6')
@@ -511,7 +510,6 @@ function legend_show_AFtest_onegroup_termdb ( group, holder, tk, block ) {
 			default_rootterm: {},
 			termfilter:{
 				terms: filterlst,
-				no_display:true
 			}
 		})
 	})

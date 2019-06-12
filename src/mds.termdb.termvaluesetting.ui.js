@@ -54,7 +54,6 @@ group{}
                 mds: mds,
                 div: treediv,
                 default_rootterm: {},
-				termfilter:{no_display:true},
                 modifier_barchart_selectbar: {
                     callback: result => {
                         tip.hide()
@@ -102,7 +101,6 @@ group{}
                         mds: mds,
                         div: treediv,
                         default_rootterm: {},
-						termfilter:{no_display:true},
                         modifier_barchart_selectbar: {
                             callback: result => {
                                 tip.hide()
