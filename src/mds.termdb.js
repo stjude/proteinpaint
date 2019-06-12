@@ -130,9 +130,7 @@ also for showing term tree, allowing to select certain terms
 
 	may_dispaly_selected_groups(obj)
 
-	const data = await obj.do_query( {
-		default_rootterm: 1
-	})
+	const data = await obj.do_query(["default_rootterm=1"])
 	if(data.error) throw 'error getting default root terms: '+data.error
 	if(!data.lst) throw 'no default root term: .lst missing'
 

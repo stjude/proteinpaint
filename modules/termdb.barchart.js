@@ -33,6 +33,8 @@ exports.handle_request_closure = ( genomes ) => {
         if(e.stack) console.log(e.stack)
       }
     }
+    if (!q.term0) q.term0 = ''
+    if (!q.term2) q.term2 = ''
     try {
       const genome = genomes[ q.genome ]
       if(!genome) throw 'invalid genome'
@@ -305,8 +307,8 @@ async function setValFxns(q, inReqs, ds, tdb) {
     }
   }
 
-  const conditionUnits = q.conditionUnits.split("-,-")
-  const conditionParents = q.conditionParents.split("-,-")
+  const conditionUnits = q.conditionUnits ? q.conditionUnits.split("-,-") : []
+  const conditionParents = q.conditionParents ? q.conditionParents.split("-,-") : []
   for(const i of [0, 1, 2]) {
     const inReq = inReqs[i]
     const term = 'term' + i
@@ -385,7 +387,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
       return mostRecentGrade ? [mostRecentGrade] : []
     }
   } else if (unit == 'by_children') {
-    if (!conditionParent) throw "conditionParent must be specified when categories is by children"
+    if (!conditionParent) throw "conditionParents must be specified when categories is by children"
     inReq.joinFxns[key] = row => {
       const conditions = []
       for(const k in row) {

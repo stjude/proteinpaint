@@ -145,31 +145,39 @@ function main(plot, callback = ()=>{}) {
 // for caching server response keys
 function getDataName(plot) {
   const obj = plot.obj
-
-  return '?'
-    + 'genome=' + obj.genome.name
-    + '&dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label)
-    + '&term0=' + (plot.term0 ? plot.term0.id : '')
-    + '&term1=' + plot.term.id
-    + '&term2=' + (
-      obj.modifier_ssid_barchart ? 'genotype' 
-      : plot.term2 ? plot.term2.id
-      : ''
-    )
-    + '&ssid=' + (obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '')
-    + '&mname=' + (obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '')
-    + '&filter=' + (
-        !obj.termfilter 
-        ? ''
-        : encodeURIComponent(JSON.stringify(obj.termfilter.terms))
-    )
-    + '&custom_bins=' + (
-      !plot.custom_bins 
-      ? '' 
-      : encodeURIComponent(JSON.stringify(plot.custom_bins))
-    )
-    + '&conditionUnits=' + plot.settings.common.conditionUnits.join("-,-")
-    + '&conditionParents=' + plot.settings.common.conditionParents.join("-,-")
+  const params = [
+    'genome=' + obj.genome.name,
+    'dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label),
+    'term1=' + plot.term.id
+  ];
+  if (plot.term0) {
+    params.push('term0=' + plot.term0.id)
+  }
+  if (obj.modifier_ssid_barchart) {
+    params.push(...[
+      'term2=genotype',
+      'ssid=' + obj.modifier_ssid_barchart.ssid,
+      'mname=' + obj.modifier_ssid_barchart.mutation_name
+    ])
+  } else if (plot.term2) {
+    params.push('term2=' + plot.term2.id)
+  }
+  if (obj.termfilter) {
+    params.push('filter=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
+  }
+  if (plot.custom_bins) {
+    params.push('custom_bins=' + encodeURIComponent(JSON.stringify(plot.custom_bins)))
+  }
+  const hasCondition = plot.term.iscondition || (plot.term2 && plot.term2.iscondition) || (plot.term0 && plot.term0.iscondition)
+  const conditionUnits = plot.settings.common.conditionUnits.join("-,-")
+  if (conditionUnits != "-,--,-" && hasCondition) {
+    params.push('conditionUnits=' + conditionUnits)
+  }
+  const conditionParents = plot.settings.common.conditionParents.join("-,-")
+  if (conditionParents != "-,--,-" && hasCondition) {
+    params.push('conditionParents=' + conditionParents)
+  }
+  return '?' + params.join('&')
 }
 
 function render ( plot, data ) {
