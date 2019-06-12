@@ -73,6 +73,8 @@ v: {}
    v: [ {grade,age}, {} ]
 */
 
+const grade2count = new Map()
+
 rl.on('line',line=>{
 	if(first) {
 		first=false
@@ -95,6 +97,8 @@ rl.on('line',line=>{
 	if(Number.isNaN(age)) console.error('invalid age',l[9-1])
 	const grade = Number(l[ 10-1 ])
 	if(Number.isNaN(grade)) console.error('invalid grade',l[10-1])
+	if(!grade2count.has(grade)) grade2count.set(grade,0)
+	grade2count.set( grade, 1+grade2count.get(grade) )
 
 	if(!patient2condition.has(patient)) {
 		patient2condition.set( patient, {})
@@ -126,4 +130,8 @@ rl.on('close',()=>{
 		console.log(patient+'\t'+JSON.stringify(o2))
 	}
 	console.error(patient2condition.size+' patients, '+conditions.size+' conditions, '+numberofevents+' events')
+
+	for(const [g,c] of grade2count) {
+		console.error('Grade '+g+': '+c)
+	}
 })

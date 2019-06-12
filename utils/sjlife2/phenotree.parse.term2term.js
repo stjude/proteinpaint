@@ -23,7 +23,7 @@ column 6:
 
 
 
-detect terms associated with chronic conditions:
+special handling of chronic condition terms (3: organ system, 4: grouped condition, 5: condition):
 - all under "CTCAE Graded Events"
 - type flag ".iscondition:true"
 - chart configs
@@ -161,9 +161,20 @@ function makegraphconfig_conditionterm ( t ) {
 	t.graph = {
 		barchart: {
 
-			grades:[0,1,2,3,4,5,9],
 			grade_key:'grade',
+			grade_labels:[
+				{grade:1,label:'0: Mild'},
+				{grade:2,label:'1: Moderate'},
+				{grade:3,label:'2: Severe'},
+				{grade:4,label:'3: Life-threatening'},
+				{grade:5,label:'4: Death'}
+			],
+			uncomputable_grades:[
+				{grade:0,label:'No symptom'},
+				{grade:9,label:'Unknown status'}
+			],
 			age_key:'age',
+
 
 			bar_choices:[
 				{
@@ -187,7 +198,9 @@ function makegraphconfig_conditionterm ( t ) {
 	}
 
 	if( !t.isleaf ) {
-		// has children, at bar_choices, allow immediate children to be bars
+		// has children, more options for bar_choices
+		t.graph.barchart.bar_choices[0].allow_to_stackby_children = true
+
 		t.graph.barchart.bar_choices.push({
 			by_children: true,
 			label:'Conditions',
