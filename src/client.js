@@ -82,12 +82,12 @@ export function dofetch(path,arg) {
  
 export function dofetch2(path,init={}) {
 /*
-	path "" string URL path
-	init {}
-		// "init" will be supplied as the second argument to
-		// the native fetch api, so the method, headers, body
-		// may be optionally supplied in the "init" argument
-		// see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
+path "" string URL path
+init {}
+	will be supplied as the second argument to
+	the native fetch api, so the method, headers, body
+	may be optionally supplied in the "init" argument
+	see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
 */
 	// path should be "path" but not "/path"
 	if(path[0]=='/') {
@@ -102,7 +102,7 @@ export function dofetch2(path,init={}) {
 		init.headers.authorization = "Bearer " + jwt
 	}
 
-	let url
+	let url = path
 	const host = localStorage.getItem('hostURL')
 	if(host) {
 		// hostURL can end with / or not, must use 'host/path'
@@ -111,8 +111,6 @@ export function dofetch2(path,init={}) {
 		} else {
 			url = host +'/'+ path
 		}
-	} else {
-		url = path
 	}
 
 	trackfetch(url, init)
