@@ -163,11 +163,11 @@ function makegraphconfig_conditionterm ( t ) {
 
 			grade_key:'grade',
 			grade_labels:[
-				{grade:1,label:'0: Mild'},
-				{grade:2,label:'1: Moderate'},
-				{grade:3,label:'2: Severe'},
-				{grade:4,label:'3: Life-threatening'},
-				{grade:5,label:'4: Death'}
+				{grade:1,label:'1: Mild'},
+				{grade:2,label:'2: Moderate'},
+				{grade:3,label:'3: Severe'},
+				{grade:4,label:'4: Life-threatening'},
+				{grade:5,label:'5: Death'}
 			],
 			uncomputable_grades:[
 				{grade:0,label:'No symptom'},
