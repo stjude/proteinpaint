@@ -112,8 +112,10 @@ arg: server returned data
   controls(arg, plot, main)
   
   main( plot, callback )
-  if (Array.isArray(arg.obj.filterCallbacks)) {
-    arg.obj.filterCallbacks.push(()=>main(plot))
+  if ( arg.obj.termfilter && arg.obj.termfilter.callbacks ) {
+    // termfilter in action, insert main() of this plot to callback list to be called when filter is updated
+	// FIXME svg dimension will be 0 when the plot is invisible (as turned off by the VIEW button)
+    arg.obj.termfilter.callbacks.push(()=>main(plot))
   }
 }
 
