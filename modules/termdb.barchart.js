@@ -304,6 +304,8 @@ async function setValFxns(q, inReqs, ds, tdb) {
     }
   }
 
+  const conditionUnits = q.conditionUnits.split("-,-")
+  const conditionParents = q.conditionParents.split("-,-")
   for(const i of [0, 1, 2]) {
     const inReq = inReqs[i]
     const term = 'term' + i
@@ -332,9 +334,10 @@ async function setValFxns(q, inReqs, ds, tdb) {
       // tdb.patient_condition
       if (!tdb.patient_condition) throw "missing termdb patient_condition"
       if (!tdb.patient_condition.events_key) throw "missing termdb patient_condition.events_key"
-      inReq.orderedLabels = [0,1,2,3,4,5,9]
-      const unit = q.conditionUnits.split(",")[+term.slice(-1)] 
-      set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq, q.conditionParent)
+      inReq.orderedLabels = t.grades ? t.grades : [0,1,2,3,4,5,9]
+      const unit = conditionUnits[i]
+      const parent = conditionParents[i]
+      set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq, parent)
     } else {
       throw "unsupported term binning"
     }

@@ -444,9 +444,14 @@ export class TermdbBarchart{
       })
     }
     if (s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
+      const t = this.terms.term2
+      const overlay = !t.iscondition || !t.graph || !t.graph.barchart || !t.graph.barchart.value_choices
+        ? '' 
+        : t.graph.barchart.value_choices.find(d => d[s.conditionUnits[2]])
+
       const colors = {}
       legendGrps.push({
-        name: this.terms.term2.name,
+        name: t.name + (overlay ? ': '+overlay.label : ''),
         items: s.rows.map(d => {
           return {
             dataId: d,

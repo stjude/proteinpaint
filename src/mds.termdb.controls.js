@@ -41,14 +41,12 @@ export function controls(arg, plot, main) {
   const table = tip.append('table')
   setConditionUnitOpts(plot, main, table, 'term', 'Bar categories', 1)
   setOverlayOpts(plot, main, table, arg)
-  setConditionUnitOpts(plot, main, table, 'term2', 'Overlay categories', 2)
   setViewOpts(plot, main, table)
   setOrientationOpts(plot, main, table)
   setScaleOpts(plot, main, table)
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
   setBinOpts(plot, main, table, 'term2', 'Overlay Bins')
   setDivideByOpts(plot, main, table, arg)
-  setConditionUnitOpts(plot, main, table, 'term0', 'Chart categories', 0)
 }
 
 function renderRadioInput(inputName, elem, opts, inputHandler) {
@@ -156,7 +154,9 @@ function setOverlayOpts(plot, main, table, arg) {
     [
       {label: 'None', value: 'none'},
       {label: 'Term', value: 'tree'},
-      {label: 'Genotype', value: 'genotype'}
+      {label: 'Genotype', value: 'genotype'},
+      {label: 'Max. grade per person', value: 'max_grade_perperson'},
+      {label: 'Most recent grade', value: 'most_recent_grade'}
     ]
   )
 
@@ -182,6 +182,12 @@ function setOverlayOpts(plot, main, table, arg) {
 
           // adding term2 for the first time
           plot.term2 = term2
+          if (plot.term2.iscondition) { //!plot.settings.common.conditionParents[0]) {
+            plot.settings.common.conditionParents[2] = plot.term2.id
+              if (!plot.settings.common.conditionUnits[2]) {
+              plot.settings.common.conditionUnits[2] = "max_grade_perperson"
+            }
+          }
           if (plot.term2.isfloat && plot.term2_boxplot) { 
             plot.term2_displaymode = 'boxplot'
             main(plot)
@@ -197,6 +203,11 @@ function setOverlayOpts(plot, main, table, arg) {
       may_trigger_crosstabulate( _arg, tr.node() )
     } else if (d.value == "genotype") {
       // to-do
+    } else if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+      if (!plot.term2) plot.term2 = plot.term
+      plot.settings.common.conditionUnits[2] = d.value
+      plot.settings.common.conditionParents[2] = plot.term2.id
+      main(plot)
     }
   })
 
@@ -231,7 +242,14 @@ function setOverlayOpts(plot, main, table, arg) {
         : 'none'
     }
     radio.inputs.property('checked', d => d.value == plot.settings.bar.overlay)
-    radio.divs.style('display', d => d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? 'inline-block' : 'none')
+    const cu = plot.settings.common.conditionUnits
+    radio.divs.style('display', d => {
+      if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+        return plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'none'
+      } else {
+        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? 'block' : 'none'
+      }
+    })
   })
 }
 
@@ -274,7 +292,10 @@ function setDivideByOpts(plot, main, table, arg) {
     [
       {label: 'None', value: 'none'},
       {label: 'Term', value: 'tree'},
-      {label: 'Genotype', value: 'genotype'}
+      {label: 'Genotype', value: 'genotype'},
+      {label: 'Children', value: 'by_children'},
+      {label: 'Max. grade per person', value: 'max_grade_perperson'},
+      {label: 'Most recent grade', value: 'most_recent_grade'}
     ]
   )
 
@@ -298,12 +319,23 @@ function setDivideByOpts(plot, main, table, arg) {
         callback: term2=>{
           obj.tip.hide()
           plot.term0 = term2
+          if (plot.term0.iscondition) { //!plot.settings.common.conditionParents[0]) {
+            plot.settings.common.conditionParents[0] = plot.term0.id
+            if (!plot.settings.common.conditionUnits[0]) {
+              plot.settings.common.conditionUnits[0] = "max_grade_perperson"
+            }
+          }
           main(plot)
         }
       }
       may_trigger_crosstabulate( _arg, tr.node() )
     } else if (d.value == "genotype") {
       // to-do
+    } else if (d.value == "by_children" || d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+      if (!plot.term0) plot.term0 = plot.term
+      plot.settings.common.conditionUnits[0] = d.value
+      plot.settings.common.conditionParents[0] = plot.term0.id
+      main(plot)
     }
   })
 
@@ -338,28 +370,44 @@ function setDivideByOpts(plot, main, table, arg) {
         : 'none'
     }
     radio.inputs.property('checked', d => d.value == plot.settings.bar.divideBy)
-    radio.divs.style('display', d => d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? 'inline-block' : 'none')
+    radio.divs.style('display', d => {
+      if (d.value == "by_children" || d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+        return plot.term1.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'none'
+      } else {
+        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? 'block' : 'none'
+      }
+    })
   })
 }
 
 function setConditionUnitOpts(plot, main, table, termNum, label, index) {
-  if ( !plot[termNum]
-    || !plot[termNum].graph 
-    || !plot[termNum].graph.barchart 
-    || !plot[termNum].graph.barchart.value_choices
-  ) return
+  /**/
   const cu = plot.settings.common.conditionUnits
   const tr = table.append('tr')
   tr.append('td').html(label)
   const td = tr.append('td')
-  const optionsSeed = window.location.search.includes("conditionBy=") ? [{label: "Child conditions", value: "by_children"}] : []
+  const optionsSeed = [
+    {label: "Child conditions", value: "by_children"}
+  ]
 
   plot.controls.push(() => {
+    const choices = plot[termNum]
+        && plot[termNum].graph 
+        && plot[termNum].graph.barchart 
+        && plot[termNum].graph.barchart.value_choices 
+        ? plot[termNum].graph.barchart.value_choices
+      : plot.term.iscondition
+        && plot.term.graph 
+        && plot.term.graph.barchart 
+        && plot.term.graph.barchart.value_choices 
+      ? plot.term.graph.barchart.value_choices
+      : []
+
     const radio = renderRadioInput(
       'pp-termdb-condition-unit-'+ index + '-' + plot.controlsIndex, 
       td,
       optionsSeed.concat( 
-        plot[termNum].graph.barchart.value_choices
+        choices
         .filter(d => d.max_grade_perperson || d.most_recent_grade)
         .map(d => {
           let value = d.max_grade_perperson 
@@ -375,23 +423,27 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
     .property('checked', d => d.value == cu[index])
     .on('input', d => {
       cu[index] = d.value
-      if (index == 1) {
-        plot.term2 = d.value == "by_children" ? plot.term : null
-        plot.settings.common.conditionParent = plot.term2 ? plot.term2.id : ''
-      }
+      plot.settings.common.conditionParents[index] = plot[termNum] ? plot[termNum].id : ''
       main(plot)
     })
 
-    tr.style('display', 
-      termNum == 'term'
-      && plot[termNum] 
-      && plot[termNum].iscondition 
+    tr.style('display', plot[termNum] && plot[termNum].iscondition 
       ? "table-row" 
+      : index == 2 && plot.term.iscondition 
+      ? "table-row"
       : "none")
 
-    radio.divs.style('display', 
-      d => d.value != 'none' || !plot[termNum].isleaf ? 'block' : 'none'
-    )
+    radio.divs.style('display', d => {
+      if (d.value == 'none') {
+        return index == 1 ? 'none' : 'block'
+      } else if (d.value == 'by_children') {
+        return (plot[termNum] && !plot[termNum].isleaf) 
+          && ((index == 1 && (!plot.term0 || cu[0] != 'by_children')) || (index == 0 && cu[1] != 'by_children'))
+          ? 'block' : 'none'
+      } else if (index != 1) {
+        return cu[1] != d.value ? 'block' : 'none'
+      } // return d.value != 'none' || !plot[termNum].isleaf ? 'block' : 'none'
+    })
 
     radio.inputs.property('checked', d => cu[index] == d.value) 
   })

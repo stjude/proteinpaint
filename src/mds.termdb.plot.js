@@ -67,9 +67,9 @@ arg: server returned data
         barwidth: 20, // bar thickness
         barspace: 2, // space between two bars
         // conditionUits: [divide-unit, bin-unit, stack-unit]
-        conditionUnits: ['max_grade_perperson', 'max_grade_perperson', 'max_grade_perperson'],
+        conditionUnits: ['', 'max_grade_perperson', ''],
+        conditionParents: ['', '', ''],
         conditionsBy: 'by_grade',
-        conditionParent: '',
       },
       boxplot: {
         toppad: 20, // top padding
@@ -168,8 +168,8 @@ function getDataName(plot) {
       ? '' 
       : encodeURIComponent(JSON.stringify(plot.custom_bins))
     )
-    + '&conditionUnits=' + plot.settings.common.conditionUnits.join(",")
-    + '&conditionParent=' + plot.settings.common.conditionParent
+    + '&conditionUnits=' + plot.settings.common.conditionUnits.join("-,-")
+    + '&conditionParents=' + plot.settings.common.conditionParents.join("-,-")
 }
 
 function render ( plot, data ) {
