@@ -965,6 +965,7 @@ function launch_termdb ( arg, holder ) {
 		return
 	}
 	arg.div = holder
+	arg.debugmode = debugmode
 	import('./mds.termdb').then(_=>{
 		_.init(arg)
 	})
