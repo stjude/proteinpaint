@@ -307,8 +307,14 @@ export class TermdbBarchart{
       },
       colLabel: {
         text: d => {
-          return !self.terms.term1.values ? d
-            : self.terms.term1.values[d].label
+          const grade = self.terms.term1.graph.barchart && self.terms.term1.graph.barchart.grade_labels
+            ? self.terms.term1.graph.barchart.grade_labels.find(c => c.grade == d)
+            : null
+          return self.terms.term1.values
+            ? self.terms.term1.values[d].label
+            : grade
+            ? grade.label
+            : d
         },
         click: () => { 
           const d = event.target.__data__
@@ -326,8 +332,14 @@ export class TermdbBarchart{
       },
       rowLabel: {
         text: d => {
-          return !self.terms.term1.values ? d
-            : self.terms.term1.values[d].label
+          const grade = self.terms.term1.graph.barchart && self.terms.term1.graph.barchart.grade_labels
+            ? self.terms.term1.graph.barchart.grade_labels.find(c => c.grade == d)
+            : null
+          return self.terms.term1.values
+            ? self.terms.term1.values[d].label
+            : grade
+            ? grade.label
+            : d
         },
         click: () => { 
           const d = event.target.__data__

@@ -75,7 +75,8 @@ function getTrackers() {
     unannotated: "",
     orderedLabels: [],
     unannotatedLabels: [],
-    bins: []
+    bins: [],
+    uncomputable_grades: {}
   }
 }
 
@@ -254,7 +255,7 @@ function getPj(q, inReqs, data, tdb) {
         }
         return  total
       },
-      sortColsRows(result) { console.log(inReqs[1].orderedLabels)
+      sortColsRows(result) {
         if (inReqs[1].orderedLabels.length) {
           const labels = inReqs[1].orderedLabels
           result.cols.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
@@ -290,7 +291,7 @@ function getPj(q, inReqs, data, tdb) {
 async function setValFxns(q, inReqs, ds, tdb) {
 /*
   sets request-specific value and filter functions
-  unannotated values will be processed but tracked separately
+  non-condition unannotated values will be processed but tracked separately
 */
   if(q.filter) {
     // for categorical terms, must convert values to valueset
@@ -334,7 +335,7 @@ async function setValFxns(q, inReqs, ds, tdb) {
       // tdb.patient_condition
       if (!tdb.patient_condition) throw "missing termdb patient_condition"
       if (!tdb.patient_condition.events_key) throw "missing termdb patient_condition.events_key"
-      inReq.orderedLabels = t.grades ? t.grades : [0,1,2,3,4,5,9]
+      inReq.orderedLabels = t.grades ? t.grades : [0,1,2,3,4,5,9] // hardcoded default order
       const unit = conditionUnits[i]
       const parent = conditionParents[i]
       set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq, parent)
@@ -345,7 +346,6 @@ async function setValFxns(q, inReqs, ds, tdb) {
 }
 
 function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
-  const unannotated = [9] // hardcoded for now, should be defined for term
   const events_key = tdb.patient_condition.events_key
   if (unit == 'max_grade_perperson') {
     inReq.joinFxns[key] = row => {
@@ -354,6 +354,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         if (!row[k][events_key]) continue
         const term = tdb.termjson.map.get(k)
         if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+          const unannotated = setUncomputableGrades(inReq, term, k)
           for(const event of row[k][events_key]) {
             if (unannotated.includes(event[b.grade_key])) continue
             if (maxGrade === undefined || maxGrade < event[b.grade_key]) {
@@ -371,6 +372,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         if (!row[k][events_key]) continue
         const term = tdb.termjson.map.get(k)
         if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+          const unannotated = setUncomputableGrades(inReq, term, k)
           for(const event of row[k][events_key]) {
             if (unannotated.includes(event[b.grade_key])) continue
             if (mostRecentAge === undefined || mostRecentAge < event[b.age_key]) {
@@ -392,7 +394,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         if (!term || !term.conditionlineage) continue
         const i = term.conditionlineage.indexOf(conditionParent)
         if (i < 1) continue
-
+        const unannotated = setUncomputableGrades(inReq, term, k)
         let graded = false
         for(const event in row[k][events_key]) {
           if (!unannotated.includes(event[b.grade_key])) {
@@ -412,6 +414,15 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
   } else {
     throw `invalid condition unit: '${unit}'`
   }
+}
+
+function setUncomputableGrades(inReq, term, k) {
+  if (!inReq.uncomputable_grades[k]) {
+    inReq.uncomputable_grades[k] = term && term.graph && term.graph.barchart && term.graph.barchart.uncomputable_grades
+      ? term.graph.barchart.uncomputable_grades.map(d => d.grade)
+      : []
+  }
+  return inReq.uncomputable_grades[k]
 }
 
 function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {

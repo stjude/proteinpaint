@@ -399,7 +399,7 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const optionsSeed = [
-    {label: "Child conditions", value: "by_children"}
+    {label: "Subconditions", value: "by_children"}
   ]
 
   plot.controls.push(() => {
