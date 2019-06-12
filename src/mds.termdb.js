@@ -21,7 +21,6 @@ init accepts obj{}
 
 triggers
 obj.default_rootterm{}
-	allow obj.termfilter[]
 
 
 modifiers, for modifying the behavior/display of the term tree
@@ -148,28 +147,23 @@ also for showing term tree, allowing to select certain terms
 
 
 function may_display_termfilter ( obj ) {
-	if( obj.termfilter ) {
-		if(obj.termfilter.terms) {
-			if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
-			validate_termvaluesetting( obj.termfilter.terms )
-		} else {
-			obj.termfilter.terms = []
-		}
-		if( obj.termfilter.no_display ) {
-			/*
-			only not to do following when told
-			- display filter ui
-			- initiate callback collector
-			*/
-			return
-		}
-	} else {
-		obj.termfilter = {
-			terms: []
-		}
+/* when the ui is not displayed, will not allow altering filters and callback-updating
+*/
+
+	if(obj.termfilter && obj.termfilter.terms) {
+		if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
+		validate_termvaluesetting( obj.termfilter.terms )
 	}
-	obj.filterCallbacks = []
-	// term filter in use
+
+	if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
+		// do not display ui, and do not collect callbacks
+		return
+	}
+
+	obj.termfilter.callbacks = []
+	if(!obj.termfilter.terms) obj.termfilter.terms = []
+
+	// make ui
 	const div = obj.termfilterdiv
 		.style('display','block')
 		.append('div')
@@ -191,7 +185,7 @@ function may_display_termfilter ( obj ) {
 		false,
 		// callback when updating the filter
 		() => {
-			for(const fxn of obj.filterCallbacks) {
+			for(const fxn of obj.termfilter.callbacks) {
 				fxn()
 			}
 		} 
