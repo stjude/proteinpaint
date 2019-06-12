@@ -10,20 +10,16 @@ export function controls(arg, plot, main) {
     .style('display','inline-block')
     .style('vertical-align','top')
     .style('margin', '8px')
-    .style('padding', '5px')
+    .style('padding', '10px 15px 15px 15px')
 
   // controlsIndex to be used to assign unique radio input names
   // by config div
   plot.controlsIndex = plots.length
   plots.push(plot)
 
-  plot.controls_update = () => {
-    plot.controls.forEach(update => update())
-  }
-
   // label
-  plot.config_div.append('div')
-    .style('color', '#777')
+  plot.config_div.append('div').append('button')
+    .style('color', '#333')
     .style('font-size', '12px')
     .style('cursor', 'pointer')
     .html('CONFIG')
@@ -31,14 +27,14 @@ export function controls(arg, plot, main) {
       plot.controls.forEach(update => update())
       const display = tip.style('display')
       tip.style('display', display == "none" ? "inline-block" : "none")
-      plot.config_div.style('background', display == "none" ? '#ececec' : "")
+      plot.config_div.style('background', display == "none" ? '#eee' : "")
     })
 
   const tip = plot.config_div.append('div').style("display","none")
   // will be used to track control elements
   // for contextual updates
   plot.controls = []
-  const table = tip.append('table')
+  const table = tip.append('table').attr('cellpadding',0).attr('cellspacing',0)
   setConditionUnitOpts(plot, main, table, 'term', 'Bar categories', 1)
   setOverlayOpts(plot, main, table, arg)
   setViewOpts(plot, main, table)
@@ -47,6 +43,21 @@ export function controls(arg, plot, main) {
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
   setBinOpts(plot, main, table, 'term2', 'Overlay Bins')
   setDivideByOpts(plot, main, table, arg)
+
+  plot.controls_update = () => {
+    plot.controls.forEach(update => update())
+    table.selectAll('tr')
+    .filter(rowIsVisible)
+    .each(altRowColors)
+  }
+
+  function rowIsVisible() {
+    return d3select(this).style('display') != 'none'
+  }
+
+  function altRowColors(d,i){
+    d3select(this).selectAll('td').style('border-top', i !== 0 ? '1px solid #ccc' : '')
+  }
 }
 
 function renderRadioInput(inputName, elem, opts, inputHandler) {
@@ -63,7 +74,7 @@ function renderRadioInput(inputName, elem, opts, inputHandler) {
   
   const labels = divs.enter().append('div')
     .style('display', 'inline-block')
-    .style('padding', '3px 5px')
+    .style('padding', '5px')
     .append('label')
   
   const inputs = labels.append('input')
@@ -86,7 +97,7 @@ function renderRadioInput(inputName, elem, opts, inputHandler) {
 
 function setOrientationOpts(plot, main, table) {
   const tr = table.append('tr')
-  tr.append('td').html('Orientation')
+  tr.append('td').html('Orientation').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const radio = renderRadioInput(
     'pp-termdb-condition-unit-' + plot.controlsIndex, 
@@ -111,7 +122,7 @@ function setOrientationOpts(plot, main, table) {
 
 function setScaleOpts(plot, main, table) {
   const tr = table.append('tr')
-  tr.append('td').html('Scale')
+  tr.append('td').html('Scale').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const radio = renderRadioInput(
     'pp-termdb-scale-unit-' + plot.controlsIndex, 
@@ -146,7 +157,7 @@ function setScaleOpts(plot, main, table) {
 
 function setOverlayOpts(plot, main, table, arg) {
   const tr = table.append('tr')
-  tr.append('td').html('Overlay with')
+  tr.append('td').html('Overlay with').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const radio = renderRadioInput(
     'pp-termdb-overlay-' + plot.controlsIndex, 
@@ -247,7 +258,8 @@ function setOverlayOpts(plot, main, table, arg) {
       if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
         return plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'none'
       } else {
-        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? 'block' : 'none'
+        const block = plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'inline-block'
+        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
       }
     })
   })
@@ -255,7 +267,7 @@ function setOverlayOpts(plot, main, table, arg) {
 
 function setViewOpts(plot, main, table, arg) {
   const tr = table.append('tr')
-  tr.append('td').html('Display mode')
+  tr.append('td').html('Display mode').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const radio = renderRadioInput(
     'pp-termdb-display-mode-' + plot.controlsIndex, 
@@ -284,7 +296,7 @@ function setViewOpts(plot, main, table, arg) {
 
 function setDivideByOpts(plot, main, table, arg) {
   const tr = table.append('tr')
-  tr.append('td').html('Divide by')
+  tr.append('td').html('Divide by').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const radio = renderRadioInput(
     'pp-termdb-divide-by-' + plot.controlsIndex, 
@@ -293,7 +305,6 @@ function setDivideByOpts(plot, main, table, arg) {
       {label: 'None', value: 'none'},
       {label: 'Term', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
-      {label: 'Children', value: 'by_children'},
       {label: 'Max. grade per person', value: 'max_grade_perperson'},
       {label: 'Most recent grade', value: 'most_recent_grade'}
     ]
@@ -371,10 +382,11 @@ function setDivideByOpts(plot, main, table, arg) {
     }
     radio.inputs.property('checked', d => d.value == plot.settings.bar.divideBy)
     radio.divs.style('display', d => {
-      if (d.value == "by_children" || d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+      if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
         return plot.term1.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'none'
       } else {
-        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? 'block' : 'none'
+        const block = plot.term.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'inline-block'
+        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
       }
     })
   })
@@ -384,7 +396,7 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
   /**/
   const cu = plot.settings.common.conditionUnits
   const tr = table.append('tr')
-  tr.append('td').html(label)
+  tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const optionsSeed = [
     {label: "Child conditions", value: "by_children"}
@@ -452,7 +464,7 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
 function setBinOpts(plot, main, table, termNum, label) {
   const tr = table.append('tr')
   
-  tr.append('td').html(label)
+  tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
 
   tr.append('td')
     .style('text-decoration', 'underline')
