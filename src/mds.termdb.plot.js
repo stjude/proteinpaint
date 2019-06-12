@@ -102,7 +102,7 @@ arg: server returned data
       holder: plot.dom.viz,
       settings: {},
       term1: arg.term,
-      obj,
+      obj: arg.obj,
     }),
     boxplot: boxplot_init(plot.dom.viz),
     stattable: stattable_init(plot.dom.viz),
@@ -180,7 +180,7 @@ at the beginning or stacked bar plot for cross-tabulating
 */ 
   // console.log(plot)
   plot.controls_update()
-  plot.views.barchart.main(plot, data, plot.term2_displaymode == "stacked", obj)
+  plot.views.barchart.main(plot, data, plot.term2_displaymode == "stacked", plot.obj)
   plot.views.boxplot.main(plot, data, plot.term2_displaymode == "boxplot")
   plot.views.stattable.main(plot, data, data.boxplot != undefined && plot.term2_displaymode == "stacked")
   plot.views.table.main(plot, data, plot.term2_displaymode == "table")
