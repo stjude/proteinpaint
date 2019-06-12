@@ -26,7 +26,7 @@ exports.handle_request_closure = ( genomes ) => {
 
 return async (req, res) => {
 
-	if( app.reqbodyisinvalidjson(req,res) ) return
+	app.log( req )
 
 	const q = req.query
 
@@ -40,6 +40,7 @@ return async (req, res) => {
 		const tdb = ds.cohort.termdb
 		if(!tdb) throw 'no termdb for this dataset'
 
+		// maybe no need to apply filter here
 		//const ds_filtered = may_apply_termfilter( q, ds )
 
 		// process triggers
@@ -114,12 +115,14 @@ function trigger_rootterm ( q, res, tdb ) {
 }
 
 
+
 async function trigger_children ( q, res, tdb ) {
 /* get children terms
 may apply ssid: a premade sample set
 */
+	if(!q.tid) throw 'no parent term id'
 	// list of children id
-	const cidlst = tdb.parent2children.get( q.get_children.id )
+	const cidlst = tdb.parent2children.get( q.tid )
 	// list of children terms
 	const lst = []
 	if(cidlst) {
@@ -131,11 +134,8 @@ may apply ssid: a premade sample set
 		}
 	}
 
+	/* not dealing with ssid
 	if( 0 && q.get_children.ssid ) {
-		/*
-		may not do this
-		but to apply this to barchart
-		*/
 		// based on premade sample sets, count how many samples from each set are annotated to each term
 		const samplesets = await load_ssid( q.get_children.ssid )
 		for(const term of lst) {
@@ -145,6 +145,7 @@ may apply ssid: a premade sample set
 			}
 		}
 	}
+	*/
 
 	res.send({lst: lst})
 }
@@ -266,7 +267,7 @@ function server_init_mayparse_patientcondition ( ds ) {
 
 
 function trigger_findterm ( q, res, termdb ) {
-	const str = q.findterm.str.toLowerCase()
+	const str = q.findterm.toLowerCase()
 	const lst = []
 	for(const term of termdb.termjson.map.values()) {
 		if(term.name.toLowerCase().indexOf( str ) != -1) {
