@@ -128,7 +128,11 @@ also for showing term tree, allowing to select certain terms
 
 	may_display_termfilter( obj )
 
-	const data = await obj.do_query( [ 'default_rootterm=1' ] )
+	may_dispaly_selected_groups(obj)
+
+	const data = await obj.do_query( {
+		default_rootterm: 1
+	})
 	if(data.error) throw 'error getting default root terms: '+data.error
 	if(!data.lst) throw 'no default root term: .lst missing'
 
@@ -195,6 +199,109 @@ function may_display_termfilter ( obj ) {
 }
 
 
+function may_dispaly_selected_groups(obj){
+	
+	if(!obj.selected_groups) return
+
+	if(obj.selected_groups.length > 0){
+
+		obj.groupCallbacks = []
+		
+		// selected group button
+		obj.selected_group_div = obj.termfilterdiv.append('div')
+			.attr('class','sja_filter_tag_btn')
+			.style('display','inline-block')
+			.style('padding','6px')
+			.style('margin','0px 10px')
+			.style('border-radius','6px')
+			.style('background-color','#00AB66')
+			.style('color','#fff')
+			.text('Selected '+ obj.selected_groups.length +' Group' + (obj.selected_groups.length > 1 ?'s':''))
+			.on('click',()=>{
+				// const tip = obj.tip // not working, creating new tip
+				const tip = new client.Menu({padding:'0'})
+				tip.clear()
+				tip.showunder( obj.selected_group_div.node() )
+
+				const table = tip.d.append('table')
+					.style('border-spacing','5px')
+					.style('border-collapse','separate')
+
+				// one row for each group
+				for( const [i, group] of obj.selected_groups.entries() ) {
+				
+					const tr = table.append('tr')
+					const td1 = tr.append('td')
+
+					td1.append('div')
+						.attr('class','sja_filter_tag_btn')
+						.text('Group '+(i+1))
+						.style('white-space','nowrap')
+						.style('color','#000')
+						.style('padding','6px')
+						.style('margin','3px 5px')
+						.style('font-size','.7em')
+						.style('text-transform','uppercase')
+						
+					group.dom = {
+						td2: tr.append('td'),
+						td3: tr.append('td').style('opacity',.5).style('font-size','.8em'),
+						td4: tr.append('td')
+					}
+					
+					termvaluesettingui.display(
+						group.dom.td2, 
+						group, 
+						obj.mds, 
+						obj.genome, 
+						false,
+						// callback when updating the groups
+						() => {
+							for(const fxn of obj.groupCallbacks) {
+									fxn()
+							}
+						}
+					)
+					
+					// TODO : update 'n=' by group selection 
+					// group.dom.td3.append('div')
+					//  .text('n=?, view stats')
+
+					// 'X' button to remove gorup
+					group.dom.td4.append('div')
+						.attr('class','sja_filter_tag_btn')
+						.style('padding','2px 6px 2px 6px')
+						.style('display','inline-block')
+						.style('margin-left','7px')
+						.style('border-radius','6px')
+						.style('background-color','#fa5e5b')
+						.html('&#215;') 
+						.on('click',()=>{
+							//TODO: remove group and update tip and button
+						})
+				}
+
+				const tr_gp = table.append('tr')
+				const td_gp = tr_gp.append('td')
+					.attr('colspan',4)
+					.attr('align','center')
+					.style('padding','0')
+
+				td_gp.append('div')
+					.attr('class','sja_filter_tag_btn')
+					.style('display','inline-block')
+					.style('height','100%')
+					.style('width','96%')
+					.style('padding','4px 10px')
+					.style('margin-top','10px')
+					// .style('border-radius','6px')
+					.style('background-color','#ddd')
+					.style('color','#000')
+					.text('Perform Association Test in GenomePaint')
+					.style('font-size','.8em')
+			})
+	}
+}
 
 
 function print_one_term ( arg, obj ) {
