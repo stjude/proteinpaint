@@ -64,7 +64,7 @@ async function barchart_data ( q, ds, res, tdb ) {
   const inReqs = [getTrackers(), getTrackers(), getTrackers()]
   inReqs.filterFxn = ()=>1 // default allow all rows, may be replaced via q.termfilter
   await setValFxns(q, inReqs, ds, tdb)
-  const pj = getPj(q, inReqs, ds.cohort.annorows.slice(0,100), tdb)
+  const pj = getPj(q, inReqs, ds.cohort.annorows, tdb)
   res.send(pj.tree.results)
 }
 
