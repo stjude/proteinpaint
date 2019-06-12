@@ -131,7 +131,10 @@ export class TermdbBarchart{
       ? bins.crosstab_fixed_bins.map(d=>d.label).reverse()
       : null
 
-    self.rowSorter = self.binLabels
+    const rows = chartsData.refs.rows
+    self.rowSorter = chartsData.refs.useRowOrder
+      ? (a,b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
+      : self.binLabels
       ? (a,b) => self.binLabels.indexOf(b.dataId) - self.binLabels.indexOf(a.dataId)
       : (a,b) => b.total - a.total
 

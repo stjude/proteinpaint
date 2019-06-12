@@ -64,7 +64,7 @@ async function barchart_data ( q, ds, res, tdb ) {
   const inReqs = [getTrackers(), getTrackers(), getTrackers()]
   inReqs.filterFxn = ()=>1 // default allow all rows, may be replaced via q.termfilter
   await setValFxns(q, inReqs, ds, tdb)
-  const pj = getPj(q, inReqs, ds.cohort.annorows)
+  const pj = getPj(q, inReqs, ds.cohort.annorows.slice(0,100), tdb)
   res.send(pj.tree.results)
 }
 
@@ -72,9 +72,9 @@ function getTrackers() {
   return {
     joinFxns: {"": () => ""}, // keys are term0, term1, term2 names; ...
     numValFxns: {"": () => {}}, // ... if key == empty string then the term is not specified
-    unannotated: {},
-    orderedLabels: {},
-    unannotatedLabels: {},
+    unannotated: "",
+    orderedLabels: [],
+    unannotatedLabels: [],
     bins: []
   }
 }
@@ -91,14 +91,14 @@ const template = JSON.stringify({
   results: {
     "_2:maxAcrossCharts": "=maxAcrossCharts()",
     charts: [{
-      chartId: "&vals.chartId",
+      chartId: "@key",
       total: "+1",
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
       serieses: [{
         total: "+1",
-        seriesId: "&vals.seriesId",
+        seriesId: "@key",
         data: [{
-          dataId: "&vals.dataId",
+          dataId: "@key",
           total: "+1",
         }, "&vals.dataId"],
         max: "<&vals.value2",
@@ -122,7 +122,7 @@ const template = JSON.stringify({
       rowgrps: ["-"],
       col2name: {
         "&vals.seriesId": {
-          name: "&vals.seriesId",
+          name: "@branch",
           grp: "-"
         }
       },
@@ -141,16 +141,28 @@ const template = JSON.stringify({
   }
 })
 
-function getPj(q, inReqs, data) {
+function getPj(q, inReqs, data, tdb) {
 /*
   q: objectified URL query string
   inReq: request-specific closured functions and variables
   data: rows of annotation data
 */
+
+  // in case a join function returns an array of values,
+  // tweak the template to append the symbol "[]" as needed
+  const ids = ["chartId", "seriesId", "dataId"]
+  let _template = template
+  for(const i of [0, 1, 2]) {
+    const t = tdb.termjson.map.get(q['term' + i])
+    if (t && t.iscondition) {
+      _template = _template.replace(new RegExp("vals." + ids[i], "g"), "vals." + ids[i] + "[]")
+    }
+  }
+
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
-    template,
+    template: _template,
     "=": {
       vals(row) {
         // vals() is used as a @join function in the partjson 
@@ -222,30 +234,46 @@ function getPj(q, inReqs, data) {
       },
       unannotated(row, context) {
         const vals = context.joins.get('vals')
-        return vals.seriesId === inReqs[1].unannotated.label ? 1 : 0
+        const seriesIds = Array.isArray(vals.seriesId) ? vals.seriesId : [vals.seriesId]
+        let total = 0
+        for(const s of seriesIds) {
+          if (s === inReqs[1].unannotated.label) {
+            total += 1
+          }
+        }
+        return  total
       },
       annotated(row, context) {
         const vals = context.joins.get('vals')
-        return vals.seriesId === inReqs[1].unannotated.label ? 0 : 1
-      },
-      sortColsRows(result) {
-        if (inReqs[1].orderedLabels[q.term1].length) {
-          result.cols.sort((a,b) => inReqs[1].orderedLabels[q.term1].indexOf(a) - inReqs[1].orderedLabels[q.term1].indexOf(b))
+        const seriesIds = Array.isArray(vals.seriesId) ? vals.seriesId : [vals.seriesId]
+        let total = 0
+        for(const s of seriesIds) {
+          if (s !== inReqs[1].unannotated.label) {
+            total += 1
+          }
         }
-        if (inReqs[2].orderedLabels[q.term2].length) {
-          result.rows.sort((a,b) => inReqs[2].orderedLabels[q.term2].indexOf(a) - inReqs[2].orderedLabels[q.term2].indexOf(b))
+        return  total
+      },
+      sortColsRows(result) { console.log(inReqs[1].orderedLabels)
+        if (inReqs[1].orderedLabels.length) {
+          const labels = inReqs[1].orderedLabels
+          result.cols.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
+        }
+        if (inReqs[2].orderedLabels.length) {
+          const labels = inReqs[1].orderedLabels
+          result.rows.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
         }
       },
       useColOrder() {
-        return inReqs[1].orderedLabels[q.term1].length > 0
+        return inReqs[1].orderedLabels.length > 0
       },
       useRowOrder() {
-        return inReqs[2].orderedLabels[q.term2].length > 0
+        return inReqs[2].orderedLabels.length > 0
       },
       unannotatedLabels() {
         return {
-          term1: inReqs[1].unannotatedLabels[q.term1], 
-          term2: inReqs[2].unannotatedLabels[q.term2]
+          term1: inReqs[1].unannotatedLabels, 
+          term2: inReqs[2].unannotatedLabels
         }
       },
       bins() {
@@ -280,9 +308,9 @@ async function setValFxns(q, inReqs, ds, tdb) {
     const inReq = inReqs[i]
     const term = 'term' + i
     const key = q[term]
-    if (!inReq.orderedLabels[key]) {
-      inReq.orderedLabels[key] = []
-      inReq.unannotatedLabels[key] = []
+    if (!inReq.orderedLabels) {
+      inReq.orderedLabels = []
+      inReq.unannotatedLabels = []
     }
     if (key == "genotype") {
       if (!q.ssid) `missing ssid for genotype`
@@ -304,6 +332,7 @@ async function setValFxns(q, inReqs, ds, tdb) {
       // tdb.patient_condition
       if (!tdb.patient_condition) throw "missing termdb patient_condition"
       if (!tdb.patient_condition.events_key) throw "missing termdb patient_condition.events_key"
+      inReq.orderedLabels = [0,1,2,3,4,5,9]
       const unit = q.conditionUnits.split(",")[+term.slice(-1)] 
       set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq, q.conditionParent)
     } else {
@@ -313,6 +342,7 @@ async function setValFxns(q, inReqs, ds, tdb) {
 }
 
 function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
+  const unannotated = [9] // hardcoded for now, should be defined for term
   const events_key = tdb.patient_condition.events_key
   if (unit == 'max_grade_perperson') {
     inReq.joinFxns[key] = row => {
@@ -322,14 +352,15 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         const term = tdb.termjson.map.get(k)
         if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
           for(const event of row[k][events_key]) {
+            if (unannotated.includes(event[b.grade_key])) continue
             if (maxGrade === undefined || maxGrade < event[b.grade_key]) {
               maxGrade = event[b.grade_key]
             }
           }
         }
       }
-      return maxGrade
-    } 
+      return maxGrade ? [maxGrade] : []
+    }
   } else if (unit == 'most_recent_grade') {
     inReq.joinFxns[key] = row => {
       let mostRecentAge, mostRecentGrade
@@ -338,6 +369,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         const term = tdb.termjson.map.get(k)
         if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
           for(const event of row[k][events_key]) {
+            if (unannotated.includes(event[b.grade_key])) continue
             if (mostRecentAge === undefined || mostRecentAge < event[b.age_key]) {
               mostRecentAge = event[b.age_key]
               mostRecentGrade = event[b.grade_key]
@@ -345,20 +377,34 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
           }
         }
       }
-      return mostRecentGrade
+      return mostRecentGrade ? [mostRecentGrade] : []
     }
   } else if (unit == 'by_children') {
     if (!conditionParent) throw "conditionParent must be specified when categories is by children"
     inReq.joinFxns[key] = row => {
       const conditions = []
       for(const k in row) {
+        if (!row[k][events_key]) continue
         const term = tdb.termjson.map.get(k)
         if (!term || !term.conditionlineage) continue
         const i = term.conditionlineage.indexOf(conditionParent)
         if (i < 1) continue
-        return term.conditionlineage[i - 1]
+
+        let graded = false
+        for(const event in row[k][events_key]) {
+          if (!unannotated.includes(event[b.grade_key])) {
+            graded = true
+            break
+          } 
+        }
+        if (graded) {
+          const child = term.conditionlineage[i - 1]
+          if (!conditions.includes(child)) {
+            conditions.push(child)
+          }
+        }
       }
-      return undefined
+      return conditions
     }
   } else {
     throw `invalid condition unit: '${unit}'`
@@ -369,9 +415,9 @@ function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
   const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum, custom_bins[termNum.slice(-1)] )
   inReq.bins = binconfig.bins
 
-  inReq.orderedLabels[key] = _orderedLabels
+  inReq.orderedLabels = _orderedLabels
   if (binconfig.unannotated) {
-    inReq.unannotatedLabels[key] = Object.values(binconfig.unannotated._labels)
+    inReq.unannotatedLabels = Object.values(binconfig.unannotated._labels)
   }
   Object.assign(inReq.unannotated, binconfig.unannotated)
 

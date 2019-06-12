@@ -3,7 +3,14 @@ class Reserved {
   constructor(e) {
     ;(this.Pj = e),
       (this.opts = ["@delimit", "@errmode"]),
-      (this.contexts = ["@branch", "@parent", "@root", "@self", "@values"]),
+      (this.contexts = [
+        "@branch",
+        "@parent",
+        "@root",
+        "@self",
+        "@values",
+        "@key"
+      ]),
       (this.filters = ["@before()", "@join()", "@ignore()"]),
       (this.post = ["@after()", "@dist()", "@end()"]),
       (this.terms = [
@@ -237,15 +244,19 @@ class ValFiller {
       )
       return o.aggr || o.skip || o.timing
         ? void t.errors.push(["val", "INVALID-[{}]-OPTION-TOKEN"])
-        : (t, s, o, i) => {
-            const n = this.Pj.setResultContext("[]", s, o, !0),
-              l = this.Pj.contexts.get(n).tracker,
-              c = r(t, i)
-            if (l.has(c)) this.Pj.processRow(t, e, l.get(c))
-            else {
-              const s = this.Pj.setResultContext("{}", n.length, n, !0)
-              l.set(c, s), this.Pj.processRow(t, e, s)
-            }
+        : (o, i, n, l) => {
+            const c = this.Pj.setResultContext("[]", i, n, !0),
+              p = this.Pj.contexts.get(c).tracker,
+              a = r(o, l),
+              h = "]" == s.slice(-1) ? a : [a]
+            if (Array.isArray(h))
+              for (const t of h)
+                if (p.has(t)) this.Pj.processRow(o, e, p.get(t))
+                else {
+                  const s = this.Pj.setResultContext("{}", c.length, c, !1, t)
+                  p.set(t, s), this.Pj.processRow(o, e, s)
+                }
+            else l.errors.push([t, "NON-ARRAY-VALS", o])
           }
     }
     t.errors.push(["val", "INVALID-[{}]-OPTION"])
@@ -674,22 +685,23 @@ class Partjson {
       this.opts.data && this.add(this.opts.data, !1),
       this.errors.log(this.fillers)
   }
-  setResultContext(e, t = null, s = null, r = !1) {
-    const o = null !== t && t in s ? s[t] : JSON.parse(e)
-    if (this.contexts.has(o)) return o
-    const i = {
+  setResultContext(e, t = null, s = null, r = !1, o) {
+    const i = null !== t && t in s ? s[t] : JSON.parse(e)
+    if (this.contexts.has(i)) return i
+    const n = {
       branch: t,
       parent: s,
-      self: o,
-      root: this.tree ? this.tree : o,
+      self: i,
+      root: this.tree ? this.tree : i,
       joins: this.joins,
-      errors: []
+      errors: [],
+      key: o
     }
     return (
-      r && (i.tracker = new Map()),
-      this.contexts.set(o, i),
-      null !== t && (s[t] = o),
-      o
+      r && (n.tracker = new Map()),
+      this.contexts.set(i, n),
+      null !== t && (s[t] = i),
+      i
     )
   }
   parseTemplate(e, t, s = []) {
@@ -749,7 +761,7 @@ class Partjson {
           const t = o.inputs[i]
           if (t.keyFxn && t.valFxn) {
             const o = t.keyFxn(e, r)
-            for (const i of o) (r.key = i), t.valFxn(e, i, s, r)
+            for (const i of o) t.valFxn(e, i, s, r)
           }
         }
       o["@after"](e, r),
