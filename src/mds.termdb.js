@@ -41,6 +41,7 @@ init()
 add_searchbox_4term
 ********************** INTERNAL
 show_default_rootterm
+	display_searchbox
 	may_display_termfilter
 	print_one_term
 		may_make_term_foldbutton
@@ -48,6 +49,7 @@ show_default_rootterm
 		may_apply_modifier_barchart_selectbar
 		may_make_term_graphbuttons
 			term_addbutton_barchart
+				make_barplot
 */
 
 
@@ -64,8 +66,9 @@ obj{}:
 .default_rootterm{}
 ... modifiers
 */
-	window.obj = obj // for testing
+	if( obj.debugmode ) window.obj = obj
 	obj.errdiv = obj.div.append('div')
+	obj.searchdiv = obj.div.append('div').style('display','none')
 	obj.termfilterdiv = obj.div.append('div').style('display','none')
 	obj.treediv = obj.div.append('div')
 		.style('display','inline-block')
@@ -83,19 +86,18 @@ obj{}:
 		// handler in client.js Menu will not be triggered
 		obj.tip.hide()
 	})
+	// simplified query
+	obj.do_query = (args) => {
+		const lst = [ 'genome='+obj.genome.name, '&dslabel='+obj.mds.label ]
+		// maybe no need to provide term filter at this query
+		return client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
+	}
 
 	try {
 
 		if(!obj.genome) throw '.genome{} missing'
 		if(!obj.mds) throw '.mds{} missing'
 
-		// if all queries are handled at termdb route, can use this closure to simplify
-		obj.do_query = (arg) => {
-			arg.genome = obj.genome.name
-			arg.dslabel = obj.mds.label
-			arg.termfilter = obj.termfilter ? obj.termfilter.terms : ''
-			return client.dofetch('termdb', arg)
-		}
 
 		// handle triggers
 
@@ -122,11 +124,11 @@ also for showing term tree, allowing to select certain terms
 
 */
 
+	display_searchbox( obj )
+
 	may_display_termfilter( obj )
 
-	const data = await obj.do_query( {
-		default_rootterm: 1
-	})
+	const data = await obj.do_query( [ 'default_rootterm=1' ] )
 	if(data.error) throw 'error getting default root terms: '+data.error
 	if(!data.lst) throw 'no default root term: .lst missing'
 
@@ -331,14 +333,15 @@ such conditions may be carried by obj
 	const button = row.append('div')
 		.style('font-size','.8em')
 		.style('margin-left','20px')
-		.attr('class','sja_button')
+		.style('display','inline-block')
+		.style('border-radius','5px')
+		.attr('class','sja_menuoption')
 		.text('VIEW')
 
 	const div = row_graph.append('div')
-		.style('border','solid 1px #ccc')
+		.style('border','solid 1px #aaa')
 		.style('border-radius','5px')
-		.style('margin','10px')
-		.style('padding','10px')
+		.style('margin','10px 0px')
 		.style('display','none')
 		.style('position','relative')
 
@@ -353,61 +356,57 @@ such conditions may be carried by obj
 
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
-			button.attr('class','sja_button_open')
+			//button.attr('class','sja_button_open')
+			button.style('border','none')
 		} else {
 			client.disappear(div)
-			button.attr('class','sja_button_fold')
+			//button.attr('class','sja_button_fold')
+			button.style('border','solid 1px #555')
 		}
 
 		if( term.graph.barchart.dom.loaded ) return
-			
+
 		button.text('Loading')
-
-		const arg = {
-			barchart: {
-				id: term.id
-			}
-		}
-		if( obj.termfilter ) {
-			arg.termfilter = termvaluesettingui.to_parameter( obj.termfilter.terms )
-			// may add other flags
-		}
-		/// modifier
-		if( obj.modifier_ssid_barchart ) {
-			arg.ssid = obj.modifier_ssid_barchart.ssid
-		}
-
-		// make barchart
-		const plot = {
-			obj,
-			holder: div,
-			genome: obj.genome.name,
-			dslabel: obj.mds.label,
-			term: term
-		}
-
-		if( obj.modifier_ssid_barchart ) {
-			const g2c = {}
-			for(const k in obj.modifier_ssid_barchart.groups) {
-				g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
-			}
-			plot.mutation_lst = [
-				{
-					mutation_name: obj.modifier_ssid_barchart.mutation_name,
-					ssid: obj.modifier_ssid_barchart.ssid,
-					genotype2color: g2c
-				}
-			]
-			plot.overlay_with_genotype_idx = 0
-		}
-
-		plot_init( plot, () => button.text('VIEW'))
 		term.graph.barchart.dom.loaded=true
+		make_barplot(
+			obj,
+			term,
+			div,
+			()=> button.text('VIEW')
+		)
 	})
 }
 
 
 
+
+
+function make_barplot ( obj, term, div, callback ) {
+	// make barchart
+	const plot = {
+		obj,
+		holder: div,
+		genome: obj.genome.name,
+		dslabel: obj.mds.label,
+		term: term
+	}
+
+	if( obj.modifier_ssid_barchart ) {
+		const g2c = {}
+		for(const k in obj.modifier_ssid_barchart.groups) {
+			g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
+		}
+		plot.mutation_lst = [
+			{
+				mutation_name: obj.modifier_ssid_barchart.mutation_name,
+				ssid: obj.modifier_ssid_barchart.ssid,
+				genotype2color: g2c
+			}
+		]
+		plot.overlay_with_genotype_idx = 0
+	}
+	plot_init( plot, callback )
+}
 
 
 
@@ -515,16 +514,7 @@ buttonholder: div in which to show the button, term label is also in it
 			.style('opacity',.5)
 			.style('margin','3px 0px')
 
-		// parameter for getting children terms
-		const param = {
-			get_children: {
-				id: arg.term.id
-			}
-		}
-		if( arg.modifier_ssid_onterm ) {
-			param.get_children.ssid = arg.modifier_ssid_onterm.ssid
-		}
-
+		const param = [ 'get_children=1&tid='+arg.term.id ] // not adding ssid here
 		obj.do_query( param )
 		.then(data=>{
 			if(data.error) throw data.error
@@ -560,6 +550,7 @@ buttonholder: div in which to show the button, term label is also in it
 
 export function add_searchbox_4term ( obj, holder, callback ) {
 /*
+to be removed
 add a search box to find term and run callback on it
 */
 
@@ -628,6 +619,111 @@ add a search box to find term and run callback on it
 				.on('click',()=>{
 					callback( term )
 				})
+		}
+	})
+}
+
+
+
+
+function display_searchbox ( obj ) {
+/*
+*/
+	const div = obj.searchdiv
+		.style('display','block')
+		.append('div')
+		.style('display','inline-block')
+	const input = div
+		.append('input')
+		.attr('type','search')
+		.style('width','100px')
+		.style('display','block')
+		.attr('name','x')
+		.attr('placeholder','Search')
+
+	if( obj.modifier_click_term ) {
+		// selecting term, set focus to the box
+		input.node().focus()
+	}
+
+	const table = div.append('table')
+		.style('border-spacing','0px')
+		.style('border-collapse','separate')
+		.style('margin-bottom','10px')
+
+	let lastterm = null
+
+	// TODO keyup event listner needs debounce
+
+	input.on('keyup', async ()=>{
+		
+		const str = input.property('value')
+		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
+
+		if( str==' ' || str=='' ) {
+			// blank
+			table.selectAll('*').remove()
+			return
+		}
+
+		// query
+		const data = await obj.do_query( ['findterm='+str] )
+
+		if(data.error) {
+			return
+		}
+
+		table.selectAll('*').remove()
+		if(!data.lst || data.lst.length==0) {
+			table.append('tr').append('td')
+				.text('No match')
+				.style('opacity',.5)
+			return
+		}
+
+		lastterm = data.lst[0]
+
+		for(const term of data.lst) {
+
+			if( obj.modifier_click_term ) {
+				// display term as a button to be selected
+				table.append('tr')
+					.append('td')
+					.append('div')
+					.attr('class','sja_menuoption')
+					.text(term.name)
+					.on('click',()=>{
+						obj.modifier_click_term.callback( term )
+					})
+				continue
+			}
+
+			// not selecting term name, display additional buttons for each term
+			const tr = table.append('tr')
+				.attr('class','sja_tr2')
+			tr.append('td').text(term.name)
+			const td = tr.append('td') // holder for buttons
+			if( term.graph && term.graph.barchart ) {
+				td.append('div')
+					.style('display','inline-block')
+					.attr('class','sja_menuoption')
+					.style('zoom','.8')
+					.text('VIEW')
+					.on('click',()=>{
+						const p = client.newpane({x:100,y:100})
+						p.header.text(term.name)
+						const wait = p.body.append('div')
+							.style('margin','20px')
+							.text('Loading...')
+						make_barplot( obj, term, p.body, ()=>wait.remove() )
+					})
+			}
+			tr.append('td')
+				.append('span')
+				.text('TREE')
+				.style('margin-left','10px')
+				.style('font-size','.8em')
+				.attr('class','sja_clbtext')
 		}
 	})
 }
