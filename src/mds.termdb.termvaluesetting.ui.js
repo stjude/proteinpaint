@@ -142,11 +142,17 @@ group{}
                                 update_terms(terms_div)
                             })
                     })
-            } else {
+            } else if(term.term.isinteger || term.term.isfloat) {
                 // range label is not clickable
                 condition_btn.text('RANGE')
                     .style('background-color', '#015051')
                     .style('pointer-events','none')
+            }else if(term.term.iscondition) {
+                condition_btn.text('IS')
+                    .style('background-color', '#015051')
+                    .style('pointer-events','none')
+
+                term_name_btn.text(term.term.name + ' (CTCAE Grade)')
             }
 
             const term_value_div = one_term_div.append('div')
@@ -284,6 +290,18 @@ group{}
             } else if( term.term.isinteger || term.term.isfloat ) {
                 // TODO numerical term, print range in value button and apply the suitable click callback
                 display_numeric_filter(term, term_value_div)
+            } else if(term.term.iscondition){
+
+                for (let j=0; j<term.values.length; j++){
+
+                    const term_value_btn = term_value_div.append('div')
+                        .attr('class','sja_filter_tag_btn')
+                        .style('font-size','1em')
+                        .style('padding','3px 4px 3px 4px')
+                        .style('margin-right','1px')
+                        .style('background-color', '#4888BF')
+                        .text(term.values[j].label)
+                }
             }
 
             // button with 'x' to remove term2
@@ -498,6 +516,9 @@ export function make_new_term(bar_term){
     if(bar_term.term.isinteger) {
         new_term.term.isinteger = bar_term.term.isinteger
         new_term.range = bar_term.range
+    }
+    if(bar_term.term.iscondition) {
+        new_term.term.iscondition = bar_term.term.iscondition
     }
 
     return new_term
