@@ -314,7 +314,7 @@ export class TermdbBarchart{
                 : term.values[d.dataId].label
 
             if (termNum != 'term0' && term) {
-              const range = !bins ? null : bins.find(d => d.label == value)
+              const range = !bins ? null : bins.find(d => d.label == label)
               t.push({term, values: [{key, label}], range})
             }
           }
