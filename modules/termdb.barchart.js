@@ -15,12 +15,12 @@ handle_request_closure
 
 exports.handle_request_closure = ( genomes ) => {
   return async (req, res) => {
-    app.log(req)
     const q = req.query
     if (q.custom_bins) {
       try {
         q.custom_bins = JSON.parse(decodeURIComponent(q.custom_bins))
       } catch(e) {
+        app.log(req)
         res.send({error: (e.message || e)})
         if(e.stack) console.log(e.stack)
       }
@@ -29,10 +29,12 @@ exports.handle_request_closure = ( genomes ) => {
       try {
         q.filter = JSON.parse(decodeURIComponent(q.filter))
       } catch(e) {
+        app.log(req)
         res.send({error: (e.message || e)})
         if(e.stack) console.log(e.stack)
       }
     }
+    app.log(req)
     if (!q.term0) q.term0 = ''
     if (!q.term2) q.term2 = ''
     try {

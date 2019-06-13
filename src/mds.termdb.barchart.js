@@ -91,6 +91,7 @@ export class TermdbBarchart{
     } else if ('term2' in this.settings && plot.term2) {
       this.terms.term2 = plot.term2 
     }
+    this.terms.term0 = settings.term0 && plot.term0 ? plot.term0 : null
   }
 
   setVisibility(isVisible) {
@@ -260,6 +261,21 @@ export class TermdbBarchart{
     const self = this
     const s = this.settings
     return {
+      chart: {
+        title(chart) {
+          if (!self.terms.term0) return chart.chartId
+          const grade = self.terms.term0.graph
+              && self.terms.term0.graph.barchart 
+              && self.terms.term0.graph.barchart.grade_labels
+            ? self.terms.term0.graph.barchart.grade_labels.find(c => c.grade == chart.chartId)
+            : null
+          return self.terms.term0.values
+            ? self.terms.term0.values[chart.chartId].label
+            : grade
+            ? grade.label
+            : chart.chartId
+        }
+      },
       svg: {
         mouseout: ()=>{
           tip.hide()
@@ -457,17 +473,17 @@ export class TermdbBarchart{
     }
     if (s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
       const t = this.terms.term2
-      const overlay = !t.iscondition || !t.graph || !t.graph.barchart || !t.graph.barchart.value_choices
-        ? '' 
-        : t.graph.barchart.value_choices.find(d => d[s.conditionUnits[2]])
-
+      const b = t.graph && t.graph.barchart ? t.graph.barchart : null
+      const overlay = !t.iscondition || !b ? '' : b.value_choices.find(d => d[s.conditionUnits[2]])
+      const grades = b && b.grade_labels ? b.grade_labels : null
       const colors = {}
       legendGrps.push({
         name: t.name + (overlay ? ': '+overlay.label : ''),
         items: s.rows.map(d => {
+          const g = grades ? grades.find(c => c.grade == d) : null
           return {
             dataId: d,
-            text: d,
+            text: g ? g.label : d,
             color: this.term2toColor[d],
             type: 'row',
             isHidden: s.exclude.rows.includes(d)

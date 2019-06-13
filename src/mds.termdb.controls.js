@@ -27,7 +27,7 @@ export function controls(arg, plot, main) {
       plot.controls.forEach(update => update())
       const display = tip.style('display')
       tip.style('display', display == "none" ? "inline-block" : "none")
-      plot.config_div.style('background', display == "none" ? '#eee' : "")
+      plot.config_div.style('background', display == "none" ? 'rgb(245,245,220)' : "")
     })
 
   const tip = plot.config_div.append('div').style("display","none")

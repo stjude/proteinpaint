@@ -129,7 +129,7 @@ export default function barsRenderer(barsapp, holder) {
       .style("font-weight", 600)
       .style("font-size", "20px")
       .style("margin-bottom", "16px")
-      .html(chart.chartId);
+      .html(hm.handlers.chart.title(chart));
 
     // only set this initially to prevent 
     // jerky svg resize on update
