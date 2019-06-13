@@ -306,16 +306,16 @@ export class TermdbBarchart{
           for(const termNum in self.terms) {
             const term = self.terms[termNum]
             const bins = self.bins[termNum.slice(-1)]
-            const value = termNum=="term1" ? d.seriesId : d.dataId
+            const key = termNum=="term1" ? d.seriesId : d.dataId
             const label = !term || !term.values 
-              ? value
+              ? key
               : termNum=="term1"
                 ? term.values[d.seriesId].label
                 : term.values[d.dataId].label
 
             if (termNum != 'term0' && term) {
-              const bin = !bins ? null : bins.find(d => d.label == value)
-              t.push({term, label, value, range: bin})
+              const range = !bins ? null : bins.find(d => d.label == value)
+              t.push({term, values: [{key, label}], range})
             }
           }
           self.click_callback({terms: t})
