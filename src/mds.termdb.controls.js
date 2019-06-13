@@ -20,7 +20,7 @@ export function controls(arg, plot, main) {
   // label
   plot.config_div.append('div').append('button')
     .style('color', '#333')
-    .style('font-size', '12px')
+    .style('font-size', '14px')
     .style('cursor', 'pointer')
     .html('CONFIG')
     .on('click', () => {
@@ -56,7 +56,9 @@ export function controls(arg, plot, main) {
   }
 
   function altRowColors(d,i){
-    d3select(this).selectAll('td').style('border-top', i !== 0 ? '1px solid #ccc' : '')
+    d3select(this).selectAll('td')
+    //.style('border-top', i !== 0 ? '1px solid #ccc' : '')
+    .style('background-color', i%2 == 0 ? '' : '#eee')
   }
 }
 
