@@ -484,7 +484,7 @@ group{}
 export function make_new_term(bar_term){
         
     const new_term = {
-        values: [{key: bar_term.value, label: bar_term.label}],
+        values: [{key: bar_term.values.key, label: bar_term.values.label}],
         term: {
             id: bar_term.term.id,
             name: bar_term.term.name
