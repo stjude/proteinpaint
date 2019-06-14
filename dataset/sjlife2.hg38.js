@@ -57,8 +57,23 @@ module.exports={
 				{id:'Outcomes'}
 			],
 			patient_condition:{
+				// Note: this is solely for the "iscondition" terms
 				file:'files/hg38/sjlife/clinical/outcomes_2017',
 				events_key:'conditionevents',
+				grade_key: 'grade',
+				grade_labels: [
+					{ grade: 1, label: '1: Mild' },
+					{ grade: 2, label: '2: Moderate' },
+					{ grade: 3, label: '3: Severe' },
+					{ grade: 4, label: '4: Life-threatening' },
+					{ grade: 5, label: '5: Death' }
+				],
+				uncomputable_grades: {
+					0: 'No symptom',
+					9: 'Unknown status'
+				},
+				age_key: 'age',
+				yearstoevent_key:'yearstoevent'
 			}
 		},
 	},
