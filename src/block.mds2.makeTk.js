@@ -164,6 +164,11 @@ Note: must keep customizations of official tk through embedding api
 			for(const k in c.numerical_axis) {
 				if(tk.vcf.numerical_axis[k]==undefined) tk.vcf.numerical_axis[k] = c.numerical_axis[k]
 			}
+			if(c.numerical_axis.AFtest) {
+				for(const k in c.numerical_axis.AFtest) {
+					if(tk.vcf.numerical_axis.AFtest[k]==undefined) tk.vcf.numerical_axis.AFtest[k] = c.numerical_axis.AFtest[k]
+				}
+			}
 		}
 	}
 
