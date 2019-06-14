@@ -80,6 +80,20 @@ rl.on('line',line=>{
 		first=false
 		return
 	}
+	/*
+	1	sjlid	SJL1758307
+	2	wgs_sequenced	1
+	3	ctcae_graded	1
+	4	root	Outcomes
+	5	first	CTCAE Graded Events
+	6	second	Cardiovascular System
+	7	third	Arrhythmias
+	8	fourth	Cardiac dysrhythmia
+	9	agegraded	49.783561644
+	10	yearstoevent	34.78630137
+	11	grade	0
+	*/
+
 	const l = line.split('\t')
 	const w1 = l[5-1].replace(/"/g,'')
 	const w2 = l[6-1].replace(/"/g,'')
@@ -95,8 +109,10 @@ rl.on('line',line=>{
 	if(!condition) console.error('unknown condition')
 	const age = Number(l[ 9-1 ])
 	if(Number.isNaN(age)) console.error('invalid age',l[9-1])
-	const grade = Number(l[ 10-1 ])
-	if(Number.isNaN(grade)) console.error('invalid grade',l[10-1])
+	const yearstoevent = Number( l[ 10-1 ] )
+	if(Number.isNaN(yearstoevent)) console.error('invalid yearstoevent')
+	const grade = Number( l[ 11-1 ] )
+	if(!Number.isInteger(grade)) console.error('grade is not integer',l[11-1])
 	if(!grade2count.has(grade)) grade2count.set(grade,0)
 	grade2count.set( grade, 1+grade2count.get(grade) )
 
@@ -106,7 +122,7 @@ rl.on('line',line=>{
 	if(!patient2condition.get(patient)[condition]) {
 		patient2condition.get(patient)[condition] = []
 	}
-	patient2condition.get(patient)[condition].push( { grade, age } )
+	patient2condition.get(patient)[condition].push( { grade, age, yearstoevent } )
 })
 
 rl.on('close',()=>{
