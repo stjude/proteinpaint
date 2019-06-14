@@ -43,7 +43,7 @@ arg: server returned data
     term2: arg.term2 
       ? arg.term2 
       : arg.obj.modifier_ssid_barchart
-      ? {mname: obj.modifier_ssid_barchart.mutation_name}
+      ? {mname: arg.obj.modifier_ssid_barchart.mutation_name}
       : null, 
     items: arg.items,
     boxplot: arg.boxplot,
