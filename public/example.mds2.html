@@ -30,7 +30,22 @@ runproteinpaint({
 			// customizations to the official track
 			vcf:{
 				numerical_axis:{
-					//in_use:false
+					AFtest:{
+						groups:[
+							{
+								is_termdb:true,
+								terms:[
+									{
+										term:{id:'diaggrp',name:'Diagnosis Group',iscategorical:true},
+										values:[{key:'Neuroblastoma',label:'Neuroblastoma'}]
+									}
+								]
+							},
+							{
+								is_population:true, key:'gnomAD', allowto_adjust_race:true, adjust_race:true
+							}
+						]
+					}
 				}
 			}
 		},
