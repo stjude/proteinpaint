@@ -160,22 +160,6 @@ function makegraphconfig_conditionterm ( t ) {
 
 	t.graph = {
 		barchart: {
-
-			grade_key:'grade',
-			grade_labels:[
-				{grade:1,label:'1: Mild'},
-				{grade:2,label:'2: Moderate'},
-				{grade:3,label:'3: Severe'},
-				{grade:4,label:'4: Life-threatening'},
-				{grade:5,label:'5: Death'}
-			],
-			uncomputable_grades:[
-				{grade:0,label:'No symptom'},
-				{grade:9,label:'Unknown status'}
-			],
-			age_key:'age',
-
-
 			bar_choices:[
 				{
 					// this option is available for both leaf and non-leaf terms
@@ -183,7 +167,6 @@ function makegraphconfig_conditionterm ( t ) {
 					label:'Grades',
 				}
 			],
-
 			value_choices:[
 				{
 					max_grade_perperson:true,
@@ -191,7 +174,7 @@ function makegraphconfig_conditionterm ( t ) {
 				},
 				{
 					most_recent_grade:true,
-					label:'Most recent grade',
+					label:'Most recent grade per patient',
 				}
 			]
 		}
@@ -203,7 +186,7 @@ function makegraphconfig_conditionterm ( t ) {
 
 		t.graph.barchart.bar_choices.push({
 			by_children: true,
-			label:'Conditions',
+			label:'Sub-conditions',
 			allow_to_stackby_grade: true,
 		})
 	}
