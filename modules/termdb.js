@@ -314,7 +314,7 @@ supply sample count annotated to each category
 if q.samplecountbyvcf, will count from vcf samples
 otherwise, count from all samples
 */
-	const t = tdb.termjson.map.get( q.termid )
+	const t = tdb.termjson.map.get( q.tid )
 	if(!t) throw 'unknown term id'
 	if(!t.iscategorical) throw 'term not categorical'
 	const category2count = new Map()
@@ -324,14 +324,14 @@ otherwise, count from all samples
 		for(const s of ds.track.vcf.samples) {
 			const a = ds.cohort.annotation[s.name]
 			if(!a) continue
-			const v = a[ q.termid ]
+			const v = a[ q.tid ]
 			if(!v) continue
 			category2count.set( v, 1 + (category2count.get(v)||0) )
 		}
 	} else {
 		for(const n in ds.cohort.annotation) {
 			const a = ds.cohort.annotation[n]
-			const v = a[ q.termid ]
+			const v = a[ q.tid ]
 			if(!v) continue
 			category2count.set( v, 1 + (category2count.get(v)||0) )
 		}
