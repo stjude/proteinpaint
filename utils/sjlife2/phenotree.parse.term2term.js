@@ -168,14 +168,9 @@ function makegraphconfig_conditionterm ( t ) {
 				}
 			],
 			value_choices:[
-				{
-					max_grade_perperson:true,
-					label:'Max grade per patient',
-				},
-				{
-					most_recent_grade:true,
-					label:'Most recent grade per patient',
-				}
+				{ max_grade_perperson:true, label:'Max grade per patient' },
+				{ most_recent_grade:true, label:'Most recent grade per patient' },
+				{ total_measured:true, label:'Total number of patients' }
 			]
 		}
 	}
