@@ -26,32 +26,29 @@ const outcomefile = process.argv[3]
 const fs=require('fs')
 const readline=require('readline')
 
-const L1words=new Set(),
-	L2words=new Set(),
-	L3words=new Set(),
-	L4words=new Set()
+// condition terms from phenotree, to sum up number of each grade, and find inconsistency with outcome file
+const L1words=new Map(),
+	L2words=new Map(),
+	L3words=new Map(),
+	L4words=new Map()
+// k: word, v: { grade:count }
+
 
 const lines = fs.readFileSync(phenotreefile,{encoding:'utf8'}).trim().split('\n')
 for(let i=1; i<lines.length; i++) {
 	const l = lines[i].split('\t')
 
 	const w1 = l[1]=='-' ? null : l[1].trim()
+	if(w1!='CTCAE Graded Events') continue
 	const w2 = l[2]=='-' ? null : l[2].trim()
 	const w3 = l[3]=='-' ? null : l[3].trim()
 	const w4 = l[4]=='-' ? null : l[4].trim()
 
-	if(w1) L1words.add(w1)
-	if(w2) L2words.add(w2)
-	if(w3) L3words.add(w3)
-	if(w4) L4words.add(w4)
+	if(w1) L1words.set(w1, new Map())
+	if(w2) L2words.set(w2, new Map())
+	if(w3) L3words.set(w3, new Map())
+	if(w4) L4words.set(w4, new Map())
 }
-
-/*
-console.log('L1',L1words.size)
-console.log('L2',L2words.size)
-console.log('L3',L3words.size)
-console.log('L4',L4words.size)
-*/
 
 
 
@@ -73,7 +70,6 @@ v: {}
    v: [ {grade,age}, {} ]
 */
 
-const grade2count = new Map()
 
 rl.on('line',line=>{
 	if(first) {
@@ -99,10 +95,6 @@ rl.on('line',line=>{
 	const w2 = l[6-1].replace(/"/g,'')
 	const w3 = l[7-1].replace(/"/g,'')
 	const w4 = l[8-1].replace(/"/g,'')
-	if(w1 && !L1words.has(w1)) L1err.add(w1)
-	if(w2 && !L2words.has(w2)) L2err.add(w2)
-	if(w3 && !L3words.has(w3)) L3err.add(w3)
-	if(w4 && !L4words.has(w4)) L4err.add(w4)
 
 	const patient = l[0]
 	const condition = w4 ? w4 : (w3 ? w3 : w2)
@@ -113,9 +105,38 @@ rl.on('line',line=>{
 	if(Number.isNaN(yearstoevent)) console.error('invalid yearstoevent')
 	const grade = Number( l[ 11-1 ] )
 	if(!Number.isInteger(grade)) console.error('grade is not integer',l[11-1])
-	if(!grade2count.has(grade)) grade2count.set(grade,0)
-	grade2count.set( grade, 1+grade2count.get(grade) )
 
+	// count grade for each condition
+	if( w1 ) {
+		if( L1words.has(w1) ) {
+			L1words.get(w1).set( grade, 1+(L1words.get(w1).get(grade)||0) )
+		} else {
+			L1err.add(w1)
+		}
+	}
+	if( w2 ) {
+		if( L2words.has(w2) ) {
+			L2words.get(w2).set( grade, 1+(L2words.get(w2).get(grade)||0) )
+		} else {
+			L2err.add(w2)
+		}
+	}
+	if( w3 ) {
+		if( L3words.has(w3) ) {
+			L3words.get(w3).set( grade, 1+(L3words.get(w3).get(grade)||0) )
+		} else {
+			L3err.add(w3)
+		}
+	}
+	if( w4 ) {
+		if( L4words.has(w4) ) {
+			L4words.get(w4).set( grade, 1+(L4words.get(w4).get(grade)||0) )
+		} else {
+			L4err.add(w4)
+		}
+	}
+
+	// record event for this patient
 	if(!patient2condition.has(patient)) {
 		patient2condition.set( patient, {})
 	}
@@ -126,10 +147,10 @@ rl.on('line',line=>{
 })
 
 rl.on('close',()=>{
-	if(L1err.size) for(const w of L1err) console.error('First branch:', w)
-	if(L2err.size) for(const w of L2err) console.error('Second branch:', w)
-	if(L3err.size) for(const w of L3err) console.error('Third branch:', w)
-	if(L4err.size) for(const w of L4err) console.error('Forth branch:', w)
+	if(L1err.size) for(const w of L1err) console.error('First branch mismatch:', w)
+	if(L2err.size) for(const w of L2err) console.error('Second branch mismatch:', w)
+	if(L3err.size) for(const w of L3err) console.error('Third branch mismatch:', w)
+	if(L4err.size) for(const w of L4err) console.error('Forth branch mismatch:', w)
 
 	let numberofevents=0
 	const conditions=new Set()
@@ -147,7 +168,28 @@ rl.on('close',()=>{
 	}
 	console.error(patient2condition.size+' patients, '+conditions.size+' conditions, '+numberofevents+' events')
 
-	for(const [g,c] of grade2count) {
-		console.error('Grade '+g+': '+c)
+	for(const [w,o] of L1words) {
+		console.error('L1',w)
+		for(const [g,c] of o) {
+			console.error('\tgrade '+g+': '+c)
+		}
+	}
+	for(const [w,o] of L2words) {
+		console.error('L2',w)
+		for(const [g,c] of o) {
+			console.error('\tgrade '+g+': '+c)
+		}
+	}
+	for(const [w,o] of L3words) {
+		console.error('L3',w)
+		for(const [g,c] of o) {
+			console.error('\tgrade '+g+': '+c)
+		}
+	}
+	for(const [w,o] of L4words) {
+		console.error('L4',w)
+		for(const [g,c] of o) {
+			console.error('\tgrade '+g+': '+c)
+		}
 	}
 })
