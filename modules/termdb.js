@@ -57,6 +57,10 @@ return async (req, res) => {
 			trigger_findterm( q, res, tdb )
 			return
 		}
+		if( q.treeto ) {
+			trigger_treeto( q, res, tdb )
+			return
+		}
 
 		throw 'termdb: don\'t know what to do'
 
@@ -172,6 +176,125 @@ do not directly hand over the term object to client; many attr to be kept on ser
 
 
 
+function trigger_findterm ( q, res, termdb ) {
+	const str = q.findterm.toLowerCase()
+	const lst = []
+	for(const term of termdb.termjson.map.values()) {
+		if(term.name.toLowerCase().indexOf( str ) != -1) {
+			lst.push( copy_term( term ) )
+			if(lst.length>=10) {
+				break
+			}
+		}
+	}
+	res.send({lst:lst})
+}
+
+
+
+function trigger_treeto ( q, res, termdb ) {
+	const term = termdb.termjson.map.get( q.treeto )
+	if(!term) throw 'unknown term id'
+	const levels = [{
+		focusid: q.treeto,
+		terms: []
+	}]
+	let thisid = term.id
+	while( termdb.child2parent.has( thisid ) ) {
+		const parentid = termdb.child2parent.get( thisid )
+		const childrenids = termdb.parent2children.get( parentid )
+		for(const i of childrenids) {
+			levels[0].terms.push( copy_term(termdb.termjson.map.get(i)))
+		}
+		const ele = { // new element for the lst
+			focusid: parentid,
+			terms: []
+		}
+		levels.unshift( ele )
+		thisid = parentid
+	}
+	if(termdb.default_rootterm) {
+		for(const i of termdb.default_rootterm) {
+			levels[0].terms.push(copy_term(termdb.termjson.map.get(i.id)))
+		}
+	}
+	res.send({levels})
+}
+
+
+
+async function load_ssid ( ssid ) {
+/* ssid is the file name under cache/ssid/
+*/
+	const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', ssid ) )
+	const samplesets = []
+	for(const line of text.split('\n')) {
+		const l = line.split('\t')
+		samplesets.push({
+			name: l[0],
+			samples: l[1].split(',')
+		})
+	}
+	return samplesets
+}
+
+
+function term_getcount_4sampleset ( term, samples ) {
+/*
+term
+samples[] array of sample names
+*/
+}
+
+
+
+function trigger_getcategories ( q, res, tdb, ds ) {
+/*
+to get the list of categories for a categorical term
+supply sample count annotated to each category
+if q.samplecountbyvcf, will count from vcf samples
+otherwise, count from all samples
+*/
+	const t = tdb.termjson.map.get( q.tid )
+	if(!t) throw 'unknown term id'
+	if(!t.iscategorical) throw 'term not categorical'
+	const category2count = new Map()
+
+	if( q.samplecountbyvcf ) {
+		if(!ds.track || !ds.track.vcf || !ds.track.vcf.samples ) throw 'cannot use vcf samples, necessary parts missing'
+		for(const s of ds.track.vcf.samples) {
+			const a = ds.cohort.annotation[s.name]
+			if(!a) continue
+			const v = a[ q.tid ]
+			if(!v) continue
+			category2count.set( v, 1 + (category2count.get(v)||0) )
+		}
+	} else {
+		for(const n in ds.cohort.annotation) {
+			const a = ds.cohort.annotation[n]
+			const v = a[ q.tid ]
+			if(!v) continue
+			category2count.set( v, 1 + (category2count.get(v)||0) )
+		}
+	}
+	const lst = [...category2count].sort((i,j)=>j[1]-i[1])
+	res.send({lst: lst.map(i=>{
+			let label
+			if( t.values && t.values[i[0]] ) {
+				label = t.values[i[0]].label
+			}
+			return {
+				key: i[0],
+				label: (label || i[0]),
+				samplecount: i[1]
+			}
+		})
+	})
+}
+
+
+
+
 ///////////// server init
 
 
@@ -259,94 +382,4 @@ function server_init_mayparse_patientcondition ( ds ) {
 		count++
 	}
 	console.log(ds.label+': '+count+' samples loaded with condition data from '+ds.cohort.termdb.patient_condition.file)
-}
-
-
-
-
-
-
-function trigger_findterm ( q, res, termdb ) {
-	const str = q.findterm.toLowerCase()
-	const lst = []
-	for(const term of termdb.termjson.map.values()) {
-		if(term.name.toLowerCase().indexOf( str ) != -1) {
-			lst.push( copy_term( term ) )
-			if(lst.length>=10) {
-				break
-			}
-		}
-	}
-	res.send({lst:lst})
-}
-
-
-
-async function load_ssid ( ssid ) {
-/* ssid is the file name under cache/ssid/
-*/
-	const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', ssid ) )
-	const samplesets = []
-	for(const line of text.split('\n')) {
-		const l = line.split('\t')
-		samplesets.push({
-			name: l[0],
-			samples: l[1].split(',')
-		})
-	}
-	return samplesets
-}
-
-
-function term_getcount_4sampleset ( term, samples ) {
-/*
-term
-samples[] array of sample names
-*/
-}
-
-
-
-function trigger_getcategories ( q, res, tdb, ds ) {
-/*
-to get the list of categories for a categorical term
-supply sample count annotated to each category
-if q.samplecountbyvcf, will count from vcf samples
-otherwise, count from all samples
-*/
-	const t = tdb.termjson.map.get( q.tid )
-	if(!t) throw 'unknown term id'
-	if(!t.iscategorical) throw 'term not categorical'
-	const category2count = new Map()
-
-	if( q.samplecountbyvcf ) {
-		if(!ds.track || !ds.track.vcf || !ds.track.vcf.samples ) throw 'cannot use vcf samples, necessary parts missing'
-		for(const s of ds.track.vcf.samples) {
-			const a = ds.cohort.annotation[s.name]
-			if(!a) continue
-			const v = a[ q.tid ]
-			if(!v) continue
-			category2count.set( v, 1 + (category2count.get(v)||0) )
-		}
-	} else {
-		for(const n in ds.cohort.annotation) {
-			const a = ds.cohort.annotation[n]
-			const v = a[ q.tid ]
-			if(!v) continue
-			category2count.set( v, 1 + (category2count.get(v)||0) )
-		}
-	}
-	const lst = [...category2count].sort((i,j)=>j[1]-i[1])
-	res.send({lst: lst.map(i=>{
-			let label
-			if( t.values && t.values[i[0]] ) {
-				label = t.values[i[0]].label
-			}
-			return {
-				key: i[0],
-				label: (label || i[0]),
-				samplecount: i[1]
-			}
-		})
-	})
 }
