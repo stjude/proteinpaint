@@ -1,5 +1,5 @@
 import {select as d3select, event as d3event} from 'd3-selection'
-import {may_trigger_crosstabulate} from './mds.termdb.crosstab'
+import {showtree4selectterm} from './mds.termdb'
 
 // used to track controls unique "instances" by plot object
 // to be used to disambiguate between input names
@@ -213,7 +213,7 @@ function setOverlayOpts(plot, main, table, arg) {
           }
         }
       }
-      may_trigger_crosstabulate( _arg, tr.node() )
+      showtree4selectterm( _arg, tr.node() )
     } else if (d.value == "genotype") {
       // to-do
     } else if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
@@ -240,7 +240,7 @@ function setOverlayOpts(plot, main, table, arg) {
         main(plot)
       }
     }
-    may_trigger_crosstabulate( _arg, tr.node() )
+    showtree4selectterm( _arg, tr.node() )
   })
 
   plot.controls.push(() => {
@@ -341,7 +341,7 @@ function setDivideByOpts(plot, main, table, arg) {
           main(plot)
         }
       }
-      may_trigger_crosstabulate( _arg, tr.node() )
+      showtree4selectterm( _arg, tr.node() )
     } else if (d.value == "genotype") {
       // to-do
     } else if (d.value == "by_children" || d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
@@ -368,7 +368,7 @@ function setDivideByOpts(plot, main, table, arg) {
         main(plot)
       }
     }
-    may_trigger_crosstabulate( _arg, tr.node() )
+    showtree4selectterm( _arg, tr.node() )
   })
 
   plot.controls.push(() => {
