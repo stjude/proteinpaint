@@ -2,7 +2,6 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init as plot_init} from './mds.termdb.plot'
-import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 
@@ -38,7 +37,6 @@ attach to obj{}
 
 ********************** EXPORTED
 init()
-add_searchbox_4term
 ********************** INTERNAL
 show_default_rootterm
 	display_searchbox
@@ -433,7 +431,6 @@ allow to make multiple buttons
 
 	if(term.graph.barchart) {
 		term_addbutton_barchart( term, row, row_graph, obj )
-		//may_enable_crosstabulate( term, row,  obj )
 	}
 
 
@@ -468,35 +465,25 @@ such conditions may be carried by obj
 		.style('display','none')
 		.style('position','relative')
 
-	// these to be shared for crosstab function
-	term.graph.barchart.dom = {
-		button: button,
-		loaded: false,
-		div: div
-	}
+	let loaded =false,
+		loading=false
 
 	button.on('click', async ()=>{
-
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
-			//button.attr('class','sja_button_open')
 			button.style('border','none')
 		} else {
 			client.disappear(div)
-			//button.attr('class','sja_button_fold')
 			button.style('border','solid 1px #555')
 		}
-
-		if( term.graph.barchart.dom.loaded ) return
-
+		if( loaded || loading ) return
 		button.text('Loading')
-		term.graph.barchart.dom.loaded=true
-		make_barplot(
-			obj,
-			term,
-			div,
-			()=> button.text('VIEW')
-		)
+		loading=true
+		make_barplot( obj, term, div, ()=> {
+			button.text('VIEW')
+			loaded=true
+			loading=false
+		})
 	})
 }
 
@@ -529,53 +516,6 @@ function make_barplot ( obj, term, div, callback ) {
 		plot.overlay_with_genotype_idx = 0
 	}
 	plot_init( plot, callback )
-}
-
-
-
-
-
-
-function may_enable_crosstabulate ( term1, row, obj ) {
-/*
-may enable a standalone crosstab button for a term in the tree
-just a wrapper for may_makebutton_crosstabulate with its callback function
-
-benefit of having this standalone button is that user having such need in mind will be able to find it directly,
-rather than having to remember to click on the barchart button first, and get to crosstab from the barchart panel
-
-for showing crosstab output, should show in barchart panel instead with the instrument panel
-providing all the customization options
-*/
-	may_makebutton_crosstabulate( {
-		obj,
-		term1: term1,
-		button_row: row,
-		callback: term2=>{
-			obj.tip.hide()
-
-			// display result through barchart button
-			term1.graph.barchart.dom.loaded=true
-			term1.graph.barchart.dom.div.selectAll('*').remove()
-			client.appear( term1.graph.barchart.dom.div, 'inline-block' )
-			term1.graph.barchart.dom.button
-				.style('background','#ededed')
-				.style('color','black')
-
-			const plot = {
-				obj,
-				genome: obj.genome.name,
-				dslabel: obj.mds.label,
-				holder: term1.graph.barchart.dom.div,
-				term: term1,
-				term2: term2,
-				term2_displaymode: 'table',
-				default2showtable: true,
-				termfilter: obj.termfilter
-			}
-			plot_init( plot )
-		}
-	})
 }
 
 
@@ -670,81 +610,6 @@ buttonholder: div in which to show the button, term label is also in it
 
 
 
-
-export function add_searchbox_4term ( obj, holder, callback ) {
-/*
-to be removed
-add a search box to find term and run callback on it
-*/
-
-	const div = holder.append('div')
-	const input = div.append('div')
-		.append('input')
-		.attr('type','text')
-		.style('width','150px')
-		.attr('placeholder','Search term')
-
-	input.node().focus()
-
-	const resultholder = div
-		.append('div')
-		.style('margin-bottom','10px')
-		.style('display','inline-block')
-
-	let lastterm = null
-
-	// TODO keyup event listner needs debounce
-
-	input.on('keyup', async ()=>{
-		
-		const str = input.property('value')
-		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
-
-		if( str==' ' || str=='' ) {
-			// blank
-			resultholder.selectAll('*').remove()
-			return
-		}
-
-		if( client.keyupEnter() ) {
-			// pressed enter, if terms already found, use that
-			if(lastterm) {
-				callback( lastterm )
-				return
-			}
-		}
-
-		// query
-		const par = { findterm: {
-			str: str
-		}}
-
-		const data = await obj.do_query( par )
-
-		if(data.error) {
-			return
-		}
-
-		resultholder.selectAll('*').remove()
-		if(!data.lst || data.lst.length==0) {
-			resultholder.append('div')
-				.text('No match')
-				.style('opacity',.5)
-			return
-		}
-
-		lastterm = data.lst[0]
-
-		for(const term of data.lst) {
-			resultholder.append('div')
-				.attr('class','sja_menuoption')
-				.text(term.name)
-				.on('click',()=>{
-					callback( term )
-				})
-		}
-	})
-}
 
 
 
