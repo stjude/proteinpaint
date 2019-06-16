@@ -55,6 +55,9 @@ show_default_rootterm
 
 
 
+const tree_indent = '30px',
+	label_padding = '5px 3px 5px 1px'
+
 
 export async function init ( obj ) {
 /*
@@ -142,9 +145,7 @@ also for showing term tree, allowing to select certain terms
 		const arg = {
 			row: obj.dom.treediv.append('div'),
 			term: i,
-			isroot: 1,
 		}
-
 		print_one_term( arg, obj )
 	}
 }
@@ -327,10 +328,7 @@ upon clicking button, to retrieve children and make recursive call to render chi
 arg{}
 .row <DIV>
 .term{}
-	.name
-	.isleaf
-	...
-.isroot
+.flicker
 
 and deal with modifiers
 try to keep the logic clear
@@ -354,10 +352,17 @@ try to keep the logic clear
 	if( may_apply_modifier_barchart_selectbar( obj, term, row, row_graph ) ) return
 
 	// term name
-	row.append('div')
+	const label = row
+		.append('div')
 		.style('display','inline-block')
-		.style('padding','5px 3px 5px 1px')
-		.html( term.name )
+		.style('padding', label_padding)
+		.text( term.name )
+	if(arg.flicker) {
+		label.style('background-color','yellow')
+			.transition()
+			.duration(2000)
+			.style('background-color','transparent')
+	}
 
 	// term function buttons, including barchart, and cross-tabulate
 
@@ -552,7 +557,7 @@ buttonholder: div in which to show the button, term label is also in it
 	// row to display children terms
 	const childrenrow = arg.row.append('div')
 		.style('display','none')
-		.style('padding-left', '30px')
+		.style('padding-left', tree_indent)
 
 	const button = buttonholder.append('div')
 		.style('display','inline-block')
@@ -672,43 +677,14 @@ function display_searchbox ( obj ) {
 			for(const term of data.lst) {
 				const tr = table.append('tr')
 					.attr('class','sja_tr2')
-				tr.append('td').text(term.name)
+				tr.append('td')
+					.style('opacity','.6')
+					.text(term.name)
 				const td = tr.append('td') // holder for buttons
 				if( term.graph && term.graph.barchart ) {
-					const tr_hidden = table.append('tr')
-						.style('display','none')
-					let loading=false,
-						loaded =false
-					const viewbutton = td.append('div') // view button
-						.style('display','inline-block')
-						.attr('class','sja_menuoption')
-						.style('zoom','.8')
-						.style('margin-right','10px')
-						.text('VIEW')
-					viewbutton.on('click',()=>{
-						if( tr_hidden.style('display')=='none' ) {
-							tr_hidden.style('display','table-row')
-						} else {
-							tr_hidden.style('display','none')
-						}
-						if(loaded || loading) return
-						viewbutton.text('Loading...')
-						loading=true
-						const td = tr_hidden.append('td')
-							.attr('colspan',3)
-							.style('border','solid 1px #aaa')
-							.style('border-radius','5px')
-						make_barplot( obj, term, td, ()=>{
-							loading=false
-							loaded=true
-							viewbutton.text('VIEW')
-						})
-					})
+					makeviewbutton( term, td )
 				}
-				td.append('span')
-					.text('TREE')
-					.style('font-size','.8em')
-					.attr('class','sja_clbtext')
+				maketreebutton( term, td )
 			}
 		} catch(e) {
 			table.append('tr').append('td')
@@ -718,6 +694,7 @@ function display_searchbox ( obj ) {
 		}
 	})
 
+	// helpers
 	function searchresult2clickterm ( lst ) {
 		for(const term of lst) {
 			table.append('tr')
@@ -729,6 +706,85 @@ function display_searchbox ( obj ) {
 					obj.modifier_click_term.callback( term )
 				})
 		}
+	}
+	function makeviewbutton ( term, td ) {
+		const tr_hidden = table.append('tr')
+			.style('display','none')
+		let loading=false,
+			loaded =false
+		const viewbutton = td.append('div') // view button
+			.style('display','inline-block')
+			.attr('class','sja_menuoption')
+			.style('zoom','.8')
+			.style('margin-right','10px')
+			.text('VIEW')
+		viewbutton.on('click',()=>{
+			if( tr_hidden.style('display')=='none' ) {
+				tr_hidden.style('display','table-row')
+			} else {
+				tr_hidden.style('display','none')
+			}
+			if(loaded || loading) return
+			viewbutton.text('Loading...')
+			loading=true
+			const td = tr_hidden.append('td')
+				.attr('colspan',3)
+				.style('border','solid 1px #aaa')
+				.style('border-radius','5px')
+			make_barplot( obj, term, td, ()=>{
+				loading=false
+				loaded=true
+				viewbutton.text('VIEW')
+			})
+		})
+	}
+	function maketreebutton ( term, td ) {
+		const span = td.append('span')
+			.style('font-size','.8em')
+			.attr('class','sja_clbtext')
+			.text('TREE')
+		span.on('click', async ()=>{
+			span.text('Loading...')
+			const data = await obj.do_query(['treeto='+term.id])
+			if(!data.levels) throw 'levels[] missing'
+			table.selectAll('*').remove()
+			obj.dom.treediv.selectAll('*').remove()
+			let currdiv = obj.dom.treediv
+			for(const [i,level] of data.levels.entries()) {
+				let nextdiv
+				for(const term of level.terms) {
+					const row = currdiv.append('div')
+					if(term.id == level.focusid) {
+						// term under focus
+						if(i==data.levels.length-1) {
+							// last level
+							print_one_term( {term,row,flicker:true}, obj )
+						} else {
+							// before last level, manually print it
+							row.attr('class','sja_tr2')
+							row.append('div') // button
+								.style('display','inline-block')
+								.style('font-family','courier')
+								.attr('class','sja_menuoption')
+								.text('-')
+								.on('click',()=>{
+									nextdiv.style('display', nextdiv.style('display')=='none'?'block':'none')
+								})
+							row.append('div')
+								.style('display','inline-block')
+								.style('padding',label_padding)
+								.text(term.name)
+							nextdiv = currdiv.append('div')
+								.style('padding-left',tree_indent)
+						}
+					} else {
+						// a sibling
+						print_one_term( {term,row}, obj )
+					}
+				}
+				currdiv = nextdiv
+			}
+		})
 	}
 }
 
@@ -743,7 +799,7 @@ arg{}
 .callback
 */
 	arg.obj.tip.clear()
-		.showunder( btn )
+		.showunder( button )
 	const disable_terms = arg.term2 ? new Set([ arg.term1.id, arg.term2.id ]) : new Set([ arg.term1.id ])
 	const obj = {
 		genome: arg.obj.genome,
