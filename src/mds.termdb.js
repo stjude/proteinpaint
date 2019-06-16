@@ -67,14 +67,19 @@ obj{}:
 ... modifiers
 */
 	if( obj.debugmode ) window.obj = obj
-	obj.errdiv = obj.div.append('div')
-	obj.searchdiv = obj.div.append('div').style('display','none')
-	obj.termfilterdiv = obj.div.append('div').style('display','none')
-	obj.treediv = obj.div.append('div')
+
+	obj.dom = {
+		div: obj.div
+	}
+	delete obj.div
+	obj.dom.errdiv = obj.dom.div.append('div')
+	obj.dom.searchdiv = obj.dom.div.append('div').style('display','none')
+	obj.dom.termfilterdiv = obj.dom.div.append('div').style('display','none')
+	obj.dom.treediv = obj.dom.div.append('div')
 		.style('display','inline-block')
 		.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
-	obj.div.on('click.tdb', ()=>{
+	obj.dom.div.on('click.tdb', ()=>{
 		// the plot.button_row in mds.termdb.plot and
 		// individual buttons in the term tree captures
 		// the click event, so stopPropagation in here 
@@ -94,10 +99,8 @@ obj{}:
 	}
 
 	try {
-
 		if(!obj.genome) throw '.genome{} missing'
 		if(!obj.mds) throw '.mds{} missing'
-
 
 		// handle triggers
 
@@ -109,7 +112,7 @@ obj{}:
 		// to allow other triggers
 
 	} catch(e) {
-		obj.errdiv.text('Error: '+ (e.message||e) )
+		obj.dom.errdiv.text('Error: '+ (e.message||e) )
 		if(e.stack) console.log(e.stack)
 		return
 	}
@@ -138,7 +141,7 @@ also for showing term tree, allowing to select certain terms
 
 	for(const i of data.lst) {
 		const arg = {
-			row: obj.treediv.append('div'),
+			row: obj.dom.treediv.append('div'),
 			term: i,
 			isroot: 1,
 		}
@@ -168,7 +171,7 @@ function may_display_termfilter ( obj ) {
 	if(!obj.termfilter.terms) obj.termfilter.terms = []
 
 	// make ui
-	const div = obj.termfilterdiv
+	const div = obj.dom.termfilterdiv
 		.style('display','block')
 		.append('div')
 		.style('display','inline-block')
@@ -206,7 +209,7 @@ function may_display_selected_groups(obj){
 		obj.groupCallbacks = []
 		
 		// selected group button
-		obj.selected_group_div = obj.termfilterdiv.append('div')
+		obj.selected_group_div = obj.dom.termfilterdiv.append('div')
 			.attr('class','sja_filter_tag_btn')
 			.style('display','inline-block')
 			.style('padding','6px')
@@ -749,7 +752,7 @@ add a search box to find term and run callback on it
 function display_searchbox ( obj ) {
 /*
 */
-	const div = obj.searchdiv
+	const div = obj.dom.searchdiv
 		.style('display','block')
 		.append('div')
 		.style('display','inline-block')
@@ -766,12 +769,14 @@ function display_searchbox ( obj ) {
 		input.node().focus()
 	}
 
-	const table = div.append('table')
+	const table = div
+		.append('div')
+		.style('border-left','solid 1px #85B6E1')
+		.style('margin','2px 0px 10px 10px')
+		.style('padding-left','10px')
+		.append('table')
 		.style('border-spacing','0px')
 		.style('border-collapse','separate')
-		.style('margin-bottom','10px')
-
-	let lastterm = null
 
 	// TODO keyup event listner needs debounce
 
@@ -785,65 +790,78 @@ function display_searchbox ( obj ) {
 			table.selectAll('*').remove()
 			return
 		}
-
-		// query
-		const data = await obj.do_query( ['findterm='+str] )
-
-		if(data.error) {
-			return
-		}
-
-		table.selectAll('*').remove()
-		if(!data.lst || data.lst.length==0) {
-			table.append('tr').append('td')
-				.text('No match')
-				.style('opacity',.5)
-			return
-		}
-
-		lastterm = data.lst[0]
-
-		for(const term of data.lst) {
+		try {
+			// query
+			const data = await obj.do_query( ['findterm='+str] )
+			if(data.error) throw data.error
+			table.selectAll('*').remove()
+			if(!data.lst || data.lst.length==0) throw 'No match'
 
 			if( obj.modifier_click_term ) {
-				// display term as a button to be selected
-				table.append('tr')
-					.append('td')
-					.append('div')
-					.attr('class','sja_menuoption')
-					.text(term.name)
-					.on('click',()=>{
-						obj.modifier_click_term.callback( term )
-					})
-				continue
+				searchresult2clickterm( data.lst )
+				return
 			}
 
-			// not selecting term name, display additional buttons for each term
-			const tr = table.append('tr')
-				.attr('class','sja_tr2')
-			tr.append('td').text(term.name)
-			const td = tr.append('td') // holder for buttons
-			if( term.graph && term.graph.barchart ) {
-				td.append('div')
-					.style('display','inline-block')
-					.attr('class','sja_menuoption')
-					.style('zoom','.8')
-					.text('VIEW')
-					.on('click',()=>{
-						const p = client.newpane({x:100,y:100})
-						p.header.text(term.name)
-						const wait = p.body.append('div')
-							.style('margin','20px')
-							.text('Loading...')
-						make_barplot( obj, term, p.body, ()=>wait.remove() )
+			// show full terms with graph/tree buttons
+			for(const term of data.lst) {
+				const tr = table.append('tr')
+					.attr('class','sja_tr2')
+				tr.append('td').text(term.name)
+				const td = tr.append('td') // holder for buttons
+				if( term.graph && term.graph.barchart ) {
+					const tr_hidden = table.append('tr')
+						.style('display','none')
+					let loading=false,
+						loaded =false
+					const viewbutton = td.append('div') // view button
+						.style('display','inline-block')
+						.attr('class','sja_menuoption')
+						.style('zoom','.8')
+						.style('margin-right','10px')
+						.text('VIEW')
+					viewbutton.on('click',()=>{
+						if( tr_hidden.style('display')=='none' ) {
+							tr_hidden.style('display','table-row')
+						} else {
+							tr_hidden.style('display','none')
+						}
+						if(loaded || loading) return
+						viewbutton.text('Loading...')
+						loading=true
+						const td = tr_hidden.append('td')
+							.attr('colspan',3)
+							.style('border','solid 1px #aaa')
+							.style('border-radius','5px')
+						make_barplot( obj, term, td, ()=>{
+							loading=false
+							loaded=true
+							viewbutton.text('VIEW')
+						})
 					})
+				}
+				td.append('span')
+					.text('TREE')
+					.style('font-size','.8em')
+					.attr('class','sja_clbtext')
 			}
-			tr.append('td')
-				.append('span')
-				.text('TREE')
-				.style('margin-left','10px')
-				.style('font-size','.8em')
-				.attr('class','sja_clbtext')
+		} catch(e) {
+			table.append('tr').append('td')
+				.style('opacity',.5)
+				.text(e.message || e)
+			if(e.stack) console.log(e.stack)
 		}
 	})
+
+	function searchresult2clickterm ( lst ) {
+		for(const term of lst) {
+			table.append('tr')
+				.append('td')
+				.append('div')
+				.attr('class','sja_menuoption')
+				.text(term.name)
+				.on('click',()=>{
+					obj.modifier_click_term.callback( term )
+				})
+		}
+	}
 }
