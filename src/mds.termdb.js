@@ -37,6 +37,7 @@ attach to obj{}
 
 ********************** EXPORTED
 init()
+showtree4selectterm
 ********************** INTERNAL
 show_default_rootterm
 	display_searchbox
@@ -729,4 +730,30 @@ function display_searchbox ( obj ) {
 				})
 		}
 	}
+}
+
+
+
+export function showtree4selectterm ( arg, button ) {
+/*
+arg{}
+.obj
+.term1
+.term2
+.callback
+*/
+	arg.obj.tip.clear()
+		.showunder( btn )
+	const disable_terms = arg.term2 ? new Set([ arg.term1.id, arg.term2.id ]) : new Set([ arg.term1.id ])
+	const obj = {
+		genome: arg.obj.genome,
+		mds: arg.obj.mds,
+		div: arg.obj.tip.d.append('div'),
+		default_rootterm: {},
+		modifier_click_term: {
+			disable_terms,
+			callback: arg.callback
+		}
+	}
+	init(obj)
 }
