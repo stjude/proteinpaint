@@ -32,6 +32,10 @@ TODO also work for termdb filter
 				if(!Number.isFinite(t.range.stop)) throw '.stop undefined when stop is not unbounded for a term from '+from
 				if(t.range.start >= t.range.stop ) throw '.start is not lower than stop for a term from '+from
 			}
+		} else if(t.term.iscondition) {
+			if(!t.range) throw '.range{} missing from a condition term of '+from
+			if(t.range.grade==undefined && t.range.child_id==undefined) throw 'either .grade or child_id is required for a condition term from '+from
+			if(!t.range.value_by_max_grade && !t.range.value_by_most_recent) throw 'unknown value_type for a condition term from '+from
 		} else {
 			throw 'unknown term type from a '+from+' term'
 		}
