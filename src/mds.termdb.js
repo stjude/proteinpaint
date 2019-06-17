@@ -826,5 +826,25 @@ tvslst: an array of 1 or 2 term-value setting objects
 }
 export function menuoption_select_to_gp ( obj, tvslst ) {
 }
+
 export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
+
+	if(!tvslst) return
+		
+	const new_group = {}
+	new_group.is_term = true
+	new_group.terms = []
+
+	for(const [i, term] of tvslst.entries()){
+		const new_term = termvaluesettingui.make_new_term(term)
+		new_group.terms.push(new_term)
+	}
+
+	if(!obj.selected_groups){
+		obj.selected_groups = []
+	}
+
+	obj.selected_groups.push(new_group)
+	may_display_selected_groups(obj)
+
 }

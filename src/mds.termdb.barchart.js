@@ -301,9 +301,10 @@ export class TermdbBarchart{
             && self.obj.modifier_barchart_selectbar.callback) {
             const callback = self.obj.modifier_barchart_selectbar.callback
             const termValues = []
-            for(const termNum in self.terms) {
+            for(const index of [0,1,2]) { 
+              const termNum = 'term' + index
               const term = self.terms[termNum]
-              const bins = self.bins[termNum.slice(-1)]
+              const bins = self.bins[index]
               const key = termNum=="term1" ? d.seriesId : d.dataId
               const label = !term || !term.values 
                 ? key
@@ -313,7 +314,11 @@ export class TermdbBarchart{
 
               if (termNum != 'term0' && term) {
                 const range = !bins ? null : bins.find(d => d.label == label)
-                termValues.push({term, values: [{key, label}], range})
+                if (range) {
+                  termValues.push({term, range})
+                } else {
+                  termValues.push({term, values: [{key, label}]})
+                }
               }
             }
             callback({terms: termValues})
