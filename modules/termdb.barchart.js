@@ -105,13 +105,13 @@ const template = JSON.stringify({
         data: [{
           dataId: "@key",
           total: "+1",
-        }, "&vals.dataId"],
+        }, "&vals.dataId[]"],
         max: "<&vals.value2",
         tempValues: ["&vals.value2"],
         tempSum: "+&vals.value2",
         "__:boxplot": "=boxplot2()"
-      }, "&vals.seriesId"]
-    }, "&vals.chartId"],
+      }, "&vals.seriesId[]"]
+    }, "&vals.chartId[]"],
     "__:boxplot": "=boxplot1()",
     unannotated: {
       label: "",
@@ -121,19 +121,19 @@ const template = JSON.stringify({
     },
     refs: {
       //chartkey: "&vals.term0",
-      cols: ["&vals.seriesId"],
+      cols: ["&vals.seriesId[]"],
       colgrps: ["-"], 
-      rows: ["&vals.dataId"],
+      rows: ["&vals.dataId[]"],
       rowgrps: ["-"],
       col2name: {
-        "&vals.seriesId": {
+        "&vals.seriesId[]": {
           name: "@branch",
           grp: "-"
         }
       },
       row2name: {
-        "&vals.dataId": {
-          name: "&vals.dataId",
+        "&vals.dataId[]": {
+          name: "@branch",
           grp: "-"
         }
       },
@@ -153,21 +153,10 @@ function getPj(q, inReqs, data, tdb) {
   data: rows of annotation data
 */
 
-  // in case a join function returns an array of values,
-  // tweak the template to append the symbol "[]" as needed
-  const ids = ["chartId", "seriesId", "dataId"]
-  let _template = template
-  for(const i of [0, 1, 2]) {
-    const t = tdb.termjson.map.get(q['term' + i])
-    if (t && t.iscondition) {
-      _template = _template.replace(new RegExp("vals." + ids[i], "g"), "vals." + ids[i] + "[]")
-    }
-  }
-
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
-    template: _template,
+    template,
     "=": {
       vals(row) {
         // vals() is used as a @join function in the partjson 
@@ -181,9 +170,9 @@ function getPj(q, inReqs, data, tdb) {
         const dataId = inReqs[2].joinFxns[q.term2](row)
         if (chartId !== undefined && seriesId !== undefined && dataId !== undefined) {
           return {
-            chartId,
-            seriesId,
-            dataId,
+            chartId: Array.isArray(chartId) ? chartId : [chartId],
+            seriesId: Array.isArray(seriesId) ? seriesId : [seriesId],
+            dataId: Array.isArray(dataId) ? dataId : [dataId],
             value1: typeof inReqs[1].numValFxns[q.term1] == 'function'
               ? inReqs[1].numValFxns[q.term1](row)
               : undefined,
@@ -401,16 +390,16 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         const term = tdb.termjson.map.get(k)
         if (!term || !term.conditionlineage) continue
         const i = term.conditionlineage.indexOf(conditionParent)
-        if (i < 1) continue
+        if (i < 1) continue // self is the first item in lineage and so it is not a child
         let graded = false
-        const grade = event[grade_key]
         for(const event in row[k][events_key]) {
-          if (!uncomputable.includes(grade)) {
+          if (!uncomputable[event[grade_key]]) {
             graded = true
             break
           } 
         }
         if (graded) {
+          // get the immediate child of the parent condition in the lineage
           const child = term.conditionlineage[i - 1]
           if (!conditions.includes(child)) {
             conditions.push(child)
