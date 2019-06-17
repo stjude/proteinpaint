@@ -56,7 +56,8 @@ show_default_rootterm
 
 
 const tree_indent = '30px',
-	label_padding = '5px 3px 5px 1px'
+	label_padding = '5px 3px 5px 1px',
+	graph_leftpad = '10px'
 
 
 export async function init ( obj ) {
@@ -95,7 +96,7 @@ obj{}:
 	})
 	// simplified query
 	obj.do_query = (args) => {
-		const lst = [ 'genome='+obj.genome.name, '&dslabel='+obj.mds.label ]
+		const lst = [ 'genome='+obj.genome.name+'&dslabel='+obj.mds.label ]
 		// maybe no need to provide term filter at this query
 		return client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
 	}
@@ -465,11 +466,9 @@ such conditions may be carried by obj
 		.text('VIEW')
 
 	const div = row_graph.append('div')
-		.style('border','solid 1px #aaa')
-		.style('border-radius','5px')
-		.style('margin','10px 0px')
+		.style('border-left','solid 1px #aaa')
+		.style('margin-left', graph_leftpad)
 		.style('display','none')
-		.style('position','relative')
 
 	let loaded =false,
 		loading=false
@@ -727,11 +726,12 @@ function display_searchbox ( obj ) {
 			if(loaded || loading) return
 			viewbutton.text('Loading...')
 			loading=true
-			const td = tr_hidden.append('td')
+			const div = tr_hidden.append('td')
 				.attr('colspan',3)
-				.style('border','solid 1px #aaa')
-				.style('border-radius','5px')
-			make_barplot( obj, term, td, ()=>{
+				.append('div')
+				.style('border-left','solid 1px #aaa')
+				.style('margin-left',graph_leftpad)
+			make_barplot( obj, term, div, ()=>{
 				loading=false
 				loaded=true
 				viewbutton.text('VIEW')
