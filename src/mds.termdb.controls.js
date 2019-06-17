@@ -1,5 +1,10 @@
 import {select as d3select, event as d3event} from 'd3-selection'
-import {showtree4selectterm} from './mds.termdb'
+import {
+  showtree4selectterm, 
+  menuoption_add_filter,
+  menuoption_select_to_gp, 
+  menuoption_select_group_add_to_cart
+} from './mds.termdb'
 
 // used to track controls unique "instances" by plot object
 // to be used to disambiguate between input names
@@ -670,4 +675,55 @@ function custom_bin(plot, main, binNum=1, btn){
     .on('click', ()=>{
       plot.tip.hide()
     })
+}
+
+export function bar_click_menu(obj, menu, terms) {
+  let options = []
+  if (menu.add_filter) {
+    options.push({
+      label: "Add filter", 
+      callback: menuoption_add_filter
+    })
+  }
+  if (menu.select_group_add_to_cart) {
+    options.push({
+      label: "Select to Genome Paint",
+      callback: menuoption_select_to_gp
+    })
+  }
+  if (menu.select_to_gp) {
+    options.push({
+      label: "Add group to cart",
+      callback: menuoption_select_group_add_to_cart
+    })
+  }
+  if (options.length) {
+    obj.tip.clear().d
+      .selectAll('button')
+      .data(options)
+    .enter().append('button')
+      .html(d=>d.label)
+      .on('click', d=>{
+        const termValues = []
+        for(const termNum in self.terms) {
+          const term = self.terms[termNum]
+          const bins = self.bins[termNum.slice(-1)]
+          const key = termNum=="term1" ? d.seriesId : d.dataId
+          const label = !term || !term.values 
+            ? key
+            : termNum=="term1"
+              ? term.values[d.seriesId].label
+              : term.values[d.dataId].label
+
+          if (termNum != 'term0' && term) {
+            const range = !bins ? null : bins.find(d => d.label == label)
+            termValues.push({term, values: [{key, label}], range})
+          }
+        } console.log(termValues, d.callback)
+        d.callback(termValues)
+        obj.tip.hide()
+      })
+      
+    obj.tip.show(event.clientX, event.clientY)
+  }
 }

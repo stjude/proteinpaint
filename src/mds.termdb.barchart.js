@@ -4,6 +4,7 @@ import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import { Menu } from './client'
+import { bar_click_menu } from './mds.termdb.controls'
 
 const colors = {
   c10: scaleOrdinal( schemeCategory10 ),
@@ -47,12 +48,7 @@ export class TermdbBarchart{
   main(plot=null, data=null, isVisible=true, obj=null) {
     if (data) this.currServerData = data
     if (!this.setVisibility(isVisible)) return
-    if (obj) {
-      this.obj = obj
-      if (obj.modifier_barchart_selectbar) {
-        this.click_callback = obj.modifier_barchart_selectbar.callback
-      }
-    }
+    if (obj) this.obj = obj
     this.updateSettings(plot)
     this.processData(this.currServerData) 
   }
@@ -301,24 +297,30 @@ export class TermdbBarchart{
           return d.color
         },
         click(d) {
-          if (!self.click_callback) return
-          const t = []
-          for(const termNum in self.terms) {
-            const term = self.terms[termNum]
-            const bins = self.bins[termNum.slice(-1)]
-            const key = termNum=="term1" ? d.seriesId : d.dataId
-            const label = !term || !term.values 
-              ? key
-              : termNum=="term1"
-                ? term.values[d.seriesId].label
-                : term.values[d.dataId].label
+          if (self.obj.modifier_barchart_selectbar 
+            && self.obj.modifier_barchart_selectbar.callback) {
+            const callback = self.obj.modifier_barchart_selectbar.callback
+            const termValues = []
+            for(const termNum in self.terms) {
+              const term = self.terms[termNum]
+              const bins = self.bins[termNum.slice(-1)]
+              const key = termNum=="term1" ? d.seriesId : d.dataId
+              const label = !term || !term.values 
+                ? key
+                : termNum=="term1"
+                  ? term.values[d.seriesId].label
+                  : term.values[d.dataId].label
 
-            if (termNum != 'term0' && term) {
-              const range = !bins ? null : bins.find(d => d.label == label)
-              t.push({term, values: [{key, label}], range})
+              if (termNum != 'term0' && term) {
+                const range = !bins ? null : bins.find(d => d.label == label)
+                termValues.push({term, values: [{key, label}], range})
+              }
             }
+            callback({terms: termValues})
           }
-          self.click_callback({terms: t})
+          else if (self.obj.bar_click_menu) {
+            bar_click_menu(self.obj, self.obj.bar_click_menu, self.terms)
+          }
         }
       },
       colLabel: {

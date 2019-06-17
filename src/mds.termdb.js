@@ -82,18 +82,6 @@ obj{}:
 		.style('display','inline-block')
 		.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
-	obj.dom.div.on('click.tdb', ()=>{
-		// the plot.button_row in mds.termdb.plot and
-		// individual buttons in the term tree captures
-		// the click event, so stopPropagation in here 
-		// does not affect those event handlers/callbacks 
-		d3event.stopPropagation()
-		if (d3event.target.innerHTML == "CROSSTAB" || d3event.target.className == "crosstab-btn") return
-		// since the click event is not propagated to body,
-		// handle the tip hiding here since the body.click
-		// handler in client.js Menu will not be triggered
-		obj.tip.hide()
-	})
 	// simplified query
 	obj.do_query = (args) => {
 		const lst = [ 'genome='+obj.genome.name+'&dslabel='+obj.mds.label ]
