@@ -351,6 +351,9 @@ async function setValFxns(q, inReqs, ds, tdb) {
 
 function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
   const events_key = tdb.patient_condition.events_key
+  const grade_key = tdb.patient_condition.grade_key
+  const age_key = tdb.patient_condition.age_key
+  const uncomputable = tdb.patient_condition.uncomputable_grades
   if (unit == 'max_grade_perperson') {
     inReq.joinFxns[key] = row => {
       let maxGrade
@@ -358,11 +361,11 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         if (!row[k][events_key]) continue
         const term = tdb.termjson.map.get(k)
         if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-          const unannotated = setUncomputableGrades(inReq, term, k)
           for(const event of row[k][events_key]) {
-            if (unannotated.includes(event[b.grade_key])) continue
-            if (maxGrade === undefined || maxGrade < event[b.grade_key]) {
-              maxGrade = event[b.grade_key]
+            const grade = event[grade_key]
+            if (uncomputable[grade]) continue
+            if (maxGrade === undefined || maxGrade < grade) {
+              maxGrade = grade
             }
           }
         }
@@ -376,12 +379,13 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         if (!row[k][events_key]) continue
         const term = tdb.termjson.map.get(k)
         if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-          const unannotated = setUncomputableGrades(inReq, term, k)
           for(const event of row[k][events_key]) {
-            if (unannotated.includes(event[b.grade_key])) continue
-            if (mostRecentAge === undefined || mostRecentAge < event[b.age_key]) {
-              mostRecentAge = event[b.age_key]
-              mostRecentGrade = event[b.grade_key]
+            const age = event[age_key]
+            const grade = event[grade_key]
+            if (uncomputable[grade]) continue
+            if (mostRecentAge === undefined || mostRecentAge < age) {
+              mostRecentAge = age
+              mostRecentGrade = grade
             }
           }
         }
@@ -398,10 +402,10 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         if (!term || !term.conditionlineage) continue
         const i = term.conditionlineage.indexOf(conditionParent)
         if (i < 1) continue
-        const unannotated = setUncomputableGrades(inReq, term, k)
         let graded = false
+        const grade = event[grade_key]
         for(const event in row[k][events_key]) {
-          if (!unannotated.includes(event[b.grade_key])) {
+          if (!uncomputable.includes(grade)) {
             graded = true
             break
           } 
@@ -418,15 +422,6 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
   } else {
     throw `invalid condition unit: '${unit}'`
   }
-}
-
-function setUncomputableGrades(inReq, term, k) {
-  if (!inReq.uncomputable_grades[k]) {
-    inReq.uncomputable_grades[k] = term && term.graph && term.graph.barchart && term.graph.barchart.uncomputable_grades
-      ? term.graph.barchart.uncomputable_grades.map(d => d.grade)
-      : []
-  }
-  return inReq.uncomputable_grades[k]
 }
 
 function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
