@@ -246,16 +246,11 @@ group{}
                                     const wait = tip.d.append('div').text('Loading...')
                                     tip.showunder( add_value_btn.node() )
             
-                                    const arg = {
-                                        genome: genome.name,
-                                        dslabel: mds.label, 
-                                        getcategories: 1,
-                                        samplecountbyvcf: 1,
-                                        termid : term.term.id
-                                    }
+                                    const args = ['getcategories='+1,'&tid='+term.term.id,'&samplecountbyvcf='+count_limit_vcf]
             
                                     try {
-                                        const data = await client.dofetch( 'termdb', arg )
+                                        const lst = [ 'genome='+genome.name, '&dslabel='+mds.label ]
+                                        const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
                                         if(data.error) throw data.error
                                         wait.remove()
             
