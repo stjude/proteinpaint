@@ -353,7 +353,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
   const events_key = tdb.patient_condition.events_key
   const grade_key = tdb.patient_condition.grade_key
   const age_key = tdb.patient_condition.age_key
-  const uncomputable = tdb.patient_condition.uncomputable_grades
+  const uncomputable = tdb.patient_condition.uncomputable_grades || {}
   if (unit == 'max_grade_perperson') {
     inReq.joinFxns[key] = row => {
       let maxGrade

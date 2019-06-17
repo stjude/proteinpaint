@@ -185,7 +185,7 @@ function setOverlayOpts(plot, main, table, arg) {
     } else if (d.value == "tree") {
       const obj = Object.assign({},plot.obj)
       delete obj.termfilter
-      delete obj.termfilterdiv
+      delete obj.dom.termfilterdiv
       const _arg = {
         term1: arg.term,
         term2: plot.term2,
@@ -195,22 +195,21 @@ function setOverlayOpts(plot, main, table, arg) {
 
           // adding term2 for the first time
           plot.term2 = term2
-          if (plot.term2.iscondition) { //!plot.settings.common.conditionParents[0]) {
+          if (plot.term2.iscondition) {
             plot.settings.common.conditionParents[2] = plot.term2.id
-              if (!plot.settings.common.conditionUnits[2]) {
+            if (!plot.settings.common.conditionUnits[2]) {
               plot.settings.common.conditionUnits[2] = "max_grade_perperson"
             }
           }
           if (plot.term2.isfloat && plot.term2_boxplot) { 
             plot.term2_displaymode = 'boxplot'
-            main(plot)
           } else {
             if (plot.term2_displaymode == "boxplot") {
               plot.term2_displaymode = "stacked"
             }
             plot.term2_boxplot = 0
-            main( plot )
           }
+          main( plot )
         }
       }
       showtree4selectterm( _arg, tr.node() )
@@ -237,7 +236,21 @@ function setOverlayOpts(plot, main, table, arg) {
       callback: term2=>{
         obj.tip.hide()
         plot.term2 = term2
-        main(plot)
+        if (plot.term2.iscondition) {
+          plot.settings.common.conditionParents[2] = plot.term2.id
+          if (!plot.settings.common.conditionUnits[2]) {
+            plot.settings.common.conditionUnits[2] = "max_grade_perperson"
+          }
+        }
+        if (plot.term2.isfloat && plot.term2_boxplot) { 
+          plot.term2_displaymode = 'boxplot'
+        } else {
+          if (plot.term2_displaymode == "boxplot") {
+            plot.term2_displaymode = "stacked"
+          }
+          plot.term2_boxplot = 0
+        }
+        main( plot )
       }
     }
     showtree4selectterm( _arg, tr.node() )
