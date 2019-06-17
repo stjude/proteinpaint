@@ -115,6 +115,14 @@ module.exports={
 				}
 			},
 			{
+				key:'TOPMed_AF',
+				label:'TOPMed allele frequency',
+				isfilter:true,
+				isfloat:1,
+				missing_value:0,
+				range: { start: 0.1, startinclusive: true, stop: 1, stopinclusive:true }
+			},
+			{
 				key:'gnomAD_AF',
 				label:'gnomAD allele frequency',
 				isfilter:true,
@@ -181,7 +189,7 @@ module.exports={
 				key:'gnomAD',
 				label:'gnomAD (NFE+AFR+EAS)',
 				allowto_adjust_race:true,
-				//adjust_race:true,
+				adjust_race:true,
 				sets:[
 					// per variant, the control population allele counts are hardcoded to be info fields
 					{
@@ -200,6 +208,11 @@ module.exports={
 						infokey_AN: 'gnomAD_AN_eas'
 					}
 				],
+			},
+			{
+				key:'TOPMed',
+				label:'TOPMed',
+				sets:[ { infokey_AC:'TOPMed_AC', infokey_AN:'TOPMed_AN' } ]
 			}
 		],
 
