@@ -151,8 +151,6 @@ group{}
                 condition_btn.text('IS')
                     .style('background-color', '#015051')
                     .style('pointer-events','none')
-
-                term_name_btn.text(term.term.name + ' (CTCAE Grade)')
             }
 
             const term_value_div = one_term_div.append('div')
@@ -287,16 +285,13 @@ group{}
                 display_numeric_filter(term, term_value_div)
             } else if(term.term.iscondition){
 
-                for (let j=0; j<term.values.length; j++){
-
                     const term_value_btn = term_value_div.append('div')
                         .attr('class','sja_filter_tag_btn')
                         .style('font-size','1em')
                         .style('padding','3px 4px 3px 4px')
                         .style('margin-right','1px')
                         .style('background-color', '#4888BF')
-                        .text(term.values[j].label)
-                }
+                        .text(term.range.grade)
             }
 
             // button with 'x' to remove term2
@@ -514,6 +509,7 @@ export function make_new_term(bar_term){
     }
     if(bar_term.term.iscondition) {
         new_term.term.iscondition = bar_term.term.iscondition
+        new_term.range = bar_term.range
     }
 
     return new_term
