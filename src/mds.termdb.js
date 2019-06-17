@@ -135,6 +135,7 @@ also for showing term tree, allowing to select certain terms
 	may_display_termfilter( obj )
 
 	may_display_selected_groups(obj)
+	may_display_selected_groups(obj)
 
 	const data = await obj.do_query(["default_rootterm=1"])
 	if(data.error) throw 'error getting default root terms: '+data.error
@@ -620,7 +621,10 @@ buttonholder: div in which to show the button, term label is also in it
 
 
 function display_searchbox ( obj ) {
-/*
+/* show search box at top of tree
+display list of matching terms in-place below <input>
+term view shows barchart
+barchart is shown in-place under term and in full capacity
 */
 	const div = obj.dom.searchdiv
 		.style('display','block')
@@ -631,7 +635,6 @@ function display_searchbox ( obj ) {
 		.attr('type','search')
 		.style('width','100px')
 		.style('display','block')
-		.attr('name','x')
 		.attr('placeholder','Search')
 
 	if( obj.modifier_click_term ) {
@@ -648,23 +651,23 @@ function display_searchbox ( obj ) {
 		.style('border-spacing','0px')
 		.style('border-collapse','separate')
 
-	// TODO keyup event listner needs debounce
+	// TODO debounce
 
 	input.on('keyup', async ()=>{
-		
+
+		table.selectAll('*').remove()
+
 		const str = input.property('value')
 		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
 
 		if( str==' ' || str=='' ) {
 			// blank
-			table.selectAll('*').remove()
 			return
 		}
 		try {
 			// query
 			const data = await obj.do_query( ['findterm='+str] )
 			if(data.error) throw data.error
-			table.selectAll('*').remove()
 			if(!data.lst || data.lst.length==0) throw 'No match'
 
 			if( obj.modifier_click_term ) {
@@ -680,6 +683,7 @@ function display_searchbox ( obj ) {
 					.style('opacity','.6')
 					.text(term.name)
 				const td = tr.append('td') // holder for buttons
+					.style('text-align','right')
 				if( term.graph && term.graph.barchart ) {
 					makeviewbutton( term, td )
 				}
@@ -696,14 +700,19 @@ function display_searchbox ( obj ) {
 	// helpers
 	function searchresult2clickterm ( lst ) {
 		for(const term of lst) {
-			table.append('tr')
+			const div = table.append('tr')
 				.append('td')
 				.append('div')
-				.attr('class','sja_menuoption')
 				.text(term.name)
-				.on('click',()=>{
-					obj.modifier_click_term.callback( term )
-				})
+			if( term.graph ) {
+				// only allow selecting for graph-enabled ones
+				div.attr('class','sja_menuoption')
+				.style('margin','1px 0px 0px 0px')
+				.on('click',()=> obj.modifier_click_term.callback( term ) )
+			} else {
+				div.style('padding','5px 10px')
+				.style('opacity',.5)
+			}
 		}
 	}
 	function makeviewbutton ( term, td ) {
@@ -812,4 +821,18 @@ arg{}
 		}
 	}
 	init(obj)
+}
+
+export function menuoption_add_filter ( obj, tvslst ) {
+/*
+obj: the tree object
+tvslst: an array of 1 or 2 term-value setting objects
+     this is to be added to the obj.termfilter.terms[]
+	 if barchart is single-term, tvslst will have only one element
+	 if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
+*/
+}
+export function menuoption_select_to_gp ( obj, tvslst ) {
+}
+export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
 }
