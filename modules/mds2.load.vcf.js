@@ -288,7 +288,7 @@ a sample must meet all term conditions
 	for( const [i, sample] of vcfsamples.entries() ) {
 		const sanno = ds.cohort.annotation[ sample.name ]
 		if(!sanno) continue
-		if( sample_match_termvaluesetting( sanno, terms ) ) {
+		if( sample_match_termvaluesetting( sanno, terms, ds ) ) {
 			usesampleidx.push( i )
 		}
 	}
@@ -730,8 +730,10 @@ function wrap_validate_termvaluesetting ( terms, where ) {
 
 
 
-function sample_match_termvaluesetting ( sanno, terms ) {
-	// for AND, require all terms to match
+function sample_match_termvaluesetting ( sanno, terms, ds ) {
+/* for AND, require all terms to match
+ds is for accessing patient_condition
+*/
 
 	let usingAND = true
 
@@ -773,6 +775,10 @@ function sample_match_termvaluesetting ( sanno, terms ) {
 				}
 			}
 			thistermmatch = left && right
+		} else if( t.term.iscondition ) {
+			thistermmatch = test_sample_conditionterm( sanno, t, ds )
+		} else {
+			throw 'unknown term type'
 		}
 
 		if( t.isnot ) {
@@ -789,6 +795,69 @@ function sample_match_termvaluesetting ( sanno, terms ) {
 }
 exports.sample_match_termvaluesetting = sample_match_termvaluesetting
 
+
+
+
+function test_sample_conditionterm ( sample, tvs, ds ) {
+/*
+sample: ds.cohort.annotation[k]
+tvs: a term-value setting object
+	.term
+	.range
+ds
+*/
+	const _config = ds.cohort.termdb.patient_condition
+	if(!_config) throw 'patient_condition missing'
+	const term = ds.cohort.termdb.termjson.map.get( tvs.term.id )
+	if(!term) throw 'unknown term id: '+tvs.term.id
+
+	let eventlst = [] // list of events to be examined
+
+	if( term.isleaf ) {
+		// leaf, term id directly used for annotation
+		const termvalue = sample[ tvs.term.id ]
+		if(!termvalue) return false
+		eventlst = termvalue[ _config.events_key ]
+	} else {
+		// not leaf , must go over all annotated attributes of this sample
+		const find_id = range.child_id || tvs.term.id // if range.child_id is set, will limit to this instead
+		for(const tid in sample) {
+			const t = ds.cohort.termdb.termjson.map.get(tid)
+			if(!t || !t.iscondition) continue
+			if(t.conditionlineage.indexOf( find_id )!=-1) {
+				// is from a child term
+				eventlst.push( ...t[_config.events_key] )
+			}
+		}
+	}
+	if(eventlst.length==0) return false
+
+	if( tvs.range.value_by_most_recent ) {
+		const i = eventlst.reduce(
+			(i, e)=>{
+				const grade = e[_config.grade_key]
+				if(_config.uncomputable_grades && _config.uncomputable_grades[grade]) return i
+				const age = e[_config.age_key]
+				if(i.age < age) return {grade,age}
+				return i
+			},
+			{age:0}
+		)
+		return i.grade == tvs.range.grade
+	}
+	if( tvs.range.value_by_max_grade ) {
+		const maxg = eventlst.reduce(
+			(g,e)=>{
+				const grade = e[_config.grade_key]
+				if(_config.uncomputable_grades && _config.uncomputable_grades[grade]) return g
+				return g<grade ? grade : g
+			},
+			0
+		)
+		return maxg == tvs.range.grade
+	}
+	throw 'unknown method for value_by'
+}
 
 
 
