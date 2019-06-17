@@ -584,35 +584,12 @@ function legend_show_AFtest_onegroup_infofield (group, holder, tk){
 function legend_show_AFtest_onegroup_population ( group, holder, tk ){
 	
 	const p = tk.populations.find(i=>i.key==group.key)
+	const af = tk.vcf.numerical_axis.AFtest
 
 	const population_div = holder.append('div')
 		.style('display','inline-block')
 		
 	update_population(population_div)
-
-	const af = tk.vcf.numerical_axis.AFtest
-	const p_select = af.groups.find(i=>i.key==group.key)
-
-	// may allow race adjustment
-	if(p_select.allowto_adjust_race) {
-
-		const id = Math.random()
-		af.adjust_race_checkbox = holder.append('input')
-			.attr('type','checkbox')
-			.attr('id',id)
-			.style('margin-left','10px')
-			.property('disabled', (!af.groups.find(i=>i.is_termdb) || !af.groups.find(i=>i.is_population)) )
-			.property('checked', p_select.adjust_race)
-			.on('change',()=>{
-				p_select.adjust_race = !p_select.adjust_race
-				tk.load()
-			})
-
-		holder.append('label')
-			.html('&nbsp;Adjust race background')
-			.attr('class','sja_clbtext')
-			.attr('for',id)
-	}
 
 	function update_population(population_div){
 
@@ -640,17 +617,54 @@ function legend_show_AFtest_onegroup_population ( group, holder, tk ){
 			.style('margin-left', '5px')
 			.style('font-size','1em')
 			.style('z-index','-1')
-			population_btn.html(p.label+ (tk.populations.length>1 ? ' &#9662;':''))
+			
+		population_btn.html(p.label+ (tk.populations.length>1 ? ' &#9662;':''))
+
+		af.adjust_race_div = holder.append('div')
+			.style('display','inline-block')
+
+		update_adjust_race(af.adjust_race_div)
 
 		population_select.on('change',async()=>{
 			
 			//change value of button 
-			const new_population = tk.populations.find( i=>i.key == population_select.node().value )
+			const new_population = tk.populations.find( i=>i.label == population_select.node().value )
 			population_btn.text(new_population.label)
 
 			//update gorup and load tk
 			group.key = new_population.key
+			group.allowto_adjust_race = new_population.allowto_adjust_race
+			group.adjust_race = new_population.adjust_race
+			update_adjust_race(af.adjust_race_div)
 			await tk.load()
 		})
+	}
+
+	function update_adjust_race(adjust_race_div){
+
+		adjust_race_div.selectAll('*').remove()
+		
+		const p_select = af.groups.find(i=>i.key==group.key)
+
+		// may allow race adjustment
+		if(p_select.allowto_adjust_race) {
+
+			const id = Math.random()
+			af.adjust_race_checkbox = adjust_race_div.append('input')
+				.attr('type','checkbox')
+				.attr('id',id)
+				.style('margin-left','10px')
+				.property('disabled', (!af.groups.find(i=>i.is_termdb) || !af.groups.find(i=>i.is_population)) )
+				.property('checked', p_select.adjust_race)
+				.on('change',()=>{
+					p_select.adjust_race = !p_select.adjust_race
+					tk.load()
+				})
+
+			adjust_race_div.append('label')
+				.html('&nbsp;Adjust race background')
+				.attr('class','sja_clbtext')
+				.attr('for',id)
+		}
 	}
 }
