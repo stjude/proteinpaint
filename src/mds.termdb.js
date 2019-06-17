@@ -123,7 +123,7 @@ also for showing term tree, allowing to select certain terms
 
 	may_display_termfilter( obj )
 
-	may_display_selected_groups(obj)
+	update_cart_button(obj)
 
 	const data = await obj.do_query(["default_rootterm=1"])
 	if(data.error) throw 'error getting default root terms: '+data.error
@@ -143,7 +143,7 @@ also for showing term tree, allowing to select certain terms
 
 
 
-function may_display_termfilter ( obj ) {
+function may_display_termfilter( obj ) {
 /* when the ui is not displayed, will not allow altering filters and callback-updating
 */
 
@@ -190,7 +190,7 @@ function may_display_termfilter ( obj ) {
 }
 
 
-function may_display_selected_groups(obj){
+function update_cart_button(obj){
 	
 	if(!obj.selected_groups) return
 
@@ -287,7 +287,7 @@ function may_display_selected_groups(obj){
 					}
 					else{
 						make_selected_group_tip(tip)
-						may_display_selected_groups(obj)
+						update_cart_button(obj)
 					}
 				})
 		}
@@ -845,6 +845,6 @@ export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
 	}
 
 	obj.selected_groups.push(new_group)
-	may_display_selected_groups(obj)
+	update_cart_button(obj)
 
 }

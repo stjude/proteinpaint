@@ -726,7 +726,7 @@ export function bar_click_menu(obj, menu, terms, barBins, clickedBar) {
             }
           }
         } console.log(termValues, d.callback)
-        d.callback(termValues)
+        d.callback(obj, termValues)
         obj.tip.hide()
       })
       
