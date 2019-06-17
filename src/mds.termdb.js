@@ -78,8 +78,9 @@ obj{}:
 	obj.dom.errdiv = obj.dom.div.append('div')
 	obj.dom.searchdiv = obj.dom.div.append('div').style('display','none')
 	obj.dom.termfilterdiv = obj.dom.div.append('div').style('display','none')
+	obj.dom.cartdiv = obj.dom.div.append('div').style('display','none')
 	obj.dom.treediv = obj.dom.div.append('div')
-		.style('display','inline-block')
+		.style('display','block')
 		.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
 	// simplified query
@@ -123,7 +124,6 @@ also for showing term tree, allowing to select certain terms
 	may_display_termfilter( obj )
 
 	may_display_selected_groups(obj)
-	may_display_selected_groups(obj)
 
 	const data = await obj.do_query(["default_rootterm=1"])
 	if(data.error) throw 'error getting default root terms: '+data.error
@@ -162,7 +162,7 @@ function may_display_termfilter ( obj ) {
 
 	// make ui
 	const div = obj.dom.termfilterdiv
-		.style('display','block')
+		.style('display','inline-block')
 		.append('div')
 		.style('display','inline-block')
 		.style('border','solid 1px #ddd')
@@ -199,9 +199,9 @@ function may_display_selected_groups(obj){
 		obj.groupCallbacks = []
 		
 		// selected group button
-		obj.selected_group_div = obj.dom.termfilterdiv.append('div')
-			.attr('class','sja_filter_tag_btn')
+		obj.dom.cartdiv
 			.style('display','inline-block')
+			.attr('class','sja_filter_tag_btn')
 			.style('padding','6px')
 			.style('margin','0px 10px')
 			.style('border-radius','6px')
@@ -209,16 +209,19 @@ function may_display_selected_groups(obj){
 			.style('color','#fff')
 			.text('Selected '+ obj.selected_groups.length +' Group' + (obj.selected_groups.length > 1 ?'s':''))
 			.on('click',()=>{
-				make_selected_group_tip()
+				const tip = new client.Menu({padding:'0'})
+				make_selected_group_tip(tip)
 			})
+	}else{
+		obj.dom.cartdiv
+			.style('display','none')
 	}
 
-	function make_selected_group_tip(){
+	function make_selected_group_tip(tip){
 
 		// const tip = obj.tip // not working, creating new tip
-		const tip = new client.Menu({padding:'0'})
 		tip.clear()
-		tip.showunder( obj.selected_group_div.node() )
+		tip.showunder( obj.dom.cartdiv.node() )
 
 		const table = tip.d.append('table')
 			.style('border-spacing','5px')
@@ -279,11 +282,12 @@ function may_display_selected_groups(obj){
 					obj.selected_groups.splice(i,1)
 					
 					if(obj.selected_groups.length == 0){
-						obj.selected_group_div.style('display','none')
+						obj.dom.cartdiv.style('display','none')
 						tip.hide()
 					}
 					else{
-						make_selected_group_tip()
+						make_selected_group_tip(tip)
+						may_display_selected_groups(obj)
 					}
 				})
 		}
