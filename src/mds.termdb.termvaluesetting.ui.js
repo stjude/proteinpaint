@@ -174,10 +174,10 @@ group{}
                             const wait = tip.d.append('div').text('Loading...')
                             tip.showunder( term_value_btn.node() )
 
-                            const args = ['getcategories='+1,'&tid='+term.term.id,'&samplecountbyvcf='+count_limit_vcf]
+                            const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+count_limit_vcf]
 
                             try {
-                                const lst = [ 'genome='+genome.name, '&dslabel='+mds.label ]
+                                const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
                                 const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
                                 if(data.error) throw data.error
                                 wait.remove()
@@ -246,10 +246,10 @@ group{}
                                     const wait = tip.d.append('div').text('Loading...')
                                     tip.showunder( add_value_btn.node() )
             
-                                    const args = ['getcategories='+1,'&tid='+term.term.id,'&samplecountbyvcf='+count_limit_vcf]
+                                    const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+count_limit_vcf]
             
                                     try {
-                                        const lst = [ 'genome='+genome.name, '&dslabel='+mds.label ]
+                                        const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
                                         const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
                                         if(data.error) throw data.error
                                         wait.remove()
