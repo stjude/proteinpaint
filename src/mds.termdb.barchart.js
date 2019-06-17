@@ -319,7 +319,7 @@ export class TermdbBarchart{
             callback({terms: termValues})
           }
           else if (self.obj.bar_click_menu) {
-            bar_click_menu(self.obj, self.obj.bar_click_menu, self.terms)
+            bar_click_menu(self.obj, self.obj.bar_click_menu, self.terms, self.bins, d)
           }
         }
       },

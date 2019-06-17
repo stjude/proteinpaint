@@ -677,7 +677,7 @@ function custom_bin(plot, main, binNum=1, btn){
     })
 }
 
-export function bar_click_menu(obj, menu, terms) {
+export function bar_click_menu(obj, menu, terms, bins, clickedBar) {
   let options = []
   if (menu.add_filter) {
     options.push({
@@ -706,15 +706,15 @@ export function bar_click_menu(obj, menu, terms) {
       .html(d=>d.label)
       .on('click', d=>{
         const termValues = []
-        for(const termNum in self.terms) {
-          const term = self.terms[termNum]
-          const bins = self.bins[termNum.slice(-1)]
-          const key = termNum=="term1" ? d.seriesId : d.dataId
+        for(const termNum in terms) {
+          const term = terms[termNum]
+          const bins = !bins ? [] : bins[termNum.slice(-1)]
+          const key = termNum=="term1" ? clickedBar.seriesId : clickedBar.dataId
           const label = !term || !term.values 
             ? key
             : termNum=="term1"
-              ? term.values[d.seriesId].label
-              : term.values[d.dataId].label
+              ? term.values[clickedBar.seriesId].label
+              : term.values[clickedBar.dataId].label
 
           if (termNum != 'term0' && term) {
             const range = !bins ? null : bins.find(d => d.label == label)
