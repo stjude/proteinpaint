@@ -681,13 +681,13 @@ export function bar_click_menu(obj, menu, terms) {
   let options = []
   if (menu.add_filter) {
     options.push({
-      label: "Add filter", 
+      label: "Add as filter", 
       callback: menuoption_add_filter
     })
   }
   if (menu.select_group_add_to_cart) {
     options.push({
-      label: "Select to Genome Paint",
+      label: "Select to GenomePaint",
       callback: menuoption_select_to_gp
     })
   }
@@ -699,9 +699,10 @@ export function bar_click_menu(obj, menu, terms) {
   }
   if (options.length) {
     obj.tip.clear().d
-      .selectAll('button')
+      .selectAll('div')
       .data(options)
-    .enter().append('button')
+    .enter().append('div')
+      .attr('class', 'sja_menuoption')
       .html(d=>d.label)
       .on('click', d=>{
         const termValues = []
