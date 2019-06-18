@@ -512,10 +512,19 @@ export class TermdbBarchart{
       })
     }
     if (s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
-      const t = this.terms.term2
+      const t = this.terms.term2;  console.log(t)
       const b = t.graph && t.graph.barchart ? t.graph.barchart : null
       const overlay = !t.iscondition || !b ? '' : b.value_choices.find(d => d[s.conditionUnits[2]])
-      const grades = b && b.grade_labels ? b.grade_labels : null
+      const grades = b && t.iscondition 
+        ? [
+          { grade: 1, label: '1: Mild' },
+          { grade: 2, label: '2: Moderate' },
+          { grade: 3, label: '3: Severe' },
+          { grade: 4, label: '4: Life-threatening' },
+          { grade: 5, label: '5: Death' }
+        ]
+        : null
+        // b.grade_labels ? b.grade_labels : null
       const colors = {}
       legendGrps.push({
         name: t.name + (overlay ? ': '+overlay.label : ''),
