@@ -80,7 +80,8 @@ obj{}:
 	obj.dom.termfilterdiv = obj.dom.div.append('div').style('display','none')
 	obj.dom.cartdiv = obj.dom.div.append('div').style('display','none')
 	obj.dom.treediv = obj.dom.div.append('div')
-		.style('display','block')
+		.append('div')
+		.style('display','inline-block')
 		.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
 	// simplified query
