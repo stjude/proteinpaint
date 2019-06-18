@@ -828,6 +828,28 @@ tvslst: an array of 1 or 2 term-value setting objects
 */
 }
 export function menuoption_select_to_gp ( obj, tvslst ) {
+	obj.tip.hide()
+	const pane = client.newpane({x:100,y:100})
+	import('./block').then(_=>{
+		new _.Block({
+			hostURL:localStorage.getItem('hostURL'),
+			holder: pane.body,
+			genome:obj.genome,
+			nobox:true,
+			chr: obj.genome.defaultcoord.chr,
+			start: obj.genome.defaultcoord.start,
+			stop: obj.genome.defaultcoord.stop,
+			nativetracks:[ obj.genome.tracks.find(i=>i.__isgene).name.toLowerCase() ],
+			tklst:[ {
+				type:client.tkt.mds2,
+				dslabel:obj.dslabel,
+				vcf:{ numerical_axis:{ AFtest:{ groups:[
+					{ is_termdb:true, terms: tvslst },
+					obj.bar_click_menu.select_to_gp.group_compare_against
+				] } } }
+			} ]
+		})
+	})
 }
 
 export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
