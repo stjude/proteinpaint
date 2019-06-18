@@ -279,14 +279,27 @@ group{}
                 // TODO numerical term, print range in value button and apply the suitable click callback
                 display_numeric_filter(term, term_value_div)
             } else if(term.term.iscondition){
-
+                for (let j=0; j<term.values.length; j++){
                     const term_value_btn = term_value_div.append('div')
                         .attr('class','sja_filter_tag_btn')
                         .style('font-size','1em')
                         .style('padding','3px 4px 3px 4px')
                         .style('margin-right','1px')
                         .style('background-color', '#4888BF')
-                        .text(term.range.grade)
+                        .text(term.values[j].label)
+
+                        if(j<term.values.length-1){
+                            term_value_div.append('div')
+                                .style('display','inline-block')
+                                .style('color','#fff')
+                                .style('background-color','#4888BF')
+                                .style('margin-right','1px')
+                                .style('padding','7px 6px 5px 6px')
+                                .style('font-size','.7em')
+                                .style('text-transform','uppercase')
+                                .text('or')
+                        }
+                }
             }
 
             // button with 'x' to remove term2
@@ -485,7 +498,7 @@ group{}
 }
 
 export function make_new_term(bar_term){
-        
+
     const new_term = {
         values: bar_term.values,
         term: {
@@ -504,7 +517,11 @@ export function make_new_term(bar_term){
     }
     if(bar_term.term.iscondition) {
         new_term.term.iscondition = bar_term.term.iscondition
-        new_term.range = bar_term.range
+        new_term.bar_by_grade = bar_term.bar_by_grade
+        new_term.bar_by_children = bar_term.bar_by_children
+        new_term.value_by_max_grade = bar_term.value_by_max_grade
+        new_term.value_by_most_recent = bar_term.value_by_most_recent
+        new_term.value_by_total_measured = bar_term.value_by_total_measured
     }
 
     return new_term
