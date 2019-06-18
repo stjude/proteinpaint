@@ -107,6 +107,9 @@ const name2id = new Map()
 const t2t = new Map()
 // k: parent
 // v: set of children
+const c2p = new Map() // ancestry
+// k: child id
+// v: map { k: parent id, v: level }
 
 
 
@@ -206,32 +209,32 @@ manual inspection:
 	- the order of terms in this table does not impact the order of display
 	- #### are level dividers also to assist inspection
 */
-	const lines = [ '######## root' ]
+	const lines = []
 
 	{
 		const str = termjson_outputoneset( map1, lines )
 		console.log( 'ROOT: '+str )
 	}
 
-	lines.push('################# Level 1')
+	//lines.push('################# Level 1')
 	{
 		const str = termjson_outputoneset( map2, lines )
 		console.log( 'Level 1: '+str )
 	}
 
-	lines.push('################# Level 2')
+	//lines.push('################# Level 2')
 	{
 		const str = termjson_outputoneset( map3, lines )
 		console.log( 'Level 2: '+str )
 	}
 
-	lines.push('################# Level 3')
+	//lines.push('################# Level 3')
 	{
 		const str = termjson_outputoneset( map4, lines )
 		console.log( 'Level 3: '+str )
 	}
 
-	lines.push('################# Level 4')
+	//lines.push('################# Level 4')
 	{
 		const str = termjson_outputoneset( map5, lines )
 		console.log( 'Level 4: '+str )
@@ -243,19 +246,26 @@ manual inspection:
 
 
 
-const output_t2t = () => {
+function output_t2t() {
 	//
 	const out = []
 	for(const [parentterm, children] of t2t) {
-
 		if( children.size ) {
 			for(const childterm of children) {
 				out.push( parentterm+'\t'+childterm )
 			}
 		}
 	}
-
 	fs.writeFileSync('term2term', out.join('\n')+'\n' )
+}
+function output_c2p() {
+	const out = []
+	for(const [c,m] of c2p) {
+		for(const [p,l] of m) {
+			out.push(c+'\t'+p+'\t'+l)
+		}
+	}
+	fs.writeFileSync('ancestry',out.join('\n')+'\n')
 }
 
 
@@ -380,6 +390,8 @@ for(let i=1; i<lines.length; i++) {
 		if(!t2t.has( id )) {
 			t2t.set( id, new Set() )
 		}
+		if(!c2p.has(id)) c2p.set(id,new Map())
+		c2p.get(id).set(level1,0)
 	}
 
 	if(level3) {
@@ -404,6 +416,9 @@ for(let i=1; i<lines.length; i++) {
 		if(!t2t.has( id )) {
 			t2t.set( id, new Set() )
 		}
+		if(!c2p.has(id)) c2p.set(id,new Map())
+		c2p.get(id).set(level1,0)
+		c2p.get(id).set(level2,1)
 	}
 
 	if(level4) {
@@ -428,6 +443,10 @@ for(let i=1; i<lines.length; i++) {
 		if(!t2t.has( id )) {
 			t2t.set( id, new Set() )
 		}
+		if(!c2p.has(id)) c2p.set(id,new Map())
+		c2p.get(id).set(level1,0)
+		c2p.get(id).set(level2,1)
+		c2p.get(id).set(level3,2)
 	}
 
 	if(level5) {
@@ -448,6 +467,11 @@ for(let i=1; i<lines.length; i++) {
 
 		// child of level4
 		t2t.get( name2id.get(level4) || level4 ).add( id )
+		if(!c2p.has(id)) c2p.set(id,new Map())
+		c2p.get(id).set(level1,0)
+		c2p.get(id).set(level2,1)
+		c2p.get(id).set(level3,2)
+		c2p.get(id).set(level4,3)
 	}
 
 	// register terms belonging to "patient condition"
@@ -519,5 +543,5 @@ if( process.argv[3] ) {
 
 
 output_termjson()
-
 output_t2t()
+output_c2p()
