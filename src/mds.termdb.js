@@ -313,6 +313,27 @@ function update_cart_button(obj){
 				.style('color','#000')
 				.text('Perform Association Test in GenomePaint')
 				.style('font-size','.8em')
+				.on('click',()=>{
+					tip.hide()
+					const pane = client.newpane({x:100,y:100})
+					import('./block').then(_=>{
+						new _.Block({
+							hostURL:localStorage.getItem('hostURL'),
+							holder: pane.body,
+							genome:obj.genome,
+							nobox:true,
+							chr: obj.genome.defaultcoord.chr,
+							start: obj.genome.defaultcoord.start,
+							stop: obj.genome.defaultcoord.stop,
+							nativetracks:[ obj.genome.tracks.find(i=>i.__isgene).name.toLowerCase() ],
+							tklst:[ {
+								type:client.tkt.mds2,
+								dslabel:obj.dslabel,
+								vcf:{ numerical_axis:{ AFtest:{ groups: obj.selected_groups} } }
+							} ]
+						})
+					})
+				})
 		}
 	}
 }
@@ -858,7 +879,7 @@ export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
 	if(!tvslst) return
 		
 	const new_group = {}
-	new_group.is_term = true
+	new_group.is_termdb = true
 	new_group.terms = []
 
 	for(const [i, term] of tvslst.entries()){
