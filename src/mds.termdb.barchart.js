@@ -313,11 +313,35 @@ export class TermdbBarchart{
                   : term.values[d.dataId].label
 
               if (termNum != 'term0' && term) {
-                const range = !bins ? null : bins.find(d => d.label == label)
-                if (range) {
-                  termValues.push({term, range})
+                if (term.iscondition) {
+                  const unit = self.settings.conditionUnits[index]
+                  if (unit == "by_children") {
+                    termValues.push({
+                      term,
+                      range: {
+                        bar_by_children: true,
+                        child_id: key
+                      }
+                    })
+                  }
+                  else {
+                    termValues.push({
+                      term,
+                      range: {
+                        bar_by_grade: true,
+                        grade: key,
+                        value_by_max_grade: unit == "max_grade_perperson",
+                        value_by_most_recent: unit == "most_recent_grade"
+                      }
+                    })
+                  }
                 } else {
-                  termValues.push({term, values: [{key, label}]})
+                  const range = !bins ? null : bins.find(d => d.label == label)
+                  if (range) {
+                    termValues.push({term, range})
+                  } else {
+                    termValues.push({term, values: [{key, label}]})
+                  }
                 }
               }
             }
