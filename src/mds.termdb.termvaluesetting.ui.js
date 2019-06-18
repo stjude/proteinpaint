@@ -537,6 +537,10 @@ export function to_parameter ( terms ) {
 			values: i.values,
 			range: i.range,
 			isnot: i.isnot,
+			bar_by_grade: i.bar_by_grade,
+			bar_by_children: i.bar_by_children,
+			value_by_max_grade: i.value_by_max_grade,
+			value_by_most_recent: i.value_by_most_recent
 		}
 	})
 }

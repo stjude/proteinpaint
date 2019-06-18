@@ -33,9 +33,19 @@ TODO also work for termdb filter
 				if(t.range.start >= t.range.stop ) throw '.start is not lower than stop for a term from '+from
 			}
 		} else if(t.term.iscondition) {
-			if(!t.range) throw '.range{} missing from a condition term of '+from
-			if(t.range.grade==undefined && t.range.child_id==undefined) throw 'either .grade or child_id is required for a condition term from '+from
-			if(!t.range.value_by_max_grade && !t.range.value_by_most_recent) throw 'unknown value_type for a condition term from '+from
+			if(!t.values) throw '.values[] missing from a condition term of '+from
+			if(!Array.isArray(t.values)) throw '.values[] is not an array from a '+from+' term'
+			for(const i of t.values) {
+				if(typeof i != 'object') throw 'an element is not object from values of '+t.term.id+' from '+from
+				if(!i.key) throw '.key missing from a value of '+t.term.id+' from '+from
+				if(!i.label) i.label = i.key
+			}
+			if( t.bar_by_grade ) {
+				if(!t.value_by_max_grade && !t.value_by_most_recent) throw 'unknown value_type for a bar_by_grade condition term from '+from
+			} else if(t.bar_by_children) {
+			} else {
+				throw 'neither bar_by_grade or bar_by_children is set for a condition term from '+from
+			}
 		} else {
 			throw 'unknown term type from a '+from+' term'
 		}
