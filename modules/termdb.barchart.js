@@ -281,7 +281,7 @@ function getPj(q, inReqs, data, tdb) {
       grade_labels() {
         return q.conditionParents && tdb.patient_condition
           ? tdb.patient_condition.grade_labels
-          : q.conditionUnits[0] || q.conditionUnits[1] || q.conditionUnits[2]
+          : q.conditionUnits && (q.conditionUnits[0] || q.conditionUnits[1] || q.conditionUnits[2])
           ? tdb.patient_condition.grade_labels
           : undefined
       }
