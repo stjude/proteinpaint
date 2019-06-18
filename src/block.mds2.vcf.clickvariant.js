@@ -245,7 +245,8 @@ function show_functionalannotation ( div, m, tk, block ) {
 		(m.gene ? '<i>'+m.gene+'</i> ' : '')
 		+(m.isoform ? '<span style="font-size:.8em;text-decoration:italic">'+m.isoform+'</span> ' : '')
 		+m.mname
-		+' <span style="font-size:.7em;padding:3px;color:white;background:'+common.mclass[m.class].color+'">'+common.mclass[m.class].label+'</span>'
+		+'&nbsp; <span style="font-size:.7em;padding:3px;color:white;background:'+common.mclass[m.class].color+'">'+common.mclass[m.class].label+'</span>'
+		+( m.name && m.name.startsWith('rs') ? '&nbsp; <a href=https://www.ncbi.nlm.nih.gov/snp/'+m.name+' target=_blank>'+m.name+'</a>' : '')
 	)
 
 	if( m.csq_count && m.csq_count>1 ) {
@@ -295,10 +296,6 @@ function show_functionalannotation ( div, m, tk, block ) {
 			text += ' <span style="font-size:.7em;opacity:.5">REF</span> '+m.ref+' <span style="font-size:.7em;opacity:.5">ALT</span> '+m.alt
 		}
 		lst.push({k:'Genomic',v:text})
-	}
-
-	if( m.name && m.name.startsWith('rs') ) {
-		lst.push({k:'dbSNP',v:'<a href=https://www.ncbi.nlm.nih.gov/snp/'+m.name+' target=_blank>'+m.name+'</span>'})
 	}
 
 	// info fields add to lst
