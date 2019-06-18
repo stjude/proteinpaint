@@ -303,10 +303,10 @@ export class TermdbBarchart{
           }
         }
       } console.log(termValues, callback)
-      if (obj) {
+      if (!obj) {
         callback({terms: termValues})
-      } else {
-        callback(obj, {terms: termValues})
+      } else { console.log(obj)
+        callback(obj, termValues)
       }
       self.obj.tip.hide()
     }
