@@ -173,6 +173,7 @@ function setOverlayOpts(plot, main, table, arg) {
       {label: 'None', value: 'none'},
       {label: 'Term', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
+      {label: 'Subconditions', value: 'by_children'},
       {label: 'Max. grade per person', value: 'max_grade_perperson'},
       {label: 'Most recent grade', value: 'most_recent_grade'}
     ]
@@ -220,7 +221,7 @@ function setOverlayOpts(plot, main, table, arg) {
       showtree4selectterm( _arg, tr.node() )
     } else if (d.value == "genotype") {
       // to-do
-    } else if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+    } else if (d.value == "by_children" || d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
       if (!plot.term2) plot.term2 = plot.term
       plot.settings.common.conditionUnits[2] = d.value
       plot.settings.common.conditionParents[2] = plot.term2.id
