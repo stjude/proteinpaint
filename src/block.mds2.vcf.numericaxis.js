@@ -898,7 +898,7 @@ and switching numeric axis category
 			// validate AFdiff setting here
 		} else if( nm.AFtest.testby_fisher ) {
 			// require at least one termdb group
-			if( !nm.AFtest.groups.find( i=>i.is_termdb )) throw 'fisher test requires at least one termdb group'
+			if( nm.AFtest.groups.find( i=>i.is_infofield )) throw 'fisher test will not work for an info field'
 		} else {
 			throw 'AFtest: do not know how to do test'
 		}
@@ -1018,7 +1018,6 @@ export function get_axis_label ( tk ) {
 
 
 export function get_axis_label_AFtest () {
-	// TODO need to synthesize a more informative label based on term settings of group1/2
 	return 'Compare two groups'
 }
 

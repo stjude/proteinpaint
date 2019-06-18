@@ -57,11 +57,23 @@ module.exports={
 				{id:'Outcomes'}
 			],
 			patient_condition:{
+				// Note: this is solely for the "iscondition" terms
 				file:'files/hg38/sjlife/clinical/outcomes_2017',
 				events_key:'conditionevents',
-				grade_key:'grade',
-				age_key:'age',
-				// additional configs for charts and tables
+				grade_key: 'grade',
+				grade_labels: [
+					{ grade: 1, label: '1: Mild' },
+					{ grade: 2, label: '2: Moderate' },
+					{ grade: 3, label: '3: Severe' },
+					{ grade: 4, label: '4: Life-threatening' },
+					{ grade: 5, label: '5: Death' }
+				],
+				uncomputable_grades: {
+					0: 'No symptom',
+					9: 'Unknown status'
+				},
+				age_key: 'age',
+				yearstoevent_key:'yearstoevent'
 			}
 		},
 	},
@@ -101,6 +113,14 @@ module.exports={
 					stop: 0.1,
 					stopinclusive:true
 				}
+			},
+			{
+				key:'TOPMed_AF',
+				label:'TOPMed allele frequency',
+				isfilter:true,
+				isfloat:1,
+				missing_value:0,
+				range: { start: 0.1, startinclusive: true, stop: 1, stopinclusive:true }
 			},
 			{
 				key:'gnomAD_AF',
@@ -188,6 +208,11 @@ module.exports={
 						infokey_AN: 'gnomAD_AN_eas'
 					}
 				],
+			},
+			{
+				key:'TOPMed',
+				label:'TOPMed',
+				sets:[ { infokey_AC:'TOPMed_AC', infokey_AN:'TOPMed_AN' } ]
 			}
 		],
 
@@ -227,7 +252,11 @@ module.exports={
 								}
 							]
 						},
-						{ is_population:true, key:'gnomAD', adjust_race:true },
+						{
+							is_population:true, key:'gnomAD',
+							// these flags must be duplicated from .populations[]
+							allowto_adjust_race:true, adjust_race:true
+						},
 						/*
 						{
 							is_termdb:true,
@@ -250,77 +279,6 @@ module.exports={
 						{ key:'gnomAD_AF_eas' },
 						{ key:'gnomAD_AF_nfe' }
 					],
-					allowed_populations:[ 'gnomAD' ]
-				},
-
-
-
-
-
-
-
-
-				termdb2groupAF:{
-					group1:{
-						name:'GROUP 1',
-						terms:[
-							{
-							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-							values:[
-								{ key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'},
-								{key:'Neuroblastoma',label:'Neuroblastoma'}
-							]
-							}
-						]
-					},
-					group2:{
-						name:'GROUP 2',
-						terms:[
-							{
-							term: { id:'diaggrp', name:'Diagnosis Group', iscategorical:true },
-							values:[ {key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'} ],
-							isnot: true,
-							}
-						]
-					}
-				},
-
-				ebgatest: {
-					terms:[
-					/*
-						{
-							term:{id:'diaggrp',name:'Diagnosis Group', iscategorical:true },
-							values:[ {key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'} ]
-						}
-						*/
-						{
-							term:{id:'agedx',name:'Age at dx',isfloat:true},
-							range:{
-								start:0,
-								stop:4,
-								startinclusive:true,
-								stopinclusive:true
-							}
-						}
-					],
-					populations:[
-						// per variant, the control population allele counts are hardcoded to be info fields
-						{
-							key:'CEU',
-							infokey_AC: 'gnomAD_AC_nfe',
-							infokey_AN: 'gnomAD_AN_nfe'
-						},
-						{
-							key:'YRI',
-							infokey_AC: 'gnomAD_AC_afr',
-							infokey_AN: 'gnomAD_AN_afr'
-						},
-						{
-							key:'ASA',
-							infokey_AC: 'gnomAD_AC_eas',
-							infokey_AN: 'gnomAD_AN_eas'
-						}
-					]
 				},
 			},
 			plot_mafcov: {
@@ -343,6 +301,8 @@ module.exports={
 				}
 			}
 		},
+		// to restrict samples 
+		sample_termfilter:[{term:{id:'wgs_sequenced',iscategorical:true},values:[{key:'1'}]}],
 		/*
 		svcnv: {
 		},

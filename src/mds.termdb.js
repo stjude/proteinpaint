@@ -2,7 +2,6 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init as plot_init} from './mds.termdb.plot'
-import {may_makebutton_crosstabulate} from './mds.termdb.crosstab'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 
@@ -21,7 +20,6 @@ init accepts obj{}
 
 triggers
 obj.default_rootterm{}
-	allow obj.termfilter[]
 
 
 modifiers, for modifying the behavior/display of the term tree
@@ -39,32 +37,27 @@ attach to obj{}
 
 ********************** EXPORTED
 init()
-add_searchbox_4term
+showtree4selectterm
 ********************** INTERNAL
 show_default_rootterm
-print_one_term
-may_make_term_foldbutton
-may_make_term_graphbuttons
-term_addbutton_barchart
-
-
-Notes:
-* as it is called "termdb", use "term" rather than "node", to increase consistency
-
-
-server returns json objects as terms, which are from the termjson table
-
-
-
-planned features:
-* launch this vocabulary tree on a variant; limit patients to those carrying alt alleles of this variant
-
-
+	display_searchbox
+	may_display_termfilter
+	print_one_term
+		may_make_term_foldbutton
+		may_apply_modifier_click_term
+		may_apply_modifier_barchart_selectbar
+		may_make_term_graphbuttons
+			term_addbutton_barchart
+				make_barplot
 */
 
 
 
 
+
+const tree_indent = '30px',
+	label_padding = '5px 3px 5px 1px',
+	graph_leftpad = '10px'
 
 
 export async function init ( obj ) {
@@ -76,36 +69,31 @@ obj{}:
 .default_rootterm{}
 ... modifiers
 */
-	window.obj = obj // for testing
-	obj.errdiv = obj.div.append('div')
-	obj.termfilterdiv = obj.div.append('div').style('display','none')
-	obj.treediv = obj.div.append('div')
+	if( obj.debugmode ) window.obj = obj
+
+	obj.dom = {
+		div: obj.div
+	}
+	delete obj.div
+	obj.dom.errdiv = obj.dom.div.append('div')
+	obj.dom.searchdiv = obj.dom.div.append('div').style('display','none')
+	obj.dom.termfilterdiv = obj.dom.div.append('div').style('display','none')
+	obj.dom.cartdiv = obj.dom.div.append('div').style('display','none')
+	obj.dom.treediv = obj.dom.div.append('div')
+		.append('div')
+		.style('display','inline-block')
+		.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
-	obj.div.on('click.tdb', ()=>{
-		// the plot.button_row in mds.termdb.plot and
-		// individual buttons in the term tree captures
-		// the click event, so stopPropagation in here 
-		// does not affect those event handlers/callbacks 
-		d3event.stopPropagation()
-		if (d3event.target.innerHTML == "CROSSTAB" || d3event.target.className == "crosstab-btn") return
-		// since the click event is not propagated to body,
-		// handle the tip hiding here since the body.click
-		// handler in client.js Menu will not be triggered
-		obj.tip.hide()
-	})
+	// simplified query
+	obj.do_query = (args) => {
+		const lst = [ 'genome='+obj.genome.name+'&dslabel='+obj.mds.label ]
+		// maybe no need to provide term filter at this query
+		return client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
+	}
 
 	try {
-
 		if(!obj.genome) throw '.genome{} missing'
 		if(!obj.mds) throw '.mds{} missing'
-
-		// if all queries are handled at termdb route, can use this closure to simplify
-		obj.do_query = (arg) => {
-			arg.genome = obj.genome.name
-			arg.dslabel = obj.mds.label
-			arg.termfilter = obj.termfilter ? obj.termfilter.terms : ''
-			return client.dofetch('termdb', arg)
-		}
 
 		// handle triggers
 
@@ -117,7 +105,7 @@ obj{}:
 		// to allow other triggers
 
 	} catch(e) {
-		obj.errdiv.text('Error: '+ (e.message||e) )
+		obj.dom.errdiv.text('Error: '+ (e.message||e) )
 		if(e.stack) console.log(e.stack)
 		return
 	}
@@ -132,11 +120,13 @@ also for showing term tree, allowing to select certain terms
 
 */
 
+	display_searchbox( obj )
+
 	may_display_termfilter( obj )
 
-	const data = await obj.do_query( {
-		default_rootterm: 1
-	})
+	update_cart_button(obj)
+
+	const data = await obj.do_query(["default_rootterm=1"])
 	if(data.error) throw 'error getting default root terms: '+data.error
 	if(!data.lst) throw 'no default root term: .lst missing'
 
@@ -144,11 +134,9 @@ also for showing term tree, allowing to select certain terms
 
 	for(const i of data.lst) {
 		const arg = {
-			row: obj.treediv.append('div'),
+			row: obj.dom.treediv.append('div'),
 			term: i,
-			isroot: 1,
 		}
-
 		print_one_term( arg, obj )
 	}
 }
@@ -156,19 +144,26 @@ also for showing term tree, allowing to select certain terms
 
 
 
-function may_display_termfilter ( obj ) {
-	if(!obj.termfilter) return
-	if(!obj.termfilter.terms) return
-	if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
-	validate_termvaluesetting( obj.termfilter.terms )
-	if( obj.termfilter.no_display ) {
-		// do not display the terms
+function may_display_termfilter( obj ) {
+/* when the ui is not displayed, will not allow altering filters and callback-updating
+*/
+
+	if(obj.termfilter && obj.termfilter.terms) {
+		if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
+		validate_termvaluesetting( obj.termfilter.terms )
+	}
+
+	if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
+		// do not display ui, and do not collect callbacks
 		return
 	}
-	obj.filterCallbacks = []
-	// term filter in use
-	const div = obj.termfilterdiv
-		.style('display','block')
+
+	obj.termfilter.callbacks = []
+	if(!obj.termfilter.terms) obj.termfilter.terms = []
+
+	// make ui
+	const div = obj.dom.termfilterdiv
+		.style('display','inline-block')
 		.append('div')
 		.style('display','inline-block')
 		.style('border','solid 1px #ddd')
@@ -179,7 +174,7 @@ function may_display_termfilter ( obj ) {
 		.style('margin','0px 5px')
 		.text('FILTER')
 		.style('opacity','.5')
-		.style('font-size','.7em')
+		.style('font-size','.8em')
 	termvaluesettingui.display(
 		div,
 		obj.termfilter,
@@ -188,7 +183,7 @@ function may_display_termfilter ( obj ) {
 		false,
 		// callback when updating the filter
 		() => {
-			for(const fxn of obj.filterCallbacks) {
+			for(const fxn of obj.termfilter.callbacks) {
 				fxn()
 			}
 		} 
@@ -196,6 +191,131 @@ function may_display_termfilter ( obj ) {
 }
 
 
+function update_cart_button(obj){
+	
+	if(!obj.selected_groups) return
+
+	if(obj.selected_groups.length > 0){
+
+		obj.groupCallbacks = []
+		
+		// selected group button
+		obj.dom.cartdiv
+			.style('display','inline-block')
+			.attr('class','sja_filter_tag_btn')
+			.style('padding','6px')
+			.style('margin','0px 10px')
+			.style('border-radius','6px')
+			.style('background-color','#00AB66')
+			.style('color','#fff')
+			.text('Selected '+ obj.selected_groups.length +' Group' + (obj.selected_groups.length > 1 ?'s':''))
+			.on('click',()=>{
+				const tip = new client.Menu({padding:'0'})
+				make_selected_group_tip(tip)
+			})
+	}else{
+		obj.dom.cartdiv
+			.style('display','none')
+	}
+
+	function make_selected_group_tip(tip){
+
+		// const tip = obj.tip // not working, creating new tip
+		tip.clear()
+		tip.showunder( obj.dom.cartdiv.node() )
+
+		const table = tip.d.append('table')
+			.style('border-spacing','5px')
+			.style('border-collapse','separate')
+
+		// one row for each group
+		for( const [i, group] of obj.selected_groups.entries() ) {
+		
+			const tr = table.append('tr')
+			const td1 = tr.append('td')
+
+			td1.append('div')
+				.attr('class','sja_filter_tag_btn')
+				.text('Group '+(i+1))
+				.style('white-space','nowrap')
+				.style('color','#000')
+				.style('padding','6px')
+				.style('margin','3px 5px')
+				.style('font-size','.7em')
+				.style('text-transform','uppercase')
+				
+			group.dom = {
+				td2: tr.append('td'),
+				td3: tr.append('td').style('opacity',.5).style('font-size','.8em'),
+				td4: tr.append('td')
+			}
+			
+			termvaluesettingui.display(
+				group.dom.td2, 
+				group, 
+				obj.mds, 
+				obj.genome, 
+				false,
+				// callback when updating the groups
+				() => {
+					for(const fxn of obj.groupCallbacks) {
+							fxn()
+					}
+				}
+			)
+			
+			// TODO : update 'n=' by group selection 
+			// group.dom.td3.append('div')
+			//  .text('n=?, view stats')
+
+			// 'X' button to remove gorup
+			group.dom.td4.append('div')
+				.attr('class','sja_filter_tag_btn')
+				.style('padding','2px 6px 2px 6px')
+				.style('display','inline-block')
+				.style('margin-left','7px')
+				.style('border-radius','6px')
+				.style('background-color','#fa5e5b')
+				.html('&#215;') 
+				.on('click',()=>{
+					
+					// remove group and update tip and button
+					obj.selected_groups.splice(i,1)
+					
+					if(obj.selected_groups.length == 0){
+						obj.dom.cartdiv.style('display','none')
+						tip.hide()
+					}
+					else{
+						make_selected_group_tip(tip)
+						update_cart_button(obj)
+					}
+				})
+		}
+
+		if(obj.selected_groups.length > 1){
+			
+			const tr_gp = table.append('tr')
+			const td_gp = tr_gp.append('td')
+				.attr('colspan',4)
+				.attr('align','center')
+				.style('padding','0')
+
+			td_gp.append('div')
+				.attr('class','sja_filter_tag_btn')
+				.style('display','inline-block')
+				.style('height','100%')
+				.style('width','96%')
+				.style('padding','4px 10px')
+				.style('margin-top','10px')
+				.style('border-radius','3px')
+				.style('background-color','#eee')
+				.style('color','#000')
+				.text('Perform Association Test in GenomePaint')
+				.style('font-size','.8em')
+		}
+	}
+}
 
 
 function print_one_term ( arg, obj ) {
@@ -206,10 +326,7 @@ upon clicking button, to retrieve children and make recursive call to render chi
 arg{}
 .row <DIV>
 .term{}
-	.name
-	.isleaf
-	...
-.isroot
+.flicker
 
 and deal with modifiers
 try to keep the logic clear
@@ -221,6 +338,7 @@ try to keep the logic clear
 	[+] [term name] [graph button]
 	*/
 	const row = arg.row.append('div')
+		.attr('class','sja_tr2')
 	// another under row, for adding graphs
 	const row_graph = arg.row.append('div')
 
@@ -232,10 +350,17 @@ try to keep the logic clear
 	if( may_apply_modifier_barchart_selectbar( obj, term, row, row_graph ) ) return
 
 	// term name
-	row.append('div')
+	const label = row
+		.append('div')
 		.style('display','inline-block')
-		.style('padding','5px 3px 5px 1px')
-		.html( term.name )
+		.style('padding', label_padding)
+		.text( term.name )
+	if(arg.flicker) {
+		label.style('background-color','yellow')
+			.transition()
+			.duration(2000)
+			.style('background-color','transparent')
+	}
 
 	// term function buttons, including barchart, and cross-tabulate
 
@@ -309,13 +434,7 @@ allow to make multiple buttons
 
 
 	if(term.graph.barchart) {
-		// barchart button
-
-		may_list_genotypecount_peritem( term, row, row_graph, obj )
-
 		term_addbutton_barchart( term, row, row_graph, obj )
-
-		may_enable_crosstabulate( term, row,  obj )
 	}
 
 
@@ -338,207 +457,67 @@ such conditions may be carried by obj
 	const button = row.append('div')
 		.style('font-size','.8em')
 		.style('margin-left','20px')
-		.attr('class','sja_button')
+		.style('display','inline-block')
+		.style('border-radius','5px')
+		.attr('class','sja_menuoption')
 		.text('VIEW')
 
 	const div = row_graph.append('div')
-		.style('border','solid 1px #ccc')
-		.style('border-radius','5px')
-		.style('margin','10px')
-		.style('padding','10px')
+		.style('border-left','solid 1px #aaa')
+		.style('margin-left', graph_leftpad)
 		.style('display','none')
-		.style('position','relative')
 
-	// these to be shared for crosstab function
-	term.graph.barchart.dom = {
-		button: button,
-		loaded: false,
-		div: div
+	let loaded =false,
+		loading=false
+
+	button.on('click', async ()=>{
+		if(div.style('display') == 'none') {
+			client.appear(div, 'inline-block')
+			button.style('border','none')
+		} else {
+			client.disappear(div)
+			button.style('border','solid 1px #555')
+		}
+		if( loaded || loading ) return
+		button.text('Loading')
+		loading=true
+		make_barplot( obj, term, div, ()=> {
+			button.text('VIEW')
+			loaded=true
+			loading=false
+		})
+	})
+}
+
+
+
+
+
+function make_barplot ( obj, term, div, callback ) {
+	// make barchart
+	const plot = {
+		obj,
+		holder: div,
+		genome: obj.genome.name,
+		dslabel: obj.mds.label,
+		term: term
 	}
 
-	button.on('click', async ()=>{
-
-		if(div.style('display') == 'none') {
-			client.appear(div, 'inline-block')
-			button.attr('class','sja_button_open')
-		} else {
-			client.disappear(div)
-			button.attr('class','sja_button_fold')
+	if( obj.modifier_ssid_barchart ) {
+		const g2c = {}
+		for(const k in obj.modifier_ssid_barchart.groups) {
+			g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
 		}
-
-		if( term.graph.barchart.dom.loaded ) return
-
-		button.text('Loading')
-
-		const arg = {
-			barchart: {
-				id: term.id
+		plot.mutation_lst = [
+			{
+				mutation_name: obj.modifier_ssid_barchart.mutation_name,
+				ssid: obj.modifier_ssid_barchart.ssid,
+				genotype2color: g2c
 			}
-		}
-		if( obj.termfilter ) {
-			arg.termfilter = termvaluesettingui.to_parameter( obj.termfilter.terms )
-			// may add other flags
-		}
-		/// modifier
-		if( obj.modifier_ssid_barchart ) {
-			arg.ssid = obj.modifier_ssid_barchart.ssid
-		}
-
-		// make barchart
-		const plot = {
-			obj,
-			holder: div,
-			genome: obj.genome.name,
-			dslabel: obj.mds.label,
-			term: term
-		}
-
-		if( obj.modifier_ssid_barchart ) {
-			const g2c = {}
-			for(const k in obj.modifier_ssid_barchart.groups) {
-				g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
-			}
-			plot.mutation_lst = [
-				{
-					mutation_name: obj.modifier_ssid_barchart.mutation_name,
-					ssid: obj.modifier_ssid_barchart.ssid,
-					genotype2color: g2c
-				}
-			]
-			plot.overlay_with_genotype_idx = 0
-		}
-
-		plot_init( plot )
-		button.text('VIEW')
-		term.graph.barchart.dom.loaded=true
-	})
-}
-
-
-
-
-function may_list_genotypecount_peritem ( term, row, row_graph, obj ) {
-
-	if( !obj.modifier_ssid_barchart ) return
-
-	// similar to barchart, but show a list instead, for each item, display number of samples per genotype
-
-	const button = row.append('div')
-		.style('font-size','.8em')
-		.style('margin-left','20px')
-		.attr('class','sja_button')
-		.text('LIST')
-
-	const div = row_graph.append('div')
-		.style('border','solid 1px #ccc')
-		.style('border-radius','5px')
-		.style('margin','10px')
-		.style('padding','10px')
-		.style('display','none')
-
-	let loaded=false,
-		loading=false
-
-	button.on('click', async ()=>{
-
-		if(div.style('display') == 'none') {
-			client.appear(div, 'inline-block')
-			button.attr('class','sja_button_open')
-		} else {
-			client.disappear(div)
-			button.attr('class','sja_button_fold')
-		}
-
-		if( loaded || loading ) return
-
-		loading=true
-
-		button.text('Loading')
-
-		const arg = {
-			ssid: obj.modifier_ssid_barchart.ssid,
-			barchart: {
-				id: term.id
-			}
-		}
-
-		try {
-			const data = await obj.do_query( arg )
-			if(data.error) throw data.error
-			if(!data.lst) throw 'no data for barchart'
-
-			const table = div.append('table')
-			for(const item of data.lst) {
-
-				if(!item.lst) continue
-
-				const tr = table.append('tr')
-				tr.append('td')
-					.style('text-align','right')
-					.html( item.lst.map( i=>
-						// {label,value}
-						'<span style="background:'+obj.modifier_ssid_barchart.groups[i.label].color+';color:white;font-size:.8em;padding:2px">'+i.value+'</span>'
-						).join('')
-					)
-				tr.append('td').text( item.label )
-			}
-
-
-		} catch(e) {
-			client.sayerror( div, e.message || e)
-			if(e.stack) console.log(e.stack)
-		}
-
-		loaded=true
-		loading=false
-		button.text('LIST')
-	})
-}
-
-
-
-
-
-function may_enable_crosstabulate ( term1, row, obj ) {
-/*
-may enable a standalone crosstab button for a term in the tree
-just a wrapper for may_makebutton_crosstabulate with its callback function
-
-benefit of having this standalone button is that user having such need in mind will be able to find it directly,
-rather than having to remember to click on the barchart button first, and get to crosstab from the barchart panel
-
-for showing crosstab output, should show in barchart panel instead with the instrument panel
-providing all the customization options
-*/
-	may_makebutton_crosstabulate( {
-		obj,
-		term1: term1,
-		button_row: row,
-		callback: term2=>{
-			obj.tip.hide()
-
-			// display result through barchart button
-			term1.graph.barchart.dom.loaded=true
-			term1.graph.barchart.dom.div.selectAll('*').remove()
-			client.appear( term1.graph.barchart.dom.div, 'inline-block' )
-			term1.graph.barchart.dom.button
-				.style('background','#ededed')
-				.style('color','black')
-
-			const plot = {
-				obj,
-				genome: obj.genome.name,
-				dslabel: obj.mds.label,
-				holder: term1.graph.barchart.dom.div,
-				term: term1,
-				term2: term2,
-				term2_displaymode: 'table',
-				default2showtable: true,
-				termfilter: obj.termfilter
-			}
-			plot_init( plot )
-		}
-	})
+		]
+		plot.overlay_with_genotype_idx = 0
+	}
+	plot_init( plot, callback )
 }
 
 
@@ -574,7 +553,7 @@ buttonholder: div in which to show the button, term label is also in it
 	// row to display children terms
 	const childrenrow = arg.row.append('div')
 		.style('display','none')
-		.style('padding-left', '30px')
+		.style('padding-left', tree_indent)
 
 	const button = buttonholder.append('div')
 		.style('display','inline-block')
@@ -600,16 +579,7 @@ buttonholder: div in which to show the button, term label is also in it
 			.style('opacity',.5)
 			.style('margin','3px 0px')
 
-		// parameter for getting children terms
-		const param = {
-			get_children: {
-				id: arg.term.id
-			}
-		}
-		if( arg.modifier_ssid_onterm ) {
-			param.get_children.ssid = arg.modifier_ssid_onterm.ssid
-		}
-
+		const param = [ 'get_children=1&tid='+arg.term.id ] // not adding ssid here
 		obj.do_query( param )
 		.then(data=>{
 			if(data.error) throw data.error
@@ -643,76 +613,264 @@ buttonholder: div in which to show the button, term label is also in it
 
 
 
-export function add_searchbox_4term ( obj, holder, callback ) {
-/*
-add a search box to find term and run callback on it
+
+
+
+function display_searchbox ( obj ) {
+/* show search box at top of tree
+display list of matching terms in-place below <input>
+term view shows barchart
+barchart is shown in-place under term and in full capacity
 */
-
-	const div = holder.append('div')
-	const input = div.append('div')
-		.append('input')
-		.attr('type','text')
-		.style('width','150px')
-		.attr('placeholder','Search term')
-
-	input.node().focus()
-
-	const resultholder = div
+	const div = obj.dom.searchdiv
+		.style('display','block')
 		.append('div')
-		.style('margin-bottom','10px')
 		.style('display','inline-block')
+	const input = div
+		.append('input')
+		.attr('type','search')
+		.style('width','100px')
+		.style('display','block')
+		.attr('placeholder','Search')
 
-	let lastterm = null
+	if( obj.modifier_click_term ) {
+		// selecting term, set focus to the box
+		input.node().focus()
+	}
 
-	// TODO keyup event listner needs debounce
+	const table = div
+		.append('div')
+		.style('border-left','solid 1px #85B6E1')
+		.style('margin','2px 0px 10px 10px')
+		.style('padding-left','10px')
+		.append('table')
+		.style('border-spacing','0px')
+		.style('border-collapse','separate')
+
+	// TODO debounce
 
 	input.on('keyup', async ()=>{
-		
+
+		table.selectAll('*').remove()
+
 		const str = input.property('value')
 		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
 
 		if( str==' ' || str=='' ) {
 			// blank
-			resultholder.selectAll('*').remove()
 			return
 		}
+		try {
+			// query
+			const data = await obj.do_query( ['findterm='+str] )
+			if(data.error) throw data.error
+			if(!data.lst || data.lst.length==0) throw 'No match'
 
-		if( client.keyupEnter() ) {
-			// pressed enter, if terms already found, use that
-			if(lastterm) {
-				callback( lastterm )
+			if( obj.modifier_click_term ) {
+				searchresult2clickterm( data.lst )
 				return
 			}
-		}
 
-		// query
-		const par = { findterm: {
-			str: str
-		}}
-
-		const data = await obj.do_query( par )
-
-		if(data.error) {
-			return
-		}
-
-		resultholder.selectAll('*').remove()
-		if(!data.lst || data.lst.length==0) {
-			resultholder.append('div')
-				.text('No match')
+			// show full terms with graph/tree buttons
+			for(const term of data.lst) {
+				const tr = table.append('tr')
+					.attr('class','sja_tr2')
+				tr.append('td')
+					.style('opacity','.6')
+					.text(term.name)
+				const td = tr.append('td') // holder for buttons
+					.style('text-align','right')
+				if( term.graph && term.graph.barchart ) {
+					makeviewbutton( term, td )
+				}
+				maketreebutton( term, td )
+			}
+		} catch(e) {
+			table.append('tr').append('td')
 				.style('opacity',.5)
-			return
-		}
-
-		lastterm = data.lst[0]
-
-		for(const term of data.lst) {
-			resultholder.append('div')
-				.attr('class','sja_menuoption')
-				.text(term.name)
-				.on('click',()=>{
-					callback( term )
-				})
+				.text(e.message || e)
+			if(e.stack) console.log(e.stack)
 		}
 	})
+
+	// helpers
+	function searchresult2clickterm ( lst ) {
+		for(const term of lst) {
+			const div = table.append('tr')
+				.append('td')
+				.append('div')
+				.text(term.name)
+			if( term.graph ) {
+				// only allow selecting for graph-enabled ones
+				div.attr('class','sja_menuoption')
+				.style('margin','1px 0px 0px 0px')
+				.on('click',()=> obj.modifier_click_term.callback( term ) )
+			} else {
+				div.style('padding','5px 10px')
+				.style('opacity',.5)
+			}
+		}
+	}
+	function makeviewbutton ( term, td ) {
+		const tr_hidden = table.append('tr')
+			.style('display','none')
+		let loading=false,
+			loaded =false
+		const viewbutton = td.append('div') // view button
+			.style('display','inline-block')
+			.attr('class','sja_menuoption')
+			.style('zoom','.8')
+			.style('margin-right','10px')
+			.text('VIEW')
+		viewbutton.on('click',()=>{
+			if( tr_hidden.style('display')=='none' ) {
+				tr_hidden.style('display','table-row')
+			} else {
+				tr_hidden.style('display','none')
+			}
+			if(loaded || loading) return
+			viewbutton.text('Loading...')
+			loading=true
+			const div = tr_hidden.append('td')
+				.attr('colspan',3)
+				.append('div')
+				.style('border-left','solid 1px #aaa')
+				.style('margin-left',graph_leftpad)
+			make_barplot( obj, term, div, ()=>{
+				loading=false
+				loaded=true
+				viewbutton.text('VIEW')
+			})
+		})
+	}
+	function maketreebutton ( term, td ) {
+		const span = td.append('span')
+			.style('font-size','.8em')
+			.attr('class','sja_clbtext')
+			.text('TREE')
+		span.on('click', async ()=>{
+			span.text('Loading...')
+			const data = await obj.do_query(['treeto='+term.id])
+			if(!data.levels) throw 'levels[] missing'
+			table.selectAll('*').remove()
+			obj.dom.treediv.selectAll('*').remove()
+			let currdiv = obj.dom.treediv
+			for(const [i,level] of data.levels.entries()) {
+				let nextdiv
+				for(const term of level.terms) {
+					const row = currdiv.append('div')
+					if(term.id == level.focusid) {
+						// term under focus
+						if(i==data.levels.length-1) {
+							// last level
+							print_one_term( {term,row,flicker:true}, obj )
+						} else {
+							// before last level, manually print it
+							row.attr('class','sja_tr2')
+							row.append('div') // button
+								.style('display','inline-block')
+								.style('font-family','courier')
+								.attr('class','sja_menuoption')
+								.text('-')
+								.on('click',()=>{
+									nextdiv.style('display', nextdiv.style('display')=='none'?'block':'none')
+								})
+							row.append('div')
+								.style('display','inline-block')
+								.style('padding',label_padding)
+								.text(term.name)
+							nextdiv = currdiv.append('div')
+								.style('padding-left',tree_indent)
+						}
+					} else {
+						// a sibling
+						print_one_term( {term,row}, obj )
+					}
+				}
+				currdiv = nextdiv
+			}
+		})
+	}
+}
+
+
+
+export function showtree4selectterm ( arg, button ) {
+/*
+arg{}
+.obj
+.term1
+.term2
+.callback
+*/
+	arg.obj.tip.clear()
+		.showunder( button )
+	const disable_terms = arg.term2 ? new Set([ arg.term1.id, arg.term2.id ]) : new Set([ arg.term1.id ])
+	const obj = {
+		genome: arg.obj.genome,
+		mds: arg.obj.mds,
+		div: arg.obj.tip.d.append('div'),
+		default_rootterm: {},
+		modifier_click_term: {
+			disable_terms,
+			callback: arg.callback
+		}
+	}
+	init(obj)
+}
+
+export function menuoption_add_filter ( obj, tvslst ) {
+/*
+obj: the tree object
+tvslst: an array of 1 or 2 term-value setting objects
+     this is to be added to the obj.termfilter.terms[]
+	 if barchart is single-term, tvslst will have only one element
+	 if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
+*/
+}
+export function menuoption_select_to_gp ( obj, tvslst ) {
+	obj.tip.hide()
+	const pane = client.newpane({x:100,y:100})
+	import('./block').then(_=>{
+		new _.Block({
+			hostURL:localStorage.getItem('hostURL'),
+			holder: pane.body,
+			genome:obj.genome,
+			nobox:true,
+			chr: obj.genome.defaultcoord.chr,
+			start: obj.genome.defaultcoord.start,
+			stop: obj.genome.defaultcoord.stop,
+			nativetracks:[ obj.genome.tracks.find(i=>i.__isgene).name.toLowerCase() ],
+			tklst:[ {
+				type:client.tkt.mds2,
+				dslabel:obj.dslabel,
+				vcf:{ numerical_axis:{ AFtest:{ groups:[
+					{ is_termdb:true, terms: tvslst },
+					obj.bar_click_menu.select_to_gp.group_compare_against
+				] } } }
+			} ]
+		})
+	})
+}
+
+export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
+
+	if(!tvslst) return
+		
+	const new_group = {}
+	new_group.is_term = true
+	new_group.terms = []
+
+	for(const [i, term] of tvslst.entries()){
+		const new_term = termvaluesettingui.make_new_term(term)
+		new_group.terms.push(new_term)
+	}
+
+	if(!obj.selected_groups){
+		obj.selected_groups = []
+	}
+
+	obj.selected_groups.push(new_group)
+	update_cart_button(obj)
+
 }

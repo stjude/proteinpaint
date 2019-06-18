@@ -436,3 +436,9 @@ table {
 .sja_button_open:hover {opacity:1;}
 .sja_button_fold {display:inline-block;background:#aaa;color:white;padding:3px 5px;border:solid 1px black;opacity:.8;cursor:default;}
 .sja_button_fold:hover {opacity:1;}
+
+.sja-termdb-config-row-label {
+	padding: 5px;
+	text-align: left;
+	vertical-align: top;
+}

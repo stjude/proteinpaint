@@ -129,7 +129,7 @@ export default function barsRenderer(barsapp, holder) {
       .style("font-weight", 600)
       .style("font-size", "20px")
       .style("margin-bottom", "16px")
-      .html(chart.chartId);
+      .html(hm.handlers.chart.title(chart));
 
     // only set this initially to prevent 
     // jerky svg resize on update
@@ -527,8 +527,9 @@ export default function barsRenderer(barsapp, holder) {
 
   function getRectY(d) {
     const grpoffset = hm.colgrps.indexOf(d[hm.colgrpkey]) * hm.colgspace
+    const h = hm.unit == "log" ? Math.max(0, hm.h.yPrevBySeries[d.seriesId]) : hm.h.yPrevBySeries[d.seriesId]
     return hm.orientation == "vertical"
-      ? hm.svgh - hm.collabelh - hm.h.yPrevBySeries[d.seriesId]
+      ? hm.svgh - hm.collabelh - h
       : hm.cols.indexOf(d.colId) * (hm.rowh + hm.rowspace) + grpoffset
   }
 

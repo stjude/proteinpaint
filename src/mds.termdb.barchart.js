@@ -4,6 +4,7 @@ import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import { Menu } from './client'
+import { bar_click_menu } from './mds.termdb.controls'
 
 const colors = {
   c10: scaleOrdinal( schemeCategory10 ),
@@ -47,12 +48,7 @@ export class TermdbBarchart{
   main(plot=null, data=null, isVisible=true, obj=null) {
     if (data) this.currServerData = data
     if (!this.setVisibility(isVisible)) return
-    if (obj) {
-      this.obj = obj
-      if (obj.modifier_barchart_selectbar) {
-        this.click_callback = obj.modifier_barchart_selectbar.callback
-      }
-    }
+    if (obj) this.obj = obj
     this.updateSettings(plot)
     this.processData(this.currServerData) 
   }
@@ -79,7 +75,8 @@ export class TermdbBarchart{
       colw: plot.settings.common.barwidth,
       rowh: plot.settings.common.barwidth,
       colspace: plot.settings.common.barspace,
-      rowspace: plot.settings.common.barspace
+      rowspace: plot.settings.common.barspace,
+      conditionUnits: plot.settings.common.conditionUnits
     }
     Object.assign(this.settings, settings)
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
@@ -90,6 +87,7 @@ export class TermdbBarchart{
     } else if ('term2' in this.settings && plot.term2) {
       this.terms.term2 = plot.term2 
     }
+    this.terms.term0 = settings.term0 && plot.term0 ? plot.term0 : null
   }
 
   setVisibility(isVisible) {
@@ -130,7 +128,10 @@ export class TermdbBarchart{
       ? bins.crosstab_fixed_bins.map(d=>d.label).reverse()
       : null
 
-    self.rowSorter = self.binLabels
+    const rows = chartsData.refs.rows
+    self.rowSorter = chartsData.refs.useRowOrder
+      ? (a,b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
+      : self.binLabels
       ? (a,b) => self.binLabels.indexOf(b.dataId) - self.binLabels.indexOf(a.dataId)
       : (a,b) => b.total - a.total
 
@@ -255,7 +256,77 @@ export class TermdbBarchart{
   getEventHandlers() {
     const self = this
     const s = this.settings
+
+    function barclick(d, callback, obj=null) {
+    /*
+      d: clicked bar data
+      callback
+    */
+      const termValues = []
+      for(const index of [0,1,2]) { 
+        const termNum = 'term' + index
+        const term = self.terms[termNum]
+        if (termNum == 'term0' || !term) continue
+
+        const key = termNum=="term1" ? d.seriesId : d.dataId
+        const label = !term.values 
+          ? key
+          : termNum=="term1"
+            ? term.values[d.seriesId].label
+            : term.values[d.dataId].label
+
+        if (term.iscondition) {
+          const unit = self.settings.conditionUnits[index]
+          if (unit == "by_children") {
+            termValues.push({
+              term,
+              bar_by_children: true,
+              values: [{key, label}]
+            })
+          }
+          else {
+            termValues.push({
+              term,
+              bar_by_grade: true,
+              value_by_max_grade: unit == "max_grade_perperson",
+              value_by_most_recent: unit == "most_recent_grade",
+              values: [{key, label}]
+            })
+          }
+        } else {
+          const bins = self.bins[index]
+          const range = !bins ? null : bins.find(d => d.label == label)
+          if (range) {
+            termValues.push({term, range})
+          } else {
+            termValues.push({term, values: [{key, label}]})
+          }
+        }
+      } console.log(termValues, callback)
+      if (!obj) {
+        callback({terms: termValues})
+      } else { console.log(obj)
+        callback(obj, termValues)
+      }
+      self.obj.tip.hide()
+    }
+
     return {
+      chart: {
+        title(chart) {
+          if (!self.terms.term0) return chart.chartId
+          const grade = self.terms.term0.graph
+              && self.terms.term0.graph.barchart 
+              && self.terms.term0.graph.barchart.grade_labels
+            ? self.terms.term0.graph.barchart.grade_labels.find(c => c.grade == chart.chartId)
+            : null
+          return self.terms.term0.values
+            ? self.terms.term0.values[chart.chartId].label
+            : grade
+            ? grade.label
+            : chart.chartId
+        }
+      },
       svg: {
         mouseout: ()=>{
           tip.hide()
@@ -281,34 +352,29 @@ export class TermdbBarchart{
           return d.color
         },
         click(d) {
-          if (!self.click_callback) return
-          const t = []
-          for(const termNum in self.terms) {
-            const term = self.terms[termNum]
-            const bins = self.bins[termNum.slice(-1)]
-            const value = termNum=="term1" ? d.seriesId : d.dataId
-            const label = !term || !term.values 
-              ? value
-              : termNum=="term1"
-                ? term.values[d.seriesId] 
-                : term.values[d.dataId]
-
-            if (termNum != 'term0' && term) {
-              const bin = !bins ? null : bins.find(d => d.label == value)
-              t.push({term, label, value, range: bin})
-            }
+          if (self.obj.modifier_barchart_selectbar 
+            && self.obj.modifier_barchart_selectbar.callback) {
+            barclick(d, self.obj.modifier_barchart_selectbar.callback)
           }
-          self.click_callback({terms: t})
+          else if (self.obj.bar_click_menu) {
+            bar_click_menu(self.obj, barclick, d)
+          }
         }
       },
       colLabel: {
         text: d => {
-          return !self.terms.term1.values ? d
-            : self.terms.term1.values[d].label
+          const grade = self.terms.term1.graph.barchart && self.terms.term1.graph.barchart.grade_labels
+            ? self.terms.term1.graph.barchart.grade_labels.find(c => c.grade == d)
+            : null
+          return self.terms.term1.values
+            ? self.terms.term1.values[d].label
+            : grade
+            ? grade.label
+            : d
         },
         click: () => { 
           const d = event.target.__data__
-          if (!d) return
+          if (d === undefined) return
           self.settings.exclude.cols.push(d)
           self.main()
         },
@@ -322,12 +388,18 @@ export class TermdbBarchart{
       },
       rowLabel: {
         text: d => {
-          return !self.terms.term1.values ? d
-            : self.terms.term1.values[d].label
+          const grade = self.terms.term1.graph.barchart && self.terms.term1.graph.barchart.grade_labels
+            ? self.terms.term1.graph.barchart.grade_labels.find(c => c.grade == d)
+            : null
+          return self.terms.term1.values
+            ? self.terms.term1.values[d].label
+            : grade
+            ? grade.label
+            : d
         },
         click: () => { 
           const d = event.target.__data__
-          if (!d) return
+          if (d === undefined) return
           self.settings.exclude.cols.push(d)
           self.main()
         },
@@ -343,7 +415,7 @@ export class TermdbBarchart{
         click: () => {
           event.stopPropagation()
           const d = event.target.__data__
-          if (!d) return
+          if (d === undefined) return
           if (d.type == 'col') {
             const i = self.settings.exclude.cols.indexOf(d.text)
             if (i == -1) return
@@ -374,7 +446,11 @@ export class TermdbBarchart{
             return s.unit == "pct" ? "% of patients" : "# of patients"
           } else {
             const term = self.terms.term1
-            return term.iscategorical || !term.unit
+            return term.iscondition && s.conditionUnits[1] == 'max_grade_perperson'
+              ? 'Maximum grade'
+              : term.iscondition && s.conditionUnits[1] == 'most_recent_grade'
+              ? 'Most recent grade'
+              : term.iscategorical || !term.unit
               ? ''
               : term.unit //term.name[0].toUpperCase() + term.name.slice(1)
           }
@@ -384,7 +460,11 @@ export class TermdbBarchart{
         text: () => {
           if (s.orientation == "vertical") { 
             const term = self.terms.term1
-            return term.iscategorical || !term.unit
+            return term.iscondition && s.conditionUnits[1] == 'max-grade'
+              ? 'Maximum grade'
+              : term.iscondition && s.conditionUnits[1] == 'num-events'
+              ? '# of events'
+              : term.iscategorical || !term.unit
               ? ''
               : term.unit // term.name[0].toUpperCase() + term.name.slice(1)
           } else {
@@ -431,14 +511,19 @@ export class TermdbBarchart{
           })
       })
     }
-    if (!s.hidelegend && this.terms.term2 && this.term2toColor) {
+    if (s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
+      const t = this.terms.term2
+      const b = t.graph && t.graph.barchart ? t.graph.barchart : null
+      const overlay = !t.iscondition || !b ? '' : b.value_choices.find(d => d[s.conditionUnits[2]])
+      const grades = b && b.grade_labels ? b.grade_labels : null
       const colors = {}
       legendGrps.push({
-        name: this.terms.term2.name,
+        name: t.name + (overlay ? ': '+overlay.label : ''),
         items: s.rows.map(d => {
+          const g = grades ? grades.find(c => c.grade == d) : null
           return {
             dataId: d,
-            text: d,
+            text: g ? g.label : d,
             color: this.term2toColor[d],
             type: 'row',
             isHidden: s.exclude.rows.includes(d)

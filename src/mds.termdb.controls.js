@@ -1,66 +1,126 @@
-import {event as d3event} from 'd3-selection'
-import {may_trigger_crosstabulate} from './mds.termdb.crosstab'
+import {select as d3select, event as d3event} from 'd3-selection'
+import {
+  showtree4selectterm, 
+  menuoption_add_filter,
+  menuoption_select_to_gp, 
+  menuoption_select_group_add_to_cart
+} from './mds.termdb'
+
+// used to track controls unique "instances" by plot object
+// to be used to disambiguate between input names
+const plots = []
 
 export function controls(arg, plot, main) {
   plot.config_div = arg.holder.append('div')
     .style('display','inline-block')
     .style('vertical-align','top')
     .style('margin', '8px')
-    .style('padding', '5px')
+    .style('padding', '10px 15px 15px 15px')
 
-  plot.controls_update = () => {
-    plot.controls.forEach(update => update())
-  }
+  // controlsIndex to be used to assign unique radio input names
+  // by config div
+  plot.controlsIndex = plots.length
+  plots.push(plot)
 
   // label
-  plot.config_div.append('div')
-    .style('color', '#aaa')
-    .style('font-size', '12px')
+  plot.config_div.append('div').append('button')
+    .style('color', '#333')
+    .style('font-size', '14px')
     .style('cursor', 'pointer')
     .html('CONFIG')
     .on('click', () => {
       plot.controls.forEach(update => update())
       const display = tip.style('display')
       tip.style('display', display == "none" ? "inline-block" : "none")
-      plot.config_div.style('background', display == "none" ? '#ececec' : "")
+      plot.config_div.style('background', display == "none" ? 'rgb(245,245,220)' : "")
     })
 
   const tip = plot.config_div.append('div').style("display","none")
   // will be used to track control elements
   // for contextual updates
   plot.controls = []
-  const table = tip.append('table')
+  const table = tip.append('table').attr('cellpadding',0).attr('cellspacing',0)
+  setConditionUnitOpts(plot, main, table, 'term', 'Bar categories', 1)
   setOverlayOpts(plot, main, table, arg)
   setViewOpts(plot, main, table)
   setOrientationOpts(plot, main, table)
   setScaleOpts(plot, main, table)
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
-  setBinOpts(plot, main, table, 'term2', 'Stacked Bins')
+  setBinOpts(plot, main, table, 'term2', 'Overlay Bins')
   setDivideByOpts(plot, main, table, arg)
+
+  plot.controls_update = () => {
+    plot.controls.forEach(update => update())
+    table.selectAll('tr')
+    .filter(rowIsVisible)
+    .each(altRowColors)
+  }
+
+  function rowIsVisible() {
+    return d3select(this).style('display') != 'none'
+  }
+
+  function altRowColors(d,i){
+    d3select(this).selectAll('td')
+    //.style('border-top', i !== 0 ? '1px solid #ccc' : '')
+    .style('background-color', i%2 == 0 ? '' : '#eee')
+  }
+}
+
+function renderRadioInput(inputName, elem, opts, inputHandler) {
+  const divs = elem.selectAll('div')
+    .style('display', 'inline-block')
+    .data(opts, d => d.value)
+  
+  divs.exit().each(function(d){
+    d3select(this)
+    .on('input', null)
+    .on('click', null)
+    .remove()
+  })
+  
+  const labels = divs.enter().append('div')
+    .style('display', 'inline-block')
+    .style('padding', '5px')
+    .append('label')
+  
+  const inputs = labels.append('input')
+    .attr('type', 'radio')
+    .attr('name', inputName)
+    .attr('value', d=>d.value)
+    .style('vertical-align','top')
+    .on('input', inputHandler)
+  
+  labels.append('span')
+    .style('vertical-align','top')
+    .html(d=>'&nbsp;'+d.label)
+
+  return {
+    divs: elem.selectAll('div'), 
+    labels: elem.selectAll('label'),
+    inputs: labels.selectAll('input'),
+  }
 }
 
 function setOrientationOpts(plot, main, table) {
   const tr = table.append('tr')
-  
-  tr.append('td')
-    .html('Orientation')
+  tr.append('td').html('Orientation').attr('class', 'sja-termdb-config-row-label')
+  const td = tr.append('td')
+  const radio = renderRadioInput(
+    'pp-termdb-condition-unit-' + plot.controlsIndex, 
+    td, 
+    [
+      {label: 'Vertical', value: 'vertical'},
+      {label: 'Horizontal', value: 'horizontal'}
+    ]
+  )
 
-  const orientation = tr.append('td')
-    .append('select')
-    .on('change', () => {
-      plot.settings.bar.orientation = orientation.property('value')
-      main(plot)
-    })
-
-  orientation.append('option')
-    .attr('value', 'vertical')
-    .property('selected', plot.settings.bar.orientation == "vertical")
-    .html('Vertical')
-
-  orientation.append('option')
-    .attr('value', 'horizontal')
-    .property('selected', plot.settings.bar.orientation == "horizontal")
-    .html('Horizontal')
+  radio.inputs
+  .property('checked', d => d.value == plot.settings.bar.orientation)
+  .on('input', d => {
+    plot.settings.bar.orientation = d.value
+    main(plot)
+  })
 
   plot.controls.push(() => {
     tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
@@ -69,108 +129,217 @@ function setOrientationOpts(plot, main, table) {
 
 function setScaleOpts(plot, main, table) {
   const tr = table.append('tr')
+  tr.append('td').html('Scale').attr('class', 'sja-termdb-config-row-label')
+  const td = tr.append('td')
+  const radio = renderRadioInput(
+    'pp-termdb-scale-unit-' + plot.controlsIndex, 
+    td, 
+    [
+      {label: 'Linear', value: 'abs'},
+      {label: 'Log', value: 'log'},
+      {label: 'Percentage', value: 'pct'}
+    ]
+  )
 
-  tr.append('td')
-    .html('Scale')
-
-  const unit = tr.append('td')
-    .append('select')
-    .on('change', () => {
-      plot.settings.bar.unit = unit.property('value')
-      main(plot)
-    })
-
-  const abs = unit.append('option')
-    .attr('value', 'abs')
-    .property('selected', plot.settings.bar.unit == "abs")
-    .html('Linear')
-
-  const log = unit.append('option')
-    .attr('value', 'log')
-    .property('selected', plot.settings.bar.unit == "log")
-    .html('Log')
-
-  const pct = unit.append('option')
-    .attr('value', 'pct')
-    .property('selected', plot.settings.bar.unit == "pct")
-    .html('Percentage')
+  radio.inputs
+  .property('checked', d => d.value == plot.settings.bar.unit)
+  .on('input', d => {
+    plot.settings.bar.unit = d.value
+    main(plot)
+  })
 
   plot.controls.push(() => {
     tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
-    log.style('display', plot.term2 ? 'none' : 'initial')
-    pct.style('display', plot.term2 ? 'initial' : 'none')
+    radio.divs.style('display', d => {
+      if (d.value == 'log') {
+        return plot.term2 ? 'none' : 'inline-block' 
+      } else if (d.value == 'pct') {
+        return plot.term2 ? 'inline-block' : 'none'
+      } else {
+        return 'inline-block'
+      }
+    })
   })
 }
 
 function setOverlayOpts(plot, main, table, arg) {
   const tr = table.append('tr')
-  
-  tr.append('td')
-    .html('Overlay with')
-
+  tr.append('td').html('Overlay with').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
-  
-  const overlay = td.append('select')
-    .on('change', () => {
-      const value = overlay.property('value')
-      plot.settings.bar.overlay = value
-      if (value == "none") {
-        plot.term2 = undefined
-        plot.term2_displaymode = 'stacked'
-        main(plot)
-      } else if (value == "tree") {
-        const obj = Object.assign({},plot.obj)
-        delete obj.termfilter
-        delete obj.termfilterdiv
-        const _arg = {
-          term1: arg.term,
-          term2: plot.term2,
-          obj,
-          callback: term2 => {
-            obj.tip.hide()
+  const radio = renderRadioInput(
+    'pp-termdb-overlay-' + plot.controlsIndex, 
+    td, 
+    [
+      {label: 'None', value: 'none'},
+      {label: 'Term', value: 'tree'},
+      {label: 'Genotype', value: 'genotype'},
+      {label: 'Max. grade per person', value: 'max_grade_perperson'},
+      {label: 'Most recent grade', value: 'most_recent_grade'}
+    ]
+  )
 
-            // adding term2 for the first time
-            plot.term2 = term2
-            if (plot.term2.isfloat && plot.term2_boxplot) { 
-              plot.term2_displaymode = 'boxplot'
-              main(plot)
-            } else {
-              if (plot.term2_displaymode == "boxplot") {
-                plot.term2_displaymode = "stacked"
-              }
-              plot.term2_boxplot = 0
-              main( plot )
+  radio.inputs
+  .property('checked', d => d.value == plot.settings.bar.overlay)
+  .on('input', d => {
+    d3event.stopPropagation()
+    plot.settings.bar.overlay = d.value
+    if (d.value == "none") {
+      plot.term2 = undefined
+      plot.term2_displaymode = 'stacked'
+      main(plot)
+    } else if (d.value == "tree") {
+      const obj = Object.assign({},plot.obj)
+      delete obj.termfilter
+      delete obj.dom.termfilterdiv
+      const _arg = {
+        term1: arg.term,
+        term2: plot.term2,
+        obj,
+        callback: term2 => {
+          obj.tip.hide()
+
+          // adding term2 for the first time
+          plot.term2 = term2
+          if (plot.term2.iscondition) {
+            plot.settings.common.conditionParents[2] = plot.term2.id
+            if (!plot.settings.common.conditionUnits[2]) {
+              plot.settings.common.conditionUnits[2] = "max_grade_perperson"
             }
           }
+          if (plot.term2.isfloat && plot.term2_boxplot) { 
+            plot.term2_displaymode = 'boxplot'
+          } else {
+            if (plot.term2_displaymode == "boxplot") {
+              plot.term2_displaymode = "stacked"
+            }
+            plot.term2_boxplot = 0
+          }
+          main( plot )
         }
-        may_trigger_crosstabulate( _arg, tr.node() )
-      } else if (value == "genotype") {
-        // to-do
+      }
+      showtree4selectterm( _arg, tr.node() )
+    } else if (d.value == "genotype") {
+      // to-do
+    } else if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+      if (!plot.term2) plot.term2 = plot.term
+      plot.settings.common.conditionUnits[2] = d.value
+      plot.settings.common.conditionParents[2] = plot.term2.id
+      main(plot)
+    }
+  })
+
+  radio.inputs.on('click', d => {
+    d3event.stopPropagation()
+    if (d.value != 'tree' || d.value != plot.settings.bar.overlay) return
+    const obj = Object.assign({},plot.obj)
+    delete obj.termfilter
+    delete obj.termfilterdiv
+    const _arg = {
+      term1: arg.term,
+      term2: plot.term2,
+      obj,
+      callback: term2=>{
+        obj.tip.hide()
+        plot.term2 = term2
+        if (plot.term2.iscondition) {
+          plot.settings.common.conditionParents[2] = plot.term2.id
+          if (!plot.settings.common.conditionUnits[2]) {
+            plot.settings.common.conditionUnits[2] = "max_grade_perperson"
+          }
+        }
+        if (plot.term2.isfloat && plot.term2_boxplot) { 
+          plot.term2_displaymode = 'boxplot'
+        } else {
+          if (plot.term2_displaymode == "boxplot") {
+            plot.term2_displaymode = "stacked"
+          }
+          plot.term2_boxplot = 0
+        }
+        main( plot )
+      }
+    }
+    showtree4selectterm( _arg, tr.node() )
+  })
+
+  plot.controls.push(() => {
+    // hide all options when opened from genome browser view 
+    tr.style("display", plot.obj.modifier_ssid_barchart ? "none" : "table-row")
+    // do not show genotype overlay option when opened from stand-alone page
+    if (!plot.settings.bar.overlay) {
+      plot.settings.bar.overlay = plot.obj.modifier_ssid_barchart
+        ? 'genotype'
+        : plot.term2 
+        ? 'tree'
+        : 'none'
+    }
+    radio.inputs.property('checked', d => d.value == plot.settings.bar.overlay)
+    const cu = plot.settings.common.conditionUnits
+    radio.divs.style('display', d => {
+      if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+        return plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'none'
+      } else {
+        const block = plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'inline-block'
+        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
       }
     })
+  })
+}
 
-  overlay.append('option')
-    .attr('value', 'none')
-    .property('selected', plot.settings.bar.overlay == "none")
-    .html('None')
+function setViewOpts(plot, main, table, arg) {
+  const tr = table.append('tr')
+  tr.append('td').html('Display mode').attr('class', 'sja-termdb-config-row-label')
+  const td = tr.append('td')
+  const radio = renderRadioInput(
+    'pp-termdb-display-mode-' + plot.controlsIndex, 
+    td, 
+    [
+      {label: 'Barchart', value: 'stacked'},
+      {label: 'Table', value: 'table'},
+      {label: 'Boxplot', value: 'boxplot'}
+    ]
+  )
 
-  overlay.append('option')
-    .attr('value', 'tree')
-    .property('selected', plot.settings.bar.overlay == "tree")
-    .html('Term')
+  radio.inputs
+  .property('checked', d => d.value == plot.term2_displaymode)
+  .on('input', d => {
+    plot.term2_displaymode = d.value
+    plot.term2_boxplot = d.value == 'boxplot'
+    main(plot)
+  })
 
-  const genotype = overlay.append('option')
-    .attr('value', 'genotype')
-    .property('selected', plot.settings.bar.overlay == "genotype")
-    .html('Genotype')
+  plot.controls.push(() => {
+    tr.style("display", plot.term2 ? "table-row" : "none")
+    radio.inputs.property('checked', d => d.value == plot.term2_displaymode)
+    radio.divs.style('display', d => plot.term2 && (d.value != 'boxplot' || plot.term2.isfloat) ? 'inline-block' : 'none')
+  })
+}
 
-  td.append('span').html('&nbsp;') 
-  const editbtn = td.append('span')  
-    .attr('class', 'crosstab-btn')
-    .html('replace')
-    .style('cursor', 'pointer')
-    .style('text-decoration', 'underline')
-    .on('click', () =>{
+function setDivideByOpts(plot, main, table, arg) {
+  const tr = table.append('tr')
+  tr.append('td').html('Divide by').attr('class', 'sja-termdb-config-row-label')
+  const td = tr.append('td')
+  const radio = renderRadioInput(
+    'pp-termdb-divide-by-' + plot.controlsIndex, 
+    td, 
+    [
+      {label: 'None', value: 'none'},
+      {label: 'Term', value: 'tree'},
+      {label: 'Genotype', value: 'genotype'},
+      {label: 'Max. grade per person', value: 'max_grade_perperson'},
+      {label: 'Most recent grade', value: 'most_recent_grade'}
+    ]
+  )
+
+  radio.inputs
+  .property('checked', d => d.value == plot.settings.bar.divideBy)
+  .on('input', d => {
+    d3event.stopPropagation()
+    plot.settings.bar.divideBy = d.value
+    if (d.value == "none") {
+      plot.term0 = undefined
+      //plot.term2_displaymode = 'stacked'
+      main(plot)
+    } else if (d.value == "tree") {
       const obj = Object.assign({},plot.obj)
       delete obj.termfilter
       delete obj.termfilterdiv
@@ -180,172 +349,142 @@ function setOverlayOpts(plot, main, table, arg) {
         obj,
         callback: term2=>{
           obj.tip.hide()
-          plot.term2 = term2
-          if (plot.term2.isfloat && plot.term2_boxplot){ 
-            plot.term2_displaymode = 'boxplot'
-            main(plot)
-          } else {
-            if (plot.term2_displaymode == "boxplot") {
-              plot.term2_displaymode = "stacked"
-            }
-            plot.term2_boxplot = 0
-            main( plot )
-          }
-        }
-      }
-      may_trigger_crosstabulate( _arg, tr.node() )
-    })
-
-  plot.controls.push(() => {
-    // hide all options when opened from genome browser view 
-    tr.style("display", plot.obj.modifier_ssid_barchart ? "none" : "table-row")
-    editbtn.style("display", plot.settings.bar.overlay == "tree" ? "inline" : "none")
-    // do not show genoetype overlay option when opened from stand-alone page
-    if (!plot.settings.bar.overlay) {
-      plot.settings.bar.overlay = plot.obj.modifier_ssid_barchart
-        ? 'genotype'
-        : plot.term2 
-        ? 'tree'
-        : 'none'
-    }
-    overlay.property('value', plot.settings.bar.overlay)
-    genotype.style('display', plot.obj.modifier_ssid_barchart ? 'block' : 'none')
-  })
-}
-
-function setViewOpts(plot, main, table, arg) {
-  const tr = table.append('tr')
-
-  tr.append('td')
-    .html('Overlay view')
-  
-  const view = tr.append('td')
-    .append('select')
-    .on('change', () => {
-      const value = view.property('value')
-      plot.term2_displaymode = value
-      plot.term2_boxplot = value == 'boxplot'
-      main(plot)
-    })
-
-  view.append('option')
-    .attr('value', 'stacked')
-    .property('selected', plot.term2_displaymode == "stacked")
-    .html('Stacked Bars')
-
-  view.append('option')
-    .attr('value', 'table')
-    .property('selected', plot.term2_displaymode == "table")
-    .html('Table')
-
-  const boxplot = view.append('option')
-    .attr('value', 'boxplot')
-    .property('selected', plot.term2_displaymode == "boxplot")
-    .html('Boxplot')
-
-  plot.controls.push(() => {
-    tr.style("display", plot.term2 ? "table-row" : "none")
-    view.property('value', plot.term2_displaymode)
-    boxplot.style('display', plot.term2 && plot.term2.isfloat ? 'block' : 'none')
-  })
-}
-
-function setDivideByOpts(plot, main, table, arg) {
-  const tr = table.append('tr')
-  
-  tr.append('td')
-    .html('Divide By')
-
-  const td = tr.append('td')
-  
-  const divideBy = td.append('select')
-    .on('change', () => {
-      const value = divideBy.property('value')
-      plot.settings.bar.divideBy = value
-      if (value == "none") {
-        plot.term0 = undefined
-        //plot.term2_displaymode = 'stacked'
-        main(plot)
-      } else if (value == "tree") {
-        const obj = Object.assign({},plot.obj)
-        delete obj.termfilter
-        delete obj.termfilterdiv
-        const _arg = {
-          term1: arg.term,
-          term2: plot.term2,
-          obj,
-          callback: term2=>{
-            obj.tip.hide()
-            plot.term0 = term2
-            main(plot)
-          }
-        }
-        may_trigger_crosstabulate( _arg, tr.node() )
-      } else if (value == "genotype") {
-        // to-do
-      }
-    })
-
-  divideBy.append('option')
-    .attr('value', 'none')
-    .property('selected', plot.settings.bar.divideBy == "none")
-    .html('None')
-
-  divideBy.append('option')
-    .attr('value', 'tree')
-    .property('selected', plot.settings.bar.divideBy == "tree")
-    .html('Term')
-
-  const genotype = divideBy.append('option')
-    .attr('value', 'genotype')
-    .property('selected', plot.settings.bar.divideBy == "genotype")
-    .html('Genotype')
-
-  td.append('span').html('&nbsp;') 
-  const editbtn = td.append('span')  
-    .attr('class', 'crosstab-btn')
-    .html('replace')
-    .style('cursor', 'pointer')
-    .style('text-decoration', 'underline')
-    .on('click', () =>{
-      const obj = Object.assign({},plot.obj)
-      delete obj.termfilter
-      delete obj.termfilterdiv
-      const _arg = {
-        term1: arg.term,
-        term2: plot.term2,
-        obj,
-        callback: term2 => {
-          obj.tip.hide()
           plot.term0 = term2
+          if (plot.term0.iscondition) { //!plot.settings.common.conditionParents[0]) {
+            plot.settings.common.conditionParents[0] = plot.term0.id
+            if (!plot.settings.common.conditionUnits[0]) {
+              plot.settings.common.conditionUnits[0] = "max_grade_perperson"
+            }
+          }
           main(plot)
         }
       }
-      may_trigger_crosstabulate( _arg, tr.node() )
-    })
+      showtree4selectterm( _arg, tr.node() )
+    } else if (d.value == "genotype") {
+      // to-do
+    } else if (d.value == "by_children" || d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+      if (!plot.term0) plot.term0 = plot.term
+      plot.settings.common.conditionUnits[0] = d.value
+      plot.settings.common.conditionParents[0] = plot.term0.id
+      main(plot)
+    }
+  })
+
+  radio.inputs.on('click', d => {
+    d3event.stopPropagation()
+    if (d.value != 'tree' || d.value != plot.settings.bar.divideBy) return
+    const obj = Object.assign({},plot.obj)
+    delete obj.termfilter
+    delete obj.termfilterdiv
+    const _arg = {
+      term1: arg.term,
+      term2: plot.term0,
+      obj,
+      callback: term2=>{
+        obj.tip.hide()
+        plot.term0 = term2
+        main(plot)
+      }
+    }
+    showtree4selectterm( _arg, tr.node() )
+  })
 
   plot.controls.push(() => {
     // hide all options when opened from genome browser view 
     tr.style("display", plot.obj.modifier_ssid_barchart || plot.term2_displaymode != "stacked" ? "none" : "table-row")
-    editbtn.style("display", plot.settings.bar.divideBy == "tree" ? "inline" : "none")
     // do not show genotype divideBy option when opened from stand-alone page
     if (!plot.settings.bar.divideBy) {
       plot.settings.bar.divideBy = plot.obj.modifier_ssid_barchart
         ? 'genotype'
-        : plot.term2 
+        : plot.term0
         ? 'tree'
         : 'none'
     }
-    divideBy.property('value', plot.settings.bar.divideBy)
-    genotype.style('display', plot.obj.modifier_ssid_barchart ? 'block' : 'none')
+    radio.inputs.property('checked', d => d.value == plot.settings.bar.divideBy)
+    radio.divs.style('display', d => {
+      if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+        return plot.term1.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'none'
+      } else {
+        const block = plot.term.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'inline-block'
+        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
+      }
+    })
+  })
+}
+
+function setConditionUnitOpts(plot, main, table, termNum, label, index) {
+  /**/
+  const cu = plot.settings.common.conditionUnits
+  const tr = table.append('tr')
+  tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
+  const td = tr.append('td')
+  const optionsSeed = [
+    {label: "Subconditions", value: "by_children"}
+  ]
+
+  plot.controls.push(() => {
+    const choices = plot[termNum]
+        && plot[termNum].graph 
+        && plot[termNum].graph.barchart 
+        && plot[termNum].graph.barchart.value_choices 
+        ? plot[termNum].graph.barchart.value_choices
+      : plot.term.iscondition
+        && plot.term.graph 
+        && plot.term.graph.barchart 
+        && plot.term.graph.barchart.value_choices 
+      ? plot.term.graph.barchart.value_choices
+      : []
+
+    const radio = renderRadioInput(
+      'pp-termdb-condition-unit-'+ index + '-' + plot.controlsIndex, 
+      td,
+      optionsSeed.concat( 
+        choices
+        .filter(d => d.max_grade_perperson || d.most_recent_grade)
+        .map(d => {
+          let value = d.max_grade_perperson 
+            ? 'max_grade_perperson'
+            : 'most_recent_grade'
+
+          return {label: d.label, value}
+        })
+      )
+    )
+
+    radio.inputs
+    .property('checked', d => d.value == cu[index])
+    .on('input', d => {
+      cu[index] = d.value
+      plot.settings.common.conditionParents[index] = plot[termNum] ? plot[termNum].id : ''
+      main(plot)
+    })
+
+    tr.style('display', plot[termNum] && plot[termNum].iscondition 
+      ? "table-row" 
+      : index == 2 && plot.term.iscondition 
+      ? "table-row"
+      : "none")
+
+    radio.divs.style('display', d => {
+      if (d.value == 'none') {
+        return index == 1 ? 'none' : 'block'
+      } else if (d.value == 'by_children') {
+        return (plot[termNum] && !plot[termNum].isleaf) 
+          && ((index == 1 && (!plot.term0 || cu[0] != 'by_children')) || (index == 0 && cu[1] != 'by_children'))
+          ? 'block' : 'none'
+      } else if (index != 1) {
+        return cu[1] != d.value ? 'block' : 'none'
+      } // return d.value != 'none' || !plot[termNum].isleaf ? 'block' : 'none'
+    })
+
+    radio.inputs.property('checked', d => cu[index] == d.value) 
   })
 }
 
 function setBinOpts(plot, main, table, termNum, label) {
   const tr = table.append('tr')
   
-  tr.append('td')
-    .html(label)
+  tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
 
   tr.append('td')
     .style('text-decoration', 'underline')
@@ -536,4 +675,45 @@ function custom_bin(plot, main, binNum=1, btn){
     .on('click', ()=>{
       plot.tip.hide()
     })
+}
+
+export function bar_click_menu(obj, barclick, clickedBar) {
+/*
+  obj: the term tree obj
+  barclick: function to handle option click
+  clickedBar: the data associated with the clicked bar
+*/
+  const menu = obj.bar_click_menu
+  const options = []
+  if (menu.add_filter) {
+    options.push({
+      label: "Add as filter", 
+      callback: menuoption_add_filter
+    })
+  }
+  if (menu.select_group_add_to_cart) {
+    options.push({
+      label: "Select to GenomePaint",
+      callback: menuoption_select_to_gp
+    })
+  }
+  if (menu.select_to_gp) {
+    options.push({
+      label: "Add group to cart",
+      callback: menuoption_select_group_add_to_cart
+    })
+  }
+  if (options.length) {
+    obj.tip.clear().d
+      .selectAll('div')
+      .data(options)
+    .enter().append('div')
+      .attr('class', 'sja_menuoption')
+      .html(d=>d.label)
+      .on('click', d => {
+        barclick(clickedBar, d.callback, obj)
+      })
+
+    obj.tip.show(d3event.clientX, d3event.clientY)
+  }
 }

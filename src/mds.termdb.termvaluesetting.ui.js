@@ -36,7 +36,8 @@ group{}
     const add_term_btn = group_div.append('div')
         .attr('class','sja_filter_tag_btn')
         .style('padding','2px 7px')
-        .style('margin-left','10px')
+        .style('display','inline-block')
+        .style('margin-left','7px')
         .style('border-radius','6px')
         .style('background-color', '#4888BF')
         .html('&#43;')
@@ -73,7 +74,12 @@ group{}
 
         for(const [i, term] of group.terms.entries()){
 
-            const term_name_btn = terms_div.append('div')
+            const one_term_div = terms_div.append('div')
+                .style('white-space','nowrap')
+                .style('display','inline-block')
+                .style('padding','2px')
+
+            const term_name_btn = one_term_div.append('div')
                 .attr('class','sja_filter_tag_btn')
                 .style('border-radius','6px 0 0 6px')
                 .style('background-color', '#4888BF')
@@ -107,7 +113,7 @@ group{}
                     init(obj)
                 })
 
-            const condition_btn = terms_div.append('div')
+            const condition_btn = one_term_div.append('div')
                 .attr('class','sja_filter_tag_btn')
                 .style('background-color','#eeeeee')
                 .style('font-size','.7em')
@@ -136,14 +142,18 @@ group{}
                                 update_terms(terms_div)
                             })
                     })
-            } else {
+            } else if(term.term.isinteger || term.term.isfloat) {
                 // range label is not clickable
                 condition_btn.text('RANGE')
                     .style('background-color', '#015051')
                     .style('pointer-events','none')
+            }else if(term.term.iscondition) {
+                condition_btn.text('IS')
+                    .style('background-color', '#015051')
+                    .style('pointer-events','none')
             }
 
-            const term_value_div = terms_div.append('div')
+            const term_value_div = one_term_div.append('div')
                 .style('display','inline-block')
 
             if( term.term.iscategorical ) {
@@ -164,16 +174,11 @@ group{}
                             const wait = tip.d.append('div').text('Loading...')
                             tip.showunder( term_value_btn.node() )
 
-                            const arg = {
-                                genome: genome.name,
-                                dslabel: mds.label, 
-                                getcategories: 1,
-                                samplecountbyvcf: count_limit_vcf, // quick n dirty solution, to count using vcf samples
-                                termid : term.term.id
-                            }
+                            const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+count_limit_vcf]
 
                             try {
-                                const data = await client.dofetch( 'termdb', arg )
+                                const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
+                                const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
                                 if(data.error) throw data.error
                                 wait.remove()
 
@@ -241,16 +246,11 @@ group{}
                                     const wait = tip.d.append('div').text('Loading...')
                                     tip.showunder( add_value_btn.node() )
             
-                                    const arg = {
-                                        genome: genome.name,
-                                        dslabel: mds.label, 
-                                        getcategories: 1,
-                                        samplecountbyvcf: 1,
-                                        termid : term.term.id
-                                    }
+                                    const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+count_limit_vcf]
             
                                     try {
-                                        const data = await client.dofetch( 'termdb', arg )
+                                        const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
+                                        const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
                                         if(data.error) throw data.error
                                         wait.remove()
             
@@ -278,10 +278,19 @@ group{}
             } else if( term.term.isinteger || term.term.isfloat ) {
                 // TODO numerical term, print range in value button and apply the suitable click callback
                 display_numeric_filter(term, term_value_div)
+            } else if(term.term.iscondition){
+
+                    const term_value_btn = term_value_div.append('div')
+                        .attr('class','sja_filter_tag_btn')
+                        .style('font-size','1em')
+                        .style('padding','3px 4px 3px 4px')
+                        .style('margin-right','1px')
+                        .style('background-color', '#4888BF')
+                        .text(term.range.grade)
             }
 
             // button with 'x' to remove term2
-            terms_div.append('div')
+            one_term_div.append('div')
                 .attr('class','sja_filter_tag_btn')
                 .style('padding','3px 6px 3px 4px')
                 .style('border-radius','0 6px 6px 0')
@@ -299,25 +308,8 @@ group{}
     async function add_term(result){
 
         // Add new term to group.terms
-        for(let i=0; i < result.terms.length; i++){
-            const bar_term = result.terms[i]
-            const new_term = {
-                values: [{key: bar_term.value, label: bar_term.label}],
-                term: {
-                    id: bar_term.term.id,
-                    name: bar_term.term.name
-                }
-            }
-            if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
-            if(bar_term.term.isfloat) {
-                new_term.term.isfloat = bar_term.term.isfloat
-                new_term.range = bar_term.range
-            }
-            if(bar_term.term.isinteger) {
-                new_term.term.isinteger = bar_term.term.isinteger
-                new_term.range = bar_term.range
-            }
-
+        for(const [i, bar_term] of result.terms.entries()){
+            const new_term = make_new_term(bar_term)
             group.terms.push(new_term)
         }
         
@@ -336,25 +328,7 @@ group{}
             // replace the term by index of clicked term
             if(i == term_replce_index){
                 for(const [j, bar_term] of result.terms.entries()){
-                    const new_term = {
-                        values: [{key: bar_term.value, label: bar_term.label}],
-                        term: {
-                            id: bar_term.term.id,
-                            name: bar_term.term.name
-                        } 
-                    }
-                    new_term.isnot  = term.isnot ? true : false
-
-                    if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
-                    if(bar_term.term.isfloat) {
-                        new_term.term.isfloat = bar_term.term.isfloat
-                        new_term.range = bar_term.range
-                    }
-                    if(bar_term.term.isinteger) {
-                        new_term.term.isinteger = bar_term.term.isinteger
-                        new_term.range = bar_term.range
-                    }
-
+                    const new_term = make_new_term(bar_term)
                     new_terms.push(new_term)
                 }
             }else{
@@ -365,10 +339,10 @@ group{}
         // assing new terms to group
         group.terms = new_terms
         
-        // // update the group div with new terms
-        // may_settoloading_termgroup( group )
+        // update the group div with new terms
         await callback()
     }
+
 
     function display_numeric_filter(i, value_div){
 
@@ -510,7 +484,31 @@ group{}
     }
 }
 
+export function make_new_term(bar_term){
+        
+    const new_term = {
+        values: bar_term.values,
+        term: {
+            id: bar_term.term.id,
+            name: bar_term.term.name
+        }
+    }
+    if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
+    if(bar_term.term.isfloat) {
+        new_term.term.isfloat = bar_term.term.isfloat
+        new_term.range = bar_term.range
+    }
+    if(bar_term.term.isinteger) {
+        new_term.term.isinteger = bar_term.term.isinteger
+        new_term.range = bar_term.range
+    }
+    if(bar_term.term.iscondition) {
+        new_term.term.iscondition = bar_term.term.iscondition
+        new_term.range = bar_term.range
+    }
 
+    return new_term
+}
 
 
 function may_settoloading_termgroup ( group ) {
@@ -539,6 +537,10 @@ export function to_parameter ( terms ) {
 			values: i.values,
 			range: i.range,
 			isnot: i.isnot,
+			bar_by_grade: i.bar_by_grade,
+			bar_by_children: i.bar_by_children,
+			value_by_max_grade: i.value_by_max_grade,
+			value_by_most_recent: i.value_by_most_recent
 		}
 	})
 }
