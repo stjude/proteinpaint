@@ -711,7 +711,7 @@ export function bar_click_menu(obj, barclick, clickedBar) {
       .attr('class', 'sja_menuoption')
       .html(d=>d.label)
       .on('click', d => {
-        barclick(clickedBar, d.callback)
+        barclick(clickedBar, d.callback, obj)
       })
 
     obj.tip.show(d3event.clientX, d3event.clientY)

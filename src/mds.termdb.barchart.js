@@ -257,7 +257,7 @@ export class TermdbBarchart{
     const self = this
     const s = this.settings
 
-    function barclick(d, callback) {
+    function barclick(d, callback, obj=null) {
     /*
       d: clicked bar data
       callback
@@ -303,7 +303,11 @@ export class TermdbBarchart{
           }
         }
       } console.log(termValues, callback)
-      callback({terms: termValues})
+      if (obj) {
+        callback({terms: termValues})
+      } else {
+        callback(obj, {terms: termValues})
+      }
       self.obj.tip.hide()
     }
 
