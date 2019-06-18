@@ -319,10 +319,8 @@ export class TermdbBarchart{
       chart: {
         title(chart) {
           if (!self.terms.term0) return chart.chartId
-          const grade = self.terms.term0.graph
-              && self.terms.term0.graph.barchart 
-              && self.terms.term0.graph.barchart.grade_labels
-            ? self.terms.term0.graph.barchart.grade_labels.find(c => c.grade == chart.chartId)
+          const grade = self.grade_labels
+            ? self.grade_labels.find(c => c.grade == chart.chartId)
             : null
           return self.terms.term0.values
             ? self.terms.term0.values[chart.chartId].label
@@ -367,8 +365,8 @@ export class TermdbBarchart{
       },
       colLabel: {
         text: d => {
-          const grade = self.terms.term1.graph.barchart && self.terms.term1.graph.barchart.grade_labels
-            ? self.terms.term1.graph.barchart.grade_labels.find(c => c.grade == d)
+          const grade = self.grade_labels
+            ? self.grade_labels.find(c => c.grade == d)
             : null
           return self.terms.term1.values
             ? self.terms.term1.values[d].label
@@ -392,8 +390,8 @@ export class TermdbBarchart{
       },
       rowLabel: {
         text: d => {
-          const grade = self.terms.term1.graph.barchart && self.terms.term1.graph.barchart.grade_labels
-            ? self.terms.term1.graph.barchart.grade_labels.find(c => c.grade == d)
+          const grade = self.grade_labels
+            ? self.grade_labels.find(c => c.grade == d)
             : null
           return self.terms.term1.values
             ? self.terms.term1.values[d].label
