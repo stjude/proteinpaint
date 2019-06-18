@@ -276,7 +276,9 @@ function setOverlayOpts(plot, main, table, arg) {
     radio.inputs.property('checked', d => d.value == plot.settings.bar.overlay)
     const cu = plot.settings.common.conditionUnits
     radio.divs.style('display', d => {
-      if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+      if (d.value == "by_children") {
+        return plot.term.isleaf ? 'none' : 'block'
+      } else if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
         return plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'none'
       } else {
         const block = plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'inline-block'
