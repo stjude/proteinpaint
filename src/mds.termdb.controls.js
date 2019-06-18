@@ -677,8 +677,14 @@ function custom_bin(plot, main, binNum=1, btn){
     })
 }
 
-export function bar_click_menu(obj, menu, terms, barBins, clickedBar) {
-  let options = []
+export function bar_click_menu(obj, barclick, clickedBar) {
+/*
+  obj: the term tree obj
+  barclick: function to handle option click
+  clickedBar: the data associated with the clicked bar
+*/
+  const menu = obj.bar_click_menu
+  const options = []
   if (menu.add_filter) {
     options.push({
       label: "Add as filter", 
@@ -704,32 +710,10 @@ export function bar_click_menu(obj, menu, terms, barBins, clickedBar) {
     .enter().append('div')
       .attr('class', 'sja_menuoption')
       .html(d=>d.label)
-      .on('click', d=>{
-        const termValues = []
-        for(const index of [0,1,2]) {
-          const termNum = 'term' + index
-          const term = terms[termNum]
-          const bins = !barBins ? [] : barBins[index];
-          const key = termNum=="term1" ? clickedBar.seriesId : clickedBar.dataId
-          const label = !term || !term.values 
-            ? key
-            : termNum=="term1"
-              ? term.values[clickedBar.seriesId].label
-              : term.values[clickedBar.dataId].label
-
-          if (termNum != 'term0' && term) {
-            const range = !bins ? null : bins.find(d => d.label == label)
-            if (range) {
-              termValues.push({term, range})
-            } else {
-              termValues.push({term, values: [{key, label}]})
-            }
-          }
-        } console.log(termValues, d.callback)
-        d.callback(obj, termValues)
-        obj.tip.hide()
+      .on('click', d => {
+        barclick(clickedBar, d.callback)
       })
-      
-    obj.tip.show(event.clientX, event.clientY)
+
+    obj.tip.show(d3event.clientX, d3event.clientY)
   }
 }
