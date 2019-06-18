@@ -292,24 +292,27 @@ function update_cart_button(obj){
 				})
 		}
 
-		const tr_gp = table.append('tr')
-		const td_gp = tr_gp.append('td')
-			.attr('colspan',4)
-			.attr('align','center')
-			.style('padding','0')
+		if(obj.selected_groups.length > 1){
+			
+			const tr_gp = table.append('tr')
+			const td_gp = tr_gp.append('td')
+				.attr('colspan',4)
+				.attr('align','center')
+				.style('padding','0')
 
-		td_gp.append('div')
-			.attr('class','sja_filter_tag_btn')
-			.style('display','inline-block')
-			.style('height','100%')
-			.style('width','96%')
-			.style('padding','4px 10px')
-			.style('margin-top','10px')
-			.style('border-radius','3px')
-			.style('background-color','#eee')
-			.style('color','#000')
-			.text('Perform Association Test in GenomePaint')
-			.style('font-size','.8em')
+			td_gp.append('div')
+				.attr('class','sja_filter_tag_btn')
+				.style('display','inline-block')
+				.style('height','100%')
+				.style('width','96%')
+				.style('padding','4px 10px')
+				.style('margin-top','10px')
+				.style('border-radius','3px')
+				.style('background-color','#eee')
+				.style('color','#000')
+				.text('Perform Association Test in GenomePaint')
+				.style('font-size','.8em')
+		}
 	}
 }
 
