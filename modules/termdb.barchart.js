@@ -141,6 +141,7 @@ const template = JSON.stringify({
       "__:useRowOrder": "=useRowOrder()",
       "__:unannotatedLabels": "=unannotatedLabels()",
       "__:bins": "=bins()",
+      "__:grade_labels": "=grade_labels()",
       "@done()": "=sortColsRows()"
     }
   }
@@ -276,6 +277,11 @@ function getPj(q, inReqs, data, tdb) {
           "1": inReqs[1].bins,
           "2": inReqs[2].bins,
         }
+      },
+      grade_labels() {
+        return q.conditionParents && tdb.patient_condition
+          ? tdb.patient_condition.grade_labels 
+          : undefined
       }
     }
   })

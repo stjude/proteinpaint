@@ -128,6 +128,10 @@ export class TermdbBarchart{
       ? bins.crosstab_fixed_bins.map(d=>d.label).reverse()
       : null
 
+    self.grade_labels = chartsData.refs.grade_labels 
+      ? chartsData.refs.grade_labels
+      : null
+
     const rows = chartsData.refs.rows
     self.rowSorter = chartsData.refs.useRowOrder
       ? (a,b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
@@ -512,24 +516,15 @@ export class TermdbBarchart{
       })
     }
     if (s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
-      const t = this.terms.term2;  console.log(t)
+      const t = this.terms.term2
       const b = t.graph && t.graph.barchart ? t.graph.barchart : null
       const overlay = !t.iscondition || !b ? '' : b.value_choices.find(d => d[s.conditionUnits[2]])
-      const grades = b && t.iscondition 
-        ? [
-          { grade: 1, label: '1: Mild' },
-          { grade: 2, label: '2: Moderate' },
-          { grade: 3, label: '3: Severe' },
-          { grade: 4, label: '4: Life-threatening' },
-          { grade: 5, label: '5: Death' }
-        ]
-        : null
-        // b.grade_labels ? b.grade_labels : null
+      const grade_labels = b && t.iscondition ? this.grade_labels : null
       const colors = {}
       legendGrps.push({
         name: t.name + (overlay ? ': '+overlay.label : ''),
         items: s.rows.map(d => {
-          const g = grades ? grades.find(c => c.grade == d) : null
+          const g = grade_labels ? grade_labels.find(c => c.grade == d) : null
           return {
             dataId: d,
             text: g ? g.label : d,
