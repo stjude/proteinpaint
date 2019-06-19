@@ -174,8 +174,10 @@ function setOverlayOpts(plot, main, table, arg) {
       {label: 'Term', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
       {label: 'Subconditions', value: 'by_children'},
+      {label: 'Highest graded subconditions per person', value: 'max_graded_children'},
       {label: 'Max. grade per person', value: 'max_grade_perperson'},
-      {label: 'Most recent grade', value: 'most_recent_grade'}
+      {label: 'Max. grade by subcondition', value: 'max_grade_by_subcondition'},
+      {label: 'Most recent grade', value: 'most_recent_grade'},
     ]
   )
 
@@ -221,7 +223,13 @@ function setOverlayOpts(plot, main, table, arg) {
       showtree4selectterm( _arg, tr.node() )
     } else if (d.value == "genotype") {
       // to-do
-    } else if (d.value == "by_children" || d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+    } else if (
+        d.value == "by_children" 
+        || d.value == "max_graded_children" 
+        || d.value == "max_grade_perperson" 
+        || d.value == "most_recent_grade"
+        || d.value == "max_grade_by_subcondition"
+      ) {
       if (!plot.term2) plot.term2 = plot.term
       plot.settings.common.conditionUnits[2] = d.value
       plot.settings.common.conditionParents[2] = plot.term2.id
@@ -277,8 +285,16 @@ function setOverlayOpts(plot, main, table, arg) {
     const cu = plot.settings.common.conditionUnits
     radio.divs.style('display', d => {
       if (d.value == "by_children") {
-        return plot.term.isleaf ? 'none' : 'block'
+        if (plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id)) return 'none'
+        return plot.term.isleaf || cu[1] == 'by_children' ? 'none' : 'block'
+      } else if (d.value == "max_graded_children") {
+        if (cu[1] == 'by_children') return 'none'
+        return plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id) ? 'block' : 'none'
+      } else if (d.value == "max_grade_by_subcondition") {
+        if (cu[1] == 'max_grade_perperson' || cu[1] == "most_recent_grade") return 'none'
+        return plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id) ? 'block' : 'none'
       } else if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
+        if (plot.term.iscondition && plot.term2 && plot.term2.id == plot.term.id) return 'none'
         return plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'none'
       } else {
         const block = plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'inline-block'
