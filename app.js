@@ -26,7 +26,6 @@ const express=require('express'),
 	exec=child_process.exec,
 	path=require('path'),
 	sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
-	bettersqlite = require('better-sqlite3'),
 	createCanvas = require('canvas').createCanvas,
 	d3color=require('d3-color'),
 	d3stratify=require('d3-hierarchy').stratify,
@@ -53,7 +52,8 @@ const express=require('express'),
 	mds2_init = require('./modules/mds2.init'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
-	fimo = require('./modules/fimo')
+	fimo = require('./modules/fimo'),
+	utils = require('./modules/utils')
 
 
 
@@ -12223,7 +12223,8 @@ for(const genomename in genomes) {
 	{
 		let db
 		try {
-			db = new bettersqlite( path.join(serverconfig.tpmasterdir, g.genedb.dbfile), {readonly:true,fileMustExist:true})
+			db = utils.connect_db(g.genedb.dbfile)
+			//new bettersqlite( path.join(serverconfig.tpmasterdir, g.genedb.dbfile), {readonly:true,fileMustExist:true})
 		}catch(e){
 			return 'cannot read dbfile: '+g.genedb.dbfile
 		}
@@ -12261,7 +12262,8 @@ for(const genomename in genomes) {
 		if(!g.proteindomain.statement) return genomename+'.proteindomain: missing statement for sqlite db'
 		let db
 		try {
-			db = new bettersqlite( path.join(serverconfig.tpmasterdir,g.proteindomain.dbfile), {readonly:true,fileMustExist:true} )
+			db = utils.connect_db( g.proteindomain.dbfile )
+			//new bettersqlite( path.join(serverconfig.tpmasterdir,g.proteindomain.dbfile), {readonly:true,fileMustExist:true} )
 		} catch(e){
 			return 'cannot read dbfile: '+g.proteindomain.dbfile
 		}
@@ -12276,7 +12278,8 @@ for(const genomename in genomes) {
 
 		let db
 		try {
-			db = new bettersqlite( path.join(serverconfig.tpmasterdir,g.snp.dbfile), {readonly:true, fileMustExist:true} )
+			db = utils.connect_db( g.snp.dbfile )
+			//new bettersqlite( path.join(serverconfig.tpmasterdir,g.snp.dbfile), {readonly:true, fileMustExist:true} )
 		} catch(e) {
 			return 'cannot read dbfile: '+g.snp.dbfile
 		}
@@ -12681,6 +12684,23 @@ function mds_init(ds,genome, _servconfig) {
 	}
 
 	if(ds.cohort) {
+
+		if( ds.cohort.db ) {
+			// for mds2
+			if(!ds.cohort.db.file) return '.db.file missing'
+			let db
+			try {
+				db = utils.connect_db( ds.cohort.db.file )
+			}catch(e) {
+				return 'cannot read db file: '+ds.cohort.db.file
+			}
+			if(!ds.cohort.db.s) return '.s{} missing from cohort.db'
+			ds.cohort.db.q = {}
+			for(const statementkey in ds.cohort.db.s) {
+				ds.cohort.db.q[ statementkey ] = db.prepare( ds.cohort.db.s[ statementkey ] )
+			}
+		}
+
 		if(!ds.cohort.files) return '.files[] missing from .cohort'
 		if(!Array.isArray(ds.cohort.files)) return '.cohort.files is not array'
 
