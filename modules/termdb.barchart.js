@@ -105,14 +105,23 @@ const template = JSON.stringify({
         data: [{
           dataId: "@key",
           total: "+1",
-        }, "&vals.dataId[]"],
+        }, "&trickyVals.dataId[]"],
         max: "<&vals.value2",
         tempValues: ["&vals.value2"],
         tempSum: "+&vals.value2",
-        "__:boxplot": "=boxplot2()"
+        "__:boxplot": "=boxplot2()",
+        "@join()": {
+          // in a few cases, the dataId might depend on the seriesId 
+          trickyVals: "=trickyVals()"
+        },
       }, "&vals.seriesId[]"]
     }, "&vals.chartId[]"],
     "__:boxplot": "=boxplot1()",
+
+    testOnly: {
+      "&trickyVals.seriesDataId": "+1",
+    },
+
     unannotated: {
       label: "",
       label_unannotated: "",
@@ -159,16 +168,18 @@ function getPj(q, inReqs, data, tdb) {
     seed: `{"values": []}`, // result seed 
     template,
     "=": {
-      vals(row) {
+      vals(row, context, joinAlias) {
         // vals() is used as a @join function in the partjson 
         // template above. A join function that returns
         // a falsy value for a data row will cause the
         // exclusion of that row from farther processing
         if (!inReqs.filterFxn(row)) return undefined
 
-        const chartId = inReqs[0].joinFxns[q.term0](row)
-        const seriesId = inReqs[1].joinFxns[q.term1](row)
-        const dataId = inReqs[2].joinFxns[q.term2](row)
+
+        const chartId = inReqs[0].joinFxns[q.term0](row, context, joinAlias)
+        const seriesId = inReqs[1].joinFxns[q.term1](row, context, joinAlias)
+        const dataId = inReqs[2].joinFxns[q.term2](row, context, joinAlias)
+        
         if (chartId !== undefined && seriesId !== undefined && dataId !== undefined) {
           return {
             chartId: Array.isArray(chartId) ? chartId : [chartId],
@@ -181,6 +192,16 @@ function getPj(q, inReqs, data, tdb) {
               ? inReqs[2].numValFxns[q.term2](row)
               : undefined,
           }
+        }
+      },
+      trickyVals(row, context, joinAlias) {
+        const dataId = inReqs[2].joinFxns[q.term2](row, context, joinAlias)
+        return {
+          dataId: Array.isArray(dataId) ? dataId : [dataId],
+          seriesDataId: context && context.key == 2
+            && Array.isArray(dataId) && dataId.includes("Cardiovascular dysfunction")
+            ? "2:Cardiovascular dysfunction"
+            : undefined
         }
       },
       maxSeriesTotal(row, context) {
@@ -400,7 +421,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         const i = term.conditionlineage.indexOf(conditionParent)
         if (i < 1) continue // self is the first item in lineage and so it is not a child
         let graded = false
-        for(const event in row[k][events_key]) {
+        for(const event of row[k][events_key]) {
           if (!uncomputable[event[grade_key]]) {
             graded = true
             break
@@ -415,6 +436,58 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         }
       }
       return conditions
+    }
+  } else if (unit == 'max_graded_children') {
+    if (!conditionParent) throw "conditionParents must be specified when category is max_graded_children"
+    inReq.joinFxns[key] = (row, context, joinAlias) => {
+      const maxGrade = joinAlias !== "trickyVals" ? true : context.key;
+      const conditions = []
+      for(const k in row) {
+        if (!row[k][events_key]) continue
+        const term = tdb.termjson.map.get(k)
+        if (!term || !term.conditionlineage) continue
+        const i = term.conditionlineage.indexOf(conditionParent)
+        if (i < 1) continue // self is the first item in lineage and so it is not a child
+        let maxGraded = false; 
+        for(const event of row[k][events_key]) {
+          if (maxGrade === true || event[grade_key] == maxGrade) {
+            maxGraded = true
+            break
+          }
+        }
+        if (maxGraded) { 
+          // get the immediate child of the parent condition in the lineage
+          const child = term.conditionlineage[i - 1];
+          if (!conditions.includes(child)) {
+            conditions.push(child);
+          }
+        }
+      }
+      return conditions
+    }
+  } else if (unit == 'max_grade_by_subcondition') {
+    if (!conditionParent) throw "conditionParents must be specified when category is max_grade_by_subcondition"
+    inReq.joinFxns[key] = (row, context, joinAlias) => {
+      if (joinAlias !== "trickyVals") return [1,2,3,4,5]
+      const child = context.key;
+      let maxGrade; 
+      for(const k in row) {
+        if (!row[k][events_key]) continue
+        const term = tdb.termjson.map.get(k); //if (j<20) {console.log(child, 476); j++}
+        if (!term || !term.conditionlineage || !term.conditionlineage.includes(child)) continue
+        //const i = term.conditionlineage.indexOf(conditionParent); if (j<10) {console.log(child, i, 478); j++}
+        //if (i < 1) continue // self is the first item in lineage and so it is not a child
+        for(const event of row[k][events_key]) { 
+          const grade = event[grade_key];  //if (j<20) {console.log(child, grade, 481, uncomputable[grade]); j++}
+          if (uncomputable[grade]) continue; //if (j<20) {console.log(child, grade, 482); j++}
+          if (maxGrade === undefined || maxGrade < grade) {
+            maxGrade = grade
+          }
+        }
+      }
+      if (maxGrade !== undefined) {
+        return [maxGrade]
+      }
     }
   } else {
     throw `invalid condition unit: '${unit}'`
