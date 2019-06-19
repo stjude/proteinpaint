@@ -255,7 +255,7 @@ supply sample count annotated to each category
 if q.samplecountbyvcf, will count from vcf samples
 otherwise, count from all samples
 */
-	const t = tdb.termjson.map.get( q.tid )
+	const t = tdb.q.termjsonByOneid( q.tid )
 	if(!t) throw 'unknown term id'
 	if(!t.iscategorical) throw 'term not categorical'
 	const category2count = new Map()
@@ -310,6 +310,26 @@ exports.server_init = ( ds ) => {
 	server_init_parse_termjson( termdb )
 
 	server_init_mayparse_patientcondition( ds )
+
+	server_init_db_queries( ds )
+}
+
+
+
+
+function server_init_db_queries ( ds ) {
+// produce function wrappers to each db query
+	const q = ds.cohort.db.q
+	ds.cohort.termdb.q = {}
+	const q2 = ds.cohort.termdb.q
+	if(!q.termjsonByOneid) throw 'db query missing: termjsonByOneid'
+	q2.termjsonByOneid = (id)=>{
+		const t = q.termjsonByOneid.get( id )
+		if(t) {
+			return JSON.parse(t.jsondata)
+		}
+		return
+	}
 }
 
 
