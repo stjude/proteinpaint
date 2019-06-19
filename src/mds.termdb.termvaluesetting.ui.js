@@ -11,7 +11,7 @@ to_parameter
 
 
 
-export async function display ( group_div, group, mds, genome, count_limit_vcf, callback){
+export async function display ( group_div, group, mds, genome, vcf_filter, callback){
 /*
 group{}
 	.terms[]
@@ -28,6 +28,11 @@ group{}
         .style('display','inline-block')
 
     const tip = new client.Menu({padding:'0'})
+
+    let vcf_filter_str = false
+    if(vcf_filter) {
+        vcf_filter_str = JSON.stringify(vcf_filter[0])
+    }
 
     update_terms(terms_div)
 
@@ -174,7 +179,7 @@ group{}
                             const wait = tip.d.append('div').text('Loading...')
                             tip.showunder( term_value_btn.node() )
 
-                            const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+count_limit_vcf]
+                            const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+vcf_filter_str]
 
                             try {
                                 const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
@@ -246,7 +251,7 @@ group{}
                                     const wait = tip.d.append('div').text('Loading...')
                                     tip.showunder( add_value_btn.node() )
             
-                                    const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+count_limit_vcf]
+                                    const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+vcf_filter_str]
             
                                     try {
                                         const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
