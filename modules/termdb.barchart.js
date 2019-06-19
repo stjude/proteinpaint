@@ -132,7 +132,7 @@ const template = JSON.stringify({
       //chartkey: "&vals.term0",
       cols: ["&vals.seriesId[]"],
       colgrps: ["-"], 
-      rows: ["&vals.dataId[]"],
+      "_:_rows": ["&trickyVals.dataId[]"],
       rowgrps: ["-"],
       col2name: {
         "&vals.seriesId[]": {
@@ -360,35 +360,58 @@ async function setValFxns(q, inReqs, ds, tdb) {
       inReq.orderedLabels = t.grades ? t.grades : [0,1,2,3,4,5,9] // hardcoded default order
       const unit = conditionUnits[i]
       const parent = conditionParents[i]
-      set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq, parent)
+      set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq, parent, conditionUnits, i)
     } else {
       throw "unsupported term binning"
     }
   }
 }
 
-function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
+function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionUnits, index) {
   const events_key = tdb.patient_condition.events_key
   const grade_key = tdb.patient_condition.grade_key
   const age_key = tdb.patient_condition.age_key
   const uncomputable = tdb.patient_condition.uncomputable_grades || {}
   if (unit == 'max_grade_perperson') {
-    inReq.joinFxns[key] = row => {
-      let maxGrade
-      for(const k in row) {
-        if (!row[k][events_key]) continue
-        const term = tdb.termjson.map.get(k)
-        if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+    if (index==1 && conditionUnits[2] == "max_grade_by_subcondition") {
+      inReq.joinFxns[key] = (row, context, joinAlias) => {
+        const maxGradeByCond = {}
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k)
+          if (!term || !term.conditionlineage) continue
+          const i = term.conditionlineage.indexOf(conditionParent)
+          if (i < 1) continue // self is the first item in lineage and so it is not a child
+          const child = term.conditionlineage[i - 1];
           for(const event of row[k][events_key]) {
             const grade = event[grade_key]
             if (uncomputable[grade]) continue
-            if (maxGrade === undefined || maxGrade < grade) {
-              maxGrade = grade
+            if (!(child in maxGradeByCond) || maxGradeByCond[child] < grade) {
+              maxGradeByCond[child] = grade
             }
           }
         }
+        return Object.values(maxGradeByCond).filter((v, i, a) => a.indexOf(v) === i); 
       }
-      return maxGrade ? [maxGrade] : []
+    }
+    else {
+      inReq.joinFxns[key] = (row, context, joinAlias) => {
+        let maxGrade
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k)
+          if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+            for(const event of row[k][events_key]) {
+              const grade = event[grade_key]
+              if (uncomputable[grade]) continue
+              if (maxGrade === undefined || maxGrade < grade) {
+                maxGrade = grade
+              }
+            }
+          }
+        }
+        return maxGrade ? [maxGrade] : []
+      }
     }
   } else if (unit == 'most_recent_grade') {
     inReq.joinFxns[key] = row => {
@@ -467,26 +490,57 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
     }
   } else if (unit == 'max_grade_by_subcondition') {
     if (!conditionParent) throw "conditionParents must be specified when category is max_grade_by_subcondition"
-    inReq.joinFxns[key] = (row, context, joinAlias) => {
-      if (joinAlias !== "trickyVals") return [1,2,3,4,5]
-      const child = context.key;
-      let maxGrade; 
-      for(const k in row) {
-        if (!row[k][events_key]) continue
-        const term = tdb.termjson.map.get(k); //if (j<20) {console.log(child, 476); j++}
-        if (!term || !term.conditionlineage || !term.conditionlineage.includes(child)) continue
-        //const i = term.conditionlineage.indexOf(conditionParent); if (j<10) {console.log(child, i, 478); j++}
-        //if (i < 1) continue // self is the first item in lineage and so it is not a child
-        for(const event of row[k][events_key]) { 
-          const grade = event[grade_key];  //if (j<20) {console.log(child, grade, 481, uncomputable[grade]); j++}
-          if (uncomputable[grade]) continue; //if (j<20) {console.log(child, grade, 482); j++}
-          if (maxGrade === undefined || maxGrade < grade) {
-            maxGrade = grade
+    const parentUnit = conditionUnits[index-1]
+    if (parentUnit == "by_children") {
+      inReq.joinFxns[key] = (row, context, joinAlias) => {
+        if (joinAlias !== "trickyVals") return [1,2,3,4,5]
+        const child = context.key;
+        let maxGrade; 
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k); //if (j<20) {console.log(child, 476); j++}
+          if (!term || !term.conditionlineage || !term.conditionlineage.includes(child)) continue
+          //const i = term.conditionlineage.indexOf(conditionParent); if (j<10) {console.log(child, i, 478); j++}
+          //if (i < 1) continue // self is the first item in lineage and so it is not a child
+          for(const event of row[k][events_key]) { 
+            const grade = event[grade_key];  //if (j<20) {console.log(child, grade, 481, uncomputable[grade]); j++}
+            if (uncomputable[grade]) continue; //if (j<20) {console.log(child, grade, 482); j++}
+            if (maxGrade === undefined || maxGrade < grade) {
+              maxGrade = grade
+            }
           }
         }
+        if (maxGrade !== undefined) {
+          return [maxGrade]
+        }
       }
-      if (maxGrade !== undefined) {
-        return [maxGrade]
+    } else {
+      inReq.joinFxns[key] = (row, context, joinAlias) => {
+        const maxGrade = joinAlias !== "trickyVals" ? true : context.key;
+        const maxGradeByCond = {}; 
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k)
+          if (!term || !term.conditionlineage) continue
+          const i = term.conditionlineage.indexOf(conditionParent)
+          if (i < 1) continue // self is the first item in lineage and so it is not a child
+          const child = term.conditionlineage[i - 1];
+          
+          for(const event of row[k][events_key]) {
+            const grade = event[grade_key]
+            if (uncomputable[grade]) continue
+            if (!(child in maxGradeByCond) || maxGradeByCond[child] < grade) {
+              maxGradeByCond[child] = grade
+            }
+          }
+        }
+        const conditions = []
+        for(const child in maxGradeByCond) {
+          if (maxGradeByCond[child] == maxGrade && !conditions.includes(child)) {
+            conditions.push(child)
+          }
+        }
+        return conditions
       }
     }
   } else {

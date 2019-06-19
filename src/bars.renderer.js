@@ -397,7 +397,7 @@ export default function barsRenderer(barsapp, holder) {
         for(const data of series.visibleData) {
           data.height = getRectHeight(data)
           data.y = getRectY(data)
-          // calculate x before width
+          // calculate x before width 
           data.x = getRectX(data)
           data.width = getRectWidth(data)
         }
@@ -448,7 +448,7 @@ export default function barsRenderer(barsapp, holder) {
       .data(series.data.filter(filterData), cellKey);
 
     g.exit().each(function() {
-      select(this).style("display", "none");
+      select(this).remove() //style("display", "none");
     });
 
     g.style("display", d => {
@@ -456,12 +456,13 @@ export default function barsRenderer(barsapp, holder) {
     });
 
     g.select("rect")
+      .datum(d=>d)
       .transition()
       .duration(hm.duration)
-      .attr("width", d => d.width)
-      .attr("height", d => d.height)
       .attr("x", d => d.x)
       .attr("y", d => d.y)
+      .attr("width", d => d.width)
+      .attr("height", d => d.height)
       .attr("fill", hm.handlers.series.rectFill);
 
     g.enter()
@@ -490,15 +491,14 @@ export default function barsRenderer(barsapp, holder) {
       .datum(d);
 
     g.style("display", d => {
-      //if (d.rowId=='Arrhythmias') console.log(d.colId)
       return hm.cols.includes(d.colId) ? "block" : "none";
     });
 
     g.append("rect")
-      .attr("width", d => d.width)
-      .attr("height", d => d.height)
       .attr("x", d => d.x)
       .attr("y", d => d.y)
+      .attr("width", d => d.width)
+      .attr("height", d => d.height)
       .attr("fill", hm.handlers.series.rectFill)
       .attr("shape-rendering", "crispEdges")
       .style("opacity", 0)
@@ -539,6 +539,7 @@ export default function barsRenderer(barsapp, holder) {
       ? hm.colw 
       : hm.h.xScale[d.seriesId](total)
     const colspace = 0; //Math.round(width) > 1 ? hm.colspace : 0;
+    const prev = hm.h.xPrevBySeries[d.seriesId]
     hm.h.xPrevBySeries[d.seriesId] += Math.max(1, width + colspace)
     return Math.max(1, width - colspace);
   }
@@ -851,7 +852,7 @@ export default function barsRenderer(barsapp, holder) {
       currCell = d;
       //if (!hm.showgrid) currRects.style('stroke', rectStroke)
       //else {
-      const x = getRectX(d);
+      const x = d.x;
       const y = getRectY(d.cellmates ? d.cellmates[0] : d);
       if (clusterRenderer) clusterRenderer.rowcolline(d, x, y);
       //}
