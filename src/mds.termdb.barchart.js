@@ -21,6 +21,7 @@ export class TermdbBarchart{
       holder: opts.holder,
       barDiv: opts.holder.append('div'),
       legendDiv: opts.holder.append('div')
+        .style('margin', '5px 5px 15px 5px')
     }
     this.defaults = Object.assign(
       JSON.parse(rendererSettings),
@@ -470,15 +471,15 @@ export class TermdbBarchart{
           const d = event.target.__data__
           if (d === undefined) return
           if (d.type == 'col') {
-            const i = self.settings.exclude.cols.indexOf(d.text)
+            const i = self.settings.exclude.cols.indexOf(d.id)
             if (i == -1) return
             self.settings.exclude.cols.splice(i,1)
             self.main()
           }
           if (d.type == 'row') {
-            const i = self.settings.exclude.rows.indexOf(d.text)
+            const i = self.settings.exclude.rows.indexOf(d.id)
             if (i == -1) {
-              self.settings.exclude.rows.push(d.text)
+              self.settings.exclude.rows.push(d.id)
             } else {
               self.settings.exclude.rows.splice(i,1)
             }
@@ -545,6 +546,10 @@ export class TermdbBarchart{
     const legendGrps = [] 
     const s = this.settings
     if (s.exclude.cols.length) {
+      const t = this.terms.term1
+      const b = t.graph && t.graph.barchart ? t.graph.barchart : null
+      const grade_labels = b && t.iscondition ? this.grade_labels : null
+
       legendGrps.push({
         name: "Hidden " + this.terms.term1.name + " value",
         items: s.exclude.cols
@@ -553,8 +558,12 @@ export class TermdbBarchart{
             const total = chart.serieses
               .filter(c => c.seriesId == collabel)
               .reduce((sum, b) => sum + b.total, 0)
+            
+            const grade = grade_labels ? grade_labels.find(c => c.grade == collabel) : null
+            
             return {
-              text: collabel,
+              id: collabel,
+              text: grade ? grade.label : collabel,
               color: "#fff",
               textColor: "#000",
               border: "1px solid #333",
