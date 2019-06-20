@@ -554,6 +554,7 @@ export function to_parameter ( terms ) {
 				iscategorical: i.term.iscategorical,
 				isfloat: i.term.isfloat,
 				isinteger: i.term.isinteger,
+				iscondition: i.term.iscondition
 			},
 			// must return original values[{key,label}] to keep the validator function happy on both client/server
 			values: i.values,
@@ -562,7 +563,8 @@ export function to_parameter ( terms ) {
 			bar_by_grade: i.bar_by_grade,
 			bar_by_children: i.bar_by_children,
 			value_by_max_grade: i.value_by_max_grade,
-			value_by_most_recent: i.value_by_most_recent
+			value_by_most_recent: i.value_by_most_recent,
+			grade_and_child: i.grade_and_child
 		}
 	})
 }
