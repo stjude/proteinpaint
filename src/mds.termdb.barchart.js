@@ -266,6 +266,7 @@ export class TermdbBarchart{
       d: clicked bar data
       callback
     */
+
       const termValues = []
       for(const index of [0,1,2]) { 
         const termNum = 'term' + index
@@ -273,7 +274,10 @@ export class TermdbBarchart{
         if (termNum == 'term0' || !term) continue
 
         const key = termNum=="term1" ? d.seriesId : d.dataId
-        const label = !term.values 
+        const cu = self.settings.conditionUnits
+        const label = term.iscondition && self.grade_labels && (cu[index] == "max_grade_perperson" || cu[index] == "most_recent_grade")
+          ? self.grade_labels.find(c => c.grade == key).label
+          : !term.values 
           ? key
           : termNum=="term1"
             ? term.values[d.seriesId].label
@@ -281,20 +285,47 @@ export class TermdbBarchart{
 
         if (term.iscondition) {
           const unit = self.settings.conditionUnits[index]
-          if (unit == "by_children") {
+          if (term.isleaf) {
             termValues.push({
               term,
-              bar_by_children: true,
-              values: [{key, label}]
-            })
-          }
-          else {
-            termValues.push({
-              term,
-              bar_by_grade: true,
+              values:[{key,label}],
+              bar_by_grade:true,
               value_by_max_grade: unit == "max_grade_perperson",
               value_by_most_recent: unit == "most_recent_grade",
-              values: [{key, label}]
+            })
+          } else if (!self.terms.term2) {
+            if (unit == "bar_by_grade") {
+              termValues.push({
+                term,
+                values:[{key,label}],
+                bar_by_grade:true,
+                value_by_max_grade: unit == "max_grade_perperson",
+                value_by_most_recent: unit == "most_recent_grade",
+              })
+            } else if (unit == "bar_by_children") {
+              termValues.push({
+                term,
+                values:[{key,label}],
+                bar_by_children:true
+              })
+            }
+          } else if (index == 1 && term.id == self.terms.term2.id) {
+            const term2Label = unit == "by_children" 
+              ? self.grade_labels.find(c => c.grade == d.dataId).label
+              : self.terms.term2.values
+              ? self.terms.term2.values[d.dataId].label
+              : d.dataId
+
+            termValues.push({
+              term,
+              grade_and_child: [{
+                grade: unit == "by_children" ? d.dataId : key,
+                grade_label: unit == "by_children" ? term2Label : label ,
+                child_id: unit == "by_children" ? key : d.dataId,
+                child_label: unit == "by_children" ? label : term2Label
+              }],
+              value_by_max_grade: unit == "max_grade_perperson",
+              value_by_most_recent: unit == "most_recent_grade",
             })
           }
         } else {
@@ -306,10 +337,10 @@ export class TermdbBarchart{
             termValues.push({term, values: [{key, label}]})
           }
         }
-      } console.log(termValues, callback)
+      }
       if (!obj) {
         callback({terms: termValues})
-      } else { console.log(obj)
+      } else {
         callback(obj, termValues)
       }
       self.obj.tip.hide()
