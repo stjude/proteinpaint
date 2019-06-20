@@ -137,7 +137,7 @@ rl.on('line',line=>{
 	}
 
 	// output row for this event
-	console.log(patient+'\t'+condition+'\t\t'+grade+'\t'+age+'\t'+yearstoevent)
+	console.log(patient+'\t'+condition+'\t'+grade+'\t'+age+'\t'+yearstoevent)
 
 	// record event for this patient
 	if(!patient2condition.has(patient)) {
