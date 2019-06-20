@@ -344,23 +344,26 @@ export class TermdbBarchart{
           const dataGrade = self.grade_labels
             ? self.grade_labels.find(c => c.grade == d.dataId)
             : null
-          const seriesLabel = term1.values
+          const seriesLabel = (term1.values
             ? term1.values[d.seriesId].label
             : term1.iscondition && seriesGrade
             ? seriesGrade.label
-            : d.seriesId
-          const dataLabel = term2 && term2.values
+            : d.seriesId) + (term1.unit ? ' '+ term1.unit : '')
+          const dataLabel = (term2 && term2.values
             ? term2.values[d.dataId].label
             : term2 && term2.iscondition && dataGrade
             ? dataGrade.label
-            : d.dataId
-          const html = /*term1.name +': ' +*/ seriesLabel +
-            (!term2 ? "" : "<br/>" + /*term2.name +": "+*/ dataLabel) + 
-            "<br/>Total: " + d.total + 
+            : d.dataId) + (term2 && term2.unit ? ' '+ term2.unit : '')
+          const icon = !term2
+            ? ''
+            : "<div style='display:inline-block; width:12px; height:12px; margin: 2px 3px; vertical-align:top; background:"+d.color+"'>&nbsp;</div>"
+          const html = '<span>'+ seriesLabel + '</span>' +
+            (!term2 ? "" : "<br/>" + icon + '<span>' + dataLabel + '</span>') + 
+            "<br/><span>Total: " + d.total + '</span>' + 
             (
               !term2 
               ? "" 
-              : "<br/>Percentage: " + (100*d.total/d.seriesTotal).toFixed(1) + "%"
+              : "<br/><span>Percentage: " + (100*d.total/d.seriesTotal).toFixed(1) + "%</span>"
             );
           tip.show(event.clientX, event.clientY).d.html(html);
         },

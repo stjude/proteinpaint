@@ -120,7 +120,7 @@ const template = JSON.stringify({
       }, "&series.id[]"]
     }, "&chart.id[]"],
     "__:boxplot": "=boxplot1()",
-    unannotated: {
+    "_:_unannotated": {
       label: "",
       label_unannotated: "",
       value: "+=unannotated()",
@@ -230,23 +230,25 @@ function getPj(q, inReqs, data, tdb) {
       },
       unannotated(row, context) {
         const series = context.joins.get('series')
+        if (!series) return
         let total = 0
         for(const s of series.id) {
           if (s === inReqs[1].unannotated.label) {
             total += 1
           }
         }
-        return  total
+        return total
       },
       annotated(row, context) {
         const series = context.joins.get('series')
+        if (!series) return
         let total = 0
         for(const s of series.id) {
           if (s !== inReqs[1].unannotated.label) {
             total += 1
           }
         }
-        return  total
+        return total
       },
       sortColsRows(result) {
         if (inReqs[1].orderedLabels.length) {
