@@ -36,8 +36,19 @@ runproteinpaint({
 								is_termdb:true,
 								terms:[
 									{
-										term:{id:'diaggrp',name:'Diagnosis Group',iscategorical:true},
-										values:[{key:'Neuroblastoma',label:'Neuroblastoma'}]
+										//term:{id:'Asthma',name:'Asthma',iscondition:true},
+										term:{id:'Arrhythmias',name:'Arrhythmias',iscondition:true},
+										//bar_by_children:true,
+										bar_by_grade:true,
+										values:[{key:1,label:'1 - mild'}],
+										/*
+										values:[{key:'Conduction abnormalities',label:'Conduction abnormalities'}]
+										grade_and_child:[{
+											grade:1,
+											child_id:'Conduction abnormalities'
+										}],
+										*/
+										value_by_max_grade:true,
 									}
 								]
 							},
