@@ -31,7 +31,7 @@ group{}
 
     let vcf_filter_str = false
     if(vcf_filter) {
-        vcf_filter_str = JSON.stringify(vcf_filter[0])
+        vcf_filter_str = JSON.stringify(to_parameter(vcf_filter))
     }
 
     update_terms(terms_div)
