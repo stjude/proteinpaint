@@ -469,9 +469,10 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
       }
       return conditions
     }
-  } else if (unit == 'max_graded_children') {
+  } /* might re-enable this option later
+  else if (unit == 'max_graded_children') {
     if (!conditionParent) throw "conditionParents must be specified when category is max_graded_children"
-    inReq.joinFxns[key] = (row, context, joinAlias) => {
+    inReq.joinFxns[key] = (row, context) => {
       const maxGrade = context.key
       const conditions = []
       for(const k in row) {
@@ -497,11 +498,11 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
       }
       return conditions
     }
-  } else if (unit == 'max_grade_by_subcondition') {
+  }*/ else if (unit == 'max_grade_by_subcondition') {
     if (!conditionParent) throw "conditionParents must be specified when category is max_grade_by_subcondition"
     const parentUnit = conditionUnits[index-1]
     if (parentUnit == "by_children") {
-      inReq.joinFxns[key] = (row, context, joinAlias) => {
+      inReq.joinFxns[key] = (row, context) => {
         const child = context.key;
         let maxGrade; 
         for(const k in row) {
@@ -523,7 +524,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
         }
       }
     } else if (parentUnit == "max_grade_perperson") {
-      inReq.joinFxns[key] = (row, context, joinAlias) => {
+      inReq.joinFxns[key] = (row, context) => {
         const maxGrade = context.key
         const maxGradeByCond = {}; 
         for(const k in row) {
@@ -551,7 +552,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
         return conditions
       }
     } else if (parentUnit == "most_recent_grade") {
-      inReq.joinFxns[key] = (row, context, joinAlias) => {
+      inReq.joinFxns[key] = (row, context) => {
         const mostRecentGrade = context.key
         const byCond = {}; 
         for(const k in row) {

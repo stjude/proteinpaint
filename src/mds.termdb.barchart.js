@@ -335,15 +335,32 @@ export class TermdbBarchart{
         },
       },
       series: {
-        mouseover(d) { 
-          const terms = self.terms
-          const html = terms.term1.name +': ' + d.seriesId +
-            (!terms.term2 ? "" : "<br/>" + terms.term2.name +": "+ d.dataId) + 
+        mouseover(d) {
+          const term1 = self.terms.term1
+          const term2 = self.terms.term2 ? self.terms.term2 : null
+          const seriesGrade = self.grade_labels
+            ? self.grade_labels.find(c => c.grade == d.seriesId)
+            : null
+          const dataGrade = self.grade_labels
+            ? self.grade_labels.find(c => c.grade == d.dataId)
+            : null
+          const seriesLabel = term1.values
+            ? term1.values[d.seriesId].label
+            : term1.iscondition && seriesGrade
+            ? seriesGrade.label
+            : d.seriesId
+          const dataLabel = term2 && term2.values
+            ? term2.values[d.dataId].label
+            : term2 && term2.iscondition && dataGrade
+            ? dataGrade.label
+            : d.dataId
+          const html = /*term1.name +': ' +*/ seriesLabel +
+            (!term2 ? "" : "<br/>" + /*term2.name +": "+*/ dataLabel) + 
             "<br/>Total: " + d.total + 
             (
-              !terms.term2 
+              !term2 
               ? "" 
-              : "<br/>Percentage: " + (100*d.total/d.seriesTotal).toFixed(1) + "% of " + d.seriesId
+              : "<br/>Percentage: " + (100*d.total/d.seriesTotal).toFixed(1) + "%"
             );
           tip.show(event.clientX, event.clientY).d.html(html);
         },
