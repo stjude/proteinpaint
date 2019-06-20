@@ -297,7 +297,7 @@ function setOverlayOpts(plot, main, table, arg) {
         return plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id) ? 'block' : 'none'
       }*/ else if (d.value == "max_grade_by_subcondition") {
         // if (cu[1] == 'max_grade_perperson' || cu[1] == "most_recent_grade") return 'none'
-        return plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id) ? 'block' : 'none'
+        return !plot.term.isleaf && plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id) ? 'block' : 'none'
       } /*else if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
         if (plot.term.iscondition && plot.term2 && plot.term2.id == plot.term.id) return 'none'
         return plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'none'
