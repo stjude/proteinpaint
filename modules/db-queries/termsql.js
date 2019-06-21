@@ -44,7 +44,8 @@ export function handle_request_closure(genomes) {
 
 function listExampleUrls(res) {
   // do not show this if in production
-  const path= "/termsql?genome=hg38&dslabel=SJLife&"
+  const path = "/termsql?genome=hg38&dslabel=SJLife&"
+  const urls = []
   const items = [
     {
       title: "Same condition, overlay=children",
@@ -72,6 +73,7 @@ function listExampleUrls(res) {
       params.push(key + "=" + encodeURIComponent(d.params[key]))
     }
     const url = path + params.join('&')
+    urls.push(url)
     return `<li onclick='fetch("${url}").then(response=>response.json()).then(console.log)' style="cursor: pointer; margin:5px;">
       ${d.title}: ${d.description}
     </li>`
@@ -79,9 +81,17 @@ function listExampleUrls(res) {
 
   res.send(`
     <h2>Example Requests</h2>
-    <p>To use, <b>click on a list entry</b> then check dev tools.</p>
+    <p>To use, <b>click on a list entry</b> then check your browser's dev tools.</p>
+    <button onclick='runAll()'>Run All Examples</button>
     <h3>Condition terms</h3>
     <ul>${items}</ul>
+    <script>
+      function runAll() {
+        ${JSON.stringify(urls)}.forEach(url=>{
+          fetch(url).then(response=>response.json()).then(data=>console.log(url,data))
+        })
+      }
+    </script>
   `)
 }
 
