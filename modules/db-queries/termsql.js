@@ -100,30 +100,45 @@ function handleOneTerm(db, term1, q) {
       GROUP BY a.value`
     return db.prepare(sql).all([term1.id])
   } else {
-    // this statement will have to be dynamically prepared since
-    // the number of filters is request dependent
-    const filterCond = []
-    const filterVals = []
-    for(const filter of filters) {
-      const values = filter.values.map(d=>"?").join(",")
-      filterCond.push(`(term_id=? AND value IN (${values}))`)
-      // convert d.key to string since value data type is varchar
-      filterVals.push(filter.term.id, ...filter.values.map(d=>''+d.key))
-    }
-
-    const sql = `WITH
-      filtered AS (
-        SELECT sample
-        FROM annotations
-        WHERE ${filterCond.join(" AND ")}
-      )
+    const f = getFilters(filters);
+    const sql = `${f.with}
       SELECT a.value, COUNT(distinct a.sample) AS count
       FROM annotations a
-      JOIN filtered f ON f.sample = a.sample
+      JOIN filtered${filters.length-1} f ON f.sample = a.sample
       WHERE term_id=?
-      GROUP BY a.value`
+      GROUP BY a.value`; console.log(sql, [...f.filterVals, term1.id])
 
-    return db.prepare(sql).all(...filterVals, term1.id)
+    return db.prepare(sql).all(...f.filterVals, term1.id)
+  }
+}
+
+function getFilters(filters) {
+  // this statement will have to be dynamically prepared since
+  // the number of filters is request dependent
+  const filterStmt = []
+  const filterVals = []
+  filters.forEach((filter,i) => {
+    const symbols = filter.values.map(d=>"?").join(",")
+    if (i==0) {
+      filterStmt.push(`filtered${i} AS (
+        SELECT sample
+        FROM annotations
+        WHERE term_id=? AND value IN (${symbols})
+      )`)
+    } else {
+      filterStmt.push(`filtered${i} AS (
+        SELECT a.sample
+        FROM annotations a
+        INNER JOIN filtered${i-1} f ON f.sample = a.sample 
+        WHERE term_id=? AND value IN (${symbols})
+      )`)
+    }
+    // convert d.key to string since value data type is varchar
+    filterVals.push(filter.term.id, ...filter.values.map(d=>''+d.key))
+  })
+  return {
+    with: `WITH\n${filterStmt.join(",\n")}`, 
+    filterVals
   }
 }
 

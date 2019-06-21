@@ -29,7 +29,7 @@ tape("conditions", function (test) {
 })
 
 tape("one term, no overlay", function (test) {
-  test.plan(examples.data.conditions.length)
+  test.plan(examples.data.oneTerm.length)
   for(const example of examples.data.oneTerm) {
     request(examples.getURL(example),(error,response,body)=>{
       if(error) {
