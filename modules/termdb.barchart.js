@@ -65,10 +65,12 @@ async function barchart_data ( q, ds, res, tdb ) {
   if(!ds.cohort) throw 'cohort missing from ds'
   if(!ds.cohort.annorows) throw `cohort.annorows is missing`
   // request-specific variables
+  const startTime = +(new Date())
   const inReqs = [getTrackers(), getTrackers(), getTrackers()]
   inReqs.filterFxn = ()=>1 // default allow all rows, may be replaced via q.termfilter
-  await setValFxns(q, inReqs, ds, tdb)
+  await setValFxns(q, inReqs, ds, tdb);
   const pj = getPj(q, inReqs, ds.cohort.annorows, tdb)
+  pj.tree.results.pjtime = pj.times
   res.send(pj.tree.results)
 }
 
@@ -88,7 +90,7 @@ function getTrackers() {
 // have to be re-stringified within partjson refresh for every request
 const template = JSON.stringify({
   "@errmode": ["","","",""],
-  "@before()": "=filter()",
+  "@before()": "=prep()",
   "_:_sum": "+&series.value",
   "_:_values": ["&series.value"],
   results: {
@@ -109,6 +111,7 @@ const template = JSON.stringify({
         },
         total: "+1",
         seriesId: "@key",
+        samples: ["$sjlid"],
         data: [{
           dataId: "@key",
           total: "+1",
@@ -167,9 +170,10 @@ function getPj(q, inReqs, data, tdb) {
     seed: `{"values": []}`, // result seed 
     template,
     "=": {
-      filter(row) {
+      prep(row) {
         // a falsy filter value for a data row will cause the
         // exclusion of that row from farther processing
+        if (!row._computed_) row._computed_ = Object.create(null)
         return inReqs.filterFxn(row)
       },
       idVal(row, context, joinAlias) {

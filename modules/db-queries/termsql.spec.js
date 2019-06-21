@@ -17,7 +17,9 @@ tape("conditions", function (test) {
       switch(response.statusCode) {
       case 200:
         const data = JSON.parse(body)
-        test.deepEqual(data, example.expected)
+        delete data.dbtime
+        delete example.expected.dbtime
+        test.deepEqual(data, example.expected, example.title)
         break;
       default:
         test.fail("invalid status")
@@ -25,3 +27,25 @@ tape("conditions", function (test) {
     })
   }
 })
+
+tape("one term, no overlay", function (test) {
+  test.plan(examples.data.conditions.length)
+  for(const example of examples.data.oneTerm) {
+    request(examples.getURL(example),(error,response,body)=>{
+      if(error) {
+        test.fail(error)
+      }
+      switch(response.statusCode) {
+      case 200:
+        const data = JSON.parse(body)
+        delete data.dbtime
+        delete example.expected.dbtime
+        test.deepEqual(data, example.expected, example.title)
+        break;
+      default:
+        test.fail("invalid status")
+      }
+    })
+  }
+})
+

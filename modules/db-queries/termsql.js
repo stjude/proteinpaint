@@ -9,7 +9,6 @@ export function handle_request_closure(genomes) {
     app.log( req )
 
     const q = req.query
-    let db
     try {
       if (!q || !Object.keys(q).length) return listExampleUrls(res) 
 
@@ -27,20 +26,24 @@ export function handle_request_closure(genomes) {
       if (!term1) throw 'missing termjson entry for term1='+ q.term1
       const term2 = q.term2 ? tdb.termjson.map.get(q.term2) : null
       if (q.term2 && !term2) throw 'missing termjson entry for term2='+ q.term2
-      
+
+      if (!ds.cohort.db || !ds.cohort.db.connection) throw 'missing db connection for the cohort'
+      const db = ds.cohort.db.connection
       const startTime = +(new Date())
-      db = utils.connect_db(dbfile)
+      
       let result = []
       if (term1.iscondition || (term2 && term2.iscondition)) {
         result = handleConditionTerms(db, term1, term2, q)   
+      } else if (term2) {
+        result = handleOverlay(db, term1, term2, q)
+      } else {
+        result = handleOneTerm(db, term1, q)
       }
-      db.close()
       res.send({
         dbtime: +(new Date()) - startTime,
         result
       })   
     } catch(e) {
-      if (db) db.close()
       res.send({error: (e.message || e)})
       if(e.stack) console.log(e.stack)
     }
@@ -63,13 +66,14 @@ function listExampleUrls(res) {
     }).join("\n")
   }
 
-  const conditionItems = getList(examples.data.conditions)
   res.send(`
     <h2>Example Requests</h2>
     <p>To use, <b>click on a list entry</b> then check your browser's dev tools.</p>
     <button onclick='runAll()'>Run All Examples</button>
+    <h3>One term</h3>
+    <ul>${getList(examples.data.oneTerm)}</ul>
     <h3>Condition terms</h3>
-    <ul>${conditionItems}</ul>
+    <ul>${getList(examples.data.conditions)}</ul>
     <script>
       function runAll() {
         ${JSON.stringify(urls)}.forEach(url=>{
@@ -78,6 +82,44 @@ function listExampleUrls(res) {
       }
     </script>
   `)
+}
+
+function handleOneTerm(db, term1, q) {
+  const filters = q.filters ? JSON.parse(q.filters) : []
+  if (!filters.length) {
+    // For testing only, this statement should be already
+    // prepared in the dataset config
+    const sql = `SELECT a.value, COUNT(distinct a.sample) AS count
+      FROM annotations a
+      WHERE term_id=?
+      GROUP BY a.value`
+    return db.prepare(sql).all([term1.id])
+  } else {
+    // this statement will have to be dynamically prepared since
+    // the number of filters is request dependent
+    const filterCond = []
+    const filterVals = []
+    for(const filter of filters) {
+      const values = filter.values.map(d=>"?").join(",")
+      filterCond.push(`(term_id=? AND value IN (${values}))`)
+      // convert d.key to string since value data type is varchar
+      filterVals.push(filter.term.id, ...filter.values.map(d=>''+d.key))
+    }
+
+    const sql = `WITH
+      filtered AS (
+        SELECT sample
+        FROM annotations
+        WHERE ${filterCond.join(" AND ")}
+      )
+      SELECT a.value, COUNT(distinct a.sample) AS count
+      FROM annotations a
+      JOIN filtered f ON f.sample = a.sample
+      WHERE term_id=?
+      GROUP BY a.value`
+
+    return db.prepare(sql).all(...filterVals, term1.id)
+  }
 }
 
 function handleConditionTerms(db, term1, term2, q) {
@@ -92,12 +134,11 @@ function handleConditionTerms(db, term1, term2, q) {
 }
 
 const templates = {}
-
 templates["max_grade_perperson | max_grade_by_subcondition"] = sameConditionTemplate('grade','child')
 templates["by_children | max_grade_by_subcondition"] = sameConditionTemplate('child','grade')
 
 function sameConditionTemplate(bar, overlay) {
-  return `WITH 
+  return `WITH
 children AS (
   SELECT child
   FROM term2term

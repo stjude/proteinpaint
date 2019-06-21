@@ -660,6 +660,7 @@ class Partjson {
       this.refresh()
   }
   refresh(e = {}) {
+    this.times = {start: +(new Date())}
     Object.assign(this.opts, e),
       "string" != typeof this.opts.template &&
         (this.opts.template = JSON.stringify(this.opts.template))
@@ -682,6 +683,7 @@ class Partjson {
         : (this.template = t),
       (this.postLoopTerms = Object.create(null)),
       (this.done = []),
+      this.times.parse = +(new Date()) - this.times.start
       this.opts.data && this.add(this.opts.data, !1),
       this.errors.log(this.fillers)
   }
@@ -748,7 +750,8 @@ class Partjson {
       if (this.postLoopTerms[e])
         for (const t of this.postLoopTerms[e]) this.postLoop(t.self, t, e)
     for (const e of this.done) e.done(e.self, e)
-    t && this.errors.log()
+    t && this.errors.log(); 
+    this.times.total = +(new Date()) - this.times.start
   }
   processRow(e, t, s) {
     const r = this.contexts.get(s),

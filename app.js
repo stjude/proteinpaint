@@ -12693,6 +12693,10 @@ function mds_init(ds,genome, _servconfig) {
 			let db
 			try {
 				db = utils.connect_db( ds.cohort.db.file )
+				// for routes that require dymically prepared statements,
+				// such as when using request specific filters,
+				// make the db connection accessible to the request handler code
+				ds.cohort.db.connection = db
 			}catch(e) {
 				return 'cannot read db file: '+ds.cohort.db.file
 			}
