@@ -60,7 +60,7 @@ function listExampleUrls(res) {
     return items.map(d=>{
       const url = examples.getURL(d)
       urls.push(url)
-      return `<li onclick='fetch("${url}").then(response=>response.json()).then(console.log)' style="cursor: pointer; margin:5px;">
+      return `<li onclick='fetch("${url}").then(response=>response.json()).then(console.log)' style="cursor: pointer; margin:5px; color:blue">
         ${d.title}: ${d.description}
       </li>`
     }).join("\n")
@@ -68,8 +68,13 @@ function listExampleUrls(res) {
 
   res.send(`
     <h2>Example Requests</h2>
-    <p>To use, <b>click on a list entry</b> then check your browser's dev tools.</p>
-    <button onclick='runAll()'>Run All Examples</button>
+    <p>To use, <b>click on a list entry</b> below then check your browser's dev tools.</p>
+    <span style='font-size: 16px'>
+      - or -
+      <span style='background:#333; color:#fff; font-family: arial, sans-serif'>&nbsp;&nbsp;$ npm run dbqueries&nbsp;&nbsp;</span>
+      - or - 
+      <button onclick='runAll()' style='font-size: 14px'>Run All Examples</button>
+    </span>
     <h3>One term</h3>
     <ul>${getList(examples.data.oneTerm)}</ul>
     <h3>Condition terms</h3>
