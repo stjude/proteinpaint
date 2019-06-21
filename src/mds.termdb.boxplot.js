@@ -120,6 +120,7 @@ function render(self, plot, lst, binmax) {
   plot.items.forEach((item, itemidx) => {
     if (!item.boxplot) return
     const g = self.dom.graph_g.append('g')
+      .datum(item)
       .attr('transform','translate('+(itemidx*(sc.barwidth+sc.barspace))+',0)')
 
     // X axis labels  

@@ -106,7 +106,7 @@ function handleOneTerm(db, term1, q) {
       FROM annotations a
       JOIN filtered${filters.length-1} f ON f.sample = a.sample
       WHERE term_id=?
-      GROUP BY a.value`; console.log(sql, [...f.filterVals, term1.id])
+      GROUP BY a.value`; //console.log(sql, [...f.filterVals, term1.id])
 
     return db.prepare(sql).all(...f.filterVals, term1.id)
   }

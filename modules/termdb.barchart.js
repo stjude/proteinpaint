@@ -111,12 +111,11 @@ const template = JSON.stringify({
         },
         total: "+1",
         seriesId: "@key",
-        samples: ["$sjlid"],
         data: [{
           dataId: "@key",
           total: "+1",
         }, "&data.id[]"],
-        max: "<&vals.value2",
+        "_:_max": "<&data.value",
         tempValues: ["&data.value"],
         tempSum: "+&data.value",
         "__:boxplot": "=boxplot2()",
@@ -130,7 +129,6 @@ const template = JSON.stringify({
       value_annotated: "+=annotated()"
     },
     "_:_refs": {
-      //chartkey: "&vals.term0",
       cols: ["&series.id[]"],
       colgrps: ["-"], 
       rows: ["&data.id[]"],
@@ -207,27 +205,31 @@ function getPj(q, inReqs, data, tdb) {
         return maxAcrossCharts
       },
       boxplot1(row, context) {
-        if (!context.root.values.length) return;
-        context.root.values.sort((i,j)=> i - j )
-        const stat = app.boxplot_getvalue( context.root.values.map(v => {return {value: v}}) )
-        stat.mean = context.root.sum / context.root.values.length
+        if (!context.root.values) return;
+        const values = context.root.values.filter(d => d !== null)
+        if (!values.length) return
+        values.sort((i,j)=> i - j )
+        const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
+        stat.mean = context.root.sum / values.length
         let s = 0
-        for(const v of context.root.values) {
+        for(const v of values) {
           s += Math.pow( v - stat.mean, 2 )
         }
-        stat.sd = Math.sqrt( s / (context.root.values.length-1) )
+        stat.sd = Math.sqrt( s / (values.length-1) )
         return stat
       },
       boxplot2(row, context) {
         if (!context.self.tempValues || !context.self.tempValues.length) return;
-        context.self.tempValues.sort((i,j)=> i - j )
-        const stat = app.boxplot_getvalue( context.self.tempValues.map(v => {return {value: v}}) )
-        stat.mean = context.self.tempSum / context.self.tempValues.length
+        const values = context.self.tempValues.filter(d => d !== null)
+        if (!values.length) return
+        values.sort((i,j)=> i - j )
+        const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
+        stat.mean = context.self.tempSum / values.length
         let s = 0
-        for(const v of context.self.tempValues) {
+        for(const v of values) {
           s += Math.pow( v - stat.mean, 2 )
         }
-        stat.sd = Math.sqrt( s / (context.self.tempValues.length-1) )
+        stat.sd = Math.sqrt( s / (values.length-1) )
         delete context.self.tempSum
         delete context.self.tempValues
         return stat
@@ -513,13 +515,11 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
         let maxGrade; 
         for(const k in row) {
           if (!row[k][events_key]) continue
-          const term = tdb.termjson.map.get(k); //if (j<20) {console.log(child, 476); j++}
+          const term = tdb.termjson.map.get(k);
           if (!term || !term.conditionlineage || !term.conditionlineage.includes(child)) continue
-          //const i = term.conditionlineage.indexOf(conditionParent); if (j<10) {console.log(child, i, 478); j++}
-          //if (i < 1) continue
           for(const event of row[k][events_key]) { 
-            const grade = event[grade_key];  //if (j<20) {console.log(child, grade, 481, uncomputable[grade]); j++}
-            if (uncomputable[grade]) continue; //if (j<20) {console.log(child, grade, 482); j++}
+            const grade = event[grade_key]
+            if (uncomputable[grade]) continue
             if (maxGrade === undefined || maxGrade < grade) {
               maxGrade = grade
             }
