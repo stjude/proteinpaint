@@ -27,16 +27,16 @@ export function handle_request_closure(genomes) {
       if (!term1) throw 'missing termjson entry for term1='+ q.term1
       const term2 = q.term2 ? tdb.termjson.map.get(q.term2) : null
       if (q.term2 && !term2) throw 'missing termjson entry for term2='+ q.term2
-
-      db = utils.connect_db(dbfile)
+      
       const startTime = +(new Date())
+      db = utils.connect_db(dbfile)
       let result = []
       if (term1.iscondition || (term2 && term2.iscondition)) {
         result = handleConditionTerms(db, term1, term2, q)   
       }
       db.close()
       res.send({
-        totalTime: +(new Date()) - startTime,
+        dbtime: +(new Date()) - startTime,
         result
       })   
     } catch(e) {
