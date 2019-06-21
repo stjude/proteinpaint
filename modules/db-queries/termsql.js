@@ -44,20 +44,42 @@ export function handle_request_closure(genomes) {
 
 function listExampleUrls(res) {
   // do not show this if in production
-  const items = [{
-    title: "Same condition, overlay=children",
-    description: "term1, term2, unit1=max_grade_perperson, unit2=max_grade_by_subcondition",
-    url: 'term1=Cardiovascular%20System&term2=Cardiovascular%20System&unit1=max_grade_perperson&unit2=max_grade_by_subcondition'
-  },{
-    title: "Same condition, overlay=grade",
-    description: "term1, term2, unit1=by_children, unit2=max_grade_by_subcondition",
-    url: 'term1=Cardiovascular%20System&term2=Cardiovascular%20System&unit1=by_children&unit2=max_grade_by_subcondition'
-  }].map(d=>`<li>
-    <a href="/termsql?genome=hg38&dslabel=SJLife&${d.url}">${d.title}</a>: ${d.description}
-  </li>`).join("\n")
+  const path= "/termsql?genome=hg38&dslabel=SJLife&"
+  const items = [
+    {
+      title: "Same condition, overlay=children",
+      description: "organ system as parent",
+      params: {
+        term1: 'Cardiovascular System',
+        term2: 'Cardiovascular System',
+        unit1: 'max_grade_perperson',
+        unit2: 'max_grade_by_subcondition'
+      }
+    },
+    {
+      title: "Same condition, overlay=grade",
+      description: "subcondition as parent",
+      params: {
+        term1: 'Arrhythmias',
+        term2: 'Arrhythmias',
+        unit1: 'by_children',
+        unit2: 'max_grade_by_subcondition'
+      }
+    }
+  ].map(d=>{
+    const params = []
+    for(const key in d.params) {
+      params.push(key + "=" + encodeURIComponent(d.params[key]))
+    }
+    const url = path + params.join('&')
+    return `<li onclick='fetch("${url}").then(response=>response.json()).then(console.log)' style="cursor: pointer; margin:5px;">
+      ${d.title}: ${d.description}
+    </li>`
+  }).join("\n")
 
   res.send(`
-    <h2>Example URLs</h2>
+    <h2>Example Requests</h2>
+    <p>To use, <b>click on a list entry</b> then check dev tools.</p>
     <h3>Condition terms</h3>
     <ul>${items}</ul>
   `)
