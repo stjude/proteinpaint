@@ -16,6 +16,11 @@ server_init
 ********************** INTERNAL
 copy_term
 trigger_rootterm
+trigger_getcategories
+trigger_children
+trigger_findterm
+trigger_treeto
+server_init_db_queries
 */
 
 
@@ -39,9 +44,6 @@ return async (req, res) => {
 		if(!ds.cohort) throw 'ds.cohort missing'
 		const tdb = ds.cohort.termdb
 		if(!tdb) throw 'no termdb for this dataset'
-
-		// maybe no need to apply filter here
-		//const ds_filtered = may_apply_termfilter( q, ds )
 
 		// process triggers
 
@@ -72,34 +74,6 @@ return async (req, res) => {
 }
 
 
-
-
-function may_apply_termfilter ( q, ds ) {
-	if(!q.termfilter) return ds
-
-	// for categorical terms, must convert values to valueset
-	for(const t of q.termfilter) {
-		if(t.term.iscategorical) {
-			t.valueset = new Set( t.values.map(i=>i.key) )
-		}
-	}
-
-	/*
-	if needs filter, ds_filtered to point to a copy of ds with modified cohort.annotation{} with those samples passing filter
-	filter by keeping only samples annotated to certain term (e.g. wgs)
-	*/
-	let all=0, use=0
-	const new_annotation = {}
-	for(const sample in ds.cohort.annotation) {
-		const sa = ds.cohort.annotation[ sample ]
-		if( sample_match_termvaluesetting( sa, q.termfilter ) ) {
-			new_annotation[ sample ] = sa
-		}
-	}
-	return {
-		cohort:{annotation: new_annotation}
-	}
-}
 
 
 function trigger_rootterm ( q, res, tdb ) {
