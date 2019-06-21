@@ -17,17 +17,16 @@ export function handle_request_closure(genomes) {
       const ds = genome.datasets[ q.dslabel ]
       if(!ds) throw 'invalid dslabel'
       if(!ds.cohort) throw 'ds.cohort missing'
+      const dbfile = ds.cohort.db && ds.cohort.db.file
+      if(!dbfile) throw 'no db for this dataset'
       const tdb = ds.cohort.termdb
       if(!tdb) throw 'no termdb for this dataset'
-      
       if (!q.term1) throw 'term1 is missing'
       const term1 = tdb.termjson.map.get(q.term1)
       if (!term1) throw 'missing termjson entry for term1='+ q.term1
       const term2 = q.term2 ? tdb.termjson.map.get(q.term2) : null
       if (q.term2 && !term2) throw 'missing termjson entry for term2='+ q.term2
 
-      const dbfile = ds.cohort.db && ds.cohort.db.file
-      if(!dbfile) throw 'no db for this dataset'
       const db = utils.connect_db(dbfile)
       const startTime = +(new Date())
       if (term1.iscondition || (term2 && term2.iscondition)) {
@@ -68,7 +67,6 @@ function handleConditionTerms(db, term1, term2, q) {
   const template = templates[q.unit1+' | '+ q.unit2]
   if (!template) throw 'missing SQL template'
   const sql = db.prepare(template)
-
   return q.unit2 == "max_grade_by_subcondition"
     ? sql.all(term1.id)
     : term1 && term2
@@ -78,8 +76,8 @@ function handleConditionTerms(db, term1, term2, q) {
 
 const templates = {}
 
-templates["max_grade_perperson | max_grade_by_subcondition"] = sameConditionTemplate('grade','ancestor_id')
-templates["by_children | max_grade_by_subcondition"] = sameConditionTemplate('ancestor_id','grade')
+templates["max_grade_perperson | max_grade_by_subcondition"] = sameConditionTemplate('grade','child')
+templates["by_children | max_grade_by_subcondition"] = sameConditionTemplate('child','grade')
 
 function sameConditionTemplate(bar, overlay) {
   return `WITH 
@@ -89,21 +87,25 @@ children AS (
   WHERE parent = ?
 ),
 descendants AS (
-  SELECT term_id, ancestor_id
-  FROM ancestry
-  INNER JOIN children c ON c.child = ancestry.ancestor_id
+  SELECT c.child as child, term_id
+  FROM ancestry a, children c
+  WHERE c.child = a.ancestor_id OR c.child = a.term_id
+  UNION ALL
+  SELECT d.child as child, a.term_id
+  FROM ancestry a, descendants d
+  WHERE a.ancestor_id = d.term_id
 ),
 maxgrade AS (
-  SELECT ancestor_id, sample, MAX(grade) AS grade
+  SELECT d.child as child, sample, MAX(grade) AS grade
   FROM chronicevents a
-  INNER JOIN descendants ON descendants.term_id = a.term_id
+  INNER JOIN descendants d ON d.term_id = a.term_id
   WHERE a.grade IN (1,2,3,4,5)
-  GROUP BY ancestor_id, sample
+  GROUP BY d.child, sample
 )
 SELECT
   ${bar} AS bar,
   ${overlay} AS overlay,
   COUNT(*) AS total
 FROM maxgrade
-GROUP BY grade, ancestor_id`
+GROUP BY grade, child`
 }
