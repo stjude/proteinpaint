@@ -9,6 +9,7 @@ export function handle_request_closure(genomes) {
     app.log( req )
 
     const q = req.query
+    let db
     try {
       if (!q || !Object.keys(q).length) return listExampleUrls(res) 
 
@@ -27,15 +28,19 @@ export function handle_request_closure(genomes) {
       const term2 = q.term2 ? tdb.termjson.map.get(q.term2) : null
       if (q.term2 && !term2) throw 'missing termjson entry for term2='+ q.term2
 
-      const db = utils.connect_db(dbfile)
+      db = utils.connect_db(dbfile)
       const startTime = +(new Date())
+      let result = []
       if (term1.iscondition || (term2 && term2.iscondition)) {
-        res.send({
-          totalTime: +(new Date()) - startTime,
-          result: handleConditionTerms(db, term1, term2, q)
-        })      
+        result = handleConditionTerms(db, term1, term2, q)   
       }
+      db.close()
+      res.send({
+        totalTime: +(new Date()) - startTime,
+        result
+      })   
     } catch(e) {
+      if (db) db.close()
       res.send({error: (e.message || e)})
       if(e.stack) console.log(e.stack)
     }
