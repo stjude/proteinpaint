@@ -46,45 +46,25 @@ function listExampleUrls(res) {
   // do not show this if in production
   const path = "/termsql?genome=hg38&dslabel=SJLife&"
   const urls = []
-  const items = [
-    {
-      title: "Same condition, overlay=children",
-      description: "organ system as parent",
-      params: {
-        term1: 'Cardiovascular System',
-        term2: 'Cardiovascular System',
-        unit1: 'max_grade_perperson',
-        unit2: 'max_grade_by_subcondition'
-      }
-    },
-    {
-      title: "Same condition, overlay=grade",
-      description: "subcondition as parent",
-      params: {
-        term1: 'Arrhythmias',
-        term2: 'Arrhythmias',
-        unit1: 'by_children',
-        unit2: 'max_grade_by_subcondition'
-      }
-    }
-  ].map(d=>{
-    const params = []
-    for(const key in d.params) {
-      params.push(key + "=" + encodeURIComponent(d.params[key]))
-    }
-    const url = path + params.join('&')
-    urls.push(url)
-    return `<li onclick='fetch("${url}").then(response=>response.json()).then(console.log)' style="cursor: pointer; margin:5px;">
-      ${d.title}: ${d.description}
-    </li>`
-  }).join("\n")
+  const examples = require('./examples')
 
+  function getList(items){
+    return items.map(d=>{
+      const url = examples.getURL(d)
+      urls.push(url)
+      return `<li onclick='fetch("${url}").then(response=>response.json()).then(console.log)' style="cursor: pointer; margin:5px;">
+        ${d.title}: ${d.description}
+      </li>`
+    }).join("\n")
+  }
+
+  const conditionItems = getList(examples.data.conditions)
   res.send(`
     <h2>Example Requests</h2>
     <p>To use, <b>click on a list entry</b> then check your browser's dev tools.</p>
     <button onclick='runAll()'>Run All Examples</button>
     <h3>Condition terms</h3>
-    <ul>${items}</ul>
+    <ul>${conditionItems}</ul>
     <script>
       function runAll() {
         ${JSON.stringify(urls)}.forEach(url=>{
