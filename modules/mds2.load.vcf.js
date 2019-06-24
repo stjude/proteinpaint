@@ -22,6 +22,7 @@ query_vcf_applymode
 getallelecount_samplegroup_vcfline
 vcfbyrange_collect_result
 _m_is_filtered
+test_sample_conditionterm
 */
 
 
@@ -742,18 +743,17 @@ ds is for accessing patient_condition
 	for(const t of terms ) {
 
 		const samplevalue = sanno[ t.term.id ]
-		if(samplevalue==undefined) {
-			// this sample has no anno for this term, do not count
-			continue
-		}
 
 		let thistermmatch
 
 		if( t.term.iscategorical ) {
 
+			if(samplevalue==undefined)  continue // this sample has no anno for this term, do not count
 			thistermmatch = t.valueset.has( samplevalue )
 
 		} else if( t.term.isinteger || t.term.isfloat ) {
+
+			if(samplevalue==undefined)  continue // this sample has no anno for this term, do not count
 
 			let left, right
 			if( t.range.startunbounded ) {
@@ -775,8 +775,11 @@ ds is for accessing patient_condition
 				}
 			}
 			thistermmatch = left && right
+
 		} else if( t.term.iscondition ) {
+
 			thistermmatch = test_sample_conditionterm( sanno, t, ds )
+
 		} else {
 			throw 'unknown term type'
 		}
@@ -802,61 +805,133 @@ function test_sample_conditionterm ( sample, tvs, ds ) {
 /*
 sample: ds.cohort.annotation[k]
 tvs: a term-value setting object
-	.term
-	.range
 ds
 */
-	const _config = ds.cohort.termdb.patient_condition
-	if(!_config) throw 'patient_condition missing'
+	const _c = ds.cohort.termdb.patient_condition
+	if(!_c) throw 'patient_condition missing'
 	const term = ds.cohort.termdb.termjson.map.get( tvs.term.id )
 	if(!term) throw 'unknown term id: '+tvs.term.id
-
-	let eventlst = [] // list of events to be examined
 
 	if( term.isleaf ) {
 		// leaf, term id directly used for annotation
 		const termvalue = sample[ tvs.term.id ]
 		if(!termvalue) return false
-		eventlst = termvalue[ _config.events_key ]
-	} else {
-		// not leaf , must go over all annotated attributes of this sample
-		const find_id = range.child_id || tvs.term.id // if range.child_id is set, will limit to this instead
+		const eventlst = termvalue[ _c.events_key ]
+		return test_grade( eventlst )
+	}
+
+	// non-leaf
+
+	if( tvs.bar_by_grade ) {
+		// by grade, irrespective of subcondition
+		const eventlst = []
 		for(const tid in sample) {
 			const t = ds.cohort.termdb.termjson.map.get(tid)
 			if(!t || !t.iscondition) continue
-			if(t.conditionlineage.indexOf( find_id )!=-1) {
-				// is from a child term
-				eventlst.push( ...t[_config.events_key] )
+			if(t.conditionlineage.indexOf( tvs.term.id )!=-1) {
+				// is a child term
+				eventlst.push( ...sample[tid][_c.events_key] )
 			}
 		}
+		return test_grade( eventlst )
 	}
-	if(eventlst.length==0) return false
 
-	if( tvs.range.value_by_most_recent ) {
-		const i = eventlst.reduce(
-			(i, e)=>{
-				const grade = e[_config.grade_key]
-				if(_config.uncomputable_grades && _config.uncomputable_grades[grade]) return i
-				const age = e[_config.age_key]
-				if(i.age < age) return {grade,age}
-				return i
-			},
-			{age:0}
-		)
-		return i.grade == tvs.range.grade
+	if( tvs.bar_by_children ) {
+		// event in any given children with computable grade
+		for(const tid in sample) {
+			const t = ds.cohort.termdb.termjson.map.get(tid)
+			if(!t || !t.iscondition) continue
+			if( tvs.values.findIndex( i=> t.conditionlineage.indexOf(i.key)!=-1 ) == -1 ) continue
+			const events = sample[tid][_c.events_key]
+			if(!events || events.length==0) continue
+			if( _c.uncomputable_grades ) {
+				for(const e of events) {
+					if( !_c.uncomputable_grades[e[_c.grade_key]] ) {
+						// has a computable grade
+						return true
+					}
+				}
+				// all are uncomputable grade
+				continue
+			}
+			// no uncomputable grades to speak of
+			return true
+		}
+		return false
 	}
-	if( tvs.range.value_by_max_grade ) {
-		const maxg = eventlst.reduce(
-			(g,e)=>{
-				const grade = e[_config.grade_key]
-				if(_config.uncomputable_grades && _config.uncomputable_grades[grade]) return g
-				return g<grade ? grade : g
-			},
-			0
-		)
-		return maxg == tvs.range.grade
+
+	if( tvs.grade_and_child ) {
+		// collect all events from all subconditions, and remember which condition it is
+		const eventlst = []
+		for(const tid in sample) {
+			const t = ds.cohort.termdb.termjson.map.get(tid)
+			if(!t || !t.iscondition) continue
+			if(t.conditionlineage.indexOf(tvs.term.id)!=-1) {
+				for(const e of sample[tid][_c.events_key]) {
+					if(_c.uncomputable_grades && _c.uncomputable_grades[e[_c.grade_key]]) continue
+					eventlst.push({ e, tid })
+				}
+			}
+		}
+		if(eventlst.length==0) return false
+
+		// from all events of any subcondition, find one matching with value_by_
+		let useevent
+		if(tvs.value_by_most_recent) {
+			let age = 0
+			for(const e of eventlst) {
+				const a = e.e[_c.age_key]
+				if(age < a) {
+					age = a
+					useevent = e
+				}
+			}
+		} else if(tvs.value_by_max_grade) {
+			let maxg = 0
+			for(const e of eventlst) {
+				const g = e.e[_c.grade_key]
+				if(maxg < g) {
+					maxg = g
+					useevent = e
+				}
+			}
+		} else {
+			throw 'unknown flag of value_by_'
+		}
+		return tvs.grade_and_child.findIndex( i=> i.grade == useevent.e[_c.grade_key] && i.child_id == useevent.tid) != -1
 	}
-	throw 'unknown method for value_by'
+
+	throw 'illegal definition of conditional tvs'
+
+
+
+	function test_grade ( eventlst ) {
+	/* from a list of events, find one matching criteria
+	*/
+		if(!eventlst) return false
+		if( tvs.value_by_most_recent ) {
+			let useevent,
+				age=0
+			for(const e of eventlst) {
+				if(_c.uncomputable_grades && _c.uncomputable_grades[e[_c.grade_key]]) continue
+				if(age < e[_c.age_key]) {
+					age = e[_c.age_key]
+					useevent=e
+				}
+			}
+			return tvs.values.findIndex(j=>j.key== useevent[_c.grade_key]) != -1
+		}
+		if( tvs.value_by_max_grade ) {
+			let maxg = -1
+			for(const e of eventlst) {
+				const grade = e[_c.grade_key]
+				if(_c.uncomputable_grades && _c.uncomputable_grades[grade]) continue
+				maxg = Math.max( maxg, grade )
+			}
+			return tvs.values.findIndex(j=>j.key==maxg) != -1
+		}
+		throw 'unknown method for value_by'
+	}
 }
 
 

@@ -11,6 +11,12 @@ module.exports={
 
 
 	cohort:{
+		db:{
+			file:'files/hg38/sjlife/clinical/db',
+			s:{
+				termjsonByOneid:'select jsondata from terms where id=?'
+			}
+		},
 		files:[
 			{file:'files/hg38/sjlife/clinical/matrix'},
 			{file:'files/hg38/sjlife/cohort/admix'},

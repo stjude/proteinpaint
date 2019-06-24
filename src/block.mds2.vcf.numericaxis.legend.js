@@ -483,7 +483,7 @@ function legend_show_AFtest_onegroup_termdb ( group, holder, tk, block ) {
 		group,
 		tk.mds,
 		block.genome,
-		true,
+		tk.sample_termfilter,
 		async ()=>{
 			await tk.load()
 		}

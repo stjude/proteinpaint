@@ -1,9 +1,10 @@
-const fs = require('fs')
-const path =require('path')
-const spawn = require('child_process').spawn
-const readline = require('readline')
-const common = require('../src/common')
-const vcf = require('../src/vcf')
+const fs = require('fs'),
+	path =require('path'),
+	spawn = require('child_process').spawn,
+	readline = require('readline'),
+	common = require('../src/common'),
+	vcf = require('../src/vcf'),
+	bettersqlite = require('better-sqlite3')
 
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
@@ -20,8 +21,10 @@ write_file
 read_file
 file_not_exist
 file_not_readable
-********************** INTERNAL
 get_header_vcf
+get_fasta
+connect_db
+********************** INTERNAL
 */
 
 
@@ -193,4 +196,10 @@ exports.get_fasta = ( gn, pos ) => {
 			resolve( out.join('') )
 		})
 	})
+}
+
+
+
+exports.connect_db = (file)=>{
+	return new bettersqlite( path.join(serverconfig.tpmasterdir,file), {readonly:true, fileMustExist:true} )
 }

@@ -65,10 +65,12 @@ async function barchart_data ( q, ds, res, tdb ) {
   if(!ds.cohort) throw 'cohort missing from ds'
   if(!ds.cohort.annorows) throw `cohort.annorows is missing`
   // request-specific variables
+  const startTime = +(new Date())
   const inReqs = [getTrackers(), getTrackers(), getTrackers()]
   inReqs.filterFxn = ()=>1 // default allow all rows, may be replaced via q.termfilter
-  await setValFxns(q, inReqs, ds, tdb)
+  await setValFxns(q, inReqs, ds, tdb);
   const pj = getPj(q, inReqs, ds.cohort.annorows, tdb)
+  pj.tree.results.pjtime = pj.times
   res.send(pj.tree.results)
 }
 
@@ -88,51 +90,57 @@ function getTrackers() {
 // have to be re-stringified within partjson refresh for every request
 const template = JSON.stringify({
   "@errmode": ["","","",""],
-  "@join()": {
-    vals: "=vals()"
-  },
-  sum: "+&vals.value1",
-  values: ["&vals.value1"],
+  "@before()": "=prep()",
+  "_:_sum": "+&series.value",
+  "_:_values": ["&series.value"],
   results: {
     "_2:maxAcrossCharts": "=maxAcrossCharts()",
+    "@join()": {
+      chart: "=idVal()"
+    },
     charts: [{
+      "@join()": {
+        series: "=idVal()"
+      },
       chartId: "@key",
       total: "+1",
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
       serieses: [{
+        "@join()": { 
+          data: "=idVal()"
+        },
         total: "+1",
         seriesId: "@key",
         data: [{
           dataId: "@key",
           total: "+1",
-        }, "&vals.dataId[]"],
-        max: "<&vals.value2",
-        tempValues: ["&vals.value2"],
-        tempSum: "+&vals.value2",
-        "__:boxplot": "=boxplot2()"
-      }, "&vals.seriesId[]"]
-    }, "&vals.chartId[]"],
+        }, "&data.id[]"],
+        "_:_max": "<&data.value",
+        tempValues: ["&data.value"],
+        tempSum: "+&data.value",
+        "__:boxplot": "=boxplot2()",
+      }, "&series.id[]"]
+    }, "&chart.id[]"],
     "__:boxplot": "=boxplot1()",
-    unannotated: {
+    "_:_unannotated": {
       label: "",
       label_unannotated: "",
       value: "+=unannotated()",
       value_annotated: "+=annotated()"
     },
-    refs: {
-      //chartkey: "&vals.term0",
-      cols: ["&vals.seriesId[]"],
+    "_:_refs": {
+      cols: ["&series.id[]"],
       colgrps: ["-"], 
-      rows: ["&vals.dataId[]"],
+      rows: ["&data.id[]"],
       rowgrps: ["-"],
       col2name: {
-        "&vals.seriesId[]": {
+        "&series.id[]": {
           name: "@branch",
           grp: "-"
         }
       },
       row2name: {
-        "&vals.dataId[]": {
+        "&data.id[]": {
           name: "@branch",
           grp: "-"
         }
@@ -141,6 +149,7 @@ const template = JSON.stringify({
       "__:useRowOrder": "=useRowOrder()",
       "__:unannotatedLabels": "=unannotatedLabels()",
       "__:bins": "=bins()",
+      "__:grade_labels": "=grade_labels()",
       "@done()": "=sortColsRows()"
     }
   }
@@ -152,34 +161,29 @@ function getPj(q, inReqs, data, tdb) {
   inReq: request-specific closured functions and variables
   data: rows of annotation data
 */
-
+  const joinAliases = ["chart", "series", "data"]
+  let j=0;
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
     template,
     "=": {
-      vals(row) {
-        // vals() is used as a @join function in the partjson 
-        // template above. A join function that returns
-        // a falsy value for a data row will cause the
+      prep(row) {
+        // a falsy filter value for a data row will cause the
         // exclusion of that row from farther processing
-        if (!inReqs.filterFxn(row)) return undefined
-
-        const chartId = inReqs[0].joinFxns[q.term0](row)
-        const seriesId = inReqs[1].joinFxns[q.term1](row)
-        const dataId = inReqs[2].joinFxns[q.term2](row)
-        if (chartId !== undefined && seriesId !== undefined && dataId !== undefined) {
-          return {
-            chartId: Array.isArray(chartId) ? chartId : [chartId],
-            seriesId: Array.isArray(seriesId) ? seriesId : [seriesId],
-            dataId: Array.isArray(dataId) ? dataId : [dataId],
-            value1: typeof inReqs[1].numValFxns[q.term1] == 'function'
-              ? inReqs[1].numValFxns[q.term1](row)
-              : undefined,
-            value2: typeof inReqs[2].numValFxns[q.term2] == 'function'
-              ? inReqs[2].numValFxns[q.term2](row)
-              : undefined,
-          }
+        if (!row._computed_) row._computed_ = Object.create(null)
+        return inReqs.filterFxn(row)
+      },
+      idVal(row, context, joinAlias) {
+        const i = joinAliases.indexOf(joinAlias)
+        const term = q['term'+i]
+        const id = inReqs[i].joinFxns[term](row, context, joinAlias)
+        if (id === undefined) return
+        return {
+          id: Array.isArray(id) ? id : [id],
+          value: typeof inReqs[i].numValFxns[term] == 'function'
+            ? inReqs[i].numValFxns[term](row)
+            : undefined
         }
       },
       maxSeriesTotal(row, context) {
@@ -201,52 +205,56 @@ function getPj(q, inReqs, data, tdb) {
         return maxAcrossCharts
       },
       boxplot1(row, context) {
-        if (!context.root.values.length) return;
-        context.root.values.sort((i,j)=> i - j )
-        const stat = app.boxplot_getvalue( context.root.values.map(v => {return {value: v}}) )
-        stat.mean = context.root.sum / context.root.values.length
+        if (!context.root.values) return;
+        const values = context.root.values.filter(d => d !== null)
+        if (!values.length) return
+        values.sort((i,j)=> i - j )
+        const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
+        stat.mean = context.root.sum / values.length
         let s = 0
-        for(const v of context.root.values) {
+        for(const v of values) {
           s += Math.pow( v - stat.mean, 2 )
         }
-        stat.sd = Math.sqrt( s / (context.root.values.length-1) )
+        stat.sd = Math.sqrt( s / (values.length-1) )
         return stat
       },
       boxplot2(row, context) {
         if (!context.self.tempValues || !context.self.tempValues.length) return;
-        context.self.tempValues.sort((i,j)=> i - j )
-        const stat = app.boxplot_getvalue( context.self.tempValues.map(v => {return {value: v}}) )
-        stat.mean = context.self.tempSum / context.self.tempValues.length
+        const values = context.self.tempValues.filter(d => d !== null)
+        if (!values.length) return
+        values.sort((i,j)=> i - j )
+        const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
+        stat.mean = context.self.tempSum / values.length
         let s = 0
-        for(const v of context.self.tempValues) {
+        for(const v of values) {
           s += Math.pow( v - stat.mean, 2 )
         }
-        stat.sd = Math.sqrt( s / (context.self.tempValues.length-1) )
+        stat.sd = Math.sqrt( s / (values.length-1) )
         delete context.self.tempSum
         delete context.self.tempValues
         return stat
       },
       unannotated(row, context) {
-        const vals = context.joins.get('vals')
-        const seriesIds = Array.isArray(vals.seriesId) ? vals.seriesId : [vals.seriesId]
+        const series = context.joins.get('series')
+        if (!series) return
         let total = 0
-        for(const s of seriesIds) {
+        for(const s of series.id) {
           if (s === inReqs[1].unannotated.label) {
             total += 1
           }
         }
-        return  total
+        return total
       },
       annotated(row, context) {
-        const vals = context.joins.get('vals')
-        const seriesIds = Array.isArray(vals.seriesId) ? vals.seriesId : [vals.seriesId]
+        const series = context.joins.get('series')
+        if (!series) return
         let total = 0
-        for(const s of seriesIds) {
+        for(const s of series.id) {
           if (s !== inReqs[1].unannotated.label) {
             total += 1
           }
         }
-        return  total
+        return total
       },
       sortColsRows(result) {
         if (inReqs[1].orderedLabels.length) {
@@ -276,6 +284,13 @@ function getPj(q, inReqs, data, tdb) {
           "1": inReqs[1].bins,
           "2": inReqs[2].bins,
         }
+      },
+      grade_labels() {
+        return q.conditionParents && tdb.patient_condition
+          ? tdb.patient_condition.grade_labels
+          : q.conditionUnits && (q.conditionUnits[0] || q.conditionUnits[1] || q.conditionUnits[2])
+          ? tdb.patient_condition.grade_labels
+          : undefined
       }
     }
   })
@@ -331,55 +346,109 @@ async function setValFxns(q, inReqs, ds, tdb) {
       inReq.orderedLabels = t.grades ? t.grades : [0,1,2,3,4,5,9] // hardcoded default order
       const unit = conditionUnits[i]
       const parent = conditionParents[i]
-      set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq, parent)
+      set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq, parent, conditionUnits, i)
     } else {
       throw "unsupported term binning"
     }
   }
 }
 
-function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
+function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionUnits, index) {
   const events_key = tdb.patient_condition.events_key
   const grade_key = tdb.patient_condition.grade_key
   const age_key = tdb.patient_condition.age_key
   const uncomputable = tdb.patient_condition.uncomputable_grades || {}
+  
+  // deduplicate array entry
+  function dedup(v, i, a) {
+    return a.indexOf(v) === i
+  }
+
   if (unit == 'max_grade_perperson') {
-    inReq.joinFxns[key] = row => {
-      let maxGrade
-      for(const k in row) {
-        if (!row[k][events_key]) continue
-        const term = tdb.termjson.map.get(k)
-        if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+    if (index==1 && conditionUnits[2] == "max_grade_by_subcondition") {
+      inReq.joinFxns[key] = (row, context, joinAlias) => {
+        const maxGradeByCond = {}
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k)
+          if (!term || !term.conditionlineage) continue
+          const i = term.conditionlineage.indexOf(conditionParent)
+          if (i < 1) continue
+          const child = term.conditionlineage[i - 1];
           for(const event of row[k][events_key]) {
             const grade = event[grade_key]
             if (uncomputable[grade]) continue
-            if (maxGrade === undefined || maxGrade < grade) {
-              maxGrade = grade
+            if (!(child in maxGradeByCond) || maxGradeByCond[child] < grade) {
+              maxGradeByCond[child] = grade
             }
           }
         }
+        return Object.values(maxGradeByCond).filter(dedup); 
       }
-      return maxGrade ? [maxGrade] : []
+    }
+    else {
+      inReq.joinFxns[key] = (row, context, joinAlias) => {
+        let maxGrade
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k)
+          if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+            for(const event of row[k][events_key]) {
+              const grade = event[grade_key]
+              if (uncomputable[grade]) continue
+              if (maxGrade === undefined || maxGrade < grade) {
+                maxGrade = grade
+              }
+            }
+          }
+        }
+        return maxGrade ? [maxGrade] : []
+      }
     }
   } else if (unit == 'most_recent_grade') {
-    inReq.joinFxns[key] = row => {
-      let mostRecentAge, mostRecentGrade
-      for(const k in row) {
-        if (!row[k][events_key]) continue
-        const term = tdb.termjson.map.get(k)
-        if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+    if (index==1 && conditionUnits[2] == "max_grade_by_subcondition") {
+      inReq.joinFxns[key] = row => {
+        const byCond = {}
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k)
+          if (!term || !term.conditionlineage) continue
+          const i = term.conditionlineage.indexOf(conditionParent)
+          if (i < 1) continue
+          const child = term.conditionlineage[i - 1];
           for(const event of row[k][events_key]) {
             const age = event[age_key]
             const grade = event[grade_key]
             if (uncomputable[grade]) continue
-            if (mostRecentAge === undefined || mostRecentAge < age) {
-              mostRecentAge = age
-              mostRecentGrade = grade
+            if (!(child in byCond) || byCond[child].age < age) {
+              if (!byCond[child]) byCond[child] = {}
+              byCond[child].age = age
+              byCond[child].grade = grade
             }
           }
         }
+        return Object.values(byCond).map(d=>d.grade).filter(dedup)
       }
-      return mostRecentGrade ? [mostRecentGrade] : []
+    } else {
+      inReq.joinFxns[key] = row => {
+        let mostRecentAge, mostRecentGrade
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k)
+          if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+            for(const event of row[k][events_key]) {
+              const age = event[age_key]
+              const grade = event[grade_key]
+              if (uncomputable[grade]) continue
+              if (mostRecentAge === undefined || mostRecentAge < age) {
+                mostRecentAge = age
+                mostRecentGrade = grade
+              }
+            }
+          }
+        }
+        return mostRecentGrade ? [mostRecentGrade] : []
+      }
     }
   } else if (unit == 'by_children') {
     if (!conditionParent) throw "conditionParents must be specified when categories is by children"
@@ -390,9 +459,9 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         const term = tdb.termjson.map.get(k)
         if (!term || !term.conditionlineage) continue
         const i = term.conditionlineage.indexOf(conditionParent)
-        if (i < 1) continue // self is the first item in lineage and so it is not a child
+        if (i < 1) continue
         let graded = false
-        for(const event in row[k][events_key]) {
+        for(const event of row[k][events_key]) {
           if (!uncomputable[event[grade_key]]) {
             graded = true
             break
@@ -407,6 +476,120 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent) {
         }
       }
       return conditions
+    }
+  } /* might re-enable this option later
+  else if (unit == 'max_graded_children') {
+    if (!conditionParent) throw "conditionParents must be specified when category is max_graded_children"
+    inReq.joinFxns[key] = (row, context) => {
+      const maxGrade = context.key
+      const conditions = []
+      for(const k in row) {
+        if (!row[k][events_key]) continue
+        const term = tdb.termjson.map.get(k)
+        if (!term || !term.conditionlineage) continue
+        const i = term.conditionlineage.indexOf(conditionParent)
+        if (i < 1) continue
+        let maxGraded = false; 
+        for(const event of row[k][events_key]) {
+          if (maxGrade === true || event[grade_key] == maxGrade) {
+            maxGraded = true
+            break
+          }
+        }
+        if (maxGraded) { 
+          // get the immediate child of the parent condition in the lineage
+          const child = term.conditionlineage[i - 1];
+          if (!conditions.includes(child)) {
+            conditions.push(child);
+          }
+        }
+      }
+      return conditions
+    }
+  }*/ else if (unit == 'max_grade_by_subcondition') {
+    if (!conditionParent) throw "conditionParents must be specified when category is max_grade_by_subcondition"
+    const parentUnit = conditionUnits[index-1]
+    if (parentUnit == "by_children") {
+      inReq.joinFxns[key] = (row, context) => {
+        const child = context.key;
+        let maxGrade; 
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k);
+          if (!term || !term.conditionlineage || !term.conditionlineage.includes(child)) continue
+          for(const event of row[k][events_key]) { 
+            const grade = event[grade_key]
+            if (uncomputable[grade]) continue
+            if (maxGrade === undefined || maxGrade < grade) {
+              maxGrade = grade
+            }
+          }
+        }
+        if (maxGrade !== undefined) {
+          return [maxGrade]
+        }
+      }
+    } else if (parentUnit == "max_grade_perperson") {
+      inReq.joinFxns[key] = (row, context) => {
+        const maxGrade = context.key
+        const maxGradeByCond = {}; 
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k)
+          if (!term || !term.conditionlineage) continue
+          const i = term.conditionlineage.indexOf(conditionParent)
+          if (i < 1) continue
+          const child = term.conditionlineage[i - 1];
+          
+          for(const event of row[k][events_key]) {
+            const grade = event[grade_key]
+            if (uncomputable[grade]) continue
+            if (!(child in maxGradeByCond) || maxGradeByCond[child] < grade) {
+              maxGradeByCond[child] = grade
+            }
+          }
+        }
+        const conditions = []
+        for(const child in maxGradeByCond) {
+          if (maxGradeByCond[child] == maxGrade && !conditions.includes(child)) {
+            conditions.push(child)
+          }
+        }
+        return conditions
+      }
+    } else if (parentUnit == "most_recent_grade") {
+      inReq.joinFxns[key] = (row, context) => {
+        const mostRecentGrade = context.key
+        const byCond = {}; 
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k)
+          if (!term || !term.conditionlineage) continue
+          const i = term.conditionlineage.indexOf(conditionParent)
+          if (i < 1) continue
+          const child = term.conditionlineage[i - 1];
+          
+          for(const event of row[k][events_key]) {
+            const grade = event[grade_key]
+            if (uncomputable[grade]) continue
+            const age = event[age_key]
+            if (!(child in byCond) || byCond[child].age < age) {
+              if (!byCond[child]) byCond[child] = {}
+              byCond[child].age = age
+              byCond[child].grade = grade
+            }
+          }
+        }
+        const conditions = []
+        for(const child in byCond) {
+          if (byCond[child].grade == mostRecentGrade && !conditions.includes(child)) {
+            conditions.push(child)
+          }
+        }
+        return conditions
+      }
+    } else {
+      throw `invalid parent condition unit: '${parentUnit}'`
     }
   } else {
     throw `invalid condition unit: '${unit}'`

@@ -42,17 +42,17 @@ class Reserved {
   (Reserved.prototype["@after"] = Reserved.prototype["@before"]),
   (Reserved.prototype["@done"] = Reserved.prototype["@before"]),
   (Reserved.prototype["@join"] = function(e, t, s) {
-    return s => {
-      let r = !0
-      for (const o in e) {
-        const i = e[o].slice(1, -2),
-          n = this.Pj.opts["="][i]
-        if (n) {
-          const e = n(s)
-          e ? this.Pj.joins.set(o, e) : (r = !1)
-        } else t.errors.push(["val", "MISSING-@join-FXN", i])
+    return (s, r) => {
+      let o = !0
+      for (const i in e) {
+        const n = e[i].slice(1, -2),
+          l = this.Pj.opts["="][n]
+        if (l) {
+          const e = l(s, r, i)
+          e ? this.Pj.joins.set(i, e) : (o = !1)
+        } else t.errors.push(["val", "MISSING-@join-FXN", n])
       }
-      return r
+      return o
     }
   }),
   (Reserved.prototype["@dist"] = function(e, t) {
@@ -660,6 +660,7 @@ class Partjson {
       this.refresh()
   }
   refresh(e = {}) {
+    this.times = {start: +(new Date())}
     Object.assign(this.opts, e),
       "string" != typeof this.opts.template &&
         (this.opts.template = JSON.stringify(this.opts.template))
@@ -682,6 +683,7 @@ class Partjson {
         : (this.template = t),
       (this.postLoopTerms = Object.create(null)),
       (this.done = []),
+      this.times.parse = +(new Date()) - this.times.start
       this.opts.data && this.add(this.opts.data, !1),
       this.errors.log(this.fillers)
   }
@@ -748,13 +750,14 @@ class Partjson {
       if (this.postLoopTerms[e])
         for (const t of this.postLoopTerms[e]) this.postLoop(t.self, t, e)
     for (const e of this.done) e.done(e.self, e)
-    t && this.errors.log()
+    t && this.errors.log(); 
+    this.times.total = +(new Date()) - this.times.start
   }
   processRow(e, t, s) {
     const r = this.contexts.get(s),
       o = this.fillers.get(t)
     if (
-      ((r.filler = o), o["@before"](e, r) && (!o["@join"] || o["@join"](e)))
+      ((r.filler = o), o["@before"](e, r) && (!o["@join"] || o["@join"](e, r)))
     ) {
       for (const t of o.steps)
         for (const i of t) {

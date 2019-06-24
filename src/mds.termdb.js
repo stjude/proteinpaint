@@ -162,32 +162,7 @@ function may_display_termfilter( obj ) {
 	if(!obj.termfilter.terms) obj.termfilter.terms = []
 
 	// make ui
-	const div = obj.dom.termfilterdiv
-		.style('display','inline-block')
-		.append('div')
-		.style('display','inline-block')
-		.style('border','solid 1px #ddd')
-		.style('padding','7px')
-		.style('margin-bottom','10px')
-	div.append('div')
-		.style('display','inline-block')
-		.style('margin','0px 5px')
-		.text('FILTER')
-		.style('opacity','.5')
-		.style('font-size','.8em')
-	termvaluesettingui.display(
-		div,
-		obj.termfilter,
-		obj.mds,
-		obj.genome,
-		false,
-		// callback when updating the filter
-		() => {
-			for(const fxn of obj.termfilter.callbacks) {
-				fxn()
-			}
-		} 
-	)
+	make_filter_ui(obj)
 }
 
 
@@ -313,6 +288,27 @@ function update_cart_button(obj){
 				.style('color','#000')
 				.text('Perform Association Test in GenomePaint')
 				.style('font-size','.8em')
+				.on('click',()=>{
+					tip.hide()
+					const pane = client.newpane({x:100,y:100})
+					import('./block').then(_=>{
+						new _.Block({
+							hostURL:localStorage.getItem('hostURL'),
+							holder: pane.body,
+							genome:obj.genome,
+							nobox:true,
+							chr: obj.genome.defaultcoord.chr,
+							start: obj.genome.defaultcoord.start,
+							stop: obj.genome.defaultcoord.stop,
+							nativetracks:[ obj.genome.tracks.find(i=>i.__isgene).name.toLowerCase() ],
+							tklst:[ {
+								type:client.tkt.mds2,
+								dslabel:obj.dslabel,
+								vcf:{ numerical_axis:{ AFtest:{ groups: obj.selected_groups} } }
+							} ]
+						})
+					})
+				})
 		}
 	}
 }
@@ -827,7 +823,25 @@ tvslst: an array of 1 or 2 term-value setting objects
 	 if barchart is single-term, tvslst will have only one element
 	 if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
 */
+
+	if(!tvslst) return
+
+	if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
+		// do not display ui, and do not collect callbacks
+		return
+	}
+
+	for(const [i, term] of tvslst.entries()){
+		const new_term = termvaluesettingui.make_new_term(term)
+		obj.termfilter.terms.push(new_term)
+	}
+
+	make_filter_ui(obj)
+
+	for (const fxn of obj.termfilter.callbacks) fxn()
 }
+
+
 export function menuoption_select_to_gp ( obj, tvslst ) {
 	obj.tip.hide()
 	const pane = client.newpane({x:100,y:100})
@@ -858,7 +872,7 @@ export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
 	if(!tvslst) return
 		
 	const new_group = {}
-	new_group.is_term = true
+	new_group.is_termdb = true
 	new_group.terms = []
 
 	for(const [i, term] of tvslst.entries()){
@@ -873,4 +887,38 @@ export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
 	obj.selected_groups.push(new_group)
 	update_cart_button(obj)
 
+}
+
+function make_filter_ui(obj){
+
+	obj.dom.termfilterdiv.selectAll('*').remove()
+
+	const div = obj.dom.termfilterdiv
+		.style('display','inline-block')
+		.append('div')
+		.style('display','inline-block')
+		.style('border','solid 1px #ddd')
+		.style('padding','7px')
+		.style('margin-bottom','10px')
+	
+	div.append('div')
+		.style('display','inline-block')
+		.style('margin','0px 5px')
+		.text('FILTER')
+		.style('opacity','.5')
+		.style('font-size','.8em')
+
+	termvaluesettingui.display(
+		div,
+		obj.termfilter,
+		obj.mds,
+		obj.genome,
+		false,
+		// callback when updating the filter
+		() => {
+			for(const fxn of obj.termfilter.callbacks) {
+				fxn()
+			}
+		} 
+	)
 }

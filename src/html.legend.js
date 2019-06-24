@@ -60,6 +60,7 @@ export default function htmlLegend(legendDiv, viz={settings:{}, handlers:{}}) {
         div.append('div')
           .style('display', s.legendOrientation == "vertical" ? 'block' : 'inline-block')
           .style('width', d.rowLabelHangLeft ? d.rowLabelHangLeft+'px' : null)
+          .style('margin-left', s.legendOrientation == "vertical" ? '15px' : null)
           .style('text-align', d.rowLabelHangLeft ? 'right' : null)
           .style('font-weight',600)
           .style('vertical-align','top')

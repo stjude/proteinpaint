@@ -136,6 +136,9 @@ rl.on('line',line=>{
 		}
 	}
 
+	// output row for this event
+	console.log(patient+'\t'+condition+'\t'+grade+'\t'+age+'\t'+yearstoevent)
+
 	// record event for this patient
 	if(!patient2condition.has(patient)) {
 		patient2condition.set( patient, {})
@@ -164,7 +167,8 @@ rl.on('close',()=>{
 			o2[k] = { conditionevents: o[k] }
 		}
 
-		console.log(patient+'\t'+JSON.stringify(o2))
+		// do not log this
+		//console.log(patient+'\t'+JSON.stringify(o2))
 	}
 	console.error(patient2condition.size+' patients, '+conditions.size+' conditions, '+numberofevents+' events')
 

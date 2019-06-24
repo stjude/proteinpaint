@@ -33,18 +33,27 @@ TODO also work for termdb filter
 				if(t.range.start >= t.range.stop ) throw '.start is not lower than stop for a term from '+from
 			}
 		} else if(t.term.iscondition) {
-			if(!t.values) throw '.values[] missing from a condition term of '+from
-			if(!Array.isArray(t.values)) throw '.values[] is not an array from a '+from+' term'
-			for(const i of t.values) {
-				if(typeof i != 'object') throw 'an element is not object from values of '+t.term.id+' from '+from
-				if(!i.key) throw '.key missing from a value of '+t.term.id+' from '+from
-				if(!i.label) i.label = i.key
-			}
-			if( t.bar_by_grade ) {
+			if( t.grade_and_child ) {
+				if(!Array.isArray(t.grade_and_child)) throw 'grade_and_child[] is not array from '+from
+				for(const i of t.grade_and_child) {
+					if(!Number.isInteger(i.grade)) throw '.grade is not an integer from one of grade_and_child[] from '+from
+					if(i.child_id==undefined) throw 'child_id is missing from one of grade_and_child[] from '+from
+				}
 				if(!t.value_by_max_grade && !t.value_by_most_recent) throw 'unknown value_type for a bar_by_grade condition term from '+from
-			} else if(t.bar_by_children) {
 			} else {
-				throw 'neither bar_by_grade or bar_by_children is set for a condition term from '+from
+				if(!t.values) throw '.values[] missing from a condition term of '+from
+				if(!Array.isArray(t.values)) throw '.values[] is not an array from a '+from+' term'
+				for(const i of t.values) {
+					if(typeof i != 'object') throw 'an element is not object from values of '+t.term.id+' from '+from
+					if(!i.key) throw '.key missing from a value of '+t.term.id+' from '+from
+					if(!i.label) i.label = i.key
+				}
+				if( t.bar_by_grade ) {
+					if(!t.value_by_max_grade && !t.value_by_most_recent) throw 'unknown value_type for a bar_by_grade condition term from '+from
+				} else if(t.bar_by_children) {
+				} else {
+					throw 'neither bar_by_grade or bar_by_children is set for a condition term from '+from
+				}
 			}
 		} else {
 			throw 'unknown term type from a '+from+' term'
