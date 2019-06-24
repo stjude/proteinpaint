@@ -38,11 +38,11 @@ second optional input is keep/termjson, 2 column:
 to override automatically generated contents in termjson file
 
 
-outputs two files
-* term2term
-* termjson
-
-
+outputs three files
+* term2term - legacy
+* termjson  - legacy
+* termdb    - load to "terms" table
+* ancestry  - load to "ancestry" table
 */
 
 
@@ -109,8 +109,10 @@ const t2t = new Map()
 // v: set of children
 const c2p = new Map() // ancestry
 // k: child id
-// v: map { k: parent id, v: level }
-
+// v: map { k: parent id, v: level } parents from the entire ancestry
+const c2immediatep = new Map()
+// k: child id
+// v: immediate parent id
 
 
 const patientcondition_terms = new Set()
@@ -149,6 +151,46 @@ each word is a term
 		}
 
 		lines.push( id+'\t'+JSON.stringify(j) )
+	}
+	return map.size+' terms, '+leafcount+' leaf terms'
+}
+
+
+
+function termjson_outputoneset2 (map, lines) {
+/*
+to replace termjson_outputoneset
+arg is set of words from root or a level, e.g. set1
+each word is a term
+*/
+	let leafcount = 0
+	for(const id of [...map.keys()].sort() ) {
+
+		let j = keep_termjson.get( id )
+		if(!j) {
+			// this term not found in keep
+			j = {
+				name: map.get( id )
+			}
+		}
+
+		// test if it is leaf
+		if( !t2t.has( id ) ) {
+			j.isleaf = true
+			leafcount++
+		}
+
+		if( patientcondition_terms.has( id )) {
+			// belongs to patient conditions
+			j.iscondition = true
+			makegraphconfig_conditionterm( j )
+		}
+
+		lines.push(
+			id+'\t'
+			+(c2immediatep.get(id)||'')
+			+'\t'+JSON.stringify(j)
+			)
 	}
 	return map.size+' terms, '+leafcount+' leaf terms'
 }
@@ -245,6 +287,54 @@ manual inspection:
 
 
 
+function output_termdb () {
+/* output "termdb" file
+to replace output_termjson()
+
+each term is one row
+
+col1: term id
+col2: {}
+lines beginning with # are ignored
+
+manual inspection:
+	- terms are sorted alphabetically for inspecting suspicious similar names;
+	- this is just a lookup table
+	- the order of terms in this table does not impact the order of display
+	- #### are level dividers also to assist inspection
+*/
+	const lines = []
+
+	{
+		const str = termjson_outputoneset2( map1, lines )
+		console.log( 'ROOT: '+str )
+	}
+
+	{
+		const str = termjson_outputoneset2( map2, lines )
+		console.log( 'Level 1: '+str )
+	}
+
+	{
+		const str = termjson_outputoneset2( map3, lines )
+		console.log( 'Level 2: '+str )
+	}
+
+	{
+		const str = termjson_outputoneset2( map4, lines )
+		console.log( 'Level 3: '+str )
+	}
+
+	{
+		const str = termjson_outputoneset2( map5, lines )
+		console.log( 'Level 4: '+str )
+	}
+
+	fs.writeFileSync('termdb', lines.join('\n')+'\n' )
+}
+
+
+
 
 function output_t2t() {
 	//
@@ -261,8 +351,8 @@ function output_t2t() {
 function output_c2p() {
 	const out = []
 	for(const [c,m] of c2p) {
-		for(const [p,l] of m) {
-			out.push(c+'\t'+p+'\t'+l)
+		for(const p of m) {
+			out.push(c+'\t'+p)
 		}
 	}
 	fs.writeFileSync('ancestry',out.join('\n')+'\n')
@@ -392,6 +482,7 @@ for(let i=1; i<lines.length; i++) {
 		}
 		if(!c2p.has(id)) c2p.set(id,new Map())
 		c2p.get(id).set(level1,0)
+		c2immediatep.set( id, level1 )
 	}
 
 	if(level3) {
@@ -419,6 +510,7 @@ for(let i=1; i<lines.length; i++) {
 		if(!c2p.has(id)) c2p.set(id,new Map())
 		c2p.get(id).set(level1,0)
 		c2p.get(id).set(level2,1)
+		c2immediatep.set( id, level2 )
 	}
 
 	if(level4) {
@@ -447,6 +539,7 @@ for(let i=1; i<lines.length; i++) {
 		c2p.get(id).set(level1,0)
 		c2p.get(id).set(level2,1)
 		c2p.get(id).set(level3,2)
+		c2immediatep.set( id, level3 )
 	}
 
 	if(level5) {
@@ -472,6 +565,7 @@ for(let i=1; i<lines.length; i++) {
 		c2p.get(id).set(level2,1)
 		c2p.get(id).set(level3,2)
 		c2p.get(id).set(level4,3)
+		c2immediatep.set( id, level4)
 	}
 
 	// register terms belonging to "patient condition"
@@ -543,5 +637,6 @@ if( process.argv[3] ) {
 
 
 output_termjson()
+output_termdb()
 output_t2t()
 output_c2p()
