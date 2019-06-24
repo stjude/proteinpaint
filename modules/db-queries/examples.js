@@ -1,4 +1,4 @@
-const serverconfig = require("../../serverconfig")
+const serverconfig = __non_webpack_require__("../../serverconfig")
 const baseUrlPath =  "http://localhost:"
   + serverconfig.port
   + "/termsql?genome=hg38"
