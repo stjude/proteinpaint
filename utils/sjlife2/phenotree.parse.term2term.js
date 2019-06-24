@@ -351,7 +351,7 @@ function output_t2t() {
 function output_c2p() {
 	const out = []
 	for(const [c,m] of c2p) {
-		for(const p of m) {
+		for(const p of m.keys()) {
 			out.push(c+'\t'+p)
 		}
 	}
