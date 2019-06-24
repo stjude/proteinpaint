@@ -519,6 +519,7 @@ arg
 			.style('height','400px')
 			.style('overflow-y','scroll')
 			.style('resize','vertical')
+			/*
 		const root=stratify()(stratinput(this.data,this.p.cohort.levels))
 		root.sum(i=>i.value)
 		root.eachBefore(n=>{
@@ -550,6 +551,7 @@ arg
 				})
 			}
 		})
+		*/
 	} else {
 		this.treediv.append('div').style('margin','10px').text('Cannot stratify sample: no cohort information.')
 	}
