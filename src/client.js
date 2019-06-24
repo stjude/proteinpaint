@@ -40,7 +40,7 @@ export const domaincolorlst=[ '#8dd3c7', '#bebada', '#fb8072', '#80b1d3', '#E8E8
 // simultaneous reporting for the same issue
 const fetchTimers = {}
 const fetchReported = {}
-const maxAcceptableFetchResponseTime = 15000
+const maxAcceptableFetchResponseTime = 0 //15000
 const maxNumReportsPerSession = 2
 
 export function dofetch(path,arg) {
@@ -125,6 +125,8 @@ init {}
 }
 
 function trackfetch(url, arg) {
+	if (maxAcceptableFetchResponseTime < 1) return 
+
 	// report slowness if the fetch does not respond
 	// within the acceptableResponseTime;
 	// if the server does respond in time,
