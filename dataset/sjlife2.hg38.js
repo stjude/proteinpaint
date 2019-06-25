@@ -13,8 +13,14 @@ module.exports={
 	cohort:{
 		db:{
 			file:'files/hg38/sjlife/clinical/db',
+			// may describe keywords about table and field names
+			k:{
+				sample:'sample',
+				term_id:'term_id'
+			},
 			s:{
-				termjsonByOneid:'select jsondata from terms where id=?'
+				termjsonByOneid:'select jsondata from terms where id=?',
+				termIsLeaf:'select id from terms where parent_id=?',
 			}
 		},
 		files:[
@@ -67,7 +73,7 @@ module.exports={
 				file:'files/hg38/sjlife/clinical/outcomes_2017',
 				events_key:'conditionevents',
 				grade_key: 'grade',
-				grade_labels: [
+				grade_labels: [ // computable grades
 					{ grade: 1, label: '1: Mild' },
 					{ grade: 2, label: '2: Moderate' },
 					{ grade: 3, label: '3: Severe' },
