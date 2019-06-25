@@ -37,21 +37,37 @@ runproteinpaint({
 								terms:[
 									{
 										term:{id:'diaggrp',name:'diag grp',iscategorical:true},
-										values:[{key:'Acute lymphoblastic leukemia',value:'Acute lymphoblastic leukemia'}],
+										values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}],
 										//term:{id:'Asthma',name:'Asthma',iscondition:true},
 										//term:{id:'Arrhythmias',name:'Arrhythmias',iscondition:true},
 										//bar_by_children:true,
-										bar_by_grade:true,
 										//values:[{key:1,label:'1 - mild'}],
 										/*
+										bar_by_grade:true,
 										values:[{key:'Conduction abnormalities',label:'Conduction abnormalities'}]
 										grade_and_child:[{
 											grade:1,
 											child_id:'Conduction abnormalities'
 										}],
+										value_by_max_grade:true,
 										*/
+									},
+									{
+										term:{id:'Arrhythmias',name:'Arrhythmias',iscondition:true},
+										bar_by_grade:true,
+										//bar_by_children:true,
+										//value_by_max_grade:true,
+										value_by_most_recent:true,
+										values:[{key:1,label:'1-mid'}]
+										//values:[{key:'Conduction abnormalities',label:'Conduction abnormalities'}]
+									}
+									/*
+									{
+										term:{id:'Cardiovascular System',name:'Cardiovascular System',iscondition:true},
+										grade_and_child:[{grade:1,child_id:'Arrhythmias',grade_label:'1',child_label:'Arr'}],
 										value_by_max_grade:true,
 									}
+									*/
 								]
 							},
 							{ is_population:true, key:'gnomAD', allowto_adjust_race:true, adjust_race:true }
