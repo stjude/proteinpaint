@@ -16,13 +16,13 @@ const hierarchy_spacer = '...'
 
 
 exports.stratinput=function(lst,levels){
-	const lp=Object.create(null)
+	const lp=new Map()
 	// leaf to parent
 	// k: HM...BALL...sub
 	// v: HM...BALL
 
 
-	const nodes=Object.create(null) //new Map() // key to node
+	const nodes=new Map() // key to node
 	/*
 	k: string id of node, e.g. HM...BALL
 	v: node
@@ -32,7 +32,7 @@ exports.stratinput=function(lst,levels){
 	*/
 
 
-	const size=Object.create(null) //new Map()
+	const size=new Map()
 	// only increment size to leaf nodes, so that root.sum() will work
 	// k: string id of a node, e.g. HM...BALL
 	// v: number of items
@@ -44,41 +44,40 @@ exports.stratinput=function(lst,levels){
 				// stop at this level
 				// add count to prev level
 				if(i>0) {
-					size[pav] += 1
+					size.set(pav,size.get(pav)+1)
 				}
 				break
 			}
-			lp[thisv] = pav
-			if(!(thisv in size)) {
-				size[thisv] = 0
+			lp.set(thisv, pav)
+			if(!size.has(thisv)) {
+				size.set(thisv,0)
 			}
-			if(!(thisv in nodes)) {
+			if(!nodes.has(thisv)) {
 				const n={
 					lst:[]
 				}
 				if(lev.full) {
 					n.full=m[lev.full]
 				}
-				nodes[thisv] = n
+				nodes.set(thisv, n)
 			}
-			nodes[thisv].lst.push(m);
+			nodes.get(thisv).lst.push(m);
 			if(i==levels.length-1) {
-				size[thisv] += 1
+				size.set(thisv, size.get(thisv)+1)
 			}
 		}
 	}
 
 	const nlst=[{ id:hardcode_root, name:hardcode_root}]
 
-	for(const chid in lp) {
-		const paid = lp[chid]
-		const n=nodes[chid]
+	for(const [chid,paid] of lp) {
+		const n=nodes.get(chid)
 		const fields=chid.split( hierarchy_spacer )
 		nlst.push({
 			id:chid,
 			parentId:paid,
 			lst:n.lst,
-			value:size[chid],
+			value:size.get(chid),
 			name:fields[fields.length-1], // show this instead of chid
 			full:n.full
 		})
