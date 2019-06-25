@@ -304,6 +304,12 @@ function server_init_db_queries ( ds ) {
 		}
 		return
 	}
+	if(!q.termIsLeaf) throw 'db query missing: termIsLeaf'
+	q2.termIsLeaf = (id)=>{
+		const t = q.termIsLeaf.get(id)
+		if(t && t.id) return false
+		return true
+	}
 }
 
 
