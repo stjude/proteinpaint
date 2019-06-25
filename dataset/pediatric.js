@@ -39,9 +39,12 @@ module.exports={
 	cohort:{
 		// both client and server
 		levels:cohorthierarchy,
+		/*
+		this is disabled, so as not to run stratinput at app.js
 		fromdb:{
 			sql:'select * from sample_master'
 		},
+		*/
 		fbarfg:'#9F80FF',
 		fbarbg:'#ECE5FF',
 	},
