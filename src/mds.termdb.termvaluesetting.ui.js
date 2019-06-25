@@ -308,14 +308,43 @@ group{}
                 // TODO numerical term, print range in value button and apply the suitable click callback
                 display_numeric_filter(term, term_value_div)
             } else if(term.term.iscondition){
-                for (let j=0; j<term.values.length; j++){
-                    const term_value_btn = term_value_div.append('div')
-                        .attr('class','sja_filter_tag_btn')
-                        .style('font-size','1em')
-                        .style('padding','3px 4px 3px 4px')
-                        .style('margin-right','1px')
-                        .style('background-color', '#4888BF')
-                        .text(term.values[j].label)
+                if(term.grade_and_child){
+                    for (let j=0; j<term.grade_and_child.length; j++){
+                        term_value_div.append('div')
+                            .attr('class','sja_filter_tag_btn')
+                            .style('font-size','1em')
+                            .style('padding','3px 4px 3px 4px')
+                            .style('margin-right','1px')
+                            .style('background-color', '#4888BF')
+                            .text(term.grade_and_child[j].grade_label)
+
+                        term_value_div.append('div')
+                            .style('display','inline-block')
+                            .style('color','#fff')
+                            .style('background-color','#4888BF')
+                            .style('margin-right','1px')
+                            .style('padding','7px 6px 5px 6px')
+                            .style('font-size','.7em')
+                            .style('text-transform','uppercase')
+                            .text('AND')
+                            
+                        term_value_div.append('div')
+                            .attr('class','sja_filter_tag_btn')
+                            .style('font-size','1em')
+                            .style('padding','3px 4px 3px 4px')
+                            .style('margin-right','1px')
+                            .style('background-color', '#4888BF')
+                            .text(term.grade_and_child[j].child_label)
+                    }
+                }else{
+                    for (let j=0; j<term.values.length; j++){
+                        const term_value_btn = term_value_div.append('div')
+                            .attr('class','sja_filter_tag_btn')
+                            .style('font-size','1em')
+                            .style('padding','3px 4px 3px 4px')
+                            .style('margin-right','1px')
+                            .style('background-color', '#4888BF')
+                            .text(term.values[j].label)
 
                         if(j<term.values.length-1){
                             term_value_div.append('div')
@@ -328,6 +357,57 @@ group{}
                                 .style('text-transform','uppercase')
                                 .text('or')
                         }
+                    }
+                }
+                
+                if(term.bar_by_grade){
+
+                    const grade_type_select = term_value_div.append('select')
+                        .style('padding','3px 0')
+                        .style('position','absolute')
+                        .style('opacity',0)
+
+                    grade_type_select.append('option')
+                        .attr('value','max')
+                        .text('Max grade per patient')
+
+                    grade_type_select.append('option')
+                        .attr('value','recent')
+                        .text('Most recent grade per patient')
+
+                    const grade_type_btn = term_value_div.append('div')
+                        .style('display','inline-block')
+                        .style('color','#FFF')
+                        .style('font-size','1em')
+                        .style('padding','2px 4px 3px 4px')
+                        .style('margin-right','1px')
+                        .style('background-color', '#4888BF')
+                        .style('z-index','-1')
+
+                    if(term.value_by_max_grade){
+                        grade_type_btn.html('(Max grade per patient) &#9662;')
+                        grade_type_select.node().value = 'max'
+
+                    }else if(term.value_by_most_recent){
+                        grade_type_btn.html('(Most recent grade per patient) &#9662;')
+                        grade_type_select.node().value = 'recent'
+                    }
+
+                    // change grade type to/from max_grade and recent_grade
+                    grade_type_select.on('change',async()=>{
+                        
+                        if(grade_type_select.node().value == 'max'){
+                            term.value_by_max_grade = true
+                            term.value_by_most_recent = false
+                        }else{
+                            term.value_by_max_grade = false
+                            term.value_by_most_recent = true
+                        }
+
+                        //update gorup and load tk
+                        await callback()
+                        update_terms(terms_div)
+                    })
                 }
             }
 
@@ -551,6 +631,7 @@ export function make_new_term(bar_term){
         new_term.value_by_max_grade = bar_term.value_by_max_grade
         new_term.value_by_most_recent = bar_term.value_by_most_recent
         new_term.value_by_total_measured = bar_term.value_by_total_measured
+        new_term.grade_and_child = bar_term.grade_and_child
     }
 
     return new_term
