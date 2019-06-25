@@ -12690,21 +12690,19 @@ function mds_init(ds,genome, _servconfig) {
 		if( ds.cohort.db ) {
 			// for mds2
 			if(!ds.cohort.db.file) return '.db.file missing'
-			let db
 			try {
-				db = utils.connect_db( ds.cohort.db.file )
-				// for routes that require dymically prepared statements,
-				// such as when using request specific filters,
-				// make the db connection accessible to the request handler code
-				ds.cohort.db.connection = db
+				ds.cohort.db.connection = utils.connect_db( ds.cohort.db.file )
 			}catch(e) {
 				return 'cannot read db file: '+ds.cohort.db.file
 			}
 			if(!ds.cohort.db.s) return '.s{} missing from cohort.db'
 			ds.cohort.db.q = {}
 			for(const statementkey in ds.cohort.db.s) {
-				ds.cohort.db.q[ statementkey ] = db.prepare( ds.cohort.db.s[ statementkey ] )
+				ds.cohort.db.q[ statementkey ] = ds.cohort.db.connection.prepare( ds.cohort.db.s[ statementkey ] )
 			}
+			ds.cohort.db.cache = new Map()
+			// k: sql string
+			// v: statement
 		}
 
 		if(!ds.cohort.files) return '.files[] missing from .cohort'
