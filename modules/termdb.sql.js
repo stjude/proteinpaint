@@ -30,7 +30,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 	if( !tvslst ) return null
 
 	let sampleset_id = 0 // increment this id before creating a CTE
-	const statements = []
+	const CTEs = []
 	const values = []
 
 	for(const tvs of tvslst) {
@@ -49,7 +49,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 	}
 
 	return {
-		statement: statements.join(', '),
+		CTE: CTEs.join(', '),
 		values,
 		sampleset_id
 	}
@@ -57,7 +57,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 	// helpers
 	function add_categorical ( tvs, and_clause ) {
 		const questionmarks = tvs.values.map(i=>'?').join(' ')
-		statements.push(
+		CTEs.push(
 			'sampleset_'+(++sampleset_id)+' AS ('
 			+'SELECT sample '
 			+'FROM annotations '
@@ -89,7 +89,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 			}
 			values.push( tvs.range.stop )
 		}
-		statements.push(
+		CTEs.push(
 			'sampleset_'+(++sampleset_id)+' AS ('
 			+'SELECT sample '
 			+'FROM annotations '
@@ -104,7 +104,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 	function add_condition ( tvs, and_clause ) {
 		if( ds.cohort.termdb.q.termIsLeaf( tvs.term.id ) ) {
 			// is leaf
-			statements.push(
+			CTEs.push(
 				'sampleset_'+(++sampleset_id)+' AS ('
 				+grade_age_select_clause(tvs)
 				+'FROM chronicevents '
@@ -127,7 +127,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 
 		// not leaf
 		if( tvs.grade_and_child ) {
-			statements.push(
+			CTEs.push(
 				'sampleset_'+(++sampleset_id)+' AS ('
 				+'SELECT term_id '
 				+'FROM ancestry '
@@ -159,7 +159,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 
 
 		if( tvs.bar_by_grade ) {
-			statements.push(
+			CTEs.push(
 				'sampleset_'+(++sampleset_id)+' AS ('
 				+'SELECT term_id '
 				+'FROM ancestry '
@@ -172,7 +172,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 				+and_clause
 				+'term_id IN sampleset_'+(sampleset_id-1)
 				+' AND grade IN '+computablegrades2str( ds )
-				+'GROUP BY sample'
+				+' GROUP BY sample'
 				+'),'
 				+'sampleset_'+(++sampleset_id)+' AS ('
 				+'SELECT sample '
@@ -190,7 +190,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 
 
 		if( tvs.bar_by_children ) {
-			statements.push(
+			CTEs.push(
 				'sampleset_'+(++sampleset_id)+' AS ('
 				+'SELECT term_id '
 				+'FROM ancestry '
@@ -202,7 +202,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 				+'FROM chronicevents '
 				+'WHERE '
 				+and_clause
-				+' term_id IN sampleset_'+(sampleset_id-1)
+				+'term_id IN sampleset_'+(sampleset_id-1)
 				+' AND grade IN '+computablegrades2str( ds )
 				+')'
 			)
@@ -222,19 +222,22 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 
 
 
-export function get_samples( filter, connection ) {
+export function get_samples( tvslst, ds ) {
 /*
-requires the filter{}, as returned by makesql_by_tvsfilter()
+must have tvslst[]
+as the actual query is embedded in tvslst
 return an array of sample names passing through the filter
 */
-	const string = 'WITH '
-		+filter.statement
+	const filter = makesql_by_tvsfilter( tvslst, ds )
+	const string =
+		'WITH '+filter.CTE
 		+' SELECT sample FROM sampleset_'
 		+filter.sampleset_id
 	console.log('SQL: ',string)
 	console.log('PARAM: ',filter.values)
-	// may cache the prepared query using string as key
-	const re = connection.prepare( string )
+
+	// may cache statement
+	const re = ds.cohort.db.connection.prepare( string )
 		.all( filter.values )
 	return re.map(i=>i.sample)
 }

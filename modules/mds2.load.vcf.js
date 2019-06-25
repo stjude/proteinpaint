@@ -293,8 +293,7 @@ a sample must meet all term conditions
 		filters.push( ...ds.track.sample_termfilter )
 	}
 	filters.push( ...terms )
-	const sql = termdbsql.makesql_by_tvsfilter( filters, ds )
-	const samples = termdbsql.get_samples( sql, ds.cohort.db.connection )
+	const samples = termdbsql.get_samples( filters, ds )
 	return samples.reduce((lst,samplename)=>{
 		const i = ds.track.vcf.sample2arrayidx.get( samplename )
 		if(i>=0) lst.push(i)
