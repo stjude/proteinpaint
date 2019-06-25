@@ -295,7 +295,7 @@ export class TermdbBarchart{
               value_by_most_recent: unit == "most_recent_grade",
             })
           } else if (!self.terms.term2) {
-            if (unit == "bar_by_grade") {
+            if (unit == "max_grade_perperson" || unit == "most_recent_grade") {
               termValues.push({
                 term,
                 values:[{key,label}],
@@ -303,7 +303,7 @@ export class TermdbBarchart{
                 value_by_max_grade: unit == "max_grade_perperson",
                 value_by_most_recent: unit == "most_recent_grade",
               })
-            } else if (unit == "bar_by_children") {
+            } else if (unit == "by_children") {
               termValues.push({
                 term,
                 values:[{key,label}],

@@ -309,7 +309,7 @@ async function setValFxns(q, inReqs, ds, tdb) {
       }
     }
     inReqs.filterFxn = (row) => {
-      return sample_match_termvaluesetting( row, q.filter )
+      return sample_match_termvaluesetting( row, q.filter, ds )
     }
   }
 
