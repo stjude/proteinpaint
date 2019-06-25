@@ -73,7 +73,7 @@ group{}
 	// all private functions below
 
 
-    function update_terms(terms_div){
+    async function update_terms(terms_div){
 
         terms_div.selectAll('*').remove()
 
@@ -164,120 +164,144 @@ group{}
             if( term.term.iscategorical ) {
                 
                 for (let j=0; j<term.values.length; j++){
+
+                    const replace_value_select = term_value_div.append('select')
+                        .style('padding','3px 0')
+                        .style('position','absolute')
+                        .style('opacity',0)
+
+                    replace_value_select.selectAll('option').remove()
+                    
+                    const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
+                    const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+vcf_filter_str] 
+
+                    try {
+                        const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
+                        if(data.error) throw data.error
+
+                        replace_value_select.append('option')
+                            .attr('value','delete')
+                            .html('&times;&nbsp;&nbsp;Delete')
+                        
+                        for (const category of data.lst){
+                            if(term.values.find(v=>v.key == category.key) && (category.key!=term.values[j].label)) continue
+                            replace_value_select.append('option')
+                                .attr('value',category.key)
+                                .text( category.label+'\t(n='+ category.samplecount +')')
+                        }
+
+                        replace_value_select.node().value = term.values[j].key
+
+                        replace_value_select.on('change',async()=>{
+
+                            //if value is 'delete' then remove from group
+                            if(replace_value_select.node().value == 'delete'){
+                                group.terms[i].values.splice(j,1)
+                                    if(group.terms[i].values.length==0) {
+                                        group.terms.splice(i,1)
+                                    }
+                            }else{
+                                //change value of button 
+                                const new_value = data.lst.find( j=> j.key == replace_value_select.node().value )
+                                term_value_btn
+                                    .style('padding','3px 4px 3px 4px')
+                                    .text('Loading...')
+                                group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
+                            }
+                
+                            //update gorup and load tk
+                            await callback()
+                            update_terms(terms_div)
+                        })
+                        
+                    } catch(e) {
+                        wait.text( e.message || e )
+                    }
+                    
                     
                     const term_value_btn = term_value_div.append('div')
-                        .attr('class','sja_filter_tag_btn')
+                        .style('display','inline-block')
+                        .style('color','#FFF')
                         .style('font-size','1em')
-                        .style('padding','3px 4px 3px 4px')
+                        .style('padding','2px 4px 3px 4px')
                         .style('margin-right','1px')
                         .style('background-color', '#4888BF')
-                        .text(term.values[j].label)
-                        .on('click', async ()=>{
+                        .html(term.values[j].label+' &#9662;')
+                        .style('z-index','-1')
 
-                            tip.clear()
+                    // limit dropdown menu width to width of term_value_btn (to avoid overflow)
+                    replace_value_select.style('width',term_value_btn.node().offsetWidth+'px')
 
-                            const wait = tip.d.append('div').text('Loading...')
-                            tip.showunder( term_value_btn.node() )
+                    // 'OR' button in between values
+                    if(j<term.values.length-1){
+                        term_value_div.append('div')
+                            .style('display','inline-block')
+                            .style('color','#fff')
+                            .style('background-color','#4888BF')
+                            .style('margin-right','1px')
+                            .style('padding','7px 6px 5px 6px')
+                            .style('font-size','.7em')
+                            .style('text-transform','uppercase')
+                            .text('or')
+                    }else{
+                        const add_value_select = term_value_div.append('select')
+                            .style('padding','3px 0')
+                            .style('position','absolute')
+                            .style('opacity',0)
 
-                            const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+vcf_filter_str]
+                        add_value_select.selectAll('option').remove()
 
-                            try {
-                                const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
-                                const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
-                                if(data.error) throw data.error
-                                wait.remove()
+                        const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
+                        const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+vcf_filter_str] 
 
-                                tip.d.append('div')
-                                    .attr('class','sja_menuoption')
-                                    .html('&times;&nbsp;&nbsp;Delete')
-                                    .on('click', async ()=>{
-                                        group.terms[i].values.splice(j,1)
-                                        if(group.terms[i].values.length==0) {
-                                            group.terms.splice(i,1)
-                                        }
-                                        tip.hide()
-                                        // may_settoloading_termgroup( group )
-                                        await callback()
-                                        update_terms(terms_div)
-                                    })
+                        try {
+                            const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
+                            if(data.error) throw data.error
 
-                                for (const category of data.lst){
-
-                                    if(term.values.find(v=>v.key == category.key)) continue
-
-                                    tip.d.append('div')
-                                        .html('<span style="font-size:.8em;opacity:.6">n='+category.samplecount+'</span> '+category.label)
-                                        .attr('class','sja_menuoption')
-                                        .on('click',async ()=>{
-                                            // replace the old category with the new one
-                                            tip.hide()
-                                            group.terms[i].values[j] = {key:category.key,label:category.label}
-                                            // may_settoloading_termgroup( group )
-                                            await callback()
-                                            update_terms(terms_div)
-                                        })
-                                }
-
-                                tip.showunder( term_value_btn.node() )
-
-                            } catch(e) {
-                                wait.text( e.message || e )
+                            add_value_select.append('option')
+                                .attr('value','add')
+                                .html('--- Add New Category ---')
+                            
+                            for (const category of data.lst){
+                                if(term.values.find(v=>v.key == category.key)) continue
+                                add_value_select.append('option')
+                                    .attr('value',category.key)
+                                    .text( category.label+'\t(n='+ category.samplecount +')')
                             }
-                        })
 
-                        // 'OR' button in between values
-                        if(j<term.values.length-1){
-                            term_value_div.append('div')
-                                .style('display','inline-block')
-                                .style('color','#fff')
-                                .style('background-color','#4888BF')
-                                .style('margin-right','1px')
-                                .style('padding','7px 6px 5px 6px')
-                                .style('font-size','.7em')
-                                .style('text-transform','uppercase')
-                                .text('or')
-                        }else{
-                            // '+' button at end of all values to add to list of values
-                            const add_value_btn = term_value_div.append('div')
-                                .attr('class','sja_filter_tag_btn')
-                                .style('background-color','#4888BF')
-                                .style('margin-right','1px')
-                                .style('padding','3px 5px')
-                                .style('text-transform','uppercase')
-                                .html('&#43;')
-                                .on('click', async ()=>{
-                                    tip.clear()
-            
-                                    const wait = tip.d.append('div').text('Loading...')
-                                    tip.showunder( add_value_btn.node() )
-            
-                                    const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+vcf_filter_str]
-            
-                                    try {
-                                        const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
-                                        const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
-                                        if(data.error) throw data.error
-                                        wait.remove()
-            
-                                        for (const category of data.lst){
-                                            if(term.values.find(v=>v.key == category.key)) continue
-                                            tip.d.append('div')
-                                                .html('<span style="font-size:.8em;opacity:.6">n='+category.samplecount+'</span> '+category.label)
-                                                .attr('class','sja_menuoption')
-                                                .on('click',async ()=>{
-                                                    group.terms[i].values.push({key:category.key,label:category.label})
-                                                    tip.hide()
-                                                    // may_settoloading_termgroup( group )
-                                                    await callback()
-                                                    update_terms(terms_div)
-                                                })
-                                        }
-                                        tip.showunder( add_value_btn.node() )
-                                    } catch(e) {
-                                        wait.text( e.message || e )
-                                    }
-                                })
+                            add_value_select.node().value = 'add'
+
+                            add_value_select.on('change',async()=>{
+
+                                //change value of button 
+                                const new_value = data.lst.find( j=> j.key == add_value_select.node().value )
+                                group.terms[i].values.push({key:new_value.key,label:new_value.label})
+                
+                                //update gorup and load tk
+                                await callback()
+                                update_terms(terms_div)
+                            })
+                            
+                        } catch(e) {
+                            wait.text( e.message || e )
                         }
+
+                        // '+' button at end of all values to add to list of values
+                        const add_value_btn = term_value_div.append('div')
+                            // .attr('class','sja_filter_tag_btn')
+                            .style('background-color','#4888BF')
+                            .style('display','inline-block')
+                            .style('color','#FFF')
+                            .style('font-size','1em')
+                            .style('margin-right','1px')
+                            .style('padding','3px 5px')
+                            .style('text-transform','uppercase')
+                            .html('&#43;')
+                            .style('z-index','-1')
+
+                        // limit dropdown menu width to width of term_value_btn (to avoid overflow)
+                        add_value_select.style('width',add_value_btn.node().offsetWidth+'px')
+                    }
                 }
 
             } else if( term.term.isinteger || term.term.isfloat ) {
