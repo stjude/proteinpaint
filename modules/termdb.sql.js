@@ -229,7 +229,7 @@ returns:
 
 
 
-export function get_samples( tvslst, ds ) {
+export function get_samples ( tvslst, ds ) {
 /*
 must have tvslst[]
 as the actual query is embedded in tvslst
@@ -247,6 +247,49 @@ return an array of sample names passing through the filter
 		.all( filter.values )
 	return re.map(i=>i.sample)
 }
+
+
+
+
+export function get_samplesummary_by_term ( arg ) {
+/*
+getting data for barchart and more
+
+arg{}
+	.tvslst
+	.ds
+	.term1_id
+*/
+	const filter =  arg.tvslst ? makesql_by_tvsfilter( arg.tvslst, arg.ds ) : undefined
+	if(!arg.term1_id) throw '.term1_id is required but missing'
+	const term1 = arg.ds.cohort.termdb.q.termjsonByOneid( arg.term1_id )
+	if(!term1) throw 'unknown term1_id: '+arg.term1_id
+
+	if( term1.iscategorical ) {
+		
+		// if term2 is not provided..
+		const string = (filter ? 'WITH '+filter.CTEcascade+' ' : '')
+			+'SELECT value AS key,count(sample) AS samplecount '
+			+'FROM annotations '
+			+'WHERE '
+			+(filter ? 'sample IN '+filter.lastCTEname+' AND ' : '')
+			+'term_id=? '
+			+'GROUP BY value'
+		const re = arg.ds.cohort.db.connection.prepare( string )
+			.all([ ...(filter?filter.values:[]), arg.term1_id ])
+		return re
+	}
+
+	if( term1.isinteger || term1.isfloat ) {
+		// todo
+		return
+	}
+	if( term1.iscondition ) {
+		return
+	}
+	throw 'unknown type of term1'
+}
+
 
 
 
