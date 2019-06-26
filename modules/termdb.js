@@ -49,7 +49,7 @@ return async (req, res) => {
 
 		if( q.getcategories ) return trigger_getcategories( q, res, tdb, ds )
 		if( q.default_rootterm ) return trigger_rootterm( res, tdb )
-		if( q.get_children ) return await trigger_children( q, res, tdb )
+		if( q.get_children ) return trigger_children( q, res, tdb )
 		if( q.findterm ) return trigger_findterm( q, res, tdb )
 		if( q.treeto ) return trigger_treeto( q, res, tdb )
 
@@ -76,33 +76,7 @@ async function trigger_children ( q, res, tdb ) {
 may apply ssid: a premade sample set
 */
 	if(!q.tid) throw 'no parent term id'
-	// list of children id
-	const cidlst = tdb.parent2children.get( q.tid )
-	// list of children terms
-	const lst = []
-	if(cidlst) {
-		for(const cid of cidlst) {
-			const t = tdb.termjson.map.get( cid )
-			if(t) {
-				lst.push( copy_term( t ) )
-			}
-		}
-	}
-
-	/* not dealing with ssid
-	if( 0 && q.get_children.ssid ) {
-		// based on premade sample sets, count how many samples from each set are annotated to each term
-		const samplesets = await load_ssid( q.get_children.ssid )
-		for(const term of lst) {
-			term.ss2count = {}
-			for(const sampleset of samplesets) {
-				term.ss2count[ sampleset.name ] = term_getcount_4sampleset( term, sampleset.samples )
-			}
-		}
-	}
-	*/
-
-	res.send({lst: lst})
+	res.send({lst: tdb.q.getTermChildren( q.tid ).map( copy_term ) })
 }
 
 
@@ -128,17 +102,7 @@ do not directly hand over the term object to client; many attr to be kept on ser
 
 
 function trigger_findterm ( q, res, termdb ) {
-	const str = q.findterm.toLowerCase()
-	const lst = []
-	for(const term of termdb.termjson.map.values()) {
-		if(term.name.toLowerCase().indexOf( str ) != -1) {
-			lst.push( copy_term( term ) )
-			if(lst.length>=10) {
-				break
-			}
-		}
-	}
-	res.send({lst:lst})
+	res.send({lst: termdb.q.findTermByName( q.findterm, 10 ) })
 }
 
 
@@ -314,10 +278,31 @@ function server_init_db_queries ( ds ) {
 		}
 	}
 	{
-		const s = ds.cohort.db.connection.prepare('SELECT id FROM terms WHERE parent_id=?')
+		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)')
 		q2.getTermChildren = (id)=>{
 			const tmp = s.all(id)
-			if(tmp) return tmp.map( i=> q2.termjsonByOneid( i.id ) )
+			if(tmp) return tmp.map( i=> {
+				const j = JSON.parse(i.jsondata)
+				j.id = i.id
+				return j
+			})
+			return undefined
+		}
+	}
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
+		q2.findTermByName = (n, limit)=>{
+			const tmp = s.all('%'+n+'%')
+			if(tmp) {
+				const lst = []
+				for(const i of tmp) {
+					const j = JSON.parse(i.jsondata)
+					j.id = i.id
+					lst.push( copy_term(j) )
+					if(lst.length==10) break
+				}
+				return lst
+			}
 			return undefined
 		}
 	}

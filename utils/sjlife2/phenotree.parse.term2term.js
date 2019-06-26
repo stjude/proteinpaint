@@ -187,7 +187,7 @@ each word is a term
 		}
 
 		lines.push(
-			id+'\t'
+			id+'\t'+j.name+'\t'
 			+(c2immediatep.get(id)||'')
 			+'\t'+JSON.stringify(j)
 			)
