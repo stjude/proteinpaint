@@ -63,11 +63,6 @@ module.exports={
 			termjson:{
 				file:'files/hg38/sjlife/clinical/termjson'
 			},
-			default_rootterm:[
-				{id:'Cancer-related Variables'},
-				{id:'Demographics/health behaviors'},
-				{id:'Outcomes'}
-			],
 			patient_condition:{
 				// Note: this is solely for the "iscondition" terms
 				file:'files/hg38/sjlife/clinical/outcomes_2017',

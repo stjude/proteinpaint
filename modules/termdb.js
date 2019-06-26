@@ -49,7 +49,7 @@ return async (req, res) => {
 
 		if( q.getcategories ) return trigger_getcategories( q, res, tdb, ds )
 
-		if( trigger_rootterm( q, res, tdb ) ) return
+		if( q.default_rootterm ) return trigger_rootterm( res, tdb )
 
 		if( q.get_children ) {
 			await trigger_children( q, res, tdb )
@@ -76,20 +76,8 @@ return async (req, res) => {
 
 
 
-function trigger_rootterm ( q, res, tdb ) {
-
-	if( !q.default_rootterm) return false
-
-	if(!tdb.default_rootterm) throw 'no default_rootterm for termdb'
-	const lst = []
-	for(const i of tdb.default_rootterm) {
-		const t = tdb.termjson.map.get( i.id )
-		if(t) {
-			lst.push( copy_term( t ) )
-		}
-	}
-	res.send({lst: lst})
-	return true
+function trigger_rootterm ( res, tdb ) {
+	res.send({lst: tdb.q.getRootTerms() })
 }
 
 
@@ -309,6 +297,21 @@ function server_init_db_queries ( ds ) {
 		const t = q.termIsLeaf.get(id)
 		if(t && t.id) return false
 		return true
+	}
+	/* as long as the termdb table and logic is universal
+	probably fine to hardcode such query strings here
+	and no need to define them in each dataset
+	thus less things to worry about...
+	*/
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE parent_id=""')
+		q2.getRootTerms = ()=>{
+			return s.all().map(i=>{
+				const t = JSON.parse(i.jsondata)
+				t.id = i.id
+				return t
+			})
+		}
 	}
 }
 
