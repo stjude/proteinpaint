@@ -117,8 +117,8 @@ returns:
 				+'FROM chronicevents '
 				+'WHERE '
 				+and_clause
-				+'grade IN '+computablegrades2str( ds )
-				+' AND term_id = ? '
+				+'term_id = ? '
+				+uncomputablegrades_clause( ds )
 				+'GROUP BY sample'
 				+'),'
 				+'sampleset_'+(++sampleset_id)+' AS ('
@@ -146,7 +146,7 @@ returns:
 				+'WHERE '
 				+and_clause
 				+'term_id IN sampleset_'+(sampleset_id-1)
-				+' AND grade IN '+computablegrades2str(ds)
+				+uncomputablegrades_clause( ds )
 				+' GROUP BY sample'
 				+'),'
 				+'sampleset_'+(++sampleset_id)+' AS ('
@@ -178,7 +178,7 @@ returns:
 				+'WHERE '
 				+and_clause
 				+'term_id IN sampleset_'+(sampleset_id-1)
-				+' AND grade IN '+computablegrades2str( ds )
+				+uncomputablegrades_clause( ds )
 				+' GROUP BY sample'
 				+'),'
 				+'sampleset_'+(++sampleset_id)+' AS ('
@@ -210,7 +210,7 @@ returns:
 				+'WHERE '
 				+and_clause
 				+'term_id IN sampleset_'+(sampleset_id-1)
-				+' AND grade IN '+computablegrades2str( ds )
+				+uncomputablegrades_clause( ds )
 				+')'
 			)
 			for(const i of tvs.values) {
@@ -293,8 +293,14 @@ arg{}
 
 
 
-function computablegrades2str ( ds ) {
-	return '('+ds.cohort.termdb.patient_condition.grade_labels.map(i=>i.grade).join(',')+')'
+function uncomputablegrades_clause ( ds ) {
+	const u = ds.cohort.termdb.patient_condition.uncomputable_grades
+	if( u ) {
+		const lst = []
+		for(const k in u) lst.push(k)
+		return ` AND grade NOT IN (${lst.join(',')}) `
+	}
+	return ''
 }
 function grade_age_select_clause ( tvs ) {
 // work for grade as bars
