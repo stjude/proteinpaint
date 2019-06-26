@@ -147,7 +147,7 @@ otherwise, count from all samples
 	const lst = termdbsql.get_samplesummary_by_term({
 		ds,
 		term1_id: q.tid,
-		tvslst: q.samplecountbyvcf ? JSON.parse(decodeURIComponent(q.samplecountbyvcf)) : undefined,
+		tvslst: q.tvslst? JSON.parse(decodeURIComponent(q.tvslst)) : undefined,
 	})
 	for(const i of lst) {
 		const label = term.values ? term.values[ i.key ] : i.key
@@ -155,6 +155,9 @@ otherwise, count from all samples
 	}
 	res.send({lst})
 }
+
+
+
 
 
 
