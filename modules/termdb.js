@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
 const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
+const termdbsql = require('./termdb.sql')
 
 
 
@@ -83,7 +84,7 @@ may apply ssid: a premade sample set
 
 function copy_term ( t ) {
 /*
-t is the {} from termjson
+t is jsondata from terms table
 
 do not directly hand over the term object to client; many attr to be kept on server
 */
@@ -129,28 +130,7 @@ function trigger_treeto ( q, res, termdb ) {
 
 
 
-async function load_ssid ( ssid ) {
-/* ssid is the file name under cache/ssid/
-*/
-	const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', ssid ) )
-	const samplesets = []
-	for(const line of text.split('\n')) {
-		const l = line.split('\t')
-		samplesets.push({
-			name: l[0],
-			samples: l[1].split(',')
-		})
-	}
-	return samplesets
-}
 
-
-function term_getcount_4sampleset ( term, samples ) {
-/*
-term
-samples[] array of sample names
-*/
-}
 
 
 
@@ -161,41 +141,19 @@ supply sample count annotated to each category
 if q.samplecountbyvcf, will count from vcf samples
 otherwise, count from all samples
 */
-	const t = tdb.q.termjsonByOneid( q.tid )
-	if(!t) throw 'unknown term id'
-	if(!t.iscategorical) throw 'term not categorical'
-	const category2count = new Map()
-
-	if( q.samplecountbyvcf ) {
-		if(!ds.track || !ds.track.vcf || !ds.track.vcf.samples ) throw 'cannot use vcf samples, necessary parts missing'
-		for(const s of ds.track.vcf.samples) {
-			const a = ds.cohort.annotation[s.name]
-			if(!a) continue
-			const v = a[ q.tid ]
-			if(!v) continue
-			category2count.set( v, 1 + (category2count.get(v)||0) )
-		}
-	} else {
-		for(const n in ds.cohort.annotation) {
-			const a = ds.cohort.annotation[n]
-			const v = a[ q.tid ]
-			if(!v) continue
-			category2count.set( v, 1 + (category2count.get(v)||0) )
-		}
-	}
-	const lst = [...category2count].sort((i,j)=>j[1]-i[1])
-	res.send({lst: lst.map(i=>{
-			let label
-			if( t.values && t.values[i[0]] ) {
-				label = t.values[i[0]].label
-			}
-			return {
-				key: i[0],
-				label: (label || i[0]),
-				samplecount: i[1]
-			}
-		})
+	const term = tdb.q.termjsonByOneid( q.tid )
+	if(!term) throw 'unknown term id'
+	if(!term.iscategorical) throw 'term not categorical'
+	const lst = termdbsql.get_samplesummary_by_term({
+		ds,
+		term1_id: q.tid,
+		tvslst: q.samplecountbyvcf ? JSON.parse(decodeURIComponent(q.samplecountbyvcf)) : undefined,
 	})
+	for(const i of lst) {
+		const label = term.values ? term.values[ i.key ] : i.key
+		i.label = label || i.key
+	}
+	res.send({lst})
 }
 
 
