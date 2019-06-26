@@ -1,5 +1,6 @@
 import * as client from './client'
 import {init} from './mds.termdb'
+import {event as d3event} from 'd3-selection'
 
 
 /*
@@ -171,6 +172,14 @@ group{}
                         .style('padding','3px 0')
                         .style('position','absolute')
                         .style('opacity',0)
+                        .style('z-index',2)
+                        .on('mouseover',()=>{
+                            term_value_btn.style('opacity', '0.8')
+                                .style('cursor','default')
+                        })
+                        .on('mouseout',()=>{
+                            term_value_btn.style('opacity', '1')
+                        })
 
                     replace_value_select.selectAll('option').remove()
                     
@@ -227,7 +236,14 @@ group{}
                         .style('margin-right','1px')
                         .style('background-color', '#4888BF')
                         .html(term.values[j].label+' &#9662;')
-                        .style('z-index','-1')
+                        .style('z-index',-1)
+                        .on('mouseover',()=>{
+                            term_value_btn.style('opacity', '0.8')
+                                .style('cursor','default')
+                        })
+                        .on('mouseout',()=>{
+                            term_value_btn.style('opacity', '1')
+                        })
 
                     // limit dropdown menu width to width of term_value_btn (to avoid overflow)
                     replace_value_select.style('width',term_value_btn.node().offsetWidth+'px')
@@ -247,13 +263,22 @@ group{}
                         const add_value_select = term_value_div.append('select')
                             .style('padding','3px 0')
                             .style('position','absolute')
+                            .style('z-index',2)
                             .style('opacity',0)
+                            .on('mouseover',()=>{
+                                add_value_btn.style('opacity', '0.8')
+                                    .style('cursor','default')
+                            })
+                            .on('mouseout',()=>{
+                                add_value_btn.style('opacity', '1')
+                            })
 
                         add_value_select.selectAll('option').remove()
 
                         if(data.lst){
                             add_value_select.append('option')
                                 .attr('value','add')
+                                .property('disabled',true)
                                 .html('--- Add New Category ---')
                             
                             for (const category of data.lst){
@@ -291,7 +316,14 @@ group{}
                             .style('padding','3px 5px')
                             .style('text-transform','uppercase')
                             .html('&#43;')
-                            .style('z-index','-1')
+                            .style('z-index',-1)
+                            .on('mouseover',()=>{
+                                add_value_btn.style('opacity', '0.8')
+                                    .style('cursor','default')
+                            })
+                            .on('mouseout',()=>{
+                                add_value_btn.style('opacity', '1')
+                            })
 
                         // limit dropdown menu width to width of term_value_btn (to avoid overflow)
                         add_value_select.style('width',add_value_btn.node().offsetWidth+'px')
@@ -360,6 +392,14 @@ group{}
                         .style('padding','3px 0')
                         .style('position','absolute')
                         .style('opacity',0)
+                        .style('z-index',2)
+                        .on('mouseover',()=>{
+                            grade_type_btn.style('opacity', '0.8')
+                                .style('cursor','default')
+                        })
+                        .on('mouseout',()=>{
+                            grade_type_btn.style('opacity', '1')
+                        })
 
                     grade_type_select.append('option')
                         .attr('value','max')
@@ -376,7 +416,14 @@ group{}
                         .style('padding','2px 4px 3px 4px')
                         .style('margin-right','1px')
                         .style('background-color', '#4888BF')
-                        .style('z-index','-1')
+                        .style('z-index',-1)
+                        .on('mouseover',()=>{
+                            grade_type_btn.style('opacity', '0.8')
+                                .style('cursor','default')
+                        })
+                        .on('mouseout',()=>{
+                            grade_type_btn.style('opacity', '1')
+                        })
 
                     if(term.value_by_max_grade){
                         grade_type_btn.html('(Max grade per patient) &#9662;')
