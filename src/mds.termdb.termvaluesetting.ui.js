@@ -59,6 +59,7 @@ group{}
                 mds: mds,
                 div: treediv,
                 default_rootterm: {},
+                termfilter:{terms:vcf_filter},
                 modifier_barchart_selectbar: {
                     callback: result => {
                         tip.hide()
@@ -106,6 +107,7 @@ group{}
                         mds: mds,
                         div: treediv,
                         default_rootterm: {},
+                        termfilter:{terms:vcf_filter},
                         modifier_barchart_selectbar: {
                             callback: result => {
                                 tip.hide()
@@ -128,7 +130,7 @@ group{}
                 condition_btn
                     .text(term.isnot ? 'IS NOT' : 'IS')
                     .style('background-color', term.isnot ? '#511e78' : '#015051')
-                    .on('click',()=>{
+                    .on('click',async()=>{
 
                         tip.clear()
                             .showunder( condition_btn.node() )
@@ -172,17 +174,16 @@ group{}
 
                     replace_value_select.selectAll('option').remove()
                     
-                    const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
-                    const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+vcf_filter_str] 
+                    const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+vcf_filter_str] 
 
-                    try {
-                        const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
-                        if(data.error) throw data.error
+                    const data = await getcategories(args)
+                    
+                    if(data.lst){
 
                         replace_value_select.append('option')
                             .attr('value','delete')
                             .html('&times;&nbsp;&nbsp;Delete')
-                        
+
                         for (const category of data.lst){
                             if(term.values.find(v=>v.key == category.key) && (category.key!=term.values[j].label)) continue
                             replace_value_select.append('option')
@@ -212,12 +213,11 @@ group{}
                             //update gorup and load tk
                             await callback()
                             update_terms(terms_div)
-                        })
-                        
-                    } catch(e) {
-                        wait.text( e.message || e )
+                        })   
+                    }else{
+                        replace_value_select.append('option')
+                            .text('ERROR: Can\'t get the data')
                     }
-                    
                     
                     const term_value_btn = term_value_div.append('div')
                         .style('display','inline-block')
@@ -251,13 +251,7 @@ group{}
 
                         add_value_select.selectAll('option').remove()
 
-                        const lst = [ 'genome='+genome.name+'&dslabel='+mds.label ]
-                        const args = ['getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+vcf_filter_str] 
-
-                        try {
-                            const data = await client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
-                            if(data.error) throw data.error
-
+                        if(data.lst){
                             add_value_select.append('option')
                                 .attr('value','add')
                                 .html('--- Add New Category ---')
@@ -281,9 +275,9 @@ group{}
                                 await callback()
                                 update_terms(terms_div)
                             })
-                            
-                        } catch(e) {
-                            wait.text( e.message || e )
+                        }else{
+                            add_value_select.append('option')
+                                .text('ERROR: Can\'t get the data')
                         }
 
                         // '+' button at end of all values to add to list of values
@@ -425,6 +419,17 @@ group{}
                     update_terms(terms_div)
                 })
         }
+    }
+
+    async function getcategories(args){
+        let data
+        try {
+            data = await client.dofetch2( '/termdb?'+args.join('&') )
+            if(data.error) throw data.error
+        } catch(e) {
+            window.alert( e.message || e )
+        }
+        return data
     }
 
     async function add_term(result){
