@@ -48,21 +48,10 @@ return async (req, res) => {
 		// process triggers
 
 		if( q.getcategories ) return trigger_getcategories( q, res, tdb, ds )
-
 		if( q.default_rootterm ) return trigger_rootterm( res, tdb )
-
-		if( q.get_children ) {
-			await trigger_children( q, res, tdb )
-			return
-		}
-		if( q.findterm ) {
-			trigger_findterm( q, res, tdb )
-			return
-		}
-		if( q.treeto ) {
-			trigger_treeto( q, res, tdb )
-			return
-		}
+		if( q.get_children ) return await trigger_children( q, res, tdb )
+		if( q.findterm ) return trigger_findterm( q, res, tdb )
+		if( q.treeto ) return trigger_treeto( q, res, tdb )
 
 		throw 'termdb: don\'t know what to do'
 
@@ -155,31 +144,22 @@ function trigger_findterm ( q, res, termdb ) {
 
 
 function trigger_treeto ( q, res, termdb ) {
-	const term = termdb.termjson.map.get( q.treeto )
+	const term = termdb.q.termjsonByOneid( q.treeto )
 	if(!term) throw 'unknown term id'
 	const levels = [{
 		focusid: q.treeto,
-		terms: []
 	}]
-	let thisid = term.id
-	while( termdb.child2parent.has( thisid ) ) {
-		const parentid = termdb.child2parent.get( thisid )
-		const childrenids = termdb.parent2children.get( parentid )
-		for(const i of childrenids) {
-			levels[0].terms.push( copy_term(termdb.termjson.map.get(i)))
-		}
+	let thisid = q.treeto
+	while( termdb.q.termHasParent( thisid ) ) {
+		const parentid = termdb.q.getTermParentId( thisid )
+		levels[0].terms = termdb.q.getTermChildren( parentid ).map( copy_term )
 		const ele = { // new element for the lst
 			focusid: parentid,
-			terms: []
 		}
 		levels.unshift( ele )
 		thisid = parentid
 	}
-	if(termdb.default_rootterm) {
-		for(const i of termdb.default_rootterm) {
-			levels[0].terms.push(copy_term(termdb.termjson.map.get(i.id)))
-		}
-	}
+	levels[0].terms = termdb.q.getRootTerms()
 	res.send({levels})
 }
 
@@ -288,9 +268,11 @@ function server_init_db_queries ( ds ) {
 	q2.termjsonByOneid = (id)=>{
 		const t = q.termjsonByOneid.get( id )
 		if(t) {
-			return JSON.parse(t.jsondata)
+			const j = JSON.parse(t.jsondata)
+			j.id = id
+			return j
 		}
-		return
+		return undefined
 	}
 	if(!q.termIsLeaf) throw 'db query missing: termIsLeaf'
 	q2.termIsLeaf = (id)=>{
@@ -304,13 +286,39 @@ function server_init_db_queries ( ds ) {
 	thus less things to worry about...
 	*/
 	{
-		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE parent_id=""')
+		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE parent_id is null')
 		q2.getRootTerms = ()=>{
 			return s.all().map(i=>{
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
 				return t
 			})
+		}
+	}
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT parent_id FROM terms WHERE id=?')
+		q2.termHasParent = (id)=>{
+			const t = s.get(id)
+			if(t && t.parent_id) return true
+			return false
+		}
+		q2.getTermParentId = (id)=>{
+			const t = s.get(id)
+			if(t && t.parent_id) return t.parent_id
+			return undefined
+		}
+		q2.getTermParent = (id)=>{
+			const c = q2.getTermParentId(id)
+			if(!c) return undefined
+			return q2.termjsonByOneid( c )
+		}
+	}
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT id FROM terms WHERE parent_id=?')
+		q2.getTermChildren = (id)=>{
+			const tmp = s.all(id)
+			if(tmp) return tmp.map( i=> q2.termjsonByOneid( i.id ) )
+			return undefined
 		}
 	}
 }
