@@ -174,7 +174,7 @@ group{}
 
                     replace_value_select.selectAll('option').remove()
                     
-                    const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&samplecountbyvcf='+vcf_filter_str] 
+                    const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+vcf_filter_str] 
 
                     const data = await getcategories(args)
                     
