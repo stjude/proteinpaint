@@ -26,6 +26,13 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 	optional
 	each element is a term-value setting object
 	must have already been validated by src/mds.termdb.termvaluesetting.js/validate_termvaluesetting()
+returns:
+	.CTEcascade:
+		one string of all CTEs, with question marks
+	.values[]:
+		array of *bind parameters*
+	.lastCTEname:
+		the name of last CTE, to be used in task-specific runner
 */
 	if( !tvslst ) return null
 
@@ -49,9 +56,9 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 	}
 
 	return {
-		CTE: CTEs.join(', '),
+		CTEcascade: CTEs.join(', '),
 		values,
-		sampleset_id
+		lastCTEname: 'sampleset_'+sampleset_id
 	}
 
 	// helpers
@@ -100,7 +107,7 @@ export function makesql_by_tvsfilter ( tvslst, ds ) {
 			+')'
 		)
 	}
-	
+
 	function add_condition ( tvs, and_clause ) {
 		if( ds.cohort.termdb.q.termIsLeaf( tvs.term.id ) ) {
 			// is leaf
@@ -230,9 +237,8 @@ return an array of sample names passing through the filter
 */
 	const filter = makesql_by_tvsfilter( tvslst, ds )
 	const string =
-		'WITH '+filter.CTE
-		+' SELECT sample FROM sampleset_'
-		+filter.sampleset_id
+		'WITH '+filter.CTEcascade
+		+' SELECT sample FROM '+filter.lastCTEname
 	console.log('SQL: ',string)
 	console.log('PARAM: ',filter.values)
 
