@@ -42,7 +42,7 @@ returns:
 
 	for(const tvs of tvslst) {
 
-		let and_clause = sampleset_id > 0 ? 'sample IN sampleset_'+sampleset_id+' AND ' : ''
+		let and_clause = sampleset_id > 0 ? `sample IN sampleset_${sampleset_id} AND ` : ''
 
 		if(tvs.term.iscategorical) {
 			add_categorical( tvs, and_clause )
@@ -65,14 +65,14 @@ returns:
 	function add_categorical ( tvs, and_clause ) {
 		const questionmarks = tvs.values.map(i=>'?').join(' ')
 		CTEs.push(
-			'sampleset_'+(++sampleset_id)+' AS ('
-			+'SELECT sample '
-			+'FROM annotations '
-			+'WHERE '
-			+and_clause
-			+'term_id = ? '
-			+'AND value IN ('+ tvs.values.map(i=>'?').join(', ')+')'
-			+')'
+			`sampleset_${++sampleset_id} AS (
+				SELECT sample
+				FROM annotations
+				WHERE
+				${and_clause}
+				term_id = ?
+				AND value IN (${tvs.values.map(i=>'?').join(', ')})
+			)`
 		)
 		values.push( tvs.term.id, ...tvs.values.map(i=>i.key) )
 	}
@@ -97,14 +97,14 @@ returns:
 			values.push( tvs.range.stop )
 		}
 		CTEs.push(
-			'sampleset_'+(++sampleset_id)+' AS ('
-			+'SELECT sample '
-			+'FROM annotations '
-			+'WHERE '
-			+and_clause
-			+'term_id = ? '
-			+'AND '+clauses.join(' AND ')
-			+')'
+			`sampleset_${++sampleset_id} AS (
+				SELECT sample
+				FROM annotations
+				WHERE
+				${and_clause}
+				term_id = ?
+				AND ${clauses.join(' AND ')}
+			)`
 		)
 	}
 
@@ -112,20 +112,21 @@ returns:
 		if( ds.cohort.termdb.q.termIsLeaf( tvs.term.id ) ) {
 			// is leaf
 			CTEs.push(
-				'sampleset_'+(++sampleset_id)+' AS ('
-				+grade_age_select_clause(tvs)
-				+'FROM chronicevents '
-				+'WHERE '
-				+and_clause
-				+'term_id = ? '
-				+uncomputablegrades_clause( ds )
-				+'GROUP BY sample'
-				+'),'
-				+'sampleset_'+(++sampleset_id)+' AS ('
-				+'SELECT sample '
-				+'FROM sampleset_'+(sampleset_id-1)+' '
-				+'WHERE grade IN ('+tvs.values.map(i=>'?').join(', ')+')'
-				+')'
+				`sampleset_${++sampleset_id} AS (
+					${grade_age_select_clause(tvs)}
+					FROM chronicevents
+					WHERE
+					${and_clause}
+					term_id = ?
+					${uncomputablegrades_clause( ds )}
+					GROUP BY sample
+				),
+				sampleset_${++sampleset_id} AS (
+					SELECT sample
+					FROM sampleset_${sampleset_id-1}
+					WHERE
+					grade IN ${tvs.values.map(i=>'?').join(', ')}
+				)`
 			)
 			values.push( tvs.term.id, ...tvs.values.map(i=>i.key) )
 			return
@@ -135,25 +136,26 @@ returns:
 		// not leaf
 		if( tvs.grade_and_child ) {
 			CTEs.push(
-				'sampleset_'+(++sampleset_id)+' AS ('
-				+'SELECT term_id '
-				+'FROM ancestry '
-				+'WHERE ancestor_id=? OR term_id=?' // hardcoded to process just grade_and_child[0]
-				+'),'
-				+'sampleset_'+(++sampleset_id)+' AS ('
-				+grade_age_select_clause(tvs)
-				+'FROM chronicevents '
-				+'WHERE '
-				+and_clause
-				+'term_id IN sampleset_'+(sampleset_id-1)
-				+uncomputablegrades_clause( ds )
-				+' GROUP BY sample'
-				+'),'
-				+'sampleset_'+(++sampleset_id)+' AS ('
-				+'SELECT sample '
-				+'FROM sampleset_'+(sampleset_id-1)+' '
-				+'WHERE grade = ?'
-				+')'
+				`sampleset_${++sampleset_id} AS (
+					SELECT term_id
+					FROM ancestry
+					WHERE
+					ancestor_id=? OR term_id=?
+				),
+				sampleset_${++sampleset_id} AS (
+					${grade_age_select_clause(tvs)}
+					FROM chronicevents
+					WHERE
+					${and_clause}
+					term_id IN sampleset_${sampleset_id-1}
+					${uncomputablegrades_clause( ds )}
+					GROUP BY sample
+				),
+				sampleset_${++sampleset_id} AS (
+					SELECT sample
+					FROM sampleset_${sampleset_id-1}
+					WHERE grade = ?
+				)`
 			)
 			values.push(
 				tvs.grade_and_child[0].child_id,
@@ -167,25 +169,27 @@ returns:
 
 		if( tvs.bar_by_grade ) {
 			CTEs.push(
-				'sampleset_'+(++sampleset_id)+' AS ('
-				+'SELECT term_id '
-				+'FROM ancestry '
-				+'WHERE ancestor_id=? OR term_id=?'
-				+'),'
-				+'sampleset_'+(++sampleset_id)+' AS ('
-				+grade_age_select_clause(tvs)
-				+'FROM chronicevents '
-				+'WHERE '
-				+and_clause
-				+'term_id IN sampleset_'+(sampleset_id-1)
-				+uncomputablegrades_clause( ds )
-				+' GROUP BY sample'
-				+'),'
-				+'sampleset_'+(++sampleset_id)+' AS ('
-				+'SELECT sample '
-				+'FROM sampleset_'+(sampleset_id-1)+' '
-				+'WHERE grade IN ('+tvs.values.map(i=>'?').join(', ')+')'
-				+')'
+				`sampleset_${++sampleset_id} AS (
+					SELECT term_id
+					FROM ancestry
+					WHERE
+					ancestor_id=? OR term_id=?
+				),
+				sampleset_${++sampleset_id} AS (
+					${grade_age_select_clause(tvs)}
+					FROM chronicevents
+					WHERE
+					${and_clause}
+					term_id IN sampleset_${sampleset_id-1}
+					${uncomputablegrades_clause( ds )}
+					GROUP BY sample
+				),
+				sampleset_${++sampleset_id} AS (
+					SELECT sample
+					FROM sampleset_${sampleset_id-1}
+					WHERE
+					grade IN (${tvs.values.map(i=>'?').join(', ')})
+				)`
 			)
 			values.push(
 				tvs.term.id,
@@ -198,20 +202,20 @@ returns:
 
 		if( tvs.bar_by_children ) {
 			CTEs.push(
-				'sampleset_'+(++sampleset_id)+' AS ('
-				+'SELECT term_id '
-				+'FROM ancestry '
-				+'WHERE '
-				+tvs.values.map(i=>'ancestor_id=? OR term_id=?').join(' OR ')
-				+'),'
-				+'sampleset_'+(++sampleset_id)+' AS ('
-				+'SELECT distinct(sample) '
-				+'FROM chronicevents '
-				+'WHERE '
-				+and_clause
-				+'term_id IN sampleset_'+(sampleset_id-1)
-				+uncomputablegrades_clause( ds )
-				+')'
+				`sampleset_${++sampleset_id} AS (
+					SELECT term_id
+					FROM ancestry
+					WHERE
+					${tvs.values.map(i=>'ancestor_id=? OR term_id=?').join(' OR ')}
+				),
+				sampleset_${++sampleset_id} AS (
+					SELECT distinct(sample)
+					FROM chronicevents
+					WHERE
+					${and_clause}
+					term_id IN sampleset_${sampleset_id-1}
+					${uncomputablegrades_clause( ds )}
+				)`
 			)
 			for(const i of tvs.values) {
 				values.push(i.key, i.key)
