@@ -121,35 +121,53 @@ group{}
                     init(obj)
                 })
 
+            const condition_select = one_term_div.append('select')
+                .style('padding','3px 0')
+                .style('position','absolute')
+                .style('opacity',0)
+                .style('z-index',2)
+
             const condition_btn = one_term_div.append('div')
                 .attr('class','sja_filter_tag_btn')
                 .style('background-color','#eeeeee')
                 .style('font-size','.7em')
                 .style('padding','7px 6px 5px 6px')
+                .style('z-index',-1)
 
             if(term.term.iscategorical){
+
+                condition_select
+                    .on('mouseover',()=>{
+                        condition_btn.style('opacity', '0.8')
+                            .style('cursor','default')
+                    })
+                    .on('mouseout',()=>{
+                        condition_btn.style('opacity', '1')
+                    })
+
+                condition_select.append('option')
+                    .attr('value','is')
+                    .text('IS')
+
+                condition_select.append('option')
+                    .attr('value','is_not')
+                    .text('IS NOT')
+
+                condition_select.node().value = term.isnot ? 'is_not' : 'is'
+
+                condition_select.on('change',async()=>{
+
+                    //change value of button 
+                    group.terms[i].isnot = term.isnot ? false : true
+    
+                    //update gorup and load tk
+                    await callback()
+                    update_terms(terms_div)
+                })
+
                 condition_btn
                     .text(term.isnot ? 'IS NOT' : 'IS')
                     .style('background-color', term.isnot ? '#511e78' : '#015051')
-                    .on('click',async()=>{
-
-                        tip.clear()
-                            .showunder( condition_btn.node() )
-
-                        tip.d.append('div')
-                            .style('font-size','.7em')
-                            .style('color','#fff')
-                            .style('padding','5px')
-                            .text(term.isnot ? 'IS' : 'IS NOT')
-                            .style('background-color', term.isnot ? '#015051' : '#511e78')
-                            .on('click', async()=>{
-                                tip.hide()
-                                group.terms[i].isnot = term.isnot ? false : true
-                                // may_settoloading_termgroup( group )
-                                await callback()
-                                update_terms(terms_div)
-                            })
-                    })
             } else if(term.term.isinteger || term.term.isfloat) {
                 // range label is not clickable
                 condition_btn.text('RANGE')
@@ -229,21 +247,12 @@ group{}
                     }
                     
                     const term_value_btn = term_value_div.append('div')
-                        .style('display','inline-block')
-                        .style('color','#FFF')
-                        .style('font-size','1em')
+                        .attr('class','sja_filter_tag_btn')
                         .style('padding','2px 4px 3px 4px')
                         .style('margin-right','1px')
                         .style('background-color', '#4888BF')
                         .html(term.values[j].label+' &#9662;')
                         .style('z-index',-1)
-                        .on('mouseover',()=>{
-                            term_value_btn.style('opacity', '0.8')
-                                .style('cursor','default')
-                        })
-                        .on('mouseout',()=>{
-                            term_value_btn.style('opacity', '1')
-                        })
 
                     // limit dropdown menu width to width of term_value_btn (to avoid overflow)
                     replace_value_select.style('width',term_value_btn.node().offsetWidth+'px')
@@ -307,23 +316,14 @@ group{}
 
                         // '+' button at end of all values to add to list of values
                         const add_value_btn = term_value_div.append('div')
-                            // .attr('class','sja_filter_tag_btn')
+                            .attr('class','sja_filter_tag_btn')
                             .style('background-color','#4888BF')
                             .style('display','inline-block')
-                            .style('color','#FFF')
-                            .style('font-size','1em')
                             .style('margin-right','1px')
                             .style('padding','3px 5px')
                             .style('text-transform','uppercase')
                             .html('&#43;')
                             .style('z-index',-1)
-                            .on('mouseover',()=>{
-                                add_value_btn.style('opacity', '0.8')
-                                    .style('cursor','default')
-                            })
-                            .on('mouseout',()=>{
-                                add_value_btn.style('opacity', '1')
-                            })
 
                         // limit dropdown menu width to width of term_value_btn (to avoid overflow)
                         add_value_select.style('width',add_value_btn.node().offsetWidth+'px')
@@ -410,20 +410,11 @@ group{}
                         .text('Most recent grade per patient')
 
                     const grade_type_btn = term_value_div.append('div')
-                        .style('display','inline-block')
-                        .style('color','#FFF')
-                        .style('font-size','1em')
+                        .attr('class','sja_filter_tag_btn')
                         .style('padding','2px 4px 3px 4px')
                         .style('margin-right','1px')
                         .style('background-color', '#4888BF')
                         .style('z-index',-1)
-                        .on('mouseover',()=>{
-                            grade_type_btn.style('opacity', '0.8')
-                                .style('cursor','default')
-                        })
-                        .on('mouseout',()=>{
-                            grade_type_btn.style('opacity', '1')
-                        })
 
                     if(term.value_by_max_grade){
                         grade_type_btn.html('(Max grade per patient) &#9662;')
