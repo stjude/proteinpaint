@@ -326,7 +326,7 @@ arg{}
 						WHERE
 						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
 						term_id = ?
-						${uncomputablegrades_clause( ds )}
+						${uncomputablegrades_clause( arg.ds )}
 						GROUP BY sample
 					)
 					SELECT grade,count(sample) as samplecount
@@ -351,7 +351,7 @@ arg{}
 							WHERE
 							${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
 							term_id IN tmp_term_table
-							${uncomputablegrades_clause( ds )}
+							${uncomputablegrades_clause( arg.ds )}
 							GROUP BY sample
 						)
 						SELECT grade,count(sample) as samplecount
@@ -379,7 +379,7 @@ arg{}
 							WHERE
 							${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
 							d.term_id = a.term_id
-							${uncomputablegrades_clause(ds)}
+							${uncomputablegrades_clause( arg.ds )}
 							GROUP BY d.child, sample
 						)
 						SELECT
