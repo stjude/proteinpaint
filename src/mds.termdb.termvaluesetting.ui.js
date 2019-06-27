@@ -121,29 +121,10 @@ group{}
                     init(obj)
                 })
 
-            const condition_select = one_term_div.append('select')
-                .style('padding','3px 0')
-                .style('position','absolute')
-                .style('opacity',0)
-                .style('z-index',2)
-
-            const condition_btn = one_term_div.append('div')
-                .attr('class','sja_filter_tag_btn')
-                .style('background-color','#eeeeee')
-                .style('font-size','.7em')
-                .style('padding','7px 6px 5px 6px')
-                .style('z-index',-1)
-
+            //term-value relation button
             if(term.term.iscategorical){
 
-                condition_select
-                    .on('mouseover',()=>{
-                        condition_btn.style('opacity', '0.8')
-                            .style('cursor','default')
-                    })
-                    .on('mouseout',()=>{
-                        condition_btn.style('opacity', '1')
-                    })
+                const [condition_select, condition_btn] = make_select_btn_pair(one_term_div)
 
                 condition_select.append('option')
                     .attr('value','is')
@@ -166,47 +147,45 @@ group{}
                 })
 
                 condition_btn
+                    .style('font-size','.7em')
+                    .style('padding','7px 6px 5px 6px')
                     .text(term.isnot ? 'IS NOT' : 'IS')
                     .style('background-color', term.isnot ? '#511e78' : '#015051')
-            } else if(term.term.isinteger || term.term.isfloat) {
-                // range label is not clickable
-                condition_btn.text('RANGE')
-                    .style('background-color', '#015051')
-                    .style('pointer-events','none')
-            }else if(term.term.iscondition) {
-                condition_btn.text('IS')
-                    .style('background-color', '#015051')
-                    .style('pointer-events','none')
+            } else{
+                const condition_btn = one_term_div.append('div')
+                    .attr('class','sja_filter_tag_btn')
+                    .style('background-color','#eeeeee')
+                    .style('font-size','.7em')
+                    .style('padding','7px 6px 5px 6px')
+                
+                if(term.term.isinteger || term.term.isfloat) {
+                    // range label is not clickable
+                    condition_btn.text('RANGE')
+                        .style('background-color', '#015051')
+                        .style('pointer-events','none')
+                }else if(term.term.iscondition) {
+                    condition_btn.text('IS')
+                        .style('background-color', '#015051')
+                        .style('pointer-events','none')
+                }
             }
 
             const term_value_div = one_term_div.append('div')
                 .style('display','inline-block')
 
             if( term.term.iscategorical ) {
+
+                // query db for list of categories and count
+                const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+vcf_filter_str]
+                const data = await getcategories(args)
                 
                 for (let j=0; j<term.values.length; j++){
 
-                    const replace_value_select = term_value_div.append('select')
-                        .style('padding','3px 0')
-                        .style('position','absolute')
-                        .style('opacity',0)
-                        .style('z-index',2)
-                        .on('mouseover',()=>{
-                            term_value_btn.style('opacity', '0.8')
-                                .style('cursor','default')
-                        })
-                        .on('mouseout',()=>{
-                            term_value_btn.style('opacity', '1')
-                        })
+                    const [replace_value_select, term_value_btn] = make_select_btn_pair(term_value_div)
 
                     replace_value_select.selectAll('option').remove()
                     
-                    const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+vcf_filter_str] 
-
-                    const data = await getcategories(args)
-                    
                     if(data.lst){
-
                         replace_value_select.append('option')
                             .attr('value','delete')
                             .html('&times;&nbsp;&nbsp;Delete')
@@ -246,13 +225,12 @@ group{}
                             .text('ERROR: Can\'t get the data')
                     }
                     
-                    const term_value_btn = term_value_div.append('div')
-                        .attr('class','sja_filter_tag_btn')
+                    term_value_btn
                         .style('padding','2px 4px 3px 4px')
                         .style('margin-right','1px')
+                        .style('font-size','1em')
                         .style('background-color', '#4888BF')
                         .html(term.values[j].label+' &#9662;')
-                        .style('z-index',-1)
 
                     // limit dropdown menu width to width of term_value_btn (to avoid overflow)
                     replace_value_select.style('width',term_value_btn.node().offsetWidth+'px')
@@ -334,6 +312,8 @@ group{}
                 // TODO numerical term, print range in value button and apply the suitable click callback
                 display_numeric_filter(term, term_value_div)
             } else if(term.term.iscondition){
+
+                // for overlay between grade and subcategory
                 if(term.grade_and_child){
                     for (let j=0; j<term.grade_and_child.length; j++){
                         term_value_div.append('div')
@@ -362,15 +342,52 @@ group{}
                             .style('background-color', '#4888BF')
                             .text(term.grade_and_child[j].child_label)
                     }
-                }else{
+                }
+                // for non-leaf term - bar by subcategry
+                else if(term.bar_by_children){
+
+                    // query db for list of sub-categories and count
+                    const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+vcf_filter_str+'&bar_by_children=1']
+                    const data = await getcategories(args)
+
                     for (let j=0; j<term.values.length; j++){
-                        const term_value_btn = term_value_div.append('div')
-                            .attr('class','sja_filter_tag_btn')
+
+                        const [subcategroy_select, term_value_btn] = make_select_btn_pair(term_value_div)
+
+                        make_select_list(data, subcategroy_select)
+    
+                        if (data.lst) subcategroy_select.node().value = term.values[j].key
+
+                        subcategroy_select.on('change',async()=>{
+
+                            //if value is 'delete' then remove from group
+                            if(subcategroy_select.node().value == 'delete'){
+                                group.terms[i].values.splice(j,1)
+                                    if(group.terms[i].values.length==0) {
+                                        group.terms.splice(i,1)
+                                    }
+                            }else{
+                                //change value of button 
+                                const new_value = data.lst.find( j=> j.key == subcategroy_select.node().value )
+                                term_value_btn
+                                    .style('padding','3px 4px 3px 4px')
+                                    .text('Loading...')
+                                group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
+                            }
+                
+                            //update gorup and load tk
+                            await callback()
+                            update_terms(terms_div)
+                        })
+
+                        term_value_btn
                             .style('font-size','1em')
-                            .style('padding','3px 4px 3px 4px')
+                            .style('padding','2px 4px 3px 4px')
                             .style('margin-right','1px')
                             .style('background-color', '#4888BF')
-                            .text(term.values[j].label)
+                            .html(term.values[j].key+' &#9662;')
+
+                        subcategroy_select.style('width',term_value_btn.node().offsetWidth+'px')
 
                         if(j<term.values.length-1){
                             term_value_div.append('div')
@@ -384,22 +401,65 @@ group{}
                                 .text('or')
                         }
                     }
-                }
-                
-                if(term.bar_by_grade){
+                }else if(term.bar_by_grade){
 
-                    const grade_type_select = term_value_div.append('select')
-                        .style('padding','3px 0')
-                        .style('position','absolute')
-                        .style('opacity',0)
-                        .style('z-index',2)
-                        .on('mouseover',()=>{
-                            grade_type_btn.style('opacity', '0.8')
-                                .style('cursor','default')
+                    // query db for list of grade and count
+                    const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+vcf_filter_str+'&bar_by_grade=1&value_by_max_grade=1&value_by_most_recent=1']
+                    const data = await getcategories(args)
+
+                    for (let j=0; j<term.values.length; j++){
+
+                        const [grade_select, term_value_btn] = make_select_btn_pair(term_value_div)
+
+                        make_select_list(data, grade_select)
+    
+                        if (data.lst) grade_select.node().value = term.values[j].key
+
+                        grade_select.on('change',async()=>{
+
+                            //if value is 'delete' then remove from group
+                            if(grade_select.node().value == 'delete'){
+                                group.terms[i].values.splice(j,1)
+                                    if(group.terms[i].values.length==0) {
+                                        group.terms.splice(i,1)
+                                    }
+                            }else{
+                                //change value of button 
+                                const new_value = data.lst.find( j=> j.key == grade_select.node().value )
+                                term_value_btn
+                                    .style('padding','3px 4px 3px 4px')
+                                    .text('Loading...')
+                                group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
+                            }
+                
+                            //update gorup and load tk
+                            await callback()
+                            update_terms(terms_div)
                         })
-                        .on('mouseout',()=>{
-                            grade_type_btn.style('opacity', '1')
-                        })
+
+                        term_value_btn
+                            .style('font-size','1em')
+                            .style('padding','2px 4px 3px 4px')
+                            .style('margin-right','1px')
+                            .style('background-color', '#4888BF')
+                            .html(term.values[j].key+' &#9662;')
+
+                        grade_select.style('width',term_value_btn.node().offsetWidth+'px')
+
+                        if(j<term.values.length-1){
+                            term_value_div.append('div')
+                                .style('display','inline-block')
+                                .style('color','#fff')
+                                .style('background-color','#4888BF')
+                                .style('margin-right','1px')
+                                .style('padding','7px 6px 5px 6px')
+                                .style('font-size','.7em')
+                                .style('text-transform','uppercase')
+                                .text('or')
+                        }
+                    }
+
+                    const [grade_type_select, grade_type_btn] = make_select_btn_pair(term_value_div)
 
                     grade_type_select.append('option')
                         .attr('value','max')
@@ -409,12 +469,11 @@ group{}
                         .attr('value','recent')
                         .text('Most recent grade per patient')
 
-                    const grade_type_btn = term_value_div.append('div')
-                        .attr('class','sja_filter_tag_btn')
+                    grade_type_btn
                         .style('padding','2px 4px 3px 4px')
                         .style('margin-right','1px')
+                        .style('font-size','1em')
                         .style('background-color', '#4888BF')
-                        .style('z-index',-1)
 
                     if(term.value_by_max_grade){
                         grade_type_btn.html('(Max grade per patient) &#9662;')
@@ -481,6 +540,46 @@ group{}
         // update the group div with new terms
         await callback()
         update_terms(terms_div)
+    }
+
+    function make_select_btn_pair(holder){
+
+        const select = holder.append('select')
+            .style('padding','3px 0')
+            .style('position','absolute')
+            .style('opacity',0)
+            .style('z-index',2)
+            .on('mouseover',()=>{
+                btn.style('opacity', '0.8')
+                    .style('cursor','default')
+            })
+            .on('mouseout',()=>{
+                btn.style('opacity', '1')
+            })
+
+        const btn = holder.append('div')
+            .attr('class','sja_filter_tag_btn')
+            .style('background-color','#eeeeee')
+            .style('z-index',-1)
+
+        return [select, btn]
+    }
+
+    function make_select_list(data, select){
+        if(data.lst){
+            select.append('option')
+                .attr('value','delete')
+                .html('&times;&nbsp;&nbsp;Delete')
+
+            for (const category of data.lst){
+                select.append('option')
+                    .attr('value',category.key)
+                    .text( category.key+'\t(n='+ category.samplecount +')')
+            }  
+        }else{
+            select.append('option')
+                .text('ERROR: Can\'t get the data')
+        }
     }
 
     async function replace_term(result, term_replce_index){

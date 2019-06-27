@@ -354,7 +354,7 @@ arg{}
 							${uncomputablegrades_clause( arg.ds )}
 							GROUP BY sample
 						)
-						SELECT grade,count(sample) as samplecount
+						SELECT grade AS key,count(sample) as samplecount
 						FROM tmp_grade_table
 						GROUP BY grade`
 					thisvalues.push( arg.term1_id, arg.term1_id )
@@ -362,8 +362,9 @@ arg{}
 				} else if( arg.bar_by_children ) {
 					string =
 						`WITH
+						${filter ? filter.CTEcascade+', ' : ''}
 						tmp_children_table AS (
-							SELECT id AS child,
+							SELECT id AS child
 							FROM terms
 							WHERE parent_id=?
 						),
@@ -371,7 +372,7 @@ arg{}
 							SELECT term_id, c.child AS child
 							FROM ancestry a, tmp_children_table c
 							WHERE c.child=a.ancestor_id OR c.child=a.term_id
-							ORDER BY term_id ACC
+							ORDER BY term_id ASC
 						),
 						tmp_events_table AS (
 							SELECT sample, d.child as child
