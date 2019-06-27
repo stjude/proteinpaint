@@ -241,8 +241,8 @@ return an array of sample names passing through the filter
 */
 	const filter = makesql_by_tvsfilter( tvslst, ds )
 	const string =
-		'WITH '+filter.CTEcascade
-		+' SELECT sample FROM '+filter.lastCTEname
+		`WITH ${filter.CTEcascade}
+		SELECT sample FROM ${filter.lastCTEname}`
 	console.log('SQL: ',string)
 	console.log('PARAM: ',filter.values)
 
@@ -255,6 +255,12 @@ return an array of sample names passing through the filter
 
 
 
+
+
+
+
+
+
 export function get_samplesummary_by_term ( arg ) {
 /*
 getting data for barchart and more
@@ -263,25 +269,42 @@ arg{}
 	.tvslst
 	.ds
 	.term1_id
+	.term2_id
+	.value_by_?
+	.bar_by_?
 */
 	const filter =  arg.tvslst ? makesql_by_tvsfilter( arg.tvslst, arg.ds ) : undefined
 	if(!arg.term1_id) throw '.term1_id is required but missing'
 	const term1 = arg.ds.cohort.termdb.q.termjsonByOneid( arg.term1_id )
 	if(!term1) throw 'unknown term1_id: '+arg.term1_id
+	let term2
+	if( arg.term2_id ) {
+		term2 = arg.ds.cohort.termdb.q.termjsonByOneid( arg.term2_id )
+		if( !term2 ) throw 'unknown term2_id: '+arg.term2_id
+	}
 
 	if( term1.iscategorical ) {
 		
-		// if term2 is not provided..
-		const string = (filter ? 'WITH '+filter.CTEcascade+' ' : '')
-			+'SELECT value AS key,count(sample) AS samplecount '
-			+'FROM annotations '
-			+'WHERE '
-			+(filter ? 'sample IN '+filter.lastCTEname+' AND ' : '')
-			+'term_id=? '
-			+'GROUP BY value'
-		const re = arg.ds.cohort.db.connection.prepare( string )
-			.all([ ...(filter?filter.values:[]), arg.term1_id ])
-		return re
+		if( !term2 ) {
+			const string =
+				`${filter ? 'WITH '+filter.CTEcascade+' ' : ''}
+				SELECT value AS key,count(sample) AS samplecount
+				FROM annotations
+				WHERE
+				${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+				term_id=?
+				GROUP BY value`
+			const lst = arg.ds.cohort.db.connection.prepare( string )
+				.all([ ...(filter?filter.values:[]), arg.term1_id ])
+			if(!lst) return undefined
+			// add label
+			for(const i of lst) {
+				const label = term1.values ? term1.values[i.key] : i.key
+				i.label = label || i.key
+			}
+			return lst
+		}
+		// overlay
 	}
 
 	if( term1.isinteger || term1.isfloat ) {
@@ -289,6 +312,91 @@ arg{}
 		return
 	}
 	if( term1.iscondition ) {
+		if(!term2) {
+			let string
+			let keyisgrade=false // for applying label after 
+			const thisvalues = []
+			if( term1.isleaf ) {
+				string = 
+					`WITH
+					${filter ? filter.CTEcascade+', ' : ''}
+					tmp_grade_table AS (
+						${grade_age_select_clause(arg)}
+						FROM chronicevents
+						WHERE
+						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+						term_id = ?
+						${uncomputablegrades_clause( ds )}
+						GROUP BY sample
+					)
+					SELECT grade,count(sample) as samplecount
+					FROM tmp_grade_table
+					GROUP BY grade`
+				thisvalues.push( arg.term1_id )
+				keyisgrade = true
+			} else {
+				if( arg.bar_by_grade ) {
+					string = 
+						`WITH
+						${filter ? filter.CTEcascade+', ' : ''}
+						tmp_term_table AS (
+							SELECT term_id
+							FROM ancestry
+							WHERE ancestor_id=?
+							OR term_id=?
+						),
+						tmp_grade_table AS (
+							${grade_age_select_clause(arg)}
+							FROM chronicevents
+							WHERE
+							${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+							term_id IN tmp_term_table
+							${uncomputablegrades_clause( ds )}
+							GROUP BY sample
+						)
+						SELECT grade,count(sample) as samplecount
+						FROM tmp_grade_table
+						GROUP BY grade`
+					thisvalues.push( arg.term1_id, arg.term1_id )
+					keyisgrade = true
+				} else if( arg.bar_by_children ) {
+					string =
+						`WITH
+						tmp_children_table AS (
+							SELECT id AS child,
+							FROM terms
+							WHERE parent_id=?
+						),
+						tmp_grandchildren_table AS (
+							SELECT term_id, c.child AS child
+							FROM ancestry a, tmp_children_table c
+							WHERE c.child=a.ancestor_id OR c.child=a.term_id
+							ORDER BY term_id ACC
+						),
+						tmp_events_table AS (
+							SELECT sample, d.child as child
+							FROM chronicevents a, tmp_grandchildren_table d
+							WHERE
+							${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+							d.term_id = a.term_id
+							${uncomputablegrades_clause(ds)}
+							GROUP BY d.child, sample
+						)
+						SELECT
+							child AS key,
+							count(sample) AS samplecount
+						FROM tmp_events_table
+						GROUP BY child`
+					thisvalues.push( arg.term1_id )
+				} else {
+					throw 'unknown bar_by_? for a non-leaf term'
+				}
+			}
+			const re = arg.ds.cohort.db.connection.prepare( string )
+				.all([ ...(filter?filter.values:[]), ...thisvalues ])
+			return re
+		}
+		// overlay
 		return
 	}
 	throw 'unknown type of term1'

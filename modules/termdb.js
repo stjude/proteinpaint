@@ -135,24 +135,15 @@ function trigger_treeto ( q, res, termdb ) {
 
 
 function trigger_getcategories ( q, res, tdb, ds ) {
-/*
-to get the list of categories for a categorical term
-supply sample count annotated to each category
-if q.samplecountbyvcf, will count from vcf samples
-otherwise, count from all samples
-*/
-	const term = tdb.q.termjsonByOneid( q.tid )
-	if(!term) throw 'unknown term id'
-	if(!term.iscategorical) throw 'term not categorical'
-	const lst = termdbsql.get_samplesummary_by_term({
+// thin wrapper of get_samplesummary_by_term
+	if( !q.tid ) throw '.tid missing'
+	const arg = {
 		ds,
-		term1_id: q.tid,
-		tvslst: q.tvslst? JSON.parse(decodeURIComponent(q.tvslst)) : undefined,
-	})
-	for(const i of lst) {
-		const label = term.values ? term.values[ i.key ] : i.key
-		i.label = label || i.key
+		term1_id: q.tid
 	}
+	Object.assign( arg, q )
+	if( q.tvslst ) arg.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+	const lst = termdbsql.get_samplesummary_by_term( arg )
 	res.send({lst})
 }
 
