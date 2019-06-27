@@ -404,7 +404,9 @@ group{}
                 }else if(term.bar_by_grade){
 
                     // query db for list of grade and count
-                    const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+vcf_filter_str+'&bar_by_grade=1&value_by_max_grade='+term.value_by_max_grade+'&value_by_most_recent='+term.value_by_most_recent]
+                    const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+vcf_filter_str+'&bar_by_grade=1']
+                    if (term.value_by_max_grade) args.push('&value_by_max_grade=1')
+                    else if(term.value_by_most_recent)args.push('&value_by_most_recent=1')
                     const data = await getcategories(args)
 
                     for (let j=0; j<term.values.length; j++){
