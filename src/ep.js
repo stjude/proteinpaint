@@ -1,7 +1,7 @@
 import {scaleLinear,scaleLog,scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {axisTop} from 'd3-axis'
 import {select as d3select,event as d3event, mouse as d3mouse} from 'd3-selection'
-import {stratify} from 'd3-hierarchy'
+import {hierarchy,stratify} from 'd3-hierarchy'
 import * as client from './client'
 import {burst} from './ep.sun'
 import {newboxplot,boxplotremove} from './ep.boxplot'
@@ -519,7 +519,8 @@ arg
 			.style('height','400px')
 			.style('overflow-y','scroll')
 			.style('resize','vertical')
-		const root=stratify()(stratinput(this.data,this.p.cohort.levels))
+		const input=stratinput(this.data,this.p.cohort.levels)
+		const root=hierarchy(stratify(input))
 		root.sum(i=>i.value)
 		root.eachBefore(n=>{
 			if(!n.parent) return

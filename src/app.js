@@ -649,13 +649,11 @@ function validate_oldds(ds) {
 		}
 		if(ds.cohort.levels) {
 			if(ds.cohort.raw) {
-			/*
 				// to stratify
 				// cosmic has only level but no cohort info, buried in snvindel
 				const nodes=stratinput(ds.cohort.raw,ds.cohort.levels)
 				ds.cohort.root=stratify()(nodes)
 				ds.cohort.root.sum(i=>i.value)
-				*/
 			}
 		}
 		if(ds.cohort.raw) {
