@@ -677,11 +677,9 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
     if (!values.length) {
       observedMin = v
       observedMax = v
-    }
-    else if (v < observedMin) {
+    } else if (v < observedMin) {
       observedMin = v
-    }
-    else if (v > observedMax) {
+    } else if (v > observedMax) {
       observedMax = v
     }
 
@@ -696,76 +694,70 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
   const bins = []
   const orderedLabels = []
 
-  // step 2, decide bins
   if(custom_bins) {
-    if (custom_bins.first_bin_option == "percentile" || custom_bins.last_bin_option == "percentile") {
+    if (custom_bins.min_unit == "percentile" || custom_bins.max_unit == "percentile") {
       values.sort((a,b) => a - b)
     }
-    const min = custom_bins.first_bin_size == 'auto' 
+    const min = custom_bins.min_val == 'auto' 
       ? observedMin 
-      : custom_bins.first_bin_option == 'percentile' 
-      ? values[ Math.floor((custom_bins.first_bin_size / 100) * values.length) ]
-      : custom_bins.first_bin_size
-    const max = custom_bins.last_bin_size == 'auto' 
+      : custom_bins.min_unit == 'percentile' 
+      ? values[ Math.floor((custom_bins.min_val / 100) * values.length) ]
+      : custom_bins.min_val
+    const max = custom_bins.max_val == 'auto' 
       ? observedMax 
-      : custom_bins.last_bin_option == 'percentile'
-      ? values[ Math.floor((custom_bins.last_bin_size / 100) * values.length) ]
-      : custom_bins.last_bin_size
-    let v = custom_bins.first_bin_size == 'auto' 
-      ? observedMin 
-      : custom_bins.first_bin_option == 'percentile'
-      ? min
-      : custom_bins.first_bin_size
-    let startunbound = v <= min
-    let afterFirst = false
-    let beforeLast = false
+      : custom_bins.max_unit == 'percentile'
+      ? values[ Math.floor((custom_bins.max_val / 100) * values.length) ]
+      : custom_bins.max_val
     
-    while( v <= observedMax ) {
-      const upper = custom_bins.size == "auto" ? custom_bins.last_bin_size : v + custom_bins.size
-      const v2 = upper > max ? max : upper
-      beforeLast = upper < max && v2 + custom_bins.size > max
+    let start = custom_bins.min_val == 'auto' ? null : min
+    
+    while( start <= observedMax ) {
+      const upper = start == null ? min + custom_bins.size : start + custom_bins.size //custom_bins.size == "auto" ? custom_bins.max_val : 
+      const stop = upper < max 
+        ? upper
+        : custom_bins.max_val == 'auto'
+        ? null
+        : max
 
       const bin = {
-        start: v >= max ? max : v,
-        stop: startunbound ? min : v2,
-        startunbound,
-        stopunbound: v >= max,
+        start, // >= max ? max : start,
+        stop, //startunbound ? min : stop,
+        startunbound: start === null,
+        stopunbound: stop === null,
         value: 0, // v2s
-        startinclusive: !startunbound || custom_bins.first_bin_oper == "lteq",
-        stopinclusive: v >= max && custom_bins.last_bin_oper == "gteq",
+        startinclusive: custom_bins.startinclusive,
+        stopinclusive: custom_bins.stopinclusive,
       }
       
       if (bin.startunbound) { 
-        const oper = bin.startinclusive ? "\u2265" : "<"
-        bin.label = oper + binLabelFormatter(min);
+        const oper = bin.stopinclusive ? "\u2264" : "<"
+        const v1 = Number.isInteger(stop) ? stop : binLabelFormatter(stop)
+        bin.label = oper + binLabelFormatter(stop);
       } else if (bin.stopunbound) {
-        const oper = bin.stopinclusive ? "\u2264" : ">"
-        bin.label = oper + binLabelFormatter(max)
-      } else if( Number.isInteger( custom_bins.size ) ) {
+        const oper = bin.startinclusive ? "\u2265" : ">"
+        const v0 = Number.isInteger(start) ? start : binLabelFormatter(start)
+        bin.label = oper + v0
+      } else if( Number.isInteger( custom_bins.size )) {
         // bin size is integer, make nicer label
         if( custom_bins.size == 1 ) {
           // bin size is 1; use just start value as label, not a range
-          bin.label = v //binLabelFormatter(v)
+          bin.label = start //binLabelFormatter(start)
         } else {
-          // bin size bigger than 1, reduce right bound by 1, in label only!
-          const oper0 = !afterFirst || custom_bins.first_bin_oper == "lt" ? "\u2265" : "<"
-          const oper1 = "" //!beforeLast || custom_bins.last_bin_oper == "gteq" ? "<" : "\u2665"
-          bin.label = oper0 + binLabelFormatter(v) +' to '+ oper1 + binLabelFormatter(v2)
+          const oper0 = custom_bins.startinclusive ? "" : ">"
+          const oper1 = custom_bins.stopinclusive ? "" : "<"
+          const v0 = Number.isInteger(start) ? start : binLabelFormatter(start)
+          const v1 = Number.isInteger(stop) ? stop : binLabelFormatter(stop)
+          bin.label = oper0 + v0 +' to '+ oper1 + v1
         }
-      } else {        
-        // bin size is not integer
-        const oper0 = !afterFirst || custom_bins.first_bin_oper == "lt" ? "\u2265" : "<"
-        const oper1 = "" //!beforeLast || custom_bins.last_bin_oper == "gteq" ? "<" : "\u2665"
-        bin.label = oper0 + binLabelFormatter(v) +' to '+ oper1 + binLabelFormatter(v2)
+      } else {
+        const oper0 = custom_bins.startinclusive ? "" : ">"
+        const oper1 = custom_bins.stopinclusive ? "" : "<"
+        bin.label = oper0 + binLabelFormatter(start) +' to '+ oper1 + binLabelFormatter(stop)
       }
 
       bins.push( bin )
       orderedLabels.push(bin.label)
-
-      if (v >= max) break
-      v += startunbound ? 0 : custom_bins.size;
-      afterFirst = !afterFirst && startunbound ? true : false
-      startunbound = 0
+      start = upper
     }
 
     const binconfig = {
@@ -830,13 +822,13 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       */
 
       const max = Math.max( ...values )
-      let v = nb.auto_bins.start_value
-      while( v < max ) {
-        const v2 = v + nb.auto_bins.bin_size
+      let start = nb.auto_bins.start_value
+      while( start < max ) {
+        const stop = start + nb.auto_bins.bin_size
 
         const bin = {
-          start: v,
-          stop: v2,
+          start,
+          stop,
           value: 0, // v2s
           startinclusive:1,
         }
@@ -846,21 +838,21 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
           if( nb.auto_bins.bin_size == 1 ) {
             // bin size is 1; use just start value as label, not a range
-            bin.label = v
+            bin.label = start
           } else {
             // bin size bigger than 1, reduce right bound by 1, in label only!
-            bin.label = v + ' to ' + (v2-1)
+            bin.label = start + ' to ' + (stop-1)
           }
         } else {
           
           // bin size is not integer
-          bin.label = v+' to '+v2
+          bin.label = start+' to '+stop
         }
 
         bins.push( bin )
         orderedLabels.push(bin.label)
 
-        v += nb.auto_bins.bin_size
+        start += nb.auto_bins.bin_size
       }
     } else {
       throw 'unknown ways to decide bins'

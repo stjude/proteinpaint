@@ -535,61 +535,12 @@ function custom_bin(plot, main, binNum=1, btn){
     .style('align-items','flex-start')
     .style('display','flex')
 
-  // First Bin
-  const first_bin_div = custom_bin_div.append('div')
-    .style('display','inline-block')
-    .style('margin-left','25px')
-    .style('text-align','center')
-
-  first_bin_div.append('div')
-    .text('First Bin')
-    .style('padding-right','3px')
-    .style('text-align','center')
-
-  const first_bin_input_div = first_bin_div.append('div')
-    .style('margin-top','10px')
-    .style('display','block')
-    .style('white-space','nowrap')
-  
-  controls.first_bin_oper = first_bin_input_div.append('select')
-    .property('selected', custom_bins && custom_bins.first_bin_oper == "lteq")
-  controls.first_bin_oper.append('option')
-    .attr('value', 'lt')
-    .html('&lt;')
-    .property('selected', custom_bins && custom_bins.first_bin_oper == "lt")
-  controls.first_bin_oper.append('option')
-    .attr('value', 'lteq')
-    .html('&lt;=')
-
-  controls.first_bin_size = first_bin_input_div.append('input')
-    .style('display','inline-block')
-    .style('margin-left','5px')
-    .attr('size','8')
-    .attr('placeholder', 'auto')
-    .property('value', !custom_bins 
-      ? null
-      : custom_bins.first_bin_size == "auto"
-      ? null
-      : custom_bins.first_bin_size)
-
-  controls.first_bin_options = first_bin_div.append('select')
-    .style('margin-top','10px')
-
-  controls.first_bin_options.append('option')
-    .attr('value','value')
-    .text('Value')
-    .property('selected', custom_bins && custom_bins.first_bin_option == 'value' ? true : false)
-
-  controls.first_bin_options.append('option')
-    .attr('value','percentile')
-    .text('Percentile')
-    .property('selected', custom_bins && custom_bins.first_bin_option == 'percentile' ? true : false)
-
   // Bin Size
   const bin_size_div = custom_bin_div.append('div')
     .style('display','inline-block')
     .style('margin-left','25px')
     .style('margin-right','10px')
+    .style('text-align','center')
 
   bin_size_div.append('div')
     .text('Bin Size')
@@ -603,6 +554,74 @@ function custom_bin(plot, main, binNum=1, btn){
     .property('value', custom_bins ? custom_bins.size : null)
     .attr('placeholder', 'auto')
 
+  // uniform bin start_inclusive or stop_inclusive
+  controls.bin_inclusion = bin_size_div.append('div')
+    .append('select')
+    .style('margin-top','10px')
+
+  controls.bin_inclusion.append('option')
+    .attr('value','start')
+    .text('start inclusive')
+    .property('selected', custom_bins && custom_bins.inclusive == 'start')
+
+   controls.bin_inclusion.append('option')
+    .attr('value','stop')
+    .text('stop inclusive')
+    .property('selected', custom_bins && custom_bins.inclusive == 'stop')
+
+  // First Bin
+  const first_bin_div = custom_bin_div.append('div')
+    .style('display','inline-block')
+    .style('margin-left','25px')
+    .style('text-align','center')
+
+  first_bin_div.append('div')
+    .text('Minimum')
+    .style('padding-right','3px')
+    .style('text-align','center')
+
+  const first_bin_input_div = first_bin_div.append('div')
+    .style('margin-top','10px')
+    .style('display','block')
+    .style('white-space','nowrap')
+
+  // comparison operator
+  /*controls.first_bin_oper = first_bin_input_div.append('select')
+    .property('selected', custom_bins && custom_bins.first_bin_oper == "lteq")
+  controls.first_bin_oper.append('option')
+    .attr('value', 'lt')
+    .html('&lt;')
+    .property('selected', custom_bins && custom_bins.first_bin_oper == "lt")
+  controls.first_bin_oper.append('option')
+    .attr('value', 'lteq')
+    .html('&lt;=')*/
+
+  // lower cutoff 
+  controls.min_val = first_bin_input_div.append('input')
+    .style('display','inline-block')
+    .style('text-align','center')
+    .attr('size','8')
+    .attr('placeholder', 'auto')
+    .property('value', !custom_bins 
+      ? null
+      : custom_bins.min_val == "auto"
+      ? null
+      : custom_bins.min_val)
+
+  // cutoff unit
+  controls.min_unit = first_bin_div.append('select')
+    .style('margin-top','10px')
+
+  controls.min_unit.append('option')
+    .attr('value','value')
+    .text('Value')
+    .property('selected', custom_bins && custom_bins.min_unit == 'value' ? true : false)
+
+  controls.min_unit.append('option')
+    .attr('value','percentile')
+    .text('Percentile')
+    .property('selected', custom_bins && custom_bins.min_unit == 'percentile' ? true : false)
+
   // Last Bin
   const last_bin_div = custom_bin_div.append('div')
     .style('display','inline-block')
@@ -611,7 +630,7 @@ function custom_bin(plot, main, binNum=1, btn){
     .style('text-align','center')
 
   last_bin_div.append('div')
-    .text('Last Bin')
+    .text('Maximum')
     .style('padding-right','3px')
     .style('text-align','center')
 
@@ -620,7 +639,8 @@ function custom_bin(plot, main, binNum=1, btn){
     .style('display','block')
     .style('white-space','nowrap')
   
-  controls.last_bin_oper = last_bin_input_div.append('select')
+  // comparison operator
+  /*controls.last_bin_oper = last_bin_input_div.append('select')
   controls.last_bin_oper.append('option')
     .attr('value', 'gt')
     .html('&gt;')
@@ -628,31 +648,33 @@ function custom_bin(plot, main, binNum=1, btn){
   controls.last_bin_oper.append('option')
     .attr('value', 'gteq')
     .html('&gt;=')
-    .property('selected', custom_bins && custom_bins.first_bin_oper == "gteq")
+    .property('selected', custom_bins && custom_bins.first_bin_oper == "gteq")*/
 
-  controls.last_bin_size = last_bin_input_div.append('input')
+  // bin size
+  controls.max_val = last_bin_input_div.append('input')
     .style('display','inline-block')
-    .style('margin-left','5px')
+    .style('text-align','center')
     .attr('size','8')
     .attr('placeholder', 'auto')
     .property('value', !custom_bins 
       ? null
-      : custom_bins.last_bin_size == "auto"
+      : custom_bins.max_val == "auto"
       ? null
-      : custom_bins.last_bin_size)
+      : custom_bins.max_val)
 
-  controls.last_bin_options = last_bin_div.append('select')
+  // cutoff unit
+  controls.max_unit = last_bin_div.append('select')
     .style('margin-top','10px')
 
-  controls.last_bin_options.append('option')
+  controls.max_unit.append('option')
     .attr('value','value')
     .text('Value')
-    .property('selected', custom_bins && custom_bins.last_bin_option == 'value' ? true : false)
+    .property('selected', custom_bins && custom_bins.max_unit == 'value' ? true : false)
 
-  controls.last_bin_options.append('option')
+  controls.max_unit.append('option')
     .attr('value','percentile')
     .text('Percentile')
-    .property('selected', custom_bins && custom_bins.last_bin_option == 'percentile' ? true : false)
+    .property('selected', custom_bins && custom_bins.max_unit == 'percentile' ? true : false)
 
   // submit, reset buttons
   const btndiv = plot.tip.d.append('div')
@@ -662,24 +684,25 @@ function custom_bin(plot, main, binNum=1, btn){
     .html('Submit')
     .on('click', ()=>{
       const size = controls.custom_bin_size.property('value')
-      const first_bin_size = controls.first_bin_size.property('value')
-      const first_bin_option = controls.first_bin_options.property('value')
-      const first_bin_oper = controls.first_bin_oper.property('value')
-      const last_bin_size = controls.last_bin_size.property('value')
-      const last_bin_option = controls.last_bin_options.property('value')
-      const last_bin_oper = controls.last_bin_oper.property('value')
+      const inclusive = controls.bin_inclusion.property('value')
+      const startinclusive = inclusive == 'start'
+      const stopinclusive = inclusive == 'stop'
+      const min_val = controls.min_val.property('value')
+      const min_unit = controls.min_unit.property('value')
+      const max_val = controls.max_val.property('value')
+      const max_unit = controls.max_unit.property('value')
       if (size !== "" && isNaN(size)) {
         alert('Invalid bin size.' + size)
       } else {
-        //if (!first_bin_size || !isNaN(first_bin_size)) errs.push('Invalid first')
+        //if (!min_val || !isNaN(min_val)) errs.push('Invalid first')
         plot.custom_bins[binNum] = {
           size: size ? +size : "auto",
-          first_bin_size: first_bin_size != '' && !isNaN(first_bin_size) ? +first_bin_size : 'auto',
-          first_bin_option,
-          first_bin_oper,
-          last_bin_size: last_bin_size != '' && !isNaN(last_bin_size) ? +last_bin_size : 'auto',
-          last_bin_option,
-          last_bin_oper
+          startinclusive,
+          stopinclusive,
+          min_val: min_val != '' && !isNaN(min_val) ? +min_val : 'auto',
+          min_unit,
+          max_val: max_val != '' && !isNaN(max_val) ? +max_val : 'auto',
+          max_unit
         }
         main(plot)
         plot.tip.hide()
@@ -699,6 +722,23 @@ function custom_bin(plot, main, binNum=1, btn){
     .on('click', ()=>{
       plot.tip.hide()
     })
+
+  plot.controls.push(() => {
+    controls.custom_bin_size
+      .property('value', custom_bins ? custom_bins.size : 'auto')
+    controls.custom_bin_size
+      .property('value', custom_bins ? custom_bins.inclusive : 'start')
+
+    controls.min_val
+      .property('value', custom_bins ? custom_bins.min_val : 'auto')
+    controls.min_unit
+      .property('value', custom_bins ? custom_bins.min_unit : 'value')
+
+    controls.min_unit
+      .property('value', custom_bins ? custom_bins.max_val : 'auto')
+    controls.min_unit
+      .property('value', custom_bins ? custom_bins.max_unit : 'value')
+  })
 }
 
 export function bar_click_menu(obj, barclick, clickedBar) {
