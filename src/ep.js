@@ -520,7 +520,7 @@ arg
 			.style('overflow-y','scroll')
 			.style('resize','vertical')
 		const input=stratinput(this.data,this.p.cohort.levels)
-		const root=hierarchy(stratify(input))
+		const root=hierarchy(stratify()(input))
 		root.sum(i=>i.value)
 		root.eachBefore(n=>{
 			if(!n.parent) return
@@ -532,21 +532,22 @@ arg
 			for(let i=1; i<n.depth; i++) {
 				row.append('span').style('color','#ccc').style('padding','0px 15px').text('|')
 			}
-			row.append('span').html(n.data.name+'&nbsp;')
-			if(n.data.full) {
-				row.append('span').html(n.data.full+'&nbsp;').style('font-size','.7em').style('color','#858585')
+			const d = n.data.data
+			row.append('span').html(d.name+'&nbsp;') // somehow no longer n.data.name
+			if(d.full) {
+				row.append('span').html(d.full+'&nbsp;').style('font-size','.7em').style('color','#858585')
 			}
-			if(n.value>0) {
-				row.append('span').text(n.value)
+			if(d.lst && d.lst.length) {
+				row.append('span').text(d.lst.length)
 				row.on('click',()=>{
 					let nf=true
 					for(const b of this.boxplots) {
-						if(b.id==n.id) nf=false
+						if(b.id==d.id) nf=false
 					}
 					if(nf) {
-						newboxplot(this,n.data.lst,n.data.name,n.id,row)
+						newboxplot(this,d.lst,d.name,d.id,row)
 					} else {
-						boxplotremove(this,n.id)
+						boxplotremove(this,d.id)
 					}
 				})
 			}
