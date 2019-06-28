@@ -19,7 +19,8 @@ export class TermdbBarchart{
     this.opts = opts
     this.dom = {
       holder: opts.holder,
-      barDiv: opts.holder.append('div'),
+      barDiv: opts.holder.append('div')
+        .style('white-space', 'normal'),
       legendDiv: opts.holder.append('div')
         .style('margin', '5px 5px 15px 5px')
     }
@@ -50,6 +51,7 @@ export class TermdbBarchart{
     if (data) this.currServerData = data
     if (!this.setVisibility(isVisible)) return
     if (obj) this.obj = obj
+    this.dom.barDiv.style('max-width', window.innerWidth + 'px')
     this.updateSettings(plot)
     this.processData(this.currServerData) 
   }
