@@ -178,11 +178,20 @@ group{}
                 
                 for (let j=0; j<term.values.length; j++){
 
-                    const [replace_value_select, term_value_btn] = make_select_btn_pair(term_value_div)
+                    const [replace_value_select, term_value_btn] = make_select_btn_pair(one_term_div)
                     replace_value_select.style('margin-right','1px')
                     replace_value_select.selectAll('option').remove()
 
-                    make_select_list(data, replace_value_select)
+                    make_select_list(data, replace_value_select, 'delete')
+
+                    //if more than 1 categories exist, disable other from the dropdown to avoid duplicate selection
+                    const options = replace_value_select.selectAll('option')
+
+                    options.nodes().forEach(function(d){
+                        if(term.values.find(v=>v.key == d.value) && (d.value!=term.values[j].key)){
+                            d.disabled = true
+                        }
+                    })
 
                     if(data.lst) replace_value_select.node().value = term.values[j].key
 
@@ -229,64 +238,7 @@ group{}
                             .style('text-transform','uppercase')
                             .text('or')
                     }else{
-                        const add_value_select = term_value_div.append('select')
-                            .style('padding','3px 0')
-                            .style('position','absolute')
-                            .style('z-index',2)
-                            .style('opacity',0)
-                            .on('mouseover',()=>{
-                                add_value_btn.style('opacity', '0.8')
-                                    .style('cursor','default')
-                            })
-                            .on('mouseout',()=>{
-                                add_value_btn.style('opacity', '1')
-                            })
-
-                        add_value_select.selectAll('option').remove()
-
-                        if(data.lst){
-                            add_value_select.append('option')
-                                .attr('value','add')
-                                .property('disabled',true)
-                                .html('--- Add New Category ---')
-                            
-                            for (const category of data.lst){
-                                if(term.values.find(v=>v.key == category.key)) continue
-                                add_value_select.append('option')
-                                    .attr('value',category.key)
-                                    .text( category.label+'\t(n='+ category.samplecount +')')
-                            }
-
-                            add_value_select.node().value = 'add'
-
-                            add_value_select.on('change',async()=>{
-
-                                //change value of button 
-                                const new_value = data.lst.find( j=> j.key == add_value_select.node().value )
-                                group.terms[i].values.push({key:new_value.key,label:new_value.label})
-                
-                                //update gorup and load tk
-                                await callback()
-                                update_terms(terms_div)
-                            })
-                        }else{
-                            add_value_select.append('option')
-                                .text('ERROR: Can\'t get the data')
-                        }
-
-                        // '+' button at end of all values to add to list of values
-                        const add_value_btn = term_value_div.append('div')
-                            .attr('class','sja_filter_tag_btn')
-                            .style('background-color','#4888BF')
-                            .style('display','inline-block')
-                            .style('margin-right','1px')
-                            .style('padding','3px 5px')
-                            .style('text-transform','uppercase')
-                            .html('&#43;')
-                            .style('z-index',-1)
-
-                        // limit dropdown menu width to width of term_value_btn (to avoid overflow)
-                        add_value_select.style('width',add_value_btn.node().offsetWidth+'px')
+                        make_plus_btn(one_term_div, data, term.values, group.terms[i].values, terms_div)
                     }
                 }
 
@@ -336,7 +288,7 @@ group{}
 
                         const [subcategroy_select, term_value_btn] = make_select_btn_pair(one_term_div)
                         subcategroy_select.style('margin-right','1px')
-                        make_select_list(data, subcategroy_select)
+                        make_select_list(data, subcategroy_select, 'delete')
     
                         if (data.lst) subcategroy_select.node().value = term.values[j].key
 
@@ -372,7 +324,7 @@ group{}
                         subcategroy_select.style('width',term_value_btn.node().offsetWidth+'px')
 
                         if(j<term.values.length-1){
-                            term_value_div.append('div')
+                            one_term_div.append('div')
                                 .style('display','inline-block')
                                 .style('color','#fff')
                                 .style('background-color','#4888BF')
@@ -383,6 +335,7 @@ group{}
                                 .text('or')
                         }
                     }
+                    make_plus_btn(one_term_div, data, term.values, group.terms[i].values, terms_div)
                 }else if(term.bar_by_grade){
 
                     // query db for list of grade and count
@@ -396,7 +349,16 @@ group{}
                         const [grade_select, term_value_btn] = make_select_btn_pair(one_term_div)
                         grade_select.style('margin-right','1px')
 
-                        make_select_list(data, grade_select)
+                        make_select_list(data, grade_select, 'delete')
+
+                        //if more than 1 categories exist, disable other from the dropdown to avoid duplicate selection
+                        const options = grade_select.selectAll('option')
+
+                        options.nodes().forEach(function(d){
+                            if(term.values.find(v=>v.key == d.value) && (d.value!=term.values[j].key)){
+                            d.disabled = true
+                            }
+                        })
     
                         if (data.lst) grade_select.node().value = term.values[j].key
 
@@ -432,7 +394,7 @@ group{}
                         grade_select.style('width',term_value_btn.node().offsetWidth+'px')
 
                         if(j<term.values.length-1){
-                            term_value_div.append('div')
+                            one_term_div.append('div')
                                 .style('display','inline-block')
                                 .style('color','#fff')
                                 .style('background-color','#4888BF')
@@ -487,6 +449,8 @@ group{}
                         await callback()
                         update_terms(terms_div)
                     })
+
+                    make_plus_btn(one_term_div, data, term.values, group.terms[i].values, terms_div)
                 }
             }
 
@@ -561,11 +525,19 @@ group{}
         return [select, btn]
     }
 
-    function make_select_list(data, select){
+    function make_select_list(data, select, first_option){
         if(data.lst){
-            select.append('option')
-                .attr('value','delete')
-                .html('&times;&nbsp;&nbsp;Delete')
+
+            if(first_option == 'delete'){
+                select.append('option')
+                    .attr('value','delete')
+                    .html('&times;&nbsp;&nbsp;Delete')
+            }else if(first_option == 'add'){
+                select.append('option')
+                .attr('value','add')
+                .property('disabled',true)
+                .html('--- Add New Category ---')
+            }
 
             for (const category of data.lst){
                 select.append('option')
@@ -576,6 +548,48 @@ group{}
             select.append('option')
                 .text('ERROR: Can\'t get the data')
         }
+    }
+
+    function make_plus_btn(holder, data, selected_values, group_values, terms_div){
+        const [add_value_select, add_value_btn] = make_select_btn_pair(holder)
+        add_value_select.style('margin-right','1px')
+
+        add_value_select.selectAll('option').remove()
+
+        make_select_list(data, add_value_select, 'add')
+
+        //disable categories already selected
+        const options = add_value_select.selectAll('option')
+
+        options.nodes().forEach(function(d){
+            if(selected_values.find(v=>v.key == d.value)){
+                d.disabled = true
+            }
+        })
+
+        if(data.lst) add_value_select.node().value = 'add'
+
+        add_value_select.on('change',async()=>{
+
+            //change value of button 
+            const new_value = data.lst.find( j=> j.key == add_value_select.node().value )
+            group_values.push({key:new_value.key,label:new_value.label})
+
+            //update gorup and load tk
+            await callback()
+            update_terms(terms_div)
+        })
+
+        // '+' button at end of all values to add to list of values
+        add_value_btn
+            .style('padding','3px 4px 3px 4px')
+            .style('margin-right','1px')
+            .style('font-size','1em')
+            .style('background-color', '#4888BF')
+            .html('&#43;')
+
+        // limit dropdown menu width to width of term_value_btn (to avoid overflow)
+        add_value_select.style('width',add_value_btn.node().offsetWidth+'px')
     }
 
     async function replace_term(result, term_replce_index){
