@@ -80,6 +80,7 @@ export class TermdbBarchart{
       conditionUnits: plot.settings.common.conditionUnits
     }
     Object.assign(this.settings, settings)
+    this.settings.numCharts = this.currServerData.charts.length
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
       this.settings.unit = "abs"
     }

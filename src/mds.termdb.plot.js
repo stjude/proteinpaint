@@ -87,7 +87,7 @@ arg: server returned data
     // views: {} see below
   }
 
-  arg.holder.style('white-space', 'nowrap')
+  // arg.holder.style('white-space', 'nowrap')
   // set the parent DOM elements for viz and controls
   plot.dom = {
     // dom.viz will hold the rendered view
