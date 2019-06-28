@@ -53,6 +53,7 @@ return async (req, res) => {
 		if( q.get_children ) return trigger_children( q, res, tdb )
 		if( q.findterm ) return trigger_findterm( q, res, tdb )
 		if( q.treeto ) return trigger_treeto( q, res, tdb )
+		if( q.testplot ) return trigger_testplot( q, res, tdb, ds )
 
 		throw 'termdb: don\'t know what to do'
 
@@ -63,6 +64,14 @@ return async (req, res) => {
 }
 }
 
+
+
+
+function trigger_testplot ( q, res, tdb, ds ) {
+	q.ds = ds
+	const lst = termdbsql.get_samplesummary_by_term( q )
+	res.send({lst})
+}
 
 
 
@@ -254,6 +263,20 @@ function server_init_db_queries ( ds ) {
 					if(lst.length==10) break
 				}
 				return lst
+			}
+			return undefined
+		}
+	}
+	{
+		const s1 = ds.cohort.db.connection.prepare('SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?')
+		const s2 = ds.cohort.db.connection.prepare('SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?')
+		const cache = new Map()
+		q2.findTermMaxvalue = (id, isint) =>{
+			if( cache.has(id) ) return cache.get(id)
+			const tmp = (isint ? s1 : s2).get(id)
+			if( tmp ) {
+				cache.set( id, tmp.v )
+				return tmp.v
 			}
 			return undefined
 		}

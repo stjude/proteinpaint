@@ -91,6 +91,8 @@ obj{}:
 		return client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
 	}
 
+	temptest()
+
 	try {
 		if(!obj.genome) throw '.genome{} missing'
 		if(!obj.mds) throw '.mds{} missing'
@@ -108,6 +110,16 @@ obj{}:
 		obj.dom.errdiv.text('Error: '+ (e.message||e) )
 		if(e.stack) console.log(e.stack)
 		return
+	}
+
+	async function temptest () {
+		// temp code, for testing get_samplesummary_by_term()
+		console.log('diaggrp', await obj.do_query(['testplot=1&term1_id=diaggrp']) )
+		console.log('diaggrp+wgs_sequenced', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=wgs_sequenced']) )
+		console.log('agedx', await obj.do_query(['testplot=1&term1_id=agedx']) )
+		console.log('diaggrp+agedx', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=agedx']) )
+		console.log('Asthma', await obj.do_query(['testplot=1&term1_id=Asthma&term1q='+encodeURIComponent('{"value_by_most_recent":1}')]) )
+		console.log('Arrhythmias', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1q='+encodeURIComponent('{"value_by_most_recent":1,"bar_by_grade":1}')]) )
 	}
 }
 
