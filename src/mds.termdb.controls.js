@@ -561,13 +561,13 @@ function custom_bin(plot, main, binNum=1, btn){
 
   controls.bin_inclusion.append('option')
     .attr('value','start')
-    .text('start inclusive')
-    .property('selected', custom_bins && custom_bins.inclusive == 'start')
+    .text('Start inclusive')
+    .property('selected', custom_bins && custom_bins.startinclusive)
 
    controls.bin_inclusion.append('option')
     .attr('value','stop')
-    .text('stop inclusive')
-    .property('selected', custom_bins && custom_bins.inclusive == 'stop')
+    .text('Stop inclusive')
+    .property('selected', custom_bins && custom_bins.stopinclusive)
 
   // First Bin
   const first_bin_div = custom_bin_div.append('div')
@@ -722,23 +722,6 @@ function custom_bin(plot, main, binNum=1, btn){
     .on('click', ()=>{
       plot.tip.hide()
     })
-
-  plot.controls.push(() => {
-    controls.custom_bin_size
-      .property('value', custom_bins ? custom_bins.size : 'auto')
-    controls.custom_bin_size
-      .property('value', custom_bins ? custom_bins.inclusive : 'start')
-
-    controls.min_val
-      .property('value', custom_bins ? custom_bins.min_val : 'auto')
-    controls.min_unit
-      .property('value', custom_bins ? custom_bins.min_unit : 'value')
-
-    controls.min_unit
-      .property('value', custom_bins ? custom_bins.max_val : 'auto')
-    controls.min_unit
-      .property('value', custom_bins ? custom_bins.max_unit : 'value')
-  })
 }
 
 export function bar_click_menu(obj, barclick, clickedBar) {
