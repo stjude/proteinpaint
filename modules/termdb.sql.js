@@ -273,15 +273,13 @@ q{}
 	if(!q.term1_id) throw '.term1_id is required but missing'
 	const term1 = q.ds.cohort.termdb.q.termjsonByOneid( q.term1_id )
 	if(!term1) throw 'unknown term1_id: '+q.term1_id
-	const term1q = q.term1q ? JSON.parse(decodeURIComponent(q.term1q)) : {} // settings about term1
 	if( q.term2_id ) {
 		// has term2, do overlay
 		const term2 = q.ds.cohort.termdb.q.termjsonByOneid( q.term2_id )
 		if( !term2 ) throw 'unknown term2_id: '+q.term2_id
-		const term2q = q.term2q ? JSON.parse(decodeURIComponent(q.term2q)) : {} // settings about term2
 		const values = []
-		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, term1q, values )
-		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, term2q, values )
+		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1q, values )
+		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2q, values )
 		const string =
 			`WITH
 			${filter ? filter.CTEcascade+', ' : ''}
@@ -345,7 +343,7 @@ q{}
 				`WITH
 				${filter ? filter.CTEcascade+', ' : ''}
 				tmp_grade_table AS (
-					${grade_age_select_clause( term1q )}
+					${grade_age_select_clause( q.term1q )}
 					FROM chronicevents
 					WHERE
 					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
@@ -359,7 +357,7 @@ q{}
 			thisvalues.push( q.term1_id )
 			keyisgrade = true
 		} else {
-			if( term1q.bar_by_grade ) {
+			if( q.term1q.bar_by_grade ) {
 				string = 
 					`WITH
 					${filter ? filter.CTEcascade+', ' : ''}
@@ -370,7 +368,7 @@ q{}
 						OR term_id=?
 					),
 					tmp_grade_table AS (
-						${grade_age_select_clause( term1q )}
+						${grade_age_select_clause( q.term1q )}
 						FROM chronicevents
 						WHERE
 						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
@@ -383,7 +381,7 @@ q{}
 					GROUP BY key`
 				thisvalues.push( q.term1_id, q.term1_id )
 				keyisgrade = true
-			} else if( term1q.bar_by_children ) {
+			} else if( q.term1q.bar_by_children ) {
 				string =
 					`WITH
 					${filter ? filter.CTEcascade+', ' : ''}
