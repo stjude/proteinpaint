@@ -228,7 +228,7 @@ group{}
 
                     // 'OR' button in between values
                     if(j<term.values.length-1){
-                        term_value_div.append('div')
+                        one_term_div.append('div')
                             .style('display','inline-block')
                             .style('color','#fff')
                             .style('background-color','#4888BF')
