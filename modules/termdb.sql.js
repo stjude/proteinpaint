@@ -267,25 +267,25 @@ q{}
 	.ds
 	.term1_id
 	.term2_id
-	.term1q{}
-	.term2q{}
+	.term1_q{}
+	.term2_q{}
 */
 	const filter =  q.tvslst ? makesql_by_tvsfilter( q.tvslst, q.ds ) : undefined
 	if(!q.term1_id) throw '.term1_id is required but missing'
 	const term1 = q.ds.cohort.termdb.q.termjsonByOneid( q.term1_id )
 	if(!term1) throw 'unknown term1_id: '+q.term1_id
-	if(!q.term1q) q.term1q = {} // settings of term1
-	if( typeof q.term1q == 'string' ) q.term1q = JSON.parse(decodeURIComponent(q.term1q))
+	if(!q.term1_q) q.term1_q = {} // settings of term1
+	if( typeof q.term1_q == 'string' ) q.term1_q = JSON.parse(decodeURIComponent(q.term1_q))
 
 	if( q.term2_id ) {
 		///////////// has term2, do overlay
 		const term2 = q.ds.cohort.termdb.q.termjsonByOneid( q.term2_id )
 		if( !term2 ) throw 'unknown term2_id: '+q.term2_id
-		if(!q.term2q) q.term2q = {} // settings of term2
-		if( typeof q.term2q == 'string' ) q.term2q = JSON.parse(decodeURIComponent(q.term2q))
+		if(!q.term2_q) q.term2_q = {} // settings of term2
+		if( typeof q.term2_q == 'string' ) q.term2_q = JSON.parse(decodeURIComponent(q.term2_q))
 		const values = []
-		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1q, values )
-		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2q, values )
+		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1_q, values )
+		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2_q, values )
 		const string =
 			`WITH
 			${filter ? filter.CTEcascade+', ' : ''}
@@ -306,13 +306,13 @@ q{}
 				i.label1 = i.key1
 				i.range1 = CTE_term1.name2bin.get( i.key1 )
 			} else {
-				i.label1 = get_label4key( i.key1, term1, q.term1q, q.ds )
+				i.label1 = get_label4key( i.key1, term1, q.term1_q, q.ds )
 			}
 			if( term2.isinteger || term2.isfloat ) {
 				i.label2 = i.key2
 				i.range2 = CTE_term2.name2bin.get( i.key2 )
 			} else {
-				i.label2 = get_label4key( i.key2, term2, q.term2q, q.ds )
+				i.label2 = get_label4key( i.key2, term2, q.term2_q, q.ds )
 			}
 		}
 		return lst
@@ -360,16 +360,17 @@ q{}
 		}
 		return lst
 	}
+
 	if( term1.iscondition ) {
 		let string
-		let keyisgrade=false // for applying label after 
 		const thisvalues = []
+		let overlay = false
 		if( term1.isleaf ) {
 			string = 
 				`WITH
 				${filter ? filter.CTEcascade+', ' : ''}
 				tmp_grade_table AS (
-					${grade_age_select_clause( q.term1q )}
+					${grade_age_select_clause( q.term1_q )}
 					FROM chronicevents
 					WHERE
 					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
@@ -381,9 +382,42 @@ q{}
 				FROM tmp_grade_table
 				GROUP BY grade`
 			thisvalues.push( q.term1_id )
-			keyisgrade = true
 		} else {
-			if( q.term1q.bar_by_grade ) {
+			// non-leaf
+
+			if( q.term1_q.grade_child_overlay ) {
+				string =
+					`WITH
+					${filter ? filter.CTEcascade+', ' : ''}
+					tmp_children_table AS (
+						SELECT id AS child
+						FROM terms
+						WHERE parent_id=?
+					),
+					tmp_grandchildren_table AS (
+						SELECT term_id, c.child AS child
+						FROM ancestry a, tmp_children_table c
+						WHERE c.child=a.ancestor_id OR c.child=a.term_id
+						ORDER BY term_id ASC
+					),
+					tmp_events_table AS (
+						SELECT sample, d.child as child,
+							${q.term1_q.value_by_max_grade ? 'MAX(grade) AS grade' : 'grade, MAX(age_graded)'}
+						FROM chronicevents a, tmp_grandchildren_table d
+						WHERE
+						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+						d.term_id = a.term_id
+						${uncomputablegrades_clause( q.ds )}
+						GROUP BY d.child, sample
+					)
+					SELECT
+						${q.term1_q.bar_by_grade ? 'grade AS key1,child AS key2,' : 'child AS key1,grade AS key2,'}
+						count(sample) AS samplecount
+					FROM tmp_events_table
+					GROUP BY grade, child`
+				thisvalues.push( q.term1_id )
+
+			} else if( q.term1_q.bar_by_grade ) {
 				string = 
 					`WITH
 					${filter ? filter.CTEcascade+', ' : ''}
@@ -394,7 +428,7 @@ q{}
 						OR term_id=?
 					),
 					tmp_grade_table AS (
-						${grade_age_select_clause( q.term1q )}
+						${grade_age_select_clause( q.term1_q )}
 						FROM chronicevents
 						WHERE
 						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
@@ -406,8 +440,7 @@ q{}
 					FROM tmp_grade_table
 					GROUP BY key`
 				thisvalues.push( q.term1_id, q.term1_id )
-				keyisgrade = true
-			} else if( q.term1q.bar_by_children ) {
+			} else if( q.term1_q.bar_by_children ) {
 				string =
 					`WITH
 					${filter ? filter.CTEcascade+', ' : ''}
@@ -444,7 +477,17 @@ q{}
 		const lst = q.ds.cohort.db.connection.prepare( string )
 			.all([ ...(filter?filter.values:[]), ...thisvalues ])
 		for(const i of lst) {
-			i.label = get_label4key( i.key, term1, q.term1q, q.ds )
+			if( q.term1_q.grade_child_overlay ) {
+				if(q.term1_q.bar_by_grade) {
+					i.label1 = get_label4key( i.key1, term1, q.term1_q, q.ds )
+					i.label2 = i.key2
+				} else {
+					i.label1 = i.key1
+					i.label2 = get_label4key( i.key2, term1, q.term1_q, q.ds )
+				}
+			} else {
+				i.label = get_label4key( i.key, term1, q.term1_q, q.ds )
+			}
 		}
 		return lst
 	}
