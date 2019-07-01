@@ -149,7 +149,7 @@ function trigger_getcategories ( q, res, tdb, ds ) {
 	const arg = {
 		ds,
 		term1_id: q.tid,
-		term1q:{
+		term1_q:{
 			bar_by_grade: q.bar_by_grade,
 			bar_by_children: q.bar_by_children,
 			value_by_max_grade: q.value_by_max_grade,
