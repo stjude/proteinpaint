@@ -118,8 +118,10 @@ obj{}:
 		console.log('diaggrp+wgs_sequenced', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=wgs_sequenced']) )
 		console.log('agedx', await obj.do_query(['testplot=1&term1_id=agedx']) )
 		console.log('diaggrp+agedx', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=agedx']) )
-		console.log('Asthma', await obj.do_query(['testplot=1&term1_id=Asthma&term1q='+encodeURIComponent('{"value_by_most_recent":1}')]) )
-		console.log('Arrhythmias', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1q='+encodeURIComponent('{"value_by_most_recent":1,"bar_by_grade":1}')]) )
+		console.log('Asthma', await obj.do_query(['testplot=1&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		console.log('Arrhythmias', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')]) )
+		console.log('Arrhythmias, sub', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1}')]) )
+		console.log('Arrhythmias, grade-sub', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1,"grade_child_overlay":1}')]) )
 	}
 }
 
