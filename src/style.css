@@ -442,3 +442,6 @@ table {
 	text-align: left;
 	vertical-align: top;
 }
+  
+input[type="search"].tree_search {-webkit-appearance: searchfield;}
+input[type="search"].tree_search::-webkit-search-cancel-button {-webkit-appearance: searchfield-cancel-button;}

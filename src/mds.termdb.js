@@ -639,6 +639,7 @@ barchart is shown in-place under term and in full capacity
 	const input = div
 		.append('input')
 		.attr('type','search')
+		.attr('class','tree_search')
 		.style('width','100px')
 		.style('display','block')
 		.attr('placeholder','Search')
@@ -659,7 +660,7 @@ barchart is shown in-place under term and in full capacity
 
 	// TODO debounce
 
-	input.on('keyup', async ()=>{
+	input.on('input', async ()=>{
 
 		table.selectAll('*').remove()
 
@@ -667,7 +668,8 @@ barchart is shown in-place under term and in full capacity
 		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
 
 		if( str==' ' || str=='' ) {
-			// blank
+			// blank or cleared by 'x' button from search input
+			table.selectAll('*').remove()
 			return
 		}
 		try {
