@@ -148,9 +148,14 @@ function trigger_getcategories ( q, res, tdb, ds ) {
 	if( !q.tid ) throw '.tid missing'
 	const arg = {
 		ds,
-		term1_id: q.tid
+		term1_id: q.tid,
+		term1q:{
+			bar_by_grade: q.bar_by_grade,
+			bar_by_children: q.bar_by_children,
+			value_by_max_grade: q.value_by_maxgrade,
+			value_by_most_recent: q.value_by_most_recent
+		}
 	}
-	Object.assign( arg, q )
 	if( q.tvslst ) arg.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 	const lst = termdbsql.get_samplesummary_by_term( arg )
 	res.send({lst})
