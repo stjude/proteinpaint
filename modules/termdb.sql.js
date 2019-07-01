@@ -285,6 +285,8 @@ q{}
 		if( typeof q.term2_q == 'string' ) q.term2_q = JSON.parse(decodeURIComponent(q.term2_q))
 		const values = []
 		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1_q, values )
+		// in case of using auto binning of numeric term, tell is term2
+		q.term2_q.isterm2 = true
 		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2_q, values )
 		const string =
 			`WITH
@@ -342,7 +344,7 @@ q{}
 	}
 
 	if( term1.isinteger || term1.isfloat ) {
-		const bins = makesql_numericBinCTE( term1, q.term1_bins, filter, q.ds )
+		const bins = makesql_numericBinCTE( term1, q.term1_q, filter, q.ds )
 		const string =
 			`WITH
 			${filter ? filter.CTEcascade+', ' : ''}
@@ -568,7 +570,7 @@ returns { sql, tablename }
 	}
 	if( term.isfloat || term.isinteger ) {
 		values.push( term.id )
-		const bins = makesql_numericBinCTE( term, q.custom_bins, filter, ds )
+		const bins = makesql_numericBinCTE( term, q, filter, ds )
 		return {
 			sql: `${bins.sql},
 			${tablename} AS (
@@ -677,29 +679,41 @@ return {sql, tablename}
 
 
 
-function makesql_numericBinCTE ( term, bins, filter, ds ) {
+function makesql_numericBinCTE ( term, q, filter, ds ) {
 /*
-bins: list of custom bins, or undefined
+decide bins and produce CTE
+
+q{}
+	.custom_bins[]: list of custom bins
+	.isterm2: true
 filter as is returned by makesql_by_tvsfilter
 returns { sql, tablename, name2bin }
 */
-	if(!bins) {
-		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin && term.graph.barchart.numeric_bin.auto_bins) {
-			const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
-			let v = term.graph.barchart.numeric_bin.auto_bins.start_value
-			const bin_size = term.graph.barchart.numeric_bin.auto_bins.bin_size
-			bins = []
-			while( v < max ) {
-				bins.push({
-					start: v,
-					stop: Math.min( v+bin_size, max ),
-					startinclusive:true
-				})
-				v+=bin_size
+	let bins = []
+	if( q.custom_bins ) {
+		bins = q.custom_bins
+	} else {
+		// use automatic bins
+		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
+			if( q.isterm2 && term.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
+				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.crosstab_fixed_bins))
+			} else if( term.graph.barchart.numeric_bin.auto_bins ) {
+				const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
+				let v = term.graph.barchart.numeric_bin.auto_bins.start_value
+				const bin_size = term.graph.barchart.numeric_bin.auto_bins.bin_size
+				while( v < max ) {
+					bins.push({
+						start: v,
+						stop: Math.min( v+bin_size, max ),
+						startinclusive:true
+					})
+					v+=bin_size
+				}
+			} else {
+				throw 'no predefined binning scheme'
 			}
 		}
 	}
-	if(!bins) throw 'no bins to work on'
 	const name2bin = new Map()
 	// k: name str, v: bin{}
 	const binstr = bins.map( (b,i)=>{
