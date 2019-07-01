@@ -182,18 +182,7 @@ group{}
                     replace_value_select.style('margin-right','1px')
                     replace_value_select.selectAll('option').remove()
 
-                    make_select_list(data, replace_value_select, 'delete')
-
-                    //if more than 1 categories exist, disable other from the dropdown to avoid duplicate selection
-                    const options = replace_value_select.selectAll('option')
-
-                    options.nodes().forEach(function(d){
-                        if(term.values.find(v=>v.key == d.value) && (d.value!=term.values[j].key)){
-                            d.disabled = true
-                        }
-                    })
-
-                    if(data.lst) replace_value_select.node().value = term.values[j].key
+                    make_select_list(data, replace_value_select, term.values, term.values[j].key, 'delete')
 
                     replace_value_select.on('change',async()=>{
                         //if selected index is 0 (delete) and value is 'delete' then remove from group
@@ -288,9 +277,7 @@ group{}
 
                         const [subcategroy_select, term_value_btn] = make_select_btn_pair(one_term_div)
                         subcategroy_select.style('margin-right','1px')
-                        make_select_list(data, subcategroy_select, 'delete')
-    
-                        if (data.lst) subcategroy_select.node().value = term.values[j].key
+                        make_select_list(data, subcategroy_select, term.values, term.values[j].key, 'delete')
 
                         subcategroy_select.on('change',async()=>{
 
@@ -349,18 +336,7 @@ group{}
                         const [grade_select, term_value_btn] = make_select_btn_pair(one_term_div)
                         grade_select.style('margin-right','1px')
 
-                        make_select_list(data, grade_select, 'delete')
-
-                        //if more than 1 categories exist, disable other from the dropdown to avoid duplicate selection
-                        const options = grade_select.selectAll('option')
-
-                        options.nodes().forEach(function(d){
-                            if(term.values.find(v=>v.key == d.value) && (d.value!=term.values[j].key)){
-                            d.disabled = true
-                            }
-                        })
-    
-                        if (data.lst) grade_select.node().value = term.values[j].key
+                        make_select_list(data, grade_select, term.values, term.values[j].key, 'delete')
 
                         grade_select.on('change',async()=>{
 
@@ -525,7 +501,7 @@ group{}
         return [select, btn]
     }
 
-    function make_select_list(data, select, first_option){
+    function make_select_list(data, select, selected_values, btn_value, first_option){
         if(data.lst){
 
             if(first_option == 'delete'){
@@ -543,7 +519,21 @@ group{}
                 select.append('option')
                     .attr('value',category.key)
                     .text( category.label+'\t(n='+ category.samplecount +')')
-            }  
+            }
+            
+            //if more than 1 categories exist, disable other from the dropdown to avoid duplicate selection
+            if(btn_value){
+                const options = select.selectAll('option')
+
+                options.nodes().forEach(function(d){
+                    if(selected_values.find(v=>v.key == d.value) && (d.value!=btn_value)){
+                    d.disabled = true
+                    }
+                })
+
+                select.node().value = btn_value
+            }
+
         }else{
             select.append('option')
                 .text('ERROR: Can\'t get the data')
@@ -556,7 +546,7 @@ group{}
 
         add_value_select.selectAll('option').remove()
 
-        make_select_list(data, add_value_select, 'add')
+        make_select_list(data, add_value_select, selected_values, false, 'add')
 
         //disable categories already selected
         const options = add_value_select.selectAll('option')
