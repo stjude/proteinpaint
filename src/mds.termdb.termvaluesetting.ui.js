@@ -319,7 +319,7 @@ group{}
                             .style('padding','2px 4px 3px 4px')
                             .style('margin-right','1px')
                             .style('background-color', '#4888BF')
-                            .html(term.values[j].key+' &#9662;')
+                            .html(term.values[j].label+' &#9662;')
 
                         subcategroy_select.style('width',term_value_btn.node().offsetWidth+'px')
 
@@ -389,7 +389,7 @@ group{}
                             .style('padding','2px 4px 3px 4px')
                             .style('margin-right','1px')
                             .style('background-color', '#4888BF')
-                            .html(term.values[j].key+' &#9662;')
+                            .html(term.values[j].label+' &#9662;')
 
                         grade_select.style('width',term_value_btn.node().offsetWidth+'px')
 
@@ -542,7 +542,7 @@ group{}
             for (const category of data.lst){
                 select.append('option')
                     .attr('value',category.key)
-                    .text( category.key+'\t(n='+ category.samplecount +')')
+                    .text( category.label+'\t(n='+ category.samplecount +')')
             }  
         }else{
             select.append('option')
