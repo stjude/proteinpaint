@@ -122,6 +122,12 @@ obj{}:
 		console.log('Arrhythmias', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')]) )
 		console.log('Arrhythmias, sub', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1}')]) )
 		console.log('Arrhythmias, grade-sub', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1,"grade_child_overlay":1}')]) )
+		console.log('Asthma + racegrp', await obj.do_query(['testplot=1&term2_id=racegrp&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		console.log('Arrthymias + racegrp', await obj.do_query(['testplot=1&term2_id=racegrp&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')]) )
+		console.log('Asthma + agedx', await obj.do_query(['testplot=1&term2_id=agedx&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		console.log('Arrthymias + agedx', await obj.do_query(['testplot=1&term2_id=agedx&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')]) )
+		console.log('Asthma + Hypertension', await obj.do_query(['testplot=1&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')+'&term2_id=Hypertension&term2_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		console.log('Cardiovascular System + Hypertension', await obj.do_query(['testplot=1&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')+'&term2_id=Hypertension&term2_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
 	}
 }
 
