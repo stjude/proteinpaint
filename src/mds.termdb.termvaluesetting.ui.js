@@ -340,8 +340,8 @@ group{}
 
                     // query db for list of grade and count
                     const lst = ['bar_by_grade=1']
-                    if (term.value_by_max_grade) lst.push('&value_by_max_grade=1')
-                    else if(term.value_by_most_recent)lst.push('&value_by_most_recent=1')
+                    if (term.value_by_max_grade) lst.push('value_by_max_grade=1')
+                    else if(term.value_by_most_recent)lst.push('value_by_most_recent=1')
                     const data = await getcategories(term, lst)
 
                     for (let j=0; j<term.values.length; j++){
@@ -479,7 +479,7 @@ group{}
         }
 
         const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+tvslst_filter_str]
-        if (lst) args.push(lst) 
+        if (lst) args.push(...lst) 
 
         let data
         try {
