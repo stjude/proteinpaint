@@ -9,6 +9,7 @@ makesql_overlay_oneterm
 makesql_numericBinCTE
 uncomputablegrades_clause
 grade_age_select_clause
+get_label4key
 */
 
 
@@ -273,10 +274,15 @@ q{}
 	if(!q.term1_id) throw '.term1_id is required but missing'
 	const term1 = q.ds.cohort.termdb.q.termjsonByOneid( q.term1_id )
 	if(!term1) throw 'unknown term1_id: '+q.term1_id
+	if(!q.term1q) q.term1q = {} // settings of term1
+	if( typeof q.term1q == 'string' ) q.term1q = JSON.parse(decodeURIComponent(q.term1q))
+
 	if( q.term2_id ) {
-		// has term2, do overlay
+		///////////// has term2, do overlay
 		const term2 = q.ds.cohort.termdb.q.termjsonByOneid( q.term2_id )
 		if( !term2 ) throw 'unknown term2_id: '+q.term2_id
+		if(!q.term2q) q.term2q = {} // settings of term2
+		if( typeof q.term2q == 'string' ) q.term2q = JSON.parse(decodeURIComponent(q.term2q))
 		const values = []
 		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1q, values )
 		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2q, values )
@@ -294,11 +300,26 @@ q{}
 		console.log(string)
 		const lst = q.ds.cohort.db.connection.prepare(string)
 			.all( values )
-		// may add label
+		// add label or range if numeric
+		for(const i of lst) {
+			if( term1.isinteger || term1.isfloat ) {
+				i.label1 = i.key1
+				i.range1 = CTE_term1.name2bin.get( i.key1 )
+			} else {
+				i.label1 = get_label4key( i.key1, term1, q.term1q, q.ds )
+			}
+			if( term2.isinteger || term2.isfloat ) {
+				i.label2 = i.key2
+				i.range2 = CTE_term2.name2bin.get( i.key2 )
+			} else {
+				i.label2 = get_label4key( i.key2, term2, q.term2q, q.ds )
+			}
+		}
 		return lst
 	}
 
-	// just term1
+	///////////////// just term1
+
 	if( term1.iscategorical ) {
 		const string =
 			`${filter ? 'WITH '+filter.CTEcascade+' ' : ''}
@@ -313,6 +334,7 @@ q{}
 		if(!lst) return undefined
 		// add label
 		for(const i of lst) {
+			i.label = get_label4key( i.key, term1 )
 			const label = term1.values ? term1.values[i.key] : i.key
 			i.label = label || i.key
 		}
@@ -332,6 +354,10 @@ q{}
 			console.log(string)
 		const lst = q.ds.cohort.db.connection.prepare(string)
 			.all( term1.id )
+		for(const i of lst) {
+			i.label = i.key
+			i.range = bins.name2bin.get( i.key )
+		}
 		return lst
 	}
 	if( term1.iscondition ) {
@@ -351,7 +377,7 @@ q{}
 					${uncomputablegrades_clause( q.ds )}
 					GROUP BY sample
 				)
-				SELECT grade,count(sample) as samplecount
+				SELECT grade as key,count(sample) as samplecount
 				FROM tmp_grade_table
 				GROUP BY grade`
 			thisvalues.push( q.term1_id )
@@ -415,14 +441,38 @@ q{}
 				throw 'unknown bar_by_? for a non-leaf term'
 			}
 		}
-		console.log(string)
-		const re = q.ds.cohort.db.connection.prepare( string )
+		const lst = q.ds.cohort.db.connection.prepare( string )
 			.all([ ...(filter?filter.values:[]), ...thisvalues ])
-		return re
+		for(const i of lst) {
+			i.label = get_label4key( i.key, term1, q.term1q, q.ds )
+		}
+		return lst
 	}
 	throw 'unknown type of term1'
 }
 
+
+
+
+function get_label4key ( key, term, q, ds ) {
+// get label for a key based on term type and setting
+	if(term.iscategorical) {
+		let label
+		if( term.values && term.values[key] ) label = term.values[key].label
+		return label || key
+	}
+	if(term.iscondition) {
+		if(term.isleaf || q.bar_by_grade) {
+			const g = ds.cohort.termdb.patient_condition.grade_labels.find(i=>i.grade==key)
+			if(!g) return key+': unknown_grade'
+			return g.label
+		}
+		// no special label for subconditions; may use .name from subcondition term
+		return key
+	}
+	if(term.isinteger || term.isfloat) throw 'should not work for numeric term'
+	throw 'unknown term type'
+}
 
 
 
@@ -482,7 +532,8 @@ returns { sql, tablename }
 				SELECT bname as key, sample
 				FROM ${bins.tablename}
 				)`,
-			tablename
+			tablename,
+			name2bin: bins.name2bin
 		}
 	}
 	if( term.iscondition ) {
