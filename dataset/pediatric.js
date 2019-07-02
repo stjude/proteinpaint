@@ -197,7 +197,11 @@ module.exports={
 					m.origin=label2origin[l.variant_origin_pp.toUpperCase()] || common.moriginsomatic
 					if(m.origin==common.morigingermline) {
 						m.isrim1=true
-						if(l.committee_classification) {
+						if(l.committee_classification && l.committee_classification!='NONE') {
+						/*
+						germline variants loaded from papers such as dkfz does not have committee classification
+						so they cannot be treated as 'germline non-pathogenic'
+						*/
 							// pediatric germline only
 							if(l.committee_classification=='LIKELY_PATHOGENIC' || l.committee_classification=='PATHOGENIC') {
 								m.origin=common.morigingermlinepathogenic
