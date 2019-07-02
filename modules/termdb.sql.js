@@ -6,6 +6,7 @@ get_samplesummary_by_term
 ********************** INTERNAL
 makesql_by_tvsfilter
 makesql_overlay_oneterm
+	makesql_overlay_oneterm_condition
 makesql_numericBinCTE
 uncomputablegrades_clause
 grade_age_select_clause
@@ -696,6 +697,8 @@ returns { sql, tablename, name2bin }
 		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
 			if( q.isterm2 && term.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
 				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.crosstab_fixed_bins))
+			} else if ( term.graph.barchart.numeric_bin.fixed_bins ) {
+				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.fixed_bins))
 			} else if( term.graph.barchart.numeric_bin.auto_bins ) {
 				const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
 				let v = term.graph.barchart.numeric_bin.auto_bins.start_value
@@ -713,9 +716,11 @@ returns { sql, tablename, name2bin }
 			}
 		}
 	}
+	const bin_def_lst = []
 	const name2bin = new Map()
 	// k: name str, v: bin{}
-	const binstr = bins.map( (b,i)=>{
+	let binid = 0
+	for(const b of bins) {
 		if(!b.name) {
 			if( b.startunbounded ) {
 				b.name = (b.stopinclusive ? '<=' : '<')+' '+b.stop
@@ -726,21 +731,87 @@ returns { sql, tablename, name2bin }
 			}
 		}
 		name2bin.set( b.name, b )
-		return `SELECT '${b.name}' AS name,
-		${b.start==undefined?0:b.start} AS start,
-		${b.stop==undefined?0:b.stop} AS stop,
-		${b.startunbounded?1:0} AS startunbounded,
-		${b.stopunbounded?1:0} AS stopunbounded,
-		${b.startinclusive?1:0} AS startinclusive,
-		${b.stopinclusive?1:0} AS stopinclusive,
-		${i} AS binorder`
-	}).join(' UNION ALL ')
+		bin_def_lst.push(
+			`SELECT '${b.name}' AS name,
+			${b.start==undefined?0:b.start} AS start,
+			${b.stop==undefined?0:b.stop} AS stop,
+			0 AS unannotated,
+			${b.startunbounded?1:0} AS startunbounded,
+			${b.stopunbounded?1:0} AS stopunbounded,
+			${b.startinclusive?1:0} AS startinclusive,
+			${b.stopinclusive?1:0} AS stopinclusive,
+			${binid++} AS binorder`
+		)
+	}
+	let excludevalues
+	if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin && term.graph.barchart.numeric_bin.unannotated) {
+		excludevalues = []
+		const u = term.graph.barchart.numeric_bin.unannotated
+		if(u.value!=undefined) {
+			excludevalues.push( u.value )
+			bin_def_lst.push(
+				`SELECT '${u.label}' AS name,
+				${u.value} AS start,
+				0 AS stop,
+				1 AS unannotated,
+				0 AS startunbounded,
+				0 AS stopunbounded,
+				0 AS startinclusive,
+				0 AS stopinclusive,
+				${binid++} AS binorder`
+			)
+			name2bin.set( u.label, {
+				is_unannotated: true,
+				value: u.value,
+				label: u.label
+			})
+		}
+		if(u.value_positive!=undefined) {
+			excludevalues.push( u.value_positive )
+			bin_def_lst.push(
+				`SELECT '${u.label_positive}' AS name,
+				${u.value_positive} AS start,
+				0 AS stop,
+				1 AS unannotated,
+				0 AS startunbounded,
+				0 AS stopunbounded,
+				0 AS startinclusive,
+				0 AS stopinclusive,
+				${binid++} AS binorder`
+			)
+			name2bin.set( u.label_positive, {
+				is_unannotated: true,
+				value: u.value_positive,
+				label: u.label_positive
+			})
+		}
+		if(u.value_negative!=undefined) {
+			excludevalues.push( u.value_negative )
+			bin_def_lst.push(
+				`SELECT '${u.label_negative}' AS name,
+				${u.value_negative} AS start,
+				0 AS stop,
+				1 AS unannotated,
+				0 AS startunbounded,
+				0 AS stopunbounded,
+				0 AS startinclusive,
+				0 AS stopinclusive,
+				${binid++} AS binorder`
+			)
+			name2bin.set( u.label_negative, {
+				is_unannotated:true,
+				value: u.value_negative,
+				label: u.label_negative
+			})
+		}
+	}
 
-	const bin_def_table = 'tmpbindef_'+term.id
-	const bin_sample_table = 'tmpbinsample_'+term.id
+	const bin_def_table = 'tmpbindef_'+term.id.replace(/ /g,'_')
+	const bin_sample_table = 'tmpbinsample_'+term.id.replace(/ /g,'_')
+
 	const sql = 
 		`${bin_def_table} AS (
-			${binstr}
+			${bin_def_lst.join(' UNION ALL ')}
 		),
 		${bin_sample_table} AS (
 			SELECT
@@ -751,15 +822,32 @@ returns { sql, tablename, name2bin }
 			FROM
 				annotations a
 			JOIN ${bin_def_table} b ON
-				(b.startunbounded=1 OR
-					(v>b.start OR
-						(b.startinclusive=1 AND v=b.start)))
-				AND
-				(b.stopunbounded OR
-					(v<b.stop OR
-						(b.stopinclusive=1 AND v=b.stop)))
+				( b.unannotated=1 AND v=b.start )
+				OR
+				(
+					${excludevalues ? 'v NOT IN ('+excludevalues.join(',')+') AND' : ''}
+					(
+						b.startunbounded=1
+						OR
+						(
+							v>b.start
+							OR
+							(b.startinclusive=1 AND v=b.start)
+						)
+					)
+					AND
+					(
+						b.stopunbounded
+						OR
+						(
+							v<b.stop
+							OR
+							(b.stopinclusive=1 AND v=b.stop)
+						)
+					)
+				)
 			WHERE
-			${filter ? 'sample IN '+filter.lastCTEname+' AND ':''}
+			${filter ? 'sample IN '+filter.lastCTEname+' AND':''}
 			term_id=?
 		)`
 	return {
