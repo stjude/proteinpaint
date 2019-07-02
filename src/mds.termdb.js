@@ -117,6 +117,7 @@ obj{}:
 		console.log('diaggrp', await obj.do_query(['testplot=1&term1_id=diaggrp']) )
 		console.log('diaggrp+wgs_sequenced', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=wgs_sequenced']) )
 		console.log('agedx', await obj.do_query(['testplot=1&term1_id=agedx']) )
+		console.log('Cumulative Alkylating Agent (CED)', await obj.do_query(['testplot=1&term1_id=aaclassic_5']) )
 		console.log('diaggrp+agedx', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=agedx']) )
 		console.log('Asthma', await obj.do_query(['testplot=1&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
 		console.log('Cardiovascular System', await obj.do_query(['testplot=1&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')]) )
