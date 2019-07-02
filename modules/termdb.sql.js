@@ -338,6 +338,7 @@ q{}
 	///////////////// just term1
 
 	if( term1.iscategorical ) {
+		// summary for categorical
 		const string =
 			`${filter ? 'WITH '+filter.CTEcascade+' ' : ''}
 			SELECT value AS key,count(sample) AS samplecount
@@ -359,6 +360,7 @@ q{}
 	}
 
 	if( term1.isinteger || term1.isfloat ) {
+		// summary for bins
 		const bins = makesql_numericBinCTE( term1, q.term1_q, filter, q.ds )
 		const string =
 			`WITH
@@ -368,7 +370,6 @@ q{}
 			FROM ${bins.tablename}
 			GROUP BY bname
 			ORDER BY binorder`
-			console.log(string)
 		const lst = q.ds.cohort.db.connection.prepare(string)
 			.all( term1.id )
 		for(const i of lst) {
@@ -383,7 +384,7 @@ q{}
 		const thisvalues = []
 		let overlay = false
 		if( term1.isleaf ) {
-			// leaf
+			// summary, leaf
 			string = 
 				`WITH
 				${filter ? filter.CTEcascade+', ' : ''}
@@ -552,8 +553,9 @@ function grade_age_select_clause ( tvs ) {
 	if( tvs.value_by_most_recent ) return 'SELECT sample,MAX(age_graded),grade '
 	throw 'unknown value_by_? for condition term by grade'
 }
-
-
+function tmptable () {
+	return 'tmp'+Math.ceil(Math.random()*10000)
+}
 
 
 function makesql_overlay_oneterm ( term, filter, ds, q, values ) {
@@ -572,7 +574,7 @@ values[]: collector of bind parameters
 
 returns { sql, tablename }
 */
-	const tablename = 'CTEtemp'+term.id.replace(/ /g,'_')
+	const tablename = tmptable()
 	if( term.iscategorical ) {
 		values.push( term.id )
 		return {
@@ -619,14 +621,14 @@ function makesql_overlay_oneterm_condition ( term, q, ds, filter, values ) {
 /*
 return {sql, tablename}
 */
-	const tmp_grade_table = 'tmpgradetable_'+term.id.replace(/ /g,'_')
-	const tmp_term_table = 'tmptermtable_'+term.id.replace(/ /g,'_')
+	const grade_table = tmptable()
+	const term_table = tmptable()
 
 	let string
 	if( term.isleaf ) {
 		values.push(term.id)
 		return {
-			sql: `${tmp_grade_table} AS (
+			sql: `${grade_table} AS (
 				${grade_age_select_clause(q)}
 				FROM chronicevents
 				WHERE
@@ -635,56 +637,56 @@ return {sql, tablename}
 				${uncomputablegrades_clause( ds )}
 				GROUP BY sample
 			)`,
-			tablename: tmp_grade_table
+			tablename: grade_table
 		}
 	}
 	if( q.bar_by_grade ) {
 		values.push(term.id, term.id)
 		return {
-			sql: `${tmp_term_table} AS (
+			sql: `${term_table} AS (
 				SELECT term_id
 				FROM ancestry
 				WHERE ancestor_id=?
 				OR term_id=?
 			),
-			${tmp_grade_table} AS (
+			${grade_table} AS (
 				${grade_age_select_clause(q)}
 				FROM chronicevents
 				WHERE
-				${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
-				term_id IN ${tmp_term_table}
+				${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
+				term_id IN ${term_table}
 				${uncomputablegrades_clause( ds )}
 				GROUP BY sample
 			)`,
-			tablename: tmp_grade_table
+			tablename: grade_table
 		}
 	}
 	if( q.bar_by_children ) {
 		values.push( term.id )
-		const tmp_children_table = 'tmpchildtable_'+term.id.replace(/ /g,'_')
-		const tmp_grandchildren_table = 'tmpgrandchildrentable_'+term.id.replace(/ /g,'_')
+		const children_table = tmptable()
+		const grandchildren_table = tmptable()
 		return {
-			sql: `${tmp_children_table} AS (
+			sql: `${children_table} AS (
 				SELECT id AS child
 				FROM terms
 				WHERE parent_id=?
 			),
-			${tmp_grandchildren_table} AS (
+			${grandchildren_table} AS (
 				SELECT term_id, c.child AS child
-				FROM ancestry a, ${tmp_children_table} c
+				FROM ancestry a, ${children_table} c
 				WHERE c.child=a.ancestor_id OR c.child=a.term_id
 				ORDER BY term_id ASC
 			),
-			${tmp_grade_table} AS (
+			${grade_table} AS (
 				SELECT sample, d.child as key
-				FROM chronicevents a, ${tmp_grandchildren_table} d
+				FROM chronicevents a, ${grandchildren_table} d
 				WHERE
-				${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+				${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
 				d.term_id = a.term_id
 				${uncomputablegrades_clause( ds )}
 				GROUP BY key, sample
 			)`,
-			tablename: tmp_grade_table
+			tablename: grade_table
 		}
 	}
 	throw 'unknown bar_by_? for a non-leaf term'
@@ -821,8 +823,8 @@ returns { sql, tablename, name2bin }
 		}
 	}
 
-	const bin_def_table = 'tmpbindef_'+term.id.replace(/ /g,'_')
-	const bin_sample_table = 'tmpbinsample_'+term.id.replace(/ /g,'_')
+	const bin_def_table = tmptable()
+	const bin_sample_table = tmptable()
 
 	const sql = 
 		`${bin_def_table} AS (
