@@ -69,7 +69,7 @@ return async (req, res) => {
 
 function trigger_testplot ( q, res, tdb, ds ) {
 	q.ds = ds
-	const lst = termdbsql.get_samplesummary_by_term( q )
+	const lst = termdbsql.get_summary( q )
 	res.send({lst})
 }
 
@@ -144,7 +144,7 @@ function trigger_treeto ( q, res, termdb ) {
 
 
 function trigger_getcategories ( q, res, tdb, ds ) {
-// thin wrapper of get_samplesummary_by_term
+// thin wrapper of get_summary
 	if( !q.tid ) throw '.tid missing'
 	const arg = {
 		ds,
@@ -157,7 +157,7 @@ function trigger_getcategories ( q, res, tdb, ds ) {
 		}
 	}
 	if( q.tvslst ) arg.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
-	const lst = termdbsql.get_samplesummary_by_term( arg )
+	const lst = termdbsql.get_summary( arg )
 	res.send({lst})
 }
 
