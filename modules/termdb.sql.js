@@ -338,7 +338,7 @@ q{}
 	///////////////// just term1
 
 	if( term1.iscategorical ) {
-		// summary for categorical
+		//////////// summary for categorical
 		const string =
 			`${filter ? 'WITH '+filter.CTEcascade+' ' : ''}
 			SELECT value AS key,count(sample) AS samplecount
@@ -360,7 +360,7 @@ q{}
 	}
 
 	if( term1.isinteger || term1.isfloat ) {
-		// summary for bins
+		//////////// summary for bins
 		const bins = makesql_numericBinCTE( term1, q.term1_q, filter, q.ds )
 		const string =
 			`WITH
@@ -384,7 +384,7 @@ q{}
 		const thisvalues = []
 		let overlay = false
 		if( term1.isleaf ) {
-			// summary, leaf
+			///////////// summary, leaf
 			string = 
 				`WITH
 				${filter ? filter.CTEcascade+', ' : ''}
@@ -402,8 +402,8 @@ q{}
 				GROUP BY grade`
 			thisvalues.push( q.term1_id )
 
-			// all below are non-leaf
 		} else if( q.term1_q.grade_child_overlay ) {
+			/////////// summary, grade-child overlay, one term
 			string =
 				`WITH
 				${filter ? filter.CTEcascade+', ' : ''}
@@ -436,6 +436,7 @@ q{}
 			thisvalues.push( q.term1_id )
 
 		} else if( q.term1_q.bar_by_grade ) {
+			//////////// summary, bar by grade
 			string = 
 				`WITH
 				${filter ? filter.CTEcascade+', ' : ''}
@@ -460,7 +461,20 @@ q{}
 			thisvalues.push( q.term1_id, q.term1_id )
 
 		} else if( q.term1_q.bar_by_children ) {
-
+			/////////// summary, bar by children
+			const selectitems = [
+				'sample',
+				'd.subcondition as subcondition'
+			]
+			if( q.term1_q.value_by_max_grade ) {
+				selectitems.push('MAX(grade)')
+			} else if(q.term1_q.value_by_most_recent) {
+				selectitems.push('MAX(age_graded)')
+			} else if(q.term1_q.value_by_computable_grade) {
+				// do not insert
+			} else {
+				throw 'unknown value_by_? for term1 bar by children'
+			}
 			string =
 				`WITH
 				${filter ? filter.CTEcascade+',' : ''}
@@ -476,7 +490,8 @@ q{}
 					ORDER BY term_id ASC
 				),
 				tmp_events_table AS (
-					SELECT sample, d.subcondition as subcondition
+					SELECT
+						${selectitems.join(',')}
 					FROM chronicevents a, tmp_descendant_table d
 					WHERE
 					${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
