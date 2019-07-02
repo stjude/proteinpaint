@@ -119,7 +119,7 @@ obj{}:
 		console.log('agedx', await obj.do_query(['testplot=1&term1_id=agedx']) )
 		console.log('diaggrp+agedx', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=agedx']) )
 		console.log('Asthma', await obj.do_query(['testplot=1&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
-		console.log('Arrhythmias', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')]) )
+		console.log('Cardiovascular System', await obj.do_query(['testplot=1&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')]) )
 		console.log('Arrhythmias, sub', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1}')]) )
 		console.log('Arrhythmias, grade-sub', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1,"grade_child_overlay":1}')]) )
 		console.log('Asthma + racegrp', await obj.do_query(['testplot=1&term2_id=racegrp&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
@@ -127,7 +127,9 @@ obj{}:
 		console.log('Asthma + agedx', await obj.do_query(['testplot=1&term2_id=agedx&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
 		console.log('Arrthymias + agedx', await obj.do_query(['testplot=1&term2_id=agedx&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')]) )
 		console.log('Asthma + Hypertension', await obj.do_query(['testplot=1&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')+'&term2_id=Hypertension&term2_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		console.log('Arrhythmias + Hypertension', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')+'&term2_id=Hypertension&term2_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
 		console.log('Cardiovascular System + Hypertension', await obj.do_query(['testplot=1&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')+'&term2_id=Hypertension&term2_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		console.log('Cardiovascular System + Endocrine System', await obj.do_query(['testplot=1&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')+'&term2_id=Endocrine+System&term2_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')]) )
 	}
 }
 
@@ -645,7 +647,6 @@ barchart is shown in-place under term and in full capacity
 	const input = div
 		.append('input')
 		.attr('type','search')
-		.attr('class','tree_search')
 		.style('width','100px')
 		.style('display','block')
 		.attr('placeholder','Search')
@@ -666,7 +667,7 @@ barchart is shown in-place under term and in full capacity
 
 	// TODO debounce
 
-	input.on('input', async ()=>{
+	input.on('keyup', async ()=>{
 
 		table.selectAll('*').remove()
 
@@ -674,8 +675,7 @@ barchart is shown in-place under term and in full capacity
 		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
 
 		if( str==' ' || str=='' ) {
-			// blank or cleared by 'x' button from search input
-			table.selectAll('*').remove()
+			// blank
 			return
 		}
 		try {

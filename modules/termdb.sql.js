@@ -556,7 +556,7 @@ values[]: collector of bind parameters
 
 returns { sql, tablename }
 */
-	const tablename = 'CTEtemp'+term.id
+	const tablename = 'CTEtemp'+term.id.replace(/ /g,'_')
 	if( term.iscategorical ) {
 		values.push( term.id )
 		return {
@@ -603,9 +603,8 @@ function makesql_overlay_oneterm_condition ( term, q, ds, filter, values ) {
 /*
 return {sql, tablename}
 */
-	const tmp_grade_table = 'tmpgradetable_'+term.id
-	const tmp_term_table = 'tmptermtable_'+term.id
-	console.log(q)
+	const tmp_grade_table = 'tmpgradetable_'+term.id.replace(/ /g,'_')
+	const tmp_term_table = 'tmptermtable_'+term.id.replace(/ /g,'_')
 
 	let string
 	if( term.isleaf ) {
@@ -646,8 +645,8 @@ return {sql, tablename}
 	}
 	if( q.bar_by_children ) {
 		values.push( term.id )
-		const tmp_children_table = 'tmpchildtable_'+term.id
-		const tmp_grandchildren_table = 'tmpgrandchildrentable_'+term.id
+		const tmp_children_table = 'tmpchildtable_'+term.id.replace(/ /g,'_')
+		const tmp_grandchildren_table = 'tmpgrandchildrentable_'+term.id.replace(/ /g,'_')
 		return {
 			sql: `${tmp_children_table} AS (
 				SELECT id AS child
