@@ -43,14 +43,14 @@ returns:
 
 	for(const tvs of tvslst) {
 
-		let and_clause = sampleset_id > 0 ? `sample IN sampleset_${sampleset_id} AND ` : ''
+		let samplein_clause = sampleset_id > 0 ? `sample IN sampleset_${sampleset_id} AND` : ''
 
 		if(tvs.term.iscategorical) {
-			add_categorical( tvs, and_clause )
+			add_categorical( tvs, samplein_clause )
 		} else if(tvs.term.isinteger || tvs.term.isfloat) {
-			add_numerical( tvs, and_clause )
+			add_numerical( tvs, samplein_clause )
 		} else if(tvs.term.iscondition) {
-			add_condition( tvs, and_clause )
+			add_condition( tvs, samplein_clause )
 		} else {
 			throw 'unknown term type'
 		}
@@ -63,14 +63,13 @@ returns:
 	}
 
 	// helpers
-	function add_categorical ( tvs, and_clause ) {
-		const questionmarks = tvs.values.map(i=>'?').join(' ')
+	function add_categorical ( tvs, samplein_clause ) {
 		CTEs.push(
 			`sampleset_${++sampleset_id} AS (
 				SELECT sample
 				FROM annotations
 				WHERE
-				${and_clause}
+				${samplein_clause}
 				term_id = ?
 				AND value IN (${tvs.values.map(i=>'?').join(', ')})
 			)`
@@ -78,7 +77,7 @@ returns:
 		values.push( tvs.term.id, ...tvs.values.map(i=>i.key) )
 	}
 
-	function add_numerical ( tvs, and_clause ) {
+	function add_numerical ( tvs, samplein_clause ) {
 		if(!tvs.range) throw '.range{} missing'
 		values.push( tvs.term.id )
 		const clauses = []
@@ -110,14 +109,14 @@ returns:
 				SELECT sample
 				FROM annotations
 				WHERE
-				${and_clause}
+				${samplein_clause}
 				term_id = ?
 				AND ${clauses.join(' AND ')}
 			)`
 		)
 	}
 
-	function add_condition ( tvs, and_clause ) {
+	function add_condition ( tvs, samplein_clause ) {
 		if( ds.cohort.termdb.q.termIsLeaf( tvs.term.id ) ) {
 			// is leaf
 			CTEs.push(
@@ -125,7 +124,7 @@ returns:
 					${grade_age_select_clause(tvs)}
 					FROM chronicevents
 					WHERE
-					${and_clause}
+					${samplein_clause}
 					term_id = ?
 					${uncomputablegrades_clause( ds )}
 					GROUP BY sample
@@ -155,7 +154,7 @@ returns:
 					${grade_age_select_clause(tvs)}
 					FROM chronicevents
 					WHERE
-					${and_clause}
+					${samplein_clause}
 					term_id IN sampleset_${sampleset_id-1}
 					${uncomputablegrades_clause( ds )}
 					GROUP BY sample
@@ -188,7 +187,7 @@ returns:
 					${grade_age_select_clause(tvs)}
 					FROM chronicevents
 					WHERE
-					${and_clause}
+					${samplein_clause}
 					term_id IN sampleset_${sampleset_id-1}
 					${uncomputablegrades_clause( ds )}
 					GROUP BY sample
@@ -221,7 +220,7 @@ returns:
 					SELECT distinct(sample)
 					FROM chronicevents
 					WHERE
-					${and_clause}
+					${samplein_clause}
 					term_id IN sampleset_${sampleset_id-1}
 					${uncomputablegrades_clause( ds )}
 				)`
@@ -384,6 +383,7 @@ q{}
 		const thisvalues = []
 		let overlay = false
 		if( term1.isleaf ) {
+			// leaf
 			string = 
 				`WITH
 				${filter ? filter.CTEcascade+', ' : ''}
@@ -400,97 +400,97 @@ q{}
 				FROM tmp_grade_table
 				GROUP BY grade`
 			thisvalues.push( q.term1_id )
+
+			// all below are non-leaf
+		} else if( q.term1_q.grade_child_overlay ) {
+			string =
+				`WITH
+				${filter ? filter.CTEcascade+', ' : ''}
+				tmp_children_table AS (
+					SELECT id AS child
+					FROM terms
+					WHERE parent_id=?
+				),
+				tmp_grandchildren_table AS (
+					SELECT term_id, c.child AS child
+					FROM ancestry a, tmp_children_table c
+					WHERE c.child=a.ancestor_id OR c.child=a.term_id
+					ORDER BY term_id ASC
+				),
+				tmp_events_table AS (
+					SELECT sample, d.child as child,
+						${q.term1_q.value_by_max_grade ? 'MAX(grade) AS grade' : 'grade, MAX(age_graded)'}
+					FROM chronicevents a, tmp_grandchildren_table d
+					WHERE
+					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+					d.term_id = a.term_id
+					${uncomputablegrades_clause( q.ds )}
+					GROUP BY d.child, sample
+				)
+				SELECT
+					${q.term1_q.bar_by_grade ? 'grade AS key1,child AS key2,' : 'child AS key1,grade AS key2,'}
+					count(sample) AS samplecount
+				FROM tmp_events_table
+				GROUP BY grade, child`
+			thisvalues.push( q.term1_id )
+
+		} else if( q.term1_q.bar_by_grade ) {
+			string = 
+				`WITH
+				${filter ? filter.CTEcascade+', ' : ''}
+				tmp_term_table AS (
+					SELECT term_id
+					FROM ancestry
+					WHERE ancestor_id=?
+					OR term_id=?
+				),
+				tmp_grade_table AS (
+					${grade_age_select_clause( q.term1_q )}
+					FROM chronicevents
+					WHERE
+					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+					term_id IN tmp_term_table
+					${uncomputablegrades_clause( q.ds )}
+					GROUP BY sample
+				)
+				SELECT grade AS key,count(sample) as samplecount
+				FROM tmp_grade_table
+				GROUP BY key`
+			thisvalues.push( q.term1_id, q.term1_id )
+
+		} else if( q.term1_q.bar_by_children ) {
+
+			string =
+				`WITH
+				${filter ? filter.CTEcascade+',' : ''}
+				tmp_subcondition_table AS (
+					SELECT id
+					FROM terms
+					WHERE parent_id=?
+				),
+				tmp_descendant_table AS (
+					SELECT term_id, s.id AS subcondition
+					FROM ancestry a, tmp_subcondition_table s
+					WHERE s.id=a.ancestor_id OR s.id=a.term_id
+					ORDER BY term_id ASC
+				),
+				tmp_events_table AS (
+					SELECT sample, d.subcondition as subcondition
+					FROM chronicevents a, tmp_descendant_table d
+					WHERE
+					${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
+					d.term_id = a.term_id
+					${uncomputablegrades_clause( q.ds )}
+					GROUP BY sample
+				)
+				SELECT
+					subcondition AS key,
+					count(sample) AS samplecount
+				FROM tmp_events_table
+				GROUP BY key`
+			thisvalues.push( q.term1_id )
 		} else {
-			// non-leaf
-
-			if( q.term1_q.grade_child_overlay ) {
-				string =
-					`WITH
-					${filter ? filter.CTEcascade+', ' : ''}
-					tmp_children_table AS (
-						SELECT id AS child
-						FROM terms
-						WHERE parent_id=?
-					),
-					tmp_grandchildren_table AS (
-						SELECT term_id, c.child AS child
-						FROM ancestry a, tmp_children_table c
-						WHERE c.child=a.ancestor_id OR c.child=a.term_id
-						ORDER BY term_id ASC
-					),
-					tmp_events_table AS (
-						SELECT sample, d.child as child,
-							${q.term1_q.value_by_max_grade ? 'MAX(grade) AS grade' : 'grade, MAX(age_graded)'}
-						FROM chronicevents a, tmp_grandchildren_table d
-						WHERE
-						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
-						d.term_id = a.term_id
-						${uncomputablegrades_clause( q.ds )}
-						GROUP BY d.child, sample
-					)
-					SELECT
-						${q.term1_q.bar_by_grade ? 'grade AS key1,child AS key2,' : 'child AS key1,grade AS key2,'}
-						count(sample) AS samplecount
-					FROM tmp_events_table
-					GROUP BY grade, child`
-				thisvalues.push( q.term1_id )
-
-			} else if( q.term1_q.bar_by_grade ) {
-				string = 
-					`WITH
-					${filter ? filter.CTEcascade+', ' : ''}
-					tmp_term_table AS (
-						SELECT term_id
-						FROM ancestry
-						WHERE ancestor_id=?
-						OR term_id=?
-					),
-					tmp_grade_table AS (
-						${grade_age_select_clause( q.term1_q )}
-						FROM chronicevents
-						WHERE
-						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
-						term_id IN tmp_term_table
-						${uncomputablegrades_clause( q.ds )}
-						GROUP BY sample
-					)
-					SELECT grade AS key,count(sample) as samplecount
-					FROM tmp_grade_table
-					GROUP BY key`
-				thisvalues.push( q.term1_id, q.term1_id )
-			} else if( q.term1_q.bar_by_children ) {
-				string =
-					`WITH
-					${filter ? filter.CTEcascade+', ' : ''}
-					tmp_children_table AS (
-						SELECT id AS child
-						FROM terms
-						WHERE parent_id=?
-					),
-					tmp_grandchildren_table AS (
-						SELECT term_id, c.child AS child
-						FROM ancestry a, tmp_children_table c
-						WHERE c.child=a.ancestor_id OR c.child=a.term_id
-						ORDER BY term_id ASC
-					),
-					tmp_events_table AS (
-						SELECT sample, d.child as child
-						FROM chronicevents a, tmp_grandchildren_table d
-						WHERE
-						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
-						d.term_id = a.term_id
-						${uncomputablegrades_clause( q.ds )}
-						GROUP BY d.child, sample
-					)
-					SELECT
-						child AS key,
-						count(sample) AS samplecount
-					FROM tmp_events_table
-					GROUP BY child`
-				thisvalues.push( q.term1_id )
-			} else {
-				throw 'unknown bar_by_? for a non-leaf term'
-			}
+			throw 'unknown setting for a non-leaf term'
 		}
 		const lst = q.ds.cohort.db.connection.prepare( string )
 			.all([ ...(filter?filter.values:[]), ...thisvalues ])
