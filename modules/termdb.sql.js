@@ -2,9 +2,12 @@
 
 ********************** EXPORTED
 get_samples
-get_samplesummary_by_term
+get_summary
 ********************** INTERNAL
 makesql_by_tvsfilter
+	add_categorical
+	add_numerical
+	add_condition
 makesql_overlay_oneterm
 	makesql_overlay_oneterm_condition
 makesql_numericBinCTE
@@ -76,23 +79,31 @@ returns:
 	}
 
 	function add_numerical ( tvs, and_clause ) {
+		if(!tvs.range) throw '.range{} missing'
 		values.push( tvs.term.id )
 		const clauses = []
-		if( !tvs.range.startunbounded ) {
-			if( tvs.range.startinclusive ) {
-				clauses.push('value >= ?')
-			} else {
-				clauses.push('value > ? ')
+		const cast = 'CAST(value AS '+(tvs.term.isinteger?'INT':'REAL')+')'
+		if( tvs.range.is_unannotated ) {
+			clauses.push(cast+'=?')
+			values.push( tvs.range.value )
+		} else {
+			// regular bin
+			if( !tvs.range.startunbounded ) {
+				if( tvs.range.startinclusive ) {
+					clauses.push(cast+' >= ?')
+				} else {
+					clauses.push(cast+' > ? ')
+				}
+				values.push( tvs.range.start )
 			}
-			values.push( tvs.range.start )
-		}
-		if( !tvs.range.stopunbounded ) {
-			if( tvs.range.stopinclusive ) {
-				clauses.push('value <= ?')
-			} else {
-				clauses.push('value < ? ')
+			if( !tvs.range.stopunbounded ) {
+				if( tvs.range.stopinclusive ) {
+					clauses.push(cast+' <= ?')
+				} else {
+					clauses.push(cast+' < ? ')
+				}
+				values.push( tvs.range.stop )
 			}
-			values.push( tvs.range.stop )
 		}
 		CTEs.push(
 			`sampleset_${++sampleset_id} AS (
@@ -259,7 +270,7 @@ return an array of sample names passing through the filter
 
 
 
-export function get_samplesummary_by_term ( q ) {
+export function get_summary ( q ) {
 /*
 getting data for barchart and more
 
@@ -271,7 +282,11 @@ q{}
 	.term1_q{}
 	.term2_q{}
 */
-	const filter =  q.tvslst ? makesql_by_tvsfilter( q.tvslst, q.ds ) : undefined
+	let filter
+	if( q.tvslst ) {
+		if( typeof q.tvslst == 'string' ) q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+		filter = makesql_by_tvsfilter( q.tvslst, q.ds )
+	}
 	if(!q.term1_id) throw '.term1_id is required but missing'
 	const term1 = q.ds.cohort.termdb.q.termjsonByOneid( q.term1_id )
 	if(!term1) throw 'unknown term1_id: '+q.term1_id
