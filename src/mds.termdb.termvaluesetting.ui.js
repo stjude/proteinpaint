@@ -541,6 +541,10 @@ group{}
     }
 
     function make_plus_btn(holder, data, selected_values, group_values, terms_div){
+
+        // If 2 or less values for the term then remove plus button
+        if (data.lst.length <= 2) return
+
         const [add_value_select, add_value_btn] = make_select_btn_pair(holder)
         add_value_select.style('margin-right','1px')
 
