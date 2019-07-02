@@ -462,19 +462,6 @@ q{}
 
 		} else if( q.term1_q.bar_by_children ) {
 			/////////// summary, bar by children
-			const selectitems = [
-				'sample',
-				'd.subcondition as subcondition'
-			]
-			if( q.term1_q.value_by_max_grade ) {
-				selectitems.push('MAX(grade)')
-			} else if(q.term1_q.value_by_most_recent) {
-				selectitems.push('MAX(age_graded)')
-			} else if(q.term1_q.value_by_computable_grade) {
-				// do not insert
-			} else {
-				throw 'unknown value_by_? for term1 bar by children'
-			}
 			string =
 				`WITH
 				${filter ? filter.CTEcascade+',' : ''}
@@ -491,7 +478,7 @@ q{}
 				),
 				tmp_events_table AS (
 					SELECT
-						${selectitems.join(',')}
+						${barbychildren_select_clause(q.term1_q)}
 					FROM chronicevents a, tmp_descendant_table d
 					WHERE
 					${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
@@ -500,7 +487,7 @@ q{}
 					GROUP BY sample
 				)
 				SELECT
-					subcondition AS key,
+					key,
 					count(sample) AS samplecount
 				FROM tmp_events_table
 				GROUP BY key`
@@ -527,6 +514,9 @@ q{}
 	}
 	throw 'unknown type of term1'
 }
+
+
+
 
 
 
@@ -571,6 +561,26 @@ function grade_age_select_clause ( tvs ) {
 function tmptable () {
 	return 'tmp'+Math.ceil(Math.random()*10000)
 }
+function barbychildren_select_clause ( q ) {
+// non-leaf condition term, bar by children, make select clause
+	const selectitems = [
+		'sample',
+		'd.subcondition as key'
+	]
+	if( q.value_by_max_grade ) {
+		selectitems.push('MAX(grade)')
+	} else if(q.value_by_most_recent) {
+		selectitems.push('MAX(age_graded)')
+	} else if(q.value_by_computable_grade) {
+		// nothing
+	} else {
+		throw 'unknown value_by_? at barbychildren_select_clause'
+	}
+	return selectitems.join(',')
+}
+
+
+
 
 
 function makesql_overlay_oneterm ( term, filter, ds, q, values ) {
@@ -615,15 +625,7 @@ returns { sql, tablename }
 		}
 	}
 	if( term.iscondition ) {
-		const tmp = makesql_overlay_oneterm_condition( term, q, ds, filter, values )
-		return {
-			sql: `${tmp.sql},
-			${tablename} AS (
-				SELECT grade as key, sample
-				FROM ${tmp.tablename}
-			)`,
-			tablename
-		}
+		return makesql_overlay_oneterm_condition( term, q, ds, filter, values )
 	}
 	throw 'unknown term type'
 }
@@ -638,12 +640,14 @@ return {sql, tablename}
 */
 	const grade_table = tmptable()
 	const term_table = tmptable()
+	const out_table = tmptable()
 
 	let string
 	if( term.isleaf ) {
 		values.push(term.id)
 		return {
-			sql: `${grade_table} AS (
+			sql:
+			`${grade_table} AS (
 				${grade_age_select_clause(q)}
 				FROM chronicevents
 				WHERE
@@ -651,14 +655,19 @@ return {sql, tablename}
 				term_id = ?
 				${uncomputablegrades_clause( ds )}
 				GROUP BY sample
+			),
+			${out_table} AS (
+				SELECT grade AS key, sample
+				FROM ${grade_table}
 			)`,
-			tablename: grade_table
+			tablename: out_table
 		}
 	}
 	if( q.bar_by_grade ) {
 		values.push(term.id, term.id)
 		return {
-			sql: `${term_table} AS (
+			sql:
+			`${term_table} AS (
 				SELECT term_id
 				FROM ancestry
 				WHERE ancestor_id=?
@@ -672,34 +681,41 @@ return {sql, tablename}
 				term_id IN ${term_table}
 				${uncomputablegrades_clause( ds )}
 				GROUP BY sample
+			),
+			${out_table} AS (
+				SELECT grade AS key, sample
+				FROM ${grade_table}
 			)`,
-			tablename: grade_table
+			tablename: out_table
 		}
 	}
 	if( q.bar_by_children ) {
 		values.push( term.id )
-		const children_table = tmptable()
-		const grandchildren_table = tmptable()
+		const subconditions = tmptable()
+		const descendants = tmptable()
 		return {
-			sql: `${children_table} AS (
-				SELECT id AS child
+			sql: `${subconditions} AS (
+				SELECT id
 				FROM terms
 				WHERE parent_id=?
 			),
-			${grandchildren_table} AS (
-				SELECT term_id, c.child AS child
-				FROM ancestry a, ${children_table} c
-				WHERE c.child=a.ancestor_id OR c.child=a.term_id
+			${descendants} AS (
+				SELECT term_id, s.id AS subcondition
+				FROM ancestry a, ${subconditions} s
+				WHERE s.id=a.ancestor_id OR s.id=a.term_id
 				ORDER BY term_id ASC
 			),
 			${grade_table} AS (
-				SELECT sample, d.child as key
-				FROM chronicevents a, ${grandchildren_table} d
+				SELECT
+					${barbychildren_select_clause(q)}
+				FROM
+					chronicevents a,
+					${descendants} d
 				WHERE
 				${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
-				d.term_id = a.term_id
+				a.term_id = d.term_id
 				${uncomputablegrades_clause( ds )}
-				GROUP BY key, sample
+				GROUP BY sample
 			)`,
 			tablename: grade_table
 		}
