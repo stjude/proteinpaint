@@ -347,6 +347,8 @@ export function may_show_samplematrix_button(tk, block) {
 			const c=m.features.length
 			words.push(c+' feature'+(c>1?'s':''))
 
+			words.push(m.samples.length+' samples')
+
 			const div = tr.append('td')
 				.append('div')
 				.attr('class','sja_menuoption')
