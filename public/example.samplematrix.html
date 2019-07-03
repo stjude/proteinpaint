@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	noheader:1,
+	samplematrix:{
+		genome:'hg19',
+		dslabel:'Pediatric2',
+		ismutation_allsymbolic:true,
+		limitsamplebyeitherannotation:[ { key:'diagnosis_short', value:'NBL' } ],
+		features:[
+			{ label:'MYCN', ismutation:1, querykeylst:['svcnv','snvindel'], width:50, position:'chr2:16079110-16087476', snvindel:{excludeclasses:{snv:1,Intron:1,E:1,mnv:1}} },
+			{ label:'ALK', ismutation:1, querykeylst:['svcnv','snvindel'], width:50, position:'chr2:29415639-30144477', snvindel:{excludeclasses:{snv:1,Intron:1,E:1,mnv:1}}  },
+		]
+	}
+})
+</script>
+
+</body>
+</html>

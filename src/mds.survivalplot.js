@@ -180,7 +180,7 @@ push button to re-render
 	}
 
 
-	if(obj.samplegroupings) {
+	if(obj.samplegroupings && !p.samplerule.full.immutable) {
 		/*
 		sample groupings is for setting samplerule.full
 
@@ -510,7 +510,11 @@ function doPlot( plot, obj ) {
 	for(const c of plot.samplesets) {
 		plot.legend.d_curves.append('div')
 			.style('margin','3px')
-			.html('<span style="background:'+c.color+'">&nbsp;&nbsp;</span> '+c.name)
+			.html(
+				'<span style="background:'+c.color+'">&nbsp;&nbsp;</span> '
+				+c.name
+				+( c.pvalue==undefined ? '' : ', P-value: '+c.pvalue )
+			)
 	}
 }
 

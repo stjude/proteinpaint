@@ -4,6 +4,7 @@ import {event as d3event} from 'd3-selection'
 import * as common from './common'
 import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 import {showMenu_isgenevalue, showMenu_iscnv, showMenu_isloh, showMenu_ismutation} from './samplematrix.featuremenu'
+import {may_add_kmplotbutton} from './samplematrix.kmplot'
 import {vcfparsemeta} from './vcf'
 
 
@@ -73,6 +74,20 @@ export class Samplematrix {
 		this.menu = new client.Menu({padding:'0px'})
 		this.errdiv = this.holder.append('div')
 
+		if(!this.iscustom) {
+			// official dataset
+			try {
+				if(!this.dslabel) throw 'not custom data but dslabel is missing'
+				// accessing a native ds
+				this.mds = this.genome.datasets[this.dslabel]
+				if(!this.mds) throw 'invalid dataset name: '+this.dslabel
+				if(!this.mds.isMds) throw 'improper dataset: '+this.dslabel
+			}catch(e){
+				this.error(e)
+			}
+		}
+		// got .mds{} then create UI
+
 		init_controlui(this)
 
 		if(this.header) {
@@ -119,14 +134,7 @@ export class Samplematrix {
 		.then(()=>{
 
 			if(!this.iscustom) {
-
 				// official dataset
-
-				if(!this.dslabel) throw('not custom data but dslabel is missing')
-				// accessing a native ds
-				this.mds = this.genome.datasets[this.dslabel]
-				if(!this.mds) throw('invalid dataset name: '+this.dslabel)
-				if(!this.mds.isMds) throw('improper dataset: '+this.dslabel)
 				return
 			}
 
@@ -2580,4 +2588,6 @@ function init_controlui(o) {
 				o.draw_matrix()
 			})
 	}
+
+	may_add_kmplotbutton( o, buttonrow )
 }
