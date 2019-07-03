@@ -158,9 +158,15 @@ group{}
                 
                 if(term.term.isinteger || term.term.isfloat) {
                     // range label is not clickable
-                    condition_btn.text('RANGE')
-                        .style('background-color', '#015051')
-                        .style('pointer-events','none')
+                    if(term.range){
+                        condition_btn.text('RANGE')
+                            .style('background-color', '#015051')
+                            .style('pointer-events','none')
+                    }else if(term.unannotated){
+                        condition_btn.text('IS')
+                            .style('background-color', '#015051')
+                            .style('pointer-events','none')
+                    }
                 }else if(term.term.iscondition) {
                     condition_btn.text('IS')
                         .style('background-color', '#015051')
@@ -271,6 +277,8 @@ group{}
 
                     // query db for list of sub-categories and count
                     const lst = ['bar_by_children=1']
+                    if (term.value_by_max_grade) lst.push('value_by_max_grade=1')
+                    else if(term.value_by_most_recent)lst.push('value_by_most_recent=1')
                     const data = await getcategories(term, lst)
 
                     for (let j=0; j<term.values.length; j++){
@@ -322,7 +330,11 @@ group{}
                                 .text('or')
                         }
                     }
+
+                    make_grade_select_btn(one_term_div, term, terms_div)
+
                     make_plus_btn(one_term_div, data, term.values, group.terms[i].values, terms_div)
+
                 }else if(term.bar_by_grade){
 
                     // query db for list of grade and count
@@ -382,49 +394,7 @@ group{}
                         }
                     }
 
-                    const [grade_type_select, grade_type_btn] = make_select_btn_pair(one_term_div)
-                    grade_type_select.style('margin-right','1px')
-
-                    grade_type_select.append('option')
-                        .attr('value','max')
-                        .text('Max grade per patient')
-
-                    grade_type_select.append('option')
-                        .attr('value','recent')
-                        .text('Most recent grade per patient')
-
-                    grade_type_btn
-                        .style('padding','2px 4px 3px 4px')
-                        .style('margin-right','1px')
-                        .style('font-size','1em')
-                        .style('background-color', '#4888BF')
-
-                    if(term.value_by_max_grade){
-                        grade_type_btn.html('(Max grade per patient) &#9662;')
-                        grade_type_select.node().value = 'max'
-
-                    }else if(term.value_by_most_recent){
-                        grade_type_btn.html('(Most recent grade per patient) &#9662;')
-                        grade_type_select.node().value = 'recent'
-                    }
-
-                    grade_type_select.style('width',grade_type_btn.node().offsetWidth+'px')
-
-                    // change grade type to/from max_grade and recent_grade
-                    grade_type_select.on('change',async()=>{
-                        
-                        if(grade_type_select.node().value == 'max'){
-                            term.value_by_max_grade = true
-                            term.value_by_most_recent = false
-                        }else{
-                            term.value_by_max_grade = false
-                            term.value_by_most_recent = true
-                        }
-
-                        //update gorup and load tk
-                        await callback()
-                        update_terms(terms_div)
-                    })
+                    make_grade_select_btn(one_term_div, term, terms_div)
 
                     make_plus_btn(one_term_div, data, term.values, group.terms[i].values, terms_div)
                 }
@@ -584,6 +554,52 @@ group{}
 
         // limit dropdown menu width to width of term_value_btn (to avoid overflow)
         add_value_select.style('width',add_value_btn.node().offsetWidth+'px')
+    }
+
+    function make_grade_select_btn(holder, term, terms_div){
+        const [grade_type_select, grade_type_btn] = make_select_btn_pair(holder)
+        grade_type_select.style('margin-right','1px')
+
+        grade_type_select.append('option')
+            .attr('value','max')
+            .text('Max grade per patient')
+
+        grade_type_select.append('option')
+            .attr('value','recent')
+            .text('Most recent grade per patient')
+
+        grade_type_btn
+            .style('padding','2px 4px 3px 4px')
+            .style('margin-right','1px')
+            .style('font-size','1em')
+            .style('background-color', '#4888BF')
+
+        if(term.value_by_max_grade){
+            grade_type_btn.html('(Max grade per patient) &#9662;')
+            grade_type_select.node().value = 'max'
+
+        }else if(term.value_by_most_recent){
+            grade_type_btn.html('(Most recent grade per patient) &#9662;')
+            grade_type_select.node().value = 'recent'
+        }
+
+        grade_type_select.style('width',grade_type_btn.node().offsetWidth+'px')
+
+        // change grade type to/from max_grade and recent_grade
+        grade_type_select.on('change',async()=>{
+            
+            if(grade_type_select.node().value == 'max'){
+                term.value_by_max_grade = true
+                term.value_by_most_recent = false
+            }else{
+                term.value_by_max_grade = false
+                term.value_by_most_recent = true
+            }
+
+            //update gorup and load tk
+            await callback()
+            update_terms(terms_div)
+        })
     }
 
     async function replace_term(result, term_replce_index){
