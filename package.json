@@ -15,6 +15,7 @@
     "irt": "./scripts/deploy.sh internal-stage",
     "test": "tape test/**/*.route.spec.js",
     "dbqueries": "tape modules/**/db-queries/*.spec.js",
+    "sql": "tape test/**/*.sql.spec.js",
     "unit": "./test/copy-modules.js && tape test/**/*.unit.spec.js",
     "deliver": "sh utils/deliver.sh",
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset",

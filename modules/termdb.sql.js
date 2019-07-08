@@ -371,7 +371,7 @@ q{}
 			GROUP BY bname
 			ORDER BY binorder`
 		const lst = q.ds.cohort.db.connection.prepare(string)
-			.all( term1.id )
+			.all([ ...(filter?filter.values:[]), term1.id ]);
 		for(const i of lst) {
 			i.label = i.key
 			i.range = bins.name2bin.get( i.key )
