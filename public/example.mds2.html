@@ -36,12 +36,15 @@ runproteinpaint({
 								is_termdb:true,
 								terms:[
 									{
-										term:{id:'diaggrp',name:'diag grp',iscategorical:true},
-										values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}],
+										// term:{id:'diaggrp',name:'diag grp',iscategorical:true},
+										// values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}],
 										//term:{id:'Asthma',name:'Asthma',iscondition:true},
 										//term:{id:'Arrhythmias',name:'Arrhythmias',iscondition:true},
 										//bar_by_children:true,
 										//values:[{key:1,label:'1 - mild'}],
+										term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", isfloat: true},
+										range: {is_unannotated: true, value: 0, label: "Not exposed"},
+										// range: {start: 0, stop: 3, startinclusive: true, name: "0 <= x < 3"},
 										/*
 										bar_by_grade:true,
 										values:[{key:'Conduction abnormalities',label:'Conduction abnormalities'}]

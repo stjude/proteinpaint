@@ -158,12 +158,12 @@ group{}
                 
                 if(term.term.isinteger || term.term.isfloat) {
                     // range label is not clickable
-                    if(term.range){
-                        condition_btn.text('RANGE')
+                    if(term.range.is_unannotated){
+                        condition_btn.text('IS')
                             .style('background-color', '#015051')
                             .style('pointer-events','none')
-                    }else if(term.unannotated){
-                        condition_btn.text('IS')
+                    }else if(term.range){
+                        condition_btn.text('RANGE')
                             .style('background-color', '#015051')
                             .style('pointer-events','none')
                     }
@@ -640,131 +640,135 @@ group{}
             .style('background-color', '#4888BF')
     
         numeric_div.selectAll('*').remove()
-    
-        const x = '<span style="font-family:Times;font-style:italic">x</span>'
-        if( i.range.startunbounded ) {
-            numeric_div.html(x+' '+(i.range.stopinclusive?'&le;':'&lt;')+' '+i.range.stop)
-        } else if( i.range.stopunbounded ) {
-            numeric_div.html(x+' '+(i.range.startinclusive?'&ge;':'&gt;')+' '+i.range.start)
-        } else {
-            numeric_div.html(
-                i.range.start
-                +' '+(i.range.startinclusive?'&le;':'&lt;')
-                +' '+x
-                +' '+(i.range.stopinclusive?'&le;':'&lt;')
-                +' '+i.range.stop
-            )
-        }
-    
-        numeric_div.on('click', ()=>{
-    
-            tip.clear()
-    
-            const equation_div = tip.d.append('div')
-                .style('display','block')
-                .style('padding','3px 5px')
-    
-            const start_input = equation_div.append('input')
-                .attr('type','number')
-                .attr('value',i.range.start)
-                .style('width','60px')
-                .on('keyup', async ()=>{
-                    if(!client.keyupEnter()) return
-                    start_input.property('disabled',true)
-                    await apply()
-                    start_input.property('disabled',false)
-                })
-    
-            // to replace operator_start_div
-            const startselect = equation_div.append('select')
-            .style('margin-left','10px')
-    
-            startselect.append('option')
-                .html('&le;')
-            startselect.append('option')
-                .html('&lt;')
-            startselect.append('option')
-                .html('&#8734;')
-    
-            startselect.node().selectedIndex =
-                i.range.startunbounded ? 2 :
-                i.range.startinclusive ? 0 : 1
-    
-            equation_div.append('div')
-                .style('display','inline-block')
-                .style('padding','3px 10px')
-                .html(x)
-    
-            // to replace operator_end_div
-            const stopselect = equation_div.append('select')
-                .style('margin-right','10px')
-    
-            stopselect.append('option')
-                .html('&le;')
-            stopselect.append('option')
-                .html('&lt;')
-            stopselect.append('option')
-                .html('&#8734;')
-    
-            stopselect.node().selectedIndex =
-                i.range.stopunbounded ? 2 :
-                i.range.stopinclusive ? 0 : 1
-    
-            const stop_input = equation_div.append('input')
-                .attr('type','number')
-                .style('width','60px')
-                .attr('value',i.range.stop)
-                .on('keyup', async ()=>{
-                    if(!client.keyupEnter()) return
-                    stop_input.property('disabled',true)
-                    await apply()
-                    stop_input.property('disabled',false)
-                })
-    
-            tip.d.append('div')
-                .attr('class','sja_menuoption')
-                .style('text-align','center')
-                .text('APPLY')
-                .on('click', ()=>{
-                    tip.hide()
-                    apply()
-                })
-    
-            // tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
-            tip.showunder( numeric_div.node() )
-    
-            async function apply () {
-                try {
-                    if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
-    
-                    const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
-                    const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
-                    if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
-    
-                    if( startselect.node().selectedIndex == 2 ) {
-                        i.range.startunbounded = true
-                        delete i.range.start
-                    } else {
-                        delete i.range.startunbounded
-                        i.range.start = start
-                        i.range.startinclusive = startselect.node().selectedIndex == 0
-                    }
-                    if( stopselect.node().selectedIndex == 2 ) {
-                        i.range.stopunbounded = true
-                        delete i.range.stop
-                    } else {
-                        delete i.range.stopunbounded
-                        i.range.stop = stop
-                        i.range.stopinclusive = stopselect.node().selectedIndex == 0
-                    }
-                    display_numeric_filter(i, value_div)
-                    tip.hide()
-                    await callback()
-                } catch(e) {
-                    window.alert(e)
-                }
+        
+        if(i.range.is_unannotated){
+            numeric_div.html(i.range.label)
+        }else{
+            const x = '<span style="font-family:Times;font-style:italic">x</span>'
+            if( i.range.startunbounded ) {
+                numeric_div.html(x+' '+(i.range.stopinclusive?'&le;':'&lt;')+' '+i.range.stop)
+            } else if( i.range.stopunbounded ) {
+                numeric_div.html(x+' '+(i.range.startinclusive?'&ge;':'&gt;')+' '+i.range.start)
+            } else {
+                numeric_div.html(
+                    i.range.start
+                    +' '+(i.range.startinclusive?'&le;':'&lt;')
+                    +' '+x
+                    +' '+(i.range.stopinclusive?'&le;':'&lt;')
+                    +' '+i.range.stop
+                )
             }
-        })
+        
+            numeric_div.on('click', ()=>{
+        
+                tip.clear()
+        
+                const equation_div = tip.d.append('div')
+                    .style('display','block')
+                    .style('padding','3px 5px')
+        
+                const start_input = equation_div.append('input')
+                    .attr('type','number')
+                    .attr('value',i.range.start)
+                    .style('width','60px')
+                    .on('keyup', async ()=>{
+                        if(!client.keyupEnter()) return
+                        start_input.property('disabled',true)
+                        await apply()
+                        start_input.property('disabled',false)
+                    })
+        
+                // to replace operator_start_div
+                const startselect = equation_div.append('select')
+                .style('margin-left','10px')
+        
+                startselect.append('option')
+                    .html('&le;')
+                startselect.append('option')
+                    .html('&lt;')
+                startselect.append('option')
+                    .html('&#8734;')
+        
+                startselect.node().selectedIndex =
+                    i.range.startunbounded ? 2 :
+                    i.range.startinclusive ? 0 : 1
+        
+                equation_div.append('div')
+                    .style('display','inline-block')
+                    .style('padding','3px 10px')
+                    .html(x)
+        
+                // to replace operator_end_div
+                const stopselect = equation_div.append('select')
+                    .style('margin-right','10px')
+        
+                stopselect.append('option')
+                    .html('&le;')
+                stopselect.append('option')
+                    .html('&lt;')
+                stopselect.append('option')
+                    .html('&#8734;')
+        
+                stopselect.node().selectedIndex =
+                    i.range.stopunbounded ? 2 :
+                    i.range.stopinclusive ? 0 : 1
+        
+                const stop_input = equation_div.append('input')
+                    .attr('type','number')
+                    .style('width','60px')
+                    .attr('value',i.range.stop)
+                    .on('keyup', async ()=>{
+                        if(!client.keyupEnter()) return
+                        stop_input.property('disabled',true)
+                        await apply()
+                        stop_input.property('disabled',false)
+                    })
+        
+                tip.d.append('div')
+                    .attr('class','sja_menuoption')
+                    .style('text-align','center')
+                    .text('APPLY')
+                    .on('click', ()=>{
+                        tip.hide()
+                        apply()
+                    })
+        
+                // tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
+                tip.showunder( numeric_div.node() )
+    
+                async function apply () {
+                    try {
+                        if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
+        
+                        const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
+                        const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
+                        if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
+        
+                        if( startselect.node().selectedIndex == 2 ) {
+                            i.range.startunbounded = true
+                            delete i.range.start
+                        } else {
+                            delete i.range.startunbounded
+                            i.range.start = start
+                            i.range.startinclusive = startselect.node().selectedIndex == 0
+                        }
+                        if( stopselect.node().selectedIndex == 2 ) {
+                            i.range.stopunbounded = true
+                            delete i.range.stop
+                        } else {
+                            delete i.range.stopunbounded
+                            i.range.stop = stop
+                            i.range.stopinclusive = stopselect.node().selectedIndex == 0
+                        }
+                        display_numeric_filter(i, value_div)
+                        tip.hide()
+                        await callback()
+                    } catch(e) {
+                        window.alert(e)
+                    }
+                }
+            })
+        }
     }
 }
 
