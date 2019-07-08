@@ -114,30 +114,48 @@ obj{}:
 
 	async function temptest () {
 		// temp code, for testing get_samplesummary_by_term()
+		// single, categorical
 		console.log('diaggrp', await obj.do_query(['testplot=1&term1_id=diaggrp']) )
-		console.log('diaggrp+wgs_sequenced', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=wgs_sequenced']) )
 		console.log('diaggrp / CED unannotated', await obj.do_query(['testplot=1&term1_id=diaggrp&tvslst='+encodeURIComponent(JSON.stringify([{term:{id:'aaclassic_5',isfloat:true},range:{is_unannotated:true,value:0,label:'Not treated'}}]))]) )
+		// single, numerical
 		console.log('agedx', await obj.do_query(['testplot=1&term1_id=agedx']) )
 		console.log('Cumulative Alkylating Agent (CED)', await obj.do_query(['testplot=1&term1_id=aaclassic_5']) )
+		// overlay, categorical or numerical
+		console.log('diaggrp+wgs_sequenced', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=wgs_sequenced']) )
 		console.log('diaggrp + agedx', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=agedx']) )
 		console.log('diaggrp + CED', await obj.do_query(['testplot=1&term1_id=diaggrp&term2_id=aaclassic_5']) )
 		console.log('CED + agedx', await obj.do_query(['testplot=1&term2_id=agedx&term1_id=aaclassic_5']) )
+		// condition, leaf
 		console.log('Asthma', await obj.do_query(['testplot=1&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		// condition, non-leaf
 		console.log('Cardiovascular System, by grade, max grade', await obj.do_query(['testplot=1&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')]) )
 		console.log('Arrhythmias, by subcondition, max grade', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')]) )
 		console.log('Arrhythmias, by subcondition, most recent grade', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_most_recent":1}')]) )
 		console.log('Arrhythmias, by subcondition, any computable grade', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_computable_grade":1}')]) )
 		console.log('Arrhythmias, max grade-subcondition overlay', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1,"grade_child_overlay":1}')]) )
+		// overlay, leaf (max grade) + categorical
 		console.log('Asthma + racegrp', await obj.do_query(['testplot=1&term2_id=racegrp&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		// overlay, nonleaf (max grade) + categorical
 		console.log('Arrthymias(max grade) + racegrp', await obj.do_query(['testplot=1&term2_id=racegrp&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')]) )
+		// overlay, nonleaf (subcondition by max grade) + categorical
 		console.log('Arrthymias(subcondition by max grade) + racegrp', await obj.do_query(['testplot=1&term2_id=racegrp&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')]) )
 		console.log('racegrp + Arrthymias(subcondition by most recent)', await obj.do_query(['testplot=1&term1_id=racegrp&term2_id=Arrhythmias&term2_q='+encodeURIComponent('{"bar_by_children":1,"value_by_most_recent":1}')]) )
+		// overlay, leaf + numeric bins
 		console.log('Asthma + agedx', await obj.do_query(['testplot=1&term2_id=agedx&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		// overlay, nonleaf (max grade) + numeric bins
 		console.log('Arrthymias + agedx', await obj.do_query(['testplot=1&term2_id=agedx&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')]) )
+		// overlay, nonleaf (subcondition by max grade) + numerical bins
+		console.log('Arrthymias(subcondition by max grade) + agedx', await obj.do_query(['testplot=1&term2_id=agedx&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')]) )
+		// overlay, leaf + leaf (both max grade)
 		console.log('Asthma + Hypertension', await obj.do_query(['testplot=1&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')+'&term2_id=Hypertension&term2_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		// overlay, nonleaf (maxgrade) + leaf (maxgrade)
 		console.log('Arrhythmias + Hypertension', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')+'&term2_id=Hypertension&term2_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
-		console.log('Cardiovascular System + Hypertension', await obj.do_query(['testplot=1&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')+'&term2_id=Hypertension&term2_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		// overlay, nonleaf (subcondition, maxgrade) + leaf (maxgrade)
+		console.log('Arrhythmias + Hypertension', await obj.do_query(['testplot=1&term1_id=Arrhythmias&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')+'&term2_id=Hypertension&term2_q='+encodeURIComponent('{"value_by_max_grade":1}')]) )
+		// overlay, nonleaf (maxgrade) + nonleaf (maxgrade)
 		console.log('Cardiovascular System + Endocrine System', await obj.do_query(['testplot=1&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')+'&term2_id=Endocrine+System&term2_q='+encodeURIComponent('{"bar_by_grade":1,"value_by_max_grade":1}')]) )
+		// overlay, nonleaf + nonleaf (both of subcondition, maxgrade)
+		console.log('Cardiovascular System + Endocrine System', await obj.do_query(['testplot=1&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')+'&term2_id=Endocrine+System&term2_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')]) )
 	}
 }
 
