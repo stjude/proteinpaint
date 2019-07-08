@@ -114,5 +114,217 @@ tape("single, numerical", function (test) {
   })
 })
 
+tape("single, condition isleaf", function (test) {
+  test.plan(6)
+  const url0 = baseUrl + '&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')
+  request(url0,(error,response,body)=>{
+    if(error) {
+      test.fail(error)
+    }
+    switch(response.statusCode) {
+    case 200:
+      const data = JSON.parse(body)
+      test.equal(data.lst && data.lst.length, 3, "should have the expected number of UNFILTERED ISLEAF max grade lst items")
+      test.deepEqual(
+        JSON.parse(body), 
+        {"lst":[{"key":1,"samplecount":141,"label":"1: Mild"},{"key":2,"samplecount":123,"label":"2: Moderate"},{"key":3,"samplecount":78,"label":"3: Severe"}]},
+        "should produce the expected UNFILTERED ISLEAF sample by max grade counts by Asthma"
+      )
+      break;
+    default:
+      test.fail("invalid status")
+    }
+  })
+  
+  const url1 = baseUrl
+    + '&term1_id=Asthma'
+    + '&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')
+    + '&tvslst='+encodeURIComponent(JSON.stringify([{
+      term: {id:'sex', name:'sex', iscategorical:true},
+      values: [{key: 'Male', label: 'Male'}]
+    }]));
+  request(url1,(error,response,body)=>{
+    if(error) {
+      test.fail(error)
+    }
+    switch(response.statusCode) {
+    case 200:
+      const data = JSON.parse(body)
+      test.equal(data.lst && data.lst.length, 3, "should have the expected number of FILTERED ISLEAF max grade lst items")
+      test.deepEqual(
+        JSON.parse(body), 
+        { lst: [ { key: 1, samplecount: 69, label: '1: Mild' }, { key: 2, samplecount: 49, label: '2: Moderate' }, { key: 3, samplecount: 33, label: '3: Severe' } ] },
+        "should produce the expected FILTERED ISLEAF sample by max grade counts by Asthma"
+      )
+      break;
+    default:
+      test.fail("invalid status")
+    }
+  })
+
+  const url2 = baseUrl + '&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_most_recent":1}')
+  request(url2,(error,response,body)=>{
+    if(error) {
+      test.fail(error)
+    }
+    switch(response.statusCode) {
+    case 200:
+      const data = JSON.parse(body)
+      test.equal(data.lst && data.lst.length, 3, "should have the expected number of unfiltered most recent grade lst items")
+      test.deepEqual(
+        JSON.parse(body), 
+        { lst: [ { key: 1, samplecount: 159, label: '1: Mild' }, { key: 2, samplecount: 122, label: '2: Moderate' }, { key: 3, samplecount: 61, label: '3: Severe' } ] },
+        "should produce the expected unfiltered sample by most recent grade counts by Asthma"
+      )
+      break;
+    default:
+      test.fail("invalid status")
+    }
+  })
+})
+
+tape("single, condition non-leaf", function (test) {
+  test.plan(10)
+  const url0 = baseUrl + '&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')
+  request(url0,(error,response,body)=>{
+    if(error) {
+      test.fail(error)
+    }
+    switch(response.statusCode) {
+    case 200:
+      const data = JSON.parse(body)
+      test.equal(data.lst && data.lst.length, 4, "should have the expected number of UNFILTERED NON-LEAF max grade lst items")
+      test.deepEqual(
+        JSON.parse(body), 
+        { lst: [ { key: 1, samplecount: 1556, label: '1: Mild' }, { key: 2, samplecount: 1013, label: '2: Moderate' }, { key: 3, samplecount: 461, label: '3: Severe' }, { key: 4, samplecount: 140, label: '4: Life-threatening' } ] },
+        "should produce the expected UNFILTERED NON-LEAF sample by max grade counts by Asthma"
+      )
+      break;
+    default:
+      test.fail("invalid status")
+    }
+  })
+  
+  const url1 = baseUrl
+    + '&term1_id=Cardiovascular+System'
+    + '&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')
+    + '&tvslst='+encodeURIComponent(JSON.stringify([{
+      term: {id:'sex', name:'sex', iscategorical:true},
+      values: [{key: 'Male', label: 'Male'}]
+    }]));
+  request(url1,(error,response,body)=>{
+    if(error) {
+      test.fail(error)
+    }
+    switch(response.statusCode) {
+    case 200:
+      const data = JSON.parse(body)
+      test.equal(data.lst && data.lst.length, 4, "should have the expected number of FILTERED NON-LEAF max grade lst items")
+      test.deepEqual(
+        JSON.parse(body), 
+        { lst: [ { key: 1, samplecount: 841, label: '1: Mild' }, { key: 2, samplecount: 556, label: '2: Moderate' }, { key: 3, samplecount: 262, label: '3: Severe' }, { key: 4, samplecount: 91, label: '4: Life-threatening' } ] },
+        "should produce the expected FILTERED NON-LEAF sample by max grade counts by Asthma"
+      )
+      break;
+    default:
+      test.fail("invalid status")
+    }
+  })
+
+  const url2 = baseUrl 
+    + '&term1_id=Cardiovascular+System'
+    + '&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')
+  request(url2,(error,response,body)=>{
+    if(error) {
+      test.fail(error)
+    }
+    switch(response.statusCode) {
+    case 200:
+      const data = JSON.parse(body)
+      test.equal(data.lst && data.lst.length, 4, "should have the expected number of unfiltered NON-LEAF most recent grade lst items")
+      test.deepEqual(
+        JSON.parse(body), 
+        { lst: [ { key: 1, samplecount: 1556, label: '1: Mild' }, { key: 2, samplecount: 1013, label: '2: Moderate' }, { key: 3, samplecount: 461, label: '3: Severe' }, { key: 4, samplecount: 140, label: '4: Life-threatening' } ] },
+        "should produce the expected unfiltered NON-LEAF sample by most recent grade counts by Asthma"
+      )
+      break;
+    default:
+      test.fail("invalid status")
+    }
+  })
 
 
+  const url3 = baseUrl 
+    + '&term1_id=Arrhythmias'
+    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')
+  request(url3,(error,response,body)=>{
+    if(error) {
+      test.fail(error)
+    }
+    switch(response.statusCode) {
+    case 200:
+      const data = JSON.parse(body)
+      test.equal(data.lst && data.lst.length, 6, "should have the expected UNFILTERED results for Arrhythmias, by subcondition, max grade")
+      test.deepEqual(
+        JSON.parse(body), 
+        { lst: [ { key: 'Atrioventricular heart block', samplecount: 43, label: 'Atrioventricular heart block' }, { key: 'Cardiac dysrhythmia', samplecount: 105, label: 'Cardiac dysrhythmia' }, { key: 'Conduction abnormalities', samplecount: 744, label: 'Conduction abnormalities' }, { key: 'Prolonged QT interval', samplecount: 140, label: 'Prolonged QT interval' }, { key: 'Sinus bradycardia', samplecount: 42, label: 'Sinus bradycardia' }, { key: 'Sinus tachycardia', samplecount: 77, label: 'Sinus tachycardia' } ] },
+        "should produce the expected UNFILTERED results for Arrhythmias, by subcondition, max grade"
+      )
+      break;
+    default:
+      test.fail("invalid status")
+    }
+  })
+  
+  const url4 = baseUrl
+    + '&term1_id=Arrhythmias'
+    + '&term1_q=' + encodeURIComponent('{"bar_by_children":1,"value_by_most_recent":1}')
+    + '&tvslst='+encodeURIComponent(JSON.stringify([{
+      term: {id:'sex', name:'sex', iscategorical:true},
+      values: [{key: 'Male', label: 'Male'}]
+    }]));
+  request(url4,(error,response,body)=>{
+    if(error) {
+      test.fail(error)
+    }
+    switch(response.statusCode) {
+    case 200:
+      const data = JSON.parse(body)
+      test.equal(data.lst && data.lst.length, 6, "should have the expected number of FILTERED results for Arrhythmias, by subcondition, most recent")
+      test.deepEqual(
+        JSON.parse(body), 
+        { lst: [ { key: 'Atrioventricular heart block', samplecount: 31, label: 'Atrioventricular heart block' }, { key: 'Cardiac dysrhythmia', samplecount: 42, label: 'Cardiac dysrhythmia' }, { key: 'Conduction abnormalities', samplecount: 491, label: 'Conduction abnormalities' }, { key: 'Prolonged QT interval', samplecount: 60, label: 'Prolonged QT interval' }, { key: 'Sinus bradycardia', samplecount: 37, label: 'Sinus bradycardia' }, { key: 'Sinus tachycardia', samplecount: 31, label: 'Sinus tachycardia' } ] },
+        "should produce the expected FILTERED results for Arrhythmias, by subcondition, most recent grade"
+      )
+      break;
+    default:
+      test.fail("invalid status")
+    }
+  })
+})
+
+tape("overlay, same condition", function (test) {
+  test.plan(2)
+
+  const url0 = baseUrl 
+    + '&term1_id=Arrhythmias'
+    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1,"grade_child_overlay":1}'); console.log(url0)
+  request(url0,(error,response,body)=>{
+    if(error) {
+      test.fail(error)
+    }
+    switch(response.statusCode) {
+    case 200:
+      const data = JSON.parse(body)
+      test.equal(data.lst && data.lst.length, 16, "should have the number of list items for Arrhythmias, by subcondition, max grade")
+      test.deepEqual(
+        JSON.parse(body), 
+        { lst: [ { key1: 'Atrioventricular heart block', key2: 1, samplecount: 33, label1: 'Atrioventricular heart block', label2: 1 }, { key1: 'Cardiac dysrhythmia', key2: 1, samplecount: 34, label1: 'Cardiac dysrhythmia', label2: 1 }, { key1: 'Conduction abnormalities', key2: 1, samplecount: 774, label1: 'Conduction abnormalities', label2: 1 }, { key1: 'Prolonged QT interval', key2: 1, samplecount: 133, label1: 'Prolonged QT interval', label2: 1 }, { key1: 'Sinus bradycardia', key2: 1, samplecount: 75, label1: 'Sinus bradycardia', label2: 1 }, { key1: 'Sinus tachycardia', key2: 1, samplecount: 124, label1: 'Sinus tachycardia', label2: 1 }, { key1: 'Atrioventricular heart block', key2: 2, samplecount: 12, label1: 'Atrioventricular heart block', label2: 2 }, { key1: 'Cardiac dysrhythmia', key2: 2, samplecount: 40, label1: 'Cardiac dysrhythmia', label2: 2 }, { key1: 'Conduction abnormalities', key2: 2, samplecount: 35, label1: 'Conduction abnormalities', label2: 2 }, { key1: 'Prolonged QT interval', key2: 2, samplecount: 77, label1: 'Prolonged QT interval', label2: 2 }, { key1: 'Sinus tachycardia', key2: 2, samplecount: 11, label1: 'Sinus tachycardia', label2: 2 }, { key1: 'Atrioventricular heart block', key2: 3, samplecount: 9, label1: 'Atrioventricular heart block', label2: 3 }, { key1: 'Cardiac dysrhythmia', key2: 3, samplecount: 27, label1: 'Cardiac dysrhythmia', label2: 3 }, { key1: 'Conduction abnormalities', key2: 3, samplecount: 7, label1: 'Conduction abnormalities', label2: 3 }, { key1: 'Prolonged QT interval', key2: 3, samplecount: 10, label1: 'Prolonged QT interval', label2: 3 }, { key1: 'Cardiac dysrhythmia', key2: 4, samplecount: 10, label1: 'Cardiac dysrhythmia', label2: 4 } ] },
+        "should have the expected results for Arrhythmias, by subcondition, most recent grade"
+      )
+      break;
+    default:
+      test.fail("invalid status")
+    }
+  })
+})
