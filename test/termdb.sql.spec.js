@@ -20,8 +20,7 @@ tape("single, categorical", function (test) {
   
   compareResponseData(
     test, 
-    getSqlUrl('diaggrp'), 
-    getBarUrl('diaggrp'), 
+    {term1: 'diaggrp'}, 
     "should produce the expected UNFILTERED sample counts by diagnosis groups"
   )
 
@@ -31,8 +30,7 @@ tape("single, categorical", function (test) {
   }]
   compareResponseData(
     test,
-    getSqlUrl('diaggrp', '', filter), 
-    getBarUrl('diaggrp', '', filter), 
+    {term1: 'diaggrp', filter},
     "should produce the expected FILTERED sample counts by diagnosis groups"
   )
 })
@@ -42,8 +40,7 @@ tape("single, numerical", function (test) {
   test.plan(2)
   compareResponseData(
     test, 
-    getSqlUrl('agedx'), 
-    getBarUrl('agedx'), 
+    {term1: 'agedx'},
     "should produce the expected UNFILTERED sample counts by age of diagnosis"
   )
   
@@ -53,8 +50,7 @@ tape("single, numerical", function (test) {
   }]
   compareResponseData(
     test,
-    getSqlUrl('agedx', '', filter), 
-    getBarUrl('agedx', '', filter), 
+    {term1: 'agedx', filter},
     "should produce the expected FILTERED sample counts by age of diagnosis"
   )
 })
@@ -380,24 +376,75 @@ tape.only("non-leaf condition with overlay", function (test) {
 })
 */
 
-function getSqlUrl(term1, term2, filter = null) {
+function compareResponseData(test, params, mssg) {
+  const url0 = getSqlUrl(params)
+  const url1 = getBarUrl(params)
+
+  request(url0, (error,response,body)=>{
+    if(error) {
+      test.fail(error)
+    }
+    switch(response.statusCode) {
+      case 200:
+        const data = JSON.parse(body);
+        // reshape sql results in order to match
+        // the compared results
+        const pj = new Partjson({
+          data: data.lst,
+          seed: `{"values": []}`, // result seed 
+          template,
+          "=": externals
+        })
+        sortResults(pj.tree.results.charts)
+        // get an alternatively computed results
+        // for comparing against sql results
+        request(url1, (error,response,body1)=>{
+          const data1 = JSON.parse(body1)
+          sortResults(data1.charts)
+          //console.log(JSON.stringify(data1.charts[0]));
+          //console.log('----')
+          //console.log(JSON.stringify(pj.tree.results.charts[0]));
+
+          if(error) {
+            test.fail(error)
+          }
+          switch(response.statusCode) {
+          case 200:
+            test.deepEqual(
+              pj.tree.results.charts,
+              data1.charts,
+              mssg
+            )
+          break;
+          default:
+            test.fail("invalid status")
+          }
+        })
+        break;
+      default:
+        test.fail("invalid status")
+    }
+  })
+}
+
+function getSqlUrl(params) {
   return "http://localhost:" + serverconfig.port
     + "/termdb?genome=hg38"
     + "&dslabel=SJLife"
     + "&testplot=1"
-    + '&term1_id=' + term1
-    + (term2 ? '&term2_id=' + term2 : '')
-    + (filter ? '&tvslst='+encodeURIComponent(JSON.stringify(filter)) : '')
+    + '&term1_id=' + params.term1
+    + (params.term2 ? '&term2_id=' + params.term2 : '')
+    + (params.filter ? '&tvslst='+encodeURIComponent(JSON.stringify(params.filter)) : '')
 }
 
-function getBarUrl(term1, term2='', filter=[], customBins={}) {
+function getBarUrl(params) {
   return "http://localhost:" + serverconfig.port
     + "/termdb-barchart?genome=hg38"
     + "&dslabel=SJLife"
-    + "&term1=" + term1
-    + "&term2=" + term2
-    + "&filter=" + encodeURIComponent(JSON.stringify(filter))
-    + "&custom_bins=" + encodeURIComponent(JSON.stringify(customBins))
+    + "&term1=" + params.term1
+    + (params.term2 ? "&term2=" + params.term2 : '')
+    + "&filter=" + encodeURIComponent(JSON.stringify(params.filter ? params.filter : []))
+    + "&custom_bins=" + encodeURIComponent(JSON.stringify(params.customBins ? params.customBins : {}))
 }
 
 const template = JSON.stringify({
@@ -485,49 +532,5 @@ function sortResults(charts) {
       series.data.sort(dataSorter)
     }
   }
-}
-
-function compareResponseData(test, url0, url1, mssg) {
-  request(url0, (error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-      case 200:
-        const data = JSON.parse(body);
-        const pj = new Partjson({
-          data: data.lst,
-          seed: `{"values": []}`, // result seed 
-          template,
-          "=": externals
-        })
-        sortResults(pj.tree.results.charts)
-        request(url1, (error,response,body1)=>{
-          const data1 = JSON.parse(body1)
-          sortResults(data1.charts)
-          //console.log(JSON.stringify(data1.charts[0]));
-          //console.log('----')
-          //console.log(JSON.stringify(pj.tree.results.charts[0]));
-
-          if(error) {
-            test.fail(error)
-          }
-          switch(response.statusCode) {
-          case 200:
-            test.deepEqual(
-              pj.tree.results.charts,
-              data1.charts,
-              mssg
-            )
-          break;
-          default:
-            test.fail("invalid status")
-          }
-        })
-        break;
-      default:
-        test.fail("invalid status")
-      }
-    })
 }
 
