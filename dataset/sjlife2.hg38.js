@@ -215,14 +215,18 @@ module.exports={
 			{
 				key:'BadBLAT',
 				label:'Bad blat',
-				isflag:true,
 				isfilter:true,
+				isactivefilter:true,
+				isflag:true,
+				remove_yes:true
 			},
 			{
 				key:'Polymer_region',
 				label:'Polymer region',
 				isflag:true,
 				isfilter:true,
+				isactivefilter:true,
+				remove_yes:true
 			},
 		],
 
