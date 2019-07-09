@@ -91,7 +91,6 @@ obj{}:
 		return client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
 	}
 
-
 	try {
 		if(!obj.genome) throw '.genome{} missing'
 		if(!obj.mds) throw '.mds{} missing'

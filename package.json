@@ -60,7 +60,7 @@
     "d3-beeswarm": "0.0.4",
     "d3-sankey": "^0.4.1",
     "empty-module": "0.0.2",
-    "express": "^4.14.0",
+    "express": "^4.17.1",
     "express-basic-auth": "^1.1.5",
     "image-size": "^0.5.5",
     "jsonwebtoken": "^7.4.3",
