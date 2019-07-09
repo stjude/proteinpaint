@@ -121,6 +121,13 @@ async function init_vcf ( vcftk, genome, ds ) {
 		if(!ds.cohort) throw 'termdb_bygenotype but ds.cohort missing'
 		if(!ds.cohort.termdb) throw 'termdb_bygenotype but ds.cohort.termdb missing'
 	}
+
+	if( vcftk.samples ) {
+		vcftk.sample2arrayidx = new Map()
+		for(const [i,n] of vcftk.samples.entries()) {
+			vcftk.sample2arrayidx.set( n.name, i )
+		}
+	}
 }
 
 

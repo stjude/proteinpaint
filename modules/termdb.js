@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
 const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
+const termdbsql = require('./termdb.sql')
 
 
 
@@ -48,21 +49,11 @@ return async (req, res) => {
 		// process triggers
 
 		if( q.getcategories ) return trigger_getcategories( q, res, tdb, ds )
-
-		if( trigger_rootterm( q, res, tdb ) ) return
-
-		if( q.get_children ) {
-			await trigger_children( q, res, tdb )
-			return
-		}
-		if( q.findterm ) {
-			trigger_findterm( q, res, tdb )
-			return
-		}
-		if( q.treeto ) {
-			trigger_treeto( q, res, tdb )
-			return
-		}
+		if( q.default_rootterm ) return trigger_rootterm( res, tdb )
+		if( q.get_children ) return trigger_children( q, res, tdb )
+		if( q.findterm ) return trigger_findterm( q, res, tdb )
+		if( q.treeto ) return trigger_treeto( q, res, tdb )
+		if( q.testplot ) return trigger_testplot( q, res, tdb, ds )
 
 		throw 'termdb: don\'t know what to do'
 
@@ -76,20 +67,16 @@ return async (req, res) => {
 
 
 
-function trigger_rootterm ( q, res, tdb ) {
+function trigger_testplot ( q, res, tdb, ds ) {
+	q.ds = ds
+	const lst = termdbsql.get_summary( q )
+	res.send({lst})
+}
 
-	if( !q.default_rootterm) return false
 
-	if(!tdb.default_rootterm) throw 'no default_rootterm for termdb'
-	const lst = []
-	for(const i of tdb.default_rootterm) {
-		const t = tdb.termjson.map.get( i.id )
-		if(t) {
-			lst.push( copy_term( t ) )
-		}
-	}
-	res.send({lst: lst})
-	return true
+
+function trigger_rootterm ( res, tdb ) {
+	res.send({lst: tdb.q.getRootTerms() })
 }
 
 
@@ -99,40 +86,14 @@ async function trigger_children ( q, res, tdb ) {
 may apply ssid: a premade sample set
 */
 	if(!q.tid) throw 'no parent term id'
-	// list of children id
-	const cidlst = tdb.parent2children.get( q.tid )
-	// list of children terms
-	const lst = []
-	if(cidlst) {
-		for(const cid of cidlst) {
-			const t = tdb.termjson.map.get( cid )
-			if(t) {
-				lst.push( copy_term( t ) )
-			}
-		}
-	}
-
-	/* not dealing with ssid
-	if( 0 && q.get_children.ssid ) {
-		// based on premade sample sets, count how many samples from each set are annotated to each term
-		const samplesets = await load_ssid( q.get_children.ssid )
-		for(const term of lst) {
-			term.ss2count = {}
-			for(const sampleset of samplesets) {
-				term.ss2count[ sampleset.name ] = term_getcount_4sampleset( term, sampleset.samples )
-			}
-		}
-	}
-	*/
-
-	res.send({lst: lst})
+	res.send({lst: tdb.q.getTermChildren( q.tid ).map( copy_term ) })
 }
 
 
 
 function copy_term ( t ) {
 /*
-t is the {} from termjson
+t is jsondata from terms table
 
 do not directly hand over the term object to client; many attr to be kept on server
 */
@@ -151,120 +112,57 @@ do not directly hand over the term object to client; many attr to be kept on ser
 
 
 function trigger_findterm ( q, res, termdb ) {
-	const str = q.findterm.toLowerCase()
-	const lst = []
-	for(const term of termdb.termjson.map.values()) {
-		if(term.name.toLowerCase().indexOf( str ) != -1) {
-			lst.push( copy_term( term ) )
-			if(lst.length>=10) {
-				break
-			}
-		}
-	}
-	res.send({lst:lst})
+	res.send({lst: termdb.q.findTermByName( q.findterm, 10 ) })
 }
 
 
 
 function trigger_treeto ( q, res, termdb ) {
-	const term = termdb.termjson.map.get( q.treeto )
+	const term = termdb.q.termjsonByOneid( q.treeto )
 	if(!term) throw 'unknown term id'
 	const levels = [{
 		focusid: q.treeto,
-		terms: []
 	}]
-	let thisid = term.id
-	while( termdb.child2parent.has( thisid ) ) {
-		const parentid = termdb.child2parent.get( thisid )
-		const childrenids = termdb.parent2children.get( parentid )
-		for(const i of childrenids) {
-			levels[0].terms.push( copy_term(termdb.termjson.map.get(i)))
-		}
+	let thisid = q.treeto
+	while( termdb.q.termHasParent( thisid ) ) {
+		const parentid = termdb.q.getTermParentId( thisid )
+		levels[0].terms = termdb.q.getTermChildren( parentid ).map( copy_term )
 		const ele = { // new element for the lst
 			focusid: parentid,
-			terms: []
 		}
 		levels.unshift( ele )
 		thisid = parentid
 	}
-	if(termdb.default_rootterm) {
-		for(const i of termdb.default_rootterm) {
-			levels[0].terms.push(copy_term(termdb.termjson.map.get(i.id)))
-		}
-	}
+	levels[0].terms = termdb.q.getRootTerms()
 	res.send({levels})
 }
 
 
 
-async function load_ssid ( ssid ) {
-/* ssid is the file name under cache/ssid/
-*/
-	const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', ssid ) )
-	const samplesets = []
-	for(const line of text.split('\n')) {
-		const l = line.split('\t')
-		samplesets.push({
-			name: l[0],
-			samples: l[1].split(',')
-		})
-	}
-	return samplesets
-}
 
-
-function term_getcount_4sampleset ( term, samples ) {
-/*
-term
-samples[] array of sample names
-*/
-}
 
 
 
 function trigger_getcategories ( q, res, tdb, ds ) {
-/*
-to get the list of categories for a categorical term
-supply sample count annotated to each category
-if q.samplecountbyvcf, will count from vcf samples
-otherwise, count from all samples
-*/
-	const t = tdb.q.termjsonByOneid( q.tid )
-	if(!t) throw 'unknown term id'
-	if(!t.iscategorical) throw 'term not categorical'
-	const category2count = new Map()
-
-	if( q.samplecountbyvcf ) {
-		if(!ds.track || !ds.track.vcf || !ds.track.vcf.samples ) throw 'cannot use vcf samples, necessary parts missing'
-		for(const s of ds.track.vcf.samples) {
-			const a = ds.cohort.annotation[s.name]
-			if(!a) continue
-			const v = a[ q.tid ]
-			if(!v) continue
-			category2count.set( v, 1 + (category2count.get(v)||0) )
-		}
-	} else {
-		for(const n in ds.cohort.annotation) {
-			const a = ds.cohort.annotation[n]
-			const v = a[ q.tid ]
-			if(!v) continue
-			category2count.set( v, 1 + (category2count.get(v)||0) )
+// thin wrapper of get_summary
+	if( !q.tid ) throw '.tid missing'
+	const arg = {
+		ds,
+		term1_id: q.tid,
+		term1_q:{
+			bar_by_grade: q.bar_by_grade,
+			bar_by_children: q.bar_by_children,
+			value_by_max_grade: q.value_by_max_grade,
+			value_by_most_recent: q.value_by_most_recent
 		}
 	}
-	const lst = [...category2count].sort((i,j)=>j[1]-i[1])
-	res.send({lst: lst.map(i=>{
-			let label
-			if( t.values && t.values[i[0]] ) {
-				label = t.values[i[0]].label
-			}
-			return {
-				key: i[0],
-				label: (label || i[0]),
-				samplecount: i[1]
-			}
-		})
-	})
+	if( q.tvslst ) arg.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+	const lst = termdbsql.get_summary( arg )
+	res.send({lst})
 }
+
+
+
 
 
 
@@ -300,9 +198,93 @@ function server_init_db_queries ( ds ) {
 	q2.termjsonByOneid = (id)=>{
 		const t = q.termjsonByOneid.get( id )
 		if(t) {
-			return JSON.parse(t.jsondata)
+			const j = JSON.parse(t.jsondata)
+			j.id = id
+			return j
 		}
-		return
+		return undefined
+	}
+	if(!q.termIsLeaf) throw 'db query missing: termIsLeaf'
+	q2.termIsLeaf = (id)=>{
+		const t = q.termIsLeaf.get(id)
+		if(t && t.id) return false
+		return true
+	}
+	/* as long as the termdb table and logic is universal
+	probably fine to hardcode such query strings here
+	and no need to define them in each dataset
+	thus less things to worry about...
+	*/
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE parent_id is null')
+		q2.getRootTerms = ()=>{
+			return s.all().map(i=>{
+				const t = JSON.parse(i.jsondata)
+				t.id = i.id
+				return t
+			})
+		}
+	}
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT parent_id FROM terms WHERE id=?')
+		q2.termHasParent = (id)=>{
+			const t = s.get(id)
+			if(t && t.parent_id) return true
+			return false
+		}
+		q2.getTermParentId = (id)=>{
+			const t = s.get(id)
+			if(t && t.parent_id) return t.parent_id
+			return undefined
+		}
+		q2.getTermParent = (id)=>{
+			const c = q2.getTermParentId(id)
+			if(!c) return undefined
+			return q2.termjsonByOneid( c )
+		}
+	}
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)')
+		q2.getTermChildren = (id)=>{
+			const tmp = s.all(id)
+			if(tmp) return tmp.map( i=> {
+				const j = JSON.parse(i.jsondata)
+				j.id = i.id
+				return j
+			})
+			return undefined
+		}
+	}
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
+		q2.findTermByName = (n, limit)=>{
+			const tmp = s.all('%'+n+'%')
+			if(tmp) {
+				const lst = []
+				for(const i of tmp) {
+					const j = JSON.parse(i.jsondata)
+					j.id = i.id
+					lst.push( copy_term(j) )
+					if(lst.length==10) break
+				}
+				return lst
+			}
+			return undefined
+		}
+	}
+	{
+		const s1 = ds.cohort.db.connection.prepare('SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?')
+		const s2 = ds.cohort.db.connection.prepare('SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?')
+		const cache = new Map()
+		q2.findTermMaxvalue = (id, isint) =>{
+			if( cache.has(id) ) return cache.get(id)
+			const tmp = (isint ? s1 : s2).get(id)
+			if( tmp ) {
+				cache.set( id, tmp.v )
+				return tmp.v
+			}
+			return undefined
+		}
 	}
 }
 

@@ -5,6 +5,7 @@ const utils = require('./utils')
 const vcf = require('../src/vcf')
 const common = require('../src/common')
 const validate_termvaluesetting = require('../src/mds.termdb.termvaluesetting').validate_termvaluesetting
+const termdbsql = require('./termdb.sql')
 
 
 
@@ -112,7 +113,7 @@ ds is either official or custom
 	const vcftk = {
 		info: tk0.info,
 		format: tk0.format,
-		samples: tk0.samples
+		samples: tk0.samples,
 	}
 
 	set_querymode( q, vcftk, ds )
@@ -194,7 +195,7 @@ generate the "querymode" object that drives subsequent queries
 			}
 			if(g.is_termdb) {
 				wrap_validate_termvaluesetting(g.terms,'AFtest.group')
-				g.columnidx = get_columnidx_byterms( g.terms, ds, vcftk.samples )
+				g.columnidx = get_columnidx_byterms( g.terms, ds )
 				continue
 			}
 			if(g.is_population) {
@@ -280,21 +281,28 @@ function get_pop2average ( popsets, columnidx, ds, vcftk ) {
 
 
 
-function get_columnidx_byterms ( terms, ds, vcfsamples ) {
+function get_columnidx_byterms ( terms, ds ) {
 /*
 terms is a list, each ele is one term-value setting
 a sample must meet all term conditions
 */
-	const usesampleidx = []
-	for( const [i, sample] of vcfsamples.entries() ) {
-		const sanno = ds.cohort.annotation[ sample.name ]
-		if(!sanno) continue
-		if( sample_match_termvaluesetting( sanno, terms, ds ) ) {
-			usesampleidx.push( i )
-		}
+
+	if(!ds.track) throw 'ds.track{} missing'
+	const filters = [] // temp filter lst
+	if( ds.track.sample_termfilter ) {
+		filters.push( ...ds.track.sample_termfilter )
 	}
-	return usesampleidx
+	filters.push( ...terms )
+	const samples = termdbsql.get_samples( filters, ds )
+	return samples.reduce((lst,samplename)=>{
+		const i = ds.track.vcf.sample2arrayidx.get( samplename )
+		if(i>=0) lst.push(i)
+		return lst
+	},[])
 }
+
+
+
 
 
 

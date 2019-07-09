@@ -22,15 +22,20 @@ TODO also work for termdb filter
 			}
 		} else if(t.term.isinteger || t.term.isfloat) {
 			if(!t.range) throw '.range{} missing from a numerical term of '+from
-			if(t.range.startunbounded && t.range.stopunbounded) throw 'both start & stop are unbounded from range of a term from '+from
-			if(t.range.startunbounded) {
-				if(!Number.isFinite(t.range.stop)) throw '.stop undefined when start is unbounded for a term from '+from
-			} else if(t.range.stopunbounded) {
-				if(!Number.isFinite(t.range.start)) throw '.start undefined when stop is unbounded for a term from '+from
+			if( t.range.is_unannotated ) {
+				if(!Number.isFinite(t.range.value)) throw '.value missing for is_unannotated category'
+				if(!t.range.label) throw '.label missing for is_unannotated category'
 			} else {
-				if(!Number.isFinite(t.range.start)) throw '.start undefined when start is not unbounded for a term from '+from
-				if(!Number.isFinite(t.range.stop)) throw '.stop undefined when stop is not unbounded for a term from '+from
-				if(t.range.start >= t.range.stop ) throw '.start is not lower than stop for a term from '+from
+				if(t.range.startunbounded && t.range.stopunbounded) throw 'both start & stop are unbounded from range of a term from '+from
+				if(t.range.startunbounded) {
+					if(!Number.isFinite(t.range.stop)) throw '.stop undefined when start is unbounded for a term from '+from
+				} else if(t.range.stopunbounded) {
+					if(!Number.isFinite(t.range.start)) throw '.start undefined when stop is unbounded for a term from '+from
+				} else {
+					if(!Number.isFinite(t.range.start)) throw '.start undefined when start is not unbounded for a term from '+from
+					if(!Number.isFinite(t.range.stop)) throw '.stop undefined when stop is not unbounded for a term from '+from
+					if(t.range.start >= t.range.stop ) throw '.start is not lower than stop for a term from '+from
+				}
 			}
 		} else if(t.term.iscondition) {
 			if( t.grade_and_child ) {

@@ -19,7 +19,8 @@ export class TermdbBarchart{
     this.opts = opts
     this.dom = {
       holder: opts.holder,
-      barDiv: opts.holder.append('div'),
+      barDiv: opts.holder.append('div')
+        .style('white-space', 'normal'),
       legendDiv: opts.holder.append('div')
         .style('margin', '5px 5px 15px 5px')
     }
@@ -50,6 +51,7 @@ export class TermdbBarchart{
     if (data) this.currServerData = data
     if (!this.setVisibility(isVisible)) return
     if (obj) this.obj = obj
+    this.dom.barDiv.style('max-width', window.innerWidth + 'px')
     this.updateSettings(plot)
     this.processData(this.currServerData) 
   }
@@ -80,6 +82,7 @@ export class TermdbBarchart{
       conditionUnits: plot.settings.common.conditionUnits
     }
     Object.assign(this.settings, settings)
+    this.settings.numCharts = this.currServerData.charts.length
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
       this.settings.unit = "abs"
     }
@@ -295,7 +298,7 @@ export class TermdbBarchart{
               value_by_most_recent: unit == "most_recent_grade",
             })
           } else if (!self.terms.term2) {
-            if (unit == "bar_by_grade") {
+            if (unit == "max_grade_perperson" || unit == "most_recent_grade") {
               termValues.push({
                 term,
                 values:[{key,label}],
@@ -303,7 +306,7 @@ export class TermdbBarchart{
                 value_by_max_grade: unit == "max_grade_perperson",
                 value_by_most_recent: unit == "most_recent_grade",
               })
-            } else if (unit == "bar_by_children") {
+            } else if (unit == "by_children") {
               termValues.push({
                 term,
                 values:[{key,label}],

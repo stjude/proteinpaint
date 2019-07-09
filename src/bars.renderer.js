@@ -54,36 +54,39 @@ returns:
       // *** EVENT CALLBACK FUNCTIONS ***
       // for optional user interactivity
       // see bars.app.js for example event handlers
+      // event handlers are passed the data as bound
+      // to the element by d3.data([...], bindkey)
       handlers: {
         svg: {
-          mouseover(d) {},
-          mouseout() {}
+          mouseover(),
+          mouseout()
         },
         series: {
-          mouseover(d) {},
-          mouseout() {},
-          rectFill(d) {}
+          mouseover(),
+          mouseout(),
+          rectFill()
         },
         colLabel: {
           text: d => d,
           mouseover(d) {},
-          mouseout() {}
+          mouseout()
         },
         rowLabel: {
-          text: d => d,
-          mouseover(d) {},
-          mouseout() {}
+          text(),
+          mouseover(),
+          mouseout()
         },
         legend: {
-          text: d => d,
-          mouseover(d) {},
-          mouseout() {}
+          text(),
+          mouseover(),
+          mouseout(),
+          click(),
         },
         yAxis: {
-          text: () => {}
+          text()
         },
         xAxis: {
-          text: () => {}
+          text()
         }
       }
     }]
@@ -344,28 +347,40 @@ export default function barsRenderer(barsapp, holder) {
   }
 
   function setDimensions() {
-    const svgw = hm.svgw
+    const maxChartsPerRow = hm.numCharts < 4 
+      ? hm.numCharts
+      : hm.numCharts % 3 == 0
+      ? 3
+      : 2
     const spacing =
-      hm.cols.length * hm.colspace +
-      (hm.colgrps.length - 1) * hm.colgspace +
-      hm.rowlabelw +
-      hm.rowgrplabelw
-    hm.colw = Math.min(
-      Math.max(16, Math.round((svgw - spacing) / hm.cols.length)),
-      100
-    );
-    hm.svgw =
-      hm.cols.length * (hm.colw + hm.colspace) -
-      hm.colspace +
-      (hm.colgrps.length - 1) * hm.colgspace +
-      hm.rowlabelw +
-      hm.rowgrplabelw
-    //+ hm.borderwidth
-    if (!hm.svgh)
-      hm.svgh = 600; /*hm.rows.length*(hm.rowh+hm.rowspace) //- hm.rowspace
-        + (hm.rowgrps.length-1)*hm.rowgspace
-        //+ hm.collabelh //+ hm.colgrplabelh // legendh will be added in finalizePos
-        + 2*hm.borderwidth*/
+        hm.cols.length * hm.colspace +
+        (hm.colgrps.length - 1) * hm.colgspace +
+        hm.rowlabelw +
+        hm.rowgrplabelw
+
+    if (hm.orientation == 'horizontal') {
+      hm.svgw = Math.min(400, window.innerWidth * 0.92 / maxChartsPerRow)
+      hm.svgh = hm.cols.length * (hm.rowh + hm.colspace) -
+        hm.colspace +
+        (hm.colgrps.length - 1) * hm.colgspace +
+        hm.rowlabelw +
+        hm.rowgrplabelw
+
+    } else {
+      const maxSvgw = window.innerWidth * 0.92 / maxChartsPerRow
+      hm.colw = Math.min(
+        Math.max(16, Math.round((maxSvgw - spacing) / hm.cols.length)),
+        80
+      );
+      hm.svgw =
+        hm.cols.length * (hm.colw + hm.colspace) -
+        hm.colspace +
+        (hm.colgrps.length - 1) * hm.colgspace +
+        hm.rowlabelw +
+        hm.rowgrplabelw;
+      const numChartRows = Math.round(window.innerWidth / hm.svgw)
+      hm.svgh = window.innerHeight * 0.9 / (numChartRows > 3 ? 2 : 1)
+    }
 
     hm.h.yScale = {}
     hm.h.xScale = {}

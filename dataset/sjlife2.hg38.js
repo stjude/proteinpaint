@@ -13,8 +13,14 @@ module.exports={
 	cohort:{
 		db:{
 			file:'files/hg38/sjlife/clinical/db',
+			// may describe keywords about table and field names
+			k:{
+				sample:'sample',
+				term_id:'term_id'
+			},
 			s:{
-				termjsonByOneid:'select jsondata from terms where id=?'
+				termjsonByOneid:'select jsondata from terms where id=?',
+				termIsLeaf:'select id from terms where parent_id=?',
 			}
 		},
 		files:[
@@ -57,17 +63,12 @@ module.exports={
 			termjson:{
 				file:'files/hg38/sjlife/clinical/termjson'
 			},
-			default_rootterm:[
-				{id:'Cancer-related Variables'},
-				{id:'Demographics/health behaviors'},
-				{id:'Outcomes'}
-			],
 			patient_condition:{
 				// Note: this is solely for the "iscondition" terms
 				file:'files/hg38/sjlife/clinical/outcomes_2017',
 				events_key:'conditionevents',
 				grade_key: 'grade',
-				grade_labels: [
+				grade_labels: [ // computable grades
 					{ grade: 1, label: '1: Mild' },
 					{ grade: 2, label: '2: Moderate' },
 					{ grade: 3, label: '3: Severe' },
@@ -98,15 +99,10 @@ module.exports={
 				isactivefilter:true,
 				iscategorical:true,
 				values:[
-					{
-						key:'good',
-						label:'Good'
-					},
-					{
-						key:'bad',
-						label:'Bad',
-						ishidden:true
-					}
+					{ key:'SuperGood', label:'SuperGood' },
+					{ key:'Good', label:'Good' },
+					{ key:'Ambiguous', label:'Ambiguous' },
+					{ key:'Bad', label:'Bad', ishidden:true }
 				]
 			},
 			{
@@ -121,12 +117,39 @@ module.exports={
 				}
 			},
 			{
-				key:'TOPMed_AF',
-				label:'TOPMed allele frequency',
+				key:'SJcontrol_AF',
+				label:'SJLIFE Control allele frequency',
 				isfilter:true,
 				isfloat:1,
-				missing_value:0,
-				range: { start: 0.1, startinclusive: true, stop: 1, stopinclusive:true }
+				range: {
+					startunbounded:true,
+					stop: 0.1,
+					stopinclusive:true
+				}
+			},
+			{
+				key:'CR',
+				label:'SJLIFE WGS cohort call rate',
+				isfilter:true,
+				isactivefilter:true,
+				isfloat:1,
+				range: {
+					start: 0.95,
+					startinclusive:true,
+					stopunbounded:true,
+				}
+			},
+			{
+				key:'gnomAD_CR',
+				label:'gnmoAD WGS cohort call rate',
+				isfilter:true,
+				isactivefilter:true,
+				isfloat:1,
+				range: {
+					start: 0.95,
+					startinclusive:true,
+					stopunbounded:true,
+				}
 			},
 			{
 				key:'gnomAD_AF',
@@ -181,11 +204,29 @@ module.exports={
 					stopinclusive:true
 				}
 			},
+			/*
+			{
+				key:'PG',
+				label:'Committee classification',
+				iscategorical:true,
+				isfilter:true,
+			},
+			*/
 			{
 				key:'BadBLAT',
 				label:'Bad blat',
+				isfilter:true,
+				isactivefilter:true,
+				isflag:true,
+				remove_yes:true
+			},
+			{
+				key:'Polymer_region',
+				label:'Polymer region',
 				isflag:true,
 				isfilter:true,
+				isactivefilter:true,
+				remove_yes:true
 			},
 		],
 
@@ -216,9 +257,9 @@ module.exports={
 				],
 			},
 			{
-				key:'TOPMed',
-				label:'TOPMed',
-				sets:[ { infokey_AC:'TOPMed_AC', infokey_AN:'TOPMed_AN' } ]
+				key:'SJControl',
+				label:'SJLife Control Cohort',
+				sets:[ { infokey_AC:'SJcontrol_AC', infokey_AN:'SJcontrol_AN' } ]
 			}
 		],
 

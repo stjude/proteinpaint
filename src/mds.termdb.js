@@ -91,6 +91,7 @@ obj{}:
 		return client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
 	}
 
+
 	try {
 		if(!obj.genome) throw '.genome{} missing'
 		if(!obj.mds) throw '.mds{} missing'
@@ -762,8 +763,10 @@ barchart is shown in-place under term and in full capacity
 							print_one_term( {term,row,flicker:true}, obj )
 						} else {
 							// before last level, manually print it
-							row.attr('class','sja_tr2')
-							row.append('div') // button
+							const row2 = row.append('div')
+							const row_graph = row.append('div')
+							row2.attr('class','sja_tr2')
+							row2.append('div') // button
 								.style('display','inline-block')
 								.style('font-family','courier')
 								.attr('class','sja_menuoption')
@@ -771,10 +774,16 @@ barchart is shown in-place under term and in full capacity
 								.on('click',()=>{
 									nextdiv.style('display', nextdiv.style('display')=='none'?'block':'none')
 								})
-							row.append('div')
+							row2.append('div')
 								.style('display','inline-block')
 								.style('padding',label_padding)
 								.text(term.name)
+
+							if( may_apply_modifier_barchart_selectbar( obj, term, row2, row_graph ) ) {
+							} else {
+								may_make_term_graphbuttons( term, row2, row_graph, obj )
+							}
+
 							nextdiv = currdiv.append('div')
 								.style('padding-left',tree_indent)
 						}
