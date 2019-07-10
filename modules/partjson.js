@@ -253,8 +253,16 @@ class ValFiller {
               for (const t of h)
                 if (p.has(t)) this.Pj.processRow(o, e, p.get(t))
                 else {
-                  const s = this.Pj.setResultContext("{}", c.length, c, !1, t)
-                  p.set(t, s), this.Pj.processRow(o, e, s)
+                  const s = this.Pj.setResultContext(
+                    "{}",
+                    c.length,
+                    c,
+                    !1,
+                    t,
+                    o,
+                    e
+                  )
+                  s && (p.set(t, s), this.Pj.processRow(o, e, s))
                 }
             else l.errors.push([t, "NON-ARRAY-VALS", o])
           }
@@ -686,24 +694,24 @@ class Partjson {
       this.opts.data && this.add(this.opts.data, !1),
       this.errors.log(this.fillers)
   }
-  setResultContext(e, t = null, s = null, r = !1, o, i = !0) {
-    const n = null !== t && t in s ? s[t] : JSON.parse(e)
-    if (this.contexts.has(n)) return n
-    const l = {
+  setResultContext(e, t = null, s = null, r = !1, o, i = null, n = null) {
+    const l = null !== t && t in s ? s[t] : JSON.parse(e)
+    if (this.contexts.has(l)) return l
+    const c = {
       branch: t,
       parent: s,
-      self: n,
-      root: this.tree ? this.tree : n,
+      self: l,
+      root: this.tree ? this.tree : l,
       joins: this.joins,
       errors: [],
       key: o
     }
-    return (
-      r && (l.tracker = new Map()),
-      this.contexts.set(n, l),
-      null !== t && i && (s[t] = n),
-      n
-    )
+    if ((r && (c.tracker = new Map()), i && n)) {
+      const e = this.fillers.get(n)
+      if (!e["@before"](i, c)) return
+      if (e["@join"] && !e["@join"](i, c)) return
+    }
+    return this.contexts.set(l, c), null !== t && (s[t] = l), l
   }
   parseTemplate(e, t, s = []) {
     const r = Object.create(null)
@@ -792,14 +800,8 @@ class Partjson {
     for (const t in e) {
       const s = e[t]
       if (s)
-        if (Array.isArray(s)) {
-          const e = s.filter(e => "object" != typeof e || Object.keys(e).length)
-          s.splice(0, s.length, ...e)
+        if (Array.isArray(s) || s instanceof Set || s instanceof Map)
           for (const e of s) "object" == typeof e && this.processResult(e)
-        } else if (s instanceof Set || s instanceof Map)
-          for (const e of s)
-            "object" == typeof e &&
-              (Object.keys(e).length ? this.processResult(e) : s.delete(e))
         else if ("object" == typeof s) {
           const e = this.contexts.get(s)
           e && e["@dist"] && e["@dist"](s), this.processResult(s)
