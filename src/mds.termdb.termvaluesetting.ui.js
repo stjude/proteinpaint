@@ -239,7 +239,7 @@ group{}
 
             } else if( term.term.isinteger || term.term.isfloat ) {
                 // TODO numerical term, print range in value button and apply the suitable click callback
-                display_numeric_filter(term, term_value_div)
+                await display_numeric_filter(group, i, one_term_div)
             } else if(term.term.iscondition){
 
                 // for overlay between grade and subcategory
@@ -628,34 +628,89 @@ group{}
     }
 
 
-    function display_numeric_filter(i, value_div){
+    async function display_numeric_filter(group, term_index, value_div){
 
-        value_div.selectAll('*').remove()
-    
-        const numeric_div = value_div.append('div')
-            .attr('class','sja_filter_tag_btn')
-            .style('font-size','1em')
-            .style('padding','3px 5px 3px 5px')
-            .style('margin-right','1px')
-            .style('background-color', '#4888BF')
-    
-        numeric_div.selectAll('*').remove()
+        const numeric_term = group.terms[term_index]
         
-        if(i.range.is_unannotated){
-            numeric_div.html(i.range.label)
+        if(numeric_term.range.is_unannotated){
+            
+            const data = await getcategories(numeric_term)
+            const unannotated_cats = {lst:[]}
+
+            for (const [index,cat] of data.lst.entries()){
+                if (cat.range.is_unannotated){
+                    unannotated_cats.lst.push(cat)
+                }
+            }
+
+            const [numeric_select, value_btn] = make_select_btn_pair(value_div)
+            numeric_select.style('margin-right','1px')
+
+            make_select_list(unannotated_cats, numeric_select, numeric_term, null, 'delete')
+
+            value_btn
+                .style('padding','3px 4px 3px 4px')
+                .style('margin-right','1px')
+                .style('font-size','1em')
+                .style('background-color', '#4888BF')
+                .html(numeric_term.range.label)
+
+            numeric_select.node().value = numeric_term.range.label
+
+            numeric_select.style('width',value_btn.node().offsetWidth+'px')
+
+            // change categroy from dropdown
+            numeric_select.on('change',async()=>{
+                
+                //if value is 'delete' then remove from group
+                if(numeric_select.node().value == 'delete'){
+                    group.terms.splice(term_index,1)
+                    //TODO add multiple range to ranges[]
+                    // numeric_term.range.splice(j,1)
+                    //     if(group.terms[i].values.length==0) {
+                    //         group.terms.splice(i,1)
+                    //     }
+                }else{
+                    //change value of button 
+                    const new_value = data.lst.find( j=> j.label == numeric_select.node().value )
+
+                    value_btn
+                        .style('padding','3px 4px 3px 4px')
+                        .text('Loading...')
+                    
+                    numeric_select.style('width',value_btn.node().offsetWidth+'px')
+                    
+                    group.terms[term_index].range = new_value.range
+                }
+
+                //update gorup and load tk
+                await callback()
+                update_terms(terms_div)
+            })
+
         }else{
+
+            const numeric_div = value_div.append('div')
+                .attr('class','sja_filter_tag_btn')
+                .style('font-size','1em')
+                .style('padding','3px 5px 3px 5px')
+                .style('margin-right','1px')
+                .style('background-color', '#4888BF')
+        
+            numeric_div.selectAll('*').remove()
+
             const x = '<span style="font-family:Times;font-style:italic">x</span>'
-            if( i.range.startunbounded ) {
-                numeric_div.html(x+' '+(i.range.stopinclusive?'&le;':'&lt;')+' '+i.range.stop)
-            } else if( i.range.stopunbounded ) {
-                numeric_div.html(x+' '+(i.range.startinclusive?'&ge;':'&gt;')+' '+i.range.start)
+            if( numeric_term.range.startunbounded ) {
+                numeric_div.html(x+' '+(numeric_term.range.stopinclusive?'&le;':'&lt;')+' '+numeric_term.range.stop)
+            } else if( numeric_term.range.stopunbounded ) {
+                numeric_div.html(x+' '+(numeric_term.range.startinclusive?'&ge;':'&gt;')+' '+numeric_term.range.start)
             } else {
                 numeric_div.html(
-                    i.range.start
-                    +' '+(i.range.startinclusive?'&le;':'&lt;')
+                    numeric_term.range.start
+                    +' '+(numeric_term.range.startinclusive?'&le;':'&lt;')
                     +' '+x
-                    +' '+(i.range.stopinclusive?'&le;':'&lt;')
-                    +' '+i.range.stop
+                    +' '+(numeric_term.range.stopinclusive?'&le;':'&lt;')
+                    +' '+numeric_term.range.stop
                 )
             }
         
@@ -669,7 +724,7 @@ group{}
         
                 const start_input = equation_div.append('input')
                     .attr('type','number')
-                    .attr('value',i.range.start)
+                    .attr('value',numeric_term.range.start)
                     .style('width','60px')
                     .on('keyup', async ()=>{
                         if(!client.keyupEnter()) return
@@ -690,8 +745,8 @@ group{}
                     .html('&#8734;')
         
                 startselect.node().selectedIndex =
-                    i.range.startunbounded ? 2 :
-                    i.range.startinclusive ? 0 : 1
+                    numeric_term.range.startunbounded ? 2 :
+                    numeric_term.range.startinclusive ? 0 : 1
         
                 equation_div.append('div')
                     .style('display','inline-block')
@@ -710,13 +765,13 @@ group{}
                     .html('&#8734;')
         
                 stopselect.node().selectedIndex =
-                    i.range.stopunbounded ? 2 :
-                    i.range.stopinclusive ? 0 : 1
+                    numeric_term.range.stopunbounded ? 2 :
+                    numeric_term.range.stopinclusive ? 0 : 1
         
                 const stop_input = equation_div.append('input')
                     .attr('type','number')
                     .style('width','60px')
-                    .attr('value',i.range.stop)
+                    .attr('value',numeric_term.range.stop)
                     .on('keyup', async ()=>{
                         if(!client.keyupEnter()) return
                         stop_input.property('disabled',true)
@@ -745,22 +800,23 @@ group{}
                         if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
         
                         if( startselect.node().selectedIndex == 2 ) {
-                            i.range.startunbounded = true
-                            delete i.range.start
+                            numeric_term.range.startunbounded = true
+                            delete numeric_term.range.start
                         } else {
-                            delete i.range.startunbounded
-                            i.range.start = start
-                            i.range.startinclusive = startselect.node().selectedIndex == 0
+                            delete numeric_term.range.startunbounded
+                            numeric_term.range.start = start
+                            numeric_term.range.startinclusive = startselect.node().selectedIndex == 0
                         }
                         if( stopselect.node().selectedIndex == 2 ) {
-                            i.range.stopunbounded = true
-                            delete i.range.stop
+                            numeric_term.range.stopunbounded = true
+                            delete numeric_term.range.stop
                         } else {
-                            delete i.range.stopunbounded
-                            i.range.stop = stop
-                            i.range.stopinclusive = stopselect.node().selectedIndex == 0
+                            delete numeric_term.range.stopunbounded
+                            numeric_term.range.stop = stop
+                            numeric_term.range.stopinclusive = stopselect.node().selectedIndex == 0
                         }
-                        display_numeric_filter(i, value_div)
+                        // display_numeric_filter(group, term_index, value_div)
+                        update_terms(terms_div)
                         tip.hide()
                         await callback()
                     } catch(e) {

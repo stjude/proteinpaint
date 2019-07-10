@@ -70,6 +70,7 @@ allow interacting with it, to update settings of i, and update track
 */
 	const row = tk.legend.variantfilter.holder
 		.append('div')
+		.style('display','inline-block')
 		.style('margin-top','5px')
 	
 	row.append('div')
