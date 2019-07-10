@@ -686,23 +686,23 @@ class Partjson {
       this.opts.data && this.add(this.opts.data, !1),
       this.errors.log(this.fillers)
   }
-  setResultContext(e, t = null, s = null, r = !1, o) {
-    const i = null !== t && t in s ? s[t] : JSON.parse(e)
-    if (this.contexts.has(i)) return i
-    const n = {
+  setResultContext(e, t = null, s = null, r = !1, o, i = !0) {
+    const n = null !== t && t in s ? s[t] : JSON.parse(e)
+    if (this.contexts.has(n)) return n
+    const l = {
       branch: t,
       parent: s,
-      self: i,
-      root: this.tree ? this.tree : i,
+      self: n,
+      root: this.tree ? this.tree : n,
       joins: this.joins,
       errors: [],
       key: o
     }
     return (
-      r && (n.tracker = new Map()),
-      this.contexts.set(i, n),
-      null !== t && (s[t] = i),
-      i
+      r && (l.tracker = new Map()),
+      this.contexts.set(n, l),
+      null !== t && i && (s[t] = n),
+      n
     )
   }
   parseTemplate(e, t, s = []) {
@@ -773,6 +773,7 @@ class Partjson {
       for (const e in o.postTerms)
         this.postLoopTerms[e] || (this.postLoopTerms[e] = []),
           this.postLoopTerms[e].includes(r) || this.postLoopTerms[e].push(r)
+      return !0
     }
   }
   postLoop(e, t, s = "__:") {
@@ -792,10 +793,9 @@ class Partjson {
       const s = e[t]
       if (s)
         if (Array.isArray(s)) {
-          const r = s.length
-          for (let e = 0; e < r; e++)
-            "object" != typeof s[e] || Object.keys(s[e]) || s.splice(e, 1)
-          for (const s of e[t]) "object" == typeof s && this.processResult(s)
+          const e = s.filter(e => "object" != typeof e || Object.keys(e).length)
+          s.splice(0, s.length, ...e)
+          for (const e of s) "object" == typeof e && this.processResult(e)
         } else if (s instanceof Set || s instanceof Map)
           for (const e of s)
             "object" == typeof e &&

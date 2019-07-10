@@ -329,7 +329,7 @@ async function setValFxns(q, inReqs, ds, tdb) {
       inReq.unannotatedLabels = []
     }
     if (key == "genotype") {
-      if (!q.ssid) `missing ssid for genotype`
+      if (!q.ssid) throw `missing ssid for genotype`
       const bySample = await load_genotype_by_sample(q.ssid)
       const skey = ds.cohort.samplenamekey
       inReq.joinFxns[key] = row => bySample[row[skey]]
