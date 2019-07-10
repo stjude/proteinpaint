@@ -103,13 +103,13 @@ const template = JSON.stringify({
         series: "=idVal()"
       },
       chartId: "@key",
-      total: "+1",
+      "_:_total": "+=hasIds()",
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
       serieses: [{
         "@join()": { 
           data: "=idVal()"
         },
-        total: "+1",
+        "_:_total": "+=hasIds()",
         seriesId: "@key",
         data: [{
           dataId: "@key",
@@ -186,6 +186,15 @@ function getPj(q, inReqs, data, tdb) {
             ? inReqs[i].numValFxns[term](row)
             : undefined
         }
+      },
+      hasIds(row, context) {
+        const data = context.joins.get('data')
+        if (!data || !data.id.length) return
+        const series = context.joins.get('series')
+        if (!series || !series.id.length) return
+        const chart = context.joins.get('chart')
+        if (!chart || !chart.id.length) return
+        return 1
       },
       maxSeriesTotal(row, context) {
         let maxSeriesTotal = 0
@@ -424,7 +433,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
           for(const event of row[k][events_key]) {
             const age = event[age_key]
             const grade = event[grade_key]
-            if (uncomputable[grade]) continue
+            if (grade in uncomputable) continue;
             if (!(child in byCond) || byCond[child].age < age) {
               if (!byCond[child]) byCond[child] = {}
               byCond[child].age = age
@@ -436,23 +445,36 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
       }
     } else {
       inReq.joinFxns[key] = row => {
-        let mostRecentAge, mostRecentGrade
+        const mostRecentGrades = []
+        let mostRecentAge
         for(const k in row) {
           if (!row[k][events_key]) continue
           const term = tdb.termjson.map.get(k)
           if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
             for(const event of row[k][events_key]) {
               const age = event[age_key]
-              const grade = event[grade_key]
-              if (uncomputable[grade]) continue
+              if (event[grade_key] in uncomputable) continue
               if (mostRecentAge === undefined || mostRecentAge < age) {
                 mostRecentAge = age
-                mostRecentGrade = grade
               }
             }
           }
         }
-        return mostRecentGrade ? [mostRecentGrade] : []
+        for(const k in row) {
+          if (!row[k][events_key]) continue
+          const term = tdb.termjson.map.get(k)
+          if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+            for(const event of row[k][events_key]) {
+              if (event[age_key] === mostRecentAge) {
+                const grade = event[grade_key]
+                if (!(grade in uncomputable) && !mostRecentGrades.includes(grade)) {
+                  mostRecentGrades.push(grade)
+                }
+              }
+            }
+          }
+        }
+        return mostRecentGrades
       }
     }
   } else if (unit == 'by_children') {

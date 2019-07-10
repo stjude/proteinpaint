@@ -46,7 +46,7 @@ tape("single, numerical", function (test) {
   
   const filter = [{
     term: {id:'sex', name:'sex', iscategorical:true},
-    values: [{key: 'Male', label: 'Female'}]
+    values: [{key: 'Female', label: 'Female'}]
   }]
   compareResponseData(
     test,
@@ -55,197 +55,108 @@ tape("single, numerical", function (test) {
   )
 })
 
-/* 
-    TO-DO: convert the remaining tests to use compareResponseData()
-
 tape("single, condition isleaf", function (test) {
-  test.plan(6)
-  const url0 = baseUrl + '&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')
-  request(url0,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 3, "should have the expected number of UNFILTERED ISLEAF max grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        {"lst":[{"key":1,"samplecount":141,"label":"1: Mild"},{"key":2,"samplecount":123,"label":"2: Moderate"},{"key":3,"samplecount":78,"label":"3: Severe"}]},
-        "should produce the expected UNFILTERED ISLEAF sample by max grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-  
-  const url1 = baseUrl
-    + '&term1_id=Asthma'
-    + '&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')
-    + '&tvslst='+encodeURIComponent(JSON.stringify([{
-      term: {id:'sex', name:'sex', iscategorical:true},
-      values: [{key: 'Male', label: 'Male'}]
-    }]));
-  request(url1,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 3, "should have the expected number of FILTERED ISLEAF max grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 1, samplecount: 69, label: '1: Mild' }, { key: 2, samplecount: 49, label: '2: Moderate' }, { key: 3, samplecount: 33, label: '3: Severe' } ] },
-        "should produce the expected FILTERED ISLEAF sample by max grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  test.plan(3)
+  compareResponseData(
+    test, 
+    {term1: 'Asthma', conditionUnits: ["","max_grade_perperson",""], term1_q: {value_by_max_grade:1}},
+    "should produce the expected UNFILTERED sample counts by Asthma condition max-grade"
+  )
 
-  const url2 = baseUrl + '&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_most_recent":1}')
-  request(url2,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 3, "should have the expected number of unfiltered most recent grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 1, samplecount: 159, label: '1: Mild' }, { key: 2, samplecount: 122, label: '2: Moderate' }, { key: 3, samplecount: 61, label: '3: Severe' } ] },
-        "should produce the expected unfiltered sample by most recent grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  const filter = [{
+    term: {id:'sex', name:'sex', iscategorical:true},
+    values: [{key: 'Male', label: 'Male'}]
+  }]
+  compareResponseData(
+    test,
+    {term1: 'Asthma', filter, conditionUnits: ["","max_grade_perperson",""], term1_q: {value_by_max_grade:1}},
+    "should produce the expected FILTERED sample counts by Asthma condition max-grade"
+  )
+
+  compareResponseData(
+    test, 
+    {term1: 'Asthma', conditionUnits: ["","most_recent_grade",""], term1_q: {value_by_most_recent:1}},
+    "should produce the expected UNFILTERED sample counts by Asthma condition most recent grade",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total) 
+  )
 })
 
 tape("single, condition non-leaf", function (test) {
-  test.plan(10)
-  const url0 = baseUrl + '&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')
-  request(url0,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 4, "should have the expected number of UNFILTERED NON-LEAF max grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 1, samplecount: 1556, label: '1: Mild' }, { key: 2, samplecount: 1013, label: '2: Moderate' }, { key: 3, samplecount: 461, label: '3: Severe' }, { key: 4, samplecount: 140, label: '4: Life-threatening' } ] },
-        "should produce the expected UNFILTERED NON-LEAF sample by max grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  test.plan(5)
+  compareResponseData(
+    test,
+    {
+      term1: 'Cardiovascular System', 
+      conditionParents: ["","Cardiovascular System",""],
+      conditionUnits: ["","max_grade_perperson",""],
+      term1_q: {value_by_max_grade:1, bar_by_grade:1}
+    },
+    "should produce the expected UNFILTERED sample counts by Cardiovascular System condition max-grade"
+  )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'Cardiovascular System',
+      conditionParents: ["","Cardiovascular System",""],
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1, bar_by_grade:1},
+      filter: [{
+        term: {id:'sex', name:'sex', iscategorical:true},
+        values: [{key: 'Male', label: 'Male'}]
+      }]
+    },
+    "should produce the expected FILTERED sample counts by Cardiovascular System condition max-grade"
+  )
   
-  const url1 = baseUrl
-    + '&term1_id=Cardiovascular+System'
-    + '&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')
-    + '&tvslst='+encodeURIComponent(JSON.stringify([{
-      term: {id:'sex', name:'sex', iscategorical:true},
-      values: [{key: 'Male', label: 'Male'}]
-    }]));
-  request(url1,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 4, "should have the expected number of FILTERED NON-LEAF max grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 1, samplecount: 841, label: '1: Mild' }, { key: 2, samplecount: 556, label: '2: Moderate' }, { key: 3, samplecount: 262, label: '3: Severe' }, { key: 4, samplecount: 91, label: '4: Life-threatening' } ] },
-        "should produce the expected FILTERED NON-LEAF sample by max grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  compareResponseData(
+    test,
+    {
+      term1: 'Cardiovascular System', 
+      conditionParents: ["","Cardiovascular System",""],
+      conditionUnits: ["","most_recent_grade",""], 
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
+    },
+    "should produce the expected UNFILTERED sample counts by Cardiovascular System condition most recent grade",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total)
+  )
 
-  const url2 = baseUrl 
-    + '&term1_id=Cardiovascular+System'
-    + '&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')
-  request(url2,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 4, "should have the expected number of unfiltered NON-LEAF most recent grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 1, samplecount: 1556, label: '1: Mild' }, { key: 2, samplecount: 1013, label: '2: Moderate' }, { key: 3, samplecount: 461, label: '3: Severe' }, { key: 4, samplecount: 140, label: '4: Life-threatening' } ] },
-        "should produce the expected unfiltered NON-LEAF sample by most recent grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  compareResponseData(
+    test,
+    {
+      term1: 'Arrhythmias', 
+      conditionParents: ["","Arrhythmias",""],
+      conditionUnits: ["","by_children",""], 
+      term1_q: {value_by_max_grade:1, bar_by_children:1},
+    },
+    "should produce the expected UNFILTERED sample counts by Arrhythmias condition by children",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total)
+  )
 
-
-  const url3 = baseUrl 
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')
-  request(url3,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 6, "should have the expected UNFILTERED results for Arrhythmias, by subcondition, max grade")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 'Atrioventricular heart block', samplecount: 43, label: 'Atrioventricular heart block' }, { key: 'Cardiac dysrhythmia', samplecount: 105, label: 'Cardiac dysrhythmia' }, { key: 'Conduction abnormalities', samplecount: 744, label: 'Conduction abnormalities' }, { key: 'Prolonged QT interval', samplecount: 140, label: 'Prolonged QT interval' }, { key: 'Sinus bradycardia', samplecount: 42, label: 'Sinus bradycardia' }, { key: 'Sinus tachycardia', samplecount: 77, label: 'Sinus tachycardia' } ] },
-        "should produce the expected UNFILTERED results for Arrhythmias, by subcondition, max grade"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-  
-  const url4 = baseUrl
-    + '&term1_id=Arrhythmias'
-    + '&term1_q=' + encodeURIComponent('{"bar_by_children":1,"value_by_most_recent":1}')
-    + '&tvslst='+encodeURIComponent(JSON.stringify([{
-      term: {id:'sex', name:'sex', iscategorical:true},
-      values: [{key: 'Male', label: 'Male'}]
-    }]));
-  request(url4,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 6, "should have the expected number of FILTERED results for Arrhythmias, by subcondition, most recent")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 'Atrioventricular heart block', samplecount: 31, label: 'Atrioventricular heart block' }, { key: 'Cardiac dysrhythmia', samplecount: 42, label: 'Cardiac dysrhythmia' }, { key: 'Conduction abnormalities', samplecount: 491, label: 'Conduction abnormalities' }, { key: 'Prolonged QT interval', samplecount: 60, label: 'Prolonged QT interval' }, { key: 'Sinus bradycardia', samplecount: 37, label: 'Sinus bradycardia' }, { key: 'Sinus tachycardia', samplecount: 31, label: 'Sinus tachycardia' } ] },
-        "should produce the expected FILTERED results for Arrhythmias, by subcondition, most recent grade"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  compareResponseData(
+    test,
+    {
+      term1: 'Arrhythmias', 
+      conditionParents: ["","Arrhythmias",""],
+      conditionUnits: ["","by_children",""], 
+      term1_q: {value_by_max_grade:1, bar_by_children:1},
+      filter: [{
+        term: {id:'sex', name:'sex', iscategorical:true},
+        values: [{key: 'Male', label: 'Male'}]
+      }]
+    },
+    "should produce the expected FILTERED sample counts by Arrhythmias condition by children",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total)
+  )
 })
+
+/* 
+  TO-DO: convert the remaining tests to use compareResponseData()
+
 
 tape("condition child-grade overlay", function (test) {
   test.plan(4)
@@ -376,7 +287,7 @@ tape.only("non-leaf condition with overlay", function (test) {
 })
 */
 
-function compareResponseData(test, params, mssg) {
+function compareResponseData(test, params, mssg, postFxn=()=>{}) {
   const url0 = getSqlUrl(params)
   const url1 = getBarUrl(params)
 
@@ -395,11 +306,13 @@ function compareResponseData(test, params, mssg) {
           template,
           "=": externals
         })
+        postFxn(pj.tree.results.charts)
         sortResults(pj.tree.results.charts)
         // get an alternatively computed results
         // for comparing against sql results
         request(url1, (error,response,body1)=>{
           const data1 = JSON.parse(body1)
+          postFxn(data1.charts)
           sortResults(data1.charts)
           //console.log(JSON.stringify(data1.charts[0]));
           //console.log('----')
@@ -433,6 +346,7 @@ function getSqlUrl(params) {
     + "&dslabel=SJLife"
     + "&testplot=1"
     + '&term1_id=' + params.term1
+    + (params.term1_q ? '&term1_q=' + encodeURIComponent(JSON.stringify(params.term1_q)) : '')
     + (params.term2 ? '&term2_id=' + params.term2 : '')
     + (params.filter ? '&tvslst='+encodeURIComponent(JSON.stringify(params.filter)) : '')
 }
@@ -443,6 +357,8 @@ function getBarUrl(params) {
     + "&dslabel=SJLife"
     + "&term1=" + params.term1
     + (params.term2 ? "&term2=" + params.term2 : '')
+    + (params.conditionUnits ? "&conditionUnits=" + params.conditionUnits.join("-,-") : '')
+    + (params.conditionParents ? "&conditionParents=" + params.conditionParents.join("-,-") : '')
     + "&filter=" + encodeURIComponent(JSON.stringify(params.filter ? params.filter : []))
     + "&custom_bins=" + encodeURIComponent(JSON.stringify(params.customBins ? params.customBins : {}))
 }

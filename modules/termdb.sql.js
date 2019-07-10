@@ -386,23 +386,48 @@ q{}
 		let overlay = false
 		if( term1.isleaf ) {
 			///////////// summary, leaf
-			string = 
-				`WITH
-				${filter ? filter.CTEcascade+', ' : ''}
-				tmp_grade_table AS (
-					${grade_age_select_clause( q.term1_q )}
-					FROM chronicevents
-					WHERE
-					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
-					term_id = ?
-					${uncomputablegrades_clause( q.ds )}
-					GROUP BY sample
-				)
-				SELECT grade as key,count(sample) as samplecount
-				FROM tmp_grade_table
-				GROUP BY grade`
-			thisvalues.push( q.term1_id )
+			if (q.term1_q.value_by_most_recent) {
+				string = 
+					`WITH
+					${filter ? filter.CTEcascade+', ' : ''}
+					tmp_grade_table AS (
+						${grade_age_select_clause( q.term1_q )}
+						FROM chronicevents
+						WHERE
+						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+						term_id = ?
+						${uncomputablegrades_clause( q.ds )}
+						GROUP BY sample
+					)
+					SELECT c.grade AS key,count(distinct t.sample) as samplecount
+					FROM tmp_grade_table t
+					JOIN chronicevents c ON 
+					  c.term_id = ? 
+					  AND c.sample = t.sample 
+					  AND c.age_graded = t.age_graded
+					  ${uncomputablegrades_clause( q.ds )}
+					GROUP BY key`
 
+				thisvalues.push( q.term1_id,  q.term1_id)
+			} else {
+				string = 
+					`WITH
+					${filter ? filter.CTEcascade+', ' : ''}
+					tmp_grade_table AS (
+						${grade_age_select_clause( q.term1_q )}
+						FROM chronicevents
+						WHERE
+						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+						term_id = ?
+						${uncomputablegrades_clause( q.ds )}
+						GROUP BY sample
+					)
+					SELECT grade as key,count(sample) as samplecount
+					FROM tmp_grade_table
+					GROUP BY grade`
+
+				thisvalues.push( q.term1_id )
+			}
 		} else if( q.term1_q.grade_child_overlay ) {
 			/////////// summary, grade-child overlay, one term
 			string =
@@ -438,7 +463,8 @@ q{}
 
 		} else if( q.term1_q.bar_by_grade ) {
 			//////////// summary, bar by grade
-			string = 
+			if (q.term1_q.value_by_most_recent) {
+				string = 
 				`WITH
 				${filter ? filter.CTEcascade+', ' : ''}
 				tmp_term_table AS (
@@ -456,9 +482,38 @@ q{}
 					${uncomputablegrades_clause( q.ds )}
 					GROUP BY sample
 				)
-				SELECT grade AS key,count(sample) as samplecount
+				SELECT c.grade AS key,count(distinct t.sample) as samplecount
+				FROM tmp_grade_table t
+				JOIN chronicevents c ON 
+				  c.term_id IN tmp_term_table 
+				  AND c.sample = t.sample 
+				  AND c.age_graded = t.age_graded 
+				  ${uncomputablegrades_clause( q.ds )}
+				GROUP BY key`
+			} else {
+				string = 
+				`WITH
+				${filter ? filter.CTEcascade+', ' : ''}
+				tmp_term_table AS (
+					SELECT term_id
+					FROM ancestry
+					WHERE ancestor_id=?
+					OR term_id=?
+				),
+				tmp_grade_table AS (
+					${grade_age_select_clause( q.term1_q )}
+					FROM chronicevents
+					WHERE
+					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+					term_id IN tmp_term_table
+					${uncomputablegrades_clause( q.ds )}
+					GROUP BY sample
+				)
+				SELECT grade AS key,count(distinct sample) as samplecount
 				FROM tmp_grade_table
 				GROUP BY key`
+			}
+			
 			thisvalues.push( q.term1_id, q.term1_id )
 
 		} else if( q.term1_q.bar_by_children ) {
@@ -556,7 +611,7 @@ function uncomputablegrades_clause ( ds ) {
 function grade_age_select_clause ( tvs ) {
 // work for grade as bars
 	if( tvs.value_by_max_grade ) return 'SELECT sample,MAX(grade) AS grade '
-	if( tvs.value_by_most_recent ) return 'SELECT sample,MAX(age_graded),grade '
+	if( tvs.value_by_most_recent ) return 'SELECT sample,MAX(age_graded) AS age_graded '
 	throw 'unknown value_by_? for condition term by grade'
 }
 function tmptable () {
