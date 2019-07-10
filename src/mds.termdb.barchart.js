@@ -211,7 +211,7 @@ export class TermdbBarchart{
       }
       chart.settings = Object.assign(this.settings, chartsData.refs)
       chart.visibleSerieses = chart.serieses.filter(d=>{
-        return !chart.settings.exclude.cols.includes(d.seriesId)
+        return Object.keys(d) && 'seriesId' in d && !chart.settings.exclude.cols.includes(d.seriesId)
       })
       chart.maxVisibleSeriesTotal = chart.visibleSerieses.reduce((max,b) => {
         b.visibleData = b.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))

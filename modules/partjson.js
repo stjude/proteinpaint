@@ -333,13 +333,14 @@ class ValFiller {
   (ValFiller.prototype["-,(]"] = ValFiller.prototype["-,[]"]),
   (ValFiller.prototype["<,"] = function(e, t) {
     return (s, r, o, i) => {
-      const n = +e(s, i)
-      t.ignore(n, r, s, i) ||
-        (this.isNumeric(n)
-          ? r in o
-            ? o[r] < n && (o[r] = n)
-            : (o[r] = n)
-          : i.errors.push([t, "NON-NUMERIC-THAN", s]))
+      const n = e(s, i)
+      if (t.ignore(n, r, s, i)) return
+      const l = +n
+      this.isNumeric(l)
+        ? r in o
+          ? o[r] < l && (o[r] = l)
+          : (o[r] = l)
+        : i.errors.push([t, "NON-NUMERIC-THAN", s])
     }
   }),
   (ValFiller.prototype["<,()"] = ValFiller.prototype["<,"]),
@@ -660,7 +661,6 @@ class Partjson {
       this.refresh()
   }
   refresh(e = {}) {
-    this.times = {start: +(new Date())}
     Object.assign(this.opts, e),
       "string" != typeof this.opts.template &&
         (this.opts.template = JSON.stringify(this.opts.template))
@@ -683,7 +683,6 @@ class Partjson {
         : (this.template = t),
       (this.postLoopTerms = Object.create(null)),
       (this.done = []),
-      this.times.parse = +(new Date()) - this.times.start
       this.opts.data && this.add(this.opts.data, !1),
       this.errors.log(this.fillers)
   }
@@ -750,8 +749,7 @@ class Partjson {
       if (this.postLoopTerms[e])
         for (const t of this.postLoopTerms[e]) this.postLoop(t.self, t, e)
     for (const e of this.done) e.done(e.self, e)
-    t && this.errors.log(); 
-    this.times.total = +(new Date()) - this.times.start
+    t && this.errors.log()
   }
   processRow(e, t, s) {
     const r = this.contexts.get(s),
@@ -793,8 +791,15 @@ class Partjson {
     for (const t in e) {
       const s = e[t]
       if (s)
-        if (Array.isArray(s) || s instanceof Set || s instanceof Map)
-          for (const e of s) "object" == typeof e && this.processResult(e)
+        if (Array.isArray(s)) {
+          const r = s.length
+          for (let e = 0; e < r; e++)
+            "object" != typeof s[e] || Object.keys(s[e]) || s.splice(e, 1)
+          for (const s of e[t]) "object" == typeof s && this.processResult(s)
+        } else if (s instanceof Set || s instanceof Map)
+          for (const e of s)
+            "object" == typeof e &&
+              (Object.keys(e).length ? this.processResult(e) : s.delete(e))
         else if ("object" == typeof s) {
           const e = this.contexts.get(s)
           e && e["@dist"] && e["@dist"](s), this.processResult(s)

@@ -484,7 +484,7 @@ q{}
 					${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
 					d.term_id = a.term_id
 					${uncomputablegrades_clause( q.ds )}
-					GROUP BY sample
+					GROUP BY key, sample
 				)
 				SELECT
 					key,
@@ -715,7 +715,7 @@ return {sql, tablename}
 				${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
 				a.term_id = d.term_id
 				${uncomputablegrades_clause( ds )}
-				GROUP BY sample
+				GROUP BY key, sample
 			)`,
 			tablename: grade_table
 		}
@@ -737,6 +737,7 @@ q{}
 filter as is returned by makesql_by_tvsfilter
 returns { sql, tablename, name2bin }
 */
+	let bin_size
 	let bins = []
 	if( q.custom_bins ) {
 		bins = q.custom_bins
@@ -750,7 +751,7 @@ returns { sql, tablename, name2bin }
 			} else if( term.graph.barchart.numeric_bin.auto_bins ) {
 				const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
 				let v = term.graph.barchart.numeric_bin.auto_bins.start_value
-				const bin_size = term.graph.barchart.numeric_bin.auto_bins.bin_size
+				bin_size = term.graph.barchart.numeric_bin.auto_bins.bin_size
 				while( v < max ) {
 					bins.push({
 						start: v,
@@ -765,8 +766,7 @@ returns { sql, tablename, name2bin }
 		}
 	}
 	const bin_def_lst = []
-	const name2bin = new Map()
-	// k: name str, v: bin{}
+	const name2bin = new Map() // k: name str, v: bin{}
 	let binid = 0
 	for(const b of bins) {
 		if(!b.name) {
@@ -777,6 +777,26 @@ returns { sql, tablename, name2bin }
 			} else {
 				b.name = `${b.start} <${b.startinclusive?'=':''} x <${b.stopinclusive?'=':''} ${b.stop}`
 			}
+
+			if( Number.isInteger( bin_size ) ) {
+        // bin size is integer, make nicer label
+        if( bin_size == 1 ) {
+          // bin size is 1; use just start value as label, not a range
+          b.name = b.start
+        } else {
+          // bin size bigger than 1, reduce right bound by 1, in label only!
+          b.name = b.start + ' to ' + (b.stop-1)
+        }
+      } else {
+        // bin size is not an integer
+        if( b.startunbounded ) {
+          b.name = (b.stopinclusive ? '<=' : '<')+' '+b.stop
+        } else if( b.stopunbounded ) {
+          b.name = (b.startinclusive ? '>=' : '>')+' '+b.start
+        } else {
+          b.name = `${b.start} <${b.startinclusive?'=':''} x <${b.stopinclusive?'=':''} ${b.stop}`
+        }
+      }
 		}
 		name2bin.set( b.name, b )
 		bin_def_lst.push(

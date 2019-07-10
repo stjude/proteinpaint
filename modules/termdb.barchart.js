@@ -115,10 +115,11 @@ const template = JSON.stringify({
           dataId: "@key",
           total: "+1",
         }, "&data.id[]"],
-        "_:_max": "<&data.value",
+        //"_:_max": "<&data.value",
         tempValues: ["&data.value"],
         tempSum: "+&data.value",
         "__:boxplot": "=boxplot2()",
+        "@done()": "=removeTemp()"
       }, "&series.id[]"]
     }, "&chart.id[]"],
     "__:boxplot": "=boxplot1()",
@@ -233,6 +234,10 @@ function getPj(q, inReqs, data, tdb) {
         delete context.self.tempSum
         delete context.self.tempValues
         return stat
+      },
+      removeTemp(result) {
+        delete result.tempSum
+        delete result.tempValues
       },
       unannotated(row, context) {
         const series = context.joins.get('series')
@@ -816,37 +821,38 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
       /* auto bins
       given start and bin size, use max from value to decide how many bins there are
-
-      if bin size is integer,
-      to make nicer labels
       */
 
       const max = Math.max( ...values )
       let start = nb.auto_bins.start_value
       while( start < max ) {
-        const stop = start + nb.auto_bins.bin_size
-
+        const stop = Math.min(start + nb.auto_bins.bin_size, max)
         const bin = {
           start,
           stop,
           value: 0, // v2s
           startinclusive:1,
-        }
-
-        if( Number.isInteger( nb.auto_bins.bin_size ) ) {
-          // bin size is integer, make nicer label
-
-          if( nb.auto_bins.bin_size == 1 ) {
-            // bin size is 1; use just start value as label, not a range
-            bin.label = start
+        } 
+        if (!bin.label) {
+          if( Number.isInteger( nb.auto_bins.bin_size ) ) {
+            // bin size is integer, make nicer label
+            if( nb.auto_bins.bin_size == 1 ) {
+              // bin size is 1; use just start value as label, not a range
+              bin.label = start
+            } else {
+              // bin size bigger than 1, reduce right bound by 1, in label only!
+              bin.label = start + ' to ' + (stop-1)
+            }
           } else {
-            // bin size bigger than 1, reduce right bound by 1, in label only!
-            bin.label = start + ' to ' + (stop-1)
+            // 
+            if( bin.startunbounded ) {
+              bin.label = (bin.stopinclusive ? '<=' : '<')+' '+bin.stop
+            } else if( bin.stopunbounded ) {
+              bin.label = (bin.startinclusive ? '>=' : '>')+' '+bin.start
+            } else {
+              bin.label = `${bin.start} <${bin.startinclusive?'=':''} x <${bin.stopinclusive?'=':''} ${bin.stop}`
+            }
           }
-        } else {
-          
-          // bin size is not integer
-          bin.label = start+' to '+stop
         }
 
         bins.push( bin )
