@@ -430,6 +430,7 @@ export default function barsRenderer(barsapp, holder) {
   }
 
   function setIds(series) {
+    if (!series.data) return
     if (!('seriesId' in series)) {
       series.data.map(data => {
         if (data) series.seriesId = data[hm.serieskey];

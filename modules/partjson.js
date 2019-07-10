@@ -791,8 +791,15 @@ class Partjson {
     for (const t in e) {
       const s = e[t]
       if (s)
-        if (Array.isArray(s) || s instanceof Set || s instanceof Map)
-          for (const e of s) "object" == typeof e && this.processResult(e)
+        if (Array.isArray(s)) {
+          const r = s.length
+          for (let e = 0; e < r; e++)
+            "object" != typeof s[e] || Object.keys(s[e]) || s.splice(e, 1)
+          for (const s of e[t]) "object" == typeof s && this.processResult(s)
+        } else if (s instanceof Set || s instanceof Map)
+          for (const e of s)
+            "object" == typeof e &&
+              (Object.keys(e).length ? this.processResult(e) : s.delete(e))
         else if ("object" == typeof s) {
           const e = this.contexts.get(s)
           e && e["@dist"] && e["@dist"](s), this.processResult(s)
