@@ -17,10 +17,6 @@ module.exports={
 			k:{
 				sample:'sample',
 				term_id:'term_id'
-			},
-			s:{
-				termjsonByOneid:'select jsondata from terms where id=?',
-				termIsLeaf:'select id from terms where parent_id=?',
 			}
 		},
 		files:[

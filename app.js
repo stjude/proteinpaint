@@ -12695,11 +12695,6 @@ function mds_init(ds,genome, _servconfig) {
 			}catch(e) {
 				return 'cannot read db file: '+ds.cohort.db.file
 			}
-			if(!ds.cohort.db.s) return '.s{} missing from cohort.db'
-			ds.cohort.db.q = {}
-			for(const statementkey in ds.cohort.db.s) {
-				ds.cohort.db.q[ statementkey ] = ds.cohort.db.connection.prepare( ds.cohort.db.s[ statementkey ] )
-			}
 			ds.cohort.db.cache = new Map()
 			// k: sql string
 			// v: statement
