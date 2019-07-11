@@ -4,6 +4,7 @@ import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-s
 import {init as plot_init} from './mds.termdb.plot'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
+import { debounce } from 'debounce'
 
 
 /*
@@ -664,51 +665,9 @@ barchart is shown in-place under term and in full capacity
 		.style('border-spacing','0px')
 		.style('border-collapse','separate')
 
-	// TODO debounce
+	// debounce: call the function once with debounce at 400ms
 
-	input.on('keyup', async ()=>{
-
-		table.selectAll('*').remove()
-
-		const str = input.property('value')
-		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
-
-		if( str==' ' || str=='' ) {
-			// blank
-			return
-		}
-		try {
-			// query
-			const data = await obj.do_query( ['findterm='+str] )
-			if(data.error) throw data.error
-			if(!data.lst || data.lst.length==0) throw 'No match'
-
-			if( obj.modifier_click_term ) {
-				searchresult2clickterm( data.lst )
-				return
-			}
-
-			// show full terms with graph/tree buttons
-			for(const term of data.lst) {
-				const tr = table.append('tr')
-					.attr('class','sja_tr2')
-				tr.append('td')
-					.style('opacity','.6')
-					.text(term.name)
-				const td = tr.append('td') // holder for buttons
-					.style('text-align','right')
-				if( term.graph && term.graph.barchart ) {
-					makeviewbutton( term, td )
-				}
-				maketreebutton( term, td )
-			}
-		} catch(e) {
-			table.append('tr').append('td')
-				.style('opacity',.5)
-				.text(e.message || e)
-			if(e.stack) console.log(e.stack)
-		}
-	})
+	input.on('keyup', debounce(tree_search, 400 ))
 
 	// helpers
 	function searchresult2clickterm ( lst ) {
@@ -815,6 +774,50 @@ barchart is shown in-place under term and in full capacity
 				currdiv = nextdiv
 			}
 		})
+	}
+
+	async function tree_search(){
+
+		table.selectAll('*').remove()
+
+		const str = input.property('value')
+		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
+
+		if( str==' ' || str=='' ) {
+			// blank
+			return
+		}
+		try {
+			// query
+			const data = await obj.do_query( ['findterm='+str] )
+			if(data.error) throw data.error
+			if(!data.lst || data.lst.length==0) throw 'No match'
+
+			if( obj.modifier_click_term ) {
+				searchresult2clickterm( data.lst )
+				return
+			}
+
+			// show full terms with graph/tree buttons
+			for(const term of data.lst) {
+				const tr = table.append('tr')
+					.attr('class','sja_tr2')
+				tr.append('td')
+					.style('opacity','.6')
+					.text(term.name)
+				const td = tr.append('td') // holder for buttons
+					.style('text-align','right')
+				if( term.graph && term.graph.barchart ) {
+					makeviewbutton( term, td )
+				}
+				maketreebutton( term, td )
+			}
+		} catch(e) {
+			table.append('tr').append('td')
+				.style('opacity',.5)
+				.text(e.message || e)
+			if(e.stack) console.log(e.stack)
+		}
 	}
 }
 
