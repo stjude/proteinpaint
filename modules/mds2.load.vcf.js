@@ -807,7 +807,7 @@ ds is for accessing patient_condition
 exports.sample_match_termvaluesetting = sample_match_termvaluesetting
 
 
-
+let testi = 0
 
 function test_sample_conditionterm ( sample, tvs, ds ) {
 /*
@@ -884,17 +884,27 @@ ds
 		if(eventlst.length==0) return false
 
 		// from all events of any subcondition, find one matching with value_by_
-		let useevent
 		if(tvs.value_by_most_recent) {
+			const most_recent_events = []
 			let age = 0
 			for(const e of eventlst) {
 				const a = e.e[_c.age_key]
 				if(age < a) {
 					age = a
-					useevent = e
 				}
 			}
+			for(const e of eventlst) {
+				if(e.e[_c.age_key] == age) {
+					const g = e.e[_c.grade_key]
+					for(const tv of tvs.grade_and_child) {
+						if (tv.grade == g && tv.child_id == e.tid) return true
+					}
+				}
+			}
+			//console.log('not matched')
+			return
 		} else if(tvs.value_by_max_grade) {
+			let useevent
 			let maxg = 0
 			for(const e of eventlst) {
 				const g = e.e[_c.grade_key]
@@ -903,14 +913,13 @@ ds
 					useevent = e
 				}
 			}
+			return tvs.grade_and_child.findIndex( i=> i.grade == useevent.e[_c.grade_key] && i.child_id == useevent.tid) != -1
 		} else {
 			throw 'unknown flag of value_by_'
 		}
-		return tvs.grade_and_child.findIndex( i=> i.grade == useevent.e[_c.grade_key] && i.child_id == useevent.tid) != -1
 	}
 
 	throw 'illegal definition of conditional tvs'
-
 
 
 	function test_grade ( eventlst ) {
@@ -918,16 +927,25 @@ ds
 	*/
 		if(!eventlst) return false
 		if( tvs.value_by_most_recent ) {
-			let useevent,
-				age=0
+			let mostrecentage=0
 			for(const e of eventlst) {
-				if(_c.uncomputable_grades && _c.uncomputable_grades[e[_c.grade_key]]) continue
-				if(age < e[_c.age_key]) {
-					age = e[_c.age_key]
-					useevent=e
+				const a = e[_c.age_key]
+				if(mostrecentage < a) {
+					mostrecentage = a
 				}
 			}
-			return tvs.values.findIndex(j=>j.key== useevent[_c.grade_key]) != -1
+			for(const e of eventlst) {
+				if(e[_c.age_key] == mostrecentage) {
+					const g = e[_c.grade_key]
+					for(const tv of tvs.values) {
+						if (+tv.key == +g) {
+							//console.log(testi++)
+							return true
+						}
+					}
+				}
+			}
+			return false
 		}
 		if( tvs.value_by_max_grade ) {
 			let maxg = -1

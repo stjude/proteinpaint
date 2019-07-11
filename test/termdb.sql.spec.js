@@ -16,7 +16,7 @@ tape("\n", function(test) {
 tape("filters", function (test) {
   // plan will track the number of expected tests,
   // which helps with the async tests
-  test.plan(4)
+  test.plan(5)
 
   compareResponseData(
     test, 
@@ -53,9 +53,38 @@ tape("filters", function (test) {
         value_by_max_grade: true
       }]
     }, 
-    "outcome filtered results"
+    "leaf condition filtered results, by maximum grade"
   )
 
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"Asthma", name:"Asthma", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:2, label: "2"}],
+        value_by_most_recent: true
+      }]
+    }, 
+    "leaf condition filtered results, by most recent grade"
+  )
+  /*
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"Arrhythmias", name:"Arrhythmias", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:2, label: "2"}],
+        value_by_most_recent: true
+      }],
+    }, 
+    "non-leaf condition filtered results, by most recent grade",
+    results => results.forEach(result => delete result.total)
+  )
+  */
   compareResponseData(
     test, 
     {
@@ -124,10 +153,14 @@ tape("single, numerical", function (test) {
 })
 
 tape("single, condition isleaf", function (test) {
-  test.plan(3)
+  test.plan(3) 
   compareResponseData(
     test, 
-    {term1: 'Asthma', conditionUnits: ["","max_grade_perperson",""], term1_q: {value_by_max_grade:1}},
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1, bar_by_grade:1}
+    },
     "unfiltered sample counts by Asthma condition max-grade"
   )
 
@@ -181,7 +214,7 @@ tape("single, condition non-leaf", function (test) {
     },
     "filtered sample counts by Cardiovascular System condition max-grade"
   )
-  
+
   compareResponseData(
     test,
     {
@@ -360,8 +393,7 @@ tape.only("non-leaf condition with overlay", function (test) {
 */
 
 function compareResponseData(test, params, mssg, postFxn=()=>{}) {
-  const url0 = getSqlUrl(params)
-  const url1 = getBarUrl(params)
+  const url0 = getSqlUrl(params); //console.log(url0)
 
   request(url0, (error,response,body)=>{
     if(error) {
@@ -382,6 +414,7 @@ function compareResponseData(test, params, mssg, postFxn=()=>{}) {
         sortResults(pj.tree.results.charts)
         // get an alternatively computed results
         // for comparing against sql results
+        const url1 = getBarUrl(params); //console.log(url1)
         request(url1, (error,response,body1)=>{
           const data1 = JSON.parse(body1)
           postFxn(data1.charts)
