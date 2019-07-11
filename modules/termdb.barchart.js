@@ -70,7 +70,7 @@ async function barchart_data ( q, ds, res, tdb ) {
   inReqs.filterFxn = ()=>1 // default allow all rows, may be replaced via q.termfilter
   await setValFxns(q, inReqs, ds, tdb);
   const pj = getPj(q, inReqs, ds.cohort.annorows, tdb)
-  pj.tree.results.pjtime = pj.times
+  if (pj.tree.results) pj.tree.results.pjtime = pj.times
   res.send(pj.tree.results)
 }
 

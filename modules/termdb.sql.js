@@ -29,56 +29,50 @@ function makesql_by_tvsfilter ( tvslst, ds ) {
 	each element is a term-value setting object
 	must have already been validated by src/mds.termdb.termvaluesetting.js/validate_termvaluesetting()
 returns:
-	.CTEcascade:
-		one string of all CTEs, with question marks
+	.filters:
+		one string of all filter statement intersects, with question marks
 	.values[]:
 		array of *bind parameters*
-	.lastCTEname:
-		the name of last CTE, to be used in task-specific runner
+	.CTEname:
+		the name of CTE, to be used in task-specific runner
 */
 	if( !tvslst ) return null
 
-	let sampleset_id = 0 // increment this id before creating a CTE
-	const CTEs = []
+	const filters = []
 	const values = []
 
 	for(const tvs of tvslst) {
-
-		let samplein_clause = sampleset_id > 0 ? `sample IN sampleset_${sampleset_id} AND` : ''
-
+		//let samplein_clause = sampleset_id > 0 ? `sample IN sampleset_${sampleset_id} AND` : ''
 		if(tvs.term.iscategorical) {
-			add_categorical( tvs, samplein_clause )
+			add_categorical( tvs )
 		} else if(tvs.term.isinteger || tvs.term.isfloat) {
-			add_numerical( tvs, samplein_clause )
+			add_numerical( tvs )
 		} else if(tvs.term.iscondition) {
-			add_condition( tvs, samplein_clause )
+			add_condition( tvs )
 		} else {
 			throw 'unknown term type'
 		}
 	}
 
+	const CTEname = 'filtered'
 	return {
-		CTEcascade: CTEs.join(', '),
+		filters: `${CTEname} AS (\n ${filters.join('\nINTERSECT\n')})\n`,
 		values,
-		lastCTEname: 'sampleset_'+sampleset_id
+		CTEname
 	}
 
 	// helpers
-	function add_categorical ( tvs, samplein_clause ) {
-		CTEs.push(
-			`sampleset_${++sampleset_id} AS (
-				SELECT sample
-				FROM annotations
-				WHERE
-				${samplein_clause}
-				term_id = ?
-				AND value IN (${tvs.values.map(i=>'?').join(', ')})
-			)`
+	function add_categorical ( tvs ) {
+		filters.push(
+			`SELECT sample
+			FROM annotations
+			WHERE term_id = ?
+			AND value IN (${tvs.values.map(i=>'?').join(', ')})`
 		)
 		values.push( tvs.term.id, ...tvs.values.map(i=>i.key) )
 	}
 
-	function add_numerical ( tvs, samplein_clause ) {
+	function add_numerical ( tvs ) {
 		if(!tvs.range) throw '.range{} missing'
 		values.push( tvs.term.id )
 		const clauses = []
@@ -105,66 +99,51 @@ returns:
 				values.push( tvs.range.stop )
 			}
 		}
-		CTEs.push(
-			`sampleset_${++sampleset_id} AS (
-				SELECT sample
-				FROM annotations
-				WHERE
-				${samplein_clause}
-				term_id = ?
-				AND ${clauses.join(' AND ')}
-			)`
+		filters.push(
+			`SELECT sample
+			FROM annotations
+			WHERE term_id = ?
+			AND ${clauses.join(' AND ')}`
 		)
 	}
 
 	function add_condition ( tvs, samplein_clause ) {
 		if( ds.cohort.termdb.q.termIsLeaf( tvs.term.id ) ) {
 			// is leaf
-			CTEs.push(
-				`sampleset_${++sampleset_id} AS (
+			filters.push(
+				`SELECT sample
+				FROM (
 					${grade_age_select_clause(tvs)}
 					FROM chronicevents
-					WHERE
-					${samplein_clause}
-					term_id = ?
+					WHERE term_id = ?
 					${uncomputablegrades_clause( ds )}
 					GROUP BY sample
-				),
-				sampleset_${++sampleset_id} AS (
-					SELECT sample
-					FROM sampleset_${sampleset_id-1}
-					WHERE
-					grade IN ${tvs.values.map(i=>'?').join(', ')}
-				)`
+				) 
+				WHERE grade IN (${tvs.values.map(i=>'?').join(', ')})`
 			)
 			values.push( tvs.term.id, ...tvs.values.map(i=>i.key) )
 			return
 		}
 
-
 		// not leaf
 		if( tvs.grade_and_child ) {
-			CTEs.push(
-				`sampleset_${++sampleset_id} AS (
-					SELECT term_id
-					FROM ancestry
-					WHERE
-					ancestor_id=? OR term_id=?
-				),
-				sampleset_${++sampleset_id} AS (
+			filters.push(
+				`SELECT sample
+				FROM (
 					${grade_age_select_clause(tvs)}
 					FROM chronicevents
 					WHERE
 					${samplein_clause}
-					term_id IN sampleset_${sampleset_id-1}
+					term_id IN (
+						SELECT term_id
+						FROM ancestry
+						WHERE
+						ancestor_id=? OR term_id=?
+					)
 					${uncomputablegrades_clause( ds )}
 					GROUP BY sample
-				),
-				sampleset_${++sampleset_id} AS (
-					SELECT sample
-					FROM sampleset_${sampleset_id-1}
-					WHERE grade = ?
-				)`
+				)
+				WHERE grade = ?`
 			)
 			values.push(
 				tvs.grade_and_child[0].child_id,
@@ -174,31 +153,24 @@ returns:
 			return
 		}
 
-
-
 		if( tvs.bar_by_grade ) {
-			CTEs.push(
-				`sampleset_${++sampleset_id} AS (
-					SELECT term_id
-					FROM ancestry
-					WHERE
-					ancestor_id=? OR term_id=?
-				),
-				sampleset_${++sampleset_id} AS (
+			filters.push(
+				`SELECT sample
+				FROM (
 					${grade_age_select_clause(tvs)}
 					FROM chronicevents
-					WHERE
-					${samplein_clause}
-					term_id IN sampleset_${sampleset_id-1}
+					WHERE 
+					term_id IN (
+						SELECT term_id
+						FROM ancestry
+						WHERE
+						ancestor_id=? OR term_id=?
+					)
 					${uncomputablegrades_clause( ds )}
 					GROUP BY sample
-				),
-				sampleset_${++sampleset_id} AS (
-					SELECT sample
-					FROM sampleset_${sampleset_id-1}
-					WHERE
-					grade IN (${tvs.values.map(i=>'?').join(', ')})
-				)`
+				)
+				WHERE
+				grade IN (${tvs.values.map(i=>'?').join(', ')})`
 			)
 			values.push(
 				tvs.term.id,
@@ -210,28 +182,23 @@ returns:
 
 
 		if( tvs.bar_by_children ) {
-			CTEs.push(
-				`sampleset_${++sampleset_id} AS (
-					SELECT term_id
-					FROM ancestry
-					WHERE
-					${tvs.values.map(i=>'ancestor_id=? OR term_id=?').join(' OR ')}
-				),
-				sampleset_${++sampleset_id} AS (
-					SELECT distinct(sample)
-					FROM chronicevents
-					WHERE
-					${samplein_clause}
-					term_id IN sampleset_${sampleset_id-1}
-					${uncomputablegrades_clause( ds )}
-				)`
+			filters.push(
+				`SELECT distinct(sample)
+				FROM chronicevents
+				WHERE
+					term_id IN (
+						SELECT term_id
+						FROM ancestry
+						WHERE
+						${tvs.values.map(i=>'ancestor_id=? OR term_id=?').join(' OR ')}
+					)
+					${uncomputablegrades_clause( ds )}`
 			)
 			for(const i of tvs.values) {
 				values.push(i.key, i.key)
 			}
 			return
 		}
-
 		throw 'unknown mode for non-leaf condition term'
 	}
 }
@@ -250,8 +217,8 @@ return an array of sample names passing through the filter
 */
 	const filter = makesql_by_tvsfilter( tvslst, ds )
 	const string =
-		`WITH ${filter.CTEcascade}
-		SELECT sample FROM ${filter.lastCTEname}`
+		`WITH ${filter.filters}
+		SELECT sample FROM ${filter.CTEname}`
 	console.log('SQL: ',string)
 	console.log('PARAM: ',filter.values)
 
@@ -306,7 +273,7 @@ q{}
 		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2_q, values )
 		const string =
 			`WITH
-			${filter ? filter.CTEcascade+', ' : ''}
+			${filter ? filter.filters+', ' : ''}
 			${CTE_term1.sql},
 			${CTE_term2.sql}
 			SELECT a.key AS key1, b.key AS key2, COUNT(DISTINCT b.sample) AS samplecount
@@ -315,7 +282,6 @@ q{}
 				${CTE_term2.tablename} b
 			WHERE a.sample=b.sample
 			GROUP BY key1,key2`
-		console.log(string)
 		const lst = q.ds.cohort.db.connection.prepare(string)
 			.all( values )
 		// add label or range if numeric
@@ -341,13 +307,13 @@ q{}
 	if( term1.iscategorical ) {
 		//////////// summary for categorical
 		const string =
-			`${filter ? 'WITH '+filter.CTEcascade+' ' : ''}
+			`${filter ? 'WITH '+filter.filters+' ' : ''}
 			SELECT value AS key,count(sample) AS samplecount
 			FROM annotations
 			WHERE
-			${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+			${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 			term_id=?
-			GROUP BY value`
+			GROUP BY value`; console.log(string)
 		const lst = q.ds.cohort.db.connection.prepare( string )
 			.all([ ...(filter?filter.values:[]), q.term1_id ])
 		if(!lst) return undefined
@@ -365,12 +331,12 @@ q{}
 		const bins = makesql_numericBinCTE( term1, q.term1_q, filter, q.ds )
 		const string =
 			`WITH
-			${filter ? filter.CTEcascade+', ' : ''}
+			${filter ? filter.filters+', ' : ''}
 			${bins.sql}
 			SELECT bname AS key, COUNT(sample) AS samplecount
 			FROM ${bins.tablename}
 			GROUP BY bname
-			ORDER BY binorder`
+			ORDER BY binorder`; console.log(string)
 		const lst = q.ds.cohort.db.connection.prepare(string)
 			.all([ ...(filter?filter.values:[]), term1.id ]);
 		for(const i of lst) {
@@ -389,12 +355,12 @@ q{}
 			if (q.term1_q.value_by_most_recent) {
 				string = 
 					`WITH
-					${filter ? filter.CTEcascade+', ' : ''}
+					${filter ? filter.filters+', ' : ''}
 					tmp_grade_table AS (
 						${grade_age_select_clause( q.term1_q )}
 						FROM chronicevents
 						WHERE
-						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+						${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 						term_id = ?
 						${uncomputablegrades_clause( q.ds )}
 						GROUP BY sample
@@ -412,12 +378,12 @@ q{}
 			} else {
 				string = 
 					`WITH
-					${filter ? filter.CTEcascade+', ' : ''}
+					${filter ? filter.filters+', ' : ''}
 					tmp_grade_table AS (
 						${grade_age_select_clause( q.term1_q )}
 						FROM chronicevents
 						WHERE
-						${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+						${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 						term_id = ?
 						${uncomputablegrades_clause( q.ds )}
 						GROUP BY sample
@@ -432,7 +398,7 @@ q{}
 			/////////// summary, grade-child overlay, one term
 			string =
 				`WITH
-				${filter ? filter.CTEcascade+', ' : ''}
+				${filter ? filter.filters+', ' : ''}
 				tmp_children_table AS (
 					SELECT id AS child
 					FROM terms
@@ -449,7 +415,7 @@ q{}
 						${q.term1_q.value_by_max_grade ? 'MAX(grade) AS grade' : 'grade, MAX(age_graded)'}
 					FROM chronicevents a, tmp_grandchildren_table d
 					WHERE
-					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+					${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 					d.term_id = a.term_id
 					${uncomputablegrades_clause( q.ds )}
 					GROUP BY d.child, sample
@@ -466,7 +432,7 @@ q{}
 			if (q.term1_q.value_by_most_recent) {
 				string = 
 				`WITH
-				${filter ? filter.CTEcascade+', ' : ''}
+				${filter ? filter.filters+', ' : ''}
 				tmp_term_table AS (
 					SELECT term_id
 					FROM ancestry
@@ -477,7 +443,7 @@ q{}
 					${grade_age_select_clause( q.term1_q )}
 					FROM chronicevents
 					WHERE
-					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+					${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 					term_id IN tmp_term_table
 					${uncomputablegrades_clause( q.ds )}
 					GROUP BY sample
@@ -493,7 +459,7 @@ q{}
 			} else {
 				string = 
 				`WITH
-				${filter ? filter.CTEcascade+', ' : ''}
+				${filter ? filter.filters+', ' : ''}
 				tmp_term_table AS (
 					SELECT term_id
 					FROM ancestry
@@ -504,7 +470,7 @@ q{}
 					${grade_age_select_clause( q.term1_q )}
 					FROM chronicevents
 					WHERE
-					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+					${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 					term_id IN tmp_term_table
 					${uncomputablegrades_clause( q.ds )}
 					GROUP BY sample
@@ -520,7 +486,7 @@ q{}
 			/////////// summary, bar by children
 			string =
 				`WITH
-				${filter ? filter.CTEcascade+',' : ''}
+				${filter ? filter.filters+',' : ''}
 				tmp_subcondition_table AS (
 					SELECT id
 					FROM terms
@@ -537,7 +503,7 @@ q{}
 						${barbychildren_select_clause(q.term1_q)}
 					FROM chronicevents a, tmp_descendant_table d
 					WHERE
-					${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
+					${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
 					d.term_id = a.term_id
 					${uncomputablegrades_clause( q.ds )}
 					GROUP BY key, sample
@@ -707,7 +673,7 @@ return {sql, tablename}
 				${grade_age_select_clause(q)}
 				FROM chronicevents
 				WHERE
-				${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+				${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 				term_id = ?
 				${uncomputablegrades_clause( ds )}
 				GROUP BY sample
@@ -733,7 +699,7 @@ return {sql, tablename}
 				${grade_age_select_clause(q)}
 				FROM chronicevents
 				WHERE
-				${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
+				${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
 				term_id IN ${term_table}
 				${uncomputablegrades_clause( ds )}
 				GROUP BY sample
@@ -768,7 +734,7 @@ return {sql, tablename}
 					chronicevents a,
 					${descendants} d
 				WHERE
-				${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
+				${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
 				a.term_id = d.term_id
 				${uncomputablegrades_clause( ds )}
 				GROUP BY key, sample
@@ -971,7 +937,7 @@ returns { sql, tablename, name2bin }
 					)
 				)
 			WHERE
-			${filter ? 'sample IN '+filter.lastCTEname+' AND':''}
+			${filter ? 'sample IN '+filter.CTEname+' AND':''}
 			term_id=?
 		)`
 	return {

@@ -13,24 +13,90 @@ tape("\n", function(test) {
   test.end()
 })
 
+tape("filters", function (test) {
+  // plan will track the number of expected tests,
+  // which helps with the async tests
+  test.plan(4)
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Male"}]
+      }]
+    }, 
+    "should produce the expected categorically filtered results"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
+        range: {start:0,stop:5}
+      }]
+    }, 
+    "should produce the expected numerically filtered results"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"Asthma", name:"Asthma", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:3, label: "3"}],
+        value_by_max_grade: true
+      }]
+    }, 
+    "should produce the expected outcome filtered results"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Female"}]
+      },{
+        term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
+        range: {start:0,stop:8}
+      },{
+        term: {id:"Asthma", name:"Asthma", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:3, label: "3"}],
+        value_by_max_grade: true
+      }]
+    }, 
+    "should produce the expected combined filtered results"
+  )
+})
+
 tape("single, categorical", function (test) {
   // plan will track the number of expected tests,
   // which helps with the async tests
   test.plan(2)
-  
+
   compareResponseData(
     test, 
     {term1: 'diaggrp'}, 
     "should produce the expected UNFILTERED sample counts by diagnosis groups"
   )
 
-  const filter = [{
-    "values":[{"key":"Male","label":"Male"}],
-    "term":{"id":"sex","name":"Sex","iscategorical":true}
-  }]
   compareResponseData(
     test,
-    {term1: 'diaggrp', filter},
+    {
+      term1: 'diaggrp', 
+      filter: [{
+        "values":[{"key":"Male","label":"Male"}],
+        "term":{"id":"sex","name":"Sex","iscategorical":true}
+      }]
+    },
     "should produce the expected FILTERED sample counts by diagnosis groups"
   )
 })
@@ -44,13 +110,15 @@ tape("single, numerical", function (test) {
     "should produce the expected UNFILTERED sample counts by age of diagnosis"
   )
   
-  const filter = [{
-    term: {id:'sex', name:'sex', iscategorical:true},
-    values: [{key: 'Female', label: 'Female'}]
-  }]
   compareResponseData(
     test,
-    {term1: 'agedx', filter},
+    {
+      term1: 'agedx', 
+      filter: [{
+        term: {id:'sex', name:'sex', iscategorical:true},
+        values: [{key: 'Female', label: 'Female'}]
+      }]
+    },
     "should produce the expected FILTERED sample counts by age of diagnosis"
   )
 })
@@ -63,13 +131,17 @@ tape("single, condition isleaf", function (test) {
     "should produce the expected UNFILTERED sample counts by Asthma condition max-grade"
   )
 
-  const filter = [{
-    term: {id:'sex', name:'sex', iscategorical:true},
-    values: [{key: 'Male', label: 'Male'}]
-  }]
   compareResponseData(
     test,
-    {term1: 'Asthma', filter, conditionUnits: ["","max_grade_perperson",""], term1_q: {value_by_max_grade:1}},
+    { 
+      term1: 'Asthma', 
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1},
+      filter: [{
+        term: {id:'sex', name:'sex', iscategorical:true},
+        values: [{key: 'Male', label: 'Male'}]
+      }]
+    },
     "should produce the expected FILTERED sample counts by Asthma condition max-grade"
   )
 
