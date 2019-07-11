@@ -24,7 +24,9 @@ module.exports={
 		{k:'SNV/indel',v:'Somatic mutations of tumor, and germline pathogenic mutations'},
 		{k:'RNA splice junction',v:'Tumor RNA splice junctions'},
 	],
-
+	singlesamplemutationjson:{
+		file:'hg19/pan-nbl/mutationpersample/table'
+	},
 
 
 	/*
