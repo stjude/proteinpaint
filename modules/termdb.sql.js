@@ -291,7 +291,7 @@ q{}
 			WHERE
 			${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 			term_id=?
-			GROUP BY value`; console.log(string, [ ...(filter?filter.values:[]), q.term1_id ])
+			GROUP BY value`
 		const lst = q.ds.cohort.db.connection.prepare( string )
 			.all([ ...(filter?filter.values:[]), q.term1_id ])
 		if(!lst) return undefined
@@ -483,7 +483,6 @@ function uncomputablegrades_clause ( ds ) {
 	return ''
 }
 function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null ) { 
-console.log('grade_age_selection filter', filter)
 	if( tvs.value_by_max_grade ) {
 		if (!termtable) values.push(term_id)
 		return `SELECT sample,MAX(grade) AS grade 

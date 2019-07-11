@@ -836,7 +836,7 @@ ds
 		for(const tid in sample) {
 			const t = ds.cohort.termdb.termjson.map.get(tid)
 			if(!t || !t.iscondition) continue
-			if(t.conditionlineage.indexOf( tvs.term.id )!=-1) {
+			if(t.conditionlineage.includes( tvs.term.id )) {
 				// is a child term
 				eventlst.push( ...sample[tid][_c.events_key] )
 			}
@@ -927,18 +927,23 @@ ds
 	*/
 		if(!eventlst) return false
 		if( tvs.value_by_most_recent ) {
-			let mostrecentage=0
+			let mostrecentage
+			// get the most recent age in the event list
 			for(const e of eventlst) {
+				const grade = e[_c.grade_key]
+				if(_c.uncomputable_grades && _c.uncomputable_grades[grade]) continue
 				const a = e[_c.age_key]
-				if(mostrecentage < a) {
+				if(mostrecentage === undefined || mostrecentage < a) {
 					mostrecentage = a
 				}
 			}
+			// if an event matches the most recent age, test 
+			// if the grade matches at least one of the filter values
 			for(const e of eventlst) {
 				if(e[_c.age_key] == mostrecentage) {
 					const g = e[_c.grade_key]
 					for(const tv of tvs.values) {
-						if (+tv.key == +g) {
+						if (tv.key == g) {
 							//console.log(testi++)
 							return true
 						}

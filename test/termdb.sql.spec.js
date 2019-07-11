@@ -16,7 +16,7 @@ tape("\n", function(test) {
 tape("filters", function (test) {
   // plan will track the number of expected tests,
   // which helps with the async tests
-  test.plan(5)
+  test.plan(6)
 
   compareResponseData(
     test, 
@@ -69,7 +69,7 @@ tape("filters", function (test) {
     }, 
     "leaf condition filtered results, by most recent grade"
   )
-  /*
+  
   compareResponseData(
     test, 
     {
@@ -84,7 +84,7 @@ tape("filters", function (test) {
     "non-leaf condition filtered results, by most recent grade",
     results => results.forEach(result => delete result.total)
   )
-  */
+  
   compareResponseData(
     test, 
     {
