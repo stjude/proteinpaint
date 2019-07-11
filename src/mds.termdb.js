@@ -450,7 +450,10 @@ there may be other conditions to apply, e.g. patients carrying alt alleles of a 
 such conditions may be carried by obj
 
 */
-	const button = row.append('div')
+	const button_div = row.append('div')
+		.style('display','inline-block')
+
+	const button = button_div.append('div')
 		.style('font-size','.8em')
 		.style('margin-left','20px')
 		.style('display','inline-block')
@@ -458,9 +461,24 @@ such conditions may be carried by obj
 		.attr('class','sja_menuoption')
 		.text('VIEW')
 
-	const div = row_graph.append('div')
+	const view_btn_line = button_div.append('div')
+		.style('height','10px')
+		.style('margin-left','45px')
 		.style('border-left','solid 1px #aaa')
+		.style('display','none')
+
+	const div = row_graph
+		.style('border-left','solid 2px #eee')
+		.append('div')
+		.style('border','solid 1px #aaa')
 		.style('margin-left', graph_leftpad)
+		.style('margin-bottom','10px')
+		.style('display','none')
+
+	const plot_loading_div = div.append('div')
+		.style('padding','10px')
+		.text('Loading')
+		.style('text-align','center')
 		.style('display','none')
 
 	let loaded =false,
@@ -469,15 +487,18 @@ such conditions may be carried by obj
 	button.on('click', async ()=>{
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
-			button.style('border','none')
+			view_btn_line.style('display','block')
 		} else {
 			client.disappear(div)
-			button.style('border','solid 1px #555')
+			view_btn_line.style('display','none')
 		}
 		if( loaded || loading ) return
 		button.text('Loading')
+		button.style('border','solid 1px #555')
 		loading=true
+		if(loading == true) plot_loading_div.style('display','block')
 		make_barplot( obj, term, div, ()=> {
+			plot_loading_div.style('display','none')
 			button.text('VIEW')
 			loaded=true
 			loading=false
