@@ -313,7 +313,7 @@ q{}
 			WHERE
 			${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 			term_id=?
-			GROUP BY value`; console.log(string)
+			GROUP BY value`
 		const lst = q.ds.cohort.db.connection.prepare( string )
 			.all([ ...(filter?filter.values:[]), q.term1_id ])
 		if(!lst) return undefined
@@ -336,7 +336,7 @@ q{}
 			SELECT bname AS key, COUNT(sample) AS samplecount
 			FROM ${bins.tablename}
 			GROUP BY bname
-			ORDER BY binorder`; console.log(string)
+			ORDER BY binorder`
 		const lst = q.ds.cohort.db.connection.prepare(string)
 			.all([ ...(filter?filter.values:[]), term1.id ]);
 		for(const i of lst) {

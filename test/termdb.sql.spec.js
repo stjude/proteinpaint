@@ -27,7 +27,7 @@ tape("filters", function (test) {
         values: [{"key":"Male","label":"Male"}]
       }]
     }, 
-    "should produce the expected categorically filtered results"
+    "categorically filtered results"
   )
 
   compareResponseData(
@@ -39,7 +39,7 @@ tape("filters", function (test) {
         range: {start:0,stop:5}
       }]
     }, 
-    "should produce the expected numerically filtered results"
+    "numerically filtered results"
   )
 
   compareResponseData(
@@ -53,7 +53,7 @@ tape("filters", function (test) {
         value_by_max_grade: true
       }]
     }, 
-    "should produce the expected outcome filtered results"
+    "outcome filtered results"
   )
 
   compareResponseData(
@@ -73,7 +73,7 @@ tape("filters", function (test) {
         value_by_max_grade: true
       }]
     }, 
-    "should produce the expected combined filtered results"
+    "combined filtered results"
   )
 })
 
@@ -85,7 +85,7 @@ tape("single, categorical", function (test) {
   compareResponseData(
     test, 
     {term1: 'diaggrp'}, 
-    "should produce the expected UNFILTERED sample counts by diagnosis groups"
+    "unfiltered sample counts by diagnosis groups"
   )
 
   compareResponseData(
@@ -97,7 +97,7 @@ tape("single, categorical", function (test) {
         "term":{"id":"sex","name":"Sex","iscategorical":true}
       }]
     },
-    "should produce the expected FILTERED sample counts by diagnosis groups"
+    "filtered sample counts by diagnosis groups"
   )
 })
 
@@ -107,7 +107,7 @@ tape("single, numerical", function (test) {
   compareResponseData(
     test, 
     {term1: 'agedx'},
-    "should produce the expected UNFILTERED sample counts by age of diagnosis"
+    "unfiltered sample counts by age of diagnosis"
   )
   
   compareResponseData(
@@ -119,7 +119,7 @@ tape("single, numerical", function (test) {
         values: [{key: 'Female', label: 'Female'}]
       }]
     },
-    "should produce the expected FILTERED sample counts by age of diagnosis"
+    "filtered sample counts by age of diagnosis"
   )
 })
 
@@ -128,7 +128,7 @@ tape("single, condition isleaf", function (test) {
   compareResponseData(
     test, 
     {term1: 'Asthma', conditionUnits: ["","max_grade_perperson",""], term1_q: {value_by_max_grade:1}},
-    "should produce the expected UNFILTERED sample counts by Asthma condition max-grade"
+    "unfiltered sample counts by Asthma condition max-grade"
   )
 
   compareResponseData(
@@ -142,13 +142,13 @@ tape("single, condition isleaf", function (test) {
         values: [{key: 'Male', label: 'Male'}]
       }]
     },
-    "should produce the expected FILTERED sample counts by Asthma condition max-grade"
+    "filtered sample counts by Asthma condition max-grade"
   )
 
   compareResponseData(
     test, 
     {term1: 'Asthma', conditionUnits: ["","most_recent_grade",""], term1_q: {value_by_most_recent:1}},
-    "should produce the expected UNFILTERED sample counts by Asthma condition most recent grade",
+    "unfiltered sample counts by Asthma condition most recent grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
     results => results.forEach(result => delete result.total) 
   )
@@ -164,7 +164,7 @@ tape("single, condition non-leaf", function (test) {
       conditionUnits: ["","max_grade_perperson",""],
       term1_q: {value_by_max_grade:1, bar_by_grade:1}
     },
-    "should produce the expected UNFILTERED sample counts by Cardiovascular System condition max-grade"
+    "unfiltered sample counts by Cardiovascular System condition max-grade"
   )
 
   compareResponseData(
@@ -179,7 +179,7 @@ tape("single, condition non-leaf", function (test) {
         values: [{key: 'Male', label: 'Male'}]
       }]
     },
-    "should produce the expected FILTERED sample counts by Cardiovascular System condition max-grade"
+    "filtered sample counts by Cardiovascular System condition max-grade"
   )
   
   compareResponseData(
@@ -190,7 +190,7 @@ tape("single, condition non-leaf", function (test) {
       conditionUnits: ["","most_recent_grade",""], 
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
     },
-    "should produce the expected UNFILTERED sample counts by Cardiovascular System condition most recent grade",
+    "unfiltered sample counts by Cardiovascular System condition most recent grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
     results => results.forEach(result => delete result.total)
   )
@@ -203,7 +203,7 @@ tape("single, condition non-leaf", function (test) {
       conditionUnits: ["","by_children",""], 
       term1_q: {value_by_max_grade:1, bar_by_children:1},
     },
-    "should produce the expected UNFILTERED sample counts by Arrhythmias condition by children",
+    "unfiltered sample counts by Arrhythmias condition by children",
     // TO-DO: SQL results must also give unique samplecount across all bars 
     results => results.forEach(result => delete result.total)
   )
@@ -220,7 +220,7 @@ tape("single, condition non-leaf", function (test) {
         values: [{key: 'Male', label: 'Male'}]
       }]
     },
-    "should produce the expected FILTERED sample counts by Arrhythmias condition by children",
+    "filtered sample counts by Arrhythmias condition by children",
     // TO-DO: SQL results must also give unique samplecount across all bars 
     results => results.forEach(result => delete result.total)
   )
