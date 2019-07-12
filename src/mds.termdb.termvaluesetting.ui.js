@@ -229,7 +229,7 @@ group{}
                             .style('text-transform','uppercase')
                             .text('or')
                     }else{
-                        make_plus_btn(one_term_div, data, term.values, group.terms[i].values, terms_div)
+                        make_plus_btn(one_term_div, data, group.terms[i].values, terms_div)
                     }
                 }
 
@@ -329,7 +329,7 @@ group{}
 
                     make_grade_select_btn(one_term_div, term, terms_div)
 
-                    make_plus_btn(one_term_div, data, term.values, group.terms[i].values, terms_div)
+                    make_plus_btn(one_term_div, data, group.terms[i].values, terms_div)
 
                 }else if(term.bar_by_grade){
 
@@ -392,7 +392,7 @@ group{}
 
                     make_grade_select_btn(one_term_div, term, terms_div)
 
-                    make_plus_btn(one_term_div, data, term.values, group.terms[i].values, terms_div)
+                    make_plus_btn(one_term_div, data, group.terms[i].values, terms_div)
                 }
             }
 
@@ -506,7 +506,7 @@ group{}
         }
     }
 
-    function make_plus_btn(holder, data, selected_values, group_values, terms_div){
+    function make_plus_btn(holder, data, selected_values, terms_div){
 
         // If 2 or less values for the term then remove plus button
         if (data.lst.length <= 2) return
@@ -522,8 +522,9 @@ group{}
         const options = add_value_select.selectAll('option')
 
         options.nodes().forEach(function(d){
-            if(selected_values.find(v=>v.key == d.value)){
-                d.disabled = true
+            for(const [i, value] of selected_values.entries()){
+                if(value.key && value.key == d.value) d.disabled = true
+                if(value.value!=undefined && value.label == d.value) d.disabled = true
             }
         })
 
@@ -533,7 +534,8 @@ group{}
 
             //change value of button 
             const new_value = data.lst.find( j=> j.key == add_value_select.node().value )
-            group_values.push({key:new_value.key,label:new_value.label})
+            if(new_value.range) selected_values.push(new_value.range)
+            else selected_values.push({key:new_value.key,label:new_value.label})
 
             //update gorup and load tk
             await callback()
@@ -835,6 +837,8 @@ group{}
                     .text('or')
             }
         }
+
+        make_plus_btn(value_div, unannotated_cats, numeric_term.ranges, terms_div)
     }
 }
 
