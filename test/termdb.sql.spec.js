@@ -36,7 +36,7 @@ tape("filters", function (test) {
       term1: 'diaggrp',
       filter: [{
         term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
-        range: {start:0,stop:5}
+        ranges: [{start:0,stop:5}]
       }]
     }, 
     "numerically filtered results"
@@ -123,7 +123,7 @@ tape("filters", function (test) {
         values: [{"key":"Male","label":"Female"}]
       },{
         term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
-        range: {start:0,stop:8}
+        ranges: [{start:0,stop:8}]
       },{
         term: {id:"Asthma", name:"Asthma", iscondition:true},
         bar_by_grade: true,
@@ -136,8 +136,6 @@ tape("filters", function (test) {
 })
 
 tape("single, categorical", function (test) {
-  // plan will track the number of expected tests,
-  // which helps with the async tests
   test.plan(2)
 
   compareResponseData(
@@ -288,138 +286,6 @@ tape("single, condition non-leaf", function (test) {
   )
 })
 
-/* 
-  TO-DO: convert the remaining tests to use compareResponseData()
-
-
-tape("condition child-grade overlay", function (test) {
-  test.plan(4)
-
-  const url0 = baseUrl
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1,"grade_child_overlay":1}')
-  request(url0,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 16, "should have the number of list items for Arrhythmias, by subcondition, max grade")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key1: 'Atrioventricular heart block', key2: 1, samplecount: 33, label1: 'Atrioventricular heart block', label2: 1 }, { key1: 'Cardiac dysrhythmia', key2: 1, samplecount: 34, label1: 'Cardiac dysrhythmia', label2: 1 }, { key1: 'Conduction abnormalities', key2: 1, samplecount: 774, label1: 'Conduction abnormalities', label2: 1 }, { key1: 'Prolonged QT interval', key2: 1, samplecount: 133, label1: 'Prolonged QT interval', label2: 1 }, { key1: 'Sinus bradycardia', key2: 1, samplecount: 75, label1: 'Sinus bradycardia', label2: 1 }, { key1: 'Sinus tachycardia', key2: 1, samplecount: 124, label1: 'Sinus tachycardia', label2: 1 }, { key1: 'Atrioventricular heart block', key2: 2, samplecount: 12, label1: 'Atrioventricular heart block', label2: 2 }, { key1: 'Cardiac dysrhythmia', key2: 2, samplecount: 40, label1: 'Cardiac dysrhythmia', label2: 2 }, { key1: 'Conduction abnormalities', key2: 2, samplecount: 35, label1: 'Conduction abnormalities', label2: 2 }, { key1: 'Prolonged QT interval', key2: 2, samplecount: 77, label1: 'Prolonged QT interval', label2: 2 }, { key1: 'Sinus tachycardia', key2: 2, samplecount: 11, label1: 'Sinus tachycardia', label2: 2 }, { key1: 'Atrioventricular heart block', key2: 3, samplecount: 9, label1: 'Atrioventricular heart block', label2: 3 }, { key1: 'Cardiac dysrhythmia', key2: 3, samplecount: 27, label1: 'Cardiac dysrhythmia', label2: 3 }, { key1: 'Conduction abnormalities', key2: 3, samplecount: 7, label1: 'Conduction abnormalities', label2: 3 }, { key1: 'Prolonged QT interval', key2: 3, samplecount: 10, label1: 'Prolonged QT interval', label2: 3 }, { key1: 'Cardiac dysrhythmia', key2: 4, samplecount: 10, label1: 'Cardiac dysrhythmia', label2: 4 } ] },
-        "should have the expected results for Arrhythmias, by subcondition, max grade"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-
-  const url1 = baseUrl 
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_most_recent":1,"grade_child_overlay":1}')
-  request(url1,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 16, "should have the number of list items for Arrhythmias, by subcondition, most recent grade")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key1: 'Atrioventricular heart block', key2: 1, samplecount: 33, label1: 'Atrioventricular heart block', label2: 1 }, { key1: 'Cardiac dysrhythmia', key2: 1, samplecount: 36, label1: 'Cardiac dysrhythmia', label2: 1 }, { key1: 'Conduction abnormalities', key2: 1, samplecount: 783, label1: 'Conduction abnormalities', label2: 1 }, { key1: 'Prolonged QT interval', key2: 1, samplecount: 141, label1: 'Prolonged QT interval', label2: 1 }, { key1: 'Sinus bradycardia', key2: 1, samplecount: 75, label1: 'Sinus bradycardia', label2: 1 }, { key1: 'Sinus tachycardia', key2: 1, samplecount: 128, label1: 'Sinus tachycardia', label2: 1 }, { key1: 'Atrioventricular heart block', key2: 2, samplecount: 12, label1: 'Atrioventricular heart block', label2: 2 }, { key1: 'Cardiac dysrhythmia', key2: 2, samplecount: 41, label1: 'Cardiac dysrhythmia', label2: 2 }, { key1: 'Conduction abnormalities', key2: 2, samplecount: 26, label1: 'Conduction abnormalities', label2: 2 }, { key1: 'Prolonged QT interval', key2: 2, samplecount: 71, label1: 'Prolonged QT interval', label2: 2 }, { key1: 'Sinus tachycardia', key2: 2, samplecount: 7, label1: 'Sinus tachycardia', label2: 2 }, { key1: 'Atrioventricular heart block', key2: 3, samplecount: 9, label1: 'Atrioventricular heart block', label2: 3 }, { key1: 'Cardiac dysrhythmia', key2: 3, samplecount: 24, label1: 'Cardiac dysrhythmia', label2: 3 }, { key1: 'Conduction abnormalities', key2: 3, samplecount: 7, label1: 'Conduction abnormalities', label2: 3 }, { key1: 'Prolonged QT interval', key2: 3, samplecount: 8, label1: 'Prolonged QT interval', label2: 3 }, { key1: 'Cardiac dysrhythmia', key2: 4, samplecount: 10, label1: 'Cardiac dysrhythmia', label2: 4 } ] },
-        "should have the expected results for Arrhythmias, by subcondition, most recent grade"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-})
-
-tape.only("non-leaf condition with overlay", function (test) {
-  test.plan(6)
-
-  const expected0 = {"lst":[{"key1":"Atrioventricular heart block","key2":"Black","samplecount":8,"label1":"Atrioventricular heart block","label2":"Black"},{"key1":"Atrioventricular heart block","key2":"Other","samplecount":1,"label1":"Atrioventricular heart block","label2":"Other"},{"key1":"Atrioventricular heart block","key2":"White","samplecount":45,"label1":"Atrioventricular heart block","label2":"White"},{"key1":"Cardiac dysrhythmia","key2":"Black","samplecount":8,"label1":"Cardiac dysrhythmia","label2":"Black"},{"key1":"Cardiac dysrhythmia","key2":"White","samplecount":103,"label1":"Cardiac dysrhythmia","label2":"White"},{"key1":"Conduction abnormalities","key2":"Black","samplecount":64,"label1":"Conduction abnormalities","label2":"Black"},{"key1":"Conduction abnormalities","key2":"Other","samplecount":11,"label1":"Conduction abnormalities","label2":"Other"},{"key1":"Conduction abnormalities","key2":"Unknown","samplecount":1,"label1":"Conduction abnormalities","label2":"Unknown"},{"key1":"Conduction abnormalities","key2":"White","samplecount":740,"label1":"Conduction abnormalities","label2":"White"},{"key1":"Prolonged QT interval","key2":"Black","samplecount":29,"label1":"Prolonged QT interval","label2":"Black"},{"key1":"Prolonged QT interval","key2":"Other","samplecount":1,"label1":"Prolonged QT interval","label2":"Other"},{"key1":"Prolonged QT interval","key2":"White","samplecount":190,"label1":"Prolonged QT interval","label2":"White"},{"key1":"Sinus bradycardia","key2":"Black","samplecount":9,"label1":"Sinus bradycardia","label2":"Black"},{"key1":"Sinus bradycardia","key2":"Other","samplecount":1,"label1":"Sinus bradycardia","label2":"Other"},{"key1":"Sinus bradycardia","key2":"White","samplecount":65,"label1":"Sinus bradycardia","label2":"White"},{"key1":"Sinus tachycardia","key2":"Black","samplecount":14,"label1":"Sinus tachycardia","label2":"Black"},{"key1":"Sinus tachycardia","key2":"White","samplecount":121,"label1":"Sinus tachycardia","label2":"White"}]}
-
-  const url0 = baseUrl
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')
-    + '&term2_id=racegrp'
-
-  request(url0,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 17, "should have the number of list items for Arrhythmias, by subcondition with CATEGORICAL (racegrp) overlay")
-      test.deepEqual(
-        JSON.parse(body),
-        expected0,
-        "should have the expected results for Arrhythmias, by subcondition with CATEGORICAL (racegrp) overlay"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-
-  // when overlaying on top of bars by children, the configuration max grade or most recent grade should not matter
-  // the same result should be produced with either configuration or no grade at all
-  const url0a = baseUrl
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_most_recent":1}')
-    + '&term2_id=racegrp'; console.log(url0a, url0)
-    
-  request(url0a,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 17, "should have the same number of list items for Arrhythmias most recent as max-grade, by subcondition with CATEGORICAL (racegrp) overlay")
-      test.deepEqual(
-        JSON.parse(body),
-        expected0,
-        "should have the expected results for Arrhythmias most recent as max-grade, by subcondition with CATEGORICAL (racegrp) overlay"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-
-  const url2 = baseUrl
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')
-    + '&term2_id=agedx'
-
-  request(url2,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 18, "should have the number of list items for Arrhythmias, by subcondition with NUMERICAL (agedx) overlay")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key1: 'Atrioventricular heart block', key2: '0 <= x < 5', samplecount: 9, label1: 'Atrioventricular heart block', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Atrioventricular heart block', key2: '10 <= x < 15', samplecount: 23, label1: 'Atrioventricular heart block', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Atrioventricular heart block', key2: '5 <= x < 10', samplecount: 8, label1: 'Atrioventricular heart block', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } }, { key1: 'Cardiac dysrhythmia', key2: '0 <= x < 5', samplecount: 31, label1: 'Cardiac dysrhythmia', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Cardiac dysrhythmia', key2: '10 <= x < 15', samplecount: 25, label1: 'Cardiac dysrhythmia', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Cardiac dysrhythmia', key2: '5 <= x < 10', samplecount: 30, label1: 'Cardiac dysrhythmia', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } }, { key1: 'Conduction abnormalities', key2: '0 <= x < 5', samplecount: 294, label1: 'Conduction abnormalities', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Conduction abnormalities', key2: '10 <= x < 15', samplecount: 190, label1: 'Conduction abnormalities', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Conduction abnormalities', key2: '5 <= x < 10', samplecount: 184, label1: 'Conduction abnormalities', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } }, { key1: 'Prolonged QT interval', key2: '0 <= x < 5', samplecount: 52, label1: 'Prolonged QT interval', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Prolonged QT interval', key2: '10 <= x < 15', samplecount: 61, label1: 'Prolonged QT interval', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Prolonged QT interval', key2: '5 <= x < 10', samplecount: 43, label1: 'Prolonged QT interval', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } }, { key1: 'Sinus bradycardia', key2: '0 <= x < 5', samplecount: 32, label1: 'Sinus bradycardia', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Sinus bradycardia', key2: '10 <= x < 15', samplecount: 16, label1: 'Sinus bradycardia', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Sinus bradycardia', key2: '5 <= x < 10', samplecount: 13, label1: 'Sinus bradycardia', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } }, { key1: 'Sinus tachycardia', key2: '0 <= x < 5', samplecount: 55, label1: 'Sinus tachycardia', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Sinus tachycardia', key2: '10 <= x < 15', samplecount: 30, label1: 'Sinus tachycardia', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Sinus tachycardia', key2: '5 <= x < 10', samplecount: 23, label1: 'Sinus tachycardia', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } } ] },
-        "should have the expected results for Arrhythmias, by subcondition with NUMERICAL (agedx) overlay"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-})
-*/
 
 function compareResponseData(test, params, mssg, postFxn=()=>{}) {
   const url0 = getSqlUrl(params); //console.log(url0)

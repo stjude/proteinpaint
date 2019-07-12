@@ -762,28 +762,29 @@ ds is for accessing patient_condition
 		} else if( t.term.isinteger || t.term.isfloat ) {
 
 			if(samplevalue==undefined)  continue // this sample has no anno for this term, do not count
-
-			let left, right
-			if( t.range.startunbounded ) {
-				left = true
-			} else {
-				if(t.range.startinclusive) {
-					left = samplevalue >= t.range.start
+			for(const range of t.ranges) {
+				let left, right
+				if( range.startunbounded ) {
+					left = true
 				} else {
-					left = samplevalue > t.range.start
+					if(range.startinclusive) {
+						left = samplevalue >= range.start
+					} else {
+						left = samplevalue > range.start
+					}
 				}
-			}
-			if( t.range.stopunbounded ) {
-				right = true
-			} else {
-				if(t.range.stopinclusive) {
-					right = samplevalue <= t.range.stop
+				if( range.stopunbounded ) {
+					right = true
 				} else {
-					right = samplevalue < t.range.stop
+					if(range.stopinclusive) {
+						right = samplevalue <= range.stop
+					} else {
+						right = samplevalue < range.stop
+					}
 				}
+				thistermmatch = left && right
+				if (thistermmatch) break
 			}
-			thistermmatch = left && right
-
 		} else if( t.term.iscondition ) {
 
 			thistermmatch = test_sample_conditionterm( sanno, t, ds )
