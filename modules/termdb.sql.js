@@ -255,10 +255,10 @@ q{}
 		if(!q.term2_q) q.term2_q = {} // settings of term2
 		if( typeof q.term2_q == 'string' ) q.term2_q = JSON.parse(decodeURIComponent(q.term2_q))
 		const values = []
-		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1_q, values )
+		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1_q, values, "_1")
 		// in case of using auto binning of numeric term, tell is term2
 		q.term2_q.isterm2 = true
-		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2_q, values )
+		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2_q, values, "_2")
 		const string =
 			`WITH
 			${filter ? filter.filters+', ' : ''}
@@ -556,36 +556,8 @@ function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null )
 
 	throw 'unknown value_by_? for condition term by grade'
 }
-function tmptable () {
-	return 'tmp'+Math.ceil(Math.random()*10000)
-}
-/* 
- Not needed ? barbychildren samplecount should not
- depend on max-grade or most recent grade
 
-function barbychildren_select_clause ( q ) {
-// non-leaf condition term, bar by children, make select clause
-	const selectitems = [
-		'sample',
-		'd.subcondition as key'
-	]
-	if( q.value_by_max_grade ) {
-		selectitems.push('MAX(grade)')
-	} else if(q.value_by_most_recent) {
-		selectitems.push('MAX(age_graded)')
-	} else if(q.value_by_computable_grade) {
-		// nothing
-	} else {
-		throw 'unknown value_by_? at barbychildren_select_clause'
-	}
-	return selectitems.join(',')
-}
-*/
-
-
-
-
-function makesql_overlay_oneterm ( term, filter, ds, q, values ) {
+function makesql_overlay_oneterm ( term, filter, ds, q, values, termindex ) {
 /*
 form the query for one of the table in term0-term1-term2 overlaying
 
@@ -601,7 +573,7 @@ values[]: collector of bind parameters
 
 returns { sql, tablename }
 */
-	const tablename = tmptable()
+	const tablename = 'samplekey' + termindex
 	if( term.iscategorical ) {
 		values.push( term.id )
 		return {
@@ -615,7 +587,7 @@ returns { sql, tablename }
 	}
 	if( term.isfloat || term.isinteger ) {
 		values.push( term.id )
-		const bins = makesql_numericBinCTE( term, q, filter, ds )
+		const bins = makesql_numericBinCTE( term, q, filter, ds, termindex )
 		return {
 			sql: `${bins.sql},
 			${tablename} AS (
@@ -627,7 +599,7 @@ returns { sql, tablename }
 		}
 	}
 	if( term.iscondition ) {
-		return makesql_overlay_oneterm_condition( term, q, ds, filter, values )
+		return makesql_overlay_oneterm_condition( term, q, ds, filter, values, termindex )
 	}
 	throw 'unknown term type'
 }
@@ -636,13 +608,13 @@ returns { sql, tablename }
 
 
 
-function makesql_overlay_oneterm_condition ( term, q, ds, filter, values ) {
+function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termindex='' ) {
 /*
 return {sql, tablename}
 */
-	const grade_table = tmptable()
-	const term_table = tmptable()
-	const out_table = tmptable()
+	const grade_table = 'grade_table' + termindex
+	const term_table = 'term_table' + termindex
+	const out_table = 'out_table' + termindex
 
 	let string
 	if( term.isleaf ) {
@@ -680,8 +652,8 @@ return {sql, tablename}
 	}
 	if( q.bar_by_children ) {
 		values.push( term.id )
-		const subconditions = tmptable()
-		const descendants = tmptable()
+		const subconditions = 'subconditions' + termindex
+		const descendants = 'descendants' + termindex
 		return {
 			sql: `${subconditions} AS (
 				SELECT id
@@ -716,7 +688,7 @@ return {sql, tablename}
 
 
 
-function makesql_numericBinCTE ( term, q, filter, ds ) {
+function makesql_numericBinCTE ( term, q, filter, ds, termindex='' ) {
 /*
 decide bins and produce CTE
 
@@ -856,8 +828,8 @@ returns { sql, tablename, name2bin }
 		}
 	}
 
-	const bin_def_table = tmptable()
-	const bin_sample_table = tmptable()
+	const bin_def_table = 'bin_defs' + termindex
+	const bin_sample_table = 'bin_sample' + termindex
 
 	const sql = 
 		`${bin_def_table} AS (
