@@ -193,7 +193,7 @@ tape("categorical term1", function (test) {
 
 
 tape("numerical term1", function (test) {
-  test.plan(2)
+  test.plan(6)
   compareResponseData(
     test, 
     {term1: 'agedx'},
@@ -210,6 +210,52 @@ tape("numerical term1", function (test) {
       }]
     },
     "filtered sample counts by age of diagnosis, no overlay"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term2: 'diaggrp'
+    },
+    "sample counts by age of diagnosis, categorical overlay"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term2: 'aaclassic_5'
+    },
+    "sample counts by age of diagnosis, numerical overlay",
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    })
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term2: 'Asthma',
+      conditionUnits: ["","","max_grade_perperson"],
+      term2_q: {value_by_max_grade:1},
+    },
+    "sample counts by age of diagnosis, condition overlay by max grade",
+    results => results.forEach(result => delete result.total)
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term2: 'Asthma',
+      conditionUnits: ["","","most_recent_grade"],
+      term2_q: {value_by_most_recent:1},
+    },
+    "sample counts by age of diagnosis, condition overlay by most recent grade",
+    results => results.forEach(result => delete result.total)
   )
 })
 
@@ -348,6 +394,7 @@ function compareResponseData(test, params, mssg, postFxn=()=>{}) {
           const data1 = JSON.parse(body1)
           postFxn(data1.charts)
           sortResults(data1.charts)
+          //console.log(JSON.stringify(pj.tree.results.charts),'\n','-----','\n',JSON.stringify(data1.charts))
           if(error) {
             test.fail(error)
           }
