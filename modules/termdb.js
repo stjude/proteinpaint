@@ -51,7 +51,7 @@ return async (req, res) => {
 		if( q.get_children ) return trigger_children( q, res, tdb )
 		if( q.findterm ) return trigger_findterm( q, res, tdb )
 		if( q.treeto ) return trigger_treeto( q, res, tdb )
-		if( q.testplot ) return trigger_testplot( q, res, tdb, ds )
+		if( q.testplot ) return trigger_testplot( q, res, tdb, ds ) // this is required for running test cases!!
 
 		throw 'termdb: don\'t know what to do'
 

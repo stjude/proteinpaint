@@ -1,8 +1,13 @@
+const app = require('../app')
+
+
+
 /*
 
 ********************** EXPORTED
 get_samples
 get_summary
+get_numericsummary
 server_init_db_queries
 ********************** INTERNAL
 makesql_by_tvsfilter
@@ -908,6 +913,52 @@ returns { sql, tablename, name2bin }
 		name2bin
 	}
 }
+
+
+
+
+export function get_numericsummary ( term, ds, tvslst ) {
+/*
+to produce the summary table of mean, median, percentiles
+at a numeric barchart
+*/
+
+	const filter = tvslst ? makesql_by_tvsfilter( tvslst, ds ) : null
+	const values = []
+	if(filter) {
+		values.push(...filter.values)
+	}
+	let excludevalues
+	if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin && term.graph.barchart.numeric_bin.unannotated) {
+		excludevalues = []
+		const u = term.graph.barchart.numeric_bin.unannotated
+		if(u.value!=undefined) excludevalues.push(u.value)
+		if(u.value_positive!=undefined) excludevalues.push(u.value_positive)
+		if(u.value_negative!=undefined) excludevalues.push(u.value_negative)
+	}
+	const string =
+		`${filter ? 'WITH '+filter.filters+' ' : ''}
+		SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
+		FROM annotations
+		WHERE
+		${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
+		term_id=?
+		${excludevalues ? 'value NOT IN ('+excludevalues.join(',')+')' : ''}`
+	values.push( term.id )
+
+	const s = ds.cohort.db.connection.prepare(string)
+	const result = s.all( values )
+	const stat = app.boxplot_getvalue( result )
+	stat.mean = result.length ?
+		result.reduce((s,i)=>s+i.value, 0) / result.length
+		: 0
+	return stat
+}
+
+
+
+
+
 
 
 
