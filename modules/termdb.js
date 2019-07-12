@@ -68,7 +68,18 @@ return async (req, res) => {
 function trigger_testplot ( q, res, tdb, ds ) {
 	q.ds = ds
 	const lst = termdbsql.get_summary( q )
-	res.send({lst})
+	const result = { lst }
+	const t1 = tdb.q.termjsonByOneid( q.term1_id )
+	if( t1.isinteger || t1.isfloat ) {
+		result.summary_term1 = termdbsql.get_numericsummary( t1, ds, q.tvslst )
+	}
+	if( q.term2_id ) {
+		const t2 = tdb.q.termjsonByOneid( q.term2_id )
+		if( t2.isinteger || t2.isfloat ) {
+			result.summary_term2 = termdbsql.get_numericsummary( t2, ds, q.tvslst )
+		}
+	}
+	res.send( result )
 }
 
 
