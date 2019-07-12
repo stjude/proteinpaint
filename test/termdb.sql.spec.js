@@ -135,26 +135,48 @@ tape("filters", function (test) {
   )
 })
 
-tape("single, categorical", function (test) {
-  test.plan(2)
+tape("categorical term1", function (test) {
+  test.plan(3)
 
   compareResponseData(
     test, 
     {term1: 'diaggrp'}, 
-    "unfiltered sample counts by diagnosis groups"
+    "sample counts by diagnosis groups, no overlay"
   )
 
   compareResponseData(
     test,
     {
-      term1: 'diaggrp', 
-      filter: [{
-        "values":[{"key":"Male","label":"Male"}],
-        "term":{"id":"sex","name":"Sex","iscategorical":true}
-      }]
+      term1: 'diaggrp',
+      term2: 'sex'
     },
-    "filtered sample counts by diagnosis groups"
+    "sample counts by diagnosis groups, categorical overlay"
   )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'diaggrp',
+      term2: 'agedx'
+    },
+    "sample counts by diagnosis groups, numerical overlay",
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    })
+  )
+  /*
+  compareResponseData(
+    test,
+    {
+      term1: 'diaggrp',
+      term2: 'Asthma',
+      conditionUnits: ["","","max_grade_perperson"],
+      term2_q: {value_by_max_grade:1},
+    },
+    "sample counts by diagnosis groups, leaf condition overlay",
+    results => results.forEach(result => delete result.total)
+  )*/
 })
 
 

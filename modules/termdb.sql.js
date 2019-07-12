@@ -758,15 +758,8 @@ returns { sql, tablename, name2bin }
 	const name2bin = new Map() // k: name str, v: bin{}
 	let binid = 0
 	for(const b of bins) {
+		if (!b.name && b.label) b.name = b.label
 		if(!b.name) {
-			if( b.startunbounded ) {
-				b.name = (b.stopinclusive ? '<=' : '<')+' '+b.stop
-			} else if( b.stopunbounded ) {
-				b.name = (b.startinclusive ? '>=' : '>')+' '+b.start
-			} else {
-				b.name = `${b.start} <${b.startinclusive?'=':''} x <${b.stopinclusive?'=':''} ${b.stop}`
-			}
-
 			if( Number.isInteger( bin_size ) ) {
         // bin size is integer, make nicer label
         if( bin_size == 1 ) {
@@ -885,22 +878,14 @@ returns { sql, tablename, name2bin }
 					${excludevalues ? 'v NOT IN ('+excludevalues.join(',')+') AND' : ''}
 					(
 						b.startunbounded=1
-						OR
-						(
-							v>b.start
-							OR
-							(b.startinclusive=1 AND v=b.start)
-						)
+						OR v>b.start
+						OR (b.startinclusive=1 AND v=b.start)
 					)
 					AND
 					(
 						b.stopunbounded
-						OR
-						(
-							v<b.stop
-							OR
-							(b.stopinclusive=1 AND v=b.stop)
-						)
+						OR v<b.stop
+						OR (b.stopinclusive=1 AND v=b.stop)
 					)
 				)
 			WHERE
