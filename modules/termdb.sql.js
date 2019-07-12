@@ -409,7 +409,7 @@ q{}
 				),
 				tmp_events_table AS (
 					SELECT
-						${barbychildren_select_clause(q.term1_q)}
+						sample, d.subcondition as key
 					FROM chronicevents a, tmp_descendant_table d
 					WHERE
 					${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
@@ -482,9 +482,14 @@ function uncomputablegrades_clause ( ds ) {
 	}
 	return ''
 }
-function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null ) { 
+function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null ) {
+	// work for grade as bars 
 	if( tvs.value_by_max_grade ) {
 		if (!termtable) values.push(term_id)
+		else if (termtable.includes('?')) {
+			values.push(term_id,term_id)
+		}
+
 		return `SELECT sample,MAX(grade) AS grade 
 		FROM chronicevents
 		WHERE
@@ -539,14 +544,15 @@ function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null )
 		}
 	}
 
-	// work for grade as bars
-	//if( tvs.value_by_max_grade ) return 'SELECT sample,MAX(grade) AS grade '
-	//if( tvs.value_by_most_recent ) return 'SELECT sample,MAX(age_graded) AS age_graded '
 	throw 'unknown value_by_? for condition term by grade'
 }
 function tmptable () {
 	return 'tmp'+Math.ceil(Math.random()*10000)
 }
+/* 
+ Not needed ? barbychildren samplecount should not
+ depend on max-grade or most recent grade
+
 function barbychildren_select_clause ( q ) {
 // non-leaf condition term, bar by children, make select clause
 	const selectitems = [
@@ -564,7 +570,7 @@ function barbychildren_select_clause ( q ) {
 	}
 	return selectitems.join(',')
 }
-
+*/
 
 
 
@@ -680,7 +686,7 @@ return {sql, tablename}
 			),
 			${grade_table} AS (
 				SELECT
-					${barbychildren_select_clause(q)}
+					sample, d.subcondition as key
 				FROM
 					chronicevents a,
 					${descendants} d

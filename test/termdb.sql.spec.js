@@ -16,7 +16,7 @@ tape("\n", function(test) {
 tape("filters", function (test) {
   // plan will track the number of expected tests,
   // which helps with the async tests
-  test.plan(6)
+  test.plan(8)
 
   compareResponseData(
     test, 
@@ -69,7 +69,22 @@ tape("filters", function (test) {
     }, 
     "leaf condition filtered results, by most recent grade"
   )
-  
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"Arrhythmias", name:"Arrhythmias", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:2, label: "2"}],
+        value_by_max_grade: true
+      }],
+    }, 
+    "non-leaf condition filtered results, by maximum grade",
+    results => results.forEach(result => delete result.total)
+  )
+ 
   compareResponseData(
     test, 
     {
@@ -84,7 +99,21 @@ tape("filters", function (test) {
     "non-leaf condition filtered results, by most recent grade",
     results => results.forEach(result => delete result.total)
   )
-  
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"Arrhythmias", name:"Arrhythmias", iscondition:true},
+        bar_by_children: true,
+        values: [{key:'Cardiac dysrhythmia', label: "Cardiac dysrhythmia"}]
+      }],
+    }, 
+    "non-leaf condition filtered results by child",
+    results => results.forEach(result => delete result.total)
+  )
+ 
   compareResponseData(
     test, 
     {
