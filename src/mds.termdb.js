@@ -468,9 +468,7 @@ such conditions may be carried by obj
 		.style('border-left','solid 1px #aaa')
 		.style('display','none')
 
-	const div = row_graph
-		.style('border-left','solid 2px #eee')
-		.append('div')
+	const div = row_graph.append('div')
 		.style('border','solid 1px #aaa')
 		.style('margin-left', graph_leftpad)
 		.style('margin-bottom','10px')
