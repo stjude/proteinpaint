@@ -669,7 +669,7 @@ return {sql, tablename}
 				OR term_id=?
 			),
 			${grade_table} AS (
-				${grade_age_selection(q.term1_id, values, q.term1_q, ds, filter)}
+				${grade_age_selection(term.id, values, q, ds, filter, term_table)}
 			),
 			${out_table} AS (
 				SELECT grade AS key, sample
