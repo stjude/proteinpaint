@@ -136,7 +136,7 @@ tape("filters", function (test) {
 })
 
 tape("categorical term1", function (test) {
-  test.plan(5)
+  test.plan(6)
 
   compareResponseData(
     test, 
@@ -189,11 +189,30 @@ tape("categorical term1", function (test) {
     "sample counts by diagnosis groups, leaf condition overlay",
     results => results.forEach(result => delete result.total)
   )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'diaggrp',
+      term2: 'Asthma',
+      conditionUnits: ["","","most_recent_grade"],
+      term2_q: {value_by_most_recent:1},
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Female"}]
+      },{
+        term: {id:"aaclassic_5", name:"alkaline dosage", isfloat:true},
+        ranges: [{start:1000,stop:5000}]
+      }]
+    },
+    "filtered sample counts by diagnosis groups, leaf condition overlay",
+    results => results.forEach(result => delete result.total)
+  )
 })
 
 
 tape("numerical term1", function (test) {
-  test.plan(6)
+  test.plan(7)
   compareResponseData(
     test, 
     {term1: 'agedx'},
@@ -257,10 +276,29 @@ tape("numerical term1", function (test) {
     "sample counts by age of diagnosis, condition overlay by most recent grade",
     results => results.forEach(result => delete result.total)
   )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term2: 'Asthma',
+      conditionUnits: ["","","most_recent_grade"],
+      term2_q: {value_by_most_recent:1},
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Female"}]
+      },{
+        term: {id:"aaclassic_5", name:"alkaline dosage", isfloat:true},
+        ranges: [{start:1000,stop:5000}]
+      }]
+    },
+    "sample counts by age of diagnosis, condition overlay by most recent grade",
+    results => results.forEach(result => delete result.total)
+  )
 })
 
 tape("leaf condition term1", function (test) {
-  test.plan(9) 
+  test.plan(10) 
   compareResponseData(
     test, 
     {
@@ -387,11 +425,36 @@ tape("leaf condition term1", function (test) {
       delete result.total
       result.serieses.forEach(series=>delete series.boxplot)
     }) 
-  ) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
+      term1_q: {value_by_most_recent:1},
+      term2: 'Hearing loss',
+      term2_q: {value_by_max_grade:1},
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Female"}]
+      },{
+        term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
+        ranges: [{start:0,stop:8}]
+      }]
+    },
+    "filtered sample counts by Asthma condition most recent grade, condition overlay by max-grade",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
 })
 
 tape("non-leaf condition term1", function (test) {
-  test.plan(11)
+  test.plan(12) 
+
   compareResponseData(
     test,
     {
@@ -546,6 +609,35 @@ tape("non-leaf condition term1", function (test) {
       term2_q: {value_by_max_grade:1}
     },
     "sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Arrhythmias', 
+      conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
+      term2: 'Hearing loss',
+      term2_q: {value_by_max_grade:1},
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Female"}]
+      },{
+        term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
+        ranges: [{start:0,stop:8}]
+      },{
+        term: {id:"Asthma", name:"Asthma", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:3, label: "3"}],
+        value_by_max_grade: true
+      }]
+    },
+    "filtered sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
     results => results.forEach(result => {
       delete result.total

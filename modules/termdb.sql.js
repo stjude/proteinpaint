@@ -271,7 +271,7 @@ q{}
 			WHERE a.sample=b.sample
 			GROUP BY key1,key2`
 		const lst = q.ds.cohort.db.connection.prepare(string)
-			.all( values )
+			.all( filter ? filter.values.concat(values) : values )
 		// add label or range if numeric
 		for(const i of lst) {
 			if( term1.isinteger || term1.isfloat ) {
