@@ -907,8 +907,11 @@ export function get_numericsummary ( term, ds, tvslst ) {
 to produce the summary table of mean, median, percentiles
 at a numeric barchart
 */
-
-	const filter = tvslst ? makesql_by_tvsfilter( tvslst, ds ) : null
+	let filter
+	if( tvslst ) {
+		if( typeof tvslst == 'string' ) tvslst = JSON.parse(decodeURIComponent(tvslst))
+		filter = makesql_by_tvsfilter( tvslst, ds )
+	}
 	const values = []
 	if(filter) {
 		values.push(...filter.values)
@@ -928,11 +931,13 @@ at a numeric barchart
 		WHERE
 		${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 		term_id=?
-		${excludevalues ? 'value NOT IN ('+excludevalues.join(',')+')' : ''}`
+		${excludevalues ? 'AND value NOT IN ('+excludevalues.join(',')+')' : ''}`
 	values.push( term.id )
 
 	const s = ds.cohort.db.connection.prepare(string)
 	const result = s.all( values )
+	result.sort((i,j)=> i.value - j.value )
+
 	const stat = app.boxplot_getvalue( result )
 	stat.mean = result.length ?
 		result.reduce((s,i)=>s+i.value, 0) / result.length
