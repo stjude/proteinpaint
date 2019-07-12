@@ -656,17 +656,25 @@ function compareResponseData(test, params, mssg, postFxn=()=>{}) {
     }
     switch(response.statusCode) {
       case 200:
-        const data = JSON.parse(body);
+        const data0 = JSON.parse(body);
         // reshape sql results in order to match
         // the compared results
         const pj = new Partjson({
-          data: data.lst,
+          data: data0.lst,
           seed: `{"values": []}`, // result seed 
           template,
           "=": externals
         })
         postFxn(pj.tree.results.charts)
         sortResults(pj.tree.results.charts)
+        const summary0 = {charts: pj.tree.results.charts}
+        if (data0.summary_term1) {
+          summary0.boxplot = data0.summary_term1
+          summary0.boxplot.mean = summary0.boxplot.mean.toPrecision(8)
+          if (summary0.boxplot.sd) {
+            summary0.boxplot.sd = summary0.boxplot.sd.toPrecision(8)
+          }
+        }
         // get an alternatively computed results
         // for comparing against sql results
         const url1 = getBarUrl(params); //console.log(url1)
@@ -674,15 +682,23 @@ function compareResponseData(test, params, mssg, postFxn=()=>{}) {
           const data1 = JSON.parse(body1)
           postFxn(data1.charts)
           sortResults(data1.charts)
-          //console.log(JSON.stringify(pj.tree.results.charts),'\n','-----','\n',JSON.stringify(data1.charts))
+          const summary1 = {charts: data1.charts}
+          if (data1.boxplot) {
+            summary1.boxplot = data1.boxplot
+            summary1.boxplot.mean = summary1.boxplot.mean.toPrecision(8)
+            if (summary1.boxplot.sd) {
+              summary1.boxplot.sd = summary1.boxplot.sd.toPrecision(8)
+            }
+          }
+          //console.log(JSON.stringify(summary0),'\n','-----','\n',JSON.stringify(summary1))
           if(error) {
             test.fail(error)
           }
           switch(response.statusCode) {
           case 200:
             test.deepEqual(
-              pj.tree.results.charts,
-              data1.charts,
+              summary0,
+              summary1,
               mssg
             )
           break;

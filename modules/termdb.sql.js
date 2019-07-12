@@ -698,34 +698,7 @@ q{}
 filter as is returned by makesql_by_tvsfilter
 returns { sql, tablename, name2bin }
 */
-	let bin_size
-	let bins = []
-	if( q.custom_bins ) {
-		bins = q.custom_bins
-	} else {
-		// use automatic bins
-		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
-			if( q.isterm2 && term.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
-				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.crosstab_fixed_bins))
-			} else if ( term.graph.barchart.numeric_bin.fixed_bins ) {
-				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.fixed_bins))
-			} else if( term.graph.barchart.numeric_bin.auto_bins ) {
-				const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
-				let v = term.graph.barchart.numeric_bin.auto_bins.start_value
-				bin_size = term.graph.barchart.numeric_bin.auto_bins.bin_size
-				while( v < max ) {
-					bins.push({
-						start: v,
-						stop: Math.min( v+bin_size, max ),
-						startinclusive:true
-					})
-					v+=bin_size
-				}
-			} else {
-				throw 'no predefined binning scheme'
-			}
-		}
-	}
+	const [bins, bin_size] = get_bins(q, term, ds)
 	const bin_def_lst = []
 	const name2bin = new Map() // k: name str, v: bin{}
 	let binid = 0
@@ -871,10 +844,40 @@ returns { sql, tablename, name2bin }
 	}
 }
 
+function get_bins(q, term, ds) {
+	let bin_size
+	let bins = []
+	if( q.custom_bins ) {
+		bins = q.custom_bins
+	} else {
+		// use automatic bins
+		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
+			if( q.isterm2 && term.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
+				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.crosstab_fixed_bins))
+			} else if ( term.graph.barchart.numeric_bin.fixed_bins ) {
+				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.fixed_bins))
+			} else if( term.graph.barchart.numeric_bin.auto_bins ) {
+				const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
+				let v = term.graph.barchart.numeric_bin.auto_bins.start_value
+				bin_size = term.graph.barchart.numeric_bin.auto_bins.bin_size
+				while( v < max ) {
+					bins.push({
+						start: v,
+						stop: Math.min( v+bin_size, max ),
+						startinclusive:true
+					})
+					v+=bin_size
+				}
+			} else {
+				throw 'no predefined binning scheme'
+			}
+		}
+	}
+	return [bins, bin_size]
+}
 
 
-
-export function get_numericsummary ( term, ds, tvslst ) {
+export function get_numericsummary (q, term, ds, tvslst ) {
 /*
 to produce the summary table of mean, median, percentiles
 at a numeric barchart
@@ -883,18 +886,24 @@ at a numeric barchart
 	if( tvslst ) {
 		if( typeof tvslst == 'string' ) tvslst = JSON.parse(decodeURIComponent(tvslst))
 		filter = makesql_by_tvsfilter( tvslst, ds )
+	} else {
+		const [bins, bin_size] = get_bins(q, term, ds)
+		tvslst = [{term, ranges: bins}]
+		filter = makesql_by_tvsfilter( tvslst, ds )
 	}
 	const values = []
 	if(filter) {
 		values.push(...filter.values)
 	}
 	let excludevalues
-	if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin && term.graph.barchart.numeric_bin.unannotated) {
-		excludevalues = []
-		const u = term.graph.barchart.numeric_bin.unannotated
-		if(u.value!=undefined) excludevalues.push(u.value)
-		if(u.value_positive!=undefined) excludevalues.push(u.value_positive)
-		if(u.value_negative!=undefined) excludevalues.push(u.value_negative)
+	if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
+		if (term.graph.barchart.numeric_bin.unannotated) {
+			excludevalues = []
+			const u = term.graph.barchart.numeric_bin.unannotated
+			if(u.value!=undefined) excludevalues.push(u.value)
+			if(u.value_positive!=undefined) excludevalues.push(u.value_positive)
+			if(u.value_negative!=undefined) excludevalues.push(u.value_negative)
+		}
 	}
 	const string =
 		`${filter ? 'WITH '+filter.filters+' ' : ''}
@@ -914,6 +923,13 @@ at a numeric barchart
 	stat.mean = result.length ?
 		result.reduce((s,i)=>s+i.value, 0) / result.length
 		: 0
+
+	let sd = 0
+  for(const i of result) {
+    sd += Math.pow( i.value - stat.mean, 2 )
+  }
+  stat.sd = Math.sqrt( sd / (result.length-1) )
+
 	return stat
 }
 

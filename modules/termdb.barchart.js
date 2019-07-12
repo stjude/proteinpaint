@@ -92,7 +92,7 @@ const template = JSON.stringify({
   "@errmode": ["","","",""],
   "@before()": "=prep()",
   "_:_sum": "+&series.value",
-  "_:_values": ["&series.value"],
+  "_:_values": ["&series.value",0],
   results: {
     "_2:maxAcrossCharts": "=maxAcrossCharts()",
     "@join()": {
