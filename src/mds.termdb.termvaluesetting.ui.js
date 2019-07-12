@@ -518,6 +518,13 @@ group{}
 
         make_select_list(data, add_value_select, selected_values, false, 'add')
 
+        //for numerical term, add option to add another bin
+        if(data.lst[0].range){
+            add_value_select.append('option')
+                .attr('value','add_bin')
+                .text('Add new range')
+        }
+
         //disable categories already selected
         const options = add_value_select.selectAll('option')
 
@@ -532,14 +539,20 @@ group{}
 
         add_value_select.on('change',async()=>{
 
-            //change value of button 
-            const new_value = data.lst.find( j=> j.key == add_value_select.node().value )
-            if(new_value.range) selected_values.push(new_value.range)
-            else selected_values.push({key:new_value.key,label:new_value.label})
+            if(add_value_select.node().value == 'add_bin'){
+                const range = {start:'', stop:''}
+                edit_numeric_bin(add_value_btn, range, terms_div)
+                selected_values.push(range)
+            }else{
+                //change value of button 
+                const new_value = data.lst.find( j=> j.key == add_value_select.node().value )
+                if(new_value.range) selected_values.push(new_value.range)
+                else selected_values.push({key:new_value.key,label:new_value.label})
 
-            //update gorup and load tk
-            await callback()
-            update_terms(terms_div)
+                //update gorup and load tk
+                await callback()
+                update_terms(terms_div)
+            }
         })
 
         // '+' button at end of all values to add to list of values
@@ -713,114 +726,7 @@ group{}
                 }
             
                 numeric_div.on('click', ()=>{
-            
-                    tip.clear()
-            
-                    const equation_div = tip.d.append('div')
-                        .style('display','block')
-                        .style('padding','3px 5px')
-            
-                    const start_input = equation_div.append('input')
-                        .attr('type','number')
-                        .attr('value',range.start)
-                        .style('width','60px')
-                        .on('keyup', async ()=>{
-                            if(!client.keyupEnter()) return
-                            start_input.property('disabled',true)
-                            await apply()
-                            start_input.property('disabled',false)
-                        })
-            
-                    // to replace operator_start_div
-                    const startselect = equation_div.append('select')
-                    .style('margin-left','10px')
-            
-                    startselect.append('option')
-                        .html('&le;')
-                    startselect.append('option')
-                        .html('&lt;')
-                    startselect.append('option')
-                        .html('&#8734;')
-            
-                    startselect.node().selectedIndex =
-                        range.startunbounded ? 2 :
-                        range.startinclusive ? 0 : 1
-            
-                    equation_div.append('div')
-                        .style('display','inline-block')
-                        .style('padding','3px 10px')
-                        .html(x)
-            
-                    // to replace operator_end_div
-                    const stopselect = equation_div.append('select')
-                        .style('margin-right','10px')
-            
-                    stopselect.append('option')
-                        .html('&le;')
-                    stopselect.append('option')
-                        .html('&lt;')
-                    stopselect.append('option')
-                        .html('&#8734;')
-            
-                    stopselect.node().selectedIndex =
-                        range.stopunbounded ? 2 :
-                        range.stopinclusive ? 0 : 1
-            
-                    const stop_input = equation_div.append('input')
-                        .attr('type','number')
-                        .style('width','60px')
-                        .attr('value',range.stop)
-                        .on('keyup', async ()=>{
-                            if(!client.keyupEnter()) return
-                            stop_input.property('disabled',true)
-                            await apply()
-                            stop_input.property('disabled',false)
-                        })
-            
-                    tip.d.append('div')
-                        .attr('class','sja_menuoption')
-                        .style('text-align','center')
-                        .text('APPLY')
-                        .on('click', ()=>{
-                            tip.hide()
-                            apply()
-                        })
-            
-                    // tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
-                    tip.showunder( numeric_div.node() )
-        
-                    async function apply () {
-                        try {
-                            if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
-            
-                            const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
-                            const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
-                            if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
-            
-                            if( startselect.node().selectedIndex == 2 ) {
-                                range.startunbounded = true
-                                delete range.start
-                            } else {
-                                delete range.startunbounded
-                                range.start = start
-                                range.startinclusive = startselect.node().selectedIndex == 0
-                            }
-                            if( stopselect.node().selectedIndex == 2 ) {
-                                range.stopunbounded = true
-                                delete range.stop
-                            } else {
-                                delete range.stopunbounded
-                                range.stop = stop
-                                range.stopinclusive = stopselect.node().selectedIndex == 0
-                            }
-                            // display_numeric_filter(group, term_index, value_div)
-                            update_terms(terms_div)
-                            tip.hide()
-                            await callback()
-                        } catch(e) {
-                            window.alert(e)
-                        }
-                    }
+                    edit_numeric_bin(numeric_div, range, terms_div)
                 })
             }
 
@@ -839,6 +745,118 @@ group{}
         }
 
         make_plus_btn(value_div, unannotated_cats, numeric_term.ranges, terms_div)
+    }
+
+    function edit_numeric_bin(holder, range, terms_div){
+        tip.clear()
+            
+        const equation_div = tip.d.append('div')
+            .style('display','block')
+            .style('padding','3px 5px')
+
+        const start_input = equation_div.append('input')
+            .attr('type','number')
+            .attr('value',range.start)
+            .style('width','60px')
+            .on('keyup', async ()=>{
+                if(!client.keyupEnter()) return
+                start_input.property('disabled',true)
+                await apply()
+                start_input.property('disabled',false)
+            })
+
+        // to replace operator_start_div
+        const startselect = equation_div.append('select')
+        .style('margin-left','10px')
+
+        startselect.append('option')
+            .html('&le;')
+        startselect.append('option')
+            .html('&lt;')
+        startselect.append('option')
+            .html('&#8734;')
+
+        startselect.node().selectedIndex =
+            range.startunbounded ? 2 :
+            range.startinclusive ? 0 : 1
+
+        const x = '<span style="font-family:Times;font-style:italic">x</span>'
+
+        equation_div.append('div')
+            .style('display','inline-block')
+            .style('padding','3px 10px')
+            .html(x)
+
+        // to replace operator_end_div
+        const stopselect = equation_div.append('select')
+            .style('margin-right','10px')
+
+        stopselect.append('option')
+            .html('&le;')
+        stopselect.append('option')
+            .html('&lt;')
+        stopselect.append('option')
+            .html('&#8734;')
+
+        stopselect.node().selectedIndex =
+            range.stopunbounded ? 2 :
+            range.stopinclusive ? 0 : 1
+
+        const stop_input = equation_div.append('input')
+            .attr('type','number')
+            .style('width','60px')
+            .attr('value',range.stop)
+            .on('keyup', async ()=>{
+                if(!client.keyupEnter()) return
+                stop_input.property('disabled',true)
+                await apply()
+                stop_input.property('disabled',false)
+            })
+
+        tip.d.append('div')
+            .attr('class','sja_menuoption')
+            .style('text-align','center')
+            .text('APPLY')
+            .on('click', ()=>{
+                tip.hide()
+                apply()
+            })
+
+        // tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
+        tip.showunder( holder.node() )
+
+        async function apply () {
+            try {
+                if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
+
+                const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
+                const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
+                if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
+
+                if( startselect.node().selectedIndex == 2 ) {
+                    range.startunbounded = true
+                    delete range.start
+                } else {
+                    delete range.startunbounded
+                    range.start = start
+                    range.startinclusive = startselect.node().selectedIndex == 0
+                }
+                if( stopselect.node().selectedIndex == 2 ) {
+                    range.stopunbounded = true
+                    delete range.stop
+                } else {
+                    delete range.stopunbounded
+                    range.stop = stop
+                    range.stopinclusive = stopselect.node().selectedIndex == 0
+                }
+                // display_numeric_filter(group, term_index, value_div)
+                update_terms(terms_div)
+                tip.hide()
+                await callback()
+            } catch(e) {
+                window.alert(e)
+            }
+        }
     }
 }
 
