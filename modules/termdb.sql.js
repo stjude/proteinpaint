@@ -73,37 +73,42 @@ returns:
 	}
 
 	function add_numerical ( tvs ) {
-		if(!tvs.range) throw '.range{} missing'
+		if(!tvs.ranges) throw '.ranges{} missing'
 		values.push( tvs.term.id )
-		const clauses = []
+		const range2clause = []
 		const cast = 'CAST(value AS '+(tvs.term.isinteger?'INT':'REAL')+')'
-		if( tvs.range.is_unannotated ) {
-			clauses.push(cast+'=?')
-			values.push( tvs.range.value )
-		} else {
-			// regular bin
-			if( !tvs.range.startunbounded ) {
-				if( tvs.range.startinclusive ) {
-					clauses.push(cast+' >= ?')
-				} else {
-					clauses.push(cast+' > ? ')
+		for(const range of tvs.ranges) {
+			if( range.value != undefined ) {
+				// special category
+				range2clause.push(cast+'=?')
+				values.push( range.value )
+			} else {
+				// regular bin
+				const lst = []
+				if( !range.startunbounded ) {
+					if( range.startinclusive ) {
+						lst.push(cast+' >= ?')
+					} else {
+						lst.push(cast+' > ? ')
+					}
+					values.push( range.start )
 				}
-				values.push( tvs.range.start )
-			}
-			if( !tvs.range.stopunbounded ) {
-				if( tvs.range.stopinclusive ) {
-					clauses.push(cast+' <= ?')
-				} else {
-					clauses.push(cast+' < ? ')
+				if( !range.stopunbounded ) {
+					if( range.stopinclusive ) {
+						lst.push(cast+' <= ?')
+					} else {
+						lst.push(cast+' < ? ')
+					}
+					values.push( range.stop )
 				}
-				values.push( tvs.range.stop )
+				range2clause.push( '('+lst.join(' AND ')+')' )
 			}
 		}
 		filters.push(
 			`SELECT sample
 			FROM annotations
 			WHERE term_id = ?
-			AND ${clauses.join(' AND ')}`
+			AND ( ${range2clause.join(' OR ')} )`
 		)
 	}
 

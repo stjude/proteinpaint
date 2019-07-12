@@ -2,7 +2,6 @@ const app = require('../app')
 const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
-const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
 const termdbsql = require('./termdb.sql')
 
 

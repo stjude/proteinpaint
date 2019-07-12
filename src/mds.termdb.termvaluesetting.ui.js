@@ -885,7 +885,7 @@ export function to_parameter ( terms ) {
 			},
 			// must return original values[{key,label}] to keep the validator function happy on both client/server
 			values: i.values,
-			range: i.range,
+			ranges: i.ranges,
 			isnot: i.isnot,
 			bar_by_grade: i.bar_by_grade,
 			bar_by_children: i.bar_by_children,
