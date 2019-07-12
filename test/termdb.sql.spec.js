@@ -136,7 +136,7 @@ tape("filters", function (test) {
 })
 
 tape("categorical term1", function (test) {
-  test.plan(3)
+  test.plan(5)
 
   compareResponseData(
     test, 
@@ -165,7 +165,7 @@ tape("categorical term1", function (test) {
       result.serieses.forEach(series=>delete series.boxplot)
     })
   )
-  /*
+
   compareResponseData(
     test,
     {
@@ -176,7 +176,19 @@ tape("categorical term1", function (test) {
     },
     "sample counts by diagnosis groups, leaf condition overlay",
     results => results.forEach(result => delete result.total)
-  )*/
+  )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'diaggrp',
+      term2: 'Asthma',
+      conditionUnits: ["","","most_recent_grade"],
+      term2_q: {value_by_most_recent:1},
+    },
+    "sample counts by diagnosis groups, leaf condition overlay",
+    results => results.forEach(result => delete result.total)
+  )
 })
 
 
@@ -336,10 +348,6 @@ function compareResponseData(test, params, mssg, postFxn=()=>{}) {
           const data1 = JSON.parse(body1)
           postFxn(data1.charts)
           sortResults(data1.charts)
-          //console.log(JSON.stringify(data1.charts[0]));
-          //console.log('----')
-          //console.log(JSON.stringify(pj.tree.results.charts[0]));
-
           if(error) {
             test.fail(error)
           }
@@ -370,6 +378,7 @@ function getSqlUrl(params) {
     + '&term1_id=' + params.term1
     + (params.term1_q ? '&term1_q=' + encodeURIComponent(JSON.stringify(params.term1_q)) : '')
     + (params.term2 ? '&term2_id=' + params.term2 : '')
+    + (params.term2_q ? '&term2_q=' + encodeURIComponent(JSON.stringify(params.term2_q)) : '')
     + (params.filter ? '&tvslst='+encodeURIComponent(JSON.stringify(params.filter)) : '')
 }
 

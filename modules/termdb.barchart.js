@@ -120,7 +120,8 @@ const template = JSON.stringify({
         tempSum: "+&data.value",
         "__:boxplot": "=boxplot2()",
         "@done()": "=removeTemp()"
-      }, "&series.id[]"]
+      }, "&series.id[]"],
+      "@done()": "=filterEmptySeries()"
     }, "&chart.id[]"],
     "__:boxplot": "=boxplot1()",
     "_:_unannotated": {
@@ -247,6 +248,10 @@ function getPj(q, inReqs, data, tdb) {
       removeTemp(result) {
         delete result.tempSum
         delete result.tempValues
+      },
+      filterEmptySeries(result) {
+        const nonempty = result.serieses.filter(series=>series.total)
+        result.serieses.splice(0, result.serieses.length, ...nonempty)
       },
       unannotated(row, context) {
         const series = context.joins.get('series')
