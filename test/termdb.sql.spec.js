@@ -180,12 +180,12 @@ tape("categorical term1", function (test) {
 })
 
 
-tape("single, numerical", function (test) {
+tape("numerical term1", function (test) {
   test.plan(2)
   compareResponseData(
     test, 
     {term1: 'agedx'},
-    "unfiltered sample counts by age of diagnosis"
+    "sample counts by age of diagnosis, no overlay"
   )
   
   compareResponseData(
@@ -197,11 +197,11 @@ tape("single, numerical", function (test) {
         values: [{key: 'Female', label: 'Female'}]
       }]
     },
-    "filtered sample counts by age of diagnosis"
+    "filtered sample counts by age of diagnosis, no overlay"
   )
 })
 
-tape("single, condition isleaf", function (test) {
+tape("leaf condition term1", function (test) {
   test.plan(3) 
   compareResponseData(
     test, 
@@ -210,7 +210,7 @@ tape("single, condition isleaf", function (test) {
       conditionUnits: ["","max_grade_perperson",""], 
       term1_q: {value_by_max_grade:1, bar_by_grade:1}
     },
-    "unfiltered sample counts by Asthma condition max-grade"
+    "sample counts by Asthma condition max-grade, no overlay"
   )
 
   compareResponseData(
@@ -224,19 +224,19 @@ tape("single, condition isleaf", function (test) {
         values: [{key: 'Male', label: 'Male'}]
       }]
     },
-    "filtered sample counts by Asthma condition max-grade"
+    "filtered sample counts by Asthma condition max-grade, no overlay"
   )
 
   compareResponseData(
     test, 
     {term1: 'Asthma', conditionUnits: ["","most_recent_grade",""], term1_q: {value_by_most_recent:1}},
-    "unfiltered sample counts by Asthma condition most recent grade",
+    "sample counts by Asthma condition most recent grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
     results => results.forEach(result => delete result.total) 
   )
 })
 
-tape("single, condition non-leaf", function (test) {
+tape("non-leaf condition term1", function (test) {
   test.plan(5)
   compareResponseData(
     test,
@@ -246,7 +246,7 @@ tape("single, condition non-leaf", function (test) {
       conditionUnits: ["","max_grade_perperson",""],
       term1_q: {value_by_max_grade:1, bar_by_grade:1}
     },
-    "unfiltered sample counts by Cardiovascular System condition max-grade"
+    "sample counts by Cardiovascular System condition max-grade"
   )
 
   compareResponseData(
@@ -272,7 +272,7 @@ tape("single, condition non-leaf", function (test) {
       conditionUnits: ["","most_recent_grade",""], 
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
     },
-    "unfiltered sample counts by Cardiovascular System condition most recent grade",
+    "sample counts by Cardiovascular System condition most recent grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
     results => results.forEach(result => delete result.total)
   )
@@ -285,7 +285,7 @@ tape("single, condition non-leaf", function (test) {
       conditionUnits: ["","by_children",""], 
       term1_q: {value_by_max_grade:1, bar_by_children:1},
     },
-    "unfiltered sample counts by Arrhythmias condition by children",
+    "sample counts by Arrhythmias condition by children",
     // TO-DO: SQL results must also give unique samplecount across all bars 
     results => results.forEach(result => delete result.total)
   )
@@ -302,7 +302,7 @@ tape("single, condition non-leaf", function (test) {
         values: [{key: 'Male', label: 'Male'}]
       }]
     },
-    "filtered sample counts by Arrhythmias condition by children",
+    "sample counts by Arrhythmias condition by children",
     // TO-DO: SQL results must also give unique samplecount across all bars 
     results => results.forEach(result => delete result.total)
   )
