@@ -13,6 +13,7 @@ import {
 	} from './block.mds.svcnv'
 import { createbutton_addfeature, createnewmatrix_withafeature } from './block.mds.svcnv.samplematrix'
 import {getsjcharts}     from './getsjcharts'
+import {debounce} from 'debounce'
 
 
 /*
@@ -67,11 +68,13 @@ export async function may_allow_samplesearch(tk, block) {
 	const showdiv = row.append('div')
 		.style('margin-top','10px')
 
-	input.on('keyup',()=>{
+	input.on('keyup', debounce( samplesearch, 300) )
+
+	async function samplesearch () {
 
 		showdiv.selectAll('*').remove()
 
-		const str = d3event.target.value
+		const str = input.property('value').trim()
 		if(!str) return
 
 		const par={
@@ -80,8 +83,9 @@ export async function may_allow_samplesearch(tk, block) {
 			querykey:tk.querykey,
 			findsamplename: str
 		}
-		client.dofetch('mdssvcnv', par)
-		.then(data=>{
+		try {
+
+			const data = await client.dofetch('mdssvcnv', par)
 
 			if(data.error) throw data.error
 			if(!data.result) return
@@ -131,66 +135,65 @@ export async function may_allow_samplesearch(tk, block) {
 				}
 
 				cell
-					.attr('class','sja_menuoption')
-					.on('click',()=>{
+				.attr('class','sja_menuoption')
+				.on('click',()=>{
 
-						tk.tkconfigtip.hide()
+					tk.tkconfigtip.hide()
 
-						const tabs = []
+					const tabs = []
 
-						addtab_sampleview( tabs, {
-							tk: tk,
-							block: block,
-							sample: {
-								samplename: sample.name
-							},
-							samplegroup: {attributes: sample.attributes}
-						})
-
-						mayaddtab_disco( tabs, {
-							tk: tk,
-							block: block,
-							sample: {
-								samplename: sample.name
-							},
-							//samplegroup: {attributes: sample.attributes}
-						})
-						mayaddtab_genome( tabs, {
-							tk: tk,
-							block: block,
-							sample: {
-								samplename: sample.name
-							},
-							//samplegroup: {attributes: sample.attributes}
-						})
-						mayaddtab_mutationsignature( tabs, sample.name, tk, block )
-
-						if(sample.attr && tk.sampleAttribute && tk.sampleAttribute.attributes) {
-							tabs.push({
-								label:'Attributes',
-								show_immediate:(div)=>{
-									for(const attr of sample.attr) {
-										const a = tk.sampleAttribute.attributes[attr.k]
-										if(a) attr.k = a.label
-									}
-									client.make_table_2col( div, sample.attr)
-								}
-							})
-						}
-						const pane = client.newpane({x:100, y:100})
-						pane.header.text( sample.name )
-						client.tab2box( pane.body.style('padding-top','10px'), tabs)
-						for(const t of tabs) {
-							if(t.show_immediate) t.show_immediate(t.box)
-						}
+					addtab_sampleview( tabs, {
+						tk: tk,
+						block: block,
+						sample: {
+							samplename: sample.name
+						},
+						samplegroup: {attributes: sample.attributes}
 					})
+
+					mayaddtab_disco( tabs, {
+						tk: tk,
+						block: block,
+						sample: {
+							samplename: sample.name
+						},
+						//samplegroup: {attributes: sample.attributes}
+					})
+					mayaddtab_genome( tabs, {
+						tk: tk,
+						block: block,
+						sample: {
+							samplename: sample.name
+						},
+						//samplegroup: {attributes: sample.attributes}
+					})
+					mayaddtab_mutationsignature( tabs, sample.name, tk, block )
+
+					if(sample.attr && tk.sampleAttribute && tk.sampleAttribute.attributes) {
+						tabs.push({
+							label:'Attributes',
+							show_immediate:(div)=>{
+								for(const attr of sample.attr) {
+									const a = tk.sampleAttribute.attributes[attr.k]
+									if(a) attr.k = a.label
+								}
+								client.make_table_2col( div, sample.attr)
+							}
+						})
+					}
+					const pane = client.newpane({x:100, y:100})
+					pane.header.text( sample.name )
+					client.tab2box( pane.body.style('padding-top','10px'), tabs)
+					for(const t of tabs) {
+						if(t.show_immediate) t.show_immediate(t.box)
+					}
+				})
 			}
-		})
-		.catch(err=>{
+		}catch(e){
 			client.sayerror( showdiv, err.message || err)
 			if(err.stack) console.log(err.stack)
-		})
-	})
+		}
+	}
 }
 
 
