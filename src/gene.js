@@ -1,5 +1,6 @@
 import * as client from './client'
 import {event as d3event} from 'd3-selection'
+import {debounce} from 'debounce'
 
 
 
@@ -48,8 +49,12 @@ matching genes are shown beneath the input
 			}
 			return
 		}
+		debouncer()
+	})
+	input.node().focus()
 
-		client.dofetch('genelookup',{genome:p.genome,input:str})
+	function genesearch () {
+		client.dofetch('genelookup',{genome:p.genome,input:input.property('value')})
 		.then(data=>{
 			if(data.error) throw data.error
 			if(!data.hits) throw '.hits[] missing'
@@ -76,9 +81,8 @@ matching genes are shown beneath the input
 				.append('div').text( err.message || err )
 			if(err.stack) console.log(err.stack)
 		})
-	})
-
-	input.node().focus()
+	}
+	const debouncer = debounce( genesearch, 300 )
 }
 
 
