@@ -3,6 +3,7 @@ import {select as d3select,selectAll as d3selectAll,event as d3event,mouse as d3
 import {transition} from 'd3-transition'
 import {format as d3format} from 'd3-format'
 import {axisTop, axisLeft} from 'd3-axis'
+import {debounce} from 'debounce'
 import * as client from './client'
 import * as common from './common'
 import * as coord from './coord'
@@ -4652,7 +4653,7 @@ function makecoordinput(bb, butrow) {
 			bb.coord.inputtip.hide()
 			return
 		}
-		if(d3event.code=='Enter' || d3event.code=='NumpadEnter') {
+		if( client.keyupEnter() ) {
 			bb.coord.inputtip.hide()
 			input.blur()
 			bb.jump_1basedcoordinate(v)
@@ -4668,14 +4669,13 @@ function makecoordinput(bb, butrow) {
 			return
 		}
 		if(v.length>6) return
+		debouncer()
+	})
 
+	function genesearch () {
 		// gene name lookup
 		bb.coord.inputtipshow()
-		fetch( new Request( bb.hostURL+'/genelookup', {
-			method:'POST',
-			body:JSON.stringify({ genome:bb.genome.name, input:v, jwt:bb.jwt })
-		}))
-		.then(data=>{return data.json()})
+		client.dofetch('/genelookup', { genome:bb.genome.name, input:bb.coord.input.property('value')} )
 		.then(data=>{
 			if(data.error) throw({message:data.error})
 			if(data.hits && data.hits.length) {
@@ -4694,7 +4694,9 @@ function makecoordinput(bb, butrow) {
 			bb.error(err.message)
 			if(err.stack) console.log(err.stack)
 		})
-	})
+	}
+
+	const debouncer = debounce( genesearch, 300 )
 }
 
 
