@@ -8,11 +8,6 @@ import {termdb_bygenotype} from './block.mds2.vcf.termdb'
 ********************** EXPORTED
 vcf_clickvariant
 ********************** INTERNAL
-maymakebutton_termdbbygenotype
-maymakebutton_mafcovplot
-maymakebutton_fimo
-show_functionalannotation
-may_show_contigencytable
 */
 
 
@@ -32,16 +27,18 @@ p{}
 		+' <span style="font-size:.7em;">'+common.mclass[m.class].label+'</span>'
 	)
 
-	const buttonrow = pane.body.append('div')
-		.style('margin','20px')
+	const tabs = []
+	addtab_functionalannotation( tabs, m, tk, block )
+	mayaddtab_fishertable( tabs, m, tk )
+	mayaddtab_termdbbygenotype( tabs, m, tk, block )
+	mayaddtab_mafcovplot( tabs, m, tk, block )
+	mayaddtab_fimo( tabs, m, tk, block )
 
-	const showholder = pane.body.append('div')
-
-	maymakebutton_termdbbygenotype( buttonrow, showholder, m, tk, block )
-	maymakebutton_mafcovplot( buttonrow, showholder, m, tk, block )
-	maymakebutton_fimo( buttonrow, showholder, m, tk, block )
-
-	show_functionalannotation( pane.body.append('div').style('margin','20px'), m, tk, block )
+	client.tab2box( pane.body.style('padding-top','10px'), tabs )
+	// fill in static ones
+	for(const tab of tabs) {
+		if( tab.show_immediate ) tab.show_immediate( tab.box, m, tk, block )
+	}
 }
 
 
@@ -51,337 +48,308 @@ p{}
 
 
 
-function maymakebutton_mafcovplot ( buttonrow, showholder, m, tk, block ) {
+function mayaddtab_mafcovplot ( tabs, m, tk, block ) {
 // only for vcf item
-
-	if(!tk.vcf) return
-	if(!tk.vcf.plot_mafcov ) return
-
-	let loading = false,
-		loaded = false
-
-	const button = buttonrow.append('div')
-		.attr('class','sja_button')
-		.text('Coverage-maf plot')
-		.style('margin-left','2px')
-
-	const plotdiv = showholder.append('div')
-		.style('display','none')
-
-	button.on('click', async ()=>{
-
-		if(plotdiv.style('display')=='none') {
-			client.appear(plotdiv)
-			button.attr('class','sja_button_open')
-		} else {
-			client.disappear(plotdiv)
-			button.attr('class','sja_button_fold')
+	if(!tk.vcf || !tk.vcf.plot_mafcov ) return
+	tabs.push({
+		label:'Coverage-MAF plot',
+		callback: async (div)=>{
+			const wait = client.tab_wait( div )
+			try {
+				await show_mafcovplot( div, m, tk, block )
+				wait.remove()
+			}catch(e){
+				wait.text('Error: '+(e.message||e))
+			}
 		}
-		if(loaded || loading) return
-		loading=true
-		button.text('Loading...')
-		try {
-			await show_mafcovplot( plotdiv, m, tk, block )
-		}catch(e){
-			plotdiv.text('Error: '+(e.message||e))
-		}
-		loading=false
-		loaded=true
-		button.text('Coverage-maf plot')
 	})
 }
 
 
 
 
-function maymakebutton_termdbbygenotype ( buttonrow, showholder, m, tk, block ) {
+function mayaddtab_termdbbygenotype ( tabs, m, tk, block ) {
 // only for vcf, by variant genotype
 
 	if(!tk.vcf) return
 	if(!tk.vcf.termdb_bygenotype) return
-
-	let loaded=false, loading=false
-
-	const button = buttonrow.append('div')
-		.attr('class','sja_button')
-		.text('Clinical info')
-
-	const plotdiv = showholder.append('div')
-		.style('display','none')
-
-	button.on('click', async ()=>{
-
-		if(plotdiv.style('display')=='none') {
-			client.appear(plotdiv)
-			button.attr('class','sja_button_open')
-		} else {
-			client.disappear(plotdiv)
-			button.attr('class','sja_button_fold')
+	tabs.push( {
+		label: 'Clinical info',
+		callback: async (div)=>{
+			// runs only once
+			const wait = client.tab_wait( div )
+			try {
+				await termdb_bygenotype( div, m, tk, block )
+				wait.remove()
+			}catch(e){
+				wait.text('Error: '+(e.message||e))
+			}
 		}
-		if( loaded || loading ) return
-		loading = true // prevent clicking while loading
-		button.text('Loading...')
-		try {
-			await termdb_bygenotype( plotdiv, m, tk, block )
-		}catch(e){
-			plotdiv.text('Error: '+(e.message||e))
-		}
-		loaded=true
-		loading=false
-		button.text('Clinical info')
 	})
 }
 
 
 
 
-function may_show_contigencytable( div, m, tk ) {
-	if(!tk.vcf.numerical_axis || !tk.vcf.numerical_axis.inuse_AFtest || !tk.vcf.numerical_axis.AFtest || !tk.vcf.numerical_axis.AFtest.testby_fisher || !m.contigencytable) return
-	const table = div.append('table')
-		.style('margin','20px 0px')
-		.style('border','1px solid #ccc')
-		.style('border-collapse','collapse')
-	{
-		const tr = table.append('tr')
-		tr.append('td')
-		tr.append('th').text('#ALT alleles')
-		tr.append('th').text('#REF alleles')
+function mayaddtab_fishertable( tabs, m, tk ) {
+	if(!tk.vcf.numerical_axis
+		|| !tk.vcf.numerical_axis.inuse_AFtest
+		|| !tk.vcf.numerical_axis.AFtest
+		|| !tk.vcf.numerical_axis.AFtest.testby_fisher
+		|| !m.contigencytable) return
+
+	tabs.push({
+		label:'Fisher\' exact test',
+		show_immediate
+	})
+
+	function show_immediate (div) {
+
+		const table = div.append('table')
+			.style('border','1px solid #ccc')
+			.style('border-collapse','collapse')
+		{
+			const tr = table.append('tr')
+			tr.append('td')
+			tr.append('th').text('#ALT alleles')
+			tr.append('th').text('#REF alleles')
+		}
+		{
+			const tr = table.append('tr')
+			tr.append('th').text('Group 1') // TODO may show informative name based on term
+			tr.append('td').text( m.contigencytable[0].toFixed(0) )
+				.style('padding','5px')
+			tr.append('td').text( m.contigencytable[1].toFixed(0) )
+				.style('padding','5px')
+		}
+		{
+			const tr = table.append('tr')
+			tr.append('th').text('Group 2')
+			tr.append('td').text( m.contigencytable[2].toFixed(0) )
+				.style('padding','5px')
+			tr.append('td').text( m.contigencytable[3].toFixed(0) )
+				.style('padding','5px')
+		}
+		table.append('tr').append('td')
+			.attr('colspan',3)
+			.style('border','1px solid #ccc')
+			.style('padding','5px')
+			.html('<span style="opacity:.5">Fisher exact p-value:</span> '+m.AFtest_pvalue)
+
+		if( m.popsetadjvalue ) {
+
+			const af = tk.vcf.numerical_axis.AFtest
+
+			const termdbgidx = af.groups.findIndex(i=>i.is_termdb)
+			const termdbg = af.groups.find(i=>i.is_termdb)
+			const popgrp = af.groups.find(i=>i.is_population)
+
+			const table = div.append('table')
+				.style('margin-top','30px')
+				.style('border','1px solid #ccc')
+				.style('border-collapse','collapse')
+			{
+				const tr = table.append('tr')
+				tr.append('td')
+					.style('padding','5px')
+				for(const s of termdbg.popsetaverage) {
+					tr.append('th')
+						.text(s[0])
+						.style('padding','5px')
+				}
+			}
+			{
+				const tr = table.append('tr')
+				tr.append('th')
+					.text('Group '+(termdbgidx+1)+' average admix')
+					.style('padding','5px')
+				for(const s of termdbg.popsetaverage) {
+					tr.append('td')
+						.text(s[1].toFixed(2))
+						.style('padding','5px')
+				}
+			}
+			{
+				const tr = table.append('tr')
+				tr.append('th')
+					.text(popgrp.key+' raw ALT/REF')
+					.style('padding','5px')
+				for(const s of termdbg.popsetaverage) {
+					const v = m.popsetadjvalue.find(i=>i[0]==s[0])
+					tr.append('td')
+						.text( v[1]+'/'+v[2])
+						.style('padding','5px')
+				}
+			}
+			{
+				const tr = table.append('tr')
+				tr.append('th')
+					.text(popgrp.key+' adjusted ALT/REF')
+					.style('padding','5px')
+				for(const s of termdbg.popsetaverage) {
+					const v = m.popsetadjvalue.find(i=>i[0]==s[0])
+					tr.append('td')
+						.text( v[3]+'/'+v[4])
+						.style('padding','5px')
+				}
+			}
+		}
 	}
-	{
-		const tr = table.append('tr')
-		tr.append('th').text('Group 1') // TODO may show informative name based on term
-		tr.append('td').text( m.contigencytable[0].toFixed(0) )
-			.style('padding','5px')
-		tr.append('td').text( m.contigencytable[1].toFixed(0) )
-			.style('padding','5px')
-	}
-	{
-		const tr = table.append('tr')
-		tr.append('th').text('Group 2')
-		tr.append('td').text( m.contigencytable[2].toFixed(0) )
-			.style('padding','5px')
-		tr.append('td').text( m.contigencytable[3].toFixed(0) )
-			.style('padding','5px')
-	}
-	table.append('tr').append('td')
-		.attr('colspan',3)
-		.style('border','1px solid #ccc')
-		.style('padding','5px')
-		.html('<span style="opacity:.5">Fisher exact p-value:</span> '+m.AFtest_pvalue)
 }
 
 
 
-function may_show_popsetadjvalue ( div, m, tk ) {
-	if(!m.popsetadjvalue) return
+function addtab_functionalannotation ( tabs, m, tk, block ) {
 
-	const af = tk.vcf.numerical_axis.AFtest
+	tabs.push({
+		label:'Annotation',
+		show_immediate
+	})
 
-	const termdbgidx = af.groups.findIndex(i=>i.is_termdb)
-	const termdbg = af.groups.find(i=>i.is_termdb)
-	const popgrp = af.groups.find(i=>i.is_population)
+	function show_immediate (div) {
 
-	const table = div.append('table')
-		.style('margin','20px 0px')
-		.style('border','1px solid #ccc')
-		.style('border-collapse','collapse')
-	{
-		const tr = table.append('tr')
-		tr.append('td')
-			.style('padding','5px')
-		for(const s of termdbg.popsetaverage) {
-			tr.append('th')
-				.text(s[0])
-				.style('padding','5px')
-		}
-	}
-	{
-		const tr = table.append('tr')
-		tr.append('th')
-			.text('Group '+(termdbgidx+1)+' average admix')
-			.style('padding','5px')
-		for(const s of termdbg.popsetaverage) {
-			tr.append('td')
-				.text(s[1].toFixed(2))
-				.style('padding','5px')
-		}
-	}
-	{
-		const tr = table.append('tr')
-		tr.append('th')
-			.text(popgrp.key+' raw ALT/REF')
-			.style('padding','5px')
-		for(const s of termdbg.popsetaverage) {
-			const v = m.popsetadjvalue.find(i=>i[0]==s[0])
-			tr.append('td')
-				.text( v[1]+'/'+v[2])
-				.style('padding','5px')
-		}
-	}
-	{
-		const tr = table.append('tr')
-		tr.append('th')
-			.text(popgrp.key+' adjusted ALT/REF')
-			.style('padding','5px')
-		for(const s of termdbg.popsetaverage) {
-			const v = m.popsetadjvalue.find(i=>i[0]==s[0])
-			tr.append('td')
-				.text( v[3]+'/'+v[4])
-				.style('padding','5px')
-		}
-	}
-}
+		div.append('span').html(
+			(m.gene ? '<i>'+m.gene+'</i> ' : '')
+			+(m.isoform ? '<span style="font-size:.8em;text-decoration:italic">'+m.isoform+'</span> ' : '')
+			+m.mname
+			+'&nbsp; <span style="font-size:.7em;padding:3px;color:white;background:'+common.mclass[m.class].color+'">'+common.mclass[m.class].label+'</span>'
+			+( m.name && m.name.startsWith('rs') ? '&nbsp; <a href=https://www.ncbi.nlm.nih.gov/snp/'+m.name+' target=_blank>'+m.name+'</a>' : '')
+		)
 
+		if( m.csq_count && m.csq_count>1 ) {
+			// variant does not keep csq on client
+			// a button to retrieve actual csq
+			const button = div.append('div')
+				.style('margin-left','20px')
+				.text((m.csq_count-1)+' other interpretations')
+				.attr('class','sja_button')
+				.style('zoom','.7')
 
+			let loading=false,loaded=false
+			const plotdiv = div.append('div')
+				.style('margin','20px')
+				.style('display','none')
 
-function show_functionalannotation ( div, m, tk, block ) {
+			button.on('click', async ()=>{
 
-	may_show_contigencytable( div, m, tk )
-	may_show_popsetadjvalue( div, m, tk )
-
-	// first row: brief info about the variant
-
-	div.append('span').html(
-		(m.gene ? '<i>'+m.gene+'</i> ' : '')
-		+(m.isoform ? '<span style="font-size:.8em;text-decoration:italic">'+m.isoform+'</span> ' : '')
-		+m.mname
-		+'&nbsp; <span style="font-size:.7em;padding:3px;color:white;background:'+common.mclass[m.class].color+'">'+common.mclass[m.class].label+'</span>'
-		+( m.name && m.name.startsWith('rs') ? '&nbsp; <a href=https://www.ncbi.nlm.nih.gov/snp/'+m.name+' target=_blank>'+m.name+'</a>' : '')
-	)
-
-	if( m.csq_count && m.csq_count>1 ) {
-		// variant does not keep csq on client
-		// a button to retrieve actual csq
-		const button = div.append('div')
-			.style('margin-left','20px')
-			.text((m.csq_count-1)+' other interpretations')
-			.attr('class','sja_button')
-			.style('zoom','.7')
-
-		let loading=false,loaded=false
-		const plotdiv = div.append('div')
-			.style('margin','20px')
-			.style('display','none')
-
-		button.on('click', async ()=>{
-
-			if(plotdiv.style('display')=='none') {
-				client.appear(plotdiv)
-				button.attr('class','sja_button_open')
-			} else {
-				client.disappear(plotdiv)
-				button.attr('class','sja_button_fold')
-			}
-			if( loaded || loading ) return
-			loading = true // prevent clicking while loading
-			button.text('Loading...')
-			try {
-				await get_csq( plotdiv, m, tk, block )
-			}catch(e){
-				plotdiv.text('Error: '+(e.message||e))
-			}
-			loaded=true
-			loading=false
-			button.text((m.csq_count-1)+' other interpretations')
-		})
-	}
-
-	const lst=[] // items for showing in a table
-
-	// genomic position
-	{
-		let text = m.chr+':'+(m.pos+1)
-		if( m.ref+'>'+m.alt != m.mname ) {
-			// m has hgvs, so display alleles
-			text += ' <span style="font-size:.7em;opacity:.5">REF</span> '+m.ref+' <span style="font-size:.7em;opacity:.5">ALT</span> '+m.alt
-		}
-		lst.push({k:'Genomic',v:text})
-	}
-
-	// info fields add to lst
-	if( m.altinfo ) {
-		// alt allele info
-		for(const k in m.altinfo) {
-			// value from altinfo maybe array
-			const infovalue = Array.isArray( m.altinfo[k] ) ? m.altinfo[k] : [ m.altinfo[k] ]
-			const showvalue = infovalue
-			/*
-			let showvalue
-			if( altkey2category[ k ] ) {
-				showvalue = infovalue.map( i=> {
-					const cat = altkey2category[k][i]
-					if(cat) {
-						return '<span style="padding:1px 3px;background:'+cat.color+';color:'+(cat.textcolor || 'black')+';">'+i+'</span>'
-					}
-					return i
-				})
-			} else {
-				showvalue = infovalue
-			}
-			*/
-			lst.push({
-				k:k,
-				v: showvalue.join(', ') + (tk.vcf.info && tk.vcf.info[k] ? ' <span style="font-size:.7em;opacity:.5">'+tk.vcf.info[k].Description+'</span>' : '')
+				if(plotdiv.style('display')=='none') {
+					client.appear(plotdiv)
+					button.attr('class','sja_button_open')
+				} else {
+					client.disappear(plotdiv)
+					button.attr('class','sja_button_fold')
+				}
+				if( loaded || loading ) return
+				loading = true // prevent clicking while loading
+				button.text('Loading...')
+				try {
+					await get_csq( plotdiv, m, tk, block )
+				}catch(e){
+					plotdiv.text('Error: '+(e.message||e))
+				}
+				loaded=true
+				loading=false
+				button.text((m.csq_count-1)+' other interpretations')
 			})
 		}
-	}
 
-	if( m.info ) {
-		// locus info
-		for(const k in m.info) {
-			const infovalue = Array.isArray( m.info[k] ) ? m.info[k] : [m.info[k]]
-			const showvalue = infovalue
-			/*
-			let showvalue
-			if( lockey2category[ k ] ) {
-				showvalue = infovalue.map( i=> {
-					const cat = lockey2category[k][i]
-					if(cat) {
-						return '<span style="padding:1px 3px;background:'+cat.color+';color:'+(cat.textcolor || 'black')+';">'+i+'</span>'
-					}
-					return i
-				})
-			} else {
-				showvalue = infovalue
+		const lst=[] // items for showing in a table
+
+		// genomic position
+		{
+			let text = m.chr+':'+(m.pos+1)
+			if( m.ref+'>'+m.alt != m.mname ) {
+				// m has hgvs, so display alleles
+				text += ' <span style="font-size:.7em;opacity:.5">REF</span> '+m.ref+' <span style="font-size:.7em;opacity:.5">ALT</span> '+m.alt
 			}
-			*/
-			lst.push({
-				k:k,
-				v: showvalue.join(', ') + (tk.vcf.info && tk.vcf.info[k] ? ' <span style="font-size:.7em;opacity:.5">'+tk.vcf.info[k].Description+'</span>' : '')
+			lst.push({k:'Genomic',v:text})
+		}
+
+		// info fields add to lst
+		if( m.altinfo ) {
+			// alt allele info
+			for(const k in m.altinfo) {
+				// value from altinfo maybe array
+				const infovalue = Array.isArray( m.altinfo[k] ) ? m.altinfo[k] : [ m.altinfo[k] ]
+				const showvalue = infovalue
+				/*
+				let showvalue
+				if( altkey2category[ k ] ) {
+					showvalue = infovalue.map( i=> {
+						const cat = altkey2category[k][i]
+						if(cat) {
+							return '<span style="padding:1px 3px;background:'+cat.color+';color:'+(cat.textcolor || 'black')+';">'+i+'</span>'
+						}
+						return i
+					})
+				} else {
+					showvalue = infovalue
+				}
+				*/
+				lst.push({
+					k:k,
+					v: showvalue.join(', ') + (tk.vcf.info && tk.vcf.info[k] ? ' <span style="font-size:.7em;opacity:.5">'+tk.vcf.info[k].Description+'</span>' : '')
+				})
+			}
+		}
+
+		if( m.info ) {
+			// locus info
+			for(const k in m.info) {
+				const infovalue = Array.isArray( m.info[k] ) ? m.info[k] : [m.info[k]]
+				const showvalue = infovalue
+				/*
+				let showvalue
+				if( lockey2category[ k ] ) {
+					showvalue = infovalue.map( i=> {
+						const cat = lockey2category[k][i]
+						if(cat) {
+							return '<span style="padding:1px 3px;background:'+cat.color+';color:'+(cat.textcolor || 'black')+';">'+i+'</span>'
+						}
+						return i
+					})
+				} else {
+					showvalue = infovalue
+				}
+				*/
+				lst.push({
+					k:k,
+					v: showvalue.join(', ') + (tk.vcf.info && tk.vcf.info[k] ? ' <span style="font-size:.7em;opacity:.5">'+tk.vcf.info[k].Description+'</span>' : '')
+				})
+			}
+		}
+
+		const table = client.make_table_2col(div,lst)
+			.style('margin','20px 0px 0px 0px')
+
+		// add dynamic columns
+
+		if( tk.vcf.check_pecanpie ) {
+			const tr = table.append('tr')
+			tr.append('td')
+				.attr('colspan',2)
+				.text('PeCAN-PIE')
+				.style('opacity',.5)
+			const td = tr.append('td')
+				.text('Loading...')
+			fetch( 'https://pecan.stjude.cloud/variant/decision/'+block.genome.name+'/'+m.chr.replace('chr','')+'/'+(m.pos+1)+'/'+m.ref+'/'+m.alt)
+			.then(data=>{return data.json()})
+			.then(data=>{
+				if(data.length==0) throw 'Not in PeCAN-PIE'
+				const v=data[0].paneldecision
+				if(!v) throw 'Not in PeCAN-PIE'
+
+				const info = tk.vcf.check_pecanpie.info
+				td.html('<a href=https://pecan.stjude.cloud/variant/'+block.genome.name+'/'+m.chr.replace('chr','')+'/'+(m.pos+1)+'/'+m.ref+'/'+m.alt
+					+' target=_blank '
+					+' style="font-size:.8em;text-decoration:none;background:'+info[v].fill+';color:'+(info[v].color||'white')+';padding:3px 5px">'
+					+'PeCAN-PIE: '+info[v].label+'</a>')
+			})
+			.catch(e=>{
+				td.text( e.message || e )
+				if(e.stack) console.log(e.stack)
 			})
 		}
-	}
-
-	const table = client.make_table_2col(div,lst)
-		.style('margin','20px 0px 0px 0px')
-
-	// add dynamic columns
-
-	if( tk.vcf.check_pecanpie ) {
-		const tr = table.append('tr')
-		tr.append('td')
-			.attr('colspan',2)
-			.text('PeCAN-PIE')
-			.style('opacity',.5)
-		const td = tr.append('td')
-			.text('Loading...')
-		fetch( 'https://pecan.stjude.cloud/variant/decision/'+block.genome.name+'/'+m.chr.replace('chr','')+'/'+(m.pos+1)+'/'+m.ref+'/'+m.alt)
-		.then(data=>{return data.json()})
-		.then(data=>{
-			if(data.length==0) throw 'Not in PeCAN-PIE'
-			const v=data[0].paneldecision
-			if(!v) throw 'Not in PeCAN-PIE'
-
-			const info = tk.vcf.check_pecanpie.info
-			td.html('<a href=https://pecan.stjude.cloud/variant/'+block.genome.name+'/'+m.chr.replace('chr','')+'/'+(m.pos+1)+'/'+m.ref+'/'+m.alt
-				+' target=_blank '
-				+' style="font-size:.8em;text-decoration:none;background:'+info[v].fill+';color:'+(info[v].color||'white')+';padding:3px 5px">'
-				+'PeCAN-PIE: '+info[v].label+'</a>')
-		})
-		.catch(e=>{
-			td.text( e.message || e )
-			if(e.stack) console.log(e.stack)
-		})
 	}
 }
 
@@ -461,50 +429,32 @@ function get_csq ( div, m, tk, block ) {
 
 
 
-function maymakebutton_fimo ( buttonrow, showholder, m, tk, block ) {
+function mayaddtab_fimo ( tabs, m, tk, block ) {
 /*
 may create a tf motif find button for mutation
 */
 	if(!block.genome.fimo_motif) return
-
-	let loaded=false, loading=false
-
-	const button = buttonrow.append('div')
-		.attr('class','sja_button')
-		.style('margin-left','2px')
-		.text('TF motif')
-
-	const plotdiv = showholder.append('div')
-		.style('display','none')
-
-	button.on('click', async ()=>{
-
-		if(plotdiv.style('display')=='none') {
-			client.appear(plotdiv)
-			button.attr('class','sja_button_open')
-		} else {
-			client.disappear(plotdiv)
-			button.attr('class','sja_button_fold')
+	tabs.push({
+		label:'TF motif',
+		callback: async (div)=>{
+			const wait = client.tab_wait(div)
+			const fimoarg = {
+				genome: block.genome,
+				div,
+				m: {
+					chr: m.chr,
+					pos: (m.pos+1), // 1 based
+					ref: m.ref,
+					alt: m.alt
+				},
+			}
+			try {
+				const _ = await import('./mds.fimo')
+				await _.init( fimoarg )
+				wait.remove()
+			} catch (e) {
+				wait.text('Error: '+(e.message||e))
+			}
 		}
-		if( loaded || loading ) return
-		loading = true // prevent clicking while loading
-		button.text('Loading...')
-
-		const fimoarg = {
-			genome: block.genome,
-			div: plotdiv,
-			m: {
-				chr: m.chr,
-				pos: (m.pos+1), // 1 based
-				ref: m.ref,
-				alt: m.alt
-			},
-		}
-		const _ = await import('./mds.fimo')
-		await _.init( fimoarg )
-
-		loaded=true
-		loading=false
-		button.text('TF motif')
 	})
 }

@@ -320,102 +320,88 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 	const af = tk.vcf.numerical_axis.AFtest
 	const tip = tk.legend.tip.clear()
 
-	let tabcount = 0
-	if( tk.mds ) tabcount++
-	if( af.allowed_infofields ) tabcount++
-	if( tk.populations ) tabcount++
-
-	const [tabs,boxes] = client.tab2box(
-		tip.d.append('div').style('margin','13px'),
-		tabcount
-		)
-
-	let tabidx = 0
-
-	if(tk.mds){
-		const thistab = tabs[tabidx]
-		const thisbox = boxes[tabidx++]
-		thistab.append('span')
-			.style('background','#4888BF')
-			.style('border-radius','7px')
-			.html('&nbsp;&nbsp;')
-			.style('margin-right','8px')
-		thistab.append('span')
-			.text('Clinical dictionary')
-		const obj = {
-			genome: block.genome,
-			mds: tk.mds,
-			div: thisbox,
-			default_rootterm: {},
-			modifier_barchart_selectbar: {
-				callback: (result) => {
-					tip.hide()
-					update_group_term(result, group)
-					_updatetk()
-				}
-			}
-		}
-		termdb.init(obj)
-	}
+	const tabs = []
 
 	if( af.allowed_infofields ){
-		const thistab = tabs[tabidx]
-		const thisbox = boxes[tabidx++]
-		thistab.append('span')
-			.style('background','#674EA7')
-			.style('border-radius','7px')
-			.html('&nbsp;&nbsp;')
-			.style('margin-right','8px')
-		thistab.append('span')
-			.text('Numerical value')
-		for( const i of af.allowed_infofields ){
-			if( group.is_infofield && group.key==i.key ) {
-				// group is currently this one
-				continue
+		tabs.push({
+			label:'Numerical value',
+			show_immediate: (div)=>{
+				for( const i of af.allowed_infofields ){
+					if( group.is_infofield && group.key==i.key ) {
+						// group is currently this one
+						continue
+					}
+					const info = tk.info_fields.find( j=> j.key == i.key )
+					div.append('div')
+						.attr('class','sja_menuoption')
+						.text(info.label)
+						.on('click', async()=>{
+							tip.hide()
+							delete group.is_termdb
+							delete group.is_population
+							group.is_infofield = true
+							group.key = i.key
+							_updatetk()
+						})
+				}
 			}
-			const info = tk.info_fields.find( j=> j.key == i.key )
-			thisbox.append('div')
-				.attr('class','sja_menuoption')
-				.text(info.label)
-				.on('click', async()=>{
-					tip.hide()
-					delete group.is_termdb
-					delete group.is_population
-					group.is_infofield = true
-					group.key = i.key
-					_updatetk()
-				})
-		}
+		})
 	}
 
 	if( tk.populations ) {
-		const thistab = tabs[tabidx]
-		const thisbox = boxes[tabidx++]
-		thistab.append('span')
-			.style('background','#A64D79')
-			.style('border-radius','7px')
-			.html('&nbsp;&nbsp;')
-			.style('margin-right','8px')
-		thistab.append('span')
-			.text('Population')
-		for( const population of tk.populations ){
-			if( group.is_population && group.key==population.key ) {
-				continue
+		tabs.push({
+			label:'Population',
+			show_immediate: (div)=>{
+				for( const population of tk.populations ){
+					if( group.is_population && group.key==population.key ) {
+						continue
+					}
+					div.append('div')
+						.attr('class','sja_menuoption')
+						.text(population.label)
+						.on('click', async()=>{
+							tip.hide()
+							delete group.is_termdb
+							delete group.is_infofield
+							group.is_population = true
+							group.key = population.key
+							group.allowto_adjust_race = population.allowto_adjust_race
+							group.adjust_race = population.adjust_race
+							_updatetk()
+						})
+				}
 			}
-			thisbox.append('div')
-				.attr('class','sja_menuoption')
-				.text(population.label)
-				.on('click', async()=>{
-					tip.hide()
-					delete group.is_termdb
-					delete group.is_infofield
-					group.is_population = true
-					group.key = population.key
-					group.allowto_adjust_race = population.allowto_adjust_race
-					group.adjust_race = population.adjust_race
-					_updatetk()
-				})
-		}
+		})
+	}
+
+	if(tk.mds && tk.mds.termdb){
+		tabs.push({
+			label:'Clinical info',
+			callback: async (div)=>{
+				const wait = client.tab_wait(div)
+				const obj = {
+					genome: block.genome,
+					mds: tk.mds,
+					div,
+					default_rootterm: {},
+					modifier_barchart_selectbar: {
+						callback: (result) => {
+							tip.hide()
+							update_group_term(result, group)
+							_updatetk()
+						}
+					}
+				}
+				await termdb.init(obj)
+				wait.remove()
+			}
+		})
+	}
+
+
+	client.tab2box( tip.d.append('div').style('margin','13px'), tabs )
+	for(const t of tabs) {
+		if(t.show_immediate) t.show_immediate( t.box )
 	}
 
 	tip.showunder( clickeddom )

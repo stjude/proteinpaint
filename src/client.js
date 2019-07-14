@@ -1604,7 +1604,17 @@ export function gmlst2loci ( gmlst ) {
 
 
 
-export function tab2box ( holder, numberofTabs ) {
+
+
+export function tab2box ( holder, tabs ) {
+/*
+tabs[ tab{} ]
+	.label: required
+	.callback()
+		if callback is provided for a tab,
+
+this function attaches .box (d3 dom) to each tab of tabs[]
+*/
 	const tr = holder.append('table')
 		.style('border-spacing','0px')
 		.style('border-collapse','separate')
@@ -1616,32 +1626,48 @@ export function tab2box ( holder, numberofTabs ) {
 		.style('vertical-align','top')
 		.style('border-left','solid 1px #aaa')
 		.style('padding','10px')
-	const tabs = []
-	const boxes = []
-	for(let i=0; i<numberofTabs; i++) {
-		tabs.push(
-			tdleft.append('div')
+	for(let i=0; i<tabs.length; i++) {
+
+		const tab = tabs[i]
+		let callback_called = false // only used when there's a callback for the tab
+
+		tab.tab = tdleft.append('div')
 			.style('padding','5px 10px')
 			.style('margin','0px')
 			.style('border-top','solid 1px #ddd')
-			.classed('sja_menuoption',true)
+			.classed('sja_menuoption', i!=0)
+			.html( tab.label )
 			.on('click',()=>{
-				for(let j=0; j<numberofTabs; j++) {
-					tabs[j].classed('sja_menuoption', i!=j )
-					boxes[j].style('display', i==j ? 'block' : 'none' )
+				if( tab.box.style('display')!='none' ) {
+					tab.tab.classed('sja_menuoption',true)
+					tab.box.style('display','none')
+				} else {
+					for(let j=0; j<tabs.length; j++) {
+						tabs[j].tab.classed('sja_menuoption', i!=j )
+						tabs[j].box.style('display', i==j ? 'block' : 'none' )
+					}
+				}
+				if( tab.callback ) {
+					if( callback_called ) return
+					callback_called=true
+					tab.callback( tab.box )
 				}
 			})
-		)
-		boxes.push(
-			tdright.append('div')
+		tab.box = tdright.append('div')
 			.style('padding','3px')
-			.style('display','none')
-		)
+			.style('display', i==0 ? 'block' : 'none')
 	}
-	tabs[0].classed('sja_menuoption',false)
-	boxes[0].style('display','block')
-	return [tabs,boxes]
 }
+
+
+
+
+export function tab_wait ( d ) {
+	return d.append('div')
+		.style('margin','30px')
+		.text('Loading...')
+}
+
 
 
 export function add_scriptTag ( path ) {
