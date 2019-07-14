@@ -20,24 +20,31 @@ TODO also work for termdb filter
 				if(!i.key) throw '.key missing from a value of '+t.term.id+' from '+from
 				if(!i.label) i.label = i.key
 			}
-		} else if(t.term.isinteger || t.term.isfloat) {
-			if(!t.range) throw '.range{} missing from a numerical term of '+from
-			if( t.range.is_unannotated ) {
-				if(!Number.isFinite(t.range.value)) throw '.value missing for is_unannotated category'
-				if(!t.range.label) throw '.label missing for is_unannotated category'
-			} else {
-				if(t.range.startunbounded && t.range.stopunbounded) throw 'both start & stop are unbounded from range of a term from '+from
-				if(t.range.startunbounded) {
-					if(!Number.isFinite(t.range.stop)) throw '.stop undefined when start is unbounded for a term from '+from
-				} else if(t.range.stopunbounded) {
-					if(!Number.isFinite(t.range.start)) throw '.start undefined when stop is unbounded for a term from '+from
+			continue
+		}
+		if(t.term.isinteger || t.term.isfloat) {
+			if(!t.ranges) throw '.ranges[] missing from a numerical term of '+from
+			for(const range of t.ranges) {
+				if( range.value != undefined ) {
+					// is a special category, not a value from numerical range
+					if(!range.label) throw '.label missing for is_unannotated category'
 				} else {
-					if(!Number.isFinite(t.range.start)) throw '.start undefined when start is not unbounded for a term from '+from
-					if(!Number.isFinite(t.range.stop)) throw '.stop undefined when stop is not unbounded for a term from '+from
-					if(t.range.start >= t.range.stop ) throw '.start is not lower than stop for a term from '+from
+					// a regular range
+					if(range.startunbounded && range.stopunbounded) throw 'both start & stop are unbounded from range of a term from '+from
+					if(range.startunbounded) {
+						if(!Number.isFinite(range.stop)) throw '.stop undefined when start is unbounded for a term from '+from
+					} else if(range.stopunbounded) {
+						if(!Number.isFinite(range.start)) throw '.start undefined when stop is unbounded for a term from '+from
+					} else {
+						if(!Number.isFinite(range.start)) throw '.start undefined when start is not unbounded for a term from '+from
+						if(!Number.isFinite(range.stop)) throw '.stop undefined when stop is not unbounded for a term from '+from
+						if(range.start >= range.stop ) throw '.start is not lower than stop for a term from '+from
+					}
 				}
 			}
-		} else if(t.term.iscondition) {
+			continue
+		}
+		if(t.term.iscondition) {
 			if( t.grade_and_child ) {
 				if(!Array.isArray(t.grade_and_child)) throw 'grade_and_child[] is not array from '+from
 				for(const i of t.grade_and_child) {
@@ -60,8 +67,8 @@ TODO also work for termdb filter
 					throw 'neither bar_by_grade or bar_by_children is set for a condition term from '+from
 				}
 			}
-		} else {
-			throw 'unknown term type from a '+from+' term'
+			continue
 		}
+		throw 'unknown term type from a '+from+' term'
 	}
 }

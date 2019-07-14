@@ -1,8 +1,14 @@
+const app = require('../app')
+
+
+
 /*
 
 ********************** EXPORTED
 get_samples
 get_summary
+get_numericsummary
+server_init_db_queries
 ********************** INTERNAL
 makesql_by_tvsfilter
 	add_categorical
@@ -28,142 +34,118 @@ function makesql_by_tvsfilter ( tvslst, ds ) {
 	each element is a term-value setting object
 	must have already been validated by src/mds.termdb.termvaluesetting.js/validate_termvaluesetting()
 returns:
-	.CTEcascade:
-		one string of all CTEs, with question marks
+	.filters:
+		one string of all filter statement intersects, with question marks
 	.values[]:
 		array of *bind parameters*
-	.lastCTEname:
-		the name of last CTE, to be used in task-specific runner
+	.CTEname:
+		the name of CTE, to be used in task-specific runner
 */
 	if( !tvslst ) return null
 
-	let sampleset_id = 0 // increment this id before creating a CTE
-	const CTEs = []
+	const filters = []
 	const values = []
 
 	for(const tvs of tvslst) {
-
-		let samplein_clause = sampleset_id > 0 ? `sample IN sampleset_${sampleset_id} AND` : ''
-
+		//let samplein_clause = sampleset_id > 0 ? `sample IN sampleset_${sampleset_id} AND` : ''
 		if(tvs.term.iscategorical) {
-			add_categorical( tvs, samplein_clause )
+			add_categorical( tvs )
 		} else if(tvs.term.isinteger || tvs.term.isfloat) {
-			add_numerical( tvs, samplein_clause )
+			add_numerical( tvs )
 		} else if(tvs.term.iscondition) {
-			add_condition( tvs, samplein_clause )
+			add_condition( tvs )
 		} else {
 			throw 'unknown term type'
 		}
 	}
 
+	const CTEname = 'filtered'
 	return {
-		CTEcascade: CTEs.join(', '),
+		filters: `${CTEname} AS (\n ${filters.join('\nINTERSECT\n')})\n`,
 		values,
-		lastCTEname: 'sampleset_'+sampleset_id
+		CTEname
 	}
 
 	// helpers
-	function add_categorical ( tvs, samplein_clause ) {
-		CTEs.push(
-			`sampleset_${++sampleset_id} AS (
-				SELECT sample
-				FROM annotations
-				WHERE
-				${samplein_clause}
-				term_id = ?
-				AND value IN (${tvs.values.map(i=>'?').join(', ')})
-			)`
+	function add_categorical ( tvs ) {
+		filters.push(
+			`SELECT sample
+			FROM annotations
+			WHERE term_id = ?
+			AND value IN (${tvs.values.map(i=>'?').join(', ')})`
 		)
 		values.push( tvs.term.id, ...tvs.values.map(i=>i.key) )
 	}
 
-	function add_numerical ( tvs, samplein_clause ) {
-		if(!tvs.range) throw '.range{} missing'
+	function add_numerical ( tvs ) {
+		if(!tvs.ranges) throw '.ranges{} missing'
 		values.push( tvs.term.id )
-		const clauses = []
+		const range2clause = []
 		const cast = 'CAST(value AS '+(tvs.term.isinteger?'INT':'REAL')+')'
-		if( tvs.range.is_unannotated ) {
-			clauses.push(cast+'=?')
-			values.push( tvs.range.value )
-		} else {
-			// regular bin
-			if( !tvs.range.startunbounded ) {
-				if( tvs.range.startinclusive ) {
-					clauses.push(cast+' >= ?')
-				} else {
-					clauses.push(cast+' > ? ')
+		for(const range of tvs.ranges) {
+			if( range.value != undefined ) {
+				// special category
+				range2clause.push(cast+'=?')
+				values.push( range.value )
+			} else {
+				// regular bin
+				const lst = []
+				if( !range.startunbounded ) {
+					if( range.startinclusive ) {
+						lst.push(cast+' >= ?')
+					} else {
+						lst.push(cast+' > ? ')
+					}
+					values.push( range.start )
 				}
-				values.push( tvs.range.start )
-			}
-			if( !tvs.range.stopunbounded ) {
-				if( tvs.range.stopinclusive ) {
-					clauses.push(cast+' <= ?')
-				} else {
-					clauses.push(cast+' < ? ')
+				if( !range.stopunbounded ) {
+					if( range.stopinclusive ) {
+						lst.push(cast+' <= ?')
+					} else {
+						lst.push(cast+' < ? ')
+					}
+					values.push( range.stop )
 				}
-				values.push( tvs.range.stop )
+				range2clause.push( '('+lst.join(' AND ')+')' )
 			}
 		}
-		CTEs.push(
-			`sampleset_${++sampleset_id} AS (
-				SELECT sample
-				FROM annotations
-				WHERE
-				${samplein_clause}
-				term_id = ?
-				AND ${clauses.join(' AND ')}
-			)`
+		filters.push(
+			`SELECT sample
+			FROM annotations
+			WHERE term_id = ?
+			AND ( ${range2clause.join(' OR ')} )`
 		)
 	}
 
-	function add_condition ( tvs, samplein_clause ) {
+	function add_condition ( tvs ) {
 		if( ds.cohort.termdb.q.termIsLeaf( tvs.term.id ) ) {
 			// is leaf
-			CTEs.push(
-				`sampleset_${++sampleset_id} AS (
-					${grade_age_select_clause(tvs)}
-					FROM chronicevents
-					WHERE
-					${samplein_clause}
-					term_id = ?
-					${uncomputablegrades_clause( ds )}
-					GROUP BY sample
-				),
-				sampleset_${++sampleset_id} AS (
-					SELECT sample
-					FROM sampleset_${sampleset_id-1}
-					WHERE
-					grade IN ${tvs.values.map(i=>'?').join(', ')}
-				)`
+			filters.push(
+				`
+				SELECT sample
+				FROM (
+					${grade_age_selection(tvs.term.id, values, tvs, ds)}
+				) 
+				WHERE grade IN (${tvs.values.map(i=>'?').join(', ')})`
 			)
-			values.push( tvs.term.id, ...tvs.values.map(i=>i.key) )
+			values.push( ...tvs.values.map(i=>i.key) )
 			return
 		}
 
+		const termtable = `(
+			SELECT term_id
+			FROM ancestry
+			WHERE (ancestor_id=? OR term_id=?)
+		)`
 
 		// not leaf
 		if( tvs.grade_and_child ) {
-			CTEs.push(
-				`sampleset_${++sampleset_id} AS (
-					SELECT term_id
-					FROM ancestry
-					WHERE
-					ancestor_id=? OR term_id=?
-				),
-				sampleset_${++sampleset_id} AS (
-					${grade_age_select_clause(tvs)}
-					FROM chronicevents
-					WHERE
-					${samplein_clause}
-					term_id IN sampleset_${sampleset_id-1}
-					${uncomputablegrades_clause( ds )}
-					GROUP BY sample
-				),
-				sampleset_${++sampleset_id} AS (
-					SELECT sample
-					FROM sampleset_${sampleset_id-1}
-					WHERE grade = ?
-				)`
+			filters.push(
+				`SELECT sample
+				FROM (
+					${grade_age_selection(tvs.term.id, values, tvs, ds, null, termtable)}
+				)
+				WHERE grade = ?`
 			)
 			values.push(
 				tvs.grade_and_child[0].child_id,
@@ -173,64 +155,38 @@ returns:
 			return
 		}
 
-
-
 		if( tvs.bar_by_grade ) {
-			CTEs.push(
-				`sampleset_${++sampleset_id} AS (
-					SELECT term_id
-					FROM ancestry
-					WHERE
-					ancestor_id=? OR term_id=?
-				),
-				sampleset_${++sampleset_id} AS (
-					${grade_age_select_clause(tvs)}
-					FROM chronicevents
-					WHERE
-					${samplein_clause}
-					term_id IN sampleset_${sampleset_id-1}
-					${uncomputablegrades_clause( ds )}
-					GROUP BY sample
-				),
-				sampleset_${++sampleset_id} AS (
-					SELECT sample
-					FROM sampleset_${sampleset_id-1}
-					WHERE
-					grade IN (${tvs.values.map(i=>'?').join(', ')})
-				)`
+			filters.push(
+				`SELECT sample
+				FROM (
+					${grade_age_selection(tvs.term.id, values, tvs, ds, null, termtable)}
+				)
+				WHERE
+				grade IN (${tvs.values.map(i=>'?').join(', ')})`
 			)
-			values.push(
-				tvs.term.id,
-				tvs.term.id,
-				...tvs.values.map(i=>i.key)
-			)
+			values.push(...tvs.values.map(i=>i.key))
 			return
 		}
 
 
 		if( tvs.bar_by_children ) {
-			CTEs.push(
-				`sampleset_${++sampleset_id} AS (
-					SELECT term_id
-					FROM ancestry
-					WHERE
-					${tvs.values.map(i=>'ancestor_id=? OR term_id=?').join(' OR ')}
-				),
-				sampleset_${++sampleset_id} AS (
-					SELECT distinct(sample)
-					FROM chronicevents
-					WHERE
-					${samplein_clause}
-					term_id IN sampleset_${sampleset_id-1}
-					${uncomputablegrades_clause( ds )}
-				)`
+			filters.push(
+				`SELECT distinct(sample)
+				FROM chronicevents
+				WHERE
+					term_id IN (
+						SELECT term_id
+						FROM ancestry
+						WHERE
+						${tvs.values.map(i=>'ancestor_id=? OR term_id=?').join(' OR ')}
+					)
+					${uncomputablegrades_clause( ds )}`
 			)
 			for(const i of tvs.values) {
 				values.push(i.key, i.key)
 			}
 			return
 		}
-
 		throw 'unknown mode for non-leaf condition term'
 	}
 }
@@ -249,8 +205,8 @@ return an array of sample names passing through the filter
 */
 	const filter = makesql_by_tvsfilter( tvslst, ds )
 	const string =
-		`WITH ${filter.CTEcascade}
-		SELECT sample FROM ${filter.lastCTEname}`
+		`WITH ${filter.filters}
+		SELECT sample FROM ${filter.CTEname}`
 	console.log('SQL: ',string)
 	console.log('PARAM: ',filter.values)
 
@@ -299,13 +255,13 @@ q{}
 		if(!q.term2_q) q.term2_q = {} // settings of term2
 		if( typeof q.term2_q == 'string' ) q.term2_q = JSON.parse(decodeURIComponent(q.term2_q))
 		const values = []
-		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1_q, values )
+		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1_q, values, "_1")
 		// in case of using auto binning of numeric term, tell is term2
 		q.term2_q.isterm2 = true
-		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2_q, values )
+		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2_q, values, "_2")
 		const string =
 			`WITH
-			${filter ? filter.CTEcascade+', ' : ''}
+			${filter ? filter.filters+', ' : ''}
 			${CTE_term1.sql},
 			${CTE_term2.sql}
 			SELECT a.key AS key1, b.key AS key2, COUNT(DISTINCT b.sample) AS samplecount
@@ -314,9 +270,8 @@ q{}
 				${CTE_term2.tablename} b
 			WHERE a.sample=b.sample
 			GROUP BY key1,key2`
-		console.log(string)
 		const lst = q.ds.cohort.db.connection.prepare(string)
-			.all( values )
+			.all( filter ? filter.values.concat(values) : values )
 		// add label or range if numeric
 		for(const i of lst) {
 			if( term1.isinteger || term1.isfloat ) {
@@ -340,11 +295,11 @@ q{}
 	if( term1.iscategorical ) {
 		//////////// summary for categorical
 		const string =
-			`${filter ? 'WITH '+filter.CTEcascade+' ' : ''}
+			`${filter ? 'WITH '+filter.filters+' ' : ''}
 			SELECT value AS key,count(sample) AS samplecount
 			FROM annotations
 			WHERE
-			${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+			${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 			term_id=?
 			GROUP BY value`
 		const lst = q.ds.cohort.db.connection.prepare( string )
@@ -364,7 +319,7 @@ q{}
 		const bins = makesql_numericBinCTE( term1, q.term1_q, filter, q.ds )
 		const string =
 			`WITH
-			${filter ? filter.CTEcascade+', ' : ''}
+			${filter ? filter.filters+', ' : ''}
 			${bins.sql}
 			SELECT bname AS key, COUNT(sample) AS samplecount
 			FROM ${bins.tablename}
@@ -387,26 +342,18 @@ q{}
 			///////////// summary, leaf
 			string = 
 				`WITH
-				${filter ? filter.CTEcascade+', ' : ''}
+				${filter ? filter.filters+', ' : ''}
 				tmp_grade_table AS (
-					${grade_age_select_clause( q.term1_q )}
-					FROM chronicevents
-					WHERE
-					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
-					term_id = ?
-					${uncomputablegrades_clause( q.ds )}
-					GROUP BY sample
+					${grade_age_selection(q.term1_id, thisvalues, q.term1_q, q.ds, filter )}
 				)
 				SELECT grade as key,count(sample) as samplecount
 				FROM tmp_grade_table
 				GROUP BY grade`
-			thisvalues.push( q.term1_id )
-
 		} else if( q.term1_q.grade_child_overlay ) {
 			/////////// summary, grade-child overlay, one term
 			string =
 				`WITH
-				${filter ? filter.CTEcascade+', ' : ''}
+				${filter ? filter.filters+', ' : ''}
 				tmp_children_table AS (
 					SELECT id AS child
 					FROM terms
@@ -423,7 +370,7 @@ q{}
 						${q.term1_q.value_by_max_grade ? 'MAX(grade) AS grade' : 'grade, MAX(age_graded)'}
 					FROM chronicevents a, tmp_grandchildren_table d
 					WHERE
-					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
+					${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 					d.term_id = a.term_id
 					${uncomputablegrades_clause( q.ds )}
 					GROUP BY d.child, sample
@@ -433,38 +380,32 @@ q{}
 					count(sample) AS samplecount
 				FROM tmp_events_table
 				GROUP BY grade, child`
-			thisvalues.push( q.term1_id )
 
 		} else if( q.term1_q.bar_by_grade ) {
 			//////////// summary, bar by grade
-			string = 
-				`WITH
-				${filter ? filter.CTEcascade+', ' : ''}
-				tmp_term_table AS (
-					SELECT term_id
-					FROM ancestry
-					WHERE ancestor_id=?
-					OR term_id=?
-				),
-				tmp_grade_table AS (
-					${grade_age_select_clause( q.term1_q )}
-					FROM chronicevents
-					WHERE
-					${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
-					term_id IN tmp_term_table
-					${uncomputablegrades_clause( q.ds )}
-					GROUP BY sample
-				)
-				SELECT grade AS key,count(sample) as samplecount
-				FROM tmp_grade_table
-				GROUP BY key`
-			thisvalues.push( q.term1_id, q.term1_id )
-
+			thisvalues.push(q.term1_id, q.term1_id)
+			const termtable = 'tmp_term_table'
+			string = // NOTE: `tmp_term_table is relied upon by grade_age_selection`
+			`WITH
+			${filter ? filter.filters+', ' : ''}
+			${termtable} AS (
+				SELECT term_id
+				FROM ancestry
+				WHERE ancestor_id=?
+				OR term_id=?
+			),
+			tmp_grade_table AS (
+				${grade_age_selection(q.term1_id, thisvalues, q.term1_q, q.ds, filter, termtable )}
+			)
+			SELECT grade AS key,count(distinct sample) as samplecount
+			FROM tmp_grade_table
+			GROUP BY key`
 		} else if( q.term1_q.bar_by_children ) {
 			/////////// summary, bar by children
+			thisvalues.push(q.term1_id)
 			string =
 				`WITH
-				${filter ? filter.CTEcascade+',' : ''}
+				${filter ? filter.filters+',' : ''}
 				tmp_subcondition_table AS (
 					SELECT id
 					FROM terms
@@ -478,10 +419,10 @@ q{}
 				),
 				tmp_events_table AS (
 					SELECT
-						${barbychildren_select_clause(q.term1_q)}
+						sample, d.subcondition as key
 					FROM chronicevents a, tmp_descendant_table d
 					WHERE
-					${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
+					${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
 					d.term_id = a.term_id
 					${uncomputablegrades_clause( q.ds )}
 					GROUP BY key, sample
@@ -491,7 +432,6 @@ q{}
 					count(sample) AS samplecount
 				FROM tmp_events_table
 				GROUP BY key`
-			thisvalues.push( q.term1_id )
 		} else {
 			throw 'unknown setting for a non-leaf term'
 		}
@@ -552,38 +492,72 @@ function uncomputablegrades_clause ( ds ) {
 	}
 	return ''
 }
-function grade_age_select_clause ( tvs ) {
-// work for grade as bars
-	if( tvs.value_by_max_grade ) return 'SELECT sample,MAX(grade) AS grade '
-	if( tvs.value_by_most_recent ) return 'SELECT sample,MAX(age_graded),grade '
+function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null ) {
+	// work for grade as bars 
+	if( tvs.value_by_max_grade ) {
+		if (!termtable) values.push(term_id)
+		else if (termtable.includes('?')) {
+			values.push(term_id,term_id)
+		}
+
+		return `SELECT sample,MAX(grade) AS grade 
+		FROM chronicevents
+		WHERE
+		${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
+		term_id IN ${termtable ? termtable : '(?)'}
+		${uncomputablegrades_clause( ds )}
+		GROUP BY sample`
+	}
+
+	if( tvs.value_by_most_recent ) {
+		if (termtable) {
+			if (termtable.includes('?')) {
+				values.push(term_id,term_id,term_id,term_id)
+			}
+			return `
+			SELECT c.sample as sample, c.grade AS grade
+			FROM (
+				SELECT sample, MAX(age_graded) AS age_graded 
+				FROM chronicevents
+				WHERE
+				${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
+				term_id IN ${termtable}
+				${uncomputablegrades_clause( ds )}
+				GROUP BY sample
+			) t
+			JOIN chronicevents c ON 
+			  c.term_id IN ${termtable}
+			  AND c.sample = t.sample 
+			  AND c.age_graded = t.age_graded
+			  ${uncomputablegrades_clause( ds )}
+			`
+		} else {
+			values.push(term_id, term_id)
+
+			return `
+			SELECT c.sample as sample, c.grade AS grade
+			FROM (
+				SELECT sample, MAX(age_graded) AS age_graded 
+				FROM chronicevents
+				WHERE
+				${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
+				term_id = ?
+				${uncomputablegrades_clause( ds )}
+				GROUP BY sample
+			) t
+			JOIN chronicevents c ON 
+			  c.term_id = ? 
+			  AND c.sample = t.sample 
+			  AND c.age_graded = t.age_graded
+			  ${uncomputablegrades_clause( ds )}
+			`
+		}
+	}
+
 	throw 'unknown value_by_? for condition term by grade'
 }
-function tmptable () {
-	return 'tmp'+Math.ceil(Math.random()*10000)
-}
-function barbychildren_select_clause ( q ) {
-// non-leaf condition term, bar by children, make select clause
-	const selectitems = [
-		'sample',
-		'd.subcondition as key'
-	]
-	if( q.value_by_max_grade ) {
-		selectitems.push('MAX(grade)')
-	} else if(q.value_by_most_recent) {
-		selectitems.push('MAX(age_graded)')
-	} else if(q.value_by_computable_grade) {
-		// nothing
-	} else {
-		throw 'unknown value_by_? at barbychildren_select_clause'
-	}
-	return selectitems.join(',')
-}
 
-
-
-
-
-function makesql_overlay_oneterm ( term, filter, ds, q, values ) {
+function makesql_overlay_oneterm ( term, filter, ds, q, values, termindex ) {
 /*
 form the query for one of the table in term0-term1-term2 overlaying
 
@@ -599,7 +573,7 @@ values[]: collector of bind parameters
 
 returns { sql, tablename }
 */
-	const tablename = tmptable()
+	const tablename = 'samplekey' + termindex
 	if( term.iscategorical ) {
 		values.push( term.id )
 		return {
@@ -613,7 +587,7 @@ returns { sql, tablename }
 	}
 	if( term.isfloat || term.isinteger ) {
 		values.push( term.id )
-		const bins = makesql_numericBinCTE( term, q, filter, ds )
+		const bins = makesql_numericBinCTE( term, q, filter, ds, termindex )
 		return {
 			sql: `${bins.sql},
 			${tablename} AS (
@@ -625,7 +599,7 @@ returns { sql, tablename }
 		}
 	}
 	if( term.iscondition ) {
-		return makesql_overlay_oneterm_condition( term, q, ds, filter, values )
+		return makesql_overlay_oneterm_condition( term, q, ds, filter, values, termindex )
 	}
 	throw 'unknown term type'
 }
@@ -634,27 +608,20 @@ returns { sql, tablename }
 
 
 
-function makesql_overlay_oneterm_condition ( term, q, ds, filter, values ) {
+function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termindex='' ) {
 /*
 return {sql, tablename}
 */
-	const grade_table = tmptable()
-	const term_table = tmptable()
-	const out_table = tmptable()
+	const grade_table = 'grade_table' + termindex
+	const term_table = 'term_table' + termindex
+	const out_table = 'out_table' + termindex
 
 	let string
 	if( term.isleaf ) {
-		values.push(term.id)
 		return {
 			sql:
 			`${grade_table} AS (
-				${grade_age_select_clause(q)}
-				FROM chronicevents
-				WHERE
-				${filter ? 'sample IN '+filter.lastCTEname+' AND ' : ''}
-				term_id = ?
-				${uncomputablegrades_clause( ds )}
-				GROUP BY sample
+				${grade_age_selection(term.id, values, q, ds, filter)}
 			),
 			${out_table} AS (
 				SELECT grade AS key, sample
@@ -674,13 +641,7 @@ return {sql, tablename}
 				OR term_id=?
 			),
 			${grade_table} AS (
-				${grade_age_select_clause(q)}
-				FROM chronicevents
-				WHERE
-				${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
-				term_id IN ${term_table}
-				${uncomputablegrades_clause( ds )}
-				GROUP BY sample
+				${grade_age_selection(term.id, values, q, ds, filter, term_table)}
 			),
 			${out_table} AS (
 				SELECT grade AS key, sample
@@ -691,8 +652,8 @@ return {sql, tablename}
 	}
 	if( q.bar_by_children ) {
 		values.push( term.id )
-		const subconditions = tmptable()
-		const descendants = tmptable()
+		const subconditions = 'subconditions' + termindex
+		const descendants = 'descendants' + termindex
 		return {
 			sql: `${subconditions} AS (
 				SELECT id
@@ -707,12 +668,12 @@ return {sql, tablename}
 			),
 			${grade_table} AS (
 				SELECT
-					${barbychildren_select_clause(q)}
+					sample, d.subcondition as key
 				FROM
 					chronicevents a,
 					${descendants} d
 				WHERE
-				${filter ? 'sample IN '+filter.lastCTEname+' AND' : ''}
+				${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
 				a.term_id = d.term_id
 				${uncomputablegrades_clause( ds )}
 				GROUP BY key, sample
@@ -727,7 +688,7 @@ return {sql, tablename}
 
 
 
-function makesql_numericBinCTE ( term, q, filter, ds ) {
+function makesql_numericBinCTE ( term, q, filter, ds, termindex='' ) {
 /*
 decide bins and produce CTE
 
@@ -737,47 +698,13 @@ q{}
 filter as is returned by makesql_by_tvsfilter
 returns { sql, tablename, name2bin }
 */
-	let bin_size
-	let bins = []
-	if( q.custom_bins ) {
-		bins = q.custom_bins
-	} else {
-		// use automatic bins
-		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
-			if( q.isterm2 && term.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
-				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.crosstab_fixed_bins))
-			} else if ( term.graph.barchart.numeric_bin.fixed_bins ) {
-				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.fixed_bins))
-			} else if( term.graph.barchart.numeric_bin.auto_bins ) {
-				const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
-				let v = term.graph.barchart.numeric_bin.auto_bins.start_value
-				bin_size = term.graph.barchart.numeric_bin.auto_bins.bin_size
-				while( v < max ) {
-					bins.push({
-						start: v,
-						stop: Math.min( v+bin_size, max ),
-						startinclusive:true
-					})
-					v+=bin_size
-				}
-			} else {
-				throw 'no predefined binning scheme'
-			}
-		}
-	}
+	const [bins, bin_size] = get_bins(q, term, ds)
 	const bin_def_lst = []
 	const name2bin = new Map() // k: name str, v: bin{}
 	let binid = 0
 	for(const b of bins) {
+		if (!b.name && b.label) b.name = b.label
 		if(!b.name) {
-			if( b.startunbounded ) {
-				b.name = (b.stopinclusive ? '<=' : '<')+' '+b.stop
-			} else if( b.stopunbounded ) {
-				b.name = (b.startinclusive ? '>=' : '>')+' '+b.start
-			} else {
-				b.name = `${b.start} <${b.startinclusive?'=':''} x <${b.stopinclusive?'=':''} ${b.stop}`
-			}
-
 			if( Number.isInteger( bin_size ) ) {
         // bin size is integer, make nicer label
         if( bin_size == 1 ) {
@@ -874,8 +801,8 @@ returns { sql, tablename, name2bin }
 		}
 	}
 
-	const bin_def_table = tmptable()
-	const bin_sample_table = tmptable()
+	const bin_def_table = 'bin_defs' + termindex
+	const bin_sample_table = 'bin_sample' + termindex
 
 	const sql = 
 		`${bin_def_table} AS (
@@ -896,31 +823,232 @@ returns { sql, tablename, name2bin }
 					${excludevalues ? 'v NOT IN ('+excludevalues.join(',')+') AND' : ''}
 					(
 						b.startunbounded=1
-						OR
-						(
-							v>b.start
-							OR
-							(b.startinclusive=1 AND v=b.start)
-						)
+						OR v>b.start
+						OR (b.startinclusive=1 AND v=b.start)
 					)
 					AND
 					(
 						b.stopunbounded
-						OR
-						(
-							v<b.stop
-							OR
-							(b.stopinclusive=1 AND v=b.stop)
-						)
+						OR v<b.stop
+						OR (b.stopinclusive=1 AND v=b.stop)
 					)
 				)
 			WHERE
-			${filter ? 'sample IN '+filter.lastCTEname+' AND':''}
+			${filter ? 'sample IN '+filter.CTEname+' AND':''}
 			term_id=?
 		)`
 	return {
 		sql,
 		tablename: bin_sample_table,
 		name2bin
+	}
+}
+
+function get_bins(q, term, ds) {
+	let bin_size
+	let bins = []
+	if( q.custom_bins ) {
+		bins = q.custom_bins
+	} else {
+		// use automatic bins
+		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
+			if( q.isterm2 && term.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
+				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.crosstab_fixed_bins))
+			} else if ( term.graph.barchart.numeric_bin.fixed_bins ) {
+				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.fixed_bins))
+			} else if( term.graph.barchart.numeric_bin.auto_bins ) {
+				const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
+				let v = term.graph.barchart.numeric_bin.auto_bins.start_value
+				bin_size = term.graph.barchart.numeric_bin.auto_bins.bin_size
+				while( v < max ) {
+					bins.push({
+						start: v,
+						stop: Math.min( v+bin_size, max ),
+						startinclusive:true
+					})
+					v+=bin_size
+				}
+			} else {
+				throw 'no predefined binning scheme'
+			}
+		}
+	}
+	return [bins, bin_size]
+}
+
+
+export function get_numericsummary (q, term, ds, tvslst ) {
+/*
+to produce the summary table of mean, median, percentiles
+at a numeric barchart
+*/
+	let filter
+	if( tvslst ) {
+		if( typeof tvslst == 'string' ) tvslst = JSON.parse(decodeURIComponent(tvslst))
+		filter = makesql_by_tvsfilter( tvslst, ds )
+	} else {
+		const [bins, bin_size] = get_bins(q, term, ds)
+		tvslst = [{term, ranges: bins}]
+		filter = makesql_by_tvsfilter( tvslst, ds )
+	}
+	const values = []
+	if(filter) {
+		values.push(...filter.values)
+	}
+	let excludevalues
+	if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
+		if (term.graph.barchart.numeric_bin.unannotated) {
+			excludevalues = []
+			const u = term.graph.barchart.numeric_bin.unannotated
+			if(u.value!=undefined) excludevalues.push(u.value)
+			if(u.value_positive!=undefined) excludevalues.push(u.value_positive)
+			if(u.value_negative!=undefined) excludevalues.push(u.value_negative)
+		}
+	}
+	const string =
+		`${filter ? 'WITH '+filter.filters+' ' : ''}
+		SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
+		FROM annotations
+		WHERE
+		${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
+		term_id=?
+		${excludevalues ? 'AND value NOT IN ('+excludevalues.join(',')+')' : ''}`
+	values.push( term.id )
+
+	const s = ds.cohort.db.connection.prepare(string)
+	const result = s.all( values )
+	result.sort((i,j)=> i.value - j.value )
+
+	const stat = app.boxplot_getvalue( result )
+	stat.mean = result.length ?
+		result.reduce((s,i)=>s+i.value, 0) / result.length
+		: 0
+
+	let sd = 0
+  for(const i of result) {
+    sd += Math.pow( i.value - stat.mean, 2 )
+  }
+  stat.sd = Math.sqrt( sd / (result.length-1) )
+
+	return stat
+}
+
+
+
+
+
+
+
+
+
+
+export function server_init_db_queries ( ds ) {
+/*
+initiate db queries and produce function wrappers
+run only once
+
+as long as the termdb table and logic is universal
+probably fine to hardcode such query strings here
+and no need to define them in each dataset
+thus less things to worry about...
+*/
+	if(!ds.cohort) throw 'ds.cohort missing'
+	if(!ds.cohort.db) throw 'ds.cohort.db missing'
+	if(!ds.cohort.db.connection) throw 'ds.cohort.db.connection missing'
+	ds.cohort.termdb.q = {}
+	const q = ds.cohort.termdb.q
+
+	{
+		const s = ds.cohort.db.connection.prepare('select jsondata from terms where id=?')
+		q.termjsonByOneid = (id)=>{
+			const t = s.get( id )
+			if(t) {
+				const j = JSON.parse(t.jsondata)
+				j.id = id
+				return j
+			}
+			return undefined
+		}
+	}
+
+	{
+		const s = ds.cohort.db.connection.prepare('select id from terms where parent_id=?')
+		q.termIsLeaf = (id)=>{
+			const t = s.get(id)
+			if(t && t.id) return false
+			return true
+		}
+	}
+
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE parent_id is null')
+		q.getRootTerms = ()=>{
+			return s.all().map(i=>{
+				const t = JSON.parse(i.jsondata)
+				t.id = i.id
+				return t
+			})
+		}
+	}
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT parent_id FROM terms WHERE id=?')
+		q.termHasParent = (id)=>{
+			const t = s.get(id)
+			if(t && t.parent_id) return true
+			return false
+		}
+		q.getTermParentId = (id)=>{
+			const t = s.get(id)
+			if(t && t.parent_id) return t.parent_id
+			return undefined
+		}
+		q.getTermParent = (id)=>{
+			const c = q.getTermParentId(id)
+			if(!c) return undefined
+			return q.termjsonByOneid( c )
+		}
+	}
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)')
+		q.getTermChildren = (id)=>{
+			const tmp = s.all(id)
+			if(tmp) return tmp.map( i=> {
+				const j = JSON.parse(i.jsondata)
+				j.id = i.id
+				return j
+			})
+			return undefined
+		}
+	}
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
+		q.findTermByName = (n, limit)=>{
+			const tmp = s.all('%'+n+'%')
+			if(tmp) {
+				const lst = []
+				for(const i of tmp) {
+					const j = JSON.parse(i.jsondata)
+					j.id = i.id
+					lst.push( j )
+					if(lst.length==10) break
+				}
+				return lst
+			}
+			return undefined
+		}
+	}
+	{
+		const s1 = ds.cohort.db.connection.prepare('SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?')
+		const s2 = ds.cohort.db.connection.prepare('SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?')
+		const cache = new Map()
+		q.findTermMaxvalue = (id, isint) =>{
+			if( cache.has(id) ) return cache.get(id)
+			const tmp = (isint ? s1 : s2).get(id)
+			if( tmp ) {
+				cache.set( id, tmp.v )
+				return tmp.v
+			}
+			return undefined
+		}
 	}
 }

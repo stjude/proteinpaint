@@ -2,7 +2,6 @@ const app = require('../app')
 const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
-const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
 const termdbsql = require('./termdb.sql')
 
 
@@ -21,7 +20,6 @@ trigger_getcategories
 trigger_children
 trigger_findterm
 trigger_treeto
-server_init_db_queries
 */
 
 
@@ -53,7 +51,7 @@ return async (req, res) => {
 		if( q.get_children ) return trigger_children( q, res, tdb )
 		if( q.findterm ) return trigger_findterm( q, res, tdb )
 		if( q.treeto ) return trigger_treeto( q, res, tdb )
-		if( q.testplot ) return trigger_testplot( q, res, tdb, ds )
+		if( q.testplot ) return trigger_testplot( q, res, tdb, ds ) // this is required for running test cases!!
 
 		throw 'termdb: don\'t know what to do'
 
@@ -70,7 +68,18 @@ return async (req, res) => {
 function trigger_testplot ( q, res, tdb, ds ) {
 	q.ds = ds
 	const lst = termdbsql.get_summary( q )
-	res.send({lst})
+	const result = { lst }
+	const t1 = tdb.q.termjsonByOneid( q.term1_id )
+	if( t1.isinteger || t1.isfloat ) {
+		result.summary_term1 = termdbsql.get_numericsummary(q, t1, ds, q.tvslst )
+	}
+	if( q.term2_id ) {
+		const t2 = tdb.q.termjsonByOneid( q.term2_id )
+		if( t2.isinteger || t2.isfloat ) {
+			result.summary_term2 = termdbsql.get_numericsummary(q, t2, ds, q.tvslst )
+		}
+	}
+	res.send( result )
 }
 
 
@@ -112,7 +121,9 @@ do not directly hand over the term object to client; many attr to be kept on ser
 
 
 function trigger_findterm ( q, res, termdb ) {
-	res.send({lst: termdb.q.findTermByName( q.findterm, 10 ) })
+	res.send({
+		lst: termdb.q.findTermByName( q.findterm, 10 ).map( copy_term )
+	})
 }
 
 
@@ -183,110 +194,10 @@ exports.server_init = ( ds ) => {
 
 	server_init_mayparse_patientcondition( ds )
 
-	server_init_db_queries( ds )
+	termdbsql.server_init_db_queries( ds )
 }
 
 
-
-
-function server_init_db_queries ( ds ) {
-// produce function wrappers to each db query
-	const q = ds.cohort.db.q
-	ds.cohort.termdb.q = {}
-	const q2 = ds.cohort.termdb.q
-	if(!q.termjsonByOneid) throw 'db query missing: termjsonByOneid'
-	q2.termjsonByOneid = (id)=>{
-		const t = q.termjsonByOneid.get( id )
-		if(t) {
-			const j = JSON.parse(t.jsondata)
-			j.id = id
-			return j
-		}
-		return undefined
-	}
-	if(!q.termIsLeaf) throw 'db query missing: termIsLeaf'
-	q2.termIsLeaf = (id)=>{
-		const t = q.termIsLeaf.get(id)
-		if(t && t.id) return false
-		return true
-	}
-	/* as long as the termdb table and logic is universal
-	probably fine to hardcode such query strings here
-	and no need to define them in each dataset
-	thus less things to worry about...
-	*/
-	{
-		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE parent_id is null')
-		q2.getRootTerms = ()=>{
-			return s.all().map(i=>{
-				const t = JSON.parse(i.jsondata)
-				t.id = i.id
-				return t
-			})
-		}
-	}
-	{
-		const s = ds.cohort.db.connection.prepare('SELECT parent_id FROM terms WHERE id=?')
-		q2.termHasParent = (id)=>{
-			const t = s.get(id)
-			if(t && t.parent_id) return true
-			return false
-		}
-		q2.getTermParentId = (id)=>{
-			const t = s.get(id)
-			if(t && t.parent_id) return t.parent_id
-			return undefined
-		}
-		q2.getTermParent = (id)=>{
-			const c = q2.getTermParentId(id)
-			if(!c) return undefined
-			return q2.termjsonByOneid( c )
-		}
-	}
-	{
-		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)')
-		q2.getTermChildren = (id)=>{
-			const tmp = s.all(id)
-			if(tmp) return tmp.map( i=> {
-				const j = JSON.parse(i.jsondata)
-				j.id = i.id
-				return j
-			})
-			return undefined
-		}
-	}
-	{
-		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
-		q2.findTermByName = (n, limit)=>{
-			const tmp = s.all('%'+n+'%')
-			if(tmp) {
-				const lst = []
-				for(const i of tmp) {
-					const j = JSON.parse(i.jsondata)
-					j.id = i.id
-					lst.push( copy_term(j) )
-					if(lst.length==10) break
-				}
-				return lst
-			}
-			return undefined
-		}
-	}
-	{
-		const s1 = ds.cohort.db.connection.prepare('SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?')
-		const s2 = ds.cohort.db.connection.prepare('SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?')
-		const cache = new Map()
-		q2.findTermMaxvalue = (id, isint) =>{
-			if( cache.has(id) ) return cache.get(id)
-			const tmp = (isint ? s1 : s2).get(id)
-			if( tmp ) {
-				cache.set( id, tmp.v )
-				return tmp.v
-			}
-			return undefined
-		}
-	}
-}
 
 
 

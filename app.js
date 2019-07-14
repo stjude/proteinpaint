@@ -49,7 +49,6 @@ const express=require('express'),
 	basicAuth = require('express-basic-auth'),
 	termdb = require('./modules/termdb'),
 	termdbbarchart = require('./modules/termdb.barchart'),
-	termsql = require('./modules/db-queries/termsql')
 	mds2_init = require('./modules/mds2.init'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
@@ -195,7 +194,6 @@ app.post('/mdssurvivalplot',handle_mdssurvivalplot)
 app.post('/fimo', fimo.handle_closure(genomes) )
 app.get('/termdb', termdb.handle_request_closure( genomes ) )
 app.get('/termdb-barchart', termdbbarchart.handle_request_closure( genomes ) )
-app.get('/termsql', termsql.handle_request_closure( genomes ))
 app.post('/singlecell', singlecell.handle_singlecell_closure( genomes ) )
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)
@@ -12737,11 +12735,6 @@ function mds_init(ds,genome, _servconfig) {
 				ds.cohort.db.connection = utils.connect_db( ds.cohort.db.file )
 			}catch(e) {
 				return 'cannot read db file: '+ds.cohort.db.file
-			}
-			if(!ds.cohort.db.s) return '.s{} missing from cohort.db'
-			ds.cohort.db.q = {}
-			for(const statementkey in ds.cohort.db.s) {
-				ds.cohort.db.q[ statementkey ] = ds.cohort.db.connection.prepare( ds.cohort.db.s[ statementkey ] )
 			}
 			ds.cohort.db.cache = new Map()
 			// k: sql string

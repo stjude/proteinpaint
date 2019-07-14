@@ -14,7 +14,7 @@ import {loadstudycohort} from './tp.init'
 import {rgb as d3rgb} from 'd3-color'
 import blockinit from './block.init'
 import {getsjcharts}     from './getsjcharts'
-
+import {debounce} from 'debounce'
 
 
 
@@ -206,6 +206,30 @@ function makeheader(holder,obj, jwt) {
 
 	// 2, search box
 	const tip = new client.Menu({border:'',padding:'0px'})
+	function entersearch () {
+		// by pressing enter, if not gene will search snp
+		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
+		let str=input.property('value').trim()
+		if(!str) return
+		const hitgene=tip.d.select('.sja_menuoption')
+		if(hitgene.size()>0 && hitgene.attr('isgene')) {
+			str=hitgene.text()
+		}
+		findgene2paint( str, selectgenome.property('value'), jwt )
+		input.property('value','')
+		tip.hide()
+	}
+	function genesearch () {
+		// any other key typing
+		tip.clear().showunder(input.node())
+		findgenelst(
+			input.property('value'),
+			selectgenome.property('value'),
+			tip,
+			jwt
+		)
+	}
+	const debouncer = debounce(genesearch,300)
 	const input=headbox.append('div')
 		.style('display','inline-block')
 		.style('padding',padw)
@@ -215,33 +239,13 @@ function makeheader(holder,obj, jwt) {
 		.style('padding','3px')
 		.attr('size',20)
 		.attr('placeholder','Gene, position, or SNP')
-		.on('keyup',()=>{
-			const stmp=selectgenome.node()
-			const usegenome=stmp.options[stmp.selectedIndex].getAttribute('n')
-			if(d3event.code=='Enter') {
-
-				// poor fix to remove existing epaint windows
-				d3selectAll('.sja_ep_pane').remove()
-
-				let str=d3event.target.value.trim()
-				const hitgene=tip.d.select('.sja_menuoption')
-				if(hitgene.size()>0 && hitgene.attr('isgene')) {
-					str=hitgene.text()
-				}
-				findgene2paint( str, usegenome, jwt )
-				d3event.target.value=''
-				tip.hide()
-				return
-			}
-			tip.clear().showunder(d3event.target)
-			findgenelst(
-				d3event.target.value,
-				usegenome,
-				tip,
-				jwt
-			)
+		.on('keyup', ()=>{
+			if(client.keyupEnter()) entersearch()
+			else debouncer()
 		})
 	input.node().focus()
+
+
 
 	const selectgenome=headbox.append('div')
 		.style('display','inline-block')

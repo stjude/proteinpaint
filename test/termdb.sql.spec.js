@@ -13,372 +13,642 @@ tape("\n", function(test) {
   test.end()
 })
 
-tape("single, categorical", function (test) {
+tape("filters", function (test) {
   // plan will track the number of expected tests,
   // which helps with the async tests
-  test.plan(2)
-  
+  test.plan(8)
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Male"}]
+      }]
+    }, 
+    "categorically filtered results"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
+        ranges: [{start:0,stop:5}]
+      }]
+    }, 
+    "numerically filtered results"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"Asthma", name:"Asthma", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:3, label: "3"}],
+        value_by_max_grade: true
+      }]
+    }, 
+    "leaf condition filtered results, by maximum grade"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"Asthma", name:"Asthma", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:2, label: "2"}],
+        value_by_most_recent: true
+      }]
+    }, 
+    "leaf condition filtered results, by most recent grade"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"Arrhythmias", name:"Arrhythmias", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:2, label: "2"}],
+        value_by_max_grade: true
+      }],
+    }, 
+    "non-leaf condition filtered results, by maximum grade",
+    results => results.forEach(result => delete result.total)
+  )
+ 
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"Arrhythmias", name:"Arrhythmias", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:2, label: "2"}],
+        value_by_most_recent: true
+      }],
+    }, 
+    "non-leaf condition filtered results, by most recent grade",
+    results => results.forEach(result => delete result.total)
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"Arrhythmias", name:"Arrhythmias", iscondition:true},
+        bar_by_children: true,
+        values: [{key:'Cardiac dysrhythmia', label: "Cardiac dysrhythmia"}]
+      }],
+    }, 
+    "non-leaf condition filtered results by child",
+    results => results.forEach(result => delete result.total)
+  )
+ 
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Female"}]
+      },{
+        term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
+        ranges: [{start:0,stop:8}]
+      },{
+        term: {id:"Asthma", name:"Asthma", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:3, label: "3"}],
+        value_by_max_grade: true
+      }]
+    }, 
+    "combined filtered results"
+  )
+})
+
+tape("categorical term1", function (test) {
+  test.plan(6)
+
   compareResponseData(
     test, 
     {term1: 'diaggrp'}, 
-    "should produce the expected UNFILTERED sample counts by diagnosis groups"
+    "sample counts by diagnosis groups, no overlay"
   )
 
-  const filter = [{
-    "values":[{"key":"Male","label":"Male"}],
-    "term":{"id":"sex","name":"Sex","iscategorical":true}
-  }]
   compareResponseData(
     test,
-    {term1: 'diaggrp', filter},
-    "should produce the expected FILTERED sample counts by diagnosis groups"
+    {
+      term1: 'diaggrp',
+      term2: 'sex'
+    },
+    "sample counts by diagnosis groups, categorical overlay"
+  )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'diaggrp',
+      term2: 'agedx'
+    },
+    "sample counts by diagnosis groups, numerical overlay",
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    })
+  )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'diaggrp',
+      term2: 'Asthma',
+      conditionUnits: ["","","max_grade_perperson"],
+      term2_q: {value_by_max_grade:1},
+    },
+    "sample counts by diagnosis groups, leaf condition overlay",
+    results => results.forEach(result => delete result.total)
+  )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'diaggrp',
+      term2: 'Asthma',
+      conditionUnits: ["","","most_recent_grade"],
+      term2_q: {value_by_most_recent:1},
+    },
+    "sample counts by diagnosis groups, leaf condition overlay",
+    results => results.forEach(result => delete result.total)
+  )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'diaggrp',
+      term2: 'Asthma',
+      conditionUnits: ["","","most_recent_grade"],
+      term2_q: {value_by_most_recent:1},
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Female"}]
+      },{
+        term: {id:"aaclassic_5", name:"alkaline dosage", isfloat:true},
+        ranges: [{start:1000,stop:5000}]
+      }]
+    },
+    "filtered sample counts by diagnosis groups, leaf condition overlay",
+    results => results.forEach(result => delete result.total)
   )
 })
 
 
-tape("single, numerical", function (test) {
-  test.plan(2)
+tape("numerical term1", function (test) {
+  test.plan(7)
   compareResponseData(
     test, 
     {term1: 'agedx'},
-    "should produce the expected UNFILTERED sample counts by age of diagnosis"
+    "sample counts by age of diagnosis, no overlay"
   )
   
-  const filter = [{
-    term: {id:'sex', name:'sex', iscategorical:true},
-    values: [{key: 'Male', label: 'Female'}]
-  }]
   compareResponseData(
     test,
-    {term1: 'agedx', filter},
-    "should produce the expected FILTERED sample counts by age of diagnosis"
+    {
+      term1: 'agedx', 
+      filter: [{
+        term: {id:'sex', name:'sex', iscategorical:true},
+        values: [{key: 'Female', label: 'Female'}]
+      }]
+    },
+    "filtered sample counts by age of diagnosis, no overlay"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term2: 'diaggrp'
+    },
+    "sample counts by age of diagnosis, categorical overlay"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term2: 'aaclassic_5'
+    },
+    "sample counts by age of diagnosis, numerical overlay",
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    })
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term2: 'Asthma',
+      conditionUnits: ["","","max_grade_perperson"],
+      term2_q: {value_by_max_grade:1},
+    },
+    "sample counts by age of diagnosis, condition overlay by max grade",
+    results => results.forEach(result => delete result.total)
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term2: 'Asthma',
+      conditionUnits: ["","","most_recent_grade"],
+      term2_q: {value_by_most_recent:1},
+    },
+    "sample counts by age of diagnosis, condition overlay by most recent grade",
+    results => results.forEach(result => delete result.total)
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term2: 'Asthma',
+      conditionUnits: ["","","most_recent_grade"],
+      term2_q: {value_by_most_recent:1},
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Female"}]
+      },{
+        term: {id:"aaclassic_5", name:"alkaline dosage", isfloat:true},
+        ranges: [{start:1000,stop:5000}]
+      }]
+    },
+    "sample counts by age of diagnosis, condition overlay by most recent grade",
+    results => results.forEach(result => delete result.total)
   )
 })
 
-/* 
-    TO-DO: convert the remaining tests to use compareResponseData()
+tape("leaf condition term1", function (test) {
+  test.plan(10) 
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1, bar_by_grade:1}
+    },
+    "sample counts by Asthma condition max-grade, no overlay"
+  )
 
-tape("single, condition isleaf", function (test) {
-  test.plan(6)
-  const url0 = baseUrl + '&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')
-  request(url0,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 3, "should have the expected number of UNFILTERED ISLEAF max grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        {"lst":[{"key":1,"samplecount":141,"label":"1: Mild"},{"key":2,"samplecount":123,"label":"2: Moderate"},{"key":3,"samplecount":78,"label":"3: Severe"}]},
-        "should produce the expected UNFILTERED ISLEAF sample by max grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  compareResponseData(
+    test,
+    { 
+      term1: 'Asthma', 
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1},
+      filter: [{
+        term: {id:'sex', name:'sex', iscategorical:true},
+        values: [{key: 'Male', label: 'Male'}]
+      }]
+    },
+    "filtered sample counts by Asthma condition max-grade, no overlay"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","most_recent_grade",""], 
+      term1_q: {value_by_most_recent:1}
+    },
+    "sample counts by Asthma condition most recent grade, no overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total) 
+  )
   
-  const url1 = baseUrl
-    + '&term1_id=Asthma'
-    + '&term1_q='+encodeURIComponent('{"value_by_max_grade":1}')
-    + '&tvslst='+encodeURIComponent(JSON.stringify([{
-      term: {id:'sex', name:'sex', iscategorical:true},
-      values: [{key: 'Male', label: 'Male'}]
-    }]));
-  request(url1,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 3, "should have the expected number of FILTERED ISLEAF max grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 1, samplecount: 69, label: '1: Mild' }, { key: 2, samplecount: 49, label: '2: Moderate' }, { key: 3, samplecount: 33, label: '3: Severe' } ] },
-        "should produce the expected FILTERED ISLEAF sample by max grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1},
+      term2: 'sex'
+    },
+    "sample counts by Asthma condition max grade, categorical overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total) 
+  )
 
-  const url2 = baseUrl + '&term1_id=Asthma&term1_q='+encodeURIComponent('{"value_by_most_recent":1}')
-  request(url2,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 3, "should have the expected number of unfiltered most recent grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 1, samplecount: 159, label: '1: Mild' }, { key: 2, samplecount: 122, label: '2: Moderate' }, { key: 3, samplecount: 61, label: '3: Severe' } ] },
-        "should produce the expected unfiltered sample by most recent grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","most_recent_grade",""], 
+      term1_q: {value_by_most_recent:1},
+      term2: 'diaggrp'
+    },
+    "sample counts by Asthma condition most recent grade, categorical overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1},
+      term2: 'agedx'
+    },
+    "sample counts by Asthma condition max grade, numerical overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","most_recent_grade",""], 
+      term1_q: {value_by_most_recent:1},
+      term2: 'aaclassic_5'
+    },
+    "sample counts by Asthma condition most recent grade, numerical overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","max_grade_perperson","max_grade_perperson"], 
+      term1_q: {value_by_max_grade:1},
+      term2: 'Hearing loss',
+      term2_q: {value_by_max_grade:1}
+    },
+    "sample counts by Asthma condition max grade, condition overlay by max-grade",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
+      term1_q: {value_by_most_recent:1},
+      term2: 'Hearing loss',
+      term2_q: {value_by_max_grade:1}
+    },
+    "sample counts by Asthma condition most recent grade, condition overlay by max-grade",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
+      term1_q: {value_by_most_recent:1},
+      term2: 'Hearing loss',
+      term2_q: {value_by_max_grade:1},
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Female"}]
+      },{
+        term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
+        ranges: [{start:0,stop:8}]
+      }]
+    },
+    "filtered sample counts by Asthma condition most recent grade, condition overlay by max-grade",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
 })
 
-tape("single, condition non-leaf", function (test) {
-  test.plan(10)
-  const url0 = baseUrl + '&term1_id=Cardiovascular+System&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')
-  request(url0,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 4, "should have the expected number of UNFILTERED NON-LEAF max grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 1, samplecount: 1556, label: '1: Mild' }, { key: 2, samplecount: 1013, label: '2: Moderate' }, { key: 3, samplecount: 461, label: '3: Severe' }, { key: 4, samplecount: 140, label: '4: Life-threatening' } ] },
-        "should produce the expected UNFILTERED NON-LEAF sample by max grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-  
-  const url1 = baseUrl
-    + '&term1_id=Cardiovascular+System'
-    + '&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')
-    + '&tvslst='+encodeURIComponent(JSON.stringify([{
-      term: {id:'sex', name:'sex', iscategorical:true},
-      values: [{key: 'Male', label: 'Male'}]
-    }]));
-  request(url1,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 4, "should have the expected number of FILTERED NON-LEAF max grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 1, samplecount: 841, label: '1: Mild' }, { key: 2, samplecount: 556, label: '2: Moderate' }, { key: 3, samplecount: 262, label: '3: Severe' }, { key: 4, samplecount: 91, label: '4: Life-threatening' } ] },
-        "should produce the expected FILTERED NON-LEAF sample by max grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+tape("non-leaf condition term1", function (test) {
+  test.plan(12) 
 
-  const url2 = baseUrl 
-    + '&term1_id=Cardiovascular+System'
-    + '&term1_q='+encodeURIComponent('{"value_by_max_grade":1,"bar_by_grade":1}')
-  request(url2,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 4, "should have the expected number of unfiltered NON-LEAF most recent grade lst items")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 1, samplecount: 1556, label: '1: Mild' }, { key: 2, samplecount: 1013, label: '2: Moderate' }, { key: 3, samplecount: 461, label: '3: Severe' }, { key: 4, samplecount: 140, label: '4: Life-threatening' } ] },
-        "should produce the expected unfiltered NON-LEAF sample by most recent grade counts by Asthma"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  compareResponseData(
+    test,
+    {
+      term1: 'Cardiovascular System', 
+      conditionParents: ["","Cardiovascular System",""],
+      conditionUnits: ["","max_grade_perperson",""],
+      term1_q: {value_by_max_grade:1, bar_by_grade:1}
+    },
+    "sample counts by Cardiovascular System condition max-grade, no overlay"
+  )
 
+  compareResponseData(
+    test,
+    {
+      term1: 'Cardiovascular System',
+      conditionParents: ["","Cardiovascular System",""],
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1, bar_by_grade:1},
+      filter: [{
+        term: {id:'sex', name:'sex', iscategorical:true},
+        values: [{key: 'Male', label: 'Male'}]
+      }]
+    },
+    "filtered sample counts by Cardiovascular System condition max-grade, no overlay"
+  )
 
-  const url3 = baseUrl 
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')
-  request(url3,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 6, "should have the expected UNFILTERED results for Arrhythmias, by subcondition, max grade")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 'Atrioventricular heart block', samplecount: 43, label: 'Atrioventricular heart block' }, { key: 'Cardiac dysrhythmia', samplecount: 105, label: 'Cardiac dysrhythmia' }, { key: 'Conduction abnormalities', samplecount: 744, label: 'Conduction abnormalities' }, { key: 'Prolonged QT interval', samplecount: 140, label: 'Prolonged QT interval' }, { key: 'Sinus bradycardia', samplecount: 42, label: 'Sinus bradycardia' }, { key: 'Sinus tachycardia', samplecount: 77, label: 'Sinus tachycardia' } ] },
-        "should produce the expected UNFILTERED results for Arrhythmias, by subcondition, max grade"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-  
-  const url4 = baseUrl
-    + '&term1_id=Arrhythmias'
-    + '&term1_q=' + encodeURIComponent('{"bar_by_children":1,"value_by_most_recent":1}')
-    + '&tvslst='+encodeURIComponent(JSON.stringify([{
-      term: {id:'sex', name:'sex', iscategorical:true},
-      values: [{key: 'Male', label: 'Male'}]
-    }]));
-  request(url4,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 6, "should have the expected number of FILTERED results for Arrhythmias, by subcondition, most recent")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key: 'Atrioventricular heart block', samplecount: 31, label: 'Atrioventricular heart block' }, { key: 'Cardiac dysrhythmia', samplecount: 42, label: 'Cardiac dysrhythmia' }, { key: 'Conduction abnormalities', samplecount: 491, label: 'Conduction abnormalities' }, { key: 'Prolonged QT interval', samplecount: 60, label: 'Prolonged QT interval' }, { key: 'Sinus bradycardia', samplecount: 37, label: 'Sinus bradycardia' }, { key: 'Sinus tachycardia', samplecount: 31, label: 'Sinus tachycardia' } ] },
-        "should produce the expected FILTERED results for Arrhythmias, by subcondition, most recent grade"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
+  compareResponseData(
+    test,
+    {
+      term1: 'Cardiovascular System', 
+      conditionParents: ["","Cardiovascular System",""],
+      conditionUnits: ["","most_recent_grade",""], 
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
+    },
+    "sample counts by Cardiovascular System condition most recent grade, no overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total)
+  )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'Arrhythmias', 
+      conditionParents: ["","Arrhythmias",""],
+      conditionUnits: ["","by_children",""], 
+      term1_q: {value_by_max_grade:1, bar_by_children:1},
+    },
+    "sample counts by Arrhythmias condition by children, no overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total)
+  )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'Arrhythmias', 
+      conditionParents: ["","Arrhythmias",""],
+      conditionUnits: ["","by_children",""], 
+      term1_q: {value_by_max_grade:1, bar_by_children:1},
+      filter: [{
+        term: {id:'sex', name:'sex', iscategorical:true},
+        values: [{key: 'Male', label: 'Male'}]
+      }]
+    },
+    "sample counts by Arrhythmias condition by children, no overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total)
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Arrhythmias', 
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1, bar_by_grade:1},
+      term2: 'sex'
+    },
+    "sample counts by Arrhythmias condition max grade, categorical overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Arrhythmias', 
+      conditionUnits: ["","most_recent_grade",""], 
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
+      term2: 'diaggrp'
+    },
+    "sample counts by Arrhythmias condition most recent grade, categorical overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => delete result.total) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Arrhythmias', 
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1, bar_by_grade:1},
+      term2: 'agedx'
+    },
+    "sample counts by Arrhythmias condition max grade, numerical overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Arrhythmias', 
+      conditionUnits: ["","most_recent_grade",""], 
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
+      term2: 'aaclassic_5'
+    },
+    "sample counts by Arrhythmias condition most recent grade, numerical overlay",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Arrhythmias', 
+      conditionUnits: ["","max_grade_perperson","max_grade_perperson"], 
+      term1_q: {value_by_max_grade:1, bar_by_grade:1},
+      term2: 'Hearing loss',
+      term2_q: {value_by_max_grade:1}
+    },
+    "sample counts by Arrhythmias condition max grade, condition overlay by max-grade",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Arrhythmias', 
+      conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
+      term2: 'Hearing loss',
+      term2_q: {value_by_max_grade:1}
+    },
+    "sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Arrhythmias', 
+      conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
+      term2: 'Hearing loss',
+      term2_q: {value_by_max_grade:1},
+      filter: [{
+        term: {id:"sex", name:"Sex", iscategorical:true},
+        values: [{"key":"Male","label":"Female"}]
+      },{
+        term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
+        ranges: [{start:0,stop:8}]
+      },{
+        term: {id:"Asthma", name:"Asthma", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:3, label: "3"}],
+        value_by_max_grade: true
+      }]
+    },
+    "filtered sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade",
+    // TO-DO: SQL results must also give unique samplecount across all bars 
+    results => results.forEach(result => {
+      delete result.total
+      result.serieses.forEach(series=>delete series.boxplot)
+    }) 
+  )
 })
 
-tape("condition child-grade overlay", function (test) {
-  test.plan(4)
 
-  const url0 = baseUrl
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1,"grade_child_overlay":1}')
-  request(url0,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 16, "should have the number of list items for Arrhythmias, by subcondition, max grade")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key1: 'Atrioventricular heart block', key2: 1, samplecount: 33, label1: 'Atrioventricular heart block', label2: 1 }, { key1: 'Cardiac dysrhythmia', key2: 1, samplecount: 34, label1: 'Cardiac dysrhythmia', label2: 1 }, { key1: 'Conduction abnormalities', key2: 1, samplecount: 774, label1: 'Conduction abnormalities', label2: 1 }, { key1: 'Prolonged QT interval', key2: 1, samplecount: 133, label1: 'Prolonged QT interval', label2: 1 }, { key1: 'Sinus bradycardia', key2: 1, samplecount: 75, label1: 'Sinus bradycardia', label2: 1 }, { key1: 'Sinus tachycardia', key2: 1, samplecount: 124, label1: 'Sinus tachycardia', label2: 1 }, { key1: 'Atrioventricular heart block', key2: 2, samplecount: 12, label1: 'Atrioventricular heart block', label2: 2 }, { key1: 'Cardiac dysrhythmia', key2: 2, samplecount: 40, label1: 'Cardiac dysrhythmia', label2: 2 }, { key1: 'Conduction abnormalities', key2: 2, samplecount: 35, label1: 'Conduction abnormalities', label2: 2 }, { key1: 'Prolonged QT interval', key2: 2, samplecount: 77, label1: 'Prolonged QT interval', label2: 2 }, { key1: 'Sinus tachycardia', key2: 2, samplecount: 11, label1: 'Sinus tachycardia', label2: 2 }, { key1: 'Atrioventricular heart block', key2: 3, samplecount: 9, label1: 'Atrioventricular heart block', label2: 3 }, { key1: 'Cardiac dysrhythmia', key2: 3, samplecount: 27, label1: 'Cardiac dysrhythmia', label2: 3 }, { key1: 'Conduction abnormalities', key2: 3, samplecount: 7, label1: 'Conduction abnormalities', label2: 3 }, { key1: 'Prolonged QT interval', key2: 3, samplecount: 10, label1: 'Prolonged QT interval', label2: 3 }, { key1: 'Cardiac dysrhythmia', key2: 4, samplecount: 10, label1: 'Cardiac dysrhythmia', label2: 4 } ] },
-        "should have the expected results for Arrhythmias, by subcondition, max grade"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-
-  const url1 = baseUrl 
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_most_recent":1,"grade_child_overlay":1}')
-  request(url1,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 16, "should have the number of list items for Arrhythmias, by subcondition, most recent grade")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key1: 'Atrioventricular heart block', key2: 1, samplecount: 33, label1: 'Atrioventricular heart block', label2: 1 }, { key1: 'Cardiac dysrhythmia', key2: 1, samplecount: 36, label1: 'Cardiac dysrhythmia', label2: 1 }, { key1: 'Conduction abnormalities', key2: 1, samplecount: 783, label1: 'Conduction abnormalities', label2: 1 }, { key1: 'Prolonged QT interval', key2: 1, samplecount: 141, label1: 'Prolonged QT interval', label2: 1 }, { key1: 'Sinus bradycardia', key2: 1, samplecount: 75, label1: 'Sinus bradycardia', label2: 1 }, { key1: 'Sinus tachycardia', key2: 1, samplecount: 128, label1: 'Sinus tachycardia', label2: 1 }, { key1: 'Atrioventricular heart block', key2: 2, samplecount: 12, label1: 'Atrioventricular heart block', label2: 2 }, { key1: 'Cardiac dysrhythmia', key2: 2, samplecount: 41, label1: 'Cardiac dysrhythmia', label2: 2 }, { key1: 'Conduction abnormalities', key2: 2, samplecount: 26, label1: 'Conduction abnormalities', label2: 2 }, { key1: 'Prolonged QT interval', key2: 2, samplecount: 71, label1: 'Prolonged QT interval', label2: 2 }, { key1: 'Sinus tachycardia', key2: 2, samplecount: 7, label1: 'Sinus tachycardia', label2: 2 }, { key1: 'Atrioventricular heart block', key2: 3, samplecount: 9, label1: 'Atrioventricular heart block', label2: 3 }, { key1: 'Cardiac dysrhythmia', key2: 3, samplecount: 24, label1: 'Cardiac dysrhythmia', label2: 3 }, { key1: 'Conduction abnormalities', key2: 3, samplecount: 7, label1: 'Conduction abnormalities', label2: 3 }, { key1: 'Prolonged QT interval', key2: 3, samplecount: 8, label1: 'Prolonged QT interval', label2: 3 }, { key1: 'Cardiac dysrhythmia', key2: 4, samplecount: 10, label1: 'Cardiac dysrhythmia', label2: 4 } ] },
-        "should have the expected results for Arrhythmias, by subcondition, most recent grade"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-})
-
-tape.only("non-leaf condition with overlay", function (test) {
-  test.plan(6)
-
-  const expected0 = {"lst":[{"key1":"Atrioventricular heart block","key2":"Black","samplecount":8,"label1":"Atrioventricular heart block","label2":"Black"},{"key1":"Atrioventricular heart block","key2":"Other","samplecount":1,"label1":"Atrioventricular heart block","label2":"Other"},{"key1":"Atrioventricular heart block","key2":"White","samplecount":45,"label1":"Atrioventricular heart block","label2":"White"},{"key1":"Cardiac dysrhythmia","key2":"Black","samplecount":8,"label1":"Cardiac dysrhythmia","label2":"Black"},{"key1":"Cardiac dysrhythmia","key2":"White","samplecount":103,"label1":"Cardiac dysrhythmia","label2":"White"},{"key1":"Conduction abnormalities","key2":"Black","samplecount":64,"label1":"Conduction abnormalities","label2":"Black"},{"key1":"Conduction abnormalities","key2":"Other","samplecount":11,"label1":"Conduction abnormalities","label2":"Other"},{"key1":"Conduction abnormalities","key2":"Unknown","samplecount":1,"label1":"Conduction abnormalities","label2":"Unknown"},{"key1":"Conduction abnormalities","key2":"White","samplecount":740,"label1":"Conduction abnormalities","label2":"White"},{"key1":"Prolonged QT interval","key2":"Black","samplecount":29,"label1":"Prolonged QT interval","label2":"Black"},{"key1":"Prolonged QT interval","key2":"Other","samplecount":1,"label1":"Prolonged QT interval","label2":"Other"},{"key1":"Prolonged QT interval","key2":"White","samplecount":190,"label1":"Prolonged QT interval","label2":"White"},{"key1":"Sinus bradycardia","key2":"Black","samplecount":9,"label1":"Sinus bradycardia","label2":"Black"},{"key1":"Sinus bradycardia","key2":"Other","samplecount":1,"label1":"Sinus bradycardia","label2":"Other"},{"key1":"Sinus bradycardia","key2":"White","samplecount":65,"label1":"Sinus bradycardia","label2":"White"},{"key1":"Sinus tachycardia","key2":"Black","samplecount":14,"label1":"Sinus tachycardia","label2":"Black"},{"key1":"Sinus tachycardia","key2":"White","samplecount":121,"label1":"Sinus tachycardia","label2":"White"}]}
-
-  const url0 = baseUrl
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')
-    + '&term2_id=racegrp'
-
-  request(url0,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 17, "should have the number of list items for Arrhythmias, by subcondition with CATEGORICAL (racegrp) overlay")
-      test.deepEqual(
-        JSON.parse(body),
-        expected0,
-        "should have the expected results for Arrhythmias, by subcondition with CATEGORICAL (racegrp) overlay"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-
-  // when overlaying on top of bars by children, the configuration max grade or most recent grade should not matter
-  // the same result should be produced with either configuration or no grade at all
-  const url0a = baseUrl
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_most_recent":1}')
-    + '&term2_id=racegrp'; console.log(url0a, url0)
-    
-  request(url0a,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 17, "should have the same number of list items for Arrhythmias most recent as max-grade, by subcondition with CATEGORICAL (racegrp) overlay")
-      test.deepEqual(
-        JSON.parse(body),
-        expected0,
-        "should have the expected results for Arrhythmias most recent as max-grade, by subcondition with CATEGORICAL (racegrp) overlay"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-
-  const url2 = baseUrl
-    + '&term1_id=Arrhythmias'
-    + '&term1_q='+encodeURIComponent('{"bar_by_children":1,"value_by_max_grade":1}')
-    + '&term2_id=agedx'
-
-  request(url2,(error,response,body)=>{
-    if(error) {
-      test.fail(error)
-    }
-    switch(response.statusCode) {
-    case 200:
-      const data = JSON.parse(body)
-      test.equal(data.lst && data.lst.length, 18, "should have the number of list items for Arrhythmias, by subcondition with NUMERICAL (agedx) overlay")
-      test.deepEqual(
-        JSON.parse(body), 
-        { lst: [ { key1: 'Atrioventricular heart block', key2: '0 <= x < 5', samplecount: 9, label1: 'Atrioventricular heart block', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Atrioventricular heart block', key2: '10 <= x < 15', samplecount: 23, label1: 'Atrioventricular heart block', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Atrioventricular heart block', key2: '5 <= x < 10', samplecount: 8, label1: 'Atrioventricular heart block', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } }, { key1: 'Cardiac dysrhythmia', key2: '0 <= x < 5', samplecount: 31, label1: 'Cardiac dysrhythmia', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Cardiac dysrhythmia', key2: '10 <= x < 15', samplecount: 25, label1: 'Cardiac dysrhythmia', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Cardiac dysrhythmia', key2: '5 <= x < 10', samplecount: 30, label1: 'Cardiac dysrhythmia', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } }, { key1: 'Conduction abnormalities', key2: '0 <= x < 5', samplecount: 294, label1: 'Conduction abnormalities', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Conduction abnormalities', key2: '10 <= x < 15', samplecount: 190, label1: 'Conduction abnormalities', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Conduction abnormalities', key2: '5 <= x < 10', samplecount: 184, label1: 'Conduction abnormalities', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } }, { key1: 'Prolonged QT interval', key2: '0 <= x < 5', samplecount: 52, label1: 'Prolonged QT interval', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Prolonged QT interval', key2: '10 <= x < 15', samplecount: 61, label1: 'Prolonged QT interval', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Prolonged QT interval', key2: '5 <= x < 10', samplecount: 43, label1: 'Prolonged QT interval', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } }, { key1: 'Sinus bradycardia', key2: '0 <= x < 5', samplecount: 32, label1: 'Sinus bradycardia', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Sinus bradycardia', key2: '10 <= x < 15', samplecount: 16, label1: 'Sinus bradycardia', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Sinus bradycardia', key2: '5 <= x < 10', samplecount: 13, label1: 'Sinus bradycardia', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } }, { key1: 'Sinus tachycardia', key2: '0 <= x < 5', samplecount: 55, label1: 'Sinus tachycardia', label2: '0 <= x < 5', range2: { start: 0, stop: 5, startinclusive: 1, label: '0-4 Years', name: '0 <= x < 5' } }, { key1: 'Sinus tachycardia', key2: '10 <= x < 15', samplecount: 30, label1: 'Sinus tachycardia', label2: '10 <= x < 15', range2: { start: 10, stop: 15, startinclusive: 1, label: '10-14 Years', name: '10 <= x < 15' } }, { key1: 'Sinus tachycardia', key2: '5 <= x < 10', samplecount: 23, label1: 'Sinus tachycardia', label2: '5 <= x < 10', range2: { start: 5, stop: 10, startinclusive: 1, label: '5-9 Years', name: '5 <= x < 10' } } ] },
-        "should have the expected results for Arrhythmias, by subcondition with NUMERICAL (agedx) overlay"
-      )
-      break;
-    default:
-      test.fail("invalid status")
-    }
-  })
-})
-*/
-
-function compareResponseData(test, params, mssg) {
-  const url0 = getSqlUrl(params)
-  const url1 = getBarUrl(params)
+function compareResponseData(test, params, mssg, postFxn=()=>{}) {
+  const url0 = getSqlUrl(params); //console.log(url0)
 
   request(url0, (error,response,body)=>{
     if(error) {
@@ -386,33 +656,49 @@ function compareResponseData(test, params, mssg) {
     }
     switch(response.statusCode) {
       case 200:
-        const data = JSON.parse(body);
+        const data0 = JSON.parse(body);
         // reshape sql results in order to match
         // the compared results
         const pj = new Partjson({
-          data: data.lst,
+          data: data0.lst,
           seed: `{"values": []}`, // result seed 
           template,
           "=": externals
         })
+        postFxn(pj.tree.results.charts)
         sortResults(pj.tree.results.charts)
+        const summary0 = {charts: pj.tree.results.charts}
+        if (data0.summary_term1) {
+          summary0.boxplot = data0.summary_term1
+          summary0.boxplot.mean = summary0.boxplot.mean.toPrecision(8)
+          if (summary0.boxplot.sd) {
+            summary0.boxplot.sd = summary0.boxplot.sd.toPrecision(8)
+          }
+        }
         // get an alternatively computed results
         // for comparing against sql results
+        const url1 = getBarUrl(params); //console.log(url1)
         request(url1, (error,response,body1)=>{
           const data1 = JSON.parse(body1)
+          postFxn(data1.charts)
           sortResults(data1.charts)
-          //console.log(JSON.stringify(data1.charts[0]));
-          //console.log('----')
-          //console.log(JSON.stringify(pj.tree.results.charts[0]));
-
+          const summary1 = {charts: data1.charts}
+          if (data1.boxplot) {
+            summary1.boxplot = data1.boxplot
+            summary1.boxplot.mean = summary1.boxplot.mean.toPrecision(8)
+            if (summary1.boxplot.sd) {
+              summary1.boxplot.sd = summary1.boxplot.sd.toPrecision(8)
+            }
+          }
+          //console.log(JSON.stringify(summary0),'\n','-----','\n',JSON.stringify(summary1))
           if(error) {
             test.fail(error)
           }
           switch(response.statusCode) {
           case 200:
             test.deepEqual(
-              pj.tree.results.charts,
-              data1.charts,
+              summary0,
+              summary1,
               mssg
             )
           break;
@@ -433,7 +719,9 @@ function getSqlUrl(params) {
     + "&dslabel=SJLife"
     + "&testplot=1"
     + '&term1_id=' + params.term1
+    + (params.term1_q ? '&term1_q=' + encodeURIComponent(JSON.stringify(params.term1_q)) : '')
     + (params.term2 ? '&term2_id=' + params.term2 : '')
+    + (params.term2_q ? '&term2_q=' + encodeURIComponent(JSON.stringify(params.term2_q)) : '')
     + (params.filter ? '&tvslst='+encodeURIComponent(JSON.stringify(params.filter)) : '')
 }
 
@@ -443,6 +731,8 @@ function getBarUrl(params) {
     + "&dslabel=SJLife"
     + "&term1=" + params.term1
     + (params.term2 ? "&term2=" + params.term2 : '')
+    + (params.conditionUnits ? "&conditionUnits=" + params.conditionUnits.join("-,-") : '')
+    + (params.conditionParents ? "&conditionParents=" + params.conditionParents.join("-,-") : '')
     + "&filter=" + encodeURIComponent(JSON.stringify(params.filter ? params.filter : []))
     + "&custom_bins=" + encodeURIComponent(JSON.stringify(params.customBins ? params.customBins : {}))
 }

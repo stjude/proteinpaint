@@ -4,6 +4,7 @@ import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-s
 import {init as plot_init} from './mds.termdb.plot'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
+import { debounce } from 'debounce'
 
 
 /*
@@ -450,7 +451,10 @@ there may be other conditions to apply, e.g. patients carrying alt alleles of a 
 such conditions may be carried by obj
 
 */
-	const button = row.append('div')
+	const button_div = row.append('div')
+		.style('display','inline-block')
+
+	const button = button_div.append('div')
 		.style('font-size','.8em')
 		.style('margin-left','20px')
 		.style('display','inline-block')
@@ -458,9 +462,22 @@ such conditions may be carried by obj
 		.attr('class','sja_menuoption')
 		.text('VIEW')
 
-	const div = row_graph.append('div')
+	const view_btn_line = button_div.append('div')
+		.style('height','10px')
+		.style('margin-left','45px')
 		.style('border-left','solid 1px #aaa')
+		.style('display','none')
+
+	const div = row_graph.append('div')
+		.style('border','solid 1px #aaa')
 		.style('margin-left', graph_leftpad)
+		.style('margin-bottom','10px')
+		.style('display','none')
+
+	const plot_loading_div = div.append('div')
+		.style('padding','10px')
+		.text('Loading')
+		.style('text-align','center')
 		.style('display','none')
 
 	let loaded =false,
@@ -469,15 +486,18 @@ such conditions may be carried by obj
 	button.on('click', async ()=>{
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
-			button.style('border','none')
+			view_btn_line.style('display','block')
 		} else {
 			client.disappear(div)
-			button.style('border','solid 1px #555')
+			view_btn_line.style('display','none')
 		}
 		if( loaded || loading ) return
 		button.text('Loading')
+		button.style('border','solid 1px #555')
 		loading=true
+		if(loading == true) plot_loading_div.style('display','block')
 		make_barplot( obj, term, div, ()=> {
+			plot_loading_div.style('display','none')
 			button.text('VIEW')
 			loaded=true
 			loading=false
@@ -643,51 +663,9 @@ barchart is shown in-place under term and in full capacity
 		.style('border-spacing','0px')
 		.style('border-collapse','separate')
 
-	// TODO debounce
+	// debounce: call the function once with debounce at 400ms
 
-	input.on('keyup', async ()=>{
-
-		table.selectAll('*').remove()
-
-		const str = input.property('value')
-		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
-
-		if( str==' ' || str=='' ) {
-			// blank
-			return
-		}
-		try {
-			// query
-			const data = await obj.do_query( ['findterm='+str] )
-			if(data.error) throw data.error
-			if(!data.lst || data.lst.length==0) throw 'No match'
-
-			if( obj.modifier_click_term ) {
-				searchresult2clickterm( data.lst )
-				return
-			}
-
-			// show full terms with graph/tree buttons
-			for(const term of data.lst) {
-				const tr = table.append('tr')
-					.attr('class','sja_tr2')
-				tr.append('td')
-					.style('opacity','.6')
-					.text(term.name)
-				const td = tr.append('td') // holder for buttons
-					.style('text-align','right')
-				if( term.graph && term.graph.barchart ) {
-					makeviewbutton( term, td )
-				}
-				maketreebutton( term, td )
-			}
-		} catch(e) {
-			table.append('tr').append('td')
-				.style('opacity',.5)
-				.text(e.message || e)
-			if(e.stack) console.log(e.stack)
-		}
-	})
+	input.on('keyup', debounce(tree_search, 400 ))
 
 	// helpers
 	function searchresult2clickterm ( lst ) {
@@ -794,6 +772,50 @@ barchart is shown in-place under term and in full capacity
 				currdiv = nextdiv
 			}
 		})
+	}
+
+	async function tree_search(){
+
+		table.selectAll('*').remove()
+
+		const str = input.property('value')
+		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
+
+		if( str==' ' || str=='' ) {
+			// blank
+			return
+		}
+		try {
+			// query
+			const data = await obj.do_query( ['findterm='+str] )
+			if(data.error) throw data.error
+			if(!data.lst || data.lst.length==0) throw 'No match'
+
+			if( obj.modifier_click_term ) {
+				searchresult2clickterm( data.lst )
+				return
+			}
+
+			// show full terms with graph/tree buttons
+			for(const term of data.lst) {
+				const tr = table.append('tr')
+					.attr('class','sja_tr2')
+				tr.append('td')
+					.style('opacity','.6')
+					.text(term.name)
+				const td = tr.append('td') // holder for buttons
+					.style('text-align','right')
+				if( term.graph && term.graph.barchart ) {
+					makeviewbutton( term, td )
+				}
+				maketreebutton( term, td )
+			}
+		} catch(e) {
+			table.append('tr').append('td')
+				.style('opacity',.5)
+				.text(e.message || e)
+			if(e.stack) console.log(e.stack)
+		}
 	}
 }
 

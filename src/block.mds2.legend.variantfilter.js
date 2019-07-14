@@ -70,16 +70,23 @@ allow interacting with it, to update settings of i, and update track
 */
 	const row = tk.legend.variantfilter.holder
 		.append('div')
+		.style('display','inline-block')
 		.style('margin-top','5px')
 	
 	row.append('div')
 		.style('display','inline-block')
 		.style('border-radius','6px 0 0 6px')
-		.style('background-color', '#ddd')
 		.style('color','#000')
-		.style('padding','6px 6px 6px 6px')
+		//new UI of bordered filter-name btn
+		.style('border-color', '#ddd')
+		.style('border-style','solid')
+		.style('border-width','2px')
+		.style('padding','4px')
+		//legaacy UI of solid filter-name btn
+		// .style('background-color', '#ddd')
+		// .style('padding','6px 6px 6px 6px')
+		// .style('margin-right','1px')
 		.style('margin-left', '5px')
-		.style('margin-right','1px')
 		.style('font-size','.7em')
 		.style('text-transform','uppercase')
 		.text(i.label)

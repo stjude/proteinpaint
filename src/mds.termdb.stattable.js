@@ -6,7 +6,7 @@ export function init(holder) {
 */
   const self = {
     dom: {
-      div: holder.append('div').style('margin','10px 0px')
+      div: holder.append('div').style('margin','10px')
     },
     // main() remembers the self "instance" via closure
     // so that self does not need to be passed to it

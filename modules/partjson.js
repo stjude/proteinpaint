@@ -253,8 +253,16 @@ class ValFiller {
               for (const t of h)
                 if (p.has(t)) this.Pj.processRow(o, e, p.get(t))
                 else {
-                  const s = this.Pj.setResultContext("{}", c.length, c, !1, t)
-                  p.set(t, s), this.Pj.processRow(o, e, s)
+                  const s = this.Pj.setResultContext(
+                    "{}",
+                    c.length,
+                    c,
+                    !1,
+                    t,
+                    o,
+                    e
+                  )
+                  s && (p.set(t, s), this.Pj.processRow(o, e, s))
                 }
             else l.errors.push([t, "NON-ARRAY-VALS", o])
           }
@@ -661,7 +669,8 @@ class Partjson {
       this.refresh()
   }
   refresh(e = {}) {
-    Object.assign(this.opts, e),
+    ;(this.times = { start: +new Date() }),
+      Object.assign(this.opts, e),
       "string" != typeof this.opts.template &&
         (this.opts.template = JSON.stringify(this.opts.template))
     const t = JSON.parse(this.opts.template)
@@ -675,6 +684,7 @@ class Partjson {
       (this.tree = this.setResultContext(this.opts.seed)),
       (this.focusTemplate = Object.create(null)),
       this.parseTemplate(t, { "@": this.reserved.notDefined }),
+      (this.times.parse = +new Date() - this.times.start),
       Object.keys(this.focusTemplate).length
         ? (this.parseTemplate(this.focusTemplate, {
             "@": this.reserved.notDefined
@@ -686,24 +696,24 @@ class Partjson {
       this.opts.data && this.add(this.opts.data, !1),
       this.errors.log(this.fillers)
   }
-  setResultContext(e, t = null, s = null, r = !1, o) {
-    const i = null !== t && t in s ? s[t] : JSON.parse(e)
-    if (this.contexts.has(i)) return i
-    const n = {
+  setResultContext(e, t = null, s = null, r = !1, o, i = null, n = null) {
+    const l = null !== t && t in s ? s[t] : JSON.parse(e)
+    if (this.contexts.has(l)) return l
+    const c = {
       branch: t,
       parent: s,
-      self: i,
-      root: this.tree ? this.tree : i,
+      self: l,
+      root: this.tree ? this.tree : l,
       joins: this.joins,
       errors: [],
       key: o
     }
-    return (
-      r && (n.tracker = new Map()),
-      this.contexts.set(i, n),
-      null !== t && (s[t] = i),
-      i
-    )
+    if ((r && (c.tracker = new Map()), i && n)) {
+      const e = this.fillers.get(n)
+      if (!e["@before"](i, c)) return
+      if (e["@join"] && !e["@join"](i, c)) return
+    }
+    return this.contexts.set(l, c), null !== t && (s[t] = l), l
   }
   parseTemplate(e, t, s = []) {
     const r = Object.create(null)
@@ -749,7 +759,7 @@ class Partjson {
       if (this.postLoopTerms[e])
         for (const t of this.postLoopTerms[e]) this.postLoop(t.self, t, e)
     for (const e of this.done) e.done(e.self, e)
-    t && this.errors.log()
+    ;(this.times.total = +new Date() - this.times.start), t && this.errors.log()
   }
   processRow(e, t, s) {
     const r = this.contexts.get(s),
@@ -773,6 +783,7 @@ class Partjson {
       for (const e in o.postTerms)
         this.postLoopTerms[e] || (this.postLoopTerms[e] = []),
           this.postLoopTerms[e].includes(r) || this.postLoopTerms[e].push(r)
+      return !0
     }
   }
   postLoop(e, t, s = "__:") {
@@ -791,15 +802,8 @@ class Partjson {
     for (const t in e) {
       const s = e[t]
       if (s)
-        if (Array.isArray(s)) {
-          const r = s.length
-          for (let e = 0; e < r; e++)
-            "object" != typeof s[e] || Object.keys(s[e]) || s.splice(e, 1)
-          for (const s of e[t]) "object" == typeof s && this.processResult(s)
-        } else if (s instanceof Set || s instanceof Map)
-          for (const e of s)
-            "object" == typeof e &&
-              (Object.keys(e).length ? this.processResult(e) : s.delete(e))
+        if (Array.isArray(s) || s instanceof Set || s instanceof Map)
+          for (const e of s) "object" == typeof e && this.processResult(e)
         else if ("object" == typeof s) {
           const e = this.contexts.get(s)
           e && e["@dist"] && e["@dist"](s), this.processResult(s)
