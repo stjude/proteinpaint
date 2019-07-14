@@ -38,7 +38,6 @@ may_allow_samplesearch
 ********************** INTERNAL
 printer_snvindel
 may_show_matrixbutton
-may_createbutton_survival_onemutation
 may_createbutton_survival_grouplab
 matrix_view()
 
@@ -1116,6 +1115,7 @@ export function click_multi_vcfdense( g, tk, block ) {
 			}
 
 			// one snv, in multiple samples
+			/*
 			createbutton_addfeature( {
 				m:m,
 				holder:butrow,
@@ -1133,6 +1133,7 @@ export function click_multi_vcfdense( g, tk, block ) {
 					samplename: m.sampledata[0].sampleobj.name
 				}
 			})
+			*/
 
 			const lst = printer_snvindel( m, tk )
 			const table = client.make_table_2col( pane.body, lst)
@@ -2807,116 +2808,7 @@ may create a tf motif find button for mutation
 
 
 
-function may_createbutton_survival_onemutation(arg) {
-/*
-may create a 'survival plot' button and use one mutation to divide samples
-holder
-tk
-block
-*/
-	if(!arg.tk.mds || !arg.tk.mds.survivalplot) {
-		return
-	}
 
-	arg.holder.append('div')
-	.style('display','inline-block')
-	.text('Survival plot')
-	.attr('class','sja_menuoption')
-	.on('click',()=>{
-
-		const m = arg.m
-
-		// sample dividing rules
-		const st = {
-			mutation: 1
-		}
-
-		if(m.dt == common.dtsnvindel) {
-			// default to use this specific mutation
-			st.chr = m.chr
-			st.start = m.pos
-			st.stop = m.pos
-			st.snvindel = {
-				name: (m.gene ? m.gene+' ' : '') + m.mname,
-				ref: m.ref,
-				alt: m.alt,
-			}
-		} else if(m.dt == common.dtcnv) {
-			st.chr = m.chr
-			st.start = m.start
-			st.stop = m.stop
-			st.cnv = {
-				focalsizelimit: arg.tk.bplengthUpperLimit,
-				valuecutoff: arg.tk.valueCutoff,
-			}
-		} else if(m.dt == common.dtloh) {
-			st.chr = m.chr
-			st.start = m.start
-			st.stop = m.stop
-			st.loh = {
-				focalsizelimit: arg.tk.lohLengthUpperLimit,
-				valuecutoff: arg.tk.segmeanValueCutoff,
-			}
-		} else if(m.dt == common.dtsv) {
-			st.chr = m._chr
-			st.start = m._pos
-			st.stop = m._pos
-			st.sv = {}
-
-		} else if(m.dt == common.dtfusionrna) {
-			st.chr = m._chr
-			st.start = m._pos
-			st.stop = m._pos
-			st.fusion = {}
-		} else if(m.dt == common.dtitd) {
-			st.chr = m.chr
-			st.start = m.start
-			st.stop = m.stop
-			st.itd = {}
-		}
-
-		const plot = {
-			renderplot: 1, // instruct the plot to be rendered, no wait
-			samplerule:{
-				full:{},
-				set: st
-			}
-		}
-
-		if(arg.tk.mds.survivalplot.samplegroupattrlst && arg.sample ) {
-			// the survivalplot has samplegrouping, and there is a single sample
-			// will just use the first attribute
-			const attr = arg.tk.mds.survivalplot.samplegroupattrlst[0]
-			const sampleanno = arg.tk.sampleAttribute ? arg.tk.sampleAttribute.samples[ arg.sample.samplename ]  : null
-			if(sampleanno) {
-				const v = sampleanno[ attr.key ]
-				if(v) {
-					plot.samplerule.full.byattr = 1
-					plot.samplerule.full.key = attr.key
-					plot.samplerule.full.value = v
-				}
-			}
-		} else {
-			// do not set rule for sample-full
-		}
-
-		const pane = client.newpane({x:100, y: 100})
-		pane.header
-			.text('Survival plot')
-
-		import('./mds.survivalplot').then(_=>{
-			_.init(
-				{
-					genome: arg.block.genome,
-					mds: arg.tk.mds,
-					plotlist:[ plot ]
-				},
-				pane.body,
-				arg.block.debugmode
-			)
-		})
-	})
-}
 function mayaddtab_survival_onemutation(tabs, arg) {
 /*
 may create a 'survival plot' button and use one mutation to divide samples
