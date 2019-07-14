@@ -1637,25 +1637,32 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 			.style('border-top','solid 1px #ddd')
 			.classed('sja_menuoption', i!=0)
 			.html( tab.label )
-			.on('click',()=>{
-				if( tab.box.style('display')!='none' ) {
-					tab.tab.classed('sja_menuoption',true)
-					tab.box.style('display','none')
-				} else {
-					for(let j=0; j<tabs.length; j++) {
-						tabs[j].tab.classed('sja_menuoption', i!=j )
-						tabs[j].box.style('display', i==j ? 'block' : 'none' )
-					}
-				}
-				if( tab.callback ) {
-					if( callback_called ) return
-					callback_called=true
-					tab.callback( tab.box )
-				}
-			})
+
 		tab.box = tdright.append('div')
 			.style('padding','3px')
 			.style('display', i==0 ? 'block' : 'none')
+
+		if( i==0 && tab.callback ) {
+			tab.callback( tab.box )
+			delete tab.callback
+		}
+
+		tab.tab.on('click',()=>{
+			if( tab.box.style('display')!='none' ) {
+				tab.tab.classed('sja_menuoption',true)
+				tab.box.style('display','none')
+			} else {
+				for(let j=0; j<tabs.length; j++) {
+					tabs[j].tab.classed('sja_menuoption', i!=j )
+					tabs[j].box.style('display', i==j ? 'block' : 'none' )
+				}
+			}
+			if( tab.callback ) {
+				if( callback_called ) return
+				callback_called=true
+				tab.callback( tab.box )
+			}
+		})
 	}
 }
 
