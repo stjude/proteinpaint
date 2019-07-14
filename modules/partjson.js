@@ -483,7 +483,7 @@ function converter(e, t, s, r) {
   const [o, i, n] = parseTerm(e, r)
   if (e.reserved.opts.includes(o)) return []
   const l = o + n.conv
-  if (((t.ignore = l in s ? s[l] : s["@"]), n.skip))
+  if (((t.ignore = l in s ? s[l] : s["@"]), n.skip && "~" != n.skip))
     return subs[n.skip](e, o, t), []
   if (n.subs in subs) {
     const s = subs[n.subs](e, o, t)
@@ -507,7 +507,7 @@ function parseTerm(e, t) {
         ? t.slice(i + 1)
         : p
         ? t.slice(i, -2)
-        : o
+        : s || o
         ? t.slice(i)
         : t,
     h = e.subsSymbols.includes(a[0]) ? a[0] : "",
@@ -656,7 +656,7 @@ class Partjson {
         "_9:"
       ]),
       (this.timeSymbols = [":__", "_:_", "__:", ...this.timePost]),
-      (this.skipSymbols = ["#", "*"]),
+      (this.skipSymbols = ["#", "*", "~"]),
       (this.steps = [":__", "", "_:_"]),
       (this.errors = new Err(this)),
       (this.reserved = new Reserved(this)),
@@ -666,6 +666,7 @@ class Partjson {
       (this.joins = new Map()),
       (this.fillers = new Map()),
       (this.contexts = new Map()),
+      (this.temps = new Map()),
       this.refresh()
   }
   refresh(e = {}) {
@@ -680,6 +681,7 @@ class Partjson {
       this.joins.clear(),
       this.fillers.clear(),
       this.contexts.clear(),
+      this.temps.clear(),
       delete this.tree,
       (this.tree = this.setResultContext(this.opts.seed)),
       (this.focusTemplate = Object.create(null)),
@@ -759,6 +761,7 @@ class Partjson {
       if (this.postLoopTerms[e])
         for (const t of this.postLoopTerms[e]) this.postLoop(t.self, t, e)
     for (const e of this.done) e.done(e.self, e)
+    for (const [e, t] of this.temps) for (const s of t) delete e[s]
     ;(this.times.total = +new Date() - this.times.start), t && this.errors.log()
   }
   processRow(e, t, s) {
@@ -772,7 +775,12 @@ class Partjson {
           const t = o.inputs[i]
           if (t.keyFxn && t.valFxn) {
             const o = t.keyFxn(e, r)
-            for (const i of o) t.valFxn(e, i, s, r)
+            for (const i of o)
+              if ((t.valFxn(e, i, s, r), "~" == t.keyTokens.skip)) {
+                this.temps.has(s) || this.temps.set(s, [])
+                const e = this.temps.get(s)
+                e.includes(i) || e.push(i)
+              }
           }
         }
       o["@after"](e, r),

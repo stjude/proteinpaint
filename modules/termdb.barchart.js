@@ -116,10 +116,9 @@ const template = JSON.stringify({
           total: "+1",
         }, "&data.id[]"],
         //"_:_max": "<&data.value",
-        tempValues: ["&data.value"],
-        tempSum: "+&data.value",
-        "__:boxplot": "=boxplot2()",
-        "@done()": "=removeTemp()"
+        "~values": ["&data.value"],
+        "~sum": "+&data.value",
+        "__:boxplot": "=boxplot2()"
       }, "&series.id[]"],
       "@done()": "=filterEmptySeries()"
     }, "&chart.id[]"],
@@ -230,24 +229,18 @@ function getPj(q, inReqs, data, tdb) {
         return stat
       },
       boxplot2(row, context) {
-        if (!context.self.tempValues || !context.self.tempValues.length) return;
-        const values = context.self.tempValues.filter(d => d !== null)
+        if (!context.self.values || !context.self.values.length) return;
+        const values = context.self.values.filter(d => d !== null)
         if (!values.length) return
         values.sort((i,j)=> i - j )
         const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
-        stat.mean = context.self.tempSum / values.length
+        stat.mean = context.self.sum / values.length
         let s = 0
         for(const v of values) {
           s += Math.pow( v - stat.mean, 2 )
         }
         stat.sd = Math.sqrt( s / (values.length-1) )
-        delete context.self.tempSum
-        delete context.self.tempValues
         return stat
-      },
-      removeTemp(result) {
-        delete result.tempSum
-        delete result.tempValues
       },
       filterEmptySeries(result) {
         const nonempty = result.serieses.filter(series=>series.total)
