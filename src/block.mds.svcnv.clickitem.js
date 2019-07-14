@@ -37,11 +37,8 @@ may_allow_samplesearch
 ********************** INTERNAL
 printer_snvindel
 may_show_matrixbutton
-may_createbutton_samplesignature
 may_createbutton_survival_onemutation
 may_createbutton_survival_grouplab
-may_createbutton_disco
-may_createbutton_genome
 matrix_view()
 
 
@@ -139,25 +136,18 @@ export async function may_allow_samplesearch(tk, block) {
 
 						tk.tkconfigtip.hide()
 
-						const pane = client.newpane({x:100, y:100})
-						pane.header.text( sample.name )
+						const tabs = []
 
-						const buttonrow = pane.body.append('div')
-							.style('margin','10px')
-						const folderdiv = pane.body.append('div')
-							.style('margin','10px')
-
-						createbutton_focus( buttonrow, folderdiv, {
+						addtab_sampleview( tabs, {
 							tk: tk,
 							block: block,
 							sample: {
 								samplename: sample.name
 							},
 							samplegroup: {attributes: sample.attributes}
-						}, true)
+						})
 
-
-						may_createbutton_disco( buttonrow, folderdiv, {
+						mayaddtab_disco( tabs, {
 							tk: tk,
 							block: block,
 							sample: {
@@ -165,7 +155,7 @@ export async function may_allow_samplesearch(tk, block) {
 							},
 							//samplegroup: {attributes: sample.attributes}
 						})
-						may_createbutton_genome( buttonrow, folderdiv, {
+						mayaddtab_genome( tabs, {
 							tk: tk,
 							block: block,
 							sample: {
@@ -173,19 +163,25 @@ export async function may_allow_samplesearch(tk, block) {
 							},
 							//samplegroup: {attributes: sample.attributes}
 						})
+						mayaddtab_mutationsignature( tabs, sample.name, tk, block )
 
-
-						may_createbutton_samplesignature( buttonrow, folderdiv, sample.name, tk, block )
-
-
-						if(sample.attr) {
-							if(tk.sampleAttribute && tk.sampleAttribute.attributes) {
-								for(const attr of sample.attr) {
-									const a = tk.sampleAttribute.attributes[attr.k]
-									if(a) attr.k = a.label
+						if(sample.attr && tk.sampleAttribute && tk.sampleAttribute.attributes) {
+							tabs.push({
+								label:'Attributes',
+								show_immediate:(div)=>{
+									for(const attr of sample.attr) {
+										const a = tk.sampleAttribute.attributes[attr.k]
+										if(a) attr.k = a.label
+									}
+									client.make_table_2col( div, sample.attr)
 								}
-							}
-							client.make_table_2col( pane.body, sample.attr)
+							})
+						}
+						const pane = client.newpane({x:100, y:100})
+						pane.header.text( sample.name )
+						client.tab2box( pane.body.style('padding-top','10px'), tabs)
+						for(const t of tabs) {
+							if(t.show_immediate) t.show_immediate(t.box)
 						}
 					})
 			}
@@ -1387,23 +1383,20 @@ export async function click_multi_singleitem( p ) {
 	const pane = client.newpane({x:d3event.clientX, y:d3event.clientY})
 	pane.header.text(p.tk.name)
 
-	const buttonrow = pane.body.append('div')
-		.style('margin','10px')
-	const folderdiv = pane.body.append('div')
-		.style('margin','10px')
+	const tabs = []
+	tabs.push({
+		label:'Details',
+		show_immediate: (div)=>{
+			p.holder = div
+			detailtable_singlesample( p )
+		}
+	})
 
-
-	may_show_svgraph( p, buttonrow, folderdiv )
-
-
-	createbutton_focus( buttonrow, folderdiv, p )
-
-
-	may_createbutton_disco( buttonrow, folderdiv, p )
-
-	may_createbutton_genome( buttonrow, folderdiv, p )
-
-
+	addtab_sampleview( tabs, p )
+	mayaddtab_svgraph( tabs, p )
+	mayaddtab_disco( tabs, p )
+	mayaddtab_genome( tabs, p )
+/*
 	createbutton_addfeature( {
 		m: p.item,
 		holder:buttonrow,
@@ -1411,20 +1404,15 @@ export async function click_multi_singleitem( p ) {
 		block: p.block,
 		pane: pane
 	})
-
-	may_createbutton_samplesignature( buttonrow, folderdiv, p.sample.samplename, p.tk, p.block )
-
-	may_createbutton_survival_onemutation({
-		holder: buttonrow,
+	*/
+	mayaddtab_mutationsignature( tabs, p.sample.samplename, p.tk, p.block )
+	mayaddtab_survival_onemutation( tabs, {
 		tk: p.tk,
 		block: p.block,
 		m: p.item,
 		sample: p.sample,
 	})
-
-	may_createbutton_fimo({
-		holder: buttonrow,
-		folderdiv: folderdiv,
+	mayaddtab_fimo(tabs, {
 		tk: p.tk,
 		block: p.block,
 		m: p.item,
@@ -1432,9 +1420,10 @@ export async function click_multi_singleitem( p ) {
 		samplegroup: p.samplegroup,
 	})
 
-
-	p.holder = pane.body
-	detailtable_singlesample( p )
+	client.tab2box( pane.body.style('padding-top','10px'), tabs )
+	for(const t of tabs) {
+		if(t.show_immediate) t.show_immediate(t.box)
+	}
 }
 
 
@@ -2290,25 +2279,17 @@ export function may_add_sampleannotation(samplename, tk, lst) {
 
 
 
-function may_show_svgraph ( p, buttonrow, holder0 ) {
+function mayaddtab_svgraph ( tabs, p ) {
 	if(!p.item) return
 	if(p.item.dt != common.dtsv && p.item.dt != common.dtfusionrna) return
-
-	const holder = holder0.append('div')
-		.style('margin','10px')
-	make_svgraph( p, holder )
-
-	buttonrow.append('div')
-		.style('display','inline-block')
-		.attr('class', 'sja_menuoption')
-		.text('SVGraph')
-		.on('click',()=>{
-			if(holder.style('display')=='none') {
-				client.appear(holder)
-			} else {
-				client.disappear(holder)
-			}
-		})
+	tabs.push({
+		label:'Fusion graph',
+		callback: async (div)=>{
+			const wait = client.tab_wait(div)
+			await make_svgraph( p, div )
+			wait.remove()
+		}
+	})
 }
 
 
@@ -2483,7 +2464,26 @@ function createbutton_focus( buttonrow, div, p, defaultshow ) {
 
 
 
-function may_createbutton_genome ( buttonrow, div, p ) {
+function addtab_sampleview( tabs, p ) {
+	tabs.push({
+		label:'Sample View',
+		callback:(div)=>{
+			focus_singlesample({
+				holder: div,
+				m: p.item,
+				sample: p.sample,
+				samplegroup: p.samplegroup,
+				tk: p.tk,
+				block: p.block
+			})
+		}
+	})
+}
+
+
+
+
+function mayaddtab_genome ( tabs, p ) {
 /*
 if the sample has a single vcf file
 will allow genome view
@@ -2493,113 +2493,89 @@ show entirety of each chr, and the mds single sample track
 may allow for custom track without vcf
 */
 	if(!p.tk.mds) return
-	client.dofetch('mdssvcnv',{
-		genome: p.block.genome.name,
-		dslabel: p.tk.mds.label,
-		querykey: p.tk.mds.querykey,
-		ifsamplehasvcf: p.sample.samplename
-	})
-	.then(data=>{
-		if(data.no) return
-
-		// has single-sample vcf
-		const holder = div.append('div')
-			.style('margin','10px')
-			.style('display','none')
-		let plotnotshown=true
-
-		buttonrow.append('div')
-		.style('display','inline-block')
-		.attr('class','sja_menuoption')
-		.text('Genome')
-		.on('click',()=>{
-			if(holder.style('display')=='none') {
-				client.appear(holder)
-			} else {
-				client.disappear(holder)
-			}
-			if(!plotnotshown) return
-			plotnotshown=false
-
-			let maxbp = 0
-			for(const chr in p.block.genome.majorchr) {
-				maxbp = Math.max(maxbp, p.block.genome.majorchr[chr])
-			}
-
-			for(const chr in p.block.genome.majorchr) {
-				const chrdiv = holder.append('div')
-					.style('display','inline-block')
-				const t = {}
-
-				if(p.tk.iscustom) {
-					// TODO
-				} else {
-					t.fixname = chr.toUpperCase()
-					t.mds = p.tk.mds
-					t.querykey = p.tk.querykey
-					t.singlesample = {
-						name: p.sample.samplename,
-						waterfall:{ inuse:1 }
-					}
-					for(const k in p.tk.mds.queries[p.tk.querykey]) {
-						if(k=='bplengthUpperLimit' || k=='valueCutoff') {
-							// do not use default
-							continue
-						}
-						t[k] = p.tk.mds.queries[p.tk.querykey][k]
-					}
-				}
-				p.block.newblock({
-					foldlegend:true,
-					hide_mdsHandleHolder:1,
-					width: Math.ceil( 900 * p.block.genome.majorchr[chr] / maxbp ),
-					holder: chrdiv,
-					block:1,
-					chr: chr,
-					start: 0,
-					stop: p.block.genome.majorchr[chr],
-					tklst: [ t ]
+	tabs.push({
+		label:'Genome',
+		callback: async (div)=>{
+			const wait = client.tab_wait(div)
+			try {
+				const data = await client.dofetch('mdssvcnv',{
+					genome: p.block.genome.name,
+					dslabel: p.tk.mds.label,
+					querykey: p.tk.mds.querykey,
+					ifsamplehasvcf: p.sample.samplename
 				})
+				if(data.no) return
+				// has single-sample vcf
+				let maxbp = 0
+				for(const chr in p.block.genome.majorchr) {
+					maxbp = Math.max(maxbp, p.block.genome.majorchr[chr])
+				}
+
+				for(const chr in p.block.genome.majorchr) {
+					const chrdiv = div.append('div')
+						.style('display','inline-block')
+					const t = {}
+
+					if(p.tk.iscustom) {
+						// TODO
+					} else {
+						t.fixname = chr.toUpperCase()
+						t.mds = p.tk.mds
+						t.querykey = p.tk.querykey
+						t.singlesample = {
+							name: p.sample.samplename,
+							waterfall:{ inuse:1 }
+						}
+						for(const k in p.tk.mds.queries[p.tk.querykey]) {
+							if(k=='bplengthUpperLimit' || k=='valueCutoff') {
+								// do not use default
+								continue
+							}
+							t[k] = p.tk.mds.queries[p.tk.querykey][k]
+						}
+					}
+					p.block.newblock({
+						foldlegend:true,
+						hide_mdsHandleHolder:1,
+						width: Math.ceil( 900 * p.block.genome.majorchr[chr] / maxbp ),
+						holder: chrdiv,
+						block:1,
+						chr: chr,
+						start: 0,
+						stop: p.block.genome.majorchr[chr],
+						tklst: [ t ]
+					})
+				}
+				wait.remove()
+			}catch(e){
+				wait.text('Error: '+(e.message||e))
+				if(e.stack)console.log(e.stack)
 			}
-		})
+		}
 	})
 }
 
 
-async function may_createbutton_disco ( buttonrow, div, p ) {
-	if(!p.tk.mds || !p.tk.mds.singlesamplemutationjson) return
 
+function mayaddtab_disco ( tabs, p ) {
+	if(!p.tk.mds || !p.tk.mds.singlesamplemutationjson) return
 	/*
 	is official dataset, and equipped with single-sample files
 	click button to retrieve all mutations and show in disco plot
 	*/
-	let plotnotshown = true
-	const holder = div.append('div')
-		.style('margin','10px')
-		.style('display','none')
-	const sjcharts = await getsjcharts()
-	const discoPromise = sjcharts.dtDisco({
-		holderSelector: holder,
-		settings: {
-			showControls: false,
-			selectedSamples: []
-		}
-	})
-
-	buttonrow.append('div')
-		.style('display','inline-block')
-		.attr('class', 'sja_menuoption')
-		.text('Disco')
-		.on('click',()=>{
-
-			if(holder.style('display')=='none') {
-				client.appear(holder)
-			} else {
-				client.disappear(holder)
-			}
-
-			if(plotnotshown) {
-				plotnotshown=false
+	tabs.push({
+		label:'Disco plot',
+		callback: async (div)=>{
+			const wait = client.tab_wait(div)
+			try {
+				const sjcharts = await getsjcharts()
+				const discoPromise = sjcharts.dtDisco({
+					holderSelector: div,
+					settings: {
+						showControls: false,
+						selectedSamples: []
+					}
+				})
 
 				const arg = {
 					genome: p.block.genome.name,
@@ -2607,260 +2583,221 @@ async function may_createbutton_disco ( buttonrow, div, p ) {
 					querykey: p.tk.querykey,
 					getsample4disco: p.sample.samplename
 				}
-				client.dofetch('/mdssvcnv', arg)
-				.then(data=>{
-					if(data.error) throw(data.error)
-					if(!data.text) throw('.text missing')
+				const data = await client.dofetch('/mdssvcnv', arg)
+				if(data.error) throw data.error
+				if(!data.text) throw '.text missing'
 
-					let json
-					try{
-						json = JSON.parse(data.text)
-					} catch(e){
-						throw(e.message)
-					}
-
-					const disco_arg = {
-						sampleName: p.sample.samplename,
-						data: json
-					}
-
-					if(p.tk.mds.mutation_signature) {
-						let hassig=false
-						for(const k in p.tk.mds.mutation_signature.sets) {
-							for(const m of json) {
-								if(m[k]) {
-									hassig = k
-									break
-								}
-							}
-							if(hassig) break
-						}
-						if(hassig) {
-							const o = p.tk.mds.mutation_signature.sets[hassig]
-							disco_arg.mutation_signature = {
-								key: hassig,
-								name: o.name,
-								signatures: o.signatures
-							}
-						}
-					}
-
-					discoPromise.then(renderer=> renderer.main( disco_arg ) )
-				})
-				.catch(err=>{
-					client.sayerror(holder, typeof(err)=='string'?err:err.message)
-					if(err.stack) console.log(err.stack)
-				})
-			}
-		})
-}
-
-
-
-
-function may_createbutton_samplesignature( buttonrow, div, samplename, tk, block ) {
-	if(tk.iscustom || !tk.mds || !tk.mds.mutation_signature) return
-	client.dofetch('mdssamplesignature', {sample:samplename, genome:block.genome.name, dslabel:tk.mds.label} )
-	.then(data=>{
-		if(data.error) throw data.error
-		if(!data.lst) throw '.lst[] missing'
-		if(data.lst.length==0) {
-			// no
-			return
-		}
-		const holder = div.append('div')
-			.style('margin','10px')
-		for(const s of data.lst) {
-			const ss = tk.mds.mutation_signature.sets[s.key]
-			const d2 = holder.append('div')
-				.style('margin-bottom','20px')
-			d2.append('div')
-				.text( ss.name )
-			d2.append('div')
-				.text( s.valuename)
-			const svg = d2.append('svg')
-			const fontsize=14,
-				rowh = 16,
-				barw = 250,
-				pad = 20,
-				rowspace = 2,
-				labelspace = 6,
-				axish = 5
-			const maxv = s.annotation[0].v
-			//const minv = s.annotation[s.annotation.length-1].v
-			const minv = 0 // hardcode the #mutation per mb minimum value as 0
-			const scale = scaleLinear().domain([minv, maxv]).range([0, barw])
-			let labelw = 0
-			for(const i of s.annotation) {
-				svg.append('text')
-					.attr('font-family',client.font)
-					.attr('font-size',fontsize)
-					.text(ss.signatures[i.k].name)
-					.each(function(){labelw = Math.max(labelw, this.getBBox().width) })
-					.remove()
-			}
-			const g = svg.append('g')
-				.attr('transform','translate('+(pad+labelw+labelspace)+','+(pad+axish+rowspace)+')')
-			for(const [i,a] of s.annotation.entries()) {
-				const row = g.append('g')
-					.attr('transform','translate(0,'+((rowh+rowspace)*i)+')')
-				row.append('text')
-					.attr('font-family',client.font)
-					.attr('font-size',fontsize)
-					.attr('x',-labelspace)
-					.attr('text-anchor','end')
-					.attr('y',rowh/2)
-					.text(ss.signatures[a.k].name)
-					.attr('dominant-baseline','central')
-				row.append('rect')
-					.attr('width', Math.max(1,scale(a.v)))
-					.attr('height', rowh)
-					.attr('shape-rendering','crispEdges')
-					.attr('fill', ss.signatures[a.k].color)
-			}
-
-			client.axisstyle({
-				axis: g.append('g')
-					.attr('transform','translate(0,-'+rowspace+')')
-					.call(axisTop().scale(scale).ticks(4)),
-				showline:1,
-				fontsize: fontsize-2,
-			})
-
-			svg.attr('width', pad+labelw+labelspace+barw+pad)
-				.attr('height', pad+axish+rowspace+(rowh+rowspace)*s.annotation.length+pad)
-		}
-		holder.style('display','none')
-		buttonrow.append('div')
-			.style('display','inline-block')
-			.attr('class', 'sja_menuoption')
-			.text('Mutation signature')
-			.on('click',()=>{
-				if(holder.style('display')=='none') {
-					client.appear(holder)
-				} else {
-					client.disappear(holder)
+				const disco_arg = {
+					sampleName: p.sample.samplename,
+					data: JSON.parse( data.text )
 				}
-			})
-	})
-	.catch(e=>{
-		if(e.stack) console.log(e.stack)
-		console.log(e.message||e)
+
+				if(p.tk.mds.mutation_signature) {
+					let hassig=false
+					for(const k in p.tk.mds.mutation_signature.sets) {
+						for(const m of disco_arg.data) {
+							if(m[k]) {
+								hassig = k
+								break
+							}
+						}
+						if(hassig) break
+					}
+					if(hassig) {
+						const o = p.tk.mds.mutation_signature.sets[hassig]
+						disco_arg.mutation_signature = {
+							key: hassig,
+							name: o.name,
+							signatures: o.signatures
+						}
+					}
+				}
+
+				discoPromise.then(renderer=> renderer.main( disco_arg ) )
+				wait.remove()
+			}catch(e){
+				wait.text('Error: '+(e.message||e))
+				if(err.stack) console.log(err.stack)
+			}
+		}
 	})
 }
 
 
 
 
-function may_createbutton_fimo ( arg ) {
+
+function mayaddtab_mutationsignature( tabs, samplename, tk, block ) {
+	if(tk.iscustom || !tk.mds || !tk.mds.mutation_signature) return
+	tabs.push({
+		label:'Mutation signature',
+		callback:async (div)=>{
+			const wait = client.tab_wait(div)
+			try {
+				const data = await client.dofetch('mdssamplesignature', {sample:samplename, genome:block.genome.name, dslabel:tk.mds.label} )
+				if(data.error) throw data.error
+				if(!data.lst) throw '.lst[] missing'
+				if(data.lst.length==0) {
+					// no
+					return
+				}
+				for(const s of data.lst) {
+					const ss = tk.mds.mutation_signature.sets[s.key]
+					const d2 = div.append('div')
+						.style('margin-bottom','20px')
+					d2.append('div')
+						.text( ss.name )
+					d2.append('div')
+						.text( s.valuename)
+					const svg = d2.append('svg')
+					const fontsize=14,
+						rowh = 16,
+						barw = 250,
+						pad = 20,
+						rowspace = 2,
+						labelspace = 6,
+						axish = 5
+					const maxv = s.annotation[0].v
+					//const minv = s.annotation[s.annotation.length-1].v
+					const minv = 0 // hardcode the #mutation per mb minimum value as 0
+					const scale = scaleLinear().domain([minv, maxv]).range([0, barw])
+					let labelw = 0
+					for(const i of s.annotation) {
+						svg.append('text')
+							.attr('font-family',client.font)
+							.attr('font-size',fontsize)
+							.text(ss.signatures[i.k].name)
+							.each(function(){labelw = Math.max(labelw, this.getBBox().width) })
+							.remove()
+					}
+					const g = svg.append('g')
+						.attr('transform','translate('+(pad+labelw+labelspace)+','+(pad+axish+rowspace)+')')
+					for(const [i,a] of s.annotation.entries()) {
+						const row = g.append('g')
+							.attr('transform','translate(0,'+((rowh+rowspace)*i)+')')
+						row.append('text')
+							.attr('font-family',client.font)
+							.attr('font-size',fontsize)
+							.attr('x',-labelspace)
+							.attr('text-anchor','end')
+							.attr('y',rowh/2)
+							.text(ss.signatures[a.k].name)
+							.attr('dominant-baseline','central')
+						row.append('rect')
+							.attr('width', Math.max(1,scale(a.v)))
+							.attr('height', rowh)
+							.attr('shape-rendering','crispEdges')
+							.attr('fill', ss.signatures[a.k].color)
+					}
+
+					client.axisstyle({
+						axis: g.append('g')
+							.attr('transform','translate(0,-'+rowspace+')')
+							.call(axisTop().scale(scale).ticks(4)),
+						showline:1,
+						fontsize: fontsize-2,
+					})
+
+					svg.attr('width', pad+labelw+labelspace+barw+pad)
+						.attr('height', pad+axish+rowspace+(rowh+rowspace)*s.annotation.length+pad)
+				}
+				wait.remove()
+			}catch(e){
+				wait.text('Error: '+(e.message||e))
+				if(e.stack) console.log(e.stack)
+			}
+		}
+	})
+}
+
+
+
+
+function mayaddtab_fimo ( tabs, arg ) {
 /*
 may create a tf motif find button for mutation
 */
-	if(!arg.tk || !arg.block || !arg.block.genome || !arg.block.genome.fimo_motif) {
-		return
-	}
-	if(!arg.m || arg.m.dt!=common.dtsnvindel) {
-		return
-	}
-
-	let loaded = false
-	let shown = false
-
-	const button = arg.holder.append('button')
-	.text('TF motif')
-
-	const div = arg.folderdiv.append('div')
-		.style('display','none')
-
-	button.on('click',()=>{
-
-		// toggle
-		if(shown) {
-			client.disappear(div)
-			shown=false
-		} else {
-			client.appear(div)
-			shown=true
-		}
-		if(loaded) return // already loaded
-
-		button.text('Loading...')
-			.property('disabled',1)
-
-		// generate fimo query param
-		const fimoarg = {
-			genome: arg.block.genome,
-			div: div,
-			m: {
-				chr: arg.m.chr,
-				pos: (arg.m.pos+1), // 1 based
-				ref: arg.m.ref,
-				alt: arg.m.alt
-			},
-			callback_once:()=>{
-				loaded=1
-				button.text('TF motif')
-					.property('disabled',0)
-			}
-		}
-		// if fpkm is available and how to query
-		if(arg.tk.iscustom) {
-			if(arg.tk.checkexpressionrank) {
-				fimoarg.factor_profiles = [ {
-					isgenevalue:1,
-					name: 'Gene '+arg.tk.gecfg.datatype,
-					file: arg.tk.checkexpressionrank.file,
-					url: arg.tk.checkexpressionrank.url,
-					indexURL: arg.tk.checkexpressionrank.indexURL,
-				} ]
-
-				if(arg.sample) {
-					fimoarg.factor_profiles.push( {
-						isgenevalueonesample:1,
-						name: arg.sample.samplename+' '+arg.tk.gecfg.datatype,
-						samplename: arg.sample.samplename,
-						file: arg.tk.checkexpressionrank.file,
-						url: arg.tk.checkexpressionrank.url,
-						indexURL: arg.tk.checkexpressionrank.indexURL,
-					} )
-				}
-			}
-		} else {
-			// native
-			if(arg.tk.checkexpressionrank) {
-				const fpro = {
-					isgenevalue: 1,
-					datatype: arg.tk.checkexpressionrank.datatype,
-					querykey: arg.tk.checkexpressionrank.querykey,
-					mdslabel: arg.tk.mds.label
-				}
-				if(arg.samplegroup) {
-					if(arg.samplegroup.attributes) {
-						// restrict expression to a group
-						fpro.name = arg.samplegroup.name+' '+arg.tk.gecfg.datatype
-						fpro.samplegroup_attrlst = arg.samplegroup.attributes
+	if(!arg.tk || !arg.block || !arg.block.genome || !arg.block.genome.fimo_motif) return
+	if(!arg.m || arg.m.dt!=common.dtsnvindel) return
+	tabs.push({
+		label:'TF motif',
+		callback: async (div)=>{
+			const wait = client.tab_wait(div)
+			try {
+				// generate fimo query param
+				const fimoarg = {
+					genome: arg.block.genome,
+					div: div,
+					m: {
+						chr: arg.m.chr,
+						pos: (arg.m.pos+1), // 1 based
+						ref: arg.m.ref,
+						alt: arg.m.alt
 					}
 				}
-				if(!fpro.name) {
-					fpro.name = 'Gene '+arg.tk.gecfg.datatype
-				}
-				fimoarg.factor_profiles = [ fpro ]
+				// if fpkm is available and how to query
+				if(arg.tk.iscustom) {
+					if(arg.tk.checkexpressionrank) {
+						fimoarg.factor_profiles = [ {
+							isgenevalue:1,
+							name: 'Gene '+arg.tk.gecfg.datatype,
+							file: arg.tk.checkexpressionrank.file,
+							url: arg.tk.checkexpressionrank.url,
+							indexURL: arg.tk.checkexpressionrank.indexURL,
+						} ]
 
-				if(arg.sample) {
-					fimoarg.factor_profiles.push( {
-						isgenevalueonesample:1,
-						name: arg.sample.samplename+' '+arg.tk.gecfg.datatype,
-						samplename: arg.sample.samplename,
-						datatype: arg.tk.checkexpressionrank.datatype,
-						querykey: arg.tk.checkexpressionrank.querykey,
-						mdslabel: arg.tk.mds.label
-					})
+						if(arg.sample) {
+							fimoarg.factor_profiles.push( {
+								isgenevalueonesample:1,
+								name: arg.sample.samplename+' '+arg.tk.gecfg.datatype,
+								samplename: arg.sample.samplename,
+								file: arg.tk.checkexpressionrank.file,
+								url: arg.tk.checkexpressionrank.url,
+								indexURL: arg.tk.checkexpressionrank.indexURL,
+							} )
+						}
+					}
+				} else {
+					// native
+					if(arg.tk.checkexpressionrank) {
+						const fpro = {
+							isgenevalue: 1,
+							datatype: arg.tk.checkexpressionrank.datatype,
+							querykey: arg.tk.checkexpressionrank.querykey,
+							mdslabel: arg.tk.mds.label
+						}
+						if(arg.samplegroup) {
+							if(arg.samplegroup.attributes) {
+								// restrict expression to a group
+								fpro.name = arg.samplegroup.name+' '+arg.tk.gecfg.datatype
+								fpro.samplegroup_attrlst = arg.samplegroup.attributes
+							}
+						}
+						if(!fpro.name) {
+							fpro.name = 'Gene '+arg.tk.gecfg.datatype
+						}
+						fimoarg.factor_profiles = [ fpro ]
+
+						if(arg.sample) {
+							fimoarg.factor_profiles.push( {
+								isgenevalueonesample:1,
+								name: arg.sample.samplename+' '+arg.tk.gecfg.datatype,
+								samplename: arg.sample.samplename,
+								datatype: arg.tk.checkexpressionrank.datatype,
+								querykey: arg.tk.checkexpressionrank.querykey,
+								mdslabel: arg.tk.mds.label
+							})
+						}
+					}
 				}
+				const _ = await import('./mds.fimo')
+				await _.init( fimoarg )
+				wait.remove()
+			}catch(e){
+				wait.text('Error: '+(e.message||e))
+				if(e.stack)console.log(e.stack)
 			}
 		}
-		import('./mds.fimo').then(_=>{
-			_.init( fimoarg )
-		})
 	})
 }
 
@@ -2975,6 +2912,111 @@ block
 				arg.block.debugmode
 			)
 		})
+	})
+}
+function mayaddtab_survival_onemutation(tabs, arg) {
+/*
+may create a 'survival plot' button and use one mutation to divide samples
+holder
+tk
+block
+*/
+	if(!arg.tk.mds || !arg.tk.mds.survivalplot) return
+	tabs.push({
+		label:'Survival',
+		callback: async (div)=>{
+			const wait = client.tab_wait(div)
+			try {
+				const m = arg.m
+				// sample dividing rules
+				const st = {
+					mutation: 1
+				}
+
+				if(m.dt == common.dtsnvindel) {
+					// default to use this specific mutation
+					st.chr = m.chr
+					st.start = m.pos
+					st.stop = m.pos
+					st.snvindel = {
+						name: (m.gene ? m.gene+' ' : '') + m.mname,
+						ref: m.ref,
+						alt: m.alt,
+					}
+				} else if(m.dt == common.dtcnv) {
+					st.chr = m.chr
+					st.start = m.start
+					st.stop = m.stop
+					st.cnv = {
+						focalsizelimit: arg.tk.bplengthUpperLimit,
+						valuecutoff: arg.tk.valueCutoff,
+					}
+				} else if(m.dt == common.dtloh) {
+					st.chr = m.chr
+					st.start = m.start
+					st.stop = m.stop
+					st.loh = {
+						focalsizelimit: arg.tk.lohLengthUpperLimit,
+						valuecutoff: arg.tk.segmeanValueCutoff,
+					}
+				} else if(m.dt == common.dtsv) {
+					st.chr = m._chr
+					st.start = m._pos
+					st.stop = m._pos
+					st.sv = {}
+
+				} else if(m.dt == common.dtfusionrna) {
+					st.chr = m._chr
+					st.start = m._pos
+					st.stop = m._pos
+					st.fusion = {}
+				} else if(m.dt == common.dtitd) {
+					st.chr = m.chr
+					st.start = m.start
+					st.stop = m.stop
+					st.itd = {}
+				}
+
+				const plot = {
+					renderplot: 1, // instruct the plot to be rendered, no wait
+					samplerule:{
+						full:{},
+						set: st
+					}
+				}
+
+				if(arg.tk.mds.survivalplot.samplegroupattrlst && arg.sample ) {
+					// the survivalplot has samplegrouping, and there is a single sample
+					// will just use the first attribute
+					const attr = arg.tk.mds.survivalplot.samplegroupattrlst[0]
+					const sampleanno = arg.tk.sampleAttribute ? arg.tk.sampleAttribute.samples[ arg.sample.samplename ]  : null
+					if(sampleanno) {
+						const v = sampleanno[ attr.key ]
+						if(v) {
+							plot.samplerule.full.byattr = 1
+							plot.samplerule.full.key = attr.key
+							plot.samplerule.full.value = v
+						}
+					}
+				} else {
+					// do not set rule for sample-full
+				}
+
+				const _ = await import('./mds.survivalplot')
+				await _.init( {
+						genome: arg.block.genome,
+						mds: arg.tk.mds,
+						plotlist:[ plot ]
+					},
+					div,
+					arg.block.debugmode
+				)
+				wait.remove()
+			}catch(e){
+				wait.text('Error: '+(e.message||e))
+				if(e.stack) console.log(e.stack)
+			}
+		}
 	})
 }
 
