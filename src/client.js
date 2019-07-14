@@ -1652,9 +1652,13 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 				tab.tab.classed('sja_menuoption',true)
 				tab.box.style('display','none')
 			} else {
+				tab.tab.classed('sja_menuoption',false)
+				appear(tab.box)
 				for(let j=0; j<tabs.length; j++) {
-					tabs[j].tab.classed('sja_menuoption', i!=j )
-					tabs[j].box.style('display', i==j ? 'block' : 'none' )
+					if(i!=j) {
+						tabs[j].tab.classed('sja_menuoption', true )
+						tabs[j].box.style('display', 'none' )
+					}
 				}
 			}
 			if( tab.callback ) {
