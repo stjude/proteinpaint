@@ -510,6 +510,39 @@ function setBinOpts(plot, main, table, termNum, label) {
   
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
 
+  const bin_edit_td = tr.append('td')
+
+  const bin_size_div = bin_edit_td.append('div')
+    .html('Bin Size')
+
+  const bin_size_btn = bin_size_div.append('div')
+    .attr('class','sja_edit_btn')
+
+  const first_bin_div = bin_edit_td.append('div')
+    .html('First Bin')
+
+  const first_bin_btn = first_bin_div.append('div')
+    .attr('class','sja_edit_btn')
+
+  const last_bin_div = bin_edit_td.append('div')
+    .html('Last Bin')
+
+  const last_bin_btn = last_bin_div.append('div')
+    .attr('class','sja_edit_btn')
+
+  if(plot.term.isfloat || plot.term.isinteger ){
+    if(plot.term.graph.barchart.numeric_bin.auto_bins){
+      bin_size_btn.text(plot.term.graph.barchart.numeric_bin.auto_bins.bin_size + ' ' + (plot.term.unit?plot.term.unit:''))
+      first_bin_btn.text('EDIT')
+      last_bin_btn.text('EDIT')
+    }else if(plot.term.graph.barchart.numeric_bin.fixed_bins){
+      const fixed_bins = plot.term.graph.barchart.numeric_bin.fixed_bins
+      bin_size_btn.text('EDIT')
+      first_bin_btn.text(fixed_bins[0].label + ' ' + (plot.term.unit?plot.term.unit:''))
+      last_bin_btn.text(fixed_bins[fixed_bins.length-1].label + ' ' + (plot.term.unit?plot.term.unit:''))
+    }
+  }
+
   tr.append('td')
     .style('text-decoration', 'underline')
     .style("cursor", "pointer")

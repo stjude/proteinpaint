@@ -442,6 +442,21 @@ table {
 	text-align: left;
 	vertical-align: top;
 }
+
+.sja_edit_btn {
+	display: inline-block;
+	color:black;
+	background-color:#f2f2f2;
+	border-radius: 5px;
+	border:solid 1px #aaa;
+	padding:5px 10px;
+	cursor:default;
+	margin:1px;
+	font-size:0.8em;
+	margin-left:20px;
+}
+.sja_edit_btn:hover { background-color:#e6e6e6}
+.sja_edit_btn:active { color:#cc0000; background-color:#FCE2E1;}
   
 input[type="search"].tree_search {-webkit-appearance: searchfield;}
 input[type="search"].tree_search::-webkit-search-cancel-button {-webkit-appearance: searchfield-cancel-button;}
