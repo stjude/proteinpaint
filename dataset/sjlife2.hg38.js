@@ -345,6 +345,10 @@ module.exports={
 			termdb_bygenotype: {
 				// this only works for stratifying samples by mutation genotype
 				// svcnv or svcnv+snv combined may need its own trigger
+				getAF:true,
+				termid_sex: 'sex',
+				value_male: 'Male',
+				sex_chrs:['chrX','chrY']
 			},
 			check_pecanpie: {
 				info: {
