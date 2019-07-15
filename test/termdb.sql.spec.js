@@ -81,8 +81,7 @@ tape("filters", function (test) {
         value_by_max_grade: true
       }],
     }, 
-    "non-leaf condition filtered results, by maximum grade",
-    results => results.forEach(result => delete result.total)
+    "non-leaf condition filtered results, by maximum grade"
   )
  
   compareResponseData(
@@ -96,8 +95,7 @@ tape("filters", function (test) {
         value_by_most_recent: true
       }],
     }, 
-    "non-leaf condition filtered results, by most recent grade",
-    results => results.forEach(result => delete result.total)
+    "non-leaf condition filtered results, by most recent grade"
   )
 
   compareResponseData(
@@ -110,8 +108,7 @@ tape("filters", function (test) {
         values: [{key:'Cardiac dysrhythmia', label: "Cardiac dysrhythmia"}]
       }],
     }, 
-    "non-leaf condition filtered results by child",
-    results => results.forEach(result => delete result.total)
+    "non-leaf condition filtered results by child"
   )
  
   compareResponseData(
@@ -159,8 +156,7 @@ tape("categorical term1", function (test) {
       term1: 'diaggrp',
       term2: 'agedx'
     },
-    "sample counts by diagnosis groups, numerical overlay",
-    results => results.forEach(result =>delete result.total)
+    "sample counts by diagnosis groups, numerical overlay"
   )
 
   compareResponseData(
@@ -171,8 +167,7 @@ tape("categorical term1", function (test) {
       conditionUnits: ["","","max_grade_perperson"],
       term2_q: {value_by_max_grade:1},
     },
-    "sample counts by diagnosis groups, leaf condition overlay",
-    results => results.forEach(result => delete result.total)
+    "sample counts by diagnosis groups, leaf condition overlay"
   )
 
   compareResponseData(
@@ -183,8 +178,7 @@ tape("categorical term1", function (test) {
       conditionUnits: ["","","most_recent_grade"],
       term2_q: {value_by_most_recent:1},
     },
-    "sample counts by diagnosis groups, leaf condition overlay",
-    results => results.forEach(result => delete result.total)
+    "sample counts by diagnosis groups, leaf condition overlay"
   )
 
   compareResponseData(
@@ -202,8 +196,7 @@ tape("categorical term1", function (test) {
         ranges: [{start:1000,stop:5000}]
       }]
     },
-    "filtered sample counts by diagnosis groups, leaf condition overlay",
-    results => results.forEach(result => delete result.total)
+    "filtered sample counts by diagnosis groups, leaf condition overlay"
   )
 })
 
@@ -243,8 +236,7 @@ tape("numerical term1", function (test) {
       term1: 'agedx',
       term2: 'aaclassic_5'
     },
-    "sample counts by age of diagnosis, numerical overlay",
-    results => results.forEach(result =>delete result.total)
+    "sample counts by age of diagnosis, numerical overlay"
   )
 
   compareResponseData(
@@ -255,8 +247,7 @@ tape("numerical term1", function (test) {
       conditionUnits: ["","","max_grade_perperson"],
       term2_q: {value_by_max_grade:1},
     },
-    "sample counts by age of diagnosis, condition overlay by max grade",
-    results => results.forEach(result => delete result.total)
+    "sample counts by age of diagnosis, condition overlay by max grade"
   )
 
   compareResponseData(
@@ -267,8 +258,7 @@ tape("numerical term1", function (test) {
       conditionUnits: ["","","most_recent_grade"],
       term2_q: {value_by_most_recent:1},
     },
-    "sample counts by age of diagnosis, condition overlay by most recent grade",
-    results => results.forEach(result => delete result.total)
+    "sample counts by age of diagnosis, condition overlay by most recent grade"
   )
 
   compareResponseData(
@@ -286,8 +276,7 @@ tape("numerical term1", function (test) {
         ranges: [{start:1000,stop:5000}]
       }]
     },
-    "sample counts by age of diagnosis, condition overlay by most recent grade",
-    results => results.forEach(result => delete result.total)
+    "sample counts by age of diagnosis, condition overlay by most recent grade"
   )
 })
 
@@ -324,9 +313,7 @@ tape("leaf condition term1", function (test) {
       conditionUnits: ["","most_recent_grade",""], 
       term1_q: {value_by_most_recent:1}
     },
-    "sample counts by Asthma condition most recent grade, no overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Asthma condition most recent grade, no overlay"
   )
  
   compareResponseData(
@@ -337,9 +324,7 @@ tape("leaf condition term1", function (test) {
       term1_q: {value_by_max_grade:1},
       term2: 'sex'
     },
-    "sample counts by Asthma condition max grade, categorical overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Asthma condition max grade, categorical overlay"
   )
 
   compareResponseData(
@@ -350,9 +335,7 @@ tape("leaf condition term1", function (test) {
       term1_q: {value_by_most_recent:1},
       term2: 'diaggrp'
     },
-    "sample counts by Asthma condition most recent grade, categorical overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Asthma condition most recent grade, categorical overlay"
   )
 
   compareResponseData(
@@ -363,9 +346,7 @@ tape("leaf condition term1", function (test) {
       term1_q: {value_by_max_grade:1},
       term2: 'agedx'
     },
-    "sample counts by Asthma condition max grade, numerical overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Asthma condition max grade, numerical overlay" 
   )
 
   compareResponseData(
@@ -376,9 +357,7 @@ tape("leaf condition term1", function (test) {
       term1_q: {value_by_most_recent:1},
       term2: 'aaclassic_5'
     },
-    "sample counts by Asthma condition most recent grade, numerical overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Asthma condition most recent grade, numerical overlay"
   )
 
   compareResponseData(
@@ -390,9 +369,7 @@ tape("leaf condition term1", function (test) {
       term2: 'Hearing loss',
       term2_q: {value_by_max_grade:1}
     },
-    "sample counts by Asthma condition max grade, condition overlay by max-grade",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Asthma condition max grade, condition overlay by max-grade"
   )
 
   compareResponseData(
@@ -404,9 +381,7 @@ tape("leaf condition term1", function (test) {
       term2: 'Hearing loss',
       term2_q: {value_by_max_grade:1}
     },
-    "sample counts by Asthma condition most recent grade, condition overlay by max-grade",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Asthma condition most recent grade, condition overlay by max-grade"
   )
 
   compareResponseData(
@@ -425,9 +400,7 @@ tape("leaf condition term1", function (test) {
         ranges: [{start:0,stop:8}]
       }]
     },
-    "filtered sample counts by Asthma condition most recent grade, condition overlay by max-grade",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "filtered sample counts by Asthma condition most recent grade, condition overlay by max-grade"
   )
 })
 
@@ -468,9 +441,7 @@ tape("non-leaf condition term1", function (test) {
       conditionUnits: ["","most_recent_grade",""], 
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
     },
-    "sample counts by Cardiovascular System condition most recent grade, no overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total)
+    "sample counts by Cardiovascular System condition most recent grade, no overlay"
   )
 
   compareResponseData(
@@ -481,9 +452,7 @@ tape("non-leaf condition term1", function (test) {
       conditionUnits: ["","by_children",""], 
       term1_q: {value_by_max_grade:1, bar_by_children:1},
     },
-    "sample counts by Arrhythmias condition by children, no overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total)
+    "sample counts by Arrhythmias condition by children, no overlay"
   )
 
   compareResponseData(
@@ -498,9 +467,7 @@ tape("non-leaf condition term1", function (test) {
         values: [{key: 'Male', label: 'Male'}]
       }]
     },
-    "sample counts by Arrhythmias condition by children, no overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total)
+    "sample counts by Arrhythmias condition by children, no overlay"
   )
 
   compareResponseData(
@@ -512,8 +479,6 @@ tape("non-leaf condition term1", function (test) {
       term2: 'sex'
     },
     "sample counts by Arrhythmias condition max grade, categorical overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
   )
 
   compareResponseData(
@@ -524,9 +489,7 @@ tape("non-leaf condition term1", function (test) {
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'diaggrp'
     },
-    "sample counts by Arrhythmias condition most recent grade, categorical overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Arrhythmias condition most recent grade, categorical overlay"
   )
 
   compareResponseData(
@@ -537,9 +500,7 @@ tape("non-leaf condition term1", function (test) {
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'agedx'
     },
-    "sample counts by Arrhythmias condition max grade, numerical overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result =>delete result.total)
+    "sample counts by Arrhythmias condition max grade, numerical overlay"
   )
 
   compareResponseData(
@@ -550,9 +511,7 @@ tape("non-leaf condition term1", function (test) {
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'aaclassic_5'
     },
-    "sample counts by Arrhythmias condition most recent grade, numerical overlay",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Arrhythmias condition most recent grade, numerical overlay"
   )
 
   compareResponseData(
@@ -564,9 +523,7 @@ tape("non-leaf condition term1", function (test) {
       term2: 'Hearing loss',
       term2_q: {value_by_max_grade:1}
     },
-    "sample counts by Arrhythmias condition max grade, condition overlay by max-grade",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Arrhythmias condition max grade, condition overlay by max-grade"
   )
 
   compareResponseData(
@@ -578,9 +535,7 @@ tape("non-leaf condition term1", function (test) {
       term2: 'Hearing loss',
       term2_q: {value_by_max_grade:1}
     },
-    "sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade"
   )
 
   compareResponseData(
@@ -604,14 +559,12 @@ tape("non-leaf condition term1", function (test) {
         value_by_max_grade: true
       }]
     },
-    "filtered sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade",
-    // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => delete result.total) 
+    "filtered sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade"
   )
 })
 
 
-function compareResponseData(test, params, mssg, postFxn=()=>{}) {
+function compareResponseData(test, params, mssg) {
   const url0 = getSqlUrl(params); //console.log(url0)
 
   request(url0, (error,response,body)=>{
@@ -629,8 +582,7 @@ function compareResponseData(test, params, mssg, postFxn=()=>{}) {
           template,
           "=": externals
         })
-        postFxn(pj.tree.results.charts)
-        sortResults(pj.tree.results.charts)
+        normalizeCharts(pj.tree.results.charts)
         const summary0 = {charts: pj.tree.results.charts}
         if (data0.summary_term1) {
           summary0.boxplot = data0.summary_term1
@@ -657,8 +609,7 @@ function compareResponseData(test, params, mssg, postFxn=()=>{}) {
         const url1 = getBarUrl(params); //console.log(url1)
         request(url1, (error,response,body1)=>{
           const data1 = JSON.parse(body1)
-          postFxn(data1.charts)
-          sortResults(data1.charts)
+          normalizeCharts(data1.charts)
           const summary1 = {charts: data1.charts}
           if (data1.boxplot) {
             summary1.boxplot = data1.boxplot
@@ -678,15 +629,15 @@ function compareResponseData(test, params, mssg, postFxn=()=>{}) {
             }
           }
 
-          //console.log(JSON.stringify(summary0),'\n','-----','\n',JSON.stringify(summary1))
+          //console.log(JSON.stringify(summary0.charts[0].serieses.slice(0,1)),'\n','-----','\n',JSON.stringify(summary1.charts[0].serieses.slice(0,1)))
           if(error) {
             test.fail(error)
           }
           switch(response.statusCode) {
           case 200:
             test.deepEqual(
-              summary0,
-              summary1,
+              summary0.charts[0].serieses.slice(0,1),
+              summary1.charts[0].serieses.slice(0,1),
               mssg
             )
           break;
@@ -790,16 +741,18 @@ const externals = {
   }
 }
 
-function chartSorter(a,b) {
-  return a.chartId < b.chartId ? -1 : 1
+function normalizeCharts(charts) {
+  charts.forEach(onlyComparableKeys)
+  sortResults(charts)
 }
 
-function seriesSorter(a,b) {
-  return a.seriesId < b.seriesId ? -1 : 1
+function onlyComparableKeys(chart) {
+  delete chart.total
+  chart.serieses.forEach(removeMax)
 }
 
-function dataSorter(a,b) {
-  return a.dataId < b.dataId ? -1 : 1
+function removeMax(series) {
+  delete series.max
 }
 
 function sortResults(charts) {
@@ -810,5 +763,17 @@ function sortResults(charts) {
       series.data.sort(dataSorter)
     }
   }
+}
+
+function chartSorter(a,b) {
+  return a.chartId < b.chartId ? -1 : 1
+}
+
+function seriesSorter(a,b) {
+  return a.seriesId < b.seriesId ? -1 : 1
+}
+
+function dataSorter(a,b) {
+  return a.dataId < b.dataId ? -1 : 1
 }
 

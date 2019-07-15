@@ -749,7 +749,6 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
         stop, //startunbound ? min : stop,
         startunbound: start === null,
         stopunbound: stop === null,
-        value: 0, // v2s
         startinclusive: custom_bins.startinclusive,
         stopinclusive: custom_bins.stopinclusive,
       }
@@ -796,11 +795,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
         _values: [nb.unannotated.value],
         _labels: {[nb.unannotated.value]: nb.unannotated.label},
         label: nb.unannotated.label,
-        label_annotated: nb.unannotated.label_annotated,
-        // for unannotated samples
-        value: 0, // v2s
-        // for annotated samples
-        value_annotated: 0, // v2s
+        label_annotated: nb.unannotated.label_annotated
       }
 
       if (nb.unannotated.value_positive) {
@@ -827,9 +822,7 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
       // return copy of the bin, not direct obj, as bins will be modified later
 
       for(const i of fixed_bins) {
-        const copy = {
-          value: 0 // v2s
-        }
+        const copy = {}
         for(const k in i) {
           copy[ k ] = i[ k ]
         }
@@ -850,7 +843,6 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
         const bin = {
           start,
           stop,
-          value: 0, // v2s
           startinclusive:1,
         } 
         if (!bin.label) {
@@ -898,8 +890,6 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
         _labels: {[nb.unannotated.value]: nb.unannotated.label},
         label: nb.unannotated.label,
         label_annotated: nb.unannotated.label_annotated,
-        // for unannotated samples
-        value: 0, // v2s
         // for annotated samples
         value_annotated: 0, // v2s
       }
