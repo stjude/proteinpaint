@@ -115,7 +115,7 @@ const template = JSON.stringify({
           dataId: "@key",
           total: "+1",
         }, "&data.id[]"],
-        //"_:_max": "<&data.value",
+        "_:_max": "<&data.value", // needed by client-side boxplot renderer 
         "~values": ["&data.value",0],
         "~sum": "+&data.value",
         "__:boxplot": "=boxplot2()"
