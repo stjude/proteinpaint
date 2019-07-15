@@ -322,6 +322,33 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 
 	const tabs = []
 
+	if(tk.mds && tk.mds.termdb){
+		tabs.push({
+			label:'Clinical info',
+			callback: async (div)=>{
+				const obj = {
+					genome: block.genome,
+					mds: tk.mds,
+					div,
+					default_rootterm: {},
+					modifier_barchart_selectbar: {
+						callback: (result) => {
+							tip.hide()
+							update_group_term(result, group)
+							_updatetk()
+						}
+					}
+				}
+				if( tk.sample_termfilter ) {
+					obj.termfilter = {
+						terms: JSON.parse(JSON.stringify(tk.sample_termfilter))
+					}
+				}
+				await termdb.init(obj)
+			}
+		})
+	}
+
 	if( af.allowed_infofields ){
 		tabs.push({
 			label:'Numerical value',
@@ -370,30 +397,6 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 							_updatetk()
 						})
 				}
-			}
-		})
-	}
-
-	if(tk.mds && tk.mds.termdb){
-		tabs.push({
-			label:'Clinical info',
-			callback: async (div)=>{
-				const wait = client.tab_wait(div)
-				const obj = {
-					genome: block.genome,
-					mds: tk.mds,
-					div,
-					default_rootterm: {},
-					modifier_barchart_selectbar: {
-						callback: (result) => {
-							tip.hide()
-							update_group_term(result, group)
-							_updatetk()
-						}
-					}
-				}
-				await termdb.init(obj)
-				wait.remove()
 			}
 		})
 	}
