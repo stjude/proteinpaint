@@ -154,11 +154,12 @@ function getDataName(plot) {
     params.push('term0=' + plot.term0.id)
   }
   if (obj.modifier_ssid_barchart) {
-    params.push(...[
+    params.push(
       'term2=genotype',
       'ssid=' + obj.modifier_ssid_barchart.ssid,
-      'mname=' + obj.modifier_ssid_barchart.mutation_name
-    ])
+      'mname=' + obj.modifier_ssid_barchart.mutation_name,
+	  'chr=' + obj.modifier_ssid_barchart.chr
+    )
   } else if (plot.term2) {
     params.push('term2=' + plot.term2.id)
   }

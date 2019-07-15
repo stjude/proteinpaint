@@ -53,6 +53,7 @@ official track only
 		div: plotdiv,
 		default_rootterm: {},
 		modifier_ssid_barchart: {
+			chr: m.chr,
 			mutation_name: m.mname,
 			ssid: ssid,
 			groups: groups

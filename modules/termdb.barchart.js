@@ -337,7 +337,7 @@ async function setValFxns(q, inReqs, ds, tdb) {
     }
     if (key == "genotype") {
       if (!q.ssid) throw `missing ssid for genotype`
-      const bySample = await load_genotype_by_sample(q.ssid)
+      const [bySample, genotype2sample] = await load_genotype_by_sample(q.ssid)
       const skey = ds.cohort.samplenamekey
       inReq.joinFxns[key] = row => bySample[row[skey]]
       continue
@@ -923,12 +923,70 @@ async function load_genotype_by_sample ( id ) {
 */
   const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', id ) )
   const bySample = Object.create(null)
+  const genotype2sample = new Map()
   for(const line of text.split('\n')) {
     const [type, samplesStr] = line.split('\t')
     const samples = samplesStr.split(",")
     for(const sample of samples) {
       bySample[sample] = type
     }
+	if( type=='Homozygous reference') {
+      genotype2sample.set('href', new Set(samples))
+	} else if( type=='Homozygous alternative') {
+      genotype2sample.set('halt', new Set(samples))
+	} else {
+      genotype2sample.set('het', new Set(samples))
+	}
   }
-  return bySample
+  return [bySample, genotype2sample]
+}
+
+
+function get_AF ( samples, chr, genotype2sample, ds ) {
+/*
+as configured by ds.track.vcf.termdb_bygenotype,
+at genotype overlay of a barchart,
+to show AF=? for each bar, based on the current variant
+
+arguments:
+- samples[]
+	list of samples from a bar
+- chr
+	chromosome of the variant
+- genotype2sample MAP
+	k: het, href, halt
+	v: set of samples
+- ds{}
+*/
+  const afconfig = ds.track.vcf.termdb_bygenotype // location of configurations
+
+  let AC=0, AN=0
+
+  if( afconfig.sex_chrs.has( chr ) ) {
+  	// sex chr
+	for(const s of samples) {
+	  if( afconfig.male_samples.has( s )) {
+	    AN++
+		if(!genotype2sample.href.has(s)) AC++
+	  } else {
+	    AN+=2
+	    if( genotype2sample.halt.has( s ) ) {
+	      AC+=2
+	    } else if(genotype2sample.het.has( s )) {
+	      AC++
+  	    }
+	  }
+	}
+  } else {
+    // autosome
+	for(const s of samples) {
+	  AN+=2
+	  if( genotype2sample.halt.has( s ) ) {
+	    AC+=2
+	  } else if(genotype2sample.het.has( s )) {
+	    AC++
+  	  }
+	}
+  }
+  return AN==0 ? 0 : (AC/AN).toFixed(3)
 }

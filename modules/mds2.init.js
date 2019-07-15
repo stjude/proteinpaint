@@ -134,6 +134,18 @@ async function init_vcf ( vcftk, genome, ds ) {
 		if(!vcftk.format.GT) throw '.termdb_bygenotype enabled but the GT FORMAT field is missing'
 		if(!ds.cohort) throw 'termdb_bygenotype but ds.cohort missing'
 		if(!ds.cohort.termdb) throw 'termdb_bygenotype but ds.cohort.termdb missing'
+		if( vcftk.termdb_bygenotype.getAF ) {
+			if(!vcftk.termdb_bygenotype.termid_sex ) throw 'termid_sex missing for getAF at termdb_bygenotype'
+			if(!vcftk.termdb_bygenotype.value_male ) throw 'value_male missing for getAF at termdb_bygenotype'
+			const t = ds.cohort.termdb.q.getSample2value( vcftk.termdb_bygenotype.termid_sex )
+			vcftk.termdb_bygenotype.male_samples = new Set()
+			for(const i of t) {
+				if( i.value == vcftk.termdb_bygenotype.value_male ) vcftk.termdb_bygenotype.male_samples.add( i.sample )
+			}
+			if(!vcftk.termdb_bygenotype.sex_chrs ) throw 'sex_chrs missing for getAF at termdb_bygenotype'
+			if(!Array.isArray(vcftk.termdb_bygenotype.sex_chrs) ) throw 'sex_chrs is not array'
+			vcftk.termdb_bygenotype.sex_chrs = new Set( vcftk.termdb_bygenotype.sex_chrs)
+		}
 	}
 
 	if( vcftk.samples ) {

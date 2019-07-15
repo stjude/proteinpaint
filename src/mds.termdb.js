@@ -29,7 +29,6 @@ attach to obj{}
 	when this is provided, will allow selecting terms, do not show graph buttons
 ** modifier_ssid_barchart
 ** modifier_barchart_selectbar
-** modifier_ssid_onterm
 
 
 
@@ -526,6 +525,7 @@ function make_barplot ( obj, term, div, callback ) {
 		}
 		plot.mutation_lst = [
 			{
+				chr: obj.modifier_ssid_barchart.chr,
 				mutation_name: obj.modifier_ssid_barchart.mutation_name,
 				ssid: obj.modifier_ssid_barchart.ssid,
 				genotype2color: g2c
