@@ -29,6 +29,12 @@ __update_legend
 */
 
 
+// hardcoded colors
+const color_infofield = '#674EA7'
+const color_population = '#A64D79'
+const color_termdb = '#4888BF'
+
+
 
 
 export function may_create_vcflegend_numericalaxis( tk, block ) {
@@ -324,7 +330,7 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 
 	if(tk.mds && tk.mds.termdb){
 		tabs.push({
-			label:'Clinical info',
+			label:'<span style="background:'+color_termdb+';border-radius:4px">&nbsp;&nbsp;</span> Clinical info',
 			callback: async (div)=>{
 				const obj = {
 					genome: block.genome,
@@ -351,7 +357,7 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 
 	if( af.allowed_infofields ){
 		tabs.push({
-			label:'Numerical value',
+			label:'<span style="background:'+color_infofield+';border-radius:4px">&nbsp;&nbsp;</span> Numerical value',
 			show_immediate: (div)=>{
 				for( const i of af.allowed_infofields ){
 					if( group.is_infofield && group.key==i.key ) {
@@ -377,7 +383,7 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 
 	if( tk.populations ) {
 		tabs.push({
-			label:'Population',
+			label:'<span style="background:'+color_population+';border-radius:4px">&nbsp;&nbsp;</span> Population',
 			show_immediate: (div)=>{
 				for( const population of tk.populations ){
 					if( group.is_population && group.key==population.key ) {
@@ -546,7 +552,7 @@ function legend_show_AFtest_onegroup_infofield (group, holder, tk){
 			// .attr('class','sja_filter_tag_btn')
 			.style('color','#FFF')
 			.style('border-radius','6px')
-			.style('background-color', '#674EA7')
+			.style('background-color', color_infofield)
 			.style('padding','3px 6px 3px 6px')
 			.style('margin-left', '5px')
 			.style('font-size','1em')
@@ -601,7 +607,7 @@ function legend_show_AFtest_onegroup_population ( group, holder, tk ){
 		const population_btn = population_div.append('div')
 			.style('color','#FFF')
 			.style('border-radius','6px')
-			.style('background-color', '#A64D79')
+			.style('background-color', color_population)
 			.style('padding','3px 6px 3px 6px')
 			.style('margin-left', '5px')
 			.style('font-size','1em')
