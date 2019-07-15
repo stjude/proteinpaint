@@ -2642,7 +2642,7 @@ function mayaddtab_mutationsignature( tabs, samplename, tk, block ) {
 				if(data.error) throw data.error
 				if(!data.lst) throw '.lst[] missing'
 				if(data.lst.length==0) {
-					// no
+					wait.text('No mutation signature for this sample.')
 					return
 				}
 				for(const s of data.lst) {

@@ -13,8 +13,8 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 ********************** EXPORTED
 handle_request_closure
 server_init
-********************** INTERNAL
 copy_term
+********************** INTERNAL
 trigger_rootterm
 trigger_getcategories
 trigger_children
@@ -24,7 +24,7 @@ trigger_treeto
 
 
 
-exports.handle_request_closure = ( genomes ) => {
+export function handle_request_closure ( genomes ) {
 /*
 */
 
@@ -100,7 +100,7 @@ may apply ssid: a premade sample set
 
 
 
-function copy_term ( t ) {
+export function copy_term ( t ) {
 /*
 t is jsondata from terms table
 
@@ -181,7 +181,7 @@ function trigger_getcategories ( q, res, tdb, ds ) {
 ///////////// server init
 
 
-exports.server_init = ( ds ) => {
+export function server_init ( ds ) {
 /* to initiate termdb for a mds dataset
 */
 	const termdb = ds.cohort.termdb

@@ -1,6 +1,7 @@
 const app = require('../app')
 const fs = require('fs')
 const utils = require('./utils')
+const termdb = require('./termdb')
 
 
 
@@ -61,7 +62,10 @@ the client copy stays at .mds.track{}
 			check_pecanpie: t0.vcf.check_pecanpie,
 		}
 		if(t0.vcf.plot_mafcov) {
-			tk.vcf.plot_mafcov = true
+			tk.vcf.plot_mafcov = {}
+			if( t0.vcf.plot_mafcov.overlay_term ) {
+				tk.vcf.plot_mafcov.overlay_term = termdb.copy_term( t0.vcf.plot_mafcov.overlay_term )
+			}
 		}
 		if(t0.vcf.termdb_bygenotype) {
 			tk.vcf.termdb_bygenotype = true
@@ -112,6 +116,16 @@ async function init_vcf ( vcftk, genome, ds ) {
 		if(!vcftk.format.AD) throw '.plot_mafcov enabled but the AD FORMAT field is missing'
 		if(vcftk.format.AD.Number!='R') throw 'AD FORMAT field Number=R is not true'
 		if(vcftk.format.AD.Type!='Integer') throw 'AD FORMAT field Type=Integer is not true'
+		if( vcftk.plot_mafcov.overlay_term ) {
+			if(!ds.cohort) throw 'ds.cohort missing when plot_mafcov.overlay_term defined'
+			if(!ds.cohort.termdb) throw 'ds.cohort.termdb missing when plot_mafcov.overlay_term defined'
+			// termdb must have already been initiated
+			if(!ds.cohort.termdb.q) throw 'ERR: termdb.q{} missing while trying to access termdb helper functions'
+			if(!ds.cohort.termdb.q.termjsonByOneid) throw 'ERR: q.termjsonByOneid missing'
+			const t = ds.cohort.termdb.q.termjsonByOneid( vcftk.plot_mafcov.overlay_term )
+			if(!t) throw 'unknown term id "'+vcftk.plot_mafcov.overlay_term+'" from vcftk.plot_mafcov.overlay_term'
+			vcftk.plot_mafcov.overlay_term = t
+		}
 	}
 
 	if( vcftk.termdb_bygenotype ) {

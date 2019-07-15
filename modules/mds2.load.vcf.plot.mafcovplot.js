@@ -1,5 +1,6 @@
 const utils = require('./utils')
 const vcf = require('../src/vcf')
+const d3scale = require('d3-scale')
 
 
 
@@ -10,7 +11,7 @@ handle_mafcovplot
 ********************** INTERNAL
 */
 
-exports.handle_mafcovplot = async ( q, genome, ds, result ) => {
+export async function handle_mafcovplot ( q, genome, ds, result ) {
 	try {
 		if(!ds.track) throw 'ds.track missing'
 		const tk = ds.track.vcf
@@ -47,9 +48,33 @@ exports.handle_mafcovplot = async ( q, genome, ds, result ) => {
 
 		// hardcoded to use AD
 
-		// conditional, may do server-side rendering instead
-
+		// client side rendering
 		result.plotgroups = mafcov_getdata4clientrendering ( m, tk )
+
+		if( q.overlay_term ) {
+			// find out category for each sample, color-code categories, then sample
+			const tmp = ds.cohort.termdb.q.getSample2value( q.overlay_term )
+			const category2color = d3scale.scaleOrdinal( d3scale.schemeCategory10)
+			const categories = new Set()
+			const sample2color = new Map()
+			for(const i of tmp) {
+				const category = i.value
+				categories.add( category )
+				sample2color.set( i.sample, category2color(category) )
+			}
+			for(const plot of result.plotgroups ) {
+				for(const o of plot.lst ) {
+					o.sampleobj.color = sample2color.get( o.sampleobj.name ) || 'black'
+				}
+			}
+			result.categories = []
+			for(const c of categories) {
+				result.categories.push({ color:category2color(c), label:c })
+			}
+		}
+
+
+		// conditional, may do server-side rendering instead
 
 	}catch(e) {
 		result.error = e.message || e

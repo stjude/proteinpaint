@@ -1051,4 +1051,12 @@ thus less things to worry about...
 			return undefined
 		}
 	}
+	{
+		// select sample and category, only for categorical term
+		// right now only for category-overlay on maf-cov plot
+		const s = ds.cohort.db.connection.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
+		q.getSample2value = (id) => {
+			return s.all(id)
+		}
+	}
 }
