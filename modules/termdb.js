@@ -71,12 +71,26 @@ function trigger_testplot ( q, res, tdb, ds ) {
 	const result = { lst }
 	const t1 = tdb.q.termjsonByOneid( q.term1_id )
 	if( t1.isinteger || t1.isfloat ) {
-		result.summary_term1 = termdbsql.get_numericsummary(q, t1, ds, q.tvslst )
+		result.summary_term1 = termdbsql.get_numericsummary( q, t1, ds, q.tvslst )
 	}
 	if( q.term2_id ) {
 		const t2 = tdb.q.termjsonByOneid( q.term2_id )
 		if( t2.isinteger || t2.isfloat ) {
-			result.summary_term2 = termdbsql.get_numericsummary(q, t2, ds, q.tvslst )
+			result.summary_term2 = {}
+			for(const item of result.lst) {
+				if (!(item.key1 in result.summary_term2)) {
+					const t1q = {
+						term: t1,
+						values: t1.iscategorical || t1.iscondition ? [{key:item.key1, label: item.label}] : null,
+						ranges: t1.isinteger || t1.isfloat ? [item.range1] : null
+					}
+					if (q.term1_q) {
+						Object.assign(t1q, q.term1_q)
+					}
+					const tvslst = (q.tvslst ? q.tvslst : []).concat(t1q)
+					result.summary_term2[item.key1] = termdbsql.get_numericsummary( q, t2, ds, tvslst )
+				}
+			}
 		}
 	}
 	res.send( result )

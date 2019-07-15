@@ -868,6 +868,7 @@ function get_bins(q, term, ds) {
 					})
 					v+=bin_size
 				}
+				bins[bins.length-1].stopinclusive = true
 			} else {
 				throw 'no predefined binning scheme'
 			}
@@ -877,20 +878,20 @@ function get_bins(q, term, ds) {
 }
 
 
-export function get_numericsummary (q, term, ds, tvslst ) {
+export function get_numericsummary (q, term, ds, _tvslst = [] ) {
 /*
 to produce the summary table of mean, median, percentiles
 at a numeric barchart
 */
-	let filter
-	if( tvslst ) {
-		if( typeof tvslst == 'string' ) tvslst = JSON.parse(decodeURIComponent(tvslst))
-		filter = makesql_by_tvsfilter( tvslst, ds )
-	} else {
+	const tvslst = typeof _tvslst == 'string'
+		? JSON.parse(decodeURIComponent(_tvslst))
+		: _tvslst
+
+	if ((term.isinteger || term.isfloat ) && !(tvslst.find(tv=>tv.term.id == term.id && 'ranges' in tv))) {
 		const [bins, bin_size] = get_bins(q, term, ds)
-		tvslst = [{term, ranges: bins}]
-		filter = makesql_by_tvsfilter( tvslst, ds )
+		tvslst.push({term, ranges: bins})
 	}
+	const filter = makesql_by_tvsfilter( tvslst, ds )
 	const values = []
 	if(filter) {
 		values.push(...filter.values)
@@ -917,6 +918,7 @@ at a numeric barchart
 
 	const s = ds.cohort.db.connection.prepare(string)
 	const result = s.all( values )
+	if (!result.length) return null
 	result.sort((i,j)=> i.value - j.value )
 
 	const stat = app.boxplot_getvalue( result )

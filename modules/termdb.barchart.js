@@ -116,7 +116,7 @@ const template = JSON.stringify({
           total: "+1",
         }, "&data.id[]"],
         //"_:_max": "<&data.value",
-        "~values": ["&data.value"],
+        "~values": ["&data.value",0],
         "~sum": "+&data.value",
         "__:boxplot": "=boxplot2()"
       }, "&series.id[]"],
@@ -880,6 +880,8 @@ this is to accommondate settings where a valid value e.g. 0 is used for unannota
 
         start += nb.auto_bins.bin_size
       }
+
+      bins[bins.length - 1].stopinclusive = 1
     } else {
       throw 'unknown ways to decide bins'
     }

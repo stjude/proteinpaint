@@ -160,10 +160,7 @@ tape("categorical term1", function (test) {
       term2: 'agedx'
     },
     "sample counts by diagnosis groups, numerical overlay",
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    })
+    results => results.forEach(result =>delete result.total)
   )
 
   compareResponseData(
@@ -247,10 +244,7 @@ tape("numerical term1", function (test) {
       term2: 'aaclassic_5'
     },
     "sample counts by age of diagnosis, numerical overlay",
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    })
+    results => results.forEach(result =>delete result.total)
   )
 
   compareResponseData(
@@ -334,7 +328,7 @@ tape("leaf condition term1", function (test) {
     // TO-DO: SQL results must also give unique samplecount across all bars 
     results => results.forEach(result => delete result.total) 
   )
-  
+ 
   compareResponseData(
     test, 
     {
@@ -371,10 +365,7 @@ tape("leaf condition term1", function (test) {
     },
     "sample counts by Asthma condition max grade, numerical overlay",
     // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    }) 
+    results => results.forEach(result => delete result.total) 
   )
 
   compareResponseData(
@@ -387,10 +378,7 @@ tape("leaf condition term1", function (test) {
     },
     "sample counts by Asthma condition most recent grade, numerical overlay",
     // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    }) 
+    results => results.forEach(result => delete result.total) 
   )
 
   compareResponseData(
@@ -404,10 +392,7 @@ tape("leaf condition term1", function (test) {
     },
     "sample counts by Asthma condition max grade, condition overlay by max-grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    }) 
+    results => results.forEach(result => delete result.total) 
   )
 
   compareResponseData(
@@ -421,10 +406,7 @@ tape("leaf condition term1", function (test) {
     },
     "sample counts by Asthma condition most recent grade, condition overlay by max-grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    }) 
+    results => results.forEach(result => delete result.total) 
   )
 
   compareResponseData(
@@ -445,10 +427,7 @@ tape("leaf condition term1", function (test) {
     },
     "filtered sample counts by Asthma condition most recent grade, condition overlay by max-grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    }) 
+    results => results.forEach(result => delete result.total) 
   )
 })
 
@@ -560,10 +539,7 @@ tape("non-leaf condition term1", function (test) {
     },
     "sample counts by Arrhythmias condition max grade, numerical overlay",
     // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    }) 
+    results => results.forEach(result =>delete result.total)
   )
 
   compareResponseData(
@@ -576,10 +552,7 @@ tape("non-leaf condition term1", function (test) {
     },
     "sample counts by Arrhythmias condition most recent grade, numerical overlay",
     // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    }) 
+    results => results.forEach(result => delete result.total) 
   )
 
   compareResponseData(
@@ -593,10 +566,7 @@ tape("non-leaf condition term1", function (test) {
     },
     "sample counts by Arrhythmias condition max grade, condition overlay by max-grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    }) 
+    results => results.forEach(result => delete result.total) 
   )
 
   compareResponseData(
@@ -610,10 +580,7 @@ tape("non-leaf condition term1", function (test) {
     },
     "sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    }) 
+    results => results.forEach(result => delete result.total) 
   )
 
   compareResponseData(
@@ -639,10 +606,7 @@ tape("non-leaf condition term1", function (test) {
     },
     "filtered sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade",
     // TO-DO: SQL results must also give unique samplecount across all bars 
-    results => results.forEach(result => {
-      delete result.total
-      result.serieses.forEach(series=>delete series.boxplot)
-    }) 
+    results => results.forEach(result => delete result.total) 
   )
 })
 
@@ -675,6 +639,19 @@ function compareResponseData(test, params, mssg, postFxn=()=>{}) {
             summary0.boxplot.sd = summary0.boxplot.sd.toPrecision(8)
           }
         }
+        if (data0.summary_term2) {
+          for(const chart of summary0.charts) {
+            for(const series of chart.serieses) {
+              if (data0.summary_term2[series.seriesId]) {
+                series.boxplot = data0.summary_term2[series.seriesId]
+                series.boxplot.mean = series.boxplot.mean.toPrecision(8)
+                if (series.boxplot.sd) {
+                  series.boxplot.sd = series.boxplot.sd.toPrecision(8)
+                }
+              }
+            }
+          }
+        }
         // get an alternatively computed results
         // for comparing against sql results
         const url1 = getBarUrl(params); //console.log(url1)
@@ -690,6 +667,17 @@ function compareResponseData(test, params, mssg, postFxn=()=>{}) {
               summary1.boxplot.sd = summary1.boxplot.sd.toPrecision(8)
             }
           }
+          for(const chart of summary1.charts) {
+            for(const series of chart.serieses) {
+              if (series.boxplot) {
+                series.boxplot.mean = series.boxplot.mean.toPrecision(8)
+                if (series.boxplot.sd) {
+                  series.boxplot.sd = series.boxplot.sd.toPrecision(8)
+                }
+              }
+            }
+          }
+
           //console.log(JSON.stringify(summary0),'\n','-----','\n',JSON.stringify(summary1))
           if(error) {
             test.fail(error)
@@ -756,13 +744,13 @@ const template = JSON.stringify({
         },
         total: "+&series.value",
         seriesId: "@key",
+        boxplot: "$summary_term2",
         data: [{
           dataId: "@key",
           total: "&data.value",
         }, "&data.id"],
       }, "&series.id"]
     }, "&chart.id"],
-    "__:boxplot": "=boxplot1()",
     "_:_unannotated": {
       label: "",
       label_unannotated: "",
