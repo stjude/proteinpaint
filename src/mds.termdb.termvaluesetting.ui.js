@@ -874,9 +874,9 @@ export function make_new_term(bar_term){
         new_term.term.isfloat = bar_term.term.isfloat
         new_term.range = bar_term.range
     }
-    if(bar_term.term.isinteger) {
+    if(bar_term.term.isinteger || bar_term.term.isfloat) {
         new_term.term.isinteger = bar_term.term.isinteger
-        new_term.range = bar_term.range
+        new_term.ranges = bar_term.ranges
     }
     if(bar_term.term.iscondition) {
         new_term.term.iscondition = bar_term.term.iscondition
