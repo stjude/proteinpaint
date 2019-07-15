@@ -114,7 +114,7 @@ module.exports={
 			},
 			{
 				key:'SJcontrol_AF',
-				label:'SJLIFE Control allele frequency',
+				label:'SJLIFE control cohort allele frequency',
 				isfilter:true,
 				isfloat:1,
 				range: {
@@ -124,8 +124,19 @@ module.exports={
 				}
 			},
 			{
+				key:'SJcontrol_CR',
+				label:'SJLIFE control cohort call rate',
+				isfilter:true,
+				isfloat:1,
+				range: {
+					start:0.95,
+					startinclusive:true,
+					stopunbounded:true,
+				}
+			},
+			{
 				key:'CR',
-				label:'SJLIFE WGS cohort call rate',
+				label:'SJLIFE call rate',
 				isfilter:true,
 				isactivefilter:true,
 				isfloat:1,
@@ -137,7 +148,7 @@ module.exports={
 			},
 			{
 				key:'gnomAD_CR',
-				label:'gnmoAD WGS cohort call rate',
+				label:'gnmoAD call rate',
 				isfilter:true,
 				isactivefilter:true,
 				isfloat:1,
@@ -200,14 +211,16 @@ module.exports={
 					stopinclusive:true
 				}
 			},
-			/*
 			{
 				key:'PG',
 				label:'Committee classification',
 				iscategorical:true,
 				isfilter:true,
+				values:[
+					{key:'P',label:'Pathogenic'},
+					{key:'LP',label:'Likely pathogenic'},
+				]
 			},
-			*/
 			{
 				key:'BadBLAT',
 				label:'Bad blat',
@@ -325,7 +338,8 @@ module.exports={
 				},
 			},
 			plot_mafcov: {
-				show_samplename: 1
+				show_samplename: 1,
+				overlay_term: 'sex'
 				// may allow jwt
 			},
 			termdb_bygenotype: {

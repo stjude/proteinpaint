@@ -11,7 +11,11 @@ show_mafcovplot
 
 
 
-export function show_mafcovplot ( holder, m, tk, block ) {
+export async function show_mafcovplot ( holder, m, tk, block ) {
+/*
+call this function to generate/update plot
+will include tk.vcf.plot_mafcov.overlay_term
+*/
 	const par = {
 		genome: block.genome.name,
 		trigger_mafcovplot:1,
@@ -31,23 +35,40 @@ export function show_mafcovplot ( holder, m, tk, block ) {
 			indexURL: tk.vcf.indexURL
 		}
 	}
+	if( tk.vcf.plot_mafcov.overlay_term ) {
+		par.overlay_term = tk.vcf.plot_mafcov.overlay_term.id
+	}
 
-	return client.dofetch('mds2',par)
-	.then(data=>{
+	const wait = holder.append('div')
+
+	try {
+		const data = await client.dofetch('mds2',par)
 		if(data.error) throw data.error
 
-
 		// TODO if is server rendered image
-
 
 		if( data.plotgroups ) {
 			clientside_plot( data.plotgroups, holder, tk )
 		}
-	})
-	.catch(e=>{
-		holder.text('ERROR: '+(e.message||e))
+
+		if( data.categories ) {
+			for(const c of data.categories ) {
+				const row = holder.append('div')
+					.style('margin','4px')
+				row.append('span')
+					.style('background',c.color)
+					.html('&nbsp;&nbsp;')
+				row.append('span')
+					.style('color',c.color)
+					.html('&nbsp;'+c.label)
+			}
+		}
+
+		wait.remove()
+	}catch(e){
+		wait.text('ERROR: '+(e.message||e))
 		if(e.stack) console.log(e.stack)
-	})
+	}
 }
 
 
