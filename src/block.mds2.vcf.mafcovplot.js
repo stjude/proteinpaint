@@ -23,6 +23,9 @@ will include tk.vcf.plot_mafcov.overlay_term
 
 	const svgdiv = holder.append('div')
 	const legenddiv = holder.append('div') // termdb handle and category color
+		.style('margin','10px')
+		.style('border-top','solid 1px #ccc')
+		.style('padding-top','10px')
 	const obj = {
 		svgdiv,
 		legenddiv,
@@ -63,7 +66,10 @@ when overlay term is changed
 			indexURL: obj.tk.vcf.indexURL
 		}
 	}
-	if( obj.overlay_term ) par.overlay_term = obj.overlay_term.id
+	if( obj.overlay_term ) {
+		par.overlay_term = obj.overlay_term.id
+		par.overlay_term_q = obj.overlay_term_q
+	}
 
 	const wait = obj.svgdiv
 		.selectAll('*').remove()
@@ -100,15 +106,11 @@ function show_legend ( obj, categories ) {
 
 	obj.legenddiv.selectAll('*').remove()
 
-	const tr = obj.legenddiv.append('table')
-		.style('border-spacing','5px')
-		.style('border-collapse','separate')
-		.append('tr')
-
-	const termbutton = tr.append('td')
-		.style('vertical-align','top')
+	const termbutton = obj.legenddiv
 		.append('div')
-		.style('background','#4888BF')
+		.append('div')
+		.style('display','inline-block')
+		.style('background','#4888BF') // to share css class with tvs.ui
 		.style('border-radius','5px')
 		.style('color','white')
 		.style('padding','2px 5px')
@@ -125,7 +127,18 @@ function show_legend ( obj, categories ) {
 				modifier_click_term:{
 					disable_terms: new Set([ obj.overlay_term.id ]),
 					callback: (t)=>{
+						obj.tk.legend.tip.hide()
 						obj.overlay_term = t
+						// assign default setting about this term
+						if( t.iscondition ) {
+							if( t.isleaf ) {
+								obj.overlay_term_q = { value_by_max_grade:true, bar_by_grade:true }
+							} else {
+								obj.overlay_term_q = { value_by_max_grade:true, bar_by_children:true }
+							}
+						} else {
+							delete obj.overlay_term_q
+						}
 						do_plot( obj )
 					}
 				}
@@ -133,10 +146,9 @@ function show_legend ( obj, categories ) {
 		})
 
 	if( categories ) {
-		const td2 = tr.append('td')
 		for(const c of categories ) {
-			const row = td2.append('div')
-				.style('margin-bottom','4px')
+			const row = obj.legenddiv.append('div')
+				.style('margin','4px 0px')
 			row.append('span')
 				.style('background',c.color)
 				.html('&nbsp;&nbsp;')

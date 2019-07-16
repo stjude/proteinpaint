@@ -1,6 +1,7 @@
 const utils = require('./utils')
 const vcf = require('../src/vcf')
 const d3scale = require('d3-scale')
+const termdbsql = require('./termdb.sql')
 
 
 
@@ -52,13 +53,19 @@ export async function handle_mafcovplot ( q, genome, ds, result ) {
 		result.plotgroups = mafcov_getdata4clientrendering ( m, tk )
 
 		if( q.overlay_term ) {
-			// find out category for each sample, color-code categories, then sample
-			const tmp = ds.cohort.termdb.q.getSample2value( q.overlay_term )
+
+			const tmp = termdbsql.get_rows( {
+				ds,
+				term1_id: q.overlay_term,
+				term1_q: q.overlay_term_q
+			})
+			console.log(tmp)
+
 			const category2color = d3scale.scaleOrdinal( d3scale.schemeCategory10)
 			const categories = new Set()
 			const sample2color = new Map()
 			for(const i of tmp) {
-				const category = i.value
+				const category = i.key1
 				categories.add( category )
 				sample2color.set( i.sample, category2color(category) )
 			}
