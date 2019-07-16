@@ -68,7 +68,7 @@ async function barchart_data ( q, ds, res, tdb ) {
   // if(!ds.cohort.annorows) throw `cohort.annorows is missing`
   // request-specific variables
   const startTime = +(new Date())
-  const rows = get_rows(q); console.log(rows.slice(0,5))
+  const rows = get_rows(q)
   const sqlDone = +(new Date())
   const inReqs = [getTrackers(), getTrackers(), getTrackers()]
   await setValFxns(q, inReqs, ds, tdb);
@@ -99,8 +99,8 @@ function getTrackers() {
 const template = JSON.stringify({
   "@errmode": ["","","",""],
   "@before()": "=prep()",
-  "_:_sum": "+$series.value",
-  "_:_values": ["&series.value",0],
+  "_:_sum": "+$val1",
+  "_:_values": ["$val1",0],
   results: {
     /*"@join()": {
       "chart": "=idVal()"
@@ -111,7 +111,7 @@ const template = JSON.stringify({
         "series": "=idVal()"
       },*/
       chartId: "@key",
-      "~samples": ["$sample"],
+      "~samples": ["$sample", "set"],
       "__:total": "=sampleCount()",
       count: "+1",
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
@@ -120,24 +120,24 @@ const template = JSON.stringify({
           data: "=idVal()"
         },*/
         seriesId: "@key",
-        "~samples": ["$sample"],
+        "~samples": ["$sample", "set"],
         count: "+1",
         data: [{
           dataId: "@key",
           count: "+1",
-          "~samples": ["$sample"],
+          "~samples": ["$sample", "set"],
           "__:total": "=sampleCount()",
         }, "$key2"],
-        "_:_max": "<&data.value", // needed by client-side boxplot renderer 
-        "~values": ["&data.value",0],
-        "~sum": "+&data.value",
+        "_:_max": "$val2", // needed by client-side boxplot renderer 
+        "~values": ["$val2",0],
+        "~sum": "+$val2",
         "__:total": "=sampleCount()",
         "__:boxplot": "=boxplot2()"
       }, "$key1"],
       "@done()": "=filterEmptySeries()"
     }, "$key0"],
-    /*"__:boxplot": "=boxplot1()",
-    "_:_unannotated": {
+    "__:boxplot": "=boxplot1()",
+    /*"_:_unannotated": {
       label: "",
       label_unannotated: "",
       value: "+=unannotated()",
@@ -190,12 +190,12 @@ function getPj(q, inReqs, data, tdb) {
         return true
       },
       sampleCount(row, context) {
-        return context.self.samples.length
+        return context.self.count
       },
       // still needed to properly handle non-numeric values
       idVal(row, context, joinAlias) {
         const i = joinAliases.indexOf(joinAlias)
-        const term = q['term' + i + '_id']; console.log(term, inReqs[i].joinFxns)
+        const term = q['term' + i + '_id']
         const id = term && typeof inReqs[i].joinFxns[term] == 'function' 
           ? inReqs[i].joinFxns[term](row, context, joinAlias) 
           : row['key'+i]

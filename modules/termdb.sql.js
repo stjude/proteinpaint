@@ -28,7 +28,7 @@ get_label4key
 
 
 
-export function makesql_by_tvsfilter ( tvslst, ds ) {
+function makesql_by_tvsfilter ( tvslst, ds ) {
 /*
 .tvslst[{}]
 	optional
@@ -220,12 +220,12 @@ return an array of sample names passing through the filter
 
 
 /* 
-	not summarized by counts, 
-	returns all relevant annotation rows 
+	 
 */
 export function get_rows ( q ) {
 /*
-getting data for barchart and more
+get data for barchart but not summarized by counts;
+return all relevant rows of {sample, annotation key, value}
 
 q{}
 	.tvslst
@@ -244,30 +244,17 @@ q{}
 				CTEname: 'filtered'
 			}
 
-	const values = filter.values ? filter.values.slice() : [] 
-
-	const term0 = q.term0_id ? q.ds.cohort.termdb.q.termjsonByOneid( q.term0_id ) : null; console.log('term0', term0)
-	const CTE_term0 = term0 
-		? get_term_cte( term0, filter, q.ds, q.term0_q, values, "_0")
-		: {sql: `samplekey_0 AS (\nSELECT sample, '' as key, 0 as value FROM filtered\n)`}
-
-	const term1 = q.ds.cohort.termdb.q.termjsonByOneid( q.term1_id ); console.log('term1', q.term1_id, term1)
-	const CTE_term1 = get_term_cte( term1, filter, q.ds, q.term1_q, values, "_1")
-
-	const term2 = q.term2_id ? q.ds.cohort.termdb.q.termjsonByOneid( q.term2_id ) : null; console.log('term2', term2)
-	if( typeof q.term2_q == 'string' ) q.term2_q = JSON.parse(decodeURIComponent(q.term2_q))	
-	if (!q.term2_q) q.term2_q = {}
-	q.term2_q.isterm2 = true
-	const CTE_term2 = term2 
-		? get_term_cte( term2, filter, q.ds, q.term2_q, values, "_2")
-		: {sql: `samplekey_2 AS (\nSELECT sample, '' as key, 0 as value FROM filtered\n)`}
+	const values = filter.values ? filter.values.slice() : []
+	const CTE0 = get_term_cte(q, filter, values, 0)
+	const CTE1 = get_term_cte(q, filter, values, 1)
+	const CTE2 = get_term_cte(q, filter, values, 2)
 
 	const statement =
 		`WITH
 		${filter.filters},
-		${CTE_term0.sql},
-		${CTE_term1.sql},
-		${CTE_term2.sql}
+		${CTE0.sql},
+		${CTE1.sql},
+		${CTE2.sql}
 		SELECT
 			t0.sample as sample,
       t0.key AS key0,
@@ -276,16 +263,64 @@ q{}
       t1.value AS val1,
       t2.key AS key2,
       t2.value AS val2
-		FROM samplekey_0 t0
-		JOIN samplekey_1 t1 ON t1.sample = t0.sample
-		JOIN samplekey_2 t2 ON t2.sample = t0.sample`
-console.log(statement, values)
+		FROM ${CTE1.tablename} t1
+		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
+		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}`
+	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( filter ? filter.values.concat(values) : values )
 
 	return lst
 }
 
+function get_term_cte(q, filter, values, index) {
+/*
+Generate a CTE by term
+
+q{}
+	.tvslst
+	.ds
+	.term1_id
+	.term2_id
+	.term1_q{}
+	.term2_q{}
+
+filter 
+	.filters
+	.values
+	.CTEname
+
+values 
+  [] string/numeric to replace ? in CTEs
+
+index
+	term-index: 0 for term0, 1 for term1, 2 for term2
+*/
+	const termnum_id = 'term' + index + '_id'
+	const termid = q[termnum_id]
+	const term = termid ? q.ds.cohort.termdb.q.termjsonByOneid( termid ) : null; //console.log('term'+ index, term)
+	if (termid && !term) throw `unknown term${index}: ${termid}`
+	const termnum_q = 'term' + index + '_q'
+	const termq = q[termnum_q]
+	if(termq && typeof termq == 'string' ) q[termnum_q] = JSON.parse(decodeURIComponent(termq))	
+	if (!termq) q[termnum_q] = {}
+	if (index == 2) q[termnum_q].isterm2 = true
+
+	const tablename = 'samplekey_' + index
+	const CTE = term
+		? makesql_overlay_oneterm( term, filter, q.ds, q.term0_q, values, "_" + index)
+		: {
+				sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
+				tablename,
+				join_on_clause: '' //`ON t${index}.sample IS NULL`
+			}
+	
+	if (!('join_on_clause' in CTE)) {
+		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+	}
+	
+	return CTE
+}
 
 
 export function get_summary ( q ) {
@@ -666,10 +701,6 @@ returns { sql, tablename }
 	}
 	throw 'unknown term type'
 }
-
-// a more general name, as the CTE generator may be used
-// for cases when there is no overlay
-const get_term_cte = makesql_overlay_oneterm
 
 
 function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termindex='' ) {
