@@ -5,6 +5,7 @@ import {
   menuoption_select_to_gp, 
   menuoption_select_group_add_to_cart
 } from './mds.termdb'
+import * as client from './client'
 
 // used to track controls unique "instances" by plot object
 // to be used to disambiguate between input names
@@ -530,19 +531,48 @@ function setBinOpts(plot, main, table, termNum, label) {
   const last_bin_btn = last_bin_div.append('div')
     .attr('class','sja_edit_btn')
 
+  let first_bin_range, last_bin_range, custom_bin_size
+
   if(plot.term.isfloat || plot.term.isinteger ){
     if(plot.term.graph.barchart.numeric_bin.auto_bins){
-      bin_size_btn.text(plot.term.graph.barchart.numeric_bin.auto_bins.bin_size + ' ' + (plot.term.unit?plot.term.unit:''))
+      const auto_bins = plot.term.graph.barchart.numeric_bin.auto_bins
+      bin_size_btn.text(auto_bins.bin_size + ' ' + (plot.term.unit?plot.term.unit:''))
       first_bin_btn.text('EDIT')
       last_bin_btn.text('EDIT')
+
+      //define first and last bin range
+      first_bin_range = { start : auto_bins.start_value , stop: (auto_bins.start_value + auto_bins.bin_size)}
+      last_bin_range = { start: '', stop: ''}
+      custom_bin_size = { bin_size: auto_bins.bin_size}
+
     }else if(plot.term.graph.barchart.numeric_bin.fixed_bins){
       const fixed_bins = plot.term.graph.barchart.numeric_bin.fixed_bins
       bin_size_btn.text('EDIT')
       first_bin_btn.text(fixed_bins[0].label + ' ' + (plot.term.unit?plot.term.unit:''))
       last_bin_btn.text(fixed_bins[fixed_bins.length-1].label + ' ' + (plot.term.unit?plot.term.unit:''))
+      
+      //define first and last bin range
+      first_bin_range = fixed_bins[0]
+      last_bin_range = fixed_bins[fixed_bins.length-1]
+      custom_bin_size = { bin_size: ''}
     }
   }
 
+  bin_size_btn.on('click', () => {
+    plot.tip.clear().showunder(bin_size_btn.node())
+    bin_size_menu(plot, main, plot.tip, custom_bin_size)
+  })
+
+  first_bin_btn.on('click', () => {
+    plot.tip.clear().showunder(first_bin_btn.node())
+    edit_bin_menu(plot.tip,first_bin_range)
+  })
+
+  last_bin_btn.on('click', () => {
+    plot.tip.clear().showunder(last_bin_btn.node())
+    edit_bin_menu(plot.tip,last_bin_range)
+  })
+  console.log(plot)
   tr.append('td')
     .style('text-decoration', 'underline')
     .style("cursor", "pointer")
@@ -555,6 +585,139 @@ function setBinOpts(plot, main, table, termNum, label) {
     plot.term1 = plot.term
     tr.style('display', plot[termNum] && plot[termNum].isfloat ? 'table-row' : 'none')
   })
+}
+
+function bin_size_menu(plot, main, tip, custom_bin_size){
+
+  tip.d.style('padding','0')
+
+  const bin_size_div = tip.d.append('div')
+    .style('display','block')
+    .style('padding','3px 5px')
+
+  const x = '<span style="font-family:Times;font-style:italic">x</span>'
+
+  bin_size_div.append('div')
+    .style('display','inline-block')
+    .style('padding','3px 10px')
+    .html(x + ' =')
+
+  const bin_size_input = bin_size_div.append('input')
+    .attr('type','number')
+    .attr('value',custom_bin_size.bin_size)
+    .style('width','60px')
+    .on('keyup', async ()=>{
+      if(!client.keyupEnter()) return
+      bin_size_input.property('disabled',true)
+      // await apply()
+      bin_size_input.property('disabled',false)
+    })
+
+  // select between start/stop inclusive
+  const include_select = bin_size_div.append('select')
+    .style('margin-left','10px')
+
+  include_select.append('option')
+  .attr('value','stopinclusive')
+    .html('start &lt; ' + x + ' &le; end')
+  include_select.append('option')
+    .attr('value','startinclusive')
+    .html('start &le; ' + x + ' &lt; end')
+
+  include_select.node().selectedIndex =
+    custom_bin_size.startinclusive ? 1 : 0 
+
+  tip.d.append('div')
+    .attr('class','sja_menuoption')
+    .style('text-align','center')
+    .text('APPLY')
+    // .on('click', ()=>{
+    //   plot.custom_bins[0] = {
+    //     size: bin_size_input.node().value ? bin_size_input.node().value : "auto",
+    //     startinclusive: (include_select.node().value == 'startinclusive'),
+    //     stopinclusive: (include_select.node().value == 'stopinclusive'),
+    //     min_val: 'auto',
+    //     min_unit: 'value',
+    //     max_val: 'auto',
+    //     max_unit: 'value'
+    //   }
+    //   main(plot)
+    //   tip.hide()
+    // })
+
+}
+
+function edit_bin_menu(tip, range){
+
+  tip.d.style('padding','0')
+
+  const bin_edit_div = tip.d.append('div')
+    .style('display','block')
+    .style('padding','3px 5px')
+
+  const start_input = bin_edit_div.append('input')
+    .attr('type','number')
+    .attr('value',range.start)
+    .style('width','60px')
+    .on('keyup', async ()=>{
+      if(!client.keyupEnter()) return
+      start_input.property('disabled',true)
+      // await apply()
+      start_input.property('disabled',false)
+    })
+
+  // to replace operator_start_div
+  const startselect = bin_edit_div.append('select')
+    .style('margin-left','10px')
+
+  startselect.append('option')
+    .html('&le;')
+  startselect.append('option')
+    .html('&lt;')
+  startselect.append('option')
+    .html('&#8734;')
+
+  startselect.node().selectedIndex =
+    range.startunbounded ? 2 :
+    range.startinclusive ? 0 : 1
+
+  const x = '<span style="font-family:Times;font-style:italic">x</span>'
+
+  bin_edit_div.append('div')
+    .style('display','inline-block')
+    .style('padding','3px 10px')
+    .html(x)
+
+  // to replace operator_end_div
+  const stopselect = bin_edit_div.append('select')
+    .style('margin-right','10px')
+
+  stopselect.append('option')
+    .html('&le;')
+  stopselect.append('option')
+    .html('&lt;')
+  stopselect.append('option')
+    .html('&#8734;')
+
+  stopselect.node().selectedIndex =
+    range.stopunbounded ? 2 :
+    range.stopinclusive ? 0 : 1
+    
+  const stop_input = bin_edit_div.append('input')
+    .attr('type','number')
+    .style('width','60px')
+    .attr('value',range.stop)
+    .on('keyup', async ()=>{
+      if(!client.keyupEnter()) return
+      stop_input.property('disabled',true)
+      // await apply()
+      stop_input.property('disabled',false)
+    })
+
+  tip.d.append('div')
+    .attr('class','sja_menuoption')
+    .style('text-align','center')
+    .text('APPLY')
 }
 
 function custom_bin(plot, main, binNum=1, btn){
