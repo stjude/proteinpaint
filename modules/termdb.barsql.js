@@ -70,9 +70,7 @@ async function barchart_data ( q, ds, res, tdb ) {
   const startTime = +(new Date())
   const rows = get_rows(q)
   const sqlDone = +(new Date())
-  const inReqs = [getTrackers(), getTrackers(), getTrackers()]
-  await setValFxns(q, inReqs, ds, tdb);
-  const pj = getPj(q, inReqs, rows, tdb)
+  const pj = getPj(q, rows, tdb)
   if (pj.tree.results) {
     pj.tree.results.times = {
       sql: sqlDone - startTime,
@@ -82,43 +80,20 @@ async function barchart_data ( q, ds, res, tdb ) {
   res.send(pj.tree.results)
 }
 
-function getTrackers() {
-  return {
-    joinFxns: {"": () => ""}, // keys are term0, term1, term2 names; ...
-    numValFxns: {"": () => {}}, // ... if key == empty string then the term is not specified
-    unannotated: "",
-    orderedLabels: [],
-    unannotatedLabels: [],
-    bins: [],
-    uncomputable_grades: {}
-  }
-}
-
 // template for partjson, already stringified so that it does not 
 // have to be re-stringified within partjson refresh for every request
 const template = JSON.stringify({
   "@errmode": ["","","",""],
   "@before()": "=prep()",
-  "_:_sum": "+$val1",
-  "_:_values": ["$val1",0],
   results: {
-    /*"@join()": {
-      "chart": "=idVal()"
-    },*/
     "_2:maxAcrossCharts": "=maxAcrossCharts()",
     charts: [{
-      /*"@join()": {
-        "series": "=idVal()"
-      },*/
       chartId: "@key",
       "~samples": ["$sample", "set"],
       "__:total": "=sampleCount()",
       count: "+1",
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
       serieses: [{
-        /*"@join()": { 
-          data: "=idVal()"
-        },*/
         seriesId: "@key",
         "~samples": ["$sample", "set"],
         count: "+1",
@@ -132,11 +107,13 @@ const template = JSON.stringify({
         "~values": ["$val2",0],
         "~sum": "+$val2",
         "__:total": "=sampleCount()",
-        "__:boxplot": "=boxplot2()"
+        "__:boxplot": "=boxplot()"
       }, "$key1"],
       "@done()": "=filterEmptySeries()"
     }, "$key0"],
-    "__:boxplot": "=boxplot1()",
+    "~sum": "+$val1",
+    "~values": ["$val1",0],
+    "__:boxplot": "=boxplot()"
     /*"_:_unannotated": {
       label: "",
       label_unannotated: "",
@@ -170,7 +147,7 @@ const template = JSON.stringify({
   }
 })
 
-function getPj(q, inReqs, data, tdb) {
+function getPj(q, data, tdb) { 
 /*
   q: objectified URL query string
   inReq: request-specific closured functions and variables
@@ -184,36 +161,13 @@ function getPj(q, inReqs, data, tdb) {
     template,
     "=": {
       prep(row) {
-        if (isNaN(row.val0)) delete row.val0
-        if (isNaN(row.val1)) delete row.val1
-        if (isNaN(row.val2)) delete row.val2
+        if (!isNumeric(row.val0)) delete row.val0
+        if (!isNumeric(row.val1)) delete row.val1
+        if (!isNumeric(row.val2)) delete row.val2
         return true
       },
       sampleCount(row, context) {
         return context.self.count
-      },
-      // still needed to properly handle non-numeric values
-      idVal(row, context, joinAlias) {
-        const i = joinAliases.indexOf(joinAlias)
-        const term = q['term' + i + '_id']
-        const id = term && typeof inReqs[i].joinFxns[term] == 'function' 
-          ? inReqs[i].joinFxns[term](row, context, joinAlias) 
-          : row['key'+i]
-        if (id === undefined) return
-        const val = row['val' + i]
-        return {
-          id,
-          value: isNaN(val) ? undefined : val
-        }
-      },
-      hasIds(row, context) {
-        const data = context.joins.get('data')
-        if (!data || !data.id.length) return
-        const series = context.joins.get('series')
-        if (!series || !series.id.length) return
-        const chart = context.joins.get('chart')
-        if (!chart || !chart.id.length) return
-        return 1
       },
       maxSeriesTotal(row, context) {
         let maxSeriesTotal = 0
@@ -233,24 +187,9 @@ function getPj(q, inReqs, data, tdb) {
         }
         return maxAcrossCharts
       },
-      boxplot1(row, context) {
-        if (!context.root.values) return;
-        const values = context.root.values.filter(d => d !== null)
-        if (!values.length) return
-        values.sort((i,j)=> i - j )
-        const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
-        stat.mean = context.root.sum / values.length
-        let s = 0
-        for(const v of values) {
-          s += Math.pow( v - stat.mean, 2 )
-        }
-        stat.sd = Math.sqrt( s / (values.length-1) )
-        return stat
-      },
-      boxplot2(row, context) {
-        if (!context.self.values || !context.self.values.length) return;
-        const values = context.self.values.filter(d => d !== null)
-        if (!values.length) return
+      boxplot(row, context) {
+        const values = context.self.values
+        if (!values || !values.length) return; console.log(values)
         values.sort((i,j)=> i - j )
         const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
         stat.mean = context.self.sum / values.length
@@ -327,29 +266,8 @@ function getPj(q, inReqs, data, tdb) {
   })
 }
 
-
-async function setValFxns(q, inReqs, ds, tdb) {
-/*
-  sets request-specific value and filter functions
-  non-condition unannotated values will be processed but tracked separately
-*/
-  for(const i of [0, 1, 2]) {
-    const inReq = inReqs[i]
-    if (!inReq.orderedLabels) {
-      inReq.orderedLabels = []
-      inReq.unannotatedLabels = []
-    }
-    const termid = q['term' + i + '_id']
-    if (termid == "genotype") {
-      if (!q.ssid) throw `missing ssid for genotype`
-      const [bySample, genotype2sample] = await load_genotype_by_sample(q.ssid)
-      const skey = ds.cohort.samplenamekey
-      inReq.joinFxns[key] = row => bySample[row[skey]]
-    } else {
-      const key = 'key' + i
-      inReq.joinFxns[key] = row => row[key]
-    }
-  }
+function isNumeric(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
 }
 
 

@@ -224,8 +224,8 @@ return an array of sample names passing through the filter
 */
 export function get_rows ( q ) {
 /*
-get data for barchart but not summarized by counts;
-return all relevant rows of {sample, annotation key, value}
+gets data for barchart but not summarized by counts;
+returns all relevant rows of {sample, key[0,1,2], val[0,1,2]}
 
 q{}
 	.tvslst
@@ -268,7 +268,7 @@ q{}
 
 function get_term_cte(q, filter, values, index) {
 /*
-Generate a CTE by term
+Generates one or more CTEs by term
 
 q{}
 	.tvslst
