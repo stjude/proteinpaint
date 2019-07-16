@@ -235,7 +235,7 @@ q{}
 	.term1_q{}
 	.term2_q{}
 */
-	
+	if (typeof q.tvslst == 'string') q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 	const filter = makesql_by_tvsfilter( q.tvslst, q.ds )
 	const values = filter ? filter.values.slice() : []
 	const CTE0 = get_term_cte(q, filter, values, 0)
@@ -259,10 +259,10 @@ q{}
 		FROM ${CTE1.tablename} t1
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
-		${filter ? "WHERE sample in "+filter.CTEname : ""}`
+		${filter ? "WHERE t1.sample in "+filter.CTEname : ""}`
   //console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
-		.all( filter ? filter.values.concat(values) : values )
+		.all( values )
 
 	return lst
 }

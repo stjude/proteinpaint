@@ -564,7 +564,11 @@ tape("non-leaf condition term1", function (test) {
 
 
 function compareResponseData(test, params, mssg) {
-  const url0 = getSqlUrl(params); //console.log(url0)
+  // i=series start, j=series end, k=chart index
+  // for debugging result data, set i < j to slice chart.serieses
+  const i=0, j=0, k=0;
+  const url0 = getSqlUrl(params);
+  if (i!==j) console.log(url0)
 
   request(url0, (error,response,body)=>{
     if(error) {
@@ -575,60 +579,28 @@ function compareResponseData(test, params, mssg) {
         const data0 = JSON.parse(body);
         // reshape sql results in order to match
         // the compared results
-        const pj = new Partjson({
-          data: data0.lst,
-          seed: `{"values": []}`, // result seed 
-          template,
-          "=": externals
-        })
-        normalizeCharts(pj.tree.results.charts)
-        const summary0 = {charts: pj.tree.results.charts}
-        if (data0.summary_term1) {
-          summary0.boxplot = data0.summary_term1
-          summary0.boxplot.mean = summary0.boxplot.mean.toPrecision(8)
-          if (summary0.boxplot.sd) {
-            summary0.boxplot.sd = summary0.boxplot.sd.toPrecision(8)
-          }
-        }
-        if (data0.summary_term2) {
-          for(const chart of summary0.charts) {
-            for(const series of chart.serieses) {
-              if (data0.summary_term2[series.seriesId]) {
-                series.boxplot = data0.summary_term2[series.seriesId]
-                series.boxplot.mean = series.boxplot.mean.toPrecision(8)
-                if (series.boxplot.sd) {
-                  series.boxplot.sd = series.boxplot.sd.toPrecision(8)
-                }
-              }
-            }
-          }
-        }
+        let charts
+        if (process.argv[3]) {
+          charts = data0.charts
+        } else {
+          const pj = new Partjson({
+            data: data0.lst,
+            seed: `{"values": []}`, // result seed 
+            template,
+            "=": externals
+          })
+          charts = pj.tree.results.charts
+        } 
+        const summary0 = normalizeCharts(charts, data0)
+        
         // get an alternatively computed results
         // for comparing against sql results
-        const url1 = getBarUrl(params); //console.log(url1)
+        const url1 = getBarUrl(params);
+        if (i!==j) console.log(url1)
+
         request(url1, (error,response,body1)=>{
           const data1 = JSON.parse(body1)
-          normalizeCharts(data1.charts)
-          const summary1 = {charts: data1.charts}
-          if (data1.boxplot) {
-            summary1.boxplot = data1.boxplot
-            summary1.boxplot.mean = summary1.boxplot.mean.toPrecision(8)
-            if (summary1.boxplot.sd) {
-              summary1.boxplot.sd = summary1.boxplot.sd.toPrecision(8)
-            }
-          }
-          for(const chart of summary1.charts) {
-            for(const series of chart.serieses) {
-              if (series.boxplot) {
-                series.boxplot.mean = series.boxplot.mean.toPrecision(8)
-                if (series.boxplot.sd) {
-                  series.boxplot.sd = series.boxplot.sd.toPrecision(8)
-                }
-              }
-            }
-          }
-
-          const i=0, j=0, k=0;
+          const summary1 = normalizeCharts(data1.charts, data1)
           const sqlSummary = i !== j ? summary0.charts[k].serieses.slice(i,j) : summary0
           const barSummary = i !== j ? summary1.charts[k].serieses.slice(i,j) : summary1
           if (i!==j) console.log(JSON.stringify(sqlSummary),'\n','-----','\n',JSON.stringify(barSummary))
@@ -746,9 +718,51 @@ const externals = {
   }
 }
 
-function normalizeCharts(charts) {
+function normalizeCharts(charts, data) {
   charts.forEach(onlyComparableChartKeys)
   sortResults(charts)
+  const summary = {charts}
+  
+  if (data.boxplot) {
+    summary.boxplot = data.boxplot
+    summary.boxplot.mean = summary.boxplot.mean.toPrecision(8)
+    if (summary.boxplot.sd) {
+      summary.boxplot.sd = summary.boxplot.sd.toPrecision(8)
+    }
+  }
+  for(const chart of summary.charts) {
+    for(const series of chart.serieses) {
+      if (series.boxplot && series.boxplot.mean) {
+        series.boxplot.mean = series.boxplot.mean.toPrecision(8)
+        if (series.boxplot.sd) {
+          series.boxplot.sd = series.boxplot.sd.toPrecision(8)
+        }
+      }
+    }
+  }
+
+  if (data.summary_term1) {
+    summary.boxplot = data.summary_term1
+    summary.boxplot.mean = summary.boxplot.mean.toPrecision(8)
+    if (summary.boxplot.sd) {
+      summary.boxplot.sd = summary.boxplot.sd.toPrecision(8)
+    }
+  }
+  if (data.summary_term2) {
+    for(const chart of summary.charts) {
+      for(const series of chart.serieses) {
+        if (data.summary_term2[series.seriesId]) {
+          series.boxplot = data.summary_term2[series.seriesId]
+          series.boxplot.mean = series.boxplot.mean.toPrecision(8)
+          if (series.boxplot.sd) {
+            series.boxplot.sd = series.boxplot.sd.toPrecision(8)
+          }
+        }
+      }
+    }
+  }
+
+  return summary
 }
 
 function onlyComparableChartKeys(chart) {

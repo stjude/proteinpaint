@@ -15,6 +15,7 @@
     "irt": "./scripts/deploy.sh internal-stage",
     "test": "tape test/**/*.route.spec.js",
     "test-sql": "tape test/**/*.sql.spec.js",
+    "test-barsql": "tape test/**/*.sql.spec.js '/termdb-barsql?'",
     "unit": "./test/copy-modules.js && tape test/**/*.unit.spec.js",
     "deliver": "sh utils/deliver.sh",
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset",

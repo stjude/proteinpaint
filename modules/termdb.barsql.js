@@ -91,15 +91,12 @@ const template = JSON.stringify({
       chartId: "@key",
       "~samples": ["$sample", "set"],
       "__:total": "=sampleCount()",
-      count: "+1",
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
       serieses: [{
         seriesId: "@key",
         "~samples": ["$sample", "set"],
-        count: "+1",
         data: [{
           dataId: "@key",
-          count: "+1",
           "~samples": ["$sample", "set"],
           "__:total": "=sampleCount()",
         }, "$key2"],
@@ -167,7 +164,7 @@ function getPj(q, data, tdb) {
         return true
       },
       sampleCount(row, context) {
-        return context.self.count
+        return context.self.samples ? context.self.samples.size : undefined
       },
       maxSeriesTotal(row, context) {
         let maxSeriesTotal = 0
