@@ -249,7 +249,7 @@ q{}
 		${CTE1.sql},
 		${CTE2.sql}
 		SELECT
-			t0.sample as sample,
+			t1.sample as sample,
       t0.key AS key0,
       t0.value AS val0,
       t1.key AS key1,
@@ -274,9 +274,11 @@ Generates one or more CTEs by term
 q{}
 	.tvslst
 	.ds
+	.term0_id
+	.term0_q{}
 	.term1_id
-	.term2_id
 	.term1_q{}
+	.term2_id
 	.term2_q{}
 
 filter 
