@@ -67,6 +67,7 @@ return async (req, res) => {
 
 function trigger_testplot ( q, res, tdb, ds ) {
 	q.ds = ds
+	const startTime = +(new Date())
 	const lst = termdbsql.get_summary( q )
 	const result = { lst }
 	const t1 = tdb.q.termjsonByOneid( q.term1_id )
@@ -93,6 +94,7 @@ function trigger_testplot ( q, res, tdb, ds ) {
 			}
 		}
 	}
+	result.time = +(new Date()) - startTime
 	res.send( result )
 }
 

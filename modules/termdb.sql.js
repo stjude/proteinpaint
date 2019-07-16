@@ -8,6 +8,7 @@ const app = require('../app')
 get_samples
 get_summary
 get_numericsummary
+get_rows
 server_init_db_queries
 ********************** INTERNAL
 makesql_by_tvsfilter
@@ -27,7 +28,7 @@ get_label4key
 
 
 
-function makesql_by_tvsfilter ( tvslst, ds ) {
+export function makesql_by_tvsfilter ( tvslst, ds ) {
 /*
 .tvslst[{}]
 	optional
@@ -218,10 +219,72 @@ return an array of sample names passing through the filter
 
 
 
+/* 
+	not summarized by counts, 
+	returns all relevant annotation rows 
+*/
+export function get_rows ( q ) {
+/*
+getting data for barchart and more
 
+q{}
+	.tvslst
+	.ds
+	.term1_id
+	.term2_id
+	.term1_q{}
+	.term2_q{}
+*/
+	
+	const filter = q.tvslst 
+		? makesql_by_tvsfilter( q.tvslst, q.ds )
+		: {
+				filters: 'filtered AS (\nSELECT sample FROM annotations GROUP BY sample\n)', // faster than DISTINCT?
+				values: [],
+				CTEname: 'filtered'
+			}
 
+	const values = filter.values ? filter.values.slice() : [] 
 
+	const term0 = q.term0_id ? q.ds.cohort.termdb.q.termjsonByOneid( q.term0_id ) : null; console.log('term0', term0)
+	const CTE_term0 = term0 
+		? get_term_cte( term0, filter, q.ds, q.term0_q, values, "_0")
+		: {sql: `samplekey_0 AS (\nSELECT sample, '' as key, 0 as value FROM filtered\n)`}
 
+	const term1 = q.ds.cohort.termdb.q.termjsonByOneid( q.term1_id ); console.log('term1', q.term1_id, term1)
+	const CTE_term1 = get_term_cte( term1, filter, q.ds, q.term1_q, values, "_1")
+
+	const term2 = q.term2_id ? q.ds.cohort.termdb.q.termjsonByOneid( q.term2_id ) : null; console.log('term2', term2)
+	if( typeof q.term2_q == 'string' ) q.term2_q = JSON.parse(decodeURIComponent(q.term2_q))	
+	if (!q.term2_q) q.term2_q = {}
+	q.term2_q.isterm2 = true
+	const CTE_term2 = term2 
+		? get_term_cte( term2, filter, q.ds, q.term2_q, values, "_2")
+		: {sql: `samplekey_2 AS (\nSELECT sample, '' as key, 0 as value FROM filtered\n)`}
+
+	const statement =
+		`WITH
+		${filter.filters},
+		${CTE_term0.sql},
+		${CTE_term1.sql},
+		${CTE_term2.sql}
+		SELECT
+			t0.sample as sample,
+      t0.key AS key0,
+      t0.value AS val0,
+      t1.key AS key1,
+      t1.value AS val1,
+      t2.key AS key2,
+      t2.value AS val2
+		FROM samplekey_0 t0
+		JOIN samplekey_1 t1 ON t1.sample = t0.sample
+		JOIN samplekey_2 t2 ON t2.sample = t0.sample`
+console.log(statement, values)
+	const lst = q.ds.cohort.db.connection.prepare(statement)
+		.all( filter ? filter.values.concat(values) : values )
+
+	return lst
+}
 
 
 
@@ -578,7 +641,7 @@ returns { sql, tablename }
 		values.push( term.id )
 		return {
 			sql: `${tablename} AS (
-				SELECT sample,value as key
+				SELECT sample,value as key, value as value
 				FROM annotations
 				WHERE term_id=?
 			)`,
@@ -591,9 +654,9 @@ returns { sql, tablename }
 		return {
 			sql: `${bins.sql},
 			${tablename} AS (
-				SELECT bname as key, sample
+				SELECT bname as key, sample, v as value
 				FROM ${bins.tablename}
-				)`,
+			)`,
 			tablename,
 			name2bin: bins.name2bin
 		}
@@ -604,8 +667,9 @@ returns { sql, tablename }
 	throw 'unknown term type'
 }
 
-
-
+// a more general name, as the CTE generator may be used
+// for cases when there is no overlay
+const get_term_cte = makesql_overlay_oneterm
 
 
 function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termindex='' ) {
@@ -624,7 +688,7 @@ return {sql, tablename}
 				${grade_age_selection(term.id, values, q, ds, filter)}
 			),
 			${out_table} AS (
-				SELECT grade AS key, sample
+				SELECT grade AS key, sample, grade as value
 				FROM ${grade_table}
 			)`,
 			tablename: out_table
