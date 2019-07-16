@@ -189,7 +189,7 @@ function getPj(q, data, tdb) {
       },
       boxplot(row, context) {
         const values = context.self.values
-        if (!values || !values.length) return; console.log(values)
+        if (!values || !values.length) return
         values.sort((i,j)=> i - j )
         const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
         stat.mean = context.self.sum / values.length

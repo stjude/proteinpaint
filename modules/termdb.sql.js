@@ -304,7 +304,7 @@ index
 
 	const tablename = 'samplekey_' + index
 	const CTE = term
-		? makesql_overlay_oneterm( term, filter, q.ds, q.term0_q, values, "_" + index)
+		? makesql_overlay_oneterm( term, filter, q.ds, q[termnum_q], values, "_" + index)
 		: {
 				sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
 				tablename,
