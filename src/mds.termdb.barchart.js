@@ -210,15 +210,15 @@ export class TermdbBarchart{
         }
       }
       chart.settings = Object.assign(this.settings, chartsData.refs)
-      chart.settings.colLabels = chartsData.refs.cols.map(colName=>{
-        const series = chart.serieses.find(series=>series.seriesId == colName)
+      chart.visibleSerieses = chart.serieses.filter(d=>{
+        return !chart.settings.exclude.cols.includes(d.seriesId)
+      })
+      chart.settings.colLabels = chart.visibleSerieses.map(series=>{
+        const colName = series.seriesId
         return {
           id: colName,
           label: series && 'AF' in series ? colName + ', AF=' + series.AF : colName
         }
-      })
-      chart.visibleSerieses = chart.serieses.filter(d=>{
-        return !chart.settings.exclude.cols.includes(d.seriesId)
       })
       chart.maxVisibleSeriesTotal = chart.visibleSerieses.reduce((max,b) => {
         b.visibleData = b.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))
@@ -441,7 +441,7 @@ export class TermdbBarchart{
         click: () => { 
           const d = event.target.__data__
           if (d === undefined) return
-          self.settings.exclude.cols.push(d)
+          self.settings.exclude.cols.push(d.id)
           self.main()
         },
         mouseover: () => {
@@ -468,7 +468,7 @@ export class TermdbBarchart{
         click: () => { 
           const d = event.target.__data__
           if (d === undefined) return
-          self.settings.exclude.cols.push(d)
+          self.settings.exclude.cols.push(d.id)
           self.main()
         },
         mouseover: () => {

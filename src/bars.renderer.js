@@ -911,7 +911,7 @@ export default function barsRenderer(barsapp, holder) {
   function colLabelMouseover() {
     const d = event.target.__data__;
     if (!d) return;
-    const r = hm.col2name[d];
+    const r = hm.col2name['id' in d ? d.id : d];
     const cell = { colId: r.name };
     cell[hm.colkey] = r.name;
     cell[hm.colgrpkey] = r.grp;
