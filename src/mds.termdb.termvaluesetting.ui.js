@@ -437,8 +437,7 @@ group{}
 
         // Add new term to group.terms
         for(const [i, bar_term] of result.terms.entries()){
-            const new_term = make_new_term(bar_term)
-            group.terms.push(new_term)
+            group.terms.push(bar_term)
         }
         
         // update the group div with new terms
@@ -623,8 +622,7 @@ group{}
             // replace the term by index of clicked term
             if(i == term_replce_index){
                 for(const [j, bar_term] of result.terms.entries()){
-                    const new_term = make_new_term(bar_term)
-                    new_terms.push(new_term)
+                    new_terms.push(bar_term)
                 }
             }else{
                 new_terms.push(term)
@@ -858,37 +856,6 @@ group{}
             }
         }
     }
-}
-
-export function make_new_term(bar_term){
-
-    const new_term = {
-        values: bar_term.values,
-        term: {
-            id: bar_term.term.id,
-            name: bar_term.term.name
-        }
-    }
-    if(bar_term.term.iscategorical) new_term.term.iscategorical = bar_term.term.iscategorical
-    if(bar_term.term.isfloat) {
-        new_term.term.isfloat = bar_term.term.isfloat
-        new_term.range = bar_term.range
-    }
-    if(bar_term.term.isinteger || bar_term.term.isfloat) {
-        new_term.term.isinteger = bar_term.term.isinteger
-        new_term.ranges = bar_term.ranges
-    }
-    if(bar_term.term.iscondition) {
-        new_term.term.iscondition = bar_term.term.iscondition
-        new_term.bar_by_grade = bar_term.bar_by_grade
-        new_term.bar_by_children = bar_term.bar_by_children
-        new_term.value_by_max_grade = bar_term.value_by_max_grade
-        new_term.value_by_most_recent = bar_term.value_by_most_recent
-        new_term.value_by_total_measured = bar_term.value_by_total_measured
-        new_term.grade_and_child = bar_term.grade_and_child
-    }
-
-    return new_term
 }
 
 

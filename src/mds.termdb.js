@@ -862,8 +862,7 @@ tvslst: an array of 1 or 2 term-value setting objects
 	}
 
 	for(const [i, term] of tvslst.entries()){
-		const new_term = termvaluesettingui.make_new_term(term)
-		obj.termfilter.terms.push(new_term)
+		obj.termfilter.terms.push(term)
 	}
 
 	make_filter_ui(obj)
@@ -906,8 +905,7 @@ export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
 	new_group.terms = []
 
 	for(const [i, term] of tvslst.entries()){
-		const new_term = termvaluesettingui.make_new_term(term)
-		new_group.terms.push(new_term)
+		new_group.terms.push(term)
 	}
 
 	if(!obj.selected_groups){
