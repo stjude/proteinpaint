@@ -91,8 +91,8 @@ function getTrackers() {
 const template = JSON.stringify({
   "@errmode": ["","","",""],
   "@before()": "=prep()",
-  "_:_sum": "+&series.value",
-  "_:_values": ["&series.value",0],
+  "_:_sum": "+=getSeriesVal()",
+  "_:_values": ["=getSeriesVal()",0],
   results: {
     "_2:maxAcrossCharts": "=maxAcrossCharts()",
     "@join()": {
@@ -116,8 +116,8 @@ const template = JSON.stringify({
           total: "+1" 
         }, "&data.id[]"],
         "_:_max": "<&data.value", // needed by client-side boxplot renderer 
-        "~values": ["&data.value",0],
-        "~sum": "+&data.value",
+        "~_:_values": ["=getDataVal()",0],
+        "~_:_sum": "+=getDataVal()",
         "__:boxplot": "=boxplot2()",
         "__:AF": "=getAF()",
         "~samples": ["$sjlid", "set"],
@@ -180,7 +180,6 @@ function getPj(q, inReqs, data, tdb, ds) {
       prep(row) {
         // a falsy filter return value for a data row will cause the
         // exclusion of that row from farther processing
-        if (!row._computed_) row._computed_ = Object.create(null)
         return inReqs.filterFxn(row)
       },
       idVal(row, context, joinAlias) {
@@ -203,6 +202,26 @@ function getPj(q, inReqs, data, tdb, ds) {
         const chart = context.joins.get('chart')
         if (!chart || !chart.id.length) return
         return 1
+      },
+      getSeriesVal(row, context) {
+        const data = context.joins.get('data')
+        if (!data || !data.id.length) return
+        const series = context.joins.get('series')
+        if (!series || !series.id.length) return
+        if (inReqs[1].unannotatedLabels.includes(series.value)) return
+        const chart = context.joins.get('chart')
+        if (!chart || !chart.id.length) return
+        return series.value
+      },
+      getDataVal(row, context) {
+        const data = context.joins.get('data')
+        if (!data || !data.id.length) return
+        if (inReqs[2].unannotatedLabels.includes(data.value)) return
+        const series = context.joins.get('series')
+        if (!series || !series.id.length) return
+        const chart = context.joins.get('chart')
+        if (!chart || !chart.id.length) return
+        return data.value
       },
       maxSeriesTotal(row, context) {
         let maxSeriesTotal = 0
@@ -237,10 +256,10 @@ function getPj(q, inReqs, data, tdb, ds) {
         return stat
       },
       boxplot2(row, context) {
-        if (!context.self.values || !context.self.values.length) return;
+        if (!context.self.values || !context.self.values.length) return
         const values = context.self.values.filter(d => d !== null)
         if (!values.length) return
-        values.sort((i,j)=> i - j )
+        values.sort((i,j)=> i - j ); //console.log(values.slice(0,5), values.slice(-5), context.self.values.sort((i,j)=> i - j ).slice(0,5))
         const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
         stat.mean = context.self.sum / values.length
         let s = 0
@@ -266,7 +285,7 @@ function getPj(q, inReqs, data, tdb, ds) {
         if (!series) return
         let total = 0
         for(const s of series.id) {
-          if (s === inReqs[1].unannotated.label) {
+          if (inReqs[1].unannotatedLabels.includes(s)) {
             total += 1
           }
         }
@@ -277,7 +296,7 @@ function getPj(q, inReqs, data, tdb, ds) {
         if (!series) return
         let total = 0
         for(const s of series.id) {
-          if (s !== inReqs[1].unannotated.label) {
+          if (!inReqs[1].unannotatedLabels.includes(s)) {
             total += 1
           }
         }

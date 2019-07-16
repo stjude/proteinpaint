@@ -201,13 +201,14 @@ tape("categorical term1", function (test) {
 
 
 tape("numerical term1", function (test) {
-  test.plan(7)
+  test.plan(7) 
+ 
   compareResponseData(
     test, 
     {term1: 'agedx'},
     "sample counts by age of diagnosis, no overlay"
   )
-  
+
   compareResponseData(
     test,
     {
@@ -568,7 +569,7 @@ function compareResponseData(test, params, mssg) {
   // for debugging result data, set i < j to slice chart.serieses
   const i=0, j=0, k=0;
   const url0 = getSqlUrl(params);
-  if (i!==j) console.log(url0)
+  if (k == -1 || i!==j) console.log(url0)
 
   request(url0, (error,response,body)=>{
     if(error) {
@@ -596,14 +597,22 @@ function compareResponseData(test, params, mssg) {
         // get an alternatively computed results
         // for comparing against sql results
         const url1 = getBarUrl(params);
-        if (i!==j) console.log(url1)
+        if (k==-1 || i !== j) console.log(url1)
 
         request(url1, (error,response,body1)=>{
           const data1 = JSON.parse(body1)
           const summary1 = normalizeCharts(data1.charts, data1)
-          const sqlSummary = i !== j ? summary0.charts[k].serieses.slice(i,j) : summary0
-          const barSummary = i !== j ? summary1.charts[k].serieses.slice(i,j) : summary1
-          if (i!==j) console.log(JSON.stringify(sqlSummary),'\n','-----','\n',JSON.stringify(barSummary))
+          const sqlSummary = k == -1
+            ? summary0
+            : i !== j 
+            ? summary0.charts[k].serieses.slice(i,j) 
+            : summary0
+          const barSummary = k == -1
+            ? summary1
+            : i !== j 
+            ? summary1.charts[k].serieses.slice(i,j) 
+            : summary1
+          if (k == -1 || i!==j) console.log(JSON.stringify(sqlSummary),'\n','-----','\n',JSON.stringify(barSummary))
 
           if(error) {
             test.fail(error)

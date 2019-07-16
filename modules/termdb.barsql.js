@@ -101,15 +101,15 @@ const template = JSON.stringify({
           "__:total": "=sampleCount()",
         }, "$key2"],
         "_:_max": "$val2", // needed by client-side boxplot renderer 
-        "~values": ["$val2",0],
-        "~sum": "+$val2",
+        "~_:_values": ["$nval2",0],
+        "~_:_sum": "+$nval2",
         "__:total": "=sampleCount()",
         "__:boxplot": "=boxplot()"
       }, "$key1"],
       "@done()": "=filterEmptySeries()"
     }, "$key0"],
-    "~sum": "+$val1",
-    "~values": ["$val1",0],
+    "~sum": "+$nval1",
+    "~values": ["$nval1",0],
     "__:boxplot": "=boxplot()"
     /*"_:_unannotated": {
       label: "",
@@ -151,16 +151,19 @@ function getPj(q, data, tdb) {
   data: rows of annotation data
 */
   const joinAliases = ["chart", "series", "data"]
-  let j=0;
+  const term0isAnnoVal = getIsAnnoValFxn(q, tdb, 0) 
+  const term1isAnnoVal = getIsAnnoValFxn(q, tdb, 1)
+  const term2isAnnoVal = getIsAnnoValFxn(q, tdb, 2)
+
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
     template,
     "=": {
       prep(row) {
-        if (!isNumeric(row.val0)) delete row.val0
-        if (!isNumeric(row.val1)) delete row.val1
-        if (!isNumeric(row.val2)) delete row.val2
+        if (term0isAnnoVal(row.val0)) row.nval0 = row.val0 
+        if (term1isAnnoVal(row.val1)) row.nval1 = row.val1
+        if (term2isAnnoVal(row.val2)) row.nval2 = row.val2
         return true
       },
       sampleCount(row, context) {
@@ -187,7 +190,7 @@ function getPj(q, data, tdb) {
       boxplot(row, context) {
         const values = context.self.values
         if (!values || !values.length) return
-        values.sort((i,j)=> i - j )
+        values.sort((i,j)=> i - j );  //console.log(values.slice(0,5), values.slice(-5), context.self.values.sort((i,j)=> i - j ).slice(0,5))
         const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
         stat.mean = context.self.sum / values.length
         let s = 0
@@ -201,57 +204,6 @@ function getPj(q, data, tdb) {
         const nonempty = result.serieses.filter(series=>series.total)
         result.serieses.splice(0, result.serieses.length, ...nonempty)
       },
-      unannotated(row, context) {
-        const series = context.joins.get('series')
-        if (!series) return
-        let total = 0
-        for(const s of series.id) {
-          if (s === inReqs[1].unannotated.label) {
-            total += 1
-          }
-        }
-        return total
-      },
-      annotated(row, context) {
-        const series = context.joins.get('series')
-        if (!series) return
-        let total = 0
-        for(const s of series.id) {
-          if (s !== inReqs[1].unannotated.label) {
-            total += 1
-          }
-        }
-        return total
-      },
-      sortColsRows(result) {
-        if (inReqs[1].orderedLabels.length) {
-          const labels = inReqs[1].orderedLabels
-          result.cols.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
-        }
-        if (inReqs[2].orderedLabels.length) {
-          const labels = inReqs[1].orderedLabels
-          result.rows.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
-        }
-      },
-      useColOrder() {
-        return inReqs[1].orderedLabels.length > 0
-      },
-      useRowOrder() {
-        return inReqs[2].orderedLabels.length > 0
-      },
-      unannotatedLabels() {
-        return {
-          term1: inReqs[1].unannotatedLabels, 
-          term2: inReqs[2].unannotatedLabels
-        }
-      },
-      bins() {
-        return {
-          "0": inReqs[0].bins,
-          "1": inReqs[1].bins,
-          "2": inReqs[2].bins,
-        }
-      },
       grade_labels() {
         return q.conditionParents && tdb.patient_condition
           ? tdb.patient_condition.grade_labels
@@ -263,8 +215,18 @@ function getPj(q, data, tdb) {
   })
 }
 
-function isNumeric(n) {
-  return !isNaN(parseFloat(n)) && isFinite(n);
+function getIsAnnoValFxn(q, tdb, index) {
+  const termnum_id = 'term'+ index + '_id'
+  const termid = q[termnum_id]
+  const term = termid ? tdb.termjson.map.get(termid) : {}
+  const termIsNumeric = term.isinteger || term.isfloat
+  const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin 
+    ? term.graph.barchart.numeric_bin
+    : {}
+  const unannotatedValues = nb.unannotated
+    ? Object.keys(nb.unannotated).filter(key=>key.startsWith('value')).map(key=>nb.unannotated[key]) 
+    : []
+  return val => termIsNumeric && !unannotatedValues.includes(val)
 }
 
 

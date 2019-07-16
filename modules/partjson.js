@@ -493,7 +493,7 @@ function converter(e, t, s, r) {
 }
 function parseTerm(e, t) {
   const s = e.skipSymbols.includes(t[0]) ? t[0] : "",
-    r = t.slice(0, 3),
+    r = t.slice(s.length, s.length + 3),
     o = e.timeSymbols.includes(r) ? r : "",
     i = s.length + o.length,
     n = t[i],
@@ -776,11 +776,10 @@ class Partjson {
           if (t.keyFxn && t.valFxn) {
             const o = t.keyFxn(e, r)
             for (const i of o)
-              if ((t.valFxn(e, i, s, r), "~" == t.keyTokens.skip)) {
-                this.temps.has(s) || this.temps.set(s, [])
-                const e = this.temps.get(s)
-                e.includes(i) || e.push(i)
-              }
+              t.valFxn(e, i, s, r),
+                "~" == t.keyTokens.skip &&
+                  (this.temps.has(s) || this.temps.set(s, new Set()),
+                  this.temps.get(s).add(i))
           }
         }
       o["@after"](e, r),
