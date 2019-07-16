@@ -258,7 +258,8 @@ q{}
       t2.value AS val2
 		FROM ${CTE1.tablename} t1
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
-		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}`
+		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
+		${filter ? "WHERE sample in "+filter.CTEname : ""}`
 	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( filter ? filter.values.concat(values) : values )
