@@ -260,7 +260,7 @@ q{}
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? "WHERE sample in "+filter.CTEname : ""}`
-	//console.log(statement, values)
+  //console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( filter ? filter.values.concat(values) : values )
 
@@ -594,7 +594,7 @@ function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null )
 			values.push(term_id,term_id)
 		}
 
-		return `SELECT sample,MAX(grade) AS grade 
+		return `SELECT sample,MAX(grade) AS grade, MAX(grade) AS value
 		FROM chronicevents
 		WHERE
 		${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
@@ -609,7 +609,7 @@ function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null )
 				values.push(term_id,term_id,term_id,term_id)
 			}
 			return `
-			SELECT c.sample as sample, c.grade AS grade
+			SELECT c.sample as sample, c.grade AS grade, c.grade AS value
 			FROM (
 				SELECT sample, MAX(age_graded) AS age_graded 
 				FROM chronicevents
@@ -629,7 +629,7 @@ function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null )
 			values.push(term_id, term_id)
 
 			return `
-			SELECT c.sample as sample, c.grade AS grade
+			SELECT c.sample as sample, c.grade AS grade, c.grade AS value
 			FROM (
 				SELECT sample, MAX(age_graded) AS age_graded 
 				FROM chronicevents
@@ -735,7 +735,7 @@ return {sql, tablename}
 				${grade_age_selection(term.id, values, q, ds, filter, term_table)}
 			),
 			${out_table} AS (
-				SELECT grade AS key, sample
+				SELECT grade AS key, sample, grade AS value
 				FROM ${grade_table}
 			)`,
 			tablename: out_table
@@ -759,7 +759,7 @@ return {sql, tablename}
 			),
 			${grade_table} AS (
 				SELECT
-					sample, d.subcondition as key
+					sample, d.subcondition as key, d.subcondition AS value
 				FROM
 					chronicevents a,
 					${descendants} d
@@ -903,6 +903,7 @@ returns { sql, tablename, name2bin }
 			SELECT
 				sample,
 				CAST(value AS ${term.isinteger?'INT':'REAL'}) AS v,
+				CAST(value AS ${term.isinteger?'INT':'REAL'}) AS value,
 				b.name AS bname,
 				b.binorder AS binorder
 			FROM

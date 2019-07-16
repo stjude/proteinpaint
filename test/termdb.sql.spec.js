@@ -5,7 +5,6 @@ const serverconfig = require("../serverconfig")
 const Partjson = require('../modules/partjson')
 const request = require("request")
 const tape = require("tape")
-
 /* helper functions are found below after the tests */
 
 tape("\n", function(test) {
@@ -629,15 +628,19 @@ function compareResponseData(test, params, mssg) {
             }
           }
 
-          //console.log(JSON.stringify(summary0.charts[0].serieses.slice(0,1)),'\n','-----','\n',JSON.stringify(summary1.charts[0].serieses.slice(0,1)))
+          const i=0, j=0, k=0;
+          const sqlSummary = i !== j ? summary0.charts[k].serieses.slice(i,j) : summary0
+          const barSummary = i !== j ? summary1.charts[k].serieses.slice(i,j) : summary1
+          if (i!==j) console.log(JSON.stringify(sqlSummary),'\n','-----','\n',JSON.stringify(barSummary))
+
           if(error) {
             test.fail(error)
           }
           switch(response.statusCode) {
           case 200:
             test.deepEqual(
-              summary0.charts[0].serieses.slice(0,1),
-              summary1.charts[0].serieses.slice(0,1),
+              sqlSummary,
+              barSummary,
               mssg
             )
           break;
@@ -652,11 +655,13 @@ function compareResponseData(test, params, mssg) {
   })
 }
 
+const sqlBasePath = process.argv[3] ? process.argv[3] : '/termdb?&testplot=1'
+
 function getSqlUrl(params) {
   return "http://localhost:" + serverconfig.port
-    + "/termdb?genome=hg38"
+    + sqlBasePath
+    + "&genome=hg38"
     + "&dslabel=SJLife"
-    + "&testplot=1"
     + '&term1_id=' + params.term1
     + (params.term1_q ? '&term1_q=' + encodeURIComponent(JSON.stringify(params.term1_q)) : '')
     + (params.term2 ? '&term2_id=' + params.term2 : '')
@@ -742,17 +747,18 @@ const externals = {
 }
 
 function normalizeCharts(charts) {
-  charts.forEach(onlyComparableKeys)
+  charts.forEach(onlyComparableChartKeys)
   sortResults(charts)
 }
 
-function onlyComparableKeys(chart) {
+function onlyComparableChartKeys(chart) {
   delete chart.total
-  chart.serieses.forEach(removeMax)
+  chart.serieses.forEach(onlyComparableSeriesKeys)
 }
 
-function removeMax(series) {
+function onlyComparableSeriesKeys(series) {
   delete series.max
+  delete series.summaryByDataId
 }
 
 function sortResults(charts) {
