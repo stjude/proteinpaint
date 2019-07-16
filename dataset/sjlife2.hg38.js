@@ -114,7 +114,7 @@ module.exports={
 			},
 			{
 				key:'SJcontrol_AF',
-				label:'SJLIFE control cohort allele frequency',
+				label:'SJLIFE control allele frequency',
 				isfilter:true,
 				isfloat:1,
 				range: {
@@ -125,7 +125,7 @@ module.exports={
 			},
 			{
 				key:'SJcontrol_CR',
-				label:'SJLIFE control cohort call rate',
+				label:'SJLIFE control call rate',
 				isfilter:true,
 				isfloat:1,
 				range: {
@@ -223,7 +223,7 @@ module.exports={
 			},
 			{
 				key:'BadBLAT',
-				label:'Bad blat',
+				label:'Paralog',
 				isfilter:true,
 				isactivefilter:true,
 				isflag:true,
@@ -243,7 +243,7 @@ module.exports={
 		populations:[
 			{
 				key:'gnomAD',
-				label:'gnomAD (NFE+AFR+EAS)',
+				label:'gnomAD',
 				allowto_adjust_race:true,
 				adjust_race:true,
 				sets:[
@@ -267,7 +267,7 @@ module.exports={
 			},
 			{
 				key:'SJControl',
-				label:'SJLife Control Cohort',
+				label:'SJLIFE control',
 				sets:[ { infokey_AC:'SJcontrol_AC', infokey_AN:'SJcontrol_AN' } ]
 			}
 		],
@@ -287,7 +287,11 @@ module.exports={
 					{ key:'gnomAD_AF' },
 					{ key:'gnomAD_AF_afr' },
 					{ key:'gnomAD_AF_eas' },
-					{ key:'gnomAD_AF_nfe' }
+					{ key:'gnomAD_AF_nfe' },
+					{ key:'SJcontrol_AF' },
+					{ key:'CR' },
+					{ key:'gnomAD_CR' },
+					{ key:'SJcontrol_CR' },
 				],
 				in_use: true, // to use numerical axis by default
 				//inuse_infokey:true,
@@ -330,6 +334,8 @@ module.exports={
 						*/
 					],
 					allowed_infofields:[
+						{ key:'AF' },
+						{ key:'SJcontrol_AF' },
 						{ key:'gnomAD_AF' },
 						{ key:'gnomAD_AF_afr' },
 						{ key:'gnomAD_AF_eas' },
@@ -343,7 +349,7 @@ module.exports={
 				// may allow jwt
 			},
 			termdb_bygenotype: {
-				// this only works for stratifying samples by mutation genotype
+				// this only works for stratifying samples by vcf genotype
 				// svcnv or svcnv+snv combined may need its own trigger
 				getAF:true,
 				termid_sex: 'sex',

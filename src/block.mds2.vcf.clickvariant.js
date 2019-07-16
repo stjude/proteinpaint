@@ -1,6 +1,6 @@
 import * as common from './common'
 import * as client from './client'
-import {show_mafcovplot} from './block.mds2.vcf.mafcovplot'
+import {make_ui as mafcovplot_makeui} from './block.mds2.vcf.mafcovplot'
 import {termdb_bygenotype} from './block.mds2.vcf.termdb'
 
 
@@ -56,7 +56,7 @@ function mayaddtab_mafcovplot ( tabs, m, tk, block ) {
 		callback: async (div)=>{
 			const wait = client.tab_wait( div )
 			try {
-				await show_mafcovplot( div, m, tk, block )
+				await mafcovplot_makeui( div, m, tk, block )
 				wait.remove()
 			}catch(e){
 				wait.text('Error: '+(e.message||e))

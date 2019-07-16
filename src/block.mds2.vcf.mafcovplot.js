@@ -1,45 +1,74 @@
 import * as client from './client'
+import {init as termdbinit} from './mds.termdb'
 
 
 /*
 ********************** EXPORTED
-show_mafcovplot
+make_ui
 ********************** INTERNAL
+do_plot
+show_legend
+clientside_plot
 */
 
 
 
 
 
-export async function show_mafcovplot ( holder, m, tk, block ) {
+export async function make_ui ( holder, m, tk, block ) {
 /*
 call this function to generate/update plot
 will include tk.vcf.plot_mafcov.overlay_term
 */
+
+	const svgdiv = holder.append('div')
+	const legenddiv = holder.append('div') // termdb handle and category color
+	const obj = {
+		svgdiv,
+		legenddiv,
+		m,
+		tk,
+		block,
+		overlay_term: tk.vcf.plot_mafcov.overlay_term
+	}
+	await do_plot( obj )
+}
+
+
+
+
+
+async function do_plot ( obj ) {
+/*
+call this function to update plot
+when overlay term is changed
+*/
+
 	const par = {
-		genome: block.genome.name,
+		genome: obj.block.genome.name,
 		trigger_mafcovplot:1,
 		m: {
-			chr: m.chr,
-			pos: m.pos,
-			ref: m.ref,
-			alt: m.alt
+			chr: obj.m.chr,
+			pos: obj.m.pos,
+			ref: obj.m.ref,
+			alt: obj.m.alt
 		}
 	}
-	if(tk.mds) {
-		par.dslabel = tk.mds.label
+	if(obj.tk.mds) {
+		par.dslabel = obj.tk.mds.label
 	} else {
 		par.vcf = {
-			file: tk.vcf.file,
-			url: tk.vcf.url,
-			indexURL: tk.vcf.indexURL
+			file: obj.tk.vcf.file,
+			url: obj.tk.vcf.url,
+			indexURL: obj.tk.vcf.indexURL
 		}
 	}
-	if( tk.vcf.plot_mafcov.overlay_term ) {
-		par.overlay_term = tk.vcf.plot_mafcov.overlay_term.id
-	}
+	if( obj.overlay_term ) par.overlay_term = obj.overlay_term.id
 
-	const wait = holder.append('div')
+	const wait = obj.svgdiv
+		.selectAll('*').remove()
+		.append('div')
+		.text('Loading...')
 
 	try {
 		const data = await client.dofetch('mds2',par)
@@ -48,23 +77,13 @@ will include tk.vcf.plot_mafcov.overlay_term
 		// TODO if is server rendered image
 
 		if( data.plotgroups ) {
-			clientside_plot( data.plotgroups, holder, tk )
+			clientside_plot( obj, data.plotgroups )
 		}
 
-		if( data.categories ) {
-			for(const c of data.categories ) {
-				const row = holder.append('div')
-					.style('margin','4px')
-				row.append('span')
-					.style('background',c.color)
-					.html('&nbsp;&nbsp;')
-				row.append('span')
-					.style('color',c.color)
-					.html('&nbsp;'+c.label)
-			}
-		}
+		show_legend( obj, data.categories )
 
 		wait.remove()
+
 	}catch(e){
 		wait.text('ERROR: '+(e.message||e))
 		if(e.stack) console.log(e.stack)
@@ -74,10 +93,64 @@ will include tk.vcf.plot_mafcov.overlay_term
 
 
 
+function show_legend ( obj, categories ) {
+// optional, only if has termdb
+// categories[] is returned from xhr
+	if( !obj.tk.mds || !obj.tk.mds.termdb ) return
+
+	obj.legenddiv.selectAll('*').remove()
+
+	const tr = obj.legenddiv.append('table')
+		.style('border-spacing','5px')
+		.style('border-collapse','separate')
+		.append('tr')
+
+	const termbutton = tr.append('td')
+		.style('vertical-align','top')
+		.append('div')
+		.style('background','#4888BF')
+		.style('border-radius','5px')
+		.style('color','white')
+		.style('padding','2px 5px')
+		.style('font-size','.9em')
+		.text( obj.overlay_term ? obj.overlay_term.name : 'Select a term' )
+		.on('click',()=>{
+			obj.tk.legend.tip.clear()
+				.showunder(termbutton.node())
+			termdbinit({
+				genome: obj.block.genome,
+				mds: obj.tk.mds,
+				div: obj.tk.legend.tip.d,
+				default_rootterm:true,
+				modifier_click_term:{
+					disable_terms: new Set([ obj.overlay_term.id ]),
+					callback: (t)=>{
+						obj.overlay_term = t
+						do_plot( obj )
+					}
+				}
+			})
+		})
+
+	if( categories ) {
+		const td2 = tr.append('td')
+		for(const c of categories ) {
+			const row = td2.append('div')
+				.style('margin-bottom','4px')
+			row.append('span')
+				.style('background',c.color)
+				.html('&nbsp;&nbsp;')
+			row.append('span')
+				.style('color',c.color)
+				.html('&nbsp;'+c.label)
+		}
+	}
+}
 
 
 
-function clientside_plot ( plotgroups, holder, tk ) {
+
+function clientside_plot ( obj, plotgroups ) {
 	/*
 	import plotter, then plot all groups
 	each plot will return data point -> svg cross,
@@ -91,7 +164,7 @@ function clientside_plot ( plotgroups, holder, tk ) {
 
 			// may define how to plot each group
 
-			let div  = holder.append('div')
+			let div  = obj.svgdiv.append('div')
 				.style('display','inline-block')
 				.style('vertical-align','top')
 
@@ -117,7 +190,7 @@ function clientside_plot ( plotgroups, holder, tk ) {
 				holder:div,
 				data: g.lst,
 				name: g.name,
-				tip: tk.tktip,
+				tip: obj.tk.tktip,
 				automax:true,
 				samplecolor:'#4888BF',
 				mouseover: d=>{
