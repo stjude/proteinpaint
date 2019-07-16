@@ -236,22 +236,15 @@ q{}
 	.term2_q{}
 */
 	
-	const filter = q.tvslst 
-		? makesql_by_tvsfilter( q.tvslst, q.ds )
-		: {
-				filters: 'filtered AS (\nSELECT sample FROM annotations GROUP BY sample\n)', // faster than DISTINCT?
-				values: [],
-				CTEname: 'filtered'
-			}
-
-	const values = filter.values ? filter.values.slice() : []
+	const filter = makesql_by_tvsfilter( q.tvslst, q.ds )
+	const values = filter ? filter.values.slice() : []
 	const CTE0 = get_term_cte(q, filter, values, 0)
 	const CTE1 = get_term_cte(q, filter, values, 1)
 	const CTE2 = get_term_cte(q, filter, values, 2)
 
 	const statement =
 		`WITH
-		${filter.filters},
+		${filter ? filter.filters + ',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
 		${CTE2.sql}
