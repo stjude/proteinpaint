@@ -69,7 +69,7 @@ async function barchart_data ( q, ds, res, tdb ) {
   const inReqs = [getTrackers(), getTrackers(), getTrackers()]
   inReqs.filterFxn = ()=>1 // default allow all rows, may be replaced via q.termfilter
   await setValFxns(q, inReqs, ds, tdb);
-  const pj = getPj(q, inReqs, ds.cohort.annorows, tdb)
+  const pj = getPj(q, inReqs, ds.cohort.annorows, tdb, ds)
   if (pj.tree.results) pj.tree.results.pjtime = pj.times
   res.send(pj.tree.results)
 }
@@ -113,12 +113,20 @@ const template = JSON.stringify({
         seriesId: "@key",
         data: [{
           dataId: "@key",
-          total: "+1",
+          total: "+1" 
         }, "&data.id[]"],
         "_:_max": "<&data.value", // needed by client-side boxplot renderer 
         "~values": ["&data.value",0],
         "~sum": "+&data.value",
-        "__:boxplot": "=boxplot2()"
+        "__:boxplot": "=boxplot2()",
+        "__:AF": "=getAF()",
+        "~samples": ["$sjlid", "set"],
+        "_:_summaryByDataId": {
+          "&data.id[]": {
+            "~samples": ["$sjlid", "set"],
+            "__:numSamples": "=numSamples()",
+          }
+        }
       }, "&series.id[]"],
       "@done()": "=filterEmptySeries()"
     }, "&chart.id[]"],
@@ -156,7 +164,7 @@ const template = JSON.stringify({
   }
 })
 
-function getPj(q, inReqs, data, tdb) {
+function getPj(q, inReqs, data, tdb, ds) {
 /*
   q: objectified URL query string
   inReq: request-specific closured functions and variables
@@ -170,7 +178,7 @@ function getPj(q, inReqs, data, tdb) {
     template,
     "=": {
       prep(row) {
-        // a falsy filter value for a data row will cause the
+        // a falsy filter return value for a data row will cause the
         // exclusion of that row from farther processing
         if (!row._computed_) row._computed_ = Object.create(null)
         return inReqs.filterFxn(row)
@@ -241,6 +249,13 @@ function getPj(q, inReqs, data, tdb) {
         }
         stat.sd = Math.sqrt( s / (values.length-1) )
         return stat
+      },
+      numSamples(row, context) {
+        return context.self.samples.size
+      },
+      getAF(row, context) {
+        if (q.term2 != 'genotype' || !('chr' in q)) return
+        return get_AF([...context.self.samples], q.chr, context.self.summaryByDataId, ds)
       },
       filterEmptySeries(result) {
         const nonempty = result.serieses.filter(series=>series.total)
@@ -945,11 +960,17 @@ arguments:
 	list of samples from a bar
 - chr
 	chromosome of the variant
-- genotype2sample MAP
+- genotype2sample {}
 	k: het, href, halt
 	v: set of samples
 - ds{}
 */
+  // hardcode genotype labels, for now
+  const labels = {
+    href: "Homozygous reference",
+    halt: "Homozygous alternative",
+    het: "Heterozygous"
+  }
   const afconfig = ds.track.vcf.termdb_bygenotype // location of configurations
 
   let AC=0, AN=0
@@ -962,9 +983,9 @@ arguments:
 		if(!genotype2sample.href.has(s)) AC++
 	  } else {
 	    AN+=2
-	    if( genotype2sample.halt.has( s ) ) {
+	    if(genotype2sample[labels.halt] && genotype2sample[labels.halt].samples.has( s ) ) {
 	      AC+=2
-	    } else if(genotype2sample.het.has( s )) {
+	    } else if(genotype2sample[labels.het] && genotype2sample[labels.het].samples.has( s )) {
 	      AC++
   	    }
 	  }
@@ -973,9 +994,9 @@ arguments:
     // autosome
 	for(const s of samples) {
 	  AN+=2
-	  if( genotype2sample.halt.has( s ) ) {
+	  if(genotype2sample[labels.halt] && genotype2sample[labels.halt].samples.has( s ) ) {
 	    AC+=2
-	  } else if(genotype2sample.het.has( s )) {
+	  } else if(genotype2sample[labels.het] && genotype2sample[labels.het].samples.has( s )) {
 	    AC++
   	  }
 	}

@@ -210,6 +210,13 @@ export class TermdbBarchart{
         }
       }
       chart.settings = Object.assign(this.settings, chartsData.refs)
+      chart.settings.colLabels = chartsData.refs.cols.map(colName=>{
+        const series = chart.serieses.find(series=>series.seriesId == colName)
+        return {
+          id: colName,
+          label: series && 'AF' in series ? colName + ', AF=' + series.AF : ''
+        }
+      })
       chart.visibleSerieses = chart.serieses.filter(d=>{
         return !chart.settings.exclude.cols.includes(d.seriesId)
       })
@@ -427,6 +434,8 @@ export class TermdbBarchart{
             ? self.terms.term1.values[d].label
             : grade
             ? grade.label
+            : 'label' in d
+            ? d.label
             : d
         },
         click: () => { 
@@ -452,6 +461,8 @@ export class TermdbBarchart{
             ? self.terms.term1.values[d].label
             : grade
             ? grade.label
+            : 'label' in d
+            ? d.label
             : d
         },
         click: () => { 

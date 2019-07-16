@@ -156,7 +156,7 @@ export default function barsRenderer(barsapp, holder) {
       .style("opacity", prevOrientation != hm.orientation ? 0.0001 : 1)
       .style("display", hm.orientation != 'vertical' ? "none" : "")
       .selectAll("g")
-      .data(hm.cols, returnD)
+      .data(hm.colLabels, d=>d.id)
     c.exit().remove();
     c.each(updateColLabel);
     c.enter()
@@ -168,7 +168,7 @@ export default function barsRenderer(barsapp, holder) {
       .style("opacity", prevOrientation != hm.orientation ? 0.0001 : 1)
       .style("display", hm.orientation != "horizontal" ? "none" : "")
       .selectAll("g")
-      .data(hm.cols, returnD)
+      .data(hm.colLabels, d=>d.id)
     r.exit().remove();
     r.each(updateRowLabel);
     r.enter()
@@ -579,7 +579,7 @@ export default function barsRenderer(barsapp, holder) {
     const grp = hm.col2name[d] ? hm.col2name[d].grp : "";
     const x =
       hm.colgrps.indexOf(grp) * hm.colgspace +
-      hm.cols.indexOf(d) * (hm.colw + hm.colspace) +
+      hm.cols.indexOf('id' in d ? d.id : d) * (hm.colw + hm.colspace) +
       hm.colw / 2;
     const y = hm.colheadtop
       ? -1 * (hm.coltick + hm.collabtickspace)
@@ -631,7 +631,7 @@ export default function barsRenderer(barsapp, holder) {
     const grp = hm.row2name[d] ? hm.row2name[d].grp : "";
     const y =
       hm.colgrps.indexOf(grp) * hm.rowgspace +
-      hm.cols.indexOf(d) * (hm.rowh + hm.rowspace) +
+      hm.cols.indexOf('id' in d ? d.id : d) * (hm.rowh + hm.rowspace) +
       hm.rowh; // / 4;
     const x = hm.rowheadleft
       ? -1 * (hm.rowtick + hm.rowlabtickspace)
