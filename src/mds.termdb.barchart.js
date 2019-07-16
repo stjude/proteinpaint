@@ -214,7 +214,7 @@ export class TermdbBarchart{
         const series = chart.serieses.find(series=>series.seriesId == colName)
         return {
           id: colName,
-          label: series && 'AF' in series ? colName + ', AF=' + series.AF : ''
+          label: series && 'AF' in series ? colName + ', AF=' + series.AF : colName
         }
       })
       chart.visibleSerieses = chart.serieses.filter(d=>{
