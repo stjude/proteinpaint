@@ -345,7 +345,6 @@ module.exports={
 			},
 			plot_mafcov: {
 				show_samplename: 1,
-				overlay_term: 'sex'
 				// may allow jwt
 			},
 			termdb_bygenotype: {

@@ -9,6 +9,10 @@ make_ui
 do_plot
 show_legend
 clientside_plot
+
+
+obj{}
+
 */
 
 
@@ -21,20 +25,91 @@ call this function to generate/update plot
 will include tk.vcf.plot_mafcov.overlay_term
 */
 
-	const svgdiv = holder.append('div')
+	// the governing object
+	const obj = {
+		d: {
+			svgdiv: holder.append('div'),
+			wait: holder.append('div'),
+		},
+		m,
+		tk,
+		block,
+		overlay_term: tk.vcf.plot_mafcov.overlay_term // optional
+	}
+
 	const legenddiv = holder.append('div') // termdb handle and category color
 		.style('margin','10px')
 		.style('border-top','solid 1px #ccc')
 		.style('padding-top','10px')
-	const obj = {
-		svgdiv,
-		legenddiv,
-		m,
-		tk,
-		block,
-		overlay_term: tk.vcf.plot_mafcov.overlay_term
+
+	if( tk.mds && tk.mds.termdb ) {
+		// enable selecting term for overlaying
+		const row = legenddiv.append('div')
+			.style('margin-bottom','5px')
+		obj.d.term_button = row
+			.append('div')
+			.style('display','inline-block')
+			.style('margin-right','10px')
+			.style('background','#4888BF') // to share css class with tvs.ui
+			.style('border-radius','5px')
+			.style('color','white')
+			.style('padding','2px 9px')
+			.on('click',()=>{
+				obj.tk.legend.tip.clear()
+					.showunder(obj.d.term_button.node())
+				termdbinit({
+					genome: obj.block.genome,
+					mds: obj.tk.mds,
+					div: obj.tk.legend.tip.d,
+					default_rootterm:true,
+					modifier_click_term:{
+						disable_terms: ( obj.overlay_term ? new Set([ obj.overlay_term.id ]) : undefined ),
+						callback: (t)=>{
+							obj.tk.legend.tip.hide()
+							obj.overlay_term = t
+							update_term_button( obj )
+							// assign default setting about this term
+							if( t.iscondition ) {
+								if( t.isleaf ) {
+									obj.overlay_term_q = { value_by_max_grade:true  }
+								} else {
+									obj.overlay_term_q = { value_by_max_grade:true, bar_by_children:true }
+								}
+							} else {
+								delete obj.overlay_term_q
+							}
+							do_plot( obj )
+						}
+					}
+				})
+			})
+		obj.d.delete_term_button = row.append('div')
+			.html('&times;')
+			.on('click',()=>{
+				delete obj.overlay_term
+				update_term_button(obj)
+				do_plot(obj)
+			})
+		obj.d.term_legenddiv = row.append('div') // display categories after updating plot
+		update_term_button( obj )
 	}
+
 	await do_plot( obj )
+}
+
+
+
+
+function update_term_button ( obj ) {
+// call after updating overlay_term
+	obj.d.term_legenddiv.selectAll('*').remove()
+	if( obj.overlay_term ) {
+		obj.d.term_button.text( obj.overlay_term.name )
+		obj.d.delete_term_button.style('display','inline-block')
+	} else {
+		obj.d.term_button.text( 'Select a term to overlay' )
+		obj.d.delete_term_button.style('display','none')
+	}
 }
 
 
@@ -71,10 +146,8 @@ when overlay term is changed
 		par.overlay_term_q = obj.overlay_term_q
 	}
 
-	const wait = obj.svgdiv
-		.selectAll('*').remove()
-		.append('div')
-		.text('Loading...')
+	obj.d.wait.text('Loading...')
+		.style('display','block')
 
 	try {
 		const data = await client.dofetch('mds2',par)
@@ -88,10 +161,10 @@ when overlay term is changed
 
 		show_legend( obj, data.categories )
 
-		wait.remove()
+		obj.d.wait.style('display','none')
 
 	}catch(e){
-		wait.text('ERROR: '+(e.message||e))
+		obj.d.wait.text('ERROR: '+(e.message||e))
 		if(e.stack) console.log(e.stack)
 	}
 }
@@ -102,60 +175,18 @@ when overlay term is changed
 function show_legend ( obj, categories ) {
 // optional, only if has termdb
 // categories[] is returned from xhr
-	if( !obj.tk.mds || !obj.tk.mds.termdb ) return
+	if( !obj.tk.mds || !obj.tk.mds.termdb || !categories) return
 
-	obj.legenddiv.selectAll('*').remove()
-
-	const termbutton = obj.legenddiv
-		.append('div')
-		.append('div')
-		.style('display','inline-block')
-		.style('background','#4888BF') // to share css class with tvs.ui
-		.style('border-radius','5px')
-		.style('color','white')
-		.style('padding','2px 5px')
-		.style('font-size','.9em')
-		.text( obj.overlay_term ? obj.overlay_term.name : 'Select a term' )
-		.on('click',()=>{
-			obj.tk.legend.tip.clear()
-				.showunder(termbutton.node())
-			termdbinit({
-				genome: obj.block.genome,
-				mds: obj.tk.mds,
-				div: obj.tk.legend.tip.d,
-				default_rootterm:true,
-				modifier_click_term:{
-					disable_terms: new Set([ obj.overlay_term.id ]),
-					callback: (t)=>{
-						obj.tk.legend.tip.hide()
-						obj.overlay_term = t
-						// assign default setting about this term
-						if( t.iscondition ) {
-							if( t.isleaf ) {
-								obj.overlay_term_q = { value_by_max_grade:true, bar_by_grade:true }
-							} else {
-								obj.overlay_term_q = { value_by_max_grade:true, bar_by_children:true }
-							}
-						} else {
-							delete obj.overlay_term_q
-						}
-						do_plot( obj )
-					}
-				}
-			})
-		})
-
-	if( categories ) {
-		for(const c of categories ) {
-			const row = obj.legenddiv.append('div')
-				.style('margin','4px 0px')
-			row.append('span')
-				.style('background',c.color)
-				.html('&nbsp;&nbsp;')
-			row.append('span')
-				.style('color',c.color)
-				.html('&nbsp;'+c.label)
-		}
+	obj.d.term_legenddiv.selectAll('*').remove()
+	for(const c of categories ) {
+		const row = obj.d.term_legenddiv.append('div')
+			.style('margin','4px 0px')
+		row.append('span')
+			.style('background',c.color)
+			.html('&nbsp;&nbsp;')
+		row.append('span')
+			.style('color',c.color)
+			.html('&nbsp;'+c.label)
 	}
 }
 
@@ -172,11 +203,13 @@ function clientside_plot ( obj, plotgroups ) {
 
 		const name2sgp = {}
 
+		obj.d.svgdiv.selectAll('*').remove()
+
 		for(const g of plotgroups) {
 
 			// may define how to plot each group
 
-			let div  = obj.svgdiv.append('div')
+			let div  = obj.d.svgdiv.append('div')
 				.style('display','inline-block')
 				.style('vertical-align','top')
 

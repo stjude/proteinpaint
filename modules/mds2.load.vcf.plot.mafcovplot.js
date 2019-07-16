@@ -59,7 +59,6 @@ export async function handle_mafcovplot ( q, genome, ds, result ) {
 				term1_id: q.overlay_term,
 				term1_q: q.overlay_term_q
 			})
-			console.log(tmp)
 
 			const category2color = d3scale.scaleOrdinal( d3scale.schemeCategory10)
 			const categories = new Set()
