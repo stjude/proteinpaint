@@ -624,7 +624,7 @@ function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null )
 			  AND c.sample = t.sample 
 			  AND c.age_graded = t.age_graded
 			  ${uncomputablegrades_clause( ds )}
-			`
+  		GROUP BY c.sample, c.grade`
 		} else {
 			values.push(term_id, term_id)
 
@@ -644,7 +644,7 @@ function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null )
 			  AND c.sample = t.sample 
 			  AND c.age_graded = t.age_graded
 			  ${uncomputablegrades_clause( ds )}
-			`
+			GROUP BY c.sample, c.grade`
 		}
 	}
 
