@@ -18,9 +18,11 @@ makesql_by_tvsfilter
 makesql_overlay_oneterm
 	makesql_overlay_oneterm_condition
 makesql_numericBinCTE
+get_term_cte
 uncomputablegrades_clause
 grade_age_select_clause
 get_label4key
+
 */
 
 
@@ -260,7 +262,7 @@ q{}
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? "WHERE t1.sample in "+filter.CTEname : ""}`
-  //console.log(statement, values)
+	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( values )
 
@@ -294,8 +296,18 @@ index
 */
 	const termnum_id = 'term' + index + '_id'
 	const termid = q[termnum_id]
-	const term = termid ? q.ds.cohort.termdb.q.termjsonByOneid( termid ) : null; //console.log('term'+ index, term)
-	if (termid && !term && termid != 'genotype') throw `unknown ${termnum_id}: ${termid}`
+	let term = termid ? q.ds.cohort.termdb.q.termjsonByOneid( termid ) : null; //console.log('term'+ index, term)
+
+	// comment this out to allow a non-termdb attributes to work
+	//if (termid && !term && termid != 'genotype') throw `unknown ${termnum_id}: ${termid}`
+
+	if(!term && termid) {
+		// when termid is given but term object is not found
+		// should be a non-termdb attribute e.g. admix population label
+		// dirty fix to pretend it as a categorical term so as to be able to pull out data
+		term = {iscategorical:true, id: termid }
+	}
+
 	const termnum_q = 'term' + index + '_q'
 	const termq = q[termnum_q]
 	if(termq && typeof termq == 'string' ) q[termnum_q] = JSON.parse(decodeURIComponent(termq))	
@@ -304,14 +316,15 @@ index
 
 	const tablename = 'samplekey_' + index
 	const keyval = termid == 'genotype' ? termid : ""
-	const CTE = term
-		? makesql_overlay_oneterm( term, filter, q.ds, q[termnum_q], values, "_" + index)
+
+	const CTE = term ?
+		makesql_overlay_oneterm( term, filter, q.ds, q[termnum_q], values, "_" + index)
 		: {
-				sql: `${tablename} AS (\nSELECT null AS sample, '${keyval}' as key, '${keyval}' as value\n)`,
-				tablename,
-				join_on_clause: '' //`ON t${index}.sample IS NULL`
-			}
-	
+			sql: `${tablename} AS (\nSELECT null AS sample, '${keyval}' as key, '${keyval}' as value\n)`,
+			tablename,
+			join_on_clause: '' //`ON t${index}.sample IS NULL`
+		}
+
 	if (!('join_on_clause' in CTE)) {
 		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
 	}
