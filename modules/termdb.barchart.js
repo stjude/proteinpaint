@@ -126,25 +126,25 @@ const template = JSON.stringify({
       "@done()": "=filterEmptySeries()"
     }, "&chart.id[]"],
     "__:boxplot": "=boxplot1()",
-    "_:_unannotated": {
+    /*"_:_unannotated": {
       label: "",
       label_unannotated: "",
       value: "+=unannotated()",
       value_annotated: "+=annotated()"
-    },
+    },*/
     "_:_refs": {
-      cols: ["&series.id[]"],
+      "_:_cols": ["=getSeriesId(]"],
       colgrps: ["-"], 
-      rows: ["&data.id[]"],
+      "_:_rows": ["=getDataId(]"],
       rowgrps: ["-"],
-      col2name: {
-        "&series.id[]": {
+      "_:_col2name": {
+        "=getSeriesId(]": {
           name: "@branch",
           grp: "-"
         }
       },
-      row2name: {
-        "&data.id[]": {
+      "_:_row2name": {
+        "=getDataId(]": {
           name: "@branch",
           grp: "-"
         }
@@ -198,6 +198,16 @@ function getPj(q, inReqs, data, tdb, ds) {
         if (!chart || !chart.id.length) return
         return 1
       },
+      getSeriesId(row, context) {
+        const data = context.joins.get('data')
+        if (!data || !data.id.length) return []
+        const series = context.joins.get('series')
+        if (!series || !series.id.length) return []
+        if (inReqs[1].unannotatedLabels.includes(series.value)) return []
+        const chart = context.joins.get('chart')
+        if (!chart || !chart.id.length) return []
+        return series.id
+      },
       getSeriesVal(row, context) {
         const data = context.joins.get('data')
         if (!data || !data.id.length) return
@@ -207,6 +217,16 @@ function getPj(q, inReqs, data, tdb, ds) {
         const chart = context.joins.get('chart')
         if (!chart || !chart.id.length) return
         return series.value
+      },
+      getDataId(row, context) {
+        const data = context.joins.get('data')
+        if (!data || !data.id.length) return []
+        if (inReqs[2].unannotatedLabels.includes(data.value)) return []
+        const series = context.joins.get('series')
+        if (!series || !series.id.length) return []
+        const chart = context.joins.get('chart')
+        if (!chart || !chart.id.length) return []
+        return data.id
       },
       getDataVal(row, context) {
         const data = context.joins.get('data')
@@ -330,6 +350,7 @@ function getPj(q, inReqs, data, tdb, ds) {
       },
       unannotatedLabels() {
         return {
+          term0: inReqs[0].unannotatedLabels,
           term1: inReqs[1].unannotatedLabels, 
           term2: inReqs[2].unannotatedLabels
         }

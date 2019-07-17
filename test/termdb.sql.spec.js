@@ -10,7 +10,7 @@ const path = require('path')
 
 const ssid = 'genotype-test.txt'
 const src = path.join('./test/testdata', ssid)
-const dest = path.join(serverconfig.cachedir,'ssid',ssid); console.log(dest)
+const dest = path.join(serverconfig.cachedir,'ssid',ssid)
 fs.copyFileSync(src, dest, (err) => {
   if (err) throw err;
 });
@@ -590,7 +590,7 @@ tape("non-leaf condition term1", function (test) {
 function compareResponseData(test, params, mssg) {
   // i=series start, j=series end, k=chart index
   // for debugging result data, set i < j to slice chart.serieses
-  const i=0, j=0, k=0;
+  const i=0, j=0, k=0, refkey='';
   const url0 = getSqlUrl(params);
 
   request(url0, (error,response,body)=>{
@@ -628,13 +628,21 @@ function compareResponseData(test, params, mssg) {
             return
           }
           const data1 = JSON.parse(body1)
-          const summary1 = normalizeCharts(data1)
-          const sqlSummary = k == -1
+          const summary1 = normalizeCharts(data1, data0.refs)
+          const sqlSummary = refkey == '*' 
+            ? summary0.refs
+            : refkey
+            ? summary0.refs[refkey]
+            : k == -1
             ? summary0
             : i !== j 
             ? summary0.charts[k].serieses.slice(i,j) 
             : summary0
-          const barSummary = k == -1
+          const barSummary = refkey == '*' 
+            ? summary1.refs
+            : refkey
+            ? summary1.refs[refkey]
+            : k == -1
             ? summary1
             : i !== j 
             ? summary1.charts[k].serieses.slice(i,j) 
@@ -642,7 +650,7 @@ function compareResponseData(test, params, mssg) {
 
           switch(response.statusCode) {
           case 200:
-            const extra = k == -1 || i!==j 
+            const extra = k == -1 || i!==j || refkey
               ? '\n\n' + url0 +'\n----\n' + url1 + '\n' + JSON.stringify(sqlSummary) + '\n-----\n' + JSON.stringify(barSummary) 
               : ''
             test.deepEqual(
@@ -787,7 +795,7 @@ const externals = {
   }
 }
 
-function normalizeCharts(data) {
+function normalizeCharts(data, comparedRefs=null) {
   const charts = data.charts
   if (!charts) {
     return {charts: [{serieses:[]}]}
@@ -795,7 +803,9 @@ function normalizeCharts(data) {
 
   charts.forEach(onlyComparableChartKeys)
   sortResults(charts)
-  const summary = {charts}
+  const reformattedRefs = normalizeRefs(data.refs, comparedRefs)
+  if (reformattedRefs) data.refs = reformattedRefs
+  const summary = {charts, refs: data.refs}
   
   if (data.boxplot) {
     summary.boxplot = data.boxplot
@@ -870,3 +880,47 @@ function dataSorter(a,b) {
   return a.dataId < b.dataId ? -1 : 1
 }
 
+function normalizeRefs(refs, comparedRefs) {
+  delete refs.useColOrder
+  delete refs.useRowOrder
+  delete refs.bins
+  delete refs.grade_labels
+  delete refs['@errors']
+  delete refs.row2name['@errors']
+
+  refs.cols.sort(valueSort)
+  refs.rows.sort(valueSort)
+
+  let obj
+  if (comparedRefs) {
+    obj = {}
+    for(const key in comparedRefs) {
+      if (!refs[key] || !comparedRefs[key]) {
+        obj[key] = refs[key]
+      } else if (Array.isArray(refs[key]) && Array.isArray(comparedRefs[key])) {
+        obj[key] = refs[key]
+        obj[key].sort(valueSort)
+        comparedRefs[key].sort(valueSort)
+      }
+      else if (typeof refs[key] == 'object' && typeof comparedRefs[key] == 'object') {
+        obj[key] = {}
+        for(const subkey in comparedRefs[key]) { 
+          obj[key][subkey] = refs[key][subkey]
+        }
+        for(const subkey in refs[key]) {
+          if (!(key in obj[key])) obj[key][subkey] = refs[key][subkey]
+        }
+      } else {
+        obj[key] = refs[key]
+      }
+    }
+    for(const key in refs) {
+      if (!(key in obj)) obj[key] = refs[key]
+    }
+  }
+  return obj
+}
+
+function valueSort(a,b) {
+  return a < b ? -1 : 1
+}

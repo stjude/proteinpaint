@@ -141,10 +141,11 @@ const template = JSON.stringify({
           name: "@branch",
           grp: "-"
         }
-      }, /*
+      },
+      "__:unannotatedLabels": "=unannotatedLabels()", 
+      /*
       "__:useColOrder": "=useColOrder()",
       "__:useRowOrder": "=useRowOrder()",
-      "__:unannotatedLabels": "=unannotatedLabels()",
       "__:bins": "=bins()",
       "__:grade_labels": "=grade_labels()",
       "@done()": "=sortColsRows()" */
@@ -167,7 +168,7 @@ function getPj(q, data, tdb, ds) {
       isAnnoVal: getIsAnnoValFxn(q, tdb, i)
     }
   })
-let i=0
+
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
@@ -242,6 +243,15 @@ let i=0
           ds
         )
       },
+      unannotatedLabels() {
+        const unannotated = {}
+        kva.forEach((kv,i)=>{
+          unannotated['term' + i] = kv.isAnnoVal.unannotatedLabels
+            ? kv.isAnnoVal.unannotatedLabels
+            : []
+        })
+        return unannotated
+      },
       filterEmptySeries(result) {
         const nonempty = result.serieses.filter(series=>series.total)
         result.serieses.splice(0, result.serieses.length, ...nonempty)
@@ -268,7 +278,11 @@ function getIsAnnoValFxn(q, tdb, index) {
   const unannotatedValues = nb.unannotated
     ? Object.keys(nb.unannotated).filter(key=>key.startsWith('value')).map(key=>nb.unannotated[key]) 
     : []
-  return val => termIsNumeric && !unannotatedValues.includes(val)
+  const fxn = val => termIsNumeric && !unannotatedValues.includes(val)
+  fxn.unannotatedLabels = nb.unannotated
+    ? Object.keys(nb.unannotated).filter(key=>key.startsWith('label') && key != 'label_annotated').map(key=>nb.unannotated[key])
+    : []
+  return fxn
 }
 
 
