@@ -11,6 +11,7 @@ const binLabelFormatter = d3format.format('.3r')
 ********************** EXPORTED
 handle_request_closure
 **********************
+get_AF
 */
 
 exports.handle_request_closure = ( genomes ) => {
@@ -273,8 +274,21 @@ function getPj(q, inReqs, data, tdb, ds) {
         return context.self.samples.size
       },
       getAF(row, context) {
-        if (q.term2 != 'genotype' || !('chr' in q)) return
-        return get_AF([...context.self.samples], q.chr, context.self.summaryByDataId, ds)
+		// only get AF when termdb_bygenotype.getAF is true
+	    if ( !ds.track
+		  || !ds.track.vcf
+		  || !ds.track.vcf.termdb_bygenotype
+		  || !ds.track.vcf.termdb_bygenotype.getAF ) return
+        if (q.term2 != 'genotype') return
+		if (!q.chr) throw 'chr missing for getting AF'
+		if (!q.pos) throw 'pos missing for getting AF'
+        return get_AF(
+			[...context.self.samples],
+			q.chr,
+			Number(q.pos),
+			context.self.summaryByDataId, // where is this defined? it should be genotype2sample returned by load_genotype_by_sample()
+			ds
+			)
       },
       filterEmptySeries(result) {
         const nonempty = result.serieses.filter(series=>series.total)
@@ -956,19 +970,27 @@ async function load_genotype_by_sample ( id ) {
     for(const sample of samples) {
       bySample[sample] = type
     }
-	if( type=='Homozygous reference') {
-      genotype2sample.set('href', new Set(samples))
-	} else if( type=='Homozygous alternative') {
-      genotype2sample.set('halt', new Set(samples))
-	} else {
-      genotype2sample.set('het', new Set(samples))
-	}
+
+    if(!genotype_type_set.has(type)) throw 'unknown hardcoded genotype label: '+type
+    genotype2sample.set(type, new Set(samples))
   }
   return [bySample, genotype2sample]
 }
 
 
-function get_AF ( samples, chr, genotype2sample, ds ) {
+
+
+const genotype_type_set = new Set(["Homozygous reference","Homozygous alternative","Heterozygous"])
+const genotype_types = {
+  href: "Homozygous reference",
+  halt: "Homozygous alternative",
+  het: "Heterozygous"
+}
+
+
+
+
+function get_AF ( samples, chr, pos, genotype2sample, ds ) {
 /*
 as configured by ds.track.vcf.termdb_bygenotype,
 at genotype overlay of a barchart,
@@ -976,48 +998,44 @@ to show AF=? for each bar, based on the current variant
 
 arguments:
 - samples[]
-	list of samples from a bar
+	list of sample names from a bar
 - chr
 	chromosome of the variant
 - genotype2sample {}
-	k: het, href, halt
-	v: set of samples
+    returned by load_genotype_by_sample()
 - ds{}
 */
   // hardcode genotype labels, for now
-  const labels = {
-    href: "Homozygous reference",
-    halt: "Homozygous alternative",
-    het: "Heterozygous"
-  }
   const afconfig = ds.track.vcf.termdb_bygenotype // location of configurations
 
-  let AC=0, AN=0
-
-  if( afconfig.sex_chrs.has( chr ) ) {
-  	// sex chr
-	for(const s of samples) {
-	  if( afconfig.male_samples.has( s )) {
-	    AN++
-		if(!genotype2sample.href.has(s)) AC++
-	  } else {
-	    AN+=2
-	    if(genotype2sample[labels.halt] && genotype2sample[labels.halt].samples.has( s ) ) {
-	      AC+=2
-	    } else if(genotype2sample[labels.het] && genotype2sample[labels.het].samples.has( s )) {
-	      AC++
-  	    }
-	  }
+  for(const sample of samples) {
+    let isdiploid = false
+	if( afconfig.sex_chrs.has( chr ) ) {
+	  if( afconfig.male_samples.has( sample ) ) {
+	    if( afconfig.chr2par && afconfig.chr2par[chr] ) {
+	      for(const par of afconfig.chr2par[chr]) {
+            if(pos>=par.start && pos<=par.stop) {
+              isdiploid=true
+              break
+            }
+          }
+        }
+      } else {
+        isdiploid=true
+      }
+	} else {
+	  isdiploid=true
 	}
-  } else {
-    // autosome
-	for(const s of samples) {
+	if( isdiploid ) {
 	  AN+=2
 	  if(genotype2sample[labels.halt] && genotype2sample[labels.halt].samples.has( s ) ) {
 	    AC+=2
 	  } else if(genotype2sample[labels.het] && genotype2sample[labels.het].samples.has( s )) {
 	    AC++
   	  }
+	} else {
+	  AN++
+	  if(!genotype2sample.href.has(s)) AC++
 	}
   }
   return AN==0 ? 0 : (AC/AN).toFixed(3)

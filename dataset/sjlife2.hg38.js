@@ -353,7 +353,11 @@ module.exports={
 				getAF:true,
 				termid_sex: 'sex',
 				value_male: 'Male',
-				sex_chrs:['chrX','chrY']
+				sex_chrs:['chrX','chrY'],
+				chr2par:{
+					'chrX':[{start:10000,stop:2781478},{start:155701382,stop:156030894}],
+					'chrY':[{start:10000,stop:2781478},{start:56887902,stop:57217414}]
+				}
 			},
 			check_pecanpie: {
 				info: {

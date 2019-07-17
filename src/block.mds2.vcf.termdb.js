@@ -53,7 +53,8 @@ official track only
 		div: plotdiv,
 		default_rootterm: {},
 		modifier_ssid_barchart: {
-			chr: m.chr,
+			chr: m.chr, // chr and pos needed for computing AF with respect to sex & par
+			pos: m.pos,
 			mutation_name: m.mname,
 			ssid: ssid,
 			groups: groups
