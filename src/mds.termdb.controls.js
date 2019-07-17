@@ -1,6 +1,5 @@
 import {select as d3select, event as d3event} from 'd3-selection'
 import {
-  showtree4selectterm, 
   menuoption_add_filter,
   menuoption_select_to_gp, 
   menuoption_select_group_add_to_cart
@@ -199,17 +198,11 @@ function setOverlayOpts(plot, main, table, arg) {
       plot.term2_displaymode = 'stacked'
       main(plot)
     } else if (d.value == "tree") {
-      const obj = Object.assign({},plot.obj)
-      delete obj.termfilter
-      delete obj.dom.termfilterdiv
-      const _arg = {
-        term1: arg.term,
-        term2: plot.term2,
-        obj,
-        callback: term2 => {
-          obj.tip.hide()
-
-          // adding term2 for the first time
+	  plot.obj.showtree4selectterm(
+	  	[arg.term.id, plot.term2 ? plot.term2.id : null],
+		tr.node(),
+        (term2) => {
+	      plot.obj.tip.hide()
           plot.term2 = term2
           if (plot.term2.iscondition) {
             plot.settings.common.conditionParents[2] = plot.term2.id
@@ -227,8 +220,7 @@ function setOverlayOpts(plot, main, table, arg) {
           }
           main( plot )
         }
-      }
-      showtree4selectterm( _arg, tr.node() )
+	  )
     } else if (d.value == "genotype") {
       // to-do
     } else if (
@@ -253,15 +245,11 @@ function setOverlayOpts(plot, main, table, arg) {
   radio.inputs.on('click', d => {
     d3event.stopPropagation()
     if (d.value != 'tree' || d.value != plot.settings.bar.overlay) return
-    const obj = Object.assign({},plot.obj)
-    delete obj.termfilter
-    delete obj.termfilterdiv
-    const _arg = {
-      term1: arg.term,
-      term2: plot.term2,
-      obj,
-      callback: term2=>{
-        obj.tip.hide()
+	plot.obj.showtree4selectterm(
+	  [arg.term.id, plot.term2 ? plot.term2.id : null],
+	  tr.node(),
+      (term2)=>{
+	    plot.obj.tip.hide()
         plot.term2 = term2
         if (plot.term2.iscondition) {
           plot.settings.common.conditionParents[2] = plot.term2.id
@@ -279,8 +267,7 @@ function setOverlayOpts(plot, main, table, arg) {
         }
         main( plot )
       }
-    }
-    showtree4selectterm( _arg, tr.node() )
+    )
   })
 
   plot.controls.push(() => {
@@ -372,16 +359,12 @@ function setDivideByOpts(plot, main, table, arg) {
       //plot.term2_displaymode = 'stacked'
       main(plot)
     } else if (d.value == "tree") {
-      const obj = Object.assign({},plot.obj)
-      delete obj.termfilter
-      delete obj.termfilterdiv
-      const _arg = {
-        term1: arg.term,
-        term2: plot.term2,
-        obj,
-        callback: term2=>{
-          obj.tip.hide()
-          plot.term0 = term2
+	  plot.obj.showtree4selectterm(
+	    [arg.term.id, plot.term2 ? plot.term2.id : null],
+		tr.node(),
+        (term0)=>{
+	      plot.obj.tip.hide()
+          plot.term0 = term0
           if (plot.term0.iscondition) { //!plot.settings.common.conditionParents[0]) {
             plot.settings.common.conditionParents[0] = plot.term0.id
             if (!plot.settings.common.conditionUnits[0]) {
@@ -390,8 +373,7 @@ function setDivideByOpts(plot, main, table, arg) {
           }
           main(plot)
         }
-      }
-      showtree4selectterm( _arg, tr.node() )
+      )
     } else if (d.value == "genotype") {
       // to-do
     } else if (d.value == "by_children" || d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
@@ -403,22 +385,18 @@ function setDivideByOpts(plot, main, table, arg) {
   })
 
   radio.inputs.on('click', d => {
+  // don't know where is this used???
     d3event.stopPropagation()
     if (d.value != 'tree' || d.value != plot.settings.bar.divideBy) return
-    const obj = Object.assign({},plot.obj)
-    delete obj.termfilter
-    delete obj.termfilterdiv
-    const _arg = {
-      term1: arg.term,
-      term2: plot.term0,
-      obj,
-      callback: term2=>{
-        obj.tip.hide()
-        plot.term0 = term2
+	plot.obj.showtree4selectterm(
+	  [arg.term.id, plot.term0 ? plot.term0.id : null],
+	  tr.node(),
+      term0=>{
+	    plot.obj.tip.hide()
+        plot.term0 = term0
         main(plot)
       }
-    }
-    showtree4selectterm( _arg, tr.node() )
+    )
   })
 
   plot.controls.push(() => {

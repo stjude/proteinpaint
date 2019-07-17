@@ -289,9 +289,6 @@ module.exports={
 					{ key:'gnomAD_AF_eas' },
 					{ key:'gnomAD_AF_nfe' },
 					{ key:'SJcontrol_AF' },
-					{ key:'CR' },
-					{ key:'gnomAD_CR' },
-					{ key:'SJcontrol_CR' },
 				],
 				in_use: true, // to use numerical axis by default
 				//inuse_infokey:true,

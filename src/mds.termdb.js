@@ -37,7 +37,9 @@ attach to obj{}
 
 ********************** EXPORTED
 init()
-showtree4selectterm
+menuoption_add_filter
+menuoption_select_to_gp
+menuoption_select_group_add_to_cart
 ********************** INTERNAL
 show_default_rootterm
 	display_searchbox
@@ -57,7 +59,8 @@ show_default_rootterm
 
 const tree_indent = '30px',
 	label_padding = '5px 3px 5px 1px',
-	graph_leftpad = '0px'
+	graph_leftpad = '0px',
+	button_radius = '5px'
 
 
 export async function init ( obj ) {
@@ -89,6 +92,22 @@ obj{}:
 		const lst = [ 'genome='+obj.genome.name+'&dslabel='+obj.mds.label ]
 		// maybe no need to provide term filter at this query
 		return client.dofetch2( '/termdb?'+lst.join('&')+'&'+args.join('&') )
+	}
+	obj.showtree4selectterm = ( termidlst, button, callback ) => {
+		// convenient function to be called in barchart config panel for selecting term2
+		obj.tip.clear()
+			.showunder( button )
+		const obj2 = {
+			genome: obj.genome,
+			mds: obj.mds,
+			div: obj.tip.d.append('div'),
+			default_rootterm: {},
+			modifier_click_term: {
+				disable_terms: new Set( termidlst ),
+				callback,
+			}
+		}
+		init(obj2)
 	}
 
 	try {
@@ -180,7 +199,7 @@ function update_cart_button(obj){
 			.attr('class','sja_filter_tag_btn')
 			.style('padding','6px')
 			.style('margin','0px 10px')
-			.style('border-radius','6px')
+			.style('border-radius', button_radius)
 			.style('background-color','#00AB66')
 			.style('color','#fff')
 			.text('Selected '+ obj.selected_groups.length +' Group' + (obj.selected_groups.length > 1 ?'s':''))
@@ -395,8 +414,8 @@ function may_apply_modifier_click_term ( obj, term, row ) {
 
 	const namebox = row.append('div')
 		.style('display','inline-block')
-		.style('padding','5px')
-		.style('margin-left','5px')
+		.style('padding','5px 10px')
+		//.style('margin-left','5px')
 		.text(term.name)
 
 	if( obj.modifier_click_term.disable_terms && obj.modifier_click_term.disable_terms.has( term.id ) ) {
@@ -404,11 +423,12 @@ function may_apply_modifier_click_term ( obj, term, row ) {
 		// this term is disabled, no clicking
 		namebox.style('opacity','.5')
 
-	} else if(term.isleaf) {
+	} else if(term.graph) {
 
 		// enable clicking this term
 		namebox
 			.attr('class', 'sja_menuoption')
+			.style('border-radius', button_radius)
 			.on('click',()=>{
 				obj.modifier_click_term.callback( term )
 			})
@@ -457,7 +477,7 @@ such conditions may be carried by obj
 		.style('font-size','.8em')
 		.style('margin-left','20px')
 		.style('display','inline-block')
-		.style('border-radius','5px')
+		.style('border-radius',button_radius)
 		.attr('class','sja_menuoption')
 		.text('VIEW')
 
@@ -643,11 +663,7 @@ barchart is shown in-place under term and in full capacity
 		.style('width','100px')
 		.style('display','block')
 		.attr('placeholder','Search')
-
-	if( obj.modifier_click_term ) {
-		// selecting term, set focus to the box
-		input.node().focus()
-	}
+	input.node().focus() // always focus
 
 	const table = div
 		.append('div')
@@ -658,9 +674,7 @@ barchart is shown in-place under term and in full capacity
 		.style('border-spacing','0px')
 		.style('border-collapse','separate')
 
-	// debounce: call the function once with debounce at 400ms
-
-	input.on('keyup', debounce(tree_search, 400 ))
+	input.on('keyup', debounce(tree_search, 300 ))
 
 	// helpers
 	function searchresult2clickterm ( lst ) {
@@ -672,8 +686,11 @@ barchart is shown in-place under term and in full capacity
 			if( term.graph ) {
 				// only allow selecting for graph-enabled ones
 				div.attr('class','sja_menuoption')
-				.style('margin','1px 0px 0px 0px')
-				.on('click',()=> obj.modifier_click_term.callback( term ) )
+					.style('margin','1px 0px 0px 0px')
+					.style('border-radius',button_radius)
+					.on('click',()=> {
+						obj.modifier_click_term.callback( term )
+					})
 			} else {
 				div.style('padding','5px 10px')
 				.style('opacity',.5)
@@ -816,29 +833,6 @@ barchart is shown in-place under term and in full capacity
 
 
 
-export function showtree4selectterm ( arg, button ) {
-/*
-arg{}
-.obj
-.term1
-.term2
-.callback
-*/
-	arg.obj.tip.clear()
-		.showunder( button )
-	const disable_terms = arg.term2 ? new Set([ arg.term1.id, arg.term2.id ]) : new Set([ arg.term1.id ])
-	const obj = {
-		genome: arg.obj.genome,
-		mds: arg.obj.mds,
-		div: arg.obj.tip.d.append('div'),
-		default_rootterm: {},
-		modifier_click_term: {
-			disable_terms,
-			callback: arg.callback
-		}
-	}
-	init(obj)
-}
 
 export function menuoption_add_filter ( obj, tvslst ) {
 /*
