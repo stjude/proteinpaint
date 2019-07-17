@@ -576,14 +576,25 @@ function setBinOpts(plot, main, table, termNum, label) {
   })
 
   function update_btn(){
+  
     if(bin_term.isfloat || bin_term.isinteger ){
-      if(bin_term.graph.barchart.numeric_bin.auto_bins){
+      if(plot.custom_bins[termNum.slice(-1)]){
+        bin_size_btn.text(plot.custom_bins[termNum.slice(-1)].size + ' ' + (bin_term.unit?bin_term.unit:''))
+        first_bin_btn.text('EDIT')
+        last_bin_btn.text('EDIT')
+
+        //define first, last bin range and custom_bin
+        // first_bin_range = { start : auto_bins.start_value , stop: (auto_bins.start_value + plot.custom_bins[termNum.slice(-1)].size)}
+        // last_bin_range = { start: '', stop: ''}
+        custom_bin_size = plot.custom_bins[termNum.slice(-1)]
+
+      }else if(bin_term.graph.barchart.numeric_bin.auto_bins){
         const auto_bins = bin_term.graph.barchart.numeric_bin.auto_bins
         bin_size_btn.text(auto_bins.bin_size + ' ' + (bin_term.unit?bin_term.unit:''))
         first_bin_btn.text('EDIT')
         last_bin_btn.text('EDIT')
   
-        //define first and last bin range
+        //define first, last bin range and custom_bin
         first_bin_range = { start : auto_bins.start_value , stop: (auto_bins.start_value + auto_bins.bin_size)}
         last_bin_range = { start: '', stop: ''}
         custom_bin_size = { size: auto_bins.bin_size }
@@ -594,7 +605,7 @@ function setBinOpts(plot, main, table, termNum, label) {
         first_bin_btn.text(fixed_bins[0].label + ' ' + (bin_term.unit?bin_term.unit:''))
         last_bin_btn.text(fixed_bins[fixed_bins.length-1].label + ' ' + (bin_term.unit?bin_term.unit:''))
         
-        //define first and last bin range
+        //define first, last bin range and custom_bin
         first_bin_range = fixed_bins[0]
         last_bin_range = fixed_bins[fixed_bins.length-1]
         custom_bin_size = { size: ''}
