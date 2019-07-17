@@ -11,12 +11,16 @@ import * as client from './client'
 // to be used to disambiguate between input names
 const plots = []
 
+
+const panel_bg_color = '#EBFFEF'
+const panel_border_color = '#C5E2CC'
+const panel_row_alt_color = 'white'
+
 export function controls(arg, plot, main) {
   plot.config_div = arg.holder.append('div')
     .style('display','inline-block')
     .style('vertical-align','top')
     .style('margin', '8px')
-    .style('padding', '10px 15px 15px 15px')
 
   // controlsIndex to be used to assign unique radio input names
   // by config div
@@ -26,6 +30,7 @@ export function controls(arg, plot, main) {
   // label
   plot.config_div.append('div').append('button')
     .style('color', '#333')
+	.style('margin','10px')
     .style('font-size', '14px')
     .style('cursor', 'pointer')
     .html('CONFIG')
@@ -33,7 +38,9 @@ export function controls(arg, plot, main) {
       plot.controls.forEach(update => update())
       const display = tip.style('display')
       tip.style('display', display == "none" ? "inline-block" : "none")
-      plot.config_div.style('background', display == "none" ? 'rgb(245,245,220)' : "")
+      plot.config_div
+	  	.style('background', display == "none" ? panel_bg_color : "")
+	  	.style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
     })
 
   const tip = plot.config_div.append('div').style("display","none")
@@ -64,7 +71,7 @@ export function controls(arg, plot, main) {
   function altRowColors(d,i){
     d3select(this).selectAll('td')
     //.style('border-top', i !== 0 ? '1px solid #ccc' : '')
-    .style('background-color', i%2 == 0 ? '' : '#eee')
+    .style('background-color', i%2 == 0 ? panel_row_alt_color : '')
   }
 }
 
