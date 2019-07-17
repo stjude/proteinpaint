@@ -19,6 +19,7 @@ sample_match_termvaluesetting
 get_columnidx_byterms
 wrap_validate_termvaluesetting
 set_querymode
+	get_pop2average
 query_vcf_applymode
 getallelecount_samplegroup_vcfline
 vcfbyrange_collect_result
@@ -32,7 +33,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 
 
-exports.handle_ssidbyonem =  async ( q, genome, ds, result ) => {
+export async function handle_ssidbyonem ( q, genome, ds, result ) {
 /*
 ssid: sample set id
 get ssid by one m from vcf
@@ -98,7 +99,7 @@ get ssid by one m from vcf
 
 
 
-exports.handle_vcfbyrange = async ( q, genome, ds, result ) => {
+export async function handle_vcfbyrange ( q, genome, ds, result ) {
 /*
 for range query
 
@@ -246,30 +247,40 @@ generate the "querymode" object that drives subsequent queries
 
 
 function get_pop2average ( popsets, columnidx, ds, vcftk ) {
-	// to get population admix average for this subset of samples, initiate 0 for each population
+/*
+using adjust race, when combining a population and a termdb group
+for the set of samples defined by termdb,
+get population admix average, initiate 0 for each population
+
+popsets:
+	.sets[] from the population
+
+columnidx:
+
+ds:
+vcftk
+*/
 	const pop2average = new Map()
+	let poptotal = 0 // sum for all sets, across all samples
 	for(const p of popsets) {
-		pop2average.set(
-			p.key,
-			{
-				infokey_AC: p.infokey_AC,
-				infokey_AN: p.infokey_AN,
-				average: 0
-			}
-		)
-	}
-	let poptotal = 0 // sum for all sets
-	// sum up admix for everybody from this set
-	for(const idx of columnidx) {
-		const samplename = vcftk.samples[idx].name
-		const anno = ds.cohort.annotation[ samplename ]
-		if( !anno ) continue
-		for(const p of popsets) {
-			const v = anno[ p.key ]
-			if(!Number.isFinite(v)) continue
-			pop2average.get( p.key ).average += v
-			poptotal += v
+		const o = {
+			infokey_AC: p.infokey_AC,
+			infokey_AN: p.infokey_AN,
+			average: 0
 		}
+
+		// for this race grp, issue one query to get percentage value of all samples, and sum up
+		const lst = termdbsql.get_rows({ ds, term1_id: p.key })
+		for(const i of lst) {
+			if(!ds.track.vcf.sample2arrayidx.has( i.sample )) continue
+			const v = Number(i.key1)
+			if(Number.isFinite(v)) {
+				o.average += v
+				poptotal += v
+			}
+		}
+
+		pop2average.set( p.key, o )
 	}
 	// after sum, make average
 	for(const [k,v] of pop2average) {
@@ -392,7 +403,7 @@ function make_mockblock ( r ) {
 
 
 
-exports.handle_getcsq =  async ( q, genome, ds, result ) => {
+export async function handle_getcsq ( q, genome, ds, result ) {
 /*
 get csq from one variant
 */
@@ -739,7 +750,7 @@ function wrap_validate_termvaluesetting ( terms, where ) {
 
 
 
-function sample_match_termvaluesetting ( sanno, terms, ds ) {
+export function sample_match_termvaluesetting ( sanno, terms, ds ) {
 /* for AND, require all terms to match
 ds is for accessing patient_condition
 */
@@ -805,7 +816,6 @@ ds is for accessing patient_condition
 	// using OR
 	return numberofmatchedterms > 0
 }
-exports.sample_match_termvaluesetting = sample_match_termvaluesetting
 
 
 let testi = 0
