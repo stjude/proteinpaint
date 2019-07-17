@@ -171,6 +171,7 @@ rl.on('close',()=>{
 		//console.log(patient+'\t'+JSON.stringify(o2))
 	}
 	console.error(patient2condition.size+' patients, '+conditions.size+' conditions, '+numberofevents+' events')
+	/*
 
 	for(const [w,o] of L1words) {
 		console.error('L1',w)
@@ -196,4 +197,5 @@ rl.on('close',()=>{
 			console.error('\tgrade '+g+': '+c)
 		}
 	}
+	*/
 })
