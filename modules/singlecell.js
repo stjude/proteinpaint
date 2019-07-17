@@ -168,7 +168,7 @@ may attach coloring scheme to result{} for returning to client
 
 		await utils.get_lines_tabix( [ge.file,coord], null, line=>{
 			const j = JSON.parse( line.split('\t')[3] )
-			if(j.gene != ge.genename) return
+			if(j.gene.toLowerCase() != ge.genename.toLowerCase()) return
 			if(!Number.isFinite( j.value )) return
 			result.numbercellwithgeneexp++
 
