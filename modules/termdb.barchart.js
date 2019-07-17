@@ -1037,5 +1037,5 @@ arguments:
       if(!href.has(sample)) AC++
     }
   }
-  return AN==0 ? 0 : (AC/AN).toFixed(3)
+  return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
 }
