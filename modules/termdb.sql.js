@@ -295,7 +295,7 @@ index
 	const termnum_id = 'term' + index + '_id'
 	const termid = q[termnum_id]
 	const term = termid ? q.ds.cohort.termdb.q.termjsonByOneid( termid ) : null; //console.log('term'+ index, term)
-	if (termid && !term) throw `unknown term${index}: ${termid}`
+	if (termid && !term && termid != 'genotype') throw `unknown ${termnum_id}: ${termid}`
 	const termnum_q = 'term' + index + '_q'
 	const termq = q[termnum_q]
 	if(termq && typeof termq == 'string' ) q[termnum_q] = JSON.parse(decodeURIComponent(termq))	
@@ -303,10 +303,11 @@ index
 	if (index == 2) q[termnum_q].isterm2 = true
 
 	const tablename = 'samplekey_' + index
+	const keyval = termid == 'genotype' ? termid : ""
 	const CTE = term
 		? makesql_overlay_oneterm( term, filter, q.ds, q[termnum_q], values, "_" + index)
 		: {
-				sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
+				sql: `${tablename} AS (\nSELECT null AS sample, '${keyval}' as key, '${keyval}' as value\n)`,
 				tablename,
 				join_on_clause: '' //`ON t${index}.sample IS NULL`
 			}

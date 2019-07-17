@@ -5,6 +5,16 @@ const serverconfig = require("../serverconfig")
 const Partjson = require('../modules/partjson')
 const request = require("request")
 const tape = require("tape")
+const fs = require('fs')
+const path = require('path')
+
+const ssid = 'genotype-test.txt'
+const src = path.join('./test/testdata', ssid)
+const dest = path.join(serverconfig.cachedir,'ssid',ssid); console.log(dest)
+fs.copyFileSync(src, dest, (err) => {
+  if (err) throw err;
+});
+
 /* helper functions are found below after the tests */
 
 tape("\n", function(test) {
@@ -132,7 +142,7 @@ tape("filters", function (test) {
 })
 
 tape("categorical term1", function (test) {
-  test.plan(6)
+  test.plan(7)
 
   compareResponseData(
     test, 
@@ -196,6 +206,19 @@ tape("categorical term1", function (test) {
       }]
     },
     "filtered sample counts by diagnosis groups, leaf condition overlay"
+  )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'diaggrp',
+      term2: 'genotype',
+      ssid,
+      mname: 'T>C',
+      chr: 'chr17',
+      pos: 7666870,
+    },
+    "sample counts by diagnosis group, genotype overlay"
   )
 })
 
@@ -569,10 +592,10 @@ function compareResponseData(test, params, mssg) {
   // for debugging result data, set i < j to slice chart.serieses
   const i=0, j=0, k=0;
   const url0 = getSqlUrl(params);
-  if (k == -1 || i!==j) console.log(url0)
 
   request(url0, (error,response,body)=>{
     if(error) {
+      console.log(url0)
       test.fail(error)
     }
     switch(response.statusCode) {
@@ -580,9 +603,9 @@ function compareResponseData(test, params, mssg) {
         const data0 = JSON.parse(body);
         // reshape sql results in order to match
         // the compared results
-        let charts
+        let dataCharts
         if (process.argv[3]) {
-          charts = data0.charts
+          dataCharts = data0
         } else {
           const pj = new Partjson({
             data: data0.lst,
@@ -590,18 +613,22 @@ function compareResponseData(test, params, mssg) {
             template,
             "=": externals
           })
-          charts = pj.tree.results.charts
+          dataCharts = pj.tree.results
         } 
-        const summary0 = normalizeCharts(charts, data0)
+        const summary0 = normalizeCharts(data0)
         
         // get an alternatively computed results
         // for comparing against sql results
         const url1 = getBarUrl(params);
-        if (k==-1 || i !== j) console.log(url1)
 
         request(url1, (error,response,body1)=>{
+          if(error) {
+            console.log(url1)
+            test.fail(error)
+            return
+          }
           const data1 = JSON.parse(body1)
-          const summary1 = normalizeCharts(data1.charts, data1)
+          const summary1 = normalizeCharts(data1)
           const sqlSummary = k == -1
             ? summary0
             : i !== j 
@@ -612,54 +639,87 @@ function compareResponseData(test, params, mssg) {
             : i !== j 
             ? summary1.charts[k].serieses.slice(i,j) 
             : summary1
-          if (k == -1 || i!==j) console.log(JSON.stringify(sqlSummary),'\n','-----','\n',JSON.stringify(barSummary))
 
-          if(error) {
-            test.fail(error)
-          }
           switch(response.statusCode) {
           case 200:
+            const extra = k == -1 || i!==j 
+              ? '\n\n' + url0 +'\n----\n' + url1 + '\n' + JSON.stringify(sqlSummary) + '\n-----\n' + JSON.stringify(barSummary) 
+              : ''
             test.deepEqual(
               sqlSummary,
               barSummary,
-              mssg
+              mssg + extra
             )
           break;
           default:
+            console.log(url1)
             test.fail("invalid status")
           }
         })
         break;
       default:
+        console.log(url0)
         test.fail("invalid status")
     }
   })
 }
 
 const sqlBasePath = process.argv[3] ? process.argv[3] : '/termdb?&testplot=1'
+const sqlParamsReformat = {
+  rename: {
+    term0: 'term0_id',
+    term1: 'term1_id',
+    term2: 'term2_id',
+    filter: 'tvslst'
+  },
+  json: ['term0_q', 'term1_q', 'term2_q', 'tvslst']
+}
 
-function getSqlUrl(params) {
-  return "http://localhost:" + serverconfig.port
+function getSqlUrl(_params={}) {
+  const params = Object.assign({},_params)
+  let url = "http://localhost:" + serverconfig.port
     + sqlBasePath
     + "&genome=hg38"
     + "&dslabel=SJLife"
-    + '&term1_id=' + params.term1
-    + (params.term1_q ? '&term1_q=' + encodeURIComponent(JSON.stringify(params.term1_q)) : '')
-    + (params.term2 ? '&term2_id=' + params.term2 : '')
-    + (params.term2_q ? '&term2_q=' + encodeURIComponent(JSON.stringify(params.term2_q)) : '')
-    + (params.filter ? '&tvslst='+encodeURIComponent(JSON.stringify(params.filter)) : '')
+
+  for(const key in params) {
+    if(key in sqlParamsReformat.rename) {
+      params[sqlParamsReformat.rename[key]] = params[key]
+      delete params[key]
+    }
+  }
+  for(const key in params) {
+    if (sqlParamsReformat.json.includes(key)) {
+      url += `&${key}=${encodeURIComponent(JSON.stringify(params[key]))}`
+    } else {
+      url += `&${key}=${params[key]}`
+    }
+  }
+
+  return url
 }
 
-function getBarUrl(params) {
-  return "http://localhost:" + serverconfig.port
+const barParamsReformat = {
+  sep: ['conditionUnits', 'conditionParents'],
+  json: ['filter','custom_bins']
+}
+
+function getBarUrl(_params) {
+  const params = Object.assign({filter: [], custom_bins: {}}, _params)
+  let url = "http://localhost:" + serverconfig.port
     + "/termdb-barchart?genome=hg38"
     + "&dslabel=SJLife"
-    + "&term1=" + params.term1
-    + (params.term2 ? "&term2=" + params.term2 : '')
-    + (params.conditionUnits ? "&conditionUnits=" + params.conditionUnits.join("-,-") : '')
-    + (params.conditionParents ? "&conditionParents=" + params.conditionParents.join("-,-") : '')
-    + "&filter=" + encodeURIComponent(JSON.stringify(params.filter ? params.filter : []))
-    + "&custom_bins=" + encodeURIComponent(JSON.stringify(params.customBins ? params.customBins : {}))
+  
+  for(const key in params) {
+    if (barParamsReformat.sep.includes(key)) {
+      url += `&${key}=${params[key].join("-,-")}`
+    } else if (barParamsReformat.json.includes(key)) {
+      url += `&${key}=${encodeURIComponent(JSON.stringify(params[key]))}`
+    } else {
+      url += `&${key}=${params[key]}`
+    }
+  }
+  return url
 }
 
 const template = JSON.stringify({
@@ -727,7 +787,12 @@ const externals = {
   }
 }
 
-function normalizeCharts(charts, data) {
+function normalizeCharts(data) {
+  const charts = data.charts
+  if (!charts) {
+    return {charts: [{serieses:[]}]}
+  }
+
   charts.forEach(onlyComparableChartKeys)
   sortResults(charts)
   const summary = {charts}
@@ -781,7 +846,6 @@ function onlyComparableChartKeys(chart) {
 
 function onlyComparableSeriesKeys(series) {
   delete series.max
-  delete series.summaryByDataId
 }
 
 function sortResults(charts) {

@@ -65,12 +65,19 @@ async function barchart_data ( q, ds, res, tdb ) {
 */
   if(!ds.cohort) throw 'cohort missing from ds'
   q.ds = ds
+
+  if (q.ssid) {
+    const [genotypeBySample, genotype2sample] = await load_genotype_by_sample(q.ssid)
+    q.genotypeBySample = genotypeBySample
+    q.genotype2sample = genotype2sample
+  }
+
   // if(!ds.cohort.annorows) throw `cohort.annorows is missing`
   // request-specific variables
   const startTime = +(new Date())
   const rows = get_rows(q)
   const sqlDone = +(new Date())
-  const pj = getPj(q, rows, tdb)
+  const pj = getPj(q, rows, tdb, ds)
   if (pj.tree.results) {
     pj.tree.results.times = {
       sql: sqlDone - startTime,
@@ -94,76 +101,92 @@ const template = JSON.stringify({
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
       serieses: [{
         seriesId: "@key",
-        "~samples": ["$sample", "set"],
         data: [{
           dataId: "@key",
           "~samples": ["$sample", "set"],
           "__:total": "=sampleCount()",
         }, "$key2"],
         "_:_max": "$val2", // needed by client-side boxplot renderer 
-        "~_:_values": ["$nval2",0],
-        "~_:_sum": "+$nval2",
+        "~values": ["$nval2",0],
+        "~sum": "+$nval2",
+        "~samples": ["$sample", "set"],
         "__:total": "=sampleCount()",
-        "__:boxplot": "=boxplot()"
+        "__:boxplot": "=boxplot()",
+        "__:AF": "=getAF()",
       }, "$key1"],
-      "@done()": "=filterEmptySeries()"
+      //"@done()": "=filterEmptySeries()"
     }, "$key0"],
     "~sum": "+$nval1",
     "~values": ["$nval1",0],
-    "__:boxplot": "=boxplot()"
+    "__:boxplot": "=boxplot()",
     /*"_:_unannotated": {
       label: "",
       label_unannotated: "",
       value: "+=unannotated()",
       value_annotated: "+=annotated()"
-    },
+    },*/
     "_:_refs": {
-      cols: ["&series.id[]"],
+      cols: ["$key1"],
       colgrps: ["-"], 
-      rows: ["&data.id[]"],
+      rows: ["$key2"],
       rowgrps: ["-"],
       col2name: {
-        "&series.id[]": {
+        "$key1": {
           name: "@branch",
           grp: "-"
         }
       },
       row2name: {
-        "&data.id[]": {
+        "$key2": {
           name: "@branch",
           grp: "-"
         }
-      },
+      }, /*
       "__:useColOrder": "=useColOrder()",
       "__:useRowOrder": "=useRowOrder()",
       "__:unannotatedLabels": "=unannotatedLabels()",
       "__:bins": "=bins()",
       "__:grade_labels": "=grade_labels()",
-      "@done()": "=sortColsRows()"
-    }*/
+      "@done()": "=sortColsRows()" */
+    }
   }
 })
 
-function getPj(q, data, tdb) { 
+function getPj(q, data, tdb, ds) { 
 /*
   q: objectified URL query string
   inReq: request-specific closured functions and variables
   data: rows of annotation data
 */
   const joinAliases = ["chart", "series", "data"]
-  const term0isAnnoVal = getIsAnnoValFxn(q, tdb, 0) 
-  const term1isAnnoVal = getIsAnnoValFxn(q, tdb, 1)
-  const term2isAnnoVal = getIsAnnoValFxn(q, tdb, 2)
-
+  const kva = [0,1,2].map(i=>{
+    return {
+      key: 'key'+i, 
+      val: 'val'+i,
+      nval: 'nval'+i,
+      isAnnoVal: getIsAnnoValFxn(q, tdb, i)
+    }
+  })
+let i=0
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
     template,
     "=": {
       prep(row) {
-        if (term0isAnnoVal(row.val0)) row.nval0 = row.val0 
-        if (term1isAnnoVal(row.val1)) row.nval1 = row.val1
-        if (term2isAnnoVal(row.val2)) row.nval2 = row.val2
+        // mutates the data row, ok since
+        // rows from db query are unique to request;
+        // do not do this with ds.cohort.annorows, 
+        // use partjson @join() instead 
+        for(const d of kva) {
+          if (row[d.key] == 'genotype') {
+            if (!(row.sample in q.genotypeBySample)) return
+            row[d.key] = q.genotypeBySample[row.sample]
+            row[d.val] = q.genotypeBySample[row.sample]
+          } else if (d.isAnnoVal(row[d.val])) {
+            row[d.nval] = row[d.val]
+          }
+        }
         return true
       },
       sampleCount(row, context) {
@@ -200,6 +223,25 @@ function getPj(q, data, tdb) {
         stat.sd = Math.sqrt( s / (values.length-1) )
         return stat
       },
+      getAF(row, context) {
+        // only get AF when termdb_bygenotype.getAF is true
+        if ( !ds.track
+          || !ds.track.vcf
+          || !ds.track.vcf.termdb_bygenotype
+          || !ds.track.vcf.termdb_bygenotype.getAF
+        ) return
+        if (q.term2_id != 'genotype') return
+        if (!q.chr) throw 'chr missing for getting AF'
+        if (!q.pos) throw 'pos missing for getting AF'
+        
+        return get_AF(
+          context.self.samples ? [...context.self.samples] : [],
+          q.chr,
+          Number(q.pos),
+          q.genotype2sample,
+          ds
+        )
+      },
       filterEmptySeries(result) {
         const nonempty = result.serieses.filter(series=>series.total)
         result.serieses.splice(0, result.serieses.length, ...nonempty)
@@ -218,7 +260,7 @@ function getPj(q, data, tdb) {
 function getIsAnnoValFxn(q, tdb, index) {
   const termnum_id = 'term'+ index + '_id'
   const termid = q[termnum_id]
-  const term = termid ? tdb.termjson.map.get(termid) : {}
+  const term = termid && termid != 'genotype' ? tdb.termjson.map.get(termid) : {}
   const termIsNumeric = term.isinteger || term.isfloat
   const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin 
     ? term.graph.barchart.numeric_bin
@@ -237,24 +279,28 @@ async function load_genotype_by_sample ( id ) {
   const bySample = Object.create(null)
   const genotype2sample = new Map()
   for(const line of text.split('\n')) {
+    if (!line) continue
     const [type, samplesStr] = line.split('\t')
+    if (!samplesStr) continue
     const samples = samplesStr.split(",")
     for(const sample of samples) {
       bySample[sample] = type
     }
-  if( type=='Homozygous reference') {
-      genotype2sample.set('href', new Set(samples))
-  } else if( type=='Homozygous alternative') {
-      genotype2sample.set('halt', new Set(samples))
-  } else {
-      genotype2sample.set('het', new Set(samples))
-  }
+
+    if(!genotype_type_set.has(type)) throw 'unknown hardcoded genotype label: '+type
+    genotype2sample.set(type, new Set(samples))
   }
   return [bySample, genotype2sample]
 }
 
+const genotype_type_set = new Set(["Homozygous reference","Homozygous alternative","Heterozygous"])
+const genotype_types = {
+  href: "Homozygous reference",
+  halt: "Homozygous alternative",
+  het: "Heterozygous"
+}
 
-function get_AF ( samples, chr, genotype2sample, ds ) {
+function get_AF ( samples, chr, pos, genotype2sample, ds ) {
 /*
 as configured by ds.track.vcf.termdb_bygenotype,
 at genotype overlay of a barchart,
@@ -262,43 +308,47 @@ to show AF=? for each bar, based on the current variant
 
 arguments:
 - samples[]
-  list of samples from a bar
+  list of sample names from a bar
 - chr
   chromosome of the variant
-- genotype2sample MAP
-  k: het, href, halt
-  v: set of samples
+- genotype2sample Map
+    returned by load_genotype_by_sample()
 - ds{}
 */
   const afconfig = ds.track.vcf.termdb_bygenotype // location of configurations
-
+  const href = genotype2sample.has(genotype_types.href) ? genotype2sample.get(genotype_types.href) : new Set()
+  const halt = genotype2sample.has(genotype_types.halt) ? genotype2sample.get(genotype_types.halt) : new Set()
+  const het = genotype2sample.has(genotype_types.het) ? genotype2sample.get(genotype_types.het) : new Set()
   let AC=0, AN=0
-
-  if( afconfig.sex_chrs.has( chr ) ) {
-    // sex chr
-  for(const s of samples) {
-    if( afconfig.male_samples.has( s )) {
-      AN++
-    if(!genotype2sample.href.has(s)) AC++
-    } else {
-      AN+=2
-      if( genotype2sample.halt.has( s ) ) {
-        AC+=2
-      } else if(genotype2sample.het.has( s )) {
-        AC++
+  for(const sample of samples) {
+    let isdiploid = false
+    if( afconfig.sex_chrs.has( chr ) ) {
+      if( afconfig.male_samples.has( sample ) ) {
+        if( afconfig.chr2par && afconfig.chr2par[chr] ) {
+          for(const par of afconfig.chr2par[chr]) {
+            if(pos>=par.start && pos<=par.stop) {
+              isdiploid=true
+              break
+            }
+          }
         }
-    }
-  }
-  } else {
-    // autosome
-  for(const s of samples) {
-    AN+=2
-    if( genotype2sample.halt.has( s ) ) {
-      AC+=2
-    } else if(genotype2sample.het.has( s )) {
-      AC++
+      } else {
+        isdiploid=true
       }
-  }
+    } else {
+      isdiploid=true
+    }
+    if( isdiploid ) {
+      AN+=2
+      if(halt.has( sample ) ) {
+        AC+=2
+      } else if(het.has( sample )) {
+        AC++
+      }
+    } else {
+      AN++
+      if(!href.has(sample)) AC++
+    }
   }
   return AN==0 ? 0 : (AC/AN).toFixed(3)
 }

@@ -121,13 +121,7 @@ const template = JSON.stringify({
         "~_:_sum": "+=getDataVal()",
         "__:boxplot": "=boxplot2()",
         "__:AF": "=getAF()",
-        "~samples": ["$sjlid", "set"],
-        "_:_summaryByDataId": {
-          "&data.id[]": {
-            "~samples": ["$sjlid", "set"],
-            "__:numSamples": "=numSamples()",
-          }
-        }
+        "~samples": ["$sjlid", "set"]
       }, "&series.id[]"],
       "@done()": "=filterEmptySeries()"
     }, "&chart.id[]"],
@@ -274,21 +268,23 @@ function getPj(q, inReqs, data, tdb, ds) {
         return context.self.samples.size
       },
       getAF(row, context) {
-		// only get AF when termdb_bygenotype.getAF is true
-	    if ( !ds.track
-		  || !ds.track.vcf
-		  || !ds.track.vcf.termdb_bygenotype
-		  || !ds.track.vcf.termdb_bygenotype.getAF ) return
+		    // only get AF when termdb_bygenotype.getAF is true
+  	    if ( !ds.track
+  		    || !ds.track.vcf
+  		    || !ds.track.vcf.termdb_bygenotype
+  		    || !ds.track.vcf.termdb_bygenotype.getAF
+        ) return
         if (q.term2 != 'genotype') return
-		if (!q.chr) throw 'chr missing for getting AF'
-		if (!q.pos) throw 'pos missing for getting AF'
+		    if (!q.chr) throw 'chr missing for getting AF'
+		    if (!q.pos) throw 'pos missing for getting AF'
+        
         return get_AF(
-			[...context.self.samples],
-			q.chr,
-			Number(q.pos),
-			context.self.summaryByDataId, // where is this defined? it should be genotype2sample returned by load_genotype_by_sample()
-			ds
-			)
+          context.self.samples ? [...context.self.samples] : [],
+          q.chr,
+          Number(q.pos),
+          inReqs.genotype2sample,
+          ds
+        )
       },
       filterEmptySeries(result) {
         const nonempty = result.serieses.filter(series=>series.total)
@@ -386,6 +382,7 @@ async function setValFxns(q, inReqs, ds, tdb) {
     if (key == "genotype") {
       if (!q.ssid) throw `missing ssid for genotype`
       const [bySample, genotype2sample] = await load_genotype_by_sample(q.ssid)
+      inReqs.genotype2sample = genotype2sample
       const skey = ds.cohort.samplenamekey
       inReq.joinFxns[key] = row => bySample[row[skey]]
       continue
@@ -1001,19 +998,21 @@ arguments:
 	list of sample names from a bar
 - chr
 	chromosome of the variant
-- genotype2sample {}
+- genotype2sample Map
     returned by load_genotype_by_sample()
 - ds{}
 */
-  // hardcode genotype labels, for now
   const afconfig = ds.track.vcf.termdb_bygenotype // location of configurations
-
+  const href = genotype2sample.has(genotype_types.href) ? genotype2sample.get(genotype_types.href) : new Set()
+  const halt = genotype2sample.has(genotype_types.halt) ? genotype2sample.get(genotype_types.halt) : new Set()
+  const het = genotype2sample.has(genotype_types.het) ? genotype2sample.get(genotype_types.het) : new Set()
+  let AC=0, AN=0
   for(const sample of samples) {
     let isdiploid = false
-	if( afconfig.sex_chrs.has( chr ) ) {
-	  if( afconfig.male_samples.has( sample ) ) {
-	    if( afconfig.chr2par && afconfig.chr2par[chr] ) {
-	      for(const par of afconfig.chr2par[chr]) {
+    if( afconfig.sex_chrs.has( chr ) ) {
+      if( afconfig.male_samples.has( sample ) ) {
+        if( afconfig.chr2par && afconfig.chr2par[chr] ) {
+          for(const par of afconfig.chr2par[chr]) {
             if(pos>=par.start && pos<=par.stop) {
               isdiploid=true
               break
@@ -1023,20 +1022,20 @@ arguments:
       } else {
         isdiploid=true
       }
-	} else {
-	  isdiploid=true
-	}
-	if( isdiploid ) {
-	  AN+=2
-	  if(genotype2sample[labels.halt] && genotype2sample[labels.halt].samples.has( s ) ) {
-	    AC+=2
-	  } else if(genotype2sample[labels.het] && genotype2sample[labels.het].samples.has( s )) {
-	    AC++
-  	  }
-	} else {
-	  AN++
-	  if(!genotype2sample.href.has(s)) AC++
-	}
+    } else {
+      isdiploid=true
+    }
+    if( isdiploid ) {
+      AN+=2
+      if(halt.has( sample ) ) {
+        AC+=2
+      } else if(het.has( sample )) {
+        AC++
+    	}
+    } else {
+      AN++
+      if(!href.has(sample)) AC++
+    }
   }
   return AN==0 ? 0 : (AC/AN).toFixed(3)
 }

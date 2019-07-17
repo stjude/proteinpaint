@@ -753,6 +753,7 @@ class Partjson {
     r.steps = i.filter(e => e.length)
   }
   add(e, t = !0) {
+    if (!this.times.start) this.times.start = +new Date()
     t && this.errors.clear(), this.joins.clear()
     for (const t of e)
       this.processRow(t, this.template, this.tree), this.joins.clear()
@@ -763,6 +764,7 @@ class Partjson {
     for (const e of this.done) e.done(e.self, e)
     for (const [e, t] of this.temps) for (const s of t) delete e[s]
     ;(this.times.total = +new Date() - this.times.start), t && this.errors.log()
+    delete this.times.start
   }
   processRow(e, t, s) {
     const r = this.contexts.get(s),
