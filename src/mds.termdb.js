@@ -57,7 +57,7 @@ show_default_rootterm
 
 const tree_indent = '30px',
 	label_padding = '5px 3px 5px 1px',
-	graph_leftpad = '10px'
+	graph_leftpad = '0px'
 
 
 export async function init ( obj ) {
@@ -354,7 +354,7 @@ try to keep the logic clear
 	if(arg.flicker) {
 		label.style('background-color','yellow')
 			.transition()
-			.duration(2000)
+			.duration(4000)
 			.style('background-color','transparent')
 	}
 
@@ -469,15 +469,13 @@ such conditions may be carried by obj
 
 	const div = row_graph.append('div')
 		.style('border','solid 1px #aaa')
-		.style('margin-left', graph_leftpad)
 		.style('margin-bottom','10px')
 		.style('display','none')
 
 	const plot_loading_div = div.append('div')
 		.style('padding','10px')
-		.text('Loading')
+		.text('Loading...')
 		.style('text-align','center')
-		.style('display','none')
 
 	let loaded =false,
 		loading=false
@@ -491,13 +489,10 @@ such conditions may be carried by obj
 			view_btn_line.style('display','none')
 		}
 		if( loaded || loading ) return
-		button.text('Loading')
-		button.style('border','solid 1px #555')
+		button.style('border','solid 1px #aaa')
 		loading=true
-		if(loading == true) plot_loading_div.style('display','block')
 		make_barplot( obj, term, div, ()=> {
-			plot_loading_div.style('display','none')
-			button.text('VIEW')
+			plot_loading_div.remove()
 			loaded=true
 			loading=false
 		})
