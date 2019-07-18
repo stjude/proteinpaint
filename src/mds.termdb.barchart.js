@@ -493,9 +493,9 @@ export class TermdbBarchart{
             self.main()
           }
           if (d.type == 'row') {
-            const i = self.settings.exclude.rows.indexOf(d.id)
+            const i = self.settings.exclude.rows.indexOf(d.dataId)
             if (i == -1) {
-              self.settings.exclude.rows.push(d.id)
+              self.settings.exclude.rows.push(d.dataId)
             } else {
               self.settings.exclude.rows.splice(i,1)
             }

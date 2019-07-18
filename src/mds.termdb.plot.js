@@ -125,7 +125,7 @@ arg: server returned data
 // client 
 const serverData = {}
 
-function main(plot, callback = ()=>{}) { console.log(plot)
+function main(plot, callback = ()=>{}) {
   const dataName = getDataName(plot)
   if (serverData[dataName]) {
     render(plot, serverData[dataName])
