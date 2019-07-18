@@ -660,6 +660,7 @@ barchart is shown in-place under term and in full capacity
 	const input = div
 		.append('input')
 		.attr('type','search')
+		.attr('class','tree_search')
 		.style('width','100px')
 		.style('display','block')
 		.attr('placeholder','Search')
@@ -674,7 +675,7 @@ barchart is shown in-place under term and in full capacity
 		.style('border-spacing','0px')
 		.style('border-collapse','separate')
 
-	input.on('keyup', debounce(tree_search, 300 ))
+	input.on('input', debounce(tree_search, 300 ))
 
 	// helpers
 	function searchresult2clickterm ( lst ) {
