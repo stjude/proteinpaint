@@ -212,7 +212,7 @@ tape("categorical term1", function (test) {
     test,
     {
       term1: 'diaggrp',
-      term2: 'genotype',
+      term2_is_genotype: 1,
       ssid,
       mname: 'T>C',
       chr: 'chr17',
@@ -680,6 +680,12 @@ const sqlParamsReformat = {
     term2: 'term2_id',
     filter: 'tvslst'
   },
+  asis: [
+    'term0_id', 'term0_is_genotype',
+    'term1_id', 'term1_is_genotype',
+    'term2_id', 'term2_is_genotype',
+    'ssid', 'chr', 'pos', 'mname'
+  ],
   json: ['term0_q', 'term1_q', 'term2_q', 'tvslst']
 }
 
@@ -699,7 +705,7 @@ function getSqlUrl(_params={}) {
   for(const key in params) {
     if (sqlParamsReformat.json.includes(key)) {
       url += `&${key}=${encodeURIComponent(JSON.stringify(params[key]))}`
-    } else {
+    } else if (sqlParamsReformat.asis.includes(key)) {
       url += `&${key}=${params[key]}`
     }
   }
@@ -708,6 +714,12 @@ function getSqlUrl(_params={}) {
 }
 
 const barParamsReformat = {
+  asis: [
+    'term0', 'term0_is_genotype',
+    'term1', 'term1_is_genotype',
+    'term2', 'term2_is_genotype',
+    'ssid', 'chr', 'pos', 'mname'
+  ],
   sep: ['conditionUnits', 'conditionParents'],
   json: ['filter','custom_bins']
 }
@@ -723,7 +735,7 @@ function getBarUrl(_params) {
       url += `&${key}=${params[key].join("-,-")}`
     } else if (barParamsReformat.json.includes(key)) {
       url += `&${key}=${encodeURIComponent(JSON.stringify(params[key]))}`
-    } else {
+    } else if (barParamsReformat.asis.includes(key)) {
       url += `&${key}=${params[key]}`
     }
   }

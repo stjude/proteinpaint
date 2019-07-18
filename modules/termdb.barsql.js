@@ -165,6 +165,7 @@ function getPj(q, data, tdb, ds) {
       key: 'key'+i, 
       val: 'val'+i,
       nval: 'nval'+i,
+      isGenotype: 'term' + i + '_is_genotype',
       isAnnoVal: getIsAnnoValFxn(q, tdb, i)
     }
   })
@@ -180,7 +181,7 @@ function getPj(q, data, tdb, ds) {
         // do not do this with ds.cohort.annorows, 
         // use partjson @join() instead 
         for(const d of kva) {
-          if (row[d.key] == 'genotype') {
+          if (q[d.isGenotype]) {
             if (!(row.sample in q.genotypeBySample)) return
             row[d.key] = q.genotypeBySample[row.sample]
             row[d.val] = q.genotypeBySample[row.sample]
@@ -231,7 +232,7 @@ function getPj(q, data, tdb, ds) {
           || !ds.track.vcf.termdb_bygenotype
           || !ds.track.vcf.termdb_bygenotype.getAF
         ) return
-        if (q.term2_id != 'genotype') return
+        if (!q.term2_is_genotype) return
         if (!q.chr) throw 'chr missing for getting AF'
         if (!q.pos) throw 'pos missing for getting AF'
         
@@ -270,7 +271,7 @@ function getPj(q, data, tdb, ds) {
 function getIsAnnoValFxn(q, tdb, index) {
   const termnum_id = 'term'+ index + '_id'
   const termid = q[termnum_id]
-  const term = termid && termid != 'genotype' ? tdb.termjson.map.get(termid) : {}
+  const term = termid ? tdb.termjson.map.get(termid) : {}
   const termIsNumeric = term.isinteger || term.isfloat
   const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin 
     ? term.graph.barchart.numeric_bin
@@ -286,7 +287,7 @@ function getIsAnnoValFxn(q, tdb, index) {
 }
 
 
-async function load_genotype_by_sample ( id ) {
+async function load_genotype_by_sample ( id ) { console.log(id)
 /* id is the file name under cache/samples-by-genotype/
 */
   const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', id ) )

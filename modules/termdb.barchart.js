@@ -294,7 +294,7 @@ function getPj(q, inReqs, data, tdb, ds) {
   		    || !ds.track.vcf.termdb_bygenotype
   		    || !ds.track.vcf.termdb_bygenotype.getAF
         ) return
-        if (q.term2 != 'genotype') return
+        if (!q.term2_is_genotype) return
 		    if (!q.chr) throw 'chr missing for getting AF'
 		    if (!q.pos) throw 'pos missing for getting AF'
         
@@ -400,7 +400,7 @@ async function setValFxns(q, inReqs, ds, tdb) {
       inReq.orderedLabels = []
       inReq.unannotatedLabels = []
     }
-    if (key == "genotype") {
+    if (q['term'+ i + '_is_genotype']) {
       if (!q.ssid) throw `missing ssid for genotype`
       const [bySample, genotype2sample] = await load_genotype_by_sample(q.ssid)
       inReqs.genotype2sample = genotype2sample

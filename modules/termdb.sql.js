@@ -294,12 +294,18 @@ values
 index
 	term-index: 0 for term0, 1 for term1, 2 for term2
 */
+	const term_is_genotype = 'term' + index + '_is_genotype'
 	const termnum_id = 'term' + index + '_id'
 	const termid = q[termnum_id]
 	let term = termid ? q.ds.cohort.termdb.q.termjsonByOneid( termid ) : null; //console.log('term'+ index, term)
+	if (termid && !term && !q[term_is_genotype]) throw `unknown ${termnum_id}: ${termid}`
 
-	// comment this out to allow a non-termdb attributes to work
-	//if (termid && !term && termid != 'genotype') throw `unknown ${termnum_id}: ${termid}`
+	/* 
+	  The change below causes `npm run test-barsql` to fail, so it's commented out for now.
+
+	  NOTE: Forcing unknown terms into a category is likely to have undesirable side-effects
+	  in CTE execution, since it may force a table scan. It'll be much more performant to 
+	  default to a dummy single row selection.
 
 	if(!term && termid) {
 		// when termid is given but term object is not found
@@ -307,6 +313,7 @@ index
 		// dirty fix to pretend it as a categorical term so as to be able to pull out data
 		term = {iscategorical:true, id: termid }
 	}
+	*/
 
 	const termnum_q = 'term' + index + '_q'
 	const termq = q[termnum_q]
@@ -315,12 +322,11 @@ index
 	if (index == 2) q[termnum_q].isterm2 = true
 
 	const tablename = 'samplekey_' + index
-	const keyval = termid == 'genotype' ? termid : ""
 
 	const CTE = term ?
 		makesql_overlay_oneterm( term, filter, q.ds, q[termnum_q], values, "_" + index)
 		: {
-			sql: `${tablename} AS (\nSELECT null AS sample, '${keyval}' as key, '${keyval}' as value\n)`,
+			sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
 			tablename,
 			join_on_clause: '' //`ON t${index}.sample IS NULL`
 		}
