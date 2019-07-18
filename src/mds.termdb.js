@@ -997,7 +997,8 @@ async function restore_barchart(obj, params) {
 	}
 
 	make_barplot( obj, data.lst[0], restored_div, ({plot, main})=>{
-		if (!term2) return  
+		if (!term2) return
+		plot.settings.bar.overlay = 'tree'
     plot.term2 = term2
     if (plot.term2.iscondition) {
       plot.settings.common.conditionParents[2] = plot.term2.id
@@ -1013,7 +1014,9 @@ async function restore_barchart(obj, params) {
       }
       plot.term2_boxplot = 0
     }
-    main( plot )
+	  setTimeout(()=>{
+	    main( plot )
+	  }, 1100)
 	})
 }
 
