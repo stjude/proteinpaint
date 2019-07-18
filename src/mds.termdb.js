@@ -118,11 +118,11 @@ obj{}:
 
 		if( obj.default_rootterm ) {
 			await show_default_rootterm( obj )
+			restore_view(obj)
 			return
 		}
 
 		// to allow other triggers
-
 	} catch(e) {
 		obj.dom.errdiv.text('Error: '+ (e.message||e) )
 		if(e.stack) console.log(e.stack)
@@ -791,7 +791,7 @@ barchart is shown in-place under term and in full capacity
 
 		table.selectAll('*').remove()
 
-		const str = input.property('value')
+		const str = input.property('value'); console.log(str)
 		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
 
 		if( str==' ' || str=='' ) {
@@ -940,3 +940,80 @@ function make_filter_ui(obj){
 		} 
 	)
 }
+
+// allow view restore on initial page load only
+let view_restored = false
+
+function restore_view(obj) {
+	if (view_restored) return
+	view_restored = true
+	const querystr = window.location.search.split('?')[1]
+	if (!querystr) return
+	const params = {}
+	querystr.split('&').forEach(kv=>{
+		const [key,val] = kv.split('=')
+		params[key] = !val || isNaN(val) ? val : +val 
+	})
+	if (!params.restore_view) return
+	if (params.restore_view=='by-url-params') {
+		if (!params.term1) return
+		if (params.view_type=='barchart') {
+			restore_barchart(obj, params)
+		}
+	} else if (params.restore_view=='by-saved-settings' && params.view_id) {
+		// fetch cached view settings from the server
+		// will enable sharing of saved views among users, developers
+		// useful for discussions, feedback, bug reports
+	}
+}
+
+function save_view() {
+	/* To-Do: 
+
+	If a user clicks a 'Save View' button,
+	it will submit and cache the view settings as a json file
+	in the server, which will return and notify the user
+	with the view_id for future reference and to be opened via
+	restore_view()
+
+	*/
+}
+
+async function restore_barchart(obj, params) {
+	const data = await obj.do_query( ['findterm='+params.term1] );
+	if (!data.lst.length) return
+	
+	const restored_div = obj.dom.div.append('div')
+		.style('margin', '20px')
+		.style('padding', '10px 20px')
+		.style('border', '1px solid #aaa')
+	restored_div.append('h3')
+		.html('Restored View')
+
+	let term2
+	if (params.term2) {
+		const data = await obj.do_query( ['findterm='+params.term2] );
+		if (data.lst.length) term2 = data.lst[0]
+	}
+
+	make_barplot( obj, data.lst[0], restored_div, ({plot, main})=>{
+		if (!term2) return  
+    plot.term2 = term2
+    if (plot.term2.iscondition) {
+      plot.settings.common.conditionParents[2] = plot.term2.id
+      if (!plot.settings.common.conditionUnits[2]) {
+        plot.settings.common.conditionUnits[2] = "max_grade_perperson"
+      }
+    }
+    if (plot.term2.isfloat && plot.term2_boxplot) { 
+      plot.term2_displaymode = 'boxplot'
+    } else {
+      if (plot.term2_displaymode == "boxplot") {
+        plot.term2_displaymode = "stacked"
+      }
+      plot.term2_boxplot = 0
+    }
+    main( plot )
+	})
+}
+

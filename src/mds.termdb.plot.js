@@ -125,18 +125,18 @@ arg: server returned data
 // client 
 const serverData = {}
 
-function main(plot, callback = ()=>{}) {
+function main(plot, callback = ()=>{}) { console.log(plot)
   const dataName = getDataName(plot)
   if (serverData[dataName]) {
     render(plot, serverData[dataName])
-    callback()
+    callback({plot, main})
   }
   else {
     client.dofetch2('/termdb-barsql' + dataName)
     .then(chartsData => {
       serverData[dataName] = chartsData
       render(plot, chartsData)
-      callback()
+      callback({plot, main})
     })
   }
 }
