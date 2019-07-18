@@ -433,7 +433,7 @@ export class TermdbBarchart{
             ? self.grade_labels.find(c => 'id' in d ? c.grade == d.id : c.grade == d)
             : null
           return self.terms.term1.values
-            ? self.terms.term1.values[d].label
+            ? self.terms.term1.values['id' in d ? d.id : d].label
             : grade
             ? grade.label
             : 'label' in d
@@ -460,7 +460,7 @@ export class TermdbBarchart{
             ? self.grade_labels.find(c => 'id' in d ? c.grade == d.id : c.grade == d)
             : null
           return self.terms.term1.values
-            ? self.terms.term1.values[d].label
+            ? self.terms.term1.values['id' in d ? d.id : d].label
             : grade
             ? grade.label
             : 'label' in d
