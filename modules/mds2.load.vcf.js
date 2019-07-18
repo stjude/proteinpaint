@@ -270,10 +270,10 @@ vcftk
 		}
 
 		// for this race grp, issue one query to get percentage value of all samples, and sum up
-		const lst = termdbsql.get_rows({ ds, term1_id: p.key })
+		const lst = termdbsql.get_rows_by_one_key({ ds, key: p.key })
 		for(const i of lst) {
 			if(!ds.track.vcf.sample2arrayidx.has( i.sample )) continue
-			const v = Number(i.key1)
+			const v = Number(i.value)
 			if(Number.isFinite(v)) {
 				o.average += v
 				poptotal += v
