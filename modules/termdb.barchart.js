@@ -92,59 +92,53 @@ function getTrackers() {
 const template = JSON.stringify({
   "@errmode": ["","","",""],
   "@before()": "=prep()",
-  "_:_sum": "+=getSeriesVal()",
-  "_:_values": ["=getSeriesVal()",0],
+  "@join()": {
+    "idVal": "=idVal()"
+  },
   results: {
     "_2:maxAcrossCharts": "=maxAcrossCharts()",
-    "@join()": {
-      chart: "=idVal()"
-    },
     charts: [{
-      "@join()": {
-        series: "=idVal()"
-      },
       chartId: "@key",
-      "_:_total": "+=hasIds()",
+      total: "+1",
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
       serieses: [{
-        "@join()": { 
-          data: "=idVal()"
-        },
-        "_:_total": "+=hasIds()",
+        total: "+1",
         seriesId: "@key",
         data: [{
           dataId: "@key",
           total: "+1" 
-        }, "&data.id[]"],
-        "_:_max": "<&data.value", // needed by client-side boxplot renderer 
-        "~_:_values": ["=getDataVal()",0],
-        "~_:_sum": "+=getDataVal()",
-        "__:boxplot": "=boxplot2()",
-        "__:AF": "=getAF()",
-        "~samples": ["$sjlid", "set"]
-      }, "&series.id[]"],
+        }, "&idVal.dataId[]"],
+        max: "<&idVal.dataVal", // needed by client-side boxplot renderer 
+        "~values": ["&idVal.dataVal",0],
+        "~sum": "+&idVal.dataVal",
+        "__:boxplot": "=boxplot()",
+        "~samples": ["$sjlid", "set"],
+        "__:AF": "=getAF()"
+      }, "&idVal.seriesId[]"],
       "@done()": "=filterEmptySeries()"
-    }, "&chart.id[]"],
-    "__:boxplot": "=boxplot1()",
+    }, "&idVal.chartId[]"],
+    "~sum": "+&idVal.seriesVal",
+    "~values": ["&idVal.seriesVal",0],
+    "__:boxplot": "=boxplot()",
     /*"_:_unannotated": {
       label: "",
       label_unannotated: "",
       value: "+=unannotated()",
       value_annotated: "+=annotated()"
     },*/
-    "_:_refs": {
-      "_:_cols": ["=getSeriesId(]"],
+    refs: {
+      cols: ["&idVal.seriesId[]"],
       colgrps: ["-"], 
-      "_:_rows": ["=getDataId(]"],
+      rows: ["&idVal.dataId[]"],
       rowgrps: ["-"],
-      "_:_col2name": {
-        "=getSeriesId(]": {
+      col2name: {
+        "&idVal.seriesId[]": {
           name: "@branch",
           grp: "-"
         }
       },
-      "_:_row2name": {
-        "=getDataId(]": {
+      row2name: {
+        "&idVal.dataId[]": {
           name: "@branch",
           grp: "-"
         }
@@ -164,9 +158,12 @@ function getPj(q, inReqs, data, tdb, ds) {
   q: objectified URL query string
   inReq: request-specific closured functions and variables
   data: rows of annotation data
-*/
-  const joinAliases = ["chart", "series", "data"]
-  let j=0;
+*/ 
+  const kvs = [
+    {i: 0, term: 'term0', key: 'chartId', val: 'chartVal'},
+    {i: 1, term: 'term1', key: 'seriesId', val: 'seriesVal'},
+    {i: 2, term: 'term2', key: 'dataId', val: 'dataVal'}
+  ]; let j=0
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
@@ -178,65 +175,21 @@ function getPj(q, inReqs, data, tdb, ds) {
         return inReqs.filterFxn(row)
       },
       idVal(row, context, joinAlias) {
-        const i = joinAliases.indexOf(joinAlias)
-        const term = q['term'+i]
-        const id = inReqs[i].joinFxns[term](row, context, joinAlias)
-        if (id === undefined) return
-        return {
-          id: Array.isArray(id) ? id : [id],
-          value: typeof inReqs[i].numValFxns[term] == 'function'
-            ? inReqs[i].numValFxns[term](row)
+        // chart, series, data
+        const csd = Object.create(null)
+        for(const kv of kvs) {
+          const termid = q[kv.term]
+          const id = inReqs[kv.i].joinFxns[termid](row, context, joinAlias)
+          if (id===undefined || (Array.isArray(id) && !id.length)) return
+          csd[kv.key] = Array.isArray(id) ? id : [id]
+          const value = typeof inReqs[kv.i].numValFxns[termid] == 'function'
+            ? inReqs[kv.i].numValFxns[termid](row)
             : undefined
-        }
-      },
-      hasIds(row, context) {
-        const data = context.joins.get('data')
-        if (!data || !data.id.length) return
-        const series = context.joins.get('series')
-        if (!series || !series.id.length) return
-        const chart = context.joins.get('chart')
-        if (!chart || !chart.id.length) return
-        return 1
-      },
-      getSeriesId(row, context) {
-        const data = context.joins.get('data')
-        if (!data || !data.id.length) return []
-        const series = context.joins.get('series')
-        if (!series || !series.id.length) return []
-        if (inReqs[1].unannotatedLabels.includes(series.value)) return []
-        const chart = context.joins.get('chart')
-        if (!chart || !chart.id.length) return []
-        return series.id
-      },
-      getSeriesVal(row, context) {
-        const data = context.joins.get('data')
-        if (!data || !data.id.length) return
-        const series = context.joins.get('series')
-        if (!series || !series.id.length) return
-        if (inReqs[1].unannotatedLabels.includes(series.value)) return
-        const chart = context.joins.get('chart')
-        if (!chart || !chart.id.length) return
-        return series.value
-      },
-      getDataId(row, context) {
-        const data = context.joins.get('data')
-        if (!data || !data.id.length) return []
-        if (inReqs[2].unannotatedLabels.includes(data.value)) return []
-        const series = context.joins.get('series')
-        if (!series || !series.id.length) return []
-        const chart = context.joins.get('chart')
-        if (!chart || !chart.id.length) return []
-        return data.id
-      },
-      getDataVal(row, context) {
-        const data = context.joins.get('data')
-        if (!data || !data.id.length) return
-        if (inReqs[2].unannotatedLabels.includes(data.value)) return
-        const series = context.joins.get('series')
-        if (!series || !series.id.length) return
-        const chart = context.joins.get('chart')
-        if (!chart || !chart.id.length) return
-        return data.value
+          csd[kv.val] = 0 && inReqs[kv.i].unannotatedLabels.includes(value)
+            ? undefined
+            : value 
+        }; //if (j<3) {j++; console.log(csd); console.log(inReqs[2])}
+        return csd
       },
       maxSeriesTotal(row, context) {
         let maxSeriesTotal = 0
@@ -256,21 +209,7 @@ function getPj(q, inReqs, data, tdb, ds) {
         }
         return maxAcrossCharts
       },
-      boxplot1(row, context) {
-        if (!context.root.values) return;
-        const values = context.root.values.filter(d => d !== null)
-        if (!values.length) return
-        values.sort((i,j)=> i - j )
-        const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
-        stat.mean = context.root.sum / values.length
-        let s = 0
-        for(const v of values) {
-          s += Math.pow( v - stat.mean, 2 )
-        }
-        stat.sd = Math.sqrt( s / (values.length-1) )
-        return stat
-      },
-      boxplot2(row, context) {
+      boxplot(row, context) {
         if (!context.self.values || !context.self.values.length) return
         const values = context.self.values.filter(d => d !== null)
         if (!values.length) return
@@ -314,7 +253,7 @@ function getPj(q, inReqs, data, tdb, ds) {
         const series = context.joins.get('series')
         if (!series) return
         let total = 0
-        for(const s of series.id) {
+        for(const s of idVal.seriesId) {
           if (inReqs[1].unannotatedLabels.includes(s)) {
             total += 1
           }
@@ -325,7 +264,7 @@ function getPj(q, inReqs, data, tdb, ds) {
         const series = context.joins.get('series')
         if (!series) return
         let total = 0
-        for(const s of series.id) {
+        for(const s of idVal.seriesId) {
           if (!inReqs[1].unannotatedLabels.includes(s)) {
             total += 1
           }
