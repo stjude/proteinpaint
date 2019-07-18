@@ -16,9 +16,10 @@ handle_ssidbyonem
 handle_getcsq
 sample_match_termvaluesetting
 ********************** INTERNAL
-get_columnidx_byterms
 wrap_validate_termvaluesetting
 set_querymode
+	get_columnidx_byterms
+	filter_samples_by_termvalue
 	get_pop2average
 query_vcf_applymode
 getallelecount_samplegroup_vcfline
@@ -197,12 +198,26 @@ generate the "querymode" object that drives subsequent queries
 			if(g.is_termdb) {
 				wrap_validate_termvaluesetting(g.terms,'AFtest.group')
 				g.columnidx = get_columnidx_byterms( g.terms, ds )
+				if( q.AFtest.termfilter ) {
+					// further filter samples
+					g.columnidx = filter_samples_by_termvalue( g.columnidx, ds, q.AFtest.termfilter )
+				}
 				continue
 			}
 			if(g.is_population) {
 				if(!ds.track.populations) throw 'ds.track.populations missing'
-				g.population = ds.track.populations.find(i=>i.key==g.key)
-				if(!g.population) throw 'unknown population key: '+g.key
+				const p = ds.track.populations.find(i=>i.key==g.key)
+				if(!p) throw 'unknown population key: '+g.key
+				g.population = JSON.parse(JSON.stringify(p)) // as the population data structure can be modified later
+				if( q.AFtest.termfilter ) {
+					// termfilter hardcode to be just one term
+					if( q.AFtest.termfilter[0].term.id == g.population.termfilter ) {
+						// this population can be filtered by this term
+						const popset = g.population.sets.find( i=> i.termfilter_value == q.AFtest.termfilter[0].values[0].key )
+						if(!popset) throw 'no matching set found for a termfilter from a population'
+						g.population.sets = [ popset ] // only keep this set
+					}
+				}
 				continue
 			}
 			throw 'Cannot set query mode: unknown group type'
@@ -312,6 +327,31 @@ a sample must meet all term conditions
 	},[])
 }
 
+
+
+
+function filter_samples_by_termvalue ( sampleidx, ds, termfilter ) {
+/*
+for a termdb group from AFtest
+
+sampleidx[]
+	list of array index of the VCF samples as input,
+	output a smaller list of samples who matches with termfilter
+ds:
+termfilter{}
+	tvs structure
+	though it is hardcoded to be categorical only
+*/
+	const allmatching = termdbsql.get_samples( termfilter, ds )
+	const sampleset = new Set( allmatching )
+	const newlst = []
+	for(const i of sampleidx) {
+		if( sampleset.has( ds.track.vcf.samples[i].name ) ) {
+			newlst.push(i)
+		}
+	}
+	return newlst
+}
 
 
 

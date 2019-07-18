@@ -35,23 +35,6 @@ module.exports={
 			}
 		},
 
-		sampleAttribute: {
-			attributes: {
-				CEU: {
-					label:'Non-finish European',
-					isfloat:1
-				},
-				YRI: {
-					label:'African American',
-					isfloat:1
-				},
-				ASA: {
-					label:'East Asian',
-					isfloat:1
-				},
-			}
-		},
-
 		termdb: {
 			term2term:{
 				file:'files/hg38/sjlife/clinical/term2term'
@@ -246,22 +229,30 @@ module.exports={
 				label:'gnomAD',
 				allowto_adjust_race:true,
 				adjust_race:true,
+				termfilter: 'genetic_race',
+				/*
+				the "sets" is hardcoded to be based on a single attribute (race group)
+				and does not allow another attribute e.g. sex
+				*/
 				sets:[
 					// per variant, the control population allele counts are hardcoded to be info fields
 					{
 						key:'CEU', // header of file "cohort/admix"
 						infokey_AC: 'gnomAD_AC_nfe',
-						infokey_AN: 'gnomAD_AN_nfe'
+						infokey_AN: 'gnomAD_AN_nfe',
+						termfilter_value: 'European American'
 					},
 					{
 						key:'YRI',
 						infokey_AC: 'gnomAD_AC_afr',
-						infokey_AN: 'gnomAD_AN_afr'
+						infokey_AN: 'gnomAD_AN_afr',
+						termfilter_value: 'African American'
 					},
 					{
 						key:'ASA',
 						infokey_AC: 'gnomAD_AC_eas',
-						infokey_AN: 'gnomAD_AN_eas'
+						infokey_AN: 'gnomAD_AN_eas',
+						termfilter_value: 'Asian American'
 					}
 				],
 			},
@@ -338,6 +329,19 @@ module.exports={
 						{ key:'gnomAD_AF_eas' },
 						{ key:'gnomAD_AF_nfe' }
 					],
+					/*
+					the termfilter hardcodes to be a single term
+					may expands to termfilters[] to support multiple terms
+					for selecting one as filter
+					or even use two terms to combine
+					*/
+					termfilter: {
+						id:'genetic_race',
+						name:'Genetically defined race',
+						iscategorical:true,
+						values:[{key:'European American',inuse:true},{key:'African American'},{key:'Asian American'}]
+					},
+					termfilter_inuse:true,
 				},
 			},
 			plot_mafcov: {

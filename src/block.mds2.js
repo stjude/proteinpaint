@@ -6,7 +6,7 @@ import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
 import {makeTk} from './block.mds2.makeTk'
 import {may_render_vcf} from './block.mds2.vcf'
-import {maygetparameter_numericaxis} from './block.mds2.vcf.numericaxis'
+import {may_get_param as maygetparameter_numericaxis} from './block.mds2.vcf.numericaxis'
 
 
 

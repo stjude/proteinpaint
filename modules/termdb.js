@@ -172,6 +172,7 @@ function trigger_treeto ( q, res, termdb ) {
 
 function trigger_getcategories ( q, res, tdb, ds ) {
 // thin wrapper of get_summary
+// works for all types of terms, not just categorical
 	if( !q.tid ) throw '.tid missing'
 	const arg = {
 		ds,

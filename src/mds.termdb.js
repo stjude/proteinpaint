@@ -791,7 +791,7 @@ barchart is shown in-place under term and in full capacity
 
 		table.selectAll('*').remove()
 
-		const str = input.property('value'); console.log(str)
+		const str = input.property('value')
 		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
 
 		if( str==' ' || str=='' ) {

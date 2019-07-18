@@ -18,7 +18,7 @@ render
 may_setup_numerical_axis
 get_axis_label
 get_axis_label_AFtest
-maygetparameter_numericaxis
+may_get_param
 ********************** INTERNAL
 numeric_make
 render_axis
@@ -1024,7 +1024,7 @@ export function get_axis_label_AFtest () {
 
 
 
-export function maygetparameter_numericaxis ( tk, par ) {
+export function may_get_param ( tk, par ) {
 /*
 append numeric axis parameter to object for loadTk
 */
@@ -1071,6 +1071,20 @@ append numeric axis parameter to object for loadTk
 			}
 			return lst
 		}, [])
+		if( nm.AFtest.termfilter_inuse ) {
+			if(!nm.AFtest.termfilter) throw 'termfilter missing while termfilter_inuse is true'
+			if(!nm.AFtest.termfilter.iscategorical) throw 'AFtest.termfilter is not categorical'
+			if(!nm.AFtest.termfilter.values) throw 'termfilter.values missing'
+			par.AFtest.termfilter = [{ // mimic tvs
+				term:{
+					id: nm.AFtest.termfilter.id,
+					iscategorical: true // hardcoded
+				}
+			}]
+			let v = nm.AFtest.termfilter.values.find(i=>i.inuse)
+			if(!v) v = nm.AFtest.termfilter.values[0]
+			par.AFtest.termfilter[0].values = [ v ]
+		}
 		return
 	}
 	throw 'unknown type of numeric axis'
