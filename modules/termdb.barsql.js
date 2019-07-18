@@ -6,7 +6,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
 const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
-const get_rows = require('./termdb.sql').get_rows
+const termdbsql = require('./termdb.sql')
 
 /*
 ********************** EXPORTED
@@ -17,22 +17,12 @@ handle_request_closure
 exports.handle_request_closure = ( genomes ) => {
   return async (req, res) => {
     const q = req.query
-    if (q.custom_bins) {
-      try {
-        q.custom_bins = JSON.parse(decodeURIComponent(q.custom_bins))
-      } catch(e) {
-        app.log(req)
-        res.send({error: (e.message || e)})
-        if(e.stack) console.log(e.stack)
-      }
-    } 
-    if (q.filter) {
-      try {
-        q.filter = JSON.parse(decodeURIComponent(q.filter))
-      } catch(e) {
-        app.log(req)
-        res.send({error: (e.message || e)})
-        if(e.stack) console.log(e.stack)
+    for(const i of [0,1,2]) {
+      const termnum_q = 'term' + i + '_q'
+      const term_q = q[termnum_q]
+      if (term_q) {
+        q[termnum_q] = JSON.parse(decodeURIComponent(term_q))
+        q[termnum_q].term_id = q['term' + i + '_id']
       }
     }
     app.log(req)
@@ -71,9 +61,12 @@ async function barchart_data ( q, ds, res, tdb ) {
     q.genotypeBySample = genotypeBySample
     q.genotype2sample = genotype2sample
   }
+  for(const i of [0,1,2]) {
+    preProcessTermQ(q['term' + i + '_q'], ds)
+  }
 
   const startTime = +(new Date())
-  q.results = get_rows(q, true) // withCTEs = true
+  q.results = termdbsql.get_rows(q, true) // withCTEs = true
   const sqlDone = +(new Date())
   const pj = getPj(q, q.results.lst, tdb, ds)
   if (pj.tree.results) {
@@ -83,6 +76,10 @@ async function barchart_data ( q, ds, res, tdb ) {
     }
   }
   res.send(pj.tree.results)
+}
+
+function preProcessTermQ(q, ds) {
+  if (q && q.custom_bins) setCustomBins(q, ds)
 }
 
 // template for partjson, already stringified so that it does not 
@@ -399,4 +396,78 @@ arguments:
     }
   }
   return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
+}
+
+function setCustomBins(q, ds) {
+  if (!q.custom_bins) return
+  if (!q.term_id) throw 'missing q.term[ ]_id to set custom_bins'
+  const custom_bins = q.custom_bins
+  delete q.custom_bins // must not use custom_bin config as understood by get_numeric_summary below
+  const bins = []
+  const orderedLabels = []
+  const term = ds.cohort.termdb.q.termjsonByOneid( q.term_id )
+  const summary = termdbsql.get_numericsummary(q, term, ds, [], true)  
+  
+  const min = custom_bins.lowerbound == 'auto' 
+    ? summary.min 
+    : custom_bins.first_bin_unit == 'percentile' 
+    ? summary.values[ Math.floor((custom_bins.lowerbound / 100) * summaries.values.length) ]
+    : custom_bins.lowerbound
+  const max = custom_bins.upperbound == 'auto' 
+    ? summary.max
+    : custom_bins.last_bin_unit == 'percentile'
+    ? summary.values[ Math.floor((custom_bins.upperbound / 100) * summary.values.length) ]
+    : custom_bins.upperbound
+  
+  let start = custom_bins.lowerbound == 'auto' ? null : min
+  
+  while( start <= summary.max ) {
+    const upper = start == null ? min + custom_bins.size : start + custom_bins.size //custom_bins.size == "auto" ? custom_bins.max_val : 
+    const stop = upper < max 
+      ? upper
+      : custom_bins.upperbound == 'auto'
+      ? null
+      : max
+
+    const bin = {
+      start, // >= max ? max : start,
+      stop, //startunbound ? min : stop,
+      startunbound: start === null,
+      stopunbound: stop === null,
+      startinclusive: custom_bins.startinclusive,
+      stopinclusive: custom_bins.stopinclusive,
+    }
+    
+    if (bin.startunbound) { 
+      const oper = bin.stopinclusive ? "\u2264" : "<"
+      const v1 = Number.isInteger(stop) ? stop : binLabelFormatter(stop)
+      bin.label = oper + binLabelFormatter(stop);
+    } else if (bin.stopunbound) {
+      const oper = bin.startinclusive ? "\u2265" : ">"
+      const v0 = Number.isInteger(start) ? start : binLabelFormatter(start)
+      bin.label = oper + v0
+    } else if( Number.isInteger( custom_bins.size )) {
+      // bin size is integer, make nicer label
+      if( custom_bins.size == 1 ) {
+        // bin size is 1; use just start value as label, not a range
+        bin.label = start //binLabelFormatter(start)
+      } else {
+        const oper0 = custom_bins.startinclusive ? "" : ">"
+        const oper1 = custom_bins.stopinclusive ? "" : "<"
+        const v0 = Number.isInteger(start) ? start : binLabelFormatter(start)
+        const v1 = Number.isInteger(stop) ? stop : binLabelFormatter(stop)
+        bin.label = oper0 + v0 +' to '+ oper1 + v1
+      }
+    } else {
+      const oper0 = custom_bins.startinclusive ? "" : ">"
+      const oper1 = custom_bins.stopinclusive ? "" : "<"
+      bin.label = oper0 + binLabelFormatter(start) +' to '+ oper1 + binLabelFormatter(stop)
+    }
+
+    bins.push( bin )
+    orderedLabels.push(bin.label)
+    start = upper
+  }
+
+  q.custom_bins = bins
 }

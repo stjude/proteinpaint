@@ -45,7 +45,7 @@ returns:
 	.CTEname:
 		the name of CTE, to be used in task-specific runner
 */
-	if( !tvslst ) return null
+	if( !tvslst || !tvslst.length) return null
 
 	const filters = []
 	const values = []
@@ -241,17 +241,16 @@ q{}
 
 
 
-
-
-/* 
-	 
-*/
 export function get_rows ( q, withCTEs = false ) {
 /*
 works for only termdb terms; non-termdb attributes will not work
 
 gets data for barchart but not summarized by counts;
-returns all relevant rows of {sample, key[0,1,2], val[0,1,2]}
+returns all relevant rows of 
+	{
+		sample, key[0,1,2], val[0,1,2], 
+		CTE[0,1,2]} if withCTE == true
+	}
 
 q{}
 	.tvslst
@@ -1002,7 +1001,7 @@ function get_bins(q, term, ds) {
 }
 
 
-export function get_numericsummary (q, term, ds, _tvslst = [] ) {
+export function get_numericsummary (q, term, ds, _tvslst = [], withValues = false ) {
 /*
 to produce the summary table of mean, median, percentiles
 at a numeric barchart
@@ -1055,7 +1054,9 @@ at a numeric barchart
     sd += Math.pow( i.value - stat.mean, 2 )
   }
   stat.sd = Math.sqrt( sd / (result.length-1) )
-
+  stat.min = result[0].value
+  stat.max = result[result.length - 1].value
+  if (withValues) stat.values = result.map(i => i.value)
 	return stat
 }
 
