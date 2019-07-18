@@ -629,11 +629,58 @@ tape("non-leaf condition term1", function (test) {
   )
 })
 
+tape("term0 charts", function (test) {
+  test.plan(4)
+
+  compareResponseData(
+    test, 
+    {
+      term0: 'sex',
+      term1: 'diaggrp'
+    }, 
+    "categorical charts by sex, categorical bars by diagnosis group"
+  )
+
+  compareResponseData(
+    test,
+    {
+      term0: 'agedx',
+      term1: 'sex'
+    },
+    "numerical charts by agedx, categorical bars by sex"
+  )
+
+  compareResponseData(
+    test,
+    {
+      term0: 'Arrhythmias',
+      term0_q: {value_by_max_grade:1, bar_by_children:1},
+      conditionParents: ["Arrhythmias","",""],
+      conditionUnits: ["by_children","",""], 
+      term1: 'sex'
+    },
+    "condition charts by Arrhythmias subcondition, categorical bars by sex"
+  )
+
+  compareResponseData(
+    test,
+    {
+      term0_is_genotype: 1,
+      term0: 'genotype',
+      term1: 'diaggrp',
+      ssid,
+      mname: 'T>C',
+      chr: 'chr17',
+      pos: 7666870,
+    },
+    "genotype charts, categorical bars by diagnosis"
+  )
+})
 
 function compareResponseData(test, params, mssg) {
   // i=series start, j=series end, k=chart index
   // for debugging result data, set i < j to slice chart.serieses
-  const i=0, j=0, k=0, refkey='';
+  const i=0, j=0, k=0, l=0, refkey='';
   const url0 = getSqlUrl(params);
 
   request(url0, (error,response,body)=>{
@@ -678,6 +725,8 @@ function compareResponseData(test, params, mssg) {
             ? summary0.refs[refkey]
             : k == -1
             ? summary0
+            ? k !== l
+            : summary0.charts.slice(k,l)
             : i !== j 
             ? summary0.charts[k].serieses.slice(i,j) 
             : summary0
@@ -687,6 +736,8 @@ function compareResponseData(test, params, mssg) {
             ? summary1.refs[refkey]
             : k == -1
             ? summary1
+            ? k !== l
+            : summary1.charts.slice(k,l)
             : i !== j 
             ? summary1.charts[k].serieses.slice(i,j) 
             : summary1

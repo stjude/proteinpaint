@@ -320,6 +320,7 @@ index
 	if(termq && typeof termq == 'string' ) q[termnum_q] = JSON.parse(decodeURIComponent(termq))	
 	if (!termq) q[termnum_q] = {}
 	if (index == 2) q[termnum_q].isterm2 = true
+	if (index == 0) q[termnum_q].isterm0 = true
 
 	const tablename = 'samplekey_' + index
 
@@ -966,7 +967,7 @@ function get_bins(q, term, ds) {
 	} else {
 		// use automatic bins
 		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
-			if( q.isterm2 && term.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
+			if( (q.isterm0 || q.isterm2) && term.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
 				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.crosstab_fixed_bins))
 			} else if ( term.graph.barchart.numeric_bin.fixed_bins ) {
 				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.fixed_bins))

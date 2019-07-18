@@ -149,7 +149,8 @@ const template = JSON.stringify({
       "__:bins": "=bins()",
       "__:grade_labels": "=grade_labels()",
       "@done()": "=sortColsRows()"
-    }
+    },
+    "@done()": "=sortCharts()"
   }
 })
 
@@ -279,6 +280,12 @@ function getPj(q, inReqs, data, tdb, ds) {
         if (inReqs[2].orderedLabels.length) {
           const labels = inReqs[2].orderedLabels
           result.rows.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
+        }
+      },
+      sortCharts(result) {
+        if (inReqs[0].orderedLabels.length) {
+          const labels = inReqs[0].orderedLabels
+          result.charts.sort((a,b) => labels.indexOf(a.chartId) - labels.indexOf(b.chartId))
         }
       },
       useColOrder() {

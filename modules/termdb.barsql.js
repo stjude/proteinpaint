@@ -146,7 +146,8 @@ const template = JSON.stringify({
       "__:bins": "=bins()",
       "__:grade_labels": "=grade_labels()",
       "@done()": "=sortColsRows()"
-    }
+    },
+    "@done()": "=sortCharts()"
   }
 })
 
@@ -290,6 +291,12 @@ function getPj(q, data, tdb, ds) {
           result.rows.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
         }
       },
+      sortCharts(result) {
+        if (terms[0].orderedLabels.length) {
+          const labels = terms[0].orderedLabels
+          result.charts.sort((a,b) => labels.indexOf(a.chartId) - labels.indexOf(b.chartId))
+        }
+      }
     }
   })
 }
@@ -297,7 +304,7 @@ function getPj(q, data, tdb, ds) {
 function getTermDetails(q, tdb, index) {
   const termnum_id = 'term'+ index + '_id'
   const termid = q[termnum_id]
-  const term = termid ? tdb.termjson.map.get(termid) : {}
+  const term = termid && !q['term' + index + '_is_genotype'] ? tdb.termjson.map.get(termid) : {}
   const termIsNumeric = term.isinteger || term.isfloat
   const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin 
     ? term.graph.barchart.numeric_bin
