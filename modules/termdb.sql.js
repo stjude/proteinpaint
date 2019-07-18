@@ -321,23 +321,8 @@ index
 	const term_is_genotype = 'term' + index + '_is_genotype'
 	const termnum_id = 'term' + index + '_id'
 	const termid = q[termnum_id]
-	let term = termid ? q.ds.cohort.termdb.q.termjsonByOneid( termid ) : null; //console.log('term'+ index, term)
+	let term = termid ? q.ds.cohort.termdb.q.termjsonByOneid( termid ) : null;
 	if (termid && !term && !q[term_is_genotype]) throw `unknown ${termnum_id}: ${termid}`
-
-	/* 
-	  The change below causes `npm run test-barsql` to fail, so it's commented out for now.
-
-	  NOTE: Forcing unknown terms into a category is likely to have undesirable side-effects
-	  in CTE execution, since it may force a table scan. It'll be much more performant to 
-	  default to a dummy single row selection.
-
-	if(!term && termid) {
-		// when termid is given but term object is not found
-		// should be a non-termdb attribute e.g. admix population label
-		// dirty fix to pretend it as a categorical term so as to be able to pull out data
-		term = {iscategorical:true, id: termid }
-	}
-	*/
 
 	const termnum_q = 'term' + index + '_q'
 	const termq = q[termnum_q]

@@ -132,7 +132,7 @@ function main(plot, callback = ()=>{}) {
     callback()
   }
   else {
-    client.dofetch2('/termdb-barchart' + dataName)
+    client.dofetch2('/termdb-barsql' + dataName)
     .then(chartsData => {
       serverData[dataName] = chartsData
       render(plot, chartsData)
@@ -141,44 +141,67 @@ function main(plot, callback = ()=>{}) {
   }
 }
 
-// creates a unique request identifier to be used
-// for caching server response keys
+// creates URL search parameter string, that also serves as 
+// a unique request identifier to be used for caching server response
 function getDataName(plot) {
   const obj = plot.obj
   const params = [
     'genome=' + obj.genome.name,
     'dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label),
-    'term1=' + plot.term.id
+    'term1_id=' + plot.term.id
   ];
   if (plot.term0) {
-    params.push('term0=' + plot.term0.id)
+    params.push('term0_id=' + plot.term0.id)
   }
   if (obj.modifier_ssid_barchart) {
     params.push(
-      'term2=genotype',
+      'term2_is_genotype=1',
       'ssid=' + obj.modifier_ssid_barchart.ssid,
       'mname=' + obj.modifier_ssid_barchart.mutation_name,
-	  'chr=' + obj.modifier_ssid_barchart.chr,
-	  'pos=' + obj.modifier_ssid_barchart.pos
+      'chr=' + obj.modifier_ssid_barchart.chr,
+      'pos=' + obj.modifier_ssid_barchart.pos
     )
   } else if (plot.term2) {
-    params.push('term2=' + plot.term2.id)
+    params.push('term2_id=' + plot.term2.id)
   }
-  if (obj.termfilter) {
-    params.push('filter=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
+  if (obj.termfilter && obj.termfilter.length) {
+    params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
   }
+
+  const _q={0:{}, 1:{}, 2:{}}
   if (plot.custom_bins) {
-    params.push('custom_bins=' + encodeURIComponent(JSON.stringify(plot.custom_bins)))
+    for(const i in plot.custom_bins) {
+      if (typeof plot.custom_bins[i] == 'object' && Object.keys(plot.custom_bins[i]).length) {
+        _q[i].custom_bins = plot.custom_bins[i]
+      } 
+    }
+    //params.push('custom_bins=' + encodeURIComponent(JSON.stringify(plot.custom_bins)))
   }
-  const hasCondition = plot.term.iscondition || (plot.term2 && plot.term2.iscondition) || (plot.term0 && plot.term0.iscondition)
-  const conditionUnits = plot.settings.common.conditionUnits.join("-,-")
-  if (conditionUnits != "-,--,-" && hasCondition) {
-    params.push('conditionUnits=' + conditionUnits)
+
+  plot.settings.common.conditionUnits.forEach((unit,i) => {
+    const termnum = i == 1 ? 'term' : 'term' + i
+    if (!unit || !plot[termnum] || !plot[termnum].iscondition) return
+    if (unit == 'max_grade_perperson') {
+      _q[i].value_by_max_grade = 1
+      _q[i].bar_by_grade = 1
+    } else if (unit == 'most_recent_grade') {
+      _q[i].value_by_most_recent = 1
+      _q[i].bar_by_grade = 1
+    }
+  })
+
+  plot.settings.common.conditionParents.forEach((parent,i) => {
+    if (!parent || !plot[termnum] || !plot[termnum].iscondition) return
+    _q[i].value_by_max_grade = 1
+    _q[i].bar_by_children = 1
+  })
+
+  for(const i in _q) {
+    if (Object.keys(_q[i]).length) {
+      params.push('term' + i + '_q=' + encodeURIComponent(JSON.stringify(_q[i])))
+    }
   }
-  const conditionParents = plot.settings.common.conditionParents.join("-,-")
-  if (conditionParents != "-,--,-" && hasCondition) {
-    params.push('conditionParents=' + conditionParents)
-  }
+
   return '?' + params.join('&')
 }
 
