@@ -9,6 +9,7 @@ get_samples
 get_summary
 get_numericsummary
 get_rows
+get_rows_by_one_key
 server_init_db_queries
 ********************** INTERNAL
 makesql_by_tvsfilter
@@ -221,11 +222,34 @@ return an array of sample names passing through the filter
 
 
 
+
+export function get_rows_by_one_key ( q ) {
+/*
+get all sample and value by one key
+no filter or cte
+works for all attributes, including non-termdb ones
+
+q{}
+	.ds
+	.key
+*/
+	const sql = 'SELECT sample,value FROM annotations WHERE term_id=?'
+	return q.ds.cohort.db.connection.prepare( sql )
+		.all( q.key )
+}
+
+
+
+
+
+
 /* 
 	 
 */
 export function get_rows ( q, withCTEs = false ) {
 /*
+works for only termdb terms; non-termdb attributes will not work
+
 gets data for barchart but not summarized by counts;
 returns all relevant rows of {sample, key[0,1,2], val[0,1,2]}
 
