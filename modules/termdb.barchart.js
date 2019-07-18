@@ -338,7 +338,7 @@ function getPj(q, inReqs, data, tdb, ds) {
           result.cols.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
         }
         if (inReqs[2].orderedLabels.length) {
-          const labels = inReqs[1].orderedLabels
+          const labels = inReqs[2].orderedLabels
           result.rows.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
         }
       },

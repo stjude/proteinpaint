@@ -72,12 +72,10 @@ async function barchart_data ( q, ds, res, tdb ) {
     q.genotype2sample = genotype2sample
   }
 
-  // if(!ds.cohort.annorows) throw `cohort.annorows is missing`
-  // request-specific variables
   const startTime = +(new Date())
-  const rows = get_rows(q)
+  q.results = get_rows(q, true) // withCTEs = true
   const sqlDone = +(new Date())
-  const pj = getPj(q, rows, tdb, ds)
+  const pj = getPj(q, q.results.lst, tdb, ds)
   if (pj.tree.results) {
     pj.tree.results.times = {
       sql: sqlDone - startTime,
@@ -143,12 +141,11 @@ const template = JSON.stringify({
         }
       },
       "__:unannotatedLabels": "=unannotatedLabels()", 
-      /*
       "__:useColOrder": "=useColOrder()",
       "__:useRowOrder": "=useRowOrder()",
       "__:bins": "=bins()",
       "__:grade_labels": "=grade_labels()",
-      "@done()": "=sortColsRows()" */
+      "@done()": "=sortColsRows()"
     }
   }
 })
@@ -160,14 +157,21 @@ function getPj(q, data, tdb, ds) {
   data: rows of annotation data
 */
   const joinAliases = ["chart", "series", "data"]
-  const kva = [0,1,2].map(i=>{
-    return {
-      key: 'key'+i, 
-      val: 'val'+i,
-      nval: 'nval'+i,
-      isGenotype: 'term' + i + '_is_genotype',
-      isAnnoVal: getIsAnnoValFxn(q, tdb, i)
-    }
+  const terms = [0,1,2].map(i=>{
+    const d = getTermDetails(q, tdb, i)
+    const bins = q.results['CTE' + i].bins ? q.results['CTE' + i].bins : []
+    return Object.assign(d, {
+      key: 'key' + i, 
+      val: 'val' + i,
+      nval: 'nval' + i,
+      isGenotype: q['term' + i + '_is_genotype'],
+      bins,
+      orderedLabels: d.term.iscondition && d.term.grades
+        ? d.term.grades
+        : d.term.iscondition
+        ? [0,1,2,3,4,5,9] // hardcoded default order
+        : bins.map(bin => bin.name ? bin.name : bin.label)
+    })
   })
 
   return new Partjson({
@@ -178,10 +182,11 @@ function getPj(q, data, tdb, ds) {
       prep(row) {
         // mutates the data row, ok since
         // rows from db query are unique to request;
-        // do not do this with ds.cohort.annorows, 
+        // do not do this with ds.cohort.annorows in termdb.barchart
+        // since that is shared across requests - 
         // use partjson @join() instead 
-        for(const d of kva) {
-          if (q[d.isGenotype]) {
+        for(const d of terms) {
+          if (d.isGenotype) {
             if (!(row.sample in q.genotypeBySample)) return
             row[d.key] = q.genotypeBySample[row.sample]
             row[d.val] = q.genotypeBySample[row.sample]
@@ -246,9 +251,9 @@ function getPj(q, data, tdb, ds) {
       },
       unannotatedLabels() {
         const unannotated = {}
-        kva.forEach((kv,i)=>{
-          unannotated['term' + i] = kv.isAnnoVal.unannotatedLabels
-            ? kv.isAnnoVal.unannotatedLabels
+        terms.forEach((kv,i)=>{
+          unannotated['term' + i] = kv.unannotatedLabels
+            ? kv.unannotatedLabels
             : []
         })
         return unannotated
@@ -258,17 +263,38 @@ function getPj(q, data, tdb, ds) {
         result.serieses.splice(0, result.serieses.length, ...nonempty)
       },
       grade_labels() {
-        return q.conditionParents && tdb.patient_condition
-          ? tdb.patient_condition.grade_labels
-          : q.conditionUnits && (q.conditionUnits[0] || q.conditionUnits[1] || q.conditionUnits[2])
+        return terms[0].term.iscondition || terms[1].term.iscondition || terms[2].term.iscondition
           ? tdb.patient_condition.grade_labels
           : undefined
-      }
+      },
+      bins() {
+        return {
+          "0": terms[0].bins,
+          "1": terms[1].bins,
+          "2": terms[2].bins,
+        }
+      },
+      useColOrder() {
+        return terms[1].orderedLabels.length > 0
+      },
+      useRowOrder() {
+        return terms[2].orderedLabels.length > 0
+      },
+      sortColsRows(result) {
+        if (terms[1].orderedLabels.length) {
+          const labels = terms[1].orderedLabels
+          result.cols.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
+        }
+        if (terms[2].orderedLabels.length) {
+          const labels = terms[2].orderedLabels
+          result.rows.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
+        }
+      },
     }
   })
 }
 
-function getIsAnnoValFxn(q, tdb, index) {
+function getTermDetails(q, tdb, index) {
   const termnum_id = 'term'+ index + '_id'
   const termid = q[termnum_id]
   const term = termid ? tdb.termjson.map.get(termid) : {}
@@ -279,15 +305,15 @@ function getIsAnnoValFxn(q, tdb, index) {
   const unannotatedValues = nb.unannotated
     ? Object.keys(nb.unannotated).filter(key=>key.startsWith('value')).map(key=>nb.unannotated[key]) 
     : []
-  const fxn = val => termIsNumeric && !unannotatedValues.includes(val)
-  fxn.unannotatedLabels = nb.unannotated
+  const isAnnoVal = val => termIsNumeric && !unannotatedValues.includes(val)
+  const unannotatedLabels = nb.unannotated
     ? Object.keys(nb.unannotated).filter(key=>key.startsWith('label') && key != 'label_annotated').map(key=>nb.unannotated[key])
     : []
-  return fxn
+  return {term, isAnnoVal, nb, unannotatedValues, unannotatedLabels}
 }
 
 
-async function load_genotype_by_sample ( id ) { console.log(id)
+async function load_genotype_by_sample ( id ) {
 /* id is the file name under cache/samples-by-genotype/
 */
   const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', id ) )

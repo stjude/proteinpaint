@@ -224,7 +224,7 @@ tape("categorical term1", function (test) {
 
 
 tape("numerical term1", function (test) {
-  test.plan(7) 
+  test.plan(7)
  
   compareResponseData(
     test, 
@@ -893,16 +893,33 @@ function dataSorter(a,b) {
 }
 
 function normalizeRefs(refs, comparedRefs) {
-  delete refs.useColOrder
-  delete refs.useRowOrder
-  delete refs.bins
-  delete refs.grade_labels
   delete refs['@errors']
   delete refs.row2name['@errors']
+  if (!refs.useColOrder) refs.cols.sort(valueSort)
+  if (!refs.useRowOrder) refs.rows.sort(valueSort)
 
-  refs.cols.sort(valueSort)
-  refs.rows.sort(valueSort)
+  // normalize the minor differences
+  if (refs.bins) {
+    for(const i in refs.bins) {
+      refs.bins[i].forEach(bin => {
+        if (bin.name) {
+          if (!('label' in bin)) bin.label = bin.name
+          delete bin.name
+        }
+        for(const key in bin) {
+          if (bin[key] === true) {
+            bin[key] = 1
+          }
+          if (bin[key] === false) {
+            bin[key] = 0
+          }
+        }
+      })
+    }
+  }
 
+  // make it easier to manually inspect results by
+  // matching the result key ordering in the json printout
   let obj
   if (comparedRefs) {
     obj = {}

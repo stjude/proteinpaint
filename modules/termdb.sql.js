@@ -224,7 +224,7 @@ return an array of sample names passing through the filter
 /* 
 	 
 */
-export function get_rows ( q ) {
+export function get_rows ( q, withCTEs = false ) {
 /*
 gets data for barchart but not summarized by counts;
 returns all relevant rows of {sample, key[0,1,2], val[0,1,2]}
@@ -266,7 +266,7 @@ q{}
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( values )
 
-	return lst
+	return !withCTEs ? lst : {lst, CTE0, CTE1, CTE2}
 }
 
 function get_term_cte(q, filter, values, index) {
@@ -709,7 +709,8 @@ returns { sql, tablename }
 				FROM ${bins.tablename}
 			)`,
 			tablename,
-			name2bin: bins.name2bin
+			name2bin: bins.name2bin,
+			bins: bins.bins
 		}
 	}
 	if( term.iscondition ) {
@@ -952,7 +953,8 @@ returns { sql, tablename, name2bin }
 	return {
 		sql,
 		tablename: bin_sample_table,
-		name2bin
+		name2bin,
+		bins
 	}
 }
 
