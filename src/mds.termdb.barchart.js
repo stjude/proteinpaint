@@ -130,13 +130,15 @@ export class TermdbBarchart{
       ? bins.fixed_bins.map(d=>d.label).reverse()
       : bins && bins.crosstab_fixed_bins 
       ? bins.crosstab_fixed_bins.map(d=>d.label).reverse()
+      : bins["2"]
+      ? bins["2"].map(d=>d.label).reverse()
       : null
 
     self.grade_labels = chartsData.refs.grade_labels 
       ? chartsData.refs.grade_labels
       : null
 
-    const rows = chartsData.refs.rows
+    const rows = chartsData.refs.rows;
     self.rowSorter = chartsData.refs.useRowOrder
       ? (a,b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
       : self.binLabels
@@ -428,7 +430,7 @@ export class TermdbBarchart{
       colLabel: {
         text: d => {
           const grade = self.grade_labels
-            ? self.grade_labels.find(c => c.grade == d)
+            ? self.grade_labels.find(c => 'id' in d ? c.grade == d.id : c.grade == d)
             : null
           return self.terms.term1.values
             ? self.terms.term1.values[d].label
@@ -455,7 +457,7 @@ export class TermdbBarchart{
       rowLabel: {
         text: d => {
           const grade = self.grade_labels
-            ? self.grade_labels.find(c => c.grade == d)
+            ? self.grade_labels.find(c => 'id' in d ? c.grade == d.id : c.grade == d)
             : null
           return self.terms.term1.values
             ? self.terms.term1.values[d].label
@@ -596,7 +598,8 @@ export class TermdbBarchart{
       legendGrps.push({
         name: t.name + (overlay ? ': '+overlay.label : ''),
         items: s.rows.map(d => {
-          const g = grade_labels ? grade_labels.find(c => c.grade == d) : null
+          const g = grade_labels ? grade_labels.find(c => typeof d == 'object' && 'id' in d ? c.grade == d.id : c.grade == d) : null
+          this.binLabels
           return {
             dataId: d,
             text: g ? g.label : d,

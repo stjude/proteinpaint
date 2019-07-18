@@ -191,6 +191,7 @@ function getDataName(plot) {
   })
 
   plot.settings.common.conditionParents.forEach((parent,i) => {
+    const termnum = i == 1 ? 'term' : 'term' + i
     if (!parent || !plot[termnum] || !plot[termnum].iscondition) return
     _q[i].value_by_max_grade = 1
     _q[i].bar_by_children = 1
