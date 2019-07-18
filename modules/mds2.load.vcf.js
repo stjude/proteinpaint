@@ -392,16 +392,34 @@ for specific type of query mode, send additional info
 	}
 
 	if( q.AFtest ) {
-		// did adjustment, return back average admix
-		const g = q.AFtest.groups.find(i=>i.is_termdb)
-		if( g ) {
-			result.AFtest_termdbgroup = {
-				samplecount: g.columnidx.length
+		if( q.AFtest.groups.find(i=>i.is_termdb) ) {
+			// has termdb group
+			// return number of samples; did adjustment, return back average admix
+			result.AFtest_termdbgroup = []
+
+			let g = q.AFtest.groups[0]
+			if( g.is_termdb ) {
+				result.AFtest_termdbgroup[0] = {
+					samplecount: g.columnidx.length
+				}
+				if( g.pop2average ) {
+					result.AFtest_termdbgroup[0].popsetaverage = []
+					for(const [k,v] of g.pop2average) {
+						result.AFtest_termdbgroup[0].popsetaverage.push([k,v.average])
+					}
+				}
 			}
-			if( g.pop2average ) {
-				result.AFtest_termdbgroup.popsetaverage = []
-				for(const [k,v] of g.pop2average) {
-					result.AFtest_termdbgroup.popsetaverage.push([k,v.average])
+
+			g = q.AFtest.groups[1]
+			if( g.is_termdb ) {
+				result.AFtest_termdbgroup[1] = {
+					samplecount: g.columnidx.length
+				}
+				if( g.pop2average ) {
+					result.AFtest_termdbgroup[1].popsetaverage = []
+					for(const [k,v] of g.pop2average) {
+						result.AFtest_termdbgroup[1].popsetaverage.push([k,v.average])
+					}
 				}
 			}
 		}
