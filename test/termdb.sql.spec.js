@@ -224,7 +224,7 @@ tape("categorical term1", function (test) {
 
 
 tape("numerical term1", function (test) {
-  test.plan(7)
+  test.plan(8)
  
   compareResponseData(
     test, 
@@ -301,10 +301,23 @@ tape("numerical term1", function (test) {
     },
     "sample counts by age of diagnosis, condition overlay by most recent grade"
   )
+
+  compareResponseData(
+    test,
+    {
+      term1: 'agedx',
+      term2_is_genotype: 1,
+      ssid,
+      mname: 'T>C',
+      chr: 'chr17',
+      pos: 7666870,
+    },
+    "sample counts by age of diagnosis, genotype overlay"
+  )
 })
 
 tape("leaf condition term1", function (test) {
-  test.plan(10) 
+  test.plan(11) 
   compareResponseData(
     test, 
     {
@@ -425,10 +438,25 @@ tape("leaf condition term1", function (test) {
     },
     "filtered sample counts by Asthma condition most recent grade, condition overlay by max-grade"
   )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Asthma', 
+      conditionUnits: ["","most_recent_grade",""], 
+      term1_q: {value_by_most_recent:1},
+      term2_is_genotype: 1,
+      ssid,
+      mname: 'T>C',
+      chr: 'chr17',
+      pos: 7666870,
+    },
+    "sample counts by Asthma condition most recent grade, genotype overlay"
+  )
 })
 
 tape("non-leaf condition term1", function (test) {
-  test.plan(12) 
+  test.plan(13) 
 
   compareResponseData(
     test,
@@ -583,6 +611,21 @@ tape("non-leaf condition term1", function (test) {
       }]
     },
     "filtered sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'Arrhythmias', 
+      conditionUnits: ["","max_grade_perperson",""], 
+      term1_q: {value_by_max_grade:1, bar_by_grade:1},
+      term2_is_genotype: 1,
+      ssid,
+      mname: 'T>C',
+      chr: 'chr17',
+      pos: 7666870,
+    },
+    "sample counts by Arrhythmias condition most recent grade, genotype overlay"
   )
 })
 
