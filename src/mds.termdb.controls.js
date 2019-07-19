@@ -626,7 +626,19 @@ function setBinOpts(plot, main, table, termNum, label) {
         last_bin_btn.text('EDIT')
   
         //define first, last bin range and custom_bin
-        custom_bin_size = { size: auto_bins.bin_size }
+        custom_bin_size = { 
+          size: auto_bins.bin_size, 
+          startinclusive: 0,
+          stopinclusive: 1,
+          lowerbound:auto_bins.start_value?auto_bins.start_value:'auto',
+          lowerbound_inclusive: 1,
+          first_bin_uppervalue: auto_bins.start_value? (auto_bins.start_value + auto_bins.bin_size) : 'auto',
+          first_bin_unit: 'value',
+          upperbound: 'auto',
+          upperbound_inclusive: 0,
+          last_bin_lowervalue: 'auto',
+          last_bin_unit: 'value'
+        }
   
       }else if(bin_term.graph.barchart.numeric_bin.fixed_bins){
         const fixed_bins = bin_term.graph.barchart.numeric_bin.fixed_bins

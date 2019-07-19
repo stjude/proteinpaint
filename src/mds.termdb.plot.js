@@ -171,7 +171,7 @@ function getDataName(plot) {
   const _q={0:{}, 1:{}, 2:{}}
   if (plot.custom_bins) {
     for(const i in plot.custom_bins) {
-      if (typeof plot.custom_bins[i] == 'object' && Object.keys(plot.custom_bins[i]).length) {
+      if (plot.custom_bins[i] && typeof plot.custom_bins[i] == 'object' && Object.keys(plot.custom_bins[i]).length) {
         _q[i].custom_bins = plot.custom_bins[i]
       } 
     }
