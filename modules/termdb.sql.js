@@ -211,8 +211,6 @@ return an array of sample names passing through the filter
 	const string =
 		`WITH ${filter.filters}
 		SELECT sample FROM ${filter.CTEname}`
-	console.log('SQL: ',string)
-	console.log('PARAM: ',filter.values)
 
 	// may cache statement
 	const re = ds.cohort.db.connection.prepare( string )

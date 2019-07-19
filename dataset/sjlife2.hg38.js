@@ -339,9 +339,10 @@ module.exports={
 						id:'genetic_race',
 						name:'Genetically defined race',
 						iscategorical:true,
-						values:[{key:'European American',inuse:true},{key:'African American'},{key:'Asian American'}]
-					},
-					termfilter_inuse:true,
+						values:[{key:'European American',inuse:true},{key:'African American'},{key:'Asian American'}],
+						inuse:true,
+						value_index:0,
+					}
 				},
 			},
 			plot_mafcov: {

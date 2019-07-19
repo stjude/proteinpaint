@@ -20,12 +20,13 @@ may_create_vcflegend_numericalaxis
 ********************** INTERNAL
 showmenu_numericaxis
 __update_legend
-	update_legend_by_AFtest
+	AFtest_makeui
+		AFtest_update_flag
 		menu_edit_AFtest_onegroup
-		legend_show_AFtest_onegroup
-			legend_show_AFtest_onegroup_termdb
-			legend_show_AFtest_onegroup_infofield
-			legend_show_AFtest_onegroup_population
+		AFtest_showgroup
+			AFtest_showgroup_termdb
+			AFtest_showgroup_infofield
+			AFtest_showgroup_population
 */
 
 
@@ -191,7 +192,7 @@ but will not update track
 		}
 
 		if( nm.inuse_AFtest ) {
-			update_legend_by_AFtest( settingholder, tk, block )
+			AFtest_makeui( settingholder, tk, block )
 			return
 		}
 
@@ -205,7 +206,17 @@ but will not update track
 
 
 
-function AFtest_adjustsettingbygroup ( af ) {
+function AFtest_update_flag ( af ) {
+/*
+after selecting groups,
+update AFtest setting flags based on what groups are selected
+
+toggle following flags, do not alter doms:
+- population.adjust_race
+- af.testby_fisher
+- af.testby_AFdiff
+- af.termfilter.inuse
+*/
 	if( af.groups[0].is_population && af.groups[1].is_population ) {
 		// both groups are populations, do not adjust race
 		af.groups[0].adjust_race=false
@@ -230,19 +241,36 @@ function AFtest_adjustsettingbygroup ( af ) {
 			af.testby_AFdiff = true
 		}
 	}
+	if( af.termfilter ) {
+		// termfilter available
+		// if condition does not apply then turn off and disable
+		af.termfilter.disabled = false
+		if( !af.groups.find( i=> i.is_termdb ) ) {
+			// no termdb group
+			// must has at least one population that supports it
+			if( !af.groups.find( i=>{ if(i.is_population && i.termfilter) return i }) ) {
+				// no pop either
+				af.termfilter.inuse = false
+				af.termfilter.disabled = true
+			}
+		}
+	}
 }
 
 
 
 
-function update_legend_by_AFtest ( settingholder, tk, block ) {
-	// works for arbitrary number of groups
+function AFtest_makeui ( settingholder, tk, block ) {
+/*
+make ui for AFtest in legend
+do not alter any flags, as they are handled in AFtest_update_flag
+*/
 
 	const af = tk.vcf.numerical_axis.AFtest
 
-	AFtest_adjustsettingbygroup( af )
+	AFtest_update_flag( af )
 
-	const table = settingholder.append('table')
+	const table = settingholder.append('table') // 3 columns
 		.style('border-spacing','5px')
 		.style('border-collapse','separate')
 		.style('border-left','solid 1px #ccc')
@@ -271,49 +299,73 @@ function update_legend_by_AFtest ( settingholder, tk, block ) {
 			td3: tr.append('td'),
 		}
 
-		legend_show_AFtest_onegroup( tk, block, group )
+		AFtest_showgroup( tk, block, group )
 	}
 
-	// extra rows for controls
+	// row for test method
 	{
 		const tr = table.append('tr')
-		const td = tr.append('td')
-			.attr('colspan',3)
-
-		td.append('div')
-			.text('Test Method')
-			.style('border-radius','6px')
-			.style('display', 'inline-block')
-			.style('color','#000')
+		const td = tr.append('td').attr('colspan',3)
+		td.append('span')
+			.text('TEST METHOD')
 			.style('padding','6px')
 			.style('margin','3px 5px')
 			.style('font-size','.7em')
-			.style('text-transform','uppercase')
-
-		const testmethod = td.append('select')
-			.style('margin-right','5px')
+		const select = td.append('select')
 			.on('change',()=>{
 				af.testby_AFdiff=false
 				af.testby_fisher=false
-				const i = testmethod.node().selectedIndex
+				const i = select.node().selectedIndex
 				if(i==0) {
 					af.testby_AFdiff=true
 				} else if(i==1) {
 					af.testby_fisher=true
 				}
+				// must call this to reset axis label after changing test method
 				may_setup_numerical_axis(tk)
 				tk.load()
 			})
-		testmethod.append('option')
-			.text('Value difference')
-		const fisher_option = testmethod.append('option')
-			.text('Fisher exact test')
-		
-		// if one of the groups is info_field then disable fisher test	
-		if(af.groups.find(i=>i.is_infofield)){
-			fisher_option.property('disabled','true')
+		select.append('option').text('Value difference')
+		{
+			const o = select.append('option').text('Fisher exact test')
+			// fisher test option will be disabled if there is info field
+			if( af.groups.find(i=> i.is_infofield) ) {
+				o.property('disabled',true)
+			}
 		}
-		testmethod.node().selectedIndex = af.testby_AFdiff ? 0 : 1
+		select.node().selectedIndex = af.testby_AFdiff ? 0 : 1
+	}
+
+	if( af.termfilter ) {
+		// row for term filter
+		const tr = table.append('tr')
+		const td = tr.append('td').attr('colspan',3)
+		td.append('span')
+			.text('RESTRICT TO')
+			.style('padding','6px')
+			.style('margin','3px 5px')
+			.style('font-size','.7em')
+		const select = td.append('select')
+			.on('change', async ()=>{
+				const i = select.node().selectedIndex
+				if(i==0) {
+					af.termfilter.inuse=false
+				} else {
+					af.termfilter.inuse=true
+					af.termfilter.value_index = i-1
+				}
+				select.property('disabled',true)
+				await tk.load()
+				select.property('disabled',false)
+			})
+		if( af.termfilter.disabled ) {
+			select.property('disabled',true)
+		}
+		select.append('option').text('No restriction')
+		for(const v of af.termfilter.values) {
+			select.append('option').text(v.label || v.key)
+		}
+		select.node().selectedIndex = af.termfilter.inuse ? 1+af.termfilter.value_index : 0
 	}
 }
 
@@ -417,7 +469,7 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 
 	async function _updatetk () {
 		settingholder.selectAll('*').remove()
-		update_legend_by_AFtest(settingholder, tk, block)
+		AFtest_makeui(settingholder, tk, block)
 		group.dom.td2.text('UPDATING...')
 		may_setup_numerical_axis( tk )
 		await tk.load()
@@ -447,22 +499,22 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 
 
 
-function legend_show_AFtest_onegroup ( tk, block, group, tr ) {
+function AFtest_showgroup ( tk, block, group ) {
 /* display one AFtest group in legend
 */
 	if( group.is_termdb ) {
 		group.dom.td2.text('ALLELE FREQUENCY OF')
-		legend_show_AFtest_onegroup_termdb(group, group.dom.td3, tk, block)
+		AFtest_showgroup_termdb(group, group.dom.td3, tk, block)
 		return
 	}
 	if( group.is_infofield ) {
 		group.dom.td2.text('VALUE OF')
-		legend_show_AFtest_onegroup_infofield(group, group.dom.td3, tk)
+		AFtest_showgroup_infofield(group, group.dom.td3, tk)
 		return
 	}
 	if( group.is_population ) {
 		group.dom.td2.text('ALLELE FREQUENCY OF')
-		legend_show_AFtest_onegroup_population(group, group.dom.td3, tk)
+		AFtest_showgroup_population(group, group.dom.td3, tk)
 		return
 	}
 	group.dom.td3.text('Unknown group type!')
@@ -471,7 +523,7 @@ function legend_show_AFtest_onegroup ( tk, block, group, tr ) {
 
 
 
-function legend_show_AFtest_onegroup_termdb ( group, holder, tk, block ) {
+function AFtest_showgroup_termdb ( group, holder, tk, block ) {
 	termvaluesettingui.display(
 		holder,
 		group,
@@ -512,7 +564,7 @@ function legend_show_AFtest_onegroup_termdb ( group, holder, tk, block ) {
 
 
 
-function legend_show_AFtest_onegroup_infofield (group, holder, tk){
+function AFtest_showgroup_infofield (group, holder, tk) {
 // group is based on an info field
 
 	const f = tk.info_fields.find( j=> j.key == group.key )
@@ -575,7 +627,7 @@ function legend_show_AFtest_onegroup_infofield (group, holder, tk){
 
 
 
-function legend_show_AFtest_onegroup_population ( group, holder, tk ){
+function AFtest_showgroup_population ( group, holder, tk ) {
 	
 	const p = tk.populations.find(i=>i.key==group.key)
 	const af = tk.vcf.numerical_axis.AFtest

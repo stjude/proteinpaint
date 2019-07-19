@@ -1071,19 +1071,20 @@ append numeric axis parameter to object for loadTk
 			}
 			return lst
 		}, [])
-		if( nm.AFtest.termfilter_inuse ) {
-			if(!nm.AFtest.termfilter) throw 'termfilter missing while termfilter_inuse is true'
+		if( nm.AFtest.termfilter && nm.AFtest.termfilter.inuse ) {
 			if(!nm.AFtest.termfilter.iscategorical) throw 'AFtest.termfilter is not categorical'
 			if(!nm.AFtest.termfilter.values) throw 'termfilter.values missing'
-			par.AFtest.termfilter = [{ // mimic tvs
+			// in nm, termfilter is not tvs
+			// in parameter, termfilter is tvs
+			const v = nm.AFtest.termfilter.values[ nm.AFtest.termfilter.value_index ]
+			if(!v) throw 'unknown value selection by value_index in AFtest.termfilter'
+			par.AFtest.termfilter = [{
 				term:{
 					id: nm.AFtest.termfilter.id,
 					iscategorical: true // hardcoded
-				}
+				},
+				values: [ v ]
 			}]
-			let v = nm.AFtest.termfilter.values.find(i=>i.inuse)
-			if(!v) v = nm.AFtest.termfilter.values[0]
-			par.AFtest.termfilter[0].values = [ v ]
 		}
 		return
 	}
