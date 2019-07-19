@@ -209,7 +209,7 @@ function show_legend ( obj, categories ) {
 			.html('&nbsp;&nbsp;')
 		row.append('span')
 			.style('color',c.color)
-			.html('&nbsp;'+c.label)
+			.html('&nbsp;'+c.label+'&nbsp;(n='+c.count+')')
 	}
 }
 

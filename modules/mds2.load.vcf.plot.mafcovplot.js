@@ -63,6 +63,7 @@ export async function handle_mafcovplot ( q, genome, ds, result ) {
 			const category2color = d3scale.scaleOrdinal( d3scale.schemeCategory10)
 			const categories = new Set()
 			const sample2color = new Map()
+			const color2count = {}
 			for(const i of tmp) {
 				const category = i.key1
 				categories.add( category )
@@ -71,11 +72,16 @@ export async function handle_mafcovplot ( q, genome, ds, result ) {
 			for(const plot of result.plotgroups ) {
 				for(const o of plot.lst ) {
 					o.sampleobj.color = sample2color.get( o.sampleobj.name ) || 'black'
+					if(o.sampleobj.color in color2count){
+						color2count[o.sampleobj.color] = color2count[o.sampleobj.color] + 1
+					}else{
+						color2count[o.sampleobj.color] = 1
+					}
 				}
 			}
 			result.categories = []
 			for(const c of categories) {
-				result.categories.push({ color:category2color(c), label:c })
+				result.categories.push({ color:category2color(c), label:c, count:color2count[category2color(c)] })
 			}
 		}
 
