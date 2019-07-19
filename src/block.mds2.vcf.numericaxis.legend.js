@@ -504,17 +504,17 @@ function AFtest_showgroup ( tk, block, group ) {
 */
 	if( group.is_termdb ) {
 		group.dom.td2.text('ALLELE FREQUENCY OF')
-		AFtest_showgroup_termdb(group, group.dom.td3, tk, block)
+		AFtest_showgroup_termdb(group, tk, block)
 		return
 	}
 	if( group.is_infofield ) {
 		group.dom.td2.text('VALUE OF')
-		AFtest_showgroup_infofield(group, group.dom.td3, tk)
+		AFtest_showgroup_infofield(group, tk)
 		return
 	}
 	if( group.is_population ) {
 		group.dom.td2.text('ALLELE FREQUENCY OF')
-		AFtest_showgroup_population(group, group.dom.td3, tk)
+		AFtest_showgroup_population(group, tk)
 		return
 	}
 	group.dom.td3.text('Unknown group type!')
@@ -523,7 +523,8 @@ function AFtest_showgroup ( tk, block, group ) {
 
 
 
-function AFtest_showgroup_termdb ( group, holder, tk, block ) {
+function AFtest_showgroup_termdb ( group, tk, block ) {
+	const holder = group.dom.td3.append('span')
 	termvaluesettingui.display(
 		holder,
 		group,
@@ -564,62 +565,44 @@ function AFtest_showgroup_termdb ( group, holder, tk, block ) {
 
 
 
-function AFtest_showgroup_infofield (group, holder, tk) {
+function AFtest_showgroup_infofield (group, tk) {
 // group is based on an info field
+
+	const holder = group.dom.td3.append('span')
 
 	const f = tk.info_fields.find( j=> j.key == group.key )
 
-	const info_field_div = holder.append('div')
-		.style('display','inline-block')
-		
-	update_info_field(info_field_div)
-
-
-	function update_info_field(info_field_div){
-
-		info_field_div.selectAll('*').remove()
-		
-		//hidden select and options on top of info_field_btn
-		const info_select = info_field_div.append('select')
-			.style('padding','3px 6px 3px 6px')
-			.style('position','absolute')
-			.style('opacity',0)
-
-		const af = tk.vcf.numerical_axis.AFtest
-
-		for( const info_field of af.allowed_infofields ){
-
-			const info = tk.info_fields.find( j=> j.key == info_field.key )
-
-			info_select.append('option')
-				.attr('value',info_field.key)
-				.text(info.label)
-		}
-
-		info_select.node().value = f.key
-
-		//info field button with selected info field
-		const info_field_btn = info_field_div.append('div')
-			// .attr('class','sja_filter_tag_btn')
-			.style('color','#FFF')
-			.style('border-radius','6px')
-			.style('background-color', color_infofield)
-			.style('padding','3px 6px 3px 6px')
-			.style('margin-left', '5px')
-			.style('font-size','1em')
-			.html(f.label+' &#9662;')
-
-		info_select.on('change',async()=>{
-			
-			//change value of button 
-			const new_info = tk.info_fields.find( j=> j.key == info_select.node().value )
-			info_field_btn.text(new_info.label)
-
-			//update gorup and load tk
-			group.key = new_info.key
+	//hidden select and options
+	const select = holder.append('select')
+		.style('padding','3px 6px 3px 6px')
+		.style('position','absolute')
+		.style('opacity',0)
+		.on('change',async()=>{
+			const value = select.node().value
+			const i = tk.info_fields.find( j=> j.key == value )
+			group.key = value
+			info_field_btn.html( (i ? i.label : value ) + '&nbsp; <span style="font-size:.7em">LOADING...</span>')
 			await tk.load()
+			info_field_btn.text( i ? i.label : value )
 		})
+
+	for( const i of tk.vcf.numerical_axis.AFtest.allowed_infofields ){
+		const i2 = tk.info_fields.find( j=> j.key == i.key )
+		select.append('option')
+			.attr('value',i.key)
+			.text( i2 ? i2.label : i.key )
 	}
+
+	select.node().value = group.key
+
+	//info field button with selected info field
+	const info_field_btn = holder.append('span')
+		.style('color','#FFF')
+		.style('border-radius','6px')
+		.style('background-color', color_infofield)
+		.style('padding','3px 6px 3px 6px')
+		.style('margin-left', '5px')
+		.html(f.label+' &#9662;')
 }
 
 
@@ -627,90 +610,71 @@ function AFtest_showgroup_infofield (group, holder, tk) {
 
 
 
-function AFtest_showgroup_population ( group, holder, tk ) {
-	
+function AFtest_showgroup_population ( group, tk ) {
+	const holder = group.dom.td3.append('span')
+
 	const p = tk.populations.find(i=>i.key==group.key)
 	const af = tk.vcf.numerical_axis.AFtest
 
-	const population_div = holder.append('div')
-		.style('display','inline-block')
-		
-	update_population(population_div)
-
-	function update_population(population_div){
-
-		population_div.selectAll('*').remove()
-		
-		//hidden select and options on top of population_btn
-		const population_select = population_div.append('select')
-			.style('padding','3px 6px 3px 6px')
-			.style('position','absolute')
-			.style('opacity',0)
-
-		for( const population of tk.populations ){
-			population_select.append('option')
-				.attr('value',population.value)
-				.text(population.label)
-		}
-
-		population_select.node().value = p.key
-
-		const population_btn = population_div.append('div')
-			.style('color','#FFF')
-			.style('border-radius','6px')
-			.style('background-color', color_population)
-			.style('padding','3px 6px 3px 6px')
-			.style('margin-left', '5px')
-			.style('font-size','1em')
-			.style('z-index','-1')
-			
-		population_btn.html(p.label+ (tk.populations.length>1 ? ' &#9662;':''))
-
-		af.adjust_race_div = holder.append('div')
-			.style('display','inline-block')
-
-		update_adjust_race(af.adjust_race_div)
-
-		population_select.on('change',async()=>{
-			
-			//change value of button 
-			const new_population = tk.populations.find( i=>i.label == population_select.node().value )
-			population_btn.text(new_population.label)
-
-			//update gorup and load tk
-			group.key = new_population.key
-			group.allowto_adjust_race = new_population.allowto_adjust_race
-			group.adjust_race = new_population.adjust_race
-			update_adjust_race(af.adjust_race_div)
+	const select = holder.append('select')
+		.style('padding','3px 6px 3px 6px')
+		.style('position','absolute')
+		.style('opacity',0)
+		.on('change', async()=>{
+			const value = select.node().value
+			const p = tk.populations.find( i=>i.key == value )
+			group.key = value
+			group.allowto_adjust_race = p.allowto_adjust_race
+			group.adjust_race = p.adjust_race
+			update_adjust_race(adjust_race_div)
+			population_btn.html(p.label+' &nbsp;<span style="font-size:.7em">LOADING...</span>')
 			await tk.load()
+			population_btn.text(p.label)
 		})
+
+	for( const p of tk.populations ){
+		select.append('option')
+			.attr('value',p.key)
+			.text(p.label)
 	}
+
+	select.node().value = group.key
+
+	const population_btn = holder.append('span')
+		.style('color','#FFF')
+		.style('border-radius','6px')
+		.style('background-color', color_population)
+		.style('padding','3px 6px 3px 6px')
+		.style('margin-left', '5px')
+
+	population_btn.html( p.label+ (tk.populations.length>1 ? ' &#9662;':''))
+
+	const adjust_race_div = holder.append('span')
+
+	update_adjust_race(adjust_race_div)
 
 	function update_adjust_race(adjust_race_div){
 
 		adjust_race_div.selectAll('*').remove()
-		
-		const p_select = af.groups.find(i=>i.key==group.key)
 
-		// may allow race adjustment
-		if(p_select.allowto_adjust_race) {
+		const p = af.groups.find(i=>i.key==group.key)
 
-			const id = Math.random()
-			af.adjust_race_checkbox = adjust_race_div.append('input')
+		if(p.allowto_adjust_race) {
+			const label = adjust_race_div.append('label')
+			label.append('input')
 				.attr('type','checkbox')
-				.attr('id',id)
 				.style('margin-left','10px')
 				.property('disabled', (!af.groups.find(i=>i.is_termdb) || !af.groups.find(i=>i.is_population)) )
-				.property('checked', p_select.adjust_race)
-				.on('change',()=>{
-					p_select.adjust_race = !p_select.adjust_race
-					tk.load()
+				.property('checked', p.adjust_race)
+				.on('change', async ()=>{
+					p.adjust_race = !p.adjust_race
+					lab.html('&nbsp;Loading...')
+					await tk.load()
+					lab.html('&nbsp;Adjust race background')
 				})
-
-			adjust_race_div.append('label')
+			const lab = label
+				.append('span')
 				.html('&nbsp;Adjust race background')
-				.attr('class','sja_clbtext')
-				.attr('for',id)
 		}
 	}
 }
