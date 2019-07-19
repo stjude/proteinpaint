@@ -48,12 +48,12 @@ will include tk.vcf.plot_mafcov.overlay_term
 			.style('margin-bottom','5px')
 		obj.d.term_button = row
 			.append('div')
+			.attr('class','sja_filter_tag_btn')
 			.style('display','inline-block')
-			.style('margin-right','10px')
-			.style('background','#4888BF') // to share css class with tvs.ui
-			.style('border-radius','5px')
+			.style('margin-right','1px')
+			.style('background','#4888BF')
 			.style('color','white')
-			.style('padding','2px 9px')
+			.style('padding','4px 9px')
 			.on('click',()=>{
 				obj.tk.legend.tip.clear()
 					.showunder(obj.d.term_button.node())
@@ -84,6 +84,12 @@ will include tk.vcf.plot_mafcov.overlay_term
 				})
 			})
 		obj.d.delete_term_button = row.append('div')
+			.attr('class','sja_filter_tag_btn')
+			.style('margin-right','10px')
+			.style('background','#4888BF')
+			.style('border-radius','0 6px 6px 0')
+			.style('color','white')
+			.style('padding','4px 6px')
 			.html('&times;')
 			.on('click',()=>{
 				delete obj.overlay_term
@@ -104,10 +110,14 @@ function update_term_button ( obj ) {
 // call after updating overlay_term
 	obj.d.term_legenddiv.selectAll('*').remove()
 	if( obj.overlay_term ) {
-		obj.d.term_button.text( obj.overlay_term.name )
+		obj.d.term_button
+			.style('border-radius','6px 0 0 6px')
+			.text( obj.overlay_term.name )
 		obj.d.delete_term_button.style('display','inline-block')
 	} else {
-		obj.d.term_button.text( 'Select a term to overlay' )
+		obj.d.term_button
+			.style('border-radius','6px')
+			.text( 'Select a term to overlay' )
 		obj.d.delete_term_button.style('display','none')
 	}
 }
@@ -176,9 +186,22 @@ function show_legend ( obj, categories ) {
 // optional, only if has termdb
 // categories[] is returned from xhr
 	if( !obj.tk.mds || !obj.tk.mds.termdb || !categories) return
+	let cats = categories
+
+	// for numerical term sort the categories, and attach unannotated at the end of cats[]
+	if(obj.overlay_term.isinteger || obj.overlay_term.isfloat){
+		let unannoated_cats = []
+		for (const [i, cat] of categories.entries()){
+			if(isNaN(cat.label.split(' ')[0])){
+				unannoated_cats.push(categories.splice(i,1)[0]) 
+			}
+		}
+		cats = categories.sort((a, b) => (parseFloat(a.label.split(' ')[0])  > parseFloat(b.label.split(' ')[0]) ? 1 : -1))
+		cats.push(...unannoated_cats)
+	}
 
 	obj.d.term_legenddiv.selectAll('*').remove()
-	for(const c of categories ) {
+	for(const c of cats ) {
 		const row = obj.d.term_legenddiv.append('div')
 			.style('margin','4px 0px')
 		row.append('span')
