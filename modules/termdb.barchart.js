@@ -512,9 +512,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
           for(const k in row) {
             if (!row[k][events_key]) continue
             const term = tdb.termjson.map.get(k)
-            // find the max grade across all conditions, not just for 
-            // subconditions of the parent term
-            //if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+            if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
               for(const event of row[k][events_key]) {
                 const grade = event[grade_key]
                 if (uncomputable[grade]) continue
@@ -522,7 +520,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
                   maxGrade = grade
                 }
               }
-            //}
+            }
           }
           for(const k in row) {
             if (!row[k][events_key]) continue
@@ -545,9 +543,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
           for(const k in row) {
             if (!row[k][events_key]) continue
             const term = tdb.termjson.map.get(k)
-            // find the most recent age graded for all conditions, not just for 
-            // subconditions of the parent term
-            //if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+            if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
               for(const event of row[k][events_key]) {
                 const age = event[age_key]
                 if (event[grade_key] in uncomputable) continue
@@ -555,7 +551,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
                   mostRecentAge = age
                 }
               }
-            //}
+            }
           }
           for(const k in row) {
             if (!row[k][events_key]) continue
