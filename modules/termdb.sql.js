@@ -613,6 +613,8 @@ function uncomputablegrades_clause ( ds ) {
 	}
 	return ''
 }
+
+
 function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null ) {
 	// work for grade as bars 
 	if( tvs.value_by_max_grade ) {
@@ -735,7 +737,6 @@ return {sql, tablename}
 	const term_table = 'term_table' + termindex
 	const out_table = 'out_table' + termindex
 
-	let string
 	if( term.isleaf ) {
 		return {
 			sql:
@@ -771,33 +772,73 @@ return {sql, tablename}
 	}
 	if( q.bar_by_children ) {
 		values.push( term.id )
-		const subconditions = 'subconditions' + termindex
-		const descendants = 'descendants' + termindex
-		return {
-			sql: `${subconditions} AS (
-				SELECT id
-				FROM terms
-				WHERE parent_id=?
-			),
-			${descendants} AS (
-				SELECT term_id, s.id AS subcondition
-				FROM ancestry a, ${subconditions} s
-				WHERE s.id=a.ancestor_id OR s.id=a.term_id
-				ORDER BY term_id ASC
-			),
-			${grade_table} AS (
+		const subcondition_terms = 'subcondition_terms' + termindex
+		const descendant_terms = 'descendant_terms' + termindex
+		let sql = `${subcondition_terms} AS (
+			SELECT id
+			FROM terms
+			WHERE parent_id=?
+		),
+		${descendant_terms} AS (
+			SELECT term_id, s.id AS subcondition
+			FROM ancestry a, ${subcondition_terms} s
+			WHERE s.id=a.ancestor_id OR s.id=a.term_id
+			GROUP BY term_id, subcondition
+			ORDER BY term_id ASC
+		)`
+		
+		if (q.value_by_computable_grade) {
+			sql += `,
+			${out_table} AS (
 				SELECT
 					sample, d.subcondition as key, d.subcondition AS value
 				FROM
-					chronicevents a,
-					${descendants} d
+					annotations a,
+					${descendant_terms} d
 				WHERE
 				${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
 				a.term_id = d.term_id
 				${uncomputablegrades_clause( ds )}
 				GROUP BY key, sample
-			)`,
-			tablename: grade_table
+			)`
+		} else if (q.value_by_max_grade) {
+			/*
+				NEED TO CLARIFY !!!
+
+				If max-grade or most recent grade is to be computed across all conditions
+				for a patient, then take out the termtable argument from the 
+				grade_age_selection(..., ${descendant_terms}) function call below.
+
+			*/
+			// grade_table would not have term_id column 
+			// but has sample that would have been filtered by the 
+			// descendant term_ids;
+			// grade_table also filters out uncomputable grades
+			sql += `,
+			${grade_table} AS (
+				${grade_age_selection(term.id, values, q, ds, filter, ${descendant_terms})}
+			),
+			${out_table} AS (
+				SELECT
+					c.sample as sample, d.subcondition as key, d.subcondition AS value
+				FROM
+					chronicevents c,
+					${grade_table} g
+				JOIN ${descendant_terms} d ON d.term_id = c.term_id
+				WHERE
+				${filter ? 'c.sample IN '+filter.CTEname+' AND' : ''}
+				g.sample = c.sample AND g.grade = c.grade
+				GROUP BY key, c.sample
+			)`
+		} else if (q.value_by_max_grade) {
+			// to-do, different out_table WHERE clause than value_by_max_grade
+		} else {
+			throw 'unknown value_by_? for bar_by_children'
+		}
+
+		return {
+			sql,
+			tablename: out_table
 		}
 	}
 	throw 'unknown bar_by_? for a non-leaf term'
