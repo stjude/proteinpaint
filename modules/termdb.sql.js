@@ -807,16 +807,17 @@ return {sql, tablename}
 
 				If max-grade or most recent grade is to be computed across all conditions
 				for a patient, then take out the termtable argument from the 
-				grade_age_selection(..., ${descendant_terms}) function call below.
+				grade_age_selection() function call below.
 
 			*/
 			// grade_table would not have term_id column 
 			// but has sample that would have been filtered by the 
 			// descendant term_ids;
 			// grade_table also filters out uncomputable grades
+			const termtable = `(SELECT term_id FROM ${descendant_terms})`
 			sql += `,
 			${grade_table} AS (
-				${grade_age_selection(term.id, values, q, ds, filter, ${descendant_terms})}
+				${grade_age_selection(term.id, values, q, ds, filter, termtable)}
 			),
 			${out_table} AS (
 				SELECT
