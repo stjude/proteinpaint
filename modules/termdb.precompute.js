@@ -27,7 +27,7 @@ exports.handle_request_closure = ( genomes ) => {
       if (!Array.isArray(annorows)) throw 'ds.cohort.annorows must be an array'
 
       // process triggers
-      await precompute(res, tdb, annorows)
+      precompute(ds.cohort.db.connection, res, tdb, annorows)
     } catch(e) {
       res.send({error: (e.message || e)})
       if(e.stack) console.log(e.stack)
@@ -35,7 +35,7 @@ exports.handle_request_closure = ( genomes ) => {
   }
 }
 
-function precompute ( res, tdb, rows) {
+function precompute (dbconn, res, tdb, rows) {
 /*
   q: objectified URL query string
   ds: dataset
@@ -47,6 +47,7 @@ function precompute ( res, tdb, rows) {
   pj.tree.pjtime = pj.times
   delete tdb.precomputed
   tdb.precomputed = pj.tree
+  dbcache(dbconn, pj.tree.bySample)
   if (res) res.send(pj.times)
 }
 
@@ -64,9 +65,12 @@ function getPj(tdb, data) {
         '$sjlid': {
           byCondition: {
             '=term_id(]': {
+              term_id: '@branch',
               maxGrade: '<$grade',
               mostRecentAge: '<$age',
-              children: ['=subterm()']
+              children: ['=subterm()'],
+              '__:childrenAtMaxGrade': ['=childrenAtMaxGrade(]'],
+              '__:childrenAtMostRecent': ['=childrenAtMostRecent(]'],
             }
           }
         }
@@ -103,8 +107,47 @@ function getPj(tdb, data) {
         const i = row.lineage.indexOf(context.branch)
         return row.lineage[i-1]
       },
+      childrenAtMaxGrade(row, context) {
+        if (!Array.isArray(context.self.children)) return []
+        const byCondition = context.parent
+        const ids = []
+        for(const id of context.self.children) {
+          if (byCondition[id].maxGrade == context.self.maxGrade) {
+            ids.push(id)
+          }
+        }
+        return ids
+      },
+      childrenAtMostRecent(row, context) {
+        if (!Array.isArray(context.self.children)) return []
+        const byCondition = context.parent
+        const ids = []
+        for(const id of context.self.children) {
+          if (byCondition[id].mostRecentAge == context.self.mostRecentAge) {
+            ids.push(id)
+          }
+        }
+        return ids
+      }
     }
   })
 }
 
 exports.precompute = precompute
+
+function dbcache(dbconn, bySample) { return;
+  dbconn.exec(
+    `DROP TABLE IF EXISTS precomputed;
+    CREATE TABLE precomputed(
+      sample TEXT,
+      maxgrade INT,
+      maxage REAL,
+      children TEXT
+    );`
+  );
+  for(const sample in bySample) {
+    for(const row of Object.values(bySample[sample].byCondition)) {
+
+    }
+  }
+}

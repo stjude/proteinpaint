@@ -711,6 +711,7 @@ class Partjson {
     const c = {
       branch: e,
       parent: s,
+      context: this.contexts.get(s),
       self: l,
       root: this.tree ? this.tree : l,
       joins: this.joins,

@@ -546,13 +546,10 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
           if (tdb.precomputed) { 
             if (tdb.precomputed.bySample[row.sjlid]) {
               const s = tdb.precomputed.bySample[row.sjlid]
-              if (s.byCondition[key]) {
+              if (key in s.byCondition && s.byCondition[key].childrenAtMaxGrade) {
                 const p = s.byCondition[key]
-                for(const termid of p.children) {
-                  if (s.byCondition[termid].maxGrade == p.maxGrade
-                    && !conditions.includes(termid)) {
-                    conditions.push(termid)
-                  }
+                for(const termid of p.childrenAtMaxGrade) {
+                  if (!conditions.includes(termid)) conditions.push(termid)
                 }
               }
             }
