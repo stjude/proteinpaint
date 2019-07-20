@@ -64,11 +64,9 @@ function getPj(tdb, data) {
         '$sjlid': {
           byCondition: {
             '=term_id(]': {
-              maxGrade: '$grade',
-              mostRecentAge: '$age',
-              children: ['=subterm()'],
-              //'__:mostRecentChildren': ['=mostRecentChildren()'],
-              //'__:maxGradedChildren': ['=maxGradedChildren()']
+              maxGrade: '<$grade',
+              mostRecentAge: '<$age',
+              children: ['=subterm()']
             }
           }
         }

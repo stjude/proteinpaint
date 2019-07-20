@@ -543,13 +543,14 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
             }
           }
         } else if (unit == 'by_children_at_max_grade') {
-          if (tdb.precomputed) {
+          if (tdb.precomputed) { 
             if (tdb.precomputed.bySample[row.sjlid]) {
               const s = tdb.precomputed.bySample[row.sjlid]
               if (s.byCondition[key]) {
                 const p = s.byCondition[key]
                 for(const termid of p.children) {
-                  if (s.byCondition[termid].maxGrade == p.maxGrade) {
+                  if (s.byCondition[termid].maxGrade == p.maxGrade
+                    && !conditions.includes(termid)) {
                     conditions.push(termid)
                   }
                 }
