@@ -50,6 +50,7 @@ const express=require('express'),
 	termdb = require('./modules/termdb'),
 	termdbbarchart = require('./modules/termdb.barchart'),
 	termdbbarsql = require('./modules/termdb.barsql'),
+	termdbprecompute = require('./modules/termdb.precompute'),
 	mds2_init = require('./modules/mds2.init'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
@@ -196,6 +197,7 @@ app.post('/fimo', fimo.handle_closure(genomes) )
 app.get('/termdb', termdb.handle_request_closure( genomes ) )
 app.get('/termdb-barchart', termdbbarchart.handle_request_closure( genomes ) )
 app.get('/termdb-barsql', termdbbarsql.handle_request_closure( genomes ) )
+app.get('/termdb-precompute', termdbprecompute.handle_request_closure( genomes ) )
 app.post('/singlecell', singlecell.handle_singlecell_closure( genomes ) )
 app.post('/isoformbycoord', handle_isoformbycoord)
 app.post('/ase', handle_ase)

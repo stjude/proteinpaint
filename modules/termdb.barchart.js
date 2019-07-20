@@ -6,6 +6,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
 const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
+const request=require('request')
 
 /*
 ********************** EXPORTED
@@ -15,6 +16,8 @@ get_AF
 */
 
 exports.handle_request_closure = ( genomes ) => {
+  trigger_tdb_precompute(genomes)
+
   return async (req, res) => {
     const q = req.query
     if (q.custom_bins) {
@@ -46,7 +49,7 @@ exports.handle_request_closure = ( genomes ) => {
       if(!ds.cohort) throw 'ds.cohort missing'
       const tdb = ds.cohort.termdb
       if(!tdb) throw 'no termdb for this dataset'
-
+      if(!tdb.precomputed) throw 'Please reload this URL in 5 seconds'
       // process triggers
       await barchart_data( q, ds, res, tdb )
     } catch(e) {
@@ -54,6 +57,38 @@ exports.handle_request_closure = ( genomes ) => {
       if(e.stack) console.log(e.stack)
     }
   }
+}
+
+function trigger_tdb_precompute(genomes) {
+  // asynchronously trigger the precomputation of condition
+  // values for termdb dataset
+  const maxTries = 10
+  let numTries = 0
+  const i = setInterval(()=>{
+    numTries++
+    if (numTries >= maxTries) {
+      clearInterval(i);
+    }
+    for(const gnlabel in genomes) {
+      for(const dslabel in genomes[gnlabel].datasets) {
+        const ds = genomes[gnlabel].datasets[dslabel]
+        if (ds.cohort 
+          && ds.cohort.termdb 
+          && ds.cohort.annorows
+          && !ds.cohort.termdb.precomputed) {  
+          console.log('triggered precompute for', dslabel)
+          request(
+            `http://localhost:${serverconfig.port}/termdb-precompute?`
+            + `genome=${gnlabel}&dslabel=${dslabel}`,
+            (error,response,body)=>{
+              if (error) console.log(error)
+              console.log(`finished async precompute of ${gnlabel} ${dslabel} tdb`)
+            }
+          )
+        }
+      }
+    }
+  }, 500)
 }
 
 async function barchart_data ( q, ds, res, tdb ) {
@@ -508,31 +543,45 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
             }
           }
         } else if (unit == 'by_children_at_max_grade') {
-          let maxGrade
-          for(const k in row) {
-            if (!row[k][events_key]) continue
-            const term = tdb.termjson.map.get(k)
-            if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-              for(const event of row[k][events_key]) {
-                const grade = event[grade_key]
-                if (uncomputable[grade]) continue
-                if (maxGrade === undefined || maxGrade < grade) {
-                  maxGrade = grade
+          if (tdb.precomputed) {
+            if (tdb.precomputed.bySample[row.sjlid]) {
+              const s = tdb.precomputed.bySample[row.sjlid]
+              if (s.byCondition[key]) {
+                const p = s.byCondition[key]
+                for(const termid of p.children) {
+                  if (s.byCondition[termid].maxGrade == p.maxGrade) {
+                    conditions.push(termid)
+                  }
                 }
               }
             }
-          }
-          for(const k in row) {
-            if (!row[k][events_key]) continue
-            const term = tdb.termjson.map.get(k)
-            if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-              for(const event of row[k][events_key]) {
-                const grade = event[grade_key]
-                if (grade == maxGrade) {
-                  // get the immediate child of the parent condition in the lineage
-                  const child = term.conditionlineage[i - 1];
-                  if (!conditions.includes(child)) {
-                    conditions.push(child)
+          } else {
+            let maxGrade
+            for(const k in row) {
+              if (!row[k][events_key]) continue
+              const term = tdb.termjson.map.get(k)
+              if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+                for(const event of row[k][events_key]) {
+                  const grade = event[grade_key]
+                  if (uncomputable[grade]) continue
+                  if (maxGrade === undefined || maxGrade < grade) {
+                    maxGrade = grade
+                  }
+                }
+              }
+            }
+            for(const k in row) {
+              if (!row[k][events_key]) continue
+              const term = tdb.termjson.map.get(k)
+              if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+                for(const event of row[k][events_key]) {
+                  const grade = event[grade_key]
+                  if (grade == maxGrade) {
+                    // get the immediate child of the parent condition in the lineage
+                    const child = term.conditionlineage[i - 1];
+                    if (!conditions.includes(child)) {
+                      conditions.push(child)
+                    }
                   }
                 }
               }
