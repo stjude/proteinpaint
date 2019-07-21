@@ -164,7 +164,7 @@ function getDataName(plot) {
   } else if (plot.term2) {
     params.push('term2_id=' + plot.term2.id)
   }
-  if (obj.termfilter && obj.termfilter.length) {
+  if (obj.termfilter && obj.termfilter.terms && obj.termfilter.terms.length) {
     params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
   }
 
