@@ -16,6 +16,7 @@ get_AF
 */
 
 exports.handle_request_closure = ( genomes ) => {
+  // comment this out to not trigger the precompute!
   trigger_tdb_precompute(genomes)
 
   return async (req, res) => {

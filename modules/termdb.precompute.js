@@ -135,6 +135,9 @@ function getPj(tdb, data) {
 
 exports.precompute = precompute
 
+/*
+  work in progress
+*/
 function dbcache(dbconn, bySample) { return;
   dbconn.exec(
     `DROP TABLE IF EXISTS precomputed;
