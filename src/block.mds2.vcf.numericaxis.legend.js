@@ -549,7 +549,6 @@ function AFtest_showgroup_termdb ( group, tk, block ) {
 		tk.mds,
 		block.genome,
 		tvslst,
-		tk.sample_termfilter,
 		async ()=>{
 			await tk.load()
 		}
