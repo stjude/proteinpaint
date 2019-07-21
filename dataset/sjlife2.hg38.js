@@ -17,7 +17,8 @@ module.exports={
 			k:{
 				sample:'sample',
 				term_id:'term_id'
-			}
+			},
+			precomputed_file: 'files/hg38/sjlife/clinical/precomputed.tsv'
 		},
 		files:[
 			{file:'files/hg38/sjlife/clinical/matrix'},
@@ -60,7 +61,8 @@ module.exports={
 				},
 				age_key: 'age',
 				yearstoevent_key:'yearstoevent'
-			}
+			},
+			precomputed_file: 'files/hg38/sjlife/clinical/precomputed.json'
 		},
 	},
 

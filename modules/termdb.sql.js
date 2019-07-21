@@ -731,11 +731,32 @@ returns { sql, tablename }
 
 function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termindex='' ) {
 /*
-return {sql, tablename}
+	return {sql, tablename}
 */
 	const grade_table = 'grade_table' + termindex
 	const term_table = 'term_table' + termindex
 	const out_table = 'out_table' + termindex
+
+	if (ds.cohort.termdb.precomputed) {
+		const value_for = q.bar_by_children ? 'child' : 'grade'
+		const restriction = q.value_by_max_grade ? 'max_grade'
+				: q.value_by_most_recent ? 'most_recent'
+				: 'computable_grade'; console.log(value_for, restriction)
+		values.push(term.id, value_for, restriction)
+		return {
+			sql: `${out_table} AS (
+				SELECT 
+					sample, 
+					value AS key, 
+					${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
+				FROM precomputed
+				WHERE term_id = ? 
+					AND value_for = ? 
+					AND restriction = ?
+			)`,
+			tablename: out_table
+		}
+	}
 
 	if( term.isleaf ) {
 		return {
@@ -752,7 +773,7 @@ return {sql, tablename}
 	}
 	if( q.bar_by_grade ) {
 		values.push(term.id, term.id)
-		return {
+		return  {
 			sql:
 			`${term_table} AS (
 				SELECT term_id

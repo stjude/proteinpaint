@@ -16,8 +16,7 @@ get_AF
 */
 
 exports.handle_request_closure = ( genomes ) => {
-  // comment this out to not trigger the precompute!
-  trigger_tdb_precompute(genomes)
+  may_trigger_precompute(genomes)
 
   return async (req, res) => {
     const q = req.query
@@ -50,7 +49,7 @@ exports.handle_request_closure = ( genomes ) => {
       if(!ds.cohort) throw 'ds.cohort missing'
       const tdb = ds.cohort.termdb
       if(!tdb) throw 'no termdb for this dataset'
-      if(!tdb.precomputed) throw 'Please reload this URL in 5 seconds'
+      if(tdb.precomputed_file && !tdb.precomputed) throw 'Precompute is pending'
       // process triggers
       await barchart_data( q, ds, res, tdb )
     } catch(e) {
@@ -58,38 +57,6 @@ exports.handle_request_closure = ( genomes ) => {
       if(e.stack) console.log(e.stack)
     }
   }
-}
-
-function trigger_tdb_precompute(genomes) {
-  // asynchronously trigger the precomputation of condition
-  // values for termdb dataset
-  const maxTries = 10
-  let numTries = 0
-  const i = setInterval(()=>{
-    numTries++
-    if (numTries >= maxTries) {
-      clearInterval(i);
-    }
-    for(const gnlabel in genomes) {
-      for(const dslabel in genomes[gnlabel].datasets) {
-        const ds = genomes[gnlabel].datasets[dslabel]
-        if (ds.cohort 
-          && ds.cohort.termdb 
-          && ds.cohort.annorows
-          && !ds.cohort.termdb.precomputed) {  
-          console.log('triggered precompute for', dslabel)
-          request(
-            `http://localhost:${serverconfig.port}/termdb-precompute?`
-            + `genome=${gnlabel}&dslabel=${dslabel}`,
-            (error,response,body)=>{
-              if (error) console.log(error)
-              console.log(`finished async precompute of ${gnlabel} ${dslabel} tdb`)
-            }
-          )
-        }
-      }
-    }
-  }, 500)
 }
 
 async function barchart_data ( q, ds, res, tdb ) {
@@ -1112,4 +1079,42 @@ arguments:
     }
   }
   return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
+}
+
+
+function may_trigger_precompute(genomes) {
+  // asynchronously trigger the precomputation of condition
+  // values for termdb dataset
+  // will not re-trigger if ds.cohort.termdb.precomputed
+  // has been triggered or already been set
+  const maxTries = 1
+  let numTries = 0
+  const i = setInterval(()=>{
+    numTries++
+    if (numTries >= maxTries) {
+      clearInterval(i);
+    }
+    for(const gnlabel in genomes) {
+      for(const dslabel in genomes[gnlabel].datasets) {
+        const ds = genomes[gnlabel].datasets[dslabel]
+        if (
+          ds.cohort 
+          && ds.cohort.termdb 
+          && ds.cohort.annorows
+          && ds.cohort.termdb.precomputed_file // trigger only if set in dataset/*.json
+          && !ds.cohort.termdb.precompute_pending // do not re-trigger
+          && !ds.cohort.termdb.precomputed // do not precompute again
+        ) {  
+          console.log('triggered precompute for', dslabel)
+          request(
+            `http://localhost:${serverconfig.port}/termdb-precompute?`
+            + `genome=${gnlabel}&dslabel=${dslabel}`,
+            (error,response,body)=>{
+              if (error) console.log(error)
+            }
+          )
+        }
+      }
+    }
+  }, 500)
 }
