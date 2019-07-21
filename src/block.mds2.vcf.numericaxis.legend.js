@@ -3,7 +3,7 @@ import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
 import {init as termdbinit} from './mds.termdb'
-import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
+import {display as tvs_display} from './mds.termdb.termvaluesetting.ui'
 import {
 	may_setup_numerical_axis,
 	get_axis_label,
@@ -338,7 +338,7 @@ do not alter any flags, as they are handled in AFtest_update_flag
 	}
 
 	if( af.termfilter ) {
-		// row for term filter
+		// termfilter: row with <select> for restricting to a category
 		const tr = table.append('tr')
 		const td = tr.append('td').attr('colspan',3)
 		td.append('span')
@@ -354,6 +354,17 @@ do not alter any flags, as they are handled in AFtest_update_flag
 				} else {
 					af.termfilter.inuse=true
 					af.termfilter.value_index = i-1
+				}
+				/*
+				must remake any termdb group
+				as legend update() will not remake AFtest ui,
+				and the tvs ui scopes tvslst and will not update unless made anew
+				*/
+				for(const g of af.groups) {
+					if( g.is_termdb ) {
+						g.dom.td3.selectAll('*').remove()
+						AFtest_showgroup_termdb(g, tk, block)
+					}
 				}
 				select.property('disabled',true)
 				await tk.load()
@@ -525,19 +536,28 @@ function AFtest_showgroup ( tk, block, group ) {
 
 
 function AFtest_showgroup_termdb ( group, tk, block ) {
-	const holder = group.dom.td3.append('span')
-	termvaluesettingui.display(
-		holder,
+	const tvslst = []
+	if( tk.sample_termfilter ) {
+		tvslst.push( ...JSON.parse(JSON.stringify(tk.sample_termfilter)) )
+	}
+	const v = may_get_param_AFtest_termfilter( tk )
+	if( v ) tvslst.push(v)
+
+	tvs_display(
+		group.dom.td3,
 		group,
 		tk.mds,
 		block.genome,
+		tvslst,
 		tk.sample_termfilter,
 		async ()=>{
 			await tk.load()
 		}
 	)
+
 	// "n=?, view stats" handle and for porting to term tree filter
-	group.dom.samplehandle = holder.append('span')
+	group.dom.samplehandle = group.dom.td3
+	.append('span')
 	.style('margin-left','15px')
 	.style('opacity','.6')
 	.attr('class','sja_clbtext')
@@ -545,11 +565,12 @@ function AFtest_showgroup_termdb ( group, tk, block ) {
 	.on('click',()=>{
 		// click label to embed tree
 		const filterlst = JSON.parse( JSON.stringify(group.terms) ) // apply terms of this group as filter
+		filterlst.push( ...tvslst )
 		if( tk.sample_termfilter ) {
-			// apply this filter too
-			for(const t of tk.sample_termfilter) filterlst.push( JSON.parse(JSON.stringify(t)) )
+			filterlst.push( ...JSON.parse(JSON.stringify(tk.sample_termfilter)) )
 		}
-		const v = may_get_param_AFtest_termfilter( tk.vcf.numerical_axis.AFtest )
+		// must not reuse tvslst above as AFtest.termfilter may update
+		const v = may_get_param_AFtest_termfilter( tk )
 		if( v ) filterlst.push( v )
 
 		tk.legend.tip.clear()

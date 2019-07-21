@@ -1073,7 +1073,7 @@ append numeric axis parameter to object for loadTk
 			return lst
 		}, [])
 
-		const v = may_get_param_AFtest_termfilter( nm.AFtest )
+		const v = may_get_param_AFtest_termfilter( tk )
 		if(v) {
 			par.AFtest.termfilter = [ v ]
 		}
@@ -1084,8 +1084,10 @@ append numeric axis parameter to object for loadTk
 
 
 
-export function may_get_param_AFtest_termfilter ( af ) {
-	if( !af.termfilter || !af.termfilter.inuse ) return
+export function may_get_param_AFtest_termfilter ( tk ) {
+	if(!tk.vcf || !tk.vcf.numerical_axis) return
+	const af = tk.vcf.numerical_axis.AFtest
+	if( !af || !af.termfilter || !af.termfilter.inuse ) return
 	if( !af.termfilter.iscategorical) throw 'AFtest.termfilter is hardcoded to be categorical but iscategorical is not true'
 	if( !af.termfilter.values) throw 'termfilter.values missing'
 	// in nm, termfilter is not tvs
