@@ -2,12 +2,13 @@ import {scaleOrdinal,schemeCategory20} from 'd3-scale'
 import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
-import * as termdb from './mds.termdb'
+import {init as termdbinit} from './mds.termdb'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 import {
 	may_setup_numerical_axis,
 	get_axis_label,
 	get_axis_label_AFtest,
+	may_get_param_AFtest_termfilter
 	} from './block.mds2.vcf.numericaxis'
 
 
@@ -402,7 +403,7 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 						terms: JSON.parse(JSON.stringify(tk.sample_termfilter))
 					}
 				}
-				await termdb.init(obj)
+				await termdbinit(obj)
 			}
 		})
 	}
@@ -548,9 +549,12 @@ function AFtest_showgroup_termdb ( group, tk, block ) {
 			// apply this filter too
 			for(const t of tk.sample_termfilter) filterlst.push( JSON.parse(JSON.stringify(t)) )
 		}
+		const v = may_get_param_AFtest_termfilter( tk.vcf.numerical_axis.AFtest )
+		if( v ) filterlst.push( v )
+
 		tk.legend.tip.clear()
 			.showunder(group.dom.samplehandle.node())
-		termdb.init({
+		termdbinit({
 			genome: block.genome,
 			mds: tk.mds,
 			div: tk.legend.tip.d,

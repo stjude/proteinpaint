@@ -19,6 +19,7 @@ may_setup_numerical_axis
 get_axis_label
 get_axis_label_AFtest
 may_get_param
+may_get_param_AFtest_termfilter
 ********************** INTERNAL
 numeric_make
 render_axis
@@ -1071,24 +1072,33 @@ append numeric axis parameter to object for loadTk
 			}
 			return lst
 		}, [])
-		if( nm.AFtest.termfilter && nm.AFtest.termfilter.inuse ) {
-			if(!nm.AFtest.termfilter.iscategorical) throw 'AFtest.termfilter is not categorical'
-			if(!nm.AFtest.termfilter.values) throw 'termfilter.values missing'
-			// in nm, termfilter is not tvs
-			// in parameter, termfilter is tvs
-			const v = nm.AFtest.termfilter.values[ nm.AFtest.termfilter.value_index ]
-			if(!v) throw 'unknown value selection by value_index in AFtest.termfilter'
-			par.AFtest.termfilter = [{
-				term:{
-					id: nm.AFtest.termfilter.id,
-					iscategorical: true // hardcoded
-				},
-				values: [ v ]
-			}]
+
+		const v = may_get_param_AFtest_termfilter( nm.AFtest )
+		if(v) {
+			par.AFtest.termfilter = [ v ]
 		}
 		return
 	}
 	throw 'unknown type of numeric axis'
+}
+
+
+
+export function may_get_param_AFtest_termfilter ( af ) {
+	if( !af.termfilter || !af.termfilter.inuse ) return
+	if( !af.termfilter.iscategorical) throw 'AFtest.termfilter is hardcoded to be categorical but iscategorical is not true'
+	if( !af.termfilter.values) throw 'termfilter.values missing'
+	// in nm, termfilter is not tvs
+	// in parameter, termfilter is tvs
+	const v = af.termfilter.values[ af.termfilter.value_index ]
+	if(!v) throw 'unknown value selection by value_index in AFtest.termfilter'
+	return {
+		term:{
+			id: af.termfilter.id,
+			iscategorical: true // hardcoded
+		},
+		values: [ { key: v.key } ]
+	}
 }
 
 
