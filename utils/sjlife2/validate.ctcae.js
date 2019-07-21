@@ -201,7 +201,7 @@ rl.on('close',()=>{
 
 
 
-	get_summary({term:'Cardiovascular System',bar_by_children:1,value_by_max_grade:1}, patient2condition)
+	//get_summary({term:'Cardiovascular System',bar_by_children:1,value_by_max_grade:1}, patient2condition)
 })
 
 
