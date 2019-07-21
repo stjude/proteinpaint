@@ -23,7 +23,7 @@ showmenu_numericaxis
 __update_legend
 	AFtest_makeui
 		AFtest_update_flag
-		menu_edit_AFtest_onegroup
+		AFtest_editgroupmenu
 		AFtest_showgroup
 			AFtest_showgroup_termdb
 			AFtest_showgroup_infofield
@@ -278,11 +278,12 @@ do not alter any flags, as they are handled in AFtest_update_flag
 
 	// one row for each group
 	for( const [i, group] of af.groups.entries() ) {
+		group.dom = {}
 		const tr = table.append('tr')
-		const td1 = tr.append('td')
-		td1.append('div')
+		group.dom.td1 = tr.append('td')
+			.append('div')
 			.attr('class','sja_filter_tag_btn')
-			.text('Group '+(i+1))
+			.text('GROUP '+(i+1))
 			.style('white-space','nowrap')
 			.style('border-radius','6px')
 			.style('background-color', '#ddd')
@@ -290,15 +291,12 @@ do not alter any flags, as they are handled in AFtest_update_flag
 			.style('padding','6px')
 			.style('margin','3px 5px')
 			.style('font-size','.7em')
-			.style('text-transform','uppercase')
 			.on('click',()=>{
-				menu_edit_AFtest_onegroup(tk, block, group, settingholder, d3event.target)
+				AFtest_editgroupmenu(tk, block, group, settingholder)
 			})
 
-		group.dom = {
-			td2: tr.append('td').style('opacity',.5).style('font-size','.8em'),
-			td3: tr.append('td'),
-		}
+		group.dom.td2 = tr.append('td').style('opacity',.5).style('font-size','.8em')
+		group.dom.td3 = tr.append('td')
 
 		AFtest_showgroup( tk, block, group )
 	}
@@ -384,9 +382,14 @@ do not alter any flags, as they are handled in AFtest_update_flag
 
 
 
-function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom) {
-// a menu for changing type/content of one group from AFtest
+function AFtest_editgroupmenu (tk, block, group, settingholder) {
+/*
+a menu for changing type/content of one group from AFtest
 
+groupindex:
+	array index of AFtest.groups[]
+
+*/
 	const af = tk.vcf.numerical_axis.AFtest
 	const tip = tk.legend.tip.clear()
 
@@ -396,6 +399,12 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 		tabs.push({
 			label:'<span style="background:'+color_termdb+';border-radius:4px">&nbsp;&nbsp;</span> Clinical info',
 			callback: async (div)=>{
+				let filter = []
+				if( tk.sample_termfilter ) {
+					filter = JSON.parse(JSON.stringify(tk.sample_termfilter))
+				}
+				const v = may_get_param_AFtest_termfilter( tk )
+				if(v) filter.push(v)
 				const obj = {
 					genome: block.genome,
 					mds: tk.mds,
@@ -404,16 +413,16 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 					modifier_barchart_selectbar: {
 						callback: (result) => {
 							tip.hide()
-							update_group_term(result, group)
+							group.terms = result.terms
+							delete group.key
+							delete group.is_infofield
+							delete group.is_population
+							group.is_termdb = true
 							_updatetk()
 						}
 					}
 				}
-				if( tk.sample_termfilter ) {
-					obj.termfilter = {
-						terms: JSON.parse(JSON.stringify(tk.sample_termfilter))
-					}
-				}
+				if(filter.length) obj.termfilter = {terms: filter}
 				await termdbinit(obj)
 			}
 		})
@@ -477,7 +486,7 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 		if(t.show_immediate) t.show_immediate( t.box )
 	}
 
-	tip.showunder( clickeddom )
+	tip.showunder( group.dom.td1.node() )
 
 	async function _updatetk () {
 		settingholder.selectAll('*').remove()
@@ -486,26 +495,6 @@ function menu_edit_AFtest_onegroup (tk, block, group, settingholder, clickeddom)
 		may_setup_numerical_axis( tk )
 		await tk.load()
 		group.dom.td2.text( (group.is_termdb || group.is_population) ? 'ALLELE FREQUENCY OF' : 'VALUE OF' )
-	}
-
-
-	function update_group_term(result, group){
-
-        // create new array with updated terms
-		let new_terms = []
-
-		for(const [i, bar_term] of result.terms.entries()){
-			new_terms.push(bar_term)
-		}
-
-		delete group.key
-		delete group.is_infofield
-		delete group.is_population
-		group.is_termdb = true
-		group.is_infofield = false
-		group.is_population = false
-
-		group.terms = new_terms
 	}
 }
 
