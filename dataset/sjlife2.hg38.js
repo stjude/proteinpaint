@@ -374,7 +374,7 @@ module.exports={
 			}
 		},
 		// to restrict samples 
-		sample_termfilter:[{term:{id:'wgs_sequenced',iscategorical:true},values:[{key:'1'}]}],
+		sample_termfilter:[{term:{id:'wgs_curated',iscategorical:true},values:[{key:'1'}]}],
 		/*
 		svcnv: {
 		},
