@@ -594,39 +594,34 @@ function AFtest_showgroup_infofield (group, tk) {
 
 	const holder = group.dom.td3.append('span')
 
-	const f = tk.info_fields.find( j=> j.key == group.key )
+	const [select, btn] = client.make_select_btn_pair( holder )
 
-	//hidden select and options
-	const select = holder.append('select')
-		.style('padding','3px 6px 3px 6px')
-		.style('position','absolute')
-		.style('opacity',0)
-		.on('change',async()=>{
-			const value = select.node().value
-			const i = tk.info_fields.find( j=> j.key == value )
-			group.key = value
-			info_field_btn.html( (i ? i.label : value ) + '&nbsp; <span style="font-size:.7em">LOADING...</span>')
-			await tk.load()
-			info_field_btn.text( i ? i.label : value )
-		})
-
+	select.on('change',async()=>{
+		const value = select.node().value
+		const i = tk.info_fields.find( j=> j.key == value )
+		group.key = value
+		btn.html( (i ? i.label : value ) + '&nbsp; <span style="font-size:.7em">LOADING...</span>')
+		await tk.load()
+		btn.html( (i ? i.label : value) + ' &#9662;' )
+		select.style('width', btn.node().offsetWidth+'px')
+	})
 	for( const i of tk.vcf.numerical_axis.AFtest.allowed_infofields ){
 		const i2 = tk.info_fields.find( j=> j.key == i.key )
 		select.append('option')
 			.attr('value',i.key)
 			.text( i2 ? i2.label : i.key )
 	}
-
 	select.node().value = group.key
 
-	//info field button with selected info field
-	const info_field_btn = holder.append('span')
+	const f = tk.info_fields.find( j=> j.key == group.key )
+	btn
 		.style('color','#FFF')
 		.style('border-radius','6px')
 		.style('background-color', color_infofield)
 		.style('padding','3px 6px 3px 6px')
 		.style('margin-left', '5px')
 		.html(f.label+' &#9662;')
+	select.style('width', btn.node().offsetWidth+'px')
 }
 
 
@@ -640,38 +635,36 @@ function AFtest_showgroup_population ( group, tk ) {
 	const p = tk.populations.find(i=>i.key==group.key)
 	const af = tk.vcf.numerical_axis.AFtest
 
-	const select = holder.append('select')
-		.style('padding','3px 6px 3px 6px')
-		.style('position','absolute')
-		.style('opacity',0)
-		.on('change', async()=>{
-			const value = select.node().value
-			const p = tk.populations.find( i=>i.key == value )
-			group.key = value
-			group.allowto_adjust_race = p.allowto_adjust_race
-			group.adjust_race = p.adjust_race
-			update_adjust_race(adjust_race_div)
-			population_btn.html(p.label+' &nbsp;<span style="font-size:.7em">LOADING...</span>')
-			await tk.load()
-			population_btn.text(p.label)
-		})
+	const [select, btn] = client.make_select_btn_pair( holder )
 
+	select.on('change', async()=>{
+		const value = select.node().value
+		const p = tk.populations.find( i=>i.key == value )
+		group.key = value
+		group.allowto_adjust_race = p.allowto_adjust_race
+		group.adjust_race = p.adjust_race
+		update_adjust_race(adjust_race_div)
+		btn.html(p.label+' &nbsp;<span style="font-size:.7em">LOADING...</span>')
+		await tk.load()
+		btn.html( p.label+ (tk.populations.length>1 ? ' &#9662;':''))
+		select.style('width', btn.node().offsetWidth+'px')
+	})
 	for( const p of tk.populations ){
 		select.append('option')
 			.attr('value',p.key)
 			.text(p.label)
 	}
-
 	select.node().value = group.key
 
-	const population_btn = holder.append('span')
+	btn
 		.style('color','#FFF')
 		.style('border-radius','6px')
 		.style('background-color', color_population)
 		.style('padding','3px 6px 3px 6px')
 		.style('margin-left', '5px')
+		.html( p.label+ (tk.populations.length>1 ? ' &#9662;':''))
 
-	population_btn.html( p.label+ (tk.populations.length>1 ? ' &#9662;':''))
+	select.style('width', btn.node().offsetWidth+'px')
 
 	const adjust_race_div = holder.append('span')
 
