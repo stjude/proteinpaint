@@ -94,7 +94,7 @@ function getPj(tdb, data) {
             '=term_id(]': {
               term_id: '@branch',
               maxGrade: '<$grade',
-              '~mostRecentAge': '<$age',
+              mostRecentAge: '<$age',
               children: ['=subterm()'],
               '__:childrenAtMaxGrade': ['=childrenAtMaxGrade(]'],
               '__:childrenAtMostRecent': ['=childrenAtMostRecent(]'],
@@ -141,24 +141,24 @@ function getPj(tdb, data) {
       childrenAtMaxGrade(row, context) {
         if (!Array.isArray(context.self.children)) return []
         const byCondition = context.parent
-        const ids = []
+        const ids = new Set()
         for(const id of context.self.children) {
           if (byCondition[id].maxGrade == context.self.maxGrade) {
-            ids.push(id)
+            ids.add(id)
           }
         }
-        return ids
+        return [...ids]
       },
       childrenAtMostRecent(row, context) {
         if (!Array.isArray(context.self.children)) return []
         const byCondition = context.parent
-        const ids = []
+        const ids = new Set()
         for(const id of context.self.children) {
           if (byCondition[id].mostRecentAge == context.self.mostRecentAge) {
-            ids.push(id)
+            ids.add(id)
           }
         }
-        return ids
+        return [...ids]
       },
       mostRecentGrades(row, context) {
         return [...context.self.gradesByAge[context.self.mostRecentAge]]

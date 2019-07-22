@@ -122,97 +122,25 @@ returns:
 	}
 
 	function add_condition ( tvs ) {
-		if (ds.cohort.termdb.precomputed) {
-			const value_for = tvs.bar_by_children ? 'child' : 'grade'
-			const restriction = tvs.value_by_max_grade ? 'max_grade'
-					: tvs.value_by_most_recent ? 'most_recent'
-					: 'computable_grade'; console.log(value_for, restriction)
-			values.push(tvs.term.id, value_for, restriction)
-			filters.push(`
-				SELECT 
-					sample
-				FROM precomputed
-				WHERE term_id = ? 
-					AND value_for = ? 
-					AND restriction = ?
-					AND value IN (${tvs.values.map(i=>'?').join(', ')})`)
-			values.push(...tvs.values.map(i=>''+i.key))
-			return
-		}
+		const value_for = q.bar_by_children ? 'child' 
+			: q.bar_by_grade ? 'grade'
+			: ''
+		if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
 
-		// the remaining code in this function can be deleted
-		// if we go ahead with using the precomputed table
-
-		if( ds.cohort.termdb.q.termIsLeaf( tvs.term.id ) ) {
-			// is leaf
-			filters.push(
-				`
-				SELECT sample
-				FROM (
-					${grade_age_selection(tvs.term.id, values, tvs, ds)}
-				) 
-				WHERE grade IN (${tvs.values.map(i=>'?').join(', ')})`
-			)
-			values.push( ...tvs.values.map(i=>i.key) )
-			return
-		}
-
-		const termtable = `(
-			SELECT term_id
-			FROM ancestry
-			WHERE (ancestor_id=? OR term_id=?)
-		)`
-
-		// not leaf
-		if( tvs.grade_and_child ) {
-			filters.push(
-				`SELECT sample
-				FROM (
-					${grade_age_selection(tvs.term.id, values, tvs, ds, null, termtable)}
-				)
-				WHERE grade = ?`
-			)
-			values.push(
-				tvs.grade_and_child[0].child_id,
-				tvs.grade_and_child[0].child_id,
-				tvs.grade_and_child[0].grade
-			)
-			return
-		}
-
-		if( tvs.bar_by_grade ) {
-			filters.push(
-				`SELECT sample
-				FROM (
-					${grade_age_selection(tvs.term.id, values, tvs, ds, null, termtable)}
-				)
-				WHERE
-				grade IN (${tvs.values.map(i=>'?').join(', ')})`
-			)
-			values.push(...tvs.values.map(i=>i.key))
-			return
-		}
-
-
-		if( tvs.bar_by_children ) {
-			filters.push(
-				`SELECT distinct(sample)
-				FROM chronicevents
-				WHERE
-					term_id IN (
-						SELECT term_id
-						FROM ancestry
-						WHERE
-						${tvs.values.map(i=>'ancestor_id=? OR term_id=?').join(' OR ')}
-					)
-					${uncomputablegrades_clause( ds )}`
-			)
-			for(const i of tvs.values) {
-				values.push(i.key, i.key)
-			}
-			return
-		}
-		throw 'unknown mode for non-leaf condition term'
+		const restriction = tvs.value_by_max_grade ? 'max_grade'
+				: tvs.value_by_most_recent ? 'most_recent'
+				: 'computable_grade'
+		values.push(tvs.term.id, value_for, restriction)
+		
+		filters.push(`
+			SELECT 
+				sample
+			FROM precomputed
+			WHERE term_id = ? 
+				AND value_for = ? 
+				AND restriction = ?
+				AND value IN (${tvs.values.map(i=>'?').join(', ')})`)
+		values.push(...tvs.values.map(i=>''+i.key))
 	}
 }
 
@@ -367,349 +295,6 @@ index
 }
 
 
-export function get_summary ( q ) {
-/*
- --- function can be deleted ??
-
-
-getting data for barchart and more
-
-q{}
-	.tvslst
-	.ds
-	.term1_id
-	.term2_id
-	.term1_q{}
-	.term2_q{}
-*/
-	let filter
-	if( q.tvslst ) {
-		if( typeof q.tvslst == 'string' ) q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
-		filter = makesql_by_tvsfilter( q.tvslst, q.ds )
-	}
-	if(!q.term1_id) throw '.term1_id is required but missing'
-	const term1 = q.ds.cohort.termdb.q.termjsonByOneid( q.term1_id )
-	if(!term1) throw 'unknown term1_id: '+q.term1_id
-	if(!q.term1_q) q.term1_q = {} // settings of term1
-	if( typeof q.term1_q == 'string' ) q.term1_q = JSON.parse(decodeURIComponent(q.term1_q))
-
-	if( q.term2_id ) {
-		///////////// has term2, do overlay
-		const term2 = q.ds.cohort.termdb.q.termjsonByOneid( q.term2_id )
-		if( !term2 ) throw 'unknown term2_id: '+q.term2_id
-		if(!q.term2_q) q.term2_q = {} // settings of term2
-		if( typeof q.term2_q == 'string' ) q.term2_q = JSON.parse(decodeURIComponent(q.term2_q))
-		const values = []
-		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1_q, values, "_1")
-		// in case of using auto binning of numeric term, tell is term2
-		q.term2_q.isterm2 = true
-		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2_q, values, "_2")
-		const string =
-			`WITH
-			${filter ? filter.filters+', ' : ''}
-			${CTE_term1.sql},
-			${CTE_term2.sql}
-			SELECT a.key AS key1, b.key AS key2, COUNT(DISTINCT b.sample) AS samplecount
-			FROM
-				${CTE_term1.tablename} a,
-				${CTE_term2.tablename} b
-			WHERE a.sample=b.sample
-			GROUP BY key1,key2`
-		const lst = q.ds.cohort.db.connection.prepare(string)
-			.all( filter ? filter.values.concat(values) : values )
-		// add label or range if numeric
-		for(const i of lst) {
-			if( term1.isinteger || term1.isfloat ) {
-				i.label1 = i.key1
-				i.range1 = CTE_term1.name2bin.get( i.key1 )
-			} else {
-				i.label1 = get_label4key( i.key1, term1, q.term1_q, q.ds )
-			}
-			if( term2.isinteger || term2.isfloat ) {
-				i.label2 = i.key2
-				i.range2 = CTE_term2.name2bin.get( i.key2 )
-			} else {
-				i.label2 = get_label4key( i.key2, term2, q.term2_q, q.ds )
-			}
-		}
-		return lst
-	}
-
-	///////////////// just term1
-
-	if( term1.iscategorical ) {
-		//////////// summary for categorical
-		const string =
-			`${filter ? 'WITH '+filter.filters+' ' : ''}
-			SELECT value AS key,count(sample) AS samplecount
-			FROM annotations
-			WHERE
-			${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
-			term_id=?
-			GROUP BY value`
-		const lst = q.ds.cohort.db.connection.prepare( string )
-			.all([ ...(filter?filter.values:[]), q.term1_id ])
-		if(!lst) return undefined
-		// add label
-		for(const i of lst) {
-			i.label = get_label4key( i.key, term1 )
-			const label = term1.values ? term1.values[i.key] : i.key
-			i.label = label || i.key
-		}
-		return lst
-	}
-
-	if( term1.isinteger || term1.isfloat ) {
-		//////////// summary for bins
-		const bins = makesql_numericBinCTE( term1, q.term1_q, filter, q.ds )
-		const string =
-			`WITH
-			${filter ? filter.filters+', ' : ''}
-			${bins.sql}
-			SELECT bname AS key, COUNT(sample) AS samplecount
-			FROM ${bins.tablename}
-			GROUP BY bname
-			ORDER BY binorder`
-		const lst = q.ds.cohort.db.connection.prepare(string)
-			.all([ ...(filter?filter.values:[]), term1.id ]);
-		for(const i of lst) {
-			i.label = i.key
-			i.range = bins.name2bin.get( i.key )
-		}
-		return lst
-	}
-
-	if( term1.iscondition ) {
-		let string
-		const thisvalues = []
-		let overlay = false
-		if( term1.isleaf ) {
-			///////////// summary, leaf
-			string = 
-				`WITH
-				${filter ? filter.filters+', ' : ''}
-				tmp_grade_table AS (
-					${grade_age_selection(q.term1_id, thisvalues, q.term1_q, q.ds, filter )}
-				)
-				SELECT grade as key,count(sample) as samplecount
-				FROM tmp_grade_table
-				GROUP BY grade`
-		} else if( q.term1_q.grade_child_overlay ) {
-			/////////// summary, grade-child overlay, one term
-			string =
-				`WITH
-				${filter ? filter.filters+', ' : ''}
-				tmp_children_table AS (
-					SELECT id AS child
-					FROM terms
-					WHERE parent_id=?
-				),
-				tmp_grandchildren_table AS (
-					SELECT term_id, c.child AS child
-					FROM ancestry a, tmp_children_table c
-					WHERE c.child=a.ancestor_id OR c.child=a.term_id
-					ORDER BY term_id ASC
-				),
-				tmp_events_table AS (
-					SELECT sample, d.child as child,
-						${q.term1_q.value_by_max_grade ? 'MAX(grade) AS grade' : 'grade, MAX(age_graded)'}
-					FROM chronicevents a, tmp_grandchildren_table d
-					WHERE
-					${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
-					d.term_id = a.term_id
-					${uncomputablegrades_clause( q.ds )}
-					GROUP BY d.child, sample
-				)
-				SELECT
-					${q.term1_q.bar_by_grade ? 'grade AS key1,child AS key2,' : 'child AS key1,grade AS key2,'}
-					count(sample) AS samplecount
-				FROM tmp_events_table
-				GROUP BY grade, child`
-
-		} else if( q.term1_q.bar_by_grade ) {
-			//////////// summary, bar by grade
-			thisvalues.push(q.term1_id, q.term1_id)
-			const termtable = 'tmp_term_table'
-			string = // NOTE: `tmp_term_table is relied upon by grade_age_selection`
-			`WITH
-			${filter ? filter.filters+', ' : ''}
-			${termtable} AS (
-				SELECT term_id
-				FROM ancestry
-				WHERE ancestor_id=?
-				OR term_id=?
-			),
-			tmp_grade_table AS (
-				${grade_age_selection(q.term1_id, thisvalues, q.term1_q, q.ds, filter, termtable )}
-			)
-			SELECT grade AS key,count(distinct sample) as samplecount
-			FROM tmp_grade_table
-			GROUP BY key`
-		} else if( q.term1_q.bar_by_children ) {
-			/////////// summary, bar by children
-			thisvalues.push(q.term1_id)
-			string =
-				`WITH
-				${filter ? filter.filters+',' : ''}
-				tmp_subcondition_table AS (
-					SELECT id
-					FROM terms
-					WHERE parent_id=?
-				),
-				tmp_descendant_table AS (
-					SELECT term_id, s.id AS subcondition
-					FROM ancestry a, tmp_subcondition_table s
-					WHERE s.id=a.ancestor_id OR s.id=a.term_id
-					ORDER BY term_id ASC
-				),
-				tmp_events_table AS (
-					SELECT
-						sample, d.subcondition as key
-					FROM chronicevents a, tmp_descendant_table d
-					WHERE
-					${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
-					d.term_id = a.term_id
-					${uncomputablegrades_clause( q.ds )}
-					GROUP BY key, sample
-				)
-				SELECT
-					key,
-					count(sample) AS samplecount
-				FROM tmp_events_table
-				GROUP BY key`
-		} else {
-			throw 'unknown setting for a non-leaf term'
-		}
-		const lst = q.ds.cohort.db.connection.prepare( string )
-			.all([ ...(filter?filter.values:[]), ...thisvalues ])
-		for(const i of lst) {
-			if( q.term1_q.grade_child_overlay ) {
-				if(q.term1_q.bar_by_grade) {
-					i.label1 = get_label4key( i.key1, term1, q.term1_q, q.ds )
-					i.label2 = i.key2
-				} else {
-					i.label1 = i.key1
-					i.label2 = get_label4key( i.key2, term1, q.term1_q, q.ds )
-				}
-			} else {
-				i.label = get_label4key( i.key, term1, q.term1_q, q.ds )
-			}
-		}
-		return lst
-	}
-	throw 'unknown type of term1'
-}
-
-
-
-
-
-
-
-function get_label4key ( key, term, q, ds ) {
-// this function can be deleted if get_summary is deleted
-// get label for a key based on term type and setting
-	if(term.iscategorical) {
-		let label
-		if( term.values && term.values[key] ) label = term.values[key].label
-		return label || key
-	}
-	if(term.iscondition) {
-		if(term.isleaf || q.bar_by_grade) {
-			const g = ds.cohort.termdb.patient_condition.grade_labels.find(i=>i.grade==key)
-			if(!g) return key+': unknown_grade'
-			return g.label
-		}
-		// no special label for subconditions; may use .name from subcondition term
-		return key
-	}
-	if(term.isinteger || term.isfloat) throw 'should not work for numeric term'
-	throw 'unknown term type'
-}
-
-
-
-function uncomputablegrades_clause ( ds ) {
-	// this function can be deleted
-	// if we go ahead with using the precomputed table
-	const u = ds.cohort.termdb.patient_condition.uncomputable_grades
-	if( u ) {
-		const lst = []
-		for(const k in u) lst.push(k)
-		return ` AND grade NOT IN (${lst.join(',')}) `
-	}
-	return ''
-}
-
-
-function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null ) {
-	// this function can be deleted
-	// if we go ahead with using the precomputed table
-
-	// work for grade as bars 
-	if( tvs.value_by_max_grade ) {
-		if (!termtable) values.push(term_id)
-		else if (termtable.includes('?')) {
-			values.push(term_id,term_id)
-		}
-
-		return `SELECT sample,MAX(grade) AS grade, MAX(grade) AS value
-		FROM chronicevents
-		WHERE
-		${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
-		term_id IN ${termtable ? termtable : '(?)'}
-		${uncomputablegrades_clause( ds )}
-		GROUP BY sample`
-	}
-
-	if( tvs.value_by_most_recent ) {
-		if (termtable) {
-			if (termtable.includes('?')) {
-				values.push(term_id,term_id,term_id,term_id)
-			}
-			return `
-			SELECT c.sample as sample, c.grade AS grade, c.grade AS value
-			FROM (
-				SELECT sample, MAX(age_graded) AS age_graded 
-				FROM chronicevents
-				WHERE
-				${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
-				term_id IN ${termtable}
-				${uncomputablegrades_clause( ds )}
-				GROUP BY sample
-			) t
-			JOIN chronicevents c ON 
-			  c.term_id IN ${termtable}
-			  AND c.sample = t.sample 
-			  AND c.age_graded = t.age_graded
-			  ${uncomputablegrades_clause( ds )}
-  		GROUP BY c.sample, c.grade`
-		} else {
-			values.push(term_id, term_id)
-
-			return `
-			SELECT c.sample as sample, c.grade AS grade, c.grade AS value
-			FROM (
-				SELECT sample, MAX(age_graded) AS age_graded 
-				FROM chronicevents
-				WHERE
-				${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
-				term_id = ?
-				${uncomputablegrades_clause( ds )}
-				GROUP BY sample
-			) t
-			JOIN chronicevents c ON 
-			  c.term_id = ? 
-			  AND c.sample = t.sample 
-			  AND c.age_graded = t.age_graded
-			  ${uncomputablegrades_clause( ds )}
-			GROUP BY c.sample, c.grade`
-		}
-	}
-
-	throw 'unknown value_by_? for condition term by grade'
-}
-
 function makesql_overlay_oneterm ( term, filter, ds, q, values, termindex ) {
 /*
 form the query for one of the table in term0-term1-term2 overlaying
@@ -766,130 +351,29 @@ function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termin
 	const grade_table = 'grade_table' + termindex
 	const term_table = 'term_table' + termindex
 	const out_table = 'out_table' + termindex
+	const value_for = q.bar_by_children ? 'child' 
+		: q.bar_by_grade ? 'grade'
+		: ''
+	if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
 
-	if (ds.cohort.termdb.precomputed) {
-		const value_for = q.bar_by_children ? 'child' : 'grade'
-		const restriction = q.value_by_max_grade ? 'max_grade'
-				: q.value_by_most_recent ? 'most_recent'
-				: 'computable_grade'; console.log(value_for, restriction)
-		values.push(term.id, value_for, restriction)
-		return {
-			sql: `${out_table} AS (
-				SELECT 
-					sample, 
-					${value_for == 'grade' ? 'CAST(value AS integer) as key' : 'value as key'}, 
-					${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
-				FROM precomputed
-				WHERE term_id = ? 
-					AND value_for = ? 
-					AND restriction = ?
-			)`,
-			tablename: out_table
-		}
+	const restriction = q.value_by_max_grade ? 'max_grade'
+			: q.value_by_most_recent ? 'most_recent'
+			: 'computable_grade'
+	values.push(term.id, value_for, restriction)
+	
+	return {
+		sql: `${out_table} AS (
+			SELECT 
+				sample, 
+				${value_for == 'grade' ? 'CAST(value AS integer) as key' : 'value as key'}, 
+				${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
+			FROM precomputed
+			WHERE term_id = ? 
+				AND value_for = ? 
+				AND restriction = ?
+		)`,
+		tablename: out_table
 	}
-
-
-	// the rest of this function can be deleted
-	// if we go ahead with using the precomputed table
-
-	if( term.isleaf ) {
-		return {
-			sql:
-			`${grade_table} AS (
-				${grade_age_selection(term.id, values, q, ds, filter)}
-			),
-			${out_table} AS (
-				SELECT grade AS key, sample, grade as value
-				FROM ${grade_table}
-			)`,
-			tablename: out_table
-		}
-	}
-	if( q.bar_by_grade ) {
-		values.push(term.id, term.id)
-		return  {
-			sql:
-			`${term_table} AS (
-				SELECT term_id
-				FROM ancestry
-				WHERE ancestor_id=?
-				OR term_id=?
-			),
-			${grade_table} AS (
-				${grade_age_selection(term.id, values, q, ds, filter, term_table)}
-			),
-			${out_table} AS (
-				SELECT grade AS key, sample, grade AS value
-				FROM ${grade_table}
-			)`,
-			tablename: out_table
-		}
-	}
-	if( q.bar_by_children ) {
-		values.push( term.id )
-		const subcondition_terms = 'subcondition_terms' + termindex
-		const descendant_terms = 'descendant_terms' + termindex
-		let sql = `${subcondition_terms} AS (
-			SELECT id
-			FROM terms
-			WHERE parent_id=?
-		),
-		${descendant_terms} AS (
-			SELECT term_id, s.id AS subcondition
-			FROM ancestry a, ${subcondition_terms} s
-			WHERE s.id=a.ancestor_id OR s.id=a.term_id
-			GROUP BY term_id, subcondition
-			ORDER BY term_id ASC
-		)`
-		
-		if (q.value_by_computable_grade) {
-			sql += `,
-			${out_table} AS (
-				SELECT
-					sample, d.subcondition as key, d.subcondition AS value
-				FROM
-					annotations a,
-					${descendant_terms} d
-				WHERE
-				${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
-				a.term_id = d.term_id
-				${uncomputablegrades_clause( ds )}
-				GROUP BY key, sample
-			)`
-		} else if (q.value_by_max_grade) {
-			// grade_table would not have term_id column 
-			// but has sample that would have been filtered by the 
-			// descendant term_ids;
-			// grade_table also filters out uncomputable grades
-			const termtable = `(SELECT term_id FROM ${descendant_terms})`
-			sql += `,
-			${grade_table} AS (
-				${grade_age_selection(term.id, values, q, ds, filter, termtable)}
-			),
-			${out_table} AS (
-				SELECT
-					c.sample as sample, d.subcondition as key, d.subcondition AS value
-				FROM
-					chronicevents c,
-					${grade_table} g
-				JOIN ${descendant_terms} d ON d.term_id = c.term_id
-				WHERE
-				${filter ? 'c.sample IN '+filter.CTEname+' AND' : ''}
-				g.sample = c.sample AND g.grade = c.grade
-				GROUP BY key, c.sample
-			)`
-		} else if (q.value_by_max_grade) {
-			// to-do, different out_table WHERE clause than value_by_max_grade
-		} else {
-			throw 'unknown value_by_? for bar_by_children'
-		}
-
-		return {
-			sql,
-			tablename: out_table
-		}
-	}
-	throw 'unknown bar_by_? for a non-leaf term'
 }
 
 
