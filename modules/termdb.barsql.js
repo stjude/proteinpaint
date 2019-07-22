@@ -437,7 +437,7 @@ function setCustomBins(q, ds) {
     : custom_bins.upperbound
   
   let start = custom_bins.lowerbound == 'auto' ? null : min
-  
+  let i = 0
   while( start <= summary.max ) {
     const upper = !bins.length && custom_bins.first_bin_uppervalue != 'auto'
       ? custom_bins.first_bin_uppervalue
@@ -445,7 +445,9 @@ function setCustomBins(q, ds) {
       ? min + custom_bins.size 
       : start + custom_bins.size
 
-    const stop = !isNaN(custom_bins.last_bin_lowervalue) && upper > custom_bins.last_bin_lowervalue
+    const stop = !isNaN(custom_bins.last_bin_lowervalue) && start >= custom_bins.last_bin_lowervalue
+      ? null
+      : !isNaN(custom_bins.last_bin_lowervalue) && upper > custom_bins.last_bin_lowervalue
       ? custom_bins.last_bin_lowervalue
       : upper < max 
       ? upper
@@ -455,18 +457,18 @@ function setCustomBins(q, ds) {
 
     const bin = {
       start, // >= max ? max : start,
-      stop, //startunbound ? min : stop,
-      startunbound: start === null,
-      stopunbound: stop === null,
+      stop, //startunbounded ? min : stop,
+      startunbounded: start === null,
+      stopunbounded: stop === null,
       startinclusive: custom_bins.startinclusive,
       stopinclusive: custom_bins.stopinclusive,
     }
 
-    if (bin.startunbound) { 
+    if (bin.startunbounded) { 
       const oper = bin.stopinclusive ? "\u2264" : "<"
       const v1 = Number.isInteger(stop) ? stop : binLabelFormatter(stop)
       bin.label = oper + binLabelFormatter(stop);
-    } else if (bin.stopunbound) {
+    } else if (bin.stopunbounded) {
       const oper = bin.startinclusive ? "\u2265" : ">"
       const v0 = Number.isInteger(start) ? start : binLabelFormatter(start)
       bin.label = oper + v0
@@ -490,10 +492,10 @@ function setCustomBins(q, ds) {
 
     bins.push( bin )
     orderedLabels.push(bin.label)
-    if (stop === null 
-      || (!isNaN(custom_bins.last_bin_lowervalue) && custom_bins.last_bin_lowervalue <= stop)
-    ) break
+    if (stop == null) break
+    if (start !== null && !isNaN(custom_bins.last_bin_lowervalue) && custom_bins.last_bin_lowervalue <= start) break
     start = stop
+    i++; if (i>25) break
   }
 
   q.custom_bins = bins

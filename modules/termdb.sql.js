@@ -738,7 +738,7 @@ returns { sql, tablename, name2bin }
 	const name2bin = new Map() // k: name str, v: bin{}
 	let binid = 0
 	for(const b of bins) {
-		if (!b.name && b.label) b.name = b.label
+		if (!('name' in b) && b.label) b.name = b.label
 		if(!b.name) {
 			if( Number.isInteger( bin_size ) ) {
         // bin size is integer, make nicer label
@@ -886,6 +886,7 @@ function get_bins(q, term, ds) {
 	let bins = []
 	if( q.custom_bins ) {
 		bins = q.custom_bins
+		bin_size = q.custom_bins.size
 	} else {
 		// use automatic bins
 		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
