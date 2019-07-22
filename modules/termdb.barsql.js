@@ -66,7 +66,7 @@ async function barchart_data ( q, ds, res, tdb ) {
   }
 
   const startTime = +(new Date())
-  q.results = termdbsql.get_rows(q, true) // withCTEs = true
+  q.results = termdbsql.get_rows(q, {withCTEs: true})
   const sqlDone = +(new Date())
   const pj = getPj(q, q.results.lst, tdb, ds)
   if (pj.tree.results) {
