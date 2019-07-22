@@ -22,7 +22,7 @@ may_create_vcflegend_numericalaxis
 showmenu_numericaxis
 __update_legend
 	AFtest_makeui
-		AFtest_update_flag
+		AFtest_updatesetting_bygroupselection
 		AFtest_editgroupmenu
 		AFtest_showgroup
 			AFtest_showgroup_termdb
@@ -207,17 +207,24 @@ but will not update track
 
 
 
-function AFtest_update_flag ( af ) {
+function AFtest_updatesetting_bygroupselection ( tk ) {
 /*
-after selecting groups,
-update AFtest setting flags based on what groups are selected
+update AFtest setting by group selection
+will also flip <select>
+
+call at:
+1. end of AFtest_makeui
+2. after changing population
+   as different pops may allow termfilter or not
 
 toggle following flags, do not alter doms:
-- population.adjust_race
-- af.testby_fisher
-- af.testby_AFdiff
-- af.termfilter.inuse
+1. population.adjust_race
+2. af.testby_fisher, by_AFddiff
+3. af.termfilter.inuse, disabled
+
 */
+	const af = tk.vcf.numerical_axis.AFtest
+
 	if( af.groups[0].is_population && af.groups[1].is_population ) {
 		// both groups are populations, do not adjust race
 		af.groups[0].adjust_race=false
@@ -235,13 +242,20 @@ toggle following flags, do not alter doms:
 			}
 		}
 	}
+
 	if( af.testby_fisher ) {
 		// if using fisher test, do not allow info group
 		if( af.groups.find(i=>i.is_infofield) ) {
 			af.testby_fisher = false
 			af.testby_AFdiff = true
+			af.dom.testmethod_option_fisher.property('disabled',true)
+		} else {
+			// do not disable
+			af.dom.testmethod_option_fisher.property('disabled',false)
 		}
 	}
+	af.dom.testmethod_select.node().selectedIndex = af.testby_AFdiff ? 0 : 1
+
 	if( af.termfilter ) {
 		// termfilter available
 		// if condition does not apply then turn off and disable
@@ -249,12 +263,20 @@ toggle following flags, do not alter doms:
 		if( !af.groups.find( i=> i.is_termdb ) ) {
 			// no termdb group
 			// must has at least one population that supports it
-			if( !af.groups.find( i=>{ if(i.is_population && i.termfilter) return i }) ) {
+			if( !af.groups.find( i=> {
+				if( i.is_population ) {
+					const g = tk.populations.find(g=>g.key==i.key)
+					if(g && g.termfilter) return i
+				}
+				return
+			})) {
 				// no pop either
 				af.termfilter.inuse = false
 				af.termfilter.disabled = true
 			}
 		}
+		af.dom.termfilter_select.property('disabled', af.termfilter.disabled)
+		af.dom.termfilter_select.node().selectedIndex = af.termfilter.inuse ? 1+af.termfilter.value_index : 0
 	}
 }
 
@@ -264,12 +286,11 @@ toggle following flags, do not alter doms:
 function AFtest_makeui ( settingholder, tk, block ) {
 /*
 make ui for AFtest in legend
-do not alter any flags, as they are handled in AFtest_update_flag
+attaches doms to af.dom{}, and group.dom{}
+setting conflicts are resolved after doms are made
 */
-
 	const af = tk.vcf.numerical_axis.AFtest
-
-	AFtest_update_flag( af )
+	af.dom = {}
 
 	const table = settingholder.append('table') // 3 columns
 		.style('border-spacing','5px')
@@ -295,7 +316,10 @@ do not alter any flags, as they are handled in AFtest_update_flag
 				AFtest_editgroupmenu(tk, block, group, settingholder)
 			})
 
-		group.dom.td2 = tr.append('td').style('opacity',.5).style('font-size','.8em')
+		group.dom.td2 = tr.append('td')
+			.style('opacity',.5)
+			.style('font-size','.8em')
+			.style('white-space','nowrap')
 		group.dom.td3 = tr.append('td')
 
 		AFtest_showgroup( tk, block, group )
@@ -310,11 +334,11 @@ do not alter any flags, as they are handled in AFtest_update_flag
 			.style('padding','6px')
 			.style('margin','3px 5px')
 			.style('font-size','.7em')
-		const select = td.append('select')
+		af.dom.testmethod_select = td.append('select')
 			.on('change',()=>{
 				af.testby_AFdiff=false
 				af.testby_fisher=false
-				const i = select.node().selectedIndex
+				const i = af.dom.testmethod_select.node().selectedIndex
 				if(i==0) {
 					af.testby_AFdiff=true
 				} else if(i==1) {
@@ -324,15 +348,12 @@ do not alter any flags, as they are handled in AFtest_update_flag
 				may_setup_numerical_axis(tk)
 				tk.load()
 			})
-		select.append('option').text('Value difference')
-		{
-			const o = select.append('option').text('Fisher exact test')
-			// fisher test option will be disabled if there is info field
-			if( af.groups.find(i=> i.is_infofield) ) {
-				o.property('disabled',true)
-			}
-		}
-		select.node().selectedIndex = af.testby_AFdiff ? 0 : 1
+		af.dom.testmethod_select
+			.append('option')
+			.text('Value difference')
+		af.dom.testmethod_option_fisher = af.dom.testmethod_select
+			.append('option')
+			.text('Fisher exact test')
 	}
 
 	if( af.termfilter ) {
@@ -368,6 +389,7 @@ do not alter any flags, as they are handled in AFtest_update_flag
 				await tk.load()
 				select.property('disabled',false)
 			})
+		af.dom.termfilter_select = select
 		if( af.termfilter.disabled ) {
 			select.property('disabled',true)
 		}
@@ -375,8 +397,9 @@ do not alter any flags, as they are handled in AFtest_update_flag
 		for(const v of af.termfilter.values) {
 			select.append('option').text(v.label || v.key)
 		}
-		select.node().selectedIndex = af.termfilter.inuse ? 1+af.termfilter.value_index : 0
 	}
+
+	AFtest_updatesetting_bygroupselection( tk )
 }
 
 
@@ -633,6 +656,7 @@ function AFtest_showgroup_population ( group, tk ) {
 		group.allowto_adjust_race = p.allowto_adjust_race
 		group.adjust_race = p.adjust_race
 		update_adjust_race(adjust_race_div)
+		AFtest_updatesetting_bygroupselection( tk )
 		btn.html(p.label+' &nbsp;<span style="font-size:.7em">LOADING...</span>')
 		await tk.load()
 		btn.html( p.label+ (tk.populations.length>1 ? ' &#9662;':''))
