@@ -1,5 +1,6 @@
 import * as client from './client'
 import {init as termdbinit} from './mds.termdb'
+import {display} from './mds.termdb.termsetting.ui'
 
 
 /*
@@ -46,83 +47,19 @@ will include tk.vcf.plot_mafcov.overlay_term
 		// enable selecting term for overlaying
 		const row = legenddiv.append('div')
 			.style('margin-bottom','5px')
-		obj.d.term_button = row
-			.append('div')
-			.attr('class','sja_filter_tag_btn')
-			.style('display','inline-block')
-			.style('margin-right','1px')
-			.style('background','#4888BF')
-			.style('color','white')
-			.style('padding','4px 9px')
-			.on('click',()=>{
-				obj.tk.legend.tip.clear()
-					.showunder(obj.d.term_button.node())
-				termdbinit({
-					genome: obj.block.genome,
-					mds: obj.tk.mds,
-					div: obj.tk.legend.tip.d,
-					default_rootterm:true,
-					modifier_click_term:{
-						disable_terms: ( obj.overlay_term ? new Set([ obj.overlay_term.id ]) : undefined ),
-						callback: (t)=>{
-							obj.tk.legend.tip.hide()
-							obj.overlay_term = t
-							update_term_button( obj )
-							// assign default setting about this term
-							if( t.iscondition ) {
-								if( t.isleaf ) {
-									obj.overlay_term_q = { value_by_max_grade:true  }
-								} else {
-									obj.overlay_term_q = { value_by_max_grade:true, bar_by_children:true }
-								}
-							} else {
-								delete obj.overlay_term_q
-							}
-							do_plot( obj )
-						}
-					}
-				})
-			})
-		obj.d.delete_term_button = row.append('div')
-			.attr('class','sja_filter_tag_btn')
-			.style('margin-right','10px')
-			.style('background','#4888BF')
-			.style('border-radius','0 6px 6px 0')
-			.style('color','white')
-			.style('padding','4px 6px')
-			.html('&times;')
-			.on('click',()=>{
-				delete obj.overlay_term
-				update_term_button(obj)
-				do_plot(obj)
-			})
+
+		display(row, obj, callback)
+
 		obj.d.term_legenddiv = row.append('div') // display categories after updating plot
-		update_term_button( obj )
 	}
 
 	await do_plot( obj )
-}
 
-
-
-
-function update_term_button ( obj ) {
-// call after updating overlay_term
-	obj.d.term_legenddiv.selectAll('*').remove()
-	if( obj.overlay_term ) {
-		obj.d.term_button
-			.style('border-radius','6px 0 0 6px')
-			.text( obj.overlay_term.name )
-		obj.d.delete_term_button.style('display','inline-block')
-	} else {
-		obj.d.term_button
-			.style('border-radius','6px')
-			.text( 'Select a term to overlay' )
-		obj.d.delete_term_button.style('display','none')
+	function callback(){
+		obj.d.term_legenddiv.selectAll('*').remove()
+		do_plot( obj )
 	}
 }
-
-
 
 
 
