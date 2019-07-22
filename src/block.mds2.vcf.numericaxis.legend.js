@@ -454,7 +454,7 @@ groupindex:
 	if( af.allowed_infofields ){
 		tabs.push({
 			label:'<span style="background:'+color_infofield+';border-radius:4px">&nbsp;&nbsp;</span> Numerical value',
-			show_immediate: (div)=>{
+			callback: (div)=>{
 				for( const i of af.allowed_infofields ){
 					if( group.is_infofield && group.key==i.key ) {
 						// group is currently this one
@@ -480,7 +480,7 @@ groupindex:
 	if( tk.populations ) {
 		tabs.push({
 			label:'<span style="background:'+color_population+';border-radius:4px">&nbsp;&nbsp;</span> Population',
-			show_immediate: (div)=>{
+			callback: (div)=>{
 				for( const population of tk.populations ){
 					if( group.is_population && group.key==population.key ) {
 						continue
@@ -505,9 +505,6 @@ groupindex:
 
 
 	client.tab2box( tip.d.append('div').style('margin','13px'), tabs )
-	for(const t of tabs) {
-		if(t.show_immediate) t.show_immediate( t.box )
-	}
 
 	tip.showunder( group.dom.td1.node() )
 

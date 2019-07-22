@@ -35,10 +35,6 @@ p{}
 	mayaddtab_fimo( tabs, m, tk, block )
 
 	client.tab2box( pane.body.style('padding-top','10px'), tabs )
-	// fill in static ones
-	for(const tab of tabs) {
-		if( tab.show_immediate ) tab.show_immediate( tab.box, m, tk, block )
-	}
 }
 
 
@@ -100,7 +96,7 @@ function mayaddtab_fishertable( tabs, m, tk ) {
 
 	tabs.push({
 		label:'Fisher\' exact test',
-		show_immediate
+		callback: show_immediate
 	})
 
 	function show_immediate (div) {
@@ -203,7 +199,7 @@ function addtab_functionalannotation ( tabs, m, tk, block ) {
 
 	tabs.push({
 		label:'Annotation',
-		show_immediate
+		callback: show_immediate
 	})
 
 	function show_immediate (div) {

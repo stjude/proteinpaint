@@ -1609,9 +1609,10 @@ export function gmlst2loci ( gmlst ) {
 export function tab2box ( holder, tabs ) {
 /*
 tabs[ tab{} ]
-	.label: required
+	.label:
+		required
 	.callback()
-		if callback is provided for a tab,
+		required
 
 this function attaches .box (d3 dom) to each tab of tabs[]
 */
@@ -1629,7 +1630,6 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 	for(let i=0; i<tabs.length; i++) {
 
 		const tab = tabs[i]
-		let callback_called = false // only used when there's a callback for the tab
 
 		tab.tab = tdleft.append('div')
 			.style('padding','5px 10px')
@@ -1662,9 +1662,8 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 				}
 			}
 			if( tab.callback ) {
-				if( callback_called ) return
-				callback_called=true
 				tab.callback( tab.box )
+				delete tab.callback
 			}
 		})
 	}

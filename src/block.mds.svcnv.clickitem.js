@@ -171,7 +171,7 @@ export async function may_allow_samplesearch(tk, block) {
 					if(sample.attr && tk.sampleAttribute && tk.sampleAttribute.attributes) {
 						tabs.push({
 							label:'Attributes',
-							show_immediate:(div)=>{
+							callback:(div)=>{
 								for(const attr of sample.attr) {
 									const a = tk.sampleAttribute.attributes[attr.k]
 									if(a) attr.k = a.label
@@ -183,9 +183,6 @@ export async function may_allow_samplesearch(tk, block) {
 					const pane = client.newpane({x:100, y:100})
 					pane.header.text( sample.name )
 					client.tab2box( pane.body.style('padding-top','10px'), tabs)
-					for(const t of tabs) {
-						if(t.show_immediate) t.show_immediate(t.box)
-					}
 				})
 			}
 		}catch(e){
@@ -1390,7 +1387,7 @@ export async function click_multi_singleitem( p ) {
 	const tabs = []
 	tabs.push({
 		label:'Details',
-		show_immediate: (div)=>{
+		callback: (div)=>{
 			p.holder = div
 			detailtable_singlesample( p )
 		}
@@ -1425,9 +1422,6 @@ export async function click_multi_singleitem( p ) {
 	})
 
 	client.tab2box( pane.body.style('padding-top','10px'), tabs )
-	for(const t of tabs) {
-		if(t.show_immediate) t.show_immediate(t.box)
-	}
 }
 
 
