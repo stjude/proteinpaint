@@ -13,11 +13,11 @@ import {may_get_param as maygetparameter_numericaxis} from './block.mds2.vcf.num
 /*
 ********************** EXPORTED
 loadTk
+addparameter_rangequery
 ********************** INTERNAL
 makeTk
 makeTk_parse_client_config
 loadTk_finish_closure
-addparameter_rangequery
 rangequery_add_variantfilters
 
 
@@ -103,7 +103,7 @@ function loadTk_finish_closure ( tk, block ) {
 
 
 
-function addparameter_rangequery ( tk, block ) {
+export function addparameter_rangequery ( tk, block ) {
 // to get data for current view range
 
 	/*
