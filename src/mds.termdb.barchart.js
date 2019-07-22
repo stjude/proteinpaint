@@ -343,8 +343,13 @@ export class TermdbBarchart{
           }
         } else {
           const bins = self.bins[index]
-          const range = !bins ? null : bins.find(d => d.label == label || d.name == label)
-          if (range) termValues.push({term, ranges: [range]})
+          if (!bins || !bins.length) {
+            // not associated with numeric bins
+            termValues.push({term, values: [{key, label}]})
+          } else {
+            const range = bins.find(d => d.label == label || d.name == label)
+            if (range) termValues.push({term, ranges: [range]})
+          }
         }
       }
       if (!obj) {
