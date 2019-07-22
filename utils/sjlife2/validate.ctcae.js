@@ -201,7 +201,7 @@ rl.on('close',()=>{
 
 
 
-	//get_summary({term:'Cardiovascular System',bar_by_children:1,value_by_max_grade:1}, patient2condition)
+	get_summary({term:'Cardiovascular System',bar_by_children:1,value_by_most_recent:1}, patient2condition)
 })
 
 
@@ -239,26 +239,49 @@ q{}
 
 		for(const [patient,o] of patient2condition) {
 
-			let maxgrade = 0
 			let matchconditions = new Set()
 
-			for(const condition in o) {
-				const subterm = child2subcondition.get( condition )
-				if( !subterm ) continue
-				const grades = []
-				for(const e of o[condition]) {
-					if(e.grade==0 || e.grade==9) continue
-					grades.push(e.grade)
+			if( q.value_by_maxgrade ) {
+				let maxgrade = 0
+				for(const condition in o) {
+					const subterm = child2subcondition.get( condition )
+					if( !subterm ) continue
+					const grades = []
+					for(const e of o[condition]) {
+						if(e.grade==0 || e.grade==9) continue
+						grades.push(e.grade)
+					}
+					if(grades.length==0) continue
+					const mg = Math.max(...grades)
+					if( mg == maxgrade ) {
+						matchconditions.add( subterm )
+					} else if( mg > maxgrade ) {
+						maxgrade = mg
+						matchconditions = new Set( [subterm] )
+					}
 				}
-				if(grades.length==0) continue
-				const mg = Math.max(...grades)
-				if( mg == maxgrade ) {
-					matchconditions.add( subterm )
-				} else if( mg > maxgrade ) {
-					maxgrade = mg
-					matchconditions = new Set( [subterm] )
+			} else if( q.value_by_most_recent) {
+				let lastage = 0
+				for(const condition in o) {
+					const subterm = child2subcondition.get( condition )
+					if( !subterm ) continue
+					let thislastage = 0
+					for(const e of o[condition]) {
+						if(e.grade==0 || e.grade==9) continue
+						thislastage = Math.max(e.age, thislastage)
+					}
+					if(thislastage==0) continue
+					if( thislastage == lastage ) {
+						matchconditions.add( subterm )
+					} else if( thislastage > lastage ) {
+						lastage = thislastage
+						matchconditions = new Set( [subterm] )
+					}
 				}
+			} else {
+				throw 'unknown value_by_?'
 			}
+
 			if( matchconditions.size==0 ) continue
 			for( const c of matchconditions ) {
 				child2samplecount.set( c, 1 + (child2samplecount.get(c) || 0) )
