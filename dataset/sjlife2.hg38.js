@@ -18,7 +18,8 @@ module.exports={
 				sample:'sample',
 				term_id:'term_id'
 			},
-			precomputed_file: 'files/hg38/sjlife/clinical/precomputed.tsv'
+			// the precompute script will save the tsv to this file
+			precomputed_file: 'files/hg38/sjlife/clinical/chronicevents.precomputed'
 		},
 		files:[
 			{file:'files/hg38/sjlife/clinical/matrix'},
@@ -62,11 +63,12 @@ module.exports={
 				age_key: 'age',
 				yearstoevent_key:'yearstoevent'
 			},
-			precomputed_file: 'files/hg38/sjlife/clinical/precomputed.json'
+			// the precompute script will save the json object to this file
+			// this will be loaded once by modules/termdb.barchart.js
+			precomputed_file: 'files/hg38/sjlife/clinical/precomputed.json',
+			precompute_script: 'precompute.sjlife2.hg38.js'
 		},
 	},
-
-
 
 
 	track: {

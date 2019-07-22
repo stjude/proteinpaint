@@ -6,7 +6,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
 const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
-const request=require('request')
+const fs = require('fs')
 
 /*
 ********************** EXPORTED
@@ -16,8 +16,6 @@ get_AF
 */
 
 exports.handle_request_closure = ( genomes ) => {
-  may_trigger_precompute(genomes)
-
   return async (req, res) => {
     const q = req.query
     if (q.custom_bins) {
@@ -49,7 +47,7 @@ exports.handle_request_closure = ( genomes ) => {
       if(!ds.cohort) throw 'ds.cohort missing'
       const tdb = ds.cohort.termdb
       if(!tdb) throw 'no termdb for this dataset'
-      if(tdb.precomputed_file && !tdb.precomputed) throw 'Precompute is pending'
+      if(tdb.precomputed_file) await may_load_precomputed(tdb)
       // process triggers
       await barchart_data( q, ds, res, tdb )
     } catch(e) {
@@ -772,40 +770,18 @@ arguments:
   return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
 }
 
-
-function may_trigger_precompute(genomes) {
-  // asynchronously trigger the precomputation of condition
-  // values for termdb dataset
-  // will not re-trigger if ds.cohort.termdb.precomputed
-  // has been triggered or already been set
-  const maxTries = 1
-  let numTries = 0
-  const i = setInterval(()=>{
-    numTries++
-    if (numTries >= maxTries) {
-      clearInterval(i);
-    }
-    for(const gnlabel in genomes) {
-      for(const dslabel in genomes[gnlabel].datasets) {
-        const ds = genomes[gnlabel].datasets[dslabel]
-        if (
-          ds.cohort 
-          && ds.cohort.termdb 
-          && ds.cohort.annorows
-          && ds.cohort.termdb.precomputed_file // trigger only if set in dataset/*.json
-          && !ds.cohort.termdb.precompute_pending // do not re-trigger
-          && !ds.cohort.termdb.precomputed // do not precompute again
-        ) {  
-          console.log('triggered precompute for', dslabel)
-          request(
-            `http://localhost:${serverconfig.port}/termdb-precompute?`
-            + `genome=${gnlabel}&dslabel=${dslabel}`,
-            (error,response,body)=>{
-              if (error) console.log(error)
-            }
-          )
-        }
-      }
-    }
-  }, 500)
+let numTries = 0
+async function may_load_precomputed(tdb, res) {
+  if (tdb.precomputed || numTries > 3) return
+  numTries++
+  const filename = path.join(serverconfig.tpmasterdir,tdb.precomputed_file)
+  try {
+    const file = fs.existsSync(filename) ? await utils.read_file(filename, {encoding:'utf8'}) : ''
+    tdb.precomputed = JSON.parse(file.trim())
+    console.log("Loaded the precomputed values from "+ filename)
+  } catch(e) {
+    const message = 'Unable to load the precomputed file ' + filename
+    console.log(message, e.message || e)
+    throw message
+  }
 }
