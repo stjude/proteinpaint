@@ -18,6 +18,7 @@ import {
 
 ********************** EXPORTED
 may_create_vcflegend_numericalaxis
+AFtest_groupname
 ********************** INTERNAL
 showmenu_numericaxis
 __update_legend
@@ -704,4 +705,32 @@ function AFtest_showgroup_population ( group, tk ) {
 				.html('&nbsp;Adjust race background')
 		}
 	}
+}
+
+
+
+
+export function AFtest_groupname (tk, gi) {
+	const g = tk.vcf.numerical_axis.AFtest.groups[gi]
+	if(!g) throw 'index out of bound'
+	if( g.is_infofield ) {
+		const i = tk.info_fields.find( i=> i.key == g.key )
+		return i ? i.label : g.key
+	}
+	if( g.is_population ) {
+		const i = tk.populations.find( i=> i.key == g.key )
+		return i ? i.label : g.key
+	}
+	if( g.is_termdb ) {
+		const otherg = tk.vcf.numerical_axis.AFtest.groups[ gi==0 ? 1 : 0 ]
+		if( otherg.is_termdb ) {
+			// both termdb
+			return 'Group '+(gi+1)
+		}
+		// only g is termdb
+		const term1name = g.terms[0].term.name
+		if( term1name.length <= 20 ) return term1name
+		return term1name.substr(0,17)+'...'
+	}
+	throw 'unknown AFtest group type'
 }

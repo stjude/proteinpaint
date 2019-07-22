@@ -2,6 +2,8 @@ import * as common from './common'
 import * as client from './client'
 import {make_ui as mafcovplot_makeui} from './block.mds2.vcf.mafcovplot'
 import {termdb_bygenotype} from './block.mds2.vcf.termdb'
+import {AFtest_groupname} from './block.mds2.vcf.numericaxis.legend'
+
 
 
 /*
@@ -96,11 +98,14 @@ function mayaddtab_fishertable( tabs, m, tk ) {
 
 	tabs.push({
 		label:'Fisher\' exact test',
-		callback: show_immediate
+		callback
 	})
 
-	function show_immediate (div) {
+	function callback (div) {
 
+		const af = tk.vcf.numerical_axis.AFtest
+
+		// reform this table; if doing fisher test with just one termdb group, display pvalue as 3rd column, and add rows for additional controls
 		const table = div.append('table')
 			.style('border','1px solid #ccc')
 			.style('border-collapse','collapse')
@@ -112,7 +117,7 @@ function mayaddtab_fishertable( tabs, m, tk ) {
 		}
 		{
 			const tr = table.append('tr')
-			tr.append('th').text('Group 1') // TODO may show informative name based on term
+			tr.append('th').text( AFtest_groupname( tk, 0 ) )
 			tr.append('td').text( m.contigencytable[0].toFixed(0) )
 				.style('padding','5px')
 			tr.append('td').text( m.contigencytable[1].toFixed(0) )
@@ -120,7 +125,7 @@ function mayaddtab_fishertable( tabs, m, tk ) {
 		}
 		{
 			const tr = table.append('tr')
-			tr.append('th').text('Group 2')
+			tr.append('th').text( AFtest_groupname( tk, 1 ) )
 			tr.append('td').text( m.contigencytable[2].toFixed(0) )
 				.style('padding','5px')
 			tr.append('td').text( m.contigencytable[3].toFixed(0) )
@@ -132,9 +137,8 @@ function mayaddtab_fishertable( tabs, m, tk ) {
 			.style('padding','5px')
 			.html('<span style="opacity:.5">Fisher exact p-value:</span> '+m.AFtest_pvalue)
 
-		if( m.popsetadjvalue ) {
 
-			const af = tk.vcf.numerical_axis.AFtest
+		if( m.popsetadjvalue ) {
 
 			const termdbgidx = af.groups.findIndex(i=>i.is_termdb)
 			const termdbg = af.groups.find(i=>i.is_termdb)
