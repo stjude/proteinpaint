@@ -400,9 +400,26 @@ arguments:
 
 function setCustomBins(q, ds) {
   if (!q.custom_bins) return
+  if (!('size' in q.custom_bins)) throw 'missing custom_bin.size'
   if (!q.term_id) throw 'missing q.term[ ]_id to set custom_bins'
+
   const custom_bins = q.custom_bins
   delete q.custom_bins // must not use custom_bin config as understood by get_numeric_summary below
+  
+  // set defaults here, only in case it is not set by the client app 
+  if (!('lowerbound' in custom_bins)) custom_bins.lowerbound = 'auto'
+  if (!('lowerbound_inclusive' in custom_bins)) custom_bins.lowerbound_inclusive = 0
+  if (!('first_bin_uppervalue' in custom_bins)) custom_bins.first_bin_uppervalue = 'auto'
+  if (!('first_bin_unit' in custom_bins)) custom_bins.first_bin_unit = 'value'
+  
+  if (!('upperbound' in custom_bins)) custom_bins.upperbound = 'auto'
+  if (!('upperbound_inclusive' in custom_bins)) custom_bins.upperbound_inclusive = 0
+  if (!('last_bin_uppervalue' in custom_bins)) custom_bins.last_bin_uppervalue = 'auto'
+  if (!('last_bin_unit' in custom_bins)) custom_bins.last_bin_unit = 'value'
+  
+  if (!('startinclusive' in custom_bins)) custom_bins.startinclusive = 1
+  if (!('stopinclusive' in custom_bins)) custom_bins.startinclusive = 0
+
   const bins = []
   const orderedLabels = []
   const term = ds.cohort.termdb.q.termjsonByOneid( q.term_id )
@@ -422,8 +439,15 @@ function setCustomBins(q, ds) {
   let start = custom_bins.lowerbound == 'auto' ? null : min
   
   while( start <= summary.max ) {
-    const upper = start == null ? min + custom_bins.size : start + custom_bins.size //custom_bins.size == "auto" ? custom_bins.max_val : 
-    const stop = upper < max 
+    const upper = !bins.length && custom_bins.first_bin_uppervalue != 'auto'
+      ? custom_bins.first_bin_uppervalue
+      : start == null 
+      ? min + custom_bins.size 
+      : start + custom_bins.size
+
+    const stop = !isNaN(custom_bins.last_bin_lowervalue) && upper > custom_bins.last_bin_lowervalue
+      ? custom_bins.last_bin_lowervalue
+      : upper < max 
       ? upper
       : custom_bins.upperbound == 'auto'
       ? null
@@ -437,7 +461,7 @@ function setCustomBins(q, ds) {
       startinclusive: custom_bins.startinclusive,
       stopinclusive: custom_bins.stopinclusive,
     }
-    
+
     if (bin.startunbound) { 
       const oper = bin.stopinclusive ? "\u2264" : "<"
       const v1 = Number.isInteger(stop) ? stop : binLabelFormatter(stop)
