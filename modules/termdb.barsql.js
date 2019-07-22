@@ -436,7 +436,12 @@ function setCustomBins(q, ds) {
     ? summary.values[ Math.floor((custom_bins.upperbound / 100) * summary.values.length) ]
     : custom_bins.upperbound
   
-  let start = custom_bins.lowerbound == 'auto' ? null : min
+  let start = custom_bins.lowerbound == 'auto' 
+    ? null
+    : custom_bins.lowerbound && !isNaN(custom_bins.lowerbound)
+    ? custom_bins.lowerbound
+    : min
+  
   let i = 0
   while( start <= summary.max ) {
     const upper = !bins.length && custom_bins.first_bin_uppervalue != 'auto'
@@ -446,7 +451,7 @@ function setCustomBins(q, ds) {
       : start + custom_bins.size
 
     const stop = !isNaN(custom_bins.last_bin_lowervalue) && start >= custom_bins.last_bin_lowervalue
-      ? null
+      ? (custom_bins.upperbound == 'auto' ? null : +custom_bins.upperbound)
       : !isNaN(custom_bins.last_bin_lowervalue) && upper > custom_bins.last_bin_lowervalue
       ? custom_bins.last_bin_lowervalue
       : upper < max 
