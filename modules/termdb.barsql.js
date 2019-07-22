@@ -490,7 +490,10 @@ function setCustomBins(q, ds) {
 
     bins.push( bin )
     orderedLabels.push(bin.label)
-    start = upper
+    if (stop === null 
+      || (!isNaN(custom_bins.last_bin_lowervalue) && custom_bins.last_bin_lowervalue <= stop)
+    ) break
+    start = stop
   }
 
   q.custom_bins = bins
