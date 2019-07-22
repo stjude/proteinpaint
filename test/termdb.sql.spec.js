@@ -500,7 +500,7 @@ tape("non-leaf condition term1", function (test) {
     {
       term1: 'Arrhythmias', 
       conditionParents: ["","Arrhythmias",""],
-      conditionUnits: ["","by_children",""], 
+      conditionUnits: ["","by_children_at_max_grade",""], 
       term1_q: {value_by_max_grade:1, bar_by_children:1},
     },
     "sample counts by Arrhythmias condition by children, no overlay"
@@ -512,13 +512,13 @@ tape("non-leaf condition term1", function (test) {
       term1: 'Arrhythmias', 
       conditionParents: ["","Arrhythmias",""],
       conditionUnits: ["","by_children",""], 
-      term1_q: {value_by_max_grade:1, bar_by_children:1},
+      term1_q: {value_by_computable_grade:1, bar_by_children:1},
       filter: [{
         term: {id:'sex', name:'sex', iscategorical:true},
         values: [{key: 'Male', label: 'Male'}]
       }]
     },
-    "sample counts by Arrhythmias condition by children, no overlay"
+    "filtered sample counts by Arrhythmias condition by children, no overlay"
   )
 
   compareResponseData(
@@ -654,9 +654,9 @@ tape("term0 charts", function (test) {
     test,
     {
       term0: 'Arrhythmias',
-      term0_q: {value_by_max_grade:1, bar_by_children:1},
+      term0_q: {value_by_most_recent:1, bar_by_children:1},
       conditionParents: ["Arrhythmias","",""],
-      conditionUnits: ["by_children","",""], 
+      conditionUnits: ["by_children_at_most_recent","",""], 
       term1: 'sex'
     },
     "condition charts by Arrhythmias subcondition, categorical bars by sex"
@@ -681,7 +681,7 @@ function compareResponseData(test, params, mssg) {
   // i=series start, j=series end, k=chart index
   // for debugging result data, set i < j to slice chart.serieses
   const i=0, j=0, k=0, l=0, refkey='';
-  const url0 = getSqlUrl(params);
+  const url0 = getSqlUrl(params); //console.log(url0)
 
   request(url0, (error,response,body)=>{
     if(error) {

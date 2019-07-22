@@ -381,6 +381,30 @@ async function setValFxns(q, inReqs, ds, tdb) {
 }
 
 function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionUnits, index) {
+  if (tdb.precomputed) {
+    const precomputedKey = unit == 'by_children' ? 'children'
+      : 'by_children_at_max_grade' ? 'childrenAtMaxGrade'
+      : 'by_children_at_most_recent' ? 'childrenAtMostRecent'
+      : 'max_grade_perperson' ? 'maxGrade'
+      : 'most_recent_grade' ? 'mostRecentGrades'
+      : ''
+    if (!precomputedKey) throw `unknown condition term unit='${unit}'`
+
+    inReq.joinFxns[key] = row => {
+      const conditions = []
+      if (tdb.precomputed.bySample[row.sjlid]) {
+        const s = tdb.precomputed.bySample[row.sjlid]
+        if (key in s.byCondition) {
+          return Array.isArray(s.byCondition[key][precomputedKey])
+            ? s.byCondition[key][precomputedKey]
+            : [s.byCondition[key][precomputedKey]]
+        }
+      }
+    }
+  }
+
+  // the rest of this function can be deleted if we use tdb.precomputed all the time
+
   const events_key = tdb.patient_condition.events_key
   const grade_key = tdb.patient_condition.grade_key
   const age_key = tdb.patient_condition.age_key
@@ -511,43 +535,31 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
             }
           }
         } else if (unit == 'by_children_at_max_grade') {
-          if (tdb.precomputed) { 
-            if (tdb.precomputed.bySample[row.sjlid]) {
-              const s = tdb.precomputed.bySample[row.sjlid]
-              if (key in s.byCondition && s.byCondition[key].childrenAtMaxGrade) {
-                const p = s.byCondition[key]
-                for(const termid of p.childrenAtMaxGrade) {
-                  if (!conditions.includes(termid)) conditions.push(termid)
+          let maxGrade
+          for(const k in row) {
+            if (!row[k][events_key]) continue
+            const term = tdb.termjson.map.get(k)
+            if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+              for(const event of row[k][events_key]) {
+                const grade = event[grade_key]
+                if (uncomputable[grade]) continue
+                if (maxGrade === undefined || maxGrade < grade) {
+                  maxGrade = grade
                 }
               }
             }
-          } else {
-            let maxGrade
-            for(const k in row) {
-              if (!row[k][events_key]) continue
-              const term = tdb.termjson.map.get(k)
-              if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-                for(const event of row[k][events_key]) {
-                  const grade = event[grade_key]
-                  if (uncomputable[grade]) continue
-                  if (maxGrade === undefined || maxGrade < grade) {
-                    maxGrade = grade
-                  }
-                }
-              }
-            }
-            for(const k in row) {
-              if (!row[k][events_key]) continue
-              const term = tdb.termjson.map.get(k)
-              if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-                for(const event of row[k][events_key]) {
-                  const grade = event[grade_key]
-                  if (grade == maxGrade) {
-                    // get the immediate child of the parent condition in the lineage
-                    const child = term.conditionlineage[i - 1];
-                    if (!conditions.includes(child)) {
-                      conditions.push(child)
-                    }
+          }
+          for(const k in row) {
+            if (!row[k][events_key]) continue
+            const term = tdb.termjson.map.get(k)
+            if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
+              for(const event of row[k][events_key]) {
+                const grade = event[grade_key]
+                if (grade == maxGrade) {
+                  // get the immediate child of the parent condition in the lineage
+                  const child = term.conditionlineage[i - 1];
+                  if (!conditions.includes(child)) {
+                    conditions.push(child)
                   }
                 }
               }

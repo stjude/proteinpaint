@@ -122,6 +122,27 @@ returns:
 	}
 
 	function add_condition ( tvs ) {
+		if (ds.cohort.termdb.precomputed) {
+			const value_for = tvs.bar_by_children ? 'child' : 'grade'
+			const restriction = tvs.value_by_max_grade ? 'max_grade'
+					: tvs.value_by_most_recent ? 'most_recent'
+					: 'computable_grade'; console.log(value_for, restriction)
+			values.push(tvs.term.id, value_for, restriction)
+			filters.push(`
+				SELECT 
+					sample
+				FROM precomputed
+				WHERE term_id = ? 
+					AND value_for = ? 
+					AND restriction = ?
+					AND value IN (${tvs.values.map(i=>'?').join(', ')})`)
+			values.push(...tvs.values.map(i=>''+i.key))
+			return
+		}
+
+		// the remaining code in this function can be deleted
+		// if we go ahead with using the precomputed table
+
 		if( ds.cohort.termdb.q.termIsLeaf( tvs.term.id ) ) {
 			// is leaf
 			filters.push(
@@ -287,7 +308,7 @@ q{}
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( values )
 
-	return !withCTEs ? lst : {lst, CTE0, CTE1, CTE2}
+	return !withCTEs ? lst : {lst, CTE0, CTE1, CTE2, filter}
 }
 
 function get_term_cte(q, filter, values, index) {
@@ -338,7 +359,7 @@ index
 			join_on_clause: '' //`ON t${index}.sample IS NULL`
 		}
 
-	if (!('join_on_clause' in CTE)) {
+	if (index!=1 && !('join_on_clause' in CTE)) {
 		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
 	}
 	
@@ -348,6 +369,9 @@ index
 
 export function get_summary ( q ) {
 /*
+ --- function can be deleted ??
+
+
 getting data for barchart and more
 
 q{}
@@ -583,6 +607,7 @@ q{}
 
 
 function get_label4key ( key, term, q, ds ) {
+// this function can be deleted if get_summary is deleted
 // get label for a key based on term type and setting
 	if(term.iscategorical) {
 		let label
@@ -605,6 +630,8 @@ function get_label4key ( key, term, q, ds ) {
 
 
 function uncomputablegrades_clause ( ds ) {
+	// this function can be deleted
+	// if we go ahead with using the precomputed table
 	const u = ds.cohort.termdb.patient_condition.uncomputable_grades
 	if( u ) {
 		const lst = []
@@ -616,6 +643,9 @@ function uncomputablegrades_clause ( ds ) {
 
 
 function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null ) {
+	// this function can be deleted
+	// if we go ahead with using the precomputed table
+
 	// work for grade as bars 
 	if( tvs.value_by_max_grade ) {
 		if (!termtable) values.push(term_id)
@@ -747,7 +777,7 @@ function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termin
 			sql: `${out_table} AS (
 				SELECT 
 					sample, 
-					value AS key, 
+					${value_for == 'grade' ? 'CAST(value AS integer) as key' : 'value as key'}, 
 					${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
 				FROM precomputed
 				WHERE term_id = ? 
@@ -757,6 +787,10 @@ function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termin
 			tablename: out_table
 		}
 	}
+
+
+	// the rest of this function can be deleted
+	// if we go ahead with using the precomputed table
 
 	if( term.isleaf ) {
 		return {
@@ -823,14 +857,6 @@ function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termin
 				GROUP BY key, sample
 			)`
 		} else if (q.value_by_max_grade) {
-			/*
-				NEED TO CLARIFY !!!
-
-				If max-grade or most recent grade is to be computed across all conditions
-				for a patient, then take out the termtable argument from the 
-				grade_age_selection() function call below.
-
-			*/
 			// grade_table would not have term_id column 
 			// but has sample that would have been filtered by the 
 			// descendant term_ids;
