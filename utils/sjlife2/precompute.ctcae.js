@@ -55,6 +55,9 @@ if (!ds.cohort.db || !ds.cohort.db.precomputed_file)
 
 ds.label = dslabel
 ds.cohort.annotation = {}
+// does not actually initializes a server
+// the function name was just copied as-is
+// for reference
 server_init(ds)
 load_cohort_files(ds)
 
@@ -71,6 +74,11 @@ precompute(tdb, Object.values(ds.cohort.annotation), ds.cohort.db)
 */
 
 ///////////// server init
+
+// does not actually initializes a server
+// the function name was just copied as-is
+// from modules/termdb.js for reference
+
 function server_init ( ds ) {
 /* to initiate termdb for a mds dataset
 */
@@ -84,9 +92,6 @@ function server_init ( ds ) {
 
   server_init_mayparse_patientcondition( ds )
 }
-
-
-
 
 
 function server_init_parse_term2term ( termdb ) {
@@ -111,7 +116,6 @@ function server_init_parse_term2term ( termdb ) {
   // maybe sqlitedb
   throw 'term2term: unknown data source'
 }
-
 
 
 function server_init_parse_termjson ( termdb ) {
