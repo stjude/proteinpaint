@@ -1,6 +1,6 @@
 import * as client from './client'
 import {init as termdbinit} from './mds.termdb'
-import {display} from './mds.termdb.termsetting.ui'
+import {termui_display} from './mds.termdb.termsetting.ui'
 
 
 /*
@@ -48,17 +48,24 @@ will include tk.vcf.plot_mafcov.overlay_term
 		const row = legenddiv.append('div')
 			.style('margin-bottom','5px')
 
-		display(row, obj, callback)
+		termui_display({
+			holder: row,
+			genome: obj.block.genome,
+			mds: obj.tk.mds,
+			tip: obj.tk.legend.tip,
+			callback: (term, term_q)=>{
+				obj.overlay_term = term
+				obj.overlay_term_q = term_q
+				obj.d.term_legenddiv.selectAll('*').remove()
+				do_plot( obj )
+			}
+		})
 
 		obj.d.term_legenddiv = row.append('div') // display categories after updating plot
 	}
 
 	await do_plot( obj )
 
-	function callback(){
-		obj.d.term_legenddiv.selectAll('*').remove()
-		do_plot( obj )
-	}
 }
 
 

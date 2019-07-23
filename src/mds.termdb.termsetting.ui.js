@@ -1,5 +1,6 @@
 import * as client from './client'
 import {init} from './mds.termdb'
+import {selectAll} from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -7,7 +8,7 @@ display
 ********************** INTERNAL
 */
 
-export async function display (holder, obj, callback){
+export async function termui_display (obj){
     /*
     group{}
         .terms[]
@@ -20,19 +21,20 @@ export async function display (holder, obj, callback){
             .isnot
     */
 
-    const terms_div = holder.append('div')
+    let overlay_term, term_q
+
+    const terms_div = obj.holder.append('div')
         .style('display','inline-block')
         .style('margin-bottom','5px')
 
-    const tip = obj.tk.legend.tip
-
     // add new term
-    obj.d.add_term_info = terms_div.append('div')
+    terms_div.add_term_info = terms_div.append('div')
         .style('display','inline-block')
         .style('margin-right','7px')
         .text('Select a term to overlay')
 
-    obj.d.term_button = terms_div.append('div')
+    //'+' button
+    terms_div.term_button = terms_div.append('div')
         .attr('class','sja_filter_tag_btn')
         .style('padding','3px 7px')
         .style('display','inline-block')
@@ -41,74 +43,138 @@ export async function display (holder, obj, callback){
         .html('&#43;')
         .on('click',async ()=>{
             
-            tip.clear()
-            .showunder( obj.d.term_button.node() )
+            obj.tip.clear()
+            .showunder( terms_div.term_button.node() )
 
-            const treediv = tip.d.append('div')
+            const treediv = obj.tip.d.append('div')
 
             // a new object as init() argument for launching the tree with modifiers
             init({
-                genome: obj.block.genome,
-                mds: obj.tk.mds,
+                genome: obj.genome,
+                mds: obj.mds,
                 div: treediv,
                 default_rootterm: true,
                 modifier_click_term:{
                     disable_terms: ( obj.overlay_term ? new Set([ obj.overlay_term.id ]) : undefined ),
                     callback: (t)=>{
-                        tip.hide()
-                        obj.overlay_term = t
+                        obj.tip.hide()
+                        overlay_term = t
                         // assign default setting about this term
 							if( t.iscondition ) {
 								if( t.isleaf ) {
-									obj.overlay_term_q = { value_by_max_grade:true  }
+									term_q = { value_by_max_grade:true  }
 								} else {
-									obj.overlay_term_q = { value_by_max_grade:true, bar_by_children:true }
+									term_q = { value_by_max_grade:true, bar_by_children:true }
 								}
 							} else {
-								delete obj.overlay_term_q
+								term_q = undefined
 							}
-                        callback(obj)
-                        update_term_button(obj)
+                        obj.callback(overlay_term, term_q)
+                        update_term_button(terms_div)
                     }
                 }
             })
-        })
-
-    obj.d.delete_term_button = terms_div.append('div')
-        .attr('class','sja_filter_tag_btn')
-        .style('display','none')
-        .style('margin-right','10px')
-        .style('margin-left','1px')
-        .style('background','#4888BF')
-        .style('border-radius','0 6px 6px 0')
-        .style('color','white')
-        .style('padding','3px 6px')
-        .html('&times;')
-        .on('click',()=>{
-            delete obj.overlay_term
-            update_term_button(obj)
-            callback(obj)
         }) 
 
-    function update_term_button(obj){
-        if( obj.overlay_term ) {
+    function update_term_button(terms_div){
 
-            obj.d.add_term_info.style('display','none')
+        if( overlay_term ) {
+
+            terms_div.add_term_info.style('display','none')
     
-            obj.d.term_button
+            terms_div.term_button
                 .style('border-radius','6px 0 0 6px')
-                .text( obj.overlay_term.name )
+                .text( overlay_term.name )
             
-            obj.d.delete_term_button.style('display','inline-block')
+            const edit_div = terms_div.append('div')
+                .style('display','inline-block')
+
+            if(overlay_term.isfloat || overlay_term.isinteger){
+
+                const custom_bin_div = edit_div.append('div')
+                    .attr('class','sja_filter_tag_btn')
+                    .style('margin-left','1px')
+                    .style('background','#4888BF')
+                    .style('padding','3px 6px')
+                    .html('BINS')
+
+                //TODO: create tip with 3 buttons
+                //TODO: change custom bins from the buttons
+
+            }else if(overlay_term.iscondition){
+
+                const [grade_type_select, grade_type_btn] = client.make_select_btn_pair(edit_div)
+                grade_type_select.style('margin-right','1px')
+
+                grade_type_select.append('option')
+                .attr('value','max')
+                .text('Max grade per patient')
+    
+                grade_type_select.append('option')
+                    .attr('value','recent')
+                    .text('Most recent grade per patient')
+
+                grade_type_select.append('option')
+                    .attr('value','any')
+                    .text('Any grade per patient')
+        
+                grade_type_btn
+                    .style('padding','2px 4px 3px 4px')
+                    .style('margin-right','1px')
+                    .style('font-size','1em')
+                    .style('background-color', '#4888BF')
+        
+                if(overlay_term.value_by_max_grade){
+                    grade_type_btn.html('(Max grade per patient) &#9662;')
+                    grade_type_select.node().value = 'max'
+        
+                }else if(overlay_term.value_by_most_recent){
+                    grade_type_btn.html('(Most recent grade per patient) &#9662;')
+                    grade_type_select.node().value = 'recent'
+                }
+        
+                grade_type_select.style('width',grade_type_btn.node().offsetWidth+'px')
+
+                if(overlay_term.isleaf){
+                    
+                    //TODO: on change update term_q
+                    
+                }else{
+
+                    grade_type_select.append('option')
+                        .attr('value','sub')
+                        .text('Sub-condition')
+
+                    //TODO: on change update term_q
+
+                }
+
+            }
+
+            //button to remove overlay term
+            const delete_term_button = edit_div.append('div')
+                .attr('class','sja_filter_tag_btn')
+                .style('margin-right','10px')
+                .style('margin-left','1px')
+                .style('background','#4888BF')
+                .style('border-radius','0 6px 6px 0')
+                .style('padding','3px 6px')
+                .html('&times;')
+                .on('click',()=>{
+                    overlay_term = undefined
+                    term_q = undefined
+                    obj.callback(overlay_term, term_q)
+                    
+                    edit_div.selectAll('*').remove()
+                    update_term_button(terms_div)
+                })
         } else {
 
-            obj.d.add_term_info.style('display','inline-block')
+            terms_div.add_term_info.style('display','inline-block')
 
-            obj.d.term_button
+            terms_div.term_button
                 .style('border-radius','6px')
                 .html('&#43;')
-
-            obj.d.delete_term_button.style('display','none')
 
         }
     }
