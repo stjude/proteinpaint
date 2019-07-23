@@ -291,15 +291,14 @@ function server_init_mayparse_patientcondition ( ds ) {
 }
 
 async function server_init_may_load_precomputed(tdb) {
-  if (!tdb || tdb.precomputed) return
+  if (!tdb || tdb.precomputed || !tdb.precomputed_file) return
   const filename = path.join(serverconfig.tpmasterdir,tdb.precomputed_file)
   try {
     const file = fs.existsSync(filename) ? await utils.read_file(filename, {encoding:'utf8'}) : ''
     tdb.precomputed = JSON.parse(file.trim())
     console.log("Loaded the precomputed values from "+ filename)
   } catch(e) {
-    const message = 'Unable to load the precomputed file ' + filename
+    const message = 'Warning: Unable to load the precomputed file ' + filename
     console.log(message, e.message || e)
-    throw message
   }
 }

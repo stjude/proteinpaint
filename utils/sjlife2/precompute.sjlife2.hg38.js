@@ -18,15 +18,13 @@ async function precompute (tdb, rows, db) {
   tdb: cohort termdb tree 
   rows: data rows
 */
-  const filename = path.join(serverconfig.tpmasterdir,tdb.precomputed_file)
+  
   try {
-    const file = fs.existsSync(filename) ? await read_file(filename, {encoding:'utf8'}) : ''
     console.log('Precomputing by sample and term_id')
     const pj = getPj(tdb, rows)
     pj.tree.pjtime = pj.times
-    write_file(filename, JSON.stringify(pj.tree))
     console.log(pj.times)
-    console.log('Saved precomputed values to '+ filename)
+    may_save_json(tdb, pj.tree)
     generate_tsv(pj.tree.bySample, db)
   } catch(e) {
     console.log(e.message || e)
@@ -126,9 +124,18 @@ function getPj(tdb, data) {
   })
 }
 
+async function may_save_json(tdb, results) {
+  if (!tdb.precomputed_file) return 
+  const filename = path.join(serverconfig.tpmasterdir,tdb.precomputed_file)
+  await write_file(filename, JSON.stringify(results))
+  console.log('Saved precomputed values to '+ filename)
+}
 
 function generate_tsv(bySample, db) {
-  if (!db || !db.file || !db.precomputed_file) return
+  if (!db || !db.file || !db.precomputed_file) {
+    console.log('Warning: precomputed tsv filename not defined')
+    return
+  }
   const precomputed_file = path.join(serverconfig.tpmasterdir,db.precomputed_file)
   
   console.log("Creating data for precompute tsv file")

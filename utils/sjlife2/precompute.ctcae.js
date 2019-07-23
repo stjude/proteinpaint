@@ -36,12 +36,13 @@ if(!ds.cohort.tohash) return '.tohash() missing from cohort'
 if(typeof ds.cohort.tohash !='function') return '.cohort.tohash is not function'
 if(!ds.cohort.samplenamekey) return '.samplenamekey missing'
 
-const tdb = ds.cohort.termdb; console.log(tdb)
+const tdb = ds.cohort.termdb
 if(!tdb) throw 'no termdb for this dataset'
 if (!tdb.precompute_script) throw 'ds.cohort.termdb.precompute_script missing'
-if (!tdb.precomputed_file) throw 'ds.cohort.termdb.precomputed_file missing'
+if (!tdb.precomputed_file) 
+  console.log('Warning: Precomputed values will not be loaded in memory since the ds.cohort.termdb.precomputed_file is not defined.')
 if (!ds.cohort.db || !ds.cohort.db.precomputed_file) 
-  console.log('Warning: no db tables will be generated since ds.cohort.db.precomputed_file is not defined')
+  console.log('Warning: No db tables will be generated since the ds.cohort.db.precomputed_file is not defined')
 
 ds.label = dslabel
 ds.cohort.annotation = {}
