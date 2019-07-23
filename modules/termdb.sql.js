@@ -260,10 +260,7 @@ q{}
 	.term2_id
 	.term2_q{}
 
-filter 
-	.filters
-	.values
-	.CTEname
+filter: returned by makesql_by_tvsfilter
 
 values 
   [] string/numeric to replace ? in CTEs
@@ -304,7 +301,7 @@ index
 
 export function get_summary ( q ) {
 /*
-	q{}
+q{}
 	.tvslst
 	.ds
 	.term1_id
@@ -319,12 +316,13 @@ export function get_summary ( q ) {
 		groupby: 'GROUP BY key0, key1, key2'
 	})
 
+	const nums = [0,1,2]
 	const labeler = {}
-	for(const n of [0,1,2]) {
+	for(const n of nums) {
 		labeler[n] = getlabeler(q, n, result)
 	}
 	for(const row of result.lst) {
-		for(const n of [0,1,2]) {
+		for(const n of nums) {
 			labeler[n](row)
 		}
 	}
@@ -348,7 +346,7 @@ q{}
 	result: returned by get_rows(, {withCTEs: 1})
 */
 	const key = 'key' + i
-	const value = 'value' + i
+	const value = 'val' + i
 	const label = "label" + i
 	const default_labeler = (row) => {
 		delete row[key]
@@ -359,18 +357,35 @@ q{}
 	if (!term_id) return default_labeler
 	const term = q.ds.cohort.termdb.q.termjsonByOneid( term_id )
 	if (!term_id) return default_labeler 
-
+	
+	// when there is only term1 and no term0/term2 simplify 
+	// the property names to just "key" and "label" with no index
+	// -- consider keeping key1 terminology consistent later?
+	const tkey = i != 1 || q.term0_id || q.term2_id ? key : 'key'
+	const tlabel = i != 1 || q.term0_id || q.term2_id ? key : 'label'
 	if( term.isinteger || term.isfloat ) {
 		const CTE = result['CTE' + i]
-		const range = 'range' + i
+		const range = 'range' + (i != 1 || q.term0_id || q.term2_id ? i : '')
 		return (row) => {
 			row[range] = CTE.name2bin.get( row[key] )
-			row[label] = row[key]
+			row[tlabel] = row[key]
+			delete row[value]
+			// remove key index as needed
+			if (tkey !== key) {
+				row[tkey] = row[key]
+				delete row[key]
+			}
 		}
 	} else {
 		const term_q = q['term' + i + '_q']
 		return (row) => {
-			row[label] = get_label4key( row[key], term, term_q, q.ds )
+			row[tlabel] = get_label4key( row[key], term, term_q, q.ds )
+			delete row[value]
+			// remove key index as needed
+			if (tkey !== key) {
+				row[tkey] = row[key]
+				delete row[key]
+			}
 		}
 	}
 }
