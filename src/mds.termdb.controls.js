@@ -180,13 +180,12 @@ function setOverlayOpts(plot, main, table, arg) {
       {label: 'None', value: 'none'},
       {label: 'Term', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
-      {label: 'Subconditions, max grade', value: 'bar_by_children + value_by_max_grade'},
-      {label: 'Subconditions, most recent', value: 'bar_by_children + value_by_most_recent'},
-      //{label: 'Highest graded subconditions per person', value: 'max_graded_children'},
-      //{label: 'Max. grade per person', value: 'max_grade_perperson'},
-      //{label: 'Most recent grade', value: 'most_recent_grade'},
+      {label: 'Subconditions', value: 'bar_by_children'},
+      {label: 'Grade', value: 'bar_by_grade'}
     ]
   )
+
+  const value_by_params = ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']
 
   radio.inputs
   .property('checked', d => d.value == plot.settings.bar.overlay)
@@ -217,23 +216,36 @@ function setOverlayOpts(plot, main, table, arg) {
   	  )
     } else if (d.value == "genotype") {
       // to-do
+      console.log('genotype overlay to be handled from term tree portal', d, d3event.target)
+    } else if (d.value == "bar_by_children") {
+      if (plot.term1_q.bar_by_children){
+        console.log('bar_by_children term1 should not allow subcondition overlay')
+        return
+      }
+      plot.term2 = plot.term
+      delete plot.term2_q.bar_by_grade
+      plot.term2_q.bar_by_children = 1
+      for(const param of value_by_params) {
+        delete plot.term2_q[param]
+        if (plot.term1_q[param]) plot.term2_q[param] = 1
+      }
+      main(plot)
+    } else if (d.value == "bar_by_grade") {
+      if (plot.term1_q.bar_by_grade){
+        console.log('bar_by_grade term1 should not allow grade overlay')
+        return
+      }
+      plot.term2 = plot.term
+      delete plot.term2_q.bar_by_children
+      plot.term2_q.bar_by_grade = 1
+      for(const param of value_by_params) {
+        delete plot.term2_q[param]
+        if (plot.term1_q[param]) plot.term2_q[param] = 1
+      }
+      main(plot)
     } else {
-      console.log('work in progress to handle this click event')
-    } /* work in progress
-    else if (
-        d.value == "by_children" 
-        || d.value == "by_children_at_max_grade" 
-        || d.value == "max_grade_perperson" 
-        || d.value == "most_recent_grade"
-      ) {
-      if (!plot.term2) plot.term2 = plot.term
-      plot.settings.common.conditionUnits[2] = d.value
-      main(plot)
-    } else if (d.value == "max_grade_by_subcondition") {
-      if (!plot.term2) plot.term2 = plot.term
-      plot.settings.common.conditionUnits[2] = d.value
-      main(plot)
-    }*/
+      console.log('unhandled click event', d, d3event.target)
+    }
   })
 
   radio.inputs.on('click', d => {
@@ -271,19 +283,16 @@ function setOverlayOpts(plot, main, table, arg) {
     }
     radio.inputs.property('checked', d => d.value == plot.settings.bar.overlay)
 
-    /* to be refactored
     radio.divs.style('display', d => {
-      if (d.value == "by_children") {
-        if (plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id)) return 'none'
-        return plot.term.isleaf || cu[1] == 'by_children' ? 'none' : 'block'
-      } else if (d.value == "max_grade_by_subcondition") {
-        // if (cu[1] == 'max_grade_perperson' || cu[1] == "most_recent_grade") return 'none'
-        return !plot.term.isleaf && plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id) ? 'block' : 'none'
-      } else {
+      if (d.value == "bar_by_children") {
+        return plot.term.iscondition && !plot.term.isleaf && plot.term1_q.bar_by_grade ? 'block' : 'none'
+      } else if (d.value == "bar_by_grade") {
+        return plot.term.iscondition && !plot.term.isleaf && plot.term1_q.bar_by_children ? 'block' : 'none'
+      } /*else {
         const block = plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'inline-block'
         return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
-      }
-    }) */
+      }*/
+    })
   })
 }
 
@@ -400,11 +409,12 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const options = [
-    {label: "Subconditions", value: "bar_by_children + value_by_computable_grade"},
     {label: "Subconditions, max grade", value: "bar_by_children + value_by_max_grade"},
     {label: "Subconditions, most recent", value: "bar_by_children + value_by_most_recent"},
+    {label: "Subconditions, graded", value: "bar_by_children + value_by_computable_grade"},
     {label: "Max grade per patient", value: "bar_by_grade + value_by_max_grade"},
-    {label: "Most recent grade per patient", value: "bar_by_grade + value_by_most_recent"}, 
+    {label: "Most recent grades per patient", value: "bar_by_grade + value_by_most_recent"}, 
+    {label: "Grade per patient", value: "bar_by_grade + value_by_computable_grade"},
   ]
 
   const radio = renderRadioInput(

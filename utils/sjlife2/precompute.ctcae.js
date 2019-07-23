@@ -75,13 +75,14 @@ function getPj(tdb, data) {
     template: {
       "@split()": "=splitDataRow()",
       bySample: {
-        '$sjlid': {
+        '$sample': {
           byCondition: {
             '$lineage[]': {
               term_id: '@branch',
               maxGrade: '<$grade',
               mostRecentAge: '<$age',
               children: ['=child()'],
+              computableGrades: ['$grade', "set"],
               '__:childrenAtMaxGrade': ['=childrenAtMaxGrade(]'],
               '__:childrenAtMostRecent': ['=childrenAtMostRecent(]'],
               '~gradesByAge': {
@@ -95,6 +96,7 @@ function getPj(tdb, data) {
     },
     "=": {
       splitDataRow(row) {
+        if (!row.sjlid) return []
         const gradedEvents = []
         for(const key in row) {
           if (typeof row[key] != 'object') continue
@@ -105,7 +107,7 @@ function getPj(tdb, data) {
           for(const event of row[key][events_key]) {
             if (uncomputable[event[grade_key]]) continue
             gradedEvents.push({
-              sjlid: row.sjlid,
+              sample: row.sjlid,
               term_id: key,
               // topmost lineage terms are root and CTCAE
               lineage: term.conditionlineage.slice(0,-2),
@@ -113,7 +115,7 @@ function getPj(tdb, data) {
               grade: event[grade_key]
             })
           }
-        } //console.log(gradedEvents)
+        }
         return gradedEvents
       },
       child(row, context) {
@@ -166,33 +168,39 @@ function generate_tsv(bySample, db) {
   
   console.log("Creating data for precompute tsv file")
   let csv = '', numSamples=0, numRows=0
-  for(const sample in bySample) {
+  for(const sample in bySample) { 
     numSamples++
     for(const termid in bySample[sample].byCondition) {
-      const row = bySample[sample].byCondition[termid]
-      csv += [sample, termid, 'grade', row.maxGrade, 'max_grade'].join('\t') + '\n'
+      const subresult = bySample[sample].byCondition[termid]
+      csv += [sample, termid, 'grade', subresult.maxGrade, 'max_grade'].join('\t') + '\n'
       numRows++
 
-      if (!row.mostRecentGrades) row.mostRecentGrades = []
-      for(const grade of row.mostRecentGrades) {
+      if (!subresult.mostRecentGrades) subresult.mostRecentGrades = []
+      for(const grade of subresult.mostRecentGrades) {
         csv += [sample, termid, 'grade', grade, 'most_recent'].join('\t') + '\n'
         numRows++
       }
 
-      if (!row.children) row.children = []
-      for(const child of row.children) {
+      if (!subresult.computableGrades) subresult.computableGrades = []
+      for(const grade of subresult.computableGrades) {
+        csv += [sample, termid, 'grade', grade, 'computable_grade'].join('\t') + '\n'
+        numRows++
+      }
+
+      if (!subresult.children) subresult.children = []
+      for(const child of subresult.children) {
         csv += [sample, termid, 'child', child, 'computable_grade'].join('\t') + '\n'
         numRows++
       }
 
-      if (!row.childrenAtMostRecent) row.childrenAtMostRecent = []
-      for(const child of row.childrenAtMostRecent) {
+      if (!subresult.childrenAtMostRecent) subresult.childrenAtMostRecent = []
+      for(const child of subresult.childrenAtMostRecent) {
         csv += [sample, termid, 'child', child, 'most_recent'].join('\t') + '\n'
         numRows++
       }
 
-      if (!row.childrenAtMaxGrade) row.childrenAtMaxGrade = []
-      for(const child of row.childrenAtMaxGrade) {
+      if (!subresult.childrenAtMaxGrade) subresult.childrenAtMaxGrade = []
+      for(const child of subresult.childrenAtMaxGrade) {
         csv += [sample, termid, 'child', child, 'max_grade'].join('\t') + '\n'
         numRows++
       }
