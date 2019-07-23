@@ -1,3 +1,9 @@
+const serverconfig = require('../../serverconfig.json')
+const path = require('path')
+const fs = require('fs')
+const Partjson = require('../../modules/partjson')
+const load_dataset = require('./load.sjlife').load_dataset
+
 /*
   Precompute dataset values to help speed up 
   server response as needed
@@ -19,220 +25,204 @@
   database via load.sql, which is not part of this script
 */
 
-const path = require('path')
-const fs = require('fs')
-const serverconfig = require('../../serverconfig.json')
+precompute()
 
-/***********************
-  Sanity checks
-************************/
+function precompute() {
+  const ds = verify_ds()
+  const tdb = ds.cohort.termdb
+  const db = ds.cohort.db
+  const data = Object.values(ds.cohort.annotation)
 
-const dslabel = process.argv[2]
-if(!dslabel) throw 'usage: ./precompute.ctcae.sh dslabel # from your-tp-dir/cohort-dir/...'
-
-const dsfilename = path.join('../../dataset', dslabel)
-const ds = require(dsfilename)
-if(!ds) throw 'invalid dslabel'
-if(!ds.cohort) throw 'ds.cohort missing'
-if(!ds.cohort.files) return '.files[] missing from .cohort'
-if(!Array.isArray(ds.cohort.files)) return '.cohort.files is not array'
-if(!ds.cohort.tohash) return '.tohash() missing from cohort'
-if(typeof ds.cohort.tohash !='function') return '.cohort.tohash is not function'
-if(!ds.cohort.samplenamekey) return '.samplenamekey missing'
-
-const tdb = ds.cohort.termdb
-if(!tdb) throw 'no termdb for this dataset'
-if (!tdb.precompute_script) throw 'ds.cohort.termdb.precompute_script missing'
-if (!tdb.precomputed_file) 
-  console.log('Warning: Precomputed values will not be loaded in memory since the ds.cohort.termdb.precomputed_file is not defined.')
-if (!ds.cohort.db || !ds.cohort.db.precomputed_file) 
-  console.log('Warning: No db tables will be generated since the ds.cohort.db.precomputed_file is not defined')
-
-
-/***********************
-  Process dataset files
-************************/
-
-ds.label = dslabel
-ds.cohort.annotation = {}
-// does not actually initializes a server
-// the function name was just copied as-is
-// for reference
-server_init(ds)
-load_cohort_files(ds)
-
-const precompute = require('./'+tdb.precompute_script).precompute
-precompute(tdb, Object.values(ds.cohort.annotation), ds.cohort.db)
-
-
-/***********************
-   Borrowed code
-************************/
-
-/*
-  Code extracted from porteinpaint/modules/termdb.js
-*/
-
-///////////// server init
-
-// does not actually initializes a server
-// the function name was just copied as-is
-// from modules/termdb.js for reference
-
-function server_init ( ds ) {
-/* to initiate termdb for a mds dataset
-*/
-  const termdb = ds.cohort.termdb
-
-  if(!termdb.term2term) throw '.term2term{} missing'
-  server_init_parse_term2term( termdb )
-
-  if(!termdb.termjson) throw '.termjson{} missing'
-  server_init_parse_termjson( termdb )
-
-  server_init_mayparse_patientcondition( ds )
-}
-
-
-function server_init_parse_term2term ( termdb ) {
-
-  if(termdb.term2term.file) {
-    // one single text file
-
-    termdb.parent2children = new Map()
-    // k: id, v: list of children id
-    termdb.child2parent = new Map()
-    // k: id, v: parent id
-
-    for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.term2term.file),{encoding:'utf8'}).trim().split('\n') ) {
-      if(line[0]=='#') continue
-      const [pa,child] = line.split('\t')
-      termdb.child2parent.set( child, pa )
-      if(!termdb.parent2children.has( pa )) termdb.parent2children.set( pa, [] )
-      termdb.parent2children.get( pa ).push( child )
-    }
-    return
-  }
-  // maybe sqlitedb
-  throw 'term2term: unknown data source'
-}
-
-
-function server_init_parse_termjson ( termdb ) {
-  if(termdb.termjson.file) {
-    termdb.termjson.map = new Map()
-    // k: term
-    // v: {}
-    let currTerm = -1
-    let currLineage = []
-    for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,termdb.termjson.file),{encoding:'utf8'}).trim().split('\n') ) {
-      if(line[0]=='#') continue
-      const l = line.split('\t')
-      const term = JSON.parse( l[1] )
-      term.id = l[0]
-      termdb.termjson.map.set( l[0], term )
-      if (term.iscondition && term.isleaf) {
-        term.conditionlineage = get_term_lineage([term.id], term.id, termdb.child2parent)
-      }
-    }
-    return
-  }
-  throw 'termjson: unknown data source'
-}
-
-function get_term_lineage (lineage, termid, child2parent) {
-  const pa = child2parent.get( termid )
-  if ( pa ) {
-    lineage.push( pa )
-    return get_term_lineage(lineage, pa , child2parent)
-  } else {
-    return lineage
+  try {
+    console.log('Precomputing by sample and term_id')
+    const pj = getPj(tdb, data)
+    pj.tree.pjtime = pj.times
+    console.log(pj.times)
+    may_save_json(tdb, pj.tree)
+    generate_tsv(pj.tree.bySample, db)
+  } catch(e) {
+    console.log(e.message || e)
+    if(e.stack) console.log(e.stack)
   }
 }
 
+function verify_ds() {
+  const dslabel = process.argv[2]
+  if(!dslabel) throw 'usage: ./precompute.ctcae.sh dslabel # from your-tp-dir/cohort-dir/...'
 
-function server_init_mayparse_patientcondition ( ds ) {
-  if(!ds.cohort.termdb.patient_condition) return
-  if(!ds.cohort.termdb.patient_condition.file) throw 'file missing from termdb.patient_condition'
-  let count=0
-  for(const line of fs.readFileSync(path.join(serverconfig.tpmasterdir,ds.cohort.termdb.patient_condition.file),{encoding:'utf8'}).trim().split('\n')) {
-    const l = line.split('\t')
-    ds.cohort.annotation[ l[0] ] = JSON.parse(l[1])
-    count++
+  const ds = load_dataset(dslabel)
+  const tdb = ds.cohort.termdb
+  if(!tdb) throw 'no termdb for this dataset'
+  if (!tdb.precompute_script) throw 'ds.cohort.termdb.precompute_script missing'
+  if (!tdb.precomputed_file) {
+    console.log('Warning: Precomputed values will not be loaded in memory since the ds.cohort.termdb.precomputed_file is not defined.')
   }
-  console.log(ds.label+': '+count+' samples loaded with condition data from '+ds.cohort.termdb.patient_condition.file)
+  if (!ds.cohort.db || !ds.cohort.db.precomputed_file) {
+    console.log('Warning: No db tables will be generated since the ds.cohort.db.precomputed_file is not defined')
+  }
+
+  return ds
 }
 
+function getPj(tdb, data) {
+  const events_key = tdb.patient_condition.events_key
+  const grade_key = tdb.patient_condition.grade_key
+  const age_key = tdb.patient_condition.age_key
+  const uncomputable = tdb.patient_condition.uncomputable_grades || {}
 
-
-/*
-  Code extracted from proteinpaint/app.js
-*/
-
-function load_cohort_files(ds) {
-  for(const file of ds.cohort.files) {
-    if(!file.file) return '.file missing from one of .cohort.files'
-    const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
-    if(err) return 'cohort annotation file "'+file.file+'": '+err
-    //if(items.length==0) return 'no content from sample annotation file '+file.file
-    console.log(ds.label+': '+items.length+' samples loaded from annotation file '+file.file)
-    items.forEach( i=> {
-
-      // may need to parse certain values into particular format
-
-      for(const k in i) {
-        let attr
-        if( ds.cohort.sampleAttribute ) {
-          attr = ds.cohort.sampleAttribute.attributes[ k ]
-        }
-        if( !attr ) {
-          if( ds.cohort.termdb && ds.cohort.termdb.termjson && ds.cohort.termdb.termjson.map ) {
-            attr = ds.cohort.termdb.termjson.map.get( k )
-          }
-        }
-        if(attr) {
-          if(attr.isfloat) {
-            i[k] = Number.parseFloat(i[k])
-          } else if(attr.isinteger) {
-            i[k] = Number.parseInt(i[k])
+  return new Partjson({
+    data,
+    template: {
+      "@split()": "=splitDataRow()",
+      bySample: {
+        '$sjlid': {
+          byCondition: {
+            '$lineage[]': {
+              term_id: '@branch',
+              maxGrade: '<$grade',
+              mostRecentAge: '<$age',
+              children: ['=child()'],
+              '__:childrenAtMaxGrade': ['=childrenAtMaxGrade(]'],
+              '__:childrenAtMostRecent': ['=childrenAtMostRecent(]'],
+              '~gradesByAge': {
+                '$age': ['$grade', 'set']
+              },
+              '__:mostRecentGrades': '=mostRecentGrades()'
+            }
           }
         }
       }
+    },
+    "=": {
+      splitDataRow(row) {
+        const gradedEvents = []
+        for(const key in row) {
+          if (typeof row[key] != 'object') continue
+          if (!row[key] || !(events_key in row[key])) continue;
+          if (key == 'CTCAE Graded Events') continue
+          const term = tdb.termjson.map.get(key)
+          if (!term || !term.iscondition) continue
+          for(const event of row[key][events_key]) {
+            if (uncomputable[event[grade_key]]) continue
+            gradedEvents.push({
+              sjlid: row.sjlid,
+              term_id: key,
+              // topmost lineage terms are root and CTCAE
+              lineage: term.conditionlineage.slice(0,-2),
+              age: event[age_key],
+              grade: event[grade_key]
+            })
+          }
+        } //console.log(gradedEvents)
+        return gradedEvents
+      },
+      child(row, context) {
+        if (context.branch == row.term_id) return
+        const i = row.lineage.indexOf(context.branch)
+        return row.lineage[i-1]
+      },
+      childrenAtMaxGrade(row, context) {
+        if (!Array.isArray(context.self.children)) return []
+        const byCondition = context.parent
+        const ids = new Set()
+        for(const id of context.self.children) {
+          if (byCondition[id].maxGrade == context.self.maxGrade) {
+            ids.add(id)
+          }
+        }
+        return [...ids]
+      },
+      childrenAtMostRecent(row, context) {
+        if (!Array.isArray(context.self.children)) return []
+        const byCondition = context.parent
+        const ids = new Set()
+        for(const id of context.self.children) {
+          if (byCondition[id].mostRecentAge == context.self.mostRecentAge) {
+            ids.add(id)
+          }
+        }
+        return [...ids]
+      },
+      mostRecentGrades(row, context) {
+        return [...context.self.gradesByAge[context.self.mostRecentAge]]
+      }
+    }
+  })
+}
 
-      ds.cohort.tohash(i, ds)
+async function may_save_json(tdb, results) {
+  if (!tdb.precomputed_file) return 
+  const filename = path.join(serverconfig.tpmasterdir,tdb.precomputed_file)
+  await write_file(filename, JSON.stringify(results))
+  console.log('Saved precomputed values to '+ filename)
+}
+
+function generate_tsv(bySample, db) {
+  if (!db || !db.file || !db.precomputed_file) {
+    console.log('Warning: precomputed tsv filename not defined')
+    return
+  }
+  const precomputed_file = path.join(serverconfig.tpmasterdir,db.precomputed_file)
+  
+  console.log("Creating data for precompute tsv file")
+  let csv = '', numSamples=0, numRows=0
+  for(const sample in bySample) {
+    numSamples++
+    for(const termid in bySample[sample].byCondition) {
+      const row = bySample[sample].byCondition[termid]
+      csv += [sample, termid, 'grade', row.maxGrade, 'max_grade'].join('\t') + '\n'
+      numRows++
+
+      if (!row.mostRecentGrades) row.mostRecentGrades = []
+      for(const grade of row.mostRecentGrades) {
+        csv += [sample, termid, 'grade', grade, 'most_recent'].join('\t') + '\n'
+        numRows++
+      }
+
+      if (!row.children) row.children = []
+      for(const child of row.children) {
+        csv += [sample, termid, 'child', child, 'computable_grade'].join('\t') + '\n'
+        numRows++
+      }
+
+      if (!row.childrenAtMostRecent) row.childrenAtMostRecent = []
+      for(const child of row.childrenAtMostRecent) {
+        csv += [sample, termid, 'child', child, 'most_recent'].join('\t') + '\n'
+        numRows++
+      }
+
+      if (!row.childrenAtMaxGrade) row.childrenAtMaxGrade = []
+      for(const child of row.childrenAtMaxGrade) {
+        csv += [sample, termid, 'child', child, 'max_grade'].join('\t') + '\n'
+        numRows++
+      }
+    }
+  }
+  write_file(precomputed_file, csv)
+  console.log('Saved precomputed csv to '+ precomputed_file +":")
+  console.log("number of samples="+ numSamples, ", rows="+ numRows)
+}
+
+
+/* 
+  extracted from modules/utils/js
+*/
+
+function write_file ( file, text ) {
+  return new Promise((resolve, reject)=>{
+    fs.writeFile( file, text, (err)=>{
+      if(err) reject('cannot write')
+      resolve()
     })
-  }
-  ds.cohort.annorows = Object.values(ds.cohort.annotation)
-  console.log(ds.label+': total samples from sample table: '+ds.cohort.annorows.length)
+  })
 }
 
-function parse_textfilewithheader( text ) {
-  /*
-  for sample annotation file, first line is header, skip lines start with #
-  parse each line as an item
-  */
-  const lines = text.split(/\r?\n/)
-  /*
-  if(lines.length<=1) return ['no content']
-  if(lines[0] == '') return ['empty header line']
-  */
-
-  // allow empty file
-  if(lines.length<=1 || !lines[0]) return [null,[]]
-
-  const header = lines[0].split('\t')
-  const items = []
-  for(let i=1; i<lines.length; i++) {
-    if(lines[i][0]=='#') continue
-    const l = lines[i].split('\t')
-    const item = {}
-    for(let j=0; j<header.length; j++) {
-      const value = l[j]
-      if(value) {
-        item[ header[j] ] = value
-      }
-    }
-    items.push(item)
-  }
-  return [null, items]
+function read_file ( file ) {
+  return new Promise((resolve,reject)=>{
+    fs.readFile( file, {encoding:'utf8'}, (err,txt)=>{
+      // must use reject in callback, not throw
+      if(err) reject('cannot read file')
+      resolve(txt)
+    })
+  })
 }
