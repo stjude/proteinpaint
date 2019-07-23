@@ -479,7 +479,7 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
 
 function setBinOpts(plot, main, table, termNum, label) {
   const tr = table.append('tr')
-  
+
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
 
   const bin_edit_td = tr.append('td')
@@ -502,21 +502,21 @@ function setBinOpts(plot, main, table, termNum, label) {
   const last_bin_btn = last_bin_div.append('div')
     .attr('class','sja_edit_btn')
 
-  let custom_bin_size, bin_term
+  let custom_bins_q, bin_term
   bin_term = plot.term
   
   update_btn()
 
   bin_size_btn.on('click', () => {
-    bin_size_menu(plot, main, bin_size_btn, termNum.slice(-1), custom_bin_size, update_btn)
+    bin_size_menu(plot, main, bin_size_btn, termNum, custom_bins_q, update_btn)
   })
 
   first_bin_btn.on('click', () => {
-    edit_bin_menu(plot, main, first_bin_btn, termNum.slice(-1), custom_bin_size, 'first', update_btn)
+    edit_bin_menu(plot, main, first_bin_btn, termNum, custom_bins_q, 'first', update_btn)
   })
 
   last_bin_btn.on('click', () => {
-    edit_bin_menu(plot, main, last_bin_btn, termNum.slice(-1), custom_bin_size, 'last', update_btn)
+    edit_bin_menu(plot, main, last_bin_btn, termNum, custom_bins_q, 'last', update_btn)
   })
 
   // TODO: legacy 'edit' button, remove after testing
@@ -543,113 +543,106 @@ function setBinOpts(plot, main, table, termNum, label) {
     const x = '<span style="font-family:Times;font-style:italic">x</span>'
   
     if(bin_term.isfloat || bin_term.isinteger ){
-      if(plot.custom_bins[termNum.slice(-1)]){
-        //define custom_bin
-        const custom_bin_size = plot.custom_bins[termNum.slice(-1)]
+      if(plot.term1_q && plot.term1_q.custom_bins){
+        //if custom_bins defined
+        custom_bins_q = plot.term1_q.custom_bins
 
-        bin_size_btn.text(custom_bin_size.size + ' ' + (bin_term.unit?bin_term.unit:''))
-
-        //update first_bin button
-        if( parseFloat(custom_bin_size.lowerbound) &&  parseFloat(custom_bin_size.first_bin_uppervalue)){
-          first_bin_btn.html(
-            custom_bin_size.lowerbound +
-            ' '+ (custom_bin_size.lowerbound_inclusive?'&le;':'&lt;')+
-            ' '+ x+
-            ' '+ (custom_bin_size.stopinclusive? '&le;':'&lt;')+
-            ' '+ custom_bin_size.first_bin_uppervalue +
-            ' '+ (bin_term.unit?bin_term.unit:'')
-          )
-        }else if(parseFloat(custom_bin_size.lowerbound)){
-          first_bin_btn.html(
-            x +
-            ' '+ (custom_bin_size.lowerbound_inclusive?'&ge;':'&gt;')+
-            ' '+ custom_bin_size.lowerbound +
-            ' '+ (bin_term.unit?bin_term.unit:'')
-          )
-        }else if(parseFloat(custom_bin_size.first_bin_uppervalue)){
-          first_bin_btn.html(
-            x+
-            ' '+ (custom_bin_size.stopinclusive? '&le;':'&lt;')+
-            ' '+ custom_bin_size.first_bin_uppervalue +
-            ' '+ (bin_term.unit?bin_term.unit:'')
-          )
-        }else{
-          first_bin_btn.text('EDIT')
+      }else if(bin_term.graph.barchart.numeric_bin.bins){
+        //if custom_bins not defined yet, set it as numeric_bin.bins
+        custom_bins_q = bin_term.graph.barchart.numeric_bin.bins
+        const bins = bin_term.graph.barchart.numeric_bin.bins
+        custom_bins_q = {
+          bin_size: bins.bin_size,
+          startinclusive: bins.startinclusive,
+          stopinclusive: bins.stopinclusive,
+          first_bin:{
+            stop: bins.first_bin.stop,
+            startunbounded: bins.first_bin.startunbounded,
+            startinclusive: bins.first_bin.startinclusive,
+            stopinclusive: bins.first_bin.stopinclusive
+          }
         }
 
-        //update last_bin button
-        if( parseFloat(custom_bin_size.last_bin_lowervalue) &&  parseFloat(custom_bin_size.upperbound)){
-          last_bin_btn.html(
-            custom_bin_size.last_bin_lowervalue  +
-            ' '+ (custom_bin_size.startinclusive?'&le;':'&lt;')+
-            ' '+ x+
-            ' '+ (custom_bin_size.upperbound_inclusive? '&le;':'&lt;')+
-            ' '+ custom_bin_size.upperbound +
-            ' '+ (bin_term.unit?bin_term.unit:'')
-          )
-        }else if(parseFloat(custom_bin_size.last_bin_lowervalue)){
-          last_bin_btn.html(
-            x+
-            ' '+ (custom_bin_size.startinclusive?'&ge;':'&gt;')+
-            ' '+ custom_bin_size.last_bin_lowervalue  +
-            ' '+ (bin_term.unit?bin_term.unit:'')
-          )
-        }else if(parseFloat(custom_bin_size.upperbound)){
-          last_bin_btn.html(
-            x+
-            ' '+ (custom_bin_size.upperbound_inclusive? '&le;':'&lt;')+
-            ' '+ custom_bin_size.upperbound +
-            ' '+ (bin_term.unit?bin_term.unit:'')
-          )
-        }else{
-          last_bin_btn.text('EDIT')
+        if(bins.first_bin.start) custom_bins_q.first_bin.start = bins.first_bin.start
+        if(bins.last_bin && bins.last_bin.start){
+          custom_bins_q.last_bin = {
+            start: bins.last_bin.start,
+            stopunbounded: bins.last_bin.stopunbounded,
+            startinclusive: bins.last_bin.startinclusive,
+            stopinclusive: bins.last_bin.stopinclusive
+          }
+          if(bins.last_bin.stop) custom_bins_q.last_bin.start = bins.last_bin.stop
         }
+      }
+      
+      bin_size_btn.text(custom_bins_q.bin_size + ' ' + (bin_term.unit?bin_term.unit:''))
 
-      }else if(bin_term.graph.barchart.numeric_bin.auto_bins){
-        const auto_bins = bin_term.graph.barchart.numeric_bin.auto_bins
-        bin_size_btn.text(auto_bins.bin_size + ' ' + (bin_term.unit?bin_term.unit:''))
+      //update first_bin button
+      if( parseFloat(custom_bins_q.first_bin.start) &&  parseFloat(custom_bins_q.first_bin.stop)){
+        first_bin_btn.html(
+          custom_bins_q.first_bin.start +
+          ' '+ (custom_bins_q.first_bin.startinclusive?'&le;':'&lt;')+
+          ' '+ x+
+          ' '+ (custom_bins_q.first_bin.stopinclusive? '&le;':'&lt;')+
+          ' '+ custom_bins_q.first_bin.stop +
+          ' '+ (bin_term.unit?bin_term.unit:'')
+        )
+      }else if(parseFloat(custom_bins_q.first_bin.start)){
+        first_bin_btn.html(
+          x +
+          ' '+ (custom_bins_q.first_bin.startinclusive?'&ge;':'&gt;')+
+          ' '+ custom_bins_q.first_bin.start +
+          ' '+ (bin_term.unit?bin_term.unit:'')
+        )
+      }else if(parseFloat(custom_bins_q.first_bin.stop)){
+        first_bin_btn.html(
+          x+
+          ' '+ (custom_bins_q.first_bin.stopinclusive? '&le;':'&lt;')+
+          ' '+ custom_bins_q.first_bin.stop +
+          ' '+ (bin_term.unit?bin_term.unit:'')
+        )
+      }else{
         first_bin_btn.text('EDIT')
+      }
+
+      //update last_bin button
+      if(custom_bins_q.last_bin){
+        if( parseFloat(custom_bins_q.last_bin.start) &&  parseFloat(custom_bins_q.last_bin.stop)){
+          last_bin_btn.html(
+            custom_bins_q.last_bin.start +
+            ' '+ (custom_bins_q.last_bin.startinclusive?'&le;':'&lt;')+
+            ' '+ x+
+            ' '+ (custom_bins_q.last_bin.stopinclusive? '&le;':'&lt;')+
+            ' '+ custom_bins_q.last_bin.stop +
+            ' '+ (bin_term.unit?bin_term.unit:'')
+          )
+        }else if(parseFloat(custom_bins_q.last_bin.start)){
+          last_bin_btn.html(
+            x +
+            ' '+ (custom_bins_q.last_bin.startinclusive?'&ge;':'&gt;')+
+            ' '+ custom_bins_q.last_bin.start +
+            ' '+ (bin_term.unit?bin_term.unit:'')
+          )
+        }else if(parseFloat(custom_bins_q.last_bin.stop)){
+          last_bin_btn.html(
+            x+
+            ' '+ (custom_bins_q.last_bin.stopinclusive? '&le;':'&lt;')+
+            ' '+ custom_bins_q.last_bin.stop +
+            ' '+ (bin_term.unit?bin_term.unit:'')
+          )
+        }
+      }else{
         last_bin_btn.text('EDIT')
-  
-        //define first, last bin range and custom_bin
-        custom_bin_size = { 
-          size: auto_bins.bin_size, 
-          startinclusive: 0,
-          stopinclusive: 1,
-          lowerbound:auto_bins.start_value?auto_bins.start_value:'auto',
-          lowerbound_inclusive: 1,
-          first_bin_uppervalue: auto_bins.start_value? (auto_bins.start_value + auto_bins.bin_size) : 'auto',
-          first_bin_unit: 'value',
-          upperbound: 'auto',
-          upperbound_inclusive: 0,
-          last_bin_lowervalue: 'auto',
-          last_bin_unit: 'value'
-        }
-  
-      }else if(bin_term.graph.barchart.numeric_bin.fixed_bins){
-        const fixed_bins = bin_term.graph.barchart.numeric_bin.fixed_bins
-        bin_size_btn.text('EDIT')
-        first_bin_btn.text(fixed_bins[0].label + ' ' + (bin_term.unit?bin_term.unit:''))
-        last_bin_btn.text(fixed_bins[fixed_bins.length-1].label + ' ' + (bin_term.unit?bin_term.unit:''))
-        
-        //define first, last bin range and custom_bin
-        custom_bin_size = { 
-          size:fixed_bins[1].stop - fixed_bins[1].start, //assuming every other bin except 1st and last are of same size
-          lowerbound:fixed_bins[0].start?fixed_bins[0].start:'auto', 
-          first_bin_uppervalue:fixed_bins[0].stop, 
-          startinclusive:fixed_bins[fixed_bins.length-1].startinclusive,
-          last_bin_lowervalue:fixed_bins[fixed_bins.length-1].start,
-          stopinclusive:fixed_bins[fixed_bins.length-1].stopinclusive,
-          upperbound:fixed_bins[fixed_bins.length-1].stop?fixed_bins[fixed_bins.length-1].stop:'auto'
-        }
       }
     }
   }
 }
 
-function bin_size_menu(plot, main, btn, binNum=1, custom_bin_size, update_btn){
+function bin_size_menu(plot, main, btn, termNum, custom_bins_q, update_btn){
 
-  if(plot.custom_bins[binNum]) custom_bin_size = plot.custom_bins[binNum]
+  if(termNum == 'term1' && plot.term1_q && plot.term1_q.custom_bins){
+    custom_bins_q = plot.term1_q.custom_bins
+  }
 
   const tip = plot.tip
   tip.clear().showunder(btn.node())
@@ -668,7 +661,7 @@ function bin_size_menu(plot, main, btn, binNum=1, custom_bin_size, update_btn){
 
   const bin_size_input = bin_size_div.append('input')
     .attr('type','number')
-    .attr('value',custom_bin_size.size)
+    .attr('value',custom_bins_q.bin_size)
     .style('width','60px')
     .on('keyup', async ()=>{
       if(!client.keyupEnter()) return
@@ -689,7 +682,7 @@ function bin_size_menu(plot, main, btn, binNum=1, custom_bin_size, update_btn){
     .html('start &le; ' + x + ' &lt; end')
 
   include_select.node().selectedIndex =
-    custom_bin_size.startinclusive ? 1 : 0 
+    custom_bins_q.startinclusive ? 1 : 0 
 
   tip.d.append('div')
     .attr('class','sja_menuoption')
@@ -699,13 +692,13 @@ function bin_size_menu(plot, main, btn, binNum=1, custom_bin_size, update_btn){
       apply()
     })
 
-  if(plot.custom_bins[binNum]){
+  if(plot.term1_q && plot.term1_q.custom_bins){
     tip.d.append('div')
       .attr('class','sja_menuoption')
       .style('text-align','center')
       .html('RESET')
       .on('click', ()=>{
-        plot.custom_bins[binNum] = null
+        delete plot.term1_q.custom_bins
         main(plot)
         plot.tip.hide()
         update_btn()
@@ -713,20 +706,14 @@ function bin_size_menu(plot, main, btn, binNum=1, custom_bin_size, update_btn){
   }
 
   function apply(){
-    if(!plot.custom_bins[binNum]){
-      plot.custom_bins[binNum] = {
-        lowerbound: custom_bin_size.lowerbound ? custom_bin_size.lowerbound : 'auto',
-        first_bin_uppervalue: custom_bin_size.first_bin_uppervalue ? custom_bin_size.first_bin_uppervalue :'auto',
-        first_bin_unit: 'value',
-        upperbound: custom_bin_size.upperbound ? custom_bin_size.upperbound : 'auto',
-        last_bin_lowervalue: custom_bin_size.last_bin_lowervalue ? custom_bin_size.last_bin_lowervalue : 'auto',
-        last_bin_unit: 'value'
-      }
+    if(!plot.term1_q || !plot.term1_q.custom_bins){
+      plot.term1_q = {}
+      plot.term1_q.custom_bins = custom_bins_q
     }
 
-    plot.custom_bins[binNum].size = bin_size_input.node().value ? parseFloat(bin_size_input.node().value) : "auto"
-    plot.custom_bins[binNum].startinclusive = (include_select.node().value == 'startinclusive')
-    plot.custom_bins[binNum].stopinclusive = (include_select.node().value == 'stopinclusive')
+    if(bin_size_input.node().value) plot.term1_q.custom_bins.bin_size = parseFloat(bin_size_input.node().value)
+    plot.term1_q.custom_bins.startinclusive = (include_select.node().value == 'startinclusive')
+    plot.term1_q.custom_bins.stopinclusive = (include_select.node().value == 'stopinclusive')
 
     main(plot)
     tip.hide()
@@ -735,29 +722,27 @@ function bin_size_menu(plot, main, btn, binNum=1, custom_bin_size, update_btn){
 
 }
 
-function edit_bin_menu(plot, main, btn, binNum=1, custom_bin_size, bin_flag, update_btn){
-
-  if(plot.custom_bins[binNum]) custom_bin_size = plot.custom_bins[binNum]
-
-  let bin_term
-  if (binNum == 1) bin_term = plot.term
-  else bin_term = plot.term2
+function edit_bin_menu(plot, main, btn, termNum, custom_bins_q, bin_flag, update_btn){
+  console.log(plot)
+  if(termNum == 'term1' && plot.term1_q && plot.term1_q.custom_bins){
+    custom_bins_q = plot.term1_q.custom_bins
+  }
 
   const tip = plot.tip
   tip.clear().showunder(btn.node())
   tip.d.style('padding','0')
 
-  let start, stop, start_inclusive, stop_inclusive, unit
+  let bin
   if(bin_flag == 'first'){
-    start = custom_bin_size.lowerbound
-    stop = custom_bin_size.first_bin_uppervalue
-    start_inclusive = custom_bin_size.lowerbound_inclusive
-    stop_inclusive = custom_bin_size.stopinclusive
+    bin = custom_bins_q.first_bin
   }else if(bin_flag == 'last'){
-    start = custom_bin_size.last_bin_lowervalue
-    stop = custom_bin_size.upperbound
-    start_inclusive = custom_bin_size.startinclusive
-    stop_inclusive = custom_bin_size.upperbound_inclusive
+    if(custom_bins_q.last_bin) bin = custom_bins_q.last_bin
+    else{
+      bin = {
+        start: '',
+        stop: ''
+      }
+    }
   }
 
   const bin_edit_div = tip.d.append('div')
@@ -766,7 +751,7 @@ function edit_bin_menu(plot, main, btn, binNum=1, custom_bin_size, bin_flag, upd
 
   const start_input = bin_edit_div.append('input')
     .attr('type','number')
-    .attr('value',parseFloat(start)?start:'')
+    .attr('value',parseFloat(bin.start)?bin.start:'')
     .style('width','60px')
     .on('keyup', async ()=>{
       if(!client.keyupEnter()) return
@@ -785,17 +770,14 @@ function edit_bin_menu(plot, main, btn, binNum=1, custom_bin_size, bin_flag, upd
       .html('&le;')
     startselect.append('option')
       .html('&lt;')
-    startselect.append('option')
-      .html('&#8734;')
 
     startselect.node().selectedIndex =
-      (start == 'auto') ? 2 :
-      start_inclusive ? 0 : 1
+      bin.startinclusive ? 0 : 1
   }else{
     bin_edit_div.append('div')
       .style('display','inline-block')
       .style('padding','3px 10px')
-      .html(start_inclusive? ' &le;': ' &lt;')
+      .html(custom_bins_q.startinclusive? ' &le;': ' &lt;')
   }
 
   const x = '<span style="font-family:Times;font-style:italic">x</span>'
@@ -811,7 +793,7 @@ function edit_bin_menu(plot, main, btn, binNum=1, custom_bin_size, bin_flag, upd
     bin_edit_div.append('div')
       .style('display','inline-block')
       .style('padding','3px 10px')
-      .html(stop_inclusive? ' &le;': ' &lt;')
+      .html(custom_bins_q.stopinclusive? ' &le;': ' &lt;')
   }else{
     stopselect = bin_edit_div.append('select')
       .style('margin-left','10px')
@@ -820,19 +802,16 @@ function edit_bin_menu(plot, main, btn, binNum=1, custom_bin_size, bin_flag, upd
       .html('&le;')
     stopselect.append('option')
       .html('&lt;')
-    stopselect.append('option')
-      .html('&#8734;')
 
     stopselect.node().selectedIndex =
-      (stop == 'auto') ? 2 :
-      stop_inclusive ? 0 : 1
+      bin.stopinclusive ? 0 : 1
   }
     
   const stop_input = bin_edit_div.append('input')
     .style('margin-left','10px')
     .attr('type','number')
     .style('width','60px')
-    .attr('value',stop)
+    .attr('value',bin.stop)
     .on('keyup', async ()=>{
       if(!client.keyupEnter()) return
       stop_input.property('disabled',true)
@@ -850,13 +829,13 @@ function edit_bin_menu(plot, main, btn, binNum=1, custom_bin_size, bin_flag, upd
 
   unit_select.append('option')
     .attr('value','value')
-    .text(bin_term.unit?bin_term.unit:'Value')
-    .property('selected', unit == 'value' ? true : false)
+    .text(plot.term.unit?plot.term.unit:'Value')
+    .property('selected', bin.unit == 'value' ? true : false)
 
   unit_select.append('option')
     .attr('value','percentile')
     .text('Percentile')
-    .property('selected', unit == 'percentile' ? true : false)
+    .property('selected', bin.unit == 'percentile' ? true : false)
 
   tip.d.append('div')
     .attr('class','sja_menuoption')
@@ -866,13 +845,13 @@ function edit_bin_menu(plot, main, btn, binNum=1, custom_bin_size, bin_flag, upd
       apply()
     })
 
-  if(plot.custom_bins[binNum]){
+  if(plot.term1_q && plot.term1_q.custom_bins){
     tip.d.append('div')
       .attr('class','sja_menuoption')
       .style('text-align','center')
       .html('RESET')
       .on('click', ()=>{
-        plot.custom_bins[binNum] = null
+        delete plot.term1_q.custom_bins
         main(plot)
         plot.tip.hide()
         update_btn()
@@ -881,24 +860,37 @@ function edit_bin_menu(plot, main, btn, binNum=1, custom_bin_size, bin_flag, upd
 
   function apply(){
     try{
-      if(!plot.custom_bins[binNum]) plot.custom_bins[binNum] = custom_bin_size
+      if(!plot.term1_q || !plot.term1_q.custom_bins){
+        plot.term1_q = {}
+        plot.term1_q.custom_bins = custom_bins_q
 
+        if(!plot.term1_q.custom_bins.last_bin){
+          plot.term1_q.custom_bins.last_bin = {
+            start: '',
+            stop: ''
+          }
+        }
+      }
+
+      if(start_input.node().value && stop_input.node().value && (start_input.node().value > stop_input.node().value)) throw 'start value must be smaller than stop value'
       if(bin_flag == 'first'){
 
-        if(start_input.node().value && startselect.node().selectedIndex == 2) throw 'selected relation can\'t be infinite'
-
-        plot.custom_bins[binNum].lowerbound = (start_input.node().value) ? parseFloat(start_input.node().value) : "auto"
-        plot.custom_bins[binNum].lowerbound_inclusive = (startselect.node().selectedIndex == 0)
-        plot.custom_bins[binNum].first_bin_uppervalue = stop_input.node().value ? parseFloat(stop_input.node().value) : 'auto'
-        plot.custom_bins[binNum].first_bin_unit = unit_select.node().value
+        if(start_input.node().value){
+          plot.term1_q.custom_bins.first_bin.start = parseFloat(start_input.node().value)
+        }else{
+          delete plot.term1_q.custom_bins.first_bin.start
+          plot.term1_q.custom_bins.first_bin.startunbounded = true
+        }
+        if(stop_input.node().value) plot.term1_q.custom_bins.first_bin.stop = parseFloat(stop_input.node().value)
       }else if(bin_flag == 'last'){
 
-        if(stop_input.node().value && stopselect.node().selectedIndex == 2) throw 'selected relation can\'t be infinite'
-
-        plot.custom_bins[binNum].upperbound = (stop_input.node().value && stopselect.node().selectedIndex != 2) ? parseFloat(stop_input.node().value) : "auto"
-        plot.custom_bins[binNum].upperbound_inclusive = (stopselect.node().selectedIndex == 0)
-        plot.custom_bins[binNum].last_bin_lowervalue = start_input.node().value ? parseFloat(start_input.node().value) : "auto"
-        plot.custom_bins[binNum].last_bin_unit = unit_select.node().value
+        if(start_input.node().value) plot.term1_q.custom_bins.last_bin.start = parseFloat(start_input.node().value)
+        if(stop_input.node().value) {
+          plot.term1_q.custom_bins.last_bin.stop = parseFloat(stop_input.node().value)
+        }else{
+          delete plot.term1_q.custom_bins.last_bin.stop
+          plot.term1_q.custom_bins.last_bin.stopunbounded = true
+        }
       }
       main(plot)
       tip.hide()
