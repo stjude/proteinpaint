@@ -14,8 +14,8 @@ makesql_by_tvsfilter
 	add_categorical
 	add_numerical
 	add_condition
-makesql_overlay_oneterm
-	makesql_overlay_oneterm_condition
+makesql_oneterm
+	makesql_oneterm_condition
 makesql_numericBinCTE
 get_term_cte
 uncomputablegrades_clause
@@ -200,16 +200,13 @@ returns all relevant rows of
 q{}
 	.tvslst
 	.ds
-	.term1_id
-	.term2_id
-	.term1_q{}
-	.term2_q{}
+	.term[0,1,2]_id
+	.term[0,1,2]_q
 */
 	if (typeof q.tvslst == 'string') q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 	const default_opts = {
+		withCTEs: true,
 		columnas: 't1.sample AS sample', // or "count(distinct t1.sample) as sample"
-		withCTEs: true, 
-		countas: '',
 		groupby: '' // or "GROUP BY key0, key1, key2"
 	}
 	const opts = Object.assign(default_opts, _opts)
@@ -232,13 +229,13 @@ q{}
       t1.value AS val1,
       t2.key AS key2,
       t2.value AS val2,
-      ${opts.columnas ? opts.columnas : ''}
+      ${opts.columnas}
 		FROM ${CTE1.tablename} t1
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? "WHERE t1.sample in "+filter.CTEname : ""}
 		${opts.groupby}`
-	//console.log(statement, values)
+	console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( values )
 
@@ -252,20 +249,11 @@ Generates one or more CTEs by term
 q{}
 	.tvslst
 	.ds
-	.term0_id
-	.term0_q{}
-	.term1_id
-	.term1_q{}
-	.term2_id
-	.term2_q{}
-
-filter: returned by makesql_by_tvsfilter
-
-values 
-  [] string/numeric to replace ? in CTEs
-
-index
-	term-index: 0 for term0, 1 for term1, 2 for term2
+	.term[0,1,2]_id
+	.term[0,1,2]_q
+filter   returned by makesql_by_tvsfilter
+values[] string/numeric to replace ? in CTEs
+index    0 for term0, 1 for term1, 2 for term2
 */
 	const term_is_genotype = 'term' + index + '_is_genotype'
 	const termnum_id = 'term' + index + '_id'
@@ -283,7 +271,7 @@ index
 	const tablename = 'samplekey_' + index
 
 	const CTE = term ?
-		makesql_overlay_oneterm( term, filter, q.ds, q[termnum_q], values, "_" + index)
+		makesql_oneterm( term, filter, q.ds, q[termnum_q], values, "_" + index)
 		: {
 			sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
 			tablename,
@@ -303,10 +291,8 @@ export function get_summary ( q ) {
 q{}
 	.tvslst
 	.ds
-	.term1_id
-	.term2_id
-	.term1_q{}
-	.term2_q{}
+	.term[0,1,2]_id
+	.term[0,1,2]_q
 */
 	const result = get_rows(q, {
 		withCTEs: true,
@@ -336,14 +322,10 @@ Returns a function to (re)label a data object
 q{}
 	.tvslst
 	.ds
-	.term1_id
-	.term2_id
-	.term1_q{}
-	.term2_q{}
-
-	i: 0,1,2 corresponding to term[i]_[id|q]
-	
-	result: returned by get_rows(, {withCTEs: 1})
+	.term[0,1,2]_id
+	.term[0,1,2]_q
+i       0,1,2 corresponding to term[i]_[id|q]
+result  returned by get_rows(, {withCTEs: 1})
 */
 	const key = 'key' + i
 	const value = 'val' + i
@@ -415,7 +397,7 @@ function get_label4key ( key, term, q, ds ) {
 
 
 
-function makesql_overlay_oneterm ( term, filter, ds, q, values, termindex ) {
+function makesql_oneterm ( term, filter, ds, q, values, termindex ) {
 /*
 form the query for one of the table in term0-term1-term2 overlaying
 
@@ -458,13 +440,13 @@ returns { sql, tablename }
 		}
 	}
 	if( term.iscondition ) {
-		return makesql_overlay_oneterm_condition( term, q, ds, filter, values, termindex )
+		return makesql_oneterm_condition( term, q, ds, filter, values, termindex )
 	}
 	throw 'unknown term type'
 }
 
 
-function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termindex='' ) {
+function makesql_oneterm_condition ( term, q, ds, filter, values, termindex='' ) {
 /*
 	return {sql, tablename}
 */
