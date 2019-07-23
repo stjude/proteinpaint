@@ -102,21 +102,21 @@ const template = JSON.stringify({
       chartId: "@key",
       total: "+1",
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
+      "@done()": "=filterEmptySeries()",
       serieses: [{
         total: "+1",
         seriesId: "@key",
-        data: [{
-          dataId: "@key",
-          total: "+1" 
-        }, "&idVal.dataId[]"],
         max: "<&idVal.dataVal", // needed by client-side boxplot renderer 
         "~values": ["&idVal.dataVal",0],
         "~sum": "+&idVal.dataVal",
         "__:boxplot": "=boxplot()",
         "~samples": ["$sjlid", "set"],
-        "__:AF": "=getAF()"
+        "__:AF": "=getAF()",
+        data: [{
+          dataId: "@key",
+          total: "+1" 
+        }, "&idVal.dataId[]"],
       }, "&idVal.seriesId[]"],
-      "@done()": "=filterEmptySeries()"
     }, "&idVal.chartId[]"],
     "~sum": "+&idVal.seriesVal",
     "~values": ["&idVal.seriesVal",0],

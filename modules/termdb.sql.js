@@ -207,10 +207,10 @@ q{}
 */
 	if (typeof q.tvslst == 'string') q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 	const default_opts = {
-		sampleas: 't1.sample AS sample',
+		columnas: 't1.sample AS sample', // or "count(distinct t1.sample) as sample"
 		withCTEs: true, 
 		countas: '',
-		groupby: '' 
+		groupby: '' // or "GROUP BY key0, key1, key2"
 	}
 	const opts = Object.assign(default_opts, _opts)
 	const filter = makesql_by_tvsfilter( q.tvslst, q.ds )
@@ -226,14 +226,13 @@ q{}
 		${CTE1.sql},
 		${CTE2.sql}
 		SELECT
-			${opts.sampleas ? opts.sampleas + ',' : ''}
       t0.key AS key0,
       t0.value AS val0,
       t1.key AS key1,
       t1.value AS val1,
       t2.key AS key2,
-      t2.value AS val2
-      ${opts.countas ? ','+ opts.countas : ''}
+      t2.value AS val2,
+      ${opts.columnas ? opts.columnas : ''}
 		FROM ${CTE1.tablename} t1
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
@@ -310,9 +309,8 @@ q{}
 	.term2_q{}
 */
 	const result = get_rows(q, {
-		sampleas: '',
-		withCTEs: true, 
-		countas: 'count(distinct t1.sample) as samplecount',
+		withCTEs: true,
+		columnas: 'count(distinct t1.sample) as samplecount',
 		groupby: 'GROUP BY key0, key1, key2'
 	})
 
@@ -333,6 +331,8 @@ q{}
 
 function getlabeler(q, i, result) {
 /*
+Returns a function to (re)label a data object
+
 q{}
 	.tvslst
 	.ds
