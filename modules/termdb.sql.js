@@ -204,10 +204,17 @@ q{}
 	.term[0,1,2]_q
 */
 	if (typeof q.tvslst == 'string') q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+	
+	// do not break code that still uses the opts.groupby key-value
+	// can take this out once all calling code has been migrated
+	if (_opts.groupby) {
+		_opts.endclause = _opts.groupby
+		delete _opts.groupby
+	}
 	const default_opts = {
 		withCTEs: true,
 		columnas: 't1.sample AS sample', // or "count(distinct t1.sample) as sample"
-		groupby: '' // or "GROUP BY key0, key1, key2"
+		endclause: '' // or "GROUP BY key0, key1, key2" + " ORDER BY ..." + " LIMIT ..."
 	}
 	const opts = Object.assign(default_opts, _opts)
 	const filter = makesql_by_tvsfilter( q.tvslst, q.ds )
@@ -234,8 +241,8 @@ q{}
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? "WHERE t1.sample in "+filter.CTEname : ""}
-		${opts.groupby}`
-	console.log(statement, values)
+		${opts.endclause}`
+	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( values )
 
@@ -297,7 +304,7 @@ q{}
 	const result = get_rows(q, {
 		withCTEs: true,
 		columnas: 'count(distinct t1.sample) as samplecount',
-		groupby: 'GROUP BY key0, key1, key2'
+		endclause: 'GROUP BY key0, key1, key2'
 	})
 
 	const nums = [0,1,2]
