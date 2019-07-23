@@ -48,15 +48,22 @@ arg: server returned data
     items: arg.items,
     boxplot: arg.boxplot,
 
+    term0_q: {},
+    term1_q: {bar_by_grade: 1, value_by_max_grade: 1},
+    term2_q: {},
+
+    // will switch these over
+    custom_bins: {},
+
     // may need to put the following properties under
     // a namespace or within the affected module
-    custom_bins: {},
     bin_controls: {1:{}, 2:{}},
     term2_displaymode: arg.term2_displaymode ? arg.term2_displaymode : "stacked",
     term2_boxplot: 0,
 
     unannotated: arg.unannotated ? arg.unannotated : '',
     
+
     // namespaced configuration settings to indicate
     // the scope affected by a setting key-value
     settings: {
@@ -65,11 +72,7 @@ arg: server returned data
         use_percentage: false,
         barheight: 300, // maximum bar length 
         barwidth: 20, // bar thickness
-        barspace: 2, // space between two bars
-        // conditionUits: [divide-unit, bin-unit, stack-unit]
-        conditionUnits: ['', 'max_grade_perperson', ''],
-        conditionParents: ['', '', ''],
-        conditionsBy: 'by_grade',
+        barspace: 2 // space between two bars
       },
       boxplot: {
         toppad: 20, // top padding
@@ -168,38 +171,11 @@ function getDataName(plot) {
     params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
   }
 
-  const _q={0:{}, 1:{}, 2:{}}
-  if (plot.custom_bins) {
-    for(const i in plot.custom_bins) {
-      if (plot.custom_bins[i] && typeof plot.custom_bins[i] == 'object' && Object.keys(plot.custom_bins[i]).length) {
-        _q[i].custom_bins = plot.custom_bins[i]
-      } 
-    }
-    //params.push('custom_bins=' + encodeURIComponent(JSON.stringify(plot.custom_bins)))
-  }
-
-  plot.settings.common.conditionUnits.forEach((unit,i) => {
-    const termnum = i == 1 ? 'term' : 'term' + i
-    if (!unit || !plot[termnum] || !plot[termnum].iscondition) return
-    if (unit == 'max_grade_perperson') {
-      _q[i].value_by_max_grade = 1
-      _q[i].bar_by_grade = 1
-    } else if (unit == 'most_recent_grade') {
-      _q[i].value_by_most_recent = 1
-      _q[i].bar_by_grade = 1
-    }
-  })
-
-  plot.settings.common.conditionParents.forEach((parent,i) => {
-    const termnum = i == 1 ? 'term' : 'term' + i
-    if (!parent || !plot[termnum] || !plot[termnum].iscondition) return
-    _q[i].value_by_max_grade = 1
-    _q[i].bar_by_children = 1
-  })
-
-  for(const i in _q) {
-    if (Object.keys(_q[i]).length) {
-      params.push('term' + i + '_q=' + encodeURIComponent(JSON.stringify(_q[i])))
+  for(const i in [0,1,2]) {
+    const termnum_q = 'term' + i + '_q'
+    const term_q = plot[termnum_q]
+    if (Object.keys(term_q).length) {
+      params.push(termnum_q + "=" +encodeURIComponent(JSON.stringify(term_q)))
     }
   }
 

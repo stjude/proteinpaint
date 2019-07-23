@@ -76,7 +76,7 @@ export function controls(arg, plot, main) {
 
 function renderRadioInput(inputName, elem, opts, inputHandler) {
   const divs = elem.selectAll('div')
-    .style('display', 'inline-block')
+    .style('display', 'block')
     .data(opts, d => d.value)
   
   divs.exit().each(function(d){
@@ -87,7 +87,7 @@ function renderRadioInput(inputName, elem, opts, inputHandler) {
   })
   
   const labels = divs.enter().append('div')
-    .style('display', 'inline-block')
+    .style('display', 'block')
     .style('padding', '5px')
     .append('label')
   
@@ -180,10 +180,10 @@ function setOverlayOpts(plot, main, table, arg) {
       {label: 'None', value: 'none'},
       {label: 'Term', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
-      //{label: 'Subconditions', value: 'by_children'},
+      {label: 'Subconditions, max grade', value: 'bar_by_children + value_by_max_grade'},
+      {label: 'Subconditions, most recent', value: 'bar_by_children + value_by_most_recent'},
       //{label: 'Highest graded subconditions per person', value: 'max_graded_children'},
       //{label: 'Max. grade per person', value: 'max_grade_perperson'},
-      {label: 'Grade by subcondition', value: 'max_grade_by_subcondition'},
       //{label: 'Most recent grade', value: 'most_recent_grade'},
     ]
   )
@@ -198,18 +198,12 @@ function setOverlayOpts(plot, main, table, arg) {
       plot.term2_displaymode = 'stacked'
       main(plot)
     } else if (d.value == "tree") {
-	  plot.obj.showtree4selectterm(
-	  	[arg.term.id, plot.term2 ? plot.term2.id : null],
-		tr.node(),
+  	  plot.obj.showtree4selectterm(
+  	  	[arg.term.id, plot.term2 ? plot.term2.id : null],
+  		  tr.node(),
         (term2) => {
-	      plot.obj.tip.hide()
+  	      plot.obj.tip.hide()
           plot.term2 = term2
-          if (plot.term2.iscondition) {
-            plot.settings.common.conditionParents[2] = plot.term2.id
-            if (!plot.settings.common.conditionUnits[2]) {
-              plot.settings.common.conditionUnits[2] = "max_grade_perperson"
-            }
-          }
           if (plot.term2.isfloat && plot.term2_boxplot) { 
             plot.term2_displaymode = 'boxplot'
           } else {
@@ -220,26 +214,26 @@ function setOverlayOpts(plot, main, table, arg) {
           }
           main( plot )
         }
-	  )
+  	  )
     } else if (d.value == "genotype") {
       // to-do
-    } else if (
+    } else {
+      console.log('work in progress to handle this click event')
+    } /* work in progress
+    else if (
         d.value == "by_children" 
-        || d.value == "max_graded_children" 
+        || d.value == "by_children_at_max_grade" 
         || d.value == "max_grade_perperson" 
         || d.value == "most_recent_grade"
       ) {
       if (!plot.term2) plot.term2 = plot.term
       plot.settings.common.conditionUnits[2] = d.value
-      plot.settings.common.conditionParents[2] = plot.term2.id
       main(plot)
     } else if (d.value == "max_grade_by_subcondition") {
       if (!plot.term2) plot.term2 = plot.term
       plot.settings.common.conditionUnits[2] = d.value
-      plot.settings.common.conditionParents[2] = plot.term2.id
-      plot.settings.common.conditionParents[1] = plot.term.id
       main(plot)
-    }
+    }*/
   })
 
   radio.inputs.on('click', d => {
@@ -251,12 +245,6 @@ function setOverlayOpts(plot, main, table, arg) {
       (term2)=>{
 	    plot.obj.tip.hide()
         plot.term2 = term2
-        if (plot.term2.iscondition) {
-          plot.settings.common.conditionParents[2] = plot.term2.id
-          if (!plot.settings.common.conditionUnits[2]) {
-            plot.settings.common.conditionUnits[2] = "max_grade_perperson"
-          }
-        }
         if (plot.term2.isfloat && plot.term2_boxplot) { 
           plot.term2_displaymode = 'boxplot'
         } else {
@@ -282,25 +270,20 @@ function setOverlayOpts(plot, main, table, arg) {
         : 'none'
     }
     radio.inputs.property('checked', d => d.value == plot.settings.bar.overlay)
-    const cu = plot.settings.common.conditionUnits
+
+    /* to be refactored
     radio.divs.style('display', d => {
       if (d.value == "by_children") {
         if (plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id)) return 'none'
         return plot.term.isleaf || cu[1] == 'by_children' ? 'none' : 'block'
-      } /*else if (d.value == "max_graded_children") {
-        if (cu[1] == 'by_children') return 'none'
-        return plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id) ? 'block' : 'none'
-      }*/ else if (d.value == "max_grade_by_subcondition") {
+      } else if (d.value == "max_grade_by_subcondition") {
         // if (cu[1] == 'max_grade_perperson' || cu[1] == "most_recent_grade") return 'none'
         return !plot.term.isleaf && plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id) ? 'block' : 'none'
-      } /*else if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
-        if (plot.term.iscondition && plot.term2 && plot.term2.id == plot.term.id) return 'none'
-        return plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'none'
-      }*/ else {
+      } else {
         const block = plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'inline-block'
         return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
       }
-    })
+    }) */
   })
 }
 
@@ -359,28 +342,17 @@ function setDivideByOpts(plot, main, table, arg) {
       //plot.term2_displaymode = 'stacked'
       main(plot)
     } else if (d.value == "tree") {
-	  plot.obj.showtree4selectterm(
-	    [arg.term.id, plot.term2 ? plot.term2.id : null],
-		tr.node(),
+  	  plot.obj.showtree4selectterm(
+  	    [arg.term.id, plot.term2 ? plot.term2.id : null],
+  		  tr.node(),
         (term0)=>{
-	      plot.obj.tip.hide()
+  	      plot.obj.tip.hide()
           plot.term0 = term0
-          if (plot.term0.iscondition) { //!plot.settings.common.conditionParents[0]) {
-            plot.settings.common.conditionParents[0] = plot.term0.id
-            if (!plot.settings.common.conditionUnits[0]) {
-              plot.settings.common.conditionUnits[0] = "max_grade_perperson"
-            }
-          }
           main(plot)
         }
       )
     } else if (d.value == "genotype") {
       // to-do
-    } else if (d.value == "by_children" || d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
-      if (!plot.term0) plot.term0 = plot.term
-      plot.settings.common.conditionUnits[0] = d.value
-      plot.settings.common.conditionParents[0] = plot.term0.id
-      main(plot)
     }
   })
 
@@ -424,57 +396,62 @@ function setDivideByOpts(plot, main, table, arg) {
 
 function setConditionUnitOpts(plot, main, table, termNum, label, index) {
   /**/
-  const cu = plot.settings.common.conditionUnits
   const tr = table.append('tr')
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
-  const optionsSeed = [
-    {label: "Subconditions", value: "by_children"}
+  const options = [
+    {label: "Subconditions", value: "bar_by_children + value_by_computable_grade"},
+    {label: "Subconditions, max grade", value: "bar_by_children + value_by_max_grade"},
+    {label: "Subconditions, most recent", value: "bar_by_children + value_by_most_recent"},
+    {label: "Max grade per patient", value: "bar_by_grade + value_by_max_grade"},
+    {label: "Most recent grade per patient", value: "bar_by_grade + value_by_most_recent"}, 
   ]
 
-  plot.controls.push(() => {
-    const choices = plot[termNum]
-        && plot[termNum].graph 
-        && plot[termNum].graph.barchart 
-        && plot[termNum].graph.barchart.value_choices 
-        ? plot[termNum].graph.barchart.value_choices
-      : plot.term.iscondition
-        && plot.term.graph 
-        && plot.term.graph.barchart 
-        && plot.term.graph.barchart.value_choices 
-      ? plot.term.graph.barchart.value_choices
-      : []
+  const radio = renderRadioInput(
+    'pp-termdb-condition-unit-'+ index + '-' + plot.controlsIndex, 
+    td,
+    options,
+    null,
+    'block'
+  )
 
-    const radio = renderRadioInput(
-      'pp-termdb-condition-unit-'+ index + '-' + plot.controlsIndex, 
-      td,
-      optionsSeed.concat( 
-        choices
-        .filter(d => d.max_grade_perperson || d.most_recent_grade)
-        .map(d => {
-          let value = d.max_grade_perperson 
-            ? 'max_grade_perperson'
-            : 'most_recent_grade'
+  const q = plot['term' + index + '_q']
 
-          return {label: d.label, value}
-        })
-      )
-    )
-
-    radio.inputs
-    .property('checked', d => d.value == cu[index])
+  radio.inputs
+    .property('checked', matchedParam)
     .on('input', d => {
-      cu[index] = d.value
-      plot.settings.common.conditionParents[index] = plot[termNum] ? plot[termNum].id : ''
+      // clear existing parameter values
+      delete q.value_by_max_grade
+      delete q.value_by_most_recent
+      delete q.value_by_computable_grade
+      delete q.bar_by_children
+      delete q.bar_by_grade
+
+      for(const param of d.value.split(" + ")) {
+        q[param] = 1
+      }
+
       main(plot)
     })
+
+  const matchedParam = d => {
+    const params = d.value.split(" + ")
+    let numMatched = 0
+    for(const param of params) {
+      if (q[param]) numMatched++
+    }
+    return numMatched == params.length
+  }
+
+  plot.controls.push(() => {
+    radio.inputs.property('checked', matchedParam)
 
     tr.style('display', plot[termNum] && plot[termNum].iscondition 
       ? "table-row" 
       : index == 2 && plot.term.iscondition 
       ? "table-row"
       : "none")
-
+    /*
     radio.divs.style('display', d => {
       if (d.value == 'none') {
         return index == 1 ? 'none' : 'block'
@@ -486,8 +463,7 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
         return cu[1] != d.value ? 'block' : 'none'
       } // return d.value != 'none' || !plot[termNum].isleaf ? 'block' : 'none'
     })
-
-    radio.inputs.property('checked', d => cu[index] == d.value) 
+    */
   })
 }
 
