@@ -1,6 +1,6 @@
 import * as client from './client'
 import {init as termdbinit} from './mds.termdb'
-import {termui_display} from './mds.termdb.termsetting.ui'
+import {display as termui_display} from './mds.termdb.termsetting.ui'
 
 
 /*
@@ -53,9 +53,8 @@ will include tk.vcf.plot_mafcov.overlay_term
 			genome: obj.block.genome,
 			mds: obj.tk.mds,
 			tip: obj.tk.legend.tip,
-			callback: (term, term_q)=>{
-				obj.overlay_term = term
-				obj.overlay_term_q = term_q
+			termsetting: obj.overlay_term,
+			callback: ()=>{
 				obj.d.term_legenddiv.selectAll('*').remove()
 				do_plot( obj )
 			}
@@ -95,9 +94,9 @@ when overlay term is changed
 			indexURL: obj.tk.vcf.indexURL
 		}
 	}
-	if( obj.overlay_term ) {
-		par.overlay_term = obj.overlay_term.id
-		par.overlay_term_q = obj.overlay_term_q
+	if( obj.overlay_term && obj.overlay_term.term ) {
+		par.overlay_term = obj.overlay_term.term.id
+		par.overlay_term_q = obj.overlay_term.q
 	}
 
 	obj.d.wait.text('Loading...')

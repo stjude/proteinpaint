@@ -63,8 +63,8 @@ the client copy stays at .mds.track{}
 		}
 		if(t0.vcf.plot_mafcov) {
 			tk.vcf.plot_mafcov = {}
-			if( t0.vcf.plot_mafcov.overlay_term ) {
-				tk.vcf.plot_mafcov.overlay_term = termdb.copy_term( t0.vcf.plot_mafcov.overlay_term )
+			if( ds.cohort && ds.cohort.termdb ) {
+				tk.vcf.plot_mafcov.overlay_term = t0.vcf.plot_mafcov.overlay_term || {}
 			}
 		}
 		if(t0.vcf.termdb_bygenotype) {

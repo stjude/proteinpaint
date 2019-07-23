@@ -54,11 +54,14 @@ export async function handle_mafcovplot ( q, genome, ds, result ) {
 
 		if( q.overlay_term ) {
 
-			const tmp = termdbsql.get_rows( {
-				ds,
-				term1_id: q.overlay_term,
-				term1_q: q.overlay_term_q
-			})
+			const tmp = termdbsql.get_rows(
+				{
+					ds,
+					term1_id: q.overlay_term,
+					term1_q: q.overlay_term_q
+				},
+				{ withCTEs: false }
+			)
 
 			const category2color = d3scale.scaleOrdinal( d3scale.schemeCategory10)
 			const categories = new Set()
@@ -84,7 +87,6 @@ export async function handle_mafcovplot ( q, genome, ds, result ) {
 				result.categories.push({ color:category2color(c), label:c, count:color2count[category2color(c)] })
 			}
 		}
-
 
 		// conditional, may do server-side rendering instead
 
