@@ -23,6 +23,10 @@ const path = require('path')
 const fs = require('fs')
 const serverconfig = require('../../serverconfig.json')
 
+/***********************
+  Sanity checks
+************************/
+
 const dslabel = process.argv[2]
 if(!dslabel) throw 'usage: ./precompute.ctcae.sh dslabel # from your-tp-dir/cohort-dir/...'
 
@@ -44,14 +48,23 @@ if (!tdb.precomputed_file)
 if (!ds.cohort.db || !ds.cohort.db.precomputed_file) 
   console.log('Warning: No db tables will be generated since the ds.cohort.db.precomputed_file is not defined')
 
+
+/***********************
+  Process dataset files
+************************/
+
 ds.label = dslabel
 ds.cohort.annotation = {}
 server_init(ds)
-loadCohortFiles(ds)
+load_cohort_files(ds)
 
 const precompute = require('./'+tdb.precompute_script).precompute
 precompute(tdb, Object.values(ds.cohort.annotation), ds.cohort.db)
 
+
+/***********************
+   Borrowed code
+************************/
 
 /*
   Code extracted from porteinpaint/modules/termdb.js
@@ -152,7 +165,7 @@ function server_init_mayparse_patientcondition ( ds ) {
   Code extracted from proteinpaint/app.js
 */
 
-function loadCohortFiles(ds) {
+function load_cohort_files(ds) {
   for(const file of ds.cohort.files) {
     if(!file.file) return '.file missing from one of .cohort.files'
     const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
