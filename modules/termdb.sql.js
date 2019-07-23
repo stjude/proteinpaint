@@ -120,8 +120,8 @@ returns:
 	}
 
 	function add_condition ( tvs ) {
-		const value_for = q.bar_by_children ? 'child' 
-			: q.bar_by_grade ? 'grade'
+		const value_for = tvs.bar_by_children ? 'child' 
+			: tvs.bar_by_grade ? 'grade'
 			: ''
 		if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
 
@@ -221,7 +221,7 @@ q{}
 
 	const statement =
 		`WITH
-		${filter ? filter.filters : ''}
+		${filter ? filter.filters +',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
 		${CTE2.sql}
@@ -311,7 +311,7 @@ export function get_summary ( q ) {
 	.term2_id
 	.term1_q{}
 	.term2_q{}
-*/ console.log(q)
+*/
 	const result = get_rows(q, {
 		sampleas: '',
 		withCTEs: true, 

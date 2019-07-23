@@ -47,7 +47,7 @@ exports.handle_request_closure = ( genomes ) => {
       if(!ds.cohort) throw 'ds.cohort missing'
       const tdb = ds.cohort.termdb
       if(!tdb) throw 'no termdb for this dataset'
-      if(tdb.precomputed_file) await may_load_precomputed(tdb)
+      if(!tdb.precomputed) throw 'tdb.precomputed not loaded'
       // process triggers
       await barchart_data( q, ds, res, tdb )
     } catch(e) {
@@ -165,7 +165,7 @@ function getPj(q, inReqs, data, tdb, ds) {
     {i: 0, term: 'term0', key: 'chartId', val: 'chartVal'},
     {i: 1, term: 'term1', key: 'seriesId', val: 'seriesVal'},
     {i: 2, term: 'term2', key: 'dataId', val: 'dataVal'}
-  ]; let j=0
+  ]
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
@@ -190,7 +190,7 @@ function getPj(q, inReqs, data, tdb, ds) {
           csd[kv.val] = 0 && inReqs[kv.i].unannotatedLabels.includes(value)
             ? undefined
             : value 
-        }; //if (j<3) {j++; console.log(csd); console.log(inReqs[2])}
+        };
         return csd
       },
       maxSeriesTotal(row, context) {
@@ -380,10 +380,10 @@ async function setValFxns(q, inReqs, ds, tdb) {
 
 function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionUnits, index) {
   const precomputedKey = unit == 'by_children' ? 'children'
-    : 'by_children_at_max_grade' ? 'childrenAtMaxGrade'
-    : 'by_children_at_most_recent' ? 'childrenAtMostRecent'
-    : 'max_grade_perperson' ? 'maxGrade'
-    : 'most_recent_grade' ? 'mostRecentGrades'
+    : unit == 'by_children_at_max_grade' ? 'childrenAtMaxGrade'
+    : unit == 'by_children_at_most_recent' ? 'childrenAtMostRecent'
+    : unit == 'max_grade_perperson' ? 'maxGrade'
+    : unit == 'most_recent_grade' ? 'mostRecentGrades'
     : ''
   if (!precomputedKey) throw `unknown condition term unit='${unit}'`
 
@@ -768,20 +768,4 @@ arguments:
     }
   }
   return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
-}
-
-let numTries = 0
-async function may_load_precomputed(tdb, res) {
-  if (tdb.precomputed || numTries > 3) return
-  numTries++
-  const filename = path.join(serverconfig.tpmasterdir,tdb.precomputed_file)
-  try {
-    const file = fs.existsSync(filename) ? await utils.read_file(filename, {encoding:'utf8'}) : ''
-    tdb.precomputed = JSON.parse(file.trim())
-    console.log("Loaded the precomputed values from "+ filename)
-  } catch(e) {
-    const message = 'Unable to load the precomputed file ' + filename
-    console.log(message, e.message || e)
-    throw message
-  }
 }

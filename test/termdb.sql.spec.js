@@ -174,7 +174,7 @@ tape("categorical term1", function (test) {
       term1: 'diaggrp',
       term2: 'Asthma',
       conditionUnits: ["","","max_grade_perperson"],
-      term2_q: {value_by_max_grade:1},
+      term2_q: {value_by_max_grade:1, bar_by_grade: 1},
     },
     "sample counts by diagnosis groups, leaf condition overlay"
   )
@@ -185,7 +185,7 @@ tape("categorical term1", function (test) {
       term1: 'diaggrp',
       term2: 'Asthma',
       conditionUnits: ["","","most_recent_grade"],
-      term2_q: {value_by_most_recent:1},
+      term2_q: {value_by_most_recent:1, bar_by_grade: 1},
     },
     "sample counts by diagnosis groups, leaf condition overlay"
   )
@@ -196,7 +196,7 @@ tape("categorical term1", function (test) {
       term1: 'diaggrp',
       term2: 'Asthma',
       conditionUnits: ["","","most_recent_grade"],
-      term2_q: {value_by_most_recent:1},
+      term2_q: {value_by_most_recent:1, bar_by_grade: 1},
       filter: [{
         term: {id:"sex", name:"Sex", iscategorical:true},
         values: [{"key":"Male","label":"Female"}]
@@ -268,7 +268,7 @@ tape("numerical term1", function (test) {
       term1: 'agedx',
       term2: 'Asthma',
       conditionUnits: ["","","max_grade_perperson"],
-      term2_q: {value_by_max_grade:1},
+      term2_q: {value_by_max_grade:1, bar_by_grade: 1},
     },
     "sample counts by age of diagnosis, condition overlay by max grade"
   )
@@ -279,7 +279,7 @@ tape("numerical term1", function (test) {
       term1: 'agedx',
       term2: 'Asthma',
       conditionUnits: ["","","most_recent_grade"],
-      term2_q: {value_by_most_recent:1},
+      term2_q: {value_by_most_recent:1, bar_by_grade: 1},
     },
     "sample counts by age of diagnosis, condition overlay by most recent grade"
   )
@@ -290,7 +290,7 @@ tape("numerical term1", function (test) {
       term1: 'agedx',
       term2: 'Asthma',
       conditionUnits: ["","","most_recent_grade"],
-      term2_q: {value_by_most_recent:1},
+      term2_q: {value_by_most_recent:1, bar_by_grade: 1},
       filter: [{
         term: {id:"sex", name:"Sex", iscategorical:true},
         values: [{"key":"Male","label":"Female"}]
@@ -333,7 +333,7 @@ tape("leaf condition term1", function (test) {
     { 
       term1: 'Asthma', 
       conditionUnits: ["","max_grade_perperson",""], 
-      term1_q: {value_by_max_grade:1},
+      term1_q: {value_by_max_grade:1, bar_by_grade:1},
       filter: [{
         term: {id:'sex', name:'sex', iscategorical:true},
         values: [{key: 'Male', label: 'Male'}]
@@ -347,7 +347,7 @@ tape("leaf condition term1", function (test) {
     {
       term1: 'Asthma', 
       conditionUnits: ["","most_recent_grade",""], 
-      term1_q: {value_by_most_recent:1}
+      term1_q: {value_by_most_recent:1, bar_by_grade:1}
     },
     "sample counts by Asthma condition most recent grade, no overlay"
   )
@@ -357,7 +357,7 @@ tape("leaf condition term1", function (test) {
     {
       term1: 'Asthma', 
       conditionUnits: ["","max_grade_perperson",""], 
-      term1_q: {value_by_max_grade:1},
+      term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'sex'
     },
     "sample counts by Asthma condition max grade, categorical overlay"
@@ -368,7 +368,7 @@ tape("leaf condition term1", function (test) {
     {
       term1: 'Asthma', 
       conditionUnits: ["","most_recent_grade",""], 
-      term1_q: {value_by_most_recent:1},
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'diaggrp'
     },
     "sample counts by Asthma condition most recent grade, categorical overlay"
@@ -379,7 +379,7 @@ tape("leaf condition term1", function (test) {
     {
       term1: 'Asthma', 
       conditionUnits: ["","max_grade_perperson",""], 
-      term1_q: {value_by_max_grade:1},
+      term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'agedx'
     },
     "sample counts by Asthma condition max grade, numerical overlay" 
@@ -390,7 +390,7 @@ tape("leaf condition term1", function (test) {
     {
       term1: 'Asthma', 
       conditionUnits: ["","most_recent_grade",""], 
-      term1_q: {value_by_most_recent:1},
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'aaclassic_5'
     },
     "sample counts by Asthma condition most recent grade, numerical overlay"
@@ -401,9 +401,9 @@ tape("leaf condition term1", function (test) {
     {
       term1: 'Asthma', 
       conditionUnits: ["","max_grade_perperson","max_grade_perperson"], 
-      term1_q: {value_by_max_grade:1},
+      term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'Hearing loss',
-      term2_q: {value_by_max_grade:1}
+      term2_q: {value_by_max_grade:1, bar_by_grade:1}
     },
     "sample counts by Asthma condition max grade, condition overlay by max-grade"
   )
@@ -413,9 +413,9 @@ tape("leaf condition term1", function (test) {
     {
       term1: 'Asthma', 
       conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
-      term1_q: {value_by_most_recent:1},
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'Hearing loss',
-      term2_q: {value_by_max_grade:1}
+      term2_q: {value_by_max_grade:1, bar_by_grade:1}
     },
     "sample counts by Asthma condition most recent grade, condition overlay by max-grade"
   )
@@ -425,9 +425,9 @@ tape("leaf condition term1", function (test) {
     {
       term1: 'Asthma', 
       conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
-      term1_q: {value_by_most_recent:1},
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'Hearing loss',
-      term2_q: {value_by_max_grade:1},
+      term2_q: {value_by_max_grade:1, bar_by_grade:1},
       filter: [{
         term: {id:"sex", name:"Sex", iscategorical:true},
         values: [{"key":"Male","label":"Female"}]
@@ -444,7 +444,7 @@ tape("leaf condition term1", function (test) {
     {
       term1: 'Asthma', 
       conditionUnits: ["","most_recent_grade",""], 
-      term1_q: {value_by_most_recent:1},
+      term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2_is_genotype: 1,
       ssid,
       mname: 'T>C',
@@ -572,7 +572,7 @@ tape("non-leaf condition term1", function (test) {
       conditionUnits: ["","max_grade_perperson","max_grade_perperson"], 
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'Hearing loss',
-      term2_q: {value_by_max_grade:1}
+      term2_q: {value_by_max_grade:1, bar_by_grade:1}
     },
     "sample counts by Arrhythmias condition max grade, condition overlay by max-grade"
   )
@@ -584,7 +584,7 @@ tape("non-leaf condition term1", function (test) {
       conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'Hearing loss',
-      term2_q: {value_by_max_grade:1}
+      term2_q: {value_by_max_grade:1, bar_by_grade:1}
     },
     "sample counts by Arrhythmias condition most recent grade, condition overlay by max-grade"
   )
@@ -596,7 +596,7 @@ tape("non-leaf condition term1", function (test) {
       conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'Hearing loss',
-      term2_q: {value_by_max_grade:1},
+      term2_q: {value_by_max_grade:1, bar_by_grade:1},
       filter: [{
         term: {id:"sex", name:"Sex", iscategorical:true},
         values: [{"key":"Male","label":"Female"}]
@@ -709,7 +709,7 @@ function compareResponseData(test, params, mssg) {
         
         // get an alternatively computed results
         // for comparing against sql results
-        const url1 = getBarUrl(params);
+        const url1 = getBarUrl(params); //console.log(url1)
 
         request(url1, (error,response,body1)=>{
           if(error) {

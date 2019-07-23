@@ -212,6 +212,8 @@ export function server_init ( ds ) {
 	server_init_mayparse_patientcondition( ds )
 
 	termdbsql.server_init_db_queries( ds )
+
+	server_init_may_load_precomputed(termdb)
 }
 
 
@@ -286,4 +288,18 @@ function server_init_mayparse_patientcondition ( ds ) {
 		count++
 	}
 	console.log(ds.label+': '+count+' samples loaded with condition data from '+ds.cohort.termdb.patient_condition.file)
+}
+
+async function server_init_may_load_precomputed(tdb) {
+  if (!tdb || tdb.precomputed) return
+  const filename = path.join(serverconfig.tpmasterdir,tdb.precomputed_file)
+  try {
+    const file = fs.existsSync(filename) ? await utils.read_file(filename, {encoding:'utf8'}) : ''
+    tdb.precomputed = JSON.parse(file.trim())
+    console.log("Loaded the precomputed values from "+ filename)
+  } catch(e) {
+    const message = 'Unable to load the precomputed file ' + filename
+    console.log(message, e.message || e)
+    throw message
+  }
 }
