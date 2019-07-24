@@ -16,32 +16,32 @@ tape("\n", function(test) {
 })
 
 
-tape("get_bin_label()", function (test) {
+tape.only("get_bin_label()", function (test) {
   // test smaller helper functions first since they
   // tend to get used in larger functions and the
   // testing sequence would help isolate the cause(s)
   // of multiple failing tests 
-  test.deepEqual(
+  test.equal(
     b.get_bin_label({startunbounded:1, stop: 3}),
     "<3",
     "startunbounded"
   )
 
-  test.deepEqual(
+  test.equal(
     b.get_bin_label({startunbounded:1, stop: 3, stopinclusive: 1}),
     "≤3",
     "startunbounded + stopinclusive"
   )
-  /*
+  
   test.deepEqual(
-    b.get_bin_label({stopbounded:1, stop: 30}, {bin_size: 3}),
-    ">25 to <30",
+    b.get_bin_label({stopunbounded:1, start: 30}, {bin_size: 3}),
+    ">30",
     "stopunbounded"
-  )*/
+  )
 
-  test.deepEqual(
-    b.get_bin_label({stopbounded:1, start: 25, stop: 30, startinclusive: 1}, {bin_size: 3}),
-    ">25 to <30",
+  test.equal(
+    b.get_bin_label({stopunbounded:1, start: 25, startinclusive: 1}, {bin_size: 3}),
+    "≥25",
     "stopunbounded + startinclusive"
   )
 
@@ -127,7 +127,7 @@ tape("get_bins() unbounded", function (test) {
       { startinclusive: 1, stopinclusive: 0, start: 10, stop: 15, label: '10 to <15' }, 
       { startinclusive: 1, stopinclusive: 0, start: 15, stop: 20, stopunbounded: 1, label: '≥15' } 
     ],
-    "should default to unbounded firt and last bins, equally size bins"
+    "should default to unbounded firt and last bins, equally sized bins"
   )
 
   test.deepLooseEqual(
@@ -141,7 +141,7 @@ tape("get_bins() unbounded", function (test) {
       { startinclusive: 1, stopinclusive: 0, start: 15, stop: 18, label: '15 to <18' },
       { startinclusive: 1, stopinclusive: 0, start: 18, stop: 20, stopunbounded: 1, label: '≥18' }
     ],
-    "should default to unbounded firt and last bins, not equally size bins"
+    "should default to unbounded firt and last bins, not equally sized bins"
   )
 
   test.deepLooseEqual(
