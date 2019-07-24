@@ -149,10 +149,10 @@ function get_bin_label(bin, cb) {
   Generate a numeric bin label given a bin configuration
 
 */
-  if (bin.startunbounded) { 
+  if (bin.startunbounded) {
     const oper = bin.stopinclusive ? "\u2264" : "<"
     const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
-    return oper + binLabelFormatter(bin.stop);
+    return oper + v1;
   } else if (bin.stopunbounded) {
     const oper = bin.startinclusive ? "\u2265" : ">"
     const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
@@ -172,7 +172,9 @@ function get_bin_label(bin, cb) {
   } else {
     const oper0 = cb.startinclusive ? "" : ">"
     const oper1 = cb.stopinclusive ? "" : "<"
-    return oper0 + binLabelFormatter(bin.start) +' to '+ oper1 + binLabelFormatter(bin.stop)
+    const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
+    const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
+    return oper0 + v0 +' to '+ oper1 + v1
   }
 }
 

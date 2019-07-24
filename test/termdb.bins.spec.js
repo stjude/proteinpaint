@@ -23,13 +23,13 @@ tape("get_bin_label()", function (test) {
   // of multiple failing tests 
   test.deepEqual(
     b.get_bin_label({startunbounded:1, stop: 3}),
-    "<3.00",
+    "<3",
     "startunbounded"
   )
 
   test.deepEqual(
     b.get_bin_label({startunbounded:1, stop: 3, stopinclusive: 1}),
-    "≤3.00",
+    "≤3",
     "startunbounded + stopinclusive"
   )
   /*
@@ -122,7 +122,7 @@ tape("get_bins() unbounded", function (test) {
   test.deepLooseEqual(
     b.get_bins({bin_size: 5, first_bin: {startunbounded:1}}, get_summary()),
     [ 
-      { startunbounded: 1, start: undefined, stop: 5, startinclusive: 1, stopinclusive: 0, label: '<5.00' },
+      { startunbounded: 1, start: undefined, stop: 5, startinclusive: 1, stopinclusive: 0, label: '<5' },
       { startinclusive: 1, stopinclusive: 0, start: 5, stop: 10, label: '5 to <10' }, 
       { startinclusive: 1, stopinclusive: 0, start: 10, stop: 15, label: '10 to <15' }, 
       { startinclusive: 1, stopinclusive: 0, start: 15, stop: 20, stopunbounded: 1, label: '≥15' } 
@@ -133,7 +133,7 @@ tape("get_bins() unbounded", function (test) {
   test.deepLooseEqual(
     b.get_bins({bin_size: 3, first_bin: {startunbounded:1}}, get_summary()),
     [ 
-      { startunbounded: 1, start: undefined, stop: 3, startinclusive: 1, stopinclusive: 0, label: '<3.00' },
+      { startunbounded: 1, start: undefined, stop: 3, startinclusive: 1, stopinclusive: 0, label: '<3' },
       { startinclusive: 1, stopinclusive: 0, start: 3, stop: 6, label: '3 to <6' },
       { startinclusive: 1, stopinclusive: 0, start: 6, stop: 9, label: '6 to <9' },
       { startinclusive: 1, stopinclusive: 0, start: 9, stop: 12, label: '9 to <12' },
@@ -147,10 +147,10 @@ tape("get_bins() unbounded", function (test) {
   test.deepLooseEqual(
     b.get_bins({bin_size: 10, first_bin: {startunbounded:1, start_percentile:4, start:5}}, get_summary()),
     [ 
-      { startunbounded: 1, start: undefined, stop: 10, startinclusive: 1, stopinclusive: 0, label: '<10.0' },
+      { startunbounded: 1, start: undefined, stop: 10, startinclusive: 1, stopinclusive: 0, label: '<10' },
       { startinclusive: 1, stopinclusive: 0, start: 10, stop: 20, stopunbounded: 1, label: '≥10' }
     ],
-    "should override start_percentile, start with startunbounded"
+    "should override start_percentile or start with startunbounded"
   )
 
   // stopunbounded
@@ -197,7 +197,7 @@ tape("get_bins() non-percentile", function (test) {
   test.deepLooseEqual(
     b.get_bins({bin_size: 3, first_bin: {startunbounded: 1}, last_bin: {start:15, stop: 18}}, get_summary()),
     [
-      { startunbounded: 1, start: undefined, stop: 3, startinclusive: 1, stopinclusive: 0, label: '<3.00' },
+      { startunbounded: 1, start: undefined, stop: 3, startinclusive: 1, stopinclusive: 0, label: '<3' },
       { startinclusive: 1, stopinclusive: 0, start: 3, stop: 6, label: '3 to <6' },
       { startinclusive: 1, stopinclusive: 0, start: 6, stop: 9, label: '6 to <9' },
       { startinclusive: 1, stopinclusive: 0, start: 9, stop: 12, label: '9 to <12' },
@@ -214,6 +214,6 @@ tape.skip("get_bins() percentile", function (test) {
   // to-do
 })
 
-tape.skip("get_term_bins", function(test) {
+tape.skip("get_term_bins() ", function(test) {
   // to-do
 })
