@@ -571,35 +571,52 @@ function setBinOpts(plot, main, table, termNum, label) {
             startinclusive: bins.last_bin.startinclusive,
             stopinclusive: bins.last_bin.stopinclusive
           }
-          if(bins.last_bin.stop) custom_bins_q.last_bin.start = bins.last_bin.stop
+          if(bins.last_bin.stop) custom_bins_q.last_bin.stop = bins.last_bin.stop
         }
       }
       
       bin_size_btn.text(custom_bins_q.bin_size + ' ' + (bin_term.unit?bin_term.unit:''))
 
+      let first_bin_start, first_bin_stop, last_bin_start, last_bin_stop
+
+      first_bin_start = isFinite(custom_bins_q.first_bin.start_percentile) ? custom_bins_q.first_bin.start_percentile 
+      : isFinite(custom_bins_q.first_bin.start) ? custom_bins_q.first_bin.start : undefined
+
+      first_bin_stop = isFinite(custom_bins_q.first_bin.stop_percentile) ? custom_bins_q.first_bin.stop_percentile 
+      : isFinite(custom_bins_q.first_bin.stop) ? custom_bins_q.first_bin.stop : undefined
+
+      if(custom_bins_q.last_bin){
+        last_bin_start = isFinite(custom_bins_q.last_bin.start_percentile) ? custom_bins_q.last_bin.start_percentile 
+        : isFinite(custom_bins_q.last_bin.start) ? custom_bins_q.last_bin.start : undefined
+
+        last_bin_stop = isFinite(custom_bins_q.last_bin.stop_percentile) ? custom_bins_q.last_bin.stop_percentile 
+        : isFinite(custom_bins_q.last_bin.stop) ? custom_bins_q.last_bin.stop : undefined
+      }
+
       //update first_bin button
-      if( parseFloat(custom_bins_q.first_bin.start) &&  parseFloat(custom_bins_q.first_bin.stop)){
+      if( isFinite(first_bin_start) &&  isFinite(first_bin_stop)){
         first_bin_btn.html(
-          custom_bins_q.first_bin.start +
+          first_bin_start +
           ' '+ (custom_bins_q.first_bin.startinclusive?'&le;':'&lt;')+
           ' '+ x+
           ' '+ (custom_bins_q.first_bin.stopinclusive? '&le;':'&lt;')+
-          ' '+ custom_bins_q.first_bin.stop +
-          ' '+ (bin_term.unit?bin_term.unit:'')
+          ' '+ first_bin_stop +
+          ' '+ ((isFinite(custom_bins_q.first_bin.start_percentile) || isFinite(custom_bins_q.first_bin.stop_percentile))?'Percentile':
+                bin_term.unit?bin_term.unit:'')
         )
-      }else if(parseFloat(custom_bins_q.first_bin.start)){
+      }else if(isFinite(first_bin_start)){
         first_bin_btn.html(
           x +
           ' '+ (custom_bins_q.first_bin.startinclusive?'&ge;':'&gt;')+
-          ' '+ custom_bins_q.first_bin.start +
-          ' '+ (bin_term.unit?bin_term.unit:'')
+          ' '+ first_bin_start +
+          ' '+ (isFinite(custom_bins_q.first_bin.start_percentile)? 'Percentile' : bin_term.unit?bin_term.unit:'')
         )
-      }else if(parseFloat(custom_bins_q.first_bin.stop)){
+      }else if(isFinite(first_bin_stop)){
         first_bin_btn.html(
           x+
           ' '+ (custom_bins_q.first_bin.stopinclusive? '&le;':'&lt;')+
-          ' '+ custom_bins_q.first_bin.stop +
-          ' '+ (bin_term.unit?bin_term.unit:'')
+          ' '+ first_bin_stop +
+          ' '+ (isFinite(custom_bins_q.first_bin.stop_percentile)? 'Percentile' :bin_term.unit?bin_term.unit:'')
         )
       }else{
         first_bin_btn.text('EDIT')
@@ -607,28 +624,29 @@ function setBinOpts(plot, main, table, termNum, label) {
 
       //update last_bin button
       if(custom_bins_q.last_bin){
-        if( parseFloat(custom_bins_q.last_bin.start) &&  parseFloat(custom_bins_q.last_bin.stop)){
+        if( isFinite(last_bin_start) &&  isFinite(last_bin_stop)){
           last_bin_btn.html(
-            custom_bins_q.last_bin.start +
+            last_bin_start +
             ' '+ (custom_bins_q.last_bin.startinclusive?'&le;':'&lt;')+
             ' '+ x+
             ' '+ (custom_bins_q.last_bin.stopinclusive? '&le;':'&lt;')+
-            ' '+ custom_bins_q.last_bin.stop +
-            ' '+ (bin_term.unit?bin_term.unit:'')
+            ' '+ last_bin_stop +
+            ' '+ ((isFinite(custom_bins_q.last_bin.start_percentile) || isFinite(custom_bins_q.last_bin.stop_percentile))?'Percentile':
+                  bin_term.unit?bin_term.unit:'')
           )
-        }else if(parseFloat(custom_bins_q.last_bin.start)){
+        }else if(isFinite(last_bin_start)){
           last_bin_btn.html(
             x +
             ' '+ (custom_bins_q.last_bin.startinclusive?'&ge;':'&gt;')+
-            ' '+ custom_bins_q.last_bin.start +
-            ' '+ (bin_term.unit?bin_term.unit:'')
+            ' '+ last_bin_start +
+            ' '+ (isFinite(custom_bins_q.last_bin.start_percentile)? 'Percentile' : bin_term.unit?bin_term.unit:'')
           )
-        }else if(parseFloat(custom_bins_q.last_bin.stop)){
+        }else if(isFinite(last_bin_stop)){
           last_bin_btn.html(
             x+
             ' '+ (custom_bins_q.last_bin.stopinclusive? '&le;':'&lt;')+
-            ' '+ custom_bins_q.last_bin.stop +
-            ' '+ (bin_term.unit?bin_term.unit:'')
+            ' '+ last_bin_stop +
+            ' '+ (isFinite(custom_bins_q.last_bin.stop_percentile)? 'Percentile' :bin_term.unit?bin_term.unit:'')
           )
         }
       }else{
@@ -723,7 +741,7 @@ function bin_size_menu(plot, main, btn, termNum, custom_bins_q, update_btn){
 }
 
 function edit_bin_menu(plot, main, btn, termNum, custom_bins_q, bin_flag, update_btn){
-  console.log(plot)
+
   if(termNum == 'term1' && plot.term1_q && plot.term1_q.custom_bins){
     custom_bins_q = plot.term1_q.custom_bins
   }
@@ -751,7 +769,6 @@ function edit_bin_menu(plot, main, btn, termNum, custom_bins_q, bin_flag, update
 
   const start_input = bin_edit_div.append('input')
     .attr('type','number')
-    .attr('value',parseFloat(bin.start)?bin.start:'')
     .style('width','60px')
     .on('keyup', async ()=>{
       if(!client.keyupEnter()) return
@@ -759,6 +776,12 @@ function edit_bin_menu(plot, main, btn, termNum, custom_bins_q, bin_flag, update
       await apply()
       start_input.property('disabled',false)
     })
+
+  if(isFinite(bin.start_percentile)){
+    start_input.attr('value',parseFloat(bin.start_percentile))
+  }else if(isFinite(bin.start)){
+    start_input.attr('value',parseFloat(bin.start))
+  }
 
   // select realation between lowerbound and first bin/last bin
   let startselect
@@ -811,7 +834,6 @@ function edit_bin_menu(plot, main, btn, termNum, custom_bins_q, bin_flag, update
     .style('margin-left','10px')
     .attr('type','number')
     .style('width','60px')
-    .attr('value',bin.stop)
     .on('keyup', async ()=>{
       if(!client.keyupEnter()) return
       stop_input.property('disabled',true)
@@ -819,23 +841,26 @@ function edit_bin_menu(plot, main, btn, termNum, custom_bins_q, bin_flag, update
       stop_input.property('disabled',false)
     })
 
-  // cutoff unit
-  const unit_div = bin_edit_div.append('div')
-    .style('margin-top','10px')
-    .html('Unit ')
+  if(isFinite(bin.stop_percentile)){
+    stop_input.attr('value',parseFloat(bin.stop_percentile))
+  }else if(isFinite(bin.stop)){
+    stop_input.attr('value',parseFloat(bin.stop))
+  }
 
-  const unit_select = unit_div.append('select')
+  // percentile checkbox
+
+  const percent_div = bin_edit_div.append('div')
+    .style('margin-top','10px')
+    .html('Input as Percentile')
+    
+  const id = Math.random()
+  const percent_input = percent_div.append('input')
+    .attr('id',id)
+    .attr('type','checkbox')
+    .attr('value','percent')
     .style('margin-left','10px')
 
-  unit_select.append('option')
-    .attr('value','value')
-    .text(plot.term.unit?plot.term.unit:'Value')
-    .property('selected', bin.unit == 'value' ? true : false)
-
-  unit_select.append('option')
-    .attr('value','percentile')
-    .text('Percentile')
-    .property('selected', bin.unit == 'percentile' ? true : false)
+  if(bin.start_percentile || bin.stop_percentile) percent_input.property('checked',true)
 
   tip.d.append('div')
     .attr('class','sja_menuoption')
@@ -863,34 +888,66 @@ function edit_bin_menu(plot, main, btn, termNum, custom_bins_q, bin_flag, update
       if(!plot.term1_q || !plot.term1_q.custom_bins){
         plot.term1_q = {}
         plot.term1_q.custom_bins = custom_bins_q
+      }
 
-        if(!plot.term1_q.custom_bins.last_bin){
-          plot.term1_q.custom_bins.last_bin = {
-            start: '',
-            stop: ''
-          }
-        }
+      if(!plot.term1_q.custom_bins.last_bin){
+        plot.term1_q.custom_bins.last_bin = {}
       }
 
       if(start_input.node().value && stop_input.node().value && (start_input.node().value > stop_input.node().value)) throw 'start value must be smaller than stop value'
+      
+      //first_bin parameter setup from input
       if(bin_flag == 'first'){
 
         if(start_input.node().value){
-          plot.term1_q.custom_bins.first_bin.start = parseFloat(start_input.node().value)
+          if(percent_input.node().checked) plot.term1_q.custom_bins.first_bin.start_percentile = parseFloat(start_input.node().value)
+          else plot.term1_q.custom_bins.first_bin.start = parseFloat(start_input.node().value)
         }else{
           delete plot.term1_q.custom_bins.first_bin.start
+          delete plot.term1_q.custom_bins.first_bin.start_percentile
           plot.term1_q.custom_bins.first_bin.startunbounded = true
         }
-        if(stop_input.node().value) plot.term1_q.custom_bins.first_bin.stop = parseFloat(stop_input.node().value)
-      }else if(bin_flag == 'last'){
+        if(stop_input.node().value){
+          if(percent_input.node().checked) plot.term1_q.custom_bins.first_bin.stop_percentile = parseFloat(stop_input.node().value)
+          else plot.term1_q.custom_bins.first_bin.stop = parseFloat(stop_input.node().value)
+        }else if(!start_input.node().value) throw 'If start is empty, stop is required for first bin.' 
 
-        if(start_input.node().value) plot.term1_q.custom_bins.last_bin.start = parseFloat(start_input.node().value)
+        if(start_input.node().selectedIndex == 0) plot.term1_q.custom_bins.first_bin.startinclusive = true
+        else plot.term1_q.custom_bins.first_bin.startinclusive = false
+      
+        // if percentile checkbox is unchecked, delete start/stop_percentile
+        if(!percent_input.node().checked){
+          delete plot.term1_q.custom_bins.first_bin.start_percentile
+          delete plot.term1_q.custom_bins.first_bin.stop_percentile
+        }
+      }
+
+      //last_bin parameter setup from input
+      else if(bin_flag == 'last'){
+
+        if(start_input.node().value){
+          if(percent_input.node().checked) plot.term1_q.custom_bins.last_bin.start_percentile = parseFloat(start_input.node().value)
+          else plot.term1_q.custom_bins.last_bin.start = parseFloat(start_input.node().value)
+        }else if(!stop_input.node().value) throw 'If stop is empty, start is required for last bin.'
+
         if(stop_input.node().value) {
-          plot.term1_q.custom_bins.last_bin.stop = parseFloat(stop_input.node().value)
+          if(percent_input.node().checked) plot.term1_q.custom_bins.last_bin.stop_percentile = parseFloat(stop_input.node().value)
+          else plot.term1_q.custom_bins.last_bin.stop = parseFloat(stop_input.node().value)
         }else{
           delete plot.term1_q.custom_bins.last_bin.stop
+          delete plot.term1_q.custom_bins.last_bin.stop_percentile
           plot.term1_q.custom_bins.last_bin.stopunbounded = true
         }
+
+        if(stop_input.node().selectedIndex == 0) plot.term1_q.custom_bins.last_bin.stopinclusive = true
+        else plot.term1_q.custom_bins.last_bin.stopinclusive = false
+
+        // if percentile checkbox is unchecked, delete start/stop_percentile
+        if(!percent_input.node().checked){
+          delete plot.term1_q.custom_bins.last_bin.start_percentile
+          delete plot.term1_q.custom_bins.last_bin.stop_percentile
+        }
+        
       }
       main(plot)
       tip.hide()
