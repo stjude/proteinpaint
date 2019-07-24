@@ -202,6 +202,19 @@ q{}
 	.ds
 	.term[0,1,2]_id
 	.term[0,1,2]_q
+
+opts{} options to tweak the query, see const default_opts = below
+	
+	.withCTEs		  true: return {lst,CTE0,CTE1,CTE2}, 
+							  false: return lst 
+	
+	.columnas		  default to return all rows when 't1.sample AS sample',
+							  or set to "count(distinct t1.sample) as samplecount" to aggregate
+	
+	.endclause:   default to '',
+							  or "GROUP BY key0, key1, key2" when aggregating by samplecount
+							  or +" ORDER BY ..." + " LIMIT ..."
+
 */
 	if (typeof q.tvslst == 'string') q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 	
@@ -213,8 +226,8 @@ q{}
 	}
 	const default_opts = {
 		withCTEs: true,
-		columnas: 't1.sample AS sample', // or "count(distinct t1.sample) as sample"
-		endclause: '' // or "GROUP BY key0, key1, key2" + " ORDER BY ..." + " LIMIT ..."
+		columnas: 't1.sample AS sample',
+		endclause: ''
 	}
 	const opts = Object.assign(default_opts, _opts)
 	const filter = makesql_by_tvsfilter( q.tvslst, q.ds )
