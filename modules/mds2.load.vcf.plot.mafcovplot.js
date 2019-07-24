@@ -54,37 +54,45 @@ export async function handle_mafcovplot ( q, genome, ds, result ) {
 
 		if( q.overlay_term ) {
 
-			const tmp = termdbsql.get_rows(
-				{
-					ds,
-					term1_id: q.overlay_term,
-					term1_q: q.overlay_term_q
-				},
-				{ withCTEs: false }
-			)
+			const re = termdbsql.get_rows( {
+				ds,
+				term1_id: q.overlay_term,
+				term1_q: q.overlay_term_q
+			})
 
-			const category2color = d3scale.scaleOrdinal( d3scale.schemeCategory10)
-			const categories = new Set()
-			const sample2color = new Map()
-			const color2count = {}
-			for(const i of tmp) {
-				const category = i.key1
-				categories.add( category )
-				sample2color.set( i.sample, category2color(category) )
+			const anysample2category = new Map()
+			// re.lst contains all samples of cohort
+			for(const i of re.lst) {
+				anysample2category.set( i.sample, i.key1 )
 			}
+
+			const colorfunc = d3scale.scaleOrdinal( d3scale.schemeCategory10)
+			const categories = new Map()
+			// plot groups contain only a subset of all samples
 			for(const plot of result.plotgroups ) {
 				for(const o of plot.lst ) {
-					o.sampleobj.color = sample2color.get( o.sampleobj.name ) || 'black'
-					if(o.sampleobj.color in color2count){
-						color2count[o.sampleobj.color] = color2count[o.sampleobj.color] + 1
-					}else{
-						color2count[o.sampleobj.color] = 1
+					const category = anysample2category.get( o.sampleobj.name )
+					const color = colorfunc( category )
+					o.sampleobj.color = color
+					if( !categories.has( category )) {
+						categories.set( category, {count:0, color, label:category} )
 					}
+					categories.get(category).count++
 				}
 			}
 			result.categories = []
-			for(const c of categories) {
-				result.categories.push({ color:category2color(c), label:c, count:color2count[category2color(c)] })
+
+			if( re.CTE1 && re.CTE1.name2bin ) {
+				// is numeric term, return order of bins as in the name2bin map
+				// TODO return binning scheme for customization
+				for(const n of re.CTE1.name2bin.keys()) {
+					const o = categories.get( n )
+					if( o ) result.categories.push( o )
+				}
+			} else {
+				for(const [c,o] of categories) {
+					result.categories.push( o )
+				}
 			}
 		}
 
