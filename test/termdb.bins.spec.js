@@ -210,8 +210,56 @@ tape("get_bins() non-percentile", function (test) {
   test.end()
 })
 
-tape.skip("get_bins() percentile", function (test) {
-  // to-do
+tape("get_bins() percentile", function (test) {
+  test.deepLooseEqual(
+    b.get_bins({bin_size: 3, first_bin: {start_percentile:10}}, get_summary()),
+    [
+      { startunbounded: undefined, start: 2, stop: 5, startinclusive: 1, stopinclusive: 0, label: '2 to <5' },
+      { startinclusive: 1, stopinclusive: 0, start: 5, stop: 8, label: '5 to <8' },
+      { startinclusive: 1, stopinclusive: 0, start: 8, stop: 11, label: '8 to <11' },
+      { startinclusive: 1, stopinclusive: 0, start: 11, stop: 14, label: '11 to <14' },
+      { startinclusive: 1, stopinclusive: 0, start: 14, stop: 17, label: '14 to <17' },
+      { startinclusive: 1, stopinclusive: 0, start: 17, stop: 20, stopunbounded: 1, label: '≥17'}
+    ],
+    "should handle first_bin.start_percentile"
+  )
+
+  test.deepLooseEqual(
+    b.get_bins({bin_size: 3, first_bin: {start_percentile:10, stop_percentile: 20}}, get_summary()),
+    [
+      { startunbounded: undefined, start: 2, stop: 5, startinclusive: 1, stopinclusive: 0, label: '2 to <5' },
+      { startinclusive: 1, stopinclusive: 0, start: 5, stop: 8, label: '5 to <8' },
+      { startinclusive: 1, stopinclusive: 0, start: 8, stop: 11, label: '8 to <11' },
+      { startinclusive: 1, stopinclusive: 0, start: 11, stop: 14, label: '11 to <14' },
+      { startinclusive: 1, stopinclusive: 0, start: 14, stop: 17, label: '14 to <17' },
+      { startinclusive: 1, stopinclusive: 0, start: 17, stop: 20, stopunbounded: 1, label: '≥17' }
+    ],
+    "should handle first_bin.start_percentile + stop_percentile"
+  )
+
+  test.deepLooseEqual(
+    b.get_bins({bin_size: 4, first_bin: {start:4}, last_bin: {stop_percentile:90}}, get_summary()),
+    [
+      { startunbounded: undefined, start: 4, stop: 8, startinclusive: 1, stopinclusive: 0, label: '4 to <8' },
+      { startinclusive: 1, stopinclusive: 0, start: 8, stop: 12, label: '8 to <12' },
+      { startinclusive: 1, stopinclusive: 0, start: 12, stop: 16, label: '12 to <16' },
+      { startinclusive: 1, stopinclusive: 0, start: 16, stop: 18, label: '16 to <18' } 
+    ],
+    "should handle last_bin.stop_percentile"
+  )
+
+  test.deepLooseEqual(
+    b.get_bins({bin_size: 4, first_bin: {start: 5}, last_bin: {start_percentile:80, stop_percentile: 95}}, get_summary()),
+    [
+      { startunbounded: undefined, start: 5, stop: 9, startinclusive: 1, stopinclusive: 0, label: '5 to <9' },
+      { startinclusive: 1, stopinclusive: 0, start: 9, stop: 13, label: '9 to <13' },
+      { startinclusive: 1, stopinclusive: 0, start: 13, stop: 16, label: '13 to <16' },
+      { startinclusive: 1, stopinclusive: 0, start: 16, stop: 19, label: '16 to <19' }
+    ],
+    "should handle last_bin.start_percentile + stop_percentile"
+  )
+
+  test.end()
 })
 
 tape.skip("get_term_bins() ", function(test) {

@@ -86,7 +86,7 @@ summary{}
   const min = cb.first_bin.startunbounded 
     ? summary.min 
     : cb.first_bin.start_percentile
-    ? summary.values[ Math.floor((cb.first_bin.start_percentile / 100) * summaries.values.length) ]
+    ? summary.values[ Math.floor((cb.first_bin.start_percentile / 100) * summary.values.length) ]
     : cb.first_bin.start
   const max = cb.last_bin.stopunbounded 
     ? summary.max
@@ -96,13 +96,13 @@ summary{}
     ? cb.last_bin.stop
     : summary.max
   const last_start = isNumeric(cb.last_bin.start_percentile)
-    ? cb.last_bin.start_percentile
+    ? summary.values[ Math.floor((cb.last_bin.start_percentile / 100) * summary.values.length) ]
     : isNumeric(cb.last_bin.start)
     ? cb.last_bin.start
     : null
   const last_stop = cb.last_bin.stopunbounded
     ? null 
-    : isNumeric(cb.last_bin.stop_percentile)
+    : summary.values[ Math.floor((cb.last_bin.stop_percentile / 100) * summary.values.length) ]
     ? cb.last_bin.stop_percentile
     : isNumeric(cb.last_bin.stop)
     ? cb.last_bin.stop
