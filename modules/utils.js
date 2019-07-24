@@ -30,7 +30,7 @@ connect_db
 
 
 
-exports.init_one_vcf = async ( tk, genome ) => {
+export async function init_one_vcf ( tk, genome ) {
 
 	let filelocation
 	if( tk.file ) {
@@ -65,7 +65,7 @@ exports.init_one_vcf = async ( tk, genome ) => {
 
 
 
-async function validate_tabixfile ( file ) {
+export async function validate_tabixfile ( file ) {
 	/*
 	file is full path
 	url not accepted
@@ -85,7 +85,6 @@ async function validate_tabixfile ( file ) {
 		if(await file_not_readable(tbi)) throw '.tbi index file not readable'
 	}
 }
-exports.validate_tabixfile = validate_tabixfile
 
 
 
@@ -103,7 +102,7 @@ async function tabix_is_nochr ( file, dir, genome ) {
 
 
 
-function file_not_exist ( file ) {
+export function file_not_exist ( file ) {
 	return new Promise((resolve,reject)=>{
 		fs.access( file, fs.constants.F_OK, err=>{
 			if(err) resolve( true )
@@ -111,11 +110,10 @@ function file_not_exist ( file ) {
 		})
 	})
 }
-exports.file_not_exist = file_not_exist
 
 
 
-function file_not_readable ( file ) {
+export function file_not_readable ( file ) {
 	return new Promise((resolve,reject)=>{
 		fs.access( file, fs.constants.R_OK, err=>{
 			if(err) resolve( true )
@@ -123,7 +121,6 @@ function file_not_readable ( file ) {
 		})
 	})
 }
-exports.file_not_readable = file_not_readable
 
 
 async function get_header_vcf ( file, dir ) {
@@ -143,7 +140,7 @@ async function get_header_vcf ( file, dir ) {
 
 
 
-function get_lines_tabix ( args, dir, callback ) {
+export function get_lines_tabix ( args, dir, callback ) {
 	return new Promise((resolve,reject)=>{
 		const ps = spawn( tabix, args, {cwd:dir} )
 		const rl = readline.createInterface({ input: ps.stdout })
@@ -155,12 +152,11 @@ function get_lines_tabix ( args, dir, callback ) {
 		})
 	})
 }
-exports.get_lines_tabix = get_lines_tabix
 
 
 
 
-function write_file ( file, text ) {
+export function write_file ( file, text ) {
 	return new Promise((resolve, reject)=>{
 		fs.writeFile( file, text, (err)=>{
 			if(err) reject('cannot write')
@@ -168,11 +164,10 @@ function write_file ( file, text ) {
 		})
 	})
 }
-exports.write_file = write_file
 
 
 
-function read_file ( file ) {
+export function read_file ( file ) {
 	return new Promise((resolve,reject)=>{
 		fs.readFile( file, {encoding:'utf8'}, (err,txt)=>{
 			// must use reject in callback, not throw
@@ -181,12 +176,11 @@ function read_file ( file ) {
 		})
 	})
 }
-exports.read_file = read_file
 
 
 
 
-exports.get_fasta = ( gn, pos ) => {
+export function get_fasta ( gn, pos ) {
 // chr:start-stop, positions are 1-based
 	return new Promise((resolve,reject)=>{
 		const ps = spawn(samtools, ['faidx', gn.genomefile, pos])
@@ -200,6 +194,50 @@ exports.get_fasta = ( gn, pos ) => {
 
 
 
-exports.connect_db = (file)=>{
+export function connect_db (file) {
 	return new bettersqlite( path.join(serverconfig.tpmasterdir,file), {readonly:true, fileMustExist:true} )
 }
+
+
+export const genotype_type_set = new Set(["Homozygous reference","Homozygous alternative","Heterozygous"])
+export const genotype_types = {
+  href: "Homozygous reference",
+  halt: "Homozygous alternative",
+  het: "Heterozygous"
+}
+
+
+export async function loadfile_ssid ( id ) {
+/*
+*/
+	const text = await read_file( path.join( serverconfig.cachedir, 'ssid', id ) )
+	const bySample = Object.create(null)
+	// k: sample, v: genotype str
+	const genotype2sample = new Map()
+	// k: genotype str, v: set of samples
+	for(const line of text.split('\n')) {
+		if (!line) continue
+		const [type, samplesStr] = line.split('\t')
+		if (!samplesStr) continue
+		const samples = samplesStr.split(",")
+		for(const sample of samples) {
+			bySample[sample] = type
+		}
+		if(!genotype_type_set.has(type)) throw 'unknown hardcoded genotype label: '+type
+		genotype2sample.set(type, new Set(samples))
+	}
+	return [bySample, genotype2sample]
+}
+
+
+
+
+export function run_fishertest( tmpfile ) {
+	const pfile = tmpfile+'.pvalue'
+	return new Promise((resolve,reject)=>{
+		const sp = spawn('Rscript',['utils/fisher.R',tmpfile,pfile])
+		sp.on('close',()=> resolve(pfile))
+		sp.on('error',()=> reject(error))
+	})
+}
+

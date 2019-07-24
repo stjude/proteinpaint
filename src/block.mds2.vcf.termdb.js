@@ -62,6 +62,25 @@ official track only
 	}
 	const _ = await import('./mds.termdb')
 	_.init( obj )
+
+
+	const h = client.may_get_locationsearch()
+	if(h && h.has('testall')) {
+		const div = plotdiv.append('div')
+			.style('margin-top','20px')
+		const wait = div.append('div').text('Loading...')
+		const arg = [
+			'genome='+block.genome.name,
+			'dslabel='+tk.mds.label,
+			'ssid='+ssid,
+			'testall=1'
+		]
+		const data = await client.dofetch2('/termdb?'+arg.join('&'))
+		wait.remove()
+		for(const i of data.results) {
+			div.append('div').text(JSON.stringify(i))
+		}
+	}
 }
 
 

@@ -675,7 +675,7 @@ async function may_apply_fishertest ( q ) {
 	}
 	const tmpfile = path.join(serverconfig.cachedir,Math.random().toString())
 	await utils.write_file( tmpfile, lines.join('\n') )
-	const pfile = await run_fishertest( tmpfile )
+	const pfile = await utils.run_fishertest( tmpfile )
 	const text = await utils.read_file( pfile )
 	for(const line of text.trim().split('\n')) {
 		const l = line.split('\t')
@@ -691,15 +691,6 @@ async function may_apply_fishertest ( q ) {
 }
 
 
-
-function run_fishertest( tmpfile ) {
-	const pfile = tmpfile+'.pvalue'
-	return new Promise((resolve,reject)=>{
-		const sp = spawn('Rscript',['utils/fisher.R',tmpfile,pfile])
-		sp.on('close',()=> resolve(pfile))
-		sp.on('error',()=> reject(error))
-	})
-}
 
 
 

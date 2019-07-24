@@ -111,6 +111,28 @@ module.exports={
 				}
 			},
 			{
+				key:'SJcontrol_CEU_AF',
+				label:'SJLIFE control allele frequency, Caucasian',
+				isfilter:true,
+				isfloat:1,
+				range: {
+					startunbounded:true,
+					stop: 0.1,
+					stopinclusive:true
+				}
+			},
+			{
+				key:'SJcontrol_YRI_AF',
+				label:'SJLIFE control allele frequency, African American',
+				isfilter:true,
+				isfloat:1,
+				range: {
+					startunbounded:true,
+					stop: 0.1,
+					stopinclusive:true
+				}
+			},
+			{
 				key:'SJcontrol_CR',
 				label:'SJLIFE control call rate',
 				isfilter:true,
@@ -263,7 +285,24 @@ module.exports={
 			{
 				key:'SJControl',
 				label:'SJLIFE control',
-				sets:[ { infokey_AC:'SJcontrol_AC', infokey_AN:'SJcontrol_AN' } ]
+				allowto_adjust_race:true,
+				adjust_race:true,
+				termfilter:'genetic_race',
+				sets:[
+					{
+						key:'CEU', infokey_AC:'SJcontrol_CEU_AC', infokey_AN:'SJcontrol_CEU_AN',
+						termfilter_value: 'European American'
+					},
+					{
+						key:'YRI', infokey_AC:'SJcontrol_YRI_AC', infokey_AN:'SJcontrol_YRI_AN',
+						termfilter_value: 'African American'
+					}
+				]
+			},
+			{
+				key:'TOPMed',
+				label:'TOPMed',
+				sets:[{infokey_AC:'TOPMed_AC',infokey_AN:'TOPMed_AN'}]
 			}
 		],
 

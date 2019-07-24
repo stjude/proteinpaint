@@ -767,6 +767,13 @@ thus less things to worry about...
 	const q = ds.cohort.termdb.q
 
 	{
+		const s = ds.cohort.db.connection.prepare('SELECT * FROM terms')
+		q.getallterms = ()=>{
+			return s.all()
+		}
+	}
+
+	{
 		const s = ds.cohort.db.connection.prepare('select jsondata from terms where id=?')
 		q.termjsonByOneid = (id)=>{
 			const t = s.get( id )
