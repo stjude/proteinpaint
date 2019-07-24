@@ -5,6 +5,7 @@ import {
   menuoption_select_group_add_to_cart
 } from './mds.termdb'
 import * as client from './client'
+import {make_numeric_bin_btns} from './mds.termdb.termsetting.ui'
 
 // used to track controls unique "instances" by plot object
 // to be used to disambiguate between input names
@@ -484,40 +485,52 @@ function setBinOpts(plot, main, table, termNum, label) {
 
   const bin_edit_td = tr.append('td')
 
-  const bin_size_div = bin_edit_td.append('div')
-    .html('Bin Size')
-
-  const bin_size_btn = bin_size_div.append('div')
+  bin_edit_td.append('div')
     .attr('class','sja_edit_btn')
+    .html('BINS')
+    .on('click',()=>{
+      // click to show ui and customize binning
 
-  const first_bin_div = bin_edit_td.append('div')
-    .html('First Bin')
+      make_numeric_bin_btns(plot.tip, plot.term, plot.term1_q, (result)=>{
+        plot.term1_q = result
+        main(plot)
+    })
+  })
 
-  const first_bin_btn = first_bin_div.append('div')
-    .attr('class','sja_edit_btn')
+  // const bin_size_div = bin_edit_td.append('div')
+  //   .html('Bin Size')
 
-  const last_bin_div = bin_edit_td.append('div')
-    .html('Last Bin')
+  // const bin_size_btn = bin_size_div.append('div')
+  //   .attr('class','sja_edit_btn')
 
-  const last_bin_btn = last_bin_div.append('div')
-    .attr('class','sja_edit_btn')
+  // const first_bin_div = bin_edit_td.append('div')
+  //   .html('First Bin')
 
-  let custom_bins_q, bin_term
-  bin_term = plot.term
+  // const first_bin_btn = first_bin_div.append('div')
+  //   .attr('class','sja_edit_btn')
+
+  // const last_bin_div = bin_edit_td.append('div')
+  //   .html('Last Bin')
+
+  // const last_bin_btn = last_bin_div.append('div')
+  //   .attr('class','sja_edit_btn')
+
+  // let custom_bins_q, bin_term
+  // bin_term = plot.term
   
-  update_btn()
+  // update_btn()
 
-  bin_size_btn.on('click', () => {
-    bin_size_menu(plot, main, bin_size_btn, termNum, custom_bins_q, update_btn)
-  })
+  // bin_size_btn.on('click', () => {
+  //   bin_size_menu(plot, main, bin_size_btn, termNum, custom_bins_q, update_btn)
+  // })
 
-  first_bin_btn.on('click', () => {
-    edit_bin_menu(plot, main, first_bin_btn, termNum, custom_bins_q, 'first', update_btn)
-  })
+  // first_bin_btn.on('click', () => {
+  //   edit_bin_menu(plot, main, first_bin_btn, termNum, custom_bins_q, 'first', update_btn)
+  // })
 
-  last_bin_btn.on('click', () => {
-    edit_bin_menu(plot, main, last_bin_btn, termNum, custom_bins_q, 'last', update_btn)
-  })
+  // last_bin_btn.on('click', () => {
+  //   edit_bin_menu(plot, main, last_bin_btn, termNum, custom_bins_q, 'last', update_btn)
+  // })
 
   // TODO: legacy 'edit' button, remove after testing
   // tr.append('td')
@@ -549,7 +562,7 @@ function setBinOpts(plot, main, table, termNum, label) {
 
       }else if(bin_term.graph.barchart.numeric_bin.bins){
         //if custom_bins not defined yet, set it as numeric_bin.bins
-        custom_bins_q = bin_term.graph.barchart.numeric_bin.bins
+        // custom_bins_q = bin_term.graph.barchart.numeric_bin.bins
         const bins = bin_term.graph.barchart.numeric_bin.bins
         custom_bins_q = {
           bin_size: bins.bin_size,
