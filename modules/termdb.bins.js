@@ -70,15 +70,17 @@ summary{}
     cb.stopinclusive = 0
   }
 
-  if (typeof cb.first_bin != 'object') throw 'first bin missing or not an object'
-  
-  if (!cb.first_bin.startunbounded 
+  if (!cb.first_bin) throw 'first_bin missing'
+  if (typeof cb.first_bin != 'object') throw 'first_bin is not an object'
+  if (!Object.keys(cb.first_bin).length) throw 'first_bin is an empty object'
+
+  if ((cb.first_bin.startunbounded && !isNumeric(cb.first_bin.stop_percentile) && !isNumeric(cb.first_bin.stop))
     && !cb.first_bin.start_percentile
     && !isNumeric(cb.first_bin.start)
   ) throw 'must set first_bin.start, or start_percentile, or startunbounded + stop'
   
-  if (!cb.last_bin || typeof cb.last_bin != 'object') cb.last_bin = {stopunbounded: true}
-  if (!cb.last_bin.stopunbounded 
+  if (!cb.last_bin || typeof cb.last_bin != 'object') cb.last_bin = {}
+  if ((cb.last_bin.stopunbounded && !isNumeric(cb.last_bin.start_percentile) && !isNumeric(cb.last_bin.start))
     && !cb.last_bin.stop_percentile
     && !isNumeric(cb.last_bin.stop)
   ) throw 'must set last_bin.stop, or stop_percentile, or stopunbounded + start'

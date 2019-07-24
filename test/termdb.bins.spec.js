@@ -90,29 +90,45 @@ tape("get_bins() error handling", function (test) {
     test.equal(e, 'bin_size must be greater than 0', mssg1c)
   }
 
-  const mssg2a = "should throw on missing or non-object first bin"
+  const mssg2a = "should throw on missing first_bin"
   try {
     b.get_bins({bin_size: 5}, get_summary())
     test.fail(mssg2)
   } catch(e) {
-    test.equal(e, 'first bin missing or not an object', mssg2a)
+    test.equal(e, 'first_bin missing', mssg2a)
   }
 
-  const mssg2b = "should throw if missing all of first_bin.startunbounded, start_percentile, start"
+  const mssg2b = "should throw on a non-object first_bin"
   try {
-    b.get_bins({bin_size: 5, first_bin: {}}, get_summary())
+    b.get_bins({bin_size: 5, first_bin: 'abc'}, get_summary())
     test.fail(mssg2b)
   } catch(e) {
-    test.equal(e, 'must set first_bin.start, or start_percentile, or startunbounded + stop', mssg2b)
+    test.equal(e, 'first_bin is not an object', mssg2b)
   }
 
-  const mssg3 = "should throw if setting a last bin that is missing all of stopunbounded, stop_percentile, stop"
+  const mssg2bi = "should throw on an empty first_bin object"
   try {
-    b.get_bins({bin_size: 5, first_bin: {startunbounded:1}, last_bin: {}}, get_summary())
+    b.get_bins({bin_size: 5, first_bin: {}}, get_summary())
+    test.fail(mssg2bi)
+  } catch(e) {
+    test.equal(e, 'first_bin is an empty object', mssg2bi)
+  }
+
+  const mssg2c = "should throw if missing first_bin.startunbounded + stop, or start_percentile, or start"
+  try {
+    b.get_bins({bin_size: 5, first_bin: {startunbounded:1}}, get_summary())
+    test.fail(mssg2c)
+  } catch(e) {
+    test.equal(e, 'must set first_bin.start, or start_percentile, or startunbounded + stop', mssg2c)
+  }
+  /*
+  const mssg3 = "should throw if missing last_bin.stopunbounded + start, or stop_percentile, or stop"
+  try {
+    b.get_bins({bin_size: 5, first_bin: {start:2}, last_bin: {}}, get_summary())
     test.fail(mssg3)
   } catch(e) {
-    test.equal(e, 'must set last_bin.stop, or stop_percentile, or stopunbounded + start', mssg3)
-  }
+    test.equal(e, 'must set last_bin.stopunbounded + start, or stop_percentile, or stop', mssg3)
+  }*/
 
   test.end()
 })
@@ -120,7 +136,7 @@ tape("get_bins() error handling", function (test) {
 
 tape("get_bins() unbounded", function (test) {
   test.deepLooseEqual(
-    b.get_bins({bin_size: 5, first_bin: {startunbounded:1}}, get_summary()),
+    b.get_bins({bin_size: 5, first_bin: {startunbounded:1, stop:5}}, get_summary()),
     [ 
       { startunbounded: 1, start: undefined, stop: 5, startinclusive: 1, stopinclusive: 0, label: '<5' },
       { startinclusive: 1, stopinclusive: 0, start: 5, stop: 10, label: '5 to <10' }, 
@@ -144,10 +160,11 @@ tape("get_bins() unbounded", function (test) {
   )
 
   test.deepLooseEqual(
-    b.get_bins({bin_size: 10, first_bin: {startunbounded:1, start_percentile:4, start:5}}, get_summary()),
-    [ 
+    b.get_bins({bin_size: 6, first_bin: {startunbounded:1, start_percentile:4, start:5, stop: 10}}, get_summary()),
+    [
       { startunbounded: 1, start: undefined, stop: 10, startinclusive: 1, stopinclusive: 0, label: '<10' },
-      { startinclusive: 1, stopinclusive: 0, start: 10, stop: 20, stopunbounded: 1, label: '≥10' }
+      { startinclusive: 1, stopinclusive: 0, start: 10, stop: 16, label: '10 to <16' },
+      { startinclusive: 1, stopinclusive: 0, start: 16, stop: 20, stopunbounded: 1, label: '≥16' }
     ],
     "should override start_percentile or start with startunbounded"
   )
@@ -194,7 +211,7 @@ tape("get_bins() non-percentile", function (test) {
   )
 
   test.deepLooseEqual(
-    b.get_bins({bin_size: 3, first_bin: {startunbounded: 1}, last_bin: {start:15, stop: 18}}, get_summary()),
+    b.get_bins({bin_size: 3, first_bin: {startunbounded: 1, stop:3}, last_bin: {start:15, stop: 18}}, get_summary()),
     [
       { startunbounded: 1, start: undefined, stop: 3, startinclusive: 1, stopinclusive: 0, label: '<3' },
       { startinclusive: 1, stopinclusive: 0, start: 3, stop: 6, label: '3 to <6' },
