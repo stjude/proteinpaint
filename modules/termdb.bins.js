@@ -62,25 +62,26 @@ summary{}
   
   // required custom_bin parameter
   if (!('bin_size' in cb)) throw 'missing custom_bin.bin_size'
-  if (!isNumeric(cb.bin_size)) throw 'non-numeric custom.bin_size'
-  if (cb.bin_size <= 0) throw 'custom.bin_size must be greater than 0'
+  if (!isNumeric(cb.bin_size)) throw 'non-numeric bin_size'
+  if (cb.bin_size <= 0) throw 'bin_size must be greater than 0'
   
   if (!cb.startinclusive && !cb.stopinclusive) {
     cb.startinclusive = 1
     cb.stopinclusive = 0
   }
 
-  if (typeof cb.first_bin != 'object') throw 'custom_bins.first bin missing or not an object'
+  if (typeof cb.first_bin != 'object') throw 'first bin missing or not an object'
+  
   if (!cb.first_bin.startunbounded 
     && !cb.first_bin.start_percentile
     && !isNumeric(cb.first_bin.start)
-  ) throw 'must set one of custom.first_bin.startunbounded, start_percentile, or start'
+  ) throw 'must set first_bin.start, or start_percentile, or startunbounded + stop'
   
   if (!cb.last_bin || typeof cb.last_bin != 'object') cb.last_bin = {stopunbounded: true}
   if (!cb.last_bin.stopunbounded 
     && !cb.last_bin.stop_percentile
     && !isNumeric(cb.last_bin.stop)
-  ) throw 'must set one of custom.last_bin.stopunbounded, stop_percentile, or stop'
+  ) throw 'must set last_bin.stop, or stop_percentile, or stopunbounded + start'
 
   const orderedLabels = []
   const min = cb.first_bin.startunbounded 

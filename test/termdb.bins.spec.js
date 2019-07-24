@@ -16,7 +16,7 @@ tape("\n", function(test) {
 })
 
 
-tape.only("get_bin_label()", function (test) {
+tape("get_bin_label()", function (test) {
   // test smaller helper functions first since they
   // tend to get used in larger functions and the
   // testing sequence would help isolate the cause(s)
@@ -79,7 +79,7 @@ tape("get_bins() error handling", function (test) {
     b.get_bins({bin_size: 'abc'}, get_summary())
     test.fail(mssg1b)
   } catch(e) {
-    test.equal(e, 'non-numeric custom.bin_size', mssg1b)
+    test.equal(e, 'non-numeric bin_size', mssg1b)
   }
 
   const mssg1c = "should throw on bin_size <= 0"
@@ -87,7 +87,7 @@ tape("get_bins() error handling", function (test) {
     b.get_bins({bin_size: 0}, get_summary())
     test.fail(mssg1c)
   } catch(e) {
-    test.equal(e, 'custom.bin_size must be greater than 0', mssg1c)
+    test.equal(e, 'bin_size must be greater than 0', mssg1c)
   }
 
   const mssg2a = "should throw on missing or non-object first bin"
@@ -95,7 +95,7 @@ tape("get_bins() error handling", function (test) {
     b.get_bins({bin_size: 5}, get_summary())
     test.fail(mssg2)
   } catch(e) {
-    test.equal(e, 'custom_bins.first bin missing or not an object', mssg2a)
+    test.equal(e, 'first bin missing or not an object', mssg2a)
   }
 
   const mssg2b = "should throw if missing all of first_bin.startunbounded, start_percentile, start"
@@ -103,7 +103,7 @@ tape("get_bins() error handling", function (test) {
     b.get_bins({bin_size: 5, first_bin: {}}, get_summary())
     test.fail(mssg2b)
   } catch(e) {
-    test.equal(e, 'must set one of custom.first_bin.startunbounded, start_percentile, or start', mssg2b)
+    test.equal(e, 'must set first_bin.start, or start_percentile, or startunbounded + stop', mssg2b)
   }
 
   const mssg3 = "should throw if setting a last bin that is missing all of stopunbounded, stop_percentile, stop"
@@ -111,7 +111,7 @@ tape("get_bins() error handling", function (test) {
     b.get_bins({bin_size: 5, first_bin: {startunbounded:1}, last_bin: {}}, get_summary())
     test.fail(mssg3)
   } catch(e) {
-    test.equal(e, 'must set one of custom.last_bin.stopunbounded, stop_percentile, or stop', mssg3)
+    test.equal(e, 'must set last_bin.stop, or stop_percentile, or stopunbounded + start', mssg3)
   }
 
   test.end()
@@ -131,14 +131,13 @@ tape("get_bins() unbounded", function (test) {
   )
 
   test.deepLooseEqual(
-    b.get_bins({bin_size: 3, first_bin: {startunbounded:1}}, get_summary()),
-    [ 
-      { startunbounded: 1, start: undefined, stop: 3, startinclusive: 1, stopinclusive: 0, label: '<3' },
-      { startinclusive: 1, stopinclusive: 0, start: 3, stop: 6, label: '3 to <6' },
-      { startinclusive: 1, stopinclusive: 0, start: 6, stop: 9, label: '6 to <9' },
-      { startinclusive: 1, stopinclusive: 0, start: 9, stop: 12, label: '9 to <12' },
-      { startinclusive: 1, stopinclusive: 0, start: 12, stop: 15, label: '12 to <15' },
-      { startinclusive: 1, stopinclusive: 0, start: 15, stop: 18, label: '15 to <18' },
+    b.get_bins({bin_size: 4, first_bin: {startunbounded:1, stop: 2}}, get_summary()),
+    [
+      { startunbounded: 1, start: undefined, stop: 2, startinclusive: 1, stopinclusive: 0, label: '<2' },
+      { startinclusive: 1, stopinclusive: 0, start: 2, stop: 6, label: '2 to <6' },
+      { startinclusive: 1, stopinclusive: 0, start: 6, stop: 10, label: '6 to <10' },
+      { startinclusive: 1, stopinclusive: 0, start: 10, stop: 14, label: '10 to <14' },
+      { startinclusive: 1, stopinclusive: 0, start: 14, stop: 18, label: '14 to <18' },
       { startinclusive: 1, stopinclusive: 0, start: 18, stop: 20, stopunbounded: 1, label: '≥18' }
     ],
     "should default to unbounded firt and last bins, not equally sized bins"
