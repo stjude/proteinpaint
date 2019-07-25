@@ -1,5 +1,5 @@
 const app = require('../app')
-const binsmod = require('./termdb.bins')
+const binsmodule = require('./termdb.bins')
 
 /*
 
@@ -294,8 +294,7 @@ index    0 for term0, 1 for term1, 2 for term2
 	const termq = q[termnum_q]
 	if(termq && typeof termq == 'string' ) q[termnum_q] = JSON.parse(decodeURIComponent(termq))	
 	if (!termq) q[termnum_q] = {}
-	if (index == 2) q[termnum_q].isterm2 = true
-	if (index == 0) q[termnum_q].isterm0 = true
+	q[termnum_q].index = index
 
 	const tablename = 'samplekey_' + index
 
@@ -516,8 +515,8 @@ function makesql_numericBinCTE ( term, q, filter, ds, termindex='' ) {
 decide bins and produce CTE
 
 q{}
-	.custom_bins[]: list of custom bins
-	.isterm2: true
+	.custom_bins[]   list of custom bins
+	.index           0,1,2 corresponding to term*_id           
 filter as is returned by makesql_by_tvsfilter
 returns { sql, tablename, name2bin }
 */
@@ -677,7 +676,7 @@ export function get_bins(q, term, ds) {
 q{}
 	.custom_bins
 	.tvslst
-	.isterm0, isterm2  optional boolean
+	.index           0,1,2 correponding to term*_id
 
 term
 ds 
@@ -685,11 +684,12 @@ ds
 */
 	const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin
 	const binconfig = q.custom_bins ? q.custom_bins 
-		: nb.bins_less && (q.isterm2 || q.isterm0) ? nb.bins_less
+		: nb.bins_less && q.index != 1 ? nb.bins_less
 		: nb.bins
 	if (!binconfig) throw 'unable to determine the binning configuration'
+	q.binconfig = binconfig
 
-  const bins = binsmod.compute_bins(binconfig, (percentiles) => get_numericMinMaxPct(ds, term, q.tvslst, percentiles))
+  const bins = binsmodule.compute_bins(binconfig, (percentiles) => get_numericMinMaxPct(ds, term, q.tvslst, percentiles))
 	if( nb.unannotated ) {
     // in case of using this numeric term as term2 in crosstab, 
     // this object can also work as a bin, to be put into the bins array

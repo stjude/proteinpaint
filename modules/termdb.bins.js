@@ -149,7 +149,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
       bc.error = "max_num_bins_reached"
       break
     }
-  } //console.log(bins)
+  }
+  bc.results = {summary}
   return bins
 }
 

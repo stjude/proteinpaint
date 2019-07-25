@@ -19,15 +19,11 @@ exports.handle_request_closure = ( genomes ) => {
     const q = req.query
     for(const i of [0,1,2]) {
       const termnum_q = 'term' + i + '_q'
-      const term_q = q[termnum_q]
-      if (term_q) {
-        q[termnum_q] = JSON.parse(decodeURIComponent(term_q))
-        q[termnum_q].term_id = q['term' + i + '_id']
+      if (q[termnum_q]) {
+        q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
       }
     }
     app.log(req)
-    if (!q.term0) q.term0 = ''
-    if (!q.term2) q.term2 = ''
     try {
       const genome = genomes[ q.genome ]
       if(!genome) throw 'invalid genome'
@@ -134,6 +130,7 @@ const template = JSON.stringify({
       "__:useColOrder": "=useColOrder()",
       "__:useRowOrder": "=useRowOrder()",
       "__:bins": "=bins()",
+      "__:q": "=q()",
       "__:grade_labels": "=grade_labels()",
       "@done()": "=sortColsRows()"
     },
@@ -157,6 +154,7 @@ function getPj(q, data, tdb, ds) {
       nval: 'nval' + i,
       isGenotype: q['term' + i + '_is_genotype'],
       bins,
+      q: d.q,
       orderedLabels: d.term.iscondition && d.term.grades
         ? d.term.grades
         : d.term.iscondition
@@ -259,11 +257,10 @@ function getPj(q, data, tdb, ds) {
           : undefined
       },
       bins() {
-        return {
-          "0": terms[0].bins,
-          "1": terms[1].bins,
-          "2": terms[2].bins,
-        }
+        return terms.map(d=>d.bins)
+      },
+      q() {
+        return terms.map(d=>d.q)
       },
       useColOrder() {
         return terms[1].orderedLabels.length > 0
@@ -306,7 +303,7 @@ function getTermDetails(q, tdb, index) {
   const unannotatedLabels = nb.unannotated
     ? Object.keys(nb.unannotated).filter(key=>key.startsWith('label') && key != 'label_annotated').map(key=>nb.unannotated[key])
     : []
-  return {term, isAnnoVal, nb, unannotatedValues, unannotatedLabels}
+  return {term, isAnnoVal, nb, unannotatedValues, unannotatedLabels, q: q['term' + index + '_q']}
 }
 
 
