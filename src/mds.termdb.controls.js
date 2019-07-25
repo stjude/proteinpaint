@@ -189,7 +189,7 @@ function setOverlayOpts(plot, main, table, arg) {
   const value_by_params = ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']
   
   //add blue-pill for term2
-  const pill_div = radio.labels.filter((d)=>{ return d.value == 'tree'})
+  const pill_div = d3select(radio.labels.filter((d)=>{ return d.value == 'tree'}).node().parentNode)
     .append('div')
     .style('display','inline-block')
   
@@ -199,8 +199,18 @@ function setOverlayOpts(plot, main, table, arg) {
     mds: plot.obj.mds,
     tip: plot.obj.tip,
     termsetting: {term:plot.term2, q: plot.term2_q},
-    callback: ()=>{
-      main(plot)
+    callback: (term2) => {
+      plot.obj.tip.hide()
+      plot.term2 = term2
+      if (plot.term2.isfloat && plot.term2_boxplot) { 
+        plot.term2_displaymode = 'boxplot'
+      } else {
+        if (plot.term2_displaymode == "boxplot") {
+          plot.term2_displaymode = "stacked"
+        }
+        plot.term2_boxplot = 0
+      }
+      main( plot )
     }
   })
       

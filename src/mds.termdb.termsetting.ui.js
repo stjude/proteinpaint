@@ -214,25 +214,25 @@ export async function display (obj){
                 default_rootterm: true,
                 modifier_click_term:{
                     disable_terms: ( obj.termsetting.term ? new Set([ obj.termsetting.term.id ]) : undefined ),
-                    callback: (t)=>{
+                    callback: (term)=>{
                         obj.tip.hide()
-						obj.termsetting.term = t
+						obj.termsetting.term = term
                         // assign default setting about this term
-						if( t.iscategorical ) {
+						if( term.iscategorical ) {
 							// no need to assign
 							delete obj.termsetting.q
-						} else if( t.iscondition ) {
-							if( t.isleaf ) {
+						} else if( term.iscondition ) {
+							if( term.isleaf ) {
 								obj.termsetting.q = { value_by_max_grade:true, bar_by_grade:true  }
 							} else {
 								obj.termsetting.q = { value_by_max_grade:true, bar_by_children:true }
 							}
-						} else if( t.isfloat || t.isinteger ) {
+						} else if( term.isfloat || term.isinteger ) {
 							// TODO server provides binning scheme to add to it
 						} else {
 							throw 'unknown term type'
 						}
-                        obj.callback()
+                        obj.callback(term)
                         update_ui()
                     }
                 }
