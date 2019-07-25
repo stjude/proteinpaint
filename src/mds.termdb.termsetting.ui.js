@@ -65,7 +65,6 @@ export async function display (obj){
                         obj.termsetting.q = result
                         obj.callback()
                     })
-                    console.log(obj.termsetting)
                 })
 
 		} else if (obj.termsetting.term.iscondition){
@@ -258,72 +257,64 @@ export function make_numeric_bin_btns(tip, term, term_q, callback){
 
     const bin_size_btn = bin_size_div.append('div')
         .attr('class','sja_edit_btn')
-        .on('click', () => {
-            bin_size_menu(bin_edit_tip, custom_bins_q, term_q, update_btn, callback)
-        })
 
     const first_bin_div = bin_edit_div.append('div')
         .html('First Bin')
 
     const first_bin_btn = first_bin_div.append('div')
         .attr('class','sja_edit_btn')
-        .on('click', () => {
-            edit_bin_menu(bin_edit_tip, custom_bins_q, term_q, 'first', update_btn, callback)
-        })
 
     const last_bin_div = bin_edit_div.append('div')
         .html('Last Bin')
 
     const last_bin_btn = last_bin_div.append('div')
         .attr('class','sja_edit_btn')
-        .on('click', () => {
-            edit_bin_menu(bin_edit_tip, custom_bins_q, term_q, 'last', update_btn, callback)
-        })
 
-    let custom_bins_q
+    update_btn(term_q)
 
-    if(term_q && term_q.binconfig){
-        
-        //if bincoinfig defined
-        custom_bins_q = term_q.binconfig
+    function update_btn(term_q_callback){
 
-    }else if(term.graph.barchart.numeric_bin.bins){
-        
-        //if binconfig not defined yet, set it as numeric_bin.bins
-        const bins = term.graph.barchart.numeric_bin.bins
-        custom_bins_q = {
-            bin_size: bins.bin_size,
-            startinclusive: bins.startinclusive,
-            stopinclusive: bins.stopinclusive,
-            first_bin:{
-                stop: bins.first_bin.stop,
-                startunbounded: bins.first_bin.startunbounded,
-                startinclusive: bins.first_bin.startinclusive,
-                stopinclusive: bins.first_bin.stopinclusive
+        let custom_bins_q
+
+        if(term_q_callback && term_q_callback.binconfig){
+            
+            //if bincoinfig initiated by user/by default
+            custom_bins_q = term_q_callback.binconfig
+
+        }else if(term.graph.barchart.numeric_bin.bins){
+            
+            //if binconfig not defined yet or deleted by user, set it as numeric_bin.bins
+            const bins = term.graph.barchart.numeric_bin.bins
+            custom_bins_q = {
+                bin_size: bins.bin_size,
+                startinclusive: bins.startinclusive,
+                stopinclusive: bins.stopinclusive,
+                first_bin:{
+                    stop: bins.first_bin.stop,
+                    startunbounded: bins.first_bin.startunbounded,
+                    startinclusive: bins.first_bin.startinclusive,
+                    stopinclusive: bins.first_bin.stopinclusive
+                }
+            }
+
+            if(bins.first_bin.start) custom_bins_q.first_bin.start = bins.first_bin.start
+            if(bins.last_bin && bins.last_bin.start){
+                custom_bins_q.last_bin = {
+                    start: bins.last_bin.start,
+                    stopunbounded: bins.last_bin.stopunbounded,
+                    startinclusive: bins.last_bin.startinclusive,
+                    stopinclusive: bins.last_bin.stopinclusive
+                }
+            if(bins.last_bin.stop) custom_bins_q.last_bin.stop = bins.last_bin.stop
             }
         }
-
-        if(bins.first_bin.start) custom_bins_q.first_bin.start = bins.first_bin.start
-        if(bins.last_bin && bins.last_bin.start){
-            custom_bins_q.last_bin = {
-                start: bins.last_bin.start,
-                stopunbounded: bins.last_bin.stopunbounded,
-                startinclusive: bins.last_bin.startinclusive,
-                stopinclusive: bins.last_bin.stopinclusive
-            }
-        if(bins.last_bin.stop) custom_bins_q.last_bin.stop = bins.last_bin.stop
-        }
-    }
-
-    update_btn()
-
-    function update_btn(){
-
-        if(term_q && term_q.binconfig) custom_bins_q = term_q.binconfig
 
         const x = '<span style="font-family:Times;font-style:italic">x</span>'
 
         bin_size_btn.text(custom_bins_q.bin_size + ' ' + (term.unit?term.unit:''))
+            .on('click', () => {
+                bin_size_menu(bin_edit_tip, custom_bins_q, term_q_callback, update_btn, callback)
+            })
 
         let first_bin_start, first_bin_stop, last_bin_start, last_bin_stop
 
@@ -370,6 +361,10 @@ export function make_numeric_bin_btns(tip, term, term_q, callback){
             first_bin_btn.text('EDIT')
         }
 
+        first_bin_btn.on('click', () => {
+            edit_bin_menu(bin_edit_tip, custom_bins_q, term_q_callback, 'first', update_btn, callback)
+        })
+
         //update last_bin button
         if(custom_bins_q.last_bin){
             if( isFinite(last_bin_start) &&  isFinite(last_bin_stop)){
@@ -396,15 +391,19 @@ export function make_numeric_bin_btns(tip, term, term_q, callback){
                     ' '+ last_bin_stop +
                     ' '+ (isFinite(custom_bins_q.last_bin.stop_percentile)? 'Percentile' :term.unit?term.unit:'')
                 )
-            }
+            }else last_bin_btn.text('EDIT')
         }else{
             last_bin_btn.text('EDIT')
         }
+
+        last_bin_btn.on('click', () => {
+            edit_bin_menu(bin_edit_tip, custom_bins_q, term_q_callback, 'last', update_btn, callback)
+        })
     }
 }
 
 function bin_size_menu(bin_edit_tip, custom_bins_q, term_q, update_btn, callback){
-  
+
     bin_edit_tip.clear().showunder(d3event.target)
 
     const bin_size_div = bin_edit_tip.d.append('div')
@@ -460,7 +459,7 @@ function bin_size_menu(bin_edit_tip, custom_bins_q, term_q, update_btn, callback
                 delete term_q.binconfig
                 callback(term_q)
                 bin_edit_tip.hide()
-                update_btn()
+                update_btn(term_q)
             })
     }
   
@@ -476,7 +475,7 @@ function bin_size_menu(bin_edit_tip, custom_bins_q, term_q, update_btn, callback
   
         callback(term_q)
         bin_edit_tip.hide()
-        update_btn()
+        update_btn(term_q)
     }
   
 }
@@ -613,7 +612,7 @@ function edit_bin_menu(bin_edit_tip, custom_bins_q, term_q, bin_flag, update_btn
                 delete term_q.binconfig
                 callback(term_q)
                 bin_edit_tip.hide()
-                update_btn()
+                update_btn(term_q)
             })
     }
   
@@ -686,7 +685,7 @@ function edit_bin_menu(bin_edit_tip, custom_bins_q, term_q, bin_flag, update_btn
             }
             callback(term_q)
             bin_edit_tip.hide()
-            update_btn()
+            update_btn(term_q)
         }catch(e){
             window.alert(e)
         }
