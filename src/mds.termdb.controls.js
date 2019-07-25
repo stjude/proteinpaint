@@ -5,7 +5,7 @@ import {
   menuoption_select_group_add_to_cart
 } from './mds.termdb'
 import * as client from './client'
-import {make_numeric_bin_btns} from './mds.termdb.termsetting.ui'
+import {make_numeric_bin_btns, display as termui_display} from './mds.termdb.termsetting.ui'
 
 // used to track controls unique "instances" by plot object
 // to be used to disambiguate between input names
@@ -179,7 +179,7 @@ function setOverlayOpts(plot, main, table, arg) {
     td, 
     [
       {label: 'None', value: 'none'},
-      {label: 'Term', value: 'tree'},
+      {label: '', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
       {label: 'Subconditions', value: 'bar_by_children'},
       {label: 'Grade', value: 'bar_by_grade'}
@@ -187,7 +187,23 @@ function setOverlayOpts(plot, main, table, arg) {
   )
 
   const value_by_params = ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']
-
+  
+  //add blue-pill for term2
+  const pill_div = radio.labels.filter((d)=>{ return d.value == 'tree'})
+    .append('div')
+    .style('display','inline-block')
+  
+  termui_display({
+    holder: pill_div,
+    genome: plot.obj.genome,
+    mds: plot.obj.mds,
+    tip: plot.obj.tip,
+    termsetting: {term:plot.term2, q: plot.term2_q},
+    callback: ()=>{
+      main(plot)
+    }
+  })
+      
   radio.inputs
   .property('checked', d => d.value == plot.settings.bar.overlay)
   .on('input', d => {
@@ -335,12 +351,28 @@ function setDivideByOpts(plot, main, table, arg) {
     td, 
     [
       {label: 'None', value: 'none'},
-      {label: 'Term', value: 'tree'},
+      {label: '', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
       {label: 'Max. grade per person', value: 'max_grade_perperson'},
       {label: 'Most recent grade', value: 'most_recent_grade'}
     ]
   )
+  
+  //add blue-pill for term0
+  const pill_div = radio.labels.filter((d)=>{ return d.value == 'tree'})
+    .append('div')
+    .style('display','inline-block')
+  
+  termui_display({
+    holder: pill_div,
+    genome: plot.obj.genome,
+    mds: plot.obj.mds,
+    tip: plot.obj.tip,
+    termsetting: {term:plot.term0, q: plot.term0_q},
+    callback: ()=>{
+      main(plot)
+    }
+  })
 
   radio.inputs
   .property('checked', d => d.value == plot.settings.bar.divideBy)
