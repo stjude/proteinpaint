@@ -7987,6 +7987,7 @@ function boxplot_getvalue(lst) {
 	const p75=lst[Math.floor(l*3/4)].value
 	const p05 = lst[Math.floor(l*0.05)].value
 	const p95 = lst[Math.floor(l*0.95)].value
+	const p01 = lst[Math.floor(l*0.01)].value
 	const iqr=(p75-p25)*1.5
 
 	let w1, w2

@@ -1,4 +1,5 @@
 const app = require('../app')
+const binsmod = require('./termdb.bins')
 
 /*
 
@@ -29,12 +30,21 @@ get_label4key
 
 
 
-function makesql_by_tvsfilter ( tvslst, ds ) {
+function makesql_by_tvsfilter ( tvslst, ds) {
 /*
 .tvslst[{}]
 	optional
 	each element is a term-value setting object
 	must have already been validated by src/mds.termdb.termvaluesetting.js/validate_termvaluesetting()
+
+_opts{}
+	options for minor tweaks to the generated statement to serve other purposes,
+	such as to help with getting min, max, percentiles for numeric terms 
+	.columnas    "", or set t ", value" to get values
+	.endclause   "GROUP BY sample",
+							 or "ORDER BY value ASC" if columnas == ", value" and getting min, max, percentile
+
+
 returns:
 	.filters:
 		one string of all filter statement intersects, with question marks
@@ -44,7 +54,6 @@ returns:
 		the name of CTE, to be used in task-specific runner
 */
 	if( !tvslst || !tvslst.length) return null
-
 	const filters = []
 	const values = []
 
@@ -512,9 +521,10 @@ q{}
 filter as is returned by makesql_by_tvsfilter
 returns { sql, tablename, name2bin }
 */
-	const [bins, bin_size] = get_bins(q, term, ds)
+	const [bins, bin_size] = get_bins(q, term, ds, termindex)
 	const bin_def_lst = []
 	const name2bin = new Map() // k: name str, v: bin{}
+	let has_percentiles = false
 	let binid = 0
 	for(const b of bins) {
 		if (!('name' in b) && b.label) b.name = b.label
@@ -660,39 +670,38 @@ returns { sql, tablename, name2bin }
 	}
 }
 
-function get_bins(q, term, ds) {
-	let bin_size
-	let bins = []
-	if( q.custom_bins ) {
-		bins = q.custom_bins
-		bin_size = q.custom_bins.size
-	} else {
-		// use automatic bins
-		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
-			if( (q.isterm0 || q.isterm2) && term.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
-				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.crosstab_fixed_bins))
-			} else if ( term.graph.barchart.numeric_bin.fixed_bins ) {
-				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.fixed_bins))
-			} else if( term.graph.barchart.numeric_bin.auto_bins ) {
-				const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
-				let v = term.graph.barchart.numeric_bin.auto_bins.start_value
-				bin_size = term.graph.barchart.numeric_bin.auto_bins.bin_size
-				while( v < max ) {
-					bins.push({
-						start: v,
-						stop: Math.min( v+bin_size, max ),
-						startinclusive:true
-					})
-					v+=bin_size
-				}
-				bins[bins.length-1].stopinclusive = true
-			} else {
-				throw 'no predefined binning scheme'
-			}
-		}
-	}
-	return [bins, bin_size]
+
+export function get_bins(q, term, ds) {
+	const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin
+	const binconfig = q.custom_bins ? q.custom_bins 
+		: nb.bins_less && (q.isterm2 || q.isterm0) ? nb.bins_less
+		: nb.bins;
+	if (!binconfig) throw 'unable to determine binning scheme'
+  const bins = binsmod.get_bins(binconfig, (percentiles) => get_numericMinMaxPct(ds, term, q.tvslst, percentiles))
+	if( nb.unannotated ) {
+    // in case of using this numeric term as term2 in crosstab, 
+    // this object can also work as a bin, to be put into the bins array
+    binconfig.unannotated = {
+      _values: [nb.unannotated.value],
+      _labels: {[nb.unannotated.value]: nb.unannotated.label},
+      label: nb.unannotated.label,
+      label_annotated: nb.unannotated.label_annotated
+    }
+
+    if (nb.unannotated.value_positive) {
+      binconfig.unannotated.value_positive = 0
+      binconfig.unannotated._values.push(nb.unannotated.value_positive)
+      binconfig.unannotated._labels[nb.unannotated.value_positive] = nb.unannotated.label_positive
+    }
+    if (nb.unannotated.value_negative) {
+      binconfig.unannotated.value_negative = 0
+      binconfig.unannotated._values.push(nb.unannotated.value_negative)
+      binconfig.unannotated._labels[nb.unannotated.value_negative] = nb.unannotated.label_negative
+    }
+  }
+  return [bins, binconfig]
 }
+
 
 
 export function get_numericsummary (q, term, ds, _tvslst = [], withValues = false ) {
@@ -752,6 +761,86 @@ at a numeric barchart
   stat.max = result[result.length - 1].value
   if (withValues) stat.values = result.map(i => i.value)
 	return stat
+}
+
+
+export function get_numericMinMaxPct (ds, term, tvslst = [], percentiles = []) {
+/* 
+	similar arguments to get_numericSummary()
+	but min, max, percentile is calculated by sqlite db
+	to lessen the burden on node server
+*/
+	const filter = makesql_by_tvsfilter( tvslst, ds )
+	const values = []
+	if(filter) {
+		values.push(...filter.values)
+	}
+	let excludevalues
+	if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
+		if (term.graph.barchart.numeric_bin.unannotated) {
+			excludevalues = []
+			const u = term.graph.barchart.numeric_bin.unannotated
+			if(u.value!=undefined) excludevalues.push(u.value)
+			if(u.value_positive!=undefined) excludevalues.push(u.value_positive)
+			if(u.value_negative!=undefined) excludevalues.push(u.value_negative)
+		}
+	}
+
+	const ctes = []
+	const cols = []
+	let tablename, i=0
+	for(const n of percentiles) {
+		tablename = 'pct_' + n
+		ctes.push(`${tablename} AS (
+			nth1 AS (
+			  SELECT value
+			  FROM vals
+			  LIMIT 1
+			  OFFSET (
+			    SELECT cast ( x as int ) - ( x < cast ( x as int ))
+			    FROM (
+			      SELECT cast(?*pct as int) as x 
+			      FROM p
+			    )
+			  )
+			) 
+		)`)
+		values.push(n)
+		const pname = 'p' + i
+		cols.push(`${tablename}.value AS ${pname}`)
+	} 
+
+	const string = `WITH
+		${filter ? filter.filters+', ' : ''} 
+		vals AS (
+			SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
+			FROM annotations
+			WHERE
+			${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
+			term_id=?
+			${excludevalues ? 'AND value NOT IN ('+excludevalues.join(',')+')' : ''}
+			ORDER BY value ASC
+		),
+		p AS (
+			SELECT count(value)/100 as pct
+			FROM vals
+		)
+		${ ctes.length ? ',\n' + ctes.join(",") : '' }
+		SELECT 
+			min(value) as vmin,
+			max(value) as vmax
+			${ cols.length ? ',\n' + cols.join(",") : '' } 
+		FROM vals`
+
+	values.push( term.id )
+
+	const s = ds.cohort.db.connection.prepare(string)
+	const result = s.all( values );
+	
+	const summary = !result.length ? {} : result[0]
+	summary.max = result[0].vmax
+	summary.min = result[0].vmin
+	return summary
 }
 
 

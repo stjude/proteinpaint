@@ -3,121 +3,102 @@ const binLabelFormatter = d3format.format('.3r')
 
 
 
-function set_term_bins(q, ds) {
-/*
-  Wrapper function to set numeric bins for terms
-*/
-
-  let bin_size
-  let bins = []
-  if( q.custom_bins ) {
-    // work in progress 
-    const term = ds.cohort.termdb.q.termjsonByOneid( q.term_id )
-    const summary = termdbsql.get_numericsummary(q, term, ds, [], true)
-    q.custom_bins = get_bins(q.custom_bins, summary)
-  } else if (term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
-    // work in progress - should use get_bins()
-    /*
-    const nb = term.graph.barchart.numeric_bin
-    if( (q.isterm0 || q.isterm2) && nb.bins_less ) {
-      bins = JSON.parse(JSON.stringify(nb.bins_less))
-    } else if ( nb.fixed_bins ) {
-      bins = JSON.parse(JSON.stringify(nb.fixed_bins))
-    } else if( nb.auto_bins ) {
-      const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
-      let v = nb.auto_bins.start_value
-      bin_size = nb.bin_size
-      while( v < max ) {
-        bins.push({
-          start: v,
-          stop: Math.min( v+bin_size, max ),
-          startinclusive:true
-        })
-        v+=bin_size
-      }
-      bins[bins.length-1].stopinclusive = true
-    } else {
-      throw 'no predefined binning scheme'
-    }*/
+function validate_bins(binconfig) {
+  const bc = binconfig
+  if (!bc || typeof bc !== "object" ) throw 'bin schema must be an object'
+  
+  // required custom_bin parameter
+  if (!('bin_size' in bc)) throw 'missing custom_bin.bin_size'
+  if (!isNumeric(bc.bin_size)) throw 'non-numeric bin_size'
+  if (bc.bin_size <= 0) throw 'bin_size must be greater than 0'
+  
+  if (!bc.startinclusive && !bc.stopinclusive) {
+    bc.startinclusive = 1
+    bc.stopinclusive = 0
   }
+
+  if (!bc.first_bin) throw 'first_bin missing'
+  if (typeof bc.first_bin != 'object') throw 'first_bin is not an object'
+  if (!Object.keys(bc.first_bin).length) throw 'first_bin is an empty object'
+
+  if ((bc.first_bin.startunbounded && !isNumeric(bc.first_bin.stop_percentile) && !isNumeric(bc.first_bin.stop))
+    && !bc.first_bin.start_percentile
+    && !isNumeric(bc.first_bin.start)
+  ) throw 'must set first_bin.start, or start_percentile, or startunbounded + stop'
+  
+  if (!bc.last_bin || typeof bc.last_bin != 'object') bc.last_bin = {}
+  if ((bc.last_bin.stopunbounded && !isNumeric(bc.last_bin.start_percentile) && !isNumeric(bc.last_bin.start))
+    && !bc.last_bin.stop_percentile
+    && !isNumeric(bc.last_bin.stop)
+  ) throw 'must set last_bin.stop, or stop_percentile, or stopunbounded + start'
 }
 
-exports.set_term_bins = set_term_bins
+exports.validate_bins = validate_bins
 
 
-function get_bins(cb, summary) {
+
+
+function get_bins(binconfig, summaryfxn) {
 /*
-    Generic bins generator
+  Bins generator
 
-cb    configuration of bins per the Numerical Binning Scheme
-https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit#heading=h.arwagpbhlgr3
+binconfig   
+  configuration of bins per the Numerical Binning Scheme
+  https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit#heading=h.arwagpbhlgr3
+  
+  .term_id optional if using percentiles
+  .tvslst optional if using percentiles
 
 summary{}
   .min
   .max
   .values needed for percentiles
 */
-  if (!cb || typeof cb !== "object" ) throw 'bin schema must be an object'
-  if (!summary) throw 'must provide summary to get_bins'
-  
-  // required custom_bin parameter
-  if (!('bin_size' in cb)) throw 'missing custom_bin.bin_size'
-  if (!isNumeric(cb.bin_size)) throw 'non-numeric bin_size'
-  if (cb.bin_size <= 0) throw 'bin_size must be greater than 0'
-  
-  if (!cb.startinclusive && !cb.stopinclusive) {
-    cb.startinclusive = 1
-    cb.stopinclusive = 0
-  }
-
-  if (!cb.first_bin) throw 'first_bin missing'
-  if (typeof cb.first_bin != 'object') throw 'first_bin is not an object'
-  if (!Object.keys(cb.first_bin).length) throw 'first_bin is an empty object'
-
-  if ((cb.first_bin.startunbounded && !isNumeric(cb.first_bin.stop_percentile) && !isNumeric(cb.first_bin.stop))
-    && !cb.first_bin.start_percentile
-    && !isNumeric(cb.first_bin.start)
-  ) throw 'must set first_bin.start, or start_percentile, or startunbounded + stop'
-  
-  if (!cb.last_bin || typeof cb.last_bin != 'object') cb.last_bin = {}
-  if ((cb.last_bin.stopunbounded && !isNumeric(cb.last_bin.start_percentile) && !isNumeric(cb.last_bin.start))
-    && !cb.last_bin.stop_percentile
-    && !isNumeric(cb.last_bin.stop)
-  ) throw 'must set last_bin.stop, or stop_percentile, or stopunbounded + start'
+  const bc = binconfig
+  validate_bins(bc)
+  //if (!summary) throw 'must provide summary to get_bins'
+  const percentiles = get_percentiles(bc)
+  const summary = summaryfxn(percentiles)
 
   const orderedLabels = []
-  const min = cb.first_bin.startunbounded 
-    ? summary.min 
-    : cb.first_bin.start_percentile
-    ? summary.values[ Math.floor((cb.first_bin.start_percentile / 100) * summary.values.length) ]
-    : cb.first_bin.start
-  const max = cb.last_bin.stopunbounded 
+  const min = bc.first_bin.startunbounded 
+    ? summary.min  
+    : bc.first_bin.start_percentile
+    ? summary['p' + bc.first_bin.start_percentile]
+    : bc.first_bin.start
+  const max = bc.last_bin.stopunbounded 
     ? summary.max
-    : cb.last_bin.stop_percentile
-    ? summary.values[ Math.floor((cb.last_bin.stop_percentile / 100) * summary.values.length) ]
-    : cb.last_bin.stop <= summary.max
-    ? cb.last_bin.stop
+    : bc.last_bin.stop_percentile
+    ? summary['p' + bc.last_bin.stop_percentile]
+    : bc.last_bin.stop <= summary.max
+    ? bc.last_bin.stop
     : summary.max
-  const last_start = isNumeric(cb.last_bin.start_percentile)
-    ? summary.values[ Math.floor((cb.last_bin.start_percentile / 100) * summary.values.length) ]
-    : isNumeric(cb.last_bin.start)
-    ? cb.last_bin.start
+  const last_start = isNumeric(bc.last_bin.start_percentile)
+    ? summary['p' + bc.last_bin.start_percentile]
+    : isNumeric(bc.last_bin.start)
+    ? bc.last_bin.start
     : null
-  const last_stop = cb.last_bin.stopunbounded
+  const last_stop = bc.last_bin.stopunbounded
     ? null 
-    : summary.values[ Math.floor((cb.last_bin.stop_percentile / 100) * summary.values.length) ]
-    ? cb.last_bin.stop_percentile
-    : isNumeric(cb.last_bin.stop)
-    ? cb.last_bin.stop
+    : bc.last_bin.stop_percentile
+    ? summary['p' + bc.last_bin.stop_percentile]
+    : isNumeric(bc.last_bin.stop)
+    ? bc.last_bin.stop
     : null
 
   const bins = [{
-    startunbounded: cb.first_bin.startunbounded,
-    start: cb.first_bin.startunbounded ? undefined : min,
-    stop: isNumeric(cb.first_bin.stop) ? cb.first_bin.stop : min + cb.bin_size,
-    startinclusive: cb.startinclusive,
-    stopinclusive: cb.stopinclusive
+    startunbounded: bc.first_bin.startunbounded,
+    start: bc.first_bin.startunbounded ? undefined : min,
+    stop: isNumeric(bc.first_bin.stop_percentile) 
+      ? summary['p' + bc.first_bin.stop_percentile]
+      : isNumeric(bc.first_bin.stop) 
+      ? bc.first_bin.stop 
+      : min + bc.bin_size,
+    startinclusive: bc.startinclusive,
+    stopinclusive: bc.stopinclusive
   }]
+
+  if (!isNumeric(bins[0].stop)) throw "the computed first_bin.stop is non-numeric"
   
   let currBin = bins[0]
   while( currBin.stop <= max ) {
@@ -127,14 +108,14 @@ summary{}
       if (last_stop === null) currBin.stopunbounded = 1
       else currBin.stopinclusive = 1
     }
-    currBin.label = get_bin_label(currBin, cb)
+    currBin.label = get_bin_label(currBin, bc)
     if (currBin.start >= currBin.stop) break
     if (currBin.stop >= max || bins.length > 50) break
 
-    const upper = currBin.stop + cb.bin_size;
+    const upper = currBin.stop + bc.bin_size;
     const bin = {
-      startinclusive: cb.startinclusive,
-      stopinclusive: cb.stopinclusive,
+      startinclusive: bc.startinclusive,
+      stopinclusive: bc.stopinclusive,
       start: currBin.stop,
       stop: upper >= max ? max : upper,
     }
@@ -147,11 +128,15 @@ summary{}
 
 exports.get_bins = get_bins
 
-function get_bin_label(bin, cb) {
+
+
+
+function get_bin_label(bin, binconfig) {
 /*
   Generate a numeric bin label given a bin configuration
 
 */
+  const bc = binconfig
   if (bin.startunbounded) {
     const oper = bin.stopinclusive ? "\u2264" : "<"
     const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
@@ -160,21 +145,21 @@ function get_bin_label(bin, cb) {
     const oper = bin.startinclusive ? "\u2265" : ">"
     const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
     return oper + v0
-  } else if( Number.isInteger( cb.bin_size )) {
+  } else if( Number.isInteger( bc.bin_size )) {
     // bin size is integer, make nicer label
-    if( cb.bin_size == 1 ) {
+    if( bc.bin_size == 1 ) {
       // bin size is 1; use just start value as label, not a range
       return bin.start //binLabelFormatter(start)
     } else {
-      const oper0 = cb.startinclusive ? "" : ">"
-      const oper1 = cb.stopinclusive ? "" : "<"
+      const oper0 = bc.startinclusive ? "" : ">"
+      const oper1 = bc.stopinclusive ? "" : "<"
       const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
       const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
       return oper0 + v0 +' to '+ oper1 + v1
     }
   } else {
-    const oper0 = cb.startinclusive ? "" : ">"
-    const oper1 = cb.stopinclusive ? "" : "<"
+    const oper0 = bc.startinclusive ? "" : ">"
+    const oper1 = bc.stopinclusive ? "" : "<"
     const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
     const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
     return oper0 + v0 +' to '+ oper1 + v1
@@ -182,6 +167,23 @@ function get_bin_label(bin, cb) {
 }
 
 exports.get_bin_label = get_bin_label
+
+
+
+function get_percentiles(binconfig) {
+  const percentiles = []
+  const f = binconfig.first_bin
+  if (f && isNumeric(f.start_percentile)) percentiles.push(f.start_percentile)
+  if (f && isNumeric(f.stop_percentile)) percentiles.push(f.stop_percentile)
+  const l = binconfig.last_bin
+  if (l && isNumeric(l.start_percentile)) percentiles.push(l.start_percentile)
+  if (l && isNumeric(l.stop_percentile)) percentiles.push(l.stop_percentile)
+  return percentiles
+}
+
+exports.get_percentiles = get_percentiles
+
+
 
 function isNumeric(n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
