@@ -202,7 +202,7 @@ function setOverlayOpts(plot, main, table, arg) {
     callback: (term2) => {
       plot.obj.tip.hide()
       plot.term2 = term2
-      if (plot.term2.isfloat && plot.term2_boxplot) { 
+      if (plot.term2 && plot.term2.isfloat && plot.term2_boxplot) { 
         plot.term2_displaymode = 'boxplot'
       } else {
         if (plot.term2_displaymode == "boxplot") {
@@ -210,7 +210,7 @@ function setOverlayOpts(plot, main, table, arg) {
         }
         plot.term2_boxplot = 0
       }
-      main( plot )
+      // main( plot ) //update plot only if radio selected
     }
   })
       
@@ -218,29 +218,16 @@ function setOverlayOpts(plot, main, table, arg) {
   .property('checked', d => d.value == plot.settings.bar.overlay)
   .on('input', d => {
     d3event.stopPropagation()
+    const term2_selected = plot.term2
     plot.settings.bar.overlay = d.value
     if (d.value == "none") {
       plot.term2 = undefined
       plot.term2_displaymode = 'stacked'
       main(plot)
+      plot.term2 = term2_selected
     } else if (d.value == "tree") {
-  	  plot.obj.showtree4selectterm(
-  	  	[arg.term.id, plot.term2 ? plot.term2.id : null],
-  		  tr.node(),
-        (term2) => {
-  	      plot.obj.tip.hide()
-          plot.term2 = term2
-          if (plot.term2.isfloat && plot.term2_boxplot) { 
-            plot.term2_displaymode = 'boxplot'
-          } else {
-            if (plot.term2_displaymode == "boxplot") {
-              plot.term2_displaymode = "stacked"
-            }
-            plot.term2_boxplot = 0
-          }
-          main( plot )
-        }
-  	  )
+      plot.term2 = term2_selected
+      main( plot )
     } else if (d.value == "genotype") {
       // to-do
       console.log('genotype overlay to be handled from term tree portal', d, d3event.target)
@@ -369,7 +356,7 @@ function setDivideByOpts(plot, main, table, arg) {
   )
   
   //add blue-pill for term0
-  const pill_div = radio.labels.filter((d)=>{ return d.value == 'tree'})
+  const pill_div = d3select(radio.labels.filter((d)=>{ return d.value == 'tree'}).node().parentNode)
     .append('div')
     .style('display','inline-block')
   
@@ -379,8 +366,10 @@ function setDivideByOpts(plot, main, table, arg) {
     mds: plot.obj.mds,
     tip: plot.obj.tip,
     termsetting: {term:plot.term0, q: plot.term0_q},
-    callback: ()=>{
-      main(plot)
+    callback: (term0) => {
+      plot.obj.tip.hide()
+      plot.term0 = term0
+      // main( plot ) //update plot only if radio selected
     }
   })
 
@@ -388,21 +377,16 @@ function setDivideByOpts(plot, main, table, arg) {
   .property('checked', d => d.value == plot.settings.bar.divideBy)
   .on('input', d => {
     d3event.stopPropagation()
+    const term0_selected = plot.term0
     plot.settings.bar.divideBy = d.value
     if (d.value == "none") {
       plot.term0 = undefined
       //plot.term2_displaymode = 'stacked'
       main(plot)
+      plot.term0 = term0_selected
     } else if (d.value == "tree") {
-  	  plot.obj.showtree4selectterm(
-  	    [arg.term.id, plot.term2 ? plot.term2.id : null],
-  		  tr.node(),
-        (term0)=>{
-  	      plot.obj.tip.hide()
-          plot.term0 = term0
-          main(plot)
-        }
-      )
+      plot.term0 = term0_selected
+      main(plot)
     } else if (d.value == "genotype") {
       // to-do
     }
@@ -532,7 +516,7 @@ function setBinOpts(plot, main, table, termNum, label) {
     .html('EDIT')
     .on('click',()=>{
       // click to show ui and customize binning
-      make_numeric_bin_btns(plot.tip, plot.term, (result)=>{
+      make_numeric_bin_btns(plot.tip, plot.term, plot.term1_q, (result)=>{
         if (result !== plot.term.q) {
           for(const key in plot.term.q) delete plot.term.q[key]
           Object.assign(plot.term.q, result)

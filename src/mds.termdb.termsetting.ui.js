@@ -243,7 +243,7 @@ export async function display (obj){
 
 }
 
-export function make_numeric_bin_btns(tip, term, callback){
+export function make_numeric_bin_btns(tip, term, term_q, callback){
     
     tip.clear().showunder(d3event.target)
 
@@ -270,7 +270,7 @@ export function make_numeric_bin_btns(tip, term, callback){
     const last_bin_btn = last_bin_div.append('div')
         .attr('class','sja_edit_btn')
 
-    update_btn(term.q)
+    update_btn(term_q)
 
     function update_btn(term_q_callback){
 
