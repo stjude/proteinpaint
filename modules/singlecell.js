@@ -144,9 +144,9 @@ may attach coloring scheme to result{} for returning to client
 			ge.file = file
 		}
 		if(!Number.isInteger( ge.barcodecolumnidx )) throw 'gene_expression.barcodecolumnidx missing'
-		if(!ge.chr) throw 'gene_expression.chr missing'
-		if(!ge.start) throw 'gene_expression.start missing'
-		if(!ge.stop)  throw 'gene_expression.stop missing'
+		//if(!ge.chr) throw 'gene_expression.chr missing'
+		//if(!ge.start) throw 'gene_expression.start missing'
+		//if(!ge.stop)  throw 'gene_expression.stop missing'
 		if(!ge.genename) throw 'gene_expression.genename missing'
 		if(ge.autoscale) {
 			if(!ge.color_min) throw 'gene_expression.color_min missing at autoscale'
@@ -155,7 +155,6 @@ may attach coloring scheme to result{} for returning to client
 			throw 'gene_expression: unknown scaling method'
 		}
 
-		const coord = (ge.nochr ? ge.chr.replace('chr','') : ge.chr)+':'+ge.start+'-'+ge.stop
 		const cell2value = new Map()
 		cell2color_byexp = new Map()
 
@@ -166,19 +165,27 @@ may attach coloring scheme to result{} for returning to client
 		result.numbercellwithgeneexp = 0
 		result.numbercelltotal = 0
 
-		await utils.get_lines_tabix( [ge.file,coord], null, line=>{
-			const j = JSON.parse( line.split('\t')[3] )
-			if(j.gene.toLowerCase() != ge.genename.toLowerCase()) return
-			if(!Number.isFinite( j.value )) return
-			result.numbercellwithgeneexp++
+		for(const r of ge.regions_quickfix) {
+			// use whichever region that can get data
+			const coord = (ge.nochr ? r.chr.replace('chr','') : r.chr)+':'+r.start+'-'+r.stop
+			await utils.get_lines_tabix( [ge.file,coord], null, line=>{
+				const j = JSON.parse( line.split('\t')[3] )
+				if(j.gene.toLowerCase() != ge.genename.toLowerCase()) return
+				if(!Number.isFinite( j.value )) return
+				result.numbercellwithgeneexp++
 
-			if( ge.autoscale ) {
-				minexpvalue = Math.min( minexpvalue, j.value )
-				maxexpvalue = Math.max( maxexpvalue, j.value )
+				if( ge.autoscale ) {
+					minexpvalue = Math.min( minexpvalue, j.value )
+					maxexpvalue = Math.max( maxexpvalue, j.value )
+				}
+
+				cell2value.set( j.sample, j.value )
+			})
+			if(result.numbercellwithgeneexp) {
+				// got data for this region
+				break
 			}
-
-			cell2value.set( j.sample, j.value )
-		})
+		}
 
 		// record scaling to return to client
 		if( ge.autoscale ) {

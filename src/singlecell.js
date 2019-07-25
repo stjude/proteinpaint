@@ -141,6 +141,7 @@ or selected a gene for overlaying
 			chr: gene.chr,
 			start: gene.start,
 			stop: gene.stop,
+			regions_quickfix: gene.regions_quickfix,
 			autoscale: true,
 			genename: gene.gene, 
 			color_min: obj.gene_expression.color_min,
@@ -604,11 +605,13 @@ function make_menu ( obj ) {
 							if(!obj.gene_expression.genes) obj.gene_expression.genes = []
 							const geneidx = obj.gene_expression.genes.findIndex( i=> i.gene == genename )
 							if( geneidx == -1 ) {
+								// add new gene
 								obj.gene_expression.genes.push({
 									gene: genename,
 									chr: gm.chr,
 									start: gm.start,
-									stop: gm.stop
+									stop: gm.stop,
+									regions_quickfix: client.gmlst2loci( gmlst )
 								})
 								obj.use_gene_index = obj.gene_expression.genes.length - 1
 							} else {
