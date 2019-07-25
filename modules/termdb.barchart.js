@@ -416,21 +416,13 @@ function get_numeric_bin_name (q, key, term, ds, termnum, custom_bins, inReq ) {
     }
 
     for(const b of bins) {
-      if( b.startunbound ) {
-        if( b.stopinclusive && v <= b.stop  ) {
-          return b.label
-        }
-        if( !b.stopinclusive && v < b.stop ) {
-          return b.label
-        }
+      if( b.startunbounded ) {
+        if( v < b.stop  ) return b.label
+        if( b.stopinclusive && v == b.stop ) return b.label
       }
-      if( b.stopunbound ) {
-        if( b.startinclusive && v >= b.start  ) {
-          return b.label
-        }
-        if( !b.stopinclusive && v > b.start ) {
-          return b.label
-        }
+      if( b.stopunbounded ) {
+        if( v > b.start  ) return b.label
+        if( b.stopinclusive && v == b.start ) return b.label
       }
       if( b.startinclusive  && v <  b.start ) continue
       if( !b.startinclusive && v <= b.start ) continue

@@ -38,10 +38,10 @@ exports.validate_bins = validate_bins
 
 
 
-function get_bins(binconfig, summaryfxn) {
+function compute_bins(binconfig, summaryfxn) {
 /*
   Bins generator
-
+  
 binconfig   
   configuration of bins per the Numerical Binning Scheme
   https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit#heading=h.arwagpbhlgr3
@@ -49,35 +49,47 @@ binconfig
   .term_id optional if using percentiles
   .tvslst optional if using percentiles
 
-summary{}
-  .min
-  .max
-  .values needed for percentiles
+
+summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
+  - required function
+
+  - must accept an array of desired percentile values
+  and returns an object of computed properties
+  {
+    min: minimum value
+    max: maximum value
+    pX: percentile at X value, so p10 will be 10th percentile value
+    pY: .. corresponding to the desired percentile values 
+  }
 */
   const bc = binconfig
   validate_bins(bc)
-  //if (!summary) throw 'must provide summary to get_bins'
+
+  if (typeof summaryfxn != "function") throw "summaryfxn required for modules/termdb.bins.js get_bins()"
   const percentiles = get_percentiles(bc)
   const summary = summaryfxn(percentiles)
+  if (!summary || typeof summary !== 'object') throw "invalid returned value by summaryfxn"
 
   const orderedLabels = []
-  const min = bc.first_bin.startunbounded 
+  const min = bc.first_bin.startunbounded
     ? summary.min  
     : bc.first_bin.start_percentile
     ? summary['p' + bc.first_bin.start_percentile]
     : bc.first_bin.start
-  const max = bc.last_bin.stopunbounded 
+  const max = bc.last_bin.stopunbounded
     ? summary.max
     : bc.last_bin.stop_percentile
     ? summary['p' + bc.last_bin.stop_percentile]
-    : bc.last_bin.stop <= summary.max
+    : isNumeric(bc.last_bin.stop) && bc.last_bin.stop <= summary.max
     ? bc.last_bin.stop
     : summary.max
+  const numericMax = isNumeric(max)
   const last_start = isNumeric(bc.last_bin.start_percentile)
     ? summary['p' + bc.last_bin.start_percentile]
     : isNumeric(bc.last_bin.start)
     ? bc.last_bin.start
-    : null
+    : undefined
+  const numericLastStart = isNumeric(last_start)
   const last_stop = bc.last_bin.stopunbounded
     ? null 
     : bc.last_bin.stop_percentile
@@ -85,8 +97,12 @@ summary{}
     : isNumeric(bc.last_bin.stop)
     ? bc.last_bin.stop
     : null
+  const numericLastStop = isNumeric(last_stop)
 
-  const bins = [{
+  if (!numericMax && !numericLastStart) throw "unable to compute the last bin start or stop"
+
+  const bins = []
+  let currBin = {
     startunbounded: bc.first_bin.startunbounded,
     start: bc.first_bin.startunbounded ? undefined : min,
     stop: isNumeric(bc.first_bin.stop_percentile) 
@@ -96,37 +112,53 @@ summary{}
       : min + bc.bin_size,
     startinclusive: bc.startinclusive,
     stopinclusive: bc.stopinclusive
-  }]
-
-  if (!isNumeric(bins[0].stop)) throw "the computed first_bin.stop is non-numeric"
+  }
   
-  let currBin = bins[0]
-  while( currBin.stop <= max ) {
-    if (last_start !== null && currBin.start < last_start && currBin.stop > last_start) {
-      currBin.stop = last_start
-    } else if (currBin.stop >= summary.max) {
-      if (last_stop === null) currBin.stopunbounded = 1
-      else currBin.stopinclusive = 1
-    }
+  if (!isNumeric(currBin.stop)) throw "the computed first_bin.stop is non-numeric"
+  const maxNumBins = 50 // harcoded limit for now to not stress sqlite
+
+  while( (numericMax && currBin.stop <= max)
+    || currBin.stopunbounded
+   //&& (!bins.length || (numericLastStart && currBin.start <= last_start) || currBin.start < currBin.stop)
+  ) { 
     currBin.label = get_bin_label(currBin, bc)
-    if (currBin.start >= currBin.stop) break
-    if (currBin.stop >= max || bins.length > 50) break
+    bins.push( currBin )
+    if (currBin.stopunbounded || currBin.stop >= max) break
 
     const upper = currBin.stop + bc.bin_size;
-    const bin = {
+    const previousStop = currBin.stop
+    currBin = {
       startinclusive: bc.startinclusive,
       stopinclusive: bc.stopinclusive,
-      start: currBin.stop,
-      stop: upper >= max ? max : upper,
+      start: previousStop,
+      stop: numericLastStop && (previousStop == last_start || upper > last_stop)
+        ? last_stop 
+        : numericLastStart && upper > last_start && previousStop != last_start
+        ? last_start
+        : upper
     }
-    bins.push( bin )
-    currBin = bin
-  }
 
+    if (currBin.stop >= max) {
+      currBin.stop = max
+      if (bc.last_bin.stopunbounded) currBin.stopunbounded = 1
+      if (bc.last_bin.stopinclusive) currBin.stopinclusive = 1
+    }
+    if (numericLastStart && currBin.start == last_start) {
+      currBin.stopunbounded = true
+    }
+    if (currBin.start > currBin.stop) {
+      if (numericLastStart && currBin.stop == last_start && bc.last_bin.stopunbounded) currBin.stopunbounded = true
+      else break
+    }
+    if (bins.length + 1 >= maxNumBins) {
+      bins[bins.length - 1].error = "max_num_bins_reached"
+      break
+    }
+  }
   return bins
 }
 
-exports.get_bins = get_bins
+exports.compute_bins = compute_bins
 
 
 

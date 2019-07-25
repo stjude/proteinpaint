@@ -672,12 +672,24 @@ returns { sql, tablename, name2bin }
 
 
 export function get_bins(q, term, ds) {
+/*
+
+q{}
+	.custom_bins
+	.tvslst
+	.isterm0, isterm2  optional boolean
+
+term
+ds 
+
+*/
 	const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin
 	const binconfig = q.custom_bins ? q.custom_bins 
 		: nb.bins_less && (q.isterm2 || q.isterm0) ? nb.bins_less
-		: nb.bins;
-	if (!binconfig) throw 'unable to determine binning scheme'
-  const bins = binsmod.get_bins(binconfig, (percentiles) => get_numericMinMaxPct(ds, term, q.tvslst, percentiles))
+		: nb.bins
+	if (!binconfig) throw 'unable to determine the binning configuration'
+
+  const bins = binsmod.compute_bins(binconfig, (percentiles) => get_numericMinMaxPct(ds, term, q.tvslst, percentiles))
 	if( nb.unannotated ) {
     // in case of using this numeric term as term2 in crosstab, 
     // this object can also work as a bin, to be put into the bins array
@@ -767,8 +779,18 @@ at a numeric barchart
 export function get_numericMinMaxPct (ds, term, tvslst = [], percentiles = []) {
 /* 
 	similar arguments to get_numericSummary()
-	but min, max, percentile is calculated by sqlite db
-	to lessen the burden on node server
+	but min, max, percentilex are calculated by sqlite db
+	to lessen the burden on the node server 
+	(individual values are not returned in this query)
+
+	percentiles[]
+		array of desired percentile values [X, Y, ...]
+
+	returns {min, max, pX, pY, ...} 
+	where 
+		pX is the value at the Xth percentile,
+		pY is the value at the Yth percentile,
+		and so on ...
 */
 	const filter = makesql_by_tvsfilter( tvslst, ds )
 	const values = []
@@ -810,7 +832,7 @@ export function get_numericMinMaxPct (ds, term, tvslst = [], percentiles = []) {
 		cols.push(`${tablename}.value AS ${pname}`)
 	} 
 
-	const string = `WITH
+	const sql = `WITH
 		${filter ? filter.filters+', ' : ''} 
 		vals AS (
 			SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
@@ -834,7 +856,7 @@ export function get_numericMinMaxPct (ds, term, tvslst = [], percentiles = []) {
 
 	values.push( term.id )
 
-	const s = ds.cohort.db.connection.prepare(string)
+	const s = ds.cohort.db.connection.prepare(sql);
 	const result = s.all( values );
 	
 	const summary = !result.length ? {} : result[0]
