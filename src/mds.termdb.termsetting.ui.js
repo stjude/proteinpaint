@@ -243,7 +243,7 @@ export async function display (obj){
 
 }
 
-export function make_numeric_bin_btns(tip, term, term_q, callback){
+export function make_numeric_bin_btns(tip, term, callback){
     
     tip.clear().showunder(d3event.target)
 
@@ -270,7 +270,7 @@ export function make_numeric_bin_btns(tip, term, term_q, callback){
     const last_bin_btn = last_bin_div.append('div')
         .attr('class','sja_edit_btn')
 
-    update_btn(term_q)
+    update_btn(term.q)
 
     function update_btn(term_q_callback){
 
@@ -472,7 +472,7 @@ function bin_size_menu(bin_edit_tip, custom_bins_q, term_q, update_btn, callback
         if(bin_size_input.node().value) term_q.binconfig.bin_size = parseFloat(bin_size_input.node().value)
         term_q.binconfig.startinclusive = (include_select.node().value == 'startinclusive')
         term_q.binconfig.stopinclusive = (include_select.node().value == 'stopinclusive')
-  
+
         callback(term_q)
         bin_edit_tip.hide()
         update_btn(term_q)

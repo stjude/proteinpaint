@@ -314,7 +314,7 @@ tape("numerical term1", function (test) {
     {
       term1: 'agedx',
       term1_q: {
-        custom_bins: {
+        binconfig: {
           bin_size: 5,
           first_bin: {
             start: 0,

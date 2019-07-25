@@ -39,21 +39,19 @@ arg: server returned data
     tip: new client.Menu({padding:'18px'}),
     
     // data
+    term0: arg.term0 ? arg.term0 : null,
     term: arg.term,
     term2: arg.term2 
       ? arg.term2 
       : arg.obj.modifier_ssid_barchart
       ? {mname: arg.obj.modifier_ssid_barchart.mutation_name}
-      : null, 
+      : null,
     items: arg.items,
     boxplot: arg.boxplot,
 
     term0_q: {},
-    term1_q: {bar_by_grade: 1, value_by_max_grade: 1},
+    term1_q: {},
     term2_q: {},
-
-    // will switch these over
-    custom_bins: {},
 
     // may need to put the following properties under
     // a namespace or within the affected module
@@ -63,7 +61,6 @@ arg: server returned data
 
     unannotated: arg.unannotated ? arg.unannotated : '',
     
-
     // namespaced configuration settings to indicate
     // the scope affected by a setting key-value
     settings: {
@@ -129,8 +126,17 @@ arg: server returned data
 const serverData = {}
 
 function main(plot, callback = ()=>{}) {
+  // create an alternative reference 
+  // to plot.[term0,term,term2] and term*_q parameters
+  // for convenience and namespacing related variables
+  plot.terms = [plot.term0, plot.term, plot.term2]
+  if (plot.terms[0]) plot.terms[0].q = plot.term0_q
+  plot.terms[1].q = plot.term1_q
+  if (plot.terms[2]) plot.terms[2].q = plot.term2_q
+
   const dataName = getDataName(plot)
   if (serverData[dataName]) {
+    syncParams(plot, serverData[dataName])
     render(plot, serverData[dataName])
     callback({plot, main})
   }
@@ -138,6 +144,7 @@ function main(plot, callback = ()=>{}) {
     client.dofetch2('/termdb-barsql' + dataName)
     .then(chartsData => {
       serverData[dataName] = chartsData
+      syncParams(plot, serverData[dataName])
       render(plot, chartsData)
       callback({plot, main})
     })
@@ -150,12 +157,17 @@ function getDataName(plot) {
   const obj = plot.obj
   const params = [
     'genome=' + obj.genome.name,
-    'dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label),
-    'term1_id=' + plot.term.id
+    'dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label)
   ];
-  if (plot.term0) {
-    params.push('term0_id=' + plot.term0.id)
-  }
+
+  plot.terms.forEach((term, i)=>{
+    if (!term) return
+    params.push('term'+i+'_id=' + term.id)
+    if (term.q && typeof term.q == 'object' && Object.keys(term.q).length) {
+      params.push('term'+i+'_q=' +encodeURIComponent(JSON.stringify(term.q)))
+    }
+  })
+
   if (obj.modifier_ssid_barchart) {
     params.push(
       'term2_is_genotype=1',
@@ -164,22 +176,32 @@ function getDataName(plot) {
       'chr=' + obj.modifier_ssid_barchart.chr,
       'pos=' + obj.modifier_ssid_barchart.pos
     )
-  } else if (plot.term2) {
-    params.push('term2_id=' + plot.term2.id)
-  }
+  } 
+
   if (obj.termfilter && obj.termfilter.terms && obj.termfilter.terms.length) {
     params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
   }
 
-  for(const i in [0,1,2]) {
-    const termnum_q = 'term' + i + '_q'
-    const term_q = plot[termnum_q]
-    if (Object.keys(term_q).length) {
-      params.push(termnum_q + "=" +encodeURIComponent(JSON.stringify(term_q)))
+  return '?' + params.join('&')
+}
+
+function syncParams( plot, data ) {
+  if (!data || !data.refs) return
+  for(const i of [0,1,2]) {
+    const term = plot.terms[i]
+    if (!term) continue
+    if (data.refs.bins && data.refs.bins[i]) {
+      term.bins = data.refs.bins[i]
+    }
+    if (data.refs.q && data.refs.q[i]) {
+      if (!term.q) term.q = plot['term' + i + '_q'];
+      const q = data.refs.q[i]
+      if (q !== plot.term.q) {
+        for(const key in plot.term.q) delete plot.term.q[key]
+        Object.assign(plot.term.q, q)
+      }
     }
   }
-
-  return '?' + params.join('&')
 }
 
 function render ( plot, data ) {
@@ -188,7 +210,6 @@ make a barchart, boxplot, or stat table based on configs
 in the plot object called by showing the single-term plot 
 at the beginning or stacked bar plot for cross-tabulating
 */ 
-  // console.log(plot)
   plot.controls_update()
   plot.views.barchart.main(plot, data, plot.term2_displaymode == "stacked", plot.obj)
   plot.views.boxplot.main(plot, data, plot.term2_displaymode == "boxplot")

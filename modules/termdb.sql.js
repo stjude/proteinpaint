@@ -264,7 +264,7 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? "WHERE t1.sample in "+filter.CTEname : ""}
 		${opts.endclause}`
-	
+	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( values )
 
@@ -434,7 +434,7 @@ CTE for each term resolves to a table of {sample,key}
 term{}
 filter{}: returned by makesql_by_tvsfilter
 q{}
-	.custom_bins[]
+	.binconfig[]
 	.value_by_?
 	.bar_by_?
 values[]: collector of bind parameters
@@ -515,7 +515,7 @@ function makesql_numericBinCTE ( term, q, filter, ds, termindex='' ) {
 decide bins and produce CTE
 
 q{}
-	.custom_bins[]   list of custom bins
+	.binconfig[]   list of custom bins
 	.index           0,1,2 corresponding to term*_id           
 filter as is returned by makesql_by_tvsfilter
 returns { sql, tablename, name2bin }
@@ -674,7 +674,7 @@ export function get_bins(q, term, ds) {
 /*
 
 q{}
-	.custom_bins
+	.binconfig
 	.tvslst
 	.index           0,1,2 correponding to term*_id
 
@@ -683,7 +683,7 @@ ds
 
 */
 	const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin
-	const binconfig = q.custom_bins ? q.custom_bins 
+	const binconfig = q.binconfig ? q.binconfig 
 		: nb.bins_less && q.index != 1 ? nb.bins_less
 		: nb.bins
 	if (!binconfig) throw 'unable to determine the binning configuration'
