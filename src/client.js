@@ -158,6 +158,22 @@ function trackfetch(url, arg) {
 	}
 }
 
+
+
+
+export function may_get_locationsearch () {
+	if( !location.search ) return
+	const h = new Map()
+	for(const tmp of decodeURIComponent( location.search.substr(1) ).split('&')) {
+		const l = tmp.split('=')
+		const key = l[0].toLowerCase()
+		h.set( key, l[1] || 1 )
+	}
+	return h
+}
+
+
+
 export function appear(d,display) {
 	d.style('opacity',0)
 	.style('display',display || 'block')

@@ -241,3 +241,21 @@ export function run_fishertest( tmpfile ) {
 	})
 }
 
+
+export async function run_fdr ( plst ) {
+// list of pvalues
+	const infile = path.join(serverconfig.cachedir, Math.random().toString())
+	const outfile = infile+'.out'
+	await write_file( infile, plst.join('\t') )
+	await run_fdr_2( infile, outfile )
+	const text = await read_file( outfile )
+	return text.trim().split('\n').map(Number)
+}
+
+function run_fdr_2 (infile, outfile) {
+	return new Promise((resolve, reject)=>{
+		const sp = spawn('Rscript',['utils/fdr.R', infile, outfile])
+		sp.on('close', ()=> resolve() )
+		sp.on('error', ()=> reject(e) )
+	})
+}

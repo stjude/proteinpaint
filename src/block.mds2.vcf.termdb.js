@@ -77,8 +77,25 @@ official track only
 		]
 		const data = await client.dofetch2('/termdb?'+arg.join('&'))
 		wait.remove()
+		const table = div.append('table')
+		const tr = table.append('tr')
+		tr.append('th').text('Term')
+		tr.append('th').text('Category')
+		tr.append('th').text('Case #ALT')
+		tr.append('th').text('Case #REF')
+		tr.append('th').text('Ctrl #ALT')
+		tr.append('th').text('Ctrl #REF')
+		tr.append('th').text('Adjust p-value')
 		for(const i of data.results) {
-			div.append('div').text(JSON.stringify(i))
+			const tr = table.append('tr')
+			tr.attr('class','sja_tr')
+			tr.append('td').text(i.term.name)
+			tr.append('td').text(i.category)
+			tr.append('td').text(i.table[0])
+			tr.append('td').text(i.table[1])
+			tr.append('td').text(i.table[2])
+			tr.append('td').text(i.table[3])
+			tr.append('td').text(i.pvalue)
 		}
 	}
 }

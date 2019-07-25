@@ -325,7 +325,8 @@ q{}
 	const halt0 = genotype2sample.has( utils.genotype_types.halt ) ? genotype2sample.get(utils.genotype_types.halt).size : 0
 
 
-	const tests = [] // collect tests, one for each category
+	// collect tests across all terms, one for each category
+	const tests = []
 
 
 	for(const t of ds.cohort.termdb.q.getallterms()) {
@@ -335,12 +336,16 @@ q{}
 		//////////// prep query for this term
 		const qlst = []
 		if( term.iscategorical ) {
+			qlst.push( { term1_id: t.id, ds } )
+		} else if( term.isfloat || term.isinteger ) {
+			qlst.push( { term1_id: t.id, ds } )
+		} else if( term.iscondition ) {
+			// may test other configs
 			qlst.push({
 				term1_id: t.id,
-				ds
+				ds,
+				term1_q: {bar_by_grade:true,value_by_max_grade:true}
 			})
-		} else if( term.isfloat || term.isinteger ) {
-		} else if( term.iscondition ) {
 		} else {
 			throw 'unknown term type'
 		}
@@ -382,7 +387,7 @@ q{}
 				const href2 = href0-href
 
 				tests.push({
-					term: q.term1_id,
+					term: copy_term( term ),
 					category,
 					q: q.q,
 					table: [ 
@@ -407,14 +412,20 @@ q{}
 		await utils.write_file( tmpfile, lines.join('\n') )
 		const pfile = await utils.run_fishertest( tmpfile )
 		const text = await utils.read_file( pfile )
-		let i=0
+		const pvalues = []
 		for(const line of text.trim().split('\n')) {
 			const l = line.split('\t')
 			const p = Number.parseFloat(l[5])
-			tests[i++].pvalue = p
+			pvalues.push(p)
 		}
 		fs.unlink(tmpfile,()=>{})
 		fs.unlink(pfile,()=>{})
+
+		// fdr
+		const fdr = await utils.run_fdr( pvalues )
+		for(const [i,p] of fdr.entries()) {
+			tests[i].pvalue = p
+		}
 	}
 
 
