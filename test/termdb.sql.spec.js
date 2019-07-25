@@ -223,8 +223,8 @@ tape("categorical term1", function (test) {
 
 
 tape("numerical term1", function (test) {
-  test.plan(8)
- 
+  test.plan(9)
+
   compareResponseData(
     test, 
     {term1: 'agedx'},
@@ -312,6 +312,28 @@ tape("numerical term1", function (test) {
       pos: 7666870,
     },
     "sample counts by age of diagnosis, genotype overlay"
+  )
+
+  const custom_bins = {
+    bin_size: 5,
+    first_bin: {
+      start: 0,
+      stop_percentile: 20
+    },
+    last_bin: {
+      start_percentile: 80,
+      stopunbounded: 1
+    }
+  }
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'agedx',
+      term1_q: {custom_bins},
+      custom_bins
+    },
+    "sample counts by age of diagnosis, custom bins, no overlay"
   )
 })
 

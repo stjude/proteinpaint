@@ -399,7 +399,7 @@ function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionU
 
 
 function get_numeric_bin_name (q, key, term, ds, termnum, custom_bins, inReq ) {
-  if (!q.custom_bins && custom_bins) q.custom_bins = custom_bins
+  if (!q.custom_bins && custom_bins) q.custom_bins = custom_bins[+termnum.slice(-1)]
   if (termnum=="term0") q.isterm0 = true
   if (termnum=="term2") q.isterm2 = true
   const [bins, binconfig] = get_bins(q, term, ds)

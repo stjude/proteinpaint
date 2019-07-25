@@ -179,6 +179,7 @@ tape("compute_bins() unbounded", function (test) {
   test.end()
 })
 
+
 tape("compute_bins() non-percentile", function (test) {
   test.deepLooseEqual(
     b.compute_bins({bin_size: 3, first_bin: {start:4}}, get_summary),
@@ -223,7 +224,7 @@ tape("compute_bins() non-percentile", function (test) {
       { startinclusive: 1, stopinclusive: 0, start: 6, stop: 9, label: '6 to <9' },
       { startinclusive: 1, stopinclusive: 0, start: 9, stop: 12, label: '9 to <12' },
       { startinclusive: 1, stopinclusive: 0, start: 12, stop: 15, label: '12 to <15' },
-      { startinclusive: 1, stopinclusive: 0, start: 15, stop: 18, stopunbounded: true, label: '≥15' }
+      { startinclusive: 1, stopinclusive: 0, start: 15, stop: 18, label: '15 to <18' }
     ],
     "should handle last_bin.start + stop"
   )
@@ -248,6 +249,38 @@ tape("compute_bins() non-percentile", function (test) {
 
   test.end()
 })
+
+
+tape("target_percentiles()", function (test) {
+  test.deepLooseEqual(
+    b.target_percentiles({bin_size: 3, first_bin: {startunbounded:1, stop_percentile:4}}, get_summary),
+    [4],
+    "should find the first_bin.stop_percentile"
+  )
+
+  test.deepLooseEqual(
+    b.target_percentiles({
+      bin_size: 3, 
+      first_bin: {start: 4}, 
+      first_bin: {stopunbounded:1, start_percentile:80}
+    }, get_summary),
+    [80],
+    "should find the first_bin.stop_percentile"
+  )
+
+  test.deepLooseEqual(
+    b.target_percentiles({
+      bin_size: 3, 
+      first_bin: {startunbounded: 1, start_percentile: 10, stop_percentile: 20}, 
+      last_bin: {stopunbounded:1, start_percentile:80, stop_percentile: 95}
+    }, get_summary),
+    [10, 20, 80, 95],
+    "should find all configured percentiles"
+  )
+
+  test.end()
+})
+
 
 tape("compute_bins() percentile", function (test) {
 

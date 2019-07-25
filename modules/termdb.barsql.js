@@ -61,9 +61,6 @@ async function barchart_data ( q, ds, res, tdb ) {
     q.genotypeBySample = genotypeBySample
     q.genotype2sample = genotype2sample
   }
-  for(const i of [0,1,2]) {
-    preProcessTermQ(q['term' + i + '_q'], ds)
-  }
 
   const startTime = +(new Date())
   q.results = termdbsql.get_rows(q, {withCTEs: true})
@@ -76,10 +73,6 @@ async function barchart_data ( q, ds, res, tdb ) {
     }
   }
   res.send(pj.tree.results)
-}
-
-function preProcessTermQ(q, ds) {
-  if (q && q.custom_bins) setCustomBins(q, ds)
 }
 
 // template for partjson, already stringified so that it does not 

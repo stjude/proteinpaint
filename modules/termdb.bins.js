@@ -45,10 +45,6 @@ function compute_bins(binconfig, summaryfxn) {
 binconfig   
   configuration of bins per the Numerical Binning Scheme
   https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit#heading=h.arwagpbhlgr3
-  
-  .term_id optional if using percentiles
-  .tvslst optional if using percentiles
-
 
 summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   - required function
@@ -66,7 +62,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   validate_bins(bc)
 
   if (typeof summaryfxn != "function") throw "summaryfxn required for modules/termdb.bins.js get_bins()"
-  const percentiles = get_percentiles(bc)
+  const percentiles = target_percentiles(bc)
   const summary = summaryfxn(percentiles)
   if (!summary || typeof summary !== 'object') throw "invalid returned value by summaryfxn"
 
@@ -106,20 +102,19 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
     startunbounded: bc.first_bin.startunbounded,
     start: bc.first_bin.startunbounded ? undefined : min,
     stop: isNumeric(bc.first_bin.stop_percentile) 
-      ? summary['p' + bc.first_bin.stop_percentile]
+      ? +summary['p' + bc.first_bin.stop_percentile]
       : isNumeric(bc.first_bin.stop) 
-      ? bc.first_bin.stop 
+      ? +bc.first_bin.stop 
       : min + bc.bin_size,
     startinclusive: bc.startinclusive,
     stopinclusive: bc.stopinclusive
   }
   
-  if (!isNumeric(currBin.stop)) throw "the computed first_bin.stop is non-numeric"
+  if (!isNumeric(currBin.stop)) throw "the computed first_bin.stop is non-numeric" + currBin.stop
   const maxNumBins = 50 // harcoded limit for now to not stress sqlite
 
   while( (numericMax && currBin.stop <= max)
     || currBin.stopunbounded
-   //&& (!bins.length || (numericLastStart && currBin.start <= last_start) || currBin.start < currBin.stop)
   ) { 
     currBin.label = get_bin_label(currBin, bc)
     bins.push( currBin )
@@ -144,17 +139,17 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
       if (bc.last_bin.stopinclusive) currBin.stopinclusive = 1
     }
     if (numericLastStart && currBin.start == last_start) {
-      currBin.stopunbounded = true
+      if (bc.last_bin.stopunbounded) currBin.stopunbounded = 1
     }
     if (currBin.start > currBin.stop) {
       if (numericLastStart && currBin.stop == last_start && bc.last_bin.stopunbounded) currBin.stopunbounded = true
       else break
     }
     if (bins.length + 1 >= maxNumBins) {
-      bins[bins.length - 1].error = "max_num_bins_reached"
+      bc.error = "max_num_bins_reached"
       break
     }
-  }
+  } //console.log(bins)
   return bins
 }
 
@@ -202,7 +197,7 @@ exports.get_bin_label = get_bin_label
 
 
 
-function get_percentiles(binconfig) {
+function target_percentiles(binconfig) {
   const percentiles = []
   const f = binconfig.first_bin
   if (f && isNumeric(f.start_percentile)) percentiles.push(f.start_percentile)
@@ -213,7 +208,7 @@ function get_percentiles(binconfig) {
   return percentiles
 }
 
-exports.get_percentiles = get_percentiles
+exports.target_percentiles = target_percentiles
 
 
 

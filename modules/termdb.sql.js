@@ -264,7 +264,7 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? "WHERE t1.sample in "+filter.CTEname : ""}
 		${opts.endclause}`
-	//console.log(statement, values)
+	
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( values )
 
@@ -808,28 +808,30 @@ export function get_numericMinMaxPct (ds, term, tvslst = [], percentiles = []) {
 		}
 	}
 
+	values.push(term.id)
+
 	const ctes = []
+	const ptablenames = []
 	const cols = []
-	let tablename, i=0
+	let tablename
 	for(const n of percentiles) {
 		tablename = 'pct_' + n
-		ctes.push(`${tablename} AS (
-			nth1 AS (
-			  SELECT value
-			  FROM vals
-			  LIMIT 1
-			  OFFSET (
-			    SELECT cast ( x as int ) - ( x < cast ( x as int ))
-			    FROM (
-			      SELECT cast(?*pct as int) as x 
-			      FROM p
-			    )
-			  )
-			) 
+		ctes.push(`
+		${tablename} AS (
+		  SELECT value
+		  FROM vals
+		  LIMIT 1
+		  OFFSET (
+		    SELECT cast ( x as int ) - ( x < cast ( x as int ))
+		    FROM (
+		      SELECT cast(?*pct as int) as x 
+		      FROM p
+		    )
+		  )
 		)`)
 		values.push(n)
-		const pname = 'p' + i
-		cols.push(`${tablename}.value AS ${pname}`)
+		ptablenames.push(tablename)
+		cols.push(`${tablename}.value AS ${'p' + n}`)
 	} 
 
 	const sql = `WITH
@@ -849,12 +851,10 @@ export function get_numericMinMaxPct (ds, term, tvslst = [], percentiles = []) {
 		)
 		${ ctes.length ? ',\n' + ctes.join(",") : '' }
 		SELECT 
-			min(value) as vmin,
-			max(value) as vmax
-			${ cols.length ? ',\n' + cols.join(",") : '' } 
-		FROM vals`
-
-	values.push( term.id )
+			min(vals.value) as vmin,
+			max(vals.value) as vmax
+			${ cols.length ? ',\n' + cols.join(",\n") : '' } 
+		FROM vals ${ptablenames.length ? "," + ptablenames.join(",") : ""}`
 
 	const s = ds.cohort.db.connection.prepare(sql);
 	const result = s.all( values );

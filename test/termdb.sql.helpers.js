@@ -14,80 +14,88 @@ function compareResponseData(test, params, mssg) {
       console.log(url0)
       test.fail(error)
     }
-    switch(response.statusCode) {
-      case 200:
-        const data0 = JSON.parse(body);
-        // reshape sql results in order to match
-        // the compared results
-        let dataCharts
-        if (process.argv[3]) {
-          dataCharts = data0
-        } else {
-          const pj = new Partjson({
-            data: data0.lst,
-            seed: `{"values": []}`, // result seed 
-            template,
-            "=": externals
+    if (!body) test.fail("empty response for barsql at :" + url0)
+    else if (body.includes("error")) test.fail(body)
+    else {
+      switch(response.statusCode) {
+        case 200:
+          const data0 = JSON.parse(body);
+          // reshape sql results in order to match
+          // the compared results
+          let dataCharts
+          if (process.argv[3]) {
+            dataCharts = data0
+          } else {
+            const pj = new Partjson({
+              data: data0.lst,
+              seed: `{"values": []}`, // result seed 
+              template,
+              "=": externals
+            })
+            dataCharts = pj.tree.results
+          } 
+          const summary0 = normalizeCharts(data0)
+          
+          // get an alternatively computed results
+          // for comparing against sql results
+          const url1 = getBarUrl(params); //console.log(url1)
+
+          request(url1, (error,response,body1)=>{
+            if(error) {
+              console.log(url1)
+              test.fail(error)
+              return
+            }
+            if (!body) test.fail("empty response for barchart at :" + url1)
+            else if (body.includes("error")) test.fail(body)
+            else {
+              const data1 = JSON.parse(body1)
+              const summary1 = normalizeCharts(data1, data0.refs)
+              const sqlSummary = refkey == '*' 
+                ? summary0.refs
+                : refkey
+                ? summary0.refs[refkey]
+                : k == -1
+                ? summary0
+                ? k !== l
+                : summary0.charts.slice(k,l)
+                : i !== j 
+                ? summary0.charts[k].serieses.slice(i,j) 
+                : summary0
+              const barSummary = refkey == '*' 
+                ? summary1.refs
+                : refkey
+                ? summary1.refs[refkey]
+                : k == -1
+                ? summary1
+                ? k !== l
+                : summary1.charts.slice(k,l)
+                : i !== j 
+                ? summary1.charts[k].serieses.slice(i,j) 
+                : summary1
+
+              switch(response.statusCode) {
+              case 200:
+                const extra = k == -1 || i!==j || refkey
+                  ? '\n\n' + url0 +'\n----\n' + url1 + '\n' + JSON.stringify(sqlSummary) + '\n-----\n' + JSON.stringify(barSummary) 
+                  : ''
+                test.deepEqual(
+                  sqlSummary,
+                  barSummary,
+                  mssg + extra
+                )
+              break;
+              default:
+                console.log(url1)
+                test.fail("invalid status")
+              }
+            }
           })
-          dataCharts = pj.tree.results
-        } 
-        const summary0 = normalizeCharts(data0)
-        
-        // get an alternatively computed results
-        // for comparing against sql results
-        const url1 = getBarUrl(params); //console.log(url1)
-
-        request(url1, (error,response,body1)=>{
-          if(error) {
-            console.log(url1)
-            test.fail(error)
-            return
-          }
-          const data1 = JSON.parse(body1)
-          const summary1 = normalizeCharts(data1, data0.refs)
-          const sqlSummary = refkey == '*' 
-            ? summary0.refs
-            : refkey
-            ? summary0.refs[refkey]
-            : k == -1
-            ? summary0
-            ? k !== l
-            : summary0.charts.slice(k,l)
-            : i !== j 
-            ? summary0.charts[k].serieses.slice(i,j) 
-            : summary0
-          const barSummary = refkey == '*' 
-            ? summary1.refs
-            : refkey
-            ? summary1.refs[refkey]
-            : k == -1
-            ? summary1
-            ? k !== l
-            : summary1.charts.slice(k,l)
-            : i !== j 
-            ? summary1.charts[k].serieses.slice(i,j) 
-            : summary1
-
-          switch(response.statusCode) {
-          case 200:
-            const extra = k == -1 || i!==j || refkey
-              ? '\n\n' + url0 +'\n----\n' + url1 + '\n' + JSON.stringify(sqlSummary) + '\n-----\n' + JSON.stringify(barSummary) 
-              : ''
-            test.deepEqual(
-              sqlSummary,
-              barSummary,
-              mssg + extra
-            )
           break;
-          default:
-            console.log(url1)
-            test.fail("invalid status")
-          }
-        })
-        break;
-      default:
-        console.log(url0)
-        test.fail("invalid status")
+        default:
+          console.log(url0)
+          test.fail("invalid status")
+      }
     }
   })
 }
@@ -143,7 +151,7 @@ const barParamsReformat = {
     'ssid', 'chr', 'pos', 'mname'
   ],
   sep: ['conditionUnits', 'conditionParents'],
-  json: ['filter']
+  json: ['filter', 'custom_bins']
 }
 
 function getBarUrl(_params) {
