@@ -30,7 +30,7 @@ tape("filters", function (test) {
     test, 
     {
       term1: 'diaggrp',
-      filter: [{
+      tvslst: [{
         term: {id:"sex", name:"Sex", iscategorical:true},
         values: [{"key":"Male","label":"Male"}]
       }]
@@ -42,7 +42,7 @@ tape("filters", function (test) {
     test, 
     {
       term1: 'diaggrp',
-      filter: [{
+      tvslst: [{
         term: {id:"agedx", name:"Age at diagnosis", isfloat:true},
         ranges: [{start:0,stop:5}]
       }]
@@ -54,7 +54,7 @@ tape("filters", function (test) {
     test, 
     {
       term1: 'diaggrp',
-      filter: [{
+      tvslst: [{
         term: {id:"Asthma", name:"Asthma", iscondition:true},
         bar_by_grade: true,
         values: [{key:3, label: "3"}],
@@ -68,7 +68,7 @@ tape("filters", function (test) {
     test, 
     {
       term1: 'diaggrp',
-      filter: [{
+      tvslst: [{
         term: {id:"Asthma", name:"Asthma", iscondition:true},
         bar_by_grade: true,
         values: [{key:2, label: "2"}],
@@ -82,7 +82,7 @@ tape("filters", function (test) {
     test, 
     {
       term1: 'diaggrp',
-      filter: [{
+      tvslst: [{
         term: {id:"Arrhythmias", name:"Arrhythmias", iscondition:true},
         bar_by_grade: true,
         values: [{key:2, label: "2"}],
@@ -96,7 +96,7 @@ tape("filters", function (test) {
     test, 
     {
       term1: 'diaggrp',
-      filter: [{
+      tvslst: [{
         term: {id:"Arrhythmias", name:"Arrhythmias", iscondition:true},
         bar_by_grade: true,
         values: [{key:2, label: "2"}],
@@ -110,7 +110,7 @@ tape("filters", function (test) {
     test, 
     {
       term1: 'diaggrp',
-      filter: [{
+      tvslst: [{
         term: {id:"Arrhythmias", name:"Arrhythmias", iscondition:true},
         bar_by_children: true,
         values: [{key:'Cardiac dysrhythmia', label: "Cardiac dysrhythmia"}]
@@ -123,7 +123,7 @@ tape("filters", function (test) {
     test, 
     {
       term1: 'diaggrp',
-      filter: [{
+      tvslst: [{
         term: {id:"sex", name:"Sex", iscategorical:true},
         values: [{"key":"Male","label":"Female"}]
       },{
@@ -183,7 +183,6 @@ tape("categorical term1", function (test) {
     {
       term1: 'diaggrp',
       term2: 'Asthma',
-      conditionUnits: ["","","most_recent_grade"],
       term2_q: {value_by_most_recent:1, bar_by_grade: 1},
     },
     "sample counts by diagnosis groups, leaf condition overlay"
@@ -194,9 +193,8 @@ tape("categorical term1", function (test) {
     {
       term1: 'diaggrp',
       term2: 'Asthma',
-      conditionUnits: ["","","most_recent_grade"],
       term2_q: {value_by_most_recent:1, bar_by_grade: 1},
-      filter: [{
+      tvslst: [{
         term: {id:"sex", name:"Sex", iscategorical:true},
         values: [{"key":"Male","label":"Female"}]
       },{
@@ -235,7 +233,7 @@ tape("numerical term1", function (test) {
     test,
     {
       term1: 'agedx', 
-      filter: [{
+      tvslst: [{
         term: {id:'sex', name:'sex', iscategorical:true},
         values: [{key: 'Female', label: 'Female'}]
       }]
@@ -266,7 +264,6 @@ tape("numerical term1", function (test) {
     {
       term1: 'agedx',
       term2: 'Asthma',
-      conditionUnits: ["","","max_grade_perperson"],
       term2_q: {value_by_max_grade:1, bar_by_grade: 1},
     },
     "sample counts by age of diagnosis, condition overlay by max grade"
@@ -277,7 +274,6 @@ tape("numerical term1", function (test) {
     {
       term1: 'agedx',
       term2: 'Asthma',
-      conditionUnits: ["","","most_recent_grade"],
       term2_q: {value_by_most_recent:1, bar_by_grade: 1},
     },
     "sample counts by age of diagnosis, condition overlay by most recent grade"
@@ -288,9 +284,8 @@ tape("numerical term1", function (test) {
     {
       term1: 'agedx',
       term2: 'Asthma',
-      conditionUnits: ["","","most_recent_grade"],
       term2_q: {value_by_most_recent:1, bar_by_grade: 1},
-      filter: [{
+      tvslst: [{
         term: {id:"sex", name:"Sex", iscategorical:true},
         values: [{"key":"Male","label":"Female"}]
       },{
@@ -314,24 +309,23 @@ tape("numerical term1", function (test) {
     "sample counts by age of diagnosis, genotype overlay"
   )
 
-  const custom_bins = {
-    bin_size: 5,
-    first_bin: {
-      start: 0,
-      stop_percentile: 20
-    },
-    last_bin: {
-      start_percentile: 80,
-      stopunbounded: 1
-    }
-  }
-
   compareResponseData(
     test, 
     {
       term1: 'agedx',
-      term1_q: {custom_bins},
-      custom_bins
+      term1_q: {
+        custom_bins: {
+          bin_size: 5,
+          first_bin: {
+            start: 0,
+            stop_percentile: 20
+          },
+          last_bin: {
+            start_percentile: 80,
+            stopunbounded: 1
+          }
+        }
+      }
     },
     "sample counts by age of diagnosis, custom bins, no overlay"
   )
@@ -342,8 +336,7 @@ tape("leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Asthma', 
-      conditionUnits: ["","max_grade_perperson",""], 
+      term1: 'Asthma',
       term1_q: {value_by_max_grade:1, bar_by_grade:1}
     },
     "sample counts by Asthma condition max-grade, no overlay"
@@ -352,10 +345,9 @@ tape("leaf condition term1", function (test) {
   compareResponseData(
     test,
     { 
-      term1: 'Asthma', 
-      conditionUnits: ["","max_grade_perperson",""], 
+      term1: 'Asthma',
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
-      filter: [{
+      tvslst: [{
         term: {id:'sex', name:'sex', iscategorical:true},
         values: [{key: 'Male', label: 'Male'}]
       }]
@@ -366,8 +358,7 @@ tape("leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Asthma', 
-      conditionUnits: ["","most_recent_grade",""], 
+      term1: 'Asthma',
       term1_q: {value_by_most_recent:1, bar_by_grade:1}
     },
     "sample counts by Asthma condition most recent grade, no overlay"
@@ -376,8 +367,7 @@ tape("leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Asthma', 
-      conditionUnits: ["","max_grade_perperson",""], 
+      term1: 'Asthma',
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'sex'
     },
@@ -387,8 +377,7 @@ tape("leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Asthma', 
-      conditionUnits: ["","most_recent_grade",""], 
+      term1: 'Asthma',
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'diaggrp'
     },
@@ -398,8 +387,7 @@ tape("leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Asthma', 
-      conditionUnits: ["","max_grade_perperson",""], 
+      term1: 'Asthma',
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'agedx'
     },
@@ -409,8 +397,7 @@ tape("leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Asthma', 
-      conditionUnits: ["","most_recent_grade",""], 
+      term1: 'Asthma',
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'aaclassic_5'
     },
@@ -421,7 +408,6 @@ tape("leaf condition term1", function (test) {
     test, 
     {
       term1: 'Asthma', 
-      conditionUnits: ["","max_grade_perperson","max_grade_perperson"], 
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'Hearing loss',
       term2_q: {value_by_max_grade:1, bar_by_grade:1}
@@ -433,7 +419,6 @@ tape("leaf condition term1", function (test) {
     test, 
     {
       term1: 'Asthma', 
-      conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'Hearing loss',
       term2_q: {value_by_max_grade:1, bar_by_grade:1}
@@ -444,12 +429,11 @@ tape("leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Asthma', 
-      conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
+      term1: 'Asthma',
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'Hearing loss',
       term2_q: {value_by_max_grade:1, bar_by_grade:1},
-      filter: [{
+      tvslst: [{
         term: {id:"sex", name:"Sex", iscategorical:true},
         values: [{"key":"Male","label":"Female"}]
       },{
@@ -463,8 +447,7 @@ tape("leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Asthma', 
-      conditionUnits: ["","most_recent_grade",""], 
+      term1: 'Asthma',
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2_is_genotype: 1,
       ssid,
@@ -482,9 +465,7 @@ tape("non-leaf condition term1", function (test) {
   compareResponseData(
     test,
     {
-      term1: 'Cardiovascular System', 
-      conditionParents: ["","Cardiovascular System",""],
-      conditionUnits: ["","max_grade_perperson",""],
+      term1: 'Cardiovascular System',
       term1_q: {value_by_max_grade:1, bar_by_grade:1}
     },
     "sample counts by Cardiovascular System condition max-grade, no overlay"
@@ -494,10 +475,8 @@ tape("non-leaf condition term1", function (test) {
     test,
     {
       term1: 'Cardiovascular System',
-      conditionParents: ["","Cardiovascular System",""],
-      conditionUnits: ["","max_grade_perperson",""], 
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
-      filter: [{
+      tvslst: [{
         term: {id:'sex', name:'sex', iscategorical:true},
         values: [{key: 'Male', label: 'Male'}]
       }]
@@ -508,9 +487,7 @@ tape("non-leaf condition term1", function (test) {
   compareResponseData(
     test,
     {
-      term1: 'Cardiovascular System', 
-      conditionParents: ["","Cardiovascular System",""],
-      conditionUnits: ["","most_recent_grade",""], 
+      term1: 'Cardiovascular System',
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
     },
     "sample counts by Cardiovascular System condition most recent grade, no overlay"
@@ -519,9 +496,7 @@ tape("non-leaf condition term1", function (test) {
   compareResponseData(
     test,
     {
-      term1: 'Arrhythmias', 
-      conditionParents: ["","Arrhythmias",""],
-      conditionUnits: ["","by_children_at_max_grade",""], 
+      term1: 'Arrhythmias',
       term1_q: {value_by_max_grade:1, bar_by_children:1},
     },
     "sample counts by Arrhythmias condition by children, no overlay"
@@ -531,10 +506,8 @@ tape("non-leaf condition term1", function (test) {
     test,
     {
       term1: 'Arrhythmias', 
-      conditionParents: ["","Arrhythmias",""],
-      conditionUnits: ["","by_children",""], 
       term1_q: {value_by_computable_grade:1, bar_by_children:1},
-      filter: [{
+      tvslst: [{
         term: {id:'sex', name:'sex', iscategorical:true},
         values: [{key: 'Male', label: 'Male'}]
       }]
@@ -545,8 +518,7 @@ tape("non-leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Arrhythmias', 
-      conditionUnits: ["","max_grade_perperson",""], 
+      term1: 'Arrhythmias',
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'sex'
     },
@@ -556,8 +528,7 @@ tape("non-leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Arrhythmias', 
-      conditionUnits: ["","most_recent_grade",""], 
+      term1: 'Arrhythmias',
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'diaggrp'
     },
@@ -568,7 +539,6 @@ tape("non-leaf condition term1", function (test) {
     test, 
     {
       term1: 'Arrhythmias', 
-      conditionUnits: ["","max_grade_perperson",""], 
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'agedx'
     },
@@ -578,8 +548,7 @@ tape("non-leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Arrhythmias', 
-      conditionUnits: ["","most_recent_grade",""], 
+      term1: 'Arrhythmias',
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'aaclassic_5'
     },
@@ -589,8 +558,7 @@ tape("non-leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Arrhythmias', 
-      conditionUnits: ["","max_grade_perperson","max_grade_perperson"], 
+      term1: 'Arrhythmias',
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2: 'Hearing loss',
       term2_q: {value_by_max_grade:1, bar_by_grade:1}
@@ -601,8 +569,7 @@ tape("non-leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Arrhythmias', 
-      conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
+      term1: 'Arrhythmias',
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'Hearing loss',
       term2_q: {value_by_max_grade:1, bar_by_grade:1}
@@ -613,12 +580,11 @@ tape("non-leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Arrhythmias', 
-      conditionUnits: ["","most_recent_grade","max_grade_perperson"], 
+      term1: 'Arrhythmias',
       term1_q: {value_by_most_recent:1, bar_by_grade:1},
       term2: 'Hearing loss',
       term2_q: {value_by_max_grade:1, bar_by_grade:1},
-      filter: [{
+      tvslst: [{
         term: {id:"sex", name:"Sex", iscategorical:true},
         values: [{"key":"Male","label":"Female"}]
       },{
@@ -637,8 +603,7 @@ tape("non-leaf condition term1", function (test) {
   compareResponseData(
     test, 
     {
-      term1: 'Arrhythmias', 
-      conditionUnits: ["","max_grade_perperson",""], 
+      term1: 'Arrhythmias',
       term1_q: {value_by_max_grade:1, bar_by_grade:1},
       term2_is_genotype: 1,
       ssid,
@@ -676,8 +641,6 @@ tape("term0 charts", function (test) {
     {
       term0: 'Arrhythmias',
       term0_q: {value_by_most_recent:1, bar_by_children:1},
-      conditionParents: ["Arrhythmias","",""],
-      conditionUnits: ["by_children_at_most_recent","",""], 
       term1: 'sex'
     },
     "condition charts by Arrhythmias subcondition, categorical bars by sex"

@@ -107,8 +107,7 @@ const sqlParamsReformat = {
   rename: {
     term0: 'term0_id',
     term1: 'term1_id',
-    term2: 'term2_id',
-    filter: 'tvslst'
+    term2: 'term2_id'
   },
   asis: [
     'term0_id', 'term0_is_genotype',
@@ -150,20 +149,17 @@ const barParamsReformat = {
     'term2', 'term2_is_genotype',
     'ssid', 'chr', 'pos', 'mname'
   ],
-  sep: ['conditionUnits', 'conditionParents'],
-  json: ['filter', 'custom_bins']
+  json: ['term0_q', 'term1_q', 'term2_q', 'tvslst']
 }
 
 function getBarUrl(_params) {
-  const params = Object.assign({filter: []}, _params)
+  const params = Object.assign({}, _params)
   let url = "http://localhost:" + serverconfig.port
     + "/termdb-barchart?genome=hg38"
     + "&dslabel=SJLife"
   
   for(const key in params) {
-    if (barParamsReformat.sep.includes(key)) {
-      url += `&${key}=${params[key].join("-,-")}`
-    } else if (barParamsReformat.json.includes(key)) {
+    if (barParamsReformat.json.includes(key)) {
       url += `&${key}=${encodeURIComponent(JSON.stringify(params[key]))}`
     } else if (barParamsReformat.asis.includes(key)) {
       url += `&${key}=${params[key]}`
