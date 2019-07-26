@@ -484,6 +484,7 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
 
   const matchedParam = d => {
     const q = plot.term.q
+    if (!q) return false
     const params = d.value.split(" + ")
     let numMatched = 0
     for(const param of params) {
@@ -513,6 +514,7 @@ function setBinOpts(plot, main, table, termNum, label) {
     .on('click',()=>{
       // click to show ui and customize binning
       make_numeric_bin_btns(plot.tip, plot.term, plot.term.q, (result)=>{
+        if (!plot.term.q) plot.term.q = {}
         if (result !== plot.term.q) {
           for(const key in plot.term.q) delete plot.term.q[key]
           Object.assign(plot.term.q, result)
