@@ -382,7 +382,7 @@ module.exports={
 						id:'genetic_race',
 						name:'Genetically defined race',
 						iscategorical:true,
-						values:[{key:'European American',inuse:true},{key:'African American'},{key:'Asian American'}],
+						values:[{key:'European American'},{key:'African American'},{key:'Asian American'}],
 						inuse:true,
 						value_index:0,
 					}
