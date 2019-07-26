@@ -38,7 +38,7 @@ export function controls(arg, plot, main) {
       tip.style('display', display == "none" ? "inline-block" : "none")
       plot.config_div
 	  	.style('background', display == "none" ? panel_bg_color : "")
-	  	.style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
+	  	// .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
     })
 
   const tip = plot.config_div.append('div').style("display","none")
@@ -68,7 +68,7 @@ export function controls(arg, plot, main) {
 
   function RowStyle(){
     d3select(this).selectAll('td')
-    .style('border-top','1px solid #ddd')
+    .style('border-top','2px solid #FFECDD')
     .style('padding','5px 10px')
   }
 }

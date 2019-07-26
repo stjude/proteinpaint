@@ -22,8 +22,8 @@ export async function display (obj){
 	const div_showterm = obj.holder.append('div')
 
     div_addnewterm
-		.append('span')
-		.html('Another term&nbsp;')
+        .append('span')
+		.html('Select term&nbsp;')
 
 	add_term_button( div_addnewterm )
         .style('border-radius','6px')

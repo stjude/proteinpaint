@@ -48,6 +48,11 @@ will include tk.vcf.plot_mafcov.overlay_term
 		const row = legenddiv.append('div')
 			.style('margin-bottom','5px')
 
+		row.append('div')
+			.style('display','block')
+			.style('margin-bottom','10px')
+			.html('Overlay term&nbsp;')
+
 		termui_display({
 			holder: row,
 			genome: obj.block.genome,
