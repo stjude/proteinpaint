@@ -71,6 +71,9 @@ arg: server returned data
         toppad: 20, // top padding
         yaxis_width: 100,
         label_fontsize: 15,
+        barheight: 300, // maximum bar length 
+        barwidth: 25, // bar thickness
+        barspace: 5 // space between two bars
       },
       bar: {
         orientation: 'horizontal',

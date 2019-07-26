@@ -90,7 +90,7 @@ const template = JSON.stringify({
           "~samples": ["$sample", "set"],
           "__:total": "=sampleCount()",
         }, "$key2"],
-        "_:_max": "$val2", // needed by client-side boxplot renderer 
+        "_:_max": "<$val2", // needed by client-side boxplot renderer 
         "~values": ["$nval2",0],
         "~sum": "+$nval2",
         "~samples": ["$sample", "set"],
