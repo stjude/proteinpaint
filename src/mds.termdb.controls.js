@@ -12,9 +12,8 @@ import {make_numeric_bin_btns, display as termui_display} from './mds.termdb.ter
 const plots = []
 
 
-const panel_bg_color = '#EBFFEF'
-const panel_border_color = '#C5E2CC'
-const panel_row_alt_color = 'white'
+const panel_bg_color = '#fdfaf4'
+const panel_border_color = '#D3D3D3'
 
 export function controls(arg, plot, main) {
   plot.config_div = arg.holder.append('div')
@@ -28,12 +27,11 @@ export function controls(arg, plot, main) {
   plots.push(plot)
 
   // label
-  plot.config_div.append('div').append('button')
-    .style('color', '#333')
-	.style('margin','10px')
-    .style('font-size', '14px')
-    .style('cursor', 'pointer')
-    .html('CONFIG')
+  plot.config_div.append('div').append('div')
+    .attr('class','sja_edit_btn')
+	  .style('margin','10px')
+    .style('font-size', '16px')
+    .html('&#8801;')
     .on('click', () => {
       plot.controls.forEach(update => update())
       const display = tip.style('display')
@@ -61,17 +59,17 @@ export function controls(arg, plot, main) {
     plot.controls.forEach(update => update())
     table.selectAll('tr')
     .filter(rowIsVisible)
-    .each(altRowColors)
+    .each(RowStyle)
   }
 
   function rowIsVisible() {
     return d3select(this).style('display') != 'none'
   }
 
-  function altRowColors(d,i){
+  function RowStyle(){
     d3select(this).selectAll('td')
-    //.style('border-top', i !== 0 ? '1px solid #ccc' : '')
-    .style('background-color', i%2 == 0 ? panel_row_alt_color : '')
+    .style('border-top','1px solid #ddd')
+    .style('padding','5px 10px')
   }
 }
 
@@ -519,6 +517,7 @@ function setBinOpts(plot, main, table, termNum, label) {
 
   bin_edit_td.append('div')
     .attr('class','sja_edit_btn')
+    .style('margin-left','0px')
     .html('EDIT')
     .on('click',()=>{
       // click to show ui and customize binning
