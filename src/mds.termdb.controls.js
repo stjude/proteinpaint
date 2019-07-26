@@ -192,7 +192,7 @@ function setOverlayOpts(plot, main, table, arg) {
     .append('div')
     .style('display','inline-block')
   
-  termui_display({
+  const termuiObj = {
     holder: pill_div,
     genome: plot.obj.genome,
     mds: plot.obj.mds,
@@ -217,7 +217,9 @@ function setOverlayOpts(plot, main, table, arg) {
       }
       main( plot )
     }
-  })
+  }
+
+  termui_display(termuiObj)
       
   radio.inputs
   .property('checked', d => d.value == plot.settings.bar.overlay)
@@ -231,7 +233,8 @@ function setOverlayOpts(plot, main, table, arg) {
       main(plot)
       plot.term2 = term2_selected
     } else if (d.value == "tree") {
-      // the update is handled as callback to blue pill
+      plot.term2 = termuiObj.termsetting.term
+      main(plot)
     } else if (d.value == "genotype") {
       // to-do
       console.log('genotype overlay to be handled from term tree portal', d, d3event.target)
@@ -367,7 +370,7 @@ function setDivideByOpts(plot, main, table, arg) {
     .append('div')
     .style('display','inline-block')
   
-  termui_display({
+  const termuiObj = {
     holder: pill_div,
     genome: plot.obj.genome,
     mds: plot.obj.mds,
@@ -376,9 +379,12 @@ function setDivideByOpts(plot, main, table, arg) {
     callback: (term0) => {
       plot.obj.tip.hide()
       plot.term0 = term0
+      plot.settings.bar.divideBy = term0 ? 'tree' : 'none'
       main( plot )
     }
-  })
+  }
+
+  termui_display(termuiObj)
 
   radio.inputs
   .property('checked', d => d.value == plot.settings.bar.divideBy)
@@ -392,7 +398,7 @@ function setDivideByOpts(plot, main, table, arg) {
       main(plot)
       plot.term0 = term0_selected
     } else if (d.value == "tree") {
-      plot.term0 = term0_selected
+      plot.term0 = termuiObj.termsetting.term
       main(plot)
     } else if (d.value == "genotype") {
       // to-do
