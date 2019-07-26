@@ -4674,8 +4674,10 @@ function makecoordinput(bb, butrow) {
 
 	function genesearch () {
 		// gene name lookup
+		const v = bb.coord.input.property('value')
+		if(!v) return
 		bb.coord.inputtipshow()
-		client.dofetch('/genelookup', { genome:bb.genome.name, input:bb.coord.input.property('value')} )
+		client.dofetch('/genelookup', { genome:bb.genome.name, input:v} )
 		.then(data=>{
 			if(data.error) throw({message:data.error})
 			if(data.hits && data.hits.length) {
