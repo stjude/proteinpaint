@@ -317,6 +317,11 @@ function setOverlayOpts(plot, main, table, arg) {
         return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
       }
     })
+
+    if (plot.term2 && plot.term2 != termuiObj.termsetting.term) {
+      termuiObj.termsetting.term = plot.term2
+      termuiObj.update_ui()
+    }
   })
 }
 
@@ -440,6 +445,11 @@ function setDivideByOpts(plot, main, table, arg) {
         return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
       }
     })
+
+    if (plot.term0 && plot.term0 != termuiObj.termsetting.term) {
+      termuiObj.termsetting.term = plot.term0
+      termuiObj.update_ui()
+    }
   })
 }
 

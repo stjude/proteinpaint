@@ -30,6 +30,7 @@ export async function display (obj){
         .html('&#43;')
 
 	update_ui()
+    obj.update_ui = update_ui
 
     function update_ui () {
 
