@@ -5,7 +5,7 @@ import {
   menuoption_select_group_add_to_cart
 } from './mds.termdb'
 import * as client from './client'
-import {make_numeric_bin_btns, display as termui_display} from './mds.termdb.termsetting.ui'
+import {make_numeric_bin_btns, display as termui_display, numeric_bin_edit} from './mds.termdb.termsetting.ui'
 
 // used to track unique "instances" of controls by plot object
 // to be used to disambiguate between input names
@@ -534,7 +534,7 @@ function setBinOpts(plot, main, table, termNum, label) {
     .html('EDIT')
     .on('click',()=>{
       // click to show ui and customize binning
-      make_numeric_bin_btns(plot.tip, plot.term, plot.term.q, (result)=>{
+      numeric_bin_edit(plot.tip, plot.term, plot.term.q, (result)=>{
         if (!plot.term.q) plot.term.q = {}
         if (result !== plot.term.q) {
           for(const key in plot.term.q) delete plot.term.q[key]
