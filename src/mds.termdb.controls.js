@@ -430,7 +430,7 @@ function setDivideByOpts(plot, main, table, arg) {
       if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
         return plot.term1.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'none'
       } else {
-        const block = plot.term.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'inline-block'
+        const block = 'block' //plot.term.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'inline-block'
         return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
       }
     })

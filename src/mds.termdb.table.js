@@ -60,6 +60,8 @@ export function render(self, column_keys, rows) {
 
   // header
   const tr = table.append('tr')
+    .style('white-space','pre-wrap')
+    .style('word-break', 'break-all')
   tr.append('td') // column 1
   // print term2 values as rest of columns
   for(const i of column_keys) {
@@ -68,6 +70,8 @@ export function render(self, column_keys, rows) {
       .style('border', '1px solid black')
       .style('padding', '3px')
       .style('text-align', 'center')
+      .style('min-width', '80px')
+      .style('max-width', '150px')
   }
 
   for(const t1v of rows) {
@@ -83,7 +87,7 @@ export function render(self, column_keys, rows) {
     for(const t2label of column_keys) {
       const td = tr.append('td')
         .style('border', '1px solid black')
-        .style('padding', '3px')
+        .style('padding', '3px 5px')
         .style('text-align', 'right')
       const v = t1v.lst.find( i=> i.label == t2label )
       if( v ) {

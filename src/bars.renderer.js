@@ -370,7 +370,7 @@ export default function barsRenderer(barsapp, holder) {
       const maxSvgw = window.innerWidth * 0.92 / maxChartsPerRow
       hm.colw = Math.min(
         Math.max(16, Math.round((maxSvgw - spacing) / hm.cols.length)),
-        80
+        40
       );
       hm.svgw =
         hm.cols.length * (hm.colw + hm.colspace) -
@@ -379,7 +379,7 @@ export default function barsRenderer(barsapp, holder) {
         hm.rowlabelw +
         hm.rowgrplabelw;
       const numChartRows = Math.round(window.innerWidth / hm.svgw)
-      hm.svgh = window.innerHeight * 0.9 / (numChartRows > 3 ? 2 : 1)
+      hm.svgh = window.innerHeight * 0.5 / (numChartRows > 3 ? 2 : 1)
     }
 
     hm.h.yScale = {}
