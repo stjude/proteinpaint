@@ -302,7 +302,7 @@ export class TermdbBarchart{
             values:[{key,label}]
           }, q1))
 
-          if (index == 1 && term.id == self.terms.term2.id) {
+          if (index == 1 && self.terms.term2 && term.id == self.terms.term2.id) {
             const q2 = self.plot.term2.q
             const term2Label = q.bar_by_children 
               ? self.grade_labels.find(c => c.grade == d.dataId).label
