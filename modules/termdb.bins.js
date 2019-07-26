@@ -179,8 +179,8 @@ function get_bin_label(bin, binconfig) {
       // bin size is 1; use just start value as label, not a range
       return bin.start //binLabelFormatter(start)
     } else {
-      const oper0 = bc.startinclusive ? "" : ">"
-      const oper1 = bc.stopinclusive ? "" : "<"
+      const oper0 = "" //bc.startinclusive ? "" : ">"
+      const oper1 = "" //bc.stopinclusive ? "" : "<"
       const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
       const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
       return oper0 + v0 +' to '+ oper1 + v1
