@@ -12,6 +12,10 @@ handle_mafcovplot
 ********************** INTERNAL
 */
 
+
+const unannotated_color = '#aaa'
+
+
 export async function handle_mafcovplot ( q, genome, ds, result ) {
 	try {
 		if(!ds.track) throw 'ds.track missing'
@@ -68,18 +72,28 @@ export async function handle_mafcovplot ( q, genome, ds, result ) {
 
 			const colorfunc = d3scale.scaleOrdinal( d3scale.schemeCategory10)
 			const categories = new Map()
+			let unannotated_samplecount = 0 // vcf sample may be unannotated, e.g. ctcae
 			// plot groups contain only a subset of all samples
 			for(const plot of result.plotgroups ) {
 				for(const o of plot.lst ) {
 					const category = anysample2category.get( o.sampleobj.name )
-					const color = colorfunc( category )
-					o.sampleobj.color = color
-					if( !categories.has( category )) {
-						categories.set( category, {count:0, color, label:category} )
+					if( category ) {
+						const color = colorfunc( category )
+						o.sampleobj.color = color
+						if( !categories.has( category )) {
+							categories.set( category, {count:0, color, label:category} )
+						}
+						categories.get(category).count++
+					} else {
+						// not annotated
+						unannotated_samplecount++
+						o.sampleobj.color = unannotated_color
 					}
-					categories.get(category).count++
 				}
 			}
+
+			// TODO get labels for categories, e.g. '1-mild' for '1'
+
 			result.categories = []
 
 			if( re.CTE1 && re.CTE1.name2bin ) {
@@ -93,6 +107,10 @@ export async function handle_mafcovplot ( q, genome, ds, result ) {
 				for(const [c,o] of categories) {
 					result.categories.push( o )
 				}
+			}
+
+			if( unannotated_samplecount ) {
+				result.categories.push({ count:unannotated_samplecount, color:unannotated_color, label:'Unannotated' })
 			}
 		}
 
