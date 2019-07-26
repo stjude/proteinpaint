@@ -518,36 +518,16 @@ q{}
 	.binconfig[]   list of custom bins
 	.index           0,1,2 corresponding to term*_id           
 filter as is returned by makesql_by_tvsfilter
-returns { sql, tablename, name2bin }
+returns { sql, tablename, name2bin, bins, binconfig }
 */
-	const [bins, bin_size] = get_bins(q, term, ds, termindex)
+	const [bins, binconfig] = get_bins(q, term, ds, termindex)
 	const bin_def_lst = []
 	const name2bin = new Map() // k: name str, v: bin{}
+	const bin_size = binconfig.bin_size
 	let has_percentiles = false
 	let binid = 0
 	for(const b of bins) {
 		if (!('name' in b) && b.label) b.name = b.label
-		if(!b.name) {
-			if( Number.isInteger( bin_size ) ) {
-        // bin size is integer, make nicer label
-        if( bin_size == 1 ) {
-          // bin size is 1; use just start value as label, not a range
-          b.name = b.start
-        } else {
-          // bin size bigger than 1, reduce right bound by 1, in label only!
-          b.name = b.start + ' to ' + (b.stop-1)
-        }
-      } else {
-        // bin size is not an integer
-        if( b.startunbounded ) {
-          b.name = (b.stopinclusive ? '<=' : '<')+' '+b.stop
-        } else if( b.stopunbounded ) {
-          b.name = (b.startinclusive ? '>=' : '>')+' '+b.start
-        } else {
-          b.name = `${b.start} <${b.startinclusive?'=':''} x <${b.stopinclusive?'=':''} ${b.stop}`
-        }
-      }
-		}
 		name2bin.set( b.name, b )
 		bin_def_lst.push(
 			`SELECT '${b.name}' AS name,
@@ -665,7 +645,8 @@ returns { sql, tablename, name2bin }
 		sql,
 		tablename: bin_sample_table,
 		name2bin,
-		bins
+		bins,
+		binconfig
 	}
 }
 
@@ -726,7 +707,7 @@ at a numeric barchart
 		: _tvslst
 
 	if ((term.isinteger || term.isfloat ) && !(tvslst.find(tv=>tv.term.id == term.id && 'ranges' in tv))) {
-		const [bins, bin_size] = get_bins(q, term, ds)
+		const [bins, binconfig] = get_bins(q, term, ds)
 		tvslst.push({term, ranges: bins})
 	}
 	const filter = makesql_by_tvsfilter( tvslst, ds )
@@ -784,7 +765,7 @@ export function get_numericMinMaxPct (ds, term, tvslst = [], percentiles = []) {
 	(individual values are not returned in this query)
 
 	percentiles[]
-		array of desired percentile values [X, Y, ...]
+		optional array of desired percentile values [X, Y, ...]
 
 	returns {min, max, pX, pY, ...} 
 	where 
