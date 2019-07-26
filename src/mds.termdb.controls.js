@@ -54,7 +54,7 @@ export function controls(arg, plot, main) {
   setOrientationOpts(plot, main, table)
   setScaleOpts(plot, main, table)
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
-  setBinOpts(plot, main, table, 'term2', 'Overlay Bins')
+  // setBinOpts(plot, main, table, 'term2', 'Overlay Bins') // will be handled from term2 blue-pill
   setDivideByOpts(plot, main, table, arg)
 
   plot.controls_update = () => {
@@ -198,7 +198,7 @@ function setOverlayOpts(plot, main, table, arg) {
     genome: plot.obj.genome,
     mds: plot.obj.mds,
     tip: plot.obj.tip,
-    termsetting: {term:plot.term2, q: plot.term2_q},
+    termsetting: {term:plot.term2, q: plot.term2?plot.term2.q:undefined},
     callback: (term2) => {
       plot.obj.tip.hide()
       plot.term2 = term2
@@ -210,7 +210,10 @@ function setOverlayOpts(plot, main, table, arg) {
         }
         plot.term2_boxplot = 0
       }
-      // main( plot ) //update plot only if radio selected
+      //update plot only if radio selected
+      if(radio.inputs.filter((d)=>{ return d.value == 'tree'}).node().checked){
+          main( plot )
+       } 
     }
   })
       
@@ -231,7 +234,7 @@ function setOverlayOpts(plot, main, table, arg) {
     } else if (d.value == "genotype") {
       // to-do
       console.log('genotype overlay to be handled from term tree portal', d, d3event.target)
-    } else if (d.value == "bar_by_children") {
+    } else if (d.value == "bar_by_children") { 
       if (plot.term1_q.bar_by_children){
         console.log('bar_by_children term1 should not allow subcondition overlay')
         return
@@ -365,11 +368,14 @@ function setDivideByOpts(plot, main, table, arg) {
     genome: plot.obj.genome,
     mds: plot.obj.mds,
     tip: plot.obj.tip,
-    termsetting: {term:plot.term0, q: plot.term0_q},
+    termsetting: {term:plot.term0, q: plot.term0?plot.term0.q:undefined},
     callback: (term0) => {
       plot.obj.tip.hide()
       plot.term0 = term0
-      // main( plot ) //update plot only if radio selected
+      //update plot only if radio selected
+      if(radio.inputs.filter((d)=>{ return d.value == 'tree'}).node().checked){
+        main( plot )
+     } 
     }
   })
 
@@ -516,7 +522,7 @@ function setBinOpts(plot, main, table, termNum, label) {
     .html('EDIT')
     .on('click',()=>{
       // click to show ui and customize binning
-      make_numeric_bin_btns(plot.tip, plot.term, plot.term1_q, (result)=>{
+      make_numeric_bin_btns(plot.tip, plot.term, plot.term.q, (result)=>{
         if (result !== plot.term.q) {
           for(const key in plot.term.q) delete plot.term.q[key]
           Object.assign(plot.term.q, result)
