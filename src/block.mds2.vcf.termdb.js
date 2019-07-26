@@ -85,7 +85,13 @@ official track only
 		tr.append('th').text('Case #REF')
 		tr.append('th').text('Ctrl #ALT')
 		tr.append('th').text('Ctrl #REF')
+		tr.append('th')
 		tr.append('th').text('Adjust p-value')
+
+		// collect AF difference then render
+		const afdiff_lst = []
+		let vmax = 0
+
 		for(const i of data.results) {
 			const tr = table.append('tr')
 			tr.attr('class','sja_tr')
@@ -95,7 +101,25 @@ official track only
 			tr.append('td').text(i.table[1])
 			tr.append('td').text(i.table[2])
 			tr.append('td').text(i.table[3])
+			const afdiff_td = tr.append('td')
 			tr.append('td').text(i.pvalue)
+
+			const v = i.table[0]/(i.table[0]+i.table[1]) - i.table[2]/(i.table[2]+i.table[3])
+			vmax = Math.max( vmax, Math.abs(v) )
+
+			afdiff_lst.push({ v, td: afdiff_td })
+		}
+
+		const w = 30
+		const h = 15
+		for(const {v,td} of afdiff_lst) {
+			const s = td.append('svg')
+				.attr('width', w)
+				.attr('height', h)
+			s.append('rect')
+				.attr('height',h)
+				.attr('width', Math.abs(w*v/vmax) )
+				.attr('fill', v>0 ?  '#D07A30' : '#3086D0')
 		}
 	}
 }
