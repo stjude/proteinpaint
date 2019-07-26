@@ -18,7 +18,8 @@ render
 may_setup_numerical_axis
 get_axis_label
 get_axis_label_AFtest
-maygetparameter_numericaxis
+may_get_param
+may_get_param_AFtest_termfilter
 ********************** INTERNAL
 numeric_make
 render_axis
@@ -1024,7 +1025,7 @@ export function get_axis_label_AFtest () {
 
 
 
-export function maygetparameter_numericaxis ( tk, par ) {
+export function may_get_param ( tk, par ) {
 /*
 append numeric axis parameter to object for loadTk
 */
@@ -1038,17 +1039,20 @@ append numeric axis parameter to object for loadTk
 	}
 	if( nm.inuse_AFtest && nm.AFtest ) {
 		par.AFtest = {
+			groups: [],
 			testby_AFdiff: nm.AFtest.testby_AFdiff,
 			testby_fisher: nm.AFtest.testby_fisher
 		}
-		par.AFtest.groups = nm.AFtest.groups.reduce( (lst, g)=>{
+		for(const g of nm.AFtest.groups) {
 			if( g.is_termdb ) {
-				lst.push({
+				par.AFtest.groups.push({
 					is_termdb: true,
 					terms: termvaluesettingui.to_parameter( g.terms ),
 				})
-			} else if( g.is_infofield ) {
-				const par = {
+				continue
+			}
+			if( g.is_infofield ) {
+				const g2 = {
 					is_infofield:true,
 					key: g.key,
 				}
@@ -1056,24 +1060,56 @@ append numeric axis parameter to object for loadTk
 					// attempt to get missing value
 					const i = tk.info_fields.find( j=>j.key==g.key )
 					if(i && i.missing_value!=undefined) {
-						par.missing_value = i.missing_value
+						g2.missing_value = i.missing_value
 					}
 				}
-				lst.push( par )
-			} else if( g.is_population ) {
-				lst.push({
+				par.AFtest.groups.push( g2 )
+				continue
+			}
+			if( g.is_population ) {
+				const g2 = {
 					is_population:true,
 					key: g.key,
-					adjust_race: g.adjust_race,
-				})
-			} else {
-				throw 'unknown group type at xhr parameter'
+				}
+				if( g.adjust_race ) {
+					// only adjust race if there is a termdb group besides this population
+					if( nm.AFtest.groups.find( i=> i.is_termdb )) {
+						g2.adjust_race = true
+					}
+				}
+				par.AFtest.groups.push( g2 )
+				continue
 			}
-			return lst
-		}, [])
+			throw 'unknown group type at xhr parameter'
+		}
+		const v = may_get_param_AFtest_termfilter( tk )
+		if(v) {
+			par.AFtest.termfilter = [ v ]
+		}
 		return
 	}
 	throw 'unknown type of numeric axis'
+}
+
+
+
+export function may_get_param_AFtest_termfilter ( tk ) {
+	if(!tk.vcf || !tk.vcf.numerical_axis) return
+	const af = tk.vcf.numerical_axis.AFtest
+	if( !af || !af.termfilter || !af.termfilter.inuse ) return
+	if( !af.termfilter.iscategorical) throw 'AFtest.termfilter is hardcoded to be categorical but iscategorical is not true'
+	if( !af.termfilter.values) throw 'termfilter.values missing'
+	// in nm, termfilter is not tvs
+	// in parameter, termfilter is tvs
+	const v = af.termfilter.values[ af.termfilter.value_index ]
+	if(!v) throw 'unknown value selection by value_index in AFtest.termfilter'
+	return {
+		term:{
+			id: af.termfilter.id,
+			iscategorical: true // hardcoded
+		},
+		values: [ { key: v.key } ]
+	}
 }
 
 

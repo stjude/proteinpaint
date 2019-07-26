@@ -440,7 +440,7 @@ table {
 .sja-termdb-config-row-label {
 	padding: 5px;
 	text-align: left;
-	vertical-align: top;
+	vertical-align: middle;
 }
 
 .sja_edit_btn {

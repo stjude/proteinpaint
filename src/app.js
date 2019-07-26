@@ -1257,13 +1257,8 @@ async function launchblock(arg,holder) {
 	}
 
 	// apply url parameter
-	if( location.search) {
-		const h = new Map()
-		for(const tmp of decodeURIComponent( location.search.substr(1) ).split('&')) {
-			const l = tmp.split('=')
-			const key = l[0].toLowerCase()
-			h.set( key, l[1] || 1 )
-		}
+	const h = client.may_get_locationsearch()
+	if(h) {
 		if(h.has('position')) {
 			const pos = string2pos( h.get('position'), genomeobj )
 			if(pos) {

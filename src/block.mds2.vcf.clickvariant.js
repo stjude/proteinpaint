@@ -2,6 +2,10 @@ import * as common from './common'
 import * as client from './client'
 import {make_ui as mafcovplot_makeui} from './block.mds2.vcf.mafcovplot'
 import {termdb_bygenotype} from './block.mds2.vcf.termdb'
+import {AFtest_groupname} from './block.mds2.vcf.numericaxis.legend'
+import {addparameter_rangequery} from './block.mds2'
+
+
 
 
 /*
@@ -29,16 +33,12 @@ p{}
 
 	const tabs = []
 	addtab_functionalannotation( tabs, m, tk, block )
-	mayaddtab_fishertable( tabs, m, tk )
+	mayaddtab_fishertable( tabs, m, tk, block )
 	mayaddtab_termdbbygenotype( tabs, m, tk, block )
 	mayaddtab_mafcovplot( tabs, m, tk, block )
 	mayaddtab_fimo( tabs, m, tk, block )
 
 	client.tab2box( pane.body.style('padding-top','10px'), tabs )
-	// fill in static ones
-	for(const tab of tabs) {
-		if( tab.show_immediate ) tab.show_immediate( tab.box, m, tk, block )
-	}
 }
 
 
@@ -91,7 +91,7 @@ function mayaddtab_termdbbygenotype ( tabs, m, tk, block ) {
 
 
 
-function mayaddtab_fishertable( tabs, m, tk ) {
+function mayaddtab_fishertable( tabs, m, tk, block ) {
 	if(!tk.vcf.numerical_axis
 		|| !tk.vcf.numerical_axis.inuse_AFtest
 		|| !tk.vcf.numerical_axis.AFtest
@@ -100,45 +100,129 @@ function mayaddtab_fishertable( tabs, m, tk ) {
 
 	tabs.push({
 		label:'Fisher\' exact test',
-		show_immediate
+		callback
 	})
 
-	function show_immediate (div) {
+	async function callback (div) {
 
+		const af = tk.vcf.numerical_axis.AFtest
+
+		/*
+		at fisher test
+		when group1 is termdb,
+		will test it against all the other control populations, if any
+		*/
+		const additionalpop2test = []
+		if( af.groups[0].is_termdb ) {
+			// for every population not in af.groups, test the group1 against it
+			if( tk.populations ) {
+				for(const g of tk.populations) {
+					if( !af.groups[1].is_population || af.groups[1].key!=g.key ) {
+						additionalpop2test.push( {key: g.key, label: g.label} )
+					}
+				}
+			}
+		}
+
+		// the table to be shown in different ways
 		const table = div.append('table')
 			.style('border','1px solid #ccc')
 			.style('border-collapse','collapse')
-		{
-			const tr = table.append('tr')
-			tr.append('td')
-			tr.append('th').text('#ALT alleles')
-			tr.append('th').text('#REF alleles')
+
+		if( additionalpop2test.length ) {
+			// to test against additional populations
+			{
+				const tr = table.append('tr')
+				tr.append('td')
+				tr.append('th').text('#ALT alleles')
+				tr.append('th').text('#REF alleles')
+				tr.append('th').text('P-value')
+			}
+			{
+				const tr = table.append('tr')
+				tr.append('th').text( AFtest_groupname( tk, 0 ) )
+				tr.append('td').text( m.contigencytable[0].toFixed(0) )
+					.style('padding','5px')
+				tr.append('td').text( m.contigencytable[1].toFixed(0) )
+					.style('padding','5px')
+				tr.append('td').text('-')
+			}
+			{
+				const tr = table.append('tr')
+				tr.append('th').text( AFtest_groupname( tk, 1 ) )
+				tr.append('td').text( m.contigencytable[2].toFixed(0) )
+					.style('padding','5px')
+				tr.append('td').text( m.contigencytable[3].toFixed(0) )
+					.style('padding','5px')
+				tr.append('td').text(m.AFtest_pvalue)
+					.style('padding','5px')
+			}
+			for(const g of additionalpop2test) {
+				const tr = table.append('tr')
+				tr.append('th').text( g.label )
+				const td_altcount = tr.append('td').text('...')
+					.style('padding','5px')
+				const td_refcount = tr.append('td').text('...')
+					.style('padding','5px')
+				const td_pvalue   = tr.append('td').text('...')
+					.style('padding','5px')
+
+				// run a full-blown query with altered parameter
+				const par = addparameter_rangequery( tk, block )
+				// replace the control
+				par.AFtest.groups[1] = {
+					is_population:true,
+					key: g.key
+				}
+				// replace the range
+				par.rglst = [{chr: m.chr, start: m.pos, stop: m.pos+1}]
+				const data = await client.dofetch('mds2',par)
+				if(data.vcf && data.vcf.rglst && data.vcf.rglst[0] && data.vcf.rglst[0].variants) {
+					const m2 = data.vcf.rglst[0].variants[0]
+					if(m2) {
+						if(m2.contigencytable) {
+							td_altcount.text( m2.contigencytable[2] )
+							td_refcount.text( m2.contigencytable[3] )
+						}
+						if(m2.AFtest_pvalue!=undefined) {
+							td_pvalue.text(m2.AFtest_pvalue)
+						}
+					}
+				}
+			}
+		} else {
+			// no further testing
+			{
+				const tr = table.append('tr')
+				tr.append('td')
+				tr.append('th').text('#ALT alleles')
+				tr.append('th').text('#REF alleles')
+			}
+			{
+				const tr = table.append('tr')
+				tr.append('th').text( AFtest_groupname( tk, 0 ) )
+				tr.append('td').text( m.contigencytable[0].toFixed(0) )
+					.style('padding','5px')
+				tr.append('td').text( m.contigencytable[1].toFixed(0) )
+					.style('padding','5px')
+			}
+			{
+				const tr = table.append('tr')
+				tr.append('th').text( AFtest_groupname( tk, 1 ) )
+				tr.append('td').text( m.contigencytable[2].toFixed(0) )
+					.style('padding','5px')
+				tr.append('td').text( m.contigencytable[3].toFixed(0) )
+					.style('padding','5px')
+			}
+			table.append('tr').append('td')
+				.attr('colspan',3)
+				.style('border','1px solid #ccc')
+				.style('padding','5px')
+				.html('<span style="opacity:.5">Fisher exact p-value:</span> '+m.AFtest_pvalue)
 		}
-		{
-			const tr = table.append('tr')
-			tr.append('th').text('Group 1') // TODO may show informative name based on term
-			tr.append('td').text( m.contigencytable[0].toFixed(0) )
-				.style('padding','5px')
-			tr.append('td').text( m.contigencytable[1].toFixed(0) )
-				.style('padding','5px')
-		}
-		{
-			const tr = table.append('tr')
-			tr.append('th').text('Group 2')
-			tr.append('td').text( m.contigencytable[2].toFixed(0) )
-				.style('padding','5px')
-			tr.append('td').text( m.contigencytable[3].toFixed(0) )
-				.style('padding','5px')
-		}
-		table.append('tr').append('td')
-			.attr('colspan',3)
-			.style('border','1px solid #ccc')
-			.style('padding','5px')
-			.html('<span style="opacity:.5">Fisher exact p-value:</span> '+m.AFtest_pvalue)
+
 
 		if( m.popsetadjvalue ) {
-
-			const af = tk.vcf.numerical_axis.AFtest
 
 			const termdbgidx = af.groups.findIndex(i=>i.is_termdb)
 			const termdbg = af.groups.find(i=>i.is_termdb)
@@ -203,7 +287,7 @@ function addtab_functionalannotation ( tabs, m, tk, block ) {
 
 	tabs.push({
 		label:'Annotation',
-		show_immediate
+		callback: show_immediate
 	})
 
 	function show_immediate (div) {

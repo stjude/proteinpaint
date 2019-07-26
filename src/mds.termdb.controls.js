@@ -5,15 +5,15 @@ import {
   menuoption_select_group_add_to_cart
 } from './mds.termdb'
 import * as client from './client'
+import {make_numeric_bin_btns, display as termui_display} from './mds.termdb.termsetting.ui'
 
 // used to track controls unique "instances" by plot object
 // to be used to disambiguate between input names
 const plots = []
 
 
-const panel_bg_color = '#EBFFEF'
-const panel_border_color = '#C5E2CC'
-const panel_row_alt_color = 'white'
+const panel_bg_color = '#fdfaf4'
+const panel_border_color = '#D3D3D3'
 
 export function controls(arg, plot, main) {
   plot.config_div = arg.holder.append('div')
@@ -27,12 +27,11 @@ export function controls(arg, plot, main) {
   plots.push(plot)
 
   // label
-  plot.config_div.append('div').append('button')
-    .style('color', '#333')
-	.style('margin','10px')
-    .style('font-size', '14px')
-    .style('cursor', 'pointer')
-    .html('CONFIG')
+  plot.config_div.append('div').append('div')
+    .attr('class','sja_edit_btn')
+	  .style('margin','10px')
+    .style('font-size', '16px')
+    .html('&#8801;')
     .on('click', () => {
       plot.controls.forEach(update => update())
       const display = tip.style('display')
@@ -53,30 +52,30 @@ export function controls(arg, plot, main) {
   setOrientationOpts(plot, main, table)
   setScaleOpts(plot, main, table)
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
-  setBinOpts(plot, main, table, 'term2', 'Overlay Bins')
+  // setBinOpts(plot, main, table, 'term2', 'Overlay Bins') // will be handled from term2 blue-pill
   setDivideByOpts(plot, main, table, arg)
 
   plot.controls_update = () => {
     plot.controls.forEach(update => update())
     table.selectAll('tr')
     .filter(rowIsVisible)
-    .each(altRowColors)
+    .each(RowStyle)
   }
 
   function rowIsVisible() {
     return d3select(this).style('display') != 'none'
   }
 
-  function altRowColors(d,i){
+  function RowStyle(){
     d3select(this).selectAll('td')
-    //.style('border-top', i !== 0 ? '1px solid #ccc' : '')
-    .style('background-color', i%2 == 0 ? panel_row_alt_color : '')
+    .style('border-top','1px solid #ddd')
+    .style('padding','5px 10px')
   }
 }
 
 function renderRadioInput(inputName, elem, opts, inputHandler) {
   const divs = elem.selectAll('div')
-    .style('display', 'inline-block')
+    .style('display', 'block')
     .data(opts, d => d.value)
   
   divs.exit().each(function(d){
@@ -87,7 +86,7 @@ function renderRadioInput(inputName, elem, opts, inputHandler) {
   })
   
   const labels = divs.enter().append('div')
-    .style('display', 'inline-block')
+    .style('display', 'block')
     .style('padding', '5px')
     .append('label')
   
@@ -178,67 +177,89 @@ function setOverlayOpts(plot, main, table, arg) {
     td, 
     [
       {label: 'None', value: 'none'},
-      {label: 'Term', value: 'tree'},
+      {label: '', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
-      //{label: 'Subconditions', value: 'by_children'},
-      //{label: 'Highest graded subconditions per person', value: 'max_graded_children'},
-      //{label: 'Max. grade per person', value: 'max_grade_perperson'},
-      {label: 'Grade by subcondition', value: 'max_grade_by_subcondition'},
-      //{label: 'Most recent grade', value: 'most_recent_grade'},
+      {label: 'Subconditions', value: 'bar_by_children'},
+      {label: 'Grade', value: 'bar_by_grade'}
     ]
   )
 
+  const value_by_params = ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']
+  
+  //add blue-pill for term2
+  const pill_div = d3select(radio.labels.filter((d)=>{ return d.value == 'tree'}).node().parentNode)
+    .append('div')
+    .style('display','inline-block')
+  
+  termui_display({
+    holder: pill_div,
+    genome: plot.obj.genome,
+    mds: plot.obj.mds,
+    tip: plot.obj.tip,
+    termsetting: {term:plot.term2, q: plot.term2?plot.term2.q:undefined},
+    callback: (term2) => {
+      plot.obj.tip.hide()
+      plot.term2 = term2
+      if (plot.term2 && plot.term2.isfloat && plot.term2_boxplot) { 
+        plot.term2_displaymode = 'boxplot'
+      } else {
+        if (plot.term2_displaymode == "boxplot") {
+          plot.term2_displaymode = "stacked"
+        }
+        plot.term2_boxplot = 0
+      }
+      //update plot only if radio selected
+      if(radio.inputs.filter((d)=>{ return d.value == 'tree'}).node().checked){
+          main( plot )
+       } 
+    }
+  })
+      
   radio.inputs
   .property('checked', d => d.value == plot.settings.bar.overlay)
   .on('input', d => {
     d3event.stopPropagation()
+    const term2_selected = plot.term2
     plot.settings.bar.overlay = d.value
     if (d.value == "none") {
       plot.term2 = undefined
       plot.term2_displaymode = 'stacked'
       main(plot)
+      plot.term2 = term2_selected
     } else if (d.value == "tree") {
-	  plot.obj.showtree4selectterm(
-	  	[arg.term.id, plot.term2 ? plot.term2.id : null],
-		tr.node(),
-        (term2) => {
-	      plot.obj.tip.hide()
-          plot.term2 = term2
-          if (plot.term2.iscondition) {
-            plot.settings.common.conditionParents[2] = plot.term2.id
-            if (!plot.settings.common.conditionUnits[2]) {
-              plot.settings.common.conditionUnits[2] = "max_grade_perperson"
-            }
-          }
-          if (plot.term2.isfloat && plot.term2_boxplot) { 
-            plot.term2_displaymode = 'boxplot'
-          } else {
-            if (plot.term2_displaymode == "boxplot") {
-              plot.term2_displaymode = "stacked"
-            }
-            plot.term2_boxplot = 0
-          }
-          main( plot )
-        }
-	  )
+      plot.term2 = term2_selected
+      main( plot )
     } else if (d.value == "genotype") {
       // to-do
-    } else if (
-        d.value == "by_children" 
-        || d.value == "max_graded_children" 
-        || d.value == "max_grade_perperson" 
-        || d.value == "most_recent_grade"
-      ) {
-      if (!plot.term2) plot.term2 = plot.term
-      plot.settings.common.conditionUnits[2] = d.value
-      plot.settings.common.conditionParents[2] = plot.term2.id
+      console.log('genotype overlay to be handled from term tree portal', d, d3event.target)
+    } else if (d.value == "bar_by_children") { 
+      if (plot.term1_q.bar_by_children){
+        console.log('bar_by_children term1 should not allow subcondition overlay')
+        return
+      }
+      plot.term2 = plot.term
+      delete plot.term2_q.bar_by_grade
+      plot.term2_q.bar_by_children = 1
+      for(const param of value_by_params) {
+        delete plot.term2_q[param]
+        if (plot.term1_q[param]) plot.term2_q[param] = 1
+      }
       main(plot)
-    } else if (d.value == "max_grade_by_subcondition") {
-      if (!plot.term2) plot.term2 = plot.term
-      plot.settings.common.conditionUnits[2] = d.value
-      plot.settings.common.conditionParents[2] = plot.term2.id
-      plot.settings.common.conditionParents[1] = plot.term.id
+    } else if (d.value == "bar_by_grade") {
+      if (plot.term1_q.bar_by_grade){
+        console.log('bar_by_grade term1 should not allow grade overlay')
+        return
+      }
+      plot.term2 = plot.term
+      delete plot.term2_q.bar_by_children
+      plot.term2_q.bar_by_grade = 1
+      for(const param of value_by_params) {
+        delete plot.term2_q[param]
+        if (plot.term1_q[param]) plot.term2_q[param] = 1
+      }
       main(plot)
+    } else {
+      console.log('unhandled click event', d, d3event.target)
     }
   })
 
@@ -251,12 +272,6 @@ function setOverlayOpts(plot, main, table, arg) {
       (term2)=>{
 	    plot.obj.tip.hide()
         plot.term2 = term2
-        if (plot.term2.iscondition) {
-          plot.settings.common.conditionParents[2] = plot.term2.id
-          if (!plot.settings.common.conditionUnits[2]) {
-            plot.settings.common.conditionUnits[2] = "max_grade_perperson"
-          }
-        }
         if (plot.term2.isfloat && plot.term2_boxplot) { 
           plot.term2_displaymode = 'boxplot'
         } else {
@@ -282,24 +297,16 @@ function setOverlayOpts(plot, main, table, arg) {
         : 'none'
     }
     radio.inputs.property('checked', d => d.value == plot.settings.bar.overlay)
-    const cu = plot.settings.common.conditionUnits
+
     radio.divs.style('display', d => {
-      if (d.value == "by_children") {
-        if (plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id)) return 'none'
-        return plot.term.isleaf || cu[1] == 'by_children' ? 'none' : 'block'
-      } /*else if (d.value == "max_graded_children") {
-        if (cu[1] == 'by_children') return 'none'
-        return plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id) ? 'block' : 'none'
-      }*/ else if (d.value == "max_grade_by_subcondition") {
-        // if (cu[1] == 'max_grade_perperson' || cu[1] == "most_recent_grade") return 'none'
-        return !plot.term.isleaf && plot.term.iscondition && (!plot.term2 || plot.term2.id == plot.term.id) ? 'block' : 'none'
-      } /*else if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
-        if (plot.term.iscondition && plot.term2 && plot.term2.id == plot.term.id) return 'none'
-        return plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'none'
-      }*/ else {
+      if (d.value == "bar_by_children") {
+        return plot.term.iscondition && !plot.term.isleaf && plot.term1_q.bar_by_grade ? 'block' : 'none'
+      } else if (d.value == "bar_by_grade") {
+        return plot.term.iscondition && !plot.term.isleaf && plot.term1_q.bar_by_children ? 'block' : 'none'
+      } /*else {
         const block = plot.term.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'inline-block'
         return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
-      }
+      }*/
     })
   })
 }
@@ -342,45 +349,50 @@ function setDivideByOpts(plot, main, table, arg) {
     td, 
     [
       {label: 'None', value: 'none'},
-      {label: 'Term', value: 'tree'},
+      {label: '', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
       {label: 'Max. grade per person', value: 'max_grade_perperson'},
       {label: 'Most recent grade', value: 'most_recent_grade'}
     ]
   )
+  
+  //add blue-pill for term0
+  const pill_div = d3select(radio.labels.filter((d)=>{ return d.value == 'tree'}).node().parentNode)
+    .append('div')
+    .style('display','inline-block')
+  
+  termui_display({
+    holder: pill_div,
+    genome: plot.obj.genome,
+    mds: plot.obj.mds,
+    tip: plot.obj.tip,
+    termsetting: {term:plot.term0, q: plot.term0?plot.term0.q:undefined},
+    callback: (term0) => {
+      plot.obj.tip.hide()
+      plot.term0 = term0
+      //update plot only if radio selected
+      if(radio.inputs.filter((d)=>{ return d.value == 'tree'}).node().checked){
+        main( plot )
+     } 
+    }
+  })
 
   radio.inputs
   .property('checked', d => d.value == plot.settings.bar.divideBy)
   .on('input', d => {
     d3event.stopPropagation()
+    const term0_selected = plot.term0
     plot.settings.bar.divideBy = d.value
     if (d.value == "none") {
       plot.term0 = undefined
       //plot.term2_displaymode = 'stacked'
       main(plot)
+      plot.term0 = term0_selected
     } else if (d.value == "tree") {
-	  plot.obj.showtree4selectterm(
-	    [arg.term.id, plot.term2 ? plot.term2.id : null],
-		tr.node(),
-        (term0)=>{
-	      plot.obj.tip.hide()
-          plot.term0 = term0
-          if (plot.term0.iscondition) { //!plot.settings.common.conditionParents[0]) {
-            plot.settings.common.conditionParents[0] = plot.term0.id
-            if (!plot.settings.common.conditionUnits[0]) {
-              plot.settings.common.conditionUnits[0] = "max_grade_perperson"
-            }
-          }
-          main(plot)
-        }
-      )
+      plot.term0 = term0_selected
+      main(plot)
     } else if (d.value == "genotype") {
       // to-do
-    } else if (d.value == "by_children" || d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
-      if (!plot.term0) plot.term0 = plot.term
-      plot.settings.common.conditionUnits[0] = d.value
-      plot.settings.common.conditionParents[0] = plot.term0.id
-      main(plot)
     }
   })
 
@@ -424,57 +436,63 @@ function setDivideByOpts(plot, main, table, arg) {
 
 function setConditionUnitOpts(plot, main, table, termNum, label, index) {
   /**/
-  const cu = plot.settings.common.conditionUnits
   const tr = table.append('tr')
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
-  const optionsSeed = [
-    {label: "Subconditions", value: "by_children"}
+  const options = [
+    {label: "Subconditions, max grade", value: "bar_by_children + value_by_max_grade"},
+    {label: "Subconditions, most recent", value: "bar_by_children + value_by_most_recent"},
+    {label: "Subconditions, graded", value: "bar_by_children + value_by_computable_grade"},
+    {label: "Max grade per patient", value: "bar_by_grade + value_by_max_grade"},
+    {label: "Most recent grades per patient", value: "bar_by_grade + value_by_most_recent"}, 
+    {label: "Grade per patient", value: "bar_by_grade + value_by_computable_grade"},
   ]
 
-  plot.controls.push(() => {
-    const choices = plot[termNum]
-        && plot[termNum].graph 
-        && plot[termNum].graph.barchart 
-        && plot[termNum].graph.barchart.value_choices 
-        ? plot[termNum].graph.barchart.value_choices
-      : plot.term.iscondition
-        && plot.term.graph 
-        && plot.term.graph.barchart 
-        && plot.term.graph.barchart.value_choices 
-      ? plot.term.graph.barchart.value_choices
-      : []
+  const radio = renderRadioInput(
+    'pp-termdb-condition-unit-'+ index + '-' + plot.controlsIndex, 
+    td,
+    options,
+    null,
+    'block'
+  )
 
-    const radio = renderRadioInput(
-      'pp-termdb-condition-unit-'+ index + '-' + plot.controlsIndex, 
-      td,
-      optionsSeed.concat( 
-        choices
-        .filter(d => d.max_grade_perperson || d.most_recent_grade)
-        .map(d => {
-          let value = d.max_grade_perperson 
-            ? 'max_grade_perperson'
-            : 'most_recent_grade'
+  const q = plot['term' + index + '_q']
 
-          return {label: d.label, value}
-        })
-      )
-    )
-
-    radio.inputs
-    .property('checked', d => d.value == cu[index])
+  radio.inputs
+    .property('checked', matchedParam)
     .on('input', d => {
-      cu[index] = d.value
-      plot.settings.common.conditionParents[index] = plot[termNum] ? plot[termNum].id : ''
+      // clear existing parameter values
+      delete q.value_by_max_grade
+      delete q.value_by_most_recent
+      delete q.value_by_computable_grade
+      delete q.bar_by_children
+      delete q.bar_by_grade
+
+      for(const param of d.value.split(" + ")) {
+        q[param] = 1
+      }
+
       main(plot)
     })
+
+  const matchedParam = d => {
+    const params = d.value.split(" + ")
+    let numMatched = 0
+    for(const param of params) {
+      if (q[param]) numMatched++
+    }
+    return numMatched == params.length
+  }
+
+  plot.controls.push(() => {
+    radio.inputs.property('checked', matchedParam)
 
     tr.style('display', plot[termNum] && plot[termNum].iscondition 
       ? "table-row" 
       : index == 2 && plot.term.iscondition 
       ? "table-row"
       : "none")
-
+    /*
     radio.divs.style('display', d => {
       if (d.value == 'none') {
         return index == 1 ? 'none' : 'block'
@@ -486,475 +504,39 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
         return cu[1] != d.value ? 'block' : 'none'
       } // return d.value != 'none' || !plot[termNum].isleaf ? 'block' : 'none'
     })
-
-    radio.inputs.property('checked', d => cu[index] == d.value) 
+    */
   })
 }
 
 function setBinOpts(plot, main, table, termNum, label) {
   const tr = table.append('tr')
-  
+
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
 
   const bin_edit_td = tr.append('td')
 
-  const bin_size_div = bin_edit_td.append('div')
-    .html('Bin Size')
-
-  const bin_size_btn = bin_size_div.append('div')
+  bin_edit_td.append('div')
     .attr('class','sja_edit_btn')
-
-  const first_bin_div = bin_edit_td.append('div')
-    .html('First Bin')
-
-  const first_bin_btn = first_bin_div.append('div')
-    .attr('class','sja_edit_btn')
-
-  const last_bin_div = bin_edit_td.append('div')
-    .html('Last Bin')
-
-  const last_bin_btn = last_bin_div.append('div')
-    .attr('class','sja_edit_btn')
-
-  let first_bin_range, last_bin_range, custom_bin_size, bin_term
-  bin_term = plot.term
-  
-  update_btn()
-
-  bin_size_btn.on('click', () => {
-    bin_size_menu(plot, main, bin_size_btn, termNum.slice(-1), custom_bin_size)
-  })
-
-  first_bin_btn.on('click', () => {
-    plot.tip.clear().showunder(first_bin_btn.node())
-    edit_bin_menu(plot.tip,first_bin_range)
-  })
-
-  last_bin_btn.on('click', () => {
-    plot.tip.clear().showunder(last_bin_btn.node())
-    edit_bin_menu(plot.tip,last_bin_range)
-  })
-
-  tr.append('td')
-    .style('text-decoration', 'underline')
-    .style("cursor", "pointer")
-    .html('edit ...')
-    .on('click', () => {
-      custom_bin(plot, main, termNum.slice(-1), tr.node())
+    .style('margin-left','0px')
+    .html('EDIT')
+    .on('click',()=>{
+      // click to show ui and customize binning
+      make_numeric_bin_btns(plot.tip, plot.term, plot.term.q, (result)=>{
+        if (result !== plot.term.q) {
+          for(const key in plot.term.q) delete plot.term.q[key]
+          Object.assign(plot.term.q, result)
+        }
+        main(plot)
     })
+  })
 
+  //TODO: remove following code if not used
   plot.controls.push(() => {
     plot.term1 = plot.term
     tr.style('display', plot[termNum] && plot[termNum].isfloat ? 'table-row' : 'none')
-    // update button from term2
-    if(plot.term2 && termNum == 'term2'){ 
-      bin_term = plot.term2
-      update_btn()
-    }
   })
-
-  function update_btn(){
-  
-    if(bin_term.isfloat || bin_term.isinteger ){
-      if(plot.custom_bins[termNum.slice(-1)]){
-        bin_size_btn.text(plot.custom_bins[termNum.slice(-1)].size + ' ' + (bin_term.unit?bin_term.unit:''))
-        first_bin_btn.text('EDIT')
-        last_bin_btn.text('EDIT')
-
-        //define first, last bin range and custom_bin
-        // first_bin_range = { start : auto_bins.start_value , stop: (auto_bins.start_value + plot.custom_bins[termNum.slice(-1)].size)}
-        // last_bin_range = { start: '', stop: ''}
-        custom_bin_size = plot.custom_bins[termNum.slice(-1)]
-
-      }else if(bin_term.graph.barchart.numeric_bin.auto_bins){
-        const auto_bins = bin_term.graph.barchart.numeric_bin.auto_bins
-        bin_size_btn.text(auto_bins.bin_size + ' ' + (bin_term.unit?bin_term.unit:''))
-        first_bin_btn.text('EDIT')
-        last_bin_btn.text('EDIT')
-  
-        //define first, last bin range and custom_bin
-        first_bin_range = { start : auto_bins.start_value , stop: (auto_bins.start_value + auto_bins.bin_size)}
-        last_bin_range = { start: '', stop: ''}
-        custom_bin_size = { size: auto_bins.bin_size }
-  
-      }else if(bin_term.graph.barchart.numeric_bin.fixed_bins){
-        const fixed_bins = bin_term.graph.barchart.numeric_bin.fixed_bins
-        bin_size_btn.text('EDIT')
-        first_bin_btn.text(fixed_bins[0].label + ' ' + (bin_term.unit?bin_term.unit:''))
-        last_bin_btn.text(fixed_bins[fixed_bins.length-1].label + ' ' + (bin_term.unit?bin_term.unit:''))
-        
-        //define first, last bin range and custom_bin
-        first_bin_range = fixed_bins[0]
-        last_bin_range = fixed_bins[fixed_bins.length-1]
-        custom_bin_size = { size: ''}
-      }
-    }
-  }
 }
 
-function bin_size_menu(plot, main, btn, binNum=1, custom_bin_size){
-
-  if(plot.custom_bins[binNum]) custom_bin_size = plot.custom_bins[binNum]
-  
-  let bin_term
-  if (binNum == 1) bin_term = plot.term
-  else bin_term = plot.term2
-
-  const tip = plot.tip
-  tip.clear().showunder(btn.node())
-  tip.d.style('padding','0')
-
-  const bin_size_div = tip.d.append('div')
-    .style('display','block')
-    .style('padding','3px 5px')
-
-  const x = '<span style="font-family:Times;font-style:italic">x</span>'
-
-  bin_size_div.append('div')
-    .style('display','inline-block')
-    .style('padding','3px 10px')
-    .html('Bin Size')
-
-  const bin_size_input = bin_size_div.append('input')
-    .attr('type','number')
-    .attr('value',custom_bin_size.size)
-    .style('width','60px')
-    .on('keyup', async ()=>{
-      if(!client.keyupEnter()) return
-      bin_size_input.property('disabled',true)
-      apply()
-      bin_size_input.property('disabled',false)
-    })
-
-  // select between start/stop inclusive
-  const include_select = bin_size_div.append('select')
-    .style('margin-left','10px')
-
-  include_select.append('option')
-  .attr('value','stopinclusive')
-    .html('start &lt; ' + x + ' &le; end')
-  include_select.append('option')
-    .attr('value','startinclusive')
-    .html('start &le; ' + x + ' &lt; end')
-
-  include_select.node().selectedIndex =
-    custom_bin_size.startinclusive ? 1 : 0 
-
-  tip.d.append('div')
-    .attr('class','sja_menuoption')
-    .style('text-align','center')
-    .text('APPLY')
-    .on('click', ()=>{
-      apply()
-    })
-
-  if(plot.custom_bins[binNum]){
-    tip.d.append('div')
-      .attr('class','sja_menuoption')
-      .style('text-align','center')
-      .html('RESET')
-      .on('click', ()=>{
-        plot.custom_bins[binNum] = null
-        main(plot)
-        plot.tip.hide()
-        if(bin_term.graph.barchart.numeric_bin.auto_bins){
-          const auto_bins = bin_term.graph.barchart.numeric_bin.auto_bins
-          btn.text(auto_bins.bin_size + ' ' + (bin_term.unit?bin_term.unit:''))
-        }else{
-          btn.text('EDIT')
-        }
-      })
-  }
-
-  function apply(){
-    plot.custom_bins[binNum] = {
-      size: bin_size_input.node().value ? parseFloat(bin_size_input.node().value) : "auto",
-      startinclusive: (include_select.node().value == 'startinclusive'),
-      stopinclusive: (include_select.node().value == 'stopinclusive'),
-      min_val: 'auto',
-      min_unit: 'value',
-      max_val: 'auto',
-      max_unit: 'value'
-    }
-    main(plot)
-    tip.hide()
-    btn.text(plot.custom_bins[binNum].size + ' ' + (bin_term.unit?bin_term.unit:''))
-  }
-
-}
-
-function edit_bin_menu(tip, range){
-
-  tip.d.style('padding','0')
-
-  const bin_edit_div = tip.d.append('div')
-    .style('display','block')
-    .style('padding','3px 5px')
-
-  const start_input = bin_edit_div.append('input')
-    .attr('type','number')
-    .attr('value',range.start)
-    .style('width','60px')
-    .on('keyup', async ()=>{
-      if(!client.keyupEnter()) return
-      start_input.property('disabled',true)
-      // await apply()
-      start_input.property('disabled',false)
-    })
-
-  // to replace operator_start_div
-  const startselect = bin_edit_div.append('select')
-    .style('margin-left','10px')
-
-  startselect.append('option')
-    .html('&le;')
-  startselect.append('option')
-    .html('&lt;')
-  startselect.append('option')
-    .html('&#8734;')
-
-  startselect.node().selectedIndex =
-    range.startunbounded ? 2 :
-    range.startinclusive ? 0 : 1
-
-  const x = '<span style="font-family:Times;font-style:italic">x</span>'
-
-  bin_edit_div.append('div')
-    .style('display','inline-block')
-    .style('padding','3px 10px')
-    .html(x)
-
-  // to replace operator_end_div
-  const stopselect = bin_edit_div.append('select')
-    .style('margin-right','10px')
-
-  stopselect.append('option')
-    .html('&le;')
-  stopselect.append('option')
-    .html('&lt;')
-  stopselect.append('option')
-    .html('&#8734;')
-
-  stopselect.node().selectedIndex =
-    range.stopunbounded ? 2 :
-    range.stopinclusive ? 0 : 1
-    
-  const stop_input = bin_edit_div.append('input')
-    .attr('type','number')
-    .style('width','60px')
-    .attr('value',range.stop)
-    .on('keyup', async ()=>{
-      if(!client.keyupEnter()) return
-      stop_input.property('disabled',true)
-      // await apply()
-      stop_input.property('disabled',false)
-    })
-
-  tip.d.append('div')
-    .attr('class','sja_menuoption')
-    .style('text-align','center')
-    .text('APPLY')
-}
-
-function custom_bin(plot, main, binNum=1, btn){
-  plot.tip.clear().showunder(btn)
-
-  const custom_bins = binNum in plot.custom_bins ? plot.custom_bins[binNum] : null
-  const controls = plot.bin_controls[binNum]
-
-  const custom_bin_div = plot.tip.d.append('div')
-    .style('margin','10px 0px')
-    .style('align-items','flex-start')
-    .style('display','flex')
-
-  // Bin Size
-  const bin_size_div = custom_bin_div.append('div')
-    .style('display','inline-block')
-    .style('margin-left','25px')
-    .style('margin-right','10px')
-    .style('text-align','center')
-
-  bin_size_div.append('div')
-    .text('Bin Size')
-    .style('padding-right','3px')
-    .style('text-align','center')
-
-  controls.custom_bin_size = bin_size_div.append('input')
-    .style('margin-top','10px')
-    .attr('size','8')
-    .style('text-align','center')
-    .property('value', custom_bins ? custom_bins.size : null)
-    .attr('placeholder', 'auto')
-
-  // uniform bin start_inclusive or stop_inclusive
-  controls.bin_inclusion = bin_size_div.append('div')
-    .append('select')
-    .style('margin-top','10px')
-
-  controls.bin_inclusion.append('option')
-    .attr('value','start')
-    .text('Start inclusive')
-    .property('selected', custom_bins && custom_bins.startinclusive)
-
-   controls.bin_inclusion.append('option')
-    .attr('value','stop')
-    .text('Stop inclusive')
-    .property('selected', custom_bins && custom_bins.stopinclusive)
-
-  // First Bin
-  const first_bin_div = custom_bin_div.append('div')
-    .style('display','inline-block')
-    .style('margin-left','25px')
-    .style('text-align','center')
-
-  first_bin_div.append('div')
-    .text('Minimum')
-    .style('padding-right','3px')
-    .style('text-align','center')
-
-  const first_bin_input_div = first_bin_div.append('div')
-    .style('margin-top','10px')
-    .style('display','block')
-    .style('white-space','nowrap')
-
-  // comparison operator
-  /*controls.first_bin_oper = first_bin_input_div.append('select')
-    .property('selected', custom_bins && custom_bins.first_bin_oper == "lteq")
-  controls.first_bin_oper.append('option')
-    .attr('value', 'lt')
-    .html('&lt;')
-    .property('selected', custom_bins && custom_bins.first_bin_oper == "lt")
-  controls.first_bin_oper.append('option')
-    .attr('value', 'lteq')
-    .html('&lt;=')*/
-
-  // lower cutoff 
-  controls.min_val = first_bin_input_div.append('input')
-    .style('display','inline-block')
-    .style('text-align','center')
-    .attr('size','8')
-    .attr('placeholder', 'auto')
-    .property('value', !custom_bins 
-      ? null
-      : custom_bins.min_val == "auto"
-      ? null
-      : custom_bins.min_val)
-
-  // cutoff unit
-  controls.min_unit = first_bin_div.append('select')
-    .style('margin-top','10px')
-
-  controls.min_unit.append('option')
-    .attr('value','value')
-    .text('Value')
-    .property('selected', custom_bins && custom_bins.min_unit == 'value' ? true : false)
-
-  controls.min_unit.append('option')
-    .attr('value','percentile')
-    .text('Percentile')
-    .property('selected', custom_bins && custom_bins.min_unit == 'percentile' ? true : false)
-
-  // Last Bin
-  const last_bin_div = custom_bin_div.append('div')
-    .style('display','inline-block')
-    .style('margin-left','25px')
-    .style('margin-right','10px')
-    .style('text-align','center')
-
-  last_bin_div.append('div')
-    .text('Maximum')
-    .style('padding-right','3px')
-    .style('text-align','center')
-
-  const last_bin_input_div = last_bin_div.append('div')
-    .style('margin-top','10px')
-    .style('display','block')
-    .style('white-space','nowrap')
-  
-  // comparison operator
-  /*controls.last_bin_oper = last_bin_input_div.append('select')
-  controls.last_bin_oper.append('option')
-    .attr('value', 'gt')
-    .html('&gt;')
-    .property('selected', custom_bins && custom_bins.first_bin_oper == "gt")
-  controls.last_bin_oper.append('option')
-    .attr('value', 'gteq')
-    .html('&gt;=')
-    .property('selected', custom_bins && custom_bins.first_bin_oper == "gteq")*/
-
-  // bin size
-  controls.max_val = last_bin_input_div.append('input')
-    .style('display','inline-block')
-    .style('text-align','center')
-    .attr('size','8')
-    .attr('placeholder', 'auto')
-    .property('value', !custom_bins 
-      ? null
-      : custom_bins.max_val == "auto"
-      ? null
-      : custom_bins.max_val)
-
-  // cutoff unit
-  controls.max_unit = last_bin_div.append('select')
-    .style('margin-top','10px')
-
-  controls.max_unit.append('option')
-    .attr('value','value')
-    .text('Value')
-    .property('selected', custom_bins && custom_bins.max_unit == 'value' ? true : false)
-
-  controls.max_unit.append('option')
-    .attr('value','percentile')
-    .text('Percentile')
-    .property('selected', custom_bins && custom_bins.max_unit == 'percentile' ? true : false)
-
-  // submit, reset buttons
-  const btndiv = plot.tip.d.append('div')
-    .style('text-align','center')
-    
-  btndiv.append('button')
-    .html('Submit')
-    .on('click', ()=>{
-      const size = controls.custom_bin_size.property('value')
-      const inclusive = controls.bin_inclusion.property('value')
-      const startinclusive = inclusive == 'start'
-      const stopinclusive = inclusive == 'stop'
-      const min_val = controls.min_val.property('value')
-      const min_unit = controls.min_unit.property('value')
-      const max_val = controls.max_val.property('value')
-      const max_unit = controls.max_unit.property('value')
-      if (size !== "" && isNaN(size)) {
-        alert('Invalid bin size.' + size)
-      } else {
-        //if (!min_val || !isNaN(min_val)) errs.push('Invalid first')
-        plot.custom_bins[binNum] = {
-          size: size ? +size : "auto",
-          startinclusive,
-          stopinclusive,
-          min_val: min_val != '' && !isNaN(min_val) ? +min_val : 'auto',
-          min_unit,
-          max_val: max_val != '' && !isNaN(max_val) ? +max_val : 'auto',
-          max_unit
-        }
-        main(plot)
-        plot.tip.hide()
-      }
-    })
-
-  btndiv.append('button')
-    .html('Reset')
-    .on('click', ()=>{
-      plot.custom_bins[binNum] = null
-      main(plot)
-      plot.tip.hide()
-    })
-
-  btndiv.append('button')
-    .html('Cancel')
-    .on('click', ()=>{
-      plot.tip.hide()
-    })
-}
 
 export function bar_click_menu(obj, barclick, clickedBar) {
 /*

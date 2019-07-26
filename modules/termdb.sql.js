@@ -1,6 +1,5 @@
 const app = require('../app')
-
-
+const binsmodule = require('./termdb.bins')
 
 /*
 
@@ -9,18 +8,21 @@ get_samples
 get_summary
 get_numericsummary
 get_rows
+get_rows_by_one_key
 server_init_db_queries
 ********************** INTERNAL
 makesql_by_tvsfilter
 	add_categorical
 	add_numerical
 	add_condition
-makesql_overlay_oneterm
-	makesql_overlay_oneterm_condition
+makesql_oneterm
+	makesql_oneterm_condition
 makesql_numericBinCTE
+get_term_cte
 uncomputablegrades_clause
 grade_age_select_clause
 get_label4key
+
 */
 
 
@@ -28,12 +30,21 @@ get_label4key
 
 
 
-function makesql_by_tvsfilter ( tvslst, ds ) {
+function makesql_by_tvsfilter ( tvslst, ds) {
 /*
 .tvslst[{}]
 	optional
 	each element is a term-value setting object
 	must have already been validated by src/mds.termdb.termvaluesetting.js/validate_termvaluesetting()
+
+_opts{}
+	options for minor tweaks to the generated statement to serve other purposes,
+	such as to help with getting min, max, percentiles for numeric terms 
+	.columnas    "", or set t ", value" to get values
+	.endclause   "GROUP BY sample",
+							 or "ORDER BY value ASC" if columnas == ", value" and getting min, max, percentile
+
+
 returns:
 	.filters:
 		one string of all filter statement intersects, with question marks
@@ -42,8 +53,7 @@ returns:
 	.CTEname:
 		the name of CTE, to be used in task-specific runner
 */
-	if( !tvslst ) return null
-
+	if( !tvslst || !tvslst.length) return null
 	const filters = []
 	const values = []
 
@@ -119,76 +129,25 @@ returns:
 	}
 
 	function add_condition ( tvs ) {
-		if( ds.cohort.termdb.q.termIsLeaf( tvs.term.id ) ) {
-			// is leaf
-			filters.push(
-				`
-				SELECT sample
-				FROM (
-					${grade_age_selection(tvs.term.id, values, tvs, ds)}
-				) 
-				WHERE grade IN (${tvs.values.map(i=>'?').join(', ')})`
-			)
-			values.push( ...tvs.values.map(i=>i.key) )
-			return
-		}
+		const value_for = tvs.bar_by_children ? 'child' 
+			: tvs.bar_by_grade ? 'grade'
+			: ''
+		if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
 
-		const termtable = `(
-			SELECT term_id
-			FROM ancestry
-			WHERE (ancestor_id=? OR term_id=?)
-		)`
-
-		// not leaf
-		if( tvs.grade_and_child ) {
-			filters.push(
-				`SELECT sample
-				FROM (
-					${grade_age_selection(tvs.term.id, values, tvs, ds, null, termtable)}
-				)
-				WHERE grade = ?`
-			)
-			values.push(
-				tvs.grade_and_child[0].child_id,
-				tvs.grade_and_child[0].child_id,
-				tvs.grade_and_child[0].grade
-			)
-			return
-		}
-
-		if( tvs.bar_by_grade ) {
-			filters.push(
-				`SELECT sample
-				FROM (
-					${grade_age_selection(tvs.term.id, values, tvs, ds, null, termtable)}
-				)
-				WHERE
-				grade IN (${tvs.values.map(i=>'?').join(', ')})`
-			)
-			values.push(...tvs.values.map(i=>i.key))
-			return
-		}
-
-
-		if( tvs.bar_by_children ) {
-			filters.push(
-				`SELECT distinct(sample)
-				FROM chronicevents
-				WHERE
-					term_id IN (
-						SELECT term_id
-						FROM ancestry
-						WHERE
-						${tvs.values.map(i=>'ancestor_id=? OR term_id=?').join(' OR ')}
-					)
-					${uncomputablegrades_clause( ds )}`
-			)
-			for(const i of tvs.values) {
-				values.push(i.key, i.key)
-			}
-			return
-		}
-		throw 'unknown mode for non-leaf condition term'
+		const restriction = tvs.value_by_max_grade ? 'max_grade'
+				: tvs.value_by_most_recent ? 'most_recent'
+				: 'computable_grade'
+		values.push(tvs.term.id, value_for, restriction)
+		
+		filters.push(`
+			SELECT 
+				sample
+			FROM precomputed
+			WHERE term_id = ? 
+				AND value_for = ? 
+				AND restriction = ?
+				AND value IN (${tvs.values.map(i=>'?').join(', ')})`)
+		values.push(...tvs.values.map(i=>''+i.key))
 	}
 }
 
@@ -208,8 +167,6 @@ return an array of sample names passing through the filter
 	const string =
 		`WITH ${filter.filters}
 		SELECT sample FROM ${filter.CTEname}`
-	console.log('SQL: ',string)
-	console.log('PARAM: ',filter.values)
 
 	// may cache statement
 	const re = ds.cohort.db.connection.prepare( string )
@@ -219,23 +176,69 @@ return an array of sample names passing through the filter
 
 
 
-/* 
-	 
-*/
-export function get_rows ( q ) {
+
+export function get_rows_by_one_key ( q ) {
 /*
+get all sample and value by one key
+no filter or cte
+works for all attributes, including non-termdb ones
+
+q{}
+	.ds
+	.key
+*/
+	const sql = 'SELECT sample,value FROM annotations WHERE term_id=?'
+	return q.ds.cohort.db.connection.prepare( sql )
+		.all( q.key )
+}
+
+
+
+
+export function get_rows ( q, _opts={}) {
+/*
+works for only termdb terms; non-termdb attributes will not work
+
 gets data for barchart but not summarized by counts;
-returns all relevant rows of {sample, key[0,1,2], val[0,1,2]}
+returns all relevant rows of 
+	{
+		sample, key[0,1,2], val[0,1,2], count AS opts.countas
+		CTE[0,1,2]} if opts.withCTEs == true
+	}
 
 q{}
 	.tvslst
 	.ds
-	.term1_id
-	.term2_id
-	.term1_q{}
-	.term2_q{}
+	.term[0,1,2]_id
+	.term[0,1,2]_q
+
+opts{} options to tweak the query, see const default_opts = below
+	
+	.withCTEs		  true: return {lst,CTE0,CTE1,CTE2}, 
+							  false: return lst 
+	
+	.columnas		  default to return all rows when 't1.sample AS sample',
+							  or set to "count(distinct t1.sample) as samplecount" to aggregate
+	
+	.endclause:   default to '',
+							  or "GROUP BY key0, key1, key2" when aggregating by samplecount
+							  or +" ORDER BY ..." + " LIMIT ..."
+
 */
 	if (typeof q.tvslst == 'string') q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+	
+	// do not break code that still uses the opts.groupby key-value
+	// can take this out once all calling code has been migrated
+	if (_opts.groupby) {
+		_opts.endclause = _opts.groupby
+		delete _opts.groupby
+	}
+	const default_opts = {
+		withCTEs: true,
+		columnas: 't1.sample AS sample',
+		endclause: ''
+	}
+	const opts = Object.assign(default_opts, _opts)
 	const filter = makesql_by_tvsfilter( q.tvslst, q.ds )
 	const values = filter ? filter.values.slice() : []
 	const CTE0 = get_term_cte(q, filter, values, 0)
@@ -244,27 +247,28 @@ q{}
 
 	const statement =
 		`WITH
-		${filter ? filter.filters + ',' : ''}
+		${filter ? filter.filters +',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
 		${CTE2.sql}
 		SELECT
-			t1.sample as sample,
       t0.key AS key0,
       t0.value AS val0,
       t1.key AS key1,
       t1.value AS val1,
       t2.key AS key2,
-      t2.value AS val2
+      t2.value AS val2,
+      ${opts.columnas}
 		FROM ${CTE1.tablename} t1
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
-		${filter ? "WHERE t1.sample in "+filter.CTEname : ""}`
-  //console.log(statement, values)
+		${filter ? "WHERE t1.sample in "+filter.CTEname : ""}
+		${opts.endclause}`
+	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( values )
 
-	return lst
+	return !opts.withCTEs ? lst : {lst, CTE0, CTE1, CTE2, filter}
 }
 
 function get_term_cte(q, filter, values, index) {
@@ -274,45 +278,35 @@ Generates one or more CTEs by term
 q{}
 	.tvslst
 	.ds
-	.term0_id
-	.term0_q{}
-	.term1_id
-	.term1_q{}
-	.term2_id
-	.term2_q{}
-
-filter 
-	.filters
-	.values
-	.CTEname
-
-values 
-  [] string/numeric to replace ? in CTEs
-
-index
-	term-index: 0 for term0, 1 for term1, 2 for term2
+	.term[0,1,2]_id
+	.term[0,1,2]_q
+filter   returned by makesql_by_tvsfilter
+values[] string/numeric to replace ? in CTEs
+index    0 for term0, 1 for term1, 2 for term2
 */
+	const term_is_genotype = 'term' + index + '_is_genotype'
 	const termnum_id = 'term' + index + '_id'
 	const termid = q[termnum_id]
-	const term = termid ? q.ds.cohort.termdb.q.termjsonByOneid( termid ) : null; //console.log('term'+ index, term)
-	if (termid && !term && termid != 'genotype') throw `unknown ${termnum_id}: ${termid}`
+	let term = termid ? q.ds.cohort.termdb.q.termjsonByOneid( termid ) : null;
+	if (termid && !term && !q[term_is_genotype]) throw `unknown ${termnum_id}: ${termid}`
+
 	const termnum_q = 'term' + index + '_q'
 	const termq = q[termnum_q]
 	if(termq && typeof termq == 'string' ) q[termnum_q] = JSON.parse(decodeURIComponent(termq))	
 	if (!termq) q[termnum_q] = {}
-	if (index == 2) q[termnum_q].isterm2 = true
+	q[termnum_q].index = index
 
 	const tablename = 'samplekey_' + index
-	const keyval = termid == 'genotype' ? termid : ""
-	const CTE = term
-		? makesql_overlay_oneterm( term, filter, q.ds, q[termnum_q], values, "_" + index)
+
+	const CTE = term ?
+		makesql_oneterm( term, filter, q.ds, q[termnum_q], values, "_" + index)
 		: {
-				sql: `${tablename} AS (\nSELECT null AS sample, '${keyval}' as key, '${keyval}' as value\n)`,
-				tablename,
-				join_on_clause: '' //`ON t${index}.sample IS NULL`
-			}
-	
-	if (!('join_on_clause' in CTE)) {
+			sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
+			tablename,
+			join_on_clause: '' //`ON t${index}.sample IS NULL`
+		}
+
+	if (index!=1 && !('join_on_clause' in CTE)) {
 		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
 	}
 	
@@ -322,242 +316,94 @@ index
 
 export function get_summary ( q ) {
 /*
-getting data for barchart and more
-
 q{}
 	.tvslst
 	.ds
-	.term1_id
-	.term2_id
-	.term1_q{}
-	.term2_q{}
+	.term[0,1,2]_id
+	.term[0,1,2]_q
 */
-	let filter
-	if( q.tvslst ) {
-		if( typeof q.tvslst == 'string' ) q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
-		filter = makesql_by_tvsfilter( q.tvslst, q.ds )
+	const result = get_rows(q, {
+		withCTEs: true,
+		columnas: 'count(distinct t1.sample) as samplecount',
+		endclause: 'GROUP BY key0, key1, key2'
+	})
+
+	const nums = [0,1,2]
+	const labeler = {}
+	for(const n of nums) {
+		labeler[n] = getlabeler(q, n, result)
 	}
-	if(!q.term1_id) throw '.term1_id is required but missing'
-	const term1 = q.ds.cohort.termdb.q.termjsonByOneid( q.term1_id )
-	if(!term1) throw 'unknown term1_id: '+q.term1_id
-	if(!q.term1_q) q.term1_q = {} // settings of term1
-	if( typeof q.term1_q == 'string' ) q.term1_q = JSON.parse(decodeURIComponent(q.term1_q))
-
-	if( q.term2_id ) {
-		///////////// has term2, do overlay
-		const term2 = q.ds.cohort.termdb.q.termjsonByOneid( q.term2_id )
-		if( !term2 ) throw 'unknown term2_id: '+q.term2_id
-		if(!q.term2_q) q.term2_q = {} // settings of term2
-		if( typeof q.term2_q == 'string' ) q.term2_q = JSON.parse(decodeURIComponent(q.term2_q))
-		const values = []
-		const CTE_term1 = makesql_overlay_oneterm( term1, filter, q.ds, q.term1_q, values, "_1")
-		// in case of using auto binning of numeric term, tell is term2
-		q.term2_q.isterm2 = true
-		const CTE_term2 = makesql_overlay_oneterm( term2, filter, q.ds, q.term2_q, values, "_2")
-		const string =
-			`WITH
-			${filter ? filter.filters+', ' : ''}
-			${CTE_term1.sql},
-			${CTE_term2.sql}
-			SELECT a.key AS key1, b.key AS key2, COUNT(DISTINCT b.sample) AS samplecount
-			FROM
-				${CTE_term1.tablename} a,
-				${CTE_term2.tablename} b
-			WHERE a.sample=b.sample
-			GROUP BY key1,key2`
-		const lst = q.ds.cohort.db.connection.prepare(string)
-			.all( filter ? filter.values.concat(values) : values )
-		// add label or range if numeric
-		for(const i of lst) {
-			if( term1.isinteger || term1.isfloat ) {
-				i.label1 = i.key1
-				i.range1 = CTE_term1.name2bin.get( i.key1 )
-			} else {
-				i.label1 = get_label4key( i.key1, term1, q.term1_q, q.ds )
-			}
-			if( term2.isinteger || term2.isfloat ) {
-				i.label2 = i.key2
-				i.range2 = CTE_term2.name2bin.get( i.key2 )
-			} else {
-				i.label2 = get_label4key( i.key2, term2, q.term2_q, q.ds )
-			}
+	for(const row of result.lst) {
+		for(const n of nums) {
+			labeler[n](row)
 		}
-		return lst
 	}
-
-	///////////////// just term1
-
-	if( term1.iscategorical ) {
-		//////////// summary for categorical
-		const string =
-			`${filter ? 'WITH '+filter.filters+' ' : ''}
-			SELECT value AS key,count(sample) AS samplecount
-			FROM annotations
-			WHERE
-			${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
-			term_id=?
-			GROUP BY value`
-		const lst = q.ds.cohort.db.connection.prepare( string )
-			.all([ ...(filter?filter.values:[]), q.term1_id ])
-		if(!lst) return undefined
-		// add label
-		for(const i of lst) {
-			i.label = get_label4key( i.key, term1 )
-			const label = term1.values ? term1.values[i.key] : i.key
-			i.label = label || i.key
-		}
-		return lst
-	}
-
-	if( term1.isinteger || term1.isfloat ) {
-		//////////// summary for bins
-		const bins = makesql_numericBinCTE( term1, q.term1_q, filter, q.ds )
-		const string =
-			`WITH
-			${filter ? filter.filters+', ' : ''}
-			${bins.sql}
-			SELECT bname AS key, COUNT(sample) AS samplecount
-			FROM ${bins.tablename}
-			GROUP BY bname
-			ORDER BY binorder`
-		const lst = q.ds.cohort.db.connection.prepare(string)
-			.all([ ...(filter?filter.values:[]), term1.id ]);
-		for(const i of lst) {
-			i.label = i.key
-			i.range = bins.name2bin.get( i.key )
-		}
-		return lst
-	}
-
-	if( term1.iscondition ) {
-		let string
-		const thisvalues = []
-		let overlay = false
-		if( term1.isleaf ) {
-			///////////// summary, leaf
-			string = 
-				`WITH
-				${filter ? filter.filters+', ' : ''}
-				tmp_grade_table AS (
-					${grade_age_selection(q.term1_id, thisvalues, q.term1_q, q.ds, filter )}
-				)
-				SELECT grade as key,count(sample) as samplecount
-				FROM tmp_grade_table
-				GROUP BY grade`
-		} else if( q.term1_q.grade_child_overlay ) {
-			/////////// summary, grade-child overlay, one term
-			string =
-				`WITH
-				${filter ? filter.filters+', ' : ''}
-				tmp_children_table AS (
-					SELECT id AS child
-					FROM terms
-					WHERE parent_id=?
-				),
-				tmp_grandchildren_table AS (
-					SELECT term_id, c.child AS child
-					FROM ancestry a, tmp_children_table c
-					WHERE c.child=a.ancestor_id OR c.child=a.term_id
-					ORDER BY term_id ASC
-				),
-				tmp_events_table AS (
-					SELECT sample, d.child as child,
-						${q.term1_q.value_by_max_grade ? 'MAX(grade) AS grade' : 'grade, MAX(age_graded)'}
-					FROM chronicevents a, tmp_grandchildren_table d
-					WHERE
-					${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
-					d.term_id = a.term_id
-					${uncomputablegrades_clause( q.ds )}
-					GROUP BY d.child, sample
-				)
-				SELECT
-					${q.term1_q.bar_by_grade ? 'grade AS key1,child AS key2,' : 'child AS key1,grade AS key2,'}
-					count(sample) AS samplecount
-				FROM tmp_events_table
-				GROUP BY grade, child`
-
-		} else if( q.term1_q.bar_by_grade ) {
-			//////////// summary, bar by grade
-			thisvalues.push(q.term1_id, q.term1_id)
-			const termtable = 'tmp_term_table'
-			string = // NOTE: `tmp_term_table is relied upon by grade_age_selection`
-			`WITH
-			${filter ? filter.filters+', ' : ''}
-			${termtable} AS (
-				SELECT term_id
-				FROM ancestry
-				WHERE ancestor_id=?
-				OR term_id=?
-			),
-			tmp_grade_table AS (
-				${grade_age_selection(q.term1_id, thisvalues, q.term1_q, q.ds, filter, termtable )}
-			)
-			SELECT grade AS key,count(distinct sample) as samplecount
-			FROM tmp_grade_table
-			GROUP BY key`
-		} else if( q.term1_q.bar_by_children ) {
-			/////////// summary, bar by children
-			thisvalues.push(q.term1_id)
-			string =
-				`WITH
-				${filter ? filter.filters+',' : ''}
-				tmp_subcondition_table AS (
-					SELECT id
-					FROM terms
-					WHERE parent_id=?
-				),
-				tmp_descendant_table AS (
-					SELECT term_id, s.id AS subcondition
-					FROM ancestry a, tmp_subcondition_table s
-					WHERE s.id=a.ancestor_id OR s.id=a.term_id
-					ORDER BY term_id ASC
-				),
-				tmp_events_table AS (
-					SELECT
-						sample, d.subcondition as key
-					FROM chronicevents a, tmp_descendant_table d
-					WHERE
-					${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
-					d.term_id = a.term_id
-					${uncomputablegrades_clause( q.ds )}
-					GROUP BY key, sample
-				)
-				SELECT
-					key,
-					count(sample) AS samplecount
-				FROM tmp_events_table
-				GROUP BY key`
-		} else {
-			throw 'unknown setting for a non-leaf term'
-		}
-		const lst = q.ds.cohort.db.connection.prepare( string )
-			.all([ ...(filter?filter.values:[]), ...thisvalues ])
-		for(const i of lst) {
-			if( q.term1_q.grade_child_overlay ) {
-				if(q.term1_q.bar_by_grade) {
-					i.label1 = get_label4key( i.key1, term1, q.term1_q, q.ds )
-					i.label2 = i.key2
-				} else {
-					i.label1 = i.key1
-					i.label2 = get_label4key( i.key2, term1, q.term1_q, q.ds )
-				}
-			} else {
-				i.label = get_label4key( i.key, term1, q.term1_q, q.ds )
-			}
-		}
-		return lst
-	}
-	throw 'unknown type of term1'
+	return result.lst
 }
 
 
 
+function getlabeler(q, i, result) {
+/*
+Returns a function to (re)label a data object
 
+q{}
+	.tvslst
+	.ds
+	.term[0,1,2]_id
+	.term[0,1,2]_q
+i       0,1,2 corresponding to term[i]_[id|q]
+result  returned by get_rows(, {withCTEs: 1})
+*/
+	const key = 'key' + i
+	const value = 'val' + i
+	const label = "label" + i
+	const default_labeler = (row) => {
+		delete row[key]
+		delete row[value]
+	}
+	
+	const term_id = q['term'+ i + '_id']
+	if (!term_id) return default_labeler
+	const term = q.ds.cohort.termdb.q.termjsonByOneid( term_id )
+	if (!term_id) return default_labeler 
+	
+	// when there is only term1 and no term0/term2 simplify 
+	// the property names to just "key" and "label" with no index
+	// -- consider keeping key1 terminology consistent later?
+	const tkey = i != 1 || q.term0_id || q.term2_id ? key : 'key'
+	const tlabel = i != 1 || q.term0_id || q.term2_id ? key : 'label'
+	if( term.isinteger || term.isfloat ) {
+		const CTE = result['CTE' + i]
+		const range = 'range' + (i != 1 || q.term0_id || q.term2_id ? i : '')
+		return (row) => {
+			row[range] = CTE.name2bin.get( row[key] )
+			row[tlabel] = row[key]
+			delete row[value]
+			// remove key index as needed
+			if (tkey !== key) {
+				row[tkey] = row[key]
+				delete row[key]
+			}
+		}
+	} else {
+		const term_q = q['term' + i + '_q']
+		return (row) => {
+			row[tlabel] = get_label4key( row[key], term, term_q, q.ds )
+			delete row[value]
+			// remove key index as needed
+			if (tkey !== key) {
+				row[tkey] = row[key]
+				delete row[key]
+			}
+		}
+	}
+}
 
 
 
 function get_label4key ( key, term, q, ds ) {
-// get label for a key based on term type and setting
+	// get label for a key based on term type and setting
 	if(term.iscategorical) {
 		let label
 		if( term.values && term.values[key] ) label = term.values[key].label
@@ -578,81 +424,8 @@ function get_label4key ( key, term, q, ds ) {
 
 
 
-function uncomputablegrades_clause ( ds ) {
-	const u = ds.cohort.termdb.patient_condition.uncomputable_grades
-	if( u ) {
-		const lst = []
-		for(const k in u) lst.push(k)
-		return ` AND grade NOT IN (${lst.join(',')}) `
-	}
-	return ''
-}
-function grade_age_selection (term_id, values, tvs, ds, filter, termtable=null ) {
-	// work for grade as bars 
-	if( tvs.value_by_max_grade ) {
-		if (!termtable) values.push(term_id)
-		else if (termtable.includes('?')) {
-			values.push(term_id,term_id)
-		}
 
-		return `SELECT sample,MAX(grade) AS grade, MAX(grade) AS value
-		FROM chronicevents
-		WHERE
-		${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
-		term_id IN ${termtable ? termtable : '(?)'}
-		${uncomputablegrades_clause( ds )}
-		GROUP BY sample`
-	}
-
-	if( tvs.value_by_most_recent ) {
-		if (termtable) {
-			if (termtable.includes('?')) {
-				values.push(term_id,term_id,term_id,term_id)
-			}
-			return `
-			SELECT c.sample as sample, c.grade AS grade, c.grade AS value
-			FROM (
-				SELECT sample, MAX(age_graded) AS age_graded 
-				FROM chronicevents
-				WHERE
-				${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
-				term_id IN ${termtable}
-				${uncomputablegrades_clause( ds )}
-				GROUP BY sample
-			) t
-			JOIN chronicevents c ON 
-			  c.term_id IN ${termtable}
-			  AND c.sample = t.sample 
-			  AND c.age_graded = t.age_graded
-			  ${uncomputablegrades_clause( ds )}
-  		GROUP BY c.sample, c.grade`
-		} else {
-			values.push(term_id, term_id)
-
-			return `
-			SELECT c.sample as sample, c.grade AS grade, c.grade AS value
-			FROM (
-				SELECT sample, MAX(age_graded) AS age_graded 
-				FROM chronicevents
-				WHERE
-				${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
-				term_id = ?
-				${uncomputablegrades_clause( ds )}
-				GROUP BY sample
-			) t
-			JOIN chronicevents c ON 
-			  c.term_id = ? 
-			  AND c.sample = t.sample 
-			  AND c.age_graded = t.age_graded
-			  ${uncomputablegrades_clause( ds )}
-			GROUP BY c.sample, c.grade`
-		}
-	}
-
-	throw 'unknown value_by_? for condition term by grade'
-}
-
-function makesql_overlay_oneterm ( term, filter, ds, q, values, termindex ) {
+function makesql_oneterm ( term, filter, ds, q, values, termindex ) {
 /*
 form the query for one of the table in term0-term1-term2 overlaying
 
@@ -661,7 +434,7 @@ CTE for each term resolves to a table of {sample,key}
 term{}
 filter{}: returned by makesql_by_tvsfilter
 q{}
-	.custom_bins[]
+	.binconfig[]
 	.value_by_?
 	.bar_by_?
 values[]: collector of bind parameters
@@ -690,90 +463,47 @@ returns { sql, tablename }
 				FROM ${bins.tablename}
 			)`,
 			tablename,
-			name2bin: bins.name2bin
+			name2bin: bins.name2bin,
+			bins: bins.bins
 		}
 	}
 	if( term.iscondition ) {
-		return makesql_overlay_oneterm_condition( term, q, ds, filter, values, termindex )
+		return makesql_oneterm_condition( term, q, ds, filter, values, termindex )
 	}
 	throw 'unknown term type'
 }
 
 
-function makesql_overlay_oneterm_condition ( term, q, ds, filter, values, termindex='' ) {
+function makesql_oneterm_condition ( term, q, ds, filter, values, termindex='' ) {
 /*
-return {sql, tablename}
+	return {sql, tablename}
 */
 	const grade_table = 'grade_table' + termindex
 	const term_table = 'term_table' + termindex
 	const out_table = 'out_table' + termindex
+	const value_for = q.bar_by_children ? 'child' 
+		: q.bar_by_grade ? 'grade'
+		: ''
+	if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
 
-	let string
-	if( term.isleaf ) {
-		return {
-			sql:
-			`${grade_table} AS (
-				${grade_age_selection(term.id, values, q, ds, filter)}
-			),
-			${out_table} AS (
-				SELECT grade AS key, sample, grade as value
-				FROM ${grade_table}
-			)`,
-			tablename: out_table
-		}
+	const restriction = q.value_by_max_grade ? 'max_grade'
+			: q.value_by_most_recent ? 'most_recent'
+			: 'computable_grade'
+	values.push(term.id, value_for, restriction)
+	
+	return {
+		sql: `${out_table} AS (
+			SELECT 
+				sample, 
+				${value_for == 'grade' ? 'CAST(value AS integer) as key' : 'value as key'}, 
+				${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
+			FROM precomputed
+			WHERE term_id = ? 
+				AND value_for = ? 
+				AND restriction = ?
+		)`,
+		tablename: out_table
 	}
-	if( q.bar_by_grade ) {
-		values.push(term.id, term.id)
-		return {
-			sql:
-			`${term_table} AS (
-				SELECT term_id
-				FROM ancestry
-				WHERE ancestor_id=?
-				OR term_id=?
-			),
-			${grade_table} AS (
-				${grade_age_selection(term.id, values, q, ds, filter, term_table)}
-			),
-			${out_table} AS (
-				SELECT grade AS key, sample, grade AS value
-				FROM ${grade_table}
-			)`,
-			tablename: out_table
-		}
-	}
-	if( q.bar_by_children ) {
-		values.push( term.id )
-		const subconditions = 'subconditions' + termindex
-		const descendants = 'descendants' + termindex
-		return {
-			sql: `${subconditions} AS (
-				SELECT id
-				FROM terms
-				WHERE parent_id=?
-			),
-			${descendants} AS (
-				SELECT term_id, s.id AS subcondition
-				FROM ancestry a, ${subconditions} s
-				WHERE s.id=a.ancestor_id OR s.id=a.term_id
-				ORDER BY term_id ASC
-			),
-			${grade_table} AS (
-				SELECT
-					sample, d.subcondition as key, d.subcondition AS value
-				FROM
-					chronicevents a,
-					${descendants} d
-				WHERE
-				${filter ? 'sample IN '+filter.CTEname+' AND' : ''}
-				a.term_id = d.term_id
-				${uncomputablegrades_clause( ds )}
-				GROUP BY key, sample
-			)`,
-			tablename: grade_table
-		}
-	}
-	throw 'unknown bar_by_? for a non-leaf term'
 }
 
 
@@ -785,38 +515,19 @@ function makesql_numericBinCTE ( term, q, filter, ds, termindex='' ) {
 decide bins and produce CTE
 
 q{}
-	.custom_bins[]: list of custom bins
-	.isterm2: true
+	.binconfig[]   list of custom bins
+	.index           0,1,2 corresponding to term*_id           
 filter as is returned by makesql_by_tvsfilter
-returns { sql, tablename, name2bin }
+returns { sql, tablename, name2bin, bins, binconfig }
 */
-	const [bins, bin_size] = get_bins(q, term, ds)
+	const [bins, binconfig] = get_bins(q, term, ds, termindex)
 	const bin_def_lst = []
 	const name2bin = new Map() // k: name str, v: bin{}
+	const bin_size = binconfig.bin_size
+	let has_percentiles = false
 	let binid = 0
 	for(const b of bins) {
-		if (!b.name && b.label) b.name = b.label
-		if(!b.name) {
-			if( Number.isInteger( bin_size ) ) {
-        // bin size is integer, make nicer label
-        if( bin_size == 1 ) {
-          // bin size is 1; use just start value as label, not a range
-          b.name = b.start
-        } else {
-          // bin size bigger than 1, reduce right bound by 1, in label only!
-          b.name = b.start + ' to ' + (b.stop-1)
-        }
-      } else {
-        // bin size is not an integer
-        if( b.startunbounded ) {
-          b.name = (b.stopinclusive ? '<=' : '<')+' '+b.stop
-        } else if( b.stopunbounded ) {
-          b.name = (b.startinclusive ? '>=' : '>')+' '+b.start
-        } else {
-          b.name = `${b.start} <${b.startinclusive?'=':''} x <${b.stopinclusive?'=':''} ${b.stop}`
-        }
-      }
-		}
+		if (!('name' in b) && b.label) b.name = b.label
 		name2bin.set( b.name, b )
 		bin_def_lst.push(
 			`SELECT '${b.name}' AS name,
@@ -933,45 +644,60 @@ returns { sql, tablename, name2bin }
 	return {
 		sql,
 		tablename: bin_sample_table,
-		name2bin
+		name2bin,
+		bins,
+		binconfig
 	}
 }
 
-function get_bins(q, term, ds) {
-	let bin_size
-	let bins = []
-	if( q.custom_bins ) {
-		bins = q.custom_bins
-	} else {
-		// use automatic bins
-		if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
-			if( q.isterm2 && term.graph.barchart.numeric_bin.crosstab_fixed_bins ) {
-				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.crosstab_fixed_bins))
-			} else if ( term.graph.barchart.numeric_bin.fixed_bins ) {
-				bins = JSON.parse(JSON.stringify(term.graph.barchart.numeric_bin.fixed_bins))
-			} else if( term.graph.barchart.numeric_bin.auto_bins ) {
-				const max = ds.cohort.termdb.q.findTermMaxvalue(term.id, term.isinteger)
-				let v = term.graph.barchart.numeric_bin.auto_bins.start_value
-				bin_size = term.graph.barchart.numeric_bin.auto_bins.bin_size
-				while( v < max ) {
-					bins.push({
-						start: v,
-						stop: Math.min( v+bin_size, max ),
-						startinclusive:true
-					})
-					v+=bin_size
-				}
-				bins[bins.length-1].stopinclusive = true
-			} else {
-				throw 'no predefined binning scheme'
-			}
-		}
-	}
-	return [bins, bin_size]
+
+export function get_bins(q, term, ds) {
+/*
+
+q{}
+	.binconfig
+	.tvslst
+	.index           0,1,2 correponding to term*_id
+
+term
+ds 
+
+*/
+	const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin
+	const binconfig = q.binconfig ? q.binconfig 
+		: nb.bins_less && q.index != 1 ? nb.bins_less
+		: nb.bins
+	if (!binconfig) throw 'unable to determine the binning configuration'
+	q.binconfig = binconfig
+
+  const bins = binsmodule.compute_bins(binconfig, (percentiles) => get_numericMinMaxPct(ds, term, q.tvslst, percentiles))
+	if( nb.unannotated ) {
+    // in case of using this numeric term as term2 in crosstab, 
+    // this object can also work as a bin, to be put into the bins array
+    binconfig.unannotated = {
+      _values: [nb.unannotated.value],
+      _labels: {[nb.unannotated.value]: nb.unannotated.label},
+      label: nb.unannotated.label,
+      label_annotated: nb.unannotated.label_annotated
+    }
+
+    if (nb.unannotated.value_positive) {
+      binconfig.unannotated.value_positive = 0
+      binconfig.unannotated._values.push(nb.unannotated.value_positive)
+      binconfig.unannotated._labels[nb.unannotated.value_positive] = nb.unannotated.label_positive
+    }
+    if (nb.unannotated.value_negative) {
+      binconfig.unannotated.value_negative = 0
+      binconfig.unannotated._values.push(nb.unannotated.value_negative)
+      binconfig.unannotated._labels[nb.unannotated.value_negative] = nb.unannotated.label_negative
+    }
+  }
+  return [bins, binconfig]
 }
 
 
-export function get_numericsummary (q, term, ds, _tvslst = [] ) {
+
+export function get_numericsummary (q, term, ds, _tvslst = [], withValues = false ) {
 /*
 to produce the summary table of mean, median, percentiles
 at a numeric barchart
@@ -981,7 +707,7 @@ at a numeric barchart
 		: _tvslst
 
 	if ((term.isinteger || term.isfloat ) && !(tvslst.find(tv=>tv.term.id == term.id && 'ranges' in tv))) {
-		const [bins, bin_size] = get_bins(q, term, ds)
+		const [bins, binconfig] = get_bins(q, term, ds)
 		tvslst.push({term, ranges: bins})
 	}
 	const filter = makesql_by_tvsfilter( tvslst, ds )
@@ -1024,8 +750,100 @@ at a numeric barchart
     sd += Math.pow( i.value - stat.mean, 2 )
   }
   stat.sd = Math.sqrt( sd / (result.length-1) )
-
+  stat.min = result[0].value
+  stat.max = result[result.length - 1].value
+  if (withValues) stat.values = result.map(i => i.value)
 	return stat
+}
+
+
+export function get_numericMinMaxPct (ds, term, tvslst = [], percentiles = []) {
+/* 
+	similar arguments to get_numericSummary()
+	but min, max, percentilex are calculated by sqlite db
+	to lessen the burden on the node server 
+	(individual values are not returned in this query)
+
+	percentiles[]
+		optional array of desired percentile values [X, Y, ...]
+
+	returns {min, max, pX, pY, ...} 
+	where 
+		pX is the value at the Xth percentile,
+		pY is the value at the Yth percentile,
+		and so on ...
+*/
+	const filter = makesql_by_tvsfilter( tvslst, ds )
+	const values = []
+	if(filter) {
+		values.push(...filter.values)
+	}
+	let excludevalues
+	if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
+		if (term.graph.barchart.numeric_bin.unannotated) {
+			excludevalues = []
+			const u = term.graph.barchart.numeric_bin.unannotated
+			if(u.value!=undefined) excludevalues.push(u.value)
+			if(u.value_positive!=undefined) excludevalues.push(u.value_positive)
+			if(u.value_negative!=undefined) excludevalues.push(u.value_negative)
+		}
+	}
+
+	values.push(term.id)
+
+	const ctes = []
+	const ptablenames = []
+	const cols = []
+	let tablename
+	for(const n of percentiles) {
+		tablename = 'pct_' + n
+		ctes.push(`
+		${tablename} AS (
+		  SELECT value
+		  FROM vals
+		  LIMIT 1
+		  OFFSET (
+		    SELECT cast ( x as int ) - ( x < cast ( x as int ))
+		    FROM (
+		      SELECT cast(?*pct as int) as x 
+		      FROM p
+		    )
+		  )
+		)`)
+		values.push(n)
+		ptablenames.push(tablename)
+		cols.push(`${tablename}.value AS ${'p' + n}`)
+	} 
+
+	const sql = `WITH
+		${filter ? filter.filters+', ' : ''} 
+		vals AS (
+			SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
+			FROM annotations
+			WHERE
+			${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
+			term_id=?
+			${excludevalues ? 'AND value NOT IN ('+excludevalues.join(',')+')' : ''}
+			ORDER BY value ASC
+		),
+		p AS (
+			SELECT count(value)/100 as pct
+			FROM vals
+		)
+		${ ctes.length ? ',\n' + ctes.join(",") : '' }
+		SELECT 
+			min(vals.value) as vmin,
+			max(vals.value) as vmax
+			${ cols.length ? ',\n' + cols.join(",\n") : '' } 
+		FROM vals ${ptablenames.length ? "," + ptablenames.join(",") : ""}`
+
+	const s = ds.cohort.db.connection.prepare(sql);
+	const result = s.all( values );
+	
+	const summary = !result.length ? {} : result[0]
+	summary.max = result[0].vmax
+	summary.min = result[0].vmin
+	return summary
 }
 
 
@@ -1052,6 +870,13 @@ thus less things to worry about...
 	if(!ds.cohort.db.connection) throw 'ds.cohort.db.connection missing'
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
+
+	{
+		const s = ds.cohort.db.connection.prepare('SELECT * FROM terms')
+		q.getallterms = ()=>{
+			return s.all()
+		}
+	}
 
 	{
 		const s = ds.cohort.db.connection.prepare('select jsondata from terms where id=?')

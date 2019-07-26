@@ -51,6 +51,7 @@ export class TermdbBarchart{
     if (data) this.currServerData = data
     if (!this.setVisibility(isVisible)) return
     if (obj) this.obj = obj
+    if (plot) this.plot = plot
     this.dom.barDiv.style('max-width', window.innerWidth + 'px')
     this.updateSettings(plot)
     this.processData(this.currServerData) 
@@ -78,8 +79,7 @@ export class TermdbBarchart{
       colw: plot.settings.common.barwidth,
       rowh: plot.settings.common.barwidth,
       colspace: plot.settings.common.barspace,
-      rowspace: plot.settings.common.barspace,
-      conditionUnits: plot.settings.common.conditionUnits
+      rowspace: plot.settings.common.barspace
     }
     Object.assign(this.settings, settings)
     this.settings.numCharts = this.currServerData.charts.length
@@ -130,13 +130,15 @@ export class TermdbBarchart{
       ? bins.fixed_bins.map(d=>d.label).reverse()
       : bins && bins.crosstab_fixed_bins 
       ? bins.crosstab_fixed_bins.map(d=>d.label).reverse()
+      : bins["2"]
+      ? bins["2"].map(d=>d.label).reverse()
       : null
 
     self.grade_labels = chartsData.refs.grade_labels 
       ? chartsData.refs.grade_labels
       : null
 
-    const rows = chartsData.refs.rows
+    const rows = chartsData.refs.rows;
     self.rowSorter = chartsData.refs.useRowOrder
       ? (a,b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
       : self.binLabels
@@ -285,8 +287,8 @@ export class TermdbBarchart{
         if (termNum == 'term0' || !term) continue
 
         const key = termNum=="term1" ? d.seriesId : d.dataId
-        const cu = self.settings.conditionUnits
-        const label = term.iscondition && self.grade_labels && (cu[index] == "max_grade_perperson" || cu[index] == "most_recent_grade")
+        const q1 = self.plot['term' + index + '_q']
+        const label = term.iscondition && self.grade_labels && q1.bar_by_grade
           ? self.grade_labels.find(c => c.grade == key).label
           : !term.values 
           ? key
@@ -295,57 +297,37 @@ export class TermdbBarchart{
             : term.values[d.dataId].label
 
         if (term.iscondition) {
-          const unit = self.settings.conditionUnits[index]
-          if (term.isleaf) {
-            termValues.push({
-              term,
-              values:[{key,label}],
-              bar_by_grade:true,
-              value_by_max_grade: unit == "max_grade_perperson",
-              value_by_most_recent: unit == "most_recent_grade",
-            })
-          } else if (!self.terms.term2) {
-            if (unit == "max_grade_perperson" || unit == "most_recent_grade") {
-              termValues.push({
-                term,
-                values:[{key,label}],
-                bar_by_grade:true,
-                value_by_max_grade: unit == "max_grade_perperson",
-                value_by_most_recent: unit == "most_recent_grade",
-              })
-            } else if (unit == "by_children") {
-              termValues.push({
-                term,
-                values:[{key,label}],
-                bar_by_children:true
-              })
-            }
-          } else if (index == 1 && term.id == self.terms.term2.id) {
-            const term2Label = unit == "by_children" 
+          termValues.push(Object.assign({
+            term,
+            values:[{key,label}]
+          }, q1))
+
+          if (index == 1 && term.id == self.terms.term2.id) {
+            const q2 = self.plot.term2_q
+            const term2Label = q.bar_by_children 
               ? self.grade_labels.find(c => c.grade == d.dataId).label
               : self.terms.term2.values
               ? self.terms.term2.values[d.dataId].label
               : d.dataId
 
-            termValues.push({
+            termValues.push(Object.assign({
               term,
               grade_and_child: [{
-                grade: unit == "by_children" ? d.dataId : key,
-                grade_label: unit == "by_children" ? term2Label : label ,
-                child_id: unit == "by_children" ? key : d.dataId,
-                child_label: unit == "by_children" ? label : term2Label
-              }],
-              value_by_max_grade: unit == "max_grade_perperson",
-              value_by_most_recent: unit == "most_recent_grade",
-            })
+                grade: q2.bar_by_grade ? d.dataId : key,
+                grade_label: q2.bar_by_grade ? term2Label : label ,
+                child_id: q2.bar_by_children ? key : d.dataId,
+                child_label: q2.bar_by_children ? label : term2Label
+              }]
+            }, q2))
           }
         } else {
           const bins = self.bins[index]
-          const range = !bins ? null : bins.find(d => d.label == label)
-          if (range) {
-            termValues.push({term, ranges: [range]})
-          } else {
+          if (!bins || !bins.length) {
+            // not associated with numeric bins
             termValues.push({term, values: [{key, label}]})
+          } else {
+            const range = bins.find(d => d.label == label || d.name == label)
+            if (range) termValues.push({term, ranges: [range]})
           }
         }
       }
@@ -428,10 +410,10 @@ export class TermdbBarchart{
       colLabel: {
         text: d => {
           const grade = self.grade_labels
-            ? self.grade_labels.find(c => c.grade == d)
+            ? self.grade_labels.find(c => 'id' in d ? c.grade == d.id : c.grade == d)
             : null
           return self.terms.term1.values
-            ? self.terms.term1.values[d].label
+            ? self.terms.term1.values['id' in d ? d.id : d].label
             : grade
             ? grade.label
             : 'label' in d
@@ -455,10 +437,10 @@ export class TermdbBarchart{
       rowLabel: {
         text: d => {
           const grade = self.grade_labels
-            ? self.grade_labels.find(c => c.grade == d)
+            ? self.grade_labels.find(c => 'id' in d ? c.grade == d.id : c.grade == d)
             : null
           return self.terms.term1.values
-            ? self.terms.term1.values[d].label
+            ? self.terms.term1.values['id' in d ? d.id : d].label
             : grade
             ? grade.label
             : 'label' in d
@@ -491,9 +473,9 @@ export class TermdbBarchart{
             self.main()
           }
           if (d.type == 'row') {
-            const i = self.settings.exclude.rows.indexOf(d.id)
+            const i = self.settings.exclude.rows.indexOf(d.dataId)
             if (i == -1) {
-              self.settings.exclude.rows.push(d.id)
+              self.settings.exclude.rows.push(d.dataId)
             } else {
               self.settings.exclude.rows.splice(i,1)
             }
@@ -514,9 +496,9 @@ export class TermdbBarchart{
             return s.unit == "pct" ? "% of patients" : "# of patients"
           } else {
             const term = self.terms.term1
-            return term.iscondition && s.conditionUnits[1] == 'max_grade_perperson'
+            return term.iscondition && self.plot.term1_q.value_by_max_grade
               ? 'Maximum grade'
-              : term.iscondition && s.conditionUnits[1] == 'most_recent_grade'
+              : term.iscondition && self.plot.term1_q.value_by_most_recent
               ? 'Most recent grade'
               : term.iscategorical || !term.unit
               ? ''
@@ -526,12 +508,13 @@ export class TermdbBarchart{
       },
       xAxis: {
         text: () => {
-          if (s.orientation == "vertical") { 
+          if (s.orientation == "vertical") {
             const term = self.terms.term1
-            return term.iscondition && s.conditionUnits[1] == 'max-grade'
-              ? 'Maximum grade'
-              : term.iscondition && s.conditionUnits[1] == 'num-events'
-              ? '# of events'
+            const q1 = self.plot.term1_q
+            return term.iscondition && q1.bar_by_grade && q1.value_by_max_grade
+              ? 'Maximum grade' 
+              : term.iscondition && q1.bar_by_grade && q1.value_by_most_recent
+              ? 'Most recent grades'
               : term.iscategorical || !term.unit
               ? ''
               : term.unit // term.name[0].toUpperCase() + term.name.slice(1)
@@ -590,13 +573,14 @@ export class TermdbBarchart{
     if (s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
       const t = this.terms.term2
       const b = t.graph && t.graph.barchart ? t.graph.barchart : null
-      const overlay = !t.iscondition || !b ? '' : b.value_choices.find(d => d[s.conditionUnits[2]])
+      const overlay = !t.iscondition || !b ? '' : b.value_choices.find(d => false /*d[s.conditionUnits[2]]*/)
       const grade_labels = b && t.iscondition ? this.grade_labels : null
       const colors = {}
       legendGrps.push({
         name: t.name + (overlay ? ': '+overlay.label : ''),
         items: s.rows.map(d => {
-          const g = grade_labels ? grade_labels.find(c => c.grade == d) : null
+          const g = grade_labels ? grade_labels.find(c => typeof d == 'object' && 'id' in d ? c.grade == d.id : c.grade == d) : null
+          this.binLabels
           return {
             dataId: d,
             text: g ? g.label : d,

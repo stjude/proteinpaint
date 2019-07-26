@@ -158,6 +158,22 @@ function trackfetch(url, arg) {
 	}
 }
 
+
+
+
+export function may_get_locationsearch () {
+	if( !location.search ) return
+	const h = new Map()
+	for(const tmp of decodeURIComponent( location.search.substr(1) ).split('&')) {
+		const l = tmp.split('=')
+		const key = l[0].toLowerCase()
+		h.set( key, l[1] || 1 )
+	}
+	return h
+}
+
+
+
 export function appear(d,display) {
 	d.style('opacity',0)
 	.style('display',display || 'block')
@@ -1609,9 +1625,10 @@ export function gmlst2loci ( gmlst ) {
 export function tab2box ( holder, tabs ) {
 /*
 tabs[ tab{} ]
-	.label: required
+	.label:
+		required
 	.callback()
-		if callback is provided for a tab,
+		required
 
 this function attaches .box (d3 dom) to each tab of tabs[]
 */
@@ -1629,7 +1646,6 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 	for(let i=0; i<tabs.length; i++) {
 
 		const tab = tabs[i]
-		let callback_called = false // only used when there's a callback for the tab
 
 		tab.tab = tdleft.append('div')
 			.style('padding','5px 10px')
@@ -1662,9 +1678,8 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 				}
 			}
 			if( tab.callback ) {
-				if( callback_called ) return
-				callback_called=true
 				tab.callback( tab.box )
+				delete tab.callback
 			}
 		})
 	}
@@ -1689,4 +1704,21 @@ export function add_scriptTag ( path ) {
 		document.head.appendChild(script)
 		script.onload = resolve
 	})
+}
+
+export function make_select_btn_pair( holder ){
+// a click button triggering a <select> menu
+	const btn = holder.append('div')
+		.attr('class','sja_filter_tag_btn')
+		.style('position','absolute')
+	const select = holder.append('select')
+		.style('opacity',0)
+		.on('mouseover',()=>{
+			btn.style('opacity', '0.8')
+			.style('cursor','default')
+		})
+		.on('mouseout',()=>{
+			btn.style('opacity', '1')
+		})
+	return [select, btn]
 }

@@ -39,18 +39,22 @@ arg: server returned data
     tip: new client.Menu({padding:'18px'}),
     
     // data
+    term0: arg.term0 ? arg.term0 : null,
     term: arg.term,
     term2: arg.term2 
       ? arg.term2 
       : arg.obj.modifier_ssid_barchart
       ? {mname: arg.obj.modifier_ssid_barchart.mutation_name}
-      : null, 
+      : null,
     items: arg.items,
     boxplot: arg.boxplot,
 
+    term0_q: {},
+    term1_q: {},
+    term2_q: {},
+
     // may need to put the following properties under
     // a namespace or within the affected module
-    custom_bins: {},
     bin_controls: {1:{}, 2:{}},
     term2_displaymode: arg.term2_displaymode ? arg.term2_displaymode : "stacked",
     term2_boxplot: 0,
@@ -65,11 +69,7 @@ arg: server returned data
         use_percentage: false,
         barheight: 300, // maximum bar length 
         barwidth: 20, // bar thickness
-        barspace: 2, // space between two bars
-        // conditionUits: [divide-unit, bin-unit, stack-unit]
-        conditionUnits: ['', 'max_grade_perperson', ''],
-        conditionParents: ['', '', ''],
-        conditionsBy: 'by_grade',
+        barspace: 2 // space between two bars
       },
       boxplot: {
         toppad: 20, // top padding
@@ -126,60 +126,85 @@ arg: server returned data
 const serverData = {}
 
 function main(plot, callback = ()=>{}) {
+  // create an alternative reference 
+  // to plot.[term0,term,term2] and term*_q parameters
+  // for convenience and namespacing related variables
+  plot.terms = [plot.term0, plot.term, plot.term2]
+  if (plot.terms[0]) plot.terms[0].q = plot.term0_q
+  plot.terms[1].q = plot.term1_q
+  if (plot.terms[2]) plot.terms[2].q = plot.term2_q
+
   const dataName = getDataName(plot)
   if (serverData[dataName]) {
+    syncParams(plot, serverData[dataName])
     render(plot, serverData[dataName])
-    callback()
+    callback({plot, main})
   }
   else {
-    client.dofetch2('/termdb-barchart' + dataName)
+    client.dofetch2('/termdb-barsql' + dataName)
     .then(chartsData => {
       serverData[dataName] = chartsData
+      syncParams(plot, serverData[dataName])
       render(plot, chartsData)
-      callback()
+      callback({plot, main})
     })
   }
 }
 
-// creates a unique request identifier to be used
-// for caching server response keys
+// creates URL search parameter string, that also serves as 
+// a unique request identifier to be used for caching server response
 function getDataName(plot) {
   const obj = plot.obj
   const params = [
     'genome=' + obj.genome.name,
-    'dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label),
-    'term1=' + plot.term.id
+    'dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label)
   ];
-  if (plot.term0) {
-    params.push('term0=' + plot.term0.id)
-  }
+
+  plot.terms.forEach((term, i)=>{
+    if (!term) return
+    params.push('term'+i+'_id=' + term.id)
+    if (term.q && typeof term.q == 'object') {
+      if (term.iscondition && !Object.keys(term.q).length) {
+        if (term.iscondition) term.q = {bar_by_grade:1, value_by_max_grade:1}
+      }
+      params.push('term'+i+'_q=' +encodeURIComponent(JSON.stringify(term.q)))
+    }
+  })
+
   if (obj.modifier_ssid_barchart) {
     params.push(
-      'term2=genotype',
+      'term2_is_genotype=1',
       'ssid=' + obj.modifier_ssid_barchart.ssid,
       'mname=' + obj.modifier_ssid_barchart.mutation_name,
-	  'chr=' + obj.modifier_ssid_barchart.chr,
-	  'pos=' + obj.modifier_ssid_barchart.pos
+      'chr=' + obj.modifier_ssid_barchart.chr,
+      'pos=' + obj.modifier_ssid_barchart.pos
     )
-  } else if (plot.term2) {
-    params.push('term2=' + plot.term2.id)
+  } 
+
+  if (obj.termfilter && obj.termfilter.terms && obj.termfilter.terms.length) {
+    params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
   }
-  if (obj.termfilter) {
-    params.push('filter=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
-  }
-  if (plot.custom_bins) {
-    params.push('custom_bins=' + encodeURIComponent(JSON.stringify(plot.custom_bins)))
-  }
-  const hasCondition = plot.term.iscondition || (plot.term2 && plot.term2.iscondition) || (plot.term0 && plot.term0.iscondition)
-  const conditionUnits = plot.settings.common.conditionUnits.join("-,-")
-  if (conditionUnits != "-,--,-" && hasCondition) {
-    params.push('conditionUnits=' + conditionUnits)
-  }
-  const conditionParents = plot.settings.common.conditionParents.join("-,-")
-  if (conditionParents != "-,--,-" && hasCondition) {
-    params.push('conditionParents=' + conditionParents)
-  }
+
   return '?' + params.join('&')
+}
+
+function syncParams( plot, data ) {
+  if (!data || !data.refs) return
+  for(const i of [0,1,2]) {
+    const term = plot.terms[i]
+    if (!term) continue
+    if (data.refs.bins && data.refs.bins[i]) {
+      term.bins = data.refs.bins[i]
+    }
+    if (data.refs.q && data.refs.q[i]) {
+      if (!term.q) term.q = plot['term' + i + '_q'];
+      const q = data.refs.q[i]
+      if (q !== plot.term.q) {
+        for(const key in plot.term.q) delete plot.term.q[key]
+        Object.assign(plot.term.q, q)
+      }
+    }
+  }
 }
 
 function render ( plot, data ) {
@@ -188,7 +213,6 @@ make a barchart, boxplot, or stat table based on configs
 in the plot object called by showing the single-term plot 
 at the beginning or stacked bar plot for cross-tabulating
 */ 
-  // console.log(plot)
   plot.controls_update()
   plot.views.barchart.main(plot, data, plot.term2_displaymode == "stacked", plot.obj)
   plot.views.boxplot.main(plot, data, plot.term2_displaymode == "boxplot")

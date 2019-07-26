@@ -81,9 +81,17 @@ data is returned by xhr
 		update_info_fields( data.info_fields, tk )
 	}
 	if( data.AFtest_termdbgroup ) {
-		const group = tk.vcf.numerical_axis.AFtest.groups.find(i=>i.is_termdb)
-		group.dom.samplehandle.text('n='+data.AFtest_termdbgroup.samplecount+', view stats')
-		group.popsetaverage = data.AFtest_termdbgroup.popsetaverage // for displaying in tooltip
+		let g = tk.vcf.numerical_axis.AFtest.groups[0]
+		if( g.is_termdb ) {
+			g.dom.samplehandle.text('n='+data.AFtest_termdbgroup[0].samplecount+', view stats')
+			g.popsetaverage = data.AFtest_termdbgroup[0].popsetaverage // for displaying in tooltip
+		}
+
+		g = tk.vcf.numerical_axis.AFtest.groups[1]
+		if( g.is_termdb ) {
+			g.dom.samplehandle.text('n='+data.AFtest_termdbgroup[1].samplecount+', view stats')
+			g.popsetaverage = data.AFtest_termdbgroup[1].popsetaverage // for displaying in tooltip
+		}
 	}
 }
 

@@ -119,7 +119,7 @@ group{}
             //term-value relation button
             if(term.term.iscategorical){
 
-                const [condition_select, condition_btn] = make_select_btn_pair(one_term_div)
+                const [condition_select, condition_btn] = client.make_select_btn_pair(one_term_div)
 
                 condition_select.append('option')
                     .attr('value','is')
@@ -180,7 +180,7 @@ group{}
                 
                 for (let j=0; j<term.values.length; j++){
 
-                    const [replace_value_select, term_value_btn] = make_select_btn_pair(one_term_div)
+                    const [replace_value_select, term_value_btn] = client.make_select_btn_pair(one_term_div)
                     replace_value_select.style('margin-right','1px')
                     replace_value_select.selectAll('option').remove()
 
@@ -279,7 +279,7 @@ group{}
 
                     for (let j=0; j<term.values.length; j++){
 
-                        const [subcategroy_select, term_value_btn] = make_select_btn_pair(one_term_div)
+                        const [subcategroy_select, term_value_btn] = client.make_select_btn_pair(one_term_div)
                         subcategroy_select.style('margin-right','1px')
                         make_select_list(data, subcategroy_select, term.values, term.values[j].key, 'delete')
 
@@ -341,7 +341,7 @@ group{}
 
                     for (let j=0; j<term.values.length; j++){
 
-                        const [grade_select, term_value_btn] = make_select_btn_pair(one_term_div)
+                        const [grade_select, term_value_btn] = client.make_select_btn_pair(one_term_div)
                         grade_select.style('margin-right','1px')
 
                         make_select_list(data, grade_select, term.values, term.values[j].key, 'delete')
@@ -445,27 +445,6 @@ group{}
         update_terms(terms_div)
     }
 
-    function make_select_btn_pair(holder){
-
-        const btn = holder.append('div')
-            .attr('class','sja_filter_tag_btn')
-            .style('position','absolute')
-            .style('background-color','#eeeeee')
-            
-        const select = holder.append('select')
-            .style('padding','3px 0')
-            .style('opacity',0)
-            .on('mouseover',()=>{
-                btn.style('opacity', '0.8')
-                    .style('cursor','default')
-            })
-            .on('mouseout',()=>{
-                btn.style('opacity', '1')
-            })
-
-        return [select, btn]
-    }
-
     function make_select_list(data, select, selected_values, btn_value, first_option){
         if(data.lst){
 
@@ -510,7 +489,7 @@ group{}
         // If 2 or less values for the term then remove plus button
         if (data.lst.length <= 2) return
 
-        const [add_value_select, add_value_btn] = make_select_btn_pair(holder)
+        const [add_value_select, add_value_btn] = client.make_select_btn_pair(holder)
         add_value_select.style('margin-right','1px')
 
         add_value_select.selectAll('option').remove()
@@ -567,7 +546,7 @@ group{}
     }
 
     function make_grade_select_btn(holder, term, terms_div){
-        const [grade_type_select, grade_type_btn] = make_select_btn_pair(holder)
+        const [grade_type_select, grade_type_btn] = client.make_select_btn_pair(holder)
         grade_type_select.style('margin-right','1px')
 
         grade_type_select.append('option')
@@ -654,7 +633,7 @@ group{}
         
             if(range.value !=undefined ){
 
-                const [numeric_select, value_btn] = make_select_btn_pair(value_div)
+                const [numeric_select, value_btn] = client.make_select_btn_pair(value_div)
                 numeric_select.style('margin-right','1px')
 
                 make_select_list(unannotated_cats, numeric_select, numeric_term, null, 'delete')

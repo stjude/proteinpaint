@@ -6,6 +6,8 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
 const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
+const fs = require('fs')
+const get_bins = require('./termdb.sql').get_bins
 
 /*
 ********************** EXPORTED
@@ -17,18 +19,21 @@ get_AF
 exports.handle_request_closure = ( genomes ) => {
   return async (req, res) => {
     const q = req.query
-    if (q.custom_bins) {
-      try {
-        q.custom_bins = JSON.parse(decodeURIComponent(q.custom_bins))
-      } catch(e) {
-        app.log(req)
-        res.send({error: (e.message || e)})
-        if(e.stack) console.log(e.stack)
+    for(const i of [0,1,2]) {
+      const termnum_q = 'term' + i +'_q'
+      if (q[termnum_q]) {
+        try {
+          q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
+        } catch(e) {
+          app.log(req)
+          res.send({error: (e.message || e)})
+          if(e.stack) console.log(e.stack)
+        }
       }
-    } 
-    if (q.filter) {
+    }
+    if (q.tvslst) {
       try {
-        q.filter = JSON.parse(decodeURIComponent(q.filter))
+        q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
       } catch(e) {
         app.log(req)
         res.send({error: (e.message || e)})
@@ -36,8 +41,15 @@ exports.handle_request_closure = ( genomes ) => {
       }
     }
     app.log(req)
+    // support legacy query parameter names
+    if (q.term1_id) q.term1 = q.term1_id
+    if (!q.term1_q) q.term1_q = {}
     if (!q.term0) q.term0 = ''
+    if (q.term0_id) q.term0 = q.term0_id 
+    if (!q.term0_q) q.term0_q = {}
     if (!q.term2) q.term2 = ''
+    if (q.term2_id) q.term2 = q.term2_id
+    if (!q.term2_q) q.term2_q = {}
     try {
       const genome = genomes[ q.genome ]
       if(!genome) throw 'invalid genome'
@@ -46,7 +58,7 @@ exports.handle_request_closure = ( genomes ) => {
       if(!ds.cohort) throw 'ds.cohort missing'
       const tdb = ds.cohort.termdb
       if(!tdb) throw 'no termdb for this dataset'
-
+      if(!tdb.precomputed) throw 'tdb.precomputed not loaded'
       // process triggers
       await barchart_data( q, ds, res, tdb )
     } catch(e) {
@@ -92,59 +104,47 @@ function getTrackers() {
 const template = JSON.stringify({
   "@errmode": ["","","",""],
   "@before()": "=prep()",
-  "_:_sum": "+=getSeriesVal()",
-  "_:_values": ["=getSeriesVal()",0],
+  "@join()": {
+    "idVal": "=idVal()"
+  },
   results: {
     "_2:maxAcrossCharts": "=maxAcrossCharts()",
-    "@join()": {
-      chart: "=idVal()"
-    },
     charts: [{
-      "@join()": {
-        series: "=idVal()"
-      },
       chartId: "@key",
-      "_:_total": "+=hasIds()",
+      total: "+1",
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
+      "@done()": "=filterEmptySeries()",
       serieses: [{
-        "@join()": { 
-          data: "=idVal()"
-        },
-        "_:_total": "+=hasIds()",
+        total: "+1",
         seriesId: "@key",
+        max: "<&idVal.dataVal", // needed by client-side boxplot renderer 
+        "~values": ["&idVal.dataVal",0],
+        "~sum": "+&idVal.dataVal",
+        "__:boxplot": "=boxplot()",
+        "~samples": ["$sjlid", "set"],
+        "__:AF": "=getAF()",
         data: [{
           dataId: "@key",
           total: "+1" 
-        }, "&data.id[]"],
-        "_:_max": "<&data.value", // needed by client-side boxplot renderer 
-        "~_:_values": ["=getDataVal()",0],
-        "~_:_sum": "+=getDataVal()",
-        "__:boxplot": "=boxplot2()",
-        "__:AF": "=getAF()",
-        "~samples": ["$sjlid", "set"]
-      }, "&series.id[]"],
-      "@done()": "=filterEmptySeries()"
-    }, "&chart.id[]"],
-    "__:boxplot": "=boxplot1()",
-    "_:_unannotated": {
-      label: "",
-      label_unannotated: "",
-      value: "+=unannotated()",
-      value_annotated: "+=annotated()"
-    },
-    "_:_refs": {
-      cols: ["&series.id[]"],
+        }, "&idVal.dataId[]"],
+      }, "&idVal.seriesId[]"],
+    }, "&idVal.chartId[]"],
+    "~sum": "+&idVal.seriesVal",
+    "~values": ["&idVal.seriesVal",0],
+    "__:boxplot": "=boxplot()",
+    refs: {
+      cols: ["&idVal.seriesId[]"],
       colgrps: ["-"], 
-      rows: ["&data.id[]"],
+      rows: ["&idVal.dataId[]"],
       rowgrps: ["-"],
       col2name: {
-        "&series.id[]": {
+        "&idVal.seriesId[]": {
           name: "@branch",
           grp: "-"
         }
       },
       row2name: {
-        "&data.id[]": {
+        "&idVal.dataId[]": {
           name: "@branch",
           grp: "-"
         }
@@ -153,9 +153,11 @@ const template = JSON.stringify({
       "__:useRowOrder": "=useRowOrder()",
       "__:unannotatedLabels": "=unannotatedLabels()",
       "__:bins": "=bins()",
+      '__:q': "=q()",
       "__:grade_labels": "=grade_labels()",
       "@done()": "=sortColsRows()"
-    }
+    },
+    "@done()": "=sortCharts()"
   }
 })
 
@@ -164,9 +166,17 @@ function getPj(q, inReqs, data, tdb, ds) {
   q: objectified URL query string
   inReq: request-specific closured functions and variables
   data: rows of annotation data
-*/
-  const joinAliases = ["chart", "series", "data"]
-  let j=0;
+*/ 
+  const kvs = [
+    {i: 0, term: 'term0', key: 'chartId', val: 'chartVal', q: q.term0_q},
+    {i: 1, term: 'term1', key: 'seriesId', val: 'seriesVal', q: q.term1_q},
+    {i: 2, term: 'term2', key: 'dataId', val: 'dataVal', q: q.term2_q}
+  ]
+
+  inReqs[0].q = q.term0_q
+  inReqs[1].q = q.term1_q
+  inReqs[2].q = q.term2_q
+
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
@@ -178,45 +188,21 @@ function getPj(q, inReqs, data, tdb, ds) {
         return inReqs.filterFxn(row)
       },
       idVal(row, context, joinAlias) {
-        const i = joinAliases.indexOf(joinAlias)
-        const term = q['term'+i]
-        const id = inReqs[i].joinFxns[term](row, context, joinAlias)
-        if (id === undefined) return
-        return {
-          id: Array.isArray(id) ? id : [id],
-          value: typeof inReqs[i].numValFxns[term] == 'function'
-            ? inReqs[i].numValFxns[term](row)
+        // chart, series, data
+        const csd = Object.create(null)
+        for(const kv of kvs) {
+          const termid = q[kv.term]
+          const id = inReqs[kv.i].joinFxns[termid](row, context, joinAlias)
+          if (id===undefined || (Array.isArray(id) && !id.length)) return
+          csd[kv.key] = Array.isArray(id) ? id : [id]
+          const value = typeof inReqs[kv.i].numValFxns[termid] == 'function'
+            ? inReqs[kv.i].numValFxns[termid](row)
             : undefined
-        }
-      },
-      hasIds(row, context) {
-        const data = context.joins.get('data')
-        if (!data || !data.id.length) return
-        const series = context.joins.get('series')
-        if (!series || !series.id.length) return
-        const chart = context.joins.get('chart')
-        if (!chart || !chart.id.length) return
-        return 1
-      },
-      getSeriesVal(row, context) {
-        const data = context.joins.get('data')
-        if (!data || !data.id.length) return
-        const series = context.joins.get('series')
-        if (!series || !series.id.length) return
-        if (inReqs[1].unannotatedLabels.includes(series.value)) return
-        const chart = context.joins.get('chart')
-        if (!chart || !chart.id.length) return
-        return series.value
-      },
-      getDataVal(row, context) {
-        const data = context.joins.get('data')
-        if (!data || !data.id.length) return
-        if (inReqs[2].unannotatedLabels.includes(data.value)) return
-        const series = context.joins.get('series')
-        if (!series || !series.id.length) return
-        const chart = context.joins.get('chart')
-        if (!chart || !chart.id.length) return
-        return data.value
+          csd[kv.val] = 0 && inReqs[kv.i].unannotatedLabels.includes(value)
+            ? undefined
+            : value 
+        };
+        return csd
       },
       maxSeriesTotal(row, context) {
         let maxSeriesTotal = 0
@@ -236,21 +222,7 @@ function getPj(q, inReqs, data, tdb, ds) {
         }
         return maxAcrossCharts
       },
-      boxplot1(row, context) {
-        if (!context.root.values) return;
-        const values = context.root.values.filter(d => d !== null)
-        if (!values.length) return
-        values.sort((i,j)=> i - j )
-        const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
-        stat.mean = context.root.sum / values.length
-        let s = 0
-        for(const v of values) {
-          s += Math.pow( v - stat.mean, 2 )
-        }
-        stat.sd = Math.sqrt( s / (values.length-1) )
-        return stat
-      },
-      boxplot2(row, context) {
+      boxplot(row, context) {
         if (!context.self.values || !context.self.values.length) return
         const values = context.self.values.filter(d => d !== null)
         if (!values.length) return
@@ -274,7 +246,7 @@ function getPj(q, inReqs, data, tdb, ds) {
   		    || !ds.track.vcf.termdb_bygenotype
   		    || !ds.track.vcf.termdb_bygenotype.getAF
         ) return
-        if (q.term2 != 'genotype') return
+        if (!q.term2_is_genotype) return
 		    if (!q.chr) throw 'chr missing for getting AF'
 		    if (!q.pos) throw 'pos missing for getting AF'
         
@@ -294,7 +266,7 @@ function getPj(q, inReqs, data, tdb, ds) {
         const series = context.joins.get('series')
         if (!series) return
         let total = 0
-        for(const s of series.id) {
+        for(const s of idVal.seriesId) {
           if (inReqs[1].unannotatedLabels.includes(s)) {
             total += 1
           }
@@ -305,7 +277,7 @@ function getPj(q, inReqs, data, tdb, ds) {
         const series = context.joins.get('series')
         if (!series) return
         let total = 0
-        for(const s of series.id) {
+        for(const s of idVal.seriesId) {
           if (!inReqs[1].unannotatedLabels.includes(s)) {
             total += 1
           }
@@ -318,8 +290,13 @@ function getPj(q, inReqs, data, tdb, ds) {
           result.cols.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
         }
         if (inReqs[2].orderedLabels.length) {
-          const labels = inReqs[1].orderedLabels
+          const labels = inReqs[2].orderedLabels
           result.rows.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
+        }
+      },
+      sortCharts(result) {
+        for(const kv of kvs) {
+          const termid = q[kv.term]
         }
       },
       useColOrder() {
@@ -330,21 +307,26 @@ function getPj(q, inReqs, data, tdb, ds) {
       },
       unannotatedLabels() {
         return {
+          term0: inReqs[0].unannotatedLabels,
           term1: inReqs[1].unannotatedLabels, 
           term2: inReqs[2].unannotatedLabels
         }
       },
       bins() {
-        return {
-          "0": inReqs[0].bins,
-          "1": inReqs[1].bins,
-          "2": inReqs[2].bins,
-        }
+        return inReqs.map(d=>d.bins)
+      },
+      q() {
+        return inReqs.map(d=>d.q)
       },
       grade_labels() {
-        return q.conditionParents && tdb.patient_condition
-          ? tdb.patient_condition.grade_labels
-          : q.conditionUnits && (q.conditionUnits[0] || q.conditionUnits[1] || q.conditionUnits[2])
+        let has_condition_term = false
+        for(const kv of kvs) {
+          if (kv.q.bar_by_grade || kv.q.bar_by_children) {
+            has_condition_term = true
+            break
+          }
+        }
+        return tdb.patient_condition && has_condition_term
           ? tdb.patient_condition.grade_labels
           : undefined
       }
@@ -357,347 +339,100 @@ async function setValFxns(q, inReqs, ds, tdb) {
   sets request-specific value and filter functions
   non-condition unannotated values will be processed but tracked separately
 */
-  if(q.filter) {
+  if(q.tvslst) {
     // for categorical terms, must convert values to valueset
-    for(const t of q.filter) {
-      if(t.term.iscategorical) {
-        t.valueset = new Set( t.values.map(i=>i.key) )
+    for(const tv of q.tvslst) {
+      if(tv.term.iscategorical) {
+        tv.valueset = new Set( tv.values.map(i=>i.key) )
       }
     }
     inReqs.filterFxn = (row) => {
-      return sample_match_termvaluesetting( row, q.filter, ds )
+      return sample_match_termvaluesetting( row, q.tvslst, ds )
     }
   }
 
-  const conditionUnits = q.conditionUnits ? q.conditionUnits.split("-,-") : []
-  const conditionParents = q.conditionParents ? q.conditionParents.split("-,-") : []
   for(const i of [0, 1, 2]) {
     const inReq = inReqs[i]
-    const term = 'term' + i
-    const key = q[term]
+    const termnum = 'term' + i
+    const termid = q[termnum]
+    const term_q = q[termnum + "_q"]
+    inReq.q = term_q
+    term_q.index = i
     if (!inReq.orderedLabels) {
       inReq.orderedLabels = []
       inReq.unannotatedLabels = []
     }
-    if (key == "genotype") {
+    if (q[termnum + '_is_genotype']) {
       if (!q.ssid) throw `missing ssid for genotype`
       const [bySample, genotype2sample] = await load_genotype_by_sample(q.ssid)
       inReqs.genotype2sample = genotype2sample
       const skey = ds.cohort.samplenamekey
-      inReq.joinFxns[key] = row => bySample[row[skey]]
+      inReq.joinFxns[termid] = row => bySample[row[skey]]
       continue
     }
-    const t = tdb.termjson.map.get(key)
-    if ((!key || t.iscategorical) && key in inReq.joinFxns) continue
-    if (!t) throw `Unknown ${term}="${q[term]}"`
-    if (!t.graph) throw `${term}.graph missing`
-    if (!t.graph.barchart) throw `${term}.graph.barchart missing`
-    if (t.iscategorical) {
-      inReq.joinFxns[key] = row => row[key] 
-    } else if (t.isinteger || t.isfloat) {
-      get_numeric_bin_name(key, t, ds, term, q.custom_bins, inReq)
-    } else if (t.iscondition) {
+    const term = termid ? tdb.termjson.map.get(termid) : null
+    if ((!termid || term.iscategorical) && termid in inReq.joinFxns) continue
+    if (!term) throw `Unknown ${termnum}="${q[termnum]}"`
+    if (!term.graph) throw `${termnum}.graph missing`
+    if (!term.graph.barchart) throw `${termnum}.graph.barchart missing`
+    if (term.iscategorical) {
+      inReq.joinFxns[termid] = row => row[termid] 
+    } else if (term.isinteger || term.isfloat) {
+      get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq)
+    } else if (term.iscondition) {
       // tdb.patient_condition
       if (!tdb.patient_condition) throw "missing termdb patient_condition"
       if (!tdb.patient_condition.events_key) throw "missing termdb patient_condition.events_key"
-      inReq.orderedLabels = t.grades ? t.grades : [0,1,2,3,4,5,9] // hardcoded default order
-      const unit = conditionUnits[i]
-      const parent = conditionParents[i]
-      set_condition_fxn(key, t.graph.barchart, tdb, unit, inReq, parent, conditionUnits, i)
+      inReq.orderedLabels = term.grades ? term.grades : [0,1,2,3,4,5,9] // hardcoded default order
+      set_condition_fxn(termid, term.graph.barchart, tdb, inReq, i)
     } else {
-      throw "unsupported term binning"
+      throw "unable to handle request, unknown term type"
     }
   }
 }
 
-function set_condition_fxn(key, b, tdb, unit, inReq, conditionParent, conditionUnits, index) {
-  const events_key = tdb.patient_condition.events_key
-  const grade_key = tdb.patient_condition.grade_key
-  const age_key = tdb.patient_condition.age_key
-  const uncomputable = tdb.patient_condition.uncomputable_grades || {}
-  
-  // deduplicate array entry
-  function dedup(v, i, a) {
-    return a.indexOf(v) === i
-  }
+function set_condition_fxn(termid, b, tdb, inReq, index) {
+  const q = inReq.q
+  const precomputedKey = q.bar_by_children && q.value_by_max_grade ? 'childrenAtMaxGrade'
+    : q.bar_by_children && q.value_by_most_recent ? 'childrenAtMostRecent'
+    : q.bar_by_children ? 'children'
+    : q.bar_by_grade && q.value_by_max_grade ? 'maxGrade'
+    : q.bar_by_grade && q.value_by_most_recent ? 'mostRecentGrades'
+    : ''
+  if (!precomputedKey) throw `unknown condition term unit='${unit}'`
 
-  if (unit == 'max_grade_perperson') {
-    if (index==1 && conditionUnits[2] == "max_grade_by_subcondition") {
-      inReq.joinFxns[key] = (row, context, joinAlias) => {
-        const maxGradeByCond = {}
-        for(const k in row) {
-          if (!row[k][events_key]) continue
-          const term = tdb.termjson.map.get(k)
-          if (!term || !term.conditionlineage) continue
-          const i = term.conditionlineage.indexOf(conditionParent)
-          if (i < 1) continue
-          const child = term.conditionlineage[i - 1];
-          for(const event of row[k][events_key]) {
-            const grade = event[grade_key]
-            if (uncomputable[grade]) continue
-            if (!(child in maxGradeByCond) || maxGradeByCond[child] < grade) {
-              maxGradeByCond[child] = grade
-            }
-          }
-        }
-        return Object.values(maxGradeByCond).filter(dedup); 
-      }
-    }
-    else {
-      inReq.joinFxns[key] = (row, context, joinAlias) => {
-        let maxGrade
-        for(const k in row) {
-          if (!row[k][events_key]) continue
-          const term = tdb.termjson.map.get(k)
-          if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-            for(const event of row[k][events_key]) {
-              const grade = event[grade_key]
-              if (uncomputable[grade]) continue
-              if (maxGrade === undefined || maxGrade < grade) {
-                maxGrade = grade
-              }
-            }
-          }
-        }
-        return maxGrade ? [maxGrade] : []
-      }
-    }
-  } else if (unit == 'most_recent_grade') {
-    if (index==1 && conditionUnits[2] == "max_grade_by_subcondition") {
-      inReq.joinFxns[key] = row => {
-        const byCond = {}
-        for(const k in row) {
-          if (!row[k][events_key]) continue
-          const term = tdb.termjson.map.get(k)
-          if (!term || !term.conditionlineage) continue
-          const i = term.conditionlineage.indexOf(conditionParent)
-          if (i < 1) continue
-          const child = term.conditionlineage[i - 1];
-          for(const event of row[k][events_key]) {
-            const age = event[age_key]
-            const grade = event[grade_key]
-            if (grade in uncomputable) continue;
-            if (!(child in byCond) || byCond[child].age < age) {
-              if (!byCond[child]) byCond[child] = {}
-              byCond[child].age = age
-              byCond[child].grade = grade
-            }
-          }
-        }
-        return Object.values(byCond).map(d=>d.grade).filter(dedup)
-      }
-    } else {
-      inReq.joinFxns[key] = row => {
-        const mostRecentGrades = []
-        let mostRecentAge
-        for(const k in row) {
-          if (!row[k][events_key]) continue
-          const term = tdb.termjson.map.get(k)
-          if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-            for(const event of row[k][events_key]) {
-              const age = event[age_key]
-              if (event[grade_key] in uncomputable) continue
-              if (mostRecentAge === undefined || mostRecentAge < age) {
-                mostRecentAge = age
-              }
-            }
-          }
-        }
-        for(const k in row) {
-          if (!row[k][events_key]) continue
-          const term = tdb.termjson.map.get(k)
-          if (term && term.conditionlineage && term.conditionlineage.includes(key)) {
-            for(const event of row[k][events_key]) {
-              if (event[age_key] === mostRecentAge) {
-                const grade = event[grade_key]
-                if (!(grade in uncomputable) && !mostRecentGrades.includes(grade)) {
-                  mostRecentGrades.push(grade)
-                }
-              }
-            }
-          }
-        }
-        return mostRecentGrades
-      }
-    }
-  } else if (unit == 'by_children') {
-    if (!conditionParent) throw "conditionParents must be specified when categories is by children"
-    inReq.joinFxns[key] = row => {
-      const conditions = []
-      for(const k in row) {
-        if (!row[k][events_key]) continue
-        const term = tdb.termjson.map.get(k)
-        if (!term || !term.conditionlineage) continue
-        const i = term.conditionlineage.indexOf(conditionParent)
-        if (i < 1) continue
-        let graded = false
-        for(const event of row[k][events_key]) {
-          if (!uncomputable[event[grade_key]]) {
-            graded = true
-            break
-          } 
-        }
-        if (graded) {
-          // get the immediate child of the parent condition in the lineage
-          const child = term.conditionlineage[i - 1]
-          if (!conditions.includes(child)) {
-            conditions.push(child)
-          }
-        }
-      }
-      return conditions
-    }
-  } /* might re-enable this option later
-  else if (unit == 'max_graded_children') {
-    if (!conditionParent) throw "conditionParents must be specified when category is max_graded_children"
-    inReq.joinFxns[key] = (row, context) => {
-      const maxGrade = context.key
-      const conditions = []
-      for(const k in row) {
-        if (!row[k][events_key]) continue
-        const term = tdb.termjson.map.get(k)
-        if (!term || !term.conditionlineage) continue
-        const i = term.conditionlineage.indexOf(conditionParent)
-        if (i < 1) continue
-        let maxGraded = false; 
-        for(const event of row[k][events_key]) {
-          if (maxGrade === true || event[grade_key] == maxGrade) {
-            maxGraded = true
-            break
-          }
-        }
-        if (maxGraded) { 
-          // get the immediate child of the parent condition in the lineage
-          const child = term.conditionlineage[i - 1];
-          if (!conditions.includes(child)) {
-            conditions.push(child);
-          }
-        }
-      }
-      return conditions
-    }
-  }*/ else if (unit == 'max_grade_by_subcondition') {
-    if (!conditionParent) throw "conditionParents must be specified when category is max_grade_by_subcondition"
-    const parentUnit = conditionUnits[index-1]
-    if (parentUnit == "by_children") {
-      inReq.joinFxns[key] = (row, context) => {
-        const child = context.key;
-        let maxGrade; 
-        for(const k in row) {
-          if (!row[k][events_key]) continue
-          const term = tdb.termjson.map.get(k);
-          if (!term || !term.conditionlineage || !term.conditionlineage.includes(child)) continue
-          for(const event of row[k][events_key]) { 
-            const grade = event[grade_key]
-            if (uncomputable[grade]) continue
-            if (maxGrade === undefined || maxGrade < grade) {
-              maxGrade = grade
-            }
-          }
-        }
-        if (maxGrade !== undefined) {
-          return [maxGrade]
-        }
-      }
-    } else if (parentUnit == "max_grade_perperson") {
-      inReq.joinFxns[key] = (row, context) => {
-        const maxGrade = context.key
-        const maxGradeByCond = {}; 
-        for(const k in row) {
-          if (!row[k][events_key]) continue
-          const term = tdb.termjson.map.get(k)
-          if (!term || !term.conditionlineage) continue
-          const i = term.conditionlineage.indexOf(conditionParent)
-          if (i < 1) continue
-          const child = term.conditionlineage[i - 1];
-          
-          for(const event of row[k][events_key]) {
-            const grade = event[grade_key]
-            if (uncomputable[grade]) continue
-            if (!(child in maxGradeByCond) || maxGradeByCond[child] < grade) {
-              maxGradeByCond[child] = grade
-            }
-          }
-        }
-        const conditions = []
-        for(const child in maxGradeByCond) {
-          if (maxGradeByCond[child] == maxGrade && !conditions.includes(child)) {
-            conditions.push(child)
-          }
-        }
-        return conditions
-      }
-    } else if (parentUnit == "most_recent_grade") {
-      inReq.joinFxns[key] = (row, context) => {
-        const mostRecentGrade = context.key
-        const byCond = {}; 
-        for(const k in row) {
-          if (!row[k][events_key]) continue
-          const term = tdb.termjson.map.get(k)
-          if (!term || !term.conditionlineage) continue
-          const i = term.conditionlineage.indexOf(conditionParent)
-          if (i < 1) continue
-          const child = term.conditionlineage[i - 1];
-          
-          for(const event of row[k][events_key]) {
-            const grade = event[grade_key]
-            if (uncomputable[grade]) continue
-            const age = event[age_key]
-            if (!(child in byCond) || byCond[child].age < age) {
-              if (!byCond[child]) byCond[child] = {}
-              byCond[child].age = age
-              byCond[child].grade = grade
-            }
-          }
-        }
-        const conditions = []
-        for(const child in byCond) {
-          if (byCond[child].grade == mostRecentGrade && !conditions.includes(child)) {
-            conditions.push(child)
-          }
-        }
-        return conditions
-      }
-    } else {
-      throw `invalid parent condition unit: '${parentUnit}'`
-    }
-  } else {
-    throw `invalid condition unit: '${unit}'`
+  inReq.joinFxns[termid] = row => {
+    if (!tdb.precomputed.bySample[row.sjlid]) return []
+    const c = tdb.precomputed.bySample[row.sjlid].byCondition
+    if (!(termid in c) || !(precomputedKey in c[termid])) return []
+    const value = c[termid][precomputedKey]
+    return Array.isArray(value) ? value : [value]
   }
 }
 
-function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
-  const [ binconfig, values, _orderedLabels ] = termdb_get_numericbins( key, t, ds, termNum, custom_bins[termNum.slice(-1)] )
-  inReq.bins = binconfig.bins
 
-  inReq.orderedLabels = _orderedLabels
+function get_numeric_bin_name (term_q, termid, term, ds, termnum, inReq ) {
+  const [bins, binconfig] = get_bins(term_q, term, ds)
+  inReq.bins = bins
+  inReq.orderedLabels = bins.map(d=>d.label); 
   if (binconfig.unannotated) {
     inReq.unannotatedLabels = Object.values(binconfig.unannotated._labels)
   }
-  Object.assign(inReq.unannotated, binconfig.unannotated)
 
-  inReq.joinFxns[key] = row => {
-    const v = row[key]
+  inReq.joinFxns[termid] = row => {
+    const v = row[termid]
     if( binconfig.unannotated && binconfig.unannotated._values.includes(v) ) {
       return binconfig.unannotated._labels[v]
     }
 
-    for(const b of binconfig.bins) {
-      if( b.startunbound ) {
-        if( b.stopinclusive && v <= b.stop  ) {
-          return b.label
-        }
-        if( !b.stopinclusive && v < b.stop ) {
-          return b.label
-        }
+    for(const b of bins) {
+      if( b.startunbounded ) {
+        if( v < b.stop  ) return b.label
+        if( b.stopinclusive && v == b.stop ) return b.label
       }
-      if( b.stopunbound ) {
-        if( b.startinclusive && v >= b.start  ) {
-          return b.label
-        }
-        if( !b.stopinclusive && v > b.start ) {
-          return b.label
-        }
+      if( b.stopunbounded ) {
+        if( v > b.start  ) return b.label
+        if( b.stopinclusive && v == b.start ) return b.label
       }
       if( b.startinclusive  && v <  b.start ) continue
       if( !b.startinclusive && v <= b.start ) continue
@@ -707,253 +442,14 @@ function get_numeric_bin_name ( key, t, ds, termNum, custom_bins, inReq ) {
     }
   }
 
-  inReq.numValFxns[key] = row => {
-    const v = row[key]
+  inReq.numValFxns[termid] = row => {
+    const v = row[termid]
     if(!binconfig.unannotated || !binconfig.unannotated._values.includes(v) ) {
       return v
     }
   }
 }
 
-function termdb_get_numericbins ( id, term, ds, termNum, custom_bins ) {
-/*
-must return values from all samples, not to exclude unannotated values
-
-do not count sample for any bin here, including annotated/unannotated
-only initiate the bins without count
-barchart or crosstab will do the counting in different ways
-
-return an object for binning setting {}
-rather than a list of bins
-this is to accommondate settings where a valid value e.g. 0 is used for unannotated samples, and need to collect this count
-
-.bins[{}]
-  each element is one bin
-  .start
-  .stop
-  etc
-.unannotated{}
-  .value
-  .samplecount
-  for counting unannotated samples if unannotated{} is set on server
-*/
-
-  // step 1, get values from all samples
-  const values = []
-  let observedMin, observedMax
-  for(const s in ds.cohort.annotation) {
-    const v = ds.cohort.annotation[ s ][ id ]
-
-    if (!values.length) {
-      observedMin = v
-      observedMax = v
-    } else if (v < observedMin) {
-      observedMin = v
-    } else if (v > observedMax) {
-      observedMax = v
-    }
-
-    if(Number.isFinite(v)) {
-      values.push(+v)
-    }
-  }
-  if(values.length==0) {
-    throw 'No numeric values found for any sample'
-  }
-  const nb = term.graph.barchart.numeric_bin
-  const bins = []
-  const orderedLabels = []
-
-  if(custom_bins) {
-    if (custom_bins.min_unit == "percentile" || custom_bins.max_unit == "percentile") {
-      values.sort((a,b) => a - b)
-    }
-    const min = custom_bins.min_val == 'auto' 
-      ? observedMin 
-      : custom_bins.min_unit == 'percentile' 
-      ? values[ Math.floor((custom_bins.min_val / 100) * values.length) ]
-      : custom_bins.min_val
-    const max = custom_bins.max_val == 'auto' 
-      ? observedMax 
-      : custom_bins.max_unit == 'percentile'
-      ? values[ Math.floor((custom_bins.max_val / 100) * values.length) ]
-      : custom_bins.max_val
-    
-    let start = custom_bins.min_val == 'auto' ? null : min
-    
-    while( start <= observedMax ) {
-      const upper = start == null ? min + custom_bins.size : start + custom_bins.size //custom_bins.size == "auto" ? custom_bins.max_val : 
-      const stop = upper < max 
-        ? upper
-        : custom_bins.max_val == 'auto'
-        ? null
-        : max
-
-      const bin = {
-        start, // >= max ? max : start,
-        stop, //startunbound ? min : stop,
-        startunbound: start === null,
-        stopunbound: stop === null,
-        startinclusive: custom_bins.startinclusive,
-        stopinclusive: custom_bins.stopinclusive,
-      }
-      
-      if (bin.startunbound) { 
-        const oper = bin.stopinclusive ? "\u2264" : "<"
-        const v1 = Number.isInteger(stop) ? stop : binLabelFormatter(stop)
-        bin.label = oper + binLabelFormatter(stop);
-      } else if (bin.stopunbound) {
-        const oper = bin.startinclusive ? "\u2265" : ">"
-        const v0 = Number.isInteger(start) ? start : binLabelFormatter(start)
-        bin.label = oper + v0
-      } else if( Number.isInteger( custom_bins.size )) {
-        // bin size is integer, make nicer label
-        if( custom_bins.size == 1 ) {
-          // bin size is 1; use just start value as label, not a range
-          bin.label = start //binLabelFormatter(start)
-        } else {
-          const oper0 = custom_bins.startinclusive ? "" : ">"
-          const oper1 = custom_bins.stopinclusive ? "" : "<"
-          const v0 = Number.isInteger(start) ? start : binLabelFormatter(start)
-          const v1 = Number.isInteger(stop) ? stop : binLabelFormatter(stop)
-          bin.label = oper0 + v0 +' to '+ oper1 + v1
-        }
-      } else {
-        const oper0 = custom_bins.startinclusive ? "" : ">"
-        const oper1 = custom_bins.stopinclusive ? "" : "<"
-        bin.label = oper0 + binLabelFormatter(start) +' to '+ oper1 + binLabelFormatter(stop)
-      }
-
-      bins.push( bin )
-      orderedLabels.push(bin.label)
-      start = upper
-    }
-
-    const binconfig = {
-      bins: bins
-    }
-
-    if( nb.unannotated ) {
-      // in case of using this numeric term as term2 in crosstab, 
-      // this object can also work as a bin, to be put into the bins array
-      binconfig.unannotated = {
-        _values: [nb.unannotated.value],
-        _labels: {[nb.unannotated.value]: nb.unannotated.label},
-        label: nb.unannotated.label,
-        label_annotated: nb.unannotated.label_annotated
-      }
-
-      if (nb.unannotated.value_positive) {
-        binconfig.unannotated.value_positive = 0
-        binconfig.unannotated._values.push(nb.unannotated.value_positive)
-        binconfig.unannotated._labels[nb.unannotated.value_positive] = nb.unannotated.label_positive
-      }
-      if (nb.unannotated.value_negative) {
-        binconfig.unannotated.value_negative = 0
-        binconfig.unannotated._values.push(nb.unannotated.value_negative)
-        binconfig.unannotated._labels[nb.unannotated.value_negative] = nb.unannotated.label_negative
-      }
-    }
-
-    return [ binconfig, values, orderedLabels ]
-  }
-  else {
-    const fixed_bins = (termNum=='term2' || termNum=='term0') && nb.crosstab_fixed_bins ? nb.crosstab_fixed_bins 
-      : nb.fixed_bins ? nb.fixed_bins
-      : undefined
-
-    if( fixed_bins ) {
-      // server predefined
-      // return copy of the bin, not direct obj, as bins will be modified later
-
-      for(const i of fixed_bins) {
-        const copy = {}
-        for(const k in i) {
-          copy[ k ] = i[ k ]
-        }
-        bins.push( copy )
-        orderedLabels.push(i.label)
-      }
-
-    } else if( nb.auto_bins ) {
-
-      /* auto bins
-      given start and bin size, use max from value to decide how many bins there are
-      */
-
-      const max = Math.max( ...values )
-      let start = nb.auto_bins.start_value
-      while( start < max ) {
-        const stop = Math.min(start + nb.auto_bins.bin_size, max)
-        const bin = {
-          start,
-          stop,
-          startinclusive:1,
-        } 
-        if (!bin.label) {
-          if( Number.isInteger( nb.auto_bins.bin_size ) ) {
-            // bin size is integer, make nicer label
-            if( nb.auto_bins.bin_size == 1 ) {
-              // bin size is 1; use just start value as label, not a range
-              bin.label = start
-            } else {
-              // bin size bigger than 1, reduce right bound by 1, in label only!
-              bin.label = start + ' to ' + (stop-1)
-            }
-          } else {
-            // 
-            if( bin.startunbounded ) {
-              bin.label = (bin.stopinclusive ? '<=' : '<')+' '+bin.stop
-            } else if( bin.stopunbounded ) {
-              bin.label = (bin.startinclusive ? '>=' : '>')+' '+bin.start
-            } else {
-              bin.label = `${bin.start} <${bin.startinclusive?'=':''} x <${bin.stopinclusive?'=':''} ${bin.stop}`
-            }
-          }
-        }
-
-        bins.push( bin )
-        orderedLabels.push(bin.label)
-
-        start += nb.auto_bins.bin_size
-      }
-
-      bins[bins.length - 1].stopinclusive = 1
-    } else {
-      throw 'unknown ways to decide bins'
-    }
-
-    const binconfig = {
-      bins: bins
-    }
-
-    if( nb.unannotated ) {
-      // in case of using this numeric term as term2 in crosstab, 
-      // this object can also work as a bin, to be put into the bins array
-      binconfig.unannotated = {
-        _values: [nb.unannotated.value],
-        _labels: {[nb.unannotated.value]: nb.unannotated.label},
-        label: nb.unannotated.label,
-        label_annotated: nb.unannotated.label_annotated,
-        // for annotated samples
-        value_annotated: 0, // v2s
-      }
-
-      if (nb.unannotated.value_positive) {
-        binconfig.unannotated.value_positive = 0
-        binconfig.unannotated._values.push(nb.unannotated.value_positive)
-        binconfig.unannotated._labels[nb.unannotated.value_positive] = nb.unannotated.label_positive
-      }
-      if (nb.unannotated.value_negative) {
-        binconfig.unannotated.value_negative = 0
-        binconfig.unannotated._values.push(nb.unannotated.value_negative)
-        binconfig.unannotated._labels[nb.unannotated.value_negative] = nb.unannotated.label_negative
-      }
-    }
-
-    return [ binconfig, values, orderedLabels ]
-  }
-}
 
 async function load_genotype_by_sample ( id ) {
 /* id is the file name under cache/samples-by-genotype/
@@ -1037,5 +533,5 @@ arguments:
       if(!href.has(sample)) AC++
     }
   }
-  return AN==0 ? 0 : (AC/AN).toFixed(3)
+  return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
 }

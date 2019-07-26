@@ -6,18 +6,18 @@ import * as client from './client'
 import * as mds2legend from './block.mds2.legend'
 import {makeTk} from './block.mds2.makeTk'
 import {may_render_vcf} from './block.mds2.vcf'
-import {maygetparameter_numericaxis} from './block.mds2.vcf.numericaxis'
+import {may_get_param as maygetparameter_numericaxis} from './block.mds2.vcf.numericaxis'
 
 
 
 /*
 ********************** EXPORTED
 loadTk
+addparameter_rangequery
 ********************** INTERNAL
 makeTk
 makeTk_parse_client_config
 loadTk_finish_closure
-addparameter_rangequery
 rangequery_add_variantfilters
 
 
@@ -103,7 +103,7 @@ function loadTk_finish_closure ( tk, block ) {
 
 
 
-function addparameter_rangequery ( tk, block ) {
+export function addparameter_rangequery ( tk, block ) {
 // to get data for current view range
 
 	/*

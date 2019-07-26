@@ -198,4 +198,122 @@ rl.on('close',()=>{
 		}
 	}
 	*/
+
+
+
+	get_summary({term:'Cardiovascular System',bar_by_children:1,value_by_most_recent:1}, patient2condition)
 })
+
+
+
+
+function get_summary ( q, patient2condition ) {
+/*
+to get barchart-style summary for a given term
+print result to stderr
+
+note that only bar_by_children and value_by_maxgrade is supported!
+
+q{}
+.term
+.value_by_?
+.bar_by_?
+*/
+	const p2c = new Map()
+	// k: parent term, v: a set of direct children terms
+	for(const line of fs.readFileSync('term2term',{encoding:'utf8'}).trim().split('\n')) {
+		const [parent, child] = line.split('\t')
+		if(!p2c.has(parent)) p2c.set(parent, new Set())
+		p2c.get(parent).add(child)
+	}
+
+	if( q.bar_by_children ) {
+
+		const child2subcondition = get_child2sub( q.term, p2c )
+		// k: descendent (any term under the given root)
+		// v: subcondition, corresponding to a bar
+
+		const child2samplecount = new Map()
+		// k: subcondition
+		// v: number of samples with this subcondition matching with the max/recent grade criteria
+
+		for(const [patient,o] of patient2condition) {
+
+			let matchconditions = new Set()
+
+			if( q.value_by_maxgrade ) {
+				let maxgrade = 0
+				for(const condition in o) {
+					const subterm = child2subcondition.get( condition )
+					if( !subterm ) continue
+					const grades = []
+					for(const e of o[condition]) {
+						if(e.grade==0 || e.grade==9) continue
+						grades.push(e.grade)
+					}
+					if(grades.length==0) continue
+					const mg = Math.max(...grades)
+					if( mg == maxgrade ) {
+						matchconditions.add( subterm )
+					} else if( mg > maxgrade ) {
+						maxgrade = mg
+						matchconditions = new Set( [subterm] )
+					}
+				}
+			} else if( q.value_by_most_recent) {
+				let lastage = 0
+				for(const condition in o) {
+					const subterm = child2subcondition.get( condition )
+					if( !subterm ) continue
+					let thislastage = 0
+					for(const e of o[condition]) {
+						if(e.grade==0 || e.grade==9) continue
+						thislastage = Math.max(e.age, thislastage)
+					}
+					if(thislastage==0) continue
+					if( thislastage == lastage ) {
+						matchconditions.add( subterm )
+					} else if( thislastage > lastage ) {
+						lastage = thislastage
+						matchconditions = new Set( [subterm] )
+					}
+				}
+			} else {
+				throw 'unknown value_by_?'
+			}
+
+			if( matchconditions.size==0 ) continue
+			for( const c of matchconditions ) {
+				child2samplecount.set( c, 1 + (child2samplecount.get(c) || 0) )
+			}
+		}
+		console.error( child2samplecount )
+	}
+}
+
+
+
+function get_branch ( term, p2c, branch ) {
+	if(p2c.has(term)) {
+		for(const child of p2c.get(term)) {
+			branch.add(child)
+			get_branch( child, p2c, branch )
+		}
+	}
+}
+
+
+function get_child2sub ( root, p2c ) {
+	const child2sub = new Map()
+	// key: a descendent term in the branch of root
+	// v: the subcondition of root
+	for(const subcondition of p2c.get(root)) {
+		child2sub.set( subcondition, subcondition )
+		const set = new Set()
+		get_branch( subcondition, p2c, set )
+		for(const child of set) {
+			child2sub.set( child, subcondition )
+		}
+	}
+	return child2sub
+}

@@ -6,7 +6,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
 const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
-const get_rows = require('./termdb.sql').get_rows
+const termdbsql = require('./termdb.sql')
 
 /*
 ********************** EXPORTED
@@ -17,27 +17,13 @@ handle_request_closure
 exports.handle_request_closure = ( genomes ) => {
   return async (req, res) => {
     const q = req.query
-    if (q.custom_bins) {
-      try {
-        q.custom_bins = JSON.parse(decodeURIComponent(q.custom_bins))
-      } catch(e) {
-        app.log(req)
-        res.send({error: (e.message || e)})
-        if(e.stack) console.log(e.stack)
-      }
-    } 
-    if (q.filter) {
-      try {
-        q.filter = JSON.parse(decodeURIComponent(q.filter))
-      } catch(e) {
-        app.log(req)
-        res.send({error: (e.message || e)})
-        if(e.stack) console.log(e.stack)
+    for(const i of [0,1,2]) {
+      const termnum_q = 'term' + i + '_q'
+      if (q[termnum_q]) {
+        q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
       }
     }
     app.log(req)
-    if (!q.term0) q.term0 = ''
-    if (!q.term2) q.term2 = ''
     try {
       const genome = genomes[ q.genome ]
       if(!genome) throw 'invalid genome'
@@ -72,12 +58,10 @@ async function barchart_data ( q, ds, res, tdb ) {
     q.genotype2sample = genotype2sample
   }
 
-  // if(!ds.cohort.annorows) throw `cohort.annorows is missing`
-  // request-specific variables
   const startTime = +(new Date())
-  const rows = get_rows(q)
+  q.results = termdbsql.get_rows(q, {withCTEs: true})
   const sqlDone = +(new Date())
-  const pj = getPj(q, rows, tdb, ds)
+  const pj = getPj(q, q.results.lst, tdb, ds)
   if (pj.tree.results) {
     pj.tree.results.times = {
       sql: sqlDone - startTime,
@@ -141,14 +125,16 @@ const template = JSON.stringify({
           name: "@branch",
           grp: "-"
         }
-      }, /*
+      },
+      "__:unannotatedLabels": "=unannotatedLabels()", 
       "__:useColOrder": "=useColOrder()",
       "__:useRowOrder": "=useRowOrder()",
-      "__:unannotatedLabels": "=unannotatedLabels()",
       "__:bins": "=bins()",
+      "__:q": "=q()",
       "__:grade_labels": "=grade_labels()",
-      "@done()": "=sortColsRows()" */
-    }
+      "@done()": "=sortColsRows()"
+    },
+    "@done()": "=sortCharts()"
   }
 })
 
@@ -159,15 +145,24 @@ function getPj(q, data, tdb, ds) {
   data: rows of annotation data
 */
   const joinAliases = ["chart", "series", "data"]
-  const kva = [0,1,2].map(i=>{
-    return {
-      key: 'key'+i, 
-      val: 'val'+i,
-      nval: 'nval'+i,
-      isAnnoVal: getIsAnnoValFxn(q, tdb, i)
-    }
+  const terms = [0,1,2].map(i=>{
+    const d = getTermDetails(q, tdb, i)
+    const bins = q.results['CTE' + i].bins ? q.results['CTE' + i].bins : []
+    return Object.assign(d, {
+      key: 'key' + i, 
+      val: 'val' + i,
+      nval: 'nval' + i,
+      isGenotype: q['term' + i + '_is_genotype'],
+      bins,
+      q: d.q,
+      orderedLabels: d.term.iscondition && d.term.grades
+        ? d.term.grades
+        : d.term.iscondition
+        ? [0,1,2,3,4,5,9] // hardcoded default order
+        : bins.map(bin => bin.name ? bin.name : bin.label)
+    })
   })
-let i=0
+
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
@@ -176,10 +171,11 @@ let i=0
       prep(row) {
         // mutates the data row, ok since
         // rows from db query are unique to request;
-        // do not do this with ds.cohort.annorows, 
+        // do not do this with ds.cohort.annorows in termdb.barchart
+        // since that is shared across requests - 
         // use partjson @join() instead 
-        for(const d of kva) {
-          if (row[d.key] == 'genotype') {
+        for(const d of terms) {
+          if (d.isGenotype) {
             if (!(row.sample in q.genotypeBySample)) return
             row[d.key] = q.genotypeBySample[row.sample]
             row[d.val] = q.genotypeBySample[row.sample]
@@ -230,7 +226,7 @@ let i=0
           || !ds.track.vcf.termdb_bygenotype
           || !ds.track.vcf.termdb_bygenotype.getAF
         ) return
-        if (q.term2_id != 'genotype') return
+        if (!q.term2_is_genotype) return
         if (!q.chr) throw 'chr missing for getting AF'
         if (!q.pos) throw 'pos missing for getting AF'
         
@@ -242,25 +238,60 @@ let i=0
           ds
         )
       },
+      unannotatedLabels() {
+        const unannotated = {}
+        terms.forEach((kv,i)=>{
+          unannotated['term' + i] = kv.unannotatedLabels
+            ? kv.unannotatedLabels
+            : []
+        })
+        return unannotated
+      },
       filterEmptySeries(result) {
         const nonempty = result.serieses.filter(series=>series.total)
         result.serieses.splice(0, result.serieses.length, ...nonempty)
       },
       grade_labels() {
-        return q.conditionParents && tdb.patient_condition
-          ? tdb.patient_condition.grade_labels
-          : q.conditionUnits && (q.conditionUnits[0] || q.conditionUnits[1] || q.conditionUnits[2])
+        return terms[0].term.iscondition || terms[1].term.iscondition || terms[2].term.iscondition
           ? tdb.patient_condition.grade_labels
           : undefined
+      },
+      bins() {
+        return terms.map(d=>d.bins)
+      },
+      q() {
+        return terms.map(d=>d.q)
+      },
+      useColOrder() {
+        return terms[1].orderedLabels.length > 0
+      },
+      useRowOrder() {
+        return terms[2].orderedLabels.length > 0
+      },
+      sortColsRows(result) {
+        if (terms[1].orderedLabels.length) {
+          const labels = terms[1].orderedLabels
+          result.cols.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
+        }
+        if (terms[2].orderedLabels.length) {
+          const labels = terms[2].orderedLabels
+          result.rows.sort((a,b) => labels.indexOf(a) - labels.indexOf(b))
+        }
+      },
+      sortCharts(result) {
+        if (terms[0].orderedLabels.length) {
+          const labels = terms[0].orderedLabels
+          result.charts.sort((a,b) => labels.indexOf(a.chartId) - labels.indexOf(b.chartId))
+        }
       }
     }
   })
 }
 
-function getIsAnnoValFxn(q, tdb, index) {
+function getTermDetails(q, tdb, index) {
   const termnum_id = 'term'+ index + '_id'
   const termid = q[termnum_id]
-  const term = termid && termid != 'genotype' ? tdb.termjson.map.get(termid) : {}
+  const term = termid && !q['term' + index + '_is_genotype'] ? tdb.termjson.map.get(termid) : {}
   const termIsNumeric = term.isinteger || term.isfloat
   const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin 
     ? term.graph.barchart.numeric_bin
@@ -268,7 +299,11 @@ function getIsAnnoValFxn(q, tdb, index) {
   const unannotatedValues = nb.unannotated
     ? Object.keys(nb.unannotated).filter(key=>key.startsWith('value')).map(key=>nb.unannotated[key]) 
     : []
-  return val => termIsNumeric && !unannotatedValues.includes(val)
+  const isAnnoVal = val => termIsNumeric && !unannotatedValues.includes(val)
+  const unannotatedLabels = nb.unannotated
+    ? Object.keys(nb.unannotated).filter(key=>key.startsWith('label') && key != 'label_annotated').map(key=>nb.unannotated[key])
+    : []
+  return {term, isAnnoVal, nb, unannotatedValues, unannotatedLabels, q: q['term' + index + '_q']}
 }
 
 
@@ -350,5 +385,5 @@ arguments:
       if(!href.has(sample)) AC++
     }
   }
-  return AN==0 ? 0 : (AC/AN).toFixed(3)
+  return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
 }

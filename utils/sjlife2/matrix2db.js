@@ -12,6 +12,8 @@ for(let i=1; i<lines.length; i++) {
 	const l = lines[i].split('\t')
 	const sample = l[0]
 	for(let j=1; j<header.length; j++) {
+		const v = l[j]
+		if(v=='') continue
 		console.log(sample+'\t'+header[j]+'\t'+l[j])
 	}
 }

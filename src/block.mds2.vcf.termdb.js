@@ -62,6 +62,42 @@ official track only
 	}
 	const _ = await import('./mds.termdb')
 	_.init( obj )
+
+
+	const h = client.may_get_locationsearch()
+	if(h && h.has('testall')) {
+		const div = plotdiv.append('div')
+			.style('margin-top','20px')
+		const wait = div.append('div').text('Loading...')
+		const arg = [
+			'genome='+block.genome.name,
+			'dslabel='+tk.mds.label,
+			'ssid='+ssid,
+			'testall=1'
+		]
+		const data = await client.dofetch2('/termdb?'+arg.join('&'))
+		wait.remove()
+		const table = div.append('table')
+		const tr = table.append('tr')
+		tr.append('th').text('Term')
+		tr.append('th').text('Category')
+		tr.append('th').text('Case #ALT')
+		tr.append('th').text('Case #REF')
+		tr.append('th').text('Ctrl #ALT')
+		tr.append('th').text('Ctrl #REF')
+		tr.append('th').text('Adjust p-value')
+		for(const i of data.results) {
+			const tr = table.append('tr')
+			tr.attr('class','sja_tr')
+			tr.append('td').text(i.term.name)
+			tr.append('td').text(i.category)
+			tr.append('td').text(i.table[0])
+			tr.append('td').text(i.table[1])
+			tr.append('td').text(i.table[2])
+			tr.append('td').text(i.table[3])
+			tr.append('td').text(i.pvalue)
+		}
+	}
 }
 
 

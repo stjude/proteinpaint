@@ -17,7 +17,9 @@ module.exports={
 			k:{
 				sample:'sample',
 				term_id:'term_id'
-			}
+			},
+			// the precompute script will save the tsv to this file
+			precomputed_file: 'files/hg38/sjlife/clinical/chronicevents.precomputed'
 		},
 		files:[
 			{file:'files/hg38/sjlife/clinical/matrix'},
@@ -32,23 +34,6 @@ module.exports={
 				}
 			} else {
 				ds.cohort.annotation[ n ] = item
-			}
-		},
-
-		sampleAttribute: {
-			attributes: {
-				CEU: {
-					label:'Non-finish European',
-					isfloat:1
-				},
-				YRI: {
-					label:'African American',
-					isfloat:1
-				},
-				ASA: {
-					label:'East Asian',
-					isfloat:1
-				},
 			}
 		},
 
@@ -77,11 +62,13 @@ module.exports={
 				},
 				age_key: 'age',
 				yearstoevent_key:'yearstoevent'
-			}
+			},
+			// the precompute script will save the json object to this file
+			// this will be loaded once by modules/termdb.barchart.js
+			precomputed_file: 'files/hg38/sjlife/clinical/precomputed.json',
+			precompute_script: 'precompute.sjlife2.hg38.js'
 		},
 	},
-
-
 
 
 	track: {
@@ -115,6 +102,28 @@ module.exports={
 			{
 				key:'SJcontrol_AF',
 				label:'SJLIFE control allele frequency',
+				isfilter:true,
+				isfloat:1,
+				range: {
+					startunbounded:true,
+					stop: 0.1,
+					stopinclusive:true
+				}
+			},
+			{
+				key:'SJcontrol_CEU_AF',
+				label:'SJLIFE control allele frequency, Caucasian',
+				isfilter:true,
+				isfloat:1,
+				range: {
+					startunbounded:true,
+					stop: 0.1,
+					stopinclusive:true
+				}
+			},
+			{
+				key:'SJcontrol_YRI_AF',
+				label:'SJLIFE control allele frequency, African American',
 				isfilter:true,
 				isfloat:1,
 				range: {
@@ -246,29 +255,54 @@ module.exports={
 				label:'gnomAD',
 				allowto_adjust_race:true,
 				adjust_race:true,
+				termfilter: 'genetic_race',
+				/*
+				the "sets" is hardcoded to be based on a single attribute (race group)
+				and does not allow another attribute e.g. sex
+				*/
 				sets:[
 					// per variant, the control population allele counts are hardcoded to be info fields
 					{
 						key:'CEU', // header of file "cohort/admix"
 						infokey_AC: 'gnomAD_AC_nfe',
-						infokey_AN: 'gnomAD_AN_nfe'
+						infokey_AN: 'gnomAD_AN_nfe',
+						termfilter_value: 'European American'
 					},
 					{
 						key:'YRI',
 						infokey_AC: 'gnomAD_AC_afr',
-						infokey_AN: 'gnomAD_AN_afr'
+						infokey_AN: 'gnomAD_AN_afr',
+						termfilter_value: 'African American'
 					},
 					{
 						key:'ASA',
 						infokey_AC: 'gnomAD_AC_eas',
-						infokey_AN: 'gnomAD_AN_eas'
+						infokey_AN: 'gnomAD_AN_eas',
+						termfilter_value: 'Asian American'
 					}
 				],
 			},
 			{
 				key:'SJControl',
 				label:'SJLIFE control',
-				sets:[ { infokey_AC:'SJcontrol_AC', infokey_AN:'SJcontrol_AN' } ]
+				allowto_adjust_race:true,
+				adjust_race:true,
+				termfilter:'genetic_race',
+				sets:[
+					{
+						key:'CEU', infokey_AC:'SJcontrol_CEU_AC', infokey_AN:'SJcontrol_CEU_AN',
+						termfilter_value: 'European American'
+					},
+					{
+						key:'YRI', infokey_AC:'SJcontrol_YRI_AC', infokey_AN:'SJcontrol_YRI_AN',
+						termfilter_value: 'African American'
+					}
+				]
+			},
+			{
+				key:'TOPMed',
+				label:'TOPMed',
+				sets:[{infokey_AC:'TOPMed_AC',infokey_AN:'TOPMed_AN'}]
 			}
 		],
 
@@ -338,6 +372,20 @@ module.exports={
 						{ key:'gnomAD_AF_eas' },
 						{ key:'gnomAD_AF_nfe' }
 					],
+					/*
+					the termfilter hardcodes to be a single term
+					may expands to termfilters[] to support multiple terms
+					for selecting one as filter
+					or even use two terms to combine
+					*/
+					termfilter: {
+						id:'genetic_race',
+						name:'Genetically defined race',
+						iscategorical:true,
+						values:[{key:'European American'},{key:'African American'},{key:'Asian American'}],
+						inuse:true,
+						value_index:0,
+					}
 				},
 			},
 			plot_mafcov: {
@@ -369,7 +417,7 @@ module.exports={
 			}
 		},
 		// to restrict samples 
-		sample_termfilter:[{term:{id:'wgs_sequenced',iscategorical:true},values:[{key:'1'}]}],
+		sample_termfilter:[{term:{id:'wgs_curated',iscategorical:true},values:[{key:'1'}]}],
 		/*
 		svcnv: {
 		},

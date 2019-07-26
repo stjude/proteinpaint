@@ -16,9 +16,11 @@ handle_ssidbyonem
 handle_getcsq
 sample_match_termvaluesetting
 ********************** INTERNAL
-get_columnidx_byterms
 wrap_validate_termvaluesetting
 set_querymode
+	get_columnidx_byterms
+	filter_samples_by_termvalue
+	get_pop2average
 query_vcf_applymode
 getallelecount_samplegroup_vcfline
 vcfbyrange_collect_result
@@ -32,7 +34,7 @@ const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 
 
-exports.handle_ssidbyonem =  async ( q, genome, ds, result ) => {
+export async function handle_ssidbyonem ( q, genome, ds, result ) {
 /*
 ssid: sample set id
 get ssid by one m from vcf
@@ -98,7 +100,7 @@ get ssid by one m from vcf
 
 
 
-exports.handle_vcfbyrange = async ( q, genome, ds, result ) => {
+export async function handle_vcfbyrange ( q, genome, ds, result ) {
 /*
 for range query
 
@@ -196,12 +198,26 @@ generate the "querymode" object that drives subsequent queries
 			if(g.is_termdb) {
 				wrap_validate_termvaluesetting(g.terms,'AFtest.group')
 				g.columnidx = get_columnidx_byterms( g.terms, ds )
+				if( q.AFtest.termfilter ) {
+					// further filter samples
+					g.columnidx = filter_samples_by_termvalue( g.columnidx, ds, q.AFtest.termfilter )
+				}
 				continue
 			}
 			if(g.is_population) {
 				if(!ds.track.populations) throw 'ds.track.populations missing'
-				g.population = ds.track.populations.find(i=>i.key==g.key)
-				if(!g.population) throw 'unknown population key: '+g.key
+				const p = ds.track.populations.find(i=>i.key==g.key)
+				if(!p) throw 'unknown population key: '+g.key
+				g.population = JSON.parse(JSON.stringify(p)) // as the population data structure can be modified later
+				if( q.AFtest.termfilter ) {
+					// termfilter hardcode to be just one term
+					if( q.AFtest.termfilter[0].term.id == g.population.termfilter ) {
+						// this population can be filtered by this term
+						const popset = g.population.sets.find( i=> i.termfilter_value == q.AFtest.termfilter[0].values[0].key )
+						if(!popset) throw 'no matching set found for a termfilter from a population'
+						g.population.sets = [ popset ] // only keep this set
+					}
+				}
 				continue
 			}
 			throw 'Cannot set query mode: unknown group type'
@@ -246,30 +262,40 @@ generate the "querymode" object that drives subsequent queries
 
 
 function get_pop2average ( popsets, columnidx, ds, vcftk ) {
-	// to get population admix average for this subset of samples, initiate 0 for each population
+/*
+using adjust race, when combining a population and a termdb group
+for the set of samples defined by termdb,
+get population admix average, initiate 0 for each population
+
+popsets:
+	.sets[] from the population
+
+columnidx:
+
+ds:
+vcftk
+*/
 	const pop2average = new Map()
+	let poptotal = 0 // sum for all sets, across all samples
 	for(const p of popsets) {
-		pop2average.set(
-			p.key,
-			{
-				infokey_AC: p.infokey_AC,
-				infokey_AN: p.infokey_AN,
-				average: 0
-			}
-		)
-	}
-	let poptotal = 0 // sum for all sets
-	// sum up admix for everybody from this set
-	for(const idx of columnidx) {
-		const samplename = vcftk.samples[idx].name
-		const anno = ds.cohort.annotation[ samplename ]
-		if( !anno ) continue
-		for(const p of popsets) {
-			const v = anno[ p.key ]
-			if(!Number.isFinite(v)) continue
-			pop2average.get( p.key ).average += v
-			poptotal += v
+		const o = {
+			infokey_AC: p.infokey_AC,
+			infokey_AN: p.infokey_AN,
+			average: 0
 		}
+
+		// for this race grp, issue one query to get percentage value of all samples, and sum up
+		const lst = termdbsql.get_rows_by_one_key({ ds, key: p.key })
+		for(const i of lst) {
+			if(!ds.track.vcf.sample2arrayidx.has( i.sample )) continue
+			const v = Number(i.value)
+			if(Number.isFinite(v)) {
+				o.average += v
+				poptotal += v
+			}
+		}
+
+		pop2average.set( p.key, o )
 	}
 	// after sum, make average
 	for(const [k,v] of pop2average) {
@@ -301,6 +327,31 @@ a sample must meet all term conditions
 	},[])
 }
 
+
+
+
+function filter_samples_by_termvalue ( sampleidx, ds, termfilter ) {
+/*
+for a termdb group from AFtest
+
+sampleidx[]
+	list of array index of the VCF samples as input,
+	output a smaller list of samples who matches with termfilter
+ds:
+termfilter{}
+	tvs structure
+	though it is hardcoded to be categorical only
+*/
+	const allmatching = termdbsql.get_samples( termfilter, ds )
+	const sampleset = new Set( allmatching )
+	const newlst = []
+	for(const i of sampleidx) {
+		if( sampleset.has( ds.track.vcf.samples[i].name ) ) {
+			newlst.push(i)
+		}
+	}
+	return newlst
+}
 
 
 
@@ -341,16 +392,34 @@ for specific type of query mode, send additional info
 	}
 
 	if( q.AFtest ) {
-		// did adjustment, return back average admix
-		const g = q.AFtest.groups.find(i=>i.is_termdb)
-		if( g ) {
-			result.AFtest_termdbgroup = {
-				samplecount: g.columnidx.length
+		if( q.AFtest.groups.find(i=>i.is_termdb) ) {
+			// has termdb group
+			// return number of samples; did adjustment, return back average admix
+			result.AFtest_termdbgroup = []
+
+			let g = q.AFtest.groups[0]
+			if( g.is_termdb ) {
+				result.AFtest_termdbgroup[0] = {
+					samplecount: g.columnidx.length
+				}
+				if( g.pop2average ) {
+					result.AFtest_termdbgroup[0].popsetaverage = []
+					for(const [k,v] of g.pop2average) {
+						result.AFtest_termdbgroup[0].popsetaverage.push([k,v.average])
+					}
+				}
 			}
-			if( g.pop2average ) {
-				result.AFtest_termdbgroup.popsetaverage = []
-				for(const [k,v] of g.pop2average) {
-					result.AFtest_termdbgroup.popsetaverage.push([k,v.average])
+
+			g = q.AFtest.groups[1]
+			if( g.is_termdb ) {
+				result.AFtest_termdbgroup[1] = {
+					samplecount: g.columnidx.length
+				}
+				if( g.pop2average ) {
+					result.AFtest_termdbgroup[1].popsetaverage = []
+					for(const [k,v] of g.pop2average) {
+						result.AFtest_termdbgroup[1].popsetaverage.push([k,v.average])
+					}
 				}
 			}
 		}
@@ -392,7 +461,7 @@ function make_mockblock ( r ) {
 
 
 
-exports.handle_getcsq =  async ( q, genome, ds, result ) => {
+export async function handle_getcsq ( q, genome, ds, result ) {
 /*
 get csq from one variant
 */
@@ -606,7 +675,7 @@ async function may_apply_fishertest ( q ) {
 	}
 	const tmpfile = path.join(serverconfig.cachedir,Math.random().toString())
 	await utils.write_file( tmpfile, lines.join('\n') )
-	const pfile = await run_fishertest( tmpfile )
+	const pfile = await utils.run_fishertest( tmpfile )
 	const text = await utils.read_file( pfile )
 	for(const line of text.trim().split('\n')) {
 		const l = line.split('\t')
@@ -622,15 +691,6 @@ async function may_apply_fishertest ( q ) {
 }
 
 
-
-function run_fishertest( tmpfile ) {
-	const pfile = tmpfile+'.pvalue'
-	return new Promise((resolve,reject)=>{
-		const sp = spawn('Rscript',['utils/fisher.R',tmpfile,pfile])
-		sp.on('close',()=> resolve(pfile))
-		sp.on('error',()=> reject(error))
-	})
-}
 
 
 
@@ -739,7 +799,7 @@ function wrap_validate_termvaluesetting ( terms, where ) {
 
 
 
-function sample_match_termvaluesetting ( sanno, terms, ds ) {
+export function sample_match_termvaluesetting ( sanno, terms, ds ) {
 /* for AND, require all terms to match
 ds is for accessing patient_condition
 */
@@ -805,7 +865,6 @@ ds is for accessing patient_condition
 	// using OR
 	return numberofmatchedterms > 0
 }
-exports.sample_match_termvaluesetting = sample_match_termvaluesetting
 
 
 let testi = 0
