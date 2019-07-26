@@ -163,7 +163,10 @@ function getDataName(plot) {
   plot.terms.forEach((term, i)=>{
     if (!term) return
     params.push('term'+i+'_id=' + term.id)
-    if (term.q && typeof term.q == 'object' && Object.keys(term.q).length) {
+    if (term.q && typeof term.q == 'object') {
+      if (term.iscondition && !Object.keys(term.q).length) {
+        if (term.iscondition) term.q = {bar_by_grade:1, value_by_max_grade:1}
+      }
       params.push('term'+i+'_q=' +encodeURIComponent(JSON.stringify(term.q)))
     }
   })

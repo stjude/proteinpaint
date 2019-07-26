@@ -222,11 +222,10 @@ export async function display (obj){
 							// no need to assign
 							delete obj.termsetting.q
 						} else if( term.iscondition ) {
-							if( term.isleaf ) {
-								obj.termsetting.q = { value_by_max_grade:true, bar_by_grade:true  }
-							} else {
-								obj.termsetting.q = { value_by_max_grade:true, bar_by_children:true }
-							}
+                            term.q = term.isleaf 
+                                ? { value_by_max_grade:true, bar_by_grade:true  }
+								: { value_by_max_grade:true, bar_by_children:true }
+                            obj.termsetting.q = term.q
 						} else if( term.isfloat || term.isinteger ) {
 							// TODO server provides binning scheme to add to it
 						} else {
