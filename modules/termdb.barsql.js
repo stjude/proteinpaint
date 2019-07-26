@@ -259,8 +259,14 @@ function getPj(q, data, tdb, ds) {
       bins() {
         return terms.map(d=>d.bins)
       },
-      q() {
-        return terms.map(d=>d.q)
+      q() { 
+        return terms.map((d,i)=>{
+          const q = {}
+          for(const key in d.q) {
+            if (key != "index") q[key] = d.q[key]
+          } 
+          return q
+        })
       },
       useColOrder() {
         return terms[1].orderedLabels.length > 0

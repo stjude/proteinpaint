@@ -62,8 +62,9 @@ export async function display (obj){
                 .on('click',()=>{
                     // click to show ui and customize binning
                     make_numeric_bin_btns(obj.tip, obj.termsetting.term, obj.termsetting.q, (result)=>{
-                        obj.termsetting.q = result
-                        obj.callback()
+                        obj.termsetting.q = result;
+                        obj.termsetting.term.q = result
+                        obj.callback(obj.termsetting.term)
                     })
                 })
 
@@ -79,7 +80,7 @@ export async function display (obj){
 					else if (v=='sub') obj.termsetting.q = { value_by_max_grade:true, bar_by_children:true }
 					__flip_select()
 					__flip_select2()
-					obj.callback()
+					obj.callback(obj.termsetting.term)
 				})
 
             select.append('option')

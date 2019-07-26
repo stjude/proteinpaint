@@ -287,7 +287,7 @@ export class TermdbBarchart{
         if (termNum == 'term0' || !term) continue
 
         const key = termNum=="term1" ? d.seriesId : d.dataId
-        const q1 = self.plot['term' + index + '_q']
+        const q1 = self.plot.term.q
         const label = term.iscondition && self.grade_labels && q1.bar_by_grade
           ? self.grade_labels.find(c => c.grade == key).label
           : !term.values 
@@ -303,7 +303,7 @@ export class TermdbBarchart{
           }, q1))
 
           if (index == 1 && term.id == self.terms.term2.id) {
-            const q2 = self.plot.term2_q
+            const q2 = self.plot.term2.q
             const term2Label = q.bar_by_children 
               ? self.grade_labels.find(c => c.grade == d.dataId).label
               : self.terms.term2.values
@@ -496,9 +496,9 @@ export class TermdbBarchart{
             return s.unit == "pct" ? "% of patients" : "# of patients"
           } else {
             const term = self.terms.term1
-            return term.iscondition && self.plot.term1_q.value_by_max_grade
+            return term.iscondition && self.plot.term.q.value_by_max_grade
               ? 'Maximum grade'
-              : term.iscondition && self.plot.term1_q.value_by_most_recent
+              : term.iscondition && self.plot.term.q.value_by_most_recent
               ? 'Most recent grade'
               : term.iscategorical || !term.unit
               ? ''
@@ -510,7 +510,7 @@ export class TermdbBarchart{
         text: () => {
           if (s.orientation == "vertical") {
             const term = self.terms.term1
-            const q1 = self.plot.term1_q
+            const q1 = term.q
             return term.iscondition && q1.bar_by_grade && q1.value_by_max_grade
               ? 'Maximum grade' 
               : term.iscondition && q1.bar_by_grade && q1.value_by_most_recent
