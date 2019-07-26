@@ -2,7 +2,7 @@ import * as common from './common'
 import * as client from './client'
 import {make_ui as mafcovplot_makeui} from './block.mds2.vcf.mafcovplot'
 import {termdb_bygenotype} from './block.mds2.vcf.termdb'
-import {AFtest_groupname} from './block.mds2.vcf.numericaxis.legend'
+import {AFtest_groupname} from './block.mds2.vcf.numericaxis.AFtest'
 import {addparameter_rangequery} from './block.mds2'
 
 
