@@ -88,6 +88,7 @@ arg: server returned data
     .style('overflow-x', 'scroll')
   // set the parent DOM elements for viz and controls
   plot.dom = {
+    holder: arg.holder,
     // dom.viz will hold the rendered view
     viz: arg.holder.append('div').style('display','inline-block'),
     // dom.controls will hold the config input, select, button elements
@@ -128,6 +129,7 @@ function main(plot, callback = ()=>{}) {
   // to plot.[term0,term,term2] and term1_q parameters
   // for convenience and namespacing related variables
   plot.terms = [plot.term0, plot.term, plot.term2]
+  plot.dom.holder.style('max-width', Math.round(85*window.innerWidth/100) + 'px')
 
   const dataName = getDataName(plot)
   if (serverData[dataName]) {

@@ -173,6 +173,7 @@ export class TermdbBarchart{
     .attr('class', 'pp-sbar-div')
     .style("display", "inline-block")
     .style("padding", "20px")
+    .style('vertical-align', 'top')
     .each(function(chart,i) {
       if (!chartsData.refs.useColOrder) {
         chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(b) - self.seriesOrder.indexOf(a))

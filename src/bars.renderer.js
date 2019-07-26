@@ -131,7 +131,7 @@ export default function barsRenderer(barsapp, holder) {
       //.style("width", hm.svgw + "px")
       .style("font-weight", 600)
       .style("font-size", "20px")
-      .style("margin-bottom", "16px")
+      .style("margin-bottom", "24px")
       .html(hm.handlers.chart.title(chart));
 
     // only set this initially to prevent 
