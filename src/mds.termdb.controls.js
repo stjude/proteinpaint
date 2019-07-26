@@ -7,7 +7,7 @@ import {
 import * as client from './client'
 import {make_numeric_bin_btns, display as termui_display} from './mds.termdb.termsetting.ui'
 
-// used to track controls unique "instances" by plot object
+// used to track unique "instances" of controls by plot object
 // to be used to disambiguate between input names
 const plots = []
 
@@ -33,7 +33,7 @@ export function controls(arg, plot, main) {
     .style('font-size', '16px')
     .html('&#8801;')
     .on('click', () => {
-      plot.controls.forEach(update => update())
+      plot.syncControls.forEach(update => update())
       const display = tip.style('display')
       tip.style('display', display == "none" ? "inline-block" : "none")
       plot.config_div
@@ -42,9 +42,14 @@ export function controls(arg, plot, main) {
     })
 
   const tip = plot.config_div.append('div').style("display","none")
-  // will be used to track control elements
-  // for contextual updates
-  plot.controls = []
+  
+  // will be used to track control element related 
+  // functions to synchronize an input to the relevant plot.term or setting
+  // !!! important since changes to a plot.term or setting
+  // !!! may be triggered by more than one input or function
+  // !!! the sync functions are called in plot.controls_update below
+  plot.syncControls = []
+  
   const table = tip.append('table').attr('cellpadding',0).attr('cellspacing',0)
   setConditionUnitOpts(plot, main, table, 'term', 'Bar categories', 1)
   setOverlayOpts(plot, main, table, arg)
@@ -56,7 +61,7 @@ export function controls(arg, plot, main) {
   setDivideByOpts(plot, main, table, arg)
 
   plot.controls_update = () => {
-    plot.controls.forEach(update => update())
+    plot.syncControls.forEach(update => update()) // match input values to current
     table.selectAll('tr')
     .filter(rowIsVisible)
     .each(RowStyle)
@@ -128,7 +133,7 @@ function setOrientationOpts(plot, main, table) {
     main(plot)
   })
 
-  plot.controls.push(() => {
+  plot.syncControls.push(() => {
     tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
   })
 }
@@ -154,7 +159,7 @@ function setScaleOpts(plot, main, table) {
     main(plot)
   })
 
-  plot.controls.push(() => {
+  plot.syncControls.push(() => {
     tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
     radio.divs.style('display', d => {
       if (d.value == 'log') {
@@ -187,7 +192,7 @@ function setOverlayOpts(plot, main, table, arg) {
   const value_by_params = ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']
   
   //add blue-pill for term2
-  const treeInput = radio.inputs.filter((d)=>{ return d.value == 'tree'})
+  const treeInput = radio.inputs.filter((d)=>{ return d.value == 'tree'}).style('margin-top', '2px')
   const pill_div = d3select(treeInput.node().parentNode.parentNode)
     .append('div')
     .style('display','inline-block')
@@ -293,7 +298,7 @@ function setOverlayOpts(plot, main, table, arg) {
     )
   })
 
-  plot.controls.push(() => {
+  plot.syncControls.push(() => {
     // hide all options when opened from genome browser view 
     tr.style("display", plot.obj.modifier_ssid_barchart ? "none" : "table-row")
     // do not show genotype overlay option when opened from stand-alone page
@@ -347,7 +352,7 @@ function setViewOpts(plot, main, table, arg) {
     main(plot)
   })
 
-  plot.controls.push(() => {
+  plot.syncControls.push(() => {
     tr.style("display", plot.term2 ? "table-row" : "none")
     radio.inputs.property('checked', d => d.value == plot.term2_displaymode)
     radio.divs.style('display', d => plot.term2 && (d.value != 'boxplot' || plot.term2.isfloat) ? 'inline-block' : 'none')
@@ -425,7 +430,7 @@ function setDivideByOpts(plot, main, table, arg) {
     )
   })
 
-  plot.controls.push(() => {
+  plot.syncControls.push(() => {
     // hide all options when opened from genome browser view 
     tr.style("display", plot.obj.modifier_ssid_barchart || plot.term2_displaymode != "stacked" ? "none" : "table-row")
     // do not show genotype divideBy option when opened from stand-alone page
@@ -509,7 +514,7 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
     return numMatched == params.length
   }
 
-  plot.controls.push(() => {
+  plot.syncControls.push(() => {
     radio.inputs.property('checked', matchedParam)
     tr.style('display', plot.term.iscondition ? "table-row" : 'none')
   })
@@ -540,7 +545,7 @@ function setBinOpts(plot, main, table, termNum, label) {
   })
 
   //TODO: remove following code if not used
-  plot.controls.push(() => {
+  plot.syncControls.push(() => {
     plot.term1 = plot.term
     tr.style('display', plot[termNum] && plot[termNum].isfloat ? 'table-row' : 'none')
   })
