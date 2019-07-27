@@ -71,7 +71,7 @@ arg: server returned data
         toppad: 20, // top padding
         yaxis_width: 100,
         label_fontsize: 15,
-        barheight: 300, // maximum bar length 
+        barheight: 400, // maximum bar length 
         barwidth: 25, // bar thickness
         barspace: 5 // space between two bars
       },
@@ -93,7 +93,7 @@ arg: server returned data
   plot.dom = {
     holder: arg.holder,
     // dom.viz will hold the rendered view
-    viz: arg.holder.append('div').style('display','inline-block'),
+    viz: arg.holder.append('div').style('display','inline-block').style('min-width', '300px'),
     // dom.controls will hold the config input, select, button elements
     controls: arg.holder.append('div').style('display','inline-block')
   }

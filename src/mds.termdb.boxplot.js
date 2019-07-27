@@ -11,6 +11,8 @@ export function init(holder) {
   holder: a d3 selection
 */
   const svg = holder.append('svg')
+                    .style('margin-left', '20px')
+                    .style('margin-right', '20px')
   const self = {
     dom: {
       svg,

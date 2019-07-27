@@ -54,6 +54,7 @@ export function render(self, column_keys, rows) {
   // show table
   const table = self.dom.div.append('table')
   .style('margin-left','20px')
+  .style('margin-right','20px')
   .style('border-spacing','3px')
   .style('border-collapse','collapse')
   .style('border', '1px solid black')
