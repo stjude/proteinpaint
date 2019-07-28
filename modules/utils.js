@@ -249,6 +249,8 @@ export async function run_fdr ( plst ) {
 	await write_file( infile, plst.join('\t') )
 	await run_fdr_2( infile, outfile )
 	const text = await read_file( outfile )
+	fs.unlink( infile, ()=>{})
+	fs.unlink( outfile, ()=>{})
 	return text.trim().split('\n').map(Number)
 }
 
