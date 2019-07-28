@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
-
+const phewas = require('./termdb.phewas')
 
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
@@ -52,7 +52,8 @@ return async (req, res) => {
 		if( q.findterm ) return trigger_findterm( q, res, tdb )
 		if( q.treeto ) return trigger_treeto( q, res, tdb )
 		if( q.testplot ) return trigger_testplot( q, res, tdb, ds ) // this is required for running test cases!!
-		if( q.testall ) return trigger_testall( q, res, tdb, ds )
+		if( q.phewas ) return phewas.trigger( q, res, tdb, ds )
+		if( q.updatephewas ) return phewas.update_image( q, res )
 
 		throw 'termdb: don\'t know what to do'
 
@@ -291,6 +292,9 @@ function server_init_mayparse_patientcondition ( ds ) {
 	console.log(ds.label+': '+count+' samples loaded with condition data from '+ds.cohort.termdb.patient_condition.file)
 }
 
+
+
+
 async function server_init_may_load_precomputed(tdb) {
   if (!tdb || tdb.precomputed || !tdb.precomputed_file) return
   const filename = path.join(serverconfig.tpmasterdir,tdb.precomputed_file)
@@ -302,139 +306,4 @@ async function server_init_may_load_precomputed(tdb) {
     const message = 'Warning: Unable to load the precomputed file ' + filename
     console.log(message, e.message || e)
   }
-}
-
-
-
-
-
-
-const minimum_total_sample = 50
-
-async function trigger_testall ( q, res, tdb, ds ) {
-/*
-q{}
-.ssid
-*/
-	if(!q.ssid) throw 'ssid missing'
-	const [sample2gt, genotype2sample] = await utils.loadfile_ssid( q.ssid )
-
-	// total number of samples with each genotype
-	const het0 = genotype2sample.has( utils.genotype_types.het ) ? genotype2sample.get(utils.genotype_types.het).size : 0
-	const href0 = genotype2sample.has( utils.genotype_types.href ) ? genotype2sample.get(utils.genotype_types.href).size : 0
-	const halt0 = genotype2sample.has( utils.genotype_types.halt ) ? genotype2sample.get(utils.genotype_types.halt).size : 0
-
-
-	// collect tests across all terms, one for each category
-	const tests = []
-
-
-	for(const t of ds.cohort.termdb.q.getallterms()) {
-		const term = JSON.parse(t.jsondata)
-		if(!term.graph) continue
-
-		//////////// prep query for this term
-		const qlst = []
-		if( term.iscategorical ) {
-			qlst.push( { term1_id: t.id, ds } )
-		} else if( term.isfloat || term.isinteger ) {
-			qlst.push( { term1_id: t.id, ds } )
-		} else if( term.iscondition ) {
-			// may test other configs
-			qlst.push({
-				term1_id: t.id,
-				ds,
-				term1_q: {bar_by_grade:true,value_by_max_grade:true}
-			})
-		} else {
-			throw 'unknown term type'
-		}
-
-		for(const q of qlst) {
-			////////////// run query
-			const re = termdbsql.get_rows( q )
-			const category2gt2samples = new Map()
-			// k: category (key1)
-			// v: map{}
-			//    k: gt
-			//    v: sample set
-			for(const i of re.lst) {
-				const genotype = sample2gt[ i.sample ]
-				if(!genotype) continue
-				const category = i.key1
-				if(!category2gt2samples.has(category)) category2gt2samples.set(category, new Map())
-				if(!category2gt2samples.get(category).has( genotype )) category2gt2samples.get(category).set( genotype, new Set())
-				category2gt2samples.get(category).get(genotype).add( i.sample )
-			}
-
-			for(const [category,o] of category2gt2samples) {
-				/////////////// each category as a case
-				const gt2size = new Map()
-				let thiscatnumber = 0
-				for(const [gt,s] of o) {
-					gt2size.set(gt, s.size)
-					thiscatnumber += s.size
-				}
-				if(thiscatnumber < minimum_total_sample) {
-					console.log('skip', category, thiscatnumber)
-					continue
-				}
-				const het  = gt2size.get(utils.genotype_types.het) || 0
-				const halt = gt2size.get(utils.genotype_types.halt) || 0
-				const href = gt2size.get(utils.genotype_types.href) || 0
-				const het2 = het0-het
-				const halt2 = halt0-halt
-				const href2 = href0-href
-
-				tests.push({
-					term: copy_term( term ),
-					category,
-					q: q.q,
-					table: [ 
-						het + 2* halt, // case alt
-						het + 2* href, // case ref
-						het2 + 2* halt2, // ctrl alt
-						het2 + 2* href2, // ctrl ref
-					]
-				})
-			}
-		}
-	}
-
-
-	///////// fisher
-	{
-		const lines = []
-		for(let i=0; i<tests.length; i++) {
-			lines.push( i +'\t'+ tests[i].table.join('\t'))
-		}
-		const tmpfile = path.join(serverconfig.cachedir,Math.random().toString())
-		await utils.write_file( tmpfile, lines.join('\n') )
-		const pfile = await utils.run_fishertest( tmpfile )
-		const text = await utils.read_file( pfile )
-		const pvalues = []
-		for(const line of text.trim().split('\n')) {
-			const l = line.split('\t')
-			const p = Number.parseFloat(l[5])
-			pvalues.push(p)
-		}
-		fs.unlink(tmpfile,()=>{})
-		fs.unlink(pfile,()=>{})
-
-		// fdr
-		const fdr = await utils.run_fdr( pvalues )
-		for(const [i,p] of fdr.entries()) {
-			tests[i].pvalue = p
-		}
-	}
-
-
-	/////////////// fdr
-
-
-	const cutoff = 0.05
-	const results = tests.filter( i=> i.pvalue <= cutoff )
-	results.sort( (i,j)=> i.pvalue-j.pvalue )
-
-	res.send({results})
 }
