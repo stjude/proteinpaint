@@ -11,6 +11,8 @@ export function init(holder) {
   holder: a d3 selection
 */
   const svg = holder.append('svg')
+                    .style('margin-left', '20px')
+                    .style('margin-right', '20px')
   const self = {
     dom: {
       svg,
@@ -57,16 +59,15 @@ function render(self, plot, lst, binmax) {
   const sc = plot.settings.common
   const s = plot.settings.boxplot
   self.dom.svg.style('display','inline-block')
-  self.y_scale = scaleLinear().domain([s.yscale_max,0]).range([0,sc.barheight])
   const max_label_height = get_max_labelheight( self, plot, s)
 
   // space for boxplot
   // let box_plot_space = (plot.boxplot) ?  30 : 4
   const box_plot_space = 4
-
   // define svg height and width
-  const svg_width = plot.items.length * (sc.barwidth+sc.barspace) + s.yaxis_width
-  const svg_height = s.toppad + sc.barheight + max_label_height + box_plot_space
+  const svg_width = plot.items.length * (s.barwidth+s.barspace) + s.yaxis_width
+  const svg_height = s.toppad + s.barheight + max_label_height + box_plot_space
+  self.y_scale = scaleLinear().domain([s.yscale_max,0]).range([0,s.barheight])
 
   self.dom.svg
     .transition()
@@ -87,7 +88,7 @@ function render(self, plot, lst, binmax) {
   client.axisstyle({
     axis: self.dom.yaxis_g,
     showline: true,
-    fontsize: sc.barwidth*.8,
+    fontsize: s.barwidth*.8,
     color: 'black'
   })
 
@@ -110,10 +111,10 @@ function render(self, plot, lst, binmax) {
   }
 
   // plot each bar
-  let x = s.yaxis_width + sc.barspace + sc.barwidth/2
+  let x = s.yaxis_width + s.barspace + s.barwidth/2
 
   self.dom.graph_g
-    .attr('transform','translate('+x+','+(s.toppad + sc.barheight)+')')
+    .attr('transform','translate('+x+','+(s.toppad + s.barheight)+')')
     .selectAll('*')
     .remove()
 
@@ -121,7 +122,7 @@ function render(self, plot, lst, binmax) {
     if (!item.boxplot) return
     const g = self.dom.graph_g.append('g')
       .datum(item)
-      .attr('transform','translate('+(itemidx*(sc.barwidth+sc.barspace))+',0)')
+      .attr('transform','translate('+(itemidx*(s.barwidth+s.barspace))+',0)')
 
     // X axis labels  
     const xlabel = g.append('text')
@@ -138,49 +139,49 @@ function render(self, plot, lst, binmax) {
     if ('w1' in item.boxplot) {
       g.append("line")
         .attr("x1", 0)
-        .attr("y1", self.y_scale(item.boxplot.w1)-sc.barheight)
+        .attr("y1", self.y_scale(item.boxplot.w1)-s.barheight)
         .attr("x2", 0)
-        .attr("y2", self.y_scale(item.boxplot.w2)-sc.barheight)
+        .attr("y2", self.y_scale(item.boxplot.w2)-s.barheight)
         .attr("stroke-width", 2)
         .attr("stroke", "black")
 
       if(sc.use_logscale){
         g.append("rect")
-        .attr('x', -sc.barwidth/2)
-        .attr('y', self.y_scale(item.boxplot.p75)-sc.barheight)
-        .attr('width', sc.barwidth)
-        .attr('height', sc.barheight - self.y_scale(item.boxplot.p75 / item.boxplot.p25))
+        .attr('x', -s.barwidth/2)
+        .attr('y', self.y_scale(item.boxplot.p75)-s.barheight)
+        .attr('width', s.barwidth)
+        .attr('height', s.barheight - self.y_scale(item.boxplot.p75 / item.boxplot.p25))
         .attr('fill','#901739')
       }else{
         g.append("rect")
-        .attr('x', -sc.barwidth/2)
-        .attr('y', self.y_scale(item.boxplot.p75)-sc.barheight)
-        .attr('width', sc.barwidth)
-        .attr('height', sc.barheight - self.y_scale(item.boxplot.p75-item.boxplot.p25))
+        .attr('x', -s.barwidth/2)
+        .attr('y', self.y_scale(item.boxplot.p75)-s.barheight)
+        .attr('width', s.barwidth)
+        .attr('height', s.barheight - self.y_scale(item.boxplot.p75-item.boxplot.p25))
         .attr('fill','#901739')
       }
 
       g.append("line")
-        .attr("x1", -sc.barwidth/2.2)
-        .attr("y1", self.y_scale(item.boxplot.w1)-sc.barheight)
-        .attr("x2", sc.barwidth/2.2)
-        .attr("y2", self.y_scale(item.boxplot.w1)-sc.barheight)
+        .attr("x1", -s.barwidth/2.2)
+        .attr("y1", self.y_scale(item.boxplot.w1)-s.barheight)
+        .attr("x2", s.barwidth/2.2)
+        .attr("y2", self.y_scale(item.boxplot.w1)-s.barheight)
         .attr("stroke-width", 2)
         .attr("stroke", "black")
 
       g.append("line")
-        .attr("x1", -sc.barwidth/2.2)
-        .attr("y1", self.y_scale(item.boxplot.p50)-sc.barheight)
-        .attr("x2", sc.barwidth/2.2)
-        .attr("y2", self.y_scale(item.boxplot.p50)-sc.barheight)
+        .attr("x1", -s.barwidth/2.2)
+        .attr("y1", self.y_scale(item.boxplot.p50)-s.barheight)
+        .attr("x2", s.barwidth/2.2)
+        .attr("y2", self.y_scale(item.boxplot.p50)-s.barheight)
         .attr("stroke-width", 1.5)
         .attr("stroke", "white")
       
       g.append("line")
-        .attr("x1", -sc.barwidth/2.2)
-        .attr("y1", self.y_scale(item.boxplot.w2)-sc.barheight)
-        .attr("x2", sc.barwidth/2.2)
-        .attr("y2", self.y_scale(item.boxplot.w2)-sc.barheight)
+        .attr("x1", -s.barwidth/2.2)
+        .attr("y1", self.y_scale(item.boxplot.w2)-s.barheight)
+        .attr("x2", s.barwidth/2.2)
+        .attr("y2", self.y_scale(item.boxplot.w2)-s.barheight)
         .attr("stroke-width", 2)
         .attr("stroke", "black")
     }
@@ -188,7 +189,7 @@ function render(self, plot, lst, binmax) {
     for(const outlier of item.boxplot.out){
       g.append("circle")
         .attr('cx', 0)
-        .attr('cy', self.y_scale(outlier.value)-sc.barheight)
+        .attr('cy', self.y_scale(outlier.value)-s.barheight)
         .attr('r', 2)
         .attr('fill','#901739')
     } 

@@ -18,7 +18,6 @@ import {
 
 ********************** EXPORTED
 may_create_vcflegend_numericalaxis
-AFtest_groupname
 ********************** INTERNAL
 showmenu_numericaxis
 __update_legend

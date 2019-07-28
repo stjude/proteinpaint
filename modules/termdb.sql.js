@@ -83,7 +83,7 @@ returns:
 			`SELECT sample
 			FROM annotations
 			WHERE term_id = ?
-			AND value IN (${tvs.values.map(i=>'?').join(', ')})`
+			AND value ${tvs.isnot?'NOT':''} IN (${tvs.values.map(i=>'?').join(', ')})`
 		)
 		values.push( tvs.term.id, ...tvs.values.map(i=>i.key) )
 	}

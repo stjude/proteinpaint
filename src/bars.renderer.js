@@ -131,7 +131,7 @@ export default function barsRenderer(barsapp, holder) {
       //.style("width", hm.svgw + "px")
       .style("font-weight", 600)
       .style("font-size", "20px")
-      .style("margin-bottom", "16px")
+      .style("margin-bottom", "24px")
       .html(hm.handlers.chart.title(chart));
 
     // only set this initially to prevent 
@@ -191,41 +191,27 @@ export default function barsRenderer(barsapp, holder) {
         .attr("height", 1)
         .attr("width", 1)
         .style("opacity",1);
-      setTimeout(()=>{
-        const bbox = mainG.node().getBBox()
-        svg.transition().duration(100)
-          .attr('width', bbox.width + 20)
-          .attr('height', bbox.height + 20)
-
-        const rbox = rowlabels.node().getBBox()
-        if (hm.orientation == "vertical") {
-          mainG.transition().duration(100)
-          .attr('transform','translate(' + rbox.width + ',0)')
-        } else {
-          const tbox = yTitle.node().getBBox()
-          const x = Math.max(rbox.width, tbox.width)
-          mainG.transition().duration(100)
-          .attr('transform', 'translate('+ x +',0)')
-        }
-      },110)
-    } else {
-      setTimeout(()=>{
-        const bbox = mainG.node().getBBox()
-        svg.transition().duration(100)
-          .attr('width', bbox.width + 20)
-          .attr('height', bbox.height + 20)
-        
-        if (hm.orientation == "vertical") {
-          mainG.transition().duration(100)
-          .attr('transform','translate('+ hm.rowlabelw + ',0)')
-        } else {
-          const rbox = rowlabels.node().getBBox()
-          const tbox = yTitle.node().getBBox()
-          mainG.transition().duration(100)
-          .attr('transform', 'translate('+ Math.max(rbox.width, tbox.width) +',0)')
-        }
-      },510)
     }
+
+    setTimeout(()=>{
+      const bbox = mainG.node().getBBox()
+      svg.transition().duration(100)
+        .attr('width', bbox.width + 20)
+        .attr('height', bbox.height + 20); 
+
+      if (hm.orientation == "vertical") {
+        const cbox = collabels.node().getBBox()
+        const ytbox = yTitle.node().getBBox()
+        const xoffset = ytbox.x < cbox.x ? -ytbox.x + ytbox.height : -cbox.x
+        mainG.transition().duration(100)
+        .attr('transform','translate('+ xoffset + ',0)')
+      } else {
+        const rbox = rowlabels.node().getBBox()
+        const ytbox = yTitle.node().getBBox();
+        mainG.transition().duration(100)
+        .attr('transform', 'translate('+ Math.max(rbox.width, ytbox.width) +',0)')
+      }
+    }, nosvg ? 110 : 510)
   }
 
   function init() {
@@ -370,7 +356,7 @@ export default function barsRenderer(barsapp, holder) {
       const maxSvgw = window.innerWidth * 0.92 / maxChartsPerRow
       hm.colw = Math.min(
         Math.max(16, Math.round((maxSvgw - spacing) / hm.cols.length)),
-        80
+        30
       );
       hm.svgw =
         hm.cols.length * (hm.colw + hm.colspace) -
@@ -378,8 +364,8 @@ export default function barsRenderer(barsapp, holder) {
         (hm.colgrps.length - 1) * hm.colgspace +
         hm.rowlabelw +
         hm.rowgrplabelw;
-      const numChartRows = Math.round(window.innerWidth / hm.svgw)
-      hm.svgh = window.innerHeight * 0.9 / (numChartRows > 3 ? 2 : 1)
+      const numChartRows = Math.ceil(hm.numCharts/maxChartsPerRow)
+      hm.svgh = Math.max(350, Math.min(400, window.innerHeight * 0.5)) / (numChartRows > 3 ? 2 : 1)
     }
 
     hm.h.yScale = {}

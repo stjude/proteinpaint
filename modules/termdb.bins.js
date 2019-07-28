@@ -173,14 +173,18 @@ function get_bin_label(bin, binconfig) {
     const oper = bin.startinclusive ? "\u2265" : ">"
     const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
     return oper + v0
-  } else if( Number.isInteger( bc.bin_size )) {
+  } else if( Number.isInteger(bc.bin_size)) {
     // bin size is integer, make nicer label
     if( bc.bin_size == 1 ) {
       // bin size is 1; use just start value as label, not a range
       return bin.start //binLabelFormatter(start)
-    } else {
-      const oper0 = bc.startinclusive ? "" : ">"
-      const oper1 = bc.stopinclusive ? "" : "<"
+    } /*else if (Number.isInteger(bin.start) && Number.isInteger(bin.stop)) {
+      const v0 = bin.startinclusive ? bin.start - 1 : bin.start
+      const v1 = bin.stopinclusive ? bin.stop - 1 : bin.stop
+      return v0 +' to '+ v1
+    }*/ else {
+      const oper0 = "" //bc.startinclusive ? "" : ">"
+      const oper1 = "" //bc.stopinclusive ? "" : "<"
       const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)
       const v1 = Number.isInteger(bin.stop) ? bin.stop : binLabelFormatter(bin.stop)
       return oper0 + v0 +' to '+ oper1 + v1

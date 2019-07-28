@@ -90,7 +90,7 @@ const template = JSON.stringify({
           "~samples": ["$sample", "set"],
           "__:total": "=sampleCount()",
         }, "$key2"],
-        "_:_max": "$val2", // needed by client-side boxplot renderer 
+        "_:_max": "<$val2", // needed by client-side boxplot renderer 
         "~values": ["$nval2",0],
         "~sum": "+$nval2",
         "~samples": ["$sample", "set"],
@@ -259,8 +259,14 @@ function getPj(q, data, tdb, ds) {
       bins() {
         return terms.map(d=>d.bins)
       },
-      q() {
-        return terms.map(d=>d.q)
+      q() { 
+        return terms.map((d,i)=>{
+          const q = {}
+          for(const key in d.q) {
+            if (key != "index") q[key] = d.q[key]
+          } 
+          return q
+        })
       },
       useColOrder() {
         return terms[1].orderedLabels.length > 0

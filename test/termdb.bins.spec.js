@@ -106,7 +106,7 @@ tape("compute_bins() error handling", function (test) {
 })
 
 
-tape("get_bin_label()", function (test) {
+tape.only("get_bin_label()", function (test) {
   // test smaller helper functions first since they
   // tend to get used in larger functions and the
   // testing sequence would help isolate the cause(s)
@@ -133,6 +133,30 @@ tape("get_bin_label()", function (test) {
     b.get_bin_label({stopunbounded:1, start: 25, startinclusive: 1}, {bin_size: 3}, get_summary),
     "≥25",
     "stopunbounded + startinclusive"
+  )
+
+  test.equal(
+    b.get_bin_label({start: 1, stop: 5, startinclusive: 1}, {bin_size: 3}, get_summary),
+    "1 to 4",
+    "integer start and stop, startinclusive and not stopinclusive"
+  )
+
+  test.equal(
+    b.get_bin_label({start: 1, stop: 5, stopinclusive: 1}, {bin_size: 3}, get_summary),
+    "2 to 5",
+    "integer start and stop, not startinclusive but stopinclusive"
+  )
+
+  test.equal(
+    b.get_bin_label({start: 1, stop: 5, stopinclusive: 1, startinclusive: 1}, {bin_size: 3}, get_summary),
+    "1 to 5",
+    "integer start and stop, both startinclusive and stopinclusive"
+  )
+
+  test.equal(
+    b.get_bin_label({start: 1, stop: 5}, {bin_size: 3}, get_summary),
+    "2 to 4",
+    "integer start and stop, neither startinclusive nor stopinclusive"
   )
 
   test.end()

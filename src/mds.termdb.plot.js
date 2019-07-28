@@ -49,10 +49,6 @@ arg: server returned data
     items: arg.items,
     boxplot: arg.boxplot,
 
-    term0_q: {},
-    term1_q: {},
-    term2_q: {},
-
     // may need to put the following properties under
     // a namespace or within the affected module
     bin_controls: {1:{}, 2:{}},
@@ -75,6 +71,9 @@ arg: server returned data
         toppad: 20, // top padding
         yaxis_width: 100,
         label_fontsize: 15,
+        barheight: 400, // maximum bar length 
+        barwidth: 25, // bar thickness
+        barspace: 5 // space between two bars
       },
       bar: {
         orientation: 'horizontal',
@@ -87,11 +86,14 @@ arg: server returned data
     // views: {} see below
   }
 
-  arg.holder.style('white-space', 'nowrap')
+  arg.holder
+    .style('white-space', 'nowrap')
+    .style('overflow-x', 'scroll')
   // set the parent DOM elements for viz and controls
   plot.dom = {
+    holder: arg.holder,
     // dom.viz will hold the rendered view
-    viz: arg.holder.append('div').style('display','inline-block'),
+    viz: arg.holder.append('div').style('display','inline-block').style('min-width', '300px'),
     // dom.controls will hold the config input, select, button elements
     controls: arg.holder.append('div').style('display','inline-block')
   }
@@ -127,12 +129,10 @@ const serverData = {}
 
 function main(plot, callback = ()=>{}) {
   // create an alternative reference 
-  // to plot.[term0,term,term2] and term*_q parameters
+  // to plot.[term0,term,term2] and term1_q parameters
   // for convenience and namespacing related variables
   plot.terms = [plot.term0, plot.term, plot.term2]
-  if (plot.terms[0]) plot.terms[0].q = plot.term0_q
-  plot.terms[1].q = plot.term1_q
-  if (plot.terms[2]) plot.terms[2].q = plot.term2_q
+  plot.dom.holder.style('max-width', Math.round(85*window.innerWidth/100) + 'px')
 
   const dataName = getDataName(plot)
   if (serverData[dataName]) {
@@ -163,6 +163,7 @@ function getDataName(plot) {
   plot.terms.forEach((term, i)=>{
     if (!term) return
     params.push('term'+i+'_id=' + term.id)
+    if (term.iscondition && !term.q) term.q = {}
     if (term.q && typeof term.q == 'object') {
       if (term.iscondition && !Object.keys(term.q).length) {
         if (term.iscondition) term.q = {bar_by_grade:1, value_by_max_grade:1}
@@ -196,12 +197,11 @@ function syncParams( plot, data ) {
     if (data.refs.bins && data.refs.bins[i]) {
       term.bins = data.refs.bins[i]
     }
-    if (data.refs.q && data.refs.q[i]) {
-      if (!term.q) term.q = plot['term' + i + '_q'];
+    if (term.q && data.refs.q && data.refs.q[i]) {
       const q = data.refs.q[i]
-      if (q !== plot.term.q) {
-        for(const key in plot.term.q) delete plot.term.q[key]
-        Object.assign(plot.term.q, q)
+      if (q !== term.q) {
+        for(const key in term.q) delete term.q[key]
+        Object.assign(term.q, q)
       }
     }
   }
