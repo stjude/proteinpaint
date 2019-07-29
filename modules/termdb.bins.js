@@ -65,6 +65,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   const percentiles = target_percentiles(bc)
   const summary = summaryfxn(percentiles)
   if (!summary || typeof summary !== 'object') throw "invalid returned value by summaryfxn"
+  bc.results = {summary}
 
   const orderedLabels = []
   const min = bc.first_bin.startunbounded
@@ -150,7 +151,6 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
       break
     }
   }
-  bc.results = {summary}
   return bins
 }
 
@@ -178,11 +178,26 @@ function get_bin_label(bin, binconfig) {
     if( bc.bin_size == 1 ) {
       // bin size is 1; use just start value as label, not a range
       return bin.start //binLabelFormatter(start)
-    } /*else if (Number.isInteger(bin.start) && Number.isInteger(bin.stop)) {
-      const v0 = bin.startinclusive ? bin.start - 1 : bin.start
-      const v1 = bin.stopinclusive ? bin.stop - 1 : bin.stop
+    } else if (Number.isInteger(bin.start) || Number.isInteger(bin.stop)) { 
+      // else if ('label_offset' in binconfig) {
+      // should change condition later to be detected via 'label_offset' in binconfig
+      // so that the label_offset may be applied to floats also
+      const label_offset = 1 // change to binconfig.label_offset later
+      const min = 'start' in binconfig.first_bin ? binconfig.first_bin.start
+        : 'start_percentile' in binconfig.first_bin 
+        ? binconfig.results.summary['p'+binconfig.first_bin.start_percentile]
+        : binconfig.results.summary.min
+      const v0 = bin.startinclusive || bin.start == min ? bin.start : bin.start + label_offset // bin.start - 1 : bin.start
+      const max = !binconfig.last_bin
+        ? binconfig.results.summary.max
+        : 'stop' in binconfig.last_bin 
+        ? binconfig.first_bin.stop
+        : 'stop_percentile' in binconfig.last_bin 
+        ? binconfig.results.summary['p'+binconfig.last_bin.stop_percentile]
+        : binconfig.results.summary.max
+      const v1 = bin.stopinclusive || bin.stop == max ? bin.stop : bin.stop - label_offset // bin.stop - 1 : bin.stop
       return v0 +' to '+ v1
-    }*/ else {
+    } else {
       const oper0 = "" //bc.startinclusive ? "" : ">"
       const oper1 = "" //bc.stopinclusive ? "" : "<"
       const v0 = Number.isInteger(bin.start) ? bin.start : binLabelFormatter(bin.start)

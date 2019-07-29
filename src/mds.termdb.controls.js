@@ -531,7 +531,7 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
         return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
       }
     })
-    console.log(plot.termuiObjOverlay.termsetting)
+    //console.log(plot.termuiObjOverlay.termsetting)
     plot.termuiObjOverlay.update_ui()
   })
 }
