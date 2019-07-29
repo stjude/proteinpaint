@@ -44,17 +44,18 @@ export async function display (obj){
 		// a term is selected
 		div_addnewterm.style('display','none')
 		div_showterm
-			.style('display','block')
+            .style('display','block')
 			.selectAll('*').remove()
 
 		add_term_button( div_showterm )
-			.text( obj.termsetting.term.name )
+            .text( obj.termsetting.term.name )
 			.style('border-radius', '6px 0px 0px 6px')
 
         if(obj.termsetting.term.isfloat || obj.termsetting.term.isinteger){
 
             div_showterm
-				.append('div')
+                .append('div')
+                .style('font-size','1em')
                 .attr('class','sja_filter_tag_btn')
                 .style('margin-left','1px')
                 .style('background','#4888BF')
@@ -100,6 +101,8 @@ export async function display (obj){
             btn
                 .style('padding','3px 7px')
                 .style('margin-left','1px')
+                .style('font-size','1em')
+                .style('line-height','1.15')
                 .style('background-color', '#4888BF')
         
 			let select2, btn2
@@ -137,7 +140,9 @@ export async function display (obj){
 					.text('Any grade per patient')
 				btn2
 					.style('padding','3px 7px')
-					.style('margin-left','1px')
+                    .style('margin-left','1px')
+                    .style('font-size','1em')
+                    .style('line-height','1.15')
 					.style('background-color', '#4888BF')
             }
 
@@ -158,7 +163,7 @@ export async function display (obj){
 					select.node().value = 'any'
 					btn.html('Any grade per patient &#9662;')
 				}
-            	select.style('width',btn.node().offsetWidth+'px')
+                select.style('width',btn.node().offsetWidth+'px')
 			}
 			function __flip_select2() {
 				if(!select2) return
