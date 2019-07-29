@@ -222,7 +222,7 @@ export async function display (obj){
                 div: obj.tip.d,
                 default_rootterm: true,
                 modifier_click_term:{
-                    disable_terms: ( obj.termsetting.term ? new Set([ obj.termsetting.term.id ]) : undefined ),
+                    disable_terms: ( obj.termsetting.term ? new Set([ obj.currterm.id, obj.termsetting.term.id ]) : new Set([ obj.currterm.id ]) ),
                     callback: (term)=>{
                         obj.tip.hide()
 						obj.termsetting.term = term

@@ -202,6 +202,7 @@ function setOverlayOpts(plot, main, table, arg) {
     genome: plot.obj.genome,
     mds: plot.obj.mds,
     tip: plot.obj.tip,
+    currterm: plot.term,
     termsetting: {term:plot.term2, q: plot.term2?plot.term2.q:undefined},
     callback: (term2) => {
       plot.obj.tip.hide()
