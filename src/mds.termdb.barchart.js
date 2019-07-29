@@ -104,6 +104,11 @@ export class TermdbBarchart{
   processData(chartsData) {
     const self = this
     const cols = chartsData.refs.cols
+
+    self.grade_labels = chartsData.refs.grade_labels 
+      ? chartsData.refs.grade_labels
+      : null
+
     self.seriesOrder = chartsData.charts[0].serieses
       .sort(chartsData.refs.useColOrder
         ? (a,b) => cols.indexOf(b.seriesId) - cols.indexOf(a.seriesId)
@@ -132,10 +137,6 @@ export class TermdbBarchart{
       ? bins.crosstab_fixed_bins.map(d=>d.label).reverse()
       : bins["2"]
       ? bins["2"].map(d=>d.label).reverse()
-      : null
-
-    self.grade_labels = chartsData.refs.grade_labels 
-      ? chartsData.refs.grade_labels
       : null
 
     const rows = chartsData.refs.rows;
@@ -217,10 +218,15 @@ export class TermdbBarchart{
         return !chart.settings.exclude.cols.includes(d.seriesId)
       })
       chart.settings.colLabels = chart.visibleSerieses.map(series=>{
-        const colName = series.seriesId
+        const id = series.seriesId
+        const grade_label = this.terms.term1.iscondition && this.grade_labels
+            ? this.grade_labels.find(c => id == c.grade)
+            : null
+        const label = grade_label ? grade_label.label : id
+        const af = series && 'AF' in series ? ', AF=' + series.AF : ''
         return {
-          id: colName,
-          label: series && 'AF' in series ? colName + ', AF=' + series.AF : colName
+          id,
+          label: label + af
         }
       })
       chart.maxVisibleSeriesTotal = chart.visibleSerieses.reduce((max,b) => {
@@ -410,13 +416,8 @@ export class TermdbBarchart{
       },
       colLabel: {
         text: d => {
-          const grade = self.grade_labels
-            ? self.grade_labels.find(c => 'id' in d ? c.grade == d.id : c.grade == d)
-            : null
           return self.terms.term1.values
             ? self.terms.term1.values['id' in d ? d.id : d].label
-            : grade
-            ? grade.label
             : 'label' in d
             ? d.label
             : d
@@ -437,13 +438,8 @@ export class TermdbBarchart{
       },
       rowLabel: {
         text: d => {
-          const grade = self.grade_labels
-            ? self.grade_labels.find(c => 'id' in d ? c.grade == d.id : c.grade == d)
-            : null
           return self.terms.term1.values
             ? self.terms.term1.values['id' in d ? d.id : d].label
-            : grade
-            ? grade.label
             : 'label' in d
             ? d.label
             : d

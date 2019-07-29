@@ -1000,12 +1000,6 @@ async function restore_barchart(obj, params) {
 		if (!term2) return
 		plot.settings.bar.overlay = 'tree'
     plot.term2 = term2
-    if (plot.term2.iscondition) {
-      plot.settings.common.conditionParents[2] = plot.term2.id
-      if (!plot.settings.common.conditionUnits[2]) {
-        plot.settings.common.conditionUnits[2] = "max_grade_perperson"
-      }
-    }
     if (plot.term2.isfloat && plot.term2_boxplot) { 
       plot.term2_displaymode = 'boxplot'
     } else {

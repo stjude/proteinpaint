@@ -62,9 +62,9 @@ export async function display (obj){
                 .html('BINS')
                 .on('click',()=>{
                     // click to show ui and customize binning
-                    numeric_bin_edit(obj.tip, obj.termsetting.term, obj.termsetting.q, (result)=>{
-                        obj.termsetting.q = result;
-                        obj.termsetting.term.q = result
+                    numeric_bin_edit(obj.tip, obj.termsetting.term, obj.termsetting.term.q, (result)=>{
+                        obj.termsetting.term.q = result;
+                        obj.termsetting.q = result
                         obj.callback(obj.termsetting.term)
                     })
                 })
@@ -75,10 +75,11 @@ export async function display (obj){
             select.style('margin-left','1px')
 				.on('change',()=>{
 					const v = select.node().value
-					if(v=='max') obj.termsetting.q = { value_by_max_grade:true, bar_by_grade:true }
-					else if (v=='recent') obj.termsetting.q = { value_by_most_recent:true, bar_by_grade:true }
-					else if (v=='any') obj.termsetting.q = { value_by_computable_grade:true, bar_by_grade:true }
-					else if (v=='sub') obj.termsetting.q = { value_by_max_grade:true, bar_by_children:true }
+					if(v=='max') obj.termsetting.term.q = { value_by_max_grade:true, bar_by_grade:true }
+					else if (v=='recent') obj.termsetting.term.q = { value_by_most_recent:true, bar_by_grade:true }
+					else if (v=='any') obj.termsetting.term.q = { value_by_computable_grade:true, bar_by_grade:true }
+					else if (v=='sub') obj.termsetting.term.q = { value_by_max_grade:true, bar_by_children:true }
+                    obj.termsetting.q = obj.termsetting.term.q
 					__flip_select()
 					__flip_select2()
 					obj.callback(obj.termsetting.term)
@@ -113,13 +114,14 @@ export async function display (obj){
 				btn2 = b
 				select2.style('margin-left','1px')
 					.on('change',()=>{
-						delete obj.termsetting.q.value_by_max_grade
-						delete obj.termsetting.q.value_by_most_recent
-						delete obj.termsetting.q.value_by_computable_grade
+						delete obj.termsetting.term.q.value_by_max_grade
+						delete obj.termsetting.term.q.value_by_most_recent
+						delete obj.termsetting.term.q.value_by_computable_grade
 						const v = select2.node().value
-						if(v=='max') obj.termsetting.q.value_by_max_grade=true
-						else if (v=='recent') obj.termsetting.q.value_by_most_recent=true
-						else if (v=='any') obj.termsetting.q.value_by_computable_grade=true
+						if(v=='max') obj.termsetting.term.q.value_by_max_grade=true
+						else if (v=='recent') obj.termsetting.term.q.value_by_most_recent=true
+						else if (v=='any') obj.termsetting.term.q.value_by_computable_grade=true
+                        obj.termsetting.q = obj.termsetting.term.q
 						__flip_select2()
 						obj.callback()
 					})
@@ -143,16 +145,16 @@ export async function display (obj){
 			__flip_select2()
 
 			function __flip_select() {
-				if( obj.termsetting.q.bar_by_children ) {
+				if( obj.termsetting.term.q.bar_by_children ) {
 					select.node().value = 'sub'
 					btn.html('Sub-conditions &#9662;')
-				} else if(obj.termsetting.q.value_by_max_grade) {
+				} else if(obj.termsetting.term.q.value_by_max_grade) {
 					select.node().value = 'max'
 					btn.html('Max grade per patient &#9662;')
-				} else if(obj.termsetting.q.value_by_most_recent) {
+				} else if(obj.termsetting.term.q.value_by_most_recent) {
 					select.node().value = 'recent'
 					btn.html('Most recent grade per patient &#9662;')
-				} else if( obj.termsetting.q.value_by_computable_grade) {
+				} else if( obj.termsetting.term.q.value_by_computable_grade) {
 					select.node().value = 'any'
 					btn.html('Any grade per patient &#9662;')
 				}
@@ -160,20 +162,20 @@ export async function display (obj){
 			}
 			function __flip_select2() {
 				if(!select2) return
-				if(!obj.termsetting.q.bar_by_children) {
+				if(!obj.termsetting.term.q.bar_by_children) {
 					select2.style('display','none')
 					btn2.style('display','none')
 					return
 				}
 				select2.style('display','inline-block')
 				btn2.style('display','inline-block')
-				if(obj.termsetting.q.value_by_max_grade) {
+				if(obj.termsetting.term.q.value_by_max_grade) {
 					select2.node().value = 'max'
 					btn2.html('Max grade per patient &#9662;')
-				} else if(obj.termsetting.q.value_by_most_recent) {
+				} else if(obj.termsetting.term.q.value_by_most_recent) {
 					select2.node().value = 'recent'
 					btn2.html('Most recent grade per patient &#9662;')
-				} else if( obj.termsetting.q.value_by_computable_grade) {
+				} else if( obj.termsetting.term.q.value_by_computable_grade) {
 					select2.node().value = 'any'
 					btn2.html('Any grade per patient &#9662;')
 				}
@@ -222,7 +224,8 @@ export async function display (obj){
                         // assign default setting about this term
 						if( term.iscategorical ) {
 							// no need to assign
-							delete obj.termsetting.q
+							delete obj.termsetting.term.q
+                            delete obj.termsetting.q
 						} else if( term.iscondition ) {
                             term.q = term.isleaf 
                                 ? { value_by_max_grade:true, bar_by_grade:true  }

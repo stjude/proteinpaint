@@ -224,6 +224,7 @@ function setOverlayOpts(plot, main, table, arg) {
     }
   }
 
+  plot.termuiObjOverlay = termuiObj
   termui_display(termuiObj)
       
   radio.inputs
@@ -250,6 +251,8 @@ function setOverlayOpts(plot, main, table, arg) {
       }
       plot.term2 = Object.assign({}, plot.term)
       plot.term2.q = Object.assign({}, plot.term.q)
+      termuiObj.termsetting.term = plot.term2
+      termuiObj.termsetting.q = plot.term2.q; console.log(termuiObj.termsetting)
       delete plot.term2.q.bar_by_grade
       plot.term2.q.bar_by_children = 1
       for(const param of value_by_params) {
@@ -264,6 +267,8 @@ function setOverlayOpts(plot, main, table, arg) {
       }
       plot.term2 = Object.assign({}, plot.term)
       plot.term2.q = Object.assign({}, plot.term.q)
+      termuiObj.termsetting.term = plot.term2
+      termuiObj.termsetting.q = plot.term2.q
       delete plot.term2.q.bar_by_children
       plot.term2.q.bar_by_grade = 1
       for(const param of value_by_params) {
@@ -394,6 +399,7 @@ function setDivideByOpts(plot, main, table, arg) {
     }
   }
 
+  plot.termuiObjDivide = termuiObj
   termui_display(termuiObj)
 
   radio.inputs
@@ -444,7 +450,7 @@ function setDivideByOpts(plot, main, table, arg) {
     radio.inputs.property('checked', d => d.value == plot.settings.bar.divideBy)
     radio.divs.style('display', d => {
       if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
-        return plot.term1.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'none'
+        return plot.term.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'none'
       } else {
         const block = 'block' //plot.term.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'inline-block'
         return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
@@ -517,6 +523,16 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
   plot.syncControls.push(() => {
     radio.inputs.property('checked', matchedParam)
     tr.style('display', plot.term.iscondition ? "table-row" : 'none')
+    radio.divs.style('display', d => {
+      if (d.value.includes("bar_by_children")) {
+        return plot.term.iscondition && !plot.term.isleaf ? 'block' : 'none'
+      } else {
+        const block = 'block' //plot.term.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'inline-block'
+        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
+      }
+    })
+    console.log(plot.termuiObjOverlay.termsetting)
+    plot.termuiObjOverlay.update_ui()
   })
 }
 
