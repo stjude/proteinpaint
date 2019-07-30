@@ -195,9 +195,10 @@ export default function barsRenderer(barsapp, holder) {
 
     setTimeout(()=>{
       const bbox = mainG.node().getBBox()
+      main.adjustedSvgw = bbox.width + 20
       svg.transition().duration(100)
-        .attr('width', bbox.width + 20)
-        .attr('height', bbox.height + 20); 
+        .attr('width', main.adjustedSvgw)
+        .attr('height', bbox.height + 20);
 
       if (hm.orientation == "vertical") {
         const cbox = collabels.node().getBBox()

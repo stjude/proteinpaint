@@ -604,8 +604,9 @@ export class TermdbBarchart{
 
     let totalWidth = 0, i = 0
     for(const chartId in this.renderers) {
-      totalWidth += this.renderers[chartId].hm.svgw
-      if (i++ >= maxChartsPerRow) break
+      totalWidth += this.renderers[chartId].adjustedSvgw
+      i++
+      if (i >= maxChartsPerRow) break
     }
       
     this.dom.barDiv.transition().duration(300).style('max-width', Math.max(600,Math.ceil(totalWidth + 100)) + 'px')
