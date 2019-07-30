@@ -530,7 +530,7 @@ export class TermdbBarchart{
     if (result.dataId in this.term2toColor) return 
     this.term2toColor[result.dataId] = this.settings.term2 === ""
       ? "rgb(144, 23, 57)"
-      : rgb(this.settings.rows.length < 11 
+      : rgb(this.settings.rows && this.settings.rows.length < 11 
         ? colors.c10(result.dataId)
         : colors.c20(result.dataId)
       ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
