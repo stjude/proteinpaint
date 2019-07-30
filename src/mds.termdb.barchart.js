@@ -48,13 +48,15 @@ export class TermdbBarchart{
   }
 
   main(plot=null, data=null, isVisible=true, obj=null) {
+    if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
     if (data) this.currServerData = data
     if (!this.setVisibility(isVisible)) return
     if (obj) this.obj = obj
     if (plot) this.plot = plot
-    this.dom.barDiv.style('max-width', window.innerWidth + 'px')
     this.updateSettings(plot)
-    this.processData(this.currServerData) 
+    this.processData(this.currServerData)
+    
+    setTimeout(()=>this.setMaxWidth(), 900)
   }
 
   updateSettings(plot) {
@@ -591,5 +593,21 @@ export class TermdbBarchart{
       })
     }
     return legendGrps;
+  }
+
+  setMaxWidth() {
+    const maxChartsPerRow = this.settings.numCharts < 4 
+      ? this.settings.numCharts
+      : this.settings.numCharts % 3 == 0
+      ? 3
+      : 2
+
+    let totalWidth = 0, i = 0
+    for(const chartId in this.renderers) {
+      totalWidth += this.renderers[chartId].hm.svgw
+      if (i++ >= maxChartsPerRow) break
+    }
+      
+    this.dom.barDiv.transition().duration(300).style('max-width', Math.max(600,Math.ceil(totalWidth + 100)) + 'px')
   }
 }
