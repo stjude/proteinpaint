@@ -58,6 +58,7 @@ will include tk.vcf.plot_mafcov.overlay_term
 			genome: obj.block.genome,
 			mds: obj.tk.mds,
 			tip: obj.tk.legend.tip,
+			currterm: obj.overlay_term,
 			termsetting: obj.overlay_term,
 			callback: ()=>{
 				obj.d.term_legenddiv.selectAll('*').remove()

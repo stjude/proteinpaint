@@ -103,6 +103,7 @@ export async function display (obj){
                 .style('margin-left','1px')
                 .style('font-size','1em')
                 .style('line-height','1.15')
+                .style('position','static')
                 .style('background-color', '#4888BF')
         
 			let select2, btn2
@@ -115,7 +116,7 @@ export async function display (obj){
 				const [s, b] = client.make_select_btn_pair( div_showterm )
 				select2 = s
 				btn2 = b
-				select2.style('margin-left','1px')
+                select2.style('margin-left','1px')
 					.on('change',()=>{
 						delete obj.termsetting.term.q.value_by_max_grade
 						delete obj.termsetting.term.q.value_by_most_recent
@@ -143,6 +144,7 @@ export async function display (obj){
                     .style('margin-left','1px')
                     .style('font-size','1em')
                     .style('line-height','1.15')
+                    .style('position','static')
 					.style('background-color', '#4888BF')
             }
 
@@ -163,7 +165,8 @@ export async function display (obj){
 					select.node().value = 'any'
 					btn.html('Any grade per patient &#9662;')
 				}
-                select.style('width',btn.node().offsetWidth+'px')
+                select.style( 'width', btn.node().offsetWidth+'px' )
+                    .style('margin-left','-'+btn.node().offsetWidth+'px')
 			}
 			function __flip_select2() {
 				if(!select2) return
@@ -184,7 +187,8 @@ export async function display (obj){
 					select2.node().value = 'any'
 					btn2.html('Any grade per patient &#9662;')
 				}
-            	select2.style( 'width', btn2.node().offsetWidth+'px' )
+                select2.style( 'width', btn2.node().offsetWidth+'px' )
+                    .style('margin-left','-'+btn2.node().offsetWidth+'px')
 			}
         }
 
