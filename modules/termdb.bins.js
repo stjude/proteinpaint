@@ -162,7 +162,6 @@ exports.compute_bins = compute_bins
 function get_bin_label(bin, binconfig) {
 /*
   Generate a numeric bin label given a bin configuration
-
 */
   const bc = binconfig
   if (bin.startunbounded) {
@@ -196,7 +195,9 @@ function get_bin_label(bin, binconfig) {
         ? binconfig.results.summary['p'+binconfig.last_bin.stop_percentile]
         : binconfig.results.summary.max
       const v1 = bin.stopinclusive || bin.stop == max ? bin.stop : bin.stop - label_offset // bin.stop - 1 : bin.stop
-      return v0 +' to '+ v1
+      return v0 >= v1 && bin.stopinclusive ? "\u2265" + v0  
+        : v0 >= v1 ? ">" + v0
+        : v0 +' to '+ v1
     } else {
       const oper0 = "" //bc.startinclusive ? "" : ">"
       const oper1 = "" //bc.stopinclusive ? "" : "<"
