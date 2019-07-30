@@ -392,6 +392,7 @@ function setDivideByOpts(plot, main, table, arg) {
     genome: plot.obj.genome,
     mds: plot.obj.mds,
     tip: plot.obj.tip,
+    currterm: plot.term,
     termsetting: {term:plot.term0, q: plot.term0?plot.term0.q:undefined},
     currterm: plot.term,
     callback: (term0) => {
