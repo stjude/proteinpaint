@@ -115,14 +115,14 @@ export default function barsRenderer(barsapp, holder) {
     chart = _chart
     Object.assign(hm, chart.settings)
     hm.handlers = chart.handlers
-    hm.cols = hm.cols.filter(d => !hm.exclude.cols.includes(d))
+    hm.cols = hm.cols.filter(colId => hm.colLabels.find(d => d.id == colId))
     hm.rows = hm.rows.filter(d => !hm.exclude.rows.includes(d))
     if (_unstackedBarsPanes) unstackedBarsPanes = _unstackedBarsPanes;
     const nosvg = !svg
     if (nosvg) init();
 
     const unadjustedColw = hm.colw
-    currserieses = chart.visibleSerieses;
+    currserieses = chart.visibleSerieses
     currserieses.map(setIds);
     chart.serieses.map(setIds);
     setDimensions();

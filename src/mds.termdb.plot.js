@@ -151,6 +151,7 @@ function main(plot, callback = ()=>{}) {
       render(plot, chartsData)
       callback({plot, main})
     })
+    //.catch(window.alert)
   }
 }
 
@@ -165,7 +166,7 @@ function getDataName(plot) {
 
   plot.terms.forEach((term, i)=>{
     if (!term) return
-    params.push('term'+i+'_id=' + term.id)
+    params.push('term'+i+'_id=' + encodeURIComponent(term.id))
     if (term.iscondition && !term.q) term.q = {}
     if (term.q && typeof term.q == 'object') {
       if (term.iscondition && !Object.keys(term.q).length) {

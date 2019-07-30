@@ -82,7 +82,7 @@ export class TermdbBarchart{
       rowspace: plot.settings.common.barspace
     }
     Object.assign(this.settings, settings)
-    this.settings.numCharts = this.currServerData.charts.length
+    this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
       this.settings.unit = "abs"
     }
@@ -190,25 +190,28 @@ export class TermdbBarchart{
     const term1 = this.settings.term1
     let maxVisibleAcrossCharts = 0
     for(const chart of chartsData.charts) {
+      chart.settings = JSON.parse(rendererSettings)
       if (this.currChartsData != chartsData) {
         const unannotatedColLabels = chartsData.refs.unannotatedLabels.term1
         if (unannotatedColLabels) {
           for(const label of unannotatedColLabels) {
-            if (!this.settings.exclude.cols.includes(label)) {
-              this.settings.exclude.cols.push(label)
+            if (!chart.settings.exclude.cols.includes(label)) {
+              chart.settings.exclude.cols.push(label)
             }
           }
         }
         const unannotatedRowLabels = chartsData.refs.unannotatedLabels.term2
         if (unannotatedRowLabels) {
           for(const label of unannotatedRowLabels) {
-            if (!this.settings.exclude.rows.includes(label)) {
-              this.settings.exclude.rows.push(label)
+            if (!chart.settings.exclude.rows.includes(label)) {
+              chart.settings.exclude.rows.push(label)
             }
           }
         }
       }
-      chart.settings = Object.assign(this.settings, chartsData.refs)
+    }
+    for(const chart of chartsData.charts) {
+      Object.assign(chart.settings, this.settings, chartsData.refs)
       chart.visibleSerieses = chart.serieses.filter(d=>{
         return !chart.settings.exclude.cols.includes(d.seriesId)
       })
@@ -562,7 +565,7 @@ export class TermdbBarchart{
           })
       })
     }
-    if (s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
+    if (s.rows && s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
       const t = this.terms.term2
       const b = t.graph && t.graph.barchart ? t.graph.barchart : null
       const overlay = !t.iscondition || !b ? '' : b.value_choices.find(d => false /*d[s.conditionUnits[2]]*/)

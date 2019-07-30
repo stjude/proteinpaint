@@ -990,19 +990,24 @@ async function restore_barchart(obj, params) {
 	restored_div.append('h3')
 		.html('Restored View')
 
-	let term2
+	let term2, term0
 	if (params.term2) {
 		const data = await obj.do_query( ['findterm='+params.term2] );
-		if (data.lst.length) term2 = data.lst[0]
+		if (data.lst.length) term2 = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
+	}
+	if (params.term0) {
+		const data = await obj.do_query( ['findterm='+params.term0] );
+		if (data.lst.length) term0 = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
 	}
 
 	make_barplot( obj, data.lst[0], restored_div, ({plot, main})=>{
-		if (!term2) return
+		if (!term2 && !term0) return
 		plot.settings.bar.overlay = 'tree'
     plot.term2 = term2
-    if (plot.term2.isfloat && plot.term2_boxplot) { 
+    plot.term0 = term0
+    if (plot.term2 && plot.term2.isfloat && plot.term2_boxplot) { 
       plot.term2_displaymode = 'boxplot'
-    } else {
+    } else if (plot.term2) {
       if (plot.term2_displaymode == "boxplot") {
         plot.term2_displaymode = "stacked"
       }

@@ -61,7 +61,7 @@ export function controls(arg, plot, main) {
   setDivideByOpts(plot, main, table, arg)
 
   plot.controls_update = (plot, data) => {
-    plot.config_div.style('display', data.charts.length ? 'inline-block' : 'none')
+    plot.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
     plot.syncControls.forEach(update => update()) // match input values to current
     table.selectAll('tr')
     .filter(rowIsVisible)
@@ -393,6 +393,7 @@ function setDivideByOpts(plot, main, table, arg) {
     mds: plot.obj.mds,
     tip: plot.obj.tip,
     termsetting: {term:plot.term0, q: plot.term0?plot.term0.q:undefined},
+    currterm: plot.term,
     callback: (term0) => {
       plot.obj.tip.hide()
       plot.term0 = term0
