@@ -165,7 +165,7 @@ function getPj(q, data, tdb, ds) {
 
   return new Partjson({
     data,
-    seed: `{"values": []}`, // result seed 
+    seed: `{"results": {"charts": [], "refs":{}}}`, // result seed 
     template,
     "=": {
       prep(row) {

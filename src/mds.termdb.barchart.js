@@ -109,14 +109,16 @@ export class TermdbBarchart{
       ? chartsData.refs.grade_labels
       : null
 
-    self.seriesOrder = chartsData.charts[0].serieses
-      .sort(chartsData.refs.useColOrder
-        ? (a,b) => cols.indexOf(b.seriesId) - cols.indexOf(a.seriesId)
-        : (a,b) => !isNaN(a.seriesId)
-          ? +b.seriesId - +a.seriesId
-          : a.total - b.total
-      )
-      .map(d => d.seriesId)
+    self.seriesOrder = !chartsData.charts.length 
+      ? [] 
+      :chartsData.charts[0].serieses
+        .sort(chartsData.refs.useColOrder
+          ? (a,b) => cols.indexOf(b.seriesId) - cols.indexOf(a.seriesId)
+          : (a,b) => !isNaN(a.seriesId)
+            ? +b.seriesId - +a.seriesId
+            : a.total - b.total
+        )
+        .map(d => d.seriesId)
 
     self.setMaxVisibleTotals(chartsData)
 
@@ -127,17 +129,10 @@ export class TermdbBarchart{
         && self.terms.term2.graph.barchart
         && self.terms.term2.graph.barchart.numeric_bin
       ? self.terms.term2.graph.barchart.numeric_bin
-      : null
+      : []
 
     self.bins = bins
-
-    self.binLabels = bins && bins.fixed_bins
-      ? bins.fixed_bins.map(d=>d.label).reverse()
-      : bins && bins.crosstab_fixed_bins 
-      ? bins.crosstab_fixed_bins.map(d=>d.label).reverse()
-      : bins["2"]
-      ? bins["2"].map(d=>d.label).reverse()
-      : null
+    self.binLabels = bins.map(d=>d.label).reverse()
 
     const rows = chartsData.refs.rows;
     self.rowSorter = chartsData.refs.useRowOrder

@@ -92,6 +92,8 @@ arg: server returned data
   // set the parent DOM elements for viz and controls
   plot.dom = {
     holder: arg.holder,
+    // will hold no data notice or the page title in multichart views
+    banner: arg.holder.append('div').style('display', 'none'),
     // dom.viz will hold the rendered view
     viz: arg.holder.append('div').style('display','inline-block').style('min-width', '300px'),
     // dom.controls will hold the config input, select, button elements
@@ -100,6 +102,7 @@ arg: server returned data
 
   // set view functions or objects
   plot.views = {
+    banner: banner_init(plot.dom.banner), 
     barchart: new TermdbBarchart({
       holder: plot.dom.viz,
       settings: {},
@@ -213,10 +216,26 @@ make a barchart, boxplot, or stat table based on configs
 in the plot object called by showing the single-term plot 
 at the beginning or stacked bar plot for cross-tabulating
 */ 
-  plot.controls_update()
+  plot.controls_update(plot, data)
   plot.views.barchart.main(plot, data, plot.term2_displaymode == "stacked", plot.obj)
   plot.views.boxplot.main(plot, data, plot.term2_displaymode == "boxplot")
   plot.views.stattable.main(plot, data, data.boxplot != undefined && plot.term2_displaymode == "stacked")
   plot.views.table.main(plot, data, plot.term2_displaymode == "table")
+  plot.views.banner.main(plot, data)
+}
+
+function banner_init(div) {
+  div.style('text-align', 'center')
+     .style('padding', '10px')
+
+  return {
+    main(plot, data) {
+      if (!data.charts.length) {
+        div.html('No data to display.').style('display', 'block')
+      } else {
+        div.style('display', 'none')
+      }
+    }
+  }
 }
 

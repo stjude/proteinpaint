@@ -60,7 +60,8 @@ export function controls(arg, plot, main) {
   // setBinOpts(plot, main, table, 'term2', 'Overlay Bins') // will be handled from term2 blue-pill
   setDivideByOpts(plot, main, table, arg)
 
-  plot.controls_update = () => {
+  plot.controls_update = (plot, data) => {
+    plot.config_div.style('display', data.charts.length ? 'inline-block' : 'none')
     plot.syncControls.forEach(update => update()) // match input values to current
     table.selectAll('tr')
     .filter(rowIsVisible)

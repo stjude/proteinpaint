@@ -274,6 +274,7 @@ export default function barsRenderer(barsapp, holder) {
 
     if (!svg) {
       chartTitle = holder.append('div')
+        .attr('class', 'pp-chart-title')
         .style('text-align','center')
 
       svg = holder
