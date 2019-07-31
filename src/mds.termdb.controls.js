@@ -17,6 +17,7 @@ const panel_border_color = '#D3D3D3'
 
 export function controls(arg, plot, main) {
   plot.config_div = arg.holder.append('div')
+    .style('float','left')
     .style('display','inline-block')
     .style('vertical-align','top')
     .style('margin', '8px')
@@ -27,21 +28,41 @@ export function controls(arg, plot, main) {
   plots.push(plot)
 
   // label
-  plot.config_div.append('div').append('div')
+  const hamburger_btn = plot.config_div.append('div').append('div')
     .attr('class','sja_edit_btn')
 	  .style('margin','10px')
     .style('font-size', '16px')
     .html('&#8801;')
     .on('click', () => {
       plot.syncControls.forEach(update => update())
-      const display = tip.style('display')
-      tip.style('display', display == "none" ? "inline-block" : "none")
+      const opacity = tip.style('opacity')
+      
+      //change opacity of 'config' div
+      tip.style('opacity', opacity == "0" ? "1" : "0")
+        .style('transition','0.2s')
+
       plot.config_div
-	  	.style('background', display == "none" ? panel_bg_color : "")
-	  	// .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
+        .style('background', opacity == "0" ? panel_bg_color : "")
+        // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
+
+      hamburger_btn
+        .html(opacity == "0" ? '&#215;' : '&#8801;')
+        .style('transition','0.5s')
+      
+       //add margin to plot and stats table if present
+      d3select(arg.holder.node()).select('svg')
+        .style('transition','0.5s')
+        .style('margin-left',opacity == "0" ? '0px': '-'+ tip.node().offsetWidth + 'px')
+
+      if(plot.term.isfloat || plot.term.isinteger){
+        d3select(arg.holder.node()).select('table')
+          .style('transition','0.5s')
+          .style('margin-left',opacity == "0" ? '0px': '-'+ tip.node().offsetWidth + 'px')
+      }
     })
 
-  const tip = plot.config_div.append('div').style("display","none")
+  const tip = plot.config_div.append('div')
+    .style("opacity","0")
   
   // will be used to track control element related 
   // functions to synchronize an input to the relevant plot.term or setting
@@ -59,6 +80,16 @@ export function controls(arg, plot, main) {
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
   // setBinOpts(plot, main, table, 'term2', 'Overlay Bins') // will be handled from term2 blue-pill
   setDivideByOpts(plot, main, table, arg)
+  
+  setTimeout(()=> {
+    d3select(arg.holder.node()).selectAll('svg')
+    .style('margin-left', '-' + tip.node().offsetWidth + 'px')
+
+    if(plot.term.isfloat || plot.term.isinteger){
+      d3select(arg.holder.node()).select('table')
+        .style('margin-left','-'+ tip.node().offsetWidth + 'px')
+    }
+  }, 500)
 
   plot.controls_update = (plot, data) => {
     plot.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
