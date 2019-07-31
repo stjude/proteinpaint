@@ -83,7 +83,7 @@ export class TermdbBarchart{
       colspace: plot.settings.common.barspace,
       rowspace: plot.settings.common.barspace
     }
-    Object.assign(this.settings, settings)
+    Object.assign(this.settings, settings, this.currServerData.refs ? this.currServerData.refs : {})
     this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
       this.settings.unit = "abs"
@@ -537,7 +537,7 @@ export class TermdbBarchart{
   }
 
   getLegendGrps(chart) {
-    const legendGrps = [] 
+    const legendGrps = []
     const s = this.settings
     if (s.exclude.cols.length) {
       const t = this.terms.term1

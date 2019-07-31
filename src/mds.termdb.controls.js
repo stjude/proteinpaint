@@ -377,8 +377,8 @@ function setDivideByOpts(plot, main, table, arg) {
       {label: 'None', value: 'none'},
       {label: '', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
-      {label: 'Max. grade per person', value: 'max_grade_perperson'},
-      {label: 'Most recent grade', value: 'most_recent_grade'}
+      //{label: 'Max. grade per person', value: 'max_grade_perperson'},
+      //{label: 'Most recent grade', value: 'most_recent_grade'}
     ]
   )
   
