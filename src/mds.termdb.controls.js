@@ -416,7 +416,6 @@ function setDivideByOpts(plot, main, table, arg) {
       plot.term0 = undefined
       //plot.term2_displaymode = 'stacked'
       main(plot)
-      plot.term0 = term0_selected
     } else if (d.value == "tree") {
       plot.term0 = termuiObj.termsetting.term
       main(plot)

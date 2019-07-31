@@ -1002,7 +1002,8 @@ async function restore_barchart(obj, params) {
 
 	make_barplot( obj, data.lst[0], restored_div, ({plot, main})=>{
 		if (!term2 && !term0) return
-		plot.settings.bar.overlay = 'tree'
+		if (term2) plot.settings.bar.overlay = 'tree'
+		if (term0) plot.settings.bar.divideBy = 'tree'
     plot.term2 = term2
     plot.term0 = term0
     if (plot.term2 && plot.term2.isfloat && plot.term2_boxplot) { 
