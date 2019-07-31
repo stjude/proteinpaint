@@ -55,6 +55,10 @@ export function controls(arg, plot, main) {
         .style('transition','0.5s')
         .style('margin-left',visibility == 'hidden' ? '0px': '-'+ tip.node().offsetWidth + 'px')
 
+      d3select(plot.views.barchart.dom.legendDiv.node())
+        .style('transition','0.5s')
+        .style('margin-left',visibility == 'hidden' ? '0px': '-'+ tip.node().offsetWidth + 'px') 
+
       if(plot.term.isfloat || plot.term.isinteger){
         d3select(arg.holder.node()).select('table')
           .style('transition','0.5s')
@@ -84,7 +88,11 @@ export function controls(arg, plot, main) {
   
   setTimeout(()=> {
     d3select(arg.holder.node()).selectAll('svg')
-    .style('margin-left', '-' + tip.node().offsetWidth + 'px')
+      .style('margin-left', '-' + tip.node().offsetWidth + 'px')
+
+    d3select(plot.views.barchart.dom.legendDiv.node())
+        .style('transition','0.5s')
+        .style('margin-left', '-'+ tip.node().offsetWidth + 'px')
 
     if(plot.term.isfloat || plot.term.isinteger){
       d3select(arg.holder.node()).select('table')
