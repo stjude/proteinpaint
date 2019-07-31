@@ -35,34 +35,35 @@ export function controls(arg, plot, main) {
     .html('&#8801;')
     .on('click', () => {
       plot.syncControls.forEach(update => update())
-      const opacity = tip.style('opacity')
+      const visibility = tip.style('visibility')
       
-      //change opacity of 'config' div
-      tip.style('opacity', opacity == "0" ? "1" : "0")
+      //change visibility of 'config' div
+      tip
+        .style('visibility', visibility == 'hidden' ? 'visible' : 'hidden')
         .style('transition','0.2s')
 
       plot.config_div
-        .style('background', opacity == "0" ? panel_bg_color : "")
+        .style('background', visibility == 'hidden' ? panel_bg_color : '')
         // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
 
       hamburger_btn
-        .html(opacity == "0" ? '&#215;' : '&#8801;')
+        .html(visibility == 'hidden' ? '&#215;' : '&#8801;')
         .style('transition','0.5s')
       
        //add margin to plot and stats table if present
       d3select(arg.holder.node()).select('svg')
         .style('transition','0.5s')
-        .style('margin-left',opacity == "0" ? '0px': '-'+ tip.node().offsetWidth + 'px')
+        .style('margin-left',visibility == 'hidden' ? '0px': '-'+ tip.node().offsetWidth + 'px')
 
       if(plot.term.isfloat || plot.term.isinteger){
         d3select(arg.holder.node()).select('table')
           .style('transition','0.5s')
-          .style('margin-left',opacity == "0" ? '0px': '-'+ tip.node().offsetWidth + 'px')
+          .style('margin-left',visibility == 'hidden' ? '0px': '-'+ tip.node().offsetWidth + 'px')
       }
     })
 
   const tip = plot.config_div.append('div')
-    .style("opacity","0")
+    .style('visibility','hidden')
   
   // will be used to track control element related 
   // functions to synchronize an input to the relevant plot.term or setting
