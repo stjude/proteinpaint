@@ -23,7 +23,7 @@ export async function display (obj){
 
     div_addnewterm
         .append('span')
-		.html('Select term&nbsp;')
+		.html(obj.mainlabel ? obj.mainlabel + '&nbsp;' : 'Select term&nbsp;')
 
 	add_term_button( div_addnewterm )
         .style('border-radius','6px')

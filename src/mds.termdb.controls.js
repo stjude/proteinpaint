@@ -214,6 +214,7 @@ function setOverlayOpts(plot, main, table, arg) {
     .style('display','inline-block')
   
   const termuiObj = {
+    mainlabel: 'Another term',
     holder: pill_div,
     genome: plot.obj.genome,
     mds: plot.obj.mds,
@@ -228,6 +229,7 @@ function setOverlayOpts(plot, main, table, arg) {
       } else {
         plot.settings.bar.overlay = 'tree'
         treeInput.property('checked', true)
+
         if (term2.isfloat && plot.term2_boxplot) { 
           plot.term2_displaymode = 'boxplot'
         } else {
@@ -501,6 +503,12 @@ function setBarsAsOpts(plot, main, table, termNum, label, index) {
     currterm: plot.term,
     callback: (term) => {
       if (term) plot.term = term
+      if (plot.term2 && plot.term.q) {
+        if (
+          (plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade))
+          || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
+        ) plot.term2 = undefined
+      }
       main( plot )
     }
   }
