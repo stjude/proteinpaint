@@ -9,7 +9,7 @@ const load_dataset = require('./load.sjlife').load_dataset
   server response as needed
   
   call with dataset label
-  ./precompute.ctcae.sh dslabel # from your-tp-dir/cohort-dir/...
+  node ./precompute.ctcae.js dslabel # from your-tp-dir/cohort-dir/...
 
   The output and precompute script filenames 
   are declared in dataset/dslabel.js as
