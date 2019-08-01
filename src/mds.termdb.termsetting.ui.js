@@ -761,31 +761,45 @@ export function numeric_bin_edit(tip, term, term_q, callback){
 
     tip.d.style('padding','0px')
 
-    const bin_edit_div = tip.d.append('div')
+    const config_table = tip.d.append('table')
+		.style('border-spacing','7px')
+		.style('border-collapse','separate')
+
+    const bin_size_tr = config_table.append('tr')
+
+    bin_size_tr.append('td')
         .style('margin','5px')
+        .html('Bin Size')
 
-    const bin_size_div = bin_edit_div.append('div')
+    const bin_size_td = bin_size_tr.append('td')
 
-    bin_size_edit(bin_size_div, custom_bins_q, term_q, callback)
+    bin_size_edit()
 
-    const first_bin_div = bin_edit_div.append('div')
+    const first_bin_tr = config_table.append('tr')
+    
+    first_bin_tr.append('td')
+        .style('margin','5px')
+        .html('First Bin')
 
-    end_bin_edit(first_bin_div, 'first')
+    const first_bin_td = first_bin_tr.append('td')   
 
-    const last_bin_div = bin_edit_div.append('div')
+    end_bin_edit(first_bin_tr, first_bin_td, 'first')
 
-    end_bin_edit(last_bin_div, 'last')
+    const last_bin_tr = config_table.append('tr')
+    
+    last_bin_tr.append('td')
+        .style('margin','5px')
+        .html('Last Bin')
 
-    function bin_size_edit(bin_size_div){
+    const last_bin_td = last_bin_tr.append('td')
 
-        bin_size_div.append('div')
-            .style('display','inline-block')
-            .style('padding','10px 5px')
-            .html('Bin Size')
+    end_bin_edit(last_bin_tr, last_bin_td, 'last')
+
+    function bin_size_edit(){
     
         const x = '<span style="font-family:Times;font-style:italic">x</span>'
         
-        const bin_size_input = bin_size_div.append('input')
+        const bin_size_input = bin_size_td.append('input')
             .attr('type','number')
             .attr('value',custom_bins_q.bin_size)
             .style('margin-left','15px')
@@ -798,7 +812,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
             })
         
         // select between start/stop inclusive
-        const include_select = bin_size_div.append('select')
+        const include_select = bin_size_td.append('select')
             .style('margin-left','10px')
         
         include_select.append('option')
@@ -810,9 +824,11 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         
         include_select.node().selectedIndex =
             custom_bins_q.startinclusive ? 1 : 0
-    
+        
+        const bin_size_apply_td = bin_size_tr.append('td')  
+
         const id = Math.random()
-        const apply_checkbox = bin_size_div
+        const apply_checkbox = bin_size_apply_td
             .append('input')
             .attr('type','checkbox')
             .style('margin','0px 5px 0px 10px')
@@ -822,7 +838,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
                 await apply()
                 apply_checkbox.property('disabled',false)
             })
-        bin_size_div.append('label')
+        bin_size_apply_td.append('label')
             .attr('for',id)
             .text('APPLY')
             .style('font-size','.8em')
@@ -852,14 +868,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         }
     }
 
-    function end_bin_edit(bin_edit_div, bin_flag){
-
-        const end_bin_label = bin_edit_div.append('div')
-            .style('display','inline-block')
-            .style('padding','10px 5px')
-    
-        if(bin_flag == 'first') end_bin_label.html('First Bin')
-        else if(bin_flag == 'last') end_bin_label.html('Last Bin')
+    function end_bin_edit(bin_edit_tr, bin_edit_td, bin_flag){
     
         let bin
         if(bin_flag == 'first'){
@@ -874,7 +883,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
             }
         }
     
-        const start_input = bin_edit_div.append('input')
+        const start_input = bin_edit_td.append('input')
             .attr('type','number')
             .style('width','60px')
             .style('margin-left','15px')
@@ -894,7 +903,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         // select realation between lowerbound and first bin/last bin
         let startselect
         if(bin_flag == 'first'){
-            startselect = bin_edit_div.append('select')
+            startselect = bin_edit_td.append('select')
                 .style('margin-left','10px')
       
             startselect.append('option')
@@ -905,7 +914,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
             startselect.node().selectedIndex =
                 bin.startinclusive ? 0 : 1
         }else{
-            bin_edit_div.append('div')
+            bin_edit_td.append('div')
                 .style('display','inline-block')
                 .style('padding','3px 10px')
                 .style('margin-left','10px')
@@ -915,7 +924,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
     
         const x = '<span style="font-family:Times;font-style:italic">x</span>'
     
-        bin_edit_div.append('div')
+        bin_edit_td.append('div')
             .style('display','inline-block')
             .style('padding','3px 10px')
             .html(x)
@@ -923,14 +932,14 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         // relation between first bin and upper value
         let stopselect
         if(bin_flag == 'first'){
-            bin_edit_div.append('div')
+            bin_edit_td.append('div')
                 .style('display','inline-block')
                 .style('padding','3px 10px')
                 .style('margin-left','10px')
                 .style('width','15px')
                 .html(custom_bins_q.stopinclusive? ' &le;': ' &lt;')
         }else{
-            stopselect = bin_edit_div.append('select')
+            stopselect = bin_edit_td.append('select')
                 .style('margin-left','10px')
       
             stopselect.append('option')
@@ -942,7 +951,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
                 bin.stopinclusive ? 0 : 1
         }
           
-        const stop_input = bin_edit_div.append('input')
+        const stop_input = bin_edit_td.append('input')
             .style('margin-left','10px')
             .attr('type','number')
             .style('width','60px')
@@ -961,7 +970,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
       
         // percentile checkbox
         const id = Math.random()
-        const percentile_checkbox = bin_edit_div.append('input')
+        const percentile_checkbox = bin_edit_td.append('input')
             .attr('type','checkbox')
             .style('margin','0px 5px 0px 10px')
             .attr('id',id)
@@ -976,17 +985,19 @@ export function numeric_bin_edit(tip, term, term_q, callback){
                 }
             })
     
-        bin_edit_div.append('label')
+        bin_edit_td.append('label')
             .attr('for',id)
             .text('Percentile')
             .style('font-size','.8em')
             .attr('class','sja_clbtext')
       
         if(bin.start_percentile || bin.stop_percentile) percentile_checkbox.property('checked',true)
-    
+            
+        const bin_edit_apply_td = bin_edit_tr.append('td') 
+
         // Apply checkbox
         const id2 = Math.random()
-        const apply_checkbox = bin_edit_div.append('input')
+        const apply_checkbox = bin_edit_apply_td.append('input')
             .attr('type','checkbox')
             .style('margin','0px 5px 0px 10px')
             .attr('id',id2)
@@ -996,7 +1007,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
                 apply_checkbox.property('disabled',false)
             })
     
-        bin_edit_div.append('label')
+        bin_edit_apply_td.append('label')
             .attr('for',id2)
             .text('APPLY')
             .style('font-size','.8em')
