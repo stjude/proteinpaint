@@ -47,9 +47,11 @@ export async function display (obj){
             .style('display','block')
 			.selectAll('*').remove()
 
-		add_term_button( div_showterm )
-            .text( obj.termsetting.term.name )
-			.style('border-radius', '6px 0px 0px 6px')
+        if(!obj.bars_as){
+            add_term_button( div_showterm )
+                .text( obj.termsetting.term.name )
+                .style('border-radius', '6px 0px 0px 6px')
+        }    
 
         if(obj.termsetting.term.isfloat || obj.termsetting.term.isinteger){
 
@@ -167,6 +169,8 @@ export async function display (obj){
 				}
                 select.style('width',btn.node().offsetWidth+'px')
                     .style('margin-left','-'+btn.node().offsetWidth+'px')
+
+                if(obj.bars_as) btn.style('border-radius', '6px')
 			}
 			function __flip_select2() {
 				if(!select2) return
@@ -189,24 +193,31 @@ export async function display (obj){
 				}
                 select2.style( 'width', btn2.node().offsetWidth+'px' )
                     .style('margin-left','-'+btn2.node().offsetWidth+'px')
+
+                if(obj.bars_as){
+                    btn.style('border-radius', '6px 0 0 6px')
+                    btn2.style('border-radius','0 6px 6px 0')
+                } 
 			}
         }
 
         // button to remove term
-        div_showterm
-			.append('div')
-            .attr('class','sja_filter_tag_btn')
-            .style('margin-right','10px')
-            .style('margin-left','1px')
-            .style('background','#4888BF')
-            .style('border-radius','0 6px 6px 0')
-            .style('padding','3px 6px')
-            .html('&times;')
-            .on('click',()=>{
-				delete obj.termsetting.term
-				update_ui()
-                obj.callback()
-            })
+        if(!obj.bars_as){
+            div_showterm
+                .append('div')
+                .attr('class','sja_filter_tag_btn')
+                .style('margin-right','10px')
+                .style('margin-left','1px')
+                .style('background','#4888BF')
+                .style('border-radius','0 6px 6px 0')
+                .style('padding','3px 6px')
+                .html('&times;')
+                .on('click',()=>{
+                    delete obj.termsetting.term
+                    update_ui()
+                    obj.callback()
+                })
+            }
 	}
 
 
