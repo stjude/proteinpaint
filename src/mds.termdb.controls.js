@@ -16,11 +16,12 @@ const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
 
 export function controls(arg, plot, main) {
-  plot.config_div = arg.holder.append('div')
-    .style('float','left')
-    .style('display','inline-block')
+  plot.config_div = plot.dom.controls
+    .style('max-width', '50px')
     .style('vertical-align','top')
     .style('margin', '8px')
+    .style('overflow', 'hidden')
+    .style('transition', '0.2s ease-in-out')
 
   // controlsIndex to be used to assign unique radio input names
   // by config div
@@ -32,42 +33,27 @@ export function controls(arg, plot, main) {
     .attr('class','sja_edit_btn')
 	  .style('margin','10px')
     .style('font-size', '16px')
+    .style('transition','0.5s')
     .html('&#8801;')
     .on('click', () => {
       plot.syncControls.forEach(update => update())
       const visibility = tip.style('visibility')
       
       //change visibility of 'config' div
-      tip
-        .style('visibility', visibility == 'hidden' ? 'visible' : 'hidden')
-        .style('transition','0.2s')
-
+      tip.style('visibility', visibility == 'hidden' ? 'visible' : 'hidden')
+        
       plot.config_div
+        .style('max-width', visibility == 'hidden' ? '600px' : '50px')
         .style('background', visibility == 'hidden' ? panel_bg_color : '')
         // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
 
       hamburger_btn
         .html(visibility == 'hidden' ? '&#215;' : '&#8801;')
-        .style('transition','0.5s')
-      
-       //add margin to plot and stats table if present
-      d3select(arg.holder.node()).select('svg')
-        .style('transition','0.5s')
-        .style('margin-left',visibility == 'hidden' ? '0px': '-'+ tip.node().offsetWidth + 'px')
-
-      d3select(plot.views.barchart.dom.legendDiv.node())
-        .style('transition','0.5s')
-        .style('margin-left',visibility == 'hidden' ? '0px': '-'+ tip.node().offsetWidth + 'px') 
-
-      if(plot.term.isfloat || plot.term.isinteger){
-        d3select(arg.holder.node()).select('table')
-          .style('transition','0.5s')
-          .style('margin-left',visibility == 'hidden' ? '0px': '-'+ tip.node().offsetWidth + 'px')
-      }
     })
 
   const tip = plot.config_div.append('div')
     .style('visibility','hidden')
+    .style('transition','0.2s')
   
   // will be used to track control element related 
   // functions to synchronize an input to the relevant plot.term or setting
@@ -86,11 +72,16 @@ export function controls(arg, plot, main) {
   // setBinOpts(plot, main, table, 'term2', 'Overlay Bins') // will be handled from term2 blue-pill
   setDivideByOpts(plot, main, table, arg)
   
+  /*
+  
+  not needed - the whole viz div should move as an inline-block
+  pushed by the controls div expanding its width
+
   setTimeout(()=> {
     d3select(arg.holder.node()).selectAll('svg')
       .style('margin-left', '-' + tip.node().offsetWidth + 'px')
 
-    d3select(plot.views.barchart.dom.legendDiv.node())
+    plot.views.barchart.dom.legendDiv
         .style('transition','0.5s')
         .style('margin-left', '-'+ tip.node().offsetWidth + 'px')
 
@@ -98,7 +89,7 @@ export function controls(arg, plot, main) {
       d3select(arg.holder.node()).select('table')
         .style('margin-left','-'+ tip.node().offsetWidth + 'px')
     }
-  }, 500)
+  }, 500)*/
 
   plot.controls_update = (plot, data) => {
     plot.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')

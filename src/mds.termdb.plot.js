@@ -92,12 +92,21 @@ arg: server returned data
   // set the parent DOM elements for viz and controls
   plot.dom = {
     holder: arg.holder,
+    
     // will hold no data notice or the page title in multichart views
     banner: arg.holder.append('div').style('display', 'none'),
-    // dom.viz will hold the rendered view
-    viz: arg.holder.append('div').style('display','inline-block').style('min-width', '300px'),
+    
     // dom.controls will hold the config input, select, button elements
-    controls: arg.holder.append('div').style('display','inline-block')
+    controls: arg.holder.append('div')
+      .attr('class','pp-termdb-plot-controls')
+      .style('display','inline-block'),
+    
+    // dom.viz will hold the rendered view
+    viz: arg.holder.append('div')
+      .attr('class','pp-termdb-plot-viz')
+      .style('display','inline-block')
+      .style('min-width', '300px')
+      .style('margin-left', '50px'),
   }
 
   // set view functions or objects
