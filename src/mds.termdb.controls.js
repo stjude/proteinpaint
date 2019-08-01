@@ -20,7 +20,7 @@ export function controls(arg, plot, main) {
     .style('max-width', '50px')
     .style('vertical-align','top')
     .style('margin', '8px')
-    .style('overflow', 'scroll')
+    .style('overflow-x', 'scroll')
     .style('transition', '0.2s ease-in-out')
 
   // controlsIndex to be used to assign unique radio input names
@@ -72,25 +72,6 @@ export function controls(arg, plot, main) {
   // setBinOpts(plot, main, table, 'term2', 'Overlay Bins') // will be handled from term2 blue-pill
   setDivideByOpts(plot, main, table, arg)
   
-  /*
-  
-  not needed - the whole viz div should move as an inline-block
-  pushed by the controls div expanding its width
-
-  setTimeout(()=> {
-    d3select(arg.holder.node()).selectAll('svg')
-      .style('margin-left', '-' + tip.node().offsetWidth + 'px')
-
-    plot.views.barchart.dom.legendDiv
-        .style('transition','0.5s')
-        .style('margin-left', '-'+ tip.node().offsetWidth + 'px')
-
-    if(plot.term.isfloat || plot.term.isinteger){
-      d3select(arg.holder.node()).select('table')
-        .style('margin-left','-'+ tip.node().offsetWidth + 'px')
-    }
-  }, 500)*/
-
   plot.controls_update = (plot, data) => {
     plot.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
     plot.syncControls.forEach(update => update()) // match input values to current
@@ -516,15 +497,19 @@ function setBarsAsOpts(plot, main, table, termNum, label, index) {
     mds: plot.obj.mds,
     tip: plot.obj.tip,
     currterm: plot.term,
-    termsetting: {term: plot.term, q: plot.term.q},
+    termsetting: {term: plot.term},
     currterm: plot.term,
     callback: (term) => {
       if (term) plot.term = term
       main( plot )
     }
   }
+  setTimeout(()=> {
+    if (!plot.term.q) plot.term.q = {}
+    termuiObj.termsetting.q = plot.term.q
 
-  termui_display(termuiObj)
+    termui_display(termuiObj)
+  },0)
 
   plot.syncControls.push(() => {
     tr.style('display', plot.term && plot.term.iscondition ? 'table-row' : 'none')
