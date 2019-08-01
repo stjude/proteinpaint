@@ -532,6 +532,7 @@ function setBarsAsOpts(plot, main, table, termNum, label, index) {
   termui_display(termuiObj)
 
   plot.syncControls.push(() => {
+    tr.style('display', plot.term && plot.term.iscondition ? 'table-row' : 'none')
     plot.termuiObjOverlay.update_ui()
   })
 }
