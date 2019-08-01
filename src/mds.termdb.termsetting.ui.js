@@ -50,6 +50,7 @@ export async function display (obj){
         if(!obj.bars_as){
             add_term_button( div_showterm )
                 .text( obj.termsetting.term.name )
+                .style('margin-bottom','2px')
                 .style('border-radius', '6px 0px 0px 6px')
         }    
 
@@ -103,6 +104,7 @@ export async function display (obj){
             btn
                 .style('padding','3px 7px')
                 .style('margin-left','1px')
+                .style('margin-bottom','2px')
                 .style('font-size','1em')
                 .style('line-height','1.15')
                 .style('position','static')
@@ -144,6 +146,7 @@ export async function display (obj){
 				btn2
 					.style('padding','3px 7px')
                     .style('margin-left','1px')
+                    .style('margin-bottom','2px')
                     .style('font-size','1em')
                     .style('line-height','1.15')
                     .style('position','static')

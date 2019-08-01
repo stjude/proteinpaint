@@ -20,7 +20,6 @@ export function controls(arg, plot, main) {
     .style('max-width', '50px')
     .style('vertical-align','top')
     .style('margin', '8px')
-    .style('overflow-x', 'scroll')
     .style('transition', '0.2s ease-in-out')
 
   // controlsIndex to be used to assign unique radio input names
@@ -43,7 +42,7 @@ export function controls(arg, plot, main) {
       tip.style('visibility', visibility == 'hidden' ? 'visible' : 'hidden')
         
       plot.config_div
-        .style('max-width', visibility == 'hidden' ? '600px' : '50px')
+        .style('max-width', visibility == 'hidden' ? '500px' : '50px')
         .style('background', visibility == 'hidden' ? panel_bg_color : '')
         // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
 
@@ -211,6 +210,7 @@ function setOverlayOpts(plot, main, table, arg) {
   const treeInput = radio.inputs.filter((d)=>{ return d.value == 'tree'}).style('margin-top', '2px')
   const pill_div = d3select(treeInput.node().parentNode.parentNode)
     .append('div')
+    .style('white-space','normal')
     .style('display','inline-block')
   
   const termuiObj = {
