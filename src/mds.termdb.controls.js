@@ -20,7 +20,7 @@ export function controls(arg, plot, main) {
     .style('max-width', '50px')
     .style('vertical-align','top')
     .style('margin', '8px')
-    .style('overflow', 'hidden')
+    .style('overflow', 'scroll')
     .style('transition', '0.2s ease-in-out')
 
   // controlsIndex to be used to assign unique radio input names
@@ -63,7 +63,7 @@ export function controls(arg, plot, main) {
   plot.syncControls = []
   
   const table = tip.append('table').attr('cellpadding',0).attr('cellspacing',0)
-  setConditionUnitOpts(plot, main, table, 'term', 'Bar categories', 1)
+  setBarsAsOpts(plot, main, table, 'term', 'Bars as', 1)
   setOverlayOpts(plot, main, table, arg)
   setViewOpts(plot, main, table)
   setOrientationOpts(plot, main, table)
@@ -285,7 +285,7 @@ function setOverlayOpts(plot, main, table, arg) {
       plot.term2 = Object.assign({}, plot.term)
       plot.term2.q = Object.assign({}, plot.term.q)
       termuiObj.termsetting.term = plot.term2
-      termuiObj.termsetting.q = plot.term2.q; console.log(termuiObj.termsetting)
+      termuiObj.termsetting.q = plot.term2.q
       delete plot.term2.q.bar_by_grade
       plot.term2.q.bar_by_children = 1
       for(const param of value_by_params) {
@@ -349,7 +349,7 @@ function setOverlayOpts(plot, main, table, arg) {
     }
     radio.inputs.property('checked', d => d.value == plot.settings.bar.overlay)
 
-    radio.divs.style('display', d => {
+    radio.divs.style('display', d => { 
       const term1 = plot.term
       if (d.value == "bar_by_children") {
         return term1.iscondition && !term1.isleaf && term1.q && term1.q.bar_by_grade ? 'block' : 'none'
@@ -498,11 +498,12 @@ function setDivideByOpts(plot, main, table, arg) {
   })
 }
 
-function setConditionUnitOpts(plot, main, table, termNum, label, index) {
+function setBarsAsOpts(plot, main, table, termNum, label, index) {
   /**/
   const tr = table.append('tr')
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
+  /*
   const options = [
     {label: "Subconditions, max grade", value: "bar_by_children + value_by_max_grade"},
     {label: "Subconditions, most recent", value: "bar_by_children + value_by_most_recent"},
@@ -511,61 +512,26 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
     {label: "Most recent grades per patient", value: "bar_by_grade + value_by_most_recent"}, 
     {label: "Grade per patient", value: "bar_by_grade + value_by_computable_grade"},
   ]
+  */
+   if (!plot.term.q) plot.term.q = {}
 
-  const radio = renderRadioInput(
-    'pp-termdb-condition-unit-'+ index + '-' + plot.controlsIndex, 
-    td,
-    options,
-    null,
-    'block'
-  )
-
-  radio.inputs
-    .property('checked', matchedParam)
-    .on('input', d => {
-      const currBarBy = plot.term.q.bar_by_grade ? 'grade' : 'children'
-      const q = plot.term.q
-      // clear existing parameter values
-      delete q.value_by_max_grade
-      delete q.value_by_most_recent
-      delete q.value_by_computable_grade
-      delete q.bar_by_children
-      delete q.bar_by_grade
-
-      for(const param of d.value.split(" + ")) {
-        q[param] = 1
-        if (param.startsWith('bar_by_') && !param.endsWith(currBarBy)) {
-          plot.term2 = null
-          plot.settings.bar.overlay = 'none'
-        }
-      }
-
-      main(plot)
-    })
-
-  const matchedParam = d => {
-    const q = plot.term.q
-    if (!q) return false
-    const params = d.value.split(" + ")
-    let numMatched = 0
-    for(const param of params) {
-      if (q[param]) numMatched++
+   const termuiObj = {
+    holder: td.append('div'),
+    genome: plot.obj.genome,
+    mds: plot.obj.mds,
+    tip: plot.obj.tip,
+    currterm: plot.term,
+    termsetting: {term: plot.term, q: plot.term.q},
+    currterm: plot.term,
+    callback: (term) => {
+      if (term) plot.term = term
+      main( plot )
     }
-    return numMatched == params.length
   }
 
+  termui_display(termuiObj)
+
   plot.syncControls.push(() => {
-    radio.inputs.property('checked', matchedParam)
-    tr.style('display', plot.term.iscondition ? "table-row" : 'none')
-    radio.divs.style('display', d => {
-      if (d.value.includes("bar_by_children")) {
-        return plot.term.iscondition && !plot.term.isleaf ? 'block' : 'none'
-      } else {
-        const block = 'block' //plot.term.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'inline-block'
-        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
-      }
-    })
-    //console.log(plot.termuiObjOverlay.termsetting)
     plot.termuiObjOverlay.update_ui()
   })
 }
