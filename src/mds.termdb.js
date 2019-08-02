@@ -45,6 +45,7 @@ show_default_rootterm
 	display_searchbox
 	may_display_termfilter
 	print_one_term
+		print_term_name
 		may_make_term_foldbutton
 		may_apply_modifier_click_term
 		may_apply_modifier_barchart_selectbar
@@ -362,20 +363,11 @@ try to keep the logic clear
 
 	// if be able to apply these modifiers, can just exist and not doing anything else
 	if( may_apply_modifier_click_term( obj, term, row ) ) return
+
+	print_term_name( row, arg, term )
+
 	if( may_apply_modifier_barchart_selectbar( obj, term, row, row_graph ) ) return
 
-	// term name
-	const label = row
-		.append('div')
-		.style('display','inline-block')
-		.style('padding', label_padding)
-		.text( term.name )
-	if(arg.flicker) {
-		label.style('background-color','yellow')
-			.transition()
-			.duration(4000)
-			.style('background-color','transparent')
-	}
 
 	// term function buttons, including barchart, and cross-tabulate
 
@@ -384,16 +376,27 @@ try to keep the logic clear
 
 
 
+
+function print_term_name ( row, arg, term ) {
+	// term name
+	const label = row
+		.append('div')
+		.style('display','inline-block')
+		.style('padding', label_padding)
+		.text( term.name )
+	if(arg && arg.flicker) {
+		label.style('background-color','yellow')
+			.transition()
+			.duration(4000)
+			.style('background-color','transparent')
+	}
+	return label
+}
+
+
+
 function may_apply_modifier_barchart_selectbar ( obj, term, row, row_graph ) {
 	if(!obj.modifier_barchart_selectbar) return false
-	/*
-	for a term equipped with graph.barchart{}, allow to click the term and directly show the barchart
-	*/
-	row.append('div')
-		.style('display','inline-block')
-		.style('padding','5px')
-		.style('margin-left','5px')
-		.text(term.name)
 	if(!term.graph || !term.graph.barchart) {
 		// no chart, this term is not clickable
 		return true
@@ -412,11 +415,7 @@ function may_apply_modifier_click_term ( obj, term, row ) {
 	will not show any other buttons
 	*/
 
-	const namebox = row.append('div')
-		.style('display','inline-block')
-		.style('padding','5px 10px')
-		//.style('margin-left','5px')
-		.text(term.name)
+	const namebox = print_term_name( row, null, term )
 
 	if( obj.modifier_click_term.disable_terms && obj.modifier_click_term.disable_terms.has( term.id ) ) {
 
@@ -427,6 +426,8 @@ function may_apply_modifier_click_term ( obj, term, row ) {
 
 		// enable clicking this term
 		namebox
+			.style('padding-left','8px')
+			.style('padding-right','8px')
 			.attr('class', 'sja_menuoption')
 			.style('border-radius', button_radius)
 			.on('click',()=>{
@@ -762,12 +763,11 @@ barchart is shown in-place under term and in full capacity
 								.attr('class','sja_menuoption')
 								.text('-')
 								.on('click',()=>{
-									nextdiv.style('display', nextdiv.style('display')=='none'?'block':'none')
+									const toshow = nextdiv.style('display')=='none'
+									d3event.target.innerHTML = toshow ? '-' : '+'
+									nextdiv.style('display', toshow ? 'block' : 'none')
 								})
-							row2.append('div')
-								.style('display','inline-block')
-								.style('padding',label_padding)
-								.text(term.name)
+							print_term_name( row2, null, term )
 
 							if( may_apply_modifier_barchart_selectbar( obj, term, row2, row_graph ) ) {
 							} else {
