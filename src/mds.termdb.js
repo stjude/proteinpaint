@@ -17,6 +17,10 @@ init accepts obj{}
 .genome{}
 .mds{}
 .div
+.termfilter{}
+	.show_top_ui
+	.callbacks[]
+	.terms[]     // lst of tvs objects
 
 
 triggers
@@ -863,6 +867,15 @@ tvslst: an array of 1 or 2 term-value setting objects
 
 export function menuoption_select_to_gp ( obj, tvslst ) {
 	obj.tip.hide()
+	
+	const lst = []
+	for(const t of tvslst) lst.push(t)
+	if(obj.termfilter && obj.termfilter.terms) {
+		for(const t of obj.termfilter.terms) {
+			lst.push( JSON.parse(JSON.stringify(t)))
+		}
+	}
+
 	const pane = client.newpane({x:100,y:100})
 	import('./block').then(_=>{
 		new _.Block({
@@ -878,13 +891,14 @@ export function menuoption_select_to_gp ( obj, tvslst ) {
 				type:client.tkt.mds2,
 				dslabel:obj.dslabel,
 				vcf:{ numerical_axis:{ AFtest:{ groups:[
-					{ is_termdb:true, terms: tvslst },
+					{ is_termdb:true, terms: lst },
 					obj.bar_click_menu.select_to_gp.group_compare_against
 				] } } }
 			} ]
 		})
 	})
 }
+
 
 export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
 
