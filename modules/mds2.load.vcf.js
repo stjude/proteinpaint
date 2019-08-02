@@ -802,6 +802,7 @@ function wrap_validate_termvaluesetting ( terms, where ) {
 export function sample_match_termvaluesetting ( sanno, terms, ds ) {
 /* for AND, require all terms to match
 ds is for accessing patient_condition
+XXX  only used by termdb.barchart.js, to be taken out
 */
 
 	let usingAND = true

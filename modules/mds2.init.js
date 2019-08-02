@@ -1,7 +1,7 @@
 const app = require('../app')
 const fs = require('fs')
 const utils = require('./utils')
-const termdb = require('./termdb')
+const server_init_db_queries = require('./termdb.sql').server_init_db_queries
 
 
 
@@ -22,6 +22,10 @@ may_sum_samples
 exports.init = async ( ds, genome ) => {
 /* initiate the mds2 track upon launching server
 */
+
+	if( ds.cohort && ds.cohort.db && ds.cohort.termdb ) {
+		server_init_db_queries( ds )
+	}
 
 	if( !ds.track ) throw 'no mds2 track; missing ds.track{}'
 

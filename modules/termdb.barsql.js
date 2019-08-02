@@ -3,7 +3,6 @@ const path = require('path')
 const utils = require('./utils')
 const Partjson = require('./partjson')
 const serverconfig = __non_webpack_require__('./serverconfig.json')
-const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
 const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
 const termdbsql = require('./termdb.sql')
@@ -297,7 +296,7 @@ function getPj(q, data, tdb, ds) {
 function getTermDetails(q, tdb, index) {
   const termnum_id = 'term'+ index + '_id'
   const termid = q[termnum_id]
-  const term = termid && !q['term' + index + '_is_genotype'] ? tdb.termjson.map.get(termid) : {}
+  const term = termid && !q['term' + index + '_is_genotype'] ? tdb.q.termjsonByOneid(termid) : {}
   const termIsNumeric = term.isinteger || term.isfloat
   const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin 
     ? term.graph.barchart.numeric_bin

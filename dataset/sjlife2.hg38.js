@@ -1,52 +1,23 @@
-
-
-const samplenamekey = 'sjlid'
-
-
-
 module.exports={
 
 	isMds:true,
-
 
 
 	cohort:{
 		db:{
 			file:'files/hg38/sjlife/clinical/db',
 			// may describe keywords about table and field names
+			/*
 			k:{
 				sample:'sample',
 				term_id:'term_id'
 			},
-			// the precompute script will save the tsv to this file
-			precomputed_file: 'files/hg38/sjlife/clinical/chronicevents.precomputed'
-		},
-		files:[
-			{file:'files/hg38/sjlife/clinical/matrix'},
-			{file:'files/hg38/sjlife/cohort/admix'},
-		],
-		samplenamekey: samplenamekey,
-		tohash: (item, ds)=>{
-			const n = item[samplenamekey]
-			if(ds.cohort.annotation[n]) {
-				for(const k in item) {
-					ds.cohort.annotation[n][k] = item[k]
-				}
-			} else {
-				ds.cohort.annotation[ n ] = item
-			}
+			*/
 		},
 
 		termdb: {
-			term2term:{
-				file:'files/hg38/sjlife/clinical/term2term'
-			},
-			termjson:{
-				file:'files/hg38/sjlife/clinical/termjson'
-			},
 			patient_condition:{
-				// Note: this is solely for the "iscondition" terms
-				file:'files/hg38/sjlife/clinical/outcomes_2017',
+				// solely for the "iscondition" terms
 				events_key:'conditionevents',
 				grade_key: 'grade',
 				grade_labels: [ // computable grades
@@ -62,12 +33,8 @@ module.exports={
 				},
 				age_key: 'age',
 				yearstoevent_key:'yearstoevent'
-			},
-			// the precompute script will save the json object to this file
-			// this will be loaded once by modules/termdb.barchart.js
-			precomputed_file: 'files/hg38/sjlife/clinical/precomputed.json',
-			precompute_script: 'precompute.sjlife2.hg38.js'
-		},
+			}
+		}
 	},
 
 
