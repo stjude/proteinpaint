@@ -210,7 +210,8 @@ function syncParams( plot, data ) {
     if (data.refs.bins && data.refs.bins[i]) {
       term.bins = data.refs.bins[i]
     }
-    if (term.q && data.refs.q && data.refs.q[i]) {
+    if (data.refs.q && data.refs.q[i]) {
+      if (!term.q) term.q = {}
       const q = data.refs.q[i]
       if (q !== term.q) {
         for(const key in term.q) delete term.q[key]
