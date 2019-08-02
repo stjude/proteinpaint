@@ -92,14 +92,26 @@ arg: server returned data
   // set the parent DOM elements for viz and controls
   plot.dom = {
     holder: arg.holder,
-    // dom.viz will hold the rendered view
-    viz: arg.holder.append('div').style('display','inline-block').style('min-width', '300px'),
+    
+    // will hold no data notice or the page title in multichart views
+    banner: arg.holder.append('div').style('display', 'none'),
+    
     // dom.controls will hold the config input, select, button elements
-    controls: arg.holder.append('div').style('display','inline-block')
+    controls: arg.holder.append('div')
+      .attr('class','pp-termdb-plot-controls')
+      .style('display','inline-block'),
+    
+    // dom.viz will hold the rendered view
+    viz: arg.holder.append('div')
+      .attr('class','pp-termdb-plot-viz')
+      .style('display','inline-block')
+      .style('min-width', '300px')
+      .style('margin-left', '50px'),
   }
 
   // set view functions or objects
   plot.views = {
+    banner: banner_init(plot.dom.banner), 
     barchart: new TermdbBarchart({
       holder: plot.dom.viz,
       settings: {},
@@ -148,6 +160,7 @@ function main(plot, callback = ()=>{}) {
       render(plot, chartsData)
       callback({plot, main})
     })
+    //.catch(window.alert)
   }
 }
 
@@ -162,7 +175,7 @@ function getDataName(plot) {
 
   plot.terms.forEach((term, i)=>{
     if (!term) return
-    params.push('term'+i+'_id=' + term.id)
+    params.push('term'+i+'_id=' + encodeURIComponent(term.id))
     if (term.iscondition && !term.q) term.q = {}
     if (term.q && typeof term.q == 'object') {
       if (term.iscondition && !Object.keys(term.q).length) {
@@ -197,7 +210,8 @@ function syncParams( plot, data ) {
     if (data.refs.bins && data.refs.bins[i]) {
       term.bins = data.refs.bins[i]
     }
-    if (term.q && data.refs.q && data.refs.q[i]) {
+    if (data.refs.q && data.refs.q[i]) {
+      if (!term.q) term.q = {}
       const q = data.refs.q[i]
       if (q !== term.q) {
         for(const key in term.q) delete term.q[key]
@@ -213,10 +227,26 @@ make a barchart, boxplot, or stat table based on configs
 in the plot object called by showing the single-term plot 
 at the beginning or stacked bar plot for cross-tabulating
 */ 
-  plot.controls_update()
+  plot.controls_update(plot, data)
   plot.views.barchart.main(plot, data, plot.term2_displaymode == "stacked", plot.obj)
   plot.views.boxplot.main(plot, data, plot.term2_displaymode == "boxplot")
   plot.views.stattable.main(plot, data, data.boxplot != undefined && plot.term2_displaymode == "stacked")
   plot.views.table.main(plot, data, plot.term2_displaymode == "table")
+  plot.views.banner.main(plot, data)
+}
+
+function banner_init(div) {
+  div.style('text-align', 'center')
+     .style('padding', '10px')
+
+  return {
+    main(plot, data) {
+      if (!data.charts.length) {
+        div.html('No data to display.').style('display', 'block')
+      } else {
+        div.style('display', 'none')
+      }
+    }
+  }
 }
 

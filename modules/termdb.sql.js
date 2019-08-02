@@ -1,5 +1,6 @@
 const app = require('../app')
 const binsmodule = require('./termdb.bins')
+const connect_db = require('./utils').connect_db
 
 /*
 
@@ -867,7 +868,10 @@ thus less things to worry about...
 */
 	if(!ds.cohort) throw 'ds.cohort missing'
 	if(!ds.cohort.db) throw 'ds.cohort.db missing'
-	if(!ds.cohort.db.connection) throw 'ds.cohort.db.connection missing'
+	if(!ds.cohort.db.file) throw 'ds.cohort.db.file missing'
+	ds.cohort.db.connection = connect_db( ds.cohort.db.file )
+
+	if(!ds.cohort.termdb ) throw 'ds.cohor.termdb missing'
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 

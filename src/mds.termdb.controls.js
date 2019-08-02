@@ -16,10 +16,11 @@ const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
 
 export function controls(arg, plot, main) {
-  plot.config_div = arg.holder.append('div')
-    .style('display','inline-block')
+  plot.config_div = plot.dom.controls
+    .style('max-width', '50px')
     .style('vertical-align','top')
     .style('margin', '8px')
+    .style('transition', '0.2s ease-in-out')
 
   // controlsIndex to be used to assign unique radio input names
   // by config div
@@ -27,21 +28,31 @@ export function controls(arg, plot, main) {
   plots.push(plot)
 
   // label
-  plot.config_div.append('div').append('div')
+  const hamburger_btn = plot.config_div.append('div').append('div')
     .attr('class','sja_edit_btn')
 	  .style('margin','10px')
     .style('font-size', '16px')
+    .style('transition','0.5s')
     .html('&#8801;')
     .on('click', () => {
       plot.syncControls.forEach(update => update())
-      const display = tip.style('display')
-      tip.style('display', display == "none" ? "inline-block" : "none")
+      const visibility = tip.style('visibility')
+      
+      //change visibility of 'config' div
+      tip.style('visibility', visibility == 'hidden' ? 'visible' : 'hidden')
+        
       plot.config_div
-	  	.style('background', display == "none" ? panel_bg_color : "")
-	  	// .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
+        .style('max-width', visibility == 'hidden' ? '500px' : '50px')
+        .style('background', visibility == 'hidden' ? panel_bg_color : '')
+        // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
+
+      hamburger_btn
+        .html(visibility == 'hidden' ? '&#215;' : '&#8801;')
     })
 
-  const tip = plot.config_div.append('div').style("display","none")
+  const tip = plot.config_div.append('div')
+    .style('visibility','hidden')
+    .style('transition','0.2s')
   
   // will be used to track control element related 
   // functions to synchronize an input to the relevant plot.term or setting
@@ -51,7 +62,7 @@ export function controls(arg, plot, main) {
   plot.syncControls = []
   
   const table = tip.append('table').attr('cellpadding',0).attr('cellspacing',0)
-  setConditionUnitOpts(plot, main, table, 'term', 'Bar categories', 1)
+  setBarsAsOpts(plot, main, table, 'term', 'Bars as', 1)
   setOverlayOpts(plot, main, table, arg)
   setViewOpts(plot, main, table)
   setOrientationOpts(plot, main, table)
@@ -59,8 +70,9 @@ export function controls(arg, plot, main) {
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
   // setBinOpts(plot, main, table, 'term2', 'Overlay Bins') // will be handled from term2 blue-pill
   setDivideByOpts(plot, main, table, arg)
-
-  plot.controls_update = () => {
+  
+  plot.controls_update = (plot, data) => {
+    plot.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
     plot.syncControls.forEach(update => update()) // match input values to current
     table.selectAll('tr')
     .filter(rowIsVisible)
@@ -108,7 +120,7 @@ function renderRadioInput(inputName, elem, opts, inputHandler) {
 
   return {
     divs: elem.selectAll('div'), 
-    labels: elem.selectAll('label'),
+    labels: elem.selectAll('label').select('span'),
     inputs: labels.selectAll('input'),
   }
 }
@@ -182,12 +194,15 @@ function setOverlayOpts(plot, main, table, arg) {
     td, 
     [
       {label: 'None', value: 'none'},
+      {label: 'Subconditions', value: 'bar_by_children'},
+      {label: 'Grade', value: 'bar_by_grade'},
       {label: '', value: 'tree'},
       {label: 'Genotype', value: 'genotype'},
-      {label: 'Subconditions', value: 'bar_by_children'},
-      {label: 'Grade', value: 'bar_by_grade'}
     ]
   )
+
+  const bar_by_children_radio = radio.inputs.filter(d=>d.value=="bar_by_children").node();
+  const bar_by_grade_radio = radio.inputs.filter(d=>d.value=="bar_by_grade").node();
 
   const value_by_params = ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']
   
@@ -195,13 +210,16 @@ function setOverlayOpts(plot, main, table, arg) {
   const treeInput = radio.inputs.filter((d)=>{ return d.value == 'tree'}).style('margin-top', '2px')
   const pill_div = d3select(treeInput.node().parentNode.parentNode)
     .append('div')
+    .style('white-space','normal')
     .style('display','inline-block')
   
   const termuiObj = {
+    mainlabel: 'Another term',
     holder: pill_div,
     genome: plot.obj.genome,
     mds: plot.obj.mds,
     tip: plot.obj.tip,
+    currterm: plot.term,
     termsetting: {term:plot.term2, q: plot.term2?plot.term2.q:undefined},
     callback: (term2) => {
       plot.obj.tip.hide()
@@ -211,6 +229,7 @@ function setOverlayOpts(plot, main, table, arg) {
       } else {
         plot.settings.bar.overlay = 'tree'
         treeInput.property('checked', true)
+
         if (term2.isfloat && plot.term2_boxplot) { 
           plot.term2_displaymode = 'boxplot'
         } else {
@@ -224,6 +243,7 @@ function setOverlayOpts(plot, main, table, arg) {
     }
   }
 
+  plot.termuiObjOverlay = termuiObj
   termui_display(termuiObj)
       
   radio.inputs
@@ -250,6 +270,7 @@ function setOverlayOpts(plot, main, table, arg) {
       }
       plot.term2 = Object.assign({}, plot.term)
       plot.term2.q = Object.assign({}, plot.term.q)
+      termuiObj.termsetting.term = undefined
       delete plot.term2.q.bar_by_grade
       plot.term2.q.bar_by_children = 1
       for(const param of value_by_params) {
@@ -264,6 +285,7 @@ function setOverlayOpts(plot, main, table, arg) {
       }
       plot.term2 = Object.assign({}, plot.term)
       plot.term2.q = Object.assign({}, plot.term.q)
+      termuiObj.termsetting.term = undefined
       delete plot.term2.q.bar_by_children
       plot.term2.q.bar_by_grade = 1
       for(const param of value_by_params) {
@@ -279,51 +301,62 @@ function setOverlayOpts(plot, main, table, arg) {
   radio.inputs.on('click', d => {
     d3event.stopPropagation()
     if (d.value != 'tree' || d.value != plot.settings.bar.overlay) return
-	plot.obj.showtree4selectterm(
-	  [arg.term.id, plot.term2 ? plot.term2.id : null],
-	  tr.node(),
+	
+    plot.obj.showtree4selectterm(
+      [arg.term.id, plot.term2 ? plot.term2.id : null],
+	    tr.node(),
       (term2)=>{
-	    plot.obj.tip.hide()
-        plot.term2 = term2
-        if (plot.term2.isfloat && plot.term2_boxplot) { 
-          plot.term2_displaymode = 'boxplot'
-        } else {
-          if (plot.term2_displaymode == "boxplot") {
-            plot.term2_displaymode = "stacked"
+  	    plot.obj.tip.hide()
+          plot.term2 = term2
+          if (plot.term2.isfloat && plot.term2_boxplot) { 
+            plot.term2_displaymode = 'boxplot'
+          } else {
+            if (plot.term2_displaymode == "boxplot") {
+              plot.term2_displaymode = "stacked"
+            }
+            plot.term2_boxplot = 0
           }
-          plot.term2_boxplot = 0
-        }
-        main( plot )
+          main( plot )
       }
     )
   })
 
   plot.syncControls.push(() => {
     // hide all options when opened from genome browser view 
-    tr.style("display", plot.obj.modifier_ssid_barchart ? "none" : "table-row")
+    tr.style("display", plot.obj.modifier_ssid_barchart ? "none" : "table-row");
     // do not show genotype overlay option when opened from stand-alone page
     if (!plot.settings.bar.overlay) {
       plot.settings.bar.overlay = plot.obj.modifier_ssid_barchart
         ? 'genotype'
-        : plot.term2 
+        : plot.term2 && plot.term2.id != plot.term.id
         ? 'tree'
         : 'none'
     }
     radio.inputs.property('checked', d => d.value == plot.settings.bar.overlay)
 
-    radio.divs.style('display', d => {
-      const term1 = plot.term
-      if (d.value == "bar_by_children") {
-        return term1.iscondition && !term1.isleaf && term1.q && term1.q.bar_by_grade ? 'block' : 'none'
-      } else if (d.value == "bar_by_grade") {
-        return term1.iscondition && !term1.isleaf && term1.q && term1.q.bar_by_children ? 'block' : 'none'
-      } else {
-        const block = 'block' //term1.q.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'inline-block'
-        return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
-      }
-    })
+    radio.labels
+      .html(d=>{
+        const term1 = plot.term
+        if (!term1.iscondition) return '&nbsp;'+ d.label
+        if (d.value == "bar_by_children") return '&nbsp;'+ term1.id + " subconditions"
+        if (d.value == "bar_by_grade") return '&nbsp;'+ term1.id + " grades"
+        return '&nbsp;'+ d.label
+      })
 
-    if (plot.term2 && plot.term2 != termuiObj.termsetting.term) {
+    radio.divs
+      .style('display', d => { 
+        const term1 = plot.term
+        if (d.value == "bar_by_children") {
+          return term1.iscondition && !term1.isleaf && term1.q && term1.q.bar_by_grade ? 'block' : 'none'
+        } else if (d.value == "bar_by_grade") {
+          return term1.iscondition && !term1.isleaf && term1.q && term1.q.bar_by_children ? 'block' : 'none'
+        } else {
+          const block = 'block' //term1.q.iscondition || (plot.term2 && plot.term2.iscondition) ? 'block' : 'inline-block'
+          return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
+        }
+      })
+
+    if (plot.term2 && plot.term2.id != plot.term.id && plot.term2 != termuiObj.termsetting.term) {
       termuiObj.termsetting.term = plot.term2
       termuiObj.update_ui()
     }
@@ -369,14 +402,12 @@ function setDivideByOpts(plot, main, table, arg) {
     [
       {label: 'None', value: 'none'},
       {label: '', value: 'tree'},
-      {label: 'Genotype', value: 'genotype'},
-      {label: 'Max. grade per person', value: 'max_grade_perperson'},
-      {label: 'Most recent grade', value: 'most_recent_grade'}
+      {label: 'Genotype', value: 'genotype'}
     ]
   )
   
   //add blue-pill for term0
-  const pill_div = d3select(radio.labels.filter((d)=>{ return d.value == 'tree'}).node().parentNode)
+  const pill_div = d3select(radio.divs.filter((d)=>{ return d.value == 'tree'}).node())
     .append('div')
     .style('display','inline-block')
   
@@ -385,7 +416,9 @@ function setDivideByOpts(plot, main, table, arg) {
     genome: plot.obj.genome,
     mds: plot.obj.mds,
     tip: plot.obj.tip,
+    currterm: plot.term,
     termsetting: {term:plot.term0, q: plot.term0?plot.term0.q:undefined},
+    currterm: plot.term,
     callback: (term0) => {
       plot.obj.tip.hide()
       plot.term0 = term0
@@ -394,6 +427,7 @@ function setDivideByOpts(plot, main, table, arg) {
     }
   }
 
+  plot.termuiObjDivide = termuiObj
   termui_display(termuiObj)
 
   radio.inputs
@@ -406,28 +440,12 @@ function setDivideByOpts(plot, main, table, arg) {
       plot.term0 = undefined
       //plot.term2_displaymode = 'stacked'
       main(plot)
-      plot.term0 = term0_selected
     } else if (d.value == "tree") {
       plot.term0 = termuiObj.termsetting.term
       main(plot)
     } else if (d.value == "genotype") {
       // to-do
     }
-  })
-
-  radio.inputs.on('click', d => {
-  // don't know where is this used???
-    d3event.stopPropagation()
-    if (d.value != 'tree' || d.value != plot.settings.bar.divideBy) return
-	plot.obj.showtree4selectterm(
-	  [arg.term.id, plot.term0 ? plot.term0.id : null],
-	  tr.node(),
-      term0=>{
-	    plot.obj.tip.hide()
-        plot.term0 = term0
-        main(plot)
-      }
-    )
   })
 
   plot.syncControls.push(() => {
@@ -444,7 +462,7 @@ function setDivideByOpts(plot, main, table, arg) {
     radio.inputs.property('checked', d => d.value == plot.settings.bar.divideBy)
     radio.divs.style('display', d => {
       if (d.value == "max_grade_perperson" || d.value == "most_recent_grade") {
-        return plot.term1.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'none'
+        return plot.term.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'none'
       } else {
         const block = 'block' //plot.term.iscondition || (plot.term0 && plot.term0.iscondition) ? 'block' : 'inline-block'
         return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
@@ -458,11 +476,12 @@ function setDivideByOpts(plot, main, table, arg) {
   })
 }
 
-function setConditionUnitOpts(plot, main, table, termNum, label, index) {
+function setBarsAsOpts(plot, main, table, termNum, label, index) {
   /**/
   const tr = table.append('tr')
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
+  /*
   const options = [
     {label: "Subconditions, max grade", value: "bar_by_children + value_by_max_grade"},
     {label: "Subconditions, most recent", value: "bar_by_children + value_by_most_recent"},
@@ -471,52 +490,39 @@ function setConditionUnitOpts(plot, main, table, termNum, label, index) {
     {label: "Most recent grades per patient", value: "bar_by_grade + value_by_most_recent"}, 
     {label: "Grade per patient", value: "bar_by_grade + value_by_computable_grade"},
   ]
+  */
+   if (!plot.term.q) plot.term.q = {}
 
-  const radio = renderRadioInput(
-    'pp-termdb-condition-unit-'+ index + '-' + plot.controlsIndex, 
-    td,
-    options,
-    null,
-    'block'
-  )
-
-  radio.inputs
-    .property('checked', matchedParam)
-    .on('input', d => {
-      const currBarBy = plot.term.q.bar_by_grade ? 'grade' : 'children'
-      const q = plot.term.q
-      // clear existing parameter values
-      delete q.value_by_max_grade
-      delete q.value_by_most_recent
-      delete q.value_by_computable_grade
-      delete q.bar_by_children
-      delete q.bar_by_grade
-
-      for(const param of d.value.split(" + ")) {
-        q[param] = 1
-        if (param.startsWith('bar_by_') && !param.endsWith(currBarBy)) {
-          plot.term2 = null
-          plot.settings.bar.overlay = 'none'
-        }
+   const termuiObj = {
+    holder: td.append('div'),
+    genome: plot.obj.genome,
+    mds: plot.obj.mds,
+    tip: plot.obj.tip,
+    currterm: plot.term,
+    termsetting: {term: plot.term},
+    currterm: plot.term,
+    bars_as: true,
+    callback: (term) => {
+      if (term) plot.term = term
+      if (plot.term2 && plot.term.q) {
+        if (
+          (plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade))
+          || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
+        ) plot.term2 = undefined
       }
-
-      main(plot)
-    })
-
-  const matchedParam = d => {
-    const q = plot.term.q
-    if (!q) return false
-    const params = d.value.split(" + ")
-    let numMatched = 0
-    for(const param of params) {
-      if (q[param]) numMatched++
+      main( plot )
     }
-    return numMatched == params.length
   }
+  setTimeout(()=> {
+    if (!plot.term.q) plot.term.q = {}
+    termuiObj.termsetting.q = plot.term.q
+
+    termui_display(termuiObj)
+  },0)
 
   plot.syncControls.push(() => {
-    radio.inputs.property('checked', matchedParam)
-    tr.style('display', plot.term.iscondition ? "table-row" : 'none')
+    tr.style('display', plot.term && plot.term.iscondition ? 'table-row' : 'none')
+    plot.termuiObjOverlay.update_ui()
   })
 }
 

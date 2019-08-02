@@ -58,8 +58,10 @@ will include tk.vcf.plot_mafcov.overlay_term
 			genome: obj.block.genome,
 			mds: obj.tk.mds,
 			tip: obj.tk.legend.tip,
-			termsetting: obj.overlay_term,
-			callback: ()=>{
+			currterm: obj.overlay_term,
+			termsetting: {term:obj.overlay_term.term, q:obj.overlay_term.q},
+			callback: (term)=>{
+				obj.overlay_term.term = term
 				obj.d.term_legenddiv.selectAll('*').remove()
 				do_plot( obj )
 			}
@@ -101,7 +103,7 @@ when overlay term is changed
 	}
 	if( obj.overlay_term && obj.overlay_term.term ) {
 		par.overlay_term = obj.overlay_term.term.id
-		par.overlay_term_q = obj.overlay_term.q
+		par.overlay_term_q = obj.overlay_term.term.q
 	}
 
 	obj.d.wait.text('Loading...')

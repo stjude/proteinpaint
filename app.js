@@ -12729,32 +12729,22 @@ function mds_init(ds,genome, _servconfig) {
 		console.log( count+' samples for disco plot')
 	}
 
-	if(ds.cohort) {
+	if(ds.cohort && ds.cohort.files) {
+		/*
+		*********** legacy mds *************
 
-		if( ds.cohort.db ) {
-			// for mds2
-			if(!ds.cohort.db.file) return '.db.file missing'
-			try {
-				ds.cohort.db.connection = utils.connect_db( ds.cohort.db.file )
-			}catch(e) {
-				return 'cannot read db file: '+ds.cohort.db.file
-			}
-			ds.cohort.db.cache = new Map()
-			// k: sql string
-			// v: statement
-		}
+		following all loads sample attributes from text files
+		and store in ds.cohort.annotation
+		*/
 
-		if(!ds.cohort.files) return '.files[] missing from .cohort'
 		if(!Array.isArray(ds.cohort.files)) return '.cohort.files is not array'
 
-		// FIXME tohash{} to be replaced by using sample_name field
 		if(!ds.cohort.tohash) return '.tohash() missing from cohort'
 		if(typeof ds.cohort.tohash !='function') return '.cohort.tohash is not function'
 		if(!ds.cohort.samplenamekey) return '.samplenamekey missing'
 
-		ds.cohort.annotation = {}
 		// should allow both sample/individual level as key
-
+		ds.cohort.annotation = {}
 
 		if( ds.cohort.mutation_signature) {
 			const s = ds.cohort.mutation_signature
@@ -12900,14 +12890,6 @@ function mds_init(ds,genome, _servconfig) {
 			}
 		}
 
-		if(ds.cohort.termdb) {
-			try {
-				termdb.server_init( ds )
-			} catch(e) {
-				return 'error with termdb: '+e
-			}
-		}
-
 		for(const file of ds.cohort.files) {
 			if(!file.file) return '.file missing from one of .cohort.files'
 			const [err, items] = parse_textfilewithheader( fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file),{encoding:'utf8'}).trim() )
@@ -12940,7 +12922,6 @@ function mds_init(ds,genome, _servconfig) {
 				ds.cohort.tohash(i, ds)
 			})
 		}
-
 		ds.cohort.annorows = Object.values(ds.cohort.annotation)
 		console.log(ds.label+': total samples from sample table: '+ds.cohort.annorows.length)
 

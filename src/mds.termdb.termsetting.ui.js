@@ -23,7 +23,7 @@ export async function display (obj){
 
     div_addnewterm
         .append('span')
-		.html('Select term&nbsp;')
+		.html(obj.mainlabel ? obj.mainlabel + '&nbsp;' : 'Select term&nbsp;')
 
 	add_term_button( div_addnewterm )
         .style('border-radius','6px')
@@ -44,17 +44,21 @@ export async function display (obj){
 		// a term is selected
 		div_addnewterm.style('display','none')
 		div_showterm
-			.style('display','block')
+            .style('display','block')
 			.selectAll('*').remove()
 
-		add_term_button( div_showterm )
-			.text( obj.termsetting.term.name )
-			.style('border-radius', '6px 0px 0px 6px')
+        if(!obj.bars_as){
+            add_term_button( div_showterm )
+                .text( obj.termsetting.term.name )
+                .style('margin-bottom','2px')
+                .style('border-radius', '6px 0px 0px 6px')
+        }    
 
         if(obj.termsetting.term.isfloat || obj.termsetting.term.isinteger){
 
             div_showterm
-				.append('div')
+                .append('div')
+                .style('font-size','1em')
                 .attr('class','sja_filter_tag_btn')
                 .style('margin-left','1px')
                 .style('background','#4888BF')
@@ -62,9 +66,9 @@ export async function display (obj){
                 .html('BINS')
                 .on('click',()=>{
                     // click to show ui and customize binning
-                    numeric_bin_edit(obj.tip, obj.termsetting.term, obj.termsetting.q, (result)=>{
-                        obj.termsetting.q = result;
-                        obj.termsetting.term.q = result
+                    numeric_bin_edit(obj.tip, obj.termsetting.term, obj.termsetting.term.q, (result)=>{
+                        obj.termsetting.term.q = result;
+                        obj.termsetting.q = result
                         obj.callback(obj.termsetting.term)
                     })
                 })
@@ -75,10 +79,11 @@ export async function display (obj){
             select.style('margin-left','1px')
 				.on('change',()=>{
 					const v = select.node().value
-					if(v=='max') obj.termsetting.q = { value_by_max_grade:true, bar_by_grade:true }
-					else if (v=='recent') obj.termsetting.q = { value_by_most_recent:true, bar_by_grade:true }
-					else if (v=='any') obj.termsetting.q = { value_by_computable_grade:true, bar_by_grade:true }
-					else if (v=='sub') obj.termsetting.q = { value_by_max_grade:true, bar_by_children:true }
+					if(v=='max') obj.termsetting.term.q = { value_by_max_grade:true, bar_by_grade:true }
+					else if (v=='recent') obj.termsetting.term.q = { value_by_most_recent:true, bar_by_grade:true }
+					else if (v=='any') obj.termsetting.term.q = { value_by_computable_grade:true, bar_by_grade:true }
+					else if (v=='sub') obj.termsetting.term.q = { value_by_max_grade:true, bar_by_children:true }
+                    obj.termsetting.q = obj.termsetting.term.q
 					__flip_select()
 					__flip_select2()
 					obj.callback(obj.termsetting.term)
@@ -99,6 +104,10 @@ export async function display (obj){
             btn
                 .style('padding','3px 7px')
                 .style('margin-left','1px')
+                .style('margin-bottom','2px')
+                .style('font-size','1em')
+                .style('line-height','1.15')
+                .style('position','static')
                 .style('background-color', '#4888BF')
         
 			let select2, btn2
@@ -113,13 +122,14 @@ export async function display (obj){
 				btn2 = b
 				select2.style('margin-left','1px')
 					.on('change',()=>{
-						delete obj.termsetting.q.value_by_max_grade
-						delete obj.termsetting.q.value_by_most_recent
-						delete obj.termsetting.q.value_by_computable_grade
+						delete obj.termsetting.term.q.value_by_max_grade
+						delete obj.termsetting.term.q.value_by_most_recent
+						delete obj.termsetting.term.q.value_by_computable_grade
 						const v = select2.node().value
-						if(v=='max') obj.termsetting.q.value_by_max_grade=true
-						else if (v=='recent') obj.termsetting.q.value_by_most_recent=true
-						else if (v=='any') obj.termsetting.q.value_by_computable_grade=true
+						if(v=='max') obj.termsetting.term.q.value_by_max_grade=true
+						else if (v=='recent') obj.termsetting.term.q.value_by_most_recent=true
+						else if (v=='any') obj.termsetting.term.q.value_by_computable_grade=true
+                        obj.termsetting.q = obj.termsetting.term.q
 						__flip_select2()
 						obj.callback()
 					})
@@ -135,7 +145,11 @@ export async function display (obj){
 					.text('Any grade per patient')
 				btn2
 					.style('padding','3px 7px')
-					.style('margin-left','1px')
+                    .style('margin-left','1px')
+                    .style('margin-bottom','2px')
+                    .style('font-size','1em')
+                    .style('line-height','1.15')
+                    .style('position','static')
 					.style('background-color', '#4888BF')
             }
 
@@ -143,59 +157,70 @@ export async function display (obj){
 			__flip_select2()
 
 			function __flip_select() {
-				if( obj.termsetting.q.bar_by_children ) {
+				if( obj.termsetting.term.q.bar_by_children ) {
 					select.node().value = 'sub'
 					btn.html('Sub-conditions &#9662;')
-				} else if(obj.termsetting.q.value_by_max_grade) {
+				} else if(obj.termsetting.term.q.value_by_max_grade) {
 					select.node().value = 'max'
 					btn.html('Max grade per patient &#9662;')
-				} else if(obj.termsetting.q.value_by_most_recent) {
+				} else if(obj.termsetting.term.q.value_by_most_recent) {
 					select.node().value = 'recent'
 					btn.html('Most recent grade per patient &#9662;')
-				} else if( obj.termsetting.q.value_by_computable_grade) {
+				} else if( obj.termsetting.term.q.value_by_computable_grade) {
 					select.node().value = 'any'
 					btn.html('Any grade per patient &#9662;')
 				}
-            	select.style('width',btn.node().offsetWidth+'px')
+                select.style('width',btn.node().offsetWidth+'px')
+                    .style('margin-left','-'+btn.node().offsetWidth+'px')
+
+                if(obj.bars_as) btn.style('border-radius', '6px')
 			}
 			function __flip_select2() {
 				if(!select2) return
-				if(!obj.termsetting.q.bar_by_children) {
+				if(!obj.termsetting.term.q.bar_by_children) {
 					select2.style('display','none')
 					btn2.style('display','none')
 					return
 				}
 				select2.style('display','inline-block')
 				btn2.style('display','inline-block')
-				if(obj.termsetting.q.value_by_max_grade) {
+				if(obj.termsetting.term.q.value_by_max_grade) {
 					select2.node().value = 'max'
 					btn2.html('Max grade per patient &#9662;')
-				} else if(obj.termsetting.q.value_by_most_recent) {
+				} else if(obj.termsetting.term.q.value_by_most_recent) {
 					select2.node().value = 'recent'
 					btn2.html('Most recent grade per patient &#9662;')
-				} else if( obj.termsetting.q.value_by_computable_grade) {
+				} else if( obj.termsetting.term.q.value_by_computable_grade) {
 					select2.node().value = 'any'
 					btn2.html('Any grade per patient &#9662;')
 				}
-            	select2.style( 'width', btn2.node().offsetWidth+'px' )
+                select2.style( 'width', btn2.node().offsetWidth+'px' )
+                    .style('margin-left','-'+btn2.node().offsetWidth+'px')
+
+                if(obj.bars_as){
+                    btn.style('border-radius', '6px 0 0 6px')
+                    btn2.style('border-radius','0 6px 6px 0')
+                } 
 			}
         }
 
         // button to remove term
-        div_showterm
-			.append('div')
-            .attr('class','sja_filter_tag_btn')
-            .style('margin-right','10px')
-            .style('margin-left','1px')
-            .style('background','#4888BF')
-            .style('border-radius','0 6px 6px 0')
-            .style('padding','3px 6px')
-            .html('&times;')
-            .on('click',()=>{
-				delete obj.termsetting.term
-				update_ui()
-                obj.callback()
-            })
+        if(!obj.bars_as){
+            div_showterm
+                .append('div')
+                .attr('class','sja_filter_tag_btn')
+                .style('margin-right','10px')
+                .style('margin-left','1px')
+                .style('background','#4888BF')
+                .style('border-radius','0 6px 6px 0')
+                .style('padding','3px 6px')
+                .html('&times;')
+                .on('click',()=>{
+                    delete obj.termsetting.term
+                    update_ui()
+                    obj.callback()
+                })
+            }
 	}
 
 
@@ -215,14 +240,15 @@ export async function display (obj){
                 div: obj.tip.d,
                 default_rootterm: true,
                 modifier_click_term:{
-                    disable_terms: ( obj.termsetting.term ? new Set([ obj.termsetting.term.id ]) : undefined ),
+                    disable_terms: ( obj.termsetting.term ? new Set([ obj.currterm.id, obj.termsetting.term.id ]) : new Set([ obj.currterm.id ]) ),
                     callback: (term)=>{
                         obj.tip.hide()
 						obj.termsetting.term = term
                         // assign default setting about this term
 						if( term.iscategorical ) {
 							// no need to assign
-							delete obj.termsetting.q
+							delete obj.termsetting.term.q
+                            delete obj.termsetting.q
 						} else if( term.iscondition ) {
                             term.q = term.isleaf 
                                 ? { value_by_max_grade:true, bar_by_grade:true  }
@@ -735,31 +761,45 @@ export function numeric_bin_edit(tip, term, term_q, callback){
 
     tip.d.style('padding','0px')
 
-    const bin_edit_div = tip.d.append('div')
+    const config_table = tip.d.append('table')
+		.style('border-spacing','7px')
+		.style('border-collapse','separate')
+
+    const bin_size_tr = config_table.append('tr')
+
+    bin_size_tr.append('td')
         .style('margin','5px')
+        .html('Bin Size')
 
-    const bin_size_div = bin_edit_div.append('div')
+    const bin_size_td = bin_size_tr.append('td')
 
-    bin_size_edit(bin_size_div, custom_bins_q, term_q, callback)
+    bin_size_edit()
 
-    const first_bin_div = bin_edit_div.append('div')
+    const first_bin_tr = config_table.append('tr')
+    
+    first_bin_tr.append('td')
+        .style('margin','5px')
+        .html('First Bin')
 
-    end_bin_edit(first_bin_div, 'first')
+    const first_bin_td = first_bin_tr.append('td')   
 
-    const last_bin_div = bin_edit_div.append('div')
+    end_bin_edit(first_bin_tr, first_bin_td, 'first')
 
-    end_bin_edit(last_bin_div, 'last')
+    const last_bin_tr = config_table.append('tr')
+    
+    last_bin_tr.append('td')
+        .style('margin','5px')
+        .html('Last Bin')
 
-    function bin_size_edit(bin_size_div){
+    const last_bin_td = last_bin_tr.append('td')
 
-        bin_size_div.append('div')
-            .style('display','inline-block')
-            .style('padding','10px 5px')
-            .html('Bin Size')
+    end_bin_edit(last_bin_tr, last_bin_td, 'last')
+
+    function bin_size_edit(){
     
         const x = '<span style="font-family:Times;font-style:italic">x</span>'
         
-        const bin_size_input = bin_size_div.append('input')
+        const bin_size_input = bin_size_td.append('input')
             .attr('type','number')
             .attr('value',custom_bins_q.bin_size)
             .style('margin-left','15px')
@@ -772,7 +812,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
             })
         
         // select between start/stop inclusive
-        const include_select = bin_size_div.append('select')
+        const include_select = bin_size_td.append('select')
             .style('margin-left','10px')
         
         include_select.append('option')
@@ -784,9 +824,11 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         
         include_select.node().selectedIndex =
             custom_bins_q.startinclusive ? 1 : 0
-    
+        
+        const bin_size_apply_td = bin_size_tr.append('td')  
+
         const id = Math.random()
-        const apply_checkbox = bin_size_div
+        const apply_checkbox = bin_size_apply_td
             .append('input')
             .attr('type','checkbox')
             .style('margin','0px 5px 0px 10px')
@@ -796,7 +838,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
                 await apply()
                 apply_checkbox.property('disabled',false)
             })
-        bin_size_div.append('label')
+        bin_size_apply_td.append('label')
             .attr('for',id)
             .text('APPLY')
             .style('font-size','.8em')
@@ -826,14 +868,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         }
     }
 
-    function end_bin_edit(bin_edit_div, bin_flag){
-
-        const end_bin_label = bin_edit_div.append('div')
-            .style('display','inline-block')
-            .style('padding','10px 5px')
-    
-        if(bin_flag == 'first') end_bin_label.html('First Bin')
-        else if(bin_flag == 'last') end_bin_label.html('Last Bin')
+    function end_bin_edit(bin_edit_tr, bin_edit_td, bin_flag){
     
         let bin
         if(bin_flag == 'first'){
@@ -848,7 +883,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
             }
         }
     
-        const start_input = bin_edit_div.append('input')
+        const start_input = bin_edit_td.append('input')
             .attr('type','number')
             .style('width','60px')
             .style('margin-left','15px')
@@ -868,7 +903,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         // select realation between lowerbound and first bin/last bin
         let startselect
         if(bin_flag == 'first'){
-            startselect = bin_edit_div.append('select')
+            startselect = bin_edit_td.append('select')
                 .style('margin-left','10px')
       
             startselect.append('option')
@@ -879,7 +914,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
             startselect.node().selectedIndex =
                 bin.startinclusive ? 0 : 1
         }else{
-            bin_edit_div.append('div')
+            bin_edit_td.append('div')
                 .style('display','inline-block')
                 .style('padding','3px 10px')
                 .style('margin-left','10px')
@@ -889,7 +924,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
     
         const x = '<span style="font-family:Times;font-style:italic">x</span>'
     
-        bin_edit_div.append('div')
+        bin_edit_td.append('div')
             .style('display','inline-block')
             .style('padding','3px 10px')
             .html(x)
@@ -897,14 +932,14 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         // relation between first bin and upper value
         let stopselect
         if(bin_flag == 'first'){
-            bin_edit_div.append('div')
+            bin_edit_td.append('div')
                 .style('display','inline-block')
                 .style('padding','3px 10px')
                 .style('margin-left','10px')
                 .style('width','15px')
                 .html(custom_bins_q.stopinclusive? ' &le;': ' &lt;')
         }else{
-            stopselect = bin_edit_div.append('select')
+            stopselect = bin_edit_td.append('select')
                 .style('margin-left','10px')
       
             stopselect.append('option')
@@ -916,7 +951,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
                 bin.stopinclusive ? 0 : 1
         }
           
-        const stop_input = bin_edit_div.append('input')
+        const stop_input = bin_edit_td.append('input')
             .style('margin-left','10px')
             .attr('type','number')
             .style('width','60px')
@@ -935,7 +970,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
       
         // percentile checkbox
         const id = Math.random()
-        const percentile_checkbox = bin_edit_div.append('input')
+        const percentile_checkbox = bin_edit_td.append('input')
             .attr('type','checkbox')
             .style('margin','0px 5px 0px 10px')
             .attr('id',id)
@@ -950,17 +985,19 @@ export function numeric_bin_edit(tip, term, term_q, callback){
                 }
             })
     
-        bin_edit_div.append('label')
+        bin_edit_td.append('label')
             .attr('for',id)
             .text('Percentile')
             .style('font-size','.8em')
             .attr('class','sja_clbtext')
       
         if(bin.start_percentile || bin.stop_percentile) percentile_checkbox.property('checked',true)
-    
+            
+        const bin_edit_apply_td = bin_edit_tr.append('td') 
+
         // Apply checkbox
         const id2 = Math.random()
-        const apply_checkbox = bin_edit_div.append('input')
+        const apply_checkbox = bin_edit_apply_td.append('input')
             .attr('type','checkbox')
             .style('margin','0px 5px 0px 10px')
             .attr('id',id2)
@@ -970,7 +1007,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
                 apply_checkbox.property('disabled',false)
             })
     
-        bin_edit_div.append('label')
+        bin_edit_apply_td.append('label')
             .attr('for',id2)
             .text('APPLY')
             .style('font-size','.8em')

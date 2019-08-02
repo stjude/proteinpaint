@@ -48,13 +48,13 @@ export class TermdbBarchart{
   }
 
   main(plot=null, data=null, isVisible=true, obj=null) {
+    if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
     if (data) this.currServerData = data
     if (!this.setVisibility(isVisible)) return
     if (obj) this.obj = obj
     if (plot) this.plot = plot
-    this.dom.barDiv.style('max-width', window.innerWidth + 'px')
     this.updateSettings(plot)
-    this.processData(this.currServerData) 
+    this.processData(this.currServerData)
   }
 
   updateSettings(plot) {
@@ -81,8 +81,8 @@ export class TermdbBarchart{
       colspace: plot.settings.common.barspace,
       rowspace: plot.settings.common.barspace
     }
-    Object.assign(this.settings, settings)
-    this.settings.numCharts = this.currServerData.charts.length
+    Object.assign(this.settings, settings, this.currServerData.refs ? this.currServerData.refs : {})
+    this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
       this.settings.unit = "abs"
     }
@@ -104,14 +104,21 @@ export class TermdbBarchart{
   processData(chartsData) {
     const self = this
     const cols = chartsData.refs.cols
-    self.seriesOrder = chartsData.charts[0].serieses
-      .sort(chartsData.refs.useColOrder
-        ? (a,b) => cols.indexOf(b.seriesId) - cols.indexOf(a.seriesId)
-        : (a,b) => !isNaN(a.seriesId)
-          ? +b.seriesId - +a.seriesId
-          : a.total - b.total
-      )
-      .map(d => d.seriesId)
+
+    self.grade_labels = chartsData.refs.grade_labels 
+      ? chartsData.refs.grade_labels
+      : null
+
+    self.seriesOrder = !chartsData.charts.length 
+      ? [] 
+      :chartsData.charts[0].serieses
+        .sort(chartsData.refs.useColOrder
+          ? (a,b) => cols.indexOf(b.seriesId) - cols.indexOf(a.seriesId)
+          : (a,b) => !isNaN(a.seriesId)
+            ? +b.seriesId - +a.seriesId
+            : a.total - b.total
+        )
+        .map(d => d.seriesId)
 
     self.setMaxVisibleTotals(chartsData)
 
@@ -122,21 +129,10 @@ export class TermdbBarchart{
         && self.terms.term2.graph.barchart
         && self.terms.term2.graph.barchart.numeric_bin
       ? self.terms.term2.graph.barchart.numeric_bin
-      : null
+      : []
 
     self.bins = bins
-
-    self.binLabels = bins && bins.fixed_bins
-      ? bins.fixed_bins.map(d=>d.label).reverse()
-      : bins && bins.crosstab_fixed_bins 
-      ? bins.crosstab_fixed_bins.map(d=>d.label).reverse()
-      : bins["2"]
-      ? bins["2"].map(d=>d.label).reverse()
-      : null
-
-    self.grade_labels = chartsData.refs.grade_labels 
-      ? chartsData.refs.grade_labels
-      : null
+    self.binLabels = bins.map(d=>d.label).reverse()
 
     const rows = chartsData.refs.rows;
     self.rowSorter = chartsData.refs.useRowOrder
@@ -194,33 +190,41 @@ export class TermdbBarchart{
     const term1 = this.settings.term1
     let maxVisibleAcrossCharts = 0
     for(const chart of chartsData.charts) {
+      chart.settings = JSON.parse(rendererSettings)
       if (this.currChartsData != chartsData) {
         const unannotatedColLabels = chartsData.refs.unannotatedLabels.term1
         if (unannotatedColLabels) {
           for(const label of unannotatedColLabels) {
-            if (!this.settings.exclude.cols.includes(label)) {
-              this.settings.exclude.cols.push(label)
+            if (!chart.settings.exclude.cols.includes(label)) {
+              chart.settings.exclude.cols.push(label)
             }
           }
         }
         const unannotatedRowLabels = chartsData.refs.unannotatedLabels.term2
         if (unannotatedRowLabels) {
           for(const label of unannotatedRowLabels) {
-            if (!this.settings.exclude.rows.includes(label)) {
-              this.settings.exclude.rows.push(label)
+            if (!chart.settings.exclude.rows.includes(label)) {
+              chart.settings.exclude.rows.push(label)
             }
           }
         }
       }
-      chart.settings = Object.assign(this.settings, chartsData.refs)
+    }
+    for(const chart of chartsData.charts) {
+      Object.assign(chart.settings, this.settings, chartsData.refs)
       chart.visibleSerieses = chart.serieses.filter(d=>{
         return !chart.settings.exclude.cols.includes(d.seriesId)
       })
       chart.settings.colLabels = chart.visibleSerieses.map(series=>{
-        const colName = series.seriesId
+        const id = series.seriesId
+        const grade_label = this.terms.term1.iscondition && this.grade_labels
+            ? this.grade_labels.find(c => id == c.grade)
+            : null
+        const label = grade_label ? grade_label.label : id
+        const af = series && 'AF' in series ? ', AF=' + series.AF : ''
         return {
-          id: colName,
-          label: series && 'AF' in series ? colName + ', AF=' + series.AF : colName
+          id,
+          label: label + af
         }
       })
       chart.maxVisibleSeriesTotal = chart.visibleSerieses.reduce((max,b) => {
@@ -410,13 +414,8 @@ export class TermdbBarchart{
       },
       colLabel: {
         text: d => {
-          const grade = self.grade_labels
-            ? self.grade_labels.find(c => 'id' in d ? c.grade == d.id : c.grade == d)
-            : null
           return self.terms.term1.values
             ? self.terms.term1.values['id' in d ? d.id : d].label
-            : grade
-            ? grade.label
             : 'label' in d
             ? d.label
             : d
@@ -437,13 +436,8 @@ export class TermdbBarchart{
       },
       rowLabel: {
         text: d => {
-          const grade = self.grade_labels
-            ? self.grade_labels.find(c => 'id' in d ? c.grade == d.id : c.grade == d)
-            : null
           return self.terms.term1.values
             ? self.terms.term1.values['id' in d ? d.id : d].label
-            : grade
-            ? grade.label
             : 'label' in d
             ? d.label
             : d
@@ -534,14 +528,14 @@ export class TermdbBarchart{
     if (result.dataId in this.term2toColor) return 
     this.term2toColor[result.dataId] = this.settings.term2 === ""
       ? "rgb(144, 23, 57)"
-      : rgb(this.settings.rows.length < 11 
+      : rgb(this.settings.rows && this.settings.rows.length < 11 
         ? colors.c10(result.dataId)
         : colors.c20(result.dataId)
       ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
   }
 
   getLegendGrps(chart) {
-    const legendGrps = [] 
+    const legendGrps = []
     const s = this.settings
     if (s.exclude.cols.length) {
       const t = this.terms.term1
@@ -571,7 +565,7 @@ export class TermdbBarchart{
           })
       })
     }
-    if (s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
+    if (s.rows && s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
       const t = this.terms.term2
       const b = t.graph && t.graph.barchart ? t.graph.barchart : null
       const overlay = !t.iscondition || !b ? '' : b.value_choices.find(d => false /*d[s.conditionUnits[2]]*/)
