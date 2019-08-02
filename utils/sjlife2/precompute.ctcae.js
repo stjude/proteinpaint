@@ -9,17 +9,13 @@ const load_dataset = require('./load.sjlife').load_dataset
   server response as needed
   
   call with dataset label
-  node ./precompute.ctcae.js dslabel # from your-tp-dir/cohort-dir/...
-
-  The output and precompute script filenames 
-  are declared in dataset/dslabel.js as
+  node ./precompute.ctcae.js
   
   - ds.cohort
       .db
         .precomputed_file # tsv format
       .termdb
         .precomputed_file # json format
-        .precompute_script # js file
 
   the tsv output file will be loaded to the
   database via load.sql, which is not part of this script
@@ -47,13 +43,10 @@ function precompute() {
 }
 
 function verify_ds() {
-  const dslabel = process.argv[2]
-  if(!dslabel) throw 'usage: ./precompute.ctcae.sh dslabel # from your-tp-dir/cohort-dir/...'
-
+  const dslabel = 'sjlife2.hg38.js'
   const ds = load_dataset(dslabel)
   const tdb = ds.cohort.termdb
   if(!tdb) throw 'no termdb for this dataset'
-  if (!tdb.precompute_script) throw 'ds.cohort.termdb.precompute_script missing'
   if (!tdb.precomputed_file) {
     console.log('Warning: Precomputed values will not be loaded in memory since the ds.cohort.termdb.precomputed_file is not defined.')
   }

@@ -11,6 +11,7 @@ const serverconfig = require('../../serverconfig.json')
 function load_dataset(dslabel) {
   const ds = get_dataset( dslabel )
   const termdb = ds.cohort.termdb
+
   load_term2term( termdb )
   load_termjson( termdb )
   ds.cohort.annotation = {}
@@ -32,6 +33,38 @@ function get_dataset(dslabel) {
   if(!tdb) throw 'no termdb for this dataset'
   
   ds.label = dslabel
+
+  // migrate sjlife dataset sample id and file information here
+  const samplenamekey = 'sjlid'
+  ds.cohort.samplenamekey = samplenamekey
+  ds.cohort.tohash = (item, ds)=>{
+    const n = item[samplenamekey]
+    if(ds.cohort.annotation[n]) {
+      for(const k in item) {
+        ds.cohort.annotation[n][k] = item[k]
+      }
+    } else {
+      ds.cohort.annotation[ n ] = item
+    }
+  }
+  ds.cohort.files = [
+    {file:'files/hg38/sjlife/clinical/matrix'},
+    {file:'files/hg38/sjlife/cohort/admix'},
+  ]
+  ds.cohort.termdb.term2term = {
+    file: 'files/hg38/sjlife/clinical/term2term'
+  }
+  ds.cohort.termdb.termjson = {
+    file: 'files/hg38/sjlife/clinical/termjson'
+  }
+  if (!ds.cohort.termdb.patient_condition) ds.cohort.termdb.patient_condition = {}
+  ds.cohort.termdb.patient_condition.file = 'files/hg38/sjlife/clinical/outcomes_2017'
+  // the precompute script will save the json object to this file
+  // also, this will be loaded once during termdb.sql.spec.js testing
+  ds.cohort.termdb.precomputed_file = 'files/hg38/sjlife/clinical/precomputed.json'
+  // the precompute script will save the tsv to this file
+  ds.cohort.db.precomputed_file = 'files/hg38/sjlife/clinical/chronicevents.precomputed'
+
   return  ds
 }
 
