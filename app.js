@@ -48,7 +48,6 @@ const express=require('express'),
 	d3dsv=require('d3-dsv'),
 	basicAuth = require('express-basic-auth'),
 	termdb = require('./modules/termdb'),
-	termdbbarchart = require('./modules/termdb.barchart'),
 	termdbbarsql = require('./modules/termdb.barsql'),
 	mds2_init = require('./modules/mds2.init'),
 	mds2_load = require('./modules/mds2.load'),
@@ -194,7 +193,6 @@ app.post('/mdssamplesignature',handle_mdssamplesignature)
 app.post('/mdssurvivalplot',handle_mdssurvivalplot)
 app.post('/fimo', fimo.handle_closure(genomes) )
 app.get('/termdb', termdb.handle_request_closure( genomes ) )
-app.get('/termdb-barchart', termdbbarchart.handle_request_closure( genomes ) )
 app.get('/termdb-barsql', termdbbarsql.handle_request_closure( genomes ) )
 app.post('/singlecell', singlecell.handle_singlecell_closure( genomes ) )
 app.post('/isoformbycoord', handle_isoformbycoord)

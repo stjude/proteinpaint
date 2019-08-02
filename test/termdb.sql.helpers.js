@@ -1,7 +1,9 @@
 const serverconfig = require("../serverconfig")
-const Partjson = require('../modules/partjson')
 const request = require("request")
 const tape = require("tape")
+const dodiff = require("deep-object-diff");
+const barchart_data = require("./termdb.barchart").barchart_data
+
 
 function compareResponseData(test, params, mssg) {
   // i=series start, j=series end, k=chart index
@@ -15,82 +17,51 @@ function compareResponseData(test, params, mssg) {
       test.fail(error)
     }
     if (!body) test.fail("empty response for barsql at :" + url0)
-    else if (body.includes("error")) test.fail(body)
+    //else if (body.includes("error")) test.fail(body)
     else {
       switch(response.statusCode) {
         case 200:
           const data0 = JSON.parse(body);
           // reshape sql results in order to match
           // the compared results
-          let dataCharts
-          if (process.argv[3]) {
-            dataCharts = data0
-          } else {
-            const pj = new Partjson({
-              data: data0.lst,
-              seed: `{"values": []}`, // result seed 
-              template,
-              "=": externals
-            })
-            dataCharts = pj.tree.results
-          } 
+          const dataCharts = data0
           const summary0 = normalizeCharts(data0)
           
           // get an alternatively computed results
           // for comparing against sql results
-          const url1 = getBarUrl(params); //console.log(url1)
+          const data1 = barchart_data(params, data0);
+          const summary1 = normalizeCharts(data1, data0.refs)
+          const sqlSummary = refkey == '*' 
+            ? summary0.refs
+            : refkey
+            ? summary0.refs[refkey]
+            : k == -1
+            ? summary0
+            ? k !== l
+            : summary0.charts.slice(k,l)
+            : i !== j 
+            ? summary0.charts[k].serieses.slice(i,j) 
+            : summary0
+          const barSummary = refkey == '*' 
+            ? summary1.refs
+            : refkey
+            ? summary1.refs[refkey]
+            : k == -1
+            ? summary1
+            ? k !== l
+            : summary1.charts.slice(k,l)
+            : i !== j 
+            ? summary1.charts[k].serieses.slice(i,j) 
+            : summary1
 
-          request(url1, (error,response,body1)=>{
-            if(error) {
-              console.log(url1)
-              test.fail(error)
-              return
-            }
-            if (!body) test.fail("empty response for barchart at :" + url1)
-            else if (body.includes("error")) test.fail(body)
-            else {
-              const data1 = JSON.parse(body1)
-              const summary1 = normalizeCharts(data1, data0.refs)
-              const sqlSummary = refkey == '*' 
-                ? summary0.refs
-                : refkey
-                ? summary0.refs[refkey]
-                : k == -1
-                ? summary0
-                ? k !== l
-                : summary0.charts.slice(k,l)
-                : i !== j 
-                ? summary0.charts[k].serieses.slice(i,j) 
-                : summary0
-              const barSummary = refkey == '*' 
-                ? summary1.refs
-                : refkey
-                ? summary1.refs[refkey]
-                : k == -1
-                ? summary1
-                ? k !== l
-                : summary1.charts.slice(k,l)
-                : i !== j 
-                ? summary1.charts[k].serieses.slice(i,j) 
-                : summary1
-
-              switch(response.statusCode) {
-              case 200:
-                const extra = k == -1 || i!==j || refkey
-                  ? '\n\n' + url0 +'\n----\n' + url1 + '\n' + JSON.stringify(sqlSummary) + '\n-----\n' + JSON.stringify(barSummary) 
-                  : ''
-                test.deepEqual(
-                  sqlSummary,
-                  barSummary,
-                  mssg + extra
-                )
-              break;
-              default:
-                console.log(url1)
-                test.fail("invalid status")
-              }
-            }
-          })
+            const diff = dodiff.diff(sqlSummary, barSummary)
+            const diffStr = JSON.stringify(diff)
+            test.deepEqual(
+              diff,
+              {}, //barSummary,
+              mssg + (diffStr == '{}' ? '' : ' '+ diffStr)
+            )
+          
           break;
         default:
           console.log(url0)
@@ -142,97 +113,6 @@ function getSqlUrl(_params={}) {
   return url
 }
 
-const barParamsReformat = {
-  asis: [
-    'term0', 'term0_is_genotype',
-    'term1', 'term1_is_genotype',
-    'term2', 'term2_is_genotype',
-    'ssid', 'chr', 'pos', 'mname'
-  ],
-  json: ['term0_q', 'term1_q', 'term2_q', 'tvslst']
-}
-
-function getBarUrl(_params) {
-  const params = Object.assign({}, _params)
-  let url = "http://localhost:" + serverconfig.port
-    + "/termdb-barchart?genome=hg38"
-    + "&dslabel=SJLife"
-  
-  for(const key in params) {
-    if (barParamsReformat.json.includes(key)) {
-      url += `&${key}=${encodeURIComponent(JSON.stringify(params[key]))}`
-    } else if (barParamsReformat.asis.includes(key)) {
-      url += `&${key}=${params[key]}`
-    }
-  }
-  return url
-}
-
-const template = JSON.stringify({
-  "@errmode": ["","","",""],
-  results: {
-    "@join()": {
-      chart: "=chart()"
-    },
-    charts: [{
-      "@join()": {
-        series: "=series()"
-      },
-      chartId: "@key",
-      total: "+&chart.value",
-      "_1:maxSeriesTotal": "=maxSeriesTotal()",
-      serieses: [{
-        "@join()": {
-          data: "=data()"
-        },
-        total: "+&series.value",
-        seriesId: "@key",
-        boxplot: "$summary_term2",
-        data: [{
-          dataId: "@key",
-          total: "&data.value",
-        }, "&data.id"],
-      }, "&series.id"]
-    }, "&chart.id"],
-    "_:_unannotated": {
-      label: "",
-      label_unannotated: "",
-      value: "+=unannotated()",
-      value_annotated: "+=annotated()"
-    }
-  }
-})
-
-const externals = {
-  chart(row) {
-    return {
-      id: "",
-      value: row.samplecount
-    } 
-  },
-  series(row) {
-    return {
-      id: 'key1' in row ? row.key1 : row.key,
-      value: row.samplecount
-    } 
-  },
-  data(row) {
-    return {
-      id: 'key2' in row ? row.key2 : '',
-      value: row.samplecount
-    } 
-  },
-  maxSeriesTotal(row, context) {
-    let maxSeriesTotal = 0
-    for(const grp of context.self.serieses) {
-      if (grp && grp.total > maxSeriesTotal) {
-        maxSeriesTotal = grp.total
-      }
-    }
-    return maxSeriesTotal
-  }
-}
-
 function normalizeCharts(data, comparedRefs=null) {
   const charts = data.charts
   if (!charts) {
@@ -254,31 +134,10 @@ function normalizeCharts(data, comparedRefs=null) {
   }
   for(const chart of summary.charts) {
     for(const series of chart.serieses) {
-      if (series.boxplot && series.boxplot.mean) {
+      if (series.boxplot && series.boxplot.mean) { 
         series.boxplot.mean = series.boxplot.mean.toPrecision(8)
         if (series.boxplot.sd) {
           series.boxplot.sd = series.boxplot.sd.toPrecision(8)
-        }
-      }
-    }
-  }
-
-  if (data.summary_term1) {
-    summary.boxplot = data.summary_term1
-    summary.boxplot.mean = summary.boxplot.mean.toPrecision(8)
-    if (summary.boxplot.sd) {
-      summary.boxplot.sd = summary.boxplot.sd.toPrecision(8)
-    }
-  }
-  if (data.summary_term2) {
-    for(const chart of summary.charts) {
-      for(const series of chart.serieses) {
-        if (data.summary_term2[series.seriesId]) {
-          series.boxplot = data.summary_term2[series.seriesId]
-          series.boxplot.mean = series.boxplot.mean.toPrecision(8)
-          if (series.boxplot.sd) {
-            series.boxplot.sd = series.boxplot.sd.toPrecision(8)
-          }
         }
       }
     }
@@ -289,11 +148,13 @@ function normalizeCharts(data, comparedRefs=null) {
 
 function onlyComparableChartKeys(chart) {
   delete chart.total
+  chart.serieses.sort((a,b)=>a.seriesId < b.seriesId ? -1 : 1)
   chart.serieses.forEach(onlyComparableSeriesKeys)
 }
 
 function onlyComparableSeriesKeys(series) {
   delete series.max
+  delete series['@errors']
 }
 
 function sortResults(charts) {
@@ -379,3 +240,4 @@ function normalizeRefs(refs, comparedRefs) {
 function valueSort(a,b) {
   return a < b ? -1 : 1
 }
+
