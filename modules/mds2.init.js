@@ -2,6 +2,7 @@ const app = require('../app')
 const fs = require('fs')
 const utils = require('./utils')
 const server_init_db_queries = require('./termdb.sql').server_init_db_queries
+const validate_single_numericrange = require('../src/mds.termdb.termvaluesetting').validate_single_numericrange
 
 
 
@@ -11,36 +12,37 @@ const server_init_db_queries = require('./termdb.sql').server_init_db_queries
 init
 client_copy
 ********************** INTERNAL
-init_vcf
-init_svcnv
+may_validate_info_fields
+may_validate_population
+may_init_vcf
+may_init_svcnv
 may_sum_samples
 */
 
 
 
 
-exports.init = async ( ds, genome ) => {
+export async function init ( ds, genome ) {
 /* initiate the mds2 track upon launching server
 */
 
-	if( ds.cohort && ds.cohort.db && ds.cohort.termdb ) {
+	if( ds.cohort && ds.cohort.db ) {
+		/* db should be required
+		must initiate db first, then process other things
+		as db may be needed (e.g. getting json of a term)
+		*/
+		if(!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
 		server_init_db_queries( ds )
 	}
 
 	if( !ds.track ) throw 'no mds2 track; missing ds.track{}'
-
 	const tk = ds.track
-
 	if(!tk.name) tk.name = ds.label
 
-	if(tk.vcf) {
-		await init_vcf( tk.vcf, genome, ds )
-	}
-
-	if(tk.svcnv) {
-		init_svcnv( tk.svcnv, genome, ds )
-	}
-
+	may_validate_info_fields( tk )
+	may_validate_population( tk )
+	may_init_vcf( tk.vcf, genome, ds )
+	may_init_svcnv( tk.svcnv, genome, ds )
 	may_sum_samples( tk )
 	if(tk.samples) console.log(ds.label+': mds2: '+tk.samples.length+' samples')
 }
@@ -48,7 +50,7 @@ exports.init = async ( ds, genome ) => {
 
 
 
-exports.client_copy = ( ds ) => {
+export function client_copy ( ds ) {
 /* make client copy of the track
 the client copy stays at .mds.track{}
 */
@@ -84,7 +86,51 @@ the client copy stays at .mds.track{}
 
 
 
-async function init_vcf ( vcftk, genome, ds ) {
+function may_validate_info_fields ( tk ) {
+	if(!tk.info_fields) return
+	if(!Array.isArray(tk.info_fields)) throw 'tk.info_fields is not array'
+	for(const i of tk.info_fields) {
+		if(!i.key) throw '.key missing from one of tk.info_fields[]'
+		if(!i.label) i.label = i.key
+		if(i.iscategorical) {
+			if(!Array.isArray(i.values)) throw '.values[] not an array of categorical INFO field: '+i.key
+			for(const v of i.values) {
+				if(!v.key) throw 'key missing from a value of categorical INFO: '+i.key
+				if(!v.label) v.label = v.key
+			}
+		} else if(i.isfloat || i.isinteger) {
+			if(!i.range) throw '.range{} missing from a numerical INFO: '+i.key
+			validate_single_numericrange( i.range, 'tk.info_fields[]')
+		} else if(i.isflag) {
+		} else {
+			throw 'tk.info_fields unknown type: '+i.key
+		}
+	}
+}
+
+
+
+function may_validate_population ( tk ) {
+	if(!tk.populations) return
+	if(!Array.isArray(tk.populations)) throw 'populations should be array'
+	for(const p of tk.populations) {
+		if(!p.key) throw 'key missing from a population'
+		if(!p.label) p.label = p.key
+		if(!Array.isArray(p.sets)) throw '.sets is not an array in population: '+p.key
+		for(const s of p.sets) {
+			if(!s.infokey_AC) throw 'infokey_AC missing from a set of population: '+p.key
+			if(!s.infokey_AN) throw 'infokey_AN missing from a set of population: '+p.key
+			if( p.termfilter ) {
+				if(!s.termfilter_value) throw 'termfilter_value missing from a set of population where termfilter is set: '+p.key
+			}
+		}
+	}
+}
+
+
+
+async function may_init_vcf ( vcftk, genome, ds ) {
+	if(!vcftk) return
 
 	if( vcftk.file ) {
 
@@ -162,7 +208,8 @@ async function init_vcf ( vcftk, genome, ds ) {
 
 
 
-async function init_svcnv ( sctk, genome ) {
+async function may_init_svcnv ( sctk, genome ) {
+	if(!sctk) return
 }
 
 
