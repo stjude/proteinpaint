@@ -501,7 +501,7 @@ function setBarsAsOpts(plot, main, table, termNum, label, index) {
     currterm: plot.term,
     termsetting: {term: plot.term},
     currterm: plot.term,
-    bars_as: true,
+    is_term1: true,
     callback: (term) => {
       if (term) plot.term = term
       if (plot.term2 && plot.term.q) {
