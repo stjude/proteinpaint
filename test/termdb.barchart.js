@@ -32,7 +32,7 @@ function getDataset() {
 function barchart_data ( q, data0 ) {
 /*
   q: objectified URL query string
-  data0: the response data from /termdb-barsql
+  data0: the response data from /termdb-barsql, needed to reuse computed bins
 */
   // ds is loaded at the start of this file
   if(!ds.cohort) throw 'cohort missing from ds'

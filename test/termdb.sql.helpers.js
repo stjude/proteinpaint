@@ -25,41 +25,22 @@ function compareResponseData(test, params, mssg) {
           // reshape sql results in order to match
           // the compared results
           const dataCharts = data0
-          const summary0 = normalizeCharts(data0)
-          
+          const summary0 = normalizeCharts(data0);
           // get an alternatively computed results
           // for comparing against sql results
-          const data1 = barchart_data(params, data0);
+          const data1 = barchart_data(params, data0)
           const summary1 = normalizeCharts(data1, data0.refs)
-          const sqlSummary = refkey == '*' 
-            ? summary0.refs
-            : refkey
-            ? summary0.refs[refkey]
-            : k == -1
-            ? summary0
-            ? k !== l
-            : summary0.charts.slice(k,l)
-            : i !== j 
-            ? summary0.charts[k].serieses.slice(i,j) 
-            : summary0
-          const barSummary = refkey == '*' 
-            ? summary1.refs
-            : refkey
-            ? summary1.refs[refkey]
-            : k == -1
-            ? summary1
-            ? k !== l
-            : summary1.charts.slice(k,l)
-            : i !== j 
-            ? summary1.charts[k].serieses.slice(i,j) 
-            : summary1
-
-            const diff = dodiff.diff(sqlSummary, barSummary)
-            const diffStr = JSON.stringify(diff)
+          // reduce results if an option applies
+          const sqlSummary = getComparableResults(summary0, refkey, i, j, k)
+          const barSummary = getComparableResults(summary1, refkey, i, j, k)
+          const diff = dodiff.diff(sqlSummary, barSummary)
+          const diffStr = JSON.stringify(diff)
             test.deepEqual(
               diff,
               {}, //barSummary,
-              mssg + (diffStr == '{}' ? '' : ' '+ diffStr)
+              mssg == "WEB-TEST" 
+              ? {diffStr, sqlSummary, barSummary}
+              : mssg + (diffStr == '{}' ? '' : ' '+ diffStr)
             )
           
           break;
@@ -73,7 +54,7 @@ function compareResponseData(test, params, mssg) {
 
 exports.compareResponseData = compareResponseData
 
-const sqlBasePath = process.argv[3] ? process.argv[3] : '/termdb?&testplot=1'
+const sqlBasePath = '/termdb-barsql?'
 const sqlParamsReformat = {
   rename: {
     term0: 'term0_id',
@@ -241,3 +222,20 @@ function valueSort(a,b) {
   return a < b ? -1 : 1
 }
 
+function getComparableResults(summary, refkey, i, j, k) {
+  const result = refkey == '*' 
+    ? summary.refs
+    : refkey
+    ? summary.refs[refkey]
+    : k == -1
+    ? summary
+    ? k !== l
+    : summary0.charts.slice(k,l)
+    : i !== j 
+    ? summary.charts[k].serieses.slice(i,j) 
+    : summary
+
+  // some result diffs are normalized via JSON stringify,
+  // such as NaN -> null
+  return JSON.parse(JSON.stringify(result))
+}
