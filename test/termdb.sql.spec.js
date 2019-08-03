@@ -1,5 +1,9 @@
 /*
-  requires a running pp server
+  Requires a running pp server, `npm runs server`
+
+  See the header comments in test/termdb.barchart.server.js 
+  for help in troubleshooting a failing test as
+  encountered below.
 */
 
 const tape = require("tape")
