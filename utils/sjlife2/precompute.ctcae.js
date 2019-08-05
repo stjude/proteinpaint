@@ -29,11 +29,11 @@ function precompute () {
   const jsontarget = process.argv[5] || 'precomputed.json'
   if (!jsontarget) throw "missing jsontarget argument"
 
-  const terms = load_terms(termdbfile)
-  const annotations = load_patientcondition(outcomesfile)
-  const data = Object.values(annotations)
-
   try {
+    const terms = load_terms(termdbfile)
+    const annotations = load_patientcondition(outcomesfile)
+    const data = Object.values(annotations)
+
     //console.log('Precomputing by sample and term_id')
     const pj = getPj(terms, data)
     pj.tree.pjtime = pj.times
