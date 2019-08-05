@@ -1,8 +1,8 @@
 /*
-  Requires a running pp server, `npm runs server`
+  Requires a running pp server, `npm run server`
 
   See the header comments in test/termdb.barchart.server.js 
-  for help in troubleshooting a failing test as
+  for help in troubleshooting a failing test if
   encountered below.
 */
 

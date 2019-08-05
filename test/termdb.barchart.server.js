@@ -115,7 +115,7 @@ function handle_testui_request(req, res) {
 <p>Enter the URL query parameters to test below, encoded as JSON, then click submit.</p>
 <textarea id='qparams' style='width:400px; height: 400px'></textarea>
 <button onclick='submit()'>Submit</button>
-</body>
+
 <script>
 const qparams = document.querySelector('#qparams')
 
@@ -148,5 +148,6 @@ function submit() {
   .then(response=>console.log(response.diffStr))
 }
 </script>
+</body>
 </html>`)
 }
