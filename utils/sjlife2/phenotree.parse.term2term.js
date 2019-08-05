@@ -56,6 +56,8 @@ const abort = (m)=>{
 
 
 if(process.argv.length<3) abort('<phenotree txt file> <keep/termjson file> outputs to files "term2term" and "termjson"')
+const infile_phenotree = process.argv[2]
+const infile_keeptermjson = process.argv[3] // optional
 
 
 const fs=require('fs')
@@ -96,6 +98,13 @@ const map4 = new Map()
 const map5 = new Map()
 
 
+/* keep a list of terms, by their order of appearance in the phenotree file
+to be printed out and loaded to a small table
+for ordering terms in phewas
+*/
+const allterms_byorder = new Set()
+
+
 /* for recalling id from a non-leaf level name
 k: name
 v: id
@@ -116,50 +125,14 @@ const c2immediatep = new Map()
 
 
 const patientcondition_terms = new Set()
-// the set of terms under CTCAE and will have .has_patient_condition:true
+// the set of terms under CTCAE branch, to make its json differently
 
 
-
-
-
-const termjson_outputoneset = (map, lines) => {
-/*
-arg is set of words from root or a level, e.g. set1
-each word is a term
-*/
-	let leafcount = 0
-	for(const id of [...map.keys()].sort() ) {
-
-		let j = keep_termjson.get( id )
-		if(!j) {
-			// this term not found in keep
-			j = {
-				name: map.get( id )
-			}
-		}
-
-		// test if it is leaf
-		if( !t2t.has( id ) ) {
-			j.isleaf = true
-			leafcount++
-		}
-
-		if( patientcondition_terms.has( id )) {
-			// belongs to patient conditions
-			j.iscondition = true
-			makegraphconfig_conditionterm( j )
-		}
-
-		lines.push( id+'\t'+JSON.stringify(j) )
-	}
-	return map.size+' terms, '+leafcount+' leaf terms'
-}
 
 
 
 function termjson_outputoneset2 (map, lines) {
 /*
-to replace termjson_outputoneset
 arg is set of words from root or a level, e.g. set1
 each word is a term
 */
@@ -236,60 +209,8 @@ function makegraphconfig_conditionterm ( t ) {
 
 
 
-const output_termjson = () => {
-/* output "termjson" file
-
-each term is one row
-
-col1: term id
-col2: {}
-lines beginning with # are ignored
-
-manual inspection:
-	- terms are sorted alphabetically for inspecting suspicious similar names;
-	- this is just a lookup table
-	- the order of terms in this table does not impact the order of display
-	- #### are level dividers also to assist inspection
-*/
-	const lines = []
-
-	{
-		const str = termjson_outputoneset( map1, lines )
-		console.log( 'ROOT: '+str )
-	}
-
-	//lines.push('################# Level 1')
-	{
-		const str = termjson_outputoneset( map2, lines )
-		console.log( 'Level 1: '+str )
-	}
-
-	//lines.push('################# Level 2')
-	{
-		const str = termjson_outputoneset( map3, lines )
-		console.log( 'Level 2: '+str )
-	}
-
-	//lines.push('################# Level 3')
-	{
-		const str = termjson_outputoneset( map4, lines )
-		console.log( 'Level 3: '+str )
-	}
-
-	//lines.push('################# Level 4')
-	{
-		const str = termjson_outputoneset( map5, lines )
-		console.log( 'Level 4: '+str )
-	}
-
-	fs.writeFileSync('termjson', lines.join('\n')+'\n' )
-}
-
-
-
 function output_termdb () {
 /* output "termdb" file
-to replace output_termjson()
 
 each term is one row
 
@@ -336,19 +257,7 @@ manual inspection:
 
 
 
-function output_t2t() {
-	//
-	const out = []
-	for(const [parentterm, children] of t2t) {
-		if( children.size ) {
-			for(const childterm of children) {
-				out.push( parentterm+'\t'+childterm )
-			}
-		}
-	}
-	fs.writeFileSync('term2term', out.join('\n')+'\n' )
-}
-function output_c2p() {
+function output_ancestry() {
 	const out = []
 	for(const [c,m] of c2p) {
 		for(const p of m.keys()) {
@@ -356,6 +265,10 @@ function output_c2p() {
 		}
 	}
 	fs.writeFileSync('ancestry',out.join('\n')+'\n')
+}
+function output_alltermlst() {
+	// may add term group and color etc
+	fs.writeFileSync('alltermsbyorder',[...allterms_byorder].join('\n'))
 }
 
 
@@ -366,7 +279,7 @@ function output_c2p() {
 //////////////// process file
 
 
-const lines = fs.readFileSync(process.argv[2],{encoding:'utf8'}).trim().split('\n')
+const lines = fs.readFileSync( infile_phenotree, {encoding:'utf8'}).trim().split('\n')
 
 
 
@@ -455,6 +368,7 @@ for(let i=1; i<lines.length; i++) {
 		if(!t2t.has( id )) {
 			t2t.set( id, new Set() )
 		}
+		allterms_byorder.add(id)
 	}
 
 	if(level2) {
@@ -483,6 +397,7 @@ for(let i=1; i<lines.length; i++) {
 		if(!c2p.has(id)) c2p.set(id,new Map())
 		c2p.get(id).set(level1,0)
 		c2immediatep.set( id, level1 )
+		allterms_byorder.add(id)
 	}
 
 	if(level3) {
@@ -511,6 +426,9 @@ for(let i=1; i<lines.length; i++) {
 		c2p.get(id).set(level1,0)
 		c2p.get(id).set(level2,1)
 		c2immediatep.set( id, level2 )
+
+		allterms_byorder.add(id)
+		if(level2=='CTCAE Graded Events') patientcondition_terms.add(id)
 	}
 
 	if(level4) {
@@ -540,6 +458,9 @@ for(let i=1; i<lines.length; i++) {
 		c2p.get(id).set(level2,1)
 		c2p.get(id).set(level3,2)
 		c2immediatep.set( id, level3 )
+
+		allterms_byorder.add(id)
+		if(level2=='CTCAE Graded Events') patientcondition_terms.add(id)
 	}
 
 	if(level5) {
@@ -566,13 +487,9 @@ for(let i=1; i<lines.length; i++) {
 		c2p.get(id).set(level3,2)
 		c2p.get(id).set(level4,3)
 		c2immediatep.set( id, level4)
-	}
 
-	// register terms belonging to "patient condition"
-	if(level2=='CTCAE Graded Events') {
-		if(level3) patientcondition_terms.add(level3)
-		if(level4) patientcondition_terms.add(level4)
-		if(level5) patientcondition_terms.add(level5)
+		allterms_byorder.add(id)
+		if(level2=='CTCAE Graded Events') patientcondition_terms.add(id)
 	}
 }
 
@@ -582,7 +499,9 @@ for(let i=1; i<lines.length; i++) {
 ///////////// done parsing phenotree file
 
 
-console.log('Phenotree: '+patientcondition_terms.size+' terms for patient condition')
+console.log(allterms_byorder.size+' terms in total')
+console.log(patientcondition_terms.size+' terms for patient condition')
+
 
 
 // clean t2t by removing leaf terms with no children; leaf should not appear in t2t
@@ -621,13 +540,13 @@ for(const n of map4.keys()) {
 const keep_termjson = new Map()
 
 
-if( process.argv[3] ) {
+if( infile_keeptermjson ) {
 	/* keep/termjson file is given
 	this file is one single object, of key:value pairs
 	key: term id
 	value: term json definition
 	*/
-	const j = JSON.parse( fs.readFileSync(process.argv[3],{encoding:'utf8'}) )
+	const j = JSON.parse( fs.readFileSync( infile_keeptermjson,{encoding:'utf8'}) )
 	for(const id in j) {
 		keep_termjson.set( id, j[id] )
 	}
@@ -636,7 +555,6 @@ if( process.argv[3] ) {
 
 
 
-output_termjson()
 output_termdb()
-output_t2t()
-output_c2p()
+output_ancestry()
+output_alltermlst()

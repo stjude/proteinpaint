@@ -24,6 +24,7 @@ file_not_readable
 get_header_vcf
 get_fasta
 connect_db
+loadfile_ssid
 ********************** INTERNAL
 */
 

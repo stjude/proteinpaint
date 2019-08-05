@@ -1,5 +1,6 @@
 .mode tab
 
+
 drop table if exists terms;
 drop index if exists terms_id;
 drop index if exists terms_p;
@@ -29,6 +30,13 @@ create index ancestry_tid on ancestry(term_id);
 create index ancestry_pid on ancestry(ancestor_id);
 
 
+
+-- may add term group and color etc
+drop table if exists alltermsbyorder;
+create table alltermsbyorder (
+  id character varying(100) not null
+);
+.import alltermsbyorder alltermsbyorder
 
 
 
