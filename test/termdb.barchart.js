@@ -96,9 +96,11 @@ const templateBar = JSON.stringify({
         "__:boxplot": "=boxplot()",
         "~samples": ["$sjlid", "set"],
         "__:AF": "=getAF()",
+        "__:unannotated": "=unannotatedSeries()"
         data: [{
           dataId: "@key",
-          total: "+1" 
+          total: "+1",
+          "__:unannotated": "=unannotatedData()"
         }, "&idVal.dataId[]"],
       }, "&idVal.seriesId[]"],
     }, "&idVal.chartId[]"],
@@ -249,6 +251,18 @@ function getPj(q, inReqs, data, tdb, ds) {
           }
         }
         return total
+      },
+      unannotatedSeries(row, context) {
+        if (!terms[1].unannotatedLabels.length) return
+        const i = terms[1].unannotatedLabels.indexOf(context.self.seriesId)
+        if (i == -1) return
+        return {value: terms[1].unannotatedValues[i]}
+      },
+      unannotatedData(row, context) {
+        if (!terms[2].unannotatedLabels.length) return
+        const i = terms[2].unannotatedLabels.indexOf(context.self.seriesId)
+        if (i == -1) return
+        return {value: terms[2].unannotatedValues[i]}
       },
       annotated(row, context) {
         const series = context.joins.get('series')

@@ -197,25 +197,25 @@ export class TermdbBarchart{
         const unannotatedColLabels = chartsData.refs.unannotatedLabels.term1
         if (unannotatedColLabels) {
           for(const label of unannotatedColLabels) {
-            if (!chart.settings.exclude.cols.includes(label)) {
-              chart.settings.exclude.cols.push(label)
+            if (!this.settings.exclude.cols.includes(label)) {
+              this.settings.exclude.cols.push(label)
             }
           }
         }
         const unannotatedRowLabels = chartsData.refs.unannotatedLabels.term2
         if (unannotatedRowLabels) {
           for(const label of unannotatedRowLabels) {
-            if (!chart.settings.exclude.rows.includes(label)) {
-              chart.settings.exclude.rows.push(label)
+            if (!this.settings.exclude.rows.includes(label)) {
+              this.settings.exclude.rows.push(label)
             }
           }
         }
       }
     }
-    const settingsCopy = Object.assign({},this.settings)
-    delete settingsCopy.exclude
+    //const settingsCopy = Object.assign({},this.settings)
+    //delete settingsCopy.exclude
     for(const chart of chartsData.charts) {
-      Object.assign(chart.settings, settingsCopy, chartsData.refs)
+      Object.assign(chart.settings, this.settings, chartsData.refs)
       chart.visibleSerieses = chart.serieses.filter(d=>{
         return !chart.settings.exclude.cols.includes(d.seriesId)
       })
@@ -340,7 +340,9 @@ export class TermdbBarchart{
           } else {
             const range = bins.find(d => d.label == label || d.name == label)
             if (range) termValues.push({term, ranges: [range]})
-            else if (term.q && term.q.binconfig && term.q.binconfig.unannotated) {
+            else if (d.unannotated) { console.log(d.unannotated)
+               termValues.push({term, ranges: [{value: d.unannotated.value, label}]})
+            } else if (term.q && term.q.binconfig && term.q.binconfig.unannotated) {
               for(const id in term.q.binconfig.unannotated._labels) {
                 const _label = term.q.binconfig.unannotated._labels[id];
                 if (_label == label) termValues.push({term, ranges: [{value: id, label}]});
@@ -432,7 +434,7 @@ export class TermdbBarchart{
         },
         click: () => { 
           const d = event.target.__data__
-          if (d === undefined) return
+          if (d === undefined) return; console.log(d.id)
           self.settings.exclude.cols.push(d.id)
           self.main()
         },
