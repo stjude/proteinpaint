@@ -114,7 +114,7 @@ export async function display (obj){
                 .text('Any grade per patient')
         
             btn
-                .style('padding','3px 7px')
+                .style('padding','3px 6px')
                 .style('margin-left','1px')
                 .style('margin-bottom','2px')
                 .style('font-size','1em')
@@ -156,7 +156,7 @@ export async function display (obj){
 					.attr('value','any')
 					.text('Any grade per patient')
 				btn2
-					.style('padding','3px 7px')
+					.style('padding','3px 6px')
                     .style('margin-left','1px')
                     .style('margin-bottom','2px')
                     .style('font-size','1em')
@@ -221,7 +221,7 @@ export async function display (obj){
             div_showterm
                 .append('div')
                 .attr('class','sja_filter_tag_btn')
-                .style('margin-right','10px')
+                .style('margin-right','6px')
                 .style('margin-left','1px')
                 .style('background','#4888BF')
                 .style('border-radius','0 6px 6px 0')
