@@ -335,6 +335,12 @@ export class TermdbBarchart{
           } else {
             const range = bins.find(d => d.label == label || d.name == label)
             if (range) termValues.push({term, ranges: [range]})
+            else if (term.q && term.q.binconfig && term.q.binconfig.unannotated) {
+              for(const id in term.q.binconfig.unannotated._labels) {
+                const _label = term.q.binconfig.unannotated._labels[id];
+                if (_label == label) termValues.push({term, ranges: [{value: id, label}]});
+              }
+            }
           }
         }
       }
