@@ -38,14 +38,16 @@ function processData(self, plot, data) {
   let binmax = 0
   const lst = data.refs.cols.map(t1 => {
     const d = data.charts[0].serieses.find(d => d.seriesId == t1)
+    if (!d) return null
     if (binmax < d.max) binmax = d.max
     return {
       label: t1,
       vvalue: t1,
+      value: d.total,
       boxplot: d.boxplot
     }
   })
-  render(self, plot, lst, binmax)
+  render(self, plot, lst.filter(d=>d!=null), binmax)
 }
 
 function render(self, plot, lst, binmax) {
@@ -145,21 +147,47 @@ function render(self, plot, lst, binmax) {
         .attr("stroke-width", 2)
         .attr("stroke", "black")
 
-      if(sc.use_logscale){
-        g.append("rect")
+      
+      g.append("rect")
         .attr('x', -s.barwidth/2)
         .attr('y', self.y_scale(item.boxplot.p75)-s.barheight)
         .attr('width', s.barwidth)
-        .attr('height', s.barheight - self.y_scale(item.boxplot.p75 / item.boxplot.p25))
+        .attr('height', s.barheight - self.y_scale(sc.use_logscale ? item.boxplot.p75 / item.boxplot.p25 : item.boxplot.p75-item.boxplot.p25))
         .attr('fill','#901739')
-      }else{
-        g.append("rect")
-        .attr('x', -s.barwidth/2)
-        .attr('y', self.y_scale(item.boxplot.p75)-s.barheight)
-        .attr('width', s.barwidth)
-        .attr('height', s.barheight - self.y_scale(item.boxplot.p75-item.boxplot.p25))
-        .attr('fill','#901739')
-      }
+        .on('mouseover',()=>{
+          plot.tip.clear()
+            .show(d3event.clientX,d3event.clientY)
+            .d
+            .append('div')
+            .html(
+              `<table class='sja_simpletable'>
+                <tr>
+                  <td style='padding: 3px'>${plot.term.name}</td>
+                  <td style='padding: 3px'>${item.label}</td>
+                </tr>
+                <tr>
+                  <td style='padding: 3px'>Mean</td>
+                  <td style='padding: 3px'>${item.boxplot.mean.toPrecision(4)}</td>
+                </tr>
+                <tr>
+                  <td style='padding: 3px'>Median</td>
+                  <td style='padding: 3px'>${item.boxplot.p50.toPrecision(4)}</td>
+                </tr>
+                <tr>
+                  <td style='padding: 3px'>1st to 3rd Quartile</td>
+                  <td style='padding: 3px'>${item.boxplot.p25.toPrecision(4)} to ${item.boxplot.p75.toPrecision(4)}</td>
+                </tr>
+                <tr>
+                  <td style='padding: 3px'>Std. Deviation</td>
+                  <td style='padding: 3px'>${item.boxplot.sd.toPrecision(4)}</td>
+                </tr>
+              </table>`
+            )
+        })
+        .on('mouseout',()=>{
+          plot.tip.hide()
+        })
+      
 
       g.append("line")
         .attr("x1", -s.barwidth/2.2)
@@ -192,9 +220,21 @@ function render(self, plot, lst, binmax) {
         .attr('cy', self.y_scale(outlier.value)-s.barheight)
         .attr('r', 2)
         .attr('fill','#901739')
+        .on('mouseover',()=>{
+          plot.tip.clear()
+            .show(d3event.clientX,d3event.clientY)
+            .d
+            .append('div')
+            .html(plot.term2.name + ' ' + outlier.value.toPrecision(4))
+        })
+        .on('mouseout',()=>{
+          plot.tip.hide()
+        })
     } 
     // x-label tooltip
     if( item.lst ){
+
+
       xlabel.on('mouseover',()=>{
         plot.tip.clear()
           .show(d3event.clientX,d3event.clientY)
