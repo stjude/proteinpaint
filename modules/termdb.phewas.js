@@ -68,7 +68,7 @@ q{}
 let i=0
 	for(const term of ds.cohort.termdb.q.getAlltermsbyorder()) {
 		if(!term.graph) continue
-		if(++i==60) break
+		//if(++i==60) break
 
 		//////////// prep query for this term
 		const qlst = []
