@@ -205,6 +205,16 @@ function getDataName(plot) {
           for(const subkey in filter.term) {
             if (subkey.startsWith('is')) f.term[subkey] = filter.term[subkey]
           }
+          if (filter.term.graph && filter.term.graph.barchart && filter.term.graph.barchart.numeric_bin) {
+            const unanno = filter.term.graph.barchart.numeric_bin.unannotated
+            f.exclude = Object.keys(unanno)
+              .filter(key=>key.startsWith("value")) // match unannotated.value, .value_negative, .value_positive
+              .map(key=>unanno[key]) // get unannotated[key] value
+              .filter(!filter.isnot 
+                ? value => !filter.ranges.find(range=> range.value == value)  // may actually want to NOT exclude an annotated value
+                : value => filter.ranges.find(range=> range.value == value) // exclude
+              )
+          }
         }
       }
       return f

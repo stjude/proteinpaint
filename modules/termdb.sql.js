@@ -121,11 +121,18 @@ returns:
 				range2clause.push( '('+lst.join(' AND ')+')' )
 			}
 		}
+		const exclude = tvs.exclude && tvs.exclude.length 
+			? tvs.exclude.map(d=>"?").join(",")
+			: ""
+
+		if (exclude) values.push(...tvs.exclude)
+
 		filters.push(
 			`SELECT sample
 			FROM annotations
 			WHERE term_id = ?
-			AND ( ${range2clause.join(' OR ')} )`
+			AND ( ${range2clause.join(' OR ')} )
+			${ exclude ? 'AND '+ cast +' NOT IN (' + exclude + ')' : ""}`
 		)
 	}
 
@@ -265,7 +272,7 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? "WHERE t1.sample in "+filter.CTEname : ""}
 		${opts.endclause}`
-	//console.log(statement, values)
+	console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( values )
 
