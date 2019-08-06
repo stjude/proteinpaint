@@ -222,7 +222,6 @@ function setOverlayOpts(plot, main, table, arg) {
     currterm: plot.term,
     termsetting: {term:plot.term2, q: plot.term2?plot.term2.q:undefined},
     callback: (term2) => {
-      plot.obj.tip.hide()
       plot.term2 = term2
       if (!term2) {
         plot.settings.bar.overlay = 'none'
@@ -418,7 +417,6 @@ function setDivideByOpts(plot, main, table, arg) {
     termsetting: {term:plot.term0, q: plot.term0?plot.term0.q:undefined},
     currterm: plot.term,
     callback: (term0) => {
-      plot.obj.tip.hide()
       plot.term0 = term0
       plot.settings.bar.divideBy = term0 ? 'tree' : 'none'
       main( plot )
@@ -537,7 +535,7 @@ function setBinOpts(plot, main, table, termNum, label) {
     .html('EDIT')
     .on('click',()=>{
       // click to show ui and customize binning
-      numeric_bin_edit(plot.tip, plot.term, plot.term.q, (result)=>{
+      numeric_bin_edit(plot.tip, plot.term, plot.term.q, true, (result)=>{
         if (!plot.term.q) plot.term.q = {}
         if (result !== plot.term.q) {
           for(const key in plot.term.q) delete plot.term.q[key]
