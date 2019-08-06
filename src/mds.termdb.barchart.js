@@ -12,7 +12,7 @@ const colors = {
 } 
 
 const tip = new Menu({padding:'5px'})
-tip.d.style('text-align', 'center')
+//tip.d.style('text-align', 'center')
 
 export class TermdbBarchart{
   constructor(opts={settings:{}}) {
@@ -212,8 +212,10 @@ export class TermdbBarchart{
         }
       }
     }
+    const settingsCopy = Object.assign({},this.settings)
+    delete settingsCopy.exclude
     for(const chart of chartsData.charts) {
-      Object.assign(chart.settings, this.settings, chartsData.refs)
+      Object.assign(chart.settings, settingsCopy, chartsData.refs)
       chart.visibleSerieses = chart.serieses.filter(d=>{
         return !chart.settings.exclude.cols.includes(d.seriesId)
       })
@@ -288,14 +290,17 @@ export class TermdbBarchart{
     */
 
       const termValues = []
+      self.terms.term0 = self.plot.term0
+      self.terms.term1 = self.plot.term
+      self.terms.term2 = self.plot.term2
       for(const index of [0,1,2]) { 
         const termNum = 'term' + index
         const term = self.terms[termNum]
         if (termNum == 'term0' || !term) continue
 
         const key = termNum=="term1" ? d.seriesId : d.dataId
-        const q1 = self.plot.term.q
-        const label = term.iscondition && self.grade_labels && q1.bar_by_grade
+        const q = term.q
+        const label = term.iscondition && self.grade_labels && q.bar_by_grade
           ? self.grade_labels.find(c => c.grade == key).label
           : !term.values 
           ? key
@@ -307,7 +312,7 @@ export class TermdbBarchart{
           termValues.push(Object.assign({
             term,
             values:[{key,label}]
-          }, q1))
+          }, q));
 
           if (index == 1 && self.terms.term2 && term.id == self.terms.term2.id) {
             const q2 = self.plot.term2.q
@@ -381,6 +386,7 @@ export class TermdbBarchart{
           const dataGrade = self.grade_labels
             ? self.grade_labels.find(c => c.grade == d.dataId)
             : null
+          const term1unit = term1.unit 
           const seriesLabel = (term1.values
             ? term1.values[d.seriesId].label
             : term1.iscondition && seriesGrade
@@ -393,16 +399,12 @@ export class TermdbBarchart{
             : d.dataId) + (term2 && term2.unit ? ' '+ term2.unit : '')
           const icon = !term2
             ? ''
-            : "<div style='display:inline-block; width:12px; height:12px; margin: 2px 3px; vertical-align:top; background:"+d.color+"'>&nbsp;</div>"
-          const html = '<span>'+ seriesLabel + '</span>' +
-            (!term2 ? "" : "<br/>" + icon + '<span>' + dataLabel + '</span>') + 
-            "<br/><span>Total: " + d.total + '</span>' + 
-            (
-              !term2 
-              ? "" 
-              : "<br/><span>Percentage: " + (100*d.total/d.seriesTotal).toFixed(1) + "%</span>"
-            );
-          tip.show(event.clientX, event.clientY).d.html(html);
+            : "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:"+d.color+"'>&nbsp;</div>"
+          const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${seriesLabel}</td></tr>`]
+          if (term2) rows.push(`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${dataLabel}</span></td></tr>`)
+          rows.push(`<tr><td style='padding:3px; color:#aaa'>Total</td><td style='padding:3px'>${d.total}</td></tr>`)
+          rows.push(`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px'>${(100*d.total/d.seriesTotal).toFixed(1)}</td></tr>`)
+          tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`);
         },
         mouseout: ()=>{
           tip.hide()
