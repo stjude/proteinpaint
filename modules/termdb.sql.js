@@ -121,18 +121,31 @@ returns:
 				range2clause.push( '('+lst.join(' AND ')+')' )
 			}
 		}
-		const exclude = tvs.exclude && tvs.exclude.length 
-			? tvs.exclude.map(d=>"?").join(",")
-			: ""
 
-		if (exclude) values.push(...tvs.exclude)
+    const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
+    let exclude = ''
+    if (term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
+      const unanno = term.graph.barchart.numeric_bin.unannotated
+      const _exclude = Object.keys(unanno)
+        .filter(key=>key.startsWith("value")) // match unannotated.value, .value_negative, .value_positive
+        .map(key=>unanno[key]) // get unannotated[key] value
+        .filter(!tvs.isnot 
+          ? value => !tvs.ranges.find(range=> range.value == value)  // may actually want to NOT exclude an annotated value
+          : value => !tvs.ranges.find(range=> range.value == value) // exclude
+        )
+
+      if (_exclude.length) {
+      	exclude = `AND ${cast} NOT IN (${_exclude.map(d=>"?").join(",")})`
+      	values.push(..._exclude)
+      }
+    }
 
 		filters.push(
 			`SELECT sample
 			FROM annotations
 			WHERE term_id = ?
 			AND ( ${range2clause.join(' OR ')} )
-			${ exclude ? 'AND '+ cast +' NOT IN (' + exclude + ')' : ""}`
+			${exclude}`
 		)
 	}
 
