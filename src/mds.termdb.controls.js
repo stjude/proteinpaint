@@ -250,13 +250,11 @@ function setOverlayOpts(plot, main, table, arg) {
   .property('checked', d => d.value == plot.settings.bar.overlay)
   .on('input', d => {
     d3event.stopPropagation()
-    const term2_selected = plot.term2
     plot.settings.bar.overlay = d.value
     if (d.value == "none") {
       plot.term2 = undefined
       plot.term2_displaymode = 'stacked'
       main(plot)
-      plot.term2 = term2_selected
     } else if (d.value == "tree") {
       plot.term2 = termuiObj.termsetting.term
       main(plot)
@@ -434,7 +432,6 @@ function setDivideByOpts(plot, main, table, arg) {
   .property('checked', d => d.value == plot.settings.bar.divideBy)
   .on('input', d => {
     d3event.stopPropagation()
-    const term0_selected = plot.term0
     plot.settings.bar.divideBy = d.value
     if (d.value == "none") {
       plot.term0 = undefined

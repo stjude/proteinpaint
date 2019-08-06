@@ -90,6 +90,8 @@ export class TermdbBarchart{
       this.terms.term2 = {name: this.settings.mname}
     } else if ('term2' in this.settings && plot.term2) {
       this.terms.term2 = plot.term2 
+    } else {
+      this.terms.term2 = null
     }
     this.terms.term0 = settings.term0 && plot.term0 ? plot.term0 : null
   }

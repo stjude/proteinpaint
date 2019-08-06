@@ -28,18 +28,20 @@ export function init(holder) {
 function processData(self, data) {
   const column_keys = data.refs.rows
   const rows = data.refs.cols.map(t1 => {
+    const series = data.charts[0].serieses.find(d => d.seriesId == t1)
     return {
       label: t1,
-      lst: data.charts[0].serieses
-        .find(d => d.seriesId == t1)
-        .data.slice()
-        .sort((a,b) => column_keys.indexOf(a.dataId) - column_keys.indexOf(b.dataId))
-        .map(d => {
-          return {
-            label: d.dataId,
-            value: d.total
-          }
-        })
+      lst: !series 
+        ? []
+        : series
+          .data.slice()
+          .sort((a,b) => column_keys.indexOf(a.dataId) - column_keys.indexOf(b.dataId))
+          .map(d => {
+            return {
+              label: d.dataId,
+              value: d.total
+            }
+          })
     }
   })
   render(self, column_keys, rows)
