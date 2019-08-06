@@ -25,7 +25,7 @@ const express=require('express'),
 	spawn=child_process.spawn,
 	exec=child_process.exec,
 	path=require('path'),
-	sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
+	//sqlite3=require('sqlite3').verbose(), // TODO  replace by bettersqlite
 	createCanvas = require('canvas').createCanvas,
 	d3color=require('d3-color'),
 	d3stratify=require('d3-hierarchy').stratify,
@@ -186,7 +186,6 @@ app.post('/vcfheader',handle_vcfheader)
 app.post('/translategm',handle_translategm)
 app.post('/hicstat',handle_hicstat)
 app.post('/hicdata',handle_hicdata)
-app.post('/checkrank',handle_checkrank)
 app.post('/samplematrix', handle_samplematrix)
 app.post('/mdssamplescatterplot',handle_mdssamplescatterplot)
 app.post('/mdssamplesignature',handle_mdssamplesignature)
@@ -2615,7 +2614,7 @@ function handle_dsdata(req,res) {
 				})
 			})
 		} else {
-			// query from ds.db
+			// query from ds.newconn
 			tasks.push(next=>{
 				const sqlstr=query.makequery(req.query)
 				if(!sqlstr) {
@@ -2623,11 +2622,7 @@ function handle_dsdata(req,res) {
 					next(null)
 					return
 				}
-				ds.db.all(sqlstr,(err,rows)=>{
-					if(err) {
-						next(err)
-						return
-					}
+				const rows = ds.newconn.prepare(sqlstr).all()
 					let lst
 					if(query.tidy) {
 						lst=rows.map(i=>query.tidy(i))
@@ -2663,7 +2658,6 @@ function handle_dsdata(req,res) {
 					}
 					data.push(result)
 					next(null)
-				})
 			})
 		}
 	}
@@ -12441,6 +12435,12 @@ for(const genomename in genomes) {
 			/*
 			this dataset has a db
 			*/
+			try {
+				ds.newconn = utils.connect_db( ds.dbfile )
+			} catch(e) {
+				return 'cannot connect to db: '+ds.dbfile
+			}
+			/*
 			const file=path.join(serverconfig.tpmasterdir,ds.dbfile)
 			ds.__dbopener = new Promise((resolve,reject)=>{
 				ds.db=new sqlite3.Database(file, sqlite3.OPEN_READONLY, err=>{
@@ -12460,6 +12460,7 @@ for(const genomename in genomes) {
 				console.error('sqlite3: failed to open db at '+file+': '+err)
 				process.exit()
 			})
+			*/
 		}
 
 		if(ds.snvindel_attributes) {
@@ -12513,22 +12514,10 @@ for(const genomename in genomes) {
 				cohort content to be loaded lazily from db
 				*/
 				if(!ds.cohort.fromdb.sql) return '.sql missing from ds.cohort.fromdb in '+genomename+'.'+ds.label
-				if(!ds.__dbopener) return '.dbfile missing from ds while ds.cohort.fromdb is set in '+genomename+'.'+ds.label
-				ds.__dbopener.then( ()=>{
-					ds.db.all(ds.cohort.fromdb.sql,(err,rows)=>{
-						if(err) {
-							throw(err)
-							return
-						}
-						delete ds.cohort.fromdb
-						ds.cohort.raw = rows ///// backward compatible
-						console.log(rows.length+' rows retrieved for '+ds.label+' sample annotation')
-					})
-				})
-				.catch(err=>{
-					console.error('Error getting cohort from db: '+ds.cohort.fromdb.sql+': '+err)
-					process.exit()
-				})
+				const rows = ds.newconn.prepare(ds.cohort.fromdb.sql).all()
+				delete ds.cohort.fromdb
+				ds.cohort.raw = rows ///// backward compatible
+				console.log(rows.length+' rows retrieved for '+ds.label+' sample annotation')
 			}
 
 			if(ds.cohort.files) {
@@ -12605,7 +12594,6 @@ for(const genomename in genomes) {
 			} else {
 				// must be db-querying
 				if(!q.makequery) return ds.label+': makequery missing for '+q.name
-				if(!ds.dbfile) return ds.label+': makequery used but no dbfile'
 				if(q.isgeneexpression) {
 					if(!q.config) return 'config object missing for gene expression query of '+q.name
 					if(q.config.maf) {
@@ -13712,203 +13700,3 @@ function mds_init_mdsvcf(query, ds, genome) {
 
 
 ////////////// end of __MDS
-
-
-
-
-
-
-
-
-
-///////////// begin of __rank
-
-function handle_checkrank(req,res) {
-	/*
-	several methods to check rank:
-	- dataset expression db, old
-	- dataset expression db, mds
-	- custom bedj track
-
-	*/
-	if(reqbodyisinvalidjson(req,res)) return
-	if(!genomes[req.query.genome]) return res.send({error:'invalid genome'})
-
-	if(req.query.dsname) {
-		checkrank_dsexpression(req,res)
-		return
-	}
-	if(req.query.isbedj) {
-		checkrank_bedj(req,res)
-		return
-	}
-	return res.send({error:'unknown method for checking rank'})
-}
-
-
-
-
-function checkrank_dsexpression(req,res) {
-	/*
-	for each given gene, query ds for expression data over all available samples
-	and convert that gene's custom value to rank with respect to the db expression data
-	*/
-	if(!req.query.dsname) return res.send({error:'.dsname missing'})
-	const ds=genomes[req.query.genome].datasets[req.query.dsname]
-	if(!ds) return res.send({error:'invalid dsname'})
-
-	// to support mds
-
-
-	if(req.query.queryidx!=undefined) {
-		// query from old-style sqlite db
-		const query = ds.queries[req.query.queryidx]
-		if(!query) return res.send({error:'no query found by queryidx'})
-		if(!query.isgeneexpression) return res.send({error:'not querying a gene expression database'})
-
-		const tasks=[]
-		for(const [gene, value] of req.query.genelst) {
-			const sqlstr=query.makequery({genename:gene})
-			if(!sqlstr) {
-				continue
-			}
-			tasks.push( new Promise((resolve, reject)=>{
-				ds.db.all(sqlstr,(err,rows)=>{
-					if(err) throw({message:err})
-
-					const values = []
-					for(const r of rows) {
-						// FIXME "value" key is hardcoded, specify it in ds
-						if(Number.isFinite(r.value)) {
-							values.push(r.value)
-						}
-					}
-					values.sort((a,b)=>a-b)
-
-					const idx = values.findIndex( i=> i>value )
-					let rank
-					if(idx==-1) {
-						rank=100
-					} else {
-						rank = Math.ceil( idx * 100 / values.length )
-					}
-					resolve( [gene, rank ])
-				})
-			}))
-		}
-		Promise.all( tasks )
-		.then(data=>{
-			res.send({items: data})
-		})
-		.catch(err=>{
-			res.send({error:err.message})
-			if(err.stack) console.log(err.stack)
-		})
-	}
-}
-
-
-
-function checkrank_bedj(req,res) {
-	/*
-	load expression from a range
-	*/
-	const gene2rawvalue = new Map()
-	for(const g of req.query.genelst) {
-		gene2rawvalue.set( g[0], g[1] )
-	}
-
-	const [e,tkfile,isurl] = fileurl(req)
-	if(e) return res.send({error:e})
-
-	Promise.resolve()
-	.then(()=>{
-
-		if(!isurl) return {file:tkfile}
-		const indexurl = req.query.indexURL || tkfile+'.tbi'
-
-		return cache_index_promise(indexurl)
-		.then(dir=>{
-			return {file:tkfile, dir:dir}
-		})
-	})
-
-	.then( fileobj => {
-
-		// query data over each region
-		const tasks = []
-		for(const region of req.query.regions) {
-			tasks.push( new Promise((resolve,reject)=>{
-				const ps=spawn(tabix, [fileobj.file, region],{cwd:fileobj.dir})
-				const out=[]
-				const errout = []
-				ps.stdout.on('data',i=>out.push(i))
-				ps.stderr.on('data',i=>errout.push(i))
-				ps.on('close',code=>{
-					const e=errout.join('')
-					if(e && !tabixnoterror(e)) {
-						reject(e)
-					}
-					resolve( out.join('').trim().split('\n') )
-				})
-			})
-			)
-		}
-		return Promise.all(tasks)
-	})
-	
-	.then(data=>{
-		// got data for each region
-		const gene2cohort = new Map() // collect cohort values for genes to look at
-		for(const gene of gene2rawvalue.keys()) {
-			gene2cohort.set( gene, [] )
-		}
-		for(const lines of data) {
-			for(const line of lines) {
-				if(!line) continue
-				const l = line.split('\t')
-				if(l.length!=4) continue
-				let j
-				try{
-					j = JSON.parse(l[3])
-				} catch(e){
-					continue
-				}
-				if(j.gene && gene2cohort.has( j.gene)) {
-					if(!Number.isFinite(j.value)) continue
-					gene2cohort.get( j.gene ).push( j.value )
-				}
-			}
-		}
-
-		const result=[]
-		for(const [gene, values] of gene2cohort) {
-			if(values.length==0) continue
-			values.sort((i,j)=>i-j)
-			const idx = values.findIndex( i=> i > gene2rawvalue.get(gene) )
-			let rank
-			if(idx==-1) {
-				rank=100
-			} else {
-				rank = Math.ceil( idx * 100 / values.length )
-			}
-			result.push([ gene, rank ])
-		}
-		res.send({items:result})
-	})
-	.catch(err=>{
-		res.send({error:err.message})
-		if(err.stack) console.log(err.stack)
-	})
-}
-
-
-///////////// end of __rank
-
-
-
-
-
-
-
-

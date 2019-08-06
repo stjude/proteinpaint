@@ -31,7 +31,7 @@ loadfile_ssid
 
 
 
-export async function init_one_vcf ( tk, genome ) {
+exports.init_one_vcf = async function ( tk, genome ) {
 
 	let filelocation
 	if( tk.file ) {
@@ -66,7 +66,7 @@ export async function init_one_vcf ( tk, genome ) {
 
 
 
-export async function validate_tabixfile ( file ) {
+async function validate_tabixfile ( file ) {
 	/*
 	file is full path
 	url not accepted
@@ -86,6 +86,7 @@ export async function validate_tabixfile ( file ) {
 		if(await file_not_readable(tbi)) throw '.tbi index file not readable'
 	}
 }
+exports.validate_tabixfile = validate_tabixfile
 
 
 
@@ -103,7 +104,7 @@ async function tabix_is_nochr ( file, dir, genome ) {
 
 
 
-export function file_not_exist ( file ) {
+function file_not_exist ( file ) {
 	return new Promise((resolve,reject)=>{
 		fs.access( file, fs.constants.F_OK, err=>{
 			if(err) resolve( true )
@@ -114,7 +115,7 @@ export function file_not_exist ( file ) {
 
 
 
-export function file_not_readable ( file ) {
+function file_not_readable ( file ) {
 	return new Promise((resolve,reject)=>{
 		fs.access( file, fs.constants.R_OK, err=>{
 			if(err) resolve( true )
@@ -122,6 +123,8 @@ export function file_not_readable ( file ) {
 		})
 	})
 }
+exports.file_not_readable = file_not_readable
+exports.file_not_exist = file_not_exist
 
 
 async function get_header_vcf ( file, dir ) {
@@ -141,7 +144,7 @@ async function get_header_vcf ( file, dir ) {
 
 
 
-export function get_lines_tabix ( args, dir, callback ) {
+function get_lines_tabix ( args, dir, callback ) {
 	return new Promise((resolve,reject)=>{
 		const ps = spawn( tabix, args, {cwd:dir} )
 		const rl = readline.createInterface({ input: ps.stdout })
@@ -153,11 +156,11 @@ export function get_lines_tabix ( args, dir, callback ) {
 		})
 	})
 }
+exports.get_lines_tabix = get_lines_tabix
 
 
 
-
-export function write_file ( file, text ) {
+function write_file ( file, text ) {
 	return new Promise((resolve, reject)=>{
 		fs.writeFile( file, text, (err)=>{
 			if(err) reject('cannot write')
@@ -165,10 +168,11 @@ export function write_file ( file, text ) {
 		})
 	})
 }
+exports.write_file = write_file
 
 
 
-export function read_file ( file ) {
+function read_file ( file ) {
 	return new Promise((resolve,reject)=>{
 		fs.readFile( file, {encoding:'utf8'}, (err,txt)=>{
 			// must use reject in callback, not throw
@@ -177,11 +181,12 @@ export function read_file ( file ) {
 		})
 	})
 }
+exports.read_file = read_file
 
 
 
 
-export function get_fasta ( gn, pos ) {
+exports.get_fasta = function ( gn, pos ) {
 // chr:start-stop, positions are 1-based
 	return new Promise((resolve,reject)=>{
 		const ps = spawn(samtools, ['faidx', gn.genomefile, pos])
@@ -195,20 +200,22 @@ export function get_fasta ( gn, pos ) {
 
 
 
-export function connect_db (file) {
+exports.connect_db = function (file) {
 	return new bettersqlite( path.join(serverconfig.tpmasterdir,file), {readonly:true, fileMustExist:true} )
 }
 
 
-export const genotype_type_set = new Set(["Homozygous reference","Homozygous alternative","Heterozygous"])
-export const genotype_types = {
+const genotype_type_set = new Set(["Homozygous reference","Homozygous alternative","Heterozygous"])
+const genotype_types = {
   href: "Homozygous reference",
   halt: "Homozygous alternative",
   het: "Heterozygous"
 }
+exports.genotype_type_set = genotype_type_set
+exports.genotype_types = genotype_types
 
 
-export async function loadfile_ssid ( id ) {
+exports.loadfile_ssid = async function ( id ) {
 /*
 */
 	const text = await read_file( path.join( serverconfig.cachedir, 'ssid', id ) )
@@ -233,7 +240,7 @@ export async function loadfile_ssid ( id ) {
 
 
 
-export function run_fishertest( tmpfile ) {
+exports.run_fishertest = function ( tmpfile ) {
 	const pfile = tmpfile+'.pvalue'
 	return new Promise((resolve,reject)=>{
 		const sp = spawn('Rscript',['utils/fisher.R',tmpfile,pfile])
@@ -243,7 +250,7 @@ export function run_fishertest( tmpfile ) {
 }
 
 
-export async function run_fdr ( plst ) {
+exports.run_fdr = async function ( plst ) {
 // list of pvalues
 	const infile = path.join(serverconfig.cachedir, Math.random().toString())
 	const outfile = infile+'.out'
