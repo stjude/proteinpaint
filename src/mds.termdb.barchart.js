@@ -113,7 +113,7 @@ export class TermdbBarchart{
 
     self.seriesOrder = !chartsData.charts.length 
       ? [] 
-      :chartsData.charts[0].serieses
+      : chartsData.charts[0].serieses
         .sort(chartsData.refs.useColOrder
           ? (a,b) => cols.indexOf(b.seriesId) - cols.indexOf(a.seriesId)
           : (a,b) => !isNaN(a.seriesId)
@@ -198,7 +198,7 @@ export class TermdbBarchart{
         if (unannotatedColLabels) {
           for(const label of unannotatedColLabels) {
             if (!this.settings.exclude.cols.includes(label)) {
-              this.settings.exclude.cols.push(label)
+              //this.settings.exclude.cols.push(label) // do not automatically hide for now
             }
           }
         }
@@ -206,7 +206,7 @@ export class TermdbBarchart{
         if (unannotatedRowLabels) {
           for(const label of unannotatedRowLabels) {
             if (!this.settings.exclude.rows.includes(label)) {
-              this.settings.exclude.rows.push(label)
+              //this.settings.exclude.rows.push(label) // do not automatically hide for now
             }
           }
         }
@@ -261,6 +261,8 @@ export class TermdbBarchart{
       seriesLogTotal += result.logTotal;
       this.setTerm2Color(result)
       result.color = this.term2toColor[result.dataId]
+      result.unannotatedSeries = series.unannotated
+      result.unannotatedData = result.unannotated
     }
     if (seriesLogTotal > chart.maxSeriesLogTotal) {
       chart.maxSeriesLogTotal = seriesLogTotal
@@ -340,8 +342,10 @@ export class TermdbBarchart{
           } else {
             const range = bins.find(d => d.label == label || d.name == label)
             if (range) termValues.push({term, ranges: [range]})
-            else if (d.unannotated) { console.log(d.unannotated)
-               termValues.push({term, ranges: [{value: d.unannotated.value, label}]})
+            else if (index==1 && d.unannotatedSeries) {
+               termValues.push({term, ranges: [{value: d.unannotatedSeries.value, label}]})
+            } else if (index==2 && d.unannotatedData) {
+               termValues.push({term, ranges: [{value: d.unannotatedData.value, label}]})
             } else if (term.q && term.q.binconfig && term.q.binconfig.unannotated) {
               for(const id in term.q.binconfig.unannotated._labels) {
                 const _label = term.q.binconfig.unannotated._labels[id];

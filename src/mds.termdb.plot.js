@@ -196,7 +196,19 @@ function getDataName(plot) {
   } 
 
   if (obj.termfilter && obj.termfilter.terms && obj.termfilter.terms.length) {
-    params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
+    params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms.map(filter=>{
+      const f = Object.create(null)
+      for(const key in filter) {
+        if (key != "term") f[key] = filter[key]
+        else {
+          f.term = {id: filter.term.id}
+          for(const subkey in filter.term) {
+            if (subkey.startsWith('is')) f.term[subkey] = filter.term[subkey]
+          }
+        }
+      }
+      return f
+    }))))
   }
 
   return '?' + params.join('&')
