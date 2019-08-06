@@ -48,12 +48,25 @@ export async function display (obj){
 			.selectAll('*').remove()
 
         if(!obj.is_term1){
+            let term_name = obj.termsetting.term.name
+
+            // trim long term name with '...' at end and hover to see full term_name
+            if((obj.termsetting.term.isfloat || obj.termsetting.term.isinteger) && obj.termsetting.term.name.length >25){
+                term_name = '<label title="'+obj.termsetting.term.name+'">'
+                    +obj.termsetting.term.name.substring(0,24)+'...'
+                    +'</label>'
+            }else if(obj.termsetting.term.iscondition && obj.termsetting.term.name.length >12){
+                term_name = '<label title="'+obj.termsetting.term.name+'">'
+                    +obj.termsetting.term.name.substring(0,10)+'...'
+                    +'</label>'
+            }
+
             add_term_button( div_showterm )
-                .text( obj.termsetting.term.name )
+                .html( term_name )
                 .style('margin-bottom','2px')
                 .style('border-radius', '6px 0px 0px 6px')
-        }    
-
+        }
+        
         if(obj.termsetting.term.isfloat || obj.termsetting.term.isinteger){
 
             div_showterm

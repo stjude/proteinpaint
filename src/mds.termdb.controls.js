@@ -42,7 +42,7 @@ export function controls(arg, plot, main) {
       tip.style('visibility', visibility == 'hidden' ? 'visible' : 'hidden')
         
       plot.config_div
-        .style('max-width', visibility == 'hidden' ? '500px' : '50px')
+        .style('max-width', visibility == 'hidden' ? '660px' : '50px')
         .style('background', visibility == 'hidden' ? panel_bg_color : '')
         // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
 
