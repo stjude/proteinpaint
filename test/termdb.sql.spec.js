@@ -1,3 +1,11 @@
+/*
+  Requires a running pp server, `npm run server`
+
+  See the header comments in test/termdb.barchart.server.js 
+  for help in troubleshooting a failing test if
+  encountered below.
+*/
+
 const tape = require("tape")
 const fs = require('fs')
 const path = require('path')
@@ -10,11 +18,6 @@ const dest = path.join(serverconfig.cachedir,'ssid',ssid)
 fs.copyFileSync(src, dest, (err) => {
   if (err) throw err;
 });
-
-/*
-  requires a running pp server
-*/
-
 
 tape("\n", function(test) {
   test.pass("-***- termdb.sql specs -***-")

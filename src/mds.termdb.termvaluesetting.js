@@ -1,4 +1,4 @@
-exports.validate_termvaluesetting = ( lst, from ) => {
+export function validate_termvaluesetting ( lst, from ) {
 /*
 shared between client and server
 for validating a list of term-value setting
@@ -29,17 +29,7 @@ TODO also work for termdb filter
 					// is a special category, not a value from numerical range
 					if(!range.label) throw '.label missing for is_unannotated category'
 				} else {
-					// a regular range
-					if(range.startunbounded && range.stopunbounded) throw 'both start & stop are unbounded from range of a term from '+from
-					if(range.startunbounded) {
-						if(!Number.isFinite(range.stop)) throw '.stop undefined when start is unbounded for a term from '+from
-					} else if(range.stopunbounded) {
-						if(!Number.isFinite(range.start)) throw '.start undefined when stop is unbounded for a term from '+from
-					} else {
-						if(!Number.isFinite(range.start)) throw '.start undefined when start is not unbounded for a term from '+from
-						if(!Number.isFinite(range.stop)) throw '.stop undefined when stop is not unbounded for a term from '+from
-						if(range.start >= range.stop ) throw '.start is not lower than stop for a term from '+from
-					}
+					validate_single_numericrange( range, from )
 				}
 			}
 			continue
@@ -70,5 +60,21 @@ TODO also work for termdb filter
 			continue
 		}
 		throw 'unknown term type from a '+from+' term'
+	}
+}
+
+
+
+export function validate_single_numericrange ( r, from ) {
+	// a regular range
+	if(r.startunbounded) {
+		if(r.stopunbounded) throw 'both start & stop are unbounded from '+from
+		if(!Number.isFinite(r.stop)) throw '.stop undefined when start is unbounded from '+from
+	} else if(r.stopunbounded) {
+		if(!Number.isFinite(r.start)) throw '.start undefined when stop is unbounded from '+from
+	} else {
+		if(!Number.isFinite(r.start)) throw '.start undefined when start is not unbounded from '+from
+		if(!Number.isFinite(r.stop)) throw '.stop undefined when stop is not unbounded from '+from
+		if(r.start >= r.stop ) throw '.start is not lower than stop from '+from
 	}
 }

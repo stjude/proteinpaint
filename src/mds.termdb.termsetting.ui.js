@@ -47,13 +47,26 @@ export async function display (obj){
             .style('display','block')
 			.selectAll('*').remove()
 
-        if(!obj.bars_as){
+        if(!obj.is_term1){
+            let term_name = obj.termsetting.term.name
+
+            // trim long term name with '...' at end and hover to see full term_name
+            if((obj.termsetting.term.isfloat || obj.termsetting.term.isinteger) && obj.termsetting.term.name.length >25){
+                term_name = '<label title="'+obj.termsetting.term.name+'">'
+                    +obj.termsetting.term.name.substring(0,24)+'...'
+                    +'</label>'
+            }else if(obj.termsetting.term.iscondition && obj.termsetting.term.name.length >12){
+                term_name = '<label title="'+obj.termsetting.term.name+'">'
+                    +obj.termsetting.term.name.substring(0,10)+'...'
+                    +'</label>'
+            }
+
             add_term_button( div_showterm )
-                .text( obj.termsetting.term.name )
+                .html( term_name )
                 .style('margin-bottom','2px')
                 .style('border-radius', '6px 0px 0px 6px')
-        }    
-
+        }
+        
         if(obj.termsetting.term.isfloat || obj.termsetting.term.isinteger){
 
             div_showterm
@@ -66,9 +79,8 @@ export async function display (obj){
                 .html('BINS')
                 .on('click',()=>{
                     // click to show ui and customize binning
-                    numeric_bin_edit(obj.tip, obj.termsetting.term, obj.termsetting.term.q, (result)=>{
-                        obj.termsetting.term.q = result;
-                        obj.termsetting.q = result
+                    numeric_bin_edit(obj.tip, obj.termsetting.term, obj.termsetting.term.q, obj.is_term1, (result)=>{
+                        obj.termsetting.term.q = result
                         obj.callback(obj.termsetting.term)
                     })
                 })
@@ -102,7 +114,7 @@ export async function display (obj){
                 .text('Any grade per patient')
         
             btn
-                .style('padding','3px 7px')
+                .style('padding','3px 6px')
                 .style('margin-left','1px')
                 .style('margin-bottom','2px')
                 .style('font-size','1em')
@@ -144,7 +156,7 @@ export async function display (obj){
 					.attr('value','any')
 					.text('Any grade per patient')
 				btn2
-					.style('padding','3px 7px')
+					.style('padding','3px 6px')
                     .style('margin-left','1px')
                     .style('margin-bottom','2px')
                     .style('font-size','1em')
@@ -173,7 +185,7 @@ export async function display (obj){
                 select.style('width',btn.node().offsetWidth+'px')
                     .style('margin-left','-'+btn.node().offsetWidth+'px')
 
-                if(obj.bars_as) btn.style('border-radius', '6px')
+                if(obj.is_term1) btn.style('border-radius', '6px')
 			}
 			function __flip_select2() {
 				if(!select2) return
@@ -197,7 +209,7 @@ export async function display (obj){
                 select2.style( 'width', btn2.node().offsetWidth+'px' )
                     .style('margin-left','-'+btn2.node().offsetWidth+'px')
 
-                if(obj.bars_as){
+                if(obj.is_term1){
                     btn.style('border-radius', '6px 0 0 6px')
                     btn2.style('border-radius','0 6px 6px 0')
                 } 
@@ -205,11 +217,11 @@ export async function display (obj){
         }
 
         // button to remove term
-        if(!obj.bars_as){
+        if(!obj.is_term1){
             div_showterm
                 .append('div')
                 .attr('class','sja_filter_tag_btn')
-                .style('margin-right','10px')
+                .style('margin-right','6px')
                 .style('margin-left','1px')
                 .style('background','#4888BF')
                 .style('border-radius','0 6px 6px 0')
@@ -720,9 +732,9 @@ function edit_bin_menu(bin_edit_tip, custom_bins_q, term_q, bin_flag, update_btn
   
 }
 
-export function numeric_bin_edit(tip, term, term_q, callback){
+export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
     
-    let custom_bins_q
+    let custom_bins_q, default_bins_q
 
     if(term_q && term_q.binconfig){
             
@@ -732,30 +744,16 @@ export function numeric_bin_edit(tip, term, term_q, callback){
     }else if(term.graph.barchart.numeric_bin.bins){
         
         //if binconfig not defined yet or deleted by user, set it as numeric_bin.bins
-        const bins = term.graph.barchart.numeric_bin.bins
-        custom_bins_q = {
-            bin_size: bins.bin_size,
-            startinclusive: bins.startinclusive,
-            stopinclusive: bins.stopinclusive,
-            first_bin:{
-                stop: bins.first_bin.stop,
-                startunbounded: bins.first_bin.startunbounded,
-                startinclusive: bins.first_bin.startinclusive,
-                stopinclusive: bins.first_bin.stopinclusive
-            }
-        }
+        const bins = (term.graph.barchart.numeric_bin.bins_less && !is_term1) ? 
+            term.graph.barchart.numeric_bin.bins_less :
+            term.graph.barchart.numeric_bin.bins
 
-        if(bins.first_bin.start) custom_bins_q.first_bin.start = bins.first_bin.start
-        if(bins.last_bin && bins.last_bin.start){
-            custom_bins_q.last_bin = {
-                start: bins.last_bin.start,
-                stopunbounded: bins.last_bin.stopunbounded,
-                startinclusive: bins.last_bin.startinclusive,
-                stopinclusive: bins.last_bin.stopinclusive
-            }
-        if(bins.last_bin.stop) custom_bins_q.last_bin.stop = bins.last_bin.stop
-        }
+        custom_bins_q = JSON.parse(JSON.stringify(bins))
     }
+    
+    default_bins_q = (term.graph.barchart.numeric_bin.bins_less && !is_term1)? 
+            term.graph.barchart.numeric_bin.bins_less :
+            term.graph.barchart.numeric_bin.bins
 
     tip.clear().showunder(d3event.target)
 
@@ -765,6 +763,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
 		.style('border-spacing','7px')
 		.style('border-collapse','separate')
 
+    //Bin Size edit row
     const bin_size_tr = config_table.append('tr')
 
     bin_size_tr.append('td')
@@ -775,6 +774,7 @@ export function numeric_bin_edit(tip, term, term_q, callback){
 
     bin_size_edit()
 
+    //First Bin edit row
     const first_bin_tr = config_table.append('tr')
     
     first_bin_tr.append('td')
@@ -783,8 +783,9 @@ export function numeric_bin_edit(tip, term, term_q, callback){
 
     const first_bin_td = first_bin_tr.append('td')   
 
-    end_bin_edit(first_bin_tr, first_bin_td, 'first')
+    end_bin_edit(first_bin_td, 'first')
 
+    //Last bin edit row
     const last_bin_tr = config_table.append('tr')
     
     last_bin_tr.append('td')
@@ -792,10 +793,100 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         .html('Last Bin')
 
     const last_bin_td = last_bin_tr.append('td')
+    
+    const last_bin_select_div = last_bin_td.append('div')
+    .style('display','none')
 
-    end_bin_edit(last_bin_tr, last_bin_td, 'last')
+    // if last bin is not defined, it will be auto, can be edited from dropdown
+    const last_bin_select = last_bin_select_div.append('select')
+        .style('margin-left','15px')
+        .style('margin-bottom','7px')
+        .on('change',()=>{
+            apply_last_bin_change()
+        })  
 
+    last_bin_select.append('option')
+        .attr('value','auto')
+        .html('Auto')
+
+    last_bin_select.append('option')
+        .attr('value','custom')
+        .html('Custom Bin')
+
+    if(Object.keys(custom_bins_q.last_bin).length === 0 && custom_bins_q.last_bin.constructor === Object){
+        last_bin_select.node().selectedIndex = 0
+    }else if(JSON.stringify(custom_bins_q.last_bin) != JSON.stringify(default_bins_q.last_bin)){
+        last_bin_select.node().selectedIndex = 1
+    }
+
+    const last_bin_edit_div = last_bin_td.append('div')
+        .style('display','none')
+
+    apply_last_bin_change()
+
+    end_bin_edit(last_bin_edit_div, 'last')
+
+    function apply_last_bin_change(){
+    
+        if(last_bin_select.node().value == 'custom'){
+            last_bin_edit_div.style('display','block')
+        }else{
+            const last_bin = default_bins_q.last_bin? default_bins_q.last_bin : {}
+            term_q.binconfig.last_bin = JSON.parse(JSON.stringify(last_bin))
+            custom_bins_q.last_bin = JSON.parse(JSON.stringify(last_bin))
+            callback(term_q)
+            last_bin_edit_div.style('display','none')
+        }
+    }  
+
+    if(!default_bins_q.last_bin || (Object.keys(default_bins_q.last_bin).length === 0 && default_bins_q.last_bin.constructor === Object)){
+        last_bin_select_div.style('display','block')
+    }else{
+        last_bin_edit_div.style('display','block')
+    }
+
+    // note for users to press enter to make changes to bins
+    const note_tr = config_table.append('tr')
+
+    note_tr.append('td')
+    
+    note_tr.append('td').append('div')
+        .style('font-size','.6em')
+        .style('margin-left','10px') 
+        .style('color','#858585')   
+        .text('Note: Press ENTER to update.')
+
+    // reset row with 'reset to default' button if any changes detected
+    const reset_bins_tr = config_table.append('tr')
+        .style('display','none')
+
+    const button_div = reset_bins_tr.append('div')
+        .style('display','inline-block')
+
+    // reset button    
+    button_div.append('div')
+        .style('font-size','.8em')
+        .style('margin-left','10px')    
+        .style('display','inline-block')
+        .style('border-radius','5px')
+        .attr('class','sja_menuoption')
+        .text('RESET')
+        .on('click',()=>{
+            term_q.binconfig = JSON.parse(JSON.stringify(default_bins_q))
+            // custom_bins_q = JSON.parse(JSON.stringify(default_bins_q))
+            callback(term_q)
+            bin_size_edit()
+            end_bin_edit(first_bin_td, 'first')
+            end_bin_edit(last_bin_td, 'last')
+            reset_bins_tr.style('display','none')
+        })
+    
+    if(bins_customized(term_q.binconfig, default_bins_q)) reset_bins_tr.style('display','table-row')
+    
+    // function to edit bin_size options
     function bin_size_edit(){
+
+        bin_size_td.selectAll('*').remove()
     
         const x = '<span style="font-family:Times;font-style:italic">x</span>'
         
@@ -804,16 +895,19 @@ export function numeric_bin_edit(tip, term, term_q, callback){
             .attr('value',custom_bins_q.bin_size)
             .style('margin-left','15px')
             .style('width','60px')
-            .on('keyup', async ()=>{
+            .on('keyup', ()=>{
                 if(!client.keyupEnter()) return
                 bin_size_input.property('disabled',true)
                 apply()
-                bin_size_input.property('disabled',false)
+                bin_size_input.property('disabled',false).node().focus()
             })
         
         // select between start/stop inclusive
         const include_select = bin_size_td.append('select')
             .style('margin-left','10px')
+            .on('change', ()=>{
+                apply()
+            })
         
         include_select.append('option')
             .attr('value','stopinclusive')
@@ -824,25 +918,6 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         
         include_select.node().selectedIndex =
             custom_bins_q.startinclusive ? 1 : 0
-        
-        const bin_size_apply_td = bin_size_tr.append('td')  
-
-        const id = Math.random()
-        const apply_checkbox = bin_size_apply_td
-            .append('input')
-            .attr('type','checkbox')
-            .style('margin','0px 5px 0px 10px')
-            .attr('id',id)
-            .on('change', async ()=>{
-                apply_checkbox.property('disabled',true)
-                await apply()
-                apply_checkbox.property('disabled',false)
-            })
-        bin_size_apply_td.append('label')
-            .attr('for',id)
-            .text('APPLY')
-            .style('font-size','.8em')
-            .attr('class','sja_clbtext')
     
         function apply(){
     
@@ -851,30 +926,27 @@ export function numeric_bin_edit(tip, term, term_q, callback){
                 term_q.binconfig = custom_bins_q
             }
     
-            
-            //if checked then set bin_size to input parameters
-            if(apply_checkbox.node().checked){
-                if(bin_size_input.node().value) term_q.binconfig.bin_size = parseFloat(bin_size_input.node().value)
-                term_q.binconfig.startinclusive = (include_select.node().value == 'startinclusive')
-                term_q.binconfig.stopinclusive = (include_select.node().value == 'stopinclusive')
-            }else{
-                //if unchecked then set bin_size parameters to default
-                term_q.binconfig.bin_size = term.graph.barchart.numeric_bin.bins.bin_size
-                term_q.binconfig.startinclusive = term.graph.barchart.numeric_bin.bins.startinclusive
-                term_q.binconfig.stopinclusive = term.graph.barchart.numeric_bin.bins.stopinclusive  
-            }
-    
+            if(bin_size_input.node().value) term_q.binconfig.bin_size = parseFloat(bin_size_input.node().value)
+            term_q.binconfig.stopinclusive = (include_select.node().value == 'stopinclusive')
+            if(!term_q.binconfig.stopinclusive) term_q.binconfig.startinclusive = (include_select.node().value == 'startinclusive')
+
+            if(bins_customized(term_q.binconfig, default_bins_q)) reset_bins_tr.style('display','table-row')
             callback(term_q)
         }
     }
 
-    function end_bin_edit(bin_edit_tr, bin_edit_td, bin_flag){
+    // function to edit first and last bin 
+    function end_bin_edit(bin_edit_td, bin_flag){
+
+        bin_edit_td.selectAll('*').remove()
     
         let bin
         if(bin_flag == 'first'){
             bin = custom_bins_q.first_bin
         }else if(bin_flag == 'last'){
-            if(custom_bins_q.last_bin) bin = custom_bins_q.last_bin
+            if(custom_bins_q.last_bin){
+                bin = custom_bins_q.last_bin
+            } 
             else{
                 bin = {
                     start: '',
@@ -905,6 +977,9 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         if(bin_flag == 'first'){
             startselect = bin_edit_td.append('select')
                 .style('margin-left','10px')
+                .on('change', ()=>{
+                    apply()
+                })
       
             startselect.append('option')
                 .html('&le;')
@@ -941,6 +1016,9 @@ export function numeric_bin_edit(tip, term, term_q, callback){
         }else{
             stopselect = bin_edit_td.append('select')
                 .style('margin-left','10px')
+                .on('change', ()=>{
+                    apply()
+                })
       
             stopselect.append('option')
                 .html('&le;')
@@ -992,26 +1070,6 @@ export function numeric_bin_edit(tip, term, term_q, callback){
             .attr('class','sja_clbtext')
       
         if(bin.start_percentile || bin.stop_percentile) percentile_checkbox.property('checked',true)
-            
-        const bin_edit_apply_td = bin_edit_tr.append('td') 
-
-        // Apply checkbox
-        const id2 = Math.random()
-        const apply_checkbox = bin_edit_apply_td.append('input')
-            .attr('type','checkbox')
-            .style('margin','0px 5px 0px 10px')
-            .attr('id',id2)
-            .on('change', async ()=>{
-                apply_checkbox.property('disabled',true)
-                await apply()
-                apply_checkbox.property('disabled',false)
-            })
-    
-        bin_edit_apply_td.append('label')
-            .attr('for',id2)
-            .text('APPLY')
-            .style('font-size','.8em')
-            .attr('class','sja_clbtext')
     
         function apply(){
             try{
@@ -1034,85 +1092,79 @@ export function numeric_bin_edit(tip, term, term_q, callback){
                 
                 //first_bin parameter setup from input
                 if(bin_flag == 'first'){
-
-                    //if checked then set bin_size to input parameters
-                    if(apply_checkbox.node().checked){
         
-                        if(start_input.node().value){
-                            if(percentile_checkbox.node().checked) term_q.binconfig.first_bin.start_percentile = parseFloat(start_input.node().value)
-                            else term_q.binconfig.first_bin.start = parseFloat(start_input.node().value)
-                        }else{
-                            delete term_q.binconfig.first_bin.start
-                            delete term_q.binconfig.first_bin.start_percentile
-                            term_q.binconfig.first_bin.startunbounded = true
-                        }
-                        if(stop_input.node().value){
-                            if(percentile_checkbox.node().checked) term_q.binconfig.first_bin.stop_percentile = parseFloat(stop_input.node().value)
-                            else term_q.binconfig.first_bin.stop = parseFloat(stop_input.node().value)
-                        }else if(!start_input.node().value) throw 'If start is empty, stop is required for first bin.' 
-                
-                        if(start_input.node().selectedIndex == 0) term_q.binconfig.first_bin.startinclusive = true
-                        else term_q.binconfig.first_bin.startinclusive = false
-                        
-                        // if percentile checkbox is unchecked, delete start/stop_percentile
-                        if(!percentile_checkbox.node().checked){
-                            delete term_q.binconfig.first_bin.start_percentile
-                            delete term_q.binconfig.first_bin.stop_percentile
-                        }
+                    if(start_input.node().value){
+                        delete term_q.binconfig.first_bin.startunbounded
+                        if(percentile_checkbox.node().checked) term_q.binconfig.first_bin.start_percentile = parseFloat(start_input.node().value)
+                        else term_q.binconfig.first_bin.start = parseFloat(start_input.node().value)
                     }else{
-                        //if unchecked then set bin_size parameters to default
-                        term_q.binconfig.first_bin = term.graph.barchart.numeric_bin.bins.first_bin
+                        delete term_q.binconfig.first_bin.start
+                        delete term_q.binconfig.first_bin.start_percentile
+                        term_q.binconfig.first_bin.startunbounded = true
+                    }
+                    if(stop_input.node().value){
+                        if(percentile_checkbox.node().checked) term_q.binconfig.first_bin.stop_percentile = parseFloat(stop_input.node().value)
+                        else term_q.binconfig.first_bin.stop = parseFloat(stop_input.node().value)
+                    }else if(!start_input.node().value) throw 'If start is empty, stop is required for first bin.' 
+            
+                    if(startselect.node().selectedIndex == 0) term_q.binconfig.first_bin.startinclusive = true
+                    else if(term_q.binconfig.first_bin.startinclusive) delete term_q.binconfig.first_bin.startinclusive
+                    
+                    // if percentile checkbox is unchecked, delete start/stop_percentile
+                    if(!percentile_checkbox.node().checked){
+                        delete term_q.binconfig.first_bin.start_percentile
+                        delete term_q.binconfig.first_bin.stop_percentile
                     }
                 }
         
                 //last_bin parameter setup from input
                 else if(bin_flag == 'last'){
-
-                    //if checked then set bin_size to input parameters
-                    if(apply_checkbox.node().checked){
         
-                        if(start_input.node().value){
-                            if(percentile_checkbox.node().checked) term_q.binconfig.last_bin.start_percentile = parseFloat(start_input.node().value)
-                            else term_q.binconfig.last_bin.start = parseFloat(start_input.node().value)
-                        }else if(!stop_input.node().value) throw 'If stop is empty, start is required for last bin.'
-                
-                        if(stop_input.node().value) {
-                            if(percentile_checkbox.node().checked) term_q.binconfig.last_bin.stop_percentile = parseFloat(stop_input.node().value)
-                            else term_q.binconfig.last_bin.stop = parseFloat(stop_input.node().value)
-                        }else{
-                            delete term_q.binconfig.last_bin.stop
-                            delete term_q.binconfig.last_bin.stop_percentile
-                            term_q.binconfig.last_bin.stopunbounded = true
-                        }
-                
-                        if(stop_input.node().selectedIndex == 0) term_q.binconfig.last_bin.stopinclusive = true
-                        else term_q.binconfig.last_bin.stopinclusive = false
-                
-                        // if percentile checkbox is unchecked, delete start/stop_percentile
-                        if(!percentile_checkbox.node().checked){
-                            delete term_q.binconfig.last_bin.start_percentile
-                            delete term_q.binconfig.last_bin.stop_percentile
-                        }
+                    if(start_input.node().value){
+                        if(percentile_checkbox.node().checked) term_q.binconfig.last_bin.start_percentile = parseFloat(start_input.node().value)
+                        else term_q.binconfig.last_bin.start = parseFloat(start_input.node().value)
+                    }else if(!stop_input.node().value) throw 'If stop is empty, start is required for last bin.'
+            
+                    if(stop_input.node().value) {
+                        delete term_q.binconfig.last_bin.stopunbounded
+                        if(percentile_checkbox.node().checked) term_q.binconfig.last_bin.stop_percentile = parseFloat(stop_input.node().value)
+                        else term_q.binconfig.last_bin.stop = parseFloat(stop_input.node().value)
                     }else{
-                        //if unchecked then set bin_size parameters to default
-                        if(term.graph.barchart.numeric_bin.bins.last_bin && term.graph.barchart.numeric_bin.bins.last_bin.start){
-                            term_q.binconfig.last_bin = {
-                                start: bins.last_bin.start,
-                                stopunbounded: bins.last_bin.stopunbounded,
-                                startinclusive: bins.last_bin.startinclusive,
-                                stopinclusive: bins.last_bin.stopinclusive
-                            }
-                            if(term.graph.barchart.numeric_bin.bins.last_bin.stop) 
-                            custom_bins_q.last_bin.stop = term.graph.barchart.numeric_bin.bins.last_bin.stop
-                        }else{
-                            term_q.binconfig.last_bin = {}
-                        }
+                        delete term_q.binconfig.last_bin.stop
+                        delete term_q.binconfig.last_bin.stop_percentile
+                        term_q.binconfig.last_bin.stopunbounded = true
+                    }
+            
+                    if(stopselect.node().selectedIndex == 0) term_q.binconfig.last_bin.stopinclusive = true
+                    else if(term_q.binconfig.last_bin.stopinclusive) delete term_q.binconfig.last_bin.stopinclusive
+            
+                    // if percentile checkbox is unchecked, delete start/stop_percentile
+                    if(!percentile_checkbox.node().checked){
+                        delete term_q.binconfig.last_bin.start_percentile
+                        delete term_q.binconfig.last_bin.stop_percentile
                     }
                 
                 }
+                if(bins_customized(term_q.binconfig, default_bins_q)) reset_bins_tr.style('display','table-row')
                 callback(term_q)
             }catch(e){
                 window.alert(e)
+            }
+        }
+    }
+
+    function bins_customized(custom_bins_q, default_bins_q){
+        if(custom_bins_q && default_bins_q){
+            if(custom_bins_q.bin_size == default_bins_q.bin_size &&
+                custom_bins_q.stopinclusive == default_bins_q.stopinclusive &&
+                JSON.stringify(custom_bins_q.first_bin) == JSON.stringify(default_bins_q.first_bin)){
+                    if(default_bins_q.last_bin && JSON.stringify(custom_bins_q.last_bin) == JSON.stringify(default_bins_q.last_bin)){
+                        return false
+                    }else if((Object.keys(custom_bins_q.last_bin).length === 0 && custom_bins_q.last_bin.constructor === Object)){
+                        return false
+                    }
+            }else{
+                return true
             }
         }
     }

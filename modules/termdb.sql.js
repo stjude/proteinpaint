@@ -869,26 +869,39 @@ thus less things to worry about...
 	if(!ds.cohort) throw 'ds.cohort missing'
 	if(!ds.cohort.db) throw 'ds.cohort.db missing'
 	if(!ds.cohort.db.file) throw 'ds.cohort.db.file missing'
-	ds.cohort.db.connection = connect_db( ds.cohort.db.file )
+	const cn = connect_db( ds.cohort.db.file )
+	ds.cohort.db.connection = cn
 
 	if(!ds.cohort.termdb ) throw 'ds.cohor.termdb missing'
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 
 	{
-		const s = ds.cohort.db.connection.prepare('SELECT * FROM terms')
-		q.getallterms = ()=>{
-			return s.all()
+		const s = cn.prepare('SELECT * FROM alltermsbyorder')
+		let cache
+		q.getAlltermsbyorder = ()=>{
+			if(cache) return cache
+			const tmp = s.all()
+			cache = []
+			for(const i of tmp) {
+				cache.push( q.termjsonByOneid( i.id ) )
+			}
+			return cache
 		}
 	}
 
 	{
-		const s = ds.cohort.db.connection.prepare('select jsondata from terms where id=?')
+		const s = cn.prepare('SELECT jsondata FROM terms WHERE id=?')
+		const cache = new Map()
+		// should only cache result for valid term id, not for invalid ids
+		// as invalid id is arbitrary and there can be indefinite amount of them to overwhelm the server memory
 		q.termjsonByOneid = (id)=>{
+			if(cache.has(id)) return cache.get(id)
 			const t = s.get( id )
 			if(t) {
 				const j = JSON.parse(t.jsondata)
 				j.id = id
+				cache.set(id, j)
 				return j
 			}
 			return undefined
@@ -896,56 +909,90 @@ thus less things to worry about...
 	}
 
 	{
-		const s = ds.cohort.db.connection.prepare('select id from terms where parent_id=?')
+		const s = cn.prepare('select id from terms where parent_id=?')
+		const cache = new Map()
 		q.termIsLeaf = (id)=>{
+			if(cache.has(id)) return cache.get(id)
+			let re = true
 			const t = s.get(id)
-			if(t && t.id) return false
-			return true
+			if(t && t.id) re = false
+			cache.set(id, re)
+			return re
 		}
 	}
 
 	{
-		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE parent_id is null')
+		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE parent_id is null')
+		let cache = null
 		q.getRootTerms = ()=>{
-			return s.all().map(i=>{
+			if( cache ) return cache
+			cache = s.all().map(i=>{
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
 				return t
 			})
+			return cache
 		}
 	}
 	{
-		const s = ds.cohort.db.connection.prepare('SELECT parent_id FROM terms WHERE id=?')
-		q.termHasParent = (id)=>{
-			const t = s.get(id)
-			if(t && t.parent_id) return true
-			return false
+		const s = cn.prepare('SELECT parent_id FROM terms WHERE id=?')
+		{
+			const cache = new Map()
+			q.termHasParent = (id)=>{
+				if(cache.has(id)) return cache.get(id)
+				let re = false
+				const t = s.get(id)
+				if(t && t.parent_id) re=true
+				cache.set(id,re)
+				return re
+			}
 		}
-		q.getTermParentId = (id)=>{
-			const t = s.get(id)
-			if(t && t.parent_id) return t.parent_id
-			return undefined
+		{
+			const cache = new Map()
+			q.getTermParentId = (id)=>{
+				if(cache.has(id)) return cache.get(id)
+				let re=undefined
+				const t = s.get(id)
+				if(t && t.parent_id) re=t.parent_id
+				cache.set(id,re)
+				return re
+			}
 		}
-		q.getTermParent = (id)=>{
-			const c = q.getTermParentId(id)
-			if(!c) return undefined
-			return q.termjsonByOneid( c )
+		{
+			const cache = new Map()
+			q.getTermParent = (id)=>{
+				if(cache.has(id)) return cache.get(id)
+				const pid = q.getTermParentId(id)
+				let re=undefined
+				if(pid) {
+					re = q.termjsonByOneid( pid )
+				}
+				cache.set(id,re)
+				return re
+			}
 		}
 	}
 	{
-		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)')
+		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)')
+		const cache = new Map()
 		q.getTermChildren = (id)=>{
+			if(cache.has(id)) return cache.get(id)
 			const tmp = s.all(id)
-			if(tmp) return tmp.map( i=> {
-				const j = JSON.parse(i.jsondata)
-				j.id = i.id
-				return j
-			})
-			return undefined
+			let re=undefined
+			if(tmp) {
+				re = tmp.map( i=> {
+					const j = JSON.parse(i.jsondata)
+					j.id = i.id
+					return j
+				})
+			}
+			cache.set(id, re)
+			return re
 		}
 	}
 	{
-		const s = ds.cohort.db.connection.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
+		// may not cache result of this one as query string may be indefinite
+		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
 		q.findTermByName = (n, limit)=>{
 			const tmp = s.all('%'+n+'%')
 			if(tmp) {
@@ -962,8 +1009,8 @@ thus less things to worry about...
 		}
 	}
 	{
-		const s1 = ds.cohort.db.connection.prepare('SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?')
-		const s2 = ds.cohort.db.connection.prepare('SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?')
+		const s1 = cn.prepare('SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?')
+		const s2 = cn.prepare('SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?')
 		const cache = new Map()
 		q.findTermMaxvalue = (id, isint) =>{
 			if( cache.has(id) ) return cache.get(id)
@@ -978,7 +1025,7 @@ thus less things to worry about...
 	{
 		// select sample and category, only for categorical term
 		// right now only for category-overlay on maf-cov plot
-		const s = ds.cohort.db.connection.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
+		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
 		q.getSample2value = (id) => {
 			return s.all(id)
 		}

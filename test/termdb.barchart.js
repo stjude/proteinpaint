@@ -1,90 +1,63 @@
-const app = require('../app')
-const path = require('path')
-const utils = require('./utils')
-const Partjson = require('./partjson')
-const serverconfig = __non_webpack_require__('./serverconfig.json')
-const sample_match_termvaluesetting = require('./mds2.load.vcf').sample_match_termvaluesetting
-const d3format = require('d3-format')
-const binLabelFormatter = d3format.format('.3r')
+const serverconfig = require("../serverconfig")
 const fs = require('fs')
-const get_bins = require('./termdb.sql').get_bins
+const path = require('path')
+const Partjson = require('../modules/partjson')
+const load_dataset = require('../utils/sjlife2/load.sjlife').load_dataset
+const ds = getDataset()
 
 /*
-********************** EXPORTED
-handle_request_closure
-**********************
-get_AF
+  migrate modules/termdb.barchart.js data processing here
 */
 
-exports.handle_request_closure = ( genomes ) => {
-  return async (req, res) => {
-    const q = req.query
-    for(const i of [0,1,2]) {
-      const termnum_q = 'term' + i +'_q'
-      if (q[termnum_q]) {
-        try {
-          q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
-        } catch(e) {
-          app.log(req)
-          res.send({error: (e.message || e)})
-          if(e.stack) console.log(e.stack)
-        }
-      }
-    }
-    if (q.tvslst) {
-      try {
-        q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
-      } catch(e) {
-        app.log(req)
-        res.send({error: (e.message || e)})
-        if(e.stack) console.log(e.stack)
-      }
-    }
-    app.log(req)
-    // support legacy query parameter names
-    if (q.term1_id) q.term1 = q.term1_id
-    if (!q.term1_q) q.term1_q = {}
-    if (!q.term0) q.term0 = ''
-    if (q.term0_id) q.term0 = q.term0_id 
-    if (!q.term0_q) q.term0_q = {}
-    if (!q.term2) q.term2 = ''
-    if (q.term2_id) q.term2 = q.term2_id
-    if (!q.term2_q) q.term2_q = {}
-    try {
-      const genome = genomes[ q.genome ]
-      if(!genome) throw 'invalid genome'
-      const ds = genome.datasets[ q.dslabel ]
-      if(!ds) throw 'invalid dslabel'
-      if(!ds.cohort) throw 'ds.cohort missing'
-      const tdb = ds.cohort.termdb
-      if(!tdb) throw 'no termdb for this dataset'
-      if(!tdb.precomputed) throw 'tdb.precomputed not loaded'
-      // process triggers
-      await barchart_data( q, ds, res, tdb )
-    } catch(e) {
-      res.send({error: (e.message || e)})
-      if(e.stack) console.log(e.stack)
-    }
+
+
+function getDataset() {
+  const ds = load_dataset('sjlife2.hg38.js')
+  const tdb = ds.cohort.termdb
+  if (!tdb || tdb.precomputed || !tdb.precomputed_file) return
+  
+  const filename = path.join(serverconfig.tpmasterdir, tdb.precomputed_file)
+  try {
+    const file = fs.existsSync(filename) ? fs.readFileSync(filename, {encoding:'utf8'}) : ''
+    tdb.precomputed = JSON.parse(file.trim())
+    console.log("Loaded the precomputed values from "+ filename)
+  } catch(e) {
+    throw 'Unable to load the precomputed file ' + filename
   }
+
+  return ds
 }
 
-async function barchart_data ( q, ds, res, tdb ) {
+
+function barchart_data ( q, data0 ) {
 /*
   q: objectified URL query string
-  ds: dataset
-  res: express route callback's response argument
-  tdb: cohort termdb tree 
+  data0: the response data from /termdb-barsql, needed to reuse computed bins
 */
+  // ds is loaded at the start of this file
   if(!ds.cohort) throw 'cohort missing from ds'
   if(!ds.cohort.annorows) throw `cohort.annorows is missing`
+  const tdb = ds.cohort.termdb
+  if (!tdb) throw 'missing ds.cohort.termdb'
+  
+  // support legacy query parameter names
+  if (q.term1_id) q.term1 = q.term1_id
+  if (!q.term1_q) q.term1_q = {}
+  if (!q.term0) q.term0 = ''
+  if (q.term0_id) q.term0 = q.term0_id 
+  if (!q.term0_q) q.term0_q = {}
+  if (!q.term2) q.term2 = ''
+  if (q.term2_id) q.term2 = q.term2_id
+  if (!q.term2_q) q.term2_q = {}
+
   // request-specific variables
   const startTime = +(new Date())
   const inReqs = [getTrackers(), getTrackers(), getTrackers()]
   inReqs.filterFxn = ()=>1 // default allow all rows, may be replaced via q.termfilter
-  await setValFxns(q, inReqs, ds, tdb);
+  setValFxns(q, inReqs, ds, tdb, data0);
   const pj = getPj(q, inReqs, ds.cohort.annorows, tdb, ds)
   if (pj.tree.results) pj.tree.results.pjtime = pj.times
-  res.send(pj.tree.results)
+  return pj.tree.results
 }
 
 function getTrackers() {
@@ -101,7 +74,7 @@ function getTrackers() {
 
 // template for partjson, already stringified so that it does not 
 // have to be re-stringified within partjson refresh for every request
-const template = JSON.stringify({
+const templateBar = JSON.stringify({
   "@errmode": ["","","",""],
   "@before()": "=prep()",
   "@join()": {
@@ -161,6 +134,9 @@ const template = JSON.stringify({
   }
 })
 
+exports.barchart_data = barchart_data
+
+
 function getPj(q, inReqs, data, tdb, ds) {
 /*
   q: objectified URL query string
@@ -180,7 +156,7 @@ function getPj(q, inReqs, data, tdb, ds) {
   return new Partjson({
     data,
     seed: `{"values": []}`, // result seed 
-    template,
+    template: templateBar,
     "=": {
       prep(row) {
         // a falsy filter return value for a data row will cause the
@@ -227,28 +203,29 @@ function getPj(q, inReqs, data, tdb, ds) {
         const values = context.self.values.filter(d => d !== null)
         if (!values.length) return
         values.sort((i,j)=> i - j ); //console.log(values.slice(0,5), values.slice(-5), context.self.values.sort((i,j)=> i - j ).slice(0,5))
-        const stat = app.boxplot_getvalue( values.map(v => {return {value: v}}) )
+        const stat = boxplot_getvalue( values.map(v => {return {value: v}}) )
         stat.mean = context.self.sum / values.length
         let s = 0
         for(const v of values) {
           s += Math.pow( v - stat.mean, 2 )
         }
         stat.sd = Math.sqrt( s / (values.length-1) )
+        if (isNaN(stat.sd)) stat.sd = null
         return stat
       },
       numSamples(row, context) {
         return context.self.samples.size
       },
       getAF(row, context) {
-		    // only get AF when termdb_bygenotype.getAF is true
-  	    if ( !ds.track
-  		    || !ds.track.vcf
-  		    || !ds.track.vcf.termdb_bygenotype
-  		    || !ds.track.vcf.termdb_bygenotype.getAF
+        // only get AF when termdb_bygenotype.getAF is true
+        if ( !ds.track
+          || !ds.track.vcf
+          || !ds.track.vcf.termdb_bygenotype
+          || !ds.track.vcf.termdb_bygenotype.getAF
         ) return
         if (!q.term2_is_genotype) return
-		    if (!q.chr) throw 'chr missing for getting AF'
-		    if (!q.pos) throw 'pos missing for getting AF'
+        if (!q.chr) throw 'chr missing for getting AF'
+        if (!q.pos) throw 'pos missing for getting AF'
         
         return get_AF(
           context.self.samples ? [...context.self.samples] : [],
@@ -316,7 +293,14 @@ function getPj(q, inReqs, data, tdb, ds) {
         return inReqs.map(d=>d.bins)
       },
       q() {
-        return inReqs.map(d=>d.q)
+        return inReqs.map(d=>{
+          const q = {}
+          for(const key in d.q) {
+            if (key != "index") q[key] = d.q[key]
+          } 
+          if (d.binconfig) q.binconfig = d.binconfig
+          return q
+        })
       },
       grade_labels() {
         let has_condition_term = false
@@ -327,14 +311,14 @@ function getPj(q, inReqs, data, tdb, ds) {
           }
         }
         return tdb.patient_condition && has_condition_term
-          ? tdb.patient_condition.grade_labels
+          ? tdb.patient_condition.grade_labels.sort((a,b)=>a.grade - b.grade)
           : undefined
       }
     }
   })
 }
 
-async function setValFxns(q, inReqs, ds, tdb) {
+function setValFxns(q, inReqs, ds, tdb, data0) {
 /*
   sets request-specific value and filter functions
   non-condition unannotated values will be processed but tracked separately
@@ -364,7 +348,7 @@ async function setValFxns(q, inReqs, ds, tdb) {
     }
     if (q[termnum + '_is_genotype']) {
       if (!q.ssid) throw `missing ssid for genotype`
-      const [bySample, genotype2sample] = await load_genotype_by_sample(q.ssid)
+      const [bySample, genotype2sample] = load_genotype_by_sample(q.ssid)
       inReqs.genotype2sample = genotype2sample
       const skey = ds.cohort.samplenamekey
       inReq.joinFxns[termid] = row => bySample[row[skey]]
@@ -378,7 +362,7 @@ async function setValFxns(q, inReqs, ds, tdb) {
     if (term.iscategorical) {
       inReq.joinFxns[termid] = row => row[termid] 
     } else if (term.isinteger || term.isfloat) {
-      get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq)
+      get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq, data0)
     } else if (term.iscondition) {
       // tdb.patient_condition
       if (!tdb.patient_condition) throw "missing termdb patient_condition"
@@ -411,9 +395,13 @@ function set_condition_fxn(termid, b, tdb, inReq, index) {
 }
 
 
-function get_numeric_bin_name (term_q, termid, term, ds, termnum, inReq ) {
-  const [bins, binconfig] = get_bins(term_q, term, ds)
+function get_numeric_bin_name (term_q, termid, term, ds, termnum, inReq, data0 ) {
+  if (!data0.refs.bins) throw 'missing bins array in server response of /termdb-barsql'
+  const index = +termnum.slice(-1)
+  const bins = data0.refs.bins[index]
+  const binconfig = data0.refs.q[index].binconfig
   inReq.bins = bins
+  inReq.binconfig = binconfig
   inReq.orderedLabels = bins.map(d=>d.label); 
   if (binconfig.unannotated) {
     inReq.unannotatedLabels = Object.values(binconfig.unannotated._labels)
@@ -451,10 +439,12 @@ function get_numeric_bin_name (term_q, termid, term, ds, termnum, inReq ) {
 }
 
 
-async function load_genotype_by_sample ( id ) {
+function load_genotype_by_sample ( id ) {
 /* id is the file name under cache/samples-by-genotype/
 */
-  const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', id ) )
+  const filename = path.join( serverconfig.cachedir, 'ssid', id )
+  const text = fs.readFileSync(filename, {encoding:'utf8'})
+
   const bySample = Object.create(null)
   const genotype2sample = new Map()
   for(const line of text.split('\n')) {
@@ -491,9 +481,9 @@ to show AF=? for each bar, based on the current variant
 
 arguments:
 - samples[]
-	list of sample names from a bar
+  list of sample names from a bar
 - chr
-	chromosome of the variant
+  chromosome of the variant
 - genotype2sample Map
     returned by load_genotype_by_sample()
 - ds{}
@@ -505,7 +495,7 @@ arguments:
   let AC=0, AN=0
   for(const sample of samples) {
     let isdiploid = false
-    if( afconfig.sex_chrs.has( chr ) ) {
+    if( afconfig.sex_chrs.includes( chr ) ) {
       if( afconfig.male_samples.has( sample ) ) {
         if( afconfig.chr2par && afconfig.chr2par[chr] ) {
           for(const par of afconfig.chr2par[chr]) {
@@ -527,11 +517,270 @@ arguments:
         AC+=2
       } else if(het.has( sample )) {
         AC++
-    	}
+      }
     } else {
       AN++
       if(!href.has(sample)) AC++
     }
   }
   return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
+}
+
+
+function sample_match_termvaluesetting ( sanno, terms, ds ) {
+/* for AND, require all terms to match
+ds is for accessing patient_condition
+XXX  only used by termdb.barchart.js, to be taken out
+*/
+
+  let usingAND = true
+
+  let numberofmatchedterms = 0
+
+  for(const t of terms ) {
+
+    const samplevalue = sanno[ t.term.id ]
+
+    let thistermmatch
+
+    if( t.term.iscategorical ) {
+
+      if(samplevalue==undefined)  continue // this sample has no anno for this term, do not count
+      thistermmatch = t.valueset.has( samplevalue )
+
+    } else if( t.term.isinteger || t.term.isfloat ) {
+
+      if(samplevalue==undefined)  continue // this sample has no anno for this term, do not count
+      for(const range of t.ranges) {
+        let left, right
+        if( range.startunbounded ) {
+          left = true
+        } else {
+          if(range.startinclusive) {
+            left = samplevalue >= range.start
+          } else {
+            left = samplevalue > range.start
+          }
+        }
+        if( range.stopunbounded ) {
+          right = true
+        } else {
+          if(range.stopinclusive) {
+            right = samplevalue <= range.stop
+          } else {
+            right = samplevalue < range.stop
+          }
+        }
+        thistermmatch = left && right
+        if (thistermmatch) break
+      }
+    } else if( t.term.iscondition ) {
+
+      thistermmatch = test_sample_conditionterm( sanno, t, ds )
+
+    } else {
+      throw 'unknown term type'
+    }
+
+    if( t.isnot ) {
+      thistermmatch = !thistermmatch
+    }
+    if( thistermmatch ) numberofmatchedterms++
+  }
+
+  if( usingAND ) {
+    return numberofmatchedterms == terms.length
+  }
+  // using OR
+  return numberofmatchedterms > 0
+}
+
+
+let testi = 0
+
+function test_sample_conditionterm ( sample, tvs, ds ) {
+/*
+sample: ds.cohort.annotation[k]
+tvs: a term-value setting object
+ds
+*/
+  const _c = ds.cohort.termdb.patient_condition
+  if(!_c) throw 'patient_condition missing'
+  const term = ds.cohort.termdb.termjson.map.get( tvs.term.id )
+  if(!term) throw 'unknown term id: '+tvs.term.id
+
+  if( term.isleaf ) {
+    // leaf, term id directly used for annotation
+    const termvalue = sample[ tvs.term.id ]
+    if(!termvalue) return false
+    const eventlst = termvalue[ _c.events_key ]
+    return test_grade( eventlst )
+  }
+
+  // non-leaf
+
+  if( tvs.bar_by_grade ) {
+    // by grade, irrespective of subcondition
+    const eventlst = []
+    for(const tid in sample) {
+      const t = ds.cohort.termdb.termjson.map.get(tid)
+      if(!t || !t.iscondition) continue
+      if(t.conditionlineage.includes( tvs.term.id )) {
+        // is a child term
+        eventlst.push( ...sample[tid][_c.events_key] )
+      }
+    }
+    return test_grade( eventlst )
+  }
+
+  if( tvs.bar_by_children ) {
+    // event in any given children with computable grade
+    for(const tid in sample) {
+      const t = ds.cohort.termdb.termjson.map.get(tid)
+      if(!t || !t.iscondition) continue
+      if( tvs.values.findIndex( i=> t.conditionlineage.indexOf(i.key)!=-1 ) == -1 ) continue
+      const events = sample[tid][_c.events_key]
+      if(!events || events.length==0) continue
+      if( _c.uncomputable_grades ) {
+        for(const e of events) {
+          if( !_c.uncomputable_grades[e[_c.grade_key]] ) {
+            // has a computable grade
+            return true
+          }
+        }
+        // all are uncomputable grade
+        continue
+      }
+      // no uncomputable grades to speak of
+      return true
+    }
+    return false
+  }
+
+  if( tvs.grade_and_child ) {
+    // collect all events from all subconditions, and remember which condition it is
+    const eventlst = []
+    for(const tid in sample) {
+      const t = ds.cohort.termdb.termjson.map.get(tid)
+      if(!t || !t.iscondition) continue
+      if(t.conditionlineage.indexOf(tvs.term.id)!=-1) {
+        for(const e of sample[tid][_c.events_key]) {
+          if(_c.uncomputable_grades && _c.uncomputable_grades[e[_c.grade_key]]) continue
+          eventlst.push({ e, tid })
+        }
+      }
+    }
+    if(eventlst.length==0) return false
+
+    // from all events of any subcondition, find one matching with value_by_
+    if(tvs.value_by_most_recent) {
+      const most_recent_events = []
+      let age = 0
+      for(const e of eventlst) {
+        const a = e.e[_c.age_key]
+        if(age < a) {
+          age = a
+        }
+      }
+      for(const e of eventlst) {
+        if(e.e[_c.age_key] == age) {
+          const g = e.e[_c.grade_key]
+          for(const tv of tvs.grade_and_child) {
+            if (tv.grade == g && tv.child_id == e.tid) return true
+          }
+        }
+      }
+      //console.log('not matched')
+      return
+    } else if(tvs.value_by_max_grade) {
+      let useevent
+      let maxg = 0
+      for(const e of eventlst) {
+        const g = e.e[_c.grade_key]
+        if(maxg < g) {
+          maxg = g
+          useevent = e
+        }
+      }
+      return tvs.grade_and_child.findIndex( i=> i.grade == useevent.e[_c.grade_key] && i.child_id == useevent.tid) != -1
+    } else {
+      throw 'unknown flag of value_by_'
+    }
+  }
+
+  throw 'illegal definition of conditional tvs'
+
+
+  function test_grade ( eventlst ) {
+  /* from a list of events, find one matching criteria
+  */
+    if(!eventlst) return false
+    if( tvs.value_by_most_recent ) {
+      let mostrecentage
+      // get the most recent age in the event list
+      for(const e of eventlst) {
+        const grade = e[_c.grade_key]
+        if(_c.uncomputable_grades && _c.uncomputable_grades[grade]) continue
+        const a = e[_c.age_key]
+        if(mostrecentage === undefined || mostrecentage < a) {
+          mostrecentage = a
+        }
+      }
+      // if an event matches the most recent age, test 
+      // if the grade matches at least one of the filter values
+      for(const e of eventlst) {
+        if(e[_c.age_key] == mostrecentage) {
+          const g = e[_c.grade_key]
+          for(const tv of tvs.values) {
+            if (tv.key == g) {
+              //console.log(testi++)
+              return true
+            }
+          }
+        }
+      }
+      return false
+    }
+    if( tvs.value_by_max_grade ) {
+      let maxg = -1
+      for(const e of eventlst) {
+        const grade = e[_c.grade_key]
+        if(_c.uncomputable_grades && _c.uncomputable_grades[grade]) continue
+        maxg = Math.max( maxg, grade )
+      }
+      return tvs.values.findIndex(j=>j.key==maxg) != -1
+    }
+    throw 'unknown method for value_by'
+  }
+}
+
+function boxplot_getvalue(lst) {
+  /* ascending order
+  each element: {value}
+  */
+  const l=lst.length
+  if(l<5) {
+    // less than 5 items, won't make boxplot
+    return {out:lst}
+  }
+  const p50=lst[Math.floor(l/2)].value
+  const p25=lst[Math.floor(l/4)].value
+  const p75=lst[Math.floor(l*3/4)].value
+  const p05 = lst[Math.floor(l*0.05)].value
+  const p95 = lst[Math.floor(l*0.95)].value
+  const p01 = lst[Math.floor(l*0.01)].value
+  const iqr=(p75-p25)*1.5
+
+  let w1, w2
+  if( iqr == 0 ) {
+    w1 = 0
+    w2 = 0
+  } else {
+    const i=lst.findIndex(i=>i.value>p25-iqr)
+    w1=lst[i==-1 ? 0 : i].value
+    const j=lst.findIndex(i=>i.value>p75+iqr)
+    w2=lst[j==-1 ? l-1 : j-1].value
+  }
+  const out=lst.filter(i=>i.value<p25-iqr || i.value>p75+iqr)
+  return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }

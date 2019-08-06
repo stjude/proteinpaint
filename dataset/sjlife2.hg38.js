@@ -33,6 +33,13 @@ module.exports={
 				},
 				age_key: 'age',
 				yearstoevent_key:'yearstoevent'
+			},
+			phewas:{
+				samplefilter4termtype: {
+					condition:{
+						tvslst:[ {term:{id:'ctcae_graded',iscategorical:true},values:[{key:'1'}]} ]
+					}
+				}
 			}
 		}
 	},

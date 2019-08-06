@@ -42,7 +42,7 @@ export function controls(arg, plot, main) {
       tip.style('visibility', visibility == 'hidden' ? 'visible' : 'hidden')
         
       plot.config_div
-        .style('max-width', visibility == 'hidden' ? '500px' : '50px')
+        .style('max-width', visibility == 'hidden' ? '660px' : '50px')
         .style('background', visibility == 'hidden' ? panel_bg_color : '')
         // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
 
@@ -222,7 +222,6 @@ function setOverlayOpts(plot, main, table, arg) {
     currterm: plot.term,
     termsetting: {term:plot.term2, q: plot.term2?plot.term2.q:undefined},
     callback: (term2) => {
-      plot.obj.tip.hide()
       plot.term2 = term2
       if (!term2) {
         plot.settings.bar.overlay = 'none'
@@ -250,13 +249,11 @@ function setOverlayOpts(plot, main, table, arg) {
   .property('checked', d => d.value == plot.settings.bar.overlay)
   .on('input', d => {
     d3event.stopPropagation()
-    const term2_selected = plot.term2
     plot.settings.bar.overlay = d.value
     if (d.value == "none") {
       plot.term2 = undefined
       plot.term2_displaymode = 'stacked'
       main(plot)
-      plot.term2 = term2_selected
     } else if (d.value == "tree") {
       plot.term2 = termuiObj.termsetting.term
       main(plot)
@@ -420,7 +417,6 @@ function setDivideByOpts(plot, main, table, arg) {
     termsetting: {term:plot.term0, q: plot.term0?plot.term0.q:undefined},
     currterm: plot.term,
     callback: (term0) => {
-      plot.obj.tip.hide()
       plot.term0 = term0
       plot.settings.bar.divideBy = term0 ? 'tree' : 'none'
       main( plot )
@@ -434,7 +430,6 @@ function setDivideByOpts(plot, main, table, arg) {
   .property('checked', d => d.value == plot.settings.bar.divideBy)
   .on('input', d => {
     d3event.stopPropagation()
-    const term0_selected = plot.term0
     plot.settings.bar.divideBy = d.value
     if (d.value == "none") {
       plot.term0 = undefined
@@ -501,7 +496,7 @@ function setBarsAsOpts(plot, main, table, termNum, label, index) {
     currterm: plot.term,
     termsetting: {term: plot.term},
     currterm: plot.term,
-    bars_as: true,
+    is_term1: true,
     callback: (term) => {
       if (term) plot.term = term
       if (plot.term2 && plot.term.q) {
@@ -540,7 +535,7 @@ function setBinOpts(plot, main, table, termNum, label) {
     .html('EDIT')
     .on('click',()=>{
       // click to show ui and customize binning
-      numeric_bin_edit(plot.tip, plot.term, plot.term.q, (result)=>{
+      numeric_bin_edit(plot.tip, plot.term, plot.term.q, true, (result)=>{
         if (!plot.term.q) plot.term.q = {}
         if (result !== plot.term.q) {
           for(const key in plot.term.q) delete plot.term.q[key]

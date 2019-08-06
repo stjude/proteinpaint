@@ -17,7 +17,7 @@ update_image
 
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 
-//const minimum_total_sample = 10
+const minimum_total_sample = 10
 
 
 
@@ -27,8 +27,19 @@ export async function trigger ( q, res, tdb, ds ) {
 q{}
 .ssid
 */
+	if(!ds.cohort) throw 'ds.cohort missing'
+	if(!ds.cohort.termdb) throw 'cohort.termdb missing'
+	if(!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
+
 	if(!q.ssid) throw 'ssid missing'
 	const [sample2gt, genotype2sample] = await utils.loadfile_ssid( q.ssid )
+	// sample2gt: {sample:gt}
+	// genotype2sample: Map {gt: Set(samples)}
+
+
+	//////////// work on sample filter by term type
+	const [ totalcountbygenotype_condition ] = helper_get_samplefilter4termtype()
+
 
 	// total number of samples with each genotype
 	const het0 = genotype2sample.has( utils.genotype_types.het ) ? genotype2sample.get(utils.genotype_types.het).size : 0
@@ -36,29 +47,50 @@ q{}
 	const halt0 = genotype2sample.has( utils.genotype_types.halt ) ? genotype2sample.get(utils.genotype_types.halt).size : 0
 
 
-	// collect tests across all terms, one for each category
 	const tests = []
+	/* collect tests across all terms, one for each category
+	.term: {id,name}
+	.category: name of the category
+	.q: {}
+		term type-specific parameter on how the categories are synthesized
+		https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit#heading=h.ljho28ohkqr8
+	.table: [ contigency table ]
+	*/
+
+
+	const result = {
+		minimum_total_sample,
+		skipped_byminimumsample: 0
+	}
+	// to be sent to client
 
 
 let i=0
-	for(const t of ds.cohort.termdb.q.getallterms()) {
-		const term = JSON.parse(t.jsondata)
+	for(const term of ds.cohort.termdb.q.getAlltermsbyorder()) {
 		if(!term.graph) continue
-		//if(++i==10) break
+		if(++i==60) break
 
 		//////////// prep query for this term
 		const qlst = []
 		if( term.iscategorical ) {
-			qlst.push( { term1_id: t.id, ds } )
+			qlst.push( { ds, term1_id: term.id } )
 		} else if( term.isfloat || term.isinteger ) {
-			qlst.push( { term1_id: t.id, ds } )
+			qlst.push( { ds, term1_id: term.id } )
 		} else if( term.iscondition ) {
-			// may test other configs
+			// for both leaf and non-leaf
 			qlst.push({
-				term1_id: t.id,
 				ds,
+				term1_id: term.id,
 				term1_q: {bar_by_grade:true,value_by_max_grade:true}
 			})
+			if( !term.isleaf ) {
+				// for non-leaf, test subcondition by computable grade
+				qlst.push({
+					ds,
+					term1_id: term.id,
+					term1_q: {bar_by_children:true,value_by_computable_grade:true}
+				})
+			}
 		} else {
 			throw 'unknown term type'
 		}
@@ -66,6 +98,7 @@ let i=0
 		for(const q of qlst) {
 			////////////// run query
 			const re = termdbsql.get_rows( q )
+
 			const category2gt2samples = new Map()
 			// k: category (key1)
 			// v: map{}
@@ -73,16 +106,23 @@ let i=0
 			//    v: sample set
 			for(const i of re.lst) {
 				const genotype = sample2gt[ i.sample ]
-				if(!genotype) continue
+				if(!genotype) {
+					// no genotype for this sample, drop
+					continue
+				}
 				const category = i.key1
 				if(!category2gt2samples.has(category)) category2gt2samples.set(category, new Map())
 				if(!category2gt2samples.get(category).has( genotype )) category2gt2samples.get(category).set( genotype, new Set())
 				category2gt2samples.get(category).get(genotype).add( i.sample )
 			}
 
+
 			for(const [category,o] of category2gt2samples) {
+
 				/////////////// each category as a case
+
 				const gt2size = new Map()
+				// k: gt, v: number of samples
 				let thiscatnumber = 0
 				for(const [gt,s] of o) {
 					gt2size.set(gt, s.size)
@@ -90,21 +130,31 @@ let i=0
 				}
 				/*
 				if(thiscatnumber < minimum_total_sample) {
-					console.log('skip', category, thiscatnumber)
+					result.skipped_byminimumsample++
 					continue
 				}
 				*/
+
+				// number of samples by genotype in case
 				const het  = gt2size.get(utils.genotype_types.het) || 0
 				const halt = gt2size.get(utils.genotype_types.halt) || 0
 				const href = gt2size.get(utils.genotype_types.href) || 0
-				const het2 = het0-het
-				const halt2 = halt0-halt
-				const href2 = href0-href
+				// number of samples by genotype in control
+				let het2, halt2, href2
+				if( term.iscondition && totalcountbygenotype_condition ) {
+					het2 = totalcountbygenotype_condition.het - het
+					halt2 = totalcountbygenotype_condition.halt - halt
+					href2 = totalcountbygenotype_condition.href - href
+				} else {
+					het2 = het0-het
+					halt2 = halt0-halt
+					href2 = href0-href
+				}
 
 				tests.push({
 					term: termdb.copy_term( term ),
 					category,
-					q: q.q,
+					q: q.term1_q,
 					table: [ 
 						het + 2* halt, // case alt
 						het + 2* href, // case ref
@@ -116,6 +166,7 @@ let i=0
 		}
 	}
 
+	result.testcount = tests.length
 
 	///////// fisher
 	{
@@ -145,7 +196,6 @@ let i=0
 
 
 
-	const result = { testcount: tests.length }
 	get_maxlogp( tests, result )
 	result.tmpfile = await write_tmpfile( tests )
 	plot_canvas( tests, result )
@@ -157,6 +207,48 @@ let i=0
 	}
 
 	res.send( result )
+
+
+
+	/////////////// helper
+
+	function helper_get_samplefilter4termtype () {
+	/* when a sample filter is provided for a type of term
+	to recalculate total number of href/halt/het
+	as the basis for generating control set
+
+	otherwise use href0 from the complete set of samples in the vcf file
+	*/
+		let _condition = null
+		// will set to {href,halt,het} if sample filter is on for condition term
+
+		if( ds.cohort.termdb.phewas.samplefilter4termtype ) {
+			if( ds.cohort.termdb.phewas.samplefilter4termtype.condition ) {
+				const samples = new Set( termdbsql.get_samples( ds.cohort.termdb.phewas.samplefilter4termtype.condition.tvslst, ds ) )
+				_condition = {
+					het: 0,
+					href: 0,
+					halt: 0
+				}
+				if(genotype2sample.has( utils.genotype_types.het )) {
+					for(const sample of genotype2sample.get(utils.genotype_types.het)) {
+						if(samples.has(sample)) _condition.het++
+					}
+				}
+				if(genotype2sample.has( utils.genotype_types.href )) {
+					for(const sample of genotype2sample.get(utils.genotype_types.href)) {
+						if(samples.has(sample)) _condition.href++
+					}
+				}
+				if(genotype2sample.has( utils.genotype_types.halt )) {
+					for(const sample of genotype2sample.get(utils.genotype_types.halt)) {
+						if(samples.has(sample)) _condition.halt++
+					}
+				}
+			}
+		}
+		return [ _condition ]
+	}
 }
 
 

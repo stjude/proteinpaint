@@ -115,6 +115,7 @@ use the file name as a session in termdb
 
 
 function phewas_table ( data, div ) {
+// not in use
 	const table = div.append('table')
 	const tr = table.append('tr')
 	tr.append('th').text('Term')
@@ -213,9 +214,25 @@ function phewas_svg ( data, div, tk, block ) {
 				{k:'Term',v:d.term.name},
 				{k:'Category',v:d.category},
 				{k:'FDR pvalue',v:d.pvalue},
-				{k:'Case',v: d.table[0]+' <span style="font-size:.7em;">ALT</span> &nbsp;'+d.table[1]+' <span style="font-size:.7em">REF</span>'},
-				{k:'Control',v: d.table[2]+' <span style="font-size:.7em;">ALT</span> &nbsp;'+d.table[3]+' <span style="font-size:.7em">REF</span>'},
 			]
+			{
+				// case allele freq
+				const sum = d.table[0]+d.table[1]
+				const barsvg = client.fillbar(null, { f: sum > 0 ? d.table[0]/sum : 0 })
+				lst.push({
+					k: 'Case',
+					v: barsvg + ' <span style="font-size:.8em;opacity:.5">ALT/REF</span> '+d.table[0]+' / '+d.table[1]
+				})
+			}
+			{
+				// control allele freq
+				const sum = d.table[2]+d.table[3]
+				const barsvg = client.fillbar(null, { f: sum > 0 ? d.table[2]/sum : 0 })
+				lst.push({
+					k: 'Control',
+					v: barsvg + ' <span style="font-size:.8em;opacity:.5">ALT/REF</span> '+d.table[2]+' / '+d.table[3]
+				})
+			}
 			client.make_table_2col( tk.legend.tip.d, lst )
 			tk.legend.tip.show( d3event.clientX, d3event.clientY )
 		})
@@ -227,18 +244,15 @@ function phewas_svg ( data, div, tk, block ) {
 
 
 	////////////// message
-	div.append('div')
+	const msgbox = div.append('div')
+		.style('margin-bottom','5px')
+		.style('opacity',.6)
+	msgbox.append('p')
 		.text(data.testcount+' attributes tested')
-		.style('margin-bottom','5px')
-		.style('opacity',.6)
-	div.append('div')
+	msgbox.append('p')
 		.text(data.hoverdots.length+' attributes with FDR p-value <= 0.05')
-		.style('margin-bottom','5px')
-		.style('opacity',.6)
-	div.append('div')
+	msgbox.append('p')
 		.text('Max -log10(FDR pvalue) is '+data.maxlogp)
-		.style('margin-bottom','5px')
-		.style('opacity',.6)
 
 
 

@@ -82,6 +82,7 @@ const template = JSON.stringify({
       "~samples": ["$sample", "set"],
       "__:total": "=sampleCount()",
       "_1:maxSeriesTotal": "=maxSeriesTotal()",
+      "@done()": "=filterEmptySeries()",
       serieses: [{
         seriesId: "@key",
         data: [{
@@ -97,7 +98,6 @@ const template = JSON.stringify({
         "__:boxplot": "=boxplot()",
         "__:AF": "=getAF()",
       }, "$key1"],
-      //"@done()": "=filterEmptySeries()"
     }, "$key0"],
     "~sum": "+$nval1",
     "~values": ["$nval1",0],
@@ -146,6 +146,7 @@ function getPj(q, data, tdb, ds) {
   const joinAliases = ["chart", "series", "data"]
   const terms = [0,1,2].map(i=>{
     const d = getTermDetails(q, tdb, i)
+    d.q.index = i
     const bins = q.results['CTE' + i].bins ? q.results['CTE' + i].bins : []
     return Object.assign(d, {
       key: 'key' + i, 
