@@ -272,7 +272,7 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? "WHERE t1.sample in "+filter.CTEname : ""}
 		${opts.endclause}`
-	console.log(statement, values)
+	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement)
 		.all( values )
 
