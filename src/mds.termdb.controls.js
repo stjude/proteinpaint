@@ -16,22 +16,15 @@ const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
 
 export function controls(arg, plot, main) {
-  plot.config_div = plot.dom.controls
-    .style('max-width', '50px')
-    .style('max-height', 0)
-    .style('vertical-align','top')
+  plot.dom.controls
     .style('margin', '8px')
-    .style('transition', '0.2s ease-in-out')
+    .style('vertical-align', 'top')
+    .style('transition','0.5s')
 
-  // controlsIndex to be used to assign unique radio input names
-  // by config div
-  plot.controlsIndex = plots.length
-  plots.push(plot)
-
-  // label
-  const hamburger_btn = plot.config_div.append('div').append('div')
+  plot.dom.controlsTopBar = plot.dom.controls.append('div')
+  const hamburger_btn = plot.dom.controlsTopBar.append('div')
     .attr('class','sja_edit_btn')
-	  .style('margin','10px')
+    .style('margin','10px')
     .style('font-size', '16px')
     .style('transition','0.5s')
     .html('&#8801;')
@@ -44,13 +37,27 @@ export function controls(arg, plot, main) {
         
       plot.config_div
         .style('max-width', visibility == 'hidden' ? '660px' : '50px')
-        .style('max-height', visibility == 'hidden' ? '' : 0)
-        .style('background', visibility == 'hidden' ? panel_bg_color : '')
+        .style('height', visibility == 'hidden' ? '' : 0)
+        
+      plot.dom.controls.style('background', visibility == 'hidden' ? panel_bg_color : '')
         // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
 
       hamburger_btn
         .html(visibility == 'hidden' ? '&#215;' : '&#8801;')
     })
+
+  plot.config_div = plot.dom.controls.append('div')
+    .style('max-width', '50px')
+    .style('height', 0)
+    .style('vertical-align','top')
+    .style('transition', '0.2s ease-in-out')
+    .style('overflow', 'hidden')
+
+  // controlsIndex to be used to assign unique radio input names
+  // by config div
+  plot.controlsIndex = plots.length
+  plots.push(plot)
+  
 
   const tip = plot.config_div.append('div')
     .style('visibility','hidden')
