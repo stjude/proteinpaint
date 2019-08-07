@@ -897,6 +897,19 @@ thus less things to worry about...
 	const q = ds.cohort.termdb.q
 
 	{
+		const s = cn.prepare('SELECT * FROM category2vcfsample')
+		let cache
+		q.getcategory2vcfsample = ()=>{
+			if(cache) return cache
+			cache = s.all()
+			for(const i of cache) {
+				i.q = JSON.parse(i.q)
+				i.category2sample = JSON.parse(i.category2sample)
+			}
+			return cache
+		}
+	}
+	{
 		const s = cn.prepare('SELECT * FROM alltermsbyorder')
 		let cache
 		q.getAlltermsbyorder = ()=>{
@@ -909,12 +922,13 @@ thus less things to worry about...
 			return cache
 		}
 	}
-
 	{
 		const s = cn.prepare('SELECT jsondata FROM terms WHERE id=?')
 		const cache = new Map()
-		// should only cache result for valid term id, not for invalid ids
-		// as invalid id is arbitrary and there can be indefinite amount of them to overwhelm the server memory
+		/* should only cache result for valid term id, not for invalid ids
+		as invalid id is arbitrary and indefinite
+		an attack using random strings as termid can overwhelm the server memory
+		*/
 		q.termjsonByOneid = (id)=>{
 			if(cache.has(id)) return cache.get(id)
 			const t = s.get( id )

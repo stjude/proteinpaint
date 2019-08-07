@@ -39,6 +39,16 @@ create table alltermsbyorder (
 .import alltermsbyorder alltermsbyorder
 
 
+drop table if exists category2vcfsample;
+create table category2vcfsample (
+  term_id character varying(100) not null,
+  q json null,
+  category2sample json not null
+);
+.import category2vcfsample category2vcfsample
+
+
+
 
 drop table if exists annotations;
 drop index if exists a_sample;

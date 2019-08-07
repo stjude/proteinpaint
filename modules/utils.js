@@ -18,6 +18,7 @@ init_one_vcf
 validate_tabixfile
 get_lines_tabix
 write_file
+write_tmpfile
 read_file
 file_not_exist
 file_not_readable
@@ -169,6 +170,14 @@ function write_file ( file, text ) {
 	})
 }
 exports.write_file = write_file
+
+
+async function write_tmpfile ( text ) {
+	const tmp = Math.random().toString()
+	await write_file( path.join(serverconfig.cachedir, tmp), text)
+	return tmp
+}
+exports.write_tmpfile = write_tmpfile
 
 
 

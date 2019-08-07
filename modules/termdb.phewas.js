@@ -31,6 +31,13 @@ q{}
 	if(!ds.cohort.termdb) throw 'cohort.termdb missing'
 	if(!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
 
+	if( q.precompute ) {
+		// detour
+		if(!serverconfig.debugmode) throw 'precomputing is only allowed on a dev server'
+		await precompute( q, res, tdb, ds )
+		return
+	}
+
 	if(!q.ssid) throw 'ssid missing'
 	const [sample2gt, genotype2sample] = await utils.loadfile_ssid( q.ssid )
 	// sample2gt: {sample:gt}
@@ -57,112 +64,78 @@ q{}
 	.table: [ contigency table ]
 	*/
 
-
 	const result = {
 		minimum_total_sample,
 		skipped_byminimumsample: 0
 	}
 	// to be sent to client
 
+	for(const cacherow of tdb.q.getcategory2vcfsample()) {
+		/*
+		.term_id
+		.q
+		.category2sample
+		*/
 
-let i=0
-	for(const term of ds.cohort.termdb.q.getAlltermsbyorder()) {
-		if(!term.graph) continue
-		//if(++i==60) break
+		const term = termdb.copy_term( tdb.q.termjsonByOneid( cacherow.term_id ) )
 
-		//////////// prep query for this term
-		const qlst = []
-		if( term.iscategorical ) {
-			qlst.push( { ds, term1_id: term.id } )
-		} else if( term.isfloat || term.isinteger ) {
-			qlst.push( { ds, term1_id: term.id } )
-		} else if( term.iscondition ) {
-			// for both leaf and non-leaf
-			qlst.push({
-				ds,
-				term1_id: term.id,
-				term1_q: {bar_by_grade:true,value_by_max_grade:true}
-			})
-			if( !term.isleaf ) {
-				// for non-leaf, test subcondition by computable grade
-				qlst.push({
-					ds,
-					term1_id: term.id,
-					term1_q: {bar_by_children:true,value_by_computable_grade:true}
-				})
-			}
-		} else {
-			throw 'unknown term type'
-		}
-
-		for(const q of qlst) {
-			////////////// run query
-			const re = termdbsql.get_rows( q )
-
-			const category2gt2samples = new Map()
-			// k: category (key1)
-			// v: map{}
-			//    k: gt
-			//    v: sample set
-			for(const i of re.lst) {
-				const genotype = sample2gt[ i.sample ]
+		for(const category in cacherow.category2sample) {
+			const gt2samples = new Map()
+			// k: gt
+			// v: sample set
+			for(const sample of cacherow.category2sample[category]) {
+				const genotype = sample2gt[ sample ]
 				if(!genotype) {
-					// no genotype for this sample, drop
+					// no genotype, may happen when there's no sequencing coverage at this variant for this sample
 					continue
 				}
-				const category = i.key1
-				if(!category2gt2samples.has(category)) category2gt2samples.set(category, new Map())
-				if(!category2gt2samples.get(category).has( genotype )) category2gt2samples.get(category).set( genotype, new Set())
-				category2gt2samples.get(category).get(genotype).add( i.sample )
+				if(!gt2samples.has(genotype)) gt2samples.set(genotype, new Set())
+				gt2samples.get(genotype).add(sample)
 			}
 
+			/////////////// each category as a case
 
-			for(const [category,o] of category2gt2samples) {
-
-				/////////////// each category as a case
-
-				const gt2size = new Map()
-				// k: gt, v: number of samples
-				let thiscatnumber = 0
-				for(const [gt,s] of o) {
-					gt2size.set(gt, s.size)
-					thiscatnumber += s.size
-				}
-				/*
-				if(thiscatnumber < minimum_total_sample) {
-					result.skipped_byminimumsample++
-					continue
-				}
-				*/
-
-				// number of samples by genotype in case
-				const het  = gt2size.get(utils.genotype_types.het) || 0
-				const halt = gt2size.get(utils.genotype_types.halt) || 0
-				const href = gt2size.get(utils.genotype_types.href) || 0
-				// number of samples by genotype in control
-				let het2, halt2, href2
-				if( term.iscondition && totalcountbygenotype_condition ) {
-					het2 = totalcountbygenotype_condition.het - het
-					halt2 = totalcountbygenotype_condition.halt - halt
-					href2 = totalcountbygenotype_condition.href - href
-				} else {
-					het2 = het0-het
-					halt2 = halt0-halt
-					href2 = href0-href
-				}
-
-				tests.push({
-					term: termdb.copy_term( term ),
-					category,
-					q: q.term1_q,
-					table: [ 
-						het + 2* halt, // case alt
-						het + 2* href, // case ref
-						het2 + 2* halt2, // ctrl alt
-						het2 + 2* href2, // ctrl ref
-					]
-				})
+			const gt2size = new Map()
+			// k: gt, v: number of samples
+			let thiscatnumber = 0
+			for(const [gt,s] of gt2samples) {
+				gt2size.set(gt, s.size)
+				thiscatnumber += s.size
 			}
+			/*
+			if(thiscatnumber < minimum_total_sample) {
+				result.skipped_byminimumsample++
+				continue
+			}
+			*/
+
+			// number of samples by genotype in case
+			const het  = gt2size.get(utils.genotype_types.het) || 0
+			const halt = gt2size.get(utils.genotype_types.halt) || 0
+			const href = gt2size.get(utils.genotype_types.href) || 0
+			// number of samples by genotype in control
+			let het2, halt2, href2
+			if( term.iscondition && totalcountbygenotype_condition ) {
+				het2 = totalcountbygenotype_condition.het - het
+				halt2 = totalcountbygenotype_condition.halt - halt
+				href2 = totalcountbygenotype_condition.href - href
+			} else {
+				het2 = het0-het
+				halt2 = halt0-halt
+				href2 = href0-href
+			}
+
+			tests.push({
+				term,
+				category,
+				q: q.term1_q,
+				table: [ 
+					het + 2* halt, // case alt
+					het + 2* href, // case ref
+					het2 + 2* halt2, // ctrl alt
+					het2 + 2* href2, // ctrl ref
+				]
+			})
 		}
 	}
 
@@ -197,7 +170,7 @@ let i=0
 
 
 	get_maxlogp( tests, result )
-	result.tmpfile = await write_tmpfile( tests )
+	result.tmpfile = await utils.write_tmpfile( tests.map(i=>i.logp).join(' ') )
 	plot_canvas( tests, result )
 
 	{
@@ -249,6 +222,78 @@ let i=0
 		}
 		return [ _condition ]
 	}
+}
+
+
+
+
+async function precompute ( q, res, tdb, ds ) {
+/*
+for precomputing
+programmatically generate list of samples for each category
+using get_rows
+for numeric term: use default binning scheme
+for condition term: hardcoded scheme
+for the hope of 
+*/
+	if(!ds.cohort) throw 'ds.cohort missing'
+	if(!ds.cohort.termdb) throw 'cohort.termdb missing'
+	if(!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
+
+	const results = []
+
+	for(const term of ds.cohort.termdb.q.getAlltermsbyorder()) {
+		if(!term.graph) continue
+
+		//////////// prep query for this term
+		const qlst = []
+		if( term.iscategorical ) {
+			qlst.push( { ds, term1_id: term.id } )
+		} else if( term.isfloat || term.isinteger ) {
+			qlst.push( { ds, term1_id: term.id } )
+		} else if( term.iscondition ) {
+			// for both leaf and non-leaf
+			qlst.push({
+				ds,
+				term1_id: term.id,
+				term1_q: {bar_by_grade:true,value_by_max_grade:true}
+			})
+			if( !term.isleaf ) {
+				// for non-leaf, test subcondition by computable grade
+				qlst.push({
+					ds,
+					term1_id: term.id,
+					term1_q: {bar_by_children:true,value_by_computable_grade:true}
+				})
+			}
+		} else {
+			throw 'unknown term type'
+		}
+
+		for(const q of qlst) {
+
+			const re = termdbsql.get_rows( q )
+
+			const category2samples = {}
+			// k: category (key1)
+			// v: list of sample names
+			for(const i of re.lst) {
+				if( ds.track && ds.track.vcf && ds.track.vcf.sample2arrayidx) {
+					if(!ds.track.vcf.sample2arrayidx.has( i.sample )) {
+						// not a sample in vcf
+						continue
+					}
+				}
+				const category = i.key1
+				if(!category2samples[category]) category2samples[category] = []
+				category2samples[category].push(i.sample)
+			}
+			results.push(`${term.id}\t${q.term1_q?JSON.stringify(q.term1_q):''}\t${JSON.stringify(category2samples)}`)
+		}
+	}
+
+	const filename = await utils.write_tmpfile(results.join('\n'))
+	res.send({filename})
 }
 
 
@@ -317,11 +362,4 @@ function plot_canvas ( tests, result ) {
 	result.axisheight = axisheight
 	result.dotradius = dotradius
 	result.src = canvas.toDataURL()
-}
-
-
-async function write_tmpfile ( tests ) {
-	const tmp = Math.random().toString()
-	await utils.write_file( path.join(serverconfig.cachedir, tmp), tests.map(i=>i.logp).join(' '))
-	return tmp
 }
