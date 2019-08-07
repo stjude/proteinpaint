@@ -18,6 +18,7 @@ const panel_border_color = '#D3D3D3'
 export function controls(arg, plot, main) {
   plot.config_div = plot.dom.controls
     .style('max-width', '50px')
+    .style('max-height', 0)
     .style('vertical-align','top')
     .style('margin', '8px')
     .style('transition', '0.2s ease-in-out')
@@ -43,6 +44,7 @@ export function controls(arg, plot, main) {
         
       plot.config_div
         .style('max-width', visibility == 'hidden' ? '660px' : '50px')
+        .style('max-height', visibility == 'hidden' ? '' : 0)
         .style('background', visibility == 'hidden' ? panel_bg_color : '')
         // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
 

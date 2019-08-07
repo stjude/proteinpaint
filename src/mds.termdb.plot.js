@@ -144,7 +144,7 @@ function main(plot, callback = ()=>{}) {
   // to plot.[term0,term,term2] and term1_q parameters
   // for convenience and namespacing related variables
   plot.terms = [plot.term0, plot.term, plot.term2]
-  plot.dom.holder.style('max-width', Math.round(85*window.innerWidth/100) + 'px')
+  //plot.dom.holder.style('max-width', Math.round(85*window.innerWidth/100) + 'px')
 
   const dataName = getDataName(plot)
   if (serverData[dataName]) {
