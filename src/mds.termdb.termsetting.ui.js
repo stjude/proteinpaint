@@ -143,7 +143,7 @@ export async function display (obj){
 						else if (v=='any') obj.termsetting.term.q.value_by_computable_grade=true
                         obj.termsetting.q = obj.termsetting.term.q
 						__flip_select2()
-						obj.callback()
+						obj.callback(obj.termsetting.term)
 					})
 
 				select2.append('option')
