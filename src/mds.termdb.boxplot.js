@@ -162,23 +162,23 @@ function render(self, plot, lst, binmax) {
             .html(
               `<table class='sja_simpletable'>
                 <tr>
-                  <td style='padding: 3px'>${plot.term.name}</td>
+                  <td style='padding: 3px; color:#aaa'>${plot.term.name}</td>
                   <td style='padding: 3px'>${item.label}</td>
                 </tr>
                 <tr>
-                  <td style='padding: 3px'>Mean</td>
+                  <td style='padding: 3px; color:#aaa'>Mean</td>
                   <td style='padding: 3px'>${item.boxplot.mean.toPrecision(4)}</td>
                 </tr>
                 <tr>
-                  <td style='padding: 3px'>Median</td>
+                  <td style='padding: 3px; color:#aaa'>Median</td>
                   <td style='padding: 3px'>${item.boxplot.p50.toPrecision(4)}</td>
                 </tr>
                 <tr>
-                  <td style='padding: 3px'>1st to 3rd Quartile</td>
+                  <td style='padding: 3px; color:#aaa'>1st to 3rd Quartile</td>
                   <td style='padding: 3px'>${item.boxplot.p25.toPrecision(4)} to ${item.boxplot.p75.toPrecision(4)}</td>
                 </tr>
                 <tr>
-                  <td style='padding: 3px'>Std. Deviation</td>
+                  <td style='padding: 3px; color:#aaa'>Std. Deviation</td>
                   <td style='padding: 3px'>${item.boxplot.sd.toPrecision(4)}</td>
                 </tr>
               </table>`

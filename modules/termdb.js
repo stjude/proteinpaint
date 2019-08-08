@@ -51,8 +51,8 @@ return async (req, res) => {
 		if( q.findterm ) return trigger_findterm( q, res, tdb )
 		if( q.treeto ) return trigger_treeto( q, res, tdb )
 		if( q.testplot ) return trigger_testplot( q, res, tdb, ds ) // this is required for running test cases!!
-		if( q.phewas ) return phewas.trigger( q, res, tdb, ds )
-		if( q.updatephewas ) return phewas.update_image( q, res )
+		if( q.phewas ) return await phewas.trigger( q, res, ds )
+		if( q.updatephewas ) return await phewas.update_image( q, res )
 
 		throw 'termdb: don\'t know what to do'
 
@@ -107,7 +107,7 @@ function trigger_rootterm ( res, tdb ) {
 
 
 
-async function trigger_children ( q, res, tdb ) {
+function trigger_children ( q, res, tdb ) {
 /* get children terms
 may apply ssid: a premade sample set
 */

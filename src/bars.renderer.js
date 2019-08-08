@@ -94,7 +94,7 @@ returns:
 */
 
 export default function barsRenderer(barsapp, holder) {
-  const hm = {}
+  const hm = {}, computed = {}
   const emptyObj = {}; //used to represent any empty cell
   let chart
   let chartTitle
@@ -347,13 +347,13 @@ export default function barsRenderer(barsapp, holder) {
         hm.rowgrplabelw
 
     if (hm.orientation == 'horizontal') {
-      hm.svgw = Math.min(400, window.innerWidth * 0.92 / maxChartsPerRow)
+      hm.svgw = Math.min(400, 0.92 * window.innerWidth / maxChartsPerRow)
+      hm.rowh = Math.max(14, Math.min(22, 0.7 * window.innerHeight / hm.cols.length))
       hm.svgh = hm.cols.length * (hm.rowh + hm.colspace) -
         hm.colspace +
         (hm.colgrps.length - 1) * hm.colgspace +
         hm.rowlabelw +
         hm.rowgrplabelw
-
     } else {
       const maxSvgw = window.innerWidth * 0.92 / maxChartsPerRow
       hm.colw = Math.min(
@@ -407,14 +407,15 @@ export default function barsRenderer(barsapp, holder) {
       }
     }
 
-    hm.rowfontsize = Math.min(
-      hm.rowh * hm.fontsizeratio,
-      hm.rowlabelfontsizemax
-    );
-    hm.colfontsize = Math.min(
+    computed.colfontsize = Math.min(
       hm.colw * hm.fontsizeratio,
       hm.collabelfontsizemax
     );
+    computed.rowfontsize = Math.min(
+      hm.rowh * hm.fontsizeratio,
+      hm.rowlabelfontsizemax
+    );
+    computed.rowtextyalign = Math.min(hm.rowh, (hm.rowh + computed.rowfontsize)/2) + hm.rowspace
   }
 
   function setIds(series) {
@@ -585,7 +586,7 @@ export default function barsRenderer(barsapp, holder) {
       .attr("transform", "rotate(-40)")
       .attr("y", 2) //hm.colw / 3)
       .attr("text-anchor", "end")
-      .attr("font-size", hm.colfontsize)
+      .attr("font-size", computed.colfontsize + 'px')
       .text(hm.handlers.colLabel.text);
 
     g.transition()
@@ -603,7 +604,7 @@ export default function barsRenderer(barsapp, holder) {
       //.attr('transform', 'rotate(-90)')
       .attr("y", 2) //hm.colw / 3)
       .attr("text-anchor", "end")
-      .attr("font-size", hm.colfontsize)
+      .attr("font-size", computed.colfontsize + 'px')
       .text(hm.handlers.colLabel.text);
   }
 
@@ -620,7 +621,7 @@ export default function barsRenderer(barsapp, holder) {
     const y =
       hm.colgrps.indexOf(grp) * hm.rowgspace +
       hm.cols.indexOf('id' in d ? d.id : d) * (hm.rowh + hm.rowspace) +
-      hm.rowh; // / 4;
+      computed.rowtextyalign; 
     const x = hm.rowheadleft
       ? -1 * (hm.rowtick + hm.rowlabtickspace)
       : hm.rowtick + hm.rowlabtickspace;
@@ -636,7 +637,7 @@ export default function barsRenderer(barsapp, holder) {
     g.append("text")
       .attr("x", 2) //hm.colw / 3)
       .attr("text-anchor", "end")
-      .attr("font-size", hm.rowlabfontsize)
+      .attr("font-size", computed.rowfontsize + 'px')
       .text(hm.handlers.rowLabel.text);
 
     g.transition()
@@ -645,7 +646,7 @@ export default function barsRenderer(barsapp, holder) {
       .style("opacity", 1);
   }
 
-  function updateRowLabel() {
+  function updateRowLabel() { console.log()
     const g = select(this);
 
     g.attr("transform", rowLabelTransform); //.transition().duration(hm.duration)
@@ -654,7 +655,7 @@ export default function barsRenderer(barsapp, holder) {
       //.attr('transform', 'rotate(-90)')
       .attr("x", 2) //hm.colw / 3)
       .attr("text-anchor", "end")
-      .attr("font-size", hm.rowlabfontsize)
+      .attr("font-size", computed.rowfontsize + 'px')
       .text(hm.handlers.rowLabel.text);
   }
 
@@ -663,7 +664,7 @@ export default function barsRenderer(barsapp, holder) {
   }
 
   function rowTextSize(d) {
-    return d == currCell.rowId ? Math.max(12, hm.rowfontsize) : hm.rowfontsize;
+    return d == currCell.rowId ? Math.max(12, computed.rowfontsize) : computed.rowfontsize;
   }
 
   function rowTextColor(d) {
@@ -675,7 +676,7 @@ export default function barsRenderer(barsapp, holder) {
   }
 
   function colTextSize(d) {
-    return d == currCell.colId ? 12 : hm.colfontsize;
+    return d == currCell.colId ? 12 : computed.colfontsize;
   }
 
   function colTextColor(d) {
@@ -886,10 +887,10 @@ export default function barsRenderer(barsapp, holder) {
 
   function seriesMouseOut() {
     event.stopPropagation();
-    //currRowTexts.attr('font-weight','').attr('font-size',hm.rowfontsize).style('fill','')
+    //currRowTexts.attr('font-weight','').attr('font-size',computed.rowfontsize).style('fill','')
     currColTexts
       .attr("font-weight", "")
-      .attr("font-size", hm.colfontsize)
+      .attr("font-size", computed.colfontsize)
       .style("fill", "");
     //resizeCaller.show()
     currCell = emptyObj;

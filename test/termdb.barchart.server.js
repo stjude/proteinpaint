@@ -113,7 +113,7 @@ function handle_testui_request(req, res) {
 </ul>
 <p>Open the browser's dev tools to inspect Network response preview for test results and details.</p>
 <p>Enter the URL query parameters to test below, encoded as JSON, then click submit.</p>
-<textarea id='qparams' style='width:400px; height: 400px'></textarea>
+<textarea id='qparams' style='width:400px; height: 400px; font-size:16px'></textarea>
 <button onclick='submit()'>Submit</button>
 
 <script>

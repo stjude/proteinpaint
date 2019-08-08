@@ -10,6 +10,7 @@ import {event as d3event} from 'd3-selection'
 termdb_bygenotype
 ********************** INTERNAL
 get_ssid_by_onevcfm
+phewas_svg
 */
 
 
@@ -71,15 +72,33 @@ official track only
 		const div = plotdiv.append('div')
 			.style('margin-top','20px')
 		const wait = div.append('div').text('Loading...')
-		const arg = [
-			'genome='+block.genome.name,
-			'dslabel='+tk.mds.label,
-			'ssid='+ssid,
-			'phewas=1'
-		]
-		const data = await client.dofetch2('/termdb?'+arg.join('&'))
-		wait.remove()
-		phewas_svg( data, div, tk, block )
+
+		try {
+			if( h.has('precompute')) {
+				const arg = [
+					'genome='+block.genome.name,
+					'dslabel='+tk.mds.label,
+					'phewas=1&precompute=1'
+				]
+				const data = await client.dofetch2('/termdb?'+arg.join('&'))
+				if(data.error) throw data.error
+				wait.text( data.filename )
+				return
+			}
+			const arg = [
+				'genome='+block.genome.name,
+				'dslabel='+tk.mds.label,
+				'ssid='+ssid,
+				'phewas=1'
+			]
+			const data = await client.dofetch2('/termdb?'+arg.join('&'))
+			if(data.error) throw data.error
+			phewas_svg( data, div, tk, block )
+			wait.remove()
+		} catch(e) {
+			wait.text('Error: '+(e.message||e))
+			if(e.stack) console.log(e.stack)
+		}
 	}
 }
 

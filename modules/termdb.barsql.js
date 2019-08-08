@@ -89,6 +89,7 @@ const template = JSON.stringify({
           dataId: "@key",
           "~samples": ["$sample", "set"],
           "__:total": "=sampleCount()",
+          "__:unannotated": "=unannotatedData()"
         }, "$key2"],
         "_:_max": "<$val2", // needed by client-side boxplot renderer 
         "~values": ["$nval2",0],
@@ -97,17 +98,12 @@ const template = JSON.stringify({
         "__:total": "=sampleCount()",
         "__:boxplot": "=boxplot()",
         "__:AF": "=getAF()",
+        "__:unannotated": "=unannotatedSeries()"
       }, "$key1"],
     }, "$key0"],
     "~sum": "+$nval1",
     "~values": ["$nval1",0],
     "__:boxplot": "=boxplot()",
-    /*"_:_unannotated": {
-      label: "",
-      label_unannotated: "",
-      value: "+=unannotated()",
-      value_annotated: "+=annotated()"
-    },*/
     "_:_refs": {
       cols: ["$key1"],
       colgrps: ["-"], 
@@ -246,6 +242,18 @@ function getPj(q, data, tdb, ds) {
             : []
         })
         return unannotated
+      },
+      unannotatedSeries(row, context) {
+        if (!terms[1] || !terms[1].unannotatedLabels.length) return
+        const i = terms[1].unannotatedLabels.indexOf(context.self.seriesId)
+        if (i == -1) return
+        return {value: terms[1].unannotatedValues[i]}
+      },
+      unannotatedData(row, context) {
+        if (!terms[2] || !terms[2].unannotatedLabels.length) return
+        const i = terms[2].unannotatedLabels.indexOf(context.self.seriesId)
+        if (i == -1) return
+        return {value: terms[2].unannotatedValues[i]}
       },
       filterEmptySeries(result) {
         const nonempty = result.serieses.filter(series=>series.total)

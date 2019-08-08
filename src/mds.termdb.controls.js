@@ -15,22 +15,16 @@ const plots = []
 const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
 
-export function controls(arg, plot, main) {
-  plot.config_div = plot.dom.controls
-    .style('max-width', '50px')
-    .style('vertical-align','top')
+export function init(arg, plot, main) {
+  plot.dom.controls
     .style('margin', '8px')
-    .style('transition', '0.2s ease-in-out')
+    .style('vertical-align', 'top')
+    .style('transition','0.5s')
 
-  // controlsIndex to be used to assign unique radio input names
-  // by config div
-  plot.controlsIndex = plots.length
-  plots.push(plot)
-
-  // label
-  const hamburger_btn = plot.config_div.append('div').append('div')
+  plot.dom.controlsTopBar = plot.dom.controls.append('div')
+  const hamburger_btn = plot.dom.controlsTopBar.append('div')
     .attr('class','sja_edit_btn')
-	  .style('margin','10px')
+    .style('margin','10px')
     .style('font-size', '16px')
     .style('transition','0.5s')
     .html('&#8801;')
@@ -43,12 +37,27 @@ export function controls(arg, plot, main) {
         
       plot.config_div
         .style('max-width', visibility == 'hidden' ? '660px' : '50px')
-        .style('background', visibility == 'hidden' ? panel_bg_color : '')
+        .style('height', visibility == 'hidden' ? '' : 0)
+        
+      plot.dom.controls.style('background', visibility == 'hidden' ? panel_bg_color : '')
         // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
 
       hamburger_btn
         .html(visibility == 'hidden' ? '&#215;' : '&#8801;')
     })
+
+  plot.config_div = plot.dom.controls.append('div')
+    .style('max-width', '50px')
+    .style('height', 0)
+    .style('vertical-align','top')
+    .style('transition', '0.2s ease-in-out')
+    .style('overflow', 'hidden')
+
+  // controlsIndex to be used to assign unique radio input names
+  // by config div
+  plot.controlsIndex = plots.length
+  plots.push(plot)
+  
 
   const tip = plot.config_div.append('div')
     .style('visibility','hidden')
@@ -70,23 +79,26 @@ export function controls(arg, plot, main) {
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
   // setBinOpts(plot, main, table, 'term2', 'Overlay Bins') // will be handled from term2 blue-pill
   setDivideByOpts(plot, main, table, arg)
-  
-  plot.controls_update = (plot, data) => {
-    plot.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
-    plot.syncControls.forEach(update => update()) // match input values to current
-    table.selectAll('tr')
-    .filter(rowIsVisible)
-    .each(RowStyle)
-  }
+
 
   function rowIsVisible() {
     return d3select(this).style('display') != 'none'
   }
 
-  function RowStyle(){
+  function rowStyle(){
     d3select(this).selectAll('td')
     .style('border-top','2px solid #FFECDD')
     .style('padding','5px 10px')
+  }
+
+  return {
+    main(plot, data) {
+      plot.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
+      plot.syncControls.forEach(update => update()) // match input values to current
+      table.selectAll('tr')
+      .filter(rowIsVisible)
+      .each(rowStyle)
+    }
   }
 }
 

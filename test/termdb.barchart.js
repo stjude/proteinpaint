@@ -96,9 +96,11 @@ const templateBar = JSON.stringify({
         "__:boxplot": "=boxplot()",
         "~samples": ["$sjlid", "set"],
         "__:AF": "=getAF()",
+        "__:unannotated": "=unannotatedSeries()",
         data: [{
           dataId: "@key",
-          total: "+1" 
+          total: "+1",
+          "__:unannotated": "=unannotatedData()"
         }, "&idVal.dataId[]"],
       }, "&idVal.seriesId[]"],
     }, "&idVal.chartId[]"],
@@ -143,7 +145,7 @@ function getPj(q, inReqs, data, tdb, ds) {
   inReq: request-specific closured functions and variables
   data: rows of annotation data
 */ 
-  const kvs = [
+  const terms = [
     {i: 0, term: 'term0', key: 'chartId', val: 'chartVal', q: q.term0_q},
     {i: 1, term: 'term1', key: 'seriesId', val: 'seriesVal', q: q.term1_q},
     {i: 2, term: 'term2', key: 'dataId', val: 'dataVal', q: q.term2_q}
@@ -166,15 +168,15 @@ function getPj(q, inReqs, data, tdb, ds) {
       idVal(row, context, joinAlias) {
         // chart, series, data
         const csd = Object.create(null)
-        for(const kv of kvs) {
-          const termid = q[kv.term]
-          const id = inReqs[kv.i].joinFxns[termid](row, context, joinAlias)
+        for(const term of terms) {
+          const termid = q[term.term]
+          const id = inReqs[term.i].joinFxns[termid](row, context, joinAlias)
           if (id===undefined || (Array.isArray(id) && !id.length)) return
-          csd[kv.key] = Array.isArray(id) ? id : [id]
-          const value = typeof inReqs[kv.i].numValFxns[termid] == 'function'
-            ? inReqs[kv.i].numValFxns[termid](row)
+          csd[term.key] = Array.isArray(id) ? id : [id]
+          const value = typeof inReqs[term.i].numValFxns[termid] == 'function'
+            ? inReqs[term.i].numValFxns[termid](row)
             : undefined
-          csd[kv.val] = 0 && inReqs[kv.i].unannotatedLabels.includes(value)
+          csd[term.val] = 0 && inReqs[term.i].unannotatedLabels.includes(value)
             ? undefined
             : value 
         };
@@ -250,6 +252,18 @@ function getPj(q, inReqs, data, tdb, ds) {
         }
         return total
       },
+      unannotatedSeries(row, context) {
+        if (!inReqs[1].unannotatedLabels.length) return
+        const i = inReqs[1].unannotatedLabels.indexOf(context.self.seriesId)
+        if (i == -1) return
+        return {value: inReqs[2].unannotatedValues[i]}
+      },
+      unannotatedData(row, context) {
+        if (!inReqs[2].unannotatedLabels.length) return
+        const i = inReqs[2].unannotatedLabels.indexOf(context.self.seriesId)
+        if (i == -1) return
+        return {value: inReqs[2].unannotatedValues[i]}
+      },
       annotated(row, context) {
         const series = context.joins.get('series')
         if (!series) return
@@ -272,8 +286,8 @@ function getPj(q, inReqs, data, tdb, ds) {
         }
       },
       sortCharts(result) {
-        for(const kv of kvs) {
-          const termid = q[kv.term]
+        for(const term of terms) {
+          const termid = q[term.term]
         }
       },
       useColOrder() {
@@ -304,8 +318,8 @@ function getPj(q, inReqs, data, tdb, ds) {
       },
       grade_labels() {
         let has_condition_term = false
-        for(const kv of kvs) {
-          if (kv.q.bar_by_grade || kv.q.bar_by_children) {
+        for(const term of terms) {
+          if (term.q.bar_by_grade || term.q.bar_by_children) {
             has_condition_term = true
             break
           }
@@ -405,6 +419,7 @@ function get_numeric_bin_name (term_q, termid, term, ds, termnum, inReq, data0 )
   inReq.orderedLabels = bins.map(d=>d.label); 
   if (binconfig.unannotated) {
     inReq.unannotatedLabels = Object.values(binconfig.unannotated._labels)
+    inReq.unannotatedValues = Object.values(binconfig.unannotated._values)
   }
 
   inReq.joinFxns[termid] = row => {

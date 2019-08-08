@@ -3,16 +3,12 @@ import barsRenderer from "./bars.renderer"
 import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
-import { Menu } from './client'
-import { bar_click_menu } from './mds.termdb.controls'
+import getHandlers from './mds.termdb.barchart.events'
 
 const colors = {
   c10: scaleOrdinal( schemeCategory10 ),
   c20: scaleOrdinal( schemeCategory20 )
 } 
-
-const tip = new Menu({padding:'5px'})
-tip.d.style('text-align', 'center')
 
 export class TermdbBarchart{
   constructor(opts={settings:{}}) {
@@ -41,7 +37,7 @@ export class TermdbBarchart{
       term1: this.opts.term1,
       term2: null
     }
-    this.handlers = this.getEventHandlers()
+    this.handlers = getHandlers(this)
     this.controls = {}
     this.currChartsData = null
     this.term2toColor = {}
@@ -113,7 +109,7 @@ export class TermdbBarchart{
 
     self.seriesOrder = !chartsData.charts.length 
       ? [] 
-      :chartsData.charts[0].serieses
+      : chartsData.charts[0].serieses
         .sort(chartsData.refs.useColOrder
           ? (a,b) => cols.indexOf(b.seriesId) - cols.indexOf(a.seriesId)
           : (a,b) => !isNaN(a.seriesId)
@@ -197,21 +193,23 @@ export class TermdbBarchart{
         const unannotatedColLabels = chartsData.refs.unannotatedLabels.term1
         if (unannotatedColLabels) {
           for(const label of unannotatedColLabels) {
-            if (!chart.settings.exclude.cols.includes(label)) {
-              chart.settings.exclude.cols.push(label)
+            if (!this.settings.exclude.cols.includes(label)) {
+              //this.settings.exclude.cols.push(label) // do not automatically hide for now
             }
           }
         }
         const unannotatedRowLabels = chartsData.refs.unannotatedLabels.term2
         if (unannotatedRowLabels) {
           for(const label of unannotatedRowLabels) {
-            if (!chart.settings.exclude.rows.includes(label)) {
-              chart.settings.exclude.rows.push(label)
+            if (!this.settings.exclude.rows.includes(label)) {
+              //this.settings.exclude.rows.push(label) // do not automatically hide for now
             }
           }
         }
       }
     }
+    //const settingsCopy = Object.assign({},this.settings)
+    //delete settingsCopy.exclude
     for(const chart of chartsData.charts) {
       Object.assign(chart.settings, this.settings, chartsData.refs)
       chart.visibleSerieses = chart.serieses.filter(d=>{
@@ -259,6 +257,8 @@ export class TermdbBarchart{
       seriesLogTotal += result.logTotal;
       this.setTerm2Color(result)
       result.color = this.term2toColor[result.dataId]
+      result.unannotatedSeries = series.unannotated
+      result.unannotatedData = result.unannotated
     }
     if (seriesLogTotal > chart.maxSeriesLogTotal) {
       chart.maxSeriesLogTotal = seriesLogTotal
@@ -275,258 +275,6 @@ export class TermdbBarchart{
     return a[this.settings.term2] < b[this.settings.term1] 
       ? -1
       : 1 
-  }
-
-  getEventHandlers() {
-    const self = this
-    const s = this.settings
-
-    function barclick(d, callback, obj=null) {
-    /*
-      d: clicked bar data
-      callback
-    */
-
-      const termValues = []
-      for(const index of [0,1,2]) { 
-        const termNum = 'term' + index
-        const term = self.terms[termNum]
-        if (termNum == 'term0' || !term) continue
-
-        const key = termNum=="term1" ? d.seriesId : d.dataId
-        const q1 = self.plot.term.q
-        const label = term.iscondition && self.grade_labels && q1.bar_by_grade
-          ? self.grade_labels.find(c => c.grade == key).label
-          : !term.values 
-          ? key
-          : termNum=="term1"
-            ? term.values[d.seriesId].label
-            : term.values[d.dataId].label
-
-        if (term.iscondition) {
-          termValues.push(Object.assign({
-            term,
-            values:[{key,label}]
-          }, q1))
-
-          if (index == 1 && self.terms.term2 && term.id == self.terms.term2.id) {
-            const q2 = self.plot.term2.q
-            const term2Label = q.bar_by_children 
-              ? self.grade_labels.find(c => c.grade == d.dataId).label
-              : self.terms.term2.values
-              ? self.terms.term2.values[d.dataId].label
-              : d.dataId
-
-            termValues.push(Object.assign({
-              term,
-              grade_and_child: [{
-                grade: q2.bar_by_grade ? d.dataId : key,
-                grade_label: q2.bar_by_grade ? term2Label : label ,
-                child_id: q2.bar_by_children ? key : d.dataId,
-                child_label: q2.bar_by_children ? label : term2Label
-              }]
-            }, q2))
-          }
-        } else {
-          const bins = self.bins[index]
-          if (!bins || !bins.length) {
-            // not associated with numeric bins
-            termValues.push({term, values: [{key, label}]})
-          } else {
-            const range = bins.find(d => d.label == label || d.name == label)
-            if (range) termValues.push({term, ranges: [range]})
-            else if (term.q && term.q.binconfig && term.q.binconfig.unannotated) {
-              for(const id in term.q.binconfig.unannotated._labels) {
-                const _label = term.q.binconfig.unannotated._labels[id];
-                if (_label == label) termValues.push({term, ranges: [{value: id, label}]});
-              }
-            }
-          }
-        }
-      }
-      if (!obj) {
-        callback({terms: termValues})
-      } else {
-        callback(obj, termValues)
-      }
-      self.obj.tip.hide()
-    }
-
-    return {
-      chart: {
-        title(chart) {
-          if (!self.terms.term0) return chart.chartId
-          const grade = self.grade_labels
-            ? self.grade_labels.find(c => c.grade == chart.chartId)
-            : null
-          return self.terms.term0.values
-            ? self.terms.term0.values[chart.chartId].label
-            : grade
-            ? grade.label
-            : chart.chartId
-        }
-      },
-      svg: {
-        mouseout: ()=>{
-          tip.hide()
-        },
-      },
-      series: {
-        mouseover(d) {
-          const term1 = self.terms.term1
-          const term2 = self.terms.term2 ? self.terms.term2 : null
-          const seriesGrade = self.grade_labels
-            ? self.grade_labels.find(c => c.grade == d.seriesId)
-            : null
-          const dataGrade = self.grade_labels
-            ? self.grade_labels.find(c => c.grade == d.dataId)
-            : null
-          const seriesLabel = (term1.values
-            ? term1.values[d.seriesId].label
-            : term1.iscondition && seriesGrade
-            ? seriesGrade.label
-            : d.seriesId) + (term1.unit ? ' '+ term1.unit : '')
-          const dataLabel = (term2 && term2.values
-            ? term2.values[d.dataId].label
-            : term2 && term2.iscondition && dataGrade
-            ? dataGrade.label
-            : d.dataId) + (term2 && term2.unit ? ' '+ term2.unit : '')
-          const icon = !term2
-            ? ''
-            : "<div style='display:inline-block; width:12px; height:12px; margin: 2px 3px; vertical-align:top; background:"+d.color+"'>&nbsp;</div>"
-          const html = '<span>'+ seriesLabel + '</span>' +
-            (!term2 ? "" : "<br/>" + icon + '<span>' + dataLabel + '</span>') + 
-            "<br/><span>Total: " + d.total + '</span>' + 
-            (
-              !term2 
-              ? "" 
-              : "<br/><span>Percentage: " + (100*d.total/d.seriesTotal).toFixed(1) + "%</span>"
-            );
-          tip.show(event.clientX, event.clientY).d.html(html);
-        },
-        mouseout: ()=>{
-          tip.hide()
-        },
-        rectFill(d) {
-          return d.color
-        },
-        click(d) {
-          if (self.obj.modifier_barchart_selectbar 
-            && self.obj.modifier_barchart_selectbar.callback) {
-            barclick(d, self.obj.modifier_barchart_selectbar.callback)
-          }
-          else if (self.obj.bar_click_menu) {
-            bar_click_menu(self.obj, barclick, d)
-          }
-        }
-      },
-      colLabel: {
-        text: d => {
-          return self.terms.term1.values
-            ? self.terms.term1.values['id' in d ? d.id : d].label
-            : 'label' in d
-            ? d.label
-            : d
-        },
-        click: () => { 
-          const d = event.target.__data__
-          if (d === undefined) return
-          self.settings.exclude.cols.push(d.id)
-          self.main()
-        },
-        mouseover: () => {
-          event.stopPropagation()
-          tip.show(event.clientX, event.clientY).d.html("Click to hide bar");
-        },
-        mouseout: () => {
-          tip.hide()
-        }
-      },
-      rowLabel: {
-        text: d => {
-          return self.terms.term1.values
-            ? self.terms.term1.values['id' in d ? d.id : d].label
-            : 'label' in d
-            ? d.label
-            : d
-        },
-        click: () => { 
-          const d = event.target.__data__
-          if (d === undefined) return
-          self.settings.exclude.cols.push(d.id)
-          self.main()
-        },
-        mouseover: () => {
-          event.stopPropagation()
-          tip.show(event.clientX, event.clientY).d.html("Click to hide bar");
-        },
-        mouseout: () => {
-          tip.hide()
-        }
-      },
-      legend: {
-        click: () => {
-          event.stopPropagation()
-          const d = event.target.__data__
-          if (d === undefined) return
-          if (d.type == 'col') {
-            const i = self.settings.exclude.cols.indexOf(d.id)
-            if (i == -1) return
-            self.settings.exclude.cols.splice(i,1)
-            self.main()
-          }
-          if (d.type == 'row') {
-            const i = self.settings.exclude.rows.indexOf(d.dataId)
-            if (i == -1) {
-              self.settings.exclude.rows.push(d.dataId)
-            } else {
-              self.settings.exclude.rows.splice(i,1)
-            }
-            self.main()
-          }
-        },
-        mouseover: () => {
-          event.stopPropagation()
-          tip.show(event.clientX, event.clientY).d.html("Click to unhide bar");
-        },
-        mouseout: () => {
-          tip.hide()
-        }
-      },
-      yAxis: {
-        text: () => {
-          if (s.orientation == "vertical") { 
-            return s.unit == "pct" ? "% of patients" : "# of patients"
-          } else {
-            const term = self.terms.term1
-            return term.iscondition && self.plot.term.q.value_by_max_grade
-              ? 'Maximum grade'
-              : term.iscondition && self.plot.term.q.value_by_most_recent
-              ? 'Most recent grade'
-              : term.iscategorical || !term.unit
-              ? ''
-              : term.unit //term.name[0].toUpperCase() + term.name.slice(1)
-          }
-        }
-      },
-      xAxis: {
-        text: () => {
-          if (s.orientation == "vertical") {
-            const term = self.terms.term1
-            const q1 = term.q
-            return term.iscondition && q1.bar_by_grade && q1.value_by_max_grade
-              ? 'Maximum grade' 
-              : term.iscondition && q1.bar_by_grade && q1.value_by_most_recent
-              ? 'Most recent grades'
-              : term.iscategorical || !term.unit
-              ? ''
-              : term.unit // term.name[0].toUpperCase() + term.name.slice(1)
-          } else {
-            return s.unit == "pct" ? "% of patients" : "# of patients"
-          }
-        }
-      }
-    }
   }
 
   setTerm2Color(result) {

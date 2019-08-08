@@ -121,11 +121,33 @@ returns:
 				range2clause.push( '('+lst.join(' AND ')+')' )
 			}
 		}
+
+    const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
+    let exclude = ''
+    if (term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
+      const unanno = term.graph.barchart.numeric_bin.unannotated
+      if (unanno) {
+        const _exclude = Object.keys(unanno)
+          .filter(key=>key.startsWith("value")) // match unannotated.value, .value_negative, .value_positive
+          .map(key=>unanno[key]) // get unannotated[key] value
+          .filter(!tvs.isnot 
+            ? value => !tvs.ranges.find(range=> range.value == value)  // may actually want to NOT exclude an annotated value
+            : value => !tvs.ranges.find(range=> range.value == value) // exclude
+          )
+
+        if (_exclude.length) {
+        	exclude = `AND ${cast} NOT IN (${_exclude.map(d=>"?").join(",")})`
+        	values.push(..._exclude)
+        }
+      }
+    }
+
 		filters.push(
 			`SELECT sample
 			FROM annotations
 			WHERE term_id = ?
-			AND ( ${range2clause.join(' OR ')} )`
+			AND ( ${range2clause.join(' OR ')} )
+			${exclude}`
 		)
 	}
 
@@ -295,12 +317,11 @@ index    0 for term0, 1 for term1, 2 for term2
 	const termq = q[termnum_q]
 	if(termq && typeof termq == 'string' ) q[termnum_q] = JSON.parse(decodeURIComponent(termq))	
 	if (!termq) q[termnum_q] = {}
-	q[termnum_q].index = index
 
 	const tablename = 'samplekey_' + index
 
 	const CTE = term ?
-		makesql_oneterm( term, filter, q.ds, q[termnum_q], values, "_" + index)
+		makesql_oneterm( term, filter, q.ds, q[termnum_q], values, index)
 		: {
 			sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
 			tablename,
@@ -426,7 +447,7 @@ function get_label4key ( key, term, q, ds ) {
 
 
 
-function makesql_oneterm ( term, filter, ds, q, values, termindex ) {
+function makesql_oneterm ( term, filter, ds, q, values, index ) {
 /*
 form the query for one of the table in term0-term1-term2 overlaying
 
@@ -442,7 +463,7 @@ values[]: collector of bind parameters
 
 returns { sql, tablename }
 */
-	const tablename = 'samplekey' + termindex
+	const tablename = 'samplekey_' + index
 	if( term.iscategorical ) {
 		values.push( term.id )
 		return {
@@ -456,7 +477,7 @@ returns { sql, tablename }
 	}
 	if( term.isfloat || term.isinteger ) {
 		values.push( term.id )
-		const bins = makesql_numericBinCTE( term, q, filter, ds, termindex )
+		const bins = makesql_numericBinCTE( term, q, filter, ds, index )
 		return {
 			sql: `${bins.sql},
 			${tablename} AS (
@@ -469,19 +490,19 @@ returns { sql, tablename }
 		}
 	}
 	if( term.iscondition ) {
-		return makesql_oneterm_condition( term, q, ds, filter, values, termindex )
+		return makesql_oneterm_condition( term, q, ds, filter, values, index )
 	}
 	throw 'unknown term type'
 }
 
 
-function makesql_oneterm_condition ( term, q, ds, filter, values, termindex='' ) {
+function makesql_oneterm_condition ( term, q, ds, filter, values, index='' ) {
 /*
 	return {sql, tablename}
 */
-	const grade_table = 'grade_table' + termindex
-	const term_table = 'term_table' + termindex
-	const out_table = 'out_table' + termindex
+	const grade_table = 'grade_table_' + index
+	const term_table = 'term_table_' + index
+	const out_table = 'out_table_' + index
 	const value_for = q.bar_by_children ? 'child' 
 		: q.bar_by_grade ? 'grade'
 		: ''
@@ -511,7 +532,7 @@ function makesql_oneterm_condition ( term, q, ds, filter, values, termindex='' )
 
 
 
-function makesql_numericBinCTE ( term, q, filter, ds, termindex='' ) {
+function makesql_numericBinCTE ( term, q, filter, ds, index='' ) {
 /*
 decide bins and produce CTE
 
@@ -521,7 +542,7 @@ q{}
 filter as is returned by makesql_by_tvsfilter
 returns { sql, tablename, name2bin, bins, binconfig }
 */
-	const [bins, binconfig] = get_bins(q, term, ds, termindex)
+	const [bins, binconfig] = get_bins(q, term, ds, index)
 	const bin_def_lst = []
 	const name2bin = new Map() // k: name str, v: bin{}
 	const bin_size = binconfig.bin_size
@@ -605,8 +626,8 @@ returns { sql, tablename, name2bin, bins, binconfig }
 		}
 	}
 
-	const bin_def_table = 'bin_defs' + termindex
-	const bin_sample_table = 'bin_sample' + termindex
+	const bin_def_table = 'bin_defs_' + index
+	const bin_sample_table = 'bin_sample_' + index
 
 	const sql = 
 		`${bin_def_table} AS (
@@ -652,7 +673,7 @@ returns { sql, tablename, name2bin, bins, binconfig }
 }
 
 
-export function get_bins(q, term, ds) {
+export function get_bins(q, term, ds, index) {
 /*
 
 q{}
@@ -666,7 +687,7 @@ ds
 */
 	const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin
 	const binconfig = q.binconfig ? q.binconfig 
-		: nb.bins_less && q.index != 1 ? nb.bins_less
+		: nb.bins_less && index != 1 ? nb.bins_less
 		: nb.bins
 	if (!binconfig) throw 'unable to determine the binning configuration'
 	q.binconfig = binconfig
@@ -877,6 +898,20 @@ thus less things to worry about...
 	const q = ds.cohort.termdb.q
 
 	{
+		const s = cn.prepare('SELECT * FROM category2vcfsample')
+		// must be cached as there are lots of json parsing
+		let cache
+		q.getcategory2vcfsample = ()=>{
+			if(cache) return cache
+			cache = s.all()
+			for(const i of cache) {
+				i.q = JSON.parse(i.q)
+				i.categories = JSON.parse(i.categories)
+			}
+			return cache
+		}
+	}
+	{
 		const s = cn.prepare('SELECT * FROM alltermsbyorder')
 		let cache
 		q.getAlltermsbyorder = ()=>{
@@ -889,12 +924,13 @@ thus less things to worry about...
 			return cache
 		}
 	}
-
 	{
 		const s = cn.prepare('SELECT jsondata FROM terms WHERE id=?')
 		const cache = new Map()
-		// should only cache result for valid term id, not for invalid ids
-		// as invalid id is arbitrary and there can be indefinite amount of them to overwhelm the server memory
+		/* should only cache result for valid term id, not for invalid ids
+		as invalid id is arbitrary and indefinite
+		an attack using random strings as termid can overwhelm the server memory
+		*/
 		q.termjsonByOneid = (id)=>{
 			if(cache.has(id)) return cache.get(id)
 			const t = s.get( id )

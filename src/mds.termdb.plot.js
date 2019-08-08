@@ -4,7 +4,7 @@ import {TermdbBarchart} from './mds.termdb.barchart'
 import {init as table_init} from './mds.termdb.table'
 import {init as boxplot_init} from './mds.termdb.boxplot'
 import {init as stattable_init} from './mds.termdb.stattable'
-import {controls} from './mds.termdb.controls'
+import {init as controls_init} from './mds.termdb.controls'
 
 export function init(arg, callback = ()=>{}) {
 /*
@@ -123,7 +123,7 @@ arg: server returned data
     table: table_init(plot.dom.viz)
   }
   // set configuration controls
-  controls(arg, plot, main)
+  plot.controls = controls_init(arg, plot, main)
   
   main( plot, callback )
   if ( arg.obj.termfilter && arg.obj.termfilter.callbacks ) {
@@ -144,7 +144,7 @@ function main(plot, callback = ()=>{}) {
   // to plot.[term0,term,term2] and term1_q parameters
   // for convenience and namespacing related variables
   plot.terms = [plot.term0, plot.term, plot.term2]
-  plot.dom.holder.style('max-width', Math.round(85*window.innerWidth/100) + 'px')
+  //plot.dom.holder.style('max-width', Math.round(85*window.innerWidth/100) + 'px')
 
   const dataName = getDataName(plot)
   if (serverData[dataName]) {
@@ -179,7 +179,7 @@ function getDataName(plot) {
     if (term.iscondition && !term.q) term.q = {}
     if (term.q && typeof term.q == 'object') {
       if (term.iscondition && !Object.keys(term.q).length) {
-        if (term.iscondition) term.q = {bar_by_grade:1, value_by_max_grade:1}
+        term.q = {bar_by_grade:1, value_by_max_grade:1}
       }
       params.push('term'+i+'_q=' +encodeURIComponent(JSON.stringify(term.q)))
     }
@@ -196,7 +196,19 @@ function getDataName(plot) {
   } 
 
   if (obj.termfilter && obj.termfilter.terms && obj.termfilter.terms.length) {
-    params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms)))
+    params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms.map(filter=>{
+      const f = Object.create(null)
+      for(const key in filter) {
+        if (key != "term") f[key] = filter[key]
+        else {
+          f.term = {id: filter.term.id}
+          for(const subkey in filter.term) {
+            if (subkey.startsWith('is')) f.term[subkey] = filter.term[subkey]
+          }
+        }
+      }
+      return f
+    }))))
   }
 
   return '?' + params.join('&')
@@ -227,7 +239,7 @@ make a barchart, boxplot, or stat table based on configs
 in the plot object called by showing the single-term plot 
 at the beginning or stacked bar plot for cross-tabulating
 */ 
-  plot.controls_update(plot, data)
+  plot.controls.main(plot, data)
   plot.views.barchart.main(plot, data, plot.term2_displaymode == "stacked", plot.obj)
   plot.views.boxplot.main(plot, data, plot.term2_displaymode == "boxplot")
   plot.views.stattable.main(plot, data, data.boxplot != undefined && plot.term2_displaymode == "stacked")
