@@ -1,4 +1,3 @@
-import { bar_click_menu } from './mds.termdb.controls'
 import { event } from "d3-selection"
 import { Menu } from './client'
 
@@ -256,5 +255,46 @@ export default function getHandlers(self) {
         }
       }
     }
+  }
+}
+
+function bar_click_menu(obj, barclick, clickedBar) {
+/*
+  obj: the term tree obj
+  barclick: function to handle option click
+  clickedBar: the data associated with the clicked bar
+*/
+  const menu = obj.bar_click_menu
+  const options = []
+  if (menu.add_filter) {
+    options.push({
+      label: "Add as filter", 
+      callback: menuoption_add_filter
+    })
+  }
+  if (menu.select_group_add_to_cart) {
+    options.push({
+      label: "Select to GenomePaint",
+      callback: menuoption_select_to_gp
+    })
+  }
+  if (menu.select_to_gp) {
+    options.push({
+      label: "Add group to cart",
+      callback: menuoption_select_group_add_to_cart
+    })
+  }
+  if (options.length) {
+    obj.tip.clear().d
+      .selectAll('div')
+      .data(options)
+    .enter().append('div')
+      .attr('class', 'sja_menuoption')
+      .html(d=>d.label)
+      .on('click', d => {
+        barclick(clickedBar, d.callback, obj)
+      })
+
+    obj.tip.show(d3event.clientX, d3event.clientY)
   }
 }

@@ -16,26 +16,68 @@ const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
 
 export function init(arg, plot, main) {
-  plot.dom.controls
-    .style('margin', '8px')
-    .style('vertical-align', 'top')
-    .style('transition','0.5s')
+  plots.push(plot)
+  
+  const self = {
+    main(plot, data) {
+      //self.dom.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
+      self.updaters.forEach(updater => updater()) // match input values to current
+    },
 
-  plot.dom.controlsTopBar = plot.dom.controls.append('div')
-  const hamburger_btn = plot.dom.controlsTopBar.append('div')
+    index: plots.length - 1, // used for assigning unique input names, across different plots
+    
+    dom: {
+      holder: plot.dom.controls
+        .style('margin', '8px')
+        .style('vertical-align', 'top')
+        .style('transition','0.5s'),
+
+      topbar: plot.dom.controls.append('div'),
+      
+      config_div: plot.dom.controls.append('div')
+        .style('max-width', '50px')
+        .style('height', 0)
+        .style('vertical-align','top')
+        .style('transition', '0.2s ease-in-out')
+        .style('overflow', 'hidden')
+    },
+
+    // will be used to track control element related 
+    // functions to synchronize an input to the relevant plot.term or setting
+    // !!! important since changes to a plot.term or setting
+    // !!! may be triggered by more than one input or function
+    // !!! the sync functions are called in plot.main below
+    updaters: []
+  }
+
+  setBurgerBtn(plot, self)
+  setConfigDiv(self)
+  setBarsAsOpts(plot, self, main, 'term', 'Bars as', 1)
+  setOverlayOpts(plot, self, main, arg)
+  setViewOpts(plot, self, main,)
+  setOrientationOpts(plot, self, main,)
+  setScaleOpts(plot, self, main,)
+  setBinOpts(plot, self, main, 'term1', 'Primary Bins')
+  setDivideByOpts(plot, self, main, arg)
+
+  return self
+}
+
+function setBurgerBtn(plot, self) {
+  const hamburger_btn = self.dom.topbar.append('div')
     .attr('class','sja_edit_btn')
     .style('margin','10px')
     .style('font-size', '16px')
     .style('transition','0.5s')
     .html('&#8801;')
     .on('click', () => {
-      plot.syncControls.forEach(update => update())
-      const visibility = tip.style('visibility')
+      self.updaters.forEach(updater => updater())
+      const visibility = self.dom.tip.style('visibility')
       
       //change visibility of 'config' div
-      tip.style('visibility', visibility == 'hidden' ? 'visible' : 'hidden')
+      self.dom.tip.style('visibility', visibility == 'hidden' ? 'visible' : 'hidden')
         
-      plot.config_div
+      self.dom.config_div
         .style('max-width', visibility == 'hidden' ? '660px' : '50px')
         .style('height', visibility == 'hidden' ? '' : 0)
         
@@ -45,41 +87,20 @@ export function init(arg, plot, main) {
       hamburger_btn
         .html(visibility == 'hidden' ? '&#215;' : '&#8801;')
     })
+}
 
-  plot.config_div = plot.dom.controls.append('div')
-    .style('max-width', '50px')
-    .style('height', 0)
-    .style('vertical-align','top')
-    .style('transition', '0.2s ease-in-out')
-    .style('overflow', 'hidden')
-
-  // controlsIndex to be used to assign unique radio input names
-  // by config div
-  plot.controlsIndex = plots.length
-  plots.push(plot)
-  
-
-  const tip = plot.config_div.append('div')
+function setConfigDiv(self) {
+  self.dom.tip = self.dom.config_div.append('div')
     .style('visibility','hidden')
     .style('transition','0.2s')
-  
-  // will be used to track control element related 
-  // functions to synchronize an input to the relevant plot.term or setting
-  // !!! important since changes to a plot.term or setting
-  // !!! may be triggered by more than one input or function
-  // !!! the sync functions are called in plot.controls_update below
-  plot.syncControls = []
-  
-  const table = tip.append('table').attr('cellpadding',0).attr('cellspacing',0)
-  setBarsAsOpts(plot, main, table, 'term', 'Bars as', 1)
-  setOverlayOpts(plot, main, table, arg)
-  setViewOpts(plot, main, table)
-  setOrientationOpts(plot, main, table)
-  setScaleOpts(plot, main, table)
-  setBinOpts(plot, main, table, 'term1', 'Primary Bins')
-  // setBinOpts(plot, main, table, 'term2', 'Overlay Bins') // will be handled from term2 blue-pill
-  setDivideByOpts(plot, main, table, arg)
 
+  self.dom.table = self.dom.tip.append('table').attr('cellpadding',0).attr('cellspacing',0)
+
+  self.updaters.push(()=>{
+    self.dom.table.selectAll('tr')
+      .filter(rowIsVisible)
+      .each(rowStyle)
+  })
 
   function rowIsVisible() {
     return d3select(this).style('display') != 'none'
@@ -91,15 +112,7 @@ export function init(arg, plot, main) {
     .style('padding','5px 10px')
   }
 
-  return {
-    main(plot, data) {
-      plot.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
-      plot.syncControls.forEach(update => update()) // match input values to current
-      table.selectAll('tr')
-      .filter(rowIsVisible)
-      .each(rowStyle)
-    }
-  }
+  return self.dom.table
 }
 
 function renderRadioInput(inputName, elem, opts, inputHandler) {
@@ -137,12 +150,12 @@ function renderRadioInput(inputName, elem, opts, inputHandler) {
   }
 }
 
-function setOrientationOpts(plot, main, table) {
-  const tr = table.append('tr')
+function setOrientationOpts(plot, self, main,) {
+  const tr = self.dom.table.append('tr')
   tr.append('td').html('Orientation').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const radio = renderRadioInput(
-    'pp-termdb-condition-unit-' + plot.controlsIndex, 
+    'pp-termdb-condition-unit-' + self.index, 
     td, 
     [
       {label: 'Vertical', value: 'vertical'},
@@ -157,17 +170,17 @@ function setOrientationOpts(plot, main, table) {
     main(plot)
   })
 
-  plot.syncControls.push(() => {
+  self.updaters.push(() => {
     tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
   })
 }
 
-function setScaleOpts(plot, main, table) {
-  const tr = table.append('tr')
+function setScaleOpts(plot, self, main,) {
+  const tr = self.dom.table.append('tr')
   tr.append('td').html('Scale').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const radio = renderRadioInput(
-    'pp-termdb-scale-unit-' + plot.controlsIndex, 
+    'pp-termdb-scale-unit-' + self.index, 
     td, 
     [
       {label: 'Linear', value: 'abs'},
@@ -183,7 +196,7 @@ function setScaleOpts(plot, main, table) {
     main(plot)
   })
 
-  plot.syncControls.push(() => {
+  self.updaters.push(() => {
     tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
     radio.divs.style('display', d => {
       if (d.value == 'log') {
@@ -197,12 +210,12 @@ function setScaleOpts(plot, main, table) {
   })
 }
 
-function setOverlayOpts(plot, main, table, arg) {
-  const tr = table.append('tr')
+function setOverlayOpts(plot, self, main, arg) {
+  const tr = self.dom.table.append('tr')
   tr.append('td').html('Overlay with').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const radio = renderRadioInput(
-    'pp-termdb-overlay-' + plot.controlsIndex, 
+    'pp-termdb-overlay-' + self.index, 
     td, 
     [
       {label: 'None', value: 'none'},
@@ -330,7 +343,7 @@ function setOverlayOpts(plot, main, table, arg) {
     )
   })
 
-  plot.syncControls.push(() => {
+  self.updaters.push(() => {
     // hide all options when opened from genome browser view 
     tr.style("display", plot.obj.modifier_ssid_barchart ? "none" : "table-row");
     // do not show genotype overlay option when opened from stand-alone page
@@ -372,12 +385,12 @@ function setOverlayOpts(plot, main, table, arg) {
   })
 }
 
-function setViewOpts(plot, main, table, arg) {
-  const tr = table.append('tr')
+function setViewOpts(plot, self, main, arg) {
+  const tr = self.dom.table.append('tr')
   tr.append('td').html('Display mode').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const radio = renderRadioInput(
-    'pp-termdb-display-mode-' + plot.controlsIndex, 
+    'pp-termdb-display-mode-' + self.index, 
     td, 
     [
       {label: 'Barchart', value: 'stacked'},
@@ -394,19 +407,19 @@ function setViewOpts(plot, main, table, arg) {
     main(plot)
   })
 
-  plot.syncControls.push(() => {
+  self.updaters.push(() => {
     tr.style("display", plot.term2 ? "table-row" : "none")
     radio.inputs.property('checked', d => d.value == plot.term2_displaymode)
     radio.divs.style('display', d => plot.term2 && (d.value != 'boxplot' || plot.term2.isfloat) ? 'inline-block' : 'none')
   })
 }
 
-function setDivideByOpts(plot, main, table, arg) {
-  const tr = table.append('tr')
+function setDivideByOpts(plot, self, main, arg) {
+  const tr = self.dom.table.append('tr')
   tr.append('td').html('Divide by').attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   const radio = renderRadioInput(
-    'pp-termdb-divide-by-' + plot.controlsIndex, 
+    'pp-termdb-divide-by-' + self.index, 
     td, 
     [
       {label: 'None', value: 'none'},
@@ -455,7 +468,7 @@ function setDivideByOpts(plot, main, table, arg) {
     }
   })
 
-  plot.syncControls.push(() => {
+  self.updaters.push(() => {
     // hide all options when opened from genome browser view 
     tr.style("display", plot.obj.modifier_ssid_barchart || plot.term2_displaymode != "stacked" ? "none" : "table-row")
     // do not show genotype divideBy option when opened from stand-alone page
@@ -483,9 +496,9 @@ function setDivideByOpts(plot, main, table, arg) {
   })
 }
 
-function setBarsAsOpts(plot, main, table, termNum, label, index) {
+function setBarsAsOpts(plot, self, main, termNum, label, index) {
   /**/
-  const tr = table.append('tr')
+  const tr = self.dom.table.append('tr')
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
   const td = tr.append('td')
   /*
@@ -523,19 +536,18 @@ function setBarsAsOpts(plot, main, table, termNum, label, index) {
   setTimeout(()=> {
     if (!plot.term.q) plot.term.q = {}
     termuiObj.termsetting.q = plot.term.q
-
     termui_display(termuiObj)
   },0)
 
-  plot.syncControls.push(() => {
+  self.updaters.push(() => {
     tr.style('display', plot.term && plot.term.iscondition ? 'table-row' : 'none')
     plot.termuiObjOverlay.update_ui()
   })
 }
 
 
-function setBinOpts(plot, main, table, termNum, label) {
-  const tr = table.append('tr')
+function setBinOpts(plot, self, main, termNum, label) {
+  const tr = self.dom.table.append('tr')
 
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
 
@@ -558,50 +570,8 @@ function setBinOpts(plot, main, table, termNum, label) {
   })
 
   //TODO: remove following code if not used
-  plot.syncControls.push(() => {
+  self.updaters.push(() => {
     plot.term1 = plot.term
     tr.style('display', plot[termNum] && plot[termNum].isfloat ? 'table-row' : 'none')
   })
-}
-
-
-export function bar_click_menu(obj, barclick, clickedBar) {
-/*
-  obj: the term tree obj
-  barclick: function to handle option click
-  clickedBar: the data associated with the clicked bar
-*/
-  const menu = obj.bar_click_menu
-  const options = []
-  if (menu.add_filter) {
-    options.push({
-      label: "Add as filter", 
-      callback: menuoption_add_filter
-    })
-  }
-  if (menu.select_group_add_to_cart) {
-    options.push({
-      label: "Select to GenomePaint",
-      callback: menuoption_select_to_gp
-    })
-  }
-  if (menu.select_to_gp) {
-    options.push({
-      label: "Add group to cart",
-      callback: menuoption_select_group_add_to_cart
-    })
-  }
-  if (options.length) {
-    obj.tip.clear().d
-      .selectAll('div')
-      .data(options)
-    .enter().append('div')
-      .attr('class', 'sja_menuoption')
-      .html(d=>d.label)
-      .on('click', d => {
-        barclick(clickedBar, d.callback, obj)
-      })
-
-    obj.tip.show(d3event.clientX, d3event.clientY)
-  }
 }
