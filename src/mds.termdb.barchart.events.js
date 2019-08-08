@@ -1,3 +1,8 @@
+import {
+  menuoption_add_filter,
+  menuoption_select_to_gp, 
+  menuoption_select_group_add_to_cart
+} from './mds.termdb'
 import { event } from "d3-selection"
 import { Menu } from './client'
 
@@ -295,6 +300,6 @@ function bar_click_menu(obj, barclick, clickedBar) {
         barclick(clickedBar, d.callback, obj)
       })
 
-    obj.tip.show(d3event.clientX, d3event.clientY)
+    obj.tip.show(event.clientX, event.clientY)
   }
 }
