@@ -155,8 +155,21 @@ export class TermdbBarchart{
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
-      const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
-      const matchedRows = chart.serieses.find(series => !refColId || series.seriesId == refColId)
+      // const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
+      // const matchedRows = chart.serieses.find(series => !refColId || series.seriesId == refColId)
+      const mostStack = Math.max(...(chart.serieses.map((s) => s.data.length)))
+      const matchedSerieses = chart.serieses.filter(series => series.data.length === mostStack)
+      const matchedRows = matchedSerieses[0]
+      // TODO: add unmappedRows to matchedRows 
+      // (following coomented code giving error)
+      // const unmappedRows = chartsData.refs.rows.filter(d=>!matchedRows.data.map(d => d.dataId).includes(d))
+      // for(let unmappedRow of unmappedRows){
+      //   for(let series of chart.serieses){
+      //     const r = series.data.find(d => d.dataId === unmappedRow)
+      //     if(r){
+      //       matchedRows.data.push(r)
+      //       break
+      // } } }
       const rows = !matchedRows ? [] : matchedRows.data.sort(self.rowSorter).map(d => d.dataId)
       chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)
@@ -176,8 +189,11 @@ export class TermdbBarchart{
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
       self.renderers[chart.chartId] = barsRenderer(self, select(this))
-      const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
-      const matchedRows = chart.serieses.find(series => !refColId || series.seriesId == refColId)
+      // const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
+      // const matchedRows = chart.serieses.find(series => !refColId || series.seriesId == refColId)
+      const mostStack = Math.max(...(chart.serieses.map((s) => s.data.length)))
+      const matchedSerieses = chart.serieses.filter(series => series.data.length === mostStack)
+      const matchedRows = matchedSerieses[0]
       const rows = !matchedRows ? [] : matchedRows.data.sort(self.rowSorter).map(d => d.dataId)
       chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
       self.renderers[chart.chartId](chart)

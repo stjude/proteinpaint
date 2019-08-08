@@ -237,7 +237,6 @@ function setOverlayOpts(plot, self) {
   const treeInput = radio.inputs.filter((d)=>{ return d.value == 'tree'}).style('margin-top', '2px')
   const pill_div = d3select(treeInput.node().parentNode.parentNode)
     .append('div')
-    .style('white-space','normal')
     .style('display','inline-block')
   
   const termuiObj = {
