@@ -15,7 +15,7 @@ const plots = []
 const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
 
-export function controls(arg, plot, main) {
+export function init(arg, plot, main) {
   plot.dom.controls
     .style('margin', '8px')
     .style('vertical-align', 'top')
@@ -79,23 +79,26 @@ export function controls(arg, plot, main) {
   setBinOpts(plot, main, table, 'term1', 'Primary Bins')
   // setBinOpts(plot, main, table, 'term2', 'Overlay Bins') // will be handled from term2 blue-pill
   setDivideByOpts(plot, main, table, arg)
-  
-  plot.controls_update = (plot, data) => {
-    plot.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
-    plot.syncControls.forEach(update => update()) // match input values to current
-    table.selectAll('tr')
-    .filter(rowIsVisible)
-    .each(RowStyle)
-  }
+
 
   function rowIsVisible() {
     return d3select(this).style('display') != 'none'
   }
 
-  function RowStyle(){
+  function rowStyle(){
     d3select(this).selectAll('td')
     .style('border-top','2px solid #FFECDD')
     .style('padding','5px 10px')
+  }
+
+  return {
+    main(plot, data) {
+      plot.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
+      plot.syncControls.forEach(update => update()) // match input values to current
+      table.selectAll('tr')
+      .filter(rowIsVisible)
+      .each(rowStyle)
+    }
   }
 }
 
