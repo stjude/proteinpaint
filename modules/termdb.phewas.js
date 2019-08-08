@@ -12,6 +12,11 @@ const termdb = require('./termdb')
 trigger
 update_image
 ********************** INTERNAL
+do_precompute
+	get_samplefilter4termtype
+get_numsample_pergenotype
+get_maxlogp
+plot_canvas
 */
 
 
@@ -22,7 +27,7 @@ const minimum_total_sample = 10
 
 
 
-export async function trigger ( q, res, tdb, ds ) {
+export async function trigger ( q, res, ds ) {
 /*
 q{}
 .ssid
@@ -34,7 +39,7 @@ q{}
 	if( q.precompute ) {
 		// detour
 		if(!serverconfig.debugmode) throw 'precomputing is only allowed on a dev server'
-		await precompute( q, res, tdb, ds )
+		await do_precompute( q, res, ds )
 		return
 	}
 
@@ -44,14 +49,10 @@ q{}
 	// genotype2sample: Map {gt: Set(samples)}
 
 
-	//////////// work on sample filter by term type
-	const [ totalcountbygenotype_condition ] = helper_get_samplefilter4termtype()
-
-
-	// total number of samples with each genotype
-	const het0 = genotype2sample.has( utils.genotype_types.het ) ? genotype2sample.get(utils.genotype_types.het).size : 0
-	const href0 = genotype2sample.has( utils.genotype_types.href ) ? genotype2sample.get(utils.genotype_types.href).size : 0
-	const halt0 = genotype2sample.has( utils.genotype_types.halt ) ? genotype2sample.get(utils.genotype_types.halt).size : 0
+	// from vcf file, total number of samples per genotype
+	const het0  = genotype2sample.get(utils.genotype_types.het).size || 0
+	const href0 = genotype2sample.get(utils.genotype_types.href).size || 0
+	const halt0 = genotype2sample.get(utils.genotype_types.halt).size || 0
 
 
 	const tests = []
@@ -70,55 +71,30 @@ q{}
 	}
 	// to be sent to client
 
-	for(const cacherow of tdb.q.getcategory2vcfsample()) {
-		/*
+	for(const cacherow of ds.cohort.termdb.q.getcategory2vcfsample()) {
+		/************** each cached row is one term
 		.term_id
-		.q
-		.category2sample
+		.q{}
+		.categories{ category : {} }
+			.label
+			.samples[]
+			.controlsamples[]
 		*/
 
-		const term = termdb.copy_term( tdb.q.termjsonByOneid( cacherow.term_id ) )
+		const term = termdb.copy_term( ds.cohort.termdb.q.termjsonByOneid( cacherow.term_id ) )
 
-		for(const category in cacherow.category2sample) {
-			const gt2samples = new Map()
-			// k: gt
-			// v: sample set
-			for(const sample of cacherow.category2sample[category]) {
-				const genotype = sample2gt[ sample ]
-				if(!genotype) {
-					// no genotype, may happen when there's no sequencing coverage at this variant for this sample
-					continue
-				}
-				if(!gt2samples.has(genotype)) gt2samples.set(genotype, new Set())
-				gt2samples.get(genotype).add(sample)
-			}
+		for(const category in cacherow.categories) {
 
-			/////////////// each category as a case
-
-			const gt2size = new Map()
-			// k: gt, v: number of samples
-			let thiscatnumber = 0
-			for(const [gt,s] of gt2samples) {
-				gt2size.set(gt, s.size)
-				thiscatnumber += s.size
-			}
-			/*
-			if(thiscatnumber < minimum_total_sample) {
-				result.skipped_byminimumsample++
-				continue
-			}
-			*/
+			////////////// each category a case
 
 			// number of samples by genotype in case
-			const het  = gt2size.get(utils.genotype_types.het) || 0
-			const halt = gt2size.get(utils.genotype_types.halt) || 0
-			const href = gt2size.get(utils.genotype_types.href) || 0
+			const [ het, halt, href ] = get_numsample_pergenotype( sample2gt, cacherow.categories[category].samples )
+
 			// number of samples by genotype in control
 			let het2, halt2, href2
-			if( term.iscondition && totalcountbygenotype_condition ) {
-				het2 = totalcountbygenotype_condition.het - het
-				halt2 = totalcountbygenotype_condition.halt - halt
-				href2 = totalcountbygenotype_condition.href - href
+
+			if( cacherow.categories[category].controlsamples ) {
+				[ het2, halt2, href2 ] = get_numsample_pergenotype( sample2gt, cacherow.categories[category].controlsamples )
 			} else {
 				het2 = het0-het
 				halt2 = halt0-halt
@@ -168,7 +144,6 @@ q{}
 	}
 
 
-
 	get_maxlogp( tests, result )
 	result.tmpfile = await utils.write_tmpfile( tests.map(i=>i.logp).join(' ') )
 	plot_canvas( tests, result )
@@ -180,67 +155,27 @@ q{}
 	}
 
 	res.send( result )
-
-
-
-	/////////////// helper
-
-	function helper_get_samplefilter4termtype () {
-	/* when a sample filter is provided for a type of term
-	to recalculate total number of href/halt/het
-	as the basis for generating control set
-
-	otherwise use href0 from the complete set of samples in the vcf file
-	*/
-		let _condition = null
-		// will set to {href,halt,het} if sample filter is on for condition term
-
-		if( ds.cohort.termdb.phewas.samplefilter4termtype ) {
-			if( ds.cohort.termdb.phewas.samplefilter4termtype.condition ) {
-				const samples = new Set( termdbsql.get_samples( ds.cohort.termdb.phewas.samplefilter4termtype.condition.tvslst, ds ) )
-				_condition = {
-					het: 0,
-					href: 0,
-					halt: 0
-				}
-				if(genotype2sample.has( utils.genotype_types.het )) {
-					for(const sample of genotype2sample.get(utils.genotype_types.het)) {
-						if(samples.has(sample)) _condition.het++
-					}
-				}
-				if(genotype2sample.has( utils.genotype_types.href )) {
-					for(const sample of genotype2sample.get(utils.genotype_types.href)) {
-						if(samples.has(sample)) _condition.href++
-					}
-				}
-				if(genotype2sample.has( utils.genotype_types.halt )) {
-					for(const sample of genotype2sample.get(utils.genotype_types.halt)) {
-						if(samples.has(sample)) _condition.halt++
-					}
-				}
-			}
-		}
-		return [ _condition ]
-	}
 }
 
 
 
 
-async function precompute ( q, res, tdb, ds ) {
+async function do_precompute ( q, res, ds ) {
 /*
 for precomputing
-programmatically generate list of samples for each category
-using get_rows
-for numeric term: use default binning scheme
-for condition term: hardcoded scheme
-for the hope of 
-*/
-	if(!ds.cohort) throw 'ds.cohort missing'
-	if(!ds.cohort.termdb) throw 'cohort.termdb missing'
-	if(!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
+programmatically generate list of samples for each category of a term
 
-	const results = []
+use get_rows()
+- categorical: no config
+- numerical: use default binning scheme
+- condition: hardcoded scheme
+*/
+
+	//////////// work on sample filter by term type
+	const [ condition_samples ] = get_samplefilter4termtype(ds)
+
+	// text rows to be loaded to db table
+	const rows = []
 
 	for(const term of ds.cohort.termdb.q.getAlltermsbyorder()) {
 		if(!term.graph) continue
@@ -272,11 +207,17 @@ for the hope of
 
 		for(const q of qlst) {
 
+			//////////// run query for this term
 			const re = termdbsql.get_rows( q )
 
-			const category2samples = {}
-			// k: category (key1)
-			// v: list of sample names
+			const categories = {}
+			/* k: category (key1)
+			   v: {}
+			      .label
+				  .samples[]
+				  .controlsamples[]
+			   controlsamples is optional 
+			*/
 			for(const i of re.lst) {
 				if( ds.track && ds.track.vcf && ds.track.vcf.sample2arrayidx) {
 					if(!ds.track.vcf.sample2arrayidx.has( i.sample )) {
@@ -285,16 +226,45 @@ for the hope of
 					}
 				}
 				const category = i.key1
-				if(!category2samples[category]) category2samples[category] = []
-				category2samples[category].push(i.sample)
+				if(!categories[category]) {
+					categories[category] = {
+						label: category,
+						samples: []
+					}
+				}
+				categories[category].samples.push(i.sample)
 			}
-			results.push(`${term.id}\t${q.term1_q?JSON.stringify(q.term1_q):''}\t${JSON.stringify(category2samples)}`)
+
+			if( condition_samples && term.iscondition ) {
+				// there are filters for condition terms restricting samples, must create controlsamples for each category
+				for(const cat in categories) {
+					const set = new Set(categories[cat].samples)
+					categories[cat].controlsamples = []
+					for(const s of condition_samples) {
+						if( !set.has(s)) {
+							categories[cat].controlsamples.push(s)
+						}
+					}
+				}
+			}
+
+			// log
+			for(const cat in categories) {
+				const c = categories[cat]
+				console.log( c.samples.length + (c.controlsamples? '/'+c.controlsamples.length : '') + '\t'+c.label+'\t'+term.name )
+			}
+
+			// TODO add category label
+			rows.push(`${term.id}\t${q.term1_q?JSON.stringify(q.term1_q):''}\t${JSON.stringify(categories)}`)
 		}
 	}
 
-	const filename = await utils.write_tmpfile(results.join('\n'))
+	const filename = await utils.write_tmpfile( rows.join('\n') )
 	res.send({filename})
 }
+
+
+
 
 
 
@@ -362,4 +332,54 @@ function plot_canvas ( tests, result ) {
 	result.axisheight = axisheight
 	result.dotradius = dotradius
 	result.src = canvas.toDataURL()
+}
+
+
+
+function get_samplefilter4termtype ( ds ) {
+/* when a sample filter is provided for a type of term
+must restrict to these samples for the term
+only used for precomputing, not for on the fly
+*/
+	let condition_samples = null
+
+	if( ds.cohort.termdb.phewas.samplefilter4termtype ) {
+		if( ds.cohort.termdb.phewas.samplefilter4termtype.condition ) {
+			const samples = termdbsql.get_samples( ds.cohort.termdb.phewas.samplefilter4termtype.condition.tvslst, ds )
+			if( ds.track && ds.track.vcf && ds.track.vcf.sample2arrayidx) {
+				// must also restrict to vcf samples
+				condition_samples = []
+				for(const s of samples) {
+					if(ds.track.vcf.sample2arrayidx.has( s )) condition_samples.push(s)
+				}
+			} else {
+				condition_samples = samples
+			}
+		}
+		// filters for other term types
+	}
+	return [ condition_samples ]
+}
+
+
+
+
+function get_numsample_pergenotype ( sample2gt, samples ) {
+/*
+*/
+	const gt2count = new Map()
+	// k: gt, v: #samples
+	for(const sample of samples) {
+		const genotype = sample2gt[ sample ]
+		if(!genotype) {
+			// no genotype, may happen when there's no sequencing coverage at this variant for this sample
+			continue
+		}
+		gt2count.set( genotype, 1+(gt2count.get(genotype) || 0) )
+	}
+	return [
+		gt2count.get(utils.genotype_types.het) || 0,
+		gt2count.get(utils.genotype_types.halt) || 0,
+		gt2count.get(utils.genotype_types.href) || 0
+	]
 }

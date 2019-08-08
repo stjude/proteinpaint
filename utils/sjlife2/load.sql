@@ -42,8 +42,8 @@ create table alltermsbyorder (
 drop table if exists category2vcfsample;
 create table category2vcfsample (
   term_id character varying(100) not null,
-  q json null,
-  category2sample json not null
+  q text not null,
+  categories text not null
 );
 .import category2vcfsample category2vcfsample
 

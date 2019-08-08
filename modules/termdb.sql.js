@@ -899,13 +899,14 @@ thus less things to worry about...
 
 	{
 		const s = cn.prepare('SELECT * FROM category2vcfsample')
+		// must be cached as there are lots of json parsing
 		let cache
 		q.getcategory2vcfsample = ()=>{
 			if(cache) return cache
 			cache = s.all()
 			for(const i of cache) {
 				i.q = JSON.parse(i.q)
-				i.category2sample = JSON.parse(i.category2sample)
+				i.categories = JSON.parse(i.categories)
 			}
 			return cache
 		}
