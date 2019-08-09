@@ -106,16 +106,16 @@ export class TermdbBarchart{
       ? chartsData.refs.grade_labels
       : null
 
-    self.seriesOrder = !chartsData.charts.length 
-      ? [] 
-      : chartsData.charts[0].serieses
-        .sort(chartsData.refs.useColOrder
-          ? (a,b) => cols.indexOf(b.seriesId) - cols.indexOf(a.seriesId)
-          : (a,b) => !isNaN(a.seriesId)
-            ? +b.seriesId - +a.seriesId
-            : a.total - b.total
-        )
-        .map(d => d.seriesId)
+    if (!chartsData.charts.length) {
+      self.seriesOrder = []
+    }
+    else if (chartsData.refs.useColOrder) {
+      self.seriesOrder = chartsData.refs.cols
+    } else {
+      self.seriesOrder = chartsData.charts[0].serieses
+        .sort((a,b) => !isNaN(a.seriesId) && !isNaN(b.seriesId) ? +b.seriesId - +a.seriesId : b.total - a.total)
+        .map(series=>series.seriesId)
+    }
 
     self.setMaxVisibleTotals(chartsData)
 
@@ -134,9 +134,7 @@ export class TermdbBarchart{
     })
 
     charts.each(function(chart) {
-      if (!chartsData.refs.useColOrder) {
-        chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(b) - self.seriesOrder.indexOf(a))
-      }
+      chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(a) - self.seriesOrder.indexOf(b))
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
@@ -151,9 +149,7 @@ export class TermdbBarchart{
     .style("padding", "20px")
     .style('vertical-align', 'top')
     .each(function(chart,i) {
-      if (!chartsData.refs.useColOrder) {
-        chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(b) - self.seriesOrder.indexOf(a))
-      }
+      chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(a) - self.seriesOrder.indexOf(b))
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
@@ -188,8 +184,7 @@ export class TermdbBarchart{
         }
       }
     }
-    //const settingsCopy = Object.assign({},this.settings)
-    //delete settingsCopy.exclude
+    const addlSeriesIds = {} // to track series IDs that are not already in this.seriesOrder
     for(const chart of chartsData.charts) {
       Object.assign(chart.settings, this.settings, chartsData.refs)
       chart.visibleSerieses = chart.serieses.filter(series=>{
@@ -197,6 +192,10 @@ export class TermdbBarchart{
         series.visibleData = series.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))
         series.visibleTotal = series.visibleData.reduce((sum, a) => sum + a.total, 0)
         if (!series.visibleTotal) return false
+        if (!this.seriesOrder.includes(series.seriesId)) {
+          if (!(series.seriesId in addlSeriesIds)) addlSeriesIds[series.seriesId] = 0
+          addlSeriesIds[series.seriesId] += series.visibleTotal
+        }
         for(const data of series.visibleData) {
           if (!(data.dataId in this.totalsByDataId)) {
             this.totalsByDataId[data.dataId] = 0
@@ -227,6 +226,7 @@ export class TermdbBarchart{
     for(const chart of chartsData.charts) {
       chart.maxVisibleAcrossCharts = maxVisibleAcrossCharts
     }
+    this.seriesOrder.push(...Object.keys(addlSeriesIds).sort((a,b)=>addlSeriesIds[b] - addlSeriesIds[a]))
     this.currChartsData = chartsData
   }
 
