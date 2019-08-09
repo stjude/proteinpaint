@@ -126,8 +126,9 @@ export class TermdbBarchart{
       ? (a,b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
       : (a,b) => this.totalsByDataId[b.dataId] - this.totalsByDataId[a.dataId]
 
+    self.visibleCharts = chartsData.charts.filter(chart=>chart.visibleSerieses.length)
     const charts = this.dom.barDiv.selectAll('.pp-sbar-div')
-      .data(chartsData.charts.filter(chart=>chart.visibleSerieses.length), chart => chart.chartId)
+      .data(self.visibleCharts, chart => chart.chartId)
 
     charts.exit()
     .each(function(chart){

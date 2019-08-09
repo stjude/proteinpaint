@@ -19,13 +19,11 @@ export function init(plot) {
   plots.push(plot)
   
   const self = {
-    main(plot, data) {
+    main(plot) {
       //self.dom.config_div.style('display', data.charts && data.charts.length ? 'inline-block' : 'none')
       self.updaters.forEach(updater => updater()) // match input values to current
     },
-
     index: plots.length - 1, // used for assigning unique input names, across different plots
-    
     dom: {
       holder: plot.dom.controls
         .style('margin', '8px')
@@ -41,12 +39,21 @@ export function init(plot) {
         .style('transition', '0.2s ease-in-out')
         .style('overflow', 'hidden')
     },
-
+    visibility: 'hidden',
     // updaters will collect functions that synchronize an input 
     // to the relevant plot.term or setting
     // !!! important since changes to a plot.term or setting
     // !!! may be triggered by more than one input or function
-    updaters: []
+    updaters: [],
+    postRender(plot) {
+      const abspos = plot.term2_displaymode == "stacked" 
+        && (
+          plot.views.barchart.visibleCharts.length > 1
+          || plot.views.barchart.visibleCharts[0].settings.svgw > window.innerWidth - 400
+        )
+
+      self.dom.holder.style('position', abspos ? 'absolute' : '')
+    }
   }
 
   setBurgerBtn(self)
@@ -70,20 +77,20 @@ function setBurgerBtn(self) {
     .html('&#8801;')
     .on('click', () => {
       self.updaters.forEach(updater => updater())
-      const visibility = self.dom.tip.style('visibility')
-      
+      self.visibility = self.dom.tip.style('visibility') == "hidden" ? "visible" : "hidden"
+
       //change visibility of 'config' div
-      self.dom.tip.style('visibility', visibility == 'hidden' ? 'visible' : 'hidden')
+      self.dom.tip.style('visibility', self.visibility)
         
       self.dom.config_div
-        .style('max-width', visibility == 'hidden' ? '660px' : '50px')
-        .style('height', visibility == 'hidden' ? '' : 0)
+        .style('max-width', self.visibility == 'hidden' ? '50px' : '660px')
+        .style('height', self.visibility == 'hidden' ? 0 : '')
         
-      self.dom.holder.style('background', visibility == 'hidden' ? panel_bg_color : '')
+      self.dom.holder.style('background', self.visibility == 'hidden' ? '' : panel_bg_color)
         // .style('border', display == "none" ? 'solid 1px '+panel_border_color : "")
 
       hamburger_btn
-        .html(visibility == 'hidden' ? '&#215;' : '&#8801;')
+        .html(self.visibility == 'hidden' ? '&#8801;' : '&#215;')
     })
 }
 

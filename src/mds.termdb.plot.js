@@ -297,6 +297,7 @@ at the beginning or stacked bar plot for cross-tabulating
   plot.views.stattable.main(plot, data, data.boxplot != undefined && plot.term2_displaymode == "stacked")
   plot.views.table.main(plot, data, plot.term2_displaymode == "table")
   plot.views.banner.main(plot, data)
+  plot.controls.postRender(plot)
 }
 
 function banner_init(div) {
