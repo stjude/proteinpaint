@@ -75,6 +75,7 @@ q{}
 
 	for(const cacherow of ds.cohort.termdb.q.getcategory2vcfsample()) {
 		/************** each cached row is one term
+		.group_name
 		.term_id
 		.parent_name
 		.q{}
@@ -108,6 +109,7 @@ q{}
 
 			tests.push({
 				term,
+				group_name: cacherow.group_name,
 				parent_name: cacherow.parent_name,
 				group1label: category.group1label,
 				group2label: category.group2label,
@@ -150,9 +152,10 @@ q{}
 		}
 	}
 
-
 	get_maxlogp( tests, result )
-	result.tmpfile = await utils.write_tmpfile( tests.map(i=>i.logp).join(' ') )
+
+	const groups = group_categories( tests )
+	result.tmpfile = await write_resultfile( groups )
 	plot_canvas( tests, result )
 
 	{
@@ -184,7 +187,7 @@ use get_rows()
 	// text rows to be loaded to db table
 	const rows = []
 
-	for(const term of ds.cohort.termdb.q.getAlltermsbyorder()) {
+	for(const {group_name, term} of ds.cohort.termdb.q.getAlltermsbyorder()) {
 		if(!term.graph) continue
 
 		let parentname = ''
@@ -279,11 +282,14 @@ use get_rows()
 				console.log( c.group1lst.length + (c.group2lst? '/'+c.group2lst.length : '') + '\t'+c.group1label+'\t'+term.name )
 			}
 
-			// 1: term id
-			// 2: parent name
-			// 3: term setting
-			// 4: list of categories
-			rows.push(term.id+'\t'+parentname+'\t'+JSON.stringify(q.term1_q)+'\t'+JSON.stringify(categories))
+			/* columns
+			1. group name
+			2: term id
+			3: parent name
+			4: term setting
+			5: list of categories
+			*/
+			rows.push(group_name+'\t'+term.id+'\t'+parentname+'\t'+JSON.stringify(q.term1_q)+'\t'+JSON.stringify(categories))
 		}
 	}
 
@@ -474,4 +480,30 @@ function get_numsample_pergenotype ( sample2gt, samples ) {
 		gt2count.get(utils.genotype_types.halt) || 0,
 		gt2count.get(utils.genotype_types.href) || 0
 	]
+}
+
+
+
+function group_categories ( tests ) {
+	const k2lst = new Map()
+	for(const i of tests) {
+		if(!k2lst.has(i.group_name)) k2lst.set(i.group_name, [])
+		k2lst.get(i.group_name).push( i )
+	}
+	const lst = []
+	for(const [k,o] of k2lst) {
+		lst.push({
+			group_name: k,
+			categories: o
+		})
+	}
+	return lst
+}
+
+function write_resultfile ( groups ) {
+	const lines = []
+	for(const g of groups) {
+		lines.push( g.group_name +'\t'+ g.categories.map(i=>i.pvalue).join(' ') )
+	}
+	return utils.write_tmpfile( lines.join('\n'))
 }

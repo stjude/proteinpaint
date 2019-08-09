@@ -34,6 +34,7 @@ create index ancestry_pid on ancestry(ancestor_id);
 -- may add term group and color etc
 drop table if exists alltermsbyorder;
 create table alltermsbyorder (
+  group_name character not null,
   id character varying(100) not null
 );
 .import alltermsbyorder alltermsbyorder
@@ -41,6 +42,7 @@ create table alltermsbyorder (
 
 drop table if exists category2vcfsample;
 create table category2vcfsample (
+  group_name character not null,
   term_id character varying(100) not null,
   parent_name character varying(200) null,
   q text not null,

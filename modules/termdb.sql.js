@@ -919,7 +919,10 @@ thus less things to worry about...
 			const tmp = s.all()
 			cache = []
 			for(const i of tmp) {
-				cache.push( q.termjsonByOneid( i.id ) )
+				cache.push( {
+					group_name: i.group_name, 
+					term: q.termjsonByOneid( i.id )
+				} )
 			}
 			return cache
 		}
