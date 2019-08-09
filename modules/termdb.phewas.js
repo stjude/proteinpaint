@@ -76,6 +76,7 @@ q{}
 	for(const cacherow of ds.cohort.termdb.q.getcategory2vcfsample()) {
 		/************** each cached row is one term
 		.term_id
+		.parent_name
 		.q{}
 		.categories{}
 		*/
@@ -107,6 +108,7 @@ q{}
 
 			tests.push({
 				term,
+				parent_name: cacherow.parent_name,
 				group1label: category.group1label,
 				group2label: category.group2label,
 				q: q.term1_q,
@@ -185,6 +187,12 @@ use get_rows()
 	for(const term of ds.cohort.termdb.q.getAlltermsbyorder()) {
 		if(!term.graph) continue
 
+		let parentname = ''
+		{
+			const t = ds.cohort.termdb.q.getTermParent( term.id )
+			if(t) parentname = t.name
+		}
+
 		//////////// prep query for this term
 		const qlst = []
 		if( term.iscategorical ) {
@@ -230,15 +238,21 @@ use get_rows()
 
 			if( term.iscategorical || term.isinteger || term.isfloat ) {
 
-				categories.push( ...helper_rows2categories( re.lst ) )
+				categories.push(
+					...helper_rows2categories( re.lst, term )
+				)
 
 			} else if( term.iscondition ) {
 				if( ds.cohort.termdb.patient_condition && ds.cohort.termdb.patient_condition.comparison_groups ) {
 					// predefined comparison groups
-					categories.push( ...helper_conditiongroups2categories( re.lst ) )
+					categories.push(
+						...helper_conditiongroups2categories( re.lst )
+					)
 				} else {
 					// no predefined group, treat like regular category
-					categories.push( ...helper_rows2categories( re.lst ) )
+					categories.push(
+						...helper_rows2categories( re.lst, term )
+					)
 				}
 
 				if( condition_samplelst ) {
@@ -265,8 +279,11 @@ use get_rows()
 				console.log( c.group1lst.length + (c.group2lst? '/'+c.group2lst.length : '') + '\t'+c.group1label+'\t'+term.name )
 			}
 
-			// TODO add category label
-			rows.push(`${term.id}\t${q.term1_q?JSON.stringify(q.term1_q):''}\t${JSON.stringify(categories)}`)
+			// 1: term id
+			// 2: parent name
+			// 3: term setting
+			// 4: list of categories
+			rows.push(term.id+'\t'+parentname+'\t'+JSON.stringify(q.term1_q)+'\t'+JSON.stringify(categories))
 		}
 	}
 
@@ -276,7 +293,7 @@ use get_rows()
 
 	///////////// helper
 
-	function helper_rows2categories ( rows ) {
+	function helper_rows2categories ( rows, term ) {
 		// simply use .key1 as category, to summarize into list of samples by categories
 		const key2cat = new Map()
 		for(const row of rows) {
@@ -288,8 +305,10 @@ use get_rows()
 			}
 			const category = row.key1
 			if(!key2cat.has(category)) {
+				let label = category
+				if(term.values) label = term.values[category] ? term.values[category].label : category
 				key2cat.set(category, {
-					group1label: category,
+					group1label: label,
 					group2label: 'All others',
 					group1lst: [],
 				} )

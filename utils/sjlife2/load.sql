@@ -42,6 +42,7 @@ create table alltermsbyorder (
 drop table if exists category2vcfsample;
 create table category2vcfsample (
   term_id character varying(100) not null,
+  parent_name character varying(200) null,
   q text not null,
   categories text not null
 );

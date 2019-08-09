@@ -229,29 +229,32 @@ function phewas_svg ( data, div, tk, block ) {
 		.attr('fill', 'red')
 		.on('mouseover', d=>{
 			tk.legend.tip.clear()
-			const lst = [
-				{k:'Term',v:d.term.name},
-				{k:'FDR pvalue',v:d.pvalue},
-			]
+			const div = tk.legend.tip.d.append('div')
+				.style('margin','10px')
+			div.append('div').text(d.term.name)
+			if( d.parent_name ) {
+				div.append('div')
+					.style('font-size','.7em')
+					.style('opacity','.5')
+					.text('of '+d.parent_name)
+			}
+			const table = div.append('table')
+				.style('margin','10px 0px')
 			{
-				// case allele freq
+				const tr = table.append('tr')
+				tr.append('td').text(d.group1label)
 				const sum = d.table[0]+d.table[1]
 				const barsvg = client.fillbar(null, { f: sum > 0 ? d.table[0]/sum : 0 })
-				lst.push({
-					k: d.group1label,
-					v: barsvg + ' <span style="font-size:.8em;opacity:.5">ALT/REF</span> '+d.table[0]+' / '+d.table[1]
-				})
+				tr.append('td').html( barsvg + ' <span style="font-size:.7em;opacity:.5">ALT/REF</span> '+d.table[0]+' / '+d.table[1] )
 			}
 			{
-				// control allele freq
+				const tr = table.append('tr')
+				tr.append('td').text(d.group2label)
 				const sum = d.table[2]+d.table[3]
 				const barsvg = client.fillbar(null, { f: sum > 0 ? d.table[2]/sum : 0 })
-				lst.push({
-					k: d.group2label,
-					v: barsvg + ' <span style="font-size:.8em;opacity:.5">ALT/REF</span> '+d.table[2]+' / '+d.table[3]
-				})
+				tr.append('td').html( barsvg + ' <span style="font-size:.7em;opacity:.5">ALT/REF</span> '+d.table[2]+' / '+d.table[3] )
 			}
-			client.make_table_2col( tk.legend.tip.d, lst )
+			div.append('div').html( '<span style="opacity:.5;font-size:.8em">FDR P-value:</span> '+d.pvalue )
 			tk.legend.tip.show( d3event.clientX, d3event.clientY )
 		})
 		.on('mouseout',()=>{
