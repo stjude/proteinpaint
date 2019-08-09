@@ -60,16 +60,15 @@ export class TermdbBarchart{
     const settings = {
       genome: obj.genome.name,
       dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
-      term0: plot.term0 ? plot.term0.id : '',
-      term1: plot.term.id,
-      term2: obj.modifier_ssid_barchart ? 'genotype' 
+      term0: plot.term0 ? plot.term0.id : '', // convenient reference to the term id
+      term1: plot.term.id, // convenient reference to the term2 id
+      term2: obj.modifier_ssid_barchart ? 'genotype' // convenient reference to the term0 id
         : plot.term2 ? plot.term2.id
         : '',
       ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
       mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
       groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
       unit: plot.settings.bar.unit,
-      custom_bins: plot.custom_bins,
       orientation: plot.settings.bar.orientation,
       // normalize bar thickness regardless of orientation
       colw: plot.settings.common.barwidth,
@@ -120,27 +119,13 @@ export class TermdbBarchart{
 
     self.setMaxVisibleTotals(chartsData)
 
-    const term2bins = chartsData.refs.bins 
-      ? chartsData.refs.bins[2]
-      : self.settings.term2 
-        && self.terms.term2.graph 
-        && self.terms.term2.graph.barchart
-        && self.terms.term2.graph.barchart.numeric_bin
-      ? self.terms.term2.graph.barchart.numeric_bin
-      : []
-
-    self.term2bins = term2bins
-    self.term2binLabels = term2bins.map(d=>d.label).reverse()
-
     const rows = chartsData.refs.rows;
     self.rowSorter = chartsData.refs.useRowOrder
       ? (a,b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
-      : self.term2binLabels
-      ? (a,b) => self.term2binLabels.indexOf(b.dataId) - self.term2binLabels.indexOf(a.dataId)
       : (a,b) => this.totalsByDataId[b.dataId] - this.totalsByDataId[a.dataId]
 
     const charts = this.dom.barDiv.selectAll('.pp-sbar-div')
-      .data(chartsData.charts, chart => chart.chartId)
+      .data(chartsData.charts.filter(chart=>chart.visibleSerieses.length), chart => chart.chartId)
 
     charts.exit()
     .each(function(chart){
@@ -325,11 +310,13 @@ export class TermdbBarchart{
     if (s.rows && s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
       const t = this.terms.term2
       const b = t.graph && t.graph.barchart ? t.graph.barchart : null
-      const overlay = !t.iscondition || !b ? '' : b.value_choices.find(d => false /*d[s.conditionUnits[2]]*/)
       const grade_labels = b && t.iscondition ? this.grade_labels : null
-      const colors = {}
+      const value_by_label = !t.iscondition || !t.q ? '' 
+        : t.q.value_by_max_grade ? 'max. grade'
+        : t.q.value_by_most_recent ? 'most recent'
+        : ''
       legendGrps.push({
-        name: t.name + (overlay ? ': '+overlay.label : ''),
+        name: t.name + (value_by_label ? ', '+value_by_label : ''),
         items: s.rows.map(d => {
           const g = grade_labels ? grade_labels.find(c => typeof d == 'object' && 'id' in d ? c.grade == d.id : c.grade == d) : null
           return {

@@ -134,8 +134,8 @@ export default function getHandlers(self) {
           : "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:"+d.color+"'>&nbsp;</div>"
         const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${seriesLabel}</td></tr>`]
         if (term2) rows.push(`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${dataLabel}</span></td></tr>`)
-        rows.push(`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px'>${d.total}</td></tr>`)
-        rows.push(`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px'>${(100*d.total/d.seriesTotal).toFixed(1)}%</td></tr>`)
+        rows.push(`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>${d.total}</td></tr>`)
+        rows.push(`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(100*d.total/d.seriesTotal).toFixed(1)}%</td></tr>`)
         tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`);
       },
       mouseout: ()=>{
