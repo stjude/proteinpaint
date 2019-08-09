@@ -120,8 +120,8 @@ export class TermdbBarchart{
 
     self.setMaxVisibleTotals(chartsData)
 
-    const bins = chartsData.refs.bins 
-      ? chartsData.refs.bins
+    const term2bins = chartsData.refs.bins 
+      ? chartsData.refs.bins[2]
       : self.settings.term2 
         && self.terms.term2.graph 
         && self.terms.term2.graph.barchart
@@ -129,15 +129,15 @@ export class TermdbBarchart{
       ? self.terms.term2.graph.barchart.numeric_bin
       : []
 
-    self.bins = bins
-    self.binLabels = bins.map(d=>d.label).reverse()
+    self.term2bins = term2bins
+    self.term2binLabels = term2bins.map(d=>d.label).reverse()
 
     const rows = chartsData.refs.rows;
     self.rowSorter = chartsData.refs.useRowOrder
       ? (a,b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
-      : self.binLabels
-      ? (a,b) => self.binLabels.indexOf(b.dataId) - self.binLabels.indexOf(a.dataId)
-      : (a,b) => b.total - a.total
+      : self.term2binLabels
+      ? (a,b) => self.term2binLabels.indexOf(b.dataId) - self.term2binLabels.indexOf(a.dataId)
+      : (a,b) => this.totalsByDataId[b.dataId] - this.totalsByDataId[a.dataId]
 
     const charts = this.dom.barDiv.selectAll('.pp-sbar-div')
       .data(chartsData.charts, chart => chart.chartId)
@@ -155,23 +155,7 @@ export class TermdbBarchart{
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
-      // const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
-      // const matchedRows = chart.serieses.find(series => !refColId || series.seriesId == refColId)
-      const mostStack = Math.max(...(chart.serieses.map((s) => s.data.length)))
-      const matchedSerieses = chart.serieses.filter(series => series.data.length === mostStack)
-      const matchedRows = matchedSerieses[0]
-      // TODO: add unmappedRows to matchedRows 
-      // (following coomented code giving error)
-      // const unmappedRows = chartsData.refs.rows.filter(d=>!matchedRows.data.map(d => d.dataId).includes(d))
-      // for(let unmappedRow of unmappedRows){
-      //   for(let series of chart.serieses){
-      //     const r = series.data.find(d => d.dataId === unmappedRow)
-      //     if(r){
-      //       matchedRows.data.push(r)
-      //       break
-      // } } }
-      const rows = !matchedRows ? [] : matchedRows.data.sort(self.rowSorter).map(d => d.dataId)
-      chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
+      chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
 
@@ -189,18 +173,13 @@ export class TermdbBarchart{
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
       self.renderers[chart.chartId] = barsRenderer(self, select(this))
-      // const refColId = chart.settings.cols.filter(d=>!chart.settings.exclude.cols.includes(d))[0]
-      // const matchedRows = chart.serieses.find(series => !refColId || series.seriesId == refColId)
-      const mostStack = Math.max(...(chart.serieses.map((s) => s.data.length)))
-      const matchedSerieses = chart.serieses.filter(series => series.data.length === mostStack)
-      const matchedRows = matchedSerieses[0]
-      const rows = !matchedRows ? [] : matchedRows.data.sort(self.rowSorter).map(d => d.dataId)
-      chart.visibleSerieses.forEach(series => self.sortStacking(rows, series, chart, chartsData))
+      chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
   }
 
   setMaxVisibleTotals(chartsData) {
+    this.totalsByDataId = {}
     const term1 = this.settings.term1
     let maxVisibleAcrossCharts = 0
     for(const chart of chartsData.charts) {
@@ -228,8 +207,18 @@ export class TermdbBarchart{
     //delete settingsCopy.exclude
     for(const chart of chartsData.charts) {
       Object.assign(chart.settings, this.settings, chartsData.refs)
-      chart.visibleSerieses = chart.serieses.filter(d=>{
-        return !chart.settings.exclude.cols.includes(d.seriesId)
+      chart.visibleSerieses = chart.serieses.filter(series=>{
+        if (chart.settings.exclude.cols.includes(series.seriesId)) return false
+        series.visibleData = series.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))
+        series.visibleTotal = series.visibleData.reduce((sum, a) => sum + a.total, 0)
+        if (!series.visibleTotal) return false
+        for(const data of series.visibleData) {
+          if (!(data.dataId in this.totalsByDataId)) {
+            this.totalsByDataId[data.dataId] = 0
+          }
+          this.totalsByDataId[data.dataId] += data.total
+        }
+        return true
       })
       chart.settings.colLabels = chart.visibleSerieses.map(series=>{
         const id = series.seriesId
@@ -243,10 +232,8 @@ export class TermdbBarchart{
           label: label + af
         }
       })
-      chart.maxVisibleSeriesTotal = chart.visibleSerieses.reduce((max,b) => {
-        b.visibleData = b.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))
-        b.visibleTotal = b.visibleData.reduce((sum, a) => sum + a.total, 0)
-        return b.visibleTotal > max ? b.visibleTotal : max
+      chart.maxVisibleSeriesTotal = chart.visibleSerieses.reduce((max,series) => {
+        return series.visibleTotal > max ? series.visibleTotal : max
       }, 0)
       if (chart.maxVisibleSeriesTotal > maxVisibleAcrossCharts) {
         maxVisibleAcrossCharts = chart.maxVisibleSeriesTotal
@@ -258,10 +245,8 @@ export class TermdbBarchart{
     this.currChartsData = chartsData
   }
 
-  sortStacking(rows, series, chart, chartsData) {
-    series.visibleData.sort((a,b) => {
-      return rows.indexOf(a.dataId) < rows.indexOf(b.dataId) ? -1 : 1 
-    });
+  sortStacking(series, chart, chartsData) {
+    series.visibleData.sort(this.rowSorter);
     let seriesLogTotal = 0
     for(const result of series.visibleData) {
       result.colgrp = "-"
@@ -347,7 +332,6 @@ export class TermdbBarchart{
         name: t.name + (overlay ? ': '+overlay.label : ''),
         items: s.rows.map(d => {
           const g = grade_labels ? grade_labels.find(c => typeof d == 'object' && 'id' in d ? c.grade == d.id : c.grade == d) : null
-          this.binLabels
           return {
             dataId: d,
             text: g ? g.label : d,
@@ -355,11 +339,7 @@ export class TermdbBarchart{
             type: 'row',
             isHidden: s.exclude.rows.includes(d)
           }
-        }).sort(
-          this.settings.term2 && this.binLabels
-          ? this.rowSorter 
-          : (a,b) => a.text < b.text ? -1 : 1
-        )
+        }).sort(this.rowSorter)
       })
     }
     return legendGrps;
