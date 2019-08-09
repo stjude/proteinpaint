@@ -550,7 +550,7 @@ function setBinOpts(plot, self, termNum, label) {
     .on('click',()=>{
       // click to show ui and customize binning
       numeric_bin_edit(plot.tip, plot.term, plot.term.q, true, (q)=>{
-        plot.dispatch({term: {q}})
+        plot.dispatch({term: {term: plot.term, q}})
     })
   })
 

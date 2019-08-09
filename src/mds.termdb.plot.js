@@ -144,7 +144,7 @@ arg: server returned data
     // 7 is a a harcoded maximum depth allowed for processing nested object values
     if (keylineage.length >= 7) {
       obj[key] = value
-    } else if (key == 'term2' || key == 'term0') {
+    } else if (key=='term' || key == 'term2' || key == 'term0') {
       if (!value) obj[key] = value
       else if (typeof value == "object") {
         if (value.term) obj[key] = Object.assign({}, value.term)
