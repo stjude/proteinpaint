@@ -149,7 +149,7 @@ arg: server returned data
       else if (typeof value == "object") {
         if (value.term) obj[key] = Object.assign({}, value.term)
         if (value.q) obj[key].q = Object.assign({}, value.q)
-        if (obj[key].iscondition && obj[key].id == plot.term.id) {
+        if (obj[key] && obj[key].iscondition && obj[key].id == plot.term.id) {
           if (!obj[key].q) obj[key].q = {}
           for(const param of ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']) {
             delete obj[key].q[param]

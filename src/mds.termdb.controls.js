@@ -436,9 +436,7 @@ function setDivideByOpts(plot, self) {
     currterm: plot.term,
     callback: (term0) => {
       plot.dispatch({
-        term0: {
-          term: term0
-        },
+        term0: term0 ? {term: term0} : undefined,
         settings: {
           bar: {
             divideBy: term0 ? 'tree' : 'none'
