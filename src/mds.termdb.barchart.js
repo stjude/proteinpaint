@@ -120,7 +120,9 @@ export class TermdbBarchart{
     self.setMaxVisibleTotals(chartsData)
 
     const rows = chartsData.refs.rows;
-    self.rowSorter = chartsData.refs.useRowOrder
+
+    self.barSorter = (a,b) => this.seriesOrder.indexOf(a) - this.seriesOrder.indexOf(b)
+    self.overlaySorter = chartsData.refs.useRowOrder
       ? (a,b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
       : (a,b) => this.totalsByDataId[b.dataId] - this.totalsByDataId[a.dataId]
 
@@ -134,7 +136,7 @@ export class TermdbBarchart{
     })
 
     charts.each(function(chart) {
-      chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(a) - self.seriesOrder.indexOf(b))
+      chart.settings.cols.sort(self.barSorter)
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
@@ -149,7 +151,7 @@ export class TermdbBarchart{
     .style("padding", "20px")
     .style('vertical-align', 'top')
     .each(function(chart,i) {
-      chart.settings.cols.sort((a,b) => self.seriesOrder.indexOf(a) - self.seriesOrder.indexOf(b))
+      chart.settings.cols.sort(self.barSorter)
       chart.maxAcrossCharts = chartsData.maxAcrossCharts
       chart.handlers = self.handlers
       chart.maxSeriesLogTotal = 0
@@ -231,7 +233,7 @@ export class TermdbBarchart{
   }
 
   sortStacking(series, chart, chartsData) {
-    series.visibleData.sort(this.rowSorter);
+    series.visibleData.sort(this.overlaySorter);
     let seriesLogTotal = 0
     for(const result of series.visibleData) {
       result.colgrp = "-"
@@ -255,12 +257,6 @@ export class TermdbBarchart{
       this.setTerm2Color(result)
       result.color = this.term2toColor[result.dataId]
     }
-  }
-
-  sortSeries(a,b) {
-    return a[this.settings.term2] < b[this.settings.term1] 
-      ? -1
-      : 1 
   }
 
   setTerm2Color(result) {
@@ -326,7 +322,7 @@ export class TermdbBarchart{
             type: 'row',
             isHidden: s.exclude.rows.includes(d)
           }
-        }).sort(this.rowSorter)
+        }).sort(this.overlaySorter)
       })
     }
     return legendGrps;
