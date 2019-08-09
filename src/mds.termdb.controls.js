@@ -53,6 +53,11 @@ export function init(plot) {
         )
 
       self.dom.holder.style('position', abspos ? 'absolute' : '')
+      if(self.dom.holder.node().style.position == 'absolute'){
+        plot.views.barchart.dom.holder.style('height',self.dom.holder.node().offsetHeight+'px')
+      }else{
+        plot.views.barchart.dom.holder.style('height','')
+      }
     }
   }
 
