@@ -14,6 +14,8 @@ update_image
 ********************** INTERNAL
 do_precompute
 	get_samplefilter4termtype
+	helper_rows2categories
+	helper_conditiongroups2categories
 get_numsample_pergenotype
 get_maxlogp
 plot_canvas
@@ -75,26 +77,28 @@ q{}
 		/************** each cached row is one term
 		.term_id
 		.q{}
-		.categories{ category : {} }
-			.label
-			.samples[]
-			.controlsamples[]
+		.categories{}
 		*/
 
 		const term = termdb.copy_term( ds.cohort.termdb.q.termjsonByOneid( cacherow.term_id ) )
 
-		for(const category in cacherow.categories) {
+		for(const category of cacherow.categories) {
 
-			////////////// each category a case
+			/************ each category a case
+			.group1label
+			.group2label
+			.group1lst
+			.group2lst
+			*/
 
 			// number of samples by genotype in case
-			const [ het, halt, href ] = get_numsample_pergenotype( sample2gt, cacherow.categories[category].samples )
+			const [ het, halt, href ] = get_numsample_pergenotype( sample2gt, category.group1lst )
 
 			// number of samples by genotype in control
 			let het2, halt2, href2
 
-			if( cacherow.categories[category].controlsamples ) {
-				[ het2, halt2, href2 ] = get_numsample_pergenotype( sample2gt, cacherow.categories[category].controlsamples )
+			if( category.group2lst ) {
+				[ het2, halt2, href2 ] = get_numsample_pergenotype( sample2gt, category.group2lst )
 			} else {
 				het2 = het0-het
 				halt2 = halt0-halt
@@ -103,7 +107,8 @@ q{}
 
 			tests.push({
 				term,
-				category,
+				group1label: category.group1label,
+				group2label: category.group2label,
 				q: q.term1_q,
 				table: [ 
 					het + 2* halt, // case alt
@@ -171,8 +176,8 @@ use get_rows()
 - condition: hardcoded scheme
 */
 
-	//////////// work on sample filter by term type
-	const [ condition_samples ] = get_samplefilter4termtype(ds)
+	//////////// optional sample filter by term type
+	const [ condition_samplelst ] = get_samplefilter4termtype(ds)
 
 	// text rows to be loaded to db table
 	const rows = []
@@ -188,11 +193,13 @@ use get_rows()
 			qlst.push( { ds, term1_id: term.id } )
 		} else if( term.iscondition ) {
 			// for both leaf and non-leaf
+			// should only use grades as bars to go along with termdb.comparison_groups
 			qlst.push({
 				ds,
 				term1_id: term.id,
 				term1_q: {bar_by_grade:true,value_by_max_grade:true}
 			})
+			/*
 			if( !term.isleaf ) {
 				// for non-leaf, test subcondition by computable grade
 				qlst.push({
@@ -201,6 +208,7 @@ use get_rows()
 					term1_q: {bar_by_children:true,value_by_computable_grade:true}
 				})
 			}
+			*/
 		} else {
 			throw 'unknown term type'
 		}
@@ -210,48 +218,51 @@ use get_rows()
 			//////////// run query for this term
 			const re = termdbsql.get_rows( q )
 
-			const categories = {}
-			/* k: category (key1)
-			   v: {}
-			      .label
-				  .samples[]
-				  .controlsamples[]
-			   controlsamples is optional 
+			const categories = []
+			/* a category {}
+			      .group1label
+				  .group2label
+				  .group1lst[]
+				  .group2lst[]
+			   list of control samples (group2lst)is optional
+			   may only be used for condition terms since they may have type-specific filter
 			*/
-			for(const i of re.lst) {
-				if( ds.track && ds.track.vcf && ds.track.vcf.sample2arrayidx) {
-					if(!ds.track.vcf.sample2arrayidx.has( i.sample )) {
-						// not a sample in vcf
-						continue
-					}
-				}
-				const category = i.key1
-				if(!categories[category]) {
-					categories[category] = {
-						label: category,
-						samples: []
-					}
-				}
-				categories[category].samples.push(i.sample)
-			}
 
-			if( condition_samples && term.iscondition ) {
-				// there are filters for condition terms restricting samples, must create controlsamples for each category
-				for(const cat in categories) {
-					const set = new Set(categories[cat].samples)
-					categories[cat].controlsamples = []
-					for(const s of condition_samples) {
-						if( !set.has(s)) {
-							categories[cat].controlsamples.push(s)
+			if( term.iscategorical || term.isinteger || term.isfloat ) {
+
+				categories.push( ...helper_rows2categories( re.lst ) )
+
+			} else if( term.iscondition ) {
+				if( ds.cohort.termdb.patient_condition && ds.cohort.termdb.patient_condition.comparison_groups ) {
+					// predefined comparison groups
+					categories.push( ...helper_conditiongroups2categories( re.lst ) )
+				} else {
+					// no predefined group, treat like regular category
+					categories.push( ...helper_rows2categories( re.lst ) )
+				}
+
+				if( condition_samplelst ) {
+					// there are filters for condition terms restricting samples of a control set, must create list of control samplesfor each category
+					for(const c of categories) {
+						if( c.group2lst) {
+							// already has control, filter it
+							c.group2lst = c.group2lst.filter( s=> condition_samplelst.indexOf(s)!=-1 )
+						} else {
+							// no control yet
+							const set = new Set(c.group1lst)
+							c.group2lst = condition_samplelst.filter( s=> !set.has(s) )
 						}
 					}
 				}
+
+			} else {
+				throw 'unknown term type'
 			}
 
+
 			// log
-			for(const cat in categories) {
-				const c = categories[cat]
-				console.log( c.samples.length + (c.controlsamples? '/'+c.controlsamples.length : '') + '\t'+c.label+'\t'+term.name )
+			for(const c of categories) {
+				console.log( c.group1lst.length + (c.group2lst? '/'+c.group2lst.length : '') + '\t'+c.group1label+'\t'+term.name )
 			}
 
 			// TODO add category label
@@ -261,6 +272,68 @@ use get_rows()
 
 	const filename = await utils.write_tmpfile( rows.join('\n') )
 	res.send({filename})
+
+
+	///////////// helper
+
+	function helper_rows2categories ( rows ) {
+		// simply use .key1 as category, to summarize into list of samples by categories
+		const key2cat = new Map()
+		for(const row of rows) {
+			if( ds.track && ds.track.vcf && ds.track.vcf.sample2arrayidx) {
+				if(!ds.track.vcf.sample2arrayidx.has( row.sample )) {
+					// not a sample in vcf
+					continue
+				}
+			}
+			const category = row.key1
+			if(!key2cat.has(category)) {
+				key2cat.set(category, {
+					group1label: category,
+					group2label: 'All others',
+					group1lst: [],
+				} )
+			}
+			key2cat.get(category).group1lst.push(row.sample)
+		}
+		return [...key2cat.values()]
+	}
+	function helper_conditiongroups2categories ( rows ) {
+	/* with predefined comparison groups in ds
+	*/
+		const categories = []
+		for(const groupdef of ds.cohort.termdb.patient_condition.comparison_groups) {
+			// divide samples from rows into two groups based on group definition
+
+			// groupdef.group1 is required
+			const group1lst = []
+			const group2lst = []
+			for(const row of rows) {
+				const grade = Number( row.key1 ) // should be safe to assume key1 is grade
+				if( groupdef.group1.has( grade ) ) {
+					group1lst.push( row.sample )
+					continue
+				}
+				if( groupdef.group2 && groupdef.group2.has(grade) ) {
+					group2lst.push( row.sample )
+				}
+			}
+
+			if( group1lst.length == 0) {
+				// nothing in group1, skip
+				console.log('Empty group1: '+groupdef.group1label)
+				continue
+			}
+
+			categories.push( {
+				group1label: groupdef.group1label,
+				group2label: groupdef.group2label,
+				group1lst,
+				group2lst: (group2lst.length ? group2lst : undefined)
+			} )
+		}
+		return categories
+	}
 }
 
 

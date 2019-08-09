@@ -33,6 +33,14 @@ arg: server returned data
   // initiating the plot object
   // it will be updated later by axis toggle or cross tabulate
   const plot = {
+    // dispatch() is the gatekeeper function to protect the shared state
+    // among the different viz and controls; it enforces the
+    // coordinated updates of interdependent state key-values
+    dispatch(updatedKeyVals) { //console.log(updatedKeyVals)
+      nestedUpdate(plot, null, updatedKeyVals)
+      main(plot)
+    },
+
     obj: arg.obj,
     genome: arg.genome,
     dslabel: arg.dslabel,
@@ -123,13 +131,57 @@ arg: server returned data
     table: table_init(plot.dom.viz)
   }
   // set configuration controls
-  plot.controls = controls_init(arg, plot, main)
+  plot.controls = controls_init(plot)
   
   main( plot, callback )
   if ( arg.obj.termfilter && arg.obj.termfilter.callbacks ) {
     // termfilter in action, insert main() of this plot to callback list to be called when filter is updated
 	// FIXME svg dimension will be 0 when the plot is invisible (as turned off by the VIEW button)
     arg.obj.termfilter.callbacks.push(()=>main(plot))
+  }
+
+  function nestedUpdate(obj, key, value, keylineage=[]) {
+    // 7 is a a harcoded maximum depth allowed for processing nested object values
+    if (keylineage.length >= 7) {
+      obj[key] = value
+    } else if (key == 'term2' || key == 'term0') {
+      if (!value) obj[key] = value
+      else if (typeof value == "object") {
+        if (value.term) obj[key] = Object.assign({}, value.term)
+        if (value.q) obj[key].q = Object.assign({}, value.q)
+        if (obj[key].iscondition && obj[key].id == plot.term.id) {
+          if (!obj[key].q) obj[key].q = {}
+          for(const param of ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']) {
+            delete obj[key].q[param]
+            if (plot.term.q[param]) obj[key].q[param] = 1
+          }
+        }
+      }
+      if (key == 'term2' && plot.term2) {
+        if (plot.term2.isfloat && plot.term2_boxplot) { 
+          plot.term2_displaymode = 'boxplot'
+        } else {
+          plot.term2_boxplot = 0
+          if (plot.term2_displaymode == "boxplot") {
+            plot.term2_displaymode = "stacked"
+          }
+        }
+      }
+    } else if (key == 'term') {
+      obj[key] = value
+      if (plot.term2 && plot.term.q) {
+        if (
+          (plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade))
+          || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
+        ) plot.term2 = undefined
+      }
+    } else if (key !== null && (!value || typeof value != 'object')) { //console.log(keylineage, value)
+      obj[key] = value
+    } else {
+      for(const subkey in value) {
+        nestedUpdate(key == null ? obj : obj[key], subkey, value[subkey], keylineage.concat(subkey))
+      }
+    }
   }
 }
 
@@ -245,6 +297,7 @@ at the beginning or stacked bar plot for cross-tabulating
   plot.views.stattable.main(plot, data, data.boxplot != undefined && plot.term2_displaymode == "stacked")
   plot.views.table.main(plot, data, plot.term2_displaymode == "table")
   plot.views.banner.main(plot, data)
+  plot.controls.postRender(plot)
 }
 
 function banner_init(div) {
