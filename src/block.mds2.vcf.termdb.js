@@ -231,7 +231,6 @@ function phewas_svg ( data, div, tk, block ) {
 			tk.legend.tip.clear()
 			const lst = [
 				{k:'Term',v:d.term.name},
-				{k:'Category',v:d.category},
 				{k:'FDR pvalue',v:d.pvalue},
 			]
 			{
@@ -239,7 +238,7 @@ function phewas_svg ( data, div, tk, block ) {
 				const sum = d.table[0]+d.table[1]
 				const barsvg = client.fillbar(null, { f: sum > 0 ? d.table[0]/sum : 0 })
 				lst.push({
-					k: 'Case',
+					k: d.group1label,
 					v: barsvg + ' <span style="font-size:.8em;opacity:.5">ALT/REF</span> '+d.table[0]+' / '+d.table[1]
 				})
 			}
@@ -248,7 +247,7 @@ function phewas_svg ( data, div, tk, block ) {
 				const sum = d.table[2]+d.table[3]
 				const barsvg = client.fillbar(null, { f: sum > 0 ? d.table[2]/sum : 0 })
 				lst.push({
-					k: 'Control',
+					k: d.group2label,
 					v: barsvg + ' <span style="font-size:.8em;opacity:.5">ALT/REF</span> '+d.table[2]+' / '+d.table[3]
 				})
 			}

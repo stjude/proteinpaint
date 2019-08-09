@@ -31,6 +31,25 @@ module.exports={
 					0: 'No symptom',
 					9: 'Unknown status'
 				},
+				comparison_groups: [
+					{
+						group1label:'Mild and above',
+						group1:new Set([1,2,3,4,5]),
+						group2label:'Normal',
+						// group2 is not defined and will use the rest of the ctcae-graded samples
+					},
+					{
+						group1label:'Moderate and above',
+						group1:new Set([2,3,4,5]),
+						group2label:'Normal',
+					},
+					{
+						group1label:'Severe and above',
+						group1:new Set([3,4,5]),
+						group2label:'Normal',
+					}
+					// to add later 1+2 vs 3+4+5
+				],
 				age_key: 'age',
 				yearstoevent_key:'yearstoevent'
 			},
