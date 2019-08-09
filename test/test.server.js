@@ -17,7 +17,7 @@
   To try this for troubleshooting:
   -------------------------------- 
   
-  `node test/termdb.barchart.server.js`
+  `node test/server.js`
   
   then load this in your browser:
   

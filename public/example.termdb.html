@@ -32,7 +32,9 @@ runproteinpaint({
 					is_population:true, key:'gnomAD', allowto_adjust_race:true, adjust_race:true
 				}
 			}
-		}
+		},
+		// could be URL-encoded string, or an object
+		params2restore: window.location.search.slice(1)
 	},
 })
 </script>

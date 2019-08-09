@@ -123,6 +123,7 @@ obj{}:
 
 		if( obj.default_rootterm ) {
 			await show_default_rootterm( obj )
+			// restore_view will delete params2restore key-value once
 			restore_view(obj)
 			return
 		}
@@ -955,30 +956,28 @@ function make_filter_ui(obj){
 	)
 }
 
-// allow view restore on initial page load only
-let view_restored = false
+
+
 
 function restore_view(obj) {
-	if (view_restored) return
-	view_restored = true
-	const querystr = window.location.search.split('?')[1]
-	if (!querystr) return
+	if (!obj.params2restore) return
+	const params = typeof obj.params2restore == 'object'
+		? obj.params2restore
+		: getUrlParams(obj.params2restore)
+	delete obj.params2restore
+	if (!params.term1) return
+	if (params.view_type=='barchart') {
+		restore_barchart(obj, params)
+	}
+}
+
+function getUrlParams(queryStr) {
 	const params = {}
-	querystr.split('&').forEach(kv=>{
+	queryStr.split('&').forEach(kv=>{
 		const [key,val] = kv.split('=')
 		params[key] = !val || isNaN(val) ? val : +val 
 	})
-	if (!params.restore_view) return
-	if (params.restore_view=='by-url-params') {
-		if (!params.term1) return
-		if (params.view_type=='barchart') {
-			restore_barchart(obj, params)
-		}
-	} else if (params.restore_view=='by-saved-settings' && params.view_id) {
-		// fetch cached view settings from the server
-		// will enable sharing of saved views among users, developers
-		// useful for discussions, feedback, bug reports
-	}
+	return params
 }
 
 function save_view() {
@@ -995,14 +994,14 @@ function save_view() {
 
 async function restore_barchart(obj, params) {
 	const data = await obj.do_query( ['findterm='+params.term1] );
-	if (!data.lst.length) return
+	if (!data.lst.length) return;
 	
 	const restored_div = obj.dom.div.append('div')
 		.style('margin', '20px')
 		.style('padding', '10px 20px')
 		.style('border', '1px solid #aaa')
-	restored_div.append('h3')
-		.html('Restored View')
+	
+	restored_div.append('h3').html('Restored View')
 
 	let term2, term0
 	if (params.term2) {
