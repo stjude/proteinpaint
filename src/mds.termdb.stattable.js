@@ -23,11 +23,10 @@ export function init(holder) {
 }
 
 function processData(self, plot, data) {
-  plot.boxplot = data.boxplot
-  render(self, plot)
+  render(self, plot, data)
 }
 
-export function render(self, plot) {
+export function render(self, plot, data) {
   // table for statistical summary
   self.dom.div
     .style("display", "block")
@@ -43,13 +42,13 @@ export function render(self, plot) {
     + '<tr><td colspan="2">Among Patients treated</td></tr>'
   }
 
-  let rows = '<tr><td>Mean (SD)</td><td>'+ plot.boxplot.mean.toFixed(2) + ' (' + plot.boxplot.sd.toFixed(2) +') </td></tr>'
-  if (plot.boxplot.p50) {
-    rows += '<tr><td>Median (IQR)</td><td>'+ plot.boxplot.p50.toFixed(2) + ' (' + plot.boxplot.iqr.toFixed(2) +') </td></tr>'
-      + '<tr><td>5th Percentile</td><td>'+ plot.boxplot.p05.toFixed(2) +'</td></tr>'
-      + '<tr><td>25th Percentile</td><td>'+ plot.boxplot.p25.toFixed(2) +'</td></tr>'
-      + '<tr><td>75th Percentile</td><td>'+ plot.boxplot.p75.toFixed(2) +'</td></tr>'
-      + '<tr><td>95th Percentile</td><td>'+ plot.boxplot.p95.toFixed(2) +'</td></tr>'
+  let rows = '<tr><td>Mean (SD)</td><td>'+ data.boxplot.mean.toFixed(2) + ' (' + data.boxplot.sd.toFixed(2) +') </td></tr>'
+  if (data.boxplot.p50) {
+    rows += '<tr><td>Median (IQR)</td><td>'+ data.boxplot.p50.toFixed(2) + ' (' + data.boxplot.iqr.toFixed(2) +') </td></tr>'
+      + '<tr><td>5th Percentile</td><td>'+ data.boxplot.p05.toFixed(2) +'</td></tr>'
+      + '<tr><td>25th Percentile</td><td>'+ data.boxplot.p25.toFixed(2) +'</td></tr>'
+      + '<tr><td>75th Percentile</td><td>'+ data.boxplot.p75.toFixed(2) +'</td></tr>'
+      + '<tr><td>95th Percentile</td><td>'+ data.boxplot.p95.toFixed(2) +'</td></tr>'
   }
 
   self.dom.div.html(

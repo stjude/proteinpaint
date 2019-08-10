@@ -8,30 +8,17 @@ import {init as controls_init} from './mds.termdb.controls'
 
 export function init(arg, callback = ()=>{}) {
 /*
-arg: server returned data
-.items[]
-  for single-term sample count:
-  .label
-  .value
+arg: 
+.obj      required, tree-object
+.genome   required
+.dslabel  required
+.term     required, term to be rendered as bars
+.holder   required, dom element to hold the control panel and rendered views
 
-  for cross-tabulate with 2nd term:
-  .label
-  .value
-  .lst[ {} ]
-    .label
-    .value
-
-.holder
-.obj
-.term{}
-  .id
-  .graph.barchart{}
-    provides predefined chart customization, to be implemented:
-    - fixed y scale
-    - log scale
++ see the overridable key-values of the plot object below
 */
+  
   // initiating the plot object
-  // it will be updated later by axis toggle or cross tabulate
   const plot = {
     // dispatch() is the gatekeeper function to protect the shared state
     // among the different viz and controls; it enforces the
@@ -40,81 +27,85 @@ arg: server returned data
       nestedUpdate(plot, null, updatedKeyVals)
       main(plot)
     },
+    tip: new client.Menu({padding:'18px'})
+  }
 
+  // fill-in the REQUIRED argument keys
+  Object.assign(plot, {
     obj: arg.obj,
     genome: arg.genome,
     dslabel: arg.dslabel,
-    tip: new client.Menu({padding:'18px'}),
-    
+    term: arg.term,
+    // set the parent DOM elements for viz and controls
+    dom: {
+      holder: arg.holder
+        .style('white-space', 'nowrap')
+        .style('overflow-x', 'scroll'),
+      
+      // will hold no data notice or the page title in multichart views
+      banner: arg.holder.append('div').style('display', 'none'),
+      
+      // dom.controls will hold the config input, select, button elements
+      controls: arg.holder.append('div')
+        .attr('class','pp-termdb-plot-controls')
+        .style('display','inline-block'),
+      
+      // dom.viz will hold the rendered view
+      viz: arg.holder.append('div')
+        .attr('class','pp-termdb-plot-viz')
+        .style('display','inline-block')
+        .style('min-width', '300px')
+        .style('margin-left', '50px'),
+    }
+  })
+
+  // fill-in the OPTIONAL argument keys
+  Object.assign(plot, {
     // data
     term0: arg.term0 ? arg.term0 : null,
-    term: arg.term,
     term2: arg.term2 
       ? arg.term2 
       : arg.obj.modifier_ssid_barchart
       ? {mname: arg.obj.modifier_ssid_barchart.mutation_name}
       : null,
-    items: arg.items,
-    boxplot: arg.boxplot,
-
     // may need to put the following properties under
     // a namespace or within the affected module
     bin_controls: {1:{}, 2:{}},
     term2_displaymode: arg.term2_displaymode ? arg.term2_displaymode : "stacked",
     term2_boxplot: 0,
-
-    unannotated: arg.unannotated ? arg.unannotated : '',
+    unannotated: arg.unannotated ? arg.unannotated : ''
+  })
     
-    // namespaced configuration settings to indicate
-    // the scope affected by a setting key-value
-    settings: {
-      common: {
-        use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
-        use_percentage: false,
-        barheight: 300, // maximum bar length 
-        barwidth: 20, // bar thickness
-        barspace: 2 // space between two bars
-      },
-      boxplot: {
-        toppad: 20, // top padding
-        yaxis_width: 100,
-        label_fontsize: 15,
-        barheight: 400, // maximum bar length 
-        barwidth: 25, // bar thickness
-        barspace: 5 // space between two bars
-      },
-      bar: {
-        orientation: 'horizontal',
-        unit: 'abs',
-        overlay: 'none',
-        divideBy: 'none'
-      }
+  // namespaced configuration settings to indicate
+  // the scope affected by a setting key-value
+  // set the default settings
+  plot.settings = {
+    common: {
+      use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
+      use_percentage: false,
+      barheight: 300, // maximum bar length 
+      barwidth: 20, // bar thickness
+      barspace: 2 // space between two bars
     },
-    // dom: {} see below
-    // views: {} see below
+    boxplot: {
+      toppad: 20, // top padding
+      yaxis_width: 100,
+      label_fontsize: 15,
+      barheight: 400, // maximum bar length 
+      barwidth: 25, // bar thickness
+      barspace: 5 // space between two bars
+    },
+    bar: {
+      orientation: 'horizontal',
+      unit: 'abs',
+      overlay: 'none',
+      divideBy: 'none'
+    }
   }
-
-  arg.holder
-    .style('white-space', 'nowrap')
-    .style('overflow-x', 'scroll')
-  // set the parent DOM elements for viz and controls
-  plot.dom = {
-    holder: arg.holder,
-    
-    // will hold no data notice or the page title in multichart views
-    banner: arg.holder.append('div').style('display', 'none'),
-    
-    // dom.controls will hold the config input, select, button elements
-    controls: arg.holder.append('div')
-      .attr('class','pp-termdb-plot-controls')
-      .style('display','inline-block'),
-    
-    // dom.viz will hold the rendered view
-    viz: arg.holder.append('div')
-      .attr('class','pp-termdb-plot-viz')
-      .style('display','inline-block')
-      .style('min-width', '300px')
-      .style('margin-left', '50px'),
+  
+  if (arg.settings && typeof arg.settings == "object") {
+    // override the default settings
+    Object.assign(plot.settings, arg.settings)
   }
 
   // set view functions or objects

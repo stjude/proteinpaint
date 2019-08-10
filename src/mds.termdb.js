@@ -517,7 +517,7 @@ such conditions may be carried by obj
 		if( loaded || loading ) return
 		button.style('border','solid 1px #aaa')
 		loading=true
-		make_barplot( obj, term, div, ()=> {
+		make_barplot( obj, {term}, div, ()=> {
 			plot_loading_div.remove()
 			loaded=true
 			loading=false
@@ -529,22 +529,29 @@ such conditions may be carried by obj
 
 
 
-function make_barplot ( obj, term, div, callback ) {
-	// make barchart
-	const plot = {
+function make_barplot ( obj, opts, div, callback ) {
+/*
+  make barchart, as default view
+  opts {}
+    .term    required
+    .term2
+    .term0
+    .settings {}
+
+*/
+	const arg = Object.assign({
 		obj,
 		holder: div,
 		genome: obj.genome.name,
 		dslabel: obj.mds.label,
-		term: term
-	}
+	}, opts)
 
 	if( obj.modifier_ssid_barchart ) {
 		const g2c = {}
 		for(const k in obj.modifier_ssid_barchart.groups) {
 			g2c[ k ] = obj.modifier_ssid_barchart.groups[k].color
 		}
-		plot.mutation_lst = [
+		arg.mutation_lst = [
 			{
 				chr: obj.modifier_ssid_barchart.chr,
 				mutation_name: obj.modifier_ssid_barchart.mutation_name,
@@ -552,9 +559,9 @@ function make_barplot ( obj, term, div, callback ) {
 				genotype2color: g2c
 			}
 		]
-		plot.overlay_with_genotype_idx = 0
+		arg.overlay_with_genotype_idx = 0
 	}
-	plot_init( plot, callback )
+	plot_init( arg, callback )
 }
 
 
@@ -729,7 +736,7 @@ barchart is shown in-place under term and in full capacity
 				.append('div')
 				.style('border-left','solid 1px #aaa')
 				.style('margin-left',graph_leftpad)
-			make_barplot( obj, term, div, ()=>{
+			make_barplot( obj, {term}, div, ()=>{
 				loading=false
 				loaded=true
 				viewbutton.text('VIEW')
@@ -965,10 +972,7 @@ function restore_view(obj) {
 		? obj.params2restore
 		: getUrlParams(obj.params2restore)
 	delete obj.params2restore
-	if (!params.term1) return
-	if (params.view_type=='barchart') {
-		restore_barchart(obj, params)
-	}
+	restore_plot(obj, params)
 }
 
 function getUrlParams(queryStr) {
@@ -992,44 +996,52 @@ function save_view() {
 	*/
 }
 
-async function restore_barchart(obj, params) {
-	const data = await obj.do_query( ['findterm='+params.term1] );
-	if (!data.lst.length) return;
-	
+async function restore_plot(obj, params) {
+  if (!params.term && !params.term1) return
 	const restored_div = obj.dom.div.append('div')
 		.style('margin', '20px')
 		.style('padding', '10px 20px')
 		.style('border', '1px solid #aaa')
+
+  if (params.term1) params.term = params.term1
+
+	if (typeof params.term == "object") {
+		make_barplot( obj, params, restored_div)
+	} else {
+		const data = await obj.do_query( ['findterm='+params.term] );
+		if (!data.lst.length) return;
+		const term = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
+
+		let term2, term0
+		if (params.term2) {
+			const data = await obj.do_query( ['findterm='+params.term2] );
+			if (data.lst.length) term2 = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
+		}
+		if (params.term0) {
+			const data = await obj.do_query( ['findterm='+params.term0] );
+			if (data.lst.length) term0 = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
+		}
 	
-	restored_div.append('h3').html('Restored View')
+		restored_div.append('h3').html('Restored View')
 
-	let term2, term0
-	if (params.term2) {
-		const data = await obj.do_query( ['findterm='+params.term2] );
-		if (data.lst.length) term2 = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
+		make_barplot( obj, {term}, restored_div, ({plot, main})=>{
+			if (!term2 && !term0) return
+			if (term2) plot.settings.bar.overlay = 'tree'
+			if (term0) plot.settings.bar.divideBy = 'tree'
+	    plot.term2 = term2
+	    plot.term0 = term0
+	    if (plot.term2 && plot.term2.isfloat && plot.term2_boxplot) { 
+	      plot.term2_displaymode = 'boxplot'
+	    } else if (plot.term2) {
+	      if (plot.term2_displaymode == "boxplot") {
+	        plot.term2_displaymode = "stacked"
+	      }
+	      plot.term2_boxplot = 0
+	    }
+		  setTimeout(()=>{
+		    main( plot )
+		  }, 1100)
+		})
 	}
-	if (params.term0) {
-		const data = await obj.do_query( ['findterm='+params.term0] );
-		if (data.lst.length) term0 = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
-	}
-
-	make_barplot( obj, data.lst[0], restored_div, ({plot, main})=>{
-		if (!term2 && !term0) return
-		if (term2) plot.settings.bar.overlay = 'tree'
-		if (term0) plot.settings.bar.divideBy = 'tree'
-    plot.term2 = term2
-    plot.term0 = term0
-    if (plot.term2 && plot.term2.isfloat && plot.term2_boxplot) { 
-      plot.term2_displaymode = 'boxplot'
-    } else if (plot.term2) {
-      if (plot.term2_displaymode == "boxplot") {
-        plot.term2_displaymode = "stacked"
-      }
-      plot.term2_boxplot = 0
-    }
-	  setTimeout(()=>{
-	    main( plot )
-	  }, 1100)
-	})
 }
 
