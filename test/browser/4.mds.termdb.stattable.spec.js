@@ -22,18 +22,16 @@ tape("barchart-dependent display", function (test) {
       termfilter,
       params2restore: {
         term: termjson["agedx"],
+        term2: termjson["diaggrp"],
         settings: {
-          currViews: ['']
+          currViews: ['table']
         }
       },
       callbacks: {
         plot: {
           postRender: [postRender1]
         }
-      },
-      bar_click_menu:{
-        add_filter:true
-      },
+      }
     }
   })
 

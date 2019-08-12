@@ -407,7 +407,7 @@ function setViewOpts(plot, self) {
   .property('checked', d => plot.settings.currViews.includes(d.value))
   .on('input', d => {
     plot.dispatch({
-      currViews: [d.value]
+      settings: {currViews: [d.value]}
     })
   })
 

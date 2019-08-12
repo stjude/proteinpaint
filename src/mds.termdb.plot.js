@@ -146,7 +146,7 @@ arg:
         if (value.term) obj[key] = Object.assign({}, value.term)
         if (value.q) obj[key].q = Object.assign({}, value.q)
       }
-    } else if (key !== null && (!value || typeof value != 'object')) { //console.log(keylineage, value)
+    } else if (key !== null && (!value || typeof value != 'object')) {
       obj[key] = value
     } else {
       for(const subkey in value) {
@@ -211,7 +211,9 @@ function coordinateState(plot) {
         if (plot.term.q[param]) plot.term2.q[param] = 1
       }
     }
-  } 
+  } else if (!plot.settings.currViews.includes("barchart")) {
+    plot.settings.currViews = ["barchart"]
+  }
   
   const i = plot.settings.currViews.indexOf("stattable")
   if (i == -1) {
