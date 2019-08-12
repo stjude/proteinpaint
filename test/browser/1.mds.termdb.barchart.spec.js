@@ -7,7 +7,7 @@ tape("\n", function(test) {
   test.end()
 })
 
-tape("one chart, no overlay", function (test) {
+tape("single barchart, no overlay", function (test) {
   const div0 = d3s.select('body').append('div')
   
   runproteinpaint({
@@ -20,8 +20,10 @@ tape("one chart, no overlay", function (test) {
       default_rootterm:{},
       termfilter:{show_top_ui:false},
       params2restore: {
-        view_type: 'barchart',
-        term: termjson["diaggrp"]
+        term: termjson["diaggrp"],
+        settings: {
+          currViews: ['barchart']
+        }
       }
     }
   })
@@ -36,7 +38,7 @@ tape("one chart, no overlay", function (test) {
   })
 })
 
-tape("one chart, with overlay", function (test) {
+tape("single chart, with overlay", function (test) {
   const div0 = d3s.select('body').append('div')
   
   runproteinpaint({
@@ -49,9 +51,11 @@ tape("one chart, with overlay", function (test) {
       default_rootterm:{},
       termfilter:{show_top_ui:false},
       params2restore: {
-        view_type: 'barchart',
         term: termjson["diaggrp"],
-        term2: termjson["agedx"]
+        term2: termjson["agedx"],
+        settings: {
+          currViews: ['barchart']
+        }
       }
     }
   })

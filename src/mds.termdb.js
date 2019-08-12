@@ -8,37 +8,6 @@ import { debounce } from 'debounce'
 
 
 /*
-
-init() accepts following triggers:
-- show term tree starting with default terms, at terms show graph buttons
-- show term tree, for selecting a term (what are selectable?), no graph buttons
-
-init accepts obj{}
-.genome{}
-.mds{}
-.div
-.termfilter{}
-	.show_top_ui
-	.callbacks[]
-	.terms[]     // lst of tvs objects
-
-
-triggers
-obj.default_rootterm{}
-
-
-modifiers, for modifying the behavior/display of the term tree
-attach to obj{}
-** modifier_click_term
-	when this is provided, will allow selecting terms, do not show graph buttons
-** modifier_ssid_barchart
-** modifier_barchart_selectbar
-
-
-
-
-
-
 ********************** EXPORTED
 init()
 menuoption_add_filter
@@ -58,15 +27,38 @@ show_default_rootterm
 				make_barplot
 */
 
-
-
-
-
 const tree_indent = '30px',
 	label_padding = '5px 3px 5px 1px',
 	graph_leftpad = '0px',
 	button_radius = '5px'
 
+
+/*
+init() accepts following triggers:
+- show term tree starting with default terms, at terms show graph buttons
+- show term tree, for selecting a term (what are selectable?), no graph buttons
+
+init accepts obj{}
+.genome{}
+.mds{}
+.div
+.termfilter{}
+  .show_top_ui
+  .callbacks[]
+  .terms[]     // lst of tvs objects
+
+
+triggers
+obj.default_rootterm{}
+
+
+modifiers, for modifying the behavior/display of the term tree
+attach to obj{}
+** modifier_click_term
+  when this is provided, will allow selecting terms, do not show graph buttons
+** modifier_ssid_barchart
+** modifier_barchart_selectbar
+*/
 
 export async function init ( obj ) {
 /*
@@ -1030,14 +1022,6 @@ async function restore_plot(obj, params) {
 			if (term0) plot.settings.bar.divideBy = 'tree'
 	    plot.term2 = term2
 	    plot.term0 = term0
-	    if (plot.term2 && plot.term2.isfloat && plot.term2_boxplot) { 
-	      plot.term2_displaymode = 'boxplot'
-	    } else if (plot.term2) {
-	      if (plot.term2_displaymode == "boxplot") {
-	        plot.term2_displaymode = "stacked"
-	      }
-	      plot.term2_boxplot = 0
-	    }
 		  setTimeout(()=>{
 		    main( plot )
 		  }, 1100)

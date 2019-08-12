@@ -46,9 +46,10 @@ export function init(plot) {
     // !!! may be triggered by more than one input or function
     updaters: [],
     postRender(plot) {
-      const abspos = plot.term2_displaymode == "stacked" 
+      const abspos = plot.settings.currViews.includes("bachart") 
         && (
-          plot.views.barchart.visibleCharts.length > 1
+          !plot.views.barchart.visibleCharts
+          || plot.views.barchart.visibleCharts.length > 1
           || plot.views.barchart.visibleCharts[0].settings.svgw > window.innerWidth - 400
         )
 
@@ -188,7 +189,7 @@ function setOrientationOpts(plot, self) {
   })
 
   self.updaters.push(() => {
-    tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
+    tr.style('display', plot.settings.currViews.includes("barchart") ? "table-row" : "none")
   })
 }
 
@@ -217,7 +218,7 @@ function setScaleOpts(plot, self) {
   })
 
   self.updaters.push(() => {
-    tr.style('display', plot.term2_displaymode == "stacked" ? "table-row" : "none")
+    tr.style('display', plot.settings.currViews.includes("barchart") ? "table-row" : "none")
     radio.divs.style('display', d => {
       if (d.value == 'log') {
         return plot.term2 ? 'none' : 'inline-block' 
@@ -285,8 +286,10 @@ function setOverlayOpts(plot, self) {
     if (d.value == "none") {
       plot.dispatch({
         term2: undefined,
-        term2_displaymode: 'stacked',
-        settings: {bar: {overlay: d.value}}
+        settings: {
+          currViews: ["barchart"],
+          bar: {overlay: d.value}
+        }
       })
     } else if (d.value == "tree") {
       plot.dispatch({
@@ -394,24 +397,23 @@ function setViewOpts(plot, self) {
     'pp-termdb-display-mode-' + self.index, 
     td, 
     [
-      {label: 'Barchart', value: 'stacked'},
+      {label: 'Barchart', value: 'barchart'},
       {label: 'Table', value: 'table'},
       {label: 'Boxplot', value: 'boxplot'}
     ]
   )
 
   radio.inputs
-  .property('checked', d => d.value == plot.term2_displaymode)
+  .property('checked', d => plot.settings.currViews.includes(d.value))
   .on('input', d => {
     plot.dispatch({
-      term2_displaymode: d.value,
-      term2_boxplot: d.value == 'boxplot'
+      currViews: [d.value]
     })
   })
 
   self.updaters.push(() => {
     tr.style("display", plot.term2 ? "table-row" : "none")
-    radio.inputs.property('checked', d => d.value == plot.term2_displaymode)
+    radio.inputs.property('checked', d => plot.settings.currViews.includes(d.value))
     radio.divs.style('display', d => plot.term2 && (d.value != 'boxplot' || plot.term2.isfloat) ? 'inline-block' : 'none')
   })
 }
@@ -474,7 +476,7 @@ function setDivideByOpts(plot, self) {
 
   self.updaters.push(() => {
     // hide all options when opened from genome browser view 
-    tr.style("display", plot.obj.modifier_ssid_barchart || plot.term2_displaymode != "stacked" ? "none" : "table-row")
+    tr.style("display", plot.obj.modifier_ssid_barchart || !plot.settings.currViews.includes("barchart") ? "none" : "table-row")
     // do not show genotype divideBy option when opened from stand-alone page
     if (!plot.settings.bar.divideBy) {
       plot.settings.bar.divideBy = plot.obj.modifier_ssid_barchart

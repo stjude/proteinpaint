@@ -68,11 +68,6 @@ arg:
       : arg.obj.modifier_ssid_barchart
       ? {mname: arg.obj.modifier_ssid_barchart.mutation_name}
       : null,
-    // may need to put the following properties under
-    // a namespace or within the affected module
-    bin_controls: {1:{}, 2:{}},
-    term2_displaymode: arg.term2_displaymode ? arg.term2_displaymode : "stacked",
-    term2_boxplot: 0,
     unannotated: arg.unannotated ? arg.unannotated : ''
   })
     
@@ -80,6 +75,9 @@ arg:
   // the scope affected by a setting key-value
   // set the default settings
   plot.settings = {
+    // currViews: ["barchart" | "table" | "boxplot"] 
+    // + auto-added ["stattable"] if barchart && plot.term.isfloat
+    currViews: ["barchart"], 
     common: {
       use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
       use_percentage: false,
@@ -105,7 +103,11 @@ arg:
   
   if (arg.settings && typeof arg.settings == "object") {
     // override the default settings
-    Object.assign(plot.settings, arg.settings)
+    for(const key in arg.settings) {
+      const val = arg.settings[key]
+      if (!val || Array.isArray(val) || typeof val !== "object") plot.settings[key] = val
+      else Object.assign(plot.settings[key], val)
+    }
   }
 
   // set view functions or objects
@@ -148,24 +150,8 @@ arg:
           }
         }
       }
-      if (key == 'term2' && plot.term2) {
-        if (plot.term2.isfloat && plot.term2_boxplot) { 
-          plot.term2_displaymode = 'boxplot'
-        } else {
-          plot.term2_boxplot = 0
-          if (plot.term2_displaymode == "boxplot") {
-            plot.term2_displaymode = "stacked"
-          }
-        }
-      }
     } else if (key == 'term') {
       obj[key] = value
-      if (plot.term2 && plot.term.q) {
-        if (
-          (plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade))
-          || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
-        ) plot.term2 = undefined
-      }
     } else if (key !== null && (!value || typeof value != 'object')) { //console.log(keylineage, value)
       obj[key] = value
     } else {
@@ -183,6 +169,8 @@ arg:
 const serverData = {}
 
 function main(plot, callback = ()=>{}) {
+  coordinateState(plot)
+
   // create an alternative reference 
   // to plot.[term0,term,term2] and term1_q parameters
   // for convenience and namespacing related variables
@@ -204,6 +192,25 @@ function main(plot, callback = ()=>{}) {
       callback({plot, main})
     })
     //.catch(window.alert)
+  }
+}
+
+function coordinateState(plot) {
+  if (plot.term2) {
+    if (plot.settings.currViews.includes("boxplot")) {
+      if (!plot.term2.isfloat) plot.settings.currViews = ["barchart"]
+    } 
+
+    if (plot.term2.q) {
+      if (
+        (plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade))
+        || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
+      ) plot.term2 = undefined
+    }
+  } 
+  
+  if (plot.term.isfloat && !plot.settings.currViews.includes("stattable")) {
+    plot.settings.currViews.push("stattable")
   }
 }
 
@@ -283,10 +290,10 @@ in the plot object called by showing the single-term plot
 at the beginning or stacked bar plot for cross-tabulating
 */ 
   plot.controls.main(plot, data)
-  plot.views.barchart.main(plot, data, plot.term2_displaymode == "stacked", plot.obj)
-  plot.views.boxplot.main(plot, data, plot.term2_displaymode == "boxplot")
-  plot.views.stattable.main(plot, data, data.boxplot != undefined && plot.term2_displaymode == "stacked")
-  plot.views.table.main(plot, data, plot.term2_displaymode == "table")
+  plot.views.barchart.main(plot, data, plot.settings.currViews.includes("barchart"), plot.obj)
+  plot.views.boxplot.main(plot, data, plot.settings.currViews.includes("boxplot"))
+  plot.views.stattable.main(plot, data, plot.settings.currViews.includes("stattable"))
+  plot.views.table.main(plot, data, plot.settings.currViews.includes("table"))
   plot.views.banner.main(plot, data)
   plot.controls.postRender(plot)
 }
