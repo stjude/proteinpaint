@@ -95,6 +95,7 @@ export default function htmlLegend(legendDiv, viz={settings:{}, handlers:{}}) {
     const color = d.fill ? d.fill : d.stroke ? d.stroke : d.color
 
     div.style('opacity', d.isHidden ? 0.3 : 1)
+      .attr('class','legend-row')
       .style('display', s.legendOrientation == "vertical" ? 'block' : 'inline-block')
       .style('width', s.legendOrientation == "vertical" ? 'fit-content' : null)
 
