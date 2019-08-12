@@ -54,13 +54,17 @@ tape("single barchart, no overlay", function (test) {
   function postRender2(plot) {
     test.equal(termfilter.terms && termfilter.terms.length, 1, "should create a tvslst filter when a bar is clicked")
     const data = plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect').datum()
-    test.deepEqual(termfilter.terms[0], {
-      term: plot.term,
-      values: [{
-        key: data.seriesId,
-        label: data.seriesId
-      }]
-    }, "should assign the correct clicked bar {key, label} as a categorical filter term-value")
+    test.deepEqual(
+      termfilter.terms[0], 
+      {
+        term: plot.term,
+        values: [{
+          key: data.seriesId,
+          label: data.seriesId
+        }]
+      }, 
+      "should assign the correct clicked bar {key, label} as a categorical filter term-value"
+    )
     termfilter.terms.length = 0
     test.end()
   }
@@ -96,14 +100,16 @@ tape("single chart, with overlay", function (test) {
   function postRender1(plot) {
     const numBars = plot.views.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
     const numOverlays = plot.views.barchart.dom.barDiv.selectAll('.bars-cell').size()
+    test.true(numBars > 10, "should have more than 10 Diagnosis Group bars")
+    test.true(numOverlays > numBars,  "#overlays should be greater than #bars")
+    
+    // test the order of the overlay
     const bars_grp = div0.selectAll('.bars-cell-grp')
     const legend_rows = div0.selectAll('.legend-row')
-    const legend_ids = []
-    legend_rows.each((d)=>legend_ids.push(d.dataId))
-
     //flag to indicate unordred bars
     let overlay_ordered = true
-
+    const legend_ids = []
+    legend_rows.each((d)=>legend_ids.push(d.dataId))
     //check if each stacked bar is in same order as legend
     bars_grp.each((d)=>{
       const bar_ids = d.visibleData.map((d) => d.dataId)
@@ -113,11 +119,9 @@ tape("single chart, with overlay", function (test) {
           if (bar_ids[i] !== id) overlay_ordered = false
         })
     })
-
-    test.true(numBars > 10, "should have more than 10 Diagnosis Group bars")
-    test.true(numOverlays > numBars,  "#overlays should be greater than #bars")
-    // test the order of the overlay
     test.true(overlay_ordered,  "#overlays order is same as legend")
     test.end()
   }
 })
+
+
