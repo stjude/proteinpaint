@@ -22,7 +22,7 @@ arg:
   const plot = {
     // dispatch() is the gatekeeper function to protect the shared state
     // among the different viz and controls
-    dispatch(updatedKeyVals) { //console.log(updatedKeyVals)
+    dispatch(updatedKeyVals={}) { //console.log(updatedKeyVals)
       nestedUpdate(plot, null, updatedKeyVals)
       main(plot)
     },

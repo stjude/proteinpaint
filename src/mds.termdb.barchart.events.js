@@ -164,7 +164,7 @@ export default function getHandlers(self) {
       },
       click: () => { 
         const d = event.target.__data__
-        if (d === undefined) return; console.log(d.id)
+        if (d === undefined) return
         self.settings.exclude.cols.push(d.id)
         self.main()
       },
