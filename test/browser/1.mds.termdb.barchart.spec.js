@@ -43,8 +43,8 @@ tape("single barchart, no overlay", function (test) {
     const numOverlays = barDiv.selectAll('.bars-cell').size()
     test.true(numBars > 5,  "should have more than 10 Diagnosis Group bars")
     test.equal(numBars, numOverlays,  "should have equal numbers of bars and overlays")
+    // replace the post-render triggerred test
     plot.callbacks.postRender = [postRender2]
-    dispatch = plot.dispatch
     barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
     setTimeout(()=>{
       plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
@@ -61,7 +61,7 @@ tape("single barchart, no overlay", function (test) {
         label: data.seriesId
       }]
     }, "should assign the correct clicked bar {key, label} as a categorical filter term-value")
-    termfilter.terms = []
+    termfilter.terms.length = 0
     test.end()
   }
 })
