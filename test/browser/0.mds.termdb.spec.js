@@ -18,16 +18,22 @@ tape("standalone layout", function (test) {
       genome:'hg38',
       default_rootterm:{},
       termfilter:{show_top_ui:true},
+      callbacks: {
+        tree: {
+          postRender: [postRender1]
+        }
+      },
     },
   })
-  .then(() => {
+  
+  function postRender1(obj) {
     setTimeout(()=>{
       test.equal(div0.selectAll('.tree_search').size(), 1, "should have a search input")
       test.equal(div0.selectAll('div').filter(function(){return this.innerHTML=="FILTER"}).size(), 1, "should have a FILTER input")
       test.equal(div0.selectAll('.sja_menuoption').size(), 4, "should have the correct number of buttons")
       test.end()
     },100)
-  })
+  }
 })
 
 

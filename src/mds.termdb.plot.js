@@ -6,7 +6,7 @@ import {init as boxplot_init} from './mds.termdb.boxplot'
 import {init as stattable_init} from './mds.termdb.stattable'
 import {init as controls_init} from './mds.termdb.controls'
 
-export function init(arg, callback = ()=>{}) {
+export function init(arg) {
 /*
 arg: 
 .obj      required, tree-object
@@ -21,13 +21,13 @@ arg:
   // initiating the plot object
   const plot = {
     // dispatch() is the gatekeeper function to protect the shared state
-    // among the different viz and controls; it enforces the
-    // coordinated updates of interdependent state key-values
+    // among the different viz and controls
     dispatch(updatedKeyVals) { //console.log(updatedKeyVals)
       nestedUpdate(plot, null, updatedKeyVals)
       main(plot)
     },
-    tip: new client.Menu({padding:'18px'})
+    tip: new client.Menu({padding:'18px'}),
+    callbacks: (arg.obj.callbacks && arg.obj.callbacks.plot) || {}
   }
 
   // fill-in the REQUIRED argument keys
@@ -101,8 +101,8 @@ arg:
     }
   }
   
+  // override the default settings if arg.settings key-values are supplied
   if (arg.settings && typeof arg.settings == "object") {
-    // override the default settings
     for(const key in arg.settings) {
       const val = arg.settings[key]
       if (!val || Array.isArray(val) || typeof val !== "object") plot.settings[key] = val
@@ -125,11 +125,14 @@ arg:
   }
   // set configuration controls
   plot.controls = controls_init(plot)
+  if (Array.isArray(plot.callbacks.postInit)) {
+    plot.callbacks.postInit.forEach(callback => callback(plot))
+  }
   
-  main( plot, callback )
+  main( plot )
   if ( arg.obj.termfilter && arg.obj.termfilter.callbacks ) {
     // termfilter in action, insert main() of this plot to callback list to be called when filter is updated
-	// FIXME svg dimension will be 0 when the plot is invisible (as turned off by the VIEW button)
+	  // FIXME svg dimension will be 0 when the plot is invisible (as turned off by the VIEW button)
     arg.obj.termfilter.callbacks.push(()=>main(plot))
   }
 
@@ -142,13 +145,6 @@ arg:
       else if (typeof value == "object") {
         if (value.term) obj[key] = Object.assign({}, value.term)
         if (value.q) obj[key].q = Object.assign({}, value.q)
-        if (obj[key] && obj[key].iscondition && obj[key].id == plot.term.id) {
-          if (!obj[key].q) obj[key].q = {}
-          for(const param of ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']) {
-            delete obj[key].q[param]
-            if (plot.term.q[param]) obj[key].q[param] = 1
-          }
-        }
       }
     } else if (key == 'term') {
       obj[key] = value
@@ -181,7 +177,6 @@ function main(plot, callback = ()=>{}) {
   if (serverData[dataName]) {
     syncParams(plot, serverData[dataName])
     render(plot, serverData[dataName])
-    callback({plot, main})
   }
   else {
     client.dofetch2('/termdb-barsql' + dataName)
@@ -189,13 +184,16 @@ function main(plot, callback = ()=>{}) {
       serverData[dataName] = chartsData
       syncParams(plot, serverData[dataName])
       render(plot, chartsData)
-      callback({plot, main})
     })
     //.catch(window.alert)
   }
 }
 
+
 function coordinateState(plot) {
+/*
+  Enforce the coordinated updates of interdependent state key-values
+*/
   if (plot.term2) {
     if (plot.settings.currViews.includes("boxplot")) {
       if (!plot.term2.isfloat) plot.settings.currViews = ["barchart"]
@@ -207,9 +205,19 @@ function coordinateState(plot) {
         || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
       ) plot.term2 = undefined
     }
+
+    if (plot.term2 && plot.term2.iscondition && plot.term2.id == plot.term.id) {
+      if (!plot.term2.q) plot.term2.q = {}
+      for(const param of ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']) {
+        delete plot.term2.q[param]
+        if (plot.term.q[param]) plot.term2.q[param] = 1
+      }
+    }
   } 
   
-  if (plot.term.isfloat && !plot.settings.currViews.includes("stattable")) {
+  if (plot.settings.currViews.includes["barchart"] 
+    && plot.term.isfloat 
+    && !plot.settings.currViews.includes("stattable")) {
     plot.settings.currViews.push("stattable")
   }
 }
@@ -296,6 +304,10 @@ at the beginning or stacked bar plot for cross-tabulating
   plot.views.table.main(plot, data, plot.settings.currViews.includes("table"))
   plot.views.banner.main(plot, data)
   plot.controls.postRender(plot)
+ 
+  if (Array.isArray(plot.callbacks.postRender)) {
+    plot.callbacks.postRender.forEach(callback => callback(plot))
+  }
 }
 
 function banner_init(div) {

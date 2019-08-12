@@ -156,6 +156,10 @@ also for showing term tree, allowing to select certain terms
 		}
 		print_one_term( arg, obj )
 	}
+
+  if (obj.callbacks.tree && obj.callbacks.tree.postRender) {
+    obj.callbacks.tree.postRender.forEach(callback => callback(obj))
+  }
 }
 
 
@@ -531,6 +535,16 @@ function make_barplot ( obj, opts, div, callback ) {
     .settings {}
 
 */
+  const callbacks = {
+    postInit: [],
+    postRender: [callback]
+  }
+  if (obj.callbacks && obj.callbacks.plot) {
+    for(const key in obj.callbacks.plot) {
+      callbacks[key].push(...obj.callbacks.plot[key])
+    }
+  }
+
 	const arg = Object.assign({
 		obj,
 		holder: div,
@@ -553,7 +567,7 @@ function make_barplot ( obj, opts, div, callback ) {
 		]
 		arg.overlay_with_genotype_idx = 0
 	}
-	plot_init( arg, callback )
+	plot_init( arg )
 }
 
 

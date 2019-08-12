@@ -24,18 +24,24 @@ tape("single barchart, no overlay", function (test) {
         settings: {
           currViews: ['barchart']
         }
-      }
+      },
+      callbacks: {
+        plot: {
+          postRender: [postRender1]
+        }
+      },
     }
   })
-  .then(() => {
+  
+  function postRender1(plot) {
     setTimeout(()=>{
-      const numBars = div0.selectAll('.bars-cell-grp').size()
-      const numOverlays = div0.selectAll('.bars-cell').size()
+      const numBars = plot.views.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
+      const numOverlays = plot.views.barchart.dom.barDiv.selectAll('.bars-cell').size()
       test.true(numBars > 5,  "should have more than 10 Diagnosis Group bars")
       test.equal(numBars, numOverlays,  "should have equal numbers of bars and overlays")
       test.end()
-    },1000)
-  })
+    },500)
+  }
 })
 
 tape("single chart, with overlay", function (test) {
@@ -56,17 +62,23 @@ tape("single chart, with overlay", function (test) {
         settings: {
           currViews: ['barchart']
         }
-      }
+      },
+      callbacks: {
+        plot: {
+          postRender: [postRender1]
+        }
+      },
     }
   })
-  .then(() => {
+  
+  function postRender1(plot) {
     setTimeout(()=>{
-      const numBars = div0.selectAll('.bars-cell-grp').size()
-      const numOverlays = div0.selectAll('.bars-cell').size()
+      const numBars = plot.views.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
+      const numOverlays = plot.views.barchart.dom.barDiv.selectAll('.bars-cell').size()
       test.true(numBars > 5,  "should have more than 10 Diagnosis Group bars")
       test.true(numOverlays > numBars,  "#overlays should be greater than #bars")
       // test the order of the overlay
       test.end()
-    },1000)
-  })
+    },500)
+  }
 })
