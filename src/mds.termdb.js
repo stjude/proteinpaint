@@ -157,6 +157,7 @@ also for showing term tree, allowing to select certain terms
 		print_one_term( arg, obj )
 	}
 
+  if (!obj.callbacks) obj.callbacks = {}
   if (obj.callbacks.tree && obj.callbacks.tree.postRender) {
     obj.callbacks.tree.postRender.forEach(callback => callback(obj))
   }

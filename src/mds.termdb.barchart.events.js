@@ -60,8 +60,8 @@ export default function getHandlers(self) {
             }]
           }, q2))
         }
-      } else {
-        const bins = self.bins[index]
+      } else { 
+        const bins = term.bins
         if (!bins || !bins.length) {
           // not associated with numeric bins
           termValues.push({term, values: [{key, label}]})

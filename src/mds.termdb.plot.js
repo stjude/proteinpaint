@@ -215,7 +215,7 @@ function coordinateState(plot) {
     }
   } 
   
-  if (plot.settings.currViews.includes["barchart"] 
+  if (plot.settings.currViews.includes("barchart")
     && plot.term.isfloat 
     && !plot.settings.currViews.includes("stattable")) {
     plot.settings.currViews.push("stattable")

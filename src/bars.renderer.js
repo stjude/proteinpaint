@@ -646,7 +646,7 @@ export default function barsRenderer(barsapp, holder) {
       .style("opacity", 1);
   }
 
-  function updateRowLabel() { console.log()
+  function updateRowLabel() {
     const g = select(this);
 
     g.attr("transform", rowLabelTransform); //.transition().duration(hm.duration)

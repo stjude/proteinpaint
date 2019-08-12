@@ -27,12 +27,10 @@ tape("standalone layout", function (test) {
   })
   
   function postRender1(obj) {
-    setTimeout(()=>{
-      test.equal(div0.selectAll('.tree_search').size(), 1, "should have a search input")
-      test.equal(div0.selectAll('div').filter(function(){return this.innerHTML=="FILTER"}).size(), 1, "should have a FILTER input")
-      test.equal(div0.selectAll('.sja_menuoption').size(), 4, "should have the correct number of buttons")
-      test.end()
-    },100)
+    test.equal(div0.selectAll('.tree_search').size(), 1, "should have a search input")
+    test.equal(div0.selectAll('div').filter(function(){return this.innerHTML=="FILTER"}).size(), 1, "should have a FILTER input")
+    test.equal(div0.selectAll('.sja_menuoption').size(), 4, "should have the correct number of buttons")
+    test.end()
   }
 })
 
