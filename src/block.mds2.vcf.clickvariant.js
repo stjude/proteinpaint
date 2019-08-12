@@ -1,7 +1,7 @@
 import * as common from './common'
 import * as client from './client'
 import {make_ui as mafcovplot_makeui} from './block.mds2.vcf.mafcovplot'
-import {termdb_bygenotype} from './block.mds2.vcf.termdb'
+import {termdb_bygenotype, make_phewas} from './block.mds2.vcf.termdb'
 import {AFtest_groupname} from './block.mds2.vcf.numericaxis.AFtest'
 import {addparameter_rangequery} from './block.mds2'
 
@@ -34,7 +34,8 @@ p{}
 	const tabs = []
 	addtab_functionalannotation( tabs, m, tk, block )
 	mayaddtab_fishertable( tabs, m, tk, block )
-	mayaddtab_termdbbygenotype( tabs, m, tk, block )
+	//mayaddtab_termdbbygenotype( tabs, m, tk, block )
+	mayaddtab_phewas( tabs, m, tk, block )
 	mayaddtab_mafcovplot( tabs, m, tk, block )
 	mayaddtab_fimo( tabs, m, tk, block )
 
@@ -80,6 +81,25 @@ function mayaddtab_termdbbygenotype ( tabs, m, tk, block ) {
 			const wait = client.tab_wait( div )
 			try {
 				await termdb_bygenotype( div, m, tk, block )
+				wait.remove()
+			}catch(e){
+				wait.text('Error: '+(e.message||e))
+			}
+		}
+	})
+}
+function mayaddtab_phewas ( tabs, m, tk, block ) {
+// only for vcf, by variant genotype
+
+	if(!tk.vcf) return
+	if(!tk.vcf.termdb_bygenotype) return
+	tabs.push( {
+		label: 'Phewas',
+		callback: async (div)=>{
+			// runs only once
+			const wait = client.tab_wait( div )
+			try {
+				await make_phewas( div, m, tk, block )
 				wait.remove()
 			}catch(e){
 				wait.text('Error: '+(e.message||e))

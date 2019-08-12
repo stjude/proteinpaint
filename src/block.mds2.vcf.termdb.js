@@ -8,6 +8,7 @@ import {event as d3event} from 'd3-selection'
 /*
 ********************** EXPORTED
 termdb_bygenotype
+make_phewas
 ********************** INTERNAL
 get_ssid_by_onevcfm
 phewas_svg
@@ -18,6 +19,8 @@ phewas_svg
 
 export async function termdb_bygenotype( plotdiv, m, tk, block ) {
 /*
+not in use
+
 launch termdb by the genotype of one vcf variant
 
 official track only
@@ -99,6 +102,48 @@ official track only
 			wait.text('Error: '+(e.message||e))
 			if(e.stack) console.log(e.stack)
 		}
+	}
+}
+
+
+export async function make_phewas ( plotdiv, m, tk, block ) {
+/*
+phewas and also precompute
+official track only
+*/
+
+	// sample session id
+	const {ssid, groups} = await get_ssid_by_onevcfm( m, tk.mds.label, block.genome.name )
+
+	const h = client.may_get_locationsearch()
+	const div = plotdiv.append('div')
+	const wait = div.append('div')
+
+	try {
+		if( h && h.has('precompute')) {
+			const arg = [
+				'genome='+block.genome.name,
+				'dslabel='+tk.mds.label,
+				'phewas=1&precompute=1'
+			]
+			const data = await client.dofetch2('/termdb?'+arg.join('&'))
+			if(data.error) throw data.error
+			wait.text( data.filename )
+			return
+		}
+		const arg = [
+			'genome='+block.genome.name,
+			'dslabel='+tk.mds.label,
+			'ssid='+ssid,
+			'phewas=1'
+		]
+		const data = await client.dofetch2('/termdb?'+arg.join('&'))
+		if(data.error) throw data.error
+		phewas_svg( data, div, tk, block )
+		wait.remove()
+	} catch(e) {
+		wait.text('Error: '+(e.message||e))
+		if(e.stack) console.log(e.stack)
 	}
 }
 
@@ -188,6 +233,35 @@ function phewas_table ( data, div ) {
 
 
 function phewas_svg ( data, div, tk, block ) {
+
+	////////////// message
+	div.append('p')
+		.text(
+			data.testcount+' attributes tested, '
+			+data.hoverdots.length+' attributes with FDR p-value <= 0.05, '
+			+'Max -log10(FDR pvalue) is '+data.maxlogp
+		)
+
+
+	////////////// controls
+	const row = div.append('div')
+	const input = row.append('input')
+		.attr('type','number')
+		.style('width', '150px')
+		.attr('placeholder','Set Y axis max')
+		.on('keyup',()=>{
+			if(client.keyupEnter()) {
+				const s = input.property('value')
+				if(!s) return
+				const v = Number(s)
+				if(v<=0) {
+					window.alert('Max value must be above 0')
+					return
+				}
+				update_image( v )
+			}
+		})
+
 	const axiswidth = 100
 	const xpad = 5
 	const svg = div.append('svg')
@@ -263,38 +337,6 @@ function phewas_svg ( data, div, tk, block ) {
 	place_hoverdots( data.maxlogp )
 
 
-
-	////////////// message
-	const msgbox = div.append('div')
-		.style('margin-bottom','5px')
-		.style('opacity',.6)
-	msgbox.append('p')
-		.text(data.testcount+' attributes tested')
-	msgbox.append('p')
-		.text(data.hoverdots.length+' attributes with FDR p-value <= 0.05')
-	msgbox.append('p')
-		.text('Max -log10(FDR pvalue) is '+data.maxlogp)
-
-
-
-	////////////// controls
-	const row = div.append('div')
-	const input = row.append('input')
-		.attr('type','number')
-		.style('width', '150px')
-		.attr('placeholder','Set Y axis max')
-		.on('keyup',()=>{
-			if(client.keyupEnter()) {
-				const s = input.property('value')
-				if(!s) return
-				const v = Number(s)
-				if(v<=0) {
-					window.alert('Max value must be above 0')
-					return
-				}
-				update_image( v )
-			}
-		})
 
 
 	function update_axis ( data ) {

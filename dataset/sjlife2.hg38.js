@@ -33,20 +33,20 @@ module.exports={
 				},
 				comparison_groups: [
 					{
-						group1label:'Mild and above',
+						group1label:'Grades 1-5',
 						group1:new Set([1,2,3,4,5]),
-						group2label:'Normal',
+						group2label:'Condition not present',
 						// group2 is not defined and will use the rest of the ctcae-graded samples
 					},
 					{
-						group1label:'Moderate and above',
+						group1label:'Grades 2-5',
 						group1:new Set([2,3,4,5]),
-						group2label:'Normal',
+						group2label:'Condition not present',
 					},
 					{
-						group1label:'Severe and above',
+						group1label:'Grades 3-5',
 						group1:new Set([3,4,5]),
-						group2label:'Normal',
+						group2label:'Condition not present',
 					}
 					// to add later 1+2 vs 3+4+5
 				],
