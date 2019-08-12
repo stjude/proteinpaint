@@ -51,8 +51,11 @@ return async (req, res) => {
 		if( q.findterm ) return trigger_findterm( q, res, tdb )
 		if( q.treeto ) return trigger_treeto( q, res, tdb )
 		if( q.testplot ) return trigger_testplot( q, res, tdb, ds ) // this is required for running test cases!!
-		if( q.phewas ) return await phewas.trigger( q, res, ds )
-		if( q.updatephewas ) return await phewas.update_image( q, res )
+		if( q.phewas ) {
+			if( q.update ) return await phewas.update_image( q, res )
+			if( q.getgroup ) return await phewas.getgroup( q, res )
+			return await phewas.trigger( q, res, ds ) // also does precompute
+		}
 
 		throw 'termdb: don\'t know what to do'
 

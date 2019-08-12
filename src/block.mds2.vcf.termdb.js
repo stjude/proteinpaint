@@ -235,7 +235,7 @@ function phewas_table ( data, div ) {
 function phewas_svg ( data, div, tk, block ) {
 
 	////////////// message
-	div.append('p')
+	div.append('div')
 		.text(
 			data.testcount+' attributes tested, '
 			+data.hoverdots.length+' attributes with FDR p-value <= 0.05, '
@@ -245,6 +245,7 @@ function phewas_svg ( data, div, tk, block ) {
 
 	////////////// controls
 	const row = div.append('div')
+		.style('margin','10px 0px')
 	const input = row.append('input')
 		.attr('type','number')
 		.style('width', '150px')
@@ -262,12 +263,33 @@ function phewas_svg ( data, div, tk, block ) {
 			}
 		})
 
-	const axiswidth = 100
+	////////////// svg
+	const axiswidth = 80
 	const xpad = 5
 	const svg = div.append('svg')
 		.attr('width', axiswidth + xpad + data.canvaswidth )
-		.attr('height', data.canvasheight)
-	
+
+	// group labels define svg height
+	let maxgrouplabheight=0
+	for(const g of data.grouplabels) {
+		svg.append('g')
+			.attr('transform','translate('+( axiswidth+xpad+g.x)+','+g.y+')')
+			.append('text')
+			.attr('font-size',data.groupnamefontsize)
+			.text(g.name)
+			.attr('dominant-baseline','central')
+			.attr('transform','rotate(90)')
+			.each(function(){
+				maxgrouplabheight = Math.max(maxgrouplabheight, this.getBBox().width)
+			})
+			.attr('class','sja_svgtext2')
+			.on('click',()=>{
+				get_group( g.name )
+			})
+	}
+
+	svg.attr('height', data.canvasheight + maxgrouplabheight)
+
 	// axis
 	const yscale = scaleLinear()
 	const axis_g = svg.append('g')
@@ -337,6 +359,8 @@ function phewas_svg ( data, div, tk, block ) {
 	place_hoverdots( data.maxlogp )
 
 
+	////////////// details div under svg
+	const detailsdiv = div.append('div')
 
 
 	function update_axis ( data ) {
@@ -358,9 +382,10 @@ function phewas_svg ( data, div, tk, block ) {
 		const arg = [
 			'genome='+block.genome.name,
 			'dslabel='+tk.mds.label,
+			'phewas=1',
+			'update=1',
 			'file='+data.tmpfile,
-			'max='+ymax,
-			'updatephewas=1'
+			'max='+ymax
 		]
 		input
 			.property('value','')
@@ -373,5 +398,42 @@ function phewas_svg ( data, div, tk, block ) {
 		input
 			.property('disabled',false)
 			.attr('placeholder','Set Y axis max')
+	}
+
+	async function get_group ( name ) {
+		// get list of categories for a group by clicking on label
+		detailsdiv.selectAll('*').remove()
+		const wait = detailsdiv.append('div').text('Loading...')
+		const arg = [
+			'genome='+block.genome.name,
+			'dslabel='+tk.mds.label,
+			'file='+data.tmpfile,
+			'phewas=1',
+			'getgroup='+name
+		]
+		const data2 = await client.dofetch2('/termdb?'+arg.join('&'))
+		wait.remove()
+		const table = detailsdiv.append('table')
+		const tr = table.append('tr')
+		tr.append('th').text('Term')
+		tr.append('th').text('Case')
+		tr.append('th').text('Control')
+		tr.append('th').text('FDR p-value')
+		for(const i of data2.categories) {
+			const tr = table.append('tr')
+			tr.append('td').text(i.term.name)
+			{
+				const sum = i.table[0]+i.table[1]
+				const barsvg = client.fillbar(null, { f: sum > 0 ? i.table[0]/sum : 0 })
+				tr.append('td').html( i.group1label+' '+barsvg + ' <span style="font-size:.7em;opacity:.5">ALT/REF</span> '+i.table[0]+' / '+i.table[1] )
+			}
+			{
+				const sum = i.table[2]+i.table[3]
+				const barsvg = client.fillbar(null, { f: sum > 0 ? i.table[2]/sum : 0 })
+				tr.append('td').html( i.group2label+' '+barsvg + ' <span style="font-size:.7em;opacity:.5">ALT/REF</span> '+i.table[2]+' / '+i.table[3] )
+			}
+			const td = tr.append('td').text(i.pvalue)
+			if( i.pvalue<=0.05) td.style('color','red')
+		}
 	}
 }
