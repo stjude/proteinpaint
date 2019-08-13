@@ -12,14 +12,15 @@ const readline = require('readline')
 ********************** EXPORTED
 trigger
 update_image
-********************** INTERNAL
 do_precompute
-	get_samplefilter4termtype
-	helper_rows2categories
-	helper_conditiongroups2categories
+********************** INTERNAL
 get_numsample_pergenotype
 get_maxlogp
 plot_canvas
+#for precompute
+	get_samplefilter4termtype
+	helper_rows2categories
+	helper_conditiongroups2categories
 */
 
 
@@ -203,21 +204,12 @@ use get_rows()
 		} else if( term.iscondition ) {
 			// for both leaf and non-leaf
 			// should only use grades as bars to go along with termdb.comparison_groups
+			// no need to test on subconditions
 			qlst.push({
 				ds,
 				term1_id: term.id,
 				term1_q: {bar_by_grade:true,value_by_max_grade:true}
 			})
-			/*
-			if( !term.isleaf ) {
-				// for non-leaf, test subcondition by computable grade
-				qlst.push({
-					ds,
-					term1_id: term.id,
-					term1_q: {bar_by_children:true,value_by_computable_grade:true}
-				})
-			}
-			*/
 		} else {
 			throw 'unknown term type'
 		}
@@ -264,8 +256,17 @@ use get_rows()
 							c.group2lst = c.group2lst.filter( s=> condition_samplelst.indexOf(s)!=-1 )
 						} else {
 							// no control yet
-							const set = new Set(c.group1lst)
-							c.group2lst = condition_samplelst.filter( s=> !set.has(s) )
+							if( c.copycontrolfrom1stgroup ) {
+								// use the control from the first group/category!!
+								c.group2lst = []
+								for(const s of categories[0].group2lst) {
+									c.group2lst.push( s )
+								}
+							} else {
+								// generate control from the filtered sample lst
+								const set = new Set(c.group1lst)
+								c.group2lst = condition_samplelst.filter( s=> !set.has(s) )
+							}
 						}
 					}
 				}
@@ -328,16 +329,17 @@ use get_rows()
 		for(const groupdef of ds.cohort.termdb.patient_condition.comparison_groups) {
 			// divide samples from rows into two groups based on group definition
 
-			// groupdef.group1 is required
 			const group1lst = []
 			const group2lst = []
 			for(const row of rows) {
 				const grade = Number( row.key1 ) // should be safe to assume key1 is grade
-				if( groupdef.group1.has( grade ) ) {
+				// group1grades is required
+				if( groupdef.group1grades.has( grade ) ) {
 					group1lst.push( row.sample )
 					continue
 				}
-				if( groupdef.group2 && groupdef.group2.has(grade) ) {
+				// group2grades
+				if( groupdef.group2grades && groupdef.group2grades.has(grade) ) {
 					group2lst.push( row.sample )
 				}
 			}
@@ -352,7 +354,9 @@ use get_rows()
 				group1label: groupdef.group1label,
 				group2label: groupdef.group2label,
 				group1lst,
-				group2lst: (group2lst.length ? group2lst : undefined)
+				group2lst: (group2lst.length ? group2lst : undefined),
+				// must pass over this flag!
+				copycontrolfrom1stgroup: groupdef.copycontrolfrom1stgroup,
 			} )
 		}
 		return categories

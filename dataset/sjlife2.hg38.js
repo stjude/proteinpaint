@@ -32,21 +32,31 @@ module.exports={
 					9: 'Unknown status'
 				},
 				comparison_groups: [
+					/* only for condition terms
+					for the moment this is only for phewas precompute
+					later it may work for barchart too
+					*/
 					{
 						group1label:'Grades 1-5',
-						group1:new Set([1,2,3,4,5]),
+						group1grades:new Set([1,2,3,4,5]),
 						group2label:'Condition not present',
 						// group2 is not defined and will use the rest of the ctcae-graded samples
 					},
 					{
 						group1label:'Grades 2-5',
-						group1:new Set([2,3,4,5]),
+						group1grades:new Set([2,3,4,5]),
 						group2label:'Condition not present',
+						copycontrolfrom1stgroup:true,
+						/* group2 is still not defined, but here cannot simply use the rest of the ctcae-graded samples
+						but must exclude grade 1 from group2
+						as the control of the first group meets this requirement, thus this very tricky flag
+						*/
 					},
 					{
 						group1label:'Grades 3-5',
-						group1:new Set([3,4,5]),
+						group1grades:new Set([3,4,5]),
 						group2label:'Condition not present',
+						copycontrolfrom1stgroup:true,
 					}
 					// to add later 1+2 vs 3+4+5
 				],
