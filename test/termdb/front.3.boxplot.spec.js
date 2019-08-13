@@ -31,20 +31,22 @@ tape("overlay-dependent display", function (test) {
       },
       callbacks: {
         plot: {
-          postRender: [postRender1]
+          postRender: [testHiddenNoOverlay, triggerViewBoxplot]
         }
       },
     }
   })
 
-  function postRender1(plot) {
+  function testHiddenNoOverlay(plot) {
     test.equal(
       plot.views.boxplot.dom.svg.style('display'),
       'none', 
       "should be HIDDEN when there is no overlay"
     )
-    
-    plot.callbacks.postRender = [postRender2]
+  }
+
+  function triggerViewBoxplot(plot) {
+    plot.callbacks.postRender = [testVisibleBoxplot, triggerNonNumericOverlay]
     plot.dispatch({
       term2: {term: termjson["agedx"]},
       settings: {
@@ -53,14 +55,16 @@ tape("overlay-dependent display", function (test) {
     })
   }
 
-  function postRender2(plot) {
+  function testVisibleBoxplot(plot) {
     test.equal(
       plot.views.boxplot.dom.svg.style('display'), 
       'inline-block', 
       "should be visible when there is a numeric overlay"
     )
+  }
 
-    plot.callbacks.postRender = [postRender3]
+  function triggerNonNumericOverlay(plot) {
+    plot.callbacks.postRender = [testHiddenNonNumericOverlay]
     plot.dispatch({
       term2: {term: termjson["Arrhythmias"]},
       settings: {
@@ -69,7 +73,7 @@ tape("overlay-dependent display", function (test) {
     })
   }
 
-  function postRender3(plot) {
+  function testHiddenNonNumericOverlay(plot) {
     test.equal(
       plot.views.boxplot.dom.svg.style('display'), 
       'none', 
