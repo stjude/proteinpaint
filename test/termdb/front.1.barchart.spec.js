@@ -105,7 +105,7 @@ tape("single chart, with overlay", function (test) {
     const numBars = plot.views.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
     const numOverlays = plot.views.barchart.dom.barDiv.selectAll('.bars-cell').size()
     test.true(numBars > 10, "should have more than 10 Diagnosis Group bars")
-    test.true(numOverlays > numBars,  "#overlays should be greater than #bars")
+    test.true(numOverlays > numBars,  "number of overlays should be greater than bars")
     
     // test the order of the overlay
     const bars_grp = div0.selectAll('.bars-cell-grp')
@@ -116,16 +116,48 @@ tape("single chart, with overlay", function (test) {
     legend_rows.each((d)=>legend_ids.push(d.dataId))
     //check if each stacked bar is in same order as legend
     bars_grp.each((d)=>{
+      if (!overlay_ordered) return
       const bar_ids = d.visibleData.map((d) => d.dataId)
-      legend_ids
+      overlay_ordered = legend_ids
         .filter(id=>bar_ids.includes(id))
-        .forEach((id,i)=>{
-          if (bar_ids[i] !== id) overlay_ordered = false
-        })
+        .reduce((bool,id,i)=>bool && bar_ids[i] === id, overlay_ordered)
     })
-    test.true(overlay_ordered,  "#overlays order is same as legend")
+    test.true(overlay_ordered,  "overlays order is same as legend")
     test.end()
   }
 })
 
-
+tape("multiple charts", function (test) {
+  const div0 = d3s.select('body').append('div')
+  
+  runproteinpaint({
+    host,
+    holder: div0.node(),
+    noheader:1,
+    nobox:true,
+    display_termdb:{
+      dslabel:'SJLife',
+      genome:'hg38',
+      default_rootterm:{},
+      termfilter:{show_top_ui:false},
+      params2restore: {
+        term: termjson["diaggrp"],
+        term0: termjson["agedx"],
+        settings: {
+          currViews: ['barchart']
+        }
+      },
+      callbacks: {
+        plot: {
+          postRender: [postRender1]
+        }
+      },
+    }
+  })
+  
+  function postRender1(plot) {
+    const numCharts = plot.views.barchart.dom.barDiv.selectAll('.pp-sbar-div').size()
+    test.true(numCharts > 2, "should have more than 2 charts by Age at Cancer Diagnosis")
+    test.end()
+  }
+})
