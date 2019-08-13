@@ -37,7 +37,7 @@ create table alltermsbyorder (
   group_name character not null,
   id character varying(100) not null
 );
-.import alltermsbyorder alltermsbyorder
+.import 'alltermsbyorder.grouped' alltermsbyorder
 
 
 drop table if exists category2vcfsample;
