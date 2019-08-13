@@ -39,13 +39,6 @@ q{}
 	if(!ds.cohort.termdb) throw 'cohort.termdb missing'
 	if(!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
 
-	if( q.precompute ) {
-		// detour
-		if(!serverconfig.debugmode) throw 'precomputing is not allowed: not a dev server'
-		await do_precompute( q, res, ds )
-		return
-	}
-
 	if(!q.ssid) throw 'ssid missing'
 	const [sample2gt, genotype2sample] = await utils.loadfile_ssid( q.ssid )
 	// sample2gt: {sample:gt}
