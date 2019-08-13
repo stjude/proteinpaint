@@ -653,6 +653,9 @@ buttonholder: div in which to show the button, term label is also in it
 					obj
 				)
 			}
+      if (obj.callbacks.tree && obj.callbacks.tree.postExpand) {
+        obj.callbacks.tree.postExpand.forEach(callback => callback(obj))
+      }
 		})
 		.catch(e=>{
 			wait
