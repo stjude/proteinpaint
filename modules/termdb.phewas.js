@@ -53,9 +53,9 @@ q{}
 
 
 	// from vcf file, total number of samples per genotype
-	const het0  = genotype2sample.get(utils.genotype_types.het).size || 0
-	const href0 = genotype2sample.get(utils.genotype_types.href).size || 0
-	const halt0 = genotype2sample.get(utils.genotype_types.halt).size || 0
+	const het0  = genotype2sample.has(utils.genotype_types.het) ? genotype2sample.get(utils.genotype_types.het).size : 0
+	const href0 = genotype2sample.has(utils.genotype_types.href) ? genotype2sample.get(utils.genotype_types.href).size : 0
+	const halt0 = genotype2sample.has(utils.genotype_types.halt) ? genotype2sample.get(utils.genotype_types.halt).size : 0
 
 
 	const tests = []
@@ -171,7 +171,7 @@ q{}
 
 
 
-async function do_precompute ( q, res, ds ) {
+export async function do_precompute ( q, res, ds ) {
 /*
 for precomputing
 programmatically generate list of samples for each category of a term
@@ -181,6 +181,10 @@ use get_rows()
 - numerical: use default binning scheme
 - condition: hardcoded scheme
 */
+	if(!serverconfig.debugmode) throw 'precomputing is not allowed: not a dev server'
+	if(!ds.cohort) throw 'ds.cohort missing'
+	if(!ds.cohort.termdb) throw 'cohort.termdb missing'
+	if(!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
 
 	//////////// optional sample filter by term type
 	const [ condition_samplelst ] = get_samplefilter4termtype(ds)

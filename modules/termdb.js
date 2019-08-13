@@ -52,6 +52,7 @@ return async (req, res) => {
 		if( q.treeto ) return trigger_treeto( q, res, tdb )
 		if( q.testplot ) return trigger_testplot( q, res, tdb, ds ) // this is required for running test cases!!
 		if( q.phewas ) {
+			if( q.precompute ) return await phewas.do_precompute( q, res, ds )
 			if( q.update ) return await phewas.update_image( q, res )
 			if( q.getgroup ) return await phewas.getgroup( q, res )
 			return await phewas.trigger( q, res, ds ) // also does precompute
