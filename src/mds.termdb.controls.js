@@ -5,7 +5,7 @@ import {
   menuoption_select_group_add_to_cart
 } from './mds.termdb'
 import * as client from './client'
-import {make_numeric_bin_btns, display as termui_display, numeric_bin_edit} from './mds.termdb.termsetting.ui'
+import {display as termui_display, numeric_bin_edit} from './mds.termdb.termsetting.ui'
 
 // used to track unique "instances" of controls by plot object
 // to be used to disambiguate between input names
