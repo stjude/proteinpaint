@@ -13,9 +13,10 @@
     "public-prod": "./scripts/deploy.sh public-prod",
     "old-prod": "./scripts/deploy.sh old-prod",
     "irt": "./scripts/deploy.sh internal-stage",
-    "test": "tape test/*.spec.js && browserify public/bin/proteinpaint.js test/browser/*.spec.js | tape-run",
-    "test-sql": "tape test/**/*.sql.spec.js",
-    "test-browser": "watchify test/browser/*.spec.js -o public/bin/spec.bundle.js -v",
+    "test": "tape test/**/back.*.spec.js && browserify public/bin/proteinpaint.js test/**/front.*.spec.js | tape-run",
+    "test-back": "tape test/**/back.*.spec.js",
+    "test-front": "browserify public/bin/proteinpaint.js test/**/front.*.spec.js | tape-run",
+    "test-browser": "watchify test/**/front.*.spec.js -o public/bin/spec.bundle.js -v",
     "deliver": "sh utils/deliver.sh",
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset",
     "build-server": "webpack --config=webpack.config.server.js --mode=production"

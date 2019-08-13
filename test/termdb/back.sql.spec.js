@@ -9,8 +9,8 @@
 const tape = require("tape")
 const fs = require('fs')
 const path = require('path')
-const compareResponseData = require('./termdb.sql.helpers').compareResponseData
-const serverconfig = require("../serverconfig")
+const compareResponseData = require('./back.sql.helpers').compareResponseData
+const serverconfig = require("../../serverconfig")
 
 const ssid = 'genotype-test.txt'
 const src = path.join('./test/testdata', ssid)

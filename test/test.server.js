@@ -17,7 +17,7 @@
   To try this for troubleshooting:
   -------------------------------- 
   
-  `node test/server.js`
+  `node test/test.server.js`
   
   then load this in your browser:
   
@@ -26,7 +26,7 @@
 const serverconfig = require("../serverconfig")
 const express=require('express')
 const bodyParser = require('body-parser')
-const compareResponseData = require("./termdb.sql.helpers").compareResponseData
+const compareResponseData = require("./termdb/back.sql.helpers").compareResponseData
 
 /**************** 
   Set up server

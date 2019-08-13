@@ -1,8 +1,8 @@
-const serverconfig = require("../serverconfig")
+const serverconfig = require("../../serverconfig")
 const request = require("request")
 const tape = require("tape")
 const dodiff = require("deep-object-diff");
-const barchart_data = require("./termdb.barchart").barchart_data
+const barchart_data = require("./back.barchart").barchart_data
 
 
 function compareResponseData(test, params, mssg) {

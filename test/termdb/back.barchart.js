@@ -1,8 +1,8 @@
-const serverconfig = require("../serverconfig")
+const serverconfig = require("../../serverconfig")
 const fs = require('fs')
 const path = require('path')
-const Partjson = require('../modules/partjson')
-const load_dataset = require('../utils/sjlife2/load.sjlife').load_dataset
+const Partjson = require('../../modules/partjson')
+const load_dataset = require('../../utils/sjlife2/load.sjlife').load_dataset
 const ds = getDataset()
 
 /*
