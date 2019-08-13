@@ -46,6 +46,7 @@ tape("single barchart, no overlay", function (test) {
     const numOverlays = barDiv.selectAll('.bars-cell').size()
     test.true(numBars > 5,  "should have more than 10 Diagnosis Group bars")
     test.equal(numBars, numOverlays,  "should have equal numbers of bars and overlays")
+    
     // replace the post-render triggerred test
     plot.callbacks.postRender = [postRender2]
     barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
@@ -58,14 +59,14 @@ tape("single barchart, no overlay", function (test) {
     test.equal(termfilter.terms && termfilter.terms.length, 1, "should create a tvslst filter when a bar is clicked")
     const data = plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect').datum()
     test.deepEqual(
-      termfilter.terms[0], 
-      {
+      termfilter.terms, 
+      [{
         term: plot.term,
         values: [{
           key: data.seriesId,
           label: data.seriesId
         }]
-      }, 
+      }], 
       "should assign the correct clicked bar {key, label} as a categorical filter term-value"
     )
     termfilter.terms.length = 0
@@ -73,8 +74,9 @@ tape("single barchart, no overlay", function (test) {
   }
 })
 
-tape("single chart, with overlay", function (test) {
+tape.only("single chart, with overlay", function (test) {
   const div0 = d3s.select('body').append('div')
+  const termfilter = {show_top_ui:true, callbacks:[]}
   
   runproteinpaint({
     host,
@@ -85,7 +87,7 @@ tape("single chart, with overlay", function (test) {
       dslabel:'SJLife',
       genome:'hg38',
       default_rootterm:{},
-      termfilter:{show_top_ui:false},
+      termfilter,
       params2restore: {
         term: termjson["diaggrp"],
         term2: termjson["agedx"],
@@ -98,12 +100,16 @@ tape("single chart, with overlay", function (test) {
           postRender: [postRender1]
         }
       },
+      bar_click_menu:{
+        add_filter:true
+      },
     }
   })
   
   function postRender1(plot) {
-    const numBars = plot.views.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
-    const numOverlays = plot.views.barchart.dom.barDiv.selectAll('.bars-cell').size()
+    const barDiv = plot.views.barchart.dom.barDiv
+    const numBars = barDiv.selectAll('.bars-cell-grp').size()
+    const numOverlays = barDiv.selectAll('.bars-cell').size()
     test.true(numBars > 10, "should have more than 10 Diagnosis Group bars")
     test.true(numOverlays > numBars,  "number of overlays should be greater than bars")
     
@@ -123,6 +129,68 @@ tape("single chart, with overlay", function (test) {
         .reduce((bool,id,i)=>bool && bar_ids[i] === id, overlay_ordered)
     })
     test.true(overlay_ordered,  "overlays order is same as legend")
+    
+    // replace the post-render triggerred test
+    plot.callbacks.postRender = [postRender2]
+    barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
+    setTimeout(()=>{
+      plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
+    },500);
+  }
+
+  function postRender2(plot) {
+    test.equal(termfilter.terms && termfilter.terms.length, 2, "should create two tvslst filters when an overlay is clicked")
+    const data = plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect').datum()
+    test.deepEqual(
+      termfilter.terms, 
+      [{
+        term: plot.term,
+        values: [{
+          key: data.seriesId,
+          label: data.seriesId
+        }]
+      },{
+        term: plot.term2,
+        ranges: [plot.term2.bins.find(d=>d.label == data.dataId)]
+      }], 
+      "should assign the correct clicked bar {key, label} as a numeric term-value filter term-value"
+    )
+    termfilter.terms.length = 0
+
+    // replace the post-render triggerred test
+    plot.callbacks.postRender = [postRender3a]
+    plot.dispatch({
+      term2: {term: termjson["Arrhythmias"]}
+    })
+  }
+
+  function postRender3a(plot) {
+    // replace the post-render triggerred test
+    plot.callbacks.postRender = [postRender3b]
+    plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
+    setTimeout(()=>{
+      plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
+    },500);
+  }
+
+  function postRender3b(plot) {
+    test.equal(termfilter.terms && termfilter.terms.length, 2, "should create two tvslst filters when an overlay is clicked")
+    const data = plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect').datum()
+    test.deepEqual(
+      termfilter.terms, 
+      [{
+        term: plot.term,
+        values: [{
+          key: data.seriesId,
+          label: data.seriesId
+        }]
+      },Object.assign({
+        term: plot.term2,
+        values: [{ key: 1, label: '1: Mild' }]
+      }, plot.term2.q)], 
+      "should assign the correct clicked bar {key, label} as a condition term-value filter term-value"
+    )
+    termfilter.terms.length = 0
     test.end()
   }
 })
