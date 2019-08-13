@@ -31,6 +31,9 @@ module.exports={
 	sampleAssayTrack:{
 		file:'hg19/clingen/subset/iAMP21/tracktable/__table'
 	},
+	singlesamplemutationjson:{
+		file:'hg19/clingen/subset/iAMP21/mutationpersample/table'
+	},
 	cohort:{
 		files:[
 			{file:'hg19/clingen/subset/iAMP21/sampletable/iAMP21.sample'},
@@ -46,8 +49,9 @@ module.exports={
 				ds.cohort.annotation[ n ] = item
 			}
 		},
+/*
 		sampleAttribute:{
-            attributes:{
+            		attributes:{
 				fusion:{label:'Fusion'},
 				'2nd subtype':{label:'2nd subtype',filter:1},
 				PAX5_mut:{label:'PAX5_mut'},
@@ -89,6 +93,7 @@ module.exports={
 				}
             },
         }
+*/
     },
 
 
@@ -116,22 +121,6 @@ module.exports={
 				},
 				filter:1
 			},
-			medal:{
-				label:'Medal',
-				values:{
-					GOLD:{name:'Gold'},
-					BRONZE:{name:'Bronze'},
-					SILVER:{name:'Silver'}
-				},
-				filter:1
-			},
-			manual_review:{
-				label:'Manual review',
-				values:{
-					bad:{name:'Bad'},
-					good:{name:'Good'}
-				}
-			}
 		}
 	},
 
@@ -175,10 +164,13 @@ module.exports={
 			viewrangeupperlimit:3000000,
 			tracks:[
 				{
-					file:'hg19/clingen/subset/iAMP21/iAMP21.vcf.gz',
+					file:'hg19/clingen/subset/iAMP21/iAMP21.hg19.vcf.gz',
 					type:'vcf',
 				},
-			]
+			],
+			singlesamples:{
+				tablefile:'hg19/clingen/subset/iAMP21/split.vcf/table'
+			}
 		},
 		
 
