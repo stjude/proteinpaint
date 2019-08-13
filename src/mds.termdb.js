@@ -1041,14 +1041,17 @@ async function restore_plot(obj, params) {
 	
 		restored_div.append('h3').html('Restored View')
 
-		make_barplot( obj, {term}, restored_div, (plot)=>{
-			if (!term2 && !term0) return
-			if (term2) plot.settings.bar.overlay = 'tree'
-			if (term0) plot.settings.bar.divideBy = 'tree'
-	    plot.term2 = term2
-	    plot.term0 = term0
-		  setTimeout(plot.dispatch, 1100)
-		})
+		make_barplot( obj, {
+      term, 
+      term2, 
+      term0,
+      settings: {
+        bar: {
+          overlay: term2 ? 'tree' : 'none',
+          divideBy: term0 ? 'tree' : 'none',
+        }
+      }
+    }, restored_div)
 	}
 }
 
