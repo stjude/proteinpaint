@@ -74,7 +74,7 @@ tape("single barchart, no overlay", function (test) {
   }
 })
 
-tape.only("single chart, with overlay", function (test) {
+tape("single chart, with overlay", function (test) {
   const div0 = d3s.select('body').append('div')
   const termfilter = {show_top_ui:true, callbacks:[]}
   
