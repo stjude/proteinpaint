@@ -197,7 +197,7 @@ function coordinateState(plot) {
       if (!plot.term2.isfloat) plot.settings.currViews = ["barchart"]
     } 
 
-    if (plot.term2.q) {
+    if (plot.term2.q && plot.term2.id == plot.term.id) {
       if (
         (plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade))
         || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
