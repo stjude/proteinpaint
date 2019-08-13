@@ -1,6 +1,8 @@
 const tape = require("tape")
 const d3s = require("d3-selection")
 const termjson = require("./termjson").termjson
+const serverconfig = require("../../serverconfig")
+const host = "http://localhost:" + serverconfig.port
 
 tape("\n", function(test) {
   test.pass("-***- mds.termdb.barchart -***-")
@@ -12,6 +14,7 @@ tape("single barchart, no overlay", function (test) {
   const termfilter = {show_top_ui:true, callbacks:[]}
   
   runproteinpaint({
+    host,
     holder: div0.node(),
     noheader:1,
     nobox:true,
@@ -74,6 +77,7 @@ tape("single chart, with overlay", function (test) {
   const div0 = d3s.select('body').append('div')
   
   runproteinpaint({
+    host,
     holder: div0.node(),
     noheader:1,
     nobox:true,
