@@ -503,7 +503,7 @@ such conditions may be carried by obj
 	let loaded =false,
 		loading=false
 
-	button.on('click', async ()=>{
+	button.on('click.test', async ()=>{
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
 			view_btn_line.style('display','block')
@@ -511,11 +511,14 @@ such conditions may be carried by obj
 			client.disappear(div)
 			view_btn_line.style('display','none')
 		}
-		if( loaded || loading ) return
+		if( loaded || loading ) {
+      plot_loading_div.text('').remove()
+      return
+    }
 		button.style('border','solid 1px #aaa')
 		loading=true
 		make_barplot( obj, {term}, div, ()=> {
-			plot_loading_div.remove()
+			plot_loading_div.text('').remove()
 			loaded=true
 			loading=false
 		})
@@ -536,10 +539,13 @@ function make_barplot ( obj, opts, div, callback ) {
     .settings {}
 
 */
+
   const callbacks = {
     postInit: [],
-    postRender: [callback]
+    postRender: []
   }
+  if (typeof callback == "function") callbacks.postRender.push(callback)
+
   if (obj.callbacks && obj.callbacks.plot) {
     for(const key in obj.callbacks.plot) {
       callbacks[key].push(...obj.callbacks.plot[key])
@@ -551,6 +557,7 @@ function make_barplot ( obj, opts, div, callback ) {
 		holder: div,
 		genome: obj.genome.name,
 		dslabel: obj.mds.label,
+    callbacks
 	}, opts)
 
 	if( obj.modifier_ssid_barchart ) {
@@ -1031,15 +1038,13 @@ async function restore_plot(obj, params) {
 	
 		restored_div.append('h3').html('Restored View')
 
-		make_barplot( obj, {term}, restored_div, ({plot, main})=>{
+		make_barplot( obj, {term}, restored_div, (plot)=>{
 			if (!term2 && !term0) return
 			if (term2) plot.settings.bar.overlay = 'tree'
 			if (term0) plot.settings.bar.divideBy = 'tree'
 	    plot.term2 = term2
 	    plot.term0 = term0
-		  setTimeout(()=>{
-		    main( plot )
-		  }, 1100)
+		  setTimeout(plot.dispatch, 1100)
 		})
 	}
 }

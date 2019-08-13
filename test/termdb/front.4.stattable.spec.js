@@ -32,29 +32,32 @@ tape("barchart-dependent display", function (test) {
       },
       callbacks: {
         plot: {
-          postRender: [postRender1]
+          postRender: [testHiddenWithNoBarchart, triggerViewBarchart]
         }
       }
     }
   })
 
-  function postRender1(plot) {
+  function testHiddenWithNoBarchart(plot) {
     test.equal(
       plot.views.stattable.dom.div.style('display'), 
       'none', 
       "should have a HIDDEN stattable when the barchart is not in the settings.currViews array"
     )
-    plot.callbacks.postRender = [postRender2]
+  }
+
+  function triggerViewBarchart(plot) {
+    plot.callbacks.postRender = [testVisibleWithBarchart]
     plot.dispatch({
       settings: {currViews: ["barchart"]}
     })
   }
 
-  function postRender2(plot) {
+  function testVisibleWithBarchart(plot) {
     test.equal(
       plot.views.stattable.dom.div.style('display'), 
       'block', 
-      "should have a visible stattable when the barchart is not in the settings.currViews array"
+      "should have a visible stattable when the barchart is in the settings.currViews array"
     )
     test.end()
   }
@@ -80,37 +83,43 @@ tape("term.isfloat-dependent display", function (test) {
       },
       callbacks: {
         plot: {
-          postRender: [postRender1]
+          postRender: [testHiddenIfCategoricalTerm, triggerNumericTerm]
         }
       },
     }
   })
 
-  function postRender1(plot) {
+  function testHiddenIfCategoricalTerm(plot) {
     test.equal(
       plot.views.stattable.dom.div.style('display'), 
       'none', 
       "should have a HIDDEN stattable when plot.term.iscategorical"
     )
-    plot.callbacks.postRender = [postRender2]
+  }
+
+  function triggerNumericTerm(plot) {
+    plot.callbacks.postRender = [testVisibleWithNumericTerm, triggerConditionTerm]
     plot.dispatch({
       term: {term: termjson["agedx"]}
     })
   }
 
-  function postRender2(plot) {
+  function testVisibleWithNumericTerm(plot) {
     test.equal(
       plot.views.stattable.dom.div.style('display'), 
       'block', 
       "should have a visible stattable when plot.term is numeric"
     )
-    plot.callbacks.postRender = [postRender3]
+  }
+
+  function triggerConditionTerm(plot) {
+    plot.callbacks.postRender = [testHiddenIfConditionTerm]
     plot.dispatch({
       term: {term: termjson["Arrhythmias"]}
     })
   }
 
-  function postRender3(plot) {
+  function testHiddenIfConditionTerm(plot) {
     test.equal(
       plot.views.stattable.dom.div.style('display'), 
       'none', 
@@ -119,5 +128,3 @@ tape("term.isfloat-dependent display", function (test) {
     test.end()
   }
 })
-
-

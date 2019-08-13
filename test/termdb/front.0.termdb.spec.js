@@ -23,13 +23,13 @@ tape("standalone layout", function (test) {
       termfilter:{show_top_ui:true},
       callbacks: {
         tree: {
-          postRender: [postRender1]
+          postRender: [testAvailElems]
         }
       },
     },
   })
   
-  function postRender1(obj) {
+  function testAvailElems(obj) {
     test.equal(div0.selectAll('.tree_search').size(), 1, "should have a search input")
     test.equal(div0.selectAll('div').filter(function(){return this.innerHTML=="FILTER"}).size(), 1, "should have a FILTER input")
     test.equal(div0.selectAll('.sja_menuoption').size(), 4, "should have the correct number of buttons")
