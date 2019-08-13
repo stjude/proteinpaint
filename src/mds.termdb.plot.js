@@ -27,7 +27,7 @@ arg:
       main(plot)
     },
     tip: new client.Menu({padding:'18px'}),
-    callbacks: (arg.obj.callbacks && arg.obj.callbacks.plot) || {}
+    callbacks: (arg.callbacks && arg.callbacks) || {}
   }
 
   // fill-in the REQUIRED argument keys
