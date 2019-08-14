@@ -38,9 +38,7 @@ second optional input is keep/termjson, 2 column:
 to override automatically generated contents in termjson file
 
 
-outputs three files
-* term2term - legacy
-* termjson  - legacy
+outputs these files
 * termdb    - load to "terms" table
 * ancestry  - load to "ancestry" table
 */
@@ -55,7 +53,7 @@ const abort = (m)=>{
 
 
 
-if(process.argv.length<3) abort('<phenotree txt file> <keep/termjson file> outputs to files "term2term" and "termjson"')
+if(process.argv.length<3) abort('<phenotree txt file> <keep/termjson file> outputs to: termdb, ancestry')
 const infile_phenotree = process.argv[2]
 const infile_keeptermjson = process.argv[3] // optional
 

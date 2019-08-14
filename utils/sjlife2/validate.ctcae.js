@@ -199,7 +199,7 @@ rl.on('close',()=>{
 
 
 
-	//get_summary({term:'Cardiovascular System',bar_by_children:1,value_by_most_recent:1}, patient2condition)
+	get_summary({term:'Cardiovascular System',bar_by_children:1,value_by_most_recent:1}, patient2condition)
 })
 
 
@@ -219,10 +219,12 @@ q{}
 */
 	const p2c = new Map()
 	// k: parent term, v: a set of direct children terms
-	for(const line of fs.readFileSync('term2term',{encoding:'utf8'}).trim().split('\n')) {
-		const [parent, child] = line.split('\t')
-		if(!p2c.has(parent)) p2c.set(parent, new Set())
-		p2c.get(parent).add(child)
+	for(const line of fs.readFileSync('termdb',{encoding:'utf8'}).trim().split('\n')) {
+		const l = line.split('\t')
+		const child = l[0],
+			Parent = l[2]
+		if(!p2c.has(Parent)) p2c.set(Parent, new Set())
+		p2c.get(Parent).add(child)
 	}
 
 	if( q.bar_by_children ) {
