@@ -566,6 +566,6 @@ function setBinOpts(plot, self, termNum, label) {
   //TODO: remove following code if not used
   self.updaters.push(() => {
     plot.term1 = plot.term
-    tr.style('display', plot[termNum] && plot[termNum].isfloat ? 'table-row' : 'none')
+    tr.style('display', plot[termNum] && (plot[termNum].isfloat || plot[termNum].isinteger) ? 'table-row' : 'none')
   })
 }
