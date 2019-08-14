@@ -7,7 +7,7 @@ const Partjson = require('../../modules/partjson')
   Precompute dataset values to help speed up 
   server response as needed
   
-  node ./precompute.ctcae.js [termdbfile annotation.outcome jsontarget] > chronicevents.precomputed
+  node proteinpaint/utils/sjlife2/precompute.ctcae.js [termdbfile annotation.outcome jsontarget] > chronicevents.precomputed
   
   the tsv output file should be loaded to the
   database via load.sql, which is not part of this script
@@ -32,11 +32,8 @@ const uncomputable = new Set([0,9])
 try {
 	const terms = load_terms(termdbfile)
 	const annotations = load_patientcondition(outcomesfile, terms)
-	const data = Object.values(annotations)
-
-	const pj = getPj(terms, data)
+	const pj = getPj(terms, annotations)
 	pj.tree.pjtime = pj.times
-
 	save_json(jsontarget, pj.tree)
 	generate_tsv(pj.tree.bySample)
 } catch(e) {
@@ -81,29 +78,21 @@ function get_term_lineage (lineage, termid, child2parent) {
 }
 
 function load_patientcondition (outcomesfile, terms) {
-	const annotations = {}
-	/* k: sample name
-	v: [{}] list of events from this sample
-		.sample
-		.term_id
-		.grade
-		.age
-		.lineage
-	*/
-
+// outcomesfiles: lines of tab-separated sample,term,grade,age_graded,yearstoevent
+	const annotations = []
 	for(const line of fs.readFileSync(outcomesfile, {encoding:'utf8'}).trim().split('\n')) {
 		const l = line.split('\t')
 		const grade = Number(l[2])
 		if( uncomputable.has( grade )) continue
 		const sample = l[0]
-		if(!(sample in annotations)) annotations[sample] = []
 		const term_id = l[1]
 		const term = terms[ term_id ]
-		annotations[sample].push({
+		annotations.push({
 			sample,
 			term_id,
 			grade,
 			age:Number(l[3]),
+      // remove the top-most terms, [..., CTCAE, root]
 			lineage: term.conditionlineage.slice(0,-2),
 		})
 	}
@@ -115,7 +104,6 @@ function getPj (terms, data) {
   return new Partjson({
     data,
     template: {
-      "@split()": "=splitDataRow()",
       bySample: {
         '$sample': {
           byCondition: {
@@ -137,30 +125,6 @@ function getPj (terms, data) {
       }
     },
     "=": {
-      splitDataRow(row) {
-		/*
-        if (!row.sample) return []
-        const gradedEvents = []
-        for(const term_id in row.terms) {
-          if (term_id == 'CTCAE Graded Events' ) continue
-          //if (typeof row[key] != 'object') continue
-          const term = terms[term_id]
-          if (!term || !term.iscondition) continue
-          for(const e of row.terms[term_id]) {
-            gradedEvents.push({
-              sample: row.sample,
-              term_id,
-              // topmost lineage terms are root and CTCAE
-              lineage: term.conditionlineage.slice(0,-2),
-              age: e.age,
-              grade: e.grade
-            })
-          }
-        }
-        return gradedEvents
-		*/
-		return row
-      },
       child(row, context) {
         if (context.branch == row.term_id) return
         const i = row.lineage.indexOf(context.branch)

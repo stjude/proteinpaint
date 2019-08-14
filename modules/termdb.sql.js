@@ -222,7 +222,7 @@ export function get_rows ( q, _opts={}) {
 /*
 works for only termdb terms; non-termdb attributes will not work
 
-gets data for barchart but not summarized by counts;
+gets data for barchart
 returns all relevant rows of 
 	{
 		sample, key[0,1,2], val[0,1,2], count AS opts.countas

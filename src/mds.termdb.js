@@ -68,6 +68,11 @@ obj{}:
 .div
 .default_rootterm{}
 ... modifiers
+// optional lifecycle callbacks
+callbacks: { 
+  tree: {postRender: [fxn1, ...], postExpand: [fxn0, ...]}}
+  plot: {postInit: [fxn0, ...], postRender: [fxn1, ...]}}
+}
 */
 	if( obj.debugmode ) window.obj = obj
 

@@ -27,6 +27,7 @@ arg:
       main(plot)
     },
     tip: new client.Menu({padding:'18px'}),
+    // lifecycle callbacks: {postInit: [fxn0, ...], postRender: [fxn1, ...]}
     callbacks: (arg.callbacks && arg.callbacks) || {}
   }
 
@@ -217,10 +218,10 @@ function coordinateState(plot) {
   
   const i = plot.settings.currViews.indexOf("stattable")
   if (i == -1) {
-    if (plot.settings.currViews.includes("barchart") && plot.term.isfloat) {
+    if (plot.settings.currViews.includes("barchart") && (plot.term.isfloat /*|| plot.term.isinteger*/)) {
       plot.settings.currViews.push("stattable")
     }
-  } else if (!plot.settings.currViews.includes("barchart") || !plot.term.isfloat) {
+  } else if (!plot.settings.currViews.includes("barchart") || (!plot.term.isfloat /*&& !plot.term.isinteger*/)) {
     plot.settings.currViews.splice(i, 1)
   }
 }

@@ -58,14 +58,14 @@ function get_dataset(dslabel) {
     file: 'files/hg38/sjlife/clinical/termjson'
   }
   if (!ds.cohort.termdb.patient_condition) ds.cohort.termdb.patient_condition = {}
-  ds.cohort.termdb.patient_condition.file = 'files/hg38/sjlife/clinical/outcomes_2017'
+  ds.cohort.termdb.patient_condition.file = 'files/hg38/sjlife/clinical/annotation.outcome'
   // the precompute script will save the json object to this file
   // also, this will be loaded once during termdb.sql.spec.js testing
   ds.cohort.termdb.precomputed_file = 'files/hg38/sjlife/clinical/precomputed.json'
   // the precompute script will save the tsv to this file
   ds.cohort.db.precomputed_file = 'files/hg38/sjlife/clinical/chronicevents.precomputed'
 
-  return  ds
+  return ds
 }
 
 
@@ -138,15 +138,32 @@ function load_patientcondition ( ds ) {
   if(!termdb.patient_condition) return
   if(!termdb.patient_condition.file) throw 'file missing from termdb.patient_condition'
   const filename = path.join(serverconfig.tpmasterdir,termdb.patient_condition.file)
-  const file = fs.readFileSync(filename,{encoding:'utf8'})
-  if (!file) throw 'error loading termjson file ' + filename
+  // fileContents: lines of tab-separated sample,term,grade,age_graded,yearstoevent
+  const fileContents = fs.readFileSync(filename,{encoding:'utf8'})
+  if (!fileContents) throw 'error loading termjson file ' + filename
 
-  let count=0
-  for(const line of file.trim().split('\n')) {
+  const annotations = ds.cohort.annotation
+  let count = 0
+  for(const line of fileContents.trim().split('\n')) {
     const l = line.split('\t')
-    ds.cohort.annotation[ l[0] ] = JSON.parse(l[1])
-    count++
+    const sample = l[0]
+    if(!(annotations[sample])) {
+      annotations[sample] = {}
+      count++
+    }
+    const term_id = l[1]
+    if (!annotations[sample][term_id]) {
+      annotations[sample][term_id] = {conditionevents:[]}
+    }
+    annotations[sample][term_id].conditionevents.push({
+      sample,
+      term_id,
+      grade: Number(l[2]),
+      age:Number(l[3]),
+      yearstoevent: Number(l[4])
+    })
   }
+
   console.log(ds.label+': '+count+' samples loaded with condition data from '+ filename)
 }
 
