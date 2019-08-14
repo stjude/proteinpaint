@@ -218,15 +218,50 @@ tape("multiple charts", function (test) {
       },
       callbacks: {
         plot: {
-          postRender: [countCharts]
+          postRender: [testNumCharts]
         }
       },
     }
   })
   
-  function countCharts(plot) {
+  function testNumCharts(plot) {
     const numCharts = plot.views.barchart.dom.barDiv.selectAll('.pp-sbar-div').size()
     test.true(numCharts > 2, "should have more than 2 charts by Age at Cancer Diagnosis")
+    test.end()
+  }
+})
+
+tape("series visibility", function (test) {
+  const div0 = d3s.select('body').append('div')
+  
+  runproteinpaint({
+    host,
+    holder: div0.node(),
+    noheader:1,
+    nobox:true,
+    display_termdb:{
+      dslabel:'SJLife',
+      genome:'hg38',
+      default_rootterm:{},
+      termfilter:{show_top_ui:false},
+      params2restore: {
+        term: termjson["aaclassic_5"],
+        settings: {
+          currViews: ['barchart']
+        }
+      },
+      callbacks: {
+        plot: {
+          postRender: [testExcluded]
+        }
+      },
+    }
+  })
+  
+  function testExcluded(plot) {
+    const excluded = plot.views.barchart.settings.exclude.cols
+    test.true(excluded.length > 1 && excluded.length == plot.views.barchart.settings.unannotatedLabels.term1.length, "should have more than 2 charts by Age at Cancer Diagnosis")
+
     test.end()
   }
 })

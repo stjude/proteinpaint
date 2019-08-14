@@ -39,7 +39,6 @@ export class TermdbBarchart{
     }
     this.handlers = getHandlers(this)
     this.controls = {}
-    this.currChartsData = null
     this.term2toColor = {}
   }
 
@@ -76,7 +75,10 @@ export class TermdbBarchart{
       colspace: plot.settings.common.barspace,
       rowspace: plot.settings.common.barspace
     }
+    
+    this.initExclude(this.currServerData.refs)
     Object.assign(this.settings, settings, this.currServerData.refs ? this.currServerData.refs : {})
+    
     this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
       this.settings.unit = "abs"
@@ -89,6 +91,27 @@ export class TermdbBarchart{
       this.terms.term2 = null
     }
     this.terms.term0 = settings.term0 && plot.term0 ? plot.term0 : null
+  }
+
+  initExclude(refs) {
+    if (refs.exclude) return
+    refs.exclude = {cols:[], rows:[], colgrps:[], rowgrps:[]}
+    const unannotatedColLabels = refs.unannotatedLabels.term1
+    if (unannotatedColLabels) {
+      for(const label of unannotatedColLabels) {
+        if (!refs.exclude.cols.includes(label)) {
+          refs.exclude.cols.push(label) // do not automatically hide for now
+        }
+      }
+    }
+    const unannotatedRowLabels = refs.unannotatedLabels.term2
+    if (unannotatedRowLabels) {
+      for(const label of unannotatedRowLabels) {
+        if (!refs.exclude.rows.includes(label)) {
+          refs.exclude.rows.push(label) // do not automatically hide for now
+        }
+      }
+    }
   }
 
   setVisibility(isVisible) {
@@ -163,33 +186,15 @@ export class TermdbBarchart{
   }
 
   setMaxVisibleTotals(chartsData) {
+    // chartsData = this.currServerData
     this.totalsByDataId = {}
     const term1 = this.settings.term1
+    
+    const addlSeriesIds = {} // to track series IDs that are not already in this.seriesOrder
     let maxVisibleAcrossCharts = 0
     for(const chart of chartsData.charts) {
-      chart.settings = JSON.parse(rendererSettings)
-      if (this.currChartsData != chartsData) {
-        const unannotatedColLabels = chartsData.refs.unannotatedLabels.term1
-        if (unannotatedColLabels) {
-          for(const label of unannotatedColLabels) {
-            if (!this.settings.exclude.cols.includes(label)) {
-              //this.settings.exclude.cols.push(label) // do not automatically hide for now
-            }
-          }
-        }
-        const unannotatedRowLabels = chartsData.refs.unannotatedLabels.term2
-        if (unannotatedRowLabels) {
-          for(const label of unannotatedRowLabels) {
-            if (!this.settings.exclude.rows.includes(label)) {
-              //this.settings.exclude.rows.push(label) // do not automatically hide for now
-            }
-          }
-        }
-      }
-    }
-    const addlSeriesIds = {} // to track series IDs that are not already in this.seriesOrder
-    for(const chart of chartsData.charts) {
-      Object.assign(chart.settings, this.settings, chartsData.refs)
+      if (!chart.settings) chart.settings = JSON.parse(rendererSettings)
+      Object.assign(chart.settings, this.settings)
       chart.visibleSerieses = chart.serieses.filter(series=>{
         if (chart.settings.exclude.cols.includes(series.seriesId)) return false
         series.visibleData = series.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))
@@ -230,7 +235,6 @@ export class TermdbBarchart{
       chart.maxVisibleAcrossCharts = maxVisibleAcrossCharts
     }
     this.seriesOrder.push(...Object.keys(addlSeriesIds).sort((a,b)=>addlSeriesIds[b] - addlSeriesIds[a]))
-    this.currChartsData = chartsData
   }
 
   sortStacking(series, chart, chartsData) {
