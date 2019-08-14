@@ -130,8 +130,9 @@ if (window.location.search) {
   qparams.value = JSON.stringify(params, null, '    ')
 }
 
-function submit() {
-  const params = JSON.parse(qparams.value)
+function submit(literal=null) {
+  const params = literal ? literal : JSON.parse(qparams.value)
+  qparams.value = JSON.stringify(params, null, "    ")
   const arr = []
   for(const key in params) {
     arr.push(key + "=" + 

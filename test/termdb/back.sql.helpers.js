@@ -95,7 +95,7 @@ function getSqlUrl(_params={}) {
 }
 
 function normalizeCharts(data, comparedRefs=null) {
-  const charts = data.charts
+  const charts = data ? data.charts : null
   if (!charts) {
     return {charts: [{serieses:[]}]}
   }

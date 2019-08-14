@@ -3,30 +3,11 @@ const fs = require('fs')
 const path = require('path')
 const Partjson = require('../../modules/partjson')
 const load_dataset = require('./load.sjlife').load_dataset
-const ds = getDataset()
+const ds = load_dataset('sjlife2.hg38.js')
 
 /*
   migrate modules/termdb.barchart.js data processing here
 */
-
-
-
-function getDataset() {
-  const ds = load_dataset('sjlife2.hg38.js')
-  const tdb = ds.cohort.termdb
-  if (!tdb || tdb.precomputed || !tdb.precomputed_file) return
-  
-  const filename = path.join(serverconfig.tpmasterdir, tdb.precomputed_file)
-  try {
-    const file = fs.existsSync(filename) ? fs.readFileSync(filename, {encoding:'utf8'}) : ''
-    tdb.precomputed = JSON.parse(file.trim())
-    console.log("Loaded the precomputed values from "+ filename)
-  } catch(e) {
-    throw 'Unable to load the precomputed file ' + filename
-  }
-
-  return ds
-}
 
 
 function barchart_data ( q, data0 ) {
@@ -54,11 +35,13 @@ function barchart_data ( q, data0 ) {
   const startTime = +(new Date())
   const inReqs = [getTrackers(), getTrackers(), getTrackers()]
   inReqs.filterFxn = ()=>1 // default allow all rows, may be replaced via q.termfilter
-  setValFxns(q, inReqs, ds, tdb, data0);
+  setValFxns(q, inReqs, ds, tdb, data0)
   const pj = getPj(q, inReqs, ds.cohort.annorows, tdb, ds)
   if (pj.tree.results) pj.tree.results.pjtime = pj.times
   return pj.tree.results
 }
+
+exports.barchart_data = barchart_data
 
 function getTrackers() {
   return {
@@ -94,7 +77,7 @@ const templateBar = JSON.stringify({
         "~values": ["&idVal.dataVal",0],
         "~sum": "+&idVal.dataVal",
         "__:boxplot": "=boxplot()",
-        "~samples": ["$sjlid", "set"],
+        "~samples": ["$sample", "set"],
         "__:AF": "=getAF()",
         "__:unannotated": "=unannotatedSeries()",
         data: [{
@@ -135,9 +118,6 @@ const templateBar = JSON.stringify({
     "@done()": "=sortCharts()"
   }
 })
-
-exports.barchart_data = barchart_data
-
 
 function getPj(q, inReqs, data, tdb, ds) {
 /*
@@ -364,8 +344,7 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
       if (!q.ssid) throw `missing ssid for genotype`
       const [bySample, genotype2sample] = load_genotype_by_sample(q.ssid)
       inReqs.genotype2sample = genotype2sample
-      const skey = ds.cohort.samplenamekey
-      inReq.joinFxns[termid] = row => bySample[row[skey]]
+      inReq.joinFxns[termid] = row => bySample[row.sample]
       continue
     }
     const term = termid ? tdb.termjson.map.get(termid) : null
@@ -391,6 +370,18 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 
 function set_condition_fxn(termid, b, tdb, inReq, index) {
   const q = inReq.q
+  const precomputedKey = getPrecomputedKey(q)
+
+  inReq.joinFxns[termid] = row => {
+    if (!tdb.precomputed[row.sample]) return []
+    const c = tdb.precomputed[row.sample]
+    if (!(termid in c) || !(precomputedKey in c[termid])) return []
+    const value = c[termid][precomputedKey]
+    return Array.isArray(value) ? value : [value]
+  }
+}
+
+function getPrecomputedKey(q) {
   const precomputedKey = q.bar_by_children && q.value_by_max_grade ? 'childrenAtMaxGrade'
     : q.bar_by_children && q.value_by_most_recent ? 'childrenAtMostRecent'
     : q.bar_by_children ? 'children'
@@ -398,14 +389,7 @@ function set_condition_fxn(termid, b, tdb, inReq, index) {
     : q.bar_by_grade && q.value_by_most_recent ? 'mostRecentGrades'
     : ''
   if (!precomputedKey) throw `unknown condition term unit='${unit}'`
-
-  inReq.joinFxns[termid] = row => {
-    if (!tdb.precomputed.bySample[row.sjlid]) return []
-    const c = tdb.precomputed.bySample[row.sjlid].byCondition
-    if (!(termid in c) || !(precomputedKey in c[termid])) return []
-    const value = c[termid][precomputedKey]
-    return Array.isArray(value) ? value : [value]
-  }
+  return precomputedKey
 }
 
 
@@ -541,8 +525,7 @@ arguments:
   return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
 }
 
-
-function sample_match_termvaluesetting ( sanno, terms, ds ) {
+function sample_match_termvaluesetting ( row, tvslst, ds ) {
 /* for AND, require all terms to match
 ds is for accessing patient_condition
 XXX  only used by termdb.barchart.js, to be taken out
@@ -552,9 +535,9 @@ XXX  only used by termdb.barchart.js, to be taken out
 
   let numberofmatchedterms = 0
 
-  for(const t of terms ) {
+  for(const t of tvslst ) {
 
-    const samplevalue = sanno[ t.term.id ]
+    const samplevalue = row[ t.term.id ]
 
     let thistermmatch
 
@@ -590,9 +573,13 @@ XXX  only used by termdb.barchart.js, to be taken out
         if (thistermmatch) break
       }
     } else if( t.term.iscondition ) {
-
-      thistermmatch = test_sample_conditionterm( sanno, t, ds )
-
+      const anno = ds.cohort.termdb.precomputed[row.sample] && ds.cohort.termdb.precomputed[row.sample][t.term.id]
+      if (anno) {
+        const key = getPrecomputedKey(t)
+        thistermmatch = t.bar_by_grade & t.value_by_max_grade 
+          ? t.values.find(d=>d.key == anno[key])
+          : t.values.find(d=>anno[key].includes(d.key))
+      }
     } else {
       throw 'unknown term type'
     }
@@ -604,7 +591,7 @@ XXX  only used by termdb.barchart.js, to be taken out
   }
 
   if( usingAND ) {
-    return numberofmatchedterms == terms.length
+    return numberofmatchedterms == tvslst.length
   }
   // using OR
   return numberofmatchedterms > 0
@@ -613,9 +600,9 @@ XXX  only used by termdb.barchart.js, to be taken out
 
 let testi = 0
 
-function test_sample_conditionterm ( sample, tvs, ds ) {
+function test_sample_conditionterm ( sanno, tvs, ds ) {
 /*
-sample: ds.cohort.annotation[k]
+sanno: ds.cohort.annotation[k]
 tvs: a term-value setting object
 ds
 */
@@ -626,7 +613,7 @@ ds
 
   if( term.isleaf ) {
     // leaf, term id directly used for annotation
-    const termvalue = sample[ tvs.term.id ]
+    const termvalue = sanno[ tvs.term.id ]
     if(!termvalue) return false
     const eventlst = termvalue[ _c.events_key ]
     return test_grade( eventlst )
@@ -637,12 +624,12 @@ ds
   if( tvs.bar_by_grade ) {
     // by grade, irrespective of subcondition
     const eventlst = []
-    for(const tid in sample) {
+    for(const tid in sanno) {
       const t = ds.cohort.termdb.termjson.map.get(tid)
       if(!t || !t.iscondition) continue
       if(t.conditionlineage.includes( tvs.term.id )) {
         // is a child term
-        eventlst.push( ...sample[tid][_c.events_key] )
+        eventlst.push( ...sanno[tid][_c.events_key] )
       }
     }
     return test_grade( eventlst )
@@ -650,11 +637,11 @@ ds
 
   if( tvs.bar_by_children ) {
     // event in any given children with computable grade
-    for(const tid in sample) {
+    for(const tid in sanno) {
       const t = ds.cohort.termdb.termjson.map.get(tid)
       if(!t || !t.iscondition) continue
       if( tvs.values.findIndex( i=> t.conditionlineage.indexOf(i.key)!=-1 ) == -1 ) continue
-      const events = sample[tid][_c.events_key]
+      const events = sanno[tid][_c.events_key]
       if(!events || events.length==0) continue
       if( _c.uncomputable_grades ) {
         for(const e of events) {
@@ -675,11 +662,11 @@ ds
   if( tvs.grade_and_child ) {
     // collect all events from all subconditions, and remember which condition it is
     const eventlst = []
-    for(const tid in sample) {
+    for(const tid in sanno) {
       const t = ds.cohort.termdb.termjson.map.get(tid)
       if(!t || !t.iscondition) continue
       if(t.conditionlineage.indexOf(tvs.term.id)!=-1) {
-        for(const e of sample[tid][_c.events_key]) {
+        for(const e of sanno[tid][_c.events_key]) {
           if(_c.uncomputable_grades && _c.uncomputable_grades[e[_c.grade_key]]) continue
           eventlst.push({ e, tid })
         }
