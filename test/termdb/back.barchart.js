@@ -2,8 +2,8 @@ const serverconfig = require("../../serverconfig")
 const fs = require('fs')
 const path = require('path')
 const Partjson = require('../../modules/partjson')
-const load_dataset = require('./load.sjlife').load_dataset
-const ds = load_dataset('sjlife2.hg38.js')
+const sjlife = require('./load.sjlife').init('sjlife2.hg38.js')
+const ds = sjlife.ds
 
 /*
   migrate modules/termdb.barchart.js data processing here
@@ -320,6 +320,7 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
   if(q.tvslst) {
     // for categorical terms, must convert values to valueset
     for(const tv of q.tvslst) {
+      sjlife.setAnnoByTermId(tv.term.id)
       if(tv.term.iscategorical) {
         tv.valueset = new Set( tv.values.map(i=>i.key) )
       }
@@ -347,6 +348,7 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
       inReq.joinFxns[termid] = row => bySample[row.sample]
       continue
     }
+    sjlife.setAnnoByTermId(termid)
     const term = termid ? tdb.termjson.map.get(termid) : null
     if ((!termid || term.iscategorical) && termid in inReq.joinFxns) continue
     if (!term) throw `Unknown ${termnum}="${q[termnum]}"`
@@ -373,10 +375,8 @@ function set_condition_fxn(termid, b, tdb, inReq, index) {
   const precomputedKey = getPrecomputedKey(q)
 
   inReq.joinFxns[termid] = row => {
-    if (!tdb.precomputed[row.sample]) return []
-    const c = tdb.precomputed[row.sample]
-    if (!(termid in c) || !(precomputedKey in c[termid])) return []
-    const value = c[termid][precomputedKey]
+    if (!(termid in row) || !(precomputedKey in row[termid])) return []
+    const value = row[termid][precomputedKey]
     return Array.isArray(value) ? value : [value]
   }
 }
@@ -542,12 +542,10 @@ XXX  only used by termdb.barchart.js, to be taken out
     let thistermmatch
 
     if( t.term.iscategorical ) {
-
       if(samplevalue==undefined)  continue // this sample has no anno for this term, do not count
       thistermmatch = t.valueset.has( samplevalue )
-
-    } else if( t.term.isinteger || t.term.isfloat ) {
-
+    } 
+    else if( t.term.isinteger || t.term.isfloat ) {
       if(samplevalue==undefined)  continue // this sample has no anno for this term, do not count
       for(const range of t.ranges) {
         let left, right
@@ -572,13 +570,14 @@ XXX  only used by termdb.barchart.js, to be taken out
         thistermmatch = left && right
         if (thistermmatch) break
       }
-    } else if( t.term.iscondition ) {
-      const anno = ds.cohort.termdb.precomputed[row.sample] && ds.cohort.termdb.precomputed[row.sample][t.term.id]
+    } 
+    else if( t.term.iscondition) { 
+      const key = getPrecomputedKey(t)
+      const anno = samplevalue && samplevalue[key] 
       if (anno) {
-        const key = getPrecomputedKey(t)
-        thistermmatch = t.bar_by_grade & t.value_by_max_grade 
-          ? t.values.find(d=>d.key == anno[key])
-          : t.values.find(d=>anno[key].includes(d.key))
+        thistermmatch = Array.isArray(anno)
+          ? t.values.find(d=>anno.includes(d.key))
+          : t.values.find(d=>d.key == anno)
       }
     } else {
       throw 'unknown term type'
@@ -595,165 +594,6 @@ XXX  only used by termdb.barchart.js, to be taken out
   }
   // using OR
   return numberofmatchedterms > 0
-}
-
-
-let testi = 0
-
-function test_sample_conditionterm ( sanno, tvs, ds ) {
-/*
-sanno: ds.cohort.annotation[k]
-tvs: a term-value setting object
-ds
-*/
-  const _c = ds.cohort.termdb.patient_condition
-  if(!_c) throw 'patient_condition missing'
-  const term = ds.cohort.termdb.termjson.map.get( tvs.term.id )
-  if(!term) throw 'unknown term id: '+tvs.term.id
-
-  if( term.isleaf ) {
-    // leaf, term id directly used for annotation
-    const termvalue = sanno[ tvs.term.id ]
-    if(!termvalue) return false
-    const eventlst = termvalue[ _c.events_key ]
-    return test_grade( eventlst )
-  }
-
-  // non-leaf
-
-  if( tvs.bar_by_grade ) {
-    // by grade, irrespective of subcondition
-    const eventlst = []
-    for(const tid in sanno) {
-      const t = ds.cohort.termdb.termjson.map.get(tid)
-      if(!t || !t.iscondition) continue
-      if(t.conditionlineage.includes( tvs.term.id )) {
-        // is a child term
-        eventlst.push( ...sanno[tid][_c.events_key] )
-      }
-    }
-    return test_grade( eventlst )
-  }
-
-  if( tvs.bar_by_children ) {
-    // event in any given children with computable grade
-    for(const tid in sanno) {
-      const t = ds.cohort.termdb.termjson.map.get(tid)
-      if(!t || !t.iscondition) continue
-      if( tvs.values.findIndex( i=> t.conditionlineage.indexOf(i.key)!=-1 ) == -1 ) continue
-      const events = sanno[tid][_c.events_key]
-      if(!events || events.length==0) continue
-      if( _c.uncomputable_grades ) {
-        for(const e of events) {
-          if( !_c.uncomputable_grades[e[_c.grade_key]] ) {
-            // has a computable grade
-            return true
-          }
-        }
-        // all are uncomputable grade
-        continue
-      }
-      // no uncomputable grades to speak of
-      return true
-    }
-    return false
-  }
-
-  if( tvs.grade_and_child ) {
-    // collect all events from all subconditions, and remember which condition it is
-    const eventlst = []
-    for(const tid in sanno) {
-      const t = ds.cohort.termdb.termjson.map.get(tid)
-      if(!t || !t.iscondition) continue
-      if(t.conditionlineage.indexOf(tvs.term.id)!=-1) {
-        for(const e of sanno[tid][_c.events_key]) {
-          if(_c.uncomputable_grades && _c.uncomputable_grades[e[_c.grade_key]]) continue
-          eventlst.push({ e, tid })
-        }
-      }
-    }
-    if(eventlst.length==0) return false
-
-    // from all events of any subcondition, find one matching with value_by_
-    if(tvs.value_by_most_recent) {
-      const most_recent_events = []
-      let age = 0
-      for(const e of eventlst) {
-        const a = e.e[_c.age_key]
-        if(age < a) {
-          age = a
-        }
-      }
-      for(const e of eventlst) {
-        if(e.e[_c.age_key] == age) {
-          const g = e.e[_c.grade_key]
-          for(const tv of tvs.grade_and_child) {
-            if (tv.grade == g && tv.child_id == e.tid) return true
-          }
-        }
-      }
-      //console.log('not matched')
-      return
-    } else if(tvs.value_by_max_grade) {
-      let useevent
-      let maxg = 0
-      for(const e of eventlst) {
-        const g = e.e[_c.grade_key]
-        if(maxg < g) {
-          maxg = g
-          useevent = e
-        }
-      }
-      return tvs.grade_and_child.findIndex( i=> i.grade == useevent.e[_c.grade_key] && i.child_id == useevent.tid) != -1
-    } else {
-      throw 'unknown flag of value_by_'
-    }
-  }
-
-  throw 'illegal definition of conditional tvs'
-
-
-  function test_grade ( eventlst ) {
-  /* from a list of events, find one matching criteria
-  */
-    if(!eventlst) return false
-    if( tvs.value_by_most_recent ) {
-      let mostrecentage
-      // get the most recent age in the event list
-      for(const e of eventlst) {
-        const grade = e[_c.grade_key]
-        if(_c.uncomputable_grades && _c.uncomputable_grades[grade]) continue
-        const a = e[_c.age_key]
-        if(mostrecentage === undefined || mostrecentage < a) {
-          mostrecentage = a
-        }
-      }
-      // if an event matches the most recent age, test 
-      // if the grade matches at least one of the filter values
-      for(const e of eventlst) {
-        if(e[_c.age_key] == mostrecentage) {
-          const g = e[_c.grade_key]
-          for(const tv of tvs.values) {
-            if (tv.key == g) {
-              //console.log(testi++)
-              return true
-            }
-          }
-        }
-      }
-      return false
-    }
-    if( tvs.value_by_max_grade ) {
-      let maxg = -1
-      for(const e of eventlst) {
-        const grade = e[_c.grade_key]
-        if(_c.uncomputable_grades && _c.uncomputable_grades[grade]) continue
-        maxg = Math.max( maxg, grade )
-      }
-      return tvs.values.findIndex(j=>j.key==maxg) != -1
-    }
-    throw 'unknown method for value_by'
-  }
 }
 
 function boxplot_getvalue(lst) {

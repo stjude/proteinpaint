@@ -11,17 +11,24 @@ const bettersqlite = require('better-sqlite3')
 // may call as script from command line
 // if (process.argv[2]) load_dataset(process.argv[2])
 
-function load_dataset(dslabel) {
+function init(dslabel) {
   const ds = get_dataset( dslabel )
   const db = bettersqlite( path.join(serverconfig.tpmasterdir, ds.cohort.db.file), {readonly:true, fileMustExist:true} )
   load_termjson( ds, db )
-  load_annotations( ds, db)
-  load_precomputed( ds, db );
-  ds.cohort.annorows = Object.values(ds.cohort.annotation);  //console.log(ds.cohort.annorows.slice(0,5).map(d=>d.sample))
-  return ds
+  ds.cohort.annotation = {}
+  ds.cohort.annorows = []
+  loadedAnnoTerms = []
+  return {
+    ds, 
+    setAnnoByTermId(term_id) {
+      if (!term_id || loadedAnnoTerms.includes(term_id)) return
+      load_annotations( ds, db, term_id )
+      load_precomputed( ds, db, term_id )  //console.log(ds.cohort.annorows.slice(0,5).map(d=>d.sample))
+    }
+  }
 }
 
-exports.load_dataset = load_dataset
+exports.init = init
 
 
 function get_dataset(dslabel) {
@@ -69,24 +76,27 @@ function get_term_lineage (lineage, termid, child2parent) {
 }
 
 
-function load_annotations ( ds, db ) {
-  console.log(ds.label + ': loading annotations from db ...')
-  const annotation = {}
+function load_annotations ( ds, db, term_id ) {
+  //console.log(ds.label + ': loading annotations from db ...')
+  const anno = ds.cohort.annotation
   const termjson = ds.cohort.termdb.termjson
-  const rows = db.prepare('SELECT * FROM annotations').all()
+  const rows = db.prepare('SELECT * FROM annotations WHERE term_id = ?').all(term_id)
   for(const row of rows) {
-    if (!(annotation[row.sample])) annotation[row.sample] = {sample: row.sample}
+    if (!(anno[row.sample])) {
+      anno[row.sample] = {sample: row.sample}
+      ds.cohort.annorows.push(anno[row.sample])
+    }
     const term = termjson.map.get(row.term_id)
-    annotation[row.sample][row.term_id] = term && (term.isinteger || term.isfloat) ? Number(row.value) : row.value
+    anno[row.sample][row.term_id] = term && (term.isinteger || term.isfloat) ? Number(row.value) : row.value
   }
-  ds.cohort.annotation = annotation
 }
 
-function load_precomputed(ds, db) {
-  console.log(ds.label + ': loading precomputed from db ...')
-  const rows = db.prepare('SELECT * FROM precomputed').all()
+// will load precomputed data into ds.cohort.annotation
+function load_precomputed(ds, db, term_id) {
+  const rows = db.prepare('SELECT * FROM precomputed WHERE term_id = ?').all(term_id)
   const bySample = {}
   const termjson = ds.cohort.termdb.termjson
+  const anno = ds.cohort.annotation
   const alias = {
     "child | computable_grade": "children",
     "child | max_grade": "childrenAtMaxGrade",
@@ -94,23 +104,25 @@ function load_precomputed(ds, db) {
     "grade | computable_grade": "computableGrades",
     "grade | max_grade": "maxGrade",
     "grade | most_recent": "mostRecentGrades",
-  }; let i=0;
+  }
   for(const row of rows) {
-    if (!bySample[row.sample]) bySample[row.sample] = {}
-    if (!bySample[row.sample][row.term_id]) {
-      bySample[row.sample][row.term_id] = {}
+    if (!anno[row.sample]) {
+      anno[row.sample] = {sample: row.sample}
+      ds.cohort.annorows.push(anno[row.sample])
+    }
+    if (!anno[row.sample][row.term_id]) {
+      anno[row.sample][row.term_id] = {}
     }
     const key = alias[row.value_for + " | " + row.restriction]
     const value = row.value_for == "grade" ? +row.value : row.value
-    if (key == "maxGrade") bySample[row.sample][row.term_id][key] = value
+    if (key == "maxGrade") anno[row.sample][row.term_id][key] = value
     else {
-      if (!bySample[row.sample][row.term_id][key]) {
-        bySample[row.sample][row.term_id][key] = []
+      if (!anno[row.sample][row.term_id][key]) {
+        anno[row.sample][row.term_id][key] = []
       }
-      if (!bySample[row.sample][row.term_id][key].includes(value)) {
-        bySample[row.sample][row.term_id][key].push(value)
+      if (!anno[row.sample][row.term_id][key].includes(value)) {
+        anno[row.sample][row.term_id][key].push(value)
       }
     }
   }
-  ds.cohort.termdb.precomputed = bySample
 }
