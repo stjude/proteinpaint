@@ -6,11 +6,6 @@ const Partjson = require('../../modules/partjson')
 /*
   Precompute dataset values to help speed up 
   server response as needed
-  
-  node proteinpaint/utils/sjlife2/precompute.ctcae.js [termdbfile annotation.outcome jsontarget] > chronicevents.precomputed
-  
-  the tsv output file should be loaded to the
-  database via load.sql, which is not part of this script
 */
 
 if(process.argv.length!=4) {
@@ -22,8 +17,6 @@ const termdbfile = process.argv[2]
 // input file with lines of term_id \t name \t parent_id \t {termjson}
 const outcomesfile = process.argv[3]
 // input file with lines of sample,term,grade,age_graded,yearstoevent
-const jsontarget = 'precomputed.json'
-// will save the json formatted results to this file
 
 
 
@@ -34,7 +27,6 @@ try {
 	const annotations = load_patientcondition(outcomesfile, terms)
 	const pj = getPj(terms, annotations)
 	pj.tree.pjtime = pj.times
-	save_json(jsontarget, pj.tree)
 	generate_tsv(pj.tree.bySample)
 } catch(e) {
 	console.log(e.message || e)
@@ -159,11 +151,6 @@ function getPj (terms, data) {
   })
 }
 
-async function save_json(precomputed_file, results) {
-  if (!precomputed_file) return
-  await write_file(precomputed_file, JSON.stringify(results))
-  //console.log('Saved precomputed values to '+ filename)
-}
 
 
 // will output to file via bash argument
