@@ -22,8 +22,9 @@ function init(dslabel) {
     ds, 
     setAnnoByTermId(term_id) {
       if (!term_id || loadedAnnoTerms.includes(term_id)) return
+      loadedAnnoTerms.push(term_id)
       load_annotations( ds, db, term_id )
-      load_precomputed( ds, db, term_id )  //console.log(ds.cohort.annorows.slice(0,5).map(d=>d.sample))
+      load_precomputed( ds, db, term_id )
     }
   }
 }
@@ -77,7 +78,6 @@ function get_term_lineage (lineage, termid, child2parent) {
 
 
 function load_annotations ( ds, db, term_id ) {
-  //console.log(ds.label + ': loading annotations from db ...')
   const anno = ds.cohort.annotation
   const termjson = ds.cohort.termdb.termjson
   const rows = db.prepare('SELECT * FROM annotations WHERE term_id = ?').all(term_id)
