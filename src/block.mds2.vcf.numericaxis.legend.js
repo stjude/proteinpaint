@@ -2,7 +2,6 @@ import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as common from './common'
 import {init as termdbinit} from './mds.termdb'
-import {display as tvs_display} from './mds.termdb.termvaluesetting.ui'
 import {make_ui as AFtest_make_ui} from './block.mds2.vcf.numericaxis.AFtest'
 import {
 	may_setup_numerical_axis,
