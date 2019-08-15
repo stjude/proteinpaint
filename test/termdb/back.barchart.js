@@ -3,24 +3,17 @@ const fs = require('fs')
 const path = require('path')
 const Partjson = require('../../modules/partjson')
 const sjlife = require('./load.sjlife').init('sjlife2.hg38.js')
-const ds = sjlife.ds
-
-/*
-  migrate modules/termdb.barchart.js data processing here
-*/
-
 
 function barchart_data ( q, data0 ) {
 /*
-  q: objectified URL query string
-  data0: the response data from /termdb-barsql, needed to reuse computed bins
-*/
-  // ds is loaded at the start of this file
-  if(!ds.cohort) throw 'cohort missing from ds'
-  if(!ds.cohort.annorows) throw `cohort.annorows is missing`
-  const tdb = ds.cohort.termdb
-  if (!tdb) throw 'missing ds.cohort.termdb'
+  Intended to be used in tests, to generate 
+  alternatively computed results to compare 
+  against sql-based server response
   
+  q:      objectified URL query string
+  data0:  the response data from /termdb-barsql, 
+          needed to reuse computed bins
+*/
   // support legacy query parameter names
   if (q.term1_id) q.term1 = q.term1_id
   if (!q.term1_q) q.term1_q = {}
@@ -30,7 +23,9 @@ function barchart_data ( q, data0 ) {
   if (!q.term2) q.term2 = ''
   if (q.term2_id) q.term2 = q.term2_id
   if (!q.term2_q) q.term2_q = {}
-
+  const ds = sjlife.ds
+  const tdb = ds.cohort.termdb
+  
   // request-specific variables
   const startTime = +(new Date())
   const inReqs = [getTrackers(), getTrackers(), getTrackers()]
