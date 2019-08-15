@@ -55,9 +55,9 @@ export async function display (obj){
                 term_name = '<label title="'+obj.termsetting.term.name+'">'
                     +obj.termsetting.term.name.substring(0,24)+'...'
                     +'</label>'
-            }else if(obj.termsetting.term.iscondition && obj.termsetting.term.name.length >12){
+            }else if(obj.termsetting.term.iscondition && obj.termsetting.term.name.length >20){
                 term_name = '<label title="'+obj.termsetting.term.name+'">'
-                    +obj.termsetting.term.name.substring(0,10)+'...'
+                    +obj.termsetting.term.name.substring(0,18)+'...'
                     +'</label>'
             }
 
@@ -94,10 +94,9 @@ export async function display (obj){
 					if(v=='max') obj.termsetting.term.q = { value_by_max_grade:true, bar_by_grade:true }
 					else if (v=='recent') obj.termsetting.term.q = { value_by_most_recent:true, bar_by_grade:true }
 					else if (v=='any') obj.termsetting.term.q = { value_by_computable_grade:true, bar_by_grade:true }
-					else if (v=='sub') obj.termsetting.term.q = { value_by_max_grade:true, bar_by_children:true }
+					else if (v=='sub') obj.termsetting.term.q = { value_by_computable_grade:true, bar_by_children:true }
                     obj.termsetting.q = obj.termsetting.term.q
 					__flip_select()
-					__flip_select2()
 					obj.callback(obj.termsetting.term)
 				})
 
@@ -122,51 +121,16 @@ export async function display (obj){
                 .style('position','static')
                 .style('background-color', '#4888BF')
         
-			let select2, btn2
             if( !obj.termsetting.term.isleaf ){
                 select.append('option')
                     .attr('value','sub')
                     .text('Sub-conditions')
 				// for non-leaf term
-				// need a second <select> for selecting max/recent/computable when first select is subcondition
-				const [s, b] = client.make_select_btn_pair( div_showterm )
-				select2 = s
-				btn2 = b
-				select2.style('margin-left','1px')
-					.on('change',()=>{
-						delete obj.termsetting.term.q.value_by_max_grade
-						delete obj.termsetting.term.q.value_by_most_recent
-						delete obj.termsetting.term.q.value_by_computable_grade
-						const v = select2.node().value
-						if(v=='max') obj.termsetting.term.q.value_by_max_grade=true
-						else if (v=='recent') obj.termsetting.term.q.value_by_most_recent=true
-						else if (v=='any') obj.termsetting.term.q.value_by_computable_grade=true
-                        obj.termsetting.q = obj.termsetting.term.q
-						__flip_select2()
-						obj.callback(obj.termsetting.term)
-					})
-
-				select2.append('option')
-					.attr('value','max')
-					.text('Max grade per patient')
-				select2.append('option')
-					.attr('value','recent')
-					.text('Most recent grade per patient')
-				select2.append('option')
-					.attr('value','any')
-					.text('Any grade per patient')
-				btn2
-					.style('padding','3px 6px')
-                    .style('margin-left','1px')
-                    .style('margin-bottom','2px')
-                    .style('font-size','1em')
-                    .style('line-height','1.15')
-                    .style('position','static')
-					.style('background-color', '#4888BF')
+                // grades are always compuatable for sub-condition
+                // backend supports max/recent/computable grades
             }
 
 			__flip_select()
-			__flip_select2()
 
 			function __flip_select() {
 				if( obj.termsetting.term.q.bar_by_children ) {
@@ -186,33 +150,6 @@ export async function display (obj){
                     .style('margin-left','-'+btn.node().offsetWidth+'px')
 
                 if(obj.is_term1) btn.style('border-radius', '6px')
-			}
-			function __flip_select2() {
-				if(!select2) return
-				if(!obj.termsetting.term.q.bar_by_children) {
-					select2.style('display','none')
-					btn2.style('display','none')
-					return
-				}
-				select2.style('display','inline-block')
-				btn2.style('display','inline-block')
-				if(obj.termsetting.term.q.value_by_max_grade) {
-					select2.node().value = 'max'
-					btn2.html('Max grade per patient &#9662;')
-				} else if(obj.termsetting.term.q.value_by_most_recent) {
-					select2.node().value = 'recent'
-					btn2.html('Most recent grade per patient &#9662;')
-				} else if( obj.termsetting.term.q.value_by_computable_grade) {
-					select2.node().value = 'any'
-					btn2.html('Any grade per patient &#9662;')
-				}
-                select2.style( 'width', btn2.node().offsetWidth+'px' )
-                    .style('margin-left','-'+btn2.node().offsetWidth+'px')
-
-                if(obj.is_term1){
-                    btn.style('border-radius', '6px 0 0 6px')
-                    btn2.style('border-radius','0 6px 6px 0')
-                } 
 			}
         }
 
@@ -264,7 +201,7 @@ export async function display (obj){
 						} else if( term.iscondition ) {
                             term.q = term.isleaf 
                                 ? { value_by_max_grade:true, bar_by_grade:true  }
-								: { value_by_max_grade:true, bar_by_children:true }
+								: { value_by_computable_grade:true, bar_by_children:true }
                             obj.termsetting.q = term.q
 						} else if( term.isfloat || term.isinteger ) {
 							// TODO server provides binning scheme to add to it
