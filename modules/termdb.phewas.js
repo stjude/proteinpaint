@@ -32,18 +32,24 @@ const minimum_total_sample = 10
 
 
 export async function trigger ( q, res, ds ) {
-/*
+/* run on the fly phewas
 q{}
 .ssid
 */
 	if(!ds.cohort) throw 'ds.cohort missing'
 	if(!ds.cohort.termdb) throw 'cohort.termdb missing'
 	if(!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
-
 	if(!q.ssid) throw 'ssid missing'
-	const [sample2gt, genotype2sample] = await utils.loadfile_ssid( q.ssid )
-	// sample2gt: {sample:gt}
-	// genotype2sample: Map {gt: Set(samples)}
+
+	// q.tvslst provides an optional filter on samples
+	let samplefilterset
+	if( q.tvslst ) {
+		samplefilterset = new Set( termdbsql.get_samples( JSON.parse(decodeURIComponent(q.tvslst)), ds ) )
+	}
+
+	const [sample2gt, genotype2sample] = await utils.loadfile_ssid( q.ssid, samplefilterset )
+	// sample2gt: Map { sample : gt }
+	// genotype2sample: Map { gt : Set(samples) }
 
 
 	// from vcf file, total number of samples per genotype
@@ -541,7 +547,7 @@ function get_numsample_pergenotype ( sample2gt, samples ) {
 	const gt2count = new Map()
 	// k: gt, v: #samples
 	for(const sample of samples) {
-		const genotype = sample2gt[ sample ]
+		const genotype = sample2gt.get( sample )
 		if(!genotype) {
 			// no genotype, may happen when there's no sequencing coverage at this variant for this sample
 			continue

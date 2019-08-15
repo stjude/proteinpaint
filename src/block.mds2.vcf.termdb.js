@@ -137,6 +137,18 @@ official track only
 			'ssid='+ssid,
 			'phewas=1'
 		]
+		// if doing AFtest with termdb group, may add in tvs filter
+		if( tk.vcf
+			&& tk.vcf.numerical_axis
+			&& tk.vcf.numerical_axis.in_use
+			&& tk.vcf.numerical_axis.AFtest
+			&& tk.vcf.numerical_axis.inuse_AFtest ) {
+			// find the first termdb group and use
+			const tdbgrp = tk.vcf.numerical_axis.AFtest.groups.find(i=> i.is_termdb )
+			if( tdbgrp ) {
+				arg.push( 'tvslst='+encodeURIComponent(JSON.stringify(tdbgrp.terms)) )
+			}
+		}
 		const data = await client.dofetch2('/termdb?'+arg.join('&'))
 		if(data.error) throw data.error
 		phewas_svg( data, div, tk, block )
