@@ -47,8 +47,8 @@ tape("barchart-dependent display", function (test) {
   }
 
   function triggerViewBarchart(plot) {
-    plot.callbacks.postRender = [testVisibleWithBarchart]
-    plot.dispatch({
+    plot.bus.on('postRender', testVisibleWithBarchart)
+    plot.set({
       settings: {currViews: ["barchart"]}
     })
   }
@@ -98,8 +98,8 @@ tape("term.isfloat-dependent display", function (test) {
   }
 
   function triggerNumericTerm(plot) {
-    plot.callbacks.postRender = [testVisibleWithNumericTerm, triggerConditionTerm]
-    plot.dispatch({
+    plot.bus.on('postRender', [testVisibleWithNumericTerm, triggerConditionTerm])
+    plot.set({
       term: {term: termjson["agedx"]}
     })
   }
@@ -113,8 +113,8 @@ tape("term.isfloat-dependent display", function (test) {
   }
 
   function triggerConditionTerm(plot) {
-    plot.callbacks.postRender = [testHiddenIfConditionTerm]
-    plot.dispatch({
+    plot.bus.on('postRender', testHiddenIfConditionTerm)
+    plot.set({
       term: {term: termjson["Arrhythmias"]}
     })
   }

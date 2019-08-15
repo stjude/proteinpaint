@@ -48,7 +48,7 @@ tape("single barchart, no overlay", function (test) {
   }
 
   function triggerBarClick(plot) {
-    plot.callbacks.postRender = [testCategoricalTermValue]
+    plot.bus.on('postRender', testCategoricalTermValue)
     plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
     setTimeout(()=>{
       plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
@@ -132,7 +132,7 @@ tape("single chart, with overlay", function (test) {
   }
 
   function triggerNumericTermClick(plot) {
-    plot.callbacks.postRender = [testNumericTermValue, triggerConditionTermOverlay]
+    plot.bus.on('postRender', [testNumericTermValue, triggerConditionTermOverlay])
     plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
     setTimeout(()=>{
       plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
@@ -160,14 +160,14 @@ tape("single chart, with overlay", function (test) {
 
   function triggerConditionTermOverlay(plot) {
     termfilter.terms.length = 0
-    plot.callbacks.postRender = [triggerConditionTermClick]
-    plot.dispatch({
+    plot.bus.on('postRender', triggerConditionTermClick)
+    plot.set({
       term2: {term: termjson["Arrhythmias"]}
     })
   }
 
   function triggerConditionTermClick(plot) {
-    plot.callbacks.postRender = [conditionTermValue]
+    plot.bus.on('postRender', conditionTermValue)
     plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
     setTimeout(()=>{
       plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))

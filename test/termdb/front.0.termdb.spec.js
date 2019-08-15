@@ -23,7 +23,7 @@ tape("standalone layout", function (test) {
       termfilter:{show_top_ui:true},
       callbacks: {
         tree: {
-          postRender: [testAvailElems]
+          postRender: testAvailElems
         }
       },
     },
@@ -38,6 +38,7 @@ tape("standalone layout", function (test) {
 })
 
 tape("term button", function (test) {
+  test.plan(2)
   const div0 = d3s.select('body').append('div')
   let menuoption
   
@@ -53,26 +54,23 @@ tape("term button", function (test) {
       termfilter:{show_top_ui:true},
       callbacks: {
         tree: {
-          postRender: [triggerRootTermClick]
+          postRender: triggerRootTermClick
         }
       },
     },
   })
 
   function triggerRootTermClick(obj) {
-    obj.callbacks.tree.postRender = []
-    obj.callbacks.tree.postExpand = [testExpandedSubtree]
+    obj.bus.on('postRender', null).on('postExpand', testExpandedSubtree)
     menuoption = div0.select('.sja_menuoption').node()
     menuoption.click()
-    //div0.select('.sja_menuoption').on('click')()
   }
   
   function testExpandedSubtree(obj) {
     setTimeout(()=>{
       test.true(menuoption.parentNode.parentNode.lastChild.querySelectorAll('.sja_menuoption').length > 1, "should expand to subterms when clicked")
       test.true(!menuoption.innerHTML.toLowerCase().includes('loading'), "should remove the loading text on expansion")
-      obj.callbacks.tree.postExpand = []
-      test.end()
+      obj.bus.on('postExpand', null)
     },100)
   }
 })

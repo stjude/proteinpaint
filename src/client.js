@@ -173,6 +173,47 @@ export function may_get_locationsearch () {
 }
 
 
+export function get_event_bus(eventTypes=[], callbacks={}, defaultArg=null) {
+/*
+	Event bus pattern inspired by vue-bus and d3-dispatch
+  
+  eventTypes              array of string event type[.name]
+
+  callbacks{}
+  .$eventtype[.name]:     callback function or [functions]
+
+  defaultArg              the default argument to supply to 
+                          dispatcher.call() below
+*/
+	const events = {}
+	const bus = {
+		on(eventType, callback) {
+			const [type, name] = eventType.split('.')
+	    if (!eventTypes.includes(type)) {
+	    	throw `Unknown event type '${type}' (client.get_event_bus)`
+	    } else if (!callback) {
+	    	delete events[eventType]
+	    } else if (typeof callback == "function") {
+	    	events[eventType] = callback
+	    } else if (Array.isArray(callback)) {
+	    	events[eventType] = arg=>{
+	    		for(const fxn of callback) fxn(arg)
+	    	}
+	    }
+	    return bus
+		},
+		emit(eventType, arg=null) {
+			if (events[eventType]) events[eventType](arg ? arg : defaultArg) 
+		}
+	}
+	if (callbacks) {
+		for(const eventType in callbacks) {
+			bus.on(eventType, callbacks[eventType])
+		}
+	}
+	return bus
+}
+
 
 export function appear(d,display) {
 	d.style('opacity',0)

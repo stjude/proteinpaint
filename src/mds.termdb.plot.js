@@ -6,6 +6,7 @@ import {init as boxplot_init} from './mds.termdb.boxplot'
 import {init as stattable_init} from './mds.termdb.stattable'
 import {init as controls_init} from './mds.termdb.controls'
 
+
 export function init(arg) {
 /*
 arg: 
@@ -20,16 +21,20 @@ arg:
   
   // initiating the plot object
   const plot = {
-    // dispatch() is the gatekeeper function to protect the shared state
+    // set() is the gatekeeper function to protect the shared state
     // among the different viz and controls
-    dispatch(updatedKeyVals={}) { //console.log(updatedKeyVals)
+    set(updatedKeyVals={}) { //console.log(updatedKeyVals)
       nestedUpdate(plot, null, updatedKeyVals)
-      main(plot)
+      setTimeout(()=>main(plot), 0)
     },
     tip: new client.Menu({padding:'18px'}),
-    // lifecycle callbacks: {postInit: [fxn0, ...], postRender: [fxn1, ...]}
-    callbacks: (arg.callbacks && arg.callbacks) || {}
   }
+
+  plot.bus = client.get_event_bus(
+    ["postInit", "postRender"],
+    arg.obj.callbacks.plot,
+    plot
+  )
 
   // fill-in the REQUIRED argument keys
   Object.assign(plot, {
@@ -126,10 +131,9 @@ arg:
   }
   // set configuration controls
   plot.controls = controls_init(plot)
-  if (Array.isArray(plot.callbacks.postInit)) {
-    plot.callbacks.postInit.forEach(callback => callback(plot))
-  }
-  
+  plot.bus.emit("postInit")
+
+
   main( plot )
   if ( arg.obj.termfilter && arg.obj.termfilter.callbacks ) {
     // termfilter in action, insert main() of this plot to callback list to be called when filter is updated
@@ -155,6 +159,8 @@ arg:
       }
     }
   }
+
+  return plot
 }
 
 // the same route + request payload/URL parameters
@@ -308,10 +314,7 @@ at the beginning or stacked bar plot for cross-tabulating
   plot.views.table.main(plot, data, plot.settings.currViews.includes("table"))
   plot.views.banner.main(plot, data)
   plot.controls.postRender(plot)
- 
-  if (Array.isArray(plot.callbacks.postRender)) {
-    plot.callbacks.postRender.forEach(callback => callback(plot))
-  }
+  plot.bus.emit("postRender")
 }
 
 function banner_init(div) {

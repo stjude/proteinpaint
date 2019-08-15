@@ -70,15 +70,27 @@ obj{}:
 ... modifiers
 // optional lifecycle callbacks
 callbacks: { 
-  tree: {postRender: [fxn1, ...], postExpand: [fxn0, ...]}}
-  plot: {postInit: [fxn0, ...], postRender: [fxn1, ...]}}
+  tree: {postRender, postExpand, postCommit}}
+  plot: {postInit, postRender, postCommit}}
 }
 */
 	if( obj.debugmode ) window.obj = obj
+  
+  obj.commit = (updatedKeyVals={}) => {
+    for(const key in updatedKeyVals) {
+      obj[key] = updates[key]
+    }
+    for(const plot of obj.plots) plot.set()
+    obj.bus.emit('postCommit', null, obj)
+  }
 
-	obj.dom = {
-		div: obj.div
-	}
+  obj.bus = client.get_event_bus(
+    ['postRender', 'postExpand', 'postCommit'], 
+    obj.callbacks && obj.callbacks.tree,
+    obj
+  )
+
+	obj.dom = {div: obj.div}
 	delete obj.div
 	obj.dom.errdiv = obj.dom.div.append('div')
 	obj.dom.searchdiv = obj.dom.div.append('div').style('display','none')
@@ -133,8 +145,6 @@ callbacks: {
 	}
 }
 
-
-
 async function show_default_rootterm ( obj ) {
 /* for showing default terms, as defined by ds config
 
@@ -162,10 +172,7 @@ also for showing term tree, allowing to select certain terms
 		print_one_term( arg, obj )
 	}
 
-  if (!obj.callbacks) obj.callbacks = {}
-  if (obj.callbacks.tree && obj.callbacks.tree.postRender) {
-    obj.callbacks.tree.postRender.forEach(callback => callback(obj))
-  }
+  obj.bus.emit('postRender')
 }
 
 
@@ -544,25 +551,13 @@ function make_barplot ( obj, opts, div, callback ) {
     .settings {}
 
 */
-
-  const callbacks = {
-    postInit: [],
-    postRender: []
-  }
-  if (typeof callback == "function") callbacks.postRender.push(callback)
-
-  if (obj.callbacks && obj.callbacks.plot) {
-    for(const key in obj.callbacks.plot) {
-      callbacks[key].push(...obj.callbacks.plot[key])
-    }
-  }
+  if (!obj.callbacks) obj.callbacks = {}
 
 	const arg = Object.assign({
 		obj,
 		holder: div,
 		genome: obj.genome.name,
-		dslabel: obj.mds.label,
-    callbacks
+		dslabel: obj.mds.label
 	}, opts)
 
 	if( obj.modifier_ssid_barchart ) {
@@ -658,9 +653,7 @@ buttonholder: div in which to show the button, term label is also in it
 					obj
 				)
 			}
-      if (obj.callbacks.tree && obj.callbacks.tree.postExpand) {
-        obj.callbacks.tree.postExpand.forEach(callback => callback(obj))
-      }
+      obj.bus.emit('postExpand')
 		})
 		.catch(e=>{
 			wait
