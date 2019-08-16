@@ -21,17 +21,19 @@ arg:
   
   // initiating the plot object
   const plot = {
-    // set() is the gatekeeper function to protect the shared state
-    // among the different viz and controls
-    set(updatedKeyVals={}) { //console.log(updatedKeyVals)
+    // main() is the gatekeeper function to protect the shared state
+    // among the different views and controls
+    main(updatedKeyVals={}) {
       nestedUpdate(plot, null, updatedKeyVals)
-      setTimeout(()=>main(plot), 0)
+      coordinateState(plot)
+      if (!plot.obj.expanded_term_ids.includes(plot.term.id)) return
+      requestData(plot)
     },
     tip: new client.Menu({padding:'18px'}),
   }
 
   plot.bus = client.get_event_bus(
-    ["postInit", "postRender"],
+    ["postRender"],
     arg.obj.callbacks.plot,
     plot
   )
@@ -131,9 +133,7 @@ arg:
   }
   // set configuration controls
   plot.controls = controls_init(plot)
-  plot.bus.emit("postInit")
-
-  main( plot )
+  plot.main()
 
   function nestedUpdate(obj, key, value, keylineage=[]) {
     const maxDepth = 7 // harcoded maximum depth allowed for processing nested object values
@@ -156,39 +156,6 @@ arg:
 
   return plot
 }
-
-// the same route + request payload/URL parameters
-// should produce the same response data, so the
-// results of the server request can be cached in the
-// client 
-const serverData = {}
-
-function main(plot, callback = ()=>{}) {
-  coordinateState(plot)
-  if (!plot.obj.expanded_term_ids.includes(plot.term.id)) return
-
-  // create an alternative reference 
-  // to plot.[term0,term,term2] and term1_q parameters
-  // for convenience and namespacing related variables
-  plot.terms = [plot.term0, plot.term, plot.term2]
-  //plot.dom.holder.style('max-width', Math.round(85*window.innerWidth/100) + 'px')
-
-  const dataName = getDataName(plot)
-  if (serverData[dataName]) {
-    syncParams(plot, serverData[dataName])
-    render(plot, serverData[dataName])
-  }
-  else {
-    client.dofetch2('/termdb-barsql' + dataName)
-    .then(chartsData => {
-      serverData[dataName] = chartsData
-      syncParams(plot, serverData[dataName])
-      render(plot, chartsData)
-    })
-    //.catch(window.alert)
-  }
-}
-
 
 function coordinateState(plot) {
 /*
@@ -225,7 +192,37 @@ function coordinateState(plot) {
   } else if (!plot.settings.currViews.includes("barchart") || (!plot.term.isfloat /*&& !plot.term.isinteger*/)) {
     plot.settings.currViews.splice(i, 1)
   }
+
+  // create an alternative reference 
+  // to plot.[term0,term,term2] and term1_q parameters
+  // for convenience and namespacing related variables
+  plot.terms = [plot.term0, plot.term, plot.term2]
 }
+
+
+// the same route + request payload/URL parameters
+// should produce the same response data, so the
+// results of the server request can be cached in the
+// client 
+const serverData = {}
+
+function requestData(plot) {
+  const dataName = getDataName(plot)
+  if (serverData[dataName]) {
+    syncParams(plot, serverData[dataName])
+    render(plot, serverData[dataName])
+  }
+  else {
+    client.dofetch2('/termdb-barsql' + dataName)
+    .then(chartsData => {
+      serverData[dataName] = chartsData
+      syncParams(plot, serverData[dataName])
+      render(plot, chartsData)
+    })
+    //.catch(window.alert)
+  }
+}
+
 
 // creates URL search parameter string, that also serves as 
 // a unique request identifier to be used for caching server response

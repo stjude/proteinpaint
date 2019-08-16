@@ -47,7 +47,7 @@ tape("overlay-dependent display", function (test) {
 
   function triggerViewBoxplot(plot) {
     plot.bus.on('postRender', [testVisibleBoxplot, triggerNonNumericOverlay]) 
-    plot.set({
+    plot.main({
       term2: {term: termjson["agedx"]},
       settings: {
         currViews: ['boxplot']
@@ -65,7 +65,7 @@ tape("overlay-dependent display", function (test) {
 
   function triggerNonNumericOverlay(plot) {
     plot.bus.on('postRender', testHiddenNonNumericOverlay) 
-    plot.set({
+    plot.main({
       term2: {term: termjson["Arrhythmias"]},
       settings: {
         currViews: ['boxplot']

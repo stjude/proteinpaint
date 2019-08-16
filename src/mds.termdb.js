@@ -81,12 +81,12 @@ callbacks: {
   obj.plots = []
   obj.expanded_term_ids = []
 
-  obj.commit = (updatedKeyVals={}) => {
+  obj.main = (updatedKeyVals={}) => {
     for(const key in updatedKeyVals) {
       obj[key] = updates[key]
     }
     // trigger all rendered sub-elements
-    for(const plot of obj.plots) plot.set()
+    for(const plot of obj.plots) plot.main()
   }
 
   obj.bus = client.get_event_bus(
@@ -895,7 +895,7 @@ tvslst: an array of 1 or 2 term-value setting objects
 	}
 
 	make_filter_ui(obj)
-  obj.commit()
+  obj.main()
 }
 
 
@@ -981,7 +981,7 @@ function make_filter_ui(obj){
 		obj.genome,
 		false,
 		// callback when updating the filter
-		obj.commit
+		obj.main
 	)
 }
 

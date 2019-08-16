@@ -47,7 +47,7 @@ tape("overlay-dependent display", function (test) {
 
   function triggerViewTable(plot) {
     plot.bus.on('postRender', testVisibleTable)
-    plot.set({
+    plot.main({
       term2: {term: termjson["diaggrp"]},
       settings: {
         currViews: ['table']

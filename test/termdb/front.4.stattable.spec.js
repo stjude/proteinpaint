@@ -48,7 +48,7 @@ tape("barchart-dependent display", function (test) {
 
   function triggerViewBarchart(plot) {
     plot.bus.on('postRender', testVisibleWithBarchart)
-    plot.set({
+    plot.main({
       settings: {currViews: ["barchart"]}
     })
   }
@@ -99,7 +99,7 @@ tape("term.isfloat-dependent display", function (test) {
 
   function triggerNumericTerm(plot) {
     plot.bus.on('postRender', testVisibleWithNumericTerm)
-    plot.set({
+    plot.main({
       term: {term: termjson["agedx"]}
     })
   }

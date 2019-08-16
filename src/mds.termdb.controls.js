@@ -181,7 +181,7 @@ function setOrientationOpts(plot, self) {
   radio.inputs
   .property('checked', d => d.value == plot.settings.bar.orientation)
   .on('input', d => {
-    plot.set({settings: {
+    plot.main({settings: {
       bar: {
         orientation: d.value
       }
@@ -210,7 +210,7 @@ function setScaleOpts(plot, self) {
   radio.inputs
   .property('checked', d => d.value == plot.settings.bar.unit)
   .on('input', d => {
-    plot.set({settings: {
+    plot.main({settings: {
       bar: {
         unit: d.value
       }
@@ -268,10 +268,10 @@ function setOverlayOpts(plot, self) {
       plot.term2 = term2
       if (!term2) {
         plot.settings.bar.overlay = 'none'
-        plot.set({settings: {bar: {overlay: 'none'}}})
+        plot.main({settings: {bar: {overlay: 'none'}}})
       } else {
         treeInput.property('checked', true)
-        plot.set({settings: {bar: {overlay: 'tree'}}}) 
+        plot.main({settings: {bar: {overlay: 'tree'}}}) 
       }
     }
   }
@@ -284,7 +284,7 @@ function setOverlayOpts(plot, self) {
   .on('input', d => {
     d3event.stopPropagation()
     if (d.value == "none") {
-      plot.set({
+      plot.main({
         term2: undefined,
         settings: {
           currViews: ["barchart"],
@@ -292,7 +292,7 @@ function setOverlayOpts(plot, self) {
         }
       })
     } else if (d.value == "tree") {
-      plot.set({
+      plot.main({
         term2: {term: termuiObj.termsetting.term},
         settings: {bar: {overlay: d.value}}
       })
@@ -305,7 +305,7 @@ function setOverlayOpts(plot, self) {
         return
       }
       const q = {bar_by_grade: 1}
-      plot.set({
+      plot.main({
         term2: {
           term: plot.term,
           q: {
@@ -319,7 +319,7 @@ function setOverlayOpts(plot, self) {
         console.log('bar_by_grade term1 should not allow grade overlay')
         return
       }
-      plot.set({
+      plot.main({
         term2: {
           term: plot.term,
           q: {
@@ -342,7 +342,7 @@ function setOverlayOpts(plot, self) {
 	    tr.node(),
       (term2)=>{
   	    plot.obj.tip.hide()
-        plot.set({ term2 })
+        plot.main({ term2 })
       }
     )
   })
@@ -406,7 +406,7 @@ function setViewOpts(plot, self) {
   radio.inputs
   .property('checked', d => plot.settings.currViews.includes(d.value))
   .on('input', d => {
-    plot.set({
+    plot.main({
       settings: {currViews: [d.value]}
     })
   })
@@ -446,7 +446,7 @@ function setDivideByOpts(plot, self) {
     termsetting: {term:plot.term0, q: plot.term0?plot.term0.q:undefined},
     currterm: plot.term,
     callback: (term0) => {
-      plot.set({
+      plot.main({
         term0: term0 ? {term: term0} : undefined,
         settings: {
           bar: {
@@ -466,9 +466,9 @@ function setDivideByOpts(plot, self) {
     d3event.stopPropagation()
     plot.settings.bar.divideBy = d.value
     if (d.value == "none") {
-      plot.set({term0: undefined})
+      plot.main({term0: undefined})
     } else if (d.value == "tree") {
-      plot.set({term0: {term: termuiObj.termsetting.term}})
+      plot.main({term0: {term: termuiObj.termsetting.term}})
     } else if (d.value == "genotype") {
       // to-do
     }
@@ -529,7 +529,7 @@ function setBarsAsOpts(plot, self, termNum, label, index) {
     currterm: plot.term,
     is_term1: true,
     callback: (term) => {
-      plot.set({term})
+      plot.main({term})
     }
   }
   setTimeout(()=> {
@@ -559,7 +559,7 @@ function setBinOpts(plot, self, termNum, label) {
     .on('click',()=>{
       // click to show ui and customize binning
       numeric_bin_edit(plot.tip, plot.term, plot.term.q, true, (q)=>{
-        plot.set({term: {term: plot.term, q}})
+        plot.main({term: {term: plot.term, q}})
     })
   })
 
