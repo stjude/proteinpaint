@@ -189,18 +189,18 @@ export function get_event_bus(eventTypes=[], callbacks={}, defaultArg=null) {
 	const bus = {
 		on(eventType, callback) {
 			const [type, name] = eventType.split('.')
-	    if (!eventTypes.includes(type)) {
-	    	throw `Unknown event type '${type}' (client.get_event_bus)`
-	    } else if (!callback) {
-	    	delete events[eventType]
-	    } else if (typeof callback == "function") {
-	    	events[eventType] = callback
-	    } else if (Array.isArray(callback)) {
-	    	events[eventType] = arg=>{
-	    		for(const fxn of callback) fxn(arg)
-	    	}
-	    }
-	    return bus
+			if (!eventTypes.includes(type)) {
+				throw `Unknown event type '${type}' (client.get_event_bus)`
+			} else if (!callback) {
+				delete events[eventType]
+			} else if (typeof callback == "function") {
+				events[eventType] = callback
+			} else if (Array.isArray(callback)) {
+				events[eventType] = arg=>{
+					for(const fxn of callback) fxn(arg)
+				}
+			}
+			return bus
 		},
 		emit(eventType, arg=null) {
 			if (events[eventType]) events[eventType](arg ? arg : defaultArg) 
