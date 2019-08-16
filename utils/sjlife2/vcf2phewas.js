@@ -133,7 +133,7 @@ rl.on('line', async line=>{
 	for(let i=0; i<tests.length; i++) {
 		lines.push( i +'\t'+ tests[i].table.join('\t'))
 	}
-	const tmpfile = Math.random().toString()
+	const tmpfile = file_vcf+'.fisher'
 	await write_file( tmpfile, lines.join('\n') )
 	const pfile = await run_fishertest( tmpfile )
 	const pvalues = []
@@ -146,7 +146,7 @@ rl.on('line', async line=>{
 	fs.unlink(pfile,()=>{})
 
 	// fdr
-	const fdr = await run_fdr( pvalues )
+	const fdr = await run_fdr( pvalues, file_vcf+'.pvalues' )
 	for(const [i,p] of fdr.entries()) {
 		//tests[i].pvalue = p
 		const test = tests[i]
@@ -247,10 +247,9 @@ function read_file ( file ) {
 		})
 	})
 }
-async function run_fdr ( plst ) {
+async function run_fdr ( plst, infile ) {
 // list of pvalues
-	const infile = Math.random().toString()
-	const outfile = infile+'.out'
+	const outfile = infile+'.fdr'
 	await write_file( infile, plst.join('\t') )
 	await run_fdr_2( infile, outfile )
 	const text = await read_file( outfile )
