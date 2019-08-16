@@ -4,6 +4,7 @@ import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import getHandlers from './mds.termdb.barchart.events'
+import {get_event_bus} from './client'
 
 const colors = {
   c10: scaleOrdinal( schemeCategory10 ),
@@ -40,6 +41,10 @@ export class TermdbBarchart{
     this.handlers = getHandlers(this)
     this.controls = {}
     this.term2toColor = {}
+    this.bus = get_event_bus(
+      ["postClick"], // will supply term-values to postClick
+      opts.obj.callbacks.bar
+    )
   }
 
   main(plot=null, data=null, isVisible=true, obj=null) {

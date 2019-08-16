@@ -1,9 +1,4 @@
 import {select as d3select, event as d3event} from 'd3-selection'
-import {
-  menuoption_add_filter,
-  menuoption_select_to_gp, 
-  menuoption_select_group_add_to_cart
-} from './mds.termdb'
 import * as client from './client'
 import {display as termui_display, numeric_bin_edit} from './mds.termdb.termsetting.ui'
 
