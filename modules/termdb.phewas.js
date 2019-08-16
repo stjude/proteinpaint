@@ -41,15 +41,24 @@ q{}
 	if(!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
 	if(!q.ssid) throw 'ssid missing'
 
-	// q.tvslst provides an optional filter on samples
+	// to be sent to client
+	const result = {
+		//minimum_total_sample,
+		//skipped_byminimumsample: 0
+	}
+
+	// optional filter on samples
 	let samplefilterset
 	if( q.tvslst ) {
 		samplefilterset = new Set( termdbsql.get_samples( JSON.parse(decodeURIComponent(q.tvslst)), ds ) )
+		console.log('filter',samplefilterset.size)
 	}
 
 	const [sample2gt, genotype2sample] = await utils.loadfile_ssid( q.ssid, samplefilterset )
 	// sample2gt: Map { sample : gt }
 	// genotype2sample: Map { gt : Set(samples) }
+
+	result.numberofsamples = sample2gt.size
 
 
 	// from vcf file, total number of samples per genotype
@@ -68,11 +77,6 @@ q{}
 	.table: [ contigency table ]
 	*/
 
-	const result = {
-		minimum_total_sample,
-		skipped_byminimumsample: 0
-	}
-	// to be sent to client
 
 	for(const cacherow of ds.cohort.termdb.q.getcategory2vcfsample()) {
 		/************** each cached row is one term
@@ -376,6 +380,9 @@ use get_rows()
 
 
 export async function update_image ( q, res ) {
+/*
+called by changing ymax on client
+*/
 	const str = await utils.read_file( path.join(serverconfig.cachedir, q.file) )
 	const groups = []
 	for(const line of str.trim().split('\n')) {
@@ -421,9 +428,6 @@ group.width reflects number of categories and is always bigger than label font s
 
 */
 
-	// defines dot density for groups with many dots
-	// groups with fewer dots will have fixed width and lower varying density
-
 	const intendwidth = Number(q.intendwidth),
 		axisheight = Number(q.axisheight),
 		groupnamefontsize = Number(q.groupnamefontsize),
@@ -436,6 +440,8 @@ group.width reflects number of categories and is always bigger than label font s
 		dotcolor = 'black',
 		columnbgcolor = '#FDFEE2'
 
+	// defines dot density for groups with many dots
+	// groups with fewer dots will have fixed width and lower varying density
 	const dotshiftx = intendwidth / groups.reduce((i,j)=>i+j.categories.length, 0)
 
 	const canvas = createCanvas( 10,10 ) // width is dynamic

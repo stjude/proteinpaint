@@ -458,12 +458,6 @@ function show_group_termdb ( group, tk, block ) {
 		// click label to embed tree
 		const filterlst = JSON.parse( JSON.stringify(group.terms) ) // apply terms of this group as filter
 		filterlst.push( ...tvslst )
-		if( tk.sample_termfilter ) {
-			filterlst.push( ...JSON.parse(JSON.stringify(tk.sample_termfilter)) )
-		}
-		// must not reuse tvslst above as AFtest.termfilter may update
-		const v = may_get_param_AFtest_termfilter( tk )
-		if( v ) filterlst.push( v )
 
 		tk.legend.tip.clear()
 			.showunder(group.dom.samplehandle.node())
@@ -472,9 +466,7 @@ function show_group_termdb ( group, tk, block ) {
 			mds: tk.mds,
 			div: tk.legend.tip.d,
 			default_rootterm: {},
-			termfilter:{
-				terms: filterlst,
-			}
+			termfilter:{ terms: filterlst }
 		})
 	})
 }

@@ -4,6 +4,8 @@ import {scaleOrdinal,schemeCategory10, scaleLinear} from 'd3-scale'
 import {axisLeft} from 'd3-axis'
 import {event as d3event} from 'd3-selection'
 import {display as tvs_display} from './mds.termdb.termvaluesetting.ui'
+import {init as termdbinit} from './mds.termdb'
+//import { may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
 
 
 /*
@@ -12,11 +14,13 @@ obj{}
 .genome{}
 .tip
 .termfilter[]
-.row_message
-.row_control
-.row_details
+.dom{}
+	.row_filter
+	.row_message
+	.row_control
+	.row_details
+	.svg
 .svg{}
-	.svg <svg>
 	.ymax
 	.axis_g
 	.yscale
@@ -32,8 +36,9 @@ make_phewas
 ********************** INTERNAL
 get_ssid_by_onevcfm
 make_phewas_ui
+run_phewas
 phewas_svg
-	update_axis
+update_axis
 
 */
 
@@ -75,19 +80,35 @@ official track only
 			tip: tk.legend.tip,
 			mds: tk.mds,
 			genome: block.genome,
-			termfilter:{terms:[]}
+			termfilter:{terms:[]},
+			dom:{}
 		}
-		// if doing AFtest with termdb group, may add in tvs filter
-		if( tk.vcf
-			&& tk.vcf.numerical_axis
-			&& tk.vcf.numerical_axis.in_use
-			&& tk.vcf.numerical_axis.AFtest
-			&& tk.vcf.numerical_axis.inuse_AFtest ) {
-			// find the first termdb group and use
-			const tdbgrp = tk.vcf.numerical_axis.AFtest.groups.find(i=> i.is_termdb )
+
+		// may add in termfilter
+		if( tk.vcf && tk.vcf.numerical_axis && tk.vcf.numerical_axis.in_use && tk.vcf.numerical_axis.inuse_AFtest ) {
+			// using AFtest, find the first termdb group and use
+			const af = tk.vcf.numerical_axis.AFtest
+			const tdbgrp = af.groups.find(i=> i.is_termdb )
 			if( tdbgrp ) {
-				obj.termfilter.terms = JSON.parse(JSON.stringify(tdbgrp.terms))
+				obj.termfilter.terms.push( ...JSON.parse(JSON.stringify(tdbgrp.terms)) )
 			}
+			/*
+			disable for the moment
+			may_get_param_AFtest_termfilter
+
+			if(af.termfilter && af.termfilter.inuse) {
+				// this can only be in use at AFtest
+				const k = af.termfilter.values[ af.termfilter.value_index ]
+				obj.termfilter.terms.push({
+					term:{
+						id: af.termfilter.id,
+						name: af.termfilter.name,
+						iscategorical:true // hardcoded!!!
+					},
+					values:[ {key: k.key, label:(k.label || k.key)} ]
+				})
+			}
+			*/
 		}
 
 		make_phewas_ui( obj, div, tk )
@@ -126,12 +147,13 @@ function get_args( obj ) {
 
 
 async function run_phewas ( obj ) {
-	obj.svg.svg.selectAll('*').remove()
+	obj.dom.svg.selectAll('*').remove()
 	const data = await client.dofetch2('/termdb?' + get_args(obj).join('&'))
 	if(data.error) throw data.error
 	if(!data.tmpfile) throw 'data.tmpfile missing'
 	obj.tmpfile = data.tmpfile
 	obj.svg.ymax = data.maxlogp
+	obj.dom.filter_says.text('n='+data.numberofsamples)
 	phewas_svg( data, obj )
 }
 
@@ -139,10 +161,12 @@ async function run_phewas ( obj ) {
 
 function make_phewas_ui ( obj, div, tk ) {
 	// vertical layers
-	obj.row_message = div.append('div')
-	obj.row_control = div.append('div').style('margin','10px 0px')
+	obj.dom.row_filter = div.append('div').style('margin-bottom','5px')
+	obj.dom.row_message = div.append('div')
+	obj.dom.row_control = div.append('div').style('margin','10px 0px')
+	obj.dom.svg = div.append('svg')
+	obj.dom.row_details = div.append('div')
 	obj.svg = {
-		svg: div.append('svg'),
 		intendwidth: 800,
 		axisheight: 300,
 		groupnamefontsize: 16,
@@ -153,11 +177,49 @@ function make_phewas_ui ( obj, div, tk ) {
 		toppad: 20,
 		bottompad: 10,
 	}
-	obj.row_details = div.append('div')
+
+	{
+		// filter
+		obj.dom.row_filter.append('div')
+			.style('display','inline-block')
+			.text('FILTER')
+			.style('font-size','.7em')
+			.style('opacity',.5)
+		tvs_display(
+			obj.dom.row_filter.append('div').style('display','inline-block').style('margin','0px 10px'),
+			obj.termfilter,
+			obj.mds,
+			obj.genome,
+			tk.sample_termfilter,
+			async ()=>{
+				await run_phewas(obj)
+			}
+		)
+		obj.dom.filter_says = obj.dom.row_filter
+			.append('div')
+			.style('display','inline-block')
+			.attr('class','sja_clbtext')
+			.style('opacity',.6)
+			.on('click',()=>{
+				obj.tip.clear()
+					.showunder(d3event.target)
+				const lst = JSON.parse(JSON.stringify(obj.termfilter.terms))
+				if( tk.sample_termfilter) {
+					lst.push( ...JSON.parse(JSON.stringify(tk.sample_termfilter)) )
+				}
+				termdbinit({
+					genome: obj.genome,
+					mds: obj.mds,
+					div: obj.tip.d,
+					default_rootterm: {},
+					termfilter:{ terms: lst }
+				})
+			})
+	}
 
 	// controls
 	{
-		const input = obj.row_control
+		const input = obj.dom.row_control
 			.append('input')
 			.attr('type','number')
 			.style('width', '150px')
@@ -188,24 +250,6 @@ function make_phewas_ui ( obj, div, tk ) {
 					.attr('placeholder','Set Y axis max')
 			})
 	}
-	{
-		obj.row_control.append('div')
-			.style('display','inline-block')
-			.style('margin','0px 5px 0px 30px')
-			.text('FILTER')
-			.style('font-size','.7em')
-			.style('opacity',.5)
-		tvs_display(
-			obj.row_control.append('div').style('display','inline-block'),
-			obj.termfilter,
-			obj.mds,
-			obj.genome,
-			tk.sample_termfilter,
-			async ()=>{
-				await run_phewas(obj)
-			}
-		)
-	}
 }
 
 
@@ -216,7 +260,7 @@ function make_phewas_ui ( obj, div, tk ) {
 function phewas_svg ( data, obj ) {
 
 	////////////// message
-	obj.row_message.text(
+	obj.dom.row_message.text(
 		data.testcount+' attributes tested, '
 		+data.hoverdots.length+' attributes with FDR p-value <= 0.05, '
 		+'Max -log10(FDR pvalue) is '+obj.svg.ymax
@@ -229,13 +273,13 @@ function phewas_svg ( data, obj ) {
 	////////////// svg
 	const axiswidth = 80
 	const xpad = 5
-	obj.svg.svg.attr('width', axiswidth + xpad + data.canvaswidth )
+	obj.dom.svg.attr('width', axiswidth + xpad + data.canvaswidth )
 
 	{
 		// group labels define svg height
 		let maxgrouplabheight=0
 		for(const g of data.grouplabels) {
-			obj.svg.svg.append('g')
+			obj.dom.svg.append('g')
 				.attr('transform','translate('+( axiswidth+xpad+g.x)+','+g.y+')')
 				.append('text')
 				.attr('font-size',data.groupnamefontsize)
@@ -250,10 +294,10 @@ function phewas_svg ( data, obj ) {
 					get_group( g.name )
 				})
 		}
-		obj.svg.svg.attr('height', data.canvasheight + maxgrouplabheight)
+		obj.dom.svg.attr('height', data.canvasheight + maxgrouplabheight)
 	}
 
-	const g0 = obj.svg.svg.append('g')
+	const g0 = obj.dom.svg.append('g')
 
 	// axis
 	obj.svg.yscale = scaleLinear()
@@ -326,8 +370,8 @@ function phewas_svg ( data, obj ) {
 
 	async function get_group ( name ) {
 		// get list of categories for a group by clicking on label
-		obj.row_details.selectAll('*').remove()
-		const wait = obj.row_details.append('div').text('Loading...')
+		obj.dom.row_details.selectAll('*').remove()
+		const wait = obj.dom.row_details.append('div').text('Loading...')
 		const arg = [
 			'genome='+obj.genome.name,
 			'dslabel='+obj.mds.label,
@@ -337,7 +381,7 @@ function phewas_svg ( data, obj ) {
 		]
 		const data2 = await client.dofetch2('/termdb?'+arg.join('&'))
 		wait.remove()
-		const table = obj.row_details.append('table')
+		const table = obj.dom.row_details.append('table')
 		const tr = table.append('tr')
 		tr.append('th').text('Term')
 		tr.append('th').text('Case')
