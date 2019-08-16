@@ -203,7 +203,8 @@ export function get_event_bus(eventTypes=[], callbacks={}, defaultArg=null) {
 			return bus
 		},
 		emit(eventType, arg=null) {
-			if (events[eventType]) events[eventType](arg ? arg : defaultArg) 
+			if (events[eventType]) events[eventType](arg ? arg : defaultArg)
+			return bus
 		}
 	}
 	if (callbacks) {

@@ -4,7 +4,7 @@ import {TermdbBarchart} from './mds.termdb.barchart'
 import {init as table_init} from './mds.termdb.table'
 import {init as boxplot_init} from './mds.termdb.boxplot'
 import {init as stattable_init} from './mds.termdb.stattable'
-import {init as controls_init} from './mds.termdb.controls'
+import {init as controls_init} from './mds.termdb.plot.controls'
 
 
 export function init(arg) {
