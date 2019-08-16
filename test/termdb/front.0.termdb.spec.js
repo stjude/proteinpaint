@@ -61,17 +61,15 @@ tape("term button", function (test) {
   })
 
   function triggerRootTermClick(obj) {
-    obj.bus.on('postRender', null).on('postExpand', testExpandedSubtree)
+    obj.bus.on('postRender', null)
     menuoption = div0.select('.sja_menuoption').node()
     menuoption.click()
+    setTimeout(()=>testExpandedSubtree(obj), 100)
   }
   
   function testExpandedSubtree(obj) {
-    setTimeout(()=>{
-      test.true(menuoption.parentNode.parentNode.lastChild.querySelectorAll('.sja_menuoption').length > 1, "should expand to subterms when clicked")
-      test.true(!menuoption.innerHTML.toLowerCase().includes('loading'), "should remove the loading text on expansion")
-      obj.bus.on('postExpand', null)
-    },100)
+    test.true(menuoption.parentNode.parentNode.lastChild.querySelectorAll('.sja_menuoption').length > 1, "should expand to subterms when clicked")
+    test.true(!menuoption.innerHTML.toLowerCase().includes('loading'), "should remove the loading text on expansion")
   }
 })
 

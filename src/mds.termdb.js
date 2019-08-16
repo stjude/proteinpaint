@@ -70,22 +70,27 @@ obj{}:
 ... modifiers
 // optional lifecycle callbacks
 callbacks: { 
-  tree: {postRender, postExpand, postCommit}}
-  plot: {postInit, postRender, postCommit}}
+  tree: {postRender: callback or [callback1, ...]},
+  plot: {postRender: callback or [callback1, ...]}
 }
 */
 	if( obj.debugmode ) window.obj = obj
   
+  // tracker for viewed/plotted terms, 
+  // to trigger re-render on state update
+  obj.plots = []
+  obj.expanded_term_ids = []
+
   obj.commit = (updatedKeyVals={}) => {
     for(const key in updatedKeyVals) {
       obj[key] = updates[key]
     }
+    // trigger all rendered sub-elements
     for(const plot of obj.plots) plot.set()
-    obj.bus.emit('postCommit', null, obj)
   }
 
   obj.bus = client.get_event_bus(
-    ['postRender', 'postExpand', 'postCommit'], 
+    ['postRender'], 
     obj.callbacks && obj.callbacks.tree,
     obj
   )
@@ -181,19 +186,17 @@ also for showing term tree, allowing to select certain terms
 function may_display_termfilter( obj ) {
 /* when the ui is not displayed, will not allow altering filters and callback-updating
 */
+  if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
+    // do not display ui, and do not collect callbacks
+    return
+  }
 
-	if(obj.termfilter && obj.termfilter.terms) {
+	if(!obj.termfilter.terms) {
+    obj.termfilter.terms = []
+  } else {
 		if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
 		validate_termvaluesetting( obj.termfilter.terms )
-	}
-
-	if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
-		// do not display ui, and do not collect callbacks
-		return
-	}
-
-	obj.termfilter.callbacks = []
-	if(!obj.termfilter.terms) obj.termfilter.terms = []
+	} 
 
 	// make ui
 	make_filter_ui(obj)
@@ -266,7 +269,7 @@ function update_cart_button(obj){
 				obj.genome, 
 				false,
 				// callback when updating the groups
-				() => {
+				() => { console.log(obj.groupCallbacks)
 					for(const fxn of obj.groupCallbacks) {
 							fxn()
 					}
@@ -515,13 +518,16 @@ such conditions may be carried by obj
 	let loaded =false,
 		loading=false
 
-	button.on('click.test', async ()=>{
+	button.on('click', async ()=>{
+    const i = obj.expanded_term_ids.indexOf(term.id)
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
 			view_btn_line.style('display','block')
+      if (i==-1) obj.expanded_term_ids.push(term.id)
 		} else {
 			client.disappear(div)
 			view_btn_line.style('display','none')
+      obj.expanded_term_ids.splice(i, 1)
 		}
 		if( loaded || loading ) {
       plot_loading_div.text('').remove()
@@ -530,10 +536,10 @@ such conditions may be carried by obj
 		button.style('border','solid 1px #aaa')
 		loading=true
 		make_barplot( obj, {term}, div, ()=> {
-			plot_loading_div.text('').remove()
-			loaded=true
-			loading=false
-		})
+      plot_loading_div.text('').remove()
+      loaded=true
+      loading=false
+    })
 	})
 }
 
@@ -552,6 +558,11 @@ function make_barplot ( obj, opts, div, callback ) {
 
 */
   if (!obj.callbacks) obj.callbacks = {}
+  if (!obj.callbacks.plot) obj.callbacks.plot = {}
+  if (!obj.callbacks.plot.postRender) obj.callbacks.plot.postRender = []
+  if (callback) obj.callbacks.plot.postRender.push(callback)
+
+  if (!obj.expanded_term_ids.includes(opts.term.id)) obj.expanded_term_ids.push(opts.term.id)
 
 	const arg = Object.assign({
 		obj,
@@ -575,7 +586,9 @@ function make_barplot ( obj, opts, div, callback ) {
 		]
 		arg.overlay_with_genotype_idx = 0
 	}
-	plot_init( arg )
+	
+  const plot = plot_init( arg )
+  obj.plots.push(plot)
 }
 
 
@@ -653,7 +666,6 @@ buttonholder: div in which to show the button, term label is also in it
 					obj
 				)
 			}
-      obj.bus.emit('postExpand')
 		})
 		.catch(e=>{
 			wait
@@ -883,8 +895,7 @@ tvslst: an array of 1 or 2 term-value setting objects
 	}
 
 	make_filter_ui(obj)
-
-	for (const fxn of obj.termfilter.callbacks) fxn()
+  obj.commit()
 }
 
 
@@ -970,11 +981,7 @@ function make_filter_ui(obj){
 		obj.genome,
 		false,
 		// callback when updating the filter
-		() => {
-			for(const fxn of obj.termfilter.callbacks) {
-				fxn()
-			}
-		} 
+		obj.commit
 	)
 }
 
@@ -1031,6 +1038,7 @@ async function restore_plot(obj, params) {
 		if (params.term2) {
 			const data = await obj.do_query( ['findterm='+params.term2] );
 			if (data.lst.length) term2 = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
+      if (term2.iscondition) term2.q = {}
 		}
 		if (params.term0) {
 			const data = await obj.do_query( ['findterm='+params.term0] );
@@ -1038,7 +1046,6 @@ async function restore_plot(obj, params) {
 		}
 	
 		restored_div.append('h3').html('Restored View')
-
 		make_barplot( obj, {
       term, 
       term2, 

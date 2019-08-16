@@ -11,7 +11,7 @@ tape("\n", function(test) {
 
 tape("barchart-dependent display", function (test) {
   const div0 = d3s.select('body').append('div')
-  const termfilter = {show_top_ui:true, callbacks:[]}
+  const termfilter = {show_top_ui:true}
   
   runproteinpaint({
     host,
@@ -98,7 +98,7 @@ tape("term.isfloat-dependent display", function (test) {
   }
 
   function triggerNumericTerm(plot) {
-    plot.bus.on('postRender', [testVisibleWithNumericTerm, triggerConditionTerm])
+    plot.bus.on('postRender', testVisibleWithNumericTerm)
     plot.set({
       term: {term: termjson["agedx"]}
     })
@@ -112,12 +112,30 @@ tape("term.isfloat-dependent display", function (test) {
     )
   }
 
-  function triggerConditionTerm(plot) {
-    plot.bus.on('postRender', testHiddenIfConditionTerm)
-    plot.set({
-      term: {term: termjson["Arrhythmias"]}
-    })
-  }
+  const div1 = d3s.select('body').append('div')
+  
+  runproteinpaint({
+    holder: div1.node(),
+    noheader:1,
+    nobox:true,
+    display_termdb:{
+      dslabel:'SJLife',
+      genome:'hg38',
+      default_rootterm:{},
+      termfilter:{show_top_ui:false},
+      params2restore: {
+        term: termjson["Arrhythmias"],
+        settings: {
+          currViews: ['barchart']
+        }
+      },
+      callbacks: {
+        plot: {
+          postRender: testHiddenIfConditionTerm
+        }
+      },
+    }
+  })
 
   function testHiddenIfConditionTerm(plot) {
     test.equal(

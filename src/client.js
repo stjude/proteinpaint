@@ -177,7 +177,7 @@ export function get_event_bus(eventTypes=[], callbacks={}, defaultArg=null) {
 /*
 	Event bus pattern inspired by vue-bus and d3-dispatch
   
-  eventTypes              array of string event type[.name]
+  eventTypes              array of allowed string event type[.name]
 
   callbacks{}
   .$eventtype[.name]:     callback function or [functions]

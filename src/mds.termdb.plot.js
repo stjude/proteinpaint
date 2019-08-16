@@ -133,17 +133,11 @@ arg:
   plot.controls = controls_init(plot)
   plot.bus.emit("postInit")
 
-
   main( plot )
-  if ( arg.obj.termfilter && arg.obj.termfilter.callbacks ) {
-    // termfilter in action, insert main() of this plot to callback list to be called when filter is updated
-	  // FIXME svg dimension will be 0 when the plot is invisible (as turned off by the VIEW button)
-    arg.obj.termfilter.callbacks.push(()=>main(plot))
-  }
 
   function nestedUpdate(obj, key, value, keylineage=[]) {
-    // 7 is a a harcoded maximum depth allowed for processing nested object values
-    if (keylineage.length >= 7) {
+    const maxDepth = 7 // harcoded maximum depth allowed for processing nested object values
+    if (keylineage.length >= maxDepth) {
       obj[key] = value
     } else if (key=='term' || key == 'term2' || key == 'term0') {
       if (!value) obj[key] = value
@@ -171,6 +165,7 @@ const serverData = {}
 
 function main(plot, callback = ()=>{}) {
   coordinateState(plot)
+  if (!plot.obj.expanded_term_ids.includes(plot.term.id)) return
 
   // create an alternative reference 
   // to plot.[term0,term,term2] and term1_q parameters
