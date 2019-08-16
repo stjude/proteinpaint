@@ -16,6 +16,7 @@ const samtools = serverconfig.samtools || 'samtools'
 ********************** EXPORTED
 init_one_vcf
 validate_tabixfile
+tabix_is_nochr
 get_lines_tabix
 write_file
 write_tmpfile
@@ -100,7 +101,7 @@ async function tabix_is_nochr ( file, dir, genome ) {
 	)
 	return common.contigNameNoChr( genome, lines )
 }
-
+exports.tabix_is_nochr = tabix_is_nochr
 
 
 

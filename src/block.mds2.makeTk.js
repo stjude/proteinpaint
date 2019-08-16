@@ -171,6 +171,13 @@ Note: must keep customizations of official tk through embedding api
 			}
 		}
 	}
+	if( tk.mds.track.ld) {
+		if(!tk.ld) tk.ld = {}
+		const c = JSON.parse( JSON.stringify(tk.mds.track.ld ) )
+		for(const k in c ){
+			if(tk.ld[k]==undefined) tk.ld[k] = c[k]
+		}
+	}
 
 	// TODO other file types
 

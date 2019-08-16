@@ -5,6 +5,7 @@ const utils = require('./utils')
 const common = require('../src/common')
 const loader_vcf = require('./mds2.load.vcf')
 const loader_vcf_mafcov = require('./mds2.load.vcf.plot.mafcovplot')
+const load_ld = require('./mds2.load.ld').load
 // add loaders for other file types
 
 
@@ -89,6 +90,12 @@ return async (req,res) => {
 		}
 		if( q.trigger_vcfbyrange ) {
 			await loader_vcf.handle_vcfbyrange( q, genome, ds, result )
+		}
+		if( q.trigger_ld ) {
+			result.ld = {} // to be filled in load_ld
+			for(const tk of q.trigger_ld.tracks) {
+				await load_ld( tk, q, genome, ds, result )
+			}
 		}
 		if( q.trigger_ssid_onevcfm ) {
 			await loader_vcf.handle_ssidbyonem( q, genome, ds, result )

@@ -136,16 +136,24 @@ export function addparameter_rangequery ( tk, block ) {
 	}
 
 	if( tk.vcf ) {
-
 		par.trigger_vcfbyrange = 1
-
 		maygetparameter_numericaxis( tk, par )
+		/*
+		if ever to render vcf image on server, need to know 
+		any categorical attr is used to class variants instead of mclass
+		*/
+	}
+	if( tk.ld ) {
+		par.trigger_ld = {
+			tracks:[]
+		}
+		for(const t of tk.ld.tracks) {
+			if( t.shown ) {
+				par.trigger_ld.tracks.push( t )
+			}
+		}
 	}
 	// add trigger for other data types
-	/* TODO
-	for vcf, when rendering image on server, need to know 
-	if any categorical attr is used to class variants instead of mclass
-	*/
 
 
 

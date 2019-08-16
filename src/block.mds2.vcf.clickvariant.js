@@ -189,6 +189,7 @@ function mayaddtab_fishertable( tabs, m, tk, block ) {
 
 				// run a full-blown query with altered parameter
 				const par = addparameter_rangequery( tk, block )
+				delete par.trigger_ld
 				// replace the control
 				par.AFtest.groups[1] = {
 					is_population:true,
