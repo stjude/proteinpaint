@@ -784,7 +784,7 @@ async function restore_plot(obj, params) {
 		const term = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
 
 		let term2, term0
-		if (params.term2) {
+		if (params.term2 && params.term2 != 'genotype') {
 			const data = await obj.do_query( ['findterm='+params.term2] );
 			if (data.lst.length) term2 = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
       if (term2.iscondition) term2.q = {}

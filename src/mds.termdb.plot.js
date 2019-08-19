@@ -84,7 +84,7 @@ arg:
   // set the default settings
   plot.settings = {
     // currViews: ["barchart" | "table" | "boxplot"] 
-    // + auto-added ["stattable"] if barchart && plot.term.isfloat
+    // + auto-added ["stattable"] if barchart && plot.term.isfloat or .isinteger
     currViews: ["barchart"], 
     common: {
       use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
@@ -134,27 +134,26 @@ arg:
   // set configuration controls
   plot.controls = controls_init(plot)
   plot.main()
+  return plot
+}
 
-  function nestedUpdate(obj, key, value, keylineage=[]) {
-    const maxDepth = 7 // harcoded maximum depth allowed for processing nested object values
-    if (keylineage.length >= maxDepth) {
-      obj[key] = value
-    } else if (key=='term' || key == 'term2' || key == 'term0') {
-      if (!value) obj[key] = value
-      else if (typeof value == "object") {
-        if (value.term) obj[key] = Object.assign({}, value.term)
-        if (value.q) obj[key].q = Object.assign({}, value.q)
-      }
-    } else if (key !== null && (!value || typeof value != 'object')) {
-      obj[key] = value
-    } else {
-      for(const subkey in value) {
-        nestedUpdate(key == null ? obj : obj[key], subkey, value[subkey], keylineage.concat(subkey))
-      }
+function nestedUpdate(obj, key, value, keylineage=[]) {
+  const maxDepth = 7 // harcoded maximum depth allowed for processing nested object values
+  if (keylineage.length >= maxDepth) {
+    obj[key] = value
+  } else if (key=='term' || key == 'term2' || key == 'term0') {
+    if (!value) obj[key] = value
+    else if (typeof value == "object") {
+      if (value.term) obj[key] = Object.assign({}, value.term)
+      if (value.q) obj[key].q = Object.assign({}, value.q)
+    }
+  } else if (key !== null && (!value || typeof value != 'object')) {
+    obj[key] = value
+  } else {
+    for(const subkey in value) {
+      nestedUpdate(key == null ? obj : obj[key], subkey, value[subkey], keylineage.concat(subkey))
     }
   }
-
-  return plot
 }
 
 function coordinateState(plot) {
@@ -278,7 +277,7 @@ function syncParams( plot, data ) {
   if (!data || !data.refs) return
   for(const i of [0,1,2]) {
     const term = plot.terms[i]
-    if (!term) continue
+    if (!term || term=='genotype') continue
     if (data.refs.bins && data.refs.bins[i]) {
       term.bins = data.refs.bins[i]
     }

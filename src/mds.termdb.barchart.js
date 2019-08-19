@@ -66,12 +66,7 @@ export class TermdbBarchart{
       dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
       term0: plot.term0 ? plot.term0.id : '', // convenient reference to the term id
       term1: plot.term.id, // convenient reference to the term2 id
-      term2: obj.modifier_ssid_barchart ? 'genotype' // convenient reference to the term0 id
-        : plot.term2 ? plot.term2.id
-        : '',
-      ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
-      mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
-      groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
+      term2: plot.term2 ? plot.term2.id : '',
       unit: plot.settings.bar.unit,
       orientation: plot.settings.bar.orientation,
       // normalize bar thickness regardless of orientation
