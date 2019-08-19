@@ -3,9 +3,10 @@ import {axisTop, axisLeft, axisRight} from 'd3-axis'
 import {scaleLinear} from 'd3-scale'
 import * as common from './common'
 import * as client from './client'
-import * as mds2legend from './block.mds2.legend'
+import {update as update_legend} from './block.mds2.legend'
 import {makeTk} from './block.mds2.makeTk'
 import {may_render_vcf} from './block.mds2.vcf'
+import {may_render_ld} from './block.mds2.ld'
 import {may_get_param as maygetparameter_numericaxis} from './block.mds2.vcf.numericaxis'
 
 
@@ -55,9 +56,14 @@ export async function loadTk( tk, block ) {
 		tk.clear()
 
 		const rowheight_vcf = may_render_vcf( data, tk, block )
+		const rowheight_ld = may_render_ld( data, tk, block )
+		if( tk.g_ldrow ) {
+			tk.g_ldrow.transition().attr('transform','translate(0,'+rowheight_vcf+')')
+			tk.gleft_ldrow.transition().attr('transform','translate(0,'+rowheight_vcf+')')
+		}
 
 		// set height_main
-		tk.height_main = rowheight_vcf
+		tk.height_main = rowheight_vcf + rowheight_ld
 
 		_finish(data)
 
@@ -94,7 +100,7 @@ async function loadTk_do ( tk, block ) {
 
 function loadTk_finish_closure ( tk, block ) {
 	return (data)=>{
-		mds2legend.update( data, tk, block)
+		update_legend( data, tk, block)
 		block.tkcloakoff( tk, {error: data.error} )
 		block.block_setheight()
 		block.setllabel()

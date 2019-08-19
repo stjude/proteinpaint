@@ -13,8 +13,10 @@ load
 */
 
 
-//const serverconfig = __non_webpack_require__('./serverconfig.json')
 
+
+
+const connheight = 50
 
 
 
@@ -23,15 +25,28 @@ export async function load ( _tk, q, genome, ds, result ) {
 _tk:{}
 	.name
 	also has customization parameters
+result:{}
+	.__mposset
 */
 	const tk = ds.track.ld.tracks.find( i=> i.name == _tk.name )
 	if(!tk) throw 'ld track not found by name: '+_tk.name
 
 	if(!q.rglst) throw 'rglst missing'
 
-	result.ld[ tk.name ] = { rglst:[] } // collect result, same as vcf
+	result.connheight = connheight
+	result.ld[ tk.name ] = { rglst:[] }
 
 	for(const r of q.rglst) {
+
+		const r2 = {
+			chr: r.chr,
+			start: r.start,
+			stop: r.stop,
+			width: r.width,
+			reverse: r.reverse,
+			xoff: r.xoff,
+		}
+
 		const pairs = []
 		const coordset = new Set()
 
@@ -43,24 +58,18 @@ _tk:{}
 			if( start < r.start ) return
 			const stop = Number.parseInt(l[2])
 			if( stop > r.stop ) return
+			if( result.__mposset ) {
+				if( !result.__mposset.has( start )) return
+				if( !result.__mposset.has( stop  )) return
+			}
 			const r2 = Number.parseFloat(l[3])
 			pairs.push({start,stop,r2})
 			coordset.add(start)
 			coordset.add(stop)
 		})
 
-		const img = plot_img( r, pairs, coordset )
-		//result.ld[ tk.name ].rglst.push( 
+		r2.img = plot_img( r, pairs, coordset )
 
-		const r2 = {
-			chr: r.chr,
-			start: r.start,
-			stop: r.stop,
-			width: r.width,
-			reverse: r.reverse,
-			xoff: r.xoff,
-			img
-		}
 		result.ld[ tk.name ].rglst.push( r2 )
 	}
 }
@@ -90,7 +99,6 @@ x2 ------------
 		}
 	}
 
-	const connheight = 50
 	const canvasheight = connheight + r.width/2
 
 	const canvas = createCanvas( r.width, canvasheight )
@@ -102,6 +110,24 @@ x2 ------------
 		ctx.lineTo( coord2x2.get( c ), connheight )
 		ctx.closePath()
 		ctx.stroke()
+	}
+
+	for(const pair of pairs) {
+		const xstart = coord2x2.get(pair.start)
+		const xstop = coord2x2.get(pair.stop)
+		const xmid = (xstart+xstop)/2
+		const y = connheight + Math.abs(xstop-xstart)/2
+
+		const v = Math.floor(255*(1-pair.r2))
+		ctx.fillStyle = 'rgb(255,'+v+','+v+')'
+		ctx.beginPath()
+		ctx.moveTo(xmid, y-binsize/2)
+		ctx.lineTo(xmid-binsize/2, y)
+		ctx.lineTo(xmid, y+binsize/2)
+		ctx.lineTo(xmid+binsize/2, y)
+		ctx.lineTo(xmid, y-binsize/2)
+		ctx.closePath()
+		ctx.fill()
 	}
 
 	return {

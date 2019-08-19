@@ -19,7 +19,9 @@ update_info_fields
 
 
 export function init ( tk, block ) {
-
+/*
+run only once, called by makeTk
+*/
 	if(!tk.legend) tk.legend = {}
 	tk.legend.tip = new client.Menu({padding:'0px'})
 
@@ -36,6 +38,7 @@ export function init ( tk, block ) {
 	may_create_vcflegend_numericalaxis( tk, block )
 	may_create_variantfilter( tk, block )
 	create_mclass( tk )
+	may_create_ldlegend( tk, block )
 }
 
 
@@ -268,5 +271,41 @@ data is data.info_fields{}
 				throw 'unknown info type'
 			}
 		}
+	}
+}
+
+
+
+
+
+function may_create_ldlegend ( tk, block ) {
+	if(!tk.ld) return
+	const row = tk.legend.table.append('tr')
+	// td1
+	row
+		.append('td')
+		.style('text-align','right')
+		.style('opacity',.3)
+		.text('LD')
+
+	// td2
+	const td = row.append('td')
+	const table = td.append('table')
+	for(const ld of tk.ld.tracks) {
+		const tr = table.append('tr')
+		tr.append('td')
+			.text(ld.name)
+		tr.append('td')
+			.append('button')
+			.text( ld.shown?'Hide':'Show' )
+			.on('click', async ()=>{
+				const button = d3event.target
+				button.innerHTML = 'Loading...'
+				button.disabled=true
+				ld.shown = !ld.shown
+				await tk.load()
+				button.disabled=false
+				button.innerHTML = ld.shown?'Hide':'Show'
+			})
 	}
 }

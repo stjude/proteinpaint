@@ -156,7 +156,8 @@ async function may_init_ld ( ld, genome, ds ) {
 			throw 'ld tk has no file or chr2file'
 		}
 	}
-	if( ld.tracks.length==1 ) ld.tracks[0].shown=true
+	// for testing, may remove
+	//if( ld.tracks.length==1 ) ld.tracks[0].shown=true
 }
 
 

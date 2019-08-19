@@ -86,16 +86,26 @@ return async (req,res) => {
 		// by triggers
 
 		if( q.trigger_mafcovplot ) {
-			await loader_vcf_mafcov.handle_mafcovplot( q, genome, ds, result )
+			await loader_vcf_mafcov.plot( q, genome, ds, result )
 		}
 		if( q.trigger_vcfbyrange ) {
 			await loader_vcf.handle_vcfbyrange( q, genome, ds, result )
+			if( q.trigger_ld ) {
+				// collect variants passing filter for ld, so as not to include those filtered out
+				result.__mposset = new Set()
+				for(const r of result.vcf.rglst) {
+					for(const m of r.variants) {
+						result.__mposset.add( m.pos )
+					}
+				}
+			}
 		}
 		if( q.trigger_ld ) {
 			result.ld = {} // to be filled in load_ld
 			for(const tk of q.trigger_ld.tracks) {
 				await load_ld( tk, q, genome, ds, result )
 			}
+			delete result.__mposset
 		}
 		if( q.trigger_ssid_onevcfm ) {
 			await loader_vcf.handle_ssidbyonem( q, genome, ds, result )

@@ -423,7 +423,7 @@ module.exports={
 		sample_termfilter:[{term:{id:'wgs_curated',iscategorical:true},values:[{key:'1'}]}],
 		ld:{
 			tracks:[
-				{ name:'CEU', file:'files/hg38/sjlife/vcf/LD.gz', shown:true }
+				{ name:'CEU', file:'files/hg38/sjlife/vcf/LD.gz', shown:false }
 			]
 		},
 		/*
