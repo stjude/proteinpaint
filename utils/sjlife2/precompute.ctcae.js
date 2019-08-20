@@ -8,8 +8,8 @@ const Partjson = require('../../modules/partjson')
   server response as needed
 */
 
-if(process.argv.length!=4) {
-	console.log('<termdb> <annotation.outcome>, output to "precomputed.json" and stdout for loading to db')
+if(process.argv.length!=5) {
+	console.log('<termdb> <annotation.outcome> <dataset.js>, output to "precomputed.json" and stdout for loading to db')
 	process.exit()
 }
 
@@ -17,10 +17,21 @@ const termdbfile = process.argv[2]
 // input file with lines of term_id \t name \t parent_id \t {termjson}
 const outcomesfile = process.argv[3]
 // input file with lines of sample,term,grade,age_graded,yearstoevent
+const datasetjsfile = process.argv[4]
+// input dataset js file, for accessing termdb configs
 
 
 
-const uncomputable = new Set([0,9])
+const uncomputableGrades = new Set()
+{
+	const ds = require(datasetjsfile)
+	if( ds.cohort.termdb.uncomputable_grades ) {
+		for(const k in ds.cohort.termdb.uncomputable_grades) uncomputableGrades.add( k )
+	}
+}
+
+
+
 
 try {
 	const terms = load_terms(termdbfile)
@@ -32,6 +43,11 @@ try {
 	console.log(e.message || e)
 	if(e.stack) console.log(e.stack)
 }
+
+
+
+
+
 
 
 
@@ -75,7 +91,7 @@ function load_patientcondition (outcomesfile, terms) {
 	for(const line of fs.readFileSync(outcomesfile, {encoding:'utf8'}).trim().split('\n')) {
 		const l = line.split('\t')
 		const grade = Number(l[2])
-		if( uncomputable.has( grade )) continue
+		if( uncomputableGrades.has( grade )) continue
 		const sample = l[0]
 		const term_id = l[1]
 		const term = terms[ term_id ]
