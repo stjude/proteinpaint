@@ -132,7 +132,10 @@ arg:
     table: table_init(plot.dom.viz)
   }
   // set configuration controls
-  plot.controls = controls_init(plot)
+  plot.controls = controls_init({
+    plot,
+    holder: plot.dom.controls
+  })
   plot.main()
   return plot
 }
@@ -304,7 +307,6 @@ at the beginning or stacked bar plot for cross-tabulating
   plot.views.stattable.main(plot, data, plot.settings.currViews.includes("stattable"))
   plot.views.table.main(plot, data, plot.settings.currViews.includes("table"))
   plot.views.banner.main(plot, data)
-  plot.controls.postRender(plot)
   plot.bus.emit("postRender")
 }
 
