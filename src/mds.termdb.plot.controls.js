@@ -196,9 +196,9 @@ function setScaleOpts(plot, self) {
     'pp-termdb-scale-unit-' + self.index, 
     td, 
     [
-      {label: 'Linear', value: 'abs'},
+      {label: 'Absolute', value: 'abs'},
       {label: 'Log', value: 'log'},
-      {label: 'Percentage', value: 'pct'}
+      {label: 'Proportion', value: 'pct'}
     ]
   )
 
