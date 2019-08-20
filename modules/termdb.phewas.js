@@ -51,7 +51,6 @@ q{}
 	let samplefilterset
 	if( q.tvslst ) {
 		samplefilterset = new Set( termdbsql.get_samples( JSON.parse(decodeURIComponent(q.tvslst)), ds ) )
-		console.log('filter',samplefilterset.size)
 	}
 
 	const [sample2gt, genotype2sample] = await utils.loadfile_ssid( q.ssid, samplefilterset )
@@ -179,6 +178,7 @@ export async function do_precompute ( q, res, ds ) {
 /*
 for precomputing
 programmatically generate list of samples for each category of a term
+as well as list of control samples for condition terms
 
 use get_rows()
 - categorical: no config

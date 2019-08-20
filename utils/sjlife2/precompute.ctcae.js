@@ -25,8 +25,8 @@ const datasetjsfile = process.argv[4]
 const uncomputableGrades = new Set()
 {
 	const ds = require(datasetjsfile)
-	if( ds.cohort.termdb.uncomputable_grades ) {
-		for(const k in ds.cohort.termdb.uncomputable_grades) uncomputableGrades.add( k )
+	if( ds.cohort.termdb.patient_condition.uncomputable_grades ) {
+		for(const k in ds.cohort.termdb.patient_condition.uncomputable_grades) uncomputableGrades.add( Number(k) )
 	}
 }
 
