@@ -1,5 +1,6 @@
 import {event as d3event} from 'd3-selection'
 import * as client from './client'
+import * as dom from './dom'
 import {init as termdbinit} from './mds.termdb'
 import {display as tvs_display} from './mds.termdb.termvaluesetting.ui'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
@@ -479,7 +480,7 @@ function show_group_infofield (group, tk) {
 
 	const holder = group.dom.td3.append('span')
 
-	const [select, btn] = client.make_select_btn_pair( holder )
+	const [select, btn] = dom.make_select_btn_pair( holder )
 
 	select.on('change',async()=>{
 		const value = select.node().value
@@ -524,7 +525,7 @@ also <select> for changing group
 	const p = tk.populations.find(i=>i.key==group.key)
 	const af = tk.vcf.numerical_axis.AFtest
 
-	const [select, btn] = client.make_select_btn_pair( holder )
+	const [select, btn] = dom.make_select_btn_pair( holder )
 
 	select.on('change', async()=>{
 		const value = select.node().value

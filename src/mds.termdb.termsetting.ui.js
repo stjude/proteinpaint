@@ -1,4 +1,5 @@
 import * as client from './client'
+import * as dom from './dom'
 import {init} from './mds.termdb'
 import {event as d3event} from 'd3-selection'
 
@@ -87,7 +88,7 @@ export async function display (obj){
 
 		} else if (obj.termsetting.term.iscondition){
 
-            const [select, btn] = client.make_select_btn_pair( div_showterm )
+            const [select, btn] = dom.make_select_btn_pair( div_showterm )
             select.style('margin-left','1px')
 				.on('change',()=>{
 					const v = select.node().value
