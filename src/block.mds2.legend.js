@@ -4,6 +4,7 @@ import {legend_newrow} from './block.legend'
 import * as common from './common'
 import {may_create_vcflegend_numericalaxis} from './block.mds2.vcf.numericaxis.legend'
 import {may_create_variantfilter} from './block.mds2.legend.variantfilter'
+import {make_radios, make_one_checkbox} from './dom'
 
 
 
@@ -290,22 +291,58 @@ function may_create_ldlegend ( tk, block ) {
 
 	// td2
 	const td = row.append('td')
+
 	const table = td.append('table')
+		.style('border-spacing','10px')
+		.style('border-collapse','separate')
+	/* one row per track
+	col1. name
+	col2. show/hide
+	col3. overlay radio
+	one extra row with the no-overlay option
+	*/
+
+	const radios = make_radios({
+		holder: td,
+		styles:{margin:'0px'},
+		options:[...tk.ld.tracks.map(i=>{return{label:'Overlay',value:i.name}}), {label:'No overlay',value:'no_overlay',checked:true}],
+		callback: async (value)=>{
+			if(value=='no_overlay') {
+				delete tk.ld.overlaywith
+			} else {
+				tk.ld.overlaywith = value
+			}
+		}
+	})
+
 	for(const ld of tk.ld.tracks) {
 		const tr = table.append('tr')
+		// col1
 		tr.append('td')
 			.text(ld.name)
-		tr.append('td')
-			.append('button')
-			.text( ld.shown?'Hide':'Show' )
-			.on('click', async ()=>{
-				const button = d3event.target
-				button.innerHTML = 'Loading...'
-				button.disabled=true
+		// col2
+		make_one_checkbox({
+			holder: tr.append('td'),
+			labeltext: 'Show',
+			checked: ld.shown,
+			callback: async ()=>{
 				ld.shown = !ld.shown
 				await tk.load()
-				button.disabled=false
-				button.innerHTML = ld.shown?'Hide':'Show'
-			})
+			}
+		})
+		// col3
+		tr.append('td')
+			.node()
+			.appendChild( radios.divs.filter(d=>d.value==ld.name).node() )
+	}
+	// last row for "no-overlay"
+	{
+		const tr = table.append('tr')
+		tr.append('td')
+		tr.append('td')
+		tr.append('td')
+			.style('text-align','right')
+			.node()
+			.appendChild( radios.divs.filter(d=>d.label=='No overlay').node() )
 	}
 }

@@ -1,4 +1,8 @@
-
+/*
+********************** EXPORTED
+make_radios
+make_one_checkbox
+*/
 
 
 
@@ -10,7 +14,10 @@ export function make_radios ( arg ) {
 .options[ {} ]
 	.label
 	.value
-.inputHandler
+	.checked
+		only set for at most one option
+.callback
+	async
 
 ******* Optional
 .styles{}
@@ -42,11 +49,49 @@ export function make_radios ( arg ) {
 		.attr('type', 'radio')
 		.attr('name', inputName )
 		.attr('value', d=>d.value)
-		.on('input', d=>{
-			callback( d.value )
+		.on('input', async (d)=>{
+			inputs.property('disabled',true)
+			await callback( d.value )
+			inputs.property('disabled',false)
 		})
+	inputs.filter(d=>d.checked).property('checked', true)
 
 	labels.append('span')
 		.html(d=>'&nbsp;'+d.label)
-	//return { divs, labels, inputs }
+	return { divs, labels, inputs }
+}
+
+
+
+
+export function make_one_checkbox ( arg ) {
+/* on/off switch
+
+******* required
+.holder
+.labeltext
+.callback()
+	async
+	one boolean argument corresponding to whether the box is checked or not
+******* optional
+.divstyle{}
+.checked
+	if set to true, box is checked by default
+*/
+	const { holder, labeltext, callback, checked, divstyle } = arg
+
+	const div = holder.append('div')
+	if(divstyle) {
+		for(const k in divstyle) div.style(k, divstyle[k])
+	}
+	const label = div.append('label')
+	const input = label.append('input')
+		.attr('type','checkbox')
+		.property('checked', checked)
+		.on('input', async ()=>{
+			input.property('disabled', true)
+			await callback(input.property('checked'))
+			input.property('disabled', false)
+		})
+	label.append('span').html('&nbsp;'+labeltext)
 }
