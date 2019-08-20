@@ -69,7 +69,7 @@ function setBurgerBtn(controls) {
     .style('transition','0.5s')
     .html('&#8801;')
     .on('click', () => {
-      controls.isVisible = !controls.isVisible // controls.dom.tip.style('visibility') == "hidden" ? "visible" : "hidden"
+      controls.isVisible = !controls.isVisible
       controls.main(controls.plot)      
     })
 
@@ -562,12 +562,10 @@ function setBarsAsOpts(controls, termNum, label, index) {
 
 
 function setBinOpts(controls, termNum, label) {
-  const tr = controls.dom.table.append('tr')
-
-  tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
-
-  const bin_edit_td = tr.append('td')
   const plot = controls.plot
+  const tr = controls.dom.table.append('tr')
+  tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
+  const bin_edit_td = tr.append('td')
 
   bin_edit_td.append('div')
     .attr('class','sja_edit_btn')
