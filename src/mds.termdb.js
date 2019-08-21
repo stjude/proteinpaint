@@ -83,7 +83,7 @@ callbacks: {
   
   // tracker for viewed/plotted terms, 
   // to trigger re-render on state update
-  obj.plots = []
+  obj.components = {plots:[]}
   obj.expanded_term_ids = []
 
   obj.main = (updatedKeyVals={}) => {
@@ -91,7 +91,16 @@ callbacks: {
       obj[key] = updates[key]
     }
     // trigger all rendered sub-elements
-    for(const plot of obj.plots) plot.main()
+    for(const name in obj.components) {
+      if (Array.isArray(obj.components[name])) {
+        // example: 1 or more component.plots 
+        for(const component of obj.components[name]) {
+          component.main()
+        }
+      } else {
+        obj.components[name].main()
+      }
+    }
   }
 
   obj.button_radius = button_radius
@@ -450,7 +459,7 @@ function make_barplot ( obj, opts, div, callback ) {
 	}
 	
   const plot = plot_init( arg )
-  obj.plots.push(plot)
+  obj.components.plots.push(plot)
 }
 
 
