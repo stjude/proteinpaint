@@ -2,7 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init as plot_init} from './mds.termdb.plot'
-import {init as controls_init, getFilterUi, getCartUi} from './mds.termdb.tree.controls'
+import {setObjBarClickCallback, getFilterUi, getCartUi} from './mds.termdb.tree.controls'
 import { debounce } from 'debounce'
 
 
@@ -99,8 +99,7 @@ callbacks: {
 
   obj.button_radius = button_radius
   if (!obj.callbacks) obj.callbacks = {}
-  // filter, cart
-  controls_init(obj) 
+  setObjBarClickCallback(obj) 
   // create event bus for this tree obj
   obj.bus = client.get_event_bus(
     ['postRender'], 

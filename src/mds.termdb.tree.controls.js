@@ -3,57 +3,6 @@ import {event} from 'd3-selection'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 
-export function init(obj) {
-  // below is used for setting up barchart event bus 
-  obj.callbacks.bar = {
-    postClick: obj.modifier_barchart_selectbar && obj.modifier_barchart_selectbar.callback
-      ? termValues => obj.modifier_barchart_selectbar.callback({terms: termValues})
-      : obj.bar_click_menu
-      ? termValues => show_bar_click_menu(obj, termValues)
-      : ()=>{}
-  }
-}
-
-function show_bar_click_menu(obj, termValues) {
-/*
-  obj           the term tree obj
-  termValue     array of term-value entries
-*/
-  const options = []
-  if (obj.bar_click_menu.add_filter) {
-    options.push({
-      label: "Add as filter", 
-      callback: obj.components.filter.menuoption_callback // menuoption_add_filter
-    })
-  }
-  if (obj.bar_click_menu.select_to_gp) {
-    options.push({
-      label: "Select to GenomePaint",
-      callback: select_to_gp.menuoption_callback
-    })
-  }
-  if (obj.bar_click_menu.select_group_add_to_cart) {
-    options.push({
-      label: "Add group to cart",
-      callback: obj.components.cart.menuoption_callback
-    })
-  }
-  if (options.length) {
-    obj.tip.clear().d
-      .selectAll('div')
-      .data(options)
-    .enter().append('div')
-      .attr('class', 'sja_menuoption')
-      .html(d=>d.label)
-      .on('click', d => {
-        obj.tip.hide()
-        d.callback(obj, termValues)
-      })
-
-    obj.tip.show(event.clientX, event.clientY)
-  }
-}
-
 export function getFilterUi(obj) {
     if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
       // do not display ui, and do not collect callbacks
@@ -99,68 +48,9 @@ export function getFilterUi(obj) {
       if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
       validate_termvaluesetting( obj.termfilter.terms )
       obj.termfilter.update_terms()
-    },
-
-    menuoption_callback( obj, tvslst ) {
-    /*
-    obj: the tree object
-    tvslst: an array of 1 or 2 term-value setting objects
-         this is to be added to the obj.termfilter.terms[]
-       if barchart is single-term, tvslst will have only one element
-       if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
-    */
-      if(!tvslst) return
-
-      if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
-        // do not display ui, and do not collect callbacks
-        return
-      }
-
-      for(const [i, term] of tvslst.entries()){
-        obj.termfilter.terms.push(term)
-      }
-
-      obj.main()
     }
   }
 }
-
-
-
-const select_to_gp = {
-  menuoption_callback( obj, tvslst ) {
-    const lst = []
-    for(const t of tvslst) lst.push(t)
-    if(obj.termfilter && obj.termfilter.terms) {
-      for(const t of obj.termfilter.terms) {
-        lst.push( JSON.parse(JSON.stringify(t)))
-      }
-    }
-
-    const pane = newpane({x:100,y:100})
-    import('./block').then(_=>{
-      new _.Block({
-        hostURL:localStorage.getItem('hostURL'),
-        holder: pane.body,
-        genome:obj.genome,
-        nobox:true,
-        chr: obj.genome.defaultcoord.chr,
-        start: obj.genome.defaultcoord.start,
-        stop: obj.genome.defaultcoord.stop,
-        nativetracks:[ obj.genome.tracks.find(i=>i.__isgene).name.toLowerCase() ],
-        tklst:[ {
-          type:tkt.mds2,
-          dslabel:obj.dslabel,
-          vcf:{ numerical_axis:{ AFtest:{ groups:[
-            { is_termdb:true, terms: lst },
-            obj.bar_click_menu.select_to_gp.group_compare_against
-          ] } } }
-        } ]
-      })
-    })
-  }
-}
-
 
 
 export function getCartUi(obj) {
@@ -184,25 +74,7 @@ export function getCartUi(obj) {
         obj.dom.cartdiv
           .style('display','none')
       }
-    },
-    menuoption_callback( obj, tvslst ) {
-      if(!tvslst) return
-        
-      const new_group = {}
-      new_group.is_termdb = true
-      new_group.terms = []
-
-      for(const [i, term] of tvslst.entries()){
-        new_group.terms.push(term)
-      }
-
-      if(!obj.selected_groups){
-        obj.selected_groups = []
-      }
-
-      obj.selected_groups.push(new_group)
-      cart.main()
-    },
+    }
   }
 
   return cart
@@ -316,3 +188,129 @@ function make_selected_group_tip(obj, cart){
       })
   }
 }
+
+
+export function setObjBarClickCallback(obj) {
+  // below is used for setting up barchart event bus 
+  obj.callbacks.bar = {
+    postClick: obj.modifier_barchart_selectbar && obj.modifier_barchart_selectbar.callback
+      ? termValues => obj.modifier_barchart_selectbar.callback({terms: termValues})
+      : obj.bar_click_menu
+      ? termValues => show_bar_click_menu(obj, termValues)
+      : ()=>{}
+  }
+}
+
+function show_bar_click_menu(obj, termValues) {
+/*
+  obj           the term tree obj
+  termValue     array of term-value entries
+*/
+  const options = []
+  if (obj.bar_click_menu.add_filter) {
+    options.push({
+      label: "Add as filter", 
+      callback: menuoption_add_filter
+    })
+  }
+  if (obj.bar_click_menu.select_to_gp) {
+    options.push({
+      label: "Select to GenomePaint",
+      callback: menuoption_select_to_gp
+    })
+  }
+  if (obj.bar_click_menu.select_group_add_to_cart) {
+    options.push({
+      label: "Add group to cart",
+      callback: menuoption_select_group_add_to_cart
+    })
+  }
+  if (options.length) {
+    obj.tip.clear().d
+      .selectAll('div')
+      .data(options)
+    .enter().append('div')
+      .attr('class', 'sja_menuoption')
+      .html(d=>d.label)
+      .on('click', d => {
+        obj.tip.hide()
+        d.callback(obj, termValues)
+      })
+
+    obj.tip.show(event.clientX, event.clientY)
+  }
+}
+
+function menuoption_add_filter( obj, tvslst ) {
+  /*
+  obj: the tree object
+  tvslst: an array of 1 or 2 term-value setting objects
+       this is to be added to the obj.termfilter.terms[]
+     if barchart is single-term, tvslst will have only one element
+     if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
+  */
+  if(!tvslst) return
+
+  if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
+    // do not display ui, and do not collect callbacks
+    return
+  }
+
+  for(const [i, term] of tvslst.entries()){
+    obj.termfilter.terms.push(term)
+  }
+
+  obj.main()
+}
+
+function menuoption_select_to_gp( obj, tvslst ) {
+  const lst = []
+  for(const t of tvslst) lst.push(t)
+  if(obj.termfilter && obj.termfilter.terms) {
+    for(const t of obj.termfilter.terms) {
+      lst.push( JSON.parse(JSON.stringify(t)))
+    }
+  }
+
+  const pane = newpane({x:100,y:100})
+  import('./block').then(_=>{
+    new _.Block({
+      hostURL:localStorage.getItem('hostURL'),
+      holder: pane.body,
+      genome:obj.genome,
+      nobox:true,
+      chr: obj.genome.defaultcoord.chr,
+      start: obj.genome.defaultcoord.start,
+      stop: obj.genome.defaultcoord.stop,
+      nativetracks:[ obj.genome.tracks.find(i=>i.__isgene).name.toLowerCase() ],
+      tklst:[ {
+        type:tkt.mds2,
+        dslabel:obj.dslabel,
+        vcf:{ numerical_axis:{ AFtest:{ groups:[
+          { is_termdb:true, terms: lst },
+          obj.bar_click_menu.select_to_gp.group_compare_against
+        ] } } }
+      } ]
+    })
+  })
+}
+
+function menuoption_select_group_add_to_cart( obj, tvslst ) {
+  if(!tvslst || !tvslst.length) return
+    
+  const new_group = {}
+  new_group.is_termdb = true
+  new_group.terms = []
+
+  for(const [i, term] of tvslst.entries()){
+    new_group.terms.push(term)
+  }
+
+  if(!obj.selected_groups){
+    obj.selected_groups = []
+  }
+
+  obj.selected_groups.push(new_group)
+  obj.components.cart.main()
+}
+
