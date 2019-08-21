@@ -236,7 +236,11 @@ export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
             term.graph.barchart.numeric_bin.bins_less :
             term.graph.barchart.numeric_bin.bins
 
+        if(!bins.last_bin) bins.last_bin = {}
+
         custom_bins_q = JSON.parse(JSON.stringify(bins))
+        term_q = {}
+        term_q.binconfig = JSON.parse(JSON.stringify(bins))
     }
     // console.log(term_q)
     default_bins_q = (term.graph.barchart.numeric_bin.bins_less && !is_term1)? 

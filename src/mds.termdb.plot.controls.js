@@ -567,6 +567,7 @@ function setBinOpts(controls, termNum, label) {
   tr.append('td').html(label).attr('class', 'sja-termdb-config-row-label')
 
   const bin_edit_td = tr.append('td')
+  const plot = controls.plot
 
   bin_edit_td.append('div')
     .attr('class','sja_edit_btn')
