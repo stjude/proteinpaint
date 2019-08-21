@@ -52,7 +52,7 @@ export class TermdbBarchart{
     if (data) this.currServerData = data
     if (plot) {
       this.plot = plot
-      this.obj = obj
+      this.obj = plot.obj
     }
     if (!this.setVisibility()) return
     this.updateSettings(plot)
