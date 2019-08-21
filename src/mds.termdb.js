@@ -2,7 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init as plot_init} from './mds.termdb.plot'
-import {init as controls_init, getFilterUi} from './mds.termdb.tree.controls'
+import {init as controls_init, getFilterUi, getCartUi} from './mds.termdb.tree.controls'
 import { debounce } from 'debounce'
 
 
@@ -78,10 +78,6 @@ callbacks: {
 }
 */
 	if( obj.debugmode ) window.obj = obj
-  
-  // tracker for viewed/plotted terms, 
-  // to trigger re-render on state update
-  obj.components = {plots:[]}
   obj.expanded_term_ids = []
 
   obj.main = (updatedKeyVals={}) => {
@@ -93,10 +89,10 @@ callbacks: {
       if (Array.isArray(obj.components[name])) {
         // example: 1 or more component.plots 
         for(const component of obj.components[name]) {
-          component.main()
+          if (component) component.main()
         }
       } else {
-        obj.components[name].main()
+        if (obj.components[name]) obj.components[name].main()
       }
     }
   }
@@ -126,6 +122,7 @@ callbacks: {
 
   obj.components = {
     filter: getFilterUi(obj),
+    cart: getCartUi(obj),
     plots: []
   }
 
@@ -181,7 +178,6 @@ also for showing term tree, allowing to select certain terms
 */
 
 	display_searchbox( obj )
-	obj.controls.components.cart.render(obj)
 
 	const data = await obj.do_query(["default_rootterm=1"])
 	if(data.error) throw 'error getting default root terms: '+data.error
@@ -197,6 +193,7 @@ also for showing term tree, allowing to select certain terms
 		print_one_term( arg, obj )
 	}
 
+  obj.main()
   obj.bus.emit('postRender')
 }
 

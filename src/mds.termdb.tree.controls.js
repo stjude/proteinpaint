@@ -4,10 +4,6 @@ import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 
 export function init(obj) {
-  obj.controls = {
-    components:{cart}
-  }
-
   // below is used for setting up barchart event bus 
   obj.callbacks.bar = {
     postClick: obj.modifier_barchart_selectbar && obj.modifier_barchart_selectbar.callback
@@ -24,11 +20,10 @@ function show_bar_click_menu(obj, termValues) {
   termValue     array of term-value entries
 */
   const options = []
-  const filter = obj.components.filter
   if (obj.bar_click_menu.add_filter) {
     options.push({
       label: "Add as filter", 
-      callback: filter.menuoption_callback // menuoption_add_filter
+      callback: obj.components.filter.menuoption_callback // menuoption_add_filter
     })
   }
   if (obj.bar_click_menu.select_to_gp) {
@@ -40,7 +35,7 @@ function show_bar_click_menu(obj, termValues) {
   if (obj.bar_click_menu.select_group_add_to_cart) {
     options.push({
       label: "Add group to cart",
-      callback: cart.menuoption_callback
+      callback: obj.components.cart.menuoption_callback
     })
   }
   if (options.length) {
@@ -168,76 +163,76 @@ const select_to_gp = {
 
 
 
-const cart = {
-  render(obj) {
-    if(!obj.selected_groups) return
+export function getCartUi(obj) {
+  const cart = {
+    main() {
+      if(!obj.selected_groups) return
 
-    if(obj.selected_groups.length > 0){
-      // selected group button
-      obj.dom.cartdiv
-        .style('display','inline-block')
-        .attr('class','sja_filter_tag_btn')
-        .style('padding','6px')
-        .style('margin','0px 10px')
-        .style('border-radius', obj.button_radius)
-        .style('background-color','#00AB66')
-        .style('color','#fff')
-        .text('Selected '+ obj.selected_groups.length +' Group' + (obj.selected_groups.length > 1 ?'s':''))
-        .on('click',()=>cart.make_selected_group_tip(obj))
-    }else{
-      obj.dom.cartdiv
-        .style('display','none')
-    }
-  },
-  menuoption_callback( obj, tvslst ) {
-    if(!tvslst) return
-      
-    const new_group = {}
-    new_group.is_termdb = true
-    new_group.terms = []
-
-    for(const [i, term] of tvslst.entries()){
-      new_group.terms.push(term)
-    }
-
-    if(!obj.selected_groups){
-      obj.selected_groups = []
-    }
-
-    obj.selected_groups.push(new_group)
-    cart.render(obj)
-  },
-  make_selected_group_tip(obj){
-    // const tip = obj.tip // not working, creating new tip
-    const tip = new Menu({padding:'0'})
-    tip.clear()
-    tip.showunder( obj.dom.cartdiv.node() )
-
-    const table = tip.d.append('table')
-      .style('border-spacing','5px')
-      .style('border-collapse','separate')
-
-    // one row for each group
-    for( const [i, group] of obj.selected_groups.entries() ) {
-    
-      const tr = table.append('tr')
-      const td1 = tr.append('td')
-
-      td1.append('div')
-        .attr('class','sja_filter_tag_btn')
-        .text('Group '+(i+1))
-        .style('white-space','nowrap')
-        .style('color','#000')
-        .style('padding','6px')
-        .style('margin','3px 5px')
-        .style('font-size','.7em')
-        .style('text-transform','uppercase')
-        
-      group.dom = {
-        td2: tr.append('td'),
-        td3: tr.append('td').style('opacity',.5).style('font-size','.8em'),
-        td4: tr.append('td')
+      if(obj.selected_groups.length > 0){
+        // selected group button
+        obj.dom.cartdiv
+          .style('display','inline-block')
+          .attr('class','sja_filter_tag_btn')
+          .style('padding','6px')
+          .style('margin','0px 10px')
+          .style('border-radius', obj.button_radius)
+          .style('background-color','#00AB66')
+          .style('color','#fff')
+          .text('Selected '+ obj.selected_groups.length +' Group' + (obj.selected_groups.length > 1 ?'s':''))
+          .on('click',()=>make_selected_group_tip(obj, cart))
+      }else{
+        obj.dom.cartdiv
+          .style('display','none')
       }
+    },
+    menuoption_callback( obj, tvslst ) {
+      if(!tvslst) return
+        
+      const new_group = {}
+      new_group.is_termdb = true
+      new_group.terms = []
+
+      for(const [i, term] of tvslst.entries()){
+        new_group.terms.push(term)
+      }
+
+      if(!obj.selected_groups){
+        obj.selected_groups = []
+      }
+
+      obj.selected_groups.push(new_group)
+      cart.main()
+    },
+  }
+
+  return cart
+}
+
+function make_selected_group_tip(obj, cart){
+  // const tip = obj.tip // not working, creating new tip
+  const tip = new Menu({padding:'0'})
+  tip.clear()
+  tip.showunder( obj.dom.cartdiv.node() )
+
+  const table = tip.d.append('table')
+    .style('border-spacing','5px')
+    .style('border-collapse','separate')
+
+  // one row for each group
+  for( const [i, group] of obj.selected_groups.entries() ) {
+  
+    const tr = table.append('tr')
+    const td1 = tr.append('td')
+
+    td1.append('div')
+      .attr('class','sja_filter_tag_btn')
+      .text('Group '+(i+1))
+      .style('white-space','nowrap')
+      .style('color','#000')
+      .style('padding','6px')
+      .style('margin','3px 5px')
+      .style('font-size','.7em')
+      .style('text-transform','uppercase')
       
       termvaluesettingui.display(
         group.dom.td2, 
@@ -276,49 +271,48 @@ const cart = {
             update_cart_button(obj)
           }
         })
-    }
+  }
 
-    if(obj.selected_groups.length > 1){
-      
-      const tr_gp = table.append('tr')
-      const td_gp = tr_gp.append('td')
-        .attr('colspan',4)
-        .attr('align','center')
-        .style('padding','0')
+  if(obj.selected_groups.length > 1){
+    
+    const tr_gp = table.append('tr')
+    const td_gp = tr_gp.append('td')
+      .attr('colspan',4)
+      .attr('align','center')
+      .style('padding','0')
 
-      td_gp.append('div')
-        .attr('class','sja_filter_tag_btn')
-        .style('display','inline-block')
-        .style('height','100%')
-        .style('width','96%')
-        .style('padding','4px 10px')
-        .style('margin-top','10px')
-        .style('border-radius','3px')
-        .style('background-color','#eee')
-        .style('color','#000')
-        .text('Perform Association Test in GenomePaint')
-        .style('font-size','.8em')
-        .on('click',()=>{
-          tip.hide()
-          const pane = newpane({x:100,y:100})
-          import('./block').then(_=>{
-            new _.Block({
-              hostURL:localStorage.getItem('hostURL'),
-              holder: pane.body,
-              genome:obj.genome,
-              nobox:true,
-              chr: obj.genome.defaultcoord.chr,
-              start: obj.genome.defaultcoord.start,
-              stop: obj.genome.defaultcoord.stop,
-              nativetracks:[ obj.genome.tracks.find(i=>i.__isgene).name.toLowerCase() ],
-              tklst:[ {
-                type:tkt.mds2,
-                dslabel:obj.dslabel,
-                vcf:{ numerical_axis:{ AFtest:{ groups: obj.selected_groups} } }
-              } ]
-            })
+    td_gp.append('div')
+      .attr('class','sja_filter_tag_btn')
+      .style('display','inline-block')
+      .style('height','100%')
+      .style('width','96%')
+      .style('padding','4px 10px')
+      .style('margin-top','10px')
+      .style('border-radius','3px')
+      .style('background-color','#eee')
+      .style('color','#000')
+      .text('Perform Association Test in GenomePaint')
+      .style('font-size','.8em')
+      .on('click',()=>{
+        tip.hide()
+        const pane = newpane({x:100,y:100})
+        import('./block').then(_=>{
+          new _.Block({
+            hostURL:localStorage.getItem('hostURL'),
+            holder: pane.body,
+            genome:obj.genome,
+            nobox:true,
+            chr: obj.genome.defaultcoord.chr,
+            start: obj.genome.defaultcoord.start,
+            stop: obj.genome.defaultcoord.stop,
+            nativetracks:[ obj.genome.tracks.find(i=>i.__isgene).name.toLowerCase() ],
+            tklst:[ {
+              type:tkt.mds2,
+              dslabel:obj.dslabel,
+              vcf:{ numerical_axis:{ AFtest:{ groups: obj.selected_groups} } }
+            } ]
           })
         })
-    }
+      })
   }
 }

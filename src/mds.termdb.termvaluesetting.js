@@ -47,7 +47,8 @@ TODO also work for termdb filter
 				if(!Array.isArray(t.values)) throw '.values[] is not an array from a '+from+' term'
 				for(const i of t.values) {
 					if(typeof i != 'object') throw 'an element is not object from values of '+t.term.id+' from '+from
-					if(!i.key) throw '.key missing from a value of '+t.term.id+' from '+from
+					// i.key == 0 should be valid, check for presence of the object["key"] property instead 
+					if(!('key' in i)) throw '.key missing from a value of '+t.term.id+' from '+from
 					if(!i.label) i.label = i.key
 				}
 				if( t.bar_by_grade ) {
