@@ -39,7 +39,7 @@ tape("overlay-dependent display", function (test) {
 
   function testHiddenNoOverlay(plot) {
     test.equal(
-      plot.views.boxplot.dom.svg.style('display'),
+      plot.components.boxplot.dom.svg.style('display'),
       'none', 
       "should be HIDDEN when there is no overlay"
     )
@@ -57,7 +57,7 @@ tape("overlay-dependent display", function (test) {
 
   function testVisibleBoxplot(plot) {
     test.equal(
-      plot.views.boxplot.dom.svg.style('display'), 
+      plot.components.boxplot.dom.svg.style('display'), 
       'inline-block', 
       "should be visible when there is a numeric overlay"
     )
@@ -75,7 +75,7 @@ tape("overlay-dependent display", function (test) {
 
   function testHiddenNonNumericOverlay(plot) {
     test.equal(
-      plot.views.boxplot.dom.svg.style('display'), 
+      plot.components.boxplot.dom.svg.style('display'), 
       'none', 
       "should be HIDDEN when the overlay is not numeric"
     )

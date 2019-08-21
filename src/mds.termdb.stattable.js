@@ -11,7 +11,8 @@ export function init(holder) {
     // main() remembers the self "instance" via closure
     // so that self does not need to be passed to it
     // as an argument
-    main(plot, data, isVisible) {
+    main(plot, data) {
+      const isVisible = plot.settings.currViews.includes("stattable")
       if (!isVisible) {
         self.dom.div.style('display','none')
         return

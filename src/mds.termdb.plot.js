@@ -119,7 +119,11 @@ arg:
   }
 
   // set view functions or objects
-  plot.views = {
+  plot.components = {
+    controls: controls_init({
+      plot,
+      holder: plot.dom.controls
+    }),
     banner: banner_init(plot.dom.banner), 
     barchart: new TermdbBarchart({
       holder: plot.dom.viz,
@@ -130,12 +134,7 @@ arg:
     boxplot: boxplot_init(plot.dom.viz),
     stattable: stattable_init(plot.dom.viz),
     table: table_init(plot.dom.viz)
-  }
-  // set configuration controls
-  plot.controls = controls_init({
-    plot,
-    holder: plot.dom.controls
-  })
+  } 
   plot.main()
   return plot
 }
@@ -296,17 +295,9 @@ function syncParams( plot, data ) {
 }
 
 function render ( plot, data ) {
-/*
-make a barchart, boxplot, or stat table based on configs 
-in the plot object called by showing the single-term plot 
-at the beginning or stacked bar plot for cross-tabulating
-*/ 
-  plot.controls.main(plot, data)
-  plot.views.barchart.main(plot, data, plot.settings.currViews.includes("barchart"), plot.obj)
-  plot.views.boxplot.main(plot, data, plot.settings.currViews.includes("boxplot"))
-  plot.views.stattable.main(plot, data, plot.settings.currViews.includes("stattable"))
-  plot.views.table.main(plot, data, plot.settings.currViews.includes("table"))
-  plot.views.banner.main(plot, data)
+  for(const name in plot.components) {
+    plot.components[name].main(plot, data)
+  }
   plot.bus.emit("postRender")
 }
 

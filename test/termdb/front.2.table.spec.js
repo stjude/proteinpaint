@@ -39,7 +39,7 @@ tape("overlay-dependent display", function (test) {
 
   function testHiddenTable(plot) {
     test.equal(
-      plot.views.table.dom.div.style('display'),
+      plot.components.table.dom.div.style('display'),
       'none', 
       "should be HIDDEN when there is no overlay"
     )
@@ -57,7 +57,7 @@ tape("overlay-dependent display", function (test) {
 
   function testVisibleTable(plot) {
     test.equal(
-      plot.views.table.dom.div.style('display'), 
+      plot.components.table.dom.div.style('display'), 
       'inline-block', 
       "should be visible when there is an overlay"
     )

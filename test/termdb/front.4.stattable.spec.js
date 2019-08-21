@@ -40,7 +40,7 @@ tape("barchart-dependent display", function (test) {
 
   function testHiddenWithNoBarchart(plot) {
     test.equal(
-      plot.views.stattable.dom.div.style('display'), 
+      plot.components.stattable.dom.div.style('display'), 
       'none', 
       "should have a HIDDEN stattable when the barchart is not in the settings.currViews array"
     )
@@ -55,7 +55,7 @@ tape("barchart-dependent display", function (test) {
 
   function testVisibleWithBarchart(plot) {
     test.equal(
-      plot.views.stattable.dom.div.style('display'), 
+      plot.components.stattable.dom.div.style('display'), 
       'block', 
       "should have a visible stattable when the barchart is in the settings.currViews array"
     )
@@ -91,7 +91,7 @@ tape("term.isfloat-dependent display", function (test) {
 
   function testHiddenIfCategoricalTerm(plot) {
     test.equal(
-      plot.views.stattable.dom.div.style('display'), 
+      plot.components.stattable.dom.div.style('display'), 
       'none', 
       "should have a HIDDEN stattable when plot.term.iscategorical"
     )
@@ -106,7 +106,7 @@ tape("term.isfloat-dependent display", function (test) {
 
   function testVisibleWithNumericTerm(plot) {
     test.equal(
-      plot.views.stattable.dom.div.style('display'), 
+      plot.components.stattable.dom.div.style('display'), 
       'block', 
       "should have a visible stattable when plot.term is numeric"
     )
@@ -139,7 +139,7 @@ tape("term.isfloat-dependent display", function (test) {
 
   function testHiddenIfConditionTerm(plot) {
     test.equal(
-      plot.views.stattable.dom.div.style('display'), 
+      plot.components.stattable.dom.div.style('display'), 
       'none', 
       "should have a HIDDEN stattable when plot.term.iscondition"
     )

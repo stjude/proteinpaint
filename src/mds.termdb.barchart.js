@@ -47,14 +47,24 @@ export class TermdbBarchart{
     )
   }
 
-  main(plot=null, data=null, isVisible=true, obj=null) {
+  main(plot=null, data=null) {
     if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
     if (data) this.currServerData = data
-    if (!this.setVisibility(isVisible)) return
-    if (obj) this.obj = obj
-    if (plot) this.plot = plot
+    if (plot) {
+      this.plot = plot
+      this.obj = obj
+    }
+    if (!this.setVisibility()) return
     this.updateSettings(plot)
     this.processData(this.currServerData)
+  }
+
+  setVisibility() {
+    const isVisible = this.plot.settings.currViews.includes("barchart")
+    const display = isVisible ? 'block' : 'none'
+    this.dom.barDiv.style('display', display)
+    this.dom.legendDiv.style('display', display)
+    return isVisible
   }
 
   updateSettings(plot) {
@@ -112,13 +122,6 @@ export class TermdbBarchart{
         }
       }
     }
-  }
-
-  setVisibility(isVisible) {
-    const display = isVisible ? 'block' : 'none'
-    this.dom.barDiv.style('display', display)
-    this.dom.legendDiv.style('display', display)
-    return isVisible
   }
 
   processData(chartsData) {

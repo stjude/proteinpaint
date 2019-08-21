@@ -41,15 +41,15 @@ tape("single barchart, categorical bars + click", function (test) {
   })
 
   function testBarCount(plot) {
-    const numBars = plot.views.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
-    const numOverlays = plot.views.barchart.dom.barDiv.selectAll('.bars-cell').size()
+    const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
+    const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
     test.true(numBars > 5,  "should have more than 10 Diagnosis Group bars")
     test.equal(numBars, numOverlays,  "should have equal numbers of bars and overlays")
   }
 
   function triggerBarClick(plot) {
     plot.bus.on('postRender', testCategoricalTermValue)
-    plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
+    plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
     setTimeout(()=>{
       plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
     },500);
@@ -57,7 +57,7 @@ tape("single barchart, categorical bars + click", function (test) {
 
   function testCategoricalTermValue(plot) {
     test.equal(termfilter.terms && termfilter.terms.length, 1, "should create a tvslst filter when a bar is clicked")
-    const data = plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect').datum()
+    const data = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect').datum()
     test.deepEqual(
       termfilter.terms, 
       [{
@@ -107,15 +107,15 @@ tape("single chart, with overlay", function (test) {
   })
   
   function testBarCount(plot) {
-    const numBars = plot.views.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
-    const numOverlays = plot.views.barchart.dom.barDiv.selectAll('.bars-cell').size()
+    const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
+    const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
     test.true(numBars > 10, "should have more than 10 Diagnosis Group bars")
     test.true(numOverlays > numBars,  "number of overlays should be greater than bars")
   }
 
   function testOverlayOrder(plot) {
-    const bars_grp = plot.views.barchart.dom.barDiv.selectAll('.bars-cell-grp')
-    const legend_rows = plot.views.barchart.dom.barDiv.selectAll('.legend-row')
+    const bars_grp = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp')
+    const legend_rows = plot.components.barchart.dom.barDiv.selectAll('.legend-row')
     //flag to indicate unordered bars
     let overlay_ordered = true
     const legend_ids = []
@@ -170,8 +170,8 @@ tape("single chart, genotype overlay", function (test) {
   })
   
   function testBarCount(plot) {
-    const numBars = plot.views.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
-    const numOverlays = plot.views.barchart.dom.barDiv.selectAll('.bars-cell').size()
+    const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
+    const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
     test.true(numOverlays > 10, "should have more than 10 Diagnosis Group bars")
     test.equal(numOverlays, 66, "should have a total of 66 overlays")
     test.end()
@@ -212,7 +212,7 @@ tape("click to add numeric, condition term filter", function (test) {
 
   function triggerClick(plot) {
     plot.bus.on('postRender', plot=>testTermValues(plot, elem.datum()))
-    const elem = plot.views.barchart.dom.barDiv.select('.bars-cell').select('rect')
+    const elem = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect')
     elem.node().dispatchEvent(new Event('click', {bubbles: true}));
     setTimeout(()=>{
       plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
@@ -236,7 +236,7 @@ tape("click to add numeric, condition term filter", function (test) {
           term: plot.term2,
           values: [{ 
             key: clickedData.dataId, 
-            label: plot.views.barchart.grade_labels.find(d => d.grade == clickedData.dataId).label
+            label: plot.components.barchart.grade_labels.find(d => d.grade == clickedData.dataId).label
           }]
         }, plot.term2.q), 
         "should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys"
@@ -276,7 +276,7 @@ tape("multiple charts", function (test) {
   })
   
   function testNumCharts(plot) {
-    const numCharts = plot.views.barchart.dom.barDiv.selectAll('.pp-sbar-div').size()
+    const numCharts = plot.components.barchart.dom.barDiv.selectAll('.pp-sbar-div').size()
     test.true(numCharts > 2, "should have more than 2 charts by Age at Cancer Diagnosis")
     test.end()
   }
@@ -310,8 +310,8 @@ tape("series visibility", function (test) {
   })
   
   function testExcluded(plot) {
-    const excluded = plot.views.barchart.settings.exclude.cols
-    test.true(excluded.length > 1 && excluded.length == plot.views.barchart.settings.unannotatedLabels.term1.length, "should have more than 2 charts by Age at Cancer Diagnosis")
+    const excluded = plot.components.barchart.settings.exclude.cols
+    test.true(excluded.length > 1 && excluded.length == plot.components.barchart.settings.unannotatedLabels.term1.length, "should have more than 2 charts by Age at Cancer Diagnosis")
 
     test.end()
   }
