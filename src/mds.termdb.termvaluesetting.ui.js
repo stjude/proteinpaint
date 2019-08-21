@@ -31,8 +31,9 @@ group{}
 
     const tip = new client.Menu({padding:'0'})
 
-    update_terms(terms_div)
+    update_terms()
 
+    group.update_terms = update_terms
 
     // add new term
     const add_term_btn = group_div.append('div')
@@ -71,7 +72,7 @@ group{}
 	// all private functions below
 
 
-    async function update_terms(terms_div){
+    async function update_terms(){
 
         terms_div.selectAll('*').remove()
 
@@ -110,7 +111,7 @@ group{}
                                 tip.hide()
                                 replace_term(result, i)
                                 callback()
-                                update_terms(terms_div)
+                                update_terms()
                             }
                         }
                     }
@@ -139,7 +140,7 @@ group{}
     
                     //update gorup and load tk
                     await callback()
-                    update_terms(terms_div)
+                    update_terms()
                 })
 
                 condition_btn
@@ -205,7 +206,7 @@ group{}
             
                         //update gorup and load tk
                         await callback()
-                        update_terms(terms_div)
+                        update_terms()
                     })
                     
                     term_value_btn
@@ -303,7 +304,7 @@ group{}
                 
                             //update gorup and load tk
                             await callback()
-                            update_terms(terms_div)
+                            update_terms()
                         })
 
                         term_value_btn
@@ -366,7 +367,7 @@ group{}
                 
                             //update gorup and load tk
                             await callback()
-                            update_terms(terms_div)
+                            update_terms()
                         })
 
                         term_value_btn
@@ -408,7 +409,7 @@ group{}
                     group.terms.splice(i, 1)
                     // may_settoloading_termgroup( group )
                     await callback()
-                    update_terms(terms_div)
+                    update_terms()
                 })
         }
     }
@@ -443,7 +444,7 @@ group{}
         
         // update the group div with new terms
         await callback()
-        update_terms(terms_div)
+        update_terms()
     }
 
     function make_select_list(data, select, selected_values, btn_value, first_option){
@@ -530,7 +531,7 @@ group{}
 
                 //update gorup and load tk
                 await callback()
-                update_terms(terms_div)
+                update_terms()
             }
         })
 
@@ -588,7 +589,7 @@ group{}
 
             //update gorup and load tk
             await callback()
-            update_terms(terms_div)
+            update_terms()
         })
     }
 
@@ -674,7 +675,7 @@ group{}
 
                     //update gorup and load tk
                     await callback()
-                    update_terms(terms_div)
+                    update_terms()
                 })
 
             }else{
@@ -828,7 +829,7 @@ group{}
                     range.stopinclusive = stopselect.node().selectedIndex == 0
                 }
                 // display_numeric_filter(group, term_index, value_div)
-                update_terms(terms_div)
+                update_terms()
                 tip.hide()
                 await callback()
             } catch(e) {

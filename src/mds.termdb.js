@@ -207,7 +207,7 @@ function may_display_termfilter( obj ) {
 		validate_termvaluesetting( obj.termfilter.terms )
 	} 
 
-  obj.controls.components.filter.render(obj)
+  obj.controls.components.filter.init(obj)
 }
 
 

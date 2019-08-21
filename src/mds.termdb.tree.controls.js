@@ -61,7 +61,7 @@ function show_bar_click_menu(obj, termValues) {
 }
 
 const filter = {
-  render(obj){
+  init(obj){
     obj.dom.termfilterdiv.selectAll('*').remove()
 
     const div = obj.dom.termfilterdiv
@@ -88,6 +88,10 @@ const filter = {
       // callback when updating the filter
       obj.main
     )
+  },
+  render(obj){
+    obj.termfilter.update_terms()
+    obj.main()
   },
 
   menuoption_callback( obj, tvslst ) {
