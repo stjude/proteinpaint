@@ -1,13 +1,11 @@
 import {Menu, newpane, tkt} from './client'
 import {event} from 'd3-selection'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
+import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 
 export function init(obj) {
   obj.controls = {
-    components:{
-      filter: filter,
-      cart: cart
-    }
+    components:{cart}
   }
 
   // below is used for setting up barchart event bus 
@@ -26,6 +24,7 @@ function show_bar_click_menu(obj, termValues) {
   termValue     array of term-value entries
 */
   const options = []
+  const filter = obj.components.filter
   if (obj.bar_click_menu.add_filter) {
     options.push({
       label: "Add as filter", 
@@ -60,8 +59,19 @@ function show_bar_click_menu(obj, termValues) {
   }
 }
 
-const filter = {
-  init(obj){
+export function getFilterUi(obj) {
+    if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
+      // do not display ui, and do not collect callbacks
+      return
+    }
+
+    if(!obj.termfilter.terms) {
+      obj.termfilter.terms = []
+    } else {
+      if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
+      validate_termvaluesetting( obj.termfilter.terms )
+    }
+
     obj.dom.termfilterdiv.selectAll('*').remove()
 
     const div = obj.dom.termfilterdiv
@@ -88,33 +98,35 @@ const filter = {
       // callback when updating the filter
       obj.main
     )
-  },
-  render(obj){
-    obj.termfilter.update_terms()
-    obj.main()
-  },
 
-  menuoption_callback( obj, tvslst ) {
-  /*
-  obj: the tree object
-  tvslst: an array of 1 or 2 term-value setting objects
-       this is to be added to the obj.termfilter.terms[]
-     if barchart is single-term, tvslst will have only one element
-     if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
-  */
-    if(!tvslst) return
+  return {
+    main() {
+      if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
+      validate_termvaluesetting( obj.termfilter.terms )
+      obj.termfilter.update_terms()
+    },
 
-    if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
-      // do not display ui, and do not collect callbacks
-      return
+    menuoption_callback( obj, tvslst ) {
+    /*
+    obj: the tree object
+    tvslst: an array of 1 or 2 term-value setting objects
+         this is to be added to the obj.termfilter.terms[]
+       if barchart is single-term, tvslst will have only one element
+       if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
+    */
+      if(!tvslst) return
+
+      if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
+        // do not display ui, and do not collect callbacks
+        return
+      }
+
+      for(const [i, term] of tvslst.entries()){
+        obj.termfilter.terms.push(term)
+      }
+
+      obj.main()
     }
-
-    for(const [i, term] of tvslst.entries()){
-      obj.termfilter.terms.push(term)
-    }
-
-    filter.render(obj)
-    obj.main()
   }
 }
 

@@ -2,9 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init as plot_init} from './mds.termdb.plot'
-import {init as controls_init} from './mds.termdb.tree.controls'
-import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
-import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
+import {init as controls_init, getFilterUi} from './mds.termdb.tree.controls'
 import { debounce } from 'debounce'
 
 
@@ -125,6 +123,12 @@ callbacks: {
 		.style('display','inline-block')
 		.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
+
+  obj.components = {
+    filter: getFilterUi(obj),
+    plots: []
+  }
+
 	// simplified query
 	obj.do_query = (args) => {
 		const lst = [ 'genome='+obj.genome.name+'&dslabel='+obj.mds.label ]
@@ -177,8 +181,6 @@ also for showing term tree, allowing to select certain terms
 */
 
 	display_searchbox( obj )
-
-	may_display_termfilter( obj )
 	obj.controls.components.cart.render(obj)
 
 	const data = await obj.do_query(["default_rootterm=1"])
@@ -198,26 +200,6 @@ also for showing term tree, allowing to select certain terms
   obj.bus.emit('postRender')
 }
 
-
-
-
-function may_display_termfilter( obj ) {
-/* when the ui is not displayed, will not allow altering filters and callback-updating
-*/
-  if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
-    // do not display ui, and do not collect callbacks
-    return
-  }
-
-	if(!obj.termfilter.terms) {
-    obj.termfilter.terms = []
-  } else {
-		if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
-		validate_termvaluesetting( obj.termfilter.terms )
-	} 
-
-  obj.controls.components.filter.init(obj)
-}
 
 
 
