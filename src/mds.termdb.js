@@ -2,7 +2,7 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init as plot_init} from './mds.termdb.plot'
-import {init as controls_init} from './mds.termdb.controls'
+import {init as controls_init} from './mds.termdb.tree.controls'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 import { debounce } from 'debounce'
@@ -170,7 +170,7 @@ also for showing term tree, allowing to select certain terms
 	display_searchbox( obj )
 
 	may_display_termfilter( obj )
-	obj.cart.render(obj)
+	obj.controls.components.cart.render(obj)
 
 	const data = await obj.do_query(["default_rootterm=1"])
 	if(data.error) throw 'error getting default root terms: '+data.error
@@ -207,7 +207,7 @@ function may_display_termfilter( obj ) {
 		validate_termvaluesetting( obj.termfilter.terms )
 	} 
 
-  obj.filter.render(obj)
+  obj.controls.components.filter.render(obj)
 }
 
 

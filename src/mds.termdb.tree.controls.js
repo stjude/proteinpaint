@@ -3,8 +3,12 @@ import {event} from 'd3-selection'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 
 export function init(obj) {
-  obj.filter = filter
-  obj.cart = cart
+  obj.controls = {
+    components:{
+      filter: filter,
+      cart: cart
+    }
+  }
 
   // below is used for setting up barchart event bus 
   obj.callbacks.bar = {
