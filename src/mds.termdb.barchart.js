@@ -40,6 +40,7 @@ export class TermdbBarchart{
     this.handlers = getHandlers(this)
     this.controls = {}
     this.term2toColor = {}
+    this.processedExcludes = []
     this.bus = get_event_bus(
       ["postClick"], // will supply term-values to postClick
       opts.obj.callbacks.bar
@@ -86,7 +87,12 @@ export class TermdbBarchart{
     }
     
     this.initExclude(this.currServerData.refs)
-    Object.assign(this.settings, settings, this.currServerData.refs ? this.currServerData.refs : {})
+    Object.assign(
+      this.settings, 
+      settings, 
+      this.currServerData.refs ? this.currServerData.refs : {},
+      {exclude: this.settings.exclude}
+    )
     
     this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
@@ -103,21 +109,21 @@ export class TermdbBarchart{
   }
 
   initExclude(refs) {
-    if (refs.exclude) return
-    refs.exclude = {cols:[], rows:[], colgrps:[], rowgrps:[]}
+    if (this.processedExcludes.includes(refs)) return
+    this.processedExcludes.push(refs)
     const unannotatedColLabels = refs.unannotatedLabels.term1
     if (unannotatedColLabels) {
       for(const label of unannotatedColLabels) {
-        if (!refs.exclude.cols.includes(label)) {
-          refs.exclude.cols.push(label) // do not automatically hide for now
+        if (!this.settings.exclude.cols.includes(label)) {
+          this.settings.exclude.cols.push(label) // do not automatically hide for now
         }
       }
     }
     const unannotatedRowLabels = refs.unannotatedLabels.term2
     if (unannotatedRowLabels) {
       for(const label of unannotatedRowLabels) {
-        if (!refs.exclude.rows.includes(label)) {
-          refs.exclude.rows.push(label) // do not automatically hide for now
+        if (!this.exclude.rows.includes(label)) {
+          this.settings.exclude.rows.push(label) // do not automatically hide for now
         }
       }
     }
@@ -143,7 +149,6 @@ export class TermdbBarchart{
     }
 
     self.setMaxVisibleTotals(chartsData)
-
     const rows = chartsData.refs.rows;
 
     self.barSorter = (a,b) => this.seriesOrder.indexOf(a) - this.seriesOrder.indexOf(b)
