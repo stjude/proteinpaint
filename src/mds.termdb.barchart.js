@@ -32,7 +32,6 @@ export class TermdbBarchart{
     ) 
     this.settings = Object.assign(this.defaults, opts.settings)
     this.renderers = {}
-    this.serverData = {}
     this.terms = {
       term0: null,
       term1: this.opts.term1,

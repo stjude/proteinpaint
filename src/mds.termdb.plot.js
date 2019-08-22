@@ -239,10 +239,17 @@ function getDataName(plot) {
     params.push('term'+i+'_id=' + encodeURIComponent(term.id))
     if (term.iscondition && !term.q) term.q = {}
     if (term.q && typeof term.q == 'object') {
-      if (term.iscondition && !Object.keys(term.q).length) {
-        term.q = {bar_by_grade:1, value_by_max_grade:1}
+      let q={}
+      if (term.iscondition) {
+        q = Object.keys(term.q).length 
+          ? Object.assign({}, term.q)
+          : {bar_by_grade:1, value_by_max_grade:1}
       }
-      params.push('term'+i+'_q=' +encodeURIComponent(JSON.stringify(term.q)))
+      if (term.q.binconfig) {
+        q = Object.assign({},term.q)
+        delete q.binconfig.results
+      }
+      params.push('term'+i+'_q=' +encodeURIComponent(JSON.stringify(q)))
     }
   })
 
@@ -254,7 +261,7 @@ function getDataName(plot) {
       'chr=' + obj.modifier_ssid_barchart.chr,
       'pos=' + obj.modifier_ssid_barchart.pos
     )
-  } 
+  }
 
   if (obj.termfilter && obj.termfilter.terms && obj.termfilter.terms.length) {
     params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms.map(filter=>{
@@ -292,6 +299,16 @@ function syncParams( plot, data ) {
       }
     }
   }
+  // when the server response includes default parameters
+  // that was not in the request parameters, the dataName
+  // will be different even though the plot state is technically 
+  // the same except now with explicit defaults. So store 
+  // the response data under the alternative dataname
+  // that includes the defaults.
+  const altDataName = getDataName(plot)
+  if (!(altDataName in serverData)) {
+    serverData[altDataName] = data
+  }
 }
 
 function render ( plot, data ) {
@@ -307,7 +324,7 @@ function banner_init(div) {
 
   return {
     main(plot, data) {
-      if (!data.charts.length) {
+      if (!data || !data.charts || !data.charts.length) {
         div.html('No data to display.').style('display', 'block')
       } else {
         div.style('display', 'none')
