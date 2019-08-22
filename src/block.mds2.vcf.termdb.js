@@ -192,6 +192,7 @@ function make_phewas_ui ( obj, div, tk ) {
 			obj.genome,
 			tk.sample_termfilter,
 			async ()=>{
+				obj.termfilter.update_terms()
 				await run_phewas(obj)
 			}
 		)

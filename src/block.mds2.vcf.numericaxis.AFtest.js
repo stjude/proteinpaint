@@ -444,6 +444,7 @@ function show_group_termdb ( group, tk, block ) {
 		block.genome,
 		tvslst,
 		async ()=>{
+			group.update_terms()
 			await tk.load()
 		}
 	)

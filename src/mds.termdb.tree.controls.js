@@ -246,7 +246,7 @@ const cart = {
         obj.genome, 
         false,
         // callback when updating the selected groups
-        () => {}
+        () => {group.update_terms()}
       )
       
       // TODO : update 'n=' by group selection 
