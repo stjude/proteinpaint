@@ -199,7 +199,7 @@ group{}
                             term_value_btn
                                 .style('padding','3px 4px 3px 4px')
                                 .text('Loading...')
-                            group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
+                            obj.group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
                         }
             
                         //update gorup and load tk
@@ -234,7 +234,7 @@ group{}
 
             } else if( term.term.isinteger || term.term.isfloat ) {
                 // TODO numerical term, print range in value button and apply the suitable click callback
-                await display_numeric_filter(group, i, one_term_div)
+                await display_numeric_filter(obj.group, i, one_term_div)
             } else if(term.term.iscondition){
 
                 // for overlay between grade and subcategory

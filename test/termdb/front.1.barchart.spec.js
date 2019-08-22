@@ -48,7 +48,7 @@ tape("single barchart, categorical bars + click", function (test) {
   }
 
   function triggerBarClick(plot) {
-    plot.bus.on('postRender', testCategoricalTermValue)
+    plot.bus.on('postRender', [testCategoricalTermValue, testFilterElements])
     plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
     setTimeout(()=>{
       plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
@@ -70,6 +70,10 @@ tape("single barchart, categorical bars + click", function (test) {
       "should assign the correct clicked bar {key, label} as a categorical filter term-value"
     )
     termfilter.terms.length = 0
+  }
+
+  function testFilterElements(obj){
+    test.true(obj.obj.dom.termfilterdiv.selectAll('.sja_filter_tag_btn').size()>1, "should add blue-pill Filter for clicked term")
     test.end()
   }
 })
