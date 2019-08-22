@@ -546,16 +546,16 @@ function setBarsAsOpts(controls, termNum, label, index) {
     }
   }
   
-  setTimeout(()=> {
-    if (!plot.term.q) plot.term.q = {}
-    termuiObj.termsetting.q = plot.term.q
-    termui_display(termuiObj)
-  },0)
-
+  if (!plot.term.q) plot.term.q = {}
+  termuiObj.termsetting.q = plot.term.q
+  termui_display(termuiObj)
+  
   return {
     main(plot) {
       tr.style('display', plot.term && plot.term.iscondition ? 'table-row' : 'none')
-      plot.termuiObjOverlay.update_ui()
+      if (!plot.term.q) plot.term.q = {}
+      termuiObj.termsetting.q = plot.term.q
+      termuiObj.update_ui()
     }
   }
 }
