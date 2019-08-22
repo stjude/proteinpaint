@@ -35,10 +35,33 @@ const uncomputableGrades = new Set()
 
 try {
 	const terms = load_terms(termdbfile)
-	const annotations = load_patientcondition(outcomesfile, terms)
-	const pj = getPj(terms, annotations)
-	pj.tree.pjtime = pj.times
-	generate_tsv(pj.tree.bySample)
+  // uncomment filter for faster testing
+	const annotations = load_patientcondition(outcomesfile, terms)//.filter(d=>d.sample.slice(-1)=="1")  
+  annotations.sort((a,b) => a.sample < b.sample ? 1 
+    : a.sample < b.sample ? -1
+    : a.grade < b.grade ? 1
+    : -1
+  )
+  if (1) {
+    // precomputing and writting tsv by sample
+    // uses 1/2 memory and is >2x faster 
+    const rowsBySample = {}
+    annotations.forEach(row=>{
+      if (!rowsBySample[row.sample]) rowsBySample[row.sample] = []
+      rowsBySample[row.sample].push(row)
+    })
+  	const pj = getPj(terms);
+    for(const sample in rowsBySample) {
+      pj.refresh({data: rowsBySample[sample]})
+  	  generate_tsv(pj.tree.bySample)
+    }
+  } else { 
+    // uses more memory and takes longer
+    // keep for now to compare and verify 
+    // that optimized processing and template are correct
+    const pj = getPj(terms, annotations);
+    generate_tsv(pj.tree.bySample)
+  }
 } catch(e) {
 	console.log(e.message || e)
 	if(e.stack) console.log(e.stack)
@@ -118,13 +141,14 @@ function getPj (terms, data) {
             '$lineage[]': {
               term_id: '@branch',
               maxGrade: '<$grade',
-              mostRecentAge: '<$age',
+              ":__mostRecentAge": '<$age',
               children: ['=child()'],
               computableGrades: ['$grade', "set"],
               '__:childrenAtMaxGrade': ['=childrenAtMaxGrade(]'],
               '__:childrenAtMostRecent': ['=childrenAtMostRecent(]'],
               '~gradesByAge': {
-                '$age': ['$grade', 'set']
+                //'$age': ['$grade', 'set']
+                '=currMostRecentAge()': ['$grade', 'set']
               },
               '__:mostRecentGrades': '=mostRecentGrades()'
             }
@@ -161,7 +185,12 @@ function getPj (terms, data) {
         return [...ids]
       },
       mostRecentGrades(row, context) {
-        return [...context.self.gradesByAge[context.self.mostRecentAge]]
+        return context.self.gradesByAge[context.self.mostRecentAge] 
+          ? [...context.self.gradesByAge[context.self.mostRecentAge]]
+          : []
+      },
+      currMostRecentAge(row, context) {
+        if (context.parent.mostRecentAge == row.age) return row.age
       }
     }
   })
