@@ -53,8 +53,9 @@ async function main () {
 
 		for(const category of j) {
 			const newlst = category.group2lst.filter( i=> !onlyhasgrade.has(i) )
-			if( newlst.length < category.group2lst.length ) {
-				console.error( 'Control size: '+category.group2lst.length+' > '+newlst.length+'\t'+ termid+', '+category.group1label )
+			const minus = category.group2lst.length - newlst.length
+			if( minus ) {
+				console.error( 'Control size: '+category.group2lst.length+' -'+minus+'\t'+ termid+', '+category.group1label )
 				category.group2lst = newlst
 			}
 		}

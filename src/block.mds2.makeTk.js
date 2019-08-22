@@ -5,6 +5,7 @@ import {init as init_legend} from './block.mds2.legend'
 import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
 import {loadTk} from './block.mds2'
 import {getvcfheader_customtk} from './block.mds2.vcf'
+import {interpolateRgb} from 'd3-interpolate'
 
 
 /*
@@ -189,6 +190,7 @@ Note: must keep customizations of official tk through embedding api
 		for(const k in c ){
 			if(tk.ld[k]==undefined) tk.ld[k] = c[k]
 		}
+		tk.ld.overlay.r2_to_color = interpolateRgb( tk.ld.overlay.color_0, tk.ld.overlay.color_1 )
 	}
 
 	// TODO other file types

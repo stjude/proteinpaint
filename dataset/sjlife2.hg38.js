@@ -424,7 +424,11 @@ module.exports={
 		ld:{
 			tracks:[
 				{ name:'CEU', file:'files/hg38/sjlife/vcf/LD.gz', shown:false }
-			]
+			],
+			overlay:{
+				color_1:'red',
+				color_0:'blue'
+			}
 		},
 		/*
 		svcnv: {

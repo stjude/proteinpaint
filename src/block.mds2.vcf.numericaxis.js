@@ -317,6 +317,7 @@ function numeric_make ( nm, r, _g, data, tk, block ) {
 		.attr('fill',m=> vcf_m_color(m,tk) )
 		.attr('stroke','white')
 		.attr('r',m=>m.radius-.5)
+		.attr('class', 'sja_aa_disk_fill')
 
 	// no text in disc
 

@@ -298,10 +298,9 @@ function may_create_ldlegend ( tk, block ) {
 	/* one row per track
 	col1. name
 	col2. show/hide
-	col3. overlay radio
-	one extra row with the no-overlay option
 	*/
 
+/*
 	const radios = make_radios({
 		holder: td,
 		styles:{margin:'0px'},
@@ -314,6 +313,7 @@ function may_create_ldlegend ( tk, block ) {
 			}
 		}
 	})
+	*/
 
 	for(const ld of tk.ld.tracks) {
 		const tr = table.append('tr')
@@ -330,19 +330,29 @@ function may_create_ldlegend ( tk, block ) {
 				await tk.load()
 			}
 		})
-		// col3
-		tr.append('td')
-			.node()
-			.appendChild( radios.divs.filter(d=>d.value==ld.name).node() )
 	}
-	// last row for "no-overlay"
+
+	// overlay
 	{
-		const tr = table.append('tr')
-		tr.append('td')
-		tr.append('td')
-		tr.append('td')
-			.style('text-align','right')
-			.node()
-			.appendChild( radios.divs.filter(d=>d.label=='No overlay').node() )
+		const div = td.append('div')
+		div.append('span')
+			.style('opacity',.5)
+			.text('Overlay')
+		const select = div.append('select')
+			.style('margin','0px 10px')
+			.on('input',()=>{
+				const i = select.node().selectedIndex
+				if(i==0) {
+					delete tk.ld.overlaywith
+				} else {
+					tk.ld.overlaywith = tk.ld.tracks[i-1].name
+				}
+			})
+		select.append('option').text('No overlay')
+		for(const ld of tk.ld.tracks) {
+			select.append('option')
+				.text(ld.name)
+		}
 	}
+
 }

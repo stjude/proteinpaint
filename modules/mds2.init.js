@@ -87,7 +87,8 @@ the client copy stays at .mds.track{}
 	}
 	if(t0.ld) {
 		tk.ld = {
-			tracks: t0.ld.tracks.map(i=>{return {name:i.name, shown:i.shown}})
+			tracks: t0.ld.tracks.map(i=>{return {name:i.name, shown:i.shown}}),
+			overlay: t0.ld.overlay
 		}
 	}
 	return tk

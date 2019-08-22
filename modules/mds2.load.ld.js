@@ -8,7 +8,8 @@ const createCanvas = require('canvas').createCanvas
 
 /*
 ********************** EXPORTED
-load
+load_tk
+overlay
 ********************** INTERNAL
 */
 
@@ -20,7 +21,7 @@ const connheight = 50
 
 
 
-export async function load ( _tk, q, genome, ds, result ) {
+exports.load_tk = async function ( _tk, q, genome, ds, result ) {
 /*
 _tk:{}
 	.name
@@ -147,4 +148,30 @@ function get_coord2x2 ( r, coordset ) {
 		x+=binsize
 	}
 	return [ binsize, coord2x2 ]
+}
+
+
+
+
+
+exports.overlay = async function ( q, ds, res ) {
+	if(!q.ldtkname) throw '.ldtkname missing'
+	const tk = ds.track.ld.tracks.find( i=> i.name == q.ldtkname )
+	if(!tk) throw 'ld tk not found by name: '+q.ldtkname
+
+	const coord = (tk.nochr ? q.m.chr.replace('chr','') : q.m.chr)+':'+q.m.pos+'-'+(q.m.pos+1)
+	const lst = []
+	await utils.get_lines_tabix( [ tk.file, coord ], tk.dir, line=>{
+		const l = line.split('\t')
+		const start = Number.parseInt(l[1])
+		const stop = Number.parseInt(l[2])
+		const r2 = Number.parseFloat(l[3])
+		if( start == q.m.pos ) {
+			lst.push({pos: stop, r2})
+		} else if( stop == q.m.pos ) {
+			lst.push({pos: start, r2})
+		}
+	})
+
+	res.send({lst})
 }
