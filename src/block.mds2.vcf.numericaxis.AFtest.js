@@ -437,17 +437,19 @@ function show_group_termdb ( group, tk, block ) {
 	const v = may_get_param_AFtest_termfilter( tk )
 	if( v ) tvslst.push(v)
 
-	tvs_display(
-		group.dom.td3,
-		group,
-		tk.mds,
-		block.genome,
-		tvslst,
-		async ()=>{
-			group.update_terms()
+	const tvsuiObj = {
+		group_div : group.dom.td3,
+		group: group,
+		mds: tk.mds,
+		genome: block.genome,
+		tvslst_filter: tvslst,
+		callback: async ()=>{
+			tvsuiObj.update_terms()
 			await tk.load()
-		}
-	)
+		}  
+	  }
+	
+	tvs_display(tvsuiObj)
 
 	// "n=?, view stats" handle and for porting to term tree filter
 	group.dom.samplehandle = group.dom.td3

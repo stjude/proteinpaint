@@ -13,7 +13,7 @@ to_parameter
 
 
 
-export async function display ( group_div, group, mds, genome, tvslst_filter, callback){
+export async function display ( obj ){
 /*
 group{}
 	.terms[]
@@ -26,17 +26,17 @@ group{}
 		.isnot
 */
 
-    const terms_div = group_div.append('div')
+    const terms_div = obj.group_div.append('div')
         .style('display','inline-block')
 
     const tip = new client.Menu({padding:'0'})
 
     update_terms()
 
-    group.update_terms = update_terms
+    obj.update_terms = update_terms
 
     // add new term
-    const add_term_btn = group_div.append('div')
+    const add_term_btn = obj.group_div.append('div')
         .attr('class','sja_filter_tag_btn')
         .style('padding','2px 7px')
         .style('display','inline-block')
@@ -52,12 +52,12 @@ group{}
             const treediv = tip.d.append('div')
 
             // a new object as init() argument for launching the tree with modifiers
-            const obj = {
-                genome: genome,
-                mds: mds,
+            const tree_obj = {
+                genome: obj.genome,
+                mds: obj.mds,
                 div: treediv,
                 default_rootterm: {},
-                termfilter:{terms:tvslst_filter},
+                termfilter:{terms: obj.tvslst_filter},
                 modifier_barchart_selectbar: {
                     callback: result => {
                         tip.hide()
@@ -65,7 +65,7 @@ group{}
                     }
                 }
             }
-            init(obj)
+            init(tree_obj)
         })
 
 
@@ -76,7 +76,7 @@ group{}
 
         terms_div.selectAll('*').remove()
 
-        for(const [i, term] of group.terms.entries()){
+        for(const [i, term] of obj.group.terms.entries()){
 
             const one_term_div = terms_div.append('div')
                 .style('white-space','nowrap')
@@ -101,16 +101,16 @@ group{}
 
                     // a new object as init() argument for launching the tree with modifiers
                     const obj = {
-                        genome: genome,
-                        mds: mds,
+                        genome: obj.genome,
+                        mds: obj.mds,
                         div: treediv,
                         default_rootterm: {},
-                        termfilter:{terms:tvslst_filter},
+                        termfilter:{terms: obj.tvslst_filter},
                         modifier_barchart_selectbar: {
                             callback: result => {
                                 tip.hide()
                                 replace_term(result, i)
-                                callback()
+                                obj.callback()
                             }
                         }
                     }
@@ -135,10 +135,10 @@ group{}
                 condition_select.on('change',async()=>{
 
                     //change value of button 
-                    group.terms[i].isnot = term.isnot ? false : true
+                    obj.group.terms[i].isnot = term.isnot ? false : true
     
                     //update gorup and load tk
-                    await callback()
+                    await obj.callback()
                 })
 
                 condition_btn
@@ -189,9 +189,9 @@ group{}
                     replace_value_select.on('change',async()=>{
                         //if selected index is 0 (delete) and value is 'delete' then remove from group
                         if(replace_value_select.node().selectedIndex == 0 && replace_value_select.node().value == 'delete'){
-                            group.terms[i].values.splice(j,1)
-                                if(group.terms[i].values.length==0) {
-                                    group.terms.splice(i,1)
+                            obj.group.terms[i].values.splice(j,1)
+                                if(obj.group.terms[i].values.length==0) {
+                                    obj.group.terms.splice(i,1)
                                 }
                         }else{
                             //change value of button 
@@ -203,7 +203,7 @@ group{}
                         }
             
                         //update gorup and load tk
-                        await callback()
+                        await obj.callback()
                     })
                     
                     term_value_btn
@@ -228,7 +228,7 @@ group{}
                             .style('text-transform','uppercase')
                             .text('or')
                     }else{
-                        make_plus_btn(one_term_div, data, group.terms[i].values, terms_div)
+                        make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
                     }
                 }
 
@@ -286,9 +286,9 @@ group{}
 
                             //if value is 'delete' then remove from group
                             if(subcategroy_select.node().value == 'delete'){
-                                group.terms[i].values.splice(j,1)
-                                    if(group.terms[i].values.length==0) {
-                                        group.terms.splice(i,1)
+                                obj.group.terms[i].values.splice(j,1)
+                                    if(obj.group.terms[i].values.length==0) {
+                                        obj.group.terms.splice(i,1)
                                     }
                             }else{
                                 //change value of button 
@@ -296,11 +296,11 @@ group{}
                                 term_value_btn
                                     .style('padding','3px 4px 3px 4px')
                                     .text('Loading...')
-                                group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
+                                obj.group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
                             }
                 
                             //update gorup and load tk
-                            await callback()
+                            await obj.callback()
                         })
 
                         term_value_btn
@@ -327,7 +327,7 @@ group{}
 
                     make_grade_select_btn(one_term_div, term, terms_div)
 
-                    make_plus_btn(one_term_div, data, group.terms[i].values, terms_div)
+                    make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
 
                 }else if(term.bar_by_grade){
 
@@ -348,9 +348,9 @@ group{}
 
                             //if value is 'delete' then remove from group
                             if(grade_select.node().value == 'delete'){
-                                group.terms[i].values.splice(j,1)
-                                    if(group.terms[i].values.length==0) {
-                                        group.terms.splice(i,1)
+                                obj.group.terms[i].values.splice(j,1)
+                                    if(obj.group.terms[i].values.length==0) {
+                                        obj.group.terms.splice(i,1)
                                     }
                             }else{
                                 //change value of button 
@@ -358,11 +358,11 @@ group{}
                                 term_value_btn
                                     .style('padding','3px 4px 3px 4px')
                                     .text('Loading...')
-                                group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
+                                obj.group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
                             }
                 
                             //update gorup and load tk
-                            await callback()
+                            await obj.callback()
                         })
 
                         term_value_btn
@@ -389,7 +389,7 @@ group{}
 
                     make_grade_select_btn(one_term_div, term, terms_div)
 
-                    make_plus_btn(one_term_div, data, group.terms[i].values, terms_div)
+                    make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
                 }
             }
 
@@ -401,9 +401,9 @@ group{}
                 .style('background-color', '#4888BF')
                 .html('&#215;')
                 .on('click',async ()=>{
-                    group.terms.splice(i, 1)
+                    obj.group.terms.splice(i, 1)
                     // may_settoloading_termgroup( group )
-                    await callback()
+                    await obj.callback()
                 })
         }
     }
@@ -412,11 +412,11 @@ group{}
 
         let tvslst_filter_str = false
 
-        if(tvslst_filter) {
-            tvslst_filter_str = encodeURIComponent(JSON.stringify(to_parameter(tvslst_filter)))
+        if(obj.tvslst_filter) {
+            tvslst_filter_str = encodeURIComponent(JSON.stringify(to_parameter(obj.tvslst_filter)))
         }
 
-        const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+tvslst_filter_str]
+        const args = ['genome='+obj.genome.name+'&dslabel='+obj.mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+tvslst_filter_str]
         if (lst) args.push(...lst) 
 
         let data
@@ -433,11 +433,11 @@ group{}
 
         // Add new term to group.terms
         for(const [i, bar_term] of result.terms.entries()){
-            group.terms.push(bar_term)
+            obj.group.terms.push(bar_term)
         }
         
         // update the group div with new terms
-        await callback()
+        await obj.callback()
     }
 
     function make_select_list(data, select, selected_values, btn_value, first_option){
@@ -523,7 +523,7 @@ group{}
                 else selected_values.push({key:new_value.key,label:new_value.label})
 
                 //update gorup and load tk
-                await callback()
+                await obj.callback()
             }
         })
 
@@ -580,7 +580,7 @@ group{}
             }
 
             //update gorup and load tk
-            await callback()
+            await obj.callback()
         })
     }
 
@@ -589,7 +589,7 @@ group{}
         // create new array with updated terms
         let new_terms = []
     
-        for(const [i, term] of group.terms.entries()){
+        for(const [i, term] of obj.group.terms.entries()){
     
             // replace the term by index of clicked term
             if(i == term_replce_index){
@@ -602,10 +602,10 @@ group{}
         }
     
         // assing new terms to group
-        group.terms = new_terms
+        obj.group.terms = new_terms
         
         // update the group div with new terms
-        await callback()
+        await obj.callback()
     }
 
 
@@ -665,7 +665,7 @@ group{}
                     }
 
                     //update gorup and load tk
-                    await callback()
+                    await obj.callback()
                 })
 
             }else{
@@ -820,7 +820,7 @@ group{}
                 }
                 // display_numeric_filter(group, term_index, value_div)
                 tip.hide()
-                await callback()
+                await obj.callback()
             } catch(e) {
                 window.alert(e)
             }
@@ -829,13 +829,13 @@ group{}
 }
 
 
-function may_settoloading_termgroup ( group ) {
-	if( group.div_numbersamples ) group.div_numbersamples.text('Loading...')
-	if(group.div_populationaverage) {
-		group.div_populationaverage.selectAll('*').remove()
-		group.div_populationaverage.append('div').text('Loading...')
-	}
-}
+// function may_settoloading_termgroup ( group ) {
+// 	if( group.div_numbersamples ) group.div_numbersamples.text('Loading...')
+// 	if(group.div_populationaverage) {
+// 		group.div_populationaverage.selectAll('*').remove()
+// 		group.div_populationaverage.append('div').text('Loading...')
+// 	}
+// }
 
 
 

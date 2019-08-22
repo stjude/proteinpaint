@@ -33,21 +33,22 @@ export function getFilterUi(obj) {
       .style('opacity','.5')
       .style('font-size','.8em')
 
-    termvaluesettingui.display(
-      div,
-      obj.termfilter,
-      obj.mds,
-      obj.genome,
-      false,
-      // callback when updating the filter
-      obj.main
-    )
+    const tvsuiObj = {
+      group_div : div,
+      group: obj.termfilter,
+      mds: obj.mds,
+      genome: obj.genome,
+      tvslst_filter: false,
+      callback: obj.main  
+    }
+  
+    termvaluesettingui.display(tvsuiObj)
 
   return {
     main() {
       if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
       validate_termvaluesetting( obj.termfilter.terms )
-      obj.termfilter.update_terms()
+      tvsuiObj.update_terms()
     }
   }
 }
@@ -81,8 +82,8 @@ export function getCartUi(obj) {
 }
 
 function make_selected_group_tip(obj, cart){
-  // const tip = obj.tip // not working, creating new tip
-  const tip = new Menu({padding:'0'})
+  
+  const tip = obj.tip
   tip.clear()
   tip.showunder( obj.dom.cartdiv.node() )
 
@@ -106,43 +107,49 @@ function make_selected_group_tip(obj, cart){
       .style('font-size','.7em')
       .style('text-transform','uppercase')
       
-      termvaluesettingui.display(
-        group.dom.td2, 
-        group, 
-        obj.mds, 
-        obj.genome, 
-        false,
-        // callback when updating the selected groups
-        () => {group.update_terms()}
-      )
-      
-      // TODO : update 'n=' by group selection 
-      // group.dom.td3.append('div')
-      //  .text('n=?, view stats')
+    group.dom = {
+      td2: tr.append('td'),
+      td3: tr.append('td').style('opacity',.5).style('font-size','.8em'),
+      td4: tr.append('td')
+    }
 
-      // 'X' button to remove gorup
-      group.dom.td4.append('div')
-        .attr('class','sja_filter_tag_btn')
-        .style('padding','2px 6px 2px 6px')
-        .style('display','inline-block')
-        .style('margin-left','7px')
-        .style('border-radius','6px')
-        .style('background-color','#fa5e5b')
-        .html('&#215;') 
-        .on('click',()=>{
-          
-          // remove group and update tip and button
-          obj.selected_groups.splice(i,1)
-          
-          if(obj.selected_groups.length == 0){
-            obj.dom.cartdiv.style('display','none')
-            tip.hide()
-          }
-          else{
-            make_selected_group_tip(tip)
-            update_cart_button(obj)
-          }
-        })
+    const tvsuiObj = {
+      group_div : group.dom.td2,
+      group: group,
+      mds: obj.mds,
+      genome: obj.genome,
+      tvslst_filter: false,
+      callback: () => {tvsuiObj.update_terms()}  
+    }
+
+    termvaluesettingui.display(tvsuiObj)
+      
+    // TODO : update 'n=' by group selection 
+    // group.dom.td3.append('div')
+    //  .text('n=?, view stats')
+
+    // 'X' button to remove gorup
+    group.dom.td4.append('div')
+      .attr('class','sja_filter_tag_btn')
+      .style('padding','2px 6px 2px 6px')
+      .style('display','inline-block')
+      .style('margin-left','7px')
+      .style('border-radius','6px')
+      .style('background-color','#fa5e5b')
+      .html('&#215;') 
+      .on('click',()=>{
+        
+        // remove group and update tip and button
+        obj.selected_groups.splice(i,1)
+        
+        if(obj.selected_groups.length == 0){
+          obj.dom.cartdiv.style('display','none')
+          tip.hide()
+        }
+        else{
+          make_selected_group_tip(obj)
+        }
+      })
   }
 
   if(obj.selected_groups.length > 1){

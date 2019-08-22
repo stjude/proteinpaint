@@ -185,17 +185,21 @@ function make_phewas_ui ( obj, div, tk ) {
 			.text('FILTER')
 			.style('font-size','.7em')
 			.style('opacity',.5)
-		tvs_display(
-			obj.dom.row_filter.append('div').style('display','inline-block').style('margin','0px 10px'),
-			obj.termfilter,
-			obj.mds,
-			obj.genome,
-			tk.sample_termfilter,
-			async ()=>{
-				obj.termfilter.update_terms()
+
+		const tvsuiObj = {
+			group_div : obj.dom.row_filter.append('div').style('display','inline-block').style('margin','0px 10px'),
+			group: obj.termfilter,
+			mds: obj.mds,
+			genome: obj.genome,
+			tvslst_filter: tk.sample_termfilter,
+			callback: async ()=>{
+				tvsuiObj.update_terms()
 				await run_phewas(obj)
-			}
-		)
+			}  
+		}
+			
+		tvs_display(tvsuiObj)
+
 		obj.dom.filter_says = obj.dom.row_filter
 			.append('div')
 			.style('display','inline-block')
