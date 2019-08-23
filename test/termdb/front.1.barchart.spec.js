@@ -69,11 +69,14 @@ tape("single barchart, categorical bars + click", function (test) {
       }], 
       "should assign the correct clicked bar {key, label} as a categorical filter term-value"
     )
-    termfilter.terms.length = 0
   }
 
   function testFilterElements(obj){
     test.true(obj.obj.dom.termfilterdiv.selectAll('.sja_filter_tag_btn').size()>1, "should add blue-pill Filter for clicked term")
+    test.equal(obj.obj.dom.termfilterdiv.selectAll('.term_name_btn').html(),termfilter.terms[0].term.name, "should Filter term-name and plot clicked from be same")
+    test.equal(obj.obj.dom.termfilterdiv.selectAll('.value_btn').html().slice(0, -2),termfilter.terms[0].values[0].label, "should Filter value and label of bar clicked be same")
+    test.true(obj.obj.dom.termfilterdiv.selectAll('.add_value_btn').size()>=1,'should have \'+\' button to add category to filter')
+    test.true(obj.obj.dom.termfilterdiv.selectAll('.term_remove_btn').size()>=1,'should have \'x\' button to remove filter')
     test.end()
   }
 })

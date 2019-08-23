@@ -37,7 +37,7 @@ group{}
 
     // add new term
     const add_term_btn = obj.group_div.append('div')
-        .attr('class','sja_filter_tag_btn')
+        .attr('class','sja_filter_tag_btn add_term_btn')
         .style('padding','2px 7px')
         .style('display','inline-block')
         .style('margin-left','7px')
@@ -84,7 +84,7 @@ group{}
                 .style('padding','2px')
 
             const term_name_btn = one_term_div.append('div')
-                .attr('class','sja_filter_tag_btn')
+                .attr('class','sja_filter_tag_btn term_name_btn')
                 .style('border-radius','6px 0 0 6px')
                 .style('background-color', '#4888BF')
                 .style('padding','7px 6px 5px 6px')
@@ -100,7 +100,7 @@ group{}
                     const treediv = tip.d.append('div')
 
                     // a new object as init() argument for launching the tree with modifiers
-                    const obj = {
+                    const tree_obj = {
                         genome: obj.genome,
                         mds: obj.mds,
                         div: treediv,
@@ -114,7 +114,7 @@ group{}
                             }
                         }
                     }
-                    init(obj)
+                    init(tree_obj)
                 })
 
             //term-value relation button
@@ -142,6 +142,7 @@ group{}
                 })
 
                 condition_btn
+                    .attr('class','sja_filter_tag_btn condition_btn')
                     .style('font-size','.7em')
                     .style('padding','7px 6px 5px 6px')
                     .text(term.isnot ? 'IS NOT' : 'IS')
@@ -151,7 +152,7 @@ group{}
                 condition_select.style('width',condition_btn.node().offsetWidth+'px')
             } else{
                 const condition_btn = one_term_div.append('div')
-                    .attr('class','sja_filter_tag_btn')
+                    .attr('class','sja_filter_tag_btn condition_btn')
                     .style('background-color','#eeeeee')
                     .style('font-size','.7em')
                     .style('padding','7px 6px 5px 6px')
@@ -207,6 +208,7 @@ group{}
                     })
                     
                     term_value_btn
+                        .attr('class','sja_filter_tag_btn value_btn')
                         .style('padding','2px 4px 3px 4px')
                         .style('margin-right','1px')
                         .style('font-size','1em')
@@ -241,7 +243,7 @@ group{}
                 if(term.grade_and_child){
                     for (let j=0; j<term.grade_and_child.length; j++){
                         term_value_div.append('div')
-                            .attr('class','sja_filter_tag_btn')
+                            .attr('class','sja_filter_tag_btn value_btn')
                             .style('font-size','1em')
                             .style('padding','3px 4px 3px 4px')
                             .style('margin-right','1px')
@@ -259,7 +261,7 @@ group{}
                             .text('AND')
                             
                         term_value_div.append('div')
-                            .attr('class','sja_filter_tag_btn')
+                            .attr('class','sja_filter_tag_btn value_btn')
                             .style('font-size','1em')
                             .style('padding','3px 4px 3px 4px')
                             .style('margin-right','1px')
@@ -304,6 +306,7 @@ group{}
                         })
 
                         term_value_btn
+                            .attr('class','sja_filter_tag_btn value_btn')
                             .style('font-size','1em')
                             .style('padding','2px 4px 3px 4px')
                             .style('margin-right','1px')
@@ -395,7 +398,7 @@ group{}
 
             // button with 'x' to remove term2
             one_term_div.append('div')
-                .attr('class','sja_filter_tag_btn')
+                .attr('class','sja_filter_tag_btn term_remove_btn')
                 .style('padding','3px 6px 3px 4px')
                 .style('border-radius','0 6px 6px 0')
                 .style('background-color', '#4888BF')
@@ -529,6 +532,7 @@ group{}
 
         // '+' button at end of all values to add to list of values
         add_value_btn
+            .attr('class','sja_filter_tag_btn add_value_btn')
             .style('padding','3px 4px 3px 4px')
             .style('margin-right','1px')
             .style('font-size','1em')
@@ -632,6 +636,7 @@ group{}
                 make_select_list(unannotated_cats, numeric_select, numeric_term, null, 'delete')
 
                 value_btn
+                    .attr('class','sja_filter_tag_btn value_btn')
                     .style('padding','3px 4px 3px 4px')
                     .style('margin-right','1px')
                     .style('font-size','1em')
@@ -671,7 +676,7 @@ group{}
             }else{
 
                 const numeric_div = value_div.append('div')
-                    .attr('class','sja_filter_tag_btn')
+                    .attr('class','sja_filter_tag_btn value_btn')
                     .style('font-size','1em')
                     .style('padding','3px 5px 3px 5px')
                     .style('margin-right','1px')
