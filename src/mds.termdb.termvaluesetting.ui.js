@@ -29,7 +29,7 @@ group{}
     const terms_div = obj.group_div.append('div')
         .style('display','inline-block')
 
-    const tip = new client.Menu({padding:'0'})
+    obj.tvstip = new client.Menu({padding:'0'})
 
     update_terms()
 
@@ -46,10 +46,10 @@ group{}
         .html('&#43;')
         .on('click',async ()=>{
             
-            tip.clear()
+            obj.tvstip.clear()
             .showunder( add_term_btn.node() )
 
-            const treediv = tip.d.append('div')
+            const treediv = obj.tvstip.d.append('div')
 
             // a new object as init() argument for launching the tree with modifiers
             const tree_obj = {
@@ -60,7 +60,7 @@ group{}
                 termfilter:{terms: obj.tvslst_filter},
                 modifier_barchart_selectbar: {
                     callback: result => {
-                        tip.hide()
+                        obj.tvstip.hide()
                         add_term(result)
                     }
                 }
@@ -94,10 +94,10 @@ group{}
                 .style('text-transform','uppercase')
                 .on('click',async ()=>{
                     
-                    tip.clear()
+                    obj.tvstip.clear()
                     .showunder( term_name_btn.node() )
 
-                    const treediv = tip.d.append('div')
+                    const treediv = obj.tvstip.d.append('div')
 
                     // a new object as init() argument for launching the tree with modifiers
                     const tree_obj = {
@@ -108,7 +108,7 @@ group{}
                         termfilter:{terms: obj.tvslst_filter},
                         modifier_barchart_selectbar: {
                             callback: result => {
-                                tip.hide()
+                                obj.tvstip.hide()
                                 replace_term(result, i)
                                 obj.callback()
                             }
@@ -722,9 +722,9 @@ group{}
     }
 
     function edit_numeric_bin(holder, range, terms_div){
-        tip.clear()
+        obj.tvstip.clear()
             
-        const equation_div = tip.d.append('div')
+        const equation_div = obj.tvstip.d.append('div')
             .style('display','block')
             .style('padding','3px 5px')
 
@@ -787,17 +787,17 @@ group{}
                 stop_input.property('disabled',false)
             })
 
-        tip.d.append('div')
+        obj.tvstip.d.append('div')
             .attr('class','sja_menuoption')
             .style('text-align','center')
             .text('APPLY')
             .on('click', ()=>{
-                tip.hide()
+                obj.tvstip.hide()
                 apply()
             })
 
         // tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
-        tip.showunder( holder.node() )
+        obj.tvstip.showunder( holder.node() )
 
         async function apply () {
             try {
@@ -824,7 +824,7 @@ group{}
                     range.stopinclusive = stopselect.node().selectedIndex == 0
                 }
                 // display_numeric_filter(group, term_index, value_div)
-                tip.hide()
+                obj.tvstip.hide()
                 await obj.callback()
             } catch(e) {
                 window.alert(e)

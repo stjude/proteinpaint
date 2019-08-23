@@ -123,6 +123,7 @@ function make_selected_group_tip(obj, cart){
     }
 
     termvaluesettingui.display(tvsuiObj)
+    obj.tvstip = tvsuiObj.tvstip
       
     // TODO : update 'n=' by group selection 
     // group.dom.td3.append('div')
@@ -130,7 +131,7 @@ function make_selected_group_tip(obj, cart){
 
     // 'X' button to remove gorup
     group.dom.td4.append('div')
-      .attr('class','sja_filter_tag_btn')
+      .attr('class','sja_filter_tag_btn remove_group_btn')
       .style('padding','2px 6px 2px 6px')
       .style('display','inline-block')
       .style('margin-left','7px')
