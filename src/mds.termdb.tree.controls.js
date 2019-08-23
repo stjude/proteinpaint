@@ -150,6 +150,7 @@ function make_selected_group_tip(obj, cart){
         else{
           make_selected_group_tip(obj)
         }
+        cart.main()
       })
   }
 
@@ -162,7 +163,7 @@ function make_selected_group_tip(obj, cart){
       .style('padding','0')
 
     td_gp.append('div')
-      .attr('class','sja_filter_tag_btn')
+      .attr('class','sja_filter_tag_btn launch_gp_btn')
       .style('display','inline-block')
       .style('height','100%')
       .style('width','96%')
