@@ -427,7 +427,7 @@ module.exports={
 			],
 			overlay:{
 				color_1:'red',
-				color_0:'blue'
+				color_0:'#2E6594'
 			}
 		},
 		/*
