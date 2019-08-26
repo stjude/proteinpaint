@@ -66,7 +66,7 @@ tape("cart button", function (test) {
   }
 })
 
-tape.only("cart selected group tip", function (test) {
+tape("cart selected group tip", function (test) {
   // click 
   // add, remove a filter to/from a group
   const div0 = d3s.select('body').append('div')
@@ -120,23 +120,21 @@ tape.only("cart selected group tip", function (test) {
 
   function triggerAddTerm(obj){
     obj.bus.on('postRender', null)
-    setTimeout(()=>obj.tip.d.selectAll('.add_term_btn').node().click(), 400)
-    setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption').node().click(), 450)
-    setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption')._groups[0][1].click(), 550)
-    setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption')._groups[0][2].click(), 650)
+    setTimeout(()=>obj.tip.d.selectAll('.add_term_btn').node().click(), 100)
+    setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption').node().click(), 150)
+    setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption')._groups[0][1].click(), 250)
+    setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption')._groups[0][2].click(), 350)
     setTimeout(()=>{
       const elem = obj.tvstip.d.select('.bars-cell').select('rect')
       elem.node().dispatchEvent(new Event('click', {bubbles: true}))
       testAddTerm(obj)
-    }, 1300)
+    }, 1000)
   }
 
   function testAddTerm(obj){
-    setTimeout(()=>{
-      test.equal(obj.tip.d.selectAll('.term_name_btn').size(),1, "should add term button to cart")
-      obj.tip.hide()
-      test.end()
-    },900)
+    test.equal(obj.tip.d.selectAll('.term_name_btn').size(),1, "should add term button to cart")
+    obj.tip.hide()
+    test.end()
   }
 })
 
@@ -181,9 +179,8 @@ tape("cart with 2 groups", function (test) {
   })
 
   function triggerClick(obj){
-    obj.bus.on('postRender', null)
     obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
-    setTimeout(()=>testSelectedGroupTipDisplay(obj), 100)
+    obj.dom.cartdiv.on('postRender',testSelectedGroupTipDisplay(obj))
     setTimeout(()=>{
       obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
       obj.tip.d.select('.remove_group_btn').node().dispatchEvent(new Event('click', {bubbles: true}))
@@ -195,10 +192,8 @@ tape("cart with 2 groups", function (test) {
     test.equal(obj.tip.d.selectAll('.remove_group_btn').size(),2, "should show 2 blue-pill for selected groups")
     test.equal(obj.tip.d.selectAll('.launch_gp_btn').size(),1, "should show 'test in genome paint' button")
     
-    setTimeout(()=>{
-      obj.tip.d.selectAll('.launch_gp_btn').node().click()
-      testGenomePaintLaunch()
-    }, 200)
+    obj.tip.d.selectAll('.launch_gp_btn').node().click()
+    obj.tip.d.selectAll('.launch_gp_btn').on('postClick',testGenomePaintLaunch())
   }
 
   function testGenomePaintLaunch(){
@@ -206,7 +201,7 @@ tape("cart with 2 groups", function (test) {
       // Should check 'SJLife' button in GenomePaint pop-up window
       test.equal(d3s.select('body').selectAll('.sja_pane').selectAll('.sja_handle_green').html(),'SJLife', "should lauch GenomePaint")
       setTimeout(()=>d3s.select('body').selectAll('.sja_pane').selectAll('.sja_menuoption').node().click(),900)
-    }, 300)
+    }, 100)
   }
 
   function testRemoveGroup(obj){
