@@ -95,6 +95,7 @@ callbacks: {
         if (obj.components[name]) obj.components[name].main()
       }
     }
+    obj.bus.emit('postRender')
   }
 
   obj.button_radius = button_radius
@@ -193,7 +194,6 @@ also for showing term tree, allowing to select certain terms
 	}
 
   obj.main()
-  obj.bus.emit('postRender')
 }
 
 

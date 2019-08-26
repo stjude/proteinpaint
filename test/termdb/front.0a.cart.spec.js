@@ -4,6 +4,11 @@ const termjson = require("./termjson").termjson
 const serverconfig = require("../../serverconfig")
 const host = "http://localhost:" + serverconfig.port
 
+tape("\n", function(test) {
+  test.pass("-***- mds.termdb.controls cart -***-")
+  test.end()
+})
+
 tape("cart button", function (test) {
   const div0 = d3s.select('body').append('div')
   const termfilter = {show_top_ui:true}
@@ -123,13 +128,13 @@ tape("cart selected group tip", function (test) {
     obj.bus.on('postRender', null)
     setTimeout(()=>obj.tip.d.selectAll('.add_term_btn').node().click(), 400)
     setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption').node().click(), 450)
-    setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption')._groups[0][1].click(), 500)
-    setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption')._groups[0][2].click(), 550)
+    setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption')._groups[0][1].click(), 550)
+    setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption')._groups[0][2].click(), 650)
     setTimeout(()=>{
       const elem = obj.tvstip.d.select('.bars-cell').select('rect')
       elem.node().dispatchEvent(new Event('click', {bubbles: true}))
       testAddTerm(obj)
-    }, 800)
+    }, 1300)
   }
 
   function testAddTerm(obj){
