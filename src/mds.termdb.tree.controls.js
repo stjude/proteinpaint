@@ -148,7 +148,7 @@ function make_selected_group_tip(obj, cart){
           tip.hide()
         }
         else{
-          make_selected_group_tip(obj)
+          make_selected_group_tip(obj, cart)
         }
         cart.main()
       })

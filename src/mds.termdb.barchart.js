@@ -122,7 +122,7 @@ export class TermdbBarchart{
     const unannotatedRowLabels = refs.unannotatedLabels.term2
     if (unannotatedRowLabels) {
       for(const label of unannotatedRowLabels) {
-        if (!this.exclude.rows.includes(label)) {
+        if (!this.settings.exclude.rows.includes(label)) {
           this.settings.exclude.rows.push(label) // do not automatically hide for now
         }
       }
