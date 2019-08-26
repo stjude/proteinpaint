@@ -50,6 +50,7 @@ return async (req, res) => {
 		if( q.get_children ) return trigger_children( q, res, tdb )
 		if( q.findterm ) return trigger_findterm( q, res, tdb )
 		if( q.treeto ) return trigger_treeto( q, res, tdb )
+		if( q.scatter ) return trigger_scatter( q, res, tdb, ds)
 		if( q.testplot ) return trigger_testplot( q, res, tdb, ds ) // this is required for running test cases!!
 		if( q.phewas ) {
 			if( q.precompute ) return await phewas.do_precompute( q, res, ds )
@@ -192,4 +193,25 @@ function trigger_getcategories ( q, res, tdb, ds ) {
 	if( q.tvslst ) arg.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 	const lst = termdbsql.get_summary( arg )
 	res.send({lst})
+}
+
+
+
+function trigger_scatter ( q, res, tdb, ds) {
+	q.ds = ds
+	const startTime = +(new Date())
+	const t1 = tdb.q.termjsonByOneid( q.term1_id )
+	if (!t1) throw `Invalid term1_id="${q.term1_id}"`
+	if (!t1.isfloat) throw `term must be a float data type for scatter data`
+
+	const t2 = tdb.q.termjsonByOneid( q.term2_id )
+	if (!t2) throw `Invalid term1_id="${q.term2_id}"`
+	if (!t2.isfloat) throw `term2 must be a float data type for scatter data`
+	
+	const rows = termdbsql.get_rows_by_two_keys ( q, t1, t2 )
+	const result = {
+		rows,
+		//time: +(new Date()) - startTime
+	}
+	res.send(result)
 }

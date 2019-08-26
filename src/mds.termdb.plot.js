@@ -4,6 +4,7 @@ import {TermdbBarchart} from './mds.termdb.barchart'
 import {init as table_init} from './mds.termdb.table'
 import {init as boxplot_init} from './mds.termdb.boxplot'
 import {init as stattable_init} from './mds.termdb.stattable'
+import scatter from './mds.termdb.scatter'
 import {init as controls_init} from './mds.termdb.plot.controls'
 
 
@@ -133,7 +134,8 @@ arg:
     }),
     boxplot: boxplot_init(plot.dom.viz),
     stattable: stattable_init(plot.dom.viz),
-    table: table_init(plot.dom.viz)
+    table: table_init(plot.dom.viz),
+    scatter: scatter({holder: plot.dom.viz})
   } 
   plot.main()
   return plot
@@ -167,18 +169,26 @@ function coordinateState(plot) {
       if (!plot.term2.isfloat) plot.settings.currViews = ["barchart"]
     } 
 
-    if (plot.term2.q && plot.term2.id == plot.term.id) {
-      if (
-        (plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade))
-        || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
-      ) plot.term2 = undefined
+    if (plot.term2.iscondition) {
+      if (plot.term2.q && plot.term2.id == plot.term.id) {
+        if (
+          (plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade))
+          || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
+        ) plot.term2 = undefined
+      }
+
+      if (plot.term2 && plot.term2.id == plot.term.id) {
+        if (!plot.term2.q) plot.term2.q = {}
+        for(const param of ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']) {
+          delete plot.term2.q[param]
+          if (plot.term.q[param]) plot.term2.q[param] = 1
+        }
+      }
     }
 
-    if (plot.term2 && plot.term2.iscondition && plot.term2.id == plot.term.id) {
-      if (!plot.term2.q) plot.term2.q = {}
-      for(const param of ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']) {
-        delete plot.term2.q[param]
-        if (plot.term.q[param]) plot.term2.q[param] = 1
+    if (plot.settings.currViews.includes("scatter")) {
+      if (!plot.term.isfloat || !plot.term2.isfloat) {
+        plot.settings.currViews = ["barchart"]
       }
     }
   } else if (!plot.settings.currViews.includes("barchart")) {
@@ -214,7 +224,8 @@ function requestData(plot) {
     render(plot, serverData[dataName])
   }
   else {
-    client.dofetch2('/termdb-barsql' + dataName)
+    const route = plot.settings.currViews.includes("scatter") ? "/termdb" : "/termdb-barsql"
+    client.dofetch2(route + dataName)
     .then(chartsData => {
       serverData[dataName] = chartsData
       syncParams(plot, serverData[dataName])
@@ -233,6 +244,10 @@ function getDataName(plot) {
     'genome=' + obj.genome.name,
     'dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label)
   ];
+
+  if (plot.settings.currViews.includes("scatter")) {
+    params.push("scatter=1")
+  }
 
   plot.terms.forEach((term, i)=>{
     if (!term) return
@@ -324,7 +339,7 @@ function banner_init(div) {
 
   return {
     main(plot, data) {
-      if (!data || !data.charts || !data.charts.length) {
+      if (!data || ((!data.charts || !data.charts.length) && !data.rows)) {
         div.html('No data to display.').style('display', 'block')
       } else {
         div.style('display', 'none')

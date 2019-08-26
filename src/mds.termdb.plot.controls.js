@@ -410,7 +410,8 @@ function setViewOpts(controls) {
     options: [  // options
       {label: 'Barchart', value: 'barchart'},
       {label: 'Table', value: 'table'},
-      {label: 'Boxplot', value: 'boxplot'}
+      {label: 'Boxplot', value: 'boxplot'},
+      {label: 'Scatter', value: 'scatter'},
     ],
     listeners: {
       input(d) { 
@@ -426,9 +427,21 @@ function setViewOpts(controls) {
       tr.style("display", plot.term2 ? "table-row" : "none")
       const currValue = plot.settings.currViews.includes('table') ? 'table'
         : plot.settings.currViews.includes('boxplot') ? 'boxplot'
+        : plot.settings.currViews.includes('scatter') ? 'scatter'
         : 'barchart'
+      
       radio.main(currValue)
-      radio.dom.divs.style('display', d => plot.term2 && (d.value != 'boxplot' || plot.term2.isfloat) ? 'inline-block' : 'none')
+      radio.dom.divs.style('display', d => 
+        d.value == 'barchart'
+        ? 'inline-block'
+        : d.value == 'table' && plot.term2
+        ? 'inline-block'
+        : d.value == 'boxplot' && plot.term2 && plot.term2.isfloat
+        ? 'inline-block'
+        : d.value=='scatter' && plot.term.isfloat && plot.term2 && plot.term2.isfloat
+        ? 'inline-block' 
+        : 'none'
+      )
     },
     radio
   }
@@ -496,7 +509,7 @@ function setDivideByOpts(controls) {
   return {
     main(plot) {
       // hide all options when opened from genome browser view 
-      tr.style("display", plot.obj.modifier_ssid_barchart || !plot.settings.currViews.includes("barchart") ? "none" : "table-row")
+      tr.style("display", plot.obj.modifier_ssid_barchart || (!plot.settings.currViews.includes("barchart") && !plot.settings.currViews.includes("scatter")) ? "none" : "table-row")
       // do not show genotype divideBy option when opened from stand-alone page
       if (!plot.settings.bar.divideBy) {
         plot.settings.bar.divideBy = plot.obj.modifier_ssid_barchart
