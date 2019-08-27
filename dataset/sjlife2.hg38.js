@@ -423,7 +423,8 @@ module.exports={
 		sample_termfilter:[{term:{id:'wgs_curated',iscategorical:true},values:[{key:'1'}]}],
 		ld:{
 			tracks:[
-				{ name:'CEU', file:'files/hg38/sjlife/vcf/LD.gz', shown:false }
+				{ name:'SJLIFE European sub-cohort', file:'files/hg38/sjlife/ld/CEU.gz', shown:false },
+				{ name:'SJLIFE African sub-cohort', file:'files/hg38/sjlife/ld/YRI.gz', shown:false }
 			],
 			overlay:{
 				color_1:'red',

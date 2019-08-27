@@ -33,6 +33,9 @@ export function may_render_ld ( data, tk, block ) {
 				.attr('x', block.tkleftlabel_xshift)
 				.attr('y', data.connheight)
 				.attr('text-anchor','end')
+				.each(function(){
+					tk.leftLabelMaxwidth = Math.max( tk.leftLabelMaxwidth, this.getBBox().width )
+				})
 
 			const g = tk.g_ldrow.append('g')
 				.attr('transform','translate('+r.xoff+','+rowheightsum+')')
