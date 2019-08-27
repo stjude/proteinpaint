@@ -260,7 +260,8 @@ q{}
       t2.value AS val2
     FROM t1
     JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
-    JOIN t2 ON t2.sample = t1.sample`
+    JOIN t2 ON t2.sample = t1.sample
+    ${filter ? "WHERE t1.sample in "+filter.CTEname : ""}`
 
   return q.ds.cohort.db.connection.prepare( sql )
     .all( values )
