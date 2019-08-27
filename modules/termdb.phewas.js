@@ -407,7 +407,11 @@ function get_maxlogp ( tests ) {
 // set actual max for returning to client
 	let m = 0
 	for(const t of tests) {
-		t.logp = -Math.log10( t.pvalue )
+		if(t.pvalue==0) {
+			t.logp = 100
+		} else {
+			t.logp = -Math.log10( t.pvalue )
+		}
 		m = Math.max( m, t.logp)
 	}
 	return m

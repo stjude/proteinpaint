@@ -63,7 +63,7 @@ function load_phewas_file ( file ) {
 				thispos = coordinate
 				thischr = chr
 			} else {
-				console.log(chr+'\t'+thispos+'\t'+(thispos+1)+'\t'+thislogplst.join(','))
+				console.log(chr+'\t'+(thispos-1)+'\t'+thispos+'\t'+thislogplst.join(','))
 				thispos = coordinate
 				thislogplst = []
 			}
@@ -71,7 +71,7 @@ function load_phewas_file ( file ) {
 			thislogplst.push(logpvalue)
 		})
 		rl.on('close',()=>{
-			console.log( thischr +'\t'+thispos+'\t'+(thispos+1)+'\t'+thislogplst.join(','))
+			console.log( thischr +'\t'+(thispos-1)+'\t'+thispos+'\t'+thislogplst.join(','))
 			resolve()
 		})
 	})
