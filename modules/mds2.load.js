@@ -84,8 +84,12 @@ return async (req,res) => {
 				// collect variants passing filter for ld, so as not to include those filtered out
 				result.__mposset = new Set()
 				for(const r of result.vcf.rglst) {
-					for(const m of r.variants) {
-						result.__mposset.add( m.pos )
+					if( r.variants ) {
+						for(const m of r.variants) {
+							result.__mposset.add( m.pos )
+						}
+					} else {
+						// no variants, could be rangetoobig, in that case should not filter on the variants for the ld
 					}
 				}
 			}
