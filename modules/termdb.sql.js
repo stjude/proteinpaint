@@ -161,7 +161,7 @@ returns:
 		const restriction = tvs.value_by_max_grade ? 'max_grade'
 				: tvs.value_by_most_recent ? 'most_recent'
 				: 'computable_grade'
-		values.push(tvs.term.id, value_for, restriction)
+		values.push(tvs.term.id, value_for)
 		
 		filters.push(`
 			SELECT 
@@ -169,7 +169,7 @@ returns:
 			FROM precomputed
 			WHERE term_id = ? 
 				AND value_for = ? 
-				AND restriction = ?
+				AND ${restriction} = 1
 				AND value IN (${tvs.values.map(i=>'?').join(', ')})`)
 		values.push(...tvs.values.map(i=>''+i.key))
 	}
@@ -563,7 +563,7 @@ function makesql_oneterm_condition ( term, q, ds, filter, values, index='' ) {
 	const restriction = q.value_by_max_grade ? 'max_grade'
 			: q.value_by_most_recent ? 'most_recent'
 			: 'computable_grade'
-	values.push(term.id, value_for, restriction)
+	values.push(term.id, value_for)
 	
 	return {
 		sql: `${out_table} AS (
@@ -574,7 +574,7 @@ function makesql_oneterm_condition ( term, q, ds, filter, values, index='' ) {
 			FROM precomputed
 			WHERE term_id = ? 
 				AND value_for = ? 
-				AND restriction = ?
+				AND ${restriction} = 1
 		)`,
 		tablename: out_table
 	}
