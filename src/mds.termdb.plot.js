@@ -245,13 +245,13 @@ function getDataName(plot) {
     'dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label)
   ];
 
-  if (plot.settings.currViews.includes("scatter")) {
-    params.push("scatter=1")
-  }
+  const isscatter = plot.settings.currViews.includes("scatter")
+  if (isscatter) params.push("scatter=1")
 
   plot.terms.forEach((term, i)=>{
     if (!term) return
     params.push('term'+i+'_id=' + encodeURIComponent(term.id))
+    if (isscatter) return
     if (term.iscondition && !term.q) term.q = {}
     if (term.q && typeof term.q == 'object') {
       let q={}
@@ -267,15 +267,17 @@ function getDataName(plot) {
       params.push('term'+i+'_q=' +encodeURIComponent(JSON.stringify(q)))
     }
   })
-
-  if (obj.modifier_ssid_barchart) {
-    params.push(
-      'term2_is_genotype=1',
-      'ssid=' + obj.modifier_ssid_barchart.ssid,
-      'mname=' + obj.modifier_ssid_barchart.mutation_name,
-      'chr=' + obj.modifier_ssid_barchart.chr,
-      'pos=' + obj.modifier_ssid_barchart.pos
-    )
+  
+  if (!isscatter) {
+    if (obj.modifier_ssid_barchart) {
+      params.push(
+        'term2_is_genotype=1',
+        'ssid=' + obj.modifier_ssid_barchart.ssid,
+        'mname=' + obj.modifier_ssid_barchart.mutation_name,
+        'chr=' + obj.modifier_ssid_barchart.chr,
+        'pos=' + obj.modifier_ssid_barchart.pos
+      )
+    }
   }
 
   if (obj.termfilter && obj.termfilter.terms && obj.termfilter.terms.length) {
