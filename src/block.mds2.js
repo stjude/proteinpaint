@@ -150,12 +150,10 @@ export function addparameter_rangequery ( tk, block ) {
 		*/
 	}
 	if( tk.ld ) {
-		par.trigger_ld = {
-			tracks:[]
-		}
-		for(const t of tk.ld.tracks) {
-			if( t.shown ) {
-				par.trigger_ld.tracks.push( t )
+		const showntracks = tk.ld.tracks.filter( t => t.shown )
+		if( showntracks.length ) {
+			par.trigger_ld = {
+				tracks: showntracks
 			}
 		}
 	}

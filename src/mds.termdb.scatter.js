@@ -42,7 +42,10 @@ export default function scatter(opts) {
     dom: {
       div: opts.holder.append('div')
     },
-    settings: Object.assign(defaultSettings, opts.settings ? opts.settings : {}),
+    settings: Object.assign(
+      defaultSettings, 
+      opts.settings ? opts.settings : {}
+    ),
     main: (plot, data) => {
       if (!plot.settings.currViews.includes('scatter')) {
         self.dom.div.style('display','none')
