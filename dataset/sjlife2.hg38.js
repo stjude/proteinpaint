@@ -21,6 +21,7 @@ module.exports={
 				events_key:'conditionevents',
 				grade_key: 'grade',
 				grade_labels: [ // computable grades
+					{ grade: 0, label: '0: Normal' },
 					{ grade: 1, label: '1: Mild' },
 					{ grade: 2, label: '2: Moderate' },
 					{ grade: 3, label: '3: Severe' },
@@ -28,7 +29,6 @@ module.exports={
 					{ grade: 5, label: '5: Death' }
 				],
 				uncomputable_grades: {
-					0: 'No symptom',
 					9: 'Unknown status'
 				},
 				comparison_groups: [
@@ -421,6 +421,15 @@ module.exports={
 		},
 		// to restrict samples 
 		sample_termfilter:[{term:{id:'wgs_curated',iscategorical:true},values:[{key:'1'}]}],
+		ld:{
+			tracks:[
+				{ name:'CEU', file:'files/hg38/sjlife/vcf/LD.gz', shown:false }
+			],
+			overlay:{
+				color_1:'red',
+				color_0:'#2E6594'
+			}
+		},
 		/*
 		svcnv: {
 		},

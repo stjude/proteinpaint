@@ -2,17 +2,13 @@ import * as client from './client'
 import * as common from './common'
 import {select as d3select,selectAll as d3selectAll,event as d3event} from 'd3-selection'
 import {init as plot_init} from './mds.termdb.plot'
-import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
-import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
+import {setObjBarClickCallback, getFilterUi, getCartUi} from './mds.termdb.tree.controls'
 import { debounce } from 'debounce'
 
 
 /*
 ********************** EXPORTED
 init()
-menuoption_add_filter
-menuoption_select_to_gp
-menuoption_select_group_add_to_cart
 ********************** INTERNAL
 show_default_rootterm
 	display_searchbox
@@ -68,12 +64,51 @@ obj{}:
 .div
 .default_rootterm{}
 ... modifiers
+// optional lifecycle callbacks
+callbacks: { 
+  tree: {
+    postRender: callback(obj) or [callback1, ...]
+  },
+  plot: {
+    postRender: callback(plot) or [callback1, ...]
+  },
+  bar: {
+    postClick: callback(termValue)
+  }
+}
 */
 	if( obj.debugmode ) window.obj = obj
+  obj.expanded_term_ids = []
 
-	obj.dom = {
-		div: obj.div
-	}
+  obj.main = (updatedKeyVals={}) => {
+    for(const key in updatedKeyVals) {
+      obj[key] = updates[key]
+    }
+    // trigger all rendered sub-elements
+    for(const name in obj.components) {
+      if (Array.isArray(obj.components[name])) {
+        // example: 1 or more component.plots 
+        for(const component of obj.components[name]) {
+          if (component) component.main()
+        }
+      } else {
+        if (obj.components[name]) obj.components[name].main()
+      }
+    }
+    obj.bus.emit('postRender')
+  }
+
+  obj.button_radius = button_radius
+  if (!obj.callbacks) obj.callbacks = {}
+  setObjBarClickCallback(obj) 
+  // create event bus for this tree obj
+  obj.bus = client.get_event_bus(
+    ['postRender'], 
+    obj.callbacks && obj.callbacks.tree,
+    obj
+  )
+
+	obj.dom = {div: obj.div}
 	delete obj.div
 	obj.dom.errdiv = obj.dom.div.append('div')
 	obj.dom.searchdiv = obj.dom.div.append('div').style('display','none')
@@ -84,6 +119,13 @@ obj{}:
 		.style('display','inline-block')
 		.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
+
+  obj.components = {
+    filter: getFilterUi(obj),
+    cart: getCartUi(obj),
+    plots: []
+  }
+
 	// simplified query
 	obj.do_query = (args) => {
 		const lst = [ 'genome='+obj.genome.name+'&dslabel='+obj.mds.label ]
@@ -128,8 +170,6 @@ obj{}:
 	}
 }
 
-
-
 async function show_default_rootterm ( obj ) {
 /* for showing default terms, as defined by ds config
 
@@ -138,10 +178,6 @@ also for showing term tree, allowing to select certain terms
 */
 
 	display_searchbox( obj )
-
-	may_display_termfilter( obj )
-
-	update_cart_button(obj)
 
 	const data = await obj.do_query(["default_rootterm=1"])
 	if(data.error) throw 'error getting default root terms: '+data.error
@@ -157,183 +193,11 @@ also for showing term tree, allowing to select certain terms
 		print_one_term( arg, obj )
 	}
 
-  if (!obj.callbacks) obj.callbacks = {}
-  if (obj.callbacks.tree && obj.callbacks.tree.postRender) {
-    obj.callbacks.tree.postRender.forEach(callback => callback(obj))
-  }
+  obj.main()
 }
 
 
 
-
-function may_display_termfilter( obj ) {
-/* when the ui is not displayed, will not allow altering filters and callback-updating
-*/
-
-	if(obj.termfilter && obj.termfilter.terms) {
-		if(!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
-		validate_termvaluesetting( obj.termfilter.terms )
-	}
-
-	if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
-		// do not display ui, and do not collect callbacks
-		return
-	}
-
-	obj.termfilter.callbacks = []
-	if(!obj.termfilter.terms) obj.termfilter.terms = []
-
-	// make ui
-	make_filter_ui(obj)
-}
-
-
-function update_cart_button(obj){
-	
-	if(!obj.selected_groups) return
-
-	if(obj.selected_groups.length > 0){
-
-		obj.groupCallbacks = []
-		
-		// selected group button
-		obj.dom.cartdiv
-			.style('display','inline-block')
-			.attr('class','sja_filter_tag_btn')
-			.style('padding','6px')
-			.style('margin','0px 10px')
-			.style('border-radius', button_radius)
-			.style('background-color','#00AB66')
-			.style('color','#fff')
-			.text('Selected '+ obj.selected_groups.length +' Group' + (obj.selected_groups.length > 1 ?'s':''))
-			.on('click',()=>{
-				const tip = new client.Menu({padding:'0'})
-				make_selected_group_tip(tip)
-			})
-	}else{
-		obj.dom.cartdiv
-			.style('display','none')
-	}
-
-	function make_selected_group_tip(tip){
-
-		// const tip = obj.tip // not working, creating new tip
-		tip.clear()
-		tip.showunder( obj.dom.cartdiv.node() )
-
-		const table = tip.d.append('table')
-			.style('border-spacing','5px')
-			.style('border-collapse','separate')
-
-		// one row for each group
-		for( const [i, group] of obj.selected_groups.entries() ) {
-		
-			const tr = table.append('tr')
-			const td1 = tr.append('td')
-
-			td1.append('div')
-				.attr('class','sja_filter_tag_btn')
-				.text('Group '+(i+1))
-				.style('white-space','nowrap')
-				.style('color','#000')
-				.style('padding','6px')
-				.style('margin','3px 5px')
-				.style('font-size','.7em')
-				.style('text-transform','uppercase')
-				
-			group.dom = {
-				td2: tr.append('td'),
-				td3: tr.append('td').style('opacity',.5).style('font-size','.8em'),
-				td4: tr.append('td')
-			}
-			
-			termvaluesettingui.display(
-				group.dom.td2, 
-				group, 
-				obj.mds, 
-				obj.genome, 
-				false,
-				// callback when updating the groups
-				() => {
-					for(const fxn of obj.groupCallbacks) {
-							fxn()
-					}
-				}
-			)
-			
-			// TODO : update 'n=' by group selection 
-			// group.dom.td3.append('div')
-			//  .text('n=?, view stats')
-
-			// 'X' button to remove gorup
-			group.dom.td4.append('div')
-				.attr('class','sja_filter_tag_btn')
-				.style('padding','2px 6px 2px 6px')
-				.style('display','inline-block')
-				.style('margin-left','7px')
-				.style('border-radius','6px')
-				.style('background-color','#fa5e5b')
-				.html('&#215;') 
-				.on('click',()=>{
-					
-					// remove group and update tip and button
-					obj.selected_groups.splice(i,1)
-					
-					if(obj.selected_groups.length == 0){
-						obj.dom.cartdiv.style('display','none')
-						tip.hide()
-					}
-					else{
-						make_selected_group_tip(tip)
-						update_cart_button(obj)
-					}
-				})
-		}
-
-		if(obj.selected_groups.length > 1){
-			
-			const tr_gp = table.append('tr')
-			const td_gp = tr_gp.append('td')
-				.attr('colspan',4)
-				.attr('align','center')
-				.style('padding','0')
-
-			td_gp.append('div')
-				.attr('class','sja_filter_tag_btn')
-				.style('display','inline-block')
-				.style('height','100%')
-				.style('width','96%')
-				.style('padding','4px 10px')
-				.style('margin-top','10px')
-				.style('border-radius','3px')
-				.style('background-color','#eee')
-				.style('color','#000')
-				.text('Perform Association Test in GenomePaint')
-				.style('font-size','.8em')
-				.on('click',()=>{
-					tip.hide()
-					const pane = client.newpane({x:100,y:100})
-					import('./block').then(_=>{
-						new _.Block({
-							hostURL:localStorage.getItem('hostURL'),
-							holder: pane.body,
-							genome:obj.genome,
-							nobox:true,
-							chr: obj.genome.defaultcoord.chr,
-							start: obj.genome.defaultcoord.start,
-							stop: obj.genome.defaultcoord.stop,
-							nativetracks:[ obj.genome.tracks.find(i=>i.__isgene).name.toLowerCase() ],
-							tklst:[ {
-								type:client.tkt.mds2,
-								dslabel:obj.dslabel,
-								vcf:{ numerical_axis:{ AFtest:{ groups: obj.selected_groups} } }
-							} ]
-						})
-					})
-				})
-		}
-	}
-}
 
 
 function print_one_term ( arg, obj ) {
@@ -503,13 +367,16 @@ such conditions may be carried by obj
 	let loaded =false,
 		loading=false
 
-	button.on('click.test', async ()=>{
+	button.on('click', async ()=>{
+    const i = obj.expanded_term_ids.indexOf(term.id)
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
 			view_btn_line.style('display','block')
+      if (i==-1) obj.expanded_term_ids.push(term.id)
 		} else {
 			client.disappear(div)
 			view_btn_line.style('display','none')
+      obj.expanded_term_ids.splice(i, 1)
 		}
 		if( loaded || loading ) {
       plot_loading_div.text('').remove()
@@ -518,10 +385,10 @@ such conditions may be carried by obj
 		button.style('border','solid 1px #aaa')
 		loading=true
 		make_barplot( obj, {term}, div, ()=> {
-			plot_loading_div.text('').remove()
-			loaded=true
-			loading=false
-		})
+      plot_loading_div.text('').remove()
+      loaded=true
+      loading=false
+    })
 	})
 }
 
@@ -539,25 +406,18 @@ function make_barplot ( obj, opts, div, callback ) {
     .settings {}
 
 */
+  if (!obj.callbacks) obj.callbacks = {}
+  if (!obj.callbacks.plot) obj.callbacks.plot = {}
+  if (!obj.callbacks.plot.postRender) obj.callbacks.plot.postRender = []
+  if (callback) obj.callbacks.plot.postRender.push(callback)
 
-  const callbacks = {
-    postInit: [],
-    postRender: []
-  }
-  if (typeof callback == "function") callbacks.postRender.push(callback)
-
-  if (obj.callbacks && obj.callbacks.plot) {
-    for(const key in obj.callbacks.plot) {
-      callbacks[key].push(...obj.callbacks.plot[key])
-    }
-  }
+  if (!obj.expanded_term_ids.includes(opts.term.id)) obj.expanded_term_ids.push(opts.term.id)
 
 	const arg = Object.assign({
 		obj,
 		holder: div,
 		genome: obj.genome.name,
-		dslabel: obj.mds.label,
-    callbacks
+		dslabel: obj.mds.label
 	}, opts)
 
 	if( obj.modifier_ssid_barchart ) {
@@ -575,7 +435,9 @@ function make_barplot ( obj, opts, div, callback ) {
 		]
 		arg.overlay_with_genotype_idx = 0
 	}
-	plot_init( arg )
+	
+  const plot = plot_init( arg )
+  obj.components.plots.push(plot)
 }
 
 
@@ -861,124 +723,6 @@ barchart is shown in-place under term and in full capacity
 
 
 
-export function menuoption_add_filter ( obj, tvslst ) {
-/*
-obj: the tree object
-tvslst: an array of 1 or 2 term-value setting objects
-     this is to be added to the obj.termfilter.terms[]
-	 if barchart is single-term, tvslst will have only one element
-	 if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
-*/
-
-	if(!tvslst) return
-
-	if( !obj.termfilter || !obj.termfilter.show_top_ui ) {
-		// do not display ui, and do not collect callbacks
-		return
-	}
-
-	for(const [i, term] of tvslst.entries()){
-		obj.termfilter.terms.push(term)
-	}
-
-	make_filter_ui(obj)
-
-	for (const fxn of obj.termfilter.callbacks) fxn()
-}
-
-
-export function menuoption_select_to_gp ( obj, tvslst ) {
-	obj.tip.hide()
-	
-	const lst = []
-	for(const t of tvslst) lst.push(t)
-	if(obj.termfilter && obj.termfilter.terms) {
-		for(const t of obj.termfilter.terms) {
-			lst.push( JSON.parse(JSON.stringify(t)))
-		}
-	}
-
-	const pane = client.newpane({x:100,y:100})
-	import('./block').then(_=>{
-		new _.Block({
-			hostURL:localStorage.getItem('hostURL'),
-			holder: pane.body,
-			genome:obj.genome,
-			nobox:true,
-			chr: obj.genome.defaultcoord.chr,
-			start: obj.genome.defaultcoord.start,
-			stop: obj.genome.defaultcoord.stop,
-			nativetracks:[ obj.genome.tracks.find(i=>i.__isgene).name.toLowerCase() ],
-			tklst:[ {
-				type:client.tkt.mds2,
-				dslabel:obj.dslabel,
-				vcf:{ numerical_axis:{ AFtest:{ groups:[
-					{ is_termdb:true, terms: lst },
-					obj.bar_click_menu.select_to_gp.group_compare_against
-				] } } }
-			} ]
-		})
-	})
-}
-
-
-export function menuoption_select_group_add_to_cart ( obj, tvslst ) {
-
-	if(!tvslst) return
-		
-	const new_group = {}
-	new_group.is_termdb = true
-	new_group.terms = []
-
-	for(const [i, term] of tvslst.entries()){
-		new_group.terms.push(term)
-	}
-
-	if(!obj.selected_groups){
-		obj.selected_groups = []
-	}
-
-	obj.selected_groups.push(new_group)
-	update_cart_button(obj)
-
-}
-
-function make_filter_ui(obj){
-
-	obj.dom.termfilterdiv.selectAll('*').remove()
-
-	const div = obj.dom.termfilterdiv
-		.style('display','inline-block')
-		.append('div')
-		.style('display','inline-block')
-		.style('border','solid 1px #ddd')
-		.style('padding','7px')
-		.style('margin-bottom','10px')
-	
-	div.append('div')
-		.style('display','inline-block')
-		.style('margin','0px 5px')
-		.text('FILTER')
-		.style('opacity','.5')
-		.style('font-size','.8em')
-
-	termvaluesettingui.display(
-		div,
-		obj.termfilter,
-		obj.mds,
-		obj.genome,
-		false,
-		// callback when updating the filter
-		() => {
-			for(const fxn of obj.termfilter.callbacks) {
-				fxn()
-			}
-		} 
-	)
-}
-
-
-
 
 function restore_view(obj) {
 	if (!obj.params2restore) return
@@ -1027,9 +771,10 @@ async function restore_plot(obj, params) {
 		const term = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
 
 		let term2, term0
-		if (params.term2) {
+		if (params.term2 && params.term2 != 'genotype') {
 			const data = await obj.do_query( ['findterm='+params.term2] );
 			if (data.lst.length) term2 = data.lst.filter(d=>d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
+      if (term2.iscondition) term2.q = {}
 		}
 		if (params.term0) {
 			const data = await obj.do_query( ['findterm='+params.term0] );
@@ -1037,15 +782,17 @@ async function restore_plot(obj, params) {
 		}
 	
 		restored_div.append('h3').html('Restored View')
-
-		make_barplot( obj, {term}, restored_div, (plot)=>{
-			if (!term2 && !term0) return
-			if (term2) plot.settings.bar.overlay = 'tree'
-			if (term0) plot.settings.bar.divideBy = 'tree'
-	    plot.term2 = term2
-	    plot.term0 = term0
-		  setTimeout(plot.dispatch, 1100)
-		})
+		make_barplot( obj, {
+      term, 
+      term2, 
+      term0,
+      settings: {
+        bar: {
+          overlay: term2 ? 'tree' : 'none',
+          divideBy: term0 ? 'tree' : 'none',
+        }
+      }
+    }, restored_div)
 	}
 }
 

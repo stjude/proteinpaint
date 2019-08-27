@@ -6,49 +6,77 @@ const Partjson = require('../../modules/partjson')
 /*
   Precompute dataset values to help speed up 
   server response as needed
-  
-  node ./precompute.ctcae.js [termdbfile outcomesfile jsontarget] > chronicevents.precomputed
-  
-  where
-    termdbfile:                     (optional renamed) input file with lines of term_id \t name \t parent_id \t {termjson}
-    outcomesfile:                   (optional renamed) input file with lines of sample \t {term_id: {conditionevents: [grae, age, yearstoevent]}}
-    jsontarget:                     (optional renamed) will save the json formatted results to this file
-    chronicevents.precomputed:      the expected tsv output filename for autoloading via load.sql
-
-  the tsv output file should be loaded to the
-  database via load.sql, which is not part of this script
 */
 
-precompute()
-
-function precompute () {
-  const termdbfile = process.argv[3] || 'termdb'
-  if (!termdbfile) throw "missing termdbfile argument"
-  const outcomesfile = process.argv[4] || 'outcomes_2017'
-  if (!outcomesfile) throw "missing outcomesfile argument"
-  const jsontarget = process.argv[5] || 'precomputed.json'
-  if (!jsontarget) throw "missing jsontarget argument"
-
-  try {
-    const terms = load_terms(termdbfile)
-    const annotations = load_patientcondition(outcomesfile)
-    const data = Object.values(annotations)
-
-    //console.log('Precomputing by sample and term_id')
-    const pj = getPj(terms, data)
-    pj.tree.pjtime = pj.times
-    //console.log(pj.times)
-    save_json(jsontarget, pj.tree)
-    generate_tsv(pj.tree.bySample)
-  } catch(e) {
-    console.log(e.message || e)
-    if(e.stack) console.log(e.stack)
-  }
+if(process.argv.length!=5) {
+	console.log('<termdb> <annotation.outcome> <dataset.js>, output to "precomputed.json" and stdout for loading to db')
+	process.exit()
 }
 
+const termdbfile = process.argv[2]
+// input file with lines of term_id \t name \t parent_id \t {termjson}
+const outcomesfile = process.argv[3]
+// input file with lines of sample,term,grade,age_graded,yearstoevent
+const datasetjsfile = process.argv[4]
+// input dataset js file, for accessing termdb configs
+
+
+
+const uncomputableGrades = new Set()
+{
+	const ds = require(datasetjsfile)
+	if( ds.cohort.termdb.patient_condition.uncomputable_grades ) {
+		for(const k in ds.cohort.termdb.patient_condition.uncomputable_grades) uncomputableGrades.add( Number(k) )
+	}
+}
+
+
+
+
+try {
+	const terms = load_terms(termdbfile)
+  // uncomment filter for faster testing
+	const annotations = load_patientcondition(outcomesfile, terms)//.filter(d=>d.sample.slice(-1)=="1")  
+  annotations.sort((a,b) => a.sample < b.sample ? 1 
+    : a.sample < b.sample ? -1
+    : a.grade < b.grade ? 1
+    : -1
+  )
+  if (1) {
+    // precomputing and writting tsv by sample
+    // uses 1/2 memory and is >2x faster 
+    const rowsBySample = {}
+    annotations.forEach(row=>{
+      if (!rowsBySample[row.sample]) rowsBySample[row.sample] = []
+      rowsBySample[row.sample].push(row)
+    })
+  	const pj = getPj(terms);
+    for(const sample in rowsBySample) {
+      pj.refresh({data: rowsBySample[sample]})
+  	  generate_tsv(pj.tree.bySample)
+    }
+  } else { 
+    // uses more memory and takes longer
+    // keep for now to compare and verify 
+    // that optimized processing and template are correct
+    const pj = getPj(terms, annotations);
+    generate_tsv(pj.tree.bySample)
+  }
+} catch(e) {
+	console.log(e.message || e)
+	if(e.stack) console.log(e.stack)
+}
+
+
+
+
+
+
+
+
+
 function load_terms (termdbfile) {
-  const file = fs.readFileSync(termdbfile, {encoding:'utf8'})
-  if (!file) throw `error loading termdb file '${termdbfile}'`
+  const file = fs.readFileSync(termdbfile, {encoding:'utf8'}) // throws upon invalid file name
   const terms = {}
   const child2parent = Object.create(null)
   // {term_id: parent id}
@@ -80,43 +108,47 @@ function get_term_lineage (lineage, termid, child2parent) {
   }
 }
 
-function load_patientcondition (outcomesfile) {
-  const file = fs.readFileSync(outcomesfile, {encoding:'utf8'})
-  if (!file) throw `error loading outcomes file '${outcomesfile}'`
-  const annotations = {}
-
-  let count=0
-  for(const line of file.trim().split('\n')) {
-    const l = line.split('\t')
-    const sample = l[0]
-    annotations[ sample ] = JSON.parse(l[1])
-    annotations[ sample ].sample = sample
-    count++
-  }
-  //console.log(ds.label+': '+count+' samples loaded with condition data from '+ outcomesfile)
-  return annotations
+function load_patientcondition (outcomesfile, terms) {
+// outcomesfiles: lines of tab-separated sample,term,grade,age_graded,yearstoevent
+	const annotations = []
+	for(const line of fs.readFileSync(outcomesfile, {encoding:'utf8'}).trim().split('\n')) {
+		const l = line.split('\t')
+		const grade = Number(l[2])
+		if( uncomputableGrades.has( grade )) continue
+		const sample = l[0]
+		const term_id = l[1]
+		const term = terms[ term_id ]
+		annotations.push({
+			sample,
+			term_id,
+			grade,
+			age:Number(l[3]),
+      // remove the top-most terms, [..., CTCAE, root]
+			lineage: term.conditionlineage.slice(0,-2),
+		})
+	}
+	return annotations
 }
 
 function getPj (terms, data) {
-  const uncomputable = {0: 'No symptom', 9: 'Unknown status'}
 
   return new Partjson({
     data,
     template: {
-      "@split()": "=splitDataRow()",
       bySample: {
         '$sample': {
           byCondition: {
             '$lineage[]': {
               term_id: '@branch',
               maxGrade: '<$grade',
-              mostRecentAge: '<$age',
+              ":__mostRecentAge": '<$age',
               children: ['=child()'],
               computableGrades: ['$grade', "set"],
               '__:childrenAtMaxGrade': ['=childrenAtMaxGrade(]'],
               '__:childrenAtMostRecent': ['=childrenAtMostRecent(]'],
               '~gradesByAge': {
-                '$age': ['$grade', 'set']
+                //'$age': ['$grade', 'set']
+                '=currMostRecentAge()': ['$grade', 'set']
               },
               '__:mostRecentGrades': '=mostRecentGrades()'
             }
@@ -125,29 +157,6 @@ function getPj (terms, data) {
       }
     },
     "=": {
-      splitDataRow(row) {
-        if (!row.sample) return []
-        const gradedEvents = []
-        for(const key in row) {
-          if (typeof row[key] != 'object') continue
-          if (!row[key] || !('conditionevents' in row[key])) continue;
-          if (key == 'CTCAE Graded Events') continue
-          const term = terms[key]
-          if (!term || !term.iscondition) continue
-          for(const event of row[key].conditionevents) {
-            if (uncomputable[event.grade]) continue
-            gradedEvents.push({
-              sample: row.sample,
-              term_id: key,
-              // topmost lineage terms are root and CTCAE
-              lineage: term.conditionlineage.slice(0,-2),
-              age: event.age,
-              grade: event.grade
-            })
-          }
-        }
-        return gradedEvents
-      },
       child(row, context) {
         if (context.branch == row.term_id) return
         const i = row.lineage.indexOf(context.branch)
@@ -176,17 +185,17 @@ function getPj (terms, data) {
         return [...ids]
       },
       mostRecentGrades(row, context) {
-        return [...context.self.gradesByAge[context.self.mostRecentAge]]
+        return context.self.gradesByAge[context.self.mostRecentAge] 
+          ? [...context.self.gradesByAge[context.self.mostRecentAge]]
+          : []
+      },
+      currMostRecentAge(row, context) {
+        if (context.parent.mostRecentAge == row.age) return row.age
       }
     }
   })
 }
 
-async function save_json(precomputed_file, results) {
-  if (!precomputed_file) return
-  await write_file(precomputed_file, JSON.stringify(results))
-  //console.log('Saved precomputed values to '+ filename)
-}
 
 
 // will output to file via bash argument

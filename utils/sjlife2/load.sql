@@ -37,7 +37,7 @@ create table alltermsbyorder (
   group_name character not null,
   id character varying(100) not null
 );
-.import alltermsbyorder alltermsbyorder
+.import 'alltermsbyorder.grouped' alltermsbyorder
 
 
 drop table if exists category2vcfsample;
@@ -48,7 +48,7 @@ create table category2vcfsample (
   q text not null,
   categories text not null
 );
-.import category2vcfsample category2vcfsample
+.import category2vcfsample.nograde9 category2vcfsample
 
 
 

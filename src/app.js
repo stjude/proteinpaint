@@ -1279,6 +1279,19 @@ async function launchblock(arg,holder) {
 				blockinitarg.hlregions = lst
 			}
 		}
+		if(h.has('bedgraphdotfile')) {
+			if(!blockinitarg.tklst) blockinitarg.tklst = []
+			const lst=h.get('bedgraphdotfile').split(',')
+			for(let i=0; i<lst.length; i+=2) {
+				if(lst[i] && lst[i+1]) {
+					blockinitarg.tklst.push({
+						type:client.tkt.bedgraphdot,
+						name:lst[i],
+						file:lst[i+1]
+					})
+				}
+			}
+		}
 	}
 
 	// return a promise resolving to block

@@ -4,6 +4,7 @@ import {make_ui as mafcovplot_makeui} from './block.mds2.vcf.mafcovplot'
 import {termdb_bygenotype, make_phewas} from './block.mds2.vcf.termdb'
 import {AFtest_groupname} from './block.mds2.vcf.numericaxis.AFtest'
 import {addparameter_rangequery} from './block.mds2'
+//import {make_radios} from './dom'
 
 
 
@@ -17,13 +18,19 @@ vcf_clickvariant
 
 
 
-export function vcf_clickvariant ( m, p, tk, block ) {
+export async function vcf_clickvariant ( m, p, tk, block ) {
 /*
 p{}
 	.left
 	.top
 */
+
 	// if to show sunburst, do it here, no pane
+
+	if( tk.ld && tk.ld.overlaywith ) {
+		await overlay_ld( m, tk, block )
+		return
+	}
 
 	const pane = client.newpane({x: p.left, y: p.top})
 	pane.header.html(
@@ -36,6 +43,7 @@ p{}
 	mayaddtab_fishertable( tabs, m, tk, block )
 	//mayaddtab_termdbbygenotype( tabs, m, tk, block )
 	mayaddtab_phewas( tabs, m, tk, block )
+	//mayaddtab_ld( tabs, m, tk, block )
 	mayaddtab_mafcovplot( tabs, m, tk, block )
 	mayaddtab_fimo( tabs, m, tk, block )
 
@@ -104,6 +112,24 @@ function mayaddtab_phewas ( tabs, m, tk, block ) {
 			}catch(e){
 				wait.text('Error: '+(e.message||e))
 			}
+		}
+	})
+}
+function mayaddtab_ld ( tabs, m, tk, block ) {
+// only for vcf, by variant genotype
+
+	if(!tk.ld) return
+	if(!tk.vcf.termdb_bygenotype) return
+	tabs.push( {
+		label: 'LD',
+		callback: div=>{
+			make_radios({
+				holder:div,
+				options: tk.ld.tracks.map(i=>{return{label:i.name,value:i.name}}),
+				callback: (name)=>{
+					console.log(name)
+				}
+			})
 		}
 	})
 }
@@ -189,6 +215,7 @@ function mayaddtab_fishertable( tabs, m, tk, block ) {
 
 				// run a full-blown query with altered parameter
 				const par = addparameter_rangequery( tk, block )
+				delete par.trigger_ld
 				// replace the control
 				par.AFtest.groups[1] = {
 					is_population:true,
@@ -560,5 +587,46 @@ may create a tf motif find button for mutation
 				wait.text('Error: '+(e.message||e))
 			}
 		}
+	})
+}
+
+
+
+
+
+async function overlay_ld ( m, tk, block ) {
+	const par = {
+		genome: block.genome.name,
+		trigger_overlayld: 1,
+		ldtkname: tk.ld.overlaywith,
+		m: {
+			chr: m.chr,
+			pos: m.pos,
+			ref: m.ref,
+			alt: m.alt
+		}
+	}
+	if( tk.mds ) {
+		par.dslabel = tk.mds.label
+	} else {
+		// TODO add custom ld track
+	}
+		
+	const data = await client.dofetch('mds2', par)
+
+	const pos2r2 = new Map()
+	// k: pos
+	// v: r2
+	for(const v of data.lst) {
+		pos2r2.set( v.pos, v.r2 )
+	}
+
+	tk.skewer2.selectAll('.sja_aa_disk_fill').attr('fill', m2=>{
+		if( m2.pos == m.pos ) {
+			// self
+			return tk.ld.overlay.color_1
+		}
+		const r2 = pos2r2.get( m2.pos ) || 0
+		return tk.ld.overlay.r2_to_color( r2 )
 	})
 }

@@ -374,6 +374,7 @@ const tkt={
 	aicheck:'aicheck',
 	ase:'ase',
 	mds2:'mds2', // mds 2nd generation
+	bedgraphdot:'bedgraphdot',
 }
 exports.tkt = tkt
 

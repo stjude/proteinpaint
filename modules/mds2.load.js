@@ -5,7 +5,8 @@ const utils = require('./utils')
 const common = require('../src/common')
 const loader_vcf = require('./mds2.load.vcf')
 const loader_vcf_mafcov = require('./mds2.load.vcf.plot.mafcovplot')
-// add loaders for other file types
+const loader_ld = require('./mds2.load.ld')
+// add loaders for other file types and requests
 
 
 
@@ -30,28 +31,18 @@ return async (req,res) => {
 
 	try {
 		const genome = genomes[q.genome]
-		if(!genome) throw 'invalid genome'
 
-		let ds // official or custom
+		const ds = await get_ds( q, genome ) // official or custom
 
-		if( q.dslabel ) {
-			ds = genome.datasets[ q.dslabel ]
-			if(!ds) throw 'invalid dslabel'
-			if(!ds.track) throw 'no mds2 track found for dataset'
-		} else {
-			ds = {
-				iscustom: 1,
-				track: {}
-			}
 
-			if( q.vcf ) {
-				ds.track.vcf = q.vcf
-				await utils.init_one_vcf( ds.track.vcf, genome )
-			}
-
-			// other type of tracks
-
+		///////////////// standalone triggers
+		if( q.trigger_overlayld ) {
+			return await loader_ld.overlay( q, ds, res )
 		}
+
+
+		///////////////// combination triggers
+		// multiple triggers may be in one query
 
 		if( q.hidden_mclass ) q.hidden_mclass = new Set(q.hidden_mclass)
 
@@ -85,10 +76,26 @@ return async (req,res) => {
 		// by triggers
 
 		if( q.trigger_mafcovplot ) {
-			await loader_vcf_mafcov.handle_mafcovplot( q, genome, ds, result )
+			await loader_vcf_mafcov.plot( q, genome, ds, result )
 		}
 		if( q.trigger_vcfbyrange ) {
 			await loader_vcf.handle_vcfbyrange( q, genome, ds, result )
+			if( q.trigger_ld ) {
+				// collect variants passing filter for ld, so as not to include those filtered out
+				result.__mposset = new Set()
+				for(const r of result.vcf.rglst) {
+					for(const m of r.variants) {
+						result.__mposset.add( m.pos )
+					}
+				}
+			}
+		}
+		if( q.trigger_ld ) {
+			result.ld = {} // to be filled
+			for(const tk of q.trigger_ld.tracks) {
+				await loader_ld.load_tk( tk, q, genome, ds, result )
+			}
+			delete result.__mposset
 		}
 		if( q.trigger_ssid_onevcfm ) {
 			await loader_vcf.handle_ssidbyonem( q, genome, ds, result )
@@ -114,3 +121,27 @@ return async (req,res) => {
 
 
 
+
+async function get_ds ( q, genome ) {
+// return ds object, official or custom
+	if(!genome) throw 'invalid genome'
+
+	if( q.dslabel ) {
+		const ds = genome.datasets[ q.dslabel ]
+		if(!ds) throw 'invalid dslabel'
+		if(!ds.track) throw 'no mds2 track found for dataset'
+		return ds
+	}
+	// is custom mds2 track, synthesize ds object
+	const ds = {
+		iscustom: 1,
+		track: {}
+	}
+	if( q.vcf ) {
+		ds.track.vcf = q.vcf
+		await utils.init_one_vcf( ds.track.vcf, genome )
+	}
+
+	// other type of tracks
+	return ds
+}

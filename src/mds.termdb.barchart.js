@@ -4,6 +4,7 @@ import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import getHandlers from './mds.termdb.barchart.events'
+import {get_event_bus} from './client'
 
 const colors = {
   c10: scaleOrdinal( schemeCategory10 ),
@@ -31,7 +32,6 @@ export class TermdbBarchart{
     ) 
     this.settings = Object.assign(this.defaults, opts.settings)
     this.renderers = {}
-    this.serverData = {}
     this.terms = {
       term0: null,
       term1: this.opts.term1,
@@ -39,18 +39,32 @@ export class TermdbBarchart{
     }
     this.handlers = getHandlers(this)
     this.controls = {}
-    this.currChartsData = null
     this.term2toColor = {}
+    this.processedExcludes = []
+    this.bus = get_event_bus(
+      ["postClick"], // will supply term-values to postClick
+      opts.obj.callbacks.bar
+    )
   }
 
-  main(plot=null, data=null, isVisible=true, obj=null) {
+  main(plot=null, data=null) {
     if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
     if (data) this.currServerData = data
-    if (!this.setVisibility(isVisible)) return
-    if (obj) this.obj = obj
-    if (plot) this.plot = plot
+    if (plot) {
+      this.plot = plot
+      this.obj = plot.obj
+    }
+    if (!this.setVisibility()) return
     this.updateSettings(plot)
     this.processData(this.currServerData)
+  }
+
+  setVisibility() {
+    const isVisible = this.plot.settings.currViews.includes("barchart")
+    const display = isVisible ? 'block' : 'none'
+    this.dom.barDiv.style('display', display)
+    this.dom.legendDiv.style('display', display)
+    return isVisible
   }
 
   updateSettings(plot) {
@@ -62,12 +76,7 @@ export class TermdbBarchart{
       dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
       term0: plot.term0 ? plot.term0.id : '', // convenient reference to the term id
       term1: plot.term.id, // convenient reference to the term2 id
-      term2: obj.modifier_ssid_barchart ? 'genotype' // convenient reference to the term0 id
-        : plot.term2 ? plot.term2.id
-        : '',
-      ssid: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.ssid : '',
-      mname: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.mutation_name : '',
-      groups: obj.modifier_ssid_barchart ? obj.modifier_ssid_barchart.groups : null,
+      term2: plot.term2 ? plot.term2.id : '',
       unit: plot.settings.bar.unit,
       orientation: plot.settings.bar.orientation,
       // normalize bar thickness regardless of orientation
@@ -76,7 +85,15 @@ export class TermdbBarchart{
       colspace: plot.settings.common.barspace,
       rowspace: plot.settings.common.barspace
     }
-    Object.assign(this.settings, settings, this.currServerData.refs ? this.currServerData.refs : {})
+    
+    this.initExclude(this.currServerData.refs)
+    Object.assign(
+      this.settings, 
+      settings, 
+      this.currServerData.refs ? this.currServerData.refs : {},
+      {exclude: this.settings.exclude}
+    )
+    
     this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
     if (this.settings.term2 == "" && this.settings.unit == "pct") {
       this.settings.unit = "abs"
@@ -91,11 +108,25 @@ export class TermdbBarchart{
     this.terms.term0 = settings.term0 && plot.term0 ? plot.term0 : null
   }
 
-  setVisibility(isVisible) {
-    const display = isVisible ? 'block' : 'none'
-    this.dom.barDiv.style('display', display)
-    this.dom.legendDiv.style('display', display)
-    return isVisible
+  initExclude(refs) {
+    if (this.processedExcludes.includes(refs)) return
+    this.processedExcludes.push(refs)
+    const unannotatedColLabels = refs.unannotatedLabels.term1
+    if (unannotatedColLabels) {
+      for(const label of unannotatedColLabels) {
+        if (!this.settings.exclude.cols.includes(label)) {
+          this.settings.exclude.cols.push(label) // do not automatically hide for now
+        }
+      }
+    }
+    const unannotatedRowLabels = refs.unannotatedLabels.term2
+    if (unannotatedRowLabels) {
+      for(const label of unannotatedRowLabels) {
+        if (!this.settings.exclude.rows.includes(label)) {
+          this.settings.exclude.rows.push(label) // do not automatically hide for now
+        }
+      }
+    }
   }
 
   processData(chartsData) {
@@ -118,7 +149,6 @@ export class TermdbBarchart{
     }
 
     self.setMaxVisibleTotals(chartsData)
-
     const rows = chartsData.refs.rows;
 
     self.barSorter = (a,b) => this.seriesOrder.indexOf(a) - this.seriesOrder.indexOf(b)
@@ -163,33 +193,15 @@ export class TermdbBarchart{
   }
 
   setMaxVisibleTotals(chartsData) {
+    // chartsData = this.currServerData
     this.totalsByDataId = {}
     const term1 = this.settings.term1
+    
+    const addlSeriesIds = {} // to track series IDs that are not already in this.seriesOrder
     let maxVisibleAcrossCharts = 0
     for(const chart of chartsData.charts) {
-      chart.settings = JSON.parse(rendererSettings)
-      if (this.currChartsData != chartsData) {
-        const unannotatedColLabels = chartsData.refs.unannotatedLabels.term1
-        if (unannotatedColLabels) {
-          for(const label of unannotatedColLabels) {
-            if (!this.settings.exclude.cols.includes(label)) {
-              //this.settings.exclude.cols.push(label) // do not automatically hide for now
-            }
-          }
-        }
-        const unannotatedRowLabels = chartsData.refs.unannotatedLabels.term2
-        if (unannotatedRowLabels) {
-          for(const label of unannotatedRowLabels) {
-            if (!this.settings.exclude.rows.includes(label)) {
-              //this.settings.exclude.rows.push(label) // do not automatically hide for now
-            }
-          }
-        }
-      }
-    }
-    const addlSeriesIds = {} // to track series IDs that are not already in this.seriesOrder
-    for(const chart of chartsData.charts) {
-      Object.assign(chart.settings, this.settings, chartsData.refs)
+      if (!chart.settings) chart.settings = JSON.parse(rendererSettings)
+      Object.assign(chart.settings, this.settings)
       chart.visibleSerieses = chart.serieses.filter(series=>{
         if (chart.settings.exclude.cols.includes(series.seriesId)) return false
         series.visibleData = series.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))
@@ -230,7 +242,6 @@ export class TermdbBarchart{
       chart.maxVisibleAcrossCharts = maxVisibleAcrossCharts
     }
     this.seriesOrder.push(...Object.keys(addlSeriesIds).sort((a,b)=>addlSeriesIds[b] - addlSeriesIds[a]))
-    this.currChartsData = chartsData
   }
 
   sortStacking(series, chart, chartsData) {

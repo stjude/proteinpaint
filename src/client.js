@@ -173,6 +173,48 @@ export function may_get_locationsearch () {
 }
 
 
+export function get_event_bus(eventTypes=[], callbacks={}, defaultArg=null) {
+/*
+	Event bus pattern inspired by vue-bus and d3-dispatch
+  
+  eventTypes              array of allowed string event type[.name]
+
+  callbacks{}
+  .$eventtype[.name]:     callback function or [functions]
+
+  defaultArg              the default argument to supply to 
+                          dispatcher.call() below
+*/
+	const events = {}
+	const bus = {
+		on(eventType, callback) {
+			const [type, name] = eventType.split('.')
+			if (!eventTypes.includes(type)) {
+				throw `Unknown event type '${type}' (client.get_event_bus)`
+			} else if (!callback) {
+				delete events[eventType]
+			} else if (typeof callback == "function") {
+				events[eventType] = callback
+			} else if (Array.isArray(callback)) {
+				events[eventType] = arg=>{
+					for(const fxn of callback) fxn(arg)
+				}
+			}
+			return bus
+		},
+		emit(eventType, arg=null) {
+			if (events[eventType]) events[eventType](arg ? arg : defaultArg)
+			return bus
+		}
+	}
+	if (callbacks) {
+		for(const eventType in callbacks) {
+			bus.on(eventType, callbacks[eventType])
+		}
+	}
+	return bus
+}
+
 
 export function appear(d,display) {
 	d.style('opacity',0)
@@ -1704,21 +1746,4 @@ export function add_scriptTag ( path ) {
 		document.head.appendChild(script)
 		script.onload = resolve
 	})
-}
-
-export function make_select_btn_pair( holder ){
-// a click button triggering a <select> menu
-	const btn = holder.append('div')
-		.attr('class','sja_filter_tag_btn')
-		.style('position','absolute')
-	const select = holder.append('select')
-		.style('opacity',0)
-		.on('mouseover',()=>{
-			btn.style('opacity', '0.8')
-			.style('cursor','default')
-		})
-		.on('mouseout',()=>{
-			btn.style('opacity', '1')
-		})
-	return [select, btn]
 }

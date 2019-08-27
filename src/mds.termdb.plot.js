@@ -4,7 +4,9 @@ import {TermdbBarchart} from './mds.termdb.barchart'
 import {init as table_init} from './mds.termdb.table'
 import {init as boxplot_init} from './mds.termdb.boxplot'
 import {init as stattable_init} from './mds.termdb.stattable'
-import {init as controls_init} from './mds.termdb.controls'
+import scatter from './mds.termdb.scatter'
+import {init as controls_init} from './mds.termdb.plot.controls'
+
 
 export function init(arg) {
 /*
@@ -20,15 +22,22 @@ arg:
   
   // initiating the plot object
   const plot = {
-    // dispatch() is the gatekeeper function to protect the shared state
-    // among the different viz and controls
-    dispatch(updatedKeyVals={}) { //console.log(updatedKeyVals)
+    // main() is the gatekeeper function to protect the shared state
+    // among the different views and controls
+    main(updatedKeyVals={}) {
       nestedUpdate(plot, null, updatedKeyVals)
-      main(plot)
+      coordinateState(plot)
+      if (!plot.obj.expanded_term_ids.includes(plot.term.id)) return
+      requestData(plot)
     },
     tip: new client.Menu({padding:'18px'}),
-    callbacks: (arg.callbacks && arg.callbacks) || {}
   }
+
+  plot.bus = client.get_event_bus(
+    ["postRender"],
+    arg.obj.callbacks.plot,
+    plot
+  )
 
   // fill-in the REQUIRED argument keys
   Object.assign(plot, {
@@ -76,7 +85,7 @@ arg:
   // set the default settings
   plot.settings = {
     // currViews: ["barchart" | "table" | "boxplot"] 
-    // + auto-added ["stattable"] if barchart && plot.term.isfloat
+    // + auto-added ["stattable"] if barchart && plot.term.isfloat or .isinteger
     currViews: ["barchart"], 
     common: {
       use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
@@ -111,7 +120,11 @@ arg:
   }
 
   // set view functions or objects
-  plot.views = {
+  plot.components = {
+    controls: controls_init({
+      plot,
+      holder: plot.dom.controls
+    }),
     banner: banner_init(plot.dom.banner), 
     barchart: new TermdbBarchart({
       holder: plot.dom.viz,
@@ -121,72 +134,31 @@ arg:
     }),
     boxplot: boxplot_init(plot.dom.viz),
     stattable: stattable_init(plot.dom.viz),
-    table: table_init(plot.dom.viz)
-  }
-  // set configuration controls
-  plot.controls = controls_init(plot)
-  if (Array.isArray(plot.callbacks.postInit)) {
-    plot.callbacks.postInit.forEach(callback => callback(plot))
-  }
-  
-  main( plot )
-  if ( arg.obj.termfilter && arg.obj.termfilter.callbacks ) {
-    // termfilter in action, insert main() of this plot to callback list to be called when filter is updated
-	  // FIXME svg dimension will be 0 when the plot is invisible (as turned off by the VIEW button)
-    arg.obj.termfilter.callbacks.push(()=>main(plot))
-  }
+    table: table_init(plot.dom.viz),
+    scatter: scatter({holder: plot.dom.viz})
+  } 
+  plot.main()
+  return plot
+}
 
-  function nestedUpdate(obj, key, value, keylineage=[]) {
-    // 7 is a a harcoded maximum depth allowed for processing nested object values
-    if (keylineage.length >= 7) {
-      obj[key] = value
-    } else if (key=='term' || key == 'term2' || key == 'term0') {
-      if (!value) obj[key] = value
-      else if (typeof value == "object") {
-        if (value.term) obj[key] = Object.assign({}, value.term)
-        if (value.q) obj[key].q = Object.assign({}, value.q)
-      }
-    } else if (key !== null && (!value || typeof value != 'object')) {
-      obj[key] = value
-    } else {
-      for(const subkey in value) {
-        nestedUpdate(key == null ? obj : obj[key], subkey, value[subkey], keylineage.concat(subkey))
-      }
+function nestedUpdate(obj, key, value, keylineage=[]) {
+  const maxDepth = 7 // harcoded maximum depth allowed for processing nested object values
+  if (keylineage.length >= maxDepth) {
+    obj[key] = value
+  } else if (key=='term' || key == 'term2' || key == 'term0') {
+    if (!value) obj[key] = value
+    else if (typeof value == "object") {
+      if (value.term) obj[key] = Object.assign({}, value.term)
+      if (value.q) obj[key].q = Object.assign({}, value.q)
+    }
+  } else if (key !== null && (!value || typeof value != 'object')) {
+    obj[key] = value
+  } else {
+    for(const subkey in value) {
+      nestedUpdate(key == null ? obj : obj[key], subkey, value[subkey], keylineage.concat(subkey))
     }
   }
 }
-
-// the same route + request payload/URL parameters
-// should produce the same response data, so the
-// results of the server request can be cached in the
-// client 
-const serverData = {}
-
-function main(plot, callback = ()=>{}) {
-  coordinateState(plot)
-
-  // create an alternative reference 
-  // to plot.[term0,term,term2] and term1_q parameters
-  // for convenience and namespacing related variables
-  plot.terms = [plot.term0, plot.term, plot.term2]
-  //plot.dom.holder.style('max-width', Math.round(85*window.innerWidth/100) + 'px')
-
-  const dataName = getDataName(plot)
-  if (serverData[dataName]) {
-    syncParams(plot, serverData[dataName])
-    render(plot, serverData[dataName])
-  }
-  else {
-    client.dofetch2('/termdb-barsql' + dataName)
-    .then(chartsData => {
-      serverData[dataName] = chartsData
-      syncParams(plot, serverData[dataName])
-      render(plot, chartsData)
-    })
-    //.catch(window.alert)
-  }
-}
-
 
 function coordinateState(plot) {
 /*
@@ -197,18 +169,26 @@ function coordinateState(plot) {
       if (!plot.term2.isfloat) plot.settings.currViews = ["barchart"]
     } 
 
-    if (plot.term2.q && plot.term2.id == plot.term.id) {
-      if (
-        (plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade))
-        || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
-      ) plot.term2 = undefined
+    if (plot.term2.iscondition) {
+      if (plot.term2.q && plot.term2.id == plot.term.id) {
+        if (
+          (plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade))
+          || (plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
+        ) plot.term2 = undefined
+      }
+
+      if (plot.term2 && plot.term2.id == plot.term.id) {
+        if (!plot.term2.q) plot.term2.q = {}
+        for(const param of ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']) {
+          delete plot.term2.q[param]
+          if (plot.term.q[param]) plot.term2.q[param] = 1
+        }
+      }
     }
 
-    if (plot.term2 && plot.term2.iscondition && plot.term2.id == plot.term.id) {
-      if (!plot.term2.q) plot.term2.q = {}
-      for(const param of ['value_by_max_grade', 'value_by_most_recent', 'value_by_computable_grade']) {
-        delete plot.term2.q[param]
-        if (plot.term.q[param]) plot.term2.q[param] = 1
+    if (plot.settings.currViews.includes("scatter")) {
+      if (!plot.term.isfloat || !plot.term2.isfloat) {
+        plot.settings.currViews = ["barchart"]
       }
     }
   } else if (!plot.settings.currViews.includes("barchart")) {
@@ -217,13 +197,44 @@ function coordinateState(plot) {
   
   const i = plot.settings.currViews.indexOf("stattable")
   if (i == -1) {
-    if (plot.settings.currViews.includes("barchart") && plot.term.isfloat) {
+    if (plot.settings.currViews.includes("barchart") && (plot.term.isfloat /*|| plot.term.isinteger*/)) {
       plot.settings.currViews.push("stattable")
     }
-  } else if (!plot.settings.currViews.includes("barchart") || !plot.term.isfloat) {
+  } else if (!plot.settings.currViews.includes("barchart") || (!plot.term.isfloat /*&& !plot.term.isinteger*/)) {
     plot.settings.currViews.splice(i, 1)
   }
+
+  // create an alternative reference 
+  // to plot.[term0,term,term2] and term1_q parameters
+  // for convenience and namespacing related variables
+  plot.terms = [plot.term0, plot.term, plot.term2]
 }
+
+
+// the same route + request payload/URL parameters
+// should produce the same response data, so the
+// results of the server request can be cached in the
+// client 
+const serverData = {}
+
+function requestData(plot) {
+  const dataName = getDataName(plot)
+  if (serverData[dataName]) {
+    syncParams(plot, serverData[dataName])
+    render(plot, serverData[dataName])
+  }
+  else {
+    const route = plot.settings.currViews.includes("scatter") ? "/termdb" : "/termdb-barsql"
+    client.dofetch2(route + dataName)
+    .then(chartsData => {
+      serverData[dataName] = chartsData
+      syncParams(plot, serverData[dataName])
+      render(plot, chartsData)
+    })
+    //.catch(window.alert)
+  }
+}
+
 
 // creates URL search parameter string, that also serves as 
 // a unique request identifier to be used for caching server response
@@ -234,15 +245,26 @@ function getDataName(plot) {
     'dslabel=' + (obj.dslabel ? obj.dslabel : obj.mds.label)
   ];
 
+  if (plot.settings.currViews.includes("scatter")) {
+    params.push("scatter=1")
+  }
+
   plot.terms.forEach((term, i)=>{
     if (!term) return
     params.push('term'+i+'_id=' + encodeURIComponent(term.id))
     if (term.iscondition && !term.q) term.q = {}
     if (term.q && typeof term.q == 'object') {
-      if (term.iscondition && !Object.keys(term.q).length) {
-        term.q = {bar_by_grade:1, value_by_max_grade:1}
+      let q={}
+      if (term.iscondition) {
+        q = Object.keys(term.q).length 
+          ? Object.assign({}, term.q)
+          : {bar_by_grade:1, value_by_max_grade:1}
       }
-      params.push('term'+i+'_q=' +encodeURIComponent(JSON.stringify(term.q)))
+      if (term.q.binconfig) {
+        q = Object.assign({},term.q)
+        delete q.binconfig.results
+      }
+      params.push('term'+i+'_q=' +encodeURIComponent(JSON.stringify(q)))
     }
   })
 
@@ -254,7 +276,7 @@ function getDataName(plot) {
       'chr=' + obj.modifier_ssid_barchart.chr,
       'pos=' + obj.modifier_ssid_barchart.pos
     )
-  } 
+  }
 
   if (obj.termfilter && obj.termfilter.terms && obj.termfilter.terms.length) {
     params.push('tvslst=' + encodeURIComponent(JSON.stringify(obj.termfilter.terms.map(filter=>{
@@ -279,7 +301,7 @@ function syncParams( plot, data ) {
   if (!data || !data.refs) return
   for(const i of [0,1,2]) {
     const term = plot.terms[i]
-    if (!term) continue
+    if (!term || term=='genotype') continue
     if (data.refs.bins && data.refs.bins[i]) {
       term.bins = data.refs.bins[i]
     }
@@ -292,25 +314,23 @@ function syncParams( plot, data ) {
       }
     }
   }
+  // when the server response includes default parameters
+  // that was not in the request parameters, the dataName
+  // will be different even though the plot state is technically 
+  // the same except now with explicit defaults. So store 
+  // the response data under the alternative dataname
+  // that includes the defaults.
+  const altDataName = getDataName(plot)
+  if (!(altDataName in serverData)) {
+    serverData[altDataName] = data
+  }
 }
 
 function render ( plot, data ) {
-/*
-make a barchart, boxplot, or stat table based on configs 
-in the plot object called by showing the single-term plot 
-at the beginning or stacked bar plot for cross-tabulating
-*/ 
-  plot.controls.main(plot, data)
-  plot.views.barchart.main(plot, data, plot.settings.currViews.includes("barchart"), plot.obj)
-  plot.views.boxplot.main(plot, data, plot.settings.currViews.includes("boxplot"))
-  plot.views.stattable.main(plot, data, plot.settings.currViews.includes("stattable"))
-  plot.views.table.main(plot, data, plot.settings.currViews.includes("table"))
-  plot.views.banner.main(plot, data)
-  plot.controls.postRender(plot)
- 
-  if (Array.isArray(plot.callbacks.postRender)) {
-    plot.callbacks.postRender.forEach(callback => callback(plot))
+  for(const name in plot.components) {
+    plot.components[name].main(plot, data)
   }
+  plot.bus.emit("postRender")
 }
 
 function banner_init(div) {
@@ -319,7 +339,7 @@ function banner_init(div) {
 
   return {
     main(plot, data) {
-      if (!data.charts.length) {
+      if (!data || ((!data.charts || !data.charts.length) && !data.rows)) {
         div.html('No data to display.').style('display', 'block')
       } else {
         div.style('display', 'none')

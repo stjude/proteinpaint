@@ -49,6 +49,7 @@ const express=require('express'),
 	basicAuth = require('express-basic-auth'),
 	termdb = require('./modules/termdb'),
 	termdbbarsql = require('./modules/termdb.barsql'),
+	bedgraphdot_request_closure = require('./modules/bedgraphdot'),
 	mds2_init = require('./modules/mds2.init'),
 	mds2_load = require('./modules/mds2.load'),
 	singlecell = require('./modules/singlecell'),
@@ -151,6 +152,7 @@ app.post('/genelookup',handle_genelookup)
 app.post('/ntseq',handle_ntseq)
 app.post('/pdomain',handle_pdomain)
 app.post('/tkbedj',handle_tkbedj)
+app.post('/tkbedgraphdot', bedgraphdot_request_closure( genomes ) )
 app.post('/bedjdata',handle_bedjdata)
 app.post('/tkbampile',handle_tkbampile)
 app.post('/snpbyname',handle_snpbyname)
@@ -11915,6 +11917,7 @@ function makeyscale() {
 	}
 	return yscale
 }
+exports.makeyscale = makeyscale
 
 
 

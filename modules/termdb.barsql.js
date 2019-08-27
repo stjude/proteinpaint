@@ -52,8 +52,8 @@ async function barchart_data ( q, ds, res, tdb ) {
   q.ds = ds
 
   if (q.ssid) {
-    const [genotypeBySample, genotype2sample] = await load_genotype_by_sample(q.ssid)
-    q.genotypeBySample = genotypeBySample
+    const [sample2gt, genotype2sample] = await utils.loadfile_ssid( q.ssid )
+    q.sample2gt = sample2gt
     q.genotype2sample = genotype2sample
   }
 
@@ -172,9 +172,10 @@ function getPj(q, data, tdb, ds) {
         // use partjson @join() instead 
         for(const d of terms) {
           if (d.isGenotype) {
-            if (!(row.sample in q.genotypeBySample)) return
-            row[d.key] = q.genotypeBySample[row.sample]
-            row[d.val] = q.genotypeBySample[row.sample]
+		    const genotype = q.sample2gt.get(row.sample)
+            if (!genotype) return
+            row[d.key] = genotype
+            row[d.val] = genotype
           } else if (d.isAnnoVal(row[d.val])) {
             row[d.nval] = row[d.val]
           }
@@ -321,33 +322,6 @@ function getTermDetails(q, tdb, index) {
 }
 
 
-async function load_genotype_by_sample ( id ) {
-/* id is the file name under cache/samples-by-genotype/
-*/
-  const text = await utils.read_file( path.join( serverconfig.cachedir, 'ssid', id ) )
-  const bySample = Object.create(null)
-  const genotype2sample = new Map()
-  for(const line of text.split('\n')) {
-    if (!line) continue
-    const [type, samplesStr] = line.split('\t')
-    if (!samplesStr) continue
-    const samples = samplesStr.split(",")
-    for(const sample of samples) {
-      bySample[sample] = type
-    }
-
-    if(!genotype_type_set.has(type)) throw 'unknown hardcoded genotype label: '+type
-    genotype2sample.set(type, new Set(samples))
-  }
-  return [bySample, genotype2sample]
-}
-
-const genotype_type_set = new Set(["Homozygous reference","Homozygous alternative","Heterozygous"])
-const genotype_types = {
-  href: "Homozygous reference",
-  halt: "Homozygous alternative",
-  het: "Heterozygous"
-}
 
 function get_AF ( samples, chr, pos, genotype2sample, ds ) {
 /*
@@ -361,13 +335,13 @@ arguments:
 - chr
   chromosome of the variant
 - genotype2sample Map
-    returned by load_genotype_by_sample()
+    returned by loadfile_ssid()
 - ds{}
 */
   const afconfig = ds.track.vcf.termdb_bygenotype // location of configurations
-  const href = genotype2sample.has(genotype_types.href) ? genotype2sample.get(genotype_types.href) : new Set()
-  const halt = genotype2sample.has(genotype_types.halt) ? genotype2sample.get(genotype_types.halt) : new Set()
-  const het = genotype2sample.has(genotype_types.het) ? genotype2sample.get(genotype_types.het) : new Set()
+  const href = genotype2sample.has(utils.genotype_types.href) ? genotype2sample.get(utils.genotype_types.href) : new Set()
+  const halt = genotype2sample.has(utils.genotype_types.halt) ? genotype2sample.get(utils.genotype_types.halt) : new Set()
+  const het = genotype2sample.has(utils.genotype_types.het) ? genotype2sample.get(utils.genotype_types.het) : new Set()
   let AC=0, AN=0
   for(const sample of samples) {
     let isdiploid = false

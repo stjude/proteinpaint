@@ -1,4 +1,5 @@
 import * as client from './client'
+import * as dom from './dom'
 import {init} from './mds.termdb'
 import {event as d3event} from 'd3-selection'
 
@@ -12,7 +13,7 @@ to_parameter
 
 
 
-export async function display ( group_div, group, mds, genome, tvslst_filter, callback){
+export async function display ( obj ){
 /*
 group{}
 	.terms[]
@@ -25,17 +26,18 @@ group{}
 		.isnot
 */
 
-    const terms_div = group_div.append('div')
+    const terms_div = obj.group_div.append('div')
         .style('display','inline-block')
 
-    const tip = new client.Menu({padding:'0'})
+    obj.tvstip = new client.Menu({padding:'0'})
 
-    update_terms(terms_div)
+    update_terms()
 
+    obj.update_terms = update_terms
 
     // add new term
-    const add_term_btn = group_div.append('div')
-        .attr('class','sja_filter_tag_btn')
+    const add_term_btn = obj.group_div.append('div')
+        .attr('class','sja_filter_tag_btn add_term_btn')
         .style('padding','2px 7px')
         .style('display','inline-block')
         .style('margin-left','7px')
@@ -44,37 +46,37 @@ group{}
         .html('&#43;')
         .on('click',async ()=>{
             
-            tip.clear()
+            obj.tvstip.clear()
             .showunder( add_term_btn.node() )
 
-            const treediv = tip.d.append('div')
+            const treediv = obj.tvstip.d.append('div')
 
             // a new object as init() argument for launching the tree with modifiers
-            const obj = {
-                genome: genome,
-                mds: mds,
+            const tree_obj = {
+                genome: obj.genome,
+                mds: obj.mds,
                 div: treediv,
                 default_rootterm: {},
-                termfilter:{terms:tvslst_filter},
+                termfilter:{terms: obj.tvslst_filter},
                 modifier_barchart_selectbar: {
                     callback: result => {
-                        tip.hide()
+                        obj.tvstip.hide()
                         add_term(result)
                     }
                 }
             }
-            init(obj)
+            init(tree_obj)
         })
 
 
 	// all private functions below
 
 
-    async function update_terms(terms_div){
+    async function update_terms(){
 
         terms_div.selectAll('*').remove()
 
-        for(const [i, term] of group.terms.entries()){
+        for(const [i, term] of obj.group.terms.entries()){
 
             const one_term_div = terms_div.append('div')
                 .style('white-space','nowrap')
@@ -82,7 +84,7 @@ group{}
                 .style('padding','2px')
 
             const term_name_btn = one_term_div.append('div')
-                .attr('class','sja_filter_tag_btn')
+                .attr('class','sja_filter_tag_btn term_name_btn')
                 .style('border-radius','6px 0 0 6px')
                 .style('background-color', '#4888BF')
                 .style('padding','7px 6px 5px 6px')
@@ -92,34 +94,33 @@ group{}
                 .style('text-transform','uppercase')
                 .on('click',async ()=>{
                     
-                    tip.clear()
+                    obj.tvstip.clear()
                     .showunder( term_name_btn.node() )
 
-                    const treediv = tip.d.append('div')
+                    const treediv = obj.tvstip.d.append('div')
 
                     // a new object as init() argument for launching the tree with modifiers
-                    const obj = {
-                        genome: genome,
-                        mds: mds,
+                    const tree_obj = {
+                        genome: obj.genome,
+                        mds: obj.mds,
                         div: treediv,
                         default_rootterm: {},
-                        termfilter:{terms:tvslst_filter},
+                        termfilter:{terms: obj.tvslst_filter},
                         modifier_barchart_selectbar: {
                             callback: result => {
-                                tip.hide()
+                                obj.tvstip.hide()
                                 replace_term(result, i)
-                                callback()
-                                update_terms(terms_div)
+                                obj.callback()
                             }
                         }
                     }
-                    init(obj)
+                    init(tree_obj)
                 })
 
             //term-value relation button
             if(term.term.iscategorical){
 
-                const [condition_select, condition_btn] = client.make_select_btn_pair(one_term_div)
+                const [condition_select, condition_btn] = dom.make_select_btn_pair(one_term_div)
 
                 condition_select.append('option')
                     .attr('value','is')
@@ -134,14 +135,14 @@ group{}
                 condition_select.on('change',async()=>{
 
                     //change value of button 
-                    group.terms[i].isnot = term.isnot ? false : true
+                    obj.group.terms[i].isnot = term.isnot ? false : true
     
                     //update gorup and load tk
-                    await callback()
-                    update_terms(terms_div)
+                    await obj.callback()
                 })
 
                 condition_btn
+                    .attr('class','sja_filter_tag_btn condition_btn')
                     .style('font-size','.7em')
                     .style('padding','7px 6px 5px 6px')
                     .text(term.isnot ? 'IS NOT' : 'IS')
@@ -151,7 +152,7 @@ group{}
                 condition_select.style('width',condition_btn.node().offsetWidth+'px')
             } else{
                 const condition_btn = one_term_div.append('div')
-                    .attr('class','sja_filter_tag_btn')
+                    .attr('class','sja_filter_tag_btn condition_btn')
                     .style('background-color','#eeeeee')
                     .style('font-size','.7em')
                     .style('padding','7px 6px 5px 6px')
@@ -180,7 +181,7 @@ group{}
                 
                 for (let j=0; j<term.values.length; j++){
 
-                    const [replace_value_select, term_value_btn] = client.make_select_btn_pair(one_term_div)
+                    const [replace_value_select, term_value_btn] = dom.make_select_btn_pair(one_term_div)
                     replace_value_select.style('margin-right','1px')
                     replace_value_select.selectAll('option').remove()
 
@@ -189,9 +190,9 @@ group{}
                     replace_value_select.on('change',async()=>{
                         //if selected index is 0 (delete) and value is 'delete' then remove from group
                         if(replace_value_select.node().selectedIndex == 0 && replace_value_select.node().value == 'delete'){
-                            group.terms[i].values.splice(j,1)
-                                if(group.terms[i].values.length==0) {
-                                    group.terms.splice(i,1)
+                            obj.group.terms[i].values.splice(j,1)
+                                if(obj.group.terms[i].values.length==0) {
+                                    obj.group.terms.splice(i,1)
                                 }
                         }else{
                             //change value of button 
@@ -199,15 +200,15 @@ group{}
                             term_value_btn
                                 .style('padding','3px 4px 3px 4px')
                                 .text('Loading...')
-                            group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
+                            obj.group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
                         }
             
                         //update gorup and load tk
-                        await callback()
-                        update_terms(terms_div)
+                        await obj.callback()
                     })
                     
                     term_value_btn
+                        .attr('class','sja_filter_tag_btn value_btn')
                         .style('padding','2px 4px 3px 4px')
                         .style('margin-right','1px')
                         .style('font-size','1em')
@@ -229,20 +230,20 @@ group{}
                             .style('text-transform','uppercase')
                             .text('or')
                     }else{
-                        make_plus_btn(one_term_div, data, group.terms[i].values, terms_div)
+                        make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
                     }
                 }
 
             } else if( term.term.isinteger || term.term.isfloat ) {
                 // TODO numerical term, print range in value button and apply the suitable click callback
-                await display_numeric_filter(group, i, one_term_div)
+                await display_numeric_filter(obj.group, i, one_term_div)
             } else if(term.term.iscondition){
 
                 // for overlay between grade and subcategory
                 if(term.grade_and_child){
                     for (let j=0; j<term.grade_and_child.length; j++){
                         term_value_div.append('div')
-                            .attr('class','sja_filter_tag_btn')
+                            .attr('class','sja_filter_tag_btn value_btn')
                             .style('font-size','1em')
                             .style('padding','3px 4px 3px 4px')
                             .style('margin-right','1px')
@@ -260,7 +261,7 @@ group{}
                             .text('AND')
                             
                         term_value_div.append('div')
-                            .attr('class','sja_filter_tag_btn')
+                            .attr('class','sja_filter_tag_btn value_btn')
                             .style('font-size','1em')
                             .style('padding','3px 4px 3px 4px')
                             .style('margin-right','1px')
@@ -279,7 +280,7 @@ group{}
 
                     for (let j=0; j<term.values.length; j++){
 
-                        const [subcategroy_select, term_value_btn] = client.make_select_btn_pair(one_term_div)
+                        const [subcategroy_select, term_value_btn] = dom.make_select_btn_pair(one_term_div)
                         subcategroy_select.style('margin-right','1px')
                         make_select_list(data, subcategroy_select, term.values, term.values[j].key, 'delete')
 
@@ -287,9 +288,9 @@ group{}
 
                             //if value is 'delete' then remove from group
                             if(subcategroy_select.node().value == 'delete'){
-                                group.terms[i].values.splice(j,1)
-                                    if(group.terms[i].values.length==0) {
-                                        group.terms.splice(i,1)
+                                obj.group.terms[i].values.splice(j,1)
+                                    if(obj.group.terms[i].values.length==0) {
+                                        obj.group.terms.splice(i,1)
                                     }
                             }else{
                                 //change value of button 
@@ -297,15 +298,15 @@ group{}
                                 term_value_btn
                                     .style('padding','3px 4px 3px 4px')
                                     .text('Loading...')
-                                group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
+                                obj.group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
                             }
                 
                             //update gorup and load tk
-                            await callback()
-                            update_terms(terms_div)
+                            await obj.callback()
                         })
 
                         term_value_btn
+                            .attr('class','sja_filter_tag_btn value_btn')
                             .style('font-size','1em')
                             .style('padding','2px 4px 3px 4px')
                             .style('margin-right','1px')
@@ -329,7 +330,7 @@ group{}
 
                     make_grade_select_btn(one_term_div, term, terms_div)
 
-                    make_plus_btn(one_term_div, data, group.terms[i].values, terms_div)
+                    make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
 
                 }else if(term.bar_by_grade){
 
@@ -341,7 +342,7 @@ group{}
 
                     for (let j=0; j<term.values.length; j++){
 
-                        const [grade_select, term_value_btn] = client.make_select_btn_pair(one_term_div)
+                        const [grade_select, term_value_btn] = dom.make_select_btn_pair(one_term_div)
                         grade_select.style('margin-right','1px')
 
                         make_select_list(data, grade_select, term.values, term.values[j].key, 'delete')
@@ -350,9 +351,9 @@ group{}
 
                             //if value is 'delete' then remove from group
                             if(grade_select.node().value == 'delete'){
-                                group.terms[i].values.splice(j,1)
-                                    if(group.terms[i].values.length==0) {
-                                        group.terms.splice(i,1)
+                                obj.group.terms[i].values.splice(j,1)
+                                    if(obj.group.terms[i].values.length==0) {
+                                        obj.group.terms.splice(i,1)
                                     }
                             }else{
                                 //change value of button 
@@ -360,12 +361,11 @@ group{}
                                 term_value_btn
                                     .style('padding','3px 4px 3px 4px')
                                     .text('Loading...')
-                                group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
+                                obj.group.terms[i].values[j] = {key:new_value.key,label:new_value.label}
                             }
                 
                             //update gorup and load tk
-                            await callback()
-                            update_terms(terms_div)
+                            await obj.callback()
                         })
 
                         term_value_btn
@@ -392,22 +392,21 @@ group{}
 
                     make_grade_select_btn(one_term_div, term, terms_div)
 
-                    make_plus_btn(one_term_div, data, group.terms[i].values, terms_div)
+                    make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
                 }
             }
 
             // button with 'x' to remove term2
             one_term_div.append('div')
-                .attr('class','sja_filter_tag_btn')
+                .attr('class','sja_filter_tag_btn term_remove_btn')
                 .style('padding','3px 6px 3px 4px')
                 .style('border-radius','0 6px 6px 0')
                 .style('background-color', '#4888BF')
                 .html('&#215;')
                 .on('click',async ()=>{
-                    group.terms.splice(i, 1)
+                    obj.group.terms.splice(i, 1)
                     // may_settoloading_termgroup( group )
-                    await callback()
-                    update_terms(terms_div)
+                    await obj.callback()
                 })
         }
     }
@@ -416,11 +415,11 @@ group{}
 
         let tvslst_filter_str = false
 
-        if(tvslst_filter) {
-            tvslst_filter_str = encodeURIComponent(JSON.stringify(to_parameter(tvslst_filter)))
+        if(obj.tvslst_filter) {
+            tvslst_filter_str = encodeURIComponent(JSON.stringify(to_parameter(obj.tvslst_filter)))
         }
 
-        const args = ['genome='+genome.name+'&dslabel='+mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+tvslst_filter_str]
+        const args = ['genome='+obj.genome.name+'&dslabel='+obj.mds.label+'&getcategories=1&tid='+term.term.id+'&tvslst='+tvslst_filter_str]
         if (lst) args.push(...lst) 
 
         let data
@@ -437,12 +436,11 @@ group{}
 
         // Add new term to group.terms
         for(const [i, bar_term] of result.terms.entries()){
-            group.terms.push(bar_term)
+            obj.group.terms.push(bar_term)
         }
         
         // update the group div with new terms
-        await callback()
-        update_terms(terms_div)
+        await obj.callback()
     }
 
     function make_select_list(data, select, selected_values, btn_value, first_option){
@@ -489,7 +487,7 @@ group{}
         // If 2 or less values for the term then remove plus button
         if (data.lst.length <= 2) return
 
-        const [add_value_select, add_value_btn] = client.make_select_btn_pair(holder)
+        const [add_value_select, add_value_btn] = dom.make_select_btn_pair(holder)
         add_value_select.style('margin-right','1px')
 
         add_value_select.selectAll('option').remove()
@@ -528,13 +526,13 @@ group{}
                 else selected_values.push({key:new_value.key,label:new_value.label})
 
                 //update gorup and load tk
-                await callback()
-                update_terms(terms_div)
+                await obj.callback()
             }
         })
 
         // '+' button at end of all values to add to list of values
         add_value_btn
+            .attr('class','sja_filter_tag_btn add_value_btn')
             .style('padding','3px 4px 3px 4px')
             .style('margin-right','1px')
             .style('font-size','1em')
@@ -546,7 +544,7 @@ group{}
     }
 
     function make_grade_select_btn(holder, term, terms_div){
-        const [grade_type_select, grade_type_btn] = client.make_select_btn_pair(holder)
+        const [grade_type_select, grade_type_btn] = dom.make_select_btn_pair(holder)
         grade_type_select.style('margin-right','1px')
 
         grade_type_select.append('option')
@@ -586,8 +584,7 @@ group{}
             }
 
             //update gorup and load tk
-            await callback()
-            update_terms(terms_div)
+            await obj.callback()
         })
     }
 
@@ -596,7 +593,7 @@ group{}
         // create new array with updated terms
         let new_terms = []
     
-        for(const [i, term] of group.terms.entries()){
+        for(const [i, term] of obj.group.terms.entries()){
     
             // replace the term by index of clicked term
             if(i == term_replce_index){
@@ -609,10 +606,10 @@ group{}
         }
     
         // assing new terms to group
-        group.terms = new_terms
+        obj.group.terms = new_terms
         
         // update the group div with new terms
-        await callback()
+        await obj.callback()
     }
 
 
@@ -633,12 +630,13 @@ group{}
         
             if(range.value !=undefined ){
 
-                const [numeric_select, value_btn] = client.make_select_btn_pair(value_div)
+                const [numeric_select, value_btn] = dom.make_select_btn_pair(value_div)
                 numeric_select.style('margin-right','1px')
 
                 make_select_list(unannotated_cats, numeric_select, numeric_term, null, 'delete')
 
                 value_btn
+                    .attr('class','sja_filter_tag_btn value_btn')
                     .style('padding','3px 4px 3px 4px')
                     .style('margin-right','1px')
                     .style('font-size','1em')
@@ -672,14 +670,13 @@ group{}
                     }
 
                     //update gorup and load tk
-                    await callback()
-                    update_terms(terms_div)
+                    await obj.callback()
                 })
 
             }else{
 
                 const numeric_div = value_div.append('div')
-                    .attr('class','sja_filter_tag_btn')
+                    .attr('class','sja_filter_tag_btn value_btn')
                     .style('font-size','1em')
                     .style('padding','3px 5px 3px 5px')
                     .style('margin-right','1px')
@@ -725,9 +722,9 @@ group{}
     }
 
     function edit_numeric_bin(holder, range, terms_div){
-        tip.clear()
+        obj.tvstip.clear()
             
-        const equation_div = tip.d.append('div')
+        const equation_div = obj.tvstip.d.append('div')
             .style('display','block')
             .style('padding','3px 5px')
 
@@ -790,17 +787,17 @@ group{}
                 stop_input.property('disabled',false)
             })
 
-        tip.d.append('div')
+        obj.tvstip.d.append('div')
             .attr('class','sja_menuoption')
             .style('text-align','center')
             .text('APPLY')
             .on('click', ()=>{
-                tip.hide()
+                obj.tvstip.hide()
                 apply()
             })
 
         // tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
-        tip.showunder( holder.node() )
+        obj.tvstip.showunder( holder.node() )
 
         async function apply () {
             try {
@@ -827,9 +824,8 @@ group{}
                     range.stopinclusive = stopselect.node().selectedIndex == 0
                 }
                 // display_numeric_filter(group, term_index, value_div)
-                update_terms(terms_div)
-                tip.hide()
-                await callback()
+                obj.tvstip.hide()
+                await obj.callback()
             } catch(e) {
                 window.alert(e)
             }
@@ -838,13 +834,13 @@ group{}
 }
 
 
-function may_settoloading_termgroup ( group ) {
-	if( group.div_numbersamples ) group.div_numbersamples.text('Loading...')
-	if(group.div_populationaverage) {
-		group.div_populationaverage.selectAll('*').remove()
-		group.div_populationaverage.append('div').text('Loading...')
-	}
-}
+// function may_settoloading_termgroup ( group ) {
+// 	if( group.div_numbersamples ) group.div_numbersamples.text('Loading...')
+// 	if(group.div_populationaverage) {
+// 		group.div_populationaverage.selectAll('*').remove()
+// 		group.div_populationaverage.append('div').text('Loading...')
+// 	}
+// }
 
 
 

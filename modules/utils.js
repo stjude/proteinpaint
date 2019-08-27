@@ -16,6 +16,7 @@ const samtools = serverconfig.samtools || 'samtools'
 ********************** EXPORTED
 init_one_vcf
 validate_tabixfile
+tabix_is_nochr
 get_lines_tabix
 write_file
 write_tmpfile
@@ -100,7 +101,7 @@ async function tabix_is_nochr ( file, dir, genome ) {
 	)
 	return common.contigNameNoChr( genome, lines )
 }
-
+exports.tabix_is_nochr = tabix_is_nochr
 
 
 
@@ -224,26 +225,29 @@ exports.genotype_type_set = genotype_type_set
 exports.genotype_types = genotype_types
 
 
-exports.loadfile_ssid = async function ( id ) {
+exports.loadfile_ssid = async function ( id, samplefilterset ) {
 /*
+samplefilterset:
+	optional Set of samples to restrict to
 */
 	const text = await read_file( path.join( serverconfig.cachedir, 'ssid', id ) )
-	const bySample = Object.create(null)
+	const sample2gt = new Map()
 	// k: sample, v: genotype str
 	const genotype2sample = new Map()
-	// k: genotype str, v: set of samples
-	for(const line of text.split('\n')) {
+	// k: genotype str, v: Set of samples
+	for(const line of text.trim().split('\n')) {
 		if (!line) continue
-		const [type, samplesStr] = line.split('\t')
+		const [genotype, samplesStr] = line.split('\t')
 		if (!samplesStr) continue
-		const samples = samplesStr.split(",")
-		for(const sample of samples) {
-			bySample[sample] = type
+		if(!genotype_type_set.has( genotype )) throw 'unknown hardcoded genotype label: '+genotype
+		const samples_original = samplesStr.split(',')
+		const samplelst = samplefilterset ? samples_original.filter(i=>samplefilterset.has(i)) : samples_original
+		for(const sample of samplelst) {
+			sample2gt.set( sample, genotype )
 		}
-		if(!genotype_type_set.has(type)) throw 'unknown hardcoded genotype label: '+type
-		genotype2sample.set(type, new Set(samples))
+		genotype2sample.set( genotype, new Set(samplelst) )
 	}
-	return [bySample, genotype2sample]
+	return [sample2gt, genotype2sample]
 }
 
 

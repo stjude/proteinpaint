@@ -1,5 +1,6 @@
 import {event as d3event} from 'd3-selection'
 import * as client from './client'
+import * as dom from './dom'
 import {init as termdbinit} from './mds.termdb'
 import {display as tvs_display} from './mds.termdb.termvaluesetting.ui'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
@@ -436,16 +437,19 @@ function show_group_termdb ( group, tk, block ) {
 	const v = may_get_param_AFtest_termfilter( tk )
 	if( v ) tvslst.push(v)
 
-	tvs_display(
-		group.dom.td3,
-		group,
-		tk.mds,
-		block.genome,
-		tvslst,
-		async ()=>{
+	const tvsuiObj = {
+		group_div : group.dom.td3,
+		group: group,
+		mds: tk.mds,
+		genome: block.genome,
+		tvslst_filter: tvslst,
+		callback: async ()=>{
+			tvsuiObj.update_terms()
 			await tk.load()
-		}
-	)
+		}  
+	  }
+	
+	tvs_display(tvsuiObj)
 
 	// "n=?, view stats" handle and for porting to term tree filter
 	group.dom.samplehandle = group.dom.td3
@@ -458,12 +462,6 @@ function show_group_termdb ( group, tk, block ) {
 		// click label to embed tree
 		const filterlst = JSON.parse( JSON.stringify(group.terms) ) // apply terms of this group as filter
 		filterlst.push( ...tvslst )
-		if( tk.sample_termfilter ) {
-			filterlst.push( ...JSON.parse(JSON.stringify(tk.sample_termfilter)) )
-		}
-		// must not reuse tvslst above as AFtest.termfilter may update
-		const v = may_get_param_AFtest_termfilter( tk )
-		if( v ) filterlst.push( v )
 
 		tk.legend.tip.clear()
 			.showunder(group.dom.samplehandle.node())
@@ -472,9 +470,7 @@ function show_group_termdb ( group, tk, block ) {
 			mds: tk.mds,
 			div: tk.legend.tip.d,
 			default_rootterm: {},
-			termfilter:{
-				terms: filterlst,
-			}
+			termfilter:{ terms: filterlst }
 		})
 	})
 }
@@ -487,7 +483,7 @@ function show_group_infofield (group, tk) {
 
 	const holder = group.dom.td3.append('span')
 
-	const [select, btn] = client.make_select_btn_pair( holder )
+	const [select, btn] = dom.make_select_btn_pair( holder )
 
 	select.on('change',async()=>{
 		const value = select.node().value
@@ -532,7 +528,7 @@ also <select> for changing group
 	const p = tk.populations.find(i=>i.key==group.key)
 	const af = tk.vcf.numerical_axis.AFtest
 
-	const [select, btn] = client.make_select_btn_pair( holder )
+	const [select, btn] = dom.make_select_btn_pair( holder )
 
 	select.on('change', async()=>{
 		const value = select.node().value

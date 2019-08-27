@@ -10,6 +10,7 @@ get_summary
 get_numericsummary
 get_rows
 get_rows_by_one_key
+get_rows_by_two_keys
 server_init_db_queries
 ********************** INTERNAL
 makesql_by_tvsfilter
@@ -217,12 +218,62 @@ q{}
 
 
 
+export function get_rows_by_two_keys ( q, t1, t2 ) {
+/*
+get all sample and value by one key
+no filter or cte
+works for all attributes, including non-termdb ones
+
+q{}
+  .ds
+  .key
+*/
+  const filter = makesql_by_tvsfilter( q.tvslst, q.ds )
+  const values = filter ? filter.values.slice() : []
+  const CTE0 = get_term_cte(q, filter, values, 0)
+  values.push(q.term1_id, q.term2_id)
+  const t1un = t1.graph && t1.graph.barchart && t1.graph.barchart.numeric_bin && t1.graph.barchart.numeric_bin.unannotated
+  const t1unannovals = t1un
+    ? `AND value NOT IN (${Object.keys(t1un).filter(key=>key.startsWith('value')).map(key=>t1un[key])})`
+    : ''
+  const t2un = t2.graph && t2.graph.barchart && t2.graph.barchart.numeric_bin && t2.graph.barchart.numeric_bin.unannotated
+  const t2unannovals = t2un
+    ? `AND value NOT IN (${Object.keys(t2un).filter(key=>key.startsWith('value')).map(key=>t2un[key])})`
+    : ''
+ 
+  const sql = `WITH
+    ${filter ? filter.filters +',' : ''}
+    ${CTE0.sql},
+    t1 AS (
+      SELECT sample, CAST(value AS real) as value
+      FROM annotations
+      WHERE term_id=? ${t1unannovals}
+    ),
+    t2 AS (
+      SELECT sample, CAST(value AS real) as value
+      FROM annotations
+      WHERE term_id=? ${t2unannovals}
+    )
+    SELECT
+      t0.value AS val0,
+      t1.value AS val1, 
+      t2.value AS val2
+    FROM t1
+    JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
+    JOIN t2 ON t2.sample = t1.sample`
+
+  return q.ds.cohort.db.connection.prepare( sql )
+    .all( values )
+}
+
+
+
 
 export function get_rows ( q, _opts={}) {
 /*
 works for only termdb terms; non-termdb attributes will not work
 
-gets data for barchart but not summarized by counts;
+gets data for barchart
 returns all relevant rows of 
 	{
 		sample, key[0,1,2], val[0,1,2], count AS opts.countas

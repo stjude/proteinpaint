@@ -1,4 +1,5 @@
 const app = require('../app')
+const path = require('path')
 const fs = require('fs')
 const utils = require('./utils')
 const server_init_db_queries = require('./termdb.sql').server_init_db_queries
@@ -15,10 +16,13 @@ client_copy
 may_validate_info_fields
 may_validate_population
 may_init_vcf
+may_init_ld
 may_init_svcnv
 may_sum_samples
 */
 
+
+const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 
 
@@ -42,6 +46,7 @@ export async function init ( ds, genome ) {
 	may_validate_info_fields( tk )
 	may_validate_population( tk )
 	may_init_vcf( tk.vcf, genome, ds )
+	may_init_ld( tk.ld, genome, ds )
 	may_init_svcnv( tk.svcnv, genome, ds )
 	may_sum_samples( tk )
 	if(tk.samples) console.log(ds.label+': mds2: '+tk.samples.length+' samples')
@@ -78,6 +83,12 @@ the client copy stays at .mds.track{}
 		}
 		if(t0.populations) {
 			tk.populations = t0.populations
+		}
+	}
+	if(t0.ld) {
+		tk.ld = {
+			tracks: t0.ld.tracks.map(i=>{return {name:i.name, shown:i.shown}}),
+			overlay: t0.ld.overlay
 		}
 	}
 	return tk
@@ -125,6 +136,29 @@ function may_validate_population ( tk ) {
 			}
 		}
 	}
+}
+
+
+
+
+async function may_init_ld ( ld, genome, ds ) {
+	if(!ld) return
+	if(!Array.isArray(ld.tracks)) throw 'ld.tracks[] not an array'
+	if(ld.tracks.length==0) throw 'ld.tracks[] is empty array'
+	for(const tk of ld.tracks) {
+		if(!tk.name) throw '.name missing from a ld track'
+		if( tk.file ) {
+			tk.file = path.join(serverconfig.tpmasterdir, tk.file)
+			await utils.validate_tabixfile( tk.file )
+			tk.nochr = await utils.tabix_is_nochr( tk.file, null, genome )
+			console.log( tk.file+': '+(tk.nochr ? 'no chr' : 'has chr'))
+		} else if( tk.chr2file ) {
+		} else {
+			throw 'ld tk has no file or chr2file'
+		}
+	}
+	// for testing, may remove
+	//if( ld.tracks.length==1 ) ld.tracks[0].shown=true
 }
 
 

@@ -16,7 +16,7 @@ handle_mafcovplot
 const unannotated_color = '#aaa'
 
 
-export async function handle_mafcovplot ( q, genome, ds, result ) {
+export async function plot ( q, genome, ds, result ) {
 	try {
 		if(!ds.track) throw 'ds.track missing'
 		const tk = ds.track.vcf

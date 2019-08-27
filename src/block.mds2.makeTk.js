@@ -1,10 +1,11 @@
 import {select as d3select,event as d3event} from 'd3-selection'
 import * as common from './common'
 import * as client from './client'
-import * as mds2legend from './block.mds2.legend'
+import {init as init_legend} from './block.mds2.legend'
 import {may_setup_numerical_axis} from './block.mds2.vcf.numericaxis'
 import {loadTk} from './block.mds2'
 import {getvcfheader_customtk} from './block.mds2.vcf'
+import {interpolateRgb} from 'd3-interpolate'
 
 
 /*
@@ -20,6 +21,7 @@ copy_official_configs
 parse_client_config
 configPanel
 may_initiate_vcf
+may_initiate_ld
 */
 
 
@@ -62,10 +64,13 @@ export async function makeTk ( tk, block ) {
 	tk.tklabel.text( tk.name )
 
 	may_initiate_vcf( tk )
+	may_initiate_ld( tk )
 
 	tk.clear = ()=>{
 		if(tk.g_vcfrow) tk.g_vcfrow.selectAll('*').remove()
 		if(tk.leftaxis_vcfrow) tk.leftaxis_vcfrow.selectAll('*').remove()
+		if(tk.g_ldrow) tk.g_ldrow.selectAll('*').remove()
+		if(tk.gleft_ldrow) tk.gleft_ldrow.selectAll('*').remove()
 	}
 
 	// TODO <g> for other file types
@@ -76,7 +81,7 @@ export async function makeTk ( tk, block ) {
 			configPanel(tk, block)
 		})
 
-	mds2legend.init( tk, block )
+	init_legend( tk, block )
 }
 
 
@@ -140,6 +145,14 @@ function may_initiate_vcf ( tk ) {
 
 
 
+function may_initiate_ld ( tk ) {
+	if( !tk.ld ) return
+	tk.g_ldrow = tk.glider.append('g')
+	tk.gleft_ldrow = tk.gleft.append('g')
+}
+
+
+
 
 function copy_official_configs ( tk ) {
 /*
@@ -170,6 +183,14 @@ Note: must keep customizations of official tk through embedding api
 				}
 			}
 		}
+	}
+	if( tk.mds.track.ld) {
+		if(!tk.ld) tk.ld = {}
+		const c = JSON.parse( JSON.stringify(tk.mds.track.ld ) )
+		for(const k in c ){
+			if(tk.ld[k]==undefined) tk.ld[k] = c[k]
+		}
+		tk.ld.overlay.r2_to_color = interpolateRgb( tk.ld.overlay.color_0, tk.ld.overlay.color_1 )
 	}
 
 	// TODO other file types

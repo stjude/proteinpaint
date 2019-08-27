@@ -1,8 +1,3 @@
-import {
-  menuoption_add_filter,
-  menuoption_select_to_gp, 
-  menuoption_select_group_add_to_cart
-} from './mds.termdb'
 import { event } from "d3-selection"
 import { Menu } from './client'
 
@@ -10,84 +5,6 @@ const tip = new Menu({padding:'5px'})
 
 export default function getHandlers(self) {
   const s = self.settings
-
-  function barclick(d, callback, obj=null) {
-  /*
-    d: clicked bar data
-    callback
-  */
-
-    const termValues = []
-    self.terms.term0 = self.plot.term0
-    self.terms.term1 = self.plot.term
-    self.terms.term2 = self.plot.term2
-    for(const index of [0,1,2]) { 
-      const termNum = 'term' + index
-      const term = self.terms[termNum]
-      if (termNum == 'term0' || !term) continue
-
-      const key = termNum=="term1" ? d.seriesId : d.dataId
-      const q = term.q
-      const label = term.iscondition && self.grade_labels && q.bar_by_grade
-        ? self.grade_labels.find(c => c.grade == key).label
-        : !term.values 
-        ? key
-        : termNum=="term1"
-          ? term.values[d.seriesId].label
-          : term.values[d.dataId].label
-
-      if (term.iscondition) {
-        termValues.push(Object.assign({
-          term,
-          values:[{key,label}]
-        }, q));
-
-        if (index == 1 && self.terms.term2 && term.id == self.terms.term2.id) {
-          const q2 = self.plot.term2.q
-          const term2Label = q.bar_by_children 
-            ? self.grade_labels.find(c => c.grade == d.dataId).label
-            : self.terms.term2.values
-            ? self.terms.term2.values[d.dataId].label
-            : d.dataId
-
-          termValues.push(Object.assign({
-            term,
-            grade_and_child: [{
-              grade: q2.bar_by_grade ? d.dataId : key,
-              grade_label: q2.bar_by_grade ? term2Label : label ,
-              child_id: q2.bar_by_children ? key : d.dataId,
-              child_label: q2.bar_by_children ? label : term2Label
-            }]
-          }, q2))
-        }
-      } else { 
-        const bins = term.bins
-        if (!bins || !bins.length) {
-          // not associated with numeric bins
-          termValues.push({term, values: [{key, label}]})
-        } else {
-          const range = bins.find(d => d.label == label || d.name == label)
-          if (range) termValues.push({term, ranges: [range]})
-          else if (index==1 && d.unannotatedSeries) {
-             termValues.push({term, ranges: [{value: d.unannotatedSeries.value, label}]})
-          } else if (index==2 && d.unannotatedData) {
-             termValues.push({term, ranges: [{value: d.unannotatedData.value, label}]})
-          } else if (term.q && term.q.binconfig && term.q.binconfig.unannotated) {
-            for(const id in term.q.binconfig.unannotated._labels) {
-              const _label = term.q.binconfig.unannotated._labels[id];
-              if (_label == label) termValues.push({term, ranges: [{value: id, label}]});
-            }
-          }
-        }
-      }
-    }
-    if (!obj) {
-      callback({terms: termValues})
-    } else {
-      callback(obj, termValues)
-    }
-    self.obj.tip.hide()
-  }
 
   return {
     chart: {
@@ -145,13 +62,8 @@ export default function getHandlers(self) {
         return d.color
       },
       click(d) {
-        if (self.obj.modifier_barchart_selectbar 
-          && self.obj.modifier_barchart_selectbar.callback) {
-          barclick(d, self.obj.modifier_barchart_selectbar.callback)
-        }
-        else if (self.obj.bar_click_menu) {
-          bar_click_menu(self.obj, barclick, d)
-        }
+        const termValues = getTermValues(d, self)
+        self.bus.emit('postClick', termValues)
       }
     },
     colLabel: {
@@ -263,43 +175,75 @@ export default function getHandlers(self) {
   }
 }
 
-function bar_click_menu(obj, barclick, clickedBar) {
-/*
-  obj: the term tree obj
-  barclick: function to handle option click
-  clickedBar: the data associated with the clicked bar
-*/
-  const menu = obj.bar_click_menu
-  const options = []
-  if (menu.add_filter) {
-    options.push({
-      label: "Add as filter", 
-      callback: menuoption_add_filter
-    })
-  }
-  if (menu.select_group_add_to_cart) {
-    options.push({
-      label: "Select to GenomePaint",
-      callback: menuoption_select_to_gp
-    })
-  }
-  if (menu.select_to_gp) {
-    options.push({
-      label: "Add group to cart",
-      callback: menuoption_select_group_add_to_cart
-    })
-  }
-  if (options.length) {
-    obj.tip.clear().d
-      .selectAll('div')
-      .data(options)
-    .enter().append('div')
-      .attr('class', 'sja_menuoption')
-      .html(d=>d.label)
-      .on('click', d => {
-        barclick(clickedBar, d.callback, obj)
-      })
+function getTermValues(d, self) {
+  /*
+    d: clicked bar data
+    callback
+  */
 
-    obj.tip.show(event.clientX, event.clientY)
+  const termValues = []
+  self.terms.term0 = self.plot.term0
+  self.terms.term1 = self.plot.term
+  self.terms.term2 = self.plot.term2
+  for(const index of [0,1,2]) {
+    const termNum = 'term' + index
+    const term = self.terms[termNum]
+    if (termNum == 'term0' || !term) continue
+
+    const key = termNum=="term1" ? d.seriesId : d.dataId
+    const q = term.q
+    const label = term.iscondition && self.grade_labels && q.bar_by_grade
+      ? self.grade_labels.find(c => c.grade == key).label
+      : !term.values 
+      ? key
+      : termNum=="term1"
+        ? term.values[d.seriesId].label
+        : term.values[d.dataId].label
+
+    if (term.iscondition) {
+      termValues.push(Object.assign({
+        term,
+        values:[{key,label}]
+      }, q));
+
+      if (index == 1 && self.terms.term2 && term.id == self.terms.term2.id) {
+        const q2 = self.plot.term2.q
+        const term2Label = q.bar_by_children 
+          ? self.grade_labels.find(c => c.grade == d.dataId).label
+          : self.terms.term2.values
+          ? self.terms.term2.values[d.dataId].label
+          : d.dataId
+
+        termValues.push(Object.assign({
+          term,
+          grade_and_child: [{
+            grade: q2.bar_by_grade ? d.dataId : key,
+            grade_label: q2.bar_by_grade ? term2Label : label ,
+            child_id: q2.bar_by_children ? key : d.dataId,
+            child_label: q2.bar_by_children ? label : term2Label
+          }]
+        }, q2))
+      }
+    } else { 
+      const bins = term.bins
+      if (!bins || !bins.length) {
+        // not associated with numeric bins
+        termValues.push({term, values: [{key, label}]})
+      } else {
+        const range = bins.find(d => d.label == label || d.name == label)
+        if (range) termValues.push({term, ranges: [range]})
+        else if (index==1 && d.unannotatedSeries) {
+           termValues.push({term, ranges: [{value: d.unannotatedSeries.value, label}]})
+        } else if (index==2 && d.unannotatedData) {
+           termValues.push({term, ranges: [{value: d.unannotatedData.value, label}]})
+        } else if (term.q && term.q.binconfig && term.q.binconfig.unannotated) {
+          for(const id in term.q.binconfig.unannotated._labels) {
+            const _label = term.q.binconfig.unannotated._labels[id];
+            if (_label == label) termValues.push({term, ranges: [{value: id, label}]});
+          }
+        }
+      }
+    }
   }
+  return termValues
 }

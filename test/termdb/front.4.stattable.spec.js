@@ -11,7 +11,7 @@ tape("\n", function(test) {
 
 tape("barchart-dependent display", function (test) {
   const div0 = d3s.select('body').append('div')
-  const termfilter = {show_top_ui:true, callbacks:[]}
+  const termfilter = {show_top_ui:true}
   
   runproteinpaint({
     host,
@@ -40,22 +40,22 @@ tape("barchart-dependent display", function (test) {
 
   function testHiddenWithNoBarchart(plot) {
     test.equal(
-      plot.views.stattable.dom.div.style('display'), 
+      plot.components.stattable.dom.div.style('display'), 
       'none', 
       "should have a HIDDEN stattable when the barchart is not in the settings.currViews array"
     )
   }
 
   function triggerViewBarchart(plot) {
-    plot.callbacks.postRender = [testVisibleWithBarchart]
-    plot.dispatch({
+    plot.bus.on('postRender', testVisibleWithBarchart)
+    plot.main({
       settings: {currViews: ["barchart"]}
     })
   }
 
   function testVisibleWithBarchart(plot) {
     test.equal(
-      plot.views.stattable.dom.div.style('display'), 
+      plot.components.stattable.dom.div.style('display'), 
       'block', 
       "should have a visible stattable when the barchart is in the settings.currViews array"
     )
@@ -91,37 +91,55 @@ tape("term.isfloat-dependent display", function (test) {
 
   function testHiddenIfCategoricalTerm(plot) {
     test.equal(
-      plot.views.stattable.dom.div.style('display'), 
+      plot.components.stattable.dom.div.style('display'), 
       'none', 
       "should have a HIDDEN stattable when plot.term.iscategorical"
     )
   }
 
   function triggerNumericTerm(plot) {
-    plot.callbacks.postRender = [testVisibleWithNumericTerm, triggerConditionTerm]
-    plot.dispatch({
+    plot.bus.on('postRender', testVisibleWithNumericTerm)
+    plot.main({
       term: {term: termjson["agedx"]}
     })
   }
 
   function testVisibleWithNumericTerm(plot) {
     test.equal(
-      plot.views.stattable.dom.div.style('display'), 
+      plot.components.stattable.dom.div.style('display'), 
       'block', 
       "should have a visible stattable when plot.term is numeric"
     )
   }
 
-  function triggerConditionTerm(plot) {
-    plot.callbacks.postRender = [testHiddenIfConditionTerm]
-    plot.dispatch({
-      term: {term: termjson["Arrhythmias"]}
-    })
-  }
+  const div1 = d3s.select('body').append('div')
+  
+  runproteinpaint({
+    holder: div1.node(),
+    noheader:1,
+    nobox:true,
+    display_termdb:{
+      dslabel:'SJLife',
+      genome:'hg38',
+      default_rootterm:{},
+      termfilter:{show_top_ui:false},
+      params2restore: {
+        term: termjson["Arrhythmias"],
+        settings: {
+          currViews: ['barchart']
+        }
+      },
+      callbacks: {
+        plot: {
+          postRender: testHiddenIfConditionTerm
+        }
+      },
+    }
+  })
 
   function testHiddenIfConditionTerm(plot) {
     test.equal(
-      plot.views.stattable.dom.div.style('display'), 
+      plot.components.stattable.dom.div.style('display'), 
       'none', 
       "should have a HIDDEN stattable when plot.term.iscondition"
     )

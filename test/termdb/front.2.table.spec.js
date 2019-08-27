@@ -39,15 +39,15 @@ tape("overlay-dependent display", function (test) {
 
   function testHiddenTable(plot) {
     test.equal(
-      plot.views.table.dom.div.style('display'),
+      plot.components.table.dom.div.style('display'),
       'none', 
       "should be HIDDEN when there is no overlay"
     )
   }
 
   function triggerViewTable(plot) {
-    plot.callbacks.postRender = [testVisibleTable]
-    plot.dispatch({
+    plot.bus.on('postRender', testVisibleTable)
+    plot.main({
       term2: {term: termjson["diaggrp"]},
       settings: {
         currViews: ['table']
@@ -57,7 +57,7 @@ tape("overlay-dependent display", function (test) {
 
   function testVisibleTable(plot) {
     test.equal(
-      plot.views.table.dom.div.style('display'), 
+      plot.components.table.dom.div.style('display'), 
       'inline-block', 
       "should be visible when there is an overlay"
     )
