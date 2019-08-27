@@ -66,9 +66,8 @@ tape("cart button", function (test) {
   }
 })
 
-tape("cart selected group tip", function (test) {
-  // click 
-  // add, remove a filter to/from a group
+tape.only("cart selected group tip", {timeout: 2500}, function (test) {
+  test.plan(3)
   const div0 = d3s.select('body').append('div')
   const termfilter = {show_top_ui:true}
   
@@ -95,23 +94,24 @@ tape("cart selected group tip", function (test) {
       },
       callbacks: {
         tree: {
-          postRender: [triggerClick, triggerAddTerm]
+          postRender: [triggerClick]
         }
       },
     }
   })
 
   function triggerClick(obj){
+    obj.components.cart.bus.on('postRender',[testSelectedGroupTipDisplay, triggerRemoveTerm])
     obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
-    obj.dom.cartdiv.on('postRender',testSelectedGroupTipDisplay(obj))
   }
 
   function testSelectedGroupTipDisplay(obj){
     test.equal(obj.tip.d.selectAll('.term_name_btn').size(),1, "should show 1 blue-pill for selected group")
-    setTimeout(()=>{
-      obj.tip.d.selectAll('.term_remove_btn').node().dispatchEvent(new Event('click', {bubbles: true}))
-      testRemoveTerm(obj)
-    }, 50)
+  }
+
+  function triggerRemoveTerm(obj) {
+    obj.components.cart.bus.on('postRender', [testRemoveTerm, triggerAddTerm])
+    setTimeout(()=>obj.tip.d.selectAll('.term_remove_btn').node().dispatchEvent(new Event('click', {bubbles: true})), 120)
   }
 
   function testRemoveTerm(obj){
@@ -119,7 +119,6 @@ tape("cart selected group tip", function (test) {
   }
 
   function triggerAddTerm(obj){
-    obj.bus.on('postRender', null)
     setTimeout(()=>obj.tip.d.selectAll('.add_term_btn').node().click(), 100)
     setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption').node().click(), 150)
     setTimeout(()=>obj.tvstip.d.selectAll('.sja_menuoption')._groups[0][1].click(), 250)
@@ -132,9 +131,9 @@ tape("cart selected group tip", function (test) {
   }
 
   function testAddTerm(obj){
+    obj.components.cart.bus.on('postRender', null)
     test.equal(obj.tip.d.selectAll('.term_name_btn').size(),1, "should add term button to cart")
     obj.tip.hide()
-    test.end()
   }
 })
 
@@ -179,8 +178,8 @@ tape("cart with 2 groups", function (test) {
   })
 
   function triggerClick(obj){
-    obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
     obj.dom.cartdiv.on('postRender',testSelectedGroupTipDisplay(obj))
+    obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
     setTimeout(()=>{
       obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
       obj.tip.d.select('.remove_group_btn').node().dispatchEvent(new Event('click', {bubbles: true}))
