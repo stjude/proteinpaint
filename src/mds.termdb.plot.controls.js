@@ -100,7 +100,7 @@ function setSvgBtn(controls) {
     .on('click', () => {
       const svg = controls.plot.dom.viz.select('svg').node()
       const svg_name = controls.plot.term.name + ' plot'
-      client.to_svg(svg,svg_name)     
+      client.to_svg(svg,svg_name,{apply_dom_styles:true})  
     }) 
     
   return {
