@@ -941,8 +941,16 @@ thus less things to worry about...
 */
 	if(!ds.cohort) throw 'ds.cohort missing'
 	if(!ds.cohort.db) throw 'ds.cohort.db missing'
-	if(!ds.cohort.db.file) throw 'ds.cohort.db.file missing'
-	const cn = connect_db( ds.cohort.db.file )
+
+	let cn
+	if( ds.cohort.db.file ) {
+		cn = connect_db( ds.cohort.db.file )
+	} else if( ds.cohort.db.file_fullpath ) {
+		// only on ppr
+		cn = connect_db( ds.cohort.db.file_fullpath, true )
+	} else {
+		throw 'neither .file or .file_fullpath is set on ds.cohort.db'
+	}
 	ds.cohort.db.connection = cn
 
 	if(!ds.cohort.termdb ) throw 'ds.cohor.termdb missing'

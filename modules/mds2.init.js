@@ -12,6 +12,7 @@ const validate_single_numericrange = require('../src/mds.termdb.termvaluesetting
 ********************** EXPORTED
 init
 client_copy
+server_updateAttr
 ********************** INTERNAL
 may_validate_info_fields
 may_validate_population
@@ -263,5 +264,28 @@ function may_sum_samples ( tk ) {
 	}
 	if( samples.size ) {
 		tk.samples = [ ...samples ]
+	}
+}
+
+
+
+
+export function server_updateAttr ( db, sdb ) {
+/*
+sdb:
+	bootstrap objects, that are elements of the "datasets" array from serverconfig, may contain .updateAttr[]
+*/
+	if(!sdb.updateAttr) return
+	for(const row of sdb.updateAttr) {
+		let pointer = db
+		for(const field of row) {
+			if(typeof field == 'object') {
+				for(const k in field) {
+					pointer[k] = field[k]
+				}
+			} else {
+				pointer = pointer[field]
+			}
+		}
 	}
 }

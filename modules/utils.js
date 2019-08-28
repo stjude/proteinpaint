@@ -210,8 +210,15 @@ exports.get_fasta = function ( gn, pos ) {
 
 
 
-exports.connect_db = function (file) {
-	return new bettersqlite( path.join(serverconfig.tpmasterdir,file), {readonly:true, fileMustExist:true} )
+exports.connect_db = function (file, isfullpath) {
+/*
+file: half or full path
+isfullpath: true/false
+*/
+	return new bettersqlite(
+		isfullpath ? file : path.join(serverconfig.tpmasterdir,file),
+		{readonly:true, fileMustExist:true}
+	)
 }
 
 

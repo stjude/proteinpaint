@@ -12643,6 +12643,11 @@ function mds_init(ds,genome, _servconfig) {
 
 	*/
 
+
+	mds2_init.server_updateAttr( ds, _servconfig )
+
+
+
 	if(ds.sampleAssayTrack) {
 		if(!ds.sampleAssayTrack.file) return '.file missing from sampleAssayTrack'
 		ds.sampleAssayTrack.samples = new Map()
