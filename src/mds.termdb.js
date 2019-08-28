@@ -348,11 +348,11 @@ such conditions may be carried by obj
 		.attr('class','sja_menuoption')
 		.text('VIEW')
 
-	const view_btn_line = button_div.append('div')
-		.style('height','10px')
-		.style('margin-left','45px')
-		.style('border-left','solid 1px #aaa')
-		.style('display','none')
+	// const view_btn_line = button_div.append('div')
+	// 	.style('height','10px')
+	// 	.style('margin-left','45px')
+	// 	.style('border-left','solid 1px #aaa')
+	// 	.style('display','none')
 
 	const div = row_graph.append('div')
 		.style('border','solid 1px #aaa')
@@ -371,11 +371,15 @@ such conditions may be carried by obj
     const i = obj.expanded_term_ids.indexOf(term.id)
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
-			view_btn_line.style('display','block')
+			button.style('border-radius','5px 5px 0 0')
+				.style('border-style','solid solid hidden solid')
+			// view_btn_line.style('display','block')
       if (i==-1) obj.expanded_term_ids.push(term.id)
 		} else {
 			client.disappear(div)
-			view_btn_line.style('display','none')
+			button.style('border-radius',button_radius)
+				.style('border','solid 1px #aaa')
+			// view_btn_line.style('display','none')
       obj.expanded_term_ids.splice(i, 1)
 		}
 		if( loaded || loading ) {
@@ -383,6 +387,7 @@ such conditions may be carried by obj
       return
     }
 		button.style('border','solid 1px #aaa')
+			.style('border-style','solid solid hidden solid')
 		loading=true
 		make_barplot( obj, {term}, div, ()=> {
       plot_loading_div.text('').remove()

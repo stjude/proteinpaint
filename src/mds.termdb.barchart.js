@@ -203,7 +203,7 @@ export class TermdbBarchart{
     .append('div')
     .attr('class', 'pp-sbar-div')
     .style("display", "inline-block")
-    .style("padding", "20px")
+    .style("padding", "10px")
     .style('vertical-align', 'top')
     .each(function(chart,i) {
       chart.settings.cols.sort(self.barSorter)
