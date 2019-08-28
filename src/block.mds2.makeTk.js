@@ -186,6 +186,7 @@ Note: must keep customizations of official tk through embedding api
 	}
 	if( tk.mds.track.ld) {
 		if(!tk.ld) tk.ld = {}
+		if(!tk.ld.connheight) tk.ld.connheight = 50
 		const c = JSON.parse( JSON.stringify(tk.mds.track.ld ) )
 		for(const k in c ){
 			if(tk.ld[k]==undefined) tk.ld[k] = c[k]
