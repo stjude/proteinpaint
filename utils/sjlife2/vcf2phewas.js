@@ -33,7 +33,7 @@ for(const line of fs.readFileSync( file_category2vcfsamples, {encoding:'utf8'} )
 let vcfsamples
 
 
-console.log('SNV4\tSNP\tGroup_name\tVariable_ID\tCase\tControl\tFDR_P\ttest.table')
+console.log('SNV4\tSNP\tGroup_name\tVariable_ID\tCase\tControl\tp-value\ttest.table')
 
 
 const rl = readline.createInterface({input: fs.createReadStream( file_vcf )})
@@ -136,22 +136,16 @@ rl.on('line', async line=>{
 	const tmpfile = file_vcf+'.'+snv4+'.fisher'
 	await write_file( tmpfile, lines.join('\n') )
 	const pfile = await run_fishertest( tmpfile )
-	const pvalues = []
+
+	let i=0
 	for(const line of fs.readFileSync(pfile,{encoding:'utf8'}).trim().split('\n')) {
 		const l = line.split('\t')
 		const p = Number(l[5])
-		pvalues.push(p)
+		const test = tests[i++]
+		console.log(snv4+'\t'+snp+'\t'+test.group_name+'\t'+test.term_id+'\t'+test.group1label+'\t'+test.group2label+'\t'+p+'\t'+test.table)
 	}
 	fs.unlink(tmpfile,()=>{})
 	fs.unlink(pfile,()=>{})
-
-	// fdr
-	const fdr = await run_fdr( pvalues, file_vcf+'.'+snv4+'.pvalues' )
-	for(const [i,p] of fdr.entries()) {
-		//tests[i].pvalue = p
-		const test = tests[i]
-		console.log(snv4+'\t'+snp+'\t'+test.group_name+'\t'+test.term_id+'\t'+test.group1label+'\t'+test.group2label+'\t'+p+'\t'+test.table)
-	}
 })
 
 
