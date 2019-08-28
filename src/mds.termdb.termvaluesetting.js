@@ -41,7 +41,7 @@ TODO also work for termdb filter
 					if(!Number.isInteger(i.grade)) throw '.grade is not an integer from one of grade_and_child[] from '+from
 					if(i.child_id==undefined) throw 'child_id is missing from one of grade_and_child[] from '+from
 				}
-				if(!t.value_by_max_grade && !t.value_by_most_recent) throw 'unknown value_type for a bar_by_grade condition term from '+from
+				if(!t.value_by_max_grade && !t.value_by_most_recent && !t.value_by_computable_grade) throw 'unknown value_type for a bar_by_grade condition term from '+from
 			} else {
 				if(!t.values) throw '.values[] missing from a condition term of '+from
 				if(!Array.isArray(t.values)) throw '.values[] is not an array from a '+from+' term'
@@ -52,7 +52,7 @@ TODO also work for termdb filter
 					if(!i.label) i.label = i.key
 				}
 				if( t.bar_by_grade ) {
-					if(!t.value_by_max_grade && !t.value_by_most_recent) throw 'unknown value_type for a bar_by_grade condition term from '+from
+					if(!t.value_by_max_grade && !t.value_by_most_recent && !t.value_by_computable_grade) throw 'unknown value_type for a bar_by_grade condition term from '+from
 				} else if(t.bar_by_children) {
 				} else {
 					throw 'neither bar_by_grade or bar_by_children is set for a condition term from '+from

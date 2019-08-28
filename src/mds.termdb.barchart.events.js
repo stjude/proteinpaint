@@ -201,10 +201,12 @@ function getTermValues(d, self) {
         : term.values[d.dataId].label
 
     if (term.iscondition) {
-      termValues.push(Object.assign({
-        term,
-        values:[{key,label}]
-      }, q));
+      if (index == 0 || !self.terms.term2 || self.terms.term1.id != self.terms.term2.id) {
+        termValues.push(Object.assign({
+          term,
+          values:[{key,label}]
+        }, q));
+      }
 
       if (index == 1 && self.terms.term2 && term.id == self.terms.term2.id) {
         const q2 = self.plot.term2.q
@@ -219,8 +221,8 @@ function getTermValues(d, self) {
           grade_and_child: [{
             grade: q2.bar_by_grade ? d.dataId : key,
             grade_label: q2.bar_by_grade ? term2Label : label ,
-            child_id: q2.bar_by_children ? key : d.dataId,
-            child_label: q2.bar_by_children ? label : term2Label
+            child_id: q2.bar_by_children ? d.dataId : key,
+            child_label: q2.bar_by_children ? term2Label : label
           }]
         }, q2))
       }

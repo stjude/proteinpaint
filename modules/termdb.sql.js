@@ -161,17 +161,46 @@ returns:
 		const restriction = tvs.value_by_max_grade ? 'max_grade'
 				: tvs.value_by_most_recent ? 'most_recent'
 				: 'computable_grade'
-		values.push(tvs.term.id, value_for)
 		
-		filters.push(`
-			SELECT 
-				sample
-			FROM precomputed
-			WHERE term_id = ? 
-				AND value_for = ? 
-				AND ${restriction} = 1
-				AND value IN (${tvs.values.map(i=>'?').join(', ')})`)
-		values.push(...tvs.values.map(i=>''+i.key))
+    if (tvs.values) {
+      values.push(tvs.term.id, value_for)
+      values.push(...tvs.values.map(i=>''+i.key))
+  		filters.push(`
+  			SELECT 
+  				sample
+  			FROM precomputed
+  			WHERE term_id = ? 
+  				AND value_for = ? 
+  				AND ${restriction} = 1
+  				AND value IN (${tvs.values.map(i=>'?').join(', ')})`)
+    } else if (tvs.grade_and_child) {
+      //grade_and_child: [{grade, child_id}]
+      for(const gc of tvs.grade_and_child) {
+        values.push(tvs.term.id, ''+gc.grade)
+        filters.push(`
+          SELECT 
+            sample
+          FROM precomputed
+          WHERE term_id = ? 
+            AND value_for = 'grade'
+            AND ${restriction} = 1
+            AND value IN (?)`
+        )
+
+        values.push(tvs.term.id, gc.child_id)
+        filters.push(`
+          SELECT 
+            sample
+          FROM precomputed
+          WHERE term_id = ? 
+            AND value_for = 'child'
+            AND ${restriction} = 1
+            AND value IN (?)`
+        )
+      }
+    } else {
+      throw 'unknown condition term filter type: expecting term-value "values" or "grade_and_child" key'
+    }
 	}
 }
 

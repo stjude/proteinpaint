@@ -256,6 +256,63 @@ tape("click to add numeric, condition term filter", function (test) {
   }
 })
 
+tape("click to condition grade and child term filter ", function (test) {
+  const div0 = d3s.select('body').append('div')
+  const termfilter = {show_top_ui:true}
+  
+  runproteinpaint({
+    host,
+    holder: div0.node(),
+    noheader:1,
+    nobox:true,
+    display_termdb:{
+      dslabel:'SJLife',
+      genome:'hg38',
+      default_rootterm:{},
+      termfilter,
+      params2restore: {
+        term: Object.assign({}, termjson["Arrhythmias"], {q:{bar_by_grade:1, value_by_max_grade:1}}),
+        term2: Object.assign({}, termjson["Arrhythmias"], {q:{bar_by_children:1, value_by_max_grade:1}}),
+        settings: {
+          currViews: ['barchart']
+        }
+      },
+      callbacks: {
+        plot: {
+          postRender: triggerClick
+        }
+      },
+      bar_click_menu:{
+        add_filter:true
+      },
+    }
+  })
+
+  function triggerClick(plot) {
+    plot.bus.on('postRender', plot=>testTermValues(plot, elem.datum()))
+    const elem = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect')
+    elem.node().dispatchEvent(new Event('click', {bubbles: true}));
+    setTimeout(()=>{
+      plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
+    },200);
+  }
+
+  function testTermValues(plot, clickedData) {
+    setTimeout(()=>{
+      test.equal(termfilter.terms && termfilter.terms.length, 1, "should create one tvslst filter when a grade and child bar/overlay is clicked")
+      test.true('grade_and_child' in termfilter.terms[0] , "should create a tvslst filter with a grade_and_child")
+      test.true(Array.isArray(termfilter.terms[0].grade_and_child) , "filter term.grade_and_child should be an array")
+      if (Array.isArray(termfilter.terms[0].grade_and_child)) {
+        const filter = termfilter.terms[0].grade_and_child[0]
+        test.notEqual(filter.grade, filter.child_id, "filter grade and child_id should be different")
+        test.equal(typeof filter.grade, 'number', "filter grade should be a number")
+        test.equal(typeof filter.child_id, 'string', "filter grade should be a string")
+      }
+      test.end()
+    }, 200)
+  }
+})
+
 tape("multiple charts", function (test) {
   const div0 = d3s.select('body').append('div')
   
