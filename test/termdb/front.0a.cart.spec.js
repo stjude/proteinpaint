@@ -10,6 +10,7 @@ tape("\n", function(test) {
 })
 
 tape("cart button", function (test) {
+  test.timeoutAfter(1000)
   test.plan(3)
   const div0 = d3s.select('body').append('div')
   const termfilter = {show_top_ui:true}
@@ -67,7 +68,8 @@ tape("cart button", function (test) {
   }
 })
 
-tape("cart selected group tip", {timeout: 2500}, function (test) {
+tape("cart selected group tip", function (test) {
+  test.timeoutAfter(2000)
   test.plan(3)
   const div0 = d3s.select('body').append('div')
   const termfilter = {show_top_ui:true}
@@ -139,7 +141,8 @@ tape("cart selected group tip", {timeout: 2500}, function (test) {
   }
 })
 
-tape("cart with 2 groups", {timeout: 5000}, function (test) {
+tape("cart with 2 groups", function (test) {
+  test.timeoutAfter(5000)
   test.plan(6)
   const div0 = d3s.select('body').append('div')
   const termfilter = {show_top_ui:true}

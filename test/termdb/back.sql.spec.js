@@ -27,6 +27,7 @@ tape("\n", function(test) {
 tape("filters", function (test) {
   // plan will track the number of expected tests,
   // which helps with the async tests
+  test.timeoutAfter(5000)
   test.plan(8)
 
   compareResponseData(
@@ -144,6 +145,7 @@ tape("filters", function (test) {
 })
 
 tape("categorical term1", function (test) {
+  test.timeoutAfter(5000)
   test.plan(7)
 
   compareResponseData(
@@ -224,6 +226,7 @@ tape("categorical term1", function (test) {
 
 
 tape("numerical term1", function (test) {
+  test.timeoutAfter(5000)
   test.plan(9)
 
   compareResponseData(
@@ -335,6 +338,7 @@ tape("numerical term1", function (test) {
 })
 
 tape("leaf condition term1", function (test) {
+  test.timeoutAfter(5000)
   test.plan(11) 
   compareResponseData(
     test, 
@@ -463,6 +467,7 @@ tape("leaf condition term1", function (test) {
 })
 
 tape("non-leaf condition term1", function (test) {
+  test.timeoutAfter(5000)
   test.plan(13) 
 
   compareResponseData(
@@ -619,6 +624,7 @@ tape("non-leaf condition term1", function (test) {
 })
 
 tape("term0 charts", function (test) {
+  test.timeoutAfter(5000)
   test.plan(4)
 
   compareResponseData(
