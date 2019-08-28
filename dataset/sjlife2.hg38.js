@@ -21,7 +21,7 @@ module.exports={
 				events_key:'conditionevents',
 				grade_key: 'grade',
 				grade_labels: [ // computable grades
-					{ grade: 0, label: '0: Normal' },
+					{ grade: 0, label: '0: No condition' },
 					{ grade: 1, label: '1: Mild' },
 					{ grade: 2, label: '2: Moderate' },
 					{ grade: 3, label: '3: Severe' },
