@@ -20,7 +20,6 @@ export function init(opts) {
     },
     dom: {
       holder: opts.holder
-        .style('margin', '8px')
         .style('vertical-align', 'top')
         .style('transition','0.5s'),
 
@@ -46,6 +45,7 @@ export function init(opts) {
 
   controls.components = {
     burger: setBurgerBtn(controls),
+    svg: setSvgBtn(controls),
     config: setConfigDiv(controls),
     barsAs: setBarsAsOpts(controls, 'term', 'Bars as', 1),
     overlay: setOverlayOpts(controls),
@@ -63,9 +63,12 @@ export function init(opts) {
 
 function setBurgerBtn(controls) {
   const btn = controls.dom.topbar.append('div')
-    .attr('class','sja_edit_btn')
+    // .attr('class','sja_edit_btn')
     .style('margin','10px')
-    .style('font-size', '16px')
+    .style('margin-left','20px')
+    .style('font-family','verdana')
+    .style('font-size', '28px')
+    .style('cursor','default')
     .style('transition','0.5s')
     .html('&#8801;')
     .on('click', () => {
@@ -75,10 +78,37 @@ function setBurgerBtn(controls) {
 
   return {
     main() {
-      btn.html(controls.isVisible ? '&#215;' : '&#8801;')
+      // btn.html(controls.isVisible ? '&#215;' : '&#8801;')
     },
     dom: {
       btn
+    }
+  }
+}
+
+function setSvgBtn(controls) {
+  const svg_btn = controls.dom.holder.append('div')
+    // .attr('class','sja_edit_btn')
+    .style('position','absolute')
+    .style('margin-top','15px')
+    .style('margin-left','22px')
+    .style('font-family','verdana')
+    .style('font-size', '10px')
+    .style('font-weight','bold')
+    .style('cursor','default')
+    .html('SVG')
+    .on('click', () => {
+      const svg = controls.plot.dom.viz.select('svg').node()
+      const svg_name = controls.plot.term.name + ' plot'
+      client.to_svg(svg,svg_name)     
+    }) 
+    
+  return {
+    main() {
+      svg_btn.style('visibility',controls.isVisible ? 'hidden' : 'visible')
+    },
+    dom: {
+      svg_btn
     }
   }
 }
