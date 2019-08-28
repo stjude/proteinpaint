@@ -1,6 +1,5 @@
 import { select, event } from "d3-selection";
 import { scaleLinear, scaleLog } from "d3-scale";
-import htmlLegend from "./html.legend";
 import { axisLeft, axisTop } from "d3-axis";
 import { format } from 'd3-format'
 import { newpane } from "./client.js";
@@ -105,7 +104,6 @@ export default function barsRenderer(barsapp, holder) {
   let currCell, currRects, currRowTexts, currColTexts;
   let clusterRenderer;
   // eslint-disable-next-line
-  let legendRenderer;
   let defaults; //will have key values in init
   let currserieses = [];
   let unstackedBarsPanes;
@@ -177,7 +175,6 @@ export default function barsRenderer(barsapp, holder) {
 
     currRects = series.selectAll("rect");
     currColTexts = collabels.selectAll("text");
-    legendRenderer(barsapp.getLegendGrps(chart))
     hm.delay = 0.35 * hm.duration
     renderAxes(hm, prevOrientation)
     hm.colw = unadjustedColw
@@ -321,17 +318,6 @@ export default function barsRenderer(barsapp, holder) {
     xAxis = axisG.append("g").attr("class", "sjpcb-bar-chart-x-axis")
     xLine = axisG.append("line").attr("class", "sjpcb-bar-chart-x-line").style("stroke", "#000")
     xTitle = axisG.append("g").attr("class", "sjpcb-bar-chart-x-title").style("cursor", "default")
-
-    //legendDiv = svg.append("g").attr("class", "sjpcb-bars-legend");
-    legendRenderer = htmlLegend(
-      barsapp.dom.legendDiv,
-      {
-        settings: {
-          legendOrientation: 'vertical'
-        },
-        handlers: barsapp.handlers
-      }
-    );
   }
 
   function setDimensions() {

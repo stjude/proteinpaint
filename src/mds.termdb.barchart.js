@@ -1,5 +1,6 @@
 import rendererSettings from "./bars.settings"
 import barsRenderer from "./bars.renderer"
+import htmlLegend from "./html.legend";
 import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
@@ -32,12 +33,21 @@ export class TermdbBarchart{
     ) 
     this.settings = Object.assign(this.defaults, opts.settings)
     this.renderers = {}
+    this.handlers = getHandlers(this)
+    this.legendRenderer = htmlLegend(
+      this.dom.legendDiv,
+      {
+        settings: {
+          legendOrientation: 'vertical'
+        },
+        handlers: this.handlers
+      }
+    );
     this.terms = {
       term0: null,
       term1: this.opts.term1,
       term2: null
     }
-    this.handlers = getHandlers(this)
     this.controls = {}
     this.term2toColor = {}
     this.processedExcludes = []
@@ -86,7 +96,7 @@ export class TermdbBarchart{
       rowspace: plot.settings.common.barspace
     }
     
-    this.initExclude(this.currServerData.refs)
+    this.initExclude()
     Object.assign(
       this.settings, 
       settings, 
@@ -108,22 +118,36 @@ export class TermdbBarchart{
     this.terms.term0 = settings.term0 && plot.term0 ? plot.term0 : null
   }
 
-  initExclude(refs) {
+  initExclude() {
+    const refs = this.currServerData.refs
     if (this.processedExcludes.includes(refs)) return
-    this.processedExcludes.push(refs)
+    // do not filter out bar series or overlay data when it will result in no chart being displayed
     const unannotatedColLabels = refs.unannotatedLabels.term1
+    const unannotatedRowLabels = refs.unannotatedLabels.term2
+    const dataFilter = data => !unannotatedRowLabels.includes(data.dataId)
+    const seriesFilter = series => !unannotatedColLabels.includes(series.seriesId) && series.data.filter(dataFilter).length
+    if (!this.currServerData.charts.filter(chart=>chart.serieses.filter(seriesFilter).length).length) {
+      // has to make at least series or overlay visible
+      const chart = this.currServerData.charts[0]
+      const i = this.settings.exclude.cols.indexOf(chart.serieses[0].seriesId)
+      if (i != -1) this.settings.exclude.cols.splice(i,1)
+      const j = this.settings.exclude.rows.indexOf(chart.serieses[0].data[0].dataId)
+      if (j != -1) this.settings.exclude.rows.splice(j,1)
+      return
+    }
+
+    this.processedExcludes.push(refs)
     if (unannotatedColLabels) {
       for(const label of unannotatedColLabels) {
         if (!this.settings.exclude.cols.includes(label)) {
-          this.settings.exclude.cols.push(label) // do not automatically hide for now
+          this.settings.exclude.cols.push(label)
         }
       }
     }
-    const unannotatedRowLabels = refs.unannotatedLabels.term2
     if (unannotatedRowLabels) {
       for(const label of unannotatedRowLabels) {
         if (!this.settings.exclude.rows.includes(label)) {
-          this.settings.exclude.rows.push(label) // do not automatically hide for now
+          this.settings.exclude.rows.push(label)
         }
       }
     }
@@ -190,6 +214,8 @@ export class TermdbBarchart{
       chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
+
+    this.legendRenderer(this.getLegendGrps())
   }
 
   setMaxVisibleTotals(chartsData) {
@@ -284,36 +310,41 @@ export class TermdbBarchart{
       ).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
   }
 
-  getLegendGrps(chart) {
+  getLegendGrps() {
     const legendGrps = []
-    const s = this.settings
+    const s = this.settings;
     if (s.exclude.cols.length) {
       const t = this.terms.term1
       const b = t.graph && t.graph.barchart ? t.graph.barchart : null
       const grade_labels = b && t.iscondition ? this.grade_labels : null
+      const reducer = (sum, b) => sum + b.total
+      const items = s.exclude.cols
+        .filter(collabel => s.cols.includes(collabel))
+        .map(collabel => {
+          const filter = c => c.seriesId == collabel
+          const total = this.currServerData.charts.reduce((sum,chart) => {
+            return sum + chart.serieses.filter(filter).reduce(reducer, 0)
+          }, 0)
+          
+          const grade = grade_labels ? grade_labels.find(c => c.grade == collabel) : null
+          
+          return {
+            id: collabel,
+            text: grade ? grade.label : collabel,
+            color: "#fff",
+            textColor: "#000",
+            border: "1px solid #333",
+            inset: total ? total : '',
+            type: 'col'
+          }
+        })
 
-      legendGrps.push({
-        name: "Hidden " + this.terms.term1.name + " value",
-        items: s.exclude.cols
-          .filter(collabel => s.cols.includes(collabel))
-          .map(collabel => {
-            const total = chart.serieses
-              .filter(c => c.seriesId == collabel)
-              .reduce((sum, b) => sum + b.total, 0)
-            
-            const grade = grade_labels ? grade_labels.find(c => c.grade == collabel) : null
-            
-            return {
-              id: collabel,
-              text: grade ? grade.label : collabel,
-              color: "#fff",
-              textColor: "#000",
-              border: "1px solid #333",
-              inset: total ? total : '',
-              type: 'col'
-            }
-          })
-      })
+      if (items.length) {
+        legendGrps.push({
+          name: "Hidden " + this.terms.term1.name + " value",
+          items
+        })
+      }
     }
     if (s.rows && s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
       const t = this.terms.term2
