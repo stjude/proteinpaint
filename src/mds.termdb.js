@@ -78,35 +78,35 @@ callbacks: {
 }
 */
 	if( obj.debugmode ) window.obj = obj
-  obj.expanded_term_ids = []
+	obj.expanded_term_ids = []
 
-  obj.main = (updatedKeyVals={}) => {
-    for(const key in updatedKeyVals) {
-      obj[key] = updates[key]
-    }
-    // trigger all rendered sub-elements
-    for(const name in obj.components) {
-      if (Array.isArray(obj.components[name])) {
-        // example: 1 or more component.plots 
-        for(const component of obj.components[name]) {
-          if (component) component.main()
-        }
-      } else {
-        if (obj.components[name]) obj.components[name].main()
-      }
-    }
-    obj.bus.emit('postRender')
-  }
+	obj.main = (updatedKeyVals={}) => {
+		for(const key in updatedKeyVals) {
+			obj[key] = updates[key]
+		}
+		// trigger all rendered sub-elements
+		for(const name in obj.components) {
+			if (Array.isArray(obj.components[name])) {
+				// example: 1 or more component.plots 
+				for(const component of obj.components[name]) {
+					if (component) component.main()
+				}
+			} else {
+				if (obj.components[name]) obj.components[name].main()
+			}
+		}
+		obj.bus.emit('postRender')
+	}
 
-  obj.button_radius = button_radius
-  if (!obj.callbacks) obj.callbacks = {}
-  setObjBarClickCallback(obj) 
-  // create event bus for this tree obj
-  obj.bus = client.get_event_bus(
-    ['postRender'], 
-    obj.callbacks && obj.callbacks.tree,
-    obj
-  )
+	obj.button_radius = button_radius
+	if (!obj.callbacks) obj.callbacks = {}
+	setObjBarClickCallback(obj) 
+	// create event bus for this tree obj
+	obj.bus = client.get_event_bus(
+		['postRender'], 
+		obj.callbacks && obj.callbacks.tree,
+		obj
+	)
 
 	obj.dom = {div: obj.div}
 	delete obj.div
@@ -120,11 +120,11 @@ callbacks: {
 		.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
 
-  obj.components = {
-    filter: getFilterUi(obj),
-    cart: getCartUi(obj),
-    plots: []
-  }
+	obj.components = {
+		filter: getFilterUi(obj),
+		cart: getCartUi(obj),
+		plots: []
+	}
 
 	// simplified query
 	obj.do_query = (args) => {

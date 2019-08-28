@@ -468,7 +468,7 @@ function show_group_termdb ( group, tk, block ) {
 		termdbinit({
 			genome: block.genome,
 			mds: tk.mds,
-			div: tk.legend.tip.d,
+			div: tk.legend.tip.d.append('div').style('margin','5px'),
 			default_rootterm: {},
 			termfilter:{ terms: filterlst }
 		})
