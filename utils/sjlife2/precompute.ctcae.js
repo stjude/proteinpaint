@@ -36,7 +36,7 @@ const uncomputableGrades = new Set()
 try {
 	const terms = load_terms(termdbfile)
   // uncomment filter for faster testing
-	const annotations = load_patientcondition(outcomesfile, terms)//.filter(d=>d.sample.slice(-1)=="1")  
+	const annotations = load_patientcondition(outcomesfile, terms)//.filter(d=>d.sample.slice(-2)=="19")  
   annotations.sort((a,b) => a.sample < b.sample ? 1 
     : a.sample < b.sample ? -1
     : a.grade < b.grade ? 1
@@ -205,37 +205,48 @@ function generate_tsv(bySample) { //console.log(Object.keys(bySample).length); r
     numSamples++
     for(const termid in bySample[sample].byCondition) {
       const subresult = bySample[sample].byCondition[termid]
-      console.log([sample, termid, 'grade', subresult.maxGrade, 'max_grade'].join('\t'))
-      numRows++
 
       if (!subresult.mostRecentGrades) subresult.mostRecentGrades = []
+      const maxIsAlsoMostRecentGrade = subresult.mostRecentGrades.includes(subresult.maxGrade) ? 1 : 0
+      console.log([sample, termid, 'grade', subresult.maxGrade, 1, 1, maxIsAlsoMostRecentGrade].join('\t'))
+      
       for(const grade of subresult.mostRecentGrades) {
-        console.log([sample, termid, 'grade', grade, 'most_recent'].join('\t'))
-        numRows++
+        if (grade !== subresult.maxGrade) {
+          console.log([sample, termid, 'grade', grade, 1, 0, 1].join('\t'))
+          numRows++
+        }
       }
 
       if (!subresult.computableGrades) subresult.computableGrades = []
       for(const grade of subresult.computableGrades) {
-        console.log([sample, termid, 'grade', grade, 'computable_grade'].join('\t'))
-        numRows++
+        if (grade !== subresult.maxGrade && !subresult.mostRecentGrades.includes(grade)) {
+          console.log([sample, termid, 'grade', grade, 1, 0, 0].join('\t'))
+          numRows++
+        }
       }
 
       if (!subresult.children) subresult.children = []
-      for(const child of subresult.children) {
-        console.log([sample, termid, 'child', child, 'computable_grade'].join('\t'))
-        numRows++
-      }
-
-      if (!subresult.childrenAtMostRecent) subresult.childrenAtMostRecent = []
-      for(const child of subresult.childrenAtMostRecent) {
-        console.log([sample, termid, 'child', child, 'most_recent'].join('\t'))
-        numRows++
-      }
-
       if (!subresult.childrenAtMaxGrade) subresult.childrenAtMaxGrade = []
+      if (!subresult.childrenAtMostRecent) subresult.childrenAtMostRecent = []
+
+      for(const child of subresult.children) {
+        if (!subresult.childrenAtMaxGrade.includes(child) && !subresult.childrenAtMostRecent.includes(child)) {
+          console.log([sample, termid, 'child', child, 1, 0, 0].join('\t'))
+          numRows++
+        }
+      }
+
       for(const child of subresult.childrenAtMaxGrade) {
-        console.log([sample, termid, 'child', child, 'max_grade'].join('\t'))
+        const isMostRecent = subresult.childrenAtMostRecent.includes(child) ? 1 : 0
+        console.log([sample, termid, 'child', child, 1, 1, isMostRecent].join('\t'))
         numRows++
+      }
+
+      for(const child of subresult.childrenAtMostRecent) {
+        if (!subresult.childrenAtMaxGrade.includes(child)) {
+          console.log([sample, termid, 'child', child, 1, 0, 1].join('\t'))
+          numRows++
+        }
       }
     }
   }

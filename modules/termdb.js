@@ -199,6 +199,7 @@ function trigger_getcategories ( q, res, tdb, ds ) {
 
 function trigger_scatter ( q, res, tdb, ds) {
 	q.ds = ds
+	if (q.tvslst) q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 	const startTime = +(new Date())
 	const t1 = tdb.q.termjsonByOneid( q.term1_id )
 	if (!t1) throw `Invalid term1_id="${q.term1_id}"`

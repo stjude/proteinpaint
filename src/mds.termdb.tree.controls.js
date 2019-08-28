@@ -1,4 +1,4 @@
-import {Menu, newpane, tkt} from './client'
+import {Menu, newpane, tkt, get_event_bus} from './client'
 import {event} from 'd3-selection'
 import * as termvaluesettingui from './mds.termdb.termvaluesetting.ui'
 import {validate_termvaluesetting} from './mds.termdb.termvaluesetting'
@@ -57,7 +57,10 @@ export function getFilterUi(obj) {
 export function getCartUi(obj) {
   const cart = {
     main() {
-      if(!obj.selected_groups) return
+      if(!obj.selected_groups) {
+        cart.bus.emit('postRender', obj)
+        return
+      }
 
       if(obj.selected_groups.length > 0){
         // selected group button
@@ -75,7 +78,9 @@ export function getCartUi(obj) {
         obj.dom.cartdiv
           .style('display','none')
       }
-    }
+      cart.bus.emit('postRender',obj)
+    },
+    bus: get_event_bus(['postRender'])
   }
 
   return cart
@@ -119,7 +124,14 @@ function make_selected_group_tip(obj, cart){
       mds: obj.mds,
       genome: obj.genome,
       tvslst_filter: false,
-      callback: () => {tvsuiObj.update_terms()}  
+      callback: () => {
+        tvsuiObj.update_terms()
+        if (obj.emittingPostRender) delete obj.emittingPostRender
+        else {
+          obj.emittingPostRender = true
+          cart.bus.emit('postRender', obj)
+        }
+      }
     }
 
     termvaluesettingui.display(tvsuiObj)
@@ -196,6 +208,8 @@ function make_selected_group_tip(obj, cart){
         })
       })
   }
+
+  cart.bus.emit('postRender', obj)
 }
 
 

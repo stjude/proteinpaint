@@ -99,12 +99,13 @@ CREATE TABLE precomputed(
   term_id TEXT,
   value_for TEXT,
   value TEXT,
-  restriction TEXT
+  computable_grade integer,
+  max_grade integer,
+  most_recent integer
 );
 CREATE INDEX p_sample on precomputed(sample);
 CREATE INDEX p_termid on precomputed(term_id);
 CREATE INDEX p_value_for on precomputed(value_for);
-CREATE INDEX p_restriction on precomputed(restriction);
 
 -- imported filename must match the 
 -- dataset/sjlife2.hg38.js:cohort.termdb.precomputed_file value

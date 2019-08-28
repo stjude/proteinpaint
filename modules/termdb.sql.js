@@ -161,7 +161,7 @@ returns:
 		const restriction = tvs.value_by_max_grade ? 'max_grade'
 				: tvs.value_by_most_recent ? 'most_recent'
 				: 'computable_grade'
-		values.push(tvs.term.id, value_for, restriction)
+		values.push(tvs.term.id, value_for)
 		
 		filters.push(`
 			SELECT 
@@ -169,7 +169,7 @@ returns:
 			FROM precomputed
 			WHERE term_id = ? 
 				AND value_for = ? 
-				AND restriction = ?
+				AND ${restriction} = 1
 				AND value IN (${tvs.values.map(i=>'?').join(', ')})`)
 		values.push(...tvs.values.map(i=>''+i.key))
 	}
@@ -260,7 +260,8 @@ q{}
       t2.value AS val2
     FROM t1
     JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
-    JOIN t2 ON t2.sample = t1.sample`
+    JOIN t2 ON t2.sample = t1.sample
+    ${filter ? "WHERE t1.sample in "+filter.CTEname : ""}`
 
   return q.ds.cohort.db.connection.prepare( sql )
     .all( values )
@@ -562,7 +563,7 @@ function makesql_oneterm_condition ( term, q, ds, filter, values, index='' ) {
 	const restriction = q.value_by_max_grade ? 'max_grade'
 			: q.value_by_most_recent ? 'most_recent'
 			: 'computable_grade'
-	values.push(term.id, value_for, restriction)
+	values.push(term.id, value_for)
 	
 	return {
 		sql: `${out_table} AS (
@@ -573,7 +574,7 @@ function makesql_oneterm_condition ( term, q, ds, filter, values, index='' ) {
 			FROM precomputed
 			WHERE term_id = ? 
 				AND value_for = ? 
-				AND restriction = ?
+				AND ${restriction} = 1
 		)`,
 		tablename: out_table
 	}
@@ -940,8 +941,16 @@ thus less things to worry about...
 */
 	if(!ds.cohort) throw 'ds.cohort missing'
 	if(!ds.cohort.db) throw 'ds.cohort.db missing'
-	if(!ds.cohort.db.file) throw 'ds.cohort.db.file missing'
-	const cn = connect_db( ds.cohort.db.file )
+
+	let cn
+	if( ds.cohort.db.file ) {
+		cn = connect_db( ds.cohort.db.file )
+	} else if( ds.cohort.db.file_fullpath ) {
+		// only on ppr
+		cn = connect_db( ds.cohort.db.file_fullpath, true )
+	} else {
+		throw 'neither .file or .file_fullpath is set on ds.cohort.db'
+	}
 	ds.cohort.db.connection = cn
 
 	if(!ds.cohort.termdb ) throw 'ds.cohor.termdb missing'

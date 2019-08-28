@@ -105,6 +105,7 @@ function load_precomputed(ds, db, term_id) {
     "grade | max_grade": "maxGrade",
     "grade | most_recent": "mostRecentGrades",
   }
+  const restrictions = ["computable_grade", "max_grade", "most_recent"]
   for(const row of rows) {
     if (!anno[row.sample]) {
       anno[row.sample] = {sample: row.sample}
@@ -113,15 +114,19 @@ function load_precomputed(ds, db, term_id) {
     if (!anno[row.sample][row.term_id]) {
       anno[row.sample][row.term_id] = {}
     }
-    const key = alias[row.value_for + " | " + row.restriction]
-    const value = row.value_for == "grade" ? +row.value : row.value
-    if (key == "maxGrade") anno[row.sample][row.term_id][key] = value
-    else {
-      if (!anno[row.sample][row.term_id][key]) {
-        anno[row.sample][row.term_id][key] = []
-      }
-      if (!anno[row.sample][row.term_id][key].includes(value)) {
-        anno[row.sample][row.term_id][key].push(value)
+    for(const restriction of restrictions) {
+      if (row[restriction]) {
+        const key = alias[row.value_for + " | " + restriction]
+        const value = row.value_for == "grade" ? +row.value : row.value
+        if (key == "maxGrade") anno[row.sample][row.term_id][key] = value
+        else {
+          if (!anno[row.sample][row.term_id][key]) {
+            anno[row.sample][row.term_id][key] = []
+          }
+          if (!anno[row.sample][row.term_id][key].includes(value)) {
+            anno[row.sample][row.term_id][key].push(value)
+          }
+        }
       }
     }
   }

@@ -52,7 +52,7 @@ export default function scatter(opts) {
         return
       }
       self.dom.div.style('display','block')
-      if (data) self.currData = data;
+      if (data) self.currData = data
       self.plot = plot
       self.pj.refresh({ data: self.currData.rows })
 
