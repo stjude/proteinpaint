@@ -10,6 +10,7 @@ tape("\n", function(test) {
 })
 
 tape("cart button", function (test) {
+  test.plan(3)
   const div0 = d3s.select('body').append('div')
   const termfilter = {show_top_ui:true}
   
@@ -48,7 +49,7 @@ tape("cart button", function (test) {
 
   function triggerClick(obj){
     obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
-    obj.dom.cartdiv.on('postRender',testSelectedGroupTipDisplay(obj))
+    obj.components.cart.bus.on('postRender',testSelectedGroupTipDisplay(obj))
   }
 
   function testSelectedGroupTipDisplay(obj){
@@ -57,7 +58,7 @@ tape("cart button", function (test) {
 
   function triggerEmpty(obj){
       obj.tip.d.select('.remove_group_btn').node().dispatchEvent(new Event('click', {bubbles: true}))
-      obj.tip.d.select('.remove_group_btn').on('postRender',testEmpty(obj))
+      obj.components.cart.bus.on('postRender',testEmpty(obj))
   }
 
   function testEmpty(obj){
@@ -66,7 +67,7 @@ tape("cart button", function (test) {
   }
 })
 
-tape.only("cart selected group tip", {timeout: 2500}, function (test) {
+tape("cart selected group tip", {timeout: 2500}, function (test) {
   test.plan(3)
   const div0 = d3s.select('body').append('div')
   const termfilter = {show_top_ui:true}
@@ -134,10 +135,12 @@ tape.only("cart selected group tip", {timeout: 2500}, function (test) {
     obj.components.cart.bus.on('postRender', null)
     test.equal(obj.tip.d.selectAll('.term_name_btn').size(),1, "should add term button to cart")
     obj.tip.hide()
+    test.end()
   }
 })
 
-tape("cart with 2 groups", function (test) {
+tape("cart with 2 groups", {timeout: 5000}, function (test) {
+  test.plan(6)
   const div0 = d3s.select('body').append('div')
   const termfilter = {show_top_ui:true}
   
@@ -171,20 +174,15 @@ tape("cart with 2 groups", function (test) {
       },
       callbacks: {
         tree: {
-          postRender: [triggerClick]
+          postRender: [triggerCartClick, triggerRemoveGroup]
         }
       },
     }
   })
 
-  function triggerClick(obj){
-    obj.dom.cartdiv.on('postRender',testSelectedGroupTipDisplay(obj))
+  function triggerCartClick(obj){
     obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
-    setTimeout(()=>{
-      obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
-      obj.tip.d.select('.remove_group_btn').node().dispatchEvent(new Event('click', {bubbles: true}))
-      testRemoveGroup(obj)
-    },1500)
+    setTimeout(()=>testSelectedGroupTipDisplay(obj),100)
   }
 
   function testSelectedGroupTipDisplay(obj){
@@ -192,18 +190,23 @@ tape("cart with 2 groups", function (test) {
     test.equal(obj.tip.d.selectAll('.launch_gp_btn').size(),1, "should show 'test in genome paint' button")
     
     obj.tip.d.selectAll('.launch_gp_btn').node().click()
-    obj.tip.d.selectAll('.launch_gp_btn').on('postClick',testGenomePaintLaunch())
-  }
-
-  function testGenomePaintLaunch(){
     setTimeout(()=>{
       // Should check 'SJLife' button in GenomePaint pop-up window
       test.equal(d3s.select('body').selectAll('.sja_pane').selectAll('.sja_handle_green').html(),'SJLife', "should lauch GenomePaint")
-      setTimeout(()=>d3s.select('body').selectAll('.sja_pane').selectAll('.sja_menuoption').node().click(),900)
-    }, 100)
+      setTimeout(()=>d3s.select('body').selectAll('.sja_pane').selectAll('.sja_menuoption').node().click(),2800)
+    }, 300)
+  }
+
+  function triggerRemoveGroup(obj){
+    setTimeout(()=>{
+      obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
+      obj.tip.d.select('.remove_group_btn').node().dispatchEvent(new Event('click', {bubbles: true}))
+      testRemoveGroup(obj)
+    },3000)
   }
 
   function testRemoveGroup(obj){
+    obj.components.cart.bus.on('postRender', null)
     test.equal(obj.tip.d.selectAll('.remove_group_btn').size(),1, "should show only 1 blue-pill after group remove")
     test.equal(obj.tip.d.selectAll('.launch_gp_btn').size(),0, "should remove 'test in genome paint' button if only 1 group")
     test.equal(obj.dom.cartdiv.html(), "Selected 1 Group", "should update a cart button")
