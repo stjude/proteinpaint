@@ -48,6 +48,7 @@ arg:
     // set the parent DOM elements for viz and controls
     dom: {
       holder: arg.holder
+        .style('margin-top','-1px')
         .style('white-space', 'nowrap')
         .style('overflow-x', 'scroll'),
       

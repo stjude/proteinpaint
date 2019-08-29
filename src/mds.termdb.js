@@ -373,12 +373,14 @@ such conditions may be carried by obj
 			client.appear(div, 'inline-block')
 			button.style('border-radius','5px 5px 0 0')
 				.style('border-style','solid solid hidden solid')
+				.style('height','17px')
 			// view_btn_line.style('display','block')
       if (i==-1) obj.expanded_term_ids.push(term.id)
 		} else {
 			client.disappear(div)
 			button.style('border-radius',button_radius)
 				.style('border','solid 1px #aaa')
+				.style('height','auto')
 			// view_btn_line.style('display','none')
       obj.expanded_term_ids.splice(i, 1)
 		}
