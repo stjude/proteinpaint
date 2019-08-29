@@ -202,7 +202,6 @@ export default function barsRenderer(barsapp, holder) {
         const cbox = collabels.node().getBBox()
         const ytbox = yTitle.node().getBBox();
         const xoffset = Math.max(-cbox.x, -ytbox.x, -bbox.x)
-        console.log(cbox.y, ytbox.y, bbox.y)
         mainG.transition().duration(100)
         .attr('transform','translate('+ xoffset + ','+ -extraPad +')')
       } else {
