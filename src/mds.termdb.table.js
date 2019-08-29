@@ -1,3 +1,5 @@
+import {select} from "d3-selection"
+
 // init is similar to a Class constructor
 // in that it returns an object "instance"
 export function init(holder) {
@@ -12,6 +14,7 @@ export function init(holder) {
     // so that self does not need to be passed to it
     // as an argument
     main(plot, data) {
+      self.plot = plot
       const isVisible = plot.settings.currViews.includes("table")
       if (!isVisible) {
         self.dom.div.style('display','none')
@@ -21,6 +24,25 @@ export function init(holder) {
         throw 'term2 is required for table view'
       }
       processData(self, data)
+    },
+    download() {
+      if (!this.plot.settings.currViews.includes('table')) return
+      const data = []
+      self.dom.div.selectAll('tr').each(function(){
+        const series = []
+        select(this).selectAll('th, td').each(function(){series.push(select(this).text())})
+        data.push(series)
+      })
+      const matrix = data.map(row=>row.join("\t")).join("\n"); console.log(matrix)
+
+      const a=document.createElement('a')
+      document.body.appendChild(a)
+      a.addEventListener('click',function(){
+        a.download=self.plot.term.name + ' table.txt'
+        a.href=URL.createObjectURL(new Blob([matrix],{'type':"text/tab-separated-values"}))
+        document.body.removeChild(a)
+      },false)
+      a.click()
     }
   }
   return self
