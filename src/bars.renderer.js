@@ -208,8 +208,9 @@ export default function barsRenderer(barsapp, holder) {
       } else {
         const rbox = rowlabels.node().getBBox()
         const ytbox = yTitle.node().getBBox()
+        const xtbox = xTitle.node().getBBox()
         mainG.transition().duration(100)
-        .attr('transform', 'translate('+ Math.max(-rbox.x, -ytbox.x) +','+ -ytbox.y +')')
+        .attr('transform', 'translate('+ Math.max(-rbox.x, -ytbox.x) +','+ -xtbox.y +')')
       }
     }, nosvg ? 110 : 510)
   }
