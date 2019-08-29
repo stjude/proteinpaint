@@ -321,7 +321,7 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
       }
     }
     inReqs.filterFxn = (row) => {
-      return sample_match_termvaluesetting( row, q.tvslst, ds )
+      return sample_match_termvaluesetting( row, q.tvslst )
     }
   }
 
@@ -520,11 +520,8 @@ arguments:
   return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
 }
 
-function sample_match_termvaluesetting ( row, tvslst, ds ) {
-/* for AND, require all terms to match
-ds is for accessing patient_condition
-XXX  only used by termdb.barchart.js, to be taken out
-*/
+function sample_match_termvaluesetting ( row, tvslst ) {
+/* for AND, require all terms to match */
 
   let usingAND = true
 

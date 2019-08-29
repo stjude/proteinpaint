@@ -31,7 +31,7 @@ tape("single barchart, categorical bars + click", function (test) {
       },
       callbacks: {
         plot: {
-          postRender: [testBarCount, triggerBarClick]
+          postRender: [testBarCount, testAxisDimension, triggerBarClick]
         }
       },
       bar_click_menu:{
@@ -45,6 +45,15 @@ tape("single barchart, categorical bars + click", function (test) {
     const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
     test.true(numBars > 5,  "should have more than 10 Diagnosis Group bars")
     test.equal(numBars, numOverlays,  "should have equal numbers of bars and overlays")
+  }
+
+  function testAxisDimension(plot) {
+    const xAxis = plot.components.barchart.dom.barDiv.select('.sjpcb-bar-chart-x-axis').node()
+    const seriesG = plot.components.barchart.dom.barDiv.select('.bars-series').node()
+    test.true(
+      xAxis.getBBox().width >= seriesG.getBBox().width,  
+      "x-axis width should be >= series width"
+    )
   }
 
   function triggerBarClick(plot) {

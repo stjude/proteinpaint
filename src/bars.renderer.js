@@ -733,7 +733,7 @@ export default function barsRenderer(barsapp, holder) {
           .domain([max / ratio, min])
           .range([
             s.colgrplabelh,
-            s.svgh - s.collabelh + s.colgrplabelh - s.borderwidth + 0.5
+            s.svgh - s.collabelh + s.colgrplabelh - s.borderwidth + 1
           ])
       ).ticks(4, format('d'))
     );
@@ -795,13 +795,13 @@ export default function barsRenderer(barsapp, holder) {
 
     xAxis
     .style('display','block')
-    .attr('transform', 'translate(0.5,'+ y +')')
+    .attr('transform', 'translate(2.5,'+ y +')')
     .call(
       axisTop(
         (hm.unit == "log" ? scaleLog() : scaleLinear())
           .domain([min, max / ratio])
           .range([
-            2,
+            0,
             s.svgw - s.rowlabelw // + s.rowgrplabelw - s.borderwidth
           ])
       ).ticks(4, format('d'))

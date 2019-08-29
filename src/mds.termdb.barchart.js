@@ -252,9 +252,10 @@ export class TermdbBarchart{
             : null
         const label = grade_label ? grade_label.label : id
         const af = series && 'AF' in series ? ', AF=' + series.AF : ''
+        const ntotal = `, n=${series.visibleTotal}`
         return {
           id,
-          label: label + af
+          label: label + af + ntotal
         }
       })
       chart.maxVisibleSeriesTotal = chart.visibleSerieses.reduce((max,series) => {
@@ -327,14 +328,16 @@ export class TermdbBarchart{
           }, 0)
           
           const grade = grade_labels ? grade_labels.find(c => c.grade == collabel) : null
+          const ntotal =  total ? " (n="+total+")" : ''
           
           return {
             id: collabel,
-            text: grade ? grade.label : collabel,
+            text: grade ? grade.label + ntotal : collabel + ntotal,
             color: "#fff",
             textColor: "#000",
             border: "1px solid #333",
-            inset: total ? total : '',
+            //inset: total ? "n="+total : '',
+            noIcon: true,
             type: 'col'
           }
         })
