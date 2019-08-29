@@ -361,9 +361,14 @@ export class TermdbBarchart{
         name: t.name + (value_by_label ? ', '+value_by_label : ''),
         items: s.rows.map(d => {
           const g = grade_labels ? grade_labels.find(c => typeof d == 'object' && 'id' in d ? c.grade == d.id : c.grade == d) : null
+          const chartReducer = (sum, chart) => sum + chart.serieses.reduce(seriesReducer,0)
+          const seriesReducer = (sum, series) => sum + series.visibleData.reduce(dataReducer,0)
+          const dataReducer = (sum, data) => sum + (d == data.dataId ? data.total : 0)
+          const total = this.currServerData.charts.reduce(chartReducer, 0)
+          const ntotal =  total ? " (n="+total+")" : ''
           return {
             dataId: d,
-            text: g ? g.label : d,
+            text: g ? g.label + ntotal : d + ntotal,
             color: this.term2toColor[d],
             type: 'row',
             isHidden: s.exclude.rows.includes(d)
