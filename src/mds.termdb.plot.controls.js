@@ -76,8 +76,14 @@ function setBurgerBtn(controls) {
       controls.main(controls.plot)      
     })
 
+    controls.dom.button_bar = controls.dom.topbar.append('div')
+
   return {
-    main() {},
+    main() {
+      btn.style('display',controls.isVisible ? 'inline-block' : 'block')
+      controls.dom.button_bar.style('display',controls.isVisible ? 'inline-block' : 'block')
+        .style('float',controls.isVisible ? 'right' : 'none')
+    },
     dom: {
       btn
     }
@@ -85,16 +91,15 @@ function setBurgerBtn(controls) {
 }
 
 function setSvgBtn(controls) {
-  const svg_btn = controls.dom.holder.append('div')
-    .style('position','absolute')
+  const svg_btn = controls.dom.button_bar.append('div')
+    .style('margin','10px')
     .style('margin-top','15px')
-    .style('margin-left','20px')
+    .style('margin-left','24px')
     .style('font-family','verdana')
-    .style('font-size', '10px')
-    .style('font-weight','bold')
+    .style('font-size', '18px')
     .style('cursor','pointer')
-    .attr('title','Download SVG')
-    .html('SVG')
+    .attr('title','Download plot/data')
+    .html('&#10515;')
     .on('click', () => {
       for(const name in controls.plot.components) {
         if (typeof controls.plot.components[name].download == 'function') {
@@ -105,7 +110,7 @@ function setSvgBtn(controls) {
 
   return {
     main() {
-      svg_btn.style('visibility',controls.isVisible ? 'hidden' : 'visible')
+      svg_btn.style('display',controls.isVisible ? 'inline-block' : 'block')
     },
     dom: {
       svg_btn
@@ -115,12 +120,10 @@ function setSvgBtn(controls) {
 
 function setGradeInfoBtn(controls){
 
-  const info_btn = controls.dom.holder.append('div')
-    .style('position','absolute')
-    .style('display', controls.plot.term && controls.plot.term.iscondition ? 'block' : 'none')
+  const info_btn = controls.dom.button_bar.append('div')
+    .style('visibility', controls.plot.term && controls.plot.term.iscondition ? 'visible' : 'hidden')
     .style('margin','10px')
-    .style('margin-top','53px')
-    .style('margin-left','22px')
+    .style('margin-left','24px')
     .style('font-family','verdana')
     .style('font-size', '18px')
     .style('font-weight','bold')
@@ -133,7 +136,8 @@ function setGradeInfoBtn(controls){
 
   return {
     main() {
-      info_btn.style('visibility',controls.isVisible ? 'hidden' : 'visible')
+      info_btn.style('display',controls.isVisible ? 'inline-block' : 'block')
+      .style('margin-top',controls.isVisible ? '15px' :'20px')
     },
     dom: {
       info_btn
