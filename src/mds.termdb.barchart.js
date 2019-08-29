@@ -330,11 +330,15 @@ export class TermdbBarchart{
           }, 0)
           
           const grade = grade_labels ? grade_labels.find(c => c.grade == collabel) : null
-          const ntotal =  total ? " (n="+total+")" : ''
-          
+          const label = grade ? grade.label
+            : this.terms.term1.values && collabel in this.terms.term1.values
+            ? this.terms.term1.values[collabel].label
+            : collabel
+          const ntotal =  total ? ", n="+total : ''
+
           return {
             id: collabel,
-            text: grade ? grade.label + ntotal : collabel + ntotal,
+            text: label + ntotal,
             color: "#fff",
             textColor: "#000",
             border: "1px solid #333",
@@ -362,15 +366,19 @@ export class TermdbBarchart{
       legendGrps.push({
         name: t.name + (value_by_label ? ', '+value_by_label : ''),
         items: s.rows.map(d => {
-          const g = grade_labels ? grade_labels.find(c => typeof d == 'object' && 'id' in d ? c.grade == d.id : c.grade == d) : null
           const chartReducer = (sum, chart) => sum + chart.serieses.reduce(seriesReducer,0)
           const seriesReducer = (sum, series) => sum + series.visibleData.reduce(dataReducer,0)
           const dataReducer = (sum, data) => sum + (d == data.dataId ? data.total : 0)
           const total = this.currServerData.charts.reduce(chartReducer, 0)
-          const ntotal =  total ? " (n="+total+")" : ''
+          const ntotal =  total ? ", n="+total : ''
+          const g = grade_labels ? grade_labels.find(c => typeof d == 'object' && 'id' in d ? c.grade == d.id : c.grade == d) : null
+          const label = g ? g.label
+            : this.terms.term2.values && d in this.terms.term2.values
+            ? this.terms.term2.values[d].label
+            : d
           return {
             dataId: d,
-            text: g ? g.label + ntotal : d + ntotal,
+            text: label + ntotal,
             color: this.term2toColor[d],
             type: 'row',
             isHidden: s.exclude.rows.includes(d)

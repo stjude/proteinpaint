@@ -33,7 +33,7 @@ export function init(holder) {
         select(this).selectAll('th, td').each(function(){series.push(select(this).text())})
         data.push(series)
       })
-      const matrix = data.map(row=>row.join("\t")).join("\n"); console.log(matrix)
+      const matrix = data.map(row=>row.join("\t")).join("\n")
 
       const a=document.createElement('a')
       document.body.appendChild(a)
