@@ -191,23 +191,25 @@ export default function barsRenderer(barsapp, holder) {
     }
 
     setTimeout(()=>{
+      const extraPad = 20 // hardcode
       const bbox = mainG.node().getBBox()
-      main.adjustedSvgw = bbox.width + 20
+      main.adjustedSvgw = bbox.width + extraPad
       svg.transition().duration(100)
         .attr('width', main.adjustedSvgw)
-        .attr('height', bbox.height + 20);
+        .attr('height', bbox.height + extraPad);
 
       if (hm.orientation == "vertical") {
         const cbox = collabels.node().getBBox()
-        const ytbox = yTitle.node().getBBox()
-        const xoffset = ytbox.x < cbox.x ? -ytbox.x + ytbox.height : -cbox.x
+        const ytbox = yTitle.node().getBBox();
+        const xoffset = Math.max(-cbox.x, -ytbox.x, -bbox.x)
+        console.log(cbox.y, ytbox.y, bbox.y)
         mainG.transition().duration(100)
-        .attr('transform','translate('+ xoffset + ',0)')
+        .attr('transform','translate('+ xoffset + ','+ -extraPad +')')
       } else {
         const rbox = rowlabels.node().getBBox()
-        const ytbox = yTitle.node().getBBox();
+        const ytbox = yTitle.node().getBBox()
         mainG.transition().duration(100)
-        .attr('transform', 'translate('+ Math.max(rbox.width, ytbox.width) +',0)')
+        .attr('transform', 'translate('+ Math.max(-rbox.x, -ytbox.x) +','+ -ytbox.y +')')
       }
     }, nosvg ? 110 : 510)
   }

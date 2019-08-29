@@ -203,7 +203,7 @@ export class TermdbBarchart{
     .append('div')
     .attr('class', 'pp-sbar-div')
     .style("display", "inline-block")
-    .style("padding", "10px")
+    .style("padding", "20px")
     .style('vertical-align', 'top')
     .each(function(chart,i) {
       chart.settings.cols.sort(self.barSorter)
@@ -214,6 +214,8 @@ export class TermdbBarchart{
       chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, chartsData))
       self.renderers[chart.chartId](chart)
     })
+
+    this.dom.holder.selectAll('.pp-chart-title').style('display', self.visibleCharts.length < 2 ? 'none' : 'block')
 
     this.legendRenderer(this.getLegendGrps())
   }
