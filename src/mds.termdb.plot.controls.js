@@ -68,7 +68,7 @@ function setBurgerBtn(controls) {
     .style('margin-left','20px')
     .style('font-family','verdana')
     .style('font-size', '28px')
-    .style('cursor','default')
+    .style('cursor','pointer')
     .style('transition','0.5s')
     .html('&#8801;')
     .on('click', () => {
@@ -98,7 +98,6 @@ function setSvgBtn(controls) {
     .style('font-family','verdana')
     .style('font-size', '18px')
     .style('cursor','pointer')
-    .attr('title','Download plot/data')
     .html('&#10515;')
     .on('click', () => {
       for(const name in controls.plot.components) {
@@ -111,6 +110,15 @@ function setSvgBtn(controls) {
   return {
     main() {
       svg_btn.style('display',controls.isVisible ? 'inline-block' : 'block')
+
+      //show tip info for download button based on visible plot/table
+      const currviews  = controls.plot.settings.currViews
+      const plots = ['barchart','boxplot','scatter']
+      if(plots.some(view => currviews.includes(view))){
+        svg_btn.attr('title','Download plot image')
+      }else if(currviews.includes('table')){
+        svg_btn.attr('title','Download table data')
+      }
     },
     dom: {
       svg_btn
