@@ -10,7 +10,7 @@ export default function getHandlers(self) {
     chart: {
       title(chart) {
         if (!self.terms.term0) return chart.chartId
-        return self.terms.term0.values
+        return self.terms.term0.values && chart.chartId in self.terms.term0.values
           ? self.terms.term0.values[chart.chartId].label
           : chart.chartId
       }
@@ -25,15 +25,11 @@ export default function getHandlers(self) {
         const term1 = self.terms.term1
         const term2 = self.terms.term2 ? self.terms.term2 : null
         const term1unit = term1.unit 
-        const seriesLabel = (term1.values && ''+d.seriesId in term1.values
+        const seriesLabel = (term1.values && d.seriesId in term1.values
           ? term1.values[d.seriesId].label
-          : term1.iscondition && seriesGrade
-          ? seriesGrade.label
           : d.seriesId) + (term1.unit ? ' '+ term1.unit : '')
-        const dataLabel = (term2 && term2.values && ''+d.dataId in term1.values
+        const dataLabel = (term2 && term2.values && d.dataId in term1.values
           ? term2.values[d.dataId].label
-          : term2 && term2.iscondition && dataGrade
-          ? dataGrade.label
           : d.dataId) + (term2 && term2.unit ? ' '+ term2.unit : '')
         const icon = !term2
           ? ''
@@ -57,7 +53,7 @@ export default function getHandlers(self) {
     },
     colLabel: {
       text: d => {
-        return self.terms.term1.values && 'id' in d && ''+d.id in self.terms.term1.values
+        return self.terms.term1.values && 'id' in d && d.id in self.terms.term1.values
           ? self.terms.term1.values[d.id].label
           : 'label' in d
           ? d.label
@@ -79,7 +75,7 @@ export default function getHandlers(self) {
     },
     rowLabel: {
       text: d => {
-        return self.terms.term1.values && 'id' in d && ''+d.id in self.terms.term1.values
+        return self.terms.term1.values && 'id' in d && d.id in self.terms.term1.values
           ? self.terms.term1.values[d.id].label
           : 'label' in d
           ? d.label
@@ -183,9 +179,9 @@ function getTermValues(d, self) {
     const q = term.q
     const label = !term.values 
       ? key
-      : termNum=="term1"
-        ? term.values[d.seriesId].label
-        : term.values[d.dataId].label
+      : key in term.values
+        ? term.values[key].label
+        : key
 
     if (term.iscondition) {
       if (index == 0 || !self.terms.term2 || self.terms.term1.id != self.terms.term2.id) {
@@ -197,7 +193,7 @@ function getTermValues(d, self) {
 
       if (index == 1 && self.terms.term2 && term.id == self.terms.term2.id) {
         const q2 = self.plot.term2.q
-        const term2Label = self.terms.term2.values
+        const term2Label = self.terms.term2.values && d.dataId in self.terms.term2.values
           ? self.terms.term2.values[d.dataId].label
           : d.dataId
 
