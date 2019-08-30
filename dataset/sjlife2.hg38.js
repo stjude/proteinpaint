@@ -5,7 +5,7 @@ module.exports={
 
 	cohort:{
 		db:{
-			file:'files/hg38/sjlife/clinical/db2',
+			file:'files/hg38/sjlife/clinical/db',
 			// may describe keywords about table and field names
 			/*
 			k:{

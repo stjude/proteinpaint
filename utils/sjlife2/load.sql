@@ -40,6 +40,19 @@ create table alltermsbyorder (
 .import 'alltermsbyorder.grouped' alltermsbyorder
 
 
+
+
+DROP TABLE IF EXISTS termhtmldef;
+DROP INDEX IF EXISTS termhtmldef_id;
+CREATE TABLE termhtmldef (
+  id character not null,
+  jsonhtml json not null
+);
+CREATE INDEX termhtmldef_id on termhtmldef(id);
+.import termid2htmldef termhtmldef
+
+
+
 drop table if exists category2vcfsample;
 create table category2vcfsample (
   group_name character not null,

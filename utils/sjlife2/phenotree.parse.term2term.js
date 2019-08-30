@@ -203,12 +203,12 @@ function addattributes_conditionterm ( t ) {
 	}
 
 	t.values = {
-		"0":{label:"No condition"},
-		"1":{label:"Mild"},
-		"2":{label:"Moderate"},
-		"3":{label:"Severe"},
-		"4":{label:"Life-threatening"},
-		"5":{label:"Death"},
+		"0":{label:"0: No condition"},
+		"1":{label:"1: Mild"},
+		"2":{label:"2: Moderate"},
+		"3":{label:"3: Severe"},
+		"4":{label:"4: Life-threatening"},
+		"5":{label:"5: Death"},
 		"9":{label:"Unknown status", "uncomputable":true}
 	}
 }

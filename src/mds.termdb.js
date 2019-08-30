@@ -18,7 +18,7 @@ show_default_rootterm
 		may_make_term_foldbutton
 		may_apply_modifier_click_term
 		may_apply_modifier_barchart_selectbar
-		may_make_term_graphbuttons
+		may_make_term_viewbutton
 			term_addbutton_barchart
 				make_barplot
 */
@@ -235,9 +235,7 @@ try to keep the logic clear
 	if( may_apply_modifier_barchart_selectbar( obj, term, row, row_graph ) ) return
 
 
-	// term function buttons, including barchart, and cross-tabulate
-
-	may_make_term_graphbuttons( term, row, row_graph, obj )
+	may_make_term_viewbutton( term, row, row_graph, obj )
 }
 
 
@@ -263,8 +261,8 @@ function print_term_name ( row, arg, term ) {
 
 function may_apply_modifier_barchart_selectbar ( obj, term, row, row_graph ) {
 	if(!obj.modifier_barchart_selectbar) return false
-	if(!term.graph || !term.graph.barchart) {
-		// no chart, this term is not clickable
+	if(!term_hasgraph(term)) {
+		// no chart for this term, is not clickable
 		return true
 	}
 	term_addbutton_barchart ( term, row, row_graph, obj )
@@ -288,7 +286,7 @@ function may_apply_modifier_click_term ( obj, term, row ) {
 		// this term is disabled, no clicking
 		namebox.style('opacity','.5')
 
-	} else if(term.graph) {
+	} else if( term_hasgraph(term)) {
 
 		// enable clicking this term
 		namebox
@@ -305,27 +303,20 @@ function may_apply_modifier_click_term ( obj, term, row ) {
 
 
 
-function may_make_term_graphbuttons ( term, row, row_graph, obj ) {
-/*
-if term.graph{} is there, make a button to trigger it
-allow to make multiple buttons
-*/
-	if(!term.graph) {
-		// no graph
-		return
-	}
-
-
-	if(term.graph.barchart) {
+function may_make_term_viewbutton( term, row, row_graph, obj ) {
+	if( term_hasgraph(term) ) {
 		term_addbutton_barchart( term, row, row_graph, obj )
 	}
-
-
-	// to add other graph types
 }
 
 
 
+
+
+function term_hasgraph ( term ) {
+// return true if term has a valid type flag
+	return term.iscategorical || term.isfloat || term.isinteger || term.iscondition
+}
 
 
 
@@ -580,7 +571,7 @@ barchart is shown in-place under term and in full capacity
 				.append('td')
 				.append('div')
 				.text(term.name)
-			if( term.graph ) {
+			if( term_hasgraph(term) ) {
 				// only allow selecting for graph-enabled ones
 				div.attr('class','sja_menuoption')
 					.style('margin','1px 0px 0px 0px')
@@ -666,7 +657,7 @@ barchart is shown in-place under term and in full capacity
 
 							if( may_apply_modifier_barchart_selectbar( obj, term, row2, row_graph ) ) {
 							} else {
-								may_make_term_graphbuttons( term, row2, row_graph, obj )
+								may_make_term_viewbutton( term, row2, row_graph, obj )
 							}
 
 							nextdiv = currdiv.append('div')
@@ -713,7 +704,7 @@ barchart is shown in-place under term and in full capacity
 					.text(term.name)
 				const td = tr.append('td') // holder for buttons
 					.style('text-align','right')
-				if( term.graph && term.graph.barchart ) {
+				if( term_hasgraph(term) ) {
 					makeviewbutton( term, td )
 				}
 				maketreebutton( term, td )
