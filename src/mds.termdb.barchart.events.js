@@ -10,13 +10,8 @@ export default function getHandlers(self) {
     chart: {
       title(chart) {
         if (!self.terms.term0) return chart.chartId
-        const grade = self.grade_labels
-          ? self.grade_labels.find(c => c.grade == chart.chartId)
-          : null
         return self.terms.term0.values
           ? self.terms.term0.values[chart.chartId].label
-          : grade
-          ? grade.label
           : chart.chartId
       }
     },
@@ -29,12 +24,6 @@ export default function getHandlers(self) {
       mouseover(d) {
         const term1 = self.terms.term1
         const term2 = self.terms.term2 ? self.terms.term2 : null
-        const seriesGrade = self.grade_labels
-          ? self.grade_labels.find(c => c.grade == d.seriesId)
-          : null
-        const dataGrade = self.grade_labels
-          ? self.grade_labels.find(c => c.grade == d.dataId)
-          : null
         const term1unit = term1.unit 
         const seriesLabel = (term1.values && ''+d.seriesId in term1.values
           ? term1.values[d.seriesId].label
@@ -192,9 +181,7 @@ function getTermValues(d, self) {
 
     const key = termNum=="term1" ? d.seriesId : d.dataId
     const q = term.q
-    const label = term.iscondition && self.grade_labels && q.bar_by_grade
-      ? self.grade_labels.find(c => c.grade == key).label
-      : !term.values 
+    const label = !term.values 
       ? key
       : termNum=="term1"
         ? term.values[d.seriesId].label
@@ -210,9 +197,7 @@ function getTermValues(d, self) {
 
       if (index == 1 && self.terms.term2 && term.id == self.terms.term2.id) {
         const q2 = self.plot.term2.q
-        const term2Label = q.bar_by_children 
-          ? self.grade_labels.find(c => c.grade == d.dataId).label
-          : self.terms.term2.values
+        const term2Label = self.terms.term2.values
           ? self.terms.term2.values[d.dataId].label
           : d.dataId
 
