@@ -157,10 +157,6 @@ export class TermdbBarchart{
     const self = this
     const cols = chartsData.refs.cols
 
-    self.grade_labels = chartsData.refs.grade_labels 
-      ? chartsData.refs.grade_labels
-      : null
-
     if (!chartsData.charts.length) {
       self.seriesOrder = []
     }
@@ -249,10 +245,9 @@ export class TermdbBarchart{
       })
       chart.settings.colLabels = chart.visibleSerieses.map(series=>{
         const id = series.seriesId
-        const grade_label = this.terms.term1.iscondition && this.grade_labels
-            ? this.grade_labels.find(c => id == c.grade)
-            : null
-        const label = grade_label ? grade_label.label : id
+        const label = this.terms.term1.values && id in this.terms.term1.values
+          ? this.terms.term1.values[id].label
+          : id
         const af = series && 'AF' in series ? ', AF=' + series.AF : ''
         const ntotal = `, n=${series.visibleTotal}`
         return {
@@ -319,7 +314,6 @@ export class TermdbBarchart{
     if (s.exclude.cols.length) {
       const t = this.terms.term1
       const b = t.graph && t.graph.barchart ? t.graph.barchart : null
-      const grade_labels = b && t.iscondition ? this.grade_labels : null
       const reducer = (sum, b) => sum + b.total
       const items = s.exclude.cols
         .filter(collabel => s.cols.includes(collabel))
@@ -328,10 +322,7 @@ export class TermdbBarchart{
           const total = this.currServerData.charts.reduce((sum,chart) => {
             return sum + chart.serieses.filter(filter).reduce(reducer, 0)
           }, 0)
-          
-          const grade = grade_labels ? grade_labels.find(c => c.grade == collabel) : null
-          const label = grade ? grade.label
-            : this.terms.term1.values && collabel in this.terms.term1.values
+          const label = this.terms.term1.values && collabel in this.terms.term1.values
             ? this.terms.term1.values[collabel].label
             : collabel
           const ntotal =  total ? ", n="+total : ''
@@ -358,7 +349,6 @@ export class TermdbBarchart{
     if (s.rows && s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
       const t = this.terms.term2
       const b = t.graph && t.graph.barchart ? t.graph.barchart : null
-      const grade_labels = b && t.iscondition ? this.grade_labels : null
       const value_by_label = !t.iscondition || !t.q ? '' 
         : t.q.value_by_max_grade ? 'max. grade'
         : t.q.value_by_most_recent ? 'most recent'
@@ -367,13 +357,11 @@ export class TermdbBarchart{
         name: t.name + (value_by_label ? ', '+value_by_label : ''),
         items: s.rows.map(d => {
           const chartReducer = (sum, chart) => sum + chart.serieses.reduce(seriesReducer,0)
-          const seriesReducer = (sum, series) => sum + series.visibleData.reduce(dataReducer,0)
+          const seriesReducer = (sum, series) => sum + series.data.reduce(dataReducer,0)
           const dataReducer = (sum, data) => sum + (d == data.dataId ? data.total : 0)
           const total = this.currServerData.charts.reduce(chartReducer, 0)
           const ntotal =  total ? ", n="+total : ''
-          const g = grade_labels ? grade_labels.find(c => typeof d == 'object' && 'id' in d ? c.grade == d.id : c.grade == d) : null
-          const label = g ? g.label
-            : this.terms.term2.values && d in this.terms.term2.values
+          const label = this.terms.term2.values && d in this.terms.term2.values
             ? this.terms.term2.values[d].label
             : d
           return {

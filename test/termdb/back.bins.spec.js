@@ -43,7 +43,7 @@ tape("compute_bins() error handling", function (test) {
     b.compute_bins({}, get_summary)
     test.fail(mssg1a)
   } catch(e) {
-    test.equal(e, 'missing custom_bin.bin_size', mssg1a)
+    test.equal(e, 'missing binconfig.bin_size', mssg1a)
   }
 
   const mssg1b = "should throw on non-numeric bin_size"

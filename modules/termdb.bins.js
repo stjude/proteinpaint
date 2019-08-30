@@ -8,7 +8,7 @@ function validate_bins(binconfig) {
   if (!bc || typeof bc !== "object" ) throw 'bin schema must be an object'
   
   // required custom_bin parameter
-  if (!('bin_size' in bc)) throw 'missing custom_bin.bin_size'
+  if (!('bin_size' in bc)) throw 'missing binconfig.bin_size'
   if (!isNumeric(bc.bin_size)) throw 'non-numeric bin_size'
   if (bc.bin_size <= 0) throw 'bin_size must be greater than 0'
   

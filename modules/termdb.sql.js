@@ -124,31 +124,24 @@ returns:
 		}
 
     const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
-    let exclude = ''
-    if (term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
-      const unanno = term.graph.barchart.numeric_bin.unannotated
-      if (unanno) {
-        const _exclude = Object.keys(unanno)
-          .filter(key=>key.startsWith("value")) // match unannotated.value, .value_negative, .value_positive
-          .map(key=>unanno[key]) // get unannotated[key] value
-          .filter(!tvs.isnot 
-            ? value => !tvs.ranges.find(range=> range.value == value)  // may actually want to NOT exclude an annotated value
-            : value => !tvs.ranges.find(range=> range.value == value) // exclude
-          )
+    const excludevalues = term.values 
+      ? Object.keys(term.values)
+        .filter(key=>term.values[key].uncomputable) 
+        .map(key=>+key)
+        .filter(!tvs.isnot 
+          ? key => !tvs.ranges.find(range=> range.value == key) // may actually want to NOT exclude an annotated value
+          : key => tvs.ranges.find(range=> range.value == key) // exclude
+        )
+      : []
 
-        if (_exclude.length) {
-        	exclude = `AND ${cast} NOT IN (${_exclude.map(d=>"?").join(",")})`
-        	values.push(..._exclude)
-        }
-      }
-    }
+    if (excludevalues.length) values.push(...excludevalues)
 
 		filters.push(
 			`SELECT sample
 			FROM annotations
 			WHERE term_id = ?
 			AND ( ${range2clause.join(' OR ')} )
-			${exclude}`
+			${excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d=>"?").join(",")})` : ''}`
 		)
 	}
 
@@ -261,13 +254,15 @@ q{}
   const values = filter ? filter.values.slice() : []
   const CTE0 = get_term_cte(q, filter, values, 0)
   values.push(q.term1_id, q.term2_id)
-  const t1un = t1.graph && t1.graph.barchart && t1.graph.barchart.numeric_bin && t1.graph.barchart.numeric_bin.unannotated
-  const t1unannovals = t1un
-    ? `AND value NOT IN (${Object.keys(t1un).filter(key=>key.startsWith('value')).map(key=>t1un[key])})`
+
+  const t1excluded = t1.values ? Object.keys(t1.values).map(v=>+v) : []
+  const t1unannovals = t1excluded.length
+    ? `AND value NOT IN (${t1excluded.join(",")})`
     : ''
-  const t2un = t2.graph && t2.graph.barchart && t2.graph.barchart.numeric_bin && t2.graph.barchart.numeric_bin.unannotated
-  const t2unannovals = t2un
-    ? `AND value NOT IN (${Object.keys(t2un).filter(key=>key.startsWith('value')).map(key=>t2un[key])})`
+  
+  const t2excluded = t2.values ? Object.keys(t2.values).map(v=>+v) : []
+  const t2unannovals = t2excluded.length
+    ? `AND value NOT IN (${t2excluded.join(",")})`
     : ''
  
   const sql = `WITH
@@ -507,19 +502,13 @@ result  returned by get_rows(, {withCTEs: 1})
 
 function get_label4key ( key, term, q, ds ) {
 	// get label for a key based on term type and setting
-	if(term.iscategorical) {
-		let label
-		if( term.values && term.values[key] ) label = term.values[key].label
-		return label || key
-	}
 	if(term.iscondition) {
-		if(term.isleaf || q.bar_by_grade) {
-			const g = ds.cohort.termdb.patient_condition.grade_labels.find(i=>i.grade==key)
-			if(!g) return key+': unknown_grade'
-			return g.label
-		}
-		// no special label for subconditions; may use .name from subcondition term
-		return key
+    if (!term.values) throw 'missing term.values for condition term'
+    if (!(key in term.values)) throw `unknown grade='${key}'`
+    return term.values[key].label
+  }
+  if(term.values) {
+    return key in term.values ? term.values[key].label : key
 	}
 	if(term.isinteger || term.isfloat) throw 'should not work for numeric term'
 	throw 'unknown term type'
@@ -644,68 +633,30 @@ returns { sql, tablename, name2bin, bins, binconfig }
 			${binid++} AS binorder`
 		)
 	}
-	let excludevalues
-	if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin && term.graph.barchart.numeric_bin.unannotated) {
-		excludevalues = []
-		const u = term.graph.barchart.numeric_bin.unannotated
-		if(u.value!=undefined) {
-			excludevalues.push( u.value )
-			bin_def_lst.push(
-				`SELECT '${u.label}' AS name,
-				${u.value} AS start,
-				0 AS stop,
-				1 AS unannotated,
-				0 AS startunbounded,
-				0 AS stopunbounded,
-				0 AS startinclusive,
-				0 AS stopinclusive,
-				${binid++} AS binorder`
-			)
-			name2bin.set( u.label, {
-				is_unannotated: true,
-				value: u.value,
-				label: u.label
-			})
-		}
-		if(u.value_positive!=undefined) {
-			excludevalues.push( u.value_positive )
-			bin_def_lst.push(
-				`SELECT '${u.label_positive}' AS name,
-				${u.value_positive} AS start,
-				0 AS stop,
-				1 AS unannotated,
-				0 AS startunbounded,
-				0 AS stopunbounded,
-				0 AS startinclusive,
-				0 AS stopinclusive,
-				${binid++} AS binorder`
-			)
-			name2bin.set( u.label_positive, {
-				is_unannotated: true,
-				value: u.value_positive,
-				label: u.label_positive
-			})
-		}
-		if(u.value_negative!=undefined) {
-			excludevalues.push( u.value_negative )
-			bin_def_lst.push(
-				`SELECT '${u.label_negative}' AS name,
-				${u.value_negative} AS start,
-				0 AS stop,
-				1 AS unannotated,
-				0 AS startunbounded,
-				0 AS stopunbounded,
-				0 AS startinclusive,
-				0 AS stopinclusive,
-				${binid++} AS binorder`
-			)
-			name2bin.set( u.label_negative, {
-				is_unannotated:true,
-				value: u.value_negative,
-				label: u.label_negative
-			})
-		}
-	}
+	const excludevalues = []
+	if(term.values) {
+    for(const key in term.values) {
+      if (!term.values[key].uncomputable) continue 
+      excludevalues.push( key )
+      const v = term.values[key]
+      bin_def_lst.push(
+        `SELECT '${v.label}' AS name,
+        ${key} AS start,
+        0 AS stop,
+        1 AS unannotated,
+        0 AS startunbounded,
+        0 AS stopunbounded,
+        0 AS startinclusive,
+        0 AS stopinclusive,
+        ${binid++} AS binorder`
+      )
+      name2bin.set( v.label, {
+        is_unannotated: true,
+        value: key,
+        label: v.label
+      })
+    }
+  }
 
 	const bin_def_table = 'bin_defs_' + index
 	const bin_sample_table = 'bin_sample_' + index
@@ -727,7 +678,7 @@ returns { sql, tablename, name2bin, bins, binconfig }
 				( b.unannotated=1 AND v=b.start )
 				OR
 				(
-					${excludevalues ? 'v NOT IN ('+excludevalues.join(',')+') AND' : ''}
+					${excludevalues.length ? 'v NOT IN ('+excludevalues.join(',')+') AND' : ''}
 					(
 						b.startunbounded=1
 						OR v>b.start
@@ -766,35 +717,14 @@ term
 ds 
 
 */
-	const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin
 	const binconfig = q.binconfig ? q.binconfig 
-		: nb.bins_less && index != 1 ? nb.bins_less
-		: nb.bins
+		: term.bins && term.bins.less && index != 1 ? term.bins.less
+		: term.bins ? term.bins.default
+    : null
 	if (!binconfig) throw 'unable to determine the binning configuration'
 	q.binconfig = binconfig
 
   const bins = binsmodule.compute_bins(binconfig, (percentiles) => get_numericMinMaxPct(ds, term, q.tvslst, percentiles))
-	if( nb.unannotated ) {
-    // in case of using this numeric term as term2 in crosstab, 
-    // this object can also work as a bin, to be put into the bins array
-    binconfig.unannotated = {
-      _values: [nb.unannotated.value],
-      _labels: {[nb.unannotated.value]: nb.unannotated.label},
-      label: nb.unannotated.label,
-      label_annotated: nb.unannotated.label_annotated
-    }
-
-    if (nb.unannotated.value_positive) {
-      binconfig.unannotated.value_positive = 0
-      binconfig.unannotated._values.push(nb.unannotated.value_positive)
-      binconfig.unannotated._labels[nb.unannotated.value_positive] = nb.unannotated.label_positive
-    }
-    if (nb.unannotated.value_negative) {
-      binconfig.unannotated.value_negative = 0
-      binconfig.unannotated._values.push(nb.unannotated.value_negative)
-      binconfig.unannotated._labels[nb.unannotated.value_negative] = nb.unannotated.label_negative
-    }
-  }
   return [bins, binconfig]
 }
 
@@ -818,16 +748,7 @@ at a numeric barchart
 	if(filter) {
 		values.push(...filter.values)
 	}
-	let excludevalues
-	if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
-		if (term.graph.barchart.numeric_bin.unannotated) {
-			excludevalues = []
-			const u = term.graph.barchart.numeric_bin.unannotated
-			if(u.value!=undefined) excludevalues.push(u.value)
-			if(u.value_positive!=undefined) excludevalues.push(u.value_positive)
-			if(u.value_negative!=undefined) excludevalues.push(u.value_negative)
-		}
-	}
+	const excludevalues = term.values ? Object.keys(term.values).filter(key=>term.values[key].uncomputable) : []
 	const string =
 		`${filter ? 'WITH '+filter.filters+' ' : ''}
 		SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
@@ -835,7 +756,7 @@ at a numeric barchart
 		WHERE
 		${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 		term_id=?
-		${excludevalues ? 'AND value NOT IN ('+excludevalues.join(',')+')' : ''}`
+		${excludevalues.lenth ? 'AND value NOT IN ('+excludevalues.join(',')+')' : ''}`
 	values.push( term.id )
 
 	const s = ds.cohort.db.connection.prepare(string)
@@ -881,17 +802,7 @@ export function get_numericMinMaxPct (ds, term, tvslst = [], percentiles = []) {
 	if(filter) {
 		values.push(...filter.values)
 	}
-	let excludevalues
-	if(term.graph && term.graph.barchart && term.graph.barchart.numeric_bin) {
-		if (term.graph.barchart.numeric_bin.unannotated) {
-			excludevalues = []
-			const u = term.graph.barchart.numeric_bin.unannotated
-			if(u.value!=undefined) excludevalues.push(u.value)
-			if(u.value_positive!=undefined) excludevalues.push(u.value_positive)
-			if(u.value_negative!=undefined) excludevalues.push(u.value_negative)
-		}
-	}
-
+	const excludevalues = term.values ? Object.keys(term.values).filter(key=>term.values[key].uncomputable) : []
 	values.push(term.id)
 
 	const ctes = []
@@ -926,7 +837,7 @@ export function get_numericMinMaxPct (ds, term, tvslst = [], percentiles = []) {
 			WHERE
 			${filter ? 'sample IN '+filter.CTEname+' AND ' : ''}
 			term_id=?
-			${excludevalues ? 'AND value NOT IN ('+excludevalues.join(',')+')' : ''}
+			${excludevalues.length ? 'AND value NOT IN ('+excludevalues.join(',')+')' : ''}
 			ORDER BY value ASC
 		),
 		p AS (

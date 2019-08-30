@@ -126,7 +126,6 @@ const template = JSON.stringify({
       "__:useRowOrder": "=useRowOrder()",
       "__:bins": "=bins()",
       "__:q": "=q()",
-      "__:grade_labels": "=grade_labels()",
       "@done()": "=sortColsRows()"
     },
     "@done()": "=sortCharts()"
@@ -260,11 +259,6 @@ function getPj(q, data, tdb, ds) {
         const nonempty = result.serieses.filter(series=>series.total)
         result.serieses.splice(0, result.serieses.length, ...nonempty)
       },
-      grade_labels() {
-        return terms[0].term.iscondition || terms[1].term.iscondition || terms[2].term.iscondition
-          ? tdb.patient_condition.grade_labels
-          : undefined
-      },
       bins() {
         return terms.map(d=>d.bins)
       },
@@ -308,17 +302,10 @@ function getTermDetails(q, tdb, index) {
   const termid = q[termnum_id]
   const term = termid && !q['term' + index + '_is_genotype'] ? tdb.q.termjsonByOneid(termid) : {}
   const termIsNumeric = term.isinteger || term.isfloat
-  const nb = term.graph && term.graph.barchart && term.graph.barchart.numeric_bin 
-    ? term.graph.barchart.numeric_bin
-    : {}
-  const unannotatedValues = nb.unannotated
-    ? Object.keys(nb.unannotated).filter(key=>key.startsWith('value')).map(key=>nb.unannotated[key]) 
-    : []
+  const unannotatedValues = term.values ? Object.keys(term.values).filter(key=>term.values[key].uncomputable).map(v=>+v) : []
+  const unannotatedLabels = term.values ? unannotatedValues.map(key=>term.values[key].label) : []
   const isAnnoVal = val => termIsNumeric && !unannotatedValues.includes(val)
-  const unannotatedLabels = nb.unannotated
-    ? Object.keys(nb.unannotated).filter(key=>key.startsWith('label') && key != 'label_annotated').map(key=>nb.unannotated[key])
-    : []
-  return {term, isAnnoVal, nb, unannotatedValues, unannotatedLabels, q: q['term' + index + '_q']}
+  return {term, isAnnoVal, unannotatedValues, unannotatedLabels, q: q['term' + index + '_q']}
 }
 
 

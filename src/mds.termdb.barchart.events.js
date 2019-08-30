@@ -36,12 +36,12 @@ export default function getHandlers(self) {
           ? self.grade_labels.find(c => c.grade == d.dataId)
           : null
         const term1unit = term1.unit 
-        const seriesLabel = (term1.values
+        const seriesLabel = (term1.values && ''+d.seriesId in term1.values
           ? term1.values[d.seriesId].label
           : term1.iscondition && seriesGrade
           ? seriesGrade.label
           : d.seriesId) + (term1.unit ? ' '+ term1.unit : '')
-        const dataLabel = (term2 && term2.values
+        const dataLabel = (term2 && term2.values && ''+d.dataId in term1.values
           ? term2.values[d.dataId].label
           : term2 && term2.iscondition && dataGrade
           ? dataGrade.label
@@ -68,8 +68,8 @@ export default function getHandlers(self) {
     },
     colLabel: {
       text: d => {
-        return self.terms.term1.values
-          ? self.terms.term1.values['id' in d ? d.id : d].label
+        return self.terms.term1.values && 'id' in d && ''+d.id in self.terms.term1.values
+          ? self.terms.term1.values[d.id].label
           : 'label' in d
           ? d.label
           : d
@@ -90,8 +90,8 @@ export default function getHandlers(self) {
     },
     rowLabel: {
       text: d => {
-        return self.terms.term1.values
-          ? self.terms.term1.values['id' in d ? d.id : d].label
+        return self.terms.term1.values && 'id' in d && ''+d.id in self.terms.term1.values
+          ? self.terms.term1.values[d.id].label
           : 'label' in d
           ? d.label
           : d
