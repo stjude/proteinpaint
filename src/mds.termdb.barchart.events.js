@@ -28,7 +28,7 @@ export default function getHandlers(self) {
         const seriesLabel = (term1.values && d.seriesId in term1.values
           ? term1.values[d.seriesId].label
           : d.seriesId) + (term1.unit ? ' '+ term1.unit : '')
-        const dataLabel = (term2 && term2.values && d.dataId in term1.values
+        const dataLabel = (term2 && term2.values && d.dataId in term2.values
           ? term2.values[d.dataId].label
           : d.dataId) + (term2 && term2.unit ? ' '+ term2.unit : '')
         const icon = !term2
