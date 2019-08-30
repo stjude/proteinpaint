@@ -502,7 +502,10 @@ result  returned by get_rows(, {withCTEs: 1})
 
 function get_label4key ( key, term, q, ds ) {
 	// get label for a key based on term type and setting
-	if(term.iscondition) {
+	if(term.iscategorical) {
+    return term.values && key in term.values ? term.values[key].label : key
+  }
+  if(term.iscondition) {
     if (!term.values) throw 'missing term.values for condition term'
     if (!(key in term.values)) throw `unknown grade='${key}'`
     return term.values[key].label

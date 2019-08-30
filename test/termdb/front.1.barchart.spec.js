@@ -250,7 +250,7 @@ tape("click to add numeric, condition term filter", function (test) {
           term: plot.term2,
           values: [{ 
             key: clickedData.dataId, 
-            label: plot.components.barchart.grade_labels.find(d => d.grade == clickedData.dataId).label
+            label: plot.term2.values ? plot.term2.values[clickedData.dataId].label : clickedData.dataId
           }]
         }, plot.term2.q), 
         "should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys"
