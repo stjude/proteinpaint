@@ -36,7 +36,7 @@ tape("filter term-value button", function (test) {
         },
         callbacks: {
           tree: {
-            postRender: [testDisplay]
+            postRender: [testDisplay, /*triggerRemove*/]
           }
         },
       }
@@ -51,4 +51,10 @@ tape("filter term-value button", function (test) {
             test.end()
         }, 100)   
     }
+
+    // function triggerRemove(obj) {
+    //     setTimeout(()=>{
+    //         obj.dom.termfilterdiv.selectAll('.term_remove_btn').node().click()
+    //     }, 100)
+    // }
 })

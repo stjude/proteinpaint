@@ -57,7 +57,7 @@ tape("single barchart, categorical bars + click", function (test) {
   }
 
   function triggerBarClick(plot) {
-    plot.bus.on('postRender', [testCategoricalTermValue, testFilterElements])
+    plot.bus.on('postRender', [testCategoricalTermValue, testAddedFilter])
     plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
     setTimeout(()=>{
       plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
@@ -80,13 +80,9 @@ tape("single barchart, categorical bars + click", function (test) {
     )
   }
 
-  function testFilterElements(obj){
+  function testAddedFilter(obj){
     setTimeout(()=>{
       test.true(obj.obj.dom.termfilterdiv.selectAll('.sja_filter_tag_btn').size()>1, "should add blue-pill Filter for clicked term")
-      test.equal(obj.obj.dom.termfilterdiv.selectAll('.term_name_btn').html(),termfilter.terms[0].term.name, "should Filter term-name and plot clicked from be same")
-      test.equal(obj.obj.dom.termfilterdiv.selectAll('.value_btn').html().slice(0, -2),termfilter.terms[0].values[0].label, "should Filter value and label of bar clicked be same")
-      test.true(obj.obj.dom.termfilterdiv.selectAll('.add_value_btn').size()>=1,'should have \'+\' button to add category to filter')
-      test.true(obj.obj.dom.termfilterdiv.selectAll('.term_remove_btn').size()>=1,'should have \'x\' button to remove filter')
       test.end()
     },100)
   }
