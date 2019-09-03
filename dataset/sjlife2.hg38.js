@@ -269,19 +269,19 @@ module.exports={
 						key:'CEU', // header of file "cohort/admix"
 						infokey_AC: 'gnomAD_AC_nfe',
 						infokey_AN: 'gnomAD_AN_nfe',
-						termfilter_value: 'European American'
+						termfilter_value: 'European Ancestry'
 					},
 					{
 						key:'YRI',
 						infokey_AC: 'gnomAD_AC_afr',
 						infokey_AN: 'gnomAD_AN_afr',
-						termfilter_value: 'African American'
+						termfilter_value: 'African Ancestry'
 					},
 					{
 						key:'ASA',
 						infokey_AC: 'gnomAD_AC_eas',
 						infokey_AN: 'gnomAD_AN_eas',
-						termfilter_value: 'Asian American'
+						termfilter_value: 'Asian Ancestry'
 					}
 				],
 			},
@@ -294,11 +294,11 @@ module.exports={
 				sets:[
 					{
 						key:'CEU', infokey_AC:'SJcontrol_CEU_AC', infokey_AN:'SJcontrol_CEU_AN',
-						termfilter_value: 'European American'
+						termfilter_value: 'European Ancestry'
 					},
 					{
 						key:'YRI', infokey_AC:'SJcontrol_YRI_AC', infokey_AN:'SJcontrol_YRI_AN',
-						termfilter_value: 'African American'
+						termfilter_value: 'African Ancestry'
 					}
 				]
 			},
@@ -385,7 +385,7 @@ module.exports={
 						id:'genetic_race',
 						name:'Genetically defined race',
 						iscategorical:true,
-						values:[{key:'European American'},{key:'African American'},{key:'Asian American'}],
+						values:[{key:'European Ancestry'},{key:'African Ancestry'},{key:'Asian Ancestry'}],
 						inuse:true,
 						value_index:0,
 					}
