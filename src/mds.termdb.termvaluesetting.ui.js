@@ -328,8 +328,6 @@ group{}
                         }
                     }
 
-                    make_grade_select_btn(one_term_div, term, terms_div)
-
                     make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
 
                 }else if(term.bar_by_grade){
