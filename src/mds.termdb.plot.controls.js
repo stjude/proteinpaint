@@ -129,7 +129,7 @@ function setSvgBtn(controls) {
 function setGradeInfoBtn(controls){
 
   const info_btn = controls.dom.button_bar.append('div')
-    .style('display', controls.plot.term && controls.plot.term.iscondition ? 'block' : 'none')
+    .style('display', controls.plot.term && controls.plot.term.hashtmldetail ? 'block' : 'none')
     .style('margin','10px')
     .style('font-family','verdana')
     .style('font-size', '18px')
@@ -143,7 +143,7 @@ function setGradeInfoBtn(controls){
 
   return {
     main() {
-      if(controls.plot.term && controls.plot.term.iscondition){
+      if(controls.plot.term && controls.plot.term.hashtmldetail){
         info_btn.style('display',controls.isVisible ? 'inline-block' : 'block')
         .style('margin-top',controls.isVisible ? '15px' :'20px')
         .style('margin-right',controls.isVisible ? '15px' :'10px')
