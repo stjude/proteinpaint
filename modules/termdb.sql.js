@@ -507,8 +507,12 @@ function get_label4key ( key, term, q, ds ) {
   }
   if(term.iscondition) {
     if (!term.values) throw 'missing term.values for condition term'
-    if((term.isleaf || q.bar_by_grade) && !(key in term.values)) throw `unknown grade='${key}'`
-    return key in term.values ? term.values[key].label : key
+    if (q.bar_by_grade) {
+      if (!(key in term.values)) throw `unknown grade='${key}'`
+      return term.values[key].label
+    } else {
+      return key
+    }
   }
   if(term.values) {
     return key in term.values ? term.values[key].label : key
