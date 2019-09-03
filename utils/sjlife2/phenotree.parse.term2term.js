@@ -154,7 +154,7 @@ each word is a term
 		if( patientcondition_terms.has( id )) {
 			// belongs to patient conditions
 			j.iscondition = true
-			makegraphconfig_conditionterm( j )
+			addattributes_conditionterm( j )
 		}
 
 		lines.push(
@@ -169,7 +169,7 @@ each word is a term
 
 
 
-function makegraphconfig_conditionterm ( t ) {
+function addattributes_conditionterm ( t ) {
 /* make graph config for a iscondition term
    options a bit different for leaf and non-leaf terms
 */
@@ -200,6 +200,16 @@ function makegraphconfig_conditionterm ( t ) {
 			label:'Sub-conditions',
 			allow_to_stackby_grade: true,
 		})
+	}
+
+	t.values = {
+		"0":{label:"0: No condition"},
+		"1":{label:"1: Mild"},
+		"2":{label:"2: Moderate"},
+		"3":{label:"3: Severe"},
+		"4":{label:"4: Life-threatening"},
+		"5":{label:"5: Death"},
+		"9":{label:"Unknown status", "uncomputable":true}
 	}
 }
 

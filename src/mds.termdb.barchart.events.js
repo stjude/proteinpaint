@@ -10,13 +10,8 @@ export default function getHandlers(self) {
     chart: {
       title(chart) {
         if (!self.terms.term0) return chart.chartId
-        const grade = self.grade_labels
-          ? self.grade_labels.find(c => c.grade == chart.chartId)
-          : null
-        return self.terms.term0.values
+        return self.terms.term0.values && chart.chartId in self.terms.term0.values
           ? self.terms.term0.values[chart.chartId].label
-          : grade
-          ? grade.label
           : chart.chartId
       }
     },
@@ -29,29 +24,19 @@ export default function getHandlers(self) {
       mouseover(d) {
         const term1 = self.terms.term1
         const term2 = self.terms.term2 ? self.terms.term2 : null
-        const seriesGrade = self.grade_labels
-          ? self.grade_labels.find(c => c.grade == d.seriesId)
-          : null
-        const dataGrade = self.grade_labels
-          ? self.grade_labels.find(c => c.grade == d.dataId)
-          : null
         const term1unit = term1.unit 
-        const seriesLabel = (term1.values
+        const seriesLabel = (term1.values && d.seriesId in term1.values
           ? term1.values[d.seriesId].label
-          : term1.iscondition && seriesGrade
-          ? seriesGrade.label
           : d.seriesId) + (term1.unit ? ' '+ term1.unit : '')
-        const dataLabel = (term2 && term2.values
+        const dataLabel = (term2 && term2.values && d.dataId in term2.values
           ? term2.values[d.dataId].label
-          : term2 && term2.iscondition && dataGrade
-          ? dataGrade.label
           : d.dataId) + (term2 && term2.unit ? ' '+ term2.unit : '')
         const icon = !term2
           ? ''
           : "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:"+d.color+"'>&nbsp;</div>"
         const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${seriesLabel}</td></tr>`]
         if (term2) rows.push(`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${dataLabel}</span></td></tr>`)
-        rows.push(`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>${d.total}</td></tr>`)
+        rows.push(`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>n=${d.total}</td></tr>`)
         rows.push(`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(100*d.total/d.seriesTotal).toFixed(1)}%</td></tr>`)
         tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`);
       },
@@ -68,8 +53,8 @@ export default function getHandlers(self) {
     },
     colLabel: {
       text: d => {
-        return self.terms.term1.values
-          ? self.terms.term1.values['id' in d ? d.id : d].label
+        return self.terms.term1.values && 'id' in d && d.id in self.terms.term1.values
+          ? self.terms.term1.values[d.id].label
           : 'label' in d
           ? d.label
           : d
@@ -90,8 +75,8 @@ export default function getHandlers(self) {
     },
     rowLabel: {
       text: d => {
-        return self.terms.term1.values
-          ? self.terms.term1.values['id' in d ? d.id : d].label
+        return self.terms.term1.values && 'id' in d && d.id in self.terms.term1.values
+          ? self.terms.term1.values[d.id].label
           : 'label' in d
           ? d.label
           : d
@@ -192,25 +177,23 @@ function getTermValues(d, self) {
 
     const key = termNum=="term1" ? d.seriesId : d.dataId
     const q = term.q
-    const label = term.iscondition && self.grade_labels && q.bar_by_grade
-      ? self.grade_labels.find(c => c.grade == key).label
-      : !term.values 
+    const label = !term.values 
       ? key
-      : termNum=="term1"
-        ? term.values[d.seriesId].label
-        : term.values[d.dataId].label
+      : key in term.values
+        ? term.values[key].label
+        : key
 
     if (term.iscondition) {
-      termValues.push(Object.assign({
-        term,
-        values:[{key,label}]
-      }, q));
+      if (index == 0 || !self.terms.term2 || self.terms.term1.id != self.terms.term2.id) {
+        termValues.push(Object.assign({
+          term,
+          values:[{key,label}]
+        }, q));
+      }
 
       if (index == 1 && self.terms.term2 && term.id == self.terms.term2.id) {
         const q2 = self.plot.term2.q
-        const term2Label = q.bar_by_children 
-          ? self.grade_labels.find(c => c.grade == d.dataId).label
-          : self.terms.term2.values
+        const term2Label = self.terms.term2.values && d.dataId in self.terms.term2.values
           ? self.terms.term2.values[d.dataId].label
           : d.dataId
 
@@ -219,8 +202,8 @@ function getTermValues(d, self) {
           grade_and_child: [{
             grade: q2.bar_by_grade ? d.dataId : key,
             grade_label: q2.bar_by_grade ? term2Label : label ,
-            child_id: q2.bar_by_children ? key : d.dataId,
-            child_label: q2.bar_by_children ? label : term2Label
+            child_id: q2.bar_by_children ? d.dataId : key,
+            child_label: q2.bar_by_children ? term2Label : label
           }]
         }, q2))
       }

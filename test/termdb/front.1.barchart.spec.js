@@ -31,7 +31,7 @@ tape("single barchart, categorical bars + click", function (test) {
       },
       callbacks: {
         plot: {
-          postRender: [testBarCount, triggerBarClick]
+          postRender: [testBarCount, testAxisDimension, triggerBarClick]
         }
       },
       bar_click_menu:{
@@ -47,8 +47,17 @@ tape("single barchart, categorical bars + click", function (test) {
     test.equal(numBars, numOverlays,  "should have equal numbers of bars and overlays")
   }
 
+  function testAxisDimension(plot) {
+    const xAxis = plot.components.barchart.dom.barDiv.select('.sjpcb-bar-chart-x-axis').node()
+    const seriesG = plot.components.barchart.dom.barDiv.select('.bars-series').node()
+    test.true(
+      xAxis.getBBox().width >= seriesG.getBBox().width,  
+      "x-axis width should be >= series width"
+    )
+  }
+
   function triggerBarClick(plot) {
-    plot.bus.on('postRender', [testCategoricalTermValue, testFilterElements])
+    plot.bus.on('postRender', [testCategoricalTermValue, testAddedFilter])
     plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect').node().dispatchEvent(new Event('click', {bubbles: true}));
     setTimeout(()=>{
       plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
@@ -71,13 +80,9 @@ tape("single barchart, categorical bars + click", function (test) {
     )
   }
 
-  function testFilterElements(obj){
+  function testAddedFilter(obj){
     setTimeout(()=>{
       test.true(obj.obj.dom.termfilterdiv.selectAll('.sja_filter_tag_btn').size()>1, "should add blue-pill Filter for clicked term")
-      test.equal(obj.obj.dom.termfilterdiv.selectAll('.term_name_btn').html(),termfilter.terms[0].term.name, "should Filter term-name and plot clicked from be same")
-      test.equal(obj.obj.dom.termfilterdiv.selectAll('.value_btn').html().slice(0, -2),termfilter.terms[0].values[0].label, "should Filter value and label of bar clicked be same")
-      test.true(obj.obj.dom.termfilterdiv.selectAll('.add_value_btn').size()>=1,'should have \'+\' button to add category to filter')
-      test.true(obj.obj.dom.termfilterdiv.selectAll('.term_remove_btn').size()>=1,'should have \'x\' button to remove filter')
       test.end()
     },100)
   }
@@ -245,12 +250,69 @@ tape("click to add numeric, condition term filter", function (test) {
           term: plot.term2,
           values: [{ 
             key: clickedData.dataId, 
-            label: plot.components.barchart.grade_labels.find(d => d.grade == clickedData.dataId).label
+            label: plot.term2.values[clickedData.dataId].label
           }]
         }, plot.term2.q), 
         "should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys"
       )
 
+      test.end()
+    }, 200)
+  }
+})
+
+tape("click to condition grade and child term filter ", function (test) {
+  const div0 = d3s.select('body').append('div')
+  const termfilter = {show_top_ui:true}
+  
+  runproteinpaint({
+    host,
+    holder: div0.node(),
+    noheader:1,
+    nobox:true,
+    display_termdb:{
+      dslabel:'SJLife',
+      genome:'hg38',
+      default_rootterm:{},
+      termfilter,
+      params2restore: {
+        term: Object.assign({}, termjson["Arrhythmias"], {q:{bar_by_grade:1, value_by_max_grade:1}}),
+        term2: Object.assign({}, termjson["Arrhythmias"], {q:{bar_by_children:1, value_by_max_grade:1}}),
+        settings: {
+          currViews: ['barchart']
+        }
+      },
+      callbacks: {
+        plot: {
+          postRender: triggerClick
+        }
+      },
+      bar_click_menu:{
+        add_filter:true
+      },
+    }
+  })
+
+  function triggerClick(plot) {
+    plot.bus.on('postRender', plot=>testTermValues(plot, elem.datum()))
+    const elem = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect')
+    elem.node().dispatchEvent(new Event('click', {bubbles: true}));
+    setTimeout(()=>{
+      plot.obj.tip.d.select('.sja_menuoption').node().dispatchEvent(new Event('click', {bubbles: true}))
+    },200);
+  }
+
+  function testTermValues(plot, clickedData) {
+    setTimeout(()=>{
+      test.equal(termfilter.terms && termfilter.terms.length, 1, "should create one tvslst filter when a grade and child bar/overlay is clicked")
+      test.true('grade_and_child' in termfilter.terms[0] , "should create a tvslst filter with a grade_and_child")
+      test.true(Array.isArray(termfilter.terms[0].grade_and_child) , "filter term.grade_and_child should be an array")
+      if (Array.isArray(termfilter.terms[0].grade_and_child)) {
+        const filter = termfilter.terms[0].grade_and_child[0]
+        test.notEqual(filter.grade, filter.child_id, "filter grade and child_id should be different")
+        test.equal(typeof filter.grade, 'number', "filter grade should be a number")
+        test.equal(typeof filter.child_id, 'string', "filter grade should be a string")
+      }
       test.end()
     }, 200)
   }

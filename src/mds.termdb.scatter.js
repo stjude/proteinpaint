@@ -2,8 +2,7 @@ import { select, event } from "d3-selection";
 import { scaleLinear as d3Linear } from "d3-scale";
 import { axisLeft, axisBottom } from "d3-axis";
 import Partjson from "../modules/partjson";
-//import colorbrewer from "colorbrewer";
-//import { tooltip } from "./utils.js";
+import {to_svg} from "./client"
 
 //const colors = colorbrewer.Dark2[8].slice(0, 6).concat(colorbrewer.Paired[12]);
 
@@ -47,6 +46,7 @@ export default function scatter(opts) {
       opts.settings ? opts.settings : {}
     ),
     main: (plot, data) => {
+      self.plot = plot
       if (!plot.settings.currViews.includes('scatter')) {
         self.dom.div.style('display','none')
         return
@@ -69,6 +69,7 @@ export default function scatter(opts) {
   }
 
   self.pj = getPj(self)
+  self.download = getDownloadFxn(self)
 
   function getChartLayout(data) {
     const s = self.settings;
@@ -101,7 +102,7 @@ export default function scatter(opts) {
 
     div
       .append("div")
-      .attr("class", "sjpcb-scatter-chart-title")
+      .attr("class", "sjpcb-scatter-title")
       .style("text-align", "center")
       .style("width", s.svgw + 50 + "px")
       .style("height", s.chartTitleDivHt + "px")
@@ -111,7 +112,8 @@ export default function scatter(opts) {
       .html(d.chartId)
       //.on("click", viz.chcClick);
 
-    renderSVG(div.append("svg"), d, s, 0);
+    const svg = div.append("svg").attr("class", "pp-scatter-svg")
+    renderSVG(svg, d, s, 0);
 
     div
       .transition()
@@ -135,7 +137,7 @@ export default function scatter(opts) {
       );
 
     div
-      .select(".sjpcb-scatter-chart-title")
+      .select(".sjpcb-scatter-title")
       .style("width", s.svgw + 50)
       .style("height", s.chartTitleDivHt + "px")
       .datum(d.chartId)
@@ -171,7 +173,7 @@ export default function scatter(opts) {
       "translate(" + s.svgPadding.left + "," + s.svgPadding.top + ")"
     );
     const serieses = mainG
-      .selectAll(".sjpcb-scatter-chart-series")
+      .selectAll(".sjpcb-scatter-series")
       .data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ""));
 
     serieses.exit().remove();
@@ -181,7 +183,7 @@ export default function scatter(opts) {
     serieses
       .enter()
       .append("g")
-      .attr("class", "sjpcb-scatter-chart-series")
+      .attr("class", "sjpcb-scatter-series")
       .each(function(series, i) {
         renderSeries(select(this), chart, series, i, s, duration);
       });
@@ -191,20 +193,20 @@ export default function scatter(opts) {
 
   function getSvgSubElems(svg) {
     let mainG, axisG, xAxis, yAxis, xTitle, yTitle;
-    if (!svg.select(".sjpcb-scatter-chart-mainG").size()) {
-      mainG = svg.append("g").attr("class", "sjpcb-scatter-chart-mainG");
-      axisG = mainG.append("g").attr("class", "sjpcb-scatter-chart-axis");
-      xAxis = axisG.append("g").attr("class", "sjpcb-scatter-chart-x-axis");
-      yAxis = axisG.append("g").attr("class", "sjpcb-scatter-chart-y-axis");
-      xTitle = axisG.append("g").attr("class", "sjpcb-scatter-chart-x-title");
-      yTitle = axisG.append("g").attr("class", "sjpcb-scatter-chart-y-title");
+    if (!svg.select(".sjpcb-scatter-mainG").size()) {
+      mainG = svg.append("g").attr("class", "sjpcb-scatter-mainG");
+      axisG = mainG.append("g").attr("class", "sjpcb-scatter-axis");
+      xAxis = axisG.append("g").attr("class", "sjpcb-scatter-x-axis");
+      yAxis = axisG.append("g").attr("class", "sjpcb-scatter-y-axis");
+      xTitle = axisG.append("g").attr("class", "sjpcb-scatter-x-title");
+      yTitle = axisG.append("g").attr("class", "sjpcb-scatter-y-title");
     } else {
-      mainG = svg.select(".sjpcb-scatter-chart-mainG");
-      axisG = mainG.select(".sjpcb-scatter-chart-axis");
-      xAxis = axisG.select(".sjpcb-scatter-chart-x-axis");
-      yAxis = axisG.select(".sjpcb-scatter-chart-y-axis");
-      xTitle = axisG.select(".sjpcb-scatter-chart-x-title");
-      yTitle = axisG.select(".sjpcb-scatter-chart-y-title");
+      mainG = svg.select(".sjpcb-scatter-mainG");
+      axisG = mainG.select(".sjpcb-scatter-axis");
+      xAxis = axisG.select(".sjpcb-scatter-x-axis");
+      yAxis = axisG.select(".sjpcb-scatter-y-axis");
+      xTitle = axisG.select(".sjpcb-scatter-x-title");
+      yTitle = axisG.select(".sjpcb-scatter-y-title");
     }
     return [mainG, axisG, xAxis, yAxis, xTitle, yTitle];
   }
@@ -376,4 +378,74 @@ function getPj(self) {
   return pj;
 }
 
+function getDownloadFxn(self) {
+  return ()=>{
+    if (!self.plot.settings.currViews.includes('scatter')) return
+    // has to be able to handle multichart view
+    const mainGs = []
+    const translate = {x: undefined, y: undefined}
+    const titles = []
+    let maxw = 0, maxh = 0, tboxh = 0
+    let prevY = 0, numChartsPerRow = 0
 
+    self.dom.div.selectAll('.sjpcb-scatter-mainG').each(function(){
+      mainGs.push(this)
+      const bbox = this.getBBox()
+      if (bbox.width > maxw) maxw = bbox.width
+      if (bbox.height > maxh) maxh = bbox.height
+      const divY = Math.round(this.parentNode.parentNode.getBoundingClientRect().y)
+      if (!numChartsPerRow) {
+        prevY = divY;
+        numChartsPerRow++
+      } else if (Math.abs(divY - prevY) < 5) {
+        numChartsPerRow++
+      }
+      const xy = select(this).attr('transform').split("translate(")[1].split(")")[0].split(",").map(d=>+d.trim())
+      if (translate.x === undefined || xy[0] > translate.x) translate.x = +xy[0]
+      if (translate.y === undefined || xy[1] > translate.y) translate.y = +xy[1]
+
+      const title = this.parentNode.parentNode.firstChild
+      const tbox = title.getBoundingClientRect()
+      if (tbox.width > maxw) maxw = tbox.width
+      if (tbox.height > tboxh) tboxh = tbox.height
+      titles.push({text: title.innerText, styles: window.getComputedStyle(title)})
+    })
+
+    // add padding between charts
+    maxw += 30
+    maxh += 30
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+    
+    select(svg)
+      .style('display','block')
+      .style('opacity',1)
+      .attr('width', numChartsPerRow*maxw)
+      .attr('height', Math.floor(mainGs.length/numChartsPerRow)*maxh)
+
+    const svgStyles = window.getComputedStyle(document.querySelector('.pp-scatter-svg'))
+    const svgSel = select(svg)
+    for(const prop of svgStyles) {
+      if (prop.startsWith('font')) svgSel.style(prop, svgStyles.getPropertyValue(prop))
+    }
+    
+    mainGs.forEach((g,i)=>{
+      const mainG = g.cloneNode(true)
+      const colNum = i%numChartsPerRow
+      const rowNum = Math.floor(i/numChartsPerRow)
+      const corner = {x: colNum*maxw+translate.x, y: rowNum*maxh+translate.y}
+      const title = select(svg).append('text')
+        .attr('transform', 'translate('+ corner.x +','+ corner.y +')')
+        .text(titles[i].text)
+      for(const prop of titles[i].styles) {
+        if (prop.startsWith('font')) title.style(prop, titles[i].styles.getPropertyValue(prop))
+      }
+
+      select(mainG).attr('transform', 'translate('+ corner.x +','+ (corner.y + tboxh) +')')
+      svg.appendChild(mainG)
+    })
+
+    const svg_name = self.plot.term.name + ' scatter'
+    to_svg(svg,svg_name) //,{apply_dom_styles:true})  
+  }
+}

@@ -1,6 +1,5 @@
 import { select, event } from "d3-selection";
 import { scaleLinear, scaleLog } from "d3-scale";
-import htmlLegend from "./html.legend";
 import { axisLeft, axisTop } from "d3-axis";
 import { format } from 'd3-format'
 import { newpane } from "./client.js";
@@ -105,7 +104,6 @@ export default function barsRenderer(barsapp, holder) {
   let currCell, currRects, currRowTexts, currColTexts;
   let clusterRenderer;
   // eslint-disable-next-line
-  let legendRenderer;
   let defaults; //will have key values in init
   let currserieses = [];
   let unstackedBarsPanes;
@@ -177,7 +175,6 @@ export default function barsRenderer(barsapp, holder) {
 
     currRects = series.selectAll("rect");
     currColTexts = collabels.selectAll("text");
-    legendRenderer(barsapp.getLegendGrps(chart))
     hm.delay = 0.35 * hm.duration
     renderAxes(hm, prevOrientation)
     hm.colw = unadjustedColw
@@ -194,23 +191,25 @@ export default function barsRenderer(barsapp, holder) {
     }
 
     setTimeout(()=>{
+      const extraPad = 20 // hardcode
       const bbox = mainG.node().getBBox()
-      main.adjustedSvgw = bbox.width + 20
+      main.adjustedSvgw = bbox.width + extraPad
       svg.transition().duration(100)
         .attr('width', main.adjustedSvgw)
-        .attr('height', bbox.height + 20);
+        .attr('height', bbox.height + extraPad);
 
       if (hm.orientation == "vertical") {
         const cbox = collabels.node().getBBox()
-        const ytbox = yTitle.node().getBBox()
-        const xoffset = ytbox.x < cbox.x ? -ytbox.x + ytbox.height : -cbox.x
+        const ytbox = yTitle.node().getBBox();
+        const xoffset = Math.max(-cbox.x, -ytbox.x, -bbox.x)
         mainG.transition().duration(100)
-        .attr('transform','translate('+ xoffset + ',0)')
+        .attr('transform','translate('+ xoffset + ','+ -extraPad +')')
       } else {
         const rbox = rowlabels.node().getBBox()
-        const ytbox = yTitle.node().getBBox();
+        const ytbox = yTitle.node().getBBox()
+        const xtbox = xTitle.node().getBBox()
         mainG.transition().duration(100)
-        .attr('transform', 'translate('+ Math.max(rbox.width, ytbox.width) +',0)')
+        .attr('transform', 'translate('+ Math.max(-rbox.x, -ytbox.x) +','+ -xtbox.y +')')
       }
     }, nosvg ? 110 : 510)
   }
@@ -321,17 +320,6 @@ export default function barsRenderer(barsapp, holder) {
     xAxis = axisG.append("g").attr("class", "sjpcb-bar-chart-x-axis")
     xLine = axisG.append("line").attr("class", "sjpcb-bar-chart-x-line").style("stroke", "#000")
     xTitle = axisG.append("g").attr("class", "sjpcb-bar-chart-x-title").style("cursor", "default")
-
-    //legendDiv = svg.append("g").attr("class", "sjpcb-bars-legend");
-    legendRenderer = htmlLegend(
-      barsapp.dom.legendDiv,
-      {
-        settings: {
-          legendOrientation: 'vertical'
-        },
-        handlers: barsapp.handlers
-      }
-    );
   }
 
   function setDimensions() {
@@ -747,7 +735,7 @@ export default function barsRenderer(barsapp, holder) {
           .domain([max / ratio, min])
           .range([
             s.colgrplabelh,
-            s.svgh - s.collabelh + s.colgrplabelh - s.borderwidth + 0.5
+            s.svgh - s.collabelh + s.colgrplabelh - s.borderwidth + 1
           ])
       ).ticks(4, format('d'))
     );
@@ -809,13 +797,13 @@ export default function barsRenderer(barsapp, holder) {
 
     xAxis
     .style('display','block')
-    .attr('transform', 'translate(0.5,'+ y +')')
+    .attr('transform', 'translate(2.5,'+ y +')')
     .call(
       axisTop(
         (hm.unit == "log" ? scaleLog() : scaleLinear())
           .domain([min, max / ratio])
           .range([
-            2,
+            0,
             s.svgw - s.rowlabelw // + s.rowgrplabelw - s.borderwidth
           ])
       ).ticks(4, format('d'))

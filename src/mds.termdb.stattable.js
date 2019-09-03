@@ -13,7 +13,7 @@ export function init(holder) {
     // as an argument
     main(plot, data) {
       const isVisible = plot.settings.currViews.includes("stattable")
-      if (!isVisible) {
+      if (!isVisible || !data.boxplot) {
         self.dom.div.style('display','none')
         return
       }

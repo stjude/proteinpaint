@@ -17,7 +17,6 @@ overlay
 
 
 
-const connheight = 50
 
 
 
@@ -34,8 +33,9 @@ result:{}
 
 	if(!q.rglst) throw 'rglst missing'
 
-	result.connheight = connheight
 	result.ld[ tk.name ] = { rglst:[] }
+
+	const connheight = q.trigger_ld.connheight || 50
 
 	for(const r of q.rglst) {
 
@@ -69,7 +69,7 @@ result:{}
 			coordset.add(stop)
 		})
 
-		r2.img = plot_img( r, pairs, coordset )
+		r2.img = plot_img( r, pairs, coordset, connheight )
 
 		result.ld[ tk.name ].rglst.push( r2 )
 	}
@@ -80,7 +80,7 @@ result:{}
 
 
 
-function plot_img ( r, pairs, coordset ) {
+function plot_img ( r, pairs, coordset, connheight ) {
 /*
 x1 ------------
 x2 ------------

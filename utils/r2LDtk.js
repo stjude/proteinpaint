@@ -7,13 +7,7 @@ if(process.argv.length!=3) {
 /*
 1	L1	chr10.61901276.C.G
 2	L2	chr10.61901581.T.C
-3	D'	1.0
-4	LOD	190.82
-5	r^2	1.0
-6	CIlow	0.99
-7	CIhi	1.0
-8	Dist	305
-9	T-int	446.61
+3	r2
 
 */
 
@@ -24,6 +18,10 @@ const readline = require('readline')
 
 const rl = readline.createInterface({input:fs.createReadStream( infile )})
 let isfirst = true
+
+let wrong=0
+let skipr2=0
+
 rl.on('line',line=>{
 	if(isfirst) {
 		isfirst=false
@@ -34,6 +32,19 @@ rl.on('line',line=>{
 	const chr = tmp[0]
 	const start = Number(tmp[1])-1
 	const stop = Number(l[1].split('.')[1])-1
-	if(start >= stop) throw 'start>stop: '+start+' '+stop
-	console.log(chr+'\t'+start+'\t'+stop+'\t'+l[4])
+	if(start >= stop) {
+		wrong++
+		return
+	}
+
+	const r2 = Number(l[2])
+	if(r2<=0.1) {
+		skipr2++
+		return
+	}
+
+	console.log(chr+'\t'+start+'\t'+stop+'\t'+r2)
+})
+rl.on('close',()=>{
+	console.error(infile+': '+skipr2+' lines skipped with r2<=.1; '+wrong+' lines with wrong start/stop')
 })

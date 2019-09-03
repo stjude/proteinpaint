@@ -21,9 +21,11 @@ set_querymode
 	filter_samples_by_termvalue
 	get_pop2average
 query_vcf_applymode
-getallelecount_samplegroup_vcfline
 vcfbyrange_collect_result
 _m_is_filtered
+parseline_AFtest
+	AFtest_getdata_onem
+		getallelecount_samplegroup_vcfline
 */
 
 

@@ -29,7 +29,7 @@ group{}
     const terms_div = obj.group_div.append('div')
         .style('display','inline-block')
 
-    obj.tvstip = new client.Menu({padding:'0'})
+    obj.tvstip = new client.Menu({padding:'5px'})
 
     update_terms()
 

@@ -38,6 +38,7 @@ tape("standalone layout", function (test) {
 })
 
 tape("term button", function (test) {
+  test.timeoutAfter(1000)
   test.plan(2)
   const div0 = d3s.select('body').append('div')
   let menuoption

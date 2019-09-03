@@ -18,7 +18,7 @@ show_default_rootterm
 		may_make_term_foldbutton
 		may_apply_modifier_click_term
 		may_apply_modifier_barchart_selectbar
-		may_make_term_graphbuttons
+		may_make_term_viewbutton
 			term_addbutton_barchart
 				make_barplot
 */
@@ -78,35 +78,35 @@ callbacks: {
 }
 */
 	if( obj.debugmode ) window.obj = obj
-  obj.expanded_term_ids = []
+	obj.expanded_term_ids = []
 
-  obj.main = (updatedKeyVals={}) => {
-    for(const key in updatedKeyVals) {
-      obj[key] = updates[key]
-    }
-    // trigger all rendered sub-elements
-    for(const name in obj.components) {
-      if (Array.isArray(obj.components[name])) {
-        // example: 1 or more component.plots 
-        for(const component of obj.components[name]) {
-          if (component) component.main()
-        }
-      } else {
-        if (obj.components[name]) obj.components[name].main()
-      }
-    }
-    obj.bus.emit('postRender')
-  }
+	obj.main = (updatedKeyVals={}) => {
+		for(const key in updatedKeyVals) {
+			obj[key] = updates[key]
+		}
+		// trigger all rendered sub-elements
+		for(const name in obj.components) {
+			if (Array.isArray(obj.components[name])) {
+				// example: 1 or more component.plots 
+				for(const component of obj.components[name]) {
+					if (component) component.main()
+				}
+			} else {
+				if (obj.components[name]) obj.components[name].main()
+			}
+		}
+		obj.bus.emit('postRender')
+	}
 
-  obj.button_radius = button_radius
-  if (!obj.callbacks) obj.callbacks = {}
-  setObjBarClickCallback(obj) 
-  // create event bus for this tree obj
-  obj.bus = client.get_event_bus(
-    ['postRender'], 
-    obj.callbacks && obj.callbacks.tree,
-    obj
-  )
+	obj.button_radius = button_radius
+	if (!obj.callbacks) obj.callbacks = {}
+	setObjBarClickCallback(obj) 
+	// create event bus for this tree obj
+	obj.bus = client.get_event_bus(
+		['postRender'], 
+		obj.callbacks && obj.callbacks.tree,
+		obj
+	)
 
 	obj.dom = {div: obj.div}
 	delete obj.div
@@ -120,11 +120,11 @@ callbacks: {
 		.append('div')
 	obj.tip = new client.Menu({padding:'5px'})
 
-  obj.components = {
-    filter: getFilterUi(obj),
-    cart: getCartUi(obj),
-    plots: []
-  }
+	obj.components = {
+		filter: getFilterUi(obj),
+		cart: getCartUi(obj),
+		plots: []
+	}
 
 	// simplified query
 	obj.do_query = (args) => {
@@ -235,9 +235,7 @@ try to keep the logic clear
 	if( may_apply_modifier_barchart_selectbar( obj, term, row, row_graph ) ) return
 
 
-	// term function buttons, including barchart, and cross-tabulate
-
-	may_make_term_graphbuttons( term, row, row_graph, obj )
+	may_make_term_viewbutton( term, row, row_graph, obj )
 }
 
 
@@ -263,8 +261,8 @@ function print_term_name ( row, arg, term ) {
 
 function may_apply_modifier_barchart_selectbar ( obj, term, row, row_graph ) {
 	if(!obj.modifier_barchart_selectbar) return false
-	if(!term.graph || !term.graph.barchart) {
-		// no chart, this term is not clickable
+	if(!term_hasgraph(term)) {
+		// no chart for this term, is not clickable
 		return true
 	}
 	term_addbutton_barchart ( term, row, row_graph, obj )
@@ -288,7 +286,7 @@ function may_apply_modifier_click_term ( obj, term, row ) {
 		// this term is disabled, no clicking
 		namebox.style('opacity','.5')
 
-	} else if(term.graph) {
+	} else if( term_hasgraph(term)) {
 
 		// enable clicking this term
 		namebox
@@ -305,27 +303,20 @@ function may_apply_modifier_click_term ( obj, term, row ) {
 
 
 
-function may_make_term_graphbuttons ( term, row, row_graph, obj ) {
-/*
-if term.graph{} is there, make a button to trigger it
-allow to make multiple buttons
-*/
-	if(!term.graph) {
-		// no graph
-		return
-	}
-
-
-	if(term.graph.barchart) {
+function may_make_term_viewbutton( term, row, row_graph, obj ) {
+	if( term_hasgraph(term) ) {
 		term_addbutton_barchart( term, row, row_graph, obj )
 	}
-
-
-	// to add other graph types
 }
 
 
 
+
+
+function term_hasgraph ( term ) {
+// return true if term has a valid type flag
+	return term.iscategorical || term.isfloat || term.isinteger || term.iscondition
+}
 
 
 
@@ -348,11 +339,11 @@ such conditions may be carried by obj
 		.attr('class','sja_menuoption')
 		.text('VIEW')
 
-	const view_btn_line = button_div.append('div')
-		.style('height','10px')
-		.style('margin-left','45px')
-		.style('border-left','solid 1px #aaa')
-		.style('display','none')
+	// const view_btn_line = button_div.append('div')
+	// 	.style('height','10px')
+	// 	.style('margin-left','45px')
+	// 	.style('border-left','solid 1px #aaa')
+	// 	.style('display','none')
 
 	const div = row_graph.append('div')
 		.style('border','solid 1px #aaa')
@@ -371,11 +362,17 @@ such conditions may be carried by obj
     const i = obj.expanded_term_ids.indexOf(term.id)
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
-			view_btn_line.style('display','block')
+			button.style('border-radius','5px 5px 0 0')
+				.style('border-style','solid solid hidden solid')
+				.style('height','17px')
+			// view_btn_line.style('display','block')
       if (i==-1) obj.expanded_term_ids.push(term.id)
 		} else {
 			client.disappear(div)
-			view_btn_line.style('display','none')
+			button.style('border-radius',button_radius)
+				.style('border','solid 1px #aaa')
+				.style('height','auto')
+			// view_btn_line.style('display','none')
       obj.expanded_term_ids.splice(i, 1)
 		}
 		if( loaded || loading ) {
@@ -383,6 +380,7 @@ such conditions may be carried by obj
       return
     }
 		button.style('border','solid 1px #aaa')
+			.style('border-style','solid solid hidden solid')
 		loading=true
 		make_barplot( obj, {term}, div, ()=> {
       plot_loading_div.text('').remove()
@@ -573,7 +571,7 @@ barchart is shown in-place under term and in full capacity
 				.append('td')
 				.append('div')
 				.text(term.name)
-			if( term.graph ) {
+			if( term_hasgraph(term) ) {
 				// only allow selecting for graph-enabled ones
 				div.attr('class','sja_menuoption')
 					.style('margin','1px 0px 0px 0px')
@@ -659,7 +657,7 @@ barchart is shown in-place under term and in full capacity
 
 							if( may_apply_modifier_barchart_selectbar( obj, term, row2, row_graph ) ) {
 							} else {
-								may_make_term_graphbuttons( term, row2, row_graph, obj )
+								may_make_term_viewbutton( term, row2, row_graph, obj )
 							}
 
 							nextdiv = currdiv.append('div')
@@ -706,7 +704,7 @@ barchart is shown in-place under term and in full capacity
 					.text(term.name)
 				const td = tr.append('td') // holder for buttons
 					.style('text-align','right')
-				if( term.graph && term.graph.barchart ) {
+				if( term_hasgraph(term) ) {
 					makeviewbutton( term, td )
 				}
 				maketreebutton( term, td )

@@ -153,7 +153,8 @@ export function addparameter_rangequery ( tk, block ) {
 		const showntracks = tk.ld.tracks.filter( t => t.shown )
 		if( showntracks.length ) {
 			par.trigger_ld = {
-				tracks: showntracks
+				tracks: showntracks,
+				connheight: tk.ld.connheight
 			}
 		}
 	}

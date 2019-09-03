@@ -10,6 +10,7 @@ tape("\n", function(test) {
 })
 
 tape("filter term-value button", function (test) {
+    test.timeoutAfter(1000)
     test.plan(4)
     const div0 = d3s.select('body').append('div')
     const termfilter = {
@@ -35,7 +36,7 @@ tape("filter term-value button", function (test) {
         },
         callbacks: {
           tree: {
-            postRender: [testDisplay/*, triggerChange, triggerAdd, triggerRemove*/]
+            postRender: [testDisplay, /*triggerRemove*/]
           }
         },
       }
@@ -50,4 +51,10 @@ tape("filter term-value button", function (test) {
             test.end()
         }, 100)   
     }
+
+    // function triggerRemove(obj) {
+    //     setTimeout(()=>{
+    //         obj.dom.termfilterdiv.selectAll('.term_remove_btn').node().click()
+    //     }, 100)
+    // }
 })

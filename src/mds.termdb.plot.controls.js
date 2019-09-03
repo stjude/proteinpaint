@@ -20,7 +20,6 @@ export function init(opts) {
     },
     dom: {
       holder: opts.holder
-        .style('margin', '8px')
         .style('vertical-align', 'top')
         .style('transition','0.5s'),
 
@@ -46,6 +45,8 @@ export function init(opts) {
 
   controls.components = {
     burger: setBurgerBtn(controls),
+    svg: setSvgBtn(controls),
+    grade_info: setGradeInfoBtn(controls),
     config: setConfigDiv(controls),
     barsAs: setBarsAsOpts(controls, 'term', 'Bars as', 1),
     overlay: setOverlayOpts(controls),
@@ -63,9 +64,11 @@ export function init(opts) {
 
 function setBurgerBtn(controls) {
   const btn = controls.dom.topbar.append('div')
-    .attr('class','sja_edit_btn')
     .style('margin','10px')
-    .style('font-size', '16px')
+    .style('margin-left','20px')
+    .style('font-family','verdana')
+    .style('font-size', '28px')
+    .style('cursor','pointer')
     .style('transition','0.5s')
     .html('&#8801;')
     .on('click', () => {
@@ -73,12 +76,82 @@ function setBurgerBtn(controls) {
       controls.main(controls.plot)      
     })
 
+    controls.dom.button_bar = controls.dom.topbar.append('div')
+
   return {
     main() {
-      btn.html(controls.isVisible ? '&#215;' : '&#8801;')
+      btn.style('display',controls.isVisible ? 'inline-block' : 'block')
+      controls.dom.button_bar.style('display',controls.isVisible ? 'inline-block' : 'block')
+        .style('float',controls.isVisible ? 'right' : 'none')
     },
     dom: {
       btn
+    }
+  }
+}
+
+function setSvgBtn(controls) {
+  const svg_btn = controls.dom.button_bar.append('div')
+    .style('margin','10px')
+    .style('margin-top','15px')
+    .style('margin-left','24px')
+    .style('font-family','verdana')
+    .style('font-size', '18px')
+    .style('cursor','pointer')
+    .html('&#10515;')
+    .on('click', () => {
+      for(const name in controls.plot.components) {
+        if (typeof controls.plot.components[name].download == 'function') {
+          controls.plot.components[name].download()
+        }
+      }
+    })
+
+  return {
+    main() {
+      svg_btn.style('display',controls.isVisible ? 'inline-block' : 'block')
+
+      //show tip info for download button based on visible plot/table
+      const currviews  = controls.plot.settings.currViews
+      const plots = ['barchart','boxplot','scatter']
+      if(plots.some(view => currviews.includes(view))){
+        svg_btn.attr('title','Download plot image')
+      }else if(currviews.includes('table')){
+        svg_btn.attr('title','Download table data')
+      }
+    },
+    dom: {
+      svg_btn
+    }
+  }
+}
+
+function setGradeInfoBtn(controls){
+
+  const info_btn = controls.dom.button_bar.append('div')
+    .style('display', controls.plot.term && controls.plot.term.iscondition ? 'block' : 'none')
+    .style('margin','10px')
+    .style('font-family','verdana')
+    .style('font-size', '18px')
+    .style('font-weight','bold')
+    .style('cursor','pointer')
+    .attr('title','Grade Details')
+    .html('&#9432;')
+    .on('click', () => {
+      // controls.main(controls.plot)      
+    })
+
+  return {
+    main() {
+      if(controls.plot.term && controls.plot.term.iscondition){
+        info_btn.style('display',controls.isVisible ? 'inline-block' : 'block')
+        .style('margin-top',controls.isVisible ? '15px' :'20px')
+        .style('margin-right',controls.isVisible ? '15px' :'10px')
+        .style('margin-left',controls.isVisible ? '15px' :'24px')
+      }
+    },
+    dom: {
+      info_btn
     }
   }
 }

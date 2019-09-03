@@ -45,8 +45,7 @@ function getTrackers() {
     unannotated: "",
     orderedLabels: [],
     unannotatedLabels: [],
-    bins: [],
-    uncomputable_grades: {}
+    bins: []
   }
 }
 
@@ -107,7 +106,6 @@ const templateBar = JSON.stringify({
       "__:unannotatedLabels": "=unannotatedLabels()",
       "__:bins": "=bins()",
       '__:q': "=q()",
-      "__:grade_labels": "=grade_labels()",
       "@done()": "=sortColsRows()"
     },
     "@done()": "=sortCharts()"
@@ -290,18 +288,6 @@ function getPj(q, inReqs, data, tdb, ds) {
           if (d.binconfig) q.binconfig = d.binconfig
           return q
         })
-      },
-      grade_labels() {
-        let has_condition_term = false
-        for(const term of terms) {
-          if (term.q.bar_by_grade || term.q.bar_by_children) {
-            has_condition_term = true
-            break
-          }
-        }
-        return tdb.patient_condition && has_condition_term
-          ? tdb.patient_condition.grade_labels.sort((a,b)=>a.grade - b.grade)
-          : undefined
       }
     }
   })
@@ -321,7 +307,7 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
       }
     }
     inReqs.filterFxn = (row) => {
-      return sample_match_termvaluesetting( row, q.tvslst, ds )
+      return sample_match_termvaluesetting( row, q.tvslst )
     }
   }
 
@@ -346,9 +332,11 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
     sjlife.setAnnoByTermId(termid)
     const term = termid ? tdb.termjson.map.get(termid) : null
     if ((!termid || term.iscategorical) && termid in inReq.joinFxns) continue
+    
+    inReq.unannotatedValues = term.values ? Object.keys(term.values).filter(key=>term.values[key].uncomputable) : []
+    inReq.unannotatedLabels = term.values ? inReq.unannotatedValues.map(key=>term.values[key].label) : []
+    
     if (!term) throw `Unknown ${termnum}="${q[termnum]}"`
-    if (!term.graph) throw `${termnum}.graph missing`
-    if (!term.graph.barchart) throw `${termnum}.graph.barchart missing`
     if (term.iscategorical) {
       inReq.joinFxns[termid] = row => row[termid] 
     } else if (term.isinteger || term.isfloat) {
@@ -374,6 +362,8 @@ function set_condition_fxn(termid, b, tdb, inReq, index) {
     const value = row[termid][precomputedKey]
     return Array.isArray(value) ? value : [value]
   }
+
+  inReq.un
 }
 
 function getPrecomputedKey(q) {
@@ -395,16 +385,12 @@ function get_numeric_bin_name (term_q, termid, term, ds, termnum, inReq, data0 )
   const binconfig = data0.refs.q[index].binconfig
   inReq.bins = bins
   inReq.binconfig = binconfig
-  inReq.orderedLabels = bins.map(d=>d.label); 
-  if (binconfig.unannotated) {
-    inReq.unannotatedLabels = Object.values(binconfig.unannotated._labels)
-    inReq.unannotatedValues = Object.values(binconfig.unannotated._values)
-  }
+  inReq.orderedLabels = bins.map(d=>d.label)
 
   inReq.joinFxns[termid] = row => {
     const v = row[termid]
-    if( binconfig.unannotated && binconfig.unannotated._values.includes(v) ) {
-      return binconfig.unannotated._labels[v]
+    if( term.values && ""+v in term.values && term.values[v].uncomputable) {
+      return term.values[v].label
     }
 
     for(const b of bins) {
@@ -426,7 +412,7 @@ function get_numeric_bin_name (term_q, termid, term, ds, termnum, inReq, data0 )
 
   inReq.numValFxns[termid] = row => {
     const v = row[termid]
-    if(!binconfig.unannotated || !binconfig.unannotated._values.includes(v) ) {
+    if(!term.values || !(""+v in term.values) || !term.values[v].uncomputable) {
       return v
     }
   }
@@ -520,11 +506,8 @@ arguments:
   return (AN==0 || AC==0) ? 0 : (AC/AN).toFixed(3)
 }
 
-function sample_match_termvaluesetting ( row, tvslst, ds ) {
-/* for AND, require all terms to match
-ds is for accessing patient_condition
-XXX  only used by termdb.barchart.js, to be taken out
-*/
+function sample_match_termvaluesetting ( row, tvslst ) {
+/* for AND, require all terms to match */
 
   let usingAND = true
 

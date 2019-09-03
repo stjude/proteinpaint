@@ -23,12 +23,18 @@ export function init(holder) {
     // so that self does not need to be passed to it
     // as an argument
     main(plot, data) {
+      self.plot = plot
       const isVisible = plot.settings.currViews.includes("boxplot")
       if (!isVisible) {
         self.dom.svg.style('display','none')
         return
       }
       processData(self, plot, data)
+    },
+    download() {
+      if (!this.plot.settings.currViews.includes('boxplot')) return
+      const svg_name = self.plot.term.name + ' boxplot'
+      client.to_svg(self.dom.svg.node(),svg_name,{apply_dom_styles:true})
     }
   }
   return self

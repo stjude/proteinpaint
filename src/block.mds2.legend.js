@@ -1,13 +1,11 @@
 import {event as d3event} from 'd3-selection'
-import {scaleLinear} from 'd3-scale'
-import {axisTop} from 'd3-axis'
 import * as client from './client'
 import {legend_newrow} from './block.legend'
 import * as common from './common'
 import {may_create_vcflegend_numericalaxis} from './block.mds2.vcf.numericaxis.legend'
 import {may_create_variantfilter} from './block.mds2.legend.variantfilter'
-import {make_radios, make_one_checkbox} from './dom'
-import {vcf_m_color} from './block.mds2.vcf'
+import {make_radios} from './dom'
+import {may_create_ldlegend} from './block.mds2.ld'
 
 
 
@@ -17,7 +15,6 @@ init
 update
 ********************** INTERNAL
 create_mclass
-may_create_ldlegend
 update_mclass
 update_info_fields
 */
@@ -276,114 +273,5 @@ data is data.info_fields{}
 				throw 'unknown info type'
 			}
 		}
-	}
-}
-
-
-
-
-
-function may_create_ldlegend ( tk, block ) {
-	if(!tk.ld) return
-	const row = tk.legend.table.append('tr')
-	// td1
-	row
-		.append('td')
-		.style('text-align','right')
-		.style('opacity',.3)
-		.text('LD')
-
-	// td2
-	const td = row.append('td')
-
-	const table = td.append('table')
-		.style('border-spacing','10px')
-		.style('border-collapse','separate')
-	/* one row per track
-	col1. name
-	col2. show/hide
-	*/
-
-	for(const ld of tk.ld.tracks) {
-		const tr = table.append('tr')
-		// col1
-		tr.append('td')
-			.text(ld.name)
-		// col2
-		make_one_checkbox({
-			holder: tr.append('td'),
-			labeltext: 'Show',
-			checked: ld.shown,
-			callback: async ()=>{
-				ld.shown = !ld.shown
-				await tk.load()
-			}
-		})
-	}
-
-	// overlay
-	{
-		const div = td.append('div')
-			.style('margin-left','10px')
-		div.append('span')
-			.style('opacity',.5)
-			.text('Overlay')
-		const select = div.append('select')
-			.style('margin-left','10px')
-			.on('input',()=>{
-				const i = select.node().selectedIndex
-				if(i==0) {
-					// no overlay
-					delete tk.ld.overlaywith
-					colorbardiv.style('display','none')
-					tk.skewer2.selectAll('.sja_aa_disk_fill').attr('fill', m=>vcf_m_color(m,tk))
-				} else {
-					tk.ld.overlaywith = tk.ld.tracks[i-1].name
-					colorbardiv.style('display','inline-block')
-				}
-			})
-		select.append('option').text('No overlay')
-		for(const ld of tk.ld.tracks) {
-			select.append('option')
-				.text(ld.name)
-		}
-
-		const colorbardiv = div.append('div')
-			.style('display','none')
-			.style('margin-left','10px')
-
-		const colorlst=[]
-		for(let i=0; i<=1; i+=.1) {
-			colorlst.push(tk.ld.overlay.r2_to_color(i))
-		}
-		const svg = colorbardiv.append('svg')
-		const axisheight=20
-		const barheight =15
-		const xpad = 10
-		const axiswidth = 150
-		client.axisstyle({
-			axis: svg.append('g')
-				.attr('transform','translate('+xpad+','+axisheight+')')
-				.call( axisTop().scale( scaleLinear().domain([0,1]).range([0,axiswidth]) ).ticks(4) ),
-			fontsize:12
-		})
-		const grad = svg.append('defs')
-			.append('linearGradient')
-			.attr('id','grad')
-		grad.append('stop')
-			.attr('offset','0%')
-			.attr('stop-color', tk.ld.overlay.color_0)
-		grad.append('stop')
-			.attr('offset','100%')
-			.attr('stop-color', tk.ld.overlay.color_1)
-		svg.append('rect')
-			.attr('x',xpad)
-			.attr('y',axisheight)
-			.attr('width',axiswidth)
-			.attr('height',barheight)
-			.attr('fill','url(#grad)')
-
-		svg.attr('width', xpad*2+axiswidth)
-			.attr('height', axisheight + barheight )
 	}
 }

@@ -1073,12 +1073,21 @@ export function newpane3(x,y,genomes) {
 }
 
 
-export function to_svg(svg,name) {
+export function to_svg(svg,name,opts={}) {
+	if (opts.apply_dom_styles) {
+		opts.svgClone = svg.cloneNode(true)
+		const clone = d3select(opts.svgClone) // make it easier to apply style below
+		const styles = window.getComputedStyle(svg)
+		for(const s of styles) {
+			clone.style(s,styles.getPropertyValue(s))
+		}
+	}
+
 	const a=document.createElement('a')
 	document.body.appendChild(a)
 	a.addEventListener('click',function(){
 		const serializer = new XMLSerializer()
-		const svg_blob = new Blob([serializer.serializeToString(svg)], {'type': "image/svg+xml"})
+		const svg_blob = new Blob([serializer.serializeToString(opts.svgClone ? opts.svgClone : svg)], {'type': "image/svg+xml"})
 		a.download=name+'.svg'
 		a.href=URL.createObjectURL(svg_blob)
 		document.body.removeChild(a)
