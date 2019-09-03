@@ -423,8 +423,8 @@ module.exports={
 		sample_termfilter:[{term:{id:'wgs_curated',iscategorical:true},values:[{key:'1'}]}],
 		ld:{
 			tracks:[
-				{ name:'SJLIFE European sub-cohort', file:'files/hg38/sjlife/ld/CEU.gz', shown:false },
-				{ name:'SJLIFE African sub-cohort', file:'files/hg38/sjlife/ld/YRI.gz', shown:false }
+				{ name:'SJLIFE European sub-cohort', file:'files/hg38/sjlife/ld/CEU.gz', shown:false, viewrangelimit:200000 },
+				{ name:'SJLIFE African sub-cohort',  file:'files/hg38/sjlife/ld/YRI.gz', shown:false, viewrangelimit:200000 }
 			],
 			overlay:{
 				color_1:'red',

@@ -47,7 +47,6 @@ returns sum of heights of LD panels
 			.text(ldtk.name+' LD')
 			.attr('font-size',block.labelfontsize)
 			.attr('x', block.tkleftlabel_xshift)
-			.attr('y', rowheightsum + tk.ld.connheight )
 			.attr('text-anchor','end')
 			.each(function(){
 				tk.leftLabelMaxwidth = Math.max( tk.leftLabelMaxwidth, this.getBBox().width )
@@ -76,7 +75,7 @@ returns sum of heights of LD panels
 			if( r.img ) {
 				g.append('image')
 					.attr('width',  r.width)
-					.attr('height', r.imgheight)
+					.attr('height', r.img.height)
 					.attr('xlink:href', r.img.src)
 				rowheight = Math.max( rowheight, r.img.height )
 				continue
@@ -85,6 +84,7 @@ returns sum of heights of LD panels
 
 		// row height set
 		ldtk.height = rowheight
+		ldtk.g.label.attr('y', rowheightsum + Math.min( rowheight/2, tk.ld.connheight ) )
 
 		for(const r of lddata.rglst) {
 			if(r.rangetoobig) {

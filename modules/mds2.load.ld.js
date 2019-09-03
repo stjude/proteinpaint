@@ -3,6 +3,7 @@ const path = require('path')
 const spawn = require('child_process').spawn
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
+const bplen = require('../src/common').bplen
 
 
 
@@ -47,6 +48,12 @@ result:{}
 			reverse: r.reverse,
 			xoff: r.xoff,
 		}
+		result.ld[ tk.name ].rglst.push( r2 )
+
+		if( r.stop-r.start >= tk.viewrangelimit ) {
+			r2.rangetoobig = 'Zoom in under '+bplen(tk.viewrangelimit)+' to view LD data'
+			continue
+		}
 
 		const pairs = []
 		const coordset = new Set()
@@ -70,8 +77,6 @@ result:{}
 		})
 
 		r2.img = plot_img( r, pairs, coordset, connheight )
-
-		result.ld[ tk.name ].rglst.push( r2 )
 	}
 }
 
@@ -83,7 +88,9 @@ result:{}
 function plot_img ( r, pairs, coordset, connheight ) {
 /*
 x1 ------------
+	mapping of actual coord positions
 x2 ------------
+	shifted position for regularized bins
 */
 
 	const [ binsize, coord2x2 ] = get_coord2x2( r, coordset )
@@ -100,7 +107,11 @@ x2 ------------
 		}
 	}
 
-	const canvasheight = connheight + r.width/2
+	let maxpairheight = 0
+	for(const pair of pairs) {
+		maxpairheight = Math.max( maxpairheight, (coord2x2.get(pair.stop)-coord2x2.get(pair.start))/2 )
+	}
+	const canvasheight = connheight + maxpairheight + binsize/2
 
 	const canvas = createCanvas( r.width, canvasheight )
 	const ctx = canvas.getContext('2d')
@@ -139,10 +150,19 @@ x2 ------------
 
 
 function get_coord2x2 ( r, coordset ) {
-	const binsize = r.width / coordset.size
+/*
+x2 is shifted x position of regular bins
+limit bin size so as not to show a huge blood diamond filling screen when there's just one pair of snps
+*/
+	let binsize = r.width/coordset.size
+	let x_offset = 0
+	if( binsize > 40 ) {
+		binsize = 40
+		x_offset = (r.width-binsize*coordset.size)/2
+	}
 	const coord2x2 = new Map()
 	const lst = r.reverse ? [...coordset].sort((a,b)=>b-a) : [...coordset].sort((a,b)=>a-b)
-	let x=0
+	let x = x_offset
 	for(const a of lst) {
 		coord2x2.set( a, x+binsize/2 )
 		x+=binsize

@@ -148,6 +148,7 @@ async function may_init_ld ( ld, genome, ds ) {
 	if(ld.tracks.length==0) throw 'ld.tracks[] is empty array'
 	for(const tk of ld.tracks) {
 		if(!tk.name) throw '.name missing from a ld track'
+		if(!Number.isInteger(tk.viewrangelimit)) throw 'viewrangelimit missing from ld track "'+tk.name+'"'
 		if( tk.file ) {
 			tk.file = path.join(serverconfig.tpmasterdir, tk.file)
 			await utils.validate_tabixfile( tk.file )
