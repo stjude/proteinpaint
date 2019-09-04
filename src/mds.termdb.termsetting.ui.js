@@ -241,7 +241,6 @@ export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
         term_q.binconfig = JSON.parse(JSON.stringify(bins))
     }
 
-    // console.log(term_q)
     default_bins_q = (term.bins.less && !is_term1) ? term.bins.less : term.bins.default
 
     tip.clear().showunder(d3event.target)
@@ -323,7 +322,6 @@ export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
             const last_bin = default_bins_q.last_bin? default_bins_q.last_bin : {}
             term_q.binconfig.last_bin = JSON.parse(JSON.stringify(last_bin))
             custom_bins_q.last_bin = JSON.parse(JSON.stringify(last_bin))
-            callback(term_q)
             last_bin_edit_div.style('display','none')
         }
     }  
