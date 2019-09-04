@@ -372,8 +372,9 @@ function getPrecomputedKey(q) {
     : q.bar_by_children ? 'children'
     : q.bar_by_grade && q.value_by_max_grade ? 'maxGrade'
     : q.bar_by_grade && q.value_by_most_recent ? 'mostRecentGrades'
+    : q.bar_by_grade ? 'computableGrades'
     : ''
-  if (!precomputedKey) throw `unknown condition term unit='${unit}'`
+  if (!precomputedKey) throw `unknown condition term bar_by_* and/or value_by_*`
   return precomputedKey
 }
 
