@@ -140,20 +140,24 @@ q{}
 		await utils.write_file( tmpfile, lines.join('\n') )
 		const pfile = await utils.run_fishertest( tmpfile )
 		const text = await utils.read_file( pfile )
-		const pvalues = []
+		let i=0
 		for(const line of text.trim().split('\n')) {
+			tests[ i++ ].pvalue = Number( line.split('\t')[5] )
+		/*
 			const l = line.split('\t')
 			const p = Number.parseFloat(l[5])
 			pvalues.push(p)
+			*/
 		}
 		fs.unlink(tmpfile,()=>{})
 		fs.unlink(pfile,()=>{})
 
-		// fdr
+		/* fdr
 		const fdr = await utils.run_fdr( pvalues )
 		for(const [i,p] of fdr.entries()) {
 			tests[i].pvalue = p
 		}
+		*/
 	}
 
 	result.maxlogp = get_maxlogp( tests )

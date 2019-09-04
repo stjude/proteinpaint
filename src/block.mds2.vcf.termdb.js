@@ -267,8 +267,8 @@ function phewas_svg ( data, obj ) {
 	////////////// message
 	obj.dom.row_message.text(
 		data.testcount+' attributes tested, '
-		+data.hoverdots.length+' attributes with FDR p-value <= 0.05, '
-		+'Max -log10(FDR pvalue) is '+obj.svg.ymax
+		+data.hoverdots.length+' attributes with p-value <= 0.05, '
+		+'Max -log10(p-value) is '+obj.svg.ymax
 	)
 
 
@@ -313,7 +313,7 @@ function phewas_svg ( data, obj ) {
 	g0.append('g')
 		.attr('transform','translate(10,'+(obj.svg.toppad+obj.svg.axisheight/2)+')')
 		.append('text')
-		.text('-Log10(FDR p-value)')
+		.text('-Log10(p-value)')
 		.attr('text-anchor','middle')
 		.attr('dominant-baseline','central')
 		.attr('transform','rotate(-90)')
@@ -363,7 +363,7 @@ function phewas_svg ( data, obj ) {
 				const barsvg = client.fillbar(null, { f: sum > 0 ? d.table[2]/sum : 0 })
 				tr.append('td').html( barsvg + ' <span style="font-size:.7em;opacity:.5">ALT/REF</span> '+d.table[2]+' / '+d.table[3] )
 			}
-			div.append('div').html( '<span style="opacity:.5;font-size:.8em">FDR P-value:</span> '+d.pvalue )
+			div.append('div').html( '<span style="opacity:.5;font-size:.8em">P-value:</span> '+d.pvalue )
 			obj.tip.show( d3event.clientX, d3event.clientY )
 		})
 		.on('mouseout',()=>{
@@ -391,7 +391,7 @@ function phewas_svg ( data, obj ) {
 		tr.append('th').text('Term')
 		tr.append('th').text('Case')
 		tr.append('th').text('Control')
-		tr.append('th').text('FDR p-value')
+		tr.append('th').text('P-value')
 		for(const i of data2.categories) {
 			const tr = table.append('tr')
 			tr.append('td').text(i.term.name)
