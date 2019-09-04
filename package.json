@@ -17,6 +17,7 @@
     "test-back": "tape test/**/back.*.spec.js",
     "test-front": "browserify public/bin/proteinpaint.js test/**/front.*.spec.js | tape-run",
     "test-browser": "watchify test/**/front.*.spec.js -o public/bin/spec.bundle.js -v",
+    "test-response": "nodemon test/test.server.js --watch test/termdb",
     "deliver": "sh utils/deliver.sh",
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset",
     "build-server": "webpack --config=webpack.config.server.js --mode=production"

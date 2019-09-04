@@ -529,7 +529,7 @@ function sample_match_termvaluesetting ( row, tvslst ) {
         let left, right
         if( range.startunbounded ) {
           left = true
-        } else {
+        } else if ('start' in range) {
           if(range.startinclusive) {
             left = samplevalue >= range.start
           } else {
@@ -538,14 +538,14 @@ function sample_match_termvaluesetting ( row, tvslst ) {
         }
         if( range.stopunbounded ) {
           right = true
-        } else {
+        } else if ('stop' in range) {
           if(range.stopinclusive) {
             right = samplevalue <= range.stop
           } else {
             right = samplevalue < range.stop
           }
         }
-        thistermmatch = left && right
+        thistermmatch = left && right || ('value' in range && range.value === samplevalue)
         if (thistermmatch) break
       }
     } 

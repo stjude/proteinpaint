@@ -28,7 +28,7 @@ tape("filters", function (test) {
   // plan will track the number of expected tests,
   // which helps with the async tests
   test.timeoutAfter(5000)
-  test.plan(8)
+  test.plan(9)
 
   compareResponseData(
     test, 
