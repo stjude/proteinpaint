@@ -51,7 +51,19 @@ tape("filters", function (test) {
         ranges: [{start:0,stop:5}]
       }]
     }, 
-    "numerically filtered results"
+    "numerically filtered results (with range)"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      tvslst: [{
+        term: {id:'hrtavg', name:"Heart", isfloat:true}, // heart radiation
+        ranges: [{value:0}] // not radiated
+      }]
+    }, 
+    "numerically filtered results (with special category)"
   )
 
   compareResponseData(
