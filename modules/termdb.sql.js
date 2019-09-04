@@ -135,10 +135,7 @@ returns:
 				Object.keys(term.values)
 				.filter(key=>term.values[key].uncomputable) 
 				.map(Number)
-				.filter(!tvs.isnot 
-					? key => !tvs.ranges.find(range=> range.value == key) // may actually want to NOT exclude an annotated value
-					: key => tvs.ranges.find(range=> range.value == key) // exclude
-				)
+				.filter(key => tvs.isnot || !tvs.ranges.find(range=> 'value' in range && range.value === key))
 			if (excludevalues.length) values.push(...excludevalues)
 		}
 
@@ -147,7 +144,7 @@ returns:
 			FROM annotations
 			WHERE term_id = ?
 			AND ( ${rangeclauses.join(' OR ')} )
-			${excludevalues ? `AND ${cast} NOT IN (${excludevalues.map(d=>"?").join(",")})` : ''}`
+			${excludevalues && excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d=>"?").join(",")})` : ''}`
 		)
 	}
 
