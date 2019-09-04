@@ -93,15 +93,21 @@ returns:
 	function add_numerical ( tvs ) {
 		if(!tvs.ranges) throw '.ranges{} missing'
 		values.push( tvs.term.id )
-		const range2clause = []
-		const cast = 'CAST(value AS '+(tvs.term.isinteger?'INT':'REAL')+')'
+		// get term object, in case isinteger flag is missing from tvs.term
+		const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
+		const cast = 'CAST(value AS '+(term.isinteger?'INT':'REAL')+')'
+
+		const rangeclauses = []
+		let hasactualrange = false // if true, will exclude special categories
+
 		for(const range of tvs.ranges) {
 			if( range.value != undefined ) {
 				// special category
-				range2clause.push(cast+'=?')
+				rangeclauses.push(cast+'=?')
 				values.push( range.value )
 			} else {
-				// regular bin
+				// actual range
+				hasactualrange = true
 				const lst = []
 				if( !range.startunbounded ) {
 					if( range.startinclusive ) {
@@ -119,29 +125,29 @@ returns:
 					}
 					values.push( range.stop )
 				}
-				range2clause.push( '('+lst.join(' AND ')+')' )
+				rangeclauses.push( '('+lst.join(' AND ')+')' )
 			}
 		}
 
-    const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
-    const excludevalues = term.values 
-      ? Object.keys(term.values)
-        .filter(key=>term.values[key].uncomputable) 
-        .map(key=>+key)
-        .filter(!tvs.isnot 
-          ? key => !tvs.ranges.find(range=> range.value == key) // may actually want to NOT exclude an annotated value
-          : key => tvs.ranges.find(range=> range.value == key) // exclude
-        )
-      : []
-
-    if (excludevalues.length) values.push(...excludevalues)
+		let excludevalues
+		if( hasactualrange && term.values ) {
+			excludevalues =
+				Object.keys(term.values)
+				.filter(key=>term.values[key].uncomputable) 
+				.map(Number)
+				.filter(!tvs.isnot 
+					? key => !tvs.ranges.find(range=> range.value == key) // may actually want to NOT exclude an annotated value
+					: key => tvs.ranges.find(range=> range.value == key) // exclude
+				)
+			if (excludevalues.length) values.push(...excludevalues)
+		}
 
 		filters.push(
 			`SELECT sample
 			FROM annotations
 			WHERE term_id = ?
-			AND ( ${range2clause.join(' OR ')} )
-			${excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d=>"?").join(",")})` : ''}`
+			AND ( ${rangeclauses.join(' OR ')} )
+			${excludevalues ? `AND ${cast} NOT IN (${excludevalues.map(d=>"?").join(",")})` : ''}`
 		)
 	}
 
@@ -154,7 +160,7 @@ returns:
 		const restriction = tvs.value_by_max_grade ? 'max_grade'
 				: tvs.value_by_most_recent ? 'most_recent'
 				: 'computable_grade'
-		
+
     if (tvs.values) {
       values.push(tvs.term.id, value_for)
       values.push(...tvs.values.map(i=>''+i.key))

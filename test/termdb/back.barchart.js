@@ -526,26 +526,37 @@ function sample_match_termvaluesetting ( row, tvslst ) {
     else if( t.term.isinteger || t.term.isfloat ) {
       if(samplevalue==undefined)  continue // this sample has no anno for this term, do not count
       for(const range of t.ranges) {
-        let left, right
-        if( range.startunbounded ) {
-          left = true
-        } else if ('start' in range) {
-          if(range.startinclusive) {
-            left = samplevalue >= range.start
-          } else {
-            left = samplevalue > range.start
+        if(range.value!=undefined) {
+		  thistermmatch = samplevalue == range.value
+		} else {
+          // actual range
+          if( t.term.values ) {
+            const v = t.term.values[ samplevalue.toString() ]
+            if( v && v.uncomputable ) {
+              continue
+            }
           }
-        }
-        if( range.stopunbounded ) {
-          right = true
-        } else if ('stop' in range) {
-          if(range.stopinclusive) {
-            right = samplevalue <= range.stop
-          } else {
-            right = samplevalue < range.stop
+          let left, right
+          if( range.startunbounded ) {
+            left = true
+          } else if ('start' in range) {
+            if(range.startinclusive) {
+              left = samplevalue >= range.start
+            } else {
+              left = samplevalue > range.start
+            }
           }
+          if( range.stopunbounded ) {
+            right = true
+          } else if ('stop' in range) {
+            if(range.stopinclusive) {
+              right = samplevalue <= range.stop
+            } else {
+              right = samplevalue < range.stop
+            }
+          }
+		  thistermmatch = left && right
         }
-        thistermmatch = left && right || ('value' in range && range.value === samplevalue)
         if (thistermmatch) break
       }
     } 

@@ -28,7 +28,7 @@ tape("filters", function (test) {
   // plan will track the number of expected tests,
   // which helps with the async tests
   test.timeoutAfter(5000)
-  test.plan(9)
+  test.plan(11)
 
   compareResponseData(
     test, 
@@ -51,7 +51,48 @@ tape("filters", function (test) {
         ranges: [{start:0,stop:5}]
       }]
     }, 
-    "numerically filtered results (with range)"
+    "numerically filtered results, range of (start,stop) with no excluded values"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      tvslst: [{
+        term: {
+          id:'hrtavg', name:"Heart", isfloat:true,
+          values:{ // must add "values" as test/termdb/back.barchart.js won't be able to query termjson by itself
+            "0": { "label":"Not exposed", "uncomputable":true },
+            "-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+            "-9999": { "label":"Unknown treatment record", "uncomputable":true }
+          }
+        },
+        ranges: [{startunbounded:true,stop:1000,stopinclusive:true}] // range includes special values and should be excluded
+      }]
+    }, 
+    "numerically filtered results, one-side-unbound range with excluded values"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      tvslst: [{
+        term: {
+          id:'hrtavg', name:"Heart", isfloat:true,
+          values:{ // as above
+            "0": { "label":"Not exposed", "uncomputable":true },
+            "-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+            "-9999": { "label":"Unknown treatment record", "uncomputable":true }
+          }
+        },
+        ranges: [
+          {value:0},
+          {start:100,stop:1000}
+        ]
+      }]
+    }, 
+    "numerically filtered results, combining {value} and normal range"
   )
 
   compareResponseData(
