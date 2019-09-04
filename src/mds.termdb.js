@@ -359,34 +359,34 @@ such conditions may be carried by obj
 		loading=false
 
 	button.on('click', async ()=>{
-    const i = obj.expanded_term_ids.indexOf(term.id)
+		const i = obj.expanded_term_ids.indexOf(term.id)
 		if(div.style('display') == 'none') {
 			client.appear(div, 'inline-block')
 			button.style('border-radius','5px 5px 0 0')
 				.style('border-style','solid solid hidden solid')
 				.style('height','17px')
 			// view_btn_line.style('display','block')
-      if (i==-1) obj.expanded_term_ids.push(term.id)
+			if (i==-1) obj.expanded_term_ids.push(term.id)
 		} else {
 			client.disappear(div)
 			button.style('border-radius',button_radius)
 				.style('border','solid 1px #aaa')
 				.style('height','auto')
 			// view_btn_line.style('display','none')
-      obj.expanded_term_ids.splice(i, 1)
+			obj.expanded_term_ids.splice(i, 1)
 		}
 		if( loaded || loading ) {
-      plot_loading_div.text('').remove()
-      return
-    }
+			plot_loading_div.text('').remove()
+			return
+		}
 		button.style('border','solid 1px #aaa')
 			.style('border-style','solid solid hidden solid')
 		loading=true
 		make_barplot( obj, {term}, div, ()=> {
-      plot_loading_div.text('').remove()
-      loaded=true
-      loading=false
-    })
+			plot_loading_div.text('').remove()
+			loaded=true
+			loading=false
+		})
 	})
 }
 

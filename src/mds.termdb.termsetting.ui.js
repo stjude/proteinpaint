@@ -229,12 +229,10 @@ export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
         //if bincoinfig initiated by user/by default
         custom_bins_q = JSON.parse(JSON.stringify(term_q.binconfig))
 
-    }else if(term.graph.barchart.numeric_bin.bins){
+    }else if(term.bins){
         
         //if binconfig not defined yet or deleted by user, set it as numeric_bin.bins
-        const bins = (term.graph.barchart.numeric_bin.bins_less && !is_term1) ? 
-            term.graph.barchart.numeric_bin.bins_less :
-            term.graph.barchart.numeric_bin.bins
+        const bins = (term.bins.less && !is_term1) ? term.bins.less : term.bins.default
 
         if(!bins.last_bin) bins.last_bin = {}
 
@@ -242,10 +240,9 @@ export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
         term_q = {}
         term_q.binconfig = JSON.parse(JSON.stringify(bins))
     }
+
     // console.log(term_q)
-    default_bins_q = (term.graph.barchart.numeric_bin.bins_less && !is_term1)? 
-            term.graph.barchart.numeric_bin.bins_less :
-            term.graph.barchart.numeric_bin.bins
+    default_bins_q = (term.bins.less && !is_term1) ? term.bins.less : term.bins.default
 
     tip.clear().showunder(d3event.target)
 
