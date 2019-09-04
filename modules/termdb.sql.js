@@ -149,54 +149,57 @@ returns:
 	}
 
 	function add_condition ( tvs ) {
-		const value_for = tvs.bar_by_children ? 'child' 
-			: tvs.bar_by_grade ? 'grade'
-			: ''
-		if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
+		let value_for
+		if( tvs.bar_by_children ) value_for = 'child'
+		else if( tvs.bar_by_grade ) value_for = 'grade'
+		else throw 'must set the bar_by_grade or bar_by_children query parameter'
 
-		const restriction = tvs.value_by_max_grade ? 'max_grade'
-				: tvs.value_by_most_recent ? 'most_recent'
-				: 'computable_grade'
+		let restriction
+		if( tvs.value_by_max_grade ) restriction = 'max_grade'
+		else if( tvs.value_by_most_recent ) restriction = 'most_recent'
+		else if( tvs.value_by_computable_grade ) restriction = 'computable_grade'
+		else throw 'unknown setting of value_by_?'
 
-    if (tvs.values) {
-      values.push(tvs.term.id, value_for)
-      values.push(...tvs.values.map(i=>''+i.key))
-  		filters.push(`
-  			SELECT 
-  				sample
-  			FROM precomputed
-  			WHERE term_id = ? 
-  				AND value_for = ? 
-  				AND ${restriction} = 1
-  				AND value IN (${tvs.values.map(i=>'?').join(', ')})`)
-    } else if (tvs.grade_and_child) {
-      //grade_and_child: [{grade, child_id}]
-      for(const gc of tvs.grade_and_child) {
-        values.push(tvs.term.id, ''+gc.grade)
-        filters.push(`
-          SELECT 
-            sample
-          FROM precomputed
-          WHERE term_id = ? 
-            AND value_for = 'grade'
-            AND ${restriction} = 1
-            AND value IN (?)`
-        )
+		if (tvs.values) {
+			values.push(
+				tvs.term.id,
+				value_for,
+				...tvs.values.map(i=>''+i.key)
+			)
+			filters.push(
+				`SELECT sample
+				FROM precomputed
+				WHERE term_id = ? 
+				AND value_for = ? 
+				AND ${restriction} = 1
+				AND value IN (${tvs.values.map(i=>'?').join(', ')})`
+			)
+    	} else if (tvs.grade_and_child) {
+			//grade_and_child: [{grade, child_id}]
+			for(const gc of tvs.grade_and_child) {
+				values.push(tvs.term.id, ''+gc.grade)
+				filters.push(
+					`SELECT sample
+					FROM precomputed
+					WHERE term_id = ? 
+					AND value_for = 'grade'
+					AND ${restriction} = 1
+					AND value IN (?)`
+				)
 
-        values.push(tvs.term.id, gc.child_id)
-        filters.push(`
-          SELECT 
-            sample
-          FROM precomputed
-          WHERE term_id = ? 
-            AND value_for = 'child'
-            AND ${restriction} = 1
-            AND value IN (?)`
-        )
-      }
-    } else {
-      throw 'unknown condition term filter type: expecting term-value "values" or "grade_and_child" key'
-    }
+				values.push(tvs.term.id, gc.child_id)
+				filters.push(
+					`SELECT sample
+					FROM precomputed
+					WHERE term_id = ? 
+					AND value_for = 'child'
+					AND ${restriction} = 1
+					AND value IN (?)`
+				)
+			}
+		} else {
+			throw 'unknown condition term filter type: expecting term-value "values" or "grade_and_child" key'
+		}
 	}
 }
 
