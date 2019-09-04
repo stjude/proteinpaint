@@ -39,6 +39,9 @@
     }]
   })
 
+  The params argument will also be displayed in JSON string in the
+  textarea input of the html page.   
+
   2. The difference in server response will be displayed as an object 
   per the npm package deep-object-diff. The diff will be logged in the console,
   but could be more easily inspected via the Network -> Preview tab of the
