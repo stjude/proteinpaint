@@ -341,7 +341,7 @@ export class TermdbBarchart{
             type: 'col'
           }
         })
-        .sort(this.overlaySorter)
+        .sort(this.barSorter)
 
       if (items.length) {
         legendGrps.push({
