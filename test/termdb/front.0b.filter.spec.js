@@ -9,7 +9,7 @@ tape("\n", function(test) {
   test.end()
 })
 
-tape.only("filter term-value button", function (test) {
+tape("filter term-value button", function (test) {
   test.timeoutAfter(1000)
   test.plan(5)
   const div0 = d3s.select('body').append('div')
