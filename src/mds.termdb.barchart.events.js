@@ -208,7 +208,7 @@ function getTermValues(d, self) {
         }, q2))
       }
     } else { 
-      const bins = term.bins
+      const bins = self.plot.bins ? self.plot.bins[index] : null
       if (!bins || !bins.length) {
         // not associated with numeric bins
         termValues.push({term, values: [{key, label}]})

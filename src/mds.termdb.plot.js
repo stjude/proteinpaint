@@ -302,12 +302,10 @@ function getDataName(plot) {
 
 function syncParams( plot, data ) {
   if (!data || !data.refs) return
+  plot.bins = data.refs.bins
   for(const i of [0,1,2]) {
     const term = plot.terms[i]
     if (!term || term=='genotype') continue
-    if (data.refs.bins && data.refs.bins[i]) {
-      term.bins = data.refs.bins[i]
-    }
     if (data.refs.q && data.refs.q[i]) {
       if (!term.q) term.q = {}
       const q = data.refs.q[i]

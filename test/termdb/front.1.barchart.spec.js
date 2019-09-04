@@ -240,7 +240,7 @@ tape("click to add numeric, condition term filter", function (test) {
         termfilter.terms[0], 
         {
           term: plot.term,
-          ranges: [plot.term.bins.find(d=>d.label == clickedData.seriesId)]
+          ranges: [plot.bins[1].find(d=>d.label == clickedData.seriesId)]
         },
         "should create a numeric term-value filter with a ranges key"
       ) 
