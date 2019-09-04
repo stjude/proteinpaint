@@ -52,8 +52,11 @@ function processData(self, data) {
   const column_keys = data.refs.rows
   const rows = data.refs.cols.map(t1 => {
     const series = data.charts[0].serieses.find(d => d.seriesId == t1)
+    const label = self.plot.term.values && t1 in self.plot.term.values
+        ? self.plot.term.values[t1].label
+        : t1
     return {
-      label: t1,
+      label,
       lst: !series 
         ? []
         : series
