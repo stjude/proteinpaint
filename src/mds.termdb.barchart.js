@@ -34,15 +34,13 @@ export class TermdbBarchart{
     this.settings = Object.assign(this.defaults, opts.settings)
     this.renderers = {}
     this.handlers = getHandlers(this)
-    this.legendRenderer = htmlLegend(
-      this.dom.legendDiv,
-      {
-        settings: {
-          legendOrientation: 'vertical'
-        },
-        handlers: this.handlers
-      }
-    );
+    this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+      // test pre-commit hook using prettier/precise-commits/husky -- should reformat the argument
+      settings: {
+        legendOrientation: "vertical"
+      },
+      handlers: this.handlers
+    });
     this.terms = {
       term0: null,
       term1: this.opts.term1,
