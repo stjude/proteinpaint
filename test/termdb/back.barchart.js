@@ -369,10 +369,10 @@ function set_condition_fxn(termid, b, tdb, inReq, index) {
 function getPrecomputedKey(q) {
   const precomputedKey = q.bar_by_children && q.value_by_max_grade ? 'childrenAtMaxGrade'
     : q.bar_by_children && q.value_by_most_recent ? 'childrenAtMostRecent'
-    : q.bar_by_children ? 'children'
+    : q.bar_by_children && q.value_by_computable_grade ? 'children'
     : q.bar_by_grade && q.value_by_max_grade ? 'maxGrade'
     : q.bar_by_grade && q.value_by_most_recent ? 'mostRecentGrades'
-    : q.bar_by_grade ? 'computableGrades'
+    : q.bar_by_grade && q.value_by_computable_grade ? 'computableGrades'
     : ''
   if (!precomputedKey) throw `unknown condition term bar_by_* and/or value_by_*`
   return precomputedKey

@@ -593,7 +593,9 @@ function makesql_oneterm_condition ( term, q, ds, filter, values, index='' ) {
 
 	const restriction = q.value_by_max_grade ? 'max_grade'
 			: q.value_by_most_recent ? 'most_recent'
-			: 'computable_grade'
+			: q.value_by_computable_grade ? 'computable_grade'
+      : ''
+  if (!restriction) throw "must set a valid value_by_*"
 	values.push(term.id, value_for)
 	
 	return {
