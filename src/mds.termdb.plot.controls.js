@@ -161,15 +161,14 @@ function setTermInfoBtn(controls){
 
         //create term_info table
         info_div = controls.plot.dom.viz
-
-.append("div")
-           .attr("class", "term_info_div")
-          .style("width", "80vh")
-          .style("padding-bottom", "20px")
-          .style("display", "block")
-          .append("table")
-          .style("white-space", "normal")
-          .append("tbody");;
+					.append("div")
+					.attr("class", "term_info_div")
+					.style("width", "80vh")
+					.style("padding-bottom", "20px")
+					.style("display", "block")
+					.append("table")
+					.style("white-space", "normal")
+					.append("tbody");
 
         make_table(info_div, data);;
       }  else  {
