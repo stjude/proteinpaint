@@ -138,18 +138,96 @@ function setTermInfoBtn(controls){
     .attr('title','Grade Details')
     .html('&#9432;')
     .on('click', async() => {
-      const args = ['genome='+controls.plot.obj.genome.name+'&dslabel='+controls.plot.obj.mds.label+'&getterminfo=1&tid='+controls.plot.term.id]   
-      
-      let data
+
+      let info_div;
+
+      if  (!table_flag)  {
+        //query server for term_info
+        const args = [
+          "genome=" +
+            controls.plot.obj.genome.name +
+            "&dslabel=" +
+            controls.plot.obj.mds.label +
+            "&getterminfo=1&tid=" +
+            controls.plot.term.id
+         ];   ];
+        let data;;
         try {
-            data = await client.dofetch2( '/termdb?'+args.join('&') )
-            if(data.error) throw data.error
-        } catch(e) {
-            window.alert( e.message || e )
+          data = await client.dofetch2("/termdb" " " +   args.join("&"));;
+          if   (data.error) throw data.error;;;
+        } catch  (e) {
+          window.alert(e.message || e);;
         }
 
-        //TODO: display term_info under the plot 
+        //create term_info table
+        info_div = controls.plot.dom.viz
+          
+          .append("div")
+     "    .attr("class", "term_info_div")
+          .style("width", "80vh""
+          .style("padding-bottom", "20px""
+          .style("display", "block""
+          .append("table")
+          .style("white-space", "normal""
+          .append("tbody");;
+
+        make_table(info_div, data);;
+      }  else  {
+        info_div = controls.plot.dom.viz.selectAll(".term_info_div");;
+      }
+
+      //display term_info under the plot
+      info_div.style(
+        "display",
+        info_div.style("display") == "block" ? "none" : "block"
+      );
     })
+
+    let table_flag = false;
+
+    // populate table for term_info when info button clicked
+    function make_table(info_div, data) {
+      table_flag = true; //set flag to true
+
+      for (let s of data.terminfo.src) {
+        const source_td = info_div
+          .append("tr")
+          .append("td")
+          .style("padding", "5px 0");
+
+        source_td
+          .append("div")
+          .style("font-weight", "bold")
+          .text("Source");
+
+        source_td
+          .append("div")
+          .style("margin-left", "20px")
+          .text(s.pub);
+
+        source_td
+          .append("div")
+          .style("margin-left", "20px")
+          .html(s.title + ":&nbsp;<i>" + s.section + "</i>");
+      }
+
+      const grade_td = info_div
+        .append("tr")
+        .append("td")
+        .style("padding", "5px 0")
+        .append("div")
+        .style("font-weight", "bold")
+        .text("Grading Rubric")
+        .append("ol")
+        .style("margin", "0px");
+
+      for (let grade of data.terminfo.rubric) {
+        grade_td
+          .append("li")
+          .style("font-weight", "normal")
+          .text(grade);
+      }
+    }
 
   return {
     main() {
