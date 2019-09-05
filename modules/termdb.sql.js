@@ -247,6 +247,8 @@ q{}
 
 export function get_rows_by_two_keys ( q, t1, t2 ) {
 /*
+XXX only works for two numeric terms, not for any other types
+
 get all sample and value by one key
 no filter or cte
 works for all attributes, including non-termdb ones
