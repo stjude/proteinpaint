@@ -29,7 +29,7 @@
 	},
 	"prettier": {
 		"semi": false,
-		"tabWidth": 4
+		"useTabs": true
 	},
   "author": "",
   "license": "ISC",
