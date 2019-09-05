@@ -897,10 +897,7 @@ thus less things to worry about...
 	} else {
 		throw "neither .file or .file_fullpath is set on ds.cohort.db"
 	}
-	console.log(
-		`DB connected for ${ds.label}: ${ds.cohort.db.file ||
-			ds.cohort.db.file_fullpath}`
-	)
+	console.log(`DB connected for ${ds.label}: ${ds.cohort.db.file || ds.cohort.db.file_fullpath}`)
 
 	ds.cohort.db.connection = cn
 

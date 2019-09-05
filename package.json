@@ -29,7 +29,8 @@
 	},
 	"prettier": {
 		"semi": false,
-		"useTabs": true
+		"useTabs": true,
+		"printWidth": 160
 	},
   "author": "",
   "license": "ISC",
