@@ -1089,4 +1089,21 @@ thus less things to worry about...
 			return s.all(id)
 		}
 	}
+	{
+		//get term_info for a term
+		//rightnow only few conditional terms have grade info
+		const s = cn.prepare('SELECT jsonhtml FROM termhtmldef WHERE id=?')
+		const cache = new Map()
+		q.getTermInfo = (id)=>{
+			if(cache.has(id)) return cache.get(id)
+			const t = s.get( id )
+			if(t) {
+				const j = JSON.parse(t.jsonhtml)
+				j.id = id
+				cache.set(id, j)
+				return j
+			}
+			return undefined
+		}
+	}
 }

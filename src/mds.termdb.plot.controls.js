@@ -46,7 +46,7 @@ export function init(opts) {
   controls.components = {
     burger: setBurgerBtn(controls),
     svg: setSvgBtn(controls),
-    grade_info: setGradeInfoBtn(controls),
+    term_info: setTermInfoBtn(controls),
     config: setConfigDiv(controls),
     barsAs: setBarsAsOpts(controls, 'term', 'Bars as', 1),
     overlay: setOverlayOpts(controls),
@@ -126,7 +126,7 @@ function setSvgBtn(controls) {
   }
 }
 
-function setGradeInfoBtn(controls){
+function setTermInfoBtn(controls){
 
   const info_btn = controls.dom.button_bar.append('div')
     .style('display', controls.plot.term && controls.plot.term.hashtmldetail ? 'block' : 'none')
@@ -137,8 +137,18 @@ function setGradeInfoBtn(controls){
     .style('cursor','pointer')
     .attr('title','Grade Details')
     .html('&#9432;')
-    .on('click', () => {
-      // controls.main(controls.plot)      
+    .on('click', async() => {
+      const args = ['genome='+controls.plot.obj.genome.name+'&dslabel='+controls.plot.obj.mds.label+'&getterminfo=1&tid='+controls.plot.term.id]   
+      
+      let data
+        try {
+            data = await client.dofetch2( '/termdb?'+args.join('&') )
+            if(data.error) throw data.error
+        } catch(e) {
+            window.alert( e.message || e )
+        }
+
+        //TODO: display term_info under the plot 
     })
 
   return {

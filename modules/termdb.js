@@ -51,6 +51,7 @@ return async (req, res) => {
 		if( q.findterm ) return trigger_findterm( q, res, tdb )
 		if( q.treeto ) return trigger_treeto( q, res, tdb )
 		if( q.scatter ) return trigger_scatter( q, res, tdb, ds)
+		if( q.getterminfo ) return trigger_getterminfo( q, res, tdb)
 		if( q.testplot ) return trigger_testplot( q, res, tdb, ds ) // this is required for running test cases!!
 		if( q.phewas ) {
 			if( q.precompute ) return await phewas.do_precompute( q, res, ds )
@@ -216,4 +217,12 @@ function trigger_scatter ( q, res, tdb, ds) {
 		//time: +(new Date()) - startTime
 	}
 	res.send(result)
+}
+
+function trigger_getterminfo( q, res, tdb){
+/* get terminfo the the term
+rightnow only few conditional terms have grade info
+*/
+	if(!q.tid) throw 'no term id'
+	res.send({terminfo: tdb.q.getTermInfo( q.tid ) })
 }
