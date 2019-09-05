@@ -60,7 +60,6 @@ returns:
 	const values = []
 
 	for(const tvs of tvslst) {
-		//let samplein_clause = sampleset_id > 0 ? `sample IN sampleset_${sampleset_id} AND` : ''
 		if(tvs.term.iscategorical) {
 			add_categorical( tvs )
 		} else if(tvs.term.isinteger || tvs.term.isfloat) {
