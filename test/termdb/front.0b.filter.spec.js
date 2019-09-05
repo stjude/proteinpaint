@@ -56,8 +56,8 @@ tape("filter term-value button", function (test) {
   }
 
   function triggerFilterRemove(obj){
-    obj.obj.dom.termfilterdiv.selectAll('.term_remove_btn').node().click()
     obj.bus.on('postRender',[testFilterRemove])
+    obj.obj.dom.termfilterdiv.selectAll('.term_remove_btn').node().click()
   }
 
   function testFilterRemove(obj) {

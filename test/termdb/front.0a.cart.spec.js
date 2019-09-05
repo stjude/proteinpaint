@@ -38,7 +38,7 @@ tape("cart button", function (test) {
       },
       callbacks: {
         tree: {
-          postRender: [testDisplay, triggerClick, triggerEmpty]
+          postRender: [testDisplay, triggerClick]
         }
       },
     }
@@ -49,8 +49,8 @@ tape("cart button", function (test) {
   }
 
   function triggerClick(obj){
+    obj.components.cart.bus.on('postRender',[testSelectedGroupTipDisplay, triggerEmpty])
     obj.dom.cartdiv.node().dispatchEvent(new Event('click', {bubbles: true}))
-    obj.components.cart.bus.on('postRender',testSelectedGroupTipDisplay(obj))
   }
 
   function testSelectedGroupTipDisplay(obj){
@@ -58,8 +58,8 @@ tape("cart button", function (test) {
   }
 
   function triggerEmpty(obj){
+      obj.components.cart.bus.on('postRender',testEmpty)
       obj.tip.d.select('.remove_group_btn').node().dispatchEvent(new Event('click', {bubbles: true}))
-      obj.components.cart.bus.on('postRender',testEmpty(obj))
   }
 
   function testEmpty(obj){
