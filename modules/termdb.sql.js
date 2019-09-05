@@ -377,33 +377,33 @@ filter   returned by makesql_by_tvsfilter
 values[] string/numeric to replace ? in CTEs
 index    0 for term0, 1 for term1, 2 for term2
 */
-	const term_is_genotype = "term" + index + "_is_genotype"
-	const termnum_id = "term" + index + "_id"
-	const termid = q[termnum_id]
-	let term = termid ? q.ds.cohort.termdb.q.termjsonByOneid(termid) : null
-	if (termid && !term && !q[term_is_genotype])
-		throw `unknown ${termnum_id}: ${termid}`
-
-	const termnum_q = "term" + index + "_q"
-	const termq = q[termnum_q]
-	if (termq && typeof termq == "string")
-		q[termnum_q] = JSON.parse(decodeURIComponent(termq))
-	if (!termq) q[termnum_q] = {}
-
-	const tablename = "samplekey_" + index
-
-	const CTE = term
-		? makesql_oneterm(term, filter, q.ds, q[termnum_q], values, index)
-		: {
-				sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
-				tablename,
-				join_on_clause: "" //`ON t${index}.sample IS NULL`
-		  }
-
-	if (index != 1 && !("join_on_clause" in CTE)) {
-		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+	const termid = q["term" + index + "_id"]
+	const term_is_genotype = q["term" + index + "_is_genotype"]
+	if (index == 1 && !term_is_genotype) {
+		// only term1 is required
+		if (!termid) throw "missing term id"
+	} else if (!termid || term_is_genotype) {
+		// term2 and term0 are optional
+		// no table to query
+		const tablename = "samplekey_" + index
+		return {
+			tablename,
+			sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
+			join_on_clause: ""
+		}
 	}
 
+	// otherwise, must be a valid term
+	const term = q.ds.cohort.termdb.q.termjsonByOneid(termid)
+	if (!term) throw "no term found by id"
+	let termq = q["term" + index + "_q"] || {}
+	if (typeof termq == "string") {
+		termq = JSON.parse(decodeURIComponent(termq))
+	}
+	const CTE = makesql_oneterm(term, filter, q.ds, termq, values, index)
+	if (index != 1) {
+		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+	}
 	return CTE
 }
 

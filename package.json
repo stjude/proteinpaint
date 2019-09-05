@@ -24,7 +24,7 @@
   },   
   "husky": {
     "hooks": {
-    	"pre-commit": "FILES=$(git diff --cached --name-only --diff-filter=ACM '*.js' '*.json' | sed 's| |\\ |g') && precise-commits && echo $FILES | xargs git add"
+    	"pre-commit": "FILES=$(git diff --cached --name-only --diff-filter=ACM '*.js' '*.json' | sed 's| |\\ |g') && precise-commits && echo \"$FILES\" | xargs git add"
     }
 	},
 	"prettier": {
