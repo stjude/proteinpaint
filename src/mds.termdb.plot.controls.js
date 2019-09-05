@@ -150,25 +150,25 @@ function setTermInfoBtn(controls){
             controls.plot.obj.mds.label +
             "&getterminfo=1&tid=" +
             controls.plot.term.id
-         ];   ];
-        let data;;
+        ];
+        let data;
         try {
-          data = await client.dofetch2("/termdb" " " +   args.join("&"));;
-          if   (data.error) throw data.error;;;
+          data = await client.dofetch2("/termdb?" + args.join("&"));
+          if (data.error) throw data.error;
         } catch  (e) {
-          window.alert(e.message || e);;
+          window.alert(e.message || e);
         }
 
         //create term_info table
         info_div = controls.plot.dom.viz
-          
-          .append("div")
-     "    .attr("class", "term_info_div")
-          .style("width", "80vh""
-          .style("padding-bottom", "20px""
-          .style("display", "block""
+
+.append("div")
+           .attr("class", "term_info_div")
+          .style("width", "80vh")
+          .style("padding-bottom", "20px")
+          .style("display", "block")
           .append("table")
-          .style("white-space", "normal""
+          .style("white-space", "normal")
           .append("tbody");;
 
         make_table(info_div, data);;
