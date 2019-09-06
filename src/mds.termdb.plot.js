@@ -221,18 +221,14 @@ const serverData = {}
 function requestData(plot) {
   const dataName = getDataName(plot)
   if (serverData[dataName]) {
-    syncParams(plot, serverData[dataName])
-    render(plot, serverData[dataName])
+    syncParams(plot, serverData[dataName]);
+    render(plot, serverData[dataName]);
   }
   else {
-    const route = plot.settings.currViews.includes("scatter") ? "/termdb" : "/termdb-barsql"
+    // test comment to trigger pre-commit hook
+    const route = plot.settings.currViews.includes("scatter") ? "/termdb" : "/termdb-barsql";
     client.dofetch2(route + dataName)
-    .then(chartsData => {
-      serverData[dataName] = chartsData
-      syncParams(plot, serverData[dataName])
-      render(plot, chartsData)
-    })
-    //.catch(window.alert)
+    .then(chartsData => {serverData[dataName] = chartsData; syncParams(plot, serverData[dataName]); render(plot, chartsData)});
   }
 }
 
