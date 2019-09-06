@@ -5,144 +5,144 @@ const serverconfig = require("../../serverconfig")
 const host = "http://localhost:" + serverconfig.port
 
 tape("\n", function(test) {
-  test.pass("-***- mds.termdb.stattable -***-")
-  test.end()
+	test.pass("-***- mds.termdb.stattable -***-")
+	test.end()
 })
 
-tape("barchart-dependent display", function (test) {
-  const div0 = d3s.select('body').append('div')
-  const termfilter = {show_top_ui:true}
-  
-  runproteinpaint({
-    host,
-    holder: div0.node(),
-    noheader:1,
-    nobox:true,
-    display_termdb:{
-      dslabel:'SJLife',
-      genome:'hg38',
-      default_rootterm:{},
-      termfilter,
-      params2restore: {
-        term: termjson["agedx"],
-        term2: termjson["diaggrp"],
-        settings: {
-          currViews: ['table']
-        }
-      },
-      callbacks: {
-        plot: {
-          postRender: [testHiddenWithNoBarchart, triggerViewBarchart]
-        }
-      }
-    }
-  })
+tape("barchart-dependent display", function(test) {
+	const div0 = d3s.select("body").append("div")
+	const termfilter = { show_top_ui: true }
 
-  function testHiddenWithNoBarchart(plot) {
-    test.equal(
-      plot.components.stattable.dom.div.style('display'), 
-      'none', 
-      "should have a HIDDEN stattable when the barchart is not in the settings.currViews array"
-    )
-  }
+	runproteinpaint({
+		host,
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter,
+			params2restore: {
+				term: termjson["agedx"],
+				term2: termjson["diaggrp"],
+				settings: {
+					currViews: ["table"]
+				}
+			},
+			callbacks: {
+				plot: {
+					postRender: [testHiddenWithNoBarchart, triggerViewBarchart]
+				}
+			}
+		}
+	})
 
-  function triggerViewBarchart(plot) {
-    plot.bus.on('postRender', testVisibleWithBarchart)
-    plot.main({
-      settings: {currViews: ["barchart"]}
-    })
-  }
+	function testHiddenWithNoBarchart(plot) {
+		test.equal(
+			plot.components.stattable.dom.div.style("display"),
+			"none",
+			"should have a HIDDEN stattable when the barchart is not in the settings.currViews array"
+		)
+	}
 
-  function testVisibleWithBarchart(plot) {
-    test.equal(
-      plot.components.stattable.dom.div.style('display'), 
-      'block', 
-      "should have a visible stattable when the barchart is in the settings.currViews array"
-    )
-    test.end()
-  }
+	function triggerViewBarchart(plot) {
+		plot.bus.on("postRender", testVisibleWithBarchart)
+		plot.main({
+			settings: { currViews: ["barchart"] }
+		})
+	}
+
+	function testVisibleWithBarchart(plot) {
+		test.equal(
+			plot.components.stattable.dom.div.style("display"),
+			"block",
+			"should have a visible stattable when the barchart is in the settings.currViews array"
+		)
+		test.end()
+	}
 })
 
-tape("term.isfloat-dependent display", function (test) {
-  const div0 = d3s.select('body').append('div')
-  
-  runproteinpaint({
-    holder: div0.node(),
-    noheader:1,
-    nobox:true,
-    display_termdb:{
-      dslabel:'SJLife',
-      genome:'hg38',
-      default_rootterm:{},
-      termfilter:{show_top_ui:false},
-      params2restore: {
-        term: termjson["diaggrp"],
-        settings: {
-          currViews: ['barchart']
-        }
-      },
-      callbacks: {
-        plot: {
-          postRender: [testHiddenIfCategoricalTerm, triggerNumericTerm]
-        }
-      },
-    }
-  })
+tape("term.isfloat-dependent display", function(test) {
+	const div0 = d3s.select("body").append("div")
 
-  function testHiddenIfCategoricalTerm(plot) {
-    test.equal(
-      plot.components.stattable.dom.div.style('display'), 
-      'none', 
-      "should have a HIDDEN stattable when plot.term.iscategorical"
-    )
-  }
+	runproteinpaint({
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter: { show_top_ui: false },
+			params2restore: {
+				term: termjson["diaggrp"],
+				settings: {
+					currViews: ["barchart"]
+				}
+			},
+			callbacks: {
+				plot: {
+					postRender: [testHiddenIfCategoricalTerm, triggerNumericTerm]
+				}
+			}
+		}
+	})
 
-  function triggerNumericTerm(plot) {
-    plot.bus.on('postRender', testVisibleWithNumericTerm)
-    plot.main({
-      term: {term: termjson["agedx"]}
-    })
-  }
+	function testHiddenIfCategoricalTerm(plot) {
+		test.equal(
+			plot.components.stattable.dom.div.style("display"),
+			"none",
+			"should have a HIDDEN stattable when plot.term.iscategorical"
+		)
+	}
 
-  function testVisibleWithNumericTerm(plot) {
-    test.equal(
-      plot.components.stattable.dom.div.style('display'), 
-      'block', 
-      "should have a visible stattable when plot.term is numeric"
-    )
-  }
+	function triggerNumericTerm(plot) {
+		plot.bus.on("postRender", testVisibleWithNumericTerm)
+		plot.main({
+			term: { term: termjson["agedx"] }
+		})
+	}
 
-  const div1 = d3s.select('body').append('div')
-  
-  runproteinpaint({
-    holder: div1.node(),
-    noheader:1,
-    nobox:true,
-    display_termdb:{
-      dslabel:'SJLife',
-      genome:'hg38',
-      default_rootterm:{},
-      termfilter:{show_top_ui:false},
-      params2restore: {
-        term: termjson["Arrhythmias"],
-        settings: {
-          currViews: ['barchart']
-        }
-      },
-      callbacks: {
-        plot: {
-          postRender: testHiddenIfConditionTerm
-        }
-      },
-    }
-  })
+	function testVisibleWithNumericTerm(plot) {
+		test.equal(
+			plot.components.stattable.dom.div.style("display"),
+			"block",
+			"should have a visible stattable when plot.term is numeric"
+		)
+	}
 
-  function testHiddenIfConditionTerm(plot) {
-    test.equal(
-      plot.components.stattable.dom.div.style('display'), 
-      'none', 
-      "should have a HIDDEN stattable when plot.term.iscondition"
-    )
-    test.end()
-  }
+	const div1 = d3s.select("body").append("div")
+
+	runproteinpaint({
+		holder: div1.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter: { show_top_ui: false },
+			params2restore: {
+				term: termjson["Arrhythmias"],
+				settings: {
+					currViews: ["barchart"]
+				}
+			},
+			callbacks: {
+				plot: {
+					postRender: testHiddenIfConditionTerm
+				}
+			}
+		}
+	})
+
+	function testHiddenIfConditionTerm(plot) {
+		test.equal(
+			plot.components.stattable.dom.div.style("display"),
+			"none",
+			"should have a HIDDEN stattable when plot.term.iscondition"
+		)
+		test.end()
+	}
 })
