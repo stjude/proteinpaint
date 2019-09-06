@@ -43,6 +43,7 @@ export function getFilterUi(obj) {
     }
   
     termvaluesettingui.display(tvsuiObj)
+    obj.tvstip = tvsuiObj.tvstip
 
   return {
     main() {

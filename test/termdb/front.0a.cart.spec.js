@@ -74,8 +74,8 @@ tape("cart button", function(test) {
 })
 
 tape("cart selected group tip", function(test) {
-	test.timeoutAfter(2000)
-	test.plan(3)
+	test.timeoutAfter(1000)
+	test.plan(2)
 	const div0 = d3s.select("body").append("div")
 	const termfilter = { show_top_ui: true }
 
@@ -120,7 +120,7 @@ tape("cart selected group tip", function(test) {
 	}
 
 	function triggerRemoveTerm(obj) {
-		obj.components.cart.bus.on("postRender", [testRemoveTerm, triggerAddTerm])
+		obj.components.cart.bus.on("postRender", testRemoveTerm)
 		setTimeout(
 			() =>
 				obj.tip.d
@@ -132,40 +132,9 @@ tape("cart selected group tip", function(test) {
 	}
 
 	function testRemoveTerm(obj) {
-		test.equal(obj.tip.d.selectAll(".term_name_btn").size(), 0, "should remove blue-pill from the group")
-	}
-
-	function triggerAddTerm(obj) {
-		setTimeout(
-			() =>
-				obj.tip.d
-					.selectAll(".add_term_btn")
-					.node()
-					.click(),
-			100
-		)
-		setTimeout(
-			() =>
-				obj.tvstip.d
-					.selectAll(".sja_menuoption")
-					.node()
-					.click(),
-			150
-		)
-		setTimeout(() => obj.tvstip.d.selectAll(".sja_menuoption")._groups[0][1].click(), 250)
-		setTimeout(() => obj.tvstip.d.selectAll(".sja_menuoption")._groups[0][2].click(), 350)
-		setTimeout(() => {
-			const elem = obj.tvstip.d.select(".bars-cell").select("rect")
-			elem.node().dispatchEvent(new Event("click", { bubbles: true }))
-			testAddTerm(obj)
-		}, 1000)
-	}
-
-	function testAddTerm(obj) {
-		obj.components.cart.bus.on("postRender", null)
-		test.equal(obj.tip.d.selectAll(".term_name_btn").size(), 1, "should add term button to cart")
-		obj.tip.hide()
-		test.end()
+    test.equal(obj.tip.d.selectAll(".term_name_btn").size(), 0, "should remove blue-pill from the group")
+    obj.tip.hide()
+    test.end()
 	}
 })
 
