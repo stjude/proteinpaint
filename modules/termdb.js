@@ -64,8 +64,9 @@ export function handle_request_closure(genomes) {
 }
 
 function trigger_gettermbyid(q, res, tdb) {
+	const t = tdb.q.termjsonByOneid(q.gettermbyid)
 	res.send({
-		term: tdb.q.termjsonByOneid(q.gettermbyid)
+		term: t ? copy_term(t) : undefined
 	})
 }
 
