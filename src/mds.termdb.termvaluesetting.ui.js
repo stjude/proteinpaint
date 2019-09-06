@@ -515,9 +515,10 @@ group{}
         add_value_select.on('change',async()=>{
 
             if(add_value_select.node().value == 'add_bin'){
-                const range = {start:'', stop:''}
-                edit_numeric_bin(add_value_btn, range, terms_div)
-                selected_values.push(range)
+                const range_temp = { start: "", stop: "" }
+								edit_numeric_bin(add_value_btn, range_temp, range => {
+									selected_values.push(range)
+								})
             }else{
                 //change value of button 
                 const new_value = data.lst.find( j=> j.key == add_value_select.node().value )
@@ -712,7 +713,7 @@ group{}
                 }
             
                 numeric_div.on('click', ()=>{
-                    edit_numeric_bin(numeric_div, range, terms_div)
+                    edit_numeric_bin(numeric_div, range)
                 })
             }
 
@@ -733,116 +734,110 @@ group{}
         make_plus_btn(value_div, unannotated_cats, numeric_term.ranges, terms_div)
     }
 
-    function edit_numeric_bin(holder, range, terms_div){
-        obj.tvstip.clear()
-            
-        const equation_div = obj.tvstip.d.append('div')
-            .style('display','block')
-            .style('padding','3px 5px')
+    function edit_numeric_bin(holder, range, callback) {
+			obj.tvstip.clear()
 
-        const start_input = equation_div.append('input')
-            .attr('type','number')
-            .attr('value',range.start)
-            .style('width','60px')
-            .on('keyup', async ()=>{
-                if(!client.keyupEnter()) return
-                start_input.property('disabled',true)
-                await apply()
-                start_input.property('disabled',false)
-            })
+			const equation_div = obj.tvstip.d
+				.append("div")
+				.style("display", "block")
+				.style("padding", "3px 5px")
 
-        // to replace operator_start_div
-        const startselect = equation_div.append('select')
-        .style('margin-left','10px')
+			const start_input = equation_div
+				.append("input")
+				.attr("type", "number")
+				.attr("value", range.start)
+				.style("width", "60px")
+				.on("keyup", async () => {
+					if (!client.keyupEnter()) return
+					start_input.property("disabled", true)
+					await apply()
+					start_input.property("disabled", false)
+				})
 
-        startselect.append('option')
-            .html('&le;')
-        startselect.append('option')
-            .html('&lt;')
-        startselect.append('option')
-            .html('&#8734;')
+			// to replace operator_start_div
+			const startselect = equation_div.append("select").style("margin-left", "10px")
 
-        startselect.node().selectedIndex =
-            range.startunbounded ? 2 :
-            range.startinclusive ? 0 : 1
+			startselect.append("option").html("&le;")
+			startselect.append("option").html("&lt;")
+			startselect.append("option").html("&#8734;")
 
-        const x = '<span style="font-family:Times;font-style:italic">x</span>'
+			startselect.node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
 
-        equation_div.append('div')
-            .style('display','inline-block')
-            .style('padding','3px 10px')
-            .html(x)
+			const x = '<span style="font-family:Times;font-style:italic">x</span>'
 
-        // to replace operator_end_div
-        const stopselect = equation_div.append('select')
-            .style('margin-right','10px')
+			equation_div
+				.append("div")
+				.style("display", "inline-block")
+				.style("padding", "3px 10px")
+				.html(x)
 
-        stopselect.append('option')
-            .html('&le;')
-        stopselect.append('option')
-            .html('&lt;')
-        stopselect.append('option')
-            .html('&#8734;')
+			// to replace operator_end_div
+			const stopselect = equation_div.append("select").style("margin-right", "10px")
 
-        stopselect.node().selectedIndex =
-            range.stopunbounded ? 2 :
-            range.stopinclusive ? 0 : 1
+			stopselect.append("option").html("&le;")
+			stopselect.append("option").html("&lt;")
+			stopselect.append("option").html("&#8734;")
 
-        const stop_input = equation_div.append('input')
-            .attr('type','number')
-            .style('width','60px')
-            .attr('value',range.stop)
-            .on('keyup', async ()=>{
-                if(!client.keyupEnter()) return
-                stop_input.property('disabled',true)
-                await apply()
-                stop_input.property('disabled',false)
-            })
+			stopselect.node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
 
-        obj.tvstip.d.append('div')
-            .attr('class','sja_menuoption')
-            .style('text-align','center')
-            .text('APPLY')
-            .on('click', ()=>{
-                obj.tvstip.hide()
-                apply()
-            })
+			const stop_input = equation_div
+				.append("input")
+				.attr("type", "number")
+				.style("width", "60px")
+				.attr("value", range.stop)
+				.on("keyup", async () => {
+					if (!client.keyupEnter()) return
+					stop_input.property("disabled", true)
+					await apply()
+					stop_input.property("disabled", false)
+				})
 
-        // tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
-        obj.tvstip.showunder( holder.node() )
+			obj.tvstip.d
+				.append("div")
+				.attr("class", "sja_menuoption")
+				.style("text-align", "center")
+				.text("APPLY")
+				.on("click", () => {
+					obj.tvstip.hide()
+					apply()
+				})
 
-        async function apply () {
-            try {
-                if(startselect.node().selectedIndex==2 && stopselect.node().selectedIndex==2) throw 'Both ends can not be unbounded'
+			// tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
+			obj.tvstip.showunder(holder.node())
 
-                const start = startselect.node().selectedIndex==2 ? null : Number( start_input.node().value )
-                const stop  = stopselect.node().selectedIndex==2  ? null : Number( stop_input.node().value )
-                if( start!=null && stop!=null && start>=stop ) throw 'start must be lower than stop'
+			async function apply() {
+				try {
+					if (startselect.node().selectedIndex == 2 && stopselect.node().selectedIndex == 2) throw "Both ends can not be unbounded"
 
-                if( startselect.node().selectedIndex == 2 ) {
-                    range.startunbounded = true
-                    delete range.start
-                } else {
-                    delete range.startunbounded
-                    range.start = start
-                    range.startinclusive = startselect.node().selectedIndex == 0
-                }
-                if( stopselect.node().selectedIndex == 2 ) {
-                    range.stopunbounded = true
-                    delete range.stop
-                } else {
-                    delete range.stopunbounded
-                    range.stop = stop
-                    range.stopinclusive = stopselect.node().selectedIndex == 0
-                }
-                // display_numeric_filter(group, term_index, value_div)
-                obj.tvstip.hide()
-                await obj.callback()
-            } catch(e) {
-                window.alert(e)
-            }
-        }
-    }
+					const start = startselect.node().selectedIndex == 2 ? null : Number(start_input.node().value)
+					const stop = stopselect.node().selectedIndex == 2 ? null : Number(stop_input.node().value)
+					if (start != null && stop != null && start >= stop) throw "start must be lower than stop"
+
+					if (startselect.node().selectedIndex == 2) {
+						range.startunbounded = true
+						delete range.start
+					} else {
+						delete range.startunbounded
+						range.start = start
+						range.startinclusive = startselect.node().selectedIndex == 0
+					}
+					if (stopselect.node().selectedIndex == 2) {
+						range.stopunbounded = true
+						delete range.stop
+					} else {
+						delete range.stopunbounded
+						range.stop = stop
+						range.stopinclusive = stopselect.node().selectedIndex == 0
+					}
+					// display_numeric_filter(group, term_index, value_div)
+					obj.tvstip.hide()
+					await obj.callback()
+					if (callback) callback(range)
+				} catch (e) {
+					window.alert(e)
+				}
+			}
+		}
 }
 
 
