@@ -7,7 +7,7 @@ echo "Prettifying $FILES ..."
 
 # Prettify all selected files
 # configuration are under the `"prettier": {}` object in package.json
-echo "$FILES" | xargs ./node_modules/.bin/prettier --write
+echo "$FILES" | xargs ./node_modules/.bin/prettier --no-semi --use-tabs --write
 
 # Add back the modified/prettified files to staging
 echo "$FILES" | xargs git add
