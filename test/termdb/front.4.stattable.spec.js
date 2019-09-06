@@ -23,7 +23,7 @@ tape("barchart-dependent display", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter,
-			params2restore: {
+			plot2restore: {
 				term: termjson["agedx"],
 				term2: termjson["diaggrp"],
 				settings: {
@@ -75,7 +75,7 @@ tape("term.isfloat-dependent display", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter: { show_top_ui: false },
-			params2restore: {
+			plot2restore: {
 				term: termjson["diaggrp"],
 				settings: {
 					currViews: ["barchart"]
@@ -123,7 +123,7 @@ tape("term.isfloat-dependent display", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter: { show_top_ui: false },
-			params2restore: {
+			plot2restore: {
 				term: termjson["Arrhythmias"],
 				settings: {
 					currViews: ["barchart"]

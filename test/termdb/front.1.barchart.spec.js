@@ -23,7 +23,7 @@ tape("single barchart, categorical bars + click", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter,
-			params2restore: {
+			plot2restore: {
 				term: termjson["diaggrp"],
 				settings: {
 					currViews: ["barchart"]
@@ -116,7 +116,7 @@ tape("single chart, with overlay", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter,
-			params2restore: {
+			plot2restore: {
 				term: termjson["diaggrp"],
 				term2: termjson["agedx"],
 				settings: {
@@ -175,7 +175,7 @@ tape("single chart, genotype overlay", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter,
-			params2restore: {
+			plot2restore: {
 				term: termjson["diaggrp"],
 				term2: "genotype",
 				settings: {
@@ -220,7 +220,7 @@ tape("click to add numeric, condition term filter", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter,
-			params2restore: {
+			plot2restore: {
 				term: termjson["agedx"],
 				term2: Object.assign(termjson["Arrhythmias"], { q: {} }),
 				settings: {
@@ -301,7 +301,7 @@ tape("click to condition grade and child term filter ", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter,
-			params2restore: {
+			plot2restore: {
 				term: Object.assign({}, termjson["Arrhythmias"], { q: { bar_by_grade: 1, value_by_max_grade: 1 } }),
 				term2: Object.assign({}, termjson["Arrhythmias"], { q: { bar_by_children: 1, value_by_max_grade: 1 } }),
 				settings: {
@@ -364,7 +364,7 @@ tape("multiple charts", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter: { show_top_ui: false },
-			params2restore: {
+			plot2restore: {
 				term: termjson["diaggrp"],
 				term0: termjson["agedx"],
 				settings: {
@@ -399,7 +399,7 @@ tape("series visibility", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter: { show_top_ui: false },
-			params2restore: {
+			plot2restore: {
 				term: termjson["aaclassic_5"],
 				settings: {
 					currViews: ["barchart"]

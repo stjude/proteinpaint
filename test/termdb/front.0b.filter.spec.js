@@ -36,7 +36,7 @@ tape("filter term-value button", function(test) {
 			bar_click_menu: {
 				add_filter: true
 			},
-			params2restore: {
+			plot2restore: {
 				term: termjson["diaggrp"],
 				settings: {
 					currViews: ["barchart"]

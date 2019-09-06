@@ -23,7 +23,7 @@ tape("overlay-dependent display", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter,
-			params2restore: {
+			plot2restore: {
 				term: termjson["agedx"],
 				settings: {
 					currViews: ["table"]
