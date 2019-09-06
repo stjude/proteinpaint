@@ -128,11 +128,7 @@ returns:
 			excludevalues = Object.keys(term.values)
 				.filter(key => term.values[key].uncomputable)
 				.map(Number)
-				.filter(
-					key =>
-						tvs.isnot ||
-						!tvs.ranges.find(range => "value" in range && range.value === key)
-				)
+				.filter(key => tvs.isnot || !tvs.ranges.find(range => "value" in range && range.value === key))
 			if (excludevalues.length) values.push(...excludevalues)
 		}
 
@@ -141,11 +137,7 @@ returns:
 			FROM annotations
 			WHERE term_id = ?
 			AND ( ${rangeclauses.join(" OR ")} )
-			${
-				excludevalues && excludevalues.length
-					? `AND ${cast} NOT IN (${excludevalues.map(d => "?").join(",")})`
-					: ""
-			}`
+			${excludevalues && excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d => "?").join(",")})` : ""}`
 		)
 	}
 
@@ -248,21 +240,17 @@ q{}
 
 	const t1excluded = t1.values
 		? Object.keys(t1.values)
+				.filter(i => t1.values[i].uncomputable)
 				.map(Number)
-				.filter(i => i.uncomputable)
 		: []
-	const t1unannovals = t1excluded.length
-		? `AND value NOT IN (${t1excluded.join(",")})`
-		: ""
+	const t1unannovals = t1excluded.length ? `AND value NOT IN (${t1excluded.join(",")})` : ""
 
 	const t2excluded = t2.values
 		? Object.keys(t2.values)
+				.filter(i => t2.values[i].uncomputable)
 				.map(Number)
-				.filter(i => i.uncomputable)
 		: []
-	const t2unannovals = t2excluded.length
-		? `AND value NOT IN (${t2excluded.join(",")})`
-		: ""
+	const t2unannovals = t2excluded.length ? `AND value NOT IN (${t2excluded.join(",")})` : ""
 
 	const sql = `WITH
     ${filter ? filter.filters + "," : ""}
@@ -319,8 +307,7 @@ opts{} options to tweak the query, see const default_opts = below
 							  or +" ORDER BY ..." + " LIMIT ..."
 
 */
-	if (typeof q.tvslst == "string")
-		q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+	if (typeof q.tvslst == "string") q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 
 	// do not break code that still uses the opts.groupby key-value
 	// can take this out once all calling code has been migrated
@@ -568,8 +555,7 @@ function makesql_oneterm_condition(term, q, ds, filter, values, index = "") {
 	const term_table = "term_table_" + index
 	const out_table = "out_table_" + index
 	const value_for = q.bar_by_children ? "child" : q.bar_by_grade ? "grade" : ""
-	if (!value_for)
-		throw "must set the bar_by_grade or bar_by_children query parameter"
+	if (!value_for) throw "must set the bar_by_grade or bar_by_children query parameter"
 
 	const restriction = q.value_by_max_grade
 		? "max_grade"
@@ -719,32 +705,18 @@ ds
 	if (!binconfig) throw "unable to determine the binning configuration"
 	q.binconfig = binconfig
 
-	const bins = binsmodule.compute_bins(binconfig, percentiles =>
-		get_numericMinMaxPct(ds, term, q.tvslst, percentiles)
-	)
+	const bins = binsmodule.compute_bins(binconfig, percentiles => get_numericMinMaxPct(ds, term, q.tvslst, percentiles))
 	return [bins, binconfig]
 }
 
-export function get_numericsummary(
-	q,
-	term,
-	ds,
-	_tvslst = [],
-	withValues = false
-) {
+export function get_numericsummary(q, term, ds, _tvslst = [], withValues = false) {
 	/*
 to produce the summary table of mean, median, percentiles
 at a numeric barchart
 */
-	const tvslst =
-		typeof _tvslst == "string"
-			? JSON.parse(decodeURIComponent(_tvslst))
-			: _tvslst
+	const tvslst = typeof _tvslst == "string" ? JSON.parse(decodeURIComponent(_tvslst)) : _tvslst
 
-	if (
-		(term.isinteger || term.isfloat) &&
-		!tvslst.find(tv => tv.term.id == term.id && "ranges" in tv)
-	) {
+	if ((term.isinteger || term.isfloat) && !tvslst.find(tv => tv.term.id == term.id && "ranges" in tv)) {
 		const [bins, binconfig] = get_bins(q, term, ds)
 		tvslst.push({ term, ranges: bins })
 	}
@@ -753,20 +725,14 @@ at a numeric barchart
 	if (filter) {
 		values.push(...filter.values)
 	}
-	const excludevalues = term.values
-		? Object.keys(term.values).filter(key => term.values[key].uncomputable)
-		: []
+	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
 	const string = `${filter ? "WITH " + filter.filters + " " : ""}
 		SELECT CAST(value AS ${term.isinteger ? "INT" : "REAL"}) AS value
 		FROM annotations
 		WHERE
 		${filter ? "sample IN " + filter.CTEname + " AND " : ""}
 		term_id=?
-		${
-			excludevalues.lenth
-				? "AND value NOT IN (" + excludevalues.join(",") + ")"
-				: ""
-		}`
+		${excludevalues.lenth ? "AND value NOT IN (" + excludevalues.join(",") + ")" : ""}`
 	values.push(term.id)
 
 	const s = ds.cohort.db.connection.prepare(string)
@@ -775,9 +741,7 @@ at a numeric barchart
 	result.sort((i, j) => i.value - j.value)
 
 	const stat = app.boxplot_getvalue(result)
-	stat.mean = result.length
-		? result.reduce((s, i) => s + i.value, 0) / result.length
-		: 0
+	stat.mean = result.length ? result.reduce((s, i) => s + i.value, 0) / result.length : 0
 
 	let sd = 0
 	for (const i of result) {
@@ -811,9 +775,7 @@ export function get_numericMinMaxPct(ds, term, tvslst = [], percentiles = []) {
 	if (filter) {
 		values.push(...filter.values)
 	}
-	const excludevalues = term.values
-		? Object.keys(term.values).filter(key => term.values[key].uncomputable)
-		: []
+	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
 	values.push(term.id)
 
 	const ctes = []
@@ -848,11 +810,7 @@ export function get_numericMinMaxPct(ds, term, tvslst = [], percentiles = []) {
 			WHERE
 			${filter ? "sample IN " + filter.CTEname + " AND " : ""}
 			term_id=?
-			${
-				excludevalues.length
-					? "AND value NOT IN (" + excludevalues.join(",") + ")"
-					: ""
-			}
+			${excludevalues.length ? "AND value NOT IN (" + excludevalues.join(",") + ")" : ""}
 			ORDER BY value ASC
 		),
 		p AS (
@@ -969,9 +927,7 @@ thus less things to worry about...
 	}
 
 	{
-		const s = cn.prepare(
-			"SELECT id,jsondata FROM terms WHERE parent_id is null"
-		)
+		const s = cn.prepare("SELECT id,jsondata FROM terms WHERE parent_id is null")
 		let cache = null
 		q.getRootTerms = () => {
 			if (cache) return cache
@@ -1022,9 +978,7 @@ thus less things to worry about...
 		}
 	}
 	{
-		const s = cn.prepare(
-			"SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)"
-		)
+		const s = cn.prepare("SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)")
 		const cache = new Map()
 		q.getTermChildren = id => {
 			if (cache.has(id)) return cache.get(id)
@@ -1060,12 +1014,8 @@ thus less things to worry about...
 		}
 	}
 	{
-		const s1 = cn.prepare(
-			"SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?"
-		)
-		const s2 = cn.prepare(
-			"SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?"
-		)
+		const s1 = cn.prepare("SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?")
+		const s2 = cn.prepare("SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?")
 		const cache = new Map()
 		q.findTermMaxvalue = (id, isint) => {
 			if (cache.has(id)) return cache.get(id)
@@ -1088,12 +1038,12 @@ thus less things to worry about...
 	{
 		//get term_info for a term
 		//rightnow only few conditional terms have grade info
-		const s = cn.prepare('SELECT jsonhtml FROM termhtmldef WHERE id=?')
+		const s = cn.prepare("SELECT jsonhtml FROM termhtmldef WHERE id=?")
 		const cache = new Map()
-		q.getTermInfo = (id)=>{
-			if(cache.has(id)) return cache.get(id)
-			const t = s.get( id )
-			if(t) {
+		q.getTermInfo = id => {
+			if (cache.has(id)) return cache.get(id)
+			const t = s.get(id)
+			if (t) {
 				const j = JSON.parse(t.jsonhtml)
 				j.id = id
 				cache.set(id, j)
