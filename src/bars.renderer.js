@@ -159,7 +159,7 @@ export default function barsRenderer(barsapp, holder) {
     c.each(updateColLabel);
     c.enter()
       .append("g")
-      .each(addColLabel);
+      .each(addColLabel)
 
     const r = rowlabels
       .attr("transform", rowLabelsTransform)
@@ -583,12 +583,14 @@ export default function barsRenderer(barsapp, holder) {
       .style("opacity", 1);
   }
 
-  function updateColLabel() {
-    const g = select(this);
+  function updateColLabel(d) {
+    const g = select(this).datum(d);
 
-    g.attr("transform", colLabelTransform); //.transition().duration(hm.duration)
+    g.attr("transform", colLabelTransform)
 
-    g.selectAll("text") //.transition().duration(hm.duration)
+    g.selectAll("text")
+      .datum(d)
+    //.transition().duration(hm.duration)
       //.attr('transform', 'rotate(-90)')
       .attr("y", 2) //hm.colw / 3)
       .attr("text-anchor", "end")
@@ -620,7 +622,7 @@ export default function barsRenderer(barsapp, holder) {
     if (!this || d === undefined) return;
     const g = select(this)
       .attr("transform", rowLabelTransform)
-      .style("opacity", 0);
+      .style("opacity", 0)
 
     g.append("text")
       .attr("x", 2) //hm.colw / 3)
@@ -634,12 +636,14 @@ export default function barsRenderer(barsapp, holder) {
       .style("opacity", 1);
   }
 
-  function updateRowLabel() {
-    const g = select(this);
+  function updateRowLabel(d) {
+    const g = select(this).datum(d)
 
     g.attr("transform", rowLabelTransform); //.transition().duration(hm.duration)
 
-    g.selectAll("text") //.transition().duration(hm.duration)
+    g.selectAll("text")
+      .datum(d) 
+    //.transition().duration(hm.duration)
       //.attr('transform', 'rotate(-90)')
       .attr("x", 2) //hm.colw / 3)
       .attr("text-anchor", "end")

@@ -6,6 +6,13 @@ const barchart_data = require("./back.barchart").barchart_data
 
 
 function compareResponseData(test, params, mssg) {
+  /* 
+    RECOMMENDED:
+    In case of failing tests, 
+    run test/test.server.js instead for easier 
+    inspection and comparison of server response
+    instead of adjusting i, j, k, ... below
+  */
   // i=series start, j=series end, k=chart index
   // for debugging result data, set i < j to slice chart.serieses
   const i=0, j=0, k=0, l=0, refkey='';

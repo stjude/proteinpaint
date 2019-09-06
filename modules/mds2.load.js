@@ -136,6 +136,7 @@ async function get_ds ( q, genome ) {
 		if(!ds.track) throw 'no mds2 track found for dataset'
 		return ds
 	}
+
 	// is custom mds2 track, synthesize ds object
 	const ds = {
 		iscustom: 1,
@@ -144,6 +145,11 @@ async function get_ds ( q, genome ) {
 	if( q.vcf ) {
 		ds.track.vcf = q.vcf
 		await utils.init_one_vcf( ds.track.vcf, genome )
+	}
+
+	if( q.ld ) {
+		// TODO
+		// must add viewrangelimit
 	}
 
 	// other type of tracks

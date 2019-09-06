@@ -34,15 +34,12 @@ export class TermdbBarchart{
     this.settings = Object.assign(this.defaults, opts.settings)
     this.renderers = {}
     this.handlers = getHandlers(this)
-    this.legendRenderer = htmlLegend(
-      this.dom.legendDiv,
-      {
+    this.legendRenderer = htmlLegend(this.dom.legendDiv, {
         settings: {
-          legendOrientation: 'vertical'
+            legendOrientation: "vertical"
         },
         handlers: this.handlers
-      }
-    );
+    })
     this.terms = {
       term0: null,
       term1: this.opts.term1,
@@ -169,12 +166,15 @@ export class TermdbBarchart{
     }
 
     self.setMaxVisibleTotals(chartsData)
-    const rows = chartsData.refs.rows;
+    const rows = chartsData.refs.rows
 
     self.barSorter = (a,b) => this.seriesOrder.indexOf(a) - this.seriesOrder.indexOf(b)
     self.overlaySorter = chartsData.refs.useRowOrder
       ? (a,b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
-      : (a,b) => this.totalsByDataId[b.dataId] - this.totalsByDataId[a.dataId]
+      : (a,b) => this.totalsByDataId[b.dataId] > this.totalsByDataId[a.dataId] ? 1 
+        : this.totalsByDataId[b.dataId] < this.totalsByDataId[a.dataId] ? -1
+        : a.dataId < b.dataId ? -1
+        : 1;
 
     self.visibleCharts = chartsData.charts.filter(chart=>chart.visibleSerieses.length)
     const charts = this.dom.barDiv.selectAll('.pp-sbar-div')
@@ -235,7 +235,7 @@ export class TermdbBarchart{
           if (!(series.seriesId in addlSeriesIds)) addlSeriesIds[series.seriesId] = 0
           addlSeriesIds[series.seriesId] += series.visibleTotal
         }
-        for(const data of series.visibleData) {
+        for(const data of series.data) {
           if (!(data.dataId in this.totalsByDataId)) {
             this.totalsByDataId[data.dataId] = 0
           }
@@ -338,6 +338,7 @@ export class TermdbBarchart{
             type: 'col'
           }
         })
+        .sort(this.barSorter)
 
       if (items.length) {
         legendGrps.push({
@@ -356,10 +357,7 @@ export class TermdbBarchart{
       legendGrps.push({
         name: t.name + (value_by_label ? ', '+value_by_label : ''),
         items: s.rows.map(d => {
-          const chartReducer = (sum, chart) => sum + chart.serieses.reduce(seriesReducer,0)
-          const seriesReducer = (sum, series) => sum + series.data.reduce(dataReducer,0)
-          const dataReducer = (sum, data) => sum + (d == data.dataId ? data.total : 0)
-          const total = this.currServerData.charts.reduce(chartReducer, 0)
+          const total = this.totalsByDataId[d]
           const ntotal =  total ? ", n="+total : ''
           const label = this.terms.term2.values && d in this.terms.term2.values
             ? this.terms.term2.values[d].label

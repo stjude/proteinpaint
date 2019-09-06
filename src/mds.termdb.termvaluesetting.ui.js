@@ -328,8 +328,6 @@ group{}
                         }
                     }
 
-                    make_grade_select_btn(one_term_div, term, terms_div)
-
                     make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
 
                 }else if(term.bar_by_grade){
@@ -338,6 +336,7 @@ group{}
                     const lst = ['bar_by_grade=1']
                     if (term.value_by_max_grade) lst.push('value_by_max_grade=1')
                     else if(term.value_by_most_recent)lst.push('value_by_most_recent=1')
+                    else if(term.value_by_computable_grade)lst.push('value_by_computable_grade=1')
                     const data = await getcategories(term, lst)
 
                     for (let j=0; j<term.values.length; j++){
@@ -555,6 +554,10 @@ group{}
             .attr('value','recent')
             .text('Most recent grade per patient')
 
+        grade_type_select.append('option')
+            .attr('value','computable')
+            .text('Any grade per patient')
+
         grade_type_btn
             .style('padding','2px 4px 3px 4px')
             .style('margin-right','1px')
@@ -568,6 +571,9 @@ group{}
         }else if(term.value_by_most_recent){
             grade_type_btn.html('(Most recent grade per patient) &#9662;')
             grade_type_select.node().value = 'recent'
+        }else if(term.value_by_computable_grade){
+            grade_type_btn.html('(Any grade per patient) &#9662;')
+            grade_type_select.node().value = 'computable'
         }
 
         grade_type_select.style('width',grade_type_btn.node().offsetWidth+'px')
@@ -578,9 +584,15 @@ group{}
             if(grade_type_select.node().value == 'max'){
                 term.value_by_max_grade = true
                 term.value_by_most_recent = false
-            }else{
+                term.value_by_computable_grade = false
+            }else if(grade_type_select.node().value == 'recent'){
                 term.value_by_max_grade = false
                 term.value_by_most_recent = true
+                term.value_by_computable_grade = false
+            }else if(grade_type_select.node().value == 'computable'){
+                term.value_by_max_grade = false
+                term.value_by_most_recent = false
+                term.value_by_computable_grade = true
             }
 
             //update gorup and load tk

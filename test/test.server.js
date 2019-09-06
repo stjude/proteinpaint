@@ -10,18 +10,42 @@
     reloaded as part of each termdb.sql.spec test run.
 
 
-  Use `npm run test-barsql` to run all termdb.sql.spec tests
+  Use `npm run test-back` to run all termdb/back.sql.spec.js tests
   Use this to help isolate and troubleshoot a failing test.
   
   --------------------------------
   To try this for troubleshooting:
   -------------------------------- 
   
-  `node test/test.server.js`
+  `npm run test-response`
   
   then load this in your browser:
   
   http://localhost:8999/termdb-testui?term1=diaggrp&term2=sex
+  
+
+  ------------------------------------
+  Notes for comparing server response:
+  ------------------------------------ 
+  
+  1. In the browser console, copy the params from a
+  failing test and paste as argument to submit(), like so:
+
+  submit({
+    term1: 'diaggrp',
+    tvslst: [{
+      term: {id:'hrtavg', name:"Heart", isfloat:true}, // heart radiation
+      ranges: [{value:0}] // not radiated
+    }]
+  })
+
+  The params argument will also be displayed in JSON string in the
+  textarea input of the html page.   
+
+  2. The difference in server response will be displayed as an object 
+  per the npm package deep-object-diff. The diff will be logged in the console,
+  but could be more easily inspected via the Network -> Preview tab of the
+  developer tools.
 */
 const serverconfig = require("../serverconfig")
 const express=require('express')

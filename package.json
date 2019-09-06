@@ -17,10 +17,21 @@
     "test-back": "tape test/**/back.*.spec.js",
     "test-front": "browserify public/bin/proteinpaint.js test/**/front.*.spec.js | tape-run",
     "test-browser": "watchify test/**/front.*.spec.js -o public/bin/spec.bundle.js -v",
+    "test-response": "nodemon test/test.server.js --watch test/termdb",
     "deliver": "sh utils/deliver.sh",
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset",
     "build-server": "webpack --config=webpack.config.server.js --mode=production"
-  },
+  },   
+  "husky": {
+    "hooks": {
+    	"pre-commit": "FILES=$(git diff --cached --name-only --diff-filter=ACM '*.js' '*.json' | sed 's| |\\ |g') && precise-commits && echo \"$FILES\" | xargs git add"
+    }
+	},
+	"prettier": {
+		"semi": false,
+		"useTabs": true,
+		"printWidth": 160
+	},
   "author": "",
   "license": "ISC",
   "devDependencies": {
@@ -33,8 +44,11 @@
     "babel-runtime": "^6.18.0",
     "css-loader": "^0.23.1",
     "deep-object-diff": "^1.1.0",
+    "husky": "^3.0.5",
     "jasmine": "^2.5.2",
     "nodemon": "^1.19.1",
+    "precise-commits": "^1.0.2",
+    "prettier": "1.18.2",
     "style-loader": "^0.13.1",
     "tape": "^4.10.1",
     "tape-run": "^6.0.0",

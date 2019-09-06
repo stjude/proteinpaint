@@ -305,7 +305,8 @@ function getTermDetails(q, tdb, index) {
   const unannotatedValues = term.values ? Object.keys(term.values).filter(key=>term.values[key].uncomputable).map(v=>+v) : []
   const unannotatedLabels = term.values ? unannotatedValues.map(key=>term.values[key].label) : []
   const isAnnoVal = val => termIsNumeric && !unannotatedValues.includes(val)
-  return {term, isAnnoVal, unannotatedValues, unannotatedLabels, q: q['term' + index + '_q']}
+  const termq = q["term" + index + "_q"] ? q["term" + index + "_q"] : {}
+	return { term, isAnnoVal, unannotatedValues, unannotatedLabels, q: termq }
 }
 
 

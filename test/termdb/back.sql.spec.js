@@ -24,11 +24,11 @@ tape("\n", function(test) {
   test.end()
 })
 
-tape("filters", function (test) {
+tape("filters applied to categorical term", function (test) {
   // plan will track the number of expected tests,
   // which helps with the async tests
   test.timeoutAfter(5000)
-  test.plan(8)
+  test.plan(12)
 
   compareResponseData(
     test, 
@@ -39,7 +39,7 @@ tape("filters", function (test) {
         values: [{"key":"Male","label":"Male"}]
       }]
     }, 
-    "categorically filtered results"
+    "categorical filter"
   )
 
   compareResponseData(
@@ -51,7 +51,61 @@ tape("filters", function (test) {
         ranges: [{start:0,stop:5}]
       }]
     }, 
-    "numerically filtered results"
+    "numerical filter, normal range of (start,stop)"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      tvslst: [{
+        term: {
+          id:'hrtavg', name:"Heart", isfloat:true,
+          // must add "values" so that test/termdb/back.barchart.js can access it (won't be able to query termjson)
+          values:{
+            "0": { "label":"Not exposed", "uncomputable":true },
+            "-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+            "-9999": { "label":"Unknown treatment record", "uncomputable":true }
+          }
+        },
+        ranges: [{startunbounded:true,stop:1000,stopinclusive:true}] // range includes special values and should be excluded
+      }]
+    }, 
+    "numerical filter, one-side-unbound range with excluded values"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      tvslst: [{
+        term: {
+          id:'hrtavg', name:"Heart", isfloat:true,
+          values:{ // as above
+            "0": { "label":"Not exposed", "uncomputable":true },
+            "-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+            "-9999": { "label":"Unknown treatment record", "uncomputable":true }
+          }
+        },
+        ranges: [
+          {value:0},
+          {start:100,stop:1000}
+        ]
+      }]
+    }, 
+    "numerical filter, combining {value} and normal range"
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      tvslst: [{
+        term: {id:'hrtavg', name:"Heart", isfloat:true}, // heart radiation
+        ranges: [{value:0}] // not radiated
+      }]
+    }, 
+    "numerical filter, using a special category"
   )
 
   compareResponseData(
@@ -65,7 +119,7 @@ tape("filters", function (test) {
         value_by_max_grade: true
       }]
     }, 
-    "leaf condition filtered results, by maximum grade"
+    'condition filter, leaf, by maximum grade'
   )
 
   compareResponseData(
@@ -79,7 +133,21 @@ tape("filters", function (test) {
         value_by_most_recent: true
       }]
     }, 
-    "leaf condition filtered results, by most recent grade"
+    'condition filter, leaf, by most recent grade'
+  )
+
+  compareResponseData(
+    test, 
+    {
+      term1: 'diaggrp',
+      tvslst: [{
+        term: {id:"Asthma", name:"Asthma", iscondition:true},
+        bar_by_grade: true,
+        values: [{key:2, label: "2"}],
+        value_by_computable_grade: true
+      }]
+    }, 
+    'condition filter, leaf, by computable grade'
   )
 
   compareResponseData(
@@ -93,7 +161,7 @@ tape("filters", function (test) {
         value_by_max_grade: true
       }],
     }, 
-    "non-leaf condition filtered results, by maximum grade"
+    'condition filter, non-leaf, by maximum grade'
   )
  
   compareResponseData(
@@ -107,7 +175,7 @@ tape("filters", function (test) {
         value_by_most_recent: true
       }],
     }, 
-    "non-leaf condition filtered results, by most recent grade"
+    'condition filter, non-leaf, by most-recent grade'
   )
 
   compareResponseData(
@@ -117,10 +185,11 @@ tape("filters", function (test) {
       tvslst: [{
         term: {id:"Arrhythmias", name:"Arrhythmias", iscondition:true},
         bar_by_children: true,
+        value_by_computable_grade:true,
         values: [{key:'Cardiac dysrhythmia', label: "Cardiac dysrhythmia"}]
       }],
     }, 
-    "non-leaf condition filtered results by child"
+    'condition filter, non-leaf, by sub-condition'
   )
  
   compareResponseData(
