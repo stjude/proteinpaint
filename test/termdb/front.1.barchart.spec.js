@@ -78,7 +78,7 @@ tape("single barchart, categorical bars + click", function(test) {
 			termfilter.terms,
 			[
 				{
-					term: plot.term,
+					term: plot.term.term,
 					values: [
 						{
 							key: data.seriesId,
@@ -222,7 +222,12 @@ tape("click to add numeric, condition term filter", function(test) {
 			termfilter,
 			plot2restore: {
 				term: termjson["agedx"],
-				term2: Object.assign(termjson["Arrhythmias"], { q: {} }),
+				term2: Object.assign(termjson["Arrhythmias"], {
+					q: {
+						bar_by_grade: 1,
+						value_by_max_grade: 1
+					}
+				}),
 				settings: {
 					currViews: ["barchart"]
 				}
@@ -260,8 +265,8 @@ tape("click to add numeric, condition term filter", function(test) {
 			test.deepEqual(
 				termfilter.terms[0],
 				{
-					term: plot.term,
-					ranges: [plot.bins[1].find(d => d.label == clickedData.seriesId)]
+					term: plot.term.term,
+					ranges: [plot.term.bins.find(d => d.label == clickedData.seriesId)]
 				},
 				"should create a numeric term-value filter with a ranges key"
 			)
@@ -269,11 +274,11 @@ tape("click to add numeric, condition term filter", function(test) {
 				termfilter.terms[1],
 				Object.assign(
 					{
-						term: plot.term2,
+						term: plot.term2.term,
 						values: [
 							{
 								key: clickedData.dataId,
-								label: plot.term2.values[clickedData.dataId].label
+								label: plot.term2.term.values[clickedData.dataId].label
 							}
 						]
 					},
@@ -287,7 +292,7 @@ tape("click to add numeric, condition term filter", function(test) {
 	}
 })
 
-tape("click to condition grade and child term filter ", function(test) {
+tape("click to add condition grade and child term filter ", function(test) {
 	const div0 = d3s.select("body").append("div")
 	const termfilter = { show_top_ui: true }
 

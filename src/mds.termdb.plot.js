@@ -26,7 +26,7 @@ arg:
 		main(updatedKeyVals = {}) {
 			nestedUpdate(plot, null, updatedKeyVals)
 			coordinateState(plot)
-			if (!plot.obj.expanded_term_ids.includes(plot.term.id)) return
+			if (!plot.obj.expanded_term_ids.includes(plot.term.term.id)) return
 			requestData(plot)
 		},
 		tip: new client.Menu({ padding: "18px" })
@@ -39,7 +39,7 @@ arg:
 		obj: arg.obj,
 		genome: arg.genome,
 		dslabel: arg.dslabel,
-		term: arg.term,
+		term: { term: arg.term, q: arg.term.q ? arg.term.q : {} },
 		// set the parent DOM elements for viz and controls
 		dom: {
 			holder: arg.holder
@@ -69,9 +69,9 @@ arg:
 	// fill-in the OPTIONAL argument keys
 	Object.assign(plot, {
 		// data
-		term0: arg.term0 ? arg.term0 : null,
+		term0: arg.term0 ? { term: arg.term0, q: arg.term0.q ? arg.term0.q : {} } : null,
 		term2: arg.term2
-			? arg.term2
+			? { term: arg.term2, q: arg.term2.q ? arg.term2.q : {} }
 			: arg.obj.modifier_ssid_barchart
 			? { mname: arg.obj.modifier_ssid_barchart.mutation_name }
 			: null,
@@ -146,7 +146,8 @@ function nestedUpdate(obj, key, value, keylineage = []) {
 	} else if (key == "term" || key == "term2" || key == "term0") {
 		if (!value) obj[key] = value
 		else if (typeof value == "object") {
-			if (value.term) obj[key] = Object.assign({}, value.term)
+			obj[key] = {}
+			if (value.term) obj[key].term = Object.assign({}, value.term)
 			if (value.q) obj[key].q = Object.assign({}, value.q)
 		}
 	} else if (key !== null && (!value || typeof value != "object")) {
@@ -164,11 +165,11 @@ function coordinateState(plot) {
 */
 	if (plot.term2) {
 		if (plot.settings.currViews.includes("boxplot")) {
-			if (!plot.term2.isfloat) plot.settings.currViews = ["barchart"]
+			if (!plot.term2.term.isfloat) plot.settings.currViews = ["barchart"]
 		}
 
-		if (plot.term2.iscondition) {
-			if (plot.term2.q && plot.term2.id == plot.term.id) {
+		if (plot.term2.term.iscondition) {
+			if (plot.term2.q && plot.term2.term.id == plot.term.term.id) {
 				if (
 					(plot.term2.q.bar_by_children && (!plot.term.q || !plot.term.q.bar_by_grade)) ||
 					(plot.term2.q.bar_by_grade && (!plot.term.q || !plot.term.q.bar_by_children))
@@ -176,7 +177,7 @@ function coordinateState(plot) {
 					plot.term2 = undefined
 			}
 
-			if (plot.term2 && plot.term2.id == plot.term.id) {
+			if (plot.term2 && plot.term2.term.id == plot.term.term.id) {
 				if (!plot.term2.q) plot.term2.q = {}
 				for (const param of ["value_by_max_grade", "value_by_most_recent", "value_by_computable_grade"]) {
 					delete plot.term2.q[param]
@@ -186,7 +187,7 @@ function coordinateState(plot) {
 		}
 
 		if (plot.settings.currViews.includes("scatter")) {
-			if (!plot.term.isfloat || !plot.term2.isfloat) {
+			if (!plot.term.term.isfloat || !plot.term2.term.isfloat) {
 				plot.settings.currViews = ["barchart"]
 			}
 		}
@@ -196,17 +197,15 @@ function coordinateState(plot) {
 
 	const i = plot.settings.currViews.indexOf("stattable")
 	if (i == -1) {
-		if (plot.settings.currViews.includes("barchart") && plot.term.isfloat /*|| plot.term.isinteger*/) {
+		if (plot.settings.currViews.includes("barchart") && plot.term.term.isfloat /*|| plot.term.term.isinteger*/) {
 			plot.settings.currViews.push("stattable")
 		}
-	} else if (!plot.settings.currViews.includes("barchart") || !plot.term.isfloat /*&& !plot.term.isinteger*/) {
+	} else if (
+		!plot.settings.currViews.includes("barchart") ||
+		!plot.term.term.isfloat /*&& !plot.term.term.isinteger*/
+	) {
 		plot.settings.currViews.splice(i, 1)
 	}
-
-	// create an alternative reference
-	// to plot.[term0,term,term2] and term1_q parameters
-	// for convenience and namespacing related variables
-	plot.terms = [plot.term0, plot.term, plot.term2]
 }
 
 // the same route + request payload/URL parameters
@@ -238,22 +237,23 @@ function getDataName(plot) {
 
 	const isscatter = plot.settings.currViews.includes("scatter")
 	if (isscatter) params.push("scatter=1")
-
-	plot.terms.forEach((term, i) => {
+	;["term", "term2", "term0"].forEach((_key, i) => {
+		const term = plot[_key]
 		if (!term) return
-		params.push("term" + i + "_id=" + encodeURIComponent(term.id))
+		const key = _key == "term" ? "term1" : _key
+		params.push(key + "_id=" + encodeURIComponent(term.term.id))
 		if (isscatter) return
-		if (term.iscondition && !term.q) term.q = {}
+		if (term.term.iscondition && !term.q) term.q = {}
 		if (term.q && typeof term.q == "object") {
 			let q = {}
-			if (term.iscondition) {
+			if (term.term.iscondition) {
 				q = Object.keys(term.q).length ? Object.assign({}, term.q) : { bar_by_grade: 1, value_by_max_grade: 1 }
 			}
 			if (term.q.binconfig) {
 				q = Object.assign({}, term.q)
 				delete q.binconfig.results
 			}
-			params.push("term" + i + "_q=" + encodeURIComponent(JSON.stringify(q)))
+			params.push(key + "_q=" + encodeURIComponent(JSON.stringify(q)))
 		}
 	})
 
@@ -297,10 +297,10 @@ function getDataName(plot) {
 
 function syncParams(plot, data) {
 	if (!data || !data.refs) return
-	plot.bins = data.refs.bins
-	for (const i of [0, 1, 2]) {
-		const term = plot.terms[i]
+	for (const [i, key] of ["term0", "term", "term2"].entries()) {
+		const term = plot[key]
 		if (!term || term == "genotype") continue
+		term.bins = data.refs.bins[i]
 		if (data.refs.q && data.refs.q[i]) {
 			if (!term.q) term.q = {}
 			const q = data.refs.q[i]
