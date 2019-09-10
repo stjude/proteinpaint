@@ -345,3 +345,125 @@ tape("filter term-value button: Numerical term", function(test) {
 		)
 	}
 })
+
+tape("filter term-value button: Conditional term (grade)", function(test) {
+	test.timeoutAfter(4000)
+	test.plan(7)
+	const div0 = d3s.select("body").append("div")
+	const termfilter = {
+		show_top_ui: true,
+    terms: [
+			{
+				term: { id: "Arrhythmias", name: "Arrhythmias", iscondition: true },
+        values: [{ key: 0, label: "0: No condition" }],
+        bar_by_grade : 1, value_by_max_grade: 1
+      },
+		]
+	}
+
+	runproteinpaint({
+		host,
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter,
+			callbacks: {
+				tree: {
+					postRender: runTests
+				}
+			}
+		}
+  })
+  
+  function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+				.chain("", testFilterDisplay, { timeout: 300 })
+				.chain("", triggerChangeGrade)
+				.chain("", checkGradeBtn, { timeout: 200 })
+				.chain("", triggerGradeType)
+				.chain("", checkGradeTypeBtn, { timeout: 300 })
+				.chain("", triggerAddGrade)
+				.chain("", checkAddedGradeBtn, { timeout: 300 })
+				.chain("", () => test.end())
+				.next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	function testFilterDisplay(obj) {
+    test.equal(
+      obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+      termfilter.terms[0].term.name,
+      "filter btn and term-name from runpp() should be the same"
+    )
+    
+    test.equal(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][2].innerText
+        .slice(0, -2),
+      termfilter.terms[0].values[0].label,
+      "grade value button should match the data"
+    )
+
+    test.true(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.includes('Max'),
+      "grade type button should match the data"
+    )
+    
+    test.true(
+      obj.dom.termfilterdiv.selectAll(".add_value_btn").size() >= 1,
+      "should have '+' button to add unannoated value to filter"
+    )
+  }
+
+  function triggerChangeGrade(obj) {
+		obj.termfilter.terms[0].values[0] = { key: 1, label: "1: Mild" }
+    obj.main()
+	}
+  
+  function checkGradeBtn(obj) {
+    test.equal(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][2].innerText
+        .slice(0, -2),
+      termfilter.terms[0].values[0].label,
+      "should have grade value button changed from data"
+    )
+  }
+  
+  function triggerGradeType(obj) {
+    obj.termfilter.terms[0].value_by_max_grade = false
+    obj.termfilter.terms[0].value_by_most_recent = true
+    obj.main()
+  }
+  
+  function checkGradeTypeBtn(obj) {
+    test.true(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.includes('recent'),
+      "should match grade type button to the data"
+    )
+  }
+
+  function  triggerAddGrade(obj) {
+    obj.termfilter.terms[0].values[1] = { key: 2, label: "2: Moderate" }
+    obj.main()
+  }
+
+  function checkAddedGradeBtn(obj) {
+    test.equal(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.slice(0, -2),
+        termfilter.terms[0].values[1].label,
+      "should add grade from the data"
+    )
+  }
+})
