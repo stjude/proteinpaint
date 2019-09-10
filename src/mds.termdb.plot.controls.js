@@ -45,7 +45,7 @@ export function init(opts) {
 		svg: setSvgBtn(controls),
 		term_info: setTermInfoBtn(controls),
 		config: setConfigDiv(controls),
-		barsAs: setBarsAsOpts(controls, "term", "Bars as", 1),
+		barsAs: setBarsAsOpts(controls, "Bars as"),
 		overlay: setOverlayOpts(controls),
 		view: setViewOpts(controls),
 		orientation: setOrientationOpts(controls),
@@ -727,7 +727,7 @@ function setDivideByOpts(controls) {
 	}
 }
 
-function setBarsAsOpts(controls, termNum, label, index) {
+function setBarsAsOpts(controls, label) {
 	const tr = controls.dom.table.append("tr")
 	tr.append("td")
 		.html(label)
@@ -742,23 +742,24 @@ function setBarsAsOpts(controls, termNum, label, index) {
 		genome: plot.obj.genome,
 		mds: plot.obj.mds,
 		tip: plot.obj.tip,
-		currterm: plot.term.term,
-		termsetting: plot.term.term, //{term: plot.term.term, q: plot.term.q},
+		currterm: plot.term,
+		termsetting: plot.term, //{term: plot.term.term, q: plot.term.q},
 		is_term1: true,
 		callback: term => {
-			controls.dispatch({ term })
+			plot.term.q = term.q
+			controls.dispatch({ term: plot.term })
 		}
 	}
 
 	if (!plot.term.q) plot.term.q = {}
-	termuiObj.termsetting.q = plot.term.q
+	termuiObj.termsetting.term.q = plot.term.q
 	termui_display(termuiObj)
 
 	return {
 		main(plot) {
 			tr.style("display", plot.term && plot.term.term.iscondition ? "table-row" : "none")
 			if (!plot.term.q) plot.term.q = {}
-			termuiObj.termsetting.q = plot.term.q
+			termuiObj.termsetting.term.q = plot.term.q
 			termuiObj.update_ui()
 		}
 	}
