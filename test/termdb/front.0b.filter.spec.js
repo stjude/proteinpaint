@@ -38,48 +38,57 @@ tape("filter term-value button", function(test) {
 			},
 			callbacks: {
 				tree: {
-					postRender: [testFilterDisplay, triggerFilterRemove]
+					postRender: runTests
 				}
 			}
 		}
 	})
 
+	function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+				.chain("", testFilterDisplay, { timeout: 300 })
+				.chain("", triggerFilterRemove)
+				.chain("", testFilterRemove, { timeout: 100 })
+				.chain("", triggerFilterAdd)
+				.chain("", testAddTerm, { timeout: 100 })
+				.chain("", () => test.end())
+				.next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
 	function testFilterDisplay(obj) {
-		setTimeout(() => {
-			test.equal(
-				obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
-				termfilter.terms[0].term.name,
-				"should Filter term-name and plot clicked from runpp() be same"
-			)
-			test.equal(
-				obj.dom.termfilterdiv
-					.selectAll(".value_btn")
-					.html()
-					.slice(0, -2),
-				termfilter.terms[0].values[0].label,
-				"should Filter value and value supplied from runpp() be same"
-			)
-			test.true(
-				obj.dom.termfilterdiv.selectAll(".term_remove_btn").size() >= 1,
-				"should have 'x' button to remove filter"
-			)
-			test.true(
-				obj.dom.termfilterdiv.selectAll(".add_term_btn").size() >= 1,
-				"should have '+' button to add new term filter"
-			)
-		}, 100)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+			termfilter.terms[0].term.name,
+			"filter term-name and plot clicked from runpp() should be the same"
+		)
+		test.equal(
+			obj.dom.termfilterdiv
+				.selectAll(".value_btn")
+				.html()
+				.slice(0, -2),
+			termfilter.terms[0].values[0].label,
+			"filter value and value supplied from runpp() should be the same"
+		)
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".term_remove_btn").size() >= 1,
+			"should have 'x' button to remove filter"
+		)
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".add_term_btn").size() >= 1,
+			"should have '+' button to add new term filter"
+		)
 	}
 
 	function triggerFilterRemove(obj) {
-		obj.bus.on("postRender", [testFilterRemove, triggerFilterAdd])
-		setTimeout(
-			() =>
-				obj.dom.termfilterdiv
-					.selectAll(".term_remove_btn")
-					.node()
-					.click(),
-			400
-		)
+		obj.dom.termfilterdiv
+			.select(".term_remove_btn")
+			.node()
+			.click()
 	}
 
 	function testFilterRemove(obj) {
@@ -91,12 +100,11 @@ tape("filter term-value button", function(test) {
 	}
 
 	function triggerFilterAdd(obj) {
-		obj.bus.on("postRender", testAddTerm)
 		termfilter.terms[0] = {
 			term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
 			values: [{ key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }]
 		}
-		setTimeout(() => obj.main(), 200)
+		obj.main()
 	}
 
 	function testAddTerm(obj) {
@@ -106,7 +114,6 @@ tape("filter term-value button", function(test) {
 			"should add filter from data"
 		)
 		obj.tip.hide()
-		test.end()
 	}
 })
 
@@ -139,85 +146,85 @@ tape("filter term-value button: categorical term", function(test) {
 			},
 			callbacks: {
 				tree: {
-					postRender: [testFilterDisplay, triggerChangeNegation, triggerAddCategory, triggerRemoveCategory]
+					postRender: runTests
 				}
 			}
 		}
 	})
 
+	function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+				.chain("", testFilterDisplay, { timeout: 300 })
+				.chain("", triggerChangeNegation)
+				.chain("", checkNegationBtnVal, { timeout: 200 })
+				.chain("", triggerAddCategory)
+				.chain("", checkAddedCategory, { timeout: 300 })
+				.chain("", triggerRemoveCategory)
+				.chain("", checkRemovedCategory, { timeout: 300 })
+				.chain("", () => test.end())
+				.next(obj)
+		} catch (e) {
+			//console.log(e)
+		}
+	}
+
 	function testFilterDisplay(obj) {
-		setTimeout(() => {
-			test.equal(
-				obj.dom.termfilterdiv.selectAll(".condition_btn").size(),
-				1,
-				"should have negation button for categorical filter"
-			)
-			test.equal(
-				obj.dom.termfilterdiv.selectAll(".condition_btn").html(),
-				"IS",
-				"should have 'IS' for negation button for categorical filter"
-			)
-			test.equal(
-				obj.dom.termfilterdiv.selectAll(".add_value_btn").size(),
-				1,
-				"should have '+' button to add category to filter"
-			)
-		}, 100)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".condition_btn").size(),
+			1,
+			"should have negation button for categorical filter"
+		)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".condition_btn").html(),
+			"IS",
+			"should have 'IS' for negation button for categorical filter"
+		)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".add_value_btn").size(),
+			1,
+			"should have '+' button to add category to filter"
+		)
 	}
 
 	function triggerChangeNegation(obj) {
-		setTimeout(() => {
-			obj.bus.on("postRender", checkNegationBtnVal)
-			obj.termfilter.terms[0].isnot = true
-			obj.main()
-		}, 200)
+		obj.termfilter.terms[0].isnot = true
+		obj.main()
 	}
 
 	function checkNegationBtnVal(obj) {
-		setTimeout(() => {
-			test.equal(
-				obj.dom.termfilterdiv.selectAll(".condition_btn").html(),
-				"IS NOT",
-				"should have 'IS NOT' for negation button after change"
-			)
-		}, 300)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".condition_btn").html(),
+			"IS NOT",
+			"should have 'IS NOT' for negation button after change"
+		)
 	}
 
 	function triggerAddCategory(obj) {
-		setTimeout(() => {
-			obj.bus.on("postRender", checkAddedCategory)
-			obj.termfilter.terms[0].values[1] = { key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }
-			obj.main()
-		}, 400)
+		obj.termfilter.terms[0].values[1] = { key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }
+		obj.main()
 	}
 
 	function checkAddedCategory(obj) {
-		setTimeout(() => {
-			test.equal(
-				obj.dom.termfilterdiv.selectAll(".value_btn").size(),
-				termfilter.terms[0].values.length,
-				"should add category from data"
-			)
-		}, 500)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".value_btn").size(),
+			termfilter.terms[0].values.length,
+			"should add category from data"
+		)
 	}
 
 	function triggerRemoveCategory(obj) {
-		setTimeout(() => {
-			obj.bus.on("postRender", checkRemovedCategory)
-			obj.termfilter.terms[0].values.pop()
-			obj.main()
-		}, 600)
+		obj.termfilter.terms[0].values.pop()
+		obj.main()
 	}
 
 	function checkRemovedCategory(obj) {
-		setTimeout(() => {
-			test.equal(
-				obj.dom.termfilterdiv.selectAll(".value_btn").size(),
-				termfilter.terms[0].values.length,
-				"should remove category from data"
-			)
-			test.end()
-		}, 700)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".value_btn").size(),
+			termfilter.terms[0].values.length,
+			"should remove category from data"
+		)
 	}
 })
 
@@ -252,90 +259,89 @@ tape("filter term-value button: Numerical term", function(test) {
 			termfilter,
 			callbacks: {
 				tree: {
-					postRender: [testFilterDisplay]
+					postRender: runTests
 				}
 			}
 		}
 	})
 
-	function testFilterDisplay(obj) {
-		setTimeout(() => {
-			test.equal(
-				obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
-				termfilter.terms[0].term.name,
-				"filter btn and term-name from runpp() should be the same"
-			)
-			test.equal(
-				obj.dom.termfilterdiv
-					.selectAll(".value_btn")
-					.html()
-					.split(" ")[0],
-				termfilter.terms[0].ranges[0].start.toString(),
-				"value button should match the data"
-			)
-			test.true(
-				obj.dom.termfilterdiv.selectAll(".add_value_btn").size() >= 1,
-				"should have '+' button to add unannoated value to filter"
-			)
+	function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+				.chain("", testFilterDisplay, { timeout: 300 })
+				.chain("", triggerChangeRange)
+				.chain("", checkRangeBtn, { timeout: 200 })
+				.chain("", triggerAddUnannotatedRange)
+				.chain("", checkUnannotatedValBtn, { timeout: 300 })
+				.chain("", triggerRemoveRange)
+				.chain("", checkRemovedRange, { timeout: 300 })
+				.chain("", () => test.end())
+				.next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
 
-			triggerChangeRange(obj)
-		}, 200)
+	function testFilterDisplay(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+			termfilter.terms[0].term.name,
+			"filter btn and term-name from runpp() should be the same"
+		)
+		test.equal(
+			obj.dom.termfilterdiv
+				.selectAll(".value_btn")
+				.html()
+				.split(" ")[0],
+			termfilter.terms[0].ranges[0].start.toString(),
+			"value button should match the data"
+		)
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".add_value_btn").size() >= 1,
+			"should have '+' button to add unannonated value to filter"
+		)
 	}
 
 	function triggerChangeRange(obj) {
-		obj.bus.on("postRender", [checkRangeBtn, triggerAddUnannotatedRange])
 		obj.termfilter.terms[0].ranges[0] = { stopinclusive: true, start: 3000, stop: 4000 }
 		obj.main()
 	}
 
 	function checkRangeBtn(obj) {
-		setTimeout(() => {
-			test.equal(
-				obj.dom.termfilterdiv
-					.selectAll(".value_btn")
-					.html()
-					.split(" ")[0],
-				termfilter.terms[0].ranges[0].start.toString(),
-				"should have value button changed from data"
-			)
-		}, 1000)
+		test.equal(
+			obj.dom.termfilterdiv
+				.selectAll(".value_btn")
+				.html()
+				.split(" ")[0],
+			termfilter.terms[0].ranges[0].start.toString(),
+			"should have value button changed from data"
+		)
 	}
 
 	function triggerAddUnannotatedRange(obj) {
-		setTimeout(() => {
-			obj.bus.on("postRender", [checkUnannotatedValBtn, triggerRemoveRange])
-			obj.termfilter.terms[0].ranges[1] = { is_unannotated: true, value: "-9999", label: "Unknown treatment record" }
-			obj.main()
-		}, 400)
+		obj.termfilter.terms[0].ranges[1] = { is_unannotated: true, value: "-9999", label: "Unknown treatment record" }
+		obj.main()
 	}
 
 	function checkUnannotatedValBtn(obj) {
-		setTimeout(() => {
-			test.equal(
-				obj.dom.termfilterdiv.selectAll(".value_btn")._groups[0][1].innerText,
-				termfilter.terms[0].ranges[1].label,
-				"should have unannotated value button added from data"
-			)
-		}, 600)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".value_btn")._groups[0][1].innerText,
+			termfilter.terms[0].ranges[1].label,
+			"should have unannotated value button added from data"
+		)
 	}
 
 	function triggerRemoveRange(obj) {
-		setTimeout(() => {
-			obj.bus.on("postRender", checkRemovedRange)
-			obj.termfilter.terms[0].ranges.pop()
-			obj.main()
-		}, 1200)
+		obj.termfilter.terms[0].ranges.pop()
+		obj.main()
 	}
 
 	function checkRemovedRange(obj) {
-		obj.bus.on("postRender", null)
-		setTimeout(() => {
-			test.equal(
-				obj.dom.termfilterdiv.selectAll(".value_btn").size(),
-				termfilter.terms[0].ranges.length,
-				"should remove value button altered by data"
-			)
-			test.end()
-		}, 1400)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".value_btn").size(),
+			termfilter.terms[0].ranges.length,
+			"should remove value button altered by data"
+		)
 	}
 })
