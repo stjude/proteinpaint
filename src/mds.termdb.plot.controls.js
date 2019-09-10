@@ -50,7 +50,7 @@ export function init(opts) {
 		view: setViewOpts(controls),
 		orientation: setOrientationOpts(controls),
 		scale: setScaleOpts(controls),
-		bin: setBinOpts(controls, "term1", "Primary Bins"),
+		bin: setBinOpts(controls, "term", "Primary Bins"),
 		divideBy: setDivideByOpts(controls)
 	}
 
