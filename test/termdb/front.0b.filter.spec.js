@@ -466,3 +466,172 @@ tape("filter term-value button: Conditional term (grade)", function(test) {
 		)
 	}
 })
+
+tape("filter term-value button: Conditional term (sub-condition)", function(test) {
+	test.timeoutAfter(4000)
+	test.plan(5)
+	const div0 = d3s.select("body").append("div")
+	const termfilter = {
+		show_top_ui: true,
+    terms: [
+      {
+				term: { id: "Arrhythmias", name: "Arrhythmias", iscondition: true },
+        values: [{ key: "Sinus bradycardia", label: "Sinus bradycardia" }],
+        bar_by_children : 1, value_by_computable_grade: 1
+      },
+		]
+	}
+
+	runproteinpaint({
+		host,
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter,
+			callbacks: {
+				tree: {
+					postRender: runTests
+				}
+			}
+		}
+  })
+  
+  function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+        helpers
+          .getChain()
+          .add(testFilterDisplay, { timeout: 300 })
+          .add(triggerChangeSub)
+          .add(checkSubBtn, { timeout: 200 })
+          .add(triggerAddSub)
+          .add(checkAddedSubBtn, { timeout: 200 })
+          .add(() => test.end())
+          .next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	function testFilterDisplay(obj) {
+    test.equal(
+      obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+      termfilter.terms[0].term.name,
+      "filter btn and term-name from runpp() should be the same"
+    )
+    
+    test.equal(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][2].innerText
+        .slice(0, -2),
+      termfilter.terms[0].values[0].label,
+      "should sub-condition value button match the data"
+    )
+    
+    test.true(
+      obj.dom.termfilterdiv.selectAll(".add_value_btn").size() >= 1,
+      "should have '+' button to add unannoated value to filter"
+    )
+  }
+
+  function triggerChangeSub(obj) {
+		obj.termfilter.terms[0].values[0] = { key: "Cardiac dysrhythmia", label: "Cardiac dysrhythmia" }
+		obj.main()
+  }
+  
+  function checkSubBtn(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][2].innerText.slice(0, -2),
+			termfilter.terms[0].values[0].label,
+			"should have sub-condition value button changed from data"
+		)
+  }
+  
+  function triggerAddSub(obj) {
+		obj.termfilter.terms[0].values[1] = { key: "Prolonged QT interval", label: "Prolonged QT interval" }
+		obj.main()
+  }
+  
+  function checkAddedSubBtn(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.slice(0, -2),
+			termfilter.terms[0].values[1].label,
+			"should add sub-condition value button from data"
+		)
+	}
+})
+
+tape("filter term-value button: Conditional term (grade and child)", function(test) {
+	test.timeoutAfter(4000)
+	test.plan(3)
+	const div0 = d3s.select("body").append("div")
+	const termfilter = {
+		show_top_ui: true,
+    terms: [
+      {
+				term: { id: "Arrhythmias", name: "Arrhythmias", iscondition: true },
+        grade_and_child: [{ grade: 0, grade_label: "0: No condition", child_id: "Sinus bradycardia", child_label: "Sinus bradycardia" }],
+        bar_by_children : 1, value_by_max_grade: 1
+      },
+		]
+	}
+
+	runproteinpaint({
+		host,
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter,
+			callbacks: {
+				tree: {
+					postRender: runTests
+				}
+			}
+		}
+  })
+  
+  function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+        helpers
+          .getChain()
+          .add(testFilterDisplay, { timeout: 300 })
+          .add(() => test.end())
+          .next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	function testFilterDisplay(obj) {
+    test.equal(
+      obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+      termfilter.terms[0].term.name,
+      "filter btn and term-name from runpp() should be the same"
+    )
+    
+    test.equal(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][2].innerText,
+      termfilter.terms[0].grade_and_child[0].grade_label,
+      "should grade value button match the data"
+    )
+
+    test.equal(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][3].innerText,
+      termfilter.terms[0].grade_and_child[0].child_label,
+      "should sub-condition value button match the data"
+    )
+  }
+})
