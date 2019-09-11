@@ -206,28 +206,6 @@ export function get_event_bus(eventTypes = [], callbacks = {}, defaultArg = null
 				events[eventType](arg ? arg : defaultArg)
 			}
 			return bus
-		},
-		chain(callback, opts = {}) {
-			if (typeof callback == "function") {
-				chain.push({
-					fxn: callback,
-					opts
-				})
-			} else {
-				throw "invalid callback argument to bus.chain"
-			}
-			return bus
-		},
-		next(arg) {
-			const next = chain.shift()
-			if (!next) return
-			setTimeout(
-				() => {
-					next.fxn(arg)
-					bus.next(arg)
-				},
-				next.opts.timeout ? next.opts.timeout : 0
-			)
 		}
 	}
 	if (callbacks) {

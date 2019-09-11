@@ -3,6 +3,7 @@ const d3s = require("d3-selection")
 const termjson = require("./termjson").termjson
 const serverconfig = require("../../serverconfig")
 const host = "http://localhost:" + serverconfig.port
+const helpers = require("../helpers.js")
 
 tape("\n", function(test) {
 	test.pass("-***- mds.termdb.controls filter -***-")
@@ -46,15 +47,16 @@ tape("filter term-value button", function(test) {
 
 	function runTests(obj) {
 		try {
-			obj.components.filter.bus
-				.on("postRender", null)
-				.chain(testFilterDisplay, { timeout: 100 })
-				.chain(triggerFilterRemove)
-				.chain(testFilterRemove) //, { timeout: 50 })
-				.chain(triggerFilterAdd)
-				.chain(testAddTerm) //, { timeout: 50 })
-				.chain(() => test.end())
-				.next(obj)
+			obj.components.filter.bus.on("postRender", null)
+			helpers
+				.getChain()
+				.next(testFilterDisplay, { timeout: 100 })
+				.next(triggerFilterRemove)
+				.next(testFilterRemove) //, { timeout: 50 })
+				.next(triggerFilterAdd)
+				.next(testAddTerm) //, { timeout: 50 })
+				.next(() => test.end())
+				.start(obj)
 		} catch (e) {
 			console.log(e)
 		}
@@ -154,17 +156,18 @@ tape("filter term-value button: categorical term", function(test) {
 
 	function runTests(obj) {
 		try {
-			obj.bus
-				.on("postRender", null)
-				.chain(testFilterDisplay, { timeout: 300 })
-				.chain(triggerChangeNegation)
-				.chain(checkNegationBtnVal, { timeout: 200 })
-				.chain(triggerAddCategory)
-				.chain(checkAddedCategory, { timeout: 300 })
-				.chain(triggerRemoveCategory)
-				.chain(checkRemovedCategory, { timeout: 300 })
-				.chain(() => test.end())
-				.next(obj)
+			obj.bus.on("postRender", null)
+			helpers
+				.getChain()
+				.next(testFilterDisplay, { timeout: 300 })
+				.next(triggerChangeNegation)
+				.next(checkNegationBtnVal, { timeout: 200 })
+				.next(triggerAddCategory)
+				.next(checkAddedCategory, { timeout: 300 })
+				.next(triggerRemoveCategory)
+				.next(checkRemovedCategory, { timeout: 300 })
+				.next(() => test.end())
+				.start(obj)
 		} catch (e) {
 			console.log(e)
 		}
@@ -267,17 +270,18 @@ tape("filter term-value button: Numerical term", function(test) {
 
 	function runTests(obj) {
 		try {
-			obj.bus
-				.on("postRender", null)
-				.chain(testFilterDisplay, { timeout: 300 })
-				.chain(triggerChangeRange)
-				.chain(checkRangeBtn, { timeout: 200 })
-				.chain(triggerAddUnannotatedRange)
-				.chain(checkUnannotatedValBtn, { timeout: 300 })
-				.chain(triggerRemoveRange)
-				.chain(checkRemovedRange, { timeout: 300 })
-				.chain(() => test.end())
-				.next(obj)
+			obj.bus.on("postRender", null)
+			helpers
+				.getChain()
+				.next(testFilterDisplay, { timeout: 300 })
+				.next(triggerChangeRange)
+				.next(checkRangeBtn, { timeout: 200 })
+				.next(triggerAddUnannotatedRange)
+				.next(checkUnannotatedValBtn, { timeout: 300 })
+				.next(triggerRemoveRange)
+				.next(checkRemovedRange, { timeout: 300 })
+				.next(() => test.end())
+				.start(obj)
 		} catch (e) {
 			console.log(e)
 		}
@@ -382,17 +386,18 @@ tape("filter term-value button: Conditional term (grade)", function(test) {
 
 	function runTests(obj) {
 		try {
-			obj.bus
-				.on("postRender", null)
-				.chain(testFilterDisplay, { timeout: 300 })
-				.chain(triggerChangeGrade)
-				.chain(checkGradeBtn, { timeout: 200 })
-				.chain(triggerGradeType)
-				.chain(checkGradeTypeBtn, { timeout: 300 })
-				.chain(triggerAddGrade)
-				.chain(checkAddedGradeBtn, { timeout: 300 })
-				.chain(() => test.end())
-				.next(obj)
+			obj.bus.on("postRender", null)
+			helpers
+				.getChain()
+				.next(testFilterDisplay, { timeout: 300 })
+				.next(triggerChangeGrade)
+				.next(checkGradeBtn, { timeout: 200 })
+				.next(triggerGradeType)
+				.next(checkGradeTypeBtn, { timeout: 300 })
+				.next(triggerAddGrade)
+				.next(checkAddedGradeBtn, { timeout: 300 })
+				.next(() => test.end())
+				.start(obj)
 		} catch (e) {
 			console.log(e)
 		}
