@@ -3,65 +3,635 @@ const d3s = require("d3-selection")
 const termjson = require("./termjson").termjson
 const serverconfig = require("../../serverconfig")
 const host = "http://localhost:" + serverconfig.port
+const helpers = require("../front.helpers.js")
 
 tape("\n", function(test) {
-  test.pass("-***- mds.termdb.controls filter -***-")
-  test.end()
+	test.pass("-***- mds.termdb.controls filter -***-")
+	test.end()
 })
 
-tape("filter term-value button", function (test) {
-  test.timeoutAfter(1000)
-  test.plan(5)
-  const div0 = d3s.select('body').append('div')
-  const termfilter = {
-      show_top_ui:true,
-      terms: [{
-          term: {id:'diaggrp', name: 'Diagnosis Group', iscategorical:true},
-          values: [{key: 'Wilms tumor', label: 'Wilms tumor'}]
-      }]
+tape("filter term-value button", function(test) {
+	test.timeoutAfter(3000)
+	test.plan(6)
+	const div0 = d3s.select("body").append("div")
+	const termfilter = {
+		show_top_ui: true,
+		terms: [
+			{
+				term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
+				values: [{ key: "Wilms tumor", label: "Wilms tumor" }]
+			}
+		]
+	}
+
+	runproteinpaint({
+		host,
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter,
+			bar_click_menu: {
+				add_filter: true
+			},
+			callbacks: {
+				filter: {
+					postRender: runTests
+				}
+			}
+		}
+	})
+
+	function runTests(obj) {
+		try {
+			obj.components.filter.bus.on("postRender", null)
+			helpers
+				.getChain()
+				.add(testFilterDisplay, { timeout: 200 })
+				.add(triggerFilterRemove)
+				.add(testFilterRemove) //, { timeout: 50 })
+				.add(triggerFilterAdd)
+				.add(testAddTerm) //, { timeout: 50 })
+				.add(() => test.end())
+				.next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	function testFilterDisplay(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+			termfilter.terms[0].term.name,
+			"filter term-name and plot clicked from runpp() should be the same"
+		)
+		test.equal(
+			obj.dom.termfilterdiv
+				.selectAll(".value_btn")
+				.html()
+				.slice(0, -2),
+			termfilter.terms[0].values[0].label,
+			"filter value and value supplied from runpp() should be the same"
+		)
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".term_remove_btn").size() >= 1,
+			"should have 'x' button to remove filter"
+		)
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".add_term_btn").size() >= 1,
+			"should have '+' button to add new term filter"
+		)
+	}
+
+	function triggerFilterRemove(obj) {
+		obj.dom.termfilterdiv
+			.select(".term_remove_btn")
+			.node()
+			.click()
+	}
+
+	function testFilterRemove(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".term_name_btn").size(),
+			termfilter.terms.length,
+			"should remove tvs filter after clicking 'x'"
+		)
+	}
+
+	function triggerFilterAdd(obj) {
+		termfilter.terms[0] = {
+			term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
+			values: [{ key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }]
+		}
+		obj.main()
+	}
+
+	function testAddTerm(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".term_name_btn").size(),
+			termfilter.terms.length,
+			"should add filter from data"
+		)
+		obj.tip.hide()
+	}
+})
+
+tape("filter term-value button: categorical term", function(test) {
+	test.timeoutAfter(3000)
+	test.plan(6)
+	const div0 = d3s.select("body").append("div")
+	const termfilter = {
+		show_top_ui: true,
+		terms: [
+			{
+				term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
+				values: [{ key: "Wilms tumor", label: "Wilms tumor" }]
+			}
+		]
+	}
+
+	runproteinpaint({
+		host,
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter,
+			bar_click_menu: {
+				add_filter: true
+			},
+			callbacks: {
+				tree: {
+					postRender: runTests
+				}
+			}
+		}
+	})
+
+	function runTests(obj) {
+		try {
+			obj.bus.on("postRender", null)
+			helpers
+				.getChain()
+				.add(testFilterDisplay, { timeout: 300 })
+				.add(triggerChangeNegation)
+				.add(checkNegationBtnVal, { timeout: 200 })
+				.add(triggerAddCategory)
+				.add(checkAddedCategory, { timeout: 300 })
+				.add(triggerRemoveCategory)
+				.add(checkRemovedCategory, { timeout: 300 })
+				.add(() => test.end())
+				.next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	function testFilterDisplay(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".condition_btn").size(),
+			1,
+			"should have negation button for categorical filter"
+		)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".condition_btn").html(),
+			"IS",
+			"should have 'IS' for negation button for categorical filter"
+		)
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".add_value_btn").size(),
+			1,
+			"should have '+' button to add category to filter"
+		)
+	}
+
+	function triggerChangeNegation(obj) {
+		obj.termfilter.terms[0].isnot = true
+		obj.main()
+	}
+
+	function checkNegationBtnVal(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".condition_btn").html(),
+			"IS NOT",
+			"should have 'IS NOT' for negation button after change"
+		)
+	}
+
+	function triggerAddCategory(obj) {
+		obj.termfilter.terms[0].values[1] = { key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }
+		obj.main()
+	}
+
+	function checkAddedCategory(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".value_btn").size(),
+			termfilter.terms[0].values.length,
+			"should add category from data"
+		)
+	}
+
+	function triggerRemoveCategory(obj) {
+		obj.termfilter.terms[0].values.pop()
+		obj.main()
+	}
+
+	function checkRemovedCategory(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".value_btn").size(),
+			termfilter.terms[0].values.length,
+			"should remove category from data"
+		)
+	}
+})
+
+tape("filter term-value button: Numerical term", function(test) {
+	test.timeoutAfter(4000)
+	test.plan(6)
+	const div0 = d3s.select("body").append("div")
+	const termfilter = {
+		show_top_ui: true,
+		terms: [
+			{
+				term: {
+					id: "aaclassic_5",
+					name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)",
+					unit: "mg/m²",
+					isfloat: true
+				},
+				ranges: [{ stopinclusive: true, start: 1000, stop: 2000 }]
+			}
+		]
+	}
+
+	runproteinpaint({
+		host,
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter,
+			callbacks: {
+				tree: {
+					postRender: runTests
+				}
+			}
+		}
+	})
+
+	function runTests(obj) {
+		try {
+			obj.bus.on("postRender", null)
+			helpers
+				.getChain()
+				.add(testFilterDisplay, { timeout: 300 })
+				.add(triggerChangeRange)
+				.add(checkRangeBtn, { timeout: 200 })
+				.add(triggerAddUnannotatedRange)
+				.add(checkUnannotatedValBtn, { timeout: 300 })
+				.add(triggerRemoveRange)
+				.add(checkRemovedRange, { timeout: 300 })
+				.add(() => test.end())
+				.next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	function testFilterDisplay(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+			termfilter.terms[0].term.name,
+			"filter btn and term-name from runpp() should be the same"
+		)
+		test.equal(
+			obj.dom.termfilterdiv
+				.selectAll(".value_btn")
+				.html()
+				.split(" ")[0],
+			termfilter.terms[0].ranges[0].start.toString(),
+			"value button should match the data"
+		)
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".add_value_btn").size() >= 1,
+			"should have '+' button to add unannonated value to filter"
+		)
+	}
+
+	function triggerChangeRange(obj) {
+		obj.termfilter.terms[0].ranges[0] = { stopinclusive: true, start: 3000, stop: 4000 }
+		obj.main()
+	}
+
+	function checkRangeBtn(obj) {
+		test.equal(
+			obj.dom.termfilterdiv
+				.selectAll(".value_btn")
+				.html()
+				.split(" ")[0],
+			termfilter.terms[0].ranges[0].start.toString(),
+			"should have value button changed from data"
+		)
+	}
+
+	function triggerAddUnannotatedRange(obj) {
+		obj.termfilter.terms[0].ranges[1] = { is_unannotated: true, value: "-9999", label: "Unknown treatment record" }
+		obj.main()
+	}
+
+	function checkUnannotatedValBtn(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".value_btn")._groups[0][1].innerText,
+			termfilter.terms[0].ranges[1].label,
+			"should have unannotated value button added from data"
+		)
+	}
+
+	function triggerRemoveRange(obj) {
+		obj.termfilter.terms[0].ranges.pop()
+		obj.main()
+	}
+
+	function checkRemovedRange(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".value_btn").size(),
+			termfilter.terms[0].ranges.length,
+			"should remove value button altered by data"
+		)
+	}
+})
+
+tape("filter term-value button: Conditional term (grade)", function(test) {
+	test.timeoutAfter(4000)
+	test.plan(7)
+	const div0 = d3s.select("body").append("div")
+	const termfilter = {
+		show_top_ui: true,
+		terms: [
+			{
+				term: { id: "Arrhythmias", name: "Arrhythmias", iscondition: true },
+				values: [{ key: 0, label: "0: No condition" }],
+				bar_by_grade: 1,
+				value_by_max_grade: 1
+			}
+		]
+	}
+
+	runproteinpaint({
+		host,
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter,
+			callbacks: {
+				tree: {
+					postRender: runTests
+				}
+			}
+		}
+	})
+
+	function runTests(obj) {
+		try {
+			obj.bus.on("postRender", null)
+			helpers
+				.getChain()
+				.add(testFilterDisplay, { timeout: 300 })
+				.add(triggerChangeGrade)
+				.add(checkGradeBtn, { timeout: 200 })
+				.add(triggerGradeType)
+				.add(checkGradeTypeBtn, { timeout: 300 })
+				.add(triggerAddGrade)
+				.add(checkAddedGradeBtn, { timeout: 300 })
+				.add(() => test.end())
+				.next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	function testFilterDisplay(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+			termfilter.terms[0].term.name,
+			"filter btn and term-name from runpp() should be the same"
+		)
+
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][2].innerText.slice(0, -2),
+			termfilter.terms[0].values[0].label,
+			"grade value button should match the data"
+		)
+
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.includes("Max"),
+			"grade type button should match the data"
+		)
+
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".add_value_btn").size() >= 1,
+			"should have '+' button to add unannoated value to filter"
+		)
+	}
+
+	function triggerChangeGrade(obj) {
+		obj.termfilter.terms[0].values[0] = { key: 1, label: "1: Mild" }
+		obj.main()
+	}
+
+	function checkGradeBtn(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][2].innerText.slice(0, -2),
+			termfilter.terms[0].values[0].label,
+			"should have grade value button changed from data"
+		)
+	}
+
+	function triggerGradeType(obj) {
+		obj.termfilter.terms[0].value_by_max_grade = false
+		obj.termfilter.terms[0].value_by_most_recent = true
+		obj.main()
+	}
+
+	function checkGradeTypeBtn(obj) {
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.includes("recent"),
+			"should match grade type button to the data"
+		)
+	}
+
+	function triggerAddGrade(obj) {
+		obj.termfilter.terms[0].values[1] = { key: 2, label: "2: Moderate" }
+		obj.main()
+	}
+
+	function checkAddedGradeBtn(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.slice(0, -2),
+			termfilter.terms[0].values[1].label,
+			"should add grade from the data"
+		)
+	}
+})
+
+tape("filter term-value button: Conditional term (sub-condition)", function(test) {
+	test.timeoutAfter(4000)
+	test.plan(5)
+	const div0 = d3s.select("body").append("div")
+	const termfilter = {
+		show_top_ui: true,
+    terms: [
+      {
+				term: { id: "Arrhythmias", name: "Arrhythmias", iscondition: true },
+        values: [{ key: "Sinus bradycardia", label: "Sinus bradycardia" }],
+        bar_by_children : 1, value_by_computable_grade: 1
+      },
+		]
+	}
+
+	runproteinpaint({
+		host,
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter,
+			callbacks: {
+				tree: {
+					postRender: runTests
+				}
+			}
+		}
+  })
+  
+  function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+        helpers
+          .getChain()
+          .add(testFilterDisplay, { timeout: 300 })
+          .add(triggerChangeSub)
+          .add(checkSubBtn, { timeout: 200 })
+          .add(triggerAddSub)
+          .add(checkAddedSubBtn, { timeout: 200 })
+          .add(() => test.end())
+          .next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	function testFilterDisplay(obj) {
+    test.equal(
+      obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+      termfilter.terms[0].term.name,
+      "filter btn and term-name from runpp() should be the same"
+    )
+    
+    test.equal(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][2].innerText
+        .slice(0, -2),
+      termfilter.terms[0].values[0].label,
+      "should sub-condition value button match the data"
+    )
+    
+    test.true(
+      obj.dom.termfilterdiv.selectAll(".add_value_btn").size() >= 1,
+      "should have '+' button to add unannoated value to filter"
+    )
+  }
+
+  function triggerChangeSub(obj) {
+		obj.termfilter.terms[0].values[0] = { key: "Cardiac dysrhythmia", label: "Cardiac dysrhythmia" }
+		obj.main()
   }
   
-  runproteinpaint({
-    host,
-    holder: div0.node(),
-    noheader:1,
-    nobox:true,
-    display_termdb:{
-      dslabel:'SJLife',
-      genome:'hg38',
-      default_rootterm:{},
-      termfilter,
-      bar_click_menu:{
-        add_filter:true
+  function checkSubBtn(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][2].innerText.slice(0, -2),
+			termfilter.terms[0].values[0].label,
+			"should have sub-condition value button changed from data"
+		)
+  }
+  
+  function triggerAddSub(obj) {
+		obj.termfilter.terms[0].values[1] = { key: "Prolonged QT interval", label: "Prolonged QT interval" }
+		obj.main()
+  }
+  
+  function checkAddedSubBtn(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.slice(0, -2),
+			termfilter.terms[0].values[1].label,
+			"should add sub-condition value button from data"
+		)
+	}
+})
+
+tape("filter term-value button: Conditional term (grade and child)", function(test) {
+	test.timeoutAfter(4000)
+	test.plan(3)
+	const div0 = d3s.select("body").append("div")
+	const termfilter = {
+		show_top_ui: true,
+    terms: [
+      {
+				term: { id: "Arrhythmias", name: "Arrhythmias", iscondition: true },
+        grade_and_child: [{ grade: 0, grade_label: "0: No condition", child_id: "Sinus bradycardia", child_label: "Sinus bradycardia" }],
+        bar_by_children : 1, value_by_max_grade: 1
       },
-      params2restore: {
-        term: termjson["diaggrp"],
-        settings: {
-          currViews: ['barchart']
-        }
-      },
-      callbacks: {
-        plot: {
-          postRender: [testFilterDisplay, triggerFilterRemove, /* triggerFilterAdd */]
-        }
-      },
-    }
+		]
+	}
+
+	runproteinpaint({
+		host,
+		holder: div0.node(),
+		noheader: 1,
+		nobox: true,
+		display_termdb: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			default_rootterm: {},
+			termfilter,
+			callbacks: {
+				tree: {
+					postRender: runTests
+				}
+			}
+		}
   })
+  
+  function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+        helpers
+          .getChain()
+          .add(testFilterDisplay, { timeout: 300 })
+          .add(() => test.end())
+          .next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
 
-  function testFilterDisplay(obj) {
-    test.equal(obj.obj.dom.termfilterdiv.selectAll('.term_name_btn').html(),termfilter.terms[0].term.name, "should Filter term-name and plot clicked from be same")
-    test.equal(obj.obj.dom.termfilterdiv.selectAll('.value_btn').html().slice(0, -2),termfilter.terms[0].values[0].label, "should Filter value and label of bar clicked be same")
-    test.true(obj.obj.dom.termfilterdiv.selectAll('.add_value_btn').size()>=1,'should have \'+\' button to add category to filter')
-    test.true(obj.obj.dom.termfilterdiv.selectAll('.term_remove_btn').size()>=1,'should have \'x\' button to remove filter') 
-  }
+	function testFilterDisplay(obj) {
+    test.equal(
+      obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+      termfilter.terms[0].term.name,
+      "filter btn and term-name from runpp() should be the same"
+    )
+    
+    test.equal(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][2].innerText,
+      termfilter.terms[0].grade_and_child[0].grade_label,
+      "should grade value button match the data"
+    )
 
-  function triggerFilterRemove(obj){
-    obj.bus.on('postRender',[testFilterRemove])
-    obj.obj.dom.termfilterdiv.selectAll('.term_remove_btn').node().click()
-  }
-
-  function testFilterRemove(obj) {
-    test.equal(obj.obj.dom.termfilterdiv.selectAll('.term_name_btn').size(),0, "should remove tvs filter after clicking \'x\'")
-    test.end()
+    test.equal(
+      obj.dom.termfilterdiv
+        .selectAll(".sja_filter_tag_btn")._groups[0][3].innerText,
+      termfilter.terms[0].grade_and_child[0].child_label,
+      "should sub-condition value button match the data"
+    )
   }
 })

@@ -151,7 +151,7 @@ callbacks: {
 
 		if (obj.default_rootterm) {
 			await show_default_rootterm(obj)
-			// restore_view will delete params2restore key-value once
+			// restore_view will delete plot2restore key-value once
 			restore_view(obj)
 			return
 		}
@@ -683,17 +683,32 @@ barchart is shown in-place under term and in full capacity
 }
 
 function restore_view(obj) {
-	if (!obj.params2restore) return
-	const params = typeof obj.params2restore == "object" ? obj.params2restore : getUrlParams(obj.params2restore)
-	delete obj.params2restore
+	if (!obj.plot2restore) return
+	const params = typeof obj.plot2restore == "object" ? obj.plot2restore : getUrlParams(obj.plot2restore)
+	delete obj.plot2restore
 	restore_plot(obj, params)
 }
 
 function getUrlParams(queryStr) {
 	const params = {}
+	// key: parameter or setting name, value: separator character(s)
+	const keysWithSepValue = { currViews: "," }
 	queryStr.split("&").forEach(kv => {
 		const [key, val] = kv.split("=")
-		params[key] = !val || isNaN(val) ? val : +val
+		if (key.includes(".")) {
+			const subkeys = key.split(".")
+			let subParam = params
+			subkeys.forEach((k, i) => {
+				if (i == subkeys.length - 1) {
+					subParam[k] = k in keysWithSepValue ? val.split(keysWithSepValue[k]) : val
+				} else {
+					if (!(k in subParam)) subParam[k] = {}
+					subParam = subParam[k]
+				}
+			})
+		} else {
+			params[key] = !val || isNaN(val) ? val : +val
+		}
 	})
 	return params
 }
@@ -723,19 +738,27 @@ async function restore_plot(obj, params) {
 	if (typeof params.term == "object") {
 		make_barplot(obj, params, restored_div)
 	} else {
-		const data = await obj.do_query(["findterm=" + params.term])
-		if (!data.lst.length) return
-		const term = data.lst.filter(d => d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
+		const _term = await obj.do_query(["gettermbyid=" + params.term])
+		if (!_term || !_term.term) alert(`Unable to restore the view for term='${params.term}'`)
+		const term = _term && _term.term
+		term.id = params.term
 
 		let term2, term0
 		if (params.term2 && params.term2 != "genotype") {
-			const data = await obj.do_query(["findterm=" + params.term2])
-			if (data.lst.length) term2 = data.lst.filter(d => d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
-			if (term2.iscondition) term2.q = {}
+			const term = await obj.do_query(["gettermbyid=" + params.term2])
+			if (term && term.term) {
+				term2 = term.term
+				term2.id = params.term2
+				if (term2.iscondition) term2.q = {}
+			}
 		}
 		if (params.term0) {
-			const data = await obj.do_query(["findterm=" + params.term0])
-			if (data.lst.length) term0 = data.lst.filter(d => d.iscategorical || d.isfloat || d.isinteger || d.iscondition)[0]
+			const term = await obj.do_query(["gettermbyid=" + params.term0])
+			if (term && term.term) {
+				term0 = term.term
+				term0.id = params.term0
+				if (term0.iscondition) term0.q = {}
+			}
 		}
 
 		restored_div.append("h3").html("Restored View")
@@ -745,12 +768,15 @@ async function restore_plot(obj, params) {
 				term,
 				term2,
 				term0,
-				settings: {
-					bar: {
-						overlay: term2 ? "tree" : "none",
-						divideBy: term0 ? "tree" : "none"
-					}
-				}
+				settings: Object.assign(
+					{
+						bar: {
+							overlay: term2 ? "tree" : "none",
+							divideBy: term0 ? "tree" : "none"
+						}
+					},
+					params.settings ? params.settings : {}
+				)
 			},
 			restored_div
 		)
