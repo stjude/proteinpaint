@@ -24,7 +24,7 @@ export function init(opts) {
 			topbar: opts.holder.append("div")
 		},
 		index: i++, // used for assigning unique input names, across different plots
-		isVisible: false,
+		isVisible: "isVisible" in opts ? opts.isVisible : false,
 		listeners: {
 			plot: {
 				postRender(plot) {
@@ -71,6 +71,7 @@ function setBurgerBtn(controls) {
 		.html("&#8801;")
 		.on("click", () => {
 			controls.isVisible = !controls.isVisible
+			controls.plot.settings.controls.isVisible = true
 			controls.main(controls.plot)
 		})
 

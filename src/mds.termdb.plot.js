@@ -85,6 +85,9 @@ arg:
 		// currViews: ["barchart" | "table" | "boxplot"]
 		// + auto-added ["stattable"] if barchart && plot.term.isfloat or .isinteger
 		currViews: ["barchart"],
+		controls: {
+			isVisible: false
+		},
 		common: {
 			use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
 			use_percentage: false,
@@ -121,7 +124,8 @@ arg:
 	plot.components = {
 		controls: controls_init({
 			plot,
-			holder: plot.dom.controls
+			holder: plot.dom.controls,
+			isVisible: plot.settings.controls.isVisible
 		}),
 		banner: banner_init(plot.dom.banner),
 		barchart: new TermdbBarchart({
