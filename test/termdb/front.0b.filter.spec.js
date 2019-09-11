@@ -37,7 +37,7 @@ tape("filter term-value button", function(test) {
 				add_filter: true
 			},
 			callbacks: {
-				tree: {
+				filter: {
 					postRender: runTests
 				}
 			}
@@ -46,14 +46,14 @@ tape("filter term-value button", function(test) {
 
 	function runTests(obj) {
 		try {
-			obj.bus
+			obj.components.filter.bus
 				.on("postRender", null)
-				.chain("", testFilterDisplay, { timeout: 300 })
-				.chain("", triggerFilterRemove)
-				.chain("", testFilterRemove, { timeout: 100 })
-				.chain("", triggerFilterAdd)
-				.chain("", testAddTerm, { timeout: 100 })
-				.chain("", () => test.end())
+				.chain(testFilterDisplay, { timeout: 100 })
+				.chain(triggerFilterRemove)
+				.chain(testFilterRemove) //, { timeout: 50 })
+				.chain(triggerFilterAdd)
+				.chain(testAddTerm) //, { timeout: 50 })
+				.chain(() => test.end())
 				.next(obj)
 		} catch (e) {
 			console.log(e)
@@ -156,17 +156,17 @@ tape("filter term-value button: categorical term", function(test) {
 		try {
 			obj.bus
 				.on("postRender", null)
-				.chain("", testFilterDisplay, { timeout: 300 })
-				.chain("", triggerChangeNegation)
-				.chain("", checkNegationBtnVal, { timeout: 200 })
-				.chain("", triggerAddCategory)
-				.chain("", checkAddedCategory, { timeout: 300 })
-				.chain("", triggerRemoveCategory)
-				.chain("", checkRemovedCategory, { timeout: 300 })
-				.chain("", () => test.end())
+				.chain(testFilterDisplay, { timeout: 300 })
+				.chain(triggerChangeNegation)
+				.chain(checkNegationBtnVal, { timeout: 200 })
+				.chain(triggerAddCategory)
+				.chain(checkAddedCategory, { timeout: 300 })
+				.chain(triggerRemoveCategory)
+				.chain(checkRemovedCategory, { timeout: 300 })
+				.chain(() => test.end())
 				.next(obj)
 		} catch (e) {
-			//console.log(e)
+			console.log(e)
 		}
 	}
 
@@ -269,14 +269,14 @@ tape("filter term-value button: Numerical term", function(test) {
 		try {
 			obj.bus
 				.on("postRender", null)
-				.chain("", testFilterDisplay, { timeout: 300 })
-				.chain("", triggerChangeRange)
-				.chain("", checkRangeBtn, { timeout: 200 })
-				.chain("", triggerAddUnannotatedRange)
-				.chain("", checkUnannotatedValBtn, { timeout: 300 })
-				.chain("", triggerRemoveRange)
-				.chain("", checkRemovedRange, { timeout: 300 })
-				.chain("", () => test.end())
+				.chain(testFilterDisplay, { timeout: 300 })
+				.chain(triggerChangeRange)
+				.chain(checkRangeBtn, { timeout: 200 })
+				.chain(triggerAddUnannotatedRange)
+				.chain(checkUnannotatedValBtn, { timeout: 300 })
+				.chain(triggerRemoveRange)
+				.chain(checkRemovedRange, { timeout: 300 })
+				.chain(() => test.end())
 				.next(obj)
 		} catch (e) {
 			console.log(e)
@@ -352,12 +352,13 @@ tape("filter term-value button: Conditional term (grade)", function(test) {
 	const div0 = d3s.select("body").append("div")
 	const termfilter = {
 		show_top_ui: true,
-    terms: [
+		terms: [
 			{
 				term: { id: "Arrhythmias", name: "Arrhythmias", iscondition: true },
-        values: [{ key: 0, label: "0: No condition" }],
-        bar_by_grade : 1, value_by_max_grade: 1
-      },
+				values: [{ key: 0, label: "0: No condition" }],
+				bar_by_grade: 1,
+				value_by_max_grade: 1
+			}
 		]
 	}
 
@@ -377,20 +378,20 @@ tape("filter term-value button: Conditional term (grade)", function(test) {
 				}
 			}
 		}
-  })
-  
-  function runTests(obj) {
+	})
+
+	function runTests(obj) {
 		try {
 			obj.bus
 				.on("postRender", null)
-				.chain("", testFilterDisplay, { timeout: 300 })
-				.chain("", triggerChangeGrade)
-				.chain("", checkGradeBtn, { timeout: 200 })
-				.chain("", triggerGradeType)
-				.chain("", checkGradeTypeBtn, { timeout: 300 })
-				.chain("", triggerAddGrade)
-				.chain("", checkAddedGradeBtn, { timeout: 300 })
-				.chain("", () => test.end())
+				.chain(testFilterDisplay, { timeout: 300 })
+				.chain(triggerChangeGrade)
+				.chain(checkGradeBtn, { timeout: 200 })
+				.chain(triggerGradeType)
+				.chain(checkGradeTypeBtn, { timeout: 300 })
+				.chain(triggerAddGrade)
+				.chain(checkAddedGradeBtn, { timeout: 300 })
+				.chain(() => test.end())
 				.next(obj)
 		} catch (e) {
 			console.log(e)
@@ -398,72 +399,65 @@ tape("filter term-value button: Conditional term (grade)", function(test) {
 	}
 
 	function testFilterDisplay(obj) {
-    test.equal(
-      obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
-      termfilter.terms[0].term.name,
-      "filter btn and term-name from runpp() should be the same"
-    )
-    
-    test.equal(
-      obj.dom.termfilterdiv
-        .selectAll(".sja_filter_tag_btn")._groups[0][2].innerText
-        .slice(0, -2),
-      termfilter.terms[0].values[0].label,
-      "grade value button should match the data"
-    )
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".term_name_btn").html(),
+			termfilter.terms[0].term.name,
+			"filter btn and term-name from runpp() should be the same"
+		)
 
-    test.true(
-      obj.dom.termfilterdiv
-        .selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.includes('Max'),
-      "grade type button should match the data"
-    )
-    
-    test.true(
-      obj.dom.termfilterdiv.selectAll(".add_value_btn").size() >= 1,
-      "should have '+' button to add unannoated value to filter"
-    )
-  }
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][2].innerText.slice(0, -2),
+			termfilter.terms[0].values[0].label,
+			"grade value button should match the data"
+		)
 
-  function triggerChangeGrade(obj) {
-		obj.termfilter.terms[0].values[0] = { key: 1, label: "1: Mild" }
-    obj.main()
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.includes("Max"),
+			"grade type button should match the data"
+		)
+
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".add_value_btn").size() >= 1,
+			"should have '+' button to add unannoated value to filter"
+		)
 	}
-  
-  function checkGradeBtn(obj) {
-    test.equal(
-      obj.dom.termfilterdiv
-        .selectAll(".sja_filter_tag_btn")._groups[0][2].innerText
-        .slice(0, -2),
-      termfilter.terms[0].values[0].label,
-      "should have grade value button changed from data"
-    )
-  }
-  
-  function triggerGradeType(obj) {
-    obj.termfilter.terms[0].value_by_max_grade = false
-    obj.termfilter.terms[0].value_by_most_recent = true
-    obj.main()
-  }
-  
-  function checkGradeTypeBtn(obj) {
-    test.true(
-      obj.dom.termfilterdiv
-        .selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.includes('recent'),
-      "should match grade type button to the data"
-    )
-  }
 
-  function  triggerAddGrade(obj) {
-    obj.termfilter.terms[0].values[1] = { key: 2, label: "2: Moderate" }
-    obj.main()
-  }
+	function triggerChangeGrade(obj) {
+		obj.termfilter.terms[0].values[0] = { key: 1, label: "1: Mild" }
+		obj.main()
+	}
 
-  function checkAddedGradeBtn(obj) {
-    test.equal(
-      obj.dom.termfilterdiv
-        .selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.slice(0, -2),
-        termfilter.terms[0].values[1].label,
-      "should add grade from the data"
-    )
-  }
+	function checkGradeBtn(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][2].innerText.slice(0, -2),
+			termfilter.terms[0].values[0].label,
+			"should have grade value button changed from data"
+		)
+	}
+
+	function triggerGradeType(obj) {
+		obj.termfilter.terms[0].value_by_max_grade = false
+		obj.termfilter.terms[0].value_by_most_recent = true
+		obj.main()
+	}
+
+	function checkGradeTypeBtn(obj) {
+		test.true(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.includes("recent"),
+			"should match grade type button to the data"
+		)
+	}
+
+	function triggerAddGrade(obj) {
+		obj.termfilter.terms[0].values[1] = { key: 2, label: "2: Moderate" }
+		obj.main()
+	}
+
+	function checkAddedGradeBtn(obj) {
+		test.equal(
+			obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn")._groups[0][3].innerText.slice(0, -2),
+			termfilter.terms[0].values[1].label,
+			"should add grade from the data"
+		)
+	}
 })

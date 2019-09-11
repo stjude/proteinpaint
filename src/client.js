@@ -207,14 +207,9 @@ export function get_event_bus(eventTypes = [], callbacks = {}, defaultArg = null
 			}
 			return bus
 		},
-		chain(eventType, callback, opts = {}) {
-			// callback must be a function, cannot be an array of functions like .on() argument
-			const [type, name] = eventType.split(".")
-			if (type && !eventTypes.includes(type)) {
-				throw `Unknown event type '${type}' (client.get_event_bus)`
-			} else if (typeof callback == "function") {
+		chain(callback, opts = {}) {
+			if (typeof callback == "function") {
 				chain.push({
-					eventType,
 					fxn: callback,
 					opts
 				})
@@ -226,26 +221,13 @@ export function get_event_bus(eventTypes = [], callbacks = {}, defaultArg = null
 		next(arg) {
 			const next = chain.shift()
 			if (!next) return
-			if (next.eventType) {
-				bus.on(
-					next.eventType,
-					arg => {
-						next.fxn(arg)
-						bus.next(arg)
-					},
-					next.opts
-				)
-			} else {
-				if (next.opts.timeout)
-					setTimeout(() => {
-						next.fxn(arg)
-						bus.next(arg)
-					}, next.opts.timeout)
-				else {
+			setTimeout(
+				() => {
 					next.fxn(arg)
 					bus.next(arg)
-				}
-			}
+				},
+				next.opts.timeout ? next.opts.timeout : 0
+			)
 		}
 	}
 	if (callbacks) {

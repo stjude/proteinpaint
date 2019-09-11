@@ -389,6 +389,12 @@ group{}
 					await obj.callback()
 				})
 		}
+
+		if (obj.postRenderCallback) {
+			// call via the selection to hopefully sequence
+			// after all other .remove(), .append()
+			terms_div.call(obj.postRenderCallback)
+		}
 	}
 
 	async function getcategories(term, lst) {
