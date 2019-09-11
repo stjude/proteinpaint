@@ -1,7 +1,7 @@
 exports.getChain = () => {
 	const steps = []
 	return (chain = {
-		next(callback, opts = {}) {
+		add(callback, opts = {}) {
 			if (typeof callback == "function") {
 				steps.push({
 					fxn: callback,
@@ -12,17 +12,16 @@ exports.getChain = () => {
 			}
 			return chain
 		},
-		start(arg) {
-			const next = steps.shift()
-			if (!next) return
+		next(arg) {
+			const step = steps.shift()
+			if (!step) return
 			setTimeout(
 				() => {
-					next.fxn(arg)
-					chain.start(arg)
+					step.fxn(arg)
+					chain.next(arg)
 				},
-				next.opts.timeout ? next.opts.timeout : 0
+				step.opts.timeout ? step.opts.timeout : 0
 			)
 		}
 	})
-	return chain
 }
