@@ -3,6 +3,7 @@ const d3s = require("d3-selection")
 const termjson = require("./termjson").termjson
 const serverconfig = require("../../serverconfig")
 const host = "http://localhost:" + serverconfig.port
+const helpers = require("../front.helpers.js")
 
 tape("\n", function(test) {
 	test.pass("-***- mds.termdb.controls cart -***-")
@@ -14,6 +15,16 @@ tape("cart button", function(test) {
 	test.plan(3)
 	const div0 = d3s.select("body").append("div")
 	const termfilter = { show_top_ui: true }
+	const selected_groups = [
+		{
+			terms: [
+				{
+					term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
+					values: [{ key: "Wilms tumor", label: "Wilms tumor" }]
+				}
+			]
+		}
+	]
 
 	runproteinpaint({
 		host,
@@ -25,33 +36,41 @@ tape("cart button", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter,
-			selected_groups: [
-				{
-					terms: [
-						{
-							term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
-							values: [{ key: "Wilms tumor", label: "Wilms tumor" }]
-						}
-					]
-				}
-			],
+			selected_groups,
 			bar_click_menu: {
 				add_filter: true
 			},
 			callbacks: {
 				tree: {
-					postRender: [testDisplay, triggerClick]
+					postRender: runTests
 				}
 			}
 		}
 	})
+
+	function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+        helpers
+          .getChain()
+          .add(testDisplay)
+		  .add(triggerClick)
+		  .add(testSelectedGroupTipDisplay)
+		  .add(triggerEmpty)
+          .add(testEmpty)
+          .add(() => test.end())
+          .next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
 
 	function testDisplay(obj) {
 		test.equal(obj.dom.cartdiv.html(), "Selected 1 Group", "should display a cart button")
 	}
 
 	function triggerClick(obj) {
-		obj.components.cart.bus.on("postRender", [testSelectedGroupTipDisplay, triggerEmpty])
 		obj.dom.cartdiv.node().dispatchEvent(new Event("click", { bubbles: true }))
 	}
 
@@ -60,7 +79,6 @@ tape("cart button", function(test) {
 	}
 
 	function triggerEmpty(obj) {
-		obj.components.cart.bus.on("postRender", testEmpty)
 		obj.tip.d
 			.select(".remove_group_btn")
 			.node()
@@ -69,7 +87,6 @@ tape("cart button", function(test) {
 
 	function testEmpty(obj) {
 		test.equal(obj.dom.cartdiv.style("display"), "none", "Should remove the cart button")
-		test.end()
 	}
 })
 
@@ -78,6 +95,16 @@ tape("cart selected group tip", function(test) {
 	test.plan(2)
 	const div0 = d3s.select("body").append("div")
 	const termfilter = { show_top_ui: true }
+	const selected_groups = [
+		{
+			terms: [
+				{
+					term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
+					values: [{ key: "Wilms tumor", label: "Wilms tumor" }]
+				}
+			]
+		}
+	]
 
 	runproteinpaint({
 		host,
@@ -89,29 +116,36 @@ tape("cart selected group tip", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter,
-			selected_groups: [
-				{
-					terms: [
-						{
-							term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
-							values: [{ key: "Wilms tumor", label: "Wilms tumor" }]
-						}
-					]
-				}
-			],
+			selected_groups,
 			bar_click_menu: {
 				add_filter: true
 			},
 			callbacks: {
 				tree: {
-					postRender: [triggerClick]
+					postRender: runTests
 				}
 			}
 		}
 	})
 
+	function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+        helpers
+          .getChain()
+          .add(triggerClick)
+		  .add(testSelectedGroupTipDisplay, { timeout: 200 })
+		  .add(triggerRemoveTerm)
+          .add(testRemoveTerm)
+          .add(() => test.end())
+          .next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
 	function triggerClick(obj) {
-		obj.components.cart.bus.on("postRender", [testSelectedGroupTipDisplay, triggerRemoveTerm])
 		obj.dom.cartdiv.node().dispatchEvent(new Event("click", { bubbles: true }))
 	}
 
@@ -120,21 +154,15 @@ tape("cart selected group tip", function(test) {
 	}
 
 	function triggerRemoveTerm(obj) {
-		obj.components.cart.bus.on("postRender", testRemoveTerm)
-		setTimeout(
-			() =>
-				obj.tip.d
-					.selectAll(".term_remove_btn")
-					.node()
-					.dispatchEvent(new Event("click", { bubbles: true })),
-			120
-		)
+		obj.tip.d
+			.selectAll(".term_remove_btn")
+			.node()
+			.dispatchEvent(new Event("click", { bubbles: true }))
 	}
 
 	function testRemoveTerm(obj) {
-    test.equal(obj.tip.d.selectAll(".term_name_btn").size(), 0, "should remove blue-pill from the group")
-    obj.tip.hide()
-    test.end()
+		test.equal(obj.tip.d.selectAll(".term_name_btn").size(), 0, "should remove blue-pill from the group")
+		obj.tip.hide()
 	}
 })
 
@@ -143,6 +171,27 @@ tape("cart with 2 groups", function(test) {
 	test.plan(6)
 	const div0 = d3s.select("body").append("div")
 	const termfilter = { show_top_ui: true }
+	const selected_groups = [
+		{
+			is_termdb: true,
+			terms: [
+				{
+					term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
+					values: [{ key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }]
+				}
+			]
+		},
+		{
+			is_termdb: true,
+			terms: [
+				{
+					term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
+					values: [{ key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }],
+					isnot: true
+				}
+			]
+		}
+	]
 
 	runproteinpaint({
 		host,
@@ -154,88 +203,78 @@ tape("cart with 2 groups", function(test) {
 			genome: "hg38",
 			default_rootterm: {},
 			termfilter,
-			selected_groups: [
-				{
-					is_termdb: true,
-					terms: [
-						{
-							term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
-							values: [{ key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }]
-						}
-					]
-				},
-				{
-					is_termdb: true,
-					terms: [
-						{
-							term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
-							values: [{ key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }],
-							isnot: true
-						}
-					]
-				}
-			],
+			selected_groups,
 			bar_click_menu: {
 				add_filter: true
 			},
 			callbacks: {
 				tree: {
-					postRender: [triggerCartClick, triggerRemoveGroup]
+					postRender: runTests
 				}
 			}
 		}
 	})
 
+	function runTests(obj) {
+		try {
+			obj.bus
+				.on("postRender", null)
+        helpers
+          .getChain()
+          .add(triggerCartClick)
+		  .add(testSelectedGroupTipDisplay)
+		  .add(triggerLaunchGenomePaint)
+          .add(checkLaunchGenomePaint, { timeout: 2500 })
+          .add(triggerRemoveGroup)
+          .add(testRemoveGroup, { timeout: 200 })
+          .add(() => test.end())
+          .next(obj)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
 	function triggerCartClick(obj) {
 		obj.dom.cartdiv.node().dispatchEvent(new Event("click", { bubbles: true }))
-		setTimeout(() => testSelectedGroupTipDisplay(obj), 100)
 	}
 
 	function testSelectedGroupTipDisplay(obj) {
 		test.equal(obj.tip.d.selectAll(".remove_group_btn").size(), 2, "should show 2 blue-pill for selected groups")
 		test.equal(obj.tip.d.selectAll(".launch_gp_btn").size(), 1, "should show 'test in genome paint' button")
+	}
 
-		obj.tip.d
-			.selectAll(".launch_gp_btn")
+	function triggerLaunchGenomePaint(obj){
+		obj.tip.d.selectAll(".launch_gp_btn").node().click()
+	}
+
+	function checkLaunchGenomePaint(){
+
+		// Should check 'SJLife' button in GenomePaint pop-up window
+		test.equal(
+			d3s.select("body")
+				.selectAll(".sja_pane")
+				.selectAll(".sja_handle_green")
+				.html(),
+			"SJLife",
+			"should lauch GenomePaint"
+		)
+
+		d3s.select("body")
+			.selectAll(".sja_pane")
+			.selectAll(".sja_menuoption")
 			.node()
 			.click()
-		setTimeout(() => {
-			// Should check 'SJLife' button in GenomePaint pop-up window
-			test.equal(
-				d3s
-					.select("body")
-					.selectAll(".sja_pane")
-					.selectAll(".sja_handle_green")
-					.html(),
-				"SJLife",
-				"should lauch GenomePaint"
-			)
-			setTimeout(
-				() =>
-					d3s
-						.select("body")
-						.selectAll(".sja_pane")
-						.selectAll(".sja_menuoption")
-						.node()
-						.click(),
-				2800
-			)
-		}, 300)
 	}
 
 	function triggerRemoveGroup(obj) {
-		setTimeout(() => {
-			obj.dom.cartdiv.node().dispatchEvent(new Event("click", { bubbles: true }))
-			obj.tip.d
-				.select(".remove_group_btn")
-				.node()
-				.dispatchEvent(new Event("click", { bubbles: true }))
-			testRemoveGroup(obj)
-		}, 3000)
+		obj.dom.cartdiv.node().dispatchEvent(new Event("click", { bubbles: true }))
+		obj.tip.d
+			.select(".remove_group_btn")
+			.node()
+			.dispatchEvent(new Event("click", { bubbles: true }))
 	}
 
 	function testRemoveGroup(obj) {
-		obj.components.cart.bus.on("postRender", null)
 		test.equal(obj.tip.d.selectAll(".remove_group_btn").size(), 1, "should show only 1 blue-pill after group remove")
 		test.equal(
 			obj.tip.d.selectAll(".launch_gp_btn").size(),
@@ -244,6 +283,5 @@ tape("cart with 2 groups", function(test) {
 		)
 		test.equal(obj.dom.cartdiv.html(), "Selected 1 Group", "should update a cart button")
 		obj.tip.hide()
-		test.end()
 	}
 })
