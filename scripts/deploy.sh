@@ -165,7 +165,7 @@ if [[ "$ENV" != "scp-prod" ]]; then
 	mv package.json $APP/
 	mv public/builds/$SUBDOMAIN $APP/public/bin
 	mv src/common.js src/vcf.js src/bulk* src/tree.js $APP/src/
-	mv utils test.embed modules $APP/
+	mv utils modules $APP/
 	mv genome $APP/
 	mv dataset $APP/
 
