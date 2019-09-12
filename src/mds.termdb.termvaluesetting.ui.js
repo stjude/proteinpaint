@@ -1,11 +1,11 @@
 import * as client from "./client"
 import * as dom from "./dom"
 import { init as init_tree} from "./mds.termdb"
-import { event as d3event } from "d3-selection"
+import { event as d3event, select } from "d3-selection"
 
 /*
 ********************** EXPORTED
-display
+init
 to_parameter
 ********************** INTERNAL
 */
@@ -77,7 +77,7 @@ group{}
 
 		pills.transition()
 			.duration(200)
-			.each((d, i)=> updatePill(d, i))
+			.each(updatePills)
 
 		pills.enter().append('div')
 			.attr('class','tvs_pill')
@@ -86,15 +86,11 @@ group{}
 			.style("padding", "2px")
 			.transition()
 			.duration(200)
-			.each((d, i)=> updatePill(d, i))
+			.each(updatePills)
 
-		async function updatePill(term, i){
+		async function updatePills(term, i){
 
-			const one_term_div = terms_div
-				.append("div")
-				.style("white-space", "nowrap")
-				.style("display", "inline-block")
-				.style("padding", "2px")
+			const one_term_div = select(this).datum(term)
 
 			const term_name_btn = one_term_div
 				.append("div")
