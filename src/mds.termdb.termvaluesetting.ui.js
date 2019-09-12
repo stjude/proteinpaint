@@ -1,6 +1,6 @@
 import * as client from "./client"
 import * as dom from "./dom"
-import { init } from "./mds.termdb"
+import { init as init_tree} from "./mds.termdb"
 import { event as d3event } from "d3-selection"
 
 /*
@@ -10,7 +10,7 @@ to_parameter
 ********************** INTERNAL
 */
 
-export async function display(obj) {
+export async function init(obj) {
 	/*
 group{}
 	.terms[]
@@ -27,9 +27,9 @@ group{}
 
 	obj.tvstip = new client.Menu({ padding: "5px" })
 
-	update_terms()
+	main()
 
-	obj.update_terms = update_terms
+	obj.main = main
 
 	// add new term
 	const add_term_btn = obj.group_div
@@ -60,15 +60,29 @@ group{}
 					}
 				}
 			}
-			init(tree_obj)
+			init_tree(tree_obj)
 		})
 
 	// all private functions below
 
-	async function update_terms() {
+	async function main() {
 		terms_div.selectAll("*").remove()
+		const pills = terms_div.selectAll('.tvs_pill')
+		.data(obj.group.terms, (d)=>{
+			d.term.id + ' & ' + (d.values ? (d.values.map(v=>v.key).join(" & ")) : d.range ? (d.ranges.map(v=>v.name).join(" & ")): (d.grade_and_child.map(v=>v.grade).join(" & ")))
+		})
+		pills.exit().remove()
 
-		for (const [i, term] of obj.group.terms.entries()) {
+		pills.each((d)=> updatePill(d))
+
+		pills.enter().append('div')
+			.style("white-space", "nowrap")
+			.style("display", "inline-block")
+			.style("padding", "2px")
+			.each((d)=> updatePill(d))
+
+		async function updatePill(term, i){
+			
 			const one_term_div = terms_div
 				.append("div")
 				.style("white-space", "nowrap")
@@ -105,7 +119,7 @@ group{}
 							}
 						}
 					}
-					init(tree_obj)
+					init_tree(tree_obj)
 				})
 
 			//term-value relation button
@@ -126,7 +140,7 @@ group{}
 
 				condition_select.on("change", async () => {
 					//change value of button
-					obj.group.terms[i].isnot = term.isnot ? false : true
+					term.isnot = term.isnot ? false : true
 
 					//update gorup and load tk
 					await obj.callback()
@@ -179,15 +193,15 @@ group{}
 					replace_value_select.on("change", async () => {
 						//if selected index is 0 (delete) and value is 'delete' then remove from group
 						if (replace_value_select.node().selectedIndex == 0 && replace_value_select.node().value == "delete") {
-							obj.group.terms[i].values.splice(j, 1)
-							if (obj.group.terms[i].values.length == 0) {
-								obj.group.terms.splice(i, 1)
+							term.values.splice(j, 1)
+							if (term.values.length == 0) {
+								term.splice(i, 1)
 							}
 						} else {
 							//change value of button
 							const new_value = data.lst.find(j => j.key == replace_value_select.node().value)
 							term_value_btn.style("padding", "3px 4px 3px 4px").text("Loading...")
-							obj.group.terms[i].values[j] = { key: new_value.key, label: new_value.label }
+							term.values[j] = { key: new_value.key, label: new_value.label }
 						}
 
 						//update gorup and load tk
@@ -218,12 +232,12 @@ group{}
 							.style("text-transform", "uppercase")
 							.text("or")
 					} else {
-						make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
+						make_plus_btn(one_term_div, data, term.values, terms_div)
 					}
 				}
 			} else if (term.term.isinteger || term.term.isfloat) {
 				// TODO numerical term, print range in value button and apply the suitable click callback
-				await display_numeric_filter(obj.group, i, one_term_div)
+				await display_numeric_filter(obj.group, term, one_term_div)
 			} else if (term.term.iscondition) {
 				// for overlay between grade and subcategory
 				if (term.grade_and_child) {
@@ -275,15 +289,15 @@ group{}
 						subcategroy_select.on("change", async () => {
 							//if value is 'delete' then remove from group
 							if (subcategroy_select.node().value == "delete") {
-								obj.group.terms[i].values.splice(j, 1)
-								if (obj.group.terms[i].values.length == 0) {
+								term.values.splice(j, 1)
+								if (term.values.length == 0) {
 									obj.group.terms.splice(i, 1)
 								}
 							} else {
 								//change value of button
 								const new_value = data.lst.find(j => j.key == subcategroy_select.node().value)
 								term_value_btn.style("padding", "3px 4px 3px 4px").text("Loading...")
-								obj.group.terms[i].values[j] = { key: new_value.key, label: new_value.label }
+								term.values[j] = { key: new_value.key, label: new_value.label }
 							}
 
 							//update gorup and load tk
@@ -314,7 +328,7 @@ group{}
 						}
 					}
 
-					make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
+					make_plus_btn(one_term_div, data, term.values, terms_div)
 				} else if (term.bar_by_grade) {
 					// query db for list of grade and count
 					const lst = ["bar_by_grade=1"]
@@ -332,15 +346,15 @@ group{}
 						grade_select.on("change", async () => {
 							//if value is 'delete' then remove from group
 							if (grade_select.node().value == "delete") {
-								obj.group.terms[i].values.splice(j, 1)
-								if (obj.group.terms[i].values.length == 0) {
+								term.values.splice(j, 1)
+								if (term.values.length == 0) {
 									obj.group.terms.splice(i, 1)
 								}
 							} else {
 								//change value of button
 								const new_value = data.lst.find(j => j.key == grade_select.node().value)
 								term_value_btn.style("padding", "3px 4px 3px 4px").text("Loading...")
-								obj.group.terms[i].values[j] = { key: new_value.key, label: new_value.label }
+								term.values[j] = { key: new_value.key, label: new_value.label }
 							}
 
 							//update gorup and load tk
@@ -372,7 +386,7 @@ group{}
 
 					make_grade_select_btn(one_term_div, term, terms_div)
 
-					make_plus_btn(one_term_div, data, obj.group.terms[i].values, terms_div)
+					make_plus_btn(one_term_div, data, term.values, terms_div)
 				}
 			}
 
@@ -618,8 +632,7 @@ group{}
 		await obj.callback()
 	}
 
-	async function display_numeric_filter(group, term_index, value_div) {
-		const numeric_term = group.terms[term_index]
+	async function display_numeric_filter(group, numeric_term, value_div) {
 
 		const data = await getcategories(numeric_term)
 		const unannotated_cats = { lst: [] }
@@ -655,6 +668,7 @@ group{}
 					if (numeric_select.node().value == "delete") {
 						numeric_term.ranges.splice(i, 1)
 						if (numeric_term.ranges.length == 0) {
+							const term_index = group.findIndex(t=>t.term.id == numeric_term.term.id)
 							group.terms.splice(term_index, 1)
 						}
 					} else {
@@ -665,7 +679,7 @@ group{}
 
 						numeric_select.style("width", value_btn.node().offsetWidth + "px")
 
-						group.terms[term_index].range = new_value.range
+						numeric_term.range = new_value.range
 					}
 
 					//update gorup and load tk

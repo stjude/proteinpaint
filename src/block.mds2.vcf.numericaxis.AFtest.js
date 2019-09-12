@@ -2,7 +2,7 @@ import {event as d3event} from 'd3-selection'
 import * as client from './client'
 import * as dom from './dom'
 import {init as termdbinit} from './mds.termdb'
-import {display as tvs_display} from './mds.termdb.termvaluesetting.ui'
+import {init as tvs_ui_init} from './mds.termdb.termvaluesetting.ui'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
 
 
@@ -444,12 +444,12 @@ function show_group_termdb ( group, tk, block ) {
 		genome: block.genome,
 		tvslst_filter: tvslst,
 		callback: async ()=>{
-			tvsuiObj.update_terms()
+			tvsuiObj.main()
 			await tk.load()
 		}  
 	  }
 	
-	tvs_display(tvsuiObj)
+	  tvs_ui_init(tvsuiObj)
 
 	// "n=?, view stats" handle and for porting to term tree filter
 	group.dom.samplehandle = group.dom.td3

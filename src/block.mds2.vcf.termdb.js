@@ -3,7 +3,7 @@ import * as client from './client'
 import {scaleOrdinal,schemeCategory10, scaleLinear} from 'd3-scale'
 import {axisLeft} from 'd3-axis'
 import {event as d3event} from 'd3-selection'
-import {display as tvs_display} from './mds.termdb.termvaluesetting.ui'
+import {init as tvs_ui_init} from './mds.termdb.termvaluesetting.ui'
 import {init as termdbinit} from './mds.termdb'
 //import { may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
 
@@ -193,12 +193,12 @@ function make_phewas_ui ( obj, div, tk ) {
 			genome: obj.genome,
 			tvslst_filter: tk.sample_termfilter,
 			callback: async ()=>{
-				tvsuiObj.update_terms()
+				tvsuiObj.main()
 				await run_phewas(obj)
 			}  
 		}
 			
-		tvs_display(tvsuiObj)
+		tvs_ui_init(tvsuiObj)
 
 		obj.dom.filter_says = obj.dom.row_filter
 			.append('div')

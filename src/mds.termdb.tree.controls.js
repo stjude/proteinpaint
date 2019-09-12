@@ -43,14 +43,14 @@ export function getFilterUi(obj) {
 		callback: obj.main
 	}
 
-	termvaluesettingui.display(tvsuiObj)
+	termvaluesettingui.init(tvsuiObj)
 	obj.tvstip = tvsuiObj.tvstip
 
 	const filter = {
 		main() {
 			if (!Array.isArray(obj.termfilter.terms)) throw "filter_terms[] not an array"
 			validate_termvaluesetting(obj.termfilter.terms)
-			tvsuiObj.update_terms()
+			tvsuiObj.main()
 		}
 	}
 
@@ -135,7 +135,7 @@ function make_selected_group_tip(obj, cart) {
 			genome: obj.genome,
 			tvslst_filter: false,
 			callback: () => {
-				tvsuiObj.update_terms()
+				tvsuiObj.main()
 				if (obj.emittingPostRender) delete obj.emittingPostRender
 				else {
 					obj.emittingPostRender = true
@@ -144,7 +144,7 @@ function make_selected_group_tip(obj, cart) {
 			}
 		}
 
-		termvaluesettingui.display(tvsuiObj)
+		termvaluesettingui.init(tvsuiObj)
 		obj.tvstip = tvsuiObj.tvstip
 
 		// TODO : update 'n=' by group selection
