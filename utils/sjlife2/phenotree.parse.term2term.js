@@ -211,6 +211,31 @@ function addattributes_conditionterm ( t ) {
 		"5":{label:"5: Death"},
 		"9":{label:"Unknown status", "uncomputable":true}
 	}
+
+	t.groupsetting = {
+		useIndex: -1,
+		lst: [
+			{
+				name:'Any condition vs normal',
+				groups:[
+					{
+					name:'No condition',
+					values:[{key:'0',label:'No condition'}]
+					},
+					{
+					name:'Has condition',
+					values:[
+						{key:'1',label:'1: Mild'},
+						{key:'2',label:'2: Moderate'},
+						{key:'3',label:'3: Severe'},
+						{key:'4',label:'4: Life-threatening'},
+						{key:'5',label:'5: Death'}
+					]
+					}
+				]
+			}
+		]
+	}
 }
 
 
