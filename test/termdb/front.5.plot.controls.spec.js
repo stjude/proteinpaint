@@ -13,11 +13,13 @@ tape("\n", function(test) {
 tape("overlay input", function(test) {
 	test.timeoutAfter(2000)
 	test.plan(1)
-	const div0 = d3s.select("body").append("div")
 
 	runproteinpaint({
 		host,
-		holder: div0.node(),
+		holder: d3s
+			.select("body")
+			.append("div")
+			.node(),
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
@@ -32,26 +34,13 @@ tape("overlay input", function(test) {
 				}
 			},
 			callbacks: {
-				plot: {
-					postRender: runTests
+				controls: {
+					postRender: checkDisplayInAnyView
 				}
 			},
 			serverData: helpers.serverData
 		}
 	})
-
-	function runTests(plot) {
-		try {
-			plot.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(checkDisplayInAnyView, { timeout: 200 })
-				.add(() => test.end())
-				.next(plot)
-		} catch (e) {
-			console.log(e)
-		}
-	}
 
 	function checkDisplayInAnyView(plot) {
 		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
@@ -64,11 +53,13 @@ tape("overlay input", function(test) {
 tape("orientation input", function(test) {
 	test.timeoutAfter(3000)
 	test.plan(2)
-	const div0 = d3s.select("body").append("div")
 
 	runproteinpaint({
 		host,
-		holder: div0.node(),
+		holder: d3s
+			.select("body")
+			.append("div")
+			.node(),
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
@@ -83,7 +74,7 @@ tape("orientation input", function(test) {
 				}
 			},
 			callbacks: {
-				plot: {
+				controls: {
 					postRender: runTests
 				}
 			},
@@ -92,18 +83,24 @@ tape("orientation input", function(test) {
 	})
 
 	function runTests(plot) {
-		try {
-			plot.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(checkDisplayInBarchartView, { timeout: 200 })
-				.add(triggerNonBarchartView, { timeout: 200 })
-				.add(checkDisplayInNonBarchartView, { timeout: 700 })
-				.add(() => test.end())
-				.next(plot)
-		} catch (e) {
-			console.log(e)
-		}
+		Promise.resolve()
+			.then(() => {
+				checkDisplayInBarchartView(plot)
+			})
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					plot.components.controls.bus.on("postRender", () => {
+						checkDisplayInNonBarchartView(plot)
+						resolve()
+					})
+					triggerNonBarchartView(plot)
+				})
+			})
+			.then(() => {
+				plot.components.controls.bus.on("postRender", null)
+				test.end()
+			})
+			.catch(e => console.log(e))
 	}
 	function checkDisplayInBarchartView(plot) {
 		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
@@ -130,11 +127,13 @@ tape("orientation input", function(test) {
 tape("scale input", function(test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
-	const div0 = d3s.select("body").append("div")
 
 	runproteinpaint({
 		host,
-		holder: div0.node(),
+		holder: d3s
+			.select("body")
+			.append("div")
+			.node(),
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
@@ -149,7 +148,7 @@ tape("scale input", function(test) {
 				}
 			},
 			callbacks: {
-				plot: {
+				controls: {
 					postRender: runTests
 				}
 			},
@@ -158,19 +157,26 @@ tape("scale input", function(test) {
 	})
 
 	function runTests(plot) {
-		try {
-			plot.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(checkDisplayInBarchartView, { timeout: 200 })
-				.add(triggerNonBarchartView, { timeout: 300 })
-				.add(checkDisplayInNonBarchartView, { timeout: 500 })
-				.add(() => test.end())
-				.next(plot)
-		} catch (e) {
-			console.log(e)
-		}
+		Promise.resolve()
+			.then(() => {
+				checkDisplayInBarchartView(plot)
+			})
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					plot.components.controls.bus.on("postRender", () => {
+						checkDisplayInNonBarchartView(plot)
+						resolve()
+					})
+					triggerNonBarchartView(plot)
+				})
+			})
+			.then(() => {
+				plot.components.controls.bus.on("postRender", null)
+				test.end()
+			})
+			.catch(e => console.log(e))
 	}
+
 	function checkDisplayInBarchartView(plot) {
 		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
 			if (this.innerHTML !== "Scale") return
@@ -196,11 +202,13 @@ tape("scale input", function(test) {
 tape("divide by input", function(test) {
 	test.timeoutAfter(7000)
 	test.plan(4)
-	const div0 = d3s.select("body").append("div")
 
 	runproteinpaint({
 		host,
-		holder: div0.node(),
+		holder: d3s
+			.select("body")
+			.append("div")
+			.node(),
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
@@ -215,7 +223,7 @@ tape("divide by input", function(test) {
 				}
 			},
 			callbacks: {
-				plot: {
+				controls: {
 					postRender: runTests
 				}
 			},
@@ -224,23 +232,44 @@ tape("divide by input", function(test) {
 	})
 
 	function runTests(plot) {
-		try {
-			plot.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(checkDisplayInBarchartView, { timeout: 200 })
-				.add(triggerTableView, { timeout: 500 })
-				.add(checkDisplayInTableView, { timeout: 500 })
-				.add(triggerBoxplotView, { timeout: 300 })
-				.add(checkDisplayInBoxplotView, { timeout: 300 })
-				.add(triggerScatterView, { timeout: 300 })
-				.add(checkDisplayInScatterView, { timeout: 300 })
-				.add(() => test.end())
-				.next(plot)
-		} catch (e) {
-			console.log(e)
-		}
+		Promise.resolve()
+			.then(() => {
+				checkDisplayInBarchartView(plot)
+			})
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					plot.components.controls.bus.on("postRender", () => {
+						checkDisplayInTableView(plot)
+						resolve()
+					})
+					triggerTableView(plot)
+				})
+			})
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					plot.components.controls.bus.on("postRender", () => {
+						checkDisplayInBoxplotView(plot)
+						resolve()
+					})
+					triggerBoxplotView(plot)
+				})
+			})
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					plot.components.controls.bus.on("postRender", () => {
+						checkDisplayInScatterView(plot)
+						resolve()
+					})
+					triggerScatterView(plot)
+				})
+			})
+			.then(() => {
+				plot.components.controls.bus.on("postRender", null)
+				test.end()
+			})
+			.catch(e => console.log(e))
 	}
+
 	function checkDisplayInBarchartView(plot) {
 		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
 			if (this.innerHTML !== "Divide by") return
@@ -313,7 +342,7 @@ tape("Primary bins input", function(test) {
 				}
 			},
 			callbacks: {
-				plot: {
+				controls: {
 					postRender: runTests
 				}
 			},
@@ -322,18 +351,24 @@ tape("Primary bins input", function(test) {
 	})
 
 	function runTests(plot) {
-		try {
-			plot.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(checkDisplayWithNumericTerm, { timeout: 300 })
-				.add(triggerCategoricalTerm, { timeout: 200 })
-				.add(checkDisplayWithCategoricalTerm, { timeout: 400 })
-				.add(() => test.end())
-				.next(plot)
-		} catch (e) {
-			console.log(e)
-		}
+		Promise.resolve()
+			.then(() => {
+				checkDisplayWithNumericTerm(plot)
+			})
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					plot.components.controls.bus.on("postRender", () => {
+						checkDisplayWithCategoricalTerm(plot)
+						resolve()
+					})
+					triggerCategoricalTerm(plot)
+				})
+			})
+			.then(() => {
+				plot.components.controls.bus.on("postRender", null)
+				test.end()
+			})
+			.catch(e => console.log(e))
 	}
 
 	function checkDisplayWithNumericTerm(plot) {
@@ -382,7 +417,7 @@ tape("'Bars as' input", function(test) {
 				}
 			},
 			callbacks: {
-				plot: {
+				controls: {
 					postRender: runTests
 				}
 			},
@@ -391,18 +426,24 @@ tape("'Bars as' input", function(test) {
 	})
 
 	function runTests(plot) {
-		try {
-			plot.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(checkDisplayWithNumericTerm, { timeout: 300 })
-				.add(triggerCategoricalTerm, { timeout: 300 })
-				.add(checkDisplayWithCategoricalTerm, { timeout: 300 })
-				.add(() => test.end())
-				.next(plot)
-		} catch (e) {
-			console.log(e)
-		}
+		Promise.resolve()
+			.then(() => {
+				checkDisplayWithNumericTerm(plot)
+			})
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					plot.components.controls.bus.on("postRender", () => {
+						checkDisplayWithCategoricalTerm(plot)
+						resolve()
+					})
+					triggerCategoricalTerm(plot)
+				})
+			})
+			.then(() => {
+				plot.components.controls.bus.on("postRender", null)
+				test.end()
+			})
+			.catch(e => console.log(e))
 	}
 
 	function checkDisplayWithNumericTerm(plot) {
@@ -428,7 +469,7 @@ tape("'Bars as' input", function(test) {
 })
 
 tape("Display mode input", function(test) {
-	test.timeoutAfter(7000)
+	test.timeoutAfter(5000)
 	test.plan(4)
 
 	runproteinpaint({
@@ -460,40 +501,42 @@ tape("Display mode input", function(test) {
 	})
 
 	function runTests(plot) {
-		try {
-			plot.components.controls.bus.on("postRender", null)
-			/*
-			helpers
-				.getChain()
-				.add(checkDisplayWithCategoricalTerm, { timeout: 300 })
-				.add(()=>plot.components.controls.bus.on("postRender", checkDisplayWithNonNumericOverlay))
-				.add(triggerNonNumericOverlay)
-				.add(()=>{}, { timeout: 500 })
-				.add(()=>plot.components.controls.bus.on("postRender", checkDisplayWithNumericOverlay))
-				.add(triggerNumericOverlay)
-				.add(()=>{}, { timeout: 500 })
-				.add(()=>plot.components.controls.bus.on("postRender", checkDisplayWithNumericBarAndOverlay))
-				.add(triggerNumericBarAndOverlay)
-				.add(()=>{}, { timeout: 1000 })
-				.add(()=>plot.components.controls.bus.on("postRender", null))
-				.add(() => test.end())
-				.next(plot)
-			*/
-
-			helpers
-				.getChain()
-				.add(checkDisplayWithCategoricalTerm, { timeout: 300 })
-				.add(triggerNonNumericOverlay)
-				.add(checkDisplayWithNonNumericOverlay, { timeout: 500 })
-				.add(triggerNumericOverlay)
-				.add(checkDisplayWithNumericOverlay, { timeout: 800 })
-				.add(triggerNumericBarAndOverlay)
-				.add(checkDisplayWithNumericBarAndOverlay, { timeout: 1500 })
-				.add(() => test.end())
-				.next(plot)
-		} catch (e) {
-			console.log(e)
-		}
+		Promise.resolve()
+			.then(() => {
+				checkDisplayWithCategoricalTerm(plot)
+			})
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					plot.components.controls.bus.on("postRender", () => {
+						checkDisplayWithNonNumericOverlay(plot)
+						resolve()
+					})
+					triggerNonNumericOverlay(plot)
+				})
+			})
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					plot.components.controls.bus.on("postRender", () => {
+						checkDisplayWithNumericOverlay(plot)
+						resolve()
+					})
+					triggerNumericOverlay(plot)
+				})
+			})
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					plot.components.controls.bus.on("postRender", () => {
+						checkDisplayWithNumericBarAndOverlay(plot)
+						resolve()
+					})
+					triggerNumericBarAndOverlay(plot)
+				})
+			})
+			.then(() => {
+				plot.components.controls.bus.on("postRender", null)
+				test.end()
+			})
+			.catch(e => console.log(e))
 	}
 
 	function checkDisplayWithCategoricalTerm(plot) {
@@ -509,7 +552,7 @@ tape("Display mode input", function(test) {
 		})
 	}
 
-	function checkDisplayWithNonNumericOverlay(plot) {
+	function checkDisplayWithNonNumericOverlay(plot, prom) {
 		const visibleOptions = ["barchart", "table"]
 		test.equal(
 			plot.components.controls.components.view.radio.dom.divs
