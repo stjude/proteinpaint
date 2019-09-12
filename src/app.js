@@ -116,15 +116,24 @@ window.runproteinpaint=(arg)=>{
 		client.newpane({setzindex:arg.base_zindex})
 	}
 
+	// option to use a server data cache in memory 
+	// during a browser page session
+	// see client.dofetch2 for how the cache name is derived
+	const serverData = arg.serverData || (arg.display_termdb && arg.display_termdb.serverData)
 	// load genomes
-	return fetch( new Request(hostURL+'/genomes',{
-		method:'POST',
-		body:JSON.stringify({
-			jwt: arg.jwt
-		})
-	}))
-	.then(data=>{return data.json()})
-	.then(data=>{
+	const response = serverData
+		// use serverData if provided
+		? client.dofetch('genomes', {}, {serverData})
+		// do as usual
+		: fetch( new Request(hostURL+'/genomes',{
+				method:'POST',
+				body:JSON.stringify({
+					jwt: arg.jwt
+				})
+			}))
+			.then(data=>{return data.json()})
+
+	return response.then(data=>{
 		if(data.error) throw({message:'Cannot get genomes: '+data.error})
 		if(!data.genomes) throw({message:'no genome data!?'})
 

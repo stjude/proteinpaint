@@ -46,7 +46,18 @@ const fetchReported = {}
 const maxAcceptableFetchResponseTime = 15000
 const maxNumReportsPerSession = 2
 
-export function dofetch(path, arg) {
+export function dofetch(path, arg, opts = null) {
+	if (opts && typeof opts == "object") {
+		if (opts.serverData && typeof opts.serverData == "object") {
+			if (!dofetch.serverData) {
+				dofetch.serverData = opts.serverData
+			} else if (!opts.serverData) {
+				opts.serverData = dofetch.serverData
+			}
+		}
+		return dofetch2(path, { method: "POST", body: JSON.stringify(arg) }, opts)
+	}
+
 	// path should be "path" but not "/path"
 	if (path[0] == "/") {
 		path = path.slice(1)
@@ -113,7 +124,7 @@ init {}
 		}
 	}
 
-	const dataName = url + ";;" + init.method
+	const dataName = url + " | " + init.method + " | " + init.body
 	if (opts.serverData && dataName in opts.serverData) {
 		return opts.serverData[dataName].then(str => JSON.parse(str))
 	} else {

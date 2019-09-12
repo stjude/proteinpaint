@@ -30,9 +30,9 @@ exports.serverData = {}
 
 exports.ride = function(bus, eventType, arg, wait = 0) {
 	/*
-	bus         an event bus returned by client.get_event_bus
+	bus         an event bus returned by client.get_event_bus()
 	eventType   a valid eventType for the bus argument
-	arg         the default argument to supply to the do() callback
+	arg         the argument to supply to the do() callback
 	wait        optional wait time before callback on bus.event
 */
 	bus.on(eventType, null)
