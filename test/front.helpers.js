@@ -31,26 +31,30 @@ exports.serverData = {}
 exports.promiser = function(bus, eventType, arg) {
 	let resolved = Promise.resolve()
 	const promiser = {
-		listenAndTrigger(listeners, trigger) {
+		listenAndTrigger(listener, trigger) {
 			return () => {
 				return new Promise((resolve, reject) => {
 					bus.on(eventType, () => {
-						for (const fxn of listeners) fxn(arg)
+						listener(arg)
 						resolve()
 					})
 					trigger(arg)
 				})
 			}
 		},
-		chain(listeners, trigger) {
-			if (trigger) {
-				resolved = resolved.then(promiser.listenAndTrigger(listeners, trigger))
-			} else if (!listeners) {
-				bus.on(eventType, null)
-				if (trigger) trigger()
+		chain(listener, trigger) {
+			if (listener) {
+				if (trigger) {
+					resolved = resolved.then(promiser.listenAndTrigger(listener, trigger))
+				} else {
+					resolved = resolved.then(() => {
+						listener(arg)
+					})
+				}
 			} else {
 				resolved = resolved.then(() => {
-					for (const fxn of listeners) fxn(arg)
+					bus.on(eventType, null)
+					if (trigger) trigger()
 				})
 			}
 			return promiser

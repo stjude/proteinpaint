@@ -353,8 +353,8 @@ tape("Primary bins input", function(test) {
 	function runTests(plot) {
 		helpers
 			.promiser(plot.components.controls.bus, "postRender", plot)
-			.chain([checkDisplayWithNumericTerm])
-			.chain([checkDisplayWithCategoricalTerm], triggerCategoricalTerm)
+			.chain(checkDisplayWithNumericTerm)
+			.chain(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
 			.chain(null, () => test.end())
 			.catch()
 	}
@@ -416,8 +416,8 @@ tape("'Bars as' input", function(test) {
 	function runTests(plot) {
 		helpers
 			.promiser(plot.components.controls.bus, "postRender", plot)
-			.chain([checkDisplayWithNumericTerm])
-			.chain([checkDisplayWithCategoricalTerm], triggerCategoricalTerm)
+			.chain(checkDisplayWithNumericTerm)
+			.chain(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
 			.chain(null, () => test.end())
 			.catch()
 	}
@@ -480,9 +480,9 @@ tape("Display mode input", function(test) {
 		const promiser = helpers.promiser(plot.components.controls.bus, "postRender", plot)
 		Promise.resolve()
 			.then(() => checkDisplayWithCategoricalTerm(plot))
-			.then(promiser.listenAndTrigger([checkDisplayWithNonNumericOverlay], triggerNonNumericOverlay))
-			.then(promiser.listenAndTrigger([checkDisplayWithNumericOverlay], triggerNumericOverlay))
-			.then(promiser.listenAndTrigger([checkDisplayWithNumericBarAndOverlay], triggerNumericBarAndOverlay))
+			.then(promiser.listenAndTrigger(checkDisplayWithNonNumericOverlay, triggerNonNumericOverlay))
+			.then(promiser.listenAndTrigger(checkDisplayWithNumericOverlay, triggerNumericOverlay))
+			.then(promiser.listenAndTrigger(checkDisplayWithNumericBarAndOverlay, triggerNumericBarAndOverlay))
 			.then(() => {
 				plot.components.controls.bus.on("postRender", null)
 				test.end()

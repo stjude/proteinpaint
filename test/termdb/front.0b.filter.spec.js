@@ -46,7 +46,17 @@ tape("filter term-value button", function(test) {
 	})
 
 	function runTests(obj) {
-		try {
+		// more reliable test promise chain format
+		// that is less likely to need timeouts
+		helpers
+			.promiser(obj.components.filter.bus, "postRender", obj)
+			.chain(testFilterDisplay)
+			.chain(testFilterRemove, triggerFilterRemove)
+			.chain(testAddTerm, triggerFilterAdd)
+			.chain(null, () => test.end())
+			.catch()
+
+		/*try {
 			obj.components.filter.bus.on("postRender", null)
 			helpers
 				.getChain()
@@ -59,7 +69,7 @@ tape("filter term-value button", function(test) {
 				.next(obj)
 		} catch (e) {
 			console.log(e)
-		}
+		}*/
 	}
 
 	function testFilterDisplay(obj) {
