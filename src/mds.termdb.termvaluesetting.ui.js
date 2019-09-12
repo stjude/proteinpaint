@@ -69,7 +69,7 @@ group{}
 		terms_div.selectAll("*").remove()
 		const pills = terms_div.selectAll('.tvs_pill')
 		.data(obj.group.terms, (d)=>{
-			d.term.id + ' & ' + (d.values ? (d.values.map(v=>v.key).join(" & ")) : d.range ? (d.ranges.map(v=>v.name).join(" & ")): (d.grade_and_child.map(v=>v.grade).join(" & ")))
+			d.term.id + ' & ' + (d.values ? (d.values.map(v=>v.key).join(" & ")) : d.ranges ? (d.ranges.map(v=>v.name).join(" & ")) : (d.grade_and_child.map(v=>v.grade).join(" & ")))
 		})
 		pills.exit().remove()
 
