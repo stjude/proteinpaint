@@ -11,8 +11,8 @@ tape("\n", function(test) {
 })
 
 tape("overlay input", function(test) {
-	test.timeoutAfter(3000)
-	test.plan(2)
+	test.timeoutAfter(2000)
+	test.plan(1)
 	const div0 = d3s.select("body").append("div")
 
 	runproteinpaint({
@@ -27,7 +27,7 @@ tape("overlay input", function(test) {
 			plot2restore: {
 				term: termjson["diaggrp"],
 				settings: {
-					currViews: ["barchart"],
+					currViews: [],
 					controls: { isVisible: true }
 				}
 			},
@@ -35,7 +35,8 @@ tape("overlay input", function(test) {
 				plot: {
 					postRender: runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -44,9 +45,7 @@ tape("overlay input", function(test) {
 			plot.bus.on("postRender", null)
 			helpers
 				.getChain()
-				.add(checkDisplayInBarchartView, { timeout: 200 })
-				.add(triggerTableView, { timeout: 400 })
-				.add(checkDisplayInTableView, { timeout: 200 })
+				.add(checkDisplayInAnyView, { timeout: 200 })
 				.add(() => test.end())
 				.next(plot)
 		} catch (e) {
@@ -54,24 +53,10 @@ tape("overlay input", function(test) {
 		}
 	}
 
-	function checkDisplayInBarchartView(plot) {
+	function checkDisplayInAnyView(plot) {
 		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
 			if (this.innerHTML !== "Overlay with") return
 			test.equal(this.parentNode.style.display, "table-row", "should be visible in barchart view")
-		})
-	}
-
-	function triggerTableView(plot) {
-		plot.main({
-			term2: { term: termjson["agedx"] },
-			settings: { currViews: ["table"] }
-		})
-	}
-
-	function checkDisplayInTableView(plot) {
-		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
-			if (this.innerHTML !== "Overlay with") return
-			test.equal(this.parentNode.style.display, "table-row", "should be visible even in table view")
 		})
 	}
 })
@@ -101,7 +86,8 @@ tape("orientation input", function(test) {
 				plot: {
 					postRender: runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -111,8 +97,8 @@ tape("orientation input", function(test) {
 			helpers
 				.getChain()
 				.add(checkDisplayInBarchartView, { timeout: 200 })
-				.add(triggerTableView, { timeout: 1000 })
-				.add(checkDisplayInTableView, { timeout: 500 })
+				.add(triggerNonBarchartView, { timeout: 200 })
+				.add(checkDisplayInNonBarchartView, { timeout: 700 })
 				.add(() => test.end())
 				.next(plot)
 		} catch (e) {
@@ -126,24 +112,24 @@ tape("orientation input", function(test) {
 		})
 	}
 
-	function triggerTableView(plot) {
+	function triggerNonBarchartView(plot) {
 		plot.main({
 			term2: { term: termjson["agedx"] },
 			settings: { currViews: ["table"] }
 		})
 	}
 
-	function checkDisplayInTableView(plot) {
+	function checkDisplayInNonBarchartView(plot) {
 		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
 			if (this.innerHTML !== "Orientation") return
-			test.equal(this.parentNode.style.display, "none", "should be hidden in table view")
+			test.equal(this.parentNode.style.display, "none", "should be hidden in non-barchart view")
 		})
 	}
 })
 
 tape("scale input", function(test) {
 	test.timeoutAfter(5000)
-	test.plan(3)
+	test.plan(2)
 	const div0 = d3s.select("body").append("div")
 
 	runproteinpaint({
@@ -166,7 +152,8 @@ tape("scale input", function(test) {
 				plot: {
 					postRender: runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -176,10 +163,8 @@ tape("scale input", function(test) {
 			helpers
 				.getChain()
 				.add(checkDisplayInBarchartView, { timeout: 200 })
-				.add(triggerTableView, { timeout: 1000 })
-				.add(checkDisplayInTableView, { timeout: 500 })
-				.add(triggerBoxplotView, { timeout: 1000 })
-				.add(checkDisplayInBoxplotView, { timeout: 500 })
+				.add(triggerNonBarchartView, { timeout: 300 })
+				.add(checkDisplayInNonBarchartView, { timeout: 500 })
 				.add(() => test.end())
 				.next(plot)
 		} catch (e) {
@@ -193,31 +178,17 @@ tape("scale input", function(test) {
 		})
 	}
 
-	function triggerTableView(plot) {
+	function triggerNonBarchartView(plot) {
 		plot.main({
 			term2: { term: termjson["agedx"] },
 			settings: { currViews: ["table"] }
 		})
 	}
 
-	function checkDisplayInTableView(plot) {
+	function checkDisplayInNonBarchartView(plot) {
 		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
 			if (this.innerHTML !== "Scale") return
-			test.equal(this.parentNode.style.display, "none", "should be hidden in table view")
-		})
-	}
-
-	function triggerBoxplotView(plot) {
-		plot.main({
-			term2: { term: termjson["agedx"] },
-			settings: { currViews: ["boxplot"] }
-		})
-	}
-
-	function checkDisplayInBoxplotView(plot) {
-		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
-			if (this.innerHTML !== "Scale") return
-			test.equal(this.parentNode.style.display, "none", "should be hidden in boxplot view")
+			test.equal(this.parentNode.style.display, "none", "should be hidden in non-barchart view")
 		})
 	}
 })
@@ -247,7 +218,8 @@ tape("divide by input", function(test) {
 				plot: {
 					postRender: runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -257,7 +229,7 @@ tape("divide by input", function(test) {
 			helpers
 				.getChain()
 				.add(checkDisplayInBarchartView, { timeout: 200 })
-				.add(triggerTableView, { timeout: 1000 })
+				.add(triggerTableView, { timeout: 500 })
 				.add(checkDisplayInTableView, { timeout: 500 })
 				.add(triggerBoxplotView, { timeout: 300 })
 				.add(checkDisplayInBoxplotView, { timeout: 300 })
@@ -292,7 +264,6 @@ tape("divide by input", function(test) {
 
 	function triggerBoxplotView(plot) {
 		plot.main({
-			term2: { term: termjson["agedx"] },
 			settings: { currViews: ["boxplot"] }
 		})
 	}
@@ -306,7 +277,6 @@ tape("divide by input", function(test) {
 
 	function triggerScatterView(plot) {
 		plot.main({
-			term2: { term: termjson["agedx"] },
 			settings: { currViews: ["scatter"] }
 		})
 	}
@@ -321,13 +291,7 @@ tape("divide by input", function(test) {
 
 tape("Primary bins input", function(test) {
 	test.timeoutAfter(3000)
-	const expectedNumTests = 2
-	test.plan(expectedNumTests)
-	let testCount = 0
-	function trackTests() {
-		testCount++
-		if (testCount >= expectedNumTests) test.end()
-	}
+	test.plan(2)
 
 	runproteinpaint({
 		host,
@@ -344,24 +308,28 @@ tape("Primary bins input", function(test) {
 			plot2restore: {
 				term: termjson["agedx"],
 				settings: {
+					currViews: [],
 					controls: { isVisible: true }
 				}
 			},
 			callbacks: {
 				plot: {
-					postRender: runTests0
+					postRender: runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
-	function runTests0(plot) {
+	function runTests(plot) {
 		try {
 			plot.bus.on("postRender", null)
 			helpers
 				.getChain()
 				.add(checkDisplayWithNumericTerm, { timeout: 300 })
-				.add(trackTests)
+				.add(triggerCategoricalTerm, { timeout: 200 })
+				.add(checkDisplayWithCategoricalTerm, { timeout: 400 })
+				.add(() => test.end())
 				.next(plot)
 		} catch (e) {
 			console.log(e)
@@ -375,40 +343,11 @@ tape("Primary bins input", function(test) {
 		})
 	}
 
-	runproteinpaint({
-		host,
-		holder: d3s
-			.select("body")
-			.append("div")
-			.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
-			default_rootterm: {},
-			plot2restore: {
-				term: termjson["diaggrp"]
-			},
-			callbacks: {
-				plot: {
-					postRender: runTests1
-				}
-			}
-		}
-	})
-
-	function runTests1(plot) {
-		try {
-			plot.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(checkDisplayWithCategoricalTerm, { timeout: 300 })
-				.add(trackTests)
-				.next(plot)
-		} catch (e) {
-			console.log(e)
-		}
+	function triggerCategoricalTerm(plot) {
+		plot.obj.expanded_term_ids.push("diaggrp")
+		plot.main({
+			term: { term: termjson["diaggrp"] }
+		})
 	}
 
 	function checkDisplayWithCategoricalTerm(plot) {
@@ -421,14 +360,7 @@ tape("Primary bins input", function(test) {
 
 tape("'Bars as' input", function(test) {
 	test.timeoutAfter(3000)
-
-	const expectedNumTests = 2
-	test.plan(expectedNumTests)
-	let testCount = 0
-	function trackTests() {
-		testCount++
-		if (testCount >= expectedNumTests) test.end()
-	}
+	test.plan(2)
 
 	runproteinpaint({
 		host,
@@ -445,24 +377,28 @@ tape("'Bars as' input", function(test) {
 			plot2restore: {
 				term: termjson["Arrhythmias"],
 				settings: {
+					currViews: [],
 					controls: { isVisible: true }
 				}
 			},
 			callbacks: {
 				plot: {
-					postRender: runTests0
+					postRender: runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
-	function runTests0(plot) {
+	function runTests(plot) {
 		try {
 			plot.bus.on("postRender", null)
 			helpers
 				.getChain()
 				.add(checkDisplayWithNumericTerm, { timeout: 300 })
-				.add(trackTests)
+				.add(triggerCategoricalTerm, { timeout: 300 })
+				.add(checkDisplayWithCategoricalTerm, { timeout: 300 })
+				.add(() => test.end())
 				.next(plot)
 		} catch (e) {
 			console.log(e)
@@ -476,40 +412,11 @@ tape("'Bars as' input", function(test) {
 		})
 	}
 
-	runproteinpaint({
-		host,
-		holder: d3s
-			.select("body")
-			.append("div")
-			.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
-			default_rootterm: {},
-			plot2restore: {
-				term: termjson["diaggrp"]
-			},
-			callbacks: {
-				plot: {
-					postRender: runTests1
-				}
-			}
-		}
-	})
-
-	function runTests1(plot) {
-		try {
-			plot.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(checkDisplayWithCategoricalTerm, { timeout: 300 })
-				.add(trackTests)
-				.next(plot)
-		} catch (e) {
-			console.log(e)
-		}
+	function triggerCategoricalTerm(plot) {
+		plot.obj.expanded_term_ids.push("diaggrp")
+		plot.main({
+			term: { term: termjson["diaggrp"] }
+		})
 	}
 
 	function checkDisplayWithCategoricalTerm(plot) {
@@ -539,28 +446,48 @@ tape("Display mode input", function(test) {
 			plot2restore: {
 				term: termjson["diaggrp"],
 				settings: {
+					currViews: [],
 					controls: { isVisible: true }
 				}
 			},
 			callbacks: {
-				plot: {
-					postRender: runTests0
+				controls: {
+					postRender: runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
-	function runTests0(plot) {
+	function runTests(plot) {
 		try {
-			plot.bus.on("postRender", null)
+			plot.components.controls.bus.on("postRender", null)
+			/*
 			helpers
 				.getChain()
 				.add(checkDisplayWithCategoricalTerm, { timeout: 300 })
-				.add(triggerNonNumericOverlay, { timeout: 1000 })
+				.add(()=>plot.components.controls.bus.on("postRender", checkDisplayWithNonNumericOverlay))
+				.add(triggerNonNumericOverlay)
+				.add(()=>{}, { timeout: 500 })
+				.add(()=>plot.components.controls.bus.on("postRender", checkDisplayWithNumericOverlay))
+				.add(triggerNumericOverlay)
+				.add(()=>{}, { timeout: 500 })
+				.add(()=>plot.components.controls.bus.on("postRender", checkDisplayWithNumericBarAndOverlay))
+				.add(triggerNumericBarAndOverlay)
+				.add(()=>{}, { timeout: 1000 })
+				.add(()=>plot.components.controls.bus.on("postRender", null))
+				.add(() => test.end())
+				.next(plot)
+			*/
+
+			helpers
+				.getChain()
+				.add(checkDisplayWithCategoricalTerm, { timeout: 300 })
+				.add(triggerNonNumericOverlay)
 				.add(checkDisplayWithNonNumericOverlay, { timeout: 500 })
-				.add(triggerNumericOverlay, { timeout: 500 })
-				.add(checkDisplayWithNumericOverlay, { timeout: 500 })
-				.add(triggerNumericBarAndOverlay, { timeout: 500 })
+				.add(triggerNumericOverlay)
+				.add(checkDisplayWithNumericOverlay, { timeout: 800 })
+				.add(triggerNumericBarAndOverlay)
 				.add(checkDisplayWithNumericBarAndOverlay, { timeout: 1500 })
 				.add(() => test.end())
 				.next(plot)
@@ -578,7 +505,7 @@ tape("Display mode input", function(test) {
 
 	function triggerNonNumericOverlay(plot) {
 		plot.main({
-			term2: { term: termjson["sex"] } //, q:{bar_by_children: 1, value_by_max_grade: 1}}
+			term2: { term: termjson["sex"] }
 		})
 	}
 

@@ -122,10 +122,11 @@ callbacks: {
 	}
 
 	// simplified query
+	obj.do_query_opts = { serverData: obj.serverData }
 	obj.do_query = args => {
 		const lst = ["genome=" + obj.genome.name + "&dslabel=" + obj.mds.label]
 		// maybe no need to provide term filter at this query
-		return client.dofetch2("/termdb?" + lst.join("&") + "&" + args.join("&"))
+		return client.dofetch2("/termdb?" + lst.join("&") + "&" + args.join("&"), obj.do_query_opts)
 	}
 	obj.showtree4selectterm = (termidlst, button, callback) => {
 		// convenient function to be called in barchart config panel for selecting term2

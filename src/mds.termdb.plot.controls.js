@@ -17,6 +17,7 @@ export function init(opts) {
 				controls.components[name].main(plot)
 			}
 			controls.dom.holder.style("background", controls.isVisible ? panel_bg_color : "")
+			controls.bus.emit("postRender", plot)
 		},
 		dom: {
 			holder: opts.holder.style("vertical-align", "top").style("transition", "0.5s"),
@@ -55,7 +56,10 @@ export function init(opts) {
 	}
 
 	controls.plot.bus.on("postRender.controls", controls.listeners.plot.postRender)
-
+	controls.bus = client.get_event_bus(
+		["postRender"],
+		opts.plot.obj.callbacks.controls ? opts.plot.obj.callbacks.controls : {}
+	)
 	return controls
 }
 

@@ -25,3 +25,5 @@ exports.getChain = () => {
 		}
 	})
 }
+
+exports.serverData = {}

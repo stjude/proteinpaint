@@ -195,6 +195,8 @@ function coordinateState(plot) {
 				plot.settings.currViews = ["barchart"]
 			}
 		}
+	} else if (!plot.settings.currViews.length) {
+		// allow empty view
 	} else if (!plot.settings.currViews.includes("barchart")) {
 		plot.settings.currViews = ["barchart"]
 	}
@@ -225,7 +227,7 @@ function requestData(plot) {
 		render(plot, serverData[dataName])
 	} else {
 		const route = plot.settings.currViews.includes("scatter") ? "/termdb" : "/termdb-barsql"
-		client.dofetch2(route + dataName).then(chartsData => {
+		client.dofetch2(route + dataName, {}, plot.obj.do_query_opts).then(chartsData => {
 			serverData[dataName] = chartsData
 			syncParams(plot, serverData[dataName])
 			render(plot, chartsData)

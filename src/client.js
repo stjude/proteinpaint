@@ -80,7 +80,7 @@ export function dofetch(path, arg) {
 	})
 }
 
-export function dofetch2(path, init = {}) {
+export function dofetch2(path, init = {}, opts = {}) {
 	/*
 path "" string URL path
 init {}
@@ -113,14 +113,26 @@ init {}
 		}
 	}
 
-	trackfetch(url, init)
+	const dataName = url + " | " + init.method
+	if (opts.serverData && dataName in opts.serverData) {
+		return opts.serverData[dataName].then(str => JSON.parse(str))
+	} else {
+		trackfetch(url, init)
 
-	return fetch(url, init).then(data => {
-		if (fetchTimers[url]) {
-			clearTimeout(fetchTimers[url])
-		}
-		return data.json()
-	})
+		return fetch(url, init).then(data => {
+			if (fetchTimers[url]) {
+				clearTimeout(fetchTimers[url])
+			}
+			if (opts.serverData) {
+				// stringify to not share parsed response object
+				// to-do: support opt.freeze to enforce Object.freeze(data.json())
+				opts.serverData[dataName] = data.text()
+				return opts.serverData[dataName].then(str => JSON.parse(str))
+			} else {
+				return data.json()
+			}
+		})
+	}
 }
 
 function trackfetch(url, arg) {
