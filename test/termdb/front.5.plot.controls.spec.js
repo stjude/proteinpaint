@@ -351,24 +351,12 @@ tape("Primary bins input", function(test) {
 	})
 
 	function runTests(plot) {
-		Promise.resolve()
-			.then(() => {
-				checkDisplayWithNumericTerm(plot)
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					plot.components.controls.bus.on("postRender", () => {
-						checkDisplayWithCategoricalTerm(plot)
-						resolve()
-					})
-					triggerCategoricalTerm(plot)
-				})
-			})
-			.then(() => {
-				plot.components.controls.bus.on("postRender", null)
-				test.end()
-			})
-			.catch(e => console.log(e))
+		helpers
+			.promiser(plot.components.controls.bus, "postRender", plot)
+			.chain([checkDisplayWithNumericTerm])
+			.chain([checkDisplayWithCategoricalTerm], triggerCategoricalTerm)
+			.chain(null, () => test.end())
+			.catch()
 	}
 
 	function checkDisplayWithNumericTerm(plot) {
@@ -426,24 +414,12 @@ tape("'Bars as' input", function(test) {
 	})
 
 	function runTests(plot) {
-		Promise.resolve()
-			.then(() => {
-				checkDisplayWithNumericTerm(plot)
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					plot.components.controls.bus.on("postRender", () => {
-						checkDisplayWithCategoricalTerm(plot)
-						resolve()
-					})
-					triggerCategoricalTerm(plot)
-				})
-			})
-			.then(() => {
-				plot.components.controls.bus.on("postRender", null)
-				test.end()
-			})
-			.catch(e => console.log(e))
+		helpers
+			.promiser(plot.components.controls.bus, "postRender", plot)
+			.chain([checkDisplayWithNumericTerm])
+			.chain([checkDisplayWithCategoricalTerm], triggerCategoricalTerm)
+			.chain(null, () => test.end())
+			.catch()
 	}
 
 	function checkDisplayWithNumericTerm(plot) {
@@ -501,37 +477,12 @@ tape("Display mode input", function(test) {
 	})
 
 	function runTests(plot) {
+		const promiser = helpers.promiser(plot.components.controls.bus, "postRender", plot)
 		Promise.resolve()
-			.then(() => {
-				checkDisplayWithCategoricalTerm(plot)
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					plot.components.controls.bus.on("postRender", () => {
-						checkDisplayWithNonNumericOverlay(plot)
-						resolve()
-					})
-					triggerNonNumericOverlay(plot)
-				})
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					plot.components.controls.bus.on("postRender", () => {
-						checkDisplayWithNumericOverlay(plot)
-						resolve()
-					})
-					triggerNumericOverlay(plot)
-				})
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					plot.components.controls.bus.on("postRender", () => {
-						checkDisplayWithNumericBarAndOverlay(plot)
-						resolve()
-					})
-					triggerNumericBarAndOverlay(plot)
-				})
-			})
+			.then(() => checkDisplayWithCategoricalTerm(plot))
+			.then(promiser.listenAndTrigger([checkDisplayWithNonNumericOverlay], triggerNonNumericOverlay))
+			.then(promiser.listenAndTrigger([checkDisplayWithNumericOverlay], triggerNumericOverlay))
+			.then(promiser.listenAndTrigger([checkDisplayWithNumericBarAndOverlay], triggerNumericBarAndOverlay))
 			.then(() => {
 				plot.components.controls.bus.on("postRender", null)
 				test.end()

@@ -27,3 +27,38 @@ exports.getChain = () => {
 }
 
 exports.serverData = {}
+
+exports.promiser = function(bus, eventType, arg) {
+	let resolved = Promise.resolve()
+	const promiser = {
+		listenAndTrigger(listeners, trigger) {
+			return () => {
+				return new Promise((resolve, reject) => {
+					bus.on(eventType, () => {
+						for (const fxn of listeners) fxn(arg)
+						resolve()
+					})
+					trigger(arg)
+				})
+			}
+		},
+		chain(listeners, trigger) {
+			if (trigger) {
+				resolved = resolved.then(promiser.listenAndTrigger(listeners, trigger))
+			} else if (!listeners) {
+				bus.on(eventType, null)
+				if (trigger) trigger()
+			} else {
+				resolved = resolved.then(() => {
+					for (const fxn of listeners) fxn(arg)
+				})
+			}
+			return promiser
+		},
+		catch() {
+			resolved.catch(e => console.log(e))
+		}
+	}
+
+	return promiser
+}
