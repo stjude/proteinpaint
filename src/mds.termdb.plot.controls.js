@@ -531,7 +531,8 @@ function setOverlayOpts(controls) {
 				treeInput.property("checked", true)
 				controls.dispatch({ settings: { bar: { overlay: "tree" } } })
 			}
-		}
+		},
+		isCoordinated: true
 	}
 
 	plot.termuiObjOverlay = termuiObj
@@ -693,7 +694,8 @@ function setDivideByOpts(controls) {
 					}
 				}
 			})
-		}
+		},
+		isCoordinated: true
 	}
 
 	plot.termuiObjDivide = termuiObj
@@ -753,7 +755,8 @@ function setBarsAsOpts(controls, label) {
 		callback: term => {
 			plot.term.q = term.q
 			controls.dispatch({ term: plot.term })
-		}
+		},
+		isCoordinated: true
 	}
 
 	if (!plot.term.q) plot.term.q = {}

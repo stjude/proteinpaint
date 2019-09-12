@@ -27,7 +27,7 @@ group{}
 
 	obj.tvstip = new client.Menu({ padding: "5px" })
 
-	main()
+	if (!obj.isCoordinated) main()
 
 	obj.main = main
 
@@ -433,7 +433,7 @@ group{}
 
 		let data
 		try {
-			data = await client.dofetch2("/termdb?" + args.join("&"))
+			data = await client.dofetch2("/termdb?" + args.join("&"), {}, obj.do_query_opts)
 			if (data.error) throw data.error
 		} catch (e) {
 			window.alert(e.message || e)

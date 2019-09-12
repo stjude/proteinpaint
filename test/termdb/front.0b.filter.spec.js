@@ -41,7 +41,8 @@ tape("filter term-value button", function(test) {
 				filter: {
 					"postRender.test": runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -49,26 +50,11 @@ tape("filter term-value button", function(test) {
 		// more reliable test promise chain format
 		// that is less likely to need timeouts
 		helpers
-			.ride(obj.components.filter.bus, "postRender.test", obj)
-			.do(testFilterDisplay)
+			.ride(obj.components.filter.bus, "postRender.test", obj, 300)
+			.do(testFilterDisplay, 300)
 			.do(testFilterRemove, triggerFilterRemove)
 			.do(testAddTerm, triggerFilterAdd)
 			.off(() => test.end())
-
-		/*try {
-			obj.components.filter.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(testFilterDisplay, { timeout: 200 })
-				.add(triggerFilterRemove)
-				.add(testFilterRemove) //, { timeout: 50 })
-				.add(triggerFilterAdd)
-				.add(testAddTerm) //, { timeout: 50 })
-				.add(() => test.end())
-				.next(obj)
-		} catch (e) {
-			console.log(e)
-		}*/
 	}
 
 	function testFilterDisplay(obj) {
@@ -156,30 +142,22 @@ tape("filter term-value button: categorical term", function(test) {
 				add_filter: true
 			},
 			callbacks: {
-				tree: {
-					postRender: runTests
+				filter: {
+					"postRender.test": runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
 	function runTests(obj) {
-		try {
-			obj.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(testFilterDisplay, { timeout: 300 })
-				.add(triggerChangeNegation)
-				.add(checkNegationBtnVal, { timeout: 200 })
-				.add(triggerAddCategory)
-				.add(checkAddedCategory, { timeout: 300 })
-				.add(triggerRemoveCategory)
-				.add(checkRemovedCategory, { timeout: 300 })
-				.add(() => test.end())
-				.next(obj)
-		} catch (e) {
-			console.log(e)
-		}
+		helpers
+			.ride(obj.components.filter.bus, "postRender.test", obj, 300)
+			.do(testFilterDisplay, 300)
+			.do(checkNegationBtnVal, triggerChangeNegation)
+			.do(checkAddedCategory, triggerAddCategory)
+			.do(checkRemovedCategory, triggerRemoveCategory)
+			.off(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {
@@ -270,30 +248,22 @@ tape("filter term-value button: Numerical term", function(test) {
 			default_rootterm: {},
 			termfilter,
 			callbacks: {
-				tree: {
-					postRender: runTests
+				filter: {
+					"postRender.test": runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
 	function runTests(obj) {
-		try {
-			obj.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(testFilterDisplay, { timeout: 300 })
-				.add(triggerChangeRange)
-				.add(checkRangeBtn, { timeout: 200 })
-				.add(triggerAddUnannotatedRange)
-				.add(checkUnannotatedValBtn, { timeout: 300 })
-				.add(triggerRemoveRange)
-				.add(checkRemovedRange, { timeout: 300 })
-				.add(() => test.end())
-				.next(obj)
-		} catch (e) {
-			console.log(e)
-		}
+		helpers
+			.ride(obj.components.filter.bus, "postRender.test", obj, 300)
+			.do(testFilterDisplay, 300)
+			.do(checkRangeBtn, triggerChangeRange)
+			.do(checkUnannotatedValBtn, triggerAddUnannotatedRange)
+			.do(checkRemovedRange, triggerRemoveRange)
+			.off(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {
@@ -386,31 +356,22 @@ tape("filter term-value button: Conditional term (grade)", function(test) {
 			default_rootterm: {},
 			termfilter,
 			callbacks: {
-				tree: {
-					postRender: runTests
+				filter: {
+					"postRender.test": runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
 	function runTests(obj) {
-		try {
-			obj.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(testFilterDisplay, { timeout: 300 })
-				.add(triggerChangeGrade)
-				.add(checkGradeBtn, { timeout: 300 })
-				.add(triggerGradeType)
-				.add(checkGradeTypeBtn, { timeout: 300 })
-				.add(triggerAddGrade)
-				.add(checkAddedGradeBtn, { timeout: 300 })
-				.add(() => test.end())
-				.next(obj)
-		} catch (e) {
-			console.log(e)
-		}
-		3
+		helpers
+			.ride(obj.components.filter.bus, "postRender.test", obj, 300)
+			.do(testFilterDisplay, 300)
+			.do(checkGradeBtn, triggerChangeGrade)
+			.do(checkGradeTypeBtn, triggerGradeType)
+			.do(checkAddedGradeBtn, triggerAddGrade)
+			.off(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {
@@ -504,28 +465,21 @@ tape("filter term-value button: Conditional term (sub-condition)", function(test
 			default_rootterm: {},
 			termfilter,
 			callbacks: {
-				tree: {
-					postRender: runTests
+				filter: {
+					"postRender.test": runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
 	function runTests(obj) {
-		try {
-			obj.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(testFilterDisplay, { timeout: 300 })
-				.add(triggerChangeSub)
-				.add(checkSubBtn, { timeout: 200 })
-				.add(triggerAddSub)
-				.add(checkAddedSubBtn, { timeout: 400 })
-				.add(() => test.end())
-				.next(obj)
-		} catch (e) {
-			console.log(e)
-		}
+		helpers
+			.ride(obj.components.filter.bus, "postRender.test", obj, 300)
+			.do(testFilterDisplay, 300)
+			.do(checkSubBtn, triggerChangeSub)
+			.do(checkAddedSubBtn, triggerAddSub)
+			.off(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {
@@ -603,24 +557,19 @@ tape("filter term-value button: Conditional term (grade and child)", function(te
 			default_rootterm: {},
 			termfilter,
 			callbacks: {
-				tree: {
-					postRender: runTests
+				filter: {
+					"postRender.test": runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
 	function runTests(obj) {
-		try {
-			obj.bus.on("postRender", null)
-			helpers
-				.getChain()
-				.add(testFilterDisplay, { timeout: 300 })
-				.add(() => test.end())
-				.next(obj)
-		} catch (e) {
-			console.log(e)
-		}
+		helpers
+			.ride(obj.components.filter.bus, "postRender.test", obj)
+			.do(testFilterDisplay, 300)
+			.off(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {

@@ -115,6 +115,8 @@ callbacks: {
 		.append("div")
 	obj.tip = new client.Menu({ padding: "5px" })
 
+	obj.do_query_opts = { serverData: obj.serverData }
+
 	obj.components = {
 		filter: getFilterUi(obj),
 		cart: getCartUi(obj),
@@ -122,11 +124,10 @@ callbacks: {
 	}
 
 	// simplified query
-	obj.do_query_opts = { serverData: obj.serverData }
 	obj.do_query = args => {
 		const lst = ["genome=" + obj.genome.name + "&dslabel=" + obj.mds.label]
 		// maybe no need to provide term filter at this query
-		return client.dofetch2("/termdb?" + lst.join("&") + "&" + args.join("&"), obj.do_query_opts)
+		return client.dofetch2("/termdb?" + lst.join("&") + "&" + args.join("&"), {}, obj.do_query_opts)
 	}
 	obj.showtree4selectterm = (termidlst, button, callback) => {
 		// convenient function to be called in barchart config panel for selecting term2
@@ -139,7 +140,8 @@ callbacks: {
 			modifier_click_term: {
 				disable_terms: new Set(termidlst),
 				callback
-			}
+			},
+			serverData: obj.serverData
 		}
 		init(obj2)
 	}
@@ -739,14 +741,14 @@ async function restore_plot(obj, params) {
 	if (typeof params.term == "object") {
 		make_barplot(obj, params, restored_div)
 	} else {
-		const _term = await obj.do_query(["gettermbyid=" + params.term])
+		const _term = await obj.do_query(["gettermbyid=" + params.term], {}, obj.do_query_opts)
 		if (!_term || !_term.term) alert(`Unable to restore the view for term='${params.term}'`)
 		const term = _term && _term.term
 		term.id = params.term
 
 		let term2, term0
 		if (params.term2 && params.term2 != "genotype") {
-			const term = await obj.do_query(["gettermbyid=" + params.term2])
+			const term = await obj.do_query(["gettermbyid=" + params.term2], {}, obj.do_query_opts)
 			if (term && term.term) {
 				term2 = term.term
 				term2.id = params.term2
@@ -754,7 +756,7 @@ async function restore_plot(obj, params) {
 			}
 		}
 		if (params.term0) {
-			const term = await obj.do_query(["gettermbyid=" + params.term0])
+			const term = await obj.do_query(["gettermbyid=" + params.term0], {}, obj.do_query_opts)
 			if (term && term.term) {
 				term0 = term.term
 				term0.id = params.term0

@@ -41,29 +41,21 @@ tape("cart button", function(test) {
 				add_filter: true
 			},
 			callbacks: {
-				tree: {
-					postRender: runTests
+				cart: {
+					"postRender.test": runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
 	function runTests(obj) {
-		try {
-			obj.bus
-				.on("postRender", null)
-        helpers
-          .getChain()
-          .add(testDisplay)
-		  .add(triggerClick)
-		  .add(testSelectedGroupTipDisplay)
-		  .add(triggerEmpty)
-          .add(testEmpty)
-          .add(() => test.end())
-          .next(obj)
-		} catch (e) {
-			console.log(e)
-		}
+		helpers
+			.ride(obj.components.cart.bus, "postRender.test", obj, 300)
+			.do(testDisplay)
+			.do(testSelectedGroupTipDisplay, triggerClick)
+			.do(testEmpty, triggerEmpty)
+			.off(() => test.end())
 	}
 
 	function testDisplay(obj) {
@@ -91,7 +83,7 @@ tape("cart button", function(test) {
 })
 
 tape("cart selected group tip", function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(1500)
 	test.plan(2)
 	const div0 = d3s.select("body").append("div")
 	const termfilter = { show_top_ui: true }
@@ -121,28 +113,20 @@ tape("cart selected group tip", function(test) {
 				add_filter: true
 			},
 			callbacks: {
-				tree: {
-					postRender: runTests
+				cart: {
+					"postRender.test": runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
 	function runTests(obj) {
-		try {
-			obj.bus
-				.on("postRender", null)
-        helpers
-          .getChain()
-          .add(triggerClick)
-		  .add(testSelectedGroupTipDisplay, { timeout: 200 })
-		  .add(triggerRemoveTerm)
-          .add(testRemoveTerm)
-          .add(() => test.end())
-          .next(obj)
-		} catch (e) {
-			console.log(e)
-		}
+		helpers
+			.ride(obj.components.cart.bus, "postRender.test", obj, 300)
+			.do(testSelectedGroupTipDisplay, triggerClick)
+			.do(testRemoveTerm, triggerRemoveTerm)
+			.off(() => test.end())
 	}
 
 	function triggerClick(obj) {
@@ -155,7 +139,7 @@ tape("cart selected group tip", function(test) {
 
 	function triggerRemoveTerm(obj) {
 		obj.tip.d
-			.selectAll(".term_remove_btn")
+			.select(".term_remove_btn")
 			.node()
 			.dispatchEvent(new Event("click", { bubbles: true }))
 	}
@@ -208,30 +192,21 @@ tape("cart with 2 groups", function(test) {
 				add_filter: true
 			},
 			callbacks: {
-				tree: {
-					postRender: runTests
+				cart: {
+					"postRender.test": runTests
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
 	function runTests(obj) {
-		try {
-			obj.bus
-				.on("postRender", null)
-        helpers
-          .getChain()
-          .add(triggerCartClick)
-		  .add(testSelectedGroupTipDisplay)
-		  .add(triggerLaunchGenomePaint)
-          .add(checkLaunchGenomePaint, { timeout: 2500 })
-          .add(triggerRemoveGroup)
-          .add(testRemoveGroup, { timeout: 200 })
-          .add(() => test.end())
-          .next(obj)
-		} catch (e) {
-			console.log(e)
-		}
+		helpers
+			.ride(obj.components.cart.bus, "postRender.test", obj, 300)
+			.do(testSelectedGroupTipDisplay, triggerCartClick)
+			.do(triggerLaunchGenomePaint)
+			.do(testRemoveGroup, triggerRemoveGroup)
+			.off(() => test.end())
 	}
 
 	function triggerCartClick(obj) {
@@ -243,15 +218,19 @@ tape("cart with 2 groups", function(test) {
 		test.equal(obj.tip.d.selectAll(".launch_gp_btn").size(), 1, "should show 'test in genome paint' button")
 	}
 
-	function triggerLaunchGenomePaint(obj){
-		obj.tip.d.selectAll(".launch_gp_btn").node().click()
+	function triggerLaunchGenomePaint(obj) {
+		obj.tip.d
+			.selectAll(".launch_gp_btn")
+			.node()
+			.click()
+		setTimeout(checkLaunchGenomePaint, 500)
 	}
 
-	function checkLaunchGenomePaint(){
-
+	function checkLaunchGenomePaint() {
 		// Should check 'SJLife' button in GenomePaint pop-up window
 		test.equal(
-			d3s.select("body")
+			d3s
+				.select("body")
 				.selectAll(".sja_pane")
 				.selectAll(".sja_handle_green")
 				.html(),
@@ -259,7 +238,8 @@ tape("cart with 2 groups", function(test) {
 			"should lauch GenomePaint"
 		)
 
-		d3s.select("body")
+		d3s
+			.select("body")
 			.selectAll(".sja_pane")
 			.selectAll(".sja_menuoption")
 			.node()

@@ -2,6 +2,7 @@ const tape = require("tape")
 const d3s = require("d3-selection")
 const serverconfig = require("../../serverconfig")
 const host = "http://localhost:" + serverconfig.port
+const helpers = require("../front.helpers.js")
 
 tape("\n", function(test) {
 	test.pass("-***- mds.termdb -***-")
@@ -25,7 +26,8 @@ tape("standalone layout", function(test) {
 				tree: {
 					postRender: testAvailElems
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -66,7 +68,8 @@ tape("term button", function(test) {
 				tree: {
 					postRender: triggerRootTermClick
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 

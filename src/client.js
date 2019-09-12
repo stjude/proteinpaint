@@ -113,7 +113,7 @@ init {}
 		}
 	}
 
-	const dataName = url + " | " + init.method
+	const dataName = url + ";;" + init.method
 	if (opts.serverData && dataName in opts.serverData) {
 		return opts.serverData[dataName].then(str => JSON.parse(str))
 	} else {

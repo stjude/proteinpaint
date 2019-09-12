@@ -3,6 +3,7 @@ const d3s = require("d3-selection")
 const termjson = require("./termjson").termjson
 const serverconfig = require("../../serverconfig")
 const host = "http://localhost:" + serverconfig.port
+const helpers = require("../front.helpers.js")
 
 tape("\n", function(test) {
 	test.pass("-***- mds.termdb.table -***-")
@@ -33,7 +34,8 @@ tape("overlay-dependent display", function(test) {
 				plot: {
 					postRender: [testHiddenTable, triggerViewTable]
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 

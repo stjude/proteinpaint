@@ -40,7 +40,9 @@ export function getFilterUi(obj) {
 		mds: obj.mds,
 		genome: obj.genome,
 		tvslst_filter: false,
-		callback: obj.main
+		callback: obj.main,
+		do_query_opts: obj.do_query_opts,
+		isCoordinated: true
 	}
 
 	termvaluesettingui.init(tvsuiObj)
@@ -87,7 +89,7 @@ export function getCartUi(obj) {
 			}
 			cart.bus.emit("postRender", obj)
 		},
-		bus: get_event_bus(["postRender"])
+		bus: get_event_bus(["postRender"], obj.callbacks.cart)
 	}
 
 	return cart
@@ -141,7 +143,8 @@ function make_selected_group_tip(obj, cart) {
 					obj.emittingPostRender = true
 					cart.bus.emit("postRender", obj)
 				}
-			}
+			},
+			do_query_opts: obj.do_query_opts
 		}
 
 		termvaluesettingui.init(tvsuiObj)

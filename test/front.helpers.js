@@ -35,6 +35,7 @@ exports.ride = function(bus, eventType, arg, wait = 0) {
 	arg         the default argument to supply to the do() callback
 	wait        optional wait time before callback on bus.event
 */
+	bus.on(eventType, null)
 	let resolved = Promise.resolve()
 
 	const ride = {
@@ -47,6 +48,7 @@ exports.ride = function(bus, eventType, arg, wait = 0) {
 				resolved = resolved.then(() => {
 					return new Promise((resolve, reject) => {
 						setTimeout(() => {
+							//console.log('---- timeout --- ', after, after.name, callback.name)
 							callback(arg)
 							resolve()
 						}, after)
@@ -57,8 +59,12 @@ exports.ride = function(bus, eventType, arg, wait = 0) {
 					resolved = resolved.then(() => {
 						return new Promise((resolve, reject) => {
 							bus.on(eventType, () => {
-								setTimeout(() => callback(arg), wait)
-								resolve()
+								setTimeout(() => {
+									//console.log('---- on emit --- ', wait, after.name, callback.name)
+									bus.on(eventType, null)
+									callback(arg)
+									resolve()
+								}, wait)
 							})
 							after(arg)
 						})
@@ -67,6 +73,8 @@ exports.ride = function(bus, eventType, arg, wait = 0) {
 					resolved = resolved.then(() => {
 						return new Promise((resolve, reject) => {
 							bus.on(eventType, () => {
+								//console.log('----- on emit --- ', after.name, callback.name)
+								bus.on(eventType, null)
 								callback(arg)
 								resolve()
 							})

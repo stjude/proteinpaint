@@ -3,6 +3,7 @@ const d3s = require("d3-selection")
 const termjson = require("./termjson").termjson
 const serverconfig = require("../../serverconfig")
 const host = "http://localhost:" + serverconfig.port
+const helpers = require("../front.helpers.js")
 
 tape("\n", function(test) {
 	test.pass("-***- mds.termdb.barchart -***-")
@@ -36,7 +37,8 @@ tape("single barchart, categorical bars + click", function(test) {
 			},
 			bar_click_menu: {
 				add_filter: true
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -130,7 +132,8 @@ tape("single chart, with overlay", function(test) {
 			},
 			bar_click_menu: {
 				add_filter: true
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -193,7 +196,8 @@ tape("single chart, genotype overlay", function(test) {
 			modifier_ssid_barchart: {
 				mutation_name: "TEST",
 				ssid: "genotype-test.txt"
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -239,7 +243,8 @@ tape("click to add numeric, condition term filter", function(test) {
 			},
 			bar_click_menu: {
 				add_filter: true
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -320,7 +325,8 @@ tape("click to add condition grade and child term filter ", function(test) {
 			},
 			bar_click_menu: {
 				add_filter: true
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -380,7 +386,8 @@ tape("multiple charts", function(test) {
 				plot: {
 					postRender: testNumCharts
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -414,7 +421,8 @@ tape("series visibility", function(test) {
 				plot: {
 					postRender: [testExcluded]
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 

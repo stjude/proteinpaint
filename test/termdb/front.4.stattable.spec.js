@@ -3,6 +3,7 @@ const d3s = require("d3-selection")
 const termjson = require("./termjson").termjson
 const serverconfig = require("../../serverconfig")
 const host = "http://localhost:" + serverconfig.port
+const helpers = require("../front.helpers.js")
 
 tape("\n", function(test) {
 	test.pass("-***- mds.termdb.stattable -***-")
@@ -34,7 +35,8 @@ tape("barchart-dependent display", function(test) {
 				plot: {
 					postRender: [testHiddenWithNoBarchart, triggerViewBarchart]
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -85,7 +87,8 @@ tape("term.isfloat-dependent display", function(test) {
 				plot: {
 					postRender: [testHiddenIfCategoricalTerm, triggerNumericTerm]
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
@@ -133,7 +136,8 @@ tape("term.isfloat-dependent display", function(test) {
 				plot: {
 					postRender: testHiddenIfConditionTerm
 				}
-			}
+			},
+			serverData: helpers.serverData
 		}
 	})
 
