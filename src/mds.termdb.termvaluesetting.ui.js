@@ -67,22 +67,29 @@ group{}
 
 	async function main() {
 		terms_div.selectAll("*").remove()
+
 		const pills = terms_div.selectAll('.tvs_pill')
-		.data(obj.group.terms, (d)=>{
-			d.term.id + ' & ' + (d.values ? (d.values.map(v=>v.key).join(" & ")) : d.ranges ? (d.ranges.map(v=>v.name).join(" & ")) : (d.grade_and_child.map(v=>v.grade).join(" & ")))
-		})
+			.data(obj.group.terms, (d)=>{
+				d.term.id + ' & ' + (d.values ? (d.values.map(v=>v.key).join(" & ")) : d.ranges ? (d.ranges.map(v=>v.name).join(" & ")) : (d.grade_and_child.map(v=>v.grade).join(" & ")))
+			})
+
 		pills.exit().remove()
 
-		pills.each((d)=> updatePill(d))
+		pills.transition()
+			.duration(200)
+			.each((d, i)=> updatePill(d, i))
 
 		pills.enter().append('div')
+			.attr('class','tvs_pill')
 			.style("white-space", "nowrap")
 			.style("display", "inline-block")
 			.style("padding", "2px")
-			.each((d)=> updatePill(d))
+			.transition()
+			.duration(200)
+			.each((d, i)=> updatePill(d, i))
 
 		async function updatePill(term, i){
-			
+
 			const one_term_div = terms_div
 				.append("div")
 				.style("white-space", "nowrap")
@@ -195,7 +202,7 @@ group{}
 						if (replace_value_select.node().selectedIndex == 0 && replace_value_select.node().value == "delete") {
 							term.values.splice(j, 1)
 							if (term.values.length == 0) {
-								term.splice(i, 1)
+								obj.group.terms.splice(i, 1)
 							}
 						} else {
 							//change value of button
