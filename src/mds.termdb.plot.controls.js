@@ -31,9 +31,9 @@ export function init(opts) {
 				postRender(plot) {
 					const abspos =
 						plot.settings.currViews.includes("barchart") &&
-						(!plot.views.barchart.visibleCharts ||
-							plot.views.barchart.visibleCharts.length > 1 ||
-							plot.views.barchart.visibleCharts[0].settings.svgw > window.innerWidth - 500)
+						(!plot.components.barchart.visibleCharts ||
+							plot.components.barchart.visibleCharts.length > 1 ||
+							plot.components.barchart.visibleCharts[0].settings.svgw > window.innerWidth - 500)
 
 					controls.dom.holder.style("position", abspos ? "absolute" : "")
 				}

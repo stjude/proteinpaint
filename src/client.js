@@ -214,8 +214,10 @@ export function get_event_bus(eventTypes = [], callbacks = {}, defaultArg = null
 			return bus
 		},
 		emit(eventType, arg = null) {
-			if (events[eventType]) {
-				events[eventType](arg ? arg : defaultArg)
+			for (const type in events) {
+				if (type == eventType || type.startsWith(eventType + ".")) {
+					events[type](arg ? arg : defaultArg)
+				}
 			}
 			return bus
 		}

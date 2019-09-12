@@ -35,7 +35,7 @@ tape("overlay input", function(test) {
 			},
 			callbacks: {
 				controls: {
-					postRender: checkDisplayInAnyView
+					"postRender.test": checkDisplayInAnyView
 				}
 			},
 			serverData: helpers.serverData
@@ -75,7 +75,7 @@ tape("orientation input", function(test) {
 			},
 			callbacks: {
 				controls: {
-					postRender: runTests
+					"postRender.test": runTests
 				}
 			},
 			serverData: helpers.serverData
@@ -83,24 +83,11 @@ tape("orientation input", function(test) {
 	})
 
 	function runTests(plot) {
-		Promise.resolve()
-			.then(() => {
-				checkDisplayInBarchartView(plot)
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					plot.components.controls.bus.on("postRender", () => {
-						checkDisplayInNonBarchartView(plot)
-						resolve()
-					})
-					triggerNonBarchartView(plot)
-				})
-			})
-			.then(() => {
-				plot.components.controls.bus.on("postRender", null)
-				test.end()
-			})
-			.catch(e => console.log(e))
+		helpers
+			.ride(plot.components.controls.bus, "postRender.test", plot)
+			.do(checkDisplayInBarchartView)
+			.do(checkDisplayInNonBarchartView, triggerNonBarchartView)
+			.off(() => test.end())
 	}
 	function checkDisplayInBarchartView(plot) {
 		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
@@ -149,7 +136,7 @@ tape("scale input", function(test) {
 			},
 			callbacks: {
 				controls: {
-					postRender: runTests
+					"postRender.test": runTests
 				}
 			},
 			serverData: helpers.serverData
@@ -157,24 +144,11 @@ tape("scale input", function(test) {
 	})
 
 	function runTests(plot) {
-		Promise.resolve()
-			.then(() => {
-				checkDisplayInBarchartView(plot)
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					plot.components.controls.bus.on("postRender", () => {
-						checkDisplayInNonBarchartView(plot)
-						resolve()
-					})
-					triggerNonBarchartView(plot)
-				})
-			})
-			.then(() => {
-				plot.components.controls.bus.on("postRender", null)
-				test.end()
-			})
-			.catch(e => console.log(e))
+		helpers
+			.ride(plot.components.controls.bus, "postRender.test", plot)
+			.do(checkDisplayInBarchartView)
+			.do(checkDisplayInNonBarchartView, triggerNonBarchartView)
+			.off(() => test.end())
 	}
 
 	function checkDisplayInBarchartView(plot) {
@@ -224,7 +198,7 @@ tape("divide by input", function(test) {
 			},
 			callbacks: {
 				controls: {
-					postRender: runTests
+					"postRender.test": runTests
 				}
 			},
 			serverData: helpers.serverData
@@ -232,42 +206,13 @@ tape("divide by input", function(test) {
 	})
 
 	function runTests(plot) {
-		Promise.resolve()
-			.then(() => {
-				checkDisplayInBarchartView(plot)
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					plot.components.controls.bus.on("postRender", () => {
-						checkDisplayInTableView(plot)
-						resolve()
-					})
-					triggerTableView(plot)
-				})
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					plot.components.controls.bus.on("postRender", () => {
-						checkDisplayInBoxplotView(plot)
-						resolve()
-					})
-					triggerBoxplotView(plot)
-				})
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					plot.components.controls.bus.on("postRender", () => {
-						checkDisplayInScatterView(plot)
-						resolve()
-					})
-					triggerScatterView(plot)
-				})
-			})
-			.then(() => {
-				plot.components.controls.bus.on("postRender", null)
-				test.end()
-			})
-			.catch(e => console.log(e))
+		helpers
+			.ride(plot.components.controls.bus, "postRender.test", plot)
+			.do(checkDisplayInBarchartView)
+			.do(checkDisplayInTableView, triggerTableView)
+			.do(checkDisplayInBoxplotView, triggerBoxplotView)
+			.do(checkDisplayInScatterView, triggerScatterView)
+			.off(() => test.end())
 	}
 
 	function checkDisplayInBarchartView(plot) {
@@ -343,7 +288,7 @@ tape("Primary bins input", function(test) {
 			},
 			callbacks: {
 				controls: {
-					postRender: runTests
+					"postRender.test": runTests
 				}
 			},
 			serverData: helpers.serverData
@@ -352,11 +297,10 @@ tape("Primary bins input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.promiser(plot.components.controls.bus, "postRender", plot)
-			.chain(checkDisplayWithNumericTerm)
-			.chain(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
-			.chain(null, () => test.end())
-			.catch()
+			.ride(plot.components.controls.bus, "postRender.test", plot)
+			.do(checkDisplayWithNumericTerm)
+			.do(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
+			.off(() => test.end())
 	}
 
 	function checkDisplayWithNumericTerm(plot) {
@@ -406,7 +350,7 @@ tape("'Bars as' input", function(test) {
 			},
 			callbacks: {
 				controls: {
-					postRender: runTests
+					"postRender.test": runTests
 				}
 			},
 			serverData: helpers.serverData
@@ -415,11 +359,10 @@ tape("'Bars as' input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.promiser(plot.components.controls.bus, "postRender", plot)
-			.chain(checkDisplayWithNumericTerm)
-			.chain(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
-			.chain(null, () => test.end())
-			.catch()
+			.ride(plot.components.controls.bus, "postRender.test", plot)
+			.do(checkDisplayWithNumericTerm)
+			.do(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
+			.off(() => test.end())
 	}
 
 	function checkDisplayWithNumericTerm(plot) {
@@ -469,7 +412,7 @@ tape("Display mode input", function(test) {
 			},
 			callbacks: {
 				controls: {
-					postRender: runTests
+					"postRender.test": runTests
 				}
 			},
 			serverData: helpers.serverData
@@ -477,17 +420,13 @@ tape("Display mode input", function(test) {
 	})
 
 	function runTests(plot) {
-		const promiser = helpers.promiser(plot.components.controls.bus, "postRender", plot)
-		Promise.resolve()
-			.then(() => checkDisplayWithCategoricalTerm(plot))
-			.then(promiser.listenAndTrigger(checkDisplayWithNonNumericOverlay, triggerNonNumericOverlay))
-			.then(promiser.listenAndTrigger(checkDisplayWithNumericOverlay, triggerNumericOverlay))
-			.then(promiser.listenAndTrigger(checkDisplayWithNumericBarAndOverlay, triggerNumericBarAndOverlay))
-			.then(() => {
-				plot.components.controls.bus.on("postRender", null)
-				test.end()
-			})
-			.catch(e => console.log(e))
+		helpers
+			.ride(plot.components.controls.bus, "postRender.test", plot)
+			.do(checkDisplayWithCategoricalTerm)
+			.do(checkDisplayWithNonNumericOverlay, triggerNonNumericOverlay)
+			.do(checkDisplayWithNumericOverlay, triggerNumericOverlay)
+			.do(checkDisplayWithNumericBarAndOverlay, triggerNumericBarAndOverlay)
+			.off(() => test.end())
 	}
 
 	function checkDisplayWithCategoricalTerm(plot) {

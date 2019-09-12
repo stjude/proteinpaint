@@ -28,41 +28,66 @@ exports.getChain = () => {
 
 exports.serverData = {}
 
-exports.promiser = function(bus, eventType, arg) {
+exports.ride = function(bus, eventType, arg, wait = 0) {
+	/*
+	bus         an event bus returned by client.get_event_bus
+	eventType   a valid eventType for the bus argument
+	arg         the default argument to supply to the do() callback
+	wait        optional wait time before callback on bus.event
+*/
 	let resolved = Promise.resolve()
-	const promiser = {
-		listenAndTrigger(listener, trigger) {
-			return () => {
-				return new Promise((resolve, reject) => {
-					bus.on(eventType, () => {
-						listener(arg)
-						resolve()
+
+	const ride = {
+		do(callback, after) {
+			/*
+			callback	function to be supplied with (arg)
+			after     integer timeout OR a callback function for bus eventType
+		*/
+			if (typeof after == "number") {
+				resolved = resolved.then(() => {
+					return new Promise((resolve, reject) => {
+						setTimeout(() => {
+							callback(arg)
+							resolve()
+						}, after)
 					})
-					trigger(arg)
 				})
-			}
-		},
-		chain(listener, trigger) {
-			if (listener) {
-				if (trigger) {
-					resolved = resolved.then(promiser.listenAndTrigger(listener, trigger))
+			} else if (typeof after == "function") {
+				if (wait) {
+					resolved = resolved.then(() => {
+						return new Promise((resolve, reject) => {
+							bus.on(eventType, () => {
+								setTimeout(() => callback(arg), wait)
+								resolve()
+							})
+							after(arg)
+						})
+					})
 				} else {
 					resolved = resolved.then(() => {
-						listener(arg)
+						return new Promise((resolve, reject) => {
+							bus.on(eventType, () => {
+								callback(arg)
+								resolve()
+							})
+							after(arg)
+						})
 					})
 				}
 			} else {
-				resolved = resolved.then(() => {
-					bus.on(eventType, null)
-					if (trigger) trigger()
-				})
+				resolved = resolved.then(() => callback(arg))
 			}
-			return promiser
+			return ride
 		},
-		catch() {
-			resolved.catch(e => console.log(e))
+		off(callback) {
+			resolved
+				.then(() => {
+					bus.on(eventType, null)
+					if (callback) callback()
+				})
+				.catch(e => console.log(e))
 		}
 	}
 
-	return promiser
+	return ride
 }
