@@ -50,11 +50,15 @@ tape("filter term-value button", function(test) {
 		// more reliable test promise chain format
 		// that is less likely to need timeouts
 		helpers
-			.ride(obj.components.filter.bus, "postRender.test", obj, 300)
-			.do(testFilterDisplay, 300)
-			.do(testFilterRemove, triggerFilterRemove)
-			.do(testAddTerm, triggerFilterAdd)
-			.off(() => test.end())
+			.getRide({
+				bus: obj.components.filter.bus,
+				eventType: "postRender.test",
+				arg: obj
+			})
+			.run(testFilterDisplay, 300)
+			.to(testFilterRemove, triggerFilterRemove)
+			.to(testAddTerm, triggerFilterAdd)
+			.done(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {
