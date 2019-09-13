@@ -44,7 +44,7 @@ tape("cart button", function(test) {
 			},
 			callbacks: {
 				cart: {
-					"postRender.test": runTests
+					"postRenderBtn.test": runTests
 				}
 			},
 			serverData: helpers.serverData
@@ -53,24 +53,15 @@ tape("cart button", function(test) {
 
 	function runTests(obj) {
 		helpers
-			.ride(obj.components.cart.bus, "postRender.test", obj)
-			.do(testDisplay)
-			.do(() => {
-				return (
-					helpers
-						.ride(obj.components.cart.tipbus, "postRender.test", obj)
-						// -- same promise for trigger and test that is riding on bus event
-						.do(testSelectedGroupTipDisplay, triggerClick, 100)
-						// emptying a cart does not trigger the
-						// postRender emit of the uncoordinated group tip
-						// so has to chain it after each other instead of as
-						// part of the same promise
-						.do(triggerEmpty, 100) // -- separate promise for trigger
-						.do(testEmpty, 300)
-				) // separate promise for test not riding on bus event
+			.getRide({
+				bus: obj.components.cart.bus,
+				eventType: "postRenderBtn.test",
+				arg: obj
 			})
-			.do(() => {}, 1000)
-			.off(() => test.end())
+			.run(testDisplay)
+			.sub(testSelectedGroupTipDisplay, triggerClick, { eventType: "postRenderTip.test" })
+			.sub(testEmpty, triggerEmpty, { eventType: "postRenderTip.test", wait: 200 })
+			.done(() => test.end())
 	}
 
 	function testDisplay(obj) {
@@ -78,11 +69,7 @@ tape("cart button", function(test) {
 	}
 
 	function triggerClick(obj) {
-		obj.dom.cartdiv.node().click() //.dispatchEvent(new Event("click", { bubbles: true }))
-		// dispatchEvent is only needed when there is event delegation to parent
-		// or other types of events where there is no native trigger function
-		// when the listener is attached directly to the element,
-		// use click() directly
+		obj.dom.cartdiv.node().click()
 	}
 
 	function testSelectedGroupTipDisplay(obj) {
@@ -135,7 +122,7 @@ tape("cart selected group tip", function(test) {
 			},
 			callbacks: {
 				cart: {
-					"postRender.test": runTests
+					"postRenderBtn.test": runTests
 				}
 			},
 			serverData: helpers.serverData
@@ -143,15 +130,16 @@ tape("cart selected group tip", function(test) {
 	})
 
 	function runTests(obj) {
-		obj.components.cart.bus.on("postRender.test", null)
-
+		obj.components.cart.bus.on("postRenderBtn.test", null)
 		helpers
-			.ride(obj.components.cart.tipbus, "postRender.test", obj)
-			.do(triggerClick, 400) // has to separate -- should really use reactive component flow
-			.do(testSelectedGroupTipDisplay, 300) // should be riding the cart.tipbus instead
-			.do(triggerRemoveTerm)
-			.do(testRemoveTerm, 100)
-			.off(() => test.end())
+			.getRide({
+				bus: obj.components.cart.bus,
+				eventType: "postRenderTip.test",
+				arg: obj
+			})
+			.to(testSelectedGroupTipDisplay, triggerClick, 400)
+			.to(testRemoveTerm, triggerRemoveTerm)
+			.done(() => test.end())
 	}
 
 	function triggerClick(obj) {
@@ -218,7 +206,7 @@ tape("cart with 2 groups", function(test) {
 			},
 			callbacks: {
 				cart: {
-					"postRender.test": runTests
+					"postRenderBtn.test": runTests
 				}
 			},
 			serverData: helpers.serverData
@@ -226,15 +214,19 @@ tape("cart with 2 groups", function(test) {
 	})
 
 	function runTests(obj) {
-		obj.components.cart.bus.on("postRender.test", null)
+		obj.components.cart.bus.on("postRenderBtn.test", null)
 		helpers
-			.ride(obj.components.cart.tipbus, "postRender.test", obj, 400)
-			.do(testSelectedGroupTipDisplay, triggerCartClick)
-			.do(triggerLaunchGenomePaint, 300)
-			.do(checkLaunchGenomePaint, 1500)
-			.do(triggerCartClick, 200)
-			.do(testRemoveGroup, triggerRemoveGroup)
-			.off(() => test.end())
+			.getRide({
+				bus: obj.components.cart.bus,
+				eventType: "postRenderTip.test",
+				arg: obj
+			})
+			.to(testSelectedGroupTipDisplay, triggerCartClick)
+			.run(triggerLaunchGenomePaint, 100)
+			.run(checkLaunchGenomePaint, 1500)
+			.run(triggerCartClick, 100)
+			.to(testRemoveGroup, triggerRemoveGroup)
+			.done(() => test.end())
 	}
 
 	function triggerCartClick(obj) {

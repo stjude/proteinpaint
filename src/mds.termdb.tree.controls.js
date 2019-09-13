@@ -68,12 +68,8 @@ export function getCartUi(obj) {
 	const cart = {
 		main() {
 			if (!obj.selected_groups) {
-				//obj.dom.cartdiv.style("display", "none")
-				// !!!  NOTE:
-				// Chrome defers processing events on a hidden DOM element
-				// which most often causes duplicate event triggers
-				// when the element becomes visible !!!
-				// cart.bus.emit("postRender", obj)
+				obj.dom.cartdiv.style("display", "none")
+				cart.bus.emit("postRenderBtn", obj)
 				return
 			}
 
@@ -88,18 +84,14 @@ export function getCartUi(obj) {
 					.style("background-color", "#00AB66")
 					.style("color", "#fff")
 					.text("Selected " + obj.selected_groups.length + " Group" + (obj.selected_groups.length > 1 ? "s" : ""))
-					.on("click", () => {
-						event.stopPropagation()
-						make_selected_group_tip(obj, cart)
-					})
-				cart.bus.emit("postRender", obj)
+					.on("click", () => make_selected_group_tip(obj, cart))
 			} else {
-				// see note above duplicate events on hidden DOM element
 				obj.dom.cartdiv.style("display", "none")
 			}
+
+			cart.bus.emit("postRenderBtn", obj)
 		},
-		bus: get_event_bus(["postRender"], obj.callbacks.cart),
-		tipbus: get_event_bus(["postRender"], obj.callbacks.carttip)
+		bus: get_event_bus(["postRenderBtn", "postRenderTip"], obj.callbacks.cart)
 	}
 
 	return cart
@@ -148,7 +140,7 @@ function make_selected_group_tip(obj, cart) {
 			tvslst_filter: false,
 			callback: () => {
 				tvsuiObj.main()
-				//cart.tipbus.emit("postRender")
+				cart.bus.emit("postRenderTip", obj)
 			},
 			do_query_opts: obj.do_query_opts
 		}
@@ -177,6 +169,8 @@ function make_selected_group_tip(obj, cart) {
 				if (obj.selected_groups.length == 0) {
 					obj.dom.cartdiv.style("display", "none")
 					tip.hide()
+					cart.bus.emit("postRenderBtn", obj)
+					cart.bus.emit("postRenderTip", obj)
 				} else {
 					// this coordination suggests using a
 					// reactive component flow from cart to group tip
@@ -238,7 +232,7 @@ function make_selected_group_tip(obj, cart) {
 			})
 	}
 
-	cart.tipbus.emit("postRender")
+	cart.bus.emit("postRenderTip", obj)
 }
 
 export function setObjBarClickCallback(obj) {

@@ -78,6 +78,7 @@ exports.ride = function(bus, eventType, arg, wait = 0) {
 
 function frozenInstanceGetter(privates, classPublic, classPrivate = null) {
 	return opts => {
+		"use strict"
 		const self = new classPublic(opts)
 		if (classPrivate) {
 			privates.set(self, new classPrivate(self))
@@ -89,6 +90,20 @@ function frozenInstanceGetter(privates, classPublic, classPrivate = null) {
 }
 
 {
+	/*
+		The exported getRide() test helper function tries to 
+		reliably sequence UI tests primarily via postRender
+		callbacks as emitted by an event bus. 
+
+		The idea is to minimize the dependency on less reliable,
+		timeout-based triggers of when to test UI elements, whereas
+		a postRender event would only be called when the
+		component of interest has been reached. If it is not
+		called, then the issue is either due a missing event
+		emitter or an upstream component not getting to the point
+		of triggering the re-render of the current component.
+	*/
+
 	// tracker for a public instance's corresponding
 	// private properties and methds
 	const my = new WeakMap()
@@ -154,7 +169,6 @@ function frozenInstanceGetter(privates, classPublic, classPrivate = null) {
 					return new Promise((resolve, reject) => {
 						opts.bus.on(opts.eventType, () => {
 							setTimeout(() => {
-								//console.log('---- on emit --- ', wait, after.name, callback.name)
 								opts.bus.on(opts.eventType, null)
 								callback(opts.arg)
 								resolve()
@@ -167,7 +181,6 @@ function frozenInstanceGetter(privates, classPublic, classPrivate = null) {
 				this.resolved = this.resolved.then(() => {
 					return new Promise((resolve, reject) => {
 						opts.bus.on(opts.eventType, () => {
-							//console.log('----- on emit --- ', after.name, callback.name)
 							opts.bus.on(opts.eventType, null)
 							callback(opts.arg)
 							resolve()
@@ -183,7 +196,6 @@ function frozenInstanceGetter(privates, classPublic, classPrivate = null) {
 				this.resolved = this.resolved.then(() => {
 					return new Promise((resolve, reject) => {
 						setTimeout(() => {
-							//console.log('---- timeout --- ', after, after.name, callback.name)
 							callback(opts.arg)
 							resolve()
 						}, after)
