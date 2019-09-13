@@ -1,31 +1,33 @@
 .mode tab
 
 
-drop table if exists terms;
 drop index if exists terms_id;
 drop index if exists terms_p;
 drop index if exists terms_n;
-drop index if exists ancestry_tid;
-drop index if exists ancestry_pid;
+drop table if exists terms;
 create table terms (
   id character varying(100) not null,
   name character varying(100) not null collate nocase,
   parent_id character varying(100),
   jsondata json not null
 );
+
+.import termdb terms
+update terms set parent_id=null where parent_id='';
+create index terms_id on terms(id);
+create index terms_p on terms(parent_id);
+create index terms_n on terms(name);
+
+
+drop index if exists ancestry_tid;
+drop index if exists ancestry_pid;
 drop table if exists ancestry;
 create table ancestry (
   term_id character varying(100) not null,
   ancestor_id character varying(100) not null
 );
 
-.import termdb terms
 .import ancestry ancestry
-
-update terms set parent_id=null where parent_id='';
-create index terms_id on terms(id);
-create index terms_p on terms(parent_id);
-create index terms_n on terms(name);
 create index ancestry_tid on ancestry(term_id);
 create index ancestry_pid on ancestry(ancestor_id);
 
