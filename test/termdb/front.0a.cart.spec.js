@@ -11,9 +11,8 @@ tape("\n", function(test) {
 })
 
 tape("cart button", function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(5000)
 	test.plan(3)
-	const div0 = d3s.select("body").append("div")
 	const termfilter = { show_top_ui: true }
 	const selected_groups = [
 		{
@@ -28,7 +27,10 @@ tape("cart button", function(test) {
 
 	runproteinpaint({
 		host,
-		holder: div0.node(),
+		holder: d3s
+			.select("body")
+			.append("div")
+			.node(),
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
@@ -51,10 +53,23 @@ tape("cart button", function(test) {
 
 	function runTests(obj) {
 		helpers
-			.ride(obj.components.cart.bus, "postRender.test", obj, 300)
+			.ride(obj.components.cart.bus, "postRender.test", obj)
 			.do(testDisplay)
-			.do(testSelectedGroupTipDisplay, triggerClick)
-			.do(testEmpty, triggerEmpty)
+			.do(() => {
+				return (
+					helpers
+						.ride(obj.components.cart.tipbus, "postRender.test", obj)
+						// -- same promise for trigger and test that is riding on bus event
+						.do(testSelectedGroupTipDisplay, triggerClick, 100)
+						// emptying a cart does not trigger the
+						// postRender emit of the uncoordinated group tip
+						// so has to chain it after each other instead of as
+						// part of the same promise
+						.do(triggerEmpty, 100) // -- separate promise for trigger
+						.do(testEmpty, 300)
+				) // separate promise for test not riding on bus event
+			})
+			.do(() => {}, 1000)
 			.off(() => test.end())
 	}
 
@@ -63,7 +78,11 @@ tape("cart button", function(test) {
 	}
 
 	function triggerClick(obj) {
-		obj.dom.cartdiv.node().dispatchEvent(new Event("click", { bubbles: true }))
+		obj.dom.cartdiv.node().click() //.dispatchEvent(new Event("click", { bubbles: true }))
+		// dispatchEvent is only needed when there is event delegation to parent
+		// or other types of events where there is no native trigger function
+		// when the listener is attached directly to the element,
+		// use click() directly
 	}
 
 	function testSelectedGroupTipDisplay(obj) {
@@ -74,7 +93,7 @@ tape("cart button", function(test) {
 		obj.tip.d
 			.select(".remove_group_btn")
 			.node()
-			.dispatchEvent(new Event("click", { bubbles: true }))
+			.click()
 	}
 
 	function testEmpty(obj) {
@@ -83,9 +102,8 @@ tape("cart button", function(test) {
 })
 
 tape("cart selected group tip", function(test) {
-	test.timeoutAfter(1500)
+	test.timeoutAfter(3500)
 	test.plan(2)
-	const div0 = d3s.select("body").append("div")
 	const termfilter = { show_top_ui: true }
 	const selected_groups = [
 		{
@@ -100,7 +118,10 @@ tape("cart selected group tip", function(test) {
 
 	runproteinpaint({
 		host,
-		holder: div0.node(),
+		holder: d3s
+			.select("body")
+			.append("div")
+			.node(),
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
@@ -122,15 +143,19 @@ tape("cart selected group tip", function(test) {
 	})
 
 	function runTests(obj) {
+		obj.components.cart.bus.on("postRender.test", null)
+
 		helpers
-			.ride(obj.components.cart.bus, "postRender.test", obj, 300)
-			.do(testSelectedGroupTipDisplay, triggerClick)
-			.do(testRemoveTerm, triggerRemoveTerm)
+			.ride(obj.components.cart.tipbus, "postRender.test", obj)
+			.do(triggerClick, 400) // has to separate -- should really use reactive component flow
+			.do(testSelectedGroupTipDisplay, 300) // should be riding the cart.tipbus instead
+			.do(triggerRemoveTerm)
+			.do(testRemoveTerm, 100)
 			.off(() => test.end())
 	}
 
 	function triggerClick(obj) {
-		obj.dom.cartdiv.node().dispatchEvent(new Event("click", { bubbles: true }))
+		obj.dom.cartdiv.node().click()
 	}
 
 	function testSelectedGroupTipDisplay(obj) {
@@ -141,7 +166,7 @@ tape("cart selected group tip", function(test) {
 		obj.tip.d
 			.select(".term_remove_btn")
 			.node()
-			.dispatchEvent(new Event("click", { bubbles: true }))
+			.click()
 	}
 
 	function testRemoveTerm(obj) {
@@ -201,16 +226,19 @@ tape("cart with 2 groups", function(test) {
 	})
 
 	function runTests(obj) {
+		obj.components.cart.bus.on("postRender.test", null)
 		helpers
-			.ride(obj.components.cart.bus, "postRender.test", obj, 300)
+			.ride(obj.components.cart.tipbus, "postRender.test", obj, 400)
 			.do(testSelectedGroupTipDisplay, triggerCartClick)
-			.do(triggerLaunchGenomePaint)
+			.do(triggerLaunchGenomePaint, 300)
+			.do(checkLaunchGenomePaint, 1500)
+			.do(triggerCartClick, 200)
 			.do(testRemoveGroup, triggerRemoveGroup)
 			.off(() => test.end())
 	}
 
 	function triggerCartClick(obj) {
-		obj.dom.cartdiv.node().dispatchEvent(new Event("click", { bubbles: true }))
+		obj.dom.cartdiv.node().click() //dispatchEvent(new Event("click", { bubbles: true }))
 	}
 
 	function testSelectedGroupTipDisplay(obj) {
@@ -223,7 +251,6 @@ tape("cart with 2 groups", function(test) {
 			.selectAll(".launch_gp_btn")
 			.node()
 			.click()
-		setTimeout(checkLaunchGenomePaint, 500)
 	}
 
 	function checkLaunchGenomePaint() {
@@ -247,11 +274,10 @@ tape("cart with 2 groups", function(test) {
 	}
 
 	function triggerRemoveGroup(obj) {
-		obj.dom.cartdiv.node().dispatchEvent(new Event("click", { bubbles: true }))
 		obj.tip.d
 			.select(".remove_group_btn")
 			.node()
-			.dispatchEvent(new Event("click", { bubbles: true }))
+			.click()
 	}
 
 	function testRemoveGroup(obj) {

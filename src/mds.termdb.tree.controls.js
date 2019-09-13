@@ -68,7 +68,12 @@ export function getCartUi(obj) {
 	const cart = {
 		main() {
 			if (!obj.selected_groups) {
-				cart.bus.emit("postRender", obj)
+				//obj.dom.cartdiv.style("display", "none")
+				// !!!  NOTE:
+				// Chrome defers processing events on a hidden DOM element
+				// which most often causes duplicate event triggers
+				// when the element becomes visible !!!
+				// cart.bus.emit("postRender", obj)
 				return
 			}
 
@@ -83,13 +88,18 @@ export function getCartUi(obj) {
 					.style("background-color", "#00AB66")
 					.style("color", "#fff")
 					.text("Selected " + obj.selected_groups.length + " Group" + (obj.selected_groups.length > 1 ? "s" : ""))
-					.on("click", () => make_selected_group_tip(obj, cart))
+					.on("click", () => {
+						event.stopPropagation()
+						make_selected_group_tip(obj, cart)
+					})
+				cart.bus.emit("postRender", obj)
 			} else {
+				// see note above duplicate events on hidden DOM element
 				obj.dom.cartdiv.style("display", "none")
 			}
-			cart.bus.emit("postRender", obj)
 		},
-		bus: get_event_bus(["postRender"], obj.callbacks.cart)
+		bus: get_event_bus(["postRender"], obj.callbacks.cart),
+		tipbus: get_event_bus(["postRender"], obj.callbacks.carttip)
 	}
 
 	return cart
@@ -138,11 +148,7 @@ function make_selected_group_tip(obj, cart) {
 			tvslst_filter: false,
 			callback: () => {
 				tvsuiObj.main()
-				if (obj.emittingPostRender) delete obj.emittingPostRender
-				else {
-					obj.emittingPostRender = true
-					cart.bus.emit("postRender", obj)
-				}
+				//cart.tipbus.emit("postRender")
 			},
 			do_query_opts: obj.do_query_opts
 		}
@@ -172,9 +178,17 @@ function make_selected_group_tip(obj, cart) {
 					obj.dom.cartdiv.style("display", "none")
 					tip.hide()
 				} else {
+					// this coordination suggests using a
+					// reactive component flow from cart to group tip
+					// for example,
+					// clicking the cartdiv should set cart.tipIsVisible = true,
+					// then call cart.main(),
+					// which calls cart.components.grouptip.main(),
+					// then triggers make_selected_group_tip()
+					// to maintain a unidirectional data/update flow
+					cart.main()
 					make_selected_group_tip(obj, cart)
 				}
-				cart.main()
 			})
 	}
 
@@ -224,7 +238,7 @@ function make_selected_group_tip(obj, cart) {
 			})
 	}
 
-	cart.bus.emit("postRender", obj)
+	cart.tipbus.emit("postRender")
 }
 
 export function setObjBarClickCallback(obj) {

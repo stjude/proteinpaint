@@ -39,13 +39,14 @@ exports.ride = function(bus, eventType, arg, wait = 0) {
 	let resolved = Promise.resolve()
 
 	const ride = {
-		do(callback, after) {
+		do(callback, after, wwait = 0) {
 			/*
 			callback	function to be supplied with (arg)
 			after     integer timeout OR a callback function for bus eventType
 		*/
 			if (typeof after == "number") {
 				resolved = resolved.then(() => {
+					bus.on(eventType, null)
 					return new Promise((resolve, reject) => {
 						setTimeout(() => {
 							//console.log('---- timeout --- ', after, after.name, callback.name)
@@ -55,7 +56,7 @@ exports.ride = function(bus, eventType, arg, wait = 0) {
 					})
 				})
 			} else if (typeof after == "function") {
-				if (wait) {
+				if (wwait || wait) {
 					resolved = resolved.then(() => {
 						return new Promise((resolve, reject) => {
 							bus.on(eventType, () => {
@@ -64,7 +65,7 @@ exports.ride = function(bus, eventType, arg, wait = 0) {
 									bus.on(eventType, null)
 									callback(arg)
 									resolve()
-								}, wait)
+								}, wwait || wait)
 							})
 							after(arg)
 						})
@@ -83,7 +84,10 @@ exports.ride = function(bus, eventType, arg, wait = 0) {
 					})
 				}
 			} else {
-				resolved = resolved.then(() => callback(arg))
+				resolved = resolved.then(() => {
+					bus.on(eventType, null)
+					callback(arg)
+				})
 			}
 			return ride
 		},
