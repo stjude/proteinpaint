@@ -115,8 +115,8 @@ function frozenInstanceGetter(privates, classPublic, classPrivate = null) {
 		}
 
 		// ride on the default event bus
-		to(callback, after) {
-			my.get(this).addToThen(callback, after, this.opts)
+		to(callback, after, wait = 0) {
+			my.get(this).addToThen(callback, after, Object.assign({}, this.opts, { wait }))
 			return this
 		}
 

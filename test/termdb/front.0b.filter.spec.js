@@ -152,12 +152,16 @@ tape("filter term-value button: categorical term", function(test) {
 
 	function runTests(obj) {
 		helpers
-			.ride(obj.components.filter.bus, "postRender.test", obj, 300)
-			.do(testFilterDisplay, 300)
-			.do(checkNegationBtnVal, triggerChangeNegation)
-			.do(checkAddedCategory, triggerAddCategory)
-			.do(checkRemovedCategory, triggerRemoveCategory)
-			.off(() => test.end())
+			.getRide({
+				bus: obj.components.filter.bus,
+				eventType: "postRender.test",
+				arg: obj
+			})
+			.run(testFilterDisplay, 300)
+			.to(checkNegationBtnVal, triggerChangeNegation)
+			.to(checkAddedCategory, triggerAddCategory)
+			.to(checkRemovedCategory, triggerRemoveCategory)
+			.done(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {
@@ -258,12 +262,16 @@ tape("filter term-value button: Numerical term", function(test) {
 
 	function runTests(obj) {
 		helpers
-			.ride(obj.components.filter.bus, "postRender.test", obj, 300)
-			.do(testFilterDisplay, 300)
-			.do(checkRangeBtn, triggerChangeRange)
-			.do(checkUnannotatedValBtn, triggerAddUnannotatedRange)
-			.do(checkRemovedRange, triggerRemoveRange)
-			.off(() => test.end())
+			.getRide({
+				bus: obj.components.filter.bus,
+				eventType: "postRender.test",
+				arg: obj
+			})
+			.run(testFilterDisplay, 300)
+			.to(checkRangeBtn, triggerChangeRange)
+			.to(checkUnannotatedValBtn, triggerAddUnannotatedRange)
+			.to(checkRemovedRange, triggerRemoveRange)
+			.done(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {
@@ -366,12 +374,16 @@ tape("filter term-value button: Conditional term (grade)", function(test) {
 
 	function runTests(obj) {
 		helpers
-			.ride(obj.components.filter.bus, "postRender.test", obj, 300)
-			.do(testFilterDisplay, 300)
-			.do(checkGradeBtn, triggerChangeGrade)
-			.do(checkGradeTypeBtn, triggerGradeType)
-			.do(checkAddedGradeBtn, triggerAddGrade)
-			.off(() => test.end())
+			.getRide({
+				bus: obj.components.filter.bus,
+				eventType: "postRender.test",
+				arg: obj
+			})
+			.run(testFilterDisplay, 300)
+			.to(checkGradeBtn, triggerChangeGrade, 200)
+			.to(checkGradeTypeBtn, triggerGradeType, 200)
+			.to(checkAddedGradeBtn, triggerAddGrade, 200)
+			.done(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {
@@ -475,11 +487,15 @@ tape("filter term-value button: Conditional term (sub-condition)", function(test
 
 	function runTests(obj) {
 		helpers
-			.ride(obj.components.filter.bus, "postRender.test", obj, 300)
-			.do(testFilterDisplay, 300)
-			.do(checkSubBtn, triggerChangeSub)
-			.do(checkAddedSubBtn, triggerAddSub)
-			.off(() => test.end())
+			.getRide({
+				bus: obj.components.filter.bus,
+				eventType: "postRender.test",
+				arg: obj
+			})
+			.run(testFilterDisplay, 300)
+			.to(checkSubBtn, triggerChangeSub)
+			.to(checkAddedSubBtn, triggerAddSub)
+			.done(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {
@@ -567,9 +583,13 @@ tape("filter term-value button: Conditional term (grade and child)", function(te
 
 	function runTests(obj) {
 		helpers
-			.ride(obj.components.filter.bus, "postRender.test", obj)
-			.do(testFilterDisplay, 300)
-			.off(() => test.end())
+			.getRide({
+				bus: obj.components.filter.bus,
+				eventType: "postRender.test",
+				arg: obj
+			})
+			.run(testFilterDisplay, 300)
+			.done(() => test.end())
 	}
 
 	function testFilterDisplay(obj) {
