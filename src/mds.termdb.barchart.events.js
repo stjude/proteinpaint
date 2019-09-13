@@ -60,7 +60,7 @@ export default function getHandlers(self) {
 			},
 			click(d) {
 				const termValues = getTermValues(d, self)
-				self.bus.emit("postClick", termValues)
+				self.bus.emit("postClick", { termValues, x: event.clientX, y: event.clientY })
 			}
 		},
 		colLabel: {

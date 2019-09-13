@@ -240,14 +240,14 @@ export function setObjBarClickCallback(obj) {
 	obj.callbacks.bar = {
 		postClick:
 			obj.modifier_barchart_selectbar && obj.modifier_barchart_selectbar.callback
-				? termValues => obj.modifier_barchart_selectbar.callback({ terms: termValues })
+				? arg => obj.modifier_barchart_selectbar.callback({ terms: arg.termValues })
 				: obj.bar_click_menu
-				? termValues => show_bar_click_menu(obj, termValues)
+				? arg => show_bar_click_menu(obj, arg)
 				: () => {}
 	}
 }
 
-function show_bar_click_menu(obj, termValues) {
+function show_bar_click_menu(obj, arg) {
 	/*
   obj           the term tree obj
   termValue     array of term-value entries
@@ -282,10 +282,10 @@ function show_bar_click_menu(obj, termValues) {
 			.html(d => d.label)
 			.on("click", d => {
 				obj.tip.hide()
-				d.callback(obj, termValues)
+				d.callback(obj, arg.termValues)
 			})
 
-		obj.tip.show(event.clientX, event.clientY)
+		obj.tip.show(arg.x, arg.y)
 	}
 }
 
