@@ -84,10 +84,14 @@ tape("orientation input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.ride(plot.components.controls.bus, "postRender.test", plot)
-			.do(checkDisplayInBarchartView)
-			.do(checkDisplayInNonBarchartView, triggerNonBarchartView)
-			.off(() => test.end())
+			.getRide({
+				bus: plot.components.controls.bus,
+				eventType: "postRender.test",
+				arg: plot
+			})
+			.run(checkDisplayInBarchartView)
+			.to(checkDisplayInNonBarchartView, triggerNonBarchartView)
+			.done(() => test.end())
 	}
 	function checkDisplayInBarchartView(plot) {
 		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
@@ -145,10 +149,14 @@ tape("scale input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.ride(plot.components.controls.bus, "postRender.test", plot)
-			.do(checkDisplayInBarchartView)
-			.do(checkDisplayInNonBarchartView, triggerNonBarchartView)
-			.off(() => test.end())
+			.getRide({
+				bus: plot.components.controls.bus,
+				eventType: "postRender.test",
+				arg: plot
+			})
+			.run(checkDisplayInBarchartView)
+			.to(checkDisplayInNonBarchartView, triggerNonBarchartView)
+			.done(() => test.end())
 	}
 
 	function checkDisplayInBarchartView(plot) {
@@ -207,12 +215,16 @@ tape("divide by input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.ride(plot.components.controls.bus, "postRender.test", plot)
-			.do(checkDisplayInBarchartView)
-			.do(checkDisplayInTableView, triggerTableView)
-			.do(checkDisplayInBoxplotView, triggerBoxplotView)
-			.do(checkDisplayInScatterView, triggerScatterView)
-			.off(() => test.end())
+			.getRide({
+				bus: plot.components.controls.bus,
+				eventType: "postRender.test",
+				arg: plot
+			})
+			.run(checkDisplayInBarchartView)
+			.to(checkDisplayInTableView, triggerTableView)
+			.to(checkDisplayInBoxplotView, triggerBoxplotView)
+			.to(checkDisplayInScatterView, triggerScatterView)
+			.done(() => test.end())
 	}
 
 	function checkDisplayInBarchartView(plot) {
@@ -297,10 +309,14 @@ tape("Primary bins input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.ride(plot.components.controls.bus, "postRender.test", plot)
-			.do(checkDisplayWithNumericTerm)
-			.do(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
-			.off(() => test.end())
+			.getRide({
+				bus: plot.components.controls.bus,
+				eventType: "postRender.test",
+				arg: plot
+			})
+			.run(checkDisplayWithNumericTerm)
+			.to(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
+			.done(() => test.end())
 	}
 
 	function checkDisplayWithNumericTerm(plot) {
@@ -359,10 +375,14 @@ tape("'Bars as' input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.ride(plot.components.controls.bus, "postRender.test", plot)
-			.do(checkDisplayWithNumericTerm)
-			.do(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
-			.off(() => test.end())
+			.getRide({
+				bus: plot.components.controls.bus,
+				eventType: "postRender.test",
+				arg: plot
+			})
+			.run(checkDisplayWithNumericTerm)
+			.to(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
+			.done(() => test.end())
 	}
 
 	function checkDisplayWithNumericTerm(plot) {
@@ -421,12 +441,16 @@ tape("Display mode input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.ride(plot.components.controls.bus, "postRender.test", plot)
-			.do(checkDisplayWithCategoricalTerm)
-			.do(checkDisplayWithNonNumericOverlay, triggerNonNumericOverlay)
-			.do(checkDisplayWithNumericOverlay, triggerNumericOverlay)
-			.do(checkDisplayWithNumericBarAndOverlay, triggerNumericBarAndOverlay)
-			.off(() => test.end())
+			.getRide({
+				bus: plot.components.controls.bus,
+				eventType: "postRender.test",
+				arg: plot
+			})
+			.run(checkDisplayWithCategoricalTerm)
+			.to(checkDisplayWithNonNumericOverlay, triggerNonNumericOverlay)
+			.to(checkDisplayWithNumericOverlay, triggerNumericOverlay)
+			.to(checkDisplayWithNumericBarAndOverlay, triggerNumericBarAndOverlay)
+			.done(() => test.end())
 	}
 
 	function checkDisplayWithCategoricalTerm(plot) {
