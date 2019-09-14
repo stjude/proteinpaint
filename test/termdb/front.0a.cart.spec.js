@@ -53,14 +53,14 @@ tape("cart button", function(test) {
 
 	function runTests(obj) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: obj.components.cart.bus,
 				eventType: "postRenderBtn.test",
 				arg: obj
 			})
 			.run(testDisplay)
-			.sub(testSelectedGroupTipDisplay, triggerClick, { eventType: "postRenderTip.test" })
-			.sub(testEmpty, triggerEmpty, { eventType: "postRenderTip.test", wait: 200 })
+			.to(testSelectedGroupTipDisplay, triggerClick, { eventType: "postRenderTip.test" })
+			.to(testEmpty, triggerEmpty, { eventType: "postRenderTip.test", wait: 200 })
 			.done(() => test.end())
 	}
 
@@ -132,7 +132,7 @@ tape("cart selected group tip", function(test) {
 	function runTests(obj) {
 		obj.components.cart.bus.on("postRenderBtn.test", null)
 		helpers
-			.getRide({
+			.rideInit({
 				bus: obj.components.cart.bus,
 				eventType: "postRenderTip.test",
 				arg: obj
@@ -216,7 +216,7 @@ tape("cart with 2 groups", function(test) {
 	function runTests(obj) {
 		obj.components.cart.bus.on("postRenderBtn.test", null)
 		helpers
-			.getRide({
+			.rideInit({
 				bus: obj.components.cart.bus,
 				eventType: "postRenderTip.test",
 				arg: obj

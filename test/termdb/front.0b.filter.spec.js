@@ -50,7 +50,7 @@ tape("filter term-value button", function(test) {
 		// more reliable test promise chain format
 		// that is less likely to need timeouts
 		helpers
-			.getRide({
+			.rideInit({
 				bus: obj.components.filter.bus,
 				eventType: "postRender.test",
 				arg: obj
@@ -156,7 +156,7 @@ tape("filter term-value button: categorical term", function(test) {
 
 	function runTests(obj) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: obj.components.filter.bus,
 				eventType: "postRender.test",
 				arg: obj
@@ -266,7 +266,7 @@ tape("filter term-value button: Numerical term", function(test) {
 
 	function runTests(obj) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: obj.components.filter.bus,
 				eventType: "postRender.test",
 				arg: obj
@@ -378,15 +378,15 @@ tape("filter term-value button: Conditional term (grade)", function(test) {
 
 	function runTests(obj) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: obj.components.filter.bus,
 				eventType: "postRender.test",
 				arg: obj
 			})
 			.run(testFilterDisplay, 300)
-			.to(checkGradeBtn, triggerChangeGrade, 200)
-			.to(checkGradeTypeBtn, triggerGradeType, 200)
-			.to(checkAddedGradeBtn, triggerAddGrade, 200)
+			.to(checkGradeBtn, triggerChangeGrade, { wait: 200 })
+			.to(checkGradeTypeBtn, triggerGradeType, { wait: 200 })
+			.to(checkAddedGradeBtn, triggerAddGrade, { wait: 200 })
 			.done(() => test.end())
 	}
 
@@ -491,7 +491,7 @@ tape("filter term-value button: Conditional term (sub-condition)", function(test
 
 	function runTests(obj) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: obj.components.filter.bus,
 				eventType: "postRender.test",
 				arg: obj
@@ -587,7 +587,7 @@ tape("filter term-value button: Conditional term (grade and child)", function(te
 
 	function runTests(obj) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: obj.components.filter.bus,
 				eventType: "postRender.test",
 				arg: obj

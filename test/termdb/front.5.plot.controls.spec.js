@@ -84,7 +84,7 @@ tape("orientation input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: plot.components.controls.bus,
 				eventType: "postRender.test",
 				arg: plot
@@ -93,6 +93,7 @@ tape("orientation input", function(test) {
 			.to(checkDisplayInNonBarchartView, triggerNonBarchartView)
 			.done(() => test.end())
 	}
+
 	function checkDisplayInBarchartView(plot) {
 		plot.dom.controls.selectAll(".sja-termdb-config-row-label").each(function() {
 			if (this.innerHTML !== "Orientation") return
@@ -149,7 +150,7 @@ tape("scale input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: plot.components.controls.bus,
 				eventType: "postRender.test",
 				arg: plot
@@ -215,7 +216,7 @@ tape("divide by input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: plot.components.controls.bus,
 				eventType: "postRender.test",
 				arg: plot
@@ -309,7 +310,7 @@ tape("Primary bins input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: plot.components.controls.bus,
 				eventType: "postRender.test",
 				arg: plot
@@ -375,7 +376,7 @@ tape("'Bars as' input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: plot.components.controls.bus,
 				eventType: "postRender.test",
 				arg: plot
@@ -441,7 +442,7 @@ tape("Display mode input", function(test) {
 
 	function runTests(plot) {
 		helpers
-			.getRide({
+			.rideInit({
 				bus: plot.components.controls.bus,
 				eventType: "postRender.test",
 				arg: plot
