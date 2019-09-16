@@ -4,7 +4,7 @@ function componentInit(ComponentClass) {
 	return opts => {
 		console.log(opts)
 		// private properties and methods
-		const priv = new ComponentClass(opts)
+		const inner = new ComponentClass(opts)
 
 		// the publicly visible "instance",
 		// to be made immutable below
@@ -12,8 +12,8 @@ function componentInit(ComponentClass) {
 			// update private state and propagate
 			// shared state to downstream components
 			main(state, data) {
-				priv.main(state, data)
-				if (priv.components) {
+				inner.main(state, data)
+				if (inner.components) {
 					for (const name in self.components) {
 						const component = self.components[name]
 						if (Array.isArray(component)) {
@@ -29,21 +29,21 @@ function componentInit(ComponentClass) {
 			// provides an immutable copy of the shared
 			// state from this component
 			state(key = "") {
-				const value = key ? priv.state[key] : priv.state
+				const value = key ? inner.state[key] : inner.state
 				return typeof value == "object" ? deepCopyFreeze(value) : value
 			},
 
-			// must not expose priv.bus directly since that
+			// must not expose inner.bus directly since that
 			// will also expose bus.emit() which should only
 			// be triggered by this component
 			on(eventType, callback) {
-				priv.bus.on(eventType, callback)
+				inner.bus.on(eventType, callback)
 				return self
 			}
 		}
 
-		// only expose priv on debug mode
-		if (opts.debug) self.priv = priv
+		// only expose inner on debug mode
+		if (opts.debug) self.Inner = inner
 
 		// make public instance immutable (read-only + method calls)
 		return Object.freeze(self)
@@ -93,16 +93,22 @@ class ComponentBus {
 		} else if (!callback) {
 			delete this.events[eventType]
 		} else if (typeof callback == "function") {
-			if (eventType in this.events)
+			if (eventType in this.events) {
 				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
-			this.events[eventType] = opts.timeout ? arg => setTimeout(() => callback(arg), opts.timeout) : callback
+			}
+			this.events[eventType] = opts.timeout 
+				? arg => setTimeout(() => callback(arg), opts.timeout) 
+				: callback
 		} else if (Array.isArray(callback)) {
-			if (eventType in this.events)
+			if (eventType in this.events) {
 				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
+			}
 			const wrapperFxn = arg => {
 				for (const fxn of callback) fxn(arg)
 			}
-			this.events[eventType] = opts.timeout ? arg => setTimeout(() => wrapperFxn(arg), opts.timeout) : wrapperFxn
+			this.events[eventType] = opts.timeout 
+				? arg => setTimeout(() => wrapperFxn(arg), opts.timeout) 
+				: wrapperFxn
 		} else {
 			throw `invalid callback for ${this.name} eventType=${eventType}`
 		}

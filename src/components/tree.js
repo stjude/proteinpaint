@@ -36,94 +36,144 @@ class Tree {
 			plots: []
 		}
 
-		this.clickedTerms = {}
+		this.state = {}
+		this.initTerm(opts.terms[0])
 
-		this.setHelpers()
+		// set closure methods to handle 
+		// conflicting "this" contexts
+		this.yesThis()
+		this.notThis(this)
 	}
 
-	main(state = {}, data = {}) {
-		this.processData(state)
-		const terms = this.opts.terms.filter(this.wasClicked)
-		this.render(this, terms, 0, this.dom.holder)
+	initTerm(term) {
+		if (!term || term.id in this.state) return
+		this.state[term.id] = { expanded: false }
+	}
+
+	main(state = {}) {
+		this.updateState(state)
+		this.expand(this.opts.terms[0], this.dom.holder)
 		this.bus.emit("postRender")
 		return this
 	}
 
-	processData(state) {
-		if (!this.terms) this.setTerms(this, this.opts.terms)
+	updateState(state) {
 		for (const termId in state) {
-			this.clickedTerms[termId] = state[termId]
+			Object.assign(this.state[termId], state[termId])
 		}
 	}
 
-	setTerms(self, terms) {
-		if (!terms) return
-		console.log(terms.map(d => d.id))
-		for (const term of terms) {
-			if (!(term.id in self.clickedTerms)) {
-				self.clickedTerms[term.id] = { clicked: true, expanded: true }
-			} else {
-				self.clickedTerms[term.id].expanded = !self.clickedTerms[term.id].expanded
-			}
-		}
-	}
+	expand(term, div) {
+		if (!term || !term.terms) return
+		if (!(term.id in this.state)) return
 
-	setHelpers() {
-		// quick arrow methods, helps preserve "this" context
-		this.wasClicked = d => d.id in this.clickedTerms
-		this.getLabel = d => d.name
-		this.labelOpacity = d => (this.clickedTerms[termId] ? 1 : 0.2)
-		this.bindKey = d => d.id
-	}
+		const cls = "termdiv-" + (term.level + 1)
+		const divs = div.selectAll("."+cls).data(term.terms, this.bindKey)
 
-	render(self, terms, level, div) {
-		const divs = div.selectAll(".termbtn-" + level).data(terms, self.bindKey)
+		divs.exit().each(this._hideTerm)
 
-		//divs.style("opacity", this.labelOpacity)
-		if (!divs) return
-
-		divs.exit().each(() => d3s.select(this).style("display", "none"))
-
-		divs.style("display", term => (self.clickedTerms[term.id].expanded ? "inline-block" : "none"))
+		divs.style("display", this._updateTerm)
 
 		divs
 			.enter()
 			.append("div")
-			.each(function(term) {
-				self.addTerm(self, term, d3s.select(this))
-			})
+			.attr("class", cls)
+			.each(this._printTerm)
 	}
 
-	addTerm(self, term, div) {
+	printTerm(term, div, btn, label) {
 		div
-			.attr("class", "termbtn-" + term.level)
-			.style("width", "180px")
-			.style("margin", "5px")
+			.datum(term)
+			.attr("class", "termdiv-" + term.level)
+			.style('display', 'block')
+			//.style("width", "280px")
+			.style("margin", "2px")
 			.style("padding", "5px 5px 5px 25px")
 			.style("cursor", "pointer")
-			.on("click", function(term) {
-				d3s.event.stopPropagation()
-				self.setTerms(self, term.terms)
-				self.render(self, term.terms, term.level + 1, d3s.select(this))
-			})
 
+		const expanded = term.id in this.state && this.state[term.id].expanded
+		
 		div
-			.append("div")
-			.html("+")
+			.select(".termbtn")
+			.datum(term)
+			.html(!expanded ? "+" : "-")
 			.style("display", "inline-block")
 			.style("border", "1px solid #aaa")
 			.style("padding", "2px 5px")
 			.style("background", "#ececec")
-			.datum(term)
+			.style("font-family", "courier")
+			.on("click", this._toggle)
 
 		div
-			.append("div")
-			.html(self.getLabel)
+			.select(".termlabel")
+			.datum(term)
+			.html(this.getLabel)
 			.style("display", "inline-block")
 			.style("text-align", "center")
 			.style("padding", "5px 5px 5px 5px")
+			.on("click", this._toggle)
+
+		div
+			.select(".termview")
 			.datum(term)
+			.html('VIEW')
+			.style("display", "inline-block")
+			.style("display", "inline-block")
+			.style("border", "1px solid #aaa")
+			.style("padding", "2px 5px")
+			.style("margin-left", "50px")
+			.style("background", "#ececec")
+			.style("font-size", "0.8em")
+
+		div
+			.select('.termsubdiv')
+			.style('display', expanded ? 'block' : 'none')
+		
+		this.expand(term, div.select(".termsubdiv"))
+	}
+
+	yesThis() {
+		// set methods that maintain the instance context of "this"
+	}
+
+	notThis(self) {
+		// set methods that require both instance 
+		// context and a different "this" context;
+		// cannot use arrow function since the 
+		// alternate "this" context is needed
+		
+		// this == the d3 selected DOM node
+		self._hideTerm = function(){
+			d3s.select(this).style("display", "none")
+		}
+		self._updateTerm = function(term) {
+			if (!(term.id in self.state)) return
+			self.printTerm(term, d3s.select(this))
+		}
+		self._printTerm = function(term) {
+			const div = d3s.select(this)
+			if (term.terms) div.append('div').attr('class', 'termbtn')
+			div.append('div').attr('class', 'termlabel')
+			div.append('div').attr('class', 'termsubdiv')
+			if (!term.terms) div.append('div').attr('class', 'termview')
+			self.printTerm(term, div)
+		}
+		self._toggle = function(term) {
+			d3s.event.stopPropagation()
+			const d = d3s.event.target.__data__;
+			if (term.id != d.id) return
+			self.initTerm(term)
+			self.main({[term.id]: {expanded: !self.state[term.id].expanded}})
+		}
+	}
+
+	bindKey(term) {
+		return term.id
+	}
+
+	getLabel(term) {
+		return term.name
 	}
 }
 
-exports.init = core.componentInit(Tree)
+exports.treeInit = core.componentInit(Tree)
