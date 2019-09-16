@@ -1,7 +1,5 @@
 const tape = require("tape")
 const d3s = require("d3-selection")
-const termjson = require("./termjson").termjson
-const helpers = require("../front.helpers.js")
 const treeInit = require("../../src/components/tree").treeInit
 
 const terms = [

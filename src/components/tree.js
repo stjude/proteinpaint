@@ -84,9 +84,8 @@ class Tree {
 	printTerm(term, div, btn, label) {
 		div
 			.datum(term)
-			.attr("class", "termdiv-" + term.level)
 			.style('display', 'block')
-			//.style("width", "280px")
+			.style("width", "280px")
 			.style("margin", "2px")
 			.style("padding", "5px 5px 5px 25px")
 			.style("cursor", "pointer")
@@ -107,7 +106,7 @@ class Tree {
 		div
 			.select(".termlabel")
 			.datum(term)
-			.html(this.getLabel)
+			.html(term.name)
 			.style("display", "inline-block")
 			.style("text-align", "center")
 			.style("padding", "5px 5px 5px 5px")
@@ -125,9 +124,7 @@ class Tree {
 			.style("background", "#ececec")
 			.style("font-size", "0.8em")
 
-		div
-			.select('.termsubdiv')
-			.style('display', expanded ? 'block' : 'none')
+		div.select('.termsubdiv').style("max-height", expanded ? '100%' : 0)
 		
 		this.expand(term, div.select(".termsubdiv"))
 	}
@@ -154,8 +151,10 @@ class Tree {
 			const div = d3s.select(this)
 			if (term.terms) div.append('div').attr('class', 'termbtn')
 			div.append('div').attr('class', 'termlabel')
-			div.append('div').attr('class', 'termsubdiv')
 			if (!term.terms) div.append('div').attr('class', 'termview')
+			div.append('div').attr('class', 'termsubdiv')
+				.style('overflow', 'hidden')
+				.style('transition', '0.25s ease')
 			self.printTerm(term, div)
 		}
 		self._toggle = function(term) {
@@ -169,10 +168,6 @@ class Tree {
 
 	bindKey(term) {
 		return term.id
-	}
-
-	getLabel(term) {
-		return term.name
 	}
 }
 

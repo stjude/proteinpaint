@@ -53,7 +53,7 @@ exports.rideInit = function(opts) {
 }
 
 // mutable but private access props and methods
-// when used, as intended, inside rideInit()
+// when used inside rideInit()
 class Ride {
 	constructor(opts) {
 		this.validateOpts(opts)

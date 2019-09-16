@@ -2,7 +2,6 @@
 
 function componentInit(ComponentClass) {
 	return opts => {
-		console.log(opts)
 		// private properties and methods
 		const inner = new ComponentClass(opts)
 
@@ -72,8 +71,6 @@ exports.busInit = function(name, eventTypes = [], callbacks = {}, defaultArg = n
 	const bus = new ComponentBus(name, eventTypes, callbacks, defaultArg)
 	return Object.freeze(bus)
 }
-
-//function get_event_bus(eventTypes = [], callbacks = {}, defaultArg = null) {
 
 class ComponentBus {
 	constructor(name, eventTypes, callbacks, defaultArg) {
