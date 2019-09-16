@@ -5,9 +5,9 @@ const helpers = require("../front.helpers.js")
 const treeInit = require("../../src/components/tree").treeInit
 
 const terms = [
-	{ 
+	{
 		id: 0,
-		name: 'Root',
+		name: "Root",
 		level: 0,
 		terms: [
 			{
@@ -19,15 +19,18 @@ const terms = [
 						id: 3,
 						name: "Diagnosis",
 						level: 2,
-						terms: [{
-							id: 9,
-							name: 'Diagnosis Group',
-							level: 3
-						},{
-							id: 10,
-							name: 'Diagnosis Year',
-							level: 3
-						}]
+						terms: [
+							{
+								id: 9,
+								name: "Diagnosis Group",
+								level: 3
+							},
+							{
+								id: 10,
+								name: "Diagnosis Year",
+								level: 3
+							}
+						]
 					},
 					{
 						id: 4,
@@ -72,14 +75,14 @@ tape("\n", function(test) {
 	test.end()
 })
 
-tape.only("Tree Ui", function(test) {
+tape.skip("Tree Ui", function(test) {
 	const tree = treeInit({
 		terms,
 		holder: d3s.select(document.body).append("div"),
 		debug: true
 	})
 		.on("postRender.test", runTests)
-		.main({0: true})
+		.main({ 0: true })
 
 	function runTests() {
 		test.equal(
