@@ -6,6 +6,19 @@ import { init as boxplot_init } from "./mds.termdb.boxplot"
 import { init as stattable_init } from "./mds.termdb.stattable"
 import scatter from "./mds.termdb.scatter"
 import { init as controls_init } from "./mds.termdb.plot.controls"
+import { to_parameter as tvslst_to_parameter } from "./mds.termdb.termvaluesetting.ui"
+
+/*
+THE PLOT OBJECT
+
+.term{}
+.term0{}
+.term1{}
+.main()
+
+.bus{}
+
+*/
 
 export function init(arg) {
 	/*
@@ -86,7 +99,7 @@ arg:
 		// + auto-added ["stattable"] if barchart && plot.term.isfloat or .isinteger
 		currViews: ["barchart"],
 		controls: {
-			isVisible: false
+			isVisible: false // control panel is hidden by default
 		},
 		common: {
 			use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
@@ -204,6 +217,8 @@ function coordinateState(plot) {
 	const i = plot.settings.currViews.indexOf("stattable")
 	if (i == -1) {
 		if (plot.settings.currViews.includes("barchart") && plot.term.term.isfloat /*|| plot.term.term.isinteger*/) {
+			// FIXME invalid assumption of not showing stattable for isinteger term;
+			// solution is to detect .nostattable from a numeric term: if true, no table; otherwise, always show table
 			plot.settings.currViews.push("stattable")
 		}
 	} else if (
@@ -227,6 +242,7 @@ function requestData(plot) {
 		render(plot, serverData[dataName])
 	} else {
 		const route = plot.settings.currViews.includes("scatter") ? "/termdb" : "/termdb-barsql"
+		// TODO may use await, any benefit?
 		client.dofetch2(route + dataName, {}, plot.obj.do_query_opts).then(chartsData => {
 			serverData[dataName] = chartsData
 			syncParams(plot, serverData[dataName])
@@ -243,7 +259,8 @@ function getDataName(plot) {
 
 	const isscatter = plot.settings.currViews.includes("scatter")
 	if (isscatter) params.push("scatter=1")
-	;["term", "term2", "term0"].forEach((_key, i) => {
+	;["term", "term2", "term0"].forEach(_key => {
+		// "term" on client is "term1" at backend
 		const term = plot[_key]
 		if (!term) return
 		const key = _key == "term" ? "term1" : _key
@@ -276,26 +293,7 @@ function getDataName(plot) {
 	}
 
 	if (obj.termfilter && obj.termfilter.terms && obj.termfilter.terms.length) {
-		params.push(
-			"tvslst=" +
-				encodeURIComponent(
-					JSON.stringify(
-						obj.termfilter.terms.map(filter => {
-							const f = Object.create(null)
-							for (const key in filter) {
-								if (key != "term") f[key] = filter[key]
-								else {
-									f.term = { id: filter.term.id }
-									for (const subkey in filter.term) {
-										if (subkey.startsWith("is")) f.term[subkey] = filter.term[subkey]
-									}
-								}
-							}
-							return f
-						})
-					)
-				)
-		)
+		params.push("tvslst=" + encodeURIComponent(JSON.stringify(tvslst_to_parameter(obj.termfilter.terms))))
 	}
 
 	return "?" + params.join("&")
