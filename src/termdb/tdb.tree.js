@@ -1,10 +1,10 @@
 // using CommonJS syntax only for testing
 // may use typical import, export keyword
 // when compiling with Webpack
-const core = require("./core")
+const core = require("../prx.core")
 const d3s = require("d3-selection")
-const controls = require("./tree.controls")
-const plot = require("./tree.plot")
+const controls = require("./tdb.controls")
+const plot = require("./tdb.plot")
 
 /*****************************
 	Example Component Classes

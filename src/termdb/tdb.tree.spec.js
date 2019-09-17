@@ -1,6 +1,6 @@
 const tape = require("tape")
 const d3s = require("d3-selection")
-const treeInit = require("../../src/components/tree").treeInit
+const treeInit = require("./tdb.tree").treeInit
 
 const terms = [
 	{
@@ -73,7 +73,7 @@ tape("\n", function(test) {
 	test.end()
 })
 
-tape.skip("Tree Ui", function(test) {
+tape.only("Tree Ui", function(test) {
 	const tree = treeInit({
 		terms,
 		holder: d3s.select(document.body).append("div"),

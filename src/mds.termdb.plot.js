@@ -158,11 +158,12 @@ arg:
 
 /* note for rewrite
 function reactsTo(action) {
+	const prefix = action.split("_")
 	if (prefix == 'termfilter') return true
 	if (prefix != 'plot') return false
   if (app.state.syncPlots == true) return true
 	// id == index of plot in app.state.plots[]
-	if (action.id == plot.index) return true
+	if (action.id == plot.id) return true
 	return false
 }
 */

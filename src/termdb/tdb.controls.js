@@ -1,7 +1,7 @@
 // using CommonJS syntax only for testing
 // may use typical import, export keyword
 // when compiling with Webpack
-const core = require("./core")
+const core = require("../prx.core")
 const d3s = require("d3-selection")
 
 /*****************************
@@ -14,18 +14,22 @@ const d3s = require("d3-selection")
 	componentInit() or similar component generators
 */
 
-class Plot {
+class FilterUi {
 	constructor(opts) {
 		this.cname = this.cname
 		this.opts = opts
-		this.state = {}
-		this.bus = core.busInit("Plot", ["postRender"]) //, opts.callbacks.example)
+		this.bus = core.busInit("FilterUi", ["postRender"]) //, opts.callbacks.example)
+		this.state = {
+			//term: opts.term
+		}
 	}
 
 	main(state = {}, data = {}) {
-		console.log("plot main()")
-		this.bus.emit("postRender", this.sharedState)
+		console.log("filterUi main()")
+		this.bus.emit("postRender")
 	}
+
+	render() {}
 }
 
-exports.init = core.componentInit(Plot)
+exports.filterUiInit = core.componentInit(FilterUi)

@@ -1,4 +1,4 @@
-const storeInit = require("./core").storeInit
+const storeInit = require("../prx.core").storeInit
 
 // one store for the whole tdb app
 class TdbStore {
@@ -43,7 +43,7 @@ class TdbStore {
 		else this.state.termfilter.terms.push(action.terms)
 
 		//main()
-/*
+		/*
 		app.main()
 		- filter.main()
 		- cart.main()
@@ -56,7 +56,7 @@ class TdbStore {
 			 
 			 plot.main(), ...
 			]
-*/
+		*/
 	}
 
 	termfilter_del(action) {
