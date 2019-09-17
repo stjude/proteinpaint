@@ -55,10 +55,10 @@ group{}
 				termfilter: { terms: obj.tvslst_filter },
 				modifier_barchart_selectbar: {
 					callback: result => {
+						obj.tvstip.hide()
 						if (obj.store) {
 							obj.store.dispatch({type: 'termfilter_add', terms: result.terms})
 						} else {
-							obj.tvstip.hide()
 							add_term(result)
 						}
 					}

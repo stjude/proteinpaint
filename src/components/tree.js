@@ -16,6 +16,23 @@ const plot = require("./tree.plot")
 	componentInit() or similar component generators
 */
 
+/*
+// prx = proteinpaint reactive
+prx.core.js
+
+src/termdb
+	tdb.app.js
+	tdb.tree.js
+	tdb.tree.spec.js
+	tdb.plot.js,  
+	tdb.plot.spec.js
+
+src/toy
+ toy.app.js
+ toy.app.spec.js 
+
+*/
+
 class Tree {
 	constructor(opts) {
 		this.opts = opts
@@ -131,6 +148,7 @@ class Tree {
 
 	yesThis() {
 		// set methods that maintain the instance context of "this"
+		this.currValue = (value) => this.currValue = value
 	}
 
 	notThis(self) {

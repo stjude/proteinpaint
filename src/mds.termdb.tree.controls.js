@@ -52,7 +52,7 @@ export function getFilterUi(obj) {
 
 	const filter = {
 		main(action, state=null) {
-			if (action && action.type.startsWith('termfilter_')) return
+			if (!this.reactsTo(action)) return
 			if (!Array.isArray(obj.termfilter.terms)) throw "filter_terms[] not an array"
 			validate_termvaluesetting(obj.termfilter.terms)
 			tvsuiObj.main()

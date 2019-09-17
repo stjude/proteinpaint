@@ -5,7 +5,7 @@
  a store generator function
  given a store Class as argument
 
- the store class must have methods
+ the store class must have method
  names to match the action.type
  from the dispatch argument
 */
@@ -13,16 +13,23 @@ function storeInit(StoreClass) {
 	return function storeInit(opts) {
 		const inner = new StoreClass(opts)
 
+		// what we know
 		const self = {
 			dispatch(action) { console.log(action)
 				if (typeof inner[action.type] !== 'function') {
 					throw `invalid action type=${action.type}`
 				}
-				if (inner.async.includes(action.type)) {
-					//await inner[action.type](action)
-				} else {
-					inner[action.type](action)
+				inner[action.type](action)
+				const copy = JSON.parse(JSON.stringify(inner.state))
+				// FIX-ME: must be recursive freeze
+				inner.copy = Object.freeze(copy); console.log(inner.copy)
+				inner.app.main(action, inner.copy)
+			},
+			async delayed(action) {
+				if (typeof inner[action.type] !== 'function') {
+					throw `invalid action type=${action.type}`
 				}
+				await inner.app.main(action, inner.copy)
 				const copy = JSON.parse(JSON.stringify(inner.state))
 				// FIX-ME: must be recursive freeze
 				inner.copy = Object.freeze(copy); console.log(inner.copy)

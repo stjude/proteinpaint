@@ -156,6 +156,17 @@ arg:
 	return plot
 }
 
+/* note for rewrite
+function reactsTo(action) {
+	if (prefix == 'termfilter') return true
+	if (prefix != 'plot') return false
+  if (app.state.syncPlots == true) return true
+	// id == index of plot in app.state.plots[]
+	if (action.id == plot.index) return true
+	return false
+}
+*/
+
 function nestedUpdate(obj, key, value, keylineage = []) {
 	const maxDepth = 7 // harcoded maximum depth allowed for processing nested object values
 	if (keylineage.length >= maxDepth) {

@@ -90,7 +90,7 @@ callbacks: {
 				for (const component of obj.components[name]) {
 					if (component) {
 						if (component.isReactive && obj.store) component.main(action, state)
-						else component.main(action, state)
+						else component.main()
 					}
 				}
 			} else {
