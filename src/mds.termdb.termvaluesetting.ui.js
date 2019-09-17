@@ -55,8 +55,12 @@ group{}
 				termfilter: { terms: obj.tvslst_filter },
 				modifier_barchart_selectbar: {
 					callback: result => {
-						obj.tvstip.hide()
-						add_term(result)
+						if (obj.store) {
+							obj.store.dispatch({type: 'termfilter_add', terms: result.terms})
+						} else {
+							obj.tvstip.hide()
+							add_term(result)
+						}
 					}
 				}
 			}
@@ -402,7 +406,8 @@ group{}
 				.style("background-color", "#4888BF")
 				.html("&#215;")
 				.on("click", async () => {
-					obj.group.terms.splice(i, 1)
+					if (obj.store) obj.store.dispatch({type: "termfilter_del", pos: i}) 
+					else obj.group.terms.splice(i, 1)
 					// may_settoloading_termgroup( group )
 					await obj.callback()
 				})

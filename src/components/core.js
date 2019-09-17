@@ -1,5 +1,44 @@
 "use strict"
 
+/* 
+ a generic function to create 
+ a store generator function
+ given a Class as argument
+
+ the class must have methods
+ that match the action.type
+ from the dispatch argument
+*/
+function storeInit(StoreClass) {
+	return function storeInit(opts) {
+		const inner = new StoreClass(opts)
+
+		const self = {
+			dispatch(action) { console.log(action)
+				if (typeof inner[action.type] !== 'function') {
+					throw `invalid action type=${action.type}`
+				}
+				if (inner.async.includes(action.type)) {
+					//await inner[action.type](action)
+				} else {
+					inner[action.type](action)
+				}
+				const copy = JSON.parse(JSON.stringify(inner.state))
+				copy.PrevAction = action
+				inner.copy = Object.freeze(copy); console.log(inner.copy)
+				inner.app.main(inner.copy)
+			},
+			copy(action) {
+				return inner.copy
+			}
+		}
+		if (opts.debug) self.Inner = inner
+		return Object.freeze(self)
+	}
+}
+
+exports.storeInit = storeInit
+
 function componentInit(ComponentClass) {
 	return opts => {
 		// private properties and methods

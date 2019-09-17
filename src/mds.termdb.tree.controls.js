@@ -42,7 +42,8 @@ export function getFilterUi(obj) {
 		tvslst_filter: false,
 		callback: obj.main,
 		do_query_opts: obj.do_query_opts,
-		isCoordinated: true
+		isCoordinated: true,
+		store: obj.store
 	}
 
 	termvaluesettingui.init(tvsuiObj)
@@ -50,6 +51,7 @@ export function getFilterUi(obj) {
 
 	const filter = {
 		main() {
+			if (obj.state && obj.state.PrevAction && !obj.state.PrevAction.type.startsWith('termfilter_')) return
 			if (!Array.isArray(obj.termfilter.terms)) throw "filter_terms[] not an array"
 			validate_termvaluesetting(obj.termfilter.terms)
 			tvsuiObj.main()

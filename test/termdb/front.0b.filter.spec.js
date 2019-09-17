@@ -10,7 +10,7 @@ tape("\n", function(test) {
 	test.end()
 })
 
-tape("filter term-value button", function(test) {
+tape/*.only*/("filter term-value button", function(test) {
 	test.timeoutAfter(3000)
 	test.plan(6)
 	const div0 = d3s.select("body").append("div")
@@ -42,7 +42,8 @@ tape("filter term-value button", function(test) {
 					"postRender.test": runTests
 				}
 			},
-			serverData: helpers.serverData
+			serverData: helpers.serverData,
+			//useStore: true
 		}
 	})
 

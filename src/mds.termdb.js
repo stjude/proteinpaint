@@ -4,6 +4,7 @@ import { select as d3select, selectAll as d3selectAll, event as d3event } from "
 import { init as plot_init } from "./mds.termdb.plot"
 import { setObjBarClickCallback, getFilterUi, getCartUi } from "./mds.termdb.tree.controls"
 import { debounce } from "debounce"
+import { tdbStoreInit } from './components/tdb.store'
 
 /*
 ********************** EXPORTED
@@ -76,12 +77,12 @@ callbacks: {
 }
 */
 	if (obj.debugmode) window.obj = obj
+
 	obj.expanded_term_ids = []
 
-	obj.main = (updatedKeyVals = {}) => {
-		for (const key in updatedKeyVals) {
-			obj[key] = updates[key]
-		}
+	obj.main = (state = null) => {
+		if (obj.store && state) obj.state = state
+
 		// trigger all rendered sub-elements
 		for (const name in obj.components) {
 			if (Array.isArray(obj.components[name])) {
@@ -116,6 +117,16 @@ callbacks: {
 	obj.tip = new client.Menu({ padding: "5px" })
 
 	obj.do_query_opts = { serverData: obj.serverData }
+
+	if (obj.useStore) {
+		obj.state = {
+			termfilter: obj.termfilter
+		}
+		obj.store = tdbStoreInit({
+			app: obj,
+			state: obj.state
+		}); console.log(obj.store)
+	}
 
 	obj.components = {
 		filter: getFilterUi(obj),
