@@ -3,10 +3,10 @@
 /* 
  a generic function to create 
  a store generator function
- given a Class as argument
+ given a store Class as argument
 
- the class must have methods
- that match the action.type
+ the store class must have methods
+ names to match the action.type
  from the dispatch argument
 */
 function storeInit(StoreClass) {
@@ -24,15 +24,17 @@ function storeInit(StoreClass) {
 					inner[action.type](action)
 				}
 				const copy = JSON.parse(JSON.stringify(inner.state))
-				copy.PrevAction = action
+				// FIX-ME: must be recursive freeze
 				inner.copy = Object.freeze(copy); console.log(inner.copy)
-				inner.app.main(inner.copy)
+				inner.app.main(action, inner.copy)
 			},
 			copy(action) {
 				return inner.copy
 			}
 		}
 		if (opts.debug) self.Inner = inner
+
+		// FIX-ME: must be recursive freeze
 		return Object.freeze(self)
 	}
 }

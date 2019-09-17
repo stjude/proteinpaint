@@ -80,7 +80,7 @@ callbacks: {
 
 	obj.expanded_term_ids = []
 
-	obj.main = (state = null) => {
+	obj.main = (action, state) => {
 		if (obj.store && state) obj.state = state
 
 		// trigger all rendered sub-elements
@@ -88,10 +88,19 @@ callbacks: {
 			if (Array.isArray(obj.components[name])) {
 				// example: 1 or more component.plots
 				for (const component of obj.components[name]) {
-					if (component) component.main()
+					if (component) {
+						if (component.isReactive && obj.store) component.main(action, state)
+						else component.main(action, state)
+					}
 				}
 			} else {
-				if (obj.components[name]) obj.components[name].main()
+				if (obj.components[name]) {
+					if (obj.components[name].isReactive && obj.store) { 
+						obj.components[name].main(action, state)
+					} else {
+						obj.components[name].main()
+					}
+				}
 			}
 		}
 		obj.bus.emit("postRender")
