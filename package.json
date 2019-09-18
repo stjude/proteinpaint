@@ -26,7 +26,8 @@
   "prettier": {
     "semi": false,
     "useTabs": true,
-    "printWidth": 120
+    "printWidth": 120,
+	"singleQuote":true
   },
   "author": "",
   "license": "ISC",

@@ -7,8 +7,6 @@ const common = require('../src/common')
 const validate_termvaluesetting = require('../src/mds.termdb.termvaluesetting').validate_termvaluesetting
 const termdbsql = require('./termdb.sql')
 
-
-
 /*
 ********************** EXPORTED
 handle_vcfbyrange
@@ -28,137 +26,147 @@ parseline_AFtest
 		getallelecount_samplegroup_vcfline
 */
 
-
 const serverconfig = __non_webpack_require__('./serverconfig.json')
 
-
-
-
-export async function handle_ssidbyonem ( q, genome, ds, result ) {
-/*
+export async function handle_ssidbyonem(q, genome, ds, result) {
+	/*
 ssid: sample set id
 get ssid by one m from vcf
 */
-	if(ds.iscustom) throw 'custom ds not allowed'
+	if (ds.iscustom) throw 'custom ds not allowed'
 	const tk = ds.track.vcf
-	if(!tk) throw 'ds.track.vcf missing'
-	if(!q.m) throw 'q.m missing'
+	if (!tk) throw 'ds.track.vcf missing'
+	if (!q.m) throw 'q.m missing'
 
 	// query for this variant
-	const coord = (tk.nochr ? q.m.chr.replace('chr','') : q.m.chr)+':'+(q.m.pos+1)+'-'+(q.m.pos+1)
+	const coord = (tk.nochr ? q.m.chr.replace('chr', '') : q.m.chr) + ':' + (q.m.pos + 1) + '-' + (q.m.pos + 1)
 
 	let m
-	await utils.get_lines_tabix( [ tk.file, coord ], tk.dir, (line)=>{
-		const [e,mlst,e2] = vcf.vcfparseline( line, tk )
-		for(const m2 of mlst) {
-			if( m2.pos==q.m.pos && m2.ref==q.m.ref && m2.alt==q.m.alt ) {
+	await utils.get_lines_tabix([tk.file, coord], tk.dir, line => {
+		const [e, mlst, e2] = vcf.vcfparseline(line, tk)
+		for (const m2 of mlst) {
+			if (m2.pos == q.m.pos && m2.ref == q.m.ref && m2.alt == q.m.alt) {
 				m = m2
 				return
 			}
 		}
 	})
 
-	if( !m ) throw 'variant not found'
+	if (!m) throw 'variant not found'
 
 	// divide samples by genotype
 	const rr = [], // hom ref
 		ra = [], // het
 		aa = [] // hom alt
-	for(const sample of m.sampledata) {
-		if(!sample.genotype ) continue
-		const hasref = sample.genotype.indexOf(q.m.ref)!=-1
-		const hasalt = sample.genotype.indexOf(q.m.alt)!=-1
-		if(hasref) {
-			if(hasalt) ra.push(sample.sampleobj.name)
+	for (const sample of m.sampledata) {
+		if (!sample.genotype) continue
+		const hasref = sample.genotype.indexOf(q.m.ref) != -1
+		const hasalt = sample.genotype.indexOf(q.m.alt) != -1
+		if (hasref) {
+			if (hasalt) ra.push(sample.sampleobj.name)
 			else rr.push(sample.sampleobj.name)
 		} else {
-			if(hasalt) aa.push(sample.sampleobj.name)
+			if (hasalt) aa.push(sample.sampleobj.name)
 		}
 	}
 	const filename = Math.random().toString()
 	result.ssid = filename
 	result.groups = {}
 	const lines = []
-	if( rr.length ) {
+	if (rr.length) {
 		const k = 'Homozygous reference'
-		result.groups[k] = { size:rr.length }
-		lines.push(k+'\t'+rr.join(','))
+		result.groups[k] = { size: rr.length }
+		lines.push(k + '\t' + rr.join(','))
 	}
-	if( ra.length ) {
+	if (ra.length) {
 		const k = 'Heterozygous'
-		result.groups[k] = { size:ra.length }
-		lines.push(k+'\t'+ra.join(','))
+		result.groups[k] = { size: ra.length }
+		lines.push(k + '\t' + ra.join(','))
 	}
-	if( aa.length ) {
-		const k='Homozygous alternative'
-		result.groups[k] = { size:aa.length }
-		lines.push(k+'\t'+aa.join(','))
+	if (aa.length) {
+		const k = 'Homozygous alternative'
+		result.groups[k] = { size: aa.length }
+		lines.push(k + '\t' + aa.join(','))
 	}
-	await utils.write_file( path.join(serverconfig.cachedir, 'ssid', filename ), lines.join('\n') )
+	await utils.write_file(path.join(serverconfig.cachedir, 'ssid', filename), lines.join('\n'))
 }
 
-
-
-
-export async function handle_vcfbyrange ( q, genome, ds, result ) {
-/*
+export async function handle_vcfbyrange(q, genome, ds, result) {
+	/*
 for range query
 
 ds is either official or custom
+
+genotype matrix export piggyback on this route
 */
-	if(!q.rglst) throw '.rglst[] missing'
+	if (!q.rglst) throw '.rglst[] missing'
 
 	const tk0 = ds.track.vcf
-	if(!tk0) throw 'ds.track.vcf missing'
+	if (!tk0) throw 'ds.track.vcf missing'
 
 	// temporary vcf tk object, may with altered .samples[]
 	const vcftk = {
 		info: tk0.info,
 		format: tk0.format,
-		samples: tk0.samples,
+		samples: tk0.samples
 	}
 
-	set_querymode( q, vcftk, ds )
+	set_querymode(q, vcftk, ds)
 
-	query_vcf_applymode( vcftk, q )
+	query_vcf_applymode(vcftk, q)
 
-	for(const r of q.rglst) {
+	if (q.exportgenotype) {
+		result.mlst = []
+	}
 
-		if( tk0.viewrangeupperlimit && (r.stop-r.start)>=tk0.viewrangeupperlimit ) {
-			r.rangetoobig = 'Zoom in under '+common.bplen(tk0.viewrangeupperlimit)+' to view VCF data'
+	for (const r of q.rglst) {
+		if (tk0.viewrangeupperlimit && r.stop - r.start >= tk0.viewrangeupperlimit) {
+			r.rangetoobig = 'Zoom in under ' + common.bplen(tk0.viewrangeupperlimit) + ' to view VCF data'
 			continue
 		}
 
-		const mockblock = make_mockblock( r )
-		const m_is_filtered = _m_is_filtered( q, result, mockblock )
+		const mockblock = make_mockblock(r)
+		const m_is_filtered = _m_is_filtered(q, result, mockblock)
 
-		const coord = (tk0.nochr ? r.chr.replace('chr','') : r.chr)+':'+r.start+'-'+r.stop
+		const coord = (tk0.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
 
-		await utils.get_lines_tabix( [ tk0.file, coord ], tk0.dir, (line)=>{
+		await utils.get_lines_tabix([tk0.file, coord], tk0.dir, line => {
+			if (q.exportgenotype) {
+				const [e, mlst, e2] = vcf.vcfparseline(line, vcftk)
+				for (const m of mlst) {
+					if (m_is_filtered(m)) continue
+					const row = [m.chr + '.' + (m.pos + 1) + '.' + m.ref + '.' + m.alt, m.name || '']
+					if (m.sampledata) {
+						for (const s of m.sampledata) {
+							row.push(s.genotype)
+						}
+					}
+					result.mlst.push(row.join('\t'))
+				}
+				return
+			}
 
 			let mlst
 
-			if( q.querymode.range_variantonly ) {
-
-				if( q.querymode.slicecolumnindex ) {
+			if (q.querymode.range_variantonly) {
+				if (q.querymode.slicecolumnindex) {
 					// TODO do slicing, parse reduced line with samples, and decide if the variant exist in the sliced samples
 				} else {
 					// no sample filtering, do not look at sample, just the variant
-					const newline = line.split( '\t', 8 ).join('\t')
-					const [e,mlst2,e2] = vcf.vcfparseline( newline, vcftk )
+					const newline = line.split('\t', 8).join('\t')
+					const [e, mlst2, e2] = vcf.vcfparseline(newline, vcftk)
 					mlst = []
-					for(const m of mlst2) {
-						if(!m_is_filtered(m)) mlst.push(m)
+					for (const m of mlst2) {
+						if (!m_is_filtered(m)) mlst.push(m)
 					}
 				}
-			} else if( q.querymode.range_AFtest ) {
-				mlst = parseline_AFtest( line, q, vcftk, ds, m_is_filtered )
+			} else if (q.querymode.range_AFtest) {
+				mlst = parseline_AFtest(line, q, vcftk, ds, m_is_filtered)
 			}
 
-			if( mlst ) {
-				for(const m of mlst) {
-
-					if( m.csq ) {
+			if (mlst) {
+				for (const m of mlst) {
+					if (m.csq) {
 						// not to release the whole csq, only to show number of interpretations
 						m.csq_count = m.csq.length
 						delete m.csq
@@ -167,7 +175,7 @@ ds is either official or custom
 					delete m.vcf_ID
 					delete m.sampledata
 
-					if( tk0.nochr ) m.chr = 'chr'+m.chr
+					if (tk0.nochr) m.chr = 'chr' + m.chr
 
 					r.variants.push(m)
 				}
@@ -175,47 +183,45 @@ ds is either official or custom
 		})
 	}
 
-	await may_apply_fishertest( q )
+	await may_apply_fishertest(q)
 
-	vcfbyrange_collect_result( result, q )
+	vcfbyrange_collect_result(result, q, tk0)
 }
 
-
-
-function set_querymode ( q, vcftk, ds ) {
-/*
+function set_querymode(q, vcftk, ds) {
+	/*
 generate the "querymode" object that drives subsequent queries
 */
 
 	q.querymode = {}
 
-	if( q.AFtest ) {
-		if(ds.iscustom) throw 'custom track does not support AFtest'
-		for(const g of q.AFtest.groups) {
-			if( g.is_infofield ) {
+	if (q.AFtest) {
+		if (ds.iscustom) throw 'custom track does not support AFtest'
+		for (const g of q.AFtest.groups) {
+			if (g.is_infofield) {
 				continue
 			}
-			if(g.is_termdb) {
-				wrap_validate_termvaluesetting(g.terms,'AFtest.group')
-				g.columnidx = get_columnidx_byterms( g.terms, ds )
-				if( q.AFtest.termfilter ) {
+			if (g.is_termdb) {
+				wrap_validate_termvaluesetting(g.terms, 'AFtest.group')
+				g.columnidx = get_columnidx_byterms(g.terms, ds)
+				if (q.AFtest.termfilter) {
 					// further filter samples
-					g.columnidx = filter_samples_by_termvalue( g.columnidx, ds, q.AFtest.termfilter )
+					g.columnidx = filter_samples_by_termvalue(g.columnidx, ds, q.AFtest.termfilter)
 				}
 				continue
 			}
-			if(g.is_population) {
-				if(!ds.track.populations) throw 'ds.track.populations missing'
-				const p = ds.track.populations.find(i=>i.key==g.key)
-				if(!p) throw 'unknown population key: '+g.key
+			if (g.is_population) {
+				if (!ds.track.populations) throw 'ds.track.populations missing'
+				const p = ds.track.populations.find(i => i.key == g.key)
+				if (!p) throw 'unknown population key: ' + g.key
 				g.population = JSON.parse(JSON.stringify(p)) // as the population data structure can be modified later
-				if( q.AFtest.termfilter ) {
+				if (q.AFtest.termfilter) {
 					// termfilter hardcode to be just one term
-					if( q.AFtest.termfilter[0].term.id == g.population.termfilter ) {
+					if (q.AFtest.termfilter[0].term.id == g.population.termfilter) {
 						// this population can be filtered by this term
-						const popset = g.population.sets.find( i=> i.termfilter_value == q.AFtest.termfilter[0].values[0].key )
-						if(!popset) throw 'no matching set found for a termfilter from a population'
-						g.population.sets = [ popset ] // only keep this set
+						const popset = g.population.sets.find(i => i.termfilter_value == q.AFtest.termfilter[0].values[0].key)
+						if (!popset) throw 'no matching set found for a termfilter from a population'
+						g.population.sets = [popset] // only keep this set
 					}
 				}
 				continue
@@ -223,24 +229,19 @@ generate the "querymode" object that drives subsequent queries
 			throw 'Cannot set query mode: unknown group type'
 		}
 
-		if( q.AFtest.testby_fisher ) {
-			if( q.AFtest.groups.find( i=> i.is_infofield ) ) throw 'cannot do fisher test for an INFO field'
+		if (q.AFtest.testby_fisher) {
+			if (q.AFtest.groups.find(i => i.is_infofield)) throw 'cannot do fisher test for an INFO field'
 		}
 
 		// after validating each single group, validate adjust race
 		{
-			const popg = q.AFtest.groups.find( i=> i.is_population )
-			if( popg && popg.adjust_race ) {
+			const popg = q.AFtest.groups.find(i => i.is_population)
+			if (popg && popg.adjust_race) {
 				// need termdb group
-				const tg = q.AFtest.groups.find( i=> i.is_termdb )
-				if(!tg) throw 'cannot adjust race: termdb group missing'
+				const tg = q.AFtest.groups.find(i => i.is_termdb)
+				if (!tg) throw 'cannot adjust race: termdb group missing'
 				// compute pop average
-				tg.pop2average = get_pop2average( 
-					popg.population.sets,
-					tg.columnidx,
-					ds,
-					vcftk
-				)
+				tg.pop2average = get_pop2average(popg.population.sets, tg.columnidx, ds, vcftk)
 			}
 		}
 
@@ -258,11 +259,8 @@ generate the "querymode" object that drives subsequent queries
 	*/
 }
 
-
-
-
-function get_pop2average ( popsets, columnidx, ds, vcftk ) {
-/*
+function get_pop2average(popsets, columnidx, ds, vcftk) {
+	/*
 using adjust race, when combining a population and a termdb group
 for the set of samples defined by termdb,
 get population admix average, initiate 0 for each population
@@ -277,7 +275,7 @@ vcftk
 */
 	const pop2average = new Map()
 	let poptotal = 0 // sum for all sets, across all samples
-	for(const p of popsets) {
+	for (const p of popsets) {
 		const o = {
 			infokey_AC: p.infokey_AC,
 			infokey_AN: p.infokey_AN,
@@ -286,52 +284,46 @@ vcftk
 
 		// for this race grp, issue one query to get percentage value of all samples, and sum up
 		const lst = termdbsql.get_rows_by_one_key({ ds, key: p.key })
-		for(const i of lst) {
-			if(!ds.track.vcf.sample2arrayidx.has( i.sample )) continue
+		for (const i of lst) {
+			if (!ds.track.vcf.sample2arrayidx.has(i.sample)) continue
 			const v = Number(i.value)
-			if(Number.isFinite(v)) {
+			if (Number.isFinite(v)) {
 				o.average += v
 				poptotal += v
 			}
 		}
 
-		pop2average.set( p.key, o )
+		pop2average.set(p.key, o)
 	}
 	// after sum, make average
-	for(const [k,v] of pop2average) {
+	for (const [k, v] of pop2average) {
 		v.average /= poptotal
 	}
 	return pop2average
 }
 
-
-
-
-function get_columnidx_byterms ( terms, ds ) {
-/*
+function get_columnidx_byterms(terms, ds) {
+	/*
 terms is a list, each ele is one term-value setting
 a sample must meet all term conditions
 */
 
-	if(!ds.track) throw 'ds.track{} missing'
+	if (!ds.track) throw 'ds.track{} missing'
 	const filters = [] // temp filter lst
-	if( ds.track.sample_termfilter ) {
-		filters.push( ...ds.track.sample_termfilter )
+	if (ds.track.sample_termfilter) {
+		filters.push(...ds.track.sample_termfilter)
 	}
-	filters.push( ...terms )
-	const samples = termdbsql.get_samples( filters, ds )
-	return samples.reduce((lst,samplename)=>{
-		const i = ds.track.vcf.sample2arrayidx.get( samplename )
-		if(i>=0) lst.push(i)
+	filters.push(...terms)
+	const samples = termdbsql.get_samples(filters, ds)
+	return samples.reduce((lst, samplename) => {
+		const i = ds.track.vcf.sample2arrayidx.get(samplename)
+		if (i >= 0) lst.push(i)
 		return lst
-	},[])
+	}, [])
 }
 
-
-
-
-function filter_samples_by_termvalue ( sampleidx, ds, termfilter ) {
-/*
+function filter_samples_by_termvalue(sampleidx, ds, termfilter) {
+	/*
 for a termdb group from AFtest
 
 sampleidx[]
@@ -342,34 +334,34 @@ termfilter{}
 	tvs structure
 	though it is hardcoded to be categorical only
 */
-	const allmatching = termdbsql.get_samples( termfilter, ds )
-	const sampleset = new Set( allmatching )
+	const allmatching = termdbsql.get_samples(termfilter, ds)
+	const sampleset = new Set(allmatching)
 	const newlst = []
-	for(const i of sampleidx) {
-		if( sampleset.has( ds.track.vcf.samples[i].name ) ) {
+	for (const i of sampleidx) {
+		if (sampleset.has(ds.track.vcf.samples[i].name)) {
 			newlst.push(i)
 		}
 	}
 	return newlst
 }
 
-
-
-
-
-
-
-function vcfbyrange_collect_result ( result, q ) {
-/*
+function vcfbyrange_collect_result(result, q, tk) {
+	/*
 done querying, collect result, also clear rglst which is shared by others
 
 for specific type of query mode, send additional info
 */
 
+	if (q.exportgenotype) {
+		result.exportgenotype = 'variant\tSNP\t' + tk.samples.map(i => i.name).join('\t') + '\n' + result.mlst.join('\n')
+		delete result.mlst
+		return
+	}
+
 	result.vcf = {
 		rglst: []
 	}
-	for(const r of q.rglst) {
+	for (const r of q.rglst) {
 		const r2 = {
 			chr: r.chr,
 			start: r.start,
@@ -378,47 +370,47 @@ for specific type of query mode, send additional info
 			reverse: r.reverse,
 			xoff: r.xoff
 		}
-		result.vcf.rglst.push( r2 )
-		if( r.rangetoobig ) {
+		result.vcf.rglst.push(r2)
+		if (r.rangetoobig) {
 			r2.rangetoobig = r.rangetoobig
 			delete r.rangetoobig
-		} else if( r.variants ) {
+		} else if (r.variants) {
 			r2.variants = r.variants
 			delete r.variants
-		} else if( r.canvas ) {
+		} else if (r.canvas) {
 			r2.img = r.canvas.toDataURL()
 			delete r.canvas
 		}
 	}
 
-	if( q.AFtest ) {
-		if( q.AFtest.groups.find(i=>i.is_termdb) ) {
+	if (q.AFtest) {
+		if (q.AFtest.groups.find(i => i.is_termdb)) {
 			// has termdb group
 			// return number of samples; did adjustment, return back average admix
 			result.AFtest_termdbgroup = []
 
 			let g = q.AFtest.groups[0]
-			if( g.is_termdb ) {
+			if (g.is_termdb) {
 				result.AFtest_termdbgroup[0] = {
 					samplecount: g.columnidx.length
 				}
-				if( g.pop2average ) {
+				if (g.pop2average) {
 					result.AFtest_termdbgroup[0].popsetaverage = []
-					for(const [k,v] of g.pop2average) {
-						result.AFtest_termdbgroup[0].popsetaverage.push([k,v.average])
+					for (const [k, v] of g.pop2average) {
+						result.AFtest_termdbgroup[0].popsetaverage.push([k, v.average])
 					}
 				}
 			}
 
 			g = q.AFtest.groups[1]
-			if( g.is_termdb ) {
+			if (g.is_termdb) {
 				result.AFtest_termdbgroup[1] = {
 					samplecount: g.columnidx.length
 				}
-				if( g.pop2average ) {
+				if (g.pop2average) {
 					result.AFtest_termdbgroup[1].popsetaverage = []
-					for(const [k,v] of g.pop2average) {
-						result.AFtest_termdbgroup[1].popsetaverage.push([k,v.average])
+					for (const [k, v] of g.pop2average) {
+						result.AFtest_termdbgroup[1].popsetaverage.push([k, v.average])
 					}
 				}
 			}
@@ -426,15 +418,12 @@ for specific type of query mode, send additional info
 	}
 }
 
-
-
-function query_vcf_applymode ( vcftk, q ) {
-/* at variant only mode, apply changes and prepare for querying
-*/
-	if( q.querymode.range_variantonly || q.querymode.range_AFtest ) {
-
+function query_vcf_applymode(vcftk, q) {
+	/* at variant only mode, apply changes and prepare for querying
+	 */
+	if (q.querymode.range_variantonly || q.querymode.range_AFtest) {
 		delete vcftk.samples // not to parse samples
-		for(const r of q.rglst) {
+		for (const r of q.rglst) {
 			r.variants = []
 			/* if r.variants[] is valid, store variants here
 			if number of variants is above cutoff, render them into image
@@ -449,33 +438,26 @@ function query_vcf_applymode ( vcftk, q ) {
 	}
 }
 
-
-
-function make_mockblock ( r ) {
-	if( r.usegm_isoform ) return {gmmode:'protein',usegm:{isoform:r.usegm_isoform}}
+function make_mockblock(r) {
+	if (r.usegm_isoform) return { gmmode: 'protein', usegm: { isoform: r.usegm_isoform } }
 	return {}
 }
 
-
-
-
-
-
-export async function handle_getcsq ( q, genome, ds, result ) {
-/*
+export async function handle_getcsq(q, genome, ds, result) {
+	/*
 get csq from one variant
 */
 	const tk = ds.track.vcf
-	if(!tk) throw 'ds.track.vcf missing'
-	if(!q.m) throw 'q.m missing'
+	if (!tk) throw 'ds.track.vcf missing'
+	if (!q.m) throw 'q.m missing'
 
 	// query for this variant
-	const coord = (tk.nochr ? q.m.chr.replace('chr','') : q.m.chr)+':'+(q.m.pos+1)+'-'+(q.m.pos+1)
+	const coord = (tk.nochr ? q.m.chr.replace('chr', '') : q.m.chr) + ':' + (q.m.pos + 1) + '-' + (q.m.pos + 1)
 
-	await utils.get_lines_tabix( [ tk.file, coord ], tk.dir, (line)=>{
-		const [e,mlst,e2] = vcf.vcfparseline( line, tk )
-		for(const m2 of mlst) {
-			if( m2.pos==q.m.pos && m2.ref==q.m.ref && m2.alt==q.m.alt ) {
+	await utils.get_lines_tabix([tk.file, coord], tk.dir, line => {
+		const [e, mlst, e2] = vcf.vcfparseline(line, tk)
+		for (const m2 of mlst) {
+			if (m2.pos == q.m.pos && m2.ref == q.m.ref && m2.alt == q.m.alt) {
 				result.csq = m2.csq
 				return
 			}
@@ -483,62 +465,57 @@ get csq from one variant
 	})
 }
 
-
-
-
-
-
-function parseline_AFtest ( line, q, vcftk, ds, m_is_filtered ) {
-/*
+function parseline_AFtest(line, q, vcftk, ds, m_is_filtered) {
+	/*
 there may be 2 or more groups
 a group can be determined by termdb, or info field
 */
 	const l = line.split('\t')
-	const [e,mlst,e2] = vcf.vcfparseline( l.slice(0,8).join('\t'), vcftk )
+	const [e, mlst, e2] = vcf.vcfparseline(l.slice(0, 8).join('\t'), vcftk)
 	// get those passing filter
-	const mlstpass = mlst.filter( m => !m_is_filtered( m ) )
-	if( mlstpass.length == 0 ) {
+	const mlstpass = mlst.filter(m => !m_is_filtered(m))
+	if (mlstpass.length == 0) {
 		// stop, no need to parse samples
 		return
 	}
-	const alleles = [ l[3], ...l[4].split(',') ]
+	const alleles = [l[3], ...l[4].split(',')]
 
-	for( const m of mlstpass ) {
-
-		const mgroups = AFtest_getdata_onem( l, m, alleles, q )
+	for (const m of mlstpass) {
+		const mgroups = AFtest_getdata_onem(l, m, alleles, q)
 
 		// hardcoded to deal with 2 groups
-		if( q.AFtest.testby_AFdiff ) {
-			for(const g of mgroups) {
-				if(g.is_infofield) {
+		if (q.AFtest.testby_AFdiff) {
+			for (const g of mgroups) {
+				if (g.is_infofield) {
 					g.v = g.infofieldvalue
-				} else if(g.is_termdb || g.is_population) {
-					g.v = g.altcount / (g.refcount+g.altcount)
+				} else if (g.is_termdb || g.is_population) {
+					g.v = g.altcount / (g.refcount + g.altcount)
 				} else {
 					throw 'unknown group type'
 				}
 			}
-			m.AFtest_group_values = [ mgroups[0].v, mgroups[1].v ]
+			m.AFtest_group_values = [mgroups[0].v, mgroups[1].v]
 			m.nm_axis_value = mgroups[0].v - mgroups[1].v // for axis
-		} else if( q.AFtest.testby_fisher ) {
-			m.contigencytable = [
-				mgroups[0].altcount,
-				mgroups[0].refcount,
-				mgroups[1].altcount,
-				mgroups[1].refcount
-			]
+		} else if (q.AFtest.testby_fisher) {
+			m.contigencytable = [mgroups[0].altcount, mgroups[0].refcount, mgroups[1].altcount, mgroups[1].refcount]
 			// collect table from all variants and run one test
 		}
 
 		// if adjusted race, for the population group, append the set2value to m
 		{
-			const g = q.AFtest.groups.find(i=>i.is_population)
-			if(g && g.adjust_race ) {
-				const g = mgroups.find( i=>i.is_population )
+			const g = q.AFtest.groups.find(i => i.is_population)
+			if (g && g.adjust_race) {
+				const g = mgroups.find(i => i.is_population)
 				// g must have set2value
 				m.popsetadjvalue = []
-				for(const [s,v] of g.set2value) {
-					m.popsetadjvalue.push([ s, v.ACraw, v.ANraw-v.ACraw, Number.parseInt(v.ACadj), Number.parseInt(v.ANadj-v.ACadj) ])
+				for (const [s, v] of g.set2value) {
+					m.popsetadjvalue.push([
+						s,
+						v.ACraw,
+						v.ANraw - v.ACraw,
+						Number.parseInt(v.ACadj),
+						Number.parseInt(v.ANadj - v.ACadj)
+					])
 				}
 			}
 		}
@@ -546,58 +523,51 @@ a group can be determined by termdb, or info field
 	return mlstpass
 }
 
-
-
-
-function AFtest_getdata_onem ( l, m, alleles, q ) {
-/*
+function AFtest_getdata_onem(l, m, alleles, q) {
+	/*
 AFtest
 for one variant, get data for each group
 return an array of same length and group typing of AFtest.groups[]
 */
-	return q.AFtest.groups.reduce( (lst, g)=>{
-		if( g.is_infofield ) {
+	return q.AFtest.groups.reduce((lst, g) => {
+		if (g.is_infofield) {
 			lst.push({
-				is_infofield:true,
-				infofieldvalue: get_infovalue( m, g )
+				is_infofield: true,
+				infofieldvalue: get_infovalue(m, g)
 			})
-		} else if( g.is_termdb ) {
-			const _ = getallelecount_samplegroup_vcfline( alleles, l, g.columnidx )
+		} else if (g.is_termdb) {
+			const _ = getallelecount_samplegroup_vcfline(alleles, l, g.columnidx)
 			lst.push({
-				is_termdb:true,
+				is_termdb: true,
 				allref: _.allref,
-				refcount: _.alleles.get( m.ref ) || 0,
-				altcount: _.alleles.get( m.alt ) || 0,
+				refcount: _.alleles.get(m.ref) || 0,
+				altcount: _.alleles.get(m.alt) || 0
 			})
-		} else if( g.is_population ) {
+		} else if (g.is_population) {
 			const set2value = new Map()
 			/*  k: population set key
 				v: { ACraw, ANraw, ACadj, ANadj }
 			*/
-			for(const aset of g.population.sets) {
-				set2value.set( aset.key,
-					{
-						ACraw: get_infovalue( m, {key:aset.infokey_AC,missing_value:0} ),
-						ANraw: get_infovalue( m, {key:aset.infokey_AN,missing_value:0} )
-					}
-				)
+			for (const aset of g.population.sets) {
+				set2value.set(aset.key, {
+					ACraw: get_infovalue(m, { key: aset.infokey_AC, missing_value: 0 }),
+					ANraw: get_infovalue(m, { key: aset.infokey_AN, missing_value: 0 })
+				})
 			}
 			// for a population group, if to adjust race
-			let refcount=0, altcount=0
-			if( g.adjust_race ) {
-				[refcount,altcount] = AFtest_adjust_race(
-					set2value,
-					q.AFtest.groups.find( i=> i.is_termdb )
-				)
+			let refcount = 0,
+				altcount = 0
+			if (g.adjust_race) {
+				;[refcount, altcount] = AFtest_adjust_race(set2value, q.AFtest.groups.find(i => i.is_termdb))
 			} else {
 				// not adjust race, add up AC AN
-				for(const v of set2value.values()) {
+				for (const v of set2value.values()) {
 					altcount += v.ACraw
 					refcount += v.ANraw - v.ACraw
 				}
 			}
 			lst.push({
-				is_population:true,
+				is_population: true,
 				refcount,
 				altcount,
 				set2value
@@ -606,156 +576,136 @@ return an array of same length and group typing of AFtest.groups[]
 			throw 'unknown group type'
 		}
 		return lst
-	}, [] )
+	}, [])
 }
 
-
-
-function AFtest_adjust_race ( set2value, group_termdb ) {
-	if(!group_termdb) throw 'group_termdb missing'
-	if(!group_termdb.pop2average) throw 'group_termdb.pop2average missing'
+function AFtest_adjust_race(set2value, group_termdb) {
+	if (!group_termdb) throw 'group_termdb missing'
+	if (!group_termdb.pop2average) throw 'group_termdb.pop2average missing'
 	let controltotal = 0
-	for(const v of set2value.values()) {
+	for (const v of set2value.values()) {
 		controltotal += v.ANraw
 	}
 	// adjust control population based on pop2average
 	let ACadj = 0,
 		ANadj = 0
-	for( const [k,v] of set2value ) {
-
+	for (const [k, v] of set2value) {
 		// record adjusted value per set for sending back to client
 		v.ANadj = controltotal * group_termdb.pop2average.get(k).average
-		v.ACadj = v.ANadj == 0 ? 0 : v.ACraw * v.ANadj / v.ANraw
+		v.ACadj = v.ANadj == 0 ? 0 : (v.ACraw * v.ANadj) / v.ANraw
 
 		ACadj += v.ACadj
 		ANadj += v.ANadj
 	}
-	return [ ANadj-ACadj, ACadj ]
+	return [ANadj - ACadj, ACadj]
 }
 
-
-
-
-
-
-function get_infovalue ( m, f ) {
-// field is {key,missing_value}
-	if( m.info ) {
-		const v = m.info[ f.key ]
-		if( v!=undefined ) return v
+function get_infovalue(m, f) {
+	// field is {key,missing_value}
+	if (m.info) {
+		const v = m.info[f.key]
+		if (v != undefined) return v
 	}
-	if( m.altinfo ) {
-		const v = m.altinfo[ f.key ]
-		if( v!=undefined ) return v
+	if (m.altinfo) {
+		const v = m.altinfo[f.key]
+		if (v != undefined) return v
 	}
 	return f.missing_value
 }
 
-
-
-async function may_apply_fishertest ( q ) {
-	if(!q.querymode.range_AFtest) return
-	if(!q.AFtest.testby_fisher) return
+async function may_apply_fishertest(q) {
+	if (!q.querymode.range_AFtest) return
+	if (!q.AFtest.testby_fisher) return
 	const lines = []
 	const mlst = {}
-	for(const r of q.rglst) {
-		if(r.variants) {
-			for(const m of r.variants) {
-				if(m.contigencytable) {
-					const kstr = m.chr+'.'+m.pos+'.'+m.ref+'.'+m.alt
-					lines.push( kstr +'\t'+m.contigencytable.join('\t'))
-					mlst[ kstr ] = m
+	for (const r of q.rglst) {
+		if (r.variants) {
+			for (const m of r.variants) {
+				if (m.contigencytable) {
+					const kstr = m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
+					lines.push(kstr + '\t' + m.contigencytable.join('\t'))
+					mlst[kstr] = m
 				}
 			}
 		}
 	}
-	if(lines.length==0) {
+	if (lines.length == 0) {
 		// no data
 		return
 	}
-	const tmpfile = path.join(serverconfig.cachedir,Math.random().toString())
-	await utils.write_file( tmpfile, lines.join('\n') )
-	const pfile = await utils.run_fishertest( tmpfile )
-	const text = await utils.read_file( pfile )
-	for(const line of text.trim().split('\n')) {
+	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString())
+	await utils.write_file(tmpfile, lines.join('\n'))
+	const pfile = await utils.run_fishertest(tmpfile)
+	const text = await utils.read_file(pfile)
+	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
-		const m = mlst[ l[0] ]
-		if( m ) {
+		const m = mlst[l[0]]
+		if (m) {
 			const v = Number.parseFloat(l[5])
 			m.AFtest_pvalue = v
 			m.nm_axis_value = Number.isNaN(v) ? 0 : -Math.log10(v) // for axis
 		}
 	}
-	fs.unlink(tmpfile,()=>{})
-	fs.unlink(pfile,()=>{})
+	fs.unlink(tmpfile, () => {})
+	fs.unlink(pfile, () => {})
 }
 
-
-
-
-
-
-function _m_is_filtered ( q, result, mockblock ) {
-
+function _m_is_filtered(q, result, mockblock) {
 	return m => {
-
 		let todrop = false
 		// ***warning*** down here, can only set todrop to true, must not set it to false...
 
-		if( q.info_fields ) {
-			for(const i of q.info_fields) {
-				const re = result.info_fields[ i.key ]
+		if (q.info_fields) {
+			for (const i of q.info_fields) {
+				const re = result.info_fields[i.key]
 
 				// get info field value
-				let value=undefined
-				if( m.info ) value = m.info[i.key]
-				if(value==undefined && m.altinfo) value = m.altinfo[i.key]
+				let value = undefined
+				if (m.info) value = m.info[i.key]
+				if (value == undefined && m.altinfo) value = m.altinfo[i.key]
 
-				if( i.iscategorical ) {
-					if(value==undefined) {
-						re.unannotated_count = 1 + (re.unannotated_count||0)
-						if(i.unannotated_ishidden) {
-							todrop=true
+				if (i.iscategorical) {
+					if (value == undefined) {
+						re.unannotated_count = 1 + (re.unannotated_count || 0)
+						if (i.unannotated_ishidden) {
+							todrop = true
 						}
 					} else {
-						re.value2count[ value ] = 1 + (re.value2count[value]||0)
-						if( i.hiddenvalues[ value ] ) {
-							todrop=true
+						re.value2count[value] = 1 + (re.value2count[value] || 0)
+						if (i.hiddenvalues[value]) {
+							todrop = true
 						}
 					}
-
-				} else if( i.isnumerical ) {
-
-					if( value == undefined ) {
-						if( i.missing_value!=undefined ) value = i.missing_value
+				} else if (i.isnumerical) {
+					if (value == undefined) {
+						if (i.missing_value != undefined) value = i.missing_value
 					}
 
 					// test start
-					if( !i.range.startunbounded ) {
-						if( i.range.startinclusive ) {
-							if( value < i.range.start ) todrop=true
+					if (!i.range.startunbounded) {
+						if (i.range.startinclusive) {
+							if (value < i.range.start) todrop = true
 						} else {
-							if( value <= i.range.start ) todrop=true
+							if (value <= i.range.start) todrop = true
 						}
 					}
 					// test stop
-					if( !i.range.stopunbounded ) {
-						if( i.range.stopinclusive ) {
-							if( value > i.range.stop ) todrop=true
+					if (!i.range.stopunbounded) {
+						if (i.range.stopinclusive) {
+							if (value > i.range.stop) todrop = true
 						} else {
-							if( value >= i.range.stop ) todrop=true
+							if (value >= i.range.stop) todrop = true
 						}
 					}
-					if( todrop ) re.filteredcount++
-
-				} else if( i.isflag ) {
-					if( value ) {
+					if (todrop) re.filteredcount++
+				} else if (i.isflag) {
+					if (value) {
 						re.count_yes++
 					} else {
 						re.count_no++
 					}
-					if( (i.remove_yes && value) || (i.remove_no && !value) ) {
-						todrop=true
+					if ((i.remove_yes && value) || (i.remove_no && !value)) {
+						todrop = true
 					}
 				} else {
 					throw 'unknown info type'
@@ -764,65 +714,57 @@ function _m_is_filtered ( q, result, mockblock ) {
 		}
 
 		// final step is mclass
-		if( todrop ) {
+		if (todrop) {
 			// this variant has been filtered, do not add to mclass counter
 			return true
 		}
 
-		common.vcfcopymclass( m, mockblock )
+		common.vcfcopymclass(m, mockblock)
 
 		// m.class is decided, add to counter
-		result.mclass2count[m.class] = ( result.mclass2count[m.class] || 0 ) + 1
+		result.mclass2count[m.class] = (result.mclass2count[m.class] || 0) + 1
 
 		// if to drop this variant
-		if( q.hidden_mclass && q.hidden_mclass.has(m.class) ) {
-			todrop=true
+		if (q.hidden_mclass && q.hidden_mclass.has(m.class)) {
+			todrop = true
 		}
 
 		return todrop
 	}
 }
 
-
-
-
-function wrap_validate_termvaluesetting ( terms, where ) {
-	validate_termvaluesetting(terms,where)
-	for(const t of terms) {
-		if(t.term.iscategorical) {
+function wrap_validate_termvaluesetting(terms, where) {
+	validate_termvaluesetting(terms, where)
+	for (const t of terms) {
+		if (t.term.iscategorical) {
 			// convert values[{key,label}] to set
-			t.valueset = new Set( t.values.map(i=>i.key) )
+			t.valueset = new Set(t.values.map(i => i.key))
 		}
 	}
 }
 
-
-
-
-
-
-function getallelecount_samplegroup_vcfline ( alleles, l, columnidx ) {
+function getallelecount_samplegroup_vcfline(alleles, l, columnidx) {
 	let allref = true
 
 	const allele2count = new Map()
 	// k: allele, v: count
-	for(const a of alleles) {
-		allele2count.set( a, 0 )
+	for (const a of alleles) {
+		allele2count.set(a, 0)
 	}
 
-	for(const i of columnidx ) {
-		if(!l[9+i]) continue
-		const gt = l[9+i].split(':')[0]
-		if(gt=='.') continue
-		gt.split( gt.indexOf('/')==-1 ? '|' : '/' ).forEach( s=> {
+	for (const i of columnidx) {
+		if (!l[9 + i]) continue
+		const gt = l[9 + i].split(':')[0]
+		if (gt == '.') continue
+		gt.split(gt.indexOf('/') == -1 ? '|' : '/').forEach(s => {
 			const i = Number.parseInt(s)
-			if(Number.isNaN(i)) return
-			const allele = alleles[ i ]
-			if(!allele) return
-			if(i!=0) {
+			if (Number.isNaN(i)) return
+			const allele = alleles[i]
+			if (!allele) return
+			if (i != 0) {
 				allref = false
 			}
-			allele2count.set( allele, 1 + allele2count.get(allele) )
+			allele2count.set(allele, 1 + allele2count.get(allele))
 		})
 	}
 	return {
