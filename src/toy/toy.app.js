@@ -7,17 +7,16 @@ import {select} from "d3-selection"
 class ToyApp extends App {
 	constructor(opts, holder) {
 		super()
-		this.isApp = true
 		this.opts = opts
-		const app = this.api(opts)
-		this.app = app
-		this.store = new ToyStore(app, opts.state)
+		this.app = this.getApi(opts)
+		this.store = new ToyStore(this.app, opts.state)
+		this.store.deepFreeze(this.opts)
 		this.state = this.store.copy()
 		this.dom = {holder}
 		// will not expose "this" directly to subcomponents
 		this.components = {
-			controls: controlsInit(app, holder.append("div")),
-			table: tableInit(app, holder.append("div"))
+			controls: controlsInit(this.app, holder.append("div")),
+			table: tableInit(this.app, holder.append("div"))
 		}
 		this.bus = new Bus('app', ['postInit', 'postMain'], opts.callbacks, this)
 		this.bus.emit('postInit', this.app)

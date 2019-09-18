@@ -3,14 +3,27 @@
 *************/
 
 export function getInitFxn(_Class_) {
-	return (app, holder) => {
+	/*
+		arg: 
+		= opts{} for an App constructor
+		= App instance for all other classes
+	*/
+	return (arg, holder) => {
 		// private properties and methods
-		const self = new _Class_(app, holder)
-		// the publicly visible "instance"
-		const api = self.isApp ? self.app : self.api()
-		const opts = self.isApp ? self.app.opts : app.opts
+		const self = new _Class_(arg, holder)
+		const api = self.store
+			// only an app instance will have a store
+			// and its api == instance.app
+			? self.app 
+			: self.getApi
+			// hide mutable props and methods behind the instance api
+			? self.getApi()  
+			// expose the mutable instance as its public api
+			: self
+
+		const opts = self.app && self.app.opts || {}
 		if (opts.debug) api.Inner = self
-		return api //Object.freeze(api)
+		return Object.freeze(api)
 	}
 }
 
@@ -22,7 +35,7 @@ export function getInitFxn(_Class_) {
 */
 
 export class App {
-	api(opts) {
+	getApi(opts) {
 		const self = this
 		const api = {
 			opts,
@@ -35,7 +48,7 @@ export class App {
 				}
 				await self.store[action.type](action)
 				self.state = self.store.copy()
-				//console.log("post dispatch()", action, self.state)
+				// console.log(action, self.app)
 				self.main(action)
 			},
 			// must not expose this.bus directly since that
@@ -63,18 +76,22 @@ export class App {
 }
 
 export class Store {
-	api() {
-		return this
-	}
 	copy() {
 		const copy = JSON.parse(JSON.stringify(this.state))
 		// FIX-ME: must be recursive freeze
-		return Object.freeze(copy)
+		this.deepFreeze(copy)
+		return copy
+	}
+	deepFreeze(obj) {
+		Object.freeze(obj)
+		for(const key in obj) {
+			if (typeof obj != 'object') this.deepFreeze(obj[key])
+		}
 	}
 }
 
 export class Component {
-	api() {
+	getApi() {
 		const self = this
 		const api = {
 			main(action) {

@@ -9,7 +9,7 @@ tape("\n", function(test) {
 	test.end()
 })
 
-tape.skip("default view", function(test) {
+tape.only("default view", function(test) {
 	test.timeoutAfter(1000)
 	test.plan(4)
 
@@ -48,7 +48,7 @@ tape.skip("default view", function(test) {
 			.done(() => test.end())
 	}
 
-	function testSearchDisplay(app) { console.log(app)
+	function testSearchDisplay(app) {
 		test.equal(
 			app.Inner.dom.holder.selectAll("input").size(),
 			1,
