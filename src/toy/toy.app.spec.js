@@ -9,7 +9,7 @@ tape("\n", function(test) {
 	test.end()
 })
 
-tape.only("default view", function(test) {
+tape.skip("default view", function(test) {
 	test.timeoutAfter(1000)
 	test.plan(4)
 
