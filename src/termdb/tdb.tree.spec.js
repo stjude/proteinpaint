@@ -73,7 +73,7 @@ tape("\n", function(test) {
 	test.end()
 })
 
-tape.only("Tree Ui", function(test) {
+tape("Tree Ui", function(test) {
 	const tree = treeInit({
 		terms,
 		holder: d3s.select(document.body).append("div"),

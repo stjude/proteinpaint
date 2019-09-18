@@ -67,7 +67,7 @@ class Ride {
 				opts.bus.on(opts.eventType, null)
 				return opts
 			}
-		} catch {
+		} catch(e) {
 			console.log(e)
 		}
 	}

@@ -889,6 +889,10 @@ function parseembedthenurl(arg, holder, selectgenome) {
 	if (arg.project) {
 		bulkui(0,0,genomes, hostURL)
 	}
+
+	if (arg.toy) {
+		launchtoy(arg.toy, holder)
+	}
 }
 
 
@@ -1405,4 +1409,14 @@ async function launch_singlecell ( arg, holder ) {
 		error0('Error launching single cell viewer: '+e)
 		if(e.stack) console.log(e.stack)
 	}
+}
+
+/* 
+opts
+.state may be a partial or full instance of src/toy/toy.store defaultState
+*/
+function launchtoy(opts, holder) {
+	import('./toy/toy.app').then(_=>{
+		_.appInit(opts, holder)
+	})
 }
