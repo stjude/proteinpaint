@@ -221,11 +221,13 @@ export class TermdbBarchart {
 		for (const chart of chartsData.charts) {
 			if (!chart.settings) chart.settings = JSON.parse(rendererSettings)
 			Object.assign(chart.settings, this.settings)
+		  chart.visibleTotal = 0
 			chart.visibleSerieses = chart.serieses.filter(series => {
 				if (chart.settings.exclude.cols.includes(series.seriesId)) return false
 				series.visibleData = series.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))
 				series.visibleTotal = series.visibleData.reduce((sum, a) => sum + a.total, 0)
 				if (!series.visibleTotal) return false
+				chart.visibleTotal += series.visibleTotal
 				if (!this.seriesOrder.includes(series.seriesId)) {
 					if (!(series.seriesId in addlSeriesIds)) addlSeriesIds[series.seriesId] = 0
 					addlSeriesIds[series.seriesId] += series.visibleTotal
@@ -270,6 +272,7 @@ export class TermdbBarchart {
 			result.chartId = chart.chartId
 			result.seriesId = series.seriesId
 			result.seriesTotal = series.total
+			result.chartTotal = chart.visibleTotal
 			result.logTotal = Math.log10(result.total)
 			seriesLogTotal += result.logTotal
 			this.setTerm2Color(result)
