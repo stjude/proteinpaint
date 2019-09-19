@@ -27,8 +27,6 @@ class ToyTable extends Component {
 		// Optional: set up reusable closured
 		// functions to handle "this" conflicts
 		this.yesThis()
-		// notThis(): use function(){} to refer to
-		//         DOM or non-instance "this" context
 		this.notThis(this)
 	}
 
@@ -68,14 +66,36 @@ class ToyTable extends Component {
 		// or use d3 enter, update, exit pattern
 	}
 
-	// use arrow functions to refer
-	// to component instance as "this"
+	// yesThis()
+	// use arrow functions to maintain the 
+	// component instance context of "this"
+	// 
+	// while arrow functions may be inlined,
+	// creating named reusable arrow functions
+	// - makes the intent clearer 
+	// - helps declutter a method by removing 
+	//   the nested functions inside it
+	// - is more performant since the arrow function
+	//   only has to be parsed once
+	// 
 	yesThis() {
 		this.getTerm = id => this.app.state().termsById[id]  	
 	}
 
+	// notThis(self)
 	// use function keyword to ensure that the
 	// DOM or non-instance "this" context is preserved
+	// !!! arrow functions will not work !!!
+	// 
+	// pass the instance as "self" argument to notThis(),
+	// to make distinguish that "self" is the component
+	// instance while "this" refers to something else
+	// 
+	// convention: 
+	// use a _methodName prefix to indicate that
+	// the method is simply passing arguments
+	// to a similarly named class method
+	// 
 	notThis(self) {
 		self._addDiv = function(term) {
 			self.addDiv(term, select(this))
