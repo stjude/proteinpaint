@@ -44,12 +44,14 @@ export default function getHandlers(self) {
 				rows.push(
 					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>n=${d.total}</td></tr>`
 				)
-				rows.push(
-					`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(
-						(100 * d.total) /
-						d.chartTotal
-					).toFixed(1)}%</td></tr>`
-				)
+				if (!term1.iscondition) {
+					rows.push(
+						`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(
+							(100 * d.total) /
+							d.chartTotal
+						).toFixed(1)}%</td></tr>`
+					)
+				}
 				tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join("\n")}</table>`)
 			},
 			mouseout: () => {
