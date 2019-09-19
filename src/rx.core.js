@@ -95,6 +95,11 @@ export class Component {
 		const self = this
 		const api = {
 			main(action) {
+				// reduce boilerplate or repeated code
+				// in component class main() by performing
+				// typical pre-emptive checks here
+				const acty = action.type ? action.type.split("_") : []
+				if (self.reactsTo && !self.reactsTo(action, acty)) return
 				self.main(action)
 				return api
 			},
@@ -110,13 +115,13 @@ export class Component {
 		return api
 	}
 
-	notifyComponents() {
+	notifyComponents(action) {
 		for (const name in this.components) {
 			const component = this.components[name]
 			if (Array.isArray(component)) {
-				for (const c of component) c.main()
+				for (const c of component) c.main(action)
 			} else {
-				component.main()
+				component.main(action)
 			}
 		}
 	}

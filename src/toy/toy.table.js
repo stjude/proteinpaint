@@ -14,8 +14,15 @@ class ToyTable extends Component {
 		this.notThis(this)
 	}
 
+	// as a convenience, 
+	// instance.reactsTo() will be called before
+	// instance.main() in Component api.main()
+	// acty = action.type.split("_")
+	reactsTo(action, acty) {
+		if (acty[0] == "term") return true
+	}
+
 	main(action) {
-		if (!this.reactsTo(action)) return
 		const divs = this.dom.table.selectAll('.table-wrapper')
 			.data(this.app.state().terms, this.getTermId)
 
@@ -25,11 +32,6 @@ class ToyTable extends Component {
 			.append('div')
 			.attr('class', 'table-wrapper')
 			.each(this._addDiv)
-	}
-
-	reactsTo(action) {
-		const prefix = action.type.split("_")[0]
-		if (prefix == "term") return true
 	}
 	
 	addDiv(term, div) {
@@ -51,11 +53,12 @@ class ToyTable extends Component {
 			.data(keyVals, this.trBindKey)
 
 		tr.exit().remove()
-		tr.each() // don't do anything for now
+		tr.each(this._updateDiv)
 		tr.enter().append('tr').each(this._addTr)
 	}
 
 	updateDiv(term, div) {
+		// don't do anything for now
 		// re-sort rows, etc
 	}
 

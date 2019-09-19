@@ -4,16 +4,38 @@ import {controlsInit} from "./toy.controls"
 import {tableInit} from "./toy.table"
 import {select} from "d3-selection"
 
+/*
+	ToyApp is created inside getInitFxn()
+	to expose the api from the 
+	rx.core class App.getApi()
+
+	opts
+	.genome
+	.dslabel
+	.debug
+	.state // see toy.store for default state
+
+	holder 
+	- d3-wrapped DOM selection
+
+	api resulting from getInitFxn(ToyApp)
+	.opts (frozen)
+	.state()
+	.dispatch()
+	.on()
+*/
 class ToyApp extends App {
 	constructor(opts, holder) {
 		super()
 		this.opts = opts
+		// get the instance.api here to pass along as
+		// the "app" argument to other components
 		this.app = this.getApi(opts)
 		this.store = new ToyStore(this.app, opts.state)
 		this.store.deepFreeze(this.opts)
 		this.state = this.store.copy()
 		this.dom = {holder}
-		// will not expose "this" directly to subcomponents
+		// expose the app api, not "this" directly to subcomponents
 		this.components = {
 			controls: controlsInit(this.app, holder.append("div")),
 			table: tableInit(this.app, holder.append("div"))
