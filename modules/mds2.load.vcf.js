@@ -93,12 +93,12 @@ get ssid by one m from vcf
 
 export async function handle_vcfbyrange(q, genome, ds, result) {
 	/*
-for range query
+	for range query
 
-ds is either official or custom
+	ds is either official or custom
 
-genotype matrix export piggyback on this route
-*/
+	genotype matrix export piggybacks on this route
+	*/
 	if (!q.rglst) throw '.rglst[] missing'
 
 	const tk0 = ds.track.vcf
@@ -132,14 +132,24 @@ genotype matrix export piggyback on this route
 
 		await utils.get_lines_tabix([tk0.file, coord], tk0.dir, line => {
 			if (q.exportgenotype) {
-				const [e, mlst, e2] = vcf.vcfparseline(line, vcftk)
+				// parsing full line is too slow
+				// for each line, only parse first 8 columns
+				// for each sample, only parse GT
+				// XXX buggy! parsed variant doesn't have full array of alleles, so if there are more than 1 alt, the gt index will be off
+				// solution is tell vcfparseline to keep .alleles[] array
+				const l = line.split('\t')
+				const [e, mlst, e2] = vcf.vcfparseline(l.slice(0, 8).join('\t'), vcftk)
 				for (const m of mlst) {
 					if (m_is_filtered(m)) continue
 					const row = [m.chr + '.' + (m.pos + 1) + '.' + m.ref + '.' + m.alt, m.name || '']
-					if (m.sampledata) {
-						for (const s of m.sampledata) {
-							row.push(s.genotype)
+					for (let i = 9; i < l.length; i++) {
+						const str = l[i].split(':', 1)[0]
+						if (str == '.') {
+							row.push('.')
+							continue
 						}
+						const tmp = str.split(str.indexOf('/') == -1 ? '|' : '/')
+						row.push((tmp[0] == '0' ? m.ref : m.alt) + (tmp[1] == '0' ? m.ref : m.alt))
 					}
 					result.mlst.push(row.join('\t'))
 				}
