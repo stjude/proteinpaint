@@ -244,7 +244,7 @@ export class TermdbBarchart {
 				const id = series.seriesId
 				const label = this.terms.term1.values && id in this.terms.term1.values ? this.terms.term1.values[id].label : id
 				const af = series && "AF" in series ? ", AF=" + series.AF : ""
-				const ntotal = `, n=${series.visibleTotal}`
+				const ntotal = this.terms.term2 && this.terms.term2.iscondition ? "" : `, n=${series.visibleTotal}`
 				return {
 					id,
 					label: label + af + ntotal
@@ -315,9 +315,11 @@ export class TermdbBarchart {
 				.filter(collabel => s.cols.includes(collabel))
 				.map(collabel => {
 					const filter = c => c.seriesId == collabel
-					const total = this.currServerData.charts.reduce((sum, chart) => {
-						return sum + chart.serieses.filter(filter).reduce(reducer, 0)
-					}, 0)
+					const total = this.terms.term2 && this.terms.term2.iscondition
+						? 0
+						: this.currServerData.charts.reduce((sum, chart) => {
+							return sum + chart.serieses.filter(filter).reduce(reducer, 0)
+						}, 0)
 					const label =
 						this.terms.term1.values && collabel in this.terms.term1.values
 							? this.terms.term1.values[collabel].label
