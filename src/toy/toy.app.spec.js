@@ -86,7 +86,7 @@ tape("default view", function(test) {
 		test.equal(
 			app.Inner.dom.holder.selectAll(".table-wrapper").size(),
 			2,
-			"should have 1 table displayed"
+			"should have 2 tables displayed"
 		)
 	}
 
@@ -100,7 +100,7 @@ tape("default view", function(test) {
 		test.equal(
 			app.Inner.dom.holder.selectAll(".table-wrapper").size(),
 			1,
-			"should have no tables displayed"
+			"should have 1 table displayed"
 		)
 	}
 })
