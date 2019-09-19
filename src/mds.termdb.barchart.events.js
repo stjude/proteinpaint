@@ -45,10 +45,11 @@ export default function getHandlers(self) {
 					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>n=${d.total}</td></tr>`
 				)
 				if (!term1.iscondition) {
+
 					rows.push(
 						`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(
 							(100 * d.total) /
-							d.chartTotal
+							(term2 ? d.seriesTotal : d.chartTotal)
 						).toFixed(1)}%</td></tr>`
 					)
 				}
