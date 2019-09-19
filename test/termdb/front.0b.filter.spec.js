@@ -42,8 +42,7 @@ tape/*.only*/("filter term-value button", function(test) {
 					"postRender.test": runTests
 				}
 			},
-			serverData: helpers.serverData,
-			//useStore: true
+			serverData: helpers.serverData
 		}
 	})
 

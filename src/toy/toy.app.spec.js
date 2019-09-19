@@ -58,7 +58,7 @@ tape("component access", function(test) {
 	}
 })
 
-tape.only("default view", function(test) {
+tape("default view", function(test) {
 	test.timeoutAfter(1000)
 	test.plan(4)
 

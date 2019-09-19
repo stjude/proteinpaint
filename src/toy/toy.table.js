@@ -53,7 +53,7 @@ class ToyTable extends Component {
 			.data(keyVals, this.trBindKey)
 
 		tr.exit().remove()
-		tr.each(this._updateDiv)
+		tr.each(this._updateTr)
 		tr.enter().append('tr').each(this._addTr)
 	}
 
@@ -66,6 +66,11 @@ class ToyTable extends Component {
 		tr.style('background-color', index%2 == 0 ? '#fff' : '')
 		tr.append('td').html(keyVal[0]).style('padding', '3px 5px')
 		tr.append('td').html(keyVal[1]).style('padding', '3px 5px')
+	}
+
+	updateTr(keyVal, div, index) {
+		// don't do anything for now
+		// if there are computed labels, can update via .html(label)
 	}
 
 	getTermId(term) {
@@ -89,6 +94,9 @@ class ToyTable extends Component {
 		}
 		self._addTr = function(keyVal, index) {
 			self.addTr(keyVal, select(this), index)
+		}
+		self._updateTr = function(keyVal, index) {
+			self.updateTr(keyVal, select(this), index)
 		}
 	}
 }
