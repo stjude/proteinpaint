@@ -16,6 +16,7 @@ export class ToyStore extends Store {
 		super()
 		this.app = app
 		this.state = Object.assign({}, defaultState, app.opts.state)
+		this.opts = JSON.parse(JSON.stringify(app.opts))
 	}
 
 	async term_add(action) {
@@ -26,7 +27,7 @@ export class ToyStore extends Store {
 		const lst = ["genome=" + this.state.genome.name + "&dslabel=" + this.state.dslabel]
 		const url = "/termdb?genome=hg38&dslabel=SJLife&gettermbyid=" + action.termid
 		const init = action.init ? action.init : {}
-		const fetchOpts = this.app.opts.fetchOpts ? this.app.opts.fetchOpts : {}
+		const fetchOpts = this.opts.fetchOpts ? this.opts.fetchOpts : {}
 		const data = await dofetch2(url, init, fetchOpts)
 		if (data.term) this.state.terms.push(data.term)
 		else alert(`Term not found for id=${action.termid}`)

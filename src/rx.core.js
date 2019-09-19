@@ -85,7 +85,7 @@ export class Store {
 	deepFreeze(obj) {
 		Object.freeze(obj)
 		for(const key in obj) {
-			if (typeof obj != 'object') this.deepFreeze(obj[key])
+			if (typeof obj == 'object') this.deepFreeze(obj[key])
 		}
 	}
 }

@@ -31,7 +31,7 @@ class ToyApp extends App {
 		// get the instance.api here to pass along as
 		// the "app" argument to other components
 		this.app = this.getApi(opts)
-		this.store = new ToyStore(this.app, opts.state)
+		this.store = new ToyStore(this.app)
 		this.store.deepFreeze(this.opts)
 		this.state = this.store.copy()
 		this.dom = {holder}

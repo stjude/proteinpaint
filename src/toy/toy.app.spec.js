@@ -25,7 +25,10 @@ tape("default view", function(test) {
 					"postInit.test": runTests
 				}
 			},
-			debug: 1
+			debug: 1,
+			fetchOpts: {
+				serverData: helpers.serverData
+			}
 		}
 	})
 
