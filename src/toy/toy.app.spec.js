@@ -76,6 +76,8 @@ tape("default view", function(test) {
 	}
 
 	function triggerTermAdd(app) {
+		// !!! test against action when possible !!!
+		// simpler than sequencing clicks, UI events
 		app.dispatch({type: "term_add", termid: "agedx"})
 		app.dispatch({type: "term_add", termid: "sex"})
 	}
@@ -89,6 +91,8 @@ tape("default view", function(test) {
 	}
 
 	function triggerTermRemove(app) {
+		// !!! test against action when possible !!!
+		// simpler than sequencing clicks, UI events
 		app.dispatch({type: "term_rm", termid: "agedx"})
 	}
 

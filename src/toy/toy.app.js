@@ -6,8 +6,8 @@ import {select} from "d3-selection"
 
 /*
 	ToyApp is created inside getInitFxn()
-	to expose the api from the 
-	rx.core class App.getApi()
+	to expose the api from its 
+	parent class App.getApi()
 
 	opts
 	.genome
@@ -32,7 +32,7 @@ class ToyApp extends App {
 		// the "app" argument to other components
 		this.app = this.getApi(opts)
 		this.store = new ToyStore(this.app)
-		// this.store.deepFreeze(this.opts)
+		// this.deepFreeze(this.opts)
 		this.state = this.store.copy()
 		this.dom = {holder}
 		// expose the app api, not "this" directly to subcomponents

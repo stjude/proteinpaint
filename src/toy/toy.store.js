@@ -30,7 +30,13 @@ export class ToyStore extends Store {
 		const fetchOpts = this.opts.fetchOpts ? this.opts.fetchOpts : {}
 		const data = await dofetch2(url, init, fetchOpts)
 		if (data.term) this.state.terms.push(data.term)
-		else alert(`Term not found for id=${action.termid}`)
+		else alert(`Term not found for id=${action.termid}`) 
+
+		// optional: maybe add a "result" key to action
+		// In general, not needed since a component should
+		// know where to look for relevant data in 
+		// this.app.state, .opts, .serverData
+		action.result = this.state.terms
 	}
 
 	term_rm(action) {

@@ -76,7 +76,7 @@ class ToyTable extends Component {
 		return d[0]
 	}
 
-	yesThis(term) {
+	yesThis() {
 		this.removeDiv = term => this.app.dispatch({type: 'term_rm', termid: term.id})
 	}
 

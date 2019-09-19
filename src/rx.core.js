@@ -34,7 +34,27 @@ export function getInitFxn(_Class_) {
   should provide inheritable utility methods
 */
 
-export class App {
+export class Core {
+	deepFreeze(obj) {
+		Object.freeze(obj)
+		for(const key in obj) {
+			if (typeof obj == 'object') this.deepFreeze(obj[key])
+		}
+	}
+
+	notifyComponents(action) {
+		for (const name in this.components) {
+			const component = this.components[name]
+			if (Array.isArray(component)) {
+				for (const c of component) c.main(action)
+			} else {
+				component.main(action)
+			}
+		}
+	}
+}
+
+export class App extends Core {
 	getApi(opts) {
 		const self = this
 		const api = {
@@ -62,35 +82,22 @@ export class App {
 		}
 		return api
 	}
-
-	notifyComponents(action) {
-		for (const name in this.components) {
-			const component = this.components[name]
-			if (Array.isArray(component)) {
-				for (const c of component) c.main(action)
-			} else {
-				component.main(action)
-			}
-		}
-	}
 }
 
-export class Store {
+/*
+	A Store instance will be its own api, unless 
+	a child store class has a getApi() method.
+*/
+export class Store extends Core {
 	copy() {
 		const copy = JSON.parse(JSON.stringify(this.state))
 		// FIX-ME: must be recursive freeze
 		this.deepFreeze(copy)
 		return copy
 	}
-	deepFreeze(obj) {
-		Object.freeze(obj)
-		for(const key in obj) {
-			if (typeof obj == 'object') this.deepFreeze(obj[key])
-		}
-	}
 }
 
-export class Component {
+export class Component extends Core {
 	getApi() {
 		const self = this
 		const api = {
@@ -114,22 +121,16 @@ export class Component {
 		}
 		return api
 	}
-
-	notifyComponents(action) {
-		for (const name in this.components) {
-			const component = this.components[name]
-			if (Array.isArray(component)) {
-				for (const c of component) c.main(action)
-			} else {
-				component.main(action)
-			}
-		}
-	}
 }
 
 /**************
 Utility Classes
 ***************/
+
+/*
+	A Bus instance will be its own api,
+	since it does not have a getApi() method.
+*/
 
 export class Bus {
 	constructor(name, eventTypes, callbacks, defaultArg) {
@@ -182,6 +183,3 @@ export class Bus {
 		return this
 	}
 }
-
-
-
