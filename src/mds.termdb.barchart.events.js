@@ -44,8 +44,7 @@ export default function getHandlers(self) {
 				rows.push(
 					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>n=${d.total}</td></tr>`
 				)
-				if (!term1.iscondition) {
-
+				if (!term1.iscondition && (!term2 || !term2.iscondition)) {
 					rows.push(
 						`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(
 							(100 * d.total) /
