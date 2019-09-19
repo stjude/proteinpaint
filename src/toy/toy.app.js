@@ -32,7 +32,7 @@ class ToyApp extends App {
 		// the "app" argument to other components
 		this.app = this.getApi(opts)
 		this.store = new ToyStore(this.app)
-		this.store.deepFreeze(this.opts)
+		// this.store.deepFreeze(this.opts)
 		this.state = this.store.copy()
 		this.dom = {holder}
 		// expose the app api, not "this" directly to subcomponents
