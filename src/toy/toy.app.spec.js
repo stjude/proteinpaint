@@ -9,7 +9,56 @@ tape("\n", function(test) {
 	test.end()
 })
 
-tape("default view", function(test) {
+// To-do: move rx.core tests to a separate spec file
+tape("component access", function(test) {
+	test.timeoutAfter(1000)
+	test.plan(2)
+
+	runproteinpaint({
+		host,
+		noheader: 1,
+		nobox: true,
+		toy: {
+			dslabel: "SJLife",
+			genome: "hg38",
+			callbacks: {
+				app: {
+					"postInit.test": runTests
+				}
+			},
+			debug: 1,
+			fetchOpts: {
+				serverData: helpers.serverData
+			}
+		}
+	})
+
+	function runTests(app) {
+		app.on('postInit.test', null)
+		testComponentAccess1(app)
+		testComponentAccess2(app)
+	  test.end()
+	}
+
+	function testComponentAccess1(app) {
+		test.equal(
+			app.components() && Object.keys(app.components()).length,
+			2,
+			"should be able to access app components() with empty argument"
+		)
+	}
+
+	function testComponentAccess2(app) {
+	  const search = app.components('controls.search')
+		test.equal(
+			search && search.Inner && search.Inner.constructor && search.Inner.constructor.name,
+			"ToySearch",
+			"should be able to access app components() with string argument"
+		)
+	}
+})
+
+tape.only("default view", function(test) {
 	test.timeoutAfter(1000)
 	test.plan(4)
 
@@ -44,7 +93,7 @@ tape("default view", function(test) {
 			})
 			.run(testSearchDisplay, 100)
 			.run(testTableWrapper, 100)
-			.run(triggerTermAdd)
+			.run(triggerTermAdd, 100)
 			.run(testTermAdd, 100)
 			.run(triggerTermRemove)
 			.run(testTermRemove, 100)
@@ -56,14 +105,6 @@ tape("default view", function(test) {
 			app.Inner.dom.holder.selectAll("input").size(),
 			1,
 			"should have one search input"
-		)
-	}
-
-	function testTableWrapper(app) {
-		test.equal(
-			app.Inner.dom.holder.selectAll(".table-wrapper").size(),
-			0,
-			"should have no tables displayed"
 		)
 	}
 

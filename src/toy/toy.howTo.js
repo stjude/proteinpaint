@@ -7,9 +7,18 @@
 import {Component, getInitFxn} from "../rx.core"
 // import ... other modules
 
+/*
+  By extending the Component class,
+  a child class will inherit the 
+  same getApi() method that gives 
 
-
-class ToyTable extends Component {
+  instance.api = {
+		main() {},
+		on() {},
+		components('' || 'cart.plot') {}
+  }
+*/
+class ToyHowTo extends Component {
 	constructor(app, holder) {
 		// required call to parent class constructor
 		super()
@@ -97,20 +106,21 @@ class ToyTable extends Component {
 		this.triggerAddTerm = term => this.app.dispatch({type: 'term_add', termid: term.id})
 	}
 
-	// notThis(self)
-	// use function keyword to ensure that the
-	// DOM or non-instance "this" context is preserved
-	// !!! arrow functions will not work !!!
-	// 
-	// pass the instance as "self" argument to notThis(),
-	// to make distinguish that "self" is the component
-	// instance while "this" refers to something else
-	// 
-	// convention: 
-	// use a _methodName prefix to indicate that
-	// the method is simply passing arguments
-	// to a similarly named class method
-	// 
+	/* 
+	notThis(self)
+	use function keyword to ensure that the
+	DOM or non-instance "this" context is preserved
+	!!! arrow functions will not work !!!
+	
+	pass the instance as "self" argument to notThis(),
+	to distinguish that "self" is the component
+	instance while "this" refers to something else
+	 
+	convention: 
+	use a _methodName prefix to indicate that
+	the method is simply passing arguments
+	to a similarly named class method
+	*/ 
 	notThis(self) {
 		self._addDiv = function(term) {
 			self.addDiv(term, select(this))

@@ -52,6 +52,24 @@ export class Core {
 			}
 		}
 	}
+
+	getComponents(dotSepNames) {
+		// string-based convenient accessor, 
+	  // so instead of
+	  // app.components().cart.components().tip,
+	  // simply
+	  // app.components("cart.tip")
+		const names = dotSepNames.split(".")
+		let component = this.components
+		while(names.length) {
+			let name = names.shift()
+			if (Array.isArray(component)) name = Number(name)
+			component = names.length ? component[name].components : component[name]
+			if (typeof component == "function") component = component()
+			if (!component) break
+		}
+		return component
+	}
 }
 
 export class App extends Core {
@@ -78,6 +96,10 @@ export class App extends Core {
 				if (self.bus) self.bus.on(eventType, callback)
 				else console.log('no component event bus')
 				return api
+			},
+			components(dotSepNames='') {
+				if (!dotSepNames) return Object.assign({},self.components)
+				return self.getComponents(dotSepNames)
 			}
 		}
 		return api
@@ -117,6 +139,10 @@ export class Component extends Core {
 				if (self.bus) self.bus.on(eventType, callback)
 				else console.log('no component event bus')
 				return api
+			},
+			components(dotSepNames='') {
+				if (!dotSepNames) return Object.assign({},self.components)
+				return self.getComponents(dotSepNames)
 			}
 		}
 		return api
