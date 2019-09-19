@@ -48,6 +48,10 @@ class ToyTable extends Component {
 		// pass the reference to downstream methods 
 		this.render(terms)
 
+		/*
+			Refer to toy.store to see what kind
+			of action results are provided, if any
+		*/
 		// - OR - 
 		// process some kind of action result
 		this.processData(action.result)
@@ -64,6 +68,15 @@ class ToyTable extends Component {
 		// re-render from scratch
 		this.dom.holder.selectAll('*').remove()
 		// or use d3 enter, update, exit pattern
+
+		// if using loops
+		for(const term of terms) {
+			holder.append('div')
+				.on('click', ()=>this.app.dispatch({type: 'term_add', termid: term.id}))
+		}
+		// -OR - if using d3 pattern with element-bound data
+		.enter().append('div')
+			.on('click', this.triggerAddTerm)
 	}
 
 	// yesThis()
@@ -79,7 +92,9 @@ class ToyTable extends Component {
 	//   only has to be parsed once
 	// 
 	yesThis() {
-		this.getTerm = id => this.app.state().termsById[id]  	
+		this.getTerm = id => this.app.state().termsById[id]
+		// assumes element-bound data from using d3.data()
+		this.triggerAddTerm = term => this.app.dispatch({type: 'term_add', termid: term.id})
 	}
 
 	// notThis(self)
