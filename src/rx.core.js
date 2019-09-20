@@ -54,6 +54,8 @@ export class Core {
 	}
 
 	getComponents(dotSepNames) {
+		if (!dotSepNames) return Object.assign({},this.components)
+
 		// string-based convenient accessor, 
 	  // so instead of
 	  // app.components().cart.components().tip,
@@ -81,12 +83,8 @@ export class App extends Core {
 				return self.state
 			},
 			async dispatch(action={}) {
-				if (typeof self.store[action.type] !== 'function') {
-					throw `invalid action type=${action.type}`
-				}
-				await self.store[action.type](action)
-				self.state = self.store.copy()
-				// console.log(action, self.app)
+				self.state = await self.store.main(action)
+				//self.deepFreeze(action)
 				self.main(action)
 			},
 			// must not expose this.bus directly since that
@@ -98,7 +96,6 @@ export class App extends Core {
 				return api
 			},
 			components(dotSepNames='') {
-				if (!dotSepNames) return Object.assign({},self.components)
 				return self.getComponents(dotSepNames)
 			}
 		}
@@ -111,11 +108,25 @@ export class App extends Core {
 	a child store class has a getApi() method.
 */
 export class Store extends Core {
-	copy() {
-		const copy = JSON.parse(JSON.stringify(this.state))
-		// FIX-ME: must be recursive freeze
-		this.deepFreeze(copy)
-		return copy
+	getApi() {
+		const self = this
+		const api = {
+			async main(action, substore) {
+				if (typeof self[action.type] !== 'function') {
+					throw `invalid action type=${action.type}`
+				}
+				await self[action.type](action)
+				return api.copy()
+			},
+			copy() {
+				// need to convert between JSON
+				// arrays and Set or Map as needed
+				const copy = JSON.parse(JSON.stringify(self.state))
+				self.deepFreeze(copy)
+				return copy
+			}
+		}
+		return api
 	}
 }
 
@@ -141,7 +152,6 @@ export class Component extends Core {
 				return api
 			},
 			components(dotSepNames='') {
-				if (!dotSepNames) return Object.assign({},self.components)
 				return self.getComponents(dotSepNames)
 			}
 		}

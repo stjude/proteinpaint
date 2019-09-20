@@ -1,4 +1,4 @@
-import {Store} from "../rx.core"
+import {Store, getInitFxn} from "../rx.core"
 import {dofetch2} from "../client"
 
 const defaultState = {
@@ -15,6 +15,7 @@ export class ToyStore extends Store {
 	constructor(app) {
 		super()
 		this.app = app
+		// need to convert from array to Set, Map as needed
 		this.state = Object.assign({}, defaultState, app.opts.state)
 		this.opts = JSON.parse(JSON.stringify(app.opts))
 	}
@@ -46,6 +47,4 @@ export class ToyStore extends Store {
 	}
 }
 
-// A ToyStore instance will be protected 
-// as used within the ToyApp instance, no need
-// to use getInitFxn(ToyStore).
+export const storeInit = getInitFxn(ToyStore)

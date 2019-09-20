@@ -1,5 +1,5 @@
 import {App, Bus, getInitFxn} from "../rx.core"
-import {ToyStore} from "./toy.store"
+import {storeInit} from "./toy.store"
 import {controlsInit} from "./toy.controls"
 import {tableInit} from "./toy.table"
 import {select} from "d3-selection"
@@ -31,7 +31,7 @@ class ToyApp extends App {
 		// get the instance.api here to pass along as
 		// the "app" argument to other components
 		this.app = this.getApi(opts)
-		this.store = new ToyStore(this.app)
+		this.store = storeInit(this.app)
 		// this.deepFreeze(this.opts)
 		this.state = this.store.copy()
 		this.dom = {holder}
