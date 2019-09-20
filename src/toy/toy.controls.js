@@ -1,5 +1,6 @@
 import {Component, getInitFxn} from "../rx.core"
 import {searchInit} from './toy.search'
+import {filterInit} from './toy.filter'
 
 class ToyControls extends Component {
 	constructor(app, holder) {
@@ -8,7 +9,8 @@ class ToyControls extends Component {
 		this.opts = holder
 		this.dom = {holder}
 		this.components = {
-			search: searchInit(app, holder.append("div"))
+			search: searchInit(app, holder.append("div")),
+			filter: filterInit(app, holder.append("div"))
 		}
 	}
 

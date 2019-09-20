@@ -58,19 +58,26 @@ class ToyTable extends Component {
 	}
 
 	updateDiv(term, div) {
-		// don't do anything for now
 		// re-sort rows, etc
+		const keyVals = Object.keys(term).map(key => [key, term[key]])
+		const tr = div.selectAll('table').selectAll('tr')
+			.data(keyVals, this.trBindKey)
+
+		tr.exit().remove()
+		tr.each(this._updateTr)
+		tr.enter().append('tr').each(this._addTr)
 	}
 
 	addTr(keyVal, tr, index) {
 		tr.style('background-color', index%2 == 0 ? '#fff' : '')
 		tr.append('td').html(keyVal[0]).style('padding', '3px 5px')
 		tr.append('td').html(keyVal[1]).style('padding', '3px 5px')
+		this.hideShowRaw(tr, keyVal[0])
 	}
 
-	updateTr(keyVal, div, index) {
-		// don't do anything for now
+	updateTr(keyVal, tr, index) {
 		// if there are computed labels, can update via .html(label)
+		this.hideShowRaw(tr, keyVal[0])
 	}
 
 	getTermId(term) {
@@ -79,6 +86,15 @@ class ToyTable extends Component {
 
 	trBindKey(d) {
 		return d[0]
+	}
+
+	hideShowRaw(tr, row_name){
+		const rows = this.app.state().controls.rows.map(r=>r.name)
+		if(rows.includes(row_name)){
+			const row = this.app.state().controls.rows.find(r => r.name == row_name)
+			if (row.hide) tr.style('display','none')
+			else tr.style('display','table-row')
+		}
 	}
 
 	yesThis() {

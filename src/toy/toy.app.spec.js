@@ -60,7 +60,7 @@ tape("component access", function(test) {
 
 tape("default view", function(test) {
 	test.timeoutAfter(1000)
-	test.plan(4)
+	test.plan(5)
 
 	runproteinpaint({
 		host,
@@ -97,6 +97,8 @@ tape("default view", function(test) {
 			.run(testTermAdd, 100)
 			.run(triggerTermRemove)
 			.run(testTermRemove, 100)
+			.run(triggerHideRow)
+			.run(testHideRow, 100)
 			.done(() => test.end())
 	}
 
@@ -142,6 +144,18 @@ tape("default view", function(test) {
 			app.Inner.dom.holder.selectAll(".table-wrapper").size(),
 			1,
 			"should have 1 table displayed"
+		)
+	}
+
+	function triggerHideRow(app) {
+		app.dispatch({type: "term_row_hide", row_name: "graph"})
+	}
+
+	function testHideRow(app) {
+		test.equal(
+			app.Inner.dom.holder.selectAll(".table-wrapper").selectAll('tr')._groups[0][2].style.display,
+			'none',
+			"should remove row from table"
 		)
 	}
 })
