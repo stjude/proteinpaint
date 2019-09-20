@@ -104,7 +104,7 @@ tape("default view", function(test) {
 
 	function testSearchDisplay(app) {
 		test.equal(
-			app.Inner.dom.holder.selectAll("input").size(),
+			app.Inner.dom.holder.selectAll(".tree_search").size(),
 			1,
 			"should have one search input"
 		)
