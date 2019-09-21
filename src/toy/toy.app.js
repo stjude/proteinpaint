@@ -31,8 +31,9 @@ class ToyApp extends App {
 		this.opts = opts
 		// get the instance.api here to pass along as
 		// the "app" argument to other components
-		this.app = this.getApi(opts)
-		this.store = storeInit(this.app)
+		const appApi = this.getApi(opts)
+		this.api = appApi 
+		this.store = storeInit(appApi)
 		// this.deepFreeze(this.opts)
 		this.state = this.store.copy()
 		this.dom = {
@@ -41,11 +42,11 @@ class ToyApp extends App {
 		}
 		// expose the app api, not "this" directly to subcomponents
 		this.components = {
-			controls: controlsInit(this.app, holder.append("div")),
-			table: tableInit(this.app, holder.append("div"))
+			controls: controlsInit(appApi, holder.append("div")),
+			table: tableInit(appApi, holder.append("div"))
 		}
 		this.bus = new Bus('app', ['postInit', 'postMain'], opts.callbacks, this)
-		this.bus.emit('postInit', this.app)
+		this.bus.emit('postInit', appApi)
 	}
 
 	main(action) {

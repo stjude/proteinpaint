@@ -11,17 +11,15 @@ export function getInitFxn(_Class_) {
 	return (arg, holder) => {
 		// private properties and methods
 		const self = new _Class_(arg, holder)
-		const api = self.store
-			// only an app instance will have a store
-			// and its api == instance.app
-			? self.app 
+		const api = self.api
+			? self.api
 			: self.getApi
 			// hide mutable props and methods behind the instance api
 			? self.getApi()  
 			// expose the mutable instance as its public api
 			: self
 
-		const opts = self.app && self.app.opts || {}
+		const opts = self.app && self.app.opts || self.api && self.api.opts || {}
 		if (opts.debug) api.Inner = self
 		return Object.freeze(api)
 	}
@@ -53,14 +51,16 @@ export class Core {
 		}
 	}
 
+	// access the api of an indirectly connected component, 
+	// for example to subscribe an .on(event, listener) to 
+	// the event bus of a distant component
 	getComponents(dotSepNames) {
 		if (!dotSepNames) return Object.assign({},this.components)
-
 		// string-based convenient accessor, 
 	  // so instead of
-	  // app.components().cart.components().tip,
+	  // app.components().controls.components().search,
 	  // simply
-	  // app.components("cart.tip")
+	  // app.components("controls.search")
 		const names = dotSepNames.split(".")
 		let component = this.components
 		while(names.length) {
@@ -74,39 +74,6 @@ export class Core {
 	}
 }
 
-export class App extends Core {
-	getApi(opts) {
-		const self = this
-		const api = {
-			opts,
-			state() {
-				return self.state
-			},
-			async dispatch(action={}) {
-				self.state = await self.store.main(action)
-				//self.deepFreeze(action)
-				self.main(action)
-			},
-			// must not expose this.bus directly since that
-			// will also expose bus.emit() which should only
-			// be triggered by this component
-			on(eventType, callback) {
-				if (self.bus) self.bus.on(eventType, callback)
-				else console.log('no component event bus')
-				return api
-			},
-			components(dotSepNames='') {
-				return self.getComponents(dotSepNames)
-			}
-		}
-		return api
-	}
-}
-
-/*
-	A Store instance will be its own api, unless 
-	a child store class has a getApi() method.
-*/
 export class Store extends Core {
 	getApi() {
 		const self = this
@@ -124,6 +91,41 @@ export class Store extends Core {
 				const copy = JSON.parse(JSON.stringify(self.state))
 				self.deepFreeze(copy)
 				return copy
+			}
+		}
+		return api
+	}
+}
+
+export class App extends Core {
+	getApi(opts) {
+		const self = this
+		const api = {
+			opts,
+			state() {
+				return self.state
+			},
+			async dispatch(action={}) {
+				/*
+				  track dispatched actions and
+					if there is a pending action,
+					debounce dispatch requests
+					until the pending action is done?
+				*/
+				self.state = await self.store.main(action)
+				//self.deepFreeze(action)
+				self.main(action)
+			},
+			// must not expose this.bus directly since that
+			// will also expose bus.emit() which should only
+			// be triggered by this component
+			on(eventType, callback) {
+				if (self.bus) self.bus.on(eventType, callback)
+				else console.log('no component event bus')
+				return api
+			},
+			components(dotSepNames='') {
+				return self.getComponents(dotSepNames)
 			}
 		}
 		return api
