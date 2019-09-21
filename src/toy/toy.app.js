@@ -3,6 +3,7 @@ import {storeInit} from "./toy.store"
 import {controlsInit} from "./toy.controls"
 import {tableInit} from "./toy.table"
 import {select} from "d3-selection"
+import {Menu} from '../client'
 
 /*
 	ToyApp is created inside getInitFxn()
@@ -34,7 +35,10 @@ class ToyApp extends App {
 		this.store = storeInit(this.app)
 		// this.deepFreeze(this.opts)
 		this.state = this.store.copy()
-		this.dom = {holder}
+		this.dom = {
+			tip: new Menu(),
+			holder
+		}
 		// expose the app api, not "this" directly to subcomponents
 		this.components = {
 			controls: controlsInit(this.app, holder.append("div")),

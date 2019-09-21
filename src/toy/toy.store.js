@@ -22,23 +22,31 @@ export class ToyStore extends Store {
 	}
 
 	async term_add(action) {
-		if (this.state.terms.find(d => d.id == action.termid)) {
-			alert(`The termid='${action.termid}' is already printed.`)
+
+		if (!action.term && !action.termid) throw 'neither term or termid is given'
+		if (this.state.terms.find(d => d.id == (action.term ? action.term.id : action.termid))) {
+			alert('The term is already printed.')
 			return
 		}
-		const lst = ["genome=" + this.state.genome.name + "&dslabel=" + this.state.dslabel]
-		const url = "/termdb?genome=hg38&dslabel=SJLife&gettermbyid=" + action.termid
-		const init = action.init ? action.init : {}
-		const fetchOpts = this.opts.fetchOpts ? this.opts.fetchOpts : {}
-		const data = await dofetch2(url, init, fetchOpts)
-		if (data.term){
-			this.state.terms.push(data.term)
-			const rows = this.state.controls.rows.map(a=>a.name)
-			const new_rows = Object.keys(data.term)
-			new_rows.forEach(row =>{
-				if(!rows.includes(row)) this.state.controls.rows.push({name:row})
-			})
-		}else alert(`Term not found for id=${action.termid}`) 
+		let term = action.term
+		if (!term) {
+			const lst = ["genome=" + this.state.genome.name + "&dslabel=" + this.state.dslabel]
+			const url = "/termdb?genome=hg38&dslabel=SJLife&gettermbyid=" + action.termid
+			const init = action.init ? action.init : {}
+			const fetchOpts = this.opts.fetchOpts ? this.opts.fetchOpts : {}
+			const data = await dofetch2(url, init, fetchOpts)
+			if (!data.term) {
+				alert(`Term not found for id=${action.termid}`) 
+				return
+			}
+			term = data.term
+		}
+		this.state.terms.push(term)
+		const rows = this.state.controls.rows.map(a=>a.name)
+		const new_rows = Object.keys(term)
+		new_rows.forEach(row =>{
+			if(!rows.includes(row)) this.state.controls.rows.push({name:row})
+		})
 
 		// optional: maybe add a "result" key to action
 		// In general, not needed since a component should
