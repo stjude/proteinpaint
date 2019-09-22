@@ -42,7 +42,23 @@ class ToySearch {
 		.style("width", "100px")
 		.style("display", "block")
 		.attr("placeholder", "Search")
-		.on('keyup', async ()=>{
+		// Recommended: reuse an instance method as callback to
+		// - avoid busy nested code
+		// - more clearly indicate what the callback will do
+		// - avoid reparsing anonymous functions
+		// - reduce risk of memory leaks, if any
+		.on('keyup', this.displaySearchResults)
+
+		this.input.node().focus() // always focus
+	}
+
+	yesThis() {
+		this.setTerm = () => {
+			if(event.key !== 'Enter') return
+			this.app.dispatch({type: "term_add", termid: this.input.property('value')})
+		}
+
+		this.displaySearchResults = async ()=>{
 			const value = this.input.property('value').trim()
 			if (value.length<2) {
 				this.dom.tip.hide()
@@ -62,26 +78,52 @@ class ToySearch {
 				.text('No match')
 				return
 			}
-			data.lst.forEach( term=> {
-				this.dom.tip.d
-				.append('div')
-				.text(term.name)
-				.attr('class','sja_menuoption')
-				.on('click', async ()=>{
-					this.app.dispatch({type:'term_add',term})
-					this.dom.tip.hide()
-				})
-			})
-		})
+			// reuse an instance method as callback 
+			// - see the reasons listed for render() {on('keyup')}
+			data.lst.forEach(this.displaySuggestedTerm)
+		}
 
-		this.input.node().focus() // always focus
+		this.displaySuggestedTerm = term => {
+			this.dom.tip.d
+			.append('div')
+			.datum(term)
+			.text(term.name)
+			.attr('class','sja_menuoption')
+			// for short anonymous functions, it's okay
+			// to keep inline, but still better to reuse
+			// a class method for the same reasons given
+			// in render() {on('keyup')} above
+			/*
+			.on('click', async ()=>{
+				this.app.dispatch({type:'term_add',term})
+				this.dom.tip.hide()
+			})
+			*/
+			.on('click', this.addTermByMenuClick)
+		}
+
+		// reference to specific term data,
+		// as a callback argument, is made
+		// possible by the line .datum(term) 
+		// in displaySuggestedTerm
+		// 
+		// By using d3 to bind data to a DOM element,
+		// it gives one more troubleshooting tool via dev tools, 
+		// via right click on element
+		// -> click "Inspect" 
+		// -> Elements tab 
+		// -> Properties 
+		// -> click corrsponding tag name
+		// -> scroll all the way down to see __data__ key
+		// -> click __data__ to see the bound term data
+		this.addTermByMenuClick = term => {
+			this.app.dispatch({type:'term_add',term})
+			this.dom.tip.hide()
+		}
 	}
 
-	yesThis() {
-		this.setTerm = () => {
-			if(event.key !== 'Enter') return
-			this.app.dispatch({type: "term_add", termid: this.input.property('value')})
-		}
+	notThis(self) {
+		self
 	}
 }
 

@@ -9,18 +9,24 @@ export function getInitFxn(_Class_) {
 		= App instance for all other classes
 	*/
 	return (arg, holder) => {
-		// private properties and methods
+		// instantiate mutable private properties and methods
 		const self = new _Class_(arg, holder)
+		// get the instance's api
 		const api = self.api
+			// if there is already an instance api as constructed, use it
 			? self.api
+			// if not, check if there is an api generator function
 			: self.getApi
-			// hide mutable props and methods behind the instance api
+			// if yes, hide mutable props and methods behind the instance api
 			? self.getApi()  
-			// expose the mutable instance as its public api
+			// if no, expose the mutable instance as its public api
 			: self
 
 		const opts = self.app && self.app.opts || self.api && self.api.opts || {}
+		// expose hidden isntance to debugging and testing code
 		if (opts.debug) api.Inner = self
+
+		// freeze the api's properties and methods before exposing
 		return Object.freeze(api)
 	}
 }
