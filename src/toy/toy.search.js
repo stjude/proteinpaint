@@ -1,10 +1,12 @@
-import {rx, getInitFxn} from "../rx.core"
+import {rx, getInitFxn, Bus} from "../rx.core"
 import {Menu,dofetch2} from '../client'
 import {event} from 'd3-selection'
 
 class ToySearch {
 	constructor(app, holder) {
 		this.getApi = rx.getComponentApi
+		// needed to supply this.api to callbacks
+		this.api = this.getApi()
 		this.app = app
 		this.dom = {
 			holder,
@@ -14,11 +16,14 @@ class ToySearch {
 		this.yesThis()
 		// this.notThis(this)
 		this.render()
+		this.bus = new Bus('search', ['postInit', 'postMain'], app.opts.callbacks, this.api)
+		this.bus.emit('postInit', this.api)
 	}
 
 	main(action) {
 		// clear search input entry
 		this.input.property('value', '')
+		this.bus.emit('postMain', this)
 	}
 
 	render() {
@@ -43,7 +48,7 @@ class ToySearch {
 		.style("display", "block")
 		.attr("placeholder", "Search")
 		// Recommended: reuse an instance method as callback to
-		// - avoid busy nested code
+		// - avoid busy nested code blocks
 		// - more clearly indicate what the callback will do
 		// - avoid reparsing anonymous functions
 		// - reduce risk of memory leaks, if any
@@ -120,10 +125,6 @@ class ToySearch {
 			this.app.dispatch({type:'term_add',term})
 			this.dom.tip.hide()
 		}
-	}
-
-	notThis(self) {
-		self
 	}
 }
 
