@@ -4,9 +4,10 @@ import {event} from 'd3-selection'
 
 class ToySearch {
 	constructor(app, holder) {
-		this.getApi = rx.getComponentApi
-		// needed to supply this.api to callbacks
-		this.api = this.getApi()
+		// need to supply this.api to callbacks
+		// supply optional argument to getComponentApi(),
+		// so no need to attach it as an instance method
+		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.dom = {
 			holder,
@@ -52,6 +53,8 @@ class ToySearch {
 		// - more clearly indicate what the callback will do
 		// - avoid reparsing anonymous functions
 		// - reduce risk of memory leaks, if any
+		// - make it easy to test behavior since the callback
+		//   will be exposed as an api.Inner method (important!!!)
 		.on('keyup', this.displaySearchResults)
 
 		this.input.node().focus() // always focus

@@ -57,7 +57,7 @@ tape("instance", function(test) {
 	}
 })
 
-tape.only("text input", function(test) {
+tape("text input", function(test) {
 	test.timeoutAfter(1000)
 	test.plan(3)
 

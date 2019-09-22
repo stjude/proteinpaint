@@ -81,8 +81,11 @@ export class Core {
 }
 
 export class Store extends Core {
-	getApi() {
-		const self = this
+	getApi(_self) {
+		// might make self argument required
+		// so no need to assign a getApi method
+		// to instance
+		const self = _self ? _self : this
 		const api = {
 			async main(action, substore) {
 				if (typeof self[action.type] !== 'function') {
@@ -125,10 +128,13 @@ export class Store extends Core {
 }
 
 export class App extends Core {
-	getApi(opts) {
-		const self = this
+	getApi(_self) {
+		// might make self argument required
+		// so no need to assign a getApi method
+		// to instance
+		const self = _self ? _self : this
 		const api = {
-			opts,
+			opts: self.opts,
 			state() {
 				return self.state
 			},
@@ -160,8 +166,11 @@ export class App extends Core {
 }
 
 export class Component extends Core {
-	getApi() {
-		const self = this
+	getApi(_self) {
+		// might make self argument required
+		// so no need to assign a getApi method
+		// to instance
+		const self = _self ? _self : this
 		const api = {
 			main(action) {
 				// reduce boilerplate or repeated code

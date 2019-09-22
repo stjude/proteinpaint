@@ -31,7 +31,7 @@ class ToyApp extends App {
 		this.opts = opts
 		// get the instance.api here to pass along as
 		// the "app" argument to other components
-		const appApi = this.getApi(opts)
+		const appApi = this.getApi()
 		this.api = appApi
 		this.store = storeInit(appApi)
 		this.state = this.store.state()
