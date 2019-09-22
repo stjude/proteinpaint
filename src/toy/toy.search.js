@@ -1,10 +1,10 @@
-import {Component, getInitFxn} from "../rx.core"
+import {rx, getInitFxn} from "../rx.core"
 import {Menu,dofetch2} from '../client'
 import {event} from 'd3-selection'
 
-class ToySearch extends Component {
+class ToySearch {
 	constructor(app, holder) {
-		super()
+		this.getApi = rx.getComponentApi
 		this.app = app
 		this.dom = {
 			holder,

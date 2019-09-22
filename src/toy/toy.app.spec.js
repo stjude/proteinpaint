@@ -10,7 +10,7 @@ tape("\n", function(test) {
 })
 
 // To-do: move rx.core tests to a separate spec file
-tape.only("component access", function(test) {
+tape("component access", function(test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
 

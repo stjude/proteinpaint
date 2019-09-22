@@ -1,4 +1,4 @@
-import {Store, getInitFxn} from "../rx.core"
+import {rx, getInitFxn} from "../rx.core"
 import {dofetch2} from "../client"
 
 const defaultState = {
@@ -12,13 +12,29 @@ const defaultState = {
 	}
 }
 
-export class ToyStore extends Store {
+class ToyStore {
 	constructor(app) {
-		super()
+		this.getApi = rx.getStoreApi
+		this.copyMerge = rx.copyMerge
+		this.deepFreeze = rx.deepFreeze
 		this.app = app
-		// need to convert from array to Set, Map as needed
-		this.state = Object.assign({}, defaultState, app.opts.state)
-		this.opts = JSON.parse(JSON.stringify(app.opts))
+		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
+	}
+
+	// required method in api.state()
+	fromJson(objStr) {
+		// to-do: 
+		// may need to recover any Set or Map values 
+		// via new Set(arrOfValues) or new Map(arrOfPairedValues)
+		return JSON.parse(objStr)
+	}
+
+	// required method in api.state()
+	toJson(obj=null) {
+		// to-do:
+		// may need to convert any Set or Map values
+		// via [...Set] or [...Map] to stringify
+		return JSON.stringify(obj ? obj : this.state) 
 	}
 
 	async term_add(action) {
@@ -33,7 +49,7 @@ export class ToyStore extends Store {
 			const lst = ["genome=" + this.state.genome.name + "&dslabel=" + this.state.dslabel]
 			const url = "/termdb?genome=hg38&dslabel=SJLife&gettermbyid=" + action.termid
 			const init = action.init ? action.init : {}
-			const fetchOpts = this.opts.fetchOpts ? this.opts.fetchOpts : {}
+			const fetchOpts = this.app.opts.fetchOpts ? this.app.opts.fetchOpts : {}
 			const data = await dofetch2(url, init, fetchOpts)
 			if (!data.term) {
 				alert(`Term not found for id=${action.termid}`) 
@@ -47,7 +63,6 @@ export class ToyStore extends Store {
 		new_rows.forEach(row =>{
 			if(!rows.includes(row)) this.state.controls.rows.push({name:row})
 		})
-
 		// optional: maybe add a "result" key to action
 		// In general, not needed since a component should
 		// know where to look for relevant data in 

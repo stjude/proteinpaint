@@ -32,10 +32,9 @@ class ToyApp extends App {
 		// get the instance.api here to pass along as
 		// the "app" argument to other components
 		const appApi = this.getApi(opts)
-		this.api = appApi 
+		this.api = appApi
 		this.store = storeInit(appApi)
-		// this.deepFreeze(this.opts)
-		this.state = this.store.copy()
+		this.state = this.store.state()
 		this.dom = {
 			tip: new Menu(),
 			holder

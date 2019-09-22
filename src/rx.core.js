@@ -83,17 +83,38 @@ export class Store extends Core {
 					throw `invalid action type=${action.type}`
 				}
 				await self[action.type](action)
-				return api.copy()
+				return api.state()
 			},
-			copy() {
-				// need to convert between JSON
-				// arrays and Set or Map as needed
-				const copy = JSON.parse(JSON.stringify(self.state))
-				self.deepFreeze(copy)
-				return copy
+			state() {
+				const stateCopy = self.fromJson(self.toJson(self.state))
+				self.deepFreeze(stateCopy)
+				return stateCopy
 			}
 		}
 		return api
+	}
+
+	/*
+		base: 
+		- either an state object or its JSON-stringified equivalent 
+
+		args
+		- full or partial state object(s). if base is a string, then
+		  the arg object will be converted to/from JSON to
+		  create a copy for merging
+	*/
+	copyMerge(base, ...args) {
+		const target = typeof base == "string" ? this.fromJson(base) : base
+		for(const arg of args) {
+			if (arg) {
+				const source = typeof base == "string" ? this.fromJson(this.toJson(arg)) : arg
+				for(const key in source) {
+					if (!target[key] || Array.isArray(target[key]) || typeof target[key] !== "object") target[key] = source[key]
+					else this.copyMerge(target[key], source[key])
+				}
+			}
+		}
+		return target
 	}
 }
 
@@ -220,4 +241,36 @@ export class Bus {
 		}, 0)
 		return this
 	}
+}
+
+/*
+	Methods to attach directly to an instance
+	inside a class contructor method.
+	
+	This is recommended instead of using 
+	inheritance via "extends", since this "mix-in" 
+	approach:
+
+	- makes it clearer which instance method corresponds
+	  to what rx.core method
+	
+	- it is not susceptible to any class prototype edits
+	  that may affect all instances that inherits from 
+	  the edited class
+
+	***
+	If we go with this approach, the various class methods
+	will be cut-pasted below and the class declarations
+	above will be deleted
+	***
+*/
+export const rx = {
+	getInitFxn,
+	getStoreApi: Store.prototype.getApi,
+	copyMerge: Store.prototype.copyMerge,
+	getAppApi: App.prototype.getApi,
+	getComponentApi: Component.prototype.getApi,
+	deepFreeze: Core.prototype.deepFreeze,
+	notifyComponents: Core.prototype.notifyComponents,
+	getComponents: Core.prototype.getComponents
 }
