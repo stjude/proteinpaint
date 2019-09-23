@@ -99,71 +99,9 @@ export class Bus {
 	}
 }
 
-
-/*********************
-  Detached methods
-**********************/
-
-
-/*
-	Methods to attach directly to an instance
-	inside a class contructor method.
-	
-	This is recommended instead of using 
-	inheritance via "extends", since this "mix-in" 
-	approach:
-
-	- makes it clearer which instance method corresponds
-	  to what rx.core method
-	
-	- it is not susceptible to any class prototype edits
-	  that may affect all instances that inherits from 
-	  the edited class
-
-	- avoids conceptual association of classical
-	  inheritance using the "extend" keyword
-*/
-
-export function deepFreeze(obj) {
-	Object.freeze(obj)
-	for(const key in obj) {
-		if (typeof obj == 'object') this.deepFreeze(obj[key])
-	}
-}
-
-export function notifyComponents(action) {
-	for (const name in this.components) {
-		const component = this.components[name]
-		if (Array.isArray(component)) {
-			for (const c of component) c.main(action)
-		} else {
-			component.main(action)
-		}
-	}
-}
-
-// access the api of an indirectly connected component, 
-// for example to subscribe an .on(event, listener) to 
-// the event bus of a distant component
-export function getComponents(dotSepNames) {
-	if (!dotSepNames) return Object.assign({},this.components)
-	// string-based convenient accessor, 
-  // so instead of
-  // app.components().controls.components().search,
-  // simply
-  // app.components("controls.search")
-	const names = dotSepNames.split(".")
-	let component = this.components
-	while(names.length) {
-		let name = names.shift()
-		if (Array.isArray(component)) name = Number(name)
-		component = names.length ? component[name].components : component[name]
-		if (typeof component == "function") component = component()
-		if (!component) break
-	}
-	return component
-}
-
+/****************
+  API Generators
+*****************/
 
 export function getStoreApi(_self) {
 	// might make self argument required
@@ -194,46 +132,6 @@ export function getStoreApi(_self) {
 		}
 	}
 	return api
-}
-
-/*
-	base: 
-	- either an state object or its JSON-stringified equivalent 
-
-	args
-	- full or partial state object(s). if base is a string, then
-	  the arg object will be converted to/from JSON to
-	  create a copy for merging
-*/
-export function copyMerge(base, ...args) {
-	const target = typeof base == "string" ? this.fromJson(base) : base
-	for(const arg of args) {
-		if (arg) {
-			const source = typeof base == "string" ? this.fromJson(this.toJson(arg)) : arg
-			for(const key in source) {
-				if (!target[key] || Array.isArray(target[key]) || typeof target[key] !== "object") target[key] = source[key]
-				else this.copyMerge(target[key], source[key])
-			}
-		}
-	}
-	return target
-}
-
-export function fromJson(objStr) {
-	// this method should not be reused when there is 
-	// a need to recover any Set or Map values, instead
-	// declare a class specific fromJson() method that has
-	// new Set(arrOfValues) or new Map(arrOfPairedValues)
-	return JSON.parse(objStr)
-}
-
-export function toJson(obj=null) {
-	// this method should not be reused when there is 
-	// a need to stringify any Set or Map values, 
-	// instead declare a class specific toJson() method 
-	// that converts any Set or Map values to 
-	// [...Set] or [...Map] before JSON.stringify()
-	return JSON.stringify(obj ? obj : this.state) 
 }
 
 export function getAppApi(_self) {
@@ -300,4 +198,113 @@ export function getComponentApi(_self) {
 		}
 	}
 	return api
+}
+
+/******************
+  Detached Helpers
+******************/
+/*
+	Methods to attach directly to an instance
+	inside a class contructor method.
+	
+	This is recommended instead of using 
+	inheritance via "extends", since this "mixin" 
+	approach:
+
+	- makes it clearer which instance method corresponds
+	  to what rx.core method
+	
+	- it is not susceptible to any class prototype edits
+	  that may affect all instances that inherits from 
+	  the edited class
+
+	- avoids conceptual association of classical
+	  inheritance using the "extends" keyword
+*/
+
+// Component Helpers
+// -----------------
+
+export function notifyComponents(action) {
+	for (const name in this.components) {
+		const component = this.components[name]
+		if (Array.isArray(component)) {
+			for (const c of component) c.main(action)
+		} else {
+			component.main(action)
+		}
+	}
+}
+
+// access the api of an indirectly connected component, 
+// for example to subscribe an .on(event, listener) to 
+// the event bus of a distant component
+export function getComponents(dotSepNames) {
+	if (!dotSepNames) return Object.assign({},this.components)
+	// string-based convenient accessor, 
+  // so instead of
+  // app.components().controls.components().search,
+  // simply
+  // app.components("controls.search")
+	const names = dotSepNames.split(".")
+	let component = this.components
+	while(names.length) {
+		let name = names.shift()
+		if (Array.isArray(component)) name = Number(name)
+		component = names.length ? component[name].components : component[name]
+		if (typeof component == "function") component = component()
+		if (!component) break
+	}
+	return component
+}
+
+// Store Helpers
+// -------------
+
+/*
+	base: 
+	- either an state object or its JSON-stringified equivalent 
+
+	args
+	- full or partial state object(s). if base is a string, then
+	  the arg object will be converted to/from JSON to
+	  create a copy for merging
+*/
+export function copyMerge(base, ...args) {
+	const target = typeof base == "string" ? this.fromJson(base) : base
+	for(const arg of args) {
+		if (arg) {
+			const source = typeof base == "string" ? this.fromJson(this.toJson(arg)) : arg
+			for(const key in source) {
+				if (!target[key] || Array.isArray(target[key]) || typeof target[key] !== "object") target[key] = source[key]
+				else this.copyMerge(target[key], source[key])
+			}
+		}
+	}
+	return target
+}
+
+
+export function fromJson(objStr) {
+	// this method should not be reused when there is 
+	// a need to recover any Set or Map values, instead
+	// declare a class specific fromJson() method that has
+	// new Set(arrOfValues) or new Map(arrOfPairedValues)
+	return JSON.parse(objStr)
+}
+
+export function toJson(obj=null) {
+	// this method should not be reused when there is 
+	// a need to stringify any Set or Map values, 
+	// instead declare a class specific toJson() method 
+	// that converts any Set or Map values to 
+	// [...Set] or [...Map] before JSON.stringify()
+	return JSON.stringify(obj ? obj : this.state) 
+}
+
+export function deepFreeze(obj) {
+	Object.freeze(obj)
+	for(const key in obj) {
+		if (typeof obj == 'object') this.deepFreeze(obj[key])
+	}
 }
