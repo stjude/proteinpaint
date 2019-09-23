@@ -12,23 +12,6 @@ import {dofetch2} from "../client"
 	componentInit() or similar component generators
 */
 
-/*
-// prx = proteinpaint reactive
-prx.core.js
-
-src/termdb
-	tdb.app.js
-	tdb.tree.js
-	tdb.tree.spec.js
-	tdb.plot.js,  
-	tdb.plot.spec.js
-
-src/toy
- toy.app.js
- toy.app.spec.js 
-
-*/
-
 class TdbTree {
 	constructor(app, holder) {
 		this.api = rx.getComponentApi(this)
@@ -37,11 +20,9 @@ class TdbTree {
 			holder: holder.style("margin", "10px").style("border", "1px solid #aaa"),
 		}
 		// set closure methods to handle conflicting "this" contexts
-		// this.yesThis()
 		this.notThis(this)
 
 		//this.bus = core.busInit(this.constructor.name, ["postRender"])
-		this.currHolder = this.dom.holder
 		this.currTerm = {id: 'root', level: 0}
 		this.termsById = {root: this.currTerm}
 		this.tree = [this.currTerm]
@@ -55,7 +36,7 @@ class TdbTree {
 	async main(action={}) {
 		this.currTerm = this.termsById[action.termId]
 		this.currTerm.terms = await this.requestTerm(this.currTerm)
-		this.expand(this.termsById.root, this.currHolder)
+		this.expand(this.termsById.root, this.dom.holder)
 		//this.bus.emit("postRender")
 		return this
 	}

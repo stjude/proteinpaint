@@ -22,20 +22,10 @@ class TdbApp {
 
 		this.components = {
 			tree: treeInit(this.api, holder.append('div'))
-			//filterUi: controls.filterUiInit({}),
 			//plots: []
 		}
-		
-		// set closure methods to handle conflicting "this" contexts
-		// this.yesThis()
-		// this.notThis(this)
 
 		this.bus = new rx.Bus("app", ["postRender"])
-	}
-
-	initTerm(term) {
-		if (!term || term.id in this.state) return
-		this.state[term.id] = { expanded: false }
 	}
 
 	main(action = {}) {
