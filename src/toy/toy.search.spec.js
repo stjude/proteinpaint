@@ -39,7 +39,7 @@ tape("instance", function(test) {
 		helpers
 			.rideInit({
 				bus: search,
-				eventType: "postMain.test",
+				eventType: "postNotify.test",
 				arg: search
 			})
 			.run(testDom, 100)
@@ -87,7 +87,7 @@ tape("text input", function(test) {
 		helpers
 			.rideInit({
 				bus: search,
-				eventType: "postMain.test",
+				eventType: "postNotify.test",
 				arg: search
 			})
 			.run(triggerExactTermMenu)

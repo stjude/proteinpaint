@@ -88,7 +88,7 @@ tape("default view", function(test) {
 		helpers
 			.rideInit({
 				bus: app,
-				eventType: "postMain.test",
+				eventType: "postNotify.test",
 				arg: app
 			})
 			.run(testSearchDisplay, 100)

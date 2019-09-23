@@ -17,14 +17,14 @@ class ToySearch {
 		this.yesThis()
 		// this.notThis(this)
 		this.render()
-		this.bus = new rx.Bus('search', ['postInit', 'postMain'], app.opts.callbacks, this.api)
+		this.bus = new rx.Bus('search', ['postInit', 'postNotify'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit', this.api)
 	}
 
 	main(action) {
 		// clear search input entry
 		this.input.property('value', '')
-		this.bus.emit('postMain', this)
+		this.bus.emit('postNotify', this)
 	}
 
 	render() {

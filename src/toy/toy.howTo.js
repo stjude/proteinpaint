@@ -37,7 +37,7 @@ class HowTo {
 		// this.components = { ... }
 
 		// optional event bus
-		// this.bus = new rx.Bus('howto', ['postInit', 'postMain'], opts.callbacks, this.api)
+		// this.bus = new rx.Bus('howto', ['postInit', 'postNotify'], opts.callbacks, this.api)
 		// this.bus.emit('postInit')
 	}
 
