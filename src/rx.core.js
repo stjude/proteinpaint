@@ -134,6 +134,23 @@ export class Store extends Core {
 		}
 		return target
 	}
+
+	fromJson(objStr) {
+		// this method should not be reused when there is 
+		// a need to recover any Set or Map values, instead
+		// declare a class specific fromJson() method that has
+		// new Set(arrOfValues) or new Map(arrOfPairedValues)
+		return JSON.parse(objStr)
+	}
+
+	toJson(obj=null) {
+		// this method should not be reused when there is 
+		// a need to stringify any Set or Map values, 
+		// instead declare a class specific toJson() method 
+		// that converts any Set or Map values to 
+		// [...Set] or [...Map] before JSON.stringify()
+		return JSON.stringify(obj ? obj : this.state) 
+	}
 }
 
 export class App extends Core {
@@ -292,6 +309,8 @@ export const rx = {
 	getInitFxn,
 	getStoreApi: Store.prototype.getApi,
 	copyMerge: Store.prototype.copyMerge,
+	fromJson: Store.prototype.fromJson,
+	toJson: Store.prototype.toJson,
 	getAppApi: App.prototype.getApi,
 	getComponentApi: Component.prototype.getApi,
 	deepFreeze: Core.prototype.deepFreeze,

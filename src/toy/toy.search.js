@@ -53,8 +53,8 @@ class ToySearch {
 		// - more clearly indicate what the callback will do
 		// - avoid reparsing anonymous functions
 		// - reduce risk of memory leaks, if any
-		// - make it easy to test behavior since the callback
-		//   will be exposed as an api.Inner method (important!!!)
+		// - make it easier to test since the callback
+		//   will be exposed as an api.Inner method
 		.on('keyup', this.displaySearchResults)
 
 		this.input.node().focus() // always focus
@@ -128,6 +128,22 @@ class ToySearch {
 			this.app.dispatch({type:'term_add',term})
 			this.dom.tip.hide()
 		}
+
+		/*
+		by having term data bound to an element,
+		you can attach the same mouseover callback to 
+		similar rendered elements
+		
+		this.showElementInfo = term => {
+			this.dom.tip.clear()
+			this.dom.tip.d.append('div')
+				.html(term.name + '<br/>' + term....)
+		}
+		
+		then
+		
+		elem.on('mouseover', this.showElementInfo)
+		*/
 	}
 }
 

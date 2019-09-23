@@ -17,30 +17,27 @@ class ToyStore {
 		this.getApi = rx.getStoreApi
 		this.copyMerge = rx.copyMerge
 		this.deepFreeze = rx.deepFreeze
+		
+		// see comments on when not to reuse rx.fromJson, rx.toJson
+		this.fromJson = rx.fromJson // used in store.api.state()
+		this.toJson = rx.toJson // used in store.api.state()
+		
 		this.app = app
 		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
 	}
 
-	// non-action methods should use camel-case
-	// required method in api.state()
-	fromJson(objStr) {
-		// to-do: 
-		// may need to recover any Set or Map values 
-		// via new Set(arrOfValues) or new Map(arrOfPairedValues)
-		return JSON.parse(objStr)
-	}
+	/*
+		----------------------------------------
+		by convention and for ease of validation
+		----------------------------------------
 
-	// required method in api.state()
-	toJson(obj=null) {
-		// to-do:
-		// may need to convert any Set or Map values
-		// via [...Set] or [...Map] to stringify
-		return JSON.stringify(obj ? obj : this.state) 
-	}
+		non-action methods should use camel-case, 
+		!!! NO underscore !!! for non-action methods
 
-	// by convention and for ease of validation, 
-	// a method that corresponds to an action.type 
-	// MUST use an underscore
+	  a method that corresponds to an action.type 
+		MUST use an underscore "_"
+	*/
+
 	async term_add(action) {
 		if (!action.term && !action.termid) throw 'neither term or termid is given'
 		if (this.state.terms.find(d => d.id == (action.term ? action.term.id : action.termid))) {
