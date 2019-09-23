@@ -26,7 +26,7 @@ class ToyTable {
 		const divs = this.dom.table.selectAll('.table-wrapper')
 			.data(this.app.state().terms, this.getTermId)
 
-		divs.exit().remove()
+		divs.exit().each(this._exitDiv)
 		divs.each(this._updateDiv)
 		divs.enter()
 			.append('div')
@@ -40,6 +40,10 @@ class ToyTable {
 			.style('margin', '10px')
 			.style('padding', '10px 3px')
 			.style('background-color', '#ececec')
+			.style('opacity',0)
+			.transition()
+			.duration(500)
+			.style('opacity',1)
 
 		div.append('button')
 			.datum(term)
@@ -66,6 +70,15 @@ class ToyTable {
 		tr.exit().remove()
 		tr.each(this._updateTr)
 		tr.enter().append('tr').each(this._addTr)
+	}
+
+	exitDiv(term, div) {
+
+		div.style('opacity',1)
+			.transition()
+			.duration(500)
+			.style('opacity',0)
+			.remove()
 	}
 
 	addTr(keyVal, tr, index) {
@@ -115,6 +128,9 @@ class ToyTable {
 		}
 		self._updateDiv = function(term) {
 			self.updateDiv(term, select(this))
+		}
+		self._exitDiv = function(term) {
+			self.exitDiv(term, select(this))
 		}
 		self._addTr = function(keyVal, index) {
 			self.addTr(keyVal, select(this), index)

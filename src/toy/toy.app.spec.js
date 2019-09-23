@@ -59,7 +59,7 @@ tape("component access", function(test) {
 })
 
 tape("default view", function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(2000)
 	test.plan(5)
 
 	runproteinpaint({
@@ -96,7 +96,7 @@ tape("default view", function(test) {
 			.run(triggerTermAdd, 100)
 			.run(testTermAdd, 100)
 			.run(triggerTermRemove)
-			.run(testTermRemove, 100)
+			.run(testTermRemove, 600)
 			.run(triggerHideRow)
 			.run(testHideRow, 100)
 			.done(() => test.end())
