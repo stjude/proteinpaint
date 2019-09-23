@@ -1,9 +1,9 @@
-import {Component, getInitFxn} from "../rx.core"
+import * as rx from "../rx.core"
 import {select} from "d3-selection"
 
-class ToyFilter extends Component {
+class ToyFilter {
 	constructor(app, holder) {
-		super()
+		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.dom = {holder}
 		// set closured methods to use the correct "this" context
@@ -154,5 +154,5 @@ class ToyFilter extends Component {
 	}
 }
 
-export const filterInit = getInitFxn(ToyFilter)
+export const filterInit = rx.getInitFxn(ToyFilter)
 

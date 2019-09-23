@@ -1,4 +1,4 @@
-import {rx, getInitFxn, Bus} from "../rx.core"
+import * as rx from "../rx.core"
 import {Menu,dofetch2} from '../client'
 import {event} from 'd3-selection'
 
@@ -17,7 +17,7 @@ class ToySearch {
 		this.yesThis()
 		// this.notThis(this)
 		this.render()
-		this.bus = new Bus('search', ['postInit', 'postMain'], app.opts.callbacks, this.api)
+		this.bus = new rx.Bus('search', ['postInit', 'postMain'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit', this.api)
 	}
 
@@ -147,4 +147,4 @@ class ToySearch {
 	}
 }
 
-export const searchInit = getInitFxn(ToySearch)
+export const searchInit = rx.getInitFxn(ToySearch)

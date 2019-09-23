@@ -1,4 +1,4 @@
-import {rx, getInitFxn} from "../rx.core"
+import * as rx from "../rx.core"
 import {dofetch2} from "../client"
 
 const defaultState = {
@@ -14,11 +14,10 @@ const defaultState = {
 
 class ToyStore {
 	constructor(app) {
-		this.getApi = rx.getStoreApi
+		this.api = rx.getStoreApi(this)
 		this.copyMerge = rx.copyMerge
 		this.deepFreeze = rx.deepFreeze
-		
-		// see comments on when not to reuse rx.fromJson, rx.toJson
+		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
 		this.fromJson = rx.fromJson // used in store.api.state()
 		this.toJson = rx.toJson // used in store.api.state()
 		
@@ -98,4 +97,4 @@ class ToyStore {
 	}
 }
 
-export const storeInit = getInitFxn(ToyStore)
+export const storeInit = rx.getInitFxn(ToyStore)

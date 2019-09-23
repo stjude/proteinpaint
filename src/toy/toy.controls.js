@@ -1,10 +1,12 @@
-import {Component, getInitFxn} from "../rx.core"
+import * as rx from "../rx.core"
 import {searchInit} from './toy.search'
 import {filterInit} from './toy.filter'
 
-class ToyControls extends Component {
+class ToyControls {
 	constructor(app, holder) {
-		super()
+		this.api = rx.getComponentApi(this)
+		this.notifyComponents = rx.notifyComponents
+		this.getComponents = rx.getComponents
 		this.app = app
 		this.opts = holder
 		this.dom = {holder}
@@ -19,4 +21,4 @@ class ToyControls extends Component {
 	}
 }
 
-export const controlsInit = getInitFxn(ToyControls)
+export const controlsInit = rx.getInitFxn(ToyControls)

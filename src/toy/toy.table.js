@@ -1,9 +1,9 @@
-import {Component, getInitFxn} from "../rx.core"
+import * as rx from "../rx.core"
 import {select} from "d3-selection"
 
-class ToyTable extends Component {
+class ToyTable {
 	constructor(app, holder) {
-		super()
+		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.opts = holder
 		this.dom = {
@@ -125,4 +125,4 @@ class ToyTable extends Component {
 	}
 }
 
-export const tableInit = getInitFxn(ToyTable)
+export const tableInit = rx.getInitFxn(ToyTable)

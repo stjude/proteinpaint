@@ -4,25 +4,21 @@
 	See toy.table.js for a working example
 */
 
-import {Component, getInitFxn} from "../rx.core"
+import * as rx from "../rx.core"
 // import ... other modules
 
-/*
-  By extending the Component class,
-  a child class will inherit the 
-  same getApi() method that gives 
-
-  instance.api = {
-		main() {},
-		on() {},
-		components('' || 'cart.plot') {}
-  }
-*/
-class ToyHowTo extends Component {
+class HowTo {
 	constructor(app, holder) {
-		// required call to parent class constructor
-		super()
-		
+		// indicate whether this class is an 
+		// app, store, or component by the type
+		// of api that is uses
+		this.api = rx.getComponentApi(this)
+
+		// borrow the following methods IF this class 
+		// creates this.components = {}
+		// this.notifyComponents = rx.notifyComponents
+		// this.getComponents = rx.getComponents
+
 		// save a reference to app 
 		this.app = app
 		
@@ -37,6 +33,12 @@ class ToyHowTo extends Component {
 		// functions to handle "this" conflicts
 		this.yesThis()
 		this.notThis(this)
+
+		// this.components = { ... }
+
+		// optional event bus
+		// this.bus = new rx.Bus('howto', ['postInit', 'postMain'], opts.callbacks, this.api)
+		// this.bus.emit('postInit')
 	}
 
 	// as a convenience, 
@@ -133,4 +135,4 @@ class ToyHowTo extends Component {
 	Hide a table inside the Component class api
 	see rx.core.js getInitFxn() for details
 */
-export const tableInit = getInitFxn(ToyTable)
+export const howInit = rx.getInitFxn(HowTo)
