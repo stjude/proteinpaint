@@ -87,11 +87,20 @@ export class Store extends Core {
 		// to instance
 		const self = _self ? _self : this
 		const api = {
-			async main(action, substore) {
+			async write(action) {
+				// enforce undescore convention for action methods,
+				// non-action methods should use camel-case instead
+				if (!action.type.includes("_")) {
+					throw `A store action type must use an underscore '_'.`
+				}
+				// avoid calls to inherited methods
+				if (!self.constructor.prototype.hasOwnProperty(action.type)) {
+					throw `Action=${action.type} must be declared directly as a class method.`
+				}
 				if (typeof self[action.type] !== 'function') {
 					throw `invalid action type=${action.type}`
 				}
-				await self[action.type](action)
+				await self[action.type].call(self, action)
 				return api.state()
 			},
 			state() {
@@ -145,7 +154,7 @@ export class App extends Core {
 					debounce dispatch requests
 					until the pending action is done?
 				*/
-				self.state = await self.store.main(action)
+				self.state = await self.store.write(action)
 				//self.deepFreeze(action)
 				self.main(action)
 			},

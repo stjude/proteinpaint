@@ -59,7 +59,7 @@ tape("instance", function(test) {
 
 tape("text input", function(test) {
 	test.timeoutAfter(1000)
-	test.plan(3)
+	test.plan(2)
 
 	runproteinpaint({
 		host,
@@ -90,7 +90,6 @@ tape("text input", function(test) {
 				eventType: "postMain.test",
 				arg: search
 			})
-			.run(testKeyupHandler, 100)
 			.run(triggerExactTermMenu)
 			.run(testExactSuggestedTerm, 100)
 			.run(triggerLooseTermMenu)
@@ -98,18 +97,10 @@ tape("text input", function(test) {
 			.done(() => test.end())
 	}
 
-	function testKeyupHandler(search) {
-		test.equal(
-			search.Inner.input.on('keyup'), 
-			search.Inner.displaySearchResults,
-			"should have the expected keyup handler"
-		)
-	}
-
 	function triggerExactTermMenu(search) {
 		// simulate text input
 		search.Inner.input.property('value', 'sex')
-		search.Inner.displaySearchResults()
+		search.Inner.input.on('keyup')()
 	}
 
 	function testExactSuggestedTerm(search) {
@@ -123,7 +114,7 @@ tape("text input", function(test) {
 	function triggerLooseTermMenu(search) {
 		// simulate text input
 		search.Inner.input.property('value', 'cardio')
-		search.Inner.displaySearchResults()
+		search.Inner.input.on('keyup')()
 	}
 
 	function testLooseSuggestedTerm(search) {

@@ -21,6 +21,7 @@ class ToyStore {
 		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
 	}
 
+	// non-action methods should use camel-case
 	// required method in api.state()
 	fromJson(objStr) {
 		// to-do: 
@@ -37,8 +38,10 @@ class ToyStore {
 		return JSON.stringify(obj ? obj : this.state) 
 	}
 
+	// by convention and for ease of validation, 
+	// a method that corresponds to an action.type 
+	// MUST use an underscore
 	async term_add(action) {
-
 		if (!action.term && !action.termid) throw 'neither term or termid is given'
 		if (this.state.terms.find(d => d.id == (action.term ? action.term.id : action.termid))) {
 			alert('The term is already printed.')
