@@ -125,17 +125,7 @@ callbacks: {
 	obj.tip = new client.Menu({ padding: "5px" })
 
 	obj.do_query_opts = { serverData: obj.serverData }
-/*
-	if (obj.useStore) {
-		obj.state = {
-			termfilter: obj.termfilter
-		}
-		obj.store = tdbStoreInit({
-			app: obj,
-			state: obj.state
-		}); console.log(obj.store)
-	}
-*/
+
 	obj.components = {
 		filter: getFilterUi(obj),
 		cart: getCartUi(obj),

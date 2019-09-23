@@ -1,9 +1,9 @@
-import {Component, getInitFxn} from "../rx.core"
+import * as rx from "../rx.core"
 import {select} from "d3-selection"
 
-class ToyTable extends Component {
+class ToyTable {
 	constructor(app, holder) {
-		super()
+		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.opts = holder
 		this.dom = {
@@ -53,19 +53,31 @@ class ToyTable extends Component {
 			.data(keyVals, this.trBindKey)
 
 		tr.exit().remove()
-		tr.each(this._updateDiv)
+		tr.each(this._updateTr)
 		tr.enter().append('tr').each(this._addTr)
 	}
 
 	updateDiv(term, div) {
-		// don't do anything for now
 		// re-sort rows, etc
+		const keyVals = Object.keys(term).map(key => [key, term[key]])
+		const tr = div.selectAll('table').selectAll('tr')
+			.data(keyVals, this.trBindKey)
+
+		tr.exit().remove()
+		tr.each(this._updateTr)
+		tr.enter().append('tr').each(this._addTr)
 	}
 
 	addTr(keyVal, tr, index) {
 		tr.style('background-color', index%2 == 0 ? '#fff' : '')
 		tr.append('td').html(keyVal[0]).style('padding', '3px 5px')
 		tr.append('td').html(keyVal[1]).style('padding', '3px 5px')
+		this.hideShowRaw(tr, keyVal[0])
+	}
+
+	updateTr(keyVal, tr, index) {
+		// if there are computed labels, can update via .html(label)
+		this.hideShowRaw(tr, keyVal[0])
 	}
 
 	getTermId(term) {
@@ -74,6 +86,23 @@ class ToyTable extends Component {
 
 	trBindKey(d) {
 		return d[0]
+	}
+
+	hideShowRaw(tr, row_name){
+		const rows = this.app.state().controls.rows.map(r=>r.name)
+		if(rows.includes(row_name)){
+			const row = this.app.state().controls.rows.find(r => r.name == row_name)
+			if (row.hide){
+				tr.style('visibility','collapse')
+					.style('opacity',0)
+					.style('transition','visibility .5s ease, opacity .5s ease')
+			} 
+			else{
+				tr.style('visibility','visible')
+					.style('opacity',1)
+					.style('transition','visibility .5s ease, opacity .5s ease')
+			}
+		}
 	}
 
 	yesThis() {
@@ -90,7 +119,10 @@ class ToyTable extends Component {
 		self._addTr = function(keyVal, index) {
 			self.addTr(keyVal, select(this), index)
 		}
+		self._updateTr = function(keyVal, index) {
+			self.updateTr(keyVal, select(this), index)
+		}
 	}
 }
 
-export const tableInit = getInitFxn(ToyTable)
+export const tableInit = rx.getInitFxn(ToyTable)

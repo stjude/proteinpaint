@@ -1,8 +1,9 @@
-import {App, Bus, getInitFxn} from "../rx.core"
-import {ToyStore} from "./toy.store"
+import * as rx from "../rx.core"
+import {storeInit} from "./toy.store"
 import {controlsInit} from "./toy.controls"
 import {tableInit} from "./toy.table"
 import {select} from "d3-selection"
+import {Menu} from '../client'
 
 /*
 	ToyApp is created inside getInitFxn()
@@ -24,24 +25,28 @@ import {select} from "d3-selection"
 	.dispatch()
 	.on()
 */
-class ToyApp extends App {
+class ToyApp {
 	constructor(opts, holder) {
-		super()
 		this.opts = opts
-		// get the instance.api here to pass along as
-		// the "app" argument to other components
-		this.app = this.getApi(opts)
-		this.store = new ToyStore(this.app)
-		// this.deepFreeze(this.opts)
-		this.state = this.store.copy()
-		this.dom = {holder}
+		this.api = rx.getAppApi(this)
+		this.notifyComponents = rx.notifyComponents
+		this.getComponents = rx.getComponents
+
+		this.store = storeInit(this.api)
+		this.state = this.store.state()
+		this.dom = {
+			tip: new Menu(),
+			holder
+		}
 		// expose the app api, not "this" directly to subcomponents
 		this.components = {
-			controls: controlsInit(this.app, holder.append("div")),
-			table: tableInit(this.app, holder.append("div"))
+			controls: controlsInit(this.api, holder.append("div")),
+			table: tableInit(this.api, holder.append("div"))
 		}
-		this.bus = new Bus('app', ['postInit', 'postMain'], opts.callbacks, this)
-		this.bus.emit('postInit', this.app)
+		// set up the app api as the default argument 
+		// to callbacks of emitted events
+		this.bus = new rx.Bus('app', ['postInit', 'postMain'], opts.callbacks, this.api)
+		this.bus.emit('postInit')
 	}
 
 	main(action) {
@@ -50,4 +55,4 @@ class ToyApp extends App {
 	}
 }
 
-export const appInit = getInitFxn(ToyApp)
+export const appInit = rx.getInitFxn(ToyApp)

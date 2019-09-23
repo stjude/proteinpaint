@@ -21,7 +21,8 @@
     "deliver": "sh utils/deliver.sh",
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset",
     "build-server": "webpack --config=webpack.config.server.js --mode=production",
-    "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks"
+    "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
+	"xincmd":"watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v"
   },
   "prettier": {
     "semi": false,
