@@ -649,7 +649,7 @@ export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
                         return false
                     }else if((Object.keys(custom_bins_q.last_bin).length === 0 && custom_bins_q.last_bin.constructor === Object)){
                         return false
-                    }
+                    }else return true
             }else{
                 return true
             }
