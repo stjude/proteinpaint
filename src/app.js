@@ -896,6 +896,9 @@ function parseembedthenurl(arg, holder, selectgenome) {
 	if (arg.treeapptest) {
 		launchtreeapptest(arg.treeapptest, holder)
 	}
+	if (arg.termdb) {
+		launchtermdb(arg.termdb, holder)
+	}
 }
 
 
@@ -1425,6 +1428,11 @@ function launchtoy(opts, holder) {
 }
 function launchtreeapptest(opts, holder) {
 	import('./toy/2/app').then(_=>{
+		_.appInit(opts, holder)
+	})
+}
+function launchtermdb(opts, holder) {
+	import('./termdb/tdb.app').then(_=>{
 		_.appInit(opts, holder)
 	})
 }

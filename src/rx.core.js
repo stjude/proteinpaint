@@ -53,8 +53,10 @@ export class Bus {
 		this.eventTypes = eventTypes
 		this.events = {}
 		this.defaultArg = defaultArg
-		for (const eventType in callbacks[name]) {
-			this.on(eventType, callbacks[name][eventType])
+		if (callbacks && name in callbacks) {
+			for (const eventType in callbacks[name]) {
+				this.on(eventType, callbacks[name][eventType])
+			}
 		}
 	}
 
@@ -103,11 +105,7 @@ export class Bus {
   API Generators
 *****************/
 
-export function getStoreApi(_self) {
-	// might make self argument required
-	// so no need to assign a getApi method
-	// to instance
-	const self = _self ? _self : this
+export function getStoreApi(self) {
 	const api = {
 		async write(action) {
 			// enforce undescore convention for action methods,
@@ -134,14 +132,11 @@ export function getStoreApi(_self) {
 	return api
 }
 
-export function getAppApi(_self) {
-	// might make self argument required
-	// so no need to assign a getApi method
-	// to instance
-	const self = _self ? _self : this
+export function getAppApi(self) {
 	const api = {
 		opts: self.opts,
 		state() {
+			// return self // would allow access to hidden instance
 			return self.state
 		},
 		async dispatch(action={}) {
@@ -151,6 +146,7 @@ export function getAppApi(_self) {
 				debounce dispatch requests
 				until the pending action is done?
 			*/
+			// replace app.state
 			self.state = await self.store.write(action)
 			//self.deepFreeze(action)
 			self.main(action)
@@ -170,11 +166,7 @@ export function getAppApi(_self) {
 	return api
 }
 
-export function getComponentApi(_self) {
-	// might make self argument required
-	// so no need to assign a getApi method
-	// to instance
-	const self = _self ? _self : this
+export function getComponentApi(self) {
 	const api = {
 		main(action) {
 			// reduce boilerplate or repeated code
