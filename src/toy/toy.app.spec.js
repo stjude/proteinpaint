@@ -153,8 +153,8 @@ tape("default view", function(test) {
 
 	function testHideRow(app) {
 		test.equal(
-			app.Inner.dom.holder.selectAll(".table-wrapper").selectAll('tr')._groups[0][2].style.display,
-			'none',
+			app.Inner.dom.holder.selectAll(".table-wrapper").selectAll('tr')._groups[0][2].style.opacity,
+			'0',
 			"should remove row from table"
 		)
 	}

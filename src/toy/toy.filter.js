@@ -20,7 +20,7 @@ class ToyFilter extends Component {
 		const rows = this.dom.holder.selectAll('.row_div')
 			.data(this.app.state().controls.rows, this.getRowName)
 
-		rows.exit().remove()
+		rows.exit().each(this._removeRow)
 		rows.each(this._updateRow)
 		rows.enter()
 			.append('div')
@@ -73,6 +73,10 @@ class ToyFilter extends Component {
 			.style('position', 'relative')
 			.style('margin', '5px')
 			.style('padding', '3px')
+			.style('opacity',0)
+			.transition()
+			.duration(500)
+			.style('opacity',1)
 
 		const label = div.append('label')
 			.attr('class','checkbox-inline')
@@ -98,6 +102,16 @@ class ToyFilter extends Component {
 			.on('click', this.hideRow)
 		
 		label.select('span').text(row.name)
+	}
+
+	removeRow(row,div){
+		div.select('label').datum(row)
+
+		div.style('opacity',1)
+			.transition()
+			.duration(500)
+			.style('opacity',0)
+			.remove()
 	}
 
 	getRowName(row) {
@@ -133,6 +147,9 @@ class ToyFilter extends Component {
 		}
 		self._updateRow = function(row) {
 			self.updateRow(row, select(this))
+		}
+		self._removeRow = function(row) {
+			self.removeRow(row, select(this))
 		}
 	}
 }

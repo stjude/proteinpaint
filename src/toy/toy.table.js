@@ -92,8 +92,16 @@ class ToyTable extends Component {
 		const rows = this.app.state().controls.rows.map(r=>r.name)
 		if(rows.includes(row_name)){
 			const row = this.app.state().controls.rows.find(r => r.name == row_name)
-			if (row.hide) tr.style('display','none')
-			else tr.style('display','table-row')
+			if (row.hide){
+				tr.style('visibility','collapse')
+					.style('opacity',0)
+					.style('transition','visibility .5s ease, opacity .5s ease')
+			} 
+			else{
+				tr.style('visibility','visible')
+					.style('opacity',1)
+					.style('transition','visibility .5s ease, opacity .5s ease')
+			}
 		}
 	}
 
