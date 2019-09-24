@@ -26,6 +26,11 @@ class ToyStore {
 	}
 }
 
+/*
+	To clearly indicate the allowed store actions,
+	supply a literal "actions" object on the 
+	constructor prototype
+*/
 ToyStore.prototype.actions = {
 	async term_add(action) {
 		if (!action.term && !action.termid) throw 'neither term or termid is given'

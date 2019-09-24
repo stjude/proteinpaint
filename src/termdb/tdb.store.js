@@ -1,9 +1,12 @@
 import * as rx from "../rx.core"
 
 const defaultState = {
+	genome: "hg38",
+	dslabel: "SJLife",
 	tree: {
 		currTerm: 'root',
-		expandedTerms: []
+		expandedTerms: [],
+		plottedTerms: {},
 	}
 }
 
@@ -22,6 +25,11 @@ class TdbStore {
 	}
 }
 
+/*
+	To clearly indicate the allowed store actions,
+	supply a literal "actions" object on the 
+	constructor prototype
+*/
 TdbStore.prototype.actions = {
 	tree_expand(action) {
 		if (this.state.tree.expandedTerms.includes(action.termId)) return
@@ -32,6 +40,21 @@ TdbStore.prototype.actions = {
 		const i = this.state.tree.expandedTerms.indexOf(action.termId)
 		if (i == -1) return
 		this.state.tree.expandedTerms.splice(i, 1)
+	},
+
+	plot_add(action) {
+		const plot = {id: action.id, config: action.config}
+		this.state.tree.plottedTerms[action.id] = plot
+	},
+
+	plot_show(action) {
+		const plot = this.state.tree.plottedTerms[action.id]
+		plot.isVisible = true
+	},
+
+	plot_hide(action) {
+		const plot = this.state.tree.plotttedTerms[action.id]
+		if (plot) plot.isVisible = false
 	}
 }
 

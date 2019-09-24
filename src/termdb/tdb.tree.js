@@ -1,30 +1,18 @@
 import * as rx from "../rx.core"
 import {select, event} from "d3-selection"
 import {dofetch2} from "../client"
-//import {plotInit} from "./tdb.plot"
-
-/*****************************
-	Example Component Classes
-*****************************/
-
-/*
-	The resulting instance properties and methods 
-	will be fully private when created inside
-	componentInit() or similar component generators
-*/
+import {plotInit} from "./tdb.plot"
 
 class TdbTree {
 	constructor(app, holder) {
 		this.api = rx.getComponentApi(this)
 		this.app = app
-		this.dom = {
-			holder: holder.style("margin", "10px").style("border", "1px solid #aaa"),
-		}
+		this.dom = {holder}
 		// set closure methods to handle conflicting "this" contexts
 		this.notThis(this)
 
 		this.components = {
-			plots: []
+			plots: {}
 		}
 
 		//this.bus = core.busInit(this.constructor.name, ["postRender"])
@@ -32,18 +20,23 @@ class TdbTree {
 		this.termsById = {root: this.currTerm}
 		this.tree = [this.currTerm]
 		this.app.dispatch({type: "tree_expand", termId: 'root'})
+
+		this.bus = new rx.Bus('tree', ['postInit', 'postNotify'], app.opts.callbacks, this.api)
+		this.bus.emit('postInit')
 	}
 
 	reactsTo(action, acty) {
-		if (acty[0] == 'tree') return true
+		if (acty[0] == 'tree' || acty[0] == 'plot') return true
 	}
 
 	async main(action={}) {
-		this.currTerm = this.termsById[action.termId]
-		this.currTerm.terms = await this.requestTerm(this.currTerm)
-		this.expand(this.termsById.root, this.dom.holder)
-		//this.bus.emit("postRender")
-		return this
+		if (action.type.startsWith("plot_")) {
+			this.viewPlot(action)
+		} else {
+			this.currTerm = this.termsById[action.termId]
+			this.currTerm.terms = await this.requestTerm(this.currTerm)
+			this.expand(this.termsById.root, this.dom.holder)
+		}
 	}
 
 	async requestTerm(term) {
@@ -101,7 +94,7 @@ class TdbTree {
 			.style("padding", "2px 5px")
 			.style("background", "#ececec")
 			.style("font-family", "courier")
-			.on("click", this._toggle)
+			.on("click", this.toggleTerm)
 
 		div
 			.select(".termlabel")
@@ -110,7 +103,7 @@ class TdbTree {
 			.style("display", "inline-block")
 			.style("text-align", "center")
 			.style("padding", "5px 5px 5px 5px")
-			.on("click", this._toggle)
+			.on("click", this.toggleTerm)
 
 		div
 			.select(".termview")
@@ -123,6 +116,7 @@ class TdbTree {
 			.style("margin-left", "50px")
 			.style("background", "#ececec")
 			.style("font-size", "0.8em")
+			.on('click', this.togglePlot)
 
 		div.select('.termsubdiv')
 			.style("overflow", expanded ? '' : 'hidden')
@@ -130,6 +124,11 @@ class TdbTree {
 			.style('opacity', expanded ? 1 : 0)
 		
 		this.expand(term, div.select(".termsubdiv"))
+	}
+
+	viewPlot(action) {
+		const plot = this.components.plots[action.id]
+		if (plot) plot.main(action)
 	}
 
 	notThis(self) {
@@ -157,11 +156,23 @@ class TdbTree {
 				.style('transition', '0.3s ease')
 			self.printTerm(term, div)
 		}
-		self._toggle = function(term) {
+		self.toggleTerm = function(term) {
 			event.stopPropagation()
 			const expanded = self.app.state().tree.expandedTerms.includes(term.id)
 			const type = expanded ? "tree_collapse" : "tree_expand"
 			self.app.dispatch({type, termId: term.id})
+		}
+		self.togglePlot = function(term) {
+			event.stopPropagation()
+			const plot = self.components.plots[term.id]
+			if (!plot) {
+				const holder = select(select(this).node().parentNode.lastChild)
+				const newPlot = plotInit(self.app, holder, {term, id: term.id})
+				self.components.plots[term.id] = newPlot
+			} else {
+				const type = !plot || !plot.isVisible ? "plot_show" : "plot_hide" 
+				self.app.dispatch({type, term})
+			}
 		}
 	}
 

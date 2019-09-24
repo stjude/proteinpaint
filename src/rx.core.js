@@ -13,9 +13,9 @@ export function getInitFxn(_Class_) {
 		- optionally attaches a self reference to the api
 		- freezes and returns the instance api
 	*/
-	return (arg, holder) => {
+	return (arg, holder, config={}) => {
 		// instantiate mutable private properties and methods
-		const self = new _Class_(arg, holder)
+		const self = new _Class_(arg, holder, config)
 		
 		// get the instance's api that hides its
 		// mutable props and methods
@@ -93,7 +93,7 @@ export class Bus {
 		setTimeout(() => {
 			for (const type in this.events) {
 				if (type == eventType || type.startsWith(eventType + ".")) {
-					this.events[type](arg ? arg : this.defaultArg)
+					this.events[type](arg || this.defaultArg)
 				}
 			}
 		}, 0)
@@ -221,8 +221,14 @@ export function notifyComponents(action) {
 		const component = this.components[name]
 		if (Array.isArray(component)) {
 			for (const c of component) c.main(action)
-		} else {
-			component.main(action)
+		} else if (component.hasOwnProperty('main')) {
+			 component.main(action)
+		} else if (component && typeof component == "object") {
+			for(const name in component) {
+				if (component.hasOwnProperty(name) && typeof component[name].main == "function") {
+					component[name].main(action)
+				}
+			}
 		}
 	}
 }
