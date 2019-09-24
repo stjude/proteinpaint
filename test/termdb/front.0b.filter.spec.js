@@ -497,8 +497,8 @@ tape("filter term-value button: Conditional term (sub-condition)", function(test
 				arg: obj
 			})
 			.run(testFilterDisplay, 300)
-			.to(checkSubBtn, triggerChangeSub)
-			.to(checkAddedSubBtn, triggerAddSub)
+			.to(checkSubBtn, triggerChangeSub, 100)
+			.to(checkAddedSubBtn, triggerAddSub, 100)
 			.done(() => test.end())
 	}
 
