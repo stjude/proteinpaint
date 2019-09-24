@@ -108,19 +108,18 @@ export class Bus {
 export function getStoreApi(self) {
 	const api = {
 		async write(action) {
-			// enforce undescore convention for action methods,
-			// non-action methods should use camel-case instead
-			if (!action.type.includes("_")) {
-				throw `A store action type must use an underscore '_'.`
-			}
 			// avoid calls to inherited methods
-			if (!self.constructor.prototype.hasOwnProperty(action.type)) {
-				throw `Action=${action.type} must be declared directly as a class method.`
+			const actions = self.constructor.prototype.actions
+			if (!actions) {
+				throw `no store actions specified`
 			}
-			if (typeof self[action.type] !== 'function') {
+			if (!actions.hasOwnProperty(action.type)) {
+				throw `Action=${action.type} must be declared in an "actions" property of a class.`
+			}
+			if (typeof actions[action.type] !== 'function') {
 				throw `invalid action type=${action.type}`
 			}
-			await self[action.type].call(self, action)
+			await actions[action.type].call(self, action)
 			return api.state()
 		},
 		state() {

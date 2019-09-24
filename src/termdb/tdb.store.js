@@ -3,7 +3,7 @@ import * as rx from "../rx.core"
 const defaultState = {
 	tree: {
 		currTerm: 'root',
-		expanded_terms: []
+		expandedTerms: []
 	}
 }
 
@@ -20,16 +20,18 @@ class TdbStore {
 		this.app = app
 		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
 	}
+}
 
+TdbStore.prototype.actions = {
 	tree_expand(action) {
-		if (this.state.tree.expanded_terms.includes(action.termId)) return
-		this.state.tree.expanded_terms.push(action.termid)
-	}
+		if (this.state.tree.expandedTerms.includes(action.termId)) return
+		this.state.tree.expandedTerms.push(action.termId)
+	},
 
 	tree_collapse(action) {
-		const i = this.state.tree.expanded_terms.indexOf(action.termId)
+		const i = this.state.tree.expandedTerms.indexOf(action.termId)
 		if (i == -1) return
-		this.state.tree.expanded_terms.splice(i, 1)
+		this.state.tree.expandedTerms.splice(i, 1)
 	}
 }
 

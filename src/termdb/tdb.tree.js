@@ -1,6 +1,7 @@
 import * as rx from "../rx.core"
 import {select, event} from "d3-selection"
 import {dofetch2} from "../client"
+//import {plotInit} from "./tdb.plot"
 
 /*****************************
 	Example Component Classes
@@ -22,11 +23,15 @@ class TdbTree {
 		// set closure methods to handle conflicting "this" contexts
 		this.notThis(this)
 
+		this.components = {
+			plots: []
+		}
+
 		//this.bus = core.busInit(this.constructor.name, ["postRender"])
 		this.currTerm = {id: 'root', level: 0}
 		this.termsById = {root: this.currTerm}
 		this.tree = [this.currTerm]
-		this.main({termId: 'root'})
+		this.app.dispatch({type: "tree_expand", termId: 'root'})
 	}
 
 	reactsTo(action, acty) {
@@ -85,7 +90,7 @@ class TdbTree {
 			.style("padding", "0px 5px 5px 25px")
 			.style("cursor", "pointer")
 
-		const expanded = term.id in this.termsById && this.termsById[term.id].expanded
+		const expanded = this.app.state().tree.expandedTerms.includes(term.id)
 		
 		div
 			.select(".termbtn")
@@ -121,7 +126,8 @@ class TdbTree {
 
 		div.select('.termsubdiv')
 			.style("overflow", expanded ? '' : 'hidden')
-			.style("max-height", expanded ? '100%' : 0)
+			.style("height", expanded ? '' : 0)
+			.style('opacity', expanded ? 1 : 0)
 		
 		this.expand(term, div.select(".termsubdiv"))
 	}
@@ -147,13 +153,14 @@ class TdbTree {
 			if (term.isleaf) div.append('div').attr('class', 'termview')
 			div.append('div').attr('class', 'termsubdiv')
 				//.style('overflow', 'hidden')
-				.style('transition', '0.25s ease')
+				//.style('opacity', 0)
+				.style('transition', '0.3s ease')
 			self.printTerm(term, div)
 		}
 		self._toggle = function(term) {
 			event.stopPropagation()
-			term.expanded = !term.expanded
-			const type = term.expanded ? "tree_collapse" : "tree_expand"
+			const expanded = self.app.state().tree.expandedTerms.includes(term.id)
+			const type = expanded ? "tree_collapse" : "tree_expand"
 			self.app.dispatch({type, termId: term.id})
 		}
 	}

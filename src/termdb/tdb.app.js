@@ -3,7 +3,6 @@ import {select} from "d3-selection"
 import {treeInit} from "./tdb.tree"
 import {storeInit} from "./tdb.store"
 //import {controlsInit} from "./tdb.controls"
-//import {plotInit} from "./tdb.plot"
 
 class TdbApp {
 	constructor(opts, holder) {
@@ -12,6 +11,7 @@ class TdbApp {
 		this.notifyComponents = rx.notifyComponents 
 
 		this.store = storeInit(this.api)
+		this.state = this.store.state()
 		this.dom = {
 			holder: holder.style("margin", "10px").style("border", "1px solid #aaa")
 		}
