@@ -176,6 +176,9 @@ export function getComponentApi(self) {
 			self.main(action)
 			return api
 		},
+		render(config, data) {
+			self.render(config, data)
+		},
 		// must not expose self.bus directly since that
 		// will also expose bus.emit() which should only
 		// be triggered by this component

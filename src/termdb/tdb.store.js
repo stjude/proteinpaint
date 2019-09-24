@@ -6,7 +6,7 @@ const defaultState = {
 	tree: {
 		currTerm: 'root',
 		expandedTerms: [],
-		plottedTerms: {},
+		plots: {},
 	}
 }
 
@@ -44,16 +44,17 @@ TdbStore.prototype.actions = {
 
 	plot_add(action) {
 		const plot = {id: action.id, config: action.config}
-		this.state.tree.plottedTerms[action.id] = plot
-	},
-
-	plot_show(action) {
-		const plot = this.state.tree.plottedTerms[action.id]
+		this.state.tree.plots[action.id] = plot
 		plot.isVisible = true
 	},
 
+	plot_show(action) {
+		const plot = this.state.tree.plots[action.id]
+		if (plot) plot.isVisible = true
+	},
+
 	plot_hide(action) {
-		const plot = this.state.tree.plotttedTerms[action.id]
+		const plot = this.state.tree.plots[action.id]
 		if (plot) plot.isVisible = false
 	}
 }

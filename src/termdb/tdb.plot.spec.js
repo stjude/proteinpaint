@@ -11,7 +11,7 @@ tape("\n", function(test) {
 
 tape("view click", function(test) {
 	test.timeoutAfter(2000)
-	test.plan(2)
+	test.plan(3)
 
 	runproteinpaint({
 		host,
@@ -39,10 +39,10 @@ tape("view click", function(test) {
 			eventType: "postNotify.test",
 			arg: tree
 		})
-			.run(triggerLevel1Click, 200)
-			.run(triggerLevel2Click, 200)
-			.run(triggerViewClick, 200)
-			.run(testAction, 200)
+			.run(triggerLevel1Click, 100)
+			.run(triggerLevel2Click, 100)
+			.run(triggerViewClick, 100)
+			.run(testAction, 600)
 			.done(()=>test.end())
 	}
 
@@ -71,6 +71,12 @@ tape("view click", function(test) {
 			plot && plot.Inner && plot.Inner.id,
 			term.id,
 			'should assign the clicked term id as the plot id'
+		)
+
+		test.equal(
+			plot && plot.Inner && plot.Inner.dom.viz.selectAll('.pp-bars-svg').size(),
+			1,
+			'should render a barchart view'
 		)
 	}
 })

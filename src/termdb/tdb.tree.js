@@ -129,6 +129,12 @@ class TdbTree {
 	viewPlot(action) {
 		const plot = this.components.plots[action.id]
 		if (plot) plot.main(action)
+		const show = action.type == "plot_add" || action.type == "plot_show"
+		this.dom.holder.selectAll(".termsubdiv")
+			.filter(term=>term.id == action.id)
+			.style("overflow", show ? '' : 'hidden')
+			.style("height", show ? '' : 0)
+			.style('opacity', show ? 1 : 0)
 	}
 
 	notThis(self) {
@@ -164,14 +170,14 @@ class TdbTree {
 		}
 		self.togglePlot = function(term) {
 			event.stopPropagation()
-			const plot = self.components.plots[term.id]
+			const plot = self.app.state().tree.plots[term.id]
 			if (!plot) {
 				const holder = select(select(this).node().parentNode.lastChild)
 				const newPlot = plotInit(self.app, holder, {term, id: term.id})
 				self.components.plots[term.id] = newPlot
 			} else {
-				const type = !plot || !plot.isVisible ? "plot_show" : "plot_hide" 
-				self.app.dispatch({type, term})
+				const type = !plot || !plot.isVisible ? "plot_show" : "plot_hide"
+				self.app.dispatch({type, id: term.id})
 			}
 		}
 	}
