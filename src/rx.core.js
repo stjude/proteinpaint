@@ -223,17 +223,17 @@ export function getComponentApi(self) {
 // Component Helpers
 // -----------------
 
-export function notifyComponents(action) {
+export function notifyComponents(action, data=null) {
 	for (const name in this.components) {
 		const component = this.components[name]
 		if (Array.isArray(component)) {
-			for (const c of component) c.main(action)
+			for (const c of component) c.main(action, data)
 		} else if (component.hasOwnProperty('main')) {
-			 component.main(action)
+			 component.main(action, data)
 		} else if (component && typeof component == "object") {
 			for(const name in component) {
 				if (component.hasOwnProperty(name) && typeof component[name].main == "function") {
-					component[name].main(action)
+					component[name].main(action, data)
 				}
 			}
 		}
