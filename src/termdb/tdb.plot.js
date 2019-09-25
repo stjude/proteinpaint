@@ -4,29 +4,29 @@ import {dofetch2} from "../client"
 import {barInit} from "./tdb.barchart"
 
 class TdbPlot {
-	constructor(app, holder, arg) {
+	constructor(app, opts) {
 		this.api = rx.getComponentApi(this)
 		this.app = app
-		this.id = arg.id
+		this.id = opts.id
 		this.config = this.app.state({type: 'plot', id: this.id})
 		
 		this.dom = {
-			holder: holder
+			holder: opts.holder
 				.style("margin-top", "-1px")
 				.style("white-space", "nowrap")
 				.style("overflow-x", "scroll"),
 
 			// will hold no data notice or the page title in multichart views
-			banner: holder.append("div").style("display", "none"),
+			banner: opts.holder.append("div").style("display", "none"),
 
 			// dom.controls will hold the config input, select, button elements
-			controls: holder
+			controls: opts.holder
 				.append("div")
 				.attr("class", "pp-termdb-plot-controls")
 				.style("display", "inline-block"),
 
 			// dom.viz will hold the rendered view
-			viz: holder
+			viz: opts.holder
 				.append("div")
 				.attr("class", "pp-termdb-plot-viz")
 				.style("display", "inline-block")
@@ -35,7 +35,11 @@ class TdbPlot {
 		}
 		
 		this.components = {
-			barchart: barInit(this.app, this.dom.viz.append('div'), this.config)
+			barchart: barInit(this.app, {
+				holder: this.dom.viz.append('div'), 
+				id: this.id,
+				term: opts.term
+			})
 		}
 
 		this.app.dispatch({
@@ -59,7 +63,7 @@ class TdbPlot {
 		this.config = this.app.state({type: 'plot', id: this.id})
 		const data = await this.requestData(this.config)
 		this.syncParams(this.config, data)
-		this.render(this.config, data)
+		this.render(action, data)
 	}
 
 	async requestData(config) {
@@ -145,9 +149,9 @@ class TdbPlot {
 		*/
 	}
 
-	render(config, data) {
+	render(action, data) {
 		for (const name in this.components) {
-			this.components[name].render(config, data)
+			this.components[name].main(action, data)
 		}
 		this.bus.emit("postRender")
 	}

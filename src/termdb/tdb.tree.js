@@ -4,10 +4,10 @@ import {dofetch2} from "../client"
 import {plotInit} from "./tdb.plot"
 
 class TdbTree {
-	constructor(app, holder) {
+	constructor(app, opts) {
 		this.api = rx.getComponentApi(this)
 		this.app = app
-		this.dom = {holder}
+		this.dom = {holder: opts.holder}
 		// set closure methods to handle conflicting "this" contexts
 		this.yesThis()
 		this.notThis(this)
@@ -131,7 +131,12 @@ class TdbTree {
 		const plot = this.components.plots[action.id]
 		if (plot) plot.main(action)
 		else {
-			const newPlot = plotInit(this.app, action.holder, {id: action.id})
+			// need to assess pros and cons of passing the holder via action versus alternatives
+			const newPlot = plotInit(this.app, {
+				id: action.id, 
+				holder: action.holder, 
+				term: action.term
+			})
 			this.components.plots[action.id] = newPlot
 		}
 		const show = action.type == "plot_add" || action.type == "plot_show"
@@ -178,6 +183,7 @@ class TdbTree {
 			event.stopPropagation()
 			const plot = self.app.state().tree.plots[term.id]
 			if (!plot) {
+				// need to assess pros and cons of passing the holder via action versus alternatives
 				const holder = select(select(this).node().parentNode.lastChild)
 				self.app.dispatch({type: "plot_add", id: term.id, term, holder})
 			} else {

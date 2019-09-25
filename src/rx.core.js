@@ -13,9 +13,9 @@ export function getInitFxn(_Class_) {
 		- optionally attaches a self reference to the api
 		- freezes and returns the instance api
 	*/
-	return (arg, holder, config={}) => {
+	return (arg, instanceOpts={}) => {
 		// instantiate mutable private properties and methods
-		const self = new _Class_(arg, holder, config)
+		const self = new _Class_(arg, instanceOpts)
 		
 		// get the instance's api that hides its
 		// mutable props and methods
@@ -174,17 +174,14 @@ export function getAppApi(self) {
 
 export function getComponentApi(self) {
 	const api = {
-		main(action) {
+		main(action, data=null) {
 			// reduce boilerplate or repeated code
 			// in component class main() by performing
 			// typical pre-emptive checks here
 			const acty = action.type ? action.type.split("_") : []
 			if (self.reactsTo && !self.reactsTo(action, acty)) return
-			self.main(action)
+			self.main(action, data)
 			return api
-		},
-		render(config, data) {
-			self.render(config, data)
 		},
 		// must not expose self.bus directly since that
 		// will also expose bus.emit() which should only

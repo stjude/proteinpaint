@@ -21,8 +21,7 @@ class TdbApp {
 		}
 
 		this.components = {
-			tree: treeInit(this.api, holder.append('div'))
-			//plots: []
+			tree: treeInit(this.api, {holder: holder.append('div')})
 		}
 
 		this.bus = new rx.Bus("app", ["postRender"])

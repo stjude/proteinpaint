@@ -5,7 +5,7 @@ import htmlLegend from "../html.legend"
 import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from "d3-scale"
 import { rgb } from "d3-color"
-import getHandlers from "../mds.termdb.barchart.events"
+import getHandlers from "./tdb.barchart.events"
 /* to-do: switch to using rx.Bus */
 import { get_event_bus, to_svg } from "../client"
 
@@ -15,22 +15,17 @@ const colors = {
 }
 
 class TdbBarchart {
-	constructor(app, holder, opts = { settings: {} }) {
+	constructor(app, opts) {
 		this.api = rx.getComponentApi(this)
 		this.app = app
-		this.opts = opts
+		this.id = opts.id
+		this.config = this.app.state({type: 'plot', id: this.id}) //opts
 		this.dom = {
-			holder,
-			barDiv: holder.append("div").style("white-space", "normal"),
-			legendDiv: holder.append("div").style("margin", "5px 5px 15px 5px")
+			holder: opts.holder,
+			barDiv: opts.holder.append("div").style("white-space", "normal"),
+			legendDiv: opts.holder.append("div").style("margin", "5px 5px 15px 5px")
 		}
-		this.defaults = Object.assign(JSON.parse(rendererSettings), {
-			isVisible: false,
-			term0: "",
-			term1: "sex",
-			term2: ""
-		})
-		this.settings = Object.assign(this.defaults, opts.settings.bar)
+		this.settings = Object.assign(JSON.parse(rendererSettings), this.config.settings.bar)
 		this.renderers = {}
 		this.handlers = getHandlers(this)
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
@@ -41,7 +36,7 @@ class TdbBarchart {
 		})
 		this.terms = {
 			term0: null,
-			term1: this.opts.term,
+			term1: opts.term,
 			term2: null
 		}
 		this.controls = {}
@@ -55,16 +50,13 @@ class TdbBarchart {
 		*/
 	}
 
-
-	render(config = null, data = null) {
+	main(action, data = null) {
 		if (!this.currServerData) this.dom.barDiv.style("max-width", window.innerWidth + "px")
 		if (data) this.currServerData = data
-		if (config) {
-			this.config = config
-			this.obj = this.app.state()
-		}
+		this.obj = this.app.state()
+		this.config = this.app.state({type: 'plot', id: this.id})
 		if (!this.setVisibility()) return
-		this.updateSettings(config)
+		this.updateSettings(this.config)
 		this.processData(this.currServerData)
 	}
 
@@ -101,17 +93,17 @@ class TdbBarchart {
 		})
 
 		this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
-		if (this.settings.term2 == "" && this.settings.unit == "pct") {
+		if (!config.term2 && this.settings.unit == "pct") {
 			this.settings.unit = "abs"
 		}
 		if (this.settings.term2 == "genotype") {
 			this.terms.term2 = { name: this.settings.mname }
-		} else if ("term2" in this.settings && config.term2) {
+		} else if (config.term2) {
 			this.terms.term2 = config.term2.term
 		} else {
 			this.terms.term2 = null
 		}
-		this.terms.term0 = settings.term0 && config.term0 ? config.term0.term : null
+		this.terms.term0 = config.term0 ? config.term0.term : null
 	}
 
 	initExclude() {
@@ -220,7 +212,7 @@ class TdbBarchart {
 	setMaxVisibleTotals(chartsData) {
 		// chartsData = this.currServerData
 		this.totalsByDataId = {}
-		const term1 = this.settings.term1
+		const term1 = this.terms.term1
 
 		const addlSeriesIds = {} // to track series IDs that are not already in this.seriesOrder
 		let maxVisibleAcrossCharts = 0
@@ -303,7 +295,7 @@ class TdbBarchart {
 		}
 		if (result.dataId in this.term2toColor) return
 		this.term2toColor[result.dataId] =
-			this.settings.term2 === ""
+			!this.terms.term2
 				? "rgb(144, 23, 57)"
 				: rgb(
 						this.settings.rows && this.settings.rows.length < 11 ? colors.c10(result.dataId) : colors.c20(result.dataId)
