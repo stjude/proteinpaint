@@ -9,6 +9,7 @@ class TdbTree {
 		this.app = app
 		this.dom = {holder}
 		// set closure methods to handle conflicting "this" contexts
+		this.yesThis()
 		this.notThis(this)
 
 		this.components = {
@@ -63,7 +64,7 @@ class TdbTree {
 		const cls = "termdiv-" + (term.level + 1)
 		const divs = div.selectAll("."+cls).data(term.terms, this.bindKey)
 
-		divs.exit().each(this._hideTerm)
+		divs.exit().each(this.hideTerm)
 
 		divs.style("display", this.updateTerm)
 
@@ -129,6 +130,10 @@ class TdbTree {
 	viewPlot(action) {
 		const plot = this.components.plots[action.id]
 		if (plot) plot.main(action)
+		else {
+			const newPlot = plotInit(this.app, action.holder, {id: action.id})
+			this.components.plots[action.id] = newPlot
+		}
 		const show = action.type == "plot_add" || action.type == "plot_show"
 		this.dom.holder.selectAll(".termsubdiv")
 			.filter(term=>term.id == action.id)
@@ -137,14 +142,21 @@ class TdbTree {
 			.style('opacity', show ? 1 : 0)
 	}
 
+	yesThis() {
+		this.toggleTerm = term => {
+			event.stopPropagation()
+			const expanded = this.app.state().tree.expandedTerms.includes(term.id)
+			const type = expanded ? "tree_collapse" : "tree_expand"
+			this.app.dispatch({type, termId: term.id})
+		}
+	}
+
 	notThis(self) {
-		// set methods that require both instance 
-		// context and a different "this" context;
 		// cannot use arrow function since the 
 		// alternate "this" context is needed
 		
 		// this == the d3 selected DOM node
-		self._hideTerm = function(){
+		self.hideTerm = function(){
 			select(this).style("display", "none")
 		}
 		self.updateTerm = function(term) {
@@ -162,19 +174,12 @@ class TdbTree {
 				.style('transition', '0.3s ease')
 			self.printTerm(term, div)
 		}
-		self.toggleTerm = function(term) {
-			event.stopPropagation()
-			const expanded = self.app.state().tree.expandedTerms.includes(term.id)
-			const type = expanded ? "tree_collapse" : "tree_expand"
-			self.app.dispatch({type, termId: term.id})
-		}
 		self.togglePlot = function(term) {
 			event.stopPropagation()
 			const plot = self.app.state().tree.plots[term.id]
 			if (!plot) {
 				const holder = select(select(this).node().parentNode.lastChild)
-				const newPlot = plotInit(self.app, holder, {term, id: term.id})
-				self.components.plots[term.id] = newPlot
+				self.app.dispatch({type: "plot_add", id: term.id, term, holder})
 			} else {
 				const type = !plot || !plot.isVisible ? "plot_show" : "plot_hide"
 				self.app.dispatch({type, id: term.id})

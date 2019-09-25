@@ -7,7 +7,8 @@ class TdbPlot {
 	constructor(app, holder, arg) {
 		this.api = rx.getComponentApi(this)
 		this.app = app
-		this.id = arg.id; 
+		this.id = arg.id
+		this.config = this.app.state({type: 'plot', id: this.id})
 		
 		this.dom = {
 			holder: holder
@@ -32,47 +33,6 @@ class TdbPlot {
 				.style("min-width", "300px")
 				.style("margin-left", "50px")
 		}
-
-		this.config = {
-			id: this.id,
-			term: { term: arg.term, q: arg.term.q ? arg.term.q : {} },
-			term0: arg.term0 ? { term: arg.term0, q: arg.term0.q ? arg.term0.q : {} } : null,
-			term2: arg.term2
-				? { term: arg.term2, q: arg.term2.q ? arg.term2.q : {} }
-				//: arg.obj.modifier_ssid_barchart
-				//? { mname: arg.obj.modifier_ssid_barchart.mutation_name }
-				: null,
-			//unannotated: arg.unannotated ? arg.unannotated : "" // not needed?
-			isVisible: true,
-			settings: {
-				currViews: ["barchart"],
-				controls: {
-					isVisible: false // control panel is hidden by default
-				},
-				common: {
-					use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
-					use_percentage: false,
-					barheight: 300, // maximum bar length
-					barwidth: 20, // bar thickness
-					barspace: 2 // space between two bars
-				},
-				boxplot: {
-					toppad: 20, // top padding
-					yaxis_width: 100,
-					label_fontsize: 15,
-					barheight: 400, // maximum bar length
-					barwidth: 25, // bar thickness
-					barspace: 5 // space between two bars
-				},
-				bar: {
-					orientation: "horizontal",
-					unit: "abs",
-					overlay: "none",
-					divideBy: "none"
-				}
-			}
-		}
-
 		
 		this.components = {
 			barchart: barInit(this.app, this.dom.viz.append('div'), this.config)
@@ -96,7 +56,7 @@ class TdbPlot {
 	}
 
 	async main(action) {
-		this.config = this.app.state().tree.plots[this.id].config
+		this.config = this.app.state({type: 'plot', id: this.id})
 		const data = await this.requestData(this.config)
 		this.syncParams(this.config, data)
 		this.render(this.config, data)
@@ -156,7 +116,7 @@ class TdbPlot {
 		return "?" + params.join("&")
 	}
 
-	syncParams(config, data) { return //console.log(data)
+	syncParams(config, data) {
 		if (!data || !data.refs) return
 		for (const [i, key] of ["term0", "term", "term2"].entries()) {
 			const term = config[key]
@@ -177,10 +137,12 @@ class TdbPlot {
 		// the same except now with explicit defaults. So store
 		// the response data under the alternative dataname
 		// that includes the defaults.
-		const altDataName = getDataName(config)
+		/*
+		const altDataName = this.getDataName(config)
 		if (!(altDataName in serverData)) {
 			serverData[altDataName] = data
 		}
+		*/
 	}
 
 	render(config, data) {

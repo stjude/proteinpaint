@@ -122,10 +122,17 @@ export function getStoreApi(self) {
 			await actions[action.type].call(self, action)
 			return api.state()
 		},
-		state() {
-			const stateCopy = self.fromJson(self.toJson(self.state))
-			self.deepFreeze(stateCopy)
-			return stateCopy
+		state(sub=null) {
+			if (!sub) {
+				const stateCopy = self.fromJson(self.toJson(self.state))
+				self.deepFreeze(stateCopy)
+				return stateCopy
+			} else {
+				if (!self.getters.hasOwnProperty(sub.type)) {
+					throw `undefined state getter method for component type='${sub.type}'`
+				}
+				return self.getters[sub.type].call(self, sub)
+			}
 		}
 	}
 	return api
@@ -134,9 +141,9 @@ export function getStoreApi(self) {
 export function getAppApi(self) {
 	const api = {
 		opts: self.opts,
-		state() {
+		state(sub=null) {
 			// return self // would allow access to hidden instance
-			return self.state
+			return sub ? self.store.state(sub) : self.state
 		},
 		async dispatch(action={}) {
 			/*
