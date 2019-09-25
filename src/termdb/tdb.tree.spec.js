@@ -1,15 +1,15 @@
-const tape = require("tape")
-const d3s = require("d3-selection")
-const serverconfig = require("../../serverconfig")
-const host = "http://localhost:" + serverconfig.port
-const helpers = require("../../test/front.helpers.js")
+const tape = require('tape')
+const d3s = require('d3-selection')
+const serverconfig = require('../../serverconfig')
+const host = 'http://localhost:' + serverconfig.port
+const helpers = require('../../test/front.helpers.js')
 
-tape("\n", function(test) {
-	test.pass("-***- tdb.tree -***-")
+tape('\n', function(test) {
+	test.pass('-***- tdb.tree -***-')
 	test.end()
 })
 
-tape("default view", function(test) {
+tape('default view', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(1)
 
@@ -18,11 +18,11 @@ tape("default view", function(test) {
 		noheader: 1,
 		nobox: true,
 		termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			callbacks: {
 				tree: {
-					"postInit.test": runTests
+					'postInit.test': runTests
 				}
 			},
 			debug: 1,
@@ -34,16 +34,13 @@ tape("default view", function(test) {
 
 	function runTests(tree) {
 		tree.on('postInit.test', null)
-		helpers.rideInit({arg: tree})
+		helpers
+			.rideInit({ arg: tree })
 			.run(testDom, 300)
-			.done(()=>test.end())
+			.done(() => test.end())
 	}
 
 	function testDom(tree) {
-		test.equal(
-			tree.Inner.dom.holder.selectAll('.termbtn').size(), 
-			4,
-			"should have 4 root term buttons"
-		)
+		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 4, 'should have 4 root terms')
 	}
 })
