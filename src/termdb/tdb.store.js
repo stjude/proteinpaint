@@ -43,7 +43,7 @@ TdbStore.prototype.actions = {
 	},
 
 	plot_add(action) {
-		this.setters.plot.call(this, action)
+		this.state.tree.plots[action.id] = action.config
 	},
 
 	plot_show(action) {
@@ -69,55 +69,5 @@ TdbStore.prototype.getters = {
 		return this.copyMerge('{}', this.state.tree.plots[sub.id])
 	}
 }
-
-/*
-	methods to set the initial state for a 
-	to-be-added subcomponent in an app
-*/
-TdbStore.prototype.setters = {
-	plot(action) {
-		if (action.id in this.state.tree.plots) return
-		this.state.tree.plots[action.id] = {
-			id: action.id,
-			isVisible: true,
-			term: { term: action.term, q: action.term.q ? action.term.q : {} },
-			term0: action.term0 ? { term: action.term0, q: action.term0.q ? action.term0.q : {} } : null,
-			term2: action.term2
-				? { term: action.term2, q: action.term2.q ? action.term2.q : {} }
-				//: action.obj.modifier_ssid_barchart
-				//? { mname: action.obj.modifier_ssid_barchart.mutation_name }
-				: null,
-			//unannotated: action.unannotated ? action.unannotated : "" // not needed?
-			settings: {
-				currViews: ["barchart"],
-				controls: {
-					isVisible: false // control panel is hidden by default
-				},
-				common: {
-					use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
-					use_percentage: false,
-					barheight: 300, // maximum bar length
-					barwidth: 20, // bar thickness
-					barspace: 2 // space between two bars
-				},
-				boxplot: {
-					toppad: 20, // top padding
-					yaxis_width: 100,
-					label_fontsize: 15,
-					barheight: 400, // maximum bar length
-					barwidth: 25, // bar thickness
-					barspace: 5 // space between two bars
-				},
-				bar: {
-					orientation: "horizontal",
-					unit: "abs",
-					overlay: "none",
-					divideBy: "none"
-				}
-			}
-		}
-	}
-}
-
 
 exports.storeInit = rx.getInitFxn(TdbStore)

@@ -1,7 +1,7 @@
 import * as rx from "../rx.core"
 import {select, event} from "d3-selection"
 import {dofetch2} from "../client"
-import {plotInit} from "./tdb.plot"
+import {plotInit, plotConfig} from "./tdb.plot"
 
 class TdbTree {
 	constructor(app, opts) {
@@ -185,7 +185,12 @@ class TdbTree {
 			if (!plot) {
 				// need to assess pros and cons of passing the holder via action versus alternatives
 				const holder = select(select(this).node().parentNode.lastChild)
-				self.app.dispatch({type: "plot_add", id: term.id, term, holder})
+				self.app.dispatch({
+					type: "plot_add", 
+					id: term.id, 
+					term, holder, 
+					config: plotConfig({term})
+				})
 			} else {
 				const type = !plot || !plot.isVisible ? "plot_show" : "plot_hide"
 				self.app.dispatch({type, id: term.id})

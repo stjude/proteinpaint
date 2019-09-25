@@ -157,4 +157,46 @@ class TdbPlot {
 	}
 }
 
-exports.plotInit = rx.getInitFxn(TdbPlot)
+export const plotInit = rx.getInitFxn(TdbPlot)
+
+export function plotConfig(opts) {
+	return {
+		id: opts.term.id,
+		isVisible: true,
+		term: { term: opts.term, q: opts.term.q ? opts.term.q : {} },
+		term0: opts.term0 ? { term: opts.term0, q: opts.term0.q ? opts.term0.q : {} } : null,
+		term2: opts.term2
+			? { term: opts.term2, q: opts.term2.q ? opts.term2.q : {} }
+			//: opts.obj.modifier_ssid_barchart
+			//? { mname: opts.obj.modifier_ssid_barchart.mutation_name }
+			: null,
+		//unannotated: opts.unannotated ? opts.unannotated : "" // not needed?
+		settings: {
+			currViews: ["barchart"],
+			controls: {
+				isVisible: false // control panel is hidden by default
+			},
+			common: {
+				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
+				use_percentage: false,
+				barheight: 300, // maximum bar length
+				barwidth: 20, // bar thickness
+				barspace: 2 // space between two bars
+			},
+			boxplot: {
+				toppad: 20, // top padding
+				yaxis_width: 100,
+				label_fontsize: 15,
+				barheight: 400, // maximum bar length
+				barwidth: 25, // bar thickness
+				barspace: 5 // space between two bars
+			},
+			bar: {
+				orientation: "horizontal",
+				unit: "abs",
+				overlay: "none",
+				divideBy: "none"
+			}
+		}
+	}
+}
