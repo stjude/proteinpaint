@@ -2,6 +2,7 @@ import * as rx from "../rx.core"
 import {select} from "d3-selection"
 import {treeInit} from "./tdb.tree"
 import {storeInit} from "./tdb.store"
+import {filterInit} from "./tdb.filter"
 //import {controlsInit} from "./tdb.controls"
 
 class TdbApp {
@@ -17,7 +18,8 @@ class TdbApp {
 		}
 
 		this.termfilter = {
-			terms: []
+			// terms: []
+			terms: filterInit(this.api, {holder: holder.append("div")})
 		}
 
 		this.components = {

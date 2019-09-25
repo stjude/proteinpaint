@@ -8,6 +8,9 @@ const defaultState = {
 		currTerm: 'root',
 		expandedTerms: [],
 		plots: {}
+	},
+	termfilter:{
+		terms:[]
 	}
 }
 
@@ -69,6 +72,11 @@ TdbStore.prototype.actions = {
 	plot_hide(action) {
 		const plot = this.state.tree.plots[action.id]
 		if (plot) plot.isVisible = false
+	},
+
+	filter_add(action) {
+		if (this.state.termfilter.terms.includes(action.termId)) return
+		this.state.termfilter.terms.push(action.termId)
 	}
 }
 
