@@ -40,8 +40,8 @@ class ToyApp {
 		}
 		// expose the app api, not "this" directly to subcomponents
 		this.components = {
-			controls: controlsInit(this.api, holder.append("div")),
-			table: tableInit(this.api, holder.append("div"))
+			controls: controlsInit(this.api, {holder: holder.append("div")}),
+			table: tableInit(this.api, {holder: holder.append("div")})
 		}
 		// set up the app api as the default argument 
 		// to callbacks of emitted events

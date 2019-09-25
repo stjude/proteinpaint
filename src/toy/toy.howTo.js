@@ -8,7 +8,7 @@ import * as rx from "../rx.core"
 // import ... other modules
 
 class HowTo {
-	constructor(app, holder) {
+	constructor(app, opts) {
 		// indicate whether this class is an 
 		// app, store, or component by the type
 		// of api that is uses
@@ -23,10 +23,10 @@ class HowTo {
 		this.app = app
 		
 		// usual stuff
-		this.opts = holder
+		this.opts = opts
 		this.dom = {
-			holder,
-			table: holder.append('table')
+			holder: opts.holder,
+			table: opts.holder.append('table')
 		}
 		
 		// Optional: set up reusable closured

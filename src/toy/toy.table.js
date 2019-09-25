@@ -2,13 +2,13 @@ import * as rx from "../rx.core"
 import {select} from "d3-selection"
 
 class ToyTable {
-	constructor(app, holder) {
+	constructor(app, opts) {
 		this.api = rx.getComponentApi(this)
 		this.app = app
-		this.opts = holder
+		this.opts = opts
 		this.dom = {
-			holder,
-			table: holder.append('table')
+			holder: opts.holder,
+			table: opts.holder.append('table')
 		}
 		this.yesThis()
 		this.notThis(this)
