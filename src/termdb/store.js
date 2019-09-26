@@ -22,14 +22,15 @@ class TdbStore {
 		this.toJson = rx.toJson // used in store.api.state()
 
 		this.app = app
+		if (!app.opts.state) throw '.state{} missing'
 		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
 		this.validateOpts()
 	}
 
 	validateOpts() {
 		const s = this.state
-		if (!s.genome) throw '"genome" missing'
-		if (!s.dslabel) throw '"dslabel" missing'
+		if (!s.genome) throw '.state.genome missing'
+		if (!s.dslabel) throw '.state.dslabel missing'
 	}
 }
 
