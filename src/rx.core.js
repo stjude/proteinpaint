@@ -151,7 +151,7 @@ export function getAppApi(self) {
 			// replace app.state
 			self.state = await self.store.write(action)
 			//self.deepFreeze(action)
-			self.main(action)
+			await self.main(action)
 		},
 		// must not expose this.bus directly since that
 		// will also expose bus.emit() which should only
@@ -163,9 +163,6 @@ export function getAppApi(self) {
 		},
 		components(dotSepNames = '') {
 			return self.getComponents(dotSepNames)
-		},
-		printError(e) {
-			self.printError(e)
 		}
 	}
 	return api
@@ -173,13 +170,13 @@ export function getAppApi(self) {
 
 export function getComponentApi(self) {
 	const api = {
-		main(action, data = null) {
+		async main(action, data = null) {
 			// reduce boilerplate or repeated code
 			// in component class main() by performing
 			// typical pre-emptive checks here
 			const acty = action.type ? action.type.split('_') : []
 			if (self.reactsTo && !self.reactsTo(action, acty)) return
-			self.main(action, data)
+			await self.main(action, data)
 			return api
 		},
 		// must not expose self.bus directly since that
@@ -222,17 +219,17 @@ export function getComponentApi(self) {
 // Component Helpers
 // -----------------
 
-export function notifyComponents(action, data = null) {
+export async function notifyComponents(action, data = null) {
 	for (const name in this.components) {
 		const component = this.components[name]
 		if (Array.isArray(component)) {
-			for (const c of component) c.main(action, data)
+			for (const c of component) await c.main(action, data)
 		} else if (component.hasOwnProperty('main')) {
-			component.main(action, data)
+			await component.main(action, data)
 		} else if (component && typeof component == 'object') {
 			for (const name in component) {
 				if (component.hasOwnProperty(name) && typeof component[name].main == 'function') {
-					component[name].main(action, data)
+					await component[name].main(action, data)
 				}
 			}
 		}

@@ -37,19 +37,14 @@ class TdbTree {
 	}
 
 	async main(action = {}) {
-		try {
-			if (action.type.startsWith('plot_')) {
-				this.viewPlot(action)
-			} else {
-				this.action = action
-				this.currTerm = this.termsById[action.termId]
-				this.currTerm.terms = await this.requestTerm(this.currTerm)
-				this.expand(this.termsById.root, this.dom.holder)
-			}
-		} catch (e) {
-			this.app.printError(e)
+		if (action.type.startsWith('plot_')) {
+			this.viewPlot(action)
+		} else {
+			this.action = action
+			this.currTerm = this.termsById[action.termId]
+			this.currTerm.terms = await this.requestTerm(this.currTerm)
+			this.expand(this.termsById.root, this.dom.holder)
 		}
-		this.bus.emit('postRender')
 	}
 
 	async requestTerm(term) {

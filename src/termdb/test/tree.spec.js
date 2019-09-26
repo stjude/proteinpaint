@@ -22,15 +22,15 @@ tape('error handling', function(test) {
 				genome: 'ahg38'
 			},
 			callbacks: {
-				tree: {
+				app: {
 					'postRender.test': testWrongGenome
 				}
 			},
 			debug: 1
 		}
 	})
-	function testWrongGenome(tree) {
-		const d = tree.Inner.app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
+	function testWrongGenome(app) {
+		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
 		test.equal(d.text(), 'Error: invalid genome', 'should show for invalid genome')
 	}
 	runproteinpaint({
@@ -43,15 +43,15 @@ tape('error handling', function(test) {
 				genome: 'hg38'
 			},
 			callbacks: {
-				tree: {
+				app: {
 					'postRender.test': testWrongDslabel
 				}
 			},
 			debug: 1
 		}
 	})
-	function testWrongDslabel(tree) {
-		const d = tree.Inner.app.Inner.dom.errdiv.select('.sja_errorbar').select('div')
+	function testWrongDslabel(app) {
+		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div')
 		test.equal(d.text(), 'Error: invalid dslabel', 'should show for invalid dslabel')
 	}
 })

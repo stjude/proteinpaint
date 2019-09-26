@@ -17,7 +17,7 @@ class TdbApp {
 			errdiv: holder.append('div')
 		}
 
-		// to catch error upon init
+		// catch initialization error
 		try {
 			this.store = storeInit(this.api)
 			this.state = this.store.state()
@@ -28,14 +28,22 @@ class TdbApp {
 			}
 		} catch(e) {
 			this.printError(e)
+			if (e.stack) console.log(e.stack)
 		}
 
-		this.bus = new rx.Bus("app", ["postRender"], opts.callbacks, this.api)
-		this.bus.emit('postRender')
+		this.bus = new rx.Bus("app", ["postInit",'postRender'], opts.callbacks, this.api)
+		this.bus.emit('postInit')
 	}
 
-	main(action = {}) {
-		this.notifyComponents(action)
+	async main(action = {}) {
+		// catch runtime error from components
+		try {
+			await this.notifyComponents(action)
+		} catch(e) {
+			this.printError(e)
+			if (e.stack) console.log(e.stack)
+		}
+		this.bus.emit('postRender')
 	}
 
 	printError(e) {
