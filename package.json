@@ -16,7 +16,7 @@
     "test": "tape test/**/back.*.spec.js && browserify public/bin/proteinpaint.js test/**/front.*.spec.js | tape-run",
     "test-back": "tape test/**/back.*.spec.js",
     "test-front": "browserify public/bin/proteinpaint.js test/**/front.*.spec.js | tape-run",
-    "test-browser": "watchify test/**/front.*.spec.js src/**/*.spec.js -o public/bin/spec.bundle.js -v",
+    "test-browser": "watchify test/**/front.*.spec.js src/**/test/*.spec.js -o public/bin/spec.bundle.js -v",
     "test-response": "nodemon test/test.server.js --watch test/termdb",
     "deliver": "sh utils/deliver.sh",
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset",

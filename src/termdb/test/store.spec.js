@@ -5,12 +5,12 @@ const host = 'http://localhost:' + serverconfig.port
 const helpers = require('../../../test/front.helpers.js')
 
 tape('\n', function(test) {
-	test.pass('-***- app store -***-')
+	test.pass('-***- termdb store -***-')
 	test.end()
 })
 
-tape('opts.genome missing', function(test) {
-	test.plan(1)
+tape('error message', function(test) {
+	test.plan(2)
 	runproteinpaint({
 		host,
 		noheader: 1,
@@ -18,7 +18,7 @@ tape('opts.genome missing', function(test) {
 		termdb: {
 			callbacks: {
 				app: {
-					'postRender.test': testError
+					'postRender.test': testMissingGenome
 				}
 			},
 			debug: 1,
@@ -27,12 +27,16 @@ tape('opts.genome missing', function(test) {
 			}
 		}
 	})
-	function testError(app) {
-		test.equal(app.Inner.dom.errdiv.selectAll('.sja_errorbar').size(), 1, 'should have printed 1 error')
+	function testMissingGenome(app) {
+		setTimeout(() => {
+			test.equal(
+				app.Inner.dom.errdiv.selectAll('.sja_errorbar').size(),
+				1,
+				'should be displayed for missing opts.genome'
+			)
+		}, 100)
 	}
-})
-tape('opts.dslabel missing', function(test) {
-	test.plan(1)
+
 	runproteinpaint({
 		host,
 		noheader: 1,
@@ -41,7 +45,7 @@ tape('opts.dslabel missing', function(test) {
 			genome: 'hg38',
 			callbacks: {
 				app: {
-					'postRender.test': testError
+					'postRender.test': testMissingDslabel
 				}
 			},
 			debug: 1,
@@ -50,7 +54,16 @@ tape('opts.dslabel missing', function(test) {
 			}
 		}
 	})
-	function testError(app) {
-		test.equal(app.Inner.dom.errdiv.selectAll('.sja_errorbar').size(), 1, 'should have printed 1 error')
+
+	function testMissingDslabel(app) {
+		setTimeout(() => {
+			test.equal(
+				app.Inner.dom.errdiv.selectAll('.sja_errorbar').size(),
+				1,
+				'should be displayed for missing opts.dslabel'
+			)
+		}, 100)
 	}
 })
+
+tape.skip('state overrides', function(test) {})

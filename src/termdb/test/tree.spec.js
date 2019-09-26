@@ -18,8 +18,10 @@ tape('default view', function(test) {
 		noheader: 1,
 		nobox: true,
 		termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
+			state: {
+				dslabel: 'SJLife',
+				genome: 'hg38'
+			},
 			callbacks: {
 				tree: {
 					'postInit.test': runTests
