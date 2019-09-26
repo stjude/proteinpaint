@@ -1,15 +1,13 @@
-import * as rx from "../rx.core"
+import * as rx from '../rx.core'
 
 const defaultState = {
-	genome: "hg38",
-	dslabel: "SJLife",
 	tree: {
 		currTerm: 'root',
 		expandedTerms: [],
-		plots: {},
-	},	
-	termfilter:{
-		terms:[]
+		plots: {}
+	},
+	termfilter: {
+		terms: []
 	}
 }
 
@@ -22,9 +20,16 @@ class TdbStore {
 		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
 		this.fromJson = rx.fromJson // used in store.api.state()
 		this.toJson = rx.toJson // used in store.api.state()
-		
+
 		this.app = app
 		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
+		this.validateOpts()
+	}
+
+	validateOpts() {
+		const s = this.state
+		if (!s.genome) throw '"genome" missing'
+		if (!s.dslabel) throw '"dslabel" missing'
 	}
 }
 
@@ -58,7 +63,7 @@ TdbStore.prototype.actions = {
 		const plot = this.state.tree.plots[action.id]
 		if (plot) plot.isVisible = false
 	},
-	
+
 	filter_add(action) {
 		if (this.state.termfilter.terms.includes(action.termId)) return
 		this.state.termfilter.terms.push(action.termId)
