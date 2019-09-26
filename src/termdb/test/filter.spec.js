@@ -56,6 +56,6 @@ tape('filter add', function(test) {
 	}
 
 	function testAddFilter(filter) {
-		test.equal(filter.Inner.dom.holder.classed('filter_div'), true, 'should have 1 filter div')
+		test.equal(filter.Inner.dom.holder.selectAll('.term_name_btn').size(), 1, 'should have 1 tvs filter')
 	}
 })
