@@ -36,11 +36,11 @@ tape('default view', function(test) {
 		tree.on('postInit.test', null)
 		helpers
 			.rideInit({ arg: tree })
-			.run(testDom, 300)
+			.run(testDom, 200)
 			.done(() => test.end())
 	}
 
 	function testDom(tree) {
-		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 4, 'should have 4 root terms')
+		test.equal(tree.Inner.dom.holder.selectAll('.termdiv-1').size(), 4, 'should have 4 root terms')
 	}
 })

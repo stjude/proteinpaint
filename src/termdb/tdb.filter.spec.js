@@ -9,7 +9,7 @@ tape("\n", function(test) {
 	test.end()
 })
 
-tape.only("filter add", function(test) {
+tape("filter add", function(test) {
 	test.timeoutAfter(2000)
 	test.plan(1)
 

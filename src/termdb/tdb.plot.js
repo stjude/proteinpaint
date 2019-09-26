@@ -2,6 +2,7 @@ import * as rx from "../rx.core"
 import {select, event} from "d3-selection"
 import {dofetch2} from "../client"
 import {barInit} from "./tdb.barchart"
+import { to_parameter as tvslst_to_parameter } from "../mds.termdb.termvaluesetting.ui"
 
 class TdbPlot {
 	constructor(app, opts) {
@@ -45,7 +46,8 @@ class TdbPlot {
 		this.app.dispatch({
 			type: "plot_add",
 			id: this.id, 
-			config: this.config
+			config: this.config,
+			term: opts.term
 		})
 
 		this.bus = new rx.Bus('plot', ['postInit', 'postNotify'], this.app.opts.callbacks, this.api)

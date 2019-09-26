@@ -9,7 +9,7 @@ tape("\n", function(test) {
 	test.end()
 })
 
-tape("view click", function(test) {
+tape.only("view click", function(test) {
 	test.timeoutAfter(2000)
 	test.plan(3)
 
@@ -47,15 +47,15 @@ tape("view click", function(test) {
 	}
 
 	function triggerLevel1Click(tree) {
-		tree.Inner.dom.holder.select('.termdiv-1').select('.termlabel').node().click()
+		tree.Inner.dom.holder.select('.termdiv-1').select('.termlabel-1').node().click()
 	}
 
 	function triggerLevel2Click(tree) {
-		tree.Inner.dom.holder.select('.termdiv-2').select('.termlabel').node().click()
+		tree.Inner.dom.holder.select('.termdiv-2').select('.termlabel-2').node().click()
 	}
 
 	function triggerViewClick(tree) {
-		tree.Inner.dom.holder.select('.termdiv-3').select('.termview').node().click()
+		tree.Inner.dom.holder.select('.termdiv-3').select('.termview-3').node().click()
 	}
 
 	function testAction(tree) {
@@ -65,7 +65,7 @@ tape("view click", function(test) {
 			"should initialize a new plot component"
 		)
 
-		const term = tree.Inner.dom.holder.select('.termdiv-3').select('.termview').datum()
+		const term = tree.Inner.dom.holder.select('.termdiv-3').select('.termview-3').datum()
 		const plot = tree.Inner.components.plots[term.id]
 		test.equal(
 			plot && plot.Inner && plot.Inner.id,

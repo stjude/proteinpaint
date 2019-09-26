@@ -17,13 +17,9 @@ class TdbApp {
 			holder: holder.style("margin", "10px").style("border", "1px solid #aaa")
 		}
 
-		this.termfilter = {
-			// terms: []
-			terms: filterInit(this.api, {holder: holder.append("div")})
-		}
-
 		this.components = {
-			tree: treeInit(this.api, {holder: holder.append('div')})
+			tree: treeInit(this.api, {holder: holder.append('div')}),
+			terms: filterInit(this.api, {holder: holder.append("div")})
 		}
 
 		this.bus = new rx.Bus("app", ["postRender"])
