@@ -45,7 +45,11 @@ tape("filter add", function(test) {
 	}
 
 	function triggerAddFilter(filter) {
-		filter.Inner.app.dispatch({type: "filter_add", termId: "diaggrp"})
+		const term = {
+			term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
+			values: [{ key: "Wilms tumor", label: "Wilms tumor" }]
+		}
+		filter.Inner.app.dispatch({type: "filter_add", term})
 	}
 
 	function testAddFilter(filter) {

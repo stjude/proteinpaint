@@ -65,8 +65,8 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_add(action) {
-		if (this.state.termfilter.terms.includes(action.termId)) return
-		this.state.termfilter.terms.push(action.termId)
+		if (this.state.termfilter.terms.includes(action.term)) return
+		this.state.termfilter.terms.push(action.term)
 	}
 }
 
