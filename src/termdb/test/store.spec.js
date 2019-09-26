@@ -9,7 +9,8 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('test init options', function(test) {
+tape('init errors', function(test) {
+	test.timeoutAfter(1000)
 	test.plan(3)
 	runproteinpaint({
 		host,
@@ -18,7 +19,7 @@ tape('test init options', function(test) {
 		termdb: {
 			callbacks: {
 				app: {
-					'postRender.test': testMissingState
+					'postInit.test': testMissingState
 				}
 			},
 			debug: 1,
@@ -40,7 +41,7 @@ tape('test init options', function(test) {
 			state: {},
 			callbacks: {
 				app: {
-					'postRender.test': testMissingGenome
+					'postInit.test': testMissingGenome
 				}
 			},
 			debug: 1,
@@ -51,7 +52,9 @@ tape('test init options', function(test) {
 	})
 	function testMissingGenome(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
-		test.equal(d.text(), 'Error: .state.genome missing', 'should be displayed for missing .state.genome')
+		setTimeout(() => {
+			test.equal(d.text(), 'Error: .state.genome missing', 'should be displayed for missing .state.genome')
+		}, 100)
 	}
 
 	runproteinpaint({
@@ -62,7 +65,7 @@ tape('test init options', function(test) {
 			state: { genome: 'hg38' },
 			callbacks: {
 				app: {
-					'postRender.test': testMissingDslabel
+					'postInit.test': testMissingDslabel
 				}
 			},
 			debug: 1,
@@ -73,7 +76,10 @@ tape('test init options', function(test) {
 	})
 	function testMissingDslabel(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
-		test.equal(d.text(), 'Error: .state.dslabel missing', 'should be displayed for missing .state.dslabel')
+		setTimeout(() => {
+			test.equal(d.text(), 'Error: .state.dslabel missing', 'should be displayed for missing .state.dslabel')
+			test.end()
+		}, 100)
 	}
 })
 

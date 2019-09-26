@@ -10,6 +10,7 @@ tape('\n', function(test) {
 })
 
 tape('error handling', function(test) {
+	test.timeoutAfter(1000)
 	test.plan(2)
 
 	runproteinpaint({
