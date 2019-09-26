@@ -28,13 +28,7 @@ tape('error message', function(test) {
 		}
 	})
 	function testMissingGenome(app) {
-		setTimeout(() => {
-			test.equal(
-				app.Inner.dom.errdiv.selectAll('.sja_errorbar').size(),
-				1,
-				'should be displayed for missing opts.genome'
-			)
-		}, 100)
+		test.equal(app.Inner.dom.errdiv.selectAll('.sja_errorbar').size(), 1, 'should be displayed for missing opts.genome')
 	}
 
 	runproteinpaint({
@@ -56,13 +50,11 @@ tape('error message', function(test) {
 	})
 
 	function testMissingDslabel(app) {
-		setTimeout(() => {
-			test.equal(
-				app.Inner.dom.errdiv.selectAll('.sja_errorbar').size(),
-				1,
-				'should be displayed for missing opts.dslabel'
-			)
-		}, 100)
+		test.equal(
+			app.Inner.dom.errdiv.selectAll('.sja_errorbar').size(),
+			1,
+			'should be displayed for missing opts.dslabel'
+		)
 	}
 })
 

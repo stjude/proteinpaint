@@ -9,7 +9,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape.only('filter add', function(test) {
+tape('filter add', function(test) {
 	test.timeoutAfter(2000)
 	test.plan(1)
 
@@ -49,10 +49,10 @@ tape.only('filter add', function(test) {
 
 	function triggerAddFilter(filter) {
 		const term = {
-			term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
-			values: [{ key: "Wilms tumor", label: "Wilms tumor" }]
+			term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+			values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 		}
-		filter.Inner.app.dispatch({type: "filter_add", term})
+		filter.Inner.app.dispatch({ type: 'filter_add', term })
 	}
 
 	function testAddFilter(filter) {
