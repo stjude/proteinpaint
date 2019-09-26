@@ -26,11 +26,14 @@ tape('init errors', function(test) {
 			fetchOpts: {
 				serverData: helpers.serverData
 			}
-		}
+		},
+		serverData: helpers.serverData
 	})
 	function testMissingState(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
-		test.equal(d.text(), 'Error: .state{} missing', 'should be displayed for missing .state{}')
+		setTimeout(() => {
+			test.equal(d.text(), 'Error: .state{} missing', 'should be displayed for missing .state{}')
+		}, 200)
 	}
 
 	runproteinpaint({
@@ -48,13 +51,14 @@ tape('init errors', function(test) {
 			fetchOpts: {
 				serverData: helpers.serverData
 			}
-		}
+		},
+		serverData: helpers.serverData
 	})
 	function testMissingGenome(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
 		setTimeout(() => {
 			test.equal(d.text(), 'Error: .state.genome missing', 'should be displayed for missing .state.genome')
-		}, 100)
+		}, 200)
 	}
 
 	runproteinpaint({
@@ -72,14 +76,15 @@ tape('init errors', function(test) {
 			fetchOpts: {
 				serverData: helpers.serverData
 			}
-		}
+		},
+		serverData: helpers.serverData
 	})
 	function testMissingDslabel(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
 		setTimeout(() => {
 			test.equal(d.text(), 'Error: .state.dslabel missing', 'should be displayed for missing .state.dslabel')
 			test.end()
-		}, 100)
+		}, 400)
 	}
 })
 

@@ -220,20 +220,22 @@ export function getComponentApi(self) {
 // -----------------
 
 export async function notifyComponents(action, data = null) {
+	const called = []
 	for (const name in this.components) {
 		const component = this.components[name]
 		if (Array.isArray(component)) {
-			for (const c of component) await c.main(action, data)
+			for (const c of component) called.push(c.main(action, data))
 		} else if (component.hasOwnProperty('main')) {
-			await component.main(action, data)
+			called.push(component.main(action, data))
 		} else if (component && typeof component == 'object') {
 			for (const name in component) {
 				if (component.hasOwnProperty(name) && typeof component[name].main == 'function') {
-					await component[name].main(action, data)
+					called.push(component[name].main(action, data))
 				}
 			}
 		}
 	}
+	return Promise.all(called)
 }
 
 // access the api of an indirectly connected component,
