@@ -13,23 +13,23 @@ export function getInitFxn(_Class_) {
 		- optionally attaches a self reference to the api
 		- freezes and returns the instance api
 	*/
-	return (arg, instanceOpts={}) => {
+	return (arg, instanceOpts = {}) => {
 		// instantiate mutable private properties and methods
 		const self = new _Class_(arg, instanceOpts)
-		
+
 		// get the instance's api that hides its
 		// mutable props and methods
 		const api = self.api
-			// if there is already an instance api as constructed, use it
-			? self.api
-			// if not, check if there is an api generator function
-			: self.getApi
-			// if yes, generate the api
-			? self.getApi()  
-			// if not, expose the mutable instance as its public api
-			: self
+			? // if there is already an instance api as constructed, use it
+			  self.api
+			: // if not, check if there is an api generator function
+			self.getApi
+			? // if yes, generate the api
+			  self.getApi()
+			: // if not, expose the mutable instance as its public api
+			  self
 
-		const opts = self.app && self.app.opts || self.api && self.api.opts || {}
+		const opts = (self.app && self.app.opts) || (self.api && self.api.opts) || {}
 		// expose the hidden instance to debugging and testing code
 		if (opts.debug) api.Inner = self
 
@@ -61,18 +61,16 @@ export class Bus {
 	}
 
 	on(eventType, callback, opts = {}) {
-		const [type, name] = eventType.split(".")
+		const [type, name] = eventType.split('.')
 		if (!this.eventTypes.includes(type)) {
 			throw `Unknown bus event '${type}' for component ${this.name}`
 		} else if (!callback) {
 			delete this.events[eventType]
-		} else if (typeof callback == "function") {
+		} else if (typeof callback == 'function') {
 			if (eventType in this.events) {
 				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
 			}
-			this.events[eventType] = opts.timeout 
-				? arg => setTimeout(() => callback(arg), opts.timeout) 
-				: callback
+			this.events[eventType] = opts.timeout ? arg => setTimeout(() => callback(arg), opts.timeout) : callback
 		} else if (Array.isArray(callback)) {
 			if (eventType in this.events) {
 				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
@@ -80,9 +78,7 @@ export class Bus {
 			const wrapperFxn = arg => {
 				for (const fxn of callback) fxn(arg)
 			}
-			this.events[eventType] = opts.timeout 
-				? arg => setTimeout(() => wrapperFxn(arg), opts.timeout) 
-				: wrapperFxn
+			this.events[eventType] = opts.timeout ? arg => setTimeout(() => wrapperFxn(arg), opts.timeout) : wrapperFxn
 		} else {
 			throw `invalid callback for ${this.name} eventType=${eventType}`
 		}
@@ -92,7 +88,7 @@ export class Bus {
 	emit(eventType, arg = null) {
 		setTimeout(() => {
 			for (const type in this.events) {
-				if (type == eventType || type.startsWith(eventType + ".")) {
+				if (type == eventType || type.startsWith(eventType + '.')) {
 					this.events[type](arg || this.defaultArg)
 				}
 			}
@@ -122,7 +118,7 @@ export function getStoreApi(self) {
 			await actions[action.type].call(self, action)
 			return api.state()
 		},
-		state(sub=null) {
+		state(sub = null) {
 			if (!sub) {
 				const stateCopy = self.fromJson(self.toJson(self.state))
 				self.deepFreeze(stateCopy)
@@ -141,11 +137,11 @@ export function getStoreApi(self) {
 export function getAppApi(self) {
 	const api = {
 		opts: self.opts,
-		state(sub=null) {
+		state(sub = null) {
 			// return self // would allow access to hidden instance
 			return sub ? self.store.state(sub) : self.state
 		},
-		async dispatch(action={}) {
+		async dispatch(action = {}) {
 			/*
 			  track dispatched actions and
 				if there is a pending action,
@@ -165,8 +161,11 @@ export function getAppApi(self) {
 			else console.log('no component event bus')
 			return api
 		},
-		components(dotSepNames='') {
+		components(dotSepNames = '') {
 			return self.getComponents(dotSepNames)
+		},
+		printError(e) {
+			self.printError(e)
 		}
 	}
 	return api
@@ -174,11 +173,11 @@ export function getAppApi(self) {
 
 export function getComponentApi(self) {
 	const api = {
-		main(action, data=null) {
+		main(action, data = null) {
 			// reduce boilerplate or repeated code
 			// in component class main() by performing
 			// typical pre-emptive checks here
-			const acty = action.type ? action.type.split("_") : []
+			const acty = action.type ? action.type.split('_') : []
 			if (self.reactsTo && !self.reactsTo(action, acty)) return
 			self.main(action, data)
 			return api
@@ -191,7 +190,7 @@ export function getComponentApi(self) {
 			else console.log('no component event bus')
 			return api
 		},
-		components(dotSepNames='') {
+		components(dotSepNames = '') {
 			return self.getComponents(dotSepNames)
 		}
 	}
@@ -223,16 +222,16 @@ export function getComponentApi(self) {
 // Component Helpers
 // -----------------
 
-export function notifyComponents(action, data=null) {
+export function notifyComponents(action, data = null) {
 	for (const name in this.components) {
 		const component = this.components[name]
 		if (Array.isArray(component)) {
 			for (const c of component) c.main(action, data)
 		} else if (component.hasOwnProperty('main')) {
-			 component.main(action, data)
-		} else if (component && typeof component == "object") {
-			for(const name in component) {
-				if (component.hasOwnProperty(name) && typeof component[name].main == "function") {
+			component.main(action, data)
+		} else if (component && typeof component == 'object') {
+			for (const name in component) {
+				if (component.hasOwnProperty(name) && typeof component[name].main == 'function') {
 					component[name].main(action, data)
 				}
 			}
@@ -240,23 +239,23 @@ export function notifyComponents(action, data=null) {
 	}
 }
 
-// access the api of an indirectly connected component, 
-// for example to subscribe an .on(event, listener) to 
+// access the api of an indirectly connected component,
+// for example to subscribe an .on(event, listener) to
 // the event bus of a distant component
 export function getComponents(dotSepNames) {
-	if (!dotSepNames) return Object.assign({},this.components)
-	// string-based convenient accessor, 
-  // so instead of
-  // app.components().controls.components().search,
-  // simply
-  // app.components("controls.search")
-	const names = dotSepNames.split(".")
+	if (!dotSepNames) return Object.assign({}, this.components)
+	// string-based convenient accessor,
+	// so instead of
+	// app.components().controls.components().search,
+	// simply
+	// app.components("controls.search")
+	const names = dotSepNames.split('.')
 	let component = this.components
-	while(names.length) {
+	while (names.length) {
 		let name = names.shift()
 		if (Array.isArray(component)) name = Number(name)
 		component = names.length ? component[name].components : component[name]
-		if (typeof component == "function") component = component()
+		if (typeof component == 'function') component = component()
 		if (!component) break
 	}
 	return component
@@ -275,12 +274,12 @@ export function getComponents(dotSepNames) {
 	  create a copy for merging
 */
 export function copyMerge(base, ...args) {
-	const target = typeof base == "string" ? this.fromJson(base) : base
-	for(const arg of args) {
+	const target = typeof base == 'string' ? this.fromJson(base) : base
+	for (const arg of args) {
 		if (arg) {
-			const source = typeof base == "string" ? this.fromJson(this.toJson(arg)) : arg
-			for(const key in source) {
-				if (!target[key] || Array.isArray(target[key]) || typeof target[key] !== "object") target[key] = source[key]
+			const source = typeof base == 'string' ? this.fromJson(this.toJson(arg)) : arg
+			for (const key in source) {
+				if (!target[key] || Array.isArray(target[key]) || typeof target[key] !== 'object') target[key] = source[key]
 				else this.copyMerge(target[key], source[key])
 			}
 		}
@@ -288,27 +287,26 @@ export function copyMerge(base, ...args) {
 	return target
 }
 
-
 export function fromJson(objStr) {
-	// this method should not be reused when there is 
+	// this method should not be reused when there is
 	// a need to recover any Set or Map values, instead
 	// declare a class specific fromJson() method that has
 	// new Set(arrOfValues) or new Map(arrOfPairedValues)
 	return JSON.parse(objStr)
 }
 
-export function toJson(obj=null) {
-	// this method should not be reused when there is 
-	// a need to stringify any Set or Map values, 
-	// instead declare a class specific toJson() method 
-	// that converts any Set or Map values to 
+export function toJson(obj = null) {
+	// this method should not be reused when there is
+	// a need to stringify any Set or Map values,
+	// instead declare a class specific toJson() method
+	// that converts any Set or Map values to
 	// [...Set] or [...Map] before JSON.stringify()
-	return JSON.stringify(obj ? obj : this.state) 
+	return JSON.stringify(obj ? obj : this.state)
 }
 
 export function deepFreeze(obj) {
 	Object.freeze(obj)
-	for(const key in obj) {
+	for (const key in obj) {
 		if (typeof obj == 'object') this.deepFreeze(obj[key])
 	}
 }

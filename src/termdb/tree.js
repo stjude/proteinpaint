@@ -28,7 +28,7 @@ class TdbTree {
 		this.tree = [this.currTerm]
 		this.app.dispatch({ type: 'tree_expand', termId: 'root', term: this.currTerm })
 
-		this.bus = new rx.Bus('tree', ['postInit', 'postNotify'], app.opts.callbacks, this.api)
+		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit')
 	}
 
@@ -37,14 +37,19 @@ class TdbTree {
 	}
 
 	async main(action = {}) {
-		if (action.type.startsWith('plot_')) {
-			this.viewPlot(action)
-		} else {
-			this.action = action
-			this.currTerm = this.termsById[action.termId]
-			this.currTerm.terms = await this.requestTerm(this.currTerm)
-			this.expand(this.termsById.root, this.dom.holder)
+		try {
+			if (action.type.startsWith('plot_')) {
+				this.viewPlot(action)
+			} else {
+				this.action = action
+				this.currTerm = this.termsById[action.termId]
+				this.currTerm.terms = await this.requestTerm(this.currTerm)
+				this.expand(this.termsById.root, this.dom.holder)
+			}
+		} catch (e) {
+			this.app.printError(e)
 		}
+		this.bus.emit('postRender')
 	}
 
 	async requestTerm(term) {
@@ -53,14 +58,14 @@ class TdbTree {
 		const args = [term.isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id]
 		// maybe no need to provide term filter at this query
 		const data = await dofetch2('/termdb?' + lst.join('&') + '&' + args.join('&'), {}, this.app.opts.fetchOpts)
+		if (data.error) throw data.error
+		if (!data.lst || data.lst.length == 0) throw 'no children term for ' + term.id
 		const terms = []
-		if (data && data.lst) {
-			for (const t of data.lst) {
-				const copy = Object.assign({}, t)
-				copy.level = term.level + 1
-				this.termsById[copy.id] = copy
-				terms.push(copy)
-			}
+		for (const t of data.lst) {
+			const copy = Object.assign({}, t)
+			copy.level = term.level + 1
+			this.termsById[copy.id] = copy
+			terms.push(copy)
 		}
 		return terms
 	}

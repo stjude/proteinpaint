@@ -9,6 +9,53 @@ tape('\n', function(test) {
 	test.end()
 })
 
+tape('error handling', function(test) {
+	test.plan(2)
+
+	runproteinpaint({
+		host,
+		noheader: 1,
+		nobox: true,
+		termdb: {
+			state: {
+				dslabel: 'SJLife',
+				genome: 'ahg38'
+			},
+			callbacks: {
+				tree: {
+					'postRender.test': testWrongGenome
+				}
+			},
+			debug: 1
+		}
+	})
+	function testWrongGenome(tree) {
+		const d = tree.Inner.app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
+		test.equal(d.text(), 'Error: invalid genome', 'should show for invalid genome')
+	}
+	runproteinpaint({
+		host,
+		noheader: 1,
+		nobox: true,
+		termdb: {
+			state: {
+				dslabel: 'xxx',
+				genome: 'hg38'
+			},
+			callbacks: {
+				tree: {
+					'postRender.test': testWrongDslabel
+				}
+			},
+			debug: 1
+		}
+	})
+	function testWrongDslabel(tree) {
+		const d = tree.Inner.app.Inner.dom.errdiv.select('.sja_errorbar').select('div')
+		test.equal(d.text(), 'Error: invalid dslabel', 'should show for invalid dslabel')
+	}
+})
+
 tape('default view', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(1)
@@ -27,10 +74,7 @@ tape('default view', function(test) {
 					'postInit.test': runTests
 				}
 			},
-			debug: 1,
-			fetchOpts: {
-				serverData: helpers.serverData
-			}
+			debug: 1
 		}
 	})
 
