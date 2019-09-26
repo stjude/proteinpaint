@@ -1,7 +1,7 @@
 import * as rx from "../rx.core"
 import {select, event} from "d3-selection"
 import {dofetch2} from "../client"
-import {barInit} from "./tdb.barchart"
+import {barInit} from "./barchart"
 import { to_parameter as tvslst_to_parameter } from "../mds.termdb.termvaluesetting.ui"
 
 class TdbPlot {

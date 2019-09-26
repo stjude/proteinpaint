@@ -1,9 +1,9 @@
 import * as rx from "../rx.core"
 import {select} from "d3-selection"
-import {treeInit} from "./tdb.tree"
-import {storeInit} from "./tdb.store"
-import {filterInit} from "./tdb.filter"
-//import {controlsInit} from "./tdb.controls"
+import {treeInit} from "./tree"
+import {storeInit} from "./store"
+import {filterInit} from "./filter"
+//import {controlsInit} from "./controls"
 
 class TdbApp {
 	constructor(opts, holder) {

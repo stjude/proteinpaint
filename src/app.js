@@ -1432,7 +1432,7 @@ function launchtreeapptest(opts, holder) {
 	})
 }
 function launchtermdb(opts, holder) {
-	import('./termdb/tdb.app').then(_=>{
+	import('./termdb/app').then(_=>{
 		_.appInit(opts, holder)
 	})
 }

@@ -1,7 +1,7 @@
 import * as rx from "../rx.core"
 import {select, event} from "d3-selection"
 import {dofetch2} from "../client"
-import {plotInit, plotConfig} from "./tdb.plot"
+import {plotInit, plotConfig} from "./plot"
 
 const childterm_indent = '30px'
 

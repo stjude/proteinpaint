@@ -5,7 +5,7 @@ import htmlLegend from "../html.legend"
 import { select, event } from "d3-selection"
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from "d3-scale"
 import { rgb } from "d3-color"
-import getHandlers from "./tdb.barchart.events"
+import getHandlers from "./barchart.events"
 /* to-do: switch to using rx.Bus */
 import { get_event_bus, to_svg } from "../client"
 
