@@ -65,6 +65,11 @@ TdbStore.prototype.actions = {
 		if (plot) plot.isVisible = false
 	},
 
+	plot_edit(action) {
+		const plot = this.state.tree.plots[action.id]
+		if (plot) this.copyMerge(plot, action.config)
+	},
+
 	filter_add(action) {
 		if (this.state.termfilter.terms.includes(action.term)) return
 		this.state.termfilter.terms.push(action.term)

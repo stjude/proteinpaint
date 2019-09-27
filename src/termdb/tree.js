@@ -185,13 +185,15 @@ class TdbTree {
 			})
 			this.components.plots[action.id] = newPlot
 		}
-		const show = action.type == 'plot_add' || action.type == 'plot_show'
-		this.dom.holder
-			.selectAll('.termchilddiv-' + action.term.level)
-			.filter(term => term.id == action.id)
-			.style('overflow', show ? '' : 'hidden')
-			.style('height', show ? '' : 0)
-			.style('opacity', show ? 1 : 0)
+		if (action.type != 'plot_edit') {
+			const show = action.type == 'plot_add' || action.type == 'plot_show'
+			this.dom.holder
+				.selectAll('.termchilddiv-' + action.term.level)
+				.filter(term => term.id == action.id)
+				.style('overflow', show ? '' : 'hidden')
+				.style('height', show ? '' : 0)
+				.style('opacity', show ? 1 : 0)
+		}
 	}
 
 	yesThis() {
