@@ -464,9 +464,11 @@ buttonholder: div in which to show the button, term label is also in it
 		if (childrenrow.style('display') === 'none') {
 			client.appear(childrenrow)
 			button.text('-')
+			obj.main()
 		} else {
 			client.disappear(childrenrow)
 			button.text('+')
+			obj.main()
 		}
 
 		if (children_loaded) return
