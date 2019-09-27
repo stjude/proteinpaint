@@ -143,15 +143,19 @@ export function getAppApi(self) {
 		},
 		async dispatch(action = {}) {
 			/*
-			  track dispatched actions and
-				if there is a pending action,
-				debounce dispatch requests
-				until the pending action is done?
+			track dispatched actions and
+			if there is a pending action,
+			debounce dispatch requests
+			until the pending action is done?
 			*/
 			// replace app.state
 			self.state = await self.store.write(action)
 			//self.deepFreeze(action)
 			await self.main(action)
+		},
+		async save(action) {
+			// save changes to store, do not notify components
+			self.state = await self.store.write(action)
 		},
 		// must not expose this.bus directly since that
 		// will also expose bus.emit() which should only
