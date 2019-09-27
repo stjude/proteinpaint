@@ -24,19 +24,14 @@ class ToyStore {
 		this.app = app
 		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
 	}
+}
 
-	/*
-		----------------------------------------
-		by convention and for ease of validation
-		----------------------------------------
-
-		non-action methods should use camel-case, 
-		!!! NO underscore !!! for non-action methods
-
-	  a method that corresponds to an action.type 
-		MUST use an underscore "_"
-	*/
-
+/*
+	To clearly indicate the allowed store actions,
+	supply a literal "actions" object on the 
+	constructor prototype
+*/
+ToyStore.prototype.actions = {
 	async term_add(action) {
 		if (!action.term && !action.termid) throw 'neither term or termid is given'
 		if (this.state.terms.find(d => d.id == (action.term ? action.term.id : action.termid))) {
@@ -67,7 +62,7 @@ class ToyStore {
 		// know where to look for relevant data in 
 		// this.app.state, .opts, .serverData
 		action.result = this.state.terms
-	}
+	},
 
 	term_rm(action) {
 		const i = this.state.terms.findIndex(d => d.id == action.termid)
@@ -86,7 +81,7 @@ class ToyStore {
 				this.state.controls.rows.splice(i,1)
 			}
 		})
-	}
+	},
 
 	term_row_hide(action){
 		const i = this.state.controls.rows.findIndex(r => r.name == action.row_name)

@@ -119,7 +119,12 @@ window.runproteinpaint=(arg)=>{
 	// option to use a server data cache in memory 
 	// during a browser page session
 	// see client.dofetch2 for how the cache name is derived
-	const serverData = arg.serverData || (arg.display_termdb && arg.display_termdb.serverData)
+	const serverData = arg.serverData 
+		// allow server data caching by app, 
+		// may generalize later
+		|| (arg.display_termdb && arg.display_termdb.serverData)
+		|| (arg.termdb && arg.termdb.serverData)
+		|| (arg.toy && arg.toy.serverData)
 	// load genomes
 	const response = serverData
 		// use serverData if provided
@@ -896,6 +901,9 @@ function parseembedthenurl(arg, holder, selectgenome) {
 	if (arg.treeapptest) {
 		launchtreeapptest(arg.treeapptest, holder)
 	}
+	if (arg.termdb) {
+		launchtermdb(arg.termdb, holder)
+	}
 }
 
 
@@ -1425,6 +1433,11 @@ function launchtoy(opts, holder) {
 }
 function launchtreeapptest(opts, holder) {
 	import('./toy/2/app').then(_=>{
+		_.appInit(opts, holder)
+	})
+}
+function launchtermdb(opts, holder) {
+	import('./termdb/app').then(_=>{
 		_.appInit(opts, holder)
 	})
 }

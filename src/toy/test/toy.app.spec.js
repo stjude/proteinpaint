@@ -1,16 +1,16 @@
-const tape = require("tape")
-const d3s = require("d3-selection")
-const serverconfig = require("../../serverconfig")
-const host = "http://localhost:" + serverconfig.port
-const helpers = require("../../test/front.helpers.js")
+const tape = require('tape')
+const d3s = require('d3-selection')
+const serverconfig = require('../../../serverconfig')
+const host = 'http://localhost:' + serverconfig.port
+const helpers = require('../../../test/front.helpers.js')
 
-tape("\n", function(test) {
-	test.pass("-***- toy.app -***-")
+tape('\n', function(test) {
+	test.pass('-***- toy.app -***-')
 	test.end()
 })
 
 // To-do: move rx.core tests to a separate spec file
-tape("component access", function(test) {
+tape('component access', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
 
@@ -19,47 +19,48 @@ tape("component access", function(test) {
 		noheader: 1,
 		nobox: true,
 		toy: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			callbacks: {
 				app: {
-					"postInit.test": runTests
+					'postInit.test': runTests
 				}
 			},
 			debug: 1,
 			fetchOpts: {
 				serverData: helpers.serverData
 			}
-		}
+		},
+		serverData: helpers.serverData
 	})
 
 	function runTests(app) {
 		app.on('postInit.test', null)
 		testComponentAccess1(app)
 		testComponentAccess2(app)
-	  test.end()
+		test.end()
 	}
 
 	function testComponentAccess1(app) {
 		test.equal(
 			app.components() && Object.keys(app.components()).length,
 			2,
-			"should be able to access app components() with empty argument"
+			'should be able to access app components() with empty argument'
 		)
 	}
 
 	function testComponentAccess2(app) {
-	  const search = app.components('controls.search')
+		const search = app.components('controls.search')
 		test.equal(
 			search && search.Inner && search.Inner.constructor && search.Inner.constructor.name,
-			"ToySearch",
-			"should be able to access app components() with string argument"
+			'ToySearch',
+			'should be able to access app components() with string argument'
 		)
 	}
 })
 
-tape("default view", function(test) {
-	test.timeoutAfter(1000)
+tape('default view', function(test) {
+	test.timeoutAfter(2000)
 	test.plan(5)
 
 	runproteinpaint({
@@ -67,18 +68,19 @@ tape("default view", function(test) {
 		noheader: 1,
 		nobox: true,
 		toy: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			callbacks: {
 				app: {
-					"postInit.test": runTests
+					'postInit.test': runTests
 				}
 			},
 			debug: 1,
 			fetchOpts: {
 				serverData: helpers.serverData
 			}
-		}
+		},
+		serverData: helpers.serverData
 	})
 
 	function runTests(app) {
@@ -88,7 +90,7 @@ tape("default view", function(test) {
 		helpers
 			.rideInit({
 				bus: app,
-				eventType: "postMain.test",
+				eventType: 'postNotify.test',
 				arg: app
 			})
 			.run(testSearchDisplay, 100)
@@ -96,66 +98,50 @@ tape("default view", function(test) {
 			.run(triggerTermAdd, 100)
 			.run(testTermAdd, 100)
 			.run(triggerTermRemove)
-			.run(testTermRemove, 100)
+			.run(testTermRemove, 600)
 			.run(triggerHideRow)
 			.run(testHideRow, 100)
 			.done(() => test.end())
 	}
 
 	function testSearchDisplay(app) {
-		test.equal(
-			app.Inner.dom.holder.selectAll(".tree_search").size(),
-			1,
-			"should have one search input"
-		)
+		test.equal(app.Inner.dom.holder.selectAll('.tree_search').size(), 1, 'should have one search input')
 	}
 
 	function testTableWrapper(app) {
-		test.equal(
-			app.Inner.dom.holder.selectAll(".table-wrapper").size(),
-			0,
-			"should have no tables displayed"
-		)
+		test.equal(app.Inner.dom.holder.selectAll('.table-wrapper').size(), 0, 'should have no tables displayed')
 	}
 
 	function triggerTermAdd(app) {
 		// !!! test against action when possible !!!
 		// simpler than sequencing clicks, UI events
-		app.dispatch({type: "term_add", termid: "agedx"})
-		app.dispatch({type: "term_add", termid: "sex"})
+		app.dispatch({ type: 'term_add', termid: 'agedx' })
+		app.dispatch({ type: 'term_add', termid: 'sex' })
 	}
 
 	function testTermAdd(app) {
-		test.equal(
-			app.Inner.dom.holder.selectAll(".table-wrapper").size(),
-			2,
-			"should have 2 tables displayed"
-		)
+		test.equal(app.Inner.dom.holder.selectAll('.table-wrapper').size(), 2, 'should have 2 tables displayed')
 	}
 
 	function triggerTermRemove(app) {
 		// !!! test against action when possible !!!
 		// simpler than sequencing clicks, UI events
-		app.dispatch({type: "term_rm", termid: "agedx"})
+		app.dispatch({ type: 'term_rm', termid: 'agedx' })
 	}
 
 	function testTermRemove(app) {
-		test.equal(
-			app.Inner.dom.holder.selectAll(".table-wrapper").size(),
-			1,
-			"should have 1 table displayed"
-		)
+		test.equal(app.Inner.dom.holder.selectAll('.table-wrapper').size(), 1, 'should have 1 table displayed')
 	}
 
 	function triggerHideRow(app) {
-		app.dispatch({type: "term_row_hide", row_name: "graph"})
+		app.dispatch({ type: 'term_row_hide', row_name: 'graph' })
 	}
 
 	function testHideRow(app) {
 		test.equal(
-			app.Inner.dom.holder.selectAll(".table-wrapper").selectAll('tr')._groups[0][2].style.opacity,
+			app.Inner.dom.holder.selectAll('.table-wrapper').selectAll('tr')._groups[0][2].style.opacity,
 			'0',
-			"should remove row from table"
+			'should remove row from table'
 		)
 	}
 })

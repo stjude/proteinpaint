@@ -1,15 +1,15 @@
-const tape = require("tape")
-const d3s = require("d3-selection")
-const serverconfig = require("../../serverconfig")
-const host = "http://localhost:" + serverconfig.port
-const helpers = require("../../test/front.helpers.js")
+const tape = require('tape')
+const d3s = require('d3-selection')
+const serverconfig = require('../../../serverconfig')
+const host = 'http://localhost:' + serverconfig.port
+const helpers = require('../../../test/front.helpers.js')
 
-tape("\n", function(test) {
-	test.pass("-***- toy.search -***-")
+tape('\n', function(test) {
+	test.pass('-***- toy.search -***-')
 	test.end()
 })
 
-tape("instance", function(test) {
+tape('instance', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(1)
 
@@ -18,18 +18,19 @@ tape("instance", function(test) {
 		noheader: 1,
 		nobox: true,
 		toy: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			callbacks: {
 				search: {
-					"postInit.test": runTests
+					'postInit.test': runTests
 				}
 			},
 			debug: 1,
 			fetchOpts: {
 				serverData: helpers.serverData
 			}
-		}
+		},
+		serverData: helpers.serverData
 	})
 
 	function runTests(search) {
@@ -39,7 +40,7 @@ tape("instance", function(test) {
 		helpers
 			.rideInit({
 				bus: search,
-				eventType: "postMain.test",
+				eventType: 'postNotify.test',
 				arg: search
 			})
 			.run(testDom, 100)
@@ -47,17 +48,11 @@ tape("instance", function(test) {
 	}
 
 	function testDom(search) {
-		test.equal(
-			search.Inner.dom.tip 
-			&& search.Inner.dom.tip.d 
-			&& search.Inner.dom.tip.d.size(), 
-			1,
-			"should have a tip"
-		)
+		test.equal(search.Inner.dom.tip && search.Inner.dom.tip.d && search.Inner.dom.tip.d.size(), 1, 'should have a tip')
 	}
 })
 
-tape("text input", function(test) {
+tape('text input', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
 
@@ -66,18 +61,19 @@ tape("text input", function(test) {
 		noheader: 1,
 		nobox: true,
 		toy: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			callbacks: {
 				search: {
-					"postInit.test": runTests
+					'postInit.test': runTests
 				}
 			},
 			debug: 1,
 			fetchOpts: {
 				serverData: helpers.serverData
 			}
-		}
+		},
+		serverData: helpers.serverData
 	})
 
 	function runTests(search) {
@@ -87,7 +83,7 @@ tape("text input", function(test) {
 		helpers
 			.rideInit({
 				bus: search,
-				eventType: "postMain.test",
+				eventType: 'postNotify.test',
 				arg: search
 			})
 			.run(triggerExactTermMenu)
@@ -105,7 +101,7 @@ tape("text input", function(test) {
 
 	function testExactSuggestedTerm(search) {
 		test.equal(
-			search.Inner.dom.tip.d.selectAll('.sja_menuoption').size(), 
+			search.Inner.dom.tip.d.selectAll('.sja_menuoption').size(),
 			1,
 			"should render 1 search suggestion for 'sex' term"
 		)
@@ -119,14 +115,11 @@ tape("text input", function(test) {
 
 	function testLooseSuggestedTerm(search) {
 		test.equal(
-			search.Inner.dom.tip.d.selectAll('.sja_menuoption').size(), 
+			search.Inner.dom.tip.d.selectAll('.sja_menuoption').size(),
 			3,
 			"should render 3 search suggestions for 'cardio' term"
 		)
 	}
 })
 
-tape.skip("search menu click", function(test) {
-	
-})
-
+tape.skip('search menu click', function(test) {})

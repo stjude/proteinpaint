@@ -40,18 +40,18 @@ class ToyApp {
 		}
 		// expose the app api, not "this" directly to subcomponents
 		this.components = {
-			controls: controlsInit(this.api, holder.append("div")),
-			table: tableInit(this.api, holder.append("div"))
+			controls: controlsInit(this.api, {holder: holder.append("div")}),
+			table: tableInit(this.api, {holder: holder.append("div")})
 		}
 		// set up the app api as the default argument 
 		// to callbacks of emitted events
-		this.bus = new rx.Bus('app', ['postInit', 'postMain'], opts.callbacks, this.api)
+		this.bus = new rx.Bus('app', ['postInit', 'postNotify'], opts.callbacks, this.api)
 		this.bus.emit('postInit')
 	}
 
 	main(action) {
 		this.notifyComponents(action)
-		this.bus.emit('postMain', this.app)
+		this.bus.emit('postNotify', this.app)
 	}
 }
 

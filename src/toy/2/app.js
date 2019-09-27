@@ -44,8 +44,8 @@ class TheApp extends App {
 		if (!o.genome) throw 'genome missing'
 		if (!o.dslabel) throw 'dslabel missing'
 		if (!o.callbacks) throw '.callbacks{} missing' // is this really required?
-		// if postInit and postMain are hardcoded, then need to validate opts.callbacks
-		this.bus = new Bus('app', ['postInit', 'postMain'], opts.callbacks, this)
+		// if postInit and postNotify are hardcoded, then need to validate opts.callbacks
+		this.bus = new Bus('app', ['postInit', 'postNotify'], opts.callbacks, this)
 		return o
 	}
 

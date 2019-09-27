@@ -301,14 +301,13 @@ export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
         .attr('value','custom')
         .html('Custom Bin')
 
-    if(Object.keys(custom_bins_q.last_bin).length === 0 && custom_bins_q.last_bin.constructor === Object){
+    if((!custom_bins_q.last_bin) || (Object.keys(custom_bins_q.last_bin).length === 0 && custom_bins_q.last_bin.constructor === Object)){
         last_bin_select.node().selectedIndex = 0
     }else if(JSON.stringify(custom_bins_q.last_bin) != JSON.stringify(default_bins_q.last_bin)){
         last_bin_select.node().selectedIndex = 1
     }
 
     const last_bin_edit_div = last_bin_td.append('div')
-        .style('display','none')
 
     apply_last_bin_change()
 
@@ -318,7 +317,7 @@ export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
     
         if(last_bin_select.node().value == 'custom'){
             last_bin_edit_div.style('display','block')
-        }else{
+        }else if(last_bin_select.node().value == 'auto'){
             const last_bin = default_bins_q.last_bin? default_bins_q.last_bin : {}
             term_q.binconfig.last_bin = JSON.parse(JSON.stringify(last_bin))
             custom_bins_q.last_bin = JSON.parse(JSON.stringify(last_bin))
@@ -364,7 +363,9 @@ export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
             callback(term_q)
             bin_size_edit()
             end_bin_edit(first_bin_td, 'first')
-            end_bin_edit(last_bin_td, 'last')
+            end_bin_edit(last_bin_edit_div, 'last')
+            last_bin_select.node().value = 'auto'
+            apply_last_bin_change()
             reset_bins_tr.style('display','none')
         })
     
@@ -649,7 +650,7 @@ export function numeric_bin_edit(tip, term, term_q, is_term1, callback){
                         return false
                     }else if((Object.keys(custom_bins_q.last_bin).length === 0 && custom_bins_q.last_bin.constructor === Object)){
                         return false
-                    }
+                    }else return true
             }else{
                 return true
             }

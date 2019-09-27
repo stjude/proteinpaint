@@ -22,9 +22,7 @@ exports.serverData = {}
 	.arg         optional argument to supply to the to() callback
 	.wait        optional wait time before reacting to emitted bus.event
 */
-exports.rideInit = function(opts) {
-	"use strict"
-
+exports.rideInit = function(opts={}) {
 	const priv = new Ride(Object.freeze(opts))
 
 	const ride = {
@@ -42,7 +40,7 @@ exports.rideInit = function(opts) {
 
 		// close the event bus
 		done(callback = null) {
-			priv.resolved.then(() => opts.bus.on(opts.eventType, null))
+			if (opts.bus) priv.resolved.then(() => opts.bus.on(opts.eventType, null))
 			if (callback) priv.resolved.then(callback)
 			priv.resolved.catch(console.log)
 			return ride

@@ -3,28 +3,28 @@ import {Menu,dofetch2} from '../client'
 import {event} from 'd3-selection'
 
 class ToySearch {
-	constructor(app, holder) {
+	constructor(app, opts) {
 		// need to supply this.api to callbacks
 		// supply optional argument to getComponentApi(),
 		// so no need to attach it as an instance method
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.dom = {
-			holder,
+			holder: opts.holder,
 			tip:new Menu({padding:''}),
 		}
 		// set closured methods to use the correct "this" context
 		this.yesThis()
 		// this.notThis(this)
 		this.render()
-		this.bus = new rx.Bus('search', ['postInit', 'postMain'], app.opts.callbacks, this.api)
+		this.bus = new rx.Bus('search', ['postInit', 'postNotify'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit', this.api)
 	}
 
 	main(action) {
 		// clear search input entry
 		this.input.property('value', '')
-		this.bus.emit('postMain', this)
+		this.bus.emit('postNotify', this)
 	}
 
 	render() {
