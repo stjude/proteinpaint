@@ -35,7 +35,8 @@ tape('filter add', function(test) {
 			fetchOpts: {
 				serverData: helpers.serverData
 			}
-		}
+		},
+		serverData: helpers.serverData
 	})
 
 	function runTests(filter) {

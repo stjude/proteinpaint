@@ -197,6 +197,7 @@ class TdbTree {
 	yesThis() {
 		this.toggleTerm = term => {
 			event.stopPropagation()
+			if (term.isleaf) return
 			const expanded = this.app.state().tree.expandedTerms.includes(term.id)
 			const type = expanded ? 'tree_collapse' : 'tree_expand'
 			this.app.dispatch({ type, termId: term.id, term })

@@ -31,7 +31,8 @@ tape('view click', function(test) {
 			fetchOpts: {
 				serverData: helpers.serverData
 			}
-		}
+		},
+		serverData: helpers.serverData
 	})
 
 	function runTests(tree) {

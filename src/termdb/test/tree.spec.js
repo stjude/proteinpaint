@@ -27,8 +27,10 @@ tape('error handling', function(test) {
 					'postRender.test': testWrongGenome
 				}
 			},
-			debug: 1
-		}
+			debug: 1,
+			serverData: helpers.serverData
+		},
+		serverData: helpers.serverData
 	})
 	function testWrongGenome(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
@@ -48,8 +50,10 @@ tape('error handling', function(test) {
 					'postRender.test': testWrongDslabel
 				}
 			},
-			debug: 1
-		}
+			debug: 1,
+			serverData: helpers.serverData
+		},
+		serverData: helpers.serverData
 	})
 	function testWrongDslabel(app) {
 		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div')
@@ -75,8 +79,10 @@ tape('default view', function(test) {
 					'postInit.test': runTests
 				}
 			},
-			debug: 1
-		}
+			debug: 1,
+			serverData: helpers.serverData
+		},
+		serverData: helpers.serverData
 	})
 
 	function runTests(tree) {
