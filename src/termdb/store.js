@@ -73,6 +73,43 @@ TdbStore.prototype.actions = {
 	filter_add(action) {
 		if (this.state.termfilter.terms.includes(action.term)) return
 		this.state.termfilter.terms.push(action.term)
+	},
+
+	filter_remove(action) {
+		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
+		if (i == -1) return
+		this.state.termfilter.terms.splice(i, 1)
+	},
+
+	filter_negate(action) {
+		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
+		if (i == -1) return
+		const term = this.state.termfilter.terms[i]
+		term.isnot = term.isnot ? false : true
+	},
+
+	filter_value_add(action) {
+		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
+		if (i == -1) return
+		const term = this.state.termfilter.terms[i]
+		term.values.push(action.value)
+	},
+
+	filter_value_change(action) {
+		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
+		if (i == -1) return
+		const term = this.state.termfilter.terms[i]
+		term.values[action.valueId] = action.value
+	},
+
+	filter_value_remove(action) {
+		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
+		if (i == -1) return
+		const term = this.state.termfilter.terms[i]
+		term.values.splice(action.valueId,1)
+		if(term.values.length == 0){
+			this.state.termfilter.terms.splice(i, 1)
+		}
 	}
 }
 

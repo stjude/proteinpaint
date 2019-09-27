@@ -10,9 +10,10 @@ class TdbFilter {
 		this.app = app
 		this.dom = {holder: opts.holder, tip: new Menu({ padding: "5px" })}
 		// set closure methods to handle conflicting 'this' contexts
-		// this.yesThis()
+		this.yesThis()
         this.notThis(this)
-        this.render()
+		this.render()
+		this.main()
 
 		// this.components = {
 		// 	plots: {}
@@ -32,7 +33,7 @@ class TdbFilter {
 		const filters = terms_div.selectAll('.tvs_pill')
 			.data(this.app.state().termfilter.terms)
 
-		filters.exit().each(this._removeFilter)
+		filters.exit().each(this._exitFilter)
 		filters.each(this._updateFilter )
 		filters.enter()
 			.append('div')
@@ -127,13 +128,16 @@ class TdbFilter {
 
 			condition_select.node().value = term.isnot ? 'is_not' : 'is'
 
-			condition_select.on('change', async () => {
-				//change value of button
-				term.isnot = term.isnot ? false : true
+			condition_select
+			.classed("condition_select", true)
+			.on('change',this.filterNegate)
+			// .on('change', async () => {
+			// 	//change value of button
+			// 	term.isnot = term.isnot ? false : true
 
-				//update gorup and load tk
-				await obj.callback()
-			})
+			// 	//update gorup and load tk
+			// 	await obj.callback()
+			// })
 
 			condition_btn
 				.attr('class', 'sja_filter_tag_btn condition_btn')
@@ -161,17 +165,16 @@ class TdbFilter {
 		//value btns for each term type
 		if (term.term.iscategorical) {
 			// query db for list of categories and count
-			const data = await _this.getcategories(term)
+			const data = await _this.getCategories(term)
 
-			one_term_div
-				.selectAll('.value_btn')
+			one_term_div.selectAll('.value_btn')
 				.data(term.values)
 				.enter()
 				.append('div')
 				.attr('class','value_btn sja_filter_tag_btn')
 				.style('position','absolute')
 				// .each(this._addCatValue)
-				.each(function(value,j){
+				.each(async function(value,j){
 
 					const term_value_btn = select(this).datum(value)
 
@@ -194,20 +197,15 @@ class TdbFilter {
 					replace_value_select.on('change', async () => {
 						//if selected index is 0 (delete) and value is 'delete' then remove from group
 						if (replace_value_select.node().selectedIndex == 0 && replace_value_select.node().value == 'delete') {
-							term.values.splice(j, 1)
-							if (term.values.length == 0) {
-								obj.group.terms.splice(i, 1)
-							}
+							_this.removeValue({term,j})
 						} else {
 							//change value of button
 							const new_value = data.lst.find(j => j.key == replace_value_select.node().value)
 							term_value_btn.style('padding', '3px 4px 3px 4px').text('Loading...')
-							term.values[j] = { key: new_value.key, label: new_value.label }
 							replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
+							const value = { key: new_value.key, label: new_value.label }
+							_this.changeValue({term, value, j})
 						}
-			
-						//update gorup and load tk
-						await obj.callback()
 					})
 			
 					term_value_btn
@@ -228,13 +226,16 @@ class TdbFilter {
 						.style('color', '#fff')
 						.style('background-color', '#4888BF')
 						.style('margin-right', '1px')
-						.style('padding', '7px 6px 5px 6px')
+						.style('padding', '8px 6px 4px 6px')
 						.style('font-size', '.7em')
 						.style('text-transform', 'uppercase')
 						.text('or')
 
 					if (j == term.values.length - 1) {
-						_this.make_plus_btn(one_term_div, data, term.values)
+						// _this.makePlusBtn(one_term_div, data, term.values)
+						await _this.makePlusBtn(one_term_div, data, term.values, (new_value)=>{
+							_this.addValue({term, new_value})
+						})
 					}
 				})
 		}
@@ -248,17 +249,166 @@ class TdbFilter {
 			.style('border-radius', '0 6px 6px 0')
 			.style('background-color', '#4888BF')
 			.html('&#215;')
+			.on('click', this.removeFilter)
 	}
 
-	updateFilter(filter, div){
+	async updateFilter(term, div){
 		
+		const _this = this
+		const one_term_div = div.datum(term)
+
+		one_term_div.selectAll('.term_name_btn')
+			.text(term.term.name)
+
+		//term-value relation button
+		if (term.term.iscategorical) {
+
+			const condition_select = one_term_div.selectAll('.condition_select')
+			condition_select.node().value = term.isnot ? 'is_not' : 'is'
+			
+			const condition_btn = one_term_div.selectAll('.condition_btn')
+				.text(term.isnot ? "IS NOT" : "IS")
+				.style("background-color", term.isnot ? "#511e78" : "#015051")
+
+			one_term_div.selectAll('.condition_select').style("width", condition_btn.node().offsetWidth + "px")
+
+			const data = await _this.getCategories(term)
+
+			const value_btns = one_term_div
+				.selectAll(".value_btn")
+				.data(term.values)
+
+			value_btns.exit()
+				.each(function(d,j) {
+					// console.log('exit',j)
+					select(one_term_div.selectAll('.value_select')._groups[0][j]).remove()
+					select(one_term_div.selectAll('.or_btn')._groups[0][j]).remove()
+					select(this)
+						.style('opacity',1)
+						.transition()
+						.duration(500)
+						.style('opacity',0)
+						.remove()
+				})
+
+			value_btns.transition()
+				.duration(200)
+				.each(function(d, j){
+					// console.log('update', j)
+					const value_btn = select(this).datum(d)
+						.style("padding", "3px 4px 2px 4px")
+						.html(d=>d.label + " &#9662;")
+						.style('opacity',0)
+						.transition()
+						.duration(200)
+						.style('opacity',1)
+						
+
+					const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j])
+						.style('width',value_btn.node().offsetWidth + 'px')
+
+					//update dropdown list for each term and '+' btn
+					_this.updateSelect(value_selects, term.values, d.key)
+
+					const add_value_select = one_term_div.selectAll('.add_value_select')
+					_this.updateSelect(add_value_select, term.values, 'add')
+
+					//show or hide OR button 
+					select(one_term_div.selectAll('.or_btn')._groups[0][j])
+						.style('display',j<term.values.length-1?'inline-block':'none')
+
+				})
+
+			value_btns.enter()
+				.append('div')
+				.attr('class','value_btn sja_filter_tag_btn')
+				.style("margin-right", "1px")
+				.style('position','absolute')
+				.each(async function(value,j){
+					// console.log('enter', j)
+					const term_value_btn = select(this).datum(value)
+
+					const replace_value_select = one_term_div.append('select')
+						.attr('class','value_select')
+						.style("margin-right", j+"px")
+						.style('opacity',0)
+						.on('mouseover',()=>{
+							term_value_btn.style('opacity', '0.8')
+							.style('cursor','default')
+						})
+						.on('mouseout',()=>{
+							term_value_btn.style('opacity', '1')
+						})
+					
+					_this.makeSelectList(data, replace_value_select, term.values, value.key, "delete")
+			
+					replace_value_select.on('change', async () => {
+						//if selected index is 0 (delete) and value is 'delete' then remove from group
+						if (replace_value_select.node().selectedIndex == 0 && replace_value_select.node().value == 'delete') {
+							_this.removeValue({term,j})
+						} else {
+							//change value of button
+							const new_value = data.lst.find(j => j.key == replace_value_select.node().value)
+							term_value_btn.style('padding', '3px 4px 3px 4px').text('Loading...')
+							replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
+							const value = { key: new_value.key, label: new_value.label }
+							_this.changeValue({term, value, j})
+						}
+					})
+			
+					term_value_btn
+						.style("padding", "3px 4px 2px 4px")
+						.style("margin-right", "1px")
+						.style("font-size", "1em")
+						.style("background-color", "#4888BF")
+						.html(d => d.label + " &#9662;")
+			
+					// limit dropdown menu width to width of term_value_btn (to avoid overflow)
+					replace_value_select.style("width", term_value_btn.node().offsetWidth + "px")
+
+					// 'OR' button in between values
+					one_term_div
+						.append("div")
+						.attr('class','or_btn')
+						.style("display", "none")
+						.style("color", "#fff")
+						.style("background-color", "#4888BF")
+						.style("margin-right", "1px")
+						.style("padding", "7px 6px 5px 6px")
+						.style("font-size", ".7em")
+						.style("text-transform", "uppercase")
+						.text("or")
+
+					one_term_div.selectAll('.add_value_btn').remove()
+					one_term_div.selectAll('.add_value_select').remove()
+					await _this.makePlusBtn(one_term_div, data, term.values, (new_value)=>{
+						_this.addValue({term, new_value})
+					})
+				})
+
+		}
+		// button with 'x' to remove term2
+		one_term_div.selectAll('.term_remove_btn').remove()
+		one_term_div
+			.append('div')
+			.attr('class', 'sja_filter_tag_btn term_remove_btn')
+			.style('margin-left', '1px')
+			.style('padding', '4px 6px 2px 4px')
+			.style('border-radius', '0 6px 6px 0')
+			.style('background-color', '#4888BF')
+			.html('&#215;')
+			.on('click', this.removeFilter)
 	}
 
-	removeFilter(filter, div){
-		
+	exitFilter(term, div){
+		div.style('opacity',1)
+			.transition()
+			.duration(500)
+			.style('opacity',0)
+			.remove()
 	}
 
-	async getcategories(term, lst) {
+	async getCategories(term, lst) {
 		const obj = this.app.state()
 		let tvslst_filter_str = false
 
@@ -327,7 +477,20 @@ class TdbFilter {
 		}
 	}
 
-	make_plus_btn(holder, data, selected_values) {
+	updateSelect(select, selected_values, btn_value){
+		const options = select.selectAll("option")
+
+		options.nodes().forEach(function(d) {
+			if (selected_values.find(v => (v.key||v.label) == d.value) && d.value != btn_value) {
+				d.disabled = true
+			}else{
+				d.disabled = false
+			}
+			select.node().value = btn_value
+		})
+	}
+
+	async makePlusBtn(holder, data, selected_values, callback) {
 		// If 2 or less values for the term then remove plus button
 		if (data.lst.length <= 2) return
 
@@ -370,10 +533,10 @@ class TdbFilter {
 				//change value of button
 				const new_value = data.lst.find(j => j.key == add_value_select.node().value)
 				if (new_value.range) selected_values.push(new_value.range)
-				else selected_values.push({ key: new_value.key, label: new_value.label })
+				else callback(new_value)
 
 				//update gorup and load tk
-				await obj.callback()
+				// await obj.callback()
 			}
 		})
 
@@ -390,15 +553,27 @@ class TdbFilter {
 		add_value_select.style('width', add_value_btn.node().offsetWidth + 'px')
 	}
 
+	yesThis() {
+		this.removeFilter = term => this.app.dispatch({type: 'filter_remove', termId: term.id})
+
+		this.filterNegate = term => this.app.dispatch({type: 'filter_negate', termId: term.id})
+
+		this.addValue = opts => this.app.dispatch({type: 'filter_value_add', termId: opts.term.id, value: opts.new_value})
+
+		this.changeValue = opts => this.app.dispatch({type: 'filter_value_change', termId: opts.term.id, value: opts.value, valueId: opts.j})
+
+		this.removeValue = opts => this.app.dispatch({type: 'filter_value_remove', termId: opts.term.id, valueId: opts.j})
+	}
+
 	notThis(self){
 		self._addFilter = function(term) {
 			self.addFilter(term, select(this))
 		}
-		self._updateFilter = function(filter) {
-			self.updateFilter(filter, select(this))
+		self._updateFilter = function(term) {
+			self.updateFilter(term, select(this))
 		}
-		self._removeFilter = function(filter) {
-			self.removeFilter(filter, select(this))
+		self._exitFilter = function(term) {
+			self.exitFilter(term, select(this))
 		}
 	}
 }
