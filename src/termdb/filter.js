@@ -131,13 +131,6 @@ class TdbFilter {
 			condition_select
 			.classed("condition_select", true)
 			.on('change',this.filterNegate)
-			// .on('change', async () => {
-			// 	//change value of button
-			// 	term.isnot = term.isnot ? false : true
-
-			// 	//update gorup and load tk
-			// 	await obj.callback()
-			// })
 
 			condition_btn
 				.attr('class', 'sja_filter_tag_btn condition_btn')
@@ -217,12 +210,19 @@ class TdbFilter {
 			
 					// limit dropdown menu width to width of term_value_btn (to avoid overflow)
 					replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
+					
+					if (j == term.values.length - 1) {
+						// _this.makePlusBtn(one_term_div, data, term.values)
+						await _this.makePlusBtn(one_term_div, data, term.values, (new_value)=>{
+							_this.addValue({term, new_value})
+						})
+					}
 
 					// 'OR' button in between values
 					one_term_div
 						.append('div')
 						.attr('class','or_btn')
-						.style('display', 'none')
+						.style('display','inline-block')
 						.style('color', '#fff')
 						.style('background-color', '#4888BF')
 						.style('margin-right', '1px')
@@ -231,12 +231,9 @@ class TdbFilter {
 						.style('text-transform', 'uppercase')
 						.text('or')
 
-					if (j == term.values.length - 1) {
-						// _this.makePlusBtn(one_term_div, data, term.values)
-						await _this.makePlusBtn(one_term_div, data, term.values, (new_value)=>{
-							_this.addValue({term, new_value})
-						})
-					}
+					//show or hide OR button 
+					select(one_term_div.selectAll('.or_btn')._groups[0][j])
+						.style('display',j>0?'inline-block':'none')
 				})
 		}
 
@@ -362,7 +359,13 @@ class TdbFilter {
 						.style("font-size", "1em")
 						.style("background-color", "#4888BF")
 						.html(d => d.label + " &#9662;")
-			
+
+					one_term_div.selectAll('.add_value_btn').remove()
+					one_term_div.selectAll('.add_value_select').remove()
+					await _this.makePlusBtn(one_term_div, data, term.values, (new_value)=>{
+						_this.addValue({term, new_value})
+					})
+
 					// limit dropdown menu width to width of term_value_btn (to avoid overflow)
 					replace_value_select.style("width", term_value_btn.node().offsetWidth + "px")
 
@@ -370,20 +373,18 @@ class TdbFilter {
 					one_term_div
 						.append("div")
 						.attr('class','or_btn')
-						.style("display", "none")
+						.style('display','none')
 						.style("color", "#fff")
 						.style("background-color", "#4888BF")
 						.style("margin-right", "1px")
-						.style("padding", "7px 6px 5px 6px")
+						.style("padding", "8px 6px 4px 6px")
 						.style("font-size", ".7em")
 						.style("text-transform", "uppercase")
 						.text("or")
 
-					one_term_div.selectAll('.add_value_btn').remove()
-					one_term_div.selectAll('.add_value_select').remove()
-					await _this.makePlusBtn(one_term_div, data, term.values, (new_value)=>{
-						_this.addValue({term, new_value})
-					})
+					//show or hide OR button 
+					select(one_term_div.selectAll('.or_btn')._groups[0][j])
+						.style('display',j<term.values.length-1?'inline-block':'none')
 				})
 
 		}
@@ -534,9 +535,6 @@ class TdbFilter {
 				const new_value = data.lst.find(j => j.key == add_value_select.node().value)
 				if (new_value.range) selected_values.push(new_value.range)
 				else callback(new_value)
-
-				//update gorup and load tk
-				// await obj.callback()
 			}
 		})
 

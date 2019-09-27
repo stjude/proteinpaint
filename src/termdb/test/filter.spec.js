@@ -109,7 +109,7 @@ tape('filter term-value button', function(test) {
 		test.equal(
 			filter.Inner.dom.holder.selectAll('.term_name_btn').size(), 
 			filter.Inner.app.state().termfilter.terms.length, 
-			'should have 1 tvs filter'
+			'should add 1 tvs filter'
 		)
 	}
 })
