@@ -1,9 +1,9 @@
-import * as client from "./client"
-import * as common from "./common"
-import { select as d3select, selectAll as d3selectAll, event as d3event } from "d3-selection"
-import { init as plot_init } from "./mds.termdb.plot"
-import { setObjBarClickCallback, getFilterUi, getCartUi } from "./mds.termdb.tree.controls"
-import { debounce } from "debounce"
+import * as client from './client'
+import * as common from './common'
+import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { init as plot_init } from './mds.termdb.plot'
+import { setObjBarClickCallback, getFilterUi, getCartUi } from './mds.termdb.tree.controls'
+import { debounce } from 'debounce'
 
 /*
 ********************** EXPORTED
@@ -22,10 +22,10 @@ show_default_rootterm
 				make_barplot
 */
 
-const tree_indent = "30px",
-	label_padding = "5px 3px 5px 1px",
-	graph_leftpad = "0px",
-	button_radius = "5px"
+const tree_indent = '30px',
+	label_padding = '5px 3px 5px 1px',
+	graph_leftpad = '0px',
+	button_radius = '5px'
 
 /*
 init() accepts following triggers:
@@ -94,7 +94,7 @@ callbacks: {
 				}
 			} else {
 				if (obj.components[name]) {
-					if (obj.components[name].isReactive && obj.store) { 
+					if (obj.components[name].isReactive && obj.store) {
 						obj.components[name].main(action, state)
 					} else {
 						obj.components[name].main()
@@ -102,27 +102,27 @@ callbacks: {
 				}
 			}
 		}
-		obj.bus.emit("postRender")
+		obj.bus.emit('postRender')
 	}
 
 	obj.button_radius = button_radius
 	if (!obj.callbacks) obj.callbacks = {}
 	setObjBarClickCallback(obj)
 	// create event bus for this tree obj
-	obj.bus = client.get_event_bus(["postRender"], obj.callbacks && obj.callbacks.tree, obj)
+	obj.bus = client.get_event_bus(['postRender'], obj.callbacks && obj.callbacks.tree, obj)
 
 	obj.dom = { div: obj.div }
 	delete obj.div
-	obj.dom.errdiv = obj.dom.div.append("div")
-	obj.dom.searchdiv = obj.dom.div.append("div").style("display", "none")
-	obj.dom.termfilterdiv = obj.dom.div.append("div").style("display", "none")
-	obj.dom.cartdiv = obj.dom.div.append("div").style("display", "none")
+	obj.dom.errdiv = obj.dom.div.append('div')
+	obj.dom.searchdiv = obj.dom.div.append('div').style('display', 'none')
+	obj.dom.termfilterdiv = obj.dom.div.append('div').style('display', 'none')
+	obj.dom.cartdiv = obj.dom.div.append('div').style('display', 'none')
 	obj.dom.treediv = obj.dom.div
-		.append("div")
-		.append("div")
-		.style("display", "inline-block")
-		.append("div")
-	obj.tip = new client.Menu({ padding: "5px" })
+		.append('div')
+		.append('div')
+		.style('display', 'inline-block')
+		.append('div')
+	obj.tip = new client.Menu({ padding: '5px' })
 
 	obj.do_query_opts = { serverData: obj.serverData }
 
@@ -134,9 +134,9 @@ callbacks: {
 
 	// simplified query
 	obj.do_query = args => {
-		const lst = ["genome=" + obj.genome.name + "&dslabel=" + obj.mds.label]
+		const lst = ['genome=' + obj.genome.name + '&dslabel=' + obj.mds.label]
 		// maybe no need to provide term filter at this query
-		return client.dofetch2("/termdb?" + lst.join("&") + "&" + args.join("&"), {}, obj.do_query_opts)
+		return client.dofetch2('/termdb?' + lst.join('&') + '&' + args.join('&'), {}, obj.do_query_opts)
 	}
 	obj.showtree4selectterm = (termidlst, button, callback) => {
 		// convenient function to be called in barchart config panel for selecting term2
@@ -144,7 +144,7 @@ callbacks: {
 		const obj2 = {
 			genome: obj.genome,
 			mds: obj.mds,
-			div: obj.tip.d.append("div"),
+			div: obj.tip.d.append('div'),
 			default_rootterm: {},
 			modifier_click_term: {
 				disable_terms: new Set(termidlst),
@@ -156,8 +156,8 @@ callbacks: {
 	}
 
 	try {
-		if (!obj.genome) throw ".genome{} missing"
-		if (!obj.mds) throw ".mds{} missing"
+		if (!obj.genome) throw '.genome{} missing'
+		if (!obj.mds) throw '.mds{} missing'
 
 		// handle triggers
 
@@ -170,7 +170,7 @@ callbacks: {
 
 		// to allow other triggers
 	} catch (e) {
-		obj.dom.errdiv.text("Error: " + (e.message || e))
+		obj.dom.errdiv.text('Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
 		return
 	}
@@ -185,15 +185,15 @@ also for showing term tree, allowing to select certain terms
 
 	display_searchbox(obj)
 
-	const data = await obj.do_query(["default_rootterm=1"])
-	if (data.error) throw "error getting default root terms: " + data.error
-	if (!data.lst) throw "no default root term: .lst missing"
+	const data = await obj.do_query(['default_rootterm=1'])
+	if (data.error) throw 'error getting default root terms: ' + data.error
+	if (!data.lst) throw 'no default root term: .lst missing'
 
 	// show root nodes
 
 	for (const i of data.lst) {
 		const arg = {
-			row: obj.dom.treediv.append("div"),
+			row: obj.dom.treediv.append('div'),
 			term: i
 		}
 		print_one_term(arg, obj)
@@ -221,9 +221,9 @@ try to keep the logic clear
 	/* a row for:
 	[+] [term name] [graph button]
 	*/
-	const row = arg.row.append("div").attr("class", "sja_tr2")
+	const row = arg.row.append('div').attr('class', 'sja_tr2')
 	// another under row, for adding graphs
-	const row_graph = arg.row.append("div")
+	const row_graph = arg.row.append('div')
 
 	// if [+] button is created, will add another row under row for showing children
 	may_make_term_foldbutton(arg, row, obj)
@@ -241,16 +241,16 @@ try to keep the logic clear
 function print_term_name(row, arg, term) {
 	// term name
 	const label = row
-		.append("div")
-		.style("display", "inline-block")
-		.style("padding", label_padding)
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', label_padding)
 		.text(term.name)
 	if (arg && arg.flicker) {
 		label
-			.style("background-color", "yellow")
+			.style('background-color', 'yellow')
 			.transition()
 			.duration(4000)
-			.style("background-color", "transparent")
+			.style('background-color', 'transparent')
 	}
 	return label
 }
@@ -277,15 +277,15 @@ function may_apply_modifier_click_term(obj, term, row) {
 
 	if (obj.modifier_click_term.disable_terms && obj.modifier_click_term.disable_terms.has(term.id)) {
 		// this term is disabled, no clicking
-		namebox.style("opacity", ".5")
+		namebox.style('opacity', '.5')
 	} else if (term_hasgraph(term)) {
 		// enable clicking this term
 		namebox
-			.style("padding-left", "8px")
-			.style("padding-right", "8px")
-			.attr("class", "sja_menuoption")
-			.style("border-radius", button_radius)
-			.on("click", () => {
+			.style('padding-left', '8px')
+			.style('padding-right', '8px')
+			.attr('class', 'sja_menuoption')
+			.style('border-radius', button_radius)
+			.on('click', () => {
 				obj.modifier_click_term.callback(term)
 			})
 	}
@@ -311,16 +311,16 @@ there may be other conditions to apply, e.g. patients carrying alt alleles of a 
 such conditions may be carried by obj
 
 */
-	const button_div = row.append("div").style("display", "inline-block")
+	const button_div = row.append('div').style('display', 'inline-block')
 
 	const button = button_div
-		.append("div")
-		.style("font-size", ".8em")
-		.style("margin-left", "20px")
-		.style("display", "inline-block")
-		.style("border-radius", button_radius)
-		.attr("class", "sja_menuoption")
-		.text("VIEW")
+		.append('div')
+		.style('font-size', '.8em')
+		.style('margin-left', '20px')
+		.style('display', 'inline-block')
+		.style('border-radius', button_radius)
+		.attr('class', 'sja_menuoption')
+		.text('VIEW')
 
 	// const view_btn_line = button_div.append('div')
 	// 	.style('height','10px')
@@ -329,47 +329,49 @@ such conditions may be carried by obj
 	// 	.style('display','none')
 
 	const div = row_graph
-		.append("div")
-		.style("border", "solid 1px #aaa")
-		.style("margin-bottom", "10px")
-		.style("display", "none")
+		.append('div')
+		.style('border', 'solid 1px #aaa')
+		.style('margin-bottom', '10px')
+		.style('display', 'none')
 
 	const plot_loading_div = div
-		.append("div")
-		.style("padding", "10px")
-		.text("Loading...")
-		.style("text-align", "center")
+		.append('div')
+		.style('padding', '10px')
+		.text('Loading...')
+		.style('text-align', 'center')
 
 	let loaded = false,
 		loading = false
 
-	button.on("click", async () => {
+	button.on('click', async () => {
 		const i = obj.expanded_term_ids.indexOf(term.id)
-		if (div.style("display") == "none") {
-			client.appear(div, "inline-block")
+		if (div.style('display') == 'none') {
+			client.appear(div, 'inline-block')
 			button
-				.style("border-radius", "5px 5px 0 0")
-				.style("border-style", "solid solid hidden solid")
-				.style("height", "17px")
+				.style('border-radius', '5px 5px 0 0')
+				.style('border-style', 'solid solid hidden solid')
+				.style('height', '17px')
 			// view_btn_line.style('display','block')
 			if (i == -1) obj.expanded_term_ids.push(term.id)
+			obj.main()
 		} else {
 			client.disappear(div)
 			button
-				.style("border-radius", button_radius)
-				.style("border", "solid 1px #aaa")
-				.style("height", "auto")
+				.style('border-radius', button_radius)
+				.style('border', 'solid 1px #aaa')
+				.style('height', 'auto')
 			// view_btn_line.style('display','none')
 			obj.expanded_term_ids.splice(i, 1)
+			obj.main()
 		}
 		if (loaded || loading) {
-			plot_loading_div.text("").remove()
+			plot_loading_div.text('').remove()
 			return
 		}
-		button.style("border", "solid 1px #aaa").style("border-style", "solid solid hidden solid")
+		button.style('border', 'solid 1px #aaa').style('border-style', 'solid solid hidden solid')
 		loading = true
 		make_barplot(obj, { term }, div, () => {
-			plot_loading_div.text("").remove()
+			plot_loading_div.text('').remove()
 			loaded = true
 			loading = false
 		})
@@ -447,41 +449,41 @@ buttonholder: div in which to show the button, term label is also in it
 
 	// row to display children terms
 	const childrenrow = arg.row
-		.append("div")
-		.style("display", "none")
-		.style("padding-left", tree_indent)
+		.append('div')
+		.style('display', 'none')
+		.style('padding-left', tree_indent)
 
 	const button = buttonholder
-		.append("div")
-		.style("display", "inline-block")
-		.style("font-family", "courier")
-		.attr("class", "sja_menuoption")
-		.text("+")
+		.append('div')
+		.style('display', 'inline-block')
+		.style('font-family', 'courier')
+		.attr('class', 'sja_menuoption')
+		.text('+')
 
-	button.on("click", () => {
-		if (childrenrow.style("display") === "none") {
+	button.on('click', () => {
+		if (childrenrow.style('display') === 'none') {
 			client.appear(childrenrow)
-			button.text("-")
+			button.text('-')
 		} else {
 			client.disappear(childrenrow)
-			button.text("+")
+			button.text('+')
 		}
 
 		if (children_loaded) return
 
 		// to load children terms, should run only once
 		const wait = childrenrow
-			.append("div")
-			.text("Loading...")
-			.style("opacity", 0.5)
-			.style("margin", "3px 0px")
+			.append('div')
+			.text('Loading...')
+			.style('opacity', 0.5)
+			.style('margin', '3px 0px')
 
-		const param = ["get_children=1&tid=" + arg.term.id] // not adding ssid here
+		const param = ['get_children=1&tid=' + arg.term.id] // not adding ssid here
 		obj
 			.do_query(param)
 			.then(data => {
 				if (data.error) throw data.error
-				if (!data.lst || data.lst.length === 0) throw "error getting children"
+				if (!data.lst || data.lst.length === 0) throw 'error getting children'
 				wait.remove()
 				// got children
 				for (const cterm of data.lst) {
@@ -495,13 +497,13 @@ buttonholder: div in which to show the button, term label is also in it
 				}
 			})
 			.catch(e => {
-				wait.text(e.message || e).style("color", "red")
+				wait.text(e.message || e).style('color', 'red')
 				if (e.stack) console.log(e.stack)
 			})
 			.then(() => {
 				children_loaded = true
 				client.appear(childrenrow)
-				button.text("-")
+				button.text('-')
 			})
 	})
 }
@@ -513,101 +515,103 @@ term view shows barchart
 barchart is shown in-place under term and in full capacity
 */
 	const div = obj.dom.searchdiv
-		.style("display", "block")
-		.append("div")
-		.style("display", "inline-block")
+		.style('display', 'block')
+		.append('div')
+		.style('display', 'inline-block')
 	const input = div
-		.append("input")
-		.attr("type", "search")
-		.attr("class", "tree_search")
-		.style("width", "100px")
-		.style("display", "block")
-		.attr("placeholder", "Search")
+		.append('input')
+		.attr('type', 'search')
+		.attr('class', 'tree_search')
+		.style('width', '100px')
+		.style('display', 'block')
+		.attr('placeholder', 'Search')
 	input.node().focus() // always focus
 
 	const table = div
-		.append("div")
-		.style("border-left", "solid 1px #85B6E1")
-		.style("margin", "2px 0px 10px 10px")
-		.style("padding-left", "10px")
-		.append("table")
-		.style("border-spacing", "0px")
-		.style("border-collapse", "separate")
+		.append('div')
+		.style('border-left', 'solid 1px #85B6E1')
+		.style('margin', '2px 0px 10px 10px')
+		.style('padding-left', '10px')
+		.append('table')
+		.style('border-spacing', '0px')
+		.style('border-collapse', 'separate')
 
-	input.on("input", debounce(tree_search, 300))
+	input.on('input', debounce(tree_search, 300))
 
 	// helpers
 	function searchresult2clickterm(lst) {
 		for (const term of lst) {
 			const div = table
-				.append("tr")
-				.append("td")
-				.append("div")
+				.append('tr')
+				.append('td')
+				.append('div')
 				.text(term.name)
 			if (term_hasgraph(term)) {
 				// only allow selecting for graph-enabled ones
 				div
-					.attr("class", "sja_menuoption")
-					.style("margin", "1px 0px 0px 0px")
-					.style("border-radius", button_radius)
-					.on("click", () => {
+					.attr('class', 'sja_menuoption')
+					.style('margin', '1px 0px 0px 0px')
+					.style('border-radius', button_radius)
+					.on('click', () => {
 						obj.modifier_click_term.callback(term)
 					})
 			} else {
-				div.style("padding", "5px 10px").style("opacity", 0.5)
+				div.style('padding', '5px 10px').style('opacity', 0.5)
 			}
 		}
 	}
 	function makeviewbutton(term, td) {
-		const tr_hidden = table.append("tr").style("display", "none")
+		const tr_hidden = table.append('tr').style('display', 'none')
 		let loading = false,
 			loaded = false
 		const viewbutton = td
-			.append("div") // view button
-			.style("display", "inline-block")
-			.attr("class", "sja_menuoption")
-			.style("zoom", ".8")
-			.style("margin-right", "10px")
-			.text("VIEW")
-		viewbutton.on("click", () => {
-			if (tr_hidden.style("display") == "none") {
-				tr_hidden.style("display", "table-row")
+			.append('div') // view button
+			.style('display', 'inline-block')
+			.attr('class', 'sja_menuoption')
+			.style('zoom', '.8')
+			.style('margin-right', '10px')
+			.text('VIEW')
+		viewbutton.on('click', () => {
+			if (tr_hidden.style('display') == 'none') {
+				tr_hidden.style('display', 'table-row')
+				obj.main()
 			} else {
-				tr_hidden.style("display", "none")
+				tr_hidden.style('display', 'none')
+				obj.main()
 			}
 			if (loaded || loading) return
-			viewbutton.text("Loading...")
+			viewbutton.text('Loading...')
 			loading = true
 			const div = tr_hidden
-				.append("td")
-				.attr("colspan", 3)
-				.append("div")
-				.style("border-left", "solid 1px #aaa")
-				.style("margin-left", graph_leftpad)
+				.append('td')
+				.attr('colspan', 3)
+				.append('div')
+				.style('border-left', 'solid 1px #aaa')
+				.style('margin-left', graph_leftpad)
 			make_barplot(obj, { term }, div, () => {
 				loading = false
 				loaded = true
-				viewbutton.text("VIEW")
+				viewbutton.text('VIEW')
 			})
 		})
 	}
 	function maketreebutton(term, td) {
 		const span = td
-			.append("span")
-			.style("font-size", ".8em")
-			.attr("class", "sja_clbtext")
-			.text("TREE")
-		span.on("click", async () => {
-			span.text("Loading...")
-			const data = await obj.do_query(["treeto=" + term.id])
-			if (!data.levels) throw "levels[] missing"
-			table.selectAll("*").remove()
-			obj.dom.treediv.selectAll("*").remove()
+			.append('span')
+			.style('font-size', '.8em')
+			.attr('class', 'sja_clbtext')
+			.text('TREE')
+		span.on('click', async () => {
+			span.text('Loading...')
+			const data = await obj.do_query(['treeto=' + term.id])
+			if (!data.levels) throw 'levels[] missing'
+			table.selectAll('*').remove()
+			obj.dom.treediv.selectAll('*').remove()
 			let currdiv = obj.dom.treediv
 			for (const [i, level] of data.levels.entries()) {
 				let nextdiv
 				for (const term of level.terms) {
-					const row = currdiv.append("div")
+					const row = currdiv.append('div')
 					if (term.id == level.focusid) {
 						// term under focus
 						if (i == data.levels.length - 1) {
@@ -615,19 +619,19 @@ barchart is shown in-place under term and in full capacity
 							print_one_term({ term, row, flicker: true }, obj)
 						} else {
 							// before last level, manually print it
-							const row2 = row.append("div")
-							const row_graph = row.append("div")
-							row2.attr("class", "sja_tr2")
+							const row2 = row.append('div')
+							const row_graph = row.append('div')
+							row2.attr('class', 'sja_tr2')
 							row2
-								.append("div") // button
-								.style("display", "inline-block")
-								.style("font-family", "courier")
-								.attr("class", "sja_menuoption")
-								.text("-")
-								.on("click", () => {
-									const toshow = nextdiv.style("display") == "none"
-									d3event.target.innerHTML = toshow ? "-" : "+"
-									nextdiv.style("display", toshow ? "block" : "none")
+								.append('div') // button
+								.style('display', 'inline-block')
+								.style('font-family', 'courier')
+								.attr('class', 'sja_menuoption')
+								.text('-')
+								.on('click', () => {
+									const toshow = nextdiv.style('display') == 'none'
+									d3event.target.innerHTML = toshow ? '-' : '+'
+									nextdiv.style('display', toshow ? 'block' : 'none')
 								})
 							print_term_name(row2, null, term)
 
@@ -636,7 +640,7 @@ barchart is shown in-place under term and in full capacity
 								may_make_term_viewbutton(term, row2, row_graph, obj)
 							}
 
-							nextdiv = currdiv.append("div").style("padding-left", tree_indent)
+							nextdiv = currdiv.append('div').style('padding-left', tree_indent)
 						}
 					} else {
 						// a sibling
@@ -649,20 +653,20 @@ barchart is shown in-place under term and in full capacity
 	}
 
 	async function tree_search() {
-		table.selectAll("*").remove()
+		table.selectAll('*').remove()
 
-		const str = input.property("value")
+		const str = input.property('value')
 		// do not trim space from input, so that 'age ' will be able to match with 'age at..' but not 'agedx'
 
-		if (str == " " || str == "") {
+		if (str == ' ' || str == '') {
 			// blank
 			return
 		}
 		try {
 			// query
-			const data = await obj.do_query(["findterm=" + str])
+			const data = await obj.do_query(['findterm=' + str])
 			if (data.error) throw data.error
-			if (!data.lst || data.lst.length == 0) throw "No match"
+			if (!data.lst || data.lst.length == 0) throw 'No match'
 
 			if (obj.modifier_click_term) {
 				searchresult2clickterm(data.lst)
@@ -671,13 +675,13 @@ barchart is shown in-place under term and in full capacity
 
 			// show full terms with graph/tree buttons
 			for (const term of data.lst) {
-				const tr = table.append("tr").attr("class", "sja_tr2")
-				tr.append("td")
-					.style("opacity", ".6")
+				const tr = table.append('tr').attr('class', 'sja_tr2')
+				tr.append('td')
+					.style('opacity', '.6')
 					.text(term.name)
 				const td = tr
-					.append("td") // holder for buttons
-					.style("text-align", "right")
+					.append('td') // holder for buttons
+					.style('text-align', 'right')
 				if (term_hasgraph(term)) {
 					makeviewbutton(term, td)
 				}
@@ -685,9 +689,9 @@ barchart is shown in-place under term and in full capacity
 			}
 		} catch (e) {
 			table
-				.append("tr")
-				.append("td")
-				.style("opacity", 0.5)
+				.append('tr')
+				.append('td')
+				.style('opacity', 0.5)
 				.text(e.message || e)
 			if (e.stack) console.log(e.stack)
 		}
@@ -696,7 +700,7 @@ barchart is shown in-place under term and in full capacity
 
 function restore_view(obj) {
 	if (!obj.plot2restore) return
-	const params = typeof obj.plot2restore == "object" ? obj.plot2restore : getUrlParams(obj.plot2restore)
+	const params = typeof obj.plot2restore == 'object' ? obj.plot2restore : getUrlParams(obj.plot2restore)
 	delete obj.plot2restore
 	restore_plot(obj, params)
 }
@@ -704,11 +708,11 @@ function restore_view(obj) {
 function getUrlParams(queryStr) {
 	const params = {}
 	// key: parameter or setting name, value: separator character(s)
-	const keysWithSepValue = { currViews: "," }
-	queryStr.split("&").forEach(kv => {
-		const [key, val] = kv.split("=")
-		if (key.includes(".")) {
-			const subkeys = key.split(".")
+	const keysWithSepValue = { currViews: ',' }
+	queryStr.split('&').forEach(kv => {
+		const [key, val] = kv.split('=')
+		if (key.includes('.')) {
+			const subkeys = key.split('.')
 			let subParam = params
 			subkeys.forEach((k, i) => {
 				if (i == subkeys.length - 1) {
@@ -740,24 +744,24 @@ function save_view() {
 async function restore_plot(obj, params) {
 	if (!params.term && !params.term1) return
 	const restored_div = obj.dom.div
-		.append("div")
-		.style("margin", "20px")
-		.style("padding", "10px 20px")
-		.style("border", "1px solid #aaa")
+		.append('div')
+		.style('margin', '20px')
+		.style('padding', '10px 20px')
+		.style('border', '1px solid #aaa')
 
 	if (params.term1) params.term = params.term1
 
-	if (typeof params.term == "object") {
+	if (typeof params.term == 'object') {
 		make_barplot(obj, params, restored_div)
 	} else {
-		const _term = await obj.do_query(["gettermbyid=" + params.term], {}, obj.do_query_opts)
+		const _term = await obj.do_query(['gettermbyid=' + params.term], {}, obj.do_query_opts)
 		if (!_term || !_term.term) alert(`Unable to restore the view for term='${params.term}'`)
 		const term = _term && _term.term
 		term.id = params.term
 
 		let term2, term0
-		if (params.term2 && params.term2 != "genotype") {
-			const term = await obj.do_query(["gettermbyid=" + params.term2], {}, obj.do_query_opts)
+		if (params.term2 && params.term2 != 'genotype') {
+			const term = await obj.do_query(['gettermbyid=' + params.term2], {}, obj.do_query_opts)
 			if (term && term.term) {
 				term2 = term.term
 				term2.id = params.term2
@@ -765,7 +769,7 @@ async function restore_plot(obj, params) {
 			}
 		}
 		if (params.term0) {
-			const term = await obj.do_query(["gettermbyid=" + params.term0], {}, obj.do_query_opts)
+			const term = await obj.do_query(['gettermbyid=' + params.term0], {}, obj.do_query_opts)
 			if (term && term.term) {
 				term0 = term.term
 				term0.id = params.term0
@@ -773,7 +777,7 @@ async function restore_plot(obj, params) {
 			}
 		}
 
-		restored_div.append("h3").html("Restored View")
+		restored_div.append('h3').html('Restored View')
 		make_barplot(
 			obj,
 			{
@@ -783,8 +787,8 @@ async function restore_plot(obj, params) {
 				settings: Object.assign(
 					{
 						bar: {
-							overlay: term2 ? "tree" : "none",
-							divideBy: term0 ? "tree" : "none"
+							overlay: term2 ? 'tree' : 'none',
+							divideBy: term0 ? 'tree' : 'none'
 						}
 					},
 					params.settings ? params.settings : {}
