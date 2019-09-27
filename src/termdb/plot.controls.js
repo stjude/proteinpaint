@@ -22,6 +22,7 @@ class TdbPlotControls {
 			.append('table')
 			.attr('cellpadding', 0)
 			.attr('cellspacing', 0)
+			.style('white-space', 'nowrap')
 		this.dom = {
 			holder: opts.holder.style('vertical-align', 'top').style('transition', '0.5s'),
 			topbar,
@@ -35,7 +36,7 @@ class TdbPlotControls {
 			burger: setBurgerBtn(app, { holder: this.dom.burger_div }, this),
 			svg: setSvgBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			term_info: setTermInfoBtn(app, { holder: this.dom.button_bar.append('div') }, this),
-			config: setConfigDiv(app, { holder: this.dom.config_div }, this),
+			config: setConfigDiv(app, { holder: this.dom.config_div, table }, this),
 			//barsAs: setBarsAsOpts(app, {holder: table.append('tr'), label: "Bars as"}, this),
 			overlay: setOverlayOpts(app, { holder: table.append('tr') }, this),
 			//view: setViewOpts(app),
@@ -188,7 +189,7 @@ function setSvgBtn(app, opts, controls) {
 function setTermInfoBtn(app, opts, controls) {
 	const info_btn = opts.holder
 		// TO-DO: put the conditional display back in using app.state()
-		.style('display', 'block') //controls.plot.term && controls.plot.term.term.hashtmldetail ? "block" : "none")
+		.style('display', 'none') //controls.plot.term && controls.plot.term.term.hashtmldetail ? "inline-block" : "none")
 		.style('margin', '10px')
 		.style('font-family', 'verdana')
 		.style('font-size', '18px')
@@ -309,11 +310,6 @@ function setConfigDiv(app, opts, controls) {
 		.style('visibility', 'hidden')
 		.style('transition', '0.2s')
 
-	const table = config_div
-		.append('table')
-		.attr('cellpadding', 0)
-		.attr('cellspacing', 0)
-
 	function rowIsVisible() {
 		return d3select(this).style('display') != 'none'
 	}
@@ -325,7 +321,7 @@ function setConfigDiv(app, opts, controls) {
 				.style('max-width', controls.isVisible ? '660px' : '50px')
 				.style('height', controls.isVisible ? '' : 0)
 
-			table
+			opts.table
 				.selectAll('tr')
 				.filter(rowIsVisible)
 				.selectAll('td')
@@ -334,7 +330,7 @@ function setConfigDiv(app, opts, controls) {
 		},
 		dom: {
 			config_div,
-			table
+			table: opts.table
 		}
 	}
 }
