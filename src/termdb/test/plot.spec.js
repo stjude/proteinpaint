@@ -20,7 +20,10 @@ tape('view click', function(test) {
 		termdb: {
 			state: {
 				dslabel: 'SJLife',
-				genome: 'hg38'
+				genome: 'hg38',
+				tree: {
+					expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis']
+				}
 			},
 			callbacks: {
 				tree: {
@@ -43,33 +46,14 @@ tape('view click', function(test) {
 				eventType: 'postNotify.test',
 				arg: tree
 			})
-			.run(triggerLevel1Click, 100)
-			.run(triggerLevel2Click, 100)
 			.run(triggerViewClick, 100)
 			.run(testAction, 600)
 			.done(() => test.end())
 	}
 
-	function triggerLevel1Click(tree) {
-		tree.Inner.dom.holder
-			.select('.termdiv-1')
-			.select('.termlabel-1')
-			.node()
-			.click()
-	}
-
-	function triggerLevel2Click(tree) {
-		tree.Inner.dom.holder
-			.select('.termdiv-2')
-			.select('.termlabel-2')
-			.node()
-			.click()
-	}
-
 	function triggerViewClick(tree) {
 		tree.Inner.dom.holder
-			.select('.termdiv-3')
-			.select('.termview-3')
+			.select('.termview')
 			.node()
 			.click()
 	}
@@ -77,10 +61,7 @@ tape('view click', function(test) {
 	function testAction(tree) {
 		test.equal(Object.keys(tree.Inner.components.plots).length, 1, 'should initialize a new plot component')
 
-		const term = tree.Inner.dom.holder
-			.select('.termdiv-3')
-			.select('.termview-3')
-			.datum()
+		const term = tree.Inner.dom.holder.select('.termview').datum()
 		const plot = tree.Inner.components.plots[term.id]
 		test.equal(plot && plot.Inner && plot.Inner.id, term.id, 'should assign the clicked term id as the plot id')
 

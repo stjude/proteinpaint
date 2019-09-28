@@ -94,6 +94,46 @@ tape('default view', function(test) {
 	}
 
 	function testDom(tree) {
-		test.equal(tree.Inner.dom.holder.selectAll('.termdiv-1').size(), 4, 'should have 4 root terms')
+		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 4, 'should have 4 root terms')
+	}
+})
+
+tape('rehydrated from saved state', function(test) {
+	test.timeoutAfter(1000)
+	test.plan(1)
+
+	runproteinpaint({
+		host,
+		noheader: 1,
+		nobox: true,
+		termdb: {
+			state: {
+				dslabel: 'SJLife',
+				genome: 'hg38',
+				tree: {
+					expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis']
+				}
+			},
+			callbacks: {
+				tree: {
+					'postInit.test': runTests
+				}
+			},
+			debug: 1,
+			serverData: helpers.serverData
+		},
+		serverData: helpers.serverData
+	})
+
+	function runTests(tree) {
+		tree.on('postInit.test', null)
+		helpers
+			.rideInit({ arg: tree })
+			.run(testDom, 200)
+			.done(() => test.end())
+	}
+
+	function testDom(tree) {
+		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 9, 'should have 9 expanded terms')
 	}
 })
