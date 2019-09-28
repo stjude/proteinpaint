@@ -51,7 +51,7 @@ class TdbTree {
 		} else {
 			const term = this.termsById[action.termId]
 			term.terms = await this.requestTerm(term)
-			this.updateTree(term, action.holder)
+			this.renderBranch(term, action.holder)
 		}
 	}
 
@@ -70,17 +70,15 @@ class TdbTree {
 			const copy = Object.assign({}, t)
 			this.termsById[copy.id] = copy
 			terms.push(copy)
-		}
-		for (const t of terms) {
 			// rehydrate expanded terms as needed
-			if (state.tree.expandedTerms.includes(t.id)) {
-				t.terms = await this.requestTerm(t)
+			if (state.tree.expandedTerms.includes(copy.id)) {
+				copy.terms = await this.requestTerm(copy)
 			}
 		}
 		return terms
 	}
 
-	updateTree(term, div) {
+	renderBranch(term, div) {
 		if (!term || !term.terms) return
 		if (!(term.id in this.termsById)) return
 		const expanded = this.app.state().tree.expandedTerms.includes(term.id)
@@ -236,7 +234,7 @@ class TdbTree {
 				.style('transition', '0.3s ease')
 
 			const expanded = self.app.state().tree.expandedTerms.includes(term.id)
-			if (expanded) self.updateTree(term, childdiv)
+			if (expanded) self.renderBranch(term, childdiv)
 		}
 
 		self.toggleTerm = function(term) {
