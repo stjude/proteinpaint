@@ -8,6 +8,7 @@ import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesett
 class TdbPlot {
 	constructor(app, opts) {
 		this.api = rx.getComponentApi(this)
+		this.getComponents = rx.getComponents
 		this.app = app
 		this.id = opts.id
 		this.config = this.app.state({ type: 'plot', id: this.id })

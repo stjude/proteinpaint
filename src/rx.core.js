@@ -192,7 +192,7 @@ export function getComponentApi(self) {
 			return api
 		},
 		components(dotSepNames = '') {
-			return self.getComponents(dotSepNames)
+			return typeof self.getComponents == 'function' ? self.getComponents(dotSepNames) : api
 		}
 	}
 	return api
@@ -257,7 +257,7 @@ export function getComponents(dotSepNames) {
 	while (names.length) {
 		let name = names.shift()
 		if (Array.isArray(component)) name = Number(name)
-		component = names.length ? component[name].components : component[name]
+		component = component[name].components ? component[name].components : component[name]
 		if (typeof component == 'function') component = component()
 		if (!component) break
 	}

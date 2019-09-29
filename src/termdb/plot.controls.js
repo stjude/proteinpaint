@@ -23,6 +23,7 @@ class TdbPlotControls {
 			.attr('cellpadding', 0)
 			.attr('cellspacing', 0)
 			.style('white-space', 'nowrap')
+
 		this.dom = {
 			holder: opts.holder.style('vertical-align', 'top').style('transition', '0.5s'),
 			topbar,
@@ -68,63 +69,6 @@ class TdbPlotControls {
 
 export const controlsInit = rx.getInitFxn(TdbPlotControls)
 
-export function init(opts) {
-	const controls = {
-		components: {}, // filled-in below
-		plot: opts.plot,
-		dispatch: opts.plot.main,
-		main(plot) {
-			if (plot) controls.plot = plot
-			for (const name in controls.components) {
-				controls.components[name].main(plot)
-			}
-			controls.dom.holder.style('background', controls.isVisible ? panel_bg_color : '')
-			controls.bus.emit('postRender', plot)
-		},
-		dom: {
-			holder: opts.holder.style('vertical-align', 'top').style('transition', '0.5s'),
-
-			topbar: opts.holder.append('div')
-		},
-		index: i++, // used for assigning unique input names, across different plots
-		isVisible: 'isVisible' in opts ? opts.isVisible : false,
-		listeners: {
-			plot: {
-				postRender(plot) {
-					const abspos =
-						plot.settings.currViews.includes('barchart') &&
-						(!plot.components.barchart.visibleCharts ||
-							plot.components.barchart.visibleCharts.length > 1 ||
-							plot.components.barchart.visibleCharts[0].settings.svgw > window.innerWidth - 500)
-
-					controls.dom.holder.style('position', abspos ? 'absolute' : '')
-				}
-			}
-		}
-	}
-
-	controls.components = {
-		burger: setBurgerBtn(controls),
-		svg: setSvgBtn(controls),
-		term_info: setTermInfoBtn(controls),
-		config: setConfigDiv(controls),
-		barsAs: setBarsAsOpts(controls, 'Bars as'),
-		overlay: setOverlayOpts(controls),
-		view: setViewOpts(controls),
-		orientation: setOrientationOpts(controls),
-		scale: setScaleOpts(controls),
-		bin: setBinOpts(controls, 'term', 'Primary Bins'),
-		divideBy: setDivideByOpts(controls)
-	}
-
-	plot.bus.on('postRender.controls', controls.listeners.plot.postRender)
-	controls.bus = client.get_event_bus(
-		['postRender'],
-		opts.plot.obj.callbacks.controls ? opts.plot.obj.callbacks.controls : {}
-	)
-	return controls
-}
-
 function setBurgerBtn(app, opts, controls) {
 	const btn = opts.holder
 		.style('margin', '10px')
@@ -159,10 +103,13 @@ function setSvgBtn(app, opts, controls) {
 		.style('cursor', 'pointer')
 		.html('&#10515;')
 		.on('click', () => {
-			return
-			for (const name in plot.components) {
-				if (typeof plot.components[name].download == 'function') {
-					plot.components[name].download()
+			const components = app.components('tree.plots.' + controls.id)
+			for (const name in components) {
+				// the download function in each component will be called,
+				// but should first check inside that function
+				// whether the component view is active before reacting
+				if (typeof components[name].download == 'function') {
+					components[name].download()
 				}
 			}
 		})

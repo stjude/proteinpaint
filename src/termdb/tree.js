@@ -31,6 +31,7 @@ class TdbTree {
 	constructor(app, opts) {
 		this.api = rx.getComponentApi(this)
 		this.notifyComponents = rx.notifyComponents
+		this.getComponents = rx.getComponents
 		this.app = app
 		this.dom = { holder: opts.holder }
 

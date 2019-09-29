@@ -100,7 +100,7 @@ tape('default view', function(test) {
 
 tape('rehydrated from saved state', function(test) {
 	test.timeoutAfter(1000)
-	test.plan(1)
+	test.plan(2)
 
 	runproteinpaint({
 		host,
@@ -135,5 +135,6 @@ tape('rehydrated from saved state', function(test) {
 
 	function testDom(tree) {
 		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 9, 'should have 9 expanded terms')
+		test.equal(tree.Inner.dom.holder.selectAll('.termbtn').size(), 7, 'should have 7 term toggle buttons')
 	}
 })
