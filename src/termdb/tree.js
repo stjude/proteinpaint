@@ -4,17 +4,42 @@ import { dofetch2 } from '../client'
 import { plotInit, plotConfig } from './plot'
 
 const childterm_indent = '30px'
+// class names
+const cls_termdiv = 'termdiv',
+	cls_termchilddiv = 'termchilddiv',
+	cls_termbtn = 'termbtn',
+	cls_termview = 'termview',
+	cls_termlabel = 'termlabel'
 
 /*
-	Recommended Component Code Organization
+Recommended Component Code Organization
 
-	(a) class (produces instance):
-  - all methods expected by rx.api (main, etc)
-	- all data processing code
+(a) class (produces instance):
+- all methods expected by rx.api (main, etc)
+- all data processing code
 
-	(b) setRenderers(self): attaches renderer methods
-	
-	(c) setInteractivity(self): attaches event handlers
+(b) setRenderers(self): attaches renderer methods
+
+(c) setInteractivity(self): attaches event handlers
+
+********************
+exit/update/enter
+termsById{} is bound to the DOM tree, to provide:
+- term label
+- list of children terms for a parent term
+
+may implement tree modifiers for:
+- alter the term labels by adding n=?
+- may cause to hide certain terms
+
+any change of modifier should update termsById first, then call renderBranch() at the root term to update the current tree
+
+*******************
+special flags
+root term does not exist in the termdb, but is synthesized upon initializing instance, has the "__tree_isroot" flag
+"__tree_isloading" flag is added when a term is first clicked
+same for "__tree_wait" which points to the <div>Loading...</div>
+
 */
 
 class TdbTree {
@@ -27,7 +52,7 @@ class TdbTree {
 		holder,
 		callbacks // see bus below
 	}
-*/
+	*/
 	constructor(app, opts) {
 		this.api = rx.getComponentApi(this)
 		this.notifyComponents = rx.notifyComponents
@@ -45,7 +70,7 @@ class TdbTree {
 
 		const rootTerm = {
 			id: 'root',
-			isroot: true // hardcoded attribute only introduced here
+			__tree_isroot: true
 		}
 
 		this.termsById = { root: rootTerm }
@@ -75,27 +100,36 @@ class TdbTree {
 			this.viewPlot(action)
 		} else {
 			const term = this.termsById[action.termId]
-			term.terms = await this.requestTerm(term)
-			this.renderBranch(term, action.holder)
+			if (!term.terms) {
+				term.terms = await this.requestTerm(term)
+				delete term.__tree_isloading
+				if (term.__tree_wait) {
+					term.__tree_wait.remove()
+					delete term.__tree_wait
+				}
+			}
+			this.renderBranch(term, action.holder, action.button)
 		}
 	}
 
 	async requestTerm(term) {
-		if (this.termsById[term.id].terms) return this.termsById[term.id].terms
 		const state = this.app.state()
 		const lst = ['genome=' + state.genome + '&dslabel=' + state.dslabel]
-		const args = [term.isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id]
-		// maybe no need to provide term filter at this query
-		const data = await dofetch2('/termdb?' + lst.join('&') + '&' + args.join('&'), {}, this.app.opts.fetchOpts)
+		lst.push(term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id)
+		// future: may add in tree modifier
+		const data = await dofetch2('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
-		if (!data.lst || data.lst.length == 0) throw 'no children term for ' + term.id
+		if (!data.lst || data.lst.length == 0) {
+			// do not throw exception; its children terms may have been filtered out
+			return []
+		}
 		const terms = []
 		for (const t of data.lst) {
-			//console.log(t.id)
 			const copy = Object.assign({}, t)
 			this.termsById[copy.id] = copy
 			terms.push(copy)
 			// rehydrate expanded terms as needed
+			// fills in termsById, for recovering tree
 			if (state.tree.expandedTerms.includes(copy.id)) {
 				copy.terms = await this.requestTerm(copy)
 			}
@@ -139,22 +173,27 @@ function setRenderers(self) {
 	// !!! no free-floating variable declarations here !!!
 	// set properties within the class declarations
 
-	self.renderBranch = (term, div) => {
+	self.renderBranch = (term, div, button) => {
+		/*
+		term must be from termsById
+		div is the childdiv of this term
+		button, optional, the toggle button
+		*/
 		if (!term || !term.terms) return
 		if (!(term.id in self.termsById)) return
 		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
 		if (!expanded) {
 			div.style('display', 'none')
-			// do not update hidden child termdiv's
+			if (button) button.text('+')
 			return
 		}
 		div.style('display', 'block')
+		if (button) button.text('-')
 
-		const cls = 'termdiv'
-		const childTermIds = term.terms.map(self.bindKey)
+		const childTermIds = new Set(term.terms.map(self.bindKey))
 		const divs = div
-			.selectAll('.' + cls)
-			.filter(t => childTermIds.includes(t.id))
+			.selectAll('.' + cls_termdiv)
+			.filter(t => childTermIds.has(t.id))
 			.data(term.terms, self.bindKey)
 
 		divs.exit().each(self.hideTerm)
@@ -164,45 +203,43 @@ function setRenderers(self) {
 		divs
 			.enter()
 			.append('div')
-			.attr('class', cls)
+			.attr('class', cls_termdiv)
 			.each(self.addTerm)
 	}
 
 	// this == the d3 selected DOM node
 	self.hideTerm = function(term) {
-		//console.log('hideTerm', term.id)
 		if (self.app.state().tree.expandedTerms.includes(term.id)) return
 		select(this).style('display', 'none')
 	}
 
 	self.updateTerm = function(term) {
-		//console.log('updateTerm', term.id)
 		const div = select(this)
 		div.datum(term)
 		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
 		const divs = selectAll(this.childNodes).filter(function() {
-			return !this.className.includes('termchilddiv')
+			return !this.className.includes(cls_termchilddiv)
 		})
 
 		divs
-			.select('.termbtn')
+			.select('.' + cls_termbtn)
 			.datum(term)
 			.html(!expanded ? '+' : '-')
 
 		divs
-			.select('.termlabel')
+			.select('.' + cls_termlabel)
 			.datum(term)
 			.html(term.name)
 
 		divs
-			.select('.termview')
+			.select('.' + cls_termview)
 			.datum(term)
 			.html('VIEW')
 
 		const plot = self.app.state({ type: 'plot', id: term.id })
 		const isVisible = expanded || (plot && plot.isVisible)
 		const childdiv = divs
-			.select('.termchilddiv')
+			.select('.' + cls_termchilddiv)
 			.datum(term)
 			.style('display', expanded ? 'block' : 'none')
 			.style('overflow', isVisible ? '' : 'hidden')
@@ -221,15 +258,15 @@ function setRenderers(self) {
 			.style('padding-left', term.isleaf ? 0 : '')
 			.style('cursor', 'pointer')
 
+		let button
 		if (!term.isleaf) {
-			div
+			button = div
 				.append('div')
 				.datum(term)
 				.html('+')
-				.attr('class', 'sja_menuoption termbtn')
+				.attr('class', 'sja_menuoption ' + cls_termbtn)
 				.style('display', 'inline-block')
 				.style('padding', '4px 9px')
-				.style('background', '#ececec')
 				.style('font-family', 'courier')
 				.on('click', self.toggleTerm)
 		}
@@ -238,16 +275,15 @@ function setRenderers(self) {
 			.append('div')
 			.datum(term)
 			.html(term.name)
-			.attr('class', 'termlabel')
+			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
-			.style('padding', '5px 5px 5px 5px')
-			.on('click', self.toggleTerm)
+			.style('padding', '5px')
 
 		if (term.isleaf) {
 			div
 				.append('div')
-				.attr('class', 'termview')
+				.attr('class', cls_termview)
 				.datum(term)
 				.html('VIEW')
 				.style('display', 'inline-block')
@@ -263,18 +299,18 @@ function setRenderers(self) {
 		const childdiv = div
 			.append('div')
 			.datum(term)
-			.attr('class', 'termchilddiv')
+			.attr('class', cls_termchilddiv)
 			.style('padding-left', childterm_indent)
 			.style('transition', '0.3s ease')
 
 		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
-		if (expanded) self.renderBranch(term, childdiv)
+		if (expanded) self.renderBranch(term, childdiv, button)
 	}
 
 	self.updatePlotView = function(action) {
 		const show = action.type == 'plot_add' || action.type == 'plot_show'
 		self.dom.holder
-			.selectAll('.termchilddiv')
+			.selectAll('.' + cls_termchilddiv)
 			.filter(term => term.id == action.id)
 			.style('overflow', show ? '' : 'hidden')
 			.style('height', show ? '' : 0)
@@ -297,12 +333,28 @@ function setInteractivity(self) {
 	self.toggleTerm = function(term) {
 		event.stopPropagation()
 		if (term.isleaf) return
+		const t0 = self.termsById[term.id]
+		if (!t0) throw 'invalid term id'
+
+		const holder = selectAll(this.parentNode.childNodes).filter(function() {
+			return this.className.includes(cls_termchilddiv)
+		})
+		const button = select(this)
+
+		if (!t0.terms) {
+			// to load child term with request, guard against repetitive clicking
+			if (term.__tree_isloading) return
+			term.__tree_isloading = true
+			term.__tree_wait = holder
+				.append('div')
+				.text('Loading...')
+				.style('opacity', 0.5)
+				.style('padding', '5px')
+		}
+
 		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
 		const type = expanded ? 'tree_collapse' : 'tree_expand'
-		const holder = selectAll(this.parentNode.childNodes).filter(function() {
-			return this.className.includes('termchilddiv')
-		})
-		self.app.dispatch({ type, termId: term.id, term, holder })
+		self.app.dispatch({ type, termId: term.id, term, holder, button })
 	}
 
 	self.togglePlot = function(term) {
