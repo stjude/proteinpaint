@@ -76,7 +76,7 @@ tape('default view', function(test) {
 			},
 			callbacks: {
 				tree: {
-					'postInit.test': runTests
+					'postRender.test': runTests
 				}
 			},
 			debug: 1,
@@ -86,7 +86,7 @@ tape('default view', function(test) {
 	})
 
 	function runTests(tree) {
-		tree.on('postInit.test', null)
+		tree.on('postRender.test', null)
 		helpers
 			.rideInit({ arg: tree })
 			.run(testDom, 200)

@@ -38,7 +38,6 @@ any change of modifier should update termsById first, then call renderBranch() a
 special flags
 root term does not exist in the termdb, but is synthesized upon initializing instance, has the "__tree_isroot" flag
 "__tree_isloading" flag is added when a term is first clicked
-same for "__tree_wait" which points to the <div>Loading...</div>
 
 */
 
@@ -74,19 +73,14 @@ class TdbTree {
 		}
 
 		this.termsById = { root: rootTerm }
-		this.app
-			.dispatch({
-				type: 'tree_expand',
-				termId: 'root',
-				term: rootTerm,
-				holder: this.dom.holder
-			})
-			.then(() => {
-				// wait after dispatch before emitting postInit
-				// console.log(36, 'tree postInit')
-				this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
-				this.bus.emit('postInit')
-			})
+		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
+		this.app.dispatch({
+			type: 'tree_expand',
+			termId: 'root',
+			term: rootTerm,
+			holder: this.dom.holder
+		})
+		this.bus.emit('postInit')
 	}
 
 	reactsTo(action, acty) {
@@ -103,13 +97,14 @@ class TdbTree {
 			if (!term.terms) {
 				term.terms = await this.requestTerm(term)
 				delete term.__tree_isloading
-				if (term.__tree_wait) {
-					term.__tree_wait.remove()
-					delete term.__tree_wait
+				if (action.loading_div) {
+					action.loading_div.remove()
 				}
 			}
 			this.renderBranch(term, action.holder, action.button)
 		}
+		// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
+		this.bus.emit('postRender')
 	}
 
 	async requestTerm(term) {
@@ -340,12 +335,12 @@ function setInteractivity(self) {
 			return this.className.includes(cls_termchilddiv)
 		})
 		const button = select(this)
-
+		let loading_div
 		if (!t0.terms) {
 			// to load child term with request, guard against repetitive clicking
 			if (term.__tree_isloading) return
 			term.__tree_isloading = true
-			term.__tree_wait = holder
+			loading_div = holder
 				.append('div')
 				.text('Loading...')
 				.style('opacity', 0.5)
@@ -354,7 +349,7 @@ function setInteractivity(self) {
 
 		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
 		const type = expanded ? 'tree_collapse' : 'tree_expand'
-		self.app.dispatch({ type, termId: term.id, term, holder, button })
+		self.app.dispatch({ type, termId: term.id, term, holder, button, loading_div })
 	}
 
 	self.togglePlot = function(term) {
