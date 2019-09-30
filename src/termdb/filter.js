@@ -2,7 +2,7 @@ import * as rx from '../rx.core'
 import { select, event } from 'd3-selection'
 import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
-import { treeInit } from './tree'
+import { appInit } from './app'
 
 class TdbFilter {
 	constructor(app, opts) {
@@ -111,6 +111,7 @@ function setRenderers(self) {
 			.style('border-radius', '6px')
 			.style('background-color', '#4888BF')
 			.html('&#43;')
+			.on('click', self.displayTreeMenu)
 	}
 
 	self.addFilter = async function(term) {
@@ -207,37 +208,40 @@ function setRenderers(self) {
 		one_term_div.selectAll('.term_name_btn').text(term.term.name)
 
 		//term-value relation button
-		if (term.term.iscategorical) {
-			const condition_select = one_term_div.selectAll('.condition_select')
-			condition_select.node().value = term.isnot ? 'is_not' : 'is'
+		const condition_select = one_term_div.selectAll('.condition_select')
+		condition_select.node().value = term.isnot ? 'is_not' : 'is'
 
-			const condition_btn = one_term_div
-				.selectAll('.condition_btn')
-				.text(term.isnot ? 'IS NOT' : 'IS')
-				.style('background-color', term.isnot ? '#511e78' : '#015051')
+		const condition_btn = one_term_div
+			.selectAll('.condition_btn')
+			.text(term.isnot ? 'IS NOT' : 'IS')
+			.style('background-color', term.isnot ? '#511e78' : '#015051')
 
-			one_term_div.selectAll('.condition_select').style('width', condition_btn.node().offsetWidth + 'px')
+		one_term_div.selectAll('.condition_select').style('width', condition_btn.node().offsetWidth + 'px')
 
-			const data = await self.getCategories(term)
-			self.categoryData[term.term.id] = data
+		const data = await self.getCategories(term)
+		self.categoryData[term.term.id] = data
 
-			const value_btns = one_term_div.selectAll('.value_btn').data(term.values)
+		const value_btns = one_term_div.selectAll('.value_btn').data(term.values)
 
-			value_btns.exit().each(self.removeValueBtn)
+		value_btns.exit().each(self.removeValueBtn)
 
-			value_btns
-				.transition()
-				.duration(200)
-				.each(self.updateValueBtn)
+		value_btns
+			.transition()
+			.duration(200)
+			.each(self.updateValueBtn)
 
-			value_btns
-				.enter()
-				.append('div')
-				.attr('class', 'value_btn sja_filter_tag_btn')
-				.style('margin-right', '1px')
-				.style('position', 'absolute')
-				.each(self.addCategoryValues)
-		}
+		const valueAdderFxn = term.term.iscategorical ? self.addCategoryValues
+			: term.term.isfloat || term.term.isinteger ? self.addNumericValues
+			: await self.addConditionValues
+
+		value_btns
+			.enter()
+			.append('div')
+			.attr('class', 'value_btn sja_filter_tag_btn')
+			.style('margin-right', '1px')
+			.style('position', 'absolute')
+			.each(valueAdderFxn)
+		
 		// button with 'x' to remove term2
 		one_term_div.selectAll('.term_remove_btn').remove()
 		one_term_div
@@ -302,11 +306,9 @@ function setRenderers(self) {
 			.style('background-color', '#4888BF')
 			.html(d => d.label + ' &#9662;')
 
-		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
-		replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
-
 		if (j == term.values.length - 1) {
-			// self.makePlusBtn(one_term_div, data, term.values)
+			one_term_div.selectAll('.add_value_btn').remove()
+			one_term_div.selectAll('.add_value_select').remove()
 			await self.makePlusBtn(one_term_div, self.categoryData[term.term.id], term.values, new_value => {
 				self.addValue({ term, new_value })
 			})
@@ -316,7 +318,7 @@ function setRenderers(self) {
 		one_term_div
 			.append('div')
 			.attr('class', 'or_btn')
-			.style('display', 'inline-block')
+			.style('display', 'none')
 			.style('color', '#fff')
 			.style('background-color', '#4888BF')
 			.style('margin-right', '1px')
@@ -326,7 +328,11 @@ function setRenderers(self) {
 			.text('or')
 
 		//show or hide OR button
-		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style('display', j > 0 ? 'inline-block' : 'none')
+		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style('display', (j > 0 && j <term.values.length -1) ? 'inline-block' : 'none')
+
+		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
+		// set it after editing OR button to confirm 1px margin between value_btn and + btn  
+		replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
 	}
 
 	self.updateValueBtn = function(d, j) {
@@ -343,10 +349,8 @@ function setRenderers(self) {
 			.duration(200)
 			.style('opacity', 1)
 
-		const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
-			'width',
-			value_btn.node().offsetWidth + 'px'
-		)
+		const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j])
+			.style('width', value_btn.node().offsetWidth + 'px')
 
 		//update dropdown list for each term and '+' btn
 		self.updateSelect(value_selects, term.values, d.key)
@@ -487,22 +491,29 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.displayTreeMenu = async function() {
-		// const obj = self.app.state()
-		self.dom.tip.clear().showunder(term_name_btn.node())
-		const holder = self.dom.tip.d.append('div')
+	self.displayTreeMenu = async function(term) {
+		const one_term_div = this
+		const obj = self.app.state()
+		self.dom.tip.clear().showunder(one_term_div)
+		const treediv = self.dom.tip.d.append("div")
+		// set termfilter terms to all filter-terms if '+' or all except current term if 'term_name_btn' 
+		const terms = select(one_term_div).classed('add_term_btn') ? obj.termfilter.terms : obj.termfilter.terms.filter(t => t.id != term.termId)
+	
 		// a new object as init() argument for launching the tree with modifiers
-		// const tree_obj = {
-		// 	state: {
-		// 		dslabel: obj.dslabel,
-		// 		genome: obj.genome,
-		// 		termfilter: {
-		// 			show_top_ui: true,
-		// 			terms: []
-		// 		}
-		// 	}
-		// }
-		treeInit(self.app, { holder })
+		const tree_obj = {
+			state: {
+				dslabel: obj.dslabel,
+				genome: obj.genome,
+				termfilter: {
+					show_top_ui: false,
+					terms: terms
+				}
+			},
+			callbacks:{
+				app: {'postInit.test': ()=>{}}
+			}
+		}
+		appInit(tree_obj, treediv)
 	}
 
 	self.removeFilter = term => self.app.dispatch({ type: 'filter_remove', termId: term.id })
