@@ -1,8 +1,23 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const serverconfig = require('../../../serverconfig')
-const host = 'http://localhost:' + serverconfig.port
 const helpers = require('../../../test/front.helpers.js')
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('termdb', {
+  state: {
+      dslabel: 'SJLife',
+      genome: 'hg38'
+  },
+  debug: 1,
+  serverData: helpers.serverData
+})
+
+/**************
+ test sections
+***************/
 
 tape('\n', function(test) {
 	test.pass('-***- tdb.tree -***-')
@@ -13,47 +28,30 @@ tape('error handling', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
 
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: {
-				dslabel: 'SJLife',
-				genome: 'ahg38'
-			},
-			callbacks: {
-				app: {
-					'postRender.test': testWrongGenome
-				}
-			},
-			debug: 1,
-			serverData: helpers.serverData
+	runpp({
+		state: {
+			genome: 'ahg38'
 		},
-		serverData: helpers.serverData
+		callbacks: {
+			app: {
+				'postRender.test': testWrongGenome
+			}
+		}
 	})
 	function testWrongGenome(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
 		test.equal(d.text(), 'Error: invalid genome', 'should show for invalid genome')
 	}
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: {
-				dslabel: 'xxx',
-				genome: 'hg38'
-			},
-			callbacks: {
-				app: {
-					'postRender.test': testWrongDslabel
-				}
-			},
-			debug: 1,
-			serverData: helpers.serverData
+
+	runpp({
+		state: {
+			dslabel: 'xxx',
 		},
-		serverData: helpers.serverData
+		callbacks: {
+			app: {
+				'postRender.test': testWrongDslabel
+			}
+		}
 	})
 	function testWrongDslabel(app) {
 		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div')
@@ -65,24 +63,12 @@ tape('default view', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(1)
 
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: {
-				dslabel: 'SJLife',
-				genome: 'hg38'
-			},
-			callbacks: {
-				tree: {
-					'postRender.test': runTests
-				}
-			},
-			debug: 1,
-			serverData: helpers.serverData
-		},
-		serverData: helpers.serverData
+	runpp({
+		callbacks: {
+			tree: {
+				'postRender.test': runTests
+			}
+		}
 	})
 
 	function runTests(tree) {
@@ -102,27 +88,17 @@ tape('rehydrated from saved state', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
 
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: {
-				dslabel: 'SJLife',
-				genome: 'hg38',
-				tree: {
-					expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis']
-				}
-			},
-			callbacks: {
-				tree: {
-					'postInit.test': runTests
-				}
-			},
-			debug: 1,
-			serverData: helpers.serverData
+	runpp({
+		state: {
+			tree: {
+				expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis']
+			}
 		},
-		serverData: helpers.serverData
+		callbacks: {
+			tree: {
+				'postInit.test': runTests
+			}
+		}
 	})
 
 	function runTests(tree) {
