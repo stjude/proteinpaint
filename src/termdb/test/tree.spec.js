@@ -1,5 +1,4 @@
 const tape = require('tape')
-const d3s = require('d3-selection')
 const helpers = require('../../../test/front.helpers.js')
 
 /*************************
@@ -12,7 +11,9 @@ const runpp = helpers.getRunPp('termdb', {
       genome: 'hg38'
   },
   debug: 1,
-  serverData: helpers.serverData
+  fetchOpts: {
+  	serverData: helpers.serverData
+  }
 })
 
 /**************

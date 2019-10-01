@@ -1,8 +1,20 @@
 const tape = require('tape')
-const d3s = require('d3-selection')
-const serverconfig = require('../../../serverconfig')
-const host = 'http://localhost:' + serverconfig.port
 const helpers = require('../../../test/front.helpers.js')
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('termdb', {
+  debug: 1,
+  fetchOpts: {
+  	serverData: helpers.serverData
+  }
+})
+
+/**************
+ test sections
+***************/
 
 tape('\n', function(test) {
 	test.pass('-***- termdb store -***-')
@@ -12,22 +24,12 @@ tape('\n', function(test) {
 tape('init errors', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(3)
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			callbacks: {
-				app: {
-					'postInit.test': testMissingState
-				}
-			},
-			debug: 1,
-			fetchOpts: {
-				serverData: helpers.serverData
+	runpp({
+		callbacks: {
+			app: {
+				'postInit.test': testMissingState
 			}
-		},
-		serverData: helpers.serverData
+		}
 	})
 	function testMissingState(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
@@ -36,23 +38,13 @@ tape('init errors', function(test) {
 		}, 200)
 	}
 
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: {},
-			callbacks: {
-				app: {
-					'postInit.test': testMissingGenome
-				}
-			},
-			debug: 1,
-			fetchOpts: {
-				serverData: helpers.serverData
+	runpp({
+		state: {},
+		callbacks: {
+			app: {
+				'postInit.test': testMissingGenome
 			}
-		},
-		serverData: helpers.serverData
+		}
 	})
 	function testMissingGenome(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
@@ -61,23 +53,13 @@ tape('init errors', function(test) {
 		}, 200)
 	}
 
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: { genome: 'hg38' },
-			callbacks: {
-				app: {
-					'postInit.test': testMissingDslabel
-				}
-			},
-			debug: 1,
-			fetchOpts: {
-				serverData: helpers.serverData
+	runpp({
+		state: { genome: 'hg38' },
+		callbacks: {
+			app: {
+				'postInit.test': testMissingDslabel
 			}
-		},
-		serverData: helpers.serverData
+		}
 	})
 	function testMissingDslabel(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')

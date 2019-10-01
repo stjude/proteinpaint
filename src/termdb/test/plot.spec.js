@@ -1,8 +1,24 @@
 const tape = require('tape')
-const d3s = require('d3-selection')
-const serverconfig = require('../../../serverconfig')
-const host = 'http://localhost:' + serverconfig.port
 const helpers = require('../../../test/front.helpers.js')
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('termdb', {
+  state: {
+      dslabel: 'SJLife',
+      genome: 'hg38'
+  },
+  debug: 1,
+  fetchOpts: {
+  	serverData: helpers.serverData
+  }
+})
+
+/**************
+ test sections
+***************/
 
 tape('\n', function(test) {
 	test.pass('-***- tdb.tree -***-')
@@ -13,29 +29,17 @@ tape('view click', function(test) {
 	test.timeoutAfter(2000)
 	test.plan(3)
 
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: {
-				dslabel: 'SJLife',
-				genome: 'hg38',
-				tree: {
-					expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis']
-				}
-			},
-			callbacks: {
-				tree: {
-					'postInit.test': runTests
-				}
-			},
-			debug: 1,
-			fetchOpts: {
-				serverData: helpers.serverData
+	runpp({
+		state: {
+			tree: {
+				expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis']
 			}
 		},
-		serverData: helpers.serverData
+		callbacks: {
+			tree: {
+				'postInit.test': runTests
+			}
+		}
 	})
 
 	function runTests(tree) {
