@@ -2,6 +2,7 @@ import * as rx from '../rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { plotInit, plotConfig } from './plot'
+import { searchInit } from './search'
 
 const childterm_indent = '30px'
 // class names
@@ -64,6 +65,7 @@ class TdbTree {
 		setInteractivity(this)
 
 		this.components = {
+			search: searchInit(app, {holder:opts.holder}),
 			plots: {}
 		}
 
@@ -84,15 +86,19 @@ class TdbTree {
 	}
 
 	reactsTo(action, acty) {
-		if (acty[0] == 'tree' || acty[0] == 'plot' || acty[0] == 'filter') return true
+		if (acty[0] == 'tree' || acty[0] == 'plot' || acty[0] == 'filter' || acty[0]=='search') return true
 	}
 
 	async main(action = {}) {
-		if (action.type.startsWith('filter_')) {
-			return this.notifyComponents(action)
-		} else if (action.type.startsWith('plot_')) {
+		switch(action.type.split('_')[0]) {
+		case 'filter':
+		case 'search':
+			await this.notifyComponents(action)
+			break
+		case 'plot':
 			this.viewPlot(action)
-		} else {
+			break
+		default:
 			const term = this.termsById[action.termId]
 			if (!term.terms) {
 				term.terms = await this.requestTerm(term)
