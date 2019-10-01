@@ -428,7 +428,7 @@ export class TermdbBarchart {
 			.style("display", "block")
 			.style("opacity", 1)
 			.attr("width", numChartsPerRow * maxw)
-			.attr("height", Math.floor(mainGs.length / numChartsPerRow) * maxh)
+			.attr("height", Math.ceil(mainGs.length / numChartsPerRow) * maxh)
 
 		const svgStyles = window.getComputedStyle(document.querySelector(".pp-bars-svg"))
 		const svgSel = select(svg)

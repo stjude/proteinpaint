@@ -1,4 +1,89 @@
-exports.serverData = {}
+const serverconfig = require('../serverconfig')
+const host = 'http://localhost:' + serverconfig.port
+
+const serverData = {}
+exports.serverData = serverData
+
+/*
+	getRunPp
+	- Wrap runproteinpaint() to make repeated calls to it more
+	convenient and easier to read
+	
+	Usage example: 
+	// init with default arguments for all tests
+	const runpp = getRunPp('termdb', {
+	    state: {
+	        dslabel: 'SJLife',
+	        genome: 'hg38'
+	    },
+	    debug: 1,
+	    serverData: helpers.serverData
+	}) 
+
+	// supply argument key-values that are 
+	// specific to a test section or assertion
+	runpp({
+		callbacks: {
+			app: {
+				'postRender.test': testWrongGenome
+			}
+		}
+	})
+*/
+exports.getRunPp = function getRunPp(appname='', defaultArgs={}) {
+	const arg = {
+		host,
+		noheader: 1,
+		nobox: true,
+		serverData,
+		debug: 1
+	}
+
+	// initialize default argument values for all tests
+	if (appname) arg[appname] = defaultArgs
+	else copyMerge(arg, defaultArgs)
+
+	// set argument as string for creating fresh copy
+	const argStr = JSON.stringify(arg)
+
+	// will apply overrides or other argument key-values
+  // during tests
+	return function runpp(overrides={}) {
+		// fresh arg copy will prevent conflicts when the arg
+		// is reused in different tests
+		const argCopy = JSON.parse(argStr)
+		if (appname) copyMerge(argCopy[appname], overrides)
+		else copyMerge(argCopy, overrides)
+		runproteinpaint(argCopy)
+	}
+}
+
+/*
+	COPIED FROM rx.core - to avoid import/export keyword issue
+
+	base: 
+	- either an state object or its JSON-stringified equivalent 
+
+	args
+	- full or partial state object(s). if base is a string, then
+	  the arg object will be converted to/from JSON to
+	  create a copy for merging
+*/
+function copyMerge(base, ...args) {
+	const target = typeof base == 'string' ? JSON.parse(base) : base
+	for (const arg of args) {
+		if (arg) {
+			const source = typeof base == 'string' ? JSON.parse(JSON.stringify(arg)) : arg
+			for (const key in source) {
+				if (!target[key] || Array.isArray(target[key]) || typeof target[key] !== 'object') target[key] = source[key]
+				else copyMerge(target[key], source[key])
+			}
+		}
+	}
+	return target
+}
+
+exports.copyMerge = copyMerge
 
 /*
 	The exported rideInit() test helper function tries to 

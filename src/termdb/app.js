@@ -10,7 +10,8 @@ class TdbApp {
 	constructor(opts, holder) {
 		this.opts = opts
 		this.api = rx.getAppApi(this)
-		this.notifyComponents = rx.notifyComponents 
+		this.notifyComponents = rx.notifyComponents
+		this.getComponents = rx.getComponents
 
 		this.dom = {
 			holder: holder.style("margin", "10px").style("border", "1px solid #aaa"),

@@ -143,15 +143,19 @@ export function getAppApi(self) {
 		},
 		async dispatch(action = {}) {
 			/*
-			  track dispatched actions and
-				if there is a pending action,
-				debounce dispatch requests
-				until the pending action is done?
+			track dispatched actions and
+			if there is a pending action,
+			debounce dispatch requests
+			until the pending action is done?
 			*/
 			// replace app.state
 			self.state = await self.store.write(action)
 			//self.deepFreeze(action)
 			await self.main(action)
+		},
+		async save(action) {
+			// save changes to store, do not notify components
+			self.state = await self.store.write(action)
 		},
 		// must not expose this.bus directly since that
 		// will also expose bus.emit() which should only
@@ -188,7 +192,7 @@ export function getComponentApi(self) {
 			return api
 		},
 		components(dotSepNames = '') {
-			return self.getComponents(dotSepNames)
+			return typeof self.getComponents == 'function' ? self.getComponents(dotSepNames) : api
 		}
 	}
 	return api
@@ -253,7 +257,7 @@ export function getComponents(dotSepNames) {
 	while (names.length) {
 		let name = names.shift()
 		if (Array.isArray(component)) name = Number(name)
-		component = names.length ? component[name].components : component[name]
+		component = component[name].components ? component[name].components : component[name]
 		if (typeof component == 'function') component = component()
 		if (!component) break
 	}
