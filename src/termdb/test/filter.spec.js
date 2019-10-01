@@ -245,3 +245,81 @@ tape('filter term-value button: categorical term', function(test) {
 		)
 	}
 })
+
+tape.only('filter term-value button: categorical term', function(test) {
+	test.timeoutAfter(3000)
+	// test.plan(7)
+	const div0 = d3s.select('body').append('div')
+	const termfilter = {
+		show_top_ui: true,
+		terms: [
+			{
+				term: {
+					id: 'aaclassic_5',
+					name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
+					unit: 'mg/m²',
+					isfloat: true
+				},
+				ranges: [{ stopinclusive: true, start: 1000, stop: 2000 }]
+			}
+		]
+	}
+
+	runproteinpaint({
+		host,
+		noheader: 1,
+		nobox: true,
+		termdb: {
+			state: {
+				dslabel: 'SJLife',
+				genome: 'hg38',
+				termfilter,
+			},
+			callbacks: {
+				filter: {
+					'postInit.test': runTests
+				}
+			},
+			debug: 1,
+			fetchOpts: {
+				serverData: helpers.serverData
+			}
+		}
+	})
+
+	function runTests(filter) {
+		filter.on('postInit.test', null)
+		helpers
+			.rideInit({ arg: filter })
+			.run(testFilterDisplay, 100)
+			// .run(triggerChangeNegation)
+			// .run(checkNegationBtnVal, 100)
+			// .run(triggerChangeValue)
+			// .run(testChangeValue, 600)
+			// .run(triggerAddValue)
+			// .run(testAddValue, 600)
+			// .run(triggerRemoveValue)
+			// .run(testRemoveValue, 600)
+			.done(() => test.end())
+	}
+
+	function testFilterDisplay(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.term_name_btn').html(),
+			termfilter.terms[0].term.name,
+			'filter btn and term-name from runpp() should be the same'
+		)
+		test.equal(
+			filter.Inner.dom.holder
+				.selectAll('.value_btn')
+				.html()
+				.split(' ')[0],
+			termfilter.terms[0].ranges[0].start.toString(),
+			'value button should match the data'
+		)
+		test.true(
+			filter.Inner.dom.holder.selectAll('.add_value_btn').size() >= 1,
+			"should have '+' button to add unannonated value to filter"
+		)
+	}
+})
