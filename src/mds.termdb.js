@@ -320,6 +320,7 @@ such conditions may be carried by obj
 		.style('display', 'inline-block')
 		.style('border-radius', button_radius)
 		.attr('class', 'sja_menuoption')
+		.style('box-sizing','content-box')
 		.text('VIEW')
 
 	// const view_btn_line = button_div.append('div')

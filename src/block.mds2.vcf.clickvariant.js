@@ -27,6 +27,7 @@ p{}
 	}
 
 	const pane = client.newpane({ x: p.left, y: p.top })
+	pane.pane.style('line-height', 1.15)
 	pane.header.html(m.mname + ' <span style="font-size:.7em;">' + common.mclass[m.class].label + '</span>')
 
 	const tabs = []

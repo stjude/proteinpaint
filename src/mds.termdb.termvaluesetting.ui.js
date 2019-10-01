@@ -26,6 +26,7 @@ group{}
 	const terms_div = obj.group_div.append("div").style("display", "inline-block")
 
 	obj.tvstip = new client.Menu({ padding: "5px" })
+	obj.tvstip.d.style('line-height', 1.15)
 
 	if (!obj.isCoordinated) main()
 
