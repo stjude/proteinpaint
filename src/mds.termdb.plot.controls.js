@@ -25,20 +25,7 @@ export function init(opts) {
 			topbar: opts.holder.append('div')
 		},
 		index: i++, // used for assigning unique input names, across different plots
-		isVisible: 'isVisible' in opts ? opts.isVisible : false,
-		listeners: {
-			plot: {
-				postRender(plot) {
-					const abspos =
-						plot.settings.currViews.includes('barchart') &&
-						(!plot.components.barchart.visibleCharts ||
-							plot.components.barchart.visibleCharts.length > 1 ||
-							plot.components.barchart.visibleCharts[0].settings.svgw > window.innerWidth - 500)
-
-					controls.dom.holder.style('position', abspos ? 'absolute' : '')
-				}
-			}
-		}
+		isVisible: 'isVisible' in opts ? opts.isVisible : false
 	}
 
 	controls.components = {
@@ -55,7 +42,6 @@ export function init(opts) {
 		divideBy: setDivideByOpts(controls)
 	}
 
-	controls.plot.bus.on('postRender.controls', controls.listeners.plot.postRender)
 	controls.bus = client.get_event_bus(
 		['postRender'],
 		opts.plot.obj.callbacks.controls ? opts.plot.obj.callbacks.controls : {}
