@@ -384,9 +384,9 @@ tape('filter term-value button: Conditional term (grade)', function(test) {
 				arg: obj
 			})
 			.run(testFilterDisplay, 500)
-			.to(checkGradeBtn, triggerChangeGrade, { wait: 200 })
-			.to(checkGradeTypeBtn, triggerGradeType, { wait: 200 })
-			.to(checkAddedGradeBtn, triggerAddGrade, { wait: 200 })
+			.to(checkGradeBtn, triggerChangeGrade, { wait: 350 })
+			.to(checkGradeTypeBtn, triggerGradeType, { wait: 350 })
+			.to(checkAddedGradeBtn, triggerAddGrade, { wait: 350 })
 			.done(() => test.end())
 	}
 

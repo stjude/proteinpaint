@@ -31,7 +31,7 @@ tape('filter term-value button', function(test) {
 			state: {
 				dslabel: 'SJLife',
 				genome: 'hg38',
-				termfilter,
+				termfilter
 			},
 			callbacks: {
 				filter: {
@@ -60,8 +60,8 @@ tape('filter term-value button', function(test) {
 
 	function testFilterDisplay(filter) {
 		test.equal(
-			filter.Inner.dom.holder.selectAll('.term_name_btn').size(), 
-			filter.Inner.app.state().termfilter.terms.length, 
+			filter.Inner.dom.holder.selectAll('.term_name_btn').size(),
+			filter.Inner.app.state().termfilter.terms.length,
 			'should have 1 tvs filter'
 		)
 		test.equal(
@@ -74,11 +74,11 @@ tape('filter term-value button', function(test) {
 		)
 		test.true(
 			filter.Inner.dom.holder.selectAll('.term_remove_btn').size() >= 1,
-			'should have \'x\' button to remove filter'
+			"should have 'x' button to remove filter"
 		)
 		test.true(
 			filter.Inner.dom.holder.selectAll('.add_term_btn').size() >= 1,
-			'should have '+' button to add new term filter'
+			'should have ' + ' button to add new term filter'
 		)
 	}
 
@@ -93,7 +93,7 @@ tape('filter term-value button', function(test) {
 		test.equal(
 			filter.Inner.dom.holder.selectAll('.term_name_btn').size(),
 			filter.Inner.app.state().termfilter.terms.length,
-			'should remove tvs filter after clicking \'x\''
+			"should remove tvs filter after clicking 'x'"
 		)
 	}
 
@@ -107,8 +107,8 @@ tape('filter term-value button', function(test) {
 
 	function testAddFilter(filter) {
 		test.equal(
-			filter.Inner.dom.holder.selectAll('.term_name_btn').size(), 
-			filter.Inner.app.state().termfilter.terms.length, 
+			filter.Inner.dom.holder.selectAll('.term_name_btn').size(),
+			filter.Inner.app.state().termfilter.terms.length,
 			'should add 1 tvs filter'
 		)
 	}
@@ -136,7 +136,7 @@ tape('filter term-value button: categorical term', function(test) {
 			state: {
 				dslabel: 'SJLife',
 				genome: 'hg38',
-				termfilter,
+				termfilter
 			},
 			callbacks: {
 				filter: {
@@ -175,25 +175,25 @@ tape('filter term-value button: categorical term', function(test) {
 		test.equal(
 			filter.Inner.dom.holder.selectAll('.condition_btn').html(),
 			'IS',
-			'should have \'IS\' for negation button for categorical filter'
+			"should have 'IS' for negation button for categorical filter"
 		)
 		test.equal(
 			filter.Inner.dom.holder.selectAll('.add_value_btn').size(),
 			1,
-			'should have '+' button to add category to filter'
+			'should have ' + ' button to add category to filter'
 		)
 	}
 
 	function triggerChangeNegation(filter) {
 		const term = filter.Inner.app.state().termfilter.terms[0]
-		filter.Inner.app.dispatch({ type: 'filter_negate', term})
+		filter.Inner.app.dispatch({ type: 'filter_negate', term })
 	}
 
 	function checkNegationBtnVal(filter) {
 		test.equal(
 			filter.Inner.dom.holder.selectAll('.condition_btn').html(),
 			'IS NOT',
-			'should have \'IS NOT\' for negation button after change'
+			"should have 'IS NOT' for negation button after change"
 		)
 	}
 
@@ -217,14 +217,12 @@ tape('filter term-value button: categorical term', function(test) {
 	function triggerAddValue(filter) {
 		const term = filter.Inner.app.state().termfilter.terms[0]
 		const value = { key: 'Wilms tumor', label: 'Wilms tumor' }
-		filter.Inner.app.dispatch({ type: 'filter_value_add', termId: term.id, value})
+		filter.Inner.app.dispatch({ type: 'filter_value_add', termId: term.id, value })
 	}
 
 	function testAddValue(filter) {
 		test.equal(
-			filter.Inner.dom.holder
-				.selectAll('.value_btn')
-				.size(),
+			filter.Inner.dom.holder.selectAll('.value_btn').size(),
 			filter.Inner.app.state().termfilter.terms[0].values.length,
 			'should add another value from data'
 		)
@@ -232,21 +230,19 @@ tape('filter term-value button: categorical term', function(test) {
 
 	function triggerRemoveValue(filter) {
 		const term = filter.Inner.app.state().termfilter.terms[0]
-		filter.Inner.app.dispatch({ type: 'filter_value_remove', termId: term.id, valueId:1})
+		filter.Inner.app.dispatch({ type: 'filter_value_remove', termId: term.id, valueId: 1 })
 	}
 
 	function testRemoveValue(filter) {
 		test.equal(
-			filter.Inner.dom.holder
-				.selectAll('.value_btn')
-				.size(),
+			filter.Inner.dom.holder.selectAll('.value_btn').size(),
 			filter.Inner.app.state().termfilter.terms[0].values.length,
 			'should remove value from filter'
 		)
 	}
 })
 
-tape.only('filter term-value button: categorical term', function(test) {
+tape('filter term-value button: categorical term', function(test) {
 	test.timeoutAfter(3000)
 	// test.plan(7)
 	const div0 = d3s.select('body').append('div')
@@ -273,7 +269,7 @@ tape.only('filter term-value button: categorical term', function(test) {
 			state: {
 				dslabel: 'SJLife',
 				genome: 'hg38',
-				termfilter,
+				termfilter
 			},
 			callbacks: {
 				filter: {
