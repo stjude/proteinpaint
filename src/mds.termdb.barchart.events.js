@@ -11,13 +11,14 @@ export default function getHandlers(self) {
 		const d = event.target.__data__ || event.target.parentNode.__data__
 		// bar label data only has {id,label},
 		// while bar data has all required data including seriesId
-		const termValues = getTermValues(d.seriesId ? d : { seriesId: d.id }, self)
+		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id }
+		const termValues = getTermValues(data, self)
 		const options = [
 			{
-				label: 'Hide this bar' + (d.dataId ? ' and overlay' : ''),
+				label: 'Hide this bar' + (d.dataId || d.dataId === 0 ? ' and overlay' : ''),
 				callback: () => {
-					self.settings.exclude.cols.push(d.seriesId || d.id)
-					if (d.dataId) self.settings.exclude.rows.push(d.dataId)
+					self.settings.exclude.cols.push(d.seriesId === 0 ? 0 : d.seriesId || d.id)
+					if (d.dataId || d.dataId === 0) self.settings.exclude.rows.push(d.dataId)
 					self.main()
 				}
 			}
@@ -195,7 +196,7 @@ function getTermValues(d, self) {
 		// always exclude term0 value for now
 		if (termNum == 'term0' || !term) continue
 		const key = termNum == 'term' ? d.seriesId : d.dataId
-		if (!key) return
+		if (!key && key !== 0) continue
 		const q = term ? term.q : {}
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
 
