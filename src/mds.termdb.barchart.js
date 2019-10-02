@@ -78,9 +78,9 @@ export class TermdbBarchart {
 		const settings = {
 			genome: obj.genome.name,
 			dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
-			term0: plot.term0 ? plot.term0.term.id : '', // convenient reference to the term id
+			term0: plot.term0 && plot.term0.term ? plot.term0.term.id : '', // convenient reference to the term id
 			term1: plot.term.term.id, // convenient reference to the term2 id
-			term2: plot.term2 ? plot.term2.term.id : '',
+			term2: plot.term2 && plot.term2.term ? plot.term2.term.id : '',
 			unit: plot.settings.bar.unit,
 			orientation: plot.settings.bar.orientation,
 			// normalize bar thickness regardless of orientation
@@ -208,7 +208,7 @@ export class TermdbBarchart {
 				self.renderers[chart.chartId](chart)
 			})
 
-		this.dom.holder.selectAll('.pp-chart-title').style('display', self.visibleCharts.length < 2 ? 'none' : 'block')
+		this.dom.holder.selectAll('.pp-chart-title').style('display', self.terms.term0 ? 'block' : 'none')
 
 		this.legendRenderer(this.getLegendGrps())
 	}
