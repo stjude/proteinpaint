@@ -1,7 +1,7 @@
-import { event } from "d3-selection"
-import { Menu } from "./client"
+import { event } from 'd3-selection'
+import { Menu } from './client'
 
-const tip = new Menu({ padding: "5px" })
+const tip = new Menu({ padding: '5px' })
 
 export default function getHandlers(self) {
 	const s = self.settings
@@ -27,12 +27,12 @@ export default function getHandlers(self) {
 				const term1unit = term1.unit
 				const seriesLabel =
 					(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId) +
-					(term1.unit ? " " + term1.unit : "")
+					(term1.unit ? ' ' + term1.unit : '')
 				const dataLabel =
 					(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId) +
-					(term2 && term2.unit ? " " + term2.unit : "")
+					(term2 && term2.unit ? ' ' + term2.unit : '')
 				const icon = !term2
-					? ""
+					? ''
 					: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
 					  d.color +
 					  "'>&nbsp;</div>"
@@ -52,7 +52,7 @@ export default function getHandlers(self) {
 						).toFixed(1)}%</td></tr>`
 					)
 				}
-				tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join("\n")}</table>`)
+				tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 			},
 			mouseout: () => {
 				tip.hide()
@@ -62,26 +62,26 @@ export default function getHandlers(self) {
 			},
 			click(d) {
 				const termValues = getTermValues(d, self)
-				self.bus.emit("postClick", { termValues, x: event.clientX, y: event.clientY })
+				self.bus.emit('postClick', { termValues, x: event.clientX, y: event.clientY })
 			}
 		},
 		colLabel: {
 			text: d => {
-				return self.terms.term1.values && "id" in d && d.id in self.terms.term1.values
+				return self.terms.term1.values && 'id' in d && d.id in self.terms.term1.values
 					? self.terms.term1.values[d.id].label
-					: "label" in d
+					: 'label' in d
 					? d.label
 					: d
 			},
 			click: () => {
-				const d = event.target.__data__
+				const d = event.target.__data__ || event.target.parentNode.__data__
 				if (d === undefined) return
 				self.settings.exclude.cols.push(d.id)
 				self.main()
 			},
 			mouseover: () => {
 				event.stopPropagation()
-				tip.show(event.clientX, event.clientY).d.html("Click to hide bar")
+				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
 			},
 			mouseout: () => {
 				tip.hide()
@@ -89,21 +89,21 @@ export default function getHandlers(self) {
 		},
 		rowLabel: {
 			text: d => {
-				return self.terms.term1.values && "id" in d && d.id in self.terms.term1.values
+				return self.terms.term1.values && 'id' in d && d.id in self.terms.term1.values
 					? self.terms.term1.values[d.id].label
-					: "label" in d
+					: 'label' in d
 					? d.label
 					: d
 			},
 			click: () => {
-				const d = event.target.__data__
+				const d = event.target.__data__ || event.target.parentNode.__data__
 				if (d === undefined) return
 				self.settings.exclude.cols.push(d.id)
 				self.main()
 			},
 			mouseover: () => {
 				event.stopPropagation()
-				tip.show(event.clientX, event.clientY).d.html("Click to hide bar")
+				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
 			},
 			mouseout: () => {
 				tip.hide()
@@ -114,13 +114,13 @@ export default function getHandlers(self) {
 				event.stopPropagation()
 				const d = event.target.__data__
 				if (d === undefined) return
-				if (d.type == "col") {
+				if (d.type == 'col') {
 					const i = self.settings.exclude.cols.indexOf(d.id)
 					if (i == -1) return
 					self.settings.exclude.cols.splice(i, 1)
 					self.main()
 				}
-				if (d.type == "row") {
+				if (d.type == 'row') {
 					const i = self.settings.exclude.rows.indexOf(d.dataId)
 					if (i == -1) {
 						self.settings.exclude.rows.push(d.dataId)
@@ -132,7 +132,7 @@ export default function getHandlers(self) {
 			},
 			mouseover: () => {
 				event.stopPropagation()
-				tip.show(event.clientX, event.clientY).d.html("Click to unhide bar")
+				tip.show(event.clientX, event.clientY).d.html('Click to unhide bar')
 			},
 			mouseout: () => {
 				tip.hide()
@@ -140,34 +140,34 @@ export default function getHandlers(self) {
 		},
 		yAxis: {
 			text: () => {
-				if (s.orientation == "vertical") {
-					return s.unit == "pct" ? "% of patients" : "# of patients"
+				if (s.orientation == 'vertical') {
+					return s.unit == 'pct' ? '% of patients' : '# of patients'
 				} else {
 					const term = self.terms.term1
 					return term.iscondition && self.plot.term.q.value_by_max_grade
-						? "Maximum grade"
+						? 'Maximum grade'
 						: term.iscondition && self.plot.term.q.value_by_most_recent
-						? "Most recent grade"
+						? 'Most recent grade'
 						: term.iscategorical || !term.unit
-						? ""
+						? ''
 						: term.unit //term.name[0].toUpperCase() + term.name.slice(1)
 				}
 			}
 		},
 		xAxis: {
 			text: () => {
-				if (s.orientation == "vertical") {
+				if (s.orientation == 'vertical') {
 					const term = self.terms.term1
 					const q1 = term.q
 					return term.iscondition && q1.bar_by_grade && q1.value_by_max_grade
-						? "Maximum grade"
+						? 'Maximum grade'
 						: term.iscondition && q1.bar_by_grade && q1.value_by_most_recent
-						? "Most recent grades"
+						? 'Most recent grades'
 						: term.iscategorical || !term.unit
-						? ""
+						? ''
 						: term.unit // term.name[0].toUpperCase() + term.name.slice(1)
 				} else {
-					return s.unit == "pct" ? "% of patients" : "# of patients"
+					return s.unit == 'pct' ? '% of patients' : '# of patients'
 				}
 			}
 		}
@@ -184,17 +184,17 @@ function getTermValues(d, self) {
 	self.terms.term0 = self.plot.term0 ? self.plot.term0.term : null
 	self.terms.term1 = self.plot.term.term
 	self.terms.term2 = self.plot.term2 ? self.plot.term2.term : null
-	for (const termNum of ["term0", "term", "term2"]) {
+	for (const termNum of ['term0', 'term', 'term2']) {
 		const term = self.plot[termNum]
 		// always exclude term0 value for now
-		if (termNum == "term0" || !term) continue
+		if (termNum == 'term0' || !term) continue
 
-		const key = termNum == "term" ? d.seriesId : d.dataId
+		const key = termNum == 'term' ? d.seriesId : d.dataId
 		const q = term ? term.q : {}
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
 
 		if (term.term.iscondition) {
-			if (termNum == "term0" || !self.terms.term2 || self.terms.term1.id != self.terms.term2.id) {
+			if (termNum == 'term0' || !self.terms.term2 || self.terms.term1.id != self.terms.term2.id) {
 				termValues.push(
 					Object.assign(
 						{
@@ -206,7 +206,7 @@ function getTermValues(d, self) {
 				)
 			}
 
-			if (termNum == "term" && self.terms.term2 && term.term.id == self.terms.term2.id) {
+			if (termNum == 'term' && self.terms.term2 && term.term.id == self.terms.term2.id) {
 				const q2 = self.plot.term2.q
 				const term2Label =
 					self.terms.term2.values && d.dataId in self.terms.term2.values
@@ -238,9 +238,9 @@ function getTermValues(d, self) {
 			} else {
 				const range = bins.find(d => d.label == label || d.name == label)
 				if (range) termValues.push({ term: term.term, ranges: [range] })
-				else if (termNum == "term" && d.unannotatedSeries) {
+				else if (termNum == 'term' && d.unannotatedSeries) {
 					termValues.push({ term: term.term, ranges: [{ value: d.unannotatedSeries.value, label }] })
-				} else if (termNum == "term2" && d.unannotatedData) {
+				} else if (termNum == 'term2' && d.unannotatedData) {
 					termValues.push({ term: term.term, ranges: [{ value: d.unannotatedData.value, label }] })
 				} else if (q && q.binconfig && q.binconfig.unannotated) {
 					for (const id in q.binconfig.unannotated._labels) {
