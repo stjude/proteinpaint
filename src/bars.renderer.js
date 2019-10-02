@@ -318,6 +318,7 @@ export default function barsRenderer(barsapp, holder) {
 			.on('mouseover.tphm2', seriesMouseOver)
 			.on('mouseout.tphm2', seriesMouseOut)
 			.on('click', seriesClick)
+			.style('cursor', 'pointer')
 
 		axisG = mainG.append('g').attr('class', 'sjpcb-bar-chart-axis-g')
 		yAxis = axisG.append('g').attr('class', 'sjpcb-bar-chart-y-axis')

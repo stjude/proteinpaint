@@ -6,6 +6,25 @@ const tip = new Menu({ padding: '5px' })
 export default function getHandlers(self) {
 	const s = self.settings
 
+	function triggerBarClickMenu() {
+		event.stopPropagation()
+		const d = event.target.__data__ || event.target.parentNode.__data__
+		// bar label data only has {id,label},
+		// while bar data has all required data including seriesId
+		const termValues = getTermValues(d.seriesId ? d : { seriesId: d.id }, self)
+		const options = [
+			{
+				label: 'Hide this bar' + (d.dataId ? ' and overlay' : ''),
+				callback: () => {
+					self.settings.exclude.cols.push(d.seriesId || d.id)
+					if (d.dataId) self.settings.exclude.rows.push(d.dataId)
+					self.main()
+				}
+			}
+		]
+		self.bus.emit('postClick', { termValues, options, x: event.clientX, y: event.clientY })
+	}
+
 	return {
 		chart: {
 			title(chart) {
@@ -60,10 +79,7 @@ export default function getHandlers(self) {
 			rectFill(d) {
 				return d.color
 			},
-			click(d) {
-				const termValues = getTermValues(d, self)
-				self.bus.emit('postClick', { termValues, x: event.clientX, y: event.clientY })
-			}
+			click: triggerBarClickMenu
 		},
 		colLabel: {
 			text: d => {
@@ -73,12 +89,7 @@ export default function getHandlers(self) {
 					? d.label
 					: d
 			},
-			click: () => {
-				const d = event.target.__data__ || event.target.parentNode.__data__
-				if (d === undefined) return
-				self.settings.exclude.cols.push(d.id)
-				self.main()
-			},
+			click: triggerBarClickMenu,
 			mouseover: () => {
 				event.stopPropagation()
 				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
@@ -95,12 +106,7 @@ export default function getHandlers(self) {
 					? d.label
 					: d
 			},
-			click: () => {
-				const d = event.target.__data__ || event.target.parentNode.__data__
-				if (d === undefined) return
-				self.settings.exclude.cols.push(d.id)
-				self.main()
-			},
+			click: triggerBarClickMenu,
 			mouseover: () => {
 				event.stopPropagation()
 				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
@@ -188,8 +194,8 @@ function getTermValues(d, self) {
 		const term = self.plot[termNum]
 		// always exclude term0 value for now
 		if (termNum == 'term0' || !term) continue
-
 		const key = termNum == 'term' ? d.seriesId : d.dataId
+		if (!key) return
 		const q = term ? term.q : {}
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
 
