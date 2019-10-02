@@ -663,6 +663,12 @@ function setDivideByOpts(controls) {
 		}
 	})
 
+	const treeInput = radio.dom.inputs
+		.filter(d => {
+			return d.value == 'tree'
+		})
+		.style('margin-top', '2px')
+
 	//add blue-pill for term0
 	const pill_div = d3select(
 		radio.dom.divs
@@ -687,14 +693,15 @@ function setDivideByOpts(controls) {
 		},
 		currterm: plot.term,
 		callback: term0 => {
-			controls.dispatch({
-				term0: term0 ? { term: term0 } : undefined,
-				settings: {
-					bar: {
-						divideBy: term0 ? 'tree' : 'none'
-					}
-				}
-			})
+			plot.term0 = term0 ? { term: term0 } : null
+			if (term0 && term0.q) plot.term0.q = term0.q
+			if (!term0) {
+				plot.settings.bar.divideBy = 'none'
+				controls.dispatch({ settings: { bar: { divideBy: 'none' } } })
+			} else {
+				treeInput.property('checked', true)
+				controls.dispatch({ settings: { bar: { divideBy: 'tree' } } })
+			}
 		},
 		isCoordinated: true
 	}
