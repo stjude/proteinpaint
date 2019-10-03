@@ -563,6 +563,7 @@ function setOverlayOpts(controls) {
 
 			if (plot.term2 && plot.term2.term.id != plot.term.id && plot.term2 != termuiObj.termsetting.term) {
 				termuiObj.termsetting.term = plot.term2.term
+				termuiObj.termsetting.term.q = plot.term2 ? plot.term2.q : undefined
 				termuiObj.update_ui()
 			}
 		},
