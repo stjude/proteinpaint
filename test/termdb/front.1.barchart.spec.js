@@ -1,44 +1,44 @@
 const tape = require('tape')
-const d3s = require('d3-selection')
 const termjson = require('./termjson').termjson
-const serverconfig = require('../../serverconfig')
-const host = 'http://localhost:' + serverconfig.port
 const helpers = require('../front.helpers.js')
 
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('display_termdb', {
+	dslabel: 'SJLife',
+	genome: 'hg38',
+	default_rootterm: {},
+	termfilter: { show_top_ui: true },
+	fetchOpts: {
+		serverData: helpers.serverData
+	}
+})
+
+/**************
+ test sections
+***************/
 tape('\n', function(test) {
 	test.pass('-***- mds.termdb.barchart -***-')
 	test.end()
 })
 
 tape('single barchart, categorical bars + click', function(test) {
-	const div0 = d3s.select('body').append('div')
-	const termfilter = { show_top_ui: true }
-
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			plot2restore: {
-				term: termjson['diaggrp'],
-				settings: {
-					currViews: ['barchart']
-				}
-			},
-			callbacks: {
-				plot: {
-					postRender: [testBarCount, testAxisDimension, triggerBarClick]
-				}
-			},
-			bar_click_menu: {
-				add_filter: true
-			},
-			serverData: helpers.serverData
+	runpp({
+		plot2restore: {
+			term: termjson['diaggrp'],
+			settings: {
+				currViews: ['barchart']
+			}
+		},
+		callbacks: {
+			plot: {
+				postRender: [testBarCount, testAxisDimension, triggerBarClick]
+			}
+		},
+		bar_click_menu: {
+			add_filter: true
 		}
 	})
 
@@ -106,35 +106,21 @@ tape('single barchart, categorical bars + click', function(test) {
 })
 
 tape('single chart, with overlay', function(test) {
-	const div0 = d3s.select('body').append('div')
-	const termfilter = { show_top_ui: true }
-
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			plot2restore: {
-				term: termjson['diaggrp'],
-				term2: termjson['agedx'],
-				settings: {
-					currViews: ['barchart']
-				}
-			},
-			callbacks: {
-				plot: {
-					postRender: [testBarCount, testOverlayOrder]
-				}
-			},
-			bar_click_menu: {
-				add_filter: true
-			},
-			serverData: helpers.serverData
+	runpp({
+		plot2restore: {
+			term: termjson['diaggrp'],
+			term2: termjson['agedx'],
+			settings: {
+				currViews: ['barchart']
+			}
+		},
+		callbacks: {
+			plot: {
+				postRender: [testBarCount, testOverlayOrder]
+			}
+		},
+		bar_click_menu: {
+			add_filter: true
 		}
 	})
 
@@ -166,39 +152,25 @@ tape('single chart, with overlay', function(test) {
 })
 
 tape('single chart, genotype overlay', function(test) {
-	const div0 = d3s.select('body').append('div')
-	const termfilter = { show_top_ui: true }
-
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			plot2restore: {
-				term: termjson['diaggrp'],
-				term2: 'genotype',
-				settings: {
-					currViews: ['barchart']
-				}
-			},
-			callbacks: {
-				plot: {
-					postRender: testBarCount
-				}
-			},
-			bar_click_menu: {
-				add_filter: true
-			},
-			modifier_ssid_barchart: {
-				mutation_name: 'TEST',
-				ssid: 'genotype-test.txt'
-			},
-			serverData: helpers.serverData
+	runpp({
+		plot2restore: {
+			term: termjson['diaggrp'],
+			term2: 'genotype',
+			settings: {
+				currViews: ['barchart']
+			}
+		},
+		callbacks: {
+			plot: {
+				postRender: testBarCount
+			}
+		},
+		bar_click_menu: {
+			add_filter: true
+		},
+		modifier_ssid_barchart: {
+			mutation_name: 'TEST',
+			ssid: 'genotype-test.txt'
 		}
 	})
 
@@ -212,40 +184,28 @@ tape('single chart, genotype overlay', function(test) {
 })
 
 tape('click to add numeric, condition term filter', function(test) {
-	const div0 = d3s.select('body').append('div')
-	const termfilter = { show_top_ui: true }
-
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			plot2restore: {
-				term: termjson['agedx'],
-				term2: Object.assign(termjson['Arrhythmias'], {
-					q: {
-						bar_by_grade: 1,
-						value_by_max_grade: 1
-					}
-				}),
-				settings: {
-					currViews: ['barchart']
+	const termfilter = { show_top_ui: true, terms: [] }
+	runpp({
+		termfilter,
+		plot2restore: {
+			term: termjson['agedx'],
+			term2: Object.assign(termjson['Arrhythmias'], {
+				q: {
+					bar_by_grade: 1,
+					value_by_max_grade: 1
 				}
-			},
-			callbacks: {
-				plot: {
-					postRender: triggerClick
-				}
-			},
-			bar_click_menu: {
-				add_filter: true
-			},
-			serverData: helpers.serverData
+			}),
+			settings: {
+				currViews: ['barchart']
+			}
+		},
+		callbacks: {
+			plot: {
+				postRender: triggerClick
+			}
+		},
+		bar_click_menu: {
+			add_filter: true
 		}
 	})
 
@@ -300,35 +260,23 @@ tape('click to add numeric, condition term filter', function(test) {
 })
 
 tape('click to add condition grade and child term filter ', function(test) {
-	const div0 = d3s.select('body').append('div')
-	const termfilter = { show_top_ui: true }
-
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			plot2restore: {
-				term: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_grade: 1, value_by_max_grade: 1 } }),
-				term2: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_children: 1, value_by_max_grade: 1 } }),
-				settings: {
-					currViews: ['barchart']
-				}
-			},
-			callbacks: {
-				plot: {
-					postRender: triggerClick
-				}
-			},
-			bar_click_menu: {
-				add_filter: true
-			},
-			serverData: helpers.serverData
+	const termfilter = { show_top_ui: true, terms: [] }
+	runpp({
+		termfilter,
+		plot2restore: {
+			term: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_grade: 1, value_by_max_grade: 1 } }),
+			term2: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_children: 1, value_by_max_grade: 1 } }),
+			settings: {
+				currViews: ['barchart']
+			}
+		},
+		callbacks: {
+			plot: {
+				postRender: triggerClick
+			}
+		},
+		bar_click_menu: {
+			add_filter: true
 		}
 	})
 
@@ -366,31 +314,18 @@ tape('click to add condition grade and child term filter ', function(test) {
 })
 
 tape('multiple charts', function(test) {
-	const div0 = d3s.select('body').append('div')
-
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter: { show_top_ui: false },
-			plot2restore: {
-				term: termjson['diaggrp'],
-				term0: termjson['agedx'],
-				settings: {
-					currViews: ['barchart']
-				}
-			},
-			callbacks: {
-				plot: {
-					postRender: testNumCharts
-				}
-			},
-			serverData: helpers.serverData
+	runpp({
+		plot2restore: {
+			term: termjson['diaggrp'],
+			term0: termjson['agedx'],
+			settings: {
+				currViews: ['barchart']
+			}
+		},
+		callbacks: {
+			plot: {
+				postRender: testNumCharts
+			}
 		}
 	})
 
