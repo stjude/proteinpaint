@@ -7,7 +7,6 @@ export default function getHandlers(self) {
 	const s = self.settings
 
 	function triggerBarClickMenu() {
-		event.stopPropagation()
 		const d = event.target.__data__ || event.target.parentNode.__data__
 		// bar label data only has {id,label},
 		// while bar data has all required data including seriesId

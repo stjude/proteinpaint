@@ -478,7 +478,6 @@ function setOverlayOpts(controls) {
 				if (d.value != 'tree' || d.value != plot.settings.bar.overlay) return
 
 				plot.obj.showtree4selectterm([plot.term.id, plot.term2 ? plot.term2.term.id : null], tr.node(), term2 => {
-					console.log(term2)
 					plot.obj.tip.hide()
 					controls.dispatch({ term2: { term: term2 } })
 				})
