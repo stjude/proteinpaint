@@ -132,20 +132,24 @@ function setRenderers(self) {
 		self.addRelationBtn(term, one_term_div)
 
 		//value btns for each term type
-		if (term.term.iscategorical) {
-			// query db for list of categories and count
-			self.categoryData[term.term.id] = await self.getCategories(term)
+		const valueAdderFxn = term.term.iscategorical ? self.addCategoryValues
+			: term.term.isfloat || term.term.isinteger ? self.addNumericValues
+			: await self.addConditionValues
 
-			one_term_div
-				.selectAll('.value_btn')
-				.data(term.values)
-				.enter()
-				.append('div')
-				.attr('class', 'value_btn sja_filter_tag_btn')
-				.style('position', 'absolute')
-				// .each(this._addCatValue)
-				.each(self.addCategoryValues)
-		}
+		const valueData = term.term.iscategorical ? term.values 
+			: term.term.isfloat || term.term.isinteger ? term.ranges :
+			term.grade_and_child
+
+		// query db for list of categories and count
+		self.categoryData[term.term.id] = await self.getCategories(term)
+
+		one_term_div
+			.selectAll('.value_btn')
+			.data(valueData)
+			.enter()
+			.append('div')
+			.attr('class', 'value_btn sja_filter_tag_btn')
+			.each(valueAdderFxn)
 
 		// button with 'x' to remove term2
 		one_term_div.selectAll('.term_remove_btn').remove()
@@ -191,14 +195,11 @@ function setRenderers(self) {
 			const condition_btn = one_term_div
 				.append('div')
 				.attr('class', 'sja_filter_tag_btn condition_btn')
-				.style('background-color', '#eeeeee')
 				.style('font-size', '.7em')
-				.style('padding', '7px 6px 5px 6px')
-
-			condition_btn
-				.text('IS')
 				.style('background-color', '#015051')
 				.style('pointer-events', 'none')
+				.style('padding', '8px 6px 4px 6px')
+				.text('IS')	
 		}
 	}
 
@@ -266,7 +267,7 @@ function setRenderers(self) {
 
 	self.addCategoryValues = async function(value, j) {
 		const term_value_btn = select(this).datum(value)
-		const one_term_div = select(this.parentNode)
+		const one_term_div = select(this.parentNode).style('position', 'absolute')
 		const term = one_term_div.datum()
 
 		const replace_value_select = one_term_div
@@ -305,6 +306,10 @@ function setRenderers(self) {
 			.style('font-size', '1em')
 			.style('background-color', '#4888BF')
 			.html(d => d.label + ' &#9662;')
+			.style('opacity', 0)
+			.transition()
+			.duration(200)
+			.style('opacity', 1)
 
 		if (j == term.values.length - 1) {
 			one_term_div.selectAll('.add_value_btn').remove()
@@ -333,6 +338,105 @@ function setRenderers(self) {
 		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
 		// set it after editing OR button to confirm 1px margin between value_btn and + btn  
 		replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
+	}
+
+	self.addNumericValues = function(range, j){ 
+		const value_btn = select(this).datum(range)
+		const one_term_div = select(this.parentNode)
+		const term = one_term_div.datum()
+
+		const unannotated_cats = { lst: [] }
+
+		for (const [index, cat] of self.categoryData[term.term.id].lst.entries()) {
+			if (cat.range.value != undefined) {
+				unannotated_cats.lst.push(cat)
+			}
+		}
+
+		if (range.value != undefined) {
+			// const [numeric_select, value_btn] = dom.make_select_btn_pair(one_term_div)
+			const numeric_select = one_term_div.append('select')
+				.attr('class','value_select')
+				.style('margin-right', '1px')
+				.style('opacity',0)
+				.on('mouseover',()=>{
+					value_btn.style('opacity', '0.8')
+					.style('cursor','default')
+				})
+				.on('mouseout',()=>{
+					value_btn.style('opacity', '1')
+				})
+
+			numeric_select.style('margin-right', '1px')
+
+			self.makeSelectList(unannotated_cats, numeric_select, term, null, 'delete')
+
+			value_btn
+				.style('position','absolute')
+				.style('padding', '3px 4px 3px 4px')
+				.style('margin-right', '1px')
+				.style('font-size', '1em')
+				.style('background-color', '#4888BF')
+				.html(range.label)
+
+			numeric_select.node().value = range.label
+
+			numeric_select.style('width', value_btn.node().offsetWidth + 'px')
+
+			// change categroy from dropdown
+			numeric_select.on('change', async () => {
+				//if value is 'delete' then remove from group
+				if (numeric_select.node().value == 'delete') {
+					term.ranges.splice(j, 1)
+					if (term.ranges.length == 0) {
+						obj.group.terms.splice(i, 1)
+					}
+				} else {
+					//change value of button
+					const new_value = data.lst.find(j => j.label == numeric_select.node().value)
+
+					value_btn.style('padding', '3px 4px 3px 4px').text('Loading...')
+
+					numeric_select.style('width', value_btn.node().offsetWidth + 'px')
+
+					obj.group.terms[i].ranges[j] = new_value.range
+				}
+
+				//update gorup and load tk
+				// await obj.callback()
+			})
+		} else {
+			value_btn
+				.style('font-size', '1em')
+				.style('padding', '4px 5px 2px 5px')
+				.style('margin-right', '1px')
+				.style('background-color', '#4888BF')
+
+			value_btn.html(self.setRangeBtnText(range))
+
+			value_btn.on('click', () => {
+				self.editNumericBin(value_btn, range, range => {
+					value_btn.html(self.setRangeBtnText(range))
+				})
+			})
+		}
+	
+		// 'OR' button in between values
+		one_term_div
+			.append('div')
+			.attr('class','or_btn')
+			.style('display', 'none')
+			.style('color', '#fff')
+			.style('background-color', '#4888BF')
+			.style('margin-right', '1px')
+			.style('padding', '7px 6px 5px 6px')
+			.style('font-size', '.7em')
+			.style('text-transform', 'uppercase')
+			.text('or')
+
+		if (j == term.ranges.length - 1) {
+			self.makePlusBtn(one_term_div, unannotated_cats, term.ranges)
+		}
 	}
 
 	self.updateValueBtn = function(d, j) {
@@ -414,7 +518,7 @@ function setRenderers(self) {
 				select.node().value = btn_value
 			}
 		} else {
-			select.append('option').text("ERROR: Can't get the data")
+			select.append('option').text('ERROR: Can\'t get the data')
 		}
 	}
 
@@ -465,7 +569,7 @@ function setRenderers(self) {
 		add_value_select.on('change', async () => {
 			if (add_value_select.node().value == 'add_bin') {
 				const range_temp = { start: '', stop: '' }
-				edit_numeric_bin(add_value_btn, range_temp, range => {
+				self.editNumericBin(add_value_btn, range_temp, range => {
 					selected_values.push(range)
 				})
 			} else {
@@ -488,6 +592,22 @@ function setRenderers(self) {
 		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
 		add_value_select.style('width', add_value_btn.node().offsetWidth + 'px')
 	}
+
+	self.setRangeBtnText = function(range){
+		const x = '<span style=\'font-family:Times;font-style:italic\'>x</span>'
+		let range_text
+		if (range.startunbounded) {
+			range_text = x + ' ' + (range.stopinclusive ? '&le;' : '&lt;') + ' ' + range.stop
+		} else if (range.stopunbounded) {
+			range_text = x + ' ' + (range.startinclusive ? '&ge;' : '&gt;') + ' ' + range.start
+		} else {
+			range_text = range.start + ' ' +
+				(range.startinclusive ? '&le;' : '&lt;') + ' ' + x + ' ' +
+				(range.stopinclusive ? '&le;' : '&lt;') + ' ' +
+				range.stop
+		}
+		return range_text
+	}
 }
 
 function setInteractivity(self) {
@@ -495,7 +615,7 @@ function setInteractivity(self) {
 		const one_term_div = this
 		const obj = self.app.state()
 		self.dom.tip.clear().showunder(one_term_div)
-		const treediv = self.dom.tip.d.append("div")
+		const treediv = self.dom.tip.d.append('div')
 		// set termfilter terms to all filter-terms if '+' or all except current term if 'term_name_btn' 
 		const terms = select(one_term_div).classed('add_term_btn') ? obj.termfilter.terms : obj.termfilter.terms.filter(t => t.id != term.termId)
 	
@@ -514,6 +634,112 @@ function setInteractivity(self) {
 			}
 		}
 		appInit(tree_obj, treediv)
+	}
+
+	self.editNumericBin = function(holder, range, callback) {
+		self.dom.tip.clear()
+
+		const equation_div = self.dom.tip.d
+			.append("div")
+			.style("display", "block")
+			.style("padding", "3px 5px")
+
+		const start_input = equation_div
+			.append("input")
+			.attr("type", "number")
+			.attr("value", range.start)
+			.style("width", "60px")
+			.on("keyup", async () => {
+				if (!client.keyupEnter()) return
+				start_input.property("disabled", true)
+				await apply()
+				start_input.property("disabled", false)
+			})
+
+		// to replace operator_start_div
+		const startselect = equation_div.append("select").style("margin-left", "10px")
+
+		startselect.append("option").html("&le;")
+		startselect.append("option").html("&lt;")
+		startselect.append("option").html("&#8734;")
+
+		startselect.node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
+
+		const x = '<span style="font-family:Times;font-style:italic">x</span>'
+
+		equation_div
+			.append("div")
+			.style("display", "inline-block")
+			.style("padding", "3px 10px")
+			.html(x)
+
+		// to replace operator_end_div
+		const stopselect = equation_div.append("select").style("margin-right", "10px")
+
+		stopselect.append("option").html("&le;")
+		stopselect.append("option").html("&lt;")
+		stopselect.append("option").html("&#8734;")
+
+		stopselect.node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
+
+		const stop_input = equation_div
+			.append("input")
+			.attr("type", "number")
+			.style("width", "60px")
+			.attr("value", range.stop)
+			.on("keyup", async () => {
+				if (!client.keyupEnter()) return
+				stop_input.property("disabled", true)
+				await apply()
+				stop_input.property("disabled", false)
+			})
+
+		self.dom.tip.d
+			.append("div")
+			.attr("class", "sja_menuoption")
+			.style("text-align", "center")
+			.text("APPLY")
+			.on("click", () => {
+				self.dom.tip.hide()
+				apply()
+			})
+
+		// tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
+		self.dom.tip.showunder(holder.node())
+
+		async function apply() {
+			try {
+				if (startselect.node().selectedIndex == 2 && stopselect.node().selectedIndex == 2)
+					throw "Both ends can not be unbounded"
+
+				const start = startselect.node().selectedIndex == 2 ? null : Number(start_input.node().value)
+				const stop = stopselect.node().selectedIndex == 2 ? null : Number(stop_input.node().value)
+				if (start != null && stop != null && start >= stop) throw "start must be lower than stop"
+
+				if (startselect.node().selectedIndex == 2) {
+					range.startunbounded = true
+					delete range.start
+				} else {
+					delete range.startunbounded
+					range.start = start
+					range.startinclusive = startselect.node().selectedIndex == 0
+				}
+				if (stopselect.node().selectedIndex == 2) {
+					range.stopunbounded = true
+					delete range.stop
+				} else {
+					delete range.stopunbounded
+					range.stop = stop
+					range.stopinclusive = stopselect.node().selectedIndex == 0
+				}
+				// display_numeric_filter(group, term_index, value_div)
+				self.dom.tip.hide()
+				await obj.callback()
+				if (callback) callback(range)
+			} catch (e) {
+				window.alert(e)
+			}
+		}
 	}
 
 	self.removeFilter = term => self.app.dispatch({ type: 'filter_remove', termId: term.id })

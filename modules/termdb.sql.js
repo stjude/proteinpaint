@@ -1,6 +1,6 @@
-const app = require("../app")
-const binsmodule = require("./termdb.bins")
-const connect_db = require("./utils").connect_db
+const app = require('../app')
+const binsmodule = require('./termdb.bins')
+const connect_db = require('./utils').connect_db
 
 /*
 
@@ -62,13 +62,13 @@ returns:
 		} else if (tvs.term.iscondition) {
 			add_condition(tvs)
 		} else {
-			throw "unknown term type"
+			throw 'unknown term type'
 		}
 	}
 
-	const CTEname = "filtered"
+	const CTEname = 'filtered'
 	return {
-		filters: `${CTEname} AS (\n ${filters.join("\nINTERSECT\n")})\n`,
+		filters: `${CTEname} AS (\n ${filters.join('\nINTERSECT\n')})\n`,
 		values,
 		CTEname
 	}
@@ -79,17 +79,17 @@ returns:
 			`SELECT sample
 			FROM annotations
 			WHERE term_id = ?
-			AND value ${tvs.isnot ? "NOT" : ""} IN (${tvs.values.map(i => "?").join(", ")})`
+			AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
 		)
 		values.push(tvs.term.id, ...tvs.values.map(i => i.key))
 	}
 
 	function add_numerical(tvs) {
-		if (!tvs.ranges) throw ".ranges{} missing"
+		if (!tvs.ranges) throw '.ranges{} missing'
 		values.push(tvs.term.id)
 		// get term object, in case isinteger flag is missing from tvs.term
 		const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
-		const cast = "CAST(value AS " + (term.isinteger ? "INT" : "REAL") + ")"
+		const cast = 'CAST(value AS ' + (term.isinteger ? 'INT' : 'REAL') + ')'
 
 		const rangeclauses = []
 		let hasactualrange = false // if true, will exclude special categories
@@ -97,7 +97,7 @@ returns:
 		for (const range of tvs.ranges) {
 			if (range.value != undefined) {
 				// special category
-				rangeclauses.push(cast + "=?")
+				rangeclauses.push(cast + '=?')
 				values.push(range.value)
 			} else {
 				// actual range
@@ -105,21 +105,21 @@ returns:
 				const lst = []
 				if (!range.startunbounded) {
 					if (range.startinclusive) {
-						lst.push(cast + " >= ?")
+						lst.push(cast + ' >= ?')
 					} else {
-						lst.push(cast + " > ? ")
+						lst.push(cast + ' > ? ')
 					}
 					values.push(range.start)
 				}
 				if (!range.stopunbounded) {
 					if (range.stopinclusive) {
-						lst.push(cast + " <= ?")
+						lst.push(cast + ' <= ?')
 					} else {
-						lst.push(cast + " < ? ")
+						lst.push(cast + ' < ? ')
 					}
 					values.push(range.stop)
 				}
-				rangeclauses.push("(" + lst.join(" AND ") + ")")
+				rangeclauses.push('(' + lst.join(' AND ') + ')')
 			}
 		}
 
@@ -128,7 +128,7 @@ returns:
 			excludevalues = Object.keys(term.values)
 				.filter(key => term.values[key].uncomputable)
 				.map(Number)
-				.filter(key => tvs.isnot || !tvs.ranges.find(range => "value" in range && range.value === key))
+				.filter(key => tvs.isnot || !tvs.ranges.find(range => 'value' in range && range.value === key))
 			if (excludevalues.length) values.push(...excludevalues)
 		}
 
@@ -136,37 +136,37 @@ returns:
 			`SELECT sample
 			FROM annotations
 			WHERE term_id = ?
-			AND ( ${rangeclauses.join(" OR ")} )
-			${excludevalues && excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d => "?").join(",")})` : ""}`
+			AND ( ${rangeclauses.join(' OR ')} )
+			${excludevalues && excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d => '?').join(',')})` : ''}`
 		)
 	}
 
 	function add_condition(tvs) {
 		let value_for
-		if (tvs.bar_by_children) value_for = "child"
-		else if (tvs.bar_by_grade) value_for = "grade"
-		else throw "must set the bar_by_grade or bar_by_children query parameter"
+		if (tvs.bar_by_children) value_for = 'child'
+		else if (tvs.bar_by_grade) value_for = 'grade'
+		else throw 'must set the bar_by_grade or bar_by_children query parameter'
 
 		let restriction
-		if (tvs.value_by_max_grade) restriction = "max_grade"
-		else if (tvs.value_by_most_recent) restriction = "most_recent"
-		else if (tvs.value_by_computable_grade) restriction = "computable_grade"
-		else throw "unknown setting of value_by_?"
+		if (tvs.value_by_max_grade) restriction = 'max_grade'
+		else if (tvs.value_by_most_recent) restriction = 'most_recent'
+		else if (tvs.value_by_computable_grade) restriction = 'computable_grade'
+		else throw 'unknown setting of value_by_?'
 
 		if (tvs.values) {
-			values.push(tvs.term.id, value_for, ...tvs.values.map(i => "" + i.key))
+			values.push(tvs.term.id, value_for, ...tvs.values.map(i => '' + i.key))
 			filters.push(
 				`SELECT sample
 				FROM precomputed
 				WHERE term_id = ? 
 				AND value_for = ? 
 				AND ${restriction} = 1
-				AND value IN (${tvs.values.map(i => "?").join(", ")})`
+				AND value IN (${tvs.values.map(i => '?').join(', ')})`
 			)
 		} else if (tvs.grade_and_child) {
 			//grade_and_child: [{grade, child_id}]
 			for (const gc of tvs.grade_and_child) {
-				values.push(tvs.term.id, "" + gc.grade)
+				values.push(tvs.term.id, '' + gc.grade)
 				filters.push(
 					`SELECT sample
 					FROM precomputed
@@ -217,7 +217,7 @@ q{}
 	.ds
 	.key
 */
-	const sql = "SELECT sample,value FROM annotations WHERE term_id=?"
+	const sql = 'SELECT sample,value FROM annotations WHERE term_id=?'
 	return q.ds.cohort.db.connection.prepare(sql).all(q.key)
 }
 
@@ -243,17 +243,17 @@ q{}
 				.filter(i => t1.values[i].uncomputable)
 				.map(Number)
 		: []
-	const t1unannovals = t1excluded.length ? `AND value NOT IN (${t1excluded.join(",")})` : ""
+	const t1unannovals = t1excluded.length ? `AND value NOT IN (${t1excluded.join(',')})` : ''
 
 	const t2excluded = t2.values
 		? Object.keys(t2.values)
 				.filter(i => t2.values[i].uncomputable)
 				.map(Number)
 		: []
-	const t2unannovals = t2excluded.length ? `AND value NOT IN (${t2excluded.join(",")})` : ""
+	const t2unannovals = t2excluded.length ? `AND value NOT IN (${t2excluded.join(',')})` : ''
 
 	const sql = `WITH
-    ${filter ? filter.filters + "," : ""}
+    ${filter ? filter.filters + ',' : ''}
     ${CTE0.sql},
     t1 AS (
       SELECT sample, CAST(value AS real) as value
@@ -272,7 +272,7 @@ q{}
     FROM t1
     JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
     JOIN t2 ON t2.sample = t1.sample
-    ${filter ? "WHERE t1.sample in " + filter.CTEname : ""}`
+    ${filter ? 'WHERE t1.sample in ' + filter.CTEname : ''}`
 
 	return q.ds.cohort.db.connection.prepare(sql).all(values)
 }
@@ -307,7 +307,7 @@ opts{} options to tweak the query, see const default_opts = below
 							  or +" ORDER BY ..." + " LIMIT ..."
 
 */
-	if (typeof q.tvslst == "string") q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+	if (typeof q.tvslst == 'string') q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 
 	// do not break code that still uses the opts.groupby key-value
 	// can take this out once all calling code has been migrated
@@ -317,8 +317,8 @@ opts{} options to tweak the query, see const default_opts = below
 	}
 	const default_opts = {
 		withCTEs: true,
-		columnas: "t1.sample AS sample",
-		endclause: ""
+		columnas: 't1.sample AS sample',
+		endclause: ''
 	}
 	const opts = Object.assign(default_opts, _opts)
 	const filter = makesql_by_tvsfilter(q.tvslst, q.ds)
@@ -328,7 +328,7 @@ opts{} options to tweak the query, see const default_opts = below
 	const CTE2 = get_term_cte(q, filter, values, 2)
 
 	const statement = `WITH
-		${filter ? filter.filters + "," : ""}
+		${filter ? filter.filters + ',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
 		${CTE2.sql}
@@ -343,7 +343,7 @@ opts{} options to tweak the query, see const default_opts = below
 		FROM ${CTE1.tablename} t1
 		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
-		${filter ? "WHERE t1.sample in " + filter.CTEname : ""}
+		${filter ? 'WHERE t1.sample in ' + filter.CTEname : ''}
 		${opts.endclause}`
 	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
@@ -364,27 +364,27 @@ filter   returned by makesql_by_tvsfilter
 values[] string/numeric to replace ? in CTEs
 index    0 for term0, 1 for term1, 2 for term2
 */
-	const termid = q["term" + index + "_id"]
-	const term_is_genotype = q["term" + index + "_is_genotype"]
+	const termid = q['term' + index + '_id']
+	const term_is_genotype = q['term' + index + '_is_genotype']
 	if (index == 1 && !term_is_genotype) {
 		// only term1 is required
-		if (!termid) throw "missing term id"
+		if (!termid) throw 'missing term id'
 	} else if (!termid || term_is_genotype) {
 		// term2 and term0 are optional
 		// no table to query
-		const tablename = "samplekey_" + index
+		const tablename = 'samplekey_' + index
 		return {
 			tablename,
 			sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
-			join_on_clause: ""
+			join_on_clause: ''
 		}
 	}
 
 	// otherwise, must be a valid term
 	const term = q.ds.cohort.termdb.q.termjsonByOneid(termid)
-	if (!term) throw "no term found by id"
-	let termq = q["term" + index + "_q"] || {}
-	if (typeof termq == "string") {
+	if (!term) throw 'no term found by id'
+	let termq = q['term' + index + '_q'] || {}
+	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))
 	}
 	const CTE = makesql_oneterm(term, filter, q.ds, termq, values, index)
@@ -404,8 +404,8 @@ q{}
 */
 	const result = get_rows(q, {
 		withCTEs: true,
-		columnas: "count(distinct t1.sample) as samplecount",
-		endclause: "GROUP BY key0, key1, key2"
+		columnas: 'count(distinct t1.sample) as samplecount',
+		endclause: 'GROUP BY key0, key1, key2'
 	})
 
 	const nums = [0, 1, 2]
@@ -433,15 +433,15 @@ q{}
 i       0,1,2 corresponding to term[i]_[id|q]
 result  returned by get_rows(, {withCTEs: 1})
 */
-	const key = "key" + i
-	const value = "val" + i
-	const label = "label" + i
+	const key = 'key' + i
+	const value = 'val' + i
+	const label = 'label' + i
 	const default_labeler = row => {
 		delete row[key]
 		delete row[value]
 	}
 
-	const term_id = q["term" + i + "_id"]
+	const term_id = q['term' + i + '_id']
 	if (!term_id) return default_labeler
 	const term = q.ds.cohort.termdb.q.termjsonByOneid(term_id)
 	if (!term_id) return default_labeler
@@ -449,11 +449,11 @@ result  returned by get_rows(, {withCTEs: 1})
 	// when there is only term1 and no term0/term2 simplify
 	// the property names to just "key" and "label" with no index
 	// -- consider keeping key1 terminology consistent later?
-	const tkey = i != 1 || q.term0_id || q.term2_id ? key : "key"
-	const tlabel = i != 1 || q.term0_id || q.term2_id ? key : "label"
+	const tkey = i != 1 || q.term0_id || q.term2_id ? key : 'key'
+	const tlabel = i != 1 || q.term0_id || q.term2_id ? key : 'label'
 	if (term.isinteger || term.isfloat) {
-		const CTE = result["CTE" + i]
-		const range = "range" + (i != 1 || q.term0_id || q.term2_id ? i : "")
+		const CTE = result['CTE' + i]
+		const range = 'range' + (i != 1 || q.term0_id || q.term2_id ? i : '')
 		return row => {
 			row[range] = CTE.name2bin.get(row[key])
 			row[tlabel] = row[key]
@@ -465,7 +465,7 @@ result  returned by get_rows(, {withCTEs: 1})
 			}
 		}
 	} else {
-		const term_q = q["term" + i + "_q"]
+		const term_q = q['term' + i + '_q']
 		return row => {
 			row[tlabel] = get_label4key(row[key], term, term_q, q.ds)
 			delete row[value]
@@ -484,7 +484,7 @@ function get_label4key(key, term, q, ds) {
 		return term.values && key in term.values ? term.values[key].label : key
 	}
 	if (term.iscondition) {
-		if (!term.values) throw "missing term.values for condition term"
+		if (!term.values) throw 'missing term.values for condition term'
 		if (q.bar_by_grade) {
 			if (!(key in term.values)) throw `unknown grade='${key}'`
 			return term.values[key].label
@@ -495,8 +495,8 @@ function get_label4key(key, term, q, ds) {
 	if (term.values) {
 		return key in term.values ? term.values[key].label : key
 	}
-	if (term.isinteger || term.isfloat) throw "should not work for numeric term"
-	throw "unknown term type"
+	if (term.isinteger || term.isfloat) throw 'should not work for numeric term'
+	throw 'unknown term type'
 }
 
 function makesql_oneterm(term, filter, ds, q, values, index) {
@@ -515,7 +515,7 @@ values[]: collector of bind parameters
 
 returns { sql, tablename }
 */
-	const tablename = "samplekey_" + index
+	const tablename = 'samplekey_' + index
 	if (term.iscategorical) {
 		values.push(term.id)
 		return {
@@ -544,35 +544,35 @@ returns { sql, tablename }
 	if (term.iscondition) {
 		return makesql_oneterm_condition(term, q, ds, filter, values, index)
 	}
-	throw "unknown term type"
+	throw 'unknown term type'
 }
 
-function makesql_oneterm_condition(term, q, ds, filter, values, index = "") {
+function makesql_oneterm_condition(term, q, ds, filter, values, index = '') {
 	/*
 	return {sql, tablename}
 */
-	const grade_table = "grade_table_" + index
-	const term_table = "term_table_" + index
-	const out_table = "out_table_" + index
-	const value_for = q.bar_by_children ? "child" : q.bar_by_grade ? "grade" : ""
-	if (!value_for) throw "must set the bar_by_grade or bar_by_children query parameter"
+	const grade_table = 'grade_table_' + index
+	const term_table = 'term_table_' + index
+	const out_table = 'out_table_' + index
+	const value_for = q.bar_by_children ? 'child' : q.bar_by_grade ? 'grade' : ''
+	if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
 
 	const restriction = q.value_by_max_grade
-		? "max_grade"
+		? 'max_grade'
 		: q.value_by_most_recent
-		? "most_recent"
+		? 'most_recent'
 		: q.value_by_computable_grade
-		? "computable_grade"
-		: ""
-	if (!restriction) throw "must set a valid value_by_*"
+		? 'computable_grade'
+		: ''
+	if (!restriction) throw 'must set a valid value_by_*'
 	values.push(term.id, value_for)
 
 	return {
 		sql: `${out_table} AS (
 			SELECT 
 				sample, 
-				${value_for == "grade" ? "CAST(value AS integer) as key" : "value as key"}, 
-				${value_for == "grade" ? "CAST(value AS integer) as value" : "value"}
+				${value_for == 'grade' ? 'CAST(value AS integer) as key' : 'value as key'}, 
+				${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
 			FROM precomputed
 			WHERE term_id = ? 
 				AND value_for = ? 
@@ -582,7 +582,7 @@ function makesql_oneterm_condition(term, q, ds, filter, values, index = "") {
 	}
 }
 
-function makesql_numericBinCTE(term, q, filter, ds, index = "") {
+function makesql_numericBinCTE(term, q, filter, ds, index = '') {
 	/*
 decide bins and produce CTE
 
@@ -599,7 +599,7 @@ returns { sql, tablename, name2bin, bins, binconfig }
 	let has_percentiles = false
 	let binid = 0
 	for (const b of bins) {
-		if (!("name" in b) && b.label) b.name = b.label
+		if (!('name' in b) && b.label) b.name = b.label
 		name2bin.set(b.name, b)
 		bin_def_lst.push(
 			`SELECT '${b.name}' AS name,
@@ -638,17 +638,17 @@ returns { sql, tablename, name2bin, bins, binconfig }
 		}
 	}
 
-	const bin_def_table = "bin_defs_" + index
-	const bin_sample_table = "bin_sample_" + index
+	const bin_def_table = 'bin_defs_' + index
+	const bin_sample_table = 'bin_sample_' + index
 
 	const sql = `${bin_def_table} AS (
-			${bin_def_lst.join(" UNION ALL ")}
+			${bin_def_lst.join(' UNION ALL ')}
 		),
 		${bin_sample_table} AS (
 			SELECT
 				sample,
-				CAST(value AS ${term.isinteger ? "INT" : "REAL"}) AS v,
-				CAST(value AS ${term.isinteger ? "INT" : "REAL"}) AS value,
+				CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS v,
+				CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value,
 				b.name AS bname,
 				b.binorder AS binorder
 			FROM
@@ -657,7 +657,7 @@ returns { sql, tablename, name2bin, bins, binconfig }
 				( b.unannotated=1 AND v=b.start )
 				OR
 				(
-					${excludevalues.length ? "v NOT IN (" + excludevalues.join(",") + ") AND" : ""}
+					${excludevalues.length ? 'v NOT IN (' + excludevalues.join(',') + ') AND' : ''}
 					(
 						b.startunbounded=1
 						OR v>b.start
@@ -671,7 +671,7 @@ returns { sql, tablename, name2bin, bins, binconfig }
 					)
 				)
 			WHERE
-			${filter ? "sample IN " + filter.CTEname + " AND" : ""}
+			${filter ? 'sample IN ' + filter.CTEname + ' AND' : ''}
 			term_id=?
 		)`
 	return {
@@ -702,7 +702,7 @@ ds
 		: term.bins
 		? term.bins.default
 		: null
-	if (!binconfig) throw "unable to determine the binning configuration"
+	if (!binconfig) throw 'unable to determine the binning configuration'
 	q.binconfig = binconfig
 
 	const bins = binsmodule.compute_bins(binconfig, percentiles => get_numericMinMaxPct(ds, term, q.tvslst, percentiles))
@@ -714,9 +714,9 @@ export function get_numericsummary(q, term, ds, _tvslst = [], withValues = false
 to produce the summary table of mean, median, percentiles
 at a numeric barchart
 */
-	const tvslst = typeof _tvslst == "string" ? JSON.parse(decodeURIComponent(_tvslst)) : _tvslst
+	const tvslst = typeof _tvslst == 'string' ? JSON.parse(decodeURIComponent(_tvslst)) : _tvslst
 
-	if ((term.isinteger || term.isfloat) && !tvslst.find(tv => tv.term.id == term.id && "ranges" in tv)) {
+	if ((term.isinteger || term.isfloat) && !tvslst.find(tv => tv.term.id == term.id && 'ranges' in tv)) {
 		const [bins, binconfig] = get_bins(q, term, ds)
 		tvslst.push({ term, ranges: bins })
 	}
@@ -726,13 +726,13 @@ at a numeric barchart
 		values.push(...filter.values)
 	}
 	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
-	const string = `${filter ? "WITH " + filter.filters + " " : ""}
-		SELECT CAST(value AS ${term.isinteger ? "INT" : "REAL"}) AS value
+	const string = `${filter ? 'WITH ' + filter.filters + ' ' : ''}
+		SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
 		FROM annotations
 		WHERE
-		${filter ? "sample IN " + filter.CTEname + " AND " : ""}
+		${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 		term_id=?
-		${excludevalues.lenth ? "AND value NOT IN (" + excludevalues.join(",") + ")" : ""}`
+		${excludevalues.lenth ? 'AND value NOT IN (' + excludevalues.join(',') + ')' : ''}`
 	values.push(term.id)
 
 	const s = ds.cohort.db.connection.prepare(string)
@@ -783,7 +783,7 @@ export function get_numericMinMaxPct(ds, term, tvslst = [], percentiles = []) {
 	const cols = []
 	let tablename
 	for (const n of percentiles) {
-		tablename = "pct_" + n
+		tablename = 'pct_' + n
 		ctes.push(`
 		${tablename} AS (
 		  SELECT value
@@ -799,30 +799,30 @@ export function get_numericMinMaxPct(ds, term, tvslst = [], percentiles = []) {
 		)`)
 		values.push(n)
 		ptablenames.push(tablename)
-		cols.push(`${tablename}.value AS ${"p" + n}`)
+		cols.push(`${tablename}.value AS ${'p' + n}`)
 	}
 
 	const sql = `WITH
-		${filter ? filter.filters + ", " : ""} 
+		${filter ? filter.filters + ', ' : ''} 
 		vals AS (
-			SELECT CAST(value AS ${term.isinteger ? "INT" : "REAL"}) AS value
+			SELECT CAST(value AS ${term.isinteger ? 'INT' : 'REAL'}) AS value
 			FROM annotations
 			WHERE
-			${filter ? "sample IN " + filter.CTEname + " AND " : ""}
+			${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 			term_id=?
-			${excludevalues.length ? "AND value NOT IN (" + excludevalues.join(",") + ")" : ""}
+			${excludevalues.length ? 'AND value NOT IN (' + excludevalues.join(',') + ')' : ''}
 			ORDER BY value ASC
 		),
 		p AS (
 			SELECT count(value)/100 as pct
 			FROM vals
 		)
-		${ctes.length ? ",\n" + ctes.join(",") : ""}
+		${ctes.length ? ',\n' + ctes.join(',') : ''}
 		SELECT 
 			min(vals.value) as vmin,
 			max(vals.value) as vmax
-			${cols.length ? ",\n" + cols.join(",\n") : ""} 
-		FROM vals ${ptablenames.length ? "," + ptablenames.join(",") : ""}`
+			${cols.length ? ',\n' + cols.join(',\n') : ''} 
+		FROM vals ${ptablenames.length ? ',' + ptablenames.join(',') : ''}`
 
 	const s = ds.cohort.db.connection.prepare(sql)
 	const result = s.all(values)
@@ -843,8 +843,8 @@ probably fine to hardcode such query strings here
 and no need to define them in each dataset
 thus less things to worry about...
 */
-	if (!ds.cohort) throw "ds.cohort missing"
-	if (!ds.cohort.db) throw "ds.cohort.db missing"
+	if (!ds.cohort) throw 'ds.cohort missing'
+	if (!ds.cohort.db) throw 'ds.cohort.db missing'
 
 	let cn
 	if (ds.cohort.db.file) {
@@ -853,18 +853,18 @@ thus less things to worry about...
 		// only on ppr
 		cn = connect_db(ds.cohort.db.file_fullpath, true)
 	} else {
-		throw "neither .file or .file_fullpath is set on ds.cohort.db"
+		throw 'neither .file or .file_fullpath is set on ds.cohort.db'
 	}
 	console.log(`DB connected for ${ds.label}: ${ds.cohort.db.file || ds.cohort.db.file_fullpath}`)
 
 	ds.cohort.db.connection = cn
 
-	if (!ds.cohort.termdb) throw "ds.cohor.termdb missing"
+	if (!ds.cohort.termdb) throw 'ds.cohor.termdb missing'
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 
 	{
-		const s = cn.prepare("SELECT * FROM category2vcfsample")
+		const s = cn.prepare('SELECT * FROM category2vcfsample')
 		// must be cached as there are lots of json parsing
 		let cache
 		q.getcategory2vcfsample = () => {
@@ -878,23 +878,27 @@ thus less things to worry about...
 		}
 	}
 	{
-		const s = cn.prepare("SELECT * FROM alltermsbyorder")
+		const s = cn.prepare('SELECT * FROM alltermsbyorder')
 		let cache
 		q.getAlltermsbyorder = () => {
 			if (cache) return cache
 			const tmp = s.all()
 			cache = []
 			for (const i of tmp) {
-				cache.push({
-					group_name: i.group_name,
-					term: q.termjsonByOneid(i.id)
-				})
+				const term = q.termjsonByOneid(i.id)
+				if (term) {
+					// alltermsbyorder maybe out of sync and some terms may be deleted
+					cache.push({
+						group_name: i.group_name,
+						term
+					})
+				}
 			}
 			return cache
 		}
 	}
 	{
-		const s = cn.prepare("SELECT jsondata FROM terms WHERE id=?")
+		const s = cn.prepare('SELECT jsondata FROM terms WHERE id=?')
 		const cache = new Map()
 		/* should only cache result for valid term id, not for invalid ids
 		as invalid id is arbitrary and indefinite
@@ -914,7 +918,7 @@ thus less things to worry about...
 	}
 
 	{
-		const s = cn.prepare("select id from terms where parent_id=?")
+		const s = cn.prepare('select id from terms where parent_id=?')
 		const cache = new Map()
 		q.termIsLeaf = id => {
 			if (cache.has(id)) return cache.get(id)
@@ -927,7 +931,7 @@ thus less things to worry about...
 	}
 
 	{
-		const s = cn.prepare("SELECT id,jsondata FROM terms WHERE parent_id is null")
+		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE parent_id is null')
 		let cache = null
 		q.getRootTerms = () => {
 			if (cache) return cache
@@ -940,7 +944,7 @@ thus less things to worry about...
 		}
 	}
 	{
-		const s = cn.prepare("SELECT parent_id FROM terms WHERE id=?")
+		const s = cn.prepare('SELECT parent_id FROM terms WHERE id=?')
 		{
 			const cache = new Map()
 			q.termHasParent = id => {
@@ -978,7 +982,7 @@ thus less things to worry about...
 		}
 	}
 	{
-		const s = cn.prepare("SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)")
+		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE id IN (SELECT id FROM terms WHERE parent_id=?)')
 		const cache = new Map()
 		q.getTermChildren = id => {
 			if (cache.has(id)) return cache.get(id)
@@ -997,9 +1001,9 @@ thus less things to worry about...
 	}
 	{
 		// may not cache result of this one as query string may be indefinite
-		const s = cn.prepare("SELECT id,jsondata FROM terms WHERE name LIKE ?")
+		const s = cn.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
 		q.findTermByName = (n, limit) => {
-			const tmp = s.all("%" + n + "%")
+			const tmp = s.all('%' + n + '%')
 			if (tmp) {
 				const lst = []
 				for (const i of tmp) {
@@ -1014,8 +1018,8 @@ thus less things to worry about...
 		}
 	}
 	{
-		const s1 = cn.prepare("SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?")
-		const s2 = cn.prepare("SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?")
+		const s1 = cn.prepare('SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?')
+		const s2 = cn.prepare('SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?')
 		const cache = new Map()
 		q.findTermMaxvalue = (id, isint) => {
 			if (cache.has(id)) return cache.get(id)
@@ -1030,7 +1034,7 @@ thus less things to worry about...
 	{
 		// select sample and category, only for categorical term
 		// right now only for category-overlay on maf-cov plot
-		const s = cn.prepare("SELECT sample,value FROM annotations WHERE term_id=?")
+		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
 		q.getSample2value = id => {
 			return s.all(id)
 		}
@@ -1038,7 +1042,7 @@ thus less things to worry about...
 	{
 		//get term_info for a term
 		//rightnow only few conditional terms have grade info
-		const s = cn.prepare("SELECT jsonhtml FROM termhtmldef WHERE id=?")
+		const s = cn.prepare('SELECT jsonhtml FROM termhtmldef WHERE id=?')
 		const cache = new Map()
 		q.getTermInfo = id => {
 			if (cache.has(id)) return cache.get(id)

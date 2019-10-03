@@ -1,17 +1,17 @@
-const tape = require("tape")
-const d3s = require("d3-selection")
-const termjson = require("./termjson").termjson
-const serverconfig = require("../../serverconfig")
-const host = "http://localhost:" + serverconfig.port
-const helpers = require("../front.helpers.js")
+const tape = require('tape')
+const d3s = require('d3-selection')
+const termjson = require('./termjson').termjson
+const serverconfig = require('../../serverconfig')
+const host = 'http://localhost:' + serverconfig.port
+const helpers = require('../front.helpers.js')
 
-tape("\n", function(test) {
-	test.pass("-***- mds.termdb.barchart -***-")
+tape('\n', function(test) {
+	test.pass('-***- mds.termdb.barchart -***-')
 	test.end()
 })
 
-tape("single barchart, categorical bars + click", function(test) {
-	const div0 = d3s.select("body").append("div")
+tape('single barchart, categorical bars + click', function(test) {
+	const div0 = d3s.select('body').append('div')
 	const termfilter = { show_top_ui: true }
 
 	runproteinpaint({
@@ -20,14 +20,14 @@ tape("single barchart, categorical bars + click", function(test) {
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			default_rootterm: {},
 			termfilter,
 			plot2restore: {
-				term: termjson["diaggrp"],
+				term: termjson['diaggrp'],
 				settings: {
-					currViews: ["barchart"]
+					currViews: ['barchart']
 				}
 			},
 			callbacks: {
@@ -43,38 +43,39 @@ tape("single barchart, categorical bars + click", function(test) {
 	})
 
 	function testBarCount(plot) {
-		const numBars = plot.components.barchart.dom.barDiv.selectAll(".bars-cell-grp").size()
-		const numOverlays = plot.components.barchart.dom.barDiv.selectAll(".bars-cell").size()
-		test.true(numBars > 5, "should have more than 10 Diagnosis Group bars")
-		test.equal(numBars, numOverlays, "should have equal numbers of bars and overlays")
+		const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > 5, 'should have more than 10 Diagnosis Group bars')
+		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 
 	function testAxisDimension(plot) {
-		const xAxis = plot.components.barchart.dom.barDiv.select(".sjpcb-bar-chart-x-axis").node()
-		const seriesG = plot.components.barchart.dom.barDiv.select(".bars-series").node()
-		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, "x-axis width should be >= series width")
+		const xAxis = plot.components.barchart.dom.barDiv.select('.sjpcb-bar-chart-x-axis').node()
+		const seriesG = plot.components.barchart.dom.barDiv.select('.bars-series').node()
+		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
 	}
 
 	function triggerBarClick(plot) {
-		plot.bus.on("postRender", [testCategoricalTermValue, testAddedFilter])
+		plot.bus.on('postRender', [testCategoricalTermValue, testAddedFilter])
 		plot.components.barchart.dom.barDiv
-			.select(".bars-cell")
-			.select("rect")
+			.select('.bars-cell')
+			.select('rect')
 			.node()
-			.dispatchEvent(new Event("click", { bubbles: true }))
+			.dispatchEvent(new Event('click', { bubbles: true }))
 		setTimeout(() => {
 			plot.obj.tip.d
-				.select(".sja_menuoption")
+				.selectAll('.sja_menuoption')
+				.filter(d => d.label.includes('filter'))
 				.node()
-				.dispatchEvent(new Event("click", { bubbles: true }))
+				.dispatchEvent(new Event('click', { bubbles: true }))
 		}, 500)
 	}
 
 	function testCategoricalTermValue(plot) {
-		test.equal(termfilter.terms && termfilter.terms.length, 1, "should create a tvslst filter when a bar is clicked")
+		test.equal(termfilter.terms && termfilter.terms.length, 1, 'should create a tvslst filter when a bar is clicked')
 		const data = plot.components.barchart.dom.barDiv
-			.select(".bars-cell")
-			.select("rect")
+			.select('.bars-cell')
+			.select('rect')
 			.datum()
 		test.deepEqual(
 			termfilter.terms,
@@ -89,23 +90,23 @@ tape("single barchart, categorical bars + click", function(test) {
 					]
 				}
 			],
-			"should assign the correct clicked bar {key, label} as a categorical filter term-value"
+			'should assign the correct clicked bar {key, label} as a categorical filter term-value'
 		)
 	}
 
 	function testAddedFilter(obj) {
 		setTimeout(() => {
 			test.true(
-				obj.obj.dom.termfilterdiv.selectAll(".sja_filter_tag_btn").size() > 1,
-				"should add blue-pill Filter for clicked term"
+				obj.obj.dom.termfilterdiv.selectAll('.sja_filter_tag_btn').size() > 1,
+				'should add blue-pill Filter for clicked term'
 			)
 			test.end()
 		}, 100)
 	}
 })
 
-tape("single chart, with overlay", function(test) {
-	const div0 = d3s.select("body").append("div")
+tape('single chart, with overlay', function(test) {
+	const div0 = d3s.select('body').append('div')
 	const termfilter = { show_top_ui: true }
 
 	runproteinpaint({
@@ -114,15 +115,15 @@ tape("single chart, with overlay", function(test) {
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			default_rootterm: {},
 			termfilter,
 			plot2restore: {
-				term: termjson["diaggrp"],
-				term2: termjson["agedx"],
+				term: termjson['diaggrp'],
+				term2: termjson['agedx'],
 				settings: {
-					currViews: ["barchart"]
+					currViews: ['barchart']
 				}
 			},
 			callbacks: {
@@ -138,15 +139,15 @@ tape("single chart, with overlay", function(test) {
 	})
 
 	function testBarCount(plot) {
-		const numBars = plot.components.barchart.dom.barDiv.selectAll(".bars-cell-grp").size()
-		const numOverlays = plot.components.barchart.dom.barDiv.selectAll(".bars-cell").size()
-		test.true(numBars > 10, "should have more than 10 Diagnosis Group bars")
-		test.true(numOverlays > numBars, "number of overlays should be greater than bars")
+		const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > 10, 'should have more than 10 Diagnosis Group bars')
+		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
 	}
 
 	function testOverlayOrder(plot) {
-		const bars_grp = plot.components.barchart.dom.barDiv.selectAll(".bars-cell-grp")
-		const legend_rows = plot.components.barchart.dom.barDiv.selectAll(".legend-row")
+		const bars_grp = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp')
+		const legend_rows = plot.components.barchart.dom.barDiv.selectAll('.legend-row')
 		//flag to indicate unordered bars
 		let overlay_ordered = true
 		const legend_ids = []
@@ -159,13 +160,13 @@ tape("single chart, with overlay", function(test) {
 				.filter(id => bar_ids.includes(id))
 				.reduce((bool, id, i) => bool && bar_ids[i] === id, overlay_ordered)
 		})
-		test.true(overlay_ordered, "overlays order is same as legend")
+		test.true(overlay_ordered, 'overlays order is same as legend')
 		test.end()
 	}
 })
 
-tape("single chart, genotype overlay", function(test) {
-	const div0 = d3s.select("body").append("div")
+tape('single chart, genotype overlay', function(test) {
+	const div0 = d3s.select('body').append('div')
 	const termfilter = { show_top_ui: true }
 
 	runproteinpaint({
@@ -174,15 +175,15 @@ tape("single chart, genotype overlay", function(test) {
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			default_rootterm: {},
 			termfilter,
 			plot2restore: {
-				term: termjson["diaggrp"],
-				term2: "genotype",
+				term: termjson['diaggrp'],
+				term2: 'genotype',
 				settings: {
-					currViews: ["barchart"]
+					currViews: ['barchart']
 				}
 			},
 			callbacks: {
@@ -194,24 +195,24 @@ tape("single chart, genotype overlay", function(test) {
 				add_filter: true
 			},
 			modifier_ssid_barchart: {
-				mutation_name: "TEST",
-				ssid: "genotype-test.txt"
+				mutation_name: 'TEST',
+				ssid: 'genotype-test.txt'
 			},
 			serverData: helpers.serverData
 		}
 	})
 
 	function testBarCount(plot) {
-		const numBars = plot.components.barchart.dom.barDiv.selectAll(".bars-cell-grp").size()
-		const numOverlays = plot.components.barchart.dom.barDiv.selectAll(".bars-cell").size()
-		test.true(numOverlays > 10, "should have more than 10 Diagnosis Group bars")
-		test.equal(numOverlays, 66, "should have a total of 66 overlays")
+		const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
+		test.true(numOverlays > 10, 'should have more than 10 Diagnosis Group bars')
+		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
 		test.end()
 	}
 })
 
-tape("click to add numeric, condition term filter", function(test) {
-	const div0 = d3s.select("body").append("div")
+tape('click to add numeric, condition term filter', function(test) {
+	const div0 = d3s.select('body').append('div')
 	const termfilter = { show_top_ui: true }
 
 	runproteinpaint({
@@ -220,20 +221,20 @@ tape("click to add numeric, condition term filter", function(test) {
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			default_rootterm: {},
 			termfilter,
 			plot2restore: {
-				term: termjson["agedx"],
-				term2: Object.assign(termjson["Arrhythmias"], {
+				term: termjson['agedx'],
+				term2: Object.assign(termjson['Arrhythmias'], {
 					q: {
 						bar_by_grade: 1,
 						value_by_max_grade: 1
 					}
 				}),
 				settings: {
-					currViews: ["barchart"]
+					currViews: ['barchart']
 				}
 			},
 			callbacks: {
@@ -249,14 +250,15 @@ tape("click to add numeric, condition term filter", function(test) {
 	})
 
 	function triggerClick(plot) {
-		plot.bus.on("postRender", plot => testTermValues(plot, elem.datum()))
-		const elem = plot.components.barchart.dom.barDiv.select(".bars-cell").select("rect")
-		elem.node().dispatchEvent(new Event("click", { bubbles: true }))
+		plot.bus.on('postRender', plot => testTermValues(plot, elem.datum()))
+		const elem = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect')
+		elem.node().dispatchEvent(new Event('click', { bubbles: true }))
 		setTimeout(() => {
 			plot.obj.tip.d
-				.select(".sja_menuoption")
+				.selectAll('.sja_menuoption')
+				.filter(d => d.label.includes('filter'))
 				.node()
-				.dispatchEvent(new Event("click", { bubbles: true }))
+				.dispatchEvent(new Event('click', { bubbles: true }))
 		}, 200)
 	}
 
@@ -265,7 +267,7 @@ tape("click to add numeric, condition term filter", function(test) {
 			test.equal(
 				termfilter.terms && termfilter.terms.length,
 				2,
-				"should create two tvslst filters when a numeric term overlay is clicked"
+				'should create two tvslst filters when a numeric term overlay is clicked'
 			)
 			test.deepEqual(
 				termfilter.terms[0],
@@ -273,7 +275,7 @@ tape("click to add numeric, condition term filter", function(test) {
 					term: plot.term.term,
 					ranges: [plot.term.bins.find(d => d.label == clickedData.seriesId)]
 				},
-				"should create a numeric term-value filter with a ranges key"
+				'should create a numeric term-value filter with a ranges key'
 			)
 			test.deepEqual(
 				termfilter.terms[1],
@@ -289,7 +291,7 @@ tape("click to add numeric, condition term filter", function(test) {
 					},
 					plot.term2.q
 				),
-				"should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys"
+				'should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys'
 			)
 
 			test.end()
@@ -297,8 +299,8 @@ tape("click to add numeric, condition term filter", function(test) {
 	}
 })
 
-tape("click to add condition grade and child term filter ", function(test) {
-	const div0 = d3s.select("body").append("div")
+tape('click to add condition grade and child term filter ', function(test) {
+	const div0 = d3s.select('body').append('div')
 	const termfilter = { show_top_ui: true }
 
 	runproteinpaint({
@@ -307,15 +309,15 @@ tape("click to add condition grade and child term filter ", function(test) {
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			default_rootterm: {},
 			termfilter,
 			plot2restore: {
-				term: Object.assign({}, termjson["Arrhythmias"], { q: { bar_by_grade: 1, value_by_max_grade: 1 } }),
-				term2: Object.assign({}, termjson["Arrhythmias"], { q: { bar_by_children: 1, value_by_max_grade: 1 } }),
+				term: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_grade: 1, value_by_max_grade: 1 } }),
+				term2: Object.assign({}, termjson['Arrhythmias'], { q: { bar_by_children: 1, value_by_max_grade: 1 } }),
 				settings: {
-					currViews: ["barchart"]
+					currViews: ['barchart']
 				}
 			},
 			callbacks: {
@@ -331,14 +333,15 @@ tape("click to add condition grade and child term filter ", function(test) {
 	})
 
 	function triggerClick(plot) {
-		plot.bus.on("postRender", plot => testTermValues(plot, elem.datum()))
-		const elem = plot.components.barchart.dom.barDiv.select(".bars-cell").select("rect")
-		elem.node().dispatchEvent(new Event("click", { bubbles: true }))
+		plot.bus.on('postRender', plot => testTermValues(plot, elem.datum()))
+		const elem = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect')
+		elem.node().dispatchEvent(new Event('click', { bubbles: true }))
 		setTimeout(() => {
 			plot.obj.tip.d
-				.select(".sja_menuoption")
+				.selectAll('.sja_menuoption')
+				.filter(d => d.label.includes('filter'))
 				.node()
-				.dispatchEvent(new Event("click", { bubbles: true }))
+				.dispatchEvent(new Event('click', { bubbles: true }))
 		}, 200)
 	}
 
@@ -347,23 +350,23 @@ tape("click to add condition grade and child term filter ", function(test) {
 			test.equal(
 				termfilter.terms && termfilter.terms.length,
 				1,
-				"should create one tvslst filter when a grade and child bar/overlay is clicked"
+				'should create one tvslst filter when a grade and child bar/overlay is clicked'
 			)
-			test.true("grade_and_child" in termfilter.terms[0], "should create a tvslst filter with a grade_and_child")
-			test.true(Array.isArray(termfilter.terms[0].grade_and_child), "filter term.grade_and_child should be an array")
+			test.true('grade_and_child' in termfilter.terms[0], 'should create a tvslst filter with a grade_and_child')
+			test.true(Array.isArray(termfilter.terms[0].grade_and_child), 'filter term.grade_and_child should be an array')
 			if (Array.isArray(termfilter.terms[0].grade_and_child)) {
 				const filter = termfilter.terms[0].grade_and_child[0]
-				test.notEqual(filter.grade, filter.child_id, "filter grade and child_id should be different")
-				test.equal(typeof filter.grade, "number", "filter grade should be a number")
-				test.equal(typeof filter.child_id, "string", "filter grade should be a string")
+				test.notEqual(filter.grade, filter.child_id, 'filter grade and child_id should be different')
+				test.equal(typeof filter.grade, 'number', 'filter grade should be a number')
+				test.equal(typeof filter.child_id, 'string', 'filter grade should be a string')
 			}
 			test.end()
 		}, 200)
 	}
 })
 
-tape("multiple charts", function(test) {
-	const div0 = d3s.select("body").append("div")
+tape('multiple charts', function(test) {
+	const div0 = d3s.select('body').append('div')
 
 	runproteinpaint({
 		host,
@@ -371,15 +374,15 @@ tape("multiple charts", function(test) {
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			default_rootterm: {},
 			termfilter: { show_top_ui: false },
 			plot2restore: {
-				term: termjson["diaggrp"],
-				term0: termjson["agedx"],
+				term: termjson['diaggrp'],
+				term0: termjson['agedx'],
 				settings: {
-					currViews: ["barchart"]
+					currViews: ['barchart']
 				}
 			},
 			callbacks: {
@@ -392,14 +395,14 @@ tape("multiple charts", function(test) {
 	})
 
 	function testNumCharts(plot) {
-		const numCharts = plot.components.barchart.dom.barDiv.selectAll(".pp-sbar-div").size()
-		test.true(numCharts > 2, "should have more than 2 charts by Age at Cancer Diagnosis")
+		const numCharts = plot.components.barchart.dom.barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
 		test.end()
 	}
 })
 
-tape("series visibility", function(test) {
-	const div0 = d3s.select("body").append("div")
+tape('series visibility', function(test) {
+	const div0 = d3s.select('body').append('div')
 
 	runproteinpaint({
 		host,
@@ -407,14 +410,14 @@ tape("series visibility", function(test) {
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			default_rootterm: {},
 			termfilter: { show_top_ui: false },
 			plot2restore: {
-				term: termjson["aaclassic_5"],
+				term: termjson['aaclassic_5'],
 				settings: {
-					currViews: ["barchart"]
+					currViews: ['barchart']
 				}
 			},
 			callbacks: {
@@ -430,7 +433,7 @@ tape("series visibility", function(test) {
 		const excluded = plot.components.barchart.settings.exclude.cols
 		test.true(
 			excluded.length > 1 && excluded.length == plot.components.barchart.settings.unannotatedLabels.term1.length,
-			"should have more than 2 charts by Age at Cancer Diagnosis"
+			'should have more than 2 charts by Age at Cancer Diagnosis'
 		)
 
 		test.end()
