@@ -246,8 +246,15 @@ export class TermdbBarchart {
 				const id = series.seriesId
 				const label = this.terms.term1.values && id in this.terms.term1.values ? this.terms.term1.values[id].label : id
 				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
-				const ntotal = this.terms.term2 && this.terms.term2.iscondition ? '' : `, n=${series.visibleTotal}`
-				const pct = ` (${this.pctFormat(series.visibleTotal / chart.total)})`
+				const t2q = (this.terms.term2 && this.terms.term2.q) || {}
+				const ntotal =
+					this.terms.term2 && this.terms.term2.iscondition && (!t2q.bar_by_grade || !t2q.value_by_max_grade)
+						? ''
+						: `, n=${series.visibleTotal}`
+				const pct =
+					this.terms.term2 && this.terms.term2.iscondition && !t2q.bar_by_grade
+						? ''
+						: ` (${this.pctFormat(series.visibleTotal / chart.total)})`
 				return {
 					id,
 					label: '<tspan>' + label + af + ntotal + '</tspan>' + '<tspan fill="#777">' + pct + '<tspan>'
