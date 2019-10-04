@@ -277,9 +277,13 @@ function show_bar_click_menu(obj, arg) {
 	}
 
 	if (options.length) {
-		obj.tip
-			.clear()
-			.d.selectAll('div')
+		obj.tip.clear()
+		if (arg.header) {
+			obj.tip.d.append('div').html(arg.header)
+		}
+		obj.tip.d
+			.append('div')
+			.selectAll('div')
 			.data(options)
 			.enter()
 			.append('div')

@@ -10,19 +10,40 @@ export default function getHandlers(self) {
 		const d = event.target.__data__ || event.target.parentNode.__data__
 		// bar label data only has {id,label},
 		// while bar data has all required data including seriesId
+		const term1 = self.terms.term1
+		const term2 = self.terms.term2 ? self.terms.term2 : null
+		const term1unit = term1.unit
+		const seriesLabel =
+			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId) +
+			(term1.unit ? ' ' + term1.unit : '')
+		const dataLabel =
+			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId) +
+			(term2 && term2.unit ? ' ' + term2.unit : '')
+		const header =
+			`<div style='padding:2px'><b>${term1.name}</b>: ${seriesLabel}</div>` +
+			(term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel}</div>` : '')
+
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id }
 		const termValues = getTermValues(data, self)
 		const options = [
 			{
-				label: 'Hide this bar' + (d.dataId || d.dataId === 0 ? ' and overlay' : ''),
+				label: 'Hide this bar',
 				callback: () => {
 					self.settings.exclude.cols.push(d.seriesId === 0 ? 0 : d.seriesId || d.id)
-					if (d.dataId || d.dataId === 0) self.settings.exclude.rows.push(d.dataId)
 					self.main()
 				}
 			}
 		]
-		self.bus.emit('postClick', { termValues, options, x: event.clientX, y: event.clientY })
+		if (d.dataId || d.dataId === 0) {
+			options.push({
+				label: 'Hide this overlay value',
+				callback: () => {
+					self.settings.exclude.rows.push(d.dataId)
+					self.main()
+				}
+			})
+		}
+		self.bus.emit('postClick', { header, termValues, options, x: event.clientX, y: event.clientY })
 	}
 
 	return {
