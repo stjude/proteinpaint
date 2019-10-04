@@ -28,6 +28,7 @@ export class TermdbBarchart {
 			term2: ''
 		})
 		this.settings = Object.assign(this.defaults, opts.settings)
+		this.hasInitExcludedCols = false
 		this.renderers = {}
 		this.handlers = getHandlers(this)
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
@@ -129,12 +130,13 @@ export class TermdbBarchart {
 		}
 
 		this.processedExcludes.push(refs)
-		if (unannotatedColLabels) {
+		if (unannotatedColLabels && !this.hasInitExcludedCols) {
 			for (const label of unannotatedColLabels) {
 				if (!this.settings.exclude.cols.includes(label)) {
 					this.settings.exclude.cols.push(label)
 				}
 			}
+			this.hasInitExcludedCols = true
 		}
 		if (unannotatedRowLabels) {
 			for (const label of unannotatedRowLabels) {
