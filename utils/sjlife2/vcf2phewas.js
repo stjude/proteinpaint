@@ -1,8 +1,7 @@
-if(process.argv.length!=4) {
+if (process.argv.length != 4) {
 	console.log('<vcf file> <category2vcfsamples> output result to stdout')
 	process.exit()
 }
-
 
 const fs = require('fs')
 const readline = require('readline')
@@ -11,36 +10,31 @@ const path = require('path')
 
 const minimum_total_sample = 10
 
-
-
 const file_vcf = process.argv[2]
 const file_category2vcfsamples = process.argv[3]
 
 const category2samples = []
-for(const line of fs.readFileSync( file_category2vcfsamples, {encoding:'utf8'} ).trim().split('\n') ) {
+for (const line of fs
+	.readFileSync(file_category2vcfsamples, { encoding: 'utf8' })
+	.trim()
+	.split('\n')) {
 	const l = line.split('\t')
 	const categories = JSON.parse(l[4])
-	for(const g of categories) {
+	for (const g of categories) {
 		g.group_name = l[0]
 		g.term_id = l[1]
-		category2samples.push( g )
+		category2samples.push(g)
 	}
 }
 
-
-
-
 let vcfsamples
-
 
 console.log('SNV4\tSNP\tGroup_name\tVariable_ID\tCase\tControl\tp-value\ttest.table')
 
-
-const rl = readline.createInterface({input: fs.createReadStream( file_vcf )})
-rl.on('line', async line=>{
-
-	if(line[0]=='#') {
-		if(line[1]=='#') return
+const rl = readline.createInterface({ input: fs.createReadStream(file_vcf) })
+rl.on('line', async line => {
+	if (line[0] == '#') {
+		if (line[1] == '#') return
 		vcfsamples = line.split('\t').slice(9)
 		return
 	}
@@ -48,36 +42,34 @@ rl.on('line', async line=>{
 	// a variant
 	const l = line.split('\t')
 
-	const snv4 = l[0]+'.'+l[1]+'.'+l[3]+'.'+l[4]
+	const snv4 = l[0] + '.' + l[1] + '.' + l[3] + '.' + l[4]
 	const snp = l[2]
 
 	const sample2gt = new Map()
 	// k: sample, v: gt key (href, halt, het)
-	const genotype2sample = new Map([['href',new Set()],['halt',new Set()],['het',new Set()]])
+	const genotype2sample = new Map([['href', new Set()], ['halt', new Set()], ['het', new Set()]])
 	// k: gt key (href, halt, het), v: Set(samples)
 
-	for(let i=9; i<l.length; i++) {
+	for (let i = 9; i < l.length; i++) {
 		const gtstring = l[i].split(':')[0]
-		if(gtstring == '.') {
+		if (gtstring == '.') {
 			// unknown gt
 			continue
 		}
 		let gtkey
-		if(gtstring=='0/0') gtkey = 'href'
-		else if(gtstring=='1/1') gtkey = 'halt'
-		else if(gtstring=='0/1' || gtstring=='1/0') gtkey='het'
-		else throw 'unknown GT field: '+gtstring
-		const sample = vcfsamples[i-9]
-		sample2gt.set( sample, gtkey )
+		if (gtstring == '0/0') gtkey = 'href'
+		else if (gtstring == '1/1') gtkey = 'halt'
+		else if (gtstring == '0/1' || gtstring == '1/0') gtkey = 'het'
+		else throw 'unknown GT field: ' + gtstring
+		const sample = vcfsamples[i - 9]
+		sample2gt.set(sample, gtkey)
 		genotype2sample.get(gtkey).add(sample)
 	}
 
-
 	// from vcf file, total number of samples per genotype
-	const het0  = genotype2sample.get('het').size,
-		  href0 = genotype2sample.get('href').size,
-		  halt0 = genotype2sample.get('halt').size
-
+	const het0 = genotype2sample.get('het').size,
+		href0 = genotype2sample.get('href').size,
+		halt0 = genotype2sample.get('halt').size
 
 	const tests = []
 	/* list of test objects, one for each category
@@ -89,10 +81,7 @@ rl.on('line', async line=>{
 	.table: [ contigency table ]
 	*/
 
-
-
-	for(const category of category2samples) {
-
+	for (const category of category2samples) {
 		/************ each category a case
 		.group1label
 		.group2label
@@ -100,17 +89,17 @@ rl.on('line', async line=>{
 		.group2lst
 		*/
 
-		const [ het, halt, href ] = get_numsample_pergenotype( sample2gt, category.group1lst )
+		const [het1, halt1, href1] = get_numsample_pergenotype(sample2gt, category.group1lst)
 
 		// number of samples by genotype in control
 		let het2, halt2, href2
 
-		if( category.group2lst ) {
-			[ het2, halt2, href2 ] = get_numsample_pergenotype( sample2gt, category.group2lst )
+		if (category.group2lst) {
+			;[het2, halt2, href2] = get_numsample_pergenotype(sample2gt, category.group2lst)
 		} else {
-			het2 = het0-het
-			halt2 = halt0-halt
-			href2 = href0-href
+			het2 = het0 - het1
+			halt2 = halt0 - halt1
+			href2 = href0 - href1
 		}
 
 		tests.push({
@@ -118,94 +107,89 @@ rl.on('line', async line=>{
 			group_name: category.group_name,
 			group1label: category.group1label,
 			group2label: category.group2label,
-			table: [ 
+			table: [href1, href2, het1, het2, halt1, halt2]
+			/* by allele count
 				het + 2* halt, // case alt
 				het + 2* href, // case ref
 				het2 + 2* halt2, // ctrl alt
 				het2 + 2* href2, // ctrl ref
-			]
+				*/
 		})
 	}
 
-
 	///////// fisher
 	const lines = []
-	for(let i=0; i<tests.length; i++) {
-		lines.push( i +'\t'+ tests[i].table.join('\t'))
+	for (let i = 0; i < tests.length; i++) {
+		lines.push(i + '\t' + tests[i].table.join('\t'))
 	}
-	const tmpfile = file_vcf+'.'+snv4+'.fisher'
-	await write_file( tmpfile, lines.join('\n') )
-	const pfile = await run_fishertest( tmpfile )
+	const tmpfile = file_vcf + '.' + snv4 + '.fisher'
+	await write_file(tmpfile, lines.join('\n'))
+	const pfile = await run_fishertest(tmpfile)
 
-	let i=0
-	for(const line of fs.readFileSync(pfile,{encoding:'utf8'}).trim().split('\n')) {
+	let i = 0
+	for (const line of fs
+		.readFileSync(pfile, { encoding: 'utf8' })
+		.trim()
+		.split('\n')) {
 		const l = line.split('\t')
-		const p = Number(l[5])
+		const p = Number(l[7])
 		const test = tests[i++]
-		console.log(snv4+'\t'+snp+'\t'+test.group_name+'\t'+test.term_id+'\t'+test.group1label+'\t'+test.group2label+'\t'+p+'\t'+test.table)
+		console.log(
+			snv4 +
+				'\t' +
+				snp +
+				'\t' +
+				test.group_name +
+				'\t' +
+				test.term_id +
+				'\t' +
+				test.group1label +
+				'\t' +
+				test.group2label +
+				'\t' +
+				p +
+				'\t' +
+				test.table
+		)
 	}
-	fs.unlink(tmpfile,()=>{})
-	fs.unlink(pfile,()=>{})
+	fs.unlink(tmpfile, () => {})
+	fs.unlink(pfile, () => {})
 })
 
-
-
-
-
-
-
-
-
-
-function get_maxlogp ( tests ) {
-// set actual max for returning to client
+function get_maxlogp(tests) {
+	// set actual max for returning to client
 	let m = 0
-	for(const t of tests) {
-		t.logp = -Math.log10( t.pvalue )
-		m = Math.max( m, t.logp)
+	for (const t of tests) {
+		t.logp = -Math.log10(t.pvalue)
+		m = Math.max(m, t.logp)
 	}
 	return m
 }
 
-
-
-
-
-
-
-
-
-
-function get_numsample_pergenotype ( sample2gt, samples ) {
-/*
-*/
+function get_numsample_pergenotype(sample2gt, samples) {
+	/*
+	 */
 	const gt2count = new Map()
 	// k: gt, v: #samples
-	for(const sample of samples) {
-		const genotype = sample2gt.get( sample )
-		if(!genotype) {
+	for (const sample of samples) {
+		const genotype = sample2gt.get(sample)
+		if (!genotype) {
 			// no genotype, may happen when there's no sequencing coverage at this variant for this sample
 			continue
 		}
-		gt2count.set( genotype, 1+(gt2count.get(genotype) || 0) )
+		gt2count.set(genotype, 1 + (gt2count.get(genotype) || 0))
 	}
-	return [
-		gt2count.get('het')  || 0,
-		gt2count.get('halt') || 0,
-		gt2count.get('href') || 0
-	]
+	return [gt2count.get('het') || 0, gt2count.get('halt') || 0, gt2count.get('href') || 0]
 }
 
-
-
-function group_categories ( tests ) {
+function group_categories(tests) {
 	const k2lst = new Map()
-	for(const i of tests) {
-		if(!k2lst.has(i.group_name)) k2lst.set(i.group_name, [])
-		k2lst.get(i.group_name).push( i )
+	for (const i of tests) {
+		if (!k2lst.has(i.group_name)) k2lst.set(i.group_name, [])
+		k2lst.get(i.group_name).push(i)
 	}
 	const lst = []
-	for(const [k,o] of k2lst) {
+	for (const [k, o] of k2lst) {
 		lst.push({
 			group_name: k,
 			categories: o
@@ -214,48 +198,49 @@ function group_categories ( tests ) {
 	return lst
 }
 
-
-
-function write_file ( file, text ) {
-	return new Promise((resolve, reject)=>{
-		fs.writeFile( file, text, (err)=>{
-			if(err) reject('cannot write')
+function write_file(file, text) {
+	return new Promise((resolve, reject) => {
+		fs.writeFile(file, text, err => {
+			if (err) reject('cannot write')
 			resolve()
 		})
 	})
 }
-function run_fishertest ( tmpfile ) {
-	const pfile = tmpfile+'.pvalue'
-	return new Promise((resolve,reject)=>{
-		const sp = spawn('Rscript',[ path.join(__dirname,'../fisher.R'),tmpfile,pfile])
-		sp.on('close',()=> resolve(pfile))
-		sp.on('error',()=> reject(error))
+function run_fishertest(tmpfile) {
+	const pfile = tmpfile + '.pvalue'
+	return new Promise((resolve, reject) => {
+		const sp = spawn('Rscript', [path.join(__dirname, '../fisher.2x3.R'), tmpfile, pfile])
+		sp.on('close', () => resolve(pfile))
+		sp.on('error', () => reject(error))
 	})
 }
-function read_file ( file ) {
-	return new Promise((resolve,reject)=>{
-		fs.readFile( file, {encoding:'utf8'}, (err,txt)=>{
+function read_file(file) {
+	return new Promise((resolve, reject) => {
+		fs.readFile(file, { encoding: 'utf8' }, (err, txt) => {
 			// must use reject in callback, not throw
-			if(err) reject('cannot read file')
+			if (err) reject('cannot read file')
 			resolve(txt)
 		})
 	})
 }
-async function run_fdr ( plst, infile ) {
-// list of pvalues
-	const outfile = infile+'.fdr'
-	await write_file( infile, plst.join('\t') )
-	await run_fdr_2( infile, outfile )
-	const text = await read_file( outfile )
-	fs.unlink( infile, ()=>{})
-	fs.unlink( outfile, ()=>{})
-	return text.trim().split('\n').map(Number)
+async function run_fdr(plst, infile) {
+	// list of pvalues
+	const outfile = infile + '.fdr'
+	await write_file(infile, plst.join('\t'))
+	await run_fdr_2(infile, outfile)
+	const text = await read_file(outfile)
+	fs.unlink(infile, () => {})
+	fs.unlink(outfile, () => {})
+	return text
+		.trim()
+		.split('\n')
+		.map(Number)
 }
 
-function run_fdr_2 (infile, outfile) {
-	return new Promise((resolve, reject)=>{
-		const sp = spawn('Rscript',[ path.join(__dirname,'../fdr.R'), infile, outfile])
-		sp.on('close', ()=> resolve() )
-		sp.on('error', ()=> reject(e) )
+function run_fdr_2(infile, outfile) {
+	return new Promise((resolve, reject) => {
+		const sp = spawn('Rscript', [path.join(__dirname, '../fdr.R'), infile, outfile])
+		sp.on('close', () => resolve())
+		sp.on('error', () => reject(e))
 	})
 }
