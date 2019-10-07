@@ -28,6 +28,7 @@ export class TermdbBarchart {
 			term2: ''
 		})
 		this.settings = Object.assign(this.defaults, opts.settings)
+		this.hasInitExcludedCols = false
 		this.renderers = {}
 		this.handlers = getHandlers(this)
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
@@ -129,12 +130,13 @@ export class TermdbBarchart {
 		}
 
 		this.processedExcludes.push(refs)
-		if (unannotatedColLabels) {
+		if (unannotatedColLabels && !this.hasInitExcludedCols) {
 			for (const label of unannotatedColLabels) {
 				if (!this.settings.exclude.cols.includes(label)) {
 					this.settings.exclude.cols.push(label)
 				}
 			}
+			this.hasInitExcludedCols = true
 		}
 		if (unannotatedRowLabels) {
 			for (const label of unannotatedRowLabels) {
@@ -246,8 +248,11 @@ export class TermdbBarchart {
 				const id = series.seriesId
 				const label = this.terms.term1.values && id in this.terms.term1.values ? this.terms.term1.values[id].label : id
 				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
-				const ntotal = this.terms.term2 && this.terms.term2.iscondition ? '' : `, n=${series.visibleTotal}`
-				const pct = ` (${this.pctFormat(series.visibleTotal / chart.total)})`
+				const t2q = (this.terms.term2 && this.terms.term2.q) || {}
+				const totalIsVisible =
+					this.terms.term2 && this.terms.term2.iscondition && (!t2q.bar_by_grade || !t2q.value_by_max_grade)
+				const ntotal = totalIsVisible ? '' : `, n=${series.visibleTotal}`
+				const pct = totalIsVisible ? '' : ` (${this.pctFormat(series.visibleTotal / chart.total)})`
 				return {
 					id,
 					label: '<tspan>' + label + af + ntotal + '</tspan>' + '<tspan fill="#777">' + pct + '<tspan>'

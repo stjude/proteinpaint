@@ -267,7 +267,7 @@ function setRenderers(self) {
 
 	self.addCategoryValues = async function(value, j) {
 		const term_value_btn = select(this).datum(value)
-		const one_term_div = select(this.parentNode).style('position', 'absolute')
+		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
 
 		const replace_value_select = one_term_div
@@ -304,6 +304,7 @@ function setRenderers(self) {
 			.style('padding', '3px 4px 2px 4px')
 			.style('margin-right', '1px')
 			.style('font-size', '1em')
+			.style('position', 'absolute')
 			.style('background-color', '#4888BF')
 			.html(d => d.label + ' &#9662;')
 			.style('opacity', 0)

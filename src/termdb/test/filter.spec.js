@@ -1,8 +1,25 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const serverconfig = require('../../../serverconfig')
-const host = 'http://localhost:' + serverconfig.port
 const helpers = require('../../../test/front.helpers.js')
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('termdb', {
+	state: {
+		dslabel: 'SJLife',
+		genome: 'hg38'
+	},
+	debug: 1,
+	fetchOpts: {
+		serverData: helpers.serverData
+	}
+  })
+
+/**************
+ test sections
+***************/
 
 tape('\n', function(test) {
 	test.pass('-***- tdb.filter -***-')
@@ -23,27 +40,17 @@ tape('filter term-value button', function(test) {
 		]
 	}
 
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: {
-				dslabel: 'SJLife',
-				genome: 'hg38',
-				termfilter
-			},
-			callbacks: {
-				filter: {
-					'postInit.test': runTests
-				}
-			},
-			debug: 1,
-			fetchOpts: {
-				serverData: helpers.serverData
-			}
+	runpp({
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38',
+			termfilter
 		},
-		serverData: helpers.serverData
+		callbacks: {
+			filter: {
+				'postInit.test': runTests
+			}
+		}
 	})
 
 	function runTests(filter) {
@@ -128,24 +135,15 @@ tape('filter term-value button: categorical term', function(test) {
 		]
 	}
 
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: {
-				dslabel: 'SJLife',
-				genome: 'hg38',
-				termfilter
-			},
-			callbacks: {
-				filter: {
-					'postInit.test': runTests
-				}
-			},
-			debug: 1,
-			fetchOpts: {
-				serverData: helpers.serverData
+	runpp({
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38',
+			termfilter
+		},
+		callbacks: {
+			filter: {
+				'postInit.test': runTests
 			}
 		}
 	})
@@ -261,24 +259,15 @@ tape('filter term-value button: categorical term', function(test) {
 		]
 	}
 
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: {
-				dslabel: 'SJLife',
-				genome: 'hg38',
-				termfilter
-			},
-			callbacks: {
-				filter: {
-					'postInit.test': runTests
-				}
-			},
-			debug: 1,
-			fetchOpts: {
-				serverData: helpers.serverData
+	runpp({
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38',
+			termfilter
+		},
+		callbacks: {
+			filter: {
+				'postInit.test': runTests
 			}
 		}
 	})
