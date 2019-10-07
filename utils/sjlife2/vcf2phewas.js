@@ -5,7 +5,7 @@ if (process.argv.length != 4) {
 
 const fs = require('fs')
 const readline = require('readline')
-const spawn = require('child_process').spawn
+const exec = require('child_process').execSync
 const path = require('path')
 
 const minimum_total_sample = 10
@@ -124,7 +124,7 @@ rl.on('line', async line => {
 	}
 	const tmpfile = file_vcf + '.' + snv4 + '.fisher'
 	await write_file(tmpfile, lines.join('\n'))
-	const pfile = await run_fishertest(tmpfile)
+	const pfile = run_fishertest(tmpfile)
 
 	let i = 0
 	for (const line of fs
@@ -208,11 +208,8 @@ function write_file(file, text) {
 }
 function run_fishertest(tmpfile) {
 	const pfile = tmpfile + '.pvalue'
-	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', [path.join(__dirname, '../fisher.2x3.R'), tmpfile, pfile])
-		sp.on('close', () => resolve(pfile))
-		sp.on('error', () => reject(error))
-	})
+	exec('Rscript ../fisher.2x3.R ' + tmpfile + ' ' + pfile)
+	return pfile
 }
 function read_file(file) {
 	return new Promise((resolve, reject) => {
