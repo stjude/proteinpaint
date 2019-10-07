@@ -28,7 +28,7 @@ group{}
 	obj.tvstip = new client.Menu({ padding: '5px' })
 	obj.tvstip.d.style('line-height', 1.15)
 
-	if (!obj.isCoordinated) main()
+	main()
 
 	obj.main = main
 
