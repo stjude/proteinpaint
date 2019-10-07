@@ -581,12 +581,10 @@ group{}
 			.attr('value', 'recent')
 			.text('Most recent grade per patient')
 
-		if (obj.isCoordinated) {
-			grade_type_select
-				.append('option')
-				.attr('value', 'computable')
-				.text('Any grade per patient')
-		}
+		grade_type_select
+			.append('option')
+			.attr('value', 'computable')
+			.text('Any grade per patient')
 
 		grade_type_btn
 			.style('padding', '2px 4px 3px 4px')
