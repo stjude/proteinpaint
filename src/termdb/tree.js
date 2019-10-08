@@ -125,6 +125,12 @@ class TdbTree {
 				break
 			default:
 				if (action.type == 'tree_update') {
+					for (const id of this.app.state().tree.expandedTerms) {
+						const term = this.termsById[id]
+						if (!term.terms) {
+							term.terms = await this.requestTerm(term)
+						}
+					}
 					this.renderBranch(this.termsById[root_ID], this.dom.holder)
 				} else {
 					const term = this.termsById[action.termId]
@@ -211,8 +217,8 @@ function setRenderers(self) {
 		*/
 		if (!term || !term.terms) return
 		if (!(term.id in self.termsById)) return
-		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
-		if (!expanded) {
+		const expandedTerms = self.app.state().tree.expandedTerms
+		if (!expandedTerms.includes(term.id)) {
 			div.style('display', 'none')
 			if (button) button.text('+')
 			return
@@ -228,13 +234,23 @@ function setRenderers(self) {
 
 		divs.exit().each(self.hideTerm)
 
-		divs.each(self.updateTerm)
+		self.updateTerms(divs)
 
 		divs
 			.enter()
 			.append('div')
 			.attr('class', cls_termdiv)
 			.each(self.addTerm)
+
+		for (const child of term.terms) {
+			if (expandedTerms.includes(child.id)) {
+				self.renderBranch(
+					child,
+					div.selectAll('.' + cls_termchilddiv).filter(i => i.id == child.id),
+					div.selectAll('.' + cls_termbtn).filter(i => i.id == child.id)
+				)
+			}
+		}
 	}
 
 	// this == the d3 selected DOM node
@@ -243,38 +259,11 @@ function setRenderers(self) {
 		select(this).style('display', 'none')
 	}
 
-	self.updateTerm = function(term) {
-		const div = select(this)
-		div.datum(term)
-		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
-		const divs = selectAll(this.childNodes).filter(function() {
-			return !this.className.includes(cls_termchilddiv)
-		})
-
-		divs
-			.select('.' + cls_termbtn)
-			.datum(term)
-			.html(!expanded ? '+' : '-')
-
-		divs
-			.select('.' + cls_termlabel)
-			.datum(term)
-			.html(term.name)
-
-		divs
-			.select('.' + cls_termview)
-			.datum(term)
-			.html('VIEW')
-
-		const plot = self.app.state({ type: 'plot', id: term.id })
-		const isVisible = expanded || (plot && plot.isVisible)
-		const childdiv = divs
-			.select('.' + cls_termchilddiv)
-			.datum(term)
-			.style('display', expanded ? 'block' : 'none')
-			.style('overflow', isVisible ? '' : 'hidden')
-			.style('height', isVisible ? '' : 0)
-			.style('opacity', isVisible ? 1 : 0)
+	self.updateTerms = function(divs) {
+		const expandedTerms = self.app.state().tree.expandedTerms
+		divs.select('.' + cls_termbtn).text(d => (expandedTerms.includes(d.id) ? '-' : '+'))
+		// update other parts if needed, e.g. label
+		divs.select('.' + cls_termchilddiv).style('display', d => (expandedTerms.includes(d.id) ? 'block' : 'none'))
 	}
 
 	self.addTerm = function addTerm(term) {
@@ -333,8 +322,10 @@ function setRenderers(self) {
 			.style('padding-left', childterm_indent)
 			.style('transition', '0.3s ease')
 
+		/*
 		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
 		if (expanded) self.renderBranch(term, childdiv, button)
+		*/
 	}
 
 	self.updatePlotView = function(action) {
