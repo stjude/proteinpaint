@@ -32,7 +32,7 @@ rl.on('line', line => {
 	const start = Number(left[1]) - 1
 	const stop = Number(right[1]) - 1
 	if (start >= stop) {
-		console.error(line)
+		wrong++
 		return
 	}
 
@@ -43,7 +43,7 @@ rl.on('line', line => {
 	}
 
 	console.log(
-		chr + '\t' + start + '\t' + left[2] + '.' + left[3] + '\t' + stop + '\t' + right[2] + '.' + right[3] + '\t' + r2
+		chr + '\t' + start + '\t' + stop + '\t' + left[2] + '.' + left[3] + '\t' + right[2] + '.' + right[3] + '\t' + r2
 	)
 })
 rl.on('close', () => {
