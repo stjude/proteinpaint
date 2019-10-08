@@ -118,14 +118,12 @@ function setRenderers(self) {
 			.text(d => d.name)
 			.attr('class', 'sja_menuoption')
 			.on('click', d => {
-				/*
 				self.clear()
 				const lst = [root_ID]
-				if(data.id2ancestors[d.id]) {
+				if (data.id2ancestors[d.id]) {
 					lst.push(...data.id2ancestors[d.id])
 				}
 				self.app.dispatch({ type: 'tree_update', expandedTerms: lst })
-				*/
 			})
 		tr.append('td')
 			.text(d => {

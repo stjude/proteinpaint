@@ -124,15 +124,19 @@ class TdbTree {
 				this.viewPlot(action)
 				break
 			default:
-				const term = this.termsById[action.termId]
-				if (!term.terms) {
-					term.terms = await this.requestTerm(term)
-					delete term.__tree_isloading
-					if (action.loading_div) {
-						action.loading_div.remove()
+				if (action.type == 'tree_update') {
+					this.renderBranch(this.termsById[root_ID], this.dom.holder)
+				} else {
+					const term = this.termsById[action.termId]
+					if (!term.terms) {
+						term.terms = await this.requestTerm(term)
+						delete term.__tree_isloading
+						if (action.loading_div) {
+							action.loading_div.remove()
+						}
 					}
+					this.renderBranch(term, action.holder, action.button)
 				}
-				this.renderBranch(term, action.holder, action.button)
 		}
 		// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
 		this.bus.emit('postRender')
