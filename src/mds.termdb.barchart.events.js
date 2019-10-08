@@ -19,15 +19,20 @@ export default function getHandlers(self) {
 		const dataLabel =
 			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId) +
 			(term2 && term2.unit ? ' ' + term2.unit : '')
+		const icon = !term2
+		? ''
+		: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
+			d.color +
+			"'>&nbsp;</div>"
 		const header =
 			`<div style='padding:2px'><b>${term1.name}</b>: ${seriesLabel}</div>` +
-			(term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel}</div>` : '')
+			(term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel} ${icon}</div>` : '')
 
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id }
 		const termValues = getTermValues(data, self)
 		const options = [
 			{
-				label: 'Hide this bar',
+				label: 'Hide "' + seriesLabel + '"',
 				callback: () => {
 					self.settings.exclude.cols.push(d.seriesId === 0 ? 0 : d.seriesId || d.id)
 					self.main()
@@ -36,7 +41,7 @@ export default function getHandlers(self) {
 		]
 		if (d.dataId || d.dataId === 0) {
 			options.push({
-				label: 'Hide this overlay value',
+				label: 'Hide "' + dataLabel + '" ' + icon,
 				callback: () => {
 					self.settings.exclude.rows.push(d.dataId)
 					self.main()
