@@ -11,6 +11,7 @@ const cls_termdiv = 'termdiv',
 	cls_termbtn = 'termbtn',
 	cls_termview = 'termview',
 	cls_termlabel = 'termlabel'
+export const root_ID = 'root'
 
 /*
 Recommended Component Code Organization
@@ -22,6 +23,11 @@ Recommended Component Code Organization
 (b) setRenderers(self): attaches renderer methods
 
 (c) setInteractivity(self): attaches event handlers
+
+******************** EXPORTED
+treeInit()
+graphable()
+root_ID
 
 ********************
 exit/update/enter
@@ -86,17 +92,19 @@ class TdbTree {
 			plots: {}
 		}
 
-		const rootTerm = {
-			id: 'root',
+		// privately defined root term
+		this.rootTerm = {
+			id: root_ID,
 			__tree_isroot: true
 		}
 
-		this.termsById = { root: rootTerm }
+		this.termsById = {}
+		this.termsById[root_ID] = this.rootTerm
 		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
 		this.app.dispatch({
 			type: 'tree_expand',
-			termId: 'root',
-			term: rootTerm,
+			termId: root_ID,
+			term: this.rootTerm,
 			holder: this.dom.holder
 		})
 		this.bus.emit('postInit')

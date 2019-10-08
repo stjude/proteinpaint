@@ -1032,6 +1032,16 @@ thus less things to worry about...
 		}
 	}
 	{
+		const s = cn.prepare('SELECT ancestor_id FROM ancestry WHERE term_id=?')
+		const cache = new Map()
+		q.getAncestorIDs = id => {
+			if (cache.has(id)) return cache.get(id)
+			const tmp = s.all(id).map(i => i.ancestor_id)
+			cache.set(id, tmp)
+			return tmp
+		}
+	}
+	{
 		// select sample and category, only for categorical term
 		// right now only for category-overlay on maf-cov plot
 		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')

@@ -2,7 +2,7 @@ import * as rx from '../rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { debounce } from 'debounce'
-import { graphable } from './tree'
+import { graphable, root_ID } from './tree'
 
 // class names
 
@@ -59,14 +59,14 @@ class TermSearch {
 			return
 		}
 		// found terms
-		/*
-		if(state.modifier_click_term) {
-			this.showTermsForSelect(data.lst)
+
+		if (state.modifier_click_term) {
+			this.showTermsForSelect(data)
 			return
 		}
-		*/
-		// display terms with view and tree button
-		this.showTerms(data.lst)
+
+		// no modifier
+		this.showTerms(data)
 	}
 }
 
@@ -86,7 +86,7 @@ function setRenderers(self) {
 			.append('div')
 			.style('border-left', 'solid 1px rgb(133,182,225)')
 			.style('margin', '0px 0px 10px 10px')
-			.style('padding-left', '10px')
+			.style('padding-left', '5px')
 	}
 	self.noResult = () => {
 		self.clear()
@@ -96,42 +96,44 @@ function setRenderers(self) {
 			.style('padding', '3px 3px 3px 0px')
 			.style('opacity', 0.5)
 	}
-	self.showTermsForSelect = terms => {
-		// show terms as buttons, upon clicking, may ask app to emit 'gotTerm', possible?
+	self.showTermsForSelect = data => {
 		self.dom.resultDiv
 			.selectAll()
-			.data(terms)
+			.data(data.lst)
 			.enter()
 			.append('div')
 			.attr('sja_menuoption')
 			.text(d => d.name)
 			.on('click', self.selectTerm)
 	}
-	self.showTerms = terms => {
+	self.showTerms = data => {
 		self.clear()
 		const tr = self.dom.resultDiv
 			.append('table')
 			.selectAll()
-			.data(terms)
+			.data(data.lst)
 			.enter()
 			.append('tr')
-			.attr('class', 'sja_tr2')
 		tr.append('td')
 			.text(d => d.name)
-			.style('opacity', 0.5)
-		tr.append('td')
-			.filter(d => graphable(d))
-			.append('div')
 			.attr('class', 'sja_menuoption')
-			.text('VIEW')
-			.style('zoom', 0.8)
-			.on('click', self.showplot)
+			.on('click', d => {
+				/*
+				self.clear()
+				const lst = [root_ID]
+				if(data.id2ancestors[d.id]) {
+					lst.push(...data.id2ancestors[d.id])
+				}
+				self.app.dispatch({ type: 'tree_update', expandedTerms: lst })
+				*/
+			})
 		tr.append('td')
-			.append('span')
-			.text('TREE')
-			.style('font-size', '.8em')
-			.style('class', 'sja_clbtext')
-			.on('click', self.viewInTree)
+			.text(d => {
+				const lst = data.id2ancestors[d.id] || []
+				return lst.join(' > ')
+			})
+			.style('opacity', 0.5)
+			.style('font-size', '.7em')
 	}
 	self.clear = () => {
 		self.dom.resultDiv.selectAll('*').remove()
@@ -151,6 +153,4 @@ function setInteractivity(self) {
 	self.selectTerm = term => {
 		console.log('selected', term)
 	}
-	self.showplot = () => {}
-	self.viewInTree = () => {}
 }

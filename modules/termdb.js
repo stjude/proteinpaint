@@ -1,11 +1,11 @@
-const app = require("../app")
-const fs = require("fs")
-const path = require("path")
-const utils = require("./utils")
-const termdbsql = require("./termdb.sql")
-const phewas = require("./termdb.phewas")
+const app = require('../app')
+const fs = require('fs')
+const path = require('path')
+const utils = require('./utils')
+const termdbsql = require('./termdb.sql')
+const phewas = require('./termdb.phewas')
 
-const serverconfig = __non_webpack_require__("./serverconfig.json")
+const serverconfig = __non_webpack_require__('./serverconfig.json')
 
 /*
 ********************** EXPORTED
@@ -30,12 +30,12 @@ export function handle_request_closure(genomes) {
 
 		try {
 			const genome = genomes[q.genome]
-			if (!genome) throw "invalid genome"
+			if (!genome) throw 'invalid genome'
 			const ds = genome.datasets[q.dslabel]
-			if (!ds) throw "invalid dslabel"
-			if (!ds.cohort) throw "ds.cohort missing"
+			if (!ds) throw 'invalid dslabel'
+			if (!ds.cohort) throw 'ds.cohort missing'
 			const tdb = ds.cohort.termdb
-			if (!tdb) throw "no termdb for this dataset"
+			if (!tdb) throw 'no termdb for this dataset'
 
 			// process triggers
 
@@ -112,7 +112,7 @@ function trigger_children(q, res, tdb) {
 	/* get children terms
 may apply ssid: a premade sample set
 */
-	if (!q.tid) throw "no parent term id"
+	if (!q.tid) throw 'no parent term id'
 	res.send({ lst: tdb.q.getTermChildren(q.tid).map(copy_term) })
 }
 
@@ -130,14 +130,18 @@ do not directly hand over the term object to client; many attr to be kept on ser
 }
 
 function trigger_findterm(q, res, termdb) {
-	res.send({
-		lst: termdb.q.findTermByName(q.findterm, 10).map(copy_term)
+	// TODO also search categories
+	const terms = termdb.q.findTermByName(q.findterm, 10).map(copy_term)
+	const id2ancestors = {}
+	terms.forEach(term => {
+		id2ancestors[term.id] = termdb.q.getAncestorIDs(term.id)
 	})
+	res.send({ lst: terms, id2ancestors })
 }
 
 function trigger_treeto(q, res, termdb) {
 	const term = termdb.q.termjsonByOneid(q.treeto)
-	if (!term) throw "unknown term id"
+	if (!term) throw 'unknown term id'
 	const levels = [
 		{
 			focusid: q.treeto
@@ -161,7 +165,7 @@ function trigger_treeto(q, res, termdb) {
 function trigger_getcategories(q, res, tdb, ds) {
 	// thin wrapper of get_summary
 	// works for all types of terms, not just categorical
-	if (!q.tid) throw ".tid missing"
+	if (!q.tid) throw '.tid missing'
 	const arg = {
 		ds,
 		term1_id: q.tid,
@@ -202,6 +206,6 @@ function trigger_getterminfo(q, res, tdb) {
 	/* get terminfo the the term
 rightnow only few conditional terms have grade info
 */
-	if (!q.tid) throw "no term id"
+	if (!q.tid) throw 'no term id'
 	res.send({ terminfo: tdb.q.getTermInfo(q.tid) })
 }
