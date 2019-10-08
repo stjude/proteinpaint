@@ -5,13 +5,14 @@ import { plotInit, plotConfig } from './plot'
 import { searchInit } from './search'
 
 const childterm_indent = '30px'
+export const root_ID = 'root'
 // class names
 const cls_termdiv = 'termdiv',
 	cls_termchilddiv = 'termchilddiv',
 	cls_termbtn = 'termbtn',
 	cls_termview = 'termview',
-	cls_termlabel = 'termlabel'
-export const root_ID = 'root'
+	cls_termlabel = 'termlabel',
+	cls_termgraphdiv = 'termgraphdiv'
 
 /*
 Recommended Component Code Organization
@@ -236,11 +237,7 @@ function setRenderers(self) {
 
 		self.updateTerms(divs)
 
-		divs
-			.enter()
-			.append('div')
-			.attr('class', cls_termdiv)
-			.each(self.addTerm)
+		self.addTerms(divs)
 
 		for (const child of term.terms) {
 			if (expandedTerms.includes(child.id)) {
@@ -266,66 +263,52 @@ function setRenderers(self) {
 		divs.select('.' + cls_termchilddiv).style('display', d => (expandedTerms.includes(d.id) ? 'block' : 'none'))
 	}
 
-	self.addTerm = function addTerm(term) {
-		//console.log('addTerm', term.id)
-		const div = select(this)
-		div
-			.datum(term)
-			.style('display', 'block')
-			.style('margin', term.isleaf ? '' : '2px')
-			.style('padding', '0px 5px')
-			.style('padding-left', term.isleaf ? 0 : '')
-			.style('cursor', 'pointer')
-
-		let button
-		if (!term.isleaf) {
-			button = div
-				.append('div')
-				.datum(term)
-				.html('+')
-				.attr('class', 'sja_menuoption ' + cls_termbtn)
-				.style('display', 'inline-block')
-				.style('padding', '4px 9px')
-				.style('font-family', 'courier')
-				.on('click', self.toggleTerm)
-		}
-
-		div
+	self.addTerms = function(divs) {
+		const added = divs
+			.enter()
 			.append('div')
-			.datum(term)
-			.html(term.name)
+			.attr('class', cls_termdiv)
+			.style('margin', d => (d.isleaf ? '' : '2px'))
+			.style('padding', '0px 5px')
+
+		added
+			.filter(d => !d.isleaf)
+			.append('div')
+			.attr('class', 'sja_menuoption ' + cls_termbtn)
+			.style('display', 'inline-block')
+			.style('padding', '4px 9px')
+			.style('font-family', 'courier')
+			.text('+')
+			.on('click', self.toggleTerm)
+
+		added
+			.append('div')
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
-			.style('text-align', 'center')
 			.style('padding', '5px')
+			.text(d => d.name)
 
-		if (graphable(term)) {
-			div
-				.append('div')
-				.attr('class', cls_termview)
-				.datum(term)
-				.html('VIEW')
-				.style('display', 'inline-block')
-				.style('display', 'inline-block')
-				.style('border', '1px solid #aaa')
-				.style('padding', '2px 5px')
-				.style('margin-left', '50px')
-				.style('background', '#ececec')
-				.style('font-size', '0.8em')
-				.on('click', self.togglePlot)
-		}
-
-		const childdiv = div
+		added
+			.filter(graphable)
 			.append('div')
-			.datum(term)
+			.attr('class', 'sja_menuoption ' + cls_termview)
+			.style('display', 'inline-block')
+			.style('border-radius', '5px')
+			.style('margin-left', '20px')
+			.style('font-size', '0.8em')
+			.text('VIEW')
+			.on('click', self.togglePlot)
+
+		added
+			.filter(graphable)
+			.append('div')
+			.attr('class', cls_termgraphdiv)
+
+		added
+			.filter(d => !d.isleaf)
+			.append('div')
 			.attr('class', cls_termchilddiv)
 			.style('padding-left', childterm_indent)
-			.style('transition', '0.3s ease')
-
-		/*
-		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
-		if (expanded) self.renderBranch(term, childdiv, button)
-		*/
 	}
 
 	self.updatePlotView = function(action) {
