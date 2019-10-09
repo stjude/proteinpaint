@@ -14,25 +14,25 @@ export default function getHandlers(self) {
 		const term2 = self.terms.term2 ? self.terms.term2 : null
 		const term1unit = term1.unit
 		const seriesLabel =
-			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId) +
+			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId ? d.seriesId : d.id) +
 			(term1.unit ? ' ' + term1.unit : '')
 		const dataLabel =
-			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId) +
+			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
 			(term2 && term2.unit ? ' ' + term2.unit : '')
 		const icon = !term2
-		? ''
-		: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
-			d.color +
-			"'>&nbsp;</div>"
+			? ''
+			: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
+			  d.color +
+			  "'>&nbsp;</div>"
 		const header =
 			`<div style='padding:2px'><b>${term1.name}</b>: ${seriesLabel}</div>` +
-			(term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel} ${icon}</div>` : '')
+			(d.seriesId && term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel} ${icon}</div>` : '')
 
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id }
 		const termValues = getTermValues(data, self)
 		const options = [
 			{
-				label: 'Hide "' + seriesLabel + '"',
+				label: d.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
 				callback: () => {
 					self.settings.exclude.cols.push(d.seriesId === 0 ? 0 : d.seriesId || d.id)
 					self.main()
