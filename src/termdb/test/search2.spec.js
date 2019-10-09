@@ -30,17 +30,25 @@ tape('\n', function(test) {
 
 tape('term search', function(test) {
 	test.timeoutAfter(1000)
-	test.plan(2)
+	test.plan(3)
 
 	runpp({
 		callbacks: {
 			search: {
-				'postInit.test': testSearch
+				'postInit.test': testSearchNoresult
 			}
 		}
 	})
 
-	function testSearch(search) {
+	function testSearchNoresult(search) {
+		search.Inner.main({ str: 'xxxyyyzz' })
+		search.on('postRender', () => {
+			const div = search.Inner.dom.resultDiv.select('div').node()
+			test.equal(div.innerHTML, 'No match', 'should show "No match"')
+			testSearchHasresult(search)
+		})
+	}
+	function testSearchHasresult(search) {
 		search.Inner.main({ str: 'cardio' })
 		search.on('postRender', () => {
 			const table = search.Inner.dom.resultDiv.select('table').node()
