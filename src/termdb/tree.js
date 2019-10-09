@@ -5,13 +5,14 @@ import { plotInit, plotConfig } from './plot'
 import { searchInit } from './search'
 
 const childterm_indent = '30px'
+export const root_ID = 'root'
 // class names
 const cls_termdiv = 'termdiv',
 	cls_termchilddiv = 'termchilddiv',
 	cls_termbtn = 'termbtn',
 	cls_termview = 'termview',
-	cls_termlabel = 'termlabel'
-export const root_ID = 'root'
+	cls_termlabel = 'termlabel',
+	cls_termgraphdiv = 'termgraphdiv'
 
 /*
 Recommended Component Code Organization
@@ -124,15 +125,25 @@ class TdbTree {
 				this.viewPlot(action)
 				break
 			default:
-				const term = this.termsById[action.termId]
-				if (!term.terms) {
-					term.terms = await this.requestTerm(term)
-					delete term.__tree_isloading
-					if (action.loading_div) {
-						action.loading_div.remove()
+				if (action.type == 'tree_update') {
+					for (const id of this.app.state().tree.expandedTerms) {
+						const term = this.termsById[id]
+						if (!term.terms) {
+							term.terms = await this.requestTerm(term)
+						}
 					}
+					this.renderBranch(this.termsById[root_ID], this.dom.holder)
+				} else {
+					const term = this.termsById[action.termId]
+					if (!term.terms) {
+						term.terms = await this.requestTerm(term)
+						delete term.__tree_isloading
+						if (action.loading_div) {
+							action.loading_div.remove()
+						}
+					}
+					this.renderBranch(term, action.holder, action.button)
 				}
-				this.renderBranch(term, action.holder, action.button)
 		}
 		// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
 		this.bus.emit('postRender')
@@ -207,8 +218,8 @@ function setRenderers(self) {
 		*/
 		if (!term || !term.terms) return
 		if (!(term.id in self.termsById)) return
-		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
-		if (!expanded) {
+		const expandedTerms = self.app.state().tree.expandedTerms
+		if (!expandedTerms.includes(term.id)) {
 			div.style('display', 'none')
 			if (button) button.text('+')
 			return
@@ -224,13 +235,19 @@ function setRenderers(self) {
 
 		divs.exit().each(self.hideTerm)
 
-		divs.each(self.updateTerm)
+		self.updateTerms(divs)
 
-		divs
-			.enter()
-			.append('div')
-			.attr('class', cls_termdiv)
-			.each(self.addTerm)
+		self.addTerms(divs)
+
+		for (const child of term.terms) {
+			if (expandedTerms.includes(child.id)) {
+				self.renderBranch(
+					child,
+					div.selectAll('.' + cls_termchilddiv).filter(i => i.id == child.id),
+					div.selectAll('.' + cls_termbtn).filter(i => i.id == child.id)
+				)
+			}
+		}
 	}
 
 	// this == the d3 selected DOM node
@@ -239,98 +256,59 @@ function setRenderers(self) {
 		select(this).style('display', 'none')
 	}
 
-	self.updateTerm = function(term) {
-		const div = select(this)
-		div.datum(term)
-		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
-		const divs = selectAll(this.childNodes).filter(function() {
-			return !this.className.includes(cls_termchilddiv)
-		})
-
-		divs
-			.select('.' + cls_termbtn)
-			.datum(term)
-			.html(!expanded ? '+' : '-')
-
-		divs
-			.select('.' + cls_termlabel)
-			.datum(term)
-			.html(term.name)
-
-		divs
-			.select('.' + cls_termview)
-			.datum(term)
-			.html('VIEW')
-
-		const plot = self.app.state({ type: 'plot', id: term.id })
-		const isVisible = expanded || (plot && plot.isVisible)
-		const childdiv = divs
-			.select('.' + cls_termchilddiv)
-			.datum(term)
-			.style('display', expanded ? 'block' : 'none')
-			.style('overflow', isVisible ? '' : 'hidden')
-			.style('height', isVisible ? '' : 0)
-			.style('opacity', isVisible ? 1 : 0)
+	self.updateTerms = function(divs) {
+		const expandedTerms = self.app.state().tree.expandedTerms
+		divs.select('.' + cls_termbtn).text(d => (expandedTerms.includes(d.id) ? '-' : '+'))
+		// update other parts if needed, e.g. label
+		divs.select('.' + cls_termchilddiv).style('display', d => (expandedTerms.includes(d.id) ? 'block' : 'none'))
 	}
 
-	self.addTerm = function addTerm(term) {
-		//console.log('addTerm', term.id)
-		const div = select(this)
-		div
-			.datum(term)
-			.style('display', 'block')
-			.style('margin', term.isleaf ? '' : '2px')
-			.style('padding', '0px 5px')
-			.style('padding-left', term.isleaf ? 0 : '')
-			.style('cursor', 'pointer')
-
-		let button
-		if (!term.isleaf) {
-			button = div
-				.append('div')
-				.datum(term)
-				.html('+')
-				.attr('class', 'sja_menuoption ' + cls_termbtn)
-				.style('display', 'inline-block')
-				.style('padding', '4px 9px')
-				.style('font-family', 'courier')
-				.on('click', self.toggleTerm)
-		}
-
-		div
+	self.addTerms = function(divs) {
+		const added = divs
+			.enter()
 			.append('div')
-			.datum(term)
-			.html(term.name)
+			.attr('class', cls_termdiv)
+			.style('margin', d => (d.isleaf ? '' : '2px'))
+			.style('padding', '0px 5px')
+
+		added
+			.filter(d => !d.isleaf)
+			.append('div')
+			.attr('class', 'sja_menuoption ' + cls_termbtn)
+			.style('display', 'inline-block')
+			.style('padding', '4px 9px')
+			.style('font-family', 'courier')
+			.text('+')
+			.on('click', self.toggleTerm)
+
+		added
+			.append('div')
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
-			.style('text-align', 'center')
 			.style('padding', '5px')
+			.text(d => d.name)
 
-		if (graphable(term)) {
-			div
-				.append('div')
-				.attr('class', cls_termview)
-				.datum(term)
-				.html('VIEW')
-				.style('display', 'inline-block')
-				.style('display', 'inline-block')
-				.style('border', '1px solid #aaa')
-				.style('padding', '2px 5px')
-				.style('margin-left', '50px')
-				.style('background', '#ececec')
-				.style('font-size', '0.8em')
-				.on('click', self.togglePlot)
-		}
-
-		const childdiv = div
+		added
+			.filter(graphable)
 			.append('div')
-			.datum(term)
+			.attr('class', 'sja_menuoption ' + cls_termview)
+			.style('display', 'inline-block')
+			.style('border-radius', '5px')
+			.style('margin-left', '20px')
+			.style('font-size', '0.8em')
+			.text('VIEW')
+			.on('click', self.togglePlot)
+
+		added
+			.filter(graphable)
+			.append('div')
+			.attr('class', cls_termgraphdiv)
+
+		added
+			.filter(d => !d.isleaf)
+			.append('div')
 			.attr('class', cls_termchilddiv)
 			.style('padding-left', childterm_indent)
-			.style('transition', '0.3s ease')
-
-		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
-		if (expanded) self.renderBranch(term, childdiv, button)
 	}
 
 	self.updatePlotView = function(action) {

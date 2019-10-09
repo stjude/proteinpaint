@@ -40,6 +40,9 @@ class TdbStore {
 	constructor prototype
 */
 TdbStore.prototype.actions = {
+	tree_update(action) {
+		this.state.tree.expandedTerms = action.expandedTerms
+	},
 	tree_expand(action) {
 		if (this.state.tree.expandedTerms.includes(action.termId)) return
 		this.state.tree.expandedTerms.push(action.termId)
@@ -51,8 +54,7 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTerms.splice(i, 1)
 	},
 
-	search_(action) {
-	},
+	search_(action) {},
 
 	plot_add(action) {
 		this.state.tree.plots[action.id] = action.config
@@ -109,8 +111,8 @@ TdbStore.prototype.actions = {
 		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
 		if (i == -1) return
 		const term = this.state.termfilter.terms[i]
-		term.values.splice(action.valueId,1)
-		if(term.values.length == 0){
+		term.values.splice(action.valueId, 1)
+		if (term.values.length == 0) {
 			this.state.termfilter.terms.splice(i, 1)
 		}
 	}
