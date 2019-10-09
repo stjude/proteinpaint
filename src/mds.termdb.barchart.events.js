@@ -14,8 +14,8 @@ export default function getHandlers(self) {
 		const term2 = self.terms.term2 ? self.terms.term2 : null
 		const uncomp_term1 = term1.values ? Object.values(term1.values).map(v=>v.label) : []
 		const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v=>v.label) : []
-		const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId) ? ' ' + term1.unit : ''
-		const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId) ? ' ' + term2.unit : ''
+		const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
+		const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId || d.id) ? ' ' + term2.unit : ''
 		const seriesLabel =
 			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId ? d.seriesId : d.id) +
 			term1unit
