@@ -4,6 +4,25 @@ const serverconfig = require('../../../serverconfig')
 const host = 'http://localhost:' + serverconfig.port
 const helpers = require('../../../test/front.helpers.js')
 
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('termdb', {
+	state: {
+		dslabel: 'SJLife',
+		genome: 'hg38'
+	},
+	debug: 1,
+	fetchOpts: {
+		serverData: helpers.serverData
+	}
+  })
+
+/**************
+ test sections
+***************/
+
 tape('\n', function(test) {
 	test.pass('-***- tdb.tree.search -***-')
 	test.end()
@@ -13,39 +32,44 @@ tape('term search', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(1)
 
-	runproteinpaint({
-		host,
-		noheader: 1,
-		nobox: true,
-		termdb: {
-			state: {
-				dslabel: 'SJLife',
-				genome: 'hg38'
-			},
-			callbacks: {
-				search: {
-					'postInit.test': testSearch
-				}
-			},
-			debug: 1,
-			serverData: helpers.serverData
+	runpp({
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38'
 		},
-		serverData: helpers.serverData
+		callbacks: {
+			search: {
+				'postInit.test': runTests
+			}
+		}
 	})
-	async function testSearch(comp) {
-		await comp.Inner.app.dispatch({ type: 'search_', str: 'cardio' })
-		comp.Inner.app.on('postRender', () => {
-			const table = comp.Inner.dom.resultDiv.select('table').node()
-			test.equal(table.childNodes.length, 3, 'should show 3 matching entries')
 
-			testViewButton(table)
-			testTreeButton(table)
-		})
+	function runTests(search) {
+		search.on('postInit.test', null)
+		helpers
+			.rideInit({ arg: search })
+			.run(triggerSearch)
+			.run(testSearch, 100)
+			.run(testViewButton)
+			.run(testTreeButton)
+			.done(() => test.end())
 	}
-	function testViewButton(table) {
+
+	function triggerSearch(search){
+		search.Inner.app.dispatch({ type: 'search_', str: 'cardio' })
+	}
+
+	function testSearch(search) {
+		const table = search.Inner.dom.resultDiv.select('table').node()
+		test.equal(table.childNodes.length, 3, 'should show 3 matching entries')
+	}
+
+	function testViewButton(search) {
+		const table = search.Inner.dom.resultDiv.select('table').node()
 		// click on the view button of the first term <tr> in table, see if loads
 	}
-	function testTreeButton(table) {
+	function testTreeButton(search) {
+		const table = search.Inner.dom.resultDiv.select('table').node()
 		// click on the Tree button of first term in table, see if loads
 	}
 })

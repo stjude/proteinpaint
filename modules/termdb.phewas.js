@@ -27,9 +27,9 @@ const minimum_total_sample = 10
 
 export async function trigger(q, res, ds) {
 	/* run on the fly phewas
-q{}
-.ssid
-*/
+	q{}
+	.ssid
+	*/
 	if (!ds.cohort) throw 'ds.cohort missing'
 	if (!ds.cohort.termdb) throw 'cohort.termdb missing'
 	if (!ds.cohort.termdb.phewas) throw 'not allowed on this dataset'
@@ -88,7 +88,7 @@ q{}
 			*/
 
 			// number of samples by genotype in case
-			const [het, halt, href] = get_numsample_pergenotype(sample2gt, category.group1lst)
+			const [het1, halt1, href1] = get_numsample_pergenotype(sample2gt, category.group1lst)
 
 			// number of samples by genotype in control
 			let het2, halt2, href2
@@ -96,9 +96,9 @@ q{}
 			if (category.group2lst) {
 				;[het2, halt2, href2] = get_numsample_pergenotype(sample2gt, category.group2lst)
 			} else {
-				het2 = het0 - het
-				halt2 = halt0 - halt
-				href2 = href0 - href
+				het2 = het0 - het1
+				halt2 = halt0 - halt1
+				href2 = href0 - href1
 			}
 
 			tests.push({
@@ -109,10 +109,18 @@ q{}
 				group2label: category.group2label,
 				q: q.term1_q,
 				table: [
+					href1,
+					href2,
+					het1,
+					het2,
+					halt1,
+					halt2
+					/* by allele count
 					het + 2 * halt, // case alt
 					het + 2 * href, // case ref
 					het2 + 2 * halt2, // ctrl alt
 					het2 + 2 * href2 // ctrl ref
+					*/
 				]
 			})
 		}
@@ -128,26 +136,14 @@ q{}
 		}
 		const tmpfile = path.join(serverconfig.cachedir, Math.random().toString())
 		await utils.write_file(tmpfile, lines.join('\n'))
-		const pfile = await utils.run_fishertest(tmpfile)
+		const pfile = await utils.run_fishertest2x3(tmpfile)
 		const text = await utils.read_file(pfile)
 		let i = 0
 		for (const line of text.trim().split('\n')) {
-			tests[i++].pvalue = Number(line.split('\t')[5])
-			/*
-			const l = line.split('\t')
-			const p = Number.parseFloat(l[5])
-			pvalues.push(p)
-			*/
+			tests[i++].pvalue = Number(line.split('\t')[7])
 		}
 		fs.unlink(tmpfile, () => {})
 		fs.unlink(pfile, () => {})
-
-		/* fdr
-		const fdr = await utils.run_fdr( pvalues )
-		for(const [i,p] of fdr.entries()) {
-			tests[i].pvalue = p
-		}
-		*/
 	}
 
 	result.maxlogp = get_maxlogp(tests)

@@ -11,6 +11,7 @@ const cls_termdiv = 'termdiv',
 	cls_termbtn = 'termbtn',
 	cls_termview = 'termview',
 	cls_termlabel = 'termlabel'
+export const root_ID = 'root'
 
 /*
 Recommended Component Code Organization
@@ -22,6 +23,11 @@ Recommended Component Code Organization
 (b) setRenderers(self): attaches renderer methods
 
 (c) setInteractivity(self): attaches event handlers
+
+******************** EXPORTED
+treeInit()
+graphable()
+root_ID
 
 ********************
 exit/update/enter
@@ -39,6 +45,23 @@ any change of modifier should update termsById first, then call renderBranch() a
 special flags
 root term does not exist in the termdb, but is synthesized upon initializing instance, has the "__tree_isroot" flag
 "__tree_isloading" flag is added when a term is first clicked
+
+
+*******************
+< no modifier >
+display all terms under a parent, just show name;
+non-leaf terms will have a +/- button in the front
+graphable terms will have a VIEW button at the back
+
+< modifier_click_term >
+display graphable terms as buttons, as in <search.js>
+no VIEW button
+
+< modifier_ssid_barchart >
+todo
+
+< modifier_barchart_selectbar >
+todo
 
 */
 
@@ -65,49 +88,51 @@ class TdbTree {
 		setInteractivity(this)
 
 		this.components = {
-			search: searchInit(app, {holder:opts.holder}),
+			search: searchInit(app, { holder: opts.holder }),
 			plots: {}
 		}
 
-		const rootTerm = {
-			id: 'root',
+		// privately defined root term
+		this.rootTerm = {
+			id: root_ID,
 			__tree_isroot: true
 		}
 
-		this.termsById = { root: rootTerm }
+		this.termsById = {}
+		this.termsById[root_ID] = this.rootTerm
 		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
 		this.app.dispatch({
 			type: 'tree_expand',
-			termId: 'root',
-			term: rootTerm,
+			termId: root_ID,
+			term: this.rootTerm,
 			holder: this.dom.holder
 		})
 		this.bus.emit('postInit')
 	}
 
 	reactsTo(action, acty) {
-		if (acty[0] == 'tree' || acty[0] == 'plot' || acty[0] == 'filter' || acty[0]=='search') return true
+		if (acty[0] == 'tree' || acty[0] == 'plot' || acty[0] == 'filter' || acty[0] == 'search') return true
 	}
 
 	async main(action = {}) {
-		switch(action.type.split('_')[0]) {
-		case 'filter':
-		case 'search':
-			await this.notifyComponents(action)
-			break
-		case 'plot':
-			this.viewPlot(action)
-			break
-		default:
-			const term = this.termsById[action.termId]
-			if (!term.terms) {
-				term.terms = await this.requestTerm(term)
-				delete term.__tree_isloading
-				if (action.loading_div) {
-					action.loading_div.remove()
+		switch (action.type.split('_')[0]) {
+			case 'filter':
+			case 'search':
+				await this.notifyComponents(action)
+				break
+			case 'plot':
+				this.viewPlot(action)
+				break
+			default:
+				const term = this.termsById[action.termId]
+				if (!term.terms) {
+					term.terms = await this.requestTerm(term)
+					delete term.__tree_isloading
+					if (action.loading_div) {
+						action.loading_div.remove()
+					}
 				}
-			}
-			this.renderBranch(term, action.holder, action.button)
+				this.renderBranch(term, action.holder, action.button)
 		}
 		// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
 		this.bus.emit('postRender')
@@ -281,7 +306,7 @@ function setRenderers(self) {
 			.style('text-align', 'center')
 			.style('padding', '5px')
 
-		if (term.isleaf) {
+		if (graphable(term)) {
 			div
 				.append('div')
 				.attr('class', cls_termview)
@@ -376,4 +401,9 @@ function setInteractivity(self) {
 			self.app.dispatch({ type, id: term.id, term })
 		}
 	}
+}
+
+export function graphable(term) {
+	// terms with a valid type supports graph
+	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
 }

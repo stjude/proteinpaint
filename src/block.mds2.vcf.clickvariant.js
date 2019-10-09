@@ -33,7 +33,7 @@ p{}
 	const tabs = []
 	addtab_functionalannotation(tabs, m, tk, block)
 	mayaddtab_fishertable(tabs, m, tk, block)
-	//mayaddtab_termdbbygenotype( tabs, m, tk, block )
+	mayaddtab_termdbbygenotype(tabs, m, tk, block)
 	mayaddtab_phewas(tabs, m, tk, block)
 	//mayaddtab_ld( tabs, m, tk, block )
 	mayaddtab_mafcovplot(tabs, m, tk, block)
@@ -650,19 +650,19 @@ async function overlay_ld(m, tk, block) {
 
 	const data = await client.dofetch('mds2', par)
 
-	const pos2r2 = new Map()
-	// k: pos
+	const key2r2 = new Map()
+	// k: pos+'.'+alleles
 	// v: r2
 	for (const v of data.lst) {
-		pos2r2.set(v.pos, v.r2)
+		key2r2.set(v.pos + '.' + v.alleles, v.r2)
 	}
 
 	tk.skewer2.selectAll('.sja_aa_disk_fill').attr('fill', m2 => {
-		if (m2.pos == m.pos) {
+		if (m2.pos == m.pos && m2.ref == m.ref && m2.alt == m.alt) {
 			// self
 			return tk.ld.overlay.color_1
 		}
-		const r2 = pos2r2.get(m2.pos) || 0
+		const r2 = key2r2.get(m2.pos + '.' + m2.ref + '.' + m2.alt) || 0
 		return tk.ld.overlay.r2_to_color(r2)
 	})
 
@@ -671,7 +671,7 @@ async function overlay_ld(m, tk, block) {
 	// overlay by adding to <g> of the disks
 	tk.skewer2
 		.selectAll('.sja_aa_discg')
-		.filter(m2 => m2.pos == m.pos)
+		.filter(m2 => m2.pos == m.pos && m2.ref == m.ref && m2.alt == m.alt)
 		.node()
 		.appendChild(tk.ld.overlay.vcfcircle.node())
 }

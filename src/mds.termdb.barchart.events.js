@@ -12,22 +12,30 @@ export default function getHandlers(self) {
 		// while bar data has all required data including seriesId
 		const term1 = self.terms.term1
 		const term2 = self.terms.term2 ? self.terms.term2 : null
-		const term1unit = term1.unit
+		const uncomp_term1 = term1.values ? Object.values(term1.values).map(v=>v.label) : []
+		const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v=>v.label) : []
+		const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId) ? ' ' + term1.unit : ''
+		const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId) ? ' ' + term2.unit : ''
 		const seriesLabel =
-			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId) +
-			(term1.unit ? ' ' + term1.unit : '')
+			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId ? d.seriesId : d.id) +
+			term1unit
 		const dataLabel =
-			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId) +
-			(term2 && term2.unit ? ' ' + term2.unit : '')
+			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
+			term2unit
+		const icon = !term2
+			? ''
+			: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
+			  d.color +
+			  "'>&nbsp;</div>"
 		const header =
 			`<div style='padding:2px'><b>${term1.name}</b>: ${seriesLabel}</div>` +
-			(term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel}</div>` : '')
+			(d.seriesId && term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel} ${icon}</div>` : '')
 
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id }
 		const termValues = getTermValues(data, self)
 		const options = [
 			{
-				label: 'Hide this bar',
+				label: d.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
 				callback: () => {
 					self.settings.exclude.cols.push(d.seriesId === 0 ? 0 : d.seriesId || d.id)
 					self.main()
@@ -36,7 +44,7 @@ export default function getHandlers(self) {
 		]
 		if (d.dataId || d.dataId === 0) {
 			options.push({
-				label: 'Hide this overlay value',
+				label: 'Hide "' + dataLabel + '" ' + icon,
 				callback: () => {
 					self.settings.exclude.rows.push(d.dataId)
 					self.main()
@@ -64,13 +72,16 @@ export default function getHandlers(self) {
 			mouseover(d) {
 				const term1 = self.terms.term1
 				const term2 = self.terms.term2 ? self.terms.term2 : null
-				const term1unit = term1.unit
+				const uncomp_term1 = term1.values ? Object.values(term1.values).map(v=>v.label) : []
+				const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v=>v.label) : []
+				const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId) ? ' ' + term1.unit : ''
+				const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId) ? ' ' + term2.unit : ''
 				const seriesLabel =
 					(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId) +
-					(term1.unit ? ' ' + term1.unit : '')
+					term1unit
 				const dataLabel =
 					(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId) +
-					(term2 && term2.unit ? ' ' + term2.unit : '')
+					term2unit
 				const icon = !term2
 					? ''
 					: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +

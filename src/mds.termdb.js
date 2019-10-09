@@ -320,7 +320,7 @@ such conditions may be carried by obj
 		.style('display', 'inline-block')
 		.style('border-radius', button_radius)
 		.attr('class', 'sja_menuoption')
-		.style('box-sizing','content-box')
+		.style('box-sizing', 'content-box')
 		.text('VIEW')
 
 	// const view_btn_line = button_div.append('div')
@@ -667,7 +667,7 @@ barchart is shown in-place under term and in full capacity
 		}
 		try {
 			// query
-			const data = await obj.do_query(['findterm=' + str])
+			const data = await obj.do_query(['findterm=' + encodeURIComponent(str)])
 			if (data.error) throw data.error
 			if (!data.lst || data.lst.length == 0) throw 'No match'
 
