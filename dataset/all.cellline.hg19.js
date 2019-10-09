@@ -34,7 +34,10 @@ module.exports={
 	sampleAssayTrack:{
 		file:'files/hg19/all.cellline.mds/tracktable/__table'
 	},
-	
+
+	singlesamplemutationjson:{
+		file:'files/hg19/all.cellline.mds/mutationpersample/table'
+	},	
 	/*
 	cohort and sample annotation
 	*/
@@ -147,7 +150,10 @@ module.exports={
 					file:'files/hg19/all.cellline.mds/cellline.vcf.gz',
 					type:'vcf',
 				}
-			]
+			],
+			singlesamples:{
+				tablefile:'files/hg19/all.cellline.mds/split.vcf/table'
+			}
 		},
 
 		genefpkm:{
