@@ -41,7 +41,7 @@ class TermSearch {
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
 		this.initUI()
-		this.bus = new rx.Bus('search', ['postInit'], app.opts.callbacks, this.api)
+		this.bus = new rx.Bus('search', ['postInit', 'postRender'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit')
 	}
 
@@ -50,6 +50,11 @@ class TermSearch {
 	}
 
 	async main(action) {
+		await this.main2(action)
+		this.bus.emit('postRender')
+	}
+
+	async main2(action) {
 		try {
 			const state = this.app.state()
 			const lst = ['genome=' + state.genome, 'dslabel=' + state.dslabel, 'findterm=' + encodeURIComponent(action.str)]
