@@ -1,17 +1,17 @@
-const tape = require("tape")
-const d3s = require("d3-selection")
-const termjson = require("./termjson").termjson
-const serverconfig = require("../../serverconfig")
-const host = "http://localhost:" + serverconfig.port
-const helpers = require("../front.helpers.js")
+const tape = require('tape')
+const d3s = require('d3-selection')
+const termjson = require('./termjson').termjson
+const serverconfig = require('../../serverconfig')
+const host = 'http://localhost:' + serverconfig.port
+const helpers = require('../front.helpers.js')
 
-tape("\n", function(test) {
-	test.pass("-***- mds.termdb.table -***-")
+tape('\n', function(test) {
+	test.pass('-***- mds.termdb.boxplot -***-')
 	test.end()
 })
 
-tape("overlay-dependent display", function(test) {
-	const div0 = d3s.select("body").append("div")
+tape('overlay-dependent display', function(test) {
+	const div0 = d3s.select('body').append('div')
 	const termfilter = { show_top_ui: true, callbacks: [] }
 
 	runproteinpaint({
@@ -20,14 +20,14 @@ tape("overlay-dependent display", function(test) {
 		noheader: 1,
 		nobox: true,
 		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
+			dslabel: 'SJLife',
+			genome: 'hg38',
 			default_rootterm: {},
 			termfilter,
 			plot2restore: {
-				term: termjson["diaggrp"],
+				term: termjson['diaggrp'],
 				settings: {
-					currViews: ["boxplot"]
+					currViews: ['boxplot']
 				}
 			},
 			callbacks: {
@@ -40,42 +40,42 @@ tape("overlay-dependent display", function(test) {
 	})
 
 	function testHiddenNoOverlay(plot) {
-		test.equal(plot.components.boxplot.dom.svg.style("display"), "none", "should be HIDDEN when there is no overlay")
+		test.equal(plot.components.boxplot.dom.svg.style('display'), 'none', 'should be HIDDEN when there is no overlay')
 	}
 
 	function triggerViewBoxplot(plot) {
-		plot.bus.on("postRender", [testVisibleBoxplot, triggerNonNumericOverlay])
+		plot.bus.on('postRender', [testVisibleBoxplot, triggerNonNumericOverlay])
 		plot.main({
-			term2: { term: termjson["agedx"] },
+			term2: { term: termjson['agedx'] },
 			settings: {
-				currViews: ["boxplot"]
+				currViews: ['boxplot']
 			}
 		})
 	}
 
 	function testVisibleBoxplot(plot) {
 		test.equal(
-			plot.components.boxplot.dom.svg.style("display"),
-			"inline-block",
-			"should be visible when there is a numeric overlay"
+			plot.components.boxplot.dom.svg.style('display'),
+			'inline-block',
+			'should be visible when there is a numeric overlay'
 		)
 	}
 
 	function triggerNonNumericOverlay(plot) {
-		plot.bus.on("postRender", testHiddenNonNumericOverlay)
+		plot.bus.on('postRender', testHiddenNonNumericOverlay)
 		plot.main({
-			term2: { term: termjson["Arrhythmias"] },
+			term2: { term: termjson['Arrhythmias'] },
 			settings: {
-				currViews: ["boxplot"]
+				currViews: ['boxplot']
 			}
 		})
 	}
 
 	function testHiddenNonNumericOverlay(plot) {
 		test.equal(
-			plot.components.boxplot.dom.svg.style("display"),
-			"none",
-			"should be HIDDEN when the overlay is not numeric"
+			plot.components.boxplot.dom.svg.style('display'),
+			'none',
+			'should be HIDDEN when the overlay is not numeric'
 		)
 		test.end()
 	}

@@ -86,7 +86,7 @@ arg:
 		term2: arg.term2
 			? { term: arg.term2, q: arg.term2.q ? arg.term2.q : {} }
 			: arg.obj.modifier_ssid_barchart
-			? { mname: arg.obj.modifier_ssid_barchart.mutation_name }
+			? { mname: arg.obj.modifier_ssid_barchart.mutation_name, term: {} }
 			: null,
 		unannotated: arg.unannotated ? arg.unannotated : ''
 	})
