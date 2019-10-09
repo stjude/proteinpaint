@@ -1,6 +1,6 @@
 import * as rx from '../rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch2 } from '../client'
+import { dofetch2, sayerror } from '../client'
 import { debounce } from 'debounce'
 import { graphable, root_ID } from './tree'
 
@@ -50,23 +50,27 @@ class TermSearch {
 	}
 
 	async main(action) {
-		const state = this.app.state()
-		const lst = ['genome=' + state.genome, 'dslabel=' + state.dslabel, 'findterm=' + encodeURIComponent(action.str)]
-		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
-		if (data.error) throw data.error
-		if (!data.lst || data.lst.length == 0) {
-			this.noResult()
-			return
+		try {
+			const state = this.app.state()
+			const lst = ['genome=' + state.genome, 'dslabel=' + state.dslabel, 'findterm=' + encodeURIComponent(action.str)]
+			const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+			if (data.error) throw data.error
+			if (!data.lst || data.lst.length == 0) {
+				this.noResult()
+				return
+			}
+			// found terms
+			if (state.modifier_click_term) {
+				this.showTermsForSelect(data)
+				return
+			}
+			// no modifier
+			this.showTerms(data)
+		} catch (e) {
+			this.clear()
+			sayerror(this.dom.resultDiv, 'Error: ' + (e.message || e))
+			if (e.stack) console.log(e.stack)
 		}
-		// found terms
-
-		if (state.modifier_click_term) {
-			this.showTermsForSelect(data)
-			return
-		}
-
-		// no modifier
-		this.showTerms(data)
 	}
 }
 
@@ -146,7 +150,7 @@ function setInteractivity(self) {
 			self.clear()
 			return
 		}
-		self.app.dispatch({ type: 'search_', str })
+		self.main({ str })
 	}
 	self.selectTerm = term => {
 		console.log('selected', term)

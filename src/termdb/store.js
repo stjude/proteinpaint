@@ -54,8 +54,6 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTerms.splice(i, 1)
 	},
 
-	search_(action) {},
-
 	plot_add(action) {
 		this.state.tree.plots[action.id] = action.config
 	},

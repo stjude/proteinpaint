@@ -17,7 +17,7 @@ const runpp = helpers.getRunPp('termdb', {
 	fetchOpts: {
 		serverData: helpers.serverData
 	}
-  })
+})
 
 /**************
  test sections
@@ -30,13 +30,9 @@ tape('\n', function(test) {
 
 tape('term search', function(test) {
 	test.timeoutAfter(1000)
-	test.plan(1)
+	test.plan(2)
 
 	runpp({
-		state: {
-			dslabel: 'SJLife',
-			genome: 'hg38'
-		},
 		callbacks: {
 			search: {
 				'postInit.test': runTests
@@ -49,28 +45,32 @@ tape('term search', function(test) {
 		helpers
 			.rideInit({ arg: search })
 			.run(triggerSearch)
-			.run(testSearch, 100)
-			.run(testViewButton)
-			.run(testTreeButton)
+			.run(testSearchResult, 100)
+			.run(triggerClickTerm)
+			.run(testClickResult, 100)
 			.done(() => test.end())
 	}
 
-	function triggerSearch(search){
-		search.Inner.app.dispatch({ type: 'search_', str: 'cardio' })
+	function triggerSearch(search) {
+		search.Inner.main({ str: 'cardio' })
 	}
 
-	function testSearch(search) {
+	function testSearchResult(search) {
 		const table = search.Inner.dom.resultDiv.select('table').node()
 		test.equal(table.childNodes.length, 3, 'should show 3 matching entries')
 	}
 
-	function testViewButton(search) {
-		const table = search.Inner.dom.resultDiv.select('table').node()
-		// click on the view button of the first term <tr> in table, see if loads
+	function triggerClickTerm(search) {
+		search.Inner.dom.resultDiv
+			.select('table')
+			.node()
+			.childNodes[0].childNodes[0].click()
 	}
-	function testTreeButton(search) {
-		const table = search.Inner.dom.resultDiv.select('table').node()
-		// click on the Tree button of first term in table, see if loads
+	function testClickResult(search) {
+		test.ok(
+			search.Inner.app.Inner.dom.holder.selectAll('.termdiv').nodes().length > 10,
+			'should be showing more than 10 terms'
+		)
 	}
 })
 
