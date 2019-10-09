@@ -1,193 +1,241 @@
-module.exports={
-	species:'human',
-	genomefile:'genomes/hg19.gz',
-	genedb:{
-		dbfile:'anno/genes.hg19.db',
-		hasalias:true
+module.exports = {
+	species: 'human',
+	genomefile: 'genomes/hg19.gz',
+	genedb: {
+		dbfile: 'anno/genes.hg19.db',
+		hasalias: true
 	},
-	proteindomain:{
-		dbfile:'anno/db/proteindomain.db',
+	proteindomain: {
+		dbfile: 'anno/db/proteindomain.db',
 		statement: 'select data from domain where isoform=? collate nocase'
 	},
-	snp:{
-		dbfile:'anno/db/snp146.hg19.db',
-		statement_getbyname:'select * from snp146 where name=?',
-		statement_getbycoord:'select * from snp146 where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
+	snp: {
+		dbfile: 'anno/db/snp146.hg19.db',
+		statement_getbyname: 'select * from snp146 where name=?',
+		statement_getbycoord: 'select * from snp146 where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
 	},
-	fimo_motif:{
+	fimo_motif: {
 		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',
-		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv',
+		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
 	},
-	clinvarVCF:{
-		file:'hg19/clinvar.hg19.vcf.gz',
-		infokey:'CLNSIG',
-		categories:{
-			'Uncertain_significance':{color:'#aaa',label:'Uncertain significance',textcolor:'white'},
-			'not_provided': {color:'#ccc',label:'Not provided'},
-			'_not_provided':{color:'#ccc',label:'Not provided'},
-			'Benign':{color:'#43ac6a',label:'Benign',textcolor:'white'},
+	clinvarVCF: {
+		file: 'hg19/clinvar.hg19.vcf.gz',
+		infokey: 'CLNSIG',
+		categories: {
+			Uncertain_significance: { color: '#aaa', label: 'Uncertain significance', textcolor: 'white' },
+			not_provided: { color: '#ccc', label: 'Not provided' },
+			_not_provided: { color: '#ccc', label: 'Not provided' },
+			Benign: { color: '#43ac6a', label: 'Benign', textcolor: 'white' },
 
-			'Benign/Likely_benign':{color:'#43ac6a',label:'Benign/Likely benign',textcolor:'white'},
+			'Benign/Likely_benign': { color: '#43ac6a', label: 'Benign/Likely benign', textcolor: 'white' },
 
-			'Likely_benign':{color:'#5bc0de',label:'Likely benign',textcolor:'white'},
-			'Likely_pathogenic':{color:'#e99002',label:'Likely pathogenic',textcolor:'white'},
-			'Pathogenic':{color:'#f04124',label:'Pathogenic',textcolor:'white'},
-			'Pathogenic/Likely_pathogenic':{color:'#f04124',label:'Pathogenic/Likely pathogenic',textcolor:'white'},
-			'drug_response':{color:'gold',label:'Drug response',textcolor:'white'},
-			'_drug_response':{color:'gold',label:'Drug response',textcolor:'white'},
-			'Conflicting_interpretations_of_pathogenicity':{color:'#90C3D4',label:'Conflicting interpretations of pathogenicity'},
-			'other':{color:'#ccc',label:'Other'},
-			'_other':{color:'#ccc',label:'Other'},
-			'not_provided':{color:'#ccc',label:'Not provided'},
-			'_not_provided':{color:'#ccc',label:'Not provided'},
-			'risk_factor':{color:'#ccc',label:'Risk factor'},
-			'_risk_factor':{color:'#ccc',label:'Risk factor'},
-			'association':{color:'#ccc',label:'Association'},
-			'_association':{color:'#ccc',label:'Association'},
-			'Affects':{color:'#ccc',label:'Affects'},
-			'_Affects':{color:'#ccc',label:'Affects'},
-			'protective':{color:'#ccc',label:'Protective'},
-			'_protective':{color:'#ccc',label:'Protective'},
+			Likely_benign: { color: '#5bc0de', label: 'Likely benign', textcolor: 'white' },
+			Likely_pathogenic: { color: '#e99002', label: 'Likely pathogenic', textcolor: 'white' },
+			Pathogenic: { color: '#f04124', label: 'Pathogenic', textcolor: 'white' },
+			'Pathogenic/Likely_pathogenic': { color: '#f04124', label: 'Pathogenic/Likely pathogenic', textcolor: 'white' },
+			drug_response: { color: 'gold', label: 'Drug response', textcolor: 'white' },
+			_drug_response: { color: 'gold', label: 'Drug response', textcolor: 'white' },
+			Conflicting_interpretations_of_pathogenicity: {
+				color: '#90C3D4',
+				label: 'Conflicting interpretations of pathogenicity'
+			},
+			other: { color: '#ccc', label: 'Other' },
+			_other: { color: '#ccc', label: 'Other' },
+			not_provided: { color: '#ccc', label: 'Not provided' },
+			_not_provided: { color: '#ccc', label: 'Not provided' },
+			risk_factor: { color: '#ccc', label: 'Risk factor' },
+			_risk_factor: { color: '#ccc', label: 'Risk factor' },
+			association: { color: '#ccc', label: 'Association' },
+			_association: { color: '#ccc', label: 'Association' },
+			Affects: { color: '#ccc', label: 'Affects' },
+			_Affects: { color: '#ccc', label: 'Affects' },
+			protective: { color: '#ccc', label: 'Protective' },
+			_protective: { color: '#ccc', label: 'Protective' }
 		}
 	},
-	tracks:[
+	tracks: [
 		{
-			__isgene:true, // only for initialization 
-			translatecoding:true, // instructs to translate coding:[]
-			file:'anno/refGene.hg19.gz',
-			type:'bedj',
-			name:'RefGene',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
-			color:'#1D591D',
+			__isgene: true, // only for initialization
+			translatecoding: true, // instructs to translate coding:[]
+			file: 'anno/refGene.hg19.gz',
+			type: 'bedj',
+			name: 'RefGene',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#1D591D'
 		},
 		{
-			__isgene:true,
-			translatecoding:true,
-			file:'anno/gencode.v28.hg19.gz',
-			type:'bedj',
-			name:'GENCODE v28',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
-			categories:{"coding":{"color":"#004D99","label":"Coding gene"},"nonCoding":{"color":"#009933","label":"Noncoding gene"},"problem":{"color":"#FF3300","label":"Problem"},"pseudo":{"color":"#FF00CC","label":"Pseudogene"}}
+			__isgene: true,
+			translatecoding: true,
+			file: 'anno/gencode.v31.hg19.gz',
+			type: 'bedj',
+			name: 'GENCODE v31',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			categories: {
+				coding: { color: '#004D99', label: 'Coding gene' },
+				nonCoding: { color: '#009933', label: 'Noncoding gene' },
+				problem: { color: '#FF3300', label: 'Problem' },
+				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
+			}
 		},
 		{
-			"type":"bedj",
-			"name":"RepeatMasker",
-			"stackheight":14,
-			"file":"anno/rmsk.hg19.gz","onerow":true, "categories":
-			{"SINE":{"color":"#ED8C8E","label":"SINE"},"LINE":{"color":"#EDCB8C","label":"LINE"},"LTR":{"color":"#E38CED","label":"LTR"},"DNA":{"color":"#8C8EED","label":"DNA transposon"},"simple":{"color":"#8EB88C","label":"Simple repeats"},"low_complexity":{"color":"#ACEBA9","label":"Low complexity"},"satellite":{"color":"#B59A84","label":"Satellite"},"RNA":{"color":"#9DE0E0","label":"RNA repeat"},"other":{"color":"#9BADC2","label":"Other"},"unknown":{"color":"#858585","label":"Unknown"}}
-		}
-	],
-	geneset:[
-		{name:'Signaling',lst:[
-			{name:'NRAS'},
-			{name:'FLT3'},
-			{name:'KRAS'},
-			{name:'JAK3'},
-			{name:'BRAF'},
-			{name:'NF1'},{name:'MAPK1'},
-		]},
-		{name:'Cell cycle',lst:[
-			{name:'TP53'},{name:'RB1'},{name:'CDKN2A'},{name:'CDKN2B'}
-			]},
-		{name:'Epigenetics',lst:[
-			{name:'ATRX'},
-			{name:'BCOR'},
-			{name:'MYC'},
-			{name:'MYCN'},
-			{name:'WHSC1'},{name:'SUZ12'},{name:'EED'},{name:'EZH2'},{name:'SETD2'},
-			{name:'CREBBP'},{name:'EHMT2'},{name:'PRDM1'},{name:'NSD1'},{name:'KMT2D'},{name:'UBR4'},{name:'ARID1A'},{name:'EP300'},
-		]},
-		{name:'Development',lst:[
-			{name:'RUNX1'},{name:'ETV6'},{name:'GATA3'},{name:'IKZF1'},{name:'EP300'},
-			{name:'IKZF2'},{name:'IKZF3'},{name:'PAX5'},{name:'VPREB1'},{name:'EBF1'},
-		]}
-	],
-	defaultcoord:{
-		chr:'chr17',
-		start:7568451,
-		stop:7591984,
-		gene:'TP53'
-	},
-
-	hicenzymefragment:[
-		{
-		enzyme: 'DpnII',
-		file: 'anno/hicFragment/hic.DpnII.hg19.gz'
-		},
-		{
-		enzyme: 'EcoRI',
-		file: 'anno/hicFragment/hic.EcoRI.hg19.gz'
-		},
-		{
-		enzyme: 'HindIII',
-		file: 'anno/hicFragment/hic.HindIII.hg19.gz'
-		},
-		{
-		enzyme: 'MboI',
-		file: 'anno/hicFragment/hic.MboI.hg19.gz'
-		},
-		{
-		enzyme: 'NcoI',
-		file: 'anno/hicFragment/hic.NcoI.hg19.gz'
-		}
-	],
-
-	hicdomain:{
-		groups:{
-		RaoCell2014:{
-			name:'Rao SS et al, Cell 2014',
-			reference:'<a href=https://www.ncbi.nlm.nih.gov/pubmed/25497547 target=_blank>A 3D Map of the Human Genome at Kilobase Resolution Reveals Principles of Chromatin Looping</a>',
-			sets:{
-				GM12878:{
-					name:'GM12878',
-					longname:'Human B-Lymphoblastoid',
-					file:'anno/hicTAD/aiden2014/GM12878.domain.hg19.gz'
-					},
-				HMEC:{
-					name:'HMEC',
-					longname:'Human Mammary Epithelial',
-					file:'anno/hicTAD/aiden2014/HMEC.domain.hg19.gz',
-					},
-				IMR90:{
-					name:'IRM90',
-					longname:'Human Lung Fibroblast',
-					file:'anno/hicTAD/aiden2014/IMR90.domain.hg19.gz'
-					},
-				KBM7:{
-					name:'KBM7',
-					longname:'Near Haploid Human Myelogenous Leukemia',
-					file:'anno/hicTAD/aiden2014/KBM7.domain.hg19.gz'
-					},
-				HeLa:{
-					name:'HeLa',
-					longname:'Human Cervical Carcinoma',
-					file:'anno/hicTAD/aiden2014/HeLa.domain.hg19.gz'
-					},
-				HUVEC:{
-					name:'HUVEC',
-					longname:'Human Umbilical Vein Endothelial',
-					file:'anno/hicTAD/aiden2014/HUVEC.domain.hg19.gz',
-					},
-				K562:{
-					name:'K562',
-					longname:'Human Erythroleukemia',
-					file:'anno/hicTAD/aiden2014/K562.domain.hg19.gz'
-					},
-				NHEK:{
-					name:'NHEK',
-					longname:'Normal Human Epidermal Keratinocytes',
-					file:'anno/hicTAD/aiden2014/NHEK.domain.hg19.gz'
-					}
+			type: 'bedj',
+			name: 'RepeatMasker',
+			stackheight: 14,
+			file: 'anno/rmsk.hg19.gz',
+			onerow: true,
+			categories: {
+				SINE: { color: '#ED8C8E', label: 'SINE' },
+				LINE: { color: '#EDCB8C', label: 'LINE' },
+				LTR: { color: '#E38CED', label: 'LTR' },
+				DNA: { color: '#8C8EED', label: 'DNA transposon' },
+				simple: { color: '#8EB88C', label: 'Simple repeats' },
+				low_complexity: { color: '#ACEBA9', label: 'Low complexity' },
+				satellite: { color: '#B59A84', label: 'Satellite' },
+				RNA: { color: '#9DE0E0', label: 'RNA repeat' },
+				other: { color: '#9BADC2', label: 'Other' },
+				unknown: { color: '#858585', label: 'Unknown' }
 			}
 		}
+	],
+	geneset: [
+		{
+			name: 'Signaling',
+			lst: [
+				{ name: 'NRAS' },
+				{ name: 'FLT3' },
+				{ name: 'KRAS' },
+				{ name: 'JAK3' },
+				{ name: 'BRAF' },
+				{ name: 'NF1' },
+				{ name: 'MAPK1' }
+			]
+		},
+		{ name: 'Cell cycle', lst: [{ name: 'TP53' }, { name: 'RB1' }, { name: 'CDKN2A' }, { name: 'CDKN2B' }] },
+		{
+			name: 'Epigenetics',
+			lst: [
+				{ name: 'ATRX' },
+				{ name: 'BCOR' },
+				{ name: 'MYC' },
+				{ name: 'MYCN' },
+				{ name: 'WHSC1' },
+				{ name: 'SUZ12' },
+				{ name: 'EED' },
+				{ name: 'EZH2' },
+				{ name: 'SETD2' },
+				{ name: 'CREBBP' },
+				{ name: 'EHMT2' },
+				{ name: 'PRDM1' },
+				{ name: 'NSD1' },
+				{ name: 'KMT2D' },
+				{ name: 'UBR4' },
+				{ name: 'ARID1A' },
+				{ name: 'EP300' }
+			]
+		},
+		{
+			name: 'Development',
+			lst: [
+				{ name: 'RUNX1' },
+				{ name: 'ETV6' },
+				{ name: 'GATA3' },
+				{ name: 'IKZF1' },
+				{ name: 'EP300' },
+				{ name: 'IKZF2' },
+				{ name: 'IKZF3' },
+				{ name: 'PAX5' },
+				{ name: 'VPREB1' },
+				{ name: 'EBF1' }
+			]
+		}
+	],
+	defaultcoord: {
+		chr: 'chr17',
+		start: 7568451,
+		stop: 7591984,
+		gene: 'TP53'
+	},
+
+	hicenzymefragment: [
+		{
+			enzyme: 'DpnII',
+			file: 'anno/hicFragment/hic.DpnII.hg19.gz'
+		},
+		{
+			enzyme: 'EcoRI',
+			file: 'anno/hicFragment/hic.EcoRI.hg19.gz'
+		},
+		{
+			enzyme: 'HindIII',
+			file: 'anno/hicFragment/hic.HindIII.hg19.gz'
+		},
+		{
+			enzyme: 'MboI',
+			file: 'anno/hicFragment/hic.MboI.hg19.gz'
+		},
+		{
+			enzyme: 'NcoI',
+			file: 'anno/hicFragment/hic.NcoI.hg19.gz'
+		}
+	],
+
+	hicdomain: {
+		groups: {
+			RaoCell2014: {
+				name: 'Rao SS et al, Cell 2014',
+				reference:
+					'<a href=https://www.ncbi.nlm.nih.gov/pubmed/25497547 target=_blank>A 3D Map of the Human Genome at Kilobase Resolution Reveals Principles of Chromatin Looping</a>',
+				sets: {
+					GM12878: {
+						name: 'GM12878',
+						longname: 'Human B-Lymphoblastoid',
+						file: 'anno/hicTAD/aiden2014/GM12878.domain.hg19.gz'
+					},
+					HMEC: {
+						name: 'HMEC',
+						longname: 'Human Mammary Epithelial',
+						file: 'anno/hicTAD/aiden2014/HMEC.domain.hg19.gz'
+					},
+					IMR90: {
+						name: 'IRM90',
+						longname: 'Human Lung Fibroblast',
+						file: 'anno/hicTAD/aiden2014/IMR90.domain.hg19.gz'
+					},
+					KBM7: {
+						name: 'KBM7',
+						longname: 'Near Haploid Human Myelogenous Leukemia',
+						file: 'anno/hicTAD/aiden2014/KBM7.domain.hg19.gz'
+					},
+					HeLa: {
+						name: 'HeLa',
+						longname: 'Human Cervical Carcinoma',
+						file: 'anno/hicTAD/aiden2014/HeLa.domain.hg19.gz'
+					},
+					HUVEC: {
+						name: 'HUVEC',
+						longname: 'Human Umbilical Vein Endothelial',
+						file: 'anno/hicTAD/aiden2014/HUVEC.domain.hg19.gz'
+					},
+					K562: {
+						name: 'K562',
+						longname: 'Human Erythroleukemia',
+						file: 'anno/hicTAD/aiden2014/K562.domain.hg19.gz'
+					},
+					NHEK: {
+						name: 'NHEK',
+						longname: 'Normal Human Epidermal Keratinocytes',
+						file: 'anno/hicTAD/aiden2014/NHEK.domain.hg19.gz'
+					}
+				}
+			}
 		}
 	},
 
-	majorchr:`chr1	249250621
+	majorchr: `chr1	249250621
 chr2	243199373
 chr3	198022430
 chr4	191154276
@@ -212,7 +260,7 @@ chr22	51304566
 chrX	155270560
 chrY	59373566
 chrM	16571`,
-	minorchr:`
+	minorchr: `
 chr6_ssto_hap7	4928567
 chr6_mcf_hap5	4833398
 chr6_cox_hap2	4795371
@@ -280,5 +328,5 @@ chr21_gl000210_random	27682
 chrUn_gl000231	27386
 chrUn_gl000229	19913
 chrUn_gl000226	15008
-chr18_gl000207_random	4262`,
+chr18_gl000207_random	4262`
 }

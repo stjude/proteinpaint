@@ -1,6 +1,6 @@
 import * as rx from '../rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch2 } from '../client'
+import { dofetch2, sayerror } from '../client'
 import { debounce } from 'debounce'
 import { graphable, root_ID } from './tree'
 
@@ -41,7 +41,7 @@ class TermSearch {
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
 		this.initUI()
-		this.bus = new rx.Bus('search', ['postInit'], app.opts.callbacks, this.api)
+		this.bus = new rx.Bus('search', ['postInit', 'postRender'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit')
 	}
 
@@ -50,23 +50,32 @@ class TermSearch {
 	}
 
 	async main(action) {
-		const state = this.app.state()
-		const lst = ['genome=' + state.genome, 'dslabel=' + state.dslabel, 'findterm=' + encodeURIComponent(action.str)]
-		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
-		if (data.error) throw data.error
-		if (!data.lst || data.lst.length == 0) {
-			this.noResult()
-			return
-		}
-		// found terms
+		await this.main2(action)
+		this.bus.emit('postRender')
+	}
 
-		if (state.modifier_click_term) {
-			this.showTermsForSelect(data)
-			return
+	async main2(action) {
+		try {
+			const state = this.app.state()
+			const lst = ['genome=' + state.genome, 'dslabel=' + state.dslabel, 'findterm=' + encodeURIComponent(action.str)]
+			const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+			if (data.error) throw data.error
+			if (!data.lst || data.lst.length == 0) {
+				this.noResult()
+				return
+			}
+			// found terms
+			if (state.modifier_click_term) {
+				this.showTermsForSelect(data)
+				return
+			}
+			// no modifier
+			this.showTerms(data)
+		} catch (e) {
+			this.clear()
+			sayerror(this.dom.resultDiv, 'Error: ' + (e.message || e))
+			if (e.stack) console.log(e.stack)
 		}
-
-		// no modifier
-		this.showTerms(data)
 	}
 }
 
@@ -118,14 +127,12 @@ function setRenderers(self) {
 			.text(d => d.name)
 			.attr('class', 'sja_menuoption')
 			.on('click', d => {
-				/*
 				self.clear()
 				const lst = [root_ID]
-				if(data.id2ancestors[d.id]) {
+				if (data.id2ancestors[d.id]) {
 					lst.push(...data.id2ancestors[d.id])
 				}
 				self.app.dispatch({ type: 'tree_update', expandedTerms: lst })
-				*/
 			})
 		tr.append('td')
 			.text(d => {
@@ -148,7 +155,7 @@ function setInteractivity(self) {
 			self.clear()
 			return
 		}
-		self.app.dispatch({ type: 'search_', str })
+		self.main({ str })
 	}
 	self.selectTerm = term => {
 		console.log('selected', term)

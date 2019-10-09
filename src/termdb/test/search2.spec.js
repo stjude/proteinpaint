@@ -35,43 +35,33 @@ tape('term search', function(test) {
 	runpp({
 		callbacks: {
 			search: {
-				'postInit.test': runTests
+				'postInit.test': testSearch
 			}
 		}
 	})
 
-	function runTests(search) {
-		search.on('postInit.test', null)
-		helpers
-			.rideInit({ arg: search })
-			.run(triggerSearch)
-			.run(testSearchResult, 100)
-			.run(triggerClickTerm)
-			.run(testClickResult, 100)
-			.done(() => test.end())
-	}
-
-	function triggerSearch(search) {
+	function testSearch(search) {
 		search.Inner.main({ str: 'cardio' })
+		search.on('postRender', () => {
+			const table = search.Inner.dom.resultDiv.select('table').node()
+			test.equal(table.childNodes.length, 3, 'should show 3 matching entries')
+			testResult(search)
+		})
 	}
 
-	function testSearchResult(search) {
-		const table = search.Inner.dom.resultDiv.select('table').node()
-		test.equal(table.childNodes.length, 3, 'should show 3 matching entries')
-	}
-
-	function triggerClickTerm(search) {
+	function testResult(search) {
 		search.Inner.dom.resultDiv
 			.select('table')
 			.node()
 			.childNodes[0].childNodes[0].click()
-	}
-	function testClickResult(search) {
-		test.ok(
-			search.Inner.app.Inner.dom.holder.selectAll('.termdiv').nodes().length > 10,
-			'should be showing more than 10 terms'
-		)
+		search.Inner.app.on('postRender', () => {
+			test.ok(
+				search.Inner.app.Inner.dom.holder.selectAll('.termdiv').nodes().length > 10,
+				'should be showing more than 10 terms'
+			)
+
+			search.on('postRender', null)
+			test.end()
+		})
 	}
 })
-
-// given modifier_click_term, see if search result show as buttons
