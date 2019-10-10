@@ -74,13 +74,14 @@ tape('default view', function(test) {
 
 	function runTests(tree) {
 		// since the tree has been rendered already
-		// run the first test without riderInit
-		// testDom(tree)
+		// either run the first test without riderInit
+		// via testRoot(tree)
 		// - OR -
-		// run as first test below in rideInit but not using the bus
+		// run as first test below rideInit({** no bus **})
 		helpers
-			.rideInit({ arg: tree, eventType: 'postRender.test' })
-			.run(testRoot)
+			.rideInit({ arg: tree })
+			.to(testRoot)
+			.change({ bus: tree, eventType: 'postRender.test' })
 			.to(testExpand, triggerExpand)
 			.to(testFold, triggerFold)
 			.done(() => test.end())

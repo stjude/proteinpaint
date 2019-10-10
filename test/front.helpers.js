@@ -106,6 +106,7 @@ exports.rideInit = function(opts = {}) {
 
 	/*
 		rideInit with publicly accessible props and methods
+		
 		opts {}        
 		.bus         optional event bus returned by client.get_event_bus()
 		.eventType   optional eventType for the bus argument, required if bus is provided
@@ -125,19 +126,31 @@ exports.rideInit = function(opts = {}) {
 
 			sub {}
 			- optional substitute values when attaching
-			  an event listener. the options are
-			.wait      // delay before calling event callback 
-			.bus       // attach the callback to this bus 
-			           // instead of the rideInit(opts.bus)
-			.eventType // attach the callback to this eventType 
-			           // instead of the rideInit(opts.eventType) 
+			  an event listener, *** just for this 1 step ***. 
+			  the options are wait, bus, eventType
+			  as listed for the rideInit() opts{} argument
 
 		*/
 			priv.addToThen(callback, after, Object.assign({}, opts, sub))
 			return ride
 		},
 
+		change(sub = {}) {
+			/*
+			change the opts for *** ALL subsequent steps ***
+
+			sub {}
+			- optional substitute values when attaching
+			  an event listener. the options are wait, bus, eventType
+			  as listed for the rideInit() opts{} argument
+			*/
+			Object.assign(opts, sub)
+			return ride
+		},
+
 		// run callback without using bus, with or without timeout
+		// **** TO BE DEPRECATED ***
+		// use .to(testFxn, [triggerFxn || null], {bus:null}) instead
 		run(callback, after = 0) {
 			priv.addRunThen(callback, after, opts)
 			return ride
@@ -161,7 +174,6 @@ class Ride {
 
 	constructor(opts) {
 		this.validateOpts(opts)
-		Object.freeze(opts)
 		this.resolved = Promise.resolve()
 	}
 
@@ -182,7 +194,21 @@ class Ride {
 	}
 
 	addToThen(callback, after, opts = {}) {
-		if (opts.wait) {
+		if (!opts.bus) {
+			// equivalent to addToRun() method
+			this.resolved = this.resolved.then(() => {
+				return new Promise((resolve, reject) => {
+					if (typeof after == 'function') after(opts.arg)
+					setTimeout(
+						() => {
+							callback(opts.arg)
+							resolve()
+						},
+						!opts.wait || isNaN(opts.wait) ? 0 : +opts.wait
+					)
+				})
+			})
+		} else if (opts.wait) {
 			this.resolved = this.resolved.then(() => {
 				return new Promise((resolve, reject) => {
 					opts.bus.on(opts.eventType, () => {

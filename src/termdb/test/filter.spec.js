@@ -55,8 +55,9 @@ tape('filter term-value button', function(test) {
 
 	function runTests(filter) {
 		helpers
-			.rideInit({ arg: filter, eventType: 'postRender.test' })
-			.run(testFilterDisplay, 100)
+			.rideInit({ arg: filter })
+			.to(testFilterDisplay, null, { wait: 200 })
+			.change({ bus: filter, eventType: 'postRender.test' })
 			.to(testRemoveFilter, triggerRemoveFilter)
 			.to(testAddFilter, triggerAddFilter)
 			.done(() => test.end())

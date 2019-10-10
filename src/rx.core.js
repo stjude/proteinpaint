@@ -96,7 +96,7 @@ export class Bus {
 
 		opts 
 		- optional callback configuration, such as
-		.timeout // to delay callback  
+		.wait // to delay callback  
 	*/
 		const [type, name] = eventType.split('.')
 		if (!this.eventTypes.includes(type)) {
@@ -104,10 +104,10 @@ export class Bus {
 		} else if (!callback) {
 			delete this.events[eventType]
 		} else if (typeof callback == 'function') {
-			if (eventType in this.events) {
+			if (eventType in this.events && !eventType.includes('.')) {
 				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
 			}
-			this.events[eventType] = opts.timeout ? arg => setTimeout(() => callback(arg), opts.timeout) : callback
+			this.events[eventType] = opts.wait ? arg => setTimeout(() => callback(arg), opts.wait) : callback
 		} else if (Array.isArray(callback)) {
 			if (eventType in this.events) {
 				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
@@ -115,14 +115,14 @@ export class Bus {
 			const wrapperFxn = arg => {
 				for (const fxn of callback) fxn(arg)
 			}
-			this.events[eventType] = opts.timeout ? arg => setTimeout(() => wrapperFxn(arg), opts.timeout) : wrapperFxn
+			this.events[eventType] = opts.wait ? arg => setTimeout(() => wrapperFxn(arg), opts.wait) : wrapperFxn
 		} else {
 			throw `invalid callback for ${this.name} eventType=${eventType}`
 		}
 		return this
 	}
 
-	emit(eventType, arg = null, timeout = 0) {
+	emit(eventType, arg = null, wait = 0) {
 		/*
 		eventType
 		- must be one of the eventTypes supplied to the Bus constructor
@@ -132,7 +132,7 @@ export class Bus {
 		- optional: the argument to supply to the callback
 		  if null or undefined, will use constructor() opts.defaultArg instead
 
-		timeout
+		wait
 		- optional delay in calling the callback
 	*/
 		setTimeout(() => {
@@ -141,7 +141,7 @@ export class Bus {
 					this.events[type](arg || this.defaultArg)
 				}
 			}
-		}, timeout)
+		}, wait)
 		return this
 	}
 }

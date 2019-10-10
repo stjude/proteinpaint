@@ -22,7 +22,7 @@ const runpp = helpers.getRunPp('termdb', {
 ***************/
 
 tape('\n', function(test) {
-	test.pass('-***- tdb.tree.search -***-')
+	test.pass('-***- tdb.search -***-')
 	test.end()
 })
 
@@ -40,10 +40,11 @@ tape('term search', function(test) {
 
 	function runTests(search) {
 		helpers
-			.rideInit({ arg: search, eventType: 'postRender' })
+			.rideInit({ arg: search, bus: search, eventType: 'postRender' })
 			.to(testSearchNoResult, triggerSearchNoResult)
 			.to(testSearchHasResult, triggerSearchHasResult)
-			.to(testClickResult, triggerClickTerm, { bus: search.Inner.app.components('tree'), eventType: 'postRender' })
+			.change({ bus: search.Inner.app.components('tree') })
+			.to(testClickResult, triggerClickTerm)
 			.done(() => test.end())
 	}
 
