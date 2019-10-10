@@ -30,7 +30,7 @@ exports.serverData = serverData
 		}
 	})
 */
-exports.getRunPp = function getRunPp(appname='', defaultArgs={}) {
+exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
 	const arg = {
 		host,
 		noheader: 1,
@@ -47,8 +47,8 @@ exports.getRunPp = function getRunPp(appname='', defaultArgs={}) {
 	const argStr = JSON.stringify(arg)
 
 	// will apply overrides or other argument key-values
-  // during tests
-	return function runpp(overrides={}) {
+	// during tests
+	return function runpp(overrides = {}) {
 		// fresh arg copy will prevent conflicts when the arg
 		// is reused in different tests
 		const argCopy = JSON.parse(argStr)
@@ -107,8 +107,8 @@ exports.copyMerge = copyMerge
 	.arg         optional argument to supply to the to() callback
 	.wait        optional wait time before reacting to emitted bus.event
 */
-exports.rideInit = function(opts={}) {
-	const priv = new Ride(Object.freeze(opts))
+exports.rideInit = function(opts = {}) {
+	const priv = new Ride(opts)
 
 	const ride = {
 		// ride on the default event bus
@@ -140,17 +140,22 @@ exports.rideInit = function(opts={}) {
 class Ride {
 	constructor(opts) {
 		this.validateOpts(opts)
+		Object.freeze(opts)
 		this.resolved = Promise.resolve()
 	}
 
 	validateOpts(opts) {
 		try {
+			if (opts.eventType && !opts.bus) {
+				if (!opts.arg) throw 'must specify opts.bus or opts.arg for rideInit() argument'
+				opts.bus = opts.arg
+			}
 			if (opts.bus) {
-				if (typeof opts.eventType !== "string") throw "invalid default.eventType"
+				if (typeof opts.eventType !== 'string') throw 'invalid default.eventType'
 				opts.bus.on(opts.eventType, null)
 				return opts
 			}
-		} catch(e) {
+		} catch (e) {
 			console.log(e)
 		}
 	}
@@ -160,11 +165,11 @@ class Ride {
 			this.resolved = this.resolved.then(() => {
 				return new Promise((resolve, reject) => {
 					opts.bus.on(opts.eventType, () => {
-						setTimeout(() => {
-							opts.bus.on(opts.eventType, null)
-							callback(opts.arg)
-							resolve()
-						}, opts.wait)
+						//setTimeout(() => {
+						opts.bus.on(opts.eventType, null)
+						callback(opts.arg)
+						resolve()
+						//}, opts.wait)
 					})
 					after(opts.arg)
 				})
@@ -184,7 +189,7 @@ class Ride {
 	}
 
 	addRunThen(callback, after, opts) {
-		if (typeof after == "number") {
+		if (typeof after == 'number') {
 			this.resolved = this.resolved.then(() => {
 				return new Promise((resolve, reject) => {
 					setTimeout(() => {

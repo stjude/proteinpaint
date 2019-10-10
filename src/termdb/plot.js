@@ -50,15 +50,23 @@ class TdbPlot {
 			})
 		}
 
-		this.app.dispatch({
-			type: 'plot_add',
-			id: this.id,
-			config: this.config,
-			term: opts.term
-		})
-
-		this.bus = new rx.Bus('plot', ['postInit', 'postNotify'], this.app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		// cannot "await" since that would imply or require
+		// constructor to be async, but a Class
+		// constructor must return an object (not return
+		// a resolved promise value as implied by "await")
+		// -- so instead must use promise.then here to emit postInit
+		// event
+		this.app
+			.dispatch({
+				type: 'plot_add',
+				id: this.id,
+				config: this.config,
+				term: opts.term
+			})
+			.then(() => {
+				this.bus = new rx.Bus('plot', ['postInit', 'postRender'], this.app.opts.callbacks, this.api)
+				this.bus.emit('postInit')
+			})
 	}
 
 	reactsTo(action, acty) {
@@ -73,6 +81,7 @@ class TdbPlot {
 		const data = await this.requestData(this.config)
 		this.syncParams(this.config, data)
 		this.render(action, data)
+		this.bus.emit('postRender')
 	}
 
 	async requestData(config) {
@@ -162,7 +171,6 @@ class TdbPlot {
 		for (const name in this.components) {
 			this.components[name].main(action, data)
 		}
-		this.bus.emit('postRender')
 	}
 }
 

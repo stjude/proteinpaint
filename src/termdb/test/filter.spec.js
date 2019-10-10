@@ -15,7 +15,7 @@ const runpp = helpers.getRunPp('termdb', {
 	fetchOpts: {
 		serverData: helpers.serverData
 	}
-  })
+})
 
 /**************
  test sections
@@ -54,14 +54,11 @@ tape('filter term-value button', function(test) {
 	})
 
 	function runTests(filter) {
-		filter.on('postInit.test', null)
 		helpers
-			.rideInit({ arg: filter })
+			.rideInit({ arg: filter, eventType: 'postRender.test' })
 			.run(testFilterDisplay, 100)
-			.run(triggerRemoveFilter)
-			.run(testRemoveFilter, 600)
-			.run(triggerAddFilter)
-			.run(testAddFilter, 100)
+			.to(testRemoveFilter, triggerRemoveFilter)
+			.to(testAddFilter, triggerAddFilter)
 			.done(() => test.end())
 	}
 
@@ -85,11 +82,13 @@ tape('filter term-value button', function(test) {
 		)
 		test.true(
 			filter.Inner.dom.holder.selectAll('.add_term_btn').size() >= 1,
-			'should have ' + ' button to add new term filter'
+			'should have "+" button to add new term filter'
 		)
 	}
 
+	let numFilters
 	function triggerRemoveFilter(filter) {
+		numFilters = filter.Inner.app.state().termfilter.terms.length
 		filter.Inner.dom.holder
 			.select('.term_remove_btn')
 			.node()
@@ -99,7 +98,7 @@ tape('filter term-value button', function(test) {
 	function testRemoveFilter(filter) {
 		test.equal(
 			filter.Inner.dom.holder.selectAll('.term_name_btn').size(),
-			filter.Inner.app.state().termfilter.terms.length,
+			numFilters - 1,
 			"should remove tvs filter after clicking 'x'"
 		)
 	}
@@ -113,11 +112,7 @@ tape('filter term-value button', function(test) {
 	}
 
 	function testAddFilter(filter) {
-		test.equal(
-			filter.Inner.dom.holder.selectAll('.term_name_btn').size(),
-			filter.Inner.app.state().termfilter.terms.length,
-			'should add 1 tvs filter'
-		)
+		test.equal(filter.Inner.dom.holder.selectAll('.term_name_btn').size(), numFilters, 'should add 1 tvs filter')
 	}
 })
 
@@ -276,7 +271,7 @@ tape('filter term-value button: categorical term', function(test) {
 		filter.on('postInit.test', null)
 		helpers
 			.rideInit({ arg: filter })
-			.run(testFilterDisplay, 100)
+			.run(testFilterDisplay, 200)
 			// .run(triggerChangeNegation)
 			// .run(checkNegationBtnVal, 100)
 			// .run(triggerChangeValue)

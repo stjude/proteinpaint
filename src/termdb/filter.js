@@ -9,15 +9,15 @@ class TdbFilter {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
+		this.durations = { exit: 500 }
 
 		setRenderers(this)
 		setInteractivity(this)
 
 		this.categoryData = {}
 		this.initHolder()
+		this.bus = new rx.Bus('filter', ['postInit', 'postRender'], app.opts.callbacks, this.api)
 		this.main()
-
-		this.bus = new rx.Bus('filter', ['postInit', 'postNotify'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit')
 	}
 
@@ -41,6 +41,11 @@ class TdbFilter {
 			.transition()
 			.duration(200)
 			.each(this.addFilter)
+
+		// when there are filters to be removed, must account for the delayed
+		// removal after opacity transition, as btn count will decrease only
+		// after the transition is done
+		this.bus.emit('postRender', null, filters.exit().size() ? this.durations.exit + 100 : 0)
 	}
 
 	async getCategories(term, lst) {
@@ -132,13 +137,17 @@ function setRenderers(self) {
 		self.addRelationBtn(term, one_term_div)
 
 		//value btns for each term type
-		const valueAdderFxn = term.term.iscategorical ? self.addCategoryValues
-			: term.term.isfloat || term.term.isinteger ? self.addNumericValues
+		const valueAdderFxn = term.term.iscategorical
+			? self.addCategoryValues
+			: term.term.isfloat || term.term.isinteger
+			? self.addNumericValues
 			: await self.addConditionValues
 
-		const valueData = term.term.iscategorical ? term.values 
-			: term.term.isfloat || term.term.isinteger ? term.ranges :
-			term.grade_and_child
+		const valueData = term.term.iscategorical
+			? term.values
+			: term.term.isfloat || term.term.isinteger
+			? term.ranges
+			: term.grade_and_child
 
 		// query db for list of categories and count
 		self.categoryData[term.term.id] = await self.getCategories(term)
@@ -160,7 +169,7 @@ function setRenderers(self) {
 			.style('border-radius', '0 6px 6px 0')
 			.style('background-color', '#4888BF')
 			.html('&#215;')
-			.on('click', this.removeFilter)
+			.on('click', self.removeFilter)
 	}
 
 	//term-value relation button
@@ -199,7 +208,7 @@ function setRenderers(self) {
 				.style('background-color', '#015051')
 				.style('pointer-events', 'none')
 				.style('padding', '8px 6px 4px 6px')
-				.text('IS')	
+				.text('IS')
 		}
 	}
 
@@ -231,8 +240,10 @@ function setRenderers(self) {
 			.duration(200)
 			.each(self.updateValueBtn)
 
-		const valueAdderFxn = term.term.iscategorical ? self.addCategoryValues
-			: term.term.isfloat || term.term.isinteger ? self.addNumericValues
+		const valueAdderFxn = term.term.iscategorical
+			? self.addCategoryValues
+			: term.term.isfloat || term.term.isinteger
+			? self.addNumericValues
 			: await self.addConditionValues
 
 		value_btns
@@ -242,7 +253,7 @@ function setRenderers(self) {
 			.style('margin-right', '1px')
 			.style('position', 'absolute')
 			.each(valueAdderFxn)
-		
+
 		// button with 'x' to remove term2
 		one_term_div.selectAll('.term_remove_btn').remove()
 		one_term_div
@@ -260,7 +271,7 @@ function setRenderers(self) {
 		select(this)
 			.style('opacity', 1)
 			.transition()
-			.duration(500)
+			.duration(self.durations.exit)
 			.style('opacity', 0)
 			.remove()
 	}
@@ -334,14 +345,17 @@ function setRenderers(self) {
 			.text('or')
 
 		//show or hide OR button
-		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style('display', (j > 0 && j <term.values.length -1) ? 'inline-block' : 'none')
+		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
+			'display',
+			j > 0 && j < term.values.length - 1 ? 'inline-block' : 'none'
+		)
 
 		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
-		// set it after editing OR button to confirm 1px margin between value_btn and + btn  
+		// set it after editing OR button to confirm 1px margin between value_btn and + btn
 		replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
 	}
 
-	self.addNumericValues = function(range, j){ 
+	self.addNumericValues = function(range, j) {
 		const value_btn = select(this).datum(range)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
@@ -356,15 +370,15 @@ function setRenderers(self) {
 
 		if (range.value != undefined) {
 			// const [numeric_select, value_btn] = dom.make_select_btn_pair(one_term_div)
-			const numeric_select = one_term_div.append('select')
-				.attr('class','value_select')
+			const numeric_select = one_term_div
+				.append('select')
+				.attr('class', 'value_select')
 				.style('margin-right', '1px')
-				.style('opacity',0)
-				.on('mouseover',()=>{
-					value_btn.style('opacity', '0.8')
-					.style('cursor','default')
+				.style('opacity', 0)
+				.on('mouseover', () => {
+					value_btn.style('opacity', '0.8').style('cursor', 'default')
 				})
-				.on('mouseout',()=>{
+				.on('mouseout', () => {
 					value_btn.style('opacity', '1')
 				})
 
@@ -373,7 +387,7 @@ function setRenderers(self) {
 			self.makeSelectList(unannotated_cats, numeric_select, term, null, 'delete')
 
 			value_btn
-				.style('position','absolute')
+				.style('position', 'absolute')
 				.style('padding', '3px 4px 3px 4px')
 				.style('margin-right', '1px')
 				.style('font-size', '1em')
@@ -421,11 +435,11 @@ function setRenderers(self) {
 				})
 			})
 		}
-	
+
 		// 'OR' button in between values
 		one_term_div
 			.append('div')
-			.attr('class','or_btn')
+			.attr('class', 'or_btn')
 			.style('display', 'none')
 			.style('color', '#fff')
 			.style('background-color', '#4888BF')
@@ -454,8 +468,10 @@ function setRenderers(self) {
 			.duration(200)
 			.style('opacity', 1)
 
-		const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j])
-			.style('width', value_btn.node().offsetWidth + 'px')
+		const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
+			'width',
+			value_btn.node().offsetWidth + 'px'
+		)
 
 		//update dropdown list for each term and '+' btn
 		self.updateSelect(value_selects, term.values, d.key)
@@ -479,7 +495,7 @@ function setRenderers(self) {
 		select(this)
 			.style('opacity', 1)
 			.transition()
-			.duration(500)
+			.duration(self.durations.exit)
 			.style('opacity', 0)
 			.remove()
 	}
@@ -519,7 +535,7 @@ function setRenderers(self) {
 				select.node().value = btn_value
 			}
 		} else {
-			select.append('option').text('ERROR: Can\'t get the data')
+			select.append('option').text("ERROR: Can't get the data")
 		}
 	}
 
@@ -594,17 +610,23 @@ function setRenderers(self) {
 		add_value_select.style('width', add_value_btn.node().offsetWidth + 'px')
 	}
 
-	self.setRangeBtnText = function(range){
-		const x = '<span style=\'font-family:Times;font-style:italic\'>x</span>'
+	self.setRangeBtnText = function(range) {
+		const x = "<span style='font-family:Times;font-style:italic'>x</span>"
 		let range_text
 		if (range.startunbounded) {
 			range_text = x + ' ' + (range.stopinclusive ? '&le;' : '&lt;') + ' ' + range.stop
 		} else if (range.stopunbounded) {
 			range_text = x + ' ' + (range.startinclusive ? '&ge;' : '&gt;') + ' ' + range.start
 		} else {
-			range_text = range.start + ' ' +
-				(range.startinclusive ? '&le;' : '&lt;') + ' ' + x + ' ' +
-				(range.stopinclusive ? '&le;' : '&lt;') + ' ' +
+			range_text =
+				range.start +
+				' ' +
+				(range.startinclusive ? '&le;' : '&lt;') +
+				' ' +
+				x +
+				' ' +
+				(range.stopinclusive ? '&le;' : '&lt;') +
+				' ' +
 				range.stop
 		}
 		return range_text
@@ -617,9 +639,11 @@ function setInteractivity(self) {
 		const obj = self.app.state()
 		self.dom.tip.clear().showunder(one_term_div)
 		const treediv = self.dom.tip.d.append('div')
-		// set termfilter terms to all filter-terms if '+' or all except current term if 'term_name_btn' 
-		const terms = select(one_term_div).classed('add_term_btn') ? obj.termfilter.terms : obj.termfilter.terms.filter(t => t.id != term.termId)
-	
+		// set termfilter terms to all filter-terms if '+' or all except current term if 'term_name_btn'
+		const terms = select(one_term_div).classed('add_term_btn')
+			? obj.termfilter.terms
+			: obj.termfilter.terms.filter(t => t.id != term.termId)
+
 		// a new object as init() argument for launching the tree with modifiers
 		const tree_obj = {
 			state: {
@@ -630,8 +654,8 @@ function setInteractivity(self) {
 					terms: terms
 				}
 			},
-			callbacks:{
-				app: {'postInit.test': ()=>{}}
+			callbacks: {
+				app: { 'postInit.test': () => {} }
 			}
 		}
 		appInit(tree_obj, treediv)
@@ -641,66 +665,66 @@ function setInteractivity(self) {
 		self.dom.tip.clear()
 
 		const equation_div = self.dom.tip.d
-			.append("div")
-			.style("display", "block")
-			.style("padding", "3px 5px")
+			.append('div')
+			.style('display', 'block')
+			.style('padding', '3px 5px')
 
 		const start_input = equation_div
-			.append("input")
-			.attr("type", "number")
-			.attr("value", range.start)
-			.style("width", "60px")
-			.on("keyup", async () => {
+			.append('input')
+			.attr('type', 'number')
+			.attr('value', range.start)
+			.style('width', '60px')
+			.on('keyup', async () => {
 				if (!client.keyupEnter()) return
-				start_input.property("disabled", true)
+				start_input.property('disabled', true)
 				await apply()
-				start_input.property("disabled", false)
+				start_input.property('disabled', false)
 			})
 
 		// to replace operator_start_div
-		const startselect = equation_div.append("select").style("margin-left", "10px")
+		const startselect = equation_div.append('select').style('margin-left', '10px')
 
-		startselect.append("option").html("&le;")
-		startselect.append("option").html("&lt;")
-		startselect.append("option").html("&#8734;")
+		startselect.append('option').html('&le;')
+		startselect.append('option').html('&lt;')
+		startselect.append('option').html('&#8734;')
 
 		startselect.node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
 
 		const x = '<span style="font-family:Times;font-style:italic">x</span>'
 
 		equation_div
-			.append("div")
-			.style("display", "inline-block")
-			.style("padding", "3px 10px")
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '3px 10px')
 			.html(x)
 
 		// to replace operator_end_div
-		const stopselect = equation_div.append("select").style("margin-right", "10px")
+		const stopselect = equation_div.append('select').style('margin-right', '10px')
 
-		stopselect.append("option").html("&le;")
-		stopselect.append("option").html("&lt;")
-		stopselect.append("option").html("&#8734;")
+		stopselect.append('option').html('&le;')
+		stopselect.append('option').html('&lt;')
+		stopselect.append('option').html('&#8734;')
 
 		stopselect.node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
 
 		const stop_input = equation_div
-			.append("input")
-			.attr("type", "number")
-			.style("width", "60px")
-			.attr("value", range.stop)
-			.on("keyup", async () => {
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '60px')
+			.attr('value', range.stop)
+			.on('keyup', async () => {
 				if (!client.keyupEnter()) return
-				stop_input.property("disabled", true)
+				stop_input.property('disabled', true)
 				await apply()
-				stop_input.property("disabled", false)
+				stop_input.property('disabled', false)
 			})
 
 		self.dom.tip.d
-			.append("div")
-			.attr("class", "sja_menuoption")
-			.style("text-align", "center")
-			.text("APPLY")
-			.on("click", () => {
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('text-align', 'center')
+			.text('APPLY')
+			.on('click', () => {
 				self.dom.tip.hide()
 				apply()
 			})
@@ -711,11 +735,11 @@ function setInteractivity(self) {
 		async function apply() {
 			try {
 				if (startselect.node().selectedIndex == 2 && stopselect.node().selectedIndex == 2)
-					throw "Both ends can not be unbounded"
+					throw 'Both ends can not be unbounded'
 
 				const start = startselect.node().selectedIndex == 2 ? null : Number(start_input.node().value)
 				const stop = stopselect.node().selectedIndex == 2 ? null : Number(stop_input.node().value)
-				if (start != null && stop != null && start >= stop) throw "start must be lower than stop"
+				if (start != null && stop != null && start >= stop) throw 'start must be lower than stop'
 
 				if (startselect.node().selectedIndex == 2) {
 					range.startunbounded = true

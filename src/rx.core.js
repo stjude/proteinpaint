@@ -49,6 +49,26 @@ Utility Classes
 
 export class Bus {
 	constructor(name, eventTypes, callbacks, defaultArg) {
+		/*
+		name
+		- the property name within the termdb.callbacks object
+		  to use for initializing bus events
+
+		eventType
+		- must be one of the eventTypes supplied to the Bus constructor
+		- maybe be namespaced or not, example: "postRender.test" or "postRender"
+
+		arg
+		- optional the argument to supply to the callback
+
+		callbacks
+		- optional 
+
+		defaultArg
+		- when emitting an event without a second argument,
+		  the defaultArg will be supplied as the argument
+		  to the callback
+	*/
 		this.name = name
 		this.eventTypes = eventTypes
 		this.events = {}
@@ -61,6 +81,18 @@ export class Bus {
 	}
 
 	on(eventType, callback, opts = {}) {
+		/*
+		eventType
+		- must match one of the eventTypes supplied to the Bus constructor
+		- maybe be namespaced or not, example: "postRender.test" or "postRender"
+
+		arg
+		- optional the argument to supply to the callback
+
+		opts 
+		- optional callback configuration, such as
+		.timeout // to delay callback  
+	*/
 		const [type, name] = eventType.split('.')
 		if (!this.eventTypes.includes(type)) {
 			throw `Unknown bus event '${type}' for component ${this.name}`
@@ -85,14 +117,26 @@ export class Bus {
 		return this
 	}
 
-	emit(eventType, arg = null) {
+	emit(eventType, arg = null, timeout = 0) {
+		/*
+		eventType
+		- must be one of the eventTypes supplied to the Bus constructor
+		- maybe be namespaced or not, example: "postRender.test" or "postRender"
+
+		arg
+		- optional: the argument to supply to the callback
+		  if null or undefined, will use constructor() opts.defaultArg instead
+
+		timeout
+		- optional delay in calling the callback
+	*/
 		setTimeout(() => {
 			for (const type in this.events) {
 				if (type == eventType || type.startsWith(eventType + '.')) {
 					this.events[type](arg || this.defaultArg)
 				}
 			}
-		}, 0)
+		}, timeout)
 		return this
 	}
 }
@@ -257,7 +301,11 @@ export function getComponents(dotSepNames) {
 	while (names.length) {
 		let name = names.shift()
 		if (Array.isArray(component)) name = Number(name)
-		component = component[name].components ? component[name].components : component[name]
+		component = !names.length
+			? component[name]
+			: component[name] && component[name].components
+			? component[name].components
+			: component[name]
 		if (typeof component == 'function') component = component()
 		if (!component) break
 	}

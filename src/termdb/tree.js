@@ -102,13 +102,14 @@ class TdbTree {
 		this.termsById = {}
 		this.termsById[root_ID] = this.rootTerm
 		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
-		this.app.dispatch({
-			type: 'tree_expand',
-			termId: root_ID,
-			term: this.rootTerm,
-			holder: this.dom.holder
-		})
-		this.bus.emit('postInit')
+		this.app
+			.dispatch({
+				type: 'tree_expand',
+				termId: root_ID,
+				term: this.rootTerm,
+				holder: this.dom.holder
+			})
+			.then(() => this.bus.emit('postInit'))
 	}
 
 	reactsTo(action, acty) {
@@ -174,10 +175,11 @@ class TdbTree {
 		return terms
 	}
 
-	viewPlot(action) {
+	async viewPlot(action) {
 		const plot = this.components.plots[action.id]
-		if (plot) plot.main(action)
-		else {
+		if (plot) {
+			await plot.main(action)
+		} else {
 			// need to assess pros and cons of passing the holder via action versus alternatives
 			const newPlot = plotInit(this.app, {
 				id: action.id,

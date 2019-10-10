@@ -6,14 +6,14 @@ const helpers = require('../../../test/front.helpers.js')
 **************************/
 
 const runpp = helpers.getRunPp('termdb', {
-  state: {
-      dslabel: 'SJLife',
-      genome: 'hg38'
-  },
-  debug: 1,
-  fetchOpts: {
-  	serverData: helpers.serverData
-  }
+	state: {
+		dslabel: 'SJLife',
+		genome: 'hg38'
+	},
+	debug: 1,
+	fetchOpts: {
+		serverData: helpers.serverData
+	}
 })
 
 /**************
@@ -46,7 +46,7 @@ tape('error handling', function(test) {
 
 	runpp({
 		state: {
-			dslabel: 'xxx',
+			dslabel: 'xxx'
 		},
 		callbacks: {
 			app: {
@@ -62,7 +62,7 @@ tape('error handling', function(test) {
 
 tape('default view', function(test) {
 	test.timeoutAfter(1000)
-	test.plan(1)
+	test.plan(4)
 
 	runpp({
 		callbacks: {
@@ -73,15 +73,46 @@ tape('default view', function(test) {
 	})
 
 	function runTests(tree) {
-		tree.on('postRender.test', null)
+		// since the tree has been rendered already
+		// run the first test without riderInit
+		// testDom(tree)
+		// - OR -
+		// run as first test below in rideInit but not using the bus
 		helpers
-			.rideInit({ arg: tree })
-			.run(testDom, 200)
+			.rideInit({ arg: tree, eventType: 'postRender.test' })
+			.run(testRoot)
+			.to(testExpand, triggerExpand)
+			.to(testFold, triggerFold)
 			.done(() => test.end())
 	}
 
-	function testDom(tree) {
+	function testRoot(tree) {
 		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 4, 'should have 4 root terms')
+	}
+
+	function triggerExpand(tree) {
+		tree.Inner.dom.holder
+			.select('.termbtn')
+			.node()
+			.click()
+	}
+
+	function testExpand(tree) {
+		const childdiv = tree.Inner.dom.holder.select('.termchilddiv')
+		test.equal(childdiv.style('display'), 'block', 'child DIV of first term is now visible')
+		test.equal(childdiv.selectAll('.termdiv').size(), 3, 'child DIV now contains 3 sub terms')
+	}
+
+	function triggerFold(tree) {
+		tree.Inner.dom.holder
+			.select('.termbtn')
+			.node()
+			.click()
+	}
+
+	function testFold(tree) {
+		const childdiv = tree.Inner.dom.holder.select('.termchilddiv')
+		test.equal(childdiv.style('display'), 'none', 'child DIV is now invisible')
 	}
 })
 
@@ -97,18 +128,10 @@ tape('rehydrated from saved state', function(test) {
 		},
 		callbacks: {
 			tree: {
-				'postInit.test': runTests
+				'postRender.test': testDom
 			}
 		}
 	})
-
-	function runTests(tree) {
-		tree.on('postInit.test', null)
-		helpers
-			.rideInit({ arg: tree })
-			.run(testDom, 200)
-			.done(() => test.end())
-	}
 
 	function testDom(tree) {
 		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 9, 'should have 9 expanded terms')

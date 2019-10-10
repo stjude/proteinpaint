@@ -41,21 +41,28 @@ tape('term search', function(test) {
 	})
 
 	function runTests(search) {
-		search.on('postInit.test', null)
 		helpers
-			.rideInit({ arg: search })
-			.run(triggerSearch)
-			.run(testSearchResult, 100)
-			.run(triggerClickTerm)
-			.run(testClickResult, 100)
+			.rideInit({ arg: search, eventType: 'postRender' })
+			.to(testSearchNoResult, triggerSearchNoResult)
+			.to(testSearchHasResult, triggerSearchHasResult)
+			.to(testClickResult, triggerClickTerm, { bus: search.Inner.app.components('tree'), eventType: 'postRender' })
 			.done(() => test.end())
 	}
 
-	function triggerSearch(search) {
+	function triggerSearchNoResult(search) {
+		search.Inner.main({ str: 'xxxyyyzz' })
+	}
+
+	function testSearchNoResult(search) {
+		const div = search.Inner.dom.resultDiv.select('div').node()
+		test.equal(div.innerHTML, 'No match', 'should show "No match"')
+	}
+
+	function triggerSearchHasResult(search) {
 		search.Inner.main({ str: 'cardio' })
 	}
 
-	function testSearchResult(search) {
+	function testSearchHasResult(search) {
 		const table = search.Inner.dom.resultDiv.select('table').node()
 		test.equal(table.childNodes.length, 3, 'should show 3 matching entries')
 	}
@@ -66,11 +73,8 @@ tape('term search', function(test) {
 			.node()
 			.childNodes[0].childNodes[0].click()
 	}
-	function testClickResult(search) {
-		test.ok(
-			search.Inner.app.Inner.dom.holder.selectAll('.termdiv').nodes().length > 10,
-			'should be showing more than 10 terms'
-		)
+	function testClickResult(tree) {
+		test.ok(tree.Inner.dom.holder.selectAll('.termdiv').nodes().length > 10, 'should show more than 10 terms')
 	}
 })
 
