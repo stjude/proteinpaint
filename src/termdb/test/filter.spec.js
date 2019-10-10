@@ -120,7 +120,6 @@ tape('filter term-value button', function(test) {
 tape('filter term-value button: categorical term', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(7)
-	const div0 = d3s.select('body').append('div')
 	const termfilter = {
 		show_top_ui: true,
 		terms: [
@@ -145,18 +144,13 @@ tape('filter term-value button: categorical term', function(test) {
 	})
 
 	function runTests(filter) {
-		filter.on('postInit.test', null)
 		helpers
 			.rideInit({ arg: filter })
-			.run(testFilterDisplay, 100)
-			.run(triggerChangeNegation)
-			.run(checkNegationBtnVal, 100)
-			.run(triggerChangeValue)
-			.run(testChangeValue, 600)
-			.run(triggerAddValue)
-			.run(testAddValue, 600)
-			.run(triggerRemoveValue)
-			.run(testRemoveValue, 600)
+			.to(testFilterDisplay, null, { wait: 200 })
+			.to(testNegationBtnVal, triggerChangeNegation)
+			.to(testChangeValue, triggerChangeValue, { wait: 200 })
+			.to(testAddValue, triggerAddValue, { wait: 200 })
+			.to(testRemoveValue, triggerRemoveValue, { wait: 600 })
 			.done(test)
 	}
 
@@ -183,7 +177,7 @@ tape('filter term-value button: categorical term', function(test) {
 		filter.Inner.app.dispatch({ type: 'filter_negate', term })
 	}
 
-	function checkNegationBtnVal(filter) {
+	function testNegationBtnVal(filter) {
 		test.equal(
 			filter.Inner.dom.holder.selectAll('.condition_btn').html(),
 			'IS NOT',
@@ -269,10 +263,9 @@ tape('filter term-value button: categorical term', function(test) {
 	})
 
 	function runTests(filter) {
-		filter.on('postInit.test', null)
 		helpers
 			.rideInit({ arg: filter })
-			.run(testFilterDisplay, 200)
+			.to(testFilterDisplay, null, { wait: 200 })
 			// .run(triggerChangeNegation)
 			// .run(checkNegationBtnVal, 100)
 			// .run(triggerChangeValue)

@@ -348,12 +348,9 @@ tape('filter term-value button: Conditional term (grade)', function(test) {
 
 	function runTests(obj) {
 		helpers
-			.rideInit({
-				bus: obj.components.filter.bus,
-				eventType: 'postRender.test',
-				arg: obj
-			})
-			.run(testFilterDisplay, 500)
+			.rideInit({ arg: obj })
+			.to(testFilterDisplay, null, { wait: 200 })
+			.change({ bus: obj.components.filter.bus, eventType: 'postRender.test' })
 			.to(checkGradeBtn, triggerChangeGrade, { wait: 350 })
 			.to(checkGradeTypeBtn, triggerGradeType, { wait: 350 })
 			.to(checkAddedGradeBtn, triggerAddGrade, { wait: 350 })
@@ -450,14 +447,11 @@ tape('filter term-value button: Conditional term (sub-condition)', function(test
 
 	function runTests(obj) {
 		helpers
-			.rideInit({
-				bus: obj.components.filter.bus,
-				eventType: 'postRender.test',
-				arg: obj
-			})
-			.run(testFilterDisplay, 300)
-			.to(checkSubBtn, triggerChangeSub, 100)
-			.to(checkAddedSubBtn, triggerAddSub, 100)
+			.rideInit({ arg: obj })
+			.to(testFilterDisplay, null, { wait: 300})
+			.change({ bus: obj.components.filter.bus, eventType: 'postRender.test' })
+			.to(checkSubBtn, triggerChangeSub, { wait: 100})
+			.to(checkAddedSubBtn, triggerAddSub, { wait: 100})
 			.done(test)
 	}
 
