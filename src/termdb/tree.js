@@ -109,7 +109,12 @@ class TdbTree {
 				term: _root,
 				holder: this.dom.holder
 			})
-			.then(() => this.bus.emit('postInit'))
+			.then(() => {
+				this.bus.emit('postInit')
+				for (const termId in this.app.state().tree.plots) {
+					this.togglePlot(this.termsById[termId])
+				}
+			})
 	}
 
 	reactsTo(action, acty) {
@@ -362,11 +367,13 @@ function setInteractivity(self) {
 	}
 
 	self.togglePlot = function(term) {
-		event.stopPropagation()
-		const plot = self.app.state().tree.plots[term.id]
-		if (!plot) {
+		if (event) event.stopPropagation()
+		if (!self.components.plots[term.id]) {
 			// need to assess pros and cons of passing the holder via action versus alternatives
-			const holder = select(select(this).node().parentNode.lastChild)
+			const holder =
+				this == self
+					? self.dom.holder.selectAll('.' + cls_termgraphdiv).filter(_term => _term.id == term.id)
+					: select(select(this).node().parentNode.lastChild)
 			self.app.dispatch({
 				type: 'plot_add',
 				id: term.id,
@@ -375,6 +382,7 @@ function setInteractivity(self) {
 				config: plotConfig({ term })
 			})
 		} else {
+			const plot = self.app.state().tree.plots[term.id]
 			const type = !plot || !plot.isVisible ? 'plot_show' : 'plot_hide'
 			self.app.dispatch({ type, id: term.id, term })
 		}

@@ -7,7 +7,7 @@ import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
 /* to-do: switch to using rx.Bus */
-import { get_event_bus, to_svg } from '../client'
+import { to_svg } from '../client'
 
 const colors = {
 	c10: scaleOrdinal(schemeCategory10),
@@ -45,12 +45,6 @@ class TdbBarchart {
 		this.controls = {}
 		this.term2toColor = {}
 		this.processedExcludes = []
-		/*
-		this.bus = get_event_bus(
-			["postClick"], // will supply term-values to postClick
-			opts.obj.callbacks.bar
-		)
-		*/
 	}
 
 	main(action, data = null) {

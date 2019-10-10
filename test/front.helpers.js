@@ -97,8 +97,10 @@ exports.copyMerge = copyMerge
 exports.rideInit = function(opts = {}) {
 	/*
 		The exported rideInit() test helper function tries to 
-		reliably sequence UI tests primarily via postRender
-		callbacks as emitted by an event bus. 
+		reliably sequence UI tests using chained Promises, with
+		each Promise either (a) riding on an event bus (such as
+		tree postRender), or (b) riding just on just the Promise
+		chain itself (without using an event bus). 
 
 		The idea is to minimize the dependency on less reliable,
 		timeout-based triggers of when to test UI elements, whereas
@@ -122,7 +124,7 @@ exports.rideInit = function(opts = {}) {
 
 	const rideApi = {
 		// ride on the default event bus
-		to(callback, after, sub = {}) {
+		to(callback, after = () => {}, sub = {}) {
 			/*
 			callback()
 
