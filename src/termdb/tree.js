@@ -118,7 +118,11 @@ class TdbTree {
 	}
 
 	reactsTo(action, acty) {
-		if (acty[0] == 'tree' || acty[0] == 'plot' || acty[0] == 'filter' || acty[0] == 'search') return true
+		if (acty[0] == 'tree' || acty[0] == 'filter' || acty[0] == 'search') return true
+		if (acty[0] == 'plot') {
+			if (action.type == 'plot_edit') return false
+			return true
+		}
 	}
 
 	async main(action = {}) {
@@ -133,7 +137,8 @@ class TdbTree {
 			return
 		}
 		if (t0 == 'plot') {
-			return this.viewPlot(action)
+			this.viewPlot(action)
+			return
 		}
 		if (action.type == 'tree_update') {
 			const root = this.termsById[root_ID]
@@ -179,21 +184,31 @@ class TdbTree {
 	}
 
 	async viewPlot(action) {
+		if (action.type == 'plot_hide') {
+			action.holder.style('display', 'none')
+			return
+		}
+		if (action.type == 'plot_show') {
+			action.holder.style('display', 'block')
+		}
 		const plot = this.components.plots[action.id]
 		if (plot) {
 			await plot.main(action)
-		} else {
-			// need to assess pros and cons of passing the holder via action versus alternatives
-			const newPlot = plotInit(this.app, {
-				id: action.id,
-				holder: action.holder,
-				term: action.term
-			})
-			this.components.plots[action.id] = newPlot
+			return
 		}
-		if (action.type != 'plot_edit') {
-			this.updatePlotView(action)
-		}
+		// generate new plot
+		const newPlot = plotInit(this.app, {
+			id: action.id,
+			holder: action.holder,
+			term: action.term,
+			callbacks: {
+				postInit: () => {
+					delete action.__plot_isloading
+					action.loading_div.remove()
+				}
+			}
+		})
+		this.components.plots[action.id] = newPlot
 	}
 
 	bindKey(term) {
@@ -315,16 +330,6 @@ function setRenderers(self) {
 			.attr('class', cls_termchilddiv)
 			.style('padding-left', childterm_indent)
 	}
-
-	self.updatePlotView = function(action) {
-		const show = action.type == 'plot_add' || action.type == 'plot_show'
-		self.dom.holder
-			.selectAll('.' + cls_termchilddiv)
-			.filter(term => term.id == action.id)
-			.style('overflow', show ? '' : 'hidden')
-			.style('height', show ? '' : 0)
-			.style('opacity', show ? 1 : 0)
-	}
 }
 
 function setInteractivity(self) {
@@ -345,10 +350,8 @@ function setInteractivity(self) {
 		const t0 = self.termsById[term.id]
 		if (!t0) throw 'invalid term id'
 
-		const holder = selectAll(this.parentNode.childNodes).filter(function() {
-			return this.className.includes(cls_termchilddiv)
-		})
 		const button = select(this)
+		const holder = select(this.parentNode.getElementsByClassName(cls_termchilddiv)[0])
 		let loading_div
 		if (!t0.terms) {
 			// to load child term with request, guard against repetitive clicking
@@ -384,8 +387,21 @@ function setInteractivity(self) {
 		} else {
 			const plot = self.app.state().tree.plots[term.id]
 			const type = !plot || !plot.isVisible ? 'plot_show' : 'plot_hide'
-			self.app.dispatch({ type, id: term.id, term })
+			self.app.dispatch({ type, id: term.id, term, holder })
+			return
 		}
+		// add new plot
+		term.__plot_isloading = true
+		const loading_div = holder.append('div').text('Loading...')
+		self.app.dispatch({
+			type: 'plot_add',
+			id: term.id,
+			term,
+			holder,
+			loading_div,
+			config: plotConfig({ term })
+		})
+		return
 	}
 }
 
