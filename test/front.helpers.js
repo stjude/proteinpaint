@@ -1,7 +1,6 @@
 const serverconfig = require('../serverconfig')
 const host = 'http://localhost:' + serverconfig.port
-
-const serverData = {}
+const serverData = Object.create(null)
 exports.serverData = serverData
 
 exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
@@ -36,7 +35,6 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
 		host,
 		noheader: 1,
 		nobox: true,
-		serverData,
 		debug: 1
 	}
 
@@ -55,10 +53,13 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
 	return function runpp(overrides = {}) {
 		// create a fresh arg copy to prevent conflicts when
 		// the arg is reused in different tests
+		// !!! but REUSE the same serverData !!!
 		const argCopy = JSON.parse(argStr)
 		if (appname) copyMerge(argCopy[appname], overrides)
 		else copyMerge(argCopy, overrides)
-		runproteinpaint(argCopy)
+		// reuse the same serverData here to share
+		// cached response across tests
+		runproteinpaint(Object.assign(argCopy, { serverData }))
 	}
 }
 

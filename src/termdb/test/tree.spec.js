@@ -62,7 +62,6 @@ tape('error handling', function(test) {
 
 tape('default view', function(test) {
 	test.timeoutAfter(1000)
-	test.plan(4)
 
 	runpp({
 		callbacks: {

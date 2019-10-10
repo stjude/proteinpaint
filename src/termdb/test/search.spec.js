@@ -28,7 +28,6 @@ tape('\n', function(test) {
 
 tape('term search', function(test) {
 	test.timeoutAfter(1000)
-	test.plan(2)
 
 	runpp({
 		callbacks: {
