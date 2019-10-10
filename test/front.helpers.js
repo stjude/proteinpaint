@@ -186,11 +186,11 @@ class Ride {
 			this.resolved = this.resolved.then(() => {
 				return new Promise((resolve, reject) => {
 					opts.bus.on(opts.eventType, () => {
-						//setTimeout(() => {
-						opts.bus.on(opts.eventType, null)
-						callback(opts.arg)
-						resolve()
-						//}, opts.wait)
+						setTimeout(() => {
+							opts.bus.on(opts.eventType, null)
+							callback(opts.arg)
+							resolve()
+						}, opts.wait)
 					})
 					after(opts.arg)
 				})

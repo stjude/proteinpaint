@@ -45,6 +45,8 @@ Utility Classes
 /*
 	A Bus instance will be its own api,
 	since it does not have a getApi() method.
+	Instead, the mutable Bus instance will be hidden via the
+	component.api.on() method.
 */
 
 export class Bus {
@@ -85,6 +87,9 @@ export class Bus {
 		eventType
 		- must match one of the eventTypes supplied to the Bus constructor
 		- maybe be namespaced or not, example: "postRender.test" or "postRender"
+		- any previous event-attached callbacks will be REPLACED in this bus 
+		  when the same eventType is used as an argument again -- same behavior
+		  as a DOM event listener namespacing and replacement
 
 		arg
 		- optional the argument to supply to the callback
