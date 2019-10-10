@@ -60,7 +60,7 @@ tape('filter term-value button', function(test) {
 			.change({ bus: filter, eventType: 'postRender.test' })
 			.to(testRemoveFilter, triggerRemoveFilter)
 			.to(testAddFilter, triggerAddFilter)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testFilterDisplay(filter) {
@@ -157,7 +157,7 @@ tape('filter term-value button: categorical term', function(test) {
 			.run(testAddValue, 600)
 			.run(triggerRemoveValue)
 			.run(testRemoveValue, 600)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testFilterDisplay(filter) {
@@ -281,7 +281,7 @@ tape('filter term-value button: categorical term', function(test) {
 			// .run(testAddValue, 600)
 			// .run(triggerRemoveValue)
 			// .run(testRemoveValue, 600)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testFilterDisplay(filter) {

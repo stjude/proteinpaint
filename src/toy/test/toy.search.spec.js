@@ -6,7 +6,7 @@ const helpers = require('../../../test/front.helpers.js')
 **************************/
 
 const runpp = helpers.getRunPp('toy', {
-  dslabel: 'SJLife',
+	dslabel: 'SJLife',
 	genome: 'hg38',
 	debug: 1,
 	fetchOpts: {
@@ -46,7 +46,7 @@ tape('instance', function(test) {
 				arg: search
 			})
 			.run(testDom, 100)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testDom(search) {
@@ -80,7 +80,7 @@ tape('text input', function(test) {
 			.run(testExactSuggestedTerm, 100)
 			.run(triggerLooseTermMenu)
 			.run(testLooseSuggestedTerm, 100)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function triggerExactTermMenu(search) {

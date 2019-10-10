@@ -63,7 +63,7 @@ tape('cart button', function(test) {
 			.run(testDisplay)
 			.to(testSelectedGroupTipDisplay, triggerClick, { eventType: 'postRenderTip.test' })
 			.to(testEmpty, triggerEmpty, { eventType: 'postRenderTip.test', wait: 200 })
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testDisplay(obj) {
@@ -198,7 +198,7 @@ tape('cart with 2 groups', function(test) {
 			.run(checkLaunchGenomePaint, 1500)
 			.run(triggerCartClick, 100)
 			.to(testRemoveGroup, triggerRemoveGroup)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function triggerCartClick(obj) {

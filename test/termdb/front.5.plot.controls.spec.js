@@ -81,7 +81,7 @@ tape('overlay input', function(test) {
 			})
 			.to(checkChildrenOverlayOption, triggerChildrenOverlayOption, 200)
 			.to(checkGradeOverlayOption, triggerGradeOverlayOption, 200)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function triggerChildrenOverlayOption(plot) {
@@ -157,7 +157,7 @@ tape('orientation input', function(test) {
 			})
 			.run(checkDisplayInBarchartView)
 			.to(checkDisplayInNonBarchartView, triggerNonBarchartView)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function checkDisplayInBarchartView(plot) {
@@ -210,7 +210,7 @@ tape('scale input', function(test) {
 			})
 			.run(checkDisplayInBarchartView)
 			.to(checkDisplayInNonBarchartView, triggerNonBarchartView)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function checkDisplayInBarchartView(plot) {
@@ -265,7 +265,7 @@ tape('divide by input', function(test) {
 			.to(checkDisplayInTableView, triggerTableView)
 			.to(checkDisplayInBoxplotView, triggerBoxplotView)
 			.to(checkDisplayInScatterView, triggerScatterView)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function checkDisplayInBarchartView(plot) {
@@ -344,7 +344,7 @@ tape('Primary bins input', function(test) {
 			})
 			.run(checkDisplayWithNumericTerm)
 			.to(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function checkDisplayWithNumericTerm(plot) {
@@ -397,7 +397,7 @@ tape("'Bars as' input", function(test) {
 			})
 			.run(checkDisplayWithNumericTerm)
 			.to(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function checkDisplayWithNumericTerm(plot) {
@@ -452,7 +452,7 @@ tape('Display mode input', function(test) {
 			.to(checkDisplayWithNonNumericOverlay, triggerNonNumericOverlay)
 			.to(checkDisplayWithNumericOverlay, triggerNumericOverlay)
 			.to(checkDisplayWithNumericBarAndOverlay, triggerNumericBarAndOverlay)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function checkDisplayWithCategoricalTerm(plot) {

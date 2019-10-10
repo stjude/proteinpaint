@@ -6,7 +6,7 @@ const helpers = require('../../../test/front.helpers.js')
 **************************/
 
 const runpp = helpers.getRunPp('toy', {
-  dslabel: 'SJLife',
+	dslabel: 'SJLife',
 	genome: 'hg38',
 	debug: 1,
 	fetchOpts: {
@@ -91,7 +91,7 @@ tape('default view', function(test) {
 			.run(testTermRemove, 600)
 			.run(triggerHideRow)
 			.run(testHideRow, 100)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testSearchDisplay(app) {

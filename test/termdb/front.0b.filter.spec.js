@@ -64,7 +64,7 @@ tape('filter term-value button', function(test) {
 			.run(testFilterDisplay, 300)
 			.to(testFilterRemove, triggerFilterRemove)
 			.to(testAddTerm, triggerFilterAdd)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testFilterDisplay(obj) {
@@ -157,7 +157,7 @@ tape('filter term-value button: categorical term', function(test) {
 			.to(checkNegationBtnVal, triggerChangeNegation)
 			.to(checkAddedCategory, triggerAddCategory)
 			.to(checkRemovedCategory, triggerRemoveCategory)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testFilterDisplay(obj) {
@@ -256,7 +256,7 @@ tape('filter term-value button: Numerical term', function(test) {
 			.to(checkRangeBtn, triggerChangeRange)
 			.to(checkUnannotatedValBtn, triggerAddUnannotatedRange)
 			.to(checkRemovedRange, triggerRemoveRange)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testFilterDisplay(obj) {
@@ -357,7 +357,7 @@ tape('filter term-value button: Conditional term (grade)', function(test) {
 			.to(checkGradeBtn, triggerChangeGrade, { wait: 350 })
 			.to(checkGradeTypeBtn, triggerGradeType, { wait: 350 })
 			.to(checkAddedGradeBtn, triggerAddGrade, { wait: 350 })
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testFilterDisplay(obj) {
@@ -458,7 +458,7 @@ tape('filter term-value button: Conditional term (sub-condition)', function(test
 			.run(testFilterDisplay, 300)
 			.to(checkSubBtn, triggerChangeSub, 100)
 			.to(checkAddedSubBtn, triggerAddSub, 100)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testFilterDisplay(obj) {
@@ -541,7 +541,7 @@ tape('filter term-value button: Conditional term (grade and child)', function(te
 				arg: obj
 			})
 			.run(testFilterDisplay, 300)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testFilterDisplay(obj) {

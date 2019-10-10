@@ -162,16 +162,12 @@ exports.rideInit = function(opts = {}) {
 		},
 
 		// close the event bus
-		done(callback = null) {
+		done(test) {
 			// cancel event listener after the tests so that
 			// in-browser behavior is "normal" when inspecting
 			// the displayed UI
 			if (opts.bus) self.resolved.then(() => opts.bus.on(opts.eventType, null))
-			if (callback) {
-				if (typeof callback == 'function') self.resolved.then(callback)
-				else if (typeof callback.end == 'function') self.resolved.then(() => callback.end())
-			}
-			self.resolved.catch(console.log)
+			self.resolved.then(() => test.end()).catch(console.log)
 			return rideApi
 		}
 	}
