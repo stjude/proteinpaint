@@ -1,7 +1,5 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const serverconfig = require('../../../serverconfig')
-const host = 'http://localhost:' + serverconfig.port
 const helpers = require('../../../test/front.helpers.js')
 
 /*************************

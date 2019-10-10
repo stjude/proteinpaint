@@ -44,7 +44,7 @@ class TdbFilter {
 
 		// when there are filters to be removed, must account for the delayed
 		// removal after opacity transition, as btn count will decrease only
-		// after the transition is done
+		// after the transition and remove() is done
 		this.bus.emit('postRender', null, filters.exit().size() ? this.durations.exit + 100 : 0)
 	}
 
