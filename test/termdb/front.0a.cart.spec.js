@@ -1,16 +1,34 @@
-const tape = require("tape")
-const d3s = require("d3-selection")
-const termjson = require("./termjson").termjson
-const serverconfig = require("../../serverconfig")
-const host = "http://localhost:" + serverconfig.port
-const helpers = require("../front.helpers.js")
+const tape = require('tape')
+const d3s = require('d3-selection')
+const termjson = require('./termjson').termjson
+const helpers = require('../front.helpers.js')
 
-tape("\n", function(test) {
-	test.pass("-***- mds.termdb.controls cart -***-")
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('display_termdb', {
+	dslabel: 'SJLife',
+	genome: 'hg38',
+	default_rootterm: {},
+	bar_click_menu: {
+		add_filter: true
+	},
+	fetchOpts: {
+		serverData: helpers.serverData
+	}
+})
+
+/**************
+ test sections
+***************/
+
+tape('\n', function(test) {
+	test.pass('-***- mds.termdb.controls cart -***-')
 	test.end()
 })
 
-tape("cart button", function(test) {
+tape('cart button', function(test) {
 	test.timeoutAfter(5000)
 	test.plan(3)
 	const termfilter = { show_top_ui: true }
@@ -18,36 +36,20 @@ tape("cart button", function(test) {
 		{
 			terms: [
 				{
-					term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
-					values: [{ key: "Wilms tumor", label: "Wilms tumor" }]
+					term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+					values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 				}
 			]
 		}
 	]
 
-	runproteinpaint({
-		host,
-		holder: d3s
-			.select("body")
-			.append("div")
-			.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
-			default_rootterm: {},
-			termfilter,
-			selected_groups,
-			bar_click_menu: {
-				add_filter: true
-			},
-			callbacks: {
-				cart: {
-					"postRenderBtn.test": runTests
-				}
-			},
-			serverData: helpers.serverData
+	runpp({
+		termfilter,
+		selected_groups,
+		callbacks: {
+			cart: {
+				'postRenderBtn.test': runTests
+			}
 		}
 	})
 
@@ -55,17 +57,17 @@ tape("cart button", function(test) {
 		helpers
 			.rideInit({
 				bus: obj.components.cart.bus,
-				eventType: "postRenderBtn.test",
+				eventType: 'postRenderBtn.test',
 				arg: obj
 			})
 			.run(testDisplay)
-			.to(testSelectedGroupTipDisplay, triggerClick, { eventType: "postRenderTip.test" })
-			.to(testEmpty, triggerEmpty, { eventType: "postRenderTip.test", wait: 200 })
+			.to(testSelectedGroupTipDisplay, triggerClick, { eventType: 'postRenderTip.test' })
+			.to(testEmpty, triggerEmpty, { eventType: 'postRenderTip.test', wait: 200 })
 			.done(() => test.end())
 	}
 
 	function testDisplay(obj) {
-		test.equal(obj.dom.cartdiv.html(), "Selected 1 Group", "should display a cart button")
+		test.equal(obj.dom.cartdiv.html(), 'Selected 1 Group', 'should display a cart button')
 	}
 
 	function triggerClick(obj) {
@@ -73,22 +75,22 @@ tape("cart button", function(test) {
 	}
 
 	function testSelectedGroupTipDisplay(obj) {
-		test.true(obj.tip.d.selectAll(".sja_filter_tag_btn").size() > 1, "should show blue-pill for selected group")
+		test.true(obj.tip.d.selectAll('.sja_filter_tag_btn').size() > 1, 'should show blue-pill for selected group')
 	}
 
 	function triggerEmpty(obj) {
 		obj.tip.d
-			.select(".remove_group_btn")
+			.select('.remove_group_btn')
 			.node()
 			.click()
 	}
 
 	function testEmpty(obj) {
-		test.equal(obj.dom.cartdiv.style("display"), "none", "Should remove the cart button")
+		test.equal(obj.dom.cartdiv.style('display'), 'none', 'Should remove the cart button')
 	}
 })
 
-tape("cart selected group tip", function(test) {
+tape('cart selected group tip', function(test) {
 	test.timeoutAfter(3500)
 	test.plan(2)
 	const termfilter = { show_top_ui: true }
@@ -96,50 +98,34 @@ tape("cart selected group tip", function(test) {
 		{
 			terms: [
 				{
-					term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
-					values: [{ key: "Wilms tumor", label: "Wilms tumor" }]
+					term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+					values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
 				}
 			]
 		}
 	]
 
-	runproteinpaint({
-		host,
-		holder: d3s
-			.select("body")
-			.append("div")
-			.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
-			default_rootterm: {},
-			termfilter,
-			selected_groups,
-			bar_click_menu: {
-				add_filter: true
-			},
-			callbacks: {
-				cart: {
-					"postRenderBtn.test": runTests
-				}
-			},
-			serverData: helpers.serverData
+	runpp({
+		termfilter,
+		selected_groups,
+		callbacks: {
+			cart: {
+				'postRenderBtn.test': runTests
+			}
 		}
 	})
 
 	function runTests(obj) {
-		obj.components.cart.bus.on("postRenderBtn.test", null)
+		obj.components.cart.bus.on('postRenderBtn.test', null)
 		helpers
 			.rideInit({
 				bus: obj.components.cart.bus,
-				eventType: "postRenderTip.test",
+				eventType: 'postRenderTip.test',
 				arg: obj
 			})
-			.to(testSelectedGroupTipDisplay, triggerClick, 400)
-			.to(testRemoveTerm, triggerRemoveTerm)
-			.done(() => test.end())
+			.to(testSelectedGroupTipDisplay, triggerClick, { wait: 400 })
+			.to(testRemoveTerm, triggerRemoveTerm, { wait: 400 })
+			.done(test)
 	}
 
 	function triggerClick(obj) {
@@ -147,34 +133,33 @@ tape("cart selected group tip", function(test) {
 	}
 
 	function testSelectedGroupTipDisplay(obj) {
-		test.equal(obj.tip.d.selectAll(".term_name_btn").size(), 1, "should show 1 blue-pill for selected group")
+		test.equal(obj.tip.d.selectAll('.term_name_btn').size(), 1, 'should show 1 blue-pill for selected group')
 	}
 
 	function triggerRemoveTerm(obj) {
 		obj.tip.d
-			.select(".term_remove_btn")
+			.select('.term_remove_btn')
 			.node()
 			.click()
 	}
 
 	function testRemoveTerm(obj) {
-		test.equal(obj.tip.d.selectAll(".term_name_btn").size(), 0, "should remove blue-pill from the group")
+		test.equal(obj.tip.d.selectAll('.term_name_btn').size(), 0, 'should remove blue-pill from the group')
 		obj.tip.hide()
 	}
 })
 
-tape("cart with 2 groups", function(test) {
+tape('cart with 2 groups', function(test) {
 	test.timeoutAfter(5000)
 	test.plan(6)
-	const div0 = d3s.select("body").append("div")
 	const termfilter = { show_top_ui: true }
 	const selected_groups = [
 		{
 			is_termdb: true,
 			terms: [
 				{
-					term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
-					values: [{ key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }]
+					term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+					values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
 				}
 			]
 		},
@@ -182,43 +167,30 @@ tape("cart with 2 groups", function(test) {
 			is_termdb: true,
 			terms: [
 				{
-					term: { id: "diaggrp", name: "Diagnosis Group", iscategorical: true },
-					values: [{ key: "Acute lymphoblastic leukemia", label: "Acute lymphoblastic leukemia" }],
+					term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+					values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }],
 					isnot: true
 				}
 			]
 		}
 	]
 
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: "SJLife",
-			genome: "hg38",
-			default_rootterm: {},
-			termfilter,
-			selected_groups,
-			bar_click_menu: {
-				add_filter: true
-			},
-			callbacks: {
-				cart: {
-					"postRenderBtn.test": runTests
-				}
-			},
-			serverData: helpers.serverData
+	runpp({
+		termfilter,
+		selected_groups,
+		callbacks: {
+			cart: {
+				'postRenderBtn.test': runTests
+			}
 		}
 	})
 
 	function runTests(obj) {
-		obj.components.cart.bus.on("postRenderBtn.test", null)
+		obj.components.cart.bus.on('postRenderBtn.test', null)
 		helpers
 			.rideInit({
 				bus: obj.components.cart.bus,
-				eventType: "postRenderTip.test",
+				eventType: 'postRenderTip.test',
 				arg: obj
 			})
 			.to(testSelectedGroupTipDisplay, triggerCartClick)
@@ -234,13 +206,13 @@ tape("cart with 2 groups", function(test) {
 	}
 
 	function testSelectedGroupTipDisplay(obj) {
-		test.equal(obj.tip.d.selectAll(".remove_group_btn").size(), 2, "should show 2 blue-pill for selected groups")
-		test.equal(obj.tip.d.selectAll(".launch_gp_btn").size(), 1, "should show 'test in genome paint' button")
+		test.equal(obj.tip.d.selectAll('.remove_group_btn').size(), 2, 'should show 2 blue-pill for selected groups')
+		test.equal(obj.tip.d.selectAll('.launch_gp_btn').size(), 1, "should show 'test in genome paint' button")
 	}
 
 	function triggerLaunchGenomePaint(obj) {
 		obj.tip.d
-			.selectAll(".launch_gp_btn")
+			.selectAll('.launch_gp_btn')
 			.node()
 			.click()
 	}
@@ -249,37 +221,37 @@ tape("cart with 2 groups", function(test) {
 		// Should check 'SJLife' button in GenomePaint pop-up window
 		test.equal(
 			d3s
-				.select("body")
-				.selectAll(".sja_pane")
-				.selectAll(".sja_handle_green")
+				.select('body')
+				.selectAll('.sja_pane')
+				.selectAll('.sja_handle_green')
 				.html(),
-			"SJLife",
-			"should lauch GenomePaint"
+			'SJLife',
+			'should lauch GenomePaint'
 		)
 
 		d3s
-			.select("body")
-			.selectAll(".sja_pane")
-			.selectAll(".sja_menuoption")
+			.select('body')
+			.selectAll('.sja_pane')
+			.selectAll('.sja_menuoption')
 			.node()
 			.click()
 	}
 
 	function triggerRemoveGroup(obj) {
 		obj.tip.d
-			.select(".remove_group_btn")
+			.select('.remove_group_btn')
 			.node()
 			.click()
 	}
 
 	function testRemoveGroup(obj) {
-		test.equal(obj.tip.d.selectAll(".remove_group_btn").size(), 1, "should show only 1 blue-pill after group remove")
+		test.equal(obj.tip.d.selectAll('.remove_group_btn').size(), 1, 'should show only 1 blue-pill after group remove')
 		test.equal(
-			obj.tip.d.selectAll(".launch_gp_btn").size(),
+			obj.tip.d.selectAll('.launch_gp_btn').size(),
 			0,
 			"should remove 'test in genome paint' button if only 1 group"
 		)
-		test.equal(obj.dom.cartdiv.html(), "Selected 1 Group", "should update a cart button")
+		test.equal(obj.dom.cartdiv.html(), 'Selected 1 Group', 'should update a cart button')
 		obj.tip.hide()
 	}
 })

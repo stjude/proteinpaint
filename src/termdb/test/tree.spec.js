@@ -21,7 +21,7 @@ const runpp = helpers.getRunPp('termdb', {
 ***************/
 
 tape('\n', function(test) {
-	test.pass('-***- tdb.tree -***-')
+	test.pass('-***- termdb/tree -***-')
 	test.end()
 })
 
@@ -83,7 +83,7 @@ tape('default view', function(test) {
 			.change({ bus: tree, eventType: 'postRender.test' })
 			.to(testExpand, triggerExpand)
 			.to(testFold, triggerFold)
-			.done(() => test.end())
+			.done(test)
 	}
 
 	function testRoot(tree) {

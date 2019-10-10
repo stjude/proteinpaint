@@ -449,7 +449,7 @@ group{}
 
 		let data
 		try {
-			data = await client.dofetch2('/termdb?' + args.join('&'), {}, obj.do_query_opts)
+			data = await client.dofetch2('/termdb?' + args.join('&'), {}, obj.fetchOpts)
 			if (data.error) throw data.error
 		} catch (e) {
 			window.alert(e.message || e)

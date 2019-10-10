@@ -41,7 +41,7 @@ export function getFilterUi(obj) {
 		genome: obj.genome,
 		tvslst_filter: false,
 		callback: obj.main,
-		do_query_opts: obj.do_query_opts,
+		fetchOpts: obj.fetchOpts,
 		isCoordinated: true,
 		store: obj.store,
 		isReactive: true
@@ -146,7 +146,7 @@ function make_selected_group_tip(obj, cart) {
 				tvsuiObj.main()
 				cart.bus.emit('postRenderTip', obj)
 			},
-			do_query_opts: obj.do_query_opts
+			fetchOpts: obj.fetchOpts
 		}
 
 		termvaluesettingui.init(tvsuiObj)

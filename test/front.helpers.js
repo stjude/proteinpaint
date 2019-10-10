@@ -57,8 +57,12 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
 		const argCopy = JSON.parse(argStr)
 		if (appname) copyMerge(argCopy[appname], overrides)
 		else copyMerge(argCopy, overrides)
-		// reuse the same serverData here to share
+
+		// reuse the same serverData to share
 		// cached response across tests
+		if (appname && defaultArgs.fetchOpts) {
+			argCopy[appname].fetchOpts = defaultArgs.fetchOpts
+		}
 		runproteinpaint(Object.assign(argCopy, { serverData }))
 	}
 }
@@ -114,9 +118,9 @@ exports.rideInit = function(opts = {}) {
 		.arg         optional argument to supply to the to() callback
 		.wait        optional wait time before reacting to emitted bus.event
 	*/
-	const priv = new Ride(opts)
+	const self = new Ride(opts)
 
-	const ride = {
+	const rideApi = {
 		// ride on the default event bus
 		to(callback, after, sub = {}) {
 			/*
@@ -132,8 +136,8 @@ exports.rideInit = function(opts = {}) {
 			  as listed for the rideInit() opts{} argument
 
 		*/
-			priv.addToThen(callback, after, Object.assign({}, opts, sub))
-			return ride
+			self.addToThen(callback, after, Object.assign({}, opts, sub))
+			return rideApi
 		},
 
 		change(sub = {}) {
@@ -146,27 +150,33 @@ exports.rideInit = function(opts = {}) {
 			  as listed for the rideInit() opts{} argument
 			*/
 			Object.assign(opts, sub)
-			return ride
+			return rideApi
 		},
 
 		// run callback without using bus, with or without timeout
 		// **** TO BE DEPRECATED ***
 		// use .to(testFxn, [triggerFxn || null], {bus:null}) instead
 		run(callback, after = 0) {
-			priv.addRunThen(callback, after, opts)
-			return ride
+			self.addRunThen(callback, after, opts)
+			return rideApi
 		},
 
 		// close the event bus
 		done(callback = null) {
-			if (opts.bus) priv.resolved.then(() => opts.bus.on(opts.eventType, null))
-			if (callback) priv.resolved.then(callback)
-			priv.resolved.catch(console.log)
-			return ride
+			// cancel event listener after the tests so that
+			// in-browser behavior is "normal" when inspecting
+			// the displayed UI
+			if (opts.bus) self.resolved.then(() => opts.bus.on(opts.eventType, null))
+			if (callback) {
+				if (typeof callback == 'function') self.resolved.then(callback)
+				else if (typeof callback.end == 'function') self.resolved.then(() => callback.end())
+			}
+			self.resolved.catch(console.log)
+			return rideApi
 		}
 	}
 
-	return Object.freeze(ride)
+	return Object.freeze(rideApi)
 }
 
 class Ride {

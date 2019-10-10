@@ -56,6 +56,8 @@ class TdbPlot {
 		// a resolved promise value as implied by "await")
 		// -- so instead must use promise.then here to emit postInit
 		// event
+		this.bus = new rx.Bus('plot', ['postInit', 'postRender'], this.app.opts.callbacks, this.api)
+
 		this.app
 			.dispatch({
 				type: 'plot_add',
@@ -64,7 +66,6 @@ class TdbPlot {
 				term: opts.term
 			})
 			.then(() => {
-				this.bus = new rx.Bus('plot', ['postInit', 'postRender'], this.app.opts.callbacks, this.api)
 				this.bus.emit('postInit')
 			})
 	}

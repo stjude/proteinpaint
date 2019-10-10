@@ -21,7 +21,7 @@ const runpp = helpers.getRunPp('termdb', {
 ***************/
 
 tape('\n', function(test) {
-	test.pass('-***- tdb.tree -***-')
+	test.pass('-***- termdb/plot -***-')
 	test.end()
 })
 

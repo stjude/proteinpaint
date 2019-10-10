@@ -255,7 +255,7 @@ function requestData(plot) {
 	} else {
 		const route = plot.settings.currViews.includes('scatter') ? '/termdb' : '/termdb-barsql'
 		// TODO may use await, any benefit?
-		client.dofetch2(route + dataName, {}, plot.obj.do_query_opts).then(chartsData => {
+		client.dofetch2(route + dataName, {}, plot.obj.fetchOpts).then(chartsData => {
 			serverData[dataName] = chartsData
 			syncParams(plot, serverData[dataName])
 			render(plot, chartsData)

@@ -1,9 +1,28 @@
 const tape = require('tape')
-const d3s = require('d3-selection')
 const termjson = require('./termjson').termjson
 const serverconfig = require('../../serverconfig')
 const host = 'http://localhost:' + serverconfig.port
 const helpers = require('../front.helpers.js')
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('display_termdb', {
+	dslabel: 'SJLife',
+	genome: 'hg38',
+	default_rootterm: {},
+	bar_click_menu: {
+		add_filter: true
+	},
+	fetchOpts: {
+		serverData: helpers.serverData
+	}
+})
+
+/**************
+ test sections
+***************/
 
 tape('\n', function(test) {
 	test.pass('-***- mds.termdb.controls filter -***-')
@@ -13,7 +32,6 @@ tape('\n', function(test) {
 tape('filter term-value button', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(6)
-	const div0 = d3s.select('body').append('div')
 	const termfilter = {
 		show_top_ui: true,
 		terms: [
@@ -24,26 +42,14 @@ tape('filter term-value button', function(test) {
 		]
 	}
 
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			bar_click_menu: {
-				add_filter: true
-			},
-			callbacks: {
-				filter: {
-					'postRender.test': runTests
-				}
-			},
-			serverData: helpers.serverData
-		}
+	runpp({
+		termfilter,
+		callbacks: {
+			filter: {
+				'postRender.test': runTests
+			}
+		},
+		serverData: helpers.serverData
 	})
 
 	function runTests(obj) {
@@ -121,7 +127,6 @@ tape('filter term-value button', function(test) {
 tape('filter term-value button: categorical term', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(6)
-	const div0 = d3s.select('body').append('div')
 	const termfilter = {
 		show_top_ui: true,
 		terms: [
@@ -132,25 +137,12 @@ tape('filter term-value button: categorical term', function(test) {
 		]
 	}
 
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			bar_click_menu: {
-				add_filter: true
-			},
-			callbacks: {
-				filter: {
-					'postRender.test': runTests
-				}
-			},
-			serverData: helpers.serverData
+	runpp({
+		termfilter,
+		callbacks: {
+			filter: {
+				'postRender.test': runTests
+			}
 		}
 	})
 
@@ -229,7 +221,6 @@ tape('filter term-value button: categorical term', function(test) {
 tape('filter term-value button: Numerical term', function(test) {
 	test.timeoutAfter(4000)
 	test.plan(6)
-	const div0 = d3s.select('body').append('div')
 	const termfilter = {
 		show_top_ui: true,
 		terms: [
@@ -245,22 +236,12 @@ tape('filter term-value button: Numerical term', function(test) {
 		]
 	}
 
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			callbacks: {
-				filter: {
-					'postRender.test': runTests
-				}
-			},
-			serverData: helpers.serverData
+	runpp({
+		termfilter,
+		callbacks: {
+			filter: {
+				'postRender.test': runTests
+			}
 		}
 	})
 
@@ -344,7 +325,6 @@ tape('filter term-value button: Numerical term', function(test) {
 tape('filter term-value button: Conditional term (grade)', function(test) {
 	test.timeoutAfter(4000)
 	test.plan(7)
-	const div0 = d3s.select('body').append('div')
 	const termfilter = {
 		show_top_ui: true,
 		terms: [
@@ -357,22 +337,12 @@ tape('filter term-value button: Conditional term (grade)', function(test) {
 		]
 	}
 
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			callbacks: {
-				filter: {
-					'postRender.test': runTests
-				}
-			},
-			serverData: helpers.serverData
+	runpp({
+		termfilter,
+		callbacks: {
+			filter: {
+				'postRender.test': runTests
+			}
 		}
 	})
 
@@ -457,7 +427,6 @@ tape('filter term-value button: Conditional term (grade)', function(test) {
 tape('filter term-value button: Conditional term (sub-condition)', function(test) {
 	test.timeoutAfter(4000)
 	test.plan(5)
-	const div0 = d3s.select('body').append('div')
 	const termfilter = {
 		show_top_ui: true,
 		terms: [
@@ -470,22 +439,12 @@ tape('filter term-value button: Conditional term (sub-condition)', function(test
 		]
 	}
 
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			callbacks: {
-				filter: {
-					'postRender.test': runTests
-				}
-			},
-			serverData: helpers.serverData
+	runpp({
+		termfilter,
+		callbacks: {
+			filter: {
+				'postRender.test': runTests
+			}
 		}
 	})
 
@@ -551,7 +510,6 @@ tape('filter term-value button: Conditional term (sub-condition)', function(test
 tape('filter term-value button: Conditional term (grade and child)', function(test) {
 	test.timeoutAfter(4000)
 	test.plan(3)
-	const div0 = d3s.select('body').append('div')
 	const termfilter = {
 		show_top_ui: true,
 		terms: [
@@ -566,22 +524,12 @@ tape('filter term-value button: Conditional term (grade and child)', function(te
 		]
 	}
 
-	runproteinpaint({
-		host,
-		holder: div0.node(),
-		noheader: 1,
-		nobox: true,
-		display_termdb: {
-			dslabel: 'SJLife',
-			genome: 'hg38',
-			default_rootterm: {},
-			termfilter,
-			callbacks: {
-				filter: {
-					'postRender.test': runTests
-				}
-			},
-			serverData: helpers.serverData
+	runpp({
+		termfilter,
+		callbacks: {
+			filter: {
+				'postRender.test': runTests
+			}
 		}
 	})
 
