@@ -94,19 +94,19 @@ class TdbTree {
 		}
 
 		// privately defined root term
-		this.rootTerm = {
+		const _root = {
 			id: root_ID,
-			__tree_isroot: true
+			__tree_isroot: true // must not delete this flag
 		}
 
 		this.termsById = {}
-		this.termsById[root_ID] = this.rootTerm
+		this.termsById[root_ID] = _root
 		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
 		this.app
 			.dispatch({
 				type: 'tree_expand',
 				termId: root_ID,
-				term: this.rootTerm,
+				term: _root,
 				holder: this.dom.holder
 			})
 			.then(() => this.bus.emit('postInit'))
@@ -117,37 +117,35 @@ class TdbTree {
 	}
 
 	async main(action = {}) {
-		switch (action.type.split('_')[0]) {
-			case 'filter':
-			case 'search':
-				await this.notifyComponents(action)
-				break
-			case 'plot':
-				this.viewPlot(action)
-				break
-			default:
-				if (action.type == 'tree_update') {
-					for (const id of this.app.state().tree.expandedTerms) {
-						const term = this.termsById[id]
-						if (!term.terms) {
-							term.terms = await this.requestTerm(term)
-						}
-					}
-					this.renderBranch(this.termsById[root_ID], this.dom.holder)
-				} else {
-					const term = this.termsById[action.termId]
-					if (!term.terms) {
-						term.terms = await this.requestTerm(term)
-						delete term.__tree_isloading
-						if (action.loading_div) {
-							action.loading_div.remove()
-						}
-					}
-					this.renderBranch(term, action.holder, action.button)
-				}
-		}
-		// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
+		await this.main2(action)
 		this.bus.emit('postRender')
+	}
+
+	async main2(action) {
+		const t0 = action.type.split('_')[0]
+		if (t0 == 'filter' || t0 == 'search') {
+			await this.notifyComponents(action)
+			return
+		}
+		if (t0 == 'plot') {
+			return this.viewPlot(action)
+		}
+		if (action.type == 'tree_update') {
+			const root = this.termsById[root_ID]
+			root.terms = await this.requestTerm(root)
+			this.renderBranch(root, this.dom.holder)
+			return
+		}
+		const term = this.termsById[action.termId]
+		if (!term.terms) {
+			term.terms = await this.requestTerm(term)
+			delete term.__tree_isloading
+			if (action.loading_div) {
+				action.loading_div.remove()
+			}
+		}
+		this.renderBranch(term, action.holder, action.button)
+		// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
 	}
 
 	async requestTerm(term) {
