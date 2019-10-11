@@ -367,7 +367,7 @@ export class TermdbBarchart {
 					? 'most recent'
 					: ''
 			legendGrps.push({
-				name: t.name + (value_by_label ? ', ' + value_by_label : ''),
+				name: (this.obj.modifier_ssid_barchart ? 'Genotype' : t.name) + (value_by_label ? ', ' + value_by_label : ''),
 				items: s.rows
 					.map(d => {
 						const total = this.totalsByDataId[d]
