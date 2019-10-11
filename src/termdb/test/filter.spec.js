@@ -22,7 +22,7 @@ const runpp = helpers.getRunPp('termdb', {
 ***************/
 
 tape('\n', function(test) {
-	test.pass('-***- tdb.filter -***-')
+	test.pass('-***- termdb/filter -***-')
 	test.end()
 })
 
@@ -56,7 +56,7 @@ tape('filter term-value button', function(test) {
 	function runTests(filter) {
 		helpers
 			.rideInit({ arg: filter })
-			.to(testFilterDisplay, null, { wait: 200 })
+			.run(testFilterDisplay, 200)
 			.change({ bus: filter, eventType: 'postRender.test' })
 			.to(testRemoveFilter, triggerRemoveFilter)
 			.to(testAddFilter, triggerAddFilter)
@@ -146,7 +146,7 @@ tape('filter term-value button: categorical term', function(test) {
 	function runTests(filter) {
 		helpers
 			.rideInit({ arg: filter })
-			.to(testFilterDisplay, null, { wait: 200 })
+			.run(testFilterDisplay, 300)
 			.to(testNegationBtnVal, triggerChangeNegation)
 			.to(testChangeValue, triggerChangeValue, { wait: 200 })
 			.to(testAddValue, triggerAddValue, { wait: 200 })
@@ -265,7 +265,7 @@ tape('filter term-value button: categorical term', function(test) {
 	function runTests(filter) {
 		helpers
 			.rideInit({ arg: filter })
-			.to(testFilterDisplay, null, { wait: 200 })
+			.run(testFilterDisplay, 200)
 			// .run(triggerChangeNegation)
 			// .run(checkNegationBtnVal, 100)
 			// .run(triggerChangeValue)

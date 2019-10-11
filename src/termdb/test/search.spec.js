@@ -38,12 +38,22 @@ tape('term search', function(test) {
 	})
 
 	function runTests(search) {
+		const tree = search.Inner.app.components('tree')
+
 		helpers
-			.rideInit({ arg: search, bus: search, eventType: 'postRender' })
-			.to(testSearchNoResult, triggerSearchNoResult)
-			.to(testSearchHasResult, triggerSearchHasResult)
-			.change({ bus: search.Inner.app.components('tree') })
-			.to(testClickResult, triggerClickTerm)
+			.rideInit({ arg: search, bus: search, eventType: 'postRender.test' })
+			.use(triggerSearchNoResult)
+			.to(testSearchNoResult)
+			.use(triggerSearchHasResult)
+			.to(testSearchHasResult)
+			.use(triggerClickTerm)
+			.to(testClickResult, { arg: tree, bus: tree })
+			// or instead of the preceding .to(..., opts={}) pattern,
+			// instead use the .change().to() pattern below
+			/*
+			.change({ arg: tree, bus: tree })
+			.to(testClickResult)
+			*/
 			.done(test)
 	}
 
@@ -71,8 +81,9 @@ tape('term search', function(test) {
 			.node()
 			.childNodes[0].childNodes[0].click()
 	}
+
 	function testClickResult(tree) {
-		test.ok(tree.Inner.dom.treeDiv.selectAll('.termdiv').nodes().length > 10, 'should show more than 10 terms')
+		test.ok(tree.Inner.dom.holder.selectAll('.termdiv').nodes().length > 10, 'should show more than 10 terms')
 	}
 })
 

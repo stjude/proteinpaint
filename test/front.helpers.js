@@ -124,12 +124,21 @@ exports.rideInit = function(opts = {}) {
 
 	const rideApi = {
 		// ride on the default event bus
-		to(callback, after = () => {}, sub = {}) {
+
+		/*
+			temporary second argument flexibility to support legacy test code
+			while also enabling the new usage pattern where, moving forward,
+			the second argument should always be sub{} (never a function)
+		*/
+		to(callback, afterOrSub = null, _sub = {}) {
 			/*
 			callback()
 
-			after()
-			- optional function to call before callback
+			afterOrSub: // temporary flexibility to support legacy code
+			- optional, either 
+			  trigger function to call before callback
+			  - OR -
+			  sub{}
 
 			sub {}
 			- optional substitute values when attaching
@@ -138,7 +147,21 @@ exports.rideInit = function(opts = {}) {
 			  as listed for the rideInit() opts{} argument
 
 		*/
-			self.addToThen(callback, after, Object.assign({}, opts, sub))
+			const after = typeof afterOrSub === 'function' ? afterOrSub : null
+
+			const sub = typeof afterOrSub === 'function' ? _sub : afterOrSub ? afterOrSub : {}
+
+			self.addToThen(callback, Object.assign({}, opts, sub), after)
+			return rideApi
+		},
+
+		use(triggerFxn, sub = {}) {
+			/*
+				will supply the triggerFxn for use in the next 
+				Promise.then(), so that it can trigger the event
+				that the bus listener is waiting for
+			*/
+			self.addUseThen(triggerFxn, Object.assign({}, opts, sub))
 			return rideApi
 		},
 
@@ -156,8 +179,6 @@ exports.rideInit = function(opts = {}) {
 		},
 
 		// run callback without using bus, with or without timeout
-		// **** TO BE DEPRECATED ***
-		// use .to(testFxn, [triggerFxn || null], {bus:null}) instead
 		run(callback, after = 0) {
 			self.addRunThen(callback, after, opts)
 			return rideApi
@@ -202,8 +223,42 @@ class Ride {
 		}
 	}
 
-	addToThen(callback, after, opts = {}) {
-		if (!opts.bus) {
+	/*
+		temporarily allow third argument to support legacy test code
+	*/
+	addToThen(callback, opts, after) {
+		if (!after) {
+			if (opts.wait) {
+				this.resolved = this.resolved.then(triggerFxn => {
+					return new Promise((resolve, reject) => {
+						opts.bus.on(opts.eventType, () => {
+							setTimeout(() => {
+								opts.bus.on(opts.eventType, null)
+								callback(opts.arg)
+								resolve()
+							}, opts.wait)
+						})
+						if (typeof triggerFxn == 'function') triggerFxn()
+					})
+				})
+			} else {
+				this.resolved = this.resolved.then(triggerFxn => {
+					return new Promise((resolve, reject) => {
+						opts.bus.on(opts.eventType, () => {
+							opts.bus.on(opts.eventType, null)
+							callback(opts.arg)
+							resolve()
+						})
+						if (typeof triggerFxn == 'function') triggerFxn()
+					})
+				})
+			}
+			return
+		} else if (!opts.bus) {
+
+		/* 
+			will delete the conditions below once the revised implementation is verified
+		*/
 			// equivalent to addToRun() method
 			this.resolved = this.resolved.then(() => {
 				return new Promise((resolve, reject) => {
@@ -227,7 +282,7 @@ class Ride {
 							resolve()
 						}, opts.wait)
 					})
-					after(opts.arg)
+					if (typeof after == 'function') after(opts.arg)
 				})
 			})
 		} else {
@@ -238,10 +293,26 @@ class Ride {
 						callback(opts.arg)
 						resolve()
 					})
-					after(opts.arg)
+					if (typeof after == 'function') after(opts.arg)
 				})
 			})
 		}
+	}
+
+	// prepare a trigger function for use in the pattern
+	// rideInit().use(triggerFxn).to(...)
+	//
+	// .use() enables setting a different opts.arg to be used for triggerFxn
+	//
+	addUseThen(triggerFxn, opts) {
+		this.resolved = this.resolved.then(() => {
+			// supply a trigger function as argument to the next .then()
+			return () => {
+				//setTimeout(() => {
+				triggerFxn(opts.arg)
+				//}, isNaN(opts.wait) ? 0 : opts.wait)
+			}
+		})
 	}
 
 	addRunThen(callback, after, opts) {
