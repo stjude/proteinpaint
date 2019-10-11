@@ -83,7 +83,7 @@ tape('term search', function(test) {
 	}
 
 	function testClickResult(tree) {
-		test.ok(tree.Inner.dom.holder.selectAll('.termdiv').nodes().length > 10, 'should show more than 10 terms')
+		test.ok(tree.Inner.dom.treeDiv.selectAll('.termdiv').nodes().length > 10, 'should show more than 10 terms')
 	}
 })
 
