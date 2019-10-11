@@ -198,8 +198,8 @@ class TdbTree {
 	}
 
 	async plotActions(action) {
-		// function name suggests it deals with plot-related actions
-		if (action.type == 'plot_hide' || action.type == 'plot_show') {
+		if (action.type == 'plot_hide') {
+			// no further actions needed
 			return
 		}
 		const plot = this.components.plots[action.id]
