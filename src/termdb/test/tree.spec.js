@@ -60,7 +60,7 @@ tape('error handling', function(test) {
 	}
 })
 
-tape('default view', function(test) {
+tape('default view with user interactions', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({
@@ -76,36 +76,47 @@ tape('default view', function(test) {
 		helpers
 			.rideInit({ arg: tree, bus: tree, eventType: 'postRender.test' })
 			.to(testExpand, triggerExpand)
+			//.to(testExpand2, triggerExpand2)
 			.to(testFold, triggerFold)
 			.done(test)
 	}
 
 	function testRoot(tree) {
-		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 4, 'should have 4 root terms')
+		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 4, 'should have 4 root terms')
 	}
 
 	function triggerExpand(tree) {
-		tree.Inner.dom.holder
+		// click the button of the first term
+		tree.Inner.dom.treeDiv
 			.select('.termbtn')
 			.node()
 			.click()
 	}
 
 	function testExpand(tree) {
-		const childdiv = tree.Inner.dom.holder.select('.termchilddiv')
+		const childdiv = tree.Inner.dom.treeDiv.select('.termchilddiv')
 		test.equal(childdiv.style('display'), 'block', 'child DIV of first term is now visible')
 		test.equal(childdiv.selectAll('.termdiv').size(), 3, 'child DIV now contains 3 sub terms')
 	}
 
+	/*
+	function triggerExpand2(tree) {
+		// click the button of the first child from the first term
+		tree.Inner.dom.treeDiv
+	}
+	function testExpand2(tree) {
+	}
+	*/
+
 	function triggerFold(tree) {
-		tree.Inner.dom.holder
+		tree.Inner.dom.treeDiv
 			.select('.termbtn')
 			.node()
 			.click()
 	}
 
 	function testFold(tree) {
-		const childdiv = tree.Inner.dom.holder.select('.termchilddiv')
+		const childdiv = tree.Inner.dom.treeDiv.select('.termchilddiv')
 		test.equal(childdiv.style('display'), 'none', 'child DIV is now invisible')
 	}
 })
@@ -128,7 +139,7 @@ tape('rehydrated from saved state', function(test) {
 	})
 
 	function testDom(tree) {
-		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 9, 'should have 9 expanded terms')
-		test.equal(tree.Inner.dom.holder.selectAll('.termbtn').size(), 7, 'should have 7 term toggle buttons')
+		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 9, 'should have 9 expanded terms')
+		test.equal(tree.Inner.dom.treeDiv.selectAll('.termbtn').size(), 7, 'should have 7 term toggle buttons')
 	}
 })

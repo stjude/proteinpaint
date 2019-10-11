@@ -93,14 +93,20 @@ class TdbTree {
 		this.notifyComponents = rx.notifyComponents
 		this.getComponents = rx.getComponents
 		this.app = app
-		this.dom = { holder: opts.holder }
+		this.dom = {
+			holder: opts.holder,
+			searchDiv: opts.holder.append('div').style('margin', '10px'),
+			// filter
+			treeDiv: opts.holder.append('div')
+		}
 
 		// attach instance-specific methods via closure
 		setRenderers(this)
 		setInteractivity(this)
 
 		this.components = {
-			search: searchInit(app, { holder: opts.holder }),
+			search: searchInit(app, { holder: this.dom.searchDiv }),
+			// filter
 			plots: {}
 		}
 
@@ -118,14 +124,14 @@ class TdbTree {
 				type: 'tree_expand',
 				termId: root_ID,
 				term: _root,
-				holder: this.dom.holder
+				holder: this.dom.treeDiv
 			})
 			.then(() => {
 				this.bus.emit('postInit')
 				for (const termId in this.app.state().tree.plots) {
 					this.addPlot(
 						this.termsById[termId],
-						this.dom.holder.selectAll('.' + cls_termgraphdiv).filter(i => i.id == termId)
+						this.dom.treeDiv.selectAll('.' + cls_termgraphdiv).filter(i => i.id == termId)
 					)
 				}
 			})
@@ -157,7 +163,7 @@ class TdbTree {
 		if (action.type == 'tree_update') {
 			const root = this.termsById[root_ID]
 			root.terms = await this.requestTerm(root)
-			this.renderBranch(root, this.dom.holder)
+			this.renderBranch(root, this.dom.treeDiv)
 			return
 		}
 		const term = this.termsById[action.termId]
