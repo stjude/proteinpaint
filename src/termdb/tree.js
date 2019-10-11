@@ -219,11 +219,13 @@ class TdbTree {
 			holder: action.holder,
 			term: action.term,
 			callbacks: {
-				// must use namespaced eventType otherwise will be rewritten..
-				'postRender.viewbtn': () => {
-					// may be risky, if action.term is altered outside
-					delete action.term.__plot_isloading
-					if (action.loading_div) action.loading_div.remove()
+				plot: {
+					// must use namespaced eventType otherwise will be rewritten..
+					'postRender.viewbtn': () => {
+						// may be risky, if action.term is altered outside
+						delete action.term.__plot_isloading
+						if (action.loading_div) action.loading_div.remove()
+					}
 				}
 			}
 		})
