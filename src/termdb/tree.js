@@ -15,23 +15,23 @@ const cls_termdiv = 'termdiv',
 	cls_termgraphdiv = 'termgraphdiv'
 
 /*
-Recommended Component Code Organization
-
-(a) class (produces instance):
-- all methods expected by rx.api (main, etc)
-- all data processing code
-
-(b) setRenderers(self): attaches renderer methods
-
-(c) setInteractivity(self): attaches event handlers
-
 ******************** EXPORTED
 treeInit()
 graphable()
 root_ID
 
-********************
-exit/update/enter
+******************** Plot
+separate functions are designed to handle different things so that logic won't mix
+- clickViewButton( term )
+  called by clicking button, will toggle graph div visibility
+  setup measures to prevent multi-clicking
+- addPlot( term, holder, loading_div )
+  add new plot by dispatching action
+  also called when recreating tree from saved state
+- plotActions( action )
+  to deal with plot-related actions
+
+******************** exit/update/enter
 termsById{} is bound to the DOM tree, to provide:
 - term label
 - list of children terms for a parent term
@@ -42,13 +42,16 @@ may implement tree modifiers for:
 
 any change of modifier should update termsById first, then call renderBranch() at the root term to update the current tree
 
-*******************
-special flags
+******************* special flags
 root term does not exist in the termdb, but is synthesized upon initializing instance, has the "__tree_isroot" flag
-"__tree_isloading" flag is added when a term is first clicked
+term.__tree_isloading is added when a term is first clicked
+  removed in this script when action finishes
+term.__plot_isloading is added when loading plot for a term
+  removed by plot postRender callback
+these transient flags are created and removed only within this script, and not to be handled outside, to avoid confusion
 
 
-*******************
+******************* modifiers
 < no modifier >
 display all terms under a parent, just show name;
 non-leaf terms will have a +/- button in the front
@@ -59,10 +62,18 @@ display graphable terms as buttons, as in <search.js>
 no VIEW button
 
 < modifier_ssid_barchart >
-todo
+TODO
 
 < modifier_barchart_selectbar >
-todo
+TODO
+
+******************* Recommended Component Code Organization
+
+(a) class (produces instance):
+- all methods expected by rx.api (main, etc)
+- all data processing code
+(b) setRenderers(self): attaches renderer methods
+(c) setInteractivity(self): attaches event handlers
 
 */
 
@@ -112,7 +123,10 @@ class TdbTree {
 			.then(() => {
 				this.bus.emit('postInit')
 				for (const termId in this.app.state().tree.plots) {
-					this.togglePlot(this.termsById[termId])
+					this.addPlot(
+						this.termsById[termId],
+						this.dom.holder.selectAll('.' + cls_termgraphdiv).filter(i => i.id == termId)
+					)
 				}
 			})
 	}
@@ -137,7 +151,7 @@ class TdbTree {
 			return
 		}
 		if (t0 == 'plot') {
-			this.viewPlot(action)
+			this.plotActions(action)
 			return
 		}
 		if (action.type == 'tree_update') {
@@ -183,13 +197,10 @@ class TdbTree {
 		return terms
 	}
 
-	async viewPlot(action) {
-		if (action.type == 'plot_hide') {
-			action.holder.style('display', 'none')
+	async plotActions(action) {
+		// function name suggests it deals with plot-related actions
+		if (action.type == 'plot_hide' || action.type == 'plot_show') {
 			return
-		}
-		if (action.type == 'plot_show') {
-			action.holder.style('display', 'block')
 		}
 		const plot = this.components.plots[action.id]
 		if (plot) {
@@ -202,9 +213,11 @@ class TdbTree {
 			holder: action.holder,
 			term: action.term,
 			callbacks: {
-				postInit: () => {
-					delete action.__plot_isloading
-					action.loading_div.remove()
+				// must use namespaced eventType otherwise will be rewritten..
+				'postRender.viewbtn': () => {
+					// may be risky, if action.term is altered outside
+					delete action.term.__plot_isloading
+					if (action.loading_div) action.loading_div.remove()
 				}
 			}
 		})
@@ -317,7 +330,7 @@ function setRenderers(self) {
 			.style('margin-left', '20px')
 			.style('font-size', '0.8em')
 			.text('VIEW')
-			.on('click', self.togglePlot)
+			.on('click', self.clickViewButton)
 
 		added
 			.filter(graphable)
@@ -369,30 +382,29 @@ function setInteractivity(self) {
 		self.app.dispatch({ type, termId: term.id, term, holder, button, loading_div })
 	}
 
-	self.togglePlot = function(term) {
-		if (event) event.stopPropagation()
-		if (!self.components.plots[term.id]) {
-			// need to assess pros and cons of passing the holder via action versus alternatives
-			const holder =
-				this == self
-					? self.dom.holder.selectAll('.' + cls_termgraphdiv).filter(_term => _term.id == term.id)
-					: select(select(this).node().parentNode.lastChild)
-			self.app.dispatch({
-				type: 'plot_add',
-				id: term.id,
-				term,
-				holder,
-				config: plotConfig({ term })
-			})
-		} else {
-			const plot = self.app.state().tree.plots[term.id]
-			const type = !plot || !plot.isVisible ? 'plot_show' : 'plot_hide'
-			self.app.dispatch({ type, id: term.id, term, holder })
+	self.clickViewButton = function(term) {
+		if (term.__plot_isloading) {
+			// prevent multiple clicking while loading new plot
+			return
+		}
+		event.stopPropagation()
+		event.preventDefault()
+		const holder = select(this.parentNode.getElementsByClassName(cls_termgraphdiv)[0])
+		const plotConfig = self.app.state().tree.plots[term.id]
+		if (plotConfig) {
+			// plot already made
+			holder.style('display', plotConfig.isVisible ? 'none' : 'block')
+			const type = plotConfig.isVisible ? 'plot_hide' : 'plot_show'
+			self.app.dispatch({ type, id: term.id, term })
 			return
 		}
 		// add new plot
 		term.__plot_isloading = true
 		const loading_div = holder.append('div').text('Loading...')
+		self.addPlot(term, holder, loading_div)
+	}
+
+	self.addPlot = (term, holder, loading_div) => {
 		self.app.dispatch({
 			type: 'plot_add',
 			id: term.id,
@@ -401,7 +413,6 @@ function setInteractivity(self) {
 			loading_div,
 			config: plotConfig({ term })
 		})
-		return
 	}
 }
 

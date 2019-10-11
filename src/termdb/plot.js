@@ -50,14 +50,39 @@ class TdbPlot {
 			})
 		}
 
+		// constructor also accepts callbacks in order to dismiss the loading DIV from tree
+		// here to merge callbacks from two places
+		const callbacks = Object.assign({}, opts.callbacks || {})
+		if (this.app.opts && this.app.opts.callbacks && this.app.opts.callbacks.plot) {
+			for (const key in this.app.opts.callbacks.plot) {
+				const cb = this.app.opts.callbacks.plot[key]
+				if (callbacks[key]) {
+					// merge
+					const lst = []
+					if (Array.isArray(callbacks[key])) {
+						lst.push(...callbacks[key])
+					} else {
+						lst.push(callbacks[key])
+					}
+					if (Array.isArray(cb)) {
+						lst.push(...cb)
+					} else {
+						lst.push(cb)
+					}
+					callbacks[key] = cb
+				} else {
+					callbacks[key] = cb
+				}
+			}
+		}
+		this.bus = new rx.Bus('plot', ['postInit', 'postRender'], { plot: callbacks }, this.api)
+
 		// cannot "await" since that would imply or require
 		// constructor to be async, but a Class
 		// constructor must return an object (not return
 		// a resolved promise value as implied by "await")
 		// -- so instead must use promise.then here to emit postInit
 		// event
-		this.bus = new rx.Bus('plot', ['postInit', 'postRender'], this.app.opts.callbacks, this.api)
-
 		this.app
 			.dispatch({
 				type: 'plot_add',
