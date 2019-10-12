@@ -276,9 +276,12 @@ function setRenderers(self) {
 
 		divs.exit().each(self.hideTerm)
 
-		self.updateTerms(divs)
+		divs.each(self.updateTerm)
 
-		self.addTerms(divs)
+		divs
+			.enter()
+			.append('div')
+			.each(self.addTerm)
 
 		for (const child of term.terms) {
 			if (expandedTerms.includes(child.id)) {
@@ -297,59 +300,58 @@ function setRenderers(self) {
 		select(this).style('display', 'none')
 	}
 
-	self.updateTerms = function(divs) {
-		const expandedTerms = self.app.state().tree.expandedTerms
-		divs.select('.' + cls_termbtn).text(d => (expandedTerms.includes(d.id) ? '-' : '+'))
+	self.updateTerm = function(term) {
+		const div = select(this)
+		const isExpanded = self.app.state().tree.expandedTerms.includes(term.id)
+		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
 		// update other parts if needed, e.g. label
-		divs.select('.' + cls_termchilddiv).style('display', d => (expandedTerms.includes(d.id) ? 'block' : 'none'))
+		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 	}
 
-	self.addTerms = function(divs) {
-		const added = divs
-			.enter()
-			.append('div')
+	self.addTerm = function(term) {
+		const div = select(this)
 			.attr('class', cls_termdiv)
-			.style('margin', d => (d.isleaf ? '' : '2px'))
+			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
 
-		added
-			.filter(d => !d.isleaf)
-			.append('div')
-			.attr('class', 'sja_menuoption ' + cls_termbtn)
-			.style('display', 'inline-block')
-			.style('padding', '4px 9px')
-			.style('font-family', 'courier')
-			.text('+')
-			.on('click', self.toggleTerm)
+		if (!term.isleaf) {
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption ' + cls_termbtn)
+				.style('display', 'inline-block')
+				.style('padding', '4px 9px')
+				.style('font-family', 'courier')
+				.text('+')
+				.on('click', self.toggleTerm)
+		}
 
-		added
+		div
 			.append('div')
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('padding', '5px')
 			.text(d => d.name)
 
-		added
-			.filter(graphable)
-			.append('div')
-			.attr('class', 'sja_menuoption ' + cls_termview)
-			.style('display', 'inline-block')
-			.style('border-radius', '5px')
-			.style('margin-left', '20px')
-			.style('font-size', '0.8em')
-			.text('VIEW')
-			.on('click', self.clickViewButton)
+		if (graphable(term)) {
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption ' + cls_termview)
+				.style('display', 'inline-block')
+				.style('border-radius', '5px')
+				.style('margin-left', '20px')
+				.style('font-size', '0.8em')
+				.text('VIEW')
+				.on('click', self.clickViewButton)
 
-		added
-			.filter(graphable)
-			.append('div')
-			.attr('class', cls_termgraphdiv)
+			div.append('div').attr('class', cls_termgraphdiv)
+		}
 
-		added
-			.filter(d => !d.isleaf)
-			.append('div')
-			.attr('class', cls_termchilddiv)
-			.style('padding-left', childterm_indent)
+		if (!term.isleaf) {
+			div
+				.append('div')
+				.attr('class', cls_termchilddiv)
+				.style('padding-left', childterm_indent)
+		}
 	}
 }
 
@@ -363,7 +365,7 @@ function setInteractivity(self) {
 		self: a TdbTree instance
 	*/
 	// !!! no free-floating variable declarations here !!!
-	// use self to create properties
+	// use self in TdbTree constructor to create properties
 
 	self.toggleTerm = function(term) {
 		event.stopPropagation()
@@ -372,7 +374,9 @@ function setInteractivity(self) {
 		if (!t0) throw 'invalid term id'
 
 		const button = select(this)
-		const holder = select(this.parentNode.getElementsByClassName(cls_termchilddiv)[0])
+		const holder = select(this.parentNode)
+			.selectAll('.' + cls_termchilddiv)
+			.filter(d => d.id === term.id)
 		let loading_div
 		if (!t0.terms) {
 			// to load child term with request, guard against repetitive clicking

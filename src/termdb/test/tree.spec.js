@@ -91,43 +91,65 @@ tape('default view with user interactions', function(test) {
 		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 4, 'should have 4 root terms')
 	}
 
+	let termbtn1, childdiv1
 	function expandTerm1(tree) {
+		termbtn1 = tree.Inner.dom.treeDiv.node().querySelectorAll('.termbtn')[0]
+		childdiv1 = [...termbtn1.parentNode.querySelectorAll('.termchilddiv')][0]
 		// click the button of the first term
-		tree.Inner.dom.treeDiv
-			.select('.termbtn')
-			.node()
-			.click()
+		termbtn1.click()
 	}
 
 	function testExpand1(tree) {
-		const childdiv = tree.Inner.dom.treeDiv.select('.termchilddiv')
-		test.equal(childdiv.style('display'), 'block', 'child DIV of first term is now visible')
-		test.equal(childdiv.selectAll('.termdiv').size(), 3, 'child DIV now contains 3 sub terms')
+		test.equal(childdiv1.style.display, 'block', 'child DIV of first term is now visible')
+		test.equal(childdiv1.querySelectorAll('.termdiv').length, 3, 'child DIV now contains 3 sub terms')
 	}
 
+	let childdiv2
 	function expandTerm2(tree) {
 		// term1 has already been expanded
 		// from child div of term1, expand the first child term
 		/*
 		this doesn't work, but must use getElementsByClassName as below
+		!!! see reason below due to a surprising d3-selection.select behavior !!!
+		
 		tree.Inner.dom.treeDiv
-			.select('.termchilddiv')
-			.select('.termbtn')
+			.select('.termchilddiv') // (Cancer-related Variables childdiv) 
+			.select('.termbtn') // (Diagnosis button)
+			// !!!
+			// d3.selection.select will assign the parent elem (Cancer-related Variables childdiv) 
+			// data to the select-ed child element (Diagnosis button),
+			// and that will break the dispatch action.term since the bound term data 
+			// was changed from Diagnosis term to Cancer-related Variables term
+			// !!!
 			.node()
 			.click()
-			*/
+		*/
+		/*
+		// !!!
+		// below works because there is no data binding changes
+		// made, like in d3.selection.select
+		// 
+		// however, it's easier to use the native querySelect or 
+		// querySelectorAll methods to ensure that the 
+		// same button and divs are selected using
+		// the **ordered** Nodelist index [0]
+		// !!!
+		// 
 		tree.Inner.dom.treeDiv
 			.select('.termchilddiv')
 			.node()
 			.getElementsByClassName('termbtn')[0]
 			.click()
+		*/
+
+		const termbtn2 = childdiv1.querySelectorAll('.termdiv .termbtn')[0]
+		childdiv2 = [...termbtn2.parentNode.querySelectorAll('.termchilddiv')][0]
+		// click the button of the first term
+		termbtn2.click()
 	}
 	function testExpand2(tree) {
-		const divs = tree.Inner.dom.treeDiv
-			.select('.termchilddiv')
-			.select('.termchilddiv')
-			.selectAll('.termdiv')
-		test.equal(divs.size(), 2, 'should have 2 child terms')
+		test.equal(childdiv2.style.display, 'block', 'child DIV of second term is now visible')
+		test.equal(childdiv2.querySelectorAll('.termdiv').length, 2, 'child DIV now contains 2 sub terms')
 	}
 	function clickViewBtn(tree) {
 		tree.Inner.dom.treeDiv
@@ -140,18 +162,15 @@ tape('default view with user interactions', function(test) {
 	function testPlot(tree) {
 		test.equal(Object.keys(tree.Inner.app.state().tree.plots).length, 1, 'now has 1 plot')
 		// tree.postRender cannot be used to verify that the plot is successfully rendered
+		// this is okay, will be tested independently by action-type in plot.spec
 	}
 
 	function triggerFold(tree) {
-		tree.Inner.dom.treeDiv
-			.select('.termbtn')
-			.node()
-			.click()
+		termbtn1.click()
 	}
 
 	function testFold(tree) {
-		const childdiv = tree.Inner.dom.treeDiv.select('.termchilddiv')
-		test.equal(childdiv.style('display'), 'none', 'child DIV is now invisible')
+		test.equal(childdiv1.style.display, 'none', 'child DIV is now invisible')
 	}
 })
 

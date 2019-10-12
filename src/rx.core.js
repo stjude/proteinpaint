@@ -199,7 +199,6 @@ export function getAppApi(self) {
 			*/
 			// replace app.state
 			self.state = await self.store.write(action)
-			//self.deepFreeze(action)
 			await self.main(action)
 		},
 		async save(action) {
