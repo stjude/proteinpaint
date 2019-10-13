@@ -65,16 +65,9 @@ class TdbPlot {
 		// a resolved promise value as implied by "await")
 		// -- so instead must use promise.then here to emit postInit
 		// event
-		this.app
-			.dispatch({
-				type: 'plot_show',
-				id: this.id,
-				config: this.config,
-				term: opts.term
-			})
-			.then(() => {
-				this.bus.emit('postInit')
-			})
+		this.main(opts.action).then(() => {
+			this.bus.emit('postInit')
+		})
 	}
 
 	reactsTo(action, acty) {

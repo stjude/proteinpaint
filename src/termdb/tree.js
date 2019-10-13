@@ -215,6 +215,7 @@ class TdbTree {
 		}
 		// generate new plot
 		const newPlot = plotInit(this.app, {
+			action,
 			id: action.id,
 			holder: action.holder,
 			term: action.term,
