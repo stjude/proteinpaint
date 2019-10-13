@@ -67,7 +67,7 @@ class TdbPlot {
 		// event
 		this.app
 			.dispatch({
-				type: 'plot_add',
+				type: 'plot_show',
 				id: this.id,
 				config: this.config,
 				term: opts.term
