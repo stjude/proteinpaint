@@ -1,6 +1,5 @@
 const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
-const select = require('d3-selection').select
 
 /*************************
  reusable helper functions
@@ -47,7 +46,7 @@ tape('default view with user interactions', function(test) {
 			.to(testExpandTerm1_child1)
 			.use(clickViewBtn_term1_child1_child1) // 1st click to show plot
 			.to(testPlotCreated)
-			.use(clickViewBtn_term1_child1_child1) // 2nd click to hide plot
+			.use(clickViewBtn_term1_child1_child1, { wait: 500 }) // 2nd click to hide plot, wait for term.__plot_isloading
 			.to(testPlotFolded)
 			.use(triggerFold)
 			.to(testFold)
@@ -61,7 +60,7 @@ tape('default view with user interactions', function(test) {
 	let termbtn1, childdiv1
 	function expandTerm1(tree) {
 		termbtn1 = tree.Inner.dom.treeDiv.node().querySelectorAll('.termbtn')[0]
-		childdiv1 = [...termbtn1.parentNode.querySelectorAll('.termchilddiv')][0]
+		childdiv1 = termbtn1.parentNode.querySelectorAll('.termchilddiv')[0]
 		// click the button of the first term
 		termbtn1.click()
 	}
@@ -110,7 +109,7 @@ tape('default view with user interactions', function(test) {
 		*/
 
 		const termbtn2 = childdiv1.querySelectorAll('.termdiv .termbtn')[0]
-		childdiv2 = [...termbtn2.parentNode.querySelectorAll('.termchilddiv')][0]
+		childdiv2 = termbtn2.parentNode.querySelectorAll('.termchilddiv')[0]
 		// click the button of the first term
 		termbtn2.click()
 	}
@@ -121,7 +120,7 @@ tape('default view with user interactions', function(test) {
 	function clickViewBtn_term1_child1_child1(tree) {
 		// clicking view button of term1 > child1 > child1
 		// hardcoded to sjlife dataset
-		childdiv2.querySelectorAll('.termview')[0]
+		childdiv2.querySelectorAll('.termview')[0].click()
 	}
 	function testPlotCreated(tree) {
 		test.equal(Object.keys(tree.Inner.app.state().tree.plots).length, 1, 'now has 1 plot')

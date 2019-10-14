@@ -255,8 +255,7 @@ class Ride {
 			}
 			return
 		} else if (!opts.bus) {
-
-		/* 
+			/* 
 			will delete the conditions below once the revised implementation is verified
 		*/
 			// equivalent to addToRun() method
@@ -308,9 +307,12 @@ class Ride {
 		this.resolved = this.resolved.then(() => {
 			// supply a trigger function as argument to the next .then()
 			return () => {
-				//setTimeout(() => {
-				triggerFxn(opts.arg)
-				//}, isNaN(opts.wait) ? 0 : opts.wait)
+				setTimeout(
+					() => {
+						triggerFxn(opts.arg)
+					},
+					isNaN(opts.wait) ? 0 : opts.wait
+				)
 			}
 		})
 	}
