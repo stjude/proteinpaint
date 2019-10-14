@@ -150,6 +150,48 @@ tape('default view with user interactions', function(test) {
 	}
 })
 
+tape('modifier: click_term', test => {
+	test.timeoutAfter(1000)
+	runpp({
+		modifiers: {
+			click_term: modifier_callback
+		},
+		callbacks: {
+			tree: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(tree) {
+		helpers
+			.rideInit({ arg: tree, bus: tree, eventType: 'postRender.test' })
+			.use(expandTerm1)
+			.to(expandTerm1_child1)
+			.to(testExpand_child1)
+			.done(test)
+	}
+	let childdiv_term1
+	function expandTerm1(tree) {
+		const term1 = tree.Inner.dom.treeDiv.node().querySelector('.termdiv')
+		term1.querySelector('.termbtn').click()
+		childdiv_term1 = term1.querySelector('.termchilddiv')
+	}
+	let childdiv_child1
+	function expandTerm1_child1(tree) {
+		const child1 = childdiv_term1.querySelector('.termdiv')
+		child1.querySelector('.termbtn').click()
+		childdiv_child1 = child1.querySelector('.termchilddiv')
+	}
+	function testExpand_child1(tree) {
+		const buttons = childdiv_child1.getElementsByClassName('sja_menuoption termlabel')
+		test.ok(buttons.length > 1, 'should have more than 1 child terms with class names "sja_menuoption termlabel"')
+		buttons[0].click() // click this button and trigger the next test
+	}
+	function modifier_callback(term) {
+		test.ok(graphable(term), 'modifier callback called with a graphable term')
+	}
+})
+
 tape('rehydrated from saved state', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
@@ -207,3 +249,8 @@ tape('error handling', function(test) {
 		test.equal(d.text(), 'Error: invalid dslabel', 'should show for invalid dslabel')
 	}
 })
+
+function graphable(term) {
+	if (!term) throw 'missing term'
+	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
+}

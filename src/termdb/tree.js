@@ -4,7 +4,7 @@ import { dofetch2 } from '../client'
 import { plotInit, plotConfig } from './plot'
 import { searchInit } from './search'
 
-const childterm_indent = '30px'
+const childterm_indent = '25px'
 export const root_ID = 'root'
 // class names
 const cls_termdiv = 'termdiv',
@@ -57,14 +57,14 @@ display all terms under a parent, just show name;
 non-leaf terms will have a +/- button in the front
 graphable terms will have a VIEW button at the back
 
-< modifier_click_term >
-display graphable terms as buttons, as in <search.js>
-no VIEW button
+< click_term >
+display graphable terms as buttons for selecting, no VIEW button
+as in selecting term2 in barchart
 
-< modifier_ssid_barchart >
+< ssid_barchart >
 TODO
 
-< modifier_barchart_selectbar >
+< barchart_selectbar >
 TODO
 
 ******************* Recommended Component Code Organization
@@ -85,7 +85,8 @@ class TdbTree {
 
 	opts: {
 		holder,
-		callbacks // see bus below
+		callbacks, // see bus below
+		modifiers
 	}
 	*/
 	constructor(app, opts) {
@@ -93,10 +94,10 @@ class TdbTree {
 		this.notifyComponents = rx.notifyComponents
 		this.getComponents = rx.getComponents
 		this.app = app
+		this.modifiers = opts.modifiers
 		this.dom = {
 			holder: opts.holder,
 			searchDiv: opts.holder.append('div').style('margin', '10px'),
-			// filter
 			treeDiv: opts.holder.append('div')
 		}
 
@@ -106,7 +107,6 @@ class TdbTree {
 
 		this.components = {
 			search: searchInit(app, { holder: this.dom.searchDiv }),
-			// filter
 			plots: {}
 		}
 
@@ -326,25 +326,36 @@ function setRenderers(self) {
 				.on('click', self.toggleTerm)
 		}
 
-		div
+		const labeldiv = div
 			.append('div')
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('padding', '5px')
-			.text(d => d.name)
+			.text(term.name)
 
 		if (graphable(term)) {
-			div
-				.append('div')
-				.attr('class', 'sja_menuoption ' + cls_termview)
-				.style('display', 'inline-block')
-				.style('border-radius', '5px')
-				.style('margin-left', '20px')
-				.style('font-size', '0.8em')
-				.text('VIEW')
-				.on('click', self.clickViewButton)
+			if (self.modifiers.click_term) {
+				labeldiv
+					.attr('class', 'sja_menuoption ' + cls_termlabel)
+					.style('border-radius', '5px')
+					.style('padding', '5px 8px')
+					.on('click', () => {
+						self.modifiers.click_term(term)
+					})
+			} else {
+				// no modifier, show view button and graph div
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption ' + cls_termview)
+					.style('display', 'inline-block')
+					.style('border-radius', '5px')
+					.style('margin-left', '20px')
+					.style('font-size', '0.8em')
+					.text('VIEW')
+					.on('click', self.clickViewButton)
 
-			div.append('div').attr('class', cls_termgraphdiv)
+				div.append('div').attr('class', cls_termgraphdiv)
+			}
 		}
 
 		if (!term.isleaf) {
