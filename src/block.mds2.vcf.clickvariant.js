@@ -83,6 +83,7 @@ function mayaddtab_phewas(tabs, m, tk, block) {
 
 	if (!tk.vcf) return
 	if (!tk.vcf.termdb_bygenotype) return
+	if (tk.mds && tk.mds.hide_phewas) return
 	tabs.push({
 		label: 'Phewas',
 		callback: async div => {

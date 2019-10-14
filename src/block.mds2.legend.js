@@ -260,6 +260,8 @@ data is data.info_fields{}
 }
 
 function may_add_genotypeexportbutton(tk, block) {
+	if (tk.mds && tk.mds.hide_genotypedownload) return
+
 	const button = tk.legend.table
 		.append('tr')
 		.append('td')
