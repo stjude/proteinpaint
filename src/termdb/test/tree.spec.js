@@ -26,43 +26,8 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('error handling', function(test) {
-	test.timeoutAfter(1000)
-	test.plan(2)
-
-	runpp({
-		state: {
-			genome: 'ahg38'
-		},
-		callbacks: {
-			app: {
-				'postRender.test': testWrongGenome
-			}
-		}
-	})
-	function testWrongGenome(app) {
-		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
-		test.equal(d.text(), 'Error: invalid genome', 'should show for invalid genome')
-	}
-
-	runpp({
-		state: {
-			dslabel: 'xxx'
-		},
-		callbacks: {
-			app: {
-				'postRender.test': testWrongDslabel
-			}
-		}
-	})
-	function testWrongDslabel(app) {
-		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div')
-		test.equal(d.text(), 'Error: invalid dslabel', 'should show for invalid dslabel')
-	}
-})
-
 tape('default view with user interactions', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(2000)
 
 	runpp({
 		callbacks: {
@@ -78,10 +43,12 @@ tape('default view with user interactions', function(test) {
 			.rideInit({ arg: tree, bus: tree, eventType: 'postRender.test' })
 			.use(expandTerm1)
 			.to(testExpand1)
-			.use(expandTerm2)
-			.to(testExpand2)
-			.use(clickViewBtn)
-			.to(testPlot)
+			.use(expandTerm1_child1)
+			.to(testExpandTerm1_child1)
+			.use(clickViewBtn_term1_child1_child1) // 1st click to show plot
+			.to(testPlotCreated)
+			.use(clickViewBtn_term1_child1_child1) // 2nd click to hide plot
+			.to(testPlotFolded)
 			.use(triggerFold)
 			.to(testFold)
 			.done(test)
@@ -105,7 +72,7 @@ tape('default view with user interactions', function(test) {
 	}
 
 	let childdiv2
-	function expandTerm2(tree) {
+	function expandTerm1_child1(tree) {
 		// term1 has already been expanded
 		// from child div of term1, expand the first child term
 		/*
@@ -147,22 +114,22 @@ tape('default view with user interactions', function(test) {
 		// click the button of the first term
 		termbtn2.click()
 	}
-	function testExpand2(tree) {
+	function testExpandTerm1_child1(tree) {
 		test.equal(childdiv2.style.display, 'block', 'child DIV of second term is now visible')
 		test.equal(childdiv2.querySelectorAll('.termdiv').length, 2, 'child DIV now contains 2 sub terms')
 	}
-	function clickViewBtn(tree) {
-		tree.Inner.dom.treeDiv
-			.select('.termchilddiv')
-			.select('.termchilddiv')
-			.node()
-			.getElementsByClassName('termview')[0]
-			.click()
+	function clickViewBtn_term1_child1_child1(tree) {
+		// clicking view button of term1 > child1 > child1
+		// hardcoded to sjlife dataset
+		childdiv2.querySelectorAll('.termview')[0]
 	}
-	function testPlot(tree) {
+	function testPlotCreated(tree) {
 		test.equal(Object.keys(tree.Inner.app.state().tree.plots).length, 1, 'now has 1 plot')
 		// tree.postRender cannot be used to verify that the plot is successfully rendered
 		// this is okay, will be tested independently by action-type in plot.spec
+	}
+	function testPlotFolded(tree) {
+		test.equal(childdiv2.querySelectorAll('.termgraphdiv')[0].style.display, 'none', 'graphdiv is now hidden')
 	}
 
 	function triggerFold(tree) {
@@ -194,5 +161,40 @@ tape('rehydrated from saved state', function(test) {
 	function testDom(tree) {
 		test.equal(tree.Inner.dom.treeDiv.selectAll('.termdiv').size(), 9, 'should have 9 expanded terms')
 		test.equal(tree.Inner.dom.treeDiv.selectAll('.termbtn').size(), 7, 'should have 7 term toggle buttons')
+	}
+})
+
+tape('error handling', function(test) {
+	test.timeoutAfter(1000)
+	test.plan(2)
+
+	runpp({
+		state: {
+			genome: 'ahg38'
+		},
+		callbacks: {
+			app: {
+				'postRender.test': testWrongGenome
+			}
+		}
+	})
+	function testWrongGenome(app) {
+		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
+		test.equal(d.text(), 'Error: invalid genome', 'should show for invalid genome')
+	}
+
+	runpp({
+		state: {
+			dslabel: 'xxx'
+		},
+		callbacks: {
+			app: {
+				'postRender.test': testWrongDslabel
+			}
+		}
+	})
+	function testWrongDslabel(app) {
+		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div')
+		test.equal(d.text(), 'Error: invalid dslabel', 'should show for invalid dslabel')
 	}
 })
