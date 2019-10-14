@@ -184,6 +184,8 @@ export function getStoreApi(self) {
 }
 
 export function getAppApi(self) {
+	const middlewares = []
+
 	const api = {
 		opts: self.opts,
 		state(sub = null) {
@@ -192,14 +194,52 @@ export function getAppApi(self) {
 		},
 		async dispatch(action = {}) {
 			/*
-			track dispatched actions and
-			if there is a pending action,
-			debounce dispatch requests
+			+			???
+			to-do:
+ 			track dispatched actions and
+ 			if there is a pending action,
+ 			debounce dispatch requests
 			until the pending action is done?
-			*/
+			until the pending action is done
+	 	  ???
+ 			*/
+			if (middlewares.length) {
+				// create a copy to supply the middleware functions array
+				// and allow replacing the original array via result.middlewares
+				const fxns = Object.freeze(middlewares.slice())
+				let result
+				for (const fxn of fxns) {
+					result = await fxn(action, fxns)
+					if (result) {
+						if (result.cancel) return
+						if (result.error) throw result.error
+						if (result.middlewares) {
+							// replace middlewares entries
+							middlewares.splice(0, middlewares.length, ...result.middlewares)
+						}
+					}
+				}
+			}
 			// replace app.state
 			self.state = await self.store.write(action)
 			await self.main(action)
+		},
+		middle(fxn) {
+			/*
+			add middlewares prior to calling dispatch()
+
+			fxn(action, middlewaresCopy) 
+			- called in the order of being added to middlewares array
+			- must accept an action{} argument
+			- do not return any value to eventually reach dispatch()
+			- optional returned object{}
+				.error: "string" will throw
+				.cancel: true will cancel dispatch
+				.middlewares: [fxns] will replace middlewares array
+			*/
+			if (typeof fxn !== 'function') throw `a middleware must be a function`
+			middlewares.push(fxn)
+			return api
 		},
 		async save(action) {
 			// save changes to store, do not notify components

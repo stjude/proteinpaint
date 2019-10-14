@@ -117,7 +117,17 @@ tape('default view with user interactions', function(test) {
 		test.equal(childdiv2.style.display, 'block', 'child DIV of second term is now visible')
 		test.equal(childdiv2.querySelectorAll('.termdiv').length, 2, 'child DIV now contains 2 sub terms')
 	}
+	let plot_action_type = 'plot_add'
 	function clickViewBtn_term1_child1_child1(tree) {
+		// set an optional middleware to test action type
+		tree.Inner.app.middle((action, middlewares) => {
+			test.equal(action.type, plot_action_type, 'view btn click should trigger plot_add action')
+			// for second click, will hide plot instead of adding
+			if (plot_action_type == 'plot_add') plot_action_type = 'plot_hide'
+			// remove the testing middleware after this test
+			return { middlewares: [] }
+		})
+
 		// clicking view button of term1 > child1 > child1
 		// hardcoded to sjlife dataset
 		childdiv2.querySelectorAll('.termview')[0].click()
