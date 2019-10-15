@@ -58,16 +58,7 @@ class TdbPlot {
 		// which has a different eventType namespace
 		const callbacks = rx.copyMerge(opts.callbacks || {}, this.app.opts.callbacks)
 		this.bus = new rx.Bus('plot', ['postInit', 'postRender'], callbacks, this.api)
-
-		// cannot "await" since that would imply or require
-		// constructor to be async, but a Class
-		// constructor must return an object (not return
-		// a resolved promise value as implied by "await")
-		// -- so instead must use promise.then here to emit postInit
-		// event
-		this.main(opts.action).then(() => {
-			this.bus.emit('postInit')
-		})
+		this.bus.emit('postInit', this.api)
 	}
 
 	reactsTo(action, acty) {

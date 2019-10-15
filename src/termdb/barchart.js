@@ -28,6 +28,7 @@ class TdbBarchart {
 		this.settings = Object.assign(JSON.parse(rendererSettings), this.config.settings.bar)
 		this.renderers = {}
 
+		setRenderers(this)
 		setInteractivity(this)
 		this.api.download = this.download
 
@@ -169,41 +170,8 @@ class TdbBarchart {
 						: 1
 
 		self.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
-		const charts = this.dom.barDiv.selectAll('.pp-sbar-div').data(self.visibleCharts, chart => chart.chartId)
-
-		charts.exit().each(function(chart) {
-			delete self.renderers[chart.chartId]
-			select(this).remove()
-		})
-
-		charts.each(function(chart) {
-			chart.settings.cols.sort(self.barSorter)
-			chart.maxAcrossCharts = chartsData.maxAcrossCharts
-			chart.handlers = self.handlers
-			chart.maxSeriesLogTotal = 0
-			chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, chartsData))
-			self.renderers[chart.chartId](chart)
-		})
-
-		charts
-			.enter()
-			.append('div')
-			.attr('class', 'pp-sbar-div')
-			.style('display', 'inline-block')
-			.style('padding', '20px')
-			.style('vertical-align', 'top')
-			.each(function(chart, i) {
-				chart.settings.cols.sort(self.barSorter)
-				chart.maxAcrossCharts = chartsData.maxAcrossCharts
-				chart.handlers = self.handlers
-				chart.maxSeriesLogTotal = 0
-				self.renderers[chart.chartId] = barsRenderer(self, select(this))
-				chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, chartsData))
-				self.renderers[chart.chartId](chart)
-			})
-
-		this.dom.holder.selectAll('.pp-chart-title').style('display', self.visibleCharts.length < 2 ? 'none' : 'block')
-		this.legendRenderer(this.getLegendGrps())
+		self.chartsData = chartsData
+		self.render()
 	}
 
 	setMaxVisibleTotals(chartsData) {
@@ -374,6 +342,49 @@ class TdbBarchart {
 	}
 }
 
+export const barInit = rx.getInitFxn(TdbBarchart)
+
+function setRenderers(self) {
+	self.render = function() {
+		const charts = self.dom.barDiv.selectAll('.pp-sbar-div').data(self.visibleCharts, chart => chart.chartId)
+
+		charts.exit().each(self.exitChart)
+		charts.each(self.updateChart)
+		charts
+			.enter()
+			.append('div')
+			.each(self.addChart)
+
+		self.dom.holder.selectAll('.pp-chart-title').style('display', self.visibleCharts.length < 2 ? 'none' : 'block')
+		self.legendRenderer(self.getLegendGrps())
+	}
+
+	self.exitChart = function(chart) {
+		delete self.renderers[chart.chartId]
+		select(this).remove()
+	}
+
+	self.updateChart = function(chart) {
+		chart.settings.cols.sort(self.barSorter)
+		chart.maxAcrossCharts = self.chartsData.maxAcrossCharts
+		chart.handlers = self.handlers
+		chart.maxSeriesLogTotal = 0
+		chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, self.chartsData))
+		self.renderers[chart.chartId](chart)
+	}
+
+	self.addChart = function(chart, i) {
+		const div = select(this)
+			.attr('class', 'pp-sbar-div')
+			.style('display', 'inline-block')
+			.style('padding', '20px')
+			.style('vertical-align', 'top')
+
+		self.renderers[chart.chartId] = barsRenderer(self, select(this))
+		self.updateChart(chart)
+	}
+}
+
 function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
@@ -456,5 +467,3 @@ function setInteractivity(self) {
 		to_svg(svg, svg_name) //,{apply_dom_styles:true})
 	}
 }
-
-export const barInit = rx.getInitFxn(TdbBarchart)

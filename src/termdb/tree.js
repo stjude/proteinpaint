@@ -126,25 +126,17 @@ class TdbTree {
 	}
 
 	reactsTo(action, acty) {
-		if (acty[0] == 'tree' || acty[0] == 'filter' || acty[0] == 'search') return true
-		if (acty[0] == 'plot') {
-			if (action.type == 'plot_edit') return false
-			return true
-		}
+		if (['tree', 'filter', 'search', 'plot'].includes(acty[0])) return true
 	}
 
 	async main(action = {}) {
 		await this.main2(action)
+		await this.notifyComponents(action)
 		this.bus.emit('postRender')
 	}
 
 	async main2(action) {
-		const t0 = action.type.split('_')[0]
-		if (t0 == 'filter' || t0 == 'search') {
-			await this.notifyComponents(action)
-			return
-		}
-		if (t0 == 'plot') {
+		if (action.type.startsWith('plot_')) {
 			this.plotActions(action)
 			return
 		}
@@ -154,16 +146,19 @@ class TdbTree {
 			this.renderBranch(root, this.dom.treeDiv)
 			return
 		}
-		const term = this.termsById[action.termId]
-		if (!term.terms) {
-			term.terms = await this.requestTerm(term)
-			delete term.__tree_isloading
-			if (action.loading_div) {
-				action.loading_div.remove()
+		if (action.type.startsWith('tree_')) {
+			const term = this.termsById[action.termId]
+			if (!term.terms) {
+				term.terms = await this.requestTerm(term)
+				delete term.__tree_isloading
+				if (action.loading_div) {
+					action.loading_div.remove()
+				}
 			}
+			this.renderBranch(term, action.holder, action.button)
+			// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
+			return
 		}
-		this.renderBranch(term, action.holder, action.button)
-		// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
 	}
 
 	async requestTerm(term) {
@@ -192,15 +187,7 @@ class TdbTree {
 	}
 
 	async plotActions(action) {
-		if (action.type == 'plot_hide') {
-			// no further actions needed
-			return
-		}
-		const plot = this.components.plots[action.id]
-		if (plot) {
-			await plot.main(action)
-			return
-		}
+		if (this.components.plots[action.id]) return
 		// generate new plot
 		const newPlot = plotInit(this.app, {
 			action,
@@ -325,11 +312,11 @@ function setRenderers(self) {
 			if (self.modifiers.click_term) {
 				labeldiv
 					// need better css class
-					.attr('class', 'sja_filter_tag_btn add_term_btn '+cls_termlabel)
+					.attr('class', 'sja_filter_tag_btn add_term_btn ' + cls_termlabel)
 					.style('padding', '5px 8px')
 					.style('border-radius', '6px')
 					.style('background-color', '#4888BF')
-					.style('margin','1px 0px')
+					.style('margin', '1px 0px')
 					.on('click', () => {
 						self.modifiers.click_term(term)
 					})
