@@ -59,6 +59,7 @@ these transient flags are created and removed only within this script, and not t
 - all data processing code
 (b) setRenderers(self): attaches renderer methods
 (c) setInteractivity(self): attaches event handlers
+(d) this.actions{}
 
 */
 
@@ -117,32 +118,8 @@ class TdbTree {
 		this.termsById = {}
 		this.termsById[root_ID] = _root
 		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
-		this.app
-			.dispatch({
-				type: 'tree_expand',
-				termId: root_ID,
-				term: _root,
-				holder: this.dom.treeDiv
-			})
-			.then(() => {
-				this.bus.emit('postInit')
-				for (const termId in this.app.state().tree.plots) {
-					this.addPlot(
-						this.termsById[termId],
-						this.dom.treeDiv.selectAll('.' + cls_termgraphdiv).filter(i => i.id == termId)
-					)
-				}
-			})
+		this.app.dispatch({ type: 'tree_update' })
 	}
-
-	/* 
-	// simplify by setting reactsTo() as an array[] instead,
-	// handled transparently within rx.core getComponentApi().main()
-	// 
-	reactsTo(action, acty) {
-		if (['tree', 'filter', 'search', 'plot'].includes(acty[0])) return true
-	}
-	*/
 
 	async main(action = {}) {
 		// await this.main2(action)
@@ -152,40 +129,6 @@ class TdbTree {
 		await this.notifyComponents(action)
 		this.bus.emit('postRender')
 	}
-
-	/* 
-	// use this.actions[action_type](action) in main() to simplify
-  // with less conditional branching logic, and a more direct,
-  // clearer mapping of action.type -> method
-  // 
-	async main2(action) {
-		// instead see self.actions.plot_add: this.plotAdd
-		if (action.type.startsWith('plot_')) {
-			this.plotActions(action)
-			return
-		}
-		// instead see self.actions.tree_update: this.treeUpdate
-		if (action.type == 'tree_update') {
-			const root = this.termsById[root_ID]
-			root.terms = await this.requestTerm(root)
-			this.renderBranch(root, this.dom.treeDiv)
-			return
-		}
-		if (action.type.startsWith('tree_')) {
-			const term = this.termsById[action.termId]
-			if (!term.terms) {
-				term.terms = await this.requestTerm(term)
-				delete term.__tree_isloading
-				if (action.loading_div) {
-					action.loading_div.remove()
-				}
-			}
-			this.renderBranch(term, action.holder, action.button)
-			// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
-			return
-		}
-	}
-	*/
 
 	async requestTerm(term) {
 		const state = this.app.state()
@@ -216,10 +159,19 @@ class TdbTree {
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTerm(root)
 		this.renderBranch(root, this.dom.treeDiv)
+		if (action.plotTermIds) {
+			for (const termId of action.plotTermIds) {
+				this.addPlot(
+					this.termsById[termId],
+					this.dom.treeDiv.selectAll('.' + cls_termgraphdiv).filter(i => i.id == termId)
+				)
+			}
+		}
 	}
 
 	async treeToggle(action) {
 		const term = this.termsById[action.termId]
+		if (!term) console.error(action)
 		if (!term.terms) {
 			term.terms = await this.requestTerm(term)
 			delete term.__tree_isloading

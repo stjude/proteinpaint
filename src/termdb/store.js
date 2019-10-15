@@ -1,4 +1,5 @@
 import * as rx from '../rx.core'
+import { root_ID } from './tree'
 
 const defaultState = {
 	tree: {
@@ -30,6 +31,13 @@ class TdbStore {
 		const s = this.state
 		if (!s.genome) throw '.state.genome missing'
 		if (!s.dslabel) throw '.state.dslabel missing'
+		if (s.tree.expandedTerms.length == 0) {
+			s.tree.expandedTerms.push(root_ID)
+		} else {
+			if (s.tree.expandedTerms[0] != root_ID) {
+				s.tree.expandedTerms.unshift(root_ID)
+			}
+		}
 	}
 }
 
@@ -40,7 +48,24 @@ class TdbStore {
 */
 TdbStore.prototype.actions = {
 	tree_update(action) {
-		this.state.tree.expandedTerms = action.expandedTerms
+		// note: attributes of this action will be modified
+		if (action.expandedTerms) {
+			this.state.tree.expandedTerms = action.expandedTerms
+		}
+		if (action.onlyPlotTermID) {
+			// to only show plot of one term, and hide all the other previously open plots
+			// turn all existing plots to invisible
+			for (const id in this.state.tree.plots) {
+				this.state.tree.plots[id].isVisible = false
+			}
+			const p = this.state.tree.plots[action.onlyPlotTermID]
+			if (p) {
+				p.isVisible = true
+			} else {
+				action.plotTermIds = [action.onlyPlotTermID]
+			}
+		}
+		// only show plot of a given id
 	},
 	tree_expand(action) {
 		if (this.state.tree.expandedTerms.includes(action.termId)) return
@@ -94,8 +119,7 @@ TdbStore.prototype.actions = {
 		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
 		if (i == -1) return
 		const term = this.state.termfilter.terms[i]
-		term.term.iscategorical
-		? term.values.push(action.value) : term.ranges.push(action.value.range)
+		term.term.iscategorical ? term.values.push(action.value) : term.ranges.push(action.value.range)
 	},
 
 	filter_value_change(action) {

@@ -105,11 +105,14 @@ function setRenderers(self) {
 			// as regular button, click to expand tree
 			button.attr('class', 'sja_menuoption').on('click', () => {
 				self.clear()
-				const lst = [root_ID]
+				const action = { type: 'tree_update', expandedTerms: [root_ID] }
 				if (term.__ancestors) {
-					lst.push(...term.__ancestors)
+					action.expandedTerms.push(...term.__ancestors)
 				}
-				self.app.dispatch({ type: 'tree_update', expandedTerms: lst })
+				if (graphable(term)) {
+					action.onlyPlotTermID = term.id
+				}
+				self.app.dispatch(action)
 			})
 		}
 		tr.append('td')
