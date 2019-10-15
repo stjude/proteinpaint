@@ -219,7 +219,7 @@ function setRenderers(self) {
 
 		//term-value relation button
 		const condition_select = one_term_div.selectAll('.condition_select')
-		condition_select.node().value = term.isnot ? 'is_not' : 'is'
+		if(term.term.iscategorical) condition_select.node().value = term.isnot ? 'is_not' : 'is'
 
 		const condition_btn = one_term_div
 			.selectAll('.condition_btn')
@@ -231,7 +231,13 @@ function setRenderers(self) {
 		const data = await self.getCategories(term)
 		self.categoryData[term.term.id] = data
 
-		const value_btns = one_term_div.selectAll('.value_btn').data(term.values)
+		const valueData = term.term.iscategorical
+			? term.values
+			: term.term.isfloat || term.term.isinteger
+			? term.ranges
+			: term.grade_and_child
+
+		const value_btns = one_term_div.selectAll('.value_btn').data(valueData)
 
 		value_btns.exit().each(self.removeValueBtn)
 
@@ -450,7 +456,9 @@ function setRenderers(self) {
 			.text('or')
 
 		if (j == term.ranges.length - 1) {
-			self.makePlusBtn(one_term_div, unannotated_cats, term.ranges)
+			self.makePlusBtn(one_term_div, unannotated_cats, term.ranges, new_value => {
+				self.addValue({ term, new_value })
+			})
 		}
 	}
 
@@ -473,16 +481,22 @@ function setRenderers(self) {
 			value_btn.node().offsetWidth + 'px'
 		)
 
+		const valueData = term.term.iscategorical
+			? term.values
+			: term.term.isfloat || term.term.isinteger
+			? term.ranges
+			: term.grade_and_child
+
 		//update dropdown list for each term and '+' btn
-		self.updateSelect(value_selects, term.values, d.key)
+		self.updateSelect(value_selects, valueData, d.key)
 
 		const add_value_select = one_term_div.selectAll('.add_value_select')
-		self.updateSelect(add_value_select, term.values, 'add')
+		self.updateSelect(add_value_select, valueData, 'add')
 
 		//show or hide OR button
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
 			'display',
-			j < term.values.length - 1 ? 'inline-block' : 'none'
+			j < valueData.length - 1 ? 'inline-block' : 'none'
 		)
 	}
 
@@ -592,8 +606,8 @@ function setRenderers(self) {
 			} else {
 				//change value of button
 				const new_value = data.lst.find(j => j.key == add_value_select.node().value)
-				if (new_value.range) selected_values.push(new_value.range)
-				else callback(new_value)
+				// if (new_value.range) selected_values.push(new_value.range)
+				callback(new_value)
 			}
 		})
 

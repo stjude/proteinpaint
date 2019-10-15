@@ -94,7 +94,8 @@ TdbStore.prototype.actions = {
 		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
 		if (i == -1) return
 		const term = this.state.termfilter.terms[i]
-		term.values.push(action.value)
+		term.term.iscategorical
+		? term.values.push(action.value) : term.ranges.push(action.value.range)
 	},
 
 	filter_value_change(action) {
