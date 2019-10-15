@@ -194,28 +194,22 @@ export function getAppApi(self) {
 		},
 		async dispatch(action = {}) {
 			/*
-			+			???
+			???
 			to-do:
  			track dispatched actions and
  			if there is a pending action,
  			debounce dispatch requests
 			until the pending action is done?
-			until the pending action is done
 	 	  ???
  			*/
 			if (middlewares.length) {
-				// create a copy to supply the middleware functions array
-				// and allow replacing the original array via result.middlewares
-				const fxns = Object.freeze(middlewares.slice())
-				let result
-				for (const fxn of fxns) {
-					result = await fxn(action, fxns)
+				for (const fxn of middlewares.slice()) {
+					const result = await fxn(action)
 					if (result) {
 						if (result.cancel) return
 						if (result.error) throw result.error
-						if (result.middlewares) {
-							// replace middlewares entries
-							middlewares.splice(0, middlewares.length, ...result.middlewares)
+						if (result.deactivate) {
+							middlewares.splice(middlewares.indexOf(fxn), 1)
 						}
 					}
 				}
@@ -228,16 +222,18 @@ export function getAppApi(self) {
 			/*
 			add middlewares prior to calling dispatch()
 
-			fxn(action, middlewaresCopy) 
+			fxn(action) 
 			- called in the order of being added to middlewares array
 			- must accept an action{} argument
 			- do not return any value to eventually reach dispatch()
-			- optional returned object{}
+			  - OR -
+			- optionally return an object{}
 				.error: "string" will throw
 				.cancel: true will cancel dispatch
-				.middlewares: [fxns] will replace middlewares array
+				.deactivate: true will remove the fxn from the middlewares array
 			*/
 			if (typeof fxn !== 'function') throw `a middleware must be a function`
+			if (middlewares.includes(fxn)) throw `the function is already in the middlewares array`
 			middlewares.push(fxn)
 			return api
 		},

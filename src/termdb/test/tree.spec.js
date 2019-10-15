@@ -117,21 +117,24 @@ tape('default behavior', function(test) {
 		test.equal(childdiv2.style.display, 'block', 'child DIV of second term is now visible')
 		test.equal(childdiv2.querySelectorAll('.termdiv').length, 2, 'child DIV now contains 2 sub terms')
 	}
-	let plot_action_type = 'plot_add'
 	function clickViewBtn_term1_child1_child1(tree) {
-		// set an optional middleware to test action type
-		tree.Inner.app.middle((action, middlewares) => {
-			test.equal(action.type, plot_action_type, 'view btn click should trigger plot_add action')
-			// for second click, will hide plot instead of adding
-			if (plot_action_type == 'plot_add') plot_action_type = 'plot_hide'
-			// remove the testing middleware after this test
-			return { middlewares: [] }
-		})
+		// setup an optional middleware to test action type
+		tree.Inner.app.middle(inspectAction)
 
 		// clicking view button of term1 > child1 > child1
 		// hardcoded to sjlife dataset
 		childdiv2.querySelectorAll('.termview')[0].click()
 	}
+
+	let plot_action_type = 'plot_add'
+	function inspectAction(action) {
+		test.equal(action.type, plot_action_type, `view btn click should trigger ${plot_action_type} action`)
+		// for second click, will hide plot instead of adding
+		if (plot_action_type == 'plot_add') plot_action_type = 'plot_hide'
+		// remove this function from middlewares after this test
+		return { deactivate: true }
+	}
+
 	function testPlotCreated(tree) {
 		test.equal(Object.keys(tree.Inner.app.state().tree.plots).length, 1, 'now has 1 plot')
 		// tree.postRender cannot be used to verify that the plot is successfully rendered
