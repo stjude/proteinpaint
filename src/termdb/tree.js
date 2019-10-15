@@ -86,6 +86,16 @@ class TdbTree {
 			treeDiv: opts.holder.append('div')
 		}
 
+		// simplified control-flow matching
+		this.reactsTo = ['tree', 'filter', 'search', 'plot']
+		// clearer, more direct mapping of action.type -> method
+		this.actions = {
+			plot_add: this.plotAdd.bind(this),
+			tree_update: this.treeUpdate.bind(this),
+			tree_expand: this.treeToggle.bind(this),
+			tree_collapse: this.treeToggle.bind(this)
+		}
+
 		// attach instance-specific methods via closure
 		setRenderers(this)
 		setInteractivity(this)
@@ -125,21 +135,36 @@ class TdbTree {
 			})
 	}
 
+	/* 
+	// simplify by setting reactsTo() as an array[] instead,
+	// handled transparently within rx.core getComponentApi().main()
+	// 
 	reactsTo(action, acty) {
 		if (['tree', 'filter', 'search', 'plot'].includes(acty[0])) return true
 	}
+	*/
 
 	async main(action = {}) {
-		await this.main2(action)
+		// await this.main2(action)
+		if (typeof this.actions[action.type] == 'function') {
+			await this.actions[action.type](action)
+		}
 		await this.notifyComponents(action)
 		this.bus.emit('postRender')
 	}
 
+	/* 
+	// use this.actions[action_type](action) in main() to simplify
+  // with less conditional branching logic, and a more direct,
+  // clearer mapping of action.type -> method
+  // 
 	async main2(action) {
+		// instead see self.actions.plot_add: this.plotAdd
 		if (action.type.startsWith('plot_')) {
 			this.plotActions(action)
 			return
 		}
+		// instead see self.actions.tree_update: this.treeUpdate
 		if (action.type == 'tree_update') {
 			const root = this.termsById[root_ID]
 			root.terms = await this.requestTerm(root)
@@ -160,6 +185,7 @@ class TdbTree {
 			return
 		}
 	}
+	*/
 
 	async requestTerm(term) {
 		const state = this.app.state()
@@ -186,7 +212,26 @@ class TdbTree {
 		return terms
 	}
 
-	async plotActions(action) {
+	async treeUpdate(action) {
+		const root = this.termsById[root_ID]
+		root.terms = await this.requestTerm(root)
+		this.renderBranch(root, this.dom.treeDiv)
+	}
+
+	async treeToggle(action) {
+		const term = this.termsById[action.termId]
+		if (!term.terms) {
+			term.terms = await this.requestTerm(term)
+			delete term.__tree_isloading
+			if (action.loading_div) {
+				action.loading_div.remove()
+			}
+		}
+		this.renderBranch(term, action.holder, action.button)
+		// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
+	}
+
+	async plotAdd(action) {
 		if (this.components.plots[action.id]) return
 		// generate new plot
 		const newPlot = plotInit(this.app, {

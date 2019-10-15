@@ -263,7 +263,12 @@ export function getComponentApi(self) {
 			// in component class main() by performing
 			// typical pre-emptive checks here
 			const acty = action.type ? action.type.split('_') : []
-			if (self.reactsTo && !self.reactsTo(action, acty)) return
+			if (self.reactsTo) {
+				// fine-grained flow control, may deprecate in favor of array format
+				if (typeof self.reactsTo == 'function' && !self.reactsTo(action, acty)) return
+				// coarse-grained flow control
+				if (Array.isArray(self.reactsTo) && !self.reactsTo.includes(acty[0])) return
+			}
 			await self.main(action, data)
 			return api
 		},

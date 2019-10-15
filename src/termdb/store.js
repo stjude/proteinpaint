@@ -2,7 +2,6 @@ import * as rx from '../rx.core'
 
 const defaultState = {
 	tree: {
-		currTerm: 'root',
 		expandedTerms: [],
 		plots: {}
 	},
