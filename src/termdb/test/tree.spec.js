@@ -25,7 +25,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('default view with user interactions', function(test) {
+tape('default behavior', function(test) {
 	test.timeoutAfter(2000)
 
 	runpp({
@@ -183,8 +183,8 @@ tape('modifier: click_term', test => {
 		childdiv_child1 = child1.querySelector('.termchilddiv')
 	}
 	function testExpand_child1(tree) {
-		const buttons = childdiv_child1.getElementsByClassName('sja_menuoption termlabel')
-		test.ok(buttons.length > 1, 'should have more than 1 child terms with class names "sja_menuoption termlabel"')
+		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn add_term_btn termlabel')
+		test.ok(buttons.length > 1, 'should have more than 1 child terms showing as buttons')
 		buttons[0].click() // click this button and trigger the next test
 	}
 	function modifier_callback(term) {

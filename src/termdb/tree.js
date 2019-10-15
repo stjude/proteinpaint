@@ -51,21 +51,6 @@ term.__plot_isloading is added when loading plot for a term
 these transient flags are created and removed only within this script, and not to be handled outside, to avoid confusion
 
 
-******************* modifiers
-< no modifier >
-display all terms under a parent, just show name;
-non-leaf terms will have a +/- button in the front
-graphable terms will have a VIEW button at the back
-
-< click_term >
-display graphable terms as buttons for selecting, no VIEW button
-as in selecting term2 in barchart
-
-< ssid_barchart >
-TODO
-
-< barchart_selectbar >
-TODO
 
 ******************* Recommended Component Code Organization
 
@@ -106,7 +91,10 @@ class TdbTree {
 		setInteractivity(this)
 
 		this.components = {
-			search: searchInit(app, { holder: this.dom.searchDiv }),
+			search: searchInit(app, {
+				holder: this.dom.searchDiv,
+				modifiers: opts.modifiers
+			}),
 			plots: {}
 		}
 
@@ -336,9 +324,12 @@ function setRenderers(self) {
 		if (graphable(term)) {
 			if (self.modifiers.click_term) {
 				labeldiv
-					.attr('class', 'sja_menuoption ' + cls_termlabel)
-					.style('border-radius', '5px')
+					// need better css class
+					.attr('class', 'sja_filter_tag_btn add_term_btn '+cls_termlabel)
 					.style('padding', '5px 8px')
+					.style('border-radius', '6px')
+					.style('background-color', '#4888BF')
+					.style('margin','1px 0px')
 					.on('click', () => {
 						self.modifiers.click_term(term)
 					})

@@ -134,9 +134,9 @@ function trigger_findterm(q, res, termdb) {
 	const terms = termdb.q.findTermByName(q.findterm, 10).map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
-		id2ancestors[term.id] = termdb.q.getAncestorIDs(term.id)
+		term.__ancestors = termdb.q.getAncestorIDs(term.id)
 	})
-	res.send({ lst: terms, id2ancestors })
+	res.send({ lst: terms })
 }
 
 function trigger_treeto(q, res, termdb) {

@@ -26,7 +26,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('term search', function(test) {
+tape('term search, default behavior', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({
@@ -87,4 +87,44 @@ tape('term search', function(test) {
 	}
 })
 
-// given modifier_click_term, see if search result show as buttons
+tape('modifiers: click_term', test=> {
+	test.timeoutAfter(1000)
+
+	runpp({
+		modifiers: {
+			click_term: modifier_callback
+		},
+		callbacks: {
+			search: {
+				'postInit.test': runTests
+			}
+		}
+	})
+
+	function runTests(search) {
+		const tree = search.Inner.app.components('tree')
+		helpers
+			.rideInit({ arg: search, bus: search, eventType: 'postRender.test' })
+			.use(triggerSearch)
+			.to(testSearchResult)
+			.done(test)
+	}
+	function triggerSearch(search) {
+		search.Inner.main({ str: 'cardio' })
+	}
+	function testSearchResult(search) {
+		const buttons = search.Inner.dom.resultDiv.node()
+			.getElementsByClassName('sja_filter_tag_btn add_term_btn')
+		test.equal(buttons.length, 3, 'should show 3 buttons')
+		buttons[0].click()
+	}
+	function modifier_callback(term) {
+		test.ok(graphable(term), 'modifier callback called with a graphable term')
+	}
+})
+
+
+function graphable(term) {
+	if (!term) throw 'missing term'
+	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
+}

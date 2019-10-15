@@ -4,7 +4,6 @@ import {treeInit} from "./tree"
 import {storeInit} from "./store"
 import {filterInit} from "./filter"
 import {sayerror} from '../client'
-//import {controlsInit} from "./controls"
 
 /*
 opts{}
@@ -18,6 +17,24 @@ opts{}
 	can run the callback supplied with results to other apps (e.g. click a term in tree)
 	app and components will refer to the same frozen object of "modifiers{}", in a read-only way
 }
+
+
+******************* modifiers
+< no modifier >
+tree: display all terms under a parent, just show name;
+non-leaf terms will have a +/- button in the front
+graphable terms will have a VIEW button at the back
+
+< modifiers.click_term >
+tree: display graphable terms as blue buttons for selecting, no VIEW button
+as in selecting term2 in barchart
+tree.search: display found terms as blue buttons
+
+< modifiers.ssid_barchart >
+TODO
+
+< modifiers.tvs_select >
+TODO
 */
 
 class TdbApp {
@@ -62,7 +79,6 @@ class TdbApp {
 	}
 
 	printError(e) {
-		// may need to expose this through app api
 		sayerror(this.dom.errdiv, 'Error: '+(e.message||e))
 		if (e.stack) console.log(e.stack)
 	}

@@ -15,16 +15,6 @@ app notifies all components with the action
 only main() of the "search component" will responds to the action to perform querying and display result
 
 
-< no modifier >
-native in termdb tree
-display found terms as regular-looking buttons
-clicking will reform tree to only expand to reveal this term, and show its plot
-
-< modifier_click_term >
-display found terms as different-looking blue buttons;
-clicking a term will run a callback with the term as argument
-
-
 TODO
 allow to search categories, e.g. hodgkin lymphoma from diaggrp, how to act upon clicking?
 
@@ -36,6 +26,7 @@ class TermSearch {
 	constructor(app, opts) {
 		this.api = rx.getComponentApi(this)
 		this.app = app
+		this.modifiers = opts.modifiers
 
 		setRenderers(this)
 		setInteractivity(this)
@@ -65,11 +56,6 @@ class TermSearch {
 				return
 			}
 			// found terms
-			if (state.modifier_click_term) {
-				this.showTermsForSelect(data)
-				return
-			}
-			// no modifier
 			this.showTerms(data)
 		} catch (e) {
 			this.clear()
@@ -105,40 +91,47 @@ function setRenderers(self) {
 			.style('padding', '3px 3px 3px 0px')
 			.style('opacity', 0.5)
 	}
-	self.showTermsForSelect = data => {
-		self.dom.resultDiv
-			.selectAll()
-			.data(data.lst)
-			.enter()
-			.append('div')
-			.attr('sja_menuoption')
-			.text(d => d.name)
-			.on('click', self.selectTerm)
-	}
 	self.showTerms = data => {
 		self.clear()
-		const tr = self.dom.resultDiv
+		self.dom.resultDiv
 			.append('table')
 			.selectAll()
 			.data(data.lst)
 			.enter()
 			.append('tr')
+			.each(self.showTerm)
+	}
+	self.showTerm = function(term){
+		const tr = select(this)
+		const button = tr.append('td')
+			.text(term.name)
+		if(self.modifiers.click_term && graphable(term)) {
+			// has modifier and is graphable, show as blue button
+			// click to feed to callback
+			// improve css class
+			button.attr('class', 'sja_filter_tag_btn add_term_btn')
+				.style('display','block')
+				.style('padding', '5px 8px')
+				.style('border-radius', '6px')
+				.style('background-color', '#4888BF')
+				.style('margin','1px 0px')
+				.on('click', ()=>{
+					self.modifiers.click_term(term)
+				})
+		} else {
+			// as regular button, click to expand tree
+			button.attr('class', 'sja_menuoption')
+				.on('click', () => {
+					self.clear()
+					const lst = [root_ID]
+					if (term.__ancestors) {
+						lst.push(...term.__ancestors)
+					}
+					self.app.dispatch({ type: 'tree_update', expandedTerms: lst })
+				})
+		}
 		tr.append('td')
-			.text(d => d.name)
-			.attr('class', 'sja_menuoption')
-			.on('click', d => {
-				self.clear()
-				const lst = [root_ID]
-				if (data.id2ancestors[d.id]) {
-					lst.push(...data.id2ancestors[d.id])
-				}
-				self.app.dispatch({ type: 'tree_update', expandedTerms: lst })
-			})
-		tr.append('td')
-			.text(d => {
-				const lst = data.id2ancestors[d.id] || []
-				return lst.join(' > ')
-			})
+			.text( (term.__ancestors||[]).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}
