@@ -41,27 +41,14 @@ class TermSearch {
 	}
 
 	async main(action) {
-		await this.main2(action)
+		const state = this.app.state()
+		const lst = ['genome=' + state.genome, 'dslabel=' + state.dslabel, 'findterm=' + encodeURIComponent(action.str)]
+		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		if (data.error) throw data.error
+		if (!data.lst || data.lst.length == 0) this.noResult()
+		// found terms
+		else this.showTerms(data)
 		this.bus.emit('postRender')
-	}
-
-	async main2(action) {
-		try {
-			const state = this.app.state()
-			const lst = ['genome=' + state.genome, 'dslabel=' + state.dslabel, 'findterm=' + encodeURIComponent(action.str)]
-			const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
-			if (data.error) throw data.error
-			if (!data.lst || data.lst.length == 0) {
-				this.noResult()
-				return
-			}
-			// found terms
-			this.showTerms(data)
-		} catch (e) {
-			this.clear()
-			sayerror(this.dom.resultDiv, 'Error: ' + (e.message || e))
-			if (e.stack) console.log(e.stack)
-		}
 	}
 }
 
@@ -101,37 +88,36 @@ function setRenderers(self) {
 			.append('tr')
 			.each(self.showTerm)
 	}
-	self.showTerm = function(term){
+	self.showTerm = function(term) {
 		const tr = select(this)
-		const button = tr.append('td')
-			.text(term.name)
-		if(self.modifiers.click_term && graphable(term)) {
+		const button = tr.append('td').text(term.name)
+		if (self.modifiers.click_term && graphable(term)) {
 			// has modifier and is graphable, show as blue button
 			// click to feed to callback
 			// improve css class
-			button.attr('class', 'sja_filter_tag_btn add_term_btn')
-				.style('display','block')
+			button
+				.attr('class', 'sja_filter_tag_btn add_term_btn')
+				.style('display', 'block')
 				.style('padding', '5px 8px')
 				.style('border-radius', '6px')
 				.style('background-color', '#4888BF')
-				.style('margin','1px 0px')
-				.on('click', ()=>{
+				.style('margin', '1px 0px')
+				.on('click', () => {
 					self.modifiers.click_term(term)
 				})
 		} else {
 			// as regular button, click to expand tree
-			button.attr('class', 'sja_menuoption')
-				.on('click', () => {
-					self.clear()
-					const lst = [root_ID]
-					if (term.__ancestors) {
-						lst.push(...term.__ancestors)
-					}
-					self.app.dispatch({ type: 'tree_update', expandedTerms: lst })
-				})
+			button.attr('class', 'sja_menuoption').on('click', () => {
+				self.clear()
+				const lst = [root_ID]
+				if (term.__ancestors) {
+					lst.push(...term.__ancestors)
+				}
+				self.app.dispatch({ type: 'tree_update', expandedTerms: lst })
+			})
 		}
 		tr.append('td')
-			.text( (term.__ancestors||[]).join(' > '))
+			.text((term.__ancestors || []).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}
@@ -141,14 +127,20 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.doSearch = () => {
+	self.doSearch = async () => {
 		const str = self.dom.input.property('value')
 		// do not trim space from input so that 'age ' will not match with 'agent'
 		if (str == ' ' || str == '') {
 			self.clear()
 			return
 		}
-		self.main({ str })
+		try {
+			await self.main({ str })
+		} catch (e) {
+			self.clear()
+			sayerror(self.dom.resultDiv, 'Error: ' + (e.message || e))
+			if (e.stack) console.log(e.stack)
+		}
 	}
 	self.selectTerm = term => {
 		console.log('selected', term)
