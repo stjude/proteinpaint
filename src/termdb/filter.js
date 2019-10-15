@@ -18,8 +18,8 @@ class TdbFilter {
 		this.categoryData = {}
 		this.initHolder()
 		this.bus = new rx.Bus('filter', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.main()
 		this.bus.emit('postInit')
+		this.main()
 	}
 
 	main(action) {
@@ -216,7 +216,7 @@ function setRenderers(self) {
 
 		//term-value relation button
 		const condition_select = one_term_div.selectAll('.condition_select')
-		if(term.term.iscategorical) condition_select.node().value = term.isnot ? 'is_not' : 'is'
+		if (term.term.iscategorical) condition_select.node().value = term.isnot ? 'is_not' : 'is'
 
 		const condition_btn = one_term_div
 			.selectAll('.condition_btn')

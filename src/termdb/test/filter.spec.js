@@ -264,8 +264,8 @@ tape('filter term-value button: numerical term', function(test) {
 
 	function runTests(filter) {
 		helpers
-			.rideInit({ arg: filter })
-			.to(testFilterDisplay, null, { wait: 200 })
+			.rideInit({ arg: filter, bus: filter, eventType: 'postRender.test' })
+			.to(testFilterDisplay, { wait: 200 })
 			// .run(triggerChangeValue)
 			// .run(testChangeValue, 600)
 			// .run(triggerAddValue)
