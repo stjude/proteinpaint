@@ -267,7 +267,8 @@ export function getComponentApi(self) {
 				// fine-grained flow control, may deprecate in favor of array format
 				if (typeof self.reactsTo == 'function' && !self.reactsTo(action, acty)) return
 				// coarse-grained flow control
-				if (Array.isArray(self.reactsTo) && !self.reactsTo.includes(acty[0])) return
+				if (Array.isArray(self.reactsTo) && !self.reactsTo.includes(acty[0]) && !self.reactsTo.includes(action.type))
+					return
 			}
 			await self.main(action, data)
 			return api

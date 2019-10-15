@@ -27,17 +27,13 @@ class TermSearch {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.modifiers = opts.modifiers
-
+		this.reactsTo = ['search']
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
 		this.initUI()
 		this.bus = new rx.Bus('search', ['postInit', 'postRender'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit')
-	}
-
-	reactsTo(action, acty) {
-		if (acty[0] == 'search') return true
 	}
 
 	async main(action) {

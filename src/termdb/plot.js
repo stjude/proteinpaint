@@ -12,6 +12,7 @@ class TdbPlot {
 		this.app = app
 		this.id = opts.id
 		this.config = this.app.state({ type: 'plot', id: this.id })
+		this.reactsTo = ['plot']
 
 		this.dom = {
 			holder: opts.holder
@@ -61,14 +62,8 @@ class TdbPlot {
 		this.bus.emit('postInit', this.api)
 	}
 
-	reactsTo(action, acty) {
-		if (acty[0] != 'plot') return
-		if (action.id != this.id) return
-		if (action.type == 'plot_hide') return
-		return true
-	}
-
 	async main(action) {
+		if (action.id != this.id || action.type == 'plot_hide') return
 		this.config = this.app.state({ type: 'plot', id: this.id })
 		const data = await this.requestData(this.config)
 		this.syncParams(this.config, data)
