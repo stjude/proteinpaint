@@ -50,7 +50,8 @@ TdbStore.prototype.actions = {
 	tree_update(action) {
 		// note: attributes of this action will be modified
 		if (action.expandedTerms) {
-			this.state.tree.expandedTerms = action.expandedTerms
+			// copy expandedTerms array since original is frozen/not mutable
+			this.state.tree.expandedTerms = action.expandedTerms.slice()
 		}
 		if (action.onlyPlotTermID) {
 			// to only show plot of one term, and hide all the other previously open plots

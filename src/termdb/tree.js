@@ -118,7 +118,15 @@ class TdbTree {
 		this.termsById = {}
 		this.termsById[root_ID] = _root
 		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
-		this.app.dispatch({ type: 'tree_update' })
+		this.bus.emit('postInit')
+
+		// check for plot views to restore
+		const plotTermIds = Object.keys(this.app.state().tree.plots)
+		this.app.dispatch({
+			type: 'tree_update',
+			plotTermIds,
+			expandedTerms: this.app.state().tree.expandedTerms
+		})
 	}
 
 	async main(action = {}) {
