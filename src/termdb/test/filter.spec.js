@@ -264,14 +264,15 @@ tape('filter term-value button: numerical term', function(test) {
 
 	function runTests(filter) {
 		helpers
-			.rideInit({ arg: filter, bus: filter, eventType: 'postRender.test' })
-			.to(testFilterDisplay, { wait: 200 })
+			.rideInit({ arg: filter })
+			.run(testFilterDisplay, 300)
+			.change({ bus: filter, eventType: 'postRender.test' })
 			// .run(triggerChangeValue)
 			// .run(testChangeValue, 600)
-			// .run(triggerAddValue)
-			// .run(testAddValue, 600)
-			// .run(triggerRemoveValue)
-			// .run(testRemoveValue, 600)
+			.use(triggerAddValue)
+			.to(testAddValue, { wait: 600 })
+			.use(triggerRemoveValue)
+			.to(testRemoveValue, { wait: 600 })
 			.done(test)
 	}
 
@@ -292,6 +293,33 @@ tape('filter term-value button: numerical term', function(test) {
 		test.true(
 			filter.Inner.dom.holder.selectAll('.add_value_btn').size() >= 1,
 			"should have '+' button to add unannonated value to filter"
+		)
+	}
+
+	function triggerAddValue(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		const value = { is_unannotated: true, value: '-9999', label: 'Unknown treatment record' }
+		filter.Inner.app.dispatch({ type: 'filter_value_add', termId: term.id, value })
+	}
+
+	function testAddValue(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.value_btn').size(),
+			filter.Inner.app.state().termfilter.terms[0].ranges.length,
+			'should add another value from data'
+		)
+	}
+
+	function triggerRemoveValue(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		filter.Inner.app.dispatch({ type: 'filter_value_remove', termId: term.id, valueId: 1 })
+	}
+
+	function testRemoveValue(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.value_btn').size(),
+			filter.Inner.app.state().termfilter.terms[0].ranges.length,
+			'should remove value from filter'
 		)
 	}
 })

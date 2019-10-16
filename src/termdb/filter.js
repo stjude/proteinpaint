@@ -237,10 +237,16 @@ function setRenderers(self) {
 
 		value_btns.exit().each(self.removeValueBtn)
 
+		const valueUpdateFxn = term.term.iscategorical
+			? self.updateCatValue
+			: term.term.isfloat || term.term.isinteger
+			? self.updateNumericValue
+			: await self.addConditionValues
+
 		value_btns
 			.transition()
 			.duration(200)
-			.each(self.updateValueBtn)
+			.each(valueUpdateFxn)
 
 		const valueAdderFxn = term.term.iscategorical
 			? self.addCategoryValues
@@ -358,6 +364,7 @@ function setRenderers(self) {
 	}
 
 	self.addNumericValues = function(range, j) {
+		// console.log('add', j)
 		const value_btn = select(this).datum(range)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
@@ -370,7 +377,7 @@ function setRenderers(self) {
 			}
 		}
 
-		if (range.value != undefined) {
+		if (range.start == undefined || range.stop == undefined) {
 			// const [numeric_select, value_btn] = dom.make_select_btn_pair(one_term_div)
 			const numeric_select = one_term_div
 				.append('select')
@@ -404,10 +411,7 @@ function setRenderers(self) {
 			numeric_select.on('change', async () => {
 				//if value is 'delete' then remove from group
 				if (numeric_select.node().value == 'delete') {
-					term.ranges.splice(j, 1)
-					if (term.ranges.length == 0) {
-						obj.group.terms.splice(i, 1)
-					}
+					self.removeValue({ term, j })
 				} else {
 					//change value of button
 					const new_value = data.lst.find(j => j.label == numeric_select.node().value)
@@ -446,19 +450,27 @@ function setRenderers(self) {
 			.style('color', '#fff')
 			.style('background-color', '#4888BF')
 			.style('margin-right', '1px')
-			.style('padding', '7px 6px 5px 6px')
+			.style('padding', '8px 6px 4px 6px')
 			.style('font-size', '.7em')
 			.style('text-transform', 'uppercase')
 			.text('or')
 
+		//show or hide OR button
+		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
+			'display',
+			j > 0 && j < term.ranges.length - 1 ? 'inline-block' : 'none'
+		)
+
 		if (j == term.ranges.length - 1) {
+			one_term_div.selectAll('.add_value_btn').remove()
+			one_term_div.selectAll('.add_value_select').remove()
 			self.makePlusBtn(one_term_div, unannotated_cats, term.ranges, new_value => {
 				self.addValue({ term, new_value })
 			})
 		}
 	}
 
-	self.updateValueBtn = function(d, j) {
+	self.updateCatValue = function(d, j) {
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
 
@@ -477,30 +489,59 @@ function setRenderers(self) {
 			value_btn.node().offsetWidth + 'px'
 		)
 
-		const valueData = term.term.iscategorical
-			? term.values
-			: term.term.isfloat || term.term.isinteger
-			? term.ranges
-			: term.grade_and_child
-
 		//update dropdown list for each term and '+' btn
-		self.updateSelect(value_selects, valueData, d.key)
+		self.updateSelect(value_selects, term.values, d.key)
 
 		const add_value_select = one_term_div.selectAll('.add_value_select')
-		self.updateSelect(add_value_select, valueData, 'add')
+		self.updateSelect(add_value_select, term.values, 'add')
 
 		//show or hide OR button
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
 			'display',
-			j < valueData.length - 1 ? 'inline-block' : 'none'
+			j < term.values.length - 1 ? 'inline-block' : 'none'
+		)
+	}
+
+	self.updateNumericValue = function(range, j){
+		// console.log('update', j)
+		const value_btn = select(this).datum(range)
+		const one_term_div = select(this.parentNode)
+		const term = one_term_div.datum()
+
+		const unannotated_cats = { lst: [] }
+
+		for (const [index, cat] of self.categoryData[term.term.id].lst.entries()) {
+			if (cat.range.value != undefined) {
+				unannotated_cats.lst.push(cat)
+			}
+		}
+
+		if (range.start == undefined || range.stop == undefined) {
+			// const [numeric_select, value_btn] = dom.make_select_btn_pair(one_term_div)
+			const numeric_select = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
+				'width', value_btn.node().offsetWidth + 'px')
+			value_btn.html(range.label)
+			numeric_select.node().value = range.label
+			numeric_select.style('width', value_btn.node().offsetWidth + 'px')
+		} else {
+			value_btn.html(self.setRangeBtnText(range))
+		}
+
+		//show or hide OR button
+		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
+			'display',
+			j < term.ranges.length - 1 ? 'inline-block' : 'none'
 		)
 	}
 
 	self.removeValueBtn = function(d, j) {
+		// console.log('exit', j)
 		const one_term_div = select(this.parentNode)
+		const term = one_term_div.datum()
+		const select_remove_pos = (term.term.isinteger || term.term.isfloat) ?
+			j - (term.ranges.slice(0,j).filter((a)=>a.start||a.stop).length) : j
 
-		// console.log('exit',j)
-		select(one_term_div.selectAll('.value_select')._groups[0][j]).remove()
+		select(one_term_div.selectAll('.value_select')._groups[0][select_remove_pos]).remove()
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).remove()
 		select(this)
 			.style('opacity', 1)
