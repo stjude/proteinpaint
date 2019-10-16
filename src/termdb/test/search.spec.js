@@ -2,9 +2,11 @@ const tape = require('tape')
 const d3s = require('d3-selection')
 const helpers = require('../../../test/front.helpers.js')
 
-/*************************
- reusable helper functions
-**************************/
+/*
+Note:
+these tests are dependent on SJLife termdb data.
+if data updates, these tests may also needs to be updated
+*/
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
@@ -44,10 +46,11 @@ tape('term search, default behavior', function(test) {
 			.rideInit({ arg: search, bus: search, eventType: 'postRender.test' })
 			.use(triggerSearchNoResult)
 			.to(testSearchNoResult)
-			.use(triggerSearchHasResult)
-			.to(testSearchHasResult)
-			.use(triggerClickTerm)
-			.to(testClickResult, { arg: tree, bus: tree })
+			.use(triggerFirstSearch)
+			.to(testFirstSearch)
+			.use(triggerClickResult_firstSearch)
+			.to(testClickResult_firstSearch, { arg: tree, bus: tree })
+			.use(triggerSecondSearch_samebranchas1st)
 			// or instead of the preceding .to(..., opts={}) pattern,
 			// instead use the .change().to() pattern below
 			/*
@@ -66,28 +69,47 @@ tape('term search, default behavior', function(test) {
 		test.equal(div.innerHTML, 'No match', 'should show "No match"')
 	}
 
-	function triggerSearchHasResult(search) {
+	function triggerFirstSearch(search) {
 		search.Inner.main({ str: 'cardio' })
 	}
 
-	function testSearchHasResult(search) {
-		const table = search.Inner.dom.resultDiv.select('table').node()
-		test.equal(table.childNodes.length, 3, 'should show 3 matching entries')
+	let searchResultBtns
+	function testFirstSearch(search) {
+		searchResultBtns = search.Inner.dom.resultDiv.select('table').selectAll('.sja_menuoption')
+		test.equal(searchResultBtns.size(), 3, 'search result should show 3 buttons')
 	}
 
-	function triggerClickTerm(search) {
-		search.Inner.dom.resultDiv
-			.select('table')
-			.node()
-			.childNodes[0].childNodes[0].click()
+	let clickedTerm_firstSearch
+	function triggerClickResult_firstSearch(search) {
+		const btn1 = searchResultBtns.nodes()[0]
+		btn1.click()
+		d3s.select(btn1).each(function(d) {
+			clickedTerm_firstSearch = d
+		})
 	}
 
-	function testClickResult(tree) {
-		test.ok(tree.Inner.dom.treeDiv.selectAll('.termdiv').nodes().length > 10, 'should show more than 10 terms')
+	function testClickResult_firstSearch(tree) {
+		const termdivs = tree.Inner.dom.treeDiv.selectAll('.termdiv')
+		test.ok(termdivs.nodes().length > 10, 'updated tree should show more than 10 terms')
+		test.equal(
+			termdivs.filter(i => i.id == clickedTerm_firstSearch.id).size(),
+			1,
+			'clicked term now appears in the updated tree'
+		)
+		test.ok(
+			tree.Inner.components.plots[clickedTerm_firstSearch.id],
+			'clicked term ID is now a key in tree.components.plots{}'
+		)
+	}
+
+	// second search, on the same branch as the first search
+	function triggerSecondSearch_samebranchas1st(search) {
+		// somehow this function doesn't run
+		search.Inner.main({ str: 'asthma' })
 	}
 })
 
-tape('modifiers: click_term', test=> {
+tape('modifiers: click_term', test => {
 	test.timeoutAfter(1000)
 
 	runpp({
@@ -113,8 +135,7 @@ tape('modifiers: click_term', test=> {
 		search.Inner.main({ str: 'cardio' })
 	}
 	function testSearchResult(search) {
-		const buttons = search.Inner.dom.resultDiv.node()
-			.getElementsByClassName('sja_filter_tag_btn add_term_btn')
+		const buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn add_term_btn')
 		test.equal(buttons.length, 3, 'should show 3 buttons')
 		buttons[0].click()
 	}
@@ -122,7 +143,6 @@ tape('modifiers: click_term', test=> {
 		test.ok(graphable(term), 'modifier callback called with a graphable term')
 	}
 })
-
 
 function graphable(term) {
 	if (!term) throw 'missing term'

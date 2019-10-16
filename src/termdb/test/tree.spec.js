@@ -202,7 +202,14 @@ tape('rehydrated from saved state', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis']
+				expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis'],
+				//// XXX following cannot rebuild plot
+				plots: {
+					diaggrp: {
+						id: 'diaggrp',
+						term: { term: {} }
+					}
+				}
 			}
 		},
 		callbacks: {
