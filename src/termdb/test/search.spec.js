@@ -83,9 +83,7 @@ tape('term search, default behavior', function(test) {
 	function triggerClickResult_firstSearch(search) {
 		const btn1 = searchResultBtns.nodes()[0]
 		btn1.click()
-		d3s.select(btn1).each(function(d) {
-			clickedTerm_firstSearch = d
-		})
+		clickedTerm_firstSearch = btn1.__data__
 	}
 
 	function testClickResult_firstSearch(tree) {

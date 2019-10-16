@@ -11,7 +11,7 @@ class TdbFilter {
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
 
-		this.reactsTo = ['filter']
+		this.reactsTo = [undefined, 'filter']
 		setRenderers(this)
 		setInteractivity(this)
 
@@ -19,7 +19,6 @@ class TdbFilter {
 		this.initHolder()
 		this.bus = new rx.Bus('filter', ['postInit', 'postRender'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit')
-		this.main()
 	}
 
 	main(action) {

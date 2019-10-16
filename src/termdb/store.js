@@ -1,5 +1,7 @@
 import * as rx from '../rx.core'
 import { root_ID } from './tree'
+import { plotConfig } from './plot'
+import { dofetch2 } from '../client'
 
 const defaultState = {
 	tree: {
@@ -63,7 +65,7 @@ TdbStore.prototype.actions = {
 			if (p) {
 				p.isVisible = true
 			} else {
-				action.plotTermIds = [action.onlyPlotTermID]
+				this.state.tree.plots[action.onlyPlotTermID] = action.config
 			}
 		}
 		// only show plot of a given id
@@ -79,8 +81,14 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTerms.splice(i, 1)
 	},
 
+	plot_rehydrate(action) {
+		const config = action.id in this.state.tree.plots[action.id] ? this.state.tree.plots[action.id] : {}
+		this.state.tree.plots[action.id] = rx.copyMerge(config, plotConfig(action.config))
+	},
+
 	plot_add(action) {
-		this.state.tree.plots[action.id] = action.config
+		const config = action.config ? action.config : {}
+		this.state.tree.plots[action.id] = config
 	},
 
 	plot_show(action) {

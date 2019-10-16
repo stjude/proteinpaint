@@ -45,21 +45,16 @@ tape('single barchart, categorical bars', function(test) {
 		},
 		callbacks: {
 			plot: {
-				postRender: runTests
+				'postRender.test': runTests
 			}
 		}
 	})
 
 	function runTests(plot) {
+		plot.on('postRender.test', null)
 		testBarCount(plot)
 		testAxisDimension(plot)
 		test.end()
-		/*
-		helpers.rideInit({arg: plot, bus: plot, eventType: 'postRender.test'})
-			.to(testBarCount)
-			.to(testAxisDimension)
-			.done(test)
-		*/
 	}
 
 	let barDiv

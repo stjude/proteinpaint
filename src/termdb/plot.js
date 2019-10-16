@@ -12,7 +12,7 @@ class TdbPlot {
 		this.app = app
 		this.id = opts.id
 		this.config = this.app.state({ type: 'plot', id: this.id })
-		this.reactsTo = ['plot']
+		this.reactsTo = [undefined, 'plot', 'tree_update']
 
 		this.dom = {
 			holder: opts.holder
@@ -63,7 +63,12 @@ class TdbPlot {
 	}
 
 	async main(action) {
-		if (action.id != this.id || action.type == 'plot_hide') return
+		if (
+			('id' in action && action.id != this.id) ||
+			('onlyPlotId' in action && action.onlyPlotId != this.id) ||
+			action.type == 'plot_hide'
+		)
+			return
 		this.config = this.app.state({ type: 'plot', id: this.id })
 		const data = await this.requestData(this.config)
 		this.syncParams(this.config, data)

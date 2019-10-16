@@ -1,7 +1,7 @@
 import * as rx from '../rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch2 } from '../client'
-import { plotInit, plotConfig } from './plot'
+import { plotInit } from './plot'
 import { searchInit } from './search'
 
 const childterm_indent = '25px'
@@ -88,14 +88,7 @@ class TdbTree {
 		}
 
 		// simplified control-flow matching
-		this.reactsTo = ['tree', 'filter', 'search', 'plot']
-		// clearer, more direct mapping of action.type -> method
-		this.actions = {
-			plot_add: this.plotAdd.bind(this),
-			tree_update: this.treeUpdate.bind(this),
-			tree_expand: this.treeToggle.bind(this),
-			tree_collapse: this.treeToggle.bind(this)
-		}
+		this.reactsTo = [undefined, 'tree', 'filter', 'search', 'plot']
 
 		// attach instance-specific methods via closure
 		setRenderers(this)
@@ -119,30 +112,47 @@ class TdbTree {
 		this.termsById[root_ID] = _root
 		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit')
-
-		// check for plot views to restore
-		const plotTermIds = Object.keys(this.app.state().tree.plots)
-		this.app.dispatch({
-			type: 'tree_update',
-			plotTermIds,
-			expandedTerms: this.app.state().tree.expandedTerms
-		})
 	}
 
 	async main(action = {}) {
-		// await this.main2(action)
-		if (typeof this.actions[action.type] == 'function') {
-			await this.actions[action.type](action)
-		}
+		await this.treeRender(action)
 		await this.notifyComponents(action)
 		this.bus.emit('postRender')
+	}
+
+	async treeRender(action) {
+		const root = this.termsById[root_ID]
+		root.terms = await this.requestTerm(root)
+		if (action.term) delete action.term.__tree_isloading
+		if (action.loading_div) action.loading_div.remove()
+		this.renderBranch(root, this.dom.treeDiv)
+
+		const plots = this.app.state().tree.plots
+		for (const termId in plots) {
+			if (!this.components.plots[termId]) {
+				// rehydrate here when the term information is available,
+				// in constructor the termsById are not filled in yet
+				await this.app.save({ type: 'plot_rehydrate', id: termId, config: { term: this.termsById[termId] } })
+				this.newPlot(this.termsById[termId])
+			}
+		}
 	}
 
 	async requestTerm(term) {
 		const state = this.app.state()
 		const lst = ['genome=' + state.genome + '&dslabel=' + state.dslabel]
 		lst.push(term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id)
-		// future: may add in tree modifier
+		/*
+			future: may add in tree modifier
+
+			to-do: 
+			- may reuse termsById[term.id] if it already exists
+			- HOWEVER, if the data returned by dofetch2 is dependent 
+			  on certain context such as filter terms or modifier,
+			  then the cached response may have to re-requested and refreshed.
+			- will need to devise a way to determine when to re-request
+			  cached server response as needed
+		*/
 		const data = await dofetch2('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
@@ -163,54 +173,32 @@ class TdbTree {
 		return terms
 	}
 
-	async treeUpdate(action) {
-		const root = this.termsById[root_ID]
-		root.terms = await this.requestTerm(root)
-		this.renderBranch(root, this.dom.treeDiv)
-		if (action.plotTermIds) {
-			for (const termId of action.plotTermIds) {
-				this.addPlot(
-					this.termsById[termId],
-					this.dom.treeDiv.selectAll('.' + cls_termgraphdiv).filter(i => i.id == termId)
-				)
-			}
-		}
-	}
-
-	async treeToggle(action) {
-		const term = this.termsById[action.termId]
-		if (!term) console.error(action)
-		if (!term.terms) {
-			term.terms = await this.requestTerm(term)
-			delete term.__tree_isloading
-			if (action.loading_div) {
-				action.loading_div.remove()
-			}
-		}
-		this.renderBranch(term, action.holder, action.button)
-		// for a tree modifier, will issue one query and update termsById{}, then renderBranch from root
-	}
-
-	async plotAdd(action) {
-		if (this.components.plots[action.id]) return
-		// generate new plot
-		const newPlot = plotInit(this.app, {
-			action,
-			id: action.id,
-			holder: action.holder,
-			term: action.term,
+	newPlot(term) {
+		const holder = select(
+			this.dom.treeDiv
+				.selectAll('.' + cls_termgraphdiv)
+				.filter(t => t.id == term.id)
+				.node()
+		)
+		term.__plot_isloading = true
+		const loading_div = holder.append('div').text('Loading...')
+		const plot = plotInit(this.app, {
+			id: term.id,
+			holder: holder,
+			term: term,
 			callbacks: {
 				plot: {
 					// must use namespaced eventType otherwise will be rewritten..
-					'postRender.viewbtn': () => {
+					'postRender.viewbtn': plot => {
 						// may be risky, if action.term is altered outside
-						delete action.term.__plot_isloading
-						if (action.loading_div) action.loading_div.remove()
+						delete term.__plot_isloading
+						if (loading_div) loading_div.remove()
+						//plot.on('postRender.viewbtn', null)
 					}
 				}
 			}
 		})
-		this.components.plots[action.id] = newPlot
+		this.components.plots[term.id] = plot
 	}
 
 	bindKey(term) {
@@ -396,29 +384,27 @@ function setInteractivity(self) {
 		}
 		event.stopPropagation()
 		event.preventDefault()
-		const holder = select(this.parentNode.getElementsByClassName(cls_termgraphdiv)[0])
 		const plotConfig = self.app.state().tree.plots[term.id]
 		if (plotConfig) {
 			// plot already made
+			const holder = select(this.parentNode.getElementsByClassName(cls_termgraphdiv)[0])
 			holder.style('display', plotConfig.isVisible ? 'none' : 'block')
 			const type = plotConfig.isVisible ? 'plot_hide' : 'plot_show'
 			self.app.dispatch({ type, id: term.id, term })
 			return
+		} else {
+			self.addPlot(term)
 		}
-		// add new plot
-		term.__plot_isloading = true
-		const loading_div = holder.append('div').text('Loading...')
-		self.addPlot(term, holder, loading_div)
 	}
 
-	self.addPlot = (term, holder, loading_div) => {
+	self.addPlot = term => {
+		// do not replace plot config if it already exists
+		if (self.components.plots[term.id]) return
 		self.app.dispatch({
 			type: 'plot_add',
 			id: term.id,
 			term,
-			holder,
-			loading_div,
-			config: plotConfig({ term })
+			config: { id: term.id, term }
 		})
 	}
 }

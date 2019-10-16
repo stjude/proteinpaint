@@ -65,6 +65,8 @@ class TdbApp {
 
 		this.bus = new rx.Bus("app", ["postInit",'postRender'], opts.callbacks, this.api)
 		this.bus.emit('postInit')
+		// trigger the initial render after initialization
+		this.main().catch(this.printError)
 	}
 
 	async main(action = {}) {

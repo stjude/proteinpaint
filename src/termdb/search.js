@@ -111,6 +111,7 @@ function setRenderers(self) {
 				}
 				if (graphable(term)) {
 					action.onlyPlotTermID = term.id
+					action.config = { id: term.id, term }
 				}
 				self.app.dispatch(action)
 			})
