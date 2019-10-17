@@ -27,7 +27,11 @@ class TermSearch {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.modifiers = opts.modifiers
-		this.reactsTo = ['search']
+		// see rx.core getComponentApi().main() on
+		// how these key-values are used
+		this.reactsTo = {
+			prefix: ['search']
+		}
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
@@ -111,6 +115,7 @@ function setRenderers(self) {
 				}
 				if (graphable(term)) {
 					action.onlyPlotTermID = term.id
+					action.id = term.id
 					action.config = { id: term.id, term }
 				}
 				self.app.dispatch(action)

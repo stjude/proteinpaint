@@ -48,9 +48,11 @@ tape('view click', function(test) {
 	let tree, term
 	function triggerViewClick(_tree) {
 		tree = _tree
-		const viewBtn = tree.Inner.dom.treeDiv.select('.termview')
-		term = viewBtn.datum()
-		viewBtn.node().click()
+		setTimeout(() => {
+			const viewBtn = tree.Inner.dom.treeDiv.select('.termview')
+			term = viewBtn.datum()
+			viewBtn.node().click()
+		}, 300)
 	}
 
 	function testView(plot) {

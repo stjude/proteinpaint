@@ -87,8 +87,12 @@ class TdbTree {
 			treeDiv: opts.holder.append('div')
 		}
 
-		// simplified control-flow matching
-		this.reactsTo = ['tree', 'filter', 'search', 'plot', 'app_refresh']
+		// see rx.core getComponentApi().main() on
+		// how these key-values are used
+		this.reactsTo = {
+			prefix: ['tree', 'filter', 'search', 'plot'],
+			type: ['app_refresh']
+		}
 
 		// attach instance-specific methods via closure
 		setRenderers(this)

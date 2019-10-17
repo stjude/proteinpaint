@@ -264,13 +264,25 @@ export function getComponentApi(self) {
 			// reduce boilerplate or repeated code
 			// in component class main() by performing
 			// typical pre-emptive checks here
-			const acty = action.type ? action.type.split('_') : []
 			if (self.reactsTo) {
-				// fine-grained flow control, may deprecate in favor of array format
-				if (typeof self.reactsTo == 'function' && !self.reactsTo(action, acty)) return
-				// coarse-grained flow control
-				if (Array.isArray(self.reactsTo) && !self.reactsTo.includes(acty[0]) && !self.reactsTo.includes(action.type))
-					return
+				// if string matches are specified, start with
+				// matched == false, otherwise start as true
+				let matched = !(self.reactsTo.prefix || self.reactsTo.type)
+				if (self.reactsTo.prefix) {
+					for (const p of self.reactsTo.prefix) {
+						matched = action.type.startsWith(p)
+						if (matched) break
+					}
+				}
+				if (self.reactsTo.type) {
+					// okay to match prefix, type, or both
+					matched = matched || self.reactsTo.type.includes(action.type)
+				}
+				if (self.reactsTo.match) {
+					// fine-tuned action matching with a function
+					matched = matched && self.reactsTo.match(action)
+				}
+				if (!matched) return
 			}
 			await self.main(action, data)
 			return api

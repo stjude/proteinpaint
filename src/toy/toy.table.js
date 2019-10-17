@@ -1,11 +1,14 @@
-import * as rx from "../rx.core"
-import {select} from "d3-selection"
+import * as rx from '../rx.core'
+import { select } from 'd3-selection'
 
 class ToyTable {
 	constructor(app, opts) {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.opts = opts
+		// see rx.core getComponentApi().main() on
+		// how these key-values are used
+		this.reactsTo = { prefix: ['term'] }
 		this.dom = {
 			holder: opts.holder,
 			table: opts.holder.append('table')
@@ -14,38 +17,31 @@ class ToyTable {
 		this.notThis(this)
 	}
 
-	// as a convenience, 
-	// instance.reactsTo() will be called before
-	// instance.main() in Component api.main()
-	// acty = action.type.split("_")
-	reactsTo(action, acty) {
-		if (acty[0] == "term") return true
-	}
-
 	main(action) {
-		const divs = this.dom.table.selectAll('.table-wrapper')
-			.data(this.app.state().terms, this.getTermId)
+		const divs = this.dom.table.selectAll('.table-wrapper').data(this.app.state().terms, this.getTermId)
 
 		divs.exit().each(this._exitDiv)
 		divs.each(this._updateDiv)
-		divs.enter()
+		divs
+			.enter()
 			.append('div')
 			.attr('class', 'table-wrapper')
 			.each(this._addDiv)
 	}
-	
+
 	addDiv(term, div) {
 		div
 			.style('position', 'relative')
 			.style('margin', '10px')
 			.style('padding', '10px 3px')
 			.style('background-color', '#ececec')
-			.style('opacity',0)
+			.style('opacity', 0)
 			.transition()
 			.duration(500)
-			.style('opacity',1)
+			.style('opacity', 1)
 
-		div.append('button')
+		div
+			.append('button')
 			.datum(term)
 			.html('remove')
 			.style('margin', '5px')
@@ -53,38 +49,47 @@ class ToyTable {
 
 		const table = div.append('table')
 		const keyVals = Object.keys(term).map(key => [key, term[key]])
-		const tr = table.selectAll('tr')
-			.data(keyVals, this.trBindKey)
+		const tr = table.selectAll('tr').data(keyVals, this.trBindKey)
 
 		tr.exit().remove()
 		tr.each(this._updateTr)
-		tr.enter().append('tr').each(this._addTr)
+		tr.enter()
+			.append('tr')
+			.each(this._addTr)
 	}
 
 	updateDiv(term, div) {
 		// re-sort rows, etc
 		const keyVals = Object.keys(term).map(key => [key, term[key]])
-		const tr = div.selectAll('table').selectAll('tr')
+		const tr = div
+			.selectAll('table')
+			.selectAll('tr')
 			.data(keyVals, this.trBindKey)
 
 		tr.exit().remove()
 		tr.each(this._updateTr)
-		tr.enter().append('tr').each(this._addTr)
+		tr.enter()
+			.append('tr')
+			.each(this._addTr)
 	}
 
 	exitDiv(term, div) {
-
-		div.style('opacity',1)
+		div
+			.style('opacity', 1)
 			.transition()
 			.duration(500)
-			.style('opacity',0)
+			.style('opacity', 0)
 			.remove()
 	}
 
 	addTr(keyVal, tr, index) {
-		tr.style('background-color', index%2 == 0 ? '#fff' : '')
-		tr.append('td').html(keyVal[0]).style('padding', '3px 5px')
-		tr.append('td').html(keyVal[1]).style('padding', '3px 5px')
+		tr.style('background-color', index % 2 == 0 ? '#fff' : '')
+		tr.append('td')
+			.html(keyVal[0])
+			.style('padding', '3px 5px')
+		tr.append('td')
+			.html(keyVal[1])
+			.style('padding', '3px 5px')
 		this.hideShowRaw(tr, keyVal[0])
 	}
 
@@ -101,25 +106,24 @@ class ToyTable {
 		return d[0]
 	}
 
-	hideShowRaw(tr, row_name){
-		const rows = this.app.state().controls.rows.map(r=>r.name)
-		if(rows.includes(row_name)){
+	hideShowRaw(tr, row_name) {
+		const rows = this.app.state().controls.rows.map(r => r.name)
+		if (rows.includes(row_name)) {
 			const row = this.app.state().controls.rows.find(r => r.name == row_name)
-			if (row.hide){
-				tr.style('visibility','collapse')
-					.style('opacity',0)
-					.style('transition','visibility .5s ease, opacity .5s ease')
-			} 
-			else{
-				tr.style('visibility','visible')
-					.style('opacity',1)
-					.style('transition','visibility .5s ease, opacity .5s ease')
+			if (row.hide) {
+				tr.style('visibility', 'collapse')
+					.style('opacity', 0)
+					.style('transition', 'visibility .5s ease, opacity .5s ease')
+			} else {
+				tr.style('visibility', 'visible')
+					.style('opacity', 1)
+					.style('transition', 'visibility .5s ease, opacity .5s ease')
 			}
 		}
 	}
 
 	yesThis() {
-		this.removeDiv = term => this.app.dispatch({type: 'term_rm', termid: term.id})
+		this.removeDiv = term => this.app.dispatch({ type: 'term_rm', termid: term.id })
 	}
 
 	notThis(self) {

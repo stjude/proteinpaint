@@ -11,7 +11,12 @@ class TdbFilter {
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
 
-		this.reactsTo = ['filter', 'app_refresh']
+		// see rx.core getComponentApi().main() on
+		// how these key-values are used
+		this.reactsTo = {
+			prefix: ['filter'],
+			type: ['app_refresh']
+		}
 		setRenderers(this)
 		setInteractivity(this)
 

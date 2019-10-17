@@ -21,7 +21,10 @@ class HowTo {
 
 		// save a reference to app 
 		this.app = app
-		
+		// see rx.core getComponentApi().main() on
+		// how these key-values are used
+		this.reactsTo = {prefix: ['term']}
+
 		// usual stuff
 		this.opts = opts
 		this.dom = {
@@ -39,16 +42,6 @@ class HowTo {
 		// optional event bus
 		// this.bus = new rx.Bus('howto', ['postInit', 'postNotify'], opts.callbacks, this.api)
 		// this.bus.emit('postInit')
-	}
-
-	// as a convenience, 
-	// instance.reactsTo() will be called before
-	// instance.main() in the inherited 
-	// Component api.main() method
-	// 
-	// acty = action.type.split("_")
-	reactsTo(action, acty) {
-		if (acty[0] == "term") return true
 	}
 	
 	// wrapped by Component api.main()

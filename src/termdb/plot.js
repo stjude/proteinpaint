@@ -12,7 +12,15 @@ class TdbPlot {
 		this.app = app
 		this.id = opts.id
 		this.config = this.app.state({ type: 'plot', id: this.id })
-		this.reactsTo = ['plot', 'tree_update', 'app_refresh']
+
+		// see rx.core getComponentApi().main() on
+		// how these key-values are used
+		this.reactsTo = {
+			type: ['plot_add', 'plot_show', 'plot_edit', 'tree_update', 'app_refresh'],
+			match: action => {
+				if (!('id' in action) || action.id == this.id) return true
+			}
+		}
 
 		this.dom = {
 			holder: opts.holder
@@ -63,12 +71,6 @@ class TdbPlot {
 	}
 
 	async main(action) {
-		if (
-			('id' in action && action.id != this.id) ||
-			('onlyPlotId' in action && action.onlyPlotId != this.id) ||
-			action.type == 'plot_hide'
-		)
-			return
 		this.config = this.app.state({ type: 'plot', id: this.id })
 		const data = await this.requestData(this.config)
 		this.syncParams(this.config, data)
