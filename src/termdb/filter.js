@@ -3,6 +3,7 @@ import { select, event } from 'd3-selection'
 import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
 import { appInit } from './app'
+import * as client from '../client'
 
 class TdbFilter {
 	constructor(app, opts) {
@@ -28,7 +29,7 @@ class TdbFilter {
 
 	main(action) {
 		const terms_div = this.dom.holder.selectAll('.terms_div')
-		const filters = terms_div.selectAll('.tvs_pill').data(this.app.state().termfilter.terms)
+		const filters = terms_div.selectAll('.tvs_pill').data(this.app.state().termfilter.terms, d => {d.term.id})
 
 		filters.exit().each(this.exitFilter)
 		filters.each(this.updateFilter)
@@ -155,7 +156,12 @@ function setRenderers(self) {
 
 		one_term_div
 			.selectAll('.value_btn')
-			.data(valueData)
+			.data(valueData, d => {
+					d.label ? d.label : 
+					d.start ? d.start : 
+					d.stop ? d.stop : 
+					d.grade ? d.grade : d 
+				})
 			.enter()
 			.append('div')
 			.attr('class', 'value_btn sja_filter_tag_btn')
@@ -238,7 +244,14 @@ function setRenderers(self) {
 			? term.ranges
 			: term.grade_and_child
 
-		const value_btns = one_term_div.selectAll('.value_btn').data(valueData)
+		const value_btns = one_term_div.selectAll('.value_btn').data(valueData, 
+			d => {
+				d.key ? d.key :
+				d.label ? d.label : 
+				d.start ? d.start : 
+				d.stop ? d.stop : 
+				d.grade ? d.grade : d 
+			})
 
 		value_btns.exit().each(self.removeValueBtn)
 
@@ -264,7 +277,6 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'value_btn sja_filter_tag_btn')
 			.style('margin-right', '1px')
-			.style('position', 'absolute')
 			.each(valueAdderFxn)
 
 		// button with 'x' to remove term2
@@ -407,6 +419,10 @@ function setRenderers(self) {
 				.style('font-size', '1em')
 				.style('background-color', '#4888BF')
 				.html(range.label)
+				.style('opacity', 0)
+				.transition()
+				.duration(200)
+				.style('opacity', 1)
 
 			numeric_select.node().value = range.label
 
@@ -442,7 +458,7 @@ function setRenderers(self) {
 
 			value_btn.on('click', () => {
 				self.editNumericBin(value_btn, range, range => {
-					value_btn.html(self.setRangeBtnText(range))
+					self.changeValue({ term, value:range, j })
 				})
 			})
 		}
@@ -476,10 +492,10 @@ function setRenderers(self) {
 	}
 
 	self.updateCatValue = function(d, j) {
+		// console.log('update', j)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
 
-		// console.log('update', j)
 		const value_btn = select(this)
 			.datum(d)
 			.style('padding', '3px 4px 2px 4px')
@@ -521,6 +537,12 @@ function setRenderers(self) {
 			}
 		}
 
+		value_btn.on('click', () => {
+			self.editNumericBin(value_btn, range, range => {
+				self.changeValue({ term, value:range, j })
+			})
+		})
+
 		if (range.start == undefined || range.stop == undefined) {
 			// const [numeric_select, value_btn] = dom.make_select_btn_pair(one_term_div)
 			const numeric_select = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
@@ -528,10 +550,23 @@ function setRenderers(self) {
 				value_btn.node().offsetWidth + 'px'
 			)
 			value_btn.html(range.label)
+				.style('opacity', 0)
+				.transition()
+				.duration(200)
+				.style('opacity', 1)
+
 			numeric_select.node().value = range.label
 			numeric_select.style('width', value_btn.node().offsetWidth + 'px')
+
+			//update dropdown list for each term
+			self.updateSelect(numeric_select, unannotated_cats, range.label)
+
 		} else {
 			value_btn.html(self.setRangeBtnText(range))
+				.style('opacity', 0)
+				.transition()
+				.duration(200)
+				.style('opacity', 1)
 		}
 
 		//show or hide OR button
@@ -539,10 +574,12 @@ function setRenderers(self) {
 			'display',
 			j < term.ranges.length - 1 ? 'inline-block' : 'none'
 		)
+
+		const add_value_select = one_term_div.selectAll('.add_value_select')
+		self.updateSelect(add_value_select, unannotated_cats, 'add')
 	}
 
 	self.removeValueBtn = function(d, j) {
-		// console.log('exit', j)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
 		const select_remove_pos =
@@ -601,7 +638,7 @@ function setRenderers(self) {
 		const options = select.selectAll('option')
 
 		options.nodes().forEach(function(d) {
-			if (selected_values.find(v => (v.key || v.label) == d.value) && d.value != btn_value) {
+			if (selected_values.length > 0 && selected_values.find(v => (v.key || v.label) == d.value) && d.value != btn_value) {
 				d.disabled = true
 			} else {
 				d.disabled = false
@@ -613,6 +650,7 @@ function setRenderers(self) {
 	self.makePlusBtn = async function(holder, data, selected_values, callback) {
 		// If 2 or less values for the term then remove plus button
 		if (data.lst.length <= 2) return
+		const term = holder.data()
 
 		const [add_value_select, add_value_btn] = dom.make_select_btn_pair(holder)
 		add_value_select.attr('class', 'add_value_select').style('margin-right', '1px')
@@ -645,7 +683,7 @@ function setRenderers(self) {
 			if (add_value_select.node().value == 'add_bin') {
 				const range_temp = { start: '', stop: '' }
 				self.editNumericBin(add_value_btn, range_temp, range => {
-					selected_values.push(range)
+					self.addValue({ term, new_value:range })
 				})
 			} else {
 				//change value of button
@@ -719,8 +757,9 @@ function setInteractivity(self) {
 		appInit(tree_obj, treediv)
 	}
 
-	self.editNumericBin = function(holder, range, callback) {
+	self.editNumericBin = function(holder, actual_range, callback) {
 		self.dom.tip.clear()
+		const range = JSON.parse(JSON.stringify(actual_range))
 
 		const equation_div = self.dom.tip.d
 			.append('div')
@@ -815,9 +854,7 @@ function setInteractivity(self) {
 					range.stop = stop
 					range.stopinclusive = stopselect.node().selectedIndex == 0
 				}
-				// display_numeric_filter(group, term_index, value_div)
 				self.dom.tip.hide()
-				await obj.callback()
 				if (callback) callback(range)
 			} catch (e) {
 				window.alert(e)
@@ -836,17 +873,4 @@ function setInteractivity(self) {
 
 	self.removeValue = opts => self.app.dispatch({ type: 'filter_value_remove', termId: opts.term.id, valueId: opts.j })
 
-	/*
-	self.removeValue = //if selected index is 0 (delete) and value is 'delete' then remove from group
-						if (replace_value_select.node().selectedIndex == 0 && replace_value_select.node().value == 'delete') {
-							self.removeValue({term,j})
-						} else {
-							//change value of button
-							const new_value = data.lst.find(j => j.key == replace_value_select.node().value)
-							term_value_btn.style('padding', '3px 4px 3px 4px').text('Loading...')
-							replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
-							const value = { key: new_value.key, label: new_value.label }
-							self.changeValue({term, value, j})
-						}
-	*/
 }

@@ -117,7 +117,7 @@ tape('filter term-value button', function(test) {
 	}
 })
 
-tape('filter term-value button: categorical term', function(test) {
+tape.only('filter term-value button: categorical term', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(7)
 	const termfilter = {
@@ -232,7 +232,7 @@ tape('filter term-value button: categorical term', function(test) {
 
 tape('filter term-value button: numerical term', function(test) {
 	test.timeoutAfter(3000)
-	// test.plan(7)
+	test.plan(6)
 	const div0 = d3s.select('body').append('div')
 	const termfilter = {
 		show_top_ui: true,
@@ -267,8 +267,8 @@ tape('filter term-value button: numerical term', function(test) {
 			.rideInit({ arg: filter })
 			.run(testFilterDisplay, 300)
 			.change({ bus: filter, eventType: 'postRender.test' })
-			// .run(triggerChangeValue)
-			// .run(testChangeValue, 600)
+			.use(triggerChangeValue)
+			.to(testChangeValue, { wait: 600 })
 			.use(triggerAddValue)
 			.to(testAddValue, { wait: 600 })
 			.use(triggerRemoveValue)
@@ -293,6 +293,23 @@ tape('filter term-value button: numerical term', function(test) {
 		test.true(
 			filter.Inner.dom.holder.selectAll('.add_value_btn').size() >= 1,
 			"should have '+' button to add unannonated value to filter"
+		)
+	}
+
+	function triggerChangeValue(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		const range = {start: 3000, stop: 4000, startinclusive: false, stopinclusive: false}
+		filter.Inner.app.dispatch({ type: 'filter_value_change', termId: term.id, value: range, valueId: 0 })
+	}
+
+	function testChangeValue(filter) {
+		test.equal(
+			filter.Inner.dom.holder
+				.selectAll('.value_btn')
+				.html()
+				.split(' ')[0],
+			filter.Inner.app.state().termfilter.terms[0].ranges[0].start.toString(),
+			'filter value and value supplied from data should be the same'
 		)
 	}
 
