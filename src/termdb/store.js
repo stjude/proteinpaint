@@ -61,27 +61,6 @@ TdbStore.prototype.actions = {
 		//
 		this.copyMerge(this.state, action.state ? action.state : {})
 	},
-	tree_update(action) {
-		// note: attributes of this action will be modified
-		if (action.expandedTerms) {
-			// copy expandedTerms array since original is frozen/not mutable
-			this.state.tree.expandedTerms = action.expandedTerms.slice()
-		}
-		if (action.onlyPlotTermID) {
-			// to only show plot of one term, and hide all the other previously open plots
-			// turn all existing plots to invisible
-			for (const id in this.state.tree.plots) {
-				this.state.tree.plots[id].isVisible = false
-			}
-			const p = this.state.tree.plots[action.onlyPlotTermID]
-			if (p) {
-				p.isVisible = true
-			} else {
-				this.state.tree.plots[action.onlyPlotTermID] = action.config
-			}
-		}
-		// only show plot of a given id
-	},
 	tree_expand(action) {
 		if (this.state.tree.expandedTerms.includes(action.termId)) return
 		this.state.tree.expandedTerms.push(action.termId)

@@ -109,16 +109,35 @@ function setRenderers(self) {
 			// as regular button, click to expand tree
 			button.attr('class', 'sja_menuoption').on('click', () => {
 				self.clear()
-				const action = { type: 'tree_update', expandedTerms: [root_ID] }
+				const expandedTerms = [root_ID]
 				if (term.__ancestors) {
-					action.expandedTerms.push(...term.__ancestors)
+					expandedTerms.push(...term.__ancestors)
 				}
+
 				if (graphable(term)) {
-					action.onlyPlotTermID = term.id
-					action.id = term.id
-					action.config = { id: term.id, term }
+					self.app.dispatch({
+						type: 'app_refresh',
+						state: {
+							tree: {
+								expandedTerms,
+								plots: {
+									[term.id]: {
+										id: term.id,
+										term,
+										isVisible: true
+									}
+								}
+							}
+						}
+					})
+				} else {
+					self.app.dispatch({
+						type: 'app_refresh',
+						state: {
+							tree: { expandedTerms }
+						}
+					})
 				}
-				self.app.dispatch(action)
 			})
 		}
 		tr.append('td')

@@ -16,7 +16,7 @@ class TdbPlot {
 		// see rx.core getComponentApi().main() on
 		// how these key-values are used
 		this.reactsTo = {
-			type: ['plot_add', 'plot_show', 'plot_edit', 'tree_update', 'app_refresh'],
+			type: ['plot_add', 'plot_show', 'plot_edit', 'app_refresh'],
 			match: action => {
 				if (!('id' in action) || action.id == this.id) return true
 			}
