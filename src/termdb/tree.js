@@ -88,7 +88,7 @@ class TdbTree {
 		}
 
 		// simplified control-flow matching
-		this.reactsTo = [undefined, 'tree', 'filter', 'search', 'plot']
+		this.reactsTo = ['tree', 'filter', 'search', 'plot', 'app_refresh']
 
 		// attach instance-specific methods via closure
 		setRenderers(this)

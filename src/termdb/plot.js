@@ -12,7 +12,7 @@ class TdbPlot {
 		this.app = app
 		this.id = opts.id
 		this.config = this.app.state({ type: 'plot', id: this.id })
-		this.reactsTo = [undefined, 'plot', 'tree_update']
+		this.reactsTo = ['plot', 'tree_update', 'app_refresh']
 
 		this.dom = {
 			holder: opts.holder

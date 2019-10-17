@@ -253,6 +253,8 @@ export function getAppApi(self) {
 			return self.getComponents(dotSepNames)
 		}
 	}
+
+	if (self.opts.debugName) window[self.opts.debugName] = api
 	return api
 }
 

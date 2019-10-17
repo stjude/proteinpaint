@@ -11,7 +11,7 @@ class TdbFilter {
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
 
-		this.reactsTo = [undefined, 'filter']
+		this.reactsTo = ['filter', 'app_refresh']
 		setRenderers(this)
 		setInteractivity(this)
 
@@ -502,7 +502,7 @@ function setRenderers(self) {
 		)
 	}
 
-	self.updateNumericValue = function(range, j){
+	self.updateNumericValue = function(range, j) {
 		// console.log('update', j)
 		const value_btn = select(this).datum(range)
 		const one_term_div = select(this.parentNode)
@@ -519,7 +519,9 @@ function setRenderers(self) {
 		if (range.start == undefined || range.stop == undefined) {
 			// const [numeric_select, value_btn] = dom.make_select_btn_pair(one_term_div)
 			const numeric_select = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
-				'width', value_btn.node().offsetWidth + 'px')
+				'width',
+				value_btn.node().offsetWidth + 'px'
+			)
 			value_btn.html(range.label)
 			numeric_select.node().value = range.label
 			numeric_select.style('width', value_btn.node().offsetWidth + 'px')
@@ -538,8 +540,8 @@ function setRenderers(self) {
 		// console.log('exit', j)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
-		const select_remove_pos = (term.term.isinteger || term.term.isfloat) ?
-			j - (term.ranges.slice(0,j).filter((a)=>a.start||a.stop).length) : j
+		const select_remove_pos =
+			term.term.isinteger || term.term.isfloat ? j - term.ranges.slice(0, j).filter(a => a.start || a.stop).length : j
 
 		select(one_term_div.selectAll('.value_select')._groups[0][select_remove_pos]).remove()
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).remove()

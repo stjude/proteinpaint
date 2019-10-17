@@ -7,8 +7,8 @@ import {sayerror} from '../client'
 
 /*
 opts{}
-.states{}
-	required
+.state{}
+	required, will fill-in or override store.defaultState
 	https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit
 .modifiers{}
 	optional
@@ -66,7 +66,8 @@ class TdbApp {
 		this.bus = new rx.Bus("app", ["postInit",'postRender'], opts.callbacks, this.api)
 		this.bus.emit('postInit')
 		// trigger the initial render after initialization
-		this.main().catch(this.printError)
+		// no need to supply an action.state{} at this point
+		this.main({type: 'app_refresh'}).catch(this.printError)
 	}
 
 	async main(action = {}) {

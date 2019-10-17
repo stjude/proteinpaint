@@ -4,6 +4,8 @@ import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
 
 const defaultState = {
+	// genome: "", // must be supplied
+	// dslabel: "", // must be supplied
 	tree: {
 		expandedTerms: [],
 		plots: {}
@@ -49,6 +51,16 @@ class TdbStore {
 	constructor prototype
 */
 TdbStore.prototype.actions = {
+	app_refresh(action = {}) {
+		// optional action.state{} may be full or partial overrides
+		// to the current state
+		//
+		// when constructing an app, app_refresh() is called
+		// without action.state as the current state at the
+		// initial render is not meant to be modified yet
+		//
+		this.copyMerge(this.state, action.state ? action.state : {})
+	},
 	tree_update(action) {
 		// note: attributes of this action will be modified
 		if (action.expandedTerms) {
