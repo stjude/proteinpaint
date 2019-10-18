@@ -98,8 +98,21 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_add(action) {
-		if (this.state.termfilter.terms.includes(action.term)) return
-		this.state.termfilter.terms.push(action.term)
+		// if (this.state.termfilter.terms.includes(action.term)) return
+		// this.state.termfilter.terms.push(action.term)
+		const filter = this.state.termfilter.terms.find(d=>d.id == action.termId)
+        if (filter) {
+			const valueData = filter.term.iscategorical
+			? filter.values
+			: filter.term.isfloat || filter.term.isinteger
+			? filter.ranges
+			: filter.grade_and_child
+			// may need to add check if value is already present
+			if(!valueData.includes(action.value))
+            valueData.push(action.value)
+        } else {
+            this.state.termfilter.terms.push(action.term)
+        }
 	},
 
 	filter_remove(action) {

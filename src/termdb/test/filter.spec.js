@@ -133,6 +133,7 @@ tape('filter term-value button: categorical term', function(test) {
 	}
 
 	runpp({
+		debugName: 'tdb',
 		state: {
 			dslabel: 'SJLife',
 			genome: 'hg38',
@@ -212,7 +213,7 @@ tape('filter term-value button: categorical term', function(test) {
 	function triggerAddValue(filter) {
 		const term = filter.Inner.app.state().termfilter.terms[0]
 		const value = { key: 'Wilms tumor', label: 'Wilms tumor' }
-		filter.Inner.app.dispatch({ type: 'filter_value_add', termId: term.id, value })
+		filter.Inner.app.dispatch({ type: 'filter_add', termId: term.id, value })
 	}
 
 	function testAddValue(filter) {
@@ -323,7 +324,7 @@ tape('filter term-value button: numerical term', function(test) {
 	function triggerAddValue(filter) {
 		const term = filter.Inner.app.state().termfilter.terms[0]
 		const value = { is_unannotated: true, value: '-9999', label: 'Unknown treatment record' }
-		filter.Inner.app.dispatch({ type: 'filter_value_add', termId: term.id, value })
+		filter.Inner.app.dispatch({ type: 'filter_add', termId: term.id, value })
 	}
 
 	function testAddValue(filter) {

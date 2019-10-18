@@ -254,7 +254,8 @@ function setRenderers(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'value_btn sja_filter_tag_btn')
-			.style('margin-right', '1px')
+            .style('margin-right', '1px')
+            // .style('position', 'absolute')
 			.each(valueAdderFxn)
 
 		// button with 'x' to remove term2
@@ -280,6 +281,7 @@ function setRenderers(self) {
 	}
 
 	self.addCategoryValues = async function(value, j) {
+        // console.log('add', j)
 		const term_value_btn = select(this).datum(value)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
@@ -326,14 +328,6 @@ function setRenderers(self) {
 			.duration(200)
 			.style('opacity', 1)
 
-		if (j == term.values.length - 1) {
-			one_term_div.selectAll('.add_value_btn').remove()
-			one_term_div.selectAll('.add_value_select').remove()
-			await self.makePlusBtn(one_term_div, self.categoryData[term.term.id], term.values, new_value => {
-				self.addValue({ term, new_value })
-			})
-		}
-
 		// 'OR' button in between values
 		one_term_div
 			.append('div')
@@ -351,7 +345,15 @@ function setRenderers(self) {
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
 			'display',
 			j > 0 && j < term.values.length - 1 ? 'inline-block' : 'none'
-		)
+        )
+        
+        if (j == term.values.length - 1 && self.categoryData[term.term.id].lst.length > 2) {
+			one_term_div.selectAll('.add_value_btn').remove()
+			one_term_div.selectAll('.add_value_select').remove()
+			await self.makePlusBtn(one_term_div, self.categoryData[term.term.id], term.values, new_value => {
+				self.addValue({ term, new_value })
+			})
+		}
 
 		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
 		// set it after editing OR button to confirm 1px margin between value_btn and + btn
@@ -844,7 +846,7 @@ function setInteractivity(self) {
 
 	self.filterNegate = term => self.app.dispatch({ type: 'filter_negate', termId: term.id })
 
-	self.addValue = opts => self.app.dispatch({ type: 'filter_value_add', termId: opts.term.id, value: opts.new_value })
+	self.addValue = opts => self.app.dispatch({ type: 'filter_add', termId: opts.term.id, value: opts.new_value })
 
 	self.changeValue = opts =>
 		self.app.dispatch({ type: 'filter_value_change', termId: opts.term.id, value: opts.value, valueId: opts.j })
