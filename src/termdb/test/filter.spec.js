@@ -58,8 +58,10 @@ tape('filter term-value button', function(test) {
 			.rideInit({ arg: filter })
 			.run(testFilterDisplay, 200)
 			.change({ bus: filter, eventType: 'postRender.test' })
-			.to(testRemoveFilter, triggerRemoveFilter)
-			.to(testAddFilter, triggerAddFilter)
+			.use(triggerRemoveFilter)
+			.to(testRemoveFilter)
+			.use(triggerAddFilter)
+			.to(testAddFilter)
 			.done(test)
 	}
 
@@ -147,10 +149,15 @@ tape('filter term-value button: categorical term', function(test) {
 		helpers
 			.rideInit({ arg: filter })
 			.run(testFilterDisplay, 300)
-			.to(testNegationBtnVal, triggerChangeNegation)
-			.to(testChangeValue, triggerChangeValue, { wait: 200 })
-			.to(testAddValue, triggerAddValue, { wait: 200 })
-			.to(testRemoveValue, triggerRemoveValue, { wait: 600 })
+			.change({ bus: filter, eventType: 'postRender.test' })
+			.use(triggerChangeNegation)
+			.to(testNegationBtnVal)
+			.use(triggerChangeValue)
+			.to(testChangeValue, { wait: 600 })
+			.use(triggerAddValue)
+			.to(testAddValue, { wait: 600 })
+			.use(triggerRemoveValue)
+			.to(testRemoveValue, { wait: 600 })
 			.done(test)
 	}
 
