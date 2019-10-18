@@ -136,7 +136,7 @@ class TdbPlot {
 		if (!data || !data.refs) return
 		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
 			const term = config[key]
-			if (!term || term == 'genotype') continue
+			if (!term || term == 'genotype' || !data.refs.bins) continue
 			term.bins = data.refs.bins[i]
 			if (data.refs.q && data.refs.q[i]) {
 				if (!term.q) term.q = {}
