@@ -117,7 +117,7 @@ tape('filter term-value button', function(test) {
 	}
 })
 
-tape.only('filter term-value button: categorical term', function(test) {
+tape('filter term-value button: categorical term', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(7)
 	const termfilter = {
@@ -298,7 +298,7 @@ tape('filter term-value button: numerical term', function(test) {
 
 	function triggerChangeValue(filter) {
 		const term = filter.Inner.app.state().termfilter.terms[0]
-		const range = {start: 3000, stop: 4000, startinclusive: false, stopinclusive: false}
+		const range = { start: 3000, stop: 4000, startinclusive: false, stopinclusive: false }
 		filter.Inner.app.dispatch({ type: 'filter_value_change', termId: term.id, value: range, valueId: 0 })
 	}
 

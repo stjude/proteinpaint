@@ -50,7 +50,7 @@ export function getFilterUi(obj) {
 	termvaluesettingui.init(tvsuiObj)
 	obj.tvstip = tvsuiObj.tvstip
 
-	let currTermsStr = JSON.stringify(obj.termfilter.terms)
+	let currTermsStr = ''
 
 	const filter = {
 		main(action, state = null) {
