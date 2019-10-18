@@ -50,10 +50,14 @@ export function getFilterUi(obj) {
 	termvaluesettingui.init(tvsuiObj)
 	obj.tvstip = tvsuiObj.tvstip
 
+	let currTermsStr = JSON.stringify(obj.termfilter.terms)
+
 	const filter = {
 		main(action, state = null) {
-			//if (!this.reactsTo(action)) return
 			if (!Array.isArray(obj.termfilter.terms)) throw 'filter_terms[] not an array'
+			const termStr = JSON.stringify(obj.termfilter.terms)
+			if (termStr == currTermsStr) return // do not rerender since data is the same
+			currTermsStr = termStr
 			validate_termvaluesetting(obj.termfilter.terms)
 			tvsuiObj.main()
 		},
