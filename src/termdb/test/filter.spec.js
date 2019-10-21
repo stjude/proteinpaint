@@ -348,3 +348,71 @@ tape('filter term-value button: numerical term', function(test) {
 		)
 	}
 })
+
+tape('filter term-value button: conditional term (grade)', function(test) {
+	test.timeoutAfter(3000)
+	// test.plan(6)
+	const div0 = d3s.select('body').append('div')
+	const termfilter = {
+		show_top_ui: true,
+		terms: [
+			{
+				term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+				values: [{ key: 0, label: '0: No condition' }],
+				bar_by_grade: 1,
+				value_by_max_grade: 1
+			}
+		]
+	}
+
+	runpp({
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38',
+			termfilter
+		},
+		callbacks: {
+			filter: {
+				'postInit.test': runTests
+			}
+		}
+	})
+
+	function runTests(filter) {
+		helpers
+			.rideInit({ arg: filter })
+			.run(testFilterDisplay, 300)
+			.change({ bus: filter, eventType: 'postRender.test' })
+			// .use(triggerChangeValue)
+			// .to(testChangeValue, { wait: 600 })
+			// .use(triggerAddValue)
+			// .to(testAddValue, { wait: 600 })
+			// .use(triggerRemoveValue)
+			// .to(testRemoveValue, { wait: 600 })
+			.done(test)
+	}
+
+	function testFilterDisplay(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.term_name_btn').html(),
+			termfilter.terms[0].term.name,
+			'filter btn and term-name from runpp() should be the same'
+		)
+
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.sja_filter_tag_btn')._groups[0][2].innerText.slice(0, -2),
+			termfilter.terms[0].values[0].label,
+			'grade value button should match the data'
+		)
+
+		test.true(
+			filter.Inner.dom.holder.selectAll('.sja_filter_tag_btn')._groups[0][3].innerText.includes('Max'),
+			'grade type button should match the data'
+		)
+
+		test.true(
+			filter.Inner.dom.holder.selectAll('.add_value_btn').size() >= 1,
+			"should have '+' button to add unannoated value to filter"
+		)
+	}
+})

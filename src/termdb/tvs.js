@@ -28,7 +28,7 @@ class TVS {
         
 	}
 
-	main(action) {
+	main() {
 		const terms_div = this.dom.holder.selectAll('.terms_div')
 		const filters = terms_div.selectAll('.tvs_pill').data(this.app.state().termfilter.terms, d => d.term.id)
 
@@ -129,10 +129,22 @@ function setRenderers(self) {
 			? term.values
 			: term.term.isfloat || term.term.isinteger
 			? term.ranges
+			: term.bar_by_grade || term.bar_by_children
+			? term.values
 			: term.grade_and_child
 
+		let lst
+
+		lst = term.bar_by_grade ? ["bar_by_grade=1"] 
+			: term.bar_by_children ? ["bar_by_children=1"] : []
+
+		lst.push(term.value_by_max_grade ? "value_by_max_grade=1" 
+			: term.value_by_most_recent ? "value_by_most_recent=1"
+			: term.value_by_computable_grade ? "value_by_computable_grade=1" 
+			: null)
+
 		// query db for list of categories and count
-		self.categoryData[term.term.id] = await self.getCategories(term)
+		self.categoryData[term.term.id] = await self.getCategories(term, lst)
 
 		one_term_div
 			.selectAll('.value_btn')
@@ -214,13 +226,26 @@ function setRenderers(self) {
 
 		one_term_div.selectAll('.condition_select').style('width', condition_btn.node().offsetWidth + 'px')
 
-		const data = await self.getCategories(term)
+		let lst
+
+		lst = term.bar_by_grade ? ["bar_by_grade=1"] 
+			: term.bar_by_children ? ["bar_by_children=1"] : []
+
+		lst.push(term.value_by_max_grade ? "value_by_max_grade=1" 
+			: term.value_by_most_recent ? "value_by_most_recent=1"
+			: term.value_by_computable_grade ? "value_by_computable_grade=1" 
+			: null)
+
+		const data = await self.getCategories(term, lst)
+
 		self.categoryData[term.term.id] = data
 
 		const valueData = term.term.iscategorical
 			? term.values
 			: term.term.isfloat || term.term.isinteger
 			? term.ranges
+			: term.bar_by_grade || term.bar_by_children
+			? term.values
 			: term.grade_and_child
 
 		const value_btns = one_term_div.selectAll('.value_btn').data(valueData, 
@@ -237,7 +262,7 @@ function setRenderers(self) {
 			? self.updateCatValue
 			: term.term.isfloat || term.term.isinteger
 			? self.updateNumericValue
-			: await self.addConditionValues
+			: await self.updateConditionValues
 
 		value_btns
 			.transition()
@@ -360,6 +385,38 @@ function setRenderers(self) {
 		replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
 	}
 
+	self.updateCatValue = function(d, j) {
+		// console.log('update', j)
+		const one_term_div = select(this.parentNode)
+		const term = one_term_div.datum()
+
+		const value_btn = select(this)
+			.datum(d)
+			.style('padding', '3px 4px 2px 4px')
+			.html(d => d.label + ' &#9662;')
+			.style('opacity', 0)
+			.transition()
+			.duration(200)
+			.style('opacity', 1)
+
+		const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
+			'width',
+			value_btn.node().offsetWidth + 'px'
+		)
+
+		//update dropdown list for each term and '+' btn
+		self.updateSelect(value_selects, term.values, d.key)
+
+		const add_value_select = one_term_div.selectAll('.add_value_select')
+		self.updateSelect(add_value_select, term.values, 'add')
+
+		//show or hide OR button
+		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
+			'display',
+			j < term.values.length - 1 ? 'inline-block' : 'none'
+		)
+	}
+
 	self.addNumericValues = function(range, j) {
 		// console.log('add', j)
 		const value_btn = select(this).datum(range)
@@ -473,38 +530,6 @@ function setRenderers(self) {
 		}
 	}
 
-	self.updateCatValue = function(d, j) {
-		// console.log('update', j)
-		const one_term_div = select(this.parentNode)
-		const term = one_term_div.datum()
-
-		const value_btn = select(this)
-			.datum(d)
-			.style('padding', '3px 4px 2px 4px')
-			.html(d => d.label + ' &#9662;')
-			.style('opacity', 0)
-			.transition()
-			.duration(200)
-			.style('opacity', 1)
-
-		const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
-			'width',
-			value_btn.node().offsetWidth + 'px'
-		)
-
-		//update dropdown list for each term and '+' btn
-		self.updateSelect(value_selects, term.values, d.key)
-
-		const add_value_select = one_term_div.selectAll('.add_value_select')
-		self.updateSelect(add_value_select, term.values, 'add')
-
-		//show or hide OR button
-		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
-			'display',
-			j < term.values.length - 1 ? 'inline-block' : 'none'
-		)
-	}
-
 	self.updateNumericValue = function(range, j) {
 		// console.log('update', j)
 		const value_btn = select(this).datum(range)
@@ -561,6 +586,117 @@ function setRenderers(self) {
 		const add_value_select = one_term_div.selectAll('.add_value_select')
 		self.updateSelect(add_value_select, unannotated_cats, 'add')
 		if(numeric_select) numeric_select.style('width', value_btn.node().offsetWidth + 'px')	
+	}
+
+	self.addConditionValues = async function(value, j){
+        // console.log('add', j)
+		const term_value_btn = select(this).datum(value)
+		const one_term_div = select(this.parentNode)
+		const term = one_term_div.datum()
+
+		const grade_select = one_term_div.append('select')
+			.attr('class','value_select')
+			.style("margin-right", "1px")
+			.style('opacity',0)
+			.on('mouseover',()=>{
+				term_value_btn.style('opacity', '0.8')
+				.style('cursor','default')
+			})
+			.on('mouseout',()=>{
+				term_value_btn.style('opacity', '1')
+			})
+
+		self.makeSelectList(self.categoryData[term.term.id], grade_select, term.values, value.key, 'delete')
+
+		grade_select.on('change', async () => {
+			//if selected index is 0 (delete) and value is 'delete' then remove from group
+			if (grade_select.node().selectedIndex == 0 && grade_select.node().value == 'delete') {
+				self.removeValue({ term, j })
+			} else {
+				//change value of button
+				const new_value = self.categoryData[term.term.id].lst.find(j => j.key == grade_select.node().value)
+				term_value_btn.style('padding', '3px 4px 3px 4px').text('Loading...')
+				grade_select.style('width', term_value_btn.node().offsetWidth + 'px')
+				const value = { key: new_value.key, label: new_value.label }
+				self.changeValue({ term, value, j })
+			}
+		})
+
+		term_value_btn
+			.style('padding', '3px 4px 2px 4px')
+			.style('margin-right', '1px')
+			.style('font-size', '1em')
+			.style('position', 'absolute')
+			.style('background-color', '#4888BF')
+			.html(d => d.label + ' &#9662;')
+			.style('opacity', 0)
+			.transition()
+			.duration(200)
+			.style('opacity', 1)
+
+		// 'OR' button in between values
+		one_term_div
+			.append('div')
+			.attr('class', 'or_btn')
+			.style('display', 'none')
+			.style('color', '#fff')
+			.style('background-color', '#4888BF')
+			.style('margin-right', '1px')
+			.style('padding', '8px 6px 4px 6px')
+			.style('font-size', '.7em')
+			.style('text-transform', 'uppercase')
+			.text('or')
+
+		//show or hide OR button
+		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
+			'display',
+			j > 0 && j < term.values.length - 1 ? 'inline-block' : 'none'
+		)
+		
+		one_term_div.selectAll('.grade_type_btn').remove()
+		one_term_div.selectAll('.grade_type_select').remove()	
+		self.makeGradeSelectBtn(one_term_div, term, updated_term => {
+			self.updateGradeType({ term, updated_term })
+		})
+        
+        if (j == term.values.length - 1 && self.categoryData[term.term.id].lst.length > 2) {
+			one_term_div.selectAll('.add_value_btn').remove()
+			one_term_div.selectAll('.add_value_select').remove()
+			await self.makePlusBtn(one_term_div, self.categoryData[term.term.id], term.values, new_value => {
+				self.addValue({ term, new_value })
+			})
+		}
+
+		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
+		// set it after editing OR button to confirm 1px margin between value_btn and + btn
+		grade_select.style('width', term_value_btn.node().offsetWidth + 'px')
+	}
+
+	self.updateConditionValues = function(value, j){
+		// console.log('update', j)
+		const value_btn = select(this).datum(value)
+		const one_term_div = select(this.parentNode)
+		const term = one_term_div.datum()
+
+		value_btn
+			.html(d => d.label + ' &#9662;')
+
+		one_term_div.selectAll('.grade_type_btn').remove()
+		one_term_div.selectAll('.grade_type_select').remove()	
+		self.makeGradeSelectBtn(one_term_div, term, updated_term => {
+			self.updateGradeType({ term, updated_term })
+		})
+        
+		const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
+			'width',
+			value_btn.node().offsetWidth + 'px'
+		)
+
+		//update dropdown list for each term and '+' btn
+		self.updateSelect(value_selects, term.values, value.key)
+
+		const add_value_select = one_term_div.selectAll('.add_value_select')
+		self.updateSelect(add_value_select, term.values, 'add')
 	}
 
 	self.removeValueBtn = function(d, j) {
@@ -628,6 +764,69 @@ function setRenderers(self) {
 				d.disabled = false
 			}
 			select.node().value = btn_value
+		})
+	}
+
+	self.makeGradeSelectBtn = function(holder, actual_term, callback) {
+		const term = JSON.parse(JSON.stringify(actual_term))
+		const [grade_type_select, grade_type_btn] = dom.make_select_btn_pair(holder)
+		grade_type_select
+			.attr('class','grade_type_select')
+			.style("margin-right", "1px")
+
+		grade_type_select
+			.append("option")
+			.attr("value", "max")
+			.text("Max grade per patient")
+
+		grade_type_select
+			.append("option")
+			.attr("value", "recent")
+			.text("Most recent grade per patient")
+
+		grade_type_select
+			.append("option")
+			.attr("value", "computable")
+			.text("Any grade per patient")
+
+		grade_type_btn
+			.classed('grade_type_btn',true)
+			.style("padding", "2px 4px 3px 4px")
+			.style("margin-right", "1px")
+			.style("font-size", "1em")
+			.style("background-color", "#4888BF")
+
+		grade_type_btn.html(
+			term.value_by_max_grade ? '(Max grade per patient) &#9662;' :
+			term.value_by_most_recent ? '(Most recent grade per patient) &#9662;' :
+			'(Any grade per patient) &#9662;'
+		)
+
+		grade_type_select.node().value = 
+			term.value_by_max_grade ? 'max' :
+			term.value_by_most_recent ? 'recent' : 
+			'computable'
+
+		grade_type_select.style("width", grade_type_btn.node().offsetWidth + "px")
+
+		// change grade type to/from max_grade and recent_grade
+		grade_type_select.on("change", async () => {
+			if (grade_type_select.node().value == "max") {
+				term.value_by_max_grade = true
+				term.value_by_most_recent = false
+				term.value_by_computable_grade = false
+			} else if (grade_type_select.node().value == "recent") {
+				term.value_by_max_grade = false
+				term.value_by_most_recent = true
+				term.value_by_computable_grade = false
+			} else if (grade_type_select.node().value == "computable") {
+				term.value_by_max_grade = false
+				term.value_by_most_recent = false
+				term.value_by_computable_grade = true
+			}
+
+			//update gorup and load tk
+			callback(term)
 		})
 	}
 
@@ -846,6 +1045,8 @@ function setInteractivity(self) {
 			}
 		}
 	}
+
+	self.updateGradeType = opts => self.app.dispatch({ type: 'filter_grade_update', termId: opts.term.id, updated_term : opts.updated_term })
 
 	self.removeFilter = term => self.app.dispatch({ type: 'filter_remove', termId: term.id })
 

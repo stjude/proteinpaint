@@ -115,6 +115,16 @@ TdbStore.prototype.actions = {
         }
 	},
 
+	filter_grade_update(action) {
+		const t = this.state.termfilter.terms.find(d=>d.id == action.termId)
+		if (!t) return
+		t.bar_by_grade = action.updated_term.bar_by_grade
+		t.bar_by_children = action.updated_term.bar_by_children
+		t.value_by_max_grade = action.updated_term.value_by_max_grade
+		t.value_by_most_recent = action.updated_term.value_by_most_recent
+		t.value_by_computable_grade = action.updated_term.value_by_computable_grade
+	},
+
 	filter_remove(action) {
 		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
 		if (i == -1) return
