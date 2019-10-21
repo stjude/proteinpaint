@@ -365,6 +365,7 @@ function setRenderers(self) {
 		const value_btn = select(this).datum(range)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
+		let numeric_select
 
 		const unannotated_cats = { lst: [] }
 
@@ -374,9 +375,9 @@ function setRenderers(self) {
 			}
 		}
 
-		if (range.start == undefined || range.stop == undefined) {
+		if (range.start == undefined && range.stop == undefined) {
 			// const [numeric_select, value_btn] = dom.make_select_btn_pair(one_term_div)
-			const numeric_select = one_term_div
+			numeric_select = one_term_div
 				.append('select')
 				.attr('class', 'value_select')
 				.style('margin-right', '1px')
@@ -468,6 +469,7 @@ function setRenderers(self) {
 			self.makePlusBtn(one_term_div, unannotated_cats, term.ranges, new_value => {
 				self.addValue({ term, new_value })
 			})
+			if(numeric_select) numeric_select.style('width', value_btn.node().offsetWidth + 'px')
 		}
 	}
 
@@ -508,6 +510,7 @@ function setRenderers(self) {
 		const value_btn = select(this).datum(range)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
+		let numeric_select
 
 		const unannotated_cats = { lst: [] }
 
@@ -523,9 +526,9 @@ function setRenderers(self) {
 			})
 		})
 
-		if (range.start == undefined || range.stop == undefined) {
+		if (range.start == undefined && range.stop == undefined) {
 			// const [numeric_select, value_btn] = dom.make_select_btn_pair(one_term_div)
-			const numeric_select = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
+			numeric_select = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
 				'width',
 				value_btn.node().offsetWidth + 'px'
 			)
@@ -557,6 +560,7 @@ function setRenderers(self) {
 
 		const add_value_select = one_term_div.selectAll('.add_value_select')
 		self.updateSelect(add_value_select, unannotated_cats, 'add')
+		if(numeric_select) numeric_select.style('width', value_btn.node().offsetWidth + 'px')	
 	}
 
 	self.removeValueBtn = function(d, j) {
@@ -680,6 +684,7 @@ function setRenderers(self) {
 			.style('margin-right', '1px')
 			.style('font-size', '1em')
 			.style('background-color', '#4888BF')
+			.style('width','10px')
 			.html('&#43;')
 
 		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
