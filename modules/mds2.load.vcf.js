@@ -477,9 +477,9 @@ get csq from one variant
 
 function parseline_AFtest(line, q, vcftk, ds, m_is_filtered) {
 	/*
-there may be 2 or more groups
-a group can be determined by termdb, or info field
-*/
+	there may be 2 or more groups
+	a group can be determined by termdb, or info field
+	*/
 	const l = line.split('\t')
 	const [e, mlst, e2] = vcf.vcfparseline(l.slice(0, 8).join('\t'), vcftk)
 	// get those passing filter
@@ -490,8 +490,17 @@ a group can be determined by termdb, or info field
 	}
 	const alleles = [l[3], ...l[4].split(',')]
 
+	// exclude m with no alt alleles in both groups
+	const mlstpass2 = []
+
 	for (const m of mlstpass) {
 		const mgroups = AFtest_getdata_onem(l, m, alleles, q)
+
+		if (AFtest_allow_m(mgroups)) {
+			mlstpass2.push(m)
+		} else {
+			continue
+		}
 
 		// hardcoded to deal with 2 groups
 		if (q.AFtest.testby_AFdiff) {
@@ -530,7 +539,17 @@ a group can be determined by termdb, or info field
 			}
 		}
 	}
-	return mlstpass
+	return mlstpass2
+}
+
+function AFtest_allow_m(mgroups) {
+	if (mgroups.find(i => i.is_infofield)) {
+		// has an info field, do not restrict by presence of alt allele
+		return true
+	}
+	// hardcoded to be two groups
+	const altsum = mgroups[0].altcount + mgroups[1].altcount
+	return altsum > 0
 }
 
 function AFtest_getdata_onem(l, m, alleles, q) {
