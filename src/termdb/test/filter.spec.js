@@ -77,7 +77,7 @@ tape('filter term-value button', function(test) {
 				.html()
 				.slice(0, -2),
 			filter.Inner.app.state().termfilter.terms[0].values[0].label,
-			'filter value and value supplied from data should be the same'
+			'should change value from data'
 		)
 		test.true(
 			filter.Inner.dom.holder.selectAll('.term_remove_btn').size() >= 1,
@@ -206,7 +206,7 @@ tape('filter term-value button: categorical term', function(test) {
 				.html()
 				.slice(0, -2),
 			filter.Inner.app.state().termfilter.terms[0].values[0].label,
-			'filter value and value supplied from data should be the same'
+			'should change value from data'
 		)
 	}
 
@@ -317,7 +317,7 @@ tape('filter term-value button: numerical term', function(test) {
 				.html()
 				.split(' ')[0],
 			filter.Inner.app.state().termfilter.terms[0].ranges[0].start.toString(),
-			'filter value and value supplied from data should be the same'
+			'should change value from data'
 		)
 	}
 
@@ -350,8 +350,8 @@ tape('filter term-value button: numerical term', function(test) {
 })
 
 tape('filter term-value button: conditional term (grade)', function(test) {
-	test.timeoutAfter(3000)
-	// test.plan(6)
+	test.timeoutAfter(5000)
+	test.plan(8)
 	const div0 = d3s.select('body').append('div')
 	const termfilter = {
 		show_top_ui: true,
@@ -383,12 +383,14 @@ tape('filter term-value button: conditional term (grade)', function(test) {
 			.rideInit({ arg: filter })
 			.run(testFilterDisplay, 300)
 			.change({ bus: filter, eventType: 'postRender.test' })
-			// .use(triggerChangeValue)
-			// .to(testChangeValue, { wait: 600 })
-			// .use(triggerAddValue)
-			// .to(testAddValue, { wait: 600 })
-			// .use(triggerRemoveValue)
-			// .to(testRemoveValue, { wait: 600 })
+			.use(triggerChangeValue)
+			.to(testChangeValue, { wait: 800 })
+			.use(triggerAddValue)
+			.to(testAddValue, { wait: 600 })
+			.use(triggerRemoveValue)
+			.to(testRemoveValue, { wait: 800 })
+			.use(triggerChangeGradeType)
+			.to(testChangeGradeType, { wait: 600 })
 			.done(test)
 	}
 
@@ -406,13 +408,260 @@ tape('filter term-value button: conditional term (grade)', function(test) {
 		)
 
 		test.true(
-			filter.Inner.dom.holder.selectAll('.sja_filter_tag_btn')._groups[0][3].innerText.includes('Max'),
+			filter.Inner.dom.holder.selectAll('.grade_type_btn').html().includes('Max'),
 			'grade type button should match the data'
 		)
 
 		test.true(
 			filter.Inner.dom.holder.selectAll('.add_value_btn').size() >= 1,
 			"should have '+' button to add unannoated value to filter"
+		)
+	}
+
+	function triggerChangeValue(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		const value = {key: 1, label: "1: Mild"}
+		filter.Inner.app.dispatch({ type: 'filter_value_change', termId: term.id, value: value, valueId: 0 })
+	}
+
+	function testChangeValue(filter) {
+		test.equal(
+			filter.Inner.dom.holder
+				.selectAll('.value_btn')
+				.html()
+				.slice(0, -2),
+				filter.Inner.app.state().termfilter.terms[0].values[0].label,
+				'should change value from data'
+		)
+	}
+
+	function triggerAddValue(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		const value = {key: 2, label: "2: Moderate"}
+		filter.Inner.app.dispatch({ type: 'filter_add', termId: term.id, value })
+	}
+
+	function testAddValue(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.value_btn').size(),
+			filter.Inner.app.state().termfilter.terms[0].values.length,
+			'should add another value from data'
+		)
+	}
+
+	function triggerRemoveValue(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		filter.Inner.app.dispatch({ type: 'filter_value_remove', termId: term.id, valueId: 1 })
+	}
+
+	function testRemoveValue(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.value_btn').size(),
+			filter.Inner.app.state().termfilter.terms[0].values.length,
+			'should remove value from filter'
+		)
+	}
+
+	function triggerChangeGradeType(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		const updated_term = JSON.parse(JSON.stringify(term))
+		updated_term.value_by_most_recent = true
+		updated_term.value_by_max_grade = false
+		filter.Inner.app.dispatch({ type: 'filter_grade_update', termId: term.id, updated_term })
+	}
+
+	function testChangeGradeType(filter){
+		test.true(
+			filter.Inner.dom.holder.selectAll('.grade_type_btn').html().includes('recent'),
+			'should change grade type from the data'
+		)
+	}
+})
+
+tape('filter term-value button: conditional term (subcondition)', function(test) {
+	test.timeoutAfter(5000)
+	test.plan(8)
+	const div0 = d3s.select('body').append('div')
+	const termfilter = {
+		show_top_ui: true,
+		terms: [
+			{
+				term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+				values: [{ key: 'Sinus bradycardia', label: 'Sinus bradycardia' }],
+				bar_by_children: 1,
+				value_by_computable_grade: 1
+			}
+		]
+	}
+
+	runpp({
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38',
+			termfilter
+		},
+		callbacks: {
+			filter: {
+				'postInit.test': runTests
+			}
+		}
+	})
+
+	function runTests(filter) {
+		helpers
+			.rideInit({ arg: filter })
+			.run(testFilterDisplay, 300)
+			.change({ bus: filter, eventType: 'postRender.test' })
+			.use(triggerChangeValue)
+			.to(testChangeValue, { wait: 800 })
+			.use(triggerAddValue)
+			.to(testAddValue, { wait: 600 })
+			.use(triggerRemoveValue)
+			.to(testRemoveValue, { wait: 800 })
+			.use(triggerChangeGradeType)
+			.to(testChangeGradeType, { wait: 600 })
+			.done(test)
+	}
+
+	function testFilterDisplay(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.term_name_btn').html(),
+			termfilter.terms[0].term.name,
+			'filter btn and term-name from runpp() should be the same'
+		)
+
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.sja_filter_tag_btn')._groups[0][2].innerText.slice(0, -2),
+			termfilter.terms[0].values[0].label,
+			'grade value button should match the data'
+		)
+
+		test.true(
+			filter.Inner.dom.holder.selectAll('.grade_type_btn').html().includes('Any'),
+			'grade type button should match the data'
+		)
+
+		test.true(
+			filter.Inner.dom.holder.selectAll('.add_value_btn').size() >= 1,
+			"should have '+' button to add unannoated value to filter"
+		)
+	}
+
+	function triggerChangeValue(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		const value = {key: "Cardiac dysrhythmia", label: "Cardiac dysrhythmia"}
+		filter.Inner.app.dispatch({ type: 'filter_value_change', termId: term.id, value: value, valueId: 0 })
+	}
+
+	function testChangeValue(filter) {
+		test.equal(
+			filter.Inner.dom.holder
+				.selectAll('.value_btn')
+				.html()
+				.slice(0, -2),
+				filter.Inner.app.state().termfilter.terms[0].values[0].label,
+				'should change value from data'
+		)
+	}
+
+	function triggerAddValue(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		const value = {key: "Prolonged QT interval", label: "Prolonged QT interval"}
+		filter.Inner.app.dispatch({ type: 'filter_add', termId: term.id, value })
+	}
+
+	function testAddValue(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.value_btn').size(),
+			filter.Inner.app.state().termfilter.terms[0].values.length,
+			'should add another value from data'
+		)
+	}
+
+	function triggerRemoveValue(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		filter.Inner.app.dispatch({ type: 'filter_value_remove', termId: term.id, valueId: 1 })
+	}
+
+	function testRemoveValue(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.value_btn').size(),
+			filter.Inner.app.state().termfilter.terms[0].values.length,
+			'should remove value from filter'
+		)
+	}
+
+	function triggerChangeGradeType(filter) {
+		const term = filter.Inner.app.state().termfilter.terms[0]
+		const updated_term = JSON.parse(JSON.stringify(term))
+		updated_term.value_by_most_recent = true
+		updated_term.value_by_max_grade = false
+		filter.Inner.app.dispatch({ type: 'filter_grade_update', termId: term.id, updated_term })
+	}
+
+	function testChangeGradeType(filter){
+		test.true(
+			filter.Inner.dom.holder.selectAll('.grade_type_btn').html().includes('recent'),
+			'should change grade type from the data'
+		)
+	}
+})
+
+tape('filter term-value button: conditional term (grade and child)', function(test) {
+	test.timeoutAfter(3000)
+	test.plan(3)
+	const div0 = d3s.select('body').append('div')
+	const termfilter = {
+		show_top_ui: true,
+		terms: [
+			{
+				term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+				grade_and_child: [
+					{ grade: 0, grade_label: '0: No condition', child_id: 'Sinus bradycardia', child_label: 'Sinus bradycardia' }
+				],
+				bar_by_children: 1,
+				value_by_max_grade: 1
+			}
+		]
+	}
+
+	runpp({
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38',
+			termfilter
+		},
+		callbacks: {
+			filter: {
+				'postInit.test': runTests
+			}
+		}
+	})
+
+	function runTests(filter) {
+		helpers
+			.rideInit({ arg: filter })
+			.run(testFilterDisplay, 300)
+			.done(test)
+	}
+
+	function testFilterDisplay(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.term_name_btn').html(),
+			filter.Inner.app.state().termfilter.terms[0].term.name,
+			'filter btn and term-name from runpp() should be the same'
+		)
+
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.grade_btn').html(),
+			filter.Inner.app.state().termfilter.terms[0].grade_and_child[0].grade_label,
+			'should grade value button match the data'
+		)
+
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.child_btn').html(),
+			filter.Inner.app.state().termfilter.terms[0].grade_and_child[0].child_label,
+			'should sub-condition value button match the data'
 		)
 	}
 })

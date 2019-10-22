@@ -20,7 +20,6 @@ class TdbFilter {
 			type: ['app_refresh']
 		}
 		setRenderers(this)
-		setInteractivity(this)
 
 		this.categoryData = {}
 		this.initHolder()
@@ -67,34 +66,5 @@ function setRenderers(self) {
 		div.append('div')
 			.attr('class', 'terms_div')
 			.style('display', 'inline-block')
-	}
-}
-
-function setInteractivity(self) {
-	self.displayTreeMenu = async function(term) {
-		const one_term_div = this
-		const obj = self.app.state()
-		self.dom.tip.clear().showunder(one_term_div)
-		const treediv = self.dom.tip.d.append('div')
-		// set termfilter terms to all filter-terms if '+' or all except current term if 'term_name_btn'
-		const terms = select(one_term_div).classed('add_term_btn')
-			? obj.termfilter.terms
-			: obj.termfilter.terms.filter(t => t.id != term.termId)
-
-		// a new object as init() argument for launching the tree with modifiers
-		const tree_obj = {
-			state: {
-				dslabel: obj.dslabel,
-				genome: obj.genome,
-				termfilter: {
-					show_top_ui: false,
-					terms: terms
-				}
-			},
-			callbacks: {
-				app: { 'postInit.test': () => {} }
-			}
-		}
-		appInit(tree_obj, treediv)
 	}
 }

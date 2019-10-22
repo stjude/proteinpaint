@@ -102,7 +102,7 @@ TdbStore.prototype.actions = {
 		// this.state.termfilter.terms.push(action.term)
 		const filter = this.state.termfilter.terms.find(d=>d.id == action.termId)
         if (filter) {
-			const valueData = filter.term.iscategorical
+			const valueData = filter.term.iscategorical || filter.term.iscondition
 			? filter.values
 			: filter.term.isfloat || filter.term.isinteger
 			? filter.ranges
@@ -149,15 +149,17 @@ TdbStore.prototype.actions = {
 		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
 		if (i == -1) return
 		const term = this.state.termfilter.terms[i]
-		term.term.iscategorical ? (term.values[action.valueId] = action.value) :
-		(term.ranges[action.valueId] = action.value)
+		term.term.iscategorical || term.term.iscondition 
+			? (term.values[action.valueId] = action.value) 
+			: (term.ranges[action.valueId] = action.value)
 	},
 
 	filter_value_remove(action) {
 		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
 		if (i == -1) return
 		const term = this.state.termfilter.terms[i]
-		const values = term.term.iscategorical ? term.values : term.ranges
+		const values = term.term.iscategorical || term.term.iscondition 
+			? term.values : term.ranges
 		values.splice(action.valueId, 1)
 		if (values.length == 0) {
 			this.state.termfilter.terms.splice(i, 1)

@@ -123,13 +123,15 @@ function setRenderers(self) {
 			? self.addCategoryValues
 			: term.term.isfloat || term.term.isinteger
 			? self.addNumericValues
-			: await self.addConditionValues
+			: term.term.iscondition && !term.grade_and_child
+			? self.addConditionValues
+			: self.addConditionGradeChild
 
 		const valueData = term.term.iscategorical
 			? term.values
 			: term.term.isfloat || term.term.isinteger
 			? term.ranges
-			: term.bar_by_grade || term.bar_by_children
+			: term.term.iscondition && !term.grade_and_child
 			? term.values
 			: term.grade_and_child
 
@@ -606,7 +608,7 @@ function setRenderers(self) {
 				term_value_btn.style('opacity', '1')
 			})
 
-		self.makeSelectList(self.categoryData[term.term.id], grade_select, term.values, value.key, 'delete')
+		self.makeSelectList(self.categoryData[term.term.id], grade_select, term.values, value.key.toString(), 'delete')
 
 		grade_select.on('change', async () => {
 			//if selected index is 0 (delete) and value is 'delete' then remove from group
@@ -672,6 +674,42 @@ function setRenderers(self) {
 		grade_select.style('width', term_value_btn.node().offsetWidth + 'px')
 	}
 
+	self.addConditionGradeChild = function(gc){
+		// console.log('add', j)
+		const term_value_btn = select(this).datum(gc)
+		const one_term_div = select(this.parentNode)
+		const term = one_term_div.datum()
+
+		one_term_div
+			.append("div")
+			.attr("class", "sja_filter_tag_btn grade_btn")
+			.style("font-size", "1em")
+			.style("padding", "4px 4px 2px 4px")
+			.style("margin-right", "1px")
+			.style("background-color", "#4888BF")
+			.text(gc.grade_label)
+
+		one_term_div
+			.append("div")
+			.style("display", "inline-block")
+			.style("color", "#fff")
+			.style("background-color", "#4888BF")
+			.style("margin-right", "1px")
+			.style("padding", "8px 6px 4px 6px")
+			.style("font-size", ".7em")
+			.style("text-transform", "uppercase")
+			.text("AND")
+
+		one_term_div
+			.append("div")
+			.attr("class", "sja_filter_tag_btn child_btn")
+			.style("font-size", "1em")
+			.style("padding", "4px 4px 2px 4px")
+			.style("margin-right", "1px")
+			.style("background-color", "#4888BF")
+			.text(gc.child_label)
+	}
+
 	self.updateConditionValues = function(value, j){
 		// console.log('update', j)
 		const value_btn = select(this).datum(value)
@@ -681,17 +719,33 @@ function setRenderers(self) {
 		value_btn
 			.html(d => d.label + ' &#9662;')
 
-		one_term_div.selectAll('.grade_type_btn').remove()
-		one_term_div.selectAll('.grade_type_select').remove()	
-		self.makeGradeSelectBtn(one_term_div, term, updated_term => {
-			self.updateGradeType({ term, updated_term })
-		})
-        
 		const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
 			'width',
 			value_btn.node().offsetWidth + 'px'
 		)
 
+		//show or hide OR button
+		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
+			'display',
+			j < term.values.length - 1 ? 'inline-block' : 'none'
+		)
+
+		const grade_type_btn = one_term_div.selectAll('.grade_type_btn')
+		const grade_type_select = one_term_div.selectAll('.grade_type_select')
+
+		grade_type_btn.html(
+			term.value_by_max_grade ? '(Max grade per patient) &#9662;' :
+			term.value_by_most_recent ? '(Most recent grade per patient) &#9662;' :
+			'(Any grade per patient) &#9662;'
+		)
+
+		grade_type_select.node().value = 
+			term.value_by_max_grade ? 'max' :
+			term.value_by_most_recent ? 'recent' : 
+			'computable'
+
+		grade_type_select.style("width", grade_type_btn.node().offsetWidth + "px")
+        
 		//update dropdown list for each term and '+' btn
 		self.updateSelect(value_selects, term.values, value.key)
 
@@ -795,6 +849,10 @@ function setRenderers(self) {
 			.style("margin-right", "1px")
 			.style("font-size", "1em")
 			.style("background-color", "#4888BF")
+			.style('opacity', 0)
+			.transition()
+			.duration(200)
+			.style('opacity', 1)
 
 		grade_type_btn.html(
 			term.value_by_max_grade ? '(Max grade per patient) &#9662;' :
@@ -811,21 +869,11 @@ function setRenderers(self) {
 
 		// change grade type to/from max_grade and recent_grade
 		grade_type_select.on("change", async () => {
-			if (grade_type_select.node().value == "max") {
-				term.value_by_max_grade = true
-				term.value_by_most_recent = false
-				term.value_by_computable_grade = false
-			} else if (grade_type_select.node().value == "recent") {
-				term.value_by_max_grade = false
-				term.value_by_most_recent = true
-				term.value_by_computable_grade = false
-			} else if (grade_type_select.node().value == "computable") {
-				term.value_by_max_grade = false
-				term.value_by_most_recent = false
-				term.value_by_computable_grade = true
-			}
+			
+			term.value_by_max_grade = grade_type_select.node().value == "max" ? true : false
+			term.value_by_most_recent = grade_type_select.node().value == "recent" ? true: false
+			term.value_by_computable_grade = grade_type_select.node().value == "computable" ? true : false
 
-			//update gorup and load tk
 			callback(term)
 		})
 	}
