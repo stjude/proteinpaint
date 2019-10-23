@@ -26,7 +26,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape.only('filter term-value button', function(test) {
+tape('filter term-value button', function(test) {
 	test.timeoutAfter(2000)
 	test.plan(6)
 
@@ -85,7 +85,7 @@ tape.only('filter term-value button', function(test) {
 		)
 		test.true(
 			filter.Inner.dom.holder.selectAll('.add_term_btn').size() >= 1,
-			'should have \'+\' button to add new term filter'
+			"should have '+' button to add new term filter"
 		)
 	}
 
@@ -408,7 +408,10 @@ tape('filter term-value button: conditional term (grade)', function(test) {
 		)
 
 		test.true(
-			filter.Inner.dom.holder.selectAll('.grade_type_btn').html().includes('Max'),
+			filter.Inner.dom.holder
+				.selectAll('.grade_type_btn')
+				.html()
+				.includes('Max'),
 			'grade type button should match the data'
 		)
 
@@ -420,7 +423,7 @@ tape('filter term-value button: conditional term (grade)', function(test) {
 
 	function triggerChangeValue(filter) {
 		const term = filter.Inner.app.state().termfilter.terms[0]
-		const value = {key: 1, label: "1: Mild"}
+		const value = { key: 1, label: '1: Mild' }
 		filter.Inner.app.dispatch({ type: 'filter_value_change', termId: term.id, value: value, valueId: 0 })
 	}
 
@@ -430,14 +433,14 @@ tape('filter term-value button: conditional term (grade)', function(test) {
 				.selectAll('.value_btn')
 				.html()
 				.slice(0, -2),
-				filter.Inner.app.state().termfilter.terms[0].values[0].label,
-				'should change value from data'
+			filter.Inner.app.state().termfilter.terms[0].values[0].label,
+			'should change value from data'
 		)
 	}
 
 	function triggerAddValue(filter) {
 		const term = filter.Inner.app.state().termfilter.terms[0]
-		const value = {key: 2, label: "2: Moderate"}
+		const value = { key: 2, label: '2: Moderate' }
 		filter.Inner.app.dispatch({ type: 'filter_add', termId: term.id, value })
 	}
 
@@ -470,9 +473,12 @@ tape('filter term-value button: conditional term (grade)', function(test) {
 		filter.Inner.app.dispatch({ type: 'filter_grade_update', termId: term.id, updated_term })
 	}
 
-	function testChangeGradeType(filter){
+	function testChangeGradeType(filter) {
 		test.true(
-			filter.Inner.dom.holder.selectAll('.grade_type_btn').html().includes('recent'),
+			filter.Inner.dom.holder
+				.selectAll('.grade_type_btn')
+				.html()
+				.includes('recent'),
 			'should change grade type from the data'
 		)
 	}
@@ -537,7 +543,10 @@ tape('filter term-value button: conditional term (subcondition)', function(test)
 		)
 
 		test.true(
-			filter.Inner.dom.holder.selectAll('.grade_type_btn').html().includes('Any'),
+			filter.Inner.dom.holder
+				.selectAll('.grade_type_btn')
+				.html()
+				.includes('Any'),
 			'grade type button should match the data'
 		)
 
@@ -549,7 +558,7 @@ tape('filter term-value button: conditional term (subcondition)', function(test)
 
 	function triggerChangeValue(filter) {
 		const term = filter.Inner.app.state().termfilter.terms[0]
-		const value = {key: "Cardiac dysrhythmia", label: "Cardiac dysrhythmia"}
+		const value = { key: 'Cardiac dysrhythmia', label: 'Cardiac dysrhythmia' }
 		filter.Inner.app.dispatch({ type: 'filter_value_change', termId: term.id, value: value, valueId: 0 })
 	}
 
@@ -559,14 +568,14 @@ tape('filter term-value button: conditional term (subcondition)', function(test)
 				.selectAll('.value_btn')
 				.html()
 				.slice(0, -2),
-				filter.Inner.app.state().termfilter.terms[0].values[0].label,
-				'should change value from data'
+			filter.Inner.app.state().termfilter.terms[0].values[0].label,
+			'should change value from data'
 		)
 	}
 
 	function triggerAddValue(filter) {
 		const term = filter.Inner.app.state().termfilter.terms[0]
-		const value = {key: "Prolonged QT interval", label: "Prolonged QT interval"}
+		const value = { key: 'Prolonged QT interval', label: 'Prolonged QT interval' }
 		filter.Inner.app.dispatch({ type: 'filter_add', termId: term.id, value })
 	}
 
@@ -599,9 +608,12 @@ tape('filter term-value button: conditional term (subcondition)', function(test)
 		filter.Inner.app.dispatch({ type: 'filter_grade_update', termId: term.id, updated_term })
 	}
 
-	function testChangeGradeType(filter){
+	function testChangeGradeType(filter) {
 		test.true(
-			filter.Inner.dom.holder.selectAll('.grade_type_btn').html().includes('recent'),
+			filter.Inner.dom.holder
+				.selectAll('.grade_type_btn')
+				.html()
+				.includes('recent'),
 			'should change grade type from the data'
 		)
 	}

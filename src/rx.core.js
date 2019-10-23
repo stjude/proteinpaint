@@ -167,17 +167,10 @@ export function getStoreApi(self) {
 			await actions[action.type].call(self, action)
 			return api.state()
 		},
-		state(sub = null) {
-			if (!sub) {
-				const stateCopy = self.fromJson(self.toJson(self.state))
-				self.deepFreeze(stateCopy)
-				return stateCopy
-			} else {
-				if (!self.getters.hasOwnProperty(sub.type)) {
-					throw `undefined state getter method for component type='${sub.type}'`
-				}
-				return self.getters[sub.type].call(self, sub)
-			}
+		state(sub = null, currState) {
+			const stateCopy = self.fromJson(self.toJson(self.state))
+			self.deepFreeze(stateCopy)
+			return stateCopy
 		}
 	}
 	return api
@@ -185,13 +178,11 @@ export function getStoreApi(self) {
 
 export function getAppApi(self) {
 	const middlewares = []
+	self.currStateByType = {}
+	self.currAction = { type: 'app_refresh' }
 
 	const api = {
 		opts: self.opts,
-		state(sub = null) {
-			// return self // would allow access to hidden instance
-			return sub ? self.store.state(sub) : self.state
-		},
 		async dispatch(action = {}) {
 			/*
 			???
@@ -216,7 +207,52 @@ export function getAppApi(self) {
 			}
 			// replace app.state
 			self.state = await self.store.write(action)
-			await self.main(action)
+			self.currAction = action
+			self.currStateByType = {}
+			await self.main(self.state)
+		},
+		async save(action) {
+			// save changes to store, do not notify components
+			self.state = await self.store.write(action)
+			self.currAction = action
+			self.currStateByType = {}
+		},
+		state(sub = null, currState) {
+			if (!sub) return self.state
+
+			if (!self.subState.hasOwnProperty(sub.type)) {
+				throw `undefined store config getter for component type='${sub.type}'`
+			} else if (sub.type in self.currStateByType) {
+				return self.currStateByType[sub.type]
+			} else {
+				const subState = self.subState[sub.type]
+				if (subState.reactsTo) {
+					const reactsTo = subState.reactsTo
+					// if string matches are specified, start with
+					// matched == false, otherwise start as true
+					let matched = !(reactsTo.prefix || reactsTo.type)
+					if (reactsTo.prefix) {
+						for (const p of reactsTo.prefix) {
+							matched = self.currAction.type.startsWith(p)
+							if (matched) break
+						}
+					}
+					if (reactsTo.type) {
+						// okay to match prefix, type, or both
+						matched = matched || reactsTo.type.includes(self.currAction.type)
+					}
+					if (reactsTo.match) {
+						// fine-tuned action matching with a function
+						matched = matched && reactsTo.match.call(self, self.currAction, sub)
+					}
+					if (!matched) return currState
+				}
+				const componentState = self.subState[sub.type].get.call(self, sub)
+				self.currStateByType[sub.type] = componentState
+				// freeze only the root subsState object since
+				// the copied app.state is already deeply frozen
+				return Object.freeze(componentState)
+			}
 		},
 		middle(fxn) {
 			/*
@@ -237,10 +273,6 @@ export function getAppApi(self) {
 			middlewares.push(fxn)
 			return api
 		},
-		async save(action) {
-			// save changes to store, do not notify components
-			self.state = await self.store.write(action)
-		},
 		// must not expose this.bus directly since that
 		// will also expose bus.emit() which should only
 		// be triggered by this component
@@ -259,32 +291,17 @@ export function getAppApi(self) {
 }
 
 export function getComponentApi(self) {
+	let mainCalled = false
+
 	const api = {
-		async main(action, data = null) {
-			// reduce boilerplate or repeated code
-			// in component class main() by performing
-			// typical pre-emptive checks here
-			if (self.reactsTo) {
-				// if string matches are specified, start with
-				// matched == false, otherwise start as true
-				let matched = !(self.reactsTo.prefix || self.reactsTo.type)
-				if (self.reactsTo.prefix) {
-					for (const p of self.reactsTo.prefix) {
-						matched = action.type.startsWith(p)
-						if (matched) break
-					}
-				}
-				if (self.reactsTo.type) {
-					// okay to match prefix, type, or both
-					matched = matched || self.reactsTo.type.includes(action.type)
-				}
-				if (self.reactsTo.match) {
-					// fine-tuned action matching with a function
-					matched = matched && self.reactsTo.match(action)
-				}
-				if (!matched) return
-			}
-			await self.main(action, data)
+		type: self.type,
+		id: self.id,
+		async update(data) {
+			const componentState = self.app.state(api, self.state)
+			// if the current and pending state is the same, no need to update
+			if (mainCalled && deepEqual(componentState, self.state)) return
+			await self.main(componentState, data)
+			mainCalled = true
 			return api
 		},
 		// must not expose self.bus directly since that
@@ -332,13 +349,13 @@ export async function notifyComponents(action, data = null) {
 	for (const name in this.components) {
 		const component = this.components[name]
 		if (Array.isArray(component)) {
-			for (const c of component) called.push(c.main(action, data))
-		} else if (component.hasOwnProperty('main')) {
-			called.push(component.main(action, data))
+			for (const c of component) called.push(c.update(action, data))
+		} else if (component.hasOwnProperty('update')) {
+			called.push(component.update(action, data))
 		} else if (component && typeof component == 'object') {
 			for (const name in component) {
-				if (component.hasOwnProperty(name) && typeof component[name].main == 'function') {
-					called.push(component[name].main(action, data))
+				if (component.hasOwnProperty(name) && typeof component[name].update == 'function') {
+					called.push(component[name].update(action, data))
 				}
 			}
 		}
@@ -420,4 +437,23 @@ export function deepFreeze(obj) {
 	for (const key in obj) {
 		if (typeof obj == 'object') this.deepFreeze(obj[key])
 	}
+}
+
+export function deepEqual(x, y) {
+	if (x === y) {
+		return true
+	} else if (typeof x == 'object' && x != null && (typeof y == 'object' && y != null)) {
+		if (Object.keys(x).length != Object.keys(y).length) {
+			return false
+		}
+
+		for (var prop in x) {
+			if (y.hasOwnProperty(prop)) {
+				if (!deepEqual(x[prop], y[prop])) return false
+			} else {
+				return false
+			}
+		}
+		return true
+	} else return false
 }

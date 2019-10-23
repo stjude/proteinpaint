@@ -108,15 +108,14 @@ TdbStore.prototype.actions = {
 			? filter.ranges
 			: filter.grade_and_child
 			// may need to add check if value is already present
-			if(!valueData.includes(action.value))
-            valueData.push(action.value)
-        } else {
-            this.state.termfilter.terms.push(action.term)
-        }
+			if (!valueData.includes(action.value)) valueData.push(action.value)
+		} else {
+			this.state.termfilter.terms.push(action.term)
+		}
 	},
 
 	filter_grade_update(action) {
-		const t = this.state.termfilter.terms.find(d=>d.id == action.termId)
+		const t = this.state.termfilter.terms.find(d => d.id == action.termId)
 		if (!t) return
 		t.bar_by_grade = action.updated_term.bar_by_grade
 		t.bar_by_children = action.updated_term.bar_by_children
@@ -150,7 +149,7 @@ TdbStore.prototype.actions = {
 		if (i == -1) return
 		const term = this.state.termfilter.terms[i]
 		term.term.iscategorical || term.term.iscondition 
-			? (term.values[action.valueId] = action.value) 
+			? (term.values[action.valueId] = action.value)
 			: (term.ranges[action.valueId] = action.value)
 	},
 
@@ -170,19 +169,6 @@ TdbStore.prototype.actions = {
 		this.state.termfilter.terms = []
 		this.state.termfilter.terms.push(action.term)
 
-	}
-}
-
-/*
-	methods to get coarse-grained partial state
-	that is relevant to a subcomponent type, id
-*/
-TdbStore.prototype.getters = {
-	plot(sub) {
-		if (!(sub.id in this.state.tree.plots)) {
-			return //throw `No plot with id='${sub.id}' found.`
-		}
-		return this.copyMerge('{}', this.state.tree.plots[sub.id])
 	}
 }
 

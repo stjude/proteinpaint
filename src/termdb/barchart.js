@@ -16,11 +16,13 @@ const colors = {
 
 class TdbBarchart {
 	constructor(app, opts) {
+		this.type = 'plot'
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.modifiers = opts.modifiers
 		this.id = opts.id
-		this.config = this.app.state({ type: 'plot', id: this.id }) //opts
+		this.state = this.app.state({ type: 'plot', id: this.id })
+		this.config = this.state.config
 		this.dom = {
 			holder: opts.holder,
 			barDiv: opts.holder.append('div').style('white-space', 'normal'),
@@ -48,17 +50,20 @@ class TdbBarchart {
 		this.term2toColor = {}
 		this.processedExcludes = []
 		this.bus = new rx.Bus('barchart', ['postInit', 'postRender', 'postClick'], app.opts.callbacks, this.api)
-		this.bus.emit('postRender')
+		this.bus.emit('postInit')
 	}
 
-	main(action, data = null) {
+	main(state, data) {
 		if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 		if (data) this.currServerData = data
 		this.obj = this.app.state()
-		this.config = this.app.state({ type: 'plot', id: this.id })
+		this.state = this.app.state({ type: 'plot', id: this.id })
+		this.config = this.state.config
 		if (!this.setVisibility()) return
 		this.updateSettings(this.config)
-		this.processData(this.currServerData)
+		this.chartsData = this.processData(this.currServerData)
+		this.render()
+		this.bus.emit('postRender')
 	}
 
 	setVisibility() {
@@ -173,8 +178,7 @@ class TdbBarchart {
 						: 1
 
 		self.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
-		self.chartsData = chartsData
-		self.render()
+		return chartsData
 	}
 
 	setMaxVisibleTotals(chartsData) {

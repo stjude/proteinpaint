@@ -8,17 +8,12 @@ import * as client from '../client'
 
 class TdbFilter {
 	constructor(app, opts) {
+		this.type = 'filter'
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
 
-		// see rx.core getComponentApi().main() on
-		// how these key-values are used
-		this.reactsTo = {
-			prefix: ['filter'],
-			type: ['app_refresh']
-		}
 		setRenderers(this)
 
 		this.categoryData = {}
@@ -35,13 +30,10 @@ class TdbFilter {
 		// this.bus.emit('postInit')
 	}
 
-	async main(action) {
+	async main(state = null) {
+		if (state) this.state = state
+		this.components.tvs.update()
 		this.bus.emit('postRender')
-		this.render(action)
-	}
-
-	render(action) {
-		this.components.tvs.main(action)
 	}
 }
 
@@ -58,7 +50,8 @@ function setRenderers(self) {
 			.style('display', 'block')
 			.style('border', 'solid 1px #ddd')
 
-		div.append('div')
+		div
+			.append('div')
 			.style('display', 'inline-block')
 			.style('text-transform', 'uppercase')
 			.style('color', '#bbb')
@@ -66,7 +59,8 @@ function setRenderers(self) {
 			.html('Filter')
 
 		// div to display all tvs bluepills
-		div.append('div')
+		div
+			.append('div')
 			.attr('class', 'terms_div')
 			.style('display', 'inline-block')
 	}

@@ -12,7 +12,8 @@ const cls_termdiv = 'termdiv',
 	cls_termbtn = 'termbtn',
 	cls_termview = 'termview',
 	cls_termlabel = 'termlabel',
-	cls_termgraphdiv = 'termgraphdiv'
+	cls_termgraphdiv = 'termgraphdiv',
+	cls_termloading = 'termloading'
 
 /*
 ******************** EXPORTED
@@ -76,6 +77,7 @@ class TdbTree {
 	}
 	*/
 	constructor(app, opts) {
+		this.type = 'tree'
 		this.api = rx.getComponentApi(this)
 		this.notifyComponents = rx.notifyComponents
 		this.getComponents = rx.getComponents
@@ -85,13 +87,6 @@ class TdbTree {
 			holder: opts.holder,
 			searchDiv: opts.holder.append('div').style('margin', '10px'),
 			treeDiv: opts.holder.append('div')
-		}
-
-		// see rx.core getComponentApi().main() on
-		// how these key-values are used
-		this.reactsTo = {
-			prefix: ['tree', 'filter', 'search', 'plot'],
-			type: ['app_refresh']
 		}
 
 		// attach instance-specific methods via closure
@@ -118,33 +113,33 @@ class TdbTree {
 		this.bus.emit('postInit')
 	}
 
-	async main(action = {}) {
-		await this.treeRender(action)
-		await this.notifyComponents(action)
+	async main(state) {
+		this.state = state
+		await this.treeRender()
+		await this.notifyComponents()
 		this.bus.emit('postRender')
 	}
 
-	async treeRender(action) {
+	async treeRender() {
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTerm(root)
-		if (action.term) delete action.term.__tree_isloading
-		if (action.loading_div) action.loading_div.remove()
 		this.renderBranch(root, this.dom.treeDiv)
 
-		const plots = this.app.state().tree.plots
-		for (const termId in plots) {
+		let updatePlotsState = false
+		for (const termId in this.state.plots) {
 			if (!this.components.plots[termId]) {
 				// rehydrate here when the term information is available,
 				// in constructor the termsById are not filled in yet
 				await this.app.save({ type: 'plot_rehydrate', id: termId, config: { term: this.termsById[termId] } })
 				this.newPlot(this.termsById[termId])
+				updatePlotsState = true
 			}
 		}
+		if (updatePlotsState) this.state = this.app.state(this.api)
 	}
 
 	async requestTerm(term) {
-		const state = this.app.state()
-		const lst = ['genome=' + state.genome + '&dslabel=' + state.dslabel]
+		const lst = ['genome=' + this.state.genome + '&dslabel=' + this.state.dslabel]
 		lst.push(term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id)
 		/*
 			future: may add in tree modifier
@@ -170,7 +165,7 @@ class TdbTree {
 			terms.push(copy)
 			// rehydrate expanded terms as needed
 			// fills in termsById, for recovering tree
-			if (state.tree.expandedTerms.includes(copy.id)) {
+			if (this.state.expandedTerms.includes(copy.id)) {
 				copy.terms = await this.requestTerm(copy)
 			}
 		}
@@ -185,7 +180,10 @@ class TdbTree {
 				.node()
 		)
 		term.__plot_isloading = true
-		const loading_div = holder.append('div').text('Loading...')
+		const loading_div = holder
+			.append('div')
+			.attr('class', cls_termloading)
+			.text('Loading...')
 		const plot = plotInit(this.app, {
 			id: term.id,
 			holder: holder,
@@ -233,7 +231,7 @@ function setRenderers(self) {
 		*/
 		if (!term || !term.terms) return
 		if (!(term.id in self.termsById)) return
-		const expandedTerms = self.app.state().tree.expandedTerms
+		const expandedTerms = self.state.expandedTerms
 		if (!expandedTerms.includes(term.id)) {
 			div.style('display', 'none')
 			if (button) button.text('+')
@@ -270,19 +268,29 @@ function setRenderers(self) {
 
 	// this == the d3 selected DOM node
 	self.hideTerm = function(term) {
-		if (self.app.state().tree.expandedTerms.includes(term.id)) return
+		if (self.tree.expandedTerms.includes(term.id)) return
 		select(this).style('display', 'none')
 	}
 
 	self.updateTerm = function(term) {
+		delete term.__tree_isloading
+		select(this.parentNode)
+			.select(':scope > .' + cls_termloading)
+			.remove()
+
 		const div = select(this)
-		const isExpanded = self.app.state().tree.expandedTerms.includes(term.id)
+		const isExpanded = self.state.expandedTerms.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
 		// update other parts if needed, e.g. label
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 	}
 
 	self.addTerm = function(term) {
+		delete term.__tree_isloading
+		select(this.parentNode)
+			.select(':scope > .' + cls_termloading)
+			.remove()
+
 		const div = select(this)
 			.attr('class', cls_termdiv)
 			.style('margin', term.isleaf ? '' : '2px')
@@ -373,11 +381,12 @@ function setInteractivity(self) {
 			loading_div = holder
 				.append('div')
 				.text('Loading...')
+				.attr('class', cls_termloading)
 				.style('opacity', 0.5)
 				.style('padding', '5px')
 		}
 
-		const expanded = self.app.state().tree.expandedTerms.includes(term.id)
+		const expanded = self.state.expandedTerms.includes(term.id)
 		const type = expanded ? 'tree_collapse' : 'tree_expand'
 		self.app.dispatch({ type, termId: term.id, term, holder, button, loading_div })
 	}
@@ -389,7 +398,7 @@ function setInteractivity(self) {
 		}
 		event.stopPropagation()
 		event.preventDefault()
-		const plotConfig = self.app.state().tree.plots[term.id]
+		const plotConfig = self.state.plots[term.id]
 		if (plotConfig) {
 			// plot already made
 			const holder = select(this.parentNode.getElementsByClassName(cls_termgraphdiv)[0])

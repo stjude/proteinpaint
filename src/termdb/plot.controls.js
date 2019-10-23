@@ -9,10 +9,12 @@ let i = 0 // track controls "instances" for assigning unambiguous unique input n
 
 class TdbPlotControls {
 	constructor(app, opts) {
+		this.type = 'plot'
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
 		this.api.id = this.id
 		this.app = app
+		this.state = app.state({ type: this.type, id: this.id })
 		this.index = i++ // used for assigning unique input names, across different plots
 		this.isVisible = false
 
@@ -33,16 +35,17 @@ class TdbPlotControls {
 			table
 		}
 
+		const plot = this.state.config
 		this.components = {
 			burger: setBurgerBtn(app, { holder: this.dom.burger_div }, this),
 			svg: setSvgBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			term_info: setTermInfoBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			config: setConfigDiv(app, { holder: this.dom.config_div, table }, this),
 			//barsAs: setBarsAsOpts(app, {holder: table.append('tr'), label: "Bars as"}, this),
-			overlay: setOverlayOpts(app, { holder: table.append('tr') }, this),
+			overlay: setOverlayOpts(app, { holder: table.append('tr') }, this, plot),
 			//view: setViewOpts(app),
-			orientation: setOrientationOpts(app, { holder: table.append('tr') }, this),
-			scale: setScaleOpts(app, { holder: table.append('tr') }, this)
+			orientation: setOrientationOpts(app, { holder: table.append('tr') }, this, plot),
+			scale: setScaleOpts(app, { holder: table.append('tr') }, this, plot)
 			/*bin: setBinOpts(app, "term", "Primary Bins"),
 			divideBy: setDivideByOpts(app)
 			*/
@@ -52,14 +55,14 @@ class TdbPlotControls {
 		//this.bus = new rx.Bus("controls", ["postRender"], app.opts.callbacks, this.api)
 	}
 
-	main(action = {}) {
+	main(state) {
+		this.state = state
 		this.dom.button_bar
 			.style('display', this.isVisible ? 'inline-block' : 'block')
 			.style('float', this.isVisible ? 'right' : 'none')
 
-		const plot = this.app.state({ type: 'plot', id: this.id })
 		for (const name in this.components) {
-			this.components[name].main(action, plot)
+			this.components[name].main(this.state.config)
 		}
 
 		this.dom.holder.style('background', this.isVisible ? panel_bg_color : '')
@@ -115,7 +118,7 @@ function setSvgBtn(app, opts, controls) {
 		})
 
 	return {
-		main(action, plot) {
+		main(plot) {
 			svg_btn.style('display', controls.isVisible ? 'inline-block' : 'block')
 
 			//show tip info for download button based on visible plot/table
@@ -232,7 +235,7 @@ function setTermInfoBtn(app, opts, controls) {
 	}
 
 	return {
-		main(action, plot) {
+		main(plot) {
 			if (plot.term && plot.term.term.hashtmldetail) {
 				info_btn
 					.style('display', controls.isVisible ? 'inline-block' : 'block')
@@ -364,7 +367,7 @@ function setOrientationOpts(app, opts, controls) {
 	})
 
 	return {
-		main(action, plot) {
+		main(plot) {
 			tr.style('display', plot.settings.currViews.includes('barchart') ? 'table-row' : 'none')
 			radio.main(plot.settings.bar.orientation)
 		},
@@ -404,7 +407,7 @@ function setScaleOpts(app, opts, controls) {
 	})
 
 	return {
-		main(action, plot) {
+		main(plot) {
 			tr.style('display', plot.settings.currViews.includes('barchart') ? 'table-row' : 'none')
 			radio.main(plot.settings.bar.unit)
 			radio.dom.divs.style('display', d => {
@@ -421,9 +424,8 @@ function setScaleOpts(app, opts, controls) {
 	}
 }
 
-function setOverlayOpts(app, opts, controls) {
+function setOverlayOpts(app, opts, controls, plot) {
 	const obj = app.state()
-	const plot = app.state({ type: 'plot', id: controls.id })
 	const tr = opts.holder
 	tr.append('td')
 		.html('Overlay with')
@@ -495,7 +497,7 @@ function setOverlayOpts(app, opts, controls) {
 				d3event.stopPropagation()
 				if (d.value != 'tree' || d.value != plot.settings.bar.overlay) return
 				const obj = app.state()
-				const plot = app.state({ type: 'plot', id: controls.id })
+				const plot = app.state({ type: controls.type, id: controls.id })
 
 				obj.showtree4selectterm([plot.term.id, plot.term2 ? plot.term2.term.id : null], tr.node(), term2 => {
 					console.log(term2)
@@ -541,11 +543,10 @@ function setOverlayOpts(app, opts, controls) {
 		isCoordinated: true
 	}
 
-	plot.termuiObjOverlay = termuiObj
 	termui_display(termuiObj)
 
 	return {
-		main(action, plot) {
+		main(plot) {
 			// hide all options when opened from genome browser view
 			tr.style('display', obj.modifier_ssid_barchart ? 'none' : 'table-row')
 

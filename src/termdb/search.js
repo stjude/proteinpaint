@@ -24,8 +24,10 @@ class TermSearch {
 	/*
 	 */
 	constructor(app, opts) {
+		this.type = 'search'
 		this.api = rx.getComponentApi(this)
 		this.app = app
+		this.state = Object.assign({}, app.state(this.api))
 		this.modifiers = opts.modifiers
 		// see rx.core getComponentApi().main() on
 		// how these key-values are used
@@ -40,9 +42,17 @@ class TermSearch {
 		this.bus.emit('postInit')
 	}
 
-	async main(action) {
-		const state = this.app.state()
-		const lst = ['genome=' + state.genome, 'dslabel=' + state.dslabel, 'findterm=' + encodeURIComponent(action.str)]
+	async main(state = {}) {
+		if (!state.str) {
+			this.noResult()
+			return
+		}
+		Object.assign(this.state, state)
+		const lst = [
+			'genome=' + this.state.genome,
+			'dslabel=' + this.state.dslabel,
+			'findterm=' + encodeURIComponent(this.state.str)
+		]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) this.noResult()

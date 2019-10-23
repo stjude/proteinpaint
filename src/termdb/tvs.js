@@ -7,30 +7,25 @@ import * as client from '../client'
 
 class TVS {
 	constructor(app, opts) {
+		this.type = 'filter'
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
 
-		// see rx.core getComponentApi().main() on
-		// how these key-values are used
-		this.reactsTo = {
-			prefix: ['filter'],
-			type: ['app_refresh']
-		}
 		setRenderers(this)
 		setInteractivity(this)
 
 		this.categoryData = {}
 		this.initHolder()
 		this.bus = new rx.Bus('filter', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-        this.bus.emit('postInit')
-        
+		this.bus.emit('postInit')
 	}
 
-	main() {
+	main(state) {
+		this.state = state
 		const terms_div = this.dom.holder.selectAll('.terms_div')
-		const filters = terms_div.selectAll('.tvs_pill').data(this.app.state().termfilter.terms, d => d.term.id)
+		const filters = terms_div.selectAll('.tvs_pill').data(this.state.termfilter.terms, d => d.term.id)
 
 		filters.exit().each(this.exitFilter)
 		filters.each(this.updateFilter)
@@ -79,15 +74,13 @@ class TVS {
 			window.alert(e.message || e)
 		}
 		return data
-    }
-    
+	}
 }
 
 exports.TVSInit = rx.getInitFxn(TVS)
 
 function setRenderers(self) {
 	self.initHolder = function() {
-
 		// add new term
 		this.dom.holder
 			.append('div')
@@ -137,24 +130,24 @@ function setRenderers(self) {
 
 		let lst
 
-		lst = term.bar_by_grade ? ["bar_by_grade=1"] 
-			: term.bar_by_children ? ["bar_by_children=1"] : []
+		lst = term.bar_by_grade ? ['bar_by_grade=1'] : term.bar_by_children ? ['bar_by_children=1'] : []
 
-		lst.push(term.value_by_max_grade ? "value_by_max_grade=1" 
-			: term.value_by_most_recent ? "value_by_most_recent=1"
-			: term.value_by_computable_grade ? "value_by_computable_grade=1" 
-			: null)
+		lst.push(
+			term.value_by_max_grade
+				? 'value_by_max_grade=1'
+				: term.value_by_most_recent
+				? 'value_by_most_recent=1'
+				: term.value_by_computable_grade
+				? 'value_by_computable_grade=1'
+				: null
+		)
 
 		// query db for list of categories and count
 		self.categoryData[term.term.id] = await self.getCategories(term, lst)
 
 		one_term_div
 			.selectAll('.value_btn')
-			.data(valueData, d => 
-					d.label ? d.label : 
-					d.start ? d.start : 
-					d.stop ? d.stop : 
-					d.grade ? d.grade : d)
+			.data(valueData, d => (d.label ? d.label : d.start ? d.start : d.stop ? d.stop : d.grade ? d.grade : d))
 			.enter()
 			.append('div')
 			.attr('class', 'value_btn sja_filter_tag_btn')
@@ -230,13 +223,17 @@ function setRenderers(self) {
 
 		let lst
 
-		lst = term.bar_by_grade ? ["bar_by_grade=1"] 
-			: term.bar_by_children ? ["bar_by_children=1"] : []
+		lst = term.bar_by_grade ? ['bar_by_grade=1'] : term.bar_by_children ? ['bar_by_children=1'] : []
 
-		lst.push(term.value_by_max_grade ? "value_by_max_grade=1" 
-			: term.value_by_most_recent ? "value_by_most_recent=1"
-			: term.value_by_computable_grade ? "value_by_computable_grade=1" 
-			: null)
+		lst.push(
+			term.value_by_max_grade
+				? 'value_by_max_grade=1'
+				: term.value_by_most_recent
+				? 'value_by_most_recent=1'
+				: term.value_by_computable_grade
+				? 'value_by_computable_grade=1'
+				: null
+		)
 
 		const data = await self.getCategories(term, lst)
 
@@ -250,13 +247,11 @@ function setRenderers(self) {
 			? term.values
 			: term.grade_and_child
 
-		const value_btns = one_term_div.selectAll('.value_btn').data(valueData, 
-            d => 
-                d.key ? d.key :
-				d.label ? d.label : 
-				d.start ? d.start : 
-				d.stop ? d.stop : 
-				d.grade ? d.grade : d )
+		const value_btns = one_term_div
+			.selectAll('.value_btn')
+			.data(valueData, d =>
+				d.key ? d.key : d.label ? d.label : d.start ? d.start : d.stop ? d.stop : d.grade ? d.grade : d
+			)
 
 		value_btns.exit().each(self.removeValueBtn)
 
@@ -281,8 +276,8 @@ function setRenderers(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'value_btn sja_filter_tag_btn')
-            .style('margin-right', '1px')
-            // .style('position', 'absolute')
+			.style('margin-right', '1px')
+			// .style('position', 'absolute')
 			.each(valueAdderFxn)
 
 		// button with 'x' to remove term2
@@ -308,7 +303,7 @@ function setRenderers(self) {
 	}
 
 	self.addCategoryValues = async function(value, j) {
-        // console.log('add', j)
+		// console.log('add', j)
 		const term_value_btn = select(this).datum(value)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
@@ -372,9 +367,9 @@ function setRenderers(self) {
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
 			'display',
 			j > 0 && j < term.values.length - 1 ? 'inline-block' : 'none'
-        )
-        
-        if (j == term.values.length - 1 && self.categoryData[term.term.id].lst.length > 2) {
+		)
+
+		if (j == term.values.length - 1 && self.categoryData[term.term.id].lst.length > 2) {
 			one_term_div.selectAll('.add_value_btn').remove()
 			one_term_div.selectAll('.add_value_select').remove()
 			await self.makePlusBtn(one_term_div, self.categoryData[term.term.id], term.values, new_value => {
@@ -498,7 +493,7 @@ function setRenderers(self) {
 
 			value_btn.on('click', () => {
 				self.editNumericBin(value_btn, range, range => {
-					self.changeValue({ term, value:range, j })
+					self.changeValue({ term, value: range, j })
 				})
 			})
 		}
@@ -528,7 +523,7 @@ function setRenderers(self) {
 			self.makePlusBtn(one_term_div, unannotated_cats, term.ranges, new_value => {
 				self.addValue({ term, new_value })
 			})
-			if(numeric_select) numeric_select.style('width', value_btn.node().offsetWidth + 'px')
+			if (numeric_select) numeric_select.style('width', value_btn.node().offsetWidth + 'px')
 		}
 	}
 
@@ -549,7 +544,7 @@ function setRenderers(self) {
 
 		value_btn.on('click', () => {
 			self.editNumericBin(value_btn, range, range => {
-				self.changeValue({ term, value:range, j })
+				self.changeValue({ term, value: range, j })
 			})
 		})
 
@@ -559,7 +554,8 @@ function setRenderers(self) {
 				'width',
 				value_btn.node().offsetWidth + 'px'
 			)
-			value_btn.html(range.label)
+			value_btn
+				.html(range.label)
 				.style('opacity', 0)
 				.transition()
 				.duration(200)
@@ -570,9 +566,9 @@ function setRenderers(self) {
 
 			//update dropdown list for each term
 			self.updateSelect(numeric_select, unannotated_cats, range.label)
-
 		} else {
-			value_btn.html(self.setRangeBtnText(range))
+			value_btn
+				.html(self.setRangeBtnText(range))
 				.style('opacity', 0)
 				.transition()
 				.duration(200)
@@ -587,24 +583,24 @@ function setRenderers(self) {
 
 		const add_value_select = one_term_div.selectAll('.add_value_select')
 		self.updateSelect(add_value_select, unannotated_cats, 'add')
-		if(numeric_select) numeric_select.style('width', value_btn.node().offsetWidth + 'px')	
+		if (numeric_select) numeric_select.style('width', value_btn.node().offsetWidth + 'px')
 	}
 
-	self.addConditionValues = async function(value, j){
-        // console.log('add', j)
+	self.addConditionValues = async function(value, j) {
+		// console.log('add', j)
 		const term_value_btn = select(this).datum(value)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
 
-		const grade_select = one_term_div.append('select')
-			.attr('class','value_select')
-			.style("margin-right", "1px")
-			.style('opacity',0)
-			.on('mouseover',()=>{
-				term_value_btn.style('opacity', '0.8')
-				.style('cursor','default')
+		const grade_select = one_term_div
+			.append('select')
+			.attr('class', 'value_select')
+			.style('margin-right', '1px')
+			.style('opacity', 0)
+			.on('mouseover', () => {
+				term_value_btn.style('opacity', '0.8').style('cursor', 'default')
 			})
-			.on('mouseout',()=>{
+			.on('mouseout', () => {
 				term_value_btn.style('opacity', '1')
 			})
 
@@ -654,14 +650,14 @@ function setRenderers(self) {
 			'display',
 			j > 0 && j < term.values.length - 1 ? 'inline-block' : 'none'
 		)
-		
+
 		one_term_div.selectAll('.grade_type_btn').remove()
-		one_term_div.selectAll('.grade_type_select').remove()	
+		one_term_div.selectAll('.grade_type_select').remove()
 		self.makeGradeSelectBtn(one_term_div, term, updated_term => {
 			self.updateGradeType({ term, updated_term })
 		})
-        
-        if (j == term.values.length - 1 && self.categoryData[term.term.id].lst.length > 2) {
+
+		if (j == term.values.length - 1 && self.categoryData[term.term.id].lst.length > 2) {
 			one_term_div.selectAll('.add_value_btn').remove()
 			one_term_div.selectAll('.add_value_select').remove()
 			await self.makePlusBtn(one_term_div, self.categoryData[term.term.id], term.values, new_value => {
@@ -716,9 +712,7 @@ function setRenderers(self) {
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
 
-		value_btn
-			.html(d => d.label + ' &#9662;')
-
+		value_btn.html(d => d.label + ' &#9662;')
 		const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
 			'width',
 			value_btn.node().offsetWidth + 'px'
@@ -812,7 +806,11 @@ function setRenderers(self) {
 		const options = select.selectAll('option')
 
 		options.nodes().forEach(function(d) {
-			if (selected_values.length > 0 && selected_values.find(v => (v.key || v.label) == d.value) && d.value != btn_value) {
+			if (
+				selected_values.length > 0 &&
+				selected_values.find(v => (v.key || v.label) == d.value) &&
+				d.value != btn_value
+			) {
 				d.disabled = true
 			} else {
 				d.disabled = false
@@ -824,24 +822,22 @@ function setRenderers(self) {
 	self.makeGradeSelectBtn = function(holder, actual_term, callback) {
 		const term = JSON.parse(JSON.stringify(actual_term))
 		const [grade_type_select, grade_type_btn] = dom.make_select_btn_pair(holder)
-		grade_type_select
-			.attr('class','grade_type_select')
-			.style("margin-right", "1px")
+		grade_type_select.attr('class', 'grade_type_select').style('margin-right', '1px')
 
 		grade_type_select
-			.append("option")
-			.attr("value", "max")
-			.text("Max grade per patient")
+			.append('option')
+			.attr('value', 'max')
+			.text('Max grade per patient')
 
 		grade_type_select
-			.append("option")
-			.attr("value", "recent")
-			.text("Most recent grade per patient")
+			.append('option')
+			.attr('value', 'recent')
+			.text('Most recent grade per patient')
 
 		grade_type_select
-			.append("option")
-			.attr("value", "computable")
-			.text("Any grade per patient")
+			.append('option')
+			.attr('value', 'computable')
+			.text('Any grade per patient')
 
 		grade_type_btn
 			.classed('grade_type_btn',true)
@@ -855,17 +851,20 @@ function setRenderers(self) {
 			.style('opacity', 1)
 
 		grade_type_btn.html(
-			term.value_by_max_grade ? '(Max grade per patient) &#9662;' :
-			term.value_by_most_recent ? '(Most recent grade per patient) &#9662;' :
-			'(Any grade per patient) &#9662;'
+			term.value_by_max_grade
+				? '(Max grade per patient) &#9662;'
+				: term.value_by_most_recent
+				? '(Most recent grade per patient) &#9662;'
+				: '(Any grade per patient) &#9662;'
 		)
 
-		grade_type_select.node().value = 
-			term.value_by_max_grade ? 'max' :
-			term.value_by_most_recent ? 'recent' : 
-			'computable'
+		grade_type_select.node().value = term.value_by_max_grade
+			? 'max'
+			: term.value_by_most_recent
+			? 'recent'
+			: 'computable'
 
-		grade_type_select.style("width", grade_type_btn.node().offsetWidth + "px")
+		grade_type_select.style('width', grade_type_btn.node().offsetWidth + 'px')
 
 		// change grade type to/from max_grade and recent_grade
 		grade_type_select.on("change", async () => {
@@ -873,7 +872,6 @@ function setRenderers(self) {
 			term.value_by_max_grade = grade_type_select.node().value == "max" ? true : false
 			term.value_by_most_recent = grade_type_select.node().value == "recent" ? true: false
 			term.value_by_computable_grade = grade_type_select.node().value == "computable" ? true : false
-
 			callback(term)
 		})
 	}
@@ -914,7 +912,7 @@ function setRenderers(self) {
 			if (add_value_select.node().value == 'add_bin') {
 				const range_temp = { start: '', stop: '' }
 				self.editNumericBin(add_value_btn, range_temp, range => {
-					self.addValue({ term, new_value:range })
+					self.addValue({ term, new_value: range })
 				})
 			} else {
 				//change value of button
@@ -931,7 +929,7 @@ function setRenderers(self) {
 			.style('margin-right', '1px')
 			.style('font-size', '1em')
 			.style('background-color', '#4888BF')
-			.style('width','10px')
+			.style('width', '10px')
 			.html('&#43;')
 
 		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
@@ -964,19 +962,18 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.displayTreeMenu = async function(term) {
 		const one_term_div = this
-		const obj = self.app.state()
 		self.dom.tip.clear().showunder(one_term_div)
 		const treediv = self.dom.tip.d.append('div')
 		// set termfilter terms to all filter-terms if '+' or all except current term if 'term_name_btn'
 		const terms = select(one_term_div).classed('add_term_btn')
-			? obj.termfilter.terms
-			: obj.termfilter.terms.filter(t => t.id != term.termId)
+			? this.state.termfilter.terms
+			: this.state.termfilter.terms.filter(t => t.id != term.termId)
 
 		// a new object as init() argument for launching the tree with modifiers
 		const tree_obj = {
 			state: {
-				dslabel: obj.dslabel,
-				genome: obj.genome,
+				dslabel: this.state.dslabel,
+				genome: this.state.genome,
 				termfilter: {
 					show_top_ui: false,
 					terms: terms
@@ -1101,7 +1098,8 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.updateGradeType = opts => self.app.dispatch({ type: 'filter_grade_update', termId: opts.term.id, updated_term : opts.updated_term })
+	self.updateGradeType = opts =>
+		self.app.dispatch({ type: 'filter_grade_update', termId: opts.term.id, updated_term: opts.updated_term })
 
 	self.removeFilter = term => self.app.dispatch({ type: 'filter_remove', termId: term.id })
 
@@ -1115,5 +1113,4 @@ function setInteractivity(self) {
 	self.removeValue = opts => self.app.dispatch({ type: 'filter_value_remove', termId: opts.term.id, valueId: opts.j })
 
 	self.replaceFilter = opts => self.app.dispatch({ type: 'filter_replace', term: opts.term})
-
 }

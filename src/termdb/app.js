@@ -67,13 +67,14 @@ class TdbApp {
 		this.bus.emit('postInit')
 		// trigger the initial render after initialization
 		// no need to supply an action.state{} at this point
-		this.main({type: 'app_refresh'}).catch(this.printError)
+		this.main().catch(this.printError)
+		//this.api.dispatch({type:'app_refresh'}).catch(this.printError)
 	}
 
-	async main(action = {}) {
+	async main() {
 		// catch runtime error from components
 		try {
-			await this.notifyComponents(action)
+			await this.notifyComponents()
 		} catch(e) {
 			this.printError(e)
 			if (e.stack) console.log(e.stack)
@@ -87,7 +88,91 @@ class TdbApp {
 	}
 }
 
+/*
+	subState: 
+	- a collection of action filters and 
+	methods grouped by component type. 
+
+	The subStates are defined here since the "app"
+	should know about the structure of the store.state
+	and the expected arguments to sub-components, so that
+	it can reshape the state by component type. 
+
+	[component.type]: {}
+	.reactsTo{}
+		.prefix
+		.type
+		.match
+
+		see rx.core getAppApi().state() on how
+		these key-values are used as coarse-grained filters 
+		to avoid unnecessary state recomputations or 
+		component updates
+
+	.get() 
+		a method to get coarse-grained partial state
+	  that is relevant to a subcomponent type, id
+*/
+TdbApp.prototype.subState = {
+	tree: {
+		reactsTo: {
+			prefix: ['tree', 'filter', 'plot'],
+			type: ['app_refresh']
+		},
+		get(sub) {
+			return {
+				genome: this.state.genome,
+				dslabel: this.state.dslabel,
+				plots: this.state.tree.plots,
+				expandedTerms: this.state.tree.expandedTerms
+			}
+		}
+	},
+	filter: {
+		reactsTo: {
+			prefix: ['filter'],
+			type: ['app_refresh']
+		},
+		get(sub) {
+			return {
+				genome: this.state.genome,
+				dslabel: this.state.dslabel,
+				termfilter: this.state.termfilter
+			}
+		}
+	},
+	plot: {
+		reactsTo: {
+			type: ['plot_add', 'plot_show', 'plot_edit', 'app_refresh', 'plot_rehydrate'],
+			match: (action, sub) => {
+				if (!('id' in action) || action.id == sub.id) return true
+			}
+		},
+		get(sub) {
+			if (!(sub.id in this.state.tree.plots)) {
+				return //throw `No plot with id='${sub.id}' found.`
+			}
+			return {
+				genome: this.state.genome,
+				dslabel: this.state.dslabel,
+				termfilter: this.state.termfilter,
+				config: this.state.tree.plots[sub.id]
+			}
+		}
+	},
+	search: {
+		get(sub) {
+			return {
+				genome: this.state.genome,
+				dslabel: this.state.dslabel
+			}
+		}
+	}
+}
+
 exports.appInit = rx.getInitFxn(TdbApp)
+
+
 
 function validate_modifiers(tmp={}){
 	for(const k in tmp) {

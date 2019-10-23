@@ -7,21 +7,14 @@ import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesett
 
 class TdbPlot {
 	constructor(app, opts) {
+		this.type = 'plot'
+		this.id = opts.id
 		this.api = rx.getComponentApi(this)
+		this.notifyComponents = rx.notifyComponents
 		this.getComponents = rx.getComponents
 		this.app = app
 		this.modifiers = opts.modifiers
-		this.id = opts.id
-		this.config = this.app.state({ type: 'plot', id: this.id })
-
-		// see rx.core getComponentApi().main() on
-		// how these key-values are used
-		this.reactsTo = {
-			type: ['plot_add', 'plot_show', 'plot_edit', 'app_refresh'],
-			match: action => {
-				if (!('id' in action) || action.id == this.id) return true
-			}
-		}
+		this.config = this.app.state(this.api)
 
 		this.dom = {
 			holder: opts.holder
@@ -72,25 +65,25 @@ class TdbPlot {
 		this.bus.emit('postInit', this.api)
 	}
 
-	async main(action) {
-		this.config = this.app.state({ type: 'plot', id: this.id })
-		const data = await this.requestData(this.config)
+	async main(state) {
+		this.state = state
+		const data = await this.requestData(this.state)
 		this.syncParams(this.config, data)
-		this.render(action, data)
+		this.notifyComponents(data)
 		this.bus.emit('postRender')
 	}
 
-	async requestData(config) {
-		const dataName = this.getDataName(this.config)
-		const route = config.settings.currViews.includes('scatter') ? '/termdb' : '/termdb-barsql'
+	async requestData(state) {
+		const dataName = this.getDataName(state)
+		const route = state.config.settings.currViews.includes('scatter') ? '/termdb' : '/termdb-barsql'
 		return await dofetch2(route + dataName, {}, this.app.opts.fetchOpts)
 	}
 
 	// creates URL search parameter string, that also serves as
 	// a unique request identifier to be used for caching server response
-	getDataName(config) {
-		const obj = this.app.state()
-		const params = ['genome=' + obj.genome, 'dslabel=' + obj.dslabel]
+	getDataName(state) {
+		const config = state.config
+		const params = ['genome=' + state.genome, 'dslabel=' + state.dslabel]
 
 		const isscatter = config.settings.currViews.includes('scatter')
 		if (isscatter) params.push('scatter=1')
@@ -116,19 +109,19 @@ class TdbPlot {
 		})
 
 		if (!isscatter) {
-			if (obj.modifier_ssid_barchart) {
+			if (state.modifier_ssid_barchart) {
 				params.push(
 					'term2_is_genotype=1',
-					'ssid=' + obj.modifier_ssid_barchart.ssid,
-					'mname=' + obj.modifier_ssid_barchart.mutation_name,
-					'chr=' + obj.modifier_ssid_barchart.chr,
-					'pos=' + obj.modifier_ssid_barchart.pos
+					'ssid=' + state.modifier_ssid_barchart.ssid,
+					'mname=' + state.modifier_ssid_barchart.mutation_name,
+					'chr=' + state.modifier_ssid_barchart.chr,
+					'pos=' + state.modifier_ssid_barchart.pos
 				)
 			}
 		}
 
-		if (obj.termfilter && obj.termfilter.terms && obj.termfilter.terms.length) {
-			params.push('tvslst=' + encodeURIComponent(JSON.stringify(tvslst_to_parameter(obj.termfilter.terms))))
+		if (state.termfilter && state.termfilter.terms && state.termfilter.terms.length) {
+			params.push('tvslst=' + encodeURIComponent(JSON.stringify(tvslst_to_parameter(state.termfilter.terms))))
 		}
 
 		return '?' + params.join('&')
@@ -148,24 +141,6 @@ class TdbPlot {
 					Object.assign(term.q, q)
 				}
 			}
-		}
-		// when the server response includes default parameters
-		// that was not in the request parameters, the dataName
-		// will be different even though the config state is technically
-		// the same except now with explicit defaults. So store
-		// the response data under the alternative dataname
-		// that includes the defaults.
-		/*
-		const altDataName = this.getDataName(config)
-		if (!(altDataName in serverData)) {
-			serverData[altDataName] = data
-		}
-		*/
-	}
-
-	render(action, data) {
-		for (const name in this.components) {
-			this.components[name].main(action, data)
 		}
 	}
 }
