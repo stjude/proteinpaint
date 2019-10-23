@@ -239,7 +239,7 @@ tape('filter term-value button: categorical term', function(test) {
 })
 
 tape('filter term-value button: numerical term', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(5000)
 	test.plan(6)
 	const div0 = d3s.select('body').append('div')
 	const termfilter = {
@@ -276,11 +276,11 @@ tape('filter term-value button: numerical term', function(test) {
 			.run(testFilterDisplay, 300)
 			.change({ bus: filter, eventType: 'postRender.test' })
 			.use(triggerChangeValue)
-			.to(testChangeValue, { wait: 600 })
+			.to(testChangeValue, { wait: 800 })
 			.use(triggerAddValue)
-			.to(testAddValue, { wait: 600 })
+			.to(testAddValue, { wait: 800 })
 			.use(triggerRemoveValue)
-			.to(testRemoveValue, { wait: 600 })
+			.to(testRemoveValue, { wait: 800 })
 			.done(test)
 	}
 

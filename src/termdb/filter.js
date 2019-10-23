@@ -32,7 +32,7 @@ class TdbFilter {
 
 	async main(state = null) {
 		if (state) this.state = state
-		this.components.tvs.update()
+		await this.components.tvs.update()
 		this.bus.emit('postRender')
 	}
 }
