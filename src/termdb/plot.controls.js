@@ -14,7 +14,7 @@ class TdbPlotControls {
 		this.api = rx.getComponentApi(this)
 		this.api.id = this.id
 		this.app = app
-		this.state = app.state({ type: this.type, id: this.id })
+		this.state = app.state(this.api)
 		this.index = i++ // used for assigning unique input names, across different plots
 		this.isVisible = false
 
@@ -56,7 +56,7 @@ class TdbPlotControls {
 	}
 
 	main(state) {
-		this.state = state
+		if (state) this.state = state
 		this.dom.button_bar
 			.style('display', this.isVisible ? 'inline-block' : 'block')
 			.style('float', this.isVisible ? 'right' : 'none')
