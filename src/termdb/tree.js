@@ -190,6 +190,7 @@ class TdbTree {
 			id: term.id,
 			holder: holder,
 			term: term,
+			modifiers : this.modifiers,
 			callbacks: {
 				plot: {
 					// must use namespaced eventType otherwise will be rewritten..

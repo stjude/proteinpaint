@@ -24,7 +24,10 @@ class TdbFilter {
 		this.categoryData = {}
 		this.initHolder()
 		this.components = {
-			tvs: TVSInit(app, {holder: opts.holder})
+			tvs: TVSInit(app, {
+				holder: opts.holder,
+				modifiers: opts.modifiers
+			})
 		}
 
 		this.bus = new rx.Bus('filter', ['postInit', 'postRender'], app.opts.callbacks, this.api)

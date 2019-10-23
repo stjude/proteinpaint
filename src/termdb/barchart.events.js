@@ -63,6 +63,10 @@ export default function getHandlers(self) {
 			click(d) {
 				const termValues = getTermValues(d, self)
 				self.bus.emit("postClick", { termValues, x: event.clientX, y: event.clientY })
+				if(self.modifiers.tvs_select){
+					//send the tvs to the main app state() to apply filter
+					self.modifiers.tvs_select(termValues[0])
+				} 
 			}
 		},
 		colLabel: {

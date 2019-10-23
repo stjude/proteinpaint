@@ -10,6 +10,7 @@ class TdbPlot {
 		this.api = rx.getComponentApi(this)
 		this.getComponents = rx.getComponents
 		this.app = app
+		this.modifiers = opts.modifiers
 		this.id = opts.id
 		this.config = this.app.state({ type: 'plot', id: this.id })
 
@@ -55,7 +56,8 @@ class TdbPlot {
 			barchart: barInit(this.app, {
 				holder: this.dom.viz.append('div'),
 				id: this.id,
-				term: opts.term
+				term: opts.term,
+				modifiers: this.modifiers
 			})
 		}
 

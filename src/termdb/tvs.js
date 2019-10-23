@@ -982,6 +982,13 @@ function setInteractivity(self) {
 					terms: terms
 				}
 			},
+			modifiers: {
+				//modifier to replace filter by clicking term btn
+				//TODO: add tvs as new filter from '+' button
+				tvs_select : (tvs) => {
+					self.replaceFilter({ term:tvs })
+				}
+			},
 			callbacks: {
 				app: { 'postInit.test': () => {} }
 			}
@@ -1106,5 +1113,7 @@ function setInteractivity(self) {
 		self.app.dispatch({ type: 'filter_value_change', termId: opts.term.id, value: opts.value, valueId: opts.j })
 
 	self.removeValue = opts => self.app.dispatch({ type: 'filter_value_remove', termId: opts.term.id, valueId: opts.j })
+
+	self.replaceFilter = opts => self.app.dispatch({ type: 'filter_replace', term: opts.term})
 
 }

@@ -26,7 +26,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('filter term-value button', function(test) {
+tape.only('filter term-value button', function(test) {
 	test.timeoutAfter(2000)
 	test.plan(6)
 
@@ -85,7 +85,7 @@ tape('filter term-value button', function(test) {
 		)
 		test.true(
 			filter.Inner.dom.holder.selectAll('.add_term_btn').size() >= 1,
-			'should have "+" button to add new term filter'
+			'should have \'+\' button to add new term filter'
 		)
 	}
 

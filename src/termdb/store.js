@@ -164,6 +164,12 @@ TdbStore.prototype.actions = {
 		if (values.length == 0) {
 			this.state.termfilter.terms.splice(i, 1)
 		}
+	}, 
+
+	filter_replace(action) {
+		this.state.termfilter.terms = []
+		this.state.termfilter.terms.push(action.term)
+
 	}
 }
 

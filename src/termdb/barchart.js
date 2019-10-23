@@ -18,6 +18,7 @@ class TdbBarchart {
 	constructor(app, opts) {
 		this.api = rx.getComponentApi(this)
 		this.app = app
+		this.modifiers = opts.modifiers
 		this.id = opts.id
 		this.config = this.app.state({ type: 'plot', id: this.id }) //opts
 		this.dom = {
