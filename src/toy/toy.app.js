@@ -29,8 +29,6 @@ class ToyApp {
 	constructor(opts, holder) {
 		this.opts = opts
 		this.api = rx.getAppApi(this)
-		this.notifyComponents = rx.notifyComponents
-		this.getComponents = rx.getComponents
 
 		this.store = storeInit(this.api)
 		this.state = this.store.state()
@@ -45,13 +43,19 @@ class ToyApp {
 		}
 		// set up the app api as the default argument
 		// to callbacks of emitted events
-		this.bus = new rx.Bus('app', ['postInit', 'postNotify'], opts.callbacks, this.api)
+		this.bus = new rx.Bus('app', ['postInit', 'postRender'], opts.callbacks, this.api)
 		this.bus.emit('postInit')
 	}
 
-	main(action) {
-		this.notifyComponents(action)
-		this.bus.emit('postNotify', this.app)
+	async main(state, action) {
+		this.state = state
+		try {
+			await rx.notifyComponents(this.components, action)
+		} catch (e) {
+			console.log(e)
+			if (e.stack) console.log(e.stack)
+		}
+		this.bus.emit('postRender')
 	}
 }
 
@@ -60,9 +64,9 @@ ToyApp.prototype.subState = {
 		reactsTo: {
 			prefix: ['term']
 		},
-		get(sub) {
+		get(state, sub) {
 			return {
-				rows: this.state.controls.rows
+				rows: state.controls.rows
 			}
 		}
 	}

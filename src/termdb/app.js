@@ -41,8 +41,6 @@ class TdbApp {
 	constructor(opts, holder) {
 		this.opts = opts
 		this.api = rx.getAppApi(this)
-		this.notifyComponents = rx.notifyComponents
-		this.getComponents = rx.getComponents
 
 		this.dom = {
 			holder: holder.style("margin", "10px").style("border", "1px solid #aaa"),
@@ -67,14 +65,15 @@ class TdbApp {
 		this.bus.emit('postInit')
 		// trigger the initial render after initialization
 		// no need to supply an action.state{} at this point
-		this.main().catch(this.printError)
-		//this.api.dispatch({type:'app_refresh'}).catch(this.printError)
+		//this.main().catch(this.printError)
+		this.api.dispatch({type:'app_refresh'}).catch(e=>this.printError(e))
 	}
 
-	async main() {
+	async main(state, action) {
+		this.state = state
 		// catch runtime error from components
 		try {
-			await this.notifyComponents()
+			await rx.notifyComponents(this.components, action)
 		} catch(e) {
 			this.printError(e)
 			if (e.stack) console.log(e.stack)
@@ -119,13 +118,13 @@ TdbApp.prototype.subState = {
 			prefix: ['tree', 'filter', 'plot'],
 			type: ['app_refresh']
 		},
-		get(sub) {
+		get(appState, sub) {
 			return {
-				genome: this.state.genome,
-				dslabel: this.state.dslabel,
-				plots: this.state.tree.plots,
-				expandedTerms: this.state.tree.expandedTerms,
-				termfilter: this.state.termfilter
+				genome: appState.genome,
+				dslabel: appState.dslabel,
+				plots: appState.tree.plots,
+				expandedTerms: appState.tree.expandedTerms,
+				termfilter: appState.termfilter
 			}
 		}
 	},
@@ -134,11 +133,11 @@ TdbApp.prototype.subState = {
 			prefix: ['filter'],
 			type: ['app_refresh']
 		},
-		get(sub) {
+		get(appState, sub) {
 			return {
-				genome: this.state.genome,
-				dslabel: this.state.dslabel,
-				termfilter: this.state.termfilter
+				genome: appState.genome,
+				dslabel: appState.dslabel,
+				termfilter: appState.termfilter
 			}
 		}
 	},
@@ -151,23 +150,23 @@ TdbApp.prototype.subState = {
 				if (!('id' in action) || action.id == sub.id) return true
 			}
 		},
-		get(sub) {
-			if (!(sub.id in this.state.tree.plots)) {
+		get(appState, sub) {
+			if (!(sub.id in appState.tree.plots)) {
 				return //throw `No plot with id='${sub.id}' found.`
 			}
 			return {
-				genome: this.state.genome,
-				dslabel: this.state.dslabel,
-				termfilter: this.state.termfilter,
-				config: this.state.tree.plots[sub.id]
+				genome: appState.genome,
+				dslabel: appState.dslabel,
+				termfilter: appState.termfilter,
+				config: appState.tree.plots[sub.id]
 			}
 		}
 	},
 	search: {
-		get(sub) {
+		get(appState, sub) {
 			return {
-				genome: this.state.genome,
-				dslabel: this.state.dslabel
+				genome: appState.genome,
+				dslabel: appState.dslabel
 			}
 		}
 	}

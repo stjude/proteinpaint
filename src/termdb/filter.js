@@ -26,14 +26,11 @@ class TdbFilter {
 		}
 
 		this.bus = new rx.Bus('filter', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		// TODO: check if this is required
-		// this.bus.emit('postInit')
+		this.bus.emit('postInit')
 	}
 
 	async main(state = null) {
 		if (state) this.state = state
-		await this.components.tvs.update()
-		this.bus.emit('postRender')
 	}
 }
 

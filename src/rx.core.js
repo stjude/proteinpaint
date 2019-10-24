@@ -178,8 +178,6 @@ export function getStoreApi(self) {
 
 export function getAppApi(self) {
 	const middlewares = []
-	self.currStateByType = {}
-	self.currAction = { type: 'app_refresh' }
 
 	const api = {
 		opts: self.opts,
@@ -193,63 +191,61 @@ export function getAppApi(self) {
 			until the pending action is done?
 	 	  ???
  			*/
-			if (middlewares.length) {
-				for (const fxn of middlewares.slice()) {
-					const result = await fxn(action)
-					if (result) {
-						if (result.cancel) return
-						if (result.error) throw result.error
-						if (result.deactivate) {
-							middlewares.splice(middlewares.indexOf(fxn), 1)
+			try {
+				if (middlewares.length) {
+					for (const fxn of middlewares.slice()) {
+						const result = await fxn(action)
+						if (result) {
+							if (result.cancel) return
+							if (result.error) throw result.error
+							if (result.deactivate) {
+								middlewares.splice(middlewares.indexOf(fxn), 1)
+							}
 						}
 					}
 				}
+				// replace app.state
+				if (self.store) {
+					const state = await self.store.write(action)
+					await self.main(state)
+				}
+			} catch (e) {
+				self.printError(e)
 			}
-			// replace app.state
-			self.state = await self.store.write(action)
-			self.currAction = action
-			self.currStateByType = {}
-			await self.main(self.state)
 		},
 		async save(action) {
 			// save changes to store, do not notify components
 			self.state = await self.store.write(action)
-			self.currAction = action
-			self.currStateByType = {}
 		},
-		getState(sub = null, currState) {
+		getState(sub = null, action = null) {
 			if (!sub || !sub.type) return self.state
 
 			if (!self.subState.hasOwnProperty(sub.type)) {
 				throw `undefined store config getter for component type='${sub.type}'`
-			} else if (sub.type in self.currStateByType) {
-				return self.currStateByType[sub.type][sub.id]
 			} else {
 				const subState = self.subState[sub.type]
-				if (subState.reactsTo) {
+				if (action && subState.reactsTo) {
 					const reactsTo = subState.reactsTo
 					// if string matches are specified, start with
 					// matched == false, otherwise start as true
 					let matched = !(reactsTo.prefix || reactsTo.type)
 					if (reactsTo.prefix) {
 						for (const p of reactsTo.prefix) {
-							matched = self.currAction.type.startsWith(p)
+							matched = action.type.startsWith(p)
 							if (matched) break
 						}
 					}
 					if (reactsTo.type) {
 						// okay to match prefix, type, or both
-						matched = matched || reactsTo.type.includes(self.currAction.type)
+						matched = matched || reactsTo.type.includes(action.type)
 					}
 					if (reactsTo.match) {
 						// fine-tuned action matching with a function
-						matched = matched && reactsTo.match.call(self, self.currAction, sub)
+						matched = matched && reactsTo.match.call(self, action, sub)
 					}
-					if (!matched) return currState
+					if (!matched) return
 				}
-				const componentState = self.subState[sub.type].get.call(self, sub)
-				if (!self.currStateByType[sub.type]) self.currStateByType[sub.type] = {}
-				self.currStateByType[sub.type][sub.id] = componentState
+				const componentState = self.subState[sub.type].get(self.state, sub)
 				// freeze only the root subsState object since
 				// the copied app.state is already deeply frozen
 				return Object.freeze(componentState)
@@ -283,7 +279,7 @@ export function getAppApi(self) {
 			return api
 		},
 		getComponents(dotSepNames = '') {
-			return self.getComponents(dotSepNames)
+			return getComponents(self.components, dotSepNames)
 		}
 	}
 
@@ -297,15 +293,19 @@ export function getComponentApi(self) {
 	const api = {
 		type: self.type,
 		id: self.id,
-		async update(data) {
-			const componentState = self.app.getState(api, self.state)
+		async update(action, data) {
+			const componentState = self.app.getState(api, action)
 			// if the current and pending state is the same, no need to update
-			if (mainCalled) {
+			if (!mainCalled) {
+				mainCalled = true
+			} else {
 				if (!componentState) return
 				if (deepEqual(componentState, self.state)) return
 			}
-			await self.main(componentState, data)
-			mainCalled = true
+
+			const componentData = await self.main(componentState, data)
+			await notifyComponents(self.components, action, componentData)
+			if (self.bus) self.bus.emit('postRender')
 			return api
 		},
 		// must not expose self.bus directly since that
@@ -317,7 +317,7 @@ export function getComponentApi(self) {
 			return api
 		},
 		getComponents(dotSepNames = '') {
-			return typeof self.getComponents == 'function' ? self.getComponents(dotSepNames) : api
+			return getComponents(self.components, dotSepNames)
 		}
 	}
 	return api
@@ -348,10 +348,10 @@ export function getComponentApi(self) {
 // Component Helpers
 // -----------------
 
-export async function notifyComponents(action, data = null) {
+export async function notifyComponents(components, action, data = null) {
 	const called = []
-	for (const name in this.components) {
-		const component = this.components[name]
+	for (const name in components) {
+		const component = components[name]
 		if (Array.isArray(component)) {
 			for (const c of component) called.push(c.update(action, data))
 		} else if (component.hasOwnProperty('update')) {
@@ -370,15 +370,15 @@ export async function notifyComponents(action, data = null) {
 // access the api of an indirectly connected component,
 // for example to subscribe an .on(event, listener) to
 // the event bus of a distant component
-export function getComponents(dotSepNames) {
-	if (!dotSepNames) return Object.assign({}, this.components)
+export function getComponents(components, dotSepNames) {
+	if (!dotSepNames) return Object.assign({}, components)
 	// string-based convenient accessor,
 	// so instead of
 	// app.getComponents().controls.getComponents().search,
 	// simply
 	// app.getComponents("controls.search")
 	const names = dotSepNames.split('.')
-	let component = this.components
+	let component = components
 	while (names.length) {
 		let name = names.shift()
 		if (Array.isArray(component)) name = Number(name)
@@ -387,9 +387,8 @@ export function getComponents(dotSepNames) {
 			: component[name] && component[name].components
 			? component[name].components
 			: component[name] && component[name].getComponents
-			? component[name].getComponents
+			? component[name].getComponents()
 			: component[name]
-		if (typeof component == 'function') component = component()
 		if (!component) break
 	}
 	return component

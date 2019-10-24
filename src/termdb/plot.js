@@ -10,8 +10,6 @@ class TdbPlot {
 		this.type = 'plot'
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
-		this.notifyComponents = rx.notifyComponents
-		this.getComponents = rx.getComponents
 		this.app = app
 		this.modifiers = opts.modifiers
 		this.config = this.app.getState(this.api)
@@ -69,8 +67,7 @@ class TdbPlot {
 		this.state = state
 		const data = await this.requestData(this.state)
 		this.syncParams(this.config, data)
-		this.notifyComponents(data)
-		this.bus.emit('postRender')
+		return data
 	}
 
 	async requestData(state) {

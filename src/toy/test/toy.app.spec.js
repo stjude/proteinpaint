@@ -80,7 +80,7 @@ tape('default view', function(test) {
 		helpers
 			.rideInit({
 				bus: app,
-				eventType: 'postNotify.test',
+				eventType: 'postRender.test',
 				arg: app
 			})
 			.run(testSearchDisplay, 100)

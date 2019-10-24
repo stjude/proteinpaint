@@ -60,7 +60,6 @@ these transient flags are created and removed only within this script, and not t
 - all data processing code
 (b) setRenderers(self): attaches renderer methods
 (c) setInteractivity(self): attaches event handlers
-(d) this.actions{}
 
 */
 
@@ -79,8 +78,6 @@ class TdbTree {
 	constructor(app, opts) {
 		this.type = 'tree'
 		this.api = rx.getComponentApi(this)
-		this.notifyComponents = rx.notifyComponents
-		this.getComponents = rx.getComponents
 		this.app = app
 		this.modifiers = opts.modifiers
 		this.dom = {
@@ -115,12 +112,6 @@ class TdbTree {
 
 	async main(state) {
 		this.state = state
-		await this.treeRender()
-		await this.notifyComponents()
-		this.bus.emit('postRender')
-	}
-
-	async treeRender() {
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTerm(root)
 		this.renderBranch(root, this.dom.treeDiv)

@@ -14,11 +14,6 @@ class HowTo {
 		// of api that is uses
 		this.api = rx.getComponentApi(this)
 
-		// borrow the following methods IF this class 
-		// creates this.components = {}
-		// this.notifyComponents = rx.notifyComponents
-		// this.getComponents = rx.getComponents
-
 		// save a reference to app 
 		this.app = app
 		// see rx.core getComponentApi().main() on
@@ -31,7 +26,7 @@ class HowTo {
 			holder: opts.holder,
 			table: opts.holder.append('table')
 		}
-		
+
 		setRenderers(this)
 		setInteractivity(this)
 

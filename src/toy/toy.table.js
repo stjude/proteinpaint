@@ -18,7 +18,7 @@ class ToyTable {
 	}
 
 	main(state) {
-		this.state = this.app.getState(this.api)
+		this.state = state
 		const divs = this.dom.table.selectAll('.table-wrapper').data(this.state.terms, this.getTermId)
 
 		divs.exit().each(this._exitDiv)

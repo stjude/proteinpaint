@@ -58,7 +58,11 @@ class TermSearch {
 		if (!data.lst || data.lst.length == 0) this.noResult()
 		// found terms
 		else this.showTerms(data)
-		this.bus.emit('postRender')
+
+		// assume that when main() is triggered by search menu updates,
+		// there will only be a "str" key; otherwise the bus will be
+		// emitted within component.api.update()
+		if (Object.keys(state)[0] == 'str') this.bus.emit('postRender')
 	}
 }
 

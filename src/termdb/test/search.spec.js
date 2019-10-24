@@ -34,7 +34,7 @@ tape('term search, default behavior', function(test) {
 	runpp({
 		callbacks: {
 			search: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
@@ -126,7 +126,7 @@ tape('modifiers: click_term', test => {
 		helpers
 			.rideInit({ arg: search, bus: search, eventType: 'postRender.test' })
 			.use(triggerSearch)
-			.to(testSearchResult)
+			.to(testSearchResult, { wait: 100 })
 			.done(test)
 	}
 	function triggerSearch(search) {

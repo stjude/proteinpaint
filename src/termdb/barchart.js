@@ -62,7 +62,6 @@ class TdbBarchart {
 		this.updateSettings(this.config)
 		this.chartsData = this.processData(this.currServerData)
 		this.render()
-		this.bus.emit('postRender')
 	}
 
 	setVisibility() {

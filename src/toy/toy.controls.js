@@ -1,6 +1,6 @@
-import * as rx from "../rx.core"
-import {searchInit} from './toy.search'
-import {filterInit} from './toy.filter'
+import * as rx from '../rx.core'
+import { searchInit } from './toy.search'
+import { filterInit } from './toy.filter'
 
 class ToyControls {
 	constructor(app, opts) {
@@ -9,16 +9,14 @@ class ToyControls {
 		this.getComponents = rx.getComponents
 		this.app = app
 		this.opts = opts.holder
-		this.dom = {holder: opts.holder}
+		this.dom = { holder: opts.holder }
 		this.components = {
-			search: searchInit(app, {holder: opts.holder.append("div")}),
-			filter: filterInit(app, {holder: opts.holder.append("div")})
+			search: searchInit(app, { holder: opts.holder.append('div') }),
+			filter: filterInit(app, { holder: opts.holder.append('div') })
 		}
 	}
 
-	main(action) {
-		this.notifyComponents(action)
-	}
+	main(state) {}
 }
 
 export const controlsInit = rx.getInitFxn(ToyControls)

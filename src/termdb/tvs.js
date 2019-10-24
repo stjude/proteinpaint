@@ -18,7 +18,7 @@ class TVS {
 
 		this.categoryData = {}
 		this.initHolder()
-		this.bus = new rx.Bus('filter', ['postInit', 'postRender'], app.opts.callbacks, this.api)
+		this.bus = new rx.Bus('tvs', ['postInit', 'postRender'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit')
 	}
 
