@@ -223,7 +223,7 @@ export function getAppApi(self) {
 			if (!self.subState.hasOwnProperty(sub.type)) {
 				throw `undefined store config getter for component type='${sub.type}'`
 			} else if (sub.type in self.currStateByType) {
-				return self.currStateByType[sub.type]
+				return self.currStateByType[sub.type][sub.id]
 			} else {
 				const subState = self.subState[sub.type]
 				if (subState.reactsTo) {
@@ -248,7 +248,8 @@ export function getAppApi(self) {
 					if (!matched) return currState
 				}
 				const componentState = self.subState[sub.type].get.call(self, sub)
-				self.currStateByType[sub.type] = componentState
+				if (!self.currStateByType[sub.type]) self.currStateByType[sub.type] = {}
+				self.currStateByType[sub.type][sub.id] = componentState
 				// freeze only the root subsState object since
 				// the copied app.state is already deeply frozen
 				return Object.freeze(componentState)
@@ -299,7 +300,10 @@ export function getComponentApi(self) {
 		async update(data) {
 			const componentState = self.app.state(api, self.state)
 			// if the current and pending state is the same, no need to update
-			if (mainCalled && deepEqual(componentState, self.state)) return
+			if (mainCalled) {
+				if (!componentState) return
+				if (deepEqual(componentState, self.state)) return
+			}
 			await self.main(componentState, data)
 			mainCalled = true
 			return api

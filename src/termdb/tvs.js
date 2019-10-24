@@ -670,43 +670,43 @@ function setRenderers(self) {
 		grade_select.style('width', term_value_btn.node().offsetWidth + 'px')
 	}
 
-	self.addConditionGradeChild = function(gc){
+	self.addConditionGradeChild = function(gc) {
 		// console.log('add', j)
 		const term_value_btn = select(this).datum(gc)
 		const one_term_div = select(this.parentNode)
 		const term = one_term_div.datum()
 
 		one_term_div
-			.append("div")
-			.attr("class", "sja_filter_tag_btn grade_btn")
-			.style("font-size", "1em")
-			.style("padding", "4px 4px 2px 4px")
-			.style("margin-right", "1px")
-			.style("background-color", "#4888BF")
+			.append('div')
+			.attr('class', 'sja_filter_tag_btn grade_btn')
+			.style('font-size', '1em')
+			.style('padding', '4px 4px 2px 4px')
+			.style('margin-right', '1px')
+			.style('background-color', '#4888BF')
 			.text(gc.grade_label)
 
 		one_term_div
-			.append("div")
-			.style("display", "inline-block")
-			.style("color", "#fff")
-			.style("background-color", "#4888BF")
-			.style("margin-right", "1px")
-			.style("padding", "8px 6px 4px 6px")
-			.style("font-size", ".7em")
-			.style("text-transform", "uppercase")
-			.text("AND")
+			.append('div')
+			.style('display', 'inline-block')
+			.style('color', '#fff')
+			.style('background-color', '#4888BF')
+			.style('margin-right', '1px')
+			.style('padding', '8px 6px 4px 6px')
+			.style('font-size', '.7em')
+			.style('text-transform', 'uppercase')
+			.text('AND')
 
 		one_term_div
-			.append("div")
-			.attr("class", "sja_filter_tag_btn child_btn")
-			.style("font-size", "1em")
-			.style("padding", "4px 4px 2px 4px")
-			.style("margin-right", "1px")
-			.style("background-color", "#4888BF")
+			.append('div')
+			.attr('class', 'sja_filter_tag_btn child_btn')
+			.style('font-size', '1em')
+			.style('padding', '4px 4px 2px 4px')
+			.style('margin-right', '1px')
+			.style('background-color', '#4888BF')
 			.text(gc.child_label)
 	}
 
-	self.updateConditionValues = function(value, j){
+	self.updateConditionValues = function(value, j) {
 		// console.log('update', j)
 		const value_btn = select(this).datum(value)
 		const one_term_div = select(this.parentNode)
@@ -728,18 +728,21 @@ function setRenderers(self) {
 		const grade_type_select = one_term_div.selectAll('.grade_type_select')
 
 		grade_type_btn.html(
-			term.value_by_max_grade ? '(Max grade per patient) &#9662;' :
-			term.value_by_most_recent ? '(Most recent grade per patient) &#9662;' :
-			'(Any grade per patient) &#9662;'
+			term.value_by_max_grade
+				? '(Max grade per patient) &#9662;'
+				: term.value_by_most_recent
+				? '(Most recent grade per patient) &#9662;'
+				: '(Any grade per patient) &#9662;'
 		)
 
-		grade_type_select.node().value = 
-			term.value_by_max_grade ? 'max' :
-			term.value_by_most_recent ? 'recent' : 
-			'computable'
+		grade_type_select.node().value = term.value_by_max_grade
+			? 'max'
+			: term.value_by_most_recent
+			? 'recent'
+			: 'computable'
 
-		grade_type_select.style("width", grade_type_btn.node().offsetWidth + "px")
-        
+		grade_type_select.style('width', grade_type_btn.node().offsetWidth + 'px')
+
 		//update dropdown list for each term and '+' btn
 		self.updateSelect(value_selects, term.values, value.key)
 
@@ -840,11 +843,11 @@ function setRenderers(self) {
 			.text('Any grade per patient')
 
 		grade_type_btn
-			.classed('grade_type_btn',true)
-			.style("padding", "2px 4px 3px 4px")
-			.style("margin-right", "1px")
-			.style("font-size", "1em")
-			.style("background-color", "#4888BF")
+			.classed('grade_type_btn', true)
+			.style('padding', '2px 4px 3px 4px')
+			.style('margin-right', '1px')
+			.style('font-size', '1em')
+			.style('background-color', '#4888BF')
 			.style('opacity', 0)
 			.transition()
 			.duration(200)
@@ -867,11 +870,10 @@ function setRenderers(self) {
 		grade_type_select.style('width', grade_type_btn.node().offsetWidth + 'px')
 
 		// change grade type to/from max_grade and recent_grade
-		grade_type_select.on("change", async () => {
-			
-			term.value_by_max_grade = grade_type_select.node().value == "max" ? true : false
-			term.value_by_most_recent = grade_type_select.node().value == "recent" ? true: false
-			term.value_by_computable_grade = grade_type_select.node().value == "computable" ? true : false
+		grade_type_select.on('change', async () => {
+			term.value_by_max_grade = grade_type_select.node().value == 'max' ? true : false
+			term.value_by_most_recent = grade_type_select.node().value == 'recent' ? true : false
+			term.value_by_computable_grade = grade_type_select.node().value == 'computable' ? true : false
 			callback(term)
 		})
 	}
@@ -966,14 +968,14 @@ function setInteractivity(self) {
 		const treediv = self.dom.tip.d.append('div')
 		// set termfilter terms to all filter-terms if '+' or all except current term if 'term_name_btn'
 		const terms = select(one_term_div).classed('add_term_btn')
-			? this.state.termfilter.terms
-			: this.state.termfilter.terms.filter(t => t.id != term.termId)
+			? self.state.termfilter.terms
+			: self.state.termfilter.terms.filter(t => t.id != term.termId)
 
 		// a new object as init() argument for launching the tree with modifiers
 		const tree_obj = {
 			state: {
-				dslabel: this.state.dslabel,
-				genome: this.state.genome,
+				dslabel: self.state.dslabel,
+				genome: self.state.genome,
 				termfilter: {
 					show_top_ui: false,
 					terms: terms
@@ -982,8 +984,8 @@ function setInteractivity(self) {
 			modifiers: {
 				//modifier to replace filter by clicking term btn
 				//TODO: add tvs as new filter from '+' button
-				tvs_select : (tvs) => {
-					self.replaceFilter({ term:tvs })
+				tvs_select: tvs => {
+					self.replaceFilter({ term: tvs })
 				}
 			},
 			callbacks: {
@@ -1112,5 +1114,5 @@ function setInteractivity(self) {
 
 	self.removeValue = opts => self.app.dispatch({ type: 'filter_value_remove', termId: opts.term.id, valueId: opts.j })
 
-	self.replaceFilter = opts => self.app.dispatch({ type: 'filter_replace', term: opts.term})
+	self.replaceFilter = opts => self.app.dispatch({ type: 'filter_replace', term: opts.term })
 }

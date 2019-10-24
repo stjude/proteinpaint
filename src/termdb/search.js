@@ -44,7 +44,7 @@ class TermSearch {
 
 	async main(state = {}) {
 		if (!state.str) {
-			this.noResult()
+			this.clear()
 			return
 		}
 		Object.assign(this.state, state)

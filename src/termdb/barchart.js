@@ -17,10 +17,10 @@ const colors = {
 class TdbBarchart {
 	constructor(app, opts) {
 		this.type = 'plot'
+		this.id = opts.id
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.modifiers = opts.modifiers
-		this.id = opts.id
 		this.state = this.app.state({ type: 'plot', id: this.id })
 		this.config = this.state.config
 		this.dom = {

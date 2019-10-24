@@ -124,7 +124,8 @@ TdbApp.prototype.subState = {
 				genome: this.state.genome,
 				dslabel: this.state.dslabel,
 				plots: this.state.tree.plots,
-				expandedTerms: this.state.tree.expandedTerms
+				expandedTerms: this.state.tree.expandedTerms,
+				termfilter: this.state.termfilter
 			}
 		}
 	},
@@ -143,8 +144,10 @@ TdbApp.prototype.subState = {
 	},
 	plot: {
 		reactsTo: {
+			prefix: ['filter'],
 			type: ['plot_add', 'plot_show', 'plot_edit', 'app_refresh', 'plot_rehydrate'],
 			match: (action, sub) => {
+				if (!action.type.startsWith('plot')) return true
 				if (!('id' in action) || action.id == sub.id) return true
 			}
 		},
