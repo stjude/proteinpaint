@@ -1,9 +1,9 @@
-import * as rx from "../rx.core"
-import {storeInit} from "./toy.store"
-import {controlsInit} from "./toy.controls"
-import {tableInit} from "./toy.table"
-import {select} from "d3-selection"
-import {Menu} from '../client'
+import * as rx from '../rx.core'
+import { storeInit } from './toy.store'
+import { controlsInit } from './toy.controls'
+import { tableInit } from './toy.table'
+import { select } from 'd3-selection'
+import { Menu } from '../client'
 
 /*
 	ToyApp is created inside getInitFxn()
@@ -40,10 +40,10 @@ class ToyApp {
 		}
 		// expose the app api, not "this" directly to subcomponents
 		this.components = {
-			controls: controlsInit(this.api, {holder: holder.append("div")}),
-			table: tableInit(this.api, {holder: holder.append("div")})
+			controls: controlsInit(this.api, { holder: holder.append('div') }),
+			table: tableInit(this.api, { holder: holder.append('div') })
 		}
-		// set up the app api as the default argument 
+		// set up the app api as the default argument
 		// to callbacks of emitted events
 		this.bus = new rx.Bus('app', ['postInit', 'postNotify'], opts.callbacks, this.api)
 		this.bus.emit('postInit')
@@ -52,6 +52,19 @@ class ToyApp {
 	main(action) {
 		this.notifyComponents(action)
 		this.bus.emit('postNotify', this.app)
+	}
+}
+
+ToyApp.prototype.subState = {
+	filter: {
+		reactsTo: {
+			prefix: ['term']
+		},
+		get(sub) {
+			return {
+				rows: this.state.controls.rows
+			}
+		}
 	}
 }
 

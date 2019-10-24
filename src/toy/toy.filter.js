@@ -3,12 +3,10 @@ import { select } from 'd3-selection'
 
 class ToyFilter {
 	constructor(app, opts) {
+		this.type = 'filter'
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.dom = { holder: opts.holder }
-		// see rx.core getComponentApi().main() on
-		// how these key-values are used
-		this.reactsTo = { prefix: ['term'] }
 
 		// set closured methods to use the correct "this" context
 		this.yesThis()
@@ -16,8 +14,9 @@ class ToyFilter {
 		this.render()
 	}
 
-	main(action) {
-		const rows = this.dom.holder.selectAll('.row_div').data(this.app.state().controls.rows, this.getRowName)
+	main(state) {
+		this.state = state
+		const rows = this.dom.holder.selectAll('.row_div').data(this.state.rows, this.getRowName)
 
 		rows.exit().each(this._removeRow)
 		rows.each(this._updateRow)
@@ -130,11 +129,11 @@ class ToyFilter {
 		this.showHideAll = () => {
 			const all_btn = this.dom.holder.selectAll('.all_btn')
 			if (all_btn.property('checked')) {
-				this.app.state().controls.rows.forEach(row => {
+				this.state.rows.forEach(row => {
 					if (row.hide) this.app.dispatch({ type: 'term_row_hide', row_name: row.name })
 				})
 			} else {
-				this.app.state().controls.rows.forEach(row => {
+				this.state.rows.forEach(row => {
 					if (!row.hide) this.app.dispatch({ type: 'term_row_hide', row_name: row.name })
 				})
 			}
@@ -142,7 +141,7 @@ class ToyFilter {
 
 		this.updateAllBtn = () => {
 			const all_btn = this.dom.holder.selectAll('.all_btn')
-			const hiddencount = this.app.state().controls.rows.map(a => a.hide)
+			const hiddencount = this.state.rows.map(a => a.hide)
 			all_btn.property('checked', hiddencount.includes(true) ? false : true)
 		}
 	}

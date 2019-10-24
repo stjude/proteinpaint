@@ -218,7 +218,7 @@ export function getAppApi(self) {
 			self.currStateByType = {}
 		},
 		state(sub = null, currState) {
-			if (!sub) return self.state
+			if (!sub || !sub.type) return self.state
 
 			if (!self.subState.hasOwnProperty(sub.type)) {
 				throw `undefined store config getter for component type='${sub.type}'`
