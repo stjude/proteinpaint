@@ -217,7 +217,7 @@ export function getAppApi(self) {
 			self.currAction = action
 			self.currStateByType = {}
 		},
-		state(sub = null, currState) {
+		getState(sub = null, currState) {
 			if (!sub || !sub.type) return self.state
 
 			if (!self.subState.hasOwnProperty(sub.type)) {
@@ -282,7 +282,7 @@ export function getAppApi(self) {
 			else console.log('no component event bus')
 			return api
 		},
-		components(dotSepNames = '') {
+		getComponents(dotSepNames = '') {
 			return self.getComponents(dotSepNames)
 		}
 	}
@@ -298,7 +298,7 @@ export function getComponentApi(self) {
 		type: self.type,
 		id: self.id,
 		async update(data) {
-			const componentState = self.app.state(api, self.state)
+			const componentState = self.app.getState(api, self.state)
 			// if the current and pending state is the same, no need to update
 			if (mainCalled) {
 				if (!componentState) return
@@ -316,7 +316,7 @@ export function getComponentApi(self) {
 			else console.log('no component event bus')
 			return api
 		},
-		components(dotSepNames = '') {
+		getComponents(dotSepNames = '') {
 			return typeof self.getComponents == 'function' ? self.getComponents(dotSepNames) : api
 		}
 	}
@@ -374,9 +374,9 @@ export function getComponents(dotSepNames) {
 	if (!dotSepNames) return Object.assign({}, this.components)
 	// string-based convenient accessor,
 	// so instead of
-	// app.components().controls.components().search,
+	// app.getComponents().controls.getComponents().search,
 	// simply
-	// app.components("controls.search")
+	// app.getComponents("controls.search")
 	const names = dotSepNames.split('.')
 	let component = this.components
 	while (names.length) {
@@ -386,6 +386,8 @@ export function getComponents(dotSepNames) {
 			? component[name]
 			: component[name] && component[name].components
 			? component[name].components
+			: component[name] && component[name].getComponents
+			? component[name].getComponents
 			: component[name]
 		if (typeof component == 'function') component = component()
 		if (!component) break

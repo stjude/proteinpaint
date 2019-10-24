@@ -47,7 +47,7 @@ class TVS {
 	}
 
 	async getCategories(term, lst) {
-		const obj = this.app.state()
+		const obj = this.state
 		let tvslst_filter_str = false
 
 		if (obj.tvslst_filter) {

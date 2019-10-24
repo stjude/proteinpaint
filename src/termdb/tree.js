@@ -135,7 +135,7 @@ class TdbTree {
 				updatePlotsState = true
 			}
 		}
-		if (updatePlotsState) this.state = this.app.state(this.api)
+		if (updatePlotsState) this.state = this.app.getState(this.api)
 	}
 
 	async requestTerm(term) {
@@ -188,7 +188,7 @@ class TdbTree {
 			id: term.id,
 			holder: holder,
 			term: term,
-			modifiers : this.modifiers,
+			modifiers: this.modifiers,
 			callbacks: {
 				plot: {
 					// must use namespaced eventType otherwise will be rewritten..

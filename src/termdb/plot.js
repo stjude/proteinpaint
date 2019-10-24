@@ -14,7 +14,7 @@ class TdbPlot {
 		this.getComponents = rx.getComponents
 		this.app = app
 		this.modifiers = opts.modifiers
-		this.config = this.app.state(this.api)
+		this.config = this.app.getState(this.api)
 
 		this.dom = {
 			holder: opts.holder

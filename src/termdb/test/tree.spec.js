@@ -136,7 +136,7 @@ tape('default behavior', function(test) {
 	}
 
 	function testPlotCreated(tree) {
-		test.equal(Object.keys(tree.Inner.app.state().tree.plots).length, 1, 'now has 1 plot')
+		test.equal(Object.keys(tree.Inner.state.plots).length, 1, 'now has 1 plot')
 		// tree.postRender cannot be used to verify that the plot is successfully rendered
 		// this is okay, will be tested independently by action-type in plot.spec
 	}

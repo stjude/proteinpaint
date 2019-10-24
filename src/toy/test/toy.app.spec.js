@@ -45,14 +45,14 @@ tape('component access', function(test) {
 
 	function testComponentAccess1(app) {
 		test.equal(
-			app.components() && Object.keys(app.components()).length,
+			app.getComponents() && Object.keys(app.getComponents()).length,
 			2,
 			'should be able to access app components() with empty argument'
 		)
 	}
 
 	function testComponentAccess2(app) {
-		const search = app.components('controls.search')
+		const search = app.getComponents('controls.search')
 		test.equal(
 			search && search.Inner && search.Inner.constructor && search.Inner.constructor.name,
 			'ToySearch',

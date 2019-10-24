@@ -17,8 +17,9 @@ class ToyTable {
 		this.notThis(this)
 	}
 
-	main(action) {
-		const divs = this.dom.table.selectAll('.table-wrapper').data(this.app.state().terms, this.getTermId)
+	main(state) {
+		this.state = this.app.getState(this.api)
+		const divs = this.dom.table.selectAll('.table-wrapper').data(this.state.terms, this.getTermId)
 
 		divs.exit().each(this._exitDiv)
 		divs.each(this._updateDiv)
@@ -107,9 +108,9 @@ class ToyTable {
 	}
 
 	hideShowRaw(tr, row_name) {
-		const rows = this.app.state().controls.rows.map(r => r.name)
+		const rows = this.state.controls.rows.map(r => r.name)
 		if (rows.includes(row_name)) {
-			const row = this.app.state().controls.rows.find(r => r.name == row_name)
+			const row = this.state.controls.rows.find(r => r.name == row_name)
 			if (row.hide) {
 				tr.style('visibility', 'collapse')
 					.style('opacity', 0)

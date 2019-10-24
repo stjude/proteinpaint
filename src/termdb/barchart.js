@@ -21,7 +21,7 @@ class TdbBarchart {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.modifiers = opts.modifiers
-		this.state = this.app.state({ type: 'plot', id: this.id })
+		this.state = this.app.getState({ type: 'plot', id: this.id })
 		this.config = this.state.config
 		this.dom = {
 			holder: opts.holder,
@@ -56,8 +56,7 @@ class TdbBarchart {
 	main(state, data) {
 		if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 		if (data) this.currServerData = data
-		this.obj = this.app.state()
-		this.state = this.app.state({ type: 'plot', id: this.id })
+		this.state = this.app.getState({ type: 'plot', id: this.id })
 		this.config = this.state.config
 		if (!this.setVisibility()) return
 		this.updateSettings(this.config)
@@ -77,7 +76,7 @@ class TdbBarchart {
 	updateSettings(config) {
 		if (!config) return
 		// translate relevant config keys to barchart settings keys
-		const obj = this.obj
+		const obj = this.state
 		const settings = {
 			genome: obj.genome,
 			dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,

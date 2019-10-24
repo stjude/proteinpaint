@@ -14,7 +14,7 @@ class TdbPlotControls {
 		this.api = rx.getComponentApi(this)
 		this.api.id = this.id
 		this.app = app
-		this.state = app.state(this.api)
+		this.state = app.getState(this.api)
 		this.index = i++ // used for assigning unique input names, across different plots
 		this.isVisible = false
 
@@ -106,7 +106,7 @@ function setSvgBtn(app, opts, controls) {
 		.style('cursor', 'pointer')
 		.html('&#10515;')
 		.on('click', () => {
-			const components = app.components('tree.plots.' + controls.id)
+			const components = app.getComponents('tree.plots.' + controls.id)
 			for (const name in components) {
 				// the download function in each component will be called,
 				// but should first check inside that function
@@ -138,7 +138,7 @@ function setSvgBtn(app, opts, controls) {
 
 function setTermInfoBtn(app, opts, controls) {
 	const info_btn = opts.holder
-		// TO-DO: put the conditional display back in using app.state()
+		// TO-DO: put the conditional display back in using app.getState()
 		.style('display', 'none') //controls.plot.term && controls.plot.term.term.hashtmldetail ? "inline-block" : "none")
 		.style('margin', '10px')
 		.style('font-family', 'verdana')
@@ -425,7 +425,7 @@ function setScaleOpts(app, opts, controls) {
 }
 
 function setOverlayOpts(app, opts, controls, plot) {
-	const obj = app.state()
+	const obj = app.getState()
 	const tr = opts.holder
 	tr.append('td')
 		.html('Overlay with')
@@ -496,8 +496,8 @@ function setOverlayOpts(app, opts, controls, plot) {
 			click(d) {
 				d3event.stopPropagation()
 				if (d.value != 'tree' || d.value != plot.settings.bar.overlay) return
-				const obj = app.state()
-				const plot = app.state({ type: controls.type, id: controls.id })
+				const obj = app.getState()
+				const plot = app.getState({ type: controls.type, id: controls.id })
 
 				obj.showtree4selectterm([plot.term.id, plot.term2 ? plot.term2.term.id : null], tr.node(), term2 => {
 					console.log(term2)
@@ -748,7 +748,7 @@ function setBarsAsOpts(app, opts, controls) {
 		.attr('class', 'sja-termdb-config-row-label')
 	const td = tr.append('td')
 
-	const plot = app.state({ type: 'plot', id: controls.id })
+	const plot = app.getState({ type: 'plot', id: controls.id })
 	console.log(plot, controls.id)
 	if (!plot.term.q) plot.term.q = {}
 

@@ -40,7 +40,7 @@ tape('term search, default behavior', function(test) {
 	})
 
 	function runTests(search) {
-		const tree = search.Inner.app.components('tree')
+		const tree = search.Inner.app.getComponents('tree')
 
 		helpers
 			.rideInit({ arg: search, bus: search, eventType: 'postRender.test' })
@@ -122,7 +122,7 @@ tape('modifiers: click_term', test => {
 	})
 
 	function runTests(search) {
-		const tree = search.Inner.app.components('tree')
+		const tree = search.Inner.app.getComponents('tree')
 		helpers
 			.rideInit({ arg: search, bus: search, eventType: 'postRender.test' })
 			.use(triggerSearch)

@@ -32,10 +32,8 @@ class HowTo {
 			table: opts.holder.append('table')
 		}
 		
-		// Optional: set up reusable closured
-		// functions to handle "this" conflicts
-		this.yesThis()
-		this.notThis(this)
+		setRenderers(this)
+		setInteractivity(this)
 
 		// this.components = { ... }
 
@@ -45,27 +43,14 @@ class HowTo {
 	}
 	
 	// wrapped by Component api.main()
-	main(action) {
+	main(state) {
 		// Create a local reference to the state
 		// property that affects this component
-		const terms = this.app.state().terms
-		// pass the reference to downstream methods 
-		this.render(terms)
-
-		/*
-			Refer to toy.store to see what kind
-			of action results are provided, if any
-		*/
-		// - OR - 
-		// process some kind of action result
-		this.processData(action.result)
-
-		// - OR -
-		// dereference result data
-		const src = action.result.src // "serverData"
-		const key = action.result.key // "/termdb-barsql?term=diaggrp"
-		const serverData = this.app[src][key]
-		this.processData(serverData)
+		this.state = this.app.state(this.api)
+		// process new state, potentially including server requests
+		this.currData = this.requestData()
+		this.processData()
+		this.render()
 	}
 
 	render(terms) {
@@ -82,47 +67,27 @@ class HowTo {
 		.enter().append('div')
 			.on('click', this.triggerAddTerm)
 	}
+}
 
-	/* 
-	yesThis()
-	  use arrow functions to maintain the 
-	  component instance context of "this"
-	
-	  while arrow functions may be inlined,
-	  creating named reusable arrow functions
-	  - makes the intent clearer 
-	  - helps declutter a method by removing 
-	    the nested functions inside it
-	  - is more performant since the arrow function
-	    only has to be parsed once
-	*/ 
-	yesThis() {
-		this.getTerm = id => this.app.state().termsById[id]
-		// assumes element-bound data from using d3.data()
-		this.triggerAddTerm = term => this.app.dispatch({type: 'term_add', termid: term.id})
-	}
-
-	/* 
-	notThis(self)
-	  use function keyword to ensure that the
-	  DOM or non-instance "this" context is preserved
-	  !!! arrow functions will not work !!!
-	
-	  pass the instance as "self" argument to notThis(),
-	  to distinguish that "self" is the component
-	  instance while "this" refers to something else
-	 
-	  convention: 
-	  use a _methodName prefix to indicate that
-	  the method is simply passing arguments
-	  to a similarly named class method
-	*/ 
-	notThis(self) {
-		self._addDiv = function(term) {
-			self.addDiv(term, select(this))
-		}
+function setRenderers(self) {
+	// DOM related functions
+	self.render = function (data) {
+		const div = select(this)
+		// ...
 	}
 }
+
+function setInteractivity(self) {
+	// event handlers
+	self.toggleVisibility = function(data) {
+		// "component_" could be any 
+		const action = data.isVisible ? 'component_hide' : 'component_show'
+		self.dispatch({
+			type: ''
+		})
+	}
+}
+
 
 /*
 	Hide a table inside the Component class api
