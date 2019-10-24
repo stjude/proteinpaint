@@ -31,7 +31,7 @@ class ToyApp {
 		this.api = rx.getAppApi(this)
 
 		this.store = storeInit(this.api)
-		this.state = this.store.state()
+		this.state = this.store.getState()
 		this.dom = {
 			tip: new Menu(),
 			holder

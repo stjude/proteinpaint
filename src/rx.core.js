@@ -165,9 +165,9 @@ export function getStoreApi(self) {
 				throw `invalid action type=${action.type}`
 			}
 			await actions[action.type].call(self, action)
-			return api.state()
+			return api.getState()
 		},
-		state(sub = null, currState) {
+		getState() {
 			const stateCopy = self.fromJson(self.toJson(self.state))
 			self.deepFreeze(stateCopy)
 			return stateCopy
@@ -295,14 +295,14 @@ export function getComponentApi(self) {
 		id: self.id,
 		async update(action, data) {
 			const componentState = self.app.getState(api, action)
-			// if the current and pending state is the same, no need to update
 			if (!mainCalled) {
 				mainCalled = true
 			} else {
+				// no new state computed for this component
 				if (!componentState) return
+				// if the current and pending state is the same, no need to update
 				if (deepEqual(componentState, self.state)) return
 			}
-
 			const componentData = await self.main(componentState, data)
 			await notifyComponents(self.components, action, componentData)
 			if (self.bus) self.bus.emit('postRender')

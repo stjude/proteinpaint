@@ -50,7 +50,7 @@ class TdbApp {
 		// catch initialization error
 		try {
 			this.store = storeInit(this.api)
-			this.state = this.store.state()
+			this.state = this.store.getState()
 			const modifiers = validate_modifiers(opts.modifiers)
 			this.components = {
 				tree: treeInit( this.api, { holder: holder.append('div'), modifiers}),
