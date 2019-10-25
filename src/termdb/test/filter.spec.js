@@ -59,7 +59,7 @@ tape('filter term-value button', function(test) {
 			.run(testFilterDisplay, 200)
 			.change({ bus: filter, eventType: 'postRender.test' })
 			.use(triggerRemoveFilter)
-			.to(testRemoveFilter)
+			.to(testRemoveFilter, { wait: 600 })
 			.use(triggerAddFilter)
 			.to(testAddFilter)
 			.done(test)

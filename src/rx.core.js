@@ -165,9 +165,9 @@ export function getStoreApi(self) {
 				throw `invalid action type=${action.type}`
 			}
 			await actions[action.type].call(self, action)
-			return api.getState()
+			return api.copyState()
 		},
-		getState() {
+		copyState() {
 			const stateCopy = self.fromJson(self.toJson(self.state))
 			self.deepFreeze(stateCopy)
 			return stateCopy
@@ -208,10 +208,12 @@ export function getAppApi(self) {
 				if (self.store) {
 					const state = await self.store.write(action)
 					await self.main(state)
+					await notifyComponents(self.components, action)
 				}
 			} catch (e) {
 				self.printError(e)
 			}
+			if (self.bus) self.bus.emit('postRender')
 		},
 		async save(action) {
 			// save changes to store, do not notify components

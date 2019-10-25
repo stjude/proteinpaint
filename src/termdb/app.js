@@ -50,7 +50,7 @@ class TdbApp {
 		// catch initialization error
 		try {
 			this.store = storeInit(this.api)
-			this.state = this.store.getState()
+			this.state = this.store.copyState()
 			const modifiers = validate_modifiers(opts.modifiers)
 			this.components = {
 				tree: treeInit( this.api, { holder: holder.append('div'), modifiers}),
@@ -65,20 +65,17 @@ class TdbApp {
 		this.bus.emit('postInit')
 		// trigger the initial render after initialization
 		// no need to supply an action.state{} at this point
-		//this.main().catch(this.printError)
+		//this.main().catch(e=>this.printError(e))
 		this.api.dispatch({type:'app_refresh'}).catch(e=>this.printError(e))
 	}
 
-	async main(state, action) {
-		this.state = state
-		// catch runtime error from components
-		try {
-			await rx.notifyComponents(this.components, action)
-		} catch(e) {
-			this.printError(e)
-			if (e.stack) console.log(e.stack)
-		}
-		this.bus.emit('postRender')
+	async main(state) {
+		// runtime errors will be caught within app.api.dispatch()
+		if (state) this.state = state
+		// may add other logic here or return data as needed,
+	  // for example request and cache metadata that maybe throughout
+	  // the app by many components; the metadata may be exposed
+	  // later via something like app.api.lookup, to-do
 	}
 
 	printError(e) {
