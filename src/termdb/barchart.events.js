@@ -188,13 +188,14 @@ function getTermValues(d, self) {
 	self.terms.term0 = self.config.term0 ? self.config.term0.term : null
 	self.terms.term1 = self.config.term.term
 	self.terms.term2 = self.config.term2 ? self.config.term2.term : null
-	for (const termNum of ["term0", "term", "term2"]) {
+	for (const [i, termNum] of ["term0", "term", "term2"].entries()) {
 		const term = self.config[termNum]
 		// always exclude term0 value for now
 		if (termNum == "term0" || !term) continue
 
 		const key = termNum == "term" ? d.seriesId : d.dataId
-		const q = term ? term.q : {}
+		// const q = term ? term.q : {}
+		const q = term ? self.currServerData.refs.q[i] : {}
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
 
 		if (term.term.iscondition) {
@@ -235,7 +236,8 @@ function getTermValues(d, self) {
 				)
 			}
 		} else {
-			const bins = term.bins
+			// const bins = term.term.bins
+			const bins = self.currServerData.refs.bins[i]
 			if (!bins || !bins.length) {
 				// not associated with numeric bins
 				termValues.push({ term: term.term, values: [{ key, label }] })
