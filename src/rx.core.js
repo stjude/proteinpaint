@@ -351,6 +351,7 @@ export function getComponentApi(self) {
 // -----------------
 
 export async function notifyComponents(components, action, data = null) {
+	if (!components) return // allow component-less app
 	const called = []
 	for (const name in components) {
 		const component = components[name]
