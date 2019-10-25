@@ -39,7 +39,7 @@ TODO
 
 class TdbApp {
 	constructor(opts, holder) {
-		this.opts = opts
+		this.opts = initOpts(opts)
 		this.api = rx.getAppApi(this)
 
 		this.dom = {
@@ -51,7 +51,7 @@ class TdbApp {
 		try {
 			this.store = storeInit(this.api)
 			this.state = this.store.copyState()
-			const modifiers = validate_modifiers(opts.modifiers)
+			const modifiers = validateModifiers(opts.modifiers)
 			this.components = {
 				tree: treeInit(this.api, { holder: holder.append('div'), modifiers }),
 				terms: filterInit(this.api, { holder: holder.append('div') })
@@ -169,9 +169,14 @@ TdbApp.prototype.subState = {
 
 exports.appInit = rx.getInitFxn(TdbApp)
 
-function validate_modifiers(tmp = {}) {
+function validateModifiers(tmp = {}) {
 	for (const k in tmp) {
 		if (typeof tmp[k] != 'function') throw 'modifier "' + k + '" not a function'
 	}
 	return Object.freeze(tmp)
+}
+function initOpts(o) {
+	if (!o.fetchOpts) o.fetchOpts = {}
+	if (!o.fetchOpts.serverData) o.fetchOpts.serverData = {}
+	return o
 }
