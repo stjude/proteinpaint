@@ -45,8 +45,6 @@ any change of modifier should update termsById first, then call renderBranch() a
 
 ******************* special flags
 root term does not exist in the termdb, but is synthesized upon initializing instance, has the "__tree_isroot" flag
-term.__tree_isloading is added when a term is first clicked
-  removed in this script when action finishes
 term.__plot_isloading is added when loading plot for a term
   removed by plot postRender callback
 these transient flags are created and removed only within this script, and not to be handled outside, to avoid confusion
@@ -104,6 +102,8 @@ class TdbTree {
 			__tree_isroot: true // must not delete this flag
 		}
 
+		// for terms waiting for server response for children terms, transient, not state
+		this.loadingTermSet = new Set()
 		this.termsById = {}
 		this.termsById[root_ID] = _root
 		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
@@ -139,6 +139,12 @@ class TdbTree {
 		where the same child terms already loaded must be re-requested with the updated filter parameters to update
 
 		TODO determine when to re-request cached server response as needed
+
+		CAUTION
+		will be great if tree_collapse will not trigger this function
+		but hard to do given that main() has no way of telling what action was dispatched
+		to prevent previously loaded .terms[] for the collapsing term from been wiped out of termsById,
+		need to add it back TERMS_ADD_BACK
 		*/
 		const lst = ['genome=' + this.state.genome + '&dslabel=' + this.state.dslabel]
 		lst.push(term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id)
@@ -151,13 +157,20 @@ class TdbTree {
 		const terms = []
 		for (const t of data.lst) {
 			const copy = Object.assign({}, t)
-			this.termsById[copy.id] = copy
 			terms.push(copy)
 			// rehydrate expanded terms as needed
 			// fills in termsById, for recovering tree
 			if (this.state.expandedTerms.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy)
+			} else {
+				// not an expanded term
+				// if it's collapsing this term, must add back its children terms for toggle button to work
+				// see flag TERMS_ADD_BACK
+				if (this.termsById[copy.id]) {
+					copy.terms = this.termsById[copy.id].terms
+				}
 			}
+			this.termsById[copy.id] = copy
 		}
 		return terms
 	}
@@ -222,8 +235,8 @@ function setRenderers(self) {
 		if (!term || !term.terms) return
 		if (!(term.id in self.termsById)) return
 
-		if (term.__tree_isloading) {
-			delete term.__tree_isloading
+		if (self.loadingTermSet.has(term.id)) {
+			self.loadingTermSet.delete(term.id)
 			div.select('.' + cls_termloading).remove()
 		}
 
@@ -355,15 +368,16 @@ function setInteractivity(self) {
 		const t0 = self.termsById[term.id]
 		if (!t0) throw 'invalid term id'
 
-		const holder = select(this.parentNode)
-			.selectAll('.' + cls_termchilddiv)
-			.filter(d => d.id === term.id)
-			.style('display', 'block')
 		if (!t0.terms) {
 			// to load child term with request, guard against repetitive clicking
-			if (term.__tree_isloading) return
-			term.__tree_isloading = true
-			holder
+			// TERMS_ADD_BACK
+			// this requires .terms[] to be added back when updated by requestTermRecursive()
+			if (self.loadingTermSet.has(t0.id)) return
+			self.loadingTermSet.add(t0.id)
+			select(this.parentNode)
+				.selectAll('.' + cls_termchilddiv)
+				.filter(d => d.id === t0.id)
+				.style('display', 'block')
 				.append('div')
 				.text('Loading...')
 				.attr('class', cls_termloading)
@@ -373,7 +387,7 @@ function setInteractivity(self) {
 
 		const expanded = self.state.expandedTerms.includes(term.id)
 		const type = expanded ? 'tree_collapse' : 'tree_expand'
-		self.app.dispatch({ type, termId: term.id, term })
+		self.app.dispatch({ type, termId: term.id })
 	}
 
 	self.clickViewButton = function(term) {
