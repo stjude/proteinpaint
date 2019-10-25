@@ -221,6 +221,12 @@ function setRenderers(self) {
 		*/
 		if (!term || !term.terms) return
 		if (!(term.id in self.termsById)) return
+
+		if (term.__tree_isloading) {
+			delete term.__tree_isloading
+			div.select('.' + cls_termloading).remove()
+		}
+
 		const expandedTerms = self.state.expandedTerms
 		if (!expandedTerms.includes(term.id)) {
 			div.style('display', 'none')
@@ -263,11 +269,6 @@ function setRenderers(self) {
 	}
 
 	self.updateTerm = function(term) {
-		delete term.__tree_isloading
-		select(this.parentNode)
-			.select(':scope > .' + cls_termloading)
-			.remove()
-
 		const div = select(this)
 		const isExpanded = self.state.expandedTerms.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
@@ -276,11 +277,6 @@ function setRenderers(self) {
 	}
 
 	self.addTerm = function(term) {
-		delete term.__tree_isloading
-		select(this.parentNode)
-			.select(':scope > .' + cls_termloading)
-			.remove()
-
 		const div = select(this)
 			.attr('class', cls_termdiv)
 			.style('margin', term.isleaf ? '' : '2px')
@@ -359,16 +355,15 @@ function setInteractivity(self) {
 		const t0 = self.termsById[term.id]
 		if (!t0) throw 'invalid term id'
 
-		const button = select(this)
 		const holder = select(this.parentNode)
 			.selectAll('.' + cls_termchilddiv)
 			.filter(d => d.id === term.id)
-		let loading_div
+			.style('display', 'block')
 		if (!t0.terms) {
 			// to load child term with request, guard against repetitive clicking
 			if (term.__tree_isloading) return
 			term.__tree_isloading = true
-			loading_div = holder
+			holder
 				.append('div')
 				.text('Loading...')
 				.attr('class', cls_termloading)
@@ -378,7 +373,7 @@ function setInteractivity(self) {
 
 		const expanded = self.state.expandedTerms.includes(term.id)
 		const type = expanded ? 'tree_collapse' : 'tree_expand'
-		self.app.dispatch({ type, termId: term.id, term, holder, button, loading_div })
+		self.app.dispatch({ type, termId: term.id, term })
 	}
 
 	self.clickViewButton = function(term) {
