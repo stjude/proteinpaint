@@ -2,7 +2,7 @@
  Init Factory
 *************/
 
-export function getInitFxn(_Class_) {
+function getInitFxn(_Class_) {
 	/*
 		arg: 
 		= opts{} for an App constructor
@@ -29,7 +29,7 @@ export function getInitFxn(_Class_) {
 			: // if not, expose the mutable instance as its public api
 			  self
 
-		const opts = (self.app && self.app.opts) || (self.api && self.api.opts) || {}
+		const opts = (self.app && self.app.opts) || (self.api && self.api.opts) || self.opts || {}
 		// expose the hidden instance to debugging and testing code
 		if (opts.debug) api.Inner = self
 
@@ -37,6 +37,8 @@ export function getInitFxn(_Class_) {
 		return Object.freeze(api)
 	}
 }
+
+exports.getInitFxn = getInitFxn
 
 /**************
 Utility Classes
@@ -49,7 +51,7 @@ Utility Classes
 	component.api.on() method.
 */
 
-export class Bus {
+class Bus {
 	constructor(name, eventTypes, callbacks, defaultArg) {
 		/*
 		name
@@ -146,11 +148,13 @@ export class Bus {
 	}
 }
 
+exports.Bus = Bus
+
 /****************
   API Generators
 *****************/
 
-export function getStoreApi(self) {
+function getStoreApi(self) {
 	const api = {
 		async write(action) {
 			// avoid calls to inherited methods
@@ -176,7 +180,9 @@ export function getStoreApi(self) {
 	return api
 }
 
-export function getAppApi(self) {
+exports.getStoreApi = getStoreApi
+
+function getAppApi(self) {
 	const middlewares = []
 
 	const api = {
@@ -207,11 +213,12 @@ export function getAppApi(self) {
 				// replace app.state
 				if (self.store) {
 					const state = await self.store.write(action)
-					await self.main(state)
-					await notifyComponents(self.components, action)
+					const data = self.main(state)
+					await notifyComponents(self.components, action, data)
 				}
 			} catch (e) {
-				self.printError(e)
+				if (self.printError) self.printError(e)
+				else console.log(e)
 			}
 			if (self.bus) self.bus.emit('postRender')
 		},
@@ -289,7 +296,9 @@ export function getAppApi(self) {
 	return api
 }
 
-export function getComponentApi(self) {
+exports.getAppApi = getAppApi
+
+function getComponentApi(self) {
 	let mainCalled = false
 
 	const api = {
@@ -325,6 +334,8 @@ export function getComponentApi(self) {
 	return api
 }
 
+exports.getComponentApi = getComponentApi
+
 /******************
   Detached Helpers
 ******************/
@@ -350,7 +361,7 @@ export function getComponentApi(self) {
 // Component Helpers
 // -----------------
 
-export async function notifyComponents(components, action, data = null) {
+async function notifyComponents(components, action, data = null) {
 	if (!components) return // allow component-less app
 	const called = []
 	for (const name in components) {
@@ -370,10 +381,12 @@ export async function notifyComponents(components, action, data = null) {
 	return Promise.all(called)
 }
 
+exports.notifyComponents = notifyComponents
+
 // access the api of an indirectly connected component,
 // for example to subscribe an .on(event, listener) to
 // the event bus of a distant component
-export function getComponents(components, dotSepNames) {
+function getComponents(components, dotSepNames) {
 	if (!dotSepNames) return Object.assign({}, components)
 	// string-based convenient accessor,
 	// so instead of
@@ -397,6 +410,8 @@ export function getComponents(components, dotSepNames) {
 	return component
 }
 
+exports.getComponents = getComponents
+
 // Store Helpers
 // -------------
 
@@ -409,7 +424,7 @@ export function getComponents(components, dotSepNames) {
 	  the arg object will be converted to/from JSON to
 	  create a copy for merging
 */
-export function copyMerge(base, ...args) {
+function copyMerge(base, ...args) {
 	const target = typeof base == 'string' ? this.fromJson(base) : base
 	for (const arg of args) {
 		if (arg) {
@@ -423,7 +438,9 @@ export function copyMerge(base, ...args) {
 	return target
 }
 
-export function fromJson(objStr) {
+exports.copyMerge = copyMerge
+
+function fromJson(objStr) {
 	// this method should not be reused when there is
 	// a need to recover any Set or Map values, instead
 	// declare a class specific fromJson() method that has
@@ -431,7 +448,9 @@ export function fromJson(objStr) {
 	return JSON.parse(objStr)
 }
 
-export function toJson(obj = null) {
+exports.fromJson = fromJson
+
+function toJson(obj = null) {
 	// this method should not be reused when there is
 	// a need to stringify any Set or Map values,
 	// instead declare a class specific toJson() method
@@ -440,14 +459,18 @@ export function toJson(obj = null) {
 	return JSON.stringify(obj ? obj : this.state)
 }
 
-export function deepFreeze(obj) {
+exports.toJson = toJson
+
+function deepFreeze(obj) {
 	Object.freeze(obj)
 	for (const key in obj) {
 		if (typeof obj == 'object') this.deepFreeze(obj[key])
 	}
 }
 
-export function deepEqual(x, y) {
+exports.deepFreeze = deepFreeze
+
+function deepEqual(x, y) {
 	if (x === y) {
 		return true
 	} else if (typeof x == 'object' && x != null && (typeof y == 'object' && y != null)) {
@@ -465,3 +488,5 @@ export function deepEqual(x, y) {
 		return true
 	} else return false
 }
+
+exports.deepEqual = deepEqual
