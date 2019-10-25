@@ -113,7 +113,7 @@ class TdbTree {
 	async main(state) {
 		this.state = state
 		const root = this.termsById[root_ID]
-		root.terms = await this.requestTerm(root)
+		root.terms = await this.requestTermRecursive(root)
 		this.renderBranch(root, this.dom.treeDiv)
 
 		let updatePlotsState = false
@@ -129,20 +129,19 @@ class TdbTree {
 		if (updatePlotsState) this.state = this.app.getState(this.api)
 	}
 
-	async requestTerm(term) {
+	async requestTermRecursive(term) {
+		/* will request child terms for this entire branch recursively
+
+		must synthesize request string (dataName) for every call
+		and get cached result for the same dataName which has been requested before
+		this is to support future features
+		e.g. to show number of samples for each term that can change based on filters
+		where the same child terms already loaded must be re-requested with the updated filter parameters to update
+
+		TODO determine when to re-request cached server response as needed
+		*/
 		const lst = ['genome=' + this.state.genome + '&dslabel=' + this.state.dslabel]
 		lst.push(term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id)
-		/*
-			future: may add in tree modifier
-
-			to-do: 
-			- may reuse termsById[term.id] if it already exists
-			- HOWEVER, if the data returned by dofetch2 is dependent 
-			  on certain context such as filter terms or modifier,
-			  then the cached response may have to re-requested and refreshed.
-			- will need to devise a way to determine when to re-request
-			  cached server response as needed
-		*/
 		const data = await dofetch2('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
@@ -157,7 +156,7 @@ class TdbTree {
 			// rehydrate expanded terms as needed
 			// fills in termsById, for recovering tree
 			if (this.state.expandedTerms.includes(copy.id)) {
-				copy.terms = await this.requestTerm(copy)
+				copy.terms = await this.requestTermRecursive(copy)
 			}
 		}
 		return terms
