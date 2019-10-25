@@ -308,6 +308,7 @@ function getComponentApi(self) {
 			const componentState = self.app.getState(api, action)
 			if (!mainCalled) {
 				mainCalled = true
+				if (!componentState) return
 			} else {
 				// no new state computed for this component
 				if (!componentState) return

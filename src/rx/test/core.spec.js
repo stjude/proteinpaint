@@ -33,6 +33,9 @@ class TestApp {
 
 TestApp.prototype.subState = {
 	type1: {
+		reactsTo: {
+			prefix: ['todo', 'prop']
+		},
 		get(appState, sub) {
 			return appState.prop
 		}
@@ -54,22 +57,6 @@ class TestStore {
 	}
 }
 
-class TestPart {
-	constructor(app, opts={}) {
-		this.app = app
-		this.opts = opts
-
-		if (opts.api) this.api = opts.api
-		else if (opts.getApi) this.api = opts.getApi(this)
-		
-		if (opts.components) this.components = opts.components
-	}
-	main(state) {
-		this.state = state
-		if (this.state.prop !== "xyz") return this.state.prop
-	}
-}
-
 TestStore.prototype.actions = {
 	todo_add(action) {
 		const i = this.state.todos.findIndex(d=>d.id == action.todo.id)
@@ -85,6 +72,24 @@ TestStore.prototype.actions = {
 	},
 	prop_edit(action) {
 		this.state.prop = action.prop
+	},
+	fake_add(action) {}
+}
+
+
+class TestPart {
+	constructor(app, opts={}) {
+		this.app = app
+		this.opts = opts
+
+		if (opts.api) this.api = opts.api
+		else if (opts.getApi) this.api = opts.getApi(this)
+		
+		if (opts.components) this.components = opts.components
+	}
+	main(state) {
+		this.state = state
+		if (this.state.prop !== "xyz") return this.state.prop
 	}
 }
 
@@ -184,11 +189,15 @@ tape('getAppApi', function(test) {
 	test.end()
 })
 
+/* 
+	integrated tests for rx.methods, where the
+	reactive update flow calls various rx apis
+	and methods
+*/
 tape('Reactive flow', async function(test) {
 	test.timeoutAfter(100)
-	test.plan(7)
+	test.plan(10)
 
-	const appInit = rx.getInitFxn(TestApp)
 	const comp1 = {
 		type: 'type1',
 		update(action, data) {
@@ -199,7 +208,10 @@ tape('Reactive flow', async function(test) {
 			}
 		}
 	}
-	const comp2 = {main() {}}
+	const comp2 = {
+		type: 'type1',
+		main() {}
+	}
 	comp2.api = rx.getComponentApi(comp2)
 
 	const arg0 = {
@@ -210,11 +222,13 @@ tape('Reactive flow', async function(test) {
 			comp2
 		}
 	}
+	const appInit = rx.getInitFxn(TestApp)
 	const app = appInit(arg0, {debug: 1})
 
 	const todo = {id: 1}
 	const updateTests = {}
-	// should not cause notification of child components
+
+	// save() should not cause notification of child components
 	updateTests.todo_add = (action, data) =>{
 		test.fail('must not notify a sub-component with save()')
 	}
@@ -223,7 +237,12 @@ tape('Reactive flow', async function(test) {
 	test.deepEqual(
 		app.getState().todos.length && app.getState().todos[0], 
 		todo, 
-		"save(action) should result in the expected state change"
+		"save() should result in the expected state change"
+	)
+	test.equal(
+		Object.isFrozen(app.getState()),
+		true, 
+		"should have a frozen state from app.getState()"
 	)
 
 	test.deepEqual(
@@ -231,18 +250,38 @@ tape('Reactive flow', async function(test) {
 		app.Inner.state.prop,
 		"should return the expected subState for a component"
 	)
+	test.equal(
+		Object.isFrozen(app.getState(comp1)),
+		true, 
+		"should have a frozen state from app.getState()"
+	)
+
+	// comp1.type == 'type1', which only reacts to todo_* and prop_*
+	const action_fake = {type: 'fake_add', todo}
+	updateTests.fake_add = (action, data) => {
+		test.equal(
+			action, 
+			action_fake, 
+			'dispatch() should trigger component.api.update() but not necessarily component.main()'
+		)
+	}
+	comp2.main = function(state, data) {
+		test.fail(`must not trigger component.main() when its type's reactsTo.prefix is not matched`)
+	}
+	await app.dispatch(action_fake)
+	comp2.main = ()=>{} // tear-down for next tests
 
 	// should cause child component notification wtih null data
 	updateTests.todo_remove = (action, data) => {
 		test.equal(
 			action, 
 			action_remove, 
-			'should notify a subcomponent of a dispatched action via its api.update'
+			'dispatch() should notify a subcomponent of a dispatched action via its api.update'
 		)
 		test.equal(
 			data, 
 			null, 
-			'should notify a subcomponent with null data if not returned by app.main()'
+			'dispatch() should notify a subcomponent with null data if not returned by app.main()'
 		)
 	}
 	const action_remove = {type: 'todo_remove', todo}
@@ -250,7 +289,7 @@ tape('Reactive flow', async function(test) {
 	test.deepEqual(
 		app.getState().todos.length, 
 		0, 
-		"dispatch(action) should result in the expected state change"
+		"dispatch() should result in the expected state change"
 	)
 
 	// should cause child component notification wtih actual data 
@@ -258,7 +297,7 @@ tape('Reactive flow', async function(test) {
 		test.equal(
 			data, 
 			action_edit.prop, 
-			'should notify a sub-component with data if returned by app.main()'
+			'dispatch() should notify a sub-component with data if returned by app.main()'
 		)
 	}
 	comp2.bus = {
@@ -266,7 +305,7 @@ tape('Reactive flow', async function(test) {
 			test.equal(
 				eventType,
 				'postRender',
-				'should emit a postRender event on component update'
+				'dispatch() should trigger an emitted postRender event on component update'
 			)
 		}
 	}
