@@ -972,7 +972,8 @@ function setInteractivity(self) {
 			: self.state.termfilter.terms.filter(t => t.id != term.termId)
 
 		// a new object as init() argument for launching the tree with modifiers
-		const tree_obj = {
+		const opts = {
+			holder: treediv,
 			state: {
 				dslabel: self.state.dslabel,
 				genome: self.state.genome,
@@ -992,7 +993,7 @@ function setInteractivity(self) {
 				app: { 'postInit.test': () => {} }
 			}
 		}
-		appInit(tree_obj, treediv)
+		appInit(null, opts)
 	}
 
 	self.editNumericBin = function(holder, actual_range, callback) {

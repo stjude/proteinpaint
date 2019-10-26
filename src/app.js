@@ -1424,12 +1424,14 @@ opts
 .state may be a partial or full instance of src/toy/toy.store defaultState
 */
 function launchtoy(opts, holder) {
+	if (!opts.holder) opts.holder = holder
 	import('./toy/toy.app').then(_=>{
-		_.appInit(opts, holder)
+		_.appInit(null, opts)
 	})
 }
 function launchtermdb(opts, holder) {
+	if (!opts.holder) opts.holder = holder
 	import('./termdb/app').then(_=>{
-		_.appInit(opts, holder)
+		_.appInit(null, opts)
 	})
 }

@@ -56,7 +56,7 @@ class TdbBarchart {
 	main(state, data) {
 		if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 		if (data) this.currServerData = data
-		this.state = this.app.getState({ type: 'plot', id: this.id })
+		this.state = state
 		this.config = this.state.config
 		if (!this.setVisibility()) return
 		this.updateSettings(this.config)

@@ -12,7 +12,6 @@ class TdbPlot {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.modifiers = opts.modifiers
-		this.config = this.app.getState(this.api)
 
 		this.dom = {
 			holder: opts.holder
@@ -65,6 +64,7 @@ class TdbPlot {
 
 	async main(state) {
 		this.state = state
+		this.config = rx.copyMerge('{}', state.config)
 		const data = await this.requestData(this.state)
 		this.syncParams(this.config, data)
 		return data
@@ -79,7 +79,7 @@ class TdbPlot {
 	// creates URL search parameter string, that also serves as
 	// a unique request identifier to be used for caching server response
 	getDataName(state) {
-		const config = state.config
+		const config = this.config
 		const params = ['genome=' + state.genome, 'dslabel=' + state.dslabel]
 
 		const isscatter = config.settings.currViews.includes('scatter')

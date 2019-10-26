@@ -38,23 +38,25 @@ TODO
 */
 
 class TdbApp {
-	constructor(opts, holder) {
-		this.opts = initOpts(opts)
-		this.api = rx.getAppApi(this)
+	constructor(parentApp, opts) {
+		this.opts = this.initOpts(opts)
+		// the TdbApp may be the root app or a component within another app
+		this.api = parentApp ? rx.getComponentApi(this) : rx.getAppApi(this)
+		this.app = parentApp ? parentApp : this.api
 
 		this.dom = {
-			holder: holder.style('margin', '10px').style('border', '1px solid #aaa'),
-			errdiv: holder.append('div')
+			holder: opts.holder.style('margin', '10px').style('border', '1px solid #aaa'),
+			errdiv: opts.holder.append('div')
 		}
 
 		// catch initialization error
 		try {
-			this.store = storeInit(this.api)
-			this.state = this.store.copyState()
-			const modifiers = validateModifiers(opts.modifiers)
+			if (!parentApp) this.store = storeInit(this.api)
+			this.state = parentApp ? this.app.getState() : this.store.copyState()
+			const modifiers = this.validateModifiers(this.opts.modifiers)
 			this.components = {
-				tree: treeInit(this.api, { holder: holder.append('div'), modifiers }),
-				terms: filterInit(this.api, { holder: holder.append('div') })
+				tree: treeInit(this.app, { holder: this.dom.holder.append('div'), modifiers }),
+				terms: filterInit(this.app, { holder: this.dom.holder.append('div') })
 			}
 		} catch (e) {
 			this.printError(e)
@@ -62,18 +64,33 @@ class TdbApp {
 
 		this.bus = new rx.Bus('app', ['postInit', 'postRender'], opts.callbacks, this.api)
 		this.bus.emit('postInit')
-		// trigger the initial render after initialization, store state is ready
-		this.api.dispatch({ type: 'app_refresh' }).catch(this.printError)
+		if (!parentApp) {
+			// trigger the initial render after initialization, store state is ready
+			this.api.dispatch({ type: 'app_refresh' }).catch(this.printError)
+		}
 	}
 
+	/*
 	async main(state) {
-		if (state) this.state = state
-
 		// may add other logic here or return data as needed,
 		// for example request and cache metadata that maybe throughout
 		// the app by many components; the metadata may be exposed
 		// later via something like app.api.lookup, to-do
 		return
+	}
+	*/
+
+	initOpts(o) {
+		if (!o.fetchOpts) o.fetchOpts = {}
+		if (!o.fetchOpts.serverData) o.fetchOpts.serverData = {}
+		return o
+	}
+
+	validateModifiers(tmp = {}) {
+		for (const k in tmp) {
+			if (typeof tmp[k] != 'function') throw 'modifier "' + k + '" not a function'
+		}
+		return Object.freeze(tmp)
 	}
 
 	printError(e) {
@@ -169,14 +186,3 @@ TdbApp.prototype.subState = {
 
 exports.appInit = rx.getInitFxn(TdbApp)
 
-function validateModifiers(tmp = {}) {
-	for (const k in tmp) {
-		if (typeof tmp[k] != 'function') throw 'modifier "' + k + '" not a function'
-	}
-	return Object.freeze(tmp)
-}
-function initOpts(o) {
-	if (!o.fetchOpts) o.fetchOpts = {}
-	if (!o.fetchOpts.serverData) o.fetchOpts.serverData = {}
-	return o
-}

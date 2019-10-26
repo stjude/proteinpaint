@@ -334,3 +334,33 @@ class Ride {
 		}
 	}
 }
+
+/*
+let visualCheckIsActive = false
+exports.visualCheck = function renderingTest() {
+	if (visualCheckIsActive) return
+	visualCheckIsActive = true
+	const d3s = require('d3-selection')
+	const d3t = require('d3-transition')
+	
+	const v= {i:0, j:0}
+	for(const k in v) {
+		const div = d3s.select('body')
+			.append('div')
+			.attr('class', 'test-div')
+			.style('position','fixed')
+			.style('height', '50px')
+			.style('top', k=='i' ? '50px' : '70px')
+			.style('font-size', '36px')
+			.style('color','#f00')
+			.style('background', k=='i' ? '#ccc' : '#3f3f3f')
+			.style('z-index', 100)
+		
+		setInterval(()=>div
+			.text(v[k]+=1)
+			.transition()
+			.duration(200)
+			.style('width', (k=='i' && v[k]%2 == 0) || (k=='j' && v[k]%2 != 0) ? '500px' : '100px'), 500)
+	}
+}
+*/

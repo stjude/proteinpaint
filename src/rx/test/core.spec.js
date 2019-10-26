@@ -26,7 +26,7 @@ class TestApp {
 		}
 	}
 	main(state) {
-		this.state = state
+		if (state) this.state = state
 		if (this.state.prop !== "xyz") return this.state.prop
 	}
 }

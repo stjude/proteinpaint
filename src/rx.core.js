@@ -212,8 +212,8 @@ function getAppApi(self) {
 				}
 				// replace app.state
 				if (self.store) {
-					const state = await self.store.write(action)
-					const data = self.main(state)
+					self.state = await self.store.write(action)
+					const data = self.main ? self.main() : null
 					await notifyComponents(self.components, action, data)
 				}
 			} catch (e) {
