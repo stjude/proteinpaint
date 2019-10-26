@@ -45,9 +45,6 @@ any change of modifier should update termsById first, then call renderBranch() a
 
 ******************* special flags
 root term does not exist in the termdb, but is synthesized upon initializing instance, has the "__tree_isroot" flag
-term.__plot_isloading is added when loading plot for a term
-  removed by plot postRender callback
-these transient flags are created and removed only within this script, and not to be handled outside, to avoid confusion
 
 
 
@@ -104,6 +101,8 @@ class TdbTree {
 
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
+		this.loadingPlotSet = new Set()
+
 		this.termsById = {}
 		this.termsById[root_ID] = _root
 		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
@@ -182,7 +181,6 @@ class TdbTree {
 				.filter(t => t.id == term.id)
 				.node()
 		)
-		term.__plot_isloading = true
 		const loading_div = holder
 			.append('div')
 			.attr('class', cls_termloading)
@@ -197,9 +195,9 @@ class TdbTree {
 					// must use namespaced eventType otherwise will be rewritten..
 					'postRender.viewbtn': plot => {
 						// may be risky, if action.term is altered outside
-						delete term.__plot_isloading
+						this.loadingPlotSet.delete(term.id)
 						if (loading_div) loading_div.remove()
-						//plot.on('postRender.viewbtn', null)
+						plot.on('postRender.viewbtn', null)
 					}
 				}
 			}
@@ -391,8 +389,8 @@ function setInteractivity(self) {
 	}
 
 	self.clickViewButton = function(term) {
-		if (term.__plot_isloading) {
-			// prevent multiple clicking while loading new plot
+		if (self.loadingPlotSet.has(term.id)) {
+			// don't respond to repetitive clicking
 			return
 		}
 		event.stopPropagation()
@@ -405,9 +403,9 @@ function setInteractivity(self) {
 			const type = plotConfig.isVisible ? 'plot_hide' : 'plot_show'
 			self.app.dispatch({ type, id: term.id, term })
 			return
-		} else {
-			self.addPlot(term)
 		}
+		self.loadingPlotSet.add(term.id)
+		self.addPlot(term)
 	}
 
 	self.addPlot = term => {
