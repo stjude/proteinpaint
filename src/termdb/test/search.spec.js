@@ -61,7 +61,7 @@ tape('term search, default behavior', function(test) {
 	}
 
 	function triggerSearchNoResult(search) {
-		search.Inner.main({ str: 'xxxyyyzz' })
+		search.Inner.doSearch('xxxyyyzz')
 	}
 
 	function testSearchNoResult(search) {
@@ -70,7 +70,7 @@ tape('term search, default behavior', function(test) {
 	}
 
 	function triggerFirstSearch(search) {
-		search.Inner.main({ str: 'cardio' })
+		search.Inner.doSearch('cardio')
 	}
 
 	let searchResultBtns
@@ -103,7 +103,7 @@ tape('term search, default behavior', function(test) {
 	// second search, on the same branch as the first search
 	function triggerSecondSearch_samebranchas1st(search) {
 		// somehow this function doesn't run
-		search.Inner.main({ str: 'asthma' })
+		search.Inner.doSearch('asthma')
 	}
 })
 
@@ -130,7 +130,7 @@ tape('modifiers: click_term', test => {
 			.done(test)
 	}
 	function triggerSearch(search) {
-		search.Inner.main({ str: 'cardio' })
+		search.Inner.doSearch('cardio')
 	}
 	function testSearchResult(search) {
 		const buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn add_term_btn')

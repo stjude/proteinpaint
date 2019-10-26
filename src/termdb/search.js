@@ -3,6 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { dofetch2, sayerror } from '../client'
 import { debounce } from 'debounce'
 import { graphable, root_ID } from './tree'
+import { plotConfig } from './plot'
 
 // class names
 
@@ -42,6 +43,7 @@ class TermSearch {
 		this.bus.emit('postInit')
 	}
 
+	/*
 	async main(state = {}) {
 		if (!state.str) {
 			this.clear()
@@ -55,15 +57,20 @@ class TermSearch {
 		]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
-		if (!data.lst || data.lst.length == 0) this.noResult()
-		// found terms
-		else this.showTerms(data)
+		if (!data.lst || data.lst.length == 0) {
+			this.noResult()
+		} else {
+			// found terms
+			this.showTerms(data)
+		}
 
 		// assume that when main() is triggered by search menu updates,
 		// there will only be a "str" key; otherwise the bus will be
 		// emitted within component.api.update()
 		if (Object.keys(state)[0] == 'str') this.bus.emit('postRender')
 	}
+	*/
+	main() {}
 }
 
 export const searchInit = rx.getInitFxn(TermSearch)
@@ -77,7 +84,7 @@ function setRenderers(self) {
 			.attr('placeholder', 'Search')
 			.style('width', '120px')
 			.style('display', 'block')
-			.on('input', debounce(self.doSearch, 300))
+			.on('input', debounce(self.onInput, 300))
 		self.dom.resultDiv = self.dom.holder
 			.append('div')
 			.style('border-left', 'solid 1px rgb(133,182,225)')
@@ -135,11 +142,7 @@ function setRenderers(self) {
 							tree: {
 								expandedTerms,
 								plots: {
-									[term.id]: {
-										id: term.id,
-										term,
-										isVisible: true
-									}
+									[term.id]: plotConfig({ term })
 								}
 							}
 						}
@@ -165,7 +168,7 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.doSearch = async () => {
+	self.onInput = async () => {
 		const str = self.dom.input.property('value')
 		// do not trim space from input so that 'age ' will not match with 'agent'
 		if (str == ' ' || str == '') {
@@ -173,12 +176,25 @@ function setInteractivity(self) {
 			return
 		}
 		try {
-			await self.main({ str })
+			//await self.main({ str })
+			await self.doSearch(str)
 		} catch (e) {
 			self.clear()
 			sayerror(self.dom.resultDiv, 'Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
 		}
+	}
+	self.doSearch = async str => {
+		const lst = ['genome=' + self.state.genome, 'dslabel=' + self.state.dslabel, 'findterm=' + encodeURIComponent(str)]
+		const data = await dofetch2('termdb?' + lst.join('&'), {}, self.app.opts.fetchOpts)
+		if (data.error) throw data.error
+		if (!data.lst || data.lst.length == 0) {
+			self.noResult()
+		} else {
+			// found terms
+			self.showTerms(data)
+		}
+		self.bus.emit('postRender')
 	}
 	self.selectTerm = term => {
 		console.log('selected', term)
