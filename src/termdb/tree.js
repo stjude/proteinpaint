@@ -26,11 +26,7 @@ separate functions are designed to handle different things so that logic won't m
 - clickViewButton( term )
   called by clicking button, will toggle graph div visibility
   setup measures to prevent multi-clicking
-- addPlot( term, holder, loading_div )
-  add new plot by dispatching action
-  also called when recreating tree from saved state
-- plotActions( action )
-  to deal with plot-related actions
+- newPlot(term)
 
 ******************** exit/update/enter
 termsById{} is bound to the DOM tree, to provide:
@@ -120,7 +116,7 @@ class TdbTree {
 			if (!this.components.plots[termId]) {
 				// rehydrate here when the term information is available,
 				// in constructor the termsById are not filled in yet
-				await this.app.save({ type: 'plot_rehydrate', id: termId, config: { term: this.termsById[termId] } })
+				//await this.app.save({ type: 'plot_rehydrate', id: termId, config: { term: this.termsById[termId] } })
 				this.newPlot(this.termsById[termId])
 				updatePlotsState = true
 			}
@@ -194,7 +190,6 @@ class TdbTree {
 				plot: {
 					// must use namespaced eventType otherwise will be rewritten..
 					'postRender.viewbtn': plot => {
-						// may be risky, if action.term is altered outside
 						this.loadingPlotSet.delete(term.id)
 						if (loading_div) loading_div.remove()
 						plot.on('postRender.viewbtn', null)
@@ -405,18 +400,7 @@ function setInteractivity(self) {
 			return
 		}
 		self.loadingPlotSet.add(term.id)
-		self.addPlot(term)
-	}
-
-	self.addPlot = term => {
-		// do not replace plot config if it already exists
-		if (self.components.plots[term.id]) return
-		self.app.dispatch({
-			type: 'plot_add',
-			id: term.id,
-			term,
-			config: { id: term.id, term }
-		})
+		self.app.dispatch({ type: 'plot_add', term })
 	}
 }
 

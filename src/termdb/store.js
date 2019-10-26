@@ -72,6 +72,7 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTerms.splice(i, 1)
 	},
 
+	/*
 	plot_rehydrate(action) {
 		const config = action.id in this.state.tree.plots[action.id] ? this.state.tree.plots[action.id] : {}
 		this.state.tree.plots[action.id] = rx.copyMerge(config, plotConfig(action.config))
@@ -80,6 +81,10 @@ TdbStore.prototype.actions = {
 	plot_add(action) {
 		const config = action.config ? action.config : {}
 		this.state.tree.plots[action.id] = config
+	},
+	*/
+	plot_add(action) {
+		this.state.tree.plots[action.term.id] = plotConfig({ term: action.term })
 	},
 
 	plot_show(action) {
@@ -100,13 +105,14 @@ TdbStore.prototype.actions = {
 	filter_add(action) {
 		// if (this.state.termfilter.terms.includes(action.term)) return
 		// this.state.termfilter.terms.push(action.term)
-		const filter = this.state.termfilter.terms.find(d=>d.id == action.termId)
-        if (filter) {
-			const valueData = filter.term.iscategorical || filter.term.iscondition
-			? filter.values
-			: filter.term.isfloat || filter.term.isinteger
-			? filter.ranges
-			: filter.grade_and_child
+		const filter = this.state.termfilter.terms.find(d => d.id == action.termId)
+		if (filter) {
+			const valueData =
+				filter.term.iscategorical || filter.term.iscondition
+					? filter.values
+					: filter.term.isfloat || filter.term.isinteger
+					? filter.ranges
+					: filter.grade_and_child
 			// may need to add check if value is already present
 			if (!valueData.includes(action.value)) valueData.push(action.value)
 		} else {
@@ -148,7 +154,7 @@ TdbStore.prototype.actions = {
 		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
 		if (i == -1) return
 		const term = this.state.termfilter.terms[i]
-		term.term.iscategorical || term.term.iscondition 
+		term.term.iscategorical || term.term.iscondition
 			? (term.values[action.valueId] = action.value)
 			: (term.ranges[action.valueId] = action.value)
 	},
@@ -157,18 +163,16 @@ TdbStore.prototype.actions = {
 		const i = this.state.termfilter.terms.findIndex(d => d.id == action.termId)
 		if (i == -1) return
 		const term = this.state.termfilter.terms[i]
-		const values = term.term.iscategorical || term.term.iscondition 
-			? term.values : term.ranges
+		const values = term.term.iscategorical || term.term.iscondition ? term.values : term.ranges
 		values.splice(action.valueId, 1)
 		if (values.length == 0) {
 			this.state.termfilter.terms.splice(i, 1)
 		}
-	}, 
+	},
 
 	filter_replace(action) {
 		this.state.termfilter.terms = []
 		this.state.termfilter.terms.push(action.term)
-
 	}
 }
 
