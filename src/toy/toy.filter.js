@@ -14,8 +14,7 @@ class ToyFilter {
 		this.render()
 	}
 
-	main(state) {
-		this.state = state
+	main() {
 		const rows = this.dom.holder.selectAll('.row_div').data(this.state.rows, this.getRowName)
 
 		rows.exit().each(this._removeRow)

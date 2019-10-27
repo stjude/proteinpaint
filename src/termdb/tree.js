@@ -105,8 +105,7 @@ class TdbTree {
 		this.bus.emit('postInit')
 	}
 
-	async main(state) {
-		this.state = state
+	async main() {
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.renderBranch(root, this.dom.treeDiv)

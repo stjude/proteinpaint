@@ -212,6 +212,8 @@ function getAppApi(self) {
 				}
 				// replace app.state
 				if (action) self.state = await self.store.write(action)
+				// else an empty action should force components to update
+
 				const data = self.main ? self.main() : null
 				const current = {action, stateByType: {app: self.state}}
 				await notifyComponents(self.components, current, data)
@@ -227,17 +229,17 @@ function getAppApi(self) {
 		},
 		getState(sub = null, current = {}) {
 			/*
-				because a component may rehydrate and save() 
+				Because a component may rehydrate and save() 
 				additional state during a dispatch cycle, 
-				cannot reuse the frozen app.state copy right after
-				store.write(), as that copy will only be guaranteed
-				to be good for root components, but that initial state copy 
-				will not contain rehydrated state and may be incomplete
-				by the time certain child components are notified 
+				getState() cannot reuse the frozen app.state copy right after
+				store.write(). That copy will only be guaranteed
+				to be good for root components and will not contain 
+				rehydrated state filled-in by notified components, 
+				and may be incomplete by the time certain child components 
+				are notified.
 			*/
 			// const appState = current.action && current.stateByType && current.stateByType.app ? current.stateByType.app : self.state; 
 			const appState = self.state
-
 			if (!sub || !sub.type) return appState
 
 			if (!self.subState.hasOwnProperty(sub.type)) {
@@ -319,7 +321,8 @@ function getComponentApi(self) {
 			if (!componentState) return
 			// if the current and pending state is the same, no need to update
 			if (current.action && deepEqual(componentState, self.state)) return
-			const componentData = await self.main(componentState, data)
+			self.state = componentState
+			const componentData = self.main ? await self.main(data) : null
 			await notifyComponents(self.components, current, componentData)
 			if (self.bus) self.bus.emit('postRender')
 			return api

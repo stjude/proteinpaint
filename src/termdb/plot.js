@@ -62,8 +62,7 @@ class TdbPlot {
 		this.bus.emit('postInit', this.api)
 	}
 
-	async main(state) {
-		this.state = state
+	async main() {
 		this.config = rx.copyMerge('{}', this.state.config)
 		const data = await this.requestData(this.state)
 		this.syncParams(this.config, data)

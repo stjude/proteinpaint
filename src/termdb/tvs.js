@@ -22,8 +22,7 @@ class TVS {
 		this.bus.emit('postInit')
 	}
 
-	main(state) {
-		this.state = state
+	main() {
 		const terms_div = this.dom.holder.selectAll('.terms_div')
 		const filters = terms_div.selectAll('.tvs_pill').data(this.state.termfilter.terms, d => d.term.id)
 

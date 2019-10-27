@@ -38,10 +38,8 @@ class HowTo {
 	}
 	
 	// wrapped by Component api.main()
-	main(state) {
-		// Create a local reference to the state
-		// property that affects this component
-		this.state = this.app.state(this.api)
+	main() {
+		// this.state is set in component.api.update()
 		// process new state, potentially including server requests
 		this.currData = this.requestData()
 		this.processData()

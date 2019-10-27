@@ -55,8 +55,7 @@ class TdbPlotControls {
 		//this.bus = new rx.Bus("controls", ["postRender"], app.opts.callbacks, this.api)
 	}
 
-	main(state) {
-		if (state) this.state = state
+	main() {
 		this.dom.button_bar
 			.style('display', this.isVisible ? 'inline-block' : 'block')
 			.style('float', this.isVisible ? 'right' : 'none')

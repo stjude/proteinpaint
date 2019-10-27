@@ -21,7 +21,7 @@ class ToySearch {
 		this.bus.emit('postInit', this.api)
 	}
 
-	main(action) {
+	main() {
 		// clear search input entry
 		this.input.property('value', '')
 		this.bus.emit('postNotify', this)

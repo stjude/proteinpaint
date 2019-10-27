@@ -29,9 +29,7 @@ class TdbFilter {
 		this.bus.emit('postInit')
 	}
 
-	async main(state = null) {
-		if (state) this.state = state
-	}
+	/*async main() {}*/
 }
 
 exports.filterInit = rx.getInitFxn(TdbFilter)

@@ -17,8 +17,7 @@ class ToyTable {
 		this.notThis(this)
 	}
 
-	main(state) {
-		this.state = state
+	main() {
 		const divs = this.dom.table.selectAll('.table-wrapper').data(this.state.terms, this.getTermId)
 
 		divs.exit().each(this._exitDiv)
