@@ -204,11 +204,13 @@ tape('rehydrated from saved state', function(test) {
 		state: {
 			tree: {
 				expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis'],
-				//// XXX following cannot rebuild plot
-				//// ??? it already works in commit a71b87b as of 10/15
 				plots: {
 					diaggrp: {
-						id: 'diaggrp'
+						id: 'diaggrp',
+						settings: {
+							currViews: ['table'],
+							bar: { orientation: 'vertical' }
+						}
 					}
 				}
 			}
