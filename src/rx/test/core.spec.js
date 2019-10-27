@@ -200,7 +200,8 @@ tape('Reactive flow', async function(test) {
 
 	const comp1 = {
 		type: 'type1',
-		update(action, data) {
+		update(current, data) {
+			const action = current.action
 			if (!updateTests[action.type]) {
 				test.fail(`missing test for action.type=${action.type}`)
 			} else {

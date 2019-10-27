@@ -49,16 +49,12 @@ class ToyApp {
 		this.bus.emit('postInit')
 	}
 
-	async main(state, action) {
-		if (state) this.state = state
-		try {
-			await rx.notifyComponents(this.components, action)
-		} catch (e) {
-			console.log(e)
-			if (e.stack) console.log(e.stack)
-		}
-		this.bus.emit('postRender')
+	/*
+	// optional app.main(), to be called within app.api.dispatch()
+	main() {
+		// may return data for child components
 	}
+	*/
 }
 
 ToyApp.prototype.subState = {

@@ -72,12 +72,11 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTerms.splice(i, 1)
 	},
 
-	/*
 	plot_rehydrate(action) {
 		const config = action.id in this.state.tree.plots[action.id] ? this.state.tree.plots[action.id] : {}
 		this.state.tree.plots[action.id] = rx.copyMerge(config, plotConfig(action.config))
 	},
-
+	/*
 	plot_add(action) {
 		const config = action.config ? action.config : {}
 		this.state.tree.plots[action.id] = config

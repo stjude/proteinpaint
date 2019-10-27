@@ -116,7 +116,7 @@ class TdbTree {
 			if (!this.components.plots[termId]) {
 				// rehydrate here when the term information is available,
 				// in constructor the termsById are not filled in yet
-				//await this.app.save({ type: 'plot_rehydrate', id: termId, config: { term: this.termsById[termId] } })
+				await this.app.save({ type: 'plot_rehydrate', id: termId, config: { term: this.termsById[termId] } })
 				this.newPlot(this.termsById[termId])
 				updatePlotsState = true
 			}

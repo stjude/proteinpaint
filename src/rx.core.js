@@ -187,7 +187,7 @@ function getAppApi(self) {
 
 	const api = {
 		opts: self.opts,
-		async dispatch(action = {}) {
+		async dispatch(action) {
 			/*
 			???
 			to-do:
@@ -211,11 +211,10 @@ function getAppApi(self) {
 					}
 				}
 				// replace app.state
-				if (self.store) {
-					self.state = await self.store.write(action)
-					const data = self.main ? self.main() : null
-					await notifyComponents(self.components, action, data)
-				}
+				if (action) self.state = await self.store.write(action)
+				const data = self.main ? self.main() : null
+				const current = {action, stateByType: {app: self.state}}
+				await notifyComponents(self.components, current, data)
 			} catch (e) {
 				if (self.printError) self.printError(e)
 				else console.log(e)
@@ -226,39 +225,51 @@ function getAppApi(self) {
 			// save changes to store, do not notify components
 			self.state = await self.store.write(action)
 		},
-		getState(sub = null, action = null) {
-			if (!sub || !sub.type) return self.state
+		getState(sub = null, current = {}) {
+			/*
+				because a component may rehydrate and save() 
+				additional state during a dispatch cycle, 
+				cannot reuse the frozen app.state copy right after
+				store.write(), as that copy will only be guaranteed
+				to be good for root components, but that initial state copy 
+				will not contain rehydrated state and may be incomplete
+				by the time certain child components are notified 
+			*/
+			// const appState = current.action && current.stateByType && current.stateByType.app ? current.stateByType.app : self.state; 
+			const appState = self.state
+
+			if (!sub || !sub.type) return appState
 
 			if (!self.subState.hasOwnProperty(sub.type)) {
 				throw `undefined store config getter for component type='${sub.type}'`
-			} else {
-				const subState = self.subState[sub.type]
-				if (action && subState.reactsTo) {
-					const reactsTo = subState.reactsTo
-					// if string matches are specified, start with
-					// matched == false, otherwise start as true
-					let matched = !(reactsTo.prefix || reactsTo.type)
-					if (reactsTo.prefix) {
-						for (const p of reactsTo.prefix) {
-							matched = action.type.startsWith(p)
-							if (matched) break
-						}
-					}
-					if (reactsTo.type) {
-						// okay to match prefix, type, or both
-						matched = matched || reactsTo.type.includes(action.type)
-					}
-					if (reactsTo.match) {
-						// fine-tuned action matching with a function
-						matched = matched && reactsTo.match.call(self, action, sub)
-					}
-					if (!matched) return
-				}
-				const componentState = self.subState[sub.type].get(self.state, sub)
-				// freeze only the root subsState object since
-				// the copied app.state is already deeply frozen
-				return Object.freeze(componentState)
 			}
+
+			const subState = self.subState[sub.type]
+			if (current.action && subState.reactsTo) {
+				const action = current.action
+				const reactsTo = subState.reactsTo
+				// if string matches are specified, start with
+				// matched == false, otherwise start as true
+				let matched = !(reactsTo.prefix || reactsTo.type)
+				if (reactsTo.prefix) {
+					for (const p of reactsTo.prefix) {
+						matched = action.type.startsWith(p)
+						if (matched) break
+					}
+				}
+				if (reactsTo.type) {
+					// okay to match prefix, type, or both
+					matched = matched || reactsTo.type.includes(action.type)
+				}
+				if (reactsTo.match) {
+					// fine-tuned action matching with a function
+					matched = matched && reactsTo.match.call(self, action, sub)
+				}
+				if (!matched) return
+			}
+			// freeze only the root subsState object since
+			// the copied app.state is already deeply frozen
+			return Object.freeze(subState.get(appState, sub))
 		},
 		middle(fxn) {
 			/*
@@ -299,24 +310,17 @@ function getAppApi(self) {
 exports.getAppApi = getAppApi
 
 function getComponentApi(self) {
-	let mainCalled = false
-
 	const api = {
 		type: self.type,
 		id: self.id,
-		async update(action, data) {
-			const componentState = self.app.getState(api, action)
-			if (!mainCalled) {
-				mainCalled = true
-				if (!componentState) return
-			} else {
-				// no new state computed for this component
-				if (!componentState) return
-				// if the current and pending state is the same, no need to update
-				if (deepEqual(componentState, self.state)) return
-			}
+		async update(current, data) {
+			const componentState = self.app.getState(api, current)
+			// no new state computed for this component
+			if (!componentState) return
+			// if the current and pending state is the same, no need to update
+			if (current.action && deepEqual(componentState, self.state)) return
 			const componentData = await self.main(componentState, data)
-			await notifyComponents(self.components, action, componentData)
+			await notifyComponents(self.components, current, componentData)
 			if (self.bus) self.bus.emit('postRender')
 			return api
 		},
@@ -362,19 +366,19 @@ exports.getComponentApi = getComponentApi
 // Component Helpers
 // -----------------
 
-async function notifyComponents(components, action, data = null) {
+async function notifyComponents(components, current, data = null) {
 	if (!components) return // allow component-less app
 	const called = []
 	for (const name in components) {
 		const component = components[name]
 		if (Array.isArray(component)) {
-			for (const c of component) called.push(c.update(action, data))
+			for (const c of component) called.push(c.update(current, data))
 		} else if (component.hasOwnProperty('update')) {
-			called.push(component.update(action, data))
+			called.push(component.update(current, data))
 		} else if (component && typeof component == 'object') {
 			for (const name in component) {
 				if (component.hasOwnProperty(name) && typeof component[name].update == 'function') {
-					called.push(component[name].update(action, data))
+					called.push(component[name].update(current, data))
 				}
 			}
 		}
@@ -465,7 +469,7 @@ exports.toJson = toJson
 function deepFreeze(obj) {
 	Object.freeze(obj)
 	for (const key in obj) {
-		if (typeof obj == 'object') this.deepFreeze(obj[key])
+		if (typeof obj == 'object') deepFreeze(obj[key])
 	}
 }
 

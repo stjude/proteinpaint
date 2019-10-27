@@ -66,7 +66,7 @@ class TdbApp {
 		this.bus.emit('postInit')
 		if (!parentApp) {
 			// trigger the initial render after initialization, store state is ready
-			this.api.dispatch({ type: 'app_refresh' }).catch(this.printError)
+			this.api.dispatch().catch(this.printError)
 		}
 	}
 

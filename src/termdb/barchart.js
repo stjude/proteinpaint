@@ -21,14 +21,12 @@ class TdbBarchart {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.modifiers = opts.modifiers
-		this.state = this.app.getState({ type: 'plot', id: this.id })
-		this.config = this.state.config
 		this.dom = {
 			holder: opts.holder,
 			barDiv: opts.holder.append('div').style('white-space', 'normal'),
 			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
-		this.settings = Object.assign(JSON.parse(rendererSettings), this.config.settings.bar)
+		this.settings = JSON.parse(rendererSettings) //, this.config.settings.bar)
 		this.renderers = {}
 
 		setRenderers(this)
