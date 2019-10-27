@@ -175,6 +175,9 @@ TdbApp.prototype.subState = {
 		}
 	},
 	search: {
+		reactsTo: {
+			prefix: ['search']
+		},
 		get(appState, sub) {
 			return {
 				genome: appState.genome,

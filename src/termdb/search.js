@@ -43,18 +43,12 @@ class TermSearch {
 		this.bus.emit('postInit')
 	}
 
-	/*
-	async main(state = {}) {
-		if (!state.str) {
+	async doSearch(str) {
+		if (!str) {
 			this.clear()
 			return
 		}
-		Object.assign(this.state, state)
-		const lst = [
-			'genome=' + this.state.genome,
-			'dslabel=' + this.state.dslabel,
-			'findterm=' + encodeURIComponent(this.state.str)
-		]
+		const lst = ['genome=' + this.state.genome, 'dslabel=' + this.state.dslabel, 'findterm=' + encodeURIComponent(str)]
 		const data = await dofetch2('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {
@@ -63,14 +57,8 @@ class TermSearch {
 			// found terms
 			this.showTerms(data)
 		}
-
-		// assume that when main() is triggered by search menu updates,
-		// there will only be a "str" key; otherwise the bus will be
-		// emitted within component.api.update()
-		if (Object.keys(state)[0] == 'str') this.bus.emit('postRender')
+		this.bus.emit('postRender')
 	}
-	*/
-	main() {}
 }
 
 export const searchInit = rx.getInitFxn(TermSearch)
@@ -171,10 +159,6 @@ function setInteractivity(self) {
 	self.onInput = async () => {
 		const str = self.dom.input.property('value')
 		// do not trim space from input so that 'age ' will not match with 'agent'
-		if (str == ' ' || str == '') {
-			self.clear()
-			return
-		}
 		try {
 			//await self.main({ str })
 			await self.doSearch(str)
@@ -183,18 +167,6 @@ function setInteractivity(self) {
 			sayerror(self.dom.resultDiv, 'Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
 		}
-	}
-	self.doSearch = async str => {
-		const lst = ['genome=' + self.state.genome, 'dslabel=' + self.state.dslabel, 'findterm=' + encodeURIComponent(str)]
-		const data = await dofetch2('termdb?' + lst.join('&'), {}, self.app.opts.fetchOpts)
-		if (data.error) throw data.error
-		if (!data.lst || data.lst.length == 0) {
-			self.noResult()
-		} else {
-			// found terms
-			self.showTerms(data)
-		}
-		self.bus.emit('postRender')
 	}
 	self.selectTerm = term => {
 		console.log('selected', term)
