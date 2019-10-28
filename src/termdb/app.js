@@ -53,7 +53,7 @@ class TdbApp {
 		// catch initialization error
 		try {
 			if (!parentApp) this.store = storeInit(this.api)
-			this.state = parentApp ? this.app.getState() : this.store.copyState()
+			//this.state = parentApp ? this.app.getState() : this.store.copyState({rehydrate:true})
 			const modifiers = this.validateModifiers(this.opts.modifiers)
 			this.components = {
 				tree: treeInit(this.app, { holder: this.dom.holder.append('div'), modifiers }),
@@ -65,9 +65,15 @@ class TdbApp {
 
 		this.bus = new rx.Bus('app', ['postInit', 'postRender'], opts.callbacks, this.api)
 		this.bus.emit('postInit')
-		if (!parentApp) {
+		if (this.store) {
 			// trigger the initial render after initialization, store state is ready
-			this.api.dispatch().catch(this.printError)
+			this.store
+				.copyState({ rehydrate: true })
+				.then(state => {
+					this.state = state
+				})
+				.then(() => this.api.dispatch())
+				.catch(e => this.printError(e))
 		}
 	}
 
@@ -161,7 +167,7 @@ TdbApp.prototype.subState = {
 	plot: {
 		reactsTo: {
 			prefix: ['filter'],
-			type: ['plot_add', 'plot_show', 'plot_edit', 'app_refresh', 'plot_rehydrate'],
+			type: ['plot_add', 'plot_show', 'plot_edit', 'app_refresh'],
 			fxn: (action, sub) => {
 				if (!action.type.startsWith('plot')) return true
 				if (!('id' in action) || action.id == sub.id) return true

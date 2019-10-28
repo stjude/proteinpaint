@@ -39,11 +39,6 @@ class TdbBarchart {
 			},
 			handlers: this.handlers
 		})
-		this.terms = {
-			term0: null,
-			term1: opts.term,
-			term2: null
-		}
 		this.controls = {}
 		this.term2toColor = {}
 		this.processedExcludes = []
@@ -98,13 +93,8 @@ class TdbBarchart {
 			this.settings.unit = 'abs'
 		}
 		if (this.settings.term2 == 'genotype') {
-			this.terms.term2 = { name: this.settings.mname }
-		} else if (config.term2) {
-			this.terms.term2 = config.term2.term
-		} else {
-			this.terms.term2 = null
+			this.config.term2 = { term: { name: this.settings.mname } }
 		}
-		this.terms.term0 = config.term0 ? config.term0.term : null
 	}
 
 	initExclude() {
@@ -179,7 +169,8 @@ class TdbBarchart {
 	setMaxVisibleTotals(chartsData) {
 		// chartsData = this.currServerData
 		this.totalsByDataId = {}
-		const term1 = this.terms.term1
+		const t1 = this.config.term
+		const t2 = this.config.term2
 
 		const addlSeriesIds = {} // to track series IDs that are not already in this.seriesOrder
 		let maxVisibleAcrossCharts = 0
@@ -207,9 +198,9 @@ class TdbBarchart {
 			})
 			chart.settings.colLabels = chart.visibleSerieses.map(series => {
 				const id = series.seriesId
-				const label = this.terms.term1.values && id in this.terms.term1.values ? this.terms.term1.values[id].label : id
+				const label = t1.values && id in t1.values ? t1.values[id].label : id
 				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
-				const ntotal = this.terms.term2 && this.terms.term2.iscondition ? '' : `, n=${series.visibleTotal}`
+				const ntotal = t2 && t2.term.iscondition ? '' : `, n=${series.visibleTotal}`
 				return {
 					id,
 					label: label + af + ntotal
@@ -261,7 +252,7 @@ class TdbBarchart {
 			this.term2toColor[result.dataId] = this.settings.groups[result.dataId].color
 		}
 		if (result.dataId in this.term2toColor) return
-		this.term2toColor[result.dataId] = !this.terms.term2
+		this.term2toColor[result.dataId] = !this.config.term2
 			? 'rgb(144, 23, 57)'
 			: rgb(
 					this.settings.rows && this.settings.rows.length < 11 ? colors.c10(result.dataId) : colors.c20(result.dataId)
@@ -271,24 +262,22 @@ class TdbBarchart {
 	getLegendGrps() {
 		const legendGrps = []
 		const s = this.settings
+		const t1 = this.config.term
+		const t2 = this.config.term2
 		if (s.exclude.cols.length) {
-			const t = this.terms.term1
-			const b = t.graph && t.graph.barchart ? t.graph.barchart : null
+			const b = t1.term.graph && t1.term.graph.barchart ? t1.term.graph.barchart : null
 			const reducer = (sum, b) => sum + b.total
 			const items = s.exclude.cols
 				.filter(collabel => s.cols.includes(collabel))
 				.map(collabel => {
 					const filter = c => c.seriesId == collabel
 					const total =
-						this.terms.term2 && this.terms.term2.iscondition
+						t2 && t2.term.iscondition
 							? 0
 							: this.currServerData.charts.reduce((sum, chart) => {
 									return sum + chart.serieses.filter(filter).reduce(reducer, 0)
 							  }, 0)
-					const label =
-						this.terms.term1.values && collabel in this.terms.term1.values
-							? this.terms.term1.values[collabel].label
-							: collabel
+					const label = t1.values && collabel in t1.values ? t1.values[collabel].label : collabel
 					const ntotal = total ? ', n=' + total : ''
 
 					return {
@@ -306,29 +295,28 @@ class TdbBarchart {
 
 			if (items.length) {
 				legendGrps.push({
-					name: 'Hidden ' + this.terms.term1.name + ' value',
+					name: 'Hidden ' + t1.term.name + ' value',
 					items
 				})
 			}
 		}
-		if (s.rows && s.rows.length > 1 && !s.hidelegend && this.terms.term2 && this.term2toColor) {
-			const t = this.terms.term2
-			const b = t.graph && t.graph.barchart ? t.graph.barchart : null
+		if (s.rows && s.rows.length > 1 && !s.hidelegend && t2 && this.term2toColor) {
+			const b = t2.term.graph && t2.term.graph.barchart ? t2.term.graph.barchart : null
 			const value_by_label =
-				!t.iscondition || !t.q
+				!t2.term.iscondition || !t2.term.q
 					? ''
-					: t.q.value_by_max_grade
+					: t2.term.q.value_by_max_grade
 					? 'max. grade'
-					: t.q.value_by_most_recent
+					: t2.term.q.value_by_most_recent
 					? 'most recent'
 					: ''
 			legendGrps.push({
-				name: t.name + (value_by_label ? ', ' + value_by_label : ''),
+				name: t2.name + (value_by_label ? ', ' + value_by_label : ''),
 				items: s.rows
 					.map(d => {
 						const total = this.totalsByDataId[d]
 						const ntotal = total ? ', n=' + total : ''
-						const label = this.terms.term2.values && d in this.terms.term2.values ? this.terms.term2.values[d].label : d
+						const label = t2.values && d in t2.values ? t2.values[d].label : d
 						return {
 							dataId: d,
 							text: label + ntotal,

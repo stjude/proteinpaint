@@ -28,7 +28,6 @@ class TermSearch {
 		this.type = 'search'
 		this.api = rx.getComponentApi(this)
 		this.app = app
-		this.state = Object.assign({}, app.getState(this.api))
 		this.modifiers = opts.modifiers
 		// see rx.core getComponentApi().main() on
 		// how these key-values are used
@@ -131,7 +130,7 @@ function setRenderers(self) {
 								expandedTermIds,
 								visiblePlotIds: [term.id],
 								plots: {
-									[term.id]: plotConfig({ term })
+									[term.id]: plotConfig({ term: { term } })
 								}
 							}
 						}

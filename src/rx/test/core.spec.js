@@ -359,7 +359,7 @@ tape('matchAction', function(test) {
 		'against={prefix, type} should return false if both does not match'
 	)
 
-	// specified prefix and type
+	// specified prefix and type and action
 	test.true(
 		rx.matchAction({ type: 'test_show' }, { prefix: ['test'], type: ['...', 'plot_show'], fxn: () => true }),
 		'against={prefix, type, fxn} should return true if either prefix/type matches and fxn returns true'

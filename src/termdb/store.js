@@ -44,6 +44,22 @@ class TdbStore {
 			}
 		}
 	}
+
+	async rehydrate() {
+		const lst = ['genome=' + this.state.genome + '&dslabel=' + this.state.dslabel]
+		// maybe no need to provide term filter at this query
+		for (const plotId in this.state.tree.plots) {
+			const savedPlot = this.state.tree.plots[plotId]
+			for (const t of ['term', 'term2', 'term0']) {
+				if (!savedPlot[t]) continue
+				if (!('id' in savedPlot[t])) savedPlot[t].id = plotId
+				if (!savedPlot[t].q) savedPlot[t].q = {}
+				const term = await dofetch2('/termdb?' + lst.join('&') + '&gettermbyid=' + savedPlot[t].id)
+				savedPlot[t].term = term.term
+			}
+			this.state.tree.plots[plotId] = plotConfig(savedPlot)
+		}
+	}
 }
 
 /*
@@ -73,12 +89,9 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
-	plot_rehydrate(action) {
-		this.state.tree.plots[action.id] = rx.copyMerge(plotConfig(action.config), this.state.tree.plots[action.id] || {})
-	},
 	plot_show(action) {
 		if (!this.state.tree.plots[action.id]) {
-			this.state.tree.plots[action.term.id] = plotConfig({ term: action.term })
+			this.state.tree.plots[action.term.id] = plotConfig({ id: action.id, term: { term: action.term } })
 		}
 		if (!this.state.tree.visiblePlotIds.includes(action.id)) {
 			this.state.tree.visiblePlotIds.push(action.id)

@@ -169,9 +169,10 @@ function getStoreApi(self) {
 				throw `invalid action type=${action.type}`
 			}
 			await actions[action.type].call(self, action)
-			return api.copyState()
+			return await api.copyState()
 		},
-		copyState() {
+		async copyState(opts = {}) {
+			if (opts.rehydrate) await self.rehydrate()
 			const stateCopy = self.fromJson(self.toJson(self.state))
 			self.deepFreeze(stateCopy)
 			return stateCopy
@@ -411,9 +412,9 @@ exports.getComponents = getComponents
 
 /*
 	base: 
-	- either an state object or its JSON-stringified equivalent 
+	- either a state object or its JSON-stringified equivalent 
 	- will be over-written by second+ argument,
-	  similar to native Object.assign() behavior
+	  similar to native Object.assign() overwrite sequence
 
 	args
 	- full or partial state object(s). if base is a string, then

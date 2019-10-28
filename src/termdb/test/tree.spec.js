@@ -208,7 +208,7 @@ tape('rehydrated from saved state', function(test) {
 				plots: {
 					diaggrp: {
 						id: 'diaggrp',
-						isVisible: true,
+						term: { id: 'diaggrp' },
 						settings: {
 							currViews: ['barchart'],
 							bar: { orientation: 'vertical' }

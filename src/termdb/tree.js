@@ -110,17 +110,11 @@ class TdbTree {
 		root.terms = await this.requestTermRecursive(root)
 		this.renderBranch(root, this.dom.treeDiv)
 
-		let updatePlotsState = false
 		for (const termId of this.state.visiblePlotIds) {
 			if (!this.components.plots[termId]) {
-				// rehydrate here when the term information is available,
-				// in constructor the termsById are not filled in yet
-				await this.app.save({ type: 'plot_rehydrate', id: termId, config: { term: this.termsById[termId] } })
 				this.newPlot(this.termsById[termId])
-				updatePlotsState = true
 			}
 		}
-		if (updatePlotsState) this.state = this.app.getState(this.api)
 	}
 
 	async requestTermRecursive(term) {

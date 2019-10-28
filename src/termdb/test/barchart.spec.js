@@ -36,8 +36,9 @@ tape('single barchart, categorical bars', function(test) {
 				visiblePlotIds: ['diaggrp'],
 				plots: {
 					diaggrp: {
-						isVisible: true,
-						term: termjson['diaggrp'],
+						term: {
+							id: 'diaggrp'
+						},
 						settings: {
 							currViews: ['barchart']
 						}
@@ -79,6 +80,33 @@ tape('single barchart, categorical bars', function(test) {
 tape('single chart, with overlay', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
+		termfilter,
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
+				plots: {
+					diaggrp: {
+						term: {
+							id: 'diaggrp',
+						},
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		callbacks: {
+			plot: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+
+	runpp({
+
 		termfilter,
 		plot2restore: {
 			term: termjson['diaggrp'],
@@ -123,7 +151,7 @@ tape('single chart, with overlay', function(test) {
 		test.end()
 	}
 })
-
+/*
 tape('single chart, genotype overlay', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
