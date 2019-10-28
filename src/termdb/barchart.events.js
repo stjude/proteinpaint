@@ -44,7 +44,7 @@ export default function getHandlers(self) {
 				rows.push(
 					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>n=${d.total}</td></tr>`
 				)
-				if (!t1.iscondition && (!t2 || !t2.term.iscondition)) {
+				if (!t1.iscondition && (!t2 || !t2.iscondition)) {
 					rows.push(
 						`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(
 							(100 * d.total) /
@@ -185,21 +185,18 @@ function getTermValues(d, self) {
   */
 
 	const termValues = []
-	self.config.term0 = self.config.term0 ? self.config.term0.term : null
-	self.config.term = self.config.term.term
-	self.config.term2 = self.config.term2 ? self.config.term2.term : null
-	for (const [i, termNum] of ['term0', 'term', 't2'].entries()) {
-		const term = self.config[termNum]
-		// always exclude term0 value for now
-		if (termNum == 'term0' || !term) continue
-
-		const key = termNum == 'term' ? d.seriesId : d.dataId
+	const t1 = self.config.term
+	const t2 = self.config.term2
+	for (const term of [t1, t2]) {
+		if (!term) continue
+		const i = term == t1 ? 1 : 2
+		const key = term == t1 ? d.seriesId : d.dataId
 		// const q = term ? term.q : {}
-		const q = term ? self.currServerData.refs.q[i] : {}
+		const q = self.currServerData.refs.q[i]
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
 
 		if (term.term.iscondition) {
-			if (termNum == 'term0' || !self.config.term2 || self.config.term.id != self.config.term2.id) {
+			if (!t2 || t1.id != t2.id) {
 				termValues.push(
 					Object.assign(
 						{
@@ -211,12 +208,10 @@ function getTermValues(d, self) {
 				)
 			}
 
-			if (termNum == 'term' && self.config.term2 && term.term.id == self.config.term2.id) {
-				const q2 = self.config.term2.q
+			if (term == t1 && t2 && term.term.id == t2.id) {
+				const q2 = t2.q
 				const term2Label =
-					self.config.term2.values && d.dataId in self.config.term2.values
-						? self.config.term2.values[d.dataId].label
-						: d.dataId
+					t2.term.values && d.dataId in t2.term.values ? self.config.term2.values[d.dataId].label : d.dataId
 
 				termValues.push(
 					Object.assign(
@@ -244,9 +239,9 @@ function getTermValues(d, self) {
 			} else {
 				const range = bins.find(d => d.label == label || d.name == label)
 				if (range) termValues.push({ term: term.term, ranges: [range] })
-				else if (termNum == 'term' && d.unannotatedSeries) {
+				else if (term == t1 && d.unannotatedSeries) {
 					termValues.push({ term: term.term, ranges: [{ value: d.unannotatedSeries.value, label }] })
-				} else if (termNum == 't2' && d.unannotatedData) {
+				} else if (term == t2 && d.unannotatedData) {
 					termValues.push({ term: term.term, ranges: [{ value: d.unannotatedData.value, label }] })
 				} else if (q && q.binconfig && q.binconfig.unannotated) {
 					for (const id in q.binconfig.unannotated._labels) {

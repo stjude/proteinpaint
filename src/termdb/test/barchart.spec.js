@@ -167,44 +167,62 @@ tape('single chart, genotype overlay', function(test) {
 		test.end()
 	}
 })
-
+*/
 tape('click to add numeric, condition term filter', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
 		termfilter,
-		plot2restore: {
-			term: termjson['agedx'],
-			term2: Object.assign(termjson['Arrhythmias'], {
-				q: {
-					bar_by_grade: 1,
-					value_by_max_grade: 1
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
+				plots: {
+					diaggrp: {
+						term: { id: 'agedx' },
+						term2: {
+							id: 'agedx',
+							term: termjson['Arrhythmias'],
+							q: {
+								bar_by_grade: 1,
+								value_by_max_grade: 1
+							}
+						},
+						settings: { currViews: ['barchart'] }
+					}
 				}
-			}),
-			settings: {
-				currViews: ['barchart']
 			}
 		},
 		callbacks: {
 			plot: {
-				postRender: triggerClick
+				'postRender.test': runTests
 			}
-		},
-		bar_click_menu: {
-			add_filter: true
 		}
 	})
 
-	function triggerClick(plot) {
-		plot.bus.on('postRender', plot => testTermValues(plot, elem.datum()))
-		const elem = plot.components.barchart.dom.barDiv.select('.bars-cell').select('rect')
+	let barDiv
+	function runTests(plot) {
+		test.end()
+		return
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		helpers
+			.rideInit({ arg: plot, eventType: 'postRender.test' })
+			.use(triggerBarClick)
+			.use(triggerMenuClick, { wait: 100 })
+			.to(testTermValues)
+			.done(test)
+	}
+
+	function triggerBarClick(plot) {
+		const elem = barDiv.select('.bars-cell').select('rect')
 		elem.node().dispatchEvent(new Event('click', { bubbles: true }))
-		setTimeout(() => {
-			plot.obj.tip.d
-				.selectAll('.sja_menuoption')
-				.filter(d => d.label.includes('filter'))
-				.node()
-				.dispatchEvent(new Event('click', { bubbles: true }))
-		}, 200)
+	}
+
+	function triggerMenuClick(plot) {
+		plot.Inner.app.Inner.tip.d
+			.selectAll('.sja_menuoption')
+			.filter(d => d.label.includes('filter'))
+			.node()
+			.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
 	function testTermValues(plot, clickedData) {
@@ -243,7 +261,7 @@ tape('click to add numeric, condition term filter', function(test) {
 		}, 200)
 	}
 })
-
+/*
 tape('click to add condition child term filter', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
@@ -348,27 +366,33 @@ tape('click to add condition grade and child term filter', function(test) {
 		}, 200)
 	}
 })
-
+*/
 tape('multiple charts', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
-		termfilter,
-		plot2restore: {
-			term: termjson['diaggrp'],
-			term0: termjson['agedx'],
-			settings: {
-				currViews: ['barchart']
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
+				plots: {
+					diaggrp: {
+						term: { id: 'diaggrp' },
+						term0: { id: 'agedx' },
+						settings: { currViews: ['barchart'] }
+					}
+				}
 			}
 		},
 		callbacks: {
 			plot: {
-				postRender: testNumCharts
+				'postRender.test': testNumCharts
 			}
 		}
 	})
 
+	let barDiv
 	function testNumCharts(plot) {
-		const numCharts = plot.components.barchart.dom.barDiv.selectAll('.pp-sbar-div').size()
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
 		test.end()
 	}
@@ -376,27 +400,32 @@ tape('multiple charts', function(test) {
 
 tape('series visibility', function(test) {
 	runpp({
-		plot2restore: {
-			term: termjson['aaclassic_5'],
-			settings: {
-				currViews: ['barchart']
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alklaying Agents'],
+				visiblePlotIds: ['aaclassic_5'],
+				plots: {
+					aaclassic_5: {
+						term: { id: 'aaclassic_5' },
+						settings: { currViews: ['barchart'] }
+					}
+				}
 			}
 		},
 		callbacks: {
 			plot: {
-				postRender: [testExcluded]
+				'postRender.test': testExcluded
 			}
 		}
 	})
 
 	function testExcluded(plot) {
-		const excluded = plot.components.barchart.settings.exclude.cols
+		const bar = plot.Inner.components.barchart.Inner
+		const excluded = bar.settings.exclude.cols
 		test.true(
-			excluded.length > 1 && excluded.length == plot.components.barchart.settings.unannotatedLabels.term1.length,
-			'should have more than 2 charts by Age at Cancer Diagnosis'
+			excluded.length > 1 && excluded.length == bar.settings.unannotatedLabels.term1.length,
+			'should have the correct number of hidden bars'
 		)
-
 		test.end()
 	}
 })
-*/

@@ -35,17 +35,16 @@ class TdbPlotControls {
 			table
 		}
 
-		const plot = this.state.config
 		this.components = {
 			burger: setBurgerBtn(app, { holder: this.dom.burger_div }, this),
 			svg: setSvgBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			term_info: setTermInfoBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			config: setConfigDiv(app, { holder: this.dom.config_div, table }, this),
 			//barsAs: setBarsAsOpts(app, {holder: table.append('tr'), label: "Bars as"}, this),
-			overlay: setOverlayOpts(app, { holder: table.append('tr') }, this, plot),
+			overlay: setOverlayOpts(app, { holder: table.append('tr') }, this),
 			//view: setViewOpts(app),
-			orientation: setOrientationOpts(app, { holder: table.append('tr') }, this, plot),
-			scale: setScaleOpts(app, { holder: table.append('tr') }, this, plot)
+			orientation: setOrientationOpts(app, { holder: table.append('tr') }, this),
+			scale: setScaleOpts(app, { holder: table.append('tr') }, this)
 			/*bin: setBinOpts(app, "term", "Primary Bins"),
 			divideBy: setDivideByOpts(app)
 			*/
@@ -423,7 +422,7 @@ function setScaleOpts(app, opts, controls) {
 	}
 }
 
-function setOverlayOpts(app, opts, controls, plot) {
+function setOverlayOpts(app, opts, controls) {
 	const obj = app.getState()
 	const tr = opts.holder
 	tr.append('td')
@@ -453,7 +452,7 @@ function setOverlayOpts(app, opts, controls, plot) {
 					})
 				} else if (d.value == 'tree') {
 					controls.dispatch({
-						term2: { term: termuiObj.termsetting.term },
+						term2: { term: self.termuiObj.termsetting.term },
 						settings: { bar: { overlay: d.value } }
 					})
 				} else if (d.value == 'genotype') {
@@ -517,35 +516,39 @@ function setOverlayOpts(app, opts, controls, plot) {
 		.append('div')
 		.style('display', 'inline-block')
 
-	const termuiObj = {
-		mainlabel: 'Another term',
-		holder: pill_div,
-		genome: obj.genome,
-		mds: obj.mds,
-		tip: obj.tip,
-		currterm: plot.term.term,
-		termsetting: {
-			term: plot.term2 ? plot.term2.term : undefined,
-			q: plot.term2 ? plot.term2.q : undefined
-		},
-		callback: term2 => {
-			plot.term2 = term2 ? { term: term2 } : null
-			if (term2 && term2.q) plot.term2.q = term2.q
-			if (!term2) {
-				plot.settings.bar.overlay = 'none'
-				controls.dispatch({ settings: { bar: { overlay: 'none' } } })
-			} else {
-				treeInput.property('checked', true)
-				controls.dispatch({ settings: { bar: { overlay: 'tree' } } })
-			}
-		},
-		isCoordinated: true
+	function setTermUi(plot) {
+		if (self.termuiObj) return
+		self.termuiObj = {
+			mainlabel: 'Another term',
+			holder: pill_div,
+			genome: obj.genome,
+			mds: obj.mds,
+			tip: obj.tip,
+			currterm: plot.term.term,
+			termsetting: {
+				term: plot.term2 ? plot.term2.term : undefined,
+				q: plot.term2 ? plot.term2.q : undefined
+			},
+			callback: term2 => {
+				plot.term2 = term2 ? { term: term2 } : null
+				if (term2 && term2.q) plot.term2.q = term2.q
+				if (!term2) {
+					plot.settings.bar.overlay = 'none'
+					controls.dispatch({ settings: { bar: { overlay: 'none' } } })
+				} else {
+					treeInput.property('checked', true)
+					controls.dispatch({ settings: { bar: { overlay: 'tree' } } })
+				}
+			},
+			isCoordinated: true
+		}
+
+		termui_display(self.termuiObj)
 	}
 
-	termui_display(termuiObj)
-
-	return {
+	const self = {
 		main(plot) {
+			setTermUi(plot)
 			// hide all options when opened from genome browser view
 			tr.style('display', obj.modifier_ssid_barchart ? 'none' : 'table-row')
 
@@ -580,14 +583,15 @@ function setOverlayOpts(app, opts, controls, plot) {
 				}
 			})
 
-			if (plot.term2 && plot.term2.term.id != plot.term.id && plot.term2 != termuiObj.termsetting.term) {
-				termuiObj.termsetting.term = plot.term2.term
-				termuiObj.update_ui()
+			if (plot.term2 && plot.term2.term.id != plot.term.id && plot.term2 != self.termuiObj.termsetting.term) {
+				self.termuiObj.termsetting.term = plot.term2.term
+				self.termuiObj.update_ui()
 			}
 		},
-		radio,
-		termuiObj
+		radio
 	}
+
+	return self
 }
 
 function setViewOpts(controls) {
