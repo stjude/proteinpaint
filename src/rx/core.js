@@ -227,7 +227,7 @@ function getAppApi(self) {
 			// save changes to store, do not notify components
 			self.state = await self.store.write(action)
 		},
-		getState(sub = null, current = {}) {
+		getState(sub = null, current = {}, currComponentState) {
 			/*
 				Because a component may rehydrate and save() 
 				additional state during a dispatch cycle, 
@@ -247,27 +247,9 @@ function getAppApi(self) {
 			}
 
 			const subState = self.subState[sub.type]
-			if (current.action && subState.reactsTo) {
-				const action = current.action
-				const reactsTo = subState.reactsTo
-				// if string matches are specified, start with
-				// matched == false, otherwise start as true
-				let matched = !(reactsTo.prefix || reactsTo.type)
-				if (reactsTo.prefix) {
-					for (const p of reactsTo.prefix) {
-						matched = action.type.startsWith(p)
-						if (matched) break
-					}
-				}
-				if (reactsTo.type) {
-					// okay to match prefix, type, or both
-					matched = matched || reactsTo.type.includes(action.type)
-				}
-				if (reactsTo.match) {
-					// fine-tuned action matching with a function
-					matched = matched && reactsTo.match.call(self, action, sub)
-				}
-				if (!matched) return
+			if (current.action) {
+				if (subState.passThrough && matchAction(current.action, subState.passThrough, sub)) return currComponentState
+				if (subState.reactsTo && !matchAction(current.action, subState.reactsTo, sub)) return
 			}
 			// freeze only the root subsState object since
 			// the copied app.state is already deeply frozen
@@ -316,7 +298,7 @@ function getComponentApi(self) {
 		type: self.type,
 		id: self.id,
 		async update(current, data) {
-			const componentState = self.app.getState(api, current)
+			const componentState = self.app.getState(api, current, self.state)
 			// no new state computed for this component
 			if (!componentState) return
 			let componentData = null
@@ -490,6 +472,33 @@ function deepFreeze(obj) {
 }
 
 exports.deepFreeze = deepFreeze
+
+// Match Helpers
+// -----------
+
+function matchAction(action, against, sub) {
+	//console.log(action, against)
+	// if string matches are specified, start with
+	// matched == false, otherwise start as true
+	let matched = !(against.prefix || against.type)
+	if (against.prefix) {
+		for (const p of against.prefix) {
+			matched = action.type.startsWith(p)
+			if (matched) break
+		}
+	}
+	if (against.type) {
+		// okay to match prefix, type, or both
+		matched = matched || against.type.includes(action.type)
+	}
+	if (against.fxn) {
+		// fine-tuned action matching with a function
+		matched = matched && against.fxn.call(self, action, sub)
+	}
+	return matched
+}
+
+exports.matchAction = matchAction
 
 function deepEqual(x, y) {
 	if (x === y) {

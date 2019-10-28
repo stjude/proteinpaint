@@ -126,9 +126,12 @@ class TdbApp {
 */
 TdbApp.prototype.subState = {
 	tree: {
+		passThrough: {
+			type: ['plot_edit']
+		},
 		reactsTo: {
-			prefix: ['tree', 'filter', 'plot'],
-			type: ['app_refresh']
+			prefix: ['tree', 'filter'],
+			type: ['app_refresh', 'plot_show', 'plot_hide']
 		},
 		get(appState, sub) {
 			const plots = appState.tree.plots
@@ -158,7 +161,7 @@ TdbApp.prototype.subState = {
 		reactsTo: {
 			prefix: ['filter'],
 			type: ['plot_add', 'plot_show', 'plot_edit', 'app_refresh', 'plot_rehydrate'],
-			match: (action, sub) => {
+			fxn: (action, sub) => {
 				if (!action.type.startsWith('plot')) return true
 				if (!('id' in action) || action.id == sub.id) return true
 			}

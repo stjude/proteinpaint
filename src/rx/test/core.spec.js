@@ -314,3 +314,59 @@ tape('copyMerge', function(test) {
 	test.deepEqual(obj.arr, source.arr, 'should replace a target array value with the corresponding source array value')
 	test.end()
 })
+
+tape('matchAction', function(test) {
+	// no "against" specified
+	test.true(rx.matchAction({ type: 'plot_show' }, {}), "against={} should return true for empty 'against' argument")
+
+	// prefix only
+	test.true(
+		rx.matchAction({ type: 'plot_show' }, { prefix: ['...', 'plot'] }),
+		'against={prefix} should return true if action.type starts with any of the prefix values'
+	)
+	test.false(
+		rx.matchAction({ type: 'plot_show' }, { prefix: ['...', 'xyz'] }),
+		'against={prefix} should return false if action.type does not start with any of the prefix values'
+	)
+
+	// type only
+	test.true(
+		rx.matchAction({ type: 'plot_show' }, { type: ['...', 'plot_show'] }),
+		'against={type} should return true if action.type equals any of the type values'
+	)
+	test.false(
+		rx.matchAction({ type: 'plot_show' }, { type: ['...', 'plot'] }),
+		'against={type} should return false if action.type does not equal any of the type values'
+	)
+
+	// fxn only
+	test.true(
+		rx.matchAction({ type: 'plot_show' }, { fxn: () => true }),
+		'against={fxn} should return true per the function'
+	)
+	test.false(
+		rx.matchAction({ type: 'plot_show' }, { fxn: () => false }),
+		'against={fxn} should return false per the function'
+	)
+
+	// specified prefix and type
+	test.true(
+		rx.matchAction({ type: 'test_show' }, { prefix: ['test'], type: ['...', 'plot_show'] }),
+		'against={prefix, type} should return true if either one matches'
+	)
+	test.false(
+		rx.matchAction({ type: 'plot_show' }, { prefix: ['test'], type: ['...', 'plot'] }),
+		'against={prefix, type} should return false if both does not match'
+	)
+
+	// specified prefix and type
+	test.true(
+		rx.matchAction({ type: 'test_show' }, { prefix: ['test'], type: ['...', 'plot_show'], fxn: () => true }),
+		'against={prefix, type, fxn} should return true if either prefix/type matches and fxn returns true'
+	)
+	test.true(
+		rx.matchAction({ type: 'test_show' }, { prefix: ['test'], type: ['...', 'plot_show'], fxn: () => true }),
+		'against={prefix, type, fxn} should return false if fxn returns false, regardless of matched prefix or type'
+	)
+	test.end()
+})
