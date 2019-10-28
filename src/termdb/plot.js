@@ -146,7 +146,6 @@ export const plotInit = rx.getInitFxn(TdbPlot)
 export function plotConfig(opts) {
 	return {
 		id: opts.term.id,
-		isVisible: true,
 		term: { term: opts.term, q: opts.term.q ? opts.term.q : {} },
 		term0: opts.term0 ? { term: opts.term0, q: opts.term0.q ? opts.term0.q : {} } : null,
 		term2: opts.term2

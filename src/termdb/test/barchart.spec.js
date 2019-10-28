@@ -33,6 +33,7 @@ tape('single barchart, categorical bars', function(test) {
 		state: {
 			tree: {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
 				plots: {
 					diaggrp: {
 						isVisible: true,

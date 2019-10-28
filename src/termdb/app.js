@@ -136,7 +136,7 @@ TdbApp.prototype.subState = {
 				genome: appState.genome,
 				dslabel: appState.dslabel,
 				expandedTermIds: appState.tree.expandedTermIds,
-				plottedTermIds: Object.keys(plots).filter(termId => plots[termId].isVisible),
+				visiblePlotIds: appState.tree.visiblePlotIds,
 				termfilter: appState.termfilter
 			}
 		}

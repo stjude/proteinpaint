@@ -129,6 +129,7 @@ function setRenderers(self) {
 						state: {
 							tree: {
 								expandedTermIds,
+								visiblePlotIds: [term.id],
 								plots: {
 									[term.id]: plotConfig({ term })
 								}

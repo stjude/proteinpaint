@@ -8,6 +8,7 @@ const defaultState = {
 	// dslabel: "", // must be supplied
 	tree: {
 		expandedTermIds: [],
+		visiblePlotIds: [],
 		plots: {}
 	},
 	termfilter: {
@@ -82,19 +83,21 @@ TdbStore.prototype.actions = {
 		this.state.tree.plots[action.id] = config
 	},
 	*/
-	plot_add(action) {
-		this.state.tree.plots[action.term.id] = plotConfig({ term: action.term })
-	},
 
 	plot_show(action) {
-		const plot = this.state.tree.plots[action.id]
-		if (plot) plot.isVisible = true
-		else this.actions.plot_add.call(this, action)
+		if (!this.state.tree.plots[action.id]) {
+			this.state.tree.plots[action.term.id] = plotConfig({ term: action.term })
+		}
+		if (!this.state.tree.visiblePlotIds.includes(action.id)) {
+			this.state.tree.visiblePlotIds.push(action.id)
+		}
 	},
 
 	plot_hide(action) {
-		const plot = this.state.tree.plots[action.id]
-		if (plot) plot.isVisible = false
+		const i = this.state.tree.visiblePlotIds.indexOf(action.id)
+		if (i != -1) {
+			this.state.tree.visiblePlotIds.splice(i, 1)
+		}
 	},
 
 	plot_edit(action) {

@@ -111,7 +111,7 @@ class TdbTree {
 		this.renderBranch(root, this.dom.treeDiv)
 
 		let updatePlotsState = false
-		for (const termId of this.state.plottedTermIds) {
+		for (const termId of this.state.visiblePlotIds) {
 			if (!this.components.plots[termId]) {
 				// rehydrate here when the term information is available,
 				// in constructor the termsById are not filled in yet
@@ -279,6 +279,10 @@ function setRenderers(self) {
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
 		// update other parts if needed, e.g. label
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
+		// when clicking a search term, it will focus on that term view
+		// and hide other visible terms
+		const plotIsVisible = self.state.visiblePlotIds.includes(term.id)
+		div.select('.' + cls_termgraphdiv).style('display', plotIsVisible ? 'block' : 'none')
 	}
 
 	self.addTerm = function(term) {
@@ -389,8 +393,7 @@ function setInteractivity(self) {
 		}
 		event.stopPropagation()
 		event.preventDefault()
-		const isVisible = self.state.plottedTermIds.includes(term.id)
-
+		const isVisible = self.state.visiblePlotIds.includes(term.id)
 		const holder = select(this.parentNode.getElementsByClassName(cls_termgraphdiv)[0])
 		holder.style('display', isVisible ? 'none' : 'block')
 		// plot_show is expected to also plot_add as needed

@@ -136,7 +136,7 @@ tape('default behavior', function(test) {
 	}
 
 	function testPlotCreated(tree) {
-		test.equal(Object.keys(tree.Inner.state.plottedTermIds).length, 1, 'now has 1 plot')
+		test.equal(Object.keys(tree.Inner.state.visiblePlotIds).length, 1, 'now has 1 plot')
 		// tree.postRender cannot be used to verify that the plot is successfully rendered
 		// this is okay, will be tested independently by action-type in plot.spec
 	}
@@ -204,6 +204,7 @@ tape('rehydrated from saved state', function(test) {
 		state: {
 			tree: {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis'],
+				visiblePlotIds: ['diaggrp'],
 				plots: {
 					diaggrp: {
 						id: 'diaggrp',
