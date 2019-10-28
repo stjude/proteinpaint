@@ -74,7 +74,6 @@ TdbStore.prototype.actions = {
 
 	plot_rehydrate(action) {
 		const config = action.id in this.state.tree.plots ? this.state.tree.plots[action.id] : {}
-		//console.log(rx.copyMerge(plotConfig(action.config), config))
 		this.state.tree.plots[action.id] = rx.copyMerge(plotConfig(action.config), config)
 	},
 	/*
