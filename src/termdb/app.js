@@ -30,11 +30,12 @@ tree: display graphable terms as blue buttons for selecting, no VIEW button
 as in selecting term2 in barchart
 tree.search: display found terms as blue buttons
 
+< modifiers.tvs_select >
+at barchart, click a bar to select to a tvs
+
 < modifiers.ssid_barchart >
 TODO
 
-< modifiers.tvs_select >
-TODO
 */
 
 class TdbApp {

@@ -160,8 +160,9 @@ class TdbTree {
 				// not an expanded term
 				// if it's collapsing this term, must add back its children terms for toggle button to work
 				// see flag TERMS_ADD_BACK
-				if (this.termsById[copy.id]) {
-					copy.terms = this.termsById[copy.id].terms
+				const t0 = this.termsById[copy.id]
+				if (t0 && t0.terms) {
+					copy.terms = t0.terms
 				}
 			}
 			this.termsById[copy.id] = copy
@@ -178,8 +179,9 @@ class TdbTree {
 		)
 		const loading_div = holder
 			.append('div')
-			.attr('class', cls_termloading)
 			.text('Loading...')
+			.style('margin', '3px')
+			.style('opacity', 0.5)
 		const plot = plotInit(this.app, {
 			id: term.id,
 			holder: holder,
@@ -387,18 +389,22 @@ function setInteractivity(self) {
 	}
 
 	self.clickViewButton = function(term) {
+		/*
+		when loading a plot for the first time,
+		"plot_show" is fired to add the term id to state.tree.plots{}
+		then, tree.main() detects the plot is not a component, will call newPlot() to render it
+		*/
 		if (self.loadingPlotSet.has(term.id)) {
 			// don't respond to repetitive clicking
 			return
 		}
 		event.stopPropagation()
 		event.preventDefault()
-		const isVisible = self.state.visiblePlotIds.includes(term.id)
-		const holder = select(this.parentNode.getElementsByClassName(cls_termgraphdiv)[0])
-		holder.style('display', isVisible ? 'none' : 'block')
-		// plot_show is expected to also plot_add as needed
-		const type = isVisible ? 'plot_hide' : 'plot_show'
-		if (!self.components.plots[term.id]) self.loadingPlotSet.add(term.id)
+		if (!self.components.plots[term.id]) {
+			// no plot component for this term yet, first time loading this plot
+			self.loadingPlotSet.add(term.id)
+		}
+		const type = self.state.visiblePlotIds.includes(term.id) ? 'plot_hide' : 'plot_show'
 		self.app.dispatch({ type, id: term.id, term })
 	}
 }

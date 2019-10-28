@@ -74,16 +74,8 @@ TdbStore.prototype.actions = {
 	},
 
 	plot_rehydrate(action) {
-		const config = action.id in this.state.tree.plots ? this.state.tree.plots[action.id] : {}
-		this.state.tree.plots[action.id] = rx.copyMerge(plotConfig(action.config), config)
+		this.state.tree.plots[action.id] = rx.copyMerge(plotConfig(action.config), this.state.tree.plots[action.id] || {})
 	},
-	/*
-	plot_add(action) {
-		const config = action.config ? action.config : {}
-		this.state.tree.plots[action.id] = config
-	},
-	*/
-
 	plot_show(action) {
 		if (!this.state.tree.plots[action.id]) {
 			this.state.tree.plots[action.term.id] = plotConfig({ term: action.term })
