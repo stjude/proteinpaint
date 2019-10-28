@@ -126,17 +126,17 @@ tape('default behavior', function(test) {
 		childdiv2.querySelectorAll('.termview')[0].click()
 	}
 
-	let plot_action_type = 'plot_add'
+	let plot_action_type = 'plot_show'
 	function inspectAction(action) {
 		test.equal(action.type, plot_action_type, `view btn click should trigger ${plot_action_type} action`)
 		// for second click, will hide plot instead of adding
-		if (plot_action_type == 'plot_add') plot_action_type = 'plot_hide'
+		if (plot_action_type == 'plot_show') plot_action_type = 'plot_hide'
 		// remove this function from middlewares after this test
 		return { deactivate: true }
 	}
 
 	function testPlotCreated(tree) {
-		test.equal(Object.keys(tree.Inner.state.plots).length, 1, 'now has 1 plot')
+		test.equal(Object.keys(tree.Inner.state.plottedTermIds).length, 1, 'now has 1 plot')
 		// tree.postRender cannot be used to verify that the plot is successfully rendered
 		// this is okay, will be tested independently by action-type in plot.spec
 	}
@@ -203,10 +203,11 @@ tape('rehydrated from saved state', function(test) {
 		debugName: 'tdb',
 		state: {
 			tree: {
-				expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis'],
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis'],
 				plots: {
 					diaggrp: {
 						id: 'diaggrp',
+						isVisible: true,
 						settings: {
 							currViews: ['barchart'],
 							bar: { orientation: 'vertical' }

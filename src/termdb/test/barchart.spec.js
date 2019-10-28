@@ -32,9 +32,10 @@ tape('single barchart, categorical bars', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
 				plots: {
 					diaggrp: {
+						isVisible: true,
 						term: termjson['diaggrp'],
 						settings: {
 							currViews: ['barchart']

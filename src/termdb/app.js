@@ -131,11 +131,12 @@ TdbApp.prototype.subState = {
 			type: ['app_refresh']
 		},
 		get(appState, sub) {
+			const plots = appState.tree.plots
 			return {
 				genome: appState.genome,
 				dslabel: appState.dslabel,
-				plots: appState.tree.plots,
-				expandedTerms: appState.tree.expandedTerms,
+				expandedTermIds: appState.tree.expandedTermIds,
+				plottedTermIds: Object.keys(plots).filter(termId => plots[termId].isVisible),
 				termfilter: appState.termfilter
 			}
 		}

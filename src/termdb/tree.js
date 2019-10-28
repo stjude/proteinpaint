@@ -111,7 +111,7 @@ class TdbTree {
 		this.renderBranch(root, this.dom.treeDiv)
 
 		let updatePlotsState = false
-		for (const termId in this.state.plots) {
+		for (const termId of this.state.plottedTermIds) {
 			if (!this.components.plots[termId]) {
 				// rehydrate here when the term information is available,
 				// in constructor the termsById are not filled in yet
@@ -154,7 +154,7 @@ class TdbTree {
 			terms.push(copy)
 			// rehydrate expanded terms as needed
 			// fills in termsById, for recovering tree
-			if (this.state.expandedTerms.includes(copy.id)) {
+			if (this.state.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy)
 			} else {
 				// not an expanded term
@@ -232,8 +232,8 @@ function setRenderers(self) {
 			div.select('.' + cls_termloading).remove()
 		}
 
-		const expandedTerms = self.state.expandedTerms
-		if (!expandedTerms.includes(term.id)) {
+		const expandedTermIds = self.state.expandedTermIds
+		if (!expandedTermIds.includes(term.id)) {
 			div.style('display', 'none')
 			if (button) button.text('+')
 			return
@@ -257,7 +257,7 @@ function setRenderers(self) {
 			.each(self.addTerm)
 
 		for (const child of term.terms) {
-			if (expandedTerms.includes(child.id)) {
+			if (expandedTermIds.includes(child.id)) {
 				self.renderBranch(
 					child,
 					div.selectAll('.' + cls_termchilddiv).filter(i => i.id == child.id),
@@ -269,13 +269,13 @@ function setRenderers(self) {
 
 	// this == the d3 selected DOM node
 	self.hideTerm = function(term) {
-		if (self.tree.expandedTerms.includes(term.id)) return
+		if (self.tree.expandedTermIds.includes(term.id)) return
 		select(this).style('display', 'none')
 	}
 
 	self.updateTerm = function(term) {
 		const div = select(this)
-		const isExpanded = self.state.expandedTerms.includes(term.id)
+		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
 		// update other parts if needed, e.g. label
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
@@ -377,7 +377,7 @@ function setInteractivity(self) {
 				.style('padding', '5px')
 		}
 
-		const expanded = self.state.expandedTerms.includes(term.id)
+		const expanded = self.state.expandedTermIds.includes(term.id)
 		const type = expanded ? 'tree_collapse' : 'tree_expand'
 		self.app.dispatch({ type, termId: term.id })
 	}
@@ -389,17 +389,14 @@ function setInteractivity(self) {
 		}
 		event.stopPropagation()
 		event.preventDefault()
-		const plotConfig = self.state.plots[term.id]
-		if (plotConfig) {
-			// plot already made
-			const holder = select(this.parentNode.getElementsByClassName(cls_termgraphdiv)[0])
-			holder.style('display', plotConfig.isVisible ? 'none' : 'block')
-			const type = plotConfig.isVisible ? 'plot_hide' : 'plot_show'
-			self.app.dispatch({ type, id: term.id, term })
-			return
-		}
-		self.loadingPlotSet.add(term.id)
-		self.app.dispatch({ type: 'plot_add', term })
+		const isVisible = self.state.plottedTermIds.includes(term.id)
+
+		const holder = select(this.parentNode.getElementsByClassName(cls_termgraphdiv)[0])
+		holder.style('display', isVisible ? 'none' : 'block')
+		// plot_show is expected to also plot_add as needed
+		const type = isVisible ? 'plot_hide' : 'plot_show'
+		if (!self.components.plots[term.id]) self.loadingPlotSet.add(term.id)
+		self.app.dispatch({ type, id: term.id, term })
 	}
 }
 

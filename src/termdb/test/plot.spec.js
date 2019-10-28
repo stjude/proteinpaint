@@ -32,7 +32,7 @@ tape('view click', function(test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTerms: ['root', 'Cancer-related Variables', 'Diagnosis']
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis']
 			}
 		},
 		callbacks: {

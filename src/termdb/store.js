@@ -7,7 +7,7 @@ const defaultState = {
 	// genome: "", // must be supplied
 	// dslabel: "", // must be supplied
 	tree: {
-		expandedTerms: [],
+		expandedTermIds: [],
 		plots: {}
 	},
 	termfilter: {
@@ -35,11 +35,11 @@ class TdbStore {
 		const s = this.state
 		if (!s.genome) throw '.state.genome missing'
 		if (!s.dslabel) throw '.state.dslabel missing'
-		if (s.tree.expandedTerms.length == 0) {
-			s.tree.expandedTerms.push(root_ID)
+		if (s.tree.expandedTermIds.length == 0) {
+			s.tree.expandedTermIds.push(root_ID)
 		} else {
-			if (s.tree.expandedTerms[0] != root_ID) {
-				s.tree.expandedTerms.unshift(root_ID)
+			if (s.tree.expandedTermIds[0] != root_ID) {
+				s.tree.expandedTermIds.unshift(root_ID)
 			}
 		}
 	}
@@ -62,14 +62,14 @@ TdbStore.prototype.actions = {
 		this.copyMerge(this.state, action.state ? action.state : {})
 	},
 	tree_expand(action) {
-		if (this.state.tree.expandedTerms.includes(action.termId)) return
-		this.state.tree.expandedTerms.push(action.termId)
+		if (this.state.tree.expandedTermIds.includes(action.termId)) return
+		this.state.tree.expandedTermIds.push(action.termId)
 	},
 
 	tree_collapse(action) {
-		const i = this.state.tree.expandedTerms.indexOf(action.termId)
+		const i = this.state.tree.expandedTermIds.indexOf(action.termId)
 		if (i == -1) return
-		this.state.tree.expandedTerms.splice(i, 1)
+		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
 	plot_rehydrate(action) {
@@ -89,6 +89,7 @@ TdbStore.prototype.actions = {
 	plot_show(action) {
 		const plot = this.state.tree.plots[action.id]
 		if (plot) plot.isVisible = true
+		else this.actions.plot_add.call(this, action)
 	},
 
 	plot_hide(action) {

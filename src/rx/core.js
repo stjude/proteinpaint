@@ -215,7 +215,7 @@ function getAppApi(self) {
 				// else an empty action should force components to update
 
 				const data = self.main ? self.main() : null
-				const current = {action, stateByType: {app: self.state}}
+				const current = { action, stateByType: { app: self.state } }
 				await notifyComponents(self.components, current, data)
 			} catch (e) {
 				if (self.printError) self.printError(e)
@@ -238,7 +238,7 @@ function getAppApi(self) {
 				and may be incomplete by the time certain child components 
 				are notified.
 			*/
-			// const appState = current.action && current.stateByType && current.stateByType.app ? current.stateByType.app : self.state; 
+			// const appState = current.action && current.stateByType && current.stateByType.app ? current.stateByType.app : self.state;
 			const appState = self.state
 			if (!sub || !sub.type) return appState
 
@@ -319,10 +319,14 @@ function getComponentApi(self) {
 			const componentState = self.app.getState(api, current)
 			// no new state computed for this component
 			if (!componentState) return
-			// if the current and pending state is the same, no need to update
-			if (current.action && deepEqual(componentState, self.state)) return
-			self.state = componentState
-			const componentData = self.main ? await self.main(data) : null
+			let componentData = null
+			// force update if there is no action, or
+			// if the current and pending state is the same
+			if (!current.action || !deepEqual(componentState, self.state)) {
+				self.state = componentState
+				componentData = self.main ? await self.main(data) : null
+			}
+			// notify children
 			await notifyComponents(self.components, current, componentData)
 			if (self.bus) self.bus.emit('postRender')
 			return api
@@ -426,12 +430,20 @@ exports.getComponents = getComponents
 /*
 	base: 
 	- either an state object or its JSON-stringified equivalent 
-	- will be over-written by second+ argument
+	- will be over-written by second+ argument,
+	  similar to native Object.assign() behavior
 
 	args
 	- full or partial state object(s). if base is a string, then
 	  the arg object will be converted to/from JSON to
 	  create a copy for merging
+
+	Merging behavior:
+	- a base value that is an array or non-object will be replaced by matching arg key-value
+	- a base value that is an object will be extended by a matching arg key-value
+	- nested base object values will be extended recursively, instead of being swapped/replaced
+	  at the root level
+	- see core.spec test for copyMerge details
 */
 function copyMerge(base, ...args) {
 	const target = typeof base == 'string' ? this.fromJson(base) : base

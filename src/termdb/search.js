@@ -118,9 +118,9 @@ function setRenderers(self) {
 			// as regular button, click to expand tree
 			button.attr('class', 'sja_menuoption').on('click', () => {
 				self.clear()
-				const expandedTerms = [root_ID]
+				const expandedTermIds = [root_ID]
 				if (term.__ancestors) {
-					expandedTerms.push(...term.__ancestors)
+					expandedTermIds.push(...term.__ancestors)
 				}
 
 				if (graphable(term)) {
@@ -128,7 +128,7 @@ function setRenderers(self) {
 						type: 'app_refresh',
 						state: {
 							tree: {
-								expandedTerms,
+								expandedTermIds,
 								plots: {
 									[term.id]: plotConfig({ term })
 								}
@@ -139,7 +139,7 @@ function setRenderers(self) {
 					self.app.dispatch({
 						type: 'app_refresh',
 						state: {
-							tree: { expandedTerms }
+							tree: { expandedTermIds }
 						}
 					})
 				}
