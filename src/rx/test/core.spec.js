@@ -291,17 +291,26 @@ tape('copyMerge', function(test) {
 	const target = {
 		setting: {
 			color: 'red'
-		}
+		},
+		arr: ['x', 'y', 'z'],
+		keyNotInSource: 'test'
 	}
 	const source = {
 		name: 'name',
 		setting: {
 			color: 'blue',
 			height: 100
-		}
+		},
+		arr: ['a', 'b']
 	}
 	const obj = rx.copyMerge(target, source)
-
-	test.equal(JSON.stringify(obj), '{"setting":{"color":"red","height":100},"name":"name"}', 'color should be "red"')
+	test.true('keyNotInSource' in obj, 'should keep target object key-values when the key is not in the source object')
+	test.deepEqual(
+		Object.keys(obj),
+		['setting', 'arr', 'keyNotInSource', 'name'],
+		'should extend the target object with new keys from the source object'
+	)
+	test.deepEqual(obj.setting, source.setting, 'should merge source nested key-values to target object')
+	test.deepEqual(obj.arr, source.arr, 'should replace a target array value with the corresponding source array value')
 	test.end()
 })
