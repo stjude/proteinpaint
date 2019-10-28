@@ -76,7 +76,6 @@ tape('single barchart, categorical bars', function(test) {
 	}
 })
 
-/*
 tape('single chart, with overlay', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
@@ -87,12 +86,9 @@ tape('single chart, with overlay', function(test) {
 				visiblePlotIds: ['diaggrp'],
 				plots: {
 					diaggrp: {
-						term: {
-							id: 'diaggrp',
-						},
-						settings: {
-							currViews: ['barchart']
-						}
+						term: { id: 'diaggrp' },
+						term2: { id: 'agedx' },
+						settings: { currViews: ['barchart'] }
 					}
 				}
 			}
@@ -104,37 +100,24 @@ tape('single chart, with overlay', function(test) {
 		}
 	})
 
-
-	runpp({
-
-		termfilter,
-		plot2restore: {
-			term: termjson['diaggrp'],
-			term2: termjson['agedx'],
-			settings: {
-				currViews: ['barchart']
-			}
-		},
-		callbacks: {
-			plot: {
-				postRender: [testBarCount, testOverlayOrder]
-			}
-		},
-		bar_click_menu: {
-			add_filter: true
-		}
-	})
+	let barDiv
+	function runTests(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		testBarCount(plot)
+		testOverlayOrder(plot)
+		test.end()
+	}
 
 	function testBarCount(plot) {
-		const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.true(numBars > 10, 'should have more than 10 Diagnosis Group bars')
 		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
 	}
 
 	function testOverlayOrder(plot) {
-		const bars_grp = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp')
-		const legend_rows = plot.components.barchart.dom.barDiv.selectAll('.legend-row')
+		const bars_grp = barDiv.selectAll('.bars-cell-grp')
+		const legend_rows = barDiv.selectAll('.legend-row')
 		//flag to indicate unordered bars
 		let overlay_ordered = true
 		const legend_ids = []
@@ -148,7 +131,6 @@ tape('single chart, with overlay', function(test) {
 				.reduce((bool, id, i) => bool && bar_ids[i] === id, overlay_ordered)
 		})
 		test.true(overlay_ordered, 'overlays order is same as legend')
-		test.end()
 	}
 })
 /*
