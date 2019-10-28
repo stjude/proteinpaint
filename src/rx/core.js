@@ -426,6 +426,7 @@ exports.getComponents = getComponents
 /*
 	base: 
 	- either an state object or its JSON-stringified equivalent 
+	- will be over-written by second+ argument
 
 	args
 	- full or partial state object(s). if base is a string, then

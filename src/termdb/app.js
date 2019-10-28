@@ -1,4 +1,4 @@
-import * as rx from '../rx.core'
+import * as rx from '../rx/core'
 import { select } from 'd3-selection'
 import { treeInit } from './tree'
 import { storeInit } from './store'
@@ -188,4 +188,3 @@ TdbApp.prototype.subState = {
 }
 
 exports.appInit = rx.getInitFxn(TdbApp)
-

@@ -1,4 +1,4 @@
-import * as rx from '../rx.core'
+import * as rx from '../rx/core'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
@@ -74,7 +74,8 @@ TdbStore.prototype.actions = {
 
 	plot_rehydrate(action) {
 		const config = action.id in this.state.tree.plots ? this.state.tree.plots[action.id] : {}
-		this.state.tree.plots[action.id] = rx.copyMerge(config, plotConfig(action.config))
+		//console.log(rx.copyMerge(plotConfig(action.config), config))
+		this.state.tree.plots[action.id] = rx.copyMerge(plotConfig(action.config), config)
 	},
 	/*
 	plot_add(action) {

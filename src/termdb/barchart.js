@@ -1,4 +1,4 @@
-import * as rx from '../rx.core'
+import * as rx from '../rx/core'
 import rendererSettings from '../bars.settings'
 import barsRenderer from '../bars.renderer'
 import htmlLegend from '../html.legend'

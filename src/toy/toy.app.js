@@ -1,4 +1,4 @@
-import * as rx from '../rx.core'
+import * as rx from '../rx/core'
 import { storeInit } from './toy.store'
 import { controlsInit } from './toy.controls'
 import { tableInit } from './toy.table'

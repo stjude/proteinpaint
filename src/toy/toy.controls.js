@@ -1,4 +1,4 @@
-import * as rx from '../rx.core'
+import * as rx from '../rx/core'
 import { searchInit } from './toy.search'
 import { filterInit } from './toy.filter'
 
