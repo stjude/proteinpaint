@@ -287,7 +287,7 @@ tape('Reactive flow', async function(test) {
 	await app.dispatch(action_edit)
 })
 
-tape('copyMerge', function(test) {
+tape.only('copyMerge', function(test) {
 	const target = {
 		setting: {
 			color: 'red'
@@ -312,6 +312,19 @@ tape('copyMerge', function(test) {
 	)
 	test.deepEqual(obj.setting, source.setting, 'should merge source nested key-values to target object')
 	test.deepEqual(obj.arr, source.arr, 'should replace a target array value with the corresponding source array value')
+
+	const target1 = {
+		settings: {
+			color: 'red'
+		}
+	}
+	const source1 = { settings: { a: 1 } }
+	test.deepEqual(
+		rx.copyMerge(target1, source1, ['settings']).settings,
+		source1.settings,
+		'should replace a target object value instead of extending it, if the last argument is an array with a matching key'
+	)
+
 	test.end()
 })
 

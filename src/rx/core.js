@@ -448,7 +448,7 @@ function copyMerge(base, ...args) {
 					!target[key] ||
 					Array.isArray(target[key]) ||
 					typeof target[key] !== 'object' ||
-					replaceKeyVals.includes[key]
+					replaceKeyVals.includes(key)
 				)
 					target[key] = source[key]
 				else this.copyMerge(target[key], source[key])
