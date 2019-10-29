@@ -2,9 +2,59 @@ import { event } from 'd3-selection'
 import { Menu } from '../client'
 
 const tip = new Menu({ padding: '5px' })
+const menu_tip = new Menu({ padding: '5px' })
 
 export default function getHandlers(self) {
 	const s = self.settings
+
+	setObjBarClickCallback(self)
+	function triggerBarClickMenu() {
+		const d = event.target.__data__ || event.target.parentNode.__data__
+		// bar label data only has {id,label},
+		// while bar data has all required data including seriesId
+		const term1 = self.config.term.term	
+		const term2 = self.config.term2 ? self.config.term2 : null
+		const uncomp_term1 = term1.values ? Object.values(term1.values).map(v=>v.label) : []
+		const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v=>v.label) : []
+		const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
+		const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId || d.id) ? ' ' + term2.unit : ''
+		const seriesLabel =
+			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId ? d.seriesId : d.id) +
+			term1unit
+		const dataLabel =
+			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
+			term2unit
+		const icon = !term2
+			? ''
+			: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
+			  d.color +
+			  "'>&nbsp;</div>"
+		const header =
+			`<div style='padding:2px'><b>${term1.name}</b>: ${seriesLabel}</div>` +
+			(d.seriesId && term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel} ${icon}</div>` : '')
+	
+		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id }
+		const termValues = getTermValues(data, self)
+		const options = [
+			{
+				label: d.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
+				callback: () => {
+					self.settings.exclude.cols.push(d.seriesId === 0 ? 0 : d.seriesId || d.id)
+					self.main()
+				}
+			}
+		]
+		if (d.dataId || d.dataId === 0) {
+			options.push({
+				label: 'Hide "' + dataLabel + '" ' + icon,
+				callback: () => {
+					self.settings.exclude.rows.push(d.dataId)
+					self.main()
+				}
+			})
+		}
+		self.bus.emit('postClick', { header, termValues, options, x: event.clientX, y: event.clientY })
+	}
 
 	return {
 		chart: {
@@ -60,14 +110,16 @@ export default function getHandlers(self) {
 			rectFill(d) {
 				return d.color
 			},
-			click(d) {
-				const termValues = getTermValues(d, self)
-				self.bus.emit('postClick', { termValues, x: event.clientX, y: event.clientY })
-				if (self.modifiers.tvs_select) {
-					//send the tvs to the main app state() to apply filter
-					self.modifiers.tvs_select(termValues[0])
-				}
-			}
+			// click(d) {
+			// 	const termValues = getTermValues(d, self)
+			// 	self.bus.emit('postClick', { termValues, x: event.clientX, y: event.clientY })
+			// 	triggerBarClickMenu()
+			// 	if (self.modifiers.tvs_select) {
+			// 		//send the tvs to the main app state() to apply filter
+			// 		self.modifiers.tvs_select(termValues[0])
+			// 	}
+			// }
+			click : triggerBarClickMenu,
 		},
 		colLabel: {
 			text: d => {
@@ -253,4 +305,144 @@ function getTermValues(d, self) {
 		}
 	}
 	return termValues
+}
+
+function setObjBarClickCallback(self) {
+	// below is used for setting up barchart event bus
+	self.app.opts.callbacks.barchart = {
+		postClick:
+			self.modifiers && self.modifiers.tvs_select
+				? arg => self.modifiers.tvs_select(arg.termValues[0])
+				: self.app.opts.state.bar_click_menu
+				? arg => show_bar_click_menu(self, arg)
+				: () => {}
+	}
+}
+
+function show_bar_click_menu(self, arg) {
+	/*
+  		self           the term tree obj
+  		termValue     array of term-value entries
+	*/
+	const options = arg.options ? arg.options : []
+	if (self.app.Inner.state.bar_click_menu.add_filter) {
+		options.push({
+			label: 'Add as filter',
+			callback: menuoption_add_filter
+		})
+	}
+	// TODO: add to cart and gp
+	// if (self.app.Inner.state.bar_click_menu.select_to_gp) {
+	// 	options.push({
+	// 		label: 'Select to GenomePaint',
+	// 		callback: menuoption_select_to_gp
+	// 	})
+	// }
+	// if (self.app.Inner.state.bar_click_menu.select_group_add_to_cart) {
+	// 	options.push({
+	// 		label: 'Add group to cart',
+	// 		callback: menuoption_select_group_add_to_cart
+	// 	})
+	// }
+
+	if (options.length) {
+		menu_tip.clear()
+		if (arg.header) {
+			menu_tip.d.append('div').html(arg.header)
+		}
+		menu_tip.d
+			.append('div')
+			.selectAll('div')
+			.data(options)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.html(d => d.label)
+			.on('click', d => {
+				menu_tip.hide()
+				d.callback(self, arg.termValues)
+			})
+
+			menu_tip.show(arg.x, arg.y)
+	}
+}
+
+function menuoption_add_filter(self, tvslst) {
+	/*
+	self: the tree object
+	tvslst: an array of 1 or 2 term-value setting objects
+		this is to be added to the obj.termfilter.terms[]
+		if barchart is single-term, tvslst will have only one element
+		if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
+  	*/
+	if (!tvslst) return
+
+	if (!self.state.termfilter || !self.state.termfilter.show_top_ui) {
+		// do not display ui, and do not collect callbacks
+		return
+	}
+
+	for (const [i, term] of tvslst.entries()) {
+		self.app.dispatch({ type: 'filter_replace', term })
+	}
+
+	self.main()
+}
+
+/* 			TODO: add to cart and gp          */
+
+function menuoption_select_to_gp(self, tvslst) {
+	const lst = []
+	for (const t of tvslst) lst.push(t)
+	if (self.termfilter && self.termfilter.terms) {
+		for (const t of self.termfilter.terms) {
+			lst.push(JSON.parse(JSON.stringify(t)))
+		}
+	}
+
+	// const pane = newpane({ x: 100, y: 100 })
+	// import('./block').then(_ => {
+	// 	new _.Block({
+	// 		hostURL: localStorage.getItem('hostURL'),
+	// 		holder: pane.body,
+	// 		genome: obj.genome,
+	// 		nobox: true,
+	// 		chr: obj.genome.defaultcoord.chr,
+	// 		start: obj.genome.defaultcoord.start,
+	// 		stop: obj.genome.defaultcoord.stop,
+	// 		nativetracks: [obj.genome.tracks.find(i => i.__isgene).name.toLowerCase()],
+	// 		tklst: [
+	// 			{
+	// 				type: tkt.mds2,
+	// 				dslabel: obj.dslabel,
+	// 				vcf: {
+	// 					numerical_axis: {
+	// 						AFtest: {
+	// 							groups: [{ is_termdb: true, terms: lst }, obj.bar_click_menu.select_to_gp.group_compare_against]
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 		]
+	// 	})
+	// })
+}
+
+function menuoption_select_group_add_to_cart(self, tvslst) {
+	if (!tvslst || !tvslst.length) return
+
+	const new_group = {}
+	new_group.is_termdb = true
+	new_group.terms = []
+
+	for (const [i, term] of tvslst.entries()) {
+		new_group.terms.push(term)
+	}
+
+	if (!self.selected_groups) {
+		self.selected_groups = []
+	}
+
+	self.selected_groups.push(new_group)
+	self.components.cart.main()
 }

@@ -148,7 +148,8 @@ TdbApp.prototype.subState = {
 				dslabel: appState.dslabel,
 				expandedTermIds: appState.tree.expandedTermIds,
 				visiblePlotIds: appState.tree.visiblePlotIds,
-				termfilter: appState.termfilter
+				termfilter: appState.termfilter,
+				bar_click_menu: appState.bar_click_menu
 			}
 		}
 	},

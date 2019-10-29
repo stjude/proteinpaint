@@ -9,7 +9,16 @@ const helpers = require('../../../test/front.helpers.js')
 const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'SJLife',
-		genome: 'hg38'
+		genome: 'hg38',
+		bar_click_menu: {
+			add_filter:true,
+			select_group_add_to_cart:true,
+			select_to_gp: {
+				group_compare_against: {
+					is_population:true, key:'gnomAD', allowto_adjust_race:true, adjust_race:true
+				}
+			}
+		},
 	},
 	debug: 1,
 	fetchOpts: {
