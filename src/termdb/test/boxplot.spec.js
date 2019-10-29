@@ -90,8 +90,8 @@ tape('supported numeric overlay', function(test) {
 				plots: {
 					diaggrp: {
 						settings: { currViews: ['boxplot'] },
-						term: { id: 'diaggrp' },
-						term2: { id: 'agedx' }
+						term: { id: 'diaggrp', term: termjson['diaggrp'] },
+						term2: { id: 'agedx', term: termjson['agedx'] }
 					}
 				}
 			}
@@ -103,14 +103,12 @@ tape('supported numeric overlay', function(test) {
 		}
 	})
 
-	let boxDiv
 	function runTests(box) {
-		boxDiv = box.Inner.dom.div
 		testVisibleBoxplot(box)
 		test.end()
 	}
 
 	function testVisibleBoxplot(box) {
-		test.equal(boxDiv.style('display'), 'block', 'should be visible when there is a numeric overlay')
+		test.equal(box.Inner.dom.div.style('display'), 'block', 'should be visible when there is a numeric overlay')
 	}
 })

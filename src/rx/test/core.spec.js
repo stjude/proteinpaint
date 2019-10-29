@@ -287,7 +287,7 @@ tape('Reactive flow', async function(test) {
 	await app.dispatch(action_edit)
 })
 
-tape.only('copyMerge', function(test) {
+tape('copyMerge', function(test) {
 	const target = {
 		setting: {
 			color: 'red'

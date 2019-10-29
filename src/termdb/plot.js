@@ -5,6 +5,7 @@ import { controlsInit } from './plot.controls'
 import { barInit } from './barchart'
 import { tableInit } from './table'
 import { boxplotInit } from './boxplot'
+import { scatterInit } from './scatter'
 import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 
 class TdbPlot {
@@ -56,6 +57,10 @@ class TdbPlot {
 				id: this.id
 			}),
 			boxplot: boxplotInit(this.app, {
+				holder: this.dom.viz.append('div'),
+				id: this.id
+			}),
+			scatter: scatterInit(this.app, {
 				holder: this.dom.viz.append('div'),
 				id: this.id
 			})
@@ -192,6 +197,25 @@ export function plotConfig(opts) {
 					unit: 'abs',
 					overlay: 'none',
 					divideBy: 'none'
+				},
+				scatter: {
+					currLine: 0,
+					svgw: 400,
+					svgh: 400,
+					svgPadding: {
+						top: 10,
+						left: 80,
+						right: 10,
+						bottom: 50
+					},
+					chartMargin: 5,
+					chartTitleDivHt: 30,
+					radius: 5,
+					axisTitleFontSize: 14,
+					scale: 'byChart', // byGroup | byChart
+					ciVisible: true,
+					fillOpacity: 0.2,
+					duration: 1000
 				}
 			}
 		},

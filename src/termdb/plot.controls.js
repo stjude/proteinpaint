@@ -610,8 +610,8 @@ function setViewOpts(app, opts, controls) {
 		options: [
 			{ label: 'Barchart', value: 'barchart' },
 			{ label: 'Table', value: 'table' },
-			{ label: 'Boxplot', value: 'boxplot' }
-			//{ label: 'Scatter', value: 'scatter' }
+			{ label: 'Boxplot', value: 'boxplot' },
+			{ label: 'Scatter', value: 'scatter' }
 		],
 		listeners: {
 			input(d) {
