@@ -50,9 +50,14 @@ class TdbStore {
 		// maybe no need to provide term filter at this query
 		for (const plotId in this.state.tree.plots) {
 			const savedPlot = this.state.tree.plots[plotId]
+			// .term{} is required, if missing, add with plotId
+			if (!savedPlot.term) savedPlot.term = {}
+			if (!savedPlot.term.id) savedPlot.term.id = plotId
+			// .term2 and term0 are optional, but .id is required as that's a different term than plotId
+			if (savedPlot.term2 && !savedPlot.term2.id) delete savedPlot.term2
+			if (savedPlot.term0 && !savedPlot.term0.id) delete savedPlot.term0
 			for (const t of ['term', 'term2', 'term0']) {
 				if (!savedPlot[t]) continue
-				if (!('id' in savedPlot[t])) savedPlot[t].id = plotId
 				if (!savedPlot[t].q) savedPlot[t].q = {}
 				const term = await dofetch2('/termdb?' + lst.join('&') + '&gettermbyid=' + savedPlot[t].id)
 				savedPlot[t].term = term.term
