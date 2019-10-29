@@ -12,7 +12,7 @@ class TdbTable {
 			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')
 		}
 		setRenderers(this)
-		this.bus = new rx.Bus('barchart', ['postInit', 'postRender'], app.opts.callbacks, this.api)
+		this.bus = new rx.Bus('table', ['postInit', 'postRender'], app.opts.callbacks, this.api)
 		this.bus.emit('postInit')
 	}
 

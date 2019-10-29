@@ -12,7 +12,6 @@ class TdbPlotControls {
 		this.type = 'plot'
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
-		this.api.id = this.id
 		this.app = app
 		this.state = app.getState(this.api)
 		this.index = i++ // used for assigning unique input names, across different plots
@@ -59,12 +58,17 @@ class TdbPlotControls {
 			.style('display', this.isVisible ? 'inline-block' : 'block')
 			.style('float', this.isVisible ? 'right' : 'none')
 
+		/******************************************************
+		NOTE: 
+		these control components do not have an update() method,
+		which means rx will not notify these subcomponents
+		--- may convert to use rx component.api later
+		*******************************************************/
 		for (const name in this.components) {
 			this.components[name].main(this.state.config)
 		}
 
 		this.dom.holder.style('background', this.isVisible ? panel_bg_color : '')
-		//this.bus.emit("postRender", plot)
 	}
 }
 
@@ -605,9 +609,9 @@ function setViewOpts(app, opts, controls) {
 		holder: td,
 		options: [
 			{ label: 'Barchart', value: 'barchart' },
-			{ label: 'Table', value: 'table' }
-			/*{ label: 'Boxplot', value: 'boxplot' },
-			{ label: 'Scatter', value: 'scatter' }*/
+			{ label: 'Table', value: 'table' },
+			{ label: 'Boxplot', value: 'boxplot' }
+			//{ label: 'Scatter', value: 'scatter' }
 		],
 		listeners: {
 			input(d) {

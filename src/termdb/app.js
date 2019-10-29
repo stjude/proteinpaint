@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 import { treeInit } from './tree'
 import { storeInit } from './store'
 import { filterInit } from './filter'
-import { sayerror } from '../client'
+import { sayerror, Menu } from '../client'
 
 /*
 opts{}
@@ -41,6 +41,7 @@ TODO
 class TdbApp {
 	constructor(parentApp, opts) {
 		this.opts = this.initOpts(opts)
+		this.tip = new Menu({ padding: '5px' })
 		// the TdbApp may be the root app or a component within another app
 		this.api = parentApp ? rx.getComponentApi(this) : rx.getAppApi(this)
 		this.app = parentApp ? parentApp : this.api

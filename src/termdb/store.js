@@ -30,6 +30,9 @@ class TdbStore {
 		if (!app.opts.state) throw '.state{} missing'
 		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
 		this.validateOpts()
+		// when using rx.copyMerge, replace the object values
+		// for these keys instead of extending them
+		this.replaceKeyVals = ['term', 'term2', 'term0']
 	}
 
 	validateOpts() {
@@ -81,7 +84,7 @@ TdbStore.prototype.actions = {
 		// without action.state as the current state at the
 		// initial render is not meant to be modified yet
 		//
-		this.copyMerge(this.state, action.state ? action.state : {})
+		this.copyMerge(this.state, action.state ? action.state : {}, this.replaceKeyVals)
 	},
 	tree_expand(action) {
 		if (this.state.tree.expandedTermIds.includes(action.termId)) return
@@ -112,7 +115,8 @@ TdbStore.prototype.actions = {
 
 	plot_edit(action) {
 		const plot = this.state.tree.plots[action.id]
-		if (plot) this.copyMerge(plot, action.config)
+		const replaceKeyVals = ['term', 'term2', 'term0']
+		if (plot) this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
 	},
 
 	filter_add(action) {

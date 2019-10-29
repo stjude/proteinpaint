@@ -288,6 +288,10 @@ function getAppApi(self) {
 		}
 	}
 
+	// expose tooltip if set, expected to be shared in common
+	// by all components within an app; should use the HOPI
+	// pattern to hide the mutable parts, not checked here
+	if (self.tip) api.tip = self.tip
 	if (self.opts.debugName) window[self.opts.debugName] = api
 	return api
 }
@@ -420,6 +424,8 @@ exports.getComponents = getComponents
 	- full or partial state object(s). if base is a string, then
 	  the arg object will be converted to/from JSON to
 	  create a copy for merging
+	- the last argument may be an array of keys to force replacing
+	  an object value instead of extending it
 
 	Merging behavior:
 	- a base value that is an array or non-object will be replaced by matching arg key-value
@@ -429,12 +435,22 @@ exports.getComponents = getComponents
 	- see core.spec test for copyMerge details
 */
 function copyMerge(base, ...args) {
+	const replaceKeyVals = []
+	if (Array.isArray(args[args.length - 1])) {
+		replaceKeyVals.push(...args.pop())
+	}
 	const target = typeof base == 'string' ? this.fromJson(base) : base
 	for (const arg of args) {
 		if (arg) {
 			const source = typeof base == 'string' ? this.fromJson(this.toJson(arg)) : arg
 			for (const key in source) {
-				if (!target[key] || Array.isArray(target[key]) || typeof target[key] !== 'object') target[key] = source[key]
+				if (
+					!target[key] ||
+					Array.isArray(target[key]) ||
+					typeof target[key] !== 'object' ||
+					replaceKeyVals.includes[key]
+				)
+					target[key] = source[key]
 				else this.copyMerge(target[key], source[key])
 			}
 		}
