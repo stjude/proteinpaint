@@ -42,7 +42,7 @@ class TdbPlotControls {
 			config: setConfigDiv(app, { holder: this.dom.config_div, table }, this),
 			//barsAs: setBarsAsOpts(app, {holder: table.append('tr'), label: "Bars as"}, this),
 			overlay: setOverlayOpts(app, { holder: table.append('tr') }, this),
-			//view: setViewOpts(app),
+			view: setViewOpts(app, { holder: table.append('tr') }, this),
 			orientation: setOrientationOpts(app, { holder: table.append('tr') }, this),
 			scale: setScaleOpts(app, { holder: table.append('tr') }, this)
 			/*bin: setBinOpts(app, "term", "Primary Bins"),
@@ -594,8 +594,8 @@ function setOverlayOpts(app, opts, controls) {
 	return self
 }
 
-function setViewOpts(controls) {
-	const tr = controls.dom.table.append('tr')
+function setViewOpts(app, opts, controls) {
+	const tr = opts.holder
 	tr.append('td')
 		.html('Display mode')
 		.attr('class', 'sja-termdb-config-row-label')
@@ -604,16 +604,19 @@ function setViewOpts(controls) {
 		name: 'pp-termdb-display-mode-' + controls.index, // elemName
 		holder: td,
 		options: [
-			// options
 			{ label: 'Barchart', value: 'barchart' },
-			{ label: 'Table', value: 'table' },
-			{ label: 'Boxplot', value: 'boxplot' },
-			{ label: 'Scatter', value: 'scatter' }
+			{ label: 'Table', value: 'table' }
+			/*{ label: 'Boxplot', value: 'boxplot' },
+			{ label: 'Scatter', value: 'scatter' }*/
 		],
 		listeners: {
 			input(d) {
-				controls.dispatch({
-					settings: { currViews: [d.value] }
+				app.dispatch({
+					type: 'plot_edit',
+					id: controls.id,
+					config: {
+						settings: { currViews: [d.value] }
+					}
 				})
 			}
 		}

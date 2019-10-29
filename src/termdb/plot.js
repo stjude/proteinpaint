@@ -3,6 +3,7 @@ import { select, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { controlsInit } from './plot.controls'
 import { barInit } from './barchart'
+import { tableInit } from './table'
 import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 
 class TdbPlot {
@@ -48,6 +49,11 @@ class TdbPlot {
 				id: this.id,
 				term: opts.term,
 				modifiers: this.modifiers
+			}),
+			table: tableInit(this.app, {
+				holder: this.dom.viz.append('div'),
+				id: this.id,
+				term: opts.term
 			})
 		}
 
