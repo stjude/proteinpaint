@@ -58,5 +58,11 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'terms_div')
 			.style('display', 'inline-block')
+
+		const state = self.app.opts.state
+
+		if(state && state.termfilter && !state.termfilter.show_top_ui){
+			div.style('display','none')
+		}
 	}
 }
