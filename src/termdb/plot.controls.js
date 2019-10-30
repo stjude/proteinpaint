@@ -34,19 +34,27 @@ class TdbPlotControls {
 			table
 		}
 
+		// helper function
+		this.dispatch = config => {
+			app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config
+			})
+		}
+
 		this.components = {
 			burger: setBurgerBtn(app, { holder: this.dom.burger_div }, this),
 			svg: setSvgBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			term_info: setTermInfoBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			config: setConfigDiv(app, { holder: this.dom.config_div, table }, this),
-			//barsAs: setBarsAsOpts(app, {holder: table.append('tr'), label: "Bars as"}, this),
+			barsAs: setBarsAsOpts(app, { holder: table.append('tr'), label: 'Bars as' }, this),
 			overlay: setOverlayOpts(app, { holder: table.append('tr') }, this),
 			view: setViewOpts(app, { holder: table.append('tr') }, this),
 			orientation: setOrientationOpts(app, { holder: table.append('tr') }, this),
-			scale: setScaleOpts(app, { holder: table.append('tr') }, this)
-			/*bin: setBinOpts(app, "term", "Primary Bins"),
-			divideBy: setDivideByOpts(app)
-			*/
+			scale: setScaleOpts(app, { holder: table.append('tr') }, this),
+			bin: setBinOpts(app, { holder: table.append('tr'), termNum: 'term', label: 'Primary Bins' }, this),
+			divideBy: setDivideByOpts(app, { holder: table.append('tr') }, this)
 		}
 
 		//this.plot.bus.on("postRender.controls", controls.listeners.plot.postRender)
@@ -353,14 +361,10 @@ function setOrientationOpts(app, opts, controls) {
 		options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }],
 		listeners: {
 			input(d) {
-				app.dispatch({
-					type: 'plot_edit',
-					id: controls.id,
-					config: {
-						settings: {
-							bar: {
-								orientation: d.value
-							}
+				controls.dispatch({
+					settings: {
+						barchart: {
+							orientation: d.value
 						}
 					}
 				})
@@ -393,14 +397,10 @@ function setScaleOpts(app, opts, controls) {
 		],
 		listeners: {
 			input(d) {
-				app.dispatch({
-					type: 'plot_edit',
-					id: controls.id,
-					config: {
-						settings: {
-							bar: {
-								unit: d.value
-							}
+				controls.dispatch({
+					settings: {
+						barchart: {
+							unit: d.value
 						}
 					}
 				})
@@ -451,13 +451,13 @@ function setOverlayOpts(app, opts, controls) {
 						term2: undefined,
 						settings: {
 							currViews: ['barchart'],
-							bar: { overlay: d.value }
+							barchart: { overlay: d.value }
 						}
 					})
 				} else if (d.value == 'tree') {
 					controls.dispatch({
 						term2: { term: self.termuiObj.termsetting.term },
-						settings: { bar: { overlay: d.value } }
+						settings: { barchart: { overlay: d.value } }
 					})
 				} else if (d.value == 'genotype') {
 					// to-do
@@ -475,7 +475,7 @@ function setOverlayOpts(app, opts, controls) {
 								bar_by_children: 1
 							}
 						},
-						settings: { bar: { overlay: d.value } }
+						settings: { barchart: { overlay: d.value } }
 					})
 				} else if (d.value == 'bar_by_grade') {
 					if (plot.term.q.bar_by_grade) {
@@ -489,7 +489,7 @@ function setOverlayOpts(app, opts, controls) {
 								bar_by_grade: 1
 							}
 						},
-						settings: { bar: { overlay: d.value } }
+						settings: { barchart: { overlay: d.value } }
 					})
 				} else {
 					console.log('unhandled click event', d, d3event.target)
@@ -520,39 +520,25 @@ function setOverlayOpts(app, opts, controls) {
 		.append('div')
 		.style('display', 'inline-block')
 
-	function setTermUi(plot) {
-		if (self.termuiObj) return
-		self.termuiObj = {
-			mainlabel: 'Another term',
-			holder: pill_div,
-			genome: obj.genome,
-			mds: obj.mds,
-			tip: obj.tip,
-			currterm: plot.term.term,
-			termsetting: {
-				term: plot.term2 ? plot.term2.term : undefined,
-				q: plot.term2 ? plot.term2.q : undefined
-			},
-			callback: term2 => {
-				plot.term2 = term2 ? { term: term2 } : null
-				if (term2 && term2.q) plot.term2.q = term2.q
-				if (!term2) {
-					plot.settings.barchart.overlay = 'none'
-					controls.dispatch({ settings: { bar: { overlay: 'none' } } })
-				} else {
-					treeInput.property('checked', true)
-					controls.dispatch({ settings: { bar: { overlay: 'tree' } } })
-				}
-			},
-			isCoordinated: true
+	function termuiCallback(term2) {
+		if (!term2) {
+			controls.dispatch({
+				settings: { barchart: { overlay: 'none' } }
+			})
+		} else {
+			treeInput.property('checked', true)
+			controls.dispatch({
+				settings: { barchart: { overlay: 'tree' } }
+			})
 		}
-
-		termui_display(self.termuiObj)
 	}
 
 	const self = {
 		main(plot) {
-			setTermUi(plot)
+			if (!self.termuiObj) {
+				self.termuiObj = getTermuiObj(app, plot, pill_div, 'Another term', 'term2', termuiCallback)
+			}
+
 			// hide all options when opened from genome browser view
 			tr.style('display', obj.modifier_ssid_barchart ? 'none' : 'table-row')
 
@@ -598,6 +584,26 @@ function setOverlayOpts(app, opts, controls) {
 	return self
 }
 
+function getTermuiObj(app, plot, holder, mainLabel, termNum, callback) {
+	const termuiObj = {
+		mainLabel,
+		holder,
+		genome: { name: plot.genome },
+		mds: { label: plot.dslabel },
+		tip: app.tip,
+		currterm: plot.term,
+		termsetting: {
+			term: plot[termNum],
+			q: plot[termNum] ? plot[termNum].q : undefined
+		},
+		currterm: plot.term,
+		callback,
+		isCoordinated: true
+	}
+	termui_display(termuiObj)
+	return termuiObj
+}
+
 function setViewOpts(app, opts, controls) {
 	const tr = opts.holder
 	tr.append('td')
@@ -615,12 +621,8 @@ function setViewOpts(app, opts, controls) {
 		],
 		listeners: {
 			input(d) {
-				app.dispatch({
-					type: 'plot_edit',
-					id: controls.id,
-					config: {
-						settings: { currViews: [d.value] }
-					}
+				controls.dispatch({
+					settings: { currViews: [d.value] }
 				})
 			}
 		}
@@ -654,8 +656,8 @@ function setViewOpts(app, opts, controls) {
 	}
 }
 
-function setDivideByOpts(controls) {
-	const tr = controls.dom.table.append('tr')
+function setDivideByOpts(app, opts, controls) {
+	const tr = opts.holder
 	tr.append('td')
 		.html('Divide by')
 		.attr('class', 'sja-termdb-config-row-label')
@@ -667,11 +669,12 @@ function setDivideByOpts(controls) {
 		listeners: {
 			input(d) {
 				d3event.stopPropagation()
-				plot.settings.barchart.divideBy = d.value
 				if (d.value == 'none') {
 					controls.dispatch({ term0: undefined })
 				} else if (d.value == 'tree') {
-					controls.dispatch({ term0: { term: termuiObj.termsetting.term } })
+					controls.dispatch({
+						term0: { term: termuiObj.termsetting.term }
+					})
 				} else if (d.value == 'genotype') {
 					// to-do
 				}
@@ -690,47 +693,34 @@ function setDivideByOpts(controls) {
 		.append('div')
 		.style('display', 'inline-block')
 
-	const plot = controls.plot
-	const termuiObj = {
-		holder: pill_div,
-		genome: plot.obj.genome,
-		mds: plot.obj.mds,
-		tip: plot.obj.tip,
-		currterm: plot.term,
-		termsetting: {
-			term: plot.term0,
-			q: plot.term0 ? plot.term0.q : undefined
-		},
-		currterm: plot.term,
-		callback: term0 => {
-			controls.dispatch({
-				term0: term0 ? { term: term0 } : undefined,
-				settings: {
-					bar: {
-						divideBy: term0 ? 'tree' : 'none'
-					}
+	function termuiCallback(term0) {
+		controls.dispatch({
+			term0: term0 ? { term: term0 } : undefined,
+			settings: {
+				barchart: {
+					divideBy: term0 ? 'tree' : 'none'
 				}
-			})
-		},
-		isCoordinated: true
+			}
+		})
 	}
-
-	plot.termuiObjDivide = termuiObj
-	termui_display(termuiObj)
 
 	return {
 		main(plot) {
+			if (!self.termuiObj) {
+				self.termuiObj = getTermuiObj(app, plot, pill_div, 'Select term', 'term0', termuiCallback)
+			}
+
 			// hide all options when opened from genome browser view
 			tr.style(
 				'display',
-				plot.obj.modifier_ssid_barchart ||
+				app.opts.modifier_ssid_barchart ||
 					(!plot.settings.currViews.includes('barchart') && !plot.settings.currViews.includes('scatter'))
 					? 'none'
 					: 'table-row'
 			)
 			// do not show genotype divideBy option when opened from stand-alone page
 			if (!plot.settings.barchart.divideBy) {
-				plot.settings.barchart.divideBy = plot.obj.modifier_ssid_barchart ? 'genotype' : plot.term0 ? 'tree' : 'none'
+				plot.settings.barchart.divideBy = app.opts.modifier_ssid_barchart ? 'genotype' : plot.term0 ? 'tree' : 'none'
 			}
 			radio.main(plot.settings.barchart.divideBy)
 
@@ -739,7 +729,7 @@ function setDivideByOpts(controls) {
 					return plot.term.term.iscondition || (plot.term0 && plot.term0.term.iscondition) ? 'block' : 'none'
 				} else {
 					const block = 'block'
-					return d.value != 'genotype' || plot.obj.modifier_ssid_barchart ? block : 'none'
+					return d.value != 'genotype' || app.opts.modifier_ssid_barchart ? block : 'none'
 				}
 			})
 
@@ -758,44 +748,26 @@ function setBarsAsOpts(app, opts, controls) {
 		.attr('class', 'sja-termdb-config-row-label')
 	const td = tr.append('td')
 
-	const plot = app.getState({ type: 'plot', id: controls.id })
-	console.log(plot, controls.id)
-	if (!plot.term.q) plot.term.q = {}
-
-	const termuiObj = {
-		holder: td.append('div'),
-		genome: plot.obj.genome,
-		mds: plot.obj.mds,
-		tip: plot.obj.tip,
-		currterm: plot.term,
-		termsetting: plot.term, //{term: plot.term.term, q: plot.term.q},
-		is_term1: true,
-		callback: term => {
-			plot.term.q = term.q
-			controls.dispatch({ term: plot.term })
-		},
-		isCoordinated: true
+	function termuiCallback(term) {
+		controls.dispatch({ term })
 	}
 
-	if (!plot.term.q) plot.term.q = {}
-	termuiObj.termsetting.term.q = plot.term.q
-	termui_display(termuiObj)
-
+	let plot
 	return {
 		main(plot) {
+			if (!self.termuiObj) {
+				self.termuiObj = getTermuiObj(app, plot, td.append('div'), '', 'term', termuiCallback)
+			}
 			tr.style('display', plot.term && plot.term.term.iscondition ? 'table-row' : 'none')
-			if (!plot.term.q) plot.term.q = {}
-			termuiObj.termsetting.term.q = plot.term.q
 			termuiObj.update_ui()
 		}
 	}
 }
 
-function setBinOpts(controls, termNum, label) {
-	const plot = controls.plot
-	const tr = controls.dom.table.append('tr')
+function setBinOpts(app, opts, controls) {
+	const tr = opts.holder
 	tr.append('td')
-		.html(label)
+		.html(opts.label)
 		.attr('class', 'sja-termdb-config-row-label')
 	const bin_edit_td = tr.append('td')
 
@@ -806,19 +778,18 @@ function setBinOpts(controls, termNum, label) {
 		.html('EDIT')
 		.on('click', () => {
 			// click to show ui and customize binning
-			numeric_bin_edit(plot.tip, plot.term.term, plot.term.q, true, q => {
-				plot.term.q = q
-				controls.dispatch({ term: plot.term })
+			const term = plot[opts.termNum]
+			numeric_bin_edit(app.tip, term.term, term.q, true, q => {
+				controls.dispatch({ term: { term, q } })
 			})
 		})
 
-	//TODO: remove following code if not used
+	let plot
 	return {
-		main(plot) {
-			tr.style(
-				'display',
-				plot[termNum] && (plot[termNum].term.isfloat || plot[termNum].term.isinteger) ? 'table-row' : 'none'
-			)
+		main(_plot) {
+			plot = _plot
+			const term = plot[opts.termNum]
+			tr.style('display', term && (term.term.isfloat || term.term.isinteger) ? 'table-row' : 'none')
 		}
 	}
 }

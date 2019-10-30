@@ -32,7 +32,7 @@ class TdbStore {
 		this.validateOpts()
 		// when using rx.copyMerge, replace the object values
 		// for these keys instead of extending them
-		this.replaceKeyVals = ['term', 'term2', 'term0']
+		this.replaceKeyVals = ['term', 'term2', 'term0', 'q']
 	}
 
 	validateOpts() {
