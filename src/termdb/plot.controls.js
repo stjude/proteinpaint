@@ -780,7 +780,7 @@ function setBinOpts(app, opts, controls) {
 			// click to show ui and customize binning
 			const term = plot[opts.termNum]
 			numeric_bin_edit(app.tip, term.term, term.q, true, q => {
-				controls.dispatch({ term: { term, q } })
+				controls.dispatch({ term: { term: term.term, q } })
 			})
 		})
 
