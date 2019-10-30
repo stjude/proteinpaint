@@ -12,8 +12,8 @@ export default function getHandlers(self) {
 		// while bar data has all required data including seriesId
 		const term1 = self.terms.term1
 		const term2 = self.terms.term2 ? self.terms.term2 : null
-		const uncomp_term1 = term1.values ? Object.values(term1.values).map(v=>v.label) : []
-		const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v=>v.label) : []
+		const uncomp_term1 = term1.values ? Object.values(term1.values).map(v => v.label) : []
+		const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v => v.label) : []
 		const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
 		const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId || d.id) ? ' ' + term2.unit : ''
 		const seriesLabel =
@@ -72,16 +72,14 @@ export default function getHandlers(self) {
 			mouseover(d) {
 				const term1 = self.terms.term1
 				const term2 = self.terms.term2 ? self.terms.term2 : null
-				const uncomp_term1 = term1.values ? Object.values(term1.values).map(v=>v.label) : []
-				const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v=>v.label) : []
+				const uncomp_term1 = term1.values ? Object.values(term1.values).map(v => v.label) : []
+				const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v => v.label) : []
 				const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId) ? ' ' + term1.unit : ''
 				const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId) ? ' ' + term2.unit : ''
 				const seriesLabel =
-					(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId) +
-					term1unit
+					(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId) + term1unit
 				const dataLabel =
-					(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId) +
-					term2unit
+					(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId) + term2unit
 				const icon = !term2
 					? ''
 					: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
@@ -115,10 +113,10 @@ export default function getHandlers(self) {
 		},
 		colLabel: {
 			text: d => {
-				return self.terms.term1.values && 'id' in d && d.id in self.terms.term1.values
-					? self.terms.term1.values[d.id].label
-					: 'label' in d
+				return 'label' in d
 					? d.label
+					: self.terms.term1.values && 'id' in d && d.id in self.terms.term1.values
+					? self.terms.term1.values[d.id].label
 					: d
 			},
 			click: triggerBarClickMenu,
@@ -132,10 +130,10 @@ export default function getHandlers(self) {
 		},
 		rowLabel: {
 			text: d => {
-				return self.terms.term1.values && 'id' in d && d.id in self.terms.term1.values
-					? self.terms.term1.values[d.id].label
-					: 'label' in d
+				return 'label' in d
 					? d.label
+					: self.terms.term1.values && 'id' in d && d.id in self.terms.term1.values
+					? self.terms.term1.values[d.id].label
 					: d
 			},
 			click: triggerBarClickMenu,
