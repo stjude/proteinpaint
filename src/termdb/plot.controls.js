@@ -371,7 +371,7 @@ function setOrientationOpts(app, opts, controls) {
 	return {
 		main(plot) {
 			tr.style('display', plot.settings.currViews.includes('barchart') ? 'table-row' : 'none')
-			radio.main(plot.settings.bar.orientation)
+			radio.main(plot.settings.barchart.orientation)
 		},
 		radio
 	}
@@ -411,7 +411,7 @@ function setScaleOpts(app, opts, controls) {
 	return {
 		main(plot) {
 			tr.style('display', plot.settings.currViews.includes('barchart') ? 'table-row' : 'none')
-			radio.main(plot.settings.bar.unit)
+			radio.main(plot.settings.barchart.unit)
 			radio.dom.divs.style('display', d => {
 				if (d.value == 'log') {
 					return plot.term2 ? 'none' : 'inline-block'
@@ -497,7 +497,7 @@ function setOverlayOpts(app, opts, controls) {
 			},
 			click(d) {
 				d3event.stopPropagation()
-				if (d.value != 'tree' || d.value != plot.settings.bar.overlay) return
+				if (d.value != 'tree' || d.value != plot.settings.barchart.overlay) return
 				const obj = app.getState()
 				const plot = app.getState({ type: controls.type, id: controls.id })
 
@@ -537,7 +537,7 @@ function setOverlayOpts(app, opts, controls) {
 				plot.term2 = term2 ? { term: term2 } : null
 				if (term2 && term2.q) plot.term2.q = term2.q
 				if (!term2) {
-					plot.settings.bar.overlay = 'none'
+					plot.settings.barchart.overlay = 'none'
 					controls.dispatch({ settings: { bar: { overlay: 'none' } } })
 				} else {
 					treeInput.property('checked', true)
@@ -557,15 +557,15 @@ function setOverlayOpts(app, opts, controls) {
 			tr.style('display', obj.modifier_ssid_barchart ? 'none' : 'table-row')
 
 			// do not show genotype overlay option when opened from stand-alone page
-			if (!plot.settings.bar.overlay) {
-				plot.settings.bar.overlay = obj.modifier_ssid_barchart
+			if (!plot.settings.barchart.overlay) {
+				plot.settings.barchart.overlay = obj.modifier_ssid_barchart
 					? 'genotype'
 					: plot.term2 && plot.term2.term.id != plot.term.term.id
 					? 'tree'
 					: 'none'
 			}
 
-			radio.main(plot.settings.bar.overlay)
+			radio.main(plot.settings.barchart.overlay)
 
 			radio.dom.labels.html(d => {
 				const term1 = plot.term.term
@@ -589,7 +589,7 @@ function setOverlayOpts(app, opts, controls) {
 
 			if (plot.term2 && plot.term2.term.id != plot.term.id && plot.term2 != self.termuiObj.termsetting.term) {
 				self.termuiObj.termsetting.term = plot.term2.term
-				self.termuiObj.update_ui()
+				if (typeof self.termuiObj.update_ui == 'function') self.termuiObj.update_ui()
 			}
 		},
 		radio
@@ -667,7 +667,7 @@ function setDivideByOpts(controls) {
 		listeners: {
 			input(d) {
 				d3event.stopPropagation()
-				plot.settings.bar.divideBy = d.value
+				plot.settings.barchart.divideBy = d.value
 				if (d.value == 'none') {
 					controls.dispatch({ term0: undefined })
 				} else if (d.value == 'tree') {
@@ -729,10 +729,10 @@ function setDivideByOpts(controls) {
 					: 'table-row'
 			)
 			// do not show genotype divideBy option when opened from stand-alone page
-			if (!plot.settings.bar.divideBy) {
-				plot.settings.bar.divideBy = plot.obj.modifier_ssid_barchart ? 'genotype' : plot.term0 ? 'tree' : 'none'
+			if (!plot.settings.barchart.divideBy) {
+				plot.settings.barchart.divideBy = plot.obj.modifier_ssid_barchart ? 'genotype' : plot.term0 ? 'tree' : 'none'
 			}
-			radio.main(plot.settings.bar.divideBy)
+			radio.main(plot.settings.barchart.divideBy)
 
 			radio.dom.divs.style('display', d => {
 				if (d.value == 'max_grade_perperson' || d.value == 'most_recent_grade') {

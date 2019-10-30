@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 
 class TdbTable {
 	constructor(app, opts) {
-		this.type = 'plot'
+		this.type = 'plot.table'
 		this.id = opts.id
 		this.app = app
 		this.opts = opts
@@ -19,8 +19,7 @@ class TdbTable {
 	main(data) {
 		if (data) this.data = data
 		this.config = this.state.config
-		const isVisible = this.config.settings.currViews.includes('table')
-		if (!isVisible) {
+		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
 			return
 		}
@@ -57,7 +56,7 @@ class TdbTable {
 	}
 
 	download() {
-		if (!this.config.settings.currViews.includes('table')) return
+		if (!this.state.isVisible) return
 		const data = []
 		this.dom.div.selectAll('tr').each(function() {
 			const series = []

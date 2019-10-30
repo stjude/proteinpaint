@@ -7,7 +7,7 @@ import { axisLeft } from 'd3-axis'
 
 class TdbBoxplot {
 	constructor(app, opts) {
-		this.type = 'plot'
+		this.type = 'plot.boxplot'
 		this.id = opts.id
 		this.app = app
 		this.api = rx.getComponentApi(this)
@@ -32,8 +32,7 @@ class TdbBoxplot {
 	main(data) {
 		if (data) this.data = data
 		this.config = rx.copyMerge('{}', this.state.config)
-		const isVisible = this.config.settings.currViews.includes('boxplot')
-		if (!isVisible) {
+		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
 			return
 		}
@@ -65,7 +64,7 @@ class TdbBoxplot {
 	}
 
 	download() {
-		if (!this.config.settings.currViews.includes('boxplot')) return
+		if (!this.state.isVisible) return
 		const svg_name = this.config.term.term.name + ' boxplot'
 		client.to_svg(this.dom.svg.node(), svg_name, { apply_dom_styles: true })
 	}

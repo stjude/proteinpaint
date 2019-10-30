@@ -16,7 +16,7 @@ const colors = {
 
 class TdbBarchart {
 	constructor(app, opts) {
-		this.type = 'plot'
+		this.type = 'plot.barchart'
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
 		this.app = app
@@ -26,7 +26,7 @@ class TdbBarchart {
 			barDiv: opts.holder.append('div').style('white-space', 'normal'),
 			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
-		this.settings = JSON.parse(rendererSettings) //, this.config.settings.bar)
+		this.settings = JSON.parse(rendererSettings) //, this.config.settings.barchart)
 		this.renderers = {}
 
 		setRenderers(this)
@@ -57,7 +57,7 @@ class TdbBarchart {
 	}
 
 	setVisibility() {
-		const isVisible = this.config.settings.currViews.includes('barchart')
+		const isVisible = this.state.isVisible
 		const display = isVisible ? 'block' : 'none'
 		this.dom.barDiv.style('display', display)
 		this.dom.legendDiv.style('display', display)
@@ -69,13 +69,11 @@ class TdbBarchart {
 		// translate relevant config keys to barchart settings keys
 		const obj = this.state
 		const settings = {
-			genome: obj.genome,
-			dslabel: obj.dslabel ? obj.dslabel : obj.mds.label,
 			term0: config.term0 ? config.term0.term.id : '', // convenient reference to the term id
 			term1: config.term.term.id, // convenient reference to the term2 id
 			term2: config.term2 ? config.term2.term.id : '',
-			unit: config.settings.bar.unit,
-			orientation: config.settings.bar.orientation,
+			unit: config.settings.barchart.unit,
+			orientation: config.settings.barchart.orientation,
 			// normalize bar thickness regardless of orientation
 			colw: config.settings.common.barwidth,
 			rowh: config.settings.common.barwidth,
@@ -379,7 +377,7 @@ function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
 	self.download = function() {
-		if (!self.config.settings.currViews.includes('barchart')) return
+		if (!self.state.isVisible) return
 		// has to be able to handle multichart view
 		const mainGs = []
 		const translate = { x: undefined, y: undefined }

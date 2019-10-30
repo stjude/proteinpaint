@@ -132,42 +132,7 @@ tape('single chart, with overlay', function(test) {
 		})
 		test.true(overlay_ordered, 'overlays order is same as legend')
 	}
-})
-/*
-tape('single chart, genotype overlay', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
-	runpp({
-		termfilter,
-		plot2restore: {
-			term: termjson['diaggrp'],
-			term2: 'genotype',
-			settings: {
-				currViews: ['barchart']
-			}
-		},
-		callbacks: {
-			plot: {
-				postRender: testBarCount
-			}
-		},
-		bar_click_menu: {
-			add_filter: true
-		},
-		modifier_ssid_barchart: {
-			mutation_name: 'TEST',
-			ssid: 'genotype-test.txt'
-		}
-	})
-
-	function testBarCount(plot) {
-		const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
-		test.true(numOverlays > 10, 'should have more than 10 Diagnosis Group bars')
-		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
-		test.end()
-	}
-})
-*/
+}) /*
 tape('click to add numeric, condition term filter', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
@@ -180,12 +145,7 @@ tape('click to add numeric, condition term filter', function(test) {
 					diaggrp: {
 						term: { id: 'agedx' },
 						term2: {
-							id: 'agedx',
-							term: termjson['Arrhythmias'],
-							q: {
-								bar_by_grade: 1,
-								value_by_max_grade: 1
-							}
+							id: 'Arrhythmias'
 						},
 						settings: { currViews: ['barchart'] }
 					}
@@ -260,8 +220,42 @@ tape('click to add numeric, condition term filter', function(test) {
 			test.end()
 		}, 200)
 	}
-})
+}) */
 /*
+tape('single chart, genotype overlay', function(test) {
+	const termfilter = { show_top_ui: true, terms: [] }
+	runpp({
+		termfilter,
+		plot2restore: {
+			term: termjson['diaggrp'],
+			term2: 'genotype',
+			settings: {
+				currViews: ['barchart']
+			}
+		},
+		callbacks: {
+			plot: {
+				postRender: testBarCount
+			}
+		},
+		bar_click_menu: {
+			add_filter: true
+		},
+		modifier_ssid_barchart: {
+			mutation_name: 'TEST',
+			ssid: 'genotype-test.txt'
+		}
+	})
+
+	function testBarCount(plot) {
+		const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
+		test.true(numOverlays > 10, 'should have more than 10 Diagnosis Group bars')
+		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
+		test.end()
+	}
+})
+*/ /*
 tape('click to add condition child term filter', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({

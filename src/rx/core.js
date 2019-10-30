@@ -243,16 +243,17 @@ function getAppApi(self) {
 			const appState = self.state
 			if (!sub || !sub.type) return appState
 
-			if (!self.subState.hasOwnProperty(sub.type)) {
-				throw `undefined store config getter for component type='${sub.type}'`
+			const componentType = sub.type.split('.')[0]
+			if (!self.subState.hasOwnProperty(componentType)) {
+				throw `undefined store config getter for component type='${componentType}'`
 			}
 
-			const subState = self.subState[sub.type]
+			const subState = self.subState[componentType]
 			if (current.action) {
 				if (subState.passThrough && matchAction(current.action, subState.passThrough, sub)) return currComponentState
 				if (subState.reactsTo && !matchAction(current.action, subState.reactsTo, sub)) return
 			}
-			// freeze only the root subsState object since
+			// freeze only the root componentState object since
 			// the copied app.state is already deeply frozen
 			return Object.freeze(subState.get(appState, sub))
 		},
@@ -308,9 +309,11 @@ function getComponentApi(self) {
 			if (!componentState) return
 			let componentData = null
 			// force update if there is no action, or
-			// if the current and pending state is the same
+			// if the current and pending state is not equal
 			if (!current.action || !deepEqual(componentState, self.state)) {
 				self.state = componentState
+				// in some cases, a component may only be a wrapper to child
+				// components, in which case it will not have a
 				componentData = self.main ? await self.main(data) : null
 			}
 			// notify children

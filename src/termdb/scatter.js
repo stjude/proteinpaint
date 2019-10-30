@@ -7,7 +7,7 @@ import { to_svg } from '../client'
 
 class TdbScatter {
 	constructor(app, opts) {
-		this.type = 'plot'
+		this.type = 'plot.scatter'
 		this.id = opts.id
 		this.app = app
 		this.api = rx.getComponentApi(this)
@@ -22,7 +22,7 @@ class TdbScatter {
 	}
 	main(data) {
 		this.config = this.state.config
-		if (!this.state.config.settings.currViews.includes('scatter')) {
+		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
 			return
 		}
@@ -348,7 +348,7 @@ function getPj(self) {
 
 function getDownloadFxn(self) {
 	return () => {
-		if (!self.plot.settings.currViews.includes('scatter')) return
+		if (!self.state.isVisible) return
 		// has to be able to handle multichart view
 		const mainGs = []
 		const translate = { x: undefined, y: undefined }

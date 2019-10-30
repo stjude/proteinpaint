@@ -169,7 +169,7 @@ TdbApp.prototype.subState = {
 	plot: {
 		reactsTo: {
 			prefix: ['filter'],
-			type: ['plot_add', 'plot_show', 'plot_edit', 'app_refresh'],
+			type: ['plot_show', 'plot_edit', 'app_refresh'],
 			fxn: (action, sub) => {
 				if (!action.type.startsWith('plot')) return true
 				if (!('id' in action) || action.id == sub.id) return true
@@ -177,13 +177,32 @@ TdbApp.prototype.subState = {
 		},
 		get(appState, sub) {
 			if (!(sub.id in appState.tree.plots)) {
-				return //throw `No plot with id='${sub.id}' found.`
+				return null //throw `No plot with id='${sub.id}' found.`
 			}
-			return {
-				genome: appState.genome,
-				dslabel: appState.dslabel,
-				termfilter: appState.termfilter,
-				config: appState.tree.plots[sub.id]
+			const config = appState.tree.plots[sub.id]
+			// component.type may optionally be dot-separated "type.name"
+			// in this case, the name corresponds to viewType
+			const viewType = sub.type.split('.')[1]
+			if (!viewType) {
+				return {
+					genome: appState.genome,
+					dslabel: appState.dslabel,
+					termfilter: appState.termfilter,
+					config
+				}
+			} else {
+				return {
+					isVisible: !viewType || config.settings.currViews.includes(viewType),
+					config: {
+						term: config.term,
+						term0: config.term0,
+						term2: config.term2,
+						settings: {
+							common: config.settings.common,
+							[viewType]: config.settings[viewType]
+						}
+					}
+				}
 			}
 		}
 	},

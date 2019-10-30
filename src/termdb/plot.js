@@ -192,7 +192,7 @@ export function plotConfig(opts) {
 					barwidth: 25, // bar thickness
 					barspace: 5 // space between two bars
 				},
-				bar: {
+				barchart: {
 					orientation: 'horizontal',
 					unit: 'abs',
 					overlay: 'none',
