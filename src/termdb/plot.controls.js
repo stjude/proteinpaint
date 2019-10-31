@@ -2,6 +2,7 @@ import * as rx from '../rx/core'
 import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from '../client'
 import { display as termui_display, numeric_bin_edit } from '../mds.termdb.termsetting.ui'
+import {TermSettingInit} from './termsetting'
 
 const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
@@ -428,6 +429,7 @@ function setScaleOpts(app, opts, controls) {
 
 function setOverlayOpts(app, opts, controls) {
 	const obj = app.getState()
+	const plot = app.getState({ type: controls.type, id: controls.id })
 	const tr = opts.holder
 	tr.append('td')
 		.html('Overlay with')
@@ -498,8 +500,8 @@ function setOverlayOpts(app, opts, controls) {
 			click(d) {
 				d3event.stopPropagation()
 				if (d.value != 'tree' || d.value != plot.settings.barchart.overlay) return
-				const obj = app.getState()
-				const plot = app.getState({ type: controls.type, id: controls.id })
+				// const obj = app.getState()
+				// const plot = app.getState({ type: controls.type, id: controls.id })
 
 				obj.showtree4selectterm([plot.term.id, plot.term2 ? plot.term2.term.id : null], tr.node(), term2 => {
 					console.log(term2)
@@ -532,6 +534,8 @@ function setOverlayOpts(app, opts, controls) {
 			})
 		}
 	}
+
+	TermSettingInit(app, {holder:pill_div, plot, term_id:'term2' })
 
 	const self = {
 		main(plot) {
@@ -573,10 +577,10 @@ function setOverlayOpts(app, opts, controls) {
 				}
 			})
 
-			if (plot.term2 && plot.term2.term.id != plot.term.id && plot.term2 != self.termuiObj.termsetting.term) {
-				self.termuiObj.termsetting.term = plot.term2.term
-				if (typeof self.termuiObj.update_ui == 'function') self.termuiObj.update_ui()
-			}
+			// if (plot.term2 && plot.term2.term.id != plot.term.id && plot.term2 != self.termuiObj.termsetting.term) {
+			// 	self.termuiObj.termsetting.term = plot.term2.term
+			// 	if (typeof self.termuiObj.update_ui == 'function') self.termuiObj.update_ui()
+			// }
 		},
 		radio
 	}
@@ -600,7 +604,7 @@ function getTermuiObj(app, plot, holder, mainLabel, termNum, callback) {
 		callback,
 		isCoordinated: true
 	}
-	termui_display(termuiObj)
+	// termui_display(termuiObj)
 	return termuiObj
 }
 
@@ -658,6 +662,7 @@ function setViewOpts(app, opts, controls) {
 
 function setDivideByOpts(app, opts, controls) {
 	const tr = opts.holder
+	const plot = app.getState({ type: controls.type, id: controls.id })
 	tr.append('td')
 		.html('Divide by')
 		.attr('class', 'sja-termdb-config-row-label')
@@ -704,6 +709,8 @@ function setDivideByOpts(app, opts, controls) {
 		})
 	}
 
+	TermSettingInit(app, {holder:pill_div, plot, term_id:'term0'})
+
 	return {
 		main(plot) {
 			if (!self.termuiObj) {
@@ -735,7 +742,7 @@ function setDivideByOpts(app, opts, controls) {
 
 			if (plot.term0 && plot.term0.term != termuiObj.termsetting.term) {
 				termuiObj.termsetting.term = plot.term0.term
-				termuiObj.update_ui()
+				// termuiObj.update_ui()
 			}
 		}
 	}
@@ -743,6 +750,7 @@ function setDivideByOpts(app, opts, controls) {
 
 function setBarsAsOpts(app, opts, controls) {
 	const tr = opts.holder
+	const plot = app.getState({ type: controls.type, id: controls.id })
 	tr.append('td')
 		.html(opts.label)
 		.attr('class', 'sja-termdb-config-row-label')
@@ -752,14 +760,15 @@ function setBarsAsOpts(app, opts, controls) {
 		controls.dispatch({ term })
 	}
 
-	let plot
+	TermSettingInit(app, {holder:td.append('div'), plot, term_id:'term1'})
+
 	return {
 		main(plot) {
 			if (!self.termuiObj) {
 				self.termuiObj = getTermuiObj(app, plot, td.append('div'), '', 'term', termuiCallback)
 			}
 			tr.style('display', plot.term && plot.term.term.iscondition ? 'table-row' : 'none')
-			termuiObj.update_ui()
+			// termuiObj.update_ui()
 		}
 	}
 }
