@@ -78,8 +78,8 @@ class TdbTree {
 		}
 
 		// attach instance-specific methods via closure
-		setRenderers(this)
 		setInteractivity(this)
+		setRenderers(this)
 
 		this.components = {
 			search: searchInit(app, {

@@ -13,7 +13,8 @@ const defaultState = {
 	},
 	termfilter: {
 		terms: []
-	}
+	},
+	autoSave: true
 }
 
 // one store for the whole tdb app
@@ -84,7 +85,7 @@ TdbStore.prototype.actions = {
 		// without action.state as the current state at the
 		// initial render is not meant to be modified yet
 		//
-		this.copyMerge(this.state, action.state ? action.state : {}, this.replaceKeyVals)
+		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
 	},
 	tree_expand(action) {
 		if (this.state.tree.expandedTermIds.includes(action.termId)) return

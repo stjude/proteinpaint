@@ -35,7 +35,8 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
 		host,
 		noheader: 1,
 		nobox: true,
-		debug: 1
+		debug: 1,
+		norecover: true
 	}
 
 	// initialize default argument values for all tests

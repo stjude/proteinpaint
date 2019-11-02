@@ -3,6 +3,7 @@ import { select } from 'd3-selection'
 import { treeInit } from './tree'
 import { storeInit } from './store'
 import { filterInit } from './filter'
+import { recoverInit } from '../rx/recover'
 import { sayerror, Menu } from '../client'
 
 /*
@@ -48,6 +49,15 @@ class TdbApp {
 
 		this.dom = {
 			holder: opts.holder.style('margin', '10px').style('border', '1px solid #aaa'),
+
+			topbar: opts.holder
+				.append('div')
+				.style('position', 'sticky')
+				.style('top', '12px')
+				.style('right', '20px')
+				.style('margin', '5px')
+				.style('text-align', 'right'),
+
 			errdiv: opts.holder.append('div')
 		}
 
@@ -57,6 +67,7 @@ class TdbApp {
 			//this.state = parentApp ? this.app.getState() : this.store.copyState({rehydrate:true})
 			const modifiers = this.validateModifiers(this.opts.modifiers)
 			this.components = {
+				recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }),
 				tree: treeInit(this.app, { holder: this.dom.holder.append('div'), modifiers }),
 				terms: filterInit(this.app, { holder: this.dom.holder.append('div') })
 			}
@@ -77,16 +88,14 @@ class TdbApp {
 				.catch(e => this.printError(e))
 		}
 	}
-
 	/*
-	async main(state) {
+	async main() { //console.log(this.state.tree.expandedTermIds)
 		// may add other logic here or return data as needed,
 		// for example request and cache metadata that maybe throughout
 		// the app by many components; the metadata may be exposed
 		// later via something like app.api.lookup, to-do
-		return
-	}
-	*/
+		// if (this.projectName) this.saveState()
+	}*/
 
 	initOpts(o) {
 		if (!o.fetchOpts) o.fetchOpts = {}
