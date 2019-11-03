@@ -17,23 +17,6 @@ const runpp = helpers.getRunPp('termdb', {
 	},
 	maxRecoverableHistory: 8
 })
-/*
-function getApp(main, opts) {
-	const self = {opts}
-	const api = {
-		dispatch(action) {
-			self.state = action.state
-			main(action, self)
-		},
-		getState() {
-			return self.state
-		}
-	}
-
-	self.components = {
-		recover: recoverInit(api, )
-	}
-} */
 
 /**************
  test sections
@@ -155,25 +138,65 @@ tape('rendered buttons', function(test) {
 		test.false(redoBtn.property('disabled'), 'redo button should should be enabled initially')
 	}
 })
-/*
+
 tape('stored state recovery', function(test) {
 	test.timeoutAfter(2000)
+	const projName = 'test-aaa'
+	window.localStorage.removeItem(projName)
 
 	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				visiblePlotIds: ['sex'],
+				plots: {
+					sex: {
+						id: 'sex',
+						term: { id: 'sex' },
+						term2: { id: 'diaggrp' },
+						settings: {
+							currViews: ['table']
+						}
+					}
+				}
+			}
+		},
 		callbacks: {
-			app: {
-				'postRender.test': runTests
+			tree: {
+				'postRender.test': saveState
 			}
 		}
 	})
 
-	function runTests(app) {
-		test.deepEqual(
-			JSON.parse(JSON.stringify(app.getState())),
-			JSON.parse(window.localStorage.getItem('tdbState')),
-			'should use tdbState from localStorage when opts.state is not provided to appInit()'
-		)
-		test.end()
+	let initialAppState, recover
+	function saveState(tree) {
+		tree.on('postRender.test', null)
+		initalAppState = tree.Inner.app.getState()
+		const recover = tree.Inner.app.Inner.components.recover.Inner
+		recover.dom.projectInput.property('value', projName)
+		recover.pro
+		recover.dom.localSaveBtn.node().click() //saveState.call(recover.dom.projectInput.node())
+
+		setTimeout(() => {
+			runpp({
+				callbacks: {
+					// no state overrides
+					tree: {
+						'postRender.test': runTests
+					}
+				}
+			})
+		}, 500)
+	}
+
+	function runTests(tree) {
+		tree.on('postRender.test', null)
+		const recover = tree.Inner.app.Inner.components.recover.Inner
+		recover.dom.projectInput.property('value', projName)
+		recover.openProject.call(recover.dom.projectInput.node())
+		setTimeout(() => {
+			test.deepEqual(initalAppState, tree.Inner.app.getState(), 'should open a project with its saved state')
+			test.end()
+		}, 100)
 	}
 })
-*/
