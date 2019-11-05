@@ -1,8 +1,7 @@
 {
   "name": "proteinpaint",
-  "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "version": "1.0.0",
-  "description": "",
+  "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "app.js",
   "scripts": {
     "dev": "rm -rf public/bin;webpack --config=scripts/webpack.config.dev.js  --env.NODE_ENV=development --watch --progress --colors",
@@ -23,13 +22,13 @@
     "server": "nodemon server.js --watch server.js --watch genome --watch dataset --watch serverconfig.json",
     "build-server": "webpack --config=webpack.config.server.js --mode=production",
     "sethooks": "cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
-	"xincmd":"watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v"
+    "xincmd": "watchify src/toy/2/test/app.js -o public/bin/spec.bundle.js -v"
   },
   "prettier": {
     "semi": false,
     "useTabs": true,
     "printWidth": 120,
-	"singleQuote":true
+    "singleQuote": true
   },
   "author": "",
   "license": "ISC",
@@ -43,7 +42,6 @@
     "babel-runtime": "^6.18.0",
     "css-loader": "^0.23.1",
     "deep-object-diff": "^1.1.0",
-    "jasmine": "^2.5.2",
     "nodemon": "^1.19.1",
     "prettier": "1.18.2",
     "style-loader": "^0.13.1",
