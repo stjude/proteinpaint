@@ -48,8 +48,7 @@ class TdbApp {
 		this.app = parentApp ? parentApp : this.api
 
 		this.dom = {
-			holder: opts.holder.style('margin', '10px').style('border', '1px solid #aaa'),
-
+			holder: opts.holder.style('margin', '10px'),
 			topbar: opts.holder
 				.append('div')
 				.style('position', 'sticky')
@@ -64,13 +63,16 @@ class TdbApp {
 		// catch initialization error
 		try {
 			if (!parentApp) this.store = storeInit(this.api)
-			//this.state = parentApp ? this.app.getState() : this.store.copyState({rehydrate:true})
 			const modifiers = this.validateModifiers(this.opts.modifiers)
-			this.components = {
-				recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }),
-				tree: treeInit(this.app, { holder: this.dom.holder.append('div'), modifiers }),
-				terms: filterInit(this.app, { holder: this.dom.holder.append('div') })
+			this.components = {}
+			if (modifiers.click_term || modifiers.tvs_select) {
+				// has modifier
+			} else {
+				// no modifier, show these components
+				this.components.recover = recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' })
+				this.components.terms = filterInit(this.app, { holder: this.dom.holder.append('div') })
 			}
+			this.components.tree = treeInit(this.app, { holder: this.dom.holder.append('div'), modifiers })
 		} catch (e) {
 			this.printError(e)
 		}
