@@ -76,6 +76,7 @@
     "lazy": "^1.0.11",
     "loader-utils": "^0.2.17",
     "normalize.css": "^4.2.0",
+    "partjson": "^0.58.1",
     "request": "^2.88.0"
   }
 }

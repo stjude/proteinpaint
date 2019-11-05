@@ -2,7 +2,7 @@ import * as rx from '../rx/core'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
-import Partjson from '../../modules/partjson'
+import Partjson from 'partjson'
 import { to_svg } from '../client'
 
 class TdbScatter {

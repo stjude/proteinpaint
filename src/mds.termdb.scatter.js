@@ -1,8 +1,8 @@
-import { select, event } from "d3-selection"
-import { scaleLinear as d3Linear } from "d3-scale"
-import { axisLeft, axisBottom } from "d3-axis"
-import Partjson from "../modules/partjson"
-import { to_svg } from "./client"
+import { select, event } from 'd3-selection'
+import { scaleLinear as d3Linear } from 'd3-scale'
+import { axisLeft, axisBottom } from 'd3-axis'
+import Partjson from 'partjson'
+import { to_svg } from './client'
 
 //const colors = colorbrewer.Dark2[8].slice(0, 6).concat(colorbrewer.Paired[12]);
 
@@ -16,7 +16,7 @@ export default function scatter(opts) {
 */
 
 	const defaultSettings = {
-		orderChartsBy: "organ-system", // top-burden | organ-system
+		orderChartsBy: 'organ-system', // top-burden | organ-system
 		currLine: 0,
 		svgw: 400,
 		svgh: 400,
@@ -30,7 +30,7 @@ export default function scatter(opts) {
 		chartTitleDivHt: 30,
 		radius: 5,
 		axisTitleFontSize: 14,
-		scale: "byChart", // byGroup | byChart
+		scale: 'byChart', // byGroup | byChart
 		ciVisible: true,
 		fillOpacity: 0.2,
 		duration: 1000
@@ -39,27 +39,27 @@ export default function scatter(opts) {
 	// any property of self will be exposed
 	const self = {
 		dom: {
-			div: opts.holder.append("div")
+			div: opts.holder.append('div')
 		},
 		settings: Object.assign(defaultSettings, opts.settings ? opts.settings : {}),
 		main: (plot, data) => {
 			self.plot = plot
-			if (!plot.settings.currViews.includes("scatter")) {
-				self.dom.div.style("display", "none")
+			if (!plot.settings.currViews.includes('scatter')) {
+				self.dom.div.style('display', 'none')
 				return
 			}
-			self.dom.div.style("display", "block")
+			self.dom.div.style('display', 'block')
 			if (data) self.currData = data
 			self.plot = plot
 			self.pj.refresh({ data: self.currData.rows })
 
-			const chartDivs = self.dom.div.selectAll(".pp-scatter-chart").data(self.pj.tree.charts, d => d.chartId)
+			const chartDivs = self.dom.div.selectAll('.pp-scatter-chart').data(self.pj.tree.charts, d => d.chartId)
 
 			chartDivs.exit().remove()
 			chartDivs.each(updateCharts)
 			chartDivs.enter().each(addCharts)
 
-			self.dom.div.on("mouseover", mouseover).on("mouseout", mouseout)
+			self.dom.div.on('mouseover', mouseover).on('mouseout', mouseout)
 		}
 	}
 
@@ -78,39 +78,39 @@ export default function scatter(opts) {
 	function addCharts(d) {
 		const s = self.settings
 		const div = select(this)
-			.append("div")
-			.attr("class", "pp-scatter-chart")
-			.style("opacity", 0)
+			.append('div')
+			.attr('class', 'pp-scatter-chart')
+			.style('opacity', 0)
 			//.style("position", "absolute")
-			.style("width", s.svgw + 50 + "px")
-			.style("display", "inline-block")
-			.style("margin", s.chartMargin + "px")
-			.style("top", 0) //layout.byChc[d.chc].top)
-			.style("left", 0) //layout.byChc[d.chc].left)
-			.style("text-align", "left")
-			.style("border", "1px solid #eee")
-			.style("box-shadow", "0px 0px 1px 0px #ccc")
-			.style("background", 1 || s.orderChartsBy == "organ-system" ? d.color : "")
+			.style('width', s.svgw + 50 + 'px')
+			.style('display', 'inline-block')
+			.style('margin', s.chartMargin + 'px')
+			.style('top', 0) //layout.byChc[d.chc].top)
+			.style('left', 0) //layout.byChc[d.chc].left)
+			.style('text-align', 'left')
+			.style('border', '1px solid #eee')
+			.style('box-shadow', '0px 0px 1px 0px #ccc')
+			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
 		div
-			.append("div")
-			.attr("class", "sjpcb-scatter-title")
-			.style("text-align", "center")
-			.style("width", s.svgw + 50 + "px")
-			.style("height", s.chartTitleDivHt + "px")
-			.style("font-weight", "600")
-			.style("margin", "5px")
+			.append('div')
+			.attr('class', 'sjpcb-scatter-title')
+			.style('text-align', 'center')
+			.style('width', s.svgw + 50 + 'px')
+			.style('height', s.chartTitleDivHt + 'px')
+			.style('font-weight', '600')
+			.style('margin', '5px')
 			.datum(d.chartId)
 			.html(d.chartId)
 		//.on("click", viz.chcClick);
 
-		const svg = div.append("svg").attr("class", "pp-scatter-svg")
+		const svg = div.append('svg').attr('class', 'pp-scatter-svg')
 		renderSVG(svg, d, s, 0)
 
 		div
 			.transition()
 			.duration(s.duration)
-			.style("opacity", 1)
+			.style('opacity', 1)
 	}
 
 	function updateCharts(d) {
@@ -120,43 +120,43 @@ export default function scatter(opts) {
 		div
 			.transition()
 			.duration(s.duration)
-			.style("width", s.svgw + 50 + "px")
+			.style('width', s.svgw + 50 + 'px')
 			//.style("top", layout.byChc[d.chc].top)
 			//.style("left", layout.byChc[d.chc].left)
-			.style("background", 1 || s.orderChartsBy == "organ-system" ? d.color : "")
+			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
 		div
-			.select(".sjpcb-scatter-title")
-			.style("width", s.svgw + 50)
-			.style("height", s.chartTitleDivHt + "px")
+			.select('.sjpcb-scatter-title')
+			.style('width', s.svgw + 50)
+			.style('height', s.chartTitleDivHt + 'px')
 			.datum(d.chartId)
 			.html(d.chartId)
 
-		div.selectAll(".sjpcb-lock-icon").style("display", s.scale == "byChart" ? "block" : "none")
+		div.selectAll('.sjpcb-lock-icon').style('display', s.scale == 'byChart' ? 'block' : 'none')
 
-		div.selectAll(".sjpcb-unlock-icon").style("display", s.scale == "byChart" ? "none" : "block")
+		div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
-		renderSVG(div.select("svg"), d, s, s.duration)
+		renderSVG(div.select('svg'), d, s, s.duration)
 	}
 
 	function renderSVG(svg, chart, s, duration) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr("width", s.svgw)
-			.attr("height", s.svgh)
-			.style("overflow", "visible")
-			.style("padding-left", "20px")
+			.attr('width', s.svgw)
+			.attr('height', s.svgh)
+			.style('overflow', 'visible')
+			.style('padding-left', '20px')
 
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
 
-		mainG.attr("transform", "translate(" + s.svgPadding.left + "," + s.svgPadding.top + ")")
+		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
 		const serieses = mainG
-			.selectAll(".sjpcb-scatter-series")
-			.data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ""))
+			.selectAll('.sjpcb-scatter-series')
+			.data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
 		serieses.each(function(series, i) {
@@ -164,8 +164,8 @@ export default function scatter(opts) {
 		})
 		serieses
 			.enter()
-			.append("g")
-			.attr("class", "sjpcb-scatter-series")
+			.append('g')
+			.attr('class', 'sjpcb-scatter-series')
 			.each(function(series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
@@ -175,51 +175,51 @@ export default function scatter(opts) {
 
 	function getSvgSubElems(svg) {
 		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
-		if (!svg.select(".sjpcb-scatter-mainG").size()) {
-			mainG = svg.append("g").attr("class", "sjpcb-scatter-mainG")
-			axisG = mainG.append("g").attr("class", "sjpcb-scatter-axis")
-			xAxis = axisG.append("g").attr("class", "sjpcb-scatter-x-axis")
-			yAxis = axisG.append("g").attr("class", "sjpcb-scatter-y-axis")
-			xTitle = axisG.append("g").attr("class", "sjpcb-scatter-x-title")
-			yTitle = axisG.append("g").attr("class", "sjpcb-scatter-y-title")
+		if (!svg.select('.sjpcb-scatter-mainG').size()) {
+			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
+			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
+			xAxis = axisG.append('g').attr('class', 'sjpcb-scatter-x-axis')
+			yAxis = axisG.append('g').attr('class', 'sjpcb-scatter-y-axis')
+			xTitle = axisG.append('g').attr('class', 'sjpcb-scatter-x-title')
+			yTitle = axisG.append('g').attr('class', 'sjpcb-scatter-y-title')
 		} else {
-			mainG = svg.select(".sjpcb-scatter-mainG")
-			axisG = mainG.select(".sjpcb-scatter-axis")
-			xAxis = axisG.select(".sjpcb-scatter-x-axis")
-			yAxis = axisG.select(".sjpcb-scatter-y-axis")
-			xTitle = axisG.select(".sjpcb-scatter-x-title")
-			yTitle = axisG.select(".sjpcb-scatter-y-title")
+			mainG = svg.select('.sjpcb-scatter-mainG')
+			axisG = mainG.select('.sjpcb-scatter-axis')
+			xAxis = axisG.select('.sjpcb-scatter-x-axis')
+			yAxis = axisG.select('.sjpcb-scatter-y-axis')
+			xTitle = axisG.select('.sjpcb-scatter-x-title')
+			yTitle = axisG.select('.sjpcb-scatter-y-title')
 		}
 		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle]
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
 		// remove all circles as there is no data id for privacy
-		g.selectAll("circle").remove()
+		g.selectAll('circle').remove()
 
-		const circles = g.selectAll("circle").data(series.data, b => b.x)
+		const circles = g.selectAll('circle').data(series.data, b => b.x)
 
 		circles.exit().remove()
 
 		circles
 			.transition()
 			.duration(duration)
-			.attr("r", s.radius)
-			.attr("cx", c => c.scaledX)
-			.attr("cy", c => c.scaledY)
+			.attr('r', s.radius)
+			.attr('cx', c => c.scaledX)
+			.attr('cy', c => c.scaledY)
 			//.style("fill", color)
-			.style("fill-opacity", s.fillOpacity)
+			.style('fill-opacity', s.fillOpacity)
 		//.style("stroke", color);
 
 		circles
 			.enter()
-			.append("circle")
-			.attr("r", s.radius)
-			.attr("cx", c => c.scaledX)
-			.attr("cy", c => c.scaledY)
+			.append('circle')
+			.attr('r', s.radius)
+			.attr('cx', c => c.scaledX)
+			.attr('cy', c => c.scaledY)
 			//.style("opacity", 0)
 			//.style("fill", color)
-			.style("fill-opacity", s.fillOpacity)
+			.style('fill-opacity', s.fillOpacity)
 			//.style("stroke", color)
 			.transition()
 			.duration(duration)
@@ -227,7 +227,7 @@ export default function scatter(opts) {
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
 		xAxis
-			.attr("transform", "translate(0," + (s.svgh - s.svgPadding.top - s.svgPadding.bottom) + ")")
+			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom) + ')')
 			.call(axisBottom(d.xScale).ticks(5))
 
 		yAxis.call(
@@ -238,47 +238,47 @@ export default function scatter(opts) {
 			).ticks(5)
 		)
 
-		xTitle.select("text, title").remove()
+		xTitle.select('text, title').remove()
 		const xTitleLabel =
-			self.plot.term.term.name.length > 24 ? self.plot.term.term.name.slice(0, 20) + "..." : self.plot.term.term.name
+			self.plot.term.term.name.length > 24 ? self.plot.term.term.name.slice(0, 20) + '...' : self.plot.term.term.name
 		const xText = xTitle
 			.attr(
-				"transform",
-				"translate(" +
+				'transform',
+				'translate(' +
 					(s.svgw - s.svgPadding.left - s.svgPadding.right) / 2 +
-					"," +
+					',' +
 					(s.svgh - s.axisTitleFontSize) +
-					")"
+					')'
 			)
-			.append("text")
-			.style("text-anchor", "middle")
-			.style("font-size", s.axisTitleFontSize + "px")
-			.text(xTitleLabel + (self.plot.term.term.unit ? ", " + self.plot.term.term.unit : ""))
+			.append('text')
+			.style('text-anchor', 'middle')
+			.style('font-size', s.axisTitleFontSize + 'px')
+			.text(xTitleLabel + (self.plot.term.term.unit ? ', ' + self.plot.term.term.unit : ''))
 
-		xText.append("title").text(self.plot.term.term.name)
+		xText.append('title').text(self.plot.term.term.name)
 
 		const yTitleLabel =
-			self.plot.term2.term.name.length > 24 ? self.plot.term2.term.name.slice(0, 20) + "..." : self.plot.term2.term.name
-		yTitle.select("text, title").remove()
+			self.plot.term2.term.name.length > 24 ? self.plot.term2.term.name.slice(0, 20) + '...' : self.plot.term2.term.name
+		yTitle.select('text, title').remove()
 		const yText = yTitle
 			.attr(
-				"transform",
-				"translate(" +
+				'transform',
+				'translate(' +
 					(-s.svgPadding.left / 2 - s.axisTitleFontSize) +
-					"," +
+					',' +
 					(s.svgh - s.svgPadding.top - s.svgPadding.bottom) / 2 +
-					")rotate(-90)"
+					')rotate(-90)'
 			)
-			.append("text")
-			.style("text-anchor", "middle")
-			.style("font-size", s.axisTitleFontSize + "px")
-			.text(yTitleLabel + (self.plot.term2.term.unit ? ", " + self.plot.term2.term.unit : ""))
+			.append('text')
+			.style('text-anchor', 'middle')
+			.style('font-size', s.axisTitleFontSize + 'px')
+			.text(yTitleLabel + (self.plot.term2.term.unit ? ', ' + self.plot.term2.term.unit : ''))
 
-		yText.append("title").text(self.plot.term2.term.name)
+		yText.append('title').text(self.plot.term2.term.name)
 	}
 
 	function mouseover() {
-		if (event.target.tagName == "circle") {
+		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
 			const rows = [
 				`<tr><td style='padding:3px; color:#aaa'>X:</td><td style='padding:3px; text-align:center'>${d.x}</td></tr>`,
@@ -286,7 +286,7 @@ export default function scatter(opts) {
 			]
 			self.plot.tip
 				.show(event.clientX, event.clientY)
-				.d.html(`<table class='sja_simpletable'>${rows.join("\n")}</table>`)
+				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 		} else {
 			self.plot.tip.hide()
 		}
@@ -305,42 +305,42 @@ function getPj(self) {
 	const pj = new Partjson({
 		template: {
 			//"__:charts": "@.byChc.@values",
-			yMin: ">$val2",
-			yMax: "<$val2",
+			yMin: '>$val2',
+			yMax: '<$val2',
 			charts: [
 				{
-					chartId: "@key",
-					chc: "@key",
-					xMin: ">$val1",
-					xMax: "<$val1",
-					yMin: ">$val2",
-					yMax: "<$val2",
-					"__:xScale": "=xScale()",
-					"__:yScale": "=yScale()",
+					chartId: '@key',
+					chc: '@key',
+					xMin: '>$val1',
+					xMax: '<$val1',
+					yMin: '>$val2',
+					yMax: '<$val2',
+					'__:xScale': '=xScale()',
+					'__:yScale': '=yScale()',
 					serieses: [
 						{
-							chartId: "@parent.@parent.@key",
-							seriesId: "@key",
+							chartId: '@parent.@parent.@key',
+							seriesId: '@key',
 							data: [
 								{
-									"__:chc": "@parent.@parent.chc",
-									"__:seriesId": "@parent.@parent.seriesId",
+									'__:chc': '@parent.@parent.chc',
+									'__:seriesId': '@parent.@parent.seriesId',
 									//color: "$color",
-									x: "$val1",
-									y: "$val2",
-									"_1:scaledX": "=scaledX()",
-									"_1:scaledY": "=scaledY()"
+									x: '$val1',
+									y: '$val2',
+									'_1:scaledX': '=scaledX()',
+									'_1:scaledY': '=scaledY()'
 								},
-								"$val2"
+								'$val2'
 							]
 						},
-						"-"
+						'-'
 					]
 				},
-				"$val0"
+				'$val0'
 			]
 		},
-		"=": {
+		'=': {
 			xScale(row, context) {
 				return d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
@@ -354,7 +354,7 @@ function getPj(self) {
 			},
 			yScale(row, context) {
 				const yMax = context.self.yMax
-				const domain = s.scale == "byChart" ? [yMax, 0] : [context.root.yMax, 0]
+				const domain = s.scale == 'byChart' ? [yMax, 0] : [context.root.yMax, 0]
 				return d3Linear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
@@ -367,7 +367,7 @@ function getPj(self) {
 
 function getDownloadFxn(self) {
 	return () => {
-		if (!self.plot.settings.currViews.includes("scatter")) return
+		if (!self.plot.settings.currViews.includes('scatter')) return
 		// has to be able to handle multichart view
 		const mainGs = []
 		const translate = { x: undefined, y: undefined }
@@ -378,7 +378,7 @@ function getDownloadFxn(self) {
 		let prevY = 0,
 			numChartsPerRow = 0
 
-		self.dom.div.selectAll(".sjpcb-scatter-mainG").each(function() {
+		self.dom.div.selectAll('.sjpcb-scatter-mainG').each(function() {
 			mainGs.push(this)
 			const bbox = this.getBBox()
 			if (bbox.width > maxw) maxw = bbox.width
@@ -391,10 +391,10 @@ function getDownloadFxn(self) {
 				numChartsPerRow++
 			}
 			const xy = select(this)
-				.attr("transform")
-				.split("translate(")[1]
-				.split(")")[0]
-				.split(",")
+				.attr('transform')
+				.split('translate(')[1]
+				.split(')')[0]
+				.split(',')
 				.map(d => +d.trim())
 			if (translate.x === undefined || xy[0] > translate.x) translate.x = +xy[0]
 			if (translate.y === undefined || xy[1] > translate.y) translate.y = +xy[1]
@@ -410,18 +410,18 @@ function getDownloadFxn(self) {
 		maxw += 30
 		maxh += 30
 
-		const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
 
 		select(svg)
-			.style("display", "block")
-			.style("opacity", 1)
-			.attr("width", numChartsPerRow * maxw)
-			.attr("height", Math.floor(mainGs.length / numChartsPerRow) * maxh)
+			.style('display', 'block')
+			.style('opacity', 1)
+			.attr('width', numChartsPerRow * maxw)
+			.attr('height', Math.floor(mainGs.length / numChartsPerRow) * maxh)
 
-		const svgStyles = window.getComputedStyle(document.querySelector(".pp-scatter-svg"))
+		const svgStyles = window.getComputedStyle(document.querySelector('.pp-scatter-svg'))
 		const svgSel = select(svg)
 		for (const prop of svgStyles) {
-			if (prop.startsWith("font")) svgSel.style(prop, svgStyles.getPropertyValue(prop))
+			if (prop.startsWith('font')) svgSel.style(prop, svgStyles.getPropertyValue(prop))
 		}
 
 		mainGs.forEach((g, i) => {
@@ -430,18 +430,18 @@ function getDownloadFxn(self) {
 			const rowNum = Math.floor(i / numChartsPerRow)
 			const corner = { x: colNum * maxw + translate.x, y: rowNum * maxh + translate.y }
 			const title = select(svg)
-				.append("text")
-				.attr("transform", "translate(" + corner.x + "," + corner.y + ")")
+				.append('text')
+				.attr('transform', 'translate(' + corner.x + ',' + corner.y + ')')
 				.text(titles[i].text)
 			for (const prop of titles[i].styles) {
-				if (prop.startsWith("font")) title.style(prop, titles[i].styles.getPropertyValue(prop))
+				if (prop.startsWith('font')) title.style(prop, titles[i].styles.getPropertyValue(prop))
 			}
 
-			select(mainG).attr("transform", "translate(" + corner.x + "," + (corner.y + tboxh) + ")")
+			select(mainG).attr('transform', 'translate(' + corner.x + ',' + (corner.y + tboxh) + ')')
 			svg.appendChild(mainG)
 		})
 
-		const svg_name = self.plot.term.term.name + " scatter"
+		const svg_name = self.plot.term.term.name + ' scatter'
 		to_svg(svg, svg_name) //,{apply_dom_styles:true})
 	}
 }
