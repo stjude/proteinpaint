@@ -8,12 +8,12 @@ import * as client from '../client'
 class TermSetting {
 	constructor(app, opts) {
         // console.log(app, opts)
-		this.type = 'termSetting'
-		this.api = rx.getComponentApi(this)
-		this.app = app
+		this.type = 'plot'
+        this.api = rx.getComponentApi(this)
+        this.app = app
         this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
         this.plot = opts.plot
-        this.term_id = opts.term_id
+        this.term_index = opts.term_id
 		this.durations = { exit: 500 }
 
 		setRenderers(this)
@@ -26,10 +26,11 @@ class TermSetting {
 	}
 
 	main() {
+        console.log('update')
         const terms_div = this.dom.holder.selectAll('.terms_div')
-        const pill_term = (this.term_id == 'term0') ? this.plot.config.term0 : 
-            (this.term_id == 'term1') ? this.plot.config.term :
-            (this.term_id == 'term2') ? this.plot.config.term2 :
+        const pill_term = (this.term_index == 'term0') ? this.state.config.term0 : 
+            (this.term_index == 'term1') ? this.state.config.term :
+            (this.term_index == 'term2') ? this.state.config.term2 :
             undefined
 		const blue_pills = terms_div.selectAll('.tvs_pill').data(pill_term, d => d.term.id)
 
@@ -99,9 +100,9 @@ function setInteractivity(self) {
 			modifiers: {
 				//modifier to replace filter by clicking term btn
 				//TODO: add tvs as new filter from '+' button
-				tvs_select: tvs => {
-					self.replaceFilter({ term: tvs })
-				}
+                click_term :ts => {
+					self.addPill({ term: ts, term_index: self.term_index, plot_term_id:self.plot.config.id })
+                },
 			},
 			callbacks: {
 				app: { 'postInit.test': () => {} }
@@ -109,4 +110,6 @@ function setInteractivity(self) {
 		}
 		appInit(null, opts)
     }
+
+    self.addPill = opts => self.app.dispatch({ type: 'plot_terms_change', term: opts.term, term_index:opts.term_index, plot_term_id:opts.plot_term_id })
 }

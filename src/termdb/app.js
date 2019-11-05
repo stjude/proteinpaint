@@ -178,7 +178,7 @@ TdbApp.prototype.subState = {
 	plot: {
 		reactsTo: {
 			prefix: ['filter'],
-			type: ['plot_show', 'plot_edit', 'app_refresh'],
+			type: ['plot_show', 'plot_edit', 'app_refresh', 'plot_terms_change'],
 			fxn: (action, sub) => {
 				if (!action.type.startsWith('plot')) return true
 				if (!('id' in action) || action.id == sub.id) return true
