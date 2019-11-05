@@ -1,5 +1,6 @@
 {
-  "name": "test_webpack",
+  "name": "proteinpaint",
+  "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "version": "1.0.0",
   "description": "",
   "main": "app.js",
