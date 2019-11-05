@@ -194,7 +194,7 @@ TdbStore.prototype.actions = {
 	}, 
 
 	plot_terms_change(action){
-		const plot_term_id = action.plot_term_id
+		const plot_term_id = action.id
 		const plot = this.state.tree.plots[plot_term_id]
 		if(action.term_index == 'term1'){
 			plot.term = action.term

@@ -14,6 +14,7 @@ class TermSetting {
         this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
         this.plot = opts.plot
         this.term_index = opts.term_id
+        this.id = opts.id
 		this.durations = { exit: 500 }
 
 		setRenderers(this)
@@ -54,7 +55,7 @@ class TermSetting {
 	}
 }
 
-exports.TermSettingInit = rx.getInitFxn(TermSetting)
+exports.termSettingInit = rx.getInitFxn(TermSetting)
 
 function setRenderers(self) {
 
@@ -101,7 +102,7 @@ function setInteractivity(self) {
 				//modifier to replace filter by clicking term btn
 				//TODO: add tvs as new filter from '+' button
                 click_term :ts => {
-					self.addPill({ term: ts, term_index: self.term_index, plot_term_id:self.plot.config.id })
+					self.addPill({ term: ts, term_index: self.term_index, plot_term_id:self.plot.config.id, id: self.id })
                 },
 			},
 			callbacks: {
@@ -111,5 +112,5 @@ function setInteractivity(self) {
 		appInit(null, opts)
     }
 
-    self.addPill = opts => self.app.dispatch({ type: 'plot_terms_change', term: opts.term, term_index:opts.term_index, plot_term_id:opts.plot_term_id })
+    self.addPill = opts => self.app.dispatch({ type: 'plot_terms_change', term: opts.term, term_index:opts.term_index, id:opts.plot_term_id })
 }

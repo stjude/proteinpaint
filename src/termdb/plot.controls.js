@@ -2,7 +2,7 @@ import * as rx from '../rx/core'
 import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from '../client'
 import { display as termui_display, numeric_bin_edit } from '../mds.termdb.termsetting.ui'
-import {TermSettingInit} from './termsetting'
+import {termSettingInit} from './termsetting'
 
 const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
@@ -535,13 +535,18 @@ function setOverlayOpts(app, opts, controls) {
 		}
 	}
 
-	TermSettingInit(app, {holder:pill_div, plot, term_id:'term2' })
+	const pill = termSettingInit(app, {holder:pill_div, plot, term_id:'term2', id: controls.id })
 
 	const self = {
+			components: {
+				pill
+			},
 		main(plot) {
 			if (!self.termuiObj) {
 				self.termuiObj = getTermuiObj(app, plot, pill_div, 'Another term', 'term2', termuiCallback)
 			}
+
+            pill.update({}, null)
 
 			// hide all options when opened from genome browser view
 			tr.style('display', obj.modifier_ssid_barchart ? 'none' : 'table-row')
@@ -709,7 +714,7 @@ function setDivideByOpts(app, opts, controls) {
 		})
 	}
 
-	TermSettingInit(app, {holder:pill_div, plot, term_id:'term0'})
+	termSettingInit(app, {holder:pill_div, plot, term_id:'term0', id: controls.id})
 
 	return {
 		main(plot) {
@@ -760,7 +765,7 @@ function setBarsAsOpts(app, opts, controls) {
 		controls.dispatch({ term })
 	}
 
-	TermSettingInit(app, {holder:td.append('div'), plot, term_id:'term1'})
+	termSettingInit(app, {holder:td.append('div'), plot, term_id:'term1', id: controls.id})
 
 	return {
 		main(plot) {
