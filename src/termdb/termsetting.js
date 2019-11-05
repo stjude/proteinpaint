@@ -7,14 +7,14 @@ import * as client from '../client'
 
 class TermSetting {
 	constructor(app, opts) {
-        // console.log(app, opts)
+		// console.log(app, opts)
 		this.type = 'plot'
-        this.api = rx.getComponentApi(this)
-        this.app = app
-        this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
-        this.plot = opts.plot
-        this.term_index = opts.term_id
-        this.id = opts.id
+		this.api = rx.getComponentApi(this)
+		this.app = app
+		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
+		this.plot = opts.plot
+		this.term_index = opts.term_id
+		this.id = opts.id
 		this.durations = { exit: 500 }
 
 		setRenderers(this)
@@ -27,12 +27,16 @@ class TermSetting {
 	}
 
 	main() {
-        console.log('update')
-        const terms_div = this.dom.holder.selectAll('.terms_div')
-        const pill_term = (this.term_index == 'term0') ? this.state.config.term0 : 
-            (this.term_index == 'term1') ? this.state.config.term :
-            (this.term_index == 'term2') ? this.state.config.term2 :
-            undefined
+		console.log('update')
+		const terms_div = this.dom.holder.selectAll('.terms_div')
+		const pill_term =
+			this.term_index == 'term0'
+				? this.state.config.term0
+				: this.term_index == 'term1'
+				? this.state.config.term
+				: this.term_index == 'term2'
+				? this.state.config.term2
+				: undefined
 		const blue_pills = terms_div.selectAll('.tvs_pill').data(pill_term, d => d.term.id)
 
 		blue_pills.exit().each(this.exitFilter)
@@ -58,11 +62,8 @@ class TermSetting {
 exports.termSettingInit = rx.getInitFxn(TermSetting)
 
 function setRenderers(self) {
-
 	self.initHolder = function() {
-        this.dom.holder
-        .append('span')
-		.html(self.mainlabel ? self.mainlabel + '&nbsp;' : 'Select term&nbsp;')
+		this.dom.holder.append('span').html(self.mainlabel ? self.mainlabel + '&nbsp;' : 'Select term&nbsp;')
 
 		// add new term
 		this.dom.holder
@@ -74,7 +75,7 @@ function setRenderers(self) {
 			.style('background-color', '#4888BF')
 			.html('&#43;')
 			.on('click', self.displayTreeMenu)
-    }
+	}
 }
 
 function setInteractivity(self) {
@@ -99,18 +100,24 @@ function setInteractivity(self) {
 				}
 			},
 			modifiers: {
-				//modifier to replace filter by clicking term btn
 				//TODO: add tvs as new filter from '+' button
-                click_term :ts => {
-					self.addPill({ term: ts, term_index: self.term_index, plot_term_id:self.plot.config.id, id: self.id })
-                },
+				click_term: self.addPill
 			},
-			callbacks: {
-				app: { 'postInit.test': () => {} }
-			}
+			callbacks: {}
 		}
 		appInit(null, opts)
-    }
+	}
 
-    self.addPill = opts => self.app.dispatch({ type: 'plot_terms_change', term: opts.term, term_index:opts.term_index, id:opts.plot_term_id })
+	self.addPill = function(ts) {
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.plot.config.id,
+			config: {
+				[self.term_index]: {
+					id: ts.id,
+					term: ts
+				}
+			}
+		})
+	}
 }

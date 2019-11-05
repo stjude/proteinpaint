@@ -195,7 +195,7 @@ tape('modifier: click_term', test => {
 	}
 })
 
-tape('rehydrated from saved state', function(test) {
+tape.only('rehydrated from saved state', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
 

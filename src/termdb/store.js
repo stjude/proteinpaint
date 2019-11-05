@@ -116,7 +116,6 @@ TdbStore.prototype.actions = {
 
 	plot_edit(action) {
 		const plot = this.state.tree.plots[action.id]
-		const replaceKeyVals = ['term', 'term2', 'term0']
 		if (plot) this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
 	},
 
@@ -191,18 +190,6 @@ TdbStore.prototype.actions = {
 	filter_replace(action) {
 		this.state.termfilter.terms = []
 		this.state.termfilter.terms.push(action.term)
-	}, 
-
-	plot_terms_change(action){
-		const plot_term_id = action.id
-		const plot = this.state.tree.plots[plot_term_id]
-		if(action.term_index == 'term1'){
-			plot.term = action.term
-		}else if(action.term_index == 'term2'){
-			plot.term2 = action.term
-		}else if(action.term_index == 'term0'){
-			plot.term0 = action.term
-		}
 	}
 }
 
