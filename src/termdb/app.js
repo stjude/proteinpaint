@@ -210,7 +210,7 @@ TdbApp.prototype.subState = {
 				}
 			} else {
 				return {
-					isVisible: !viewType || config.settings.currViews.includes(viewType),
+					isVisible: config.settings.currViews.includes(viewType),
 					config: {
 						term: config.term,
 						term0: config.term0,

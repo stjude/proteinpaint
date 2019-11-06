@@ -41,8 +41,8 @@ tape('unsupported overlay types', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			boxplot: {
+		boxplot: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -96,8 +96,8 @@ tape('supported numeric overlay', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			boxplot: {
+		boxplot: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}

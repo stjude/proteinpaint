@@ -25,8 +25,7 @@ class TdbBoxplot {
 		}
 
 		setRenderers(this)
-		this.bus = new rx.Bus('boxplot', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	main(data) {

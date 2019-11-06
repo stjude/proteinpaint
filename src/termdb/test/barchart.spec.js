@@ -46,8 +46,8 @@ tape('single barchart, categorical bars', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			plot: {
+		plot: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -93,8 +93,8 @@ tape('single chart, with overlay', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			plot: {
+		plot: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -152,8 +152,8 @@ tape('click to add numeric, condition term filter', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			plot: {
+		plot: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -220,42 +220,7 @@ tape('click to add numeric, condition term filter', function(test) {
 			test.end()
 		}, 200)
 	}
-}) */
-/*
-tape('single chart, genotype overlay', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
-	runpp({
-		termfilter,
-		plot2restore: {
-			term: termjson['diaggrp'],
-			term2: 'genotype',
-			settings: {
-				currViews: ['barchart']
-			}
-		},
-		callbacks: {
-			plot: {
-				postRender: testBarCount
-			}
-		},
-		bar_click_menu: {
-			add_filter: true
-		},
-		modifier_ssid_barchart: {
-			mutation_name: 'TEST',
-			ssid: 'genotype-test.txt'
-		}
-	})
-
-	function testBarCount(plot) {
-		const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
-		test.true(numOverlays > 10, 'should have more than 10 Diagnosis Group bars')
-		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
-		test.end()
-	}
-})
-*/ /*
+}) */ /*
 tape('click to add condition child term filter', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
@@ -266,8 +231,8 @@ tape('click to add condition child term filter', function(test) {
 				currViews: ['barchart']
 			}
 		},
-		callbacks: {
-			plot: {
+		plot: {
+			callbacks: {
 				postRender: triggerClick
 			}
 		},
@@ -318,8 +283,8 @@ tape('click to add condition grade and child term filter', function(test) {
 				currViews: ['barchart']
 			}
 		},
-		callbacks: {
-			plot: {
+		plot: {
+			callbacks: {
 				postRender: triggerClick
 			}
 		},
@@ -361,36 +326,73 @@ tape('click to add condition grade and child term filter', function(test) {
 	}
 })
 */
-tape('multiple charts', function(test) {
+/*
+tape('single chart, genotype overlay', function(test) {
+	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
-		state: {
-			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						term: { id: 'diaggrp' },
-						term0: { id: 'agedx' },
-						settings: { currViews: ['barchart'] }
-					}
-				}
+		termfilter,
+		plot2restore: {
+			term: termjson['diaggrp'],
+			term2: 'genotype',
+			settings: {
+				currViews: ['barchart']
 			}
 		},
-		callbacks: {
-			plot: {
-				'postRender.test': testNumCharts
+		plot: {
+			callbacks: {
+				postRender: testBarCount
 			}
+		},
+		bar_click_menu: {
+			add_filter: true
+		},
+		modifier_ssid_barchart: {
+			mutation_name: 'TEST',
+			ssid: 'genotype-test.txt'
 		}
 	})
 
-	let barDiv
-	function testNumCharts(plot) {
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
-		test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
+	function testBarCount(plot) {
+		const numBars = plot.components.barchart.dom.barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = plot.components.barchart.dom.barDiv.selectAll('.bars-cell').size()
+		test.true(numOverlays > 10, 'should have more than 10 Diagnosis Group bars')
+		test.equal(numOverlays, 66, 'should have a total of 66 overlays')
 		test.end()
 	}
 })
+*/ tape(
+	'multiple charts',
+	function(test) {
+		runpp({
+			state: {
+				tree: {
+					expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+					visiblePlotIds: ['diaggrp'],
+					plots: {
+						diaggrp: {
+							term: { id: 'diaggrp' },
+							term0: { id: 'agedx' },
+							settings: { currViews: ['barchart'] }
+						}
+					}
+				}
+			},
+			plot: {
+				callbacks: {
+					'postRender.test': testNumCharts
+				}
+			}
+		})
+
+		let barDiv
+		function testNumCharts(plot) {
+			barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+			const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+			test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
+			test.end()
+		}
+	}
+)
 
 tape('series visibility', function(test) {
 	runpp({
@@ -406,8 +408,8 @@ tape('series visibility', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			plot: {
+		plot: {
+			callbacks: {
 				'postRender.test': testExcluded
 			}
 		}

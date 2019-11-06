@@ -40,41 +40,52 @@ class TdbPlot {
 				.style('margin-left', '50px')
 		}
 
+		const barchartOpts = rx.copyMerge(
+			{
+				holder: this.dom.viz.append('div'),
+				id: this.id,
+				term: opts.term,
+				modifiers: this.modifiers
+			},
+			this.app.opts.barchart ? this.app.opts.barchart : {}
+		)
+
+		const tableOpts = rx.copyMerge(
+			{
+				holder: this.dom.viz.append('div'),
+				id: this.id
+			},
+			this.app.opts.table ? this.app.opts.table : {}
+		)
+
+		const boxplotOpts = rx.copyMerge(
+			{
+				holder: this.dom.viz.append('div'),
+				id: this.id
+			},
+			this.app.opts.boxplot ? this.app.opts.boxplot : {}
+		)
+
+		const scatterOpts = rx.copyMerge(
+			{
+				holder: this.dom.viz.append('div'),
+				id: this.id
+			},
+			this.app.opts.scatter ? this.app.opts.scatter : {}
+		)
+
 		this.components = {
 			controls: controlsInit(this.app, {
 				id: this.id,
 				holder: this.dom.controls,
 				isVisible: false // plot.settings.controls.isVisible
 			}),
-			barchart: barInit(this.app, {
-				holder: this.dom.viz.append('div'),
-				id: this.id,
-				term: opts.term,
-				modifiers: this.modifiers
-			}),
-			table: tableInit(this.app, {
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			}),
-			boxplot: boxplotInit(this.app, {
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			}),
-			scatter: scatterInit(this.app, {
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			})
+			barchart: barInit(this.app, barchartOpts),
+			table: tableInit(this.app, tableOpts),
+			boxplot: boxplotInit(this.app, boxplotOpts),
+			scatter: scatterInit(this.app, scatterOpts)
 		}
-
-		// constructor also accepts callbacks in order to dismiss the loading DIV from tree
-		// here to merge callbacks from two places
-		// rx.copyMerge performs a deep merge of nested objects, so in this case
-		// the opts.callback.plot{} is not replaced by this.app.opts.callbacks.plot{},
-		// but instead "extended" by all the subproperties of the latter
-		// which has a different eventType namespace
-		const callbacks = rx.copyMerge(opts.callbacks || {}, this.app.opts.callbacks)
-		this.bus = new rx.Bus('plot', ['postInit', 'postRender'], callbacks, this.api)
-		this.bus.emit('postInit', this.api)
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	async main() {

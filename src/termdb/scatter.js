@@ -17,8 +17,7 @@ class TdbScatter {
 		}
 		this.settings = {}
 		setRenderers(this)
-		this.bus = new rx.Bus('scatter', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
 	}
 	main(data) {
 		this.config = this.state.config

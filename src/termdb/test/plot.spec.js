@@ -40,8 +40,8 @@ tape('view click', function(test) {
 				'postInit.test': triggerViewClick
 			}
 		},
-		callbacks: {
-			plot: {
+		plot: {
+			callbacks: {
 				'postRender.test': testView
 			}
 		}

@@ -42,8 +42,7 @@ class TdbBarchart {
 		this.controls = {}
 		this.term2toColor = {}
 		this.processedExcludes = []
-		this.bus = new rx.Bus('barchart', ['postInit', 'postRender', 'postClick'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender', 'postClick']
 	}
 
 	main(data) {
