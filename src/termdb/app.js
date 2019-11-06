@@ -17,10 +17,14 @@ opts{}
 	a component will consume a specific modifier (addressed by its key) to alter its behavior
 	can run the callback supplied with results to other apps (e.g. click a term in tree)
 	app and components will refer to the same frozen object of "modifiers{}", in a read-only way
-}
+component specific callbacks and customizations
 
 
 ******************* modifiers
+
+a set of predefined keys, each pointing to a callback so as to supply user selected term or tvs to that callback
+will also alter the appearance and behavior of UIs, so components need to access this
+
 < no modifier >
 tree: display all terms under a parent, just show name;
 non-leaf terms will have a +/- button in the front
@@ -34,8 +38,8 @@ tree.search: display found terms as blue buttons
 < modifiers.tvs_select >
 at barchart, click a bar to select to a tvs
 
-< modifiers.ssid_barchart >
-TODO
+Compared to previous version:
+ssid is no longer a modifier, but as a customization attribute for barchart
 
 */
 
