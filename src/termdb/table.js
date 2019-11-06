@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 
 class TdbTable {
 	constructor(app, opts) {
-		this.type = 'plot.table'
+		this.type = 'table'
 		this.id = opts.id
 		this.app = app
 		this.opts = opts

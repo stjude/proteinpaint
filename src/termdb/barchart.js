@@ -16,7 +16,7 @@ const colors = {
 
 class TdbBarchart {
 	constructor(app, opts) {
-		this.type = 'plot.barchart'
+		this.type = 'barchart'
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
 		this.app = app

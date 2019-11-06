@@ -7,7 +7,7 @@ import { axisLeft } from 'd3-axis'
 
 class TdbBoxplot {
 	constructor(app, opts) {
-		this.type = 'plot.boxplot'
+		this.type = 'boxplot'
 		this.id = opts.id
 		this.app = app
 		this.api = rx.getComponentApi(this)

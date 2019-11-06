@@ -7,7 +7,7 @@ import { to_svg } from '../client'
 
 class TdbScatter {
 	constructor(app, opts) {
-		this.type = 'plot.scatter'
+		this.type = 'scatter'
 		this.id = opts.id
 		this.app = app
 		this.api = rx.getComponentApi(this)

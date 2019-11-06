@@ -74,7 +74,10 @@ class TdbApp {
 				// has modifier
 			} else {
 				// no modifier, show these components
-				this.components.recover = recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' })
+				const recoverOpts = { holder: this.dom.holder, appType: 'termdb' }
+				if (this.opts.recover) rx.copyMerge(recoverOpts, this.opts.recover)
+				this.components.recover = recoverInit(this.app, recoverOpts)
+
 				const filterOpts = { holder: this.dom.holder.append('div') }
 				if (this.opts.filter) rx.copyMerge(filterOpts, this.opts.filter)
 				this.components.terms = filterInit(this.app, filterOpts)
@@ -153,6 +156,11 @@ class TdbApp {
 	  that is relevant to a subcomponent type, id
 */
 TdbApp.prototype.subState = {
+	recover: {
+		get(appState) {
+			return appState
+		}
+	},
 	tree: {
 		passThrough: {
 			type: ['plot_edit']
@@ -186,43 +194,14 @@ TdbApp.prototype.subState = {
 			}
 		}
 	},
-	plot: {
-		reactsTo: {
-			prefix: ['filter'],
-			type: ['plot_show', 'plot_edit', 'app_refresh', 'plot_terms_change'],
-			fxn: (action, sub) => {
-				if (!action.type.startsWith('plot')) return true
-				if (!('id' in action) || action.id == sub.id) return true
-			}
-		},
+	tvs: {
+		// no need to duplicate in here the parent
+		// component's subState.filter.reactsTo{} filter
 		get(appState, sub) {
-			if (!(sub.id in appState.tree.plots)) {
-				return null //throw `No plot with id='${sub.id}' found.`
-			}
-			const config = appState.tree.plots[sub.id]
-			// component.type may optionally be dot-separated "type.name"
-			// in this case, the name corresponds to viewType
-			const viewType = sub.type.split('.')[1]
-			if (!viewType) {
-				return {
-					genome: appState.genome,
-					dslabel: appState.dslabel,
-					termfilter: appState.termfilter,
-					config
-				}
-			} else {
-				return {
-					isVisible: config.settings.currViews.includes(viewType),
-					config: {
-						term: config.term,
-						term0: config.term0,
-						term2: config.term2,
-						settings: {
-							common: config.settings.common,
-							[viewType]: config.settings[viewType]
-						}
-					}
-				}
+			return {
+				genome: appState.genome,
+				dslabel: appState.dslabel,
+				termfilter: appState.termfilter
 			}
 		}
 	},
@@ -234,6 +213,114 @@ TdbApp.prototype.subState = {
 			return {
 				genome: appState.genome,
 				dslabel: appState.dslabel
+			}
+		}
+	},
+	plot: {
+		reactsTo: {
+			prefix: ['filter'],
+			type: ['plot_show', 'plot_edit', 'app_refresh'],
+			fxn: (action, sub) => {
+				if (!action.type.startsWith('plot')) return true
+				if (!('id' in action) || action.id == sub.id) return true
+			}
+		},
+		get(appState, sub) {
+			if (!(sub.id in appState.tree.plots)) {
+				return null //throw `No plot with id='${sub.id}' found.`
+			}
+			const config = appState.tree.plots[sub.id]
+			return {
+				genome: appState.genome,
+				dslabel: appState.dslabel,
+				termfilter: appState.termfilter,
+				config
+			}
+		}
+	},
+	barchart: {
+		// no need to duplicate in here the parent
+		// component's subState.plot.reactsTo{} filter
+		get(appState, sub) {
+			if (!(sub.id in appState.tree.plots)) {
+				return null //throw `No plot with id='${sub.id}' found.`
+			}
+			const config = appState.tree.plots[sub.id]
+			return {
+				isVisible: config.settings.currViews.includes('barchart'),
+				config: {
+					term: config.term,
+					term0: config.term0,
+					term2: config.term2,
+					settings: {
+						common: config.settings.common,
+						barchart: config.settings.barchart
+					}
+				}
+			}
+		}
+	},
+	table: {
+		// no need to duplicate in here the parent
+		// component's subState.plot.reactsTo{} filter
+		get(appState, sub) {
+			if (!(sub.id in appState.tree.plots)) {
+				return null //throw `No plot with id='${sub.id}' found.`
+			}
+			const config = appState.tree.plots[sub.id]
+			return {
+				isVisible: config.settings.currViews.includes('table'),
+				config: {
+					term: config.term,
+					term2: config.term2,
+					settings: {
+						common: config.settings.common,
+						table: config.settings.table
+					}
+				}
+			}
+		}
+	},
+	boxplot: {
+		// no need to duplicate in here the parent
+		// component's subState.plot.reactsTo{} filter
+		get(appState, sub) {
+			if (!(sub.id in appState.tree.plots)) {
+				return null //throw `No plot with id='${sub.id}' found.`
+			}
+			const config = appState.tree.plots[sub.id]
+			return {
+				isVisible: config.settings.currViews.includes('boxplot'),
+				config: {
+					term: config.term,
+					term2: config.term2,
+					settings: {
+						common: config.settings.common,
+						boxplot: config.settings.boxplot
+					}
+				}
+			}
+		}
+	},
+	scatter: {
+		// no need to duplicate in here the parent
+		// component's subState.plot.reactsTo{} filter
+		get(appState, sub) {
+			if (!(sub.id in appState.tree.plots)) {
+				return null //throw `No plot with id='${sub.id}' found.`
+			}
+			const config = appState.tree.plots[sub.id]
+			return {
+				isVisible: config.settings.currViews.includes('scatter'),
+				config: {
+					term: config.term,
+					term0: config.term0,
+					term2: config.term2,
+					settings: {
+						common: config.settings.common,
+						scatter: config.settings.scatter
+					}
+				}
 			}
 		}
 	}

@@ -18,10 +18,9 @@ function getInitFxn(_Class_) {
 		const self = new _Class_(arg, instanceOpts)
 		// if a component declares eventTypes, take care of bus creation here
 		if (self.eventTypes) {
-			const type = self.type.includes('.') ? self.type.split('.')[1] : self.type
 			const callbacks =
-				type in instanceOpts // component types that have been migrated to new bus signature
-					? instanceOpts[type].callbacks
+				self.type in instanceOpts // component types that have been migrated to new bus signature
+					? instanceOpts[self.type].callbacks
 					: self.type == 'app'
 					? {}
 					: instanceOpts.callbacks

@@ -31,8 +31,8 @@ tape('history processing', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({
-		callbacks: {
-			recover: {
+		recover: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -88,8 +88,8 @@ tape('rendered buttons', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({
-		callbacks: {
-			recover: {
+		recover: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}

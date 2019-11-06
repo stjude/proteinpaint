@@ -7,7 +7,7 @@ import * as client from '../client'
 
 class TVS {
 	constructor(app, opts) {
-		this.type = 'filter'
+		this.type = 'tvs'
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
@@ -18,8 +18,6 @@ class TVS {
 
 		this.categoryData = {}
 		this.initHolder()
-		this.bus = new rx.Bus('tvs', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
 	}
 
 	main() {
@@ -42,7 +40,9 @@ class TVS {
 		// when there are filters to be removed, must account for the delayed
 		// removal after opacity transition, as btn count will decrease only
 		// after the transition and remove() is done
-		this.bus.emit('postRender', null, filters.exit().size() ? this.durations.exit + 100 : 0)
+		//
+		// !!! TODO: how to pass bus.emit('postRender') delay to rx.component.api.update()
+		// this.bus.emit('postRender', null, filters.exit().size() ? this.durations.exit + 100 : 0)
 	}
 
 	async getCategories(term, lst) {
