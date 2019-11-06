@@ -29,17 +29,11 @@ class TermSearch {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.modifiers = opts.modifiers
-		// see rx.core getComponentApi().main() on
-		// how these key-values are used
-		this.reactsTo = {
-			prefix: ['search']
-		}
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
 		this.initUI()
-		this.bus = new rx.Bus('search', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender', 'postSearch']
 	}
 
 	async doSearch(str) {
@@ -56,7 +50,7 @@ class TermSearch {
 			// found terms
 			this.showTerms(data)
 		}
-		this.bus.emit('postRender')
+		this.bus.emit('postSearch')
 	}
 }
 
@@ -167,8 +161,5 @@ function setInteractivity(self) {
 			sayerror(self.dom.resultDiv, 'Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
 		}
-	}
-	self.selectTerm = term => {
-		console.log('selected', term)
 	}
 }

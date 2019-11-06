@@ -81,12 +81,16 @@ class TdbTree {
 		setInteractivity(this)
 		setRenderers(this)
 
-		this.components = {
-			search: searchInit(app, {
+		{
+			const searchOpts = {
 				holder: this.dom.searchDiv,
 				modifiers: opts.modifiers
-			}),
-			plots: {}
+			}
+			if (this.app.opts.search) Object.assign(searchOpts, this.app.opts.search)
+			this.components = {
+				search: searchInit(app, searchOpts),
+				plots: {}
+			}
 		}
 
 		// privately defined root term

@@ -29,11 +29,11 @@ tape('\n', function(test) {
 })
 
 tape('term search, default behavior', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(10000)
 
 	runpp({
-		callbacks: {
-			search: {
+		search: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -43,20 +43,14 @@ tape('term search, default behavior', function(test) {
 		const tree = search.Inner.app.getComponents('tree')
 
 		helpers
-			.rideInit({ arg: search, bus: search, eventType: 'postRender.test' })
+			.rideInit({ arg: search, bus: search, eventType: 'postSearch' })
 			.use(triggerSearchNoResult)
 			.to(testSearchNoResult)
 			.use(triggerFirstSearch)
 			.to(testFirstSearch)
 			.use(triggerClickResult_firstSearch)
-			.to(testClickResult_firstSearch, { arg: tree, bus: tree })
+			.to(testClickResult_firstSearch, { arg: tree, bus: tree, eventType: 'postRender' })
 			.use(triggerSecondSearch_samebranchas1st)
-			// or instead of the preceding .to(..., opts={}) pattern,
-			// instead use the .change().to() pattern below
-			/*
-			.change({ arg: tree, bus: tree })
-			.to(testClickResult)
-			*/
 			.done(test)
 	}
 
@@ -114,8 +108,8 @@ tape('modifiers: click_term', test => {
 		modifiers: {
 			click_term: modifier_callback
 		},
-		callbacks: {
-			search: {
+		search: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -124,7 +118,7 @@ tape('modifiers: click_term', test => {
 	function runTests(search) {
 		const tree = search.Inner.app.getComponents('tree')
 		helpers
-			.rideInit({ arg: search, bus: search, eventType: 'postRender.test' })
+			.rideInit({ arg: search, bus: search, eventType: 'postSearch' })
 			.use(triggerSearch)
 			.to(testSearchResult, { wait: 100 })
 			.done(test)
