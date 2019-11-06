@@ -29,8 +29,8 @@ tape('default behavior', function(test) {
 	test.timeoutAfter(2000)
 
 	runpp({
-		callbacks: {
-			tree: {
+		tree: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -159,8 +159,8 @@ tape('modifier: click_term', test => {
 		modifiers: {
 			click_term: modifier_callback
 		},
-		callbacks: {
-			tree: {
+		tree: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -217,8 +217,8 @@ tape('rehydrated from saved state', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			tree: {
+		tree: {
+			callbacks: {
 				'postRender.test': testDom
 			}
 		}

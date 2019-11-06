@@ -161,8 +161,8 @@ tape('stored state recovery', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			tree: {
+		tree: {
+			callbacks: {
 				'postRender.test': saveState
 			}
 		}
@@ -179,9 +179,9 @@ tape('stored state recovery', function(test) {
 
 		setTimeout(() => {
 			runpp({
-				callbacks: {
+				tree: {
 					// no state overrides
-					tree: {
+					callbacks: {
 						'postRender.test': runTests
 					}
 				}

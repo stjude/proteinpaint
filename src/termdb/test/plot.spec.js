@@ -35,10 +35,12 @@ tape('view click', function(test) {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis']
 			}
 		},
-		callbacks: {
-			tree: {
+		tree: {
+			callbacks: {
 				'postInit.test': triggerViewClick
-			},
+			}
+		},
+		callbacks: {
 			plot: {
 				'postRender.test': testView
 			}

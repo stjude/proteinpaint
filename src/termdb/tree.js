@@ -101,8 +101,7 @@ class TdbTree {
 
 		this.termsById = {}
 		this.termsById[root_ID] = _root
-		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	async main() {

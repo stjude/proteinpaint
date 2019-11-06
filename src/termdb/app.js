@@ -77,7 +77,9 @@ class TdbApp {
 				this.components.recover = recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' })
 				this.components.terms = filterInit(this.app, { holder: this.dom.holder.append('div') })
 			}
-			this.components.tree = treeInit(this.app, { holder: this.dom.holder.append('div'), modifiers })
+			const treeOpts = { holder: this.dom.holder.append('div'), modifiers }
+			if (this.app.opts.tree) Object.assign(treeOpts, this.app.opts.tree)
+			this.components.tree = treeInit(this.app, treeOpts)
 		} catch (e) {
 			this.printError(e)
 		}

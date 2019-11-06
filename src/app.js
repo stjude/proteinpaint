@@ -1431,6 +1431,7 @@ function launchtoy(opts, holder) {
 }
 function launchtermdb(opts, holder) {
 	if (!opts.holder) opts.holder = holder
+	if (!opts.callbacks) opts.callbacks = {}
 	import('./termdb/app').then(_=>{
 		_.appInit(null, opts)
 	})
