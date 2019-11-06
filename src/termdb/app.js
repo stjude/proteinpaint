@@ -75,7 +75,9 @@ class TdbApp {
 			} else {
 				// no modifier, show these components
 				this.components.recover = recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' })
-				this.components.terms = filterInit(this.app, { holder: this.dom.holder.append('div') })
+				const filterOpts = { holder: this.dom.holder.append('div') }
+				if (this.opts.filter) rx.copyMerge(filterOpts, this.opts.filter)
+				this.components.terms = filterInit(this.app, filterOpts)
 			}
 			const treeOpts = { holder: this.dom.holder.append('div'), modifiers }
 			if (this.app.opts.tree) Object.assign(treeOpts, this.app.opts.tree)

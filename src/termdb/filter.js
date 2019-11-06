@@ -24,9 +24,7 @@ class TdbFilter {
 				modifiers: opts.modifiers
 			})
 		}
-
-		this.bus = new rx.Bus('filter', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	/*async main() {}*/
@@ -61,8 +59,8 @@ function setRenderers(self) {
 
 		const state = self.app.opts.state
 
-		if(state && state.termfilter && !state.termfilter.show_top_ui){
-			div.style('display','none')
+		if (state && state.termfilter && !state.termfilter.show_top_ui) {
+			div.style('display', 'none')
 		}
 	}
 }
