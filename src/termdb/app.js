@@ -323,6 +323,23 @@ TdbApp.prototype.subState = {
 				}
 			}
 		}
+	},
+	termsetting: {
+		// no need to duplicate in here the parent
+		// component's subState.plot.reactsTo{} filter
+		get(appState, sub) {
+			if (!(sub.id in appState.tree.plots)) {
+				return null //throw `No plot with id='${sub.id}' found.`
+			}
+			const config = appState.tree.plots[sub.id]
+			return {
+				config: {
+					term: config.term,
+					term0: config.term0,
+					term2: config.term2
+				}
+			}
+		}
 	}
 }
 

@@ -7,14 +7,13 @@ import * as client from '../client'
 
 class TermSetting {
 	constructor(app, opts) {
-		// console.log(app, opts)
-		this.type = 'plot'
+		this.type = 'termsetting'
+		this.id = opts.id
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.plot = opts.plot
 		this.term_index = opts.term_id
-		this.id = opts.id
 		this.durations = { exit: 500 }
 
 		setRenderers(this)
@@ -22,13 +21,11 @@ class TermSetting {
 
 		this.categoryData = {}
 		this.initHolder()
-		this.bus = new rx.Bus('tvs', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
 	}
 
 	main() {
-		console.log('update')
 		const terms_div = this.dom.holder.selectAll('.terms_div')
+		if (!terms_div.size()) return
 		const pill_term =
 			this.term_index == 'term0'
 				? this.state.config.term0
