@@ -45,6 +45,7 @@ ssid is no longer a modifier, but as a customization attribute for barchart
 
 class TdbApp {
 	constructor(parentApp, opts) {
+		this.type = 'app'
 		this.opts = this.initOpts(opts)
 		this.tip = new Menu({ padding: '5px' })
 		// the TdbApp may be the root app or a component within another app
@@ -81,8 +82,8 @@ class TdbApp {
 			this.printError(e)
 		}
 
-		this.bus = new rx.Bus('app', ['postInit', 'postRender'], opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
+
 		if (this.store) {
 			// trigger the initial render after initialization, store state is ready
 			this.store

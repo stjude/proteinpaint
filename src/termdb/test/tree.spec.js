@@ -195,7 +195,7 @@ tape('modifier: click_term', test => {
 	}
 })
 
-tape.only('rehydrated from saved state', function(test) {
+tape('rehydrated from saved state', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
 
@@ -238,8 +238,8 @@ tape('error handling', function(test) {
 		state: {
 			genome: 'ahg38'
 		},
-		callbacks: {
-			app: {
+		app: {
+			callbacks: {
 				'postRender.test': testWrongGenome
 			}
 		}
@@ -253,8 +253,8 @@ tape('error handling', function(test) {
 		state: {
 			dslabel: 'xxx'
 		},
-		callbacks: {
-			app: {
+		app: {
+			callbacks: {
 				'postRender.test': testWrongDslabel
 			}
 		}

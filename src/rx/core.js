@@ -16,6 +16,13 @@ function getInitFxn(_Class_) {
 	return (arg, instanceOpts = {}) => {
 		// instantiate mutable private properties and methods
 		const self = new _Class_(arg, instanceOpts)
+		// if a component declares eventTypes, take care of bus creation here
+		if (self.eventTypes) {
+			const callbacks = ['app'].includes(self.type) // component types that have been migrated to new bus signature
+				? instanceOpts[self.type] && instanceOpts[self.type].callbacks
+				: instanceOpts.callbacks
+			self.bus = new Bus(self.api, self.eventTypes, callbacks)
+		}
 
 		// get the instance's api that hides its
 		// mutable props and methods
@@ -34,7 +41,9 @@ function getInitFxn(_Class_) {
 		if (opts.debug) api.Inner = self
 
 		// freeze the api's properties and methods before exposing
-		return Object.freeze(api)
+		Object.freeze(api)
+		if (self.eventTypes && self.eventTypes.includes('postInit')) self.bus.emit('postInit')
+		return api
 	}
 }
 
@@ -52,34 +61,63 @@ Utility Classes
 */
 
 class Bus {
-	constructor(name, eventTypes, callbacks, defaultArg) {
-		/*
-		name
-		- the property name within the termdb.callbacks object
-		  to use for initializing bus events
+	constructor(/* flexible function signature to handle migration */) {
+		if (typeof arguments[0] == 'object') {
+			// new function signature
+			const [api, eventTypes, callbacks] = arguments
+			/*
+				api{} 
+				- the immutable api of the app or component
+				
+				eventTypes[] 
+				- the events that this component wants to emit
+				- ['postInit', 'postRender', 'postClick']
 
-		eventType
-		- must be one of the eventTypes supplied to the Bus constructor
-		- maybe be namespaced or not, example: "postRender.test" or "postRender"
+				callbacks{} any event listeners to set-up for this component 
+				.postInit: ()=>{}
+				.postRender() {}, etc.
 
-		arg
-		- optional the argument to supply to the callback
+			*/
+			this.name = api.type + (api.id === undefined || api.id === null ? '' : '#' + api.id)
+			this.eventTypes = eventTypes
+			this.events = {}
+			this.defaultArg = api
+			if (callbacks) {
+				for (const eventType in callbacks) {
+					this.on(eventType, callbacks[eventType])
+				}
+			}
+		} else {
+			// legacy function signature
+			const [name, eventTypes, callbacks, defaultArg] = arguments
+			/*
+			name
+			- the property name within the termdb.callbacks object
+			  to use for initializing bus events
 
-		callbacks
-		- optional 
+			eventType
+			- must be one of the eventTypes supplied to the Bus constructor
+			- maybe be namespaced or not, example: "postRender.test" or "postRender"
 
-		defaultArg
-		- when emitting an event without a second argument,
-		  the defaultArg will be supplied as the argument
-		  to the callback
-	*/
-		this.name = name
-		this.eventTypes = eventTypes
-		this.events = {}
-		this.defaultArg = defaultArg
-		if (callbacks && name in callbacks) {
-			for (const eventType in callbacks[name]) {
-				this.on(eventType, callbacks[name][eventType])
+			arg
+			- optional the argument to supply to the callback
+
+			callbacks
+			- optional 
+
+			defaultArg
+			- when emitting an event without a second argument,
+			  the defaultArg will be supplied as the argument
+			  to the callback
+		*/
+			this.name = name
+			this.eventTypes = eventTypes
+			this.events = {}
+			this.defaultArg = defaultArg
+			if (callbacks && name in callbacks) {
+				for (const eventType in callbacks[name]) {
+					this.on(eventType, callbacks[name][eventType])
+				}
 			}
 		}
 	}
@@ -187,6 +225,7 @@ function getAppApi(self) {
 	const middlewares = []
 
 	const api = {
+		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
 			/*

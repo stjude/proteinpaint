@@ -27,6 +27,7 @@ import { Menu } from '../client'
 */
 class ToyApp {
 	constructor(parentApp, opts) {
+		this.type = 'app'
 		this.opts = opts
 		// the ToyApp may be the root app or a component within another app
 		this.api = parentApp ? rx.getComponentApi(this) : rx.getAppApi(this)
@@ -45,8 +46,7 @@ class ToyApp {
 		}
 		// set up the app api as the default argument
 		// to callbacks of emitted events
-		this.bus = new rx.Bus('app', ['postInit', 'postRender'], opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	/*

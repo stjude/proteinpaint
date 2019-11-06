@@ -6,10 +6,10 @@ const helpers = require('../../../test/front.helpers.js')
 **************************/
 
 const runpp = helpers.getRunPp('termdb', {
-  debug: 1,
-  fetchOpts: {
-  	serverData: helpers.serverData
-  }
+	debug: 1,
+	fetchOpts: {
+		serverData: helpers.serverData
+	}
 })
 
 /**************
@@ -25,8 +25,8 @@ tape('init errors', function(test) {
 	test.timeoutAfter(1000)
 	test.plan(3)
 	runpp({
-		callbacks: {
-			app: {
+		app: {
+			callbacks: {
 				'postInit.test': testMissingState
 			}
 		}
@@ -40,8 +40,8 @@ tape('init errors', function(test) {
 
 	runpp({
 		state: {},
-		callbacks: {
-			app: {
+		app: {
+			callbacks: {
 				'postInit.test': testMissingGenome
 			}
 		}
@@ -55,8 +55,8 @@ tape('init errors', function(test) {
 
 	runpp({
 		state: { genome: 'hg38' },
-		callbacks: {
-			app: {
+		app: {
+			callbacks: {
 				'postInit.test': testMissingDslabel
 			}
 		}
