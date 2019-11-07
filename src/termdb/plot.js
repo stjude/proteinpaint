@@ -3,6 +3,7 @@ import { select, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { controlsInit } from './plot.controls'
 import { barInit } from './barchart'
+import { statTableInit } from './stattable'
 import { tableInit } from './table'
 import { boxplotInit } from './boxplot'
 import { scatterInit } from './scatter'
@@ -50,6 +51,14 @@ class TdbPlot {
 			this.app.opts.barchart ? this.app.opts.barchart : {}
 		)
 
+		const statTableOpts = rx.copyMerge(
+			{
+				holder: this.dom.viz.append('div'),
+				id: this.id
+			}, 
+			this.app.opts.stattable ? this.app.opts.stattable : {}
+		)
+
 		const tableOpts = rx.copyMerge(
 			{
 				holder: this.dom.viz.append('div'),
@@ -81,6 +90,7 @@ class TdbPlot {
 				isVisible: false // plot.settings.controls.isVisible
 			}),
 			barchart: barInit(this.app, barchartOpts),
+			stattable: statTableInit(this.app, statTableOpts),
 			table: tableInit(this.app, tableOpts),
 			boxplot: boxplotInit(this.app, boxplotOpts),
 			scatter: scatterInit(this.app, scatterOpts)

@@ -632,8 +632,9 @@ function setViewOpts(app, opts, controls) {
 		],
 		listeners: {
 			input(d) {
+				const currviews = d.value == 'barchart' ? ['barchart', 'stattable'] : [d.value]
 				controls.dispatch({
-					settings: { currViews: [d.value] }
+					settings: { currViews }
 				})
 			}
 		}

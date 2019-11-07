@@ -324,6 +324,28 @@ TdbApp.prototype.subState = {
 			}
 		}
 	},
+	stattable: {
+		// no need to duplicate in here the parent
+		// component's subState.plot.reactsTo{} filter
+		get(appState, sub) {
+			if (!(sub.id in appState.tree.plots)) {
+				throw `No plot with id='${sub.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			}
+			const config = appState.tree.plots[sub.id]
+			return {
+				isVisible: config.settings.currViews.includes('stattable'),
+				config: {
+					term: config.term,
+					term0: config.term0,
+					term2: config.term2,
+					settings: {
+						common: config.settings.common,
+						barchart: config.settings.barchart
+					}
+				}
+			}
+		}
+	},
 	termsetting: {
 		// no need to duplicate in here the parent
 		// component's subState.plot.reactsTo{} filter
