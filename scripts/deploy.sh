@@ -8,7 +8,7 @@ set -e
 # - checks out committed code into a subdirectory tmpbuild
 # - calls webpack.config.$ENV to bundle *.js code
 # - tars only the code that is needed (for examples, scr/* and scripts/* are not included in the build)
-# - reuses serverconfig.json, dataset/*, and genome/* files from the previously deployed build 
+# - reuses serverconfig.json from the previously deployed build 
 # - restarts node server
 ########
 
