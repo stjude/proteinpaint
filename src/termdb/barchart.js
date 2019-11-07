@@ -308,7 +308,7 @@ class TdbBarchart {
 					? 'most recent'
 					: ''
 			legendGrps.push({
-				name: t2.name + (value_by_label ? ', ' + value_by_label : ''),
+				name: t2.term.name + (value_by_label ? ', ' + value_by_label : ''),
 				items: s.rows
 					.map(d => {
 						const total = this.totalsByDataId[d]
