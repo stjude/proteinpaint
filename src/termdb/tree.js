@@ -82,13 +82,12 @@ class TdbTree {
 		setRenderers(this)
 
 		{
-			const searchOpts = {
-				holder: this.dom.searchDiv,
-				modifiers: opts.modifiers
-			}
-			if (this.app.opts.search) Object.assign(searchOpts, this.app.opts.search)
 			this.components = {
-				search: searchInit(app, searchOpts),
+				search: searchInit(
+					this.app, 
+					{ holder: this.dom.searchDiv, modifiers: opts.modifiers},
+					this.app.opts.search
+				),
 				plots: {}
 			}
 		}

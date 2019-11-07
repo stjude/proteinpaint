@@ -41,59 +41,37 @@ class TdbPlot {
 				.style('margin-left', '50px')
 		}
 
-		const barchartOpts = rx.copyMerge(
-			{
-				holder: this.dom.viz.append('div'),
-				id: this.id,
-				term: opts.term,
-				modifiers: this.modifiers
-			},
-			this.app.opts.barchart ? this.app.opts.barchart : {}
-		)
-
-		const statTableOpts = rx.copyMerge(
-			{
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			}, 
-			this.app.opts.stattable ? this.app.opts.stattable : {}
-		)
-
-		const tableOpts = rx.copyMerge(
-			{
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			},
-			this.app.opts.table ? this.app.opts.table : {}
-		)
-
-		const boxplotOpts = rx.copyMerge(
-			{
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			},
-			this.app.opts.boxplot ? this.app.opts.boxplot : {}
-		)
-
-		const scatterOpts = rx.copyMerge(
-			{
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			},
-			this.app.opts.scatter ? this.app.opts.scatter : {}
-		)
-
 		this.components = {
 			controls: controlsInit(this.app, {
 				id: this.id,
 				holder: this.dom.controls,
 				isVisible: false // plot.settings.controls.isVisible
 			}),
-			barchart: barInit(this.app, barchartOpts),
-			stattable: statTableInit(this.app, statTableOpts),
-			table: tableInit(this.app, tableOpts),
-			boxplot: boxplotInit(this.app, boxplotOpts),
-			scatter: scatterInit(this.app, scatterOpts)
+			barchart: barInit(
+				this.app, 
+				{holder: this.dom.viz.append('div'), id: this.id},
+				this.app.opts.barchart
+			),
+			stattable: statTableInit(
+				this.app, 
+				{holder: this.dom.viz.append('div'), id: this.id},
+				this.app.opts.stattable
+			),
+			table: tableInit(
+				this.app,
+				{holder: this.dom.viz.append('div'), id: this.id},
+				this.app.opts.table
+			),
+			boxplot: boxplotInit(
+				this.app, 
+				{holder: this.dom.viz.append('div'), id: this.id},
+				this.app.opts.boxplot
+			),
+			scatter: scatterInit(
+				this.app, 
+				{holder: this.dom.viz.append('div'), id: this.id},
+				this.app.opts.scatter
+			)
 		}
 		this.eventTypes = ['postInit', 'postRender']
 	}

@@ -74,13 +74,17 @@ class TdbApp {
 				// has modifier
 			} else {
 				// no modifier, show these components
-				const recoverOpts = { holder: this.dom.holder, appType: 'termdb' }
-				if (this.opts.recover) rx.copyMerge(recoverOpts, this.opts.recover)
-				this.components.recover = recoverInit(this.app, recoverOpts)
+				this.components.recover = recoverInit(
+					this.app, 
+					{ holder: this.dom.holder, appType: 'termdb' },
+					this.opts.recover
+				)
 
-				const filterOpts = { holder: this.dom.holder.append('div') }
-				if (this.opts.filter) rx.copyMerge(filterOpts, this.opts.filter)
-				this.components.terms = filterInit(this.app, filterOpts)
+				this.components.terms = filterInit(
+					this.app, 
+					{ holder: this.dom.holder.append('div') },
+					this.opts.filter
+				)
 			}
 			const treeOpts = { holder: this.dom.holder.append('div'), modifiers }
 			if (this.app.opts.tree) Object.assign(treeOpts, this.app.opts.tree)

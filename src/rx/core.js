@@ -13,7 +13,9 @@ function getInitFxn(_Class_) {
 		- optionally attaches a self reference to the api
 		- freezes and returns the instance api
 	*/
-	return (arg, instanceOpts = {}) => {
+	return (arg, instanceOpts = {}, overrides) => {
+		if (overrides) copyMerge(instanceOpts, overrides)
+
 		// instantiate mutable private properties and methods
 		const self = new _Class_(arg, instanceOpts)
 		// if a component declares eventTypes, take care of bus creation here
