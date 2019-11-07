@@ -463,7 +463,7 @@ function setOverlayOpts(app, opts, controls) {
 						// should launch the blue pill's term tree menu 
 					} else {
 						controls.dispatch({
-							term2: { term: self.termuiObj.termsetting.term },
+							['term2']: { id:self.termuiObj.termsetting.term.id, term: self.termuiObj.termsetting.term },
 							settings: { barchart: { overlay: d.value } }
 						})
 					}
@@ -588,10 +588,10 @@ function setOverlayOpts(app, opts, controls) {
 				}
 			})
 
-			// if (plot.term2 && plot.term2.term.id != plot.term.id && plot.term2 != self.termuiObj.termsetting.term) {
-			// 	self.termuiObj.termsetting.term = plot.term2.term
+			if (plot.term2 && plot.term2.term.id != plot.term.id && plot.term2 != self.termuiObj.termsetting.term) {
+				self.termuiObj.termsetting.term = plot.term2.term
 			// 	if (typeof self.termuiObj.update_ui == 'function') self.termuiObj.update_ui()
-			// }
+			}
 		},
 		radio
 	}
