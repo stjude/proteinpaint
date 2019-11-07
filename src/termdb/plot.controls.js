@@ -459,10 +459,14 @@ function setOverlayOpts(app, opts, controls) {
 						}
 					})
 				} else if (d.value == 'tree') {
-					controls.dispatch({
-						term2: { term: self.termuiObj.termsetting.term },
-						settings: { barchart: { overlay: d.value } }
-					})
+					if (!self.termuiObj.termsetting.term) {
+						// should launch the blue pill's term tree menu 
+					} else {
+						controls.dispatch({
+							term2: { term: self.termuiObj.termsetting.term },
+							settings: { barchart: { overlay: d.value } }
+						})
+					}
 				} else if (d.value == 'genotype') {
 					// to-do
 					console.log('genotype overlay to be handled from term tree portal', d, d3event.target)

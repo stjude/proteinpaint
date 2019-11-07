@@ -106,6 +106,18 @@ function setInteractivity(self) {
 	}
 
 	self.addPill = function(ts) {
+		const radioName = self.term_index == 'term2' 
+			? 'overlay'
+			: self.term_index == 'term0'
+			? 'divideBy'
+			: '' // barsAs does not have radio buttons
+
+		const settings = !radioName ? {} : {
+			barchart: {
+				[radioName]: 'tree'
+			}
+		}
+
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.plot.config.id,
@@ -113,7 +125,8 @@ function setInteractivity(self) {
 				[self.term_index]: {
 					id: ts.id,
 					term: ts
-				}
+				},
+				settings
 			}
 		})
 	}
