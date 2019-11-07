@@ -63,7 +63,7 @@ class TdbStore {
 			for (const t of ['term', 'term2', 'term0']) {
 				if (!savedPlot[t]) continue
 				if (!savedPlot[t].q) savedPlot[t].q = {}
-				const term = await dofetch2('/termdb?' + lst.join('&') + '&gettermbyid=' + savedPlot[t].id)
+				const term = await dofetch2('/termdb?' + lst.join('&') + '&gettermbyid=' + savedPlot[t].id, {}, this.app.opts.fetchOpts)
 				savedPlot[t].term = term.term
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)

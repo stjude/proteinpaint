@@ -504,7 +504,7 @@ function copyMerge(base, ...args) {
 					replaceKeyVals.includes(key)
 				)
 					target[key] = source[key]
-				else this.copyMerge(target[key], source[key])
+				else this.copyMerge(target[key], source[key], replaceKeyVals)
 			}
 		}
 	}
