@@ -7,6 +7,7 @@ const rx = require('../core')
 
 class TestApp {
 	constructor(arg, opts) {
+		this.type = 'app'
 		this.arg = arg
 		this.opts = opts
 		if (arg.api) this.api = arg.api
@@ -80,6 +81,7 @@ TestStore.prototype.actions = {
 
 class TestPart {
 	constructor(app, opts = {}) {
+		this.type = 'part'
 		this.app = app
 		this.opts = opts
 

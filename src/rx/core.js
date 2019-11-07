@@ -225,6 +225,10 @@ function getStoreApi(self) {
 exports.getStoreApi = getStoreApi
 
 function getAppApi(self) {
+	if (!('type' in self)) {
+		throw `The component's this.type must be set before calling this.getAppApi(this).`
+	}
+
 	const middlewares = []
 
 	const api = {
@@ -342,6 +346,10 @@ function getAppApi(self) {
 exports.getAppApi = getAppApi
 
 function getComponentApi(self) {
+	if (!('type' in self)) {
+		throw `The component's type must be set before calling this.getComponentApi(this).`
+	}
+
 	const api = {
 		type: self.type,
 		id: self.id,

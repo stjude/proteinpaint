@@ -9,6 +9,7 @@ import * as rx from "../rx.core"
 
 class HowTo {
 	constructor(app, opts) {
+		this.type = ''
 		// indicate whether this class is an 
 		// app, store, or component by the type
 		// of api that is uses
@@ -16,10 +17,6 @@ class HowTo {
 
 		// save a reference to app 
 		this.app = app
-		// see rx.core getComponentApi().main() on
-		// how these key-values are used
-		this.reactsTo = {prefix: ['term']}
-
 		// usual stuff
 		this.opts = opts
 		this.dom = {

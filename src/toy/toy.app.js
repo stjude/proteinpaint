@@ -58,13 +58,31 @@ class ToyApp {
 }
 
 ToyApp.prototype.subState = {
+	controls: {
+		get(appState) {
+			return appState
+		}
+	},
+	table: {
+		get(appState) {
+			return appState
+		}
+	},
 	filter: {
 		reactsTo: {
 			prefix: ['term']
 		},
-		get(state, sub) {
+		get(appState, sub) {
 			return {
-				rows: state.controls.rows
+				rows: appState.controls.rows
+			}
+		}
+	},
+	search: {
+		get(appState) {
+			return {
+				genome: appState.genome,
+				dslabel: appState.label
 			}
 		}
 	}

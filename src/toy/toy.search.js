@@ -4,6 +4,7 @@ import { event } from 'd3-selection'
 
 class ToySearch {
 	constructor(app, opts) {
+		this.type = 'search'
 		// need to supply this.api to callbacks
 		// supply optional argument to getComponentApi(),
 		// so no need to attach it as an instance method

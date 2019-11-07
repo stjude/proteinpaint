@@ -227,7 +227,7 @@ TdbApp.prototype.subState = {
 		},
 		get(appState, sub) {
 			if (!(sub.id in appState.tree.plots)) {
-				return null //throw `No plot with id='${sub.id}' found.`
+				throw `No plot with id='${sub.id}' found.`
 			}
 			const config = appState.tree.plots[sub.id]
 			return {
@@ -243,7 +243,7 @@ TdbApp.prototype.subState = {
 		// component's subState.plot.reactsTo{} filter
 		get(appState, sub) {
 			if (!(sub.id in appState.tree.plots)) {
-				return null //throw `No plot with id='${sub.id}' found.`
+				throw `No plot with id='${sub.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 			}
 			const config = appState.tree.plots[sub.id]
 			return {
@@ -265,7 +265,7 @@ TdbApp.prototype.subState = {
 		// component's subState.plot.reactsTo{} filter
 		get(appState, sub) {
 			if (!(sub.id in appState.tree.plots)) {
-				return null //throw `No plot with id='${sub.id}' found.`
+				throw `No plot with id='${sub.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 			}
 			const config = appState.tree.plots[sub.id]
 			return {
@@ -286,7 +286,7 @@ TdbApp.prototype.subState = {
 		// component's subState.plot.reactsTo{} filter
 		get(appState, sub) {
 			if (!(sub.id in appState.tree.plots)) {
-				return null //throw `No plot with id='${sub.id}' found.`
+				throw `No plot with id='${sub.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 			}
 			const config = appState.tree.plots[sub.id]
 			return {
@@ -307,7 +307,7 @@ TdbApp.prototype.subState = {
 		// component's subState.plot.reactsTo{} filter
 		get(appState, sub) {
 			if (!(sub.id in appState.tree.plots)) {
-				return null //throw `No plot with id='${sub.id}' found.`
+				throw `No plot with id='${sub.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 			}
 			const config = appState.tree.plots[sub.id]
 			return {
@@ -329,7 +329,7 @@ TdbApp.prototype.subState = {
 		// component's subState.plot.reactsTo{} filter
 		get(appState, sub) {
 			if (!(sub.id in appState.tree.plots)) {
-				return null //throw `No plot with id='${sub.id}' found.`
+				throw `No plot with id='${sub.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 			}
 			const config = appState.tree.plots[sub.id]
 			return {

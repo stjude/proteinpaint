@@ -3,12 +3,10 @@ import { select } from 'd3-selection'
 
 class ToyTable {
 	constructor(app, opts) {
+		this.type = 'table'
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.opts = opts
-		// see rx.core getComponentApi().main() on
-		// how these key-values are used
-		this.reactsTo = { prefix: ['term'] }
 		this.dom = {
 			holder: opts.holder,
 			table: opts.holder.append('table')

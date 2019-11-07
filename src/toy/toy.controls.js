@@ -4,6 +4,7 @@ import { filterInit } from './toy.filter'
 
 class ToyControls {
 	constructor(app, opts) {
+		this.type = 'controls'
 		this.api = rx.getComponentApi(this)
 		this.notifyComponents = rx.notifyComponents
 		this.getComponents = rx.getComponents
