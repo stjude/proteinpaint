@@ -12,7 +12,7 @@ otherwise, do:
 
 */
 
-const cache = {}
+const cache = { serverData: {} }
 
 export default async function(termid, dslabel = null, genome = null) {
 	if (!termid) throw 'getterm: termid missing'
