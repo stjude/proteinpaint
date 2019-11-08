@@ -1,5 +1,5 @@
 const tape = require('tape')
-const rx = require('../core')
+const rx = require('../rx.core')
 
 /*************************
  reusable helper functions

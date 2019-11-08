@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class TdbTable {

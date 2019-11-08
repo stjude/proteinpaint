@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import * as client from '../client'
 import { event as d3event } from 'd3-selection'
 import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'

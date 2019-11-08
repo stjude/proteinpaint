@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 
 class TdbStatTable {
 	constructor(app, opts) {

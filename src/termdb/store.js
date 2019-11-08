@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
 import { dofetch2 } from '../client'

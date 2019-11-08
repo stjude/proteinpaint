@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { Menu, dofetch2 } from '../client'
 import { event } from 'd3-selection'
 

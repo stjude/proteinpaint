@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'

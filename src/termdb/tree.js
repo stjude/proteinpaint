@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { plotInit } from './plot'

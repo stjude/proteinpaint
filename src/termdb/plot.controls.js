@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from '../client'
 import { display as termui_display, numeric_bin_edit } from '../mds.termdb.termsetting.ui'
