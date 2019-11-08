@@ -14,7 +14,8 @@ class TermSetting {
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.plot = opts.plot
 		this.term_index = opts.term_id
-		this.durations = { exit: 500 }
+        this.durations = { exit: 500 }
+        this.appState = app.getState()
 
 		setRenderers(this)
 		setInteractivity(this)
@@ -133,15 +134,15 @@ function setInteractivity(self) {
 		const treediv = self.dom.tip.d.append('div')
 		// set termfilter terms to all filter-terms if '+' or all except current term if 'term_name_btn'
 		const terms = select(one_term_div).classed('add_term_btn')
-			? self.app.Inner.state.termfilter.terms
-			: self.app.Inner.state.termfilter.terms.filter(t => t.id != term.termId)
+			? self.appState.termfilter.terms
+			: self.appState.termfilter.terms.filter(t => t.id != term.termId)
 
 		// a new object as init() argument for launching the tree with modifiers
 		const opts = {
 			holder: treediv,
 			state: {
-				dslabel: self.app.Inner.state.dslabel,
-				genome: self.app.Inner.state.genome,
+				dslabel: self.appState.dslabel,
+				genome: self.appState.genome,
 				termfilter: {
 					show_top_ui: false,
 					terms: terms
