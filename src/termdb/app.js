@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 import { treeInit } from './tree'
 import { storeInit } from './store'
 import { filterInit } from './filter'
-import { recoverInit } from '../rx/recover'
+import { recoverInit } from '../common/recover'
 import { sayerror, Menu } from '../client'
 
 /*

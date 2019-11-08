@@ -1,4 +1,4 @@
-import * as rx from './core'
+import * as rx from './rx.core'
 import { Menu } from '../client'
 
 class Recover {
