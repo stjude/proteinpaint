@@ -2,6 +2,7 @@ import * as rx from '../rx/core'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
+import getterm from '../common/getterm'
 
 const defaultState = {
 	// genome: "", // must be supplied
@@ -26,6 +27,7 @@ class TdbStore {
 		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
 		this.fromJson = rx.fromJson // used in store.api.state()
 		this.toJson = rx.toJson // used in store.api.state()
+		this.getterm = getterm
 
 		this.app = app
 		if (!app.opts.state) throw '.state{} missing'
@@ -63,8 +65,7 @@ class TdbStore {
 			for (const t of ['term', 'term2', 'term0']) {
 				if (!savedPlot[t]) continue
 				if (!savedPlot[t].q) savedPlot[t].q = {}
-				const term = await dofetch2('/termdb?' + lst.join('&') + '&gettermbyid=' + savedPlot[t].id, {}, this.app.opts.fetchOpts)
-				savedPlot[t].term = term.term
+				savedPlot[t].term = await this.getterm(savedPlot[t].id)
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
 		}
