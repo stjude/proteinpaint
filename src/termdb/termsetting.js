@@ -260,7 +260,7 @@ function setInteractivity(self) {
 
 		self.app.dispatch({
 			type: 'plot_edit',
-			id: self.plot.config.id,
+			id: self.state.config.id,
 			config: {
 				[self.term_index]: {
 					id: ts.id,
@@ -274,7 +274,7 @@ function setInteractivity(self) {
 	self.removePill = function() {
 		self.app.dispatch({
 			type: 'plot_edit',
-			id: self.plot.config.id,
+			id: self.id,
 			config: {
 				[self.term_index]: null
 			}

@@ -3,6 +3,8 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from '../client'
 import { display as termui_display, numeric_bin_edit } from '../mds.termdb.termsetting.ui'
 import { termSettingInit } from './termsetting'
+import { initRadioInputs } from '../common/dom'
+import { overlayInputInit } from './plot.controls.overlay'
 
 const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
@@ -50,16 +52,13 @@ class TdbPlotControls {
 			term_info: setTermInfoBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			config: setConfigDiv(app, { holder: this.dom.config_div, table }, this),
 			barsAs: setBarsAsOpts(app, { holder: table.append('tr'), label: 'Bars as' }, this),
-			overlay: setOverlayOpts(app, { holder: table.append('tr') }, this),
+			overlay: overlayInputInit(app, { holder: table.append('tr'), controls: this }),
 			view: setViewOpts(app, { holder: table.append('tr') }, this),
 			orientation: setOrientationOpts(app, { holder: table.append('tr') }, this),
 			scale: setScaleOpts(app, { holder: table.append('tr') }, this),
 			bin: setBinOpts(app, { holder: table.append('tr'), termNum: 'term', label: 'Primary Bins' }, this),
 			divideBy: setDivideByOpts(app, { holder: table.append('tr') }, this)
 		}
-
-		//this.plot.bus.on("postRender.controls", controls.listeners.plot.postRender)
-		//this.bus = new rx.Bus("controls", ["postRender"], app.opts.callbacks, this.api)
 	}
 
 	getState(appState) {
@@ -74,24 +73,19 @@ class TdbPlotControls {
 		}
 	}
 
-	main() {
+	main(data) {
 		this.dom.button_bar
 			.style('display', this.isVisible ? 'inline-block' : 'block')
 			.style('float', this.isVisible ? 'right' : 'none')
 
-		/******************************************************
-		NOTE: 
-		these control components do not have an update() method,
-		which means rx will not notify these subcomponents
-		--- may convert to use rx component.api later
-		*******************************************************/
 		for (const name in this.components) {
 			if (typeof this.components[name].update !== 'function') {
-				this.components[name].main(this.state.config)
-			}
+				this.components[name].main(this.state.config, data)
+			} // else notified via rx.notifyComponents
 		}
 
 		this.dom.holder.style('background', this.isVisible ? panel_bg_color : '')
+		return { state: this.state, data }
 	}
 }
 
@@ -310,60 +304,6 @@ function setConfigDiv(app, opts, controls) {
 	}
 }
 
-//
-function initRadioInputs(opts) {
-	const divs = opts.holder
-		.selectAll('div')
-		.style('display', 'block')
-		.data(opts.options, d => d.value)
-
-	divs.exit().each(function(d) {
-		d3select(this)
-			.on('input', null)
-			.on('click', null)
-			.remove()
-	})
-
-	const labels = divs
-		.enter()
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '5px')
-		.append('label')
-
-	const inputs = labels
-		.append('input')
-		.attr('type', 'radio')
-		.attr('name', opts.name)
-		.attr('value', d => d.value)
-		.property('checked', opts.isCheckedFxn)
-		.style('vertical-align', 'top')
-		.on('input', opts.listeners.input)
-
-	labels
-		.append('span')
-		.style('vertical-align', 'top')
-		.html(d => '&nbsp;' + d.label)
-
-	function isChecked(d) {
-		return d.value == radio.currValue
-	}
-
-	const radio = {
-		main(currValue) {
-			radio.currValue = currValue
-			inputs.property('checked', isChecked)
-		},
-		dom: {
-			divs: opts.holder.selectAll('div'),
-			labels: opts.holder.selectAll('label').select('span'),
-			inputs: labels.selectAll('input')
-		}
-	}
-
-	return radio
-}
-
 function setOrientationOpts(app, opts, controls) {
 	const tr = opts.holder
 	tr.append('td')
@@ -439,176 +379,6 @@ function setScaleOpts(app, opts, controls) {
 		},
 		radio
 	}
-}
-
-function setOverlayOpts(app, opts, controls) {
-	const obj = app.getState()
-	const plot = app.getState({ type: controls.type, id: controls.id })
-	const tr = opts.holder
-	tr.append('td')
-		.html('Overlay with')
-		.attr('class', 'sja-termdb-config-row-label')
-	const td = tr.append('td')
-	const radio = initRadioInputs({
-		name: 'pp-termdb-overlay-' + controls.index,
-		holder: td,
-		options: [
-			{ label: 'None', value: 'none' },
-			{ label: 'Subconditions', value: 'bar_by_children' },
-			{ label: 'Grade', value: 'bar_by_grade' },
-			{ label: '', value: 'tree' },
-			{ label: 'Genotype', value: 'genotype' }
-		],
-		listeners: {
-			input(d) {
-				d3event.stopPropagation()
-				if (d.value == 'none') {
-					controls.dispatch({
-						term2: undefined,
-						settings: {
-							currViews: ['barchart'],
-							barchart: { overlay: d.value }
-						}
-					})
-				} else if (d.value == 'tree') {
-					if (!self.termuiObj.termsetting.term) {
-						// should launch the blue pill's term tree menu 
-					} else {
-						controls.dispatch({
-							['term2']: { id:self.termuiObj.termsetting.term.id, term: self.termuiObj.termsetting.term },
-							settings: { barchart: { overlay: d.value } }
-						})
-					}
-				} else if (d.value == 'genotype') {
-					// to-do
-					console.log('genotype overlay to be handled from term tree portal', d, d3event.target)
-				} else if (d.value == 'bar_by_children') {
-					if (plot.term.q.bar_by_children) {
-						console.log('bar_by_children term1 should not allow subcondition overlay')
-						return
-					}
-					const q = { bar_by_grade: 1 }
-					controls.dispatch({
-						term2: {
-							term: plot.term.term,
-							q: {
-								bar_by_children: 1
-							}
-						},
-						settings: { barchart: { overlay: d.value } }
-					})
-				} else if (d.value == 'bar_by_grade') {
-					if (plot.term.q.bar_by_grade) {
-						console.log('bar_by_grade term1 should not allow grade overlay')
-						return
-					}
-					controls.dispatch({
-						term2: {
-							term: plot.term.term,
-							q: {
-								bar_by_grade: 1
-							}
-						},
-						settings: { barchart: { overlay: d.value } }
-					})
-				} else {
-					console.log('unhandled click event', d, d3event.target)
-				}
-			},
-			click(d) {
-				d3event.stopPropagation()
-				if (d.value != 'tree' || d.value != plot.settings.barchart.overlay) return
-				// const obj = app.getState()
-				// const plot = app.getState({ type: controls.type, id: controls.id })
-
-				obj.showtree4selectterm([plot.term.id, plot.term2 ? plot.term2.term.id : null], tr.node(), term2 => {
-					console.log(term2)
-					obj.tip.hide()
-					controls.dispatch({ term2: { term: term2 } })
-				})
-			}
-		}
-	})
-
-	//add blue-pill for term2
-	const treeInput = radio.dom.inputs
-		.filter(d => {
-			return d.value == 'tree'
-		})
-		.style('margin-top', '2px')
-	const pill_div = d3select(treeInput.node().parentNode.parentNode)
-		.append('div')
-		.style('display', 'inline-block')
-
-	function termuiCallback(term2) {
-		if (!term2) {
-			controls.dispatch({
-				settings: { barchart: { overlay: 'none' } }
-			})
-		} else {
-			treeInput.property('checked', true)
-			controls.dispatch({
-				settings: { barchart: { overlay: 'tree' } }
-			})
-		}
-	}
-
-	const pill = termSettingInit(app, { holder: pill_div, plot, term_id: 'term2', id: controls.id })
-
-	const self = {
-		components: {
-			pill
-		},
-		main(plot) {
-			if (!self.termuiObj) {
-				self.termuiObj = getTermuiObj(app, plot, pill_div, 'Another term', 'term2', termuiCallback)
-			}
-
-			pill.update({appState: app.getState()}, null)
-
-			// hide all options when opened from genome browser view
-			tr.style('display', obj.modifier_ssid_barchart ? 'none' : 'table-row')
-
-			// do not show genotype overlay option when opened from stand-alone page
-			if (!plot.settings.barchart.overlay) {
-				plot.settings.barchart.overlay = obj.modifier_ssid_barchart
-					? 'genotype'
-					: plot.term2 && plot.term2.term.id != plot.term.term.id
-					? 'tree'
-					: 'none'
-			}
-
-			radio.main(plot.settings.barchart.overlay)
-
-			radio.dom.labels.html(d => {
-				const term1 = plot.term.term
-				if (!term1.iscondition) return '&nbsp;' + d.label
-				if (d.value == 'bar_by_children') return '&nbsp;' + term1.id + ' subconditions'
-				if (d.value == 'bar_by_grade') return '&nbsp;' + term1.id + ' grades'
-				return '&nbsp;' + d.label
-			})
-
-			radio.dom.divs.style('display', d => {
-				const term1 = plot.term.term
-				if (d.value == 'bar_by_children') {
-					return term1.iscondition && !term1.isleaf && term1.q && term1.q.bar_by_grade ? 'block' : 'none'
-				} else if (d.value == 'bar_by_grade') {
-					return term1.iscondition && !term1.isleaf && term1.q && term1.q.bar_by_children ? 'block' : 'none'
-				} else {
-					const block = 'block' //term1.q.iscondition || (plot.term2 && plot.term2.term.iscondition) ? 'block' : 'inline-block'
-					return d.value != 'genotype' || obj.modifier_ssid_barchart ? block : 'none'
-				}
-			})
-
-			if (plot.term2 && plot.term2.term.id != plot.term.id && plot.term2 != self.termuiObj.termsetting.term) {
-				self.termuiObj.termsetting.term = plot.term2.term
-			// 	if (typeof self.termuiObj.update_ui == 'function') self.termuiObj.update_ui()
-			}
-		},
-		radio
-	}
-
-	return self
 }
 
 function getTermuiObj(app, plot, holder, mainLabel, termNum, callback) {
