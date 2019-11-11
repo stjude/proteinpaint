@@ -33,11 +33,11 @@ Store.prototype.actions = {
 	},
 	term_change(action) {
 		if ('term0' in action) {
-			this.state.term0.term = action.term0
+			this.state.term0 = action.term0
 		} else if ('term1' in action) {
-			this.state.term1.term = action.term1
+			this.state.term1 = action.term1
 		} else if ('term2' in action) {
-			this.state.term2.term = action.term2
+			this.state.term2 = action.term2
 		} else {
 			throw 'no term0/1/2 specified in term_change'
 		}

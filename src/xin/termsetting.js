@@ -10,6 +10,8 @@ opts{}
 .term{} // optional
 	.id
 	.name
+.q{}
+	must be provided alongside .term{}
 
 
 emits "termChanged" event after self.term is deleted, added, or replaced
@@ -31,7 +33,9 @@ class termsetting {
 
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
-		this.term = opts.term // one instance manages one term
+		this.term = opts.term // one instance of the class manages one term
+		this.q = opts.q
+		this.disabledTerms = opts.disabledTerms
 
 		this.eventTypes = ['termChanged']
 		this.main()
@@ -42,9 +46,15 @@ class termsetting {
 	validateOpts(o) {
 		if (!o.holder) throw 'no holder'
 		if (o.term) {
-			if (!o.term.id) throw 'term.id missing'
-			if (!o.term.name) throw 'term.name missing'
+			if (!o.q) throw 'opts.q{} missing when opts.term{} is given'
+			if (!o.term.id) throw 'opts.term.id missing'
+			if (!o.term.name) throw 'opts.term.name missing'
 		}
+	}
+	setAttr(data) {
+		// accessible by api
+		this.disabledTerms = data
+		console.log('disabling:', data)
 	}
 }
 
@@ -88,6 +98,7 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.removeTerm = () => {
 		self.term = null
+		self.q = null
 		self.updateUI()
 		self.bus.emit('termChanged', {})
 	}
@@ -102,8 +113,9 @@ function setInteractivity(self) {
 				click_term: term => {
 					self.dom.tip.hide()
 					self.term = term
+					// TODO update self.q based on the new term
 					self.updateUI()
-					self.bus.emit('termChanged', { term })
+					self.bus.emit('termChanged', { term: self.term, q: self.q })
 				}
 			}
 		})
