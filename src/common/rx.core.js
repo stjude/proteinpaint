@@ -348,6 +348,11 @@ function getComponentApi(self) {
 			if (self.bus) self.bus.emit('postRender')
 			return api
 		},
+		async setInnerAttr(data) {
+			if (typeof self.setAttr == 'function') {
+				await self.setAttr(data)
+			}
+		},
 		// must not expose self.bus directly since that
 		// will also expose bus.emit() which should only
 		// be triggered by this component
