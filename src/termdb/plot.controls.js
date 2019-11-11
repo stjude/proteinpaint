@@ -14,7 +14,7 @@ class TdbPlotControls {
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
 		this.app = app
-		this.state = app.getState(this.api)
+		//this.state = app.getState(this.api)
 		this.index = i++ // used for assigning unique input names, across different plots
 		this.isVisible = false
 
@@ -60,6 +60,18 @@ class TdbPlotControls {
 
 		//this.plot.bus.on("postRender.controls", controls.listeners.plot.postRender)
 		//this.bus = new rx.Bus("controls", ["postRender"], app.opts.callbacks, this.api)
+	}
+
+	getState(appState) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${this.id}' found.`
+		}
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter,
+			config: appState.tree.plots[this.id]
+		}
 	}
 
 	main() {
@@ -552,7 +564,7 @@ function setOverlayOpts(app, opts, controls) {
 				self.termuiObj = getTermuiObj(app, plot, pill_div, 'Another term', 'term2', termuiCallback)
 			}
 
-			pill.update({}, null)
+			pill.update({appState: app.getState()}, null)
 
 			// hide all options when opened from genome browser view
 			tr.style('display', obj.modifier_ssid_barchart ? 'none' : 'table-row')

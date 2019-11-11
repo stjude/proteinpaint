@@ -22,6 +22,13 @@ class ToySearch {
 		this.bus.emit('postInit', this.api)
 	}
 
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.label
+		}
+	}
+
 	main() {
 		// clear search input entry
 		this.input.property('value', '')

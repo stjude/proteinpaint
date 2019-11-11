@@ -16,6 +16,10 @@ class ToyControls {
 			filter: filterInit(app, { holder: opts.holder.append('div') })
 		}
 	}
+
+	getState(appState) {
+		return appState
+	}
 }
 
 export const controlsInit = rx.getInitFxn(ToyControls)

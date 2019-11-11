@@ -166,7 +166,6 @@ tape("term.isfloat-dependent display", function(test) {
 			"none",
 			"should have a hidden stattable when plot.term.iscondition"
 		)
-		test.end()
 	}
 
 	runpp({

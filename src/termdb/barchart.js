@@ -45,6 +45,25 @@ class TdbBarchart {
 		this.eventTypes = ['postInit', 'postRender', 'postClick']
 	}
 
+	getState(appState) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		const config = appState.tree.plots[this.id]
+		return {
+			isVisible: config.settings.currViews.includes('barchart'),
+			config: {
+				term: config.term,
+				term0: config.term0,
+				term2: config.term2,
+				settings: {
+					common: config.settings.common,
+					barchart: config.settings.barchart
+				}
+			}
+		}
+	}
+
 	main(data) {
 		if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 		if (data) this.currServerData = data

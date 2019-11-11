@@ -15,6 +15,10 @@ class ToyTable {
 		this.notThis(this)
 	}
 
+	getState(appState) {
+		return appState
+	}
+
 	main() {
 		const divs = this.dom.table.selectAll('.table-wrapper').data(this.state.terms, this.getTermId)
 

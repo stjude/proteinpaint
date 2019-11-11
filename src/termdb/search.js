@@ -36,6 +36,17 @@ class TermSearch {
 		this.eventTypes = ['postInit', 'postRender', 'postSearch']
 	}
 
+	reactsTo(action) {
+		return action.type.startsWith('search')
+	}
+
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel
+		}
+	}
+
 	async doSearch(str) {
 		if (!str) {
 			this.clear()

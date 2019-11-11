@@ -107,6 +107,24 @@ class TdbTree {
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
+	reactsTo(action) {
+		if (action.type.startsWith("tree_")) return true
+		if (action.type.startsWith("filter_")) return true
+		if (action.type.startsWith("plot_")) return true
+		if (action.type == "app_refresh") return true
+	}
+
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			expandedTermIds: appState.tree.expandedTermIds,
+			visiblePlotIds: appState.tree.visiblePlotIds,
+			termfilter: appState.termfilter,
+			bar_click_menu: appState.bar_click_menu
+		}
+	}
+
 	async main() {
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)

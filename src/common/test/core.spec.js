@@ -32,17 +32,6 @@ class TestApp {
 	}
 }
 
-TestApp.prototype.subState = {
-	type1: {
-		reactsTo: {
-			prefix: ['todo', 'prop']
-		},
-		get(appState, sub) {
-			return appState.prop
-		}
-	}
-}
-
 class TestStore {
 	constructor(app) {
 		this.app = app
@@ -89,6 +78,9 @@ class TestPart {
 		else if (opts.getApi) this.api = opts.getApi(this)
 
 		if (opts.components) this.components = opts.components
+	}
+	getState(appState) {
+		return appState
 	}
 	main(state) {
 		this.state = state
@@ -210,10 +202,21 @@ tape('Reactive flow', async function(test) {
 			} else {
 				updateTests[action.type](action, data)
 			}
-		}
+		},
+		Inner: {
+			getState(appState) {
+				return appState.prop
+			}
+		}	
 	}
 	const comp2 = {
 		type: 'type1',
+		reactsTo(action) {
+			return action.type.startsWith('todo') || action.type.startsWith('prop')
+		},
+		getState(appState) {
+			return appState
+		},
 		main() {}
 	}
 	comp2.api = rx.getComponentApi(comp2)
@@ -244,9 +247,8 @@ tape('Reactive flow', async function(test) {
 		'save() should result in the expected state change'
 	)
 	test.equal(Object.isFrozen(app.getState()), true, 'should have a frozen state from app.getState()')
-
-	test.deepEqual(app.getState(comp1), app.Inner.state.prop, 'should return the expected subState for a component')
-	test.equal(Object.isFrozen(app.getState(comp1)), true, 'should have a frozen state from app.getState()')
+	test.deepEqual(comp1.Inner.getState(app.getState()), app.Inner.state.prop, 'should return the expected subState for a component')
+	test.equal(Object.isFrozen(comp1.Inner.getState(app.getState())), true, 'should have a frozen state from app.getState()')
 
 	// comp1.type == 'type1', which only reacts to todo_* and prop_*
 	const action_fake = { type: 'fake_add', todo }

@@ -76,6 +76,26 @@ class TdbPlot {
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
+	reactsTo(action) {
+		if (action.type == "plot_edit" || action.type == "plot_show") {
+			return action.id == this.id
+		}
+		if (action.type.startsWith('filter')) return true
+		if (action.type == "app_refresh") return true
+	}
+
+	getState(appState) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${this.id}' found.`
+		}
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter,
+			config: appState.tree.plots[this.id]
+		}
+	}
+
 	async main() {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)

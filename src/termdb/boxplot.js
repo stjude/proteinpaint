@@ -28,6 +28,24 @@ class TdbBoxplot {
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
+	getState(appState, sub) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		const config = appState.tree.plots[this.id]
+		return {
+			isVisible: config.settings.currViews.includes('boxplot'),
+			config: {
+				term: config.term,
+				term2: config.term2,
+				settings: {
+					common: config.settings.common,
+					boxplot: config.settings.boxplot
+				}
+			}
+		}
+	}
+
 	main(data) {
 		if (data) this.data = data
 		this.config = rx.copyMerge('{}', this.state.config)

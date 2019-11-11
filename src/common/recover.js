@@ -32,6 +32,10 @@ class Recover {
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
+	getState(appState) {
+		return appState
+	}
+
 	async main() {
 		// assume that the presence of app.opts.state
 		// indicates testing, no need for history in that case

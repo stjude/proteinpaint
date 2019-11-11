@@ -19,6 +19,26 @@ class TdbScatter {
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
 	}
+
+	getState(appState) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${sub.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		const config = appState.tree.plots[this.id]
+		return {
+			isVisible: config.settings.currViews.includes('scatter'),
+			config: {
+				term: config.term,
+				term0: config.term0,
+				term2: config.term2,
+				settings: {
+					common: config.settings.common,
+					scatter: config.settings.scatter
+				}
+			}
+		}
+	}
+
 	main(data) {
 		this.config = this.state.config
 		if (!this.state.isVisible) {

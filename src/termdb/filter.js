@@ -27,6 +27,19 @@ class TdbFilter {
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
+	reactsTo(action) {
+		if (action.type.startsWith('filter')) return true
+		if (action.type == 'app_refresh') return true
+	}
+
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter
+		}
+	}
+
 	/*async main() {}*/
 }
 

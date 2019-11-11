@@ -12,6 +12,25 @@ class TdbStatTable {
 	  setRenderers(this)
 	  this.eventTypes = ['postInit', 'postRender']
 	}
+
+	getState(appState) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		const config = appState.tree.plots[this.id]
+		return {
+			isVisible: config.settings.currViews.includes('stattable'),
+			config: {
+				term: config.term,
+				term0: config.term0,
+				term2: config.term2,
+				settings: {
+					common: config.settings.common,
+					barchart: config.settings.barchart
+				}
+			}
+		}
+	}
  		
  	main(data) {
  		this.config = this.state.config

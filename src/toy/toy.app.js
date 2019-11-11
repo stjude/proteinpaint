@@ -57,35 +57,4 @@ class ToyApp {
 	*/
 }
 
-ToyApp.prototype.subState = {
-	controls: {
-		get(appState) {
-			return appState
-		}
-	},
-	table: {
-		get(appState) {
-			return appState
-		}
-	},
-	filter: {
-		reactsTo: {
-			prefix: ['term']
-		},
-		get(appState, sub) {
-			return {
-				rows: appState.controls.rows
-			}
-		}
-	},
-	search: {
-		get(appState) {
-			return {
-				genome: appState.genome,
-				dslabel: appState.label
-			}
-		}
-	}
-}
-
 export const appInit = rx.getInitFxn(ToyApp)

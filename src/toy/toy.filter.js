@@ -14,6 +14,16 @@ class ToyFilter {
 		this.render()
 	}
 
+	reactsTo(action) {
+		return action.type.startsWith('term')
+	}
+
+	getState(appState) {
+		return {
+			rows: appState.controls.rows
+		}
+	}
+
 	main() {
 		const rows = this.dom.holder.selectAll('.row_div').data(this.state.rows, this.getRowName)
 

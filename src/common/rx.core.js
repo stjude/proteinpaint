@@ -264,7 +264,7 @@ function getAppApi(self) {
 				// else an empty action should force components to update
 
 				const data = self.main ? self.main() : null
-				const current = { action, stateByType: { app: self.state } }
+				const current = { action, appState: self.state }
 				await notifyComponents(self.components, current, data)
 			} catch (e) {
 				if (self.printError) self.printError(e)
@@ -276,34 +276,8 @@ function getAppApi(self) {
 			// save changes to store, do not notify components
 			self.state = await self.store.write(action)
 		},
-		getState(sub = null, current = {}, currComponentState) {
-			/*
-				Because a component may rehydrate and save() 
-				additional state during a dispatch cycle, 
-				getState() cannot reuse the frozen app.state copy right after
-				store.write(). That copy will only be guaranteed
-				to be good for root components and will not contain 
-				rehydrated state filled-in by notified components, 
-				and may be incomplete by the time certain child components 
-				are notified.
-			*/
-			// const appState = current.action && current.stateByType && current.stateByType.app ? current.stateByType.app : self.state;
-			const appState = self.state
-			if (!sub || !sub.type) return appState
-
-			const componentType = sub.type.split('.')[0]
-			if (!self.subState.hasOwnProperty(componentType)) {
-				throw `undefined store config getter for component type='${componentType}'`
-			}
-
-			const subState = self.subState[componentType]
-			if (current.action) {
-				if (subState.passThrough && matchAction(current.action, subState.passThrough, sub)) return currComponentState
-				if (subState.reactsTo && !matchAction(current.action, subState.reactsTo, sub)) return
-			}
-			// freeze only the root componentState object since
-			// the copied app.state is already deeply frozen
-			return Object.freeze(subState.get(appState, sub))
+		getState() {
+			return self.state
 		},
 		middle(fxn) {
 			/*
@@ -356,7 +330,8 @@ function getComponentApi(self) {
 		type: self.type,
 		id: self.id,
 		async update(current, data) {
-			const componentState = self.app.getState(api, current, self.state)
+			if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
+			const componentState = self.getState ? self.getState(current.appState) : current.appState
 			// no new state computed for this component
 			if (!componentState) return
 			let componentData = null
