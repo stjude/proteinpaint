@@ -1,15 +1,19 @@
 import * as rx from '../common/rx.core'
 import * as client from '../client'
+import { appInit } from '../termdb/app'
 
 /*
 opts{}
 .holder
-.term{}
+.genome
+.dslabel
+.term{} // optional
 	.id
 	.name
 
 
-emits "termUpdated" event after self.term is deleted, added, or replaced
+emits "termChanged" event after self.term is deleted, added, or replaced
+at bus.emit(), must use {term} as arg and wrap the term inside {}. otherwise bus will automatically use defaultArg
 */
 
 class termsetting {
@@ -24,8 +28,11 @@ class termsetting {
 			tip: new client.Menu()
 		}
 		this.initUI()
-		// one instance only manages one term
-		this.term = opts.term
+
+		this.genome = opts.genome
+		this.dslabel = opts.dslabel
+		this.term = opts.term // one instance manages one term
+
 		this.eventTypes = ['termChanged']
 		this.main()
 	}
@@ -52,14 +59,15 @@ function setRenderers(self) {
 			.text('+')
 			.style('padding', '3px 5px')
 			.style('background', 'blue')
+			.style('color', 'white')
 			.on('click', () => {
 				self.dom.tip.clear().showunder(self.dom.plusbtn.node())
 				self.showTree()
 			})
 	}
 	self.updateUI = () => {
+		self.dom.pilldiv.selectAll('*').remove()
 		if (!self.term) {
-			self.dom.pilldiv.selectAll('*').remove()
 			self.dom.plusbtn.style('display', 'inline-block')
 			return
 		}
@@ -73,6 +81,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.text(self.term.name)
 			.style('background', 'blue')
+			.style('color', 'white')
 			.style('padding', '3px 8px')
 	}
 }
@@ -80,11 +89,41 @@ function setInteractivity(self) {
 	self.removeTerm = () => {
 		self.term = null
 		self.updateUI()
-		self.bus.emit('termUpdated')
+		self.bus.emit('termChanged', {})
 	}
 	self.showTree = () => {
-		// click_term callback should do
-		//self.bus.emit('termUpdated', newterm)
+		appInit(null, {
+			holder: self.dom.tip.d,
+			state: {
+				genome: self.genome,
+				dslabel: self.dslabel
+			},
+			modifiers: {
+				click_term: term => {
+					self.dom.tip.hide()
+					self.term = term
+					self.updateUI()
+					self.bus.emit('termChanged', { term })
+				}
+			}
+		})
 	}
-	self.showMenu = () => {}
+	self.showMenu = () => {
+		self.dom.tip.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text('Replace')
+			.on('click', () => {
+				self.dom.tip.clear()
+				self.showTree()
+			})
+		self.dom.tip.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text('Remove')
+			.on('click', () => {
+				self.dom.tip.hide()
+				self.removeTerm()
+			})
+	}
 }

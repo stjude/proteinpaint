@@ -1439,5 +1439,5 @@ function launchtermdb(opts, holder) {
 }
 function launchxintest(opts,holder) {
 	opts.holder = holder
-	import('./xin/app').then(_=> _.init(opts))
+	import('./xin/app').then(_=> _.appInit(null,opts))
 }
