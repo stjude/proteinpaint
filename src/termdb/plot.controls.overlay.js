@@ -59,7 +59,7 @@ class TdbOverlayInput {
 			dslabel: this.state.dslabel,
 			callback: term => {
 				console.log(term)
-				this.controls.dispatch({ term2: { id: term.id, term } })
+				this.controls.dispatch({ term2: term ? { id: term.id, term } : null })
 			}
 		})
 	}
