@@ -14,15 +14,15 @@ class TermSetting {
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.plot = opts.plot
 		this.term_index = opts.term_id
-        this.durations = { exit: 500 }
-        this.appState = app.getState()
+		this.durations = { exit: 500 }
+		this.appState = app.getState()
 
 		setRenderers(this)
 		setInteractivity(this)
 
 		this.categoryData = {}
-        this.initHolder()
-        this.eventTypes = ['postInit', 'postRender']
+		this.initHolder()
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {
@@ -40,9 +40,8 @@ class TermSetting {
 	}
 
 	main() {
+		this.dom.tip.hide()
 
-        this.dom.tip.hide()
-        
 		const pill_term =
 			this.term_index == 'term0'
 				? this.state.config.term0
@@ -50,14 +49,14 @@ class TermSetting {
 				? this.state.config.term
 				: this.term_index == 'term2'
 				? this.state.config.term2
-                : null
+				: null
 
-        this.dom.add_term_div.style('display',!pill_term ? 'block': 'none')
-        this.dom.show_term_div.style('display',!pill_term ? 'none': 'block')
+		this.dom.add_term_div.style('display', !pill_term ? 'block' : 'none')
+		this.dom.show_term_div.style('display', !pill_term ? 'none' : 'block')
 
-        if(!pill_term) return
-        
-        const blue_pills = this.dom.show_term_div.selectAll('.ts_pill').data([pill_term], d => d.id)  
+		if (!pill_term) return
+
+		const blue_pills = this.dom.show_term_div.selectAll('.ts_pill').data([pill_term], d => d.id)
 
 		blue_pills.exit().each(this.exitPill)
 		blue_pills.each(this.updatePill)
@@ -66,12 +65,12 @@ class TermSetting {
 			.append('div')
 			.attr('class', 'ts_pill sja_filter_tag_btn')
 			.style('white-space', 'nowrap')
-            .style('display', 'inline-block')
+			.style('display', 'inline-block')
 			.style('padding', '2px')
 			.transition()
 			.duration(200)
-            .each(this.enterPill)
-            
+			.each(this.enterPill)
+
 		// when there are blue_pills to be removed, must account for the delayed
 		// removal after opacity transition, as btn count will decrease only
 		// after the transition and remove() is done
@@ -83,9 +82,8 @@ exports.termSettingInit = rx.getInitFxn(TermSetting)
 
 function setRenderers(self) {
 	self.initHolder = function() {
-
-        this.dom.add_term_div = this.dom.holder.append('div')
-        this.dom.show_term_div = this.dom.holder.append('div')
+		this.dom.add_term_div = this.dom.holder.append('div')
+		this.dom.show_term_div = this.dom.holder.append('div')
 		this.dom.add_term_div.append('span').html(self.mainlabel ? self.mainlabel + '&nbsp;' : 'Select term&nbsp;')
 
 		// add new term
@@ -98,19 +96,20 @@ function setRenderers(self) {
 			.style('background-color', '#4888BF')
 			.html('&#43;')
 			.on('click', self.displayTreeMenu)
-    }
-    
-    self.enterPill = async function(term) {
-        // console.log('enter', term)
+	}
 
-        const one_term_div = select(this)
+	self.enterPill = async function(term) {
+		// console.log('enter', term)
 
-        const menuFxn = term.term.iscategorical
-            ? self.displayCatMenu
-            : term.term.isfloat || term.term.isinteger
-            ? self.displayNumMenu
-            : term.term.iscondition
-            ? self.displayConditionMenu : null
+		const one_term_div = select(this)
+
+		const menuFxn = term.term.iscategorical
+			? self.displayCatMenu
+			: term.term.isfloat || term.term.isinteger
+			? self.displayNumMenu
+			: term.term.iscondition
+			? self.displayConditionMenu
+			: null
 
 		const term_name_btn = one_term_div
 			.append('div')
@@ -123,22 +122,22 @@ function setRenderers(self) {
 			.text(d => d.term.name)
 			.style('text-transform', 'uppercase')
 			.on('click', menuFxn)
-    }
+	}
 
-    self.updatePill = async function(term) {
-        // console.log('update', term)
-    }
+	self.updatePill = async function(term) {
+		// console.log('update', term)
+	}
 
-    self.exitPill = async function(term) {
-        // console.log('exit', term)
+	self.exitPill = async function(term) {
+		// console.log('exit', term)
 
-        select(this)
+		select(this)
 			.style('opacity', 1)
 			.transition()
 			.duration(self.durations.exit)
 			.style('opacity', 0)
 			.remove()
-    }
+	}
 }
 
 function setInteractivity(self) {
@@ -169,102 +168,95 @@ function setInteractivity(self) {
 			callbacks: {}
 		}
 		appInit(null, opts)
-    }
-    
-    self.displayCatMenu = async function(term) {
-        const one_term_div = this
+	}
+
+	self.displayCatMenu = async function(term) {
+		const one_term_div = this
 		self.dom.tip.clear().showunder(one_term_div)
-        const term_option_div = self.dom.tip.d
-            .append('div')
+		const term_option_div = self.dom.tip.d.append('div')
 
-        term_option_div.append('div')
-            .style('margin', '5px')
-            .style('text-align','center')
-            .html('Categorical term options')
-            
+		term_option_div
+			.append('div')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.html('Categorical term options')
 
-        self.addReplaceBtn(term_option_div)
-        self.addRemoveBtn(term_option_div)
-    }
+		self.addReplaceBtn(term_option_div)
+		self.addRemoveBtn(term_option_div)
+	}
 
-    self.displayNumMenu = async function(term) {
-
-        const one_term_div = this
+	self.displayNumMenu = async function(term) {
+		const one_term_div = this
 		self.dom.tip.clear().showunder(one_term_div)
-        const term_option_div = self.dom.tip.d
-            .append('div')
+		const term_option_div = self.dom.tip.d.append('div')
 
-        term_option_div.append('div')
-            .style('margin', '5px')
-            .style('text-align','center')
-            .html('Nuermical term options')
-            
+		term_option_div
+			.append('div')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.html('Nuermical term options')
 
-        self.addReplaceBtn(term_option_div)
-        self.addRemoveBtn(term_option_div)
+		self.addReplaceBtn(term_option_div)
+		self.addRemoveBtn(term_option_div)
+	}
 
-    }
-
-    self.displayConditionMenu = async function(term) {
-        const one_term_div = this
+	self.displayConditionMenu = async function(term) {
+		const one_term_div = this
 		self.dom.tip.clear().showunder(one_term_div)
-        const term_option_div = self.dom.tip.d
-            .append('div')
+		const term_option_div = self.dom.tip.d.append('div')
 
-        term_option_div.append('div')
-            .style('margin', '5px')
-            .style('text-align','center')
-            .html('Conditional term options')
-            
+		term_option_div
+			.append('div')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.html('Conditional term options')
 
-        self.addReplaceBtn(term_option_div)
-        self.addRemoveBtn(term_option_div)
-    }
+		self.addReplaceBtn(term_option_div)
+		self.addRemoveBtn(term_option_div)
+	}
 
-    self.addReplaceBtn = function(div) {
-
-        div.append('div')
-            .attr('class', 'replace_btn sja_filter_tag_btn')
-            .style('display', 'inline-block')
+	self.addReplaceBtn = function(div) {
+		div
+			.append('div')
+			.attr('class', 'replace_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
 			.style('border-radius', '10px')
 			.style('background-color', '#5bc0de')
 			.style('padding', '7px 6px 5px 6px')
-            .style('margin', '5px')
-            .style('text-align','center')
-            .style('width','35%')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('width', '35%')
 			.style('font-size', '.8em')
-            .text('Replace')
-            .on('click', self.displayTreeMenu)
-    }
+			.text('Replace')
+			.on('click', self.displayTreeMenu)
+	}
 
-    self.addRemoveBtn = function(div) {
-
-        div.append('div')
-            .attr('class', 'replace_btn sja_filter_tag_btn')
-            .style('display', 'inline-block')
+	self.addRemoveBtn = function(div) {
+		div
+			.append('div')
+			.attr('class', 'replace_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
 			.style('border-radius', '10px')
 			.style('background-color', '#f0ad4e')
 			.style('padding', '7px 6px 5px 6px')
-            .style('margin', '5px')
-            .style('text-align','center')
-            .style('width','35%')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('width', '35%')
 			.style('font-size', '.8em')
-            .text('Remove')
-            .on('click', self.removePill)
-    }
+			.text('Remove')
+			.on('click', self.removePill)
+	}
 
 	self.addPill = function(ts) {
-		const radioName = self.term_index == 'term2' 
-			? 'overlay'
-			: self.term_index == 'term0'
-			? 'divideBy'
-			: '' // barsAs does not have radio buttons
+		const radioName = self.term_index == 'term2' ? 'overlay' : self.term_index == 'term0' ? 'divideBy' : '' // barsAs does not have radio buttons
 
-		const settings = !radioName ? {} : {
-			barchart: {
-				[radioName]: 'tree'
-			}
-		}
+		const settings = !radioName
+			? {}
+			: {
+					barchart: {
+						[radioName]: 'tree'
+					}
+			  }
 
 		self.app.dispatch({
 			type: 'plot_edit',
@@ -277,9 +269,9 @@ function setInteractivity(self) {
 				settings
 			}
 		})
-    }
-    
-    self.removePill = function() {
+	}
+
+	self.removePill = function() {
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.plot.config.id,
