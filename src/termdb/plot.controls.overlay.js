@@ -20,7 +20,7 @@ class TdbOverlayInput {
 	main(arg = {}) {
 		this.state = arg && arg.state
 		this.plot = arg && arg.state && arg.state.config
-		//this.data = arg && arg.data
+		this.data = arg && arg.data
 		this.obj = arg & arg.obj ? arg.obj : this.opts.obj ? this.opts.obj : {}
 		if (!this.pill) this.setPill()
 		this.render()
@@ -28,7 +28,7 @@ class TdbOverlayInput {
 		const disable_terms = [this.plot.term.term.id]
 		if (this.plot.term0) disable_terms.push(this.plot.term0.term.id)
 		// todo: may add computed data to pill.main argument
-		this.pill.main({ term: this.plot.settings.controls.term2, disable_terms })
+		this.pill.main({ plotData: this.data, term: this.plot.settings.controls.term2, disable_terms })
 	}
 
 	setPill() {
