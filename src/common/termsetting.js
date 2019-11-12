@@ -10,34 +10,37 @@ opts{}
 .term{} // optional
 	.id
 	.name
-
-
-emits "termChanged" event after self.term is deleted, added, or replaced
-at bus.emit(), must use {term} as arg and wrap the term inside {}. otherwise bus will automatically use defaultArg
 */
 
-class termsetting {
+class TermSetting {
 	constructor(app, opts) {
 		this.opts = this.validateOpts(opts)
 		this.type = 'termsetting'
 		this.app = app
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
-		this.api = rx.getComponentApi(this)
-		setRenderers(this)
-		setInteractivity(this)
+		this.placeholder = opts.placeholder ? opt.placeholder : 'Select term&nbsp;'
+		
 		this.dom = {
 			holder: opts.holder,
 			tip: new client.Menu()
 		}
+		setInteractivity(this)
+		setRenderers(this)
 		this.initUI()
-		this.eventTypes = ['termChanged']
-		//this.main()
+		
+		// this api will be frozen inside the function returned by getInitFxn()
+		this.api = {
+			main: (data={}) => { 
+				this.data = data
+				this.term = data.term
+				this.disable_terms = data.disable_terms
+				this.updateUI()
+			},
+			showTree: this.showTree
+		}
 	}
-	main({ data, term }) {
-		this.term = term
-		this.updateUI()
-	}
+
 	validateOpts(o) {
 		if (!o.holder) throw 'no holder'
 		if (o.term) {
@@ -49,49 +52,57 @@ class termsetting {
 	}
 }
 
-exports.termsettingInit = rx.getInitFxn(termsetting)
+exports.termsettingInit = rx.getInitFxn(TermSetting)
 
 function setRenderers(self) {
 	self.initUI = () => {
-		self.dom.pilldiv = self.dom.holder.append('div').style('display', 'inline-block')
+		self.dom.pilldiv = self.dom.holder.append('div')
+			.style('display', 'inline-block')
+
+		self.dom.labeldiv = self.dom.pilldiv.append('div')
+			.html(self.placeholder)
+			.style('cursor', 'pointer')
+			.on('click', self.showTree)
+
 		self.dom.plusbtn = self.dom.holder
 			.append('div')
-			.style('display', 'inline-block')
 			.text('+')
+			.style('display', 'inline-block')
+			.style('cursor', 'pointer')
 			.style('padding', '3px 5px')
 			.style('background', 'blue')
 			.style('color', 'white')
-			.on('click', () => {
-				self.dom.tip.clear().showunder(self.dom.plusbtn.node())
-				self.showTree()
-			})
-	}
-	self.updateUI = () => {
-		self.dom.pilldiv.selectAll('*').remove()
-		if (!self.term) {
-			self.dom.plusbtn.style('display', 'inline-block')
-			return
-		}
-		self.dom.plusbtn.style('display', 'none')
-		const pill = self.dom.pilldiv.append('div').on('click', () => {
-			self.dom.tip.clear().showunder(pill.node())
-			self.showMenu()
-		})
-		pill
+			.on('click', self.showTree)
+
+		self.dom.removebtn = self.dom.holder
 			.append('div')
+			.text('-')
 			.style('display', 'inline-block')
-			.text(self.term.name)
-			.style('background', 'blue')
+			.style('cursor', 'pointer')
+			.style('padding', '3px 5px')
+			.style('background', 'red')
 			.style('color', 'white')
+			.on('click', self.removeTerm)
+	}
+
+	self.updateUI = () => {
+		self.dom.plusbtn.style('display', self.term ? 'none' : 'inline-block')
+		self.dom.removebtn.style('display', self.term ? 'inline-block' : 'none')
+		self.dom.labeldiv
+			.html(self.term ? self.term.term.name : self.placeholder)
+			.style('background', self.term ? 'blue' : 'transparent')
+			.style('color', self.term ? 'white' : '')
 			.style('padding', '3px 8px')
 	}
 }
+
 function setInteractivity(self) {
 	self.removeTerm = () => {
-		self.term = null
 		self.opts.callback(null)
 	}
+
 	self.showTree = () => {
+		self.dom.tip.clear().showunder(self.dom.pilldiv.node())
 		appInit(null, {
 			holder: self.dom.tip.d,
 			state: {
@@ -106,7 +117,9 @@ function setInteractivity(self) {
 			}
 		})
 	}
+
 	self.showMenu = () => {
+		self.dom.tip.clear().showunder(pill.node())
 		self.dom.tip.d
 			.append('div')
 			.attr('class', 'sja_menuoption')

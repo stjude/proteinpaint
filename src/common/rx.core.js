@@ -404,7 +404,7 @@ async function notifyComponents(components, current, data = null) {
 			for (const c of component) called.push(c.update(current, data))
 		} else if (component.hasOwnProperty('update')) {
 			called.push(component.update(current, data))
-		} else if (component && typeof component == 'object') {
+		} else if (component && typeof component == 'object' && !component.main) {
 			for (const name in component) {
 				if (component.hasOwnProperty(name) && typeof component[name].update == 'function') {
 					called.push(component[name].update(current, data))

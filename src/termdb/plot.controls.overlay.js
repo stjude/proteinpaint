@@ -1,6 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select as d3select, event as d3event } from 'd3-selection'
-import { termsettingInit } from './termsetting-xin'
+import { termsettingInit } from '../common/termsetting'
 import { initRadioInputs } from '../common/dom'
 
 class TdbOverlayInput {
@@ -9,48 +9,30 @@ class TdbOverlayInput {
 		this.app = app
 		this.opts = opts
 		this.controls = opts.controls
-		this.dom = {
-			holder: opts.holder.append('tr')
-		}
+		this.dom = { holder: opts.holder }
 		setInteractivity(this)
 		setRenderers(this)
 
 		this.setUI()
-		this.components = {}
 		this.api = rx.getComponentApi(this)
 	}
 
-	main({ state, data, obj }) {
-		this.state = state
-		this.plot = state.config
-		this.data = data
-		this.obj = obj ? obj : this.opts.obj ? this.opts.obj : {}
-		if (!this.components.pill) this.setPill()
+	main(arg = {}) {
+		this.state = arg && arg.state
+		this.plot = arg && arg.state && arg.state.config
+		//this.data = arg && arg.data
+		this.obj = arg & arg.obj ? arg.obj : this.opts.obj ? this.opts.obj : {}
+		if (!this.pill) this.setPill()
+		this.render()
 
-		// hide all options when opened from genome browser view
-		this.dom.holder.style('display', this.obj.modifier_ssid_barchart ? 'none' : 'table-row')
-
-		const plot = this.plot
-		// do not show genotype overlay option when opened from stand-alone page
-		if (!plot.settings.barchart.overlay) {
-			plot.settings.barchart.overlay = this.obj.modifier_ssid_barchart
-				? 'genotype'
-				: plot.term2 && plot.term2.term.id != plot.term.term.id
-				? 'tree'
-				: 'none'
-		}
-
-		this.radio.main(plot.settings.barchart.overlay)
-		this.radio.dom.labels.html(this.updateRadioLabels)
-		this.radio.dom.divs.style('display', this.getDisplayStyle)
-
-		const disable_terms = [plot.term.term.id]
-		if (plot.term0) disable_terms.push(plot.term0.term.id)
-		return { data, term: plot.term2, disable_terms }
+		const disable_terms = [this.plot.term.term.id]
+		if (this.plot.term0) disable_terms.push(this.plot.term0.term.id)
+		// todo: may add computed data to pill.main argument
+		this.pill.main({ term: this.plot.settings.controls.term2, disable_terms })
 	}
 
 	setPill() {
-		this.components.pill = termsettingInit(this.app, {
+		this.pill = termsettingInit(this.app, {
 			holder: this.pill_div,
 			plot: this.plot,
 			term_id: 'term2',
@@ -58,8 +40,16 @@ class TdbOverlayInput {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			callback: term => {
-				console.log(term)
-				this.controls.dispatch({ term2: term ? { id: term.id, term } : null })
+				const term2 = term ? { id: term.id, term } : null
+				this.controls.dispatch({
+					term2: term2,
+					settings: {
+						barchart: {
+							overlay: term2 ? 'tree' : 'none'
+						},
+						controls: { term2 }
+					}
+				})
 			}
 		})
 	}
@@ -105,6 +95,25 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 	}
 
+	self.render = function() {
+		// hide all options when opened from genome browser view
+		self.dom.holder.style('display', self.obj.modifier_ssid_barchart ? 'none' : 'table-row')
+
+		const plot = self.plot
+		// do not show genotype overlay option when opened from stand-alone page
+		if (!plot.settings.barchart.overlay) {
+			plot.settings.barchart.overlay = self.obj.modifier_ssid_barchart
+				? 'genotype'
+				: plot.term2 && plot.term2.term.id != plot.term.term.id
+				? 'tree'
+				: 'none'
+		}
+
+		self.radio.main(plot.settings.barchart.overlay)
+		self.radio.dom.labels.html(self.updateRadioLabels)
+		self.radio.dom.divs.style('display', self.getDisplayStyle)
+	}
+
 	self.updateRadioLabels = function(d) {
 		const term1 = self.plot.term.term
 		if (!term1.iscondition) return '&nbsp;' + d.label
@@ -139,11 +148,11 @@ function setInteractivity(self) {
 				}
 			})
 		} else if (d.value == 'tree') {
-			if (!self.termuiObj.termsetting.term) {
-				// should launch the blue pill's term tree menu
+			if (!plot.settings.controls.term2) {
+				self.pill.showTree()
 			} else {
 				self.controls.dispatch({
-					['term2']: { id: self.termuiObj.termsetting.term.id, term: self.termuiObj.termsetting.term },
+					term2: plot.settings.controls.term2,
 					settings: { barchart: { overlay: d.value } }
 				})
 			}
@@ -189,7 +198,6 @@ function setInteractivity(self) {
 		const plot = self.plot
 		if (d.value != 'tree' || d.value != plot.settings.barchart.overlay) return
 		self.obj.showtree4selectterm([plot.term.id, plot.term2 ? plot.term2.term.id : null], tr.node(), term2 => {
-			console.log(term2)
 			self.obj.tip.hide()
 			self.controls.dispatch({ term2: { term: term2 } })
 		})

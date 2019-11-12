@@ -47,41 +47,21 @@ class TdbPlot {
 				holder: this.dom.controls,
 				isVisible: false // plot.settings.controls.isVisible
 			}),
-			barchart: barInit(
-				this.app, 
-				{holder: this.dom.viz.append('div'), id: this.id},
-				this.app.opts.barchart
-			),
-			stattable: statTableInit(
-				this.app, 
-				{holder: this.dom.viz.append('div'), id: this.id},
-				this.app.opts.stattable
-			),
-			table: tableInit(
-				this.app,
-				{holder: this.dom.viz.append('div'), id: this.id},
-				this.app.opts.table
-			),
-			boxplot: boxplotInit(
-				this.app, 
-				{holder: this.dom.viz.append('div'), id: this.id},
-				this.app.opts.boxplot
-			),
-			scatter: scatterInit(
-				this.app, 
-				{holder: this.dom.viz.append('div'), id: this.id},
-				this.app.opts.scatter
-			)
+			barchart: barInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.barchart),
+			stattable: statTableInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.stattable),
+			table: tableInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.table),
+			boxplot: boxplotInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.boxplot),
+			scatter: scatterInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.scatter)
 		}
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	reactsTo(action) {
-		if (action.type == "plot_edit" || action.type == "plot_show") {
+		if (action.type == 'plot_edit' || action.type == 'plot_show') {
 			return action.id == this.id
 		}
 		if (action.type.startsWith('filter')) return true
-		if (action.type == "app_refresh") return true
+		if (action.type == 'app_refresh') return true
 	}
 
 	getState(appState) {
@@ -194,7 +174,8 @@ export function plotConfig(opts) {
 			settings: {
 				currViews: ['barchart'],
 				controls: {
-					isVisible: false // control panel is hidden by default
+					isVisible: false, // control panel is hidden by default
+					term2: null // the previous overlay value may be displayed as a convenience for toggling
 				},
 				common: {
 					use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
