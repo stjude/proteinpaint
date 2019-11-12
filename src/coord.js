@@ -127,6 +127,7 @@ exports.genomic2gm = function(pos, gm, tempoff = 0) {
 	tempoff is a quick fix in order to move the imprecise 'intronic' breakpoints of cicero into exon
 	should not be used in any other case
 	*/
+	if (tempoff) console.log(pos, gm)
 	const rev = gm.strand == '-'
 	const cd = {}
 	if (pos < gm.start) {
@@ -166,7 +167,7 @@ exports.genomic2gm = function(pos, gm, tempoff = 0) {
 		for (let i = 0; i < gm.exon.length; i++) {
 			const e = gm.exon[i]
 			if (rev) {
-				if (e[1] <= pos) {
+				if (e[1] + tempoff <= pos) {
 					// upstream of this exon
 					cd.atexon = i + 1
 					cd.atintron = i
@@ -178,7 +179,7 @@ exports.genomic2gm = function(pos, gm, tempoff = 0) {
 					break
 				}
 			} else {
-				if (e[0] > pos) {
+				if (e[0] - tempoff > pos) {
 					// upstream of this exon
 					cd.atexon = i + 1
 					cd.atintron = i
