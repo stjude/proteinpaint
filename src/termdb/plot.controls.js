@@ -43,12 +43,7 @@ class TdbPlotControls {
 			term_info: setTermInfoBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			config: setConfigDiv(app, { holder: this.dom.config_div, table }, this),
 			barsAs: setBarsAsOpts(app, { holder: table.append('tr'), label: 'Bars as' }, this),
-			overlay: overlayInputInit(
-				// pretends an api with only dispatch{} to minimize chances for mutation
-				// do not use "this" as it is not api and mutable
-				{ dispatch: c => this.dispatch(c) },
-				{ holder: table.append('tr'), index: this.index }
-			),
+			overlay: overlayInputInit(app, { holder: table.append('tr'), index: this.index, id: this.id }),
 			view: setViewOpts(app, { holder: table.append('tr') }, this),
 			orientation: setOrientationOpts(app, { holder: table.append('tr') }, this),
 			scale: setScaleOpts(app, { holder: table.append('tr') }, this),

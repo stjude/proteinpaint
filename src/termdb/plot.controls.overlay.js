@@ -17,11 +17,11 @@ A: when overlay is notified, overlay.main() is called, which also calls pill.mai
 B: user interaction at termsetting UI updates term2 data, and sends back to overlay via callback.
 
 
-app, only has .dispatch()
 
 opts{}
 .holder
-.index (what's this)
+.index (of the plot control)
+.id (of the plot control)
 
 */
 
@@ -42,7 +42,7 @@ class TdbOverlayInput {
 		this.state = arg && arg.state
 		this.plot = arg && arg.state && arg.state.config
 		this.data = arg && arg.data
-		this.obj = arg & arg.obj ? arg.obj : this.opts.obj ? this.opts.obj : {}
+		this.obj = arg & arg.obj ? arg.obj : this.opts.obj ? this.opts.obj : {} // TODO "obj" is legacy, should fix?
 		if (!this.pill) this.setPill()
 		this.render()
 
@@ -62,12 +62,16 @@ class TdbOverlayInput {
 			callback: term => {
 				const term2 = term ? { id: term.id, term } : null
 				this.app.dispatch({
-					term2: term2,
-					settings: {
-						barchart: {
-							overlay: term2 ? 'tree' : 'none'
-						},
-						controls: { term2 }
+					type: 'plot_edit',
+					id: this.opts.id,
+					config: {
+						term2,
+						settings: {
+							barchart: {
+								overlay: term2 ? 'tree' : 'none'
+							},
+							controls: { term2 }
+						}
 					}
 				})
 			}
@@ -161,10 +165,14 @@ function setInteractivity(self) {
 		const plot = self.plot
 		if (d.value == 'none') {
 			self.app.dispatch({
-				term2: undefined,
-				settings: {
-					currViews: ['barchart'],
-					barchart: { overlay: d.value }
+				type: 'plot_edit',
+				id: self.opts.id,
+				config: {
+					term2: undefined,
+					settings: {
+						currViews: ['barchart'],
+						barchart: { overlay: d.value }
+					}
 				}
 			})
 		} else if (d.value == 'tree') {
@@ -172,8 +180,12 @@ function setInteractivity(self) {
 				self.pill.showTree()
 			} else {
 				self.app.dispatch({
-					term2: plot.settings.controls.term2,
-					settings: { barchart: { overlay: d.value } }
+					type: 'plot_edit',
+					id: self.opts.id,
+					config: {
+						term2: plot.settings.controls.term2,
+						settings: { barchart: { overlay: d.value } }
+					}
 				})
 			}
 		} else if (d.value == 'genotype') {
@@ -186,13 +198,17 @@ function setInteractivity(self) {
 			}
 			const q = { bar_by_grade: 1 }
 			self.app.dispatch({
-				term2: {
-					term: plot.term.term,
-					q: {
-						bar_by_children: 1
-					}
-				},
-				settings: { barchart: { overlay: d.value } }
+				type: 'plot_edit',
+				id: self.opts.id,
+				config: {
+					term2: {
+						term: plot.term.term,
+						q: {
+							bar_by_children: 1
+						}
+					},
+					settings: { barchart: { overlay: d.value } }
+				}
 			})
 		} else if (d.value == 'bar_by_grade') {
 			if (plot.term.q.bar_by_grade) {
@@ -200,20 +216,25 @@ function setInteractivity(self) {
 				return
 			}
 			self.app.dispatch({
-				term2: {
-					term: plot.term.term,
-					q: {
-						bar_by_grade: 1
-					}
-				},
-				settings: { barchart: { overlay: d.value } }
+				type: 'plot_edit',
+				id: self.opts.id,
+				config: {
+					term2: {
+						term: plot.term.term,
+						q: {
+							bar_by_grade: 1
+						}
+					},
+					settings: { barchart: { overlay: d.value } }
+				}
 			})
 		} else {
 			console.log('unhandled click event', d, d3event.target)
 		}
 	}
 
-	self.showTree = d => {
+	self.showTree2 = d => {
+		// FIXME should not be needed, duplicate functionality with common/termsetting
 		d3event.stopPropagation()
 		const plot = self.plot
 		if (d.value != 'tree' || d.value != plot.settings.barchart.overlay) return
