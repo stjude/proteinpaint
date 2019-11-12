@@ -59,7 +59,7 @@ tape('default behavior', function(test) {
 			.rideInit({ arg: plot, eventType: 'postRender.test' })
 			.run(testHiddenTable, { wait: 200 })
 			.use(triggerViewTable, { wait: 400 })
-			.to(testVisibleTable, { wait: 800 })
+			.to(testVisibleTable, { wait: 1000 })
 			.done(test)
 	}
 

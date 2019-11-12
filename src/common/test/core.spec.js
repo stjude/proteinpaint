@@ -207,7 +207,7 @@ tape('Reactive flow', async function(test) {
 			getState(appState) {
 				return appState.prop
 			}
-		}	
+		}
 	}
 	const comp2 = {
 		type: 'type1',
@@ -226,7 +226,7 @@ tape('Reactive flow', async function(test) {
 		storeInit: rx.getInitFxn(TestStore),
 		components: {
 			comp1,
-			comp2
+			comp2: comp2.api
 		}
 	}
 	const appInit = rx.getInitFxn(TestApp)
@@ -247,8 +247,16 @@ tape('Reactive flow', async function(test) {
 		'save() should result in the expected state change'
 	)
 	test.equal(Object.isFrozen(app.getState()), true, 'should have a frozen state from app.getState()')
-	test.deepEqual(comp1.Inner.getState(app.getState()), app.Inner.state.prop, 'should return the expected subState for a component')
-	test.equal(Object.isFrozen(comp1.Inner.getState(app.getState())), true, 'should have a frozen state from app.getState()')
+	test.deepEqual(
+		comp1.Inner.getState(app.getState()),
+		app.Inner.state.prop,
+		'should return the expected subState for a component'
+	)
+	test.equal(
+		Object.isFrozen(comp1.Inner.getState(app.getState())),
+		true,
+		'should have a frozen state from app.getState()'
+	)
 
 	// comp1.type == 'type1', which only reacts to todo_* and prop_*
 	const action_fake = { type: 'fake_add', todo }
