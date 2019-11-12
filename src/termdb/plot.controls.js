@@ -37,28 +37,33 @@ class TdbPlotControls {
 			table
 		}
 
-		// helper function
-		this.dispatch = config => {
-			app.dispatch({
-				type: 'plot_edit',
-				id: this.id,
-				config
-			})
-		}
-
 		this.components = {
 			burger: setBurgerBtn(app, { holder: this.dom.burger_div }, this),
 			svg: setSvgBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			term_info: setTermInfoBtn(app, { holder: this.dom.button_bar.append('div') }, this),
 			config: setConfigDiv(app, { holder: this.dom.config_div, table }, this),
 			barsAs: setBarsAsOpts(app, { holder: table.append('tr'), label: 'Bars as' }, this),
-			overlay: overlayInputInit(app, { holder: table.append('tr'), controls: this }),
+			overlay: overlayInputInit(
+				// pretends an api with only dispatch{} to minimize chances for mutation
+				// do not use "this" as it is not api and mutable
+				{ dispatch: c => this.dispatch(c) },
+				{ holder: table.append('tr'), index: this.index }
+			),
 			view: setViewOpts(app, { holder: table.append('tr') }, this),
 			orientation: setOrientationOpts(app, { holder: table.append('tr') }, this),
 			scale: setScaleOpts(app, { holder: table.append('tr') }, this),
 			bin: setBinOpts(app, { holder: table.append('tr'), termNum: 'term', label: 'Primary Bins' }, this),
 			divideBy: setDivideByOpts(app, { holder: table.append('tr') }, this)
 		}
+	}
+
+	dispatch(config) {
+		// helper
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config
+		})
 	}
 
 	getState(appState) {

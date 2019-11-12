@@ -3,12 +3,33 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { termsettingInit } from '../common/termsetting'
 import { initRadioInputs } from '../common/dom'
 
+/*
+a wrapper component of termsettingInit
+bi-directional information flow
+
+####################                        ###############
+#                  #   ====== A ========>   #             #
+# controls.overlay #                        # termsetting #
+#                  #   <===== B =========   #             #
+####################                        ###############
+
+A: when overlay is notified, overlay.main() is called, which also calls pill.main() to propagate updated term2 data
+B: user interaction at termsetting UI updates term2 data, and sends back to overlay via callback.
+
+
+app, only has .dispatch()
+
+opts{}
+.holder
+.index (what's this)
+
+*/
+
 class TdbOverlayInput {
 	constructor(app, opts) {
 		this.type = 'overlayInput'
 		this.app = app
 		this.opts = opts
-		this.controls = opts.controls
 		this.dom = { holder: opts.holder }
 		setInteractivity(this)
 		setRenderers(this)
@@ -27,21 +48,20 @@ class TdbOverlayInput {
 
 		const disable_terms = [this.plot.term.term.id]
 		if (this.plot.term0) disable_terms.push(this.plot.term0.term.id)
-		// todo: may add computed data to pill.main argument
+		// TODO
+		// should pass this.plot.term2{ term, q } to pill.main()
+		// plotData is not needed
 		this.pill.main({ plotData: this.data, term: this.plot.settings.controls.term2, disable_terms })
 	}
 
 	setPill() {
 		this.pill = termsettingInit(this.app, {
 			holder: this.pill_div,
-			plot: this.plot,
-			term_id: 'term2',
-			id: this.controls.id,
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			callback: term => {
 				const term2 = term ? { id: term.id, term } : null
-				this.controls.dispatch({
+				this.app.dispatch({
 					term2: term2,
 					settings: {
 						barchart: {
@@ -68,7 +88,7 @@ function setRenderers(self) {
 		const td = tr.append('td')
 
 		this.radio = initRadioInputs({
-			name: 'pp-termdb-overlay-' + this.controls.index,
+			name: 'pp-termdb-overlay-' + this.opts.index,
 			holder: td,
 			options: [
 				{ label: 'None', value: 'none' },
@@ -140,7 +160,7 @@ function setInteractivity(self) {
 		d3event.stopPropagation()
 		const plot = self.plot
 		if (d.value == 'none') {
-			self.controls.dispatch({
+			self.app.dispatch({
 				term2: undefined,
 				settings: {
 					currViews: ['barchart'],
@@ -151,7 +171,7 @@ function setInteractivity(self) {
 			if (!plot.settings.controls.term2) {
 				self.pill.showTree()
 			} else {
-				self.controls.dispatch({
+				self.app.dispatch({
 					term2: plot.settings.controls.term2,
 					settings: { barchart: { overlay: d.value } }
 				})
@@ -165,7 +185,7 @@ function setInteractivity(self) {
 				return
 			}
 			const q = { bar_by_grade: 1 }
-			self.controls.dispatch({
+			self.app.dispatch({
 				term2: {
 					term: plot.term.term,
 					q: {
@@ -179,7 +199,7 @@ function setInteractivity(self) {
 				console.log('bar_by_grade term1 should not allow grade overlay')
 				return
 			}
-			self.controls.dispatch({
+			self.app.dispatch({
 				term2: {
 					term: plot.term.term,
 					q: {
@@ -199,7 +219,7 @@ function setInteractivity(self) {
 		if (d.value != 'tree' || d.value != plot.settings.barchart.overlay) return
 		self.obj.showtree4selectterm([plot.term.id, plot.term2 ? plot.term2.term.id : null], tr.node(), term2 => {
 			self.obj.tip.hide()
-			self.controls.dispatch({ term2: { term: term2 } })
+			self.app.dispatch({ term2: { term: term2 } })
 		})
 	}
 }
