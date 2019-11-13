@@ -351,8 +351,14 @@ function appmenu( headbox, selectgenome, jwt ) {
 	})
 	headtip.d.append('div').attr('class','sja_menuoption').text('Fusion editor').style('padding-left','20px').on('click',()=>{
 		headtip.hide()
+		const lst = client.newpane3(100, 100, genomes)
+		// [0] is pane{}
+		lst[0].header.text('Fusion Editor')
+		lst[0].body.style('margin','10px')
+		const wait = lst[0].body.append('div').text('Loading...').style('margin','10px')
 		import('./svmr').then(p=>{
-			p.svmrui(genomes, hostURL, jwt)
+			wait.remove()
+			p.svmrui( lst, genomes, hostURL, jwt)
 		})
 	})
 	headtip.d.append('div').attr('class','sja_menuoption').text('Junction-by-sample matrix display').style('padding-left','20px').on('click',()=>{
@@ -1326,6 +1332,23 @@ async function launchblock(arg,holder) {
 
 
 function launchfusioneditor(arg,holder) {
+	if( arg.fusioneditor.uionly ) {
+		// duplicate newpane3
+		const inputdiv = holder.append('div').style('margin', '40px 20px 20px 20px')
+		const p = inputdiv.append('p')
+		p.append('span').html('Genome&nbsp;')
+		const gselect = p.append('select')
+		for (const n in genomes) {
+			gselect.append('option').text(n)
+		}
+		const filediv = inputdiv.append('div').style('margin', '20px 0px')
+		const saydiv = holder.append('div').style('margin', '10px 20px')
+		const visualdiv = holder.append('div').style('margin', '20px')
+		import('./svmr').then(p=>{
+			p.svmrui( [null, inputdiv, gselect.node(), filediv, saydiv, visualdiv], genomes, hostURL, arg.jwt )
+		})
+		return
+	}
 	const genomeobj=genomes[arg.genome]
 	if(!genomeobj) {
 		error0('Invalid genome: '+arg.genome)
