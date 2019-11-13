@@ -108,8 +108,8 @@ function setRenderers(self) {
 				{ label: 'None', value: 'none' },
 				{ label: 'Subconditions', value: 'bar_by_children' },
 				{ label: 'Grade', value: 'bar_by_grade' },
-				{ label: '', value: 'tree' },
-				{ label: 'Genotype', value: 'genotype' }
+				{ label: '', value: 'tree' }
+				//{ label: 'Genotype', value: 'genotype' }
 			],
 			listeners: {
 				input: self.setOptionVal,
@@ -131,16 +131,10 @@ function setRenderers(self) {
 
 	self.render = function() {
 		// hide all options when opened from genome browser view
-		// self.dom.holder.style('display', self.obj.modifier_ssid_barchart ? 'none' : 'table-row')
-
 		const plot = self.plot
 		// do not show genotype overlay option when opened from stand-alone page
 		if (!plot.settings.barchart.overlay) {
-			plot.settings.barchart.overlay = self.obj.modifier_ssid_barchart
-				? 'genotype'
-				: plot.term2 && plot.term2.term.id != plot.term.term.id
-				? 'tree'
-				: 'none'
+			plot.settings.barchart.overlay = plot.term2 && plot.term2.term.id != plot.term.term.id ? 'tree' : 'none'
 		}
 
 		self.radio.main(plot.settings.barchart.overlay)
@@ -241,16 +235,5 @@ function setInteractivity(self) {
 		} else {
 			console.log('unhandled click event', d, d3event.target)
 		}
-	}
-
-	self.showTree2 = d => {
-		// FIXME should not be needed, duplicate functionality with common/termsetting
-		d3event.stopPropagation()
-		const plot = self.plot
-		if (d.value != 'tree' || d.value != plot.settings.barchart.overlay) return
-		/*self.obj.showtree4selectterm([plot.term.id, plot.term2 ? plot.term2.term.id : null], tr.node(), term2 => {
-			self.obj.tip.hide()
-			self.opts.dispatch({ term2: { term: term2 } })
-		})*/
 	}
 }
