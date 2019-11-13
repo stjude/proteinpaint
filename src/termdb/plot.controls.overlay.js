@@ -23,6 +23,7 @@ opts{}
 .index (of the plot control)
 .id (of the plot control)
 
+FIXME should show existing term2 upon init
 */
 
 class TdbOverlayInput {
@@ -43,20 +44,27 @@ class TdbOverlayInput {
 		this.plot = arg && arg.state && arg.state.config
 		this.data = arg && arg.data
 		this.obj = arg & arg.obj ? arg.obj : this.opts.obj ? this.opts.obj : {} // TODO "obj" is legacy, should fix?
-		if (!this.pill) this.setPill()
 		this.render()
+		if (!this.pill) this.setPill()
 
-		const disable_terms = [this.plot.term.term.id]
-		if (this.plot.term0) disable_terms.push(this.plot.term0.term.id)
-		// TODO
-		// should pass this.plot.term2{ term, q } to pill.main()
-		// plotData is not needed
-		this.pill.main({ plotData: this.data, term: this.plot.settings.controls.term2, disable_terms })
+		const o = {
+			disable_terms: [this.plot.term.term.id],
+			q: {},
+			termfilter: this.state.termfilter // used later for computing kernel density of numeric term
+		}
+		if (this.plot.term0) o.disable_terms.push(this.plot.term0.term.id)
+		if (this.plot.term2) {
+			o.term = this.plot.term2.term
+			o.q = this.plot.term2.q
+		}
+
+		this.pill.main(o)
 	}
 
 	setPill() {
+		// requires this.state, so can only call in main()
 		this.pill = termsettingInit(this.app, {
-			holder: this.pill_div,
+			holder: this.dom.pill_div,
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			callback: term => {
@@ -114,7 +122,7 @@ function setRenderers(self) {
 			})
 			.style('margin-top', '2px')
 
-		this.pill_div = d3select(treeInput.node().parentNode.parentNode)
+		this.dom.pill_div = d3select(treeInput.node().parentNode.parentNode)
 			.append('div')
 			.style('display', 'inline-block')
 	}
