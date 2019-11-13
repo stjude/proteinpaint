@@ -6,7 +6,8 @@ import { searchInit } from './search'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
-// class names
+
+// class names TODO they should be shared between test/tree.spec.js
 const cls_termdiv = 'termdiv',
 	cls_termchilddiv = 'termchilddiv',
 	cls_termbtn = 'termbtn',
@@ -70,6 +71,7 @@ class TdbTree {
 		this.type = 'tree'
 		this.api = rx.getComponentApi(this)
 		this.app = app
+		this.opts = opts
 		this.modifiers = opts.modifiers
 		this.dom = {
 			holder: opts.holder,
@@ -83,11 +85,7 @@ class TdbTree {
 
 		{
 			this.components = {
-				search: searchInit(
-					this.app, 
-					{ holder: this.dom.searchDiv, modifiers: opts.modifiers},
-					this.app.opts.search
-				),
+				search: searchInit(this.app, { holder: this.dom.searchDiv, modifiers: opts.modifiers }, this.app.opts.search),
 				plots: {}
 			}
 		}
@@ -108,10 +106,10 @@ class TdbTree {
 	}
 
 	reactsTo(action) {
-		if (action.type.startsWith("tree_")) return true
-		if (action.type.startsWith("filter_")) return true
-		if (action.type.startsWith("plot_")) return true
-		if (action.type == "app_refresh") return true
+		if (action.type.startsWith('tree_')) return true
+		if (action.type.startsWith('filter_')) return true
+		if (action.type.startsWith('plot_')) return true
+		if (action.type == 'app_refresh') return true
 	}
 
 	getState(appState) {
@@ -330,17 +328,25 @@ function setRenderers(self) {
 			.text(term.name)
 
 		if (graphable(term)) {
-			if (self.modifiers.click_term) {
-				labeldiv
-					// need better css class
-					.attr('class', 'sja_filter_tag_btn add_term_btn ' + cls_termlabel)
-					.style('padding', '5px 8px')
-					.style('border-radius', '6px')
-					.style('background-color', '#4888BF')
-					.style('margin', '1px 0px')
-					.on('click', () => {
-						self.modifiers.click_term(term)
-					})
+			if (self.opts.click_term) {
+				if (self.opts.disable_terms && self.opts.disable_terms.includes(term.id)) {
+					labeldiv
+						.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
+						.style('padding', '5px 8px')
+						.style('margin', '1px 0px')
+						.style('opacity', 0.5)
+				} else {
+					labeldiv
+						// need better css class
+						.attr('class', 'sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
+						.style('padding', '5px 8px')
+						.style('border-radius', '6px')
+						.style('background-color', '#4888BF')
+						.style('margin', '1px 0px')
+						.on('click', () => {
+							self.opts.click_term(term)
+						})
+				}
 			} else {
 				// no modifier, show view button and graph div
 				div

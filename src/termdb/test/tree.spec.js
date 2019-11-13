@@ -153,13 +153,12 @@ tape('default behavior', function(test) {
 	}
 })
 
-tape('modifier: click_term', test => {
+tape('click_term', test => {
 	test.timeoutAfter(1000)
 	runpp({
-		modifiers: {
-			click_term: modifier_callback
-		},
 		tree: {
+			click_term: modifier_callback,
+			disable_terms: ['diaggrp'],
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -186,8 +185,10 @@ tape('modifier: click_term', test => {
 		childdiv_child1 = child1.querySelector('.termchilddiv')
 	}
 	function testExpand_child1(tree) {
-		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn add_term_btn termlabel')
-		test.ok(buttons.length > 1, 'should have more than 1 child terms showing as buttons')
+		const disabledlabels = childdiv_child1.getElementsByClassName('sja_tree_click_term_disabled termlabel')
+		test.ok(disabledlabels.length > 0, 'should have one or more disabled terms')
+		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term termlabel')
+		test.ok(buttons.length > 0, 'should have one or more child terms showing as buttons')
 		buttons[0].click() // click this button and trigger the next test
 	}
 	function modifier_callback(term) {

@@ -21,6 +21,7 @@ component specific callbacks and customizations
 
 
 ******************* modifiers
+TODO modifiers to be moved into opts[componentType]
 
 a set of predefined keys, each pointing to a callback so as to supply user selected term or tvs to that callback
 will also alter the appearance and behavior of UIs, so components need to access this
@@ -29,11 +30,6 @@ will also alter the appearance and behavior of UIs, so components need to access
 tree: display all terms under a parent, just show name;
 non-leaf terms will have a +/- button in the front
 graphable terms will have a VIEW button at the back
-
-< modifiers.click_term >
-tree: display graphable terms as blue buttons for selecting, no VIEW button
-as in selecting term2 in barchart
-tree.search: display found terms as blue buttons
 
 < modifiers.tvs_select >
 at barchart, click a bar to select to a tvs
@@ -70,25 +66,19 @@ class TdbApp {
 			if (!parentApp) this.store = storeInit(this.api)
 			const modifiers = this.validateModifiers(this.opts.modifiers)
 			this.components = {}
-			if (modifiers.click_term || modifiers.tvs_select) {
+			if ((this.opts.tree && this.opts.tree.click_term) || modifiers.tvs_select) {
 				// has modifier
 			} else {
 				// no modifier, show these components
 				this.components.recover = recoverInit(
-					this.app, 
+					this.app,
 					{ holder: this.dom.holder, appType: 'termdb' },
 					this.opts.recover
 				)
 
-				this.components.terms = filterInit(
-					this.app, 
-					{ holder: this.dom.holder.append('div') },
-					this.opts.filter
-				)
+				this.components.terms = filterInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.filter)
 			}
-			const treeOpts = { holder: this.dom.holder.append('div'), modifiers }
-			if (this.app.opts.tree) Object.assign(treeOpts, this.app.opts.tree)
-			this.components.tree = treeInit(this.app, treeOpts)
+			this.components.tree = treeInit(this.app, { holder: this.dom.holder.append('div'), modifiers }, this.opts.tree)
 		} catch (e) {
 			this.printError(e)
 		}
