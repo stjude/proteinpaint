@@ -88,7 +88,15 @@ tape('single chart, with overlay', function(test) {
 					diaggrp: {
 						term: { id: 'diaggrp' },
 						term2: { id: 'agedx' },
-						settings: { currViews: ['barchart'] }
+						settings: {
+							currViews: ['barchart'],
+							controls: {
+								term2: { id: 'agedx', term: termjson['agedx'] }
+							},
+							barchart: {
+								overlay: 'tree'
+							}
+						}
 					}
 				}
 			}
