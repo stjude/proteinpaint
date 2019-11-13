@@ -54,6 +54,7 @@ class TdbOverlayInput {
 		}
 		if (this.plot.term0) o.disable_terms.push(this.plot.term0.term.id)
 		if (this.plot.term2) {
+			o.disable_terms.push(this.plot.term2.term.id)
 			o.term = this.plot.term2.term
 			o.q = this.plot.term2.q
 		}

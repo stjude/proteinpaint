@@ -13,10 +13,9 @@ opts{}
 */
 
 class TermSetting {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.type = 'termsetting'
-		this.app = app
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
 		this.placeholder = opts.placeholder ? opt.placeholder : 'Select term&nbsp;'
@@ -32,8 +31,9 @@ class TermSetting {
 		// this api will be frozen inside the function returned by getInitFxn()
 		this.api = {
 			main: (data = {}) => {
-				this.data = data
+				console.log(data)
 				this.term = data.term
+				this.q = data.q
 				this.disable_terms = data.disable_terms
 				this.updateUI()
 			},
@@ -82,7 +82,7 @@ function setRenderers(self) {
 	self.updateUI = () => {
 		self.dom.plusbtn.style('display', self.term ? 'none' : 'inline-block')
 		self.dom.labeldiv
-			.html(self.term ? self.term.term.name : self.placeholder)
+			.html(self.term ? self.term.name : self.placeholder)
 			.style('background', self.term ? '#4888BF' : 'transparent')
 			.style('color', self.term ? 'white' : 'black')
 			.style('padding', '3px 8px')
@@ -103,11 +103,12 @@ function setInteractivity(self) {
 				genome: self.genome,
 				dslabel: self.dslabel
 			},
-			modifiers: {
+			tree: {
 				click_term: term => {
 					self.dom.tip.hide()
 					self.opts.callback(term) // main change
-				}
+				},
+				disable_terms: self.disable_terms
 			}
 		})
 	}
@@ -116,14 +117,30 @@ function setInteractivity(self) {
 		self.dom.tip.clear().showunder(self.dom.pilldiv.node())
 
 		const term_option_div = self.dom.tip.d.append('div')
+		const term_edit_div = self.dom.tip.d.append('div').style('text-align', 'center')
+
+		const optsFxn = self.term.iscategorical
+			? self.showCatOpts
+			: self.term.isfloat || self.term.isinteger
+			? self.showNumOpts
+			: self.term.iscondition
+			? self.showConditionOpts
+			: null
 
 		term_option_div
+			.append('div')
+			.style('margin', '5px 2px')
+			.style('text-align', 'center')
+
+		optsFxn(term_option_div)
+
+		term_edit_div
 			.append('div')
 			.attr('class', 'replace_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '10px')
-			.style('background-color', '#5bc0de')
-			.style('padding', '7px 6px 5px 6px')
+			.style('background-color', '#74b9ff')
+			.style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
@@ -132,13 +149,13 @@ function setInteractivity(self) {
 				self.dom.tip.clear()
 				self.showTree()
 			})
-		term_option_div
+		term_edit_div
 			.append('div')
 			.attr('class', 'replace_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '10px')
-			.style('background-color', '#f0ad4e')
-			.style('padding', '7px 6px 5px 6px')
+			.style('background-color', '#ff7675')
+			.style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
@@ -148,4 +165,66 @@ function setInteractivity(self) {
 				self.removeTerm()
 			})
 	}
+
+	self.showCatOpts = async function(div) {
+		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
+
+		const default_btn_txt =
+			(grpsetting_flag ? 'Using' : 'Use') +
+			' default category' +
+			(self.term.values ? '(n=' + Object.keys(self.term.values).length + ')' : '')
+
+		// default (n=total) setting btn
+		const default_btn = div
+			.append('div')
+			.attr('class', 'group_btn sja_filter_tag_btn')
+			.style('display', 'block')
+			.style('padding', '7px 6px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('border-radius', '10px')
+			.style('background-color', grpsetting_flag ? '#f8f8f8' : '#eee')
+			.style('color', '#000')
+			.style('pointer-events', grpsetting_flag ? 'none' : 'auto')
+			.text(default_btn_txt)
+
+		//show button/s for default groups
+		if (self.term.groupsetting.lst) {
+			for (const group of self.term.groupsetting.lst) {
+				div
+					.append('div')
+					.attr('class', 'group_btn sja_filter_tag_btn')
+					.style('display', 'block')
+					.style('padding', '7px 6px')
+					.style('margin', '5px')
+					.style('text-align', 'center')
+					.style('font-size', '.8em')
+					.style('border-radius', '10px')
+					.style('background-color', '#eee')
+					.style('color', '#000')
+					.html('Use <b>' + group.name + '</b>')
+			}
+		}
+
+		// devide to grpups btn
+		const devide_btn = div
+			.append('div')
+			.attr('class', 'group_btn sja_filter_tag_btn')
+			.style('display', 'block')
+			.style('padding', '7px 6px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('border-radius', '10px')
+			.style('background-color', '#eee')
+			.style('color', '#000')
+			.html('Divide <b>' + self.term.name + '</b> to groups')
+
+		if (self.term.groupsetting.disabled) devide_btn.style('display', 'none')
+	}
+
+	self.showNumOpts = async function(div) {}
+
+	self.showConditionOpts = async function(div) {}
 }
