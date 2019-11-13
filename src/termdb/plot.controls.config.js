@@ -7,12 +7,12 @@ class TdbConfigUiInit {
 		this.opts = opts
 		this.id = opts.id
 		setInteractivity(this)
-		console.log(this.rowIsVisible)
 
 		const dispatch = opts.dispatch
 		const table = this.setDom()
 		this.inputs = {
 			//barsAs: setBarsAsOpts({ holder: table.append('tr'), label: 'Bars as' }),
+			overlay: overlayInputInit({ holder: table.append('tr'), dispatch, id: this.id }),
 			view: setViewOpts({ holder: table.append('tr'), dispatch, id: this.id }),
 			orientation: setOrientationOpts({ holder: table.append('tr'), dispatch, id: this.id }),
 			scale: setScaleOpts({ holder: table.append('tr'), dispatch, id: this.id })
@@ -21,10 +21,12 @@ class TdbConfigUiInit {
 		}
 
 		this.api = {
-			main: (plot, data) => {
-				this.render()
+			main: (state, isOpen) => {
+				this.render(isOpen)
+				const plot = state.config
 				for (const name in this.inputs) {
-					this.inputs[name].main(plot, data)
+					if (name == 'overlay') this.inputs[name].main(state)
+					else this.inputs[name].main(plot) //, data)
 				}
 			}
 		}
@@ -51,8 +53,7 @@ class TdbConfigUiInit {
 		return this.dom.table
 	}
 
-	render(plot) {
-		const isOpen = true
+	render(isOpen) {
 		this.dom.holder
 			.style('visibility', isOpen ? 'visible' : 'hidden')
 			.style('max-width', isOpen ? '660px' : '50px')

@@ -27,24 +27,25 @@ FIXME should show existing term2 upon init
 */
 
 class TdbOverlayInput {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'overlayInput'
-		this.app = app
 		this.opts = opts
 		this.dom = { holder: opts.holder }
 		setInteractivity(this)
 		setRenderers(this)
 
 		this.setUI()
-		this.api = rx.getComponentApi(this)
+		this.api = {
+			main: state => {
+				this.state = state
+				this.plot = state.config
+				this.render(state)
+				this.updatePill()
+			}
+		}
 	}
 
-	main(arg = {}) {
-		this.state = arg && arg.state
-		this.plot = arg && arg.state && arg.state.config
-		this.data = arg && arg.data
-		this.obj = arg & arg.obj ? arg.obj : this.opts.obj ? this.opts.obj : {} // TODO "obj" is legacy, should fix?
-		this.render()
+	updatePill() {
 		if (!this.pill) this.setPill()
 
 		const o = {
@@ -53,12 +54,12 @@ class TdbOverlayInput {
 			termfilter: this.state.termfilter // used later for computing kernel density of numeric term
 		}
 		if (this.plot.term0) o.disable_terms.push(this.plot.term0.term.id)
-		if (this.plot.term2) {
-			o.disable_terms.push(this.plot.term2.term.id)
-			o.term = this.plot.term2.term
-			o.q = this.plot.term2.q
+		const term2 = this.plot.settings.controls.term2
+		if (term2) {
+			o.disable_terms.push(term2.term.id)
+			o.term = term2.term
+			o.q = term2.q
 		}
-
 		this.pill.main(o)
 	}
 
@@ -70,7 +71,7 @@ class TdbOverlayInput {
 			dslabel: this.state.dslabel,
 			callback: term => {
 				const term2 = term ? { id: term.id, term } : null
-				this.app.dispatch({
+				this.opts.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
 					config: {
@@ -130,7 +131,7 @@ function setRenderers(self) {
 
 	self.render = function() {
 		// hide all options when opened from genome browser view
-		self.dom.holder.style('display', self.obj.modifier_ssid_barchart ? 'none' : 'table-row')
+		// self.dom.holder.style('display', self.obj.modifier_ssid_barchart ? 'none' : 'table-row')
 
 		const plot = self.plot
 		// do not show genotype overlay option when opened from stand-alone page
@@ -163,7 +164,7 @@ function setRenderers(self) {
 			return term1.iscondition && !term1.isleaf && term1.q && term1.q.bar_by_children ? 'block' : 'none'
 		} else {
 			const block = 'block' //term1.q.iscondition || (plot.term2 && plot.term2.term.iscondition) ? 'block' : 'inline-block'
-			return d.value != 'genotype' || self.obj.modifier_ssid_barchart ? block : 'none'
+			//return d.value != 'genotype' || self.obj.modifier_ssid_barchart ? block : 'none'
 		}
 	}
 }
@@ -173,7 +174,7 @@ function setInteractivity(self) {
 		d3event.stopPropagation()
 		const plot = self.plot
 		if (d.value == 'none') {
-			self.app.dispatch({
+			self.opts.dispatch({
 				type: 'plot_edit',
 				id: self.opts.id,
 				config: {
@@ -188,7 +189,7 @@ function setInteractivity(self) {
 			if (!plot.settings.controls.term2) {
 				self.pill.showTree()
 			} else {
-				self.app.dispatch({
+				self.opts.dispatch({
 					type: 'plot_edit',
 					id: self.opts.id,
 					config: {
@@ -206,7 +207,7 @@ function setInteractivity(self) {
 				return
 			}
 			const q = { bar_by_grade: 1 }
-			self.app.dispatch({
+			self.opts.dispatch({
 				type: 'plot_edit',
 				id: self.opts.id,
 				config: {
@@ -224,7 +225,7 @@ function setInteractivity(self) {
 				console.log('bar_by_grade term1 should not allow grade overlay')
 				return
 			}
-			self.app.dispatch({
+			self.opts.dispatch({
 				type: 'plot_edit',
 				id: self.opts.id,
 				config: {
@@ -247,9 +248,9 @@ function setInteractivity(self) {
 		d3event.stopPropagation()
 		const plot = self.plot
 		if (d.value != 'tree' || d.value != plot.settings.barchart.overlay) return
-		self.obj.showtree4selectterm([plot.term.id, plot.term2 ? plot.term2.term.id : null], tr.node(), term2 => {
+		/*self.obj.showtree4selectterm([plot.term.id, plot.term2 ? plot.term2.term.id : null], tr.node(), term2 => {
 			self.obj.tip.hide()
-			self.app.dispatch({ term2: { term: term2 } })
-		})
+			self.opts.dispatch({ term2: { term: term2 } })
+		})*/
 	}
 }

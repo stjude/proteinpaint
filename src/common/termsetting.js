@@ -30,6 +30,7 @@ class TermSetting {
 
 		// this api will be frozen inside the function returned by getInitFxn()
 		this.api = {
+
 			main: (data = {}) => {
 				console.log(data)
 				this.term = data.term

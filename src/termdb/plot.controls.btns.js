@@ -1,20 +1,18 @@
-import { getInitFxn } from "../common/rx.core"
+import { getInitFxn } from '../common/rx.core'
 
 class TdbControlsTopBar {
 	constructor(opts) {
-		this.isOpen = false
-		
 		this.dom = {
 			holder: opts.holder,
 			burger_div: opts.holder.append('div'),
-			button_bar: opts.holder.append('div'),
+			button_bar: opts.holder.append('div')
 		}
 
 		this.features = {
 			burgerbtn: burgerBtnInit({
-				holder: this.dom.burger_div, 
+				holder: this.dom.burger_div,
 				callback: opts.callback
-			}),
+			})
 			/*svgbtn: svgBtnInit({
 				id: opts.id,
 				holder: this.dom.button_bar.append('div'),
@@ -28,13 +26,12 @@ class TdbControlsTopBar {
 		}
 	}
 
-	main(plot) {
-		self.dom.button_bar
-			.style('display', self.isVisible ? 'inline-block' : 'block')
-			.style('float', self.isVisible ? 'right' : 'none')
-			
-		for(const name in this.features) {
-			this.features[name].main(this.isOpen, plot)
+	main(state, isOpen) {
+		this.dom.button_bar.style('display', isOpen ? 'inline-block' : 'block').style('float', isOpen ? 'right' : 'none')
+
+		const plot = state.config
+		for (const name in this.features) {
+			this.features[name].main(isOpen, plot)
 		}
 	}
 }
@@ -107,8 +104,6 @@ function svgBtnInit(opts) {
 	return Object.freeze(api)
 }
 
-
-
 function infoBtnInit(app, opts, controls) {
 	const self = {
 		table_flag: false,
@@ -125,7 +120,7 @@ function infoBtnInit(app, opts, controls) {
 				.html('&#9432;')
 				.on('click', self.displayInfo)
 		},
-		displayInfo() {
+		async displayInfo() {
 			let info_div
 
 			if (!self.table_flag) {
