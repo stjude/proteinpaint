@@ -63,7 +63,7 @@ class TdbOverlayInput {
 
 	setPill() {
 		// requires this.state, so can only call in main()
-		this.pill = termsettingInit(this.app, {
+		this.pill = termsettingInit({
 			holder: this.dom.pill_div,
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
