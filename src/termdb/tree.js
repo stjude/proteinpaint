@@ -22,6 +22,12 @@ treeInit()
 graphable()
 root_ID
 
+******************** constructor opts{}
+.holder
+.click_term()
+.disable_terms[]
+
+
 ******************** Plot
 separate functions are designed to handle different things so that logic won't mix
 - clickViewButton( term )
@@ -34,11 +40,6 @@ termsById{} is bound to the DOM tree, to provide:
 - term label
 - list of children terms for a parent term
 
-may implement tree modifiers for:
-- alter the term labels by adding n=?
-- may cause to hide certain terms
-
-any change of modifier should update termsById first, then call renderBranch() at the root term to update the current tree
 
 ******************* special flags
 root term does not exist in the termdb, but is synthesized upon initializing instance, has the "__tree_isroot" flag
@@ -61,11 +62,6 @@ class TdbTree {
 	- api-related and data processing code
 	  within this class declaration 
 
-	opts: {
-		holder,
-		callbacks, // see bus below
-		modifiers
-	}
 	*/
 	constructor(app, opts) {
 		this.type = 'tree'
@@ -83,11 +79,19 @@ class TdbTree {
 		setInteractivity(this)
 		setRenderers(this)
 
+		this.components = { plots: {} }
 		{
-			this.components = {
-				search: searchInit(this.app, { holder: this.dom.searchDiv, modifiers: opts.modifiers }, this.app.opts.search),
-				plots: {}
+			// the search component will share some attributes with tree
+			// cherry-pick here but not copyMerge( opts.search, opts.tree ) so as not to override attributes of same name
+			const arg = {
+				click_term: opts.click_term,
+				disable_terms: opts.disable_terms
 			}
+			this.components.search = searchInit(
+				this.app,
+				{ holder: this.dom.searchDiv },
+				rx.copyMerge(arg, this.app.opts.search)
+			)
 		}
 
 		// privately defined root term
@@ -211,7 +215,7 @@ class TdbTree {
 						}
 					}
 				},
-				this.app.opts.plot ? this.app.opts.plot : {}
+				this.app.opts.plot || {}
 			)
 		)
 		this.components.plots[term.id] = plot
@@ -334,7 +338,7 @@ function setRenderers(self) {
 						.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
 						.style('padding', '5px 8px')
 						.style('margin', '1px 0px')
-						.style('opacity', 0.5)
+						.style('opacity', 0.4)
 				} else {
 					labeldiv
 						// need better css class
@@ -434,6 +438,7 @@ function setInteractivity(self) {
 }
 
 export function graphable(term) {
+	// TODO move to ./common/term.js
 	// terms with a valid type supports graph
 	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
 }
