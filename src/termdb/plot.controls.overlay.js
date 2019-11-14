@@ -33,8 +33,8 @@ class TdbOverlayInput {
 		this.dom = { holder: opts.holder }
 		setInteractivity(this)
 		setRenderers(this)
-
 		this.setUI()
+
 		this.api = {
 			main: state => {
 				this.state = state
