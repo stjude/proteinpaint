@@ -1,7 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from '../client'
-import { display as termui_display, numeric_bin_edit } from '../mds.termdb.termsetting.ui'
 import { topBarInit } from './plot.controls.btns'
 import { configUiInit } from './plot.controls.config'
 
@@ -12,7 +11,7 @@ let i = 0 // track controls "instances" for assigning unambiguous unique input n
 class TdbPlotControls {
 	constructor(app, opts) {
 		this.opts = opts
-		this.type = 'plot'
+		this.type = 'plotControls'
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
 		this.app = app
@@ -34,9 +33,12 @@ class TdbPlotControls {
 			config: configUiInit({
 				id: this.id,
 				holder: this.dom.config_div,
-				dispatch: this.app.dispatch
+				dispatch: this.app.dispatch,
+				tip: app.tip
 			})
 		}
+
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	setDom() {

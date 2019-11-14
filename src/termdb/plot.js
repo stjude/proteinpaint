@@ -42,11 +42,15 @@ class TdbPlot {
 		}
 
 		this.components = {
-			controls: controlsInit(this.app, {
-				id: this.id,
-				holder: this.dom.controls,
-				isVisible: false // plot.settings.controls.isVisible
-			}),
+			controls: controlsInit(
+				this.app,
+				{
+					id: this.id,
+					holder: this.dom.controls,
+					isVisible: false // plot.settings.controls.isVisible
+				},
+				this.app.opts.plotControls
+			),
 			barchart: barInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.barchart),
 			stattable: statTableInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.stattable),
 			table: tableInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.table),

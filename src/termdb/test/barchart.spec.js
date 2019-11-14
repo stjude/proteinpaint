@@ -140,7 +140,9 @@ tape('single chart, with overlay', function(test) {
 		})
 		test.true(overlay_ordered, 'overlays order is same as legend')
 	}
-}) /*
+})
+
+/*
 tape('click to add numeric, condition term filter', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
@@ -228,7 +230,9 @@ tape('click to add numeric, condition term filter', function(test) {
 			test.end()
 		}, 200)
 	}
-}) */ /*
+})
+
+/*
 tape('click to add condition child term filter', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({

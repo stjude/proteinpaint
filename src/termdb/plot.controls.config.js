@@ -2,6 +2,7 @@ import { getInitFxn } from '../common/rx.core'
 import { overlayInputInit } from './plot.controls.overlay'
 import { divideByInputInit } from './plot.controls.divideBy'
 import { initRadioInputs } from '../common/dom'
+import { numeric_bin_edit } from '../mds.termdb.termsetting.ui'
 
 class TdbConfigUiInit {
 	constructor(opts) {
@@ -17,7 +18,14 @@ class TdbConfigUiInit {
 			view: setViewOpts({ holder: table.append('tr'), dispatch, id: this.id }),
 			orientation: setOrientationOpts({ holder: table.append('tr'), dispatch, id: this.id }),
 			scale: setScaleOpts({ holder: table.append('tr'), dispatch, id: this.id }),
-			//bin: setBinOpts({ holder: table.append('tr'), label: 'Primary Bins' }),
+			bin: setBinOpts({
+				holder: table.append('tr'),
+				label: 'Primary Bins',
+				dispatch,
+				id: this.id,
+				tip: opts.tip,
+				termNum: 'term'
+			}),
 			divideBy: divideByInputInit({ holder: table.append('tr'), dispatch, id: this.id })
 		}
 
@@ -269,32 +277,46 @@ function setBarsAsOpts(opts) {
 	}
 }
 
-function setBinOpts(app, opts, controls) {
-	const tr = opts.holder
-	tr.append('td')
-		.html(opts.label)
-		.attr('class', 'sja-termdb-config-row-label')
-	const bin_edit_td = tr.append('td')
+function setBinOpts(opts) {
+	const self = {
+		dom: {
+			row: opts.holder,
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		},
+		edit() {
+			// click to show ui and customize binning
+			const term = self.plot[opts.termNum]
+			numeric_bin_edit(opts.tip, term.term, term.q, true, q => {
+				opts.dispatch({
+					type: 'plot_edit',
+					id: opts.id,
+					config: {
+						term: { term: term.term, q }
+					}
+				})
+			})
+		}
+	}
 
-	bin_edit_td
+	self.dom.inputTd
 		.append('div')
 		.attr('class', 'sja_edit_btn')
 		.style('margin-left', '0px')
 		.html('EDIT')
-		.on('click', () => {
-			// click to show ui and customize binning
-			const term = plot[opts.termNum]
-			numeric_bin_edit(app.tip, term.term, term.q, true, q => {
-				controls.dispatch({ term: { term: term.term, q } })
-			})
-		})
+		.on('click', self.edit)
 
-	let plot
-	return {
-		main(_plot) {
-			plot = _plot
-			const term = plot[opts.termNum]
-			tr.style('display', term && (term.term.isfloat || term.term.isinteger) ? 'table-row' : 'none')
+	const api = {
+		main(plot) {
+			self.plot = plot
+			const term = self.plot[opts.termNum]
+			opts.holder.style('display', term && (term.term.isfloat || term.term.isinteger) ? 'table-row' : 'none')
 		}
 	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
 }
