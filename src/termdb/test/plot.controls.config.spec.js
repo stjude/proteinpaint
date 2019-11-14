@@ -18,6 +18,45 @@ const runpp = helpers.getRunPp('termdb', {
 	}
 })
 
+function testByTermId(id, runTests) {
+	const expandedTermIds =
+		id == 'diaggrp'
+			? ['root', 'Cancer-related Variables', 'Diagnosis']
+			: 'aaclassic_5'
+			? ['root', 'Cancer-related Variables', 'Treatment', 'Chemotherapy', 'Alklaying Agents']
+			: null
+
+	if (!expandedTermIds) throw `unmatched id -> expandedTermIds in plot.controls.config test`
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds,
+				visiblePlotIds: [id],
+				plots: {
+					[id]: {
+						term: { id: id },
+						settings: {
+							currViews: ['barchart'],
+							controls: {
+								isOpen: true
+							},
+							barchart: {
+								overlay: 'tree'
+							}
+						}
+					}
+				}
+			}
+		},
+		plotControls: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+}
+
 /**************
  test sections
 ***************/
@@ -26,31 +65,16 @@ tape('\n', function(test) {
 	test.pass('-***- termdb/plot.controls.config -***-')
 	test.end()
 })
-/*
+
 tape('overlay input', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(3000)
 	test.plan(6)
+	testByTermId('diaggrp', checkDisplayInAnyView)
 
-	runpp({
-		plot2restore: {
-			term: termjson['diaggrp'],
-			settings: {
-				currViews: [],
-				controls: { isVisible: true }
-			}
-		},
-		callbacks: {
-			controls: {
-				'postRender.test': checkDisplayInAnyView
-			}
-		}
-	})
-
-	function checkDisplayInAnyView(plot) {
-		plot.bus.on('postRender', null)
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayInAnyView(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Overlay with') return
-			test.equal(this.parentNode.style.display, 'table-row', 'should be visible in barchart view')
+			test.notEqual(this.parentNode.style.display, 'none', 'should be visible in barchart view')
 			const inputs = [...this.parentNode.querySelectorAll('input')]
 			test.equal(inputs.filter(inputIsVisible).length, 2, 'should have 2 options for non-condition term1')
 		})
@@ -61,41 +85,52 @@ tape('overlay input', function(test) {
 	}
 
 	runpp({
-		plot2restore: {
-			term: termjson['Arrhythmias'],
-			settings: {
-				currViews: [],
-				controls: { isVisible: true }
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				visiblePlotIds: ['Arrhythmias'],
+				plots: {
+					Arrhythmias: {
+						term: {
+							id: 'Arrhythmias',
+							term: termjson['Arrhythmias'],
+							q: { bar_by_grade: true, value_by_max_grade: true }
+						},
+						settings: {
+							currViews: ['barchart'],
+							controls: {
+								isOpen: true
+							},
+							barchart: {
+								overlay: 'tree'
+							}
+						}
+					}
+				}
 			}
 		},
-		callbacks: {
-			controls: {
+		plotControls: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	function runTests(plot) {
+	function runTests(plotControls) {
 		helpers
 			.rideInit({
-				bus: plot.components.controls.bus,
+				bus: plotControls,
 				eventType: 'postRender.test',
-				arg: plot
+				arg: plotControls
 			})
-			.to(checkChildrenOverlayOption, triggerChildrenOverlayOption, 200)
-			.to(checkGradeOverlayOption, triggerGradeOverlayOption, 200)
+			.run(checkChildrenOverlayOption, { wait: 200 })
+			.use(triggerGradeOverlayOption)
+			.to(checkGradeOverlayOption, { wait: 200 })
 			.done(test)
 	}
 
-	function triggerChildrenOverlayOption(plot) {
-		plot.obj.expanded_term_ids.push('Arrhythmias')
-		plot.main({
-			term: { term: termjson['Arrhythmias'], q: { bar_by_grade: true, value_by_max_grade: true } }
-		})
-	}
-
-	function checkChildrenOverlayOption(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkChildrenOverlayOption(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Overlay with') return
 			const inputs = [...this.parentNode.querySelectorAll('input')]
 			test.equal(inputs.filter(inputIsVisible).length, 3, 'should have 3 options for condition term1')
@@ -110,14 +145,22 @@ tape('overlay input', function(test) {
 		})
 	}
 
-	function triggerGradeOverlayOption(plot) {
-		plot.main({
-			term: { term: termjson['Arrhythmias'], q: { bar_by_children: true, value_by_max_grade: true } }
+	function triggerGradeOverlayOption(plotControls) {
+		plotControls.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: plotControls.id,
+			config: {
+				term: {
+					id: 'Arrhythmias',
+					term: termjson['Arrhythmias'],
+					q: { bar_by_children: true, value_by_max_grade: true }
+				}
+			}
 		})
 	}
 
-	function checkGradeOverlayOption(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkGradeOverlayOption(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Overlay with') return
 			const inputs = [...this.parentNode.querySelectorAll('input')]
 			test.equal(inputs.filter(inputIsVisible).length, 3, 'should have 3 options for condition term1')
@@ -135,50 +178,41 @@ tape('overlay input', function(test) {
 tape('orientation input', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(2)
+	testByTermId('diaggrp', runTests)
 
-	runpp({
-		plot2restore: {
-			term: termjson['diaggrp'],
-			settings: {
-				currViews: ['barchart'],
-				controls: { isVisible: true }
-			}
-		},
-		callbacks: {
-			controls: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	function runTests(plot) {
+	function runTests(plotControls) {
 		helpers
 			.rideInit({
-				bus: plot.components.controls.bus,
+				bus: plotControls,
 				eventType: 'postRender.test',
-				arg: plot
+				arg: plotControls
 			})
 			.run(checkDisplayInBarchartView)
-			.to(checkDisplayInNonBarchartView, triggerNonBarchartView)
+			.use(triggerNonBarchartView)
+			.to(checkDisplayInNonBarchartView, { wait: 50 })
 			.done(test)
 	}
 
-	function checkDisplayInBarchartView(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayInBarchartView(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Orientation') return
 			test.equal(this.parentNode.style.display, 'table-row', 'should be visible in barchart view')
 		})
 	}
 
-	function triggerNonBarchartView(plot) {
-		plot.main({
-			term2: { term: termjson['agedx'] },
-			settings: { currViews: ['table'] }
+	function triggerNonBarchartView(plotControls) {
+		plotControls.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: plotControls.id,
+			config: {
+				term2: { term: termjson['agedx'] },
+				settings: { currViews: ['table'] }
+			}
 		})
 	}
 
-	function checkDisplayInNonBarchartView(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayInNonBarchartView(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Orientation') return
 			test.equal(this.parentNode.style.display, 'none', 'should be hidden in non-barchart view')
 		})
@@ -188,50 +222,41 @@ tape('orientation input', function(test) {
 tape('scale input', function(test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
+	testByTermId('aaclassic_5', runTests)
 
-	runpp({
-		plot2restore: {
-			term: termjson['diaggrp'],
-			settings: {
-				currViews: ['barchart'],
-				controls: { isVisible: true }
-			}
-		},
-		callbacks: {
-			controls: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	function runTests(plot) {
+	function runTests(plotControls) {
 		helpers
 			.rideInit({
-				bus: plot.components.controls.bus,
+				bus: plotControls,
 				eventType: 'postRender.test',
-				arg: plot
+				arg: plotControls
 			})
 			.run(checkDisplayInBarchartView)
-			.to(checkDisplayInNonBarchartView, triggerNonBarchartView)
+			.use(triggerNonBarchartView)
+			.to(checkDisplayInNonBarchartView)
 			.done(test)
 	}
 
-	function checkDisplayInBarchartView(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayInBarchartView(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Scale') return
 			test.equal(this.parentNode.style.display, 'table-row', 'should be visible in barchart view')
 		})
 	}
 
-	function triggerNonBarchartView(plot) {
-		plot.main({
-			term2: { term: termjson['agedx'] },
-			settings: { currViews: ['table'] }
+	function triggerNonBarchartView(plotControls) {
+		plotControls.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: plotControls.id,
+			config: {
+				term2: { id: 'agedx', term: termjson['agedx'] },
+				settings: { currViews: ['table'] }
+			}
 		})
 	}
 
-	function checkDisplayInNonBarchartView(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayInNonBarchartView(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Scale') return
 			test.equal(this.parentNode.style.display, 'none', 'should be hidden in non-barchart view')
 		})
@@ -241,84 +266,84 @@ tape('scale input', function(test) {
 tape('divide by input', function(test) {
 	test.timeoutAfter(7000)
 	test.plan(4)
+	testByTermId('aaclassic_5', runTests)
 
-	runpp({
-		plot2restore: {
-			term: termjson['aaclassic_5'],
-			settings: {
-				currViews: ['barchart'],
-				controls: { isVisible: true }
-			}
-		},
-		callbacks: {
-			controls: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	function runTests(plot) {
+	function runTests(plotControls) {
 		helpers
 			.rideInit({
-				bus: plot.components.controls.bus,
+				bus: plotControls,
 				eventType: 'postRender.test',
-				arg: plot
+				arg: plotControls
 			})
 			.run(checkDisplayInBarchartView)
-			.to(checkDisplayInTableView, triggerTableView)
-			.to(checkDisplayInBoxplotView, triggerBoxplotView)
-			.to(checkDisplayInScatterView, triggerScatterView)
+			.use(triggerTableView)
+			.to(checkDisplayInTableView)
+			.use(triggerBoxplotView)
+			.to(checkDisplayInBoxplotView)
+			.use(triggerScatterView)
+			.to(checkDisplayInScatterView)
 			.done(test)
 	}
 
-	function checkDisplayInBarchartView(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayInBarchartView(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Divide by') return
 			test.equal(this.parentNode.style.display, 'table-row', 'should be visible in barchart view')
 		})
 	}
 
-	function triggerTableView(plot) {
-		plot.main({
-			term2: { term: termjson['agedx'] },
-			settings: { currViews: ['table'] }
+	function triggerTableView(plotControls) {
+		plotControls.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: plotControls.id,
+			config: {
+				term2: { id: 'agedx', term: termjson['agedx'] },
+				settings: { currViews: ['table'] }
+			}
 		})
 	}
 
-	function checkDisplayInTableView(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayInTableView(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Divide by') return
 			test.equal(this.parentNode.style.display, 'none', 'should be hidden in table view')
 		})
 	}
 
-	function triggerBoxplotView(plot) {
-		plot.main({
-			settings: { currViews: ['boxplot'] }
+	function triggerBoxplotView(plotControls) {
+		plotControls.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: plotControls.id,
+			config: {
+				settings: { currViews: ['boxplot'] }
+			}
 		})
 	}
 
-	function checkDisplayInBoxplotView(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayInBoxplotView(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Divide by') return
 			test.equal(this.parentNode.style.display, 'none', 'should be hidden in boxplot view')
 		})
 	}
 
-	function triggerScatterView(plot) {
-		plot.main({
-			settings: { currViews: ['scatter'] }
+	function triggerScatterView(plotControls) {
+		plotControls.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: plotControls.id,
+			config: {
+				settings: { currViews: ['scatter'] }
+			}
 		})
 	}
 
-	function checkDisplayInScatterView(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayInScatterView(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Divide by') return
 			test.equal(this.parentNode.style.display, 'table-row', 'should be hidden in scatter plot view')
 		})
 	}
-}) 
-*/
+})
 
 tape('Primary bins input', function(test) {
 	test.timeoutAfter(3000)

@@ -152,10 +152,11 @@ function setRenderers(self) {
 
 	self.getDisplayStyle = function(d) {
 		const term1 = self.plot.term.term
+		const q = self.plot.term.q
 		if (d.value == 'bar_by_children') {
-			return term1.iscondition && !term1.isleaf && term1.q && term1.q.bar_by_grade ? 'block' : 'none'
+			return term1.iscondition && !term1.isleaf && q && q.bar_by_grade ? 'block' : 'none'
 		} else if (d.value == 'bar_by_grade') {
-			return term1.iscondition && !term1.isleaf && term1.q && term1.q.bar_by_children ? 'block' : 'none'
+			return term1.iscondition && !term1.isleaf && q && q.bar_by_children ? 'block' : 'none'
 		} else {
 			const block = 'block' //term1.q.iscondition || (plot.term2 && plot.term2.term.iscondition) ? 'block' : 'inline-block'
 			//return d.value != 'genotype' || self.obj.modifier_ssid_barchart ? block : 'none'

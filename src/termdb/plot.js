@@ -46,8 +46,7 @@ class TdbPlot {
 				this.app,
 				{
 					id: this.id,
-					holder: this.dom.controls,
-					isVisible: false // plot.settings.controls.isVisible
+					holder: this.dom.controls
 				},
 				this.app.opts.plotControls
 			),
@@ -186,7 +185,7 @@ export function plotConfig(opts) {
 			settings: {
 				currViews: ['barchart'],
 				controls: {
-					isVisible: false, // control panel is hidden by default
+					isOpen: false, // control panel is hidden by default
 					term2: null, // the previous overlay value may be displayed as a convenience for toggling
 					term0: null
 				},

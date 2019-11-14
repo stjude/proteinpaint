@@ -15,7 +15,6 @@ class TdbPlotControls {
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
 		this.app = app
-		this.isOpen = false
 		this.setDom()
 
 		setInteractivity(this)
@@ -25,10 +24,7 @@ class TdbPlotControls {
 			topbar: topBarInit({
 				id: this.id,
 				holder: this.dom.topbar,
-				callback: () => {
-					this.isOpen = !this.isOpen
-					this.main()
-				}
+				callback: this.toggleVisibility
 			}),
 			config: configUiInit({
 				id: this.id,
@@ -65,15 +61,10 @@ class TdbPlotControls {
 		}
 	}
 
-	main() {
-		this.render()
+	main(arg) {
 		if (!this.state) return
-		for (const name in this.features) {
-			if (typeof this.features[name].update !== 'function') {
-				this.features[name].main(this.state, this.isOpen)
-			}
-		}
-		return { state: this.state } //, data }
+		this.isOpen = this.state.config.settings.controls.isOpen
+		this.render()
 	}
 }
 
@@ -82,12 +73,25 @@ export const controlsInit = rx.getInitFxn(TdbPlotControls)
 function setRenderers(self) {
 	self.render = function() {
 		self.dom.holder.style('background', self.isOpen ? panel_bg_color : '')
+		for (const name in self.features) {
+			self.features[name].main(self.state, self.isOpen)
+		}
 	}
 }
 
 function setInteractivity(self) {
-	self.toggleVisibility = isOpen => {
+	self.toggleVisibility = () => {
+		const isOpen = !self.isOpen
+		self.app.save({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				settings: {
+					controls: { isOpen }
+				}
+			}
+		})
 		self.isOpen = isOpen
-		self.main()
+		self.render()
 	}
 }

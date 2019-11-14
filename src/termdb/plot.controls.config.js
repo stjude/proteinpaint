@@ -34,6 +34,7 @@ class TdbConfigUiInit {
 		this.api = {
 			main: (state, isOpen) => {
 				this.render(isOpen)
+				if (!state) return
 				const plot = state.config
 				for (const name in this.inputs) {
 					if (name == 'overlay' || name == 'divideBy' || name == 'barsAs') this.inputs[name].main(state)
@@ -105,7 +106,6 @@ function setOrientationOpts(opts) {
 		options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }],
 		listeners: {
 			input(d) {
-				console.log('test')
 				opts.dispatch({
 					type: 'plot_edit',
 					id: opts.id,
