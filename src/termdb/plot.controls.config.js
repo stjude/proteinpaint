@@ -2,7 +2,9 @@ import { getInitFxn } from '../common/rx.core'
 import { overlayInputInit } from './plot.controls.overlay'
 import { divideByInputInit } from './plot.controls.divideBy'
 import { initRadioInputs } from '../common/dom'
-import { numeric_bin_edit } from '../mds.termdb.termsetting.ui'
+// temporarily use legacy termui_display to prototype the barsAs input
+import { numeric_bin_edit, display as termui_display } from '../mds.termdb.termsetting.ui'
+import { termSettingInit } from './termsetting'
 
 class TdbConfigUiInit {
 	constructor(opts) {
@@ -13,7 +15,7 @@ class TdbConfigUiInit {
 		const dispatch = opts.dispatch
 		const table = this.setDom()
 		this.inputs = {
-			//barsAs: setBarsAsOpts({ holder: table.append('tr'), label: 'Bars as' }),
+			barsAs: setBarsAsOpts({ holder: table.append('tr'), label: 'Bars as', dispatch, tip: opts.tip, id: this.id }),
 			overlay: overlayInputInit({ holder: table.append('tr'), dispatch, id: this.id }),
 			view: setViewOpts({ holder: table.append('tr'), dispatch, id: this.id }),
 			orientation: setOrientationOpts({ holder: table.append('tr'), dispatch, id: this.id }),
@@ -34,7 +36,7 @@ class TdbConfigUiInit {
 				this.render(isOpen)
 				const plot = state.config
 				for (const name in this.inputs) {
-					if (name == 'overlay' || name == 'divideBy') this.inputs[name].main(state)
+					if (name == 'overlay' || name == 'divideBy' || name == 'barsAs') this.inputs[name].main(state)
 					else this.inputs[name].main(plot) //, data)
 				}
 			}
@@ -253,28 +255,68 @@ function setViewOpts(opts) {
 }
 
 function setBarsAsOpts(opts) {
-	const tr = opts.holder
-	const plot = app.getState({ type: controls.type, id: controls.id })
-	tr.append('td')
-		.html(opts.label)
-		.attr('class', 'sja-termdb-config-row-label')
-	const td = tr.append('td')
-
-	function termuiCallback(term) {
-		controls.dispatch({ term, id: opts.id })
-	}
-
-	termSettingInit(app, { holder: td.append('div'), plot, term_id: 'term1', id: controls.id })
-
-	return {
-		main(plot) {
-			if (!self.termuiObj) {
-				self.termuiObj = getTermuiObj(app, plot, td.append('div'), '', 'term', termuiCallback)
+	const self = {
+		dom: {
+			row: opts.holder,
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		},
+		async setPill() {
+			// temporarily use the legacy termui_display to prototype the barsAs input
+			// to be replaced by common/termsetting initializer
+			const q = self.plot.term.q ? self.plot.term.q : {}
+			self.pill = {
+				holder: self.dom.inputTd,
+				genome: self.state.genome,
+				mds: self.state.mds,
+				tip: opts.tip,
+				currterm: self.term,
+				termsetting: { term: Object.assign({}, self.plot.term.term, { q }), q },
+				is_term1: true,
+				callback: self.editTerm,
+				isCoordinated: true
+				// update_ui: will be attached by term_display
 			}
-			tr.style('display', plot.term && plot.term.term.iscondition ? 'table-row' : 'none')
-			// termuiObj.update_ui()
+			await termui_display(self.pill)
+		},
+		editTerm(term) {
+			//self.plot.term = Object.assign({}, self.plot.term, {q: term.q})
+			console.log(term)
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: { term: { id: term.id, term, q: term.q ? term.q : {} } }
+			})
 		}
 	}
+
+	const api = {
+		async main(state) {
+			self.state = state
+			self.plot = state.config
+			if (!self.plot.term || !self.plot.term.term.iscondition) {
+				self.dom.row.style('display', 'none')
+				return
+			}
+			self.dom.row.style('display', 'table-row')
+			if (!self.pill) {
+				await self.setPill()
+			} else {
+				const q = self.plot.term.q ? self.plot.term.q : {}
+				self.pill.termsetting = {
+					term: Object.assign({}, self.plot.term.term, { q }),
+					q
+				}
+				self.pill.update_ui()
+			}
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
 }
 
 function setBinOpts(opts) {

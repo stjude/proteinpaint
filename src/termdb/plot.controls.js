@@ -67,6 +67,7 @@ class TdbPlotControls {
 
 	main() {
 		this.render()
+		if (!this.state) return
 		for (const name in this.features) {
 			if (typeof this.features[name].update !== 'function') {
 				this.features[name].main(this.state, this.isOpen)

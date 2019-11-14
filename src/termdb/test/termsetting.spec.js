@@ -26,7 +26,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape.only('caterogical term overlay', function(test) {
+tape('caterogical term overlay', function(test) {
 	runpp({
 		state: {
 			tree: {

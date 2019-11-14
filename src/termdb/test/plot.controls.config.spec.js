@@ -333,7 +333,7 @@ tape('Primary bins input', function(test) {
 					agedx: {
 						term: { id: 'agedx' },
 						settings: {
-							currViews: ['barchart']
+							currViews: []
 						}
 					}
 				}
@@ -362,7 +362,7 @@ tape('Primary bins input', function(test) {
 					diaggrp: {
 						term: { id: 'diaggrp' },
 						settings: {
-							currViews: ['barchart']
+							currViews: []
 						}
 					}
 				}
@@ -383,58 +383,65 @@ tape('Primary bins input', function(test) {
 	}
 })
 
-/*
-tape("Bars-as input", function(test) {
+tape('Bars-as input', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(2)
 
 	runpp({
 		state: {
 			tree: {
-				term: termjson['Arrhythmias'],
-				settings: {
-					currViews: [],
-					controls: { isVisible: true }
+				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				visiblePlotIds: ['Arrhythmias'],
+				plots: {
+					Arrhythmias: {
+						term: { id: 'Arrhythmias' },
+						settings: {
+							currViews: ['barchart']
+						}
+					}
 				}
-			},
+			}
+		},
+		plotControls: {
 			callbacks: {
-				controls: {
-					'postRender.test': runTests
-				}
+				'postRender.test': checkDisplayWithConditionTerm
 			}
 		}
 	})
 
-	function runTests(plot) {
-		helpers
-			.rideInit({
-				bus: plot.components.controls.bus,
-				eventType: 'postRender.test',
-				arg: plot
-			})
-			.run(checkDisplayWithNumericTerm)
-			.to(checkDisplayWithCategoricalTerm, triggerCategoricalTerm)
-			.done(test)
-	}
-
-	function checkDisplayWithNumericTerm(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayWithConditionTerm(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Bars as') return
 			test.equal(this.parentNode.style.display, 'table-row', 'should be visible with condition term')
 		})
 	}
 
-	function triggerCategoricalTerm(plot) {
-		plot.obj.expanded_term_ids.push('diaggrp')
-		plot.main({
-			term: { term: termjson['diaggrp'] }
-		})
-	}
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				visiblePlotIds: ['sex'],
+				plots: {
+					sex: {
+						term: { id: 'sex' },
+						settings: {
+							currViews: ['barchart']
+						}
+					}
+				}
+			}
+		},
+		plotControls: {
+			callbacks: {
+				'postRender.test': checkDisplayWithCategoricalTerm
+			}
+		}
+	})
 
-	function checkDisplayWithCategoricalTerm(plot) {
-		plot.dom.controls.selectAll('.sja-termdb-config-row-label').each(function() {
+	function checkDisplayWithCategoricalTerm(plotControls) {
+		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Bars as') return
-			test.equal(this.parentNode.style.display, 'none', 'should be hidden with non-condition term')
+			test.equal(this.parentNode.style.display, 'none', 'should be hidden with non-numeric term')
 		})
 	}
 })
