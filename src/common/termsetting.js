@@ -102,6 +102,7 @@ function setRenderers(self) {
 			.on('click', self.showTree)
 		self.dom.pilldiv = self.dom.holder
 			.append('div')
+			.attr('class', 'ts_pill')
 			.style('cursor', 'pointer')
 			.on('click', self.showMenu)
 
@@ -126,7 +127,7 @@ function setRenderers(self) {
 		self.dom.pill_termname = self.dom.pilldiv
 			.append('div')
 			.style('display', 'inline-block')
-			.attr('class', 'sja_filter_tag_btn add_term_btn')
+			.attr('class', 'sja_filter_tag_btn ts_name_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
 			.style('background', '#4888BF')
@@ -134,7 +135,7 @@ function setRenderers(self) {
 		self.dom.pill_settingSummary = self.dom.pilldiv // this may be hidden
 			.append('div')
 			.style('display', 'inline-block')
-			.attr('class', 'sja_filter_tag_btn add_term_btn')
+			.attr('class', 'sja_filter_tag_btn ts_summnary_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
 			.style('background', '#4888BF')
@@ -257,7 +258,7 @@ function setInteractivity(self) {
 			.text(default_btn_txt)
 
 		//show button/s for default groups
-		if (self.term.groupsetting.lst) {
+		if (self.term.groupsetting && self.term.groupsetting.lst) {
 			for (const group of self.term.groupsetting.lst) {
 				div
 					.append('div')
@@ -288,7 +289,7 @@ function setInteractivity(self) {
 			.style('color', '#000')
 			.html('Divide <b>' + self.term.name + '</b> to groups')
 
-		if (self.term.groupsetting.disabled) devide_btn.style('display', 'none')
+		if (self.term.groupsetting && self.term.groupsetting.disabled) devide_btn.style('display', 'none')
 	}
 
 	self.showNumOpts = async function(div) {}
