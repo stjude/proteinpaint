@@ -1,5 +1,6 @@
 import { getInitFxn } from '../common/rx.core'
 import { overlayInputInit } from './plot.controls.overlay'
+import { divideByInputInit } from './plot.controls.divideBy'
 import { initRadioInputs } from '../common/dom'
 
 class TdbConfigUiInit {
@@ -15,9 +16,9 @@ class TdbConfigUiInit {
 			overlay: overlayInputInit({ holder: table.append('tr'), dispatch, id: this.id }),
 			view: setViewOpts({ holder: table.append('tr'), dispatch, id: this.id }),
 			orientation: setOrientationOpts({ holder: table.append('tr'), dispatch, id: this.id }),
-			scale: setScaleOpts({ holder: table.append('tr'), dispatch, id: this.id })
+			scale: setScaleOpts({ holder: table.append('tr'), dispatch, id: this.id }),
 			//bin: setBinOpts({ holder: table.append('tr'), label: 'Primary Bins' }),
-			//divideBy: setDivideByOpts({ holder: table.append('tr') })
+			divideBy: divideByInputInit({ holder: table.append('tr'), dispatch, id: this.id })
 		}
 
 		this.api = {
@@ -25,7 +26,7 @@ class TdbConfigUiInit {
 				this.render(isOpen)
 				const plot = state.config
 				for (const name in this.inputs) {
-					if (name == 'overlay') this.inputs[name].main(state)
+					if (name == 'overlay' || name == 'divideBy') this.inputs[name].main(state)
 					else this.inputs[name].main(plot) //, data)
 				}
 			}
@@ -241,103 +242,6 @@ function setViewOpts(opts) {
 
 	if (opts.debug) api.Inner = self
 	return Object.freeze(api)
-}
-
-function setDivideByOpts(app, opts, controls) {
-	const self = {
-		dom: {
-			row: opts.holder,
-			labelTd: row
-				.append('td')
-				.html('Divide by')
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		}
-	}
-
-	self.radio = initRadioInputs({
-		name: 'pp-termdb-divide-by',
-		holder: td,
-		options: [{ label: 'None', value: 'none' }, { label: '', value: 'tree' }, { label: 'Genotype', value: 'genotype' }],
-		listeners: {
-			input(d) {
-				d3event.stopPropagation()
-				if (d.value == 'none') {
-					opts.dispatch({ type: 'plot_edit', id: opts.id, term0: undefined })
-				} else if (d.value == 'tree') {
-					opts.dispatch({
-						term0: { type: 'plot_edit', id: opts.id, term: termuiObj.termsetting.term }
-					})
-				} else if (d.value == 'genotype') {
-					// to-do
-				}
-			}
-		}
-	})
-
-	//add blue-pill for term0
-	self.dom.pill_div = d3select(
-		radio.dom.divs
-			.filter(d => {
-				return d.value == 'tree'
-			})
-			.node()
-	)
-		.append('div')
-		.style('display', 'inline-block')
-
-	function termuiCallback(term0) {
-		controls.dispatch({
-			type: 'plot_edit',
-			id: opts.id,
-			config: {
-				term0: term0 ? { term: term0 } : undefined,
-				settings: {
-					barchart: {
-						divideBy: term0 ? 'tree' : 'none'
-					}
-				}
-			}
-		})
-	}
-
-	termSettingInit(app, { holder: pill_div, plot, term_id: 'term0', id: controls.id })
-
-	return {
-		main(plot) {
-			if (!self.termuiObj) {
-				self.termuiObj = getTermuiObj(app, plot, pill_div, 'Select term', 'term0', termuiCallback)
-			}
-
-			// hide all options when opened from genome browser view
-			tr.style(
-				'display',
-				app.opts.modifier_ssid_barchart ||
-					(!plot.settings.currViews.includes('barchart') && !plot.settings.currViews.includes('scatter'))
-					? 'none'
-					: 'table-row'
-			)
-			// do not show genotype divideBy option when opened from stand-alone page
-			if (!plot.settings.barchart.divideBy) {
-				plot.settings.barchart.divideBy = app.opts.modifier_ssid_barchart ? 'genotype' : plot.term0 ? 'tree' : 'none'
-			}
-			radio.main(plot.settings.barchart.divideBy)
-
-			radio.dom.divs.style('display', d => {
-				if (d.value == 'max_grade_perperson' || d.value == 'most_recent_grade') {
-					return plot.term.term.iscondition || (plot.term0 && plot.term0.term.iscondition) ? 'block' : 'none'
-				} else {
-					const block = 'block'
-					return d.value != 'genotype' || app.opts.modifier_ssid_barchart ? block : 'none'
-				}
-			})
-
-			if (plot.term0 && plot.term0.term != termuiObj.termsetting.term) {
-				termuiObj.termsetting.term = plot.term0.term
-				// termuiObj.update_ui()
-			}
-		}
-	}
 }
 
 function setBarsAsOpts(opts) {

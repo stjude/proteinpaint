@@ -182,7 +182,8 @@ export function plotConfig(opts) {
 				currViews: ['barchart'],
 				controls: {
 					isVisible: false, // control panel is hidden by default
-					term2: null // the previous overlay value may be displayed as a convenience for toggling
+					term2: null, // the previous overlay value may be displayed as a convenience for toggling
+					term0: null
 				},
 				common: {
 					use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log

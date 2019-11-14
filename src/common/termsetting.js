@@ -28,11 +28,10 @@ class TermSetting {
 		setRenderers(this)
 		this.initUI()
 
-		// this api will be frozen inside the function returned by getInitFxn()
+		// this api will be frozen inside the function returned by rx.getInitFxn()
 		this.api = {
-
 			main: (data = {}) => {
-				console.log(data)
+				//console.log(data)
 				this.term = data.term
 				this.q = data.q
 				this.disable_terms = data.disable_terms

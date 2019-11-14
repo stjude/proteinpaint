@@ -76,7 +76,7 @@ tape('single barchart, categorical bars', function(test) {
 	}
 })
 
-tape.only('single chart, with overlay', function(test) {
+tape('single chart, with overlay', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
 		termfilter,
@@ -141,6 +141,94 @@ tape.only('single chart, with overlay', function(test) {
 		test.true(overlay_ordered, 'overlays order is same as legend')
 	}
 }) /*
+tape('click to add numeric, condition term filter', function(test) {
+	const termfilter = { show_top_ui: true, terms: [] }
+	runpp({
+		termfilter,
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
+				plots: {
+					diaggrp: {
+						term: { id: 'agedx' },
+						term2: {
+							id: 'Arrhythmias'
+						},
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	function runTests(plot) {
+		test.end()
+		return
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		helpers
+			.rideInit({ arg: plot, eventType: 'postRender.test' })
+			.use(triggerBarClick)
+			.use(triggerMenuClick, { wait: 100 })
+			.to(testTermValues)
+			.done(test)
+	}
+
+	function triggerBarClick(plot) {
+		const elem = barDiv.select('.bars-cell').select('rect')
+		elem.node().dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function triggerMenuClick(plot) {
+		plot.Inner.app.Inner.tip.d
+			.selectAll('.sja_menuoption')
+			.filter(d => d.label.includes('filter'))
+			.node()
+			.dispatchEvent(new Event('click', { bubbles: true }))
+	}
+
+	function testTermValues(plot, clickedData) {
+		setTimeout(() => {
+			test.equal(
+				termfilter.terms && termfilter.terms.length,
+				2,
+				'should create two tvslst filters when a numeric term overlay is clicked'
+			)
+			test.deepEqual(
+				termfilter.terms[0],
+				{
+					term: plot.term.term,
+					ranges: [plot.term.bins.find(d => d.label == clickedData.seriesId)]
+				},
+				'should create a numeric term-value filter with a ranges key'
+			)
+			test.deepEqual(
+				termfilter.terms[1],
+				Object.assign(
+					{
+						term: plot.term2.term,
+						values: [
+							{
+								key: clickedData.dataId,
+								label: plot.term2.term.values[clickedData.dataId].label
+							}
+						]
+					},
+					plot.term2.q
+				),
+				'should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys'
+			)
+
+			test.end()
+		}, 200)
+	}
+}) */ /*
 tape('click to add condition child term filter', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
@@ -245,95 +333,7 @@ tape('click to add condition grade and child term filter', function(test) {
 		}, 200)
 	}
 })
-*/ /*
-tape('click to add numeric, condition term filter', function(test) {
-	const termfilter = { show_top_ui: true, terms: [] }
-	runpp({
-		termfilter,
-		state: {
-			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						term: { id: 'agedx' },
-						term2: {
-							id: 'Arrhythmias'
-						},
-						settings: { currViews: ['barchart'] }
-					}
-				}
-			}
-		},
-		plot: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	let barDiv
-	function runTests(plot) {
-		test.end()
-		return
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		helpers
-			.rideInit({ arg: plot, eventType: 'postRender.test' })
-			.use(triggerBarClick)
-			.use(triggerMenuClick, { wait: 100 })
-			.to(testTermValues)
-			.done(test)
-	}
-
-	function triggerBarClick(plot) {
-		const elem = barDiv.select('.bars-cell').select('rect')
-		elem.node().dispatchEvent(new Event('click', { bubbles: true }))
-	}
-
-	function triggerMenuClick(plot) {
-		plot.Inner.app.Inner.tip.d
-			.selectAll('.sja_menuoption')
-			.filter(d => d.label.includes('filter'))
-			.node()
-			.dispatchEvent(new Event('click', { bubbles: true }))
-	}
-
-	function testTermValues(plot, clickedData) {
-		setTimeout(() => {
-			test.equal(
-				termfilter.terms && termfilter.terms.length,
-				2,
-				'should create two tvslst filters when a numeric term overlay is clicked'
-			)
-			test.deepEqual(
-				termfilter.terms[0],
-				{
-					term: plot.term.term,
-					ranges: [plot.term.bins.find(d => d.label == clickedData.seriesId)]
-				},
-				'should create a numeric term-value filter with a ranges key'
-			)
-			test.deepEqual(
-				termfilter.terms[1],
-				Object.assign(
-					{
-						term: plot.term2.term,
-						values: [
-							{
-								key: clickedData.dataId,
-								label: plot.term2.term.values[clickedData.dataId].label
-							}
-						]
-					},
-					plot.term2.q
-				),
-				'should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys'
-			)
-
-			test.end()
-		}, 200)
-	}
-}) */
+*/
 /*
 tape('single chart, genotype overlay', function(test) {
 	const termfilter = { show_top_ui: true, terms: [] }
@@ -368,39 +368,46 @@ tape('single chart, genotype overlay', function(test) {
 		test.end()
 	}
 })
-*/ tape(
-	'multiple charts',
-	function(test) {
-		runpp({
-			state: {
-				tree: {
-					expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
-					visiblePlotIds: ['diaggrp'],
-					plots: {
-						diaggrp: {
-							term: { id: 'diaggrp' },
-							term0: { id: 'agedx' },
-							settings: { currViews: ['barchart'] }
+*/
+
+tape('multiple charts', function(test) {
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
+				plots: {
+					diaggrp: {
+						term: { id: 'diaggrp' },
+						term0: { id: 'agedx' },
+						settings: {
+							currViews: ['barchart'],
+							barchart: {
+								divideBy: 'tree'
+							},
+							controls: {
+								term0: { id: 'agedx', term: termjson['agedx'] }
+							}
 						}
 					}
 				}
-			},
-			plot: {
-				callbacks: {
-					'postRender.test': testNumCharts
-				}
 			}
-		})
-
-		let barDiv
-		function testNumCharts(plot) {
-			barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-			const numCharts = barDiv.selectAll('.pp-sbar-div').size()
-			test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
-			test.end()
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': testNumCharts
+			}
 		}
+	})
+
+	let barDiv
+	function testNumCharts(plot) {
+		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
+		test.end()
 	}
-)
+})
 
 tape('series visibility', function(test) {
 	runpp({
