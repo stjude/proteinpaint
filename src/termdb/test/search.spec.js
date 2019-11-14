@@ -101,12 +101,13 @@ tape('term search, default behavior', function(test) {
 	}
 })
 
-tape('modifiers: click_term', test => {
+tape('click_term', test => {
 	test.timeoutAfter(1000)
 
 	runpp({
-		modifiers: {
-			click_term: modifier_callback
+		tree: {
+			click_term: modifier_callback,
+			disable_terms: ['Cardiomyopathy']
 		},
 		search: {
 			callbacks: {
@@ -127,8 +128,10 @@ tape('modifiers: click_term', test => {
 		search.Inner.doSearch('cardio')
 	}
 	function testSearchResult(search) {
-		const buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn add_term_btn')
-		test.equal(buttons.length, 3, 'should show 3 buttons')
+		const disabledlabels = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_tree_click_term_disabled')
+		test.equal(disabledlabels.length, 1, 'should show 1 disabled term')
+		const buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn sja_tree_click_term')
+		test.ok(buttons.length > 0, 'should show 1 or more clickable buttons')
 		buttons[0].click()
 	}
 	function modifier_callback(term) {
