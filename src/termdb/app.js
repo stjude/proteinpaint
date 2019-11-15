@@ -40,13 +40,17 @@ ssid is no longer a modifier, but as a customization attribute for barchart
 */
 
 class TdbApp {
-	constructor(parentApp, opts) {
+	constructor(coordApp, opts) {
+		// moving to component.getState() breaks previous assumptions with app.subState[component.type].get();
+		// this issue DOES NOT affect uncoordinated, standalone use of the termdb app
+		// such as in the blue pill - shoul still be okay
+		if (coordApp) throw `TODO: termdb app does not currently support a parent coordinating app (coordApp)`
 		this.type = 'app'
 		this.opts = this.initOpts(opts)
 		this.tip = new Menu({ padding: '5px' })
 		// the TdbApp may be the root app or a component within another app
-		this.api = parentApp ? rx.getComponentApi(this) : rx.getAppApi(this)
-		this.app = parentApp ? parentApp : this.api
+		this.api = coordApp ? rx.getComponentApi(this) : rx.getAppApi(this)
+		this.app = coordApp ? coordApp : this.api
 
 		this.dom = {
 			holder: opts.holder.style('margin', '10px'),
@@ -65,7 +69,7 @@ class TdbApp {
 
 		// catch initialization error
 		try {
-			if (!parentApp) this.store = storeInit(this.api)
+			if (!coordApp) this.store = storeInit(this.api)
 			const modifiers = this.validateModifiers(this.opts.modifiers)
 			this.components = {}
 			if ((this.opts.tree && this.opts.tree.click_term) || modifiers.tvs_select) {
