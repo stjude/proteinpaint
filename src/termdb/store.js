@@ -4,9 +4,9 @@ import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
 import getterm from '../common/getterm'
 
+// state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
+
 const defaultState = {
-	// genome: "", // must be supplied
-	// dslabel: "", // must be supplied
 	tree: {
 		expandedTermIds: [],
 		visiblePlotIds: [],
@@ -195,3 +195,53 @@ TdbStore.prototype.actions = {
 }
 
 exports.storeInit = rx.getInitFxn(TdbStore)
+
+/******* helper functions for fill-in q{} from term{}
+term-type specific logic in doing the fill
+for numeric term as term2, term.bins.less (if available) will be used but not term.bins.default
+*/
+
+function numeric_fill_q(q, b) {
+	/*
+	situation-specific logic
+	when term is term1, will call as "numeric_fill_q( q, term.bins.default )"
+	when term is term2 or term0 and has .bins.less, call as "numeric_fill_q( q, term.bins.less )"
+
+	if q is already initiated, do not overwrite
+	*/
+	// not sure if it can work with partially declared state
+	rx.copyMerge(q, b)
+}
+
+function categorycondition_fill_q(q, term) {
+	// work for both categorical and condition term
+	// term.groupsetting is required
+	if (!term.iscategorical && !term.iscondition) throw 'term is not categorical or condition'
+	if (!q.groupsetting) q.groupsetting = {}
+	if (term.groupsetting.disabled) {
+		q.groupsetting.disabled = true
+		return
+	}
+	delete q.groupsetting.disabled
+	if (!('inuse' in q.groupsetting)) q.groupsetting.inuse = false // do not apply by default
+	if (!q.groupsetting.inuse) {
+		// inuse:false is either from automatic setup or predefined in state
+		// then no need for additional setup
+		return
+	}
+	if (term.groupsetting.lst && term.groupsetting.useIndex >= 0 && term.groupsetting.lst[term.groupsetting.useIndex]) {
+		q.groupsetting.predefined_groupset_idx = term.groupsetting.useIndex
+	}
+	if (term.iscondition) {
+		if (q.value_by_max_grade || q.value_by_most_recent || q.value_by_computable_grade) {
+			// need any of the three to be set
+		} else {
+			// set a default one
+			q.value_by_max_grade = true
+		}
+		if (q.bar_by_grade || q.bar_by_children) {
+		} else {
+			q.bar_by_grade = true
+		}
+	}
+}
