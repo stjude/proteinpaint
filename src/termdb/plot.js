@@ -7,6 +7,7 @@ import { statTableInit } from './stattable'
 import { tableInit } from './table'
 import { boxplotInit } from './boxplot'
 import { scatterInit } from './scatter'
+import { termInfoInit } from './termInfo'
 import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 
 class TdbPlot {
@@ -41,21 +42,41 @@ class TdbPlot {
 				.style('margin-left', '50px')
 		}
 
+		const controls = controlsInit(
+			this.app,
+			{
+				id: this.id,
+				holder: this.dom.controls
+			},
+			this.app.opts.plotControls
+		)
+
 		this.components = {
-			controls: controlsInit(
+			controls,
+			barchart: barInit(
 				this.app,
-				{
-					id: this.id,
-					holder: this.dom.controls
-				},
-				this.app.opts.plotControls
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.barchart)
 			),
-			barchart: barInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.barchart),
 			stattable: statTableInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.stattable),
-			table: tableInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.table),
-			boxplot: boxplotInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.boxplot),
-			scatter: scatterInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.scatter)
+			table: tableInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.table)
+			),
+			boxplot: boxplotInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.boxplot)
+			),
+			scatter: scatterInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.scatter)
+			),
+			termInfo: termInfoInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.termInfo)
 		}
+
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
@@ -228,6 +249,9 @@ export function plotConfig(opts) {
 					ciVisible: true,
 					fillOpacity: 0.2,
 					duration: 1000
+				},
+				termInfo: {
+					isVisible: false
 				}
 			}
 		},

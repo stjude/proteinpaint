@@ -11,8 +11,10 @@ class TdbTable {
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')
 		}
+		setInteractivity(this)
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
+		opts.controls.on('downloadClick.table', this.download)
 	}
 
 	getState(appState, sub) {
@@ -71,11 +73,13 @@ class TdbTable {
 		})
 		return [column_keys, rows]
 	}
+}
 
-	download() {
-		if (!this.state.isVisible) return
+function setInteractivity(self) {
+	self.download = () => {
+		if (!self.state || !self.state.isVisible) return
 		const data = []
-		this.dom.div.selectAll('tr').each(function() {
+		self.dom.div.selectAll('tr').each(function() {
 			const series = []
 			select(this)
 				.selectAll('th, td')
@@ -91,7 +95,7 @@ class TdbTable {
 		a.addEventListener(
 			'click',
 			function() {
-				a.download = this.config.term.term.name + ' table.txt'
+				a.download = self.config.term.term.name + ' table.txt'
 				a.href = URL.createObjectURL(new Blob([matrix], { type: 'text/tab-separated-values' }))
 				document.body.removeChild(a)
 			},

@@ -43,6 +43,7 @@ class TdbBarchart {
 		this.term2toColor = {}
 		this.processedExcludes = []
 		this.eventTypes = ['postInit', 'postRender', 'postClick']
+		opts.controls.on('downloadClick.barchart', this.download)
 	}
 
 	getState(appState) {
@@ -395,7 +396,7 @@ function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
 	self.download = function() {
-		if (!self.state.isVisible) return
+		if (!self.state || !self.state.isVisible) return
 		// has to be able to handle multichart view
 		const mainGs = []
 		const translate = { x: undefined, y: undefined }

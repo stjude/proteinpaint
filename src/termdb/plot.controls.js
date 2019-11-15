@@ -20,21 +20,37 @@ class TdbPlotControls {
 		setInteractivity(this)
 		setRenderers(this)
 
+		const debug = this.app.opts.debug
 		this.features = {
 			topbar: topBarInit({
 				id: this.id,
 				holder: this.dom.topbar,
-				callback: this.toggleVisibility
+				callback: this.toggleVisibility,
+				downloadHandler: () => this.bus.emit('downloadClick'),
+				infoHandler: isOpen =>
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: opts.id,
+						config: {
+							settings: {
+								termInfo: {
+									isVisible: isOpen
+								}
+							}
+						}
+					}),
+				debug
 			}),
 			config: configUiInit({
 				id: this.id,
 				holder: this.dom.config_div,
 				dispatch: this.app.dispatch,
-				tip: app.tip
+				tip: app.tip,
+				debug
 			})
 		}
 
-		this.eventTypes = ['postInit', 'postRender']
+		this.eventTypes = ['postInit', 'postRender', 'downloadClick', 'infoClick']
 	}
 
 	setDom() {

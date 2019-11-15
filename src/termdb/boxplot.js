@@ -10,6 +10,7 @@ class TdbBoxplot {
 		this.type = 'boxplot'
 		this.id = opts.id
 		this.app = app
+		this.opts = opts
 		this.api = rx.getComponentApi(this)
 
 		const div = opts.holder.style('display', 'none')
@@ -24,8 +25,10 @@ class TdbBoxplot {
 			graph_g: svg.append('g') // for bar and label of each data item
 		}
 
+		setInteractivity(this)
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
+		opts.controls.on('downloadClick.boxplot', this.download)
 	}
 
 	getState(appState, sub) {
@@ -79,11 +82,13 @@ class TdbBoxplot {
 		})
 		return [lst, binmax]
 	}
+}
 
-	download() {
-		if (!this.state.isVisible) return
-		const svg_name = this.config.term.term.name + ' boxplot'
-		client.to_svg(this.dom.svg.node(), svg_name, { apply_dom_styles: true })
+function setInteractivity(self) {
+	self.download = () => {
+		if (!self.state || !self.state.isVisible) return
+		const svg_name = self.config.term.term.name + ' boxplot'
+		client.to_svg(self.dom.svg.node(), svg_name, { apply_dom_styles: true })
 	}
 }
 

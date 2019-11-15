@@ -14,21 +14,30 @@ class TdbConfigUiInit {
 
 		const dispatch = opts.dispatch
 		const table = this.setDom()
+		const debug = opts.debug
 		this.inputs = {
-			barsAs: setBarsAsOpts({ holder: table.append('tr'), label: 'Bars as', dispatch, tip: opts.tip, id: this.id }),
-			overlay: overlayInputInit({ holder: table.append('tr'), dispatch, id: this.id }),
-			view: setViewOpts({ holder: table.append('tr'), dispatch, id: this.id }),
-			orientation: setOrientationOpts({ holder: table.append('tr'), dispatch, id: this.id }),
-			scale: setScaleOpts({ holder: table.append('tr'), dispatch, id: this.id }),
+			barsAs: setBarsAsOpts({
+				holder: table.append('tr'),
+				label: 'Bars as',
+				dispatch,
+				tip: opts.tip,
+				id: this.id,
+				debug
+			}),
+			overlay: overlayInputInit({ holder: table.append('tr'), dispatch, id: this.id, debug }),
+			view: setViewOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
+			orientation: setOrientationOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
+			scale: setScaleOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
 			bin: setBinOpts({
 				holder: table.append('tr'),
 				label: 'Primary Bins',
 				dispatch,
 				id: this.id,
 				tip: opts.tip,
-				termNum: 'term'
+				termNum: 'term',
+				debug
 			}),
-			divideBy: divideByInputInit({ holder: table.append('tr'), dispatch, id: this.id })
+			divideBy: divideByInputInit({ holder: table.append('tr'), dispatch, id: this.id, debug })
 		}
 
 		this.api = {
