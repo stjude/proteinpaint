@@ -72,9 +72,9 @@ tape('caterogical term overlay', function(test) {
 	}
 
 	function testTerm2Pill(plot) {
-		console.log(plot)
+		// console.log(plot)
 		test.equal(
-			plot.Inner.components.controls.Inner.dom.config_div.selectAll('.ts_pill')._groups[0][0].innerText,
+			plot.Inner.components.controls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][0].innerText,
 			plot.Inner.state.config.term2.term.name,
 			'Should have 1 pill for overlay term'
 		)

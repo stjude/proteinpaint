@@ -60,6 +60,7 @@ class TermSetting {
 		// this api will be frozen and returned by termsettingInit()
 		this.api = {
 			main: async (data = {}) => {
+				// console.log(data)
 				this.validateMainData(data)
 				this.term = data.term
 				this.q = data.q
@@ -137,8 +138,8 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.attr('class', 'sja_filter_tag_btn ts_summnary_btn')
 			.style('padding', '3px 6px 3px 6px')
-			.style('border-radius', '6px')
-			.style('background', '#4888BF')
+			.style('border-radius', '0 6px 6px 0')
+			.style('background', '#674EA7')
 			.style('color', 'white')
 	}
 
@@ -150,11 +151,22 @@ function setRenderers(self) {
 			return
 		}
 		// has term
+		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
+		const grp_summary_text =
+			self.term.groupsetting &&
+			self.term.groupsetting.lst &&
+			self.q.groupsetting &&
+			self.q.groupsetting.predefined_groupset_idx
+				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
+				: self.q.customset
+				? 'Divided into' + self.q.customset.groups.length + 'groups'
+				: ''
+
 		self.dom.nopilldiv.style('display', 'none')
 		self.dom.pilldiv.style('display', 'block')
-		self.dom.pill_termname.html(self.term.name) // TODO trim long string
-		// self.dom.pill_settingSummary.style('display', ??)
-		// self.dom.pill_settingSummary.html( ?? )
+		self.dom.pill_termname.style('border-radius', grpsetting_flag ? '6px 0 0 6px' : '6px').html(self.term.name) // TODO trim long string
+		self.dom.pill_settingSummary.style('display', grpsetting_flag ? 'inline-block' : 'none')
+		self.dom.pill_settingSummary.html(grp_summary_text)
 	}
 }
 
@@ -212,6 +224,7 @@ function setInteractivity(self) {
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
 			.text('Replace')
 			.on('click', () => {
 				self.dom.tip.clear()
@@ -227,6 +240,7 @@ function setInteractivity(self) {
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
 			.text('Remove')
 			.on('click', () => {
 				self.dom.tip.hide()
@@ -288,8 +302,143 @@ function setInteractivity(self) {
 			.style('background-color', '#eee')
 			.style('color', '#000')
 			.html('Divide <b>' + self.term.name + '</b> to groups')
+			.on('click', () => {
+				self.regroupMenu()
+			})
 
 		if (self.term.groupsetting && self.term.groupsetting.disabled) devide_btn.style('display', 'none')
+	}
+
+	self.regroupMenu = function(grp_count, temp_cat_grps) {
+		//start with default 2 groups, extra groups can be added by user
+		const default_grp_count = grp_count || 2
+		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(self.term.values))
+
+		//initiate empty customset
+		const customset = { groups: [] }
+		Array(default_grp_count)
+			.fill()
+			.map(() => customset.groups.push({ values: [] }))
+
+		self.dom.tip.clear().showunder(self.dom.holder.node())
+
+		const regroup_div = self.dom.tip.d.append('div').style('margin', '10px')
+
+		const group_select_div = regroup_div.append('div').style('margin', '5px')
+
+		const group_table = group_select_div.append('table').style('border-collapse', 'collapse')
+		const title_tr = group_table.append('tr')
+
+		// top title bar for the table
+		title_tr
+			.append('th')
+			.attr('colspan', default_grp_count + 1)
+			.style('padding', '2px 5px')
+			.html('Groups')
+
+		title_tr
+			.append('th')
+			.style('padding', '2px 5px')
+			.html('Categories')
+
+		// this row will have group names/no and '+' button to add new group
+		const group_name_tr = group_table.append('tr')
+
+		for (let i = 0; i < default_grp_count; i++)
+			group_name_tr
+				.append('th')
+				.style('padding', '2px 5px')
+				.html(i + 1)
+
+		group_name_tr
+			.append('th')
+			.style('padding', '2px 5px')
+			.style('margin', '2px')
+			.style('background-color', '#eee')
+			.style('border-radius', '6px')
+			.style('cursor', 'pointer')
+			.html('+')
+			.on('click', () => {
+				self.regroupMenu(default_grp_count + 1, cat_grps)
+			})
+
+		// for each cateogry add new row with radio button for each group and category name
+		for (const [key, val] of Object.entries(self.term.values)) {
+			const cat_tr = group_table
+				.append('tr')
+				.on('mouseover', () => {
+					cat_tr.style('background-color', '#eee')
+				})
+				.on('mouseout', () => {
+					cat_tr.style('background-color', '#fff')
+				})
+
+			// checkbox for each group
+			for (let i = 0; i < default_grp_count; i++) {
+				cat_tr
+					.append('td')
+					.attr('align', 'center')
+					.style('padding', '2px 5px')
+					.append('input')
+					.attr('type', 'radio')
+					.attr('name', key)
+					.attr('value', i)
+					.property('checked', () => {
+						if (!cat_grps[key].group) {
+							cat_grps[key].group = 1
+							return true
+						} else {
+							return cat_grps[key].group == i + 1 ? true : false
+						}
+					})
+					.on('click', () => {
+						cat_grps[key].group = i + 1
+					})
+			}
+
+			// extra empty column for '+' button
+			cat_tr.append('td')
+
+			// categories
+			cat_tr
+				.append('td')
+				.style('display', 'inline-block')
+				.style('margin', '2px')
+				.style('cursor', 'default')
+				.html(val.label)
+		}
+
+		const button_div = regroup_div
+			.append('div')
+			.style('text-align', 'center')
+			.style('margin', '5px')
+
+		// 'Apply' button
+		button_div
+			.append('div')
+			.attr('class', 'replace_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
+			.style('border-radius', '10px')
+			.style('background-color', '#74b9ff')
+			.style('padding', '7px 6px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('Apply')
+			.on('click', () => {
+				//update customset and add to self.q
+				for (const [key, val] of Object.entries(cat_grps)) {
+					for (let i = 0; i < default_grp_count; i++) {
+						if (cat_grps[key].group == i + 1) customset.groups[i].values.push(cat_grps[key])
+					}
+				}
+				self.q.groupsetting = {
+					inuse: true,
+					customset: customset
+				}
+				self.dom.tip.hide()
+			})
 	}
 
 	self.showNumOpts = async function(div) {}
