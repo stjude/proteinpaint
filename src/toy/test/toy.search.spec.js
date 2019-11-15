@@ -28,26 +28,12 @@ tape('instance', function(test) {
 	test.plan(1)
 
 	runpp({
-		callbacks: {
-			search: {
-				'postInit.test': runTests
+		search: {
+			callbacks: {
+				'postInit.test': testDom
 			}
 		}
 	})
-
-	function runTests(search) {
-		search.on('postInit.test', null)
-		// more reliable test promise chain format
-		// that is less likely to need timeouts
-		helpers
-			.rideInit({
-				bus: search,
-				eventType: 'postNotify.test',
-				arg: search
-			})
-			.run(testDom, 100)
-			.done(test)
-	}
 
 	function testDom(search) {
 		test.equal(search.Inner.dom.tip && search.Inner.dom.tip.d && search.Inner.dom.tip.d.size(), 1, 'should have a tip')
@@ -59,8 +45,8 @@ tape('text input', function(test) {
 	test.plan(2)
 
 	runpp({
-		callbacks: {
-			search: {
+		search: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -73,7 +59,7 @@ tape('text input', function(test) {
 		helpers
 			.rideInit({
 				bus: search,
-				eventType: 'postNotify.test',
+				eventType: 'postRender.test',
 				arg: search
 			})
 			.run(triggerExactTermMenu)

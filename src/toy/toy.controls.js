@@ -12,8 +12,8 @@ class ToyControls {
 		this.opts = opts.holder
 		this.dom = { holder: opts.holder }
 		this.components = {
-			search: searchInit(app, { holder: opts.holder.append('div') }),
-			filter: filterInit(app, { holder: opts.holder.append('div') })
+			search: searchInit(app, { holder: opts.holder.append('div') }, app.opts.search),
+			filter: filterInit(app, { holder: opts.holder.append('div') }, app.opts.filter)
 		}
 	}
 

@@ -18,16 +18,6 @@ function getInitFxn(_Class_) {
 
 		// instantiate mutable private properties and methods
 		const self = new _Class_(arg, instanceOpts)
-		// if a component declares eventTypes, take care of bus creation here
-		if (self.eventTypes) {
-			const callbacks =
-				self.type in instanceOpts // component types that have been migrated to new bus signature
-					? instanceOpts[self.type].callbacks
-					: self.type == 'app'
-					? {}
-					: instanceOpts.callbacks
-			self.bus = new Bus(self.api, self.eventTypes, callbacks)
-		}
 
 		// get the instance's api that hides its
 		// mutable props and methods
@@ -47,151 +37,19 @@ function getInitFxn(_Class_) {
 
 		// freeze the api's properties and methods before exposing
 		Object.freeze(api)
-		if (self.eventTypes && self.eventTypes.includes('postInit')) self.bus.emit('postInit')
+
+		if (self.eventTypes) {
+			// set up an optional event bus
+			const callbacks = self.type in instanceOpts ? instanceOpts[self.type].callbacks : instanceOpts.callbacks
+			self.bus = new Bus(self.api, self.eventTypes, callbacks)
+		}
+		if (self.bus) self.bus.emit('postInit')
+
 		return api
 	}
 }
 
 exports.getInitFxn = getInitFxn
-
-/**************
-Utility Classes
-***************/
-
-/*
-	A Bus instance will be its own api,
-	since it does not have a getApi() method.
-	Instead, the mutable Bus instance will be hidden via the
-	component.api.on() method.
-*/
-
-class Bus {
-	constructor(/* flexible function signature to handle migration */) {
-		if (typeof arguments[0] == 'object') {
-			// new function signature
-			const [api, eventTypes, callbacks] = arguments
-			/*
-				api{} 
-				- the immutable api of the app or component
-				
-				eventTypes[] 
-				- the events that this component wants to emit
-				- ['postInit', 'postRender', 'postClick']
-
-				callbacks{} any event listeners to set-up for this component 
-				.postInit: ()=>{}
-				.postRender() {}, etc.
-
-			*/
-			this.name = api.type + (api.id === undefined || api.id === null ? '' : '#' + api.id)
-			this.eventTypes = eventTypes
-			this.events = {}
-			this.defaultArg = api
-			if (callbacks) {
-				for (const eventType in callbacks) {
-					this.on(eventType, callbacks[eventType])
-				}
-			}
-		} else {
-			// legacy function signature
-			const [name, eventTypes, callbacks, defaultArg] = arguments
-			/*
-			name
-			- the property name within the termdb.callbacks object
-			  to use for initializing bus events
-
-			eventType
-			- must be one of the eventTypes supplied to the Bus constructor
-			- maybe be namespaced or not, example: "postRender.test" or "postRender"
-
-			arg
-			- optional the argument to supply to the callback
-
-			callbacks
-			- optional 
-
-			defaultArg
-			- when emitting an event without a second argument,
-			  the defaultArg will be supplied as the argument
-			  to the callback
-		*/
-			this.name = name
-			this.eventTypes = eventTypes
-			this.events = {}
-			this.defaultArg = defaultArg
-			if (callbacks && name in callbacks) {
-				for (const eventType in callbacks[name]) {
-					this.on(eventType, callbacks[name][eventType])
-				}
-			}
-		}
-	}
-
-	on(eventType, callback, opts = {}) {
-		/*
-		eventType
-		- must match one of the eventTypes supplied to the Bus constructor
-		- maybe be namespaced or not, example: "postRender.test" or "postRender"
-		- any previous event-attached callbacks will be REPLACED in this bus 
-		  when the same eventType is used as an argument again -- same behavior
-		  as a DOM event listener namespacing and replacement
-
-		arg
-		- optional the argument to supply to the callback
-
-		opts 
-		- optional callback configuration, such as
-		.wait // to delay callback  
-	*/
-		const [type, name] = eventType.split('.')
-		if (!this.eventTypes.includes(type)) {
-			throw `Unknown bus event '${type}' for component ${this.name}`
-		} else if (!callback) {
-			delete this.events[eventType]
-		} else if (typeof callback == 'function') {
-			if (eventType in this.events && !eventType.includes('.')) {
-				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
-			}
-			this.events[eventType] = opts.wait ? arg => setTimeout(() => callback(arg), opts.wait) : callback
-		} else if (Array.isArray(callback)) {
-			if (eventType in this.events) {
-				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
-			}
-			const wrapperFxn = arg => {
-				for (const fxn of callback) fxn(arg)
-			}
-			this.events[eventType] = opts.wait ? arg => setTimeout(() => wrapperFxn(arg), opts.wait) : wrapperFxn
-		} else {
-			throw `invalid callback for ${this.name} eventType=${eventType}`
-		}
-		return this
-	}
-
-	emit(eventType, arg = null, wait = 0) {
-		/*
-		eventType
-		- must be one of the eventTypes supplied to the Bus constructor
-		- maybe be namespaced or not, example: "postRender.test" or "postRender"
-
-		arg
-		- optional: the argument to supply to the callback
-		  if null or undefined, will use constructor() opts.defaultArg instead
-
-		wait
-		- optional delay in calling the callback
-	*/
-		setTimeout(() => {
-			for (const type in this.events) {
-				if (type == eventType || type.startsWith(eventType + '.')) {
-					this.events[type](arg || this.defaultArg)
-				}
-			}
-		}, wait)
-		return this
-	}
-}
-
-exports.Bus = Bus
 
 /****************
   API Generators
@@ -302,8 +160,8 @@ function getAppApi(self) {
 		// will also expose bus.emit() which should only
 		// be triggered by this component
 		on(eventType, callback) {
-			if (self.bus) self.bus.on(eventType, callback)
-			else console.log('no component event bus')
+			if (!self.eventTypes) throw `no eventTypes[] for ${self.type} component`
+			self.bus.on(eventType, callback)
 			return api
 		},
 		getComponents(dotSepNames = '') {
@@ -357,8 +215,8 @@ function getComponentApi(self) {
 		// will also expose bus.emit() which should only
 		// be triggered by this component
 		on(eventType, callback) {
-			if (self.bus) self.bus.on(eventType, callback)
-			else console.log('no component event bus')
+			if (!self.eventTypes) throw `no eventTypes[] for ${self.type} component`
+			self.bus.on(eventType, callback)
 			return api
 		},
 		getComponents(dotSepNames = '') {
@@ -369,6 +227,101 @@ function getComponentApi(self) {
 }
 
 exports.getComponentApi = getComponentApi
+
+/**************
+Utility Classes
+***************/
+
+/*
+	A Bus instance will be its own api,
+	since it does not have a getApi() method.
+	Instead, the mutable Bus instance will be hidden via the
+	component.api.on() method.
+*/
+
+class Bus {
+	constructor(api, eventTypes, callbacks) {
+		/*
+			api{} 
+			- the immutable api of the app or component
+			
+			eventTypes[] 
+			- the events that this component wants to emit
+			- ['postInit', 'postRender', 'postClick']
+
+			callbacks{} any event listeners to set-up for this component 
+			.postInit: ()=>{}
+			.postRender() {}, etc.
+
+		*/
+		this.name = api.type + (api.id === undefined || api.id === null ? '' : '#' + api.id)
+		this.eventTypes = eventTypes
+		this.events = {}
+		this.defaultArg = api
+		if (callbacks) {
+			for (const eventType in callbacks) {
+				this.on(eventType, callbacks[eventType])
+			}
+		}
+	}
+
+	on(eventType, callback, opts = {}) {
+		/*
+		eventType
+		- must match one of the eventTypes supplied to the Bus constructor
+		- maybe be namespaced or not, example: "postRender.test" or "postRender"
+		- any previous event-attached callbacks will be REPLACED in this bus 
+		  when the same eventType is used as an argument again -- same behavior
+		  as a DOM event listener namespacing and replacement
+
+		callback
+		- function
+
+		opts{}
+		- optional callback configuration, such as
+		.wait // to delay callback  
+	*/
+		const [type, name] = eventType.split('.')
+		if (!this.eventTypes.includes(type)) {
+			throw `Unknown bus event '${type}' for component ${this.name}`
+		} else if (!callback) {
+			delete this.events[eventType]
+		} else if (typeof callback == 'function') {
+			if (eventType in this.events && !eventType.includes('.')) {
+				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
+			}
+			this.events[eventType] = opts.wait ? arg => setTimeout(() => callback(arg), opts.wait) : callback
+		} else {
+			throw `invalid callback for ${this.name} eventType=${eventType}`
+		}
+		return this
+	}
+
+	emit(eventType, arg = null, wait = 0) {
+		/*
+		eventType
+		- must be one of the eventTypes supplied to the Bus constructor
+		- maybe be namespaced or not, example: "postRender.test" or "postRender"
+
+		arg
+		- optional: the argument to supply to the callback
+		  if null or undefined, will use constructor() opts.defaultArg instead
+
+		wait
+		- optional delay in calling the callback
+	*/
+		setTimeout(() => {
+			for (const type in this.events) {
+				if (type == eventType || type.startsWith(eventType + '.')) {
+					this.events[type](arg || this.defaultArg)
+				}
+			}
+		}, wait)
+		return this
+	}
+}
+
+exports.Bus = Bus
 
 /******************
   Detached Helpers

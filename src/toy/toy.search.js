@@ -18,8 +18,7 @@ class ToySearch {
 		this.yesThis()
 		// this.notThis(this)
 		this.render()
-		this.bus = new rx.Bus('search', ['postInit', 'postNotify'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit', this.api)
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {
@@ -32,7 +31,6 @@ class ToySearch {
 	main() {
 		// clear search input entry
 		this.input.property('value', '')
-		this.bus.emit('postNotify', this)
 	}
 
 	render() {
