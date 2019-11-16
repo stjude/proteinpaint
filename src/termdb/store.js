@@ -121,19 +121,29 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_add(action) {
-		// if (this.state.termfilter.terms.includes(action.term)) return
-		// this.state.termfilter.terms.push(action.term)
-		const filter = this.state.termfilter.terms.find(d => d.id == action.termId)
-		if (filter) {
-			const valueData =
-				filter.term.iscategorical || filter.term.iscondition
-					? filter.values
-					: filter.term.isfloat || filter.term.isinteger
-					? filter.ranges
-					: filter.grade_and_child
-			// may need to add check if value is already present
-			if (!valueData.includes(action.value)) valueData.push(action.value)
+		if ('termId' in action) {
+			/*
+				having one termId assumes dispatching one added tvs at a time, 
+				whereas a bar with overlay will require adding two tvs at the same time;
+
+				should always use a tvslst instead, so may need to repeat this
+				match for existing term filter
+			*/
+			const filter = this.state.termfilter.terms.find(d => d.id == action.termId)
+			if (filter) {
+				const valueData =
+					filter.term.iscategorical || filter.term.iscondition
+						? filter.values
+						: filter.term.isfloat || filter.term.isinteger
+						? filter.ranges
+						: filter.grade_and_child
+				// may need to add check if value is already present
+				if (!valueData.includes(action.value)) valueData.push(action.value)
+			}
+		} else if (action.tvslst) {
+			this.state.termfilter.terms.push(...action.tvslst)
 		} else {
+			// NOT NEEDED? SHOULD ALWAYS HANDLE tvslst array
 			this.state.termfilter.terms.push(action.term)
 		}
 	},

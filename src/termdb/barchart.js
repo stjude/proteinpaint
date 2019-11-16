@@ -16,10 +16,11 @@ const colors = {
 
 class TdbBarchart {
 	constructor(app, opts) {
+		this.app = app
+		this.opts = opts
 		this.type = 'barchart'
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
-		this.app = app
 		this.modifiers = opts.modifiers
 		this.dom = {
 			holder: opts.holder,
@@ -42,8 +43,17 @@ class TdbBarchart {
 		this.controls = {}
 		this.term2toColor = {}
 		this.processedExcludes = []
-		this.eventTypes = ['postInit', 'postRender', 'postClick']
+		this.eventTypes = ['postInit', 'postRender']
 		opts.controls.on('downloadClick.barchart', this.download)
+
+		if (this.opts.bar_click_override) {
+			// will use this as callback to bar click
+			// and will not set up bar click menu
+		} else if (!this.opts.bar_click_opts) {
+			this.opts.bar_click_opts = ['hide_bar', 'add_to_gp']
+			const filter = this.app.getState().termfilter
+			if (filter && filter.show_top_ui) this.opts.bar_click_opts.push('add_filter')
+		}
 	}
 
 	getState(appState) {
@@ -53,6 +63,7 @@ class TdbBarchart {
 		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config.settings.currViews.includes('barchart'),
+			termfilter: appState.termfilter,
 			config: {
 				term: config.term,
 				term0: config.term0,

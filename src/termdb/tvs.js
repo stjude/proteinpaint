@@ -154,7 +154,9 @@ function setRenderers(self) {
 
 		one_term_div
 			.selectAll('.value_btn')
-			.data(valueData, d => (d.label ? d.label : d.start ? d.start : d.stop ? d.stop : d.grade ? d.grade : d))
+			.data(valueData, d =>
+				!d ? '---' : d.label ? d.label : d.start ? d.start : d.stop ? d.stop : d.grade ? d.grade : d
+			)
 			.enter()
 			.append('div')
 			.attr('class', 'value_btn sja_filter_tag_btn')
@@ -988,6 +990,7 @@ function setInteractivity(self) {
 					show_top_ui: false,
 					terms: terms
 				}
+				// no bar_click_menu here
 			},
 			modifiers: {
 				//modifier to replace filter by clicking term btn
@@ -996,8 +999,16 @@ function setInteractivity(self) {
 					self.replaceFilter({ term: tvs })
 				}
 			},
-			callbacks: {
-				app: { 'postInit.test': () => {} }
+			app: {
+				callbacks: { 'postInit.test': () => {} }
+			},
+			barchart: {
+				bar_click_override: tvslst => {
+					self.app.dispatch({
+						type: 'filter_add',
+						tvslst
+					})
+				}
 			}
 		}
 		appInit(null, opts)

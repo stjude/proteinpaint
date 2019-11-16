@@ -105,6 +105,7 @@ class TdbPlot {
 		this.config = rx.copyMerge('{}', this.state.config)
 		const data = await this.requestData(this.state)
 		this.syncParams(this.config, data)
+		this.currData = data
 		return data
 	}
 
