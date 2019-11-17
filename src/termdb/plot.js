@@ -9,6 +9,7 @@ import { boxplotInit } from './boxplot'
 import { scatterInit } from './scatter'
 import { termInfoInit } from './termInfo'
 import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
+import { termsetting_fill_q } from '../common/termsetting'
 
 class TdbPlot {
 	constructor(app, opts) {
@@ -193,17 +194,22 @@ export const plotInit = rx.getInitFxn(TdbPlot)
 
 export function plotConfig(opts) {
 	if (!opts.term) throw `missing opts.term for plotConfig()`
+
+	// initiate .q{}
+	if (!opts.term.q) opts.term.q = {}
+	termsetting_fill_q(opts.term.q, opts.term.term)
+	if (opts.term2) {
+		if (!opts.term2.q) opts.term2.q = {}
+		termsetting_fill_q(opts.term2.q, opts.term2.term)
+	}
+	if (opts.term0) {
+		if (!opts.term0.q) opts.term0.q = {}
+		termsetting_fill_q(opts.term0.q, opts.term0.term)
+	}
+
 	return rx.copyMerge(
 		{
 			id: opts.term.id,
-			//term: Object.assign({q: {}}, opts.term),
-			term0: null, //opts.term0 ? Object.assign({q: {}}, opts.term0) : null,
-			term2: null /*opts.term2
-			? Object.assign({q: {}}, opts.term2)
-			: //: opts.obj.modifier_ssid_barchart
-			  //? { mname: opts.obj.modifier_ssid_barchart.mutation_name }
-			  null,*/,
-			//unannotated: opts.unannotated ? opts.unannotated : "" // not needed?
 			settings: {
 				currViews: ['barchart'],
 				controls: {
