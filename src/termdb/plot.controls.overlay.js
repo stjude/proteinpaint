@@ -13,7 +13,7 @@ bi-directional information flow
 #                  #   <===== B =========   #             #
 ####################                        ###############
 
-A: when overlay is notified, overlay.main() is called, which also calls pill.main() to propagate updated term2 data
+A: when overlay is notified, will call overlay.api.main() --> overlay.updatePill() --> overlay.pill.main()
 B: user interaction at termsetting UI updates term2 data, and sends back to overlay via callback.
 
 
@@ -37,6 +37,7 @@ class TdbOverlayInput {
 
 		this.api = {
 			main: state => {
+				// TODO show state structure
 				this.state = state
 				this.plot = state.config
 				this.render(state)
@@ -50,11 +51,12 @@ class TdbOverlayInput {
 
 		const o = {
 			disable_terms: [this.plot.term.term.id],
-			q: {},
 			termfilter: this.state.termfilter // used later for computing kernel density of numeric term
 		}
 		if (this.plot.term0) o.disable_terms.push(this.plot.term0.term.id)
-		const term2 = this.plot.settings.controls.term2
+		// XXX what's the difference between plot.settings.controls.term2 and plot.term2
+		//const term2 = this.plot.settings.controls.term2
+		const term2 = this.plot.term2
 		if (term2) {
 			o.disable_terms.push(term2.term.id)
 			o.term = term2.term
@@ -69,8 +71,8 @@ class TdbOverlayInput {
 			holder: this.dom.pill_div,
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
-			callback: term => {
-				const term2 = term ? { id: term.id, term } : null
+			callback: term2 => {
+				// term2 is an object of { id, term{}, q{} }, maybe null
 				this.opts.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
