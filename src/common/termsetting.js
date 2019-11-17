@@ -466,15 +466,11 @@ function termsetting_fill_q(q, term) {
 		}
 		delete q.groupsetting.disabled
 		if (!('inuse' in q.groupsetting)) q.groupsetting.inuse = false // do not apply by default
-		if (!q.groupsetting.inuse) {
-			// inuse:false is either from automatic setup or predefined in state
-			// then no need for additional setup
-			return
-		}
-		if (term.groupsetting.lst && term.groupsetting.useIndex >= 0 && term.groupsetting.lst[term.groupsetting.useIndex]) {
-			q.groupsetting.predefined_groupset_idx = term.groupsetting.useIndex
-		}
+
 		if (term.iscondition) {
+			/*
+			for condition term, must set up bar/value flags before quiting for inuse:false
+			*/
 			if (q.value_by_max_grade || q.value_by_most_recent || q.value_by_computable_grade) {
 				// need any of the three to be set
 			} else {
@@ -485,6 +481,16 @@ function termsetting_fill_q(q, term) {
 			} else {
 				q.bar_by_grade = true
 			}
+		}
+
+		if (!q.groupsetting.inuse) {
+			// inuse:false is either from automatic setup or predefined in state
+			// then no need for additional setup
+			return
+		}
+		// if to apply the groupsetting
+		if (term.groupsetting.lst && term.groupsetting.useIndex >= 0 && term.groupsetting.lst[term.groupsetting.useIndex]) {
+			q.groupsetting.predefined_groupset_idx = term.groupsetting.useIndex
 		}
 		return
 	}
