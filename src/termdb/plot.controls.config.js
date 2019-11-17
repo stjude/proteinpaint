@@ -46,8 +46,8 @@ class TdbConfigUiInit {
 				if (!state) return
 				const plot = state.config
 				for (const name in this.inputs) {
-					if (name == 'overlay' || name == 'divideBy' || name == 'barsAs') this.inputs[name].main(state)
-					else this.inputs[name].main(plot) //, data)
+					const o = this.inputs[name]
+					o.main(o.usestate ? state : plot)
 				}
 			}
 		}
@@ -303,6 +303,7 @@ function setBarsAsOpts(opts) {
 	}
 
 	const api = {
+		usestate: true,
 		async main(state) {
 			self.state = state
 			self.plot = state.config

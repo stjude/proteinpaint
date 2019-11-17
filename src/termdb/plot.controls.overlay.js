@@ -36,6 +36,7 @@ class TdbOverlayInput {
 		this.setUI()
 
 		this.api = {
+			usestate: true,
 			main: state => {
 				// TODO show state structure
 				this.state = state

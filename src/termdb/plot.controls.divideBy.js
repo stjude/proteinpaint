@@ -32,6 +32,7 @@ export class TdbDivideByInput {
 		})
 
 		this.api = {
+			usestate: true,
 			main: state => {
 				this.state = state
 				this.plot = state.config
