@@ -60,7 +60,6 @@ class TermSetting {
 		// this api will be frozen and returned by termsettingInit()
 		this.api = {
 			main: async (data = {}) => {
-				// console.log(data)
 				this.validateMainData(data)
 				this.term = data.term
 				this.q = data.q
@@ -186,7 +185,9 @@ function setInteractivity(self) {
 			tree: {
 				click_term: term => {
 					self.dom.tip.hide()
-					self.opts.callback(term) // main change
+					const data = { id: term.id, term, q: {} }
+					termsetting_fill_q(data.q, term)
+					self.opts.callback(data)
 				},
 				disable_terms: self.disable_terms
 			}
@@ -445,3 +446,48 @@ function setInteractivity(self) {
 
 	self.showConditionOpts = async function(div) {}
 }
+
+function termsetting_fill_q(q, term) {
+	if (term.isinteger || term.isfloat) {
+		/*
+		if q is already initiated, do not overwrite
+		to be tested if can work with partially declared state
+		always copies from .bins.default
+		no longer deals with the case where .bins.less is to be used as term2/0
+		*/
+		rx.copyMerge(q, term.bins.default)
+		return
+	}
+	if (term.iscategorical || term.iscondition) {
+		if (!q.groupsetting) q.groupsetting = {}
+		if (term.groupsetting.disabled) {
+			q.groupsetting.disabled = true
+			return
+		}
+		delete q.groupsetting.disabled
+		if (!('inuse' in q.groupsetting)) q.groupsetting.inuse = false // do not apply by default
+		if (!q.groupsetting.inuse) {
+			// inuse:false is either from automatic setup or predefined in state
+			// then no need for additional setup
+			return
+		}
+		if (term.groupsetting.lst && term.groupsetting.useIndex >= 0 && term.groupsetting.lst[term.groupsetting.useIndex]) {
+			q.groupsetting.predefined_groupset_idx = term.groupsetting.useIndex
+		}
+		if (term.iscondition) {
+			if (q.value_by_max_grade || q.value_by_most_recent || q.value_by_computable_grade) {
+				// need any of the three to be set
+			} else {
+				// set a default one
+				q.value_by_max_grade = true
+			}
+			if (q.bar_by_grade || q.bar_by_children) {
+			} else {
+				q.bar_by_grade = true
+			}
+		}
+		return
+	}
+	throw 'unknown term type'
+}
+exports.termsetting_fill_q = termsetting_fill_q
