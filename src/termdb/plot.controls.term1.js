@@ -2,26 +2,23 @@ import * as rx from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 
 /*
-blue pill UI for configuring term1
-* groupsetting for categorical/condition
-* bin scheme
+for configuring term1; just a thin wrapper of blue pill UI 
 
 execution flow:
-constructor builds and returns this.api{}
-no state available for constructor so cannot do term-type specific things
-upon getting state from plot.controls.config.js, call api.main() with latest state
-then call this.render() to:
-1) if plot.term cannot be configured, quit
-2) initiate this.pill if missing
-3) call this.pill.main() to send {term,q} to pill
+
+1. constructor builds and returns this.api{}
+2. no state available for constructor so cannot do term-type specific things
+3. upon getting state from plot.controls.config.js, call api.main() with latest state
+4. then call this.render() to:
+4.1 if plot.term cannot be configured, quit
+4.2 initiate this.pill if missing
+4.3 call this.pill.main() to send {term,q} to pill
 
 */
 
 class Term1ui {
 	constructor(opts) {
-		this.opts = opts
-		this.validateOpts()
-		//setInteractivity(this)
+		this.validateOpts(opts)
 		setRenderers(this)
 		this.initUI()
 		this.api = {
@@ -33,11 +30,12 @@ class Term1ui {
 		}
 		if (opts.debug) this.api.Inner = this
 	}
-	validateOpts() {
-		if (!('id' in this.opts)) throw 'opts.id missing'
-		if (!this.opts.holder) throw 'opts.holder missing'
-		if (typeof this.opts.dispatch != 'function') throw 'opts.dispath() is not a function'
-		this.dom = { tr: this.opts.holder }
+	validateOpts(o) {
+		if (!('id' in o)) throw 'opts.id missing'
+		if (!o.holder) throw 'opts.holder missing'
+		if (typeof o.dispatch != 'function') throw 'opts.dispath() is not a function'
+		this.opts = o
+		this.dom = { tr: o.holder }
 	}
 	setPill() {
 		// can only call after getting this.state
@@ -74,8 +72,8 @@ function setRenderers(self) {
 		/* state and plot are frozen from app.state
 		 */
 		const plot = this.state.config
-		if (!plot.term) throw 'plot.term{} is missing'
-		if (!plot.term.q) throw 'plot.term.q{} is missing'
+		if (!plot.term) throw 'state.config.plot.term{} is missing'
+		if (!plot.term.q) throw 'state.config.plot.term.q{} is missing'
 
 		if (plot.term.q.groupsetting && plot.term.q.groupsetting.disabled) {
 			///////////////////////////////////
@@ -102,8 +100,7 @@ function setRenderers(self) {
 			term: plot.term.term,
 			q: plot.term.q,
 			termfilter: this.state.termfilter
-			// no need for disable_terms as won't show tree
+			// no need for disable_terms as pill won't show tree
 		})
 	}
 }
-function setInteractivity(self) {}
