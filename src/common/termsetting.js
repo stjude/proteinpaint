@@ -234,7 +234,7 @@ function setInteractivity(self) {
 			})
 		term_edit_div
 			.append('div')
-			.attr('class', 'replace_btn sja_filter_tag_btn')
+			.attr('class', 'remove_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '10px')
 			.style('background-color', '#ff7675')
