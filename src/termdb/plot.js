@@ -119,18 +119,23 @@ class TdbPlot {
 	// creates URL search parameter string, that also serves as
 	// a unique request identifier to be used for caching server response
 	getDataName(state) {
-		const config = this.config
+		const plot = this.config // the plot object in state
 		const params = ['genome=' + state.genome, 'dslabel=' + state.dslabel]
 
-		const isscatter = config.settings.currViews.includes('scatter')
+		const isscatter = plot.settings.currViews.includes('scatter')
 		if (isscatter) params.push('scatter=1')
 		;['term', 'term2', 'term0'].forEach(_key => {
 			// "term" on client is "term1" at backend
-			const term = config[_key]
+			const term = plot[_key]
 			if (!term) return
 			const key = _key == 'term' ? 'term1' : _key
 			params.push(key + '_id=' + encodeURIComponent(term.term.id))
 			if (isscatter) return
+			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
+			params.push(key + '_q=' + encodeURIComponent(JSON.stringify(term.q)))
+			/*
+			to delete legacy code
+
 			if (term.term.iscondition && !term.q) term.q = {}
 			if (term.q && typeof term.q == 'object') {
 				let q = {}
@@ -143,6 +148,7 @@ class TdbPlot {
 				}
 				params.push(key + '_q=' + encodeURIComponent(JSON.stringify(q)))
 			}
+			*/
 		})
 
 		if (!isscatter) {
