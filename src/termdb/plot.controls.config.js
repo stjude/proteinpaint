@@ -1,5 +1,6 @@
 import { getInitFxn } from '../common/rx.core'
 import { overlayInputInit } from './plot.controls.overlay'
+import { term1uiInit } from './plot.controls.term1'
 import { divideByInputInit } from './plot.controls.divideBy'
 import { initRadioInputs } from '../common/dom'
 // temporarily use legacy termui_display to prototype the barsAs input
@@ -16,6 +17,12 @@ class TdbConfigUiInit {
 		const table = this.setDom()
 		const debug = opts.debug
 		this.inputs = {
+			term1: term1uiInit({
+				holder: table.append('tr'),
+				dispatch,
+				id: this.id
+			}),
+			/************* replaced by term1uiInit
 			barsAs: setBarsAsOpts({
 				holder: table.append('tr'),
 				label: 'Bars as',
@@ -24,10 +31,12 @@ class TdbConfigUiInit {
 				id: this.id,
 				debug
 			}),
+			*/
 			overlay: overlayInputInit({ holder: table.append('tr'), dispatch, id: this.id, debug }),
 			view: setViewOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
 			orientation: setOrientationOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
 			scale: setScaleOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
+			/************* replaced by term1uiInit
 			bin: setBinOpts({
 				holder: table.append('tr'),
 				label: 'Primary Bins',
@@ -37,6 +46,7 @@ class TdbConfigUiInit {
 				termNum: 'term',
 				debug
 			}),
+			*/
 			divideBy: divideByInputInit({ holder: table.append('tr'), dispatch, id: this.id, debug })
 		}
 
@@ -263,6 +273,7 @@ function setViewOpts(opts) {
 	return Object.freeze(api)
 }
 
+/*
 function setBarsAsOpts(opts) {
 	const self = {
 		dom: {
@@ -329,6 +340,8 @@ function setBarsAsOpts(opts) {
 	return Object.freeze(api)
 }
 
+
+
 function setBinOpts(opts) {
 	const self = {
 		dom: {
@@ -372,3 +385,4 @@ function setBinOpts(opts) {
 	if (opts.debug) api.Inner = self
 	return Object.freeze(api)
 }
+*/
