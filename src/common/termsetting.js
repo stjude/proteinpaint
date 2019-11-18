@@ -61,8 +61,9 @@ class TermSetting {
 		this.api = {
 			main: async (data = {}) => {
 				this.validateMainData(data)
+				// term is read-only if it comes from state, let it remain read-only
 				this.term = data.term
-				this.q = data.q
+				this.q = rx.fromJson(rx.toJson(data.q)) // q{} will be altered here and must not be read-only
 				this.disable_terms = data.disable_terms
 				this.updateUI()
 			},
