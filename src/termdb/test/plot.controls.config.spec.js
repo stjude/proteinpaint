@@ -373,7 +373,7 @@ tape('Primary bins input', function(test) {
 
 	function checkDisplayWithNumericTerm(plotControls) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
-			if (this.innerHTML !== 'Primary Bins') return
+			if (this.innerHTML !== 'Customize bins') return
 			test.equal(this.parentNode.style.display, 'table-row', 'should be visible with numeric term')
 		})
 	}
@@ -402,7 +402,7 @@ tape('Primary bins input', function(test) {
 
 	function checkDisplayWithCategoricalTerm(plotControls) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
-			if (this.innerHTML !== 'Primary Bins') return
+			if (this.innerHTML !== 'Customize bins') return
 			test.equal(this.parentNode.style.display, 'none', 'should be hidden with non-numeric term')
 		})
 	}

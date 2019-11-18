@@ -63,6 +63,7 @@ tape('caterogical term overlay', function(test) {
 			.to(testTerm2Pill, { wait: 600 })
 			.run(triggerBluePill)
 			.run(testGrpMenu)
+			.run(triggerDevideGrpMenu)
 			.done(test)
 	}
 
@@ -87,11 +88,13 @@ tape('caterogical term overlay', function(test) {
 
 	function testGrpMenu(plotControls) {
 		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
-
 		test.equal(tip.d.selectAll('.group_btn').size(), 2, 'Should have 2 buttons for group config')
-
 		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
-
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
+	}
+
+	function triggerDevideGrpMenu(plotControls) {
+		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		tip.d.selectAll('.group_btn')._groups[0][1].click()
 	}
 })

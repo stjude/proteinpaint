@@ -254,7 +254,7 @@ function setInteractivity(self) {
 		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
 
 		const default_btn_txt =
-			(grpsetting_flag ? 'Using' : 'Use') +
+			(!grpsetting_flag ? 'Using' : 'Use') +
 			' default category' +
 			(self.term.values ? '(n=' + Object.keys(self.term.values).length + ')' : '')
 
@@ -268,10 +268,14 @@ function setInteractivity(self) {
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('border-radius', '10px')
-			.style('background-color', grpsetting_flag ? '#f8f8f8' : '#eee')
+			.style('background-color', !grpsetting_flag ? '#f8f8f8' : '#eee')
 			.style('color', '#000')
-			.style('pointer-events', grpsetting_flag ? 'none' : 'auto')
+			.style('pointer-events', !grpsetting_flag ? 'none' : 'auto')
 			.text(default_btn_txt)
+			.on('click', () => {
+				self.q.groupsetting.inuse = false
+				self.dom.tip.hide()
+			})
 
 		//show button/s for default groups
 		if (self.term.groupsetting && self.term.groupsetting.lst) {
@@ -334,7 +338,7 @@ function setInteractivity(self) {
 		// top title bar for the table
 		title_tr
 			.append('th')
-			.attr('colspan', default_grp_count + 1)
+			.attr('colspan', default_grp_count + 2)
 			.style('padding', '2px 5px')
 			.html('Groups')
 
@@ -343,17 +347,33 @@ function setInteractivity(self) {
 			.style('padding', '2px 5px')
 			.html('Categories')
 
-		// this row will have group names/no and '+' button to add new group
-		const group_name_tr = group_table.append('tr')
+		//this row have '+'/'-' button to add new group
+		const grp_btn_tr = group_table.append('tr')
 
-		for (let i = 0; i < default_grp_count; i++)
-			group_name_tr
+		//first group cannot be deleted
+		grp_btn_tr.append('th')
+		grp_btn_tr.append('th')
+
+		for (let i = 1; i < default_grp_count; i++)
+			grp_btn_tr
 				.append('th')
+				.append('div')
 				.style('padding', '2px 5px')
-				.html(i + 1)
+				.style('margin', '2px')
+				.style('background-color', '#eee')
+				.style('border-radius', '6px')
+				.style('cursor', 'pointer')
+				.html('-')
+				.on('click', () => {
+					for (const [key, val] of Object.entries(cat_grps)) {
+						if (cat_grps[key].group == i + 1) cat_grps[key].group = 1
+					}
+					self.regroupMenu(default_grp_count - 1, cat_grps)
+				})
 
-		group_name_tr
+		grp_btn_tr
 			.append('th')
+			.append('div')
 			.style('padding', '2px 5px')
 			.style('margin', '2px')
 			.style('background-color', '#eee')
@@ -364,6 +384,20 @@ function setInteractivity(self) {
 				self.regroupMenu(default_grp_count + 1, cat_grps)
 			})
 
+		// this row will have group names/number
+		const group_name_tr = group_table.append('tr')
+
+		group_name_tr
+			.append('th')
+			.style('padding', '2px 5px')
+			.html('Exclude')
+
+		for (let i = 0; i < default_grp_count; i++)
+			group_name_tr
+				.append('th')
+				.style('padding', '2px 5px')
+				.html(i + 1)
+
 		// for each cateogry add new row with radio button for each group and category name
 		for (const [key, val] of Object.entries(self.term.values)) {
 			const cat_tr = group_table
@@ -373,6 +407,26 @@ function setInteractivity(self) {
 				})
 				.on('mouseout', () => {
 					cat_tr.style('background-color', '#fff')
+				})
+
+			//checkbox for exclude group
+			cat_tr
+				.append('td')
+				.attr('align', 'center')
+				.style('padding', '2px 5px')
+				.append('input')
+				.attr('type', 'radio')
+				.attr('name', key)
+				.attr('value', 0)
+				.property('checked', () => {
+					if (!cat_grps[key].group) {
+						return true
+					} else {
+						cat_grps[key].group = 0
+					}
+				})
+				.on('click', () => {
+					cat_grps[key].group = 0
 				})
 
 			// checkbox for each group
@@ -432,13 +486,14 @@ function setInteractivity(self) {
 				//update customset and add to self.q
 				for (const [key, val] of Object.entries(cat_grps)) {
 					for (let i = 0; i < default_grp_count; i++) {
-						if (cat_grps[key].group == i + 1) customset.groups[i].values.push(cat_grps[key])
+						if (cat_grps[key].group == i + 1) customset.groups[i].values.push({ key: key })
 					}
 				}
 				self.q.groupsetting = {
 					inuse: true,
 					customset: customset
 				}
+				console.log(self.q.groupsetting)
 				self.dom.tip.hide()
 			})
 	}
