@@ -29,8 +29,8 @@ tape('default behavior', function(test) {
 	test.timeoutAfter(2000)
 
 	runpp({
-		callbacks: {
-			tree: {
+		tree: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -153,14 +153,13 @@ tape('default behavior', function(test) {
 	}
 })
 
-tape('modifier: click_term', test => {
+tape('click_term', test => {
 	test.timeoutAfter(1000)
 	runpp({
-		modifiers: {
-			click_term: modifier_callback
-		},
-		callbacks: {
-			tree: {
+		tree: {
+			click_term: modifier_callback,
+			disable_terms: ['diaggrp'],
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -186,8 +185,10 @@ tape('modifier: click_term', test => {
 		childdiv_child1 = child1.querySelector('.termchilddiv')
 	}
 	function testExpand_child1(tree) {
-		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn add_term_btn termlabel')
-		test.ok(buttons.length > 1, 'should have more than 1 child terms showing as buttons')
+		const disabledlabels = childdiv_child1.getElementsByClassName('sja_tree_click_term_disabled termlabel')
+		test.ok(disabledlabels.length > 0, 'should have one or more disabled terms')
+		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term termlabel')
+		test.ok(buttons.length > 0, 'should have one or more child terms showing as buttons')
 		buttons[0].click() // click this button and trigger the next test
 	}
 	function modifier_callback(term) {
@@ -217,8 +218,8 @@ tape('rehydrated from saved state', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			tree: {
+		tree: {
+			callbacks: {
 				'postRender.test': testDom
 			}
 		}
@@ -238,8 +239,8 @@ tape('error handling', function(test) {
 		state: {
 			genome: 'ahg38'
 		},
-		callbacks: {
-			app: {
+		app: {
+			callbacks: {
 				'postRender.test': testWrongGenome
 			}
 		}
@@ -253,8 +254,8 @@ tape('error handling', function(test) {
 		state: {
 			dslabel: 'xxx'
 		},
-		callbacks: {
-			app: {
+		app: {
+			callbacks: {
 				'postRender.test': testWrongDslabel
 			}
 		}

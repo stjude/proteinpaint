@@ -1,11 +1,12 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
+import getterm from '../common/getterm'
+
+// state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
 const defaultState = {
-	// genome: "", // must be supplied
-	// dslabel: "", // must be supplied
 	tree: {
 		expandedTermIds: [],
 		visiblePlotIds: [],
@@ -26,6 +27,7 @@ class TdbStore {
 		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
 		this.fromJson = rx.fromJson // used in store.api.state()
 		this.toJson = rx.toJson // used in store.api.state()
+		this.getterm = getterm
 
 		this.app = app
 		if (!app.opts.state) throw '.state{} missing'
@@ -62,9 +64,7 @@ class TdbStore {
 			if (savedPlot.term0 && !savedPlot.term0.id) delete savedPlot.term0
 			for (const t of ['term', 'term2', 'term0']) {
 				if (!savedPlot[t]) continue
-				if (!savedPlot[t].q) savedPlot[t].q = {}
-				const term = await dofetch2('/termdb?' + lst.join('&') + '&gettermbyid=' + savedPlot[t].id)
-				savedPlot[t].term = term.term
+				savedPlot[t].term = await this.getterm(savedPlot[t].id)
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
 		}
@@ -116,24 +116,33 @@ TdbStore.prototype.actions = {
 
 	plot_edit(action) {
 		const plot = this.state.tree.plots[action.id]
-		const replaceKeyVals = ['term', 'term2', 'term0']
 		if (plot) this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
 	},
 
 	filter_add(action) {
-		// if (this.state.termfilter.terms.includes(action.term)) return
-		// this.state.termfilter.terms.push(action.term)
-		const filter = this.state.termfilter.terms.find(d => d.id == action.termId)
-		if (filter) {
-			const valueData =
-				filter.term.iscategorical || filter.term.iscondition
-					? filter.values
-					: filter.term.isfloat || filter.term.isinteger
-					? filter.ranges
-					: filter.grade_and_child
-			// may need to add check if value is already present
-			if (!valueData.includes(action.value)) valueData.push(action.value)
+		if ('termId' in action) {
+			/*
+				having one termId assumes dispatching one added tvs at a time, 
+				whereas a bar with overlay will require adding two tvs at the same time;
+
+				should always use a tvslst instead, so may need to repeat this
+				match for existing term filter
+			*/
+			const filter = this.state.termfilter.terms.find(d => d.id == action.termId)
+			if (filter) {
+				const valueData =
+					filter.term.iscategorical || filter.term.iscondition
+						? filter.values
+						: filter.term.isfloat || filter.term.isinteger
+						? filter.ranges
+						: filter.grade_and_child
+				// may need to add check if value is already present
+				if (!valueData.includes(action.value)) valueData.push(action.value)
+			}
+		} else if (action.tvslst) {
+			this.state.termfilter.terms.push(...action.tvslst)
 		} else {
+			// NOT NEEDED? SHOULD ALWAYS HANDLE tvslst array
 			this.state.termfilter.terms.push(action.term)
 		}
 	},
@@ -191,19 +200,22 @@ TdbStore.prototype.actions = {
 	filter_replace(action) {
 		this.state.termfilter.terms = []
 		this.state.termfilter.terms.push(action.term)
-	}, 
-
-	plot_terms_change(action){
-		const plot_term_id = action.plot_term_id
-		const plot = this.state.tree.plots[plot_term_id]
-		if(action.term_index == 'term1'){
-			plot.term = action.term
-		}else if(action.term_index == 'term2'){
-			plot.term2 = action.term
-		}else if(action.term_index == 'term0'){
-			plot.term0 = action.term
-		}
 	}
 }
 
 exports.storeInit = rx.getInitFxn(TdbStore)
+
+/******* helper functions for fill-in q{} from term{}
+term-type specific logic in doing the fill
+for numeric term as term2, term.bins.less (if available) will be used but not term.bins.default
+*/
+
+function numeric_fill_q(q, b) {
+	/*
+	situation-specific logic
+	when term is term1, will call as "numeric_fill_q( q, term.bins.default )"
+	when term is term2 or term0 and has .bins.less, call as "numeric_fill_q( q, term.bins.less )"
+
+	*/
+	rx.copyMerge(q, b)
+}

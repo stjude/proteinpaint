@@ -1,9 +1,10 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { Menu, dofetch2 } from '../client'
 import { event } from 'd3-selection'
 
 class ToySearch {
 	constructor(app, opts) {
+		this.type = 'search'
 		// need to supply this.api to callbacks
 		// supply optional argument to getComponentApi(),
 		// so no need to attach it as an instance method
@@ -17,14 +18,19 @@ class ToySearch {
 		this.yesThis()
 		// this.notThis(this)
 		this.render()
-		this.bus = new rx.Bus('search', ['postInit', 'postNotify'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit', this.api)
+		this.eventTypes = ['postInit', 'postRender']
+	}
+
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.label
+		}
 	}
 
 	main() {
 		// clear search input entry
 		this.input.property('value', '')
-		this.bus.emit('postNotify', this)
 	}
 
 	render() {

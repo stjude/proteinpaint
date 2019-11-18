@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import rendererSettings from '../bars.settings'
 import barsRenderer from '../bars.renderer'
 import htmlLegend from '../html.legend'
@@ -16,10 +16,11 @@ const colors = {
 
 class TdbBarchart {
 	constructor(app, opts) {
-		this.type = 'plot.barchart'
+		this.app = app
+		this.opts = opts
+		this.type = 'barchart'
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
-		this.app = app
 		this.modifiers = opts.modifiers
 		this.dom = {
 			holder: opts.holder,
@@ -42,8 +43,37 @@ class TdbBarchart {
 		this.controls = {}
 		this.term2toColor = {}
 		this.processedExcludes = []
-		this.bus = new rx.Bus('barchart', ['postInit', 'postRender', 'postClick'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
+		opts.controls.on('downloadClick.barchart', this.download)
+
+		if (this.opts.bar_click_override) {
+			// will use this as callback to bar click
+			// and will not set up bar click menu
+		} else if (!this.opts.bar_click_opts) {
+			this.opts.bar_click_opts = ['hide_bar', 'add_to_gp']
+			const filter = this.app.getState().termfilter
+			if (filter && filter.show_top_ui) this.opts.bar_click_opts.push('add_filter')
+		}
+	}
+
+	getState(appState) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		const config = appState.tree.plots[this.id]
+		return {
+			isVisible: config.settings.currViews.includes('barchart'),
+			termfilter: appState.termfilter,
+			config: {
+				term: config.term,
+				term0: config.term0,
+				term2: config.term2,
+				settings: {
+					common: config.settings.common,
+					barchart: config.settings.barchart
+				}
+			}
+		}
 	}
 
 	main(data) {
@@ -309,7 +339,7 @@ class TdbBarchart {
 					? 'most recent'
 					: ''
 			legendGrps.push({
-				name: t2.name + (value_by_label ? ', ' + value_by_label : ''),
+				name: t2.term.name + (value_by_label ? ', ' + value_by_label : ''),
 				items: s.rows
 					.map(d => {
 						const total = this.totalsByDataId[d]
@@ -377,7 +407,7 @@ function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
 	self.download = function() {
-		if (!self.state.isVisible) return
+		if (!self.state || !self.state.isVisible) return
 		// has to be able to handle multichart view
 		const mainGs = []
 		const translate = { x: undefined, y: undefined }

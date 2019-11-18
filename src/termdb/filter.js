@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
 import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
@@ -24,9 +24,20 @@ class TdbFilter {
 				modifiers: opts.modifiers
 			})
 		}
+		this.eventTypes = ['postInit', 'postRender']
+	}
 
-		this.bus = new rx.Bus('filter', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+	reactsTo(action) {
+		if (action.type.startsWith('filter')) return true
+		if (action.type == 'app_refresh') return true
+	}
+
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter
+		}
 	}
 
 	/*async main() {}*/
@@ -61,8 +72,8 @@ function setRenderers(self) {
 
 		const state = self.app.opts.state
 
-		if(state && state.termfilter && !state.termfilter.show_top_ui){
-			div.style('display','none')
+		if (state && state.termfilter && !state.termfilter.show_top_ui) {
+			div.style('display', 'none')
 		}
 	}
 }

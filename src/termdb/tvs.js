@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
 import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
@@ -7,7 +7,7 @@ import * as client from '../client'
 
 class TVS {
 	constructor(app, opts) {
-		this.type = 'filter'
+		this.type = 'tvs'
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
@@ -18,8 +18,14 @@ class TVS {
 
 		this.categoryData = {}
 		this.initHolder()
-		this.bus = new rx.Bus('tvs', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+	}
+
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter
+		}
 	}
 
 	main() {
@@ -42,7 +48,9 @@ class TVS {
 		// when there are filters to be removed, must account for the delayed
 		// removal after opacity transition, as btn count will decrease only
 		// after the transition and remove() is done
-		this.bus.emit('postRender', null, filters.exit().size() ? this.durations.exit + 100 : 0)
+		//
+		// !!! TODO: how to pass bus.emit('postRender') delay to rx.component.api.update()
+		// this.bus.emit('postRender', null, filters.exit().size() ? this.durations.exit + 100 : 0)
 	}
 
 	async getCategories(term, lst) {
@@ -146,7 +154,9 @@ function setRenderers(self) {
 
 		one_term_div
 			.selectAll('.value_btn')
-			.data(valueData, d => (d.label ? d.label : d.start ? d.start : d.stop ? d.stop : d.grade ? d.grade : d))
+			.data(valueData, d =>
+				!d ? '---' : d.label ? d.label : d.start ? d.start : d.stop ? d.stop : d.grade ? d.grade : d
+			)
 			.enter()
 			.append('div')
 			.attr('class', 'value_btn sja_filter_tag_btn')
@@ -980,6 +990,7 @@ function setInteractivity(self) {
 					show_top_ui: false,
 					terms: terms
 				}
+				// no bar_click_menu here
 			},
 			modifiers: {
 				//modifier to replace filter by clicking term btn
@@ -988,8 +999,16 @@ function setInteractivity(self) {
 					self.replaceFilter({ term: tvs })
 				}
 			},
-			callbacks: {
-				app: { 'postInit.test': () => {} }
+			app: {
+				callbacks: { 'postInit.test': () => {} }
+			},
+			barchart: {
+				bar_click_override: tvslst => {
+					self.app.dispatch({
+						type: 'filter_add',
+						tvslst
+					})
+				}
 			}
 		}
 		appInit(null, opts)

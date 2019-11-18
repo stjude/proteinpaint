@@ -17,10 +17,10 @@ makesql_by_tvsfilter
 	add_categorical
 	add_numerical
 	add_condition
-makesql_oneterm
-	makesql_oneterm_condition
-makesql_numericBinCTE
 get_term_cte
+	makesql_oneterm
+		makesql_oneterm_condition
+		makesql_numericBinCTE
 uncomputablegrades_clause
 grade_age_select_clause
 get_label4key
@@ -235,7 +235,7 @@ q{}
 */
 	const filter = makesql_by_tvsfilter(q.tvslst, q.ds)
 	const values = filter ? filter.values.slice() : []
-	const CTE0 = get_term_cte(q, filter, values, 0)
+	const CTE0 = get_term_cte(q, values, 0)
 	values.push(q.term1_id, q.term2_id)
 
 	const t1excluded = t1.values
@@ -323,9 +323,9 @@ opts{} options to tweak the query, see const default_opts = below
 	const opts = Object.assign(default_opts, _opts)
 	const filter = makesql_by_tvsfilter(q.tvslst, q.ds)
 	const values = filter ? filter.values.slice() : []
-	const CTE0 = get_term_cte(q, filter, values, 0)
-	const CTE1 = get_term_cte(q, filter, values, 1)
-	const CTE2 = get_term_cte(q, filter, values, 2)
+	const CTE0 = get_term_cte(q, values, 0)
+	const CTE1 = get_term_cte(q, values, 1)
+	const CTE2 = get_term_cte(q, values, 2)
 
 	const statement = `WITH
 		${filter ? filter.filters + ',' : ''}
@@ -345,13 +345,12 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? 'WHERE t1.sample in ' + filter.CTEname : ''}
 		${opts.endclause}`
-	//console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
 
 	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
 }
 
-function get_term_cte(q, filter, values, index) {
+function get_term_cte(q, values, index) {
 	/*
 Generates one or more CTEs by term
 
@@ -360,7 +359,6 @@ q{}
 	.ds
 	.term[0,1,2]_id
 	.term[0,1,2]_q
-filter   returned by makesql_by_tvsfilter
 values[] string/numeric to replace ? in CTEs
 index    0 for term0, 1 for term1, 2 for term2
 */
@@ -387,7 +385,7 @@ index    0 for term0, 1 for term1, 2 for term2
 	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))
 	}
-	const CTE = makesql_oneterm(term, filter, q.ds, termq, values, index)
+	const CTE = makesql_oneterm(term, q.ds, termq, values, index)
 	if (index != 1) {
 		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
 	}
@@ -499,14 +497,13 @@ function get_label4key(key, term, q, ds) {
 	throw 'unknown term type'
 }
 
-function makesql_oneterm(term, filter, ds, q, values, index) {
+function makesql_oneterm(term, ds, q, values, index) {
 	/*
 form the query for one of the table in term0-term1-term2 overlaying
 
 CTE for each term resolves to a table of {sample,key}
 
 term{}
-filter{}: returned by makesql_by_tvsfilter
 q{}
 	.binconfig[]
 	.value_by_?
@@ -529,7 +526,7 @@ returns { sql, tablename }
 	}
 	if (term.isfloat || term.isinteger) {
 		values.push(term.id)
-		const bins = makesql_numericBinCTE(term, q, filter, ds, index)
+		const bins = makesql_numericBinCTE(term, q, ds, index)
 		return {
 			sql: `${bins.sql},
 			${tablename} AS (
@@ -542,12 +539,12 @@ returns { sql, tablename }
 		}
 	}
 	if (term.iscondition) {
-		return makesql_oneterm_condition(term, q, ds, filter, values, index)
+		return makesql_oneterm_condition(term, q, ds, values, index)
 	}
 	throw 'unknown term type'
 }
 
-function makesql_oneterm_condition(term, q, ds, filter, values, index = '') {
+function makesql_oneterm_condition(term, q, ds, values, index = '') {
 	/*
 	return {sql, tablename}
 */
@@ -582,14 +579,13 @@ function makesql_oneterm_condition(term, q, ds, filter, values, index = '') {
 	}
 }
 
-function makesql_numericBinCTE(term, q, filter, ds, index = '') {
+function makesql_numericBinCTE(term, q, ds, index = '') {
 	/*
 decide bins and produce CTE
 
 q{}
 	.binconfig[]   list of custom bins
 	.index           0,1,2 corresponding to term*_id           
-filter as is returned by makesql_by_tvsfilter
 returns { sql, tablename, name2bin, bins, binconfig }
 */
 	const [bins, binconfig] = get_bins(q, term, ds, index)
@@ -671,7 +667,6 @@ returns { sql, tablename, name2bin, bins, binconfig }
 					)
 				)
 			WHERE
-			${filter ? 'sample IN ' + filter.CTEname + ' AND' : ''}
 			term_id=?
 		)`
 	return {

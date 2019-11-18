@@ -42,8 +42,8 @@ tape('numeric term + overlay', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			scatter: {
+		scatter: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}

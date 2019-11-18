@@ -11,14 +11,17 @@ const runpp = helpers.getRunPp('termdb', {
 		dslabel: 'SJLife',
 		genome: 'hg38',
 		bar_click_menu: {
-			add_filter:true,
-			select_group_add_to_cart:true,
+			add_filter: true,
+			select_group_add_to_cart: true,
 			select_to_gp: {
 				group_compare_against: {
-					is_population:true, key:'gnomAD', allowto_adjust_race:true, adjust_race:true
+					is_population: true,
+					key: 'gnomAD',
+					allowto_adjust_race: true,
+					adjust_race: true
 				}
 			}
-		},
+		}
 	},
 	debug: 1,
 	fetchOpts: {
@@ -55,8 +58,8 @@ tape('filter term-value button', function(test) {
 			genome: 'hg38',
 			termfilter
 		},
-		callbacks: {
-			filter: {
+		filter: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -148,8 +151,8 @@ tape('filter term-value button: categorical term', function(test) {
 			genome: 'hg38',
 			termfilter
 		},
-		callbacks: {
-			filter: {
+		filter: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -272,8 +275,8 @@ tape('filter term-value button: numerical term', function(test) {
 			genome: 'hg38',
 			termfilter
 		},
-		callbacks: {
-			filter: {
+		filter: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -380,8 +383,8 @@ tape('filter term-value button: conditional term (grade)', function(test) {
 			genome: 'hg38',
 			termfilter
 		},
-		callbacks: {
-			filter: {
+		filter: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -515,8 +518,8 @@ tape('filter term-value button: conditional term (subcondition)', function(test)
 			genome: 'hg38',
 			termfilter
 		},
-		callbacks: {
-			filter: {
+		filter: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -652,8 +655,8 @@ tape('filter term-value button: conditional term (grade and child)', function(te
 			genome: 'hg38',
 			termfilter
 		},
-		callbacks: {
-			filter: {
+		filter: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}

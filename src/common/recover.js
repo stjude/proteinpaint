@@ -1,8 +1,9 @@
-import * as rx from './core'
+import * as rx from './rx.core'
 import { Menu } from '../client'
 
 class Recover {
 	constructor(app, opts) {
+		this.type = 'recover'
 		this.opts = this.opts
 		this.app = app
 		this.api = rx.getComponentApi(this)
@@ -28,8 +29,11 @@ class Recover {
 			setRenderers(this)
 			this.initUi()
 		}
-		this.bus = new rx.Bus('recover', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
+	}
+
+	getState(appState) {
+		return appState
 	}
 
 	async main() {

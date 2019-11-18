@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import * as client from '../client'
 import { event as d3event } from 'd3-selection'
 import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
@@ -7,9 +7,10 @@ import { axisLeft } from 'd3-axis'
 
 class TdbBoxplot {
 	constructor(app, opts) {
-		this.type = 'plot.boxplot'
+		this.type = 'boxplot'
 		this.id = opts.id
 		this.app = app
+		this.opts = opts
 		this.api = rx.getComponentApi(this)
 
 		const div = opts.holder.style('display', 'none')
@@ -24,9 +25,28 @@ class TdbBoxplot {
 			graph_g: svg.append('g') // for bar and label of each data item
 		}
 
+		setInteractivity(this)
 		setRenderers(this)
-		this.bus = new rx.Bus('boxplot', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
+		opts.controls.on('downloadClick.boxplot', this.download)
+	}
+
+	getState(appState, sub) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		const config = appState.tree.plots[this.id]
+		return {
+			isVisible: config.settings.currViews.includes('boxplot'),
+			config: {
+				term: config.term,
+				term2: config.term2,
+				settings: {
+					common: config.settings.common,
+					boxplot: config.settings.boxplot
+				}
+			}
+		}
 	}
 
 	main(data) {
@@ -62,11 +82,13 @@ class TdbBoxplot {
 		})
 		return [lst, binmax]
 	}
+}
 
-	download() {
-		if (!this.state.isVisible) return
-		const svg_name = this.config.term.term.name + ' boxplot'
-		client.to_svg(this.dom.svg.node(), svg_name, { apply_dom_styles: true })
+function setInteractivity(self) {
+	self.download = () => {
+		if (!self.state || !self.state.isVisible) return
+		const svg_name = self.config.term.term.name + ' boxplot'
+		client.to_svg(self.dom.svg.node(), svg_name, { apply_dom_styles: true })
 	}
 }
 

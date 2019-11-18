@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
@@ -7,7 +7,7 @@ import { to_svg } from '../client'
 
 class TdbScatter {
 	constructor(app, opts) {
-		this.type = 'plot.scatter'
+		this.type = 'scatter'
 		this.id = opts.id
 		this.app = app
 		this.api = rx.getComponentApi(this)
@@ -17,9 +17,29 @@ class TdbScatter {
 		}
 		this.settings = {}
 		setRenderers(this)
-		this.bus = new rx.Bus('scatter', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
+		opts.controls.on('downloadClick.scatter', this.download)
 	}
+
+	getState(appState) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${sub.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		const config = appState.tree.plots[this.id]
+		return {
+			isVisible: config.settings.currViews.includes('scatter'),
+			config: {
+				term: config.term,
+				term0: config.term0,
+				term2: config.term2,
+				settings: {
+					common: config.settings.common,
+					scatter: config.settings.scatter
+				}
+			}
+		}
+	}
+
 	main(data) {
 		this.config = this.state.config
 		if (!this.state.isVisible) {
@@ -258,8 +278,6 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.download = getDownloadFxn(self)
-
 	self.mouseover = function() {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
@@ -278,77 +296,9 @@ function setInteractivity(self) {
 	self.mouseout = function() {
 		self.app.tip.hide()
 	}
-}
 
-function getPj(self) {
-	const s = self.settings
-
-	const pj = new Partjson({
-		template: {
-			//"__:charts": "@.byChc.@values",
-			yMin: '>$val2',
-			yMax: '<$val2',
-			charts: [
-				{
-					chartId: '@key',
-					chc: '@key',
-					xMin: '>$val1',
-					xMax: '<$val1',
-					yMin: '>$val2',
-					yMax: '<$val2',
-					'__:xScale': '=xScale()',
-					'__:yScale': '=yScale()',
-					serieses: [
-						{
-							chartId: '@parent.@parent.@key',
-							seriesId: '@key',
-							data: [
-								{
-									'__:chc': '@parent.@parent.chc',
-									'__:seriesId': '@parent.@parent.seriesId',
-									//color: "$color",
-									x: '$val1',
-									y: '$val2',
-									'_1:scaledX': '=scaledX()',
-									'_1:scaledY': '=scaledY()'
-								},
-								'$val2'
-							]
-						},
-						'-'
-					]
-				},
-				'$val0'
-			]
-		},
-		'=': {
-			xScale(row, context) {
-				return d3Linear()
-					.domain([context.self.xMin, context.self.xMax])
-					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
-			},
-			scaledX(row, context) {
-				return context.context.context.context.parent.xScale(context.self.x)
-			},
-			scaledY(row, context) {
-				return context.context.context.context.parent.yScale(context.self.y)
-			},
-			yScale(row, context) {
-				const yMax = context.self.yMax
-				const domain = s.scale == 'byChart' ? [yMax, 0] : [context.root.yMax, 0]
-				return d3Linear()
-					.domain(domain)
-					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
-			}
-		}
-	})
-
-	return pj
-}
-
-function getDownloadFxn(self) {
-	return () => {
-		if (!self.state.isVisible) return
+	self.download = () => {
+		if (!self.state || !self.state.isVisible) return
 		// has to be able to handle multichart view
 		const mainGs = []
 		const translate = { x: undefined, y: undefined }
@@ -425,4 +375,70 @@ function getDownloadFxn(self) {
 		const svg_name = self.plot.term.term.name + ' scatter'
 		to_svg(svg, svg_name) //,{apply_dom_styles:true})
 	}
+}
+
+function getPj(self) {
+	const s = self.settings
+
+	const pj = new Partjson({
+		template: {
+			//"__:charts": "@.byChc.@values",
+			yMin: '>$val2',
+			yMax: '<$val2',
+			charts: [
+				{
+					chartId: '@key',
+					chc: '@key',
+					xMin: '>$val1',
+					xMax: '<$val1',
+					yMin: '>$val2',
+					yMax: '<$val2',
+					'__:xScale': '=xScale()',
+					'__:yScale': '=yScale()',
+					serieses: [
+						{
+							chartId: '@parent.@parent.@key',
+							seriesId: '@key',
+							data: [
+								{
+									'__:chc': '@parent.@parent.chc',
+									'__:seriesId': '@parent.@parent.seriesId',
+									//color: "$color",
+									x: '$val1',
+									y: '$val2',
+									'_1:scaledX': '=scaledX()',
+									'_1:scaledY': '=scaledY()'
+								},
+								'$val2'
+							]
+						},
+						'-'
+					]
+				},
+				'$val0'
+			]
+		},
+		'=': {
+			xScale(row, context) {
+				return d3Linear()
+					.domain([context.self.xMin, context.self.xMax])
+					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
+			},
+			scaledX(row, context) {
+				return context.context.context.context.parent.xScale(context.self.x)
+			},
+			scaledY(row, context) {
+				return context.context.context.context.parent.yScale(context.self.y)
+			},
+			yScale(row, context) {
+				const yMax = context.self.yMax
+				const domain = s.scale == 'byChart' ? [yMax, 0] : [context.root.yMax, 0]
+				return d3Linear()
+					.domain(domain)
+					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
+			}
+		}
+	})
+
+	return pj
 }

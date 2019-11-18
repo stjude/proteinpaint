@@ -29,11 +29,11 @@ tape('\n', function(test) {
 })
 
 tape('term search, default behavior', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(10000)
 
 	runpp({
-		callbacks: {
-			search: {
+		search: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -43,20 +43,14 @@ tape('term search, default behavior', function(test) {
 		const tree = search.Inner.app.getComponents('tree')
 
 		helpers
-			.rideInit({ arg: search, bus: search, eventType: 'postRender.test' })
+			.rideInit({ arg: search, bus: search, eventType: 'postSearch' })
 			.use(triggerSearchNoResult)
 			.to(testSearchNoResult)
 			.use(triggerFirstSearch)
 			.to(testFirstSearch)
 			.use(triggerClickResult_firstSearch)
-			.to(testClickResult_firstSearch, { arg: tree, bus: tree })
+			.to(testClickResult_firstSearch, { arg: tree, bus: tree, eventType: 'postRender' })
 			.use(triggerSecondSearch_samebranchas1st)
-			// or instead of the preceding .to(..., opts={}) pattern,
-			// instead use the .change().to() pattern below
-			/*
-			.change({ arg: tree, bus: tree })
-			.to(testClickResult)
-			*/
 			.done(test)
 	}
 
@@ -107,15 +101,16 @@ tape('term search, default behavior', function(test) {
 	}
 })
 
-tape('modifiers: click_term', test => {
+tape('click_term', test => {
 	test.timeoutAfter(1000)
 
 	runpp({
-		modifiers: {
-			click_term: modifier_callback
+		tree: {
+			click_term: modifier_callback,
+			disable_terms: ['Cardiomyopathy']
 		},
-		callbacks: {
-			search: {
+		search: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -124,7 +119,7 @@ tape('modifiers: click_term', test => {
 	function runTests(search) {
 		const tree = search.Inner.app.getComponents('tree')
 		helpers
-			.rideInit({ arg: search, bus: search, eventType: 'postRender.test' })
+			.rideInit({ arg: search, bus: search, eventType: 'postSearch' })
 			.use(triggerSearch)
 			.to(testSearchResult, { wait: 100 })
 			.done(test)
@@ -133,8 +128,10 @@ tape('modifiers: click_term', test => {
 		search.Inner.doSearch('cardio')
 	}
 	function testSearchResult(search) {
-		const buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn add_term_btn')
-		test.equal(buttons.length, 3, 'should show 3 buttons')
+		const disabledlabels = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_tree_click_term_disabled')
+		test.equal(disabledlabels.length, 1, 'should show 1 disabled term')
+		const buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn sja_tree_click_term')
+		test.ok(buttons.length > 0, 'should show 1 or more clickable buttons')
 		buttons[0].click()
 	}
 	function modifier_callback(term) {

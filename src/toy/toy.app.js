@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { storeInit } from './toy.store'
 import { controlsInit } from './toy.controls'
 import { tableInit } from './toy.table'
@@ -27,6 +27,7 @@ import { Menu } from '../client'
 */
 class ToyApp {
 	constructor(parentApp, opts) {
+		this.type = 'app'
 		this.opts = opts
 		// the ToyApp may be the root app or a component within another app
 		this.api = parentApp ? rx.getComponentApi(this) : rx.getAppApi(this)
@@ -45,8 +46,7 @@ class ToyApp {
 		}
 		// set up the app api as the default argument
 		// to callbacks of emitted events
-		this.bus = new rx.Bus('app', ['postInit', 'postRender'], opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	/*
@@ -55,19 +55,6 @@ class ToyApp {
 		// may return data for child components
 	}
 	*/
-}
-
-ToyApp.prototype.subState = {
-	filter: {
-		reactsTo: {
-			prefix: ['term']
-		},
-		get(state, sub) {
-			return {
-				rows: state.controls.rows
-			}
-		}
-	}
 }
 
 export const appInit = rx.getInitFxn(ToyApp)

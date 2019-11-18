@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { plotInit } from './plot'
@@ -6,7 +6,8 @@ import { searchInit } from './search'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
-// class names
+
+// class names TODO they should be shared between test/tree.spec.js
 const cls_termdiv = 'termdiv',
 	cls_termchilddiv = 'termchilddiv',
 	cls_termbtn = 'termbtn',
@@ -21,6 +22,12 @@ treeInit()
 graphable()
 root_ID
 
+******************** constructor opts{}
+.holder
+.click_term()
+.disable_terms[]
+
+
 ******************** Plot
 separate functions are designed to handle different things so that logic won't mix
 - clickViewButton( term )
@@ -33,11 +40,6 @@ termsById{} is bound to the DOM tree, to provide:
 - term label
 - list of children terms for a parent term
 
-may implement tree modifiers for:
-- alter the term labels by adding n=?
-- may cause to hide certain terms
-
-any change of modifier should update termsById first, then call renderBranch() at the root term to update the current tree
 
 ******************* special flags
 root term does not exist in the termdb, but is synthesized upon initializing instance, has the "__tree_isroot" flag
@@ -60,16 +62,12 @@ class TdbTree {
 	- api-related and data processing code
 	  within this class declaration 
 
-	opts: {
-		holder,
-		callbacks, // see bus below
-		modifiers
-	}
 	*/
 	constructor(app, opts) {
 		this.type = 'tree'
 		this.api = rx.getComponentApi(this)
 		this.app = app
+		this.opts = opts
 		this.modifiers = opts.modifiers
 		this.dom = {
 			holder: opts.holder,
@@ -81,12 +79,19 @@ class TdbTree {
 		setInteractivity(this)
 		setRenderers(this)
 
-		this.components = {
-			search: searchInit(app, {
-				holder: this.dom.searchDiv,
-				modifiers: opts.modifiers
-			}),
-			plots: {}
+		this.components = { plots: {} }
+		{
+			// the search component will share some attributes with tree
+			// cherry-pick here but not copyMerge( opts.search, opts.tree ) so as not to override attributes of same name
+			const arg = {
+				click_term: opts.click_term,
+				disable_terms: opts.disable_terms
+			}
+			this.components.search = searchInit(
+				this.app,
+				{ holder: this.dom.searchDiv },
+				rx.copyMerge(arg, this.app.opts.search)
+			)
 		}
 
 		// privately defined root term
@@ -101,8 +106,25 @@ class TdbTree {
 
 		this.termsById = {}
 		this.termsById[root_ID] = _root
-		this.bus = new rx.Bus('tree', ['postInit', 'postNotify', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
+	}
+
+	reactsTo(action) {
+		if (action.type.startsWith('tree_')) return true
+		if (action.type.startsWith('filter_')) return true
+		if (action.type.startsWith('plot_')) return true
+		if (action.type == 'app_refresh') return true
+	}
+
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			expandedTermIds: appState.tree.expandedTermIds,
+			visiblePlotIds: appState.tree.visiblePlotIds,
+			termfilter: appState.termfilter,
+			bar_click_menu: appState.bar_click_menu
+		}
 	}
 
 	async main() {
@@ -176,22 +198,26 @@ class TdbTree {
 			.text('Loading...')
 			.style('margin', '3px')
 			.style('opacity', 0.5)
-		const plot = plotInit(this.app, {
-			id: term.id,
-			holder: holder,
-			term: term,
-			modifiers: this.modifiers,
-			callbacks: {
-				plot: {
-					// must use namespaced eventType otherwise will be rewritten..
-					'postRender.viewbtn': plot => {
-						this.loadingPlotSet.delete(term.id)
-						if (loading_div) loading_div.remove()
-						plot.on('postRender.viewbtn', null)
+		const plot = plotInit(
+			this.app,
+			rx.copyMerge(
+				{
+					id: term.id,
+					holder: holder,
+					term: term,
+					modifiers: this.modifiers,
+					callbacks: {
+						// must use namespaced eventType otherwise will be rewritten..
+						'postRender.viewbtn': plot => {
+							this.loadingPlotSet.delete(term.id)
+							if (loading_div) loading_div.remove()
+							plot.on('postRender.viewbtn', null)
+						}
 					}
-				}
-			}
-		})
+				},
+				this.app.opts.plot || {}
+			)
+		)
 		this.components.plots[term.id] = plot
 	}
 
@@ -306,17 +332,25 @@ function setRenderers(self) {
 			.text(term.name)
 
 		if (graphable(term)) {
-			if (self.modifiers.click_term) {
-				labeldiv
-					// need better css class
-					.attr('class', 'sja_filter_tag_btn add_term_btn ' + cls_termlabel)
-					.style('padding', '5px 8px')
-					.style('border-radius', '6px')
-					.style('background-color', '#4888BF')
-					.style('margin', '1px 0px')
-					.on('click', () => {
-						self.modifiers.click_term(term)
-					})
+			if (self.opts.click_term) {
+				if (self.opts.disable_terms && self.opts.disable_terms.includes(term.id)) {
+					labeldiv
+						.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
+						.style('padding', '5px 8px')
+						.style('margin', '1px 0px')
+						.style('opacity', 0.4)
+				} else {
+					labeldiv
+						// need better css class
+						.attr('class', 'sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
+						.style('padding', '5px 8px')
+						.style('border-radius', '6px')
+						.style('background-color', '#4888BF')
+						.style('margin', '1px 0px')
+						.on('click', () => {
+							self.opts.click_term(term)
+						})
+				}
 			} else {
 				// no modifier, show view button and graph div
 				div
@@ -404,6 +438,7 @@ function setInteractivity(self) {
 }
 
 export function graphable(term) {
+	// TODO move to ./common/term.js
 	// terms with a valid type supports graph
 	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
 }

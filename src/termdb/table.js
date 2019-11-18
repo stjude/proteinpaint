@@ -1,9 +1,9 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class TdbTable {
 	constructor(app, opts) {
-		this.type = 'plot.table'
+		this.type = 'table'
 		this.id = opts.id
 		this.app = app
 		this.opts = opts
@@ -11,9 +11,28 @@ class TdbTable {
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')
 		}
+		setInteractivity(this)
 		setRenderers(this)
-		this.bus = new rx.Bus('table', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender']
+		opts.controls.on('downloadClick.table', this.download)
+	}
+
+	getState(appState, sub) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		const config = appState.tree.plots[this.id]
+		return {
+			isVisible: config.settings.currViews.includes('table'),
+			config: {
+				term: config.term,
+				term2: config.term2,
+				settings: {
+					common: config.settings.common,
+					table: config.settings.table
+				}
+			}
+		}
 	}
 
 	main(data) {
@@ -54,11 +73,13 @@ class TdbTable {
 		})
 		return [column_keys, rows]
 	}
+}
 
-	download() {
-		if (!this.state.isVisible) return
+function setInteractivity(self) {
+	self.download = () => {
+		if (!self.state || !self.state.isVisible) return
 		const data = []
-		this.dom.div.selectAll('tr').each(function() {
+		self.dom.div.selectAll('tr').each(function() {
 			const series = []
 			select(this)
 				.selectAll('th, td')
@@ -74,7 +95,7 @@ class TdbTable {
 		a.addEventListener(
 			'click',
 			function() {
-				a.download = this.config.term.term.name + ' table.txt'
+				a.download = self.config.term.term.name + ' table.txt'
 				a.href = URL.createObjectURL(new Blob([matrix], { type: 'text/tab-separated-values' }))
 				document.body.removeChild(a)
 			},

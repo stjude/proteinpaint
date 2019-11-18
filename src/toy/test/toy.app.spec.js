@@ -29,8 +29,8 @@ tape('component access', function(test) {
 	test.plan(2)
 
 	runpp({
-		callbacks: {
-			app: {
+		app: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -66,8 +66,8 @@ tape('default view', function(test) {
 	test.plan(5)
 
 	runpp({
-		callbacks: {
-			app: {
+		app: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -90,7 +90,7 @@ tape('default view', function(test) {
 			.run(triggerTermRemove)
 			.run(testTermRemove, 600)
 			.run(triggerHideRow)
-			.run(testHideRow, 100)
+			.run(testHideRow, 200)
 			.done(test)
 	}
 
@@ -129,7 +129,11 @@ tape('default view', function(test) {
 
 	function testHideRow(app) {
 		test.equal(
-			app.Inner.dom.holder.selectAll('.table-wrapper').selectAll('tr')._groups[0][2].style.opacity,
+			app.Inner.dom.holder
+				.selectAll('.table-wrapper')
+				.selectAll('tr')
+				.filter(d => d[0] == 'graph')
+				.style('opacity'),
 			'0',
 			'should remove row from table'
 		)

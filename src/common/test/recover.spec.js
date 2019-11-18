@@ -31,8 +31,8 @@ tape('history processing', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({
-		callbacks: {
-			recover: {
+		recover: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -88,8 +88,8 @@ tape('rendered buttons', function(test) {
 	test.timeoutAfter(1000)
 
 	runpp({
-		callbacks: {
-			recover: {
+		recover: {
+			callbacks: {
 				'postRender.test': runTests
 			}
 		}
@@ -161,8 +161,8 @@ tape('stored state recovery', function(test) {
 				}
 			}
 		},
-		callbacks: {
-			tree: {
+		tree: {
+			callbacks: {
 				'postRender.test': saveState
 			}
 		}
@@ -179,9 +179,9 @@ tape('stored state recovery', function(test) {
 
 		setTimeout(() => {
 			runpp({
-				callbacks: {
+				tree: {
 					// no state overrides
-					tree: {
+					callbacks: {
 						'postRender.test': runTests
 					}
 				}

@@ -13,7 +13,9 @@ function getInitFxn(_Class_) {
 		- optionally attaches a self reference to the api
 		- freezes and returns the instance api
 	*/
-	return (arg, instanceOpts = {}) => {
+	return (arg, instanceOpts = {}, overrides) => {
+		if (overrides) copyMerge(instanceOpts, overrides)
+
 		// instantiate mutable private properties and methods
 		const self = new _Class_(arg, instanceOpts)
 
@@ -34,121 +36,20 @@ function getInitFxn(_Class_) {
 		if (opts.debug) api.Inner = self
 
 		// freeze the api's properties and methods before exposing
-		return Object.freeze(api)
+		Object.freeze(api)
+
+		if (self.eventTypes) {
+			// set up an optional event bus
+			const callbacks = self.type in instanceOpts ? instanceOpts[self.type].callbacks : instanceOpts.callbacks
+			self.bus = new Bus(self.api, self.eventTypes, callbacks)
+		}
+		if (self.bus) self.bus.emit('postInit')
+
+		return api
 	}
 }
 
 exports.getInitFxn = getInitFxn
-
-/**************
-Utility Classes
-***************/
-
-/*
-	A Bus instance will be its own api,
-	since it does not have a getApi() method.
-	Instead, the mutable Bus instance will be hidden via the
-	component.api.on() method.
-*/
-
-class Bus {
-	constructor(name, eventTypes, callbacks, defaultArg) {
-		/*
-		name
-		- the property name within the termdb.callbacks object
-		  to use for initializing bus events
-
-		eventType
-		- must be one of the eventTypes supplied to the Bus constructor
-		- maybe be namespaced or not, example: "postRender.test" or "postRender"
-
-		arg
-		- optional the argument to supply to the callback
-
-		callbacks
-		- optional 
-
-		defaultArg
-		- when emitting an event without a second argument,
-		  the defaultArg will be supplied as the argument
-		  to the callback
-	*/
-		this.name = name
-		this.eventTypes = eventTypes
-		this.events = {}
-		this.defaultArg = defaultArg
-		if (callbacks && name in callbacks) {
-			for (const eventType in callbacks[name]) {
-				this.on(eventType, callbacks[name][eventType])
-			}
-		}
-	}
-
-	on(eventType, callback, opts = {}) {
-		/*
-		eventType
-		- must match one of the eventTypes supplied to the Bus constructor
-		- maybe be namespaced or not, example: "postRender.test" or "postRender"
-		- any previous event-attached callbacks will be REPLACED in this bus 
-		  when the same eventType is used as an argument again -- same behavior
-		  as a DOM event listener namespacing and replacement
-
-		arg
-		- optional the argument to supply to the callback
-
-		opts 
-		- optional callback configuration, such as
-		.wait // to delay callback  
-	*/
-		const [type, name] = eventType.split('.')
-		if (!this.eventTypes.includes(type)) {
-			throw `Unknown bus event '${type}' for component ${this.name}`
-		} else if (!callback) {
-			delete this.events[eventType]
-		} else if (typeof callback == 'function') {
-			if (eventType in this.events && !eventType.includes('.')) {
-				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
-			}
-			this.events[eventType] = opts.wait ? arg => setTimeout(() => callback(arg), opts.wait) : callback
-		} else if (Array.isArray(callback)) {
-			if (eventType in this.events) {
-				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
-			}
-			const wrapperFxn = arg => {
-				for (const fxn of callback) fxn(arg)
-			}
-			this.events[eventType] = opts.wait ? arg => setTimeout(() => wrapperFxn(arg), opts.wait) : wrapperFxn
-		} else {
-			throw `invalid callback for ${this.name} eventType=${eventType}`
-		}
-		return this
-	}
-
-	emit(eventType, arg = null, wait = 0) {
-		/*
-		eventType
-		- must be one of the eventTypes supplied to the Bus constructor
-		- maybe be namespaced or not, example: "postRender.test" or "postRender"
-
-		arg
-		- optional: the argument to supply to the callback
-		  if null or undefined, will use constructor() opts.defaultArg instead
-
-		wait
-		- optional delay in calling the callback
-	*/
-		setTimeout(() => {
-			for (const type in this.events) {
-				if (type == eventType || type.startsWith(eventType + '.')) {
-					this.events[type](arg || this.defaultArg)
-				}
-			}
-		}, wait)
-		return this
-	}
-}
-
-exports.Bus = Bus
 
 /****************
   API Generators
@@ -184,9 +85,14 @@ function getStoreApi(self) {
 exports.getStoreApi = getStoreApi
 
 function getAppApi(self) {
+	if (!('type' in self)) {
+		throw `The component's this.type must be set before calling this.getAppApi(this).`
+	}
+
 	const middlewares = []
 
 	const api = {
+		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
 			/*
@@ -216,7 +122,7 @@ function getAppApi(self) {
 				// else an empty action should force components to update
 
 				const data = self.main ? self.main() : null
-				const current = { action, stateByType: { app: self.state } }
+				const current = { action, appState: self.state }
 				await notifyComponents(self.components, current, data)
 			} catch (e) {
 				if (self.printError) self.printError(e)
@@ -228,34 +134,8 @@ function getAppApi(self) {
 			// save changes to store, do not notify components
 			self.state = await self.store.write(action)
 		},
-		getState(sub = null, current = {}, currComponentState) {
-			/*
-				Because a component may rehydrate and save() 
-				additional state during a dispatch cycle, 
-				getState() cannot reuse the frozen app.state copy right after
-				store.write(). That copy will only be guaranteed
-				to be good for root components and will not contain 
-				rehydrated state filled-in by notified components, 
-				and may be incomplete by the time certain child components 
-				are notified.
-			*/
-			// const appState = current.action && current.stateByType && current.stateByType.app ? current.stateByType.app : self.state;
-			const appState = self.state
-			if (!sub || !sub.type) return appState
-
-			const componentType = sub.type.split('.')[0]
-			if (!self.subState.hasOwnProperty(componentType)) {
-				throw `undefined store config getter for component type='${componentType}'`
-			}
-
-			const subState = self.subState[componentType]
-			if (current.action) {
-				if (subState.passThrough && matchAction(current.action, subState.passThrough, sub)) return currComponentState
-				if (subState.reactsTo && !matchAction(current.action, subState.reactsTo, sub)) return
-			}
-			// freeze only the root componentState object since
-			// the copied app.state is already deeply frozen
-			return Object.freeze(subState.get(appState, sub))
+		getState() {
+			return self.state
 		},
 		middle(fxn) {
 			/*
@@ -280,8 +160,8 @@ function getAppApi(self) {
 		// will also expose bus.emit() which should only
 		// be triggered by this component
 		on(eventType, callback) {
-			if (self.bus) self.bus.on(eventType, callback)
-			else console.log('no component event bus')
+			if (!self.eventTypes) throw `no eventTypes[] for ${self.type} component`
+			self.bus.on(eventType, callback)
 			return api
 		},
 		getComponents(dotSepNames = '') {
@@ -300,11 +180,16 @@ function getAppApi(self) {
 exports.getAppApi = getAppApi
 
 function getComponentApi(self) {
+	if (!('type' in self)) {
+		throw `The component's type must be set before calling this.getComponentApi(this).`
+	}
+
 	const api = {
 		type: self.type,
 		id: self.id,
 		async update(current, data) {
-			const componentState = self.app.getState(api, current, self.state)
+			if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
+			const componentState = self.getState ? self.getState(current.appState) : current.appState
 			// no new state computed for this component
 			if (!componentState) return
 			let componentData = null
@@ -321,12 +206,17 @@ function getComponentApi(self) {
 			if (self.bus) self.bus.emit('postRender')
 			return api
 		},
+		async setInnerAttr(data) {
+			if (typeof self.setAttr == 'function') {
+				await self.setAttr(data)
+			}
+		},
 		// must not expose self.bus directly since that
 		// will also expose bus.emit() which should only
 		// be triggered by this component
 		on(eventType, callback) {
-			if (self.bus) self.bus.on(eventType, callback)
-			else console.log('no component event bus')
+			if (!self.eventTypes) throw `no eventTypes[] for ${self.type} component`
+			self.bus.on(eventType, callback)
 			return api
 		},
 		getComponents(dotSepNames = '') {
@@ -337,6 +227,101 @@ function getComponentApi(self) {
 }
 
 exports.getComponentApi = getComponentApi
+
+/**************
+Utility Classes
+***************/
+
+/*
+	A Bus instance will be its own api,
+	since it does not have a getApi() method.
+	Instead, the mutable Bus instance will be hidden via the
+	component.api.on() method.
+*/
+
+class Bus {
+	constructor(api, eventTypes, callbacks) {
+		/*
+			api{} 
+			- the immutable api of the app or component
+			
+			eventTypes[] 
+			- the events that this component wants to emit
+			- ['postInit', 'postRender', 'postClick']
+
+			callbacks{} any event listeners to set-up for this component 
+			.postInit: ()=>{}
+			.postRender() {}, etc.
+
+		*/
+		this.name = api.type + (api.id === undefined || api.id === null ? '' : '#' + api.id)
+		this.eventTypes = eventTypes
+		this.events = {}
+		this.defaultArg = api
+		if (callbacks) {
+			for (const eventType in callbacks) {
+				this.on(eventType, callbacks[eventType])
+			}
+		}
+	}
+
+	on(eventType, callback, opts = {}) {
+		/*
+		eventType
+		- must match one of the eventTypes supplied to the Bus constructor
+		- maybe be namespaced or not, example: "postRender.test" or "postRender"
+		- any previous event-attached callbacks will be REPLACED in this bus 
+		  when the same eventType is used as an argument again -- same behavior
+		  as a DOM event listener namespacing and replacement
+
+		callback
+		- function
+
+		opts{}
+		- optional callback configuration, such as
+		.wait // to delay callback  
+	*/
+		const [type, name] = eventType.split('.')
+		if (!this.eventTypes.includes(type)) {
+			throw `Unknown bus event '${type}' for component ${this.name}`
+		} else if (!callback) {
+			delete this.events[eventType]
+		} else if (typeof callback == 'function') {
+			if (eventType in this.events && !eventType.includes('.')) {
+				console.log(`Warning: replacing ${this.name} ${eventType} callback - use event.name?`)
+			}
+			this.events[eventType] = opts.wait ? arg => setTimeout(() => callback(arg), opts.wait) : callback
+		} else {
+			throw `invalid callback for ${this.name} eventType=${eventType}`
+		}
+		return this
+	}
+
+	emit(eventType, arg = null, wait = 0) {
+		/*
+		eventType
+		- must be one of the eventTypes supplied to the Bus constructor
+		- maybe be namespaced or not, example: "postRender.test" or "postRender"
+
+		arg
+		- optional: the argument to supply to the callback
+		  if null or undefined, will use constructor() opts.defaultArg instead
+
+		wait
+		- optional delay in calling the callback
+	*/
+		setTimeout(() => {
+			for (const type in this.events) {
+				if (type == eventType || type.startsWith(eventType + '.')) {
+					this.events[type](arg || this.defaultArg)
+				}
+			}
+		}, wait)
+		return this
+	}
+}
+
+exports.Bus = Bus
 
 /******************
   Detached Helpers
@@ -372,7 +357,7 @@ async function notifyComponents(components, current, data = null) {
 			for (const c of component) called.push(c.update(current, data))
 		} else if (component.hasOwnProperty('update')) {
 			called.push(component.update(current, data))
-		} else if (component && typeof component == 'object') {
+		} else if (component && typeof component == 'object' && !component.main) {
 			for (const name in component) {
 				if (component.hasOwnProperty(name) && typeof component[name].update == 'function') {
 					called.push(component[name].update(current, data))
@@ -454,7 +439,7 @@ function copyMerge(base, ...args) {
 					replaceKeyVals.includes(key)
 				)
 					target[key] = source[key]
-				else this.copyMerge(target[key], source[key])
+				else this.copyMerge(target[key], source[key], replaceKeyVals)
 			}
 		}
 	}

@@ -1,12 +1,15 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { controlsInit } from './plot.controls'
 import { barInit } from './barchart'
+import { statTableInit } from './stattable'
 import { tableInit } from './table'
 import { boxplotInit } from './boxplot'
 import { scatterInit } from './scatter'
+import { termInfoInit } from './termInfo'
 import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
+import { termsetting_fill_q } from '../common/termsetting'
 
 class TdbPlot {
 	constructor(app, opts) {
@@ -40,41 +43,62 @@ class TdbPlot {
 				.style('margin-left', '50px')
 		}
 
+		const controls = controlsInit(
+			this.app,
+			{
+				id: this.id,
+				holder: this.dom.controls
+			},
+			this.app.opts.plotControls
+		)
+
 		this.components = {
-			controls: controlsInit(this.app, {
-				id: this.id,
-				holder: this.dom.controls,
-				isVisible: false // plot.settings.controls.isVisible
-			}),
-			barchart: barInit(this.app, {
-				holder: this.dom.viz.append('div'),
-				id: this.id,
-				term: opts.term,
-				modifiers: this.modifiers
-			}),
-			table: tableInit(this.app, {
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			}),
-			boxplot: boxplotInit(this.app, {
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			}),
-			scatter: scatterInit(this.app, {
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			})
+			controls,
+			barchart: barInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.barchart)
+			),
+			stattable: statTableInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.stattable),
+			table: tableInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.table)
+			),
+			boxplot: boxplotInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.boxplot)
+			),
+			scatter: scatterInit(
+				this.app,
+				{ holder: this.dom.viz.append('div'), id: this.id },
+				Object.assign({ controls }, this.app.opts.scatter)
+			),
+			termInfo: termInfoInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.termInfo)
 		}
 
-		// constructor also accepts callbacks in order to dismiss the loading DIV from tree
-		// here to merge callbacks from two places
-		// rx.copyMerge performs a deep merge of nested objects, so in this case
-		// the opts.callback.plot{} is not replaced by this.app.opts.callbacks.plot{},
-		// but instead "extended" by all the subproperties of the latter
-		// which has a different eventType namespace
-		const callbacks = rx.copyMerge(opts.callbacks || {}, this.app.opts.callbacks)
-		this.bus = new rx.Bus('plot', ['postInit', 'postRender'], callbacks, this.api)
-		this.bus.emit('postInit', this.api)
+		this.eventTypes = ['postInit', 'postRender']
+	}
+
+	reactsTo(action) {
+		if (action.type == 'plot_edit' || action.type == 'plot_show') {
+			return action.id == this.id
+		}
+		if (action.type.startsWith('filter')) return true
+		if (action.type == 'app_refresh') return true
+	}
+
+	getState(appState) {
+		if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${this.id}' found.`
+		}
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter,
+			config: appState.tree.plots[this.id]
+		}
 	}
 
 	async main() {
@@ -82,6 +106,7 @@ class TdbPlot {
 		this.config = rx.copyMerge('{}', this.state.config)
 		const data = await this.requestData(this.state)
 		this.syncParams(this.config, data)
+		this.currData = data
 		return data
 	}
 
@@ -94,18 +119,23 @@ class TdbPlot {
 	// creates URL search parameter string, that also serves as
 	// a unique request identifier to be used for caching server response
 	getDataName(state) {
-		const config = this.config
+		const plot = this.config // the plot object in state
 		const params = ['genome=' + state.genome, 'dslabel=' + state.dslabel]
 
-		const isscatter = config.settings.currViews.includes('scatter')
+		const isscatter = plot.settings.currViews.includes('scatter')
 		if (isscatter) params.push('scatter=1')
 		;['term', 'term2', 'term0'].forEach(_key => {
 			// "term" on client is "term1" at backend
-			const term = config[_key]
+			const term = plot[_key]
 			if (!term) return
 			const key = _key == 'term' ? 'term1' : _key
 			params.push(key + '_id=' + encodeURIComponent(term.term.id))
 			if (isscatter) return
+			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
+			params.push(key + '_q=' + encodeURIComponent(JSON.stringify(term.q)))
+			/*
+			to delete legacy code
+
 			if (term.term.iscondition && !term.q) term.q = {}
 			if (term.q && typeof term.q == 'object') {
 				let q = {}
@@ -118,6 +148,7 @@ class TdbPlot {
 				}
 				params.push(key + '_q=' + encodeURIComponent(JSON.stringify(q)))
 			}
+			*/
 		})
 
 		if (!isscatter) {
@@ -143,16 +174,24 @@ class TdbPlot {
 		if (!data || !data.refs) return
 		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
 			const term = config[key]
-			if (!term || term == 'genotype' || !data.refs.bins) continue
-			term.bins = data.refs.bins[i]
-			if (data.refs.q && data.refs.q[i]) {
-				if (!term.q) term.q = {}
-				const q = data.refs.q[i]
-				if (q !== term.q) {
-					for (const key in term.q) delete term.q[key]
-					Object.assign(term.q, q)
+			if (term == 'genotype') return
+			if (!term) {
+				if (key == 'term') throw `missing plot.term{}`
+				return
+			}
+			if (data.refs.bins) {
+				term.bins = data.refs.bins[i]
+				if (data.refs.q && data.refs.q[i]) {
+					if (!term.q) term.q = {}
+					const q = data.refs.q[i]
+					if (q !== term.q) {
+						for (const key in term.q) delete term.q[key]
+						Object.assign(term.q, q)
+					}
 				}
 			}
+			if (!term.q) term.q = {}
+			if (!term.q.groupsetting) term.q.groupsetting = {}
 		}
 	}
 }
@@ -161,21 +200,28 @@ export const plotInit = rx.getInitFxn(TdbPlot)
 
 export function plotConfig(opts) {
 	if (!opts.term) throw `missing opts.term for plotConfig()`
+
+	// initiate .q{}
+	if (!opts.term.q) opts.term.q = {}
+	termsetting_fill_q(opts.term.q, opts.term.term)
+	if (opts.term2) {
+		if (!opts.term2.q) opts.term2.q = {}
+		termsetting_fill_q(opts.term2.q, opts.term2.term)
+	}
+	if (opts.term0) {
+		if (!opts.term0.q) opts.term0.q = {}
+		termsetting_fill_q(opts.term0.q, opts.term0.term)
+	}
+
 	return rx.copyMerge(
 		{
 			id: opts.term.id,
-			//term: Object.assign({q: {}}, opts.term),
-			term0: null, //opts.term0 ? Object.assign({q: {}}, opts.term0) : null,
-			term2: null /*opts.term2
-			? Object.assign({q: {}}, opts.term2)
-			: //: opts.obj.modifier_ssid_barchart
-			  //? { mname: opts.obj.modifier_ssid_barchart.mutation_name }
-			  null,*/,
-			//unannotated: opts.unannotated ? opts.unannotated : "" // not needed?
 			settings: {
 				currViews: ['barchart'],
 				controls: {
-					isVisible: false // control panel is hidden by default
+					isOpen: false, // control panel is hidden by default
+					term2: null, // the previous overlay value may be displayed as a convenience for toggling
+					term0: null
 				},
 				common: {
 					use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
@@ -216,6 +262,9 @@ export function plotConfig(opts) {
 					ciVisible: true,
 					fillOpacity: 0.2,
 					duration: 1000
+				},
+				termInfo: {
+					isVisible: false
 				}
 			}
 		},

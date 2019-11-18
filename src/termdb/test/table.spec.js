@@ -27,6 +27,8 @@ tape('\n', function(test) {
 })
 
 tape('default behavior', function(test) {
+	test.timeoutAfter(2000)
+
 	const termfilter = { show_top_ui: true, terms: [] }
 	runpp({
 		termfilter,
@@ -36,14 +38,14 @@ tape('default behavior', function(test) {
 				visiblePlotIds: ['diaggrp'],
 				plots: {
 					diaggrp: {
-						settings: { currViews: ['table'] },
+						settings: { currViews: [] },
 						term: { id: 'diaggrp' }
 					}
 				}
 			}
 		},
-		callbacks: {
-			plot: {
+		plot: {
+			callbacks: {
 				'postInit.test': runTests
 			}
 		}
@@ -57,7 +59,7 @@ tape('default behavior', function(test) {
 			.rideInit({ arg: plot, eventType: 'postRender.test' })
 			.run(testHiddenTable, { wait: 200 })
 			.use(triggerViewTable, { wait: 400 })
-			.to(testVisibleTable)
+			.to(testVisibleTable, { wait: 1000 })
 			.done(test)
 	}
 

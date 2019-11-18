@@ -24,8 +24,8 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
 		// supply argument key-values that are 
 		// specific to a test section or assertion
 		runpp({
-			callbacks: {
-				app: {
+			app: {
+				callbacks: {
 					'postRender.test': testWrongGenome
 				}
 			}

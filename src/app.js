@@ -907,6 +907,7 @@ function parseembedthenurl(arg, holder, selectgenome) {
 	if (arg.termdb) {
 		launchtermdb(arg.termdb, holder)
 	}
+	if( arg.xintest) launchxintest(arg.xintest,holder)
 }
 
 
@@ -1454,7 +1455,12 @@ function launchtoy(opts, holder) {
 }
 function launchtermdb(opts, holder) {
 	if (!opts.holder) opts.holder = holder
+	if (!opts.callbacks) opts.callbacks = {}
 	import('./termdb/app').then(_=>{
 		_.appInit(null, opts)
 	})
+}
+function launchxintest(opts,holder) {
+	opts.holder = holder
+	import('./xin/app').then(_=> _.appInit(null,opts))
 }

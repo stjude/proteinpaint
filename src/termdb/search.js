@@ -1,11 +1,9 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch2, sayerror } from '../client'
 import { debounce } from 'debounce'
 import { graphable, root_ID } from './tree'
 import { plotConfig } from './plot'
-
-// class names
 
 /*
 steps:
@@ -15,6 +13,10 @@ but the action will NOT update app state
 app notifies all components with the action
 only main() of the "search component" will responds to the action to perform querying and display result
 
+opts{}
+.holder
+.click_term()
+.disable_terms[]
 
 TODO
 allow to search categories, e.g. hodgkin lymphoma from diaggrp, how to act upon clicking?
@@ -22,24 +24,28 @@ allow to search categories, e.g. hodgkin lymphoma from diaggrp, how to act upon 
  */
 
 class TermSearch {
-	/*
-	 */
 	constructor(app, opts) {
 		this.type = 'search'
+		this.opts = opts
 		this.api = rx.getComponentApi(this)
 		this.app = app
-		this.modifiers = opts.modifiers
-		// see rx.core getComponentApi().main() on
-		// how these key-values are used
-		this.reactsTo = {
-			prefix: ['search']
-		}
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
 		this.initUI()
-		this.bus = new rx.Bus('search', ['postInit', 'postRender'], app.opts.callbacks, this.api)
-		this.bus.emit('postInit')
+		this.eventTypes = ['postInit', 'postRender', 'postSearch']
+		// currently postSearch is only used for testing
+	}
+
+	reactsTo(action) {
+		return action.type.startsWith('search')
+	}
+
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel
+		}
 	}
 
 	async doSearch(str) {
@@ -56,7 +62,7 @@ class TermSearch {
 			// found terms
 			this.showTerms(data)
 		}
-		this.bus.emit('postRender')
+		this.bus.emit('postSearch')
 	}
 }
 
@@ -99,20 +105,30 @@ function setRenderers(self) {
 	self.showTerm = function(term) {
 		const tr = select(this)
 		const button = tr.append('td').text(term.name)
-		if (self.modifiers.click_term && graphable(term)) {
-			// has modifier and is graphable, show as blue button
-			// click to feed to callback
-			// improve css class
-			button
-				.attr('class', 'sja_filter_tag_btn add_term_btn')
-				.style('display', 'block')
-				.style('padding', '5px 8px')
-				.style('border-radius', '6px')
-				.style('background-color', '#4888BF')
-				.style('margin', '1px 0px')
-				.on('click', () => {
-					self.modifiers.click_term(term)
-				})
+
+		if (self.opts.click_term && graphable(term)) {
+			// to click a graphable term, show as blue button
+			if (self.opts.disable_terms && self.opts.disable_terms.includes(term.id)) {
+				// but it's disabled
+				button
+					.attr('class', 'sja_tree_click_term_disabled')
+					.style('display', 'block')
+					.style('padding', '5px 8px')
+					.style('margin', '1px 0px')
+					.style('opacity', 0.4)
+			} else {
+				// clickable button
+				button
+					.attr('class', 'sja_filter_tag_btn sja_tree_click_term')
+					.style('display', 'block')
+					.style('padding', '5px 8px')
+					.style('border-radius', '6px')
+					.style('background-color', '#4888BF')
+					.style('margin', '1px 0px')
+					.on('click', () => {
+						self.opts.click_term(term)
+					})
+			}
 		} else {
 			// as regular button, click to expand tree
 			button.attr('class', 'sja_menuoption').on('click', () => {
@@ -167,8 +183,5 @@ function setInteractivity(self) {
 			sayerror(self.dom.resultDiv, 'Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
 		}
-	}
-	self.selectTerm = term => {
-		console.log('selected', term)
 	}
 }

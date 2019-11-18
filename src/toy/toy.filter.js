@@ -1,4 +1,4 @@
-import * as rx from '../rx/core'
+import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class ToyFilter {
@@ -12,6 +12,16 @@ class ToyFilter {
 		this.yesThis()
 		this.notThis(this)
 		this.render()
+	}
+
+	reactsTo(action) {
+		return action.type.startsWith('term')
+	}
+
+	getState(appState) {
+		return {
+			rows: appState.controls.rows
+		}
 	}
 
 	main() {
