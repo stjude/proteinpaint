@@ -31,6 +31,7 @@ class Term1ui {
 				this.render()
 			}
 		}
+		if (opts.debug) this.api.Inner = this
 	}
 	validateOpts() {
 		if (!('id' in this.opts)) throw 'opts.id missing'
@@ -45,6 +46,7 @@ class Term1ui {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.td2,
+			debug: this.opts.debug,
 			callback: data => {
 				// data is object with only one needed attribute: q, never is null
 				if (!data.q) throw 'data.q{} missing from pill callback'

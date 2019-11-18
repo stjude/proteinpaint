@@ -17,11 +17,7 @@ class TdbConfigUiInit {
 		const table = this.setDom()
 		const debug = opts.debug
 		this.inputs = {
-			term1: term1uiInit({
-				holder: table.append('tr'),
-				dispatch,
-				id: this.id
-			}),
+			term1: term1uiInit({ holder: table.append('tr'), dispatch, id: this.id, debug }),
 			/************* replaced by term1uiInit
 			barsAs: setBarsAsOpts({
 				holder: table.append('tr'),

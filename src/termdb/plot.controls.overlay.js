@@ -45,6 +45,7 @@ class TdbOverlayInput {
 				this.updatePill()
 			}
 		}
+		if (opts.debug) this.api.Inner = this
 	}
 
 	updatePill() {
@@ -72,6 +73,7 @@ class TdbOverlayInput {
 			holder: this.dom.pill_div,
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
+			debug: this.opts.debug,
 			callback: term2 => {
 				// term2 is an object of { id, term{}, q{} }, maybe null
 				this.opts.dispatch({
