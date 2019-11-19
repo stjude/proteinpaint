@@ -158,8 +158,8 @@ function setRenderers(self) {
 			self.q.groupsetting &&
 			self.q.groupsetting.predefined_groupset_idx
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
-				: self.q.customset
-				? 'Divided into' + self.q.customset.groups.length + 'groups'
+				: self.q.groupsetting && self.q.groupsetting.customset
+				? 'Divided into ' + self.q.groupsetting.customset.groups.length + ' groups'
 				: ''
 
 		self.dom.nopilldiv.style('display', 'none')
@@ -252,14 +252,73 @@ function setInteractivity(self) {
 
 	self.showCatOpts = async function(div) {
 		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
+		const predefined_group_name =
+			self.term.groupsetting &&
+			self.term.groupsetting.lst &&
+			self.q.groupsetting &&
+			self.q.groupsetting.predefined_groupset_idx
+				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
+				: ''
+
+		const active_group_info_div = div.append('div').style('margin', '10px')
+
+		// if using predfined groupset, display name
+		active_group_info_div
+			.append('div')
+			.style('display', predefined_group_name ? 'block' : 'none')
+			.html('Using ' + predefined_group_name)
+
+		//display groups and categories assigned to that group
+		if (grpsetting_flag) {
+			const groupset = self.q.groupsetting.predefined_groupset_idx
+				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+				: self.q.groupsetting.customset || undefined
+
+			const group_table = active_group_info_div.append('table').style('font-size', '.8em')
+
+			for (const [i, g] of groupset.groups.entries()) {
+				const group_tr = group_table.append('tr')
+
+				//group name
+				group_tr
+					.append('td')
+					.style('font-weight', 'bold')
+					.style('vertical-align', 'top')
+					.html(g.name || 'Group ' + (i + 1) + ':')
+
+				const values_td = group_tr.append('td')
+
+				for (const v of g.values) {
+					values_td.append('div').html(self.term.values[v.key].label)
+				}
+			}
+
+			//redevide groups btn
+			div
+				.append('div')
+				.attr('class', 'group_btn sja_filter_tag_btn')
+				.style('display', 'block')
+				.style('padding', '7px 6px')
+				.style('margin', '5px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('border-radius', '10px')
+				.style('background-color', '#eee')
+				.style('color', '#000')
+				.html('Redivide groups')
+				.on('click', () => {
+					const valGrp = self.grpSet2valGrp(groupset)
+					self.regroupMenu(groupset.groups.length, valGrp)
+				})
+		}
 
 		const default_btn_txt =
 			(!grpsetting_flag ? 'Using' : 'Use') +
 			' default category' +
 			(self.term.values ? '(n=' + Object.keys(self.term.values).length + ')' : '')
 
-		// default (n=total) setting btn
-		const default_btn = div
+		// default overlay btn - devide to n groups (n=total)
+		div
 			.append('div')
 			.attr('class', 'group_btn sja_filter_tag_btn')
 			.style('display', 'block')
@@ -274,6 +333,7 @@ function setInteractivity(self) {
 			.text(default_btn_txt)
 			.on('click', () => {
 				self.q.groupsetting.inuse = false
+				self.updateUI()
 				self.dom.tip.hide()
 			})
 
@@ -296,10 +356,13 @@ function setInteractivity(self) {
 		}
 
 		// devide to grpups btn
-		const devide_btn = div
+		div
 			.append('div')
 			.attr('class', 'group_btn sja_filter_tag_btn')
-			.style('display', 'block')
+			.style(
+				'display',
+				(self.term.groupsetting && self.term.groupsetting.disabled) || grpsetting_flag ? 'none' : 'block'
+			)
 			.style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
@@ -311,8 +374,6 @@ function setInteractivity(self) {
 			.on('click', () => {
 				self.regroupMenu()
 			})
-
-		if (self.term.groupsetting && self.term.groupsetting.disabled) devide_btn.style('display', 'none')
 	}
 
 	self.regroupMenu = function(grp_count, temp_cat_grps) {
@@ -419,10 +480,9 @@ function setInteractivity(self) {
 				.attr('name', key)
 				.attr('value', 0)
 				.property('checked', () => {
-					if (!cat_grps[key].group) {
+					if (cat_grps[key].group === 0) {
+						// cat_grps[key].group = 0
 						return true
-					} else {
-						cat_grps[key].group = 0
 					}
 				})
 				.on('click', () => {
@@ -440,7 +500,7 @@ function setInteractivity(self) {
 					.attr('name', key)
 					.attr('value', i)
 					.property('checked', () => {
-						if (!cat_grps[key].group) {
+						if (!cat_grps[key].group && cat_grps[key].group !== 0) {
 							cat_grps[key].group = 1
 							return true
 						} else {
@@ -493,7 +553,7 @@ function setInteractivity(self) {
 					inuse: true,
 					customset: customset
 				}
-				console.log(self.q.groupsetting)
+				self.updateUI()
 				self.dom.tip.hide()
 			})
 	}
@@ -501,6 +561,21 @@ function setInteractivity(self) {
 	self.showNumOpts = async function(div) {}
 
 	self.showConditionOpts = async function(div) {}
+
+	self.grpSet2valGrp = function(groupset) {
+		const vals_with_grp = JSON.parse(JSON.stringify(self.term.values))
+		for (const [i, g] of groupset.groups.entries()) {
+			for (const v of g.values) {
+				vals_with_grp[v.key].group = i + 1
+			}
+		}
+
+		for (const [key, val] of Object.entries(vals_with_grp)) {
+			if (vals_with_grp[key].group == undefined) vals_with_grp[key].group = 0
+		}
+
+		return vals_with_grp
+	}
 }
 
 function termsetting_fill_q(q, term) {
