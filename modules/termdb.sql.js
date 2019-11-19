@@ -19,6 +19,8 @@ makesql_by_tvsfilter
 	add_condition
 get_term_cte
 	makesql_oneterm
+		makesql_oneterm_categorical
+			makesql_groupset
 		makesql_oneterm_condition
 		makesql_numericBinCTE
 uncomputablegrades_clause
@@ -345,6 +347,7 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? 'WHERE t1.sample in ' + filter.CTEname : ''}
 		${opts.endclause}`
+	console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
 
 	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
@@ -352,15 +355,24 @@ opts{} options to tweak the query, see const default_opts = below
 
 function get_term_cte(q, values, index) {
 	/*
-Generates one or more CTEs by term
+Generates one or more CTEs by a term
 
 q{}
 	.tvslst
 	.ds
 	.term[0,1,2]_id
 	.term[0,1,2]_q
-values[] string/numeric to replace ? in CTEs
-index    0 for term0, 1 for term1, 2 for term2
+		the _q{} is managed by termsetting UI
+	.term?_is_genotype
+		TODO may improve??
+
+values[]
+	string/numeric to replace "?" in CTEs
+
+index
+	1 for term1, required
+	0 for term0, optional
+	2 for term2, optional
 */
 	const termid = q['term' + index + '_id']
 	const term_is_genotype = q['term' + index + '_is_genotype']
@@ -500,31 +512,24 @@ function get_label4key(key, term, q, ds) {
 function makesql_oneterm(term, ds, q, values, index) {
 	/*
 form the query for one of the table in term0-term1-term2 overlaying
-
 CTE for each term resolves to a table of {sample,key}
 
 term{}
 q{}
-	.binconfig[]
-	.value_by_?
-	.bar_by_?
-values[]: collector of bind parameters
+	managed by termsetting UI on client
+	see doc for spec
+values[]
+	collector of bind parameters
 
 returns { sql, tablename }
 */
 	const tablename = 'samplekey_' + index
 	if (term.iscategorical) {
 		values.push(term.id)
-		return {
-			sql: `${tablename} AS (
-				SELECT sample,value as key, value as value
-				FROM annotations
-				WHERE term_id=?
-			)`,
-			tablename
-		}
+		return makesql_oneterm_categorical(tablename, term, q)
 	}
 	if (term.isfloat || term.isinteger) {
+		// XXX no more q.binconfig
 		values.push(term.id)
 		const bins = makesql_numericBinCTE(term, q, ds, index)
 		return {
@@ -539,18 +544,48 @@ returns { sql, tablename }
 		}
 	}
 	if (term.iscondition) {
-		return makesql_oneterm_condition(term, q, ds, values, index)
+		return makesql_oneterm_condition(tablename, term, q, values)
 	}
 	throw 'unknown term type'
 }
 
-function makesql_oneterm_condition(term, q, ds, values, index = '') {
+function makesql_oneterm_categorical(tablename, term, q) {
+	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) {
+		// groupsetting not applied
+		return {
+			sql: `${tablename} AS (
+				SELECT sample,value as key, value as value
+				FROM annotations
+				WHERE term_id=?
+			)`,
+			tablename
+		}
+	}
+	// use groupset
+	const table2 = tablename + '_groupset'
+	return {
+		sql: `${table2} AS (
+			${makesql_groupset(term, q)}
+		),
+		${tablename} AS (
+			SELECT
+				sample,
+				${table2}.name AS key,
+				${table2}.name AS value
+			FROM annotations a
+			JOIN
+				${table2} ON a.value == ${table2}.value
+			WHERE
+				term_id=?
+		) `,
+		tablename
+	}
+}
+
+function makesql_oneterm_condition(tablename, term, q, values) {
 	/*
 	return {sql, tablename}
 */
-	const grade_table = 'grade_table_' + index
-	const term_table = 'term_table_' + index
-	const out_table = 'out_table_' + index
 	const value_for = q.bar_by_children ? 'child' : q.bar_by_grade ? 'grade' : ''
 	if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
 
@@ -564,19 +599,69 @@ function makesql_oneterm_condition(term, q, ds, values, index = '') {
 	if (!restriction) throw 'must set a valid value_by_*'
 	values.push(term.id, value_for)
 
-	return {
-		sql: `${out_table} AS (
-			SELECT 
-				sample, 
-				${value_for == 'grade' ? 'CAST(value AS integer) as key' : 'value as key'}, 
-				${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
-			FROM precomputed
-			WHERE term_id = ? 
-				AND value_for = ? 
-				AND ${restriction} = 1
-		)`,
-		tablename: out_table
+	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) {
+		return {
+			sql: `${tablename} AS (
+				SELECT
+					sample,
+					${value_for == 'grade' ? 'CAST(value AS integer) as key' : 'value as key'},
+					${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
+				FROM
+					precomputed
+				WHERE
+					term_id = ?
+					AND value_for = ?
+					AND ${restriction} = 1
+			)`,
+			tablename
+		}
 	}
+	// use groupset
+	const table2 = tablename + '_groupset'
+	const a = {
+		sql: `${table2} AS (
+			${makesql_groupset(term, q)}
+		),
+		${tablename} AS (
+			SELECT
+				sample,
+				${table2}.name AS key,
+				${table2}.name AS value
+			FROM precomputed a
+			JOIN ${table2} ON ${table2}.value==CAST(a.value AS integer)
+			WHERE
+				term_id=?
+				AND value_for=?
+				AND ${restriction}=1
+		)`,
+		tablename
+	}
+	return a
+}
+
+function makesql_groupset(term, q) {
+	let s
+	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
+		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
+		if (!term.groupsetting) throw 'term.groupsetting missing when q.predefined_groupset_idx in use'
+		if (!term.groupsetting.lst) throw 'term.groupsetting.lst missing when q.predefined_groupset_idx in use'
+		s = term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
+		if (!s) throw 'q.predefined_groupset_idx out of bound'
+	} else if (q.groupsetting.customset) {
+		s = q.groupsetting.customset
+	} else {
+		throw 'do not know how to get groupset'
+	}
+	if (!s.groups) throw '.groups[] missing from a group-set'
+	const categories = []
+	for (const [i, g] of s.groups.entries()) {
+		const groupname = g.name || 'Group ' + (i + 1)
+		if (!Array.isArray(g.values)) throw 'groupset.groups[' + i + '].values[] is not array'
+		for (const v of g.values) {
+			categories.push(`SELECT '${groupname}' AS name, '${v.key}' AS value`)
+		}
+	}
+	return categories.join(' UNION ALL ')
 }
 
 function makesql_numericBinCTE(term, q, ds, index = '') {
