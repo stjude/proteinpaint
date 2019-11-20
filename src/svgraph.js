@@ -41,6 +41,8 @@ export default function(arg) {
 		.append('div')
 		.style('margin', '10px')
 		.style('display', 'none')
+	const colormenu = new client.Menu({ padding: '10px' })
+
 	function err(m) {
 		client.sayerror(errdiv, m)
 	}
@@ -1671,7 +1673,8 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 							const lst = client.getdomaintypes(scf.gm)
 							for (const e of lst) {
 								const d2 = d.append('div')
-								d2.append('div')
+								const cbox = d2
+									.append('div')
 									.style('display', 'inline-block')
 									.style('padding', '2px 3px')
 									.style('border', 'solid 1px ' + e.stroke)
@@ -1698,9 +1701,48 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 												return proteinheight
 											})
 									})
+								const colorbtn = d2
+									.append('input')
+									.attr('type', 'color')
+									.style('display', 'none')
+									.property('value', e.fill)
 								d2.append('span')
 									.text(e.name)
+									.attr('class', 'sja_clbtext2')
 									.style('margin-right', '5px')
+									.property('title', 'Click to edit color of this domain')
+									.on('click', () => {
+										colormenu.clear().showunder(d3event.target)
+										const input = colormenu.d
+											.append('input')
+											.attr('type', 'text')
+											.property('value', e.fill)
+											.style('width', '100px')
+											.on('keyup', () => {
+												if (!client.keyupEnter()) return
+												const v = d3event.target.value.trim()
+												if (!v) return
+												cbox.style('background', v)
+												allpdomain
+													.filter(d => d.__scf.clipid == scf.clipid && d.name + d.description == e.key)
+													.transition()
+													.attr('fill', v)
+												scf.gm.pdomains.forEach(d => {
+													if (d.name + d.description == e.key) {
+														d.color = v
+													}
+												})
+											})
+											.node()
+										input.focus()
+										input.select()
+										colormenu.d
+											.append('div')
+											.style('margin-top', '10px')
+											.style('opacity', 0.5)
+											.style('font-size', '.8em')
+											.html('To change the color of this domain,<br>type in a new color and press ENTER.')
+									})
 								d2.append('span')
 									.text(e.description)
 									.style('font-size', '.7em')
