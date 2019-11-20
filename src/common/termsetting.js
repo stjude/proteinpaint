@@ -136,7 +136,7 @@ function setRenderers(self) {
 		self.dom.pill_settingSummary = self.dom.pilldiv // this may be hidden
 			.append('div')
 			.style('display', 'inline-block')
-			.attr('class', 'sja_filter_tag_btn ts_summnary_btn')
+			.attr('class', 'sja_filter_tag_btn ts_summary_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
 			.style('background', '#674EA7')
@@ -423,6 +423,7 @@ function setInteractivity(self) {
 			grp_btn_tr
 				.append('th')
 				.append('div')
+				.attr('class', 'grp_rm_btn')
 				.style('padding', '2px 5px')
 				.style('margin', '2px')
 				.style('background-color', '#eee')
@@ -439,6 +440,7 @@ function setInteractivity(self) {
 		grp_btn_tr
 			.append('th')
 			.append('div')
+			.attr('class', 'grp_add_btn')
 			.style('padding', '2px 5px')
 			.style('margin', '2px')
 			.style('background-color', '#eee')
@@ -536,7 +538,7 @@ function setInteractivity(self) {
 		// 'Apply' button
 		button_div
 			.append('div')
-			.attr('class', 'replace_btn sja_filter_tag_btn')
+			.attr('class', 'apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '10px')
 			.style('background-color', '#74b9ff')
