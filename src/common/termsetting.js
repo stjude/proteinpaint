@@ -219,7 +219,7 @@ function setInteractivity(self) {
 		term_edit_div
 			.append('div')
 			.attr('class', 'replace_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
+			.style('display', self.opts.disable_ReplaceRemove ? 'none' : 'inline-block')
 			.style('border-radius', '10px')
 			.style('background-color', '#74b9ff')
 			.style('padding', '7px 6px')
@@ -235,7 +235,7 @@ function setInteractivity(self) {
 		term_edit_div
 			.append('div')
 			.attr('class', 'remove_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
+			.style('display', self.opts.disable_ReplaceRemove ? 'none' : 'inline-block')
 			.style('border-radius', '10px')
 			.style('background-color', '#ff7675')
 			.style('padding', '7px 6px')
@@ -333,8 +333,12 @@ function setInteractivity(self) {
 			.text(default_btn_txt)
 			.on('click', () => {
 				self.q.groupsetting.inuse = false
-				self.updateUI()
 				self.dom.tip.hide()
+				self.opts.callback({
+					id: self.term.id,
+					term: self.term,
+					q: self.q
+				})
 			})
 
 		//show button/s for default groups
@@ -553,8 +557,12 @@ function setInteractivity(self) {
 					inuse: true,
 					customset: customset
 				}
-				self.updateUI()
 				self.dom.tip.hide()
+				self.opts.callback({
+					id: self.term.id,
+					term: self.term,
+					q: self.q
+				})
 			})
 	}
 
