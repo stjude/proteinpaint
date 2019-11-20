@@ -172,3 +172,84 @@ tape('caterogical term overlay', function(test) {
 		)
 	}
 })
+
+tape('Numerical term overlay', function(test) {
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
+				plots: {
+					diaggrp: {
+						term: { id: 'diaggrp' },
+						term2: { id: 'agedx' },
+						settings: {
+							currViews: ['barchart'],
+							controls: {
+								term2: { id: 'agedx', term: termjson['agedx'] }
+							},
+							barchart: {
+								overlay: 'tree'
+							}
+						}
+					}
+				}
+			}
+		},
+		plotControls: {
+			callbacks: {
+				'postInit.test': runTests
+			}
+		}
+	})
+
+	function runTests(plotControls) {
+		helpers
+			.rideInit({ arg: plotControls, eventType: 'postRender.test' })
+			.use(triggerBurgerBtn, { wait: 600 })
+			.to(testTerm2Pill, { wait: 600 })
+			.run(triggerBluePill)
+			.run(testGrpMenu)
+			.done(test)
+	}
+
+	function triggerBurgerBtn(plotControls) {
+		plotControls.Inner.dom.topbar
+			.select('div')
+			.node()
+			.click()
+	}
+
+	function testTerm2Pill(plotControls) {
+		test.equal(
+			plotControls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][1].innerText,
+			plotControls.Inner.state.config.term2.term.name,
+			'Should have 1 pill for overlay term'
+		)
+	}
+
+	function triggerBluePill(plotControls) {
+		plotControls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][1].click()
+	}
+
+	function testGrpMenu(plotControls) {
+		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
+		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
+		test.equal(
+			d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,
+			'Bin Size',
+			'Should have section for "bin size" edit'
+		)
+		test.equal(
+			d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][0].innerText,
+			'First Bin',
+			'Should have section for "First bin" edit'
+		)
+		test.equal(
+			d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('td')._groups[0][0].innerText,
+			'Last Bin',
+			'Should have section for "Last bin" edit'
+		)
+	}
+})
