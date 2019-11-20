@@ -51,7 +51,19 @@ class Term1ui {
 				this.opts.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
-					config: { term: { q: data.q } }
+					config: {
+						term: {
+							/* though the purpose is only to update plot.term.q,
+							must specifiy plot.term as {id, term, q}
+							but not just {q}
+							which copyMerge( plot, {term:{q:{...}}}, ['term']) won't allow to work
+							will replace plot.term with {q}
+							*/
+							id: this.state.config.term.term.id,
+							term: this.state.config.term.term,
+							q: data.q
+						}
+					}
 				})
 			}
 		})
