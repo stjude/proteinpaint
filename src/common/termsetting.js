@@ -570,7 +570,6 @@ function setInteractivity(self) {
 
 	self.showNumOpts = async function(div) {
 		let custom_bins_q, default_bins_q
-		console.log(self.q)
 
 		if (self.q) {
 			//if bincoinfig initiated by user/by default
@@ -636,6 +635,11 @@ function setInteractivity(self) {
 			.style('margin-bottom', '7px')
 			.on('change', () => {
 				self.apply_last_bin_change(last_bin_edit_div, last_bin_select, custom_bins_q, default_bins_q)
+				self.opts.callback({
+					id: self.term.id,
+					term: self.term,
+					q: self.q
+				})
 			})
 
 		last_bin_select
@@ -710,11 +714,11 @@ function setInteractivity(self) {
 					q: self.q
 				})
 				self.bin_size_edit(bin_size_td, custom_bins_q, default_bins_q, reset_bins_tr)
-				self.end_bin_edit(first_bin_td, 'first', custom_bins_q, reset_bins_tr)
+				self.end_bin_edit(first_bin_td, 'first', custom_bins_q, default_bins_q, reset_bins_tr)
 				last_bin_select.node().value = 'auto'
 				self.apply_last_bin_change(last_bin_edit_div, last_bin_select, custom_bins_q, default_bins_q)
 				reset_bins_tr.style('display', 'none')
-				self.end_bin_edit(last_bin_edit_div, 'last', custom_bins_q, reset_bins_tr)
+				self.end_bin_edit(last_bin_edit_div, 'last', custom_bins_q, default_bins_q, reset_bins_tr)
 			})
 
 		if (self.bins_customized(default_bins_q)) reset_bins_tr.style('display', 'table-row')

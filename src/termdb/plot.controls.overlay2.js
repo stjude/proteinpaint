@@ -45,6 +45,7 @@ class Overlay {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.pilldiv,
+			debug: this.opts.debug,
 			callback: term2 => {
 				// term2 is {term,q} and can be null
 				if (term2 && term2.term) {
