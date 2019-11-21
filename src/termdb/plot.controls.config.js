@@ -1,5 +1,6 @@
 import { getInitFxn } from '../common/rx.core'
-import { overlayInputInit } from './plot.controls.overlay'
+//import { overlayInputInit } from './plot.controls.overlay'
+import { overlayInit } from './plot.controls.overlay2'
 import { term1uiInit } from './plot.controls.term1'
 import { divideByInputInit } from './plot.controls.divideBy'
 import { initRadioInputs } from '../common/dom'
@@ -28,7 +29,8 @@ class TdbConfigUiInit {
 				debug
 			}),
 			*/
-			overlay: overlayInputInit({ holder: table.append('tr'), dispatch, id: this.id, debug }),
+			//overlay: overlayInputInit({ holder: table.append('tr'), dispatch, id: this.id, debug }),
+			overlay: overlayInit({ holder: table.append('tr'), dispatch, id: this.id, debug }),
 			view: setViewOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
 			orientation: setOrientationOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
 			scale: setScaleOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
