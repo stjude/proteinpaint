@@ -27,7 +27,7 @@ class Overlay {
 			usestate: true,
 			main: state => {
 				this.state = state
-				if (!this.pill) this.initPill() // as soon as getting state
+				this.mayRegisterTerm(state.config.term2)
 				this.updateUI()
 			}
 		}
@@ -48,12 +48,6 @@ class Overlay {
 			debug: this.opts.debug,
 			callback: term2 => {
 				// term2 is {term,q} and can be null
-				if (term2 && term2.term) {
-					// adding new term
-					if (!this.usedTerms.find(i => i.term.id == term2.term.id)) {
-						this.usedTerms.push({ term: term2.term, q: term2.q })
-					}
-				}
 				this.opts.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
@@ -63,6 +57,27 @@ class Overlay {
 				})
 			}
 		})
+	}
+	mayRegisterTerm(term) {
+		if (!term || !term.term) return // no term2
+		if (term.term.id == this.state.config.term.id) return // same as term1
+		if (this.usedTerms.find(i => i.term.id == term.term.id)) return // already had
+		this.usedTerms.push({ term: term.term, q: term.q })
+	}
+	updatePill() {
+		// after updating this.state, call pill.main() to update info in pill
+		const plot = this.state.config
+		const a = {
+			disable_terms: [plot.term.id]
+		}
+		if (plot.term2) {
+			a.term = plot.term2.term
+			a.q = plot.term2.q
+			a.disable_terms.push(plot.term2.id)
+		}
+		if (plot.term0) a.disable_terms.push(plot.term0.id)
+		if (!this.pill) this.initPill()
+		this.pill.main(a)
 	}
 }
 
@@ -87,10 +102,13 @@ function setRenderers(self) {
 		// only show pill for (2), not at the other cases
 		if (!plot.term2 || (plot.term2 && plot.term2.term.iscondition && plot.term2.id == plot.term.id)) {
 			// case (1) (3) (4), just text label
+			console.log('no pill')
 			self.dom.pilldiv.style('display', 'none')
 			self.dom.menuBtn.style('display', 'inline-block')
 			if (!plot.term2) {
 				// (1)
+				// update pill so it knows which terms to disable
+				self.updatePill()
 				return self.dom.menuBtn.html('None &#9660;')
 			}
 			if (plot.term2.q.bar_by_grade) {
@@ -110,13 +128,7 @@ function setRenderers(self) {
 		// case (2) show pill
 		self.dom.menuBtn.style('display', 'none')
 		self.dom.pilldiv.style('display', 'block')
-		const arg = {
-			term: plot.term2.term,
-			q: plot.term2.q,
-			disable_terms: [plot.term.id, plot.term2.id]
-		}
-		if (plot.term0) arg.disable_terms.push(plot.term0.id)
-		self.pill.main(arg)
+		self.updatePill()
 	}
 	self.showMenu = function() {
 		self.dom.tip.clear().showunder(self.dom.menuBtn.node())
@@ -141,17 +153,74 @@ function setRenderers(self) {
 				})
 		}
 
-		if (self.state.config.term.term.iscondition) {
-			// term2 and term1 are both the same CHC term
-			// option (2) grade
-			// option (3) subcondition
+		{
+			const t1 = self.state.config.term
+			if (t1.term.iscondition && !t1.term.isleaf) {
+				/* term1 is non-leaf CHC
+				meet the need for allowing grade-subcondition overlay
+				no longer uses bar_choices
+				if(!term2
+					|| term2.id!=t1.id
+					|| (
+						t1.q.bar_by_children
+						&& !term2.q.bar_by_grade
+						)
+					){
+				*/
+				if (t1.q.bar_by_grade || (term2 && term2.term.id == t1.id && term2.q.bar_by_grade)) {
+					// not to show (3)
+				} else {
+					// show (3)
+					self.dom.tip.d
+						.append('div')
+						.attr('class', 'sja_menuoption')
+						.html('Max grade <span style="font-size:.7em;text-transform:uppercase">' + t1.term.name + '</span>')
+						.on('click', () => {
+							self.dom.tip.hide()
+							self.opts.dispatch({
+								type: 'plot_edit',
+								id: self.opts.id,
+								config: {
+									term2: {
+										id: t1.id,
+										term: t1,
+										q: { bar_by_grade: true }
+									}
+								}
+							})
+						})
+				}
+				if (t1.q.bar_by_children || (term2 && term2.term.id == t1.id && term2.q.bar_by_children)) {
+					// not to show (4)
+				} else {
+					// show (4)
+					self.dom.tip.d
+						.append('div')
+						.attr('class', 'sja_menuoption')
+						.html('Sub-condition <span style="font-size:.7em;text-transform:uppercase">' + t1.name + '</span>')
+						.on('click', () => {
+							self.dom.tip.hide()
+							self.opts.dispatch({
+								type: 'plot_edit',
+								id: self.opts.id,
+								config: {
+									term2: {
+										id: t1.id,
+										term: t1,
+										q: { bar_by_children: true }
+									}
+								}
+							})
+						})
+				}
+			}
 		}
 
 		for (const t of self.usedTerms) {
 			self.dom.tip.d
 				.append('div')
 				.attr('class', 'sja_menuoption')
-				.text('Term: ' + t.name)
+				.text('Term: ' + t.term.name)
 				.on('click', () => {
 					self.dom.tip.hide()
 					self.opts.dispatch({
