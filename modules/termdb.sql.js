@@ -325,9 +325,10 @@ opts{} options to tweak the query, see const default_opts = below
 	const opts = Object.assign(default_opts, _opts)
 	const filter = makesql_by_tvsfilter(q.tvslst, q.ds)
 	const values = filter ? filter.values.slice() : []
-	const CTE0 = get_term_cte(q, values, 0)
-	const CTE1 = get_term_cte(q, values, 1)
-	const CTE2 = get_term_cte(q, values, 2)
+
+	const CTE0 = get_term_cte(q, values, 0, filter)
+	const CTE1 = get_term_cte(q, values, 1, filter)
+	const CTE2 = get_term_cte(q, values, 2, filter)
 
 	const statement = `WITH
 		${filter ? filter.filters + ',' : ''}
@@ -353,8 +354,7 @@ opts{} options to tweak the query, see const default_opts = below
 	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
 }
 
-function get_term_cte(q, values, index) {
-	/*
+/*
 Generates one or more CTEs by a term
 
 q{}
@@ -373,7 +373,13 @@ index
 	1 for term1, required
 	0 for term0, optional
 	2 for term2, optional
+
+filter
+	{} or null
+	returned by makesql_by_tvsfilter
+	required when making numeric bins and need to compute percentile for first/last bin
 */
+function get_term_cte(q, values, index, filter) {
 	const termid = q['term' + index + '_id']
 	const term_is_genotype = q['term' + index + '_is_genotype']
 	if (index == 1 && !term_is_genotype) {
@@ -397,7 +403,7 @@ index
 	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))
 	}
-	const CTE = makesql_oneterm(term, q.ds, termq, values, index)
+	const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
 	if (index != 1) {
 		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
 	}
@@ -509,8 +515,7 @@ function get_label4key(key, term, q, ds) {
 	throw 'unknown term type'
 }
 
-function makesql_oneterm(term, ds, q, values, index) {
-	/*
+/*
 form the query for one of the table in term0-term1-term2 overlaying
 CTE for each term resolves to a table of {sample,key}
 
@@ -521,17 +526,21 @@ q{}
 values[]
 	collector of bind parameters
 
+index
+
+filter
+
 returns { sql, tablename }
 */
+function makesql_oneterm(term, ds, q, values, index, filter) {
 	const tablename = 'samplekey_' + index
 	if (term.iscategorical) {
 		values.push(term.id)
 		return makesql_oneterm_categorical(tablename, term, q)
 	}
 	if (term.isfloat || term.isinteger) {
-		// XXX no more q.binconfig
 		values.push(term.id)
-		const bins = makesql_numericBinCTE(term, q, ds, index)
+		const bins = makesql_numericBinCTE(term, q, ds, index, filter)
 		return {
 			sql: `${bins.sql},
 			${tablename} AS (
@@ -664,19 +673,25 @@ function makesql_groupset(term, q) {
 	return categories.join(' UNION ALL ')
 }
 
-function makesql_numericBinCTE(term, q, ds, index = '') {
-	/*
+/*
 decide bins and produce CTE
 
 q{}
-	.binconfig[]   list of custom bins
-	.index           0,1,2 corresponding to term*_id           
-returns { sql, tablename, name2bin, bins, binconfig }
+	managed by termsetting
+
+index
+
+filter
+	{} or null
+
+returns { sql, tablename, name2bin, bins }
 */
-	const [bins, binconfig] = get_bins(q, term, ds, index)
+function makesql_numericBinCTE(term, q, ds, index = '', filter) {
+	const bins = get_bins(q, term, ds, index, filter)
+	console.log('last2', bins[bins.length - 2], 'last1', bins[bins.length - 1])
 	const bin_def_lst = []
 	const name2bin = new Map() // k: name str, v: bin{}
-	const bin_size = binconfig.bin_size
+	const bin_size = q.bin_size
 	let has_percentiles = false
 	let binid = 0
 	for (const b of bins) {
@@ -758,47 +773,37 @@ returns { sql, tablename, name2bin, bins, binconfig }
 		sql,
 		tablename: bin_sample_table,
 		name2bin,
-		bins,
-		binconfig
+		bins
 	}
 }
 
-export function get_bins(q, term, ds, index) {
-	/*
-
+/*
 q{}
-	.binconfig
-	.tvslst
-	.index           0,1,2 correponding to term*_id
+	termsetting
+index
 
-term
-ds 
+filter
 
+returns bins{}
 */
-	const binconfig = q.binconfig
-		? q.binconfig
-		: term.bins && term.bins.less && index != 1
-		? term.bins.less
-		: term.bins
-		? term.bins.default
-		: null
-	if (!binconfig) throw 'unable to determine the binning configuration'
-	q.binconfig = binconfig
-
-	const bins = binsmodule.compute_bins(binconfig, percentiles => get_numericMinMaxPct(ds, term, q.tvslst, percentiles))
-	return [bins, binconfig]
+export function get_bins(q, term, ds, index, filter) {
+	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles))
 }
 
 export function get_numericsummary(q, term, ds, _tvslst = [], withValues = false) {
 	/*
 to produce the summary table of mean, median, percentiles
 at a numeric barchart
+
 */
 	const tvslst = typeof _tvslst == 'string' ? JSON.parse(decodeURIComponent(_tvslst)) : _tvslst
 
 	if ((term.isinteger || term.isfloat) && !tvslst.find(tv => tv.term.id == term.id && 'ranges' in tv)) {
-		const [bins, binconfig] = get_bins(q, term, ds)
-		tvslst.push({ term, ranges: bins })
+		tvslst.push({
+			term,
+			ranges: get_bins(q, term, ds)
+			// FIXME should tvslst be converted to filter and pass to get_bins()?
+		})
 	}
 	const filter = makesql_by_tvsfilter(tvslst, ds)
 	const values = []
@@ -834,7 +839,7 @@ at a numeric barchart
 	return stat
 }
 
-export function get_numericMinMaxPct(ds, term, tvslst = [], percentiles = []) {
+export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 	/* 
 	similar arguments to get_numericSummary()
 	but min, max, percentilex are calculated by sqlite db
@@ -850,7 +855,6 @@ export function get_numericMinMaxPct(ds, term, tvslst = [], percentiles = []) {
 		pY is the value at the Yth percentile,
 		and so on ...
 */
-	const filter = makesql_by_tvsfilter(tvslst, ds)
 	const values = []
 	if (filter) {
 		values.push(...filter.values)
