@@ -570,10 +570,11 @@ function setInteractivity(self) {
 
 	self.showNumOpts = async function(div) {
 		let custom_bins_q, default_bins_q
+		console.log(self.q)
 
-		if (self.q && self.q.binconfig) {
+		if (self.q) {
 			//if bincoinfig initiated by user/by default
-			custom_bins_q = JSON.parse(JSON.stringify(self.q.binconfig))
+			custom_bins_q = JSON.parse(JSON.stringify(self.q))
 		} else if (self.term.bins) {
 			//if binconfig not defined yet or deleted by user, set it as numeric_bin.bins
 			const bins =
@@ -582,12 +583,13 @@ function setInteractivity(self) {
 			if (!bins.last_bin) bins.last_bin = {}
 
 			custom_bins_q = JSON.parse(JSON.stringify(bins))
-			self.q = {}
-			self.q.binconfig = JSON.parse(JSON.stringify(bins))
+			self.q = JSON.parse(JSON.stringify(bins))
 		}
 
-		default_bins_q =
-			self.term.bins.less && !self.opts.disable_ReplaceRemove ? self.term.bins.less : self.term.bins.default
+		// (termporary) set default_bins_q as self.bins.default
+		// default_bins_q =
+		// 	self.term.bins.less && !self.opts.disable_ReplaceRemove ? self.term.bins.less : self.term.bins.default
+		default_bins_q = self.term.bins.default
 
 		const config_table = div
 			.append('table')
@@ -700,7 +702,7 @@ function setInteractivity(self) {
 			.attr('class', 'sja_menuoption')
 			.text('RESET')
 			.on('click', () => {
-				self.q.binconfig = JSON.parse(JSON.stringify(default_bins_q))
+				self.q = JSON.parse(JSON.stringify(default_bins_q))
 				custom_bins_q = JSON.parse(JSON.stringify(default_bins_q))
 				self.opts.callback({
 					id: self.term.id,
@@ -715,7 +717,7 @@ function setInteractivity(self) {
 				self.end_bin_edit(last_bin_edit_div, 'last', custom_bins_q, reset_bins_tr)
 			})
 
-		if (self.bins_customized(self.q.binconfig, default_bins_q)) reset_bins_tr.style('display', 'table-row')
+		if (self.bins_customized(default_bins_q)) reset_bins_tr.style('display', 'table-row')
 	}
 
 	// function to edit bin_size options
@@ -760,16 +762,11 @@ function setInteractivity(self) {
 		include_select.node().selectedIndex = custom_bins_q.startinclusive ? 1 : 0
 
 		function apply() {
-			if (!self.q.binconfig) {
-				self.q.binconfig = custom_bins_q
-			}
+			if (bin_size_input.node().value) self.q.bin_size = parseFloat(bin_size_input.node().value)
+			self.q.stopinclusive = include_select.node().value == 'stopinclusive'
+			if (!self.q.stopinclusive) self.q.startinclusive = include_select.node().value == 'startinclusive'
 
-			if (bin_size_input.node().value) self.q.binconfig.bin_size = parseFloat(bin_size_input.node().value)
-			self.q.binconfig.stopinclusive = include_select.node().value == 'stopinclusive'
-			if (!self.q.binconfig.stopinclusive)
-				self.q.binconfig.startinclusive = include_select.node().value == 'startinclusive'
-
-			if (self.bins_customized(self.q.binconfig, default_bins_q)) reset_bins_tr.style('display', 'table-row')
+			if (self.bins_customized(default_bins_q)) reset_bins_tr.style('display', 'table-row')
 			self.opts.callback({
 				id: self.term.id,
 				term: self.term,
@@ -922,12 +919,8 @@ function setInteractivity(self) {
 
 		function apply() {
 			try {
-				if (!self.q.binconfig) {
-					self.q.binconfig = custom_bins_q
-				}
-
-				if (!self.q.binconfig.last_bin) {
-					self.q.binconfig.last_bin = {}
+				if (!self.q.last_bin) {
+					self.q.last_bin = {}
 				}
 
 				if (start_input.node().value && stop_input.node().value && start_input.node().value > stop_input.node().value)
@@ -946,28 +939,28 @@ function setInteractivity(self) {
 				//first_bin parameter setup from input
 				if (bin_flag == 'first') {
 					if (start_input.node().value) {
-						delete self.q.binconfig.first_bin.startunbounded
+						delete self.q.first_bin.startunbounded
 						if (percentile_checkbox.node().checked)
-							self.q.binconfig.first_bin.start_percentile = parseFloat(start_input.node().value)
-						else self.q.binconfig.first_bin.start = parseFloat(start_input.node().value)
+							self.q.first_bin.start_percentile = parseFloat(start_input.node().value)
+						else self.q.first_bin.start = parseFloat(start_input.node().value)
 					} else {
-						delete self.q.binconfig.first_bin.start
-						delete self.q.binconfig.first_bin.start_percentile
-						self.q.binconfig.first_bin.startunbounded = true
+						delete self.q.first_bin.start
+						delete self.q.first_bin.start_percentile
+						self.q.first_bin.startunbounded = true
 					}
 					if (stop_input.node().value) {
 						if (percentile_checkbox.node().checked)
-							self.q.binconfig.first_bin.stop_percentile = parseFloat(stop_input.node().value)
-						else self.q.binconfig.first_bin.stop = parseFloat(stop_input.node().value)
+							self.q.first_bin.stop_percentile = parseFloat(stop_input.node().value)
+						else self.q.first_bin.stop = parseFloat(stop_input.node().value)
 					} else if (!start_input.node().value) throw 'If start is empty, stop is required for first bin.'
 
-					if (startselect.node().selectedIndex == 0) self.q.binconfig.first_bin.startinclusive = true
-					else if (self.q.binconfig.first_bin.startinclusive) delete self.q.binconfig.first_bin.startinclusive
+					if (startselect.node().selectedIndex == 0) self.q.first_bin.startinclusive = true
+					else if (self.q.first_bin.startinclusive) delete self.q.first_bin.startinclusive
 
 					// if percentile checkbox is unchecked, delete start/stop_percentile
 					if (!percentile_checkbox.node().checked) {
-						delete self.q.binconfig.first_bin.start_percentile
-						delete self.q.binconfig.first_bin.stop_percentile
+						delete self.q.first_bin.start_percentile
+						delete self.q.first_bin.stop_percentile
 					}
 				}
 
@@ -975,31 +968,31 @@ function setInteractivity(self) {
 				else if (bin_flag == 'last') {
 					if (start_input.node().value) {
 						if (percentile_checkbox.node().checked)
-							self.q.binconfig.last_bin.start_percentile = parseFloat(start_input.node().value)
-						else self.q.binconfig.last_bin.start = parseFloat(start_input.node().value)
+							self.q.last_bin.start_percentile = parseFloat(start_input.node().value)
+						else self.q.last_bin.start = parseFloat(start_input.node().value)
 					} else if (!stop_input.node().value) throw 'If stop is empty, start is required for last bin.'
 
 					if (stop_input.node().value) {
-						delete self.q.binconfig.last_bin.stopunbounded
+						delete self.q.last_bin.stopunbounded
 						if (percentile_checkbox.node().checked)
-							self.q.binconfig.last_bin.stop_percentile = parseFloat(stop_input.node().value)
-						else self.q.binconfig.last_bin.stop = parseFloat(stop_input.node().value)
+							self.q.last_bin.stop_percentile = parseFloat(stop_input.node().value)
+						else self.q.last_bin.stop = parseFloat(stop_input.node().value)
 					} else {
-						delete self.q.binconfig.last_bin.stop
-						delete self.q.binconfig.last_bin.stop_percentile
-						self.q.binconfig.last_bin.stopunbounded = true
+						delete self.q.last_bin.stop
+						delete self.q.last_bin.stop_percentile
+						self.q.last_bin.stopunbounded = true
 					}
 
-					if (stopselect.node().selectedIndex == 0) self.q.binconfig.last_bin.stopinclusive = true
-					else if (self.q.binconfig.last_bin.stopinclusive) delete self.q.binconfig.last_bin.stopinclusive
+					if (stopselect.node().selectedIndex == 0) self.q.last_bin.stopinclusive = true
+					else if (self.q.last_bin.stopinclusive) delete self.q.last_bin.stopinclusive
 
 					// if percentile checkbox is unchecked, delete start/stop_percentile
 					if (!percentile_checkbox.node().checked) {
-						delete self.q.binconfig.last_bin.start_percentile
-						delete self.q.binconfig.last_bin.stop_percentile
+						delete self.q.last_bin.start_percentile
+						delete self.q.last_bin.stop_percentile
 					}
 				}
-				if (self.bins_customized(self.q.binconfig, default_bins_q)) reset_bins_tr.style('display', 'table-row')
+				if (self.bins_customized(default_bins_q)) reset_bins_tr.style('display', 'table-row')
 				self.opts.callback({
 					id: self.term.id,
 					term: self.term,
@@ -1016,14 +1009,15 @@ function setInteractivity(self) {
 			last_bin_edit_div.style('display', 'block')
 		} else if (last_bin_select.node().value == 'auto') {
 			const last_bin = default_bins_q.last_bin ? default_bins_q.last_bin : {}
-			self.q.binconfig.last_bin = JSON.parse(JSON.stringify(last_bin))
+			self.q.last_bin = JSON.parse(JSON.stringify(last_bin))
 			custom_bins_q.last_bin = JSON.parse(JSON.stringify(last_bin))
 			last_bin_edit_div.style('display', 'none')
 			// last_bin_select.style('display','block')
 		}
 	}
 
-	self.bins_customized = function(custom_bins_q, default_bins_q) {
+	self.bins_customized = function(default_bins_q) {
+		const custom_bins_q = self.q
 		if (custom_bins_q && default_bins_q) {
 			if (
 				custom_bins_q.bin_size == default_bins_q.bin_size &&
