@@ -175,8 +175,8 @@ function setInteractivity(self) {
 		self.opts.callback(null)
 	}
 
-	self.showTree = () => {
-		self.dom.tip.clear().showunder(self.dom.holder.node())
+	self.showTree = holder => {
+		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
 		appInit(null, {
 			holder: self.dom.tip.d,
 			state: {

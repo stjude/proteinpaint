@@ -241,7 +241,7 @@ function setRenderers(self) {
 			.text('Select a new term')
 			.on('click', () => {
 				self.dom.tip.hide()
-				self.pill.showTree() // may add showunder holder in showTree()
+				self.pill.showTree(self.dom.menuBtn.node())
 			})
 	}
 }

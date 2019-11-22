@@ -53,7 +53,7 @@ class TdbApp {
 		this.app = coordApp ? coordApp : this.api
 
 		this.dom = {
-			holder: opts.holder.style('margin', '10px'),
+			holder: opts.holder, // do not modify holder style
 			topbar: opts.holder
 				.append('div')
 				.style('position', 'sticky')
