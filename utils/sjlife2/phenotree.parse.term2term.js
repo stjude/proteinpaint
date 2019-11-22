@@ -88,8 +88,8 @@ v: id
 const name2id = new Map()
 
 const t2t = new Map()
-// k: parent
-// v: set of children
+// k: parent id
+// v: set of children id
 const c2p = new Map() // ancestry
 // k: child id
 // v: map { k: parent id, v: level } parents from the entire ancestry
@@ -114,6 +114,7 @@ each word is a term
 				name: map.get(id)
 			}
 		}
+		j.id = id
 
 		// test if it is leaf
 		if (!t2t.has(id)) {
@@ -137,6 +138,16 @@ function addattributes_conditionterm(t) {
    options a bit different for leaf and non-leaf terms
 */
 
+	t.values = {
+		'0': { label: '0: No condition' },
+		'1': { label: '1: Mild' },
+		'2': { label: '2: Moderate' },
+		'3': { label: '3: Severe' },
+		'4': { label: '4: Life-threatening' },
+		'5': { label: '5: Death' },
+		'9': { label: 'Unknown status', uncomputable: true }
+	}
+
 	/***********************************
 	term.graph{} will be phased out
 	keep below to be compatible with old code
@@ -158,43 +169,23 @@ function addattributes_conditionterm(t) {
 		}
 	}
 
-	/////////////////////// only keep .bar_choices
-	t.bar_choices = [
-		{
-			// this option is available for both leaf and non-leaf terms
-			by_grade: true,
-			label: 'Grades'
-		}
-	]
-
 	if (!t.isleaf) {
-		// has children, more options for bar_choices
-		t.graph.barchart.bar_choices[0].allow_to_stackby_children = true
+		// a non-leaf CHC term
+		// collect sub-conditions, so that termsetting UI can generate list of subconditions for grouping
+		t.subconditions = {}
+		for (const c of t2t.get(t.id)) {
+			// id and label is the same based on current data file
+			// if not the case, must need id2name mapping
+			t.subconditions[c] = { label: c }
+		}
 
+		//////////// to be removed
+		t.graph.barchart.bar_choices[0].allow_to_stackby_children = true
 		t.graph.barchart.bar_choices.push({
 			by_children: true,
 			label: 'Sub-conditions',
 			allow_to_stackby_grade: true
 		})
-
-		/////////////////////// only keep .bar_choices
-		t.bar_choices[0].allow_to_stackby_children = true
-
-		t.bar_choices.push({
-			by_children: true,
-			label: 'Sub-conditions',
-			allow_to_stackby_grade: true
-		})
-	}
-
-	t.values = {
-		'0': { label: '0: No condition' },
-		'1': { label: '1: Mild' },
-		'2': { label: '2: Moderate' },
-		'3': { label: '3: Severe' },
-		'4': { label: '4: Life-threatening' },
-		'5': { label: '5: Death' },
-		'9': { label: 'Unknown status', uncomputable: true }
 	}
 
 	t.groupsetting = {
