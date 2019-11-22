@@ -210,6 +210,10 @@ TdbStore.prototype.actions = {
 exports.storeInit = rx.getInitFxn(TdbStore)
 
 function validatePlot(p) {
+	/*
+	only work for hydrated plot object already in the state
+	not for the saved state
+	*/
 	if (!p.id) throw 'plot error: plot.id missing'
 	if (!p.term) throw 'plot error: plot.term{} not an object'
 	try {
@@ -223,7 +227,13 @@ function validatePlot(p) {
 		} catch (e) {
 			throw 'plot.term2 error: ' + e
 		}
-		// TODO compatibility check for grade-subcondition overlay for the same condition term
+		if (p.term.term.iscondition && p.term.id == p.term2.id) {
+			// term and term2 are the same CHC, potentially allows grade-subcondition overlay
+			if (p.term.q.bar_by_grade && p.term2.q.bar_by_grade)
+				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_grade'
+			if (p.term.q.bar_by_children && p.term2.q.bar_by_children)
+				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_children'
+		}
 	}
 	if (p.term0) {
 		try {
@@ -241,21 +251,20 @@ function validatePlotTerm(t) {
 	*/
 
 	// somehow plots are missing this
-	//if(!t.id) throw '.id missing'
-
 	if (!t.term) throw '.term{} missing'
 	if (!graphable(t.term)) throw '.term is not graphable (not a valid type)'
 	if (!t.term.name) throw '.term.name missing'
+	t.id = t.term.id
+
 	if (!t.q) throw '.q{} missing'
 	// term-type specific validation of q
 	if (t.term.isinteger || t.term.isfloat) {
-		if (!Number.isFinite(t.q.bin_size)) throw '.q.bin_size is not number'
-		// TODO bin scheme
+		// t.q is binning scheme, it is validated on server
 	} else if (t.term.iscategorical) {
-		if (!t.q.groupsetting) throw '.q.groupsetting{} missing'
-		// TODO more
+		if (!t.term.values) throw '.values{} missing'
+		// groupsetting is validated on server
 	} else if (t.term.iscondition) {
-		if (!t.q.groupsetting) throw '.q.groupsetting{} missing'
+		if (!t.term.values) throw '.values{} missing'
 		if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
 		if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
 			throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
