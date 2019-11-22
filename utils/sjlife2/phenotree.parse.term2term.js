@@ -193,6 +193,7 @@ function addattributes_conditionterm(t) {
 		lst: [
 			{
 				name: 'Any condition vs normal',
+				is_grade: true,
 				groups: [
 					{
 						name: 'No condition',
