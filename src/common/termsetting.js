@@ -60,6 +60,7 @@ class TermSetting {
 		// this api will be frozen and returned by termsettingInit()
 		this.api = {
 			main: async (data = {}) => {
+				console.log(data)
 				this.validateMainData(data)
 				// term is read-only if it comes from state, let it remain read-only
 				this.term = data.term
@@ -1073,7 +1074,7 @@ function setInteractivity(self) {
 			.on('change', () => {
 				self.q.bar_by_grade = value_type_select.node().value == 'sub' ? false : true
 				self.q.bar_by_children = value_type_select.node().value == 'sub' ? true : false
-				self.q.value_by_max_grade = value_type_select.node().value == 'max' ? true : false
+				self.q.value_by_max_grade = value_type_select.node().value == 'max' || 'sub' ? true : false
 				self.q.value_by_most_recent = value_type_select.node().value == 'recent' ? true : false
 				self.q.value_by_computable_grade = value_type_select.node().value == 'computable' ? true : false
 				self.dom.tip.hide()
