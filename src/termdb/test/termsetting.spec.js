@@ -210,6 +210,8 @@ tape('Numerical term overlay', function(test) {
 			.to(testTerm2Pill, { wait: 600 })
 			.run(triggerBluePill)
 			.run(testGrpMenu)
+			// .run(triggerBinChange)  //TODO (draft)
+			// .run(testBinChange)  //TODO
 			.done(test)
 	}
 
@@ -251,5 +253,106 @@ tape('Numerical term overlay', function(test) {
 			'Last Bin',
 			'Should have section for "Last bin" edit'
 		)
+	}
+
+	function triggerBinChange(plotControls) {
+		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const bin_size_input = d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0]
+
+		bin_size_input.value = 5
+
+		//TODO: press 'Enter' to update bins
+		// const event = new KeyboardEvent('keydown', {
+		//     altKey:false,
+		//     bubbles: true,
+		//     cancelBubble: false,
+		//     cancelable: true,
+		//     charCode: 0,
+		//     code: 'Enter',
+		//     composed: true,
+		//     ctrlKey: false,
+		//     currentTarget: null,
+		//     defaultPrevented: true,
+		//     detail: 0,
+		//     eventPhase: 0,
+		//     isComposing: false,
+		//     isTrusted: true,
+		//     key: 'Enter',
+		//     keyCode: 13,
+		//     location: 0,
+		//     metaKey: false,
+		//     repeat: false,
+		//     returnValue: false,
+		//     shiftKey: false,
+		//     type: 'keydown',
+		//     which: 13})
+		// bin_size_input.addEventListener('keydown', ()=>{})
+		// bin_size_input.dispatchEvent(event)
+	}
+})
+
+tape('Conditional term overlay', function(test) {
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
+				visiblePlotIds: ['diaggrp'],
+				plots: {
+					diaggrp: {
+						term: { id: 'diaggrp' },
+						term2: { id: 'Arrhythmias' },
+						settings: {
+							currViews: ['barchart'],
+							controls: {
+								term2: { id: 'Arrhythmias', term: termjson['Arrhythmias'] }
+							},
+							barchart: {
+								overlay: 'tree'
+							}
+						}
+					}
+				}
+			}
+		},
+		plotControls: {
+			callbacks: {
+				'postInit.test': runTests
+			}
+		}
+	})
+
+	function runTests(plotControls) {
+		helpers
+			.rideInit({ arg: plotControls, eventType: 'postRender.test' })
+			.use(triggerBurgerBtn, { wait: 1000 })
+			.to(testTerm2Pill, { wait: 1000 })
+			.run(triggerBluePill)
+			.run(testGrpMenu)
+			.done(test)
+	}
+
+	function triggerBurgerBtn(plotControls) {
+		plotControls.Inner.dom.topbar
+			.select('div')
+			.node()
+			.click()
+	}
+
+	function testTerm2Pill(plotControls) {
+		test.equal(
+			plotControls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][1].innerText,
+			plotControls.Inner.state.config.term2.term.name,
+			'Should have 1 pill for overlay term'
+		)
+	}
+
+	function triggerBluePill(plotControls) {
+		plotControls.Inner.dom.config_div.selectAll('.ts_name_btn')._groups[0][1].click()
+	}
+
+	function testGrpMenu(plotControls) {
+		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
+		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 	}
 })

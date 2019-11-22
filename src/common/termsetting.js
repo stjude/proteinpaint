@@ -156,16 +156,22 @@ function setRenderers(self) {
 			self.term.groupsetting &&
 			self.term.groupsetting.lst &&
 			self.q.groupsetting &&
-			self.q.groupsetting.predefined_groupset_idx
+			self.q.groupsetting.predefined_groupset_idx != undefined
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
 				: self.q.groupsetting && self.q.groupsetting.customset
 				? 'Divided into ' + self.q.groupsetting.customset.groups.length + ' groups'
+				: self.q.bar_by_grade
+				? 'By Grade'
+				: self.q.bar_by_children
+				? 'By Subcondition'
 				: ''
 
 		self.dom.nopilldiv.style('display', 'none')
 		self.dom.pilldiv.style('display', 'block')
-		self.dom.pill_termname.style('border-radius', grpsetting_flag ? '6px 0 0 6px' : '6px').html(self.term.name) // TODO trim long string
-		self.dom.pill_settingSummary.style('display', grpsetting_flag ? 'inline-block' : 'none')
+		self.dom.pill_termname
+			.style('border-radius', grpsetting_flag || self.term.iscondition ? '6px 0 0 6px' : '6px')
+			.html(self.term.name) // TODO trim long string
+		self.dom.pill_settingSummary.style('display', grpsetting_flag || self.term.iscondition ? 'inline-block' : 'none')
 		self.dom.pill_settingSummary.html(grp_summary_text)
 	}
 }
@@ -202,7 +208,7 @@ function setInteractivity(self) {
 		const term_edit_div = self.dom.tip.d.append('div').style('text-align', 'center')
 
 		const optsFxn = self.term.iscategorical
-			? self.showCatOpts
+			? self.showGrpOpts
 			: self.term.isfloat || self.term.isinteger
 			? self.showNumOpts
 			: self.term.iscondition
@@ -220,9 +226,9 @@ function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'replace_btn sja_filter_tag_btn')
 			.style('display', self.opts.disable_ReplaceRemove ? 'none' : 'inline-block')
-			.style('border-radius', '10px')
+			.style('border-radius', '13px')
 			.style('background-color', '#74b9ff')
-			.style('padding', '7px 6px')
+			.style('padding', '7px 15px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
@@ -236,9 +242,9 @@ function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'remove_btn sja_filter_tag_btn')
 			.style('display', self.opts.disable_ReplaceRemove ? 'none' : 'inline-block')
-			.style('border-radius', '10px')
+			.style('border-radius', '13px')
 			.style('background-color', '#ff7675')
-			.style('padding', '7px 6px')
+			.style('padding', '7px 15px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
@@ -250,13 +256,13 @@ function setInteractivity(self) {
 			})
 	}
 
-	self.showCatOpts = async function(div) {
+	self.showGrpOpts = async function(div) {
 		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
 		const predefined_group_name =
 			self.term.groupsetting &&
 			self.term.groupsetting.lst &&
 			self.q.groupsetting &&
-			self.q.groupsetting.predefined_groupset_idx
+			self.q.groupsetting.predefined_groupset_idx != undefined
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
 				: ''
 
@@ -265,14 +271,19 @@ function setInteractivity(self) {
 		// if using predfined groupset, display name
 		active_group_info_div
 			.append('div')
-			.style('display', predefined_group_name ? 'block' : 'none')
+			.style('display', grpsetting_flag && predefined_group_name ? 'block' : 'none')
+			.style('font-size', '.9em')
+			.style('font-weight', 'bold')
+			.style('text-align', 'center')
+			.style('padding-bottom', '5px')
 			.html('Using ' + predefined_group_name)
 
 		//display groups and categories assigned to that group
 		if (grpsetting_flag) {
-			const groupset = self.q.groupsetting.predefined_groupset_idx
-				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-				: self.q.groupsetting.customset || undefined
+			const groupset =
+				self.q.groupsetting.predefined_groupset_idx != undefined
+					? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+					: self.q.groupsetting.customset || undefined
 
 			const group_table = active_group_info_div.append('table').style('font-size', '.8em')
 
@@ -302,7 +313,7 @@ function setInteractivity(self) {
 				.style('margin', '5px')
 				.style('text-align', 'center')
 				.style('font-size', '.8em')
-				.style('border-radius', '10px')
+				.style('border-radius', '12px')
 				.style('background-color', '#eee')
 				.style('color', '#000')
 				.html('Redivide groups')
@@ -326,13 +337,14 @@ function setInteractivity(self) {
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
-			.style('border-radius', '10px')
-			.style('background-color', !grpsetting_flag ? '#f8f8f8' : '#eee')
-			.style('color', '#000')
+			.style('border-radius', '13px')
+			.style('background-color', !grpsetting_flag ? '#fff' : '#eee')
+			.style('color', !grpsetting_flag ? '#888' : '#000')
 			.style('pointer-events', !grpsetting_flag ? 'none' : 'auto')
 			.text(default_btn_txt)
 			.on('click', () => {
 				self.q.groupsetting.inuse = false
+				delete self.q.groupsetting.predefined_groupset_idx
 				self.dom.tip.hide()
 				self.opts.callback({
 					id: self.term.id,
@@ -343,19 +355,30 @@ function setInteractivity(self) {
 
 		//show button/s for default groups
 		if (self.term.groupsetting && self.term.groupsetting.lst) {
-			for (const group of self.term.groupsetting.lst) {
-				div
-					.append('div')
-					.attr('class', 'group_btn sja_filter_tag_btn')
-					.style('display', 'block')
-					.style('padding', '7px 6px')
-					.style('margin', '5px')
-					.style('text-align', 'center')
-					.style('font-size', '.8em')
-					.style('border-radius', '10px')
-					.style('background-color', '#eee')
-					.style('color', '#000')
-					.html('Use <b>' + group.name + '</b>')
+			for (const [i, group] of self.term.groupsetting.lst.entries()) {
+				if (self.q.groupsetting.predefined_groupset_idx != i)
+					div
+						.append('div')
+						.attr('class', 'group_btn sja_filter_tag_btn')
+						.style('display', 'block')
+						.style('padding', '7px 6px')
+						.style('margin', '5px')
+						.style('text-align', 'center')
+						.style('font-size', '.8em')
+						.style('border-radius', '13px')
+						.style('background-color', '#eee')
+						.style('color', '#000')
+						.html('Use <b>' + group.name + '</b>')
+						.on('click', () => {
+							self.q.groupsetting.inuse = true
+							self.q.groupsetting.predefined_groupset_idx = i
+							self.dom.tip.hide()
+							self.opts.callback({
+								id: self.term.id,
+								term: self.term,
+								q: self.q
+							})
+						})
 			}
 		}
 
@@ -371,7 +394,7 @@ function setInteractivity(self) {
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
-			.style('border-radius', '10px')
+			.style('border-radius', '13px')
 			.style('background-color', '#eee')
 			.style('color', '#000')
 			.html('Divide <b>' + self.term.name + '</b> to groups')
@@ -1042,7 +1065,56 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.showConditionOpts = async function(div) {}
+	self.showConditionOpts = async function(div) {
+		// grade/subcondtion value type
+		const value_type_select = div
+			.append('select')
+			.style('margin', '5px 10px')
+			.on('change', () => {
+				self.q.bar_by_grade = value_type_select.node().value == 'sub' ? false : true
+				self.q.bar_by_children = value_type_select.node().value == 'sub' ? true : false
+				self.q.value_by_max_grade = value_type_select.node().value == 'max' ? true : false
+				self.q.value_by_most_recent = value_type_select.node().value == 'recent' ? true : false
+				self.q.value_by_computable_grade = value_type_select.node().value == 'computable' ? true : false
+				self.dom.tip.hide()
+				self.opts.callback({
+					id: self.term.id,
+					term: self.term,
+					q: self.q
+				})
+			})
+
+		value_type_select
+			.append('option')
+			.attr('value', 'max')
+			.text('Max grade per patient')
+
+		value_type_select
+			.append('option')
+			.attr('value', 'recent')
+			.text('Most recent grade per patient')
+
+		value_type_select
+			.append('option')
+			.attr('value', 'computable')
+			.text('Any grade per patient')
+
+		value_type_select
+			.append('option')
+			.attr('value', 'sub')
+			.text('Sub-conditions')
+
+		value_type_select.node().selectedIndex = self.q.bar_by_children
+			? 3
+			: self.q.value_by_computable_grade
+			? 2
+			: self.q.value_by_most_recent
+			? 1
+			: 0
+
+		//options for grouping grades/subconditions
+		self.showGrpOpts(div)
+	}
 
 	self.grpSet2valGrp = function(groupset) {
 		const vals_with_grp = JSON.parse(JSON.stringify(self.term.values))
