@@ -1,6 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
 const helpers = require('../../../test/front.helpers.js')
+const graphable = require('../../common/graphable').graphable
 
 /*
 Note:
@@ -138,8 +139,3 @@ tape('click_term', test => {
 		test.ok(graphable(term), 'modifier callback called with a graphable term')
 	}
 })
-
-function graphable(term) {
-	if (!term) throw 'missing term'
-	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
-}

@@ -4,7 +4,7 @@ import { dofetch2, sayerror } from '../client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
-import { graphable } from '../common/getterm'
+import { graphable } from '../common/graphable'
 
 /*
 steps:

@@ -3,7 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { plotInit } from './plot'
 import { searchInit } from './search'
-import { graphable } from '../common/getterm'
+import { graphable } from '../common/graphable'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -20,7 +20,6 @@ const cls_termdiv = 'termdiv',
 /*
 ******************** EXPORTED
 treeInit()
-graphable()
 root_ID
 
 ******************** constructor opts{}

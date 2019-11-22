@@ -27,8 +27,3 @@ exports.getterm = async function(termid, dslabel = null, genome = null) {
 	if (!data.term) throw 'no term found for ' + termid
 	return data.term
 }
-
-exports.graphable = function(term) {
-	// terms with a valid type supports graph
-	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
-}
