@@ -102,7 +102,6 @@ function setRenderers(self) {
 		// only show pill for (2), not at the other cases
 		if (!plot.term2 || (plot.term2 && plot.term2.term.iscondition && plot.term2.id == plot.term.id)) {
 			// case (1) (3) (4), just text label
-			console.log('no pill')
 			self.dom.pilldiv.style('display', 'none')
 			self.dom.menuBtn.style('display', 'inline-block')
 			if (!plot.term2) {
@@ -159,13 +158,6 @@ function setRenderers(self) {
 				/* term1 is non-leaf CHC
 				meet the need for allowing grade-subcondition overlay
 				no longer uses bar_choices
-				if(!term2
-					|| term2.id!=t1.id
-					|| (
-						t1.q.bar_by_children
-						&& !term2.q.bar_by_grade
-						)
-					){
 				*/
 				if (t1.q.bar_by_grade || (term2 && term2.term.id == t1.id && term2.q.bar_by_grade)) {
 					// not to show (3)
@@ -174,7 +166,9 @@ function setRenderers(self) {
 					self.dom.tip.d
 						.append('div')
 						.attr('class', 'sja_menuoption')
-						.html('Max grade <span style="font-size:.7em;text-transform:uppercase">' + t1.term.name + '</span>')
+						.html(
+							'Max grade <span style="font-size:.7em;text-transform:uppercase;opacity:.6">' + t1.term.name + '</span>'
+						)
 						.on('click', () => {
 							self.dom.tip.hide()
 							self.opts.dispatch({
@@ -183,8 +177,8 @@ function setRenderers(self) {
 								config: {
 									term2: {
 										id: t1.id,
-										term: t1,
-										q: { bar_by_grade: true }
+										term: t1.term,
+										q: { bar_by_grade: true, value_by_max_grade: true }
 									}
 								}
 							})
@@ -197,7 +191,11 @@ function setRenderers(self) {
 					self.dom.tip.d
 						.append('div')
 						.attr('class', 'sja_menuoption')
-						.html('Sub-condition <span style="font-size:.7em;text-transform:uppercase">' + t1.name + '</span>')
+						.html(
+							'Sub-condition <span style="font-size:.7em;text-transform:uppercase;opacity:.6">' +
+								t1.term.name +
+								'</span>'
+						)
 						.on('click', () => {
 							self.dom.tip.hide()
 							self.opts.dispatch({
@@ -206,8 +204,8 @@ function setRenderers(self) {
 								config: {
 									term2: {
 										id: t1.id,
-										term: t1,
-										q: { bar_by_children: true }
+										term: t1.term,
+										q: { bar_by_children: true, value_by_max_grade: true }
 									}
 								}
 							})
