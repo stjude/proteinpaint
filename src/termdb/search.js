@@ -2,8 +2,9 @@ import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch2, sayerror } from '../client'
 import { debounce } from 'debounce'
-import { graphable, root_ID } from './tree'
+import { root_ID } from './tree'
 import { plotConfig } from './plot'
+import { graphable } from '../common/getterm'
 
 /*
 steps:

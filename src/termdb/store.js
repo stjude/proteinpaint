@@ -2,7 +2,7 @@ import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
 import { plotConfig } from './plot'
 import { dofetch2 } from '../client'
-import getterm from '../common/getterm'
+import { getterm } from '../common/getterm'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 

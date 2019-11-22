@@ -3,6 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { dofetch2 } from '../client'
 import { plotInit } from './plot'
 import { searchInit } from './search'
+import { graphable } from '../common/getterm'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -435,10 +436,4 @@ function setInteractivity(self) {
 		const type = self.state.visiblePlotIds.includes(term.id) ? 'plot_hide' : 'plot_show'
 		self.app.dispatch({ type, id: term.id, term })
 	}
-}
-
-export function graphable(term) {
-	// TODO move to ./common/term.js
-	// terms with a valid type supports graph
-	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
 }

@@ -14,7 +14,7 @@ otherwise, do:
 
 const cache = { serverData: {} }
 
-export default async function(termid, dslabel = null, genome = null) {
+exports.getterm = async function(termid, dslabel = null, genome = null) {
 	if (!termid) throw 'getterm: termid missing'
 	if (this && this.state) {
 		if (this.state.dslabel) dslabel = this.state.dslabel
@@ -26,4 +26,9 @@ export default async function(termid, dslabel = null, genome = null) {
 	if (data.error) throw 'getterm: ' + data.error
 	if (!data.term) throw 'no term found for ' + termid
 	return data.term
+}
+
+exports.graphable = function(term) {
+	// terms with a valid type supports graph
+	return term.iscategorical || term.isinteger || term.isfloat || term.iscondition
 }
