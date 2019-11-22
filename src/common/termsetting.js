@@ -266,6 +266,7 @@ function setInteractivity(self) {
 			self.q.groupsetting.predefined_groupset_idx != undefined
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
 				: ''
+		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 
 		const active_group_info_div = div.append('div').style('margin', '10px')
 
@@ -301,7 +302,7 @@ function setInteractivity(self) {
 				const values_td = group_tr.append('td')
 
 				for (const v of g.values) {
-					values_td.append('div').html(self.term.values[v.key].label)
+					values_td.append('div').html(values[v.key].label)
 				}
 			}
 
@@ -327,7 +328,7 @@ function setInteractivity(self) {
 		const default_btn_txt =
 			(!grpsetting_flag ? 'Using' : 'Use') +
 			' default categories ' +
-			(self.term.values ? '(n=' + Object.keys(self.term.values).length + ')' : '')
+			(values ? '(n=' + Object.keys(values).length + ')' : '')
 
 		// default overlay btn - devide to n groups (n=total)
 		div
@@ -361,7 +362,12 @@ function setInteractivity(self) {
 					div
 						.append('div')
 						.attr('class', 'group_btn sja_filter_tag_btn')
-						.style('display', 'block')
+						.style(
+							'display',
+							(group.is_grade && !self.q.bar_by_grade) || (group.is_subcondition && !self.q.bar_by_children)
+								? 'none'
+								: 'block'
+						)
 						.style('padding', '7px 6px')
 						.style('margin', '5px')
 						.style('text-align', 'center')
@@ -407,7 +413,8 @@ function setInteractivity(self) {
 	self.regroupMenu = function(grp_count, temp_cat_grps) {
 		//start with default 2 groups, extra groups can be added by user
 		const default_grp_count = grp_count || 2
-		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(self.term.values))
+		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
+		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
 
 		//initiate empty customset
 		const customset = { groups: [] }
@@ -490,7 +497,7 @@ function setInteractivity(self) {
 				.html(i + 1)
 
 		// for each cateogry add new row with radio button for each group and category name
-		for (const [key, val] of Object.entries(self.term.values)) {
+		for (const [key, val] of Object.entries(values)) {
 			const cat_tr = group_table
 				.append('tr')
 				.on('mouseover', () => {
@@ -1118,7 +1125,8 @@ function setInteractivity(self) {
 	}
 
 	self.grpSet2valGrp = function(groupset) {
-		const vals_with_grp = JSON.parse(JSON.stringify(self.term.values))
+		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
+		const vals_with_grp = JSON.parse(JSON.stringify(values))
 		for (const [i, g] of groupset.groups.entries()) {
 			for (const v of g.values) {
 				vals_with_grp[v.key].group = i + 1
