@@ -2,7 +2,8 @@ import { getInitFxn } from '../common/rx.core'
 //import { overlayInputInit } from './plot.controls.overlay'
 import { overlayInit } from './plot.controls.overlay2'
 import { term1uiInit } from './plot.controls.term1'
-import { divideByInputInit } from './plot.controls.divideBy'
+//import { divideByInputInit } from './plot.controls.divideBy'
+import { divideInit } from './plot.controls.divide'
 import { initRadioInputs } from '../common/dom'
 // temporarily use legacy termui_display to prototype the barsAs input
 import { numeric_bin_edit, display as termui_display } from '../mds.termdb.termsetting.ui'
@@ -45,7 +46,8 @@ class TdbConfigUiInit {
 				debug
 			}),
 			*/
-			divideBy: divideByInputInit({ holder: table.append('tr'), dispatch, id: this.id, debug })
+			//divideBy: divideByInputInit({ holder: table.append('tr'), dispatch, id: this.id, debug })
+			divideBy: divideInit({ holder: table.append('tr'), dispatch, id: this.id, debug })
 		}
 
 		this.api = {
