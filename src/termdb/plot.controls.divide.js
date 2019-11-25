@@ -88,7 +88,7 @@ function setRenderers(self) {
 	self.initUI = function() {
 		self.dom.tr
 			.append('td')
-			.text('Divide')
+			.text('Divide by')
 			.attr('class', 'sja-termdb-config-row-label')
 		const td = self.dom.tr.append('td')
 		self.dom.menuBtn = td
@@ -111,7 +111,7 @@ function setRenderers(self) {
 		}
 		// case (2) show pill
 		self.dom.menuBtn.style('display', 'none')
-		self.dom.pilldiv.style('display', 'block')
+		self.dom.pilldiv.style('display', 'inline-block')
 		self.updatePill()
 	}
 	self.showMenu = function() {

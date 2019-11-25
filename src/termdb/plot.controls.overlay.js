@@ -130,7 +130,7 @@ function setRenderers(self) {
 		}
 		// case (2) show pill
 		self.dom.menuBtn.style('display', 'none')
-		self.dom.pilldiv.style('display', 'block')
+		self.dom.pilldiv.style('display', 'inline-block')
 		self.updatePill()
 	}
 	self.showMenu = function() {

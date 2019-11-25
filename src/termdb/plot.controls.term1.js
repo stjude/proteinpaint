@@ -43,7 +43,7 @@ class Term1ui {
 			disable_ReplaceRemove: true, // to disable Replace/Remove buttons
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
-			holder: this.dom.td2,
+			holder: this.dom.td2.append('div').style('display', 'inline-block'),
 			debug: this.opts.debug,
 			callback: data => {
 				// data is object with only one needed attribute: q, never is null
