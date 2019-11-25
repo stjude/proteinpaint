@@ -104,27 +104,34 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 		: bc.first_bin.start_percentile
 		? summary['p' + bc.first_bin.start_percentile]
 		: bc.first_bin.start
-	const max = bc.last_bin.stopunbounded
-		? summary.max
-		: bc.last_bin.stop_percentile
-		? summary['p' + bc.last_bin.stop_percentile]
-		: isNumeric(bc.last_bin.stop) && bc.last_bin.stop <= summary.max
-		? bc.last_bin.stop
-		: summary.max
+
+	// following about last_bin are quick-fix
+	let max = summary.max,
+		last_start,
+		last_stop
+	if (bc.last_bin) {
+		max = bc.last_bin.stopunbounded
+			? summary.max
+			: bc.last_bin.stop_percentile
+			? summary['p' + bc.last_bin.stop_percentile]
+			: isNumeric(bc.last_bin.stop) && bc.last_bin.stop <= summary.max
+			? bc.last_bin.stop
+			: summary.max
+		last_start = isNumeric(bc.last_bin.start_percentile)
+			? summary['p' + bc.last_bin.start_percentile]
+			: isNumeric(bc.last_bin.start)
+			? bc.last_bin.start
+			: undefined
+		last_stop = bc.last_bin.stopunbounded
+			? null
+			: bc.last_bin.stop_percentile
+			? summary['p' + bc.last_bin.stop_percentile]
+			: isNumeric(bc.last_bin.stop)
+			? bc.last_bin.stop
+			: null
+	}
 	const numericMax = isNumeric(max)
-	const last_start = isNumeric(bc.last_bin.start_percentile)
-		? summary['p' + bc.last_bin.start_percentile]
-		: isNumeric(bc.last_bin.start)
-		? bc.last_bin.start
-		: undefined
 	const numericLastStart = isNumeric(last_start)
-	const last_stop = bc.last_bin.stopunbounded
-		? null
-		: bc.last_bin.stop_percentile
-		? summary['p' + bc.last_bin.stop_percentile]
-		: isNumeric(bc.last_bin.stop)
-		? bc.last_bin.stop
-		: null
 	const numericLastStop = isNumeric(last_stop)
 
 	if (!numericMax && !numericLastStart) throw 'unable to compute the last bin start or stop'
@@ -166,14 +173,15 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 
 		if (currBin.stop >= max) {
 			currBin.stop = max
-			if (bc.last_bin.stopunbounded) currBin.stopunbounded = 1
-			if (bc.last_bin.stopinclusive) currBin.stopinclusive = 1
+			if (bc.last_bin && bc.last_bin.stopunbounded) currBin.stopunbounded = 1
+			if (bc.last_bin && bc.last_bin.stopinclusive) currBin.stopinclusive = 1
 		}
 		if (numericLastStart && currBin.start == last_start) {
-			if (bc.last_bin.stopunbounded) currBin.stopunbounded = 1
+			if (bc.last_bin && bc.last_bin.stopunbounded) currBin.stopunbounded = 1
 		}
 		if (currBin.start > currBin.stop) {
-			if (numericLastStart && currBin.stop == last_start && bc.last_bin.stopunbounded) currBin.stopunbounded = true
+			if (numericLastStart && currBin.stop == last_start && bc.last_bin && bc.last_bin.stopunbounded)
+				currBin.stopunbounded = true
 			else break
 		}
 		if (bins.length + 1 >= maxNumBins) {
