@@ -291,7 +291,7 @@ tape('Numerical term overlay', function(test) {
 	}
 })
 
-tape('Conditional term overlay', function(test) {
+tape.only('Conditional term overlay', function(test) {
 	runpp({
 		state: {
 			tree: {
@@ -328,6 +328,14 @@ tape('Conditional term overlay', function(test) {
 			.to(testTerm2Pill, { wait: 1000 })
 			.run(triggerBluePill)
 			.run(testGrpMenu)
+			.use(triggerGradeChange, { wait: 1000 })
+			.to(testGradeChange)
+			.use(triggerGrpSelect)
+			.to(testBluePill)
+			.run(triggerBluePill)
+			.run(testReGrpMenu)
+			.use(triggerSubSelect, { wait: 1000 })
+			.to(testSubSelect)
 			.done(test)
 	}
 
@@ -344,6 +352,11 @@ tape('Conditional term overlay', function(test) {
 			plotControls.Inner.state.config.term2.term.name,
 			'Should have 1 pill for overlay term'
 		)
+		test.equal(
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
+			'By Max Grade',
+			'Should have bluepill summary btn "By Max Grade" as default'
+		)
 	}
 
 	function triggerBluePill(plotControls) {
@@ -352,7 +365,94 @@ tape('Conditional term overlay', function(test) {
 
 	function testGrpMenu(plotControls) {
 		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		test.equal(tip.d.selectAll('select').size(), 1, 'Should have 1 dropdown to change grade setting')
+		test.equal(tip.d.selectAll('.group_btn').size(), 3, 'Should have 3 buttons for group config')
+		test.true(
+			tip.d.selectAll('.group_btn')._groups[0][0].innerText.includes('Using'),
+			'Should have "default" group button be active'
+		)
 		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
+	}
+
+	function triggerGradeChange(plotControls) {
+		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		tip.d.selectAll('select')._groups[0][0].selectedIndex = 1
+		tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
+	}
+
+	function testGradeChange(plotControls) {
+		test.equal(
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
+			'By Most Recent Grade',
+			'Should have bluepill summary btn changed to "By Most Recent Grade"'
+		)
+	}
+
+	function triggerGrpSelect(plotControls) {
+		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		tip.d.selectAll('.group_btn')._groups[0][1].click()
+	}
+
+	function testBluePill(plotControls) {
+		const groupset_idx = plotControls.Inner.state.config.term2.q.groupsetting.predefined_groupset_idx
+		const groupset = plotControls.Inner.state.config.term2.term.groupsetting.lst[groupset_idx]
+		test.equal(
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
+			groupset.name,
+			'Should have bluepill summary btn match group name'
+		)
+	}
+
+	function testReGrpMenu(plotControls) {
+		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const groupset_idx = plotControls.Inner.state.config.term2.q.groupsetting.predefined_groupset_idx
+		const groupset = plotControls.Inner.state.config.term2.term.groupsetting.lst[groupset_idx]
+
+		test.equal(tip.d.selectAll('select')._groups[0][0].selectedIndex, 1, 'Should have "Most recent" option selected')
+		test.equal(
+			d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,
+			groupset.groups[0].name,
+			'Should have group 1 name same as predefined group1 name'
+		)
+		test.equal(
+			d3s
+				.select(d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][1])
+				.selectAll('div')
+				.size(),
+			groupset.groups[0].values.length,
+			'Should have same number of grades to group as predefined group1'
+		)
+		test.equal(
+			d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][0].innerText,
+			groupset.groups[1].name,
+			'Should have group 2 name same as predefined group2 name'
+		)
+		test.equal(
+			d3s
+				.select(d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][1])
+				.selectAll('div')
+				.size(),
+			groupset.groups[1].values.length,
+			'Should have same number of grades to group as predefined group2'
+		)
+		test.true(
+			tip.d.selectAll('.group_btn')._groups[0][1].innerText.includes('Use'),
+			'Should have "default" group button be inactive'
+		)
+	}
+
+	function triggerSubSelect(plotControls) {
+		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		tip.d.selectAll('select')._groups[0][0].selectedIndex = 3
+		tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
+	}
+
+	function testSubSelect(plotControls) {
+		test.equal(
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
+			'By Subcondition',
+			'Should have bluepill summary btn changed to "By Subcondition"'
+		)
 	}
 })
