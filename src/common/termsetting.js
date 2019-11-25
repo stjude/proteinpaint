@@ -1149,7 +1149,21 @@ function termsetting_fill_q(q, term) {
 		always copies from .bins.default
 		no longer deals with the case where .bins.less is to be used as term2/0
 		*/
-		rx.copyMerge(q, term.bins.default)
+		if (Number.isFinite(q.bin_size) && q.first_bin) {
+			if (q.first_bin.startunbounded) {
+				if (Number.isInteger(q.first_bin.stop_percentile) || Number.isFinite(q.first_bin.stop)) {
+					// valid, do not override
+					return
+				}
+			} else {
+				if (Number.isInteger(q.first_bin.start_percentile) || Number.isFinite(q.first_bin.start)) {
+					// valid, do not override
+					return
+				}
+			}
+		}
+		// override
+		termsetting_fill_q_numeric(q, term.bins.default)
 		return
 	}
 	if (term.iscategorical || term.iscondition) {
@@ -1191,3 +1205,7 @@ function termsetting_fill_q(q, term) {
 	throw 'unknown term type'
 }
 exports.termsetting_fill_q = termsetting_fill_q
+function termsetting_fill_q_numeric(q, binconfig) {
+	rx.copyMerge(q, binconfig)
+}
+exports.termsetting_fill_q_numeric = termsetting_fill_q_numeric
