@@ -261,8 +261,12 @@ function validatePlotTerm(t) {
 	if (t.term.isinteger || t.term.isfloat) {
 		// t.q is binning scheme, it is validated on server
 	} else if (t.term.iscategorical) {
-		if (!t.term.values) throw '.values{} missing'
-		// groupsetting is validated on server
+		if (t.q.groupsetting && !t.q.groupsetting.disabled) {
+			// groupsetting allowed on this term
+			if (!t.term.values) throw '.values{} missing when groupsetting is allowed'
+			// groupsetting is validated on server
+		}
+		// term may not have .values{} when groupsetting is disabled
 	} else if (t.term.iscondition) {
 		if (!t.term.values) throw '.values{} missing'
 		if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
