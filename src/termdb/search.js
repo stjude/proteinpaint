@@ -147,7 +147,7 @@ function setRenderers(self) {
 								expandedTermIds,
 								visiblePlotIds: [term.id],
 								plots: {
-									[term.id]: plotConfig({ term: { term } })
+									[term.id]: plotConfig({ id: term.id, term: { term } })
 								}
 							}
 						}
