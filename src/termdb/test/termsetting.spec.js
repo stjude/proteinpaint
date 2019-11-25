@@ -291,7 +291,7 @@ tape('Numerical term overlay', function(test) {
 	}
 })
 
-tape.only('Conditional term overlay', function(test) {
+tape('Conditional term overlay', function(test) {
 	runpp({
 		state: {
 			tree: {

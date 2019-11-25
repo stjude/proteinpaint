@@ -1085,10 +1085,10 @@ function setInteractivity(self) {
 			.on('change', () => {
 				self.q.bar_by_grade = value_type_select.node().value == 'sub' ? false : true
 				self.q.bar_by_children = value_type_select.node().value == 'sub' ? true : false
-				self.q.value_by_max_grade =
-					value_type_select.node().value == 'max' || value_type_select.node().value == 'sub' ? true : false
+				self.q.value_by_max_grade = value_type_select.node().value == 'max' ? true : false
 				self.q.value_by_most_recent = value_type_select.node().value == 'recent' ? true : false
-				self.q.value_by_computable_grade = value_type_select.node().value == 'computable' ? true : false
+				self.q.value_by_computable_grade =
+					value_type_select.node().value == 'computable' || value_type_select.node().value == 'sub' ? true : false
 				if (value_type_select.node().value == 'sub') {
 					self.q.groupsetting.inuse = false
 					self.q.groupsetting.predefined_groupset_idx = undefined
