@@ -637,7 +637,7 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 				${table2}.name AS key,
 				${table2}.name AS value
 			FROM precomputed a
-			JOIN ${table2} ON ${table2}.value==CAST(a.value AS integer)
+			JOIN ${table2} ON ${table2}.value==${q.bar_by_grade ? 'CAST(a.value AS integer)' : 'a.value'}
 			WHERE
 				term_id=?
 				AND value_for=?
