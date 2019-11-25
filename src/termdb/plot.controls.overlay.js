@@ -1,245 +1,247 @@
 import * as rx from '../common/rx.core'
-import { select as d3select, event as d3event } from 'd3-selection'
 import { termsettingInit } from '../common/termsetting'
-import { initRadioInputs } from '../common/dom'
+import { Menu } from '../client'
 
 /*
-a wrapper component of termsettingInit
-bi-directional information flow
+options for term2:
+1) none
+2) term (as term2, also is different from plot.term)
+3) grade (plot.term2 is same as term1, CHC)
+4) subcondition (same as term1)
 
-####################                        ###############
-#                  #   ====== A ========>   #             #
-# controls.overlay #                        # termsetting #
-#                  #   <===== B =========   #             #
-####################                        ###############
+pill is only for altering between 1 and 2.
 
-A: when overlay is notified, will call overlay.api.main() --> overlay.updatePill() --> overlay.pill.main()
-B: user interaction at termsetting UI updates term2 data, and sends back to overlay via callback.
-
+only show pill for (2)
+all other cases just text label
 
 
-opts{}
-.holder
-.index (of the plot control)
-.id (of the plot control)
-
-FIXME should show existing term2 upon init
 */
 
-class TdbOverlayInput {
+class Overlay {
 	constructor(opts) {
-		this.type = 'overlayInput'
-		this.opts = opts
-		this.dom = { holder: opts.holder }
-		setInteractivity(this)
+		this.validateOpts(opts)
 		setRenderers(this)
-		this.setUI()
-
+		this.initUI()
+		this.usedTerms = [] // array of {term, q}
 		this.api = {
 			usestate: true,
 			main: state => {
-				// TODO show state structure
 				this.state = state
-				this.plot = state.config
-				this.render(state)
-				this.updatePill()
+				this.mayRegisterTerm(state.config.term2)
+				this.updateUI()
 			}
 		}
 		if (opts.debug) this.api.Inner = this
 	}
-
-	updatePill() {
-		if (!this.pill) this.setPill()
-
-		const o = {
-			disable_terms: [this.plot.term.term.id],
-			termfilter: this.state.termfilter // used later for computing kernel density of numeric term
-		}
-		if (this.plot.term0) o.disable_terms.push(this.plot.term0.term.id)
-		// XXX what's the difference between plot.settings.controls.term2 and plot.term2
-		//const term2 = this.plot.settings.controls.term2
-		const term2 = this.plot.term2
-		if (term2) {
-			o.disable_terms.push(term2.term.id)
-			o.term = term2.term
-			o.q = term2.q
-		}
-		this.pill.main(o)
+	validateOpts(o) {
+		if (!('id' in o)) throw 'opts.id missing' // plot id?
+		if (!o.holder) throw 'opts.holder missing'
+		if (typeof o.dispatch != 'function') throw 'opts.dispath() is not a function'
+		this.opts = o
+		this.dom = { tr: o.holder }
 	}
-
-	setPill() {
-		// requires this.state, so can only call in main()
+	initPill() {
 		this.pill = termsettingInit({
-			holder: this.dom.pill_div,
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
+			holder: this.dom.pilldiv,
 			debug: this.opts.debug,
 			callback: term2 => {
-				// term2 is an object of { id, term{}, q{} }, maybe null
+				// term2 is {term,q} and can be null
 				this.opts.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
 					config: {
-						term2,
-						settings: {
-							barchart: {
-								overlay: term2 ? 'tree' : 'none'
-							},
-							controls: { term2 }
-						}
+						term2: term2
 					}
 				})
 			}
 		})
 	}
+	mayRegisterTerm(term) {
+		if (!term || !term.term) return // no term2
+		if (term.term.id == this.state.config.term.id) return // same as term1
+		if (this.usedTerms.find(i => i.term.id == term.term.id)) return // already had
+		this.usedTerms.push({ term: term.term, q: term.q })
+	}
+	updatePill() {
+		// after updating this.state, call pill.main() to update info in pill
+		const plot = this.state.config
+		const a = {
+			disable_terms: [plot.term.id]
+		}
+		if (plot.term2) {
+			a.term = plot.term2.term
+			a.q = plot.term2.q
+			a.disable_terms.push(plot.term2.id)
+		}
+		if (plot.term0) a.disable_terms.push(plot.term0.id)
+		if (!this.pill) this.initPill()
+		this.pill.main(a)
+	}
 }
 
-export const overlayInputInit = rx.getInitFxn(TdbOverlayInput)
+exports.overlayInit = rx.getInitFxn(Overlay)
 
 function setRenderers(self) {
-	self.setUI = function() {
-		const tr = self.dom.holder
-
-		tr.append('td')
-			.html('Overlay with')
+	self.initUI = function() {
+		self.dom.tr
+			.append('td')
+			.text('Overlay')
 			.attr('class', 'sja-termdb-config-row-label')
-
-		const td = tr.append('td')
-
-		this.radio = initRadioInputs({
-			name: 'pp-termdb-overlay-' + this.opts.index,
-			holder: td,
-			options: [
-				{ label: 'None', value: 'none' },
-				{ label: 'Subconditions', value: 'bar_by_children' },
-				{ label: 'Grade', value: 'bar_by_grade' },
-				{ label: '', value: 'tree' }
-				//{ label: 'Genotype', value: 'genotype' }
-			],
-			listeners: {
-				input: self.setOptionVal,
-				click: self.showTree
-			}
-		})
-
-		//add blue-pill for term2
-		const treeInput = this.radio.dom.inputs
-			.filter(d => {
-				return d.value == 'tree'
-			})
-			.style('margin-top', '2px')
-
-		this.dom.pill_div = d3select(treeInput.node().parentNode.parentNode)
+		const td = self.dom.tr.append('td')
+		self.dom.menuBtn = td
 			.append('div')
-			.style('display', 'inline-block')
+			.attr('class', 'sja_clbtext2')
+			.on('click', self.showMenu)
+		self.dom.pilldiv = td.append('div')
+		self.dom.tip = new Menu({ padding: '0px' })
 	}
-
-	self.render = function() {
-		// hide all options when opened from genome browser view
-		const plot = self.plot
-		// do not show genotype overlay option when opened from stand-alone page
-		if (!plot.settings.barchart.overlay) {
-			plot.settings.barchart.overlay = plot.term2 && plot.term2.term.id != plot.term.term.id ? 'tree' : 'none'
+	self.updateUI = function() {
+		const plot = this.state.config
+		// only show pill for (2), not at the other cases
+		if (!plot.term2 || (plot.term2 && plot.term2.term.iscondition && plot.term2.id == plot.term.id)) {
+			// case (1) (3) (4), just text label
+			self.dom.pilldiv.style('display', 'none')
+			self.dom.menuBtn.style('display', 'inline-block')
+			if (!plot.term2) {
+				// (1)
+				// update pill so it knows which terms to disable
+				self.updatePill()
+				return self.dom.menuBtn.html('None &#9660;')
+			}
+			if (plot.term2.q.bar_by_grade) {
+				// (3)
+				return self.dom.menuBtn.html(
+					'Max grade <span style="font-size:.7em">' + plot.term.term.name + '</span> &#9660;'
+				)
+			}
+			if (plot.term2.q.bar_by_children) {
+				// (4)
+				return self.dom.menuBtn.html(
+					'Sub-conditions <span style="font-size:.7em">' + plot.term.term.name + '</span> &#9660;'
+				)
+			}
+			return self.dom.menuBtn.html('ERROR: unknown type of overlay &#9660;')
 		}
-
-		self.radio.main(plot.settings.barchart.overlay)
-		self.radio.dom.labels.html(self.updateRadioLabels)
-		self.radio.dom.divs.style('display', self.getDisplayStyle)
+		// case (2) show pill
+		self.dom.menuBtn.style('display', 'none')
+		self.dom.pilldiv.style('display', 'block')
+		self.updatePill()
 	}
+	self.showMenu = function() {
+		self.dom.tip.clear().showunder(self.dom.menuBtn.node())
+		const term2 = self.state.config.term2
 
-	self.updateRadioLabels = function(d) {
-		const term1 = self.plot.term.term
-		if (!term1.iscondition) return '&nbsp;' + d.label
-		if (d.value == 'bar_by_children') return '&nbsp;' + term1.id + ' subconditions'
-		if (d.value == 'bar_by_grade') return '&nbsp;' + term1.id + ' grades'
-		return '&nbsp;' + d.label
-	}
-
-	self.getDisplayStyle = function(d) {
-		const term1 = self.plot.term.term
-		const q = self.plot.term.q
-		if (d.value == 'bar_by_children') {
-			return term1.iscondition && !term1.isleaf && q && q.bar_by_grade ? 'block' : 'none'
-		} else if (d.value == 'bar_by_grade') {
-			return term1.iscondition && !term1.isleaf && q && q.bar_by_children ? 'block' : 'none'
-		} else {
-			const block = 'block' //term1.q.iscondition || (plot.term2 && plot.term2.term.iscondition) ? 'block' : 'inline-block'
-			//return d.value != 'genotype' || self.obj.modifier_ssid_barchart ? block : 'none'
-		}
-	}
-}
-
-function setInteractivity(self) {
-	self.setOptionVal = d => {
-		d3event.stopPropagation()
-		const plot = self.plot
-		if (d.value == 'none') {
-			self.opts.dispatch({
-				type: 'plot_edit',
-				id: self.opts.id,
-				config: {
-					term2: undefined,
-					settings: {
-						currViews: ['barchart'],
-						barchart: { overlay: d.value }
-					}
-				}
-			})
-		} else if (d.value == 'tree') {
-			if (!plot.settings.controls.term2) {
-				self.pill.showTree()
-			} else {
-				self.opts.dispatch({
-					type: 'plot_edit',
-					id: self.opts.id,
-					config: {
-						term2: plot.settings.controls.term2,
-						settings: { barchart: { overlay: d.value } }
-					}
+		// option (1) none
+		if (term2) {
+			// term2 is not null, allow to change to none
+			self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('None')
+				.on('click', () => {
+					self.dom.tip.hide()
+					self.opts.dispatch({
+						type: 'plot_edit',
+						id: self.opts.id,
+						config: {
+							term2: null
+						}
+					})
 				})
-			}
-		} else if (d.value == 'genotype') {
-			// to-do
-			console.log('genotype overlay to be handled from term tree portal', d, d3event.target)
-		} else if (d.value == 'bar_by_children') {
-			if (plot.term.q.bar_by_children) {
-				console.log('bar_by_children term1 should not allow subcondition overlay')
-				return
-			}
-			const q = { bar_by_grade: 1 }
-			self.opts.dispatch({
-				type: 'plot_edit',
-				id: self.opts.id,
-				config: {
-					term2: {
-						term: plot.term.term,
-						q: {
-							bar_by_children: 1
-						}
-					},
-					settings: { barchart: { overlay: d.value } }
-				}
-			})
-		} else if (d.value == 'bar_by_grade') {
-			if (plot.term.q.bar_by_grade) {
-				console.log('bar_by_grade term1 should not allow grade overlay')
-				return
-			}
-			self.opts.dispatch({
-				type: 'plot_edit',
-				id: self.opts.id,
-				config: {
-					term2: {
-						term: plot.term.term,
-						q: {
-							bar_by_grade: 1
-						}
-					},
-					settings: { barchart: { overlay: d.value } }
-				}
-			})
-		} else {
-			console.log('unhandled click event', d, d3event.target)
 		}
+
+		{
+			const t1 = self.state.config.term
+			if (t1.term.iscondition && !t1.term.isleaf) {
+				/* term1 is non-leaf CHC
+				meet the need for allowing grade-subcondition overlay
+				no longer uses bar_choices
+				*/
+				if (t1.q.bar_by_grade || (term2 && term2.term.id == t1.id && term2.q.bar_by_grade)) {
+					// not to show (3)
+				} else {
+					// show (3)
+					self.dom.tip.d
+						.append('div')
+						.attr('class', 'sja_menuoption')
+						.html(
+							'Max grade <span style="font-size:.7em;text-transform:uppercase;opacity:.6">' + t1.term.name + '</span>'
+						)
+						.on('click', () => {
+							self.dom.tip.hide()
+							self.opts.dispatch({
+								type: 'plot_edit',
+								id: self.opts.id,
+								config: {
+									term2: {
+										id: t1.id,
+										term: t1.term,
+										q: { bar_by_grade: true, value_by_max_grade: true }
+									}
+								}
+							})
+						})
+				}
+				if (t1.q.bar_by_children || (term2 && term2.term.id == t1.id && term2.q.bar_by_children)) {
+					// not to show (4)
+				} else {
+					// show (4)
+					self.dom.tip.d
+						.append('div')
+						.attr('class', 'sja_menuoption')
+						.html(
+							'Sub-condition <span style="font-size:.7em;text-transform:uppercase;opacity:.6">' +
+								t1.term.name +
+								'</span>'
+						)
+						.on('click', () => {
+							self.dom.tip.hide()
+							self.opts.dispatch({
+								type: 'plot_edit',
+								id: self.opts.id,
+								config: {
+									term2: {
+										id: t1.id,
+										term: t1.term,
+										q: { bar_by_children: true, value_by_max_grade: true }
+									}
+								}
+							})
+						})
+				}
+			}
+		}
+
+		for (const t of self.usedTerms) {
+			self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('Term: ' + t.term.name)
+				.on('click', () => {
+					self.dom.tip.hide()
+					self.opts.dispatch({
+						type: 'plot_edit',
+						id: self.opts.id,
+						config: {
+							term2: {
+								id: t.term.id,
+								term: t.term,
+								q: t.q
+							}
+						}
+					})
+				})
+		}
+		// option (4)
+		self.dom.tip.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text('Select a new term')
+			.on('click', () => {
+				self.dom.tip.hide()
+				self.pill.showTree(self.dom.menuBtn.node())
+			})
 	}
 }
