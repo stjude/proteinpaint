@@ -199,7 +199,9 @@ class TdbPlot {
 export const plotInit = rx.getInitFxn(TdbPlot)
 
 export function plotConfig(opts) {
-	if (!opts.term) throw `missing opts.term for plotConfig()`
+	if (!opts.term) throw 'plotConfig: opts.term{} missing'
+	if (!opts.term.term) throw 'plotConfig: opts.term.term{} missing'
+	if (!opts.term.term.id) throw 'plotConfig: opts.term.term.id missing'
 
 	// initiate .q{}
 	if (!opts.term.q) opts.term.q = {}
@@ -213,61 +215,62 @@ export function plotConfig(opts) {
 		termsetting_fill_q(opts.term0.q, opts.term0.term)
 	}
 
-	return rx.copyMerge(
-		{
-			id: opts.term.id,
-			settings: {
-				currViews: ['barchart'],
-				controls: {
-					isOpen: false, // control panel is hidden by default
-					term2: null, // the previous overlay value may be displayed as a convenience for toggling
-					term0: null
+	const config = {
+		id: opts.term.term.id,
+		settings: {
+			currViews: ['barchart'],
+			controls: {
+				isOpen: false, // control panel is hidden by default
+				term2: null, // the previous overlay value may be displayed as a convenience for toggling
+				term0: null
+			},
+			common: {
+				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
+				use_percentage: false,
+				barheight: 300, // maximum bar length
+				barwidth: 20, // bar thickness
+				barspace: 2 // space between two bars
+			},
+			boxplot: {
+				toppad: 20, // top padding
+				yaxis_width: 100,
+				label_fontsize: 15,
+				barheight: 400, // maximum bar length
+				barwidth: 25, // bar thickness
+				barspace: 5 // space between two bars
+			},
+			barchart: {
+				orientation: 'horizontal',
+				unit: 'abs',
+				overlay: 'none',
+				divideBy: 'none'
+			},
+			scatter: {
+				currLine: 0,
+				svgw: 400,
+				svgh: 400,
+				svgPadding: {
+					top: 10,
+					left: 80,
+					right: 10,
+					bottom: 50
 				},
-				common: {
-					use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
-					use_percentage: false,
-					barheight: 300, // maximum bar length
-					barwidth: 20, // bar thickness
-					barspace: 2 // space between two bars
-				},
-				boxplot: {
-					toppad: 20, // top padding
-					yaxis_width: 100,
-					label_fontsize: 15,
-					barheight: 400, // maximum bar length
-					barwidth: 25, // bar thickness
-					barspace: 5 // space between two bars
-				},
-				barchart: {
-					orientation: 'horizontal',
-					unit: 'abs',
-					overlay: 'none',
-					divideBy: 'none'
-				},
-				scatter: {
-					currLine: 0,
-					svgw: 400,
-					svgh: 400,
-					svgPadding: {
-						top: 10,
-						left: 80,
-						right: 10,
-						bottom: 50
-					},
-					chartMargin: 5,
-					chartTitleDivHt: 30,
-					radius: 5,
-					axisTitleFontSize: 14,
-					scale: 'byChart', // byGroup | byChart
-					ciVisible: true,
-					fillOpacity: 0.2,
-					duration: 1000
-				},
-				termInfo: {
-					isVisible: false
-				}
+				chartMargin: 5,
+				chartTitleDivHt: 30,
+				radius: 5,
+				axisTitleFontSize: 14,
+				scale: 'byChart', // byGroup | byChart
+				ciVisible: true,
+				fillOpacity: 0.2,
+				duration: 1000
+			},
+			termInfo: {
+				isVisible: false
 			}
-		},
-		opts
-	)
+		}
+	}
+
+	// may apply term-specific changes to the default object
+
+	return rx.copyMerge(config, opts)
 }
