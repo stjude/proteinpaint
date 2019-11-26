@@ -1,5 +1,5 @@
 import * as rx from '../common/rx.core'
-import { termsettingInit, termsetting_fill_q_numeric } from '../common/termsetting'
+import { termsettingInit } from '../common/termsetting'
 import { Menu } from '../client'
 
 /*
@@ -42,13 +42,10 @@ class Divide {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.pilldiv,
+			use_bins_less: true,
 			debug: this.opts.debug,
 			callback: term0 => {
 				// term0 is {term,q} and can be null
-				if (term0 && (term0.term.isinteger || term0.term.isfloat) && term0.term.bins.less) {
-					// has valid term0, is numeric and has bins.less, to use this rather than bins.default
-					termsetting_fill_q_numeric(term0.q, term0.term.bins.less)
-				}
 				this.opts.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,

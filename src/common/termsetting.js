@@ -8,6 +8,8 @@ import { appInit } from '../termdb/app'
 .holder
 .genome
 .dslabel
+.use_bins_less
+	boolean. if true, to initiate q{} of newly selected numeric term with bins.less (if available)
 .placeholder
 .callback( data )
 	.term{} // optional
@@ -198,7 +200,11 @@ function setInteractivity(self) {
 				click_term: term => {
 					self.dom.tip.hide()
 					const data = { id: term.id, term, q: {} }
-					termsetting_fill_q(data.q, term)
+					if (self.opts.use_bins_less && (term.isinteger || term.isfloat) && term.bins.less) {
+						data.q = JSON.parse(JSON.stringify(term.bins.less))
+					} else {
+						termsetting_fill_q(data.q, term)
+					}
 					self.opts.callback(data)
 				},
 				disable_terms: self.disable_terms

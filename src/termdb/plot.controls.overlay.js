@@ -1,5 +1,5 @@
 import * as rx from '../common/rx.core'
-import { termsettingInit, termsetting_fill_q_numeric } from '../common/termsetting'
+import { termsettingInit } from '../common/termsetting'
 import { Menu } from '../client'
 
 /*
@@ -45,13 +45,10 @@ class Overlay {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.pilldiv,
+			use_bins_less: true,
 			debug: this.opts.debug,
 			callback: term2 => {
 				// term2 is {term,q} and can be null
-				if (term2 && (term2.term.isinteger || term2.term.isfloat) && term2.term.bins.less) {
-					// has valid term2, is numeric and has bins.less, to use this rather than bins.default
-					termsetting_fill_q_numeric(term2.q, term2.term.bins.less)
-				}
 				this.opts.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
