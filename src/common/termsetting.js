@@ -161,7 +161,7 @@ function setRenderers(self) {
 			self.q.groupsetting &&
 			self.q.groupsetting.predefined_groupset_idx != undefined
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
-				: self.q.groupsetting && self.q.groupsetting.customset
+				: grpsetting_flag && self.q.groupsetting.customset
 				? 'Divided into ' + self.q.groupsetting.customset.groups.length + ' groups'
 				: self.q.bar_by_grade && self.q.value_by_max_grade
 				? 'By Max Grade'

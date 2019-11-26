@@ -334,8 +334,14 @@ tape('Conditional term overlay', function(test) {
 			.to(testBluePill)
 			.run(triggerBluePill)
 			.run(testReGrpMenu)
-			.use(triggerSubSelect, { wait: 1000 })
-			.to(testSubSelect)
+			.use(triggerGrd2SubSelect, { wait: 1000 })
+			.to(testGrd2SubSelect)
+			.run(triggerBluePill)
+			.use(triggerSubChange)
+			.to(testSubChange)
+			.run(triggerBluePill)
+			.use(triggerSub2GrdSelect)
+			.to(testTerm2Pill)
 			.done(test)
 	}
 
@@ -442,17 +448,44 @@ tape('Conditional term overlay', function(test) {
 		)
 	}
 
-	function triggerSubSelect(plotControls) {
+	function triggerGrd2SubSelect(plotControls) {
 		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
 		tip.d.selectAll('select')._groups[0][0].selectedIndex = 3
 		tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
 	}
 
-	function testSubSelect(plotControls) {
+	function testGrd2SubSelect(plotControls) {
 		test.equal(
 			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
 			'By Subcondition',
 			'Should have bluepill summary btn changed to "By Subcondition"'
 		)
+	}
+
+	function triggerSubChange(plotControls) {
+		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		tip.d.selectAll('.group_btn')._groups[0][2].click()
+		d3s
+			.select(tip.d.selectAll('tr')._groups[0][3])
+			.selectAll('input')
+			._groups[0][2].click()
+		tip.d
+			.selectAll('.apply_btn')
+			.node()
+			.click()
+	}
+
+	function testSubChange(plotControls) {
+		test.equal(
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
+			'Divided into 2 groups',
+			'Should have blue pill summary changed by group change'
+		)
+	}
+
+	function triggerSub2GrdSelect(plotControls) {
+		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		tip.d.selectAll('select')._groups[0][0].selectedIndex = 0
+		tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
 	}
 })
