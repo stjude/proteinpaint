@@ -1048,12 +1048,20 @@ function setInteractivity(self) {
 
 	self.apply_last_bin_change = function(last_bin_edit_div, last_bin_select, custom_bins_q, default_bins_q) {
 		if (last_bin_select.node().value == 'custom') {
+			//if custom_bin is set, replace default_last_bin with custom_last_bin
+			const last_bin = custom_bins_q.last_bin
+			if (last_bin) self.q.last_bin = last_bin
+			else delete self.q.last_bin
 			last_bin_edit_div.style('display', 'block')
 		} else if (last_bin_select.node().value == 'auto') {
+			//if default_last_bin is empty, delete last_bin
 			const last_bin = default_bins_q.last_bin
+			if (last_bin) self.q.last_bin = last_bin
+			else delete self.q.last_bin
 			last_bin_edit_div.style('display', 'none')
 			// last_bin_select.style('display','block')
 		}
+		console.log(default_bins_q, custom_bins_q, self.q)
 	}
 
 	self.bins_customized = function(default_bins_q) {
