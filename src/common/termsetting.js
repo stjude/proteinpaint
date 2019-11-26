@@ -611,10 +611,7 @@ function setInteractivity(self) {
 			custom_bins_q = JSON.parse(JSON.stringify(self.q))
 		} else if (self.term.bins) {
 			//if binconfig not defined yet or deleted by user, set it as numeric_bin.bins
-			const bins =
-				self.term.bins.less && !self.opts.disable_ReplaceRemove ? self.term.bins.less : self.term.bins.default
-
-			if (!bins.last_bin) bins.last_bin = {}
+			const bins = self.term.bins.default
 
 			custom_bins_q = JSON.parse(JSON.stringify(bins))
 			self.q = JSON.parse(JSON.stringify(bins))
@@ -1047,9 +1044,7 @@ function setInteractivity(self) {
 		if (last_bin_select.node().value == 'custom') {
 			last_bin_edit_div.style('display', 'block')
 		} else if (last_bin_select.node().value == 'auto') {
-			const last_bin = default_bins_q.last_bin ? default_bins_q.last_bin : {}
-			self.q.last_bin = JSON.parse(JSON.stringify(last_bin))
-			custom_bins_q.last_bin = JSON.parse(JSON.stringify(last_bin))
+			const last_bin = default_bins_q.last_bin
 			last_bin_edit_div.style('display', 'none')
 			// last_bin_select.style('display','block')
 		}
@@ -1066,11 +1061,10 @@ function setInteractivity(self) {
 				if (
 					default_bins_q.last_bin &&
 					JSON.stringify(custom_bins_q.last_bin) == JSON.stringify(default_bins_q.last_bin)
-				) {
+				)
 					return false
-				} else if (Object.keys(custom_bins_q.last_bin).length === 0 && custom_bins_q.last_bin.constructor === Object) {
-					return false
-				} else return true
+				else if (!custom_bins_q.last_bin && !default_bins_q.last_bin) return false
+				else return true
 			} else {
 				return true
 			}
