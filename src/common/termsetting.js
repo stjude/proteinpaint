@@ -1077,16 +1077,22 @@ function setInteractivity(self) {
 			.append('select')
 			.style('margin', '5px 10px')
 			.on('change', () => {
+				// if changed from grade to sub or vice versa, set inuse = false
+				if (
+					(value_type_select.node().value == 'sub' && self.q.bar_by_grade) ||
+					(value_type_select.node().value != 'sub' && self.q.bar_by_children)
+				) {
+					self.q.groupsetting.predefined_groupset_idx = undefined
+					self.q.groupsetting.inuse = false
+				}
+
 				self.q.bar_by_grade = value_type_select.node().value == 'sub' ? false : true
 				self.q.bar_by_children = value_type_select.node().value == 'sub' ? true : false
 				self.q.value_by_max_grade = value_type_select.node().value == 'max' ? true : false
 				self.q.value_by_most_recent = value_type_select.node().value == 'recent' ? true : false
 				self.q.value_by_computable_grade =
 					value_type_select.node().value == 'computable' || value_type_select.node().value == 'sub' ? true : false
-				if (value_type_select.node().value == 'sub') {
-					self.q.groupsetting.inuse = false
-					self.q.groupsetting.predefined_groupset_idx = undefined
-				}
+
 				self.dom.tip.hide()
 				self.opts.callback({
 					id: self.term.id,
