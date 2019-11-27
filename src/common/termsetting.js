@@ -58,7 +58,7 @@ class TermSetting {
 			tip: new client.Menu({ padding: '0px' })
 		}
 		setInteractivity(this)
-		setRenderers(this)
+		setRenderers2(this)
 		this.initUI()
 
 		// this api will be frozen and returned by termsettingInit()
@@ -98,6 +98,142 @@ class TermSetting {
 }
 
 exports.termsettingInit = rx.getInitFxn(TermSetting)
+
+function setRenderers2(self) {
+	self.initUI = () => {
+		// toggle the display of pilldiv and nopilldiv with availability of this.term
+		self.dom.nopilldiv = self.dom.holder
+			.append('div')
+			.style('cursor', 'pointer')
+			.on('click', self.showTree)
+		self.dom.pilldiv = self.dom.holder
+
+		// nopilldiv - placeholder label
+		self.dom.nopilldiv
+			.append('div')
+			.html(self.placeholder)
+			.style('padding', '3px 6px 3px 6px')
+			.style('display', 'inline-block')
+
+		// nopilldiv - plus button
+		self.dom.nopilldiv
+			.append('div')
+			.attr('class', 'sja_filter_tag_btn add_term_btn')
+			.style('padding', '3px 6px 3px 6px')
+			.style('display', 'inline-block')
+			.style('border-radius', '6px')
+			.style('background-color', '#4888BF')
+			.text('+')
+	}
+
+	self.updateUI = () => {
+		if (!self.term) {
+			// no term
+			self.dom.nopilldiv.style('display', 'block')
+			self.dom.pilldiv.style('display', 'none')
+			return
+		}
+		self.dom.nopilldiv.style('display', 'none')
+		self.dom.pilldiv.style('display', 'block')
+
+		const pills = self.dom.holder.selectAll('.ts_pill').data([self.term], d => d.id)
+
+		// this exit is really nice
+		pills.exit().each(self.exitPill)
+
+		pills
+			.transition()
+			.duration(200)
+			.each(self.updatePill)
+
+		pills
+			.enter()
+			.append('div')
+			.attr('class', 'ts_pill sja_filter_tag_btn')
+			.style('cursor', 'pointer')
+			.on('click', self.showMenu)
+			.transition()
+			.duration(200)
+			.each(self.enterPill)
+	}
+
+	self.enterPill = async function() {
+		const one_term_div = select(this)
+
+		// left half of blue pill
+		self.dom.pill_termname = one_term_div
+			.append('div')
+			.style('display', 'inline-block')
+			.attr('class', 'ts_name_btn')
+			.style('padding', '3px 6px 3px 6px')
+			.style('border-radius', '6px')
+			.style('background', '#4888BF')
+			.style('color', 'white')
+			.text(d => d.name) // TODO trim long string
+
+		self.updatePill.call(this)
+	}
+
+	self.updatePill = async function() {
+		// only modify right half of the pill
+		const one_term_div = select(this)
+
+		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
+		const grp_summary_text =
+			self.term.groupsetting &&
+			self.term.groupsetting.lst &&
+			self.q.groupsetting &&
+			self.q.groupsetting.predefined_groupset_idx != undefined
+				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
+				: grpsetting_flag && self.q.groupsetting.customset
+				? 'Divided into ' + self.q.groupsetting.customset.groups.length + ' groups'
+				: self.q.bar_by_grade && self.q.value_by_max_grade
+				? 'By Max Grade'
+				: self.q.bar_by_grade && self.q.value_by_most_recent
+				? 'By Most Recent Grade'
+				: self.q.bar_by_grade && self.q.value_by_computable_grade
+				? 'By Any Grade'
+				: self.q.bar_by_children
+				? 'By Subcondition'
+				: undefined
+
+		self.dom.pill_termname.style('border-radius', grpsetting_flag || self.term.iscondition ? '6px 0 0 6px' : '6px')
+
+		const pill_settingSummary = one_term_div
+			.selectAll('.ts_summary_btn')
+			// bind d.txt to dom, is important in making sure the same text label won't trigger the dom update
+			.data(grp_summary_text ? [{ txt: grp_summary_text }] : [], d => d.txt)
+
+		// because of using d.txt of binding data, exitPill cannot be used here as two different labels will create the undesirable effect of two right halves
+		pill_settingSummary.exit().each(function() {
+			select(this).remove()
+		})
+
+		pill_settingSummary
+			.enter()
+			.append('div')
+			.attr('class', 'ts_summary_btn')
+			.style('display', 'inline-block')
+			.style('padding', '3px 6px 3px 6px')
+			.style('border-radius', '0 6px 6px 0')
+			.style('background', '#674EA7')
+			.style('color', 'white')
+			.html(d => d.txt)
+			.style('opacity', 0)
+			.transition()
+			.duration(200)
+			.style('opacity', 1)
+	}
+
+	self.exitPill = function() {
+		select(this)
+			.style('opacity', 1)
+			.transition()
+			.duration(self.durations.exit)
+			.style('opacity', 0)
+			.remove()
+	}
+}
 
 function setRenderers(self) {
 	self.initUI = () => {
