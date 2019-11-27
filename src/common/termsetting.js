@@ -1,6 +1,7 @@
 import * as rx from '../common/rx.core'
 import * as client from '../client'
 import { appInit } from '../termdb/app'
+import { select, event } from 'd3-selection'
 
 /*
 
@@ -50,6 +51,7 @@ class TermSetting {
 		this.genome = opts.genome
 		this.dslabel = opts.dslabel
 		this.placeholder = opts.placeholder || 'Select term&nbsp;'
+		this.durations = { exit: 500 }
 
 		this.dom = {
 			holder: opts.holder,
@@ -105,10 +107,6 @@ function setRenderers(self) {
 			.style('cursor', 'pointer')
 			.on('click', self.showTree)
 		self.dom.pilldiv = self.dom.holder
-			.append('div')
-			.attr('class', 'ts_pill sja_filter_tag_btn')
-			.style('cursor', 'pointer')
-			.on('click', self.showMenu)
 
 		// nopilldiv - placeholder label
 		self.dom.nopilldiv
@@ -126,24 +124,6 @@ function setRenderers(self) {
 			.style('border-radius', '6px')
 			.style('background-color', '#4888BF')
 			.text('+')
-
-		// blue pill, TODO add the multiple segments of a pill
-		self.dom.pill_termname = self.dom.pilldiv
-			.append('div')
-			.style('display', 'inline-block')
-			.attr('class', 'ts_name_btn')
-			.style('padding', '3px 6px 3px 6px')
-			.style('border-radius', '6px')
-			.style('background', '#4888BF')
-			.style('color', 'white')
-		self.dom.pill_settingSummary = self.dom.pilldiv // this may be hidden
-			.append('div')
-			.style('display', 'inline-block')
-			.attr('class', 'ts_summary_btn')
-			.style('padding', '3px 6px 3px 6px')
-			.style('border-radius', '0 6px 6px 0')
-			.style('background', '#674EA7')
-			.style('color', 'white')
 	}
 
 	self.updateUI = () => {
@@ -153,7 +133,85 @@ function setRenderers(self) {
 			self.dom.pilldiv.style('display', 'none')
 			return
 		}
-		// has term
+
+		const pills = self.dom.holder.selectAll('.ts_pill').data([self.term], d => d.id)
+
+		pills.exit().each(self.exitPills)
+
+		pills
+			.transition()
+			.duration(200)
+			.each(self.updatePills)
+
+		pills
+			.enter()
+			.append('div')
+			.attr('class', 'ts_pill sja_filter_tag_btn')
+			.style('cursor', 'pointer')
+			.on('click', self.showMenu)
+			.transition()
+			.duration(200)
+			.each(self.enterPills)
+	}
+
+	self.enterPills = async function() {
+		const one_term_div = select(this)
+
+		// blue pill, TODO add the multiple segments of a pill
+		self.dom.pill_termname = one_term_div
+			.append('div')
+			.style('display', 'inline-block')
+			.attr('class', 'ts_name_btn')
+			.style('padding', '3px 6px 3px 6px')
+			.style('border-radius', '6px')
+			.style('background', '#4888BF')
+			.style('color', 'white')
+
+		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
+		const grp_summary_text =
+			self.term.groupsetting &&
+			self.term.groupsetting.lst &&
+			self.q.groupsetting &&
+			self.q.groupsetting.predefined_groupset_idx != undefined
+				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
+				: grpsetting_flag && self.q.groupsetting.customset
+				? 'Divided into ' + self.q.groupsetting.customset.groups.length + ' groups'
+				: self.q.bar_by_grade && self.q.value_by_max_grade
+				? 'By Max Grade'
+				: self.q.bar_by_grade && self.q.value_by_most_recent
+				? 'By Most Recent Grade'
+				: self.q.bar_by_grade && self.q.value_by_computable_grade
+				? 'By Any Grade'
+				: self.q.bar_by_children
+				? 'By Sub-condition'
+				: undefined
+
+		const pill_settingSummary = one_term_div.selectAll('.ts_summary_btn').data([grp_summary_text])
+
+		pill_settingSummary
+			.enter()
+			.append('div')
+			.attr('class', 'ts_summary_btn')
+			.style('padding', '3px 6px 3px 6px')
+			.style('border-radius', '0 6px 6px 0')
+			.style('background', '#674EA7')
+			.style('color', 'white')
+			.each(function(d) {
+				select(this)
+					.style('display', d == null ? 'none' : 'inline-block')
+					.html(d)
+			})
+
+		self.dom.nopilldiv.style('display', 'none')
+		self.dom.pilldiv.style('display', 'block')
+		self.dom.pill_termname
+			.style('border-radius', grpsetting_flag || self.term.iscondition ? '6px 0 0 6px' : '6px')
+			.text(d => d.name) // TODO trim long string
+	}
+
+	self.updatePills = async function() {
+		const one_term_div = select(this)
+
 		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
 		const grp_summary_text =
 			self.term.groupsetting &&
@@ -171,15 +229,64 @@ function setRenderers(self) {
 				? 'By Any Grade'
 				: self.q.bar_by_children
 				? 'By Subcondition'
-				: ''
+				: undefined
 
 		self.dom.nopilldiv.style('display', 'none')
 		self.dom.pilldiv.style('display', 'block')
 		self.dom.pill_termname
 			.style('border-radius', grpsetting_flag || self.term.iscondition ? '6px 0 0 6px' : '6px')
 			.html(self.term.name) // TODO trim long string
-		self.dom.pill_settingSummary.style('display', grpsetting_flag || self.term.iscondition ? 'inline-block' : 'none')
-		self.dom.pill_settingSummary.html(grp_summary_text)
+
+		const pill_settingSummary = one_term_div.selectAll('.ts_summary_btn').data([grp_summary_text])
+
+		pill_settingSummary
+			.enter()
+			.append('div')
+			.attr('class', 'ts_summary_btn')
+			.style('padding', '3px 6px 3px 6px')
+			.style('border-radius', '0 6px 6px 0')
+			.style('background', '#674EA7')
+			.style('color', 'white')
+			.each(function(d) {
+				select(this)
+					.style('display', d == null ? 'none' : 'inline-block')
+					.html(d)
+					.style('opacity', 0)
+					.transition()
+					.duration(200)
+					.style('opacity', 1)
+			})
+
+		pill_settingSummary.exit().each(function() {
+			select(this)
+				.style('opacity', 1)
+				.transition()
+				.duration(self.durations.exit)
+				.style('opacity', 0)
+				.remove()
+		})
+
+		pill_settingSummary
+			.transition()
+			.duration(200)
+			.each(function(d) {
+				select(this)
+					.style('display', d == null ? 'none' : 'inline-block')
+					.html(d)
+					.style('opacity', 0)
+					.transition()
+					.duration(200)
+					.style('opacity', 1)
+			})
+	}
+
+	self.exitPills = async function() {
+		select(this)
+			.style('opacity', 1)
+			.transition()
+			.duration(self.durations.exit)
+			.style('opacity', 0)
+			.remove()
 	}
 }
 
@@ -439,6 +546,11 @@ function setInteractivity(self) {
 
 		const regroup_div = self.dom.tip.d.append('div').style('margin', '10px')
 
+		const button_div = regroup_div
+			.append('div')
+			.style('text-align', 'center')
+			.style('margin', '5px')
+
 		const group_select_div = regroup_div.append('div').style('margin', '5px')
 
 		const group_table = group_select_div.append('table').style('border-collapse', 'collapse')
@@ -573,11 +685,6 @@ function setInteractivity(self) {
 				.style('cursor', 'default')
 				.html(val.label)
 		}
-
-		const button_div = regroup_div
-			.append('div')
-			.style('text-align', 'center')
-			.style('margin', '5px')
 
 		// 'Apply' button
 		button_div
