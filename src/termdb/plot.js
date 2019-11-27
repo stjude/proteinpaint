@@ -133,23 +133,7 @@ class TdbPlot {
 			params.push(key + '_id=' + encodeURIComponent(term.term.id))
 			if (isscatter) return
 			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
-			params.push(key + '_q=' + encodeURIComponent(JSON.stringify(term.q)))
-			/*
-			to delete legacy code
-
-			if (term.term.iscondition && !term.q) term.q = {}
-			if (term.q && typeof term.q == 'object') {
-				let q = {}
-				if (term.term.iscondition) {
-					q = Object.keys(term.q).length ? Object.assign({}, term.q) : { bar_by_grade: 1, value_by_max_grade: 1 }
-				}
-				if (term.q.binconfig) {
-					q = Object.assign({}, term.q)
-					delete q.binconfig.results
-				}
-				params.push(key + '_q=' + encodeURIComponent(JSON.stringify(q)))
-			}
-			*/
+			params.push(key + '_q=' + q_to_param(term.q))
 		})
 
 		if (!isscatter) {
@@ -198,6 +182,13 @@ class TdbPlot {
 }
 
 export const plotInit = rx.getInitFxn(TdbPlot)
+
+function q_to_param(q) {
+	// exclude certain attributes of q from dataName
+	const q2 = JSON.parse(JSON.stringify(q))
+	delete q2.hiddenValues
+	return encodeURIComponent(JSON.stringify(q2))
+}
 
 export function plotConfig(opts) {
 	if (!opts.term) throw 'plotConfig: opts.term{} missing'
