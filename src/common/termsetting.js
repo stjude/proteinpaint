@@ -106,7 +106,7 @@ function setRenderers(self) {
 			.on('click', self.showTree)
 		self.dom.pilldiv = self.dom.holder
 			.append('div')
-			.attr('class', 'ts_pill')
+			.attr('class', 'ts_pill sja_filter_tag_btn')
 			.style('cursor', 'pointer')
 			.on('click', self.showMenu)
 
@@ -131,7 +131,7 @@ function setRenderers(self) {
 		self.dom.pill_termname = self.dom.pilldiv
 			.append('div')
 			.style('display', 'inline-block')
-			.attr('class', 'sja_filter_tag_btn ts_name_btn')
+			.attr('class', 'ts_name_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
 			.style('background', '#4888BF')
@@ -139,7 +139,7 @@ function setRenderers(self) {
 		self.dom.pill_settingSummary = self.dom.pilldiv // this may be hidden
 			.append('div')
 			.style('display', 'inline-block')
-			.attr('class', 'sja_filter_tag_btn ts_summary_btn')
+			.attr('class', 'ts_summary_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
 			.style('background', '#674EA7')
@@ -1061,7 +1061,6 @@ function setInteractivity(self) {
 			last_bin_edit_div.style('display', 'none')
 			// last_bin_select.style('display','block')
 		}
-		console.log(default_bins_q, custom_bins_q, self.q)
 	}
 
 	self.bins_customized = function(default_bins_q) {
