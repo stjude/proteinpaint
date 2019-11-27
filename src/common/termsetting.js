@@ -196,11 +196,7 @@ function setRenderers(self) {
 			.style('border-radius', '0 6px 6px 0')
 			.style('background', '#674EA7')
 			.style('color', 'white')
-			.each(function(d) {
-				select(this)
-					.style('display', d == null ? 'none' : 'inline-block')
-					.html(d)
-			})
+			.each(self.summaryUpdate)
 
 		self.dom.nopilldiv.style('display', 'none')
 		self.dom.pilldiv.style('display', 'block')
@@ -235,7 +231,7 @@ function setRenderers(self) {
 		self.dom.pilldiv.style('display', 'block')
 		self.dom.pill_termname
 			.style('border-radius', grpsetting_flag || self.term.iscondition ? '6px 0 0 6px' : '6px')
-			.html(self.term.name) // TODO trim long string
+			.text(d => d.name) // TODO trim long string
 
 		const pill_settingSummary = one_term_div.selectAll('.ts_summary_btn').data([grp_summary_text])
 
@@ -247,46 +243,33 @@ function setRenderers(self) {
 			.style('border-radius', '0 6px 6px 0')
 			.style('background', '#674EA7')
 			.style('color', 'white')
-			.each(function(d) {
-				select(this)
-					.style('display', d == null ? 'none' : 'inline-block')
-					.html(d)
-					.style('opacity', 0)
-					.transition()
-					.duration(200)
-					.style('opacity', 1)
-			})
+			.each(self.summaryUpdate)
 
-		pill_settingSummary.exit().each(function() {
-			select(this)
-				.style('opacity', 1)
-				.transition()
-				.duration(self.durations.exit)
-				.style('opacity', 0)
-				.remove()
-		})
+		pill_settingSummary.exit().each(self.exitPills)
 
 		pill_settingSummary
 			.transition()
 			.duration(200)
-			.each(function(d) {
-				select(this)
-					.style('display', d == null ? 'none' : 'inline-block')
-					.html(d)
-					.style('opacity', 0)
-					.transition()
-					.duration(200)
-					.style('opacity', 1)
-			})
+			.each(self.summaryUpdate)
 	}
 
-	self.exitPills = async function() {
+	self.exitPills = function() {
 		select(this)
 			.style('opacity', 1)
 			.transition()
 			.duration(self.durations.exit)
 			.style('opacity', 0)
 			.remove()
+	}
+
+	self.summaryUpdate = function(text) {
+		select(this)
+			.style('display', text == null ? 'none' : 'inline-block')
+			.html(text)
+			.style('opacity', 0)
+			.transition()
+			.duration(200)
+			.style('opacity', 1)
 	}
 }
 
