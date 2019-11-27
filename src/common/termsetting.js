@@ -200,11 +200,14 @@ function setInteractivity(self) {
 				click_term: term => {
 					self.dom.tip.hide()
 					const data = { id: term.id, term, q: {} }
+					let _term = term
 					if (self.opts.use_bins_less && (term.isinteger || term.isfloat) && term.bins.less) {
-						data.q = JSON.parse(JSON.stringify(term.bins.less))
-					} else {
-						termsetting_fill_q(data.q, term)
+						// instructed to use bins.less which is present
+						// make a decoy term replacing bins.default with bins.less
+						_term = JSON.parse(JSON.stringify(term))
+						_term.bins.default = _term.bins.less
 					}
+					termsetting_fill_q(data.q, _term)
 					self.opts.callback(data)
 				},
 				disable_terms: self.disable_terms
@@ -1165,27 +1168,14 @@ function setInteractivity(self) {
 
 function termsetting_fill_q(q, term) {
 	if (term.isinteger || term.isfloat) {
-		/*
-		if q is already initiated, do not overwrite
-		to be tested if can work with partially declared state
-		always copies from .bins.default
-		no longer deals with the case where .bins.less is to be used as term2/0
-		*/
-		if (Number.isFinite(q.bin_size) && q.first_bin) {
-			if (q.first_bin.startunbounded) {
-				if (Number.isInteger(q.first_bin.stop_percentile) || Number.isFinite(q.first_bin.stop)) {
-					// valid, do not override
-					return
-				}
-			} else {
-				if (Number.isInteger(q.first_bin.start_percentile) || Number.isFinite(q.first_bin.start)) {
-					// valid, do not override
-					return
-				}
-			}
+		if (!valid_binscheme(q)) {
+			/*
+			if q is already initiated, do not overwrite
+			to be tested if can work with partially declared state
+			always copies from .bins.default
+			*/
+			rx.copyMerge(q, term.bins.default)
 		}
-		// override
-		termsetting_fill_q_numeric(q, term.bins.default)
 		return
 	}
 	if (term.iscategorical || term.iscondition) {
@@ -1227,7 +1217,18 @@ function termsetting_fill_q(q, term) {
 	throw 'unknown term type'
 }
 exports.termsetting_fill_q = termsetting_fill_q
-function termsetting_fill_q_numeric(q, binconfig) {
-	rx.copyMerge(q, binconfig)
+
+function valid_binscheme(q) {
+	if (Number.isFinite(q.bin_size) && q.first_bin) {
+		if (q.first_bin.startunbounded) {
+			if (Number.isInteger(q.first_bin.stop_percentile) || Number.isFinite(q.first_bin.stop)) {
+				return true
+			}
+		} else {
+			if (Number.isInteger(q.first_bin.start_percentile) || Number.isFinite(q.first_bin.start)) {
+				return true
+			}
+		}
+	}
+	return false
 }
-exports.termsetting_fill_q_numeric = termsetting_fill_q_numeric
