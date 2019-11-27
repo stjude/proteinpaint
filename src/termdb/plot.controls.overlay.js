@@ -49,6 +49,9 @@ class Overlay {
 			debug: this.opts.debug,
 			callback: term2 => {
 				// term2 is {term,q} and can be null
+				if (term2) {
+					term2.id = term2.term.id
+				}
 				this.opts.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,

@@ -46,12 +46,13 @@ class Divide {
 			debug: this.opts.debug,
 			callback: term0 => {
 				// term0 is {term,q} and can be null
+				if (term0) {
+					term0.id = term0.term.id
+				}
 				this.opts.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
-					config: {
-						term0: term0
-					}
+					config: { term0: term0 }
 				})
 			}
 		})
