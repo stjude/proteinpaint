@@ -1176,9 +1176,24 @@ function termsetting_fill_q(q, term) {
 			*/
 			rx.copyMerge(q, term.bins.default)
 		}
+		if (!q.hiddenValues) {
+			// to initiate this for a brand new q by adding term.values to it
+			q.hiddenValues = {}
+			if (term.values) {
+				// special categories
+				for (const k in term.values) {
+					q.hiddenValues[k] = 1
+				}
+			}
+		}
 		return
 	}
 	if (term.iscategorical || term.iscondition) {
+		if (!q.hiddenValues) {
+			// no need to add initial values to be hidden
+			q.hiddenValues = {}
+		}
+
 		if (!q.groupsetting) q.groupsetting = {}
 		if (term.groupsetting.disabled) {
 			q.groupsetting.disabled = true
