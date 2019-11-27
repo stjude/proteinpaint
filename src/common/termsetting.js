@@ -469,7 +469,6 @@ function setInteractivity(self) {
 				delete self.q.groupsetting.predefined_groupset_idx
 				self.dom.tip.hide()
 				self.opts.callback({
-					id: self.term.id,
 					term: self.term,
 					q: self.q
 				})
@@ -501,7 +500,6 @@ function setInteractivity(self) {
 							self.q.groupsetting.predefined_groupset_idx = i
 							self.dom.tip.hide()
 							self.opts.callback({
-								id: self.term.id,
 								term: self.term,
 								q: self.q
 							})
@@ -712,7 +710,6 @@ function setInteractivity(self) {
 				}
 				self.dom.tip.hide()
 				self.opts.callback({
-					id: self.term.id,
 					term: self.term,
 					q: self.q
 				})
@@ -784,7 +781,6 @@ function setInteractivity(self) {
 			.on('change', () => {
 				self.apply_last_bin_change(last_bin_edit_div, last_bin_select, custom_bins_q, default_bins_q)
 				self.opts.callback({
-					id: self.term.id,
 					term: self.term,
 					q: self.q
 				})
@@ -857,7 +853,6 @@ function setInteractivity(self) {
 				self.q = JSON.parse(JSON.stringify(default_bins_q))
 				custom_bins_q = JSON.parse(JSON.stringify(default_bins_q))
 				self.opts.callback({
-					id: self.term.id,
 					term: self.term,
 					q: self.q
 				})
@@ -920,7 +915,6 @@ function setInteractivity(self) {
 
 			if (self.bins_customized(default_bins_q)) reset_bins_tr.style('display', 'table-row')
 			self.opts.callback({
-				id: self.term.id,
 				term: self.term,
 				q: self.q
 			})
@@ -1146,7 +1140,6 @@ function setInteractivity(self) {
 				}
 				if (self.bins_customized(default_bins_q)) reset_bins_tr.style('display', 'table-row')
 				self.opts.callback({
-					id: self.term.id,
 					term: self.term,
 					q: self.q
 				})
@@ -1218,7 +1211,6 @@ function setInteractivity(self) {
 
 				self.dom.tip.hide()
 				self.opts.callback({
-					id: self.term.id,
 					term: self.term,
 					q: self.q
 				})
