@@ -686,61 +686,42 @@ function setInteractivity(self) {
 			.style('text-align', 'center')
 			.style('margin', '5px')
 
+		const group_edit_div = regroup_div.append('div').style('margin', '5px')
+		const group_ct_div = group_edit_div.append('div').attr('class', 'group_count_div')
+		group_ct_div
+			.append('label')
+			.attr('for', 'grp_ct')
+			.style('display', 'inline-block')
+			.html('#groups')
+
+		const group_ct_select = group_ct_div
+			.append('select')
+			.style('margin-left', '15px')
+			.style('margin-bottom', '7px')
+			.on('change', () => {
+				if (group_ct_select.node().value < default_grp_count) {
+					const grp_diff = default_grp_count - group_ct_select.node().value
+					for (const [key, val] of Object.entries(cat_grps)) {
+						if (cat_grps[key].group > group_ct_select.node().value) cat_grps[key].group = 1
+					}
+					self.regroupMenu(default_grp_count - grp_diff, cat_grps)
+				} else if (group_ct_select.node().value > default_grp_count) {
+					const grp_diff = group_ct_select.node().value - default_grp_count
+					self.regroupMenu(default_grp_count + grp_diff, cat_grps)
+				}
+			})
+
+		for (let i = 0; i < default_grp_count + 2; i++)
+			group_ct_select
+				.append('option')
+				.attr('value', i + 1)
+				.html(i + 1)
+
+		group_ct_select.node().value = default_grp_count
+
 		const group_select_div = regroup_div.append('div').style('margin', '5px')
 
 		const group_table = group_select_div.append('table').style('border-collapse', 'collapse')
-		const title_tr = group_table.append('tr')
-
-		// top title bar for the table
-		title_tr
-			.append('th')
-			.attr('colspan', default_grp_count + 2)
-			.style('padding', '2px 5px')
-			.html('Groups')
-
-		title_tr
-			.append('th')
-			.style('padding', '2px 5px')
-			.html('Categories')
-
-		//this row have '+'/'-' button to add new group
-		const grp_btn_tr = group_table.append('tr')
-
-		//first group cannot be deleted
-		grp_btn_tr.append('th')
-		grp_btn_tr.append('th')
-
-		for (let i = 1; i < default_grp_count; i++)
-			grp_btn_tr
-				.append('th')
-				.append('div')
-				.attr('class', 'grp_rm_btn')
-				.style('padding', '2px 5px')
-				.style('margin', '2px')
-				.style('background-color', '#eee')
-				.style('border-radius', '6px')
-				.style('cursor', 'pointer')
-				.html('-')
-				.on('click', () => {
-					for (const [key, val] of Object.entries(cat_grps)) {
-						if (cat_grps[key].group == i + 1) cat_grps[key].group = 1
-					}
-					self.regroupMenu(default_grp_count - 1, cat_grps)
-				})
-
-		grp_btn_tr
-			.append('th')
-			.append('div')
-			.attr('class', 'grp_add_btn')
-			.style('padding', '2px 5px')
-			.style('margin', '2px')
-			.style('background-color', '#eee')
-			.style('border-radius', '6px')
-			.style('cursor', 'pointer')
-			.html('+')
-			.on('click', () => {
-				self.regroupMenu(default_grp_count + 1, cat_grps)
-			})
 
 		// this row will have group names/number
 		const group_name_tr = group_table.append('tr')

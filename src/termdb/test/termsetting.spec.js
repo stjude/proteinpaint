@@ -106,47 +106,35 @@ tape('caterogical term overlay', function(test) {
 		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
 		test.equal(
 			tip.d.selectAll('tr').size(),
-			Object.keys(plotControls.Inner.state.config.term2.term.values).length + 3,
+			Object.keys(plotControls.Inner.state.config.term2.term.values).length + 1,
 			'Should have 3 rows for header and rows for each caterory'
 		)
 		test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have "Apply" button to apply group changes')
 		test.equal(
 			tip.d
-				.selectAll('tr')
-				.selectAll('th')
+				.selectAll('.group_count_div')
+				.selectAll('label')
 				.html(),
-			'Groups',
+			'#groups',
 			'Should have "Groups" as first column group'
 		)
 		test.equal(
-			tip.d.selectAll('tr').selectAll('th')._groups[0][1].innerText,
-			'Categories',
-			'Should have "Categories" as first column group'
-		)
-		test.true(
 			tip.d
-				.selectAll('tr')
-				.selectAll('.grp_rm_btn')
-				.size() >= 1,
-			'Should have at least 1 "-" button to remove groups'
-		)
-		test.equal(
-			tip.d
-				.selectAll('tr')
-				.selectAll('.grp_add_btn')
+				.selectAll('.group_count_div')
+				.selectAll('select')
 				.size(),
 			1,
-			'Should have 1 "+" button to add new groups'
+			'Should have dropdown for group count change'
 		)
 		test.true(
 			d3s
-				.select(tip.d.selectAll('tr')._groups[0][3])
+				.select(tip.d.selectAll('tr')._groups[0][1])
 				.selectAll('input')
 				.size() >= 3,
 			'Should have 3 or more radio buttons for first category'
 		)
 		test.equal(
-			d3s.select(tip.d.selectAll('tr')._groups[0][3]).selectAll('td')._groups[0][4].innerText,
+			d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][4].innerText,
 			'Acute lymphoblastic leukemia',
 			'Should have first cateogry as "ALL"'
 		)
@@ -155,7 +143,7 @@ tape('caterogical term overlay', function(test) {
 	function triggerGrpSelect(plotControls) {
 		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
 		d3s
-			.select(tip.d.selectAll('tr')._groups[0][3])
+			.select(tip.d.selectAll('tr')._groups[0][1])
 			.selectAll('input')
 			._groups[0][2].click()
 		tip.d
@@ -166,7 +154,7 @@ tape('caterogical term overlay', function(test) {
 
 	function testBluePill(plotControls) {
 		test.equal(
-			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][0].innerText,
 			'Divided into 2 groups',
 			'Should have blue pill changed from group select'
 		)
