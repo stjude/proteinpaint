@@ -178,36 +178,21 @@ function setRenderers2(self) {
 		// only modify right half of the pill
 		const one_term_div = select(this)
 
-		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
-		const grp_summary_text =
-			self.term.groupsetting &&
-			self.term.groupsetting.lst &&
-			self.q.groupsetting &&
-			self.q.groupsetting.predefined_groupset_idx != undefined
-				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
-				: grpsetting_flag && self.q.groupsetting.customset
-				? 'Divided into ' + self.q.groupsetting.customset.groups.length + ' groups'
-				: self.q.bar_by_grade && self.q.value_by_max_grade
-				? 'By Max Grade'
-				: self.q.bar_by_grade && self.q.value_by_most_recent
-				? 'By Most Recent Grade'
-				: self.q.bar_by_grade && self.q.value_by_computable_grade
-				? 'By Any Grade'
-				: self.q.bar_by_children
-				? 'By Subcondition'
-				: undefined
+		// if using group setting, will show right half
+		// allow more than 1 flags for future expansion
+		const grpsetting_flag = self.q.groupsetting && self.q.groupsetting.inuse
+
+		const status_msg = self.get_status_msg()
 
 		self.dom.pill_termname.style('border-radius', grpsetting_flag || self.term.iscondition ? '6px 0 0 6px' : '6px')
 
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')
 			// bind d.txt to dom, is important in making sure the same text label won't trigger the dom update
-			.data(grp_summary_text ? [{ txt: grp_summary_text }] : [], d => d.txt)
+			.data(status_msg ? [{ txt: status_msg}] : [], d => d.txt)
 
 		// because of using d.txt of binding data, exitPill cannot be used here as two different labels will create the undesirable effect of two right halves
-		pill_settingSummary.exit().each(function() {
-			select(this).remove()
-		})
+		pill_settingSummary.exit().remove()
 
 		pill_settingSummary
 			.enter()
@@ -223,6 +208,39 @@ function setRenderers2(self) {
 			.transition()
 			.duration(200)
 			.style('opacity', 1)
+	}
+
+	self.get_status_msg = function(){
+		// get message text for the right half pill; may return null
+		if(self.q.groupsetting && self.q.groupsetting.inuse) {
+			if(Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
+				if(!self.term.groupsetting) return 'term.groupsetting missing'
+				if(!self.term.groupsetting.lst) return 'term.groupsetting.lst[] missing'
+				const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+				if(!i) return 'term.groupsetting.lst['+self.q.groupsetting.predefined_groupset_idx+'] missing'
+				return i.name
+			}
+			if(self.q.groupsetting.customset) {
+				const n = self.q.groupsetting.customset.groups.length
+				if(self.q.bar_by_grade) return n+' groups of grades'
+				if(self.q.bar_by_children) return n+' groups of sub-conditions'
+				return 'Divided into '+n+' groups'
+			}
+			return 'Unknown setting for groupsetting'
+		}
+		if(self.term.iscondition) {
+			if(self.q.bar_by_grade) {
+				if(self.q.value_by_max_grade) return 'Max. Grade'
+				if(self.q.value_by_most_recent) return 'Most Recent Grade'
+				if(self.q.value_by_computable_grade) return 'Any Grade'
+				return 'Error: unknown grade setting'
+			}
+			if(self.q.bar_by_children) {
+				return 'Sub-condition'
+			}
+			return 'Error: unknown setting for term.iscondition'
+		}
+		return null // for no label
 	}
 
 	self.exitPill = function() {
