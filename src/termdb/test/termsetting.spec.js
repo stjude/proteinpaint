@@ -347,8 +347,8 @@ tape('Conditional term overlay', function(test) {
 			'Should have 1 pill for overlay term'
 		)
 		test.equal(
-			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
-			'By Max Grade',
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][0].innerText,
+			'Max. Grade',
 			'Should have bluepill summary btn "By Max Grade" as default'
 		)
 	}
@@ -377,8 +377,8 @@ tape('Conditional term overlay', function(test) {
 
 	function testGradeChange(plotControls) {
 		test.equal(
-			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
-			'By Most Recent Grade',
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][0].innerText,
+			'Most Recent Grade',
 			'Should have bluepill summary btn changed to "By Most Recent Grade"'
 		)
 	}
@@ -392,7 +392,7 @@ tape('Conditional term overlay', function(test) {
 		const groupset_idx = plotControls.Inner.state.config.term2.q.groupsetting.predefined_groupset_idx
 		const groupset = plotControls.Inner.state.config.term2.term.groupsetting.lst[groupset_idx]
 		test.equal(
-			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][0].innerText,
 			groupset.name,
 			'Should have bluepill summary btn match group name'
 		)
@@ -444,8 +444,8 @@ tape('Conditional term overlay', function(test) {
 
 	function testGrd2SubSelect(plotControls) {
 		test.equal(
-			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
-			'By Subcondition',
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][0].innerText,
+			'Sub-condition',
 			'Should have bluepill summary btn changed to "By Subcondition"'
 		)
 	}
@@ -465,8 +465,8 @@ tape('Conditional term overlay', function(test) {
 
 	function testSubChange(plotControls) {
 		test.equal(
-			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][1].innerText,
-			'Divided into 2 groups',
+			plotControls.Inner.dom.config_div.selectAll('.ts_summary_btn')._groups[0][0].innerText,
+			'2 groups of sub-conditions',
 			'Should have blue pill summary changed by group change'
 		)
 	}

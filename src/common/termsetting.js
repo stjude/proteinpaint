@@ -58,7 +58,7 @@ class TermSetting {
 			tip: new client.Menu({ padding: '0px' })
 		}
 		setInteractivity(this)
-		setRenderers2(this)
+		setRenderers(this)
 		this.initUI()
 
 		// this api will be frozen and returned by termsettingInit()
@@ -99,7 +99,7 @@ class TermSetting {
 
 exports.termsettingInit = rx.getInitFxn(TermSetting)
 
-function setRenderers2(self) {
+function setRenderers(self) {
 	self.initUI = () => {
 		// toggle the display of pilldiv and nopilldiv with availability of this.term
 		self.dom.nopilldiv = self.dom.holder
@@ -189,7 +189,7 @@ function setRenderers2(self) {
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')
 			// bind d.txt to dom, is important in making sure the same text label won't trigger the dom update
-			.data(status_msg ? [{ txt: status_msg}] : [], d => d.txt)
+			.data(status_msg ? [{ txt: status_msg }] : [], d => d.txt)
 
 		// because of using d.txt of binding data, exitPill cannot be used here as two different labels will create the undesirable effect of two right halves
 		pill_settingSummary.exit().remove()
@@ -210,32 +210,32 @@ function setRenderers2(self) {
 			.style('opacity', 1)
 	}
 
-	self.get_status_msg = function(){
+	self.get_status_msg = function() {
 		// get message text for the right half pill; may return null
-		if(self.q.groupsetting && self.q.groupsetting.inuse) {
-			if(Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-				if(!self.term.groupsetting) return 'term.groupsetting missing'
-				if(!self.term.groupsetting.lst) return 'term.groupsetting.lst[] missing'
+		if (self.q.groupsetting && self.q.groupsetting.inuse) {
+			if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
+				if (!self.term.groupsetting) return 'term.groupsetting missing'
+				if (!self.term.groupsetting.lst) return 'term.groupsetting.lst[] missing'
 				const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-				if(!i) return 'term.groupsetting.lst['+self.q.groupsetting.predefined_groupset_idx+'] missing'
+				if (!i) return 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing'
 				return i.name
 			}
-			if(self.q.groupsetting.customset) {
+			if (self.q.groupsetting.customset) {
 				const n = self.q.groupsetting.customset.groups.length
-				if(self.q.bar_by_grade) return n+' groups of grades'
-				if(self.q.bar_by_children) return n+' groups of sub-conditions'
-				return 'Divided into '+n+' groups'
+				if (self.q.bar_by_grade) return n + ' groups of grades'
+				if (self.q.bar_by_children) return n + ' groups of sub-conditions'
+				return 'Divided into ' + n + ' groups'
 			}
 			return 'Unknown setting for groupsetting'
 		}
-		if(self.term.iscondition) {
-			if(self.q.bar_by_grade) {
-				if(self.q.value_by_max_grade) return 'Max. Grade'
-				if(self.q.value_by_most_recent) return 'Most Recent Grade'
-				if(self.q.value_by_computable_grade) return 'Any Grade'
+		if (self.term.iscondition) {
+			if (self.q.bar_by_grade) {
+				if (self.q.value_by_max_grade) return 'Max. Grade'
+				if (self.q.value_by_most_recent) return 'Most Recent Grade'
+				if (self.q.value_by_computable_grade) return 'Any Grade'
 				return 'Error: unknown grade setting'
 			}
-			if(self.q.bar_by_children) {
+			if (self.q.bar_by_children) {
 				return 'Sub-condition'
 			}
 			return 'Error: unknown setting for term.iscondition'
@@ -250,180 +250,6 @@ function setRenderers2(self) {
 			.duration(self.durations.exit)
 			.style('opacity', 0)
 			.remove()
-	}
-}
-
-function setRenderers(self) {
-	self.initUI = () => {
-		// toggle the display of pilldiv and nopilldiv with availability of this.term
-		self.dom.nopilldiv = self.dom.holder
-			.append('div')
-			.style('cursor', 'pointer')
-			.on('click', self.showTree)
-		self.dom.pilldiv = self.dom.holder
-
-		// nopilldiv - placeholder label
-		self.dom.nopilldiv
-			.append('div')
-			.html(self.placeholder)
-			.style('padding', '3px 6px 3px 6px')
-			.style('display', 'inline-block')
-
-		// nopilldiv - plus button
-		self.dom.nopilldiv
-			.append('div')
-			.attr('class', 'sja_filter_tag_btn add_term_btn')
-			.style('padding', '3px 6px 3px 6px')
-			.style('display', 'inline-block')
-			.style('border-radius', '6px')
-			.style('background-color', '#4888BF')
-			.text('+')
-	}
-
-	self.updateUI = () => {
-		if (!self.term) {
-			// no term
-			self.dom.nopilldiv.style('display', 'block')
-			self.dom.pilldiv.style('display', 'none')
-			return
-		}
-
-		const pills = self.dom.holder.selectAll('.ts_pill').data([self.term], d => d.id)
-
-		pills.exit().each(self.exitPills)
-
-		pills
-			.transition()
-			.duration(200)
-			.each(self.updatePills)
-
-		pills
-			.enter()
-			.append('div')
-			.attr('class', 'ts_pill sja_filter_tag_btn')
-			.style('cursor', 'pointer')
-			.on('click', self.showMenu)
-			.transition()
-			.duration(200)
-			.each(self.enterPills)
-	}
-
-	self.enterPills = async function() {
-		const one_term_div = select(this)
-
-		// blue pill, TODO add the multiple segments of a pill
-		self.dom.pill_termname = one_term_div
-			.append('div')
-			.style('display', 'inline-block')
-			.attr('class', 'ts_name_btn')
-			.style('padding', '3px 6px 3px 6px')
-			.style('border-radius', '6px')
-			.style('background', '#4888BF')
-			.style('color', 'white')
-
-		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
-		const grp_summary_text =
-			self.term.groupsetting &&
-			self.term.groupsetting.lst &&
-			self.q.groupsetting &&
-			self.q.groupsetting.predefined_groupset_idx != undefined
-				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
-				: grpsetting_flag && self.q.groupsetting.customset
-				? 'Divided into ' + self.q.groupsetting.customset.groups.length + ' groups'
-				: self.q.bar_by_grade && self.q.value_by_max_grade
-				? 'By Max Grade'
-				: self.q.bar_by_grade && self.q.value_by_most_recent
-				? 'By Most Recent Grade'
-				: self.q.bar_by_grade && self.q.value_by_computable_grade
-				? 'By Any Grade'
-				: self.q.bar_by_children
-				? 'By Sub-condition'
-				: undefined
-
-		const pill_settingSummary = one_term_div.selectAll('.ts_summary_btn').data([grp_summary_text])
-
-		pill_settingSummary
-			.enter()
-			.append('div')
-			.attr('class', 'ts_summary_btn')
-			.style('padding', '3px 6px 3px 6px')
-			.style('border-radius', '0 6px 6px 0')
-			.style('background', '#674EA7')
-			.style('color', 'white')
-			.each(self.summaryUpdate)
-
-		self.dom.nopilldiv.style('display', 'none')
-		self.dom.pilldiv.style('display', 'block')
-		self.dom.pill_termname
-			.style('border-radius', grpsetting_flag || self.term.iscondition ? '6px 0 0 6px' : '6px')
-			.text(d => d.name) // TODO trim long string
-	}
-
-	self.updatePills = async function() {
-		const one_term_div = select(this)
-
-		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
-		const grp_summary_text =
-			self.term.groupsetting &&
-			self.term.groupsetting.lst &&
-			self.q.groupsetting &&
-			self.q.groupsetting.predefined_groupset_idx != undefined
-				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
-				: grpsetting_flag && self.q.groupsetting.customset
-				? 'Divided into ' + self.q.groupsetting.customset.groups.length + ' groups'
-				: self.q.bar_by_grade && self.q.value_by_max_grade
-				? 'By Max Grade'
-				: self.q.bar_by_grade && self.q.value_by_most_recent
-				? 'By Most Recent Grade'
-				: self.q.bar_by_grade && self.q.value_by_computable_grade
-				? 'By Any Grade'
-				: self.q.bar_by_children
-				? 'By Subcondition'
-				: undefined
-
-		self.dom.nopilldiv.style('display', 'none')
-		self.dom.pilldiv.style('display', 'block')
-		self.dom.pill_termname
-			.style('border-radius', grpsetting_flag || self.term.iscondition ? '6px 0 0 6px' : '6px')
-			.text(d => d.name) // TODO trim long string
-
-		const pill_settingSummary = one_term_div.selectAll('.ts_summary_btn').data([grp_summary_text])
-
-		pill_settingSummary
-			.enter()
-			.append('div')
-			.attr('class', 'ts_summary_btn')
-			.style('padding', '3px 6px 3px 6px')
-			.style('border-radius', '0 6px 6px 0')
-			.style('background', '#674EA7')
-			.style('color', 'white')
-			.each(self.summaryUpdate)
-
-		pill_settingSummary.exit().each(self.exitPills)
-
-		pill_settingSummary
-			.transition()
-			.duration(200)
-			.each(self.summaryUpdate)
-	}
-
-	self.exitPills = function() {
-		select(this)
-			.style('opacity', 1)
-			.transition()
-			.duration(self.durations.exit)
-			.style('opacity', 0)
-			.remove()
-	}
-
-	self.summaryUpdate = function(text) {
-		select(this)
-			.style('display', text == null ? 'none' : 'inline-block')
-			.html(text)
-			.style('opacity', 0)
-			.transition()
-			.duration(200)
-			.style('opacity', 1)
 	}
 }
 
