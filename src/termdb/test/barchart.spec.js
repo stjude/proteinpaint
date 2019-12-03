@@ -182,6 +182,44 @@ tape('multiple charts', function(test) {
 })
 
 tape('series visibility', function(test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+
+	const hiddenValues = { Male: 1 }
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Demographics/health behaviors', 'sex'],
+				visiblePlotIds: ['sex'],
+				plots: {
+					sex: {
+						term: {
+							id: 'sex',
+							q: {
+								hiddenValues
+							}
+						},
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': testHiddenValues
+			}
+		}
+	})
+
+	function testHiddenValues(plot) {
+		const bar = plot.Inner.components.barchart.Inner
+		const excluded = bar.settings.exclude.cols
+		test.true(
+			excluded.length == bar.settings.unannotatedLabels.term1.length + Object.keys(hiddenValues).length,
+			'should have the correct number of hidden bars by q.hiddenValues'
+		)
+	}
+
 	runpp({
 		state: {
 			tree: {
@@ -209,7 +247,6 @@ tape('series visibility', function(test) {
 			excluded.length > 1 && excluded.length == bar.settings.unannotatedLabels.term1.length,
 			'should have the correct number of hidden bars'
 		)
-		test.end()
 	}
 })
 

@@ -127,7 +127,11 @@ class TdbBarchart {
 
 	initExclude() {
 		const refs = this.currServerData.refs
-		if (this.processedExcludes.includes(refs)) return
+		if (this.processedExcludes.includes(refs)) {
+			this.settings.exclude.cols = Object.keys(this.config.term.q.hiddenValues)
+			this.settings.exclude.rows = this.config.term2 ? Object.keys(this.config.term2.q.hiddenValues) : []
+			return
+		}
 		// do not filter out bar series or overlay data when it will result in no chart being displayed
 		const unannotatedColLabels = refs.unannotatedLabels.term1
 		const unannotatedRowLabels = refs.unannotatedLabels.term2
@@ -145,20 +149,14 @@ class TdbBarchart {
 		}
 
 		this.processedExcludes.push(refs)
-		if (unannotatedColLabels) {
-			for (const label of unannotatedColLabels) {
-				if (!this.settings.exclude.cols.includes(label)) {
-					this.settings.exclude.cols.push(label)
-				}
-			}
-		}
-		if (unannotatedRowLabels) {
-			for (const label of unannotatedRowLabels) {
-				if (!this.settings.exclude.rows.includes(label)) {
-					this.settings.exclude.rows.push(label)
-				}
-			}
-		}
+		const term = this.config.term
+		this.settings.exclude.cols = Object.keys(term.q.hiddenValues).map(val =>
+			term.term.values ? term.term.values[val].label : val
+		)
+		const term2 = this.config.term2
+		this.settings.exclude.rows = term2
+			? Object.keys(term2.q.hiddenValues).map(val => (term2.term.values ? term2.term.values[val].label : val))
+			: []
 	}
 
 	processData(chartsData) {

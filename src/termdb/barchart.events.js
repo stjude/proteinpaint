@@ -75,8 +75,21 @@ export default function getHandlers(self) {
 			click: () => {
 				const d = event.target.__data__
 				if (d === undefined) return
-				self.settings.exclude.cols.push(d.id)
-				self.main()
+				const term = self.config.term
+				const q = JSON.parse(JSON.stringify(term.q))
+				if (!q.hiddenValues) q.hiddenValues = {}
+				q.hiddenValues[d.id] = 1
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: term.id,
+					config: {
+						term: {
+							id: term.id,
+							term: term.term,
+							q
+						}
+					}
+				})
 			},
 			mouseover: () => {
 				event.stopPropagation()
@@ -97,8 +110,21 @@ export default function getHandlers(self) {
 			click: () => {
 				const d = event.target.__data__
 				if (d === undefined) return
-				self.settings.exclude.cols.push(d.id)
-				self.main()
+				const term = self.config.term
+				const q = JSON.parse(JSON.stringify(term.q))
+				if (!q.hiddenValues) q.hiddenValues = {}
+				q.hiddenValues[d.id] = 1
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: term.id,
+					config: {
+						term: {
+							id: term.id,
+							term: term.term,
+							q
+						}
+					}
+				})
 			},
 			mouseover: () => {
 				event.stopPropagation()
@@ -113,21 +139,27 @@ export default function getHandlers(self) {
 				event.stopPropagation()
 				const d = event.target.__data__
 				if (d === undefined) return
-				if (d.type == 'col') {
-					const i = self.settings.exclude.cols.indexOf(d.id)
-					if (i == -1) return
-					self.settings.exclude.cols.splice(i, 1)
-					self.main()
+
+				const term = d.type == 'col' ? self.config.term : self.config.term2
+				const q = JSON.parse(JSON.stringify(term.q))
+				if (!q.hiddenValues) q.hiddenValues = {}
+				if (!q.hiddenValues[d.id]) {
+					q.hiddenValues[d.id] = 1
+				} else {
+					delete q.hiddenValues[d.id]
 				}
-				if (d.type == 'row') {
-					const i = self.settings.exclude.rows.indexOf(d.dataId)
-					if (i == -1) {
-						self.settings.exclude.rows.push(d.dataId)
-					} else {
-						self.settings.exclude.rows.splice(i, 1)
+
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: term.id,
+					config: {
+						term: {
+							id: term.id,
+							term: term.term,
+							q
+						}
 					}
-					self.main()
-				}
+				})
 			},
 			mouseover: () => {
 				event.stopPropagation()
@@ -205,8 +237,21 @@ function handle_click(self) {
 		options.push({
 			label: d.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
 			callback: () => {
-				self.settings.exclude.cols.push(d.seriesId === 0 ? 0 : d.seriesId || d.id)
-				self.main()
+				const term = self.config.term
+				const q = JSON.parse(JSON.stringify(term.q))
+				if (!q.hiddenValues) q.hiddenValues = {}
+				q.hiddenValues[d.seriesId] = 1
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: term.id,
+					config: {
+						term: {
+							id: term.id,
+							term: term.term,
+							q
+						}
+					}
+				})
 			}
 		})
 
@@ -214,8 +259,21 @@ function handle_click(self) {
 			options.push({
 				label: 'Hide "' + dataLabel + '" ' + icon,
 				callback: () => {
-					self.settings.exclude.rows.push(d.dataId)
-					self.main()
+					const term = self.config.term2
+					const q = JSON.parse(JSON.stringify(term.q))
+					if (!q.hiddenValues) q.hiddenValues = {}
+					q.hiddenValues[d.dataId] = 1
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: term.id,
+						config: {
+							term2: {
+								id: term.id,
+								term: term.term,
+								q
+							}
+						}
+					})
 				}
 			})
 		}
