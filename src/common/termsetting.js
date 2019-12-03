@@ -380,7 +380,7 @@ function setInteractivity(self) {
 					.append('td')
 					.style('font-weight', 'bold')
 					.style('vertical-align', 'top')
-					.html(g.name || 'Group ' + (i + 1) + ':')
+					.html(g.name != undefined ? g.name + ':' : 'Group ' + (i + 1) + ':')
 
 				const values_td = group_tr.append('td')
 
@@ -498,10 +498,24 @@ function setInteractivity(self) {
 		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
 
 		//initiate empty customset
-		const customset = { groups: [] }
-		Array(default_grp_count)
-			.fill()
-			.map(() => customset.groups.push({ values: [] }))
+		let customset = { groups: [] }
+
+		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
+		const groupset =
+			grpsetting_flag && self.q.groupsetting.predefined_groupset_idx != undefined
+				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+				: self.q.groupsetting.customset || undefined
+
+		for (let i = 0; i < default_grp_count; i++) {
+			const group_name =
+				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name
+					? groupset.groups[i].name
+					: undefined
+			customset.groups.push({
+				values: [],
+				name: group_name
+			})
+		}
 
 		self.dom.tip.clear().showunder(self.dom.holder.node())
 
@@ -513,7 +527,7 @@ function setInteractivity(self) {
 			.style('margin', '5px')
 
 		const group_edit_div = regroup_div.append('div').style('margin', '5px')
-		const group_ct_div = group_edit_div.append('div').attr('class', 'group_count_div')
+		const group_ct_div = group_edit_div.append('div').attr('class', 'group_edit_div')
 		group_ct_div
 			.append('label')
 			.attr('for', 'grp_ct')
@@ -545,23 +559,87 @@ function setInteractivity(self) {
 
 		group_ct_select.node().value = default_grp_count
 
+		const group_rename_div = group_edit_div
+			.append('div')
+			.attr('class', 'group_edit_div')
+			.style('display', 'inline-block')
+
+		group_rename_div
+			.append('label')
+			.attr('for', 'grp_ct')
+			.style('display', 'inline-block')
+			.style('margin-right', '15px')
+			.html('Names')
+
+		for (let i = 0; i < default_grp_count; i++) {
+			const group_name =
+				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name ? groupset.groups[i].name : i + 1
+
+			const group_name_input = group_rename_div
+				.append('input')
+				.attr('size', 12)
+				.attr('value', group_name)
+				.style('margin', '2px 5px')
+				.style('display', 'inline-block')
+				.style('font-size', '.8em')
+				.style('width', '80px')
+				.on('keyup', () => {
+					if (!client.keyupEnter()) return
+
+					//update customset and add to self.q
+					for (const [key, val] of Object.entries(cat_grps)) {
+						for (let j = 0; j < default_grp_count; j++) {
+							if (cat_grps[key].group == j + 1) customset.groups[j].values.push({ key: key })
+						}
+					}
+
+					customset.groups[i].name = group_name_input.node().value
+					self.q.groupsetting.predefined_groupset_idx = undefined
+
+					self.q.groupsetting = {
+						inuse: true,
+						customset: customset
+					}
+					self.opts.callback({
+						term: self.term,
+						q: self.q
+					})
+
+					self.regroupMenu(default_grp_count, cat_grps)
+				})
+		}
+
+		group_edit_div
+			.append('div')
+			.style('font-size', '.6em')
+			.style('margin-left', '10px')
+			.style('color', '#858585')
+			.text('Note: Press ENTER to update group names.')
+
 		const group_select_div = regroup_div.append('div').style('margin', '5px')
 
 		const group_table = group_select_div.append('table').style('border-collapse', 'collapse')
 
 		// this row will have group names/number
-		const group_name_tr = group_table.append('tr')
+		const group_name_tr = group_table.append('tr').style('height', '50px')
 
 		group_name_tr
 			.append('th')
 			.style('padding', '2px 5px')
+			.style('font-size', '.8em')
+			.style('transform', 'rotate(315deg)')
 			.html('Exclude')
 
-		for (let i = 0; i < default_grp_count; i++)
+		for (let i = 0; i < default_grp_count; i++) {
+			const group_name =
+				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name ? groupset.groups[i].name : i + 1
 			group_name_tr
 				.append('th')
 				.style('padding', '2px 5px')
-				.html(i + 1)
+				.style('font-size', '.8em')
+				.style('transform', 'rotate(315deg)')
+				.html(group_name)
+		}
 
 		// for each cateogry add new row with radio button for each group and category name
 		for (const [key, val] of Object.entries(values)) {

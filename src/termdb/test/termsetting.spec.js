@@ -112,7 +112,7 @@ tape('caterogical term overlay', function(test) {
 		test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have "Apply" button to apply group changes')
 		test.equal(
 			tip.d
-				.selectAll('.group_count_div')
+				.selectAll('.group_edit_div')
 				.selectAll('label')
 				.html(),
 			'#groups',
@@ -120,7 +120,7 @@ tape('caterogical term overlay', function(test) {
 		)
 		test.equal(
 			tip.d
-				.selectAll('.group_count_div')
+				.selectAll('.group_edit_div')
 				.selectAll('select')
 				.size(),
 			1,
@@ -406,7 +406,7 @@ tape('Conditional term overlay', function(test) {
 		test.equal(tip.d.selectAll('select')._groups[0][0].selectedIndex, 1, 'Should have "Most recent" option selected')
 		test.equal(
 			d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,
-			groupset.groups[0].name,
+			groupset.groups[0].name + ':',
 			'Should have group 1 name same as predefined group1 name'
 		)
 		test.equal(
@@ -419,7 +419,7 @@ tape('Conditional term overlay', function(test) {
 		)
 		test.equal(
 			d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][0].innerText,
-			groupset.groups[1].name,
+			groupset.groups[1].name + ':',
 			'Should have group 2 name same as predefined group2 name'
 		)
 		test.equal(
