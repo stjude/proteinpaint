@@ -166,16 +166,21 @@ function trigger_getcategories(q, res, tdb, ds) {
 	// thin wrapper of get_summary
 	// works for all types of terms, not just categorical
 	if (!q.tid) throw '.tid missing'
+	const term = tdb.q.termjsonByOneid(q.tid)
 	const arg = {
 		ds,
 		term1_id: q.tid,
-		term1_q: {
-			bar_by_grade: q.bar_by_grade,
-			bar_by_children: q.bar_by_children,
-			value_by_max_grade: q.value_by_max_grade,
-			value_by_most_recent: q.value_by_most_recent,
-			value_by_computable_grade: q.value_by_computable_grade
-		}
+		term1_q: q.term1_q
+			? q.term1_q
+			: term.isinteger || term.isfloat
+			? term.bins.default
+			: {
+					bar_by_grade: q.bar_by_grade,
+					bar_by_children: q.bar_by_children,
+					value_by_max_grade: q.value_by_max_grade,
+					value_by_most_recent: q.value_by_most_recent,
+					value_by_computable_grade: q.value_by_computable_grade
+			  }
 	}
 	if (q.tvslst) arg.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
 	const lst = termdbsql.get_summary(arg)
