@@ -251,7 +251,7 @@ tape('series visibility', function(test) {
 	}
 })
 
-tape.only('click to add numeric, condition term filter', function(test) {
+tape('click to add numeric, condition term filter', function(test) {
 	test.timeoutAfter(3000)
 
 	const termfilter = { show_top_ui: true, terms: [] }

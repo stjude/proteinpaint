@@ -150,13 +150,14 @@ class TdbBarchart {
 
 		this.processedExcludes.push(refs)
 		const term = this.config.term
-		this.settings.exclude.cols = Object.keys(term.q.hiddenValues).map(val =>
-			term.term.values ? term.term.values[val].label : val
-		)
-		const term2 = this.config.term2
-		this.settings.exclude.rows = term2
-			? Object.keys(term2.q.hiddenValues).map(val => (term2.term.values ? term2.term.values[val].label : val))
+		this.settings.exclude.cols = term.q.hiddenValues
+			? Object.keys(term.q.hiddenValues).map(val => (term.term.values ? term.term.values[val].label : val))
 			: []
+		const term2 = this.config.term2
+		this.settings.exclude.rows =
+			term2 && term2.q && term2.q.hiddenValues
+				? Object.keys(term2.q.hiddenValues).map(val => (term2.term.values ? term2.term.values[val].label : val))
+				: []
 	}
 
 	processData(chartsData) {

@@ -40,9 +40,6 @@ function testByTermId(id, runTests) {
 							currViews: ['barchart'],
 							controls: {
 								isOpen: true
-							},
-							barchart: {
-								overlay: 'tree'
 							}
 						}
 					}
@@ -67,16 +64,14 @@ tape('\n', function(test) {
 })
 
 tape('overlay input', function(test) {
-	test.timeoutAfter(3000)
-	test.plan(6)
+	test.timeoutAfter(5000)
+	test.plan(4)
 	testByTermId('diaggrp', checkDisplayInAnyView)
 
 	function checkDisplayInAnyView(plotControls) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
-			if (this.innerHTML !== 'Overlay with') return
+			if (this.innerHTML !== 'Overlay') return
 			test.notEqual(this.parentNode.style.display, 'none', 'should be visible in barchart view')
-			const inputs = [...this.parentNode.querySelectorAll('input')]
-			test.equal(inputs.filter(inputIsVisible).length, 2, 'should have 2 options for non-condition term1')
 		})
 	}
 
@@ -100,9 +95,6 @@ tape('overlay input', function(test) {
 							currViews: ['barchart'],
 							controls: {
 								isOpen: true
-							},
-							barchart: {
-								overlay: 'tree'
 							}
 						}
 					}
@@ -131,16 +123,11 @@ tape('overlay input', function(test) {
 
 	function checkChildrenOverlayOption(plotControls) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
-			if (this.innerHTML !== 'Overlay with') return
-			const inputs = [...this.parentNode.querySelectorAll('input')]
-			test.equal(inputs.filter(inputIsVisible).length, 3, 'should have 3 options for condition term1')
-			test.equal(
-				inputs.filter(
-					elem =>
-						elem.nextSibling.innerHTML.includes('subconditions') && elem.parentNode.parentNode.style.display != 'none'
-				).length,
-				1,
-				'should have an option to overlay children'
+			if (this.innerHTML !== 'Overlay') return
+			test.pass('should have a visible overlay input')
+			test.true(
+				this.parentNode.lastChild.innerHTML.toLowerCase().includes('none'),
+				'should default to no overlay for a condition term'
 			)
 		})
 	}
@@ -150,7 +137,7 @@ tape('overlay input', function(test) {
 			type: 'plot_edit',
 			id: plotControls.id,
 			config: {
-				term: {
+				term2: {
 					id: 'Arrhythmias',
 					term: termjson['Arrhythmias'],
 					q: { bar_by_children: true, value_by_max_grade: true }
@@ -161,15 +148,10 @@ tape('overlay input', function(test) {
 
 	function checkGradeOverlayOption(plotControls) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
-			if (this.innerHTML !== 'Overlay with') return
-			const inputs = [...this.parentNode.querySelectorAll('input')]
-			test.equal(inputs.filter(inputIsVisible).length, 3, 'should have 3 options for condition term1')
-			test.equal(
-				inputs.filter(
-					elem => elem.nextSibling.innerHTML.includes('grade') && elem.parentNode.parentNode.style.display != 'none'
-				).length,
-				1,
-				'should have an option to overlay grades'
+			if (this.innerHTML !== 'Overlay') return
+			test.true(
+				this.parentNode.lastChild.innerHTML.toLowerCase().includes('sub-conditions'),
+				'should overlay subconditions'
 			)
 		})
 	}
@@ -205,7 +187,7 @@ tape('orientation input', function(test) {
 			type: 'plot_edit',
 			id: plotControls.id,
 			config: {
-				term2: { term: termjson['agedx'] },
+				term2: { term: termjson['agedx'], q: termjson['agedx'].bins.default },
 				settings: { currViews: ['table'] }
 			}
 		})
@@ -249,7 +231,7 @@ tape('scale input', function(test) {
 			type: 'plot_edit',
 			id: plotControls.id,
 			config: {
-				term2: { id: 'agedx', term: termjson['agedx'] },
+				term2: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.default },
 				settings: { currViews: ['table'] }
 			}
 		})
@@ -288,7 +270,7 @@ tape('divide by input', function(test) {
 	function checkDisplayInBarchartView(plotControls) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Divide by') return
-			test.equal(this.parentNode.style.display, 'table-row', 'should be visible in barchart view')
+			test.notEqual(this.parentNode.style.display, 'none', 'should be visible in barchart view')
 		})
 	}
 
@@ -297,7 +279,7 @@ tape('divide by input', function(test) {
 			type: 'plot_edit',
 			id: plotControls.id,
 			config: {
-				term2: { id: 'agedx', term: termjson['agedx'] },
+				term2: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.default },
 				settings: { currViews: ['table'] }
 			}
 		})
@@ -340,7 +322,7 @@ tape('divide by input', function(test) {
 	function checkDisplayInScatterView(plotControls) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Divide by') return
-			test.equal(this.parentNode.style.display, 'table-row', 'should be hidden in scatter plot view')
+			test.notEqual(this.parentNode.style.display, 'none', 'should be visible in scatter plot view')
 		})
 	}
 })
@@ -358,7 +340,10 @@ tape('Primary bins input', function(test) {
 					agedx: {
 						term: { id: 'agedx' },
 						settings: {
-							currViews: []
+							currViews: [],
+							controls: {
+								isOpen: true
+							}
 						}
 					}
 				}
@@ -374,7 +359,7 @@ tape('Primary bins input', function(test) {
 	function checkDisplayWithNumericTerm(plotControls) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML !== 'Customize bins') return
-			test.equal(this.parentNode.style.display, 'table-row', 'should be visible with numeric term')
+			test.notEqual(this.parentNode.style.display, 'none', 'should be visible with numeric term')
 		})
 	}
 
@@ -387,7 +372,10 @@ tape('Primary bins input', function(test) {
 					diaggrp: {
 						term: { id: 'diaggrp' },
 						settings: {
-							currViews: []
+							currViews: [],
+							controls: {
+								isOpen: true
+							}
 						}
 					}
 				}
@@ -401,10 +389,11 @@ tape('Primary bins input', function(test) {
 	})
 
 	function checkDisplayWithCategoricalTerm(plotControls) {
+		let matched = false
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
-			if (this.innerHTML !== 'Customize bins') return
-			test.equal(this.parentNode.style.display, 'none', 'should be hidden with non-numeric term')
+			if (this.innerHTML === 'Customize bins') matched = true
 		})
+		test.equal(matched, false, 'should be hidden with non-numeric term')
 	}
 })
 
@@ -421,7 +410,10 @@ tape('Bars-as input', function(test) {
 					Arrhythmias: {
 						term: { id: 'Arrhythmias' },
 						settings: {
-							currViews: ['barchart']
+							currViews: ['barchart'],
+							controls: {
+								isOpen: true
+							}
 						}
 					}
 				}
@@ -436,8 +428,8 @@ tape('Bars-as input', function(test) {
 
 	function checkDisplayWithConditionTerm(plotControls) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
-			if (this.innerHTML !== 'Bars as') return
-			test.equal(this.parentNode.style.display, 'table-row', 'should be visible with condition term')
+			if (this.innerHTML !== 'Group grades') return
+			test.notEqual(this.parentNode.style.display, 'none', 'should be visible with condition term')
 		})
 	}
 
@@ -450,7 +442,10 @@ tape('Bars-as input', function(test) {
 					sex: {
 						term: { id: 'sex' },
 						settings: {
-							currViews: ['barchart']
+							currViews: ['barchart'],
+							controls: {
+								isOpen: true
+							}
 						}
 					}
 				}
@@ -464,9 +459,10 @@ tape('Bars-as input', function(test) {
 	})
 
 	function checkDisplayWithCategoricalTerm(plotControls) {
+		let matched = false
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
-			if (this.innerHTML !== 'Bars as') return
-			test.equal(this.parentNode.style.display, 'none', 'should be hidden with non-numeric term')
+			if (this.innerHTML === 'Group grades') matched = true
 		})
+		test.equal(matched, false, 'should be hidden with non-condition terms')
 	}
 })

@@ -3,8 +3,6 @@ import { overlayInit } from './plot.controls.overlay'
 import { term1uiInit } from './plot.controls.term1'
 import { divideInit } from './plot.controls.divide'
 import { initRadioInputs } from '../common/dom'
-// temporarily use legacy termui_display to prototype the barsAs input
-import { numeric_bin_edit, display as termui_display } from '../mds.termdb.termsetting.ui'
 
 class TdbConfigUiInit {
 	constructor(opts) {
