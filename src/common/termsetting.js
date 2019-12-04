@@ -499,6 +499,9 @@ function setInteractivity(self) {
 
 		//initiate empty customset
 		let customset = { groups: [] }
+		let group_names = []
+		if (self.q.bar_by_grade) customset.is_grade = true
+		else if (self.q.bar_by_children) customset.is_subcondition = true
 
 		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
 		const groupset =
@@ -507,10 +510,16 @@ function setInteractivity(self) {
 				: self.q.groupsetting.customset || undefined
 
 		for (let i = 0; i < default_grp_count; i++) {
-			const group_name =
+			let group_name =
 				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name
 					? groupset.groups[i].name
 					: undefined
+
+			if (self.q.bar_by_grade && groupset && groupset.is_subcondition) group_name = undefined
+			if (self.q.bar_by_children && groupset && groupset.is_grade) group_name = undefined
+
+			group_names.push(group_name)
+
 			customset.groups.push({
 				values: [],
 				name: group_name
@@ -572,13 +581,10 @@ function setInteractivity(self) {
 			.html('Names')
 
 		for (let i = 0; i < default_grp_count; i++) {
-			const group_name =
-				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name ? groupset.groups[i].name : i + 1
-
 			const group_name_input = group_rename_div
 				.append('input')
 				.attr('size', 12)
-				.attr('value', group_name)
+				.attr('value', group_names[i] || i + 1)
 				.style('margin', '2px 5px')
 				.style('display', 'inline-block')
 				.style('font-size', '.8em')
@@ -631,14 +637,12 @@ function setInteractivity(self) {
 			.html('Exclude')
 
 		for (let i = 0; i < default_grp_count; i++) {
-			const group_name =
-				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name ? groupset.groups[i].name : i + 1
 			group_name_tr
 				.append('th')
 				.style('padding', '2px 5px')
 				.style('font-size', '.8em')
 				.style('transform', 'rotate(315deg)')
-				.html(group_name)
+				.html(group_names[i] || i + 1)
 		}
 
 		// for each cateogry add new row with radio button for each group and category name
