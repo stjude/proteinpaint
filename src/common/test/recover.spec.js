@@ -1,6 +1,6 @@
 const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
-// const recoverInit = require('../recover').recoverInit
+//const recoverInit = require('../recover').recoverInit
 
 /*************************
  reusable helper functions
@@ -23,7 +23,7 @@ const runpp = helpers.getRunPp('termdb', {
 ***************/
 
 tape('\n', function(test) {
-	test.pass('-***- termdb/app -***-')
+	test.pass('-***- termdb/recover -***-')
 	test.end()
 })
 
@@ -54,7 +54,7 @@ tape('history processing', function(test) {
 			.to(triggerExpand2)
 			.to(testDispatchedTracking, { arg: recover })
 			.use(triggerUndo, { arg: recover, bus: _recover })
-			.to(testUndo, { arg: recover, bus: _recover })
+			.to(testUndo, { arg: recover, bus: _recover, wait: 20 })
 			.done(test)
 	}
 
