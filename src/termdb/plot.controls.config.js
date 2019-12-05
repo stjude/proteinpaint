@@ -12,16 +12,18 @@ class TdbConfigUiInit {
 		this.app = app
 		setInteractivity(this)
 
-		const dispatch = opts.dispatch
+		const dispatch = app.dispatch
 		const table = this.setDom()
 		const debug = opts.debug
 		this.inputs = {
-			term1: term1uiInit({ holder: table.append('tr'), dispatch, id: this.id, debug }),
-			overlay: overlayInit({ holder: table.append('tr'), dispatch, id: this.id, debug }),
-			view: setViewOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
-			orientation: setOrientationOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
-			scale: setScaleOpts({ holder: table.append('tr'), dispatch, id: this.id, debug }),
-			divideBy: divideInit({ holder: table.append('tr'), dispatch, id: this.id, debug })
+			view: setViewOpts({ holder: this.dom.viewTr, dispatch, id: this.id, debug }),
+			orientation: setOrientationOpts({ holder: this.dom.orientationTr, dispatch, id: this.id, debug }),
+			scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug })
+		}
+		this.components = {
+			term1: term1uiInit(app, { holder: this.dom.term1Tr, id: this.id, debug }),
+			overlay: overlayInit(app, { holder: this.dom.overlayTr, id: this.id, debug }),
+			divideBy: divideInit(app, { holder: this.dom.divideTr, id: this.id, debug })
 		}
 
 		this.api = rx.getComponentApi(this)
@@ -45,6 +47,13 @@ class TdbConfigUiInit {
 			.attr('cellpadding', 0)
 			.attr('cellspacing', 0)
 			.style('white-space', 'nowrap')
+		// specify input row order
+		this.dom.term1Tr = this.dom.table.append('tr')
+		this.dom.overlayTr = this.dom.table.append('tr')
+		this.dom.viewTr = this.dom.table.append('tr')
+		this.dom.orientationTr = this.dom.table.append('tr')
+		this.dom.scaleTr = this.dom.table.append('tr')
+		this.dom.divideTr = this.dom.table.append('tr')
 
 		return this.dom.table
 	}

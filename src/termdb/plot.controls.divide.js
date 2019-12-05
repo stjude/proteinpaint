@@ -15,25 +15,19 @@ pill is only for altering between (1) and (2)
 */
 
 class Divide {
-	constructor(opts) {
+	constructor(app, opts) {
+		this.type = 'divideByInput'
+		;(this.id = opts.id), (this.app = app)
 		this.validateOpts(opts)
 		setRenderers(this)
 		this.initUI()
 		this.usedTerms = [] // array of {term, q}
-		this.api = {
-			usestate: true,
-			main: state => {
-				this.state = state
-				this.mayRegisterTerm(state.config.term0)
-				this.updateUI()
-			}
-		}
-		if (opts.debug) this.api.Inner = this
+		this.api = rx.getComponentApi(this)
+		this.eventTypes = ['postInit', 'postRender']
 	}
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing' // plot id?
 		if (!o.holder) throw 'opts.holder missing'
-		if (typeof o.dispatch != 'function') throw 'opts.dispath() is not a function'
 		this.opts = o
 		this.dom = { tr: o.holder }
 	}
@@ -49,13 +43,25 @@ class Divide {
 				if (term0) {
 					term0.id = term0.term.id
 				}
-				this.opts.dispatch({
+				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
 					config: { term0: term0 }
 				})
 			}
 		})
+	}
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter,
+			config: appState.tree.plots[this.id]
+		}
+	}
+	main() {
+		this.mayRegisterTerm(this.state.config.term0)
+		this.updateUI()
 	}
 	mayRegisterTerm(term) {
 		if (!term || !term.term) return
@@ -132,7 +138,7 @@ function setRenderers(self) {
 				.text('None')
 				.on('click', () => {
 					self.dom.tip.hide()
-					self.opts.dispatch({
+					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.opts.id,
 						config: {
@@ -149,7 +155,7 @@ function setRenderers(self) {
 				.text('Term: ' + t.term.name)
 				.on('click', () => {
 					self.dom.tip.hide()
-					self.opts.dispatch({
+					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.opts.id,
 						config: {

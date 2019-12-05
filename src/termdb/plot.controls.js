@@ -44,7 +44,6 @@ class TdbPlotControls {
 			config: configUiInit(app, {
 				id: this.id,
 				holder: this.dom.config_div,
-				dispatch: this.app.dispatch,
 				tip: app.tip,
 				debug
 			})

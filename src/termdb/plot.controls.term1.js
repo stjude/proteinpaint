@@ -17,25 +17,32 @@ execution flow:
 */
 
 class Term1ui {
-	constructor(opts) {
+	constructor(app, opts) {
+		this.type = 'term1Input'
+		this.id = opts.id
+		this.app = app
 		this.validateOpts(opts)
 		setRenderers(this)
 		this.initUI()
-		this.api = {
-			usestate: true,
-			main: state => {
-				this.state = state
-				this.render()
-			}
-		}
+		this.api = rx.getComponentApi(this)
 		if (opts.debug) this.api.Inner = this
 	}
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing'
 		if (!o.holder) throw 'opts.holder missing'
-		if (typeof o.dispatch != 'function') throw 'opts.dispath() is not a function'
 		this.opts = o
 		this.dom = { tr: o.holder }
+	}
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter,
+			config: appState.tree.plots[this.id]
+		}
+	}
+	main() {
+		this.render()
 	}
 	setPill() {
 		// can only call after getting this.state
@@ -48,7 +55,7 @@ class Term1ui {
 			callback: data => {
 				// data is object with only one needed attribute: q, never is null
 				if (!data.q) throw 'data.q{} missing from pill callback'
-				this.opts.dispatch({
+				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
 					config: {

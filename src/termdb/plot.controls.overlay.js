@@ -18,25 +18,21 @@ all other cases just text label
 */
 
 class Overlay {
-	constructor(opts) {
+	constructor(app, opts) {
+		this.type = 'overlayInput'
+		this.id = opts.id
+		this.app = app
 		this.validateOpts(opts)
 		setRenderers(this)
 		this.initUI()
 		this.usedTerms = [] // array of {term, q}
-		this.api = {
-			usestate: true,
-			main: state => {
-				this.state = state
-				this.mayRegisterTerm(state.config.term2)
-				this.updateUI()
-			}
-		}
+		this.api = rx.getComponentApi(this)
+		this.eventTypes = ['postInit', 'postRender']
 		if (opts.debug) this.api.Inner = this
 	}
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing' // plot id?
 		if (!o.holder) throw 'opts.holder missing'
-		if (typeof o.dispatch != 'function') throw 'opts.dispath() is not a function'
 		this.opts = o
 		this.dom = { tr: o.holder }
 	}
@@ -52,7 +48,7 @@ class Overlay {
 				if (term2) {
 					term2.id = term2.term.id
 				}
-				this.opts.dispatch({
+				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
 					config: {
@@ -61,6 +57,18 @@ class Overlay {
 				})
 			}
 		})
+	}
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter,
+			config: appState.tree.plots[this.id]
+		}
+	}
+	main() {
+		this.mayRegisterTerm(this.state.config.term2)
+		this.updateUI()
 	}
 	mayRegisterTerm(term) {
 		if (!term || !term.term) return // no term2
@@ -146,7 +154,7 @@ function setRenderers(self) {
 				.text('None')
 				.on('click', () => {
 					self.dom.tip.hide()
-					self.opts.dispatch({
+					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.opts.id,
 						config: {
@@ -175,7 +183,7 @@ function setRenderers(self) {
 						)
 						.on('click', () => {
 							self.dom.tip.hide()
-							self.opts.dispatch({
+							self.app.dispatch({
 								type: 'plot_edit',
 								id: self.opts.id,
 								config: {
@@ -202,7 +210,7 @@ function setRenderers(self) {
 						)
 						.on('click', () => {
 							self.dom.tip.hide()
-							self.opts.dispatch({
+							self.app.dispatch({
 								type: 'plot_edit',
 								id: self.opts.id,
 								config: {
@@ -225,7 +233,7 @@ function setRenderers(self) {
 				.text('Term: ' + t.term.name)
 				.on('click', () => {
 					self.dom.tip.hide()
-					self.opts.dispatch({
+					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.opts.id,
 						config: {
