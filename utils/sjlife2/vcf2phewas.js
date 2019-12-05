@@ -14,6 +14,7 @@ const file_vcf = process.argv[2]
 const file_category2vcfsamples = process.argv[3]
 
 const category2samples = []
+const usesamples = new Set() // samples used in file_category2vcfsamples
 for (const line of fs
 	.readFileSync(file_category2vcfsamples, { encoding: 'utf8' })
 	.trim()
@@ -24,10 +25,16 @@ for (const line of fs
 		g.group_name = l[0]
 		g.term_id = l[1]
 		category2samples.push(g)
+
+		for (const s of g.group1lst) usesamples.add(s)
+		if (g.group2lst) {
+			for (const s of g.group2lst) usesamples.add(s)
+		}
 	}
 }
 
 let vcfsamples
+let vcfsamples_useindex
 
 console.log('SNV4\tSNP\tGroup_name\tVariable_ID\tCase\tControl\tp-value\ttest.table')
 
@@ -36,6 +43,14 @@ rl.on('line', async line => {
 	if (line[0] == '#') {
 		if (line[1] == '#') return
 		vcfsamples = line.split('\t').slice(9)
+		const useindex = new Set()
+		for (let i = 0; i < vcfsamples.length; i++) {
+			if (usesamples.has(vcfsamples[i])) useindex.add(i)
+		}
+		if (useindex.size < vcfsamples.length) {
+			// some vcf samples are excluded
+			vcfsamples_useindex = useindex
+		}
 		return
 	}
 
@@ -51,6 +66,11 @@ rl.on('line', async line => {
 	// k: gt key (href, halt, het), v: Set(samples)
 
 	for (let i = 9; i < l.length; i++) {
+		if (vcfsamples_useindex && !vcfsamples_useindex.has(i - 9)) {
+			// sample excluded
+			continue
+		}
+
 		const gtstring = l[i].split(':')[0]
 		if (gtstring == '.') {
 			// unknown gt
