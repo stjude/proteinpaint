@@ -1,8 +1,11 @@
-import { getInitFxn } from '../common/rx.core'
+import * as rx from '../common/rx.core'
 
 class TdbControlsTopBar {
-	constructor(opts) {
+	constructor(app, opts) {
+		this.type = 'controlsTopBar'
 		this.opts = opts
+		this.id = opts.id
+		this.app = app
 		this.dom = {
 			holder: opts.holder,
 			burger_div: opts.holder.append('div'),
@@ -30,22 +33,28 @@ class TdbControlsTopBar {
 			})
 		}
 
-		this.api = {
-			main: (state, isOpen) => {
-				this.dom.button_bar
-					.style('display', isOpen ? 'inline-block' : 'block')
-					.style('float', isOpen ? 'right' : 'none')
-				if (!state) return
-				const plot = state.config
-				for (const name in this.features) {
-					this.features[name].main(isOpen, plot)
-				}
-			}
+		this.api = rx.getComponentApi(this)
+		this.eventTypes = ['postInit', 'postRender']
+	}
+
+	getState(appState) {
+		return {
+			config: appState.tree.plots[this.id]
+		}
+	}
+
+	main() {
+		const plot = this.state.config
+		const isOpen = plot.settings.controls.isOpen
+		this.dom.button_bar.style('display', isOpen ? 'inline-block' : 'block').style('float', isOpen ? 'right' : 'none')
+
+		for (const name in this.features) {
+			this.features[name].main(isOpen, plot)
 		}
 	}
 }
 
-export const topBarInit = getInitFxn(TdbControlsTopBar)
+export const topBarInit = rx.getInitFxn(TdbControlsTopBar)
 
 function setInteractivity(self) {
 	self.toggleVisibility = isVisible => {

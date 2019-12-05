@@ -1,13 +1,15 @@
-import { getInitFxn } from '../common/rx.core'
+import * as rx from '../common/rx.core'
 import { overlayInit } from './plot.controls.overlay'
 import { term1uiInit } from './plot.controls.term1'
 import { divideInit } from './plot.controls.divide'
 import { initRadioInputs } from '../common/dom'
 
 class TdbConfigUiInit {
-	constructor(opts) {
+	constructor(app, opts) {
+		this.type = 'controlsConfig'
 		this.opts = opts
 		this.id = opts.id
+		this.app = app
 		setInteractivity(this)
 
 		const dispatch = opts.dispatch
@@ -22,17 +24,8 @@ class TdbConfigUiInit {
 			divideBy: divideInit({ holder: table.append('tr'), dispatch, id: this.id, debug })
 		}
 
-		this.api = {
-			main: (state, isOpen) => {
-				this.render(isOpen)
-				if (!state) return
-				const plot = state.config
-				for (const name in this.inputs) {
-					const o = this.inputs[name]
-					o.main(o.usestate ? state : plot)
-				}
-			}
-		}
+		this.api = rx.getComponentApi(this)
+		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	setDom() {
@@ -56,6 +49,26 @@ class TdbConfigUiInit {
 		return this.dom.table
 	}
 
+	getState(appState) {
+		return {
+			genome: appState.genome,
+			dslabel: appState.dslabel,
+			termfilter: appState.termfilter,
+			config: appState.tree.plots[this.id]
+		}
+	}
+
+	main() {
+		const plot = this.state.config
+		const isOpen = plot.settings.controls.isOpen
+
+		this.render(isOpen)
+		for (const name in this.inputs) {
+			const o = this.inputs[name]
+			o.main(o.usestate ? this.state : plot)
+		}
+	}
+
 	render(isOpen) {
 		this.dom.holder
 			.style('visibility', isOpen ? 'visible' : 'hidden')
@@ -71,7 +84,7 @@ class TdbConfigUiInit {
 	}
 }
 
-export const configUiInit = getInitFxn(TdbConfigUiInit)
+export const configUiInit = rx.getInitFxn(TdbConfigUiInit)
 
 function setInteractivity(self) {
 	self.rowIsVisible = function() {
