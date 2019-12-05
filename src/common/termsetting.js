@@ -306,38 +306,40 @@ function setInteractivity(self) {
 
 		optsFxn(term_option_div)
 
-		term_edit_div
-			.append('div')
-			.attr('class', 'replace_btn sja_filter_tag_btn')
-			.style('display', self.opts.disable_ReplaceRemove ? 'none' : 'inline-block')
-			.style('border-radius', '13px')
-			.style('background-color', '#74b9ff')
-			.style('padding', '7px 15px')
-			.style('margin', '5px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('Replace')
-			.on('click', () => {
-				self.dom.tip.clear()
-				self.showTree()
-			})
-		term_edit_div
-			.append('div')
-			.attr('class', 'remove_btn sja_filter_tag_btn')
-			.style('display', self.opts.disable_ReplaceRemove ? 'none' : 'inline-block')
-			.style('border-radius', '13px')
-			.style('background-color', '#ff7675')
-			.style('padding', '7px 15px')
-			.style('margin', '5px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('Remove')
-			.on('click', () => {
-				self.dom.tip.hide()
-				self.removeTerm()
-			})
+		if (!self.opts.disable_ReplaceRemove) {
+			term_edit_div
+				.append('div')
+				.attr('class', 'replace_btn sja_filter_tag_btn')
+				.style('display', 'inline-block')
+				.style('border-radius', '13px')
+				.style('background-color', '#74b9ff')
+				.style('padding', '7px 15px')
+				.style('margin', '5px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.text('Replace')
+				.on('click', () => {
+					self.dom.tip.clear()
+					self.showTree()
+				})
+			term_edit_div
+				.append('div')
+				.attr('class', 'remove_btn sja_filter_tag_btn')
+				.style('display', 'inline-block')
+				.style('border-radius', '13px')
+				.style('background-color', '#ff7675')
+				.style('padding', '7px 15px')
+				.style('margin', '5px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.text('Remove')
+				.on('click', () => {
+					self.dom.tip.hide()
+					self.removeTerm()
+				})
+		}
 	}
 
 	self.showGrpOpts = async function(div) {

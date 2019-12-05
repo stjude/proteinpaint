@@ -2,7 +2,7 @@ import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 import { treeInit } from './tree'
 import { storeInit } from './store'
-import { filterInit } from './filter'
+import { filterInit } from './filter2'
 import { recoverInit } from '../common/recover'
 import { sayerror, Menu } from '../client'
 
@@ -82,7 +82,10 @@ class TdbApp {
 					this.opts.recover
 				)
 
-				this.components.terms = filterInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.filter)
+				this.components.terms = filterInit(
+					{ holder: this.dom.holder.append('div'), dispatch: this.app.dispatch, debug: opts.debug },
+					this.opts.filter
+				)
 			}
 			this.components.tree = treeInit(this.app, { holder: this.dom.holder.append('div'), modifiers }, this.opts.tree)
 		} catch (e) {
