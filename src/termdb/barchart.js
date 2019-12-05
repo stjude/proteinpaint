@@ -295,7 +295,7 @@ class TdbBarchart {
 			const b = t1.term.graph && t1.term.graph.barchart ? t1.term.graph.barchart : null
 			const reducer = (sum, b) => sum + b.total
 			const items = s.exclude.cols
-				.filter(collabel => s.cols.includes(collabel))
+				.filter(collabel => s.cols.includes(collabel) && (!t1.term.values || collabel in t1.term.values))
 				.map(collabel => {
 					const filter = c => c.seriesId == collabel
 					const total =
