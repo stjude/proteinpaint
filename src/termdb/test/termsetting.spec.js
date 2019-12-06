@@ -52,7 +52,7 @@ tape('caterogical term overlay', function(test) {
 		},
 		plotControls: {
 			callbacks: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
@@ -91,19 +91,19 @@ tape('caterogical term overlay', function(test) {
 	}
 
 	function testGrpMenu(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		test.equal(tip.d.selectAll('.group_btn').size(), 2, 'Should have 2 buttons for group config')
 		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 	}
 
 	function triggerDevideGrpMenu(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		tip.d.selectAll('.group_btn')._groups[0][1].click()
 	}
 
 	function testDevideGrpMenu(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		test.equal(
 			tip.d.selectAll('tr').size(),
 			Object.keys(plotControls.Inner.state.config.term2.term.values).length + 1,
@@ -141,7 +141,7 @@ tape('caterogical term overlay', function(test) {
 	}
 
 	function triggerGrpSelect(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		d3s
 			.select(tip.d.selectAll('tr')._groups[0][1])
 			.selectAll('input')
@@ -186,7 +186,7 @@ tape('Numerical term overlay', function(test) {
 		},
 		plotControls: {
 			callbacks: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
@@ -223,7 +223,7 @@ tape('Numerical term overlay', function(test) {
 	}
 
 	function testGrpMenu(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 		test.equal(
@@ -244,7 +244,7 @@ tape('Numerical term overlay', function(test) {
 	}
 
 	function triggerBinChange(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		const bin_size_input = d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0]
 
 		bin_size_input.value = 5
@@ -304,7 +304,7 @@ tape('Conditional term overlay', function(test) {
 		},
 		plotControls: {
 			callbacks: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
@@ -358,7 +358,7 @@ tape('Conditional term overlay', function(test) {
 	}
 
 	function testGrpMenu(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		test.equal(tip.d.selectAll('select').size(), 1, 'Should have 1 dropdown to change grade setting')
 		test.equal(tip.d.selectAll('.group_btn').size(), 3, 'Should have 3 buttons for group config')
 		test.true(
@@ -370,9 +370,9 @@ tape('Conditional term overlay', function(test) {
 	}
 
 	function triggerGradeChange(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
-		tip.d.selectAll('select')._groups[0][0].selectedIndex = 1
-		tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
+		tip.d.select('select')._groups[0][0].selectedIndex = 1
+		tip.d.select('select')._groups[0][0].dispatchEvent(new Event('change'))
 	}
 
 	function testGradeChange(plotControls) {
@@ -384,7 +384,7 @@ tape('Conditional term overlay', function(test) {
 	}
 
 	function triggerGrpSelect(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		tip.d.selectAll('.group_btn')._groups[0][1].click()
 	}
 
@@ -399,7 +399,7 @@ tape('Conditional term overlay', function(test) {
 	}
 
 	function testReGrpMenu(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		const groupset_idx = plotControls.Inner.state.config.term2.q.groupsetting.predefined_groupset_idx
 		const groupset = plotControls.Inner.state.config.term2.term.groupsetting.lst[groupset_idx]
 
@@ -437,7 +437,7 @@ tape('Conditional term overlay', function(test) {
 	}
 
 	function triggerGrd2SubSelect(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		tip.d.selectAll('select')._groups[0][0].selectedIndex = 3
 		tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
 	}
@@ -451,7 +451,7 @@ tape('Conditional term overlay', function(test) {
 	}
 
 	function triggerSubChange(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		tip.d.selectAll('.group_btn')._groups[0][2].click()
 		d3s
 			.select(tip.d.selectAll('tr')._groups[0][3])
@@ -472,7 +472,7 @@ tape('Conditional term overlay', function(test) {
 	}
 
 	function triggerSub2GrdSelect(plotControls) {
-		const tip = plotControls.Inner.features.config.Inner.inputs.overlay.Inner.pill.Inner.dom.tip
+		const tip = plotControls.Inner.components.config.Inner.components.overlay.Inner.pill.Inner.dom.tip
 		tip.d.selectAll('select')._groups[0][0].selectedIndex = 0
 		tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
 	}

@@ -30,6 +30,8 @@ class TdbFilter {
 			usestate: true,
 			main: state => {
 				this.state = state
+				if (!this.pill) this.initPill()
+				this.pill.main()
 			}
 		}
 		if (opts.debug) this.api.Inner = this
@@ -91,9 +93,6 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'terms_div')
 			.style('display', 'inline-block')
-
-		if (!this.pill) this.initPill()
-		this.pill.main()
 
 		const state = self.state
 
