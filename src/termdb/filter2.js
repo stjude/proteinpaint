@@ -6,19 +6,14 @@ import * as dom from '../dom'
 import { TVSInit } from '../common/tvs'
 import { appInit } from './app'
 import * as client from '../client'
-
 /*
-for configuring filter; just a thin wrapper of blue pill UI 
-
+for configuring filter; just a thin wrapper of blue pill UI
 execution flow:
-
 1. constructor builds and returns this.api{}
 2. no state available for constructor so cannot do term-type specific things
 3. upon getting state from app.js, call api.main() with latest state
 4. then call this.initPill() to initiate bluepill
-
 */
-
 class TdbFilter {
 	constructor(opts) {
 		this.validateOpts(opts)
@@ -37,12 +32,14 @@ class TdbFilter {
 		if (opts.debug) this.api.Inner = this
 	}
 	validateOpts(o) {
-		// if (!('id' in o)) throw 'opts.id missing' // plot id?
 		if (!o.holder) throw 'opts.holder missing'
 		if (typeof o.dispatch != 'function') throw 'opts.dispath() is not a function'
 		this.opts = o
 		this.dom = { holder: o.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
+	}
+	getState(appState) {
+		return appState
 	}
 	initPill() {
 		this.pill = TVSInit({
@@ -50,25 +47,17 @@ class TdbFilter {
 			dslabel: this.state.dslabel,
 			holder: this.dom.pilldiv,
 			debug: this.opts.debug,
-			callback: term2 => {
+			callback: tvslst => {
 				// term2 is {term,q} and can be null
-				if (term2) {
-					term2.id = term2.term.id
-				}
 				this.opts.dispatch({
-					type: 'plot_edit',
-					id: this.opts.id,
-					config: {
-						term2: term2
-					}
+					type: 'filter_add',
+					tvslst
 				})
 			}
 		})
 	}
 }
-
 exports.filterInit = rx.getInitFxn(TdbFilter)
-
 function setRenderers(self) {
 	self.initHolder = function() {
 		const div = this.dom.holder
@@ -79,7 +68,6 @@ function setRenderers(self) {
 			.style('margin-top', '5px')
 			.style('display', 'block')
 			.style('border', 'solid 1px #ddd')
-
 		div
 			.append('div')
 			.style('display', 'inline-block')
@@ -87,17 +75,22 @@ function setRenderers(self) {
 			.style('color', '#bbb')
 			.style('margin-right', '10px')
 			.html('Filter')
-
 		// div to display all tvs bluepills
 		this.dom.pilldiv = div
 			.append('div')
 			.attr('class', 'terms_div')
 			.style('display', 'inline-block')
-
+	}
+	self.render = function() {
 		const state = self.state
-
+		const div = this.dom.pilldiv
 		if (state && state.termfilter && !state.termfilter.show_top_ui) {
 			div.style('display', 'none')
+			return
 		}
+		self.pill.main({
+			termfilter: state.termfilter
+		})
+		div.style('display', 'inline-block')
 	}
 }
