@@ -139,7 +139,7 @@ function setRenderers(self) {
 			.style('padding', '8px 6px 4px 6px')
 			// .style('margin-left', '5px')
 			.style('font-size', '.8em')
-			.text(d => d.values[0].label)
+			.text(d => (d.ranges ? d.ranges[0].label : d.values[0].label))
 		// .style('text-transform', 'uppercase')
 		// .on('click', self.displayTreeMenu)
 
