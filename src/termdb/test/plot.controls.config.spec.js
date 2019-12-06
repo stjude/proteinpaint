@@ -327,7 +327,7 @@ tape('divide by input', function(test) {
 	}
 })
 
-tape('Primary bins input', function(test) {
+tape('Term1 bins', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(2)
 
@@ -393,12 +393,12 @@ tape('Primary bins input', function(test) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
 			if (this.innerHTML === 'Customize bins') matched = true
 		})
-		test.equal(matched, false, 'should be hidden with non-numeric term')
+		test.equal(matched, false, 'should not be found for non-numeric term')
 	}
 })
 
-tape('Bars-as input', function(test) {
-	test.timeoutAfter(3000)
+tape('Term1 condition, categorical', function(test) {
+	test.timeoutAfter(4000)
 	test.plan(2)
 
 	runpp({
@@ -428,7 +428,7 @@ tape('Bars-as input', function(test) {
 
 	function checkDisplayWithConditionTerm(plotControls) {
 		plotControls.Inner.dom.holder.selectAll('.sja-termdb-config-row-label').each(function() {
-			if (this.innerHTML !== 'Group grades') return
+			if (this.innerHTML !== 'Customize') return
 			test.notEqual(this.parentNode.style.display, 'none', 'should be visible with condition term')
 		})
 	}

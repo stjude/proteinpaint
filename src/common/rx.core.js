@@ -223,6 +223,7 @@ function getComponentApi(self) {
 			return getComponents(self.components, dotSepNames)
 		}
 	}
+	// must not freeze returned api, as getInitFxn() will add api.Inner
 	return api
 }
 

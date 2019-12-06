@@ -6,9 +6,9 @@ for configuring term1; just a thin wrapper of blue pill UI
 
 execution flow:
 
-1. constructor builds and returns this.api{}
-2. no state available for constructor so cannot do term-type specific things
-3. upon getting state from plot.controls.config.js, call api.main() with latest state
+1. constructor builds and returns this.api{} via getInitFxn
+2. no state available for constructor so cannot do term-type specific things in constructor
+3. upon notified by plot.controls.config.js and api.main() is called, this.state is ready
 4. then call this.render() to:
 4.1 if plot.term cannot be configured, quit
 4.2 initiate this.pill if missing
@@ -25,7 +25,6 @@ class Term1ui {
 		setRenderers(this)
 		this.initUI()
 		this.api = rx.getComponentApi(this)
-		if (opts.debug) this.api.Inner = this
 	}
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing'
@@ -38,7 +37,7 @@ class Term1ui {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
 			termfilter: appState.termfilter,
-			config: appState.tree.plots[this.id]
+			plot: appState.tree.plots[this.id]
 		}
 	}
 	main() {
@@ -66,8 +65,8 @@ class Term1ui {
 							which copyMerge( plot, {term:{q:{...}}}, ['term']) won't allow to work
 							will replace plot.term with {q}
 							*/
-							id: this.state.config.term.term.id,
-							term: this.state.config.term.term,
+							id: this.state.plot.term.term.id,
+							term: this.state.plot.term.term,
 							q: data.q
 						}
 					}
@@ -90,9 +89,9 @@ function setRenderers(self) {
 	self.render = function() {
 		/* state and plot are frozen from app.state
 		 */
-		const plot = this.state.config
-		if (!plot.term) throw 'state.config.plot.term{} is missing'
-		if (!plot.term.q) throw 'state.config.plot.term.q{} is missing'
+		const plot = this.state.plot
+		if (!plot.term) throw 'state.plot.term{} is missing'
+		if (!plot.term.q) throw 'state.plot.term.q{} is missing'
 
 		if (plot.term.q.groupsetting && plot.term.q.groupsetting.disabled) {
 			///////////////////////////////////
@@ -108,7 +107,7 @@ function setRenderers(self) {
 			self.dom.td1.text('Group categories')
 			// may replace generic "categories" with term-specifics, e.g. cancer diagnosis
 		} else if (plot.term.term.iscondition) {
-			self.dom.td1.text('Group ' + (plot.term.q.bar_by_grade ? 'grades' : 'sub-conditions'))
+			self.dom.td1.text('Customize')
 		} else if (plot.term.term.isinteger || plot.term.term.isfloat) {
 			self.dom.td1.text('Customize bins')
 		} else {
