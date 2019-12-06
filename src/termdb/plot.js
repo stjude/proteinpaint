@@ -196,13 +196,16 @@ export function plotConfig(opts) {
 	if (!opts.term.term.id) throw 'plotConfig: opts.term.term.id missing'
 
 	// initiate .q{}
+	if (!('id' in opts.term)) opts.term.id = opts.term.term.id
 	if (!opts.term.q) opts.term.q = {}
 	termsetting_fill_q(opts.term.q, opts.term.term)
 	if (opts.term2) {
+		if (!('id' in opts.term2)) opts.term2.id = opts.term2.term.id
 		if (!opts.term2.q) opts.term2.q = {}
 		termsetting_fill_q(opts.term2.q, opts.term2.term)
 	}
 	if (opts.term0) {
+		if (!('id' in opts.term0)) opts.term0.id = opts.term0.term.id
 		if (!opts.term0.q) opts.term0.q = {}
 		termsetting_fill_q(opts.term0.q, opts.term0.term)
 	}
