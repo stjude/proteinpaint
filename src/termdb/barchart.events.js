@@ -139,21 +139,22 @@ export default function getHandlers(self) {
 				event.stopPropagation()
 				const d = event.target.__data__
 				if (d === undefined) return
-
-				const term = d.type == 'col' ? self.config.term : self.config.term2
+				const id = 'id' in d ? d.id : d.type == 'col' ? d.seriesId : d.dataId
+				const termNum = d.type == 'col' ? 'term' : 'term2'
+				const term = self.config[termNum]
 				const q = JSON.parse(JSON.stringify(term.q))
 				if (!q.hiddenValues) q.hiddenValues = {}
-				if (!q.hiddenValues[d.id]) {
-					q.hiddenValues[d.id] = 1
+				if (!q.hiddenValues[id]) {
+					q.hiddenValues[id] = 1
 				} else {
-					delete q.hiddenValues[d.id]
+					delete q.hiddenValues[id]
 				}
 
 				self.app.dispatch({
 					type: 'plot_edit',
-					id: term.id,
+					id: self.config.term.id,
 					config: {
-						term: {
+						[termNum]: {
 							id: term.id,
 							term: term.term,
 							q
@@ -259,17 +260,17 @@ function handle_click(self) {
 			options.push({
 				label: 'Hide "' + dataLabel + '" ' + icon,
 				callback: () => {
-					const term = self.config.term2
-					const q = JSON.parse(JSON.stringify(term.q))
+					const term2 = self.config.term2
+					const q = JSON.parse(JSON.stringify(term2.q))
 					if (!q.hiddenValues) q.hiddenValues = {}
 					q.hiddenValues[d.dataId] = 1
 					self.app.dispatch({
 						type: 'plot_edit',
-						id: term.id,
+						id: self.config.term.id,
 						config: {
 							term2: {
-								id: term.id,
-								term: term.term,
+								id: term2.id,
+								term: term2.term,
 								q
 							}
 						}
