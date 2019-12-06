@@ -1,6 +1,5 @@
 const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
-//const recoverInit = require('../recover').recoverInit
 
 /*************************
  reusable helper functions
@@ -171,7 +170,7 @@ tape('stored state recovery', function(test) {
 	let initialAppState, recover
 	function saveState(tree) {
 		tree.on('postRender.test', null)
-		initalAppState = tree.Inner.app.getState()
+		initialAppState = tree.Inner.app.getState()
 		const recover = tree.Inner.app.Inner.components.recover.Inner
 		recover.dom.projectInput.property('value', projName)
 		recover.pro
@@ -195,7 +194,7 @@ tape('stored state recovery', function(test) {
 		recover.dom.projectInput.property('value', projName)
 		recover.openProject.call(recover.dom.projectInput.node())
 		setTimeout(() => {
-			test.deepEqual(initalAppState, tree.Inner.app.getState(), 'should open a project with its saved state')
+			test.deepEqual(initialAppState, tree.Inner.app.getState(), 'should open a project with its saved state')
 			test.end()
 		}, 100)
 	}

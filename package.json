@@ -31,6 +31,18 @@
     "printWidth": 120,
     "singleQuote": true
   },
+  "browserify": {
+    "transform": [
+      [
+        "babelify",
+        {
+          "presets": [
+            "es2015"
+          ]
+        }
+      ]
+    ]
+  },
   "author": "",
   "license": "ISC",
   "devDependencies": {
@@ -60,6 +72,7 @@
   "dependencies": {
     "async": "^2.6.0",
     "babel-polyfill": "^6.9.1",
+    "babelify": "^8.0.0",
     "better-sqlite3": "^5.4.2",
     "body-parser": "^1.15.2",
     "canvas": "^2.5.0",

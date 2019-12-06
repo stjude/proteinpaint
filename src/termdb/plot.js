@@ -8,7 +8,7 @@ import { tableInit } from './table'
 import { boxplotInit } from './boxplot'
 import { scatterInit } from './scatter'
 import { termInfoInit } from './termInfo'
-import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
+//import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 import { termsetting_fill_q } from '../common/termsetting'
 
 class TdbPlot {
@@ -265,4 +265,30 @@ export function plotConfig(opts) {
 	// may apply term-specific changes to the default object
 
 	return rx.copyMerge(config, opts)
+}
+
+function tvslst_to_parameter(terms) {
+	// apply on the terms[] array of a group
+	// TODO and/or between multiple terms
+	return terms.map(i => {
+		return {
+			term: {
+				id: i.term.id,
+				iscategorical: i.term.iscategorical,
+				isfloat: i.term.isfloat,
+				isinteger: i.term.isinteger,
+				iscondition: i.term.iscondition
+			},
+			// must return original values[{key,label}] to keep the validator function happy on both client/server
+			values: i.values,
+			ranges: i.ranges,
+			isnot: i.isnot,
+			bar_by_grade: i.bar_by_grade,
+			bar_by_children: i.bar_by_children,
+			value_by_max_grade: i.value_by_max_grade,
+			value_by_most_recent: i.value_by_most_recent,
+			value_by_computable_grade: i.value_by_computable_grade,
+			grade_and_child: i.grade_and_child
+		}
+	})
 }

@@ -9,22 +9,15 @@ will need to figure out how to allow node/browserify to work with import
 */
 
 tape('\n', test => {
-	test.pass('-***- termsetting -***-')
+	test.pass('-***- common/termsetting -***-')
 	test.end()
 })
 
-const holder0 = d3s.select('body').append('div')
+tape.skip('menu', test => {})
 
-// testing special configurations, have to generate one pill instance in each test so pills are not reusable
-test_disablereplaceremove()
-test_usebinsless()
-
-// general testing that can share a pill
-test_menu()
-
-function test_disablereplaceremove() {
+tape('disable_ReplaceRemove', test => {
 	const pill = termsettingInit({
-		holder: holder0.append('div'),
+		holder: d3s.select('body').append('div'),
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		disable_ReplaceRemove: true,
@@ -46,16 +39,16 @@ function test_disablereplaceremove() {
 		q: { groupsetting: { inuse: false } }
 	})
 
-	// trigger click on pill
+	// console.log(pill.Inner)
+	// test against pill.Inner.dom
+	// test.equal(...)
+	test.pass('to do ...')
+	test.end()
+})
 
-	tape('disable_ReplaceRemove', test => {
-		// test if no Replace and Remove buttons in menu
-	})
-}
-
-function test_usebinsless() {
+tape('use_bins_less', test => {
 	const pill = termsettingInit({
-		holder: holder0.append('div'),
+		holder: d3s.select('body').append('div'),
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		use_bins_less: true,
@@ -77,11 +70,9 @@ function test_usebinsless() {
 		q: { groupsetting: { inuse: false } }
 	})
 
-	// trigger click on pill
-
-	tape('use_bins_less', test => {
-		// test to see
-	})
-}
-
-function test_menu() {}
+	// console.log(pill.Inner)
+	// test against pill.Inner.dom
+	// test.equal(...)
+	test.pass('to do ...')
+	test.end()
+})
