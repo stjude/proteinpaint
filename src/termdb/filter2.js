@@ -16,22 +16,16 @@ execution flow:
 */
 class TdbFilter {
 	constructor(opts) {
+		this.type = 'filter'
 		this.validateOpts(opts)
 		setRenderers(this)
 		this.categoryData = {}
 		this.initHolder()
-
-		this.api = {
-			usestate: true,
-			main: state => {
-				this.state = state
-				if (!this.pill) this.initPill()
-				this.pill.main()
-			}
-		}
-		if (opts.debug) this.api.Inner = this
+		this.api = rx.getComponentApi(this)
+		this.eventTypes = ['postInit', 'postRender']
 	}
 	validateOpts(o) {
+		// if (!('id' in o)) throw 'opts.id missing' // plot id?
 		if (!o.holder) throw 'opts.holder missing'
 		if (typeof o.dispatch != 'function') throw 'opts.dispath() is not a function'
 		this.opts = o
@@ -41,6 +35,10 @@ class TdbFilter {
 	getState(appState) {
 		return appState
 	}
+	main() {
+		if (!this.pill) this.initPill()
+		this.render()
+	}
 	initPill() {
 		this.pill = TVSInit({
 			genome: this.state.genome,
@@ -48,7 +46,6 @@ class TdbFilter {
 			holder: this.dom.pilldiv,
 			debug: this.opts.debug,
 			callback: tvslst => {
-				// term2 is {term,q} and can be null
 				this.opts.dispatch({
 					type: 'filter_add',
 					tvslst
