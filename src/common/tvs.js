@@ -41,14 +41,6 @@ class TVS {
 		return o
 	}
 
-	// getState(appState) {
-	// 	return {
-	// 		genome: appState.genome,
-	// 		dslabel: appState.dslabel,
-	// 		termfilter: appState.termfilter
-	// 	}
-	// }
-
 	async getCategories(term, lst) {
 		const obj = this.state
 		let tvslst_filter_str = false
@@ -85,19 +77,32 @@ exports.TVSInit = rx.getInitFxn(TVS)
 function setRenderers(self) {
 	self.initUI = function() {
 		// add new term
-		this.dom.holder
+		self.dom.addpilldiv = self.dom.holder
 			.append('div')
 			.attr('class', 'sja_filter_tag_btn add_term_btn')
 			.style('padding', '4px 6px 2px 6px')
 			.style('display', 'inline-block')
 			.style('margin-left', '7px')
 			.style('border-radius', '6px')
-			.style('background-color', '#4888BF')
-			.html('&#43;')
+			.style('color','#000')
+			.style('background-color', '#EEEEEE')
+			.html('+ Click to add')
 			.on('click', self.displayTreeMenu)
+
+		self.dom.pilldiv = self.dom.holder
 	}
 
 	self.updateUI = function() {
+
+		if (!self.termfilter.terms) {
+			// no term
+			self.dom.addpilldiv.style('display', 'block')
+			self.dom.pilldiv.style('display', 'none')
+			return
+		}
+		self.dom.addpilldiv.style('display', 'none')
+		self.dom.pilldiv.style('display', 'block')
+
 		const terms_div = self.dom.holder
 		const filters = terms_div.selectAll('.tvs_pill').data(self.termfilter.terms, d => d.term.id)
 		filters.exit().each(self.exitFilter)
@@ -105,7 +110,7 @@ function setRenderers(self) {
 		filters
 			.enter()
 			.append('div')
-			.attr('class', 'tvs_pill')
+			.attr('class', 'tvs_pill sja_filter_tag_btn')
 			.style('white-space', 'nowrap')
 			.style('display', 'inline-block')
 			.style('padding', '2px')
@@ -119,7 +124,7 @@ function setRenderers(self) {
 
 		const term_name_btn = one_term_div
 			.append('div')
-			.attr('class', 'sja_filter_tag_btn term_name_btn')
+			.attr('class', 'term_name_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '6px 0 0 6px')
 			.style('background-color', '#396C98')
@@ -128,7 +133,7 @@ function setRenderers(self) {
 			.style('font-size', '.8em')
 			.text(d => d.term.name)
 			.style('text-transform', 'uppercase')
-			.on('click', self.displayTreeMenu)
+			// .on('click', self.displayTreeMenu)
 
 		const value_btn = one_term_div
 			.append('div')
@@ -137,13 +142,12 @@ function setRenderers(self) {
 			.style('border-radius', '0 6px 6px 0')
 			.style('background-color', '#4888BF')
 			.style('padding', '8px 6px 4px 6px')
-			// .style('margin-left', '5px')
 			.style('font-size', '.8em')
 			.text(d => (d.ranges ? d.ranges[0].label : d.values[0].label))
 		// .style('text-transform', 'uppercase')
 		// .on('click', self.displayTreeMenu)
 
-		self.dom.holder.selectAll('.add_term_btn').style('display', 'none')
+		// self.dom.holder.selectAll('.add_term_btn').style('display', 'none')
 
 		// self.addRelationBtn(term, one_term_div)
 
