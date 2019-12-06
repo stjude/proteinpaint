@@ -23,7 +23,6 @@ class Divide {
 		this.initUI()
 		this.usedTerms = [] // array of {term, q}
 		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender']
 	}
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing' // plot id?

@@ -27,8 +27,6 @@ class Overlay {
 		this.initUI()
 		this.usedTerms = [] // array of {term, q}
 		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender']
-		if (opts.debug) this.api.Inner = this
 	}
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing' // plot id?
@@ -125,13 +123,17 @@ function setRenderers(self) {
 			if (plot.term2.q.bar_by_grade) {
 				// (3)
 				return self.dom.menuBtn.html(
-					'Max grade <span style="font-size:.7em">' + plot.term.term.name + '</span> &#9660;'
+					'Max grade <span style="font-size:.7em;text-transform:uppercase;opacity:.6">' +
+						plot.term.term.name +
+						'</span> &#9660;'
 				)
 			}
 			if (plot.term2.q.bar_by_children) {
 				// (4)
 				return self.dom.menuBtn.html(
-					'Sub-conditions <span style="font-size:.7em">' + plot.term.term.name + '</span> &#9660;'
+					'Sub-conditions <span style="font-size:.7em;text-transform:uppercase;opacity:.6">' +
+						plot.term.term.name +
+						'</span> &#9660;'
 				)
 			}
 			return self.dom.menuBtn.html('ERROR: unknown type of overlay &#9660;')
