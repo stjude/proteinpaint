@@ -151,7 +151,9 @@ class TdbBarchart {
 		this.processedExcludes.push(refs)
 		const term = this.config.term
 		this.settings.exclude.cols = term.q.hiddenValues
-			? Object.keys(term.q.hiddenValues).map(val => (term.term.values ? term.term.values[val].label : val))
+			? Object.keys(term.q.hiddenValues).map(val =>
+					term.term.values && val in term.term.values ? term.term.values[val].label : val
+			  )
 			: []
 		const term2 = this.config.term2
 		this.settings.exclude.rows =
@@ -295,7 +297,7 @@ class TdbBarchart {
 			const b = t1.term.graph && t1.term.graph.barchart ? t1.term.graph.barchart : null
 			const reducer = (sum, b) => sum + b.total
 			const items = s.exclude.cols
-				.filter(collabel => s.cols.includes(collabel) && (!t1.term.values || collabel in t1.term.values))
+				.filter(collabel => s.cols.includes(collabel)) // && (!t1.term.values || collabel in t1.term.values))
 				.map(collabel => {
 					const filter = c => c.seriesId == collabel
 					const total =
@@ -304,7 +306,7 @@ class TdbBarchart {
 							: this.currServerData.charts.reduce((sum, chart) => {
 									return sum + chart.serieses.filter(filter).reduce(reducer, 0)
 							  }, 0)
-					const label = t1.values && collabel in t1.values ? t1.values[collabel].label : collabel
+					const label = t1.term.values && collabel in t1.term.values ? t1.values[collabel].label : collabel
 					const ntotal = total ? ', n=' + total : ''
 
 					return {

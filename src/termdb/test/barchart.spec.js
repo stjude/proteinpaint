@@ -246,7 +246,43 @@ tape('series visibility', function(test) {
 		const excluded = bar.settings.exclude.cols
 		test.true(
 			excluded.length > 1 && excluded.length == bar.settings.unannotatedLabels.term1.length,
-			'should have the correct number of hidden bars'
+			'should have the correct number of hidden bars by unannotatedLabels'
+		)
+	}
+
+	const conditionHiddenValues = { '1: Mild': 1 }
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Outcomes', 'CTCAE Graded Events', 'Cardiovascular System', 'Arrhythmias'],
+				visiblePlotIds: ['Arrhythmias'],
+				plots: {
+					Arrhythmias: {
+						term: {
+							id: 'Arrhythmias',
+							q: {
+								hiddenValues: conditionHiddenValues
+							}
+						},
+						settings: { currViews: ['barchart'] }
+					}
+				}
+			}
+		},
+		plot: {
+			callbacks: {
+				'postRender.test': testConditionHiddenValues
+			}
+		}
+	})
+
+	function testConditionHiddenValues(plot) {
+		return
+		const bar = plot.Inner.components.barchart.Inner
+		const excluded = bar.settings.exclude.cols
+		test.true(
+			excluded.length == bar.settings.unannotatedLabels.term1.length + Object.keys(hiddenValues).length,
+			'should have the correct number of hidden bars by q.hiddenValues'
 		)
 	}
 })
