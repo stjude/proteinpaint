@@ -29,7 +29,7 @@ function validate_bins(binconfig) {
 				if (b.stop_percentile <= 0 || b.stop_percentile >= 100) throw 'first_bin.stop_percentile out of bound (0-100)'
 			} else {
 				if (!Number.isFinite(b.stop))
-					throw 'first_bin.stop not a number when is startunbounded and stop_percentile is not set'
+					throw 'first_bin.stop should be a number when startunbounded and stop_percentile is not set'
 			}
 		} else {
 			if (b.start_percentile) {

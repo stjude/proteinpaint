@@ -289,11 +289,12 @@ function getPj(q, inReqs, data, tdb, ds) {
 			},
 			q() {
 				return inReqs.map(d => {
+					if (d.binconfig) return d.binconfig
 					const q = {}
 					for (const key in d.q) {
 						if (key != 'index') q[key] = d.q[key]
 					}
-					if (d.binconfig) q.binconfig = d.binconfig
+					//if (d.binconfig) q.binconfig = d.binconfig
 					return q
 				})
 			}
@@ -341,8 +342,12 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 		const term = termid ? tdb.termjson.map.get(termid) : null
 		if ((!termid || term.iscategorical) && termid in inReq.joinFxns) continue
 
-		inReq.unannotatedValues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
-		inReq.unannotatedLabels = term.values ? inReq.unannotatedValues.map(key => term.values[key].label) : []
+		inReq.unannotatedValues = term.values
+			? Object.keys(term.values).filter(key => key in term.values && term.values[key].uncomputable)
+			: []
+		inReq.unannotatedLabels = term.values
+			? inReq.unannotatedValues.map(key => key in term.values && term.values[key].label)
+			: []
 
 		if (!term) throw `Unknown ${termnum}="${q[termnum]}"`
 		if (term.iscategorical) {
@@ -354,21 +359,26 @@ function setValFxns(q, inReqs, ds, tdb, data0) {
 			if (!tdb.patient_condition) throw 'missing termdb patient_condition'
 			if (!tdb.patient_condition.events_key) throw 'missing termdb patient_condition.events_key'
 			inReq.orderedLabels = term.grades ? term.grades : [0, 1, 2, 3, 4, 5, 9] // hardcoded default order
-			set_condition_fxn(termid, term.graph.barchart, tdb, inReq, i)
+			set_condition_fxn(termid, term.values, tdb, inReq, i)
 		} else {
 			throw 'unable to handle request, unknown term type'
 		}
 	}
 }
 
-function set_condition_fxn(termid, b, tdb, inReq, index) {
+function set_condition_fxn(termid, values, tdb, inReq, index) {
 	const q = inReq.q
 	const precomputedKey = getPrecomputedKey(q)
 
 	inReq.joinFxns[termid] = row => {
 		if (!(termid in row) || !(precomputedKey in row[termid])) return []
 		const value = row[termid][precomputedKey]
-		return Array.isArray(value) ? value : [value]
+		if (q.bar_by_grade) {
+			const grades = Array.isArray(value) ? value : [value]
+			return grades.map(grade => values[grade].label)
+		} else {
+			return Array.isArray(value) ? value : [value]
+		}
 	}
 
 	inReq.un
@@ -397,7 +407,7 @@ function get_numeric_bin_name(term_q, termid, term, ds, termnum, inReq, data0) {
 	if (!data0.refs.bins) throw 'missing bins array in server response of /termdb-barsql'
 	const index = +termnum.slice(-1)
 	const bins = data0.refs.bins[index]
-	const binconfig = data0.refs.q[index].binconfig
+	const binconfig = data0.refs.q[index] //.binconfig
 	inReq.bins = bins
 	inReq.binconfig = binconfig
 	inReq.orderedLabels = bins.map(d => d.label)

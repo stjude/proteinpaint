@@ -38,7 +38,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape.only('filter term-value button', function(test) {
+tape('filter term-value button', function(test) {
 	test.timeoutAfter(2000)
 	// test.plan(6)
 
@@ -82,9 +82,7 @@ tape.only('filter term-value button', function(test) {
 			'should have 1 tvs filter'
 		)
 		test.equal(
-			filter.Inner.dom.holder
-				.selectAll('.value_btn')
-				.html(),
+			filter.Inner.dom.holder.selectAll('.value_btn').html(),
 			filter.Inner.state.termfilter.terms[0].values[0].label,
 			'should change value from data'
 		)

@@ -47,79 +47,80 @@
   but could be more easily inspected via the Network -> Preview tab of the
   developer tools.
 */
-const serverconfig = require("../serverconfig")
-const express=require('express')
+const serverconfig = require('../serverconfig')
+const express = require('express')
 const bodyParser = require('body-parser')
-const compareResponseData = require("./termdb/back.sql.helpers").compareResponseData
+const compareResponseData = require('./termdb/back.sql.helpers').compareResponseData
 
 /**************** 
   Set up server
 *****************/
 
-const app=express()
-app.use( bodyParser.json({}) )
-app.use( bodyParser.text({limit:'1mb'}) )
-app.use( bodyParser.urlencoded({ extended: true } )) 
-app.use((req, res, next)=>{
-  res.header("Access-Control-Allow-Origin", "*")
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
-  next()
+const app = express()
+app.use(bodyParser.json({}))
+app.use(bodyParser.text({ limit: '1mb' }))
+app.use(bodyParser.urlencoded({ extended: true }))
+app.use((req, res, next) => {
+	res.header('Access-Control-Allow-Origin', '*')
+	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+	next()
 })
-app.get('/termdb-testui', handle_testui_request )
-app.get('/termdb-barchart', handle_barchart_request )
+app.get('/termdb-testui', handle_testui_request)
+app.get('/termdb-barchart', handle_barchart_request)
 
 const port = serverconfig.testserverport || 8999
 app.listen(port)
-console.log('STANDBY AT PORT '+port)
-
+console.log('STANDBY AT PORT ' + port)
 
 /***********************
   handle server request
 ************************/
 
 async function handle_barchart_request(req, res) {
-  const q = req.query
-  if (!q || !Object.keys(q).length) res.send(getHtml()) 
-  for(const i of [0,1,2]) {
-    const termnum_q = 'term' + i +'_q'
-    if (q[termnum_q]) {
-      try {
-        q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
-      } catch(e) {
-        app.log(q)
-        res.send({error: (e.message || e)})
-        if(e.stack) console.log(e.stack)
-      }
-    }
-  }
-  if (q.tvslst) {
-    try {
-      q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
-    } catch(e) {
-      app.log(q)
-      res.send({error: (e.message || e)})
-      if(e.stack) console.log(e.stack)
-    }
-  }
-  console.log(q)
-  compareResponseData(test(res, q), q, "WEB-TEST")
+	const q = req.query
+	if (!q || !Object.keys(q).length) {
+		res.send('Empty URL query parameters') //getHtml())
+	}
+	for (const i of [0, 1, 2]) {
+		const termnum_q = 'term' + i + '_q'
+		if (q[termnum_q]) {
+			try {
+				q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
+			} catch (e) {
+				app.log(q)
+				res.send({ error: e.message || e })
+				if (e.stack) console.log(e.stack)
+			}
+		}
+	}
+	if (q.tvslst) {
+		try {
+			q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
+		} catch (e) {
+			app.log(q)
+			res.send({ error: e.message || e })
+			if (e.stack) console.log(e.stack)
+		}
+	}
+	console.log(q)
+	compareResponseData(test(res, q), q, 'WEB-TEST')
 }
 
 function test(res, q) {
-  return {
-    fail(error) {
-      res.send({error})
-    },
-    deepEqual(actual, expected, result) {
-      const diffStr = result.diffStr
-      delete result.diffStr
-      res.send({diff: actual, diffStr, result, q})
-    }
-  }
+	return {
+		fail(error) {
+			res.send({ error })
+		},
+		deepEqual(actual, expected, result) {
+			const diffStr = result.diffStr
+			delete result.diffStr
+			res.send({ diff: actual, diffStr, result, q })
+		}
+	}
 }
 
 function handle_testui_request(req, res) {
-  res.send(`<html>
+	res.send(`<html>
 <body style='font-family: Arial, Helvetica, san-serif;'>
 <h3>Test UI</h3>
 <p>This user interface helps troubleshoot failing tests.</p>

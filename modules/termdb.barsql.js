@@ -188,7 +188,7 @@ function getPj(q, data, tdb, ds) {
 						row[d.key] = genotype
 						row[d.val] = genotype
 					} else if (d.term.iscondition) {
-						row[d.key] = d.term.values[row[d.key]].label
+						row[d.key] = d.q.bar_by_grade && row[d.key] in d.term.values ? d.term.values[row[d.key]].label : row[d.key]
 						row[d.val] = row[d.key]
 					} else if (d.isAnnoVal(row[d.val])) {
 						row[d.nval] = row[d.val]
