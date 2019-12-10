@@ -160,11 +160,7 @@ function setScaleOpts(opts) {
 	self.radio = initRadioInputs({
 		name: 'pp-termdb-scale-unit',
 		holder: self.dom.inputTd,
-		options: [
-			{ label: 'Absolute', value: 'abs' },
-			{ label: 'Log', value: 'log' },
-			{ label: 'Proportion', value: 'pct' }
-		],
+		options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }, { label: 'Proportion', value: 'pct' }],
 		listeners: {
 			input(d) {
 				opts.dispatch({
