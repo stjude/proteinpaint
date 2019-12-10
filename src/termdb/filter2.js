@@ -45,11 +45,8 @@ class TdbFilter {
 			dslabel: this.state.dslabel,
 			holder: this.dom.pilldiv,
 			debug: this.opts.debug,
-			callback: tvslst => {
-				this.opts.dispatch({
-					type: 'filter_add',
-					tvslst
-				})
+			callback: data => {
+				this.opts.dispatch(data)
 			}
 		})
 	}

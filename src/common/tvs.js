@@ -84,7 +84,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('margin-left', '7px')
 			.style('border-radius', '6px')
-			.style('color','#000')
+			.style('color', '#000')
 			.style('background-color', '#EEEEEE')
 			.html('+ Click to add')
 			.on('click', self.displayTreeMenu)
@@ -93,20 +93,19 @@ function setRenderers(self) {
 	}
 
 	self.updateUI = function() {
-
-		if (!self.termfilter.terms) {
+		if (!self.termfilter.terms.length) {
 			// no term
-			self.dom.addpilldiv.style('display', 'block')
+			self.dom.addpilldiv.style('display', 'inline-block')
 			self.dom.pilldiv.style('display', 'none')
-			return
+		} else {
+			self.dom.addpilldiv.style('display', 'none')
+			self.dom.pilldiv.style('display', 'inline-block')
 		}
-		self.dom.addpilldiv.style('display', 'none')
-		self.dom.pilldiv.style('display', 'block')
 
 		const terms_div = self.dom.holder
 		const filters = terms_div.selectAll('.tvs_pill').data(self.termfilter.terms, d => d.term.id)
-		filters.exit().each(self.exitFilter)
-		filters.each(self.updateFilter)
+		filters.exit().each(self.exitPill)
+		filters.each(self.updatePill)
 		filters
 			.enter()
 			.append('div')
@@ -116,10 +115,10 @@ function setRenderers(self) {
 			.style('padding', '2px')
 			.transition()
 			.duration(200)
-			.each(self.addFilter)
+			.each(self.enterPill)
 	}
 
-	self.addFilter = async function() {
+	self.enterPill = async function() {
 		const one_term_div = select(this)
 
 		const term_name_btn = one_term_div
@@ -133,154 +132,101 @@ function setRenderers(self) {
 			.style('font-size', '.8em')
 			.text(d => d.term.name)
 			.style('text-transform', 'uppercase')
-			// .on('click', self.displayTreeMenu)
+			.on('click', self.showMenu)
 
-		const value_btn = one_term_div
-			.append('div')
-			.attr('class', 'sja_filter_tag_btn value_btn')
-			.style('display', 'inline-block')
-			.style('border-radius', '0 6px 6px 0')
-			.style('background-color', '#4888BF')
-			.style('padding', '8px 6px 4px 6px')
-			.style('font-size', '.8em')
-			.text(d => (d.ranges ? d.ranges[0].label : d.values[0].label))
-		// .style('text-transform', 'uppercase')
-		// .on('click', self.displayTreeMenu)
-
-		// self.dom.holder.selectAll('.add_term_btn').style('display', 'none')
-
-		// self.addRelationBtn(term, one_term_div)
-
-		// //value btns for each term type
-		// const valueAdderFxn = term.term.iscategorical
-		// 	? self.addCategoryValues
-		// 	: term.term.isfloat || term.term.isinteger
-		// 	? self.addNumericValues
-		// 	: term.term.iscondition && !term.grade_and_child
-		// 	? self.addConditionValues
-		// 	: self.addConditionGradeChild
-
-		// const valueData = term.term.iscategorical
-		// 	? term.values
-		// 	: term.term.isfloat || term.term.isinteger
-		// 	? term.ranges
-		// 	: term.term.iscondition && !term.grade_and_child
-		// 	? term.values
-		// 	: term.grade_and_child
-
-		// let lst
-
-		// lst = term.bar_by_grade ? ['bar_by_grade=1'] : term.bar_by_children ? ['bar_by_children=1'] : []
-
-		// lst.push(
-		// 	term.value_by_max_grade
-		// 		? 'value_by_max_grade=1'
-		// 		: term.value_by_most_recent
-		// 		? 'value_by_most_recent=1'
-		// 		: term.value_by_computable_grade
-		// 		? 'value_by_computable_grade=1'
-		// 		: null
-		// )
-
-		// // query db for list of categories and count
-		// self.categoryData[term.term.id] = await self.getCategories(term, lst)
-
-		// one_term_div
-		// 	.selectAll('.value_btn')
-		// 	.data(valueData, d =>
-		// 		!d ? '---' : d.label ? d.label : d.start ? d.start : d.stop ? d.stop : d.grade ? d.grade : d
-		// 	)
-		// 	.enter()
-		// 	.append('div')
-		// 	.attr('class', 'value_btn sja_filter_tag_btn')
-		// 	.each(valueAdderFxn)
-
-		// // button with 'x' to remove term2
-		// one_term_div.selectAll('.term_remove_btn').remove()
-		// one_term_div
-		// 	.append('div')
-		// 	.attr('class', 'sja_filter_tag_btn term_remove_btn')
-		// 	.style('padding', '4px 6px 2px 4px')
-		// 	.style('border-radius', '0 6px 6px 0')
-		// 	.style('background-color', '#4888BF')
-		// 	.html('&#215;')
-		// 	.on('click', self.removeFilter)
+		self.updatePill.call(this)
 	}
 
-	//term-value relation button
-	self.addRelationBtn = function(term, one_term_div) {
-		if (term.term.iscategorical) {
-			const [condition_select, condition_btn] = dom.make_select_btn_pair(one_term_div)
+	self.showMenu = d => {
+		const term = d.term
+		self.dom.tip.clear().showunder(self.dom.holder.node())
 
-			condition_select
-				.append('option')
-				.attr('value', 'is')
-				.text('IS')
+		const term_option_div = self.dom.tip.d.append('div')
+		const term_edit_div = self.dom.tip.d.append('div').style('text-align', 'center')
 
-			condition_select
-				.append('option')
-				.attr('value', 'is_not')
-				.text('IS NOT')
+		const optsFxn = term.iscategorical
+			? self.showGrpOpts
+			: term.isfloat || term.isinteger
+			? self.showNumOpts
+			: term.iscondition
+			? self.showConditionOpts
+			: null
 
-			condition_select.node().value = term.isnot ? 'is_not' : 'is'
+		term_option_div
+			.append('div')
+			.style('margin', '5px 2px')
+			.style('text-align', 'center')
 
-			condition_select.classed('condition_select', true).on('change', self.filterNegate)
+		optsFxn(term_option_div)
 
-			condition_btn
-				.attr('class', 'sja_filter_tag_btn condition_btn')
-				.style('font-size', '.7em')
-				.style('padding', '7px 6px 5px 6px')
-				.text(d => (d.isnot ? 'IS NOT' : 'IS'))
-				.style('background-color', d => (d.isnot ? '#511e78' : '#015051'))
-
-			// limit dropdown menu width to width of btn (to avoid overflow)
-			condition_select.style('width', condition_btn.node().offsetWidth + 'px')
-		} else {
-			const condition_btn = one_term_div
+		if (!self.opts.disable_ReplaceRemove) {
+			term_edit_div
 				.append('div')
-				.attr('class', 'sja_filter_tag_btn condition_btn')
-				.style('font-size', '.7em')
-				.style('background-color', '#015051')
-				.style('pointer-events', 'none')
-				.style('padding', '8px 6px 4px 6px')
-				.text('IS')
+				.attr('class', 'replace_btn sja_filter_tag_btn')
+				.style('display', 'inline-block')
+				.style('border-radius', '13px')
+				.style('background-color', '#74b9ff')
+				.style('padding', '7px 15px')
+				.style('margin', '5px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.text('Replace')
+				.on('click', self.displayTreeMenu)
+			term_edit_div
+				.append('div')
+				.attr('class', 'remove_btn sja_filter_tag_btn')
+				.style('display', 'inline-block')
+				.style('border-radius', '13px')
+				.style('background-color', '#ff7675')
+				.style('padding', '7px 15px')
+				.style('margin', '5px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.text('Remove')
+				// .on('click', self.removeTerm)
+				.on('click', () => {
+					self.dom.tip.hide()
+					self.removeTerm(d)
+				})
 		}
 	}
 
-	self.updateFilter = async function(term) {
-		const one_term_div = select(this).datum(term)
+	self.showGrpOpts = async function(div) {}
 
-		one_term_div.selectAll('.term_name_btn').text(term.term.name)
+	self.removeTerm = term => {
+		const termfilter = self.termfilter.terms.filter(d => d.term.id != term.term.id)
+		self.opts.callback({ type: 'filter_remove', termId: term.id })
+	}
 
-		//term-value relation button
-		const condition_select = one_term_div.selectAll('.condition_select')
-		if (term.term.iscategorical) condition_select.node().value = term.isnot ? 'is_not' : 'is'
+	self.updatePill = async function() {
+		const one_term_div = select(this)
+		const term = one_term_div.datum()
 
-		const condition_btn = one_term_div
-			.selectAll('.condition_btn')
-			.text(term.isnot ? 'IS NOT' : 'IS')
-			.style('background-color', term.isnot ? '#511e78' : '#015051')
+		const value_text = self.get_value_text(term)
 
-		one_term_div.selectAll('.condition_select').style('width', condition_btn.node().offsetWidth + 'px')
+		const value_btns = one_term_div.selectAll('.value_btn').data(value_text ? [{ txt: value_text }] : [], d => d.txt)
 
-		let lst
+		value_btns.exit().each(self.removeValueBtn)
 
-		lst = term.bar_by_grade ? ['bar_by_grade=1'] : term.bar_by_children ? ['bar_by_children=1'] : []
+		value_btns
+			.enter()
+			.append('div')
+			.attr('class', 'value_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
+			.style('padding', '6px 6px 3px 6px')
+			.style('border-radius', '0 6px 6px 0')
+			.style('background', '#4888BF')
+			.style('color', 'white')
+			.html(d => d.txt)
+			.style('opacity', 0)
+			.transition()
+			.duration(200)
+			.style('opacity', 1)
+	}
 
-		lst.push(
-			term.value_by_max_grade
-				? 'value_by_max_grade=1'
-				: term.value_by_most_recent
-				? 'value_by_most_recent=1'
-				: term.value_by_computable_grade
-				? 'value_by_computable_grade=1'
-				: null
-		)
-
-		const data = await self.getCategories(term, lst)
-
-		self.categoryData[term.term.id] = data
-
+	self.get_value_text = function(term) {
 		const valueData = term.term.iscategorical
 			? term.values
 			: term.term.isfloat || term.term.isinteger
@@ -289,53 +235,22 @@ function setRenderers(self) {
 			? term.values
 			: term.grade_and_child
 
-		const value_btns = one_term_div
-			.selectAll('.value_btn')
-			.data(valueData, d =>
-				d.key ? d.key : d.label ? d.label : d.start ? d.start : d.stop ? d.stop : d.grade ? d.grade : d
-			)
-
-		value_btns.exit().each(self.removeValueBtn)
-
-		const valueUpdateFxn = term.term.iscategorical
-			? self.updateCatValue
-			: term.term.isfloat || term.term.isinteger
-			? self.updateNumericValue
-			: await self.updateConditionValues
-
-		value_btns
-			.transition()
-			.duration(200)
-			.each(valueUpdateFxn)
-
-		const valueAdderFxn = term.term.iscategorical
-			? self.addCategoryValues
-			: term.term.isfloat || term.term.isinteger
-			? self.addNumericValues
-			: await self.addConditionValues
-
-		value_btns
-			.enter()
-			.append('div')
-			.attr('class', 'value_btn sja_filter_tag_btn')
-			.style('margin-right', '1px')
-			// .style('position', 'absolute')
-			.each(valueAdderFxn)
-
-		// button with 'x' to remove term2
-		one_term_div.selectAll('.term_remove_btn').remove()
-		one_term_div
-			.append('div')
-			.attr('class', 'sja_filter_tag_btn term_remove_btn')
-			.style('margin-left', '1px')
-			.style('padding', '4px 6px 2px 4px')
-			.style('border-radius', '0 6px 6px 0')
-			.style('background-color', '#4888BF')
-			.html('&#215;')
-			.on('click', self.removeFilter)
+		if (term.term.iscategorical) {
+			if (term.values.length == 1) return term.values[0].label
+			else return term.values.length + ' Groups'
+		} else if (term.term.isfloat || term.term.isinteger) {
+			//TODO
+		} else if (term.bar_by_grade || term.bar_by_children) {
+			//TODO
+		} else if (term.grade_and_child) {
+			//TODO
+		} else {
+			return 'Unknown term value setting'
+		}
+		return null
 	}
 
-	self.exitFilter = async function(term) {
+	self.exitPill = async function(term) {
 		select(this)
 			.style('opacity', 1)
 			.transition()
@@ -618,9 +533,10 @@ function setInteractivity(self) {
 			},
 			barchart: {
 				bar_click_override: tvslst => {
+					self.dom.tip.hide()
 					self.opts.callback({
-						// type: 'filter_add',
-						tvslst
+						type: 'filter_replace',
+						term: tvslst[0]
 					})
 				}
 			}
