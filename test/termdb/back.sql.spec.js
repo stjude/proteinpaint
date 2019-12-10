@@ -28,7 +28,7 @@ tape('\n', function(test) {
 tape('filters applied to categorical term', function(test) {
 	// plan will track the number of expected tests,
 	// which helps with the async tests
-	test.timeoutAfter(5000)
+	test.timeoutAfter(6000)
 	test.plan(12)
 
 	compareResponseData(

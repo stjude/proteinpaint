@@ -688,7 +688,7 @@ returns { sql, tablename, name2bin, bins }
 */
 function makesql_numericBinCTE(term, q, ds, index = '', filter) {
 	const bins = get_bins(q, term, ds, index, filter)
-	console.log('last2', bins[bins.length - 2], 'last1', bins[bins.length - 1])
+	//console.log('last2', bins[bins.length - 2], 'last1', bins[bins.length - 1])
 	const bin_def_lst = []
 	const name2bin = new Map() // k: name str, v: bin{}
 	const bin_size = q.bin_size

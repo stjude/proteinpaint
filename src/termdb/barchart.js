@@ -306,7 +306,7 @@ class TdbBarchart {
 							: this.currServerData.charts.reduce((sum, chart) => {
 									return sum + chart.serieses.filter(filter).reduce(reducer, 0)
 							  }, 0)
-					const label = t1.term.values && collabel in t1.term.values ? t1.values[collabel].label : collabel
+					const label = t1.term.values && collabel in t1.term.values ? t1.term.values[collabel].label : collabel
 					const ntotal = total ? ', n=' + total : ''
 
 					return {
@@ -345,7 +345,7 @@ class TdbBarchart {
 					.map(d => {
 						const total = this.totalsByDataId[d]
 						const ntotal = total ? ', n=' + total : ''
-						const label = t2.values && d in t2.values ? t2.values[d].label : d
+						const label = t2.term.values && d in t2.term.values ? t2.term.values[d].label : d
 						return {
 							dataId: d,
 							text: label + ntotal,

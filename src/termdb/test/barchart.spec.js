@@ -300,7 +300,7 @@ tape('click to add numeric, condition term filter', function(test) {
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {
-						term: { id: 'agedx', term: termjson['agedx'] },
+						term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.less },
 						term2: {
 							id: 'Arrhythmias',
 							term: termjson['Arrhythmias']
@@ -365,6 +365,10 @@ tape('click to add numeric, condition term filter', function(test) {
 		)
 		// config.term2.q is frozen
 		const q = JSON.parse(JSON.stringify(config.term2.q))
+		const t2ValKey =
+			config.term2 &&
+			config.term2.term.values &&
+			Object.keys(config.term2.term.values).filter(key => config.term2.term.values[key].label == clickedData.dataId)[0]
 		delete q.hiddenValues
 		test.deepEqual(
 			termfilter.terms[1],
@@ -373,8 +377,11 @@ tape('click to add numeric, condition term filter', function(test) {
 					term: config.term2.term,
 					values: [
 						{
-							key: clickedData.dataId,
-							label: config.term2.term.values[clickedData.dataId].label
+							key: t2ValKey !== undefined ? t2ValKey : clickedData.dataId,
+							label:
+								clickedData.dataId in config.term2.term.values
+									? config.term2.term.values[clickedData.dataId].label
+									: clickedData.dataId
 						}
 					]
 				},

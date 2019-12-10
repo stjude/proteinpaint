@@ -405,11 +405,18 @@ function getTermValues(d, self) {
 
 	const termValues = []
 	const t1 = self.config.term
+	const t1ValKey =
+		t1.term.values && Object.keys(t1.term.values).filter(key => t1.term.values[key].label === d.seriesId)[0]
+	const t1ValId = t1.term.values && t1ValKey in t1.term.values ? t1ValKey : d.seriesId
 	const t2 = self.config.term2
+	const t2ValKey =
+		t2 && t2.term.values && Object.keys(t2.term.values).filter(key => t2.term.values[key].label === d.dataId)[0]
+	const t2ValId = t2.term.values && t2ValKey in t2.term.values ? t2ValKey : d.dataId
+
 	for (const term of [t1, t2]) {
 		if (!term) continue
 		const i = term == t1 ? 1 : 2
-		const key = term == t1 ? d.seriesId : d.dataId
+		const key = term == t1 ? t1ValId : t2ValId
 		// const q = term ? term.q : {}
 		const q = self.currServerData.refs.q[i]
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
