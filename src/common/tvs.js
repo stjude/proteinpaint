@@ -42,20 +42,19 @@ class TVS {
 	}
 
 	async getCategories(term, lst) {
-		const obj = this.state
 		let tvslst_filter_str = false
 
-		if (obj.tvslst_filter) {
-			tvslst_filter_str = encodeURIComponent(JSON.stringify(to_parameter(obj.tvslst_filter)))
+		if (this.termfilter) {
+			tvslst_filter_str = encodeURIComponent(JSON.stringify(this.termfilter))
 		}
 
 		const args = [
 			'genome=' +
-				obj.genome +
+				this.genome +
 				'&dslabel=' +
-				obj.dslabel +
+				this.dslabel +
 				'&getcategories=1&tid=' +
-				term.term.id +
+				term.id +
 				'&tvslst=' +
 				tvslst_filter_str
 		]
@@ -63,7 +62,7 @@ class TVS {
 
 		let data
 		try {
-			data = await dofetch2('/termdb?' + args.join('&'), {}, obj.fetchOpts)
+			data = await dofetch2('/termdb?' + args.join('&'), {})
 			if (data.error) throw data.error
 		} catch (e) {
 			window.alert(e.message || e)
@@ -120,19 +119,20 @@ function setRenderers(self) {
 
 	self.enterPill = async function() {
 		const one_term_div = select(this)
+			.style('font-size', '.9em')
+			.on('click', self.showMenu)
 
-		const term_name_btn = one_term_div
+		//term name div
+		one_term_div
 			.append('div')
 			.attr('class', 'term_name_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '6px 0 0 6px')
 			.style('background-color', '#396C98')
-			.style('padding', '8px 6px 4px 6px')
+			.style('padding', '6px 6px 3px 6px')
 			.style('margin-left', '5px')
-			.style('font-size', '.8em')
 			.text(d => d.term.name)
 			.style('text-transform', 'uppercase')
-			.on('click', self.showMenu)
 
 		self.updatePill.call(this)
 	}
@@ -145,7 +145,7 @@ function setRenderers(self) {
 		const term_edit_div = self.dom.tip.d.append('div').style('text-align', 'center')
 
 		const optsFxn = term.iscategorical
-			? self.showGrpOpts
+			? self.showCatOpts
 			: term.isfloat || term.isinteger
 			? self.showNumOpts
 			: term.iscondition
@@ -157,7 +157,7 @@ function setRenderers(self) {
 			.style('margin', '5px 2px')
 			.style('text-align', 'center')
 
-		optsFxn(term_option_div)
+		optsFxn(term_option_div, d)
 
 		if (!self.opts.disable_ReplaceRemove) {
 			term_edit_div
@@ -193,7 +193,118 @@ function setRenderers(self) {
 		}
 	}
 
-	self.showGrpOpts = async function(div) {}
+	self.showCatOpts = async function(div, term) {
+		let lst
+		lst = term.bar_by_grade ? ['bar_by_grade=1'] : term.bar_by_children ? ['bar_by_children=1'] : []
+
+		lst.push(
+			term.value_by_max_grade
+				? 'value_by_max_grade=1'
+				: term.value_by_most_recent
+				? 'value_by_most_recent=1'
+				: term.value_by_computable_grade
+				? 'value_by_computable_grade=1'
+				: null
+		)
+
+		const data = await self.getCategories(term.term, lst)
+		const sortedVals = data.lst.sort((a, b) => {
+			return b.samplecount - a.samplecount
+		})
+
+		// 'Apply' button
+		div
+			.append('div')
+			.style('text-align', 'center')
+			.append('div')
+			.attr('class', 'apply_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
+			.style('border-radius', '10px')
+			.style('background-color', '#74b9ff')
+			.style('padding', '7px 6px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('Apply')
+			.on('click', () => {
+				//update term values by ckeckbox values
+				let checked_vals = []
+				values_table
+					.selectAll('.value_checkbox')
+					.filter(function(d) {
+						return this.checked == true
+					})
+					.each(function(d) {
+						checked_vals.push(this.value)
+					})
+
+				const new_vals = []
+
+				for (const [i, v] of sortedVals.entries()) {
+					for (const [j, sv] of checked_vals.entries()) {
+						if (v.key == sv) new_vals.push(v)
+					}
+				}
+				const new_term = JSON.parse(JSON.stringify(term))
+				new_term.values = new_vals
+				self.dom.tip.hide()
+				self.opts.callback({
+					type: 'filter_replace',
+					term: new_term
+				})
+			})
+
+		const values_table = div.append('table').style('border-collapse', 'collapse')
+
+		// this row will have group names/number
+		const all_checkbox_tr = values_table.append('tr').style('height', '20px')
+
+		const all_checkbox = all_checkbox_tr
+			.append('td')
+			.style('padding', '2px 5px')
+			.append('input')
+			.attr('type', 'checkbox')
+			.style('position', 'relative')
+			.style('vertical-align', 'middle')
+			.style('bottom', '3px')
+			.on('change', () => {
+				values_table.selectAll('.value_checkbox').property('checked', all_checkbox.node().checked)
+			})
+
+		all_checkbox_tr
+			.append('td')
+			.style('padding', '2px 5px')
+			.style('font-size', '.8em')
+			.style('font-weight', 'bold')
+			.html('Check/ Uncheck All')
+
+		for (const [i, v] of sortedVals.entries()) {
+			const value_tr = values_table.append('tr').style('height', '15px')
+
+			value_tr
+				.append('td')
+				.style('padding', '2px 5px')
+				.append('input')
+				.attr('class', 'value_checkbox')
+				.attr('type', 'checkbox')
+				.attr('value', v.key)
+				.style('position', 'relative')
+				.style('vertical-align', 'middle')
+				.style('bottom', '3px')
+				.property('checked', () => {
+					if (term.values.map(a => a.label).includes(v.label)) {
+						return true
+					}
+				})
+
+			value_tr
+				.append('td')
+				.style('padding', '2px 5px')
+				.style('font-size', '.8em')
+				.html(v.label + ' (n=' + v.samplecount + ')')
+		}
+	}
 
 	self.removeTerm = term => {
 		const termfilter = self.termfilter.terms.filter(d => d.term.id != term.term.id)

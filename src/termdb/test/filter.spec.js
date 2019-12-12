@@ -38,9 +38,9 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('filter term-value button', function(test) {
-	test.timeoutAfter(2000)
-	// test.plan(6)
+tape('tvs filter: caterogical term', function(test) {
+	test.timeoutAfter(4000)
+	test.plan(8)
 
 	const termfilter = {
 		show_top_ui: true,
@@ -70,8 +70,10 @@ tape('filter term-value button', function(test) {
 			.rideInit({ arg: filter })
 			.run(testFilterDisplay, 200)
 			.change({ bus: filter, eventType: 'postRender.test' })
-			// .use(triggerAddFilter)
-			// .to(testAddFilter)
+			.run(triggerBluePill)
+			.run(testGrpMenu, 500)
+			.use(triggerAddFilter)
+			.to(testAddFilter, { wait: 800 })
 			.done(test)
 	}
 
@@ -88,17 +90,45 @@ tape('filter term-value button', function(test) {
 		)
 	}
 
-	let numFilters
+	function triggerBluePill(filter) {
+		filter.Inner.dom.holder
+			.select('.term_name_btn')
+			.node()
+			.click()
+	}
+
+	function testGrpMenu(filter) {
+		const tip = filter.Inner.pill.Inner.dom.tip
+		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
+		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
+		test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
+		test.equal(tip.d.selectAll('.value_checkbox').size(), 27, 'Should have checkbox for each value')
+		test.equal(
+			tip.d
+				.selectAll('.value_checkbox')
+				.filter(function(d) {
+					return this.checked == true
+				})
+				.size(),
+			1,
+			'Should have 1 box checked for Wilms tumor'
+		)
+	}
 
 	function triggerAddFilter(filter) {
-		const term = {
-			term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
-			values: [{ key: 'Acute myeloid leukemia', label: 'Acute myeloid leukemia' }]
-		}
-		filter.Inner.app.dispatch({ type: 'filter_add', term })
+		const tip = filter.Inner.pill.Inner.dom.tip
+		tip.d.selectAll('.value_checkbox')._groups[0][0].click()
+		tip.d
+			.selectAll('.apply_btn')
+			.node()
+			.click()
 	}
 
 	function testAddFilter(filter) {
-		test.equal(filter.Inner.dom.holder.selectAll('.term_name_btn').size(), numFilters, 'should add 1 tvs filter')
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.value_btn').html(),
+			filter.Inner.state.termfilter.terms[0].values.length + ' Groups',
+			'should changed filter by selecting values from Menu'
+		)
 	}
 })
