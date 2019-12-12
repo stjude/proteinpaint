@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import * as rx from './rx.core'
 import { select, event } from 'd3-selection'
 import { dofetch2, Menu } from '../client'
 import * as dom from '../dom'
@@ -17,11 +17,10 @@ class TVS {
 		setInteractivity(this)
 
 		this.categoryData = {}
-		this.initUI()
 
 		this.api = {
 			main: async (data = {}) => {
-				this.termfilter = data.termfilter
+				this.term = data
 				this.updateUI()
 
 				// when there are filters to be removed, must account for the delayed
@@ -45,7 +44,7 @@ class TVS {
 		let tvslst_filter_str = false
 
 		if (this.termfilter) {
-			tvslst_filter_str = encodeURIComponent(JSON.stringify(this.termfilter))
+			tvslst_filter_str = encodeURIComponent(JSON.stringify(this.term))
 		}
 
 		const args = [
@@ -74,35 +73,18 @@ class TVS {
 exports.TVSInit = rx.getInitFxn(TVS)
 
 function setRenderers(self) {
-	self.initUI = function() {
-		// add new term
-		self.dom.addpilldiv = self.dom.holder
-			.append('div')
-			.attr('class', 'sja_filter_tag_btn add_term_btn')
-			.style('padding', '4px 6px 2px 6px')
-			.style('display', 'inline-block')
-			.style('margin-left', '7px')
-			.style('border-radius', '6px')
-			.style('color', '#000')
-			.style('background-color', '#EEEEEE')
-			.html('+ Click to add')
-			.on('click', self.displayTreeMenu)
-
-		self.dom.pilldiv = self.dom.holder
-	}
-
 	self.updateUI = function() {
-		if (!self.termfilter.terms.length) {
-			// no term
-			self.dom.addpilldiv.style('display', 'inline-block')
-			self.dom.pilldiv.style('display', 'none')
-		} else {
-			self.dom.addpilldiv.style('display', 'none')
-			self.dom.pilldiv.style('display', 'inline-block')
-		}
+		// if (!self.termfilter.terms.length) {
+		// 	// no term
+		// 	self.dom.addpilldiv.style('display', 'inline-block')
+		// 	self.dom.pilldiv.style('display', 'none')
+		// } else {
+		// 	self.dom.addpilldiv.style('display', 'none')
+		// 	self.dom.pilldiv.style('display', 'inline-block')
+		// }
 
 		const terms_div = self.dom.holder
-		const filters = terms_div.selectAll('.tvs_pill').data(self.termfilter.terms, d => d.term.id)
+		const filters = terms_div.selectAll('.tvs_pill').data([self.term], d => d.term.id)
 		filters.exit().each(self.exitPill)
 		filters.each(self.updatePill)
 		filters
@@ -307,7 +289,7 @@ function setRenderers(self) {
 	}
 
 	self.removeTerm = term => {
-		const termfilter = self.termfilter.terms.filter(d => d.term.id != term.term.id)
+		// const termfilter = self.termfilter.terms.filter(d => d.term.id != term.term.id)
 		self.opts.callback({ type: 'filter_remove', termId: term.id })
 	}
 

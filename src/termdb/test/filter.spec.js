@@ -98,7 +98,7 @@ tape('tvs filter: caterogical term', function(test) {
 	}
 
 	function testGrpMenu(filter) {
-		const tip = filter.Inner.pill.Inner.dom.tip
+		const tip = filter.Inner.filter.Inner.pills[0].Inner.dom.tip
 		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 		test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
@@ -116,7 +116,7 @@ tape('tvs filter: caterogical term', function(test) {
 	}
 
 	function triggerAddFilter(filter) {
-		const tip = filter.Inner.pill.Inner.dom.tip
+		const tip = filter.Inner.filter.Inner.pills[0].Inner.dom.tip
 		tip.d.selectAll('.value_checkbox')._groups[0][0].click()
 		tip.d
 			.selectAll('.apply_btn')
