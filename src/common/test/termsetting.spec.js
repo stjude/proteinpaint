@@ -100,11 +100,12 @@ tape('use_bins_less', async test => {
 	const tipd = pill.Inner.dom.tip.d
 	const bin_size_input = tipd.node().childNodes[0].childNodes[1].childNodes[0].childNodes[1].childNodes[0] // div // table // tr // td
 
-	test.equal(bin_size_input.value, 10, 'has term.bins.less.bin_size as value')
+	test.equal(bin_size_input.value, '10', 'has term.bins.less.bin_size as value')
 
-	delete pill.Inner.use_bins_less
+	delete pill.Inner.opts.use_bins_less
+	//TODO: need to tweak timeout, UI reflects true value
 	pilldiv.click()
-	test.equal(bin_size_input.value, 1, 'has term.bins.default.bin_size as value')
+	test.equal(bin_size_input.value, '1', 'has term.bins.default.bin_size as value')
 
 	test.end()
 })
