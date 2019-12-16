@@ -3,9 +3,11 @@ const d3s = require('d3-selection')
 const termsettingInit = require('../termsetting').termsettingInit
 
 /*********
-this is the direct functional testing of the component, without the use of runpp()
-this currently doesn't work
-will need to figure out how to allow node/browserify to work with import
+the direct functional testing of the component, without the use of runpp()
+
+run it as:
+$ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
+
 */
 
 tape('\n', test => {
@@ -15,64 +17,94 @@ tape('\n', test => {
 
 tape.skip('menu', test => {})
 
-tape('disable_ReplaceRemove', test => {
+tape('disable_ReplaceRemove', async test => {
+	const holder = d3s
+		.select('body')
+		.append('div')
+		.style('margin', '20px')
+
 	const pill = termsettingInit({
-		holder: d3s.select('body').append('div'),
+		holder,
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		disable_ReplaceRemove: true,
 		debug: true,
-		callback: data => {
-			// some logic here
-		}
+		callback: () => {}
 	})
 
-	pill.main({
+	await pill.main({
 		term: {
 			id: 'dummy',
-			name: 'dummy',
+			name: 'disable_ReplaceRemove',
 			iscategorical: true,
 			values: {
 				cat1: { label: 'Cat 1' }
 			}
-		},
-		q: { groupsetting: { inuse: false } }
+		}
 	})
 
-	// console.log(pill.Inner)
-	// test against pill.Inner.dom
-	// test.equal(...)
-	test.pass('to do ...')
+	const pilldiv = holder.node().querySelectorAll('.ts_pill')[0]
+	test.ok(pilldiv, 'a <div class=ts_pill> is created for the pill')
+	pilldiv.click()
+	const tipd = pill.Inner.dom.tip.d
+	test.equal(tipd.style('display'), 'block', 'tip is shown upon clicking pill')
+	test.equal(
+		tipd.node().childNodes[1].childNodes.length,
+		0,
+		'the second row of tip does not contain replace/remove buttons'
+	)
+
+	// delete the flag and click pill again to see if showing replace/remove buttons in tip
+	// if pill.opts is frozen in future, just create a new pill
+	delete pill.Inner.opts.disable_ReplaceRemove
+	pilldiv.click()
+	test.equal(
+		tipd.node().childNodes[1].childNodes.length,
+		2,
+		'the second row of tip now contains replace/remove buttons after deleting opts.disable_ReplaceRemove'
+	)
+
 	test.end()
 })
 
-tape('use_bins_less', test => {
+tape('use_bins_less', async test => {
+	const holder = d3s
+		.select('body')
+		.append('div')
+		.style('margin', '20px')
 	const pill = termsettingInit({
-		holder: d3s.select('body').append('div'),
+		holder,
 		genome: 'hg38',
 		dslabel: 'SJLife',
 		use_bins_less: true,
 		debug: true,
-		callback: data => {
-			// some logic here
+		callback: () => {}
+	})
+
+	await pill.main({
+		term: {
+			id: 'dummy',
+			name: 'use_bins_less',
+			isfloat: true,
+			bins: {
+				less: { bin_size: 10, first_bin: { start: 0 } },
+				default: { bin_size: 1, first_bin: { start: 0 } }
+			}
 		}
 	})
 
-	pill.main({
-		term: {
-			id: 'dummy',
-			name: 'dummy',
-			iscategorical: true,
-			values: {
-				cat1: { label: 'Cat 1' }
-			}
-		},
-		q: { groupsetting: { inuse: false } }
-	})
+	const pilldiv = holder.node().querySelectorAll('.ts_pill')[0]
+	pilldiv.click()
+	// FIXME breaks at line 982 of termsetting.js
 
-	// console.log(pill.Inner)
-	// test against pill.Inner.dom
-	// test.equal(...)
-	test.pass('to do ...')
+	const tipd = pill.Inner.dom.tip.d
+	const bin_size_input = tipd.node().childNodes[0].childNodes[1].childNodes[0].childNodes[1].childNodes[0] // div // table // tr // td
+
+	test.equal(bin_size_input.value, 10, 'has term.bins.less.bin_size as value')
+
+	delete pill.Inner.use_bins_less
+	pilldiv.click()
+	test.equal(bin_size_input.value, 1, 'has term.bins.default.bin_size as value')
+
 	test.end()
 })
