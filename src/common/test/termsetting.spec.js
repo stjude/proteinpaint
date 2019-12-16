@@ -95,17 +95,18 @@ tape('use_bins_less', async test => {
 
 	const pilldiv = holder.node().querySelectorAll('.ts_pill')[0]
 	pilldiv.click()
-	// FIXME breaks at line 982 of termsetting.js
 
-	const tipd = pill.Inner.dom.tip.d
-	const bin_size_input = tipd.node().childNodes[0].childNodes[1].childNodes[0].childNodes[1].childNodes[0] // div // table // tr // td
+	const tip = pill.Inner.dom.tip.d.node()
+	const bin_size_input = tip.childNodes[0].childNodes[1].childNodes[0].childNodes[1].childNodes[0] // div // table // tr // td
 
 	test.equal(bin_size_input.value, '10', 'has term.bins.less.bin_size as value')
 
 	delete pill.Inner.opts.use_bins_less
 	//TODO: need to tweak timeout, UI reflects true value
 	pilldiv.click()
-	test.equal(bin_size_input.value, '1', 'has term.bins.default.bin_size as value')
-
-	test.end()
+	setTimeout(() => {
+		const bin_size_input = tip.childNodes[0].childNodes[1].childNodes[0].childNodes[1].childNodes[0]
+		test.equal(bin_size_input.value, '1', 'has term.bins.default.bin_size as value')
+		test.end()
+	}, 200)
 })
