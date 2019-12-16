@@ -71,7 +71,7 @@ tape('tvs filter: caterogical term', function(test) {
 			.run(testFilterDisplay, 200)
 			.change({ bus: filter, eventType: 'postRender.test' })
 			.run(triggerBluePill)
-			.run(testGrpMenu, 500)
+			.run(testEditMenu, 500)
 			.use(triggerAddFilter)
 			.to(testAddFilter, { wait: 800 })
 			.done(test)
@@ -97,7 +97,7 @@ tape('tvs filter: caterogical term', function(test) {
 			.click()
 	}
 
-	function testGrpMenu(filter) {
+	function testEditMenu(filter) {
 		const tip = filter.Inner.filter.Inner.pills[0].Inner.dom.tip
 		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
@@ -130,5 +130,80 @@ tape('tvs filter: caterogical term', function(test) {
 			filter.Inner.state.termfilter.terms[0].values.length + ' Groups',
 			'should changed filter by selecting values from Menu'
 		)
+	}
+})
+
+tape.only('tvs filter: Numerical term', function(test) {
+	test.timeoutAfter(4000)
+	// test.plan(8)
+
+	const termfilter = {
+		show_top_ui: true,
+		terms: [
+			{
+				term: {
+					id: 'aaclassic_5',
+					name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
+					unit: 'mg/m²',
+					isfloat: true
+				},
+				ranges: [{ stopinclusive: true, start: 1000, stop: 2000 }]
+			}
+		]
+	}
+
+	runpp({
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38',
+			termfilter
+		},
+		filter: {
+			callbacks: {
+				'postInit.test': runTests
+			}
+		}
+	})
+
+	function runTests(filter) {
+		helpers
+			.rideInit({ arg: filter })
+			.run(testFilterDisplay, 600)
+			.change({ bus: filter, eventType: 'postRender.test' })
+			.run(triggerBluePill)
+			.run(testEditMenu, 500)
+			// .use(triggerAddFilter)
+			// .to(testAddFilter, { wait: 800 })
+			.done(test)
+	}
+
+	function testFilterDisplay(filter) {
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.term_name_btn').size(),
+			filter.Inner.state.termfilter.terms.length,
+			'should have 1 tvs filter'
+		)
+		test.equal(
+			filter.Inner.dom.holder.selectAll('.value_btn').size(),
+			filter.Inner.state.termfilter.terms[0].ranges.length,
+			'should change value from data'
+		)
+	}
+
+	function triggerBluePill(filter) {
+		filter.Inner.dom.holder
+			.select('.term_name_btn')
+			.node()
+			.click()
+	}
+
+	function testEditMenu(filter) {
+		const tip = filter.Inner.filter.Inner.pills[0].Inner.dom.tip
+		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
+		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
+		test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
+		test.true(tip.d.selectAll('input').size() >= 2, 'Should have at least 2 inputs for range start and end')
+		test.equal(tip.d.selectAll('input')._groups[0][0].value, '1000', 'Should match start value with data')
+		test.true(tip.d.selectAll('select').size() >= 2, 'Should have at least 2 selects for range start and end')
 	}
 })

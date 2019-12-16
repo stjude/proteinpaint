@@ -113,7 +113,7 @@ function setRenderers(self) {
 			.style('background-color', '#396C98')
 			.style('padding', '6px 6px 3px 6px')
 			.style('margin-left', '5px')
-			.text(d => d.term.name)
+			.html(self.term_name_gen)
 			.style('text-transform', 'uppercase')
 
 		self.updatePill.call(this)
@@ -288,6 +288,189 @@ function setRenderers(self) {
 		}
 	}
 
+	self.showNumOpts = async function(div, term) {
+		const range_divs = div.selectAll('.range_div').data(term.ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
+
+		range_divs.exit().each(() => {
+			select(this)
+				.style('opacity', 1)
+				.transition()
+				.duration(self.durations.exit)
+				.style('opacity', 0)
+				.remove()
+		})
+
+		range_divs.each(function(d) {
+			const div = select(this)
+			const range = JSON.parse(JSON.stringify(d))
+
+			div.select('start_input').attr('value', range.start)
+			div.select('start_select').node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
+			div.select('stop_input').attr('value', range.stop)
+			div.select('stop_select').node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
+		})
+
+		range_divs
+			.enter()
+			.append('div')
+			.attr('class', 'range_div')
+			.style('white-space', 'nowrap')
+			.style('display', 'block')
+			.style('padding', '2px')
+			.transition()
+			.duration(200)
+			.each(enter_range)
+
+		div
+			.append('div')
+			.style('text-align', 'center')
+			.append('div')
+			.attr('class', 'add_btn sja_menuoption')
+			.style('border-radius', '10px')
+			.style('padding', '7px 6px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.text('Add Interval')
+			.on('click', () => {
+				//TODO: Add new blank range temporary, save after entering values
+				// const new_term = JSON.parse(JSON.stringify(term))
+				// const range_temp = { start: '', stop: '' }
+				// range_divs.enter()
+				//     .append('div')
+				//     .attr('class','range_div')
+				//     .style('white-space', 'nowrap')
+				//     .style('display', 'block')
+				//     .style('padding', '2px')
+				//     .datum(range_temp)
+			})
+
+		function enter_range(d, i) {
+			const div = select(this)
+			const range = JSON.parse(JSON.stringify(d))
+
+			const equation_div = div
+				.append('div')
+				.style('display', 'block')
+				.style('padding', '3px 5px')
+
+			const start_input = equation_div
+				.append('input')
+				.attr('type', 'number')
+				.attr('value', range.start)
+				.attr('class', 'start_input')
+				.style('width', '60px')
+				.on('keyup', async () => {
+					if (!client.keyupEnter()) return
+					start_input.property('disabled', true)
+					await apply()
+					start_input.property('disabled', false)
+				})
+
+			// to replace operator_start_div
+			const startselect = equation_div
+				.append('select')
+				.attr('class', 'start_select')
+				.style('margin-left', '10px')
+
+			startselect.append('option').html('&le;')
+			startselect.append('option').html('&lt;')
+			startselect.append('option').html('&#8734;')
+
+			startselect.node().selectedIndex = range.startunbounded ? 2 : range.startinclusive ? 0 : 1
+
+			const x = '<span style="font-family:Times;font-style:italic">x</span>'
+
+			equation_div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '3px 10px')
+				.html(x)
+
+			// to replace operator_end_div
+			const stopselect = equation_div
+				.append('select')
+				.attr('class', 'stop_select')
+				.style('margin-right', '10px')
+
+			stopselect.append('option').html('&le;')
+			stopselect.append('option').html('&lt;')
+			stopselect.append('option').html('&#8734;')
+
+			stopselect.node().selectedIndex = range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1
+
+			const stop_input = equation_div
+				.append('input')
+				.attr('type', 'number')
+				.attr('class', 'stop_input')
+				.style('width', '60px')
+				.attr('value', range.stop)
+				.on('keyup', async () => {
+					if (!client.keyupEnter()) return
+					stop_input.property('disabled', true)
+					await apply()
+					stop_input.property('disabled', false)
+				})
+
+			//'Apply' button
+			equation_div
+				.append('div')
+				.attr('class', 'sja_menuoption apply_btn')
+				.style('display', 'inline-block')
+				.style('border-radius', '13px')
+				.style('margin', '5px')
+				.style('margin-left', '10px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.text('apply')
+				.on('click', async () => {
+					self.dom.tip.hide()
+					await apply()
+				})
+
+			// tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself
+			// self.dom.tip.showunder(holder.node())
+
+			async function apply() {
+				try {
+					if (startselect.node().selectedIndex == 2 && stopselect.node().selectedIndex == 2)
+						throw 'Both ends can not be unbounded'
+
+					const start = startselect.node().selectedIndex == 2 ? null : Number(start_input.node().value)
+					const stop = stopselect.node().selectedIndex == 2 ? null : Number(stop_input.node().value)
+					if (start != null && stop != null && start >= stop) throw 'start must be lower than stop'
+
+					if (startselect.node().selectedIndex == 2) {
+						range.startunbounded = true
+						delete range.start
+					} else {
+						delete range.startunbounded
+						range.start = start
+						range.startinclusive = startselect.node().selectedIndex == 0
+					}
+					if (stopselect.node().selectedIndex == 2) {
+						range.stopunbounded = true
+						delete range.stop
+					} else {
+						delete range.stopunbounded
+						range.stop = stop
+						range.stopinclusive = stopselect.node().selectedIndex == 0
+					}
+					self.dom.tip.hide()
+					const new_term = JSON.parse(JSON.stringify(term))
+					new_term.ranges[i] = range
+					self.opts.callback({
+						type: 'filter_replace',
+						term: new_term
+					})
+				} catch (e) {
+					window.alert(e)
+				}
+			}
+		}
+	}
+
 	self.removeTerm = term => {
 		// const termfilter = self.termfilter.terms.filter(d => d.term.id != term.term.id)
 		self.opts.callback({ type: 'filter_remove', termId: term.id })
@@ -332,7 +515,8 @@ function setRenderers(self) {
 			if (term.values.length == 1) return term.values[0].label
 			else return term.values.length + ' Groups'
 		} else if (term.term.isfloat || term.term.isinteger) {
-			//TODO
+			if (term.ranges.length == 1) return self.numeric_val_text(term.ranges[0])
+			else return term.ranges.length + ' Intervals'
 		} else if (term.bar_by_grade || term.bar_by_children) {
 			//TODO
 		} else if (term.grade_and_child) {
@@ -536,64 +720,38 @@ function setRenderers(self) {
 		})
 	}
 
-	self.makePlusBtn = async function(holder, data, selected_values, callback) {
-		// If 2 or less values for the term then remove plus button
-		if (data.lst.length <= 2) return
-		const term = holder.data()
+	self.term_name_gen = function(d) {
+		let term_name = d.term.name
 
-		const [add_value_select, add_value_btn] = dom.make_select_btn_pair(holder)
-		add_value_select.attr('class', 'add_value_select').style('margin-right', '1px')
-
-		add_value_select.selectAll('option').remove()
-
-		self.makeSelectList(data, add_value_select, selected_values, false, 'add')
-
-		//for numerical term, add option to add another bin
-		if (data.lst[0].range) {
-			add_value_select
-				.append('option')
-				.attr('value', 'add_bin')
-				.text('Add new range')
+		// trim long term name with '...' at end and hover to see full term_name
+		if ((d.term.isfloat || d.term.isinteger) && d.term.name.length > 25) {
+			term_name = '<label title="' + d.term.name + '">' + d.term.name.substring(0, 24) + '...' + '</label>'
+		} else if (d.term.iscondition && d.term.name.length > 20) {
+			term_name = '<label title="' + d.term.name + '">' + d.term.name.substring(0, 18) + '...' + '</label>'
 		}
+		return term_name
+	}
 
-		//disable categories already selected
-		const options = add_value_select.selectAll('option')
-
-		options.nodes().forEach(function(d) {
-			for (const [i, value] of selected_values.entries()) {
-				if (value.key && value.key == d.value) d.disabled = true
-				if (value.value != undefined && value.label == d.value) d.disabled = true
-			}
-		})
-
-		if (data.lst) add_value_select.node().value = 'add'
-
-		add_value_select.on('change', async () => {
-			if (add_value_select.node().value == 'add_bin') {
-				const range_temp = { start: '', stop: '' }
-				self.editNumericBin(add_value_btn, range_temp, range => {
-					self.addValue({ term, new_value: range })
-				})
-			} else {
-				//change value of button
-				const new_value = data.lst.find(j => j.key == add_value_select.node().value)
-				// if (new_value.range) selected_values.push(new_value.range)
-				callback(new_value)
-			}
-		})
-
-		// '+' button at end of all values to add to list of values
-		add_value_btn
-			.attr('class', 'sja_filter_tag_btn add_value_btn')
-			.style('padding', '3px 4px 3px 4px')
-			.style('margin-right', '1px')
-			.style('font-size', '1em')
-			.style('background-color', '#4888BF')
-			.style('width', '10px')
-			.html('&#43;')
-
-		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
-		add_value_select.style('width', add_value_btn.node().offsetWidth + 'px')
+	self.numeric_val_text = function(range) {
+		let range_txt
+		const x = '<span style="font-family:Times;font-style:italic;font-size:0.9em;">x</span>'
+		if (range.startunbounded) {
+			range_txt = x + ' ' + (range.stopinclusive ? '&le;' : '&lt;') + ' ' + range.stop
+		} else if (range.stopunbounded) {
+			range_txt = x + ' ' + (range.startinclusive ? '&ge;' : '&gt;') + ' ' + range.start
+		} else {
+			range_txt =
+				range.start +
+				' ' +
+				(range.startinclusive ? '&le;' : '&lt;') +
+				' ' +
+				x +
+				' ' +
+				(range.stopinclusive ? '&le;' : '&lt;') +
+				' ' +
+				range.stop
+		}
+		return range_txt
 	}
 }
 
