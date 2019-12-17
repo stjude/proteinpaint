@@ -201,7 +201,7 @@ tape('tvs filter: Numerical term', function(test) {
 		const tip = filter.Inner.filter.Inner.pills[0].Inner.dom.tip
 		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
-		test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply range change')
+		test.true(tip.d.selectAll('.apply_btn').size() >= 1, 'Should have 1 button to apply range change')
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove range')
 		test.true(tip.d.selectAll('input').size() >= 2, 'Should have at least 2 inputs for range start and end')
 		test.equal(tip.d.selectAll('input')._groups[0][0].value, '1000', 'Should match start value with data')

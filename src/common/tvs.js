@@ -194,98 +194,7 @@ function setRenderers(self) {
 			return b.samplecount - a.samplecount
 		})
 
-		// 'Apply' button
-		div
-			.append('div')
-			.style('text-align', 'center')
-			.append('div')
-			.attr('class', 'apply_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
-			.style('border-radius', '10px')
-			.style('background-color', '#74b9ff')
-			.style('padding', '7px 6px')
-			.style('margin', '5px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('Apply')
-			.on('click', () => {
-				//update term values by ckeckbox values
-				let checked_vals = []
-				values_table
-					.selectAll('.value_checkbox')
-					.filter(function(d) {
-						return this.checked == true
-					})
-					.each(function(d) {
-						checked_vals.push(this.value)
-					})
-
-				const new_vals = []
-
-				for (const [i, v] of sortedVals.entries()) {
-					for (const [j, sv] of checked_vals.entries()) {
-						if (v.key == sv) new_vals.push(v)
-					}
-				}
-				const new_term = JSON.parse(JSON.stringify(term))
-				new_term.values = new_vals
-				self.dom.tip.hide()
-				self.opts.callback({
-					type: 'filter_replace',
-					term: new_term
-				})
-			})
-
-		const values_table = div.append('table').style('border-collapse', 'collapse')
-
-		// this row will have group names/number
-		const all_checkbox_tr = values_table.append('tr').style('height', '20px')
-
-		const all_checkbox = all_checkbox_tr
-			.append('td')
-			.style('padding', '2px 5px')
-			.append('input')
-			.attr('type', 'checkbox')
-			.style('position', 'relative')
-			.style('vertical-align', 'middle')
-			.style('bottom', '3px')
-			.on('change', () => {
-				values_table.selectAll('.value_checkbox').property('checked', all_checkbox.node().checked)
-			})
-
-		all_checkbox_tr
-			.append('td')
-			.style('padding', '2px 5px')
-			.style('font-size', '.8em')
-			.style('font-weight', 'bold')
-			.html('Check/ Uncheck All')
-
-		for (const [i, v] of sortedVals.entries()) {
-			const value_tr = values_table.append('tr').style('height', '15px')
-
-			value_tr
-				.append('td')
-				.style('padding', '2px 5px')
-				.append('input')
-				.attr('class', 'value_checkbox')
-				.attr('type', 'checkbox')
-				.attr('value', v.key)
-				.style('position', 'relative')
-				.style('vertical-align', 'middle')
-				.style('bottom', '3px')
-				.property('checked', () => {
-					if (term.values.map(a => a.label).includes(v.label)) {
-						return true
-					}
-				})
-
-			value_tr
-				.append('td')
-				.style('padding', '2px 5px')
-				.style('font-size', '.8em')
-				.html(v.label + ' (n=' + v.samplecount + ')')
-		}
+		self.makeValueTable(div, term, sortedVals)
 	}
 
 	self.showNumOpts = async function(div, term) {
@@ -507,6 +416,22 @@ function setRenderers(self) {
 				}
 			}
 		}
+
+		// numerical checkbox for unannotated cats
+		const data = await self.getCategories(term.term)
+
+		const unannotated_cats = { lst: [] }
+
+		for (const [index, cat] of data.lst.entries()) {
+			if (cat.range.value != undefined) {
+				unannotated_cats.lst.push(cat)
+			}
+		}
+
+		const sortedVals = unannotated_cats.lst.sort((a, b) => {
+			return b.samplecount - a.samplecount
+		})
+		self.makeValueTable(div, term, sortedVals)
 	}
 
 	self.removeTerm = term => {
@@ -574,116 +499,100 @@ function setRenderers(self) {
 			.remove()
 	}
 
-	self.addCategoryValues = async function(value, j) {
-		// console.log('add', j)
-		const term_value_btn = select(this).datum(value)
-		const one_term_div = select(this.parentNode)
-		const term = one_term_div.datum()
-
-		const replace_value_select = one_term_div
-			.append('select')
-			.attr('class', 'value_select')
-			.style('margin-right', '1px')
-			.style('opacity', 0)
-			.on('mouseover', () => {
-				term_value_btn.style('opacity', '0.8').style('cursor', 'default')
-			})
-			.on('mouseout', () => {
-				term_value_btn.style('opacity', '1')
-			})
-
-		// replace_value_select.selectAll('option').remove()
-
-		self.makeSelectList(self.categoryData[term.term.id], replace_value_select, term.values, value.key, 'delete')
-
-		replace_value_select.on('change', async () => {
-			//if selected index is 0 (delete) and value is 'delete' then remove from group
-			if (replace_value_select.node().selectedIndex == 0 && replace_value_select.node().value == 'delete') {
-				self.removeValue({ term, j })
-			} else {
-				//change value of button
-				const new_value = self.categoryData[term.term.id].lst.find(j => j.key == replace_value_select.node().value)
-				term_value_btn.style('padding', '3px 4px 3px 4px').text('Loading...')
-				replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
-				const value = { key: new_value.key, label: new_value.label }
-				self.changeValue({ term, value, j })
-			}
-		})
-
-		term_value_btn
-			.style('padding', '3px 4px 2px 4px')
-			.style('margin-right', '1px')
-			.style('font-size', '1em')
-			.style('position', 'absolute')
-			.style('background-color', '#4888BF')
-			.html(d => d.label + ' &#9662;')
-			.style('opacity', 0)
-			.transition()
-			.duration(200)
-			.style('opacity', 1)
-
-		// 'OR' button in between values
-		one_term_div
+	self.makeValueTable = function(div, term, values) {
+		// 'Apply' button
+		div
 			.append('div')
-			.attr('class', 'or_btn')
-			.style('display', 'none')
-			.style('color', '#fff')
-			.style('background-color', '#4888BF')
-			.style('margin-right', '1px')
-			.style('padding', '8px 6px 4px 6px')
-			.style('font-size', '.7em')
+			.style('text-align', 'center')
+			.append('div')
+			.attr('class', 'apply_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
+			.style('border-radius', '13px')
+			.style('background-color', '#23cba7')
+			.style('padding', '7px 15px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
-			.text('or')
+			.text('Apply')
+			.on('click', () => {
+				//update term values by ckeckbox values
+				let checked_vals = []
+				values_table
+					.selectAll('.value_checkbox')
+					.filter(function(d) {
+						return this.checked == true
+					})
+					.each(function(d) {
+						checked_vals.push(this.value)
+					})
 
-		//show or hide OR button
-		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
-			'display',
-			j > 0 && j < term.values.length - 1 ? 'inline-block' : 'none'
-		)
+				const new_vals = []
 
-		if (j == term.values.length - 1 && self.categoryData[term.term.id].lst.length > 2) {
-			one_term_div.selectAll('.add_value_btn').remove()
-			one_term_div.selectAll('.add_value_select').remove()
-			await self.makePlusBtn(one_term_div, self.categoryData[term.term.id], term.values, new_value => {
-				self.addValue({ term, new_value })
+				for (const [i, v] of values.entries()) {
+					for (const [j, sv] of checked_vals.entries()) {
+						if (v.key == sv) new_vals.push(v)
+					}
+				}
+				const new_term = JSON.parse(JSON.stringify(term))
+				new_term.values = new_vals
+				self.dom.tip.hide()
+				self.opts.callback({
+					type: 'filter_replace',
+					term: new_term
+				})
 			})
+
+		const values_table = div.append('table').style('border-collapse', 'collapse')
+
+		// this row will have group names/number
+		const all_checkbox_tr = values_table.append('tr').style('height', '20px')
+
+		const all_checkbox = all_checkbox_tr
+			.append('td')
+			.style('padding', '2px 5px')
+			.append('input')
+			.attr('type', 'checkbox')
+			.style('position', 'relative')
+			.style('vertical-align', 'middle')
+			.style('bottom', '3px')
+			.on('change', () => {
+				values_table.selectAll('.value_checkbox').property('checked', all_checkbox.node().checked)
+			})
+
+		all_checkbox_tr
+			.append('td')
+			.style('padding', '2px 5px')
+			.style('font-size', '.8em')
+			.style('font-weight', 'bold')
+			.html('Check/ Uncheck All')
+
+		for (const [i, v] of values.entries()) {
+			const value_tr = values_table.append('tr').style('height', '15px')
+
+			value_tr
+				.append('td')
+				.style('padding', '2px 5px')
+				.append('input')
+				.attr('class', 'value_checkbox')
+				.attr('type', 'checkbox')
+				.attr('value', v.key)
+				.style('position', 'relative')
+				.style('vertical-align', 'middle')
+				.style('bottom', '3px')
+				.property('checked', () => {
+					if (term.values && term.values.map(a => a.label).includes(v.label)) {
+						return true
+					}
+				})
+
+			value_tr
+				.append('td')
+				.style('padding', '2px 5px')
+				.style('font-size', '.8em')
+				.html(v.label + ' (n=' + v.samplecount + ')')
 		}
-
-		// limit dropdown menu width to width of term_value_btn (to avoid overflow)
-		// set it after editing OR button to confirm 1px margin between value_btn and + btn
-		replace_value_select.style('width', term_value_btn.node().offsetWidth + 'px')
-	}
-
-	self.updateCatValue = function(d, j) {
-		// console.log('update', j)
-		const one_term_div = select(this.parentNode)
-		const term = one_term_div.datum()
-
-		const value_btn = select(this)
-			.datum(d)
-			.style('padding', '3px 4px 2px 4px')
-			.html(d => d.label + ' &#9662;')
-			.style('opacity', 0)
-			.transition()
-			.duration(200)
-			.style('opacity', 1)
-
-		const value_selects = select(one_term_div.selectAll('.value_select')._groups[0][j]).style(
-			'width',
-			value_btn.node().offsetWidth + 'px'
-		)
-
-		//update dropdown list for each term and '+' btn
-		self.updateSelect(value_selects, term.values, d.key)
-
-		const add_value_select = one_term_div.selectAll('.add_value_select')
-		self.updateSelect(add_value_select, term.values, 'add')
-
-		//show or hide OR button
-		select(one_term_div.selectAll('.or_btn')._groups[0][j]).style(
-			'display',
-			j < term.values.length - 1 ? 'inline-block' : 'none'
-		)
+		return values_table
 	}
 
 	self.removeValueBtn = function(d, j) {
