@@ -333,23 +333,19 @@ function setRenderers(self) {
 			.style('font-size', '.8em')
 			.text('Add Interval')
 			.on('click', () => {
-				//TODO: Add new blank range temporary, save after entering values
-				// const new_term = JSON.parse(JSON.stringify(term))
-				// const range_temp = { start: '', stop: '' }
-				// range_divs.enter()
-				//     .append('div')
-				//     .attr('class','range_div')
-				//     .style('white-space', 'nowrap')
-				//     .style('display', 'block')
-				//     .style('padding', '2px')
-				//     .datum(range_temp)
+				//Add new blank range temporary, save after entering values
+				const new_term = JSON.parse(JSON.stringify(term))
+				const range_temp = { start: '', stop: '' }
+				new_term.ranges.push(range_temp)
+				div.selectAll('*').remove()
+				self.showNumOpts(div, new_term)
 			})
 
 		function enter_range(d, i) {
-			const div = select(this)
+			const range_div = select(this)
 			const range = JSON.parse(JSON.stringify(d))
 
-			const equation_div = div
+			const equation_div = range_div
 				.append('div')
 				.style('display', 'block')
 				.style('padding', '3px 5px')
@@ -415,11 +411,14 @@ function setRenderers(self) {
 			//'Apply' button
 			equation_div
 				.append('div')
-				.attr('class', 'sja_menuoption apply_btn')
+				.attr('class', 'sja_filter_tag_btn apply_btn')
 				.style('display', 'inline-block')
 				.style('border-radius', '13px')
+				.style('background-color', '#23cba7')
+				.style('color', '#fff')
 				.style('margin', '5px')
 				.style('margin-left', '10px')
+				.style('padding', '7px 15px')
 				.style('text-align', 'center')
 				.style('font-size', '.8em')
 				.style('text-transform', 'uppercase')
@@ -427,6 +426,45 @@ function setRenderers(self) {
 				.on('click', async () => {
 					self.dom.tip.hide()
 					await apply()
+				})
+
+			//'Delete' button
+			equation_div
+				.append('div')
+				.attr('class', 'sja_filter_tag_btn delete_btn')
+				.style('display', 'inline-block')
+				.style('border-radius', '13px')
+				.style('background-color', '#ff7675')
+				.style('color', '#fff')
+				.style('margin', '5px')
+				.style('margin-left', '10px')
+				.style('padding', '7px 15px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.text('Delete')
+				.on('click', async () => {
+					// self.dom.tip.hide()
+					const new_term = JSON.parse(JSON.stringify(term))
+					const range_delete = new_term.ranges[i]
+					if (range_delete.start || range_delete.stop) {
+						self.dom.tip.hide()
+						if (new_term.ranges.length > 1)
+							self.opts.callback({
+								type: 'filter_value_remove',
+								termId: new_term.termId,
+								valueId: i
+							})
+						else
+							self.opts.callback({
+								type: 'filter_remove',
+								termId: new_term.termId
+							})
+					} else {
+						new_term.ranges.splice(i, 1)
+						div.selectAll('*').remove()
+						self.showNumOpts(div, new_term)
+					}
 				})
 
 			// tricky: only show tip when contents are filled, so that it's able to detect its dimention and auto position itself

@@ -133,8 +133,8 @@ tape('tvs filter: caterogical term', function(test) {
 	}
 })
 
-tape.only('tvs filter: Numerical term', function(test) {
-	test.timeoutAfter(4000)
+tape('tvs filter: Numerical term', function(test) {
+	test.timeoutAfter(6000)
 	// test.plan(8)
 
 	const termfilter = {
@@ -172,8 +172,8 @@ tape.only('tvs filter: Numerical term', function(test) {
 			.change({ bus: filter, eventType: 'postRender.test' })
 			.run(triggerBluePill)
 			.run(testEditMenu, 500)
-			// .use(triggerAddFilter)
-			// .to(testAddFilter, { wait: 800 })
+			.use(triggerRangeEdit)
+			.to(testRangeEdit, { wait: 800 })
 			.done(test)
 	}
 
@@ -201,9 +201,32 @@ tape.only('tvs filter: Numerical term', function(test) {
 		const tip = filter.Inner.filter.Inner.pills[0].Inner.dom.tip
 		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
-		test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
+		test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply range change')
+		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove range')
 		test.true(tip.d.selectAll('input').size() >= 2, 'Should have at least 2 inputs for range start and end')
 		test.equal(tip.d.selectAll('input')._groups[0][0].value, '1000', 'Should match start value with data')
 		test.true(tip.d.selectAll('select').size() >= 2, 'Should have at least 2 selects for range start and end')
+	}
+
+	function triggerRangeEdit(filter) {
+		const tip = filter.Inner.filter.Inner.pills[0].Inner.dom.tip
+		tip.d.selectAll('input')._groups[0][0].value = 1500
+		tip.d
+			.selectAll('.apply_btn')
+			.node()
+			.click()
+	}
+
+	function testRangeEdit(filter) {
+		test.equal(
+			parseInt(
+				filter.Inner.dom.holder
+					.selectAll('.value_btn')
+					.html()
+					.split(' ')[0]
+			),
+			filter.Inner.state.termfilter.terms[0].ranges[0].start,
+			'should change value from data'
+		)
 	}
 })
