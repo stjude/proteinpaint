@@ -411,7 +411,7 @@ function getTermValues(d, self) {
 	const t2 = self.config.term2
 	const t2ValKey =
 		t2 && t2.term.values && Object.keys(t2.term.values).filter(key => t2.term.values[key].label === d.dataId)[0]
-	const t2ValId = t2.term.values && t2ValKey in t2.term.values ? t2ValKey : d.dataId
+	const t2ValId = t2 && t2.term.values && t2ValKey in t2.term.values ? t2ValKey : d.dataId
 
 	for (const term of [t1, t2]) {
 		if (!term) continue

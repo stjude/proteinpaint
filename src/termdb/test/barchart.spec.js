@@ -287,6 +287,7 @@ tape('series visibility', function(test) {
 	}
 })
 
+let barDiv
 tape('click to add numeric, condition term filter', function(test) {
 	test.timeoutAfter(3000)
 
@@ -317,8 +318,8 @@ tape('click to add numeric, condition term filter', function(test) {
 		}
 	})
 
-	let barDiv
 	function runTests(plot) {
+		if (barDiv) return //console.log(322, barDiv)
 		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
 		helpers
 			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
