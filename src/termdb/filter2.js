@@ -15,8 +15,9 @@ execution flow:
 4. then call this.initFilter() to initiate filter
 */
 class TdbFilter {
-	constructor(opts) {
+	constructor(app, opts) {
 		this.type = 'filter'
+		this.app = app
 		this.validateOpts(opts)
 		setRenderers(this)
 		this.categoryData = {}
@@ -27,7 +28,6 @@ class TdbFilter {
 	validateOpts(o) {
 		// if (!('id' in o)) throw 'opts.id missing' // plot id?
 		if (!o.holder) throw 'opts.holder missing'
-		if (typeof o.dispatch != 'function') throw 'opts.dispath() is not a function'
 		this.opts = o
 		this.dom = { holder: o.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
@@ -40,13 +40,44 @@ class TdbFilter {
 		this.render()
 	}
 	initFilter() {
-		this.filter = TvsLstInit({
+		this.inclusions = TvsLstInit({
+			adderLabel: '+Include',
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
-			holder: this.dom.filterdiv,
-			debug: this.opts.debug,
-			callback: data => {
-				this.opts.dispatch(data)
+			holder: this.dom.inclusionsDiv,
+			getData: () =>
+				this.state.termfilter.inclusions ? this.state.termfilter.inclusions : this.state.termfilter.terms,
+			callback: {
+				addGrp: term => {
+					this.app.dispatch({
+						type: 'filter_add_grp',
+						term,
+						filterKey: this.state.termfilter.inclusions ? 'inclusions' : 'terms'
+					})
+				},
+				addTerm: (term, index) => {
+					this.app.dispatch({ type: 'filter_add_term', term, index, filterKey: 'inclusions' })
+				}
+			}
+		})
+
+		if (!this.state.termfilter.exclusions || this.state.termfilter.terms) return
+		this.exclusions = TvsLstInit({
+			adderLabel: '+Exclude',
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			holder: this.dom.exclusionsDiv,
+			callback: {
+				addGrp: term => {
+					this.app.dispatch({
+						type: 'filter_add_grp',
+						term,
+						filterKey: 'exclusions'
+					})
+				},
+				addTerm: (term, index) => {
+					this.app.dispatch({ type: 'filter_add_term', term, index, filterKey: 'exclusions' })
+				}
 			}
 		})
 	}
@@ -69,22 +100,29 @@ function setRenderers(self) {
 			.style('color', '#bbb')
 			.style('margin-right', '10px')
 			.html('Filter')
-		// div to display filter
-		this.dom.filterdiv = div
+
+		// div to display filter terms
+		this.dom.inclusionsDiv = div
+			.append('div')
+			.attr('class', 'terms_div')
+			.style('display', 'inline-block')
+
+		this.dom.exclusionsDiv = div
 			.append('div')
 			.attr('class', 'terms_div')
 			.style('display', 'inline-block')
 	}
 	self.render = function() {
 		const state = self.state
-		const div = this.dom.filterdiv
+		const div = this.dom.holder
 		if (state && state.termfilter && !state.termfilter.show_top_ui) {
 			div.style('display', 'none')
 			return
 		}
-		self.filter.main({
-			termfilter: state.termfilter
-		})
+		self.inclusions.main(
+			this.state.termfilter.inclusions ? this.state.termfilter.inclusions : this.state.termfilter.terms
+		)
+		if (self.exclusions) self.exclusions.main(this.state.termfilter.exclusions)
 		div.style('display', 'inline-block')
 	}
 }

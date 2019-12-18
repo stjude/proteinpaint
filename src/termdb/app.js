@@ -82,10 +82,7 @@ class TdbApp {
 					this.opts.recover
 				)
 
-				this.components.terms = filterInit(
-					{ holder: this.dom.holder.append('div'), dispatch: this.app.dispatch, debug: opts.debug },
-					this.opts.filter
-				)
+				this.components.terms = filterInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.filter)
 			}
 			this.components.tree = treeInit(this.app, { holder: this.dom.holder.append('div'), modifiers }, this.opts.tree)
 		} catch (e) {

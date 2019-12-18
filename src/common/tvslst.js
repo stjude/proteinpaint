@@ -13,16 +13,18 @@ class TvsLst {
 		this.dslabel = opts.dslabel
 		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 500 }
+		this.lastId = 0
 
 		setRenderers(this)
 		setInteractivity(this)
 
 		this.categoryData = {}
 		this.initUI()
+		this.pills = {}
 
 		this.api = {
-			main: async (data = {}) => {
-				this.termfilter = data.termfilter
+			main: async grps => {
+				this.grps = grps
 				this.updateUI()
 			}
 		}
@@ -31,7 +33,9 @@ class TvsLst {
 		if (!o.holder) throw '.holder missing'
 		if (!o.genome) throw '.genome missing'
 		if (!o.dslabel) throw '.dslabel missing'
-		if (typeof o.callback != 'function') throw '.callback() is not a function'
+		if (typeof o.callback != 'object') throw '.callback{} is not an object'
+		if (typeof o.callback.addGrp != 'function') throw '.callback.addGrp() is not a function'
+		if (typeof o.callback.addTerm != 'function') throw '.callback.addTerm() is not a function'
 		return o
 	}
 }
@@ -40,52 +44,169 @@ exports.TvsLstInit = rx.getInitFxn(TvsLst)
 
 function setRenderers(self) {
 	self.initUI = function() {
-		// add new term
-		self.dom.addpilldiv = self.dom.holder
+		//console.log(45,self.opts)
+		self.dom.pillGrpDiv = self.dom.holder
 			.append('div')
-			.attr('class', 'sja_filter_tag_btn add_term_btn')
+			.attr('class', 'sja_filter_pill_grp')
+			//.style('border', '1px solid #aaa')
+			.style('margin', '5px')
+			.style('padding', '5px')
+
+		// button to add new term
+		self.dom.grpAdderDiv = self.dom.holder
+			.append('div')
+			.attr('class', 'sja_filter_tag_btn add_grp_btn')
 			.style('padding', '4px 6px 2px 6px')
-			.style('display', 'inline-block')
-			.style('margin-left', '7px')
+			.style('display', 'block')
+			.style('margin', '7px')
 			.style('border-radius', '6px')
 			.style('color', '#000')
 			.style('background-color', '#EEEEEE')
-			.html('+ Click to add')
+			.html(self.opts.adderLabel || '+ OR')
 			.on('click', self.displayTreeMenu)
-
-		self.dom.pilldiv = self.dom.holder.append('div')
 	}
 
 	self.updateUI = function() {
-		if (!self.termfilter.terms.length) {
-			// no term
-			self.dom.addpilldiv.style('display', 'inline-block')
-			self.dom.pilldiv.style('display', 'none')
-		} else {
-			self.dom.addpilldiv.style('display', 'none')
-			self.dom.pilldiv.style('display', 'inline-block')
-		}
+		//console.log(60, self.grps)
+		//self.dom.grpAdderDiv.style('display', !self.grps.length ? 'block' : 'none')
+		self.dom.pillGrpDiv.style('display', !self.grps.length ? 'none' : 'block')
 
-		self.pills = []
-		for (const [i, t] of self.termfilter.terms.entries()) {
-			const pill = TVSInit({
-				genome: self.genome,
-				dslabel: self.dslabel,
-				holder: self.dom.pilldiv,
-				debug: self.opts.debug,
-				callback: data => {
-					self.opts.callback(data)
-				}
-			})
-			pill.main(t)
-			self.pills.push(pill)
+		const pills = self.dom.pillGrpDiv.selectAll('.tvs_pill_grp').data(self.grps, terms => terms.id)
+
+		pills.exit().each(self.removePillGrp)
+		pills.each(self.updatePillGrp)
+		pills
+			.enter()
+			.append('div')
+			.attr('class', 'tvs_pill_grp')
+			.style('margin', '5px')
+			.style('width', '250px')
+			.each(self.addPillGrp)
+	}
+
+	self.removePillGrp = function(terms) {
+		//console.log(72, terms.id)
+		select(this).remove()
+		for (const term of terms) {
+			const id = terms.id + '-' + term.id
+			delete self.pills[id]
 		}
+	}
+
+	self.updatePillGrp = function(terms) {
+		//console.log(80, terms, this)
+		const pills = select(this)
+			.select('.sja_filter_grp_terms')
+			.selectAll('.tvs_pill_wrapper')
+			.data(terms, term => terms.id + '-' + term.id)
+
+		pills.exit().each(function(term) {
+			const id = terms.id + '-' + term.id
+			delete self.pills[id]
+			select(this).remove()
+		})
+
+		pills.each(function(term, i) {
+			//console.log(104, terms.indexOf(term), terms.length-1, term.term.id)
+			select(this)
+				.select('.sja_filter_term_join_label')
+				.html(terms.indexOf(term) < terms.length - 1 ? 'AND' : '+ AND')
+				.style('background-color', self.grpJoinLabelBgColor)
+
+			const id = terms.id + '-' + term.id
+			if (!self.pills[id]) return
+			self.pills[id].main(term)
+		})
+
+		pills
+			.enter()
+			.append('div')
+			.attr('class', 'tvs_pill_wrapper')
+			.each(function(term, i) {
+				const holder = select(this.parentNode)
+					.append('div')
+					.attr('class', 'tvs_pill_term_div')
+
+				select(this.parentNode)
+					.append('div')
+					.attr('class', '.sja_filter_term_join_label')
+					.style('margin-left', '10px')
+					.style('border', 'none')
+					.style('border-radius', '5px')
+					.html(terms.indexOf(term) < terms.length - 1 ? 'AND' : '+ AND')
+					.style('background-color', self.grpJoinLabelBgColor)
+					.on('click', self.displayTreeMenu)
+
+				const pill = TVSInit({
+					genome: self.genome,
+					dslabel: self.dslabel,
+					holder,
+					debug: self.opts.debug,
+					callback: self.opts.callback
+				})
+				pill.main(term)
+				const id = terms.id + '-' + term.id
+				self.pills[id] = pill
+			})
+	}
+
+	self.addPillGrp = function(terms, i) {
+		//console.log(91, terms.id)
+		const grpJoinDiv = select(this)
+			.append('div')
+			.attr('class', 'sja_filter_grp_join_label')
+			.html(self.grps.length > 1 && i > 0 ? 'OR' : '')
+
+		const pills = select(this)
+			.append('div')
+			.attr('class', 'sja_filter_grp_terms')
+			.style('padding', '5px 5px 5px 0')
+			.style('border', '1px solid #aaa')
+			.selectAll('.tvs_pill_wrapper')
+			.data(terms)
+
+		pills
+			.enter()
+			.append('div')
+			.attr('class', 'tvs_pill_wrapper')
+			.each(function(term, i) {
+				//console.log(97, this, term)
+				const holder = select(this)
+					.append('div')
+					.attr('class', 'tvs_pill_term_div')
+				select(this)
+					.append('div')
+					.attr('class', 'sja_filter_term_join_label')
+					.style('margin-left', '10px')
+					.style('border', 'none')
+					.style('border-radius', '5px')
+					.html(i < terms.length - 1 ? 'AND' : '+ AND')
+					.style('background-color', self.grpJoinLabelBgColor)
+					.on('click', self.displayTreeMenu)
+
+				const pill = TVSInit({
+					genome: self.genome,
+					dslabel: self.dslabel,
+					holder,
+					debug: self.opts.debug,
+					callback: self.opts.callback
+				})
+				pill.main(term)
+				const id = terms.id + '-' + term.id
+				self.pills[id] = pill
+			})
+	}
+
+	self.grpJoinLabelBgColor = function() {
+		return this.innerHTML == 'AND' ? 'transparent' : '#ececec'
 	}
 }
 
 function setInteractivity(self) {
-	self.displayTreeMenu = holder => {
-		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
+	self.displayTreeMenu = function(holder) {
+		//console.log(holder, this)
+		const filterHolder = holder instanceof Node ? holder || self.dom.holder.node() : this
+		self.dom.tip.clear().showunder(filterHolder)
 		appInit(null, {
 			holder: self.dom.tip.d,
 			state: {
@@ -93,7 +214,6 @@ function setInteractivity(self) {
 				dslabel: self.dslabel,
 				termfilter: {
 					show_top_ui: false
-					// 	terms: terms
 				}
 			},
 			modifiers: {
@@ -102,16 +222,22 @@ function setInteractivity(self) {
 					self.replaceFilter({ term: tvs })
 				}
 			},
-			app: {
-				callbacks: { 'postInit.test': () => {} }
-			},
 			barchart: {
 				bar_click_override: tvslst => {
+					//console.log(187, tvslst, filterHolder.__data__)
 					self.dom.tip.hide()
-					self.opts.callback({
-						type: 'filter_replace',
-						term: tvslst[0]
-					})
+
+					if (filterHolder.className.includes('sja_filter_term_join_label')) {
+						const id = filterHolder.parentNode.parentNode.__data__.id
+						self.opts.callback.addTerm({
+							id,
+							term: tvslst[0]
+						})
+					} else {
+						self.opts.callback.addGrp({
+							term: tvslst[0]
+						})
+					}
 				}
 			}
 		})

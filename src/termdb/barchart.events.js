@@ -1,9 +1,8 @@
 import { event } from 'd3-selection'
 import { Menu } from '../client'
 
-const tip = new Menu({ padding: '5px' })
-
 export default function getHandlers(self) {
+	const tip = new Menu({ padding: '5px' })
 	const s = self.settings
 
 	return {
@@ -22,6 +21,9 @@ export default function getHandlers(self) {
 		},
 		series: {
 			mouseover(d) {
+				event.stopPropagation()
+				//console.log(26, tip.d.node() instanceof Node, tip, tip.d.node())
+				//if (!(tip.d.node() instanceof Node)) return
 				const t1 = self.config.term.term
 				const t2 = self.config.term2 && self.config.term2.term
 				const term1unit = t1.unit

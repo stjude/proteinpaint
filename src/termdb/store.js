@@ -14,7 +14,9 @@ const defaultState = {
 		plots: {}
 	},
 	termfilter: {
-		terms: []
+		terms: [],
+		inclusions: [],
+		exclusions: []
 	},
 	autoSave: true
 }
@@ -34,6 +36,15 @@ class TdbStore {
 		if (!app.opts.state) throw '.state{} missing'
 		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
 		this.validateOpts()
+
+		// increment when adding new filter groups
+		this.currFilterGrpId = this.state.termfilter.terms
+			? this.state.termfilter.terms.length
+			: this.state.termfilter.exclusions ||
+			  this.state.termfilter.exclusions.length < this.state.termfilter.inclusions.length
+			? this.state.termfilter.inclusions.length
+			: this.state.termfilter.exclusions.length
+
 		// when using rx.copyMerge, replace the object values
 		// for these keys instead of extending them
 		this.replaceKeyVals = ['term', 'term2', 'term0', 'q']
@@ -123,6 +134,13 @@ TdbStore.prototype.actions = {
 		}
 	},
 
+	filter_add_grp(action) {
+		console.log(128, action)
+		const grp = [{ term: action.term, values: [] }]
+		grp.id = this.currFilterGrpId++
+		this.state.termfilter[action.filterKey].push(grp)
+	},
+
 	filter_add(action) {
 		if ('termId' in action) {
 			/*
@@ -144,11 +162,13 @@ TdbStore.prototype.actions = {
 				if (!valueData.includes(action.value)) valueData.push(action.value)
 			}
 		} else if (action.tvslst) {
+			console.log(146, action.tvslst)
 			this.state.termfilter.terms.push(...action.tvslst)
 		} else {
 			// NOT NEEDED? SHOULD ALWAYS HANDLE tvslst array
 			this.state.termfilter.terms.push(action.term)
 		}
+		console.log(this.state.termfilter.terms)
 	},
 
 	filter_grade_update(action) {
