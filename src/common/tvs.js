@@ -194,11 +194,64 @@ function setRenderers(self) {
 			return b.samplecount - a.samplecount
 		})
 
-		self.makeValueTable(div, term, sortedVals)
+		// 'Apply' button
+		div
+			.append('div')
+			.style('text-align', 'center')
+			.append('div')
+			.attr('class', 'apply_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
+			.style('border-radius', '13px')
+			.style('background-color', '#23cba7')
+			.style('padding', '7px 15px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('Apply')
+			.on('click', () => {
+				//update term values by ckeckbox values
+				let checked_vals = []
+				values_table
+					.selectAll('.value_checkbox')
+					.filter(function(d) {
+						return this.checked == true
+					})
+					.each(function(d) {
+						checked_vals.push(this.value)
+					})
+
+				const new_vals = []
+
+				for (const [i, v] of sortedVals.entries()) {
+					for (const [j, sv] of checked_vals.entries()) {
+						if (v.key == sv) new_vals.push(v)
+					}
+				}
+				const new_term = JSON.parse(JSON.stringify(term))
+				new_term.values = new_vals
+				self.dom.tip.hide()
+				self.opts.callback({
+					type: 'filter_replace',
+					term: new_term
+				})
+			})
+
+		const values_table = self.makeValueTable(div, term, sortedVals)
 	}
 
 	self.showNumOpts = async function(div, term) {
-		const range_divs = div.selectAll('.range_div').data(term.ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
+		console.log(term)
+
+		const ranges = []
+
+		for (const [index, range] of term.ranges.entries()) {
+			if (range.value == undefined) {
+				ranges.push(range)
+			}
+		}
+
+		const range_divs = div.selectAll('.range_div').data(ranges, d => (d.start ? d.start : d.stop ? d.stop : d))
 
 		range_divs.exit().each(() => {
 			select(this)
@@ -431,7 +484,60 @@ function setRenderers(self) {
 		const sortedVals = unannotated_cats.lst.sort((a, b) => {
 			return b.samplecount - a.samplecount
 		})
-		self.makeValueTable(div, term, sortedVals)
+
+		// // 'Apply' button
+		div
+			.append('div')
+			.style('text-align', 'center')
+			.append('div')
+			.attr('class', 'apply_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
+			.style('border-radius', '13px')
+			.style('background-color', '#23cba7')
+			.style('padding', '7px 15px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('Apply')
+			.on('click', () => {
+				//update term values by ckeckbox values
+				let checked_vals = []
+				values_table
+					.selectAll('.value_checkbox')
+					.filter(function(d) {
+						return this.checked == true
+					})
+					.each(function(d) {
+						checked_vals.push(this.value)
+					})
+
+				const new_vals = []
+
+				for (const [i, v] of sortedVals.entries()) {
+					for (const [j, sv] of checked_vals.entries()) {
+						if (v.key == sv) new_vals.push({ value: v.range.value })
+					}
+				}
+				const new_term = JSON.parse(JSON.stringify(term))
+				if (new_vals.length > 0 && (term.term.isinteger || term.term.isfloat)) {
+					for (const [i, d] of new_vals.entries()) {
+						if (!new_term.ranges.map(a => a.value).includes(d.value)) new_term.ranges.push({ value: d.value })
+					}
+				}
+
+				for (const [i, d] of new_term.ranges.entries()) {
+					if (d.value && !new_vals.map(a => a.value).includes(d.value)) new_term.ranges.splice(i, 1)
+				}
+
+				self.dom.tip.hide()
+				self.opts.callback({
+					type: 'filter_replace',
+					term: new_term
+				})
+			})
+
+		const values_table = self.makeValueTable(div, term, sortedVals)
 	}
 
 	self.removeTerm = term => {
@@ -478,7 +584,8 @@ function setRenderers(self) {
 			if (term.values.length == 1) return term.values[0].label
 			else return term.values.length + ' Groups'
 		} else if (term.term.isfloat || term.term.isinteger) {
-			if (term.ranges.length == 1) return self.numeric_val_text(term.ranges[0])
+			if (term.ranges.length == 1 && term.ranges[0].value) return '1 Category'
+			else if (term.ranges.length == 1) return self.numeric_val_text(term.ranges[0])
 			else return term.ranges.length + ' Intervals'
 		} else if (term.bar_by_grade || term.bar_by_children) {
 			//TODO
@@ -501,49 +608,6 @@ function setRenderers(self) {
 	}
 
 	self.makeValueTable = function(div, term, values) {
-		// 'Apply' button
-		div
-			.append('div')
-			.style('text-align', 'center')
-			.append('div')
-			.attr('class', 'apply_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
-			.style('border-radius', '13px')
-			.style('background-color', '#23cba7')
-			.style('padding', '7px 15px')
-			.style('margin', '5px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('Apply')
-			.on('click', () => {
-				//update term values by ckeckbox values
-				let checked_vals = []
-				values_table
-					.selectAll('.value_checkbox')
-					.filter(function(d) {
-						return this.checked == true
-					})
-					.each(function(d) {
-						checked_vals.push(this.value)
-					})
-
-				const new_vals = []
-
-				for (const [i, v] of values.entries()) {
-					for (const [j, sv] of checked_vals.entries()) {
-						if (v.key == sv) new_vals.push(v)
-					}
-				}
-				const new_term = JSON.parse(JSON.stringify(term))
-				new_term.values = new_vals
-				self.dom.tip.hide()
-				self.opts.callback({
-					type: 'filter_replace',
-					term: new_term
-				})
-			})
-
 		const values_table = div.append('table').style('border-collapse', 'collapse')
 
 		// this row will have group names/number
@@ -568,8 +632,29 @@ function setRenderers(self) {
 			.style('font-weight', 'bold')
 			.html('Check/ Uncheck All')
 
-		for (const [i, v] of values.entries()) {
-			const value_tr = values_table.append('tr').style('height', '15px')
+		const value_trs = values_table.selectAll('.value_tr').data(values, d => d.key)
+
+		value_trs
+			.exit()
+			.style('opacity', 1)
+			.transition()
+			.duration(self.durations.exit)
+			.style('opacity', 0)
+			.remove()
+
+		value_trs
+			.enter()
+			.append('tr')
+			.attr('class', 'value_tr')
+			.style('height', '15px')
+			.style('opacity', 0)
+			.transition()
+			.duration(200)
+			.style('opacity', 1)
+			.each(enter_td)
+
+		function enter_td(d) {
+			const value_tr = select(this)
 
 			value_tr
 				.append('td')
@@ -577,12 +662,17 @@ function setRenderers(self) {
 				.append('input')
 				.attr('class', 'value_checkbox')
 				.attr('type', 'checkbox')
-				.attr('value', v.key)
+				.attr('value', d.key)
 				.style('position', 'relative')
 				.style('vertical-align', 'middle')
 				.style('bottom', '3px')
 				.property('checked', () => {
-					if (term.values && term.values.map(a => a.label).includes(v.label)) {
+					if (term.term.iscategorical && term.values.map(a => a.label).includes(d.label)) {
+						return true
+					} else if (
+						(term.term.isfloat || term.term.isinteger) &&
+						term.ranges.map(a => a.value).includes(d.range.value)
+					) {
 						return true
 					}
 				})
@@ -591,7 +681,7 @@ function setRenderers(self) {
 				.append('td')
 				.style('padding', '2px 5px')
 				.style('font-size', '.8em')
-				.html(v.label + ' (n=' + v.samplecount + ')')
+				.html(d.label + ' (n=' + d.samplecount + ')')
 		}
 		return values_table
 	}
