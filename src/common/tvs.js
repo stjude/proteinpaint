@@ -241,8 +241,6 @@ function setRenderers(self) {
 	}
 
 	self.showNumOpts = async function(div, term) {
-		console.log(term)
-
 		const ranges = []
 
 		for (const [index, range] of term.ranges.entries()) {
@@ -540,6 +538,68 @@ function setRenderers(self) {
 		const values_table = self.makeValueTable(div, term, sortedVals)
 	}
 
+	self.showConditionOpts = async function(div, term) {
+		let lst
+		lst = term.bar_by_grade ? ['bar_by_grade=1'] : term.bar_by_children ? ['bar_by_children=1'] : []
+
+		lst.push(
+			term.value_by_max_grade
+				? 'value_by_max_grade=1'
+				: term.value_by_most_recent
+				? 'value_by_most_recent=1'
+				: term.value_by_computable_grade
+				? 'value_by_computable_grade=1'
+				: null
+		)
+
+		const data = await self.getCategories(term.term, lst)
+
+		// 'Apply' button
+		div
+			.append('div')
+			.style('text-align', 'center')
+			.append('div')
+			.attr('class', 'apply_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
+			.style('border-radius', '13px')
+			.style('background-color', '#23cba7')
+			.style('padding', '7px 15px')
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('Apply')
+			.on('click', () => {
+				//update term values by ckeckbox values
+				let checked_vals = []
+				values_table
+					.selectAll('.value_checkbox')
+					.filter(function(d) {
+						return this.checked == true
+					})
+					.each(function(d) {
+						checked_vals.push(this.value)
+					})
+
+				const new_vals = []
+
+				for (const [i, v] of data.lst.entries()) {
+					for (const [j, sv] of checked_vals.entries()) {
+						if (v.key == sv) new_vals.push(v)
+					}
+				}
+				const new_term = JSON.parse(JSON.stringify(term))
+				new_term.values = new_vals
+				self.dom.tip.hide()
+				self.opts.callback({
+					type: 'filter_replace',
+					term: new_term
+				})
+			})
+
+		const values_table = self.makeValueTable(div, term, data.lst)
+	}
+
 	self.removeTerm = term => {
 		// const termfilter = self.termfilter.terms.filter(d => d.term.id != term.term.id)
 		self.opts.callback({ type: 'filter_remove', termId: term.id })
@@ -588,7 +648,8 @@ function setRenderers(self) {
 			else if (term.ranges.length == 1) return self.numeric_val_text(term.ranges[0])
 			else return term.ranges.length + ' Intervals'
 		} else if (term.bar_by_grade || term.bar_by_children) {
-			//TODO
+			if (term.values.length == 1) return term.values[0].label
+			else return term.values.length + term.bar_by_grade ? ' Grades' : term.bar_by_children ? ' Subconditions' : ''
 		} else if (term.grade_and_child) {
 			//TODO
 		} else {
@@ -673,6 +734,8 @@ function setRenderers(self) {
 						(term.term.isfloat || term.term.isinteger) &&
 						term.ranges.map(a => a.value).includes(d.range.value)
 					) {
+						return true
+					} else if (term.term.iscondition && term.values.map(a => a.label).includes(d.label)) {
 						return true
 					}
 				})
