@@ -134,13 +134,6 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	filter_add_grp(action) {
-		console.log(128, action)
-		const grp = [{ term: action.term, values: [] }]
-		grp.id = this.currFilterGrpId++
-		this.state.termfilter[action.filterKey].push(grp)
-	},
-
 	filter_add(action) {
 		if ('termId' in action) {
 			/*
@@ -222,8 +215,13 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_replace(action) {
-		this.state.termfilter.terms = []
-		this.state.termfilter.terms.push(action.term)
+		if (action.tvslst) {
+			if (!action.filterKey) throw 'missing action.filterKey'
+			this.state.termfilter[action.filterKey] = action.tvslst
+		} else {
+			this.state.termfilter = []
+			this.state.termfilter.terms.push(action.term)
+		}
 	}
 }
 

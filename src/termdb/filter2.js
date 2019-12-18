@@ -47,17 +47,12 @@ class TdbFilter {
 			holder: this.dom.inclusionsDiv,
 			getData: () =>
 				this.state.termfilter.inclusions ? this.state.termfilter.inclusions : this.state.termfilter.terms,
-			callback: {
-				addGrp: term => {
-					this.app.dispatch({
-						type: 'filter_add_grp',
-						term,
-						filterKey: this.state.termfilter.inclusions ? 'inclusions' : 'terms'
-					})
-				},
-				addTerm: (term, index) => {
-					this.app.dispatch({ type: 'filter_add_term', term, index, filterKey: 'inclusions' })
-				}
+			callback: tvslst => {
+				this.app.dispatch({
+					type: 'filter_replace',
+					filterKey: this.state.termfilter.inclusions ? 'inclusions' : 'terms',
+					tvslst
+				})
 			}
 		})
 
@@ -67,17 +62,12 @@ class TdbFilter {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.exclusionsDiv,
-			callback: {
-				addGrp: term => {
-					this.app.dispatch({
-						type: 'filter_add_grp',
-						term,
-						filterKey: 'exclusions'
-					})
-				},
-				addTerm: (term, index) => {
-					this.app.dispatch({ type: 'filter_add_term', term, index, filterKey: 'exclusions' })
-				}
+			callback: tvslst => {
+				this.app.dispatch({
+					type: 'filter_replace',
+					filterKey: 'exclusions',
+					tvslst
+				})
 			}
 		})
 	}

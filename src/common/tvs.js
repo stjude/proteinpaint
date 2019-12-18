@@ -36,9 +36,7 @@ class TVS {
 		if (!o.holder) throw '.holder missing'
 		if (!o.genome) throw '.genome missing'
 		if (!o.dslabel) throw '.dslabel missing'
-		if (typeof o.callback != 'object') throw '.callback{} is not an object'
-		if (typeof o.callback.addGrp != 'function') throw '.callback.addGrp() is not a function'
-		if (typeof o.callback.addTerm != 'function') throw '.callback.addTerm() is not a function'
+		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
 	}
 

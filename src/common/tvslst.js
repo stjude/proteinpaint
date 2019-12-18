@@ -6,7 +6,7 @@ import { appInit } from '../termdb/app'
 import { TVSInit } from './tvs'
 import * as client from '../client'
 
-class TvsLst {
+class TvsLstUi {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.genome = opts.genome
@@ -23,8 +23,8 @@ class TvsLst {
 		this.pills = {}
 
 		this.api = {
-			main: async grps => {
-				this.grps = grps
+			main: async tvslst => {
+				this.tvslst = tvslst
 				this.updateUI()
 			}
 		}
@@ -33,14 +33,17 @@ class TvsLst {
 		if (!o.holder) throw '.holder missing'
 		if (!o.genome) throw '.genome missing'
 		if (!o.dslabel) throw '.dslabel missing'
-		if (typeof o.callback != 'object') throw '.callback{} is not an object'
-		if (typeof o.callback.addGrp != 'function') throw '.callback.addGrp() is not a function'
-		if (typeof o.callback.addTerm != 'function') throw '.callback.addTerm() is not a function'
+		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
+	}
+	copyTvsLst() {
+		const lst = JSON.parse(JSON.stringify(this.tvslst))
+		this.tvslst.forEach((grp, i) => (lst[i].id = grp.id))
+		return lst
 	}
 }
 
-exports.TvsLstInit = rx.getInitFxn(TvsLst)
+exports.TvsLstInit = rx.getInitFxn(TvsLstUi)
 
 function setRenderers(self) {
 	self.initUI = function() {
@@ -67,11 +70,11 @@ function setRenderers(self) {
 	}
 
 	self.updateUI = function() {
-		//console.log(60, self.grps)
-		//self.dom.grpAdderDiv.style('display', !self.grps.length ? 'block' : 'none')
-		self.dom.pillGrpDiv.style('display', !self.grps.length ? 'none' : 'block')
+		//console.log(60, self.tvslst)
+		//self.dom.grpAdderDiv.style('display', !self.tvslst.length ? 'block' : 'none')
+		self.dom.pillGrpDiv.style('display', !self.tvslst.length ? 'none' : 'block')
 
-		const pills = self.dom.pillGrpDiv.selectAll('.tvs_pill_grp').data(self.grps, terms => terms.id)
+		const pills = self.dom.pillGrpDiv.selectAll('.tvs_pill_grp').data(self.tvslst, grp => grp.id)
 
 		pills.exit().each(self.removePillGrp)
 		pills.each(self.updatePillGrp)
@@ -80,82 +83,41 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'tvs_pill_grp')
 			.style('margin', '5px')
-			.style('width', '250px')
+			.style('min-width', '250px')
 			.each(self.addPillGrp)
 	}
 
 	self.removePillGrp = function(terms) {
-		//console.log(72, terms.id)
+		//console.log(72, terms.id, this)
 		select(this).remove()
 		for (const term of terms) {
-			const id = terms.id + '-' + term.id
-			delete self.pills[id]
+			delete self.pills[self.getPillId(terms.id, term.term.id)]
 		}
 	}
 
 	self.updatePillGrp = function(terms) {
-		//console.log(80, terms, this)
+		//console.log(97, terms.id, terms, this)
 		const pills = select(this)
 			.select('.sja_filter_grp_terms')
 			.selectAll('.tvs_pill_wrapper')
-			.data(terms, term => terms.id + '-' + term.id)
+			.data(terms, term => term.term.id)
 
-		pills.exit().each(function(term) {
-			const id = terms.id + '-' + term.id
-			delete self.pills[id]
-			select(this).remove()
-		})
+		pills.exit().each(self.removePill)
 
-		pills.each(function(term, i) {
-			//console.log(104, terms.indexOf(term), terms.length-1, term.term.id)
-			select(this)
-				.select('.sja_filter_term_join_label')
-				.html(terms.indexOf(term) < terms.length - 1 ? 'AND' : '+ AND')
-				.style('background-color', self.grpJoinLabelBgColor)
-
-			const id = terms.id + '-' + term.id
-			if (!self.pills[id]) return
-			self.pills[id].main(term)
-		})
+		pills.each(self.updatePillTerm)
 
 		pills
 			.enter()
 			.append('div')
 			.attr('class', 'tvs_pill_wrapper')
-			.each(function(term, i) {
-				const holder = select(this.parentNode)
-					.append('div')
-					.attr('class', 'tvs_pill_term_div')
-
-				select(this.parentNode)
-					.append('div')
-					.attr('class', '.sja_filter_term_join_label')
-					.style('margin-left', '10px')
-					.style('border', 'none')
-					.style('border-radius', '5px')
-					.html(terms.indexOf(term) < terms.length - 1 ? 'AND' : '+ AND')
-					.style('background-color', self.grpJoinLabelBgColor)
-					.on('click', self.displayTreeMenu)
-
-				const pill = TVSInit({
-					genome: self.genome,
-					dslabel: self.dslabel,
-					holder,
-					debug: self.opts.debug,
-					callback: self.opts.callback
-				})
-				pill.main(term)
-				const id = terms.id + '-' + term.id
-				self.pills[id] = pill
-			})
+			.each(self.addPillTerm)
 	}
 
 	self.addPillGrp = function(terms, i) {
-		//console.log(91, terms.id)
 		const grpJoinDiv = select(this)
 			.append('div')
 			.attr('class', 'sja_filter_grp_join_label')
-			.html(self.grps.length > 1 && i > 0 ? 'OR' : '')
+			.html(self.tvslst.length > 1 && i > 0 ? 'OR' : '')
 
 		const pills = select(this)
 			.append('div')
@@ -169,32 +131,83 @@ function setRenderers(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'tvs_pill_wrapper')
-			.each(function(term, i) {
-				//console.log(97, this, term)
-				const holder = select(this)
-					.append('div')
-					.attr('class', 'tvs_pill_term_div')
-				select(this)
-					.append('div')
-					.attr('class', 'sja_filter_term_join_label')
-					.style('margin-left', '10px')
-					.style('border', 'none')
-					.style('border-radius', '5px')
-					.html(i < terms.length - 1 ? 'AND' : '+ AND')
-					.style('background-color', self.grpJoinLabelBgColor)
-					.on('click', self.displayTreeMenu)
+			.each(self.addPillTerm)
+	}
 
-				const pill = TVSInit({
-					genome: self.genome,
-					dslabel: self.dslabel,
-					holder,
-					debug: self.opts.debug,
-					callback: self.opts.callback
-				})
-				pill.main(term)
-				const id = terms.id + '-' + term.id
-				self.pills[id] = pill
-			})
+	self.addPillTerm = function(term, i) {
+		const terms = this.parentNode.parentNode.__data__
+		const holder = select(this)
+			.style('position', 'relative')
+			.append('div')
+			.attr('class', 'tvs_pill_term_div')
+
+		holder
+			.append('div')
+			.attr('class', 'tvs_pill_term_remover')
+			.html('X')
+			.style('position', 'absolute')
+			.style('right', '5px')
+			.style('padding', '3px 3px')
+			.style('background-color', 'rgba(255,100,100,0.5)')
+			.style('font-weight', 500)
+			.style('cursor', 'pointer')
+			.on('click', self.removeTerm)
+
+		select(this)
+			.append('div')
+			.attr('class', 'sja_filter_term_join_label')
+			.style('margin-left', '10px')
+			.style('border', 'none')
+			.style('border-radius', '5px')
+			.html(terms.indexOf(term) < terms.length - 1 ? 'AND' : '+ AND')
+			.style('background-color', self.grpJoinLabelBgColor)
+			.on('click', self.displayTreeMenu)
+
+		const pill = TVSInit({
+			genome: self.genome,
+			dslabel: self.dslabel,
+			holder,
+			debug: self.opts.debug,
+			callback: self.opts.callback
+		})
+		const id = self.getPillId(terms.id, term.term.id)
+		self.pills[id] = pill
+		pill.main(term)
+	}
+
+	self.updatePillTerm = function(term, i) {
+		const terms = this.parentNode.parentNode.__data__
+		select(this)
+			.select('.sja_filter_term_join_label')
+			.html(terms.indexOf(term) < terms.length - 1 ? 'AND' : '+ AND')
+			.style('background-color', self.grpJoinLabelBgColor)
+
+		const id = self.getPillId(terms.id, term.term.id)
+		if (!self.pills[id]) return
+		self.pills[id].main(term)
+	}
+
+	self.removePill = function(term) {
+		const terms = this.parentNode.parentNode.__data__
+		const id = self.getPillId(terms.id, term.term.id)
+		delete self.pills[id]
+		select(this).remove()
+	}
+
+	self.removeTerm = function(term) {
+		const terms = this.parentNode.parentNode.parentNode.__data__
+		const grpId = terms.id
+		const i = terms.findIndex(t => t.id === term.id)
+		if (i == -1) return
+		const lst = self.copyTvsLst()
+		const grp = lst.find(grp => grp.id == grpId)
+		grp.splice(i, 1)
+		if (!grp.length) lst.splice(lst.indexOf(grp), 1)
+		self.opts.callback(lst)
+	}
+
+	self.getPillId = function(termsId, termId) {
+		return termsId + '-' + termId
 	}
 
 	self.grpJoinLabelBgColor = function() {
@@ -226,18 +239,15 @@ function setInteractivity(self) {
 				bar_click_override: tvslst => {
 					//console.log(187, tvslst, filterHolder.__data__)
 					self.dom.tip.hide()
-
+					const lst = self.copyTvsLst()
 					if (filterHolder.className.includes('sja_filter_term_join_label')) {
 						const id = filterHolder.parentNode.parentNode.__data__.id
-						self.opts.callback.addTerm({
-							id,
-							term: tvslst[0]
-						})
+						const grp = lst.find(grp => grp.id == id)
+						grp.push(tvslst[0])
 					} else {
-						self.opts.callback.addGrp({
-							term: tvslst[0]
-						})
+						lst.push(tvslst)
 					}
+					self.opts.callback(lst)
 				}
 			}
 		})
