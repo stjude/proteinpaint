@@ -198,23 +198,25 @@ tape('tvs filter: caterogical term', function(test) {
 	}
 })
 
-tape.skip('tvs filter: Numerical term', function(test) {
+tape('tvs filter: Numerical term', function(test) {
 	test.timeoutAfter(6000)
-	// test.plan(8)
 
 	const termfilter = {
 		show_top_ui: true,
-		terms: [
-			{
-				term: {
-					id: 'aaclassic_5',
-					name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
-					unit: 'mg/m²',
-					isfloat: true
-				},
-				ranges: [{ stopinclusive: true, start: 1000, stop: 2000 }]
-			}
-		]
+		inclusions: [
+			[
+				{
+					term: {
+						id: 'aaclassic_5',
+						name: 'Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)',
+						unit: 'mg/m²',
+						isfloat: true
+					},
+					ranges: [{ stopinclusive: true, start: 1000, stop: 2000 }]
+				}
+			]
+		],
+		exclusions: []
 	}
 
 	runpp({
@@ -225,16 +227,17 @@ tape.skip('tvs filter: Numerical term', function(test) {
 		},
 		filter: {
 			callbacks: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
 
+	let inclusionsBtn
 	function runTests(filter) {
+		inclusionsBtn = filter.Inner.dom.holder.select('.sja_filter_btn').node()
 		helpers
-			.rideInit({ arg: filter })
+			.rideInit({ arg: filter, bus: filter, eventType: 'postRender.test' })
 			.run(testFilterDisplay, 600)
-			.change({ bus: filter, eventType: 'postRender.test' })
 			.run(triggerBluePill)
 			.run(testEditMenu, 500)
 			.use(triggerRangeEdit)
@@ -243,27 +246,31 @@ tape.skip('tvs filter: Numerical term', function(test) {
 	}
 
 	function testFilterDisplay(filter) {
+		inclusionsBtn.click()
 		test.equal(
-			filter.Inner.dom.holder.selectAll('.term_name_btn').size(),
-			filter.Inner.state.termfilter.terms.length,
+			filter.Inner.dom.inclusionsDiv.selectAll('.term_name_btn').size(),
+			filter.Inner.state.termfilter.inclusions.length,
 			'should have 1 tvs filter'
 		)
 		test.equal(
-			filter.Inner.dom.holder.selectAll('.value_btn').size(),
-			filter.Inner.state.termfilter.terms[0].ranges.length,
+			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn').size(),
+			filter.Inner.state.termfilter.inclusions[0][0].ranges.length,
 			'should change value from data'
 		)
 	}
 
 	function triggerBluePill(filter) {
-		filter.Inner.dom.holder
+		inclusionsBtn.click()
+		filter.Inner.dom.inclusionsDiv
 			.select('.term_name_btn')
 			.node()
 			.click()
 	}
 
 	function testEditMenu(filter) {
-		const tip = filter.Inner.filter.Inner.pills[0].Inner.dom.tip
+		inclusionsBtn.click()
+		const pills = filter.Inner.inclusions.Inner.pills
+		const tip = filter.Inner.inclusions.Inner.pills[Object.keys(pills)[0]].Inner.dom.tip
 		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
 		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 		test.true(tip.d.selectAll('.apply_btn').size() >= 1, 'Should have 1 button to apply range change')
@@ -274,7 +281,9 @@ tape.skip('tvs filter: Numerical term', function(test) {
 	}
 
 	function triggerRangeEdit(filter) {
-		const tip = filter.Inner.filter.Inner.pills[0].Inner.dom.tip
+		inclusionsBtn.click()
+		const pills = filter.Inner.inclusions.Inner.pills
+		const tip = filter.Inner.inclusions.Inner.pills[Object.keys(pills)[0]].Inner.dom.tip
 		tip.d.select('input').property('value', 1500)
 		tip.d
 			.selectAll('.apply_btn')
@@ -283,14 +292,15 @@ tape.skip('tvs filter: Numerical term', function(test) {
 	}
 
 	function testRangeEdit(filter) {
+		inclusionsBtn.click()
 		test.equal(
 			parseInt(
-				filter.Inner.dom.holder
+				filter.Inner.dom.inclusionsDiv
 					.selectAll('.value_btn')
 					.html()
 					.split(' ')[0]
 			),
-			filter.Inner.state.termfilter.terms[0].ranges[0].start,
+			filter.Inner.state.termfilter.inclusions[0][0].ranges[0].start,
 			'should change value from data'
 		)
 	}
