@@ -38,9 +38,64 @@ tape('\n', function(test) {
 	test.end()
 })
 
+tape('filter buttons', function(test) {
+	const termfilter = {
+		show_top_ui: true,
+		inclusions: [
+			[
+				{
+					term: { id: 'diaggrp', name: 'Diagnosis Group', iscategorical: true },
+					values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+				}
+			]
+		],
+		exclusions: []
+	}
+
+	runpp({
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38',
+			termfilter
+		},
+		filter: {
+			callbacks: {
+				'postInit.test': runTests
+			}
+		}
+	})
+
+	function runTests(filter) {
+		test.equal(
+			filter.Inner.dom.holder.node().querySelectorAll('.sja_filter_btn').length,
+			2,
+			'should have two filter buttons'
+		)
+
+		test.equal(
+			filter.Inner.dom.holder
+				.node()
+				.querySelectorAll('.sja_filter_btn')[0]
+				.innerHTML.slice(0, 2),
+			'1 ',
+			'should label the inclusions button with the number of applied criteria'
+		)
+
+		test.equal(
+			filter.Inner.dom.holder
+				.node()
+				.querySelectorAll('.sja_filter_btn')[1]
+				.innerHTML.slice(0, 2),
+			'0 ',
+			'should label the exclusions button with the number of applied criteria'
+		)
+
+		test.end()
+	}
+})
+
 tape('tvs filter: caterogical term', function(test) {
 	test.timeoutAfter(4000)
-	test.plan(8)
 
 	const termfilter = {
 		show_top_ui: true,
@@ -62,16 +117,17 @@ tape('tvs filter: caterogical term', function(test) {
 		},
 		filter: {
 			callbacks: {
-				'postInit.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
 
+	let inclusionsBtn
 	function runTests(filter) {
+		inclusionsBtn = filter.Inner.dom.holder.select('.sja_filter_btn').node()
 		helpers
-			.rideInit({ arg: filter })
+			.rideInit({ arg: filter, bus: filter, eventType: 'postRender.test' })
 			.run(testFilterDisplay, 300)
-			.change({ bus: filter, eventType: 'postRender.test' })
 			.run(triggerBluePill)
 			.run(testEditMenu, 500)
 			.use(triggerAddFilter)
@@ -80,34 +136,37 @@ tape('tvs filter: caterogical term', function(test) {
 	}
 
 	function testFilterDisplay(filter) {
+		inclusionsBtn.click()
 		test.equal(
-			filter.Inner.dom.holder.selectAll('.term_name_btn').size(),
+			filter.Inner.dom.inclusionsDiv.selectAll('.term_name_btn').size(),
 			filter.Inner.state.termfilter.inclusions.length,
 			'should have 1 tvs filter'
 		)
 		test.equal(
-			filter.Inner.dom.holder.selectAll('.value_btn').html(),
+			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn').html(),
 			filter.Inner.state.termfilter.inclusions[0][0].values[0].label,
 			'should change value from data'
 		)
 	}
 
 	function triggerBluePill(filter) {
-		filter.Inner.dom.holder
+		inclusionsBtn.click()
+		filter.Inner.dom.inclusionsDiv
 			.select('.term_name_btn')
 			.node()
 			.click()
 	}
 
 	function testEditMenu(filter) {
+		inclusionsBtn.click()
 		const pills = filter.Inner.inclusions.Inner.pills
-		const tip = pills[Object.keys(pills)[0]].Inner.dom.tip
-		test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
-		test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
-		test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
-		test.equal(tip.d.selectAll('.value_checkbox').size(), 27, 'Should have checkbox for each value')
+		const div = pills[Object.keys(pills)[0]].Inner.dom.tip.d
+		test.equal(div.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
+		test.equal(div.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
+		test.equal(div.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
+		test.equal(div.selectAll('.value_checkbox').size(), 27, 'Should have checkbox for each value')
 		test.equal(
-			tip.d
+			div
 				.selectAll('.value_checkbox')
 				.filter(function(d) {
 					return this.checked == true
@@ -119,18 +178,20 @@ tape('tvs filter: caterogical term', function(test) {
 	}
 
 	function triggerAddFilter(filter) {
+		inclusionsBtn.click()
 		const pills = filter.Inner.inclusions.Inner.pills
-		const tip = pills[Object.keys(pills)[0]].Inner.dom.tip
-		tip.d.selectAll('.value_checkbox')._groups[0][0].click()
-		tip.d
+		const div = pills[Object.keys(pills)[0]].Inner.dom.tip.d
+		div.selectAll('.value_checkbox')._groups[0][0].click()
+		div
 			.selectAll('.apply_btn')
 			.node()
 			.click()
 	}
 
 	function testAddFilter(filter) {
+		inclusionsBtn.click()
 		test.equal(
-			filter.Inner.dom.holder.selectAll('.value_btn').html(),
+			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn').html(),
 			filter.Inner.state.termfilter.inclusions[0][0].values.length + ' Groups',
 			'should change filter by selecting values from Menu'
 		)
