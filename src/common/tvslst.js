@@ -175,6 +175,7 @@ function setRenderers(self) {
 				if (i == -1) return
 				const grp = lst[i]
 				const j = self.tvslst[i].indexOf(term)
+				// replace term
 				grp[j] = new_term
 				self.opts.callback(lst)
 			}
@@ -206,7 +207,7 @@ function setRenderers(self) {
 	self.removeTerm = function(term) {
 		const terms = this.parentNode.parentNode.parentNode.__data__
 		const grpId = terms.id
-		const i = terms.findIndex(t => t.id === term.id)
+		const i = terms.findIndex(t => t.term.id === term.term.id)
 		if (i == -1) return
 		const lst = self.copyTvsLst()
 		const grp = lst.find(grp => grp.id == grpId)
