@@ -249,6 +249,7 @@ tape('filter addition', async test => {
 		holder,
 		genome: 'hg38',
 		dslabel: 'SJLife',
+		debug: true,
 		callback: getCallback(opts)
 	})
 
@@ -259,7 +260,7 @@ tape('filter addition', async test => {
 	await sleep(200)
 
 	// termdiv[1] is assumed to be Demographics
-	const termdiv1 = document.body.querySelectorAll('.termdiv')[1]
+	const termdiv1 = opts.filter.Inner.dom.tip.d.node().querySelectorAll('.termdiv')[1]
 	termdiv1.querySelectorAll('.termbtn')[0].click()
 	await sleep(200)
 
@@ -278,7 +279,7 @@ tape('filter addition', async test => {
 	await sleep(200)
 
 	// termdiv[1] is assumed to be Demographics
-	const termdiv2 = document.body.querySelectorAll('.termdiv')[1]
+	const termdiv2 = opts.filter.Inner.dom.tip.d.node().querySelectorAll('.termdiv')[1]
 	termdiv2.querySelectorAll('.termbtn')[0].click()
 	await sleep(200)
 

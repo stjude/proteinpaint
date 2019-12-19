@@ -28,9 +28,10 @@ class TdbStore {
 		this.copyMerge = rx.copyMerge
 		this.deepFreeze = rx.deepFreeze
 		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
-		this.fromJson = rx.fromJson // used in store.api.state()
+		//this.fromJson = rx.fromJson // used in store.api.state()
 		this.toJson = rx.toJson // used in store.api.state()
 		this.getterm = getterm
+		this.prevGeneratedId = 0 // use for assigning unique IDs where needed
 
 		this.app = app
 		if (!app.opts.state) throw '.state{} missing'
@@ -79,6 +80,38 @@ class TdbStore {
 				savedPlot[t].term = await this.getterm(savedPlot[t].id)
 			}
 			this.state.tree.plots[plotId] = plotConfig(savedPlot)
+		}
+		if (this.state.termfilter.terms && !this.state.termfilter.inclusions.length) {
+			this.state.termfilter.inclusions = this.state.termfilter.terms
+		}
+		this.addFilterIds()
+	}
+
+	fromJson(str) {
+		const obj = JSON.parse(str)
+		this.addFilterIds(obj)
+		return obj
+	}
+
+	addFilterIds(_obj = null) {
+		const obj = _obj && _obj.termfilter ? _obj.termfilter : this.state && this.state.termfilter
+		if (!obj) return
+		for (const filterKey of ['inclusions', 'exclusions']) {
+			if (!obj[filterKey]) continue
+			if (!Array.isArray(obj[filterKey])) {
+				console.log(obj[filterKey])
+				throw `termfilter[filterKey] must be an array`
+			}
+			if (this.state) {
+				this.state.termfilter[filterKey].forEach((grp, i) => {
+					if ('id' in grp) obj[filterKey][i].id = grp.id
+				})
+			}
+			for (const tvslst of obj[filterKey]) {
+				if (!('id' in tvslst)) {
+					tvslst.id = this.prevGeneratedId++
+				}
+			}
 		}
 	}
 }
@@ -155,7 +188,6 @@ TdbStore.prototype.actions = {
 				if (!valueData.includes(action.value)) valueData.push(action.value)
 			}
 		} else if (action.tvslst) {
-			console.log(146, action.tvslst)
 			this.state.termfilter.terms.push(...action.tvslst)
 		} else {
 			// NOT NEEDED? SHOULD ALWAYS HANDLE tvslst array

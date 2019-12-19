@@ -38,7 +38,9 @@ class TvsLstUi {
 	}
 	copyTvsLst() {
 		const lst = JSON.parse(JSON.stringify(this.tvslst))
-		this.tvslst.forEach((grp, i) => (lst[i].id = grp.id))
+		this.tvslst.forEach((grp, i) => {
+			lst[i].id = grp.id
+		})
 		return lst
 	}
 }
@@ -145,8 +147,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'tvs_pill_term_remover')
 			.html('X')
-			.style('position', 'absolute')
-			.style('right', '5px')
+			.style('float', 'right')
 			.style('padding', '3px 3px')
 			.style('background-color', 'rgba(255,100,100,0.5)')
 			.style('font-weight', 500)
@@ -168,7 +169,15 @@ function setRenderers(self) {
 			dslabel: self.dslabel,
 			holder,
 			debug: self.opts.debug,
-			callback: self.opts.callback
+			callback: new_term => {
+				const lst = self.copyTvsLst()
+				const i = self.tvslst.findIndex(grp => grp.indexOf(term) != -1)
+				if (i == -1) return
+				const grp = lst[i]
+				const j = self.tvslst[i].indexOf(term)
+				grp[j] = new_term
+				self.opts.callback(lst)
+			}
 		})
 		const id = self.getPillId(terms.id, term.term.id)
 		self.pills[id] = pill

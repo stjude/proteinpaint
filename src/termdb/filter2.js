@@ -36,7 +36,7 @@ class TdbFilter {
 		return appState
 	}
 	main() {
-		if (!this.filter) this.initFilter()
+		if (!this.inclusions) this.initFilter()
 		this.render()
 	}
 	initFilter() {
@@ -45,6 +45,7 @@ class TdbFilter {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.inclusionsDiv,
+			debug: this.app.opts.debug,
 			getData: () =>
 				this.state.termfilter.inclusions ? this.state.termfilter.inclusions : this.state.termfilter.terms,
 			callback: tvslst => {
@@ -62,6 +63,7 @@ class TdbFilter {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			holder: this.dom.exclusionsDiv,
+			debug: this.app.opts.debug,
 			callback: tvslst => {
 				this.app.dispatch({
 					type: 'filter_replace',

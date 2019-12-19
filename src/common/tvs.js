@@ -231,10 +231,7 @@ function setRenderers(self) {
 				const new_term = JSON.parse(JSON.stringify(term))
 				new_term.values = new_vals
 				self.dom.tip.hide()
-				self.opts.callback({
-					type: 'filter_replace',
-					term: new_term
-				})
+				self.opts.callback(new_term)
 			})
 
 		const values_table = self.makeValueTable(div, term, sortedVals)
@@ -458,10 +455,7 @@ function setRenderers(self) {
 					self.dom.tip.hide()
 					const new_term = JSON.parse(JSON.stringify(term))
 					new_term.ranges[i] = range
-					self.opts.callback({
-						type: 'filter_replace',
-						term: new_term
-					})
+					self.opts.callback(new_term)
 				} catch (e) {
 					window.alert(e)
 				}
@@ -529,10 +523,7 @@ function setRenderers(self) {
 				}
 
 				self.dom.tip.hide()
-				self.opts.callback({
-					type: 'filter_replace',
-					term: new_term
-				})
+				self.opts.callback(new_term)
 			})
 
 		const values_table = self.makeValueTable(div, term, sortedVals)
@@ -591,10 +582,7 @@ function setRenderers(self) {
 				const new_term = JSON.parse(JSON.stringify(term))
 				new_term.values = new_vals
 				self.dom.tip.hide()
-				self.opts.callback({
-					type: 'filter_replace',
-					term: new_term
-				})
+				self.opts.callback(new_term)
 			})
 
 		const values_table = self.makeValueTable(div, term, data.lst)
@@ -886,10 +874,7 @@ function setInteractivity(self) {
 			barchart: {
 				bar_click_override: tvslst => {
 					self.dom.tip.hide()
-					self.opts.callback({
-						type: 'filter_replace',
-						term: tvslst[0]
-					})
+					self.opts.callback(tvslst[0])
 				}
 			}
 		})
