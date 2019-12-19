@@ -305,3 +305,155 @@ tape('tvs filter: Numerical term', function(test) {
 		)
 	}
 })
+
+tape('tvs filter: : conditional term (grade)', function(test) {
+	test.timeoutAfter(6000)
+
+	const termfilter = {
+		show_top_ui: true,
+		inclusions: [
+			[
+				{
+					term: { id: 'Arrhythmias', name: 'Arrhythmias', iscondition: true },
+					values: [{ key: 0, label: '0: No condition' }],
+					bar_by_grade: 1,
+					value_by_max_grade: 1
+				}
+			]
+		],
+		exclusions: []
+	}
+
+	runpp({
+		state: {
+			dslabel: 'SJLife',
+			genome: 'hg38',
+			termfilter
+		},
+		filter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let inclusionsBtn
+	function runTests(filter) {
+		inclusionsBtn = filter.Inner.dom.holder.select('.sja_filter_btn').node()
+		helpers
+			.rideInit({ arg: filter, bus: filter, eventType: 'postRender.test' })
+			.run(testFilterDisplay, 600)
+			.run(triggerBluePill)
+			.run(testEditMenu, 500)
+			.use(triggerAddFilter)
+			.to(testAddFilter, { wait: 800 })
+			.run(triggerBluePill)
+			.run(triggerGradeChanage)
+			.run(testGradeChanage, 800)
+			.run(triggerBluePill)
+			.run(triggerValueTypeChanage)
+			.run(triggerSubSelect, 500)
+			.run(testSubSelelct, 800)
+			.done(test)
+	}
+
+	function testFilterDisplay(filter) {
+		inclusionsBtn.click()
+		test.equal(
+			filter.Inner.dom.inclusionsDiv.selectAll('.term_name_btn').size(),
+			filter.Inner.state.termfilter.inclusions.length,
+			'should have 1 tvs filter'
+		)
+		test.equal(
+			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn').size(),
+			filter.Inner.state.termfilter.inclusions[0][0].values.length,
+			'should change value from data'
+		)
+
+		test.true(
+			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn')._groups[0][0].innerText.includes('Max Grade'),
+			'should have grade type text'
+		)
+	}
+
+	function triggerBluePill(filter) {
+		inclusionsBtn.click()
+		filter.Inner.dom.inclusionsDiv
+			.select('.term_name_btn')
+			.node()
+			.click()
+	}
+
+	function testEditMenu(filter) {
+		const pills = filter.Inner.inclusions.Inner.pills
+		const div = pills[Object.keys(pills)[0]].Inner.dom.tip.d
+		test.equal(div.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
+		test.equal(div.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
+		test.equal(div.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
+		test.equal(div.selectAll('.value_checkbox').size(), 5, 'Should have checkbox for each value')
+		test.equal(
+			div
+				.selectAll('.value_checkbox')
+				.filter(function(d) {
+					return this.checked == true
+				})
+				.size(),
+			1,
+			'Should have 1 box checked for 0 grade'
+		)
+	}
+
+	function triggerAddFilter(filter) {
+		const pills = filter.Inner.inclusions.Inner.pills
+		const div = pills[Object.keys(pills)[0]].Inner.dom.tip.d
+		div.selectAll('.value_checkbox')._groups[0][1].click()
+		div
+			.selectAll('.apply_btn')
+			.node()
+			.click()
+	}
+
+	function testAddFilter(filter) {
+		test.equal(
+			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn').html(),
+			filter.Inner.state.termfilter.inclusions[0][0].values.length + ' Grades (Max Grade)',
+			'should change filter by selecting values from Menu'
+		)
+	}
+
+	function triggerGradeChanage(filter) {
+		const pills = filter.Inner.inclusions.Inner.pills
+		const div = pills[Object.keys(pills)[0]].Inner.dom.tip.d
+		div.selectAll('select')._groups[0][1].selectedIndex = 1
+		div.selectAll('select')._groups[0][1].dispatchEvent(new Event('change'))
+	}
+
+	function testGradeChanage(filter) {
+		test.true(
+			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn')._groups[0][0].innerText.includes('Most Recent'),
+			'should change grade type from Menu'
+		)
+	}
+
+	function triggerValueTypeChanage(filter) {
+		const pills = filter.Inner.inclusions.Inner.pills
+		const div = pills[Object.keys(pills)[0]].Inner.dom.tip.d
+		div.selectAll('select')._groups[0][0].selectedIndex = 1
+		div.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
+	}
+
+	function triggerSubSelect(filter) {
+		const pills = filter.Inner.inclusions.Inner.pills
+		const div = pills[Object.keys(pills)[0]].Inner.dom.tip.d
+		div.selectAll('.value_checkbox')._groups[0][5].click()
+		div.selectAll('.apply_btn')._groups[0][1].click()
+	}
+
+	function testSubSelelct(filter) {
+		test.equal(
+			filter.Inner.dom.inclusionsDiv.selectAll('.value_btn').html(),
+			filter.Inner.state.termfilter.inclusions[0][0].values[0].label,
+			'should change to subcondition'
+		)
+	}
+})

@@ -524,6 +524,80 @@ function setRenderers(self) {
 	}
 
 	self.showConditionOpts = async function(div, term) {
+		// grade/subcondtion select
+		const value_type_select = div
+			.append('select')
+			.attr('class', '.value_select')
+			.style('display', 'block')
+			.style('margin', '5px 10px')
+			.style('padding', '3px')
+			.on('change', () => {
+				const new_term = JSON.parse(JSON.stringify(term))
+				new_term.bar_by_grade = value_type_select.node().value == 'grade' ? true : false
+				new_term.bar_by_children = value_type_select.node().value == 'sub' ? true : false
+				div.selectAll('*').remove()
+				self.showConditionOpts(div, new_term)
+			})
+
+		value_type_select
+			.append('option')
+			.attr('value', 'grade')
+			.text('By Grade')
+
+		value_type_select
+			.append('option')
+			.attr('value', 'sub')
+			.text('By Subcondition')
+
+		value_type_select.node().selectedIndex = term.bar_by_children ? 1 : 0
+
+		// grade type type
+		const grade_type_select = div
+			.append('select')
+			.attr('class', '.grade_select')
+			.style('margin', '5px 10px')
+			.style('padding', '3px')
+			.style('display', term.bar_by_grade ? 'block' : 'none')
+			.on('change', () => {
+				const new_term = JSON.parse(JSON.stringify(term))
+
+				new_term.bar_by_grade = grade_type_select.node().value == 'sub' ? false : true
+				new_term.bar_by_children = grade_type_select.node().value == 'sub' ? true : false
+				new_term.value_by_max_grade = grade_type_select.node().value == 'max' ? true : false
+				new_term.value_by_most_recent = grade_type_select.node().value == 'recent' ? true : false
+				new_term.value_by_computable_grade =
+					grade_type_select.node().value == 'computable' || grade_type_select.node().value == 'sub' ? true : false
+
+				self.dom.tip.hide()
+				self.opts.callback(new_term)
+			})
+
+		grade_type_select
+			.append('option')
+			.attr('value', 'max')
+			.text('Max grade per patient')
+
+		grade_type_select
+			.append('option')
+			.attr('value', 'recent')
+			.text('Most recent grade per patient')
+
+		grade_type_select
+			.append('option')
+			.attr('value', 'computable')
+			.text('Any grade per patient')
+
+		grade_type_select.node().selectedIndex = term.value_by_computable_grade ? 2 : term.value_by_most_recent ? 1 : 0
+
+		// display note if bar by subcondition selected
+		div
+			.append('span')
+			.style('margin', '5px 10px')
+			.style('padding', '3px')
+			.style('display', term.bar_by_children ? 'block' : 'none')
+			.style('color', '#888')
+			.html('Using any grade per patient')
+
 		let lst
 		lst = term.bar_by_grade ? ['bar_by_grade=1'] : term.bar_by_children ? ['bar_by_children=1'] : []
 
@@ -630,8 +704,21 @@ function setRenderers(self) {
 			else if (term.ranges.length == 1) return self.numeric_val_text(term.ranges[0])
 			else return term.ranges.length + ' Intervals'
 		} else if (term.bar_by_grade || term.bar_by_children) {
-			if (term.values.length == 1) return term.values[0].label
-			else return term.values.length + term.bar_by_grade ? ' Grades' : term.bar_by_children ? ' Subconditions' : ''
+			const grade_type =
+				term.bar_by_grade && term.value_by_max_grade
+					? ' (Max Grade)'
+					: term.bar_by_grade && term.value_by_most_recent
+					? ' (Most Recent Grade)'
+					: term.bar_by_grade && term.value_by_computable_grade
+					? ' (Any Grade)'
+					: ''
+			if (term.values.length == 1) return term.values[0].label + grade_type
+			else
+				return (
+					term.values.length +
+					(term.bar_by_grade ? ' Grades' : term.bar_by_children ? ' Subconditions' : '') +
+					grade_type
+				)
 		} else if (term.grade_and_child) {
 			//TODO
 		} else {
