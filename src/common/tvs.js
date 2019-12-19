@@ -407,17 +407,10 @@ function setRenderers(self) {
 					const range_delete = new_term.ranges[i]
 					if (range_delete.start || range_delete.stop) {
 						self.dom.tip.hide()
-						if (new_term.ranges.length > 1)
-							self.opts.callback({
-								type: 'filter_value_remove',
-								termId: new_term.termId,
-								valueId: i
-							})
-						else
-							self.opts.callback({
-								type: 'filter_remove',
-								termId: new_term.termId
-							})
+						if (new_term.ranges.length > 1) {
+							new_term.ranges.splice(i, 1)
+							self.opts.callback(new_term)
+						} else self.opts.callback(null)
 					} else {
 						new_term.ranges.splice(i, 1)
 						div.selectAll('*').remove()
@@ -591,7 +584,7 @@ function setRenderers(self) {
 
 	self.removeTerm = term => {
 		// const termfilter = self.termfilter.terms.filter(d => d.term.id != term.term.id)
-		self.opts.callback({ type: 'filter_remove', termId: term.id })
+		self.opts.callback(null)
 	}
 
 	self.updatePill = async function() {

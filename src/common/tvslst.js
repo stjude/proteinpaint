@@ -178,8 +178,14 @@ function setRenderers(self) {
 				if (i == -1) return
 				const grp = lst[i]
 				const j = self.tvslst[i].indexOf(term)
-				// replace term
-				grp[j] = new_term
+				if (!new_term) {
+					// remove term
+					grp.splice(j, 1)
+					if (!grp.length) lst.splice(lst.indexOf(grp), 1)
+				} else {
+					// replace term
+					grp[j] = new_term
+				}
 				self.opts.callback(lst)
 			}
 		})
