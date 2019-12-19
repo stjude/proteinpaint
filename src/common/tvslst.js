@@ -171,6 +171,9 @@ function setRenderers(self) {
 			debug: self.opts.debug,
 			callback: new_term => {
 				const lst = self.copyTvsLst()
+				// the pill term is replaced in each dispatch cycle.
+				// so cannot use the closured addPillTerm(argument) as term
+				const term = pill.getTerm()
 				const i = self.tvslst.findIndex(grp => grp.indexOf(term) != -1)
 				if (i == -1) return
 				const grp = lst[i]

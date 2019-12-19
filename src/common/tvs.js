@@ -29,7 +29,8 @@ class TVS {
 				//
 				// !!! TODO: how to pass bus.emit('postRender') delay to rx.component.api.update()
 				// this.bus.emit('postRender', null, filters.exit().size() ? this.durations.exit + 100 : 0)
-			}
+			},
+			getTerm: () => this.term
 		}
 	}
 	validateOpts(o) {
