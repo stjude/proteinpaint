@@ -85,11 +85,11 @@ returns:
 
 	for (const tvs of tvslst) {
 		if (tvs.term.iscategorical) {
-			add_categorical(tvs)
+			add_categorical(tvs, filters, values)
 		} else if (tvs.term.isinteger || tvs.term.isfloat) {
-			add_numerical(tvs)
+			add_numerical(tvs, filters, values, ds)
 		} else if (tvs.term.iscondition) {
-			add_condition(tvs)
+			add_condition(tvs, filters, values)
 		} else {
 			throw 'unknown term type'
 		}
@@ -101,123 +101,126 @@ returns:
 		values,
 		CTEname
 	}
+}
 
-	// helpers
-	function add_categorical(tvs) {
-		filters.push(
-			`SELECT sample
-			FROM annotations
-			WHERE term_id = ?
-			AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
-		)
-		values.push(tvs.term.id, ...tvs.values.map(i => i.key))
-	}
+// makesql_by_tvsfilter helpers
+// put here instead of inside makesql_by_tvsfilter
+// to parse function once at server start instead of
+// multiple times per server request
+function add_categorical(tvs, filters, values) {
+	filters.push(
+		`SELECT sample
+		FROM annotations
+		WHERE term_id = ?
+		AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
+	)
+	values.push(tvs.term.id, ...tvs.values.map(i => i.key))
+}
 
-	function add_numerical(tvs) {
-		if (!tvs.ranges) throw '.ranges{} missing'
-		values.push(tvs.term.id)
-		// get term object, in case isinteger flag is missing from tvs.term
-		const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
-		const cast = 'CAST(value AS ' + (term.isinteger ? 'INT' : 'REAL') + ')'
+function add_numerical(tvs, filters, values, ds) {
+	if (!tvs.ranges) throw '.ranges{} missing'
+	values.push(tvs.term.id)
+	// get term object, in case isinteger flag is missing from tvs.term
+	const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
+	const cast = 'CAST(value AS ' + (term.isinteger ? 'INT' : 'REAL') + ')'
 
-		const rangeclauses = []
-		let hasactualrange = false // if true, will exclude special categories
+	const rangeclauses = []
+	let hasactualrange = false // if true, will exclude special categories
 
-		for (const range of tvs.ranges) {
-			if (range.value != undefined) {
-				// special category
-				rangeclauses.push(cast + '=?')
-				values.push(range.value)
-			} else {
-				// actual range
-				hasactualrange = true
-				const lst = []
-				if (!range.startunbounded) {
-					if (range.startinclusive) {
-						lst.push(cast + ' >= ?')
-					} else {
-						lst.push(cast + ' > ? ')
-					}
-					values.push(range.start)
+	for (const range of tvs.ranges) {
+		if (range.value != undefined) {
+			// special category
+			rangeclauses.push(cast + '=?')
+			values.push(range.value)
+		} else {
+			// actual range
+			hasactualrange = true
+			const lst = []
+			if (!range.startunbounded) {
+				if (range.startinclusive) {
+					lst.push(cast + ' >= ?')
+				} else {
+					lst.push(cast + ' > ? ')
 				}
-				if (!range.stopunbounded) {
-					if (range.stopinclusive) {
-						lst.push(cast + ' <= ?')
-					} else {
-						lst.push(cast + ' < ? ')
-					}
-					values.push(range.stop)
-				}
-				rangeclauses.push('(' + lst.join(' AND ') + ')')
+				values.push(range.start)
 			}
+			if (!range.stopunbounded) {
+				if (range.stopinclusive) {
+					lst.push(cast + ' <= ?')
+				} else {
+					lst.push(cast + ' < ? ')
+				}
+				values.push(range.stop)
+			}
+			rangeclauses.push('(' + lst.join(' AND ') + ')')
 		}
-
-		let excludevalues
-		if (hasactualrange && term.values) {
-			excludevalues = Object.keys(term.values)
-				.filter(key => term.values[key].uncomputable)
-				.map(Number)
-				.filter(key => tvs.isnot || !tvs.ranges.find(range => 'value' in range && range.value === key))
-			if (excludevalues.length) values.push(...excludevalues)
-		}
-
-		filters.push(
-			`SELECT sample
-			FROM annotations
-			WHERE term_id = ?
-			AND ( ${rangeclauses.join(' OR ')} )
-			${excludevalues && excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d => '?').join(',')})` : ''}`
-		)
 	}
 
-	function add_condition(tvs) {
-		let value_for
-		if (tvs.bar_by_children) value_for = 'child'
-		else if (tvs.bar_by_grade) value_for = 'grade'
-		else throw 'must set the bar_by_grade or bar_by_children query parameter'
+	let excludevalues
+	if (hasactualrange && term.values) {
+		excludevalues = Object.keys(term.values)
+			.filter(key => term.values[key].uncomputable)
+			.map(Number)
+			.filter(key => tvs.isnot || !tvs.ranges.find(range => 'value' in range && range.value === key))
+		if (excludevalues.length) values.push(...excludevalues)
+	}
 
-		let restriction
-		if (tvs.value_by_max_grade) restriction = 'max_grade'
-		else if (tvs.value_by_most_recent) restriction = 'most_recent'
-		else if (tvs.value_by_computable_grade) restriction = 'computable_grade'
-		else throw 'unknown setting of value_by_?'
+	filters.push(
+		`SELECT sample
+		FROM annotations
+		WHERE term_id = ?
+		AND ( ${rangeclauses.join(' OR ')} )
+		${excludevalues && excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d => '?').join(',')})` : ''}`
+	)
+}
 
-		if (tvs.values) {
-			values.push(tvs.term.id, value_for, ...tvs.values.map(i => '' + i.key))
+function add_condition(tvs, filters, values) {
+	let value_for
+	if (tvs.bar_by_children) value_for = 'child'
+	else if (tvs.bar_by_grade) value_for = 'grade'
+	else throw 'must set the bar_by_grade or bar_by_children query parameter'
+
+	let restriction
+	if (tvs.value_by_max_grade) restriction = 'max_grade'
+	else if (tvs.value_by_most_recent) restriction = 'most_recent'
+	else if (tvs.value_by_computable_grade) restriction = 'computable_grade'
+	else throw 'unknown setting of value_by_?'
+
+	if (tvs.values) {
+		values.push(tvs.term.id, value_for, ...tvs.values.map(i => '' + i.key))
+		filters.push(
+			`SELECT sample
+			FROM precomputed
+			WHERE term_id = ? 
+			AND value_for = ? 
+			AND ${restriction} = 1
+			AND value IN (${tvs.values.map(i => '?').join(', ')})`
+		)
+	} else if (tvs.grade_and_child) {
+		//grade_and_child: [{grade, child_id}]
+		for (const gc of tvs.grade_and_child) {
+			values.push(tvs.term.id, '' + gc.grade)
 			filters.push(
 				`SELECT sample
 				FROM precomputed
 				WHERE term_id = ? 
-				AND value_for = ? 
+				AND value_for = 'grade'
 				AND ${restriction} = 1
-				AND value IN (${tvs.values.map(i => '?').join(', ')})`
+				AND value IN (?)`
 			)
-		} else if (tvs.grade_and_child) {
-			//grade_and_child: [{grade, child_id}]
-			for (const gc of tvs.grade_and_child) {
-				values.push(tvs.term.id, '' + gc.grade)
-				filters.push(
-					`SELECT sample
-					FROM precomputed
-					WHERE term_id = ? 
-					AND value_for = 'grade'
-					AND ${restriction} = 1
-					AND value IN (?)`
-				)
 
-				values.push(tvs.term.id, gc.child_id)
-				filters.push(
-					`SELECT sample
-					FROM precomputed
-					WHERE term_id = ? 
-					AND value_for = 'child'
-					AND ${restriction} = 1
-					AND value IN (?)`
-				)
-			}
-		} else {
-			throw 'unknown condition term filter type: expecting term-value "values" or "grade_and_child" key'
+			values.push(tvs.term.id, gc.child_id)
+			filters.push(
+				`SELECT sample
+				FROM precomputed
+				WHERE term_id = ? 
+				AND value_for = 'child'
+				AND ${restriction} = 1
+				AND value IN (?)`
+			)
 		}
+	} else {
+		throw 'unknown condition term filter type: expecting term-value "values" or "grade_and_child" key'
 	}
 }
 
